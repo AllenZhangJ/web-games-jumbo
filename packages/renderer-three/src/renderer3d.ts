@@ -9,6 +9,7 @@ import {
 } from '@number-strategy/content';
 import { createBuiltinCharacterRendererRegistry } from './character-renderer-registry.js';
 import { ContextLifecycle } from './context-lifecycle.js';
+import { resolveRenderQualityProfile } from './diagnostics/performance-budget.js';
 import {
   CAMERA_DEFAULTS,
   clamp,
@@ -142,6 +143,7 @@ export class Renderer3D {
     this.errorCount = 0;
     this.consecutiveDrawErrors = 0;
     this.lastError = null;
+    this.qualityProfile = resolveRenderQualityProfile(options.quality);
     this.sceneRegistry = options.sceneRegistry ?? createBuiltinSceneRegistry();
     this.sceneRendererRegistry = options.sceneRendererRegistry ?? createBuiltinSceneRendererRegistry();
     this.characterRegistry = options.characterRegistry ?? createBuiltinCharacterRegistry();
@@ -186,7 +188,10 @@ export class Renderer3D {
         };
         this.stage = this.sceneRendererRegistry.create(this.renderer, this.sceneSelection.definition);
       }
-      this.textureManager = new TextureManager(platform);
+      this.textureManager = new TextureManager(platform, {
+        maxBytes: this.qualityProfile.uiTextureBudgetBytes,
+        maxDynamicBytes: this.qualityProfile.dynamicTextureBudgetBytes,
+      });
       this.platformFactory = new PlatformMeshFactory(this.textureManager);
       this.platforms = new PlatformViewRegistry(this.stage.worldRoot, this.platformFactory);
       this.characterSelection = new ContentSelection({
@@ -250,7 +255,11 @@ export class Renderer3D {
     }
     const width = Math.max(1, finite(viewport.width, 1280));
     const height = Math.max(1, finite(viewport.height, 720));
-    const pixelRatio = clamp(finite(viewport.pixelRatio, 1), 0.5, 2);
+    const pixelRatio = clamp(
+      finite(viewport.pixelRatio, 1),
+      0.5,
+      this.qualityProfile?.pixelRatioCap ?? 2,
+    );
     this.viewport = { width, height, pixelRatio, safeArea: viewport.safeArea ?? null };
 
     const safe = viewport.safeArea ?? {};
@@ -535,6 +544,8 @@ export class Renderer3D {
       platformKinds: (this.platforms?.ids?.() ?? []).map((id: string) => ({ id, kind: this.platforms.get(id)?.kind ?? 'unknown' })),
       hud: this.hud?.snapshot?.() ?? null,
       textureFallbackCount: this.textureManager?.fallbackCount ?? 0,
+      quality: this.qualityProfile?.id ?? 'high',
+      resources: this.textureManager?.stats?.() ?? null,
       effects: {
         particles: this.particles?.activeCount?.() ?? 0,
         trailPoints: this.trail?.points?.length ?? 0,

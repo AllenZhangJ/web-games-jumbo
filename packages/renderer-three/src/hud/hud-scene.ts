@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { RENDER3D_COLORS, RENDER3D_DESIGN } from '../constants.js';
-import { createTextureSprite } from '../texture-manager.js';
+import { createTextureSprite, type DynamicCanvasTexture } from '../texture-manager.js';
 
 const PHASE_COPY = Object.freeze({
   ready: '按住下方箭头蓄力，松开起跳',
@@ -44,20 +44,16 @@ function setSpriteTexture(
   fallbackColor: THREE.ColorRepresentation,
   textureManager: any,
 ) {
-  const oldMaterial = sprite.material;
-  textureManager.release(oldMaterial?.map);
-  textureManager.acquire(texture);
-  sprite.material = new THREE.SpriteMaterial({
-    map: texture,
-    color: texture ? 0xffffff : fallbackColor,
-    transparent: true,
-    opacity: texture ? 1 : 0.88,
-    depthTest: false,
-    depthWrite: false,
-    toneMapped: false,
-  });
+  const material = sprite.material as THREE.SpriteMaterial;
+  if (material.map !== texture) {
+    textureManager.release(material.map);
+    textureManager.acquire(texture);
+    material.map = texture;
+  }
+  material.color.set(texture ? 0xffffff : fallbackColor);
+  material.opacity = texture ? 1 : 0.88;
+  material.needsUpdate = true;
   sprite.userData.textureFallback = texture == null;
-  oldMaterial?.dispose?.();
 }
 
 function metric(context: any, label: string, value: unknown, x: number, color: string) {
@@ -128,9 +124,11 @@ export class HudScene {
     this.statusKey = '';
     this.modalKey = '';
     this.contentMenuKey = '';
+    this.contentMenuSurface = null as DynamicCanvasTexture | null;
     this.leftControlKey = '';
     this.rightControlKey = '';
     this.resize(this.viewport);
+    this.prewarmControls();
   }
 
   resize(viewport: any = {}) {
@@ -282,7 +280,8 @@ export class HudScene {
   updateTop(state: any, presentation: any = {}) {
     const summary = presentation.contentSummary ?? {};
     const summaryText = `${summary.gameplayName ?? ''} · ${summary.taskName ?? ''}`;
-    const key = `hud-top:${state.currentValue}:${state.targetValue}:${state.movesRemaining}:${state.phase}:${summaryText}`;
+    const mode = state.phase === 'paused' ? 'paused' : 'active';
+    const key = `hud-top:${state.currentValue}:${state.targetValue}:${state.movesRemaining}:${mode}:${summaryText}`;
     if (key === this.topKey) return;
     this.topKey = key;
     const texture = this.textureManager.get(key, 1420, 176, (context: any) => {
@@ -328,16 +327,24 @@ export class HudScene {
     const key = `hud-status:${copy}:${selected ?? 'none'}:${state.phase}`;
     if (key === this.statusKey) return;
     this.statusKey = key;
-    const texture = this.textureManager.get(key, 1040, 128, (context: any, width: number, height: number) => {
+    const texture = this.statusTexture(key, copy, selected, state.phase);
+    setSpriteTexture(this.status, texture, 0x263238, this.textureManager);
+    if (state.phase === 'charging') {
+      const jumpingKey = `hud-status:${PHASE_COPY.jumping}:${selected ?? 'none'}:jumping`;
+      this.statusTexture(jumpingKey, PHASE_COPY.jumping, selected, 'jumping');
+    }
+  }
+
+  statusTexture(key: string, copy: string, selected: unknown, phase: string) {
+    return this.textureManager.get(key, 1040, 128, (context: any, width: number, height: number) => {
       context.textAlign = 'center';
       context.textBaseline = 'middle';
       context.fillStyle = selected == null ? '#263238' : '#16A6A1';
-      context.globalAlpha = state.phase === 'ready' ? 0.68 : 1;
+      context.globalAlpha = phase === 'ready' ? 0.68 : 1;
       context.font = '700 42px "PingFang SC", "Microsoft YaHei", sans-serif';
       context.fillText(copy, width / 2, height / 2 + 1);
       context.globalAlpha = 1;
     });
-    setSpriteTexture(this.status, texture, 0x263238, this.textureManager);
   }
 
   updateControls(state: any, presentation: any) {
@@ -373,7 +380,13 @@ export class HudScene {
     const keyField = side === 'left' ? 'leftControlKey' : 'rightControlKey';
     if (this[keyField] === key) return;
     this[keyField] = key;
-    const texture = this.textureManager.get(key, 368, 256, (context: any, width: number, height: number, path: any) => {
+    const texture = this.controlTexture(side, active, disabled);
+    setSpriteTexture(sprite, texture, active ? 0x16a6a1 : 0xffffff, this.textureManager);
+  }
+
+  controlTexture(side: 'left' | 'right', active: boolean, disabled: boolean) {
+    const key = `hud-control:${side}:${active ? 1 : 0}:${disabled ? 1 : 0}`;
+    return this.textureManager.get(key, 368, 256, (context: any, width: number, height: number, path: any) => {
       path(context, 18, 18, width - 36, height - 36, 28);
       context.shadowColor = 'rgba(38,50,56,0.18)';
       context.shadowBlur = 12;
@@ -405,7 +418,14 @@ export class HudScene {
       context.lineTo(tipX, tipY + 58);
       context.stroke();
     });
-    setSpriteTexture(sprite, texture, active ? 0x16a6a1 : 0xffffff, this.textureManager);
+  }
+
+  prewarmControls() {
+    (['left', 'right'] as const).forEach((side) => {
+      [false, true].forEach((active) => {
+        [false, true].forEach((disabled) => this.controlTexture(side, active, disabled));
+      });
+    });
   }
 
   updateModal(state: any) {
@@ -443,12 +463,15 @@ export class HudScene {
     this.contentMenu.visible = visible;
     if (!visible) {
       this.contentMenuKey = '';
+      this.releaseContentMenuSurface();
       return;
     }
     const key = `hud-content:${menu.gameplay?.id}:${menu.task?.id}:${menu.character?.id}`;
     if (key === this.contentMenuKey) return;
     this.contentMenuKey = key;
-    const texture = this.textureManager.get(key, 1220, 1220, (context: any, width: number, height: number, path: any) => {
+    const surface = this.ensureContentMenuSurface();
+    if (!surface) return;
+    const painted = surface.paint((context: any, width: number, height: number, path: any) => {
       path(context, 20, 20, width - 40, height - 40, 56);
       context.fillStyle = 'rgba(255,255,255,0.98)';
       context.fill();
@@ -496,7 +519,27 @@ export class HudScene {
       context.font = '800 42px "PingFang SC", "Microsoft YaHei", sans-serif';
       context.fillText('开始游戏', width / 2, height * 0.89);
     });
-    setSpriteTexture(this.contentMenu, texture, 0xffffff, this.textureManager);
+    if (!painted) this.releaseContentMenuSurface();
+  }
+
+  ensureContentMenuSurface(): DynamicCanvasTexture | null {
+    if (this.contentMenuSurface) return this.contentMenuSurface;
+    this.contentMenuSurface = this.textureManager.createDynamic?.('hud-content', 1024, 1024) ?? null;
+    setSpriteTexture(
+      this.contentMenu,
+      this.contentMenuSurface?.texture ?? null,
+      0xffffff,
+      this.textureManager,
+    );
+    return this.contentMenuSurface;
+  }
+
+  releaseContentMenuSurface() {
+    if (!this.contentMenuSurface) return;
+    const surface = this.contentMenuSurface;
+    this.contentMenuSurface = null;
+    setSpriteTexture(this.contentMenu, null, 0xffffff, this.textureManager);
+    surface.dispose();
   }
 
   hitTest(point: any) {
@@ -544,6 +587,7 @@ export class HudScene {
   }
 
   dispose() {
+    this.releaseContentMenuSurface();
     [this.top, this.status, this.modal, this.contentMenu, this.leftControl, this.rightControl].forEach((sprite: THREE.Sprite) => {
       this.textureManager.release(sprite.material?.map);
       sprite.material?.dispose?.();

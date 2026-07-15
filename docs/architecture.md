@@ -190,6 +190,8 @@ v3 只创建一个上屏 WebGL2 Canvas：
 - Mesh、Geometry、Material、Texture 和粒子/拖尾节点必须复用或在移除时显式 `dispose()`。
 - 阴影只覆盖当前游戏区域，只为必要对象开启投射/接收；阴影质量可按设备降级。
 - 不启用后处理拖尾；使用轻量几何与对象池。
+- UI 缓存同时受条目数与 RGBA 估算字节约束；被 Sprite 引用的淘汰纹理延迟销毁。内容菜单使用一个可重绘 DynamicCanvasTexture，并在关闭时释放。
+- HudScene 复用 SpriteMaterial，并在 charging 阶段预热 jumping 所需纹理，避免松开按钮的关键帧创建 CanvasTexture。
 - 三端生产构建继续使用 esbuild/Vite 路径，不引入参考项目的 Webpack 构建。
 
 目标帧率、draw calls、三角形、GPU 内存和包体属于验收指标，只有真实采样后才能勾选，不在架构文档中预填结果。

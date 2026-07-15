@@ -46,15 +46,78 @@ export function createCanvasSurface(platform: any, width: number, height: number
   }
 }
 
+type TexturePainter = (
+  context: any,
+  width: number,
+  height: number,
+  path: typeof roundedRectPath,
+) => void;
+
+export class DynamicCanvasTexture {
+  readonly texture: THREE.CanvasTexture;
+  readonly bytes: number;
+  readonly #surface: NonNullable<ReturnType<typeof createCanvasSurface>>;
+  readonly #onDispose: (resource: DynamicCanvasTexture) => void;
+  #disposed = false;
+
+  constructor(
+    name: string,
+    surface: NonNullable<ReturnType<typeof createCanvasSurface>>,
+    onDispose: (resource: DynamicCanvasTexture) => void,
+  ) {
+    this.#surface = surface;
+    this.#onDispose = onDispose;
+    this.texture = new THREE.CanvasTexture(surface.canvas);
+    this.texture.name = `ui-dynamic:${name}`;
+    this.texture.colorSpace = THREE.SRGBColorSpace;
+    this.texture.minFilter = THREE.LinearFilter;
+    this.texture.magFilter = THREE.LinearFilter;
+    this.texture.generateMipmaps = false;
+    this.bytes = estimateTextureBytes(this.texture);
+  }
+
+  paint(painter: TexturePainter): boolean {
+    if (this.#disposed) return false;
+    const { context, canvas } = this.#surface;
+    try {
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      painter(context, canvas.width, canvas.height, roundedRectPath);
+      this.texture.needsUpdate = true;
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  dispose(): void {
+    if (this.#disposed) return;
+    this.#disposed = true;
+    this.texture.dispose();
+    this.#onDispose(this);
+  }
+}
+
 export class TextureManager {
   [key: string]: any;
-  constructor(platform: any, { maxEntries = 96 } = {}) {
+  constructor(platform: any, {
+    maxEntries = 96,
+    maxBytes = 24 * 1024 * 1024,
+    maxDynamicBytes = 12 * 1024 * 1024,
+  } = {}) {
     this.platform = platform;
     this.maxEntries = Math.max(1, Number.isFinite(maxEntries) ? Math.floor(maxEntries) : 96);
+    this.maxBytes = Math.max(1, Number.isFinite(maxBytes) ? Math.floor(maxBytes) : 24 * 1024 * 1024);
+    this.maxDynamicBytes = Math.max(
+      1,
+      Number.isFinite(maxDynamicBytes) ? Math.floor(maxDynamicBytes) : 12 * 1024 * 1024,
+    );
     this.cache = new Map<string, THREE.Texture>();
     this.references = new Map<THREE.Texture, number>();
     this.pendingDisposal = new Set<THREE.Texture>();
+    this.dynamicTextures = new Set<DynamicCanvasTexture>();
     this.fallbackCount = 0;
+    this.createdTextures = 0;
+    this.createdDynamicTextures = 0;
     this.capability = null;
     this.disposed = false;
   }
@@ -81,7 +144,7 @@ export class TextureManager {
     return this.capability;
   }
 
-  get(key: string, width: number, height: number, painter: (...args: any[]) => void) {
+  get(key: string, width: number, height: number, painter: TexturePainter) {
     if (this.disposed) return null;
     const cacheKey = `${key}@${width}x${height}`;
     const cached = this.cache.get(cacheKey);
@@ -108,6 +171,7 @@ export class TextureManager {
       texture.magFilter = THREE.LinearFilter;
       texture.generateMipmaps = false;
       texture.needsUpdate = true;
+      this.createdTextures += 1;
     } catch {
       this.fallbackCount += 1;
       return null;
@@ -115,6 +179,27 @@ export class TextureManager {
     this.cache.set(cacheKey, texture);
     this.evictOverflow();
     return texture;
+  }
+
+  createDynamic(key: string, width: number, height: number): DynamicCanvasTexture | null {
+    if (this.disposed) return null;
+    const requestedBytes = Math.max(0, Math.floor(width)) * Math.max(0, Math.floor(height)) * 4;
+    const dynamicBytes = this.dynamicBytes();
+    if (requestedBytes <= 0 || dynamicBytes + requestedBytes > this.maxDynamicBytes) {
+      this.fallbackCount += 1;
+      return null;
+    }
+    const surface = createCanvasSurface(this.platform, width, height);
+    if (!surface) {
+      this.fallbackCount += 1;
+      return null;
+    }
+    const resource = new DynamicCanvasTexture(key, surface, (disposed) => {
+      this.dynamicTextures.delete(disposed);
+    });
+    this.dynamicTextures.add(resource);
+    this.createdDynamicTextures += 1;
+    return resource;
   }
 
   platformLabel({ operation = '—', preview = '', selected = false, muted = false }: any) {
@@ -145,7 +230,7 @@ export class TextureManager {
   }
 
   evictOverflow() {
-    while (this.cache.size > this.maxEntries) {
+    while (this.cache.size > this.maxEntries || this.cacheBytes() > this.maxBytes) {
       const oldest = this.cache.entries().next().value;
       if (!oldest) break;
       const [oldestKey, texture] = oldest;
@@ -153,6 +238,20 @@ export class TextureManager {
       if ((this.references.get(texture) ?? 0) > 0) this.pendingDisposal.add(texture);
       else texture.dispose();
     }
+  }
+
+  cacheBytes(): number {
+    return [...this.cache.values()].reduce(
+      (total: number, texture: THREE.Texture) => total + estimateTextureBytes(texture),
+      0,
+    );
+  }
+
+  dynamicBytes(): number {
+    return [...this.dynamicTextures].reduce(
+      (total: number, resource: DynamicCanvasTexture) => total + resource.bytes,
+      0,
+    );
   }
 
   acquire(texture: THREE.Texture | null | undefined) {
@@ -174,27 +273,43 @@ export class TextureManager {
 
   stats() {
     const cachedTextures = [...this.cache.values()];
+    const cacheBytes = cachedTextures.reduce(
+      (total: number, texture: THREE.Texture) => total + estimateTextureBytes(texture),
+      0,
+    );
+    const pendingBytes = [...this.pendingDisposal].reduce(
+      (total: number, texture: THREE.Texture) => total + estimateTextureBytes(texture),
+      0,
+    );
+    const dynamicBytes = this.dynamicBytes();
     return Object.freeze({
       cacheEntries: this.cache.size,
-      cacheBytes: cachedTextures.reduce(
-        (total: number, texture: THREE.Texture) => total + estimateTextureBytes(texture),
-        0,
-      ),
+      cacheBytes,
+      pendingBytes,
+      dynamicTextures: this.dynamicTextures.size,
+      dynamicBytes,
+      totalBytes: cacheBytes + pendingBytes + dynamicBytes,
       referencedTextures: this.references.size,
       pendingDisposals: this.pendingDisposal.size,
       fallbackCount: this.fallbackCount,
+      createdTextures: this.createdTextures,
+      createdDynamicTextures: this.createdDynamicTextures,
       maxEntries: this.maxEntries,
+      maxBytes: this.maxBytes,
+      maxDynamicBytes: this.maxDynamicBytes,
     });
   }
 
   dispose() {
     if (this.disposed) return;
     this.disposed = true;
+    [...this.dynamicTextures].forEach((resource: DynamicCanvasTexture) => resource.dispose());
     const textures = new Set([...this.cache.values(), ...this.pendingDisposal]);
     textures.forEach((texture: THREE.Texture) => texture.dispose());
     this.cache.clear();
     this.pendingDisposal.clear();
     this.references.clear();
+    this.dynamicTextures.clear();
   }
 }
 

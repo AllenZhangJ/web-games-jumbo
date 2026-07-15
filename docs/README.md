@@ -34,6 +34,7 @@
 - [渲染性能专项路线图](governance/render-performance/roadmap.md)
 - [渲染性能基线](governance/render-performance/baseline.md)
 - [渲染性能专项状态](governance/render-performance/status.md)
+- [渲染性能第二批验证](governance/render-performance/batch-2-verification.md)
 - [贡献与提交规范](../CONTRIBUTING.md)
 
 ## 架构决策
