@@ -3,6 +3,7 @@ import * as THREE from 'three';
 const MAX_PARTICLES = 72;
 
 export class ParticleBurst {
+  [key: string]: any;
   constructor(root) {
     this.root = root;
     this.geometry = new THREE.TetrahedronGeometry(0.075, 0);

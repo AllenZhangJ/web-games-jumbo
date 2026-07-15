@@ -56,6 +56,18 @@
 - `npm audit` 为 0 个已知漏洞；`git diff --check` 通过。
 - 未完成：覆盖率阈值、测试 strict、真实 pagehide/pageshow、WebGL 完整恢复和小游戏真机证据。
 
+第三批 P6–P8 收口前证据：
+
+- Node 兼容/集成 40/40；workspace Vitest 84/84；合计 124/124。
+- Renderer、Content、Feedback 进入 private TypeScript workspaces，旧 `src/render3d` JS 删除。
+- Scene/Character 生产注册、10 角色测试容量、切换/回退/销毁和 ContextLifecycle 通过。
+- 程序化声音、震动、独立开关、设置持久化与平台失败隔离通过。
+- lint、typecheck、30,000 seed、Web/微信/抖音构建通过。
+- Web JS 643,245 bytes，Vite 报告 gzip 168.80 kB。
+- 390×844 左右连续长按成功落地、镜头过渡、单 Canvas、禁止选择和 console 0 error/warn 通过。
+- 依赖审计 0 个已知漏洞。
+- 明确保留到第四批：Renderer/测试统一 strict、覆盖率、soak、真实生命周期和小游戏真机证据。
+
 自动化覆盖的主要风险见 [仓库结构中的测试地图](repository-structure.md#tests测试地图)。
 
 ## 每批开发的强制验证顺序

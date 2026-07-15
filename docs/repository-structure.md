@@ -1,116 +1,94 @@
 # 仓库结构与模块目录
 
-本文描述第二批 P3–P5 已验证的实际结构；第三、四批目标不会提前写成现状。
+本文描述第三批 P6–P8 已验证的实际结构，不把第四批目标提前写成现状。
 
-## 根目录
+## 根目录与依赖方向
 
 | 路径 | 当前职责 |
 |---|---|
-| `packages/` | private TypeScript workspaces，承载契约、难度、跳跃内核、玩法和应用编排。 |
-| `src/render3d/` | 现有 Three.js 表现；第三批迁移与拆分对象。 |
-| `src/platform/` | Web、微信、抖音宿主能力；第四批迁移对象。 |
-| `src/entry/` | 组合根与三端入口；第四批迁移对象。 |
-| `tests/` | 仍由 Node 运行的兼容、平台、渲染、架构和基线测试。 |
-| `scripts/build.mjs` | Web、微信、抖音统一构建；第四批迁移对象。 |
-| `docs/`、`licenses/` | 当前事实、治理、ADR、验收和许可证。 |
+| `packages/` | private TypeScript 模块化单体。 |
+| `src/platform/` | Web、微信、抖音宿主适配；第四批迁移 TS。 |
+| `src/entry/` | 三端入口和唯一具体组合根；第四批迁移 TS。 |
+| `src/config.js` | 剩余表现迁移配置；第四批消除。 |
+| `tests/` | 7 个 Node 兼容/平台/架构/基线 JS 测试；第四批迁移。 |
+| `scripts/build.mjs` | 三端构建；第四批迁移。 |
 
-`src/core/` 与 `src/runtime/` 的旧 JavaScript 实现已在第二批删除；不存在双实现或转发兼容层。
-
-## workspace 依赖方向
+`src/core`、`src/runtime`、`src/render3d` 的旧 JS 已依批次删除，没有双实现。
 
 ```text
-game-contracts
-      ↑
- difficulty       jump-engine
-      ↑                ↑
-      └──── gameplay ──┘
-                  ↑
-             application
-                  ↑
-       src/entry/compose-game.js
-          ┌───────┴────────┐
-     render3d            platform
+game-contracts       jump-engine
+   ↑    ↑                 ↑
+content feedback      gameplay ← difficulty
+   ↑       ↑             ↑
+renderer-three     application
+        ↑             ↑
+        └── src/entry/compose-game.js ── src/platform
 ```
 
-包全部为 `private: true`。架构测试拒绝反向依赖、Three.js/DOM/`window`/`wx`/`tt` 泄漏和未声明依赖。
+Domain/Application/Content/Feedback 禁止依赖 Three 和宿主全局；Renderer 可以依赖 Three，但禁止 DOM、`window`、`wx`、`tt`。架构测试核对每个包的 private 属性和精确依赖方向。
 
-## `packages/game-contracts`
+## 领域与应用包
 
-- 版本化 Gameplay、Task、Character 定义。
-- Command、Event、Snapshot。
-- Renderer、Feedback、Storage、Clock 小型 Port。
-- 无游戏实现、Three.js 或平台全局对象。
+- `game-contracts`：Gameplay/Task/Scene/Character、Command/Event/Snapshot 和小型 Port。
+- `difficulty`：easy/normal/hard 版本化校验与迁移投影，只开放 normal。
+- `jump-engine`：RNG、几何、轨迹、碰撞、WorldState。
+- `gameplay`：运算、求解、GameState、GameplayRegistry、TaskRegistry。
+- `application`：GameSession、CommandHandler、FixedStepClock、LifecycleController、EventCollector、SnapshotFactory 和 NumberStrategyGame。
 
-## `packages/difficulty`
+玩法/任务注册表有 5+5 容量证明，且生产 GameSession 实际按注入 ID 选择定义。
 
-- `easy@1`、`normal@1`、`hard@1` 的 Schema、注册与冻结。
-- 当前只对玩家开放 `normal@1`。
-- 暂时保留向现有规则、物理、世界参数形状投影的函数；后续配置治理再收窄。
+## `packages/content`
 
-## `packages/jump-engine`
+- SceneDefinition/SceneRegistry：主题、雾、光照和 rendererKey。
+- CharacterDefinition/CharacterRegistry：资源 Manifest、动画集合、rendererKey、缩放与主色。
+- ContentSelection：切换时先成功创建新资源再销毁旧资源；缺失 ID 或资源创建失败回退默认内容；销毁幂等。
+- 默认场景和默认程序化红色角色进入生产 Renderer。
+- 测试注册 10 个版本化程序角色 Manifest，并覆盖切换、缺失回退、加载失败回退和逐项销毁。
 
-| 文件 | 职责 |
+这证明可扩展容量，不代表已交付 10 个正式美术角色。
+
+## `packages/feedback`
+
+- FeedbackController 从 GameEvent 映射 jump/land/miss/win/restart 声音与轻/重震动。
+- 声音与震动默认开启，可独立关闭；`feedback-settings@1` 经 Storage 小端口本地保存。
+- AudioFactorySoundPort 运行时生成原创 WAV 提示音，不引入第三方音频资产。
+- 声音、震动、存储不可用或抛错时静默降级并累积诊断，不阻断 Renderer 或游戏循环。
+- 组合根把 Web/小游戏现有 `createAudio`、`vibrate`、`storageGet/storageSet` 绑定到小端口。
+
+当前没有 HUD 设置页面；设置由 FeedbackController API 管理。第四批可在存档/设置入口暴露，不改变反馈内部边界。
+
+## `packages/renderer-three`
+
+| 模块 | 职责 |
 |---|---|
-| `rng.ts` | 可快照、恢复的确定性随机数。 |
-| `geometry.ts` | 向量、插值、矩形足迹和射线区间。 |
-| `physics.ts` | 蓄力、目标窗口、解析轨迹采样和顶面碰撞。 |
-| `world-state.ts` | 平台 ID、当前/候选/历史拓扑、玩家位置和落地事务。 |
+| `renderer3d.ts` | RendererPort 外观、快照/事件入口、渲染顺序、诊断与组合。 |
+| `stage.ts` | World Scene、地面与 SceneDefinition 应用。 |
+| `camera-rig.ts` | 正交相机、手机构图和共享进度过渡。 |
+| `lighting-rig.ts` | SceneDefinition 驱动的灯光和阴影。 |
+| `platform-mesh-factory.ts`、`platform-view-registry.ts` | 平台 Mesh、稳定 ID 同步、回收和销毁。 |
+| `character-rig.ts` | CharacterDefinition 驱动的程序化 Rig、蓄力、空翻和失败姿态。 |
+| `character-renderer-registry.ts`、`scene-renderer-registry.ts` | 将内容 `rendererKey` 映射为具体 Three 工厂，拒绝未知/重复渲染器。 |
+| `hud/hud-scene.ts` | 单 Canvas HUD、左右按钮、安全区和结果覆盖层。 |
+| `texture-manager.ts`、`dispose.ts` | Canvas 纹理、引用、延迟淘汰和容错销毁。 |
+| `effects/*` | 有界粒子和拖尾。 |
+| `context-lifecycle.ts` | WebGL context lost/restored 监听与幂等解绑。 |
 
-该包可在 Node 独立运行，不依赖 Three.js、DOM、Renderer 或平台 API。
+Renderer 直接实现 `render(snapshot, events)`，不再由入口把可变 GameState/WorldState 传给 `draw`。为保持第三批可运行迁移，其源码当前为 `.ts` 但 tsconfig 暂时关闭 strict 并含宽松索引签名；第四批必须逐模块声明具体类型、删除宽松规则并通过统一 strict 门禁。
 
-## `packages/gameplay`
+## 剩余 `src`
 
-| 文件 | 职责 |
-|---|---|
-| `operations.ts` | 运算、候选生成、目标距离和受限深度求解。 |
-| `game-state.ts` | 当前数值玩法的回合、蓄力阶段、步数与胜负状态机。 |
-| `registry.ts` | 版本化 GameplayRegistry、TaskRegistry，内置数值跳跃玩法和到达目标任务。 |
+- `entry/launch-game.js`：并发启动 generation、过期实例销毁和错误回调。
+- `entry/compose-game.js`：绑定 Application、Renderer、Feedback、Storage 与具体平台。
+- `platform/*.js`：Canvas、输入、帧、生命周期、WebGL2、音频、震动、存储和分享。
 
-注册表测试证明 5 个玩法与 5 个任务定义可静态注册、按版本查询和拒绝重复；应用组件测试证明实际会话可按注入 ID 选择玩法与任务，不需要修改主循环。治理不等于已经制作 5 个正式内容。
+当前剩余 13 个 `src/**/*.js`、7 个 `tests/*.js` 和 1 个 `scripts/build.mjs`，全部属于第四批零 JS 范围。
 
-## `packages/application`
+## 测试地图与证据
 
-| 文件 | 职责 |
-|---|---|
-| `number-strategy-game.ts` | 用例编排、输入到 Command 的映射、跳跃/落地事务和端口协调。 |
-| `game-session.ts` | 难度、玩法、任务、规则、世界和表现会话的组合。 |
-| `command-handler.ts` | Command 边界校验与分派。 |
-| `fixed-step-clock.ts` | 60Hz 累积、时间上限和前后台 rebase。 |
-| `lifecycle-controller.ts` | 显式应用生命周期转换。 |
-| `event-collector.ts` | 有序、一次性消费的领域/应用事件。 |
-| `snapshot-factory.ts` | Renderer 可消费的只读 GameSnapshot。 |
-| `bootstrap.ts` | 可复用启动协调。 |
+- workspace Vitest 84 项：Contracts、Difficulty、Jump Engine、Gameplay、Application、Content、Feedback、Renderer。
+- Node 兼容/集成 40 项：基线、30,000 seed、入口、平台、IIFE、架构和文档。
+- 合计 124 项。
+- 三端构建：Web、微信、抖音通过。
+- Web 包：643,245 bytes，Vite 报告 gzip 168.80 kB。
 
-应用通过 Platform、Renderer、Feedback、Storage Port 依赖外部能力。Feedback 失败不会阻断帧或 Renderer；Storage 已注入但要到第四批 P9 才用于版本化存档。
-
-## `src` 的剩余边界
-
-- `src/entry/launch-game.js` 只接受注入的 `createGame`，不再导入具体 Application 或 Renderer。
-- `src/entry/compose-game.js` 是唯一具体组合根，把 Application、Renderer3D 与平台绑定。
-- `src/render3d/` 只通过 `render(snapshot, events)` 读取应用结果；内部暂时仍把快照转换为既有绘制形状。
-- `src/platform/` 仍独占 DOM、`wx.*`、`tt.*` 和设备能力。
-- `src/config.js` 仍含表现配置与迁移配置，属于第三/四批拆分范围。
-
-## 测试地图
-
-| 位置 | 当前覆盖 |
-|---|---|
-| `packages/jump-engine/test` | 轨迹、碰撞、边界、世界事务、快照隔离。 |
-| `packages/gameplay/test` | 运算、求解、状态机、问题 seed、注册容量。 |
-| `packages/application/test` | Command、Clock、Lifecycle、Event、Snapshot、输入、帧、竞态、失败隔离和主流程。 |
-| `packages/difficulty/test` | 三档校验、冻结、默认开放策略。 |
-| `packages/game-contracts/test` | 版本键和契约边界。 |
-| `tests/*.test.js` | v0.1.0 基线、30,000 seed、入口/平台/Renderer/架构和文档。 |
-
-第二批共有 114 项测试（62 项 workspace Vitest、52 项 Node 兼容/集成测试）。`packages/*/src` 已 strict TypeScript；迁移后的包测试目前由过渡 `tsconfig.tests.json` 类型检查但尚未全部开启 strict，第四批必须与所有剩余测试一起严格化并删除该过渡。
-
-## 构建产物
-
-`npm run build` 先构建 workspaces，再生成：
-
-- `dist/web`：Vite Web 静态站点和 source map。
-- `dist/wechat/game.js`：微信 IIFE。
-- `dist/douyin/game.js`：抖音 IIFE。
-- 三端第三方通知与许可证。
-
-`dist/`、`node_modules/` 和 workspace 编译产物不进入 Git。
+测试 TS 文件仍由过渡非 strict `tsconfig.tests.json` 检查；覆盖率阈值、资源 soak 和统一 strict 属于第四批。

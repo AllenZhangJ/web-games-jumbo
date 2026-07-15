@@ -51,7 +51,7 @@ Web / 微信 / 抖音输入、画布与生命周期
         同一上屏 WebGL2 Canvas
 ```
 
-依赖只能沿图中方向流动。`render3d` 可以读取快照，不能持有并修改 `GameState` 或 `WorldState`。
+依赖只能沿图中方向流动。`packages/renderer-three` 可以读取快照，不能持有并修改 `GameState` 或 `WorldState`。
 
 ## 真相层与坐标
 
@@ -82,38 +82,40 @@ Web / 微信 / 抖音输入、画布与生命周期
 Application 是唯一编排者：
 
 - 将平台输入转为锁定候选、蓄力、起跳、暂停、继续和重开。
-- 以固定步长更新解析轨迹并让 Core 提交碰撞结果。
-- 将 Core 状态组装为每帧只读快照，同时提供局部表现参数，例如蓄力比例、跳跃进度和一次性落地/失败事件。
-- 只有 Runtime/Core 可以推进游戏状态；Renderer 的异步加载或动画不能阻塞或篡改逻辑结果。
+- 以固定步长更新解析轨迹并让 Gameplay/Jump Engine 提交碰撞结果。
+- 将领域状态组装为每帧只读快照和一次性事件。
+- 只有 Application/Domain 可以推进游戏状态；Renderer 的异步加载或动画不能阻塞或篡改逻辑结果。
 
-### `src/render3d`
+### `packages/renderer-three`
 
-`Renderer3D` 是 Runtime 能看到的唯一三维渲染外观。目标接口：
+`Renderer3D` 是 Application 能看到的唯一三维渲染外观。当前接口：
 
 ```text
-constructor(canvas, platform)
+constructor(canvas, platform, rendererOptions)
 load()
 resize()
 toDesignPoint(rawPoint)
 hitTest(rawPoint)
-draw(state, world, presentation = {})
+render(snapshot, events)
+selectCharacter(characterId)
 getDebugSnapshot()
 dispose() / destroy()
 ```
 
-Runtime 不得直接操作内部 Scene、Camera、Mesh、Material 或 Tween。
+Application 不得直接操作内部 Scene、Camera、Mesh、Material 或 Tween。
 
 | 模块 | 责任 |
 |---|---|
-| `renderer3d.js` | 初始化、资源加载、尺寸变更、快照同步、两个 Scene 的渲染顺序、调试快照和销毁。 |
-| `stage.js` | `WebGLRenderer`、世界 Scene、HUD Scene、上下文生命周期。 |
-| `camera-rig.js` | 正交相机、长屏/宽屏构图，以及与世界原点共享进度的连续世界跟随。 |
-| `lighting-rig.js` | 背景、环境光、方向光、接收平面和受限的阴影区域。 |
-| `platform-mesh-factory.js` | 以现代 `BufferGeometry` 创建 Cube/Cylinder/原创特殊平台。 |
-| `platform-view-registry.js` | 维护稳定的平台 ID→Mesh 映射，负责新建、晋升、淘汰、回收与 dispose。 |
-| `character-rig.js` | 角色几何层级与局部形变；根节点位置只来自 Core 轨迹。 |
+| `renderer3d.ts` | 初始化、快照/事件入口、两个 Scene 的渲染顺序、内容选择、诊断和销毁。 |
+| `stage.ts` | 世界 Scene、地面和 SceneDefinition。 |
+| `context-lifecycle.ts` | 上下文丢失/恢复监听和幂等解绑。 |
+| `camera-rig.ts` | 正交相机、长屏/宽屏构图，以及与世界原点共享进度的连续世界跟随。 |
+| `lighting-rig.ts` | SceneDefinition 驱动的环境光、方向光和受限阴影。 |
+| `platform-mesh-factory.ts` | 以现代 `BufferGeometry` 创建 Cube/Cylinder/原创特殊平台。 |
+| `platform-view-registry.ts` | 维护稳定的平台 ID→Mesh 映射，负责新建、晋升、淘汰、回收与 dispose。 |
+| `character-rig.ts` | CharacterDefinition 驱动的几何层级与局部形变；根节点位置只来自领域轨迹。 |
 | `effects/*` | 拖尾、粒子和失败附加动画；使用可回收对象且不决定碰撞。 |
-| `hud/hud-scene.js` | 当前值、目标、步数、安全区底部左右箭头、暂停/重开与结算覆盖层。 |
+| `hud/hud-scene.ts` | 当前值、目标、步数、安全区底部左右箭头、暂停/重开与结算覆盖层。 |
 
 ### `src/platform`
 
@@ -141,7 +143,7 @@ v3 只创建一个上屏 WebGL2 Canvas：
 
 ### 快照同步
 
-每帧 `draw(state, world, presentation)` 只允许三类输入：
+每帧 `render(snapshot, events)` 只允许只读状态/世界/表现快照与一次性事件：
 
 - `state`：数值、回合、步数、阶段和胜负。
 - `world`：平台快照、稳定 ID 和玩家绝对位置。
@@ -176,7 +178,7 @@ v3 只创建一个上屏 WebGL2 Canvas：
 - v3 使用现代 Three.js `WebGLRenderer`，以可创建 `webgl2` 上下文为运行前提。
 - 初始化失败必须显示/上报可诊断错误，不能仅留黑屏。
 - 窗口尺寸、DPR 和安全区变化由 `resize()` 统一提交到 Renderer、相机与 HUD。
-- 上下文丢失时暂停继续渲染；恢复时重建 GPU 资源并从 Core 快照重同步，不从 Mesh 恢复玩法状态。
+- 上下文丢失时跳过渲染；当前恢复处理会重置渲染时间、刷新阴影并从后续快照继续同步，不从 Mesh 恢复玩法状态。完整 GPU 资源重建仍是待验证/待补强项。
 - 微信/抖音的上下文丢失事件支持程度必须真机测量；在此之前不宣称恢复流程已通过。
 
 ## 性能与资源边界

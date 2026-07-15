@@ -63,7 +63,7 @@ function metric(context, label, value, x, color) {
   context.fillText(`${label} ${value}`, x, 80);
 }
 
-function normalizeSafeRect(viewport = {}) {
+function normalizeSafeRect(viewport: any = {}) {
   const width = Math.max(1, finite(viewport.width, 1));
   const height = Math.max(1, finite(viewport.height, 1));
   const safe = viewport.safeArea ?? {};
@@ -81,6 +81,7 @@ function normalizeSafeRect(viewport = {}) {
 }
 
 export class HudScene {
+  [key: string]: any;
   constructor(textureManager) {
     this.textureManager = textureManager;
     this.scene = new THREE.Scene();
@@ -117,7 +118,7 @@ export class HudScene {
     this.resize(this.viewport);
   }
 
-  resize(viewport = {}) {
+  resize(viewport: any = {}) {
     const width = Math.max(1, finite(viewport.width, 1));
     const height = Math.max(1, finite(viewport.height, 1));
     this.viewport = { width, height, safeArea: viewport.safeArea ?? null };
@@ -203,7 +204,7 @@ export class HudScene {
     };
   }
 
-  update(state = {}, presentation = {}) {
+  update(state: any = {}, presentation: any = {}) {
     this.controlState = {
       phase: state.phase ?? 'ready',
       selectedChoice: presentation.selectedChoice ?? state.selectedChoice ?? null,

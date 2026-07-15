@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { clamp, dampFactor, easeOutBack, RENDER3D_COLORS } from './constants.js';
 
 export class PlatformViewRegistry {
+  [key: string]: any;
   constructor(root, factory) {
     this.root = root;
     this.factory = factory;
@@ -9,7 +10,7 @@ export class PlatformViewRegistry {
     this.tempColor = new THREE.Color();
   }
 
-  sync(platforms, context = {}, deltaSeconds = 0) {
+  sync(platforms, context: any = {}, deltaSeconds = 0) {
     const activeIds = new Set();
     const candidates = Array.isArray(context.candidates) ? context.candidates.filter(Boolean) : [];
     const renderPlatforms = Array.isArray(platforms)

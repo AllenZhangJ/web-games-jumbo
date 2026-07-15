@@ -40,6 +40,7 @@ export function createCanvasSurface(platform, width, height) {
 }
 
 export class TextureManager {
+  [key: string]: any;
   constructor(platform, { maxEntries = 96 } = {}) {
     this.platform = platform;
     this.maxEntries = Math.max(1, Number.isFinite(maxEntries) ? Math.floor(maxEntries) : 96);
@@ -111,7 +112,7 @@ export class TextureManager {
 
   platformLabel({ operation = '—', preview = '', selected = false, muted = false }) {
     const key = `platform:${operation}:${preview}:${selected ? 1 : 0}:${muted ? 1 : 0}`;
-    return this.get(key, 512, 192, (context, width, height, path) => {
+    return this.get(key, 512, 192, (context, width, height) => {
       context.textAlign = 'center';
       context.textBaseline = 'middle';
       context.fillStyle = muted ? '#858b94' : selected ? RENDER3D_COLORS.cyan : RENDER3D_COLORS.label;

@@ -54,6 +54,27 @@ export interface CharacterAssetManifest {
   readonly audio: readonly string[];
 }
 
+export interface SceneTheme {
+  readonly background: number;
+  readonly floor: number;
+  readonly fogNear: number;
+  readonly fogFar: number;
+}
+
+export interface SceneLighting {
+  readonly hemisphereSky: number;
+  readonly hemisphereGround: number;
+  readonly hemisphereIntensity: number;
+  readonly directionalColor: number;
+  readonly directionalIntensity: number;
+}
+
+export interface SceneDefinition extends VersionedDefinition {
+  readonly rendererKey: string;
+  readonly theme: SceneTheme;
+  readonly lighting: SceneLighting;
+}
+
 export interface CharacterAnimationSet {
   readonly idle: string;
   readonly charging: string;
@@ -63,9 +84,11 @@ export interface CharacterAnimationSet {
 }
 
 export interface CharacterDefinition extends VersionedDefinition {
+  readonly rendererKey: string;
   readonly assetManifest: CharacterAssetManifest;
   readonly animationSet: CharacterAnimationSet;
   readonly visualScale: number;
+  readonly primaryColor: number;
 }
 
 export type GameCommand =

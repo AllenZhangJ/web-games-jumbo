@@ -43,7 +43,7 @@ requestFrame
   → 请求下一帧
 ```
 
-快照携带真实 `gameplayId`、`taskId`、难度版本、规则状态、世界快照和表现状态。Renderer 不能持有或改写 GameState/WorldState。Feedback 异常会被记录但不阻断绘制；连续 3 帧不可恢复错误会进入明确的 `failed` 生命周期并解绑输入。
+快照携带真实 `gameplayId`、`taskId`、难度版本、规则状态、世界快照和表现状态。Renderer 不能持有或改写 GameState/WorldState。FeedbackController 按事件触发声音/震动并读取独立持久化开关；任何反馈异常只进入诊断，不阻断绘制。连续 3 帧不可恢复错误会进入明确的 `failed` 生命周期并解绑输入。
 
 ## 成功落地事务
 
@@ -93,7 +93,7 @@ requestFrame
 ## 仍未完成或证据不足
 
 - `NumberStrategyGame` 仍拥有当前跳跃应用族的输入映射与事务，这是有意的 Application 内聚，不是通用所有玩法的万能循环。
-- Renderer 内部拆分、场景/角色 Manifest、资源恢复和 FeedbackController 属于第三批。
+- Renderer、Scene/Character Manifest 和 FeedbackController 已在第三批拆分；WebGL context 恢复后的全 GPU 资源重建仍缺真实宿主证据。
 - Storage 已是端口但尚无 SaveEnvelope、迁移和回放，属于第四批。
 - pagehide/pageshow、真实 WebGL context lost/restored 和微信/抖音真机生命周期仍缺少当前批次端到端证据。
 - 测试还没有覆盖率阈值；过渡测试 tsconfig 尚未 strict。

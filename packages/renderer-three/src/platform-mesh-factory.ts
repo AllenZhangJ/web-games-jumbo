@@ -9,7 +9,7 @@ function shadowMesh(mesh) {
 }
 
 /** @param {number} [color] */
-function platformMaterial(color = RENDER3D_COLORS.platform) {
+function platformMaterial(color: number = RENDER3D_COLORS.platform) {
   return new THREE.MeshStandardMaterial({
     color,
     roughness: 0.82,
@@ -23,6 +23,7 @@ function finite(value, fallback) {
 }
 
 export class PlatformMeshFactory {
+  [key: string]: any;
   constructor(textureManager) {
     this.textureManager = textureManager;
     this.boxGeometry = new THREE.BoxGeometry(1, 1, 1);
@@ -103,7 +104,7 @@ export class PlatformMeshFactory {
     };
   }
 
-  updateLabel(view, platform, { selected = false, currentValue = null } = {}) {
+  updateLabel(view, platform, { selected = false } = {}) {
     const isCandidate = platform.role === 'candidate';
     const labelKey = isCandidate
       ? `candidate:${platform.operation?.label ?? '—'}:${platform.preview ?? ''}:${selected}`

@@ -40,20 +40,23 @@
 - 蓄力形变、空翻、拖尾、粒子和失败表现。
 - 相机和世界原点使用同一过渡进度平滑推进。
 - 底部左右按钮根据相机投影映射屏幕左右候选。
+- Scene/Character 已版本化注册，默认程序化内容进入生产 Renderer；10 角色 Manifest 容量、切换、回退和销毁已有测试。
 
 ### 平台
 
 - Web、微信和抖音画布与 WebGL2 适配。
 - 指针/触摸输入、帧循环、尺寸与安全区、前后台回调。
 - 平台层已暴露声音、震动、存储和分享能力。
+- GameEvent 已驱动程序化声音与震动；两者默认开启、可独立关闭并版本化本地保存。
 - Web 已阻止 Canvas 长按菜单、文本选择和拖拽默认行为。
 
 ### 质量基础
 
-- 当前为 114 项自动化测试（52 项 Node 兼容/集成测试和 62 项 TypeScript workspace 测试）。
+- 当前为 124 项自动化测试（40 项 Node 兼容/集成测试和 84 项 TypeScript workspace 测试）。
 - 三档难度各有 10,000 seed 的可解性验证，默认 normal 还有固定 seed 与完整获胜回放基线。
 - Core、Runtime、Difficulty、Gameplay、Task、Jump Engine 的维护源码已经迁移为 strict TypeScript，旧 Core/Runtime JS 已删除。
 - GameplayRegistry/TaskRegistry 已接入 GameSession，测试证明 5+5 静态容量及按 ID 选择实际定义。
+- Renderer、Content、Feedback 已迁入 TypeScript workspaces，旧 `src/render3d` JS 已删除。
 - `npm run lint`、`npm run typecheck` 和包依赖边界已成为累积门禁。
 - `npm run build` 同时生成 Web、微信和抖音产物。
 - 架构测试会检查 Core/Runtime 与平台 API 泄漏、小游戏 DOM 泄漏和 IIFE 可打包性。
@@ -62,15 +65,13 @@
 ## 当前没有完成的能力
 
 - 只有一个正式玩法、一个任务类型和一个角色。
-- 场景、角色和反馈还不是可注册内容包。
-- 平台声音与震动能力尚未被独立 Feedback 系统消费。
 - 平台存储能力尚未形成版本化游戏存档。
 - 没有回放、存档迁移、诊断导出或匿名遥测。
-- Renderer、平台、入口、Node 兼容测试和构建脚本仍为 JavaScript 并受 checkJs/现有测试约束；第四批前尚未达到全面 TypeScript。
+- 平台、入口、Node 兼容测试和构建脚本仍为 JavaScript；Renderer 虽为 `.ts`，仍含过渡宽松类型，第四批前尚未达到全面 strict TypeScript。
 - workspace 测试虽为 `.ts`，当前过渡测试 tsconfig 尚未 strict；第四批必须严格化。
 - 尚无覆盖率阈值和 CI 门禁。
 - 微信/抖音 iOS 与 Android 真机验收仍缺少当前版本证据。
-- WebGL 上下文恢复当前只清理时间并刷新阴影标记，没有证明完整 GPU 资源重建。
+- WebGL 上下文监听和恢复后重同步入口已独立，但尚未证明所有 GPU 资源在真机完整重建。
 
 ## 目标扩展能力
 

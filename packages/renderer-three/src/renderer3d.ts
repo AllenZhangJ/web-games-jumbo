@@ -1,5 +1,13 @@
 import * as THREE from 'three';
-import { CharacterRig } from './character-rig.js';
+import {
+  ContentSelection,
+  DEFAULT_CHARACTER,
+  DEFAULT_SCENE,
+  createBuiltinCharacterRegistry,
+  createBuiltinSceneRegistry,
+} from '@number-strategy/content';
+import { createBuiltinCharacterRendererRegistry } from './character-renderer-registry.js';
+import { ContextLifecycle } from './context-lifecycle.js';
 import {
   CAMERA_DEFAULTS,
   clamp,
@@ -13,7 +21,7 @@ import { TailTrail } from './effects/tail-trail.js';
 import { HudScene } from './hud/hud-scene.js';
 import { PlatformMeshFactory } from './platform-mesh-factory.js';
 import { PlatformViewRegistry } from './platform-view-registry.js';
-import { Stage } from './stage.js';
+import { createBuiltinSceneRendererRegistry } from './scene-renderer-registry.js';
 import { TextureManager } from './texture-manager.js';
 
 function finite(value, fallback = 0) {
@@ -35,7 +43,7 @@ function worldPlatforms(world) {
   ].filter(Boolean);
 }
 
-export function screenChoiceControlMap(candidates = [], camera, origin = {}) {
+export function screenChoiceControlMap(candidates = [], camera, origin: any = {}) {
   const fallback = { left: 0, right: 1 };
   if (!camera || !Array.isArray(candidates) || candidates.length < 2) return fallback;
   const originX = finite(origin?.x);
@@ -95,7 +103,8 @@ function normalizePresentation(state, presentation, missProgress) {
  * the supplied game or world objects.
  */
 export class Renderer3D {
-  constructor(canvas, platform) {
+  [key: string]: any;
+  constructor(canvas, platform, options: any = {}) {
     if (!canvas || typeof canvas.getContext !== 'function') {
       throw new TypeError('Renderer3D 需要可用的 Canvas。');
     }
@@ -116,7 +125,7 @@ export class Renderer3D {
     this.ready = false;
     this.disposed = false;
     this.contextLost = false;
-    this.contextListeners = [];
+    this.contextLifecycle = null;
     this.transform = null;
     this.viewport = null;
     this.visualOrigin = new THREE.Vector3();
@@ -132,27 +141,26 @@ export class Renderer3D {
     this.errorCount = 0;
     this.consecutiveDrawErrors = 0;
     this.lastError = null;
-    this.handleContextLost = (event) => {
-      event?.preventDefault?.();
-      if (this.disposed) return;
-      this.contextLost = true;
-    };
-    this.handleContextRestored = () => {
-      if (this.disposed) return;
-      this.contextLost = false;
-      this.lastTime = null;
-      if (this.renderer?.shadowMap) this.renderer.shadowMap.needsUpdate = true;
-    };
+    this.sceneRegistry = options.sceneRegistry ?? createBuiltinSceneRegistry();
+    this.sceneRendererRegistry = options.sceneRendererRegistry ?? createBuiltinSceneRendererRegistry();
+    this.characterRegistry = options.characterRegistry ?? createBuiltinCharacterRegistry();
+    this.characterRendererRegistry = options.characterRendererRegistry
+      ?? createBuiltinCharacterRendererRegistry();
+    this.sceneSelection = this.sceneRegistry.resolve(
+      options.sceneId ?? DEFAULT_SCENE.id,
+      DEFAULT_SCENE.id,
+    );
+    this.characterSelection = null;
 
     try {
-      const contextAttributes = /** @type {THREE.WebGLRendererParameters} */ ({
+      const contextAttributes: THREE.WebGLRendererParameters = {
         alpha: false,
         antialias: true,
         depth: true,
         stencil: false,
         powerPreference: 'high-performance',
         preserveDrawingBuffer: false,
-      });
+      };
       const context = this.platform.getWebGLContext?.(canvas, contextAttributes) ?? null;
       this.renderer = new THREE.WebGLRenderer({
         canvas,
@@ -167,27 +175,39 @@ export class Renderer3D {
       this.renderer.setClearColor(RENDER3D_COLORS.background, 1);
       this.renderer.autoClear = false;
 
-      this.stage = new Stage(this.renderer);
+      try {
+        this.stage = this.sceneRendererRegistry.create(this.renderer, this.sceneSelection.definition);
+      } catch (error) {
+        if (this.sceneSelection.definition.id === DEFAULT_SCENE.id) throw error;
+        this.sceneSelection = {
+          definition: this.sceneRegistry.get(DEFAULT_SCENE.id),
+          usedFallback: true,
+        };
+        this.stage = this.sceneRendererRegistry.create(this.renderer, this.sceneSelection.definition);
+      }
       this.textureManager = new TextureManager(platform);
       this.platformFactory = new PlatformMeshFactory(this.textureManager);
       this.platforms = new PlatformViewRegistry(this.stage.worldRoot, this.platformFactory);
-      this.character = new CharacterRig();
+      this.characterSelection = new ContentSelection({
+        registry: this.characterRegistry,
+        fallbackId: DEFAULT_CHARACTER.id,
+        factory: (definition) => this.characterRendererRegistry.create(definition),
+      });
+      this.character = this.characterSelection.select(options.characterId ?? DEFAULT_CHARACTER.id);
       this.stage.worldRoot.add(this.character);
       this.particles = new ParticleBurst(this.stage.worldRoot);
       this.trail = new TailTrail(this.stage.worldRoot);
       this.hud = new HudScene(this.textureManager);
 
-      for (const [type, handler] of [
-        ['webglcontextlost', this.handleContextLost],
-        ['webglcontextrestored', this.handleContextRestored],
-      ]) {
-        try {
-          this.canvas.addEventListener?.(type, handler, false);
-          this.contextListeners.push([type, handler]);
-        } catch (error) {
-          this.captureError('context-listener', error);
-        }
-      }
+      this.contextLifecycle = new ContextLifecycle(this.canvas, {
+        onLost: () => { this.contextLost = true; },
+        onRestored: () => {
+          this.contextLost = false;
+          this.lastTime = null;
+          if (this.renderer?.shadowMap) this.renderer.shadowMap.needsUpdate = true;
+        },
+      });
+      this.contextLifecycle.bind();
     } catch (cause) {
       this.captureError('initialize', cause);
       this.dispose();
@@ -219,7 +239,7 @@ export class Renderer3D {
 
   resize() {
     if (this.disposed || !this.renderer || !this.stage) return false;
-    let viewport = {};
+    let viewport: any = {};
     try {
       viewport = this.platform.getViewport() ?? {};
     } catch (error) {
@@ -315,6 +335,19 @@ export class Renderer3D {
       this.captureError('draw', error);
       return false;
     }
+  }
+
+  render(snapshot, _events = []) {
+    void _events;
+    return this.draw(snapshot?.state, snapshot?.world, snapshot?.presentation ?? {});
+  }
+
+  selectCharacter(characterId) {
+    if (!this.characterSelection || !this.stage) return false;
+    const character = this.characterSelection.select(characterId);
+    this.character = character;
+    this.stage.worldRoot.add(character);
+    return this.characterSelection.snapshot;
   }
 
   drawFrame(state, world, presentation = {}) {
@@ -510,6 +543,14 @@ export class Renderer3D {
         geometries: info.memory.geometries,
         textures: info.memory.textures,
       },
+      content: {
+        scene: {
+          requestedId: this.sceneSelection?.definition?.id ?? DEFAULT_SCENE.id,
+          selectedId: this.sceneSelection?.definition?.id ?? DEFAULT_SCENE.id,
+          usedFallback: this.sceneSelection?.usedFallback ?? false,
+        },
+        character: this.characterSelection?.snapshot ?? null,
+      },
       errors: {
         count: this.errorCount,
         consecutiveDrawErrors: this.consecutiveDrawErrors,
@@ -533,14 +574,11 @@ export class Renderer3D {
       }
     };
 
-    this.contextListeners.forEach(([type, handler]) => {
-      safely(`listener:${type}`, () => this.canvas.removeEventListener?.(type, handler, false));
-    });
-    this.contextListeners.length = 0;
+    safely('context-lifecycle', () => this.contextLifecycle?.dispose?.());
     safely('hud', () => this.hud?.dispose?.());
     safely('trail', () => this.trail?.dispose?.());
     safely('particles', () => this.particles?.dispose?.());
-    safely('character', () => this.character?.dispose?.());
+    safely('character', () => this.characterSelection?.dispose?.());
     if (this.platforms) safely('platforms', () => this.platforms.dispose());
     else safely('platform-factory', () => this.platformFactory?.dispose?.());
     safely('textures', () => this.textureManager?.dispose?.());

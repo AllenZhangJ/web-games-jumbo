@@ -49,11 +49,11 @@ Renderer3D / Three.js objects / Tween / effects
 
 | 问题 | 拥有者 | 表现层可做 | 表现层不可做 |
 |---|---|---|---|
-| 蓄力多久 | Runtime/Core | 将比例映射为身体和平台压缩 | 根据 Mesh 压缩量反算射程 |
-| 角色在哪里 | Core 轨迹 | 设置 Rig 根节点，旋转局部视觉 | 用 Tween 根节点位置作为碰撞点 |
-| 是否落地 | Core 几何和碰撞 | 播放回弹、粒子或失败倾倒 | 将边缘失败修正为成功 |
-| 平台是谁 | Core 稳定 ID | 映射到 Mesh、更换视觉状态 | 以 Mesh 顺序代替 ID |
-| 世界是否前进 | Core 平台晋升 | 平移 `worldRoot` 保持构图 | 反写平台绝对坐标 |
+| 蓄力多久 | Application/Gameplay | 将比例映射为身体和平台压缩 | 根据 Mesh 压缩量反算射程 |
+| 角色在哪里 | Jump Engine 轨迹 | 设置 Rig 根节点，旋转局部视觉 | 用 Tween 根节点位置作为碰撞点 |
+| 是否落地 | Jump Engine 几何和碰撞 | 播放回弹、粒子或失败倾倒 | 将边缘失败修正为成功 |
+| 平台是谁 | WorldState 稳定 ID | 映射到 Mesh、更换视觉状态 | 以 Mesh 顺序代替 ID |
+| 世界是否前进 | WorldState 平台晋升 | 平移 `worldRoot` 保持构图 | 反写平台绝对坐标 |
 
 ## 考虑过的替代方案
 

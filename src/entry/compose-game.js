@@ -1,27 +1,41 @@
 import { NumberStrategyGame } from '@number-strategy/application';
-import { Renderer3D } from '../render3d/renderer3d.js';
+import { AudioFactorySoundPort, FeedbackController } from '@number-strategy/feedback';
+import { Renderer3D } from '@number-strategy/renderer-three';
+
+function createStoragePort(platform) {
+  return {
+    read: (key) => platform.storageGet?.(key),
+    write: (key, value) => Boolean(platform.storageSet?.(key, value)),
+    remove: (key) => Boolean(platform.storageSet?.(key, undefined)),
+  };
+}
+
+function createFeedback(platform, storage) {
+  return new FeedbackController({
+    sound: new AudioFactorySoundPort(() => platform.createAudio?.() ?? null),
+    haptic: {
+      pulse: (cue) => Boolean(platform.vibrate?.(cue)),
+      dispose: () => {},
+    },
+    storage,
+  });
+}
 
 export function createNumberStrategyGame(platform, options = {}) {
+  const {
+    rendererOptions = {},
+    feedback: injectedFeedback,
+    storage: injectedStorage,
+    ...gameOptions
+  } = options;
+  const storage = injectedStorage ?? createStoragePort(platform);
+  const feedback = injectedFeedback ?? createFeedback(platform, storage);
   return new NumberStrategyGame(platform, {
-    ...options,
-    rendererFactory: (canvas, rendererPlatform) => {
-      const renderer = new Renderer3D(canvas, rendererPlatform);
-      return {
-        load: () => renderer.load(),
-        resize: () => renderer.resize(),
-        render: (snapshot) => renderer.draw(
-          snapshot.state,
-          snapshot.world,
-          snapshot.presentation,
-        ),
-        dispose: () => renderer.destroy(),
-        hitTest: (point) => renderer.hitTest(point),
-        toDesignPoint: (point) => renderer.toDesignPoint(point),
-        choiceIndexForControl: (control, candidates) => (
-          renderer.choiceIndexForControl(control, [...candidates])
-        ),
-        getDebugSnapshot: () => renderer.getDebugSnapshot(),
-      };
-    },
+    ...gameOptions,
+    feedback,
+    storage,
+    rendererFactory: (canvas, rendererPlatform) => (
+      new Renderer3D(canvas, rendererPlatform, rendererOptions)
+    ),
   });
 }

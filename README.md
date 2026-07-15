@@ -77,22 +77,16 @@ packages/
 ├── difficulty/             # strict TS：easy/normal/hard、校验、注册和迁移投影
 ├── jump-engine/            # strict TS：RNG、几何、轨迹、碰撞和 WorldState
 ├── gameplay/               # strict TS：数值规则、状态机、Gameplay/Task 注册表
-└── application/            # strict TS：Session、Command、Clock、Lifecycle、Event、Snapshot
+├── application/            # strict TS：Session、Command、Clock、Lifecycle、Event、Snapshot
+├── content/                # strict TS：Scene/Character 注册、回退与资源生命周期
+├── feedback/               # strict TS：事件驱动声音/震动与本地设置
+└── renderer-three/         # TS：World/HUD/Camera/Resource/Context Lifecycle
 src/
 ├── platform/               # Web / wx.* / tt.* 画布、输入、生命周期和设备能力
-├── render3d/
-│   ├── renderer3d.js        # Renderer3D 外观，隔离 Three.js 内部细节
-│   ├── stage.js             # WebGLRenderer、世界 Scene 与 HUD Scene
-│   ├── camera-rig.js        # 正交相机与连续构图
-│   ├── lighting-rig.js      # 环境光、方向光与受限阴影
-│   ├── character-rig.js     # 蓄力形变、回弹、空翻与失败表现
-│   ├── platform-*.js        # 平台 Mesh 工厂与 ID→View 注册表
-│   ├── effects/             # 拖尾与粒子，只反映事件而不判定结果
-│   └── hud/                 # 同一 WebGL Canvas 上的独立 HUD Scene
 └── entry/                   # 唯一具体组合根与 Web / 微信 / 抖音入口
 ```
 
-第二批已把 Core 与 Runtime 迁入 private strict TypeScript workspaces，并删除旧 JS 实现。剩余 Renderer、平台、入口、测试和构建工具继续受 `allowJs/checkJs` 约束，第三、四批按路线图迁移；第四批以人工维护 `.js` 为 0 的自动化门禁完成全面 TypeScript。
+第三批已把 Renderer、Scene/Character 和 Feedback 迁入 private TypeScript workspaces，并删除旧 Renderer JS。平台、入口、剩余测试和构建工具继续受迁移门禁；第四批必须把 Renderer 过渡宽松类型一并收紧，并以人工维护 `.js` 为 0 完成全面 strict TypeScript。
 
 数据严格单向流动：
 

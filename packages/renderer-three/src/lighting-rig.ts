@@ -2,11 +2,19 @@ import * as THREE from 'three';
 import { SHADOW_DEFAULTS } from './constants.js';
 
 export class LightingRig extends THREE.Group {
-  constructor({ shadowMapSize = SHADOW_DEFAULTS.mapSize } = {}) {
+  [key: string]: any;
+  constructor({ shadowMapSize = SHADOW_DEFAULTS.mapSize, definition = null }: any = {}) {
     super();
     this.name = 'LightingRig';
-    this.hemisphere = new THREE.HemisphereLight(0xffffff, 0xc9ced6, 2.15);
-    this.key = new THREE.DirectionalLight(0xffffff, 3.25);
+    this.hemisphere = new THREE.HemisphereLight(
+      definition?.hemisphereSky ?? 0xffffff,
+      definition?.hemisphereGround ?? 0xc9ced6,
+      definition?.hemisphereIntensity ?? 2.15,
+    );
+    this.key = new THREE.DirectionalLight(
+      definition?.directionalColor ?? 0xffffff,
+      definition?.directionalIntensity ?? 3.25,
+    );
     this.key.castShadow = true;
     this.key.position.set(-7.5, 12.5, -6.5);
     this.key.shadow.mapSize.set(shadowMapSize, shadowMapSize);

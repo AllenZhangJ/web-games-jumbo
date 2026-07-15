@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { CAMERA_DEFAULTS, dampFactor } from './constants.js';
 
 export class CameraRig {
+  [key: string]: any;
   constructor() {
     const { viewHeight, near, far } = CAMERA_DEFAULTS;
     this.camera = new THREE.OrthographicCamera(-viewHeight / 2, viewHeight / 2, viewHeight / 2, -viewHeight / 2, near, far);

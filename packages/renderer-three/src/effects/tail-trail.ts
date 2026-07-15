@@ -3,6 +3,7 @@ import * as THREE from 'three';
 const MAX_POINTS = 18;
 
 export class TailTrail {
+  [key: string]: any;
   constructor(root) {
     this.root = root;
     this.positions = new Float32Array(MAX_POINTS * 3);

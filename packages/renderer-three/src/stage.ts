@@ -4,19 +4,25 @@ import { CameraRig } from './camera-rig.js';
 import { LightingRig } from './lighting-rig.js';
 
 export class Stage {
-  constructor(renderer) {
+  [key: string]: any;
+  constructor(renderer, sceneDefinition: any = null) {
     this.renderer = renderer;
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(RENDER3D_COLORS.background);
-    this.scene.fog = new THREE.Fog(RENDER3D_COLORS.background, 24, 48);
+    const background = sceneDefinition?.theme?.background ?? RENDER3D_COLORS.background;
+    this.scene.background = new THREE.Color(background);
+    this.scene.fog = new THREE.Fog(
+      background,
+      sceneDefinition?.theme?.fogNear ?? 24,
+      sceneDefinition?.theme?.fogFar ?? 48,
+    );
     this.cameraRig = new CameraRig();
-    this.lighting = new LightingRig();
+    this.lighting = new LightingRig({ definition: sceneDefinition?.lighting });
     this.worldRoot = new THREE.Group();
     this.worldRoot.name = 'WorldRoot';
 
     const floorGeometry = new THREE.PlaneGeometry(160, 160);
     const floorMaterial = new THREE.MeshStandardMaterial({
-      color: RENDER3D_COLORS.floor,
+      color: sceneDefinition?.theme?.floor ?? RENDER3D_COLORS.floor,
       roughness: 1,
       metalness: 0,
     });

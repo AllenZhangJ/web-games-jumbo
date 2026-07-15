@@ -1,16 +1,19 @@
-import test from 'node:test';
+import { expect, test } from 'vitest';
 import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import * as THREE from 'three';
-import { CameraRig } from '../src/render3d/camera-rig.js';
-import { HudScene } from '../src/render3d/hud/hud-scene.js';
-import { PlatformMeshFactory } from '../src/render3d/platform-mesh-factory.js';
-import { PlatformViewRegistry } from '../src/render3d/platform-view-registry.js';
-import { Renderer3D, screenChoiceControlMap } from '../src/render3d/renderer3d.js';
-import { createCanvasSurface, TextureManager } from '../src/render3d/texture-manager.js';
+import { CameraRig } from '../src/camera-rig.js';
+import { CharacterRendererRegistry } from '../src/character-renderer-registry.js';
+import { ContextLifecycle } from '../src/context-lifecycle.js';
+import { HudScene } from '../src/hud/hud-scene.js';
+import { PlatformMeshFactory } from '../src/platform-mesh-factory.js';
+import { PlatformViewRegistry } from '../src/platform-view-registry.js';
+import { Renderer3D, screenChoiceControlMap } from '../src/renderer3d.js';
+import { SceneRendererRegistry } from '../src/scene-renderer-registry.js';
+import { createCanvasSurface, TextureManager } from '../src/texture-manager.js';
 
-const projectRoot = path.resolve(import.meta.dirname, '..');
+const projectRoot = path.resolve(import.meta.dirname, '../../..');
 
 function platform(id, role, center, extra = {}) {
   return {
@@ -130,14 +133,56 @@ test('camera transition uses one explicit progress instead of an independent sec
   assert.ok(Math.abs(rig.focus.z - (fromFocus.z + 3)) < 1e-9);
 });
 
+test('context lifecycle contains loss, restores once and removes listeners idempotently', () => {
+  const listeners = new Map();
+  const removed: string[] = [];
+  let losses = 0;
+  let restores = 0;
+  const lifecycle = new ContextLifecycle({
+    addEventListener: (type, listener) => listeners.set(type, listener),
+    removeEventListener: (type) => removed.push(type),
+  }, {
+    onLost: () => { losses += 1; },
+    onRestored: () => { restores += 1; },
+  });
+  lifecycle.bind();
+  let prevented = 0;
+  listeners.get('webglcontextlost')?.({ preventDefault: () => { prevented += 1; } });
+  listeners.get('webglcontextrestored')?.();
+  expect(lifecycle.lost).toBe(false);
+  expect({ losses, restores, prevented }).toEqual({ losses: 1, restores: 1, prevented: 1 });
+  lifecycle.dispose();
+  lifecycle.dispose();
+  expect(removed).toEqual(['webglcontextlost', 'webglcontextrestored']);
+});
+
+test('character renderer registry isolates renderer keys and rejects unsupported manifests', () => {
+  const registry = new CharacterRendererRegistry();
+  expect(registry.keys()).toEqual([]);
+  expect(() => registry.create({ rendererKey: 'missing' } as never)).toThrow(/未注册角色渲染器/);
+  registry.register('fixture-renderer', () => ({ dispose: () => {} }) as never);
+  expect(registry.keys()).toEqual(['fixture-renderer']);
+  expect(() => registry.register('fixture-renderer', () => ({ dispose: () => {} }) as never))
+    .toThrow(/重复注册/);
+});
+
+test('scene renderer registry rejects unsupported renderer keys before Stage construction', () => {
+  const registry = new SceneRendererRegistry();
+  expect(() => registry.create({} as never, { rendererKey: 'missing' } as never))
+    .toThrow(/未注册场景渲染器/);
+  registry.register('fixture-scene', () => ({ dispose: () => {} }) as never);
+  expect(() => registry.register('fixture-scene', () => ({ dispose: () => {} }) as never))
+    .toThrow(/重复注册/);
+});
+
 test('render3d and runtime have no browser or mini-game platform leakage', async () => {
-  const renderDir = path.join(projectRoot, 'src/render3d');
+  const renderDir = path.join(projectRoot, 'packages/renderer-three/src');
   const entries = [];
   async function collect(directory) {
     for (const entry of await readdir(directory, { withFileTypes: true })) {
       const absolute = path.join(directory, entry.name);
       if (entry.isDirectory()) await collect(absolute);
-      else if (entry.name.endsWith('.js')) entries.push(absolute);
+      else if (entry.name.endsWith('.ts')) entries.push(absolute);
     }
   }
   await collect(renderDir);
@@ -178,7 +223,7 @@ function textureContext() {
   };
 }
 
-function texturePlatform(context = textureContext()) {
+function texturePlatform(context: any = textureContext()) {
   return {
     createOffscreenCanvas: () => ({
       width: 1,
@@ -313,12 +358,11 @@ test('Renderer3D disposal continues after individual listener and resource failu
     errorCount: 0,
     consecutiveDrawErrors: 0,
     lastError: null,
-    contextListeners: [['webglcontextlost', () => {}]],
-    canvas: { removeEventListener: () => { throw new Error('detached'); } },
+    contextLifecycle: { dispose: () => { throw new Error('detached'); } },
     hud: { dispose: () => { calls.push('hud'); throw new Error('hud failure'); } },
     trail: { dispose: () => calls.push('trail') },
     particles: { dispose: () => calls.push('particles') },
-    character: { dispose: () => calls.push('character') },
+    characterSelection: { dispose: () => calls.push('character') },
     platforms: { dispose: () => calls.push('platforms') },
     textureManager: { dispose: () => calls.push('textures') },
     stage: { dispose: () => calls.push('stage') },

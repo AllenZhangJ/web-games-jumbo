@@ -8,7 +8,8 @@ function shadow(mesh) {
 }
 
 export class CharacterRig extends THREE.Group {
-  constructor() {
+  [key: string]: any;
+  constructor(definition: any = null) {
     super();
     this.name = 'CharacterRig';
     this.headingRoot = new THREE.Group();
@@ -23,7 +24,7 @@ export class CharacterRig extends THREE.Group {
     this.flipPivot.add(this.bodyRoot);
 
     this.redMaterial = new THREE.MeshStandardMaterial({
-      color: RENDER3D_COLORS.red,
+      color: definition?.primaryColor ?? RENDER3D_COLORS.red,
       roughness: 0.72,
       metalness: 0,
     });
@@ -36,11 +37,13 @@ export class CharacterRig extends THREE.Group {
     const head = shadow(new THREE.Mesh(this.headGeometry, this.redMaterial));
     head.position.y = 1.34;
     this.bodyRoot.add(torso, head);
+    this.definition = definition;
+    this.scale.setScalar(Number.isFinite(definition?.visualScale) ? definition.visualScale : 1);
     this.currentYaw = 0;
     this.initialized = false;
   }
 
-  update(player, context = {}, deltaSeconds = 0) {
+  update(player, context: any = {}, deltaSeconds = 0) {
     if (!player?.position) {
       this.visible = false;
       return;

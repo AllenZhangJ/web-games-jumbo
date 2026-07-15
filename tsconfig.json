@@ -5,6 +5,9 @@
     { "path": "./packages/difficulty" },
     { "path": "./packages/jump-engine" },
     { "path": "./packages/gameplay" },
-    { "path": "./packages/application" }
+    { "path": "./packages/application" },
+    { "path": "./packages/content" },
+    { "path": "./packages/feedback" },
+    { "path": "./packages/renderer-three" }
   ]
 }
