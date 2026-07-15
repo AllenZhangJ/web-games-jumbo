@@ -1,6 +1,6 @@
 # 游戏规则与玩法
 
-本文记录 v3 当前已经实现的规则。玩法真相位于 `src/core` 与 `src/runtime/game.js`；`src/render3d` 只呈现结果，不能修改数值、世界坐标或碰撞结论。
+本文记录 v3 当前已经实现的规则。玩法真相位于 `packages/gameplay` 与 `packages/jump-engine`，`packages/application` 负责用例编排；`src/render3d` 只消费快照和事件，不能修改数值、世界坐标或碰撞结论。
 
 ## 1. 操作
 

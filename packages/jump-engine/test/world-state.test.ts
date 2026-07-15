@@ -1,4 +1,4 @@
-import test from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import {
   BRANCH_SIDE,
@@ -6,7 +6,7 @@ import {
   WorldState,
   candidateDistanceRange,
   isPointOnPlatform,
-} from '../src/core/world-state.js';
+} from '../src/world-state.js';
 
 function sequenceRng(values = [0.1, 0.7, 0.35, 0.9]) {
   let cursor = 0;
@@ -233,8 +233,8 @@ test('snapshot mutations cannot write back into world truth', () => {
     initialCandidates: [descriptor('+1', 11), descriptor('+2', 12)],
   });
   const snapshot = world.snapshot();
-  snapshot.current.center.x = 999;
-  snapshot.candidates[0].operation.label = 'mutated';
+  (snapshot.current.center as { x: number }).x = 999;
+  (snapshot.candidates[0].operation as { label?: string }).label = 'mutated';
   snapshot.player.position.z = 999;
 
   assert.equal(world.current.center.x, 0);

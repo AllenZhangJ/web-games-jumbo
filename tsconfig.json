@@ -2,6 +2,9 @@
   "files": [],
   "references": [
     { "path": "./packages/game-contracts" },
-    { "path": "./packages/difficulty" }
+    { "path": "./packages/difficulty" },
+    { "path": "./packages/jump-engine" },
+    { "path": "./packages/gameplay" },
+    { "path": "./packages/application" }
   ]
 }

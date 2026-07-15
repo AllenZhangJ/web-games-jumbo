@@ -1,4 +1,4 @@
-import test from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import {
   chargeToRange,
@@ -7,7 +7,7 @@ import {
   rangeToCharge,
   resolveTopLanding,
   sampleJumpTrajectory,
-} from '../src/core/jump-physics.js';
+} from '../src/physics.js';
 
 const PHYSICS = {
   minChargeMs: 100,

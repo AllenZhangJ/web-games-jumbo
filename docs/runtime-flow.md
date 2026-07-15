@@ -1,131 +1,99 @@
 # 运行主流程与生命周期
 
-本文描述第 0 批基线代码的实际执行链路，并记录当前已有防护和仍缺少的证据。
+本文描述第二批 P3–P5 当前可验证的单向运行链路。
 
-## 启动流程
+## 启动与组合
 
 ```text
-平台入口
-  → launchGame(createPlatform)
-  → generation +1，销毁旧实例/过期启动
+Web / 微信 / 抖音入口
+  → launchGame(createPlatform, { createGame })
   → createPlatform()
-  → new NumberStrategyGame(platform, { difficulty })
-  → 校验并冻结 Difficulty，投影 GameState / Jump / World 配置
-  → renderer.resize()
-  → renderer.load()
-  → 绑定输入、resize、onHide、onShow
-  → 调度首帧
+  → compose-game.js 绑定 NumberStrategyGame + Renderer3D
+  → GameSession 选择 Difficulty / Gameplay / Task
+  → renderer.resize() / load()
+  → 绑定 Input / Resize / Hide / Show
+  → FixedStepClock rebase，调度首帧
 ```
 
-`launch-game.js` 使用共享 Symbol 保存 generation、当前实例和正在启动的实例。新启动不会等待旧异步加载完成，而是立即使旧 generation 失效并销毁旧对象。
+入口只负责平台选择和错误展示，`launch-game.js` 不知道具体游戏类。generation 会使过期异步启动失效并销毁旧实例；同一游戏的重复 `start()` 复用 Promise。
 
-当前默认组合根使用 `normal@1`。`easy@1` 和 `hard@1` 已注册并通过大样本校验，但按已确认决策尚未暴露给玩家。
-
-## 输入与蓄力
+## 输入、Command 与跳跃
 
 ```text
-pointer/touch start
-  → Platform 归一化坐标和 pointerId
-  → Renderer HUD 命中按钮
-  → 根据相机投影选择屏幕左/右候选
-  → GameState.startCharge(choiceIndex)
-  → 保存 chargeStartedAt
-
-pointer/touch end
-  → 校验同一 pointerId
-  → 用 platform.now() 计算真实按住时长
-  → 创建 JumpTrajectory
-  → GameState.releaseCharge()
+Platform Input
+  → Renderer hitTest / 屏幕左右候选映射
+  → CommandHandler 校验 Command
+  → GameState 开始/释放/取消蓄力
+  → Jump Engine 创建并采样解析轨迹
 ```
 
-当前只允许一个活动 pointer。外来 pointer 的 end/cancel 不会提交当前蓄力。Web 还会阻止上下文菜单、选择和拖拽默认行为。
+只允许一个活动 pointer。只有底部左右按钮产生 `start-charge`；场景点击不开始蓄力。释放必须属于同一 pointer。Web 继续阻止选择、上下文菜单和拖拽默认行为。
 
-## 固定步长主循环
-
-Runtime 不相信不同小游戏宿主传入的 RAF 时间戳，而统一读取 `platform.now()`：
+## 固定步长与帧输出
 
 ```text
 requestFrame
-  → elapsed 限制在 0..100ms
-  → accumulator += elapsed
-  → 每 1000/60ms 更新一次 Core
-  → Renderer.draw(state, world, presentation)
+  → 统一读取 platform.now()
+  → FixedStepClock 将 elapsed 限制在 0..100ms
+  → 以 1000/60ms 分派 tick Command
+  → EventCollector.drain()
+  → SnapshotFactory.create()
+  → FeedbackPort.handle(events)
+  → RendererPort.render(snapshot, events)
   → 请求下一帧
 ```
 
-单帧异常会记录诊断并继续调度。连续 3 帧失败后，Runtime 进入 `failed`，取消蓄力并解绑输入，避免无提示地停止在半交互状态。
+快照携带真实 `gameplayId`、`taskId`、难度版本、规则状态、世界快照和表现状态。Renderer 不能持有或改写 GameState/WorldState。Feedback 异常会被记录但不阻断绘制；连续 3 帧不可恢复错误会进入明确的 `failed` 生命周期并解绑输入。
 
-## 跳跃和落地事务
+## 成功落地事务
 
-跳跃期间每个固定步长采样解析轨迹并写入玩家真实世界位置。轨迹完成后：
+1. Jump Engine 计算脚底真实落点。
+2. Application 预计算下一数值、步数和候选，保存 Gameplay RNG 快照。
+3. `WorldState.commitLanding` 提交可能失败的世界事务。
+4. `GameState.resolveJump` 与 `useChoices` 提交数值状态。
+5. 产生 `landed`，落地阶段完成后评估当前 Task。
+6. 产生 `task-completed`/`task-failed` 及既有 `won`/`lost` 事件。
+7. Renderer 在下一帧从快照和事件执行镜头、HUD 和特效。
 
-### 成功落地
+候选生成或世界提交异常时恢复 RNG，避免世界与数值真相半提交。失败落地不执行运算、不扣步数，并保留失败落点与原因。
 
-1. `resolveTopLanding` 计算精确落点。
-2. 预计算下一数值、剩余步数和下一候选。
-3. `WorldState.commitLanding` 先提交可能失败的世界事务。
-4. `GameState.resolveJump` 提交数值结果。
-5. `GameState.useChoices` 替换下一候选。
-6. Renderer 在后续帧读取新快照，执行可丢弃的镜头和世界平移。
+## 可扩展定义的运行入口
 
-候选生成或世界提交异常时会恢复 GameState RNG 快照，避免世界与数值层一边成功、一边失败。
+`GameSession` 接受 GameplayRegistry、TaskRegistry、gameplayId 和 taskId。它在运行前验证：
 
-### 失败落地
+- 定义和版本存在。
+- Gameplay 声明支持所选 Task。
+- Gameplay/Task 配置通过验证。
+- 当前跳跃应用族返回兼容 GameState。
 
-- 不执行候选运算。
-- 不扣除步数。
-- 保存失败落点和原因。
-- 玩家失去支撑平台，表现层显示失败姿态。
+因此新增同一跳跃应用族的玩法/任务可通过组合根注册选择，不修改主循环。完全不同交互模型仍可能需要新的 Application 实现，但继续复用 Command/Event/Snapshot/Port 契约。
 
-## Web/小游戏生命周期
+## 生命周期
 
-### Hide
-
-- 如果正在蓄力，强制取消当前蓄力。
-- 如果未暂停，切换到暂停状态。
-- 固定步长更新在暂停期间不推进。
-
-### Show
-
-- 清空 `lastTime` 和 accumulator。
-- 下一帧重新建立时间基线，不追赶后台停留时间。
-- 当前实现不会自动解除暂停，恢复需要用户明确操作。
-
-### Resize
-
-- 调用 Renderer.resize。
-- resize 失败会记录错误，但不会立即销毁整个游戏。
-
-### Destroy
-
-- 标记 lifecycle 为 destroyed。
-- 清理活动 pointer。
-- 取消已调度帧。
-- 容错执行全部事件解绑。
-- 销毁 Renderer 和 GPU/Canvas 资源。
-
-## 当前已有竞态与兜底
-
-| 风险 | 当前防护 |
+| 事件 | 当前行为 |
 |---|---|
-| 多次启动互相覆盖 | generation 使旧启动失效并销毁。 |
-| start 重入 | 同一 `startPromise` 复用。 |
-| 重复帧调度 | `frameId != null` 时拒绝再次调度。 |
-| 销毁后异步加载完成 | 启动流程再次检查 lifecycle。 |
-| 外来 pointer 结束当前输入 | 使用 activePointerId 归属。 |
-| 后台时间导致巨量追帧 | show 时重置时钟；单帧 delta 上限 100ms。 |
-| 单帧渲染错误杀死循环 | finally 中继续调度；连续失败后显式 failed。 |
-| 落地候选生成半提交 | RNG 快照恢复和先世界后状态事务。 |
-| 单个 cleanup 抛错阻止其他清理 | 逐项 try/catch。 |
+| Hide | 取消活动蓄力，进入暂停，不推进固定步长。 |
+| Show | rebase 时钟，下一帧重新建立时间原点，不追赶后台时间；不自动解除暂停。 |
+| Resize | 调用 Renderer，失败被记录但不直接销毁会话。 |
+| Restart | 清 pointer、重置状态/世界/任务、rebase 时钟并发事件。 |
+| Destroy | 终结生命周期、取消 RAF、逐项解绑、销毁 Renderer/Feedback、清事件；重复调用安全。 |
 
-## 当前仍不完整或待验证
+## 已有防护
 
-- Renderer 参与“屏幕左右候选”的选择映射，应用层仍依赖具体表现能力。
-- Runtime 同时承担输入、用例、固定时钟、事务和表现编排，职责过多。
-- WebGL 上下文恢复没有完整重建 Renderer、纹理、Mesh 和缓存的自动化证据。
-- 微信/抖音真实宿主的 RAF、前后台、WebGL 恢复和音频策略仍需真机证明。
-- 页面隐藏/显示有单元测试，但尚无自动化浏览器生命周期测试。
-- 平台存储、声音和震动存在能力接口，但尚未接入游戏主流程。
-- 当前没有存档版本、回放或跨版本迁移。
+| 风险 | 防护与证据 |
+|---|---|
+| 并发启动、旧异步覆盖 | generation、启动后生命周期复查和入口测试。 |
+| 重复 RAF、负数/巨量 delta | frameId 门禁、Command 校验、100ms 上限、rebase 测试。 |
+| 多指和外来 release/cancel | activePointerId 归属测试。 |
+| Renderer/Feedback/cleanup 抛错 | 分层捕获、诊断记录、继续清理或显式 failed。 |
+| 落地半提交 | 世界先提交、玩法后提交、RNG 回滚测试。 |
+| Renderer 篡改真相 | 只读快照、包依赖边界和平台/Three 泄漏测试。 |
+| 错误玩法/任务组合 | 注册表、支持列表与配置边界校验。 |
 
-这些项目必须保留为“未完成/待验证”，不得因现有 87 项测试通过而改写成已完成。
+## 仍未完成或证据不足
+
+- `NumberStrategyGame` 仍拥有当前跳跃应用族的输入映射与事务，这是有意的 Application 内聚，不是通用所有玩法的万能循环。
+- Renderer 内部拆分、场景/角色 Manifest、资源恢复和 FeedbackController 属于第三批。
+- Storage 已是端口但尚无 SaveEnvelope、迁移和回放，属于第四批。
+- pagehide/pageshow、真实 WebGL context lost/restored 和微信/抖音真机生命周期仍缺少当前批次端到端证据。
+- 测试还没有覆盖率阈值；过渡测试 tsconfig 尚未 strict。

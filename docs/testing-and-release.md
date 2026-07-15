@@ -9,7 +9,7 @@
 | `npm run dev:lan` | 先增量构建 workspace，再监听所有网卡供同一局域网手机访问。 |
 | `npm test` | 执行 Node 旧栈回归和 TypeScript 包的 Vitest 契约测试。 |
 | `npm run lint` | 检查 TypeScript workspace 包。 |
-| `npm run typecheck` | strict 检查新包，并以 `allowJs/checkJs` 检查全部旧 `src`。 |
+| `npm run typecheck` | strict 检查 workspace 源码，检查 TS 测试，并以 `allowJs/checkJs` 检查剩余 `src` JS。 |
 | `npm run build` | 生成 Web、微信和抖音产物。 |
 | `npm run check` | 依次执行 lint、typecheck、全量测试和三端构建。 |
 | `npm run preview:lan` | 先完成三端构建，再在 4173 端口预览生产 Web。 |
@@ -44,6 +44,17 @@
 - Web、微信、抖音构建通过；Web JS 为 622,786 bytes，gzip 为 161,826 bytes。
 - 浏览器单 Canvas、左右按钮、失败重开、重载、禁止选择和控制台健康通过。
 - 依赖审计 0 个已知漏洞。
+
+第二批 P3–P5 收口前证据：
+
+- Node 兼容/集成：52/52；workspace Vitest：62/62；合计 114/114。
+- Core/Runtime 已迁移至 `jump-engine`、`gameplay`、`application` strict TypeScript 包，旧 JS 实现已删除。
+- Gameplay/Task 注册表完成 5+5 容量证明，并在 GameSession 中按注入 ID 实际选择。
+- `npm run check` 的 lint、typecheck、全量测试和 Web/微信/抖音构建通过。
+- Web JS 632.86 kB，gzip 165.55 kB；相对第一批增加来自应用边界、注册表与运行时校验，未超过当前兼容报警线。
+- 390×844：单 Canvas 满屏、`user-select: none`、左右按钮各完成一次真实长按成功落地、连续回合与镜头过渡正常，控制台 error/warn 为 0。
+- `npm audit` 为 0 个已知漏洞；`git diff --check` 通过。
+- 未完成：覆盖率阈值、测试 strict、真实 pagehide/pageshow、WebGL 完整恢复和小游戏真机证据。
 
 自动化覆盖的主要风险见 [仓库结构中的测试地图](repository-structure.md#tests测试地图)。
 

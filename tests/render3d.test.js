@@ -141,7 +141,7 @@ test('render3d and runtime have no browser or mini-game platform leakage', async
     }
   }
   await collect(renderDir);
-  entries.push(path.join(projectRoot, 'src/runtime/game.js'));
+  entries.push(path.join(projectRoot, 'packages/application/src/number-strategy-game.ts'));
   const source = (await Promise.all(entries.map((file) => readFile(file, 'utf8')))).join('\n');
   assert.doesNotMatch(source, /\b(?:document|window|wx|tt)\s*[.[]/);
   assert.doesNotMatch(source, /\.\.\/render\//);

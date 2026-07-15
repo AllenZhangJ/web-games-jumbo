@@ -94,6 +94,7 @@ export interface GameSnapshot {
   readonly difficultyVersion: number;
   readonly state: Readonly<Record<string, unknown>>;
   readonly world: Readonly<Record<string, unknown>>;
+  readonly presentation: Readonly<Record<string, unknown>>;
 }
 
 export interface RendererPort {

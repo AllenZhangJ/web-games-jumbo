@@ -1,8 +1,10 @@
-import test from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { GAME_RULES } from '../src/config.js';
-import { GAME_PHASE, GameState } from '../src/core/game-state.js';
-import { findOperationPath } from '../src/core/operations.js';
+import { DEFAULT_DIFFICULTY, toLegacyGameRules } from '@number-strategy/difficulty';
+import { GAME_PHASE, GameState } from '../src/game-state.js';
+import { findOperationPath } from '../src/operations.js';
+
+const GAME_RULES = toLegacyGameRules(DEFAULT_DIFFICULTY);
 
 test('landing applies the selected operation and consumes exactly one move', () => {
   const state = new GameState({ seed: 7 });

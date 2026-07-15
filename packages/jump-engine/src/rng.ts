@@ -1,11 +1,22 @@
-export function createRng(seed = Date.now()) {
+export interface DeterministicRng {
+  next(): number;
+  int(min: number, max: number): number;
+  pick<T>(items: readonly T[]): T;
+  snapshot(): number;
+  restore(snapshot: number): void;
+}
+
+export interface RandomSource {
+  next(): number;
+  snapshot?(): unknown;
+  restore?(snapshot: unknown): void;
+}
+
+export function createRng(seed = Date.now()): DeterministicRng {
   let state = seed >>> 0;
 
-  return {
+  const rng: DeterministicRng = {
     next() {
-      // Keep the state in uint32 space. Without the truncation the accumulated
-      // Number eventually loses low bits after a few million calls and the
-      // generator silently stops following the intended Mulberry32 sequence.
       state = (state + 0x6d2b79f5) >>> 0;
       let value = state;
       value = Math.imul(value ^ (value >>> 15), value | 1);
@@ -16,13 +27,15 @@ export function createRng(seed = Date.now()) {
       if (!Number.isSafeInteger(min) || !Number.isSafeInteger(max) || min > max) {
         throw new RangeError('rng.int(min, max) 需要 min <= max 的安全整数边界。');
       }
-      return Math.floor(this.next() * (max - min + 1)) + min;
+      return Math.floor(rng.next() * (max - min + 1)) + min;
     },
-    pick(items) {
+    pick<T>(items: readonly T[]): T {
       if (!Array.isArray(items) || items.length === 0) {
         throw new RangeError('rng.pick(items) 需要非空数组。');
       }
-      return items[Math.floor(this.next() * items.length)];
+      const item = items[Math.floor(rng.next() * items.length)];
+      if (item === undefined) throw new RangeError('rng.pick(items) 未能选择数组项。');
+      return item;
     },
     snapshot() {
       return state;
@@ -34,4 +47,5 @@ export function createRng(seed = Date.now()) {
       state = snapshot >>> 0;
     },
   };
+  return rng;
 }

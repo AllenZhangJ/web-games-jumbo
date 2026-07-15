@@ -1,11 +1,15 @@
-import test from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { HARD_DIFFICULTY } from '@number-strategy/difficulty';
-import { GAME_RULES } from '../src/config.js';
-import { GAME_PHASE } from '../src/core/game-state.js';
-import { findOperationPath } from '../src/core/operations.js';
-import { bootstrap } from '../src/runtime/bootstrap.js';
-import { NumberStrategyGame } from '../src/runtime/game.js';
+import { DEFAULT_DIFFICULTY, HARD_DIFFICULTY, toLegacyGameRules } from '@number-strategy/difficulty';
+import { GAME_PHASE, findOperationPath } from '@number-strategy/gameplay';
+import { bootstrap } from '../src/bootstrap.js';
+import {
+  NumberStrategyGame,
+  type PlatformPort,
+  type RendererPort,
+} from '../src/number-strategy-game.js';
+
+const GAME_RULES = toLegacyGameRules(DEFAULT_DIFFICULTY);
 
 function deferred() {
   let resolve;
@@ -17,12 +21,22 @@ function deferred() {
   return { promise, resolve, reject };
 }
 
-function createHarness({ pendingLoad = null, draw = null, difficulty = null } = {}) {
+function createHarness({
+  pendingLoad = null,
+  draw = null,
+  difficulty = null,
+  feedback = null,
+} = {}) {
   let clock = 0;
   let nextFrameId = 1;
   let failRequestFrame = false;
   const frames = new Map();
-  const handlers = {};
+  const handlers: {
+    input?: Parameters<PlatformPort['bindInput']>[0];
+    resize?: () => void;
+    show?: () => void;
+    hide?: () => void;
+  } = {};
   const counts = {
     bindInput: 0,
     resizeBinding: 0,
@@ -67,7 +81,13 @@ function createHarness({ pendingLoad = null, draw = null, difficulty = null } = 
     onShow: (callback) => bind('show', callback, 'showBinding'),
     onHide: (callback) => bind('hide', callback, 'hideBinding'),
   };
-  const renderer = {
+  const renderer: RendererPort & {
+    resizeCalls: number;
+    loadCalls: number;
+    drawCalls: number;
+    destroyCalls: number;
+    choiceIndexForControl?: (control: string) => number;
+  } = {
     resizeCalls: 0,
     loadCalls: 0,
     drawCalls: 0,
@@ -82,7 +102,7 @@ function createHarness({ pendingLoad = null, draw = null, difficulty = null } = 
     },
     toDesignPoint: (point) => ({ x: point.x, y: point.y }),
     hitTest: (point) => point?.control ?? null,
-    draw(...args) {
+    render(...args) {
       this.drawCalls += 1;
       return draw?.(...args, this.drawCalls);
     },
@@ -94,6 +114,7 @@ function createHarness({ pendingLoad = null, draw = null, difficulty = null } = 
   const game = new NumberStrategyGame(platform, {
     seed: 45,
     ...(difficulty ? { difficulty } : {}),
+    ...(feedback ? { feedback } : {}),
     rendererFactory: () => renderer,
   });
 
@@ -351,6 +372,29 @@ test('a transient frame failure is recorded and the next frame still runs', asyn
   assert.equal(harness.renderer.drawCalls, 2);
   assert.equal(harness.game.consecutiveFrameErrors, 0);
   assert.equal(harness.frames.size, 1);
+  harness.game.destroy();
+});
+
+test('feedback failure is diagnosed without blocking renderer or the frame loop', async () => {
+  const handled = [];
+  const harness = createHarness({
+    feedback: {
+      handle(events) {
+        handled.push(...events);
+        throw new Error('feedback unavailable');
+      },
+      dispose() {},
+    },
+  });
+  await harness.game.start();
+  harness.handlers.input.onStart({ x: 120, y: 1200, pointerId: 9, control: 'choice-left' });
+  harness.setClock(20);
+  harness.fireNextFrame(20);
+
+  assert.ok(handled.some(({ type }) => type === 'charge-started'));
+  assert.equal(harness.renderer.drawCalls, 1);
+  assert.equal(harness.game.lifecycle, 'running');
+  assert.equal(harness.game.getDebugSnapshot().lastRuntimeError.source, 'feedback');
   harness.game.destroy();
 });
 

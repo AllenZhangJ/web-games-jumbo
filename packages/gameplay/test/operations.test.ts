@@ -1,12 +1,12 @@
-import test from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import {
   applyOperation,
   findOperationPath,
   formatOperation,
   generateChoices,
-} from '../src/core/operations.js';
-import { createRng } from '../src/core/rng.js';
+} from '../src/operations.js';
+import { createRng } from '@number-strategy/jump-engine';
 
 test('applyOperation supports the four game operations', () => {
   assert.equal(applyOperation(8, { kind: 'add', amount: 4 }), 12);

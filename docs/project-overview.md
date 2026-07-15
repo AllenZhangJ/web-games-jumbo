@@ -50,9 +50,10 @@
 
 ### 质量基础
 
-- 当前为 104 项自动化测试（98 项 Node 回归和 6 项 TypeScript 包测试）。
+- 当前为 114 项自动化测试（52 项 Node 兼容/集成测试和 62 项 TypeScript workspace 测试）。
 - 三档难度各有 10,000 seed 的可解性验证，默认 normal 还有固定 seed 与完整获胜回放基线。
-- 新 workspace 包使用 strict TypeScript；旧 `src` 已完整进入 `allowJs/checkJs`。
+- Core、Runtime、Difficulty、Gameplay、Task、Jump Engine 的维护源码已经迁移为 strict TypeScript，旧 Core/Runtime JS 已删除。
+- GameplayRegistry/TaskRegistry 已接入 GameSession，测试证明 5+5 静态容量及按 ID 选择实际定义。
 - `npm run lint`、`npm run typecheck` 和包依赖边界已成为累积门禁。
 - `npm run build` 同时生成 Web、微信和抖音产物。
 - 架构测试会检查 Core/Runtime 与平台 API 泄漏、小游戏 DOM 泄漏和 IIFE 可打包性。
@@ -65,14 +66,15 @@
 - 平台声音与震动能力尚未被独立 Feedback 系统消费。
 - 平台存储能力尚未形成版本化游戏存档。
 - 没有回放、存档迁移、诊断导出或匿名遥测。
-- Core、Runtime、Renderer、平台和入口仍为 JavaScript，但已受 checkJs 检查；尚未达到全面 TypeScript。
+- Renderer、平台、入口、Node 兼容测试和构建脚本仍为 JavaScript 并受 checkJs/现有测试约束；第四批前尚未达到全面 TypeScript。
+- workspace 测试虽为 `.ts`，当前过渡测试 tsconfig 尚未 strict；第四批必须严格化。
 - 尚无覆盖率阈值和 CI 门禁。
 - 微信/抖音 iOS 与 Android 真机验收仍缺少当前版本证据。
 - WebGL 上下文恢复当前只清理时间并刷新阴影标记，没有证明完整 GPU 资源重建。
 
 ## 目标扩展能力
 
-第四批治理结束后，架构必须在不修改应用主流程的前提下支持：
+第四批治理结束后，架构必须在不修改同一应用族主流程的前提下支持：
 
 - 至少 5 个静态注册的玩法定义。
 - 至少 5 个静态注册的任务定义。

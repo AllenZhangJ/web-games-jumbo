@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { GameState } from '../src/core/game-state.js';
+import { GameState } from '@number-strategy/gameplay';
 
 const fixturePath = path.join(import.meta.dirname, 'fixtures', 'baseline-v0.1.0.json');
 

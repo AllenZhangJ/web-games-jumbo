@@ -1,20 +1,30 @@
-import { NumberStrategyGame } from './game.js';
+import {
+  NumberStrategyGame,
+  type NumberStrategyGameOptions,
+  type PlatformPort,
+} from './number-strategy-game.js';
 
-let pendingGame = null;
+interface GameGlobal {
+  __NUMBER_STRATEGY_GAME__?: NumberStrategyGame;
+}
+
+const root = globalThis as typeof globalThis & GameGlobal;
+let pendingGame: NumberStrategyGame | null = null;
 let bootstrapRevision = 0;
 
-export async function bootstrap(platform, options) {
+export async function bootstrap(
+  platform: PlatformPort,
+  options: NumberStrategyGameOptions,
+): Promise<NumberStrategyGame> {
   const revision = ++bootstrapRevision;
-  const previous = globalThis.__NUMBER_STRATEGY_GAME__;
-  if (previous && typeof previous.destroy === 'function') {
+  const previous = root.__NUMBER_STRATEGY_GAME__;
+  if (previous) {
     try {
       previous.destroy();
     } catch {
       // A broken old instance must not block the replacement main flow.
     } finally {
-      if (globalThis.__NUMBER_STRATEGY_GAME__ === previous) {
-        delete globalThis.__NUMBER_STRATEGY_GAME__;
-      }
+      if (root.__NUMBER_STRATEGY_GAME__ === previous) delete root.__NUMBER_STRATEGY_GAME__;
     }
   }
   if (pendingGame && pendingGame !== previous) {
@@ -38,7 +48,7 @@ export async function bootstrap(platform, options) {
     game.destroy();
     throw new Error('启动请求已被更新的游戏实例取代。');
   }
-  globalThis.__NUMBER_STRATEGY_GAME__ = game;
+  root.__NUMBER_STRATEGY_GAME__ = game;
   pendingGame = null;
   return game;
 }

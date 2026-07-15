@@ -34,10 +34,10 @@ Web / 微信 / 抖音输入、画布与生命周期
                        │
                 Platform Contract
                        │
-             Runtime / 固定步长编排
+        Application / 固定步长编排
                  ┌─────┴─────┐
                  │           │
-       Core 数值 + WorldState + 跳跃/碰撞
+     Gameplay 数值       Jump Engine 世界/碰撞
                  │
         只读逻辑快照 + 表现事件
                  │
@@ -55,9 +55,9 @@ Web / 微信 / 抖音输入、画布与生命周期
 
 ## 真相层与坐标
 
-### Core 是唯一玩法真相
+### Gameplay 与 Jump Engine 是唯一领域真相
 
-`src/core` 对以下结果拥有唯一决定权：
+`packages/gameplay` 与 `packages/jump-engine` 对以下结果拥有唯一决定权：
 
 - 当前值、目标值、剩余步数、左右运算候选与胜负。
 - 平台 ID、尺寸、绝对世界坐标、历史/当前/候选状态。
@@ -65,7 +65,7 @@ Web / 微信 / 抖音输入、画布与生命周期
 - 落点是否位于目标平台顶面，以及是短跳、成功还是越过。
 - 成功后的数值提交、平台晋升、未选分支淘汰和下一对候选生成。
 
-保留模块为 `operations.js`、`rng.js`、`geometry.js`、`jump-physics.js`、`world-state.js` 和数值状态的相关部分。它们必须保持纯 JavaScript，不访问 Three.js、DOM、`tt.*` 或 `wx.*`。
+这些模块已迁移为 strict TypeScript，并可在无 WebGL 环境独立测试；不得访问 Three.js、DOM、`tt.*` 或 `wx.*`。
 
 ### 三类坐标不混用
 
@@ -77,9 +77,9 @@ Web / 微信 / 抖音输入、画布与生命周期
 
 ## 模块责任
 
-### `src/runtime`
+### `packages/application`
 
-Runtime 是唯一编排者：
+Application 是唯一编排者：
 
 - 将平台输入转为锁定候选、蓄力、起跳、暂停、继续和重开。
 - 以固定步长更新解析轨迹并让 Core 提交碰撞结果。

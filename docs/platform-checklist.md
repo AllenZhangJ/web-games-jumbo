@@ -33,7 +33,7 @@
 - [x] `npm run build` 生成 `dist/web`、`dist/wechat` 和 `dist/douyin`。
 - [x] 三个分发目录都包含 `THIRD_PARTY_NOTICES.md` 和 `licenses/`。
 - [x] 小游戏构建是可直接加载的 IIFE，不依赖 DOM、Node 或运行时模块加载器。
-- [x] 平台 API 隔离测试证明 `wx.*` 和 `tt.*` 未泄漏到 Core、Runtime 或 Render3D。
+- [x] 平台 API 隔离测试证明 `wx.*` 和 `tt.*` 未泄漏到 Gameplay、Jump Engine、Application 或 Render3D。
 - [ ] 枚举构建产物尺寸，并与发行平台当前包体限制核对。
 
 已枚举本地构建：`dist/web` 约 `4.9 MiB`（含 source map），`dist/wechat` 与 `dist/douyin` 各约 `604 KiB`；发行平台当前限制仍需在发布账号和对应开发者工具中核对后才能勾选最后一项。

@@ -1,29 +1,130 @@
-import { DEFAULT_DIFFICULTY, FIXED_STEP_MS, createRuntimeConfig } from '../config.js';
-import { GAME_PHASE, GameState } from '../core/game-state.js';
+import type { DifficultyProfile, LegacyGameRules, LegacyJumpPhysics, LegacyWorldOptions } from '@number-strategy/difficulty';
+import {
+  GAME_PHASE,
+  applyOperation,
+  type GameState,
+  type GameplayRegistry,
+  type OperationChoice,
+  type TaskRegistry,
+} from '@number-strategy/gameplay';
 import {
   chargeToPower,
   createJumpTrajectory,
   getTargetChargeWindow,
   resolveTopLanding,
   sampleJumpTrajectory,
-} from '../core/jump-physics.js';
-import { applyOperation } from '../core/operations.js';
-import { createRng } from '../core/rng.js';
-import { WorldState } from '../core/world-state.js';
-import { Renderer3D } from '../render3d/renderer3d.js';
+  type ChargeWindow,
+  type JumpTrajectory,
+  type WorldState,
+  type WorldPlatform,
+} from '@number-strategy/jump-engine';
+import type { FeedbackPort, GameCommand, GameEvent, GameSnapshot, StoragePort } from '@number-strategy/game-contracts';
+import { CommandHandler } from './command-handler.js';
+import { EventCollector } from './event-collector.js';
+import { FixedStepClock } from './fixed-step-clock.js';
+import { GameSession, type SessionPresentation } from './game-session.js';
+import { LifecycleController, type ApplicationLifecycle } from './lifecycle-controller.js';
+import { SnapshotFactory } from './snapshot-factory.js';
 
-function worldCandidates(choices, value) {
+function worldCandidates(choices: readonly OperationChoice[], value: number) {
   return choices.map((operation) => ({
     operation,
     preview: applyOperation(value, operation),
   }));
 }
 
-function insideCircle(point, circle) {
+export interface InputPoint {
+  readonly x: number;
+  readonly y: number;
+  readonly pointerId?: number;
+  readonly control?: Control;
+}
+
+interface Circle {
+  readonly x: number;
+  readonly y: number;
+  readonly radius: number;
+}
+
+interface Rect {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+}
+
+export type Control = 'pause' | 'restart' | 'choice-left' | 'choice-right';
+type Cleanup = () => void;
+
+export interface CanvasPort {
+  createCanvas(): unknown;
+}
+
+export interface FrameClockPort {
+  now?(): number;
+  requestFrame(callback: (time?: number) => void): unknown;
+  cancelFrame(id: unknown): void;
+}
+
+export interface InputPort {
+  bindInput(callbacks: {
+    readonly onStart: (point: InputPoint) => boolean;
+    readonly onEnd: (point: InputPoint) => boolean;
+    readonly onCancel: (point: InputPoint) => boolean;
+  }): Cleanup;
+}
+
+export interface LifecyclePort {
+  onResize(callback: () => void): Cleanup;
+  onShow(callback: () => void): Cleanup;
+  onHide(callback: () => void): Cleanup;
+}
+
+export interface PlatformPort extends CanvasPort, FrameClockPort, InputPort, LifecyclePort {}
+
+export interface RendererPort {
+  resize(): boolean | void;
+  load(): Promise<unknown>;
+  render(snapshot: GameSnapshot, events: readonly GameEvent[]): boolean | void;
+  destroy?(): void;
+  dispose?(): void;
+  hitTest?(point: InputPoint): Control | null;
+  toDesignPoint?(point: InputPoint): InputPoint;
+  choiceIndexForControl?(control: Control, candidates: readonly WorldPlatform[]): number | null;
+  getDebugSnapshot?(): unknown;
+}
+
+export type RendererFactory = (canvas: unknown, platform: PlatformPort) => RendererPort;
+
+export interface NumberStrategyGameOptions {
+  readonly seed?: number;
+  readonly difficulty?: unknown;
+  readonly gameplayRegistry?: GameplayRegistry;
+  readonly taskRegistry?: TaskRegistry;
+  readonly gameplayId?: string;
+  readonly taskId?: string;
+  readonly rendererFactory: RendererFactory;
+  readonly feedback?: FeedbackPort;
+  readonly storage?: StoragePort;
+}
+
+interface ActiveJump {
+  elapsedMs: number;
+  readonly target: WorldPlatform;
+  readonly trajectory: Readonly<JumpTrajectory>;
+}
+
+interface RuntimeErrorRecord {
+  readonly source: string;
+  readonly error: Error;
+  readonly at: number;
+}
+
+function insideCircle(point: InputPoint, circle: Circle): boolean {
   return Math.hypot(point.x - circle.x, point.y - circle.y) <= circle.radius;
 }
 
-function insideRect(point, rect) {
+function insideRect(point: InputPoint, rect: Rect): boolean {
   return point.x >= rect.x
     && point.x <= rect.x + rect.width
     && point.y >= rect.y
@@ -39,11 +140,7 @@ const FALLBACK_CONTROLS = Object.freeze({
 
 const MAX_CONSECUTIVE_FRAME_ERRORS = 3;
 
-function defaultRendererFactory(canvas, platform) {
-  return new Renderer3D(canvas, platform);
-}
-
-function pointerIdOf(point) {
+function pointerIdOf(point: InputPoint | null): number {
   return point?.pointerId ?? 0;
 }
 
@@ -52,11 +149,51 @@ function pointerIdOf(point) {
  * Renderer3D never decides landings and never writes to GameState or WorldState.
  */
 export class NumberStrategyGame {
-  constructor(platform, {
+  readonly platform: PlatformPort;
+  readonly canvas: unknown;
+  readonly renderer: RendererPort;
+  readonly session: GameSession;
+  readonly fixedStepClock = new FixedStepClock();
+  readonly lifecycleController = new LifecycleController();
+  readonly eventCollector: EventCollector;
+  readonly snapshotFactory = new SnapshotFactory();
+  readonly commandHandler: CommandHandler<boolean>;
+  readonly feedback: FeedbackPort;
+  readonly storage: StoragePort;
+  jump: ActiveJump | null = null;
+  frameId: unknown | null = null;
+  activePointerId: number | null = null;
+  chargeStartedAt: number | null = null;
+  cleanups: Cleanup[] = [];
+  eventsBound = false;
+  startPromise: Promise<this> | null = null;
+  lastRuntimeError: RuntimeErrorRecord | null = null;
+  runtimeErrorCount = 0;
+  consecutiveFrameErrors = 0;
+
+  get seed(): number { return this.session.seed; }
+  get difficulty(): Readonly<DifficultyProfile> { return this.session.difficulty; }
+  get gameRules(): Readonly<LegacyGameRules> { return this.session.gameRules; }
+  get jumpPhysics(): Readonly<LegacyJumpPhysics> { return this.session.jumpPhysics; }
+  get worldOptions(): Readonly<LegacyWorldOptions> { return this.session.worldOptions; }
+  get state(): GameState { return this.session.state; }
+  get world(): WorldState { return this.session.world; }
+  get presentation(): SessionPresentation { return this.session.presentation; }
+  get accumulator(): number { return this.fixedStepClock.accumulator; }
+  get lastTime(): number | null { return this.fixedStepClock.lastTime; }
+  get lifecycle(): ApplicationLifecycle { return this.lifecycleController.state; }
+
+  constructor(platform: PlatformPort, {
     seed = Date.now(),
-    difficulty = DEFAULT_DIFFICULTY,
-    rendererFactory = defaultRendererFactory,
-  } = {}) {
+    difficulty,
+    gameplayRegistry,
+    taskRegistry,
+    gameplayId,
+    taskId,
+    rendererFactory,
+    feedback = { handle: () => {}, dispose: () => {} },
+    storage = { read: () => undefined, write: () => false, remove: () => false },
+  }: NumberStrategyGameOptions) {
     if (!platform || typeof platform.createCanvas !== 'function') {
       throw new TypeError('NumberStrategyGame 需要有效的平台适配层。');
     }
@@ -65,75 +202,82 @@ export class NumberStrategyGame {
     }
     this.platform = platform;
     this.canvas = platform.createCanvas();
-    this.seed = seed;
-    const runtimeConfig = createRuntimeConfig(difficulty);
-    this.difficulty = runtimeConfig.difficulty;
-    this.gameRules = runtimeConfig.gameRules;
-    this.jumpPhysics = runtimeConfig.jumpPhysics;
-    this.worldOptions = runtimeConfig.worldOptions;
-    this.state = new GameState({ seed, rules: this.gameRules });
-    this.layoutRng = createRng((seed ^ 0x9e3779b9) >>> 0);
+    this.session = new GameSession({
+      seed,
+      ...(difficulty === undefined ? {} : { difficulty }),
+      ...(gameplayRegistry === undefined ? {} : { gameplayRegistry }),
+      ...(taskRegistry === undefined ? {} : { taskRegistry }),
+      ...(gameplayId === undefined ? {} : { gameplayId }),
+      ...(taskId === undefined ? {} : { taskId }),
+    });
     this.renderer = rendererFactory(this.canvas, platform);
-    this.world = null;
-    this.jump = null;
-    this.accumulator = 0;
-    this.lastTime = null;
-    this.frameId = null;
-    this.activePointerId = null;
-    this.chargeStartedAt = null;
-    this.cleanups = [];
-    this.eventsBound = false;
-    this.lifecycle = 'idle';
-    this.startPromise = null;
-    this.lastRuntimeError = null;
-    this.runtimeErrorCount = 0;
-    this.consecutiveFrameErrors = 0;
-    this.presentation = {
-      revision: 0,
-      jumpId: 0,
-      landingId: 0,
-      missId: 0,
-      selectedChoice: null,
-      chargePower: 0,
-      jumpProgress: 0,
-      landingProgress: 0,
-      lastLanding: null,
-      missVisual: null,
-      reducedMotion: false,
-    };
-    this.resetWorld();
+    this.feedback = feedback;
+    this.storage = storage;
+    this.eventCollector = new EventCollector(() => this.readClock());
+    this.commandHandler = new CommandHandler((command) => this.executeCommand(command));
   }
 
-  resetWorld() {
-    this.world = new WorldState({
-      rng: this.layoutRng,
-      historyLimit: this.worldOptions.historyLimit,
-      platform: this.worldOptions.platform,
-      layout: this.worldOptions.layout,
-      initialCurrent: { preview: this.state.currentValue },
-      initialCandidates: worldCandidates(this.state.choices, this.state.currentValue),
-    });
-    this.jump = null;
-    this.state.chargeWindow = null;
-    Object.assign(this.presentation, {
-      revision: this.presentation.revision + 1,
-      selectedChoice: null,
-      chargePower: 0,
-      jumpProgress: 0,
-      landingProgress: 0,
-      lastLanding: null,
-      missVisual: null,
-    });
+  private executeCommand(command: GameCommand): boolean {
+    switch (command.type) {
+      case 'start-charge': {
+        const choiceIndex = command.choice === 'left' ? 0 : 1;
+        const chargeWindow = this.chargeWindowFor(choiceIndex);
+        if (!this.state.startCharge(choiceIndex)) return false;
+        this.activePointerId = command.pointerId;
+        this.chargeStartedAt = this.readClock();
+        this.state.chargeWindow = chargeWindow;
+        this.presentation.selectedChoice = choiceIndex;
+        this.presentation.chargePower = 0;
+        this.presentation.missVisual = null;
+        this.eventCollector.emit('charge-started', { choiceIndex });
+        return true;
+      }
+      case 'release-charge': {
+        if (this.activePointerId === null || command.pointerId !== this.activePointerId) return false;
+        if (this.chargeStartedAt !== null) {
+          const elapsedMs = this.readClock() - this.chargeStartedAt;
+          if (Number.isFinite(elapsedMs) && elapsedMs >= 0) this.state.setChargeDuration(elapsedMs);
+        }
+        this.clearActivePointer();
+        return this.beginJump();
+      }
+      case 'cancel-charge':
+        return this.cancelCharge(
+          command.pointerId === undefined ? null : { x: 0, y: 0, pointerId: command.pointerId },
+          command.pointerId === undefined,
+        );
+      case 'tick':
+        this.update(command.deltaMs);
+        return true;
+      case 'pause':
+        return this.state.phase === GAME_PHASE.PAUSED ? false : this.togglePause();
+      case 'resume':
+        return this.state.phase === GAME_PHASE.PAUSED ? !this.togglePause() : false;
+      case 'restart':
+        this.restart();
+        return true;
+      case 'next-round':
+        if (!this.state.nextRound()) return false;
+        this.clearActivePointer();
+        this.resetWorld();
+        return true;
+    }
   }
 
-  start() {
+  resetWorld(): void {
+    this.session.resetWorld();
+    this.jump = null;
+    this.eventCollector.emit('world-reset', { round: this.state.round });
+  }
+
+  start(): Promise<this> {
     if (this.lifecycle === 'destroyed') {
       return Promise.reject(new Error('游戏已销毁，不能再次启动。'));
     }
     if (this.lifecycle === 'running') return Promise.resolve(this);
     if (this.startPromise) return this.startPromise;
 
-    this.lifecycle = 'starting';
+    this.lifecycleController.transition('starting');
     const startPromise = (async () => {
       if (this.renderer.resize() === false) {
         const error = new Error('渲染器首屏尺寸初始化失败。');
@@ -141,16 +285,15 @@ export class NumberStrategyGame {
         throw error;
       }
       await this.renderer.load();
-      if (this.lifecycle === 'destroyed') {
+      if ((this.lifecycle as ApplicationLifecycle) === 'destroyed') {
         throw new Error('游戏在启动完成前已销毁。');
       }
       this.bindEvents();
-      if (this.lifecycle === 'destroyed') {
+      if ((this.lifecycle as ApplicationLifecycle) === 'destroyed') {
         throw new Error('游戏在事件绑定期间已销毁。');
       }
-      this.lastTime = null;
-      this.accumulator = 0;
-      this.lifecycle = 'running';
+      this.fixedStepClock.rebase();
+      this.lifecycleController.transition('running');
       if (!this.scheduleNextFrame()) {
         throw this.lastRuntimeError?.error ?? new Error('无法调度首帧。');
       }
@@ -159,7 +302,7 @@ export class NumberStrategyGame {
     this.startPromise = startPromise
       .catch((error) => {
         this.unbindEvents();
-        if (this.lifecycle !== 'destroyed') this.lifecycle = 'idle';
+        if (this.lifecycle !== 'destroyed') this.lifecycleController.transition('idle');
         throw error;
       })
       .finally(() => {
@@ -168,10 +311,10 @@ export class NumberStrategyGame {
     return this.startPromise;
   }
 
-  bindEvents() {
+  bindEvents(): void {
     if (this.eventsBound || this.lifecycle === 'destroyed') return;
-    const addCleanup = (cleanup) => {
-      if (typeof cleanup === 'function') this.cleanups.push(cleanup);
+    const addCleanup = (cleanup: unknown): void => {
+      if (typeof cleanup === 'function') this.cleanups.push(cleanup as Cleanup);
     };
     try {
       addCleanup(this.platform.bindInput({
@@ -202,8 +345,7 @@ export class NumberStrategyGame {
         if (this.lifecycle === 'destroyed') return;
         // The callback timestamp may use a different clock from platform.now().
         // Rebase on the next frame instead of mixing the two time origins.
-        this.lastTime = null;
-        this.accumulator = 0;
+        this.fixedStepClock.rebase();
       }));
       this.eventsBound = true;
     } catch (error) {
@@ -212,7 +354,7 @@ export class NumberStrategyGame {
     }
   }
 
-  unbindEvents() {
+  unbindEvents(): void {
     const cleanups = this.cleanups.splice(0);
     this.eventsBound = false;
     for (const cleanup of cleanups) {
@@ -224,7 +366,7 @@ export class NumberStrategyGame {
     }
   }
 
-  recordRuntimeError(source, error) {
+  recordRuntimeError(source: string, error: unknown): void {
     this.runtimeErrorCount += 1;
     this.lastRuntimeError = {
       source,
@@ -233,34 +375,34 @@ export class NumberStrategyGame {
     };
   }
 
-  readClock() {
+  readClock(): number {
     try {
       const value = this.platform.now?.();
-      if (Number.isFinite(value)) return value;
+      if (typeof value === 'number' && Number.isFinite(value)) return value;
     } catch {
       // Fall through to the universal monotonic-enough wall clock fallback.
     }
     return Date.now();
   }
 
-  scheduleNextFrame() {
+  scheduleNextFrame(): boolean {
     if (this.lifecycle !== 'running' || this.frameId != null) return false;
     try {
-      this.frameId = this.platform.requestFrame((time) => {
+      this.frameId = this.platform.requestFrame(() => {
         this.frameId = null;
-        this.frame(time);
+        this.frame();
       });
       return true;
     } catch (error) {
       this.recordRuntimeError('request-frame', error);
       this.cancelCharge(null, true);
-      this.lifecycle = 'failed';
+      this.lifecycleController.transition('failed');
       this.unbindEvents();
       return false;
     }
   }
 
-  chargeWindowFor(choiceIndex) {
+  chargeWindowFor(choiceIndex: number): ChargeWindow | null {
     const target = this.world.candidates[choiceIndex];
     if (!target) return null;
     return getTargetChargeWindow({
@@ -271,7 +413,7 @@ export class NumberStrategyGame {
     });
   }
 
-  hitControl(rawPoint) {
+  hitControl(rawPoint: InputPoint): Control | null {
     if (typeof this.renderer.hitTest === 'function') {
       return this.renderer.hitTest(rawPoint);
     }
@@ -283,7 +425,7 @@ export class NumberStrategyGame {
     return null;
   }
 
-  onPointerStart(rawPoint) {
+  onPointerStart(rawPoint: InputPoint): boolean {
     if (
       this.lifecycle !== 'running'
       || !rawPoint
@@ -298,45 +440,36 @@ export class NumberStrategyGame {
       return false;
     }
     if (control === 'restart') {
-      this.restart();
-      return true;
+      return this.commandHandler.handle({ type: 'restart' });
     }
     if (control === 'pause') {
-      this.togglePause();
-      return true;
+      return this.commandHandler.handle({
+        type: this.state.phase === GAME_PHASE.PAUSED ? 'resume' : 'pause',
+      });
     }
     if (this.state.phase === GAME_PHASE.PAUSED) {
       // The pause overlay promises “点击继续”. Consume this pointer as a pure
       // resume gesture so its matching pointerup cannot also launch a jump.
-      this.togglePause();
-      return true;
+      return this.commandHandler.handle({ type: 'resume' });
     }
     if (this.state.phase === GAME_PHASE.WON) {
-      if (this.state.nextRound()) {
-        this.clearActivePointer();
-        this.resetWorld();
-      }
-      return true;
+      return this.commandHandler.handle({ type: 'next-round' });
     }
     if (this.state.phase === GAME_PHASE.LOST) {
-      this.restart();
-      return true;
+      return this.commandHandler.handle({ type: 'restart' });
     }
     if (this.state.phase !== GAME_PHASE.READY || this.activePointerId != null) return false;
 
-    let choiceIndex = control === 'choice-left'
-      ? 0
-      : control === 'choice-right'
-        ? 1
-        : null;
-    if (choiceIndex == null) return false;
+    if (control !== 'choice-left' && control !== 'choice-right') return false;
+    let choiceIndex = control === 'choice-left' ? 0 : 1;
     try {
       const screenChoiceIndex = this.renderer.choiceIndexForControl?.(
         control,
         this.world.candidates,
       );
       if (
-        Number.isInteger(screenChoiceIndex)
+        typeof screenChoiceIndex === 'number'
+        && Number.isInteger(screenChoiceIndex)
         && screenChoiceIndex >= 0
         && screenChoiceIndex < this.world.candidates.length
       ) {
@@ -345,28 +478,22 @@ export class NumberStrategyGame {
     } catch {
       // Render-side projection is optional; keep the stable logical fallback.
     }
-    let chargeWindow;
     try {
-      chargeWindow = this.chargeWindowFor(choiceIndex);
+      return this.commandHandler.handle({
+        type: 'start-charge',
+        choice: choiceIndex === 0 ? 'left' : 'right',
+        pointerId: pointerIdOf(rawPoint),
+      });
     } catch (error) {
       this.recordRuntimeError('charge-window', error);
       return false;
     }
-    if (this.state.startCharge(choiceIndex)) {
-      this.activePointerId = pointerIdOf(rawPoint);
-      this.chargeStartedAt = this.readClock();
-      this.state.chargeWindow = chargeWindow;
-      this.presentation.selectedChoice = choiceIndex;
-      this.presentation.chargePower = 0;
-      this.presentation.missVisual = null;
-      return true;
-    }
-    return false;
   }
 
-  beginJump() {
+  beginJump(): boolean {
     if (this.state.phase !== GAME_PHASE.CHARGING) return false;
     const choiceIndex = this.state.selectedChoice;
+    if (choiceIndex === null) return false;
     const target = this.world.candidates[choiceIndex];
     if (!target) {
       this.cancelCharge(null, true);
@@ -400,28 +527,28 @@ export class NumberStrategyGame {
     this.presentation.jumpId += 1;
     this.presentation.jumpProgress = 0;
     this.presentation.chargePower = chargeToPower(released.chargeMs, this.jumpPhysics);
+    this.eventCollector.emit('jump-started', {
+      choiceIndex,
+      chargeMs: released.chargeMs,
+      targetId: target.id,
+    });
     return true;
   }
 
-  onPointerEnd(rawPoint) {
-    if (this.lifecycle !== 'running' || this.activePointerId == null) return false;
-    if (pointerIdOf(rawPoint) !== this.activePointerId) return false;
-    if (this.chargeStartedAt != null) {
-      const elapsedMs = this.readClock() - this.chargeStartedAt;
-      if (Number.isFinite(elapsedMs) && elapsedMs >= 0) {
-        this.state.setChargeDuration(elapsedMs);
-      }
-    }
-    this.clearActivePointer();
-    return this.beginJump();
+  onPointerEnd(rawPoint: InputPoint): boolean {
+    if (this.lifecycle !== 'running') return false;
+    return this.commandHandler.handle({
+      type: 'release-charge',
+      pointerId: pointerIdOf(rawPoint),
+    });
   }
 
-  clearActivePointer() {
+  clearActivePointer(): void {
     this.activePointerId = null;
     this.chargeStartedAt = null;
   }
 
-  cancelCharge(rawPoint = null, force = false) {
+  cancelCharge(rawPoint: InputPoint | null = null, force = false): boolean {
     if (
       !force
       && this.activePointerId != null
@@ -433,10 +560,11 @@ export class NumberStrategyGame {
     if (!cancelled) return false;
     this.presentation.selectedChoice = null;
     this.presentation.chargePower = 0;
+    this.eventCollector.emit('charge-cancelled', {});
     return true;
   }
 
-  togglePause() {
+  togglePause(): boolean {
     if (
       this.state.phase === GAME_PHASE.CHARGING
       || (this.state.phase === GAME_PHASE.PAUSED
@@ -445,12 +573,12 @@ export class NumberStrategyGame {
     return this.state.togglePause();
   }
 
-  restart() {
+  restart(): void {
     this.clearActivePointer();
     this.state.restart();
     this.resetWorld();
-    this.accumulator = 0;
-    this.lastTime = null;
+    this.fixedStepClock.rebase();
+    this.eventCollector.emit('restarted', {});
   }
 
   resolveJump() {
@@ -460,7 +588,9 @@ export class NumberStrategyGame {
       target: this.jump.target,
     });
     if (landing.landed) {
-      const operation = this.state.choices[this.state.selectedChoice];
+      const selectedChoice = this.state.selectedChoice;
+      const operation = selectedChoice === null ? undefined : this.state.choices[selectedChoice];
+      if (!operation) throw new Error('落地结算缺少已选择的运算。');
       const nextValue = applyOperation(this.state.currentValue, operation);
       const nextMovesRemaining = this.state.movesRemaining - 1;
       const rngSnapshot = this.state.rng.snapshot?.();
@@ -483,7 +613,7 @@ export class NumberStrategyGame {
         throw error;
       }
       const event = this.state.resolveJump(landing);
-      if (!event || !this.state.useChoices(nextChoices)) {
+      if (!event || event.type !== 'land' || !this.state.useChoices(nextChoices)) {
         throw new Error('落地后无法提交新的数值候选。');
       }
       this.presentation.landingId += 1;
@@ -491,6 +621,10 @@ export class NumberStrategyGame {
       this.presentation.missVisual = null;
       this.presentation.lastLanding = landing;
       this.jump = null;
+      this.eventCollector.emit('landed', {
+        result: event.result,
+        platformId: this.world.current.id,
+      });
       return event;
     } else {
       const event = this.state.resolveJump(landing);
@@ -504,11 +638,15 @@ export class NumberStrategyGame {
       };
       this.presentation.lastLanding = landing;
       this.jump = null;
+      this.eventCollector.emit('missed', {
+        reason: landing.reason,
+        targetId: this.presentation.missVisual.targetId,
+      });
       return event;
     }
   }
 
-  update(deltaMs) {
+  update(deltaMs: number): void {
     if (!Number.isFinite(deltaMs) || deltaMs <= 0) return;
     if (this.state.phase === GAME_PHASE.PAUSED) return;
 
@@ -542,6 +680,21 @@ export class NumberStrategyGame {
       this.presentation.chargePower = 0;
       this.presentation.jumpProgress = 0;
     }
+    if (landingEvent?.type === 'won' || landingEvent?.type === 'lost') {
+      this.eventCollector.emit(landingEvent.type, {
+        currentValue: this.state.currentValue,
+        targetValue: this.state.targetValue,
+      });
+    }
+    if (landingEvent) {
+      const taskResult = this.session.evaluateTask();
+      if (taskResult.status !== 'active') {
+        this.eventCollector.emit(`task-${taskResult.status}`, {
+          taskId: this.session.taskId,
+          reason: taskResult.reason,
+        });
+      }
+    }
 
     if (this.state.phase === GAME_PHASE.LOST && !this.world.player.supportPlatformId) {
       const floorY = (this.world.current?.topY ?? 0) - 20;
@@ -552,27 +705,32 @@ export class NumberStrategyGame {
     }
   }
 
-  frame(_time) {
+  frame(): void {
     if (this.lifecycle !== 'running') return;
     try {
       // requestAnimationFrame timestamps are not portable across mini-game
       // hosts: some are omitted, some use uptime, while platform.now() may use
       // epoch time. Use one clock consistently for the whole runtime.
-      const timestamp = this.readClock();
-      const elapsed = this.lastTime == null ? 0 : timestamp - this.lastTime;
-      const delta = Number.isFinite(elapsed)
-        ? Math.min(100, Math.max(0, elapsed))
-        : 0;
-      this.lastTime = timestamp;
-      if (!Number.isFinite(this.accumulator) || this.accumulator < 0) this.accumulator = 0;
-      this.accumulator += delta;
-      while (this.accumulator >= FIXED_STEP_MS) {
-        this.update(FIXED_STEP_MS);
-        this.accumulator -= FIXED_STEP_MS;
+      this.fixedStepClock.advance(this.readClock(), (deltaMs) => {
+        this.commandHandler.handle({ type: 'tick', deltaMs });
+      });
+      const events = this.eventCollector.drain();
+      const snapshot = this.snapshotFactory.create({
+        revision: this.presentation.revision,
+        state: this.state,
+        world: this.world,
+        presentation: this.presentation,
+        difficulty: this.difficulty,
+        gameplayId: this.session.gameplayId,
+        taskId: this.session.taskId,
+      });
+      try {
+        this.feedback.handle(events);
+      } catch (error) {
+        this.recordRuntimeError('feedback', error);
       }
-      if (this.renderer.draw(this.state, this.world, this.presentation) === false) {
-        const rendererError = this.renderer.getDebugSnapshot?.()?.errors?.last;
-        throw new Error(rendererError?.message ?? '渲染器未能完成当前帧。');
+      if (this.renderer.render(snapshot, events) === false) {
+        throw new Error('渲染器未能完成当前帧。');
       }
       this.consecutiveFrameErrors = 0;
     } catch (error) {
@@ -580,7 +738,7 @@ export class NumberStrategyGame {
       this.recordRuntimeError('frame', error);
       if (this.consecutiveFrameErrors >= MAX_CONSECUTIVE_FRAME_ERRORS) {
         this.cancelCharge(null, true);
-        this.lifecycle = 'failed';
+        this.lifecycleController.transition('failed');
         this.unbindEvents();
       }
     } finally {
@@ -590,7 +748,7 @@ export class NumberStrategyGame {
     }
   }
 
-  debugJump(choiceIndex = 0, chargeMs = null) {
+  debugJump(choiceIndex = 0, chargeMs: number | null = null): boolean {
     if (this.state.phase !== GAME_PHASE.READY) return false;
     if (!this.state.startCharge(choiceIndex)) return false;
     this.state.chargeWindow = this.chargeWindowFor(choiceIndex);
@@ -625,9 +783,9 @@ export class NumberStrategyGame {
     };
   }
 
-  destroy() {
+  destroy(): void {
     if (this.lifecycle === 'destroyed') return;
-    this.lifecycle = 'destroyed';
+    this.lifecycleController.transition('destroyed');
     this.clearActivePointer();
     const frameId = this.frameId;
     this.frameId = null;
@@ -645,5 +803,11 @@ export class NumberStrategyGame {
     } catch (error) {
       this.recordRuntimeError('renderer-destroy', error);
     }
+    try {
+      this.feedback.dispose();
+    } catch (error) {
+      this.recordRuntimeError('feedback-dispose', error);
+    }
+    this.eventCollector.clear();
   }
 }

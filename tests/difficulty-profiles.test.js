@@ -6,8 +6,7 @@ import {
   validateDifficultyProfile,
 } from '@number-strategy/difficulty';
 import { createRuntimeConfig } from '../src/config.js';
-import { GAME_PHASE, GameState } from '../src/core/game-state.js';
-import { findOperationPath } from '../src/core/operations.js';
+import { GAME_PHASE, GameState, findOperationPath } from '@number-strategy/gameplay';
 
 test('easy, normal and hard each keep 10000 seeded rounds winnable', { timeout: 30_000 }, () => {
   for (const profile of BUILTIN_DIFFICULTIES) {

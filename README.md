@@ -74,11 +74,12 @@ npm run preview:lan
 ```text
 packages/
 ├── game-contracts/         # strict TS：版本化定义、Command/Event/Snapshot 与小型 Port
-└── difficulty/             # strict TS：easy/normal/hard、校验、注册和迁移投影
+├── difficulty/             # strict TS：easy/normal/hard、校验、注册和迁移投影
+├── jump-engine/            # strict TS：RNG、几何、轨迹、碰撞和 WorldState
+├── gameplay/               # strict TS：数值规则、状态机、Gameplay/Task 注册表
+└── application/            # strict TS：Session、Command、Clock、Lifecycle、Event、Snapshot
 src/
-├── core/                   # 数值、世界、轨迹与碰撞；唯一玩法真相
 ├── platform/               # Web / wx.* / tt.* 画布、输入、生命周期和设备能力
-├── runtime/                # 固定步长编排与核心→表现快照同步
 ├── render3d/
 │   ├── renderer3d.js        # Renderer3D 外观，隔离 Three.js 内部细节
 │   ├── stage.js             # WebGLRenderer、世界 Scene 与 HUD Scene
@@ -88,15 +89,15 @@ src/
 │   ├── platform-*.js        # 平台 Mesh 工厂与 ID→View 注册表
 │   ├── effects/             # 拖尾与粒子，只反映事件而不判定结果
 │   └── hud/                 # 同一 WebGL Canvas 上的独立 HUD Scene
-└── entry/                   # Web / 微信 / 抖音入口
+└── entry/                   # 唯一具体组合根与 Web / 微信 / 抖音入口
 ```
 
-第一批治理采用 npm workspaces。新包已经是 strict TypeScript；迁移期间旧 `src/**/*.js` 全部进入 `allowJs/checkJs`，第二、三批按模块删除旧实现，第四批以人工维护 `.js` 为 0 的自动化门禁完成全面 TypeScript，不会长期保留双实现。
+第二批已把 Core 与 Runtime 迁入 private strict TypeScript workspaces，并删除旧 JS 实现。剩余 Renderer、平台、入口、测试和构建工具继续受 `allowJs/checkJs` 约束，第三、四批按路线图迁移；第四批以人工维护 `.js` 为 0 的自动化门禁完成全面 TypeScript。
 
 数据严格单向流动：
 
 ```text
-平台输入 → Runtime → Core 状态/碰撞结果 → 只读快照 → Renderer3D
+平台输入 → Application → Gameplay + Jump Engine → 只读快照/事件 → Renderer3D
 ```
 
 Three.js Mesh、缓动和特效不得反向修改核心世界，不得决定是否落地，也不得把偏心落点吸附到平台中心。详细理由见 [技术架构](docs/architecture.md) 和 [ADR](docs/decisions/)。
