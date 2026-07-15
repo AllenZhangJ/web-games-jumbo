@@ -1,5 +1,5 @@
 export const SAVE_FORMAT = 'number-strategy-save' as const;
-export const CURRENT_SAVE_VERSION = 3 as const;
+export const CURRENT_SAVE_VERSION = 4 as const;
 export const REPLAY_VERSION = 1 as const;
 export const MAX_REPLAY_ACTIONS = 10_000;
 
@@ -13,6 +13,7 @@ export interface GameIdentity {
   readonly difficulty: { readonly id: string; readonly version: number };
   readonly gameplay: { readonly id: string; readonly version: number };
   readonly task: { readonly id: string; readonly version: number };
+  readonly character: { readonly id: string; readonly version: number };
 }
 
 export interface SaveEnvelope {
@@ -45,6 +46,17 @@ interface LegacySaveV2 {
     readonly taskId?: string;
   };
   readonly actions: readonly unknown[];
+}
+
+interface LegacySaveV3 {
+  readonly format: typeof SAVE_FORMAT;
+  readonly version: 3;
+  readonly savedAtMs: number;
+  readonly game: Omit<GameIdentity, 'character'>;
+  readonly replay: {
+    readonly version: typeof REPLAY_VERSION;
+    readonly actions: readonly unknown[];
+  };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -101,6 +113,7 @@ function parseIdentity(value: unknown): GameIdentity {
     difficulty: parseDefinition(value.difficulty, 'game.difficulty'),
     gameplay: parseDefinition(value.gameplay, 'game.gameplay'),
     task: parseDefinition(value.task, 'game.task'),
+    character: parseDefinition(value.character, 'game.character'),
   });
 }
 
@@ -136,6 +149,7 @@ function migrateV1(value: LegacySaveV1): SaveEnvelope {
       difficulty: { id: value.difficultyId, version: 1 },
       gameplay: { id: 'number-strategy-jump', version: 1 },
       task: { id: 'reach-number', version: 1 },
+      character: { id: 'jumbo-red', version: 1 },
     },
     replay: { version: REPLAY_VERSION, actions: value.actions },
   });
@@ -154,8 +168,22 @@ function migrateV2(value: LegacySaveV2): SaveEnvelope {
       },
       gameplay: { id: value.game.gameplayId ?? 'number-strategy-jump', version: 1 },
       task: { id: value.game.taskId ?? 'reach-number', version: 1 },
+      character: { id: 'jumbo-red', version: 1 },
     },
     replay: { version: REPLAY_VERSION, actions: value.actions },
+  });
+}
+
+function migrateV3(value: LegacySaveV3): SaveEnvelope {
+  return defineSaveEnvelope({
+    format: SAVE_FORMAT,
+    version: CURRENT_SAVE_VERSION,
+    savedAtMs: value.savedAtMs,
+    game: {
+      ...value.game,
+      character: { id: 'jumbo-red', version: 1 },
+    },
+    replay: value.replay,
   });
 }
 
@@ -165,6 +193,9 @@ export function migrateSaveEnvelope(value: unknown): SaveEnvelope {
   if (value.version === 1) return migrateV1(value as unknown as LegacySaveV1);
   if (value.version === 2 && value.format === SAVE_FORMAT) {
     return migrateV2(value as unknown as LegacySaveV2);
+  }
+  if (value.version === 3 && value.format === SAVE_FORMAT) {
+    return migrateV3(value as unknown as LegacySaveV3);
   }
   throw new RangeError(`不支持存档版本：${String(value.version)}。`);
 }

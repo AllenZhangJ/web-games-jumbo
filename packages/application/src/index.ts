@@ -1,5 +1,6 @@
 export * from './bootstrap.js';
 export * from './command-handler.js';
+export * from './content-menu.js';
 export * from './event-collector.js';
 export * from './fixed-step-clock.js';
 export * from './game-session.js';

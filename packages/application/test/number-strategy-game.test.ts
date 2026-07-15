@@ -28,6 +28,7 @@ function createHarness({
   feedback = null,
   seed = 45,
   storage = null,
+  gameOptions = null,
 } = {}) {
   let clock = 0;
   let nextFrameId = 1;
@@ -88,12 +89,14 @@ function createHarness({
     loadCalls: number;
     drawCalls: number;
     destroyCalls: number;
+    selectedCharacters: string[];
     choiceIndexForControl?: (control: string) => number;
   } = {
     resizeCalls: 0,
     loadCalls: 0,
     drawCalls: 0,
     destroyCalls: 0,
+    selectedCharacters: [],
     resize() {
       this.resizeCalls += 1;
     },
@@ -111,9 +114,14 @@ function createHarness({
     destroy() {
       this.destroyCalls += 1;
     },
+    selectCharacter(characterId) {
+      this.selectedCharacters.push(characterId);
+      return { selectedId: characterId };
+    },
     getDebugSnapshot: () => null,
   };
   const game = new NumberStrategyGame(platform, {
+    ...(gameOptions ?? {}),
     ...(seed === null ? {} : { seed }),
     ...(difficulty ? { difficulty } : {}),
     ...(feedback ? { feedback } : {}),
@@ -234,6 +242,38 @@ test('screen-projected control mapping can swap logical candidates without chang
     control: 'choice-right',
   }), true);
   assert.equal(harness.game.state.selectedChoice, 0);
+  harness.game.destroy();
+});
+
+test('the single-canvas content menu applies a compatible gameplay, task and character together', async () => {
+  const harness = createHarness({
+    gameOptions: {
+      showContentMenu: true,
+      characterCatalog: [
+        { id: 'jumbo-red', version: 1, name: '赤红巨宝', description: '经典角色' },
+        { id: 'aqua-scout', version: 1, name: '青蓝侦察', description: '敏捷角色' },
+      ],
+    },
+  });
+  await harness.game.start();
+  assert.equal(harness.game.contentMenu.open, true);
+  assert.equal(harness.handlers.input.onStart({
+    x: 1, y: 1, pointerId: 1, control: 'content-gameplay-next',
+  }), true);
+  assert.equal(harness.handlers.input.onStart({
+    x: 1, y: 1, pointerId: 2, control: 'content-task-next',
+  }), true);
+  assert.equal(harness.handlers.input.onStart({
+    x: 1, y: 1, pointerId: 3, control: 'content-character-next',
+  }), true);
+  assert.equal(harness.handlers.input.onStart({
+    x: 1, y: 1, pointerId: 4, control: 'content-apply',
+  }), true);
+  assert.equal(harness.game.session.gameplayId, 'plus-minus-sprint');
+  assert.equal(harness.game.session.taskId, 'near-target');
+  assert.equal(harness.game.appliedCharacterId, 'aqua-scout');
+  assert.equal(harness.game.contentMenu.open, false);
+  assert.equal(harness.renderer.selectedCharacters.at(-1), 'aqua-scout');
   harness.game.destroy();
 });
 
@@ -508,7 +548,7 @@ test('versioned local save replays a stable session before the first rendered fr
   first.game.update(durationMs);
   if (first.game.state.phase === GAME_PHASE.LANDING) first.game.update(GAME_RULES.landingDurationMs);
   const expected = first.game.getDebugSnapshot();
-  assert.equal(saved.version, 3);
+  assert.equal(saved.version, 4);
   first.game.destroy();
 
   const restored = createHarness({ seed: null, storage });

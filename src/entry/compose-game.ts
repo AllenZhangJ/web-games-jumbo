@@ -4,6 +4,7 @@ import {
   type PlatformPort,
 } from '@number-strategy/application';
 import type { FeedbackPort, StoragePort } from '@number-strategy/game-contracts';
+import { BUILTIN_CHARACTERS } from '@number-strategy/content';
 import {
   AudioFactorySoundPort,
   FeedbackController,
@@ -58,12 +59,23 @@ export function createNumberStrategyGame(
   } = options;
   const storage = injectedStorage ?? createStoragePort(platform);
   const feedback = injectedFeedback ?? createFeedback(platform, storage);
+  const characterCatalog = gameOptions.characterCatalog ?? BUILTIN_CHARACTERS.map((character) => ({
+    id: character.id,
+    version: character.version,
+    name: character.presentation.name,
+    description: character.presentation.description,
+  }));
   return new NumberStrategyGame(platform, {
     ...gameOptions,
+    characterCatalog,
+    showContentMenu: gameOptions.showContentMenu ?? true,
     feedback,
     storage,
     rendererFactory: (canvas, rendererPlatform) => (
-      new Renderer3D(canvas, rendererPlatform, rendererOptions)
+      new Renderer3D(canvas, rendererPlatform, {
+        ...rendererOptions,
+        characterId: gameOptions.characterId,
+      })
     ),
   });
 }

@@ -149,8 +149,10 @@ export class GameSession {
     const taskDefinition = this.taskRegistry.get(this.taskId);
     return taskDefinition.evaluate(this.task, {
       currentValue: this.state.currentValue,
+      targetValue: this.state.targetValue,
       movesRemaining: this.state.movesRemaining,
       phase: this.state.phase,
+      operationHistory: this.state.operationHistory.map((operation) => ({ ...operation })),
     });
   }
 

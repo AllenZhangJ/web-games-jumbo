@@ -148,6 +148,7 @@ v3 只创建一个上屏 WebGL2 Canvas：
 - `state`：数值、回合、步数、阶段和胜负。
 - `world`：平台快照、稳定 ID 和玩家绝对位置。
 - `presentation`：蓄力比例、选中分支、跳跃姿态、一次性事件和不影响结果的视觉进度。
+- `presentation.contentMenu`：兼容玩法/任务/角色的只读选择快照；Renderer 只负责绘制与命中测试，Application 提交选择。
 
 `platform-view-registry` 以稳定平台 ID 同步 Mesh，不以对象数组下标猜测身份。缺失的 ID 创建 View，仍然存在的 ID 更新位置/状态，从快照移除的 ID 退场并回收。
 
@@ -218,3 +219,4 @@ v3 只创建一个上屏 WebGL2 Canvas：
 - [ADR-001：使用 Three.js/WebGL2 单上屏 Canvas](decisions/001-threejs-webgl2-single-canvas.md)
 - [ADR-002：核心状态单向驱动三维表现层](decisions/002-core-driven-presentation.md)
 - [ADR-003：参考 `shenmaxg/web-jump` 并保留 MIT 归属](decisions/003-web-jump-reference-and-license.md)
+- [ADR-005：正式内容目录与任务驱动胜负](decisions/005-formal-content-catalog-and-task-outcomes.md)

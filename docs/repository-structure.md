@@ -58,7 +58,7 @@ renderer-three   application ← persistence
 - 新难度提供版本化 `DifficultyProfile`；产品曝光与注册是两个独立决定。
 - 存档保存所有定义的 ID/版本；不兼容定义不能被静默替换。
 
-自动化证明 5 个玩法、5 个任务和 10 个角色可静态注册、选择、回退与销毁。这是扩展容量证明，不是相应数量正式内容的交付声明。
+当前已正式交付 5 个玩法、5 个任务和 10 个程序化角色。Gameplay 声明兼容任务，Task 决定落地后的完成条件，Character 通过类型化外观参数驱动 Three Rig；此前的 `fixture-*` 容量占位已退出正式内容路径。
 
 ## TypeScript 与质量门禁
 
@@ -74,7 +74,7 @@ renderer-three   application ← persistence
 - 回归/集成：v0.1.0 固定 seed/整局/截图、入口竞态、三端边界、文档链接、workspace 依赖。
 - 大样本：easy/normal/hard 各 10,000 seed 可解性。
 - soak：1,000 个完整 normal 会话；100 局 Three 平台资源有界并最终释放。
-- 扩展：5 Gameplay、5 Task、10 Character Manifest 容量证明。
+- 内容：5 个正式 Gameplay、5 个正式 Task、10 个正式 Character，以及兼容内容菜单。
 - 构建：Web ESM、微信 IIFE、抖音 IIFE，三端均带许可文本。
 
-当前构建 Web JS 651.45 kB、gzip 170.81 kB；Web gzip 硬预算 180 KiB，微信/抖音 `game.js` 硬预算各 700 KiB。
+当前构建 Web JS 672.91 kB、gzip 177.55 kB；Web gzip 硬预算 180 KiB，微信/抖音 `game.js` 687,289 bytes、硬预算各 700 KiB。

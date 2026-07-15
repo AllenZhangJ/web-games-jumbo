@@ -17,7 +17,7 @@ async function fixture(name: string): Promise<unknown> {
 
 describe('versioned local saves', () => {
   it('loads current and migrates the prior two fixture versions', async () => {
-    for (const name of ['save-v1.json', 'save-v2.json', 'save-v3.json']) {
+    for (const name of ['save-v1.json', 'save-v2.json', 'save-v3.json', 'save-v4.json']) {
       const migrated = migrateSaveEnvelope(await fixture(name));
       expect(migrated.version).toBe(CURRENT_SAVE_VERSION);
       expect(migrated.game).toMatchObject({
@@ -25,6 +25,7 @@ describe('versioned local saves', () => {
         difficulty: { id: 'normal', version: 1 },
         gameplay: { id: 'number-strategy-jump', version: 1 },
         task: { id: 'reach-number', version: 1 },
+        character: { id: 'jumbo-red', version: 1 },
       });
     }
   });
@@ -37,7 +38,7 @@ describe('versioned local saves', () => {
       write: (_key, value) => { stored = value; return true; },
       remove: () => { removals += 1; stored = undefined; return true; },
     });
-    expect(repository.load()?.version).toBe(3);
+    expect(repository.load()?.version).toBe(4);
     expect(repository.diagnostics().migrations).toBe(1);
     stored = { format: 'bad', version: 99 };
     expect(repository.load()).toBeNull();
@@ -53,6 +54,7 @@ describe('versioned local saves', () => {
       difficulty: { id: 'normal', version: 1 },
       gameplay: { id: 'number-strategy-jump', version: 1 },
       task: { id: 'reach-number', version: 1 },
+      character: { id: 'jumbo-red', version: 1 },
     });
     recorder.append({ type: 'jump', choiceIndex: 1, chargeMs: 600 });
     recorder.append({ type: 'restart' });

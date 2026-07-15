@@ -100,12 +100,15 @@ export class HudScene {
     this.modal = createTextureSprite(null, { color: 0xffffff, textureManager });
     this.modal.name = 'HudModal';
     this.modal.visible = false;
+    this.contentMenu = createTextureSprite(null, { color: 0xffffff, textureManager });
+    this.contentMenu.name = 'HudContentMenu';
+    this.contentMenu.visible = false;
     this.leftControl = createTextureSprite(null, { color: 0xffffff, textureManager });
     this.leftControl.name = 'HudChoiceLeft';
     this.rightControl = createTextureSprite(null, { color: 0xffffff, textureManager });
     this.rightControl.name = 'HudChoiceRight';
 
-    [this.top, this.status, this.modal, this.leftControl, this.rightControl].forEach((sprite: THREE.Sprite) => {
+    [this.top, this.status, this.modal, this.contentMenu, this.leftControl, this.rightControl].forEach((sprite: THREE.Sprite) => {
       sprite.renderOrder = 100;
       this.scene.add(sprite);
     });
@@ -113,11 +116,18 @@ export class HudScene {
     this.viewport = { width: 1, height: 1, safeArea: null };
     this.safeRect = normalizeSafeRect(this.viewport);
     this.layoutScale = 1;
-    this.controlRects = { left: null, right: null, pause: null, restart: null };
-    this.controlState = { phase: 'ready', selectedChoice: null, overlayVisible: false };
+    this.controlRects = {
+      left: null, right: null, pause: null, restart: null, menu: null,
+      gameplayPrev: null, gameplayNext: null, taskPrev: null, taskNext: null,
+      characterPrev: null, characterNext: null, apply: null, close: null,
+    };
+    this.controlState = {
+      phase: 'ready', selectedChoice: null, overlayVisible: false, contentMenuOpen: false,
+    };
     this.topKey = '';
     this.statusKey = '';
     this.modalKey = '';
+    this.contentMenuKey = '';
     this.leftControlKey = '';
     this.rightControlKey = '';
     this.resize(this.viewport);
@@ -191,6 +201,14 @@ export class HudScene {
       height: modalHeight,
     };
     screenRect(this.modal, modalRect, height, 1);
+    const contentMenuHeight = Math.min(this.safeRect.height - 36, 610 * scale);
+    const contentMenuRect = {
+      x: centerX - modalWidth / 2,
+      y: this.safeRect.top + (this.safeRect.height - contentMenuHeight) / 2,
+      width: modalWidth,
+      height: contentMenuHeight,
+    };
+    screenRect(this.contentMenu, contentMenuRect, height, 2);
 
     const pauseCenterX = topRect.x + topRect.width * (1265 / 1420);
     const restartCenterX = topRect.x + topRect.width * (1370 / 1420);
@@ -207,32 +225,86 @@ export class HudScene {
       width: topControlSize,
       height: topControlSize,
     };
+    const menuCenterX = topRect.x + topRect.width * (1155 / 1420);
+    this.controlRects.menu = {
+      x: menuCenterX - topControlSize / 2,
+      y: topRect.y + (topRect.height - topControlSize) / 2,
+      width: topControlSize,
+      height: topControlSize,
+    };
+    const arrowWidth = contentMenuRect.width * 0.15;
+    const rowHeight = contentMenuRect.height * 0.19;
+    const rowCenters = [0.31, 0.52, 0.73].map((ratio) => contentMenuRect.y + contentMenuRect.height * ratio);
+    const rowKeys = ['gameplay', 'task', 'character'];
+    rowKeys.forEach((key, index) => {
+      this.controlRects[`${key}Prev`] = {
+        x: contentMenuRect.x + contentMenuRect.width * 0.035,
+        y: rowCenters[index] - rowHeight / 2,
+        width: arrowWidth,
+        height: rowHeight,
+      };
+      this.controlRects[`${key}Next`] = {
+        x: contentMenuRect.x + contentMenuRect.width * 0.815,
+        y: rowCenters[index] - rowHeight / 2,
+        width: arrowWidth,
+        height: rowHeight,
+      };
+    });
+    this.controlRects.apply = {
+      x: contentMenuRect.x + contentMenuRect.width * 0.25,
+      y: contentMenuRect.y + contentMenuRect.height * 0.84,
+      width: contentMenuRect.width * 0.5,
+      height: contentMenuRect.height * 0.1,
+    };
+    this.controlRects.close = {
+      x: contentMenuRect.x + contentMenuRect.width * 0.84,
+      y: contentMenuRect.y + contentMenuRect.height * 0.035,
+      width: contentMenuRect.width * 0.12,
+      height: contentMenuRect.height * 0.1,
+    };
   }
 
   update(state: any = {}, presentation: any = {}) {
+    const contentMenuOpen = Boolean(presentation.contentMenu?.open);
     this.controlState = {
       phase: state.phase ?? 'ready',
       selectedChoice: presentation.selectedChoice ?? state.selectedChoice ?? null,
-      overlayVisible: ['paused', 'won', 'lost'].includes(state.phase),
+      overlayVisible: contentMenuOpen || ['paused', 'won', 'lost'].includes(state.phase),
+      contentMenuOpen,
     };
-    this.updateTop(state);
+    this.updateTop(state, presentation);
     this.updateStatus(state, presentation);
     this.updateControls(state, presentation);
     this.updateModal(state);
+    this.updateContentMenu(presentation.contentMenu);
   }
 
-  updateTop(state: any) {
-    const key = `hud-top:${state.currentValue}:${state.targetValue}:${state.movesRemaining}:${state.phase}`;
+  updateTop(state: any, presentation: any = {}) {
+    const summary = presentation.contentSummary ?? {};
+    const summaryText = `${summary.gameplayName ?? ''} · ${summary.taskName ?? ''}`;
+    const key = `hud-top:${state.currentValue}:${state.targetValue}:${state.movesRemaining}:${state.phase}:${summaryText}`;
     if (key === this.topKey) return;
     this.topKey = key;
     const texture = this.textureManager.get(key, 1420, 176, (context: any) => {
       metric(context, '当前', state.currentValue ?? '—', 34, '#263238');
       metric(context, '目标', state.targetValue ?? '—', 478, '#263238');
       metric(context, '剩余', state.movesRemaining ?? '—', 894, '#263238');
+      context.fillStyle = '#546E7A';
+      context.font = '650 28px "PingFang SC", "Microsoft YaHei", sans-serif';
+      context.textAlign = 'left';
+      context.fillText(summaryText, 38, 150);
       context.fillStyle = '#263238';
       context.font = '750 76px sans-serif';
       context.textAlign = 'center';
       context.textBaseline = 'middle';
+      context.lineWidth = 12;
+      context.lineCap = 'round';
+      [58, 80, 102].forEach((y) => {
+        context.beginPath();
+        context.moveTo(1137, y);
+        context.lineTo(1173, y);
+        context.stroke();
+      });
       context.fillText(state.phase === 'paused' ? '▶' : 'Ⅱ', 1265, 80);
       context.font = '700 80px sans-serif';
       context.fillText('↻', 1370, 80);
@@ -246,7 +318,8 @@ export class HudScene {
       ?? state.message
       ?? '';
     const selected = presentation.selectedChoice ?? state.selectedChoice;
-    const visible = ['ready', 'charging', 'jumping', 'landing'].includes(state.phase);
+    const visible = !presentation.contentMenu?.open
+      && ['ready', 'charging', 'jumping', 'landing'].includes(state.phase);
     this.status.visible = visible;
     if (!visible) {
       this.statusKey = '';
@@ -272,7 +345,8 @@ export class HudScene {
     const choiceControlMap = presentation.choiceControlMap ?? { left: 0, right: 1 };
     const leftSelected = selected === choiceControlMap.left;
     const rightSelected = selected === choiceControlMap.right;
-    const overlayVisible = ['paused', 'won', 'lost'].includes(state.phase);
+    const overlayVisible = Boolean(presentation.contentMenu?.open)
+      || ['paused', 'won', 'lost'].includes(state.phase);
     const visible = !overlayVisible;
     const disabled = !['ready', 'charging'].includes(state.phase);
     this.leftControl.visible = visible;
@@ -335,7 +409,7 @@ export class HudScene {
   }
 
   updateModal(state: any) {
-    const visible = ['paused', 'won', 'lost'].includes(state.phase);
+    const visible = !this.controlState.contentMenuOpen && ['paused', 'won', 'lost'].includes(state.phase);
     this.modal.visible = visible;
     if (!visible) {
       this.modalKey = '';
@@ -364,7 +438,81 @@ export class HudScene {
     setSpriteTexture(this.modal, texture, state.phase === 'lost' ? 0xe53935 : 0xffffff, this.textureManager);
   }
 
+  updateContentMenu(menu: any) {
+    const visible = Boolean(menu?.open);
+    this.contentMenu.visible = visible;
+    if (!visible) {
+      this.contentMenuKey = '';
+      return;
+    }
+    const key = `hud-content:${menu.gameplay?.id}:${menu.task?.id}:${menu.character?.id}`;
+    if (key === this.contentMenuKey) return;
+    this.contentMenuKey = key;
+    const texture = this.textureManager.get(key, 1220, 1220, (context: any, width: number, height: number, path: any) => {
+      path(context, 20, 20, width - 40, height - 40, 56);
+      context.fillStyle = 'rgba(255,255,255,0.98)';
+      context.fill();
+      context.textAlign = 'center';
+      context.textBaseline = 'middle';
+      context.fillStyle = '#263238';
+      context.font = '850 66px "PingFang SC", "Microsoft YaHei", sans-serif';
+      context.fillText('选择跃迁内容', width / 2, 104);
+      context.font = '700 62px sans-serif';
+      context.fillText('×', width * 0.9, 96);
+      const rows = [
+        ['玩法', menu.gameplay],
+        ['任务', menu.task],
+        ['角色', menu.character],
+      ];
+      rows.forEach(([label, entry]: any, index: number) => {
+        const centerY = height * (0.31 + index * 0.21);
+        context.fillStyle = '#78909C';
+        context.font = '700 30px "PingFang SC", "Microsoft YaHei", sans-serif';
+        context.fillText(`${label}  ${entry.index}/${entry.total}`, width / 2, centerY - 60);
+        context.fillStyle = '#263238';
+        context.font = '850 54px "PingFang SC", "Microsoft YaHei", sans-serif';
+        context.fillText(entry.name, width / 2, centerY);
+        context.fillStyle = '#607D8B';
+        context.font = '600 27px "PingFang SC", "Microsoft YaHei", sans-serif';
+        context.fillText(entry.description, width / 2, centerY + 56);
+        context.strokeStyle = '#263238';
+        context.lineWidth = 14;
+        context.lineCap = 'round';
+        context.lineJoin = 'round';
+        const arrow = (x: number, direction: number) => {
+          context.beginPath();
+          context.moveTo(x + direction * 18, centerY - 30);
+          context.lineTo(x - direction * 18, centerY);
+          context.lineTo(x + direction * 18, centerY + 30);
+          context.stroke();
+        };
+        arrow(width * 0.1, 1);
+        arrow(width * 0.9, -1);
+      });
+      path(context, width * 0.25, height * 0.84, width * 0.5, height * 0.1, 50);
+      context.fillStyle = RENDER3D_COLORS.red;
+      context.fill();
+      context.fillStyle = '#FFFFFF';
+      context.font = '800 42px "PingFang SC", "Microsoft YaHei", sans-serif';
+      context.fillText('开始游戏', width / 2, height * 0.89);
+    });
+    setSpriteTexture(this.contentMenu, texture, 0xffffff, this.textureManager);
+  }
+
   hitTest(point: any) {
+    if (this.controlState.contentMenuOpen) {
+      const contentControls: readonly (readonly [string, string])[] = [
+        ['gameplayPrev', 'content-gameplay-prev'], ['gameplayNext', 'content-gameplay-next'],
+        ['taskPrev', 'content-task-prev'], ['taskNext', 'content-task-next'],
+        ['characterPrev', 'content-character-prev'], ['characterNext', 'content-character-next'],
+        ['apply', 'content-apply'], ['close', 'content-close'],
+      ];
+      for (const [rect, control] of contentControls) {
+        if (rectContains(this.controlRects[rect], point)) return control;
+      }
+      return null;
+    }
+    if (rectContains(this.controlRects.menu, point)) return 'content-menu';
     if (rectContains(this.controlRects.pause, point)) return 'pause';
     if (rectContains(this.controlRects.restart, point)) return 'restart';
     if (this.controlState.overlayVisible || this.controlState.phase !== 'ready') return null;
@@ -386,6 +534,7 @@ export class HudScene {
         this.leftControl.userData.textureFallback || this.rightControl.userData.textureFallback
       ),
       modalVisible: this.modal.visible,
+      contentMenuVisible: this.contentMenu.visible,
       controlsVisible: this.leftControl.visible && this.rightControl.visible,
       controlRects: {
         left: this.controlRects.left ? { ...this.controlRects.left } : null,
@@ -395,7 +544,7 @@ export class HudScene {
   }
 
   dispose() {
-    [this.top, this.status, this.modal, this.leftControl, this.rightControl].forEach((sprite: THREE.Sprite) => {
+    [this.top, this.status, this.modal, this.contentMenu, this.leftControl, this.rightControl].forEach((sprite: THREE.Sprite) => {
       this.textureManager.release(sprite.material?.map);
       sprite.material?.dispose?.();
       sprite.removeFromParent();

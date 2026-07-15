@@ -16,7 +16,7 @@
 
 | 字段 | 内容 |
 |---|---|
-| 构建/commit | `83e2b93`（四批治理独立终验） |
+| 构建/commit | `feature/content-expansion` 当前工作树（内容扩容验收） |
 | Web 预览地址 | `http://192.168.1.249:4173/`（2026-07-15 第四批生产构建；更换 Wi-Fi 后重新确认） |
 | 微信开发者工具 | 待填写 |
 | 抖音开发者工具 | 待填写 |
@@ -29,7 +29,7 @@
 
 ## 自动化与产物前置检查
 
-- [x] `npm run test` 的 23 个文件、138 项测试通过，覆盖数值、WorldState、跳跃/碰撞、按钮映射、平台隔离、Renderer、Content、Feedback、Persistence、1000 会话和 100 局资源测试。
+- [x] `npm run test` 的 24 个文件、146 项测试通过，覆盖 5 个正式玩法、5 个正式任务、10 个正式角色、数值、WorldState、跳跃/碰撞、按钮映射、平台隔离、Renderer、Content、Feedback、Persistence、1000 会话和 100 局资源测试。
 - [x] `npm run build` 生成 `dist/web`、`dist/wechat` 和 `dist/douyin`。
 - [x] 三个分发目录都包含 `THIRD_PARTY_NOTICES.md` 和 `licenses/`。
 - [x] 小游戏构建是可直接加载的 IIFE，不依赖 DOM、Node 或运行时模块加载器。
@@ -37,7 +37,7 @@
 - [x] 构建脚本枚举并强制 Web gzip 180 KiB、微信/抖音 `game.js` 700 KiB 的项目预算。
 - [ ] 与发行平台账号当前包体限制核对。
 
-当前本地构建：`dist/web` 约 `5.2 MiB`（含 source map），Web JS 651.45 kB、gzip 170.81 kB；`dist/wechat` 与 `dist/douyin` 各约 `672 KiB`，其中 `game.js` 665,797 bytes。发行平台限制仍需在真实账号和开发者工具中核对。
+当前本地构建：`dist/web` 约 `5.3 MiB`（含 source map），Web JS 672.91 kB、gzip 177.55 kB；`dist/wechat` 与 `dist/douyin` 各约 `692 KiB`，其中 `game.js` 687,289 bytes。发行平台限制仍需在真实账号和开发者工具中核对。
 
 ## 共用 WebGL2 和视觉
 
@@ -49,6 +49,7 @@
 - [x] 本机浏览器环境光、方向光和动态阴影无明显条带、闪烁、阴影 acne 或断层。
 - [x] 构建与本机浏览器中未出现旧狐狸、数据城市远景/前景、节拍轨和常驻底部操作轨道。
 - [x] 本机浏览器顶部极简 HUD 正确显示当前值、目标值和剩余步数，在所测视口中无裁切。
+- [x] 单 Canvas 内容菜单在 `390×844` 和 `1280×800` 完整显示；玩法、兼容任务、10 个角色可循环选择并一起应用。
 - [x] 本机浏览器选择候选时，平台和对应运算标签有单一、明确的青色反馈。
 
 ## 共用玩法与动作

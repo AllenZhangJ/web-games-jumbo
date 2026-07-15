@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  BUILTIN_CHARACTERS,
   CharacterRegistry,
   ContentSelection,
   DEFAULT_CHARACTER,
@@ -8,18 +9,19 @@ import {
 
 describe('content registries and lifecycle', () => {
   it('registers ten character manifests with stable versioned identities', () => {
-    const registry = new CharacterRegistry();
-    for (let index = 1; index <= 10; index += 1) {
-      registry.register(createProgrammaticCharacterDefinition(index));
-    }
+    const registry = BUILTIN_CHARACTERS.reduce(
+      (characters, character) => characters.register(character),
+      new CharacterRegistry(),
+    );
     expect(registry.list()).toHaveLength(10);
-    expect(registry.get('fixture-character-10').rendererKey).toBe('three-procedural-jumbo');
+    expect(registry.get('golden-crown').rendererKey).toBe('three-procedural-jumbo');
+    expect(new Set(registry.list().map(({ presentation }) => presentation.name)).size).toBe(10);
   });
 
   it('switches, falls back and disposes resources exactly once', () => {
     const registry = new CharacterRegistry()
       .register(DEFAULT_CHARACTER)
-      .register(createProgrammaticCharacterDefinition(1));
+      .register(createProgrammaticCharacterDefinition(2));
     const disposed: string[] = [];
     const selection = new ContentSelection({
       registry,
@@ -29,30 +31,30 @@ describe('content registries and lifecycle', () => {
         dispose: () => disposed.push(definition.id),
       }),
     });
-    expect(selection.select('fixture-character-1').id).toBe('fixture-character-1');
+    expect(selection.select('aqua-scout').id).toBe('aqua-scout');
     expect(selection.select('missing-character').id).toBe(DEFAULT_CHARACTER.id);
     expect(selection.snapshot).toMatchObject({ usedFallback: true, selectedId: DEFAULT_CHARACTER.id });
-    expect(disposed).toEqual(['fixture-character-1']);
+    expect(disposed).toEqual(['aqua-scout']);
     selection.dispose();
     selection.dispose();
-    expect(disposed).toEqual(['fixture-character-1', DEFAULT_CHARACTER.id]);
+    expect(disposed).toEqual(['aqua-scout', DEFAULT_CHARACTER.id]);
   });
 
   it('falls back transactionally when replacement construction fails', () => {
     const registry = new CharacterRegistry()
       .register(DEFAULT_CHARACTER)
-      .register(createProgrammaticCharacterDefinition(2));
+      .register(createProgrammaticCharacterDefinition(3));
     const disposed: string[] = [];
     const selection = new ContentSelection({
       registry,
       fallbackId: DEFAULT_CHARACTER.id,
       factory: (definition) => {
-        if (definition.id === 'fixture-character-2') throw new Error('asset failed');
+        if (definition.id === 'amber-bot') throw new Error('asset failed');
         return { dispose: () => disposed.push(definition.id) };
       },
     });
     const original = selection.select(DEFAULT_CHARACTER.id);
-    expect(selection.select('fixture-character-2')).toBe(original);
+    expect(selection.select('amber-bot')).toBe(original);
     expect(selection.resource).toBe(original);
     expect(selection.snapshot).toMatchObject({ usedFallback: true, selectedId: DEFAULT_CHARACTER.id });
     expect(disposed).toEqual([]);

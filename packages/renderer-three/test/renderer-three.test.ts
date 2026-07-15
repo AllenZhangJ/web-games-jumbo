@@ -7,6 +7,8 @@ import { CameraRig } from '../src/camera-rig.js';
 import { CharacterRendererRegistry } from '../src/character-renderer-registry.js';
 import { ContextLifecycle } from '../src/context-lifecycle.js';
 import { HudScene } from '../src/hud/hud-scene.js';
+import { BUILTIN_CHARACTERS } from '@number-strategy/content';
+import { CharacterRig } from '../src/character-rig.js';
 import { PlatformMeshFactory } from '../src/platform-mesh-factory.js';
 import { PlatformViewRegistry } from '../src/platform-view-registry.js';
 import { Renderer3D, screenChoiceControlMap } from '../src/renderer3d.js';
@@ -315,6 +317,41 @@ test('HUD anchors route controls to the safe-area bottom and ignores world taps'
   hud.update({ phase: 'jumping', currentValue: 8, targetValue: 42, movesRemaining: 7 });
   assert.equal(hud.hitTest({ x: left.x + left.width / 2, y: left.y + left.height / 2 }), null);
   hud.dispose();
+});
+
+test('HUD exposes the single-canvas content selector and blocks route controls behind it', () => {
+  const textureManager = { get: () => null, acquire() {}, release() {} };
+  const hud = new HudScene(textureManager);
+  hud.resize({ width: 390, height: 844 });
+  hud.update({ phase: 'ready', currentValue: 8, targetValue: 42, movesRemaining: 7 }, {
+    contentMenu: {
+      open: true,
+      gameplay: { id: 'classic', name: '全能跃迁', description: '经典玩法', index: 1, total: 5 },
+      task: { id: 'exact', name: '精确命中', description: '命中目标', index: 1, total: 5 },
+      character: { id: 'red', name: '赤红巨宝', description: '经典角色', index: 1, total: 10 },
+    },
+  });
+  expect(hud.snapshot().contentMenuVisible).toBe(true);
+  const apply = hud.controlRects.apply;
+  expect(hud.hitTest({ x: apply.x + apply.width / 2, y: apply.y + apply.height / 2 }))
+    .toBe('content-apply');
+  const left = hud.controlRects.left;
+  expect(hud.hitTest({ x: left.x + left.width / 2, y: left.y + left.height / 2 })).toBeNull();
+  hud.dispose();
+});
+
+test('ten built-in characters create distinct procedural rigs and release their resources', () => {
+  expect(BUILTIN_CHARACTERS).toHaveLength(10);
+  const signatures = new Set<string>();
+  for (const definition of BUILTIN_CHARACTERS) {
+    const rig = new CharacterRig(definition);
+    signatures.add(`${definition.appearance.bodyShape}:${definition.appearance.accessory}:${definition.primaryColor}`);
+    expect(rig.bodyRoot.children.length).toBeGreaterThanOrEqual(2);
+    expect(() => rig.update({ position: { x: 0, y: 0, z: 0 } }, { isCharging: true }, 1 / 60))
+      .not.toThrow();
+    expect(() => rig.dispose()).not.toThrow();
+  }
+  expect(signatures.size).toBe(10);
 });
 
 test('Renderer3D load fails clearly when required HUD text cannot be rendered', async () => {

@@ -40,6 +40,7 @@ export class SnapshotFactory {
         jumpProgress: state.jumpProgress,
         landingProgress: state.landingProgress,
         choices: state.choices.map((choice) => ({ ...choice })),
+        operationHistory: state.operationHistory.map((operation) => ({ ...operation })),
         message: state.message,
       }),
       world: Object.freeze({ ...world.snapshot() }),

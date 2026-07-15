@@ -20,18 +20,18 @@
 
 GitHub Actions 在 push 与 pull request 上使用 Node 20、`npm ci` 和 `npm run check`。生产依赖审计需要可访问 npm 漏洞服务；离线失败不能伪装成“0 漏洞”。
 
-## 第四批自动化证据
+## 当前自动化证据
 
 - 所有维护代码 strict TypeScript；零旧 JS 门禁通过。
 - 全量测试覆盖 Contracts、Difficulty、RNG、Physics、World、Gameplay、Application、Persistence、Content、Feedback、Platform、Renderer、入口、架构和文档。
 - easy/normal/hard 各 10,000 seed，共 30,000 个可解回合。
 - 独立 1,000 个完整 normal 会话全部获胜且步数非负。
 - 100 局 Three 平台视图始终保持 3 个活动资源，结束后完整释放。
-- 存档 v1/v2/v3 fixture 迁移、迁移回写、损坏隔离、动作回放和首帧恢复通过。
-- 5 Gameplay、5 Task、10 Character Manifest 容量证明通过。
-- 全量 Vitest 23 个文件、138 项测试通过；确定性单测层行/语句 89.42%、函数 90.83%、分支 70.17%。
+- 存档 v1/v2/v3/v4 fixture、迁移回写、损坏隔离、动作回放和首帧恢复通过。
+- 5 个正式 Gameplay 各执行 1,000 个 normal 初始 seed；5 个正式 Task 和 10 个正式 Character 完成注册、兼容选择、回退与资源销毁测试。
+- 全量 Vitest 24 个文件、146 项测试通过；确定性单测层行/语句 89.70%、函数 93.16%、分支 71.44%。
 - 生产依赖审计 0 个已知漏洞；资产/许可证审计通过。
-- Web、微信、抖音构建通过；Web JS 651.45 kB、gzip 170.81 kB，Web gzip 预算 180 KiB，小游戏 `game.js` 预算各 700 KiB。
+- Web、微信、抖音构建通过；Web JS 672.91 kB、gzip 177.55 kB，Web gzip 预算 180 KiB，小游戏 `game.js` 687,289 bytes、预算各 700 KiB。
 
 覆盖率统计不包含需要真实 GPU/宿主的 Platform 与 Renderer3D 适配代码，但这些文件仍执行专用单元测试，并由三端构建、浏览器与真机矩阵约束。该分层必须在报告中保持透明，不能称为“全部代码 89%”。
 
@@ -87,8 +87,8 @@ Node 或桌面浏览器通过不能证明小游戏真机通过；开发者工具
 - 30,000 seed、1,000 完整会话和 100 局资源 soak。
 - Web 完整主流程、刷新存档恢复和生命周期。
 - 微信/抖音三端构建及可获得的开发者工具/真机矩阵。
-- v1/v2/v3 存档迁移与损坏隔离。
-- 5 玩法、5 任务、10 角色注册证明。
+- v1/v2/v3/v4 存档迁移与损坏隔离。
+- 5 玩法、5 任务、10 角色的正式目录、兼容组合和资源生命周期。
 - 零旧 JS、统一 strict、许可归属和包体预算。
 
 发现阻断问题必须修复、复测、更新文档并追加中文提交，不能只记录后结束。

@@ -17,8 +17,14 @@ export interface VersionedDefinition {
   readonly version: number;
 }
 
+export interface DefinitionPresentation {
+  readonly name: string;
+  readonly description: string;
+}
+
 export interface GameplayDefinition<TConfig = unknown, TSession = unknown>
   extends VersionedDefinition {
+  readonly presentation: DefinitionPresentation;
   readonly supportedTaskTypes: readonly DefinitionId[];
   validateConfig(config: unknown): ValidationResult;
   createSession(config: TConfig, context: GameplayContext): TSession;
@@ -32,6 +38,7 @@ export interface GameplayContext {
 
 export interface TaskDefinition<TConfig = unknown, TTask = unknown, TSnapshot = unknown>
   extends VersionedDefinition {
+  readonly presentation: DefinitionPresentation;
   validate(config: unknown): ValidationResult;
   create(config: TConfig, context: TaskContext): TTask;
   evaluate(task: TTask, snapshot: TSnapshot): TaskResult;
@@ -46,6 +53,7 @@ export interface TaskContext {
 export interface TaskResult {
   readonly status: 'active' | 'completed' | 'failed';
   readonly reason?: string;
+  readonly message?: string;
 }
 
 export interface CharacterAssetManifest {
@@ -83,12 +91,25 @@ export interface CharacterAnimationSet {
   readonly failed: string;
 }
 
+export type CharacterBodyShape = 'jumbo' | 'capsule' | 'orb' | 'bot' | 'cone';
+export type CharacterAccessory = 'none' | 'antenna' | 'visor' | 'ears' | 'ring' | 'crown';
+export type CharacterMotionStyle = 'balanced' | 'spring' | 'heavy' | 'float' | 'swift';
+
+export interface CharacterAppearance {
+  readonly bodyShape: CharacterBodyShape;
+  readonly accessory: CharacterAccessory;
+  readonly motionStyle: CharacterMotionStyle;
+  readonly secondaryColor: number;
+}
+
 export interface CharacterDefinition extends VersionedDefinition {
+  readonly presentation: DefinitionPresentation;
   readonly rendererKey: string;
   readonly assetManifest: CharacterAssetManifest;
   readonly animationSet: CharacterAnimationSet;
   readonly visualScale: number;
   readonly primaryColor: number;
+  readonly appearance: CharacterAppearance;
 }
 
 export type GameCommand =

@@ -39,6 +39,7 @@
 - [ADR-002：核心状态单向驱动表现层](decisions/002-core-driven-presentation.md)
 - [ADR-003：`web-jump` 参考与 MIT 合规](decisions/003-web-jump-reference-and-license.md)
 - [ADR-004：采用分批治理的模块化单体](decisions/004-modular-governance-roadmap.md)
+- [ADR-005：正式内容目录与任务驱动胜负](decisions/005-formal-content-catalog-and-task-outcomes.md)
 
 ## 文档状态规则
 

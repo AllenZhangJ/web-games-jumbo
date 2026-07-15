@@ -40,6 +40,12 @@ import { FixedStepClock } from './fixed-step-clock.js';
 import { GameSession, type SessionPresentation } from './game-session.js';
 import { LifecycleController, type ApplicationLifecycle } from './lifecycle-controller.js';
 import { SnapshotFactory } from './snapshot-factory.js';
+import {
+  ContentMenuController,
+  type ContentMenuCatalog,
+  type ContentMenuControl,
+  type ContentMenuEntry,
+} from './content-menu.js';
 
 function worldCandidates(choices: readonly OperationChoice[], value: number) {
   return choices.map((operation) => ({
@@ -68,7 +74,7 @@ interface Rect {
   readonly height: number;
 }
 
-export type Control = 'pause' | 'restart' | 'choice-left' | 'choice-right';
+export type Control = 'pause' | 'restart' | 'choice-left' | 'choice-right' | ContentMenuControl;
 type Cleanup = () => void;
 
 export interface CanvasPort {
@@ -107,6 +113,7 @@ export interface RendererPort {
   toDesignPoint?(point: InputPoint): InputPoint;
   choiceIndexForControl?(control: Control, candidates: readonly WorldPlatform[]): number | null;
   getDebugSnapshot?(): unknown;
+  selectCharacter?(characterId: string): unknown;
 }
 
 export type RendererFactory = (canvas: unknown, platform: PlatformPort) => RendererPort;
@@ -118,6 +125,9 @@ export interface NumberStrategyGameOptions {
   readonly taskRegistry?: TaskRegistry;
   readonly gameplayId?: string;
   readonly taskId?: string;
+  readonly characterId?: string;
+  readonly characterCatalog?: readonly ContentMenuEntry[];
+  readonly showContentMenu?: boolean;
   readonly restoreSave?: boolean;
   readonly rendererFactory: RendererFactory;
   readonly feedback?: FeedbackPort;
@@ -191,6 +201,8 @@ export class NumberStrategyGame {
   lastRuntimeError: RuntimeErrorRecord | null = null;
   runtimeErrorCount = 0;
   consecutiveFrameErrors = 0;
+  readonly contentMenu: ContentMenuController;
+  appliedCharacterId: string;
 
   get seed(): number { return this.session.seed; }
   get difficulty(): Readonly<DifficultyProfile> { return this.session.difficulty; }
@@ -211,6 +223,14 @@ export class NumberStrategyGame {
     taskRegistry,
     gameplayId,
     taskId,
+    characterId,
+    characterCatalog = [{
+      id: 'jumbo-red',
+      version: 1,
+      name: '赤红巨宝',
+      description: '均衡稳定的经典跃迁者。',
+    }],
+    showContentMenu = false,
     restoreSave = true,
     rendererFactory,
     feedback = { handle: () => {}, dispose: () => {} },
@@ -230,7 +250,8 @@ export class NumberStrategyGame {
       && seed === undefined
       && difficulty === undefined
       && gameplayId === undefined
-      && taskId === undefined;
+      && taskId === undefined
+      && characterId === undefined;
     let loadedSave = canRestore ? this.saveRepository.load() : null;
     let restoredDifficulty: unknown = difficulty;
     if (loadedSave) {
@@ -272,6 +293,39 @@ export class NumberStrategyGame {
       });
     }
     this.renderer = rendererFactory(this.canvas, platform);
+    const catalog: ContentMenuCatalog = Object.freeze({
+      gameplays: Object.freeze(this.session.gameplayRegistry.list().map((definition) => Object.freeze({
+        id: definition.id,
+        version: definition.version,
+        name: definition.presentation.name,
+        description: definition.presentation.description,
+        supportedTaskIds: Object.freeze([...definition.supportedTaskTypes]),
+      }))),
+      tasks: Object.freeze(this.session.taskRegistry.list().map((definition) => Object.freeze({
+        id: definition.id,
+        version: definition.version,
+        name: definition.presentation.name,
+        description: definition.presentation.description,
+      }))),
+      characters: Object.freeze(characterCatalog.map((entry) => Object.freeze({ ...entry }))),
+    });
+    this.appliedCharacterId = characterId
+      ?? loadedSave?.game.character.id
+      ?? characterCatalog[0]?.id
+      ?? 'jumbo-red';
+    this.contentMenu = new ContentMenuController({
+      catalog,
+      gameplayId: this.session.gameplayId,
+      taskId: this.session.taskId,
+      characterId: this.appliedCharacterId,
+      open: showContentMenu && !loadedSave,
+    });
+    this.appliedCharacterId = this.contentMenu.characterId;
+    try {
+      this.renderer.selectCharacter?.(this.appliedCharacterId);
+    } catch (error) {
+      this.recordRuntimeError('character-selection', error);
+    }
     this.feedback = feedback;
     this.eventCollector = new EventCollector(() => this.readClock());
     this.commandHandler = new CommandHandler((command) => this.executeCommand(command));
@@ -290,6 +344,12 @@ export class NumberStrategyGame {
       task: {
         id: this.session.taskId,
         version: this.session.taskRegistry.get(this.session.taskId).version,
+      },
+      character: {
+        id: this.appliedCharacterId,
+        version: this.contentMenu.catalog.characters.find(
+          ({ id }) => id === this.appliedCharacterId,
+        )?.version ?? 1,
       },
     });
   }
@@ -565,6 +625,80 @@ export class NumberStrategyGame {
     return null;
   }
 
+  private handleContentControl(control: ContentMenuControl): boolean {
+    if (control === 'content-menu') {
+      if (
+        this.state.phase !== GAME_PHASE.READY
+        && this.state.phase !== GAME_PHASE.PAUSED
+        && this.state.phase !== GAME_PHASE.WON
+        && this.state.phase !== GAME_PHASE.LOST
+      ) {
+        return false;
+      }
+      this.clearActivePointer();
+      this.contentMenu.setOpen(true);
+      return true;
+    }
+    if (!this.contentMenu.open) return false;
+    if (control === 'content-close') {
+      this.contentMenu.setOpen(false);
+      this.contentMenu.gameplayId = this.session.gameplayId;
+      this.contentMenu.taskId = this.session.taskId;
+      this.contentMenu.characterId = this.appliedCharacterId;
+      try {
+        this.renderer.selectCharacter?.(this.appliedCharacterId);
+      } catch (error) {
+        this.recordRuntimeError('character-selection', error);
+      }
+      return true;
+    }
+    if (control === 'content-apply') return this.applyContentSelection();
+    const cycle = control.match(/^content-(gameplay|task|character)-(prev|next)$/);
+    if (!cycle) return false;
+    const kind = cycle[1] as 'gameplay' | 'task' | 'character';
+    const direction = cycle[2] === 'prev' ? -1 : 1;
+    this.contentMenu.cycle(kind, direction);
+    if (kind === 'character') {
+      try {
+        this.renderer.selectCharacter?.(this.contentMenu.characterId);
+      } catch (error) {
+        this.recordRuntimeError('character-preview', error);
+      }
+    }
+    return true;
+  }
+
+  private applyContentSelection(): boolean {
+    try {
+      const nextSession = new GameSession({
+        seed: this.seed,
+        difficulty: this.difficulty,
+        gameplayRegistry: this.session.gameplayRegistry,
+        taskRegistry: this.session.taskRegistry,
+        gameplayId: this.contentMenu.gameplayId,
+        taskId: this.contentMenu.taskId,
+      });
+      this.renderer.selectCharacter?.(this.contentMenu.characterId);
+      this.session = nextSession;
+      this.appliedCharacterId = this.contentMenu.characterId;
+      this.jump = null;
+      this.clearActivePointer();
+      this.contentMenu.setOpen(false);
+      this.replayRecorder = new ReplayRecorder(this.gameIdentity());
+      this.saveRepository.clear();
+      this.fixedStepClock.rebase();
+      this.eventCollector.emit('content-selected', {
+        gameplayId: this.session.gameplayId,
+        taskId: this.session.taskId,
+        characterId: this.appliedCharacterId,
+      });
+      return true;
+    } catch (error) {
+      this.recordRuntimeError('content-selection', error);
+      return false;
+    }
+  }
+
   onPointerStart(rawPoint: InputPoint): boolean {
     if (
       this.lifecycle !== 'running'
@@ -579,6 +713,10 @@ export class NumberStrategyGame {
       this.recordRuntimeError('pointer-start', error);
       return false;
     }
+    if (control?.startsWith('content-')) {
+      return this.handleContentControl(control as ContentMenuControl);
+    }
+    if (this.contentMenu.open) return false;
     if (control === 'restart') {
       return this.commandHandler.handle({ type: 'restart' });
     }
@@ -819,7 +957,13 @@ export class NumberStrategyGame {
       throw new Error('跳跃状态缺少活动轨迹。');
     }
 
-    const landingEvent = this.state.updateLanding(remainingDeltaMs);
+    const taskResultAtLanding = this.state.phase === GAME_PHASE.LANDING
+      ? this.session.evaluateTask()
+      : null;
+    const landingEvent = this.state.updateLanding(
+      remainingDeltaMs,
+      taskResultAtLanding ?? undefined,
+    );
     this.presentation.landingProgress = this.state.landingProgress ?? 0;
     if (landingEvent?.type === 'continue') {
       this.presentation.selectedChoice = null;
@@ -833,7 +977,7 @@ export class NumberStrategyGame {
       });
     }
     if (landingEvent) {
-      const taskResult = this.session.evaluateTask();
+      const taskResult = taskResultAtLanding ?? this.session.evaluateTask();
       if (taskResult.status !== 'active') {
         this.eventCollector.emit(`task-${taskResult.status}`, {
           taskId: this.session.taskId,
@@ -865,7 +1009,17 @@ export class NumberStrategyGame {
         revision: this.presentation.revision,
         state: this.state,
         world: this.world,
-        presentation: this.presentation,
+        presentation: {
+          ...this.presentation,
+          contentMenu: this.contentMenu.snapshot(),
+          contentSummary: {
+            gameplayName: this.session.gameplayRegistry.get(this.session.gameplayId).presentation.name,
+            taskName: this.session.taskRegistry.get(this.session.taskId).presentation.name,
+            characterName: this.contentMenu.catalog.characters.find(
+              ({ id }) => id === this.appliedCharacterId,
+            )?.name ?? this.appliedCharacterId,
+          },
+        },
         difficulty: this.difficulty,
         gameplayId: this.session.gameplayId,
         taskId: this.session.taskId,

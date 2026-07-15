@@ -8,7 +8,11 @@ import {
   type ChargeWindow,
   type DeterministicRng,
 } from '@number-strategy/jump-engine';
-import { OPERATION_KINDS, type OperationKind } from '@number-strategy/game-contracts';
+import {
+  OPERATION_KINDS,
+  type OperationKind,
+  type TaskResult,
+} from '@number-strategy/game-contracts';
 import {
   applyOperation,
   findOperationPath,
@@ -160,6 +164,7 @@ export class GameState {
   landingProgress = 0;
   chargeWindow: ChargeWindow | null = null;
   lastOperation: LastOperation | null = null;
+  operationHistory: LastOperation[] = [];
   message = '';
   choices: OperationChoice[] = [];
 
@@ -188,6 +193,7 @@ export class GameState {
     this.landingProgress = 0;
     this.chargeWindow = null;
     this.lastOperation = null;
+    this.operationHistory = [];
     this.message = '按住下方箭头选择运算路线';
     this.choices = this.createChoices();
   }
@@ -287,26 +293,35 @@ export class GameState {
     this.currentValue = result;
     this.movesRemaining -= 1;
     this.lastOperation = { ...operation, previousValue, result };
+    this.operationHistory.push(this.lastOperation);
     this.phase = GAME_PHASE.LANDING;
     this.landingProgress = 0;
     return { type: 'land', operation, result };
   }
 
-  updateLanding(deltaMs: unknown): LandingUpdate {
+  updateLanding(deltaMs: unknown, taskResult?: TaskResult): LandingUpdate {
     if (this.phase !== GAME_PHASE.LANDING || !Number.isFinite(deltaMs) || (deltaMs as number) <= 0) return null;
     this.landingProgress = Math.min(
       1,
       this.landingProgress + (deltaMs as number) / this.rules.landingDurationMs,
     );
     if (this.landingProgress < 1) return null;
-    if (this.currentValue === this.targetValue) {
+    const resolvedTask = taskResult ?? (
+      this.currentValue === this.targetValue
+        ? { status: 'completed' as const, message: '目标命中' }
+        : this.movesRemaining <= 0
+          ? { status: 'failed' as const, reason: 'moves-exhausted' }
+          : { status: 'active' as const }
+    );
+    if (resolvedTask.status === 'completed') {
       this.phase = GAME_PHASE.WON;
-      this.message = '目标命中';
+      this.message = resolvedTask.message ?? '任务完成';
       return { type: 'won' };
     }
-    if (this.movesRemaining <= 0) {
+    if (resolvedTask.status === 'failed' || this.movesRemaining <= 0) {
       this.phase = GAME_PHASE.LOST;
-      this.message = `相差 ${Math.abs(this.targetValue - this.currentValue)}，再试一次`;
+      this.message = resolvedTask.message
+        ?? `相差 ${Math.abs(this.targetValue - this.currentValue)}，再试一次`;
       return { type: 'lost' };
     }
     this.phase = GAME_PHASE.READY;

@@ -73,6 +73,7 @@ describe('application components', () => {
     const gameplay: GameplayDefinition<unknown, GameState> = {
       id: gameplayId,
       version: 1,
+      presentation: { name: '测试玩法', description: '用于应用测试' },
       supportedTaskTypes: [taskId],
       validateConfig: () => ({ valid: true, issues: [] }),
       createSession: (rules, context) => new GameState({ seed: context.seed, rules }),
@@ -80,6 +81,7 @@ describe('application components', () => {
     const task: TaskDefinition<unknown, ReachNumberTask, ReachNumberSnapshot> = {
       id: taskId,
       version: 1,
+      presentation: { name: '测试任务', description: '用于应用测试' },
       validate: () => ({ valid: true, issues: [] }),
       create: (config) => Object.freeze({
         targetValue: (config as { targetValue: number }).targetValue,
