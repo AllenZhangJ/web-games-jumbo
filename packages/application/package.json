@@ -19,6 +19,7 @@
     "@number-strategy/difficulty": "0.1.0",
     "@number-strategy/game-contracts": "0.1.0",
     "@number-strategy/gameplay": "0.1.0",
-    "@number-strategy/jump-engine": "0.1.0"
+    "@number-strategy/jump-engine": "0.1.0",
+    "@number-strategy/persistence": "0.1.0"
   }
 }

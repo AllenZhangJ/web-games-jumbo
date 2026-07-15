@@ -16,8 +16,8 @@
 
 | 字段 | 内容 |
 |---|---|
-| 构建/commit | `v3-three-webgl2-2026-07-15`（正式 Git commit 待项目方提交） |
-| Web 预览地址 | `http://192.168.1.249:4173/`（同一 Wi-Fi；2026-07-15 已复核 HTTP 200 与正式产物首屏） |
+| 构建/commit | `governance/batch-4-production`（第四批收口提交待生成） |
+| Web 预览地址 | `http://192.168.1.249:4173/`（2026-07-15 第四批生产构建；更换 Wi-Fi 后重新确认） |
 | 微信开发者工具 | 待填写 |
 | 抖音开发者工具 | 待填写 |
 | 微信 iOS 设备 | 待填写 |
@@ -29,14 +29,15 @@
 
 ## 自动化与产物前置检查
 
-- [x] `npm run test` 通过，且数值、WorldState、跳跃/碰撞、按钮限定输入、屏幕左右映射、平台隔离、Renderer、Content 和 Feedback 测试都在清单内（第三批 124/124）。
+- [x] `npm run test` 覆盖数值、WorldState、跳跃/碰撞、按钮映射、平台隔离、Renderer、Content、Feedback、Persistence、1000 会话和 100 局资源测试；最终数量以第四批收口记录为准。
 - [x] `npm run build` 生成 `dist/web`、`dist/wechat` 和 `dist/douyin`。
 - [x] 三个分发目录都包含 `THIRD_PARTY_NOTICES.md` 和 `licenses/`。
 - [x] 小游戏构建是可直接加载的 IIFE，不依赖 DOM、Node 或运行时模块加载器。
 - [x] 平台 API 隔离测试证明 `wx.*` 和 `tt.*` 未泄漏到 Gameplay、Jump Engine、Application 或 Render3D。
-- [ ] 枚举构建产物尺寸，并与发行平台当前包体限制核对。
+- [x] 构建脚本枚举并强制 Web gzip 180 KiB、微信/抖音 `game.js` 700 KiB 的项目预算。
+- [ ] 与发行平台账号当前包体限制核对。
 
-已枚举本地构建：`dist/web` 约 `4.9 MiB`（含 source map），`dist/wechat` 与 `dist/douyin` 各约 `604 KiB`；发行平台当前限制仍需在发布账号和对应开发者工具中核对后才能勾选最后一项。
+当前本地构建：`dist/web` 约 `5.2 MiB`（含 source map），Web JS 651.45 kB、gzip 170.81 kB；`dist/wechat` 与 `dist/douyin` 各约 `672 KiB`，其中 `game.js` 665,797 bytes。发行平台限制仍需在真实账号和开发者工具中核对。
 
 ## 共用 WebGL2 和视觉
 
@@ -70,6 +71,7 @@
 - [x] `dist/web` 可作为静态站点直接访问，且本机浏览器控制台无未处理错误和 WebGL 编译警告。
 - [ ] 桌面鼠标、手机触摸和页面隐藏/恢复均正常。
 - [x] 本机浏览器以 `390×844` 手机尺寸持续按住箭头时只驱动蓄力/起跳，未产生文本选区、上下文菜单或焦点异常。
+- [x] 本机浏览器先左后右成功落地（18→23→32），刷新后从本地存档恢复为“当前 32 / 剩余 5”，且 console 记录为空。
 - [ ] 手机浏览器长按箭头只触发蓄力，不出现复制菜单、文本选区、图片拖拽或页面手势抢占。
 - [ ] 更换 Wi-Fi 后重新发现电脑局域网 IP，手机使用新 `Network` 地址访问成功。
 - [x] 本机浏览器实测手机竖屏 `390×844`、概念原生长屏 `941×1672` 与桌面宽窗口 `1100×900`，HUD 和两个候选均可读。

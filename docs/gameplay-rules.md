@@ -76,7 +76,7 @@ v3 已删除节拍、连击、节拍轨、最高分和背景音乐系统。
 ## 6. 平台与构建
 
 - Web、微信、抖音共用数值、世界、碰撞、运行时和 Three.js 表现代码。
-- 平台差异只位于 `src/platform`：主 Canvas、WebGL2、离屏文字 Canvas、输入、帧循环、安全区、生命周期、音频工厂、震动、存储和分享；Feedback 只依赖这些小端口。
+- 平台差异只位于 `packages/platform`：主 Canvas、WebGL2、离屏文字 Canvas、输入、帧循环、安全区、生命周期、音频工厂、震动、存储和分享；Feedback 只依赖这些小端口。
 - 微信和抖音构建均声明 `deviceOrientation: portrait`。
 - Canvas 按 DPR（最高 2）和安全区缩放；桌面宽窗口保持竖屏游戏构图。
 - 现代 Three.js 构建要求宿主提供真实 WebGL2；开发工具成功不能替代 iOS/Android 真机验证。

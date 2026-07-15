@@ -8,6 +8,8 @@
     { "path": "./packages/application" },
     { "path": "./packages/content" },
     { "path": "./packages/feedback" },
-    { "path": "./packages/renderer-three" }
+    { "path": "./packages/renderer-three" },
+    { "path": "./packages/persistence" },
+    { "path": "./packages/platform" }
   ]
 }

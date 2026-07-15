@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { hashString, RENDER3D_COLORS } from './constants.js';
 import { createTextureSprite } from './texture-manager.js';
 
-function shadowMesh(mesh) {
+function shadowMesh<T extends THREE.Mesh>(mesh: T): T {
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   return mesh;
@@ -18,22 +18,22 @@ function platformMaterial(color: number = RENDER3D_COLORS.platform) {
   });
 }
 
-function finite(value, fallback) {
+function finite(value: number, fallback: number): number {
   return Number.isFinite(value) ? value : fallback;
 }
 
 export class PlatformMeshFactory {
   [key: string]: any;
-  constructor(textureManager) {
+  constructor(textureManager: any) {
     this.textureManager = textureManager;
     this.boxGeometry = new THREE.BoxGeometry(1, 1, 1);
     this.cylinderGeometry = new THREE.CylinderGeometry(1, 1, 1, 32, 1, false);
     this.ringGeometry = new THREE.RingGeometry(0.96, 1, 48);
   }
 
-  create(platform) {
+  create(platform: any) {
     const hash = hashString(platform.id);
-    const kind = ['cube', 'cylinder', 'parcel'][hash % 3];
+    const kind = ['cube', 'cylinder', 'parcel'][hash % 3]!;
     const root = new THREE.Group();
     root.name = `PlatformView:${platform.id}`;
     root.userData.platformId = platform.id;
@@ -42,7 +42,7 @@ export class PlatformMeshFactory {
     bodyRoot.name = 'PlatformBody';
     root.add(bodyRoot);
 
-    const materials = [];
+    const materials: THREE.Material[] = [];
     const bodyMaterial = platformMaterial(kind === 'cube' ? 0x16a6a1 : RENDER3D_COLORS.platform);
     materials.push(bodyMaterial);
     const width = Math.max(0.1, finite(platform.halfWidth, 1.05) * 2);
@@ -104,7 +104,7 @@ export class PlatformMeshFactory {
     };
   }
 
-  updateLabel(view, platform, { selected = false } = {}) {
+  updateLabel(view: any, platform: any, { selected = false } = {}) {
     const isCandidate = platform.role === 'candidate';
     const labelKey = isCandidate
       ? `candidate:${platform.operation?.label ?? '—'}:${platform.preview ?? ''}:${selected}`
@@ -136,10 +136,10 @@ export class PlatformMeshFactory {
     view.label = sprite;
   }
 
-  disposeView(view) {
+  disposeView(view: any) {
     this.textureManager.release?.(view.label?.material?.map);
     view.label?.material?.dispose?.();
-    view.materials.forEach((material) => material.dispose());
+    view.materials.forEach((material: THREE.Material) => material.dispose());
     view.root.removeFromParent();
     view.root.clear();
   }

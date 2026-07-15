@@ -4,7 +4,7 @@ const MAX_POINTS = 18;
 
 export class TailTrail {
   [key: string]: any;
-  constructor(root) {
+  constructor(root: THREE.Object3D) {
     this.root = root;
     this.positions = new Float32Array(MAX_POINTS * 3);
     this.geometry = new THREE.BufferGeometry();
@@ -21,13 +21,13 @@ export class TailTrail {
     this.line.name = 'JumpTrail';
     this.line.frustumCulled = false;
     this.line.renderOrder = 3;
-    this.points = [];
+    this.points = [] as THREE.Vector3[];
     this.sampleElapsed = 0;
     this.wasActive = false;
     this.root.add(this.line);
   }
 
-  update(position, { active = false, reducedMotion = false } = {}, deltaSeconds) {
+  update(position: any, { active = false, reducedMotion = false } = {}, deltaSeconds: number) {
     if (reducedMotion || !position) {
       this.clear();
       return;
@@ -56,7 +56,7 @@ export class TailTrail {
   }
 
   writeGeometry() {
-    this.points.forEach((point, index) => {
+    this.points.forEach((point: THREE.Vector3, index: number) => {
       const offset = index * 3;
       this.positions[offset] = point.x;
       this.positions[offset + 1] = point.y + 0.72;

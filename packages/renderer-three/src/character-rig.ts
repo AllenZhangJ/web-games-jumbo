@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { clamp, dampFactor, easeOutCubic, RENDER3D_COLORS } from './constants.js';
 
-function shadow(mesh) {
+function shadow<T extends THREE.Mesh>(mesh: T): T {
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   return mesh;
@@ -43,7 +43,7 @@ export class CharacterRig extends THREE.Group {
     this.initialized = false;
   }
 
-  update(player, context: any = {}, deltaSeconds = 0) {
+  update(player: any, context: any = {}, deltaSeconds = 0) {
     if (!player?.position) {
       this.visible = false;
       return;

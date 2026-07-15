@@ -5,7 +5,7 @@ import { LightingRig } from './lighting-rig.js';
 
 export class Stage {
   [key: string]: any;
-  constructor(renderer, sceneDefinition: any = null) {
+  constructor(renderer: THREE.WebGLRenderer, sceneDefinition: any = null) {
     this.renderer = renderer;
     this.scene = new THREE.Scene();
     const background = sceneDefinition?.theme?.background ?? RENDER3D_COLORS.background;
@@ -36,11 +36,11 @@ export class Stage {
     this.scene.add(this.worldRoot, this.floor, this.lighting);
   }
 
-  resize(width, height) {
+  resize(width: number, height: number) {
     this.cameraRig.resize(width, height);
   }
 
-  updateCamera(context, deltaSeconds, transition = null) {
+  updateCamera(context: any, deltaSeconds: number, transition: any = null) {
     const focus = this.cameraRig.update(context, deltaSeconds, transition);
     this.lighting.update(focus);
   }

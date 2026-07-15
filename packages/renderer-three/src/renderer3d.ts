@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import type { GameEvent, GameSnapshot } from '@number-strategy/game-contracts';
 import {
   ContentSelection,
   DEFAULT_CHARACTER,
@@ -24,17 +25,17 @@ import { PlatformViewRegistry } from './platform-view-registry.js';
 import { createBuiltinSceneRendererRegistry } from './scene-renderer-registry.js';
 import { TextureManager } from './texture-manager.js';
 
-function finite(value, fallback = 0) {
+function finite(value: number, fallback = 0): number {
   return Number.isFinite(value) ? value : fallback;
 }
 
-function worldSnapshot(world) {
+function worldSnapshot(world: any): any {
   if (!world) return null;
   if (typeof world.snapshot === 'function') return world.snapshot();
   return world;
 }
 
-function worldPlatforms(world) {
+function worldPlatforms(world: any): any[] {
   if (Array.isArray(world?.platforms)) return world.platforms;
   return [
     ...(Array.isArray(world?.history) ? world.history : []),
@@ -43,7 +44,7 @@ function worldPlatforms(world) {
   ].filter(Boolean);
 }
 
-export function screenChoiceControlMap(candidates = [], camera, origin: any = {}) {
+export function screenChoiceControlMap(candidates: readonly any[] = [], camera: any, origin: any = {}) {
   const fallback = { left: 0, right: 1 };
   if (!camera || !Array.isArray(candidates) || candidates.length < 2) return fallback;
   const originX = finite(origin?.x);
@@ -60,14 +61,14 @@ export function screenChoiceControlMap(candidates = [], camera, origin: any = {}
     });
     if (projected.some((entry) => !Number.isFinite(entry.x))) return fallback;
     projected.sort((left, right) => left.x - right.x);
-    if (Math.abs(projected[0].x - projected[1].x) < Number.EPSILON) return fallback;
-    return { left: projected[0].index, right: projected[1].index };
+    if (Math.abs(projected[0]!.x - projected[1]!.x) < Number.EPSILON) return fallback;
+    return { left: projected[0]!.index, right: projected[1]!.index };
   } catch {
     return fallback;
   }
 }
 
-function normalizePresentation(state, presentation, missProgress) {
+function normalizePresentation(state: any, presentation: any, missProgress: number): any {
   const phase = state?.phase ?? 'ready';
   const selectedChoice = presentation.selectedChoice ?? state?.selectedChoice ?? null;
   const inferredPower = finite(state?.chargeMs) / 1200;
@@ -104,7 +105,7 @@ function normalizePresentation(state, presentation, missProgress) {
  */
 export class Renderer3D {
   [key: string]: any;
-  constructor(canvas, platform, options: any = {}) {
+  constructor(canvas: any, platform: any, options: any = {}) {
     if (!canvas || typeof canvas.getContext !== 'function') {
       throw new TypeError('Renderer3D 需要可用的 Canvas。');
     }
@@ -217,12 +218,13 @@ export class Renderer3D {
     }
   }
 
-  captureError(phase, error) {
+  captureError(phase: string, error: unknown) {
+    const detail = error as any;
     this.errorCount += 1;
     this.lastError = {
       phase,
-      name: error?.name ?? 'Error',
-      message: error?.message ?? String(error ?? '未知渲染错误'),
+      name: detail?.name ?? 'Error',
+      message: detail?.message ?? String(error ?? '未知渲染错误'),
       count: this.errorCount,
     };
   }
@@ -286,7 +288,7 @@ export class Renderer3D {
     }
   }
 
-  toDesignPoint(rawPoint) {
+  toDesignPoint(rawPoint: any) {
     if (!this.transform) this.resize();
     const { pixelRatio, scale, offsetX, offsetY } = this.transform ?? {
       pixelRatio: 1,
@@ -300,7 +302,7 @@ export class Renderer3D {
     };
   }
 
-  toViewportPoint(rawPoint) {
+  toViewportPoint(rawPoint: any) {
     if (!this.transform) this.resize();
     const pixelRatio = this.transform?.pixelRatio ?? 1;
     return {
@@ -309,11 +311,11 @@ export class Renderer3D {
     };
   }
 
-  hitTest(rawPoint) {
+  hitTest(rawPoint: any) {
     return this.hud?.hitTest?.(this.toViewportPoint(rawPoint)) ?? null;
   }
 
-  choiceIndexForControl(control, candidates = []) {
+  choiceIndexForControl(control: string, candidates: readonly any[] = []) {
     const map = screenChoiceControlMap(
       candidates,
       this.stage?.cameraRig?.camera,
@@ -324,7 +326,7 @@ export class Renderer3D {
     return null;
   }
 
-  draw(state, world, presentation = {}) {
+  draw(state: any, world: any, presentation: any = {}) {
     if (!this.ready || this.disposed || this.contextLost) return;
     try {
       this.drawFrame(state, world, presentation);
@@ -337,12 +339,12 @@ export class Renderer3D {
     }
   }
 
-  render(snapshot, _events = []) {
+  render(snapshot: GameSnapshot, _events: readonly GameEvent[] = []) {
     void _events;
     return this.draw(snapshot?.state, snapshot?.world, snapshot?.presentation ?? {});
   }
 
-  selectCharacter(characterId) {
+  selectCharacter(characterId: string) {
     if (!this.characterSelection || !this.stage) return false;
     const character = this.characterSelection.select(characterId);
     this.character = character;
@@ -350,7 +352,7 @@ export class Renderer3D {
     return this.characterSelection.snapshot;
   }
 
-  drawFrame(state, world, presentation = {}) {
+  drawFrame(state: any, world: any, presentation: any = {}) {
     if (!this.transform) this.resize();
     if (!this.transform) return;
     const snapshot = worldSnapshot(world);
@@ -530,7 +532,7 @@ export class Renderer3D {
       },
       camera: this.stage?.cameraRig?.snapshot?.() ?? null,
       platformIds: this.platforms?.ids?.() ?? [],
-      platformKinds: (this.platforms?.ids?.() ?? []).map((id) => ({ id, kind: this.platforms.get(id)?.kind ?? 'unknown' })),
+      platformKinds: (this.platforms?.ids?.() ?? []).map((id: string) => ({ id, kind: this.platforms.get(id)?.kind ?? 'unknown' })),
       hud: this.hud?.snapshot?.() ?? null,
       textureFallbackCount: this.textureManager?.fallbackCount ?? 0,
       effects: {
@@ -566,7 +568,7 @@ export class Renderer3D {
     this.ready = false;
     this.contextLost = false;
 
-    const safely = (phase, operation) => {
+    const safely = (phase: string, operation: (() => void) | undefined) => {
       try {
         operation?.();
       } catch (error) {

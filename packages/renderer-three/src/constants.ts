@@ -38,33 +38,33 @@ export const SHADOW_DEFAULTS = Object.freeze({
   cameraExtent: 10,
 });
 
-export function clamp(value, min = 0, max = 1) {
+export function clamp(value: number, min = 0, max = 1): number {
   return Math.min(max, Math.max(min, Number.isFinite(value) ? value : min));
 }
 
-export function dampFactor(deltaSeconds, speed) {
+export function dampFactor(deltaSeconds: number, speed: number): number {
   const delta = Number.isFinite(deltaSeconds) ? Math.max(0, deltaSeconds) : 0;
   const rate = Number.isFinite(speed) ? Math.max(0, speed) : 0;
   return 1 - Math.exp(-delta * rate);
 }
 
-export function easeOutBack(value) {
+export function easeOutBack(value: number): number {
   const x = clamp(value);
   const c1 = 1.70158;
   const c3 = c1 + 1;
   return 1 + c3 * ((x - 1) ** 3) + c1 * ((x - 1) ** 2);
 }
 
-export function easeOutCubic(value) {
+export function easeOutCubic(value: number): number {
   return 1 - ((1 - clamp(value)) ** 3);
 }
 
-export function easeInOutCubic(value) {
+export function easeInOutCubic(value: number): number {
   const x = clamp(value);
   return x < 0.5 ? 4 * (x ** 3) : 1 - (((-2 * x) + 2) ** 3) / 2;
 }
 
-export function hashString(value) {
+export function hashString(value: unknown): number {
   const text = String(value ?? '');
   let hash = 2166136261;
   for (let index = 0; index < text.length; index += 1) {

@@ -4,7 +4,7 @@ const MAX_PARTICLES = 72;
 
 export class ParticleBurst {
   [key: string]: any;
-  constructor(root) {
+  constructor(root: THREE.Object3D) {
     this.root = root;
     this.geometry = new THREE.TetrahedronGeometry(0.075, 0);
     this.material = new THREE.MeshStandardMaterial({
@@ -36,7 +36,7 @@ export class ParticleBurst {
     this.refreshInstances();
   }
 
-  emit(position, { color = 0xe53935, count = 18, reducedMotion = false } = {}) {
+  emit(position: any, { color = 0xe53935, count = 18, reducedMotion = false } = {}) {
     if (!position) return;
     const requested = Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 0;
     const amount = reducedMotion ? Math.min(5, requested) : requested;
@@ -62,8 +62,8 @@ export class ParticleBurst {
     if (this.mesh.instanceColor) this.mesh.instanceColor.needsUpdate = true;
   }
 
-  update(deltaSeconds) {
-    this.particles.forEach((particle) => {
+  update(deltaSeconds: number) {
+    this.particles.forEach((particle: any) => {
       if (!particle.active) return;
       particle.age += deltaSeconds;
       if (particle.age >= particle.life) {
@@ -78,7 +78,7 @@ export class ParticleBurst {
   }
 
   refreshInstances() {
-    this.particles.forEach((particle, index) => {
+    this.particles.forEach((particle: any, index: number) => {
       if (!particle.active) {
         this.matrix.compose(particle.position, this.quaternion, this.hiddenScale);
       } else {
@@ -93,11 +93,11 @@ export class ParticleBurst {
   }
 
   activeCount() {
-    return this.particles.reduce((count, particle) => count + (particle.active ? 1 : 0), 0);
+    return this.particles.reduce((count: number, particle: any) => count + (particle.active ? 1 : 0), 0);
   }
 
   clear() {
-    this.particles.forEach((particle) => { particle.active = false; });
+    this.particles.forEach((particle: any) => { particle.active = false; });
     this.refreshInstances();
   }
 

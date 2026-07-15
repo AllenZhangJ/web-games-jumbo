@@ -3,17 +3,17 @@ import { clamp, dampFactor, easeOutBack, RENDER3D_COLORS } from './constants.js'
 
 export class PlatformViewRegistry {
   [key: string]: any;
-  constructor(root, factory) {
+  constructor(root: THREE.Object3D, factory: any) {
     this.root = root;
     this.factory = factory;
-    this.views = new Map();
+    this.views = new Map<string, any>();
     this.tempColor = new THREE.Color();
   }
 
-  sync(platforms, context: any = {}, deltaSeconds = 0) {
-    const activeIds = new Set();
-    const candidates = Array.isArray(context.candidates) ? context.candidates.filter(Boolean) : [];
-    const renderPlatforms = Array.isArray(platforms)
+  sync(platforms: any, context: any = {}, deltaSeconds = 0) {
+    const activeIds = new Set<string>();
+    const candidates: any[] = Array.isArray(context.candidates) ? context.candidates.filter(Boolean) : [];
+    const renderPlatforms: any[] = Array.isArray(platforms)
       ? platforms.filter((platform) => platform?.id != null && platform?.center)
       : [];
     renderPlatforms.forEach((platform) => {
@@ -25,7 +25,7 @@ export class PlatformViewRegistry {
         this.views.set(platform.id, view);
         this.root.add(view.root);
       }
-      const candidateIndex = candidates.findIndex((candidate) => candidate.id === platform.id);
+      const candidateIndex = candidates.findIndex((candidate: any) => candidate.id === platform.id);
       const selected = candidateIndex >= 0 && candidateIndex === context.selectedChoice;
       this.factory.updateLabel(view, platform, { selected, currentValue: context.currentValue });
       this.updateView(view, platform, {
@@ -42,7 +42,7 @@ export class PlatformViewRegistry {
     });
   }
 
-  updateView(view, platform, context, deltaSeconds) {
+  updateView(view: any, platform: any, context: any, deltaSeconds: number) {
     const height = Number.isFinite(platform.height) ? platform.height : view.height;
     view.baseY = (Number.isFinite(platform.topY) ? platform.topY : 0) - height / 2;
     const selectedLift = context.selected ? 0.1 : 0;
@@ -67,7 +67,7 @@ export class PlatformViewRegistry {
     view.bodyRoot.position.y = -(height * (1 - view.bodyRoot.scale.y)) / 2;
 
     const roleOpacity = platform.role === 'history' ? 0.56 : 1;
-    view.materials.forEach((material) => {
+    view.materials.forEach((material: any) => {
       if (material === view.ringMaterial) return;
       material.opacity = roleOpacity;
       material.transparent = roleOpacity < 1;
@@ -92,7 +92,7 @@ export class PlatformViewRegistry {
     view.selectionRing.rotation.z += context.selected && !context.reducedMotion ? deltaSeconds * 0.45 : 0;
   }
 
-  get(id) {
+  get(id: string) {
     return this.views.get(id) ?? null;
   }
 
@@ -101,7 +101,7 @@ export class PlatformViewRegistry {
   }
 
   dispose() {
-    this.views.forEach((view) => this.factory.disposeView(view));
+    this.views.forEach((view: any) => this.factory.disposeView(view));
     this.views.clear();
     this.factory.dispose();
   }

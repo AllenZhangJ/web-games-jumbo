@@ -1,7 +1,14 @@
 import * as THREE from 'three';
 import { RENDER3D_COLORS } from './constants.js';
 
-function roundedRectPath(context, x, y, width, height, radius) {
+function roundedRectPath(
+  context: any,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number,
+) {
   const r = Math.max(0, Math.min(radius, width / 2, height / 2));
   context.beginPath();
   context.moveTo(x + r, y);
@@ -16,7 +23,7 @@ function roundedRectPath(context, x, y, width, height, radius) {
   context.closePath();
 }
 
-export function createCanvasSurface(platform, width, height) {
+export function createCanvasSurface(platform: any, width: number, height: number) {
   if (typeof platform?.createOffscreenCanvas !== 'function') return null;
   let canvas = null;
   try {
@@ -41,12 +48,12 @@ export function createCanvasSurface(platform, width, height) {
 
 export class TextureManager {
   [key: string]: any;
-  constructor(platform, { maxEntries = 96 } = {}) {
+  constructor(platform: any, { maxEntries = 96 } = {}) {
     this.platform = platform;
     this.maxEntries = Math.max(1, Number.isFinite(maxEntries) ? Math.floor(maxEntries) : 96);
-    this.cache = new Map();
-    this.references = new Map();
-    this.pendingDisposal = new Set();
+    this.cache = new Map<string, THREE.Texture>();
+    this.references = new Map<THREE.Texture, number>();
+    this.pendingDisposal = new Set<THREE.Texture>();
     this.fallbackCount = 0;
     this.capability = null;
     this.disposed = false;
@@ -74,7 +81,7 @@ export class TextureManager {
     return this.capability;
   }
 
-  get(key, width, height, painter) {
+  get(key: string, width: number, height: number, painter: (...args: any[]) => void) {
     if (this.disposed) return null;
     const cacheKey = `${key}@${width}x${height}`;
     const cached = this.cache.get(cacheKey);
@@ -110,9 +117,9 @@ export class TextureManager {
     return texture;
   }
 
-  platformLabel({ operation = '—', preview = '', selected = false, muted = false }) {
+  platformLabel({ operation = '—', preview = '', selected = false, muted = false }: any) {
     const key = `platform:${operation}:${preview}:${selected ? 1 : 0}:${muted ? 1 : 0}`;
-    return this.get(key, 512, 192, (context, width, height) => {
+    return this.get(key, 512, 192, (context: any, width: number, height: number) => {
       context.textAlign = 'center';
       context.textBaseline = 'middle';
       context.fillStyle = muted ? '#858b94' : selected ? RENDER3D_COLORS.cyan : RENDER3D_COLORS.label;
@@ -121,8 +128,8 @@ export class TextureManager {
     });
   }
 
-  currentLabel(value) {
-    return this.get(`current:${value}`, 320, 112, (context, width, height, path) => {
+  currentLabel(value: unknown) {
+    return this.get(`current:${value}`, 320, 112, (context: any, width: number, height: number, path: typeof roundedRectPath) => {
       path(context, 7, 7, width - 14, height - 14, 36);
       context.fillStyle = 'rgba(255,255,255,0.94)';
       context.fill();
@@ -139,20 +146,22 @@ export class TextureManager {
 
   evictOverflow() {
     while (this.cache.size > this.maxEntries) {
-      const [oldestKey, texture] = this.cache.entries().next().value;
+      const oldest = this.cache.entries().next().value;
+      if (!oldest) break;
+      const [oldestKey, texture] = oldest;
       this.cache.delete(oldestKey);
       if ((this.references.get(texture) ?? 0) > 0) this.pendingDisposal.add(texture);
       else texture.dispose();
     }
   }
 
-  acquire(texture) {
+  acquire(texture: THREE.Texture | null | undefined) {
     if (!texture || this.disposed) return texture;
     this.references.set(texture, (this.references.get(texture) ?? 0) + 1);
     return texture;
   }
 
-  release(texture) {
+  release(texture: THREE.Texture | null | undefined) {
     if (!texture) return;
     const count = this.references.get(texture) ?? 0;
     if (count <= 1) {
@@ -167,14 +176,14 @@ export class TextureManager {
     if (this.disposed) return;
     this.disposed = true;
     const textures = new Set([...this.cache.values(), ...this.pendingDisposal]);
-    textures.forEach((texture) => texture.dispose());
+    textures.forEach((texture: THREE.Texture) => texture.dispose());
     this.cache.clear();
     this.pendingDisposal.clear();
     this.references.clear();
   }
 }
 
-export function createTextureSprite(texture, { color = 0xffffff, textureManager = null } = {}) {
+export function createTextureSprite(texture: any, { color = 0xffffff, textureManager = null }: any = {}) {
   textureManager?.acquire?.(texture);
   const material = new THREE.SpriteMaterial({
     map: texture,

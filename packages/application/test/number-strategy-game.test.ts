@@ -26,6 +26,8 @@ function createHarness({
   draw = null,
   difficulty = null,
   feedback = null,
+  seed = 45,
+  storage = null,
 } = {}) {
   let clock = 0;
   let nextFrameId = 1;
@@ -112,9 +114,10 @@ function createHarness({
     getDebugSnapshot: () => null,
   };
   const game = new NumberStrategyGame(platform, {
-    seed: 45,
+    ...(seed === null ? {} : { seed }),
     ...(difficulty ? { difficulty } : {}),
     ...(feedback ? { feedback } : {}),
+    ...(storage ? { storage } : {}),
     rendererFactory: () => renderer,
   });
 
@@ -489,6 +492,57 @@ test('the guaranteed branch completes a formerly unwinnable seed through runtime
   assert.equal(harness.game.state.currentValue, harness.game.state.targetValue);
   assert.equal(harness.game.world.step, jumps);
   assert.equal(harness.game.world.current.preview, harness.game.state.currentValue);
+  harness.game.destroy();
+});
+
+test('versioned local save replays a stable session before the first rendered frame', () => {
+  let saved;
+  const storage = {
+    read: () => saved,
+    write: (_key, value) => { saved = value; return true; },
+    remove: () => { saved = undefined; return true; },
+  };
+  const first = createHarness({ seed: 45, storage });
+  assert.equal(first.game.debugJump(0), true);
+  const durationMs = first.game.jump.trajectory.durationMs;
+  first.game.update(durationMs);
+  if (first.game.state.phase === GAME_PHASE.LANDING) first.game.update(GAME_RULES.landingDurationMs);
+  const expected = first.game.getDebugSnapshot();
+  assert.equal(saved.version, 3);
+  first.game.destroy();
+
+  const restored = createHarness({ seed: null, storage });
+  const actual = restored.game.getDebugSnapshot();
+  assert.equal(actual.persistence.restoredActionCount, 1);
+  assert.equal(actual.currentValue, expected.currentValue);
+  assert.equal(actual.movesRemaining, expected.movesRemaining);
+  assert.equal(actual.currentPlatformId, expected.currentPlatformId);
+  assert.deepEqual(actual.player, expected.player);
+  restored.game.destroy();
+});
+
+test('a structurally valid but impossible replay is cleared and falls back to a fresh session', () => {
+  let removed = 0;
+  const storage = {
+    read: () => ({
+      format: 'number-strategy-save',
+      version: 3,
+      savedAtMs: 1,
+      game: {
+        seed: 45,
+        difficulty: { id: 'normal', version: 1 },
+        gameplay: { id: 'number-strategy-jump', version: 1 },
+        task: { id: 'reach-number', version: 1 },
+      },
+      replay: { version: 1, actions: [{ type: 'next-round' }] },
+    }),
+    write: () => true,
+    remove: () => { removed += 1; return true; },
+  };
+  const harness = createHarness({ seed: null, storage });
+  assert.match(harness.game.getDebugSnapshot().persistence.restoreError, /回放/);
+  assert.equal(harness.game.state.phase, GAME_PHASE.READY);
+  assert.equal(removed, 1);
   harness.game.destroy();
 });
 

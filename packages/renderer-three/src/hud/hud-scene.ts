@@ -12,11 +12,11 @@ const PHASE_COPY = Object.freeze({
   lost: '跃迁失败',
 });
 
-function finite(value, fallback = 0) {
+function finite(value: number, fallback = 0): number {
   return Number.isFinite(value) ? value : fallback;
 }
 
-function rectContains(rect, point) {
+function rectContains(rect: any, point: any): boolean {
   return Boolean(
     rect
     && point
@@ -29,7 +29,7 @@ function rectContains(rect, point) {
   );
 }
 
-function screenRect(sprite, rect, viewportHeight, z = 0) {
+function screenRect(sprite: THREE.Sprite, rect: any, viewportHeight: number, z = 0) {
   sprite.position.set(
     rect.x + rect.width / 2,
     viewportHeight - rect.y - rect.height / 2,
@@ -38,7 +38,12 @@ function screenRect(sprite, rect, viewportHeight, z = 0) {
   sprite.scale.set(rect.width, rect.height, 1);
 }
 
-function setSpriteTexture(sprite, texture, fallbackColor, textureManager) {
+function setSpriteTexture(
+  sprite: THREE.Sprite,
+  texture: any,
+  fallbackColor: THREE.ColorRepresentation,
+  textureManager: any,
+) {
   const oldMaterial = sprite.material;
   textureManager.release(oldMaterial?.map);
   textureManager.acquire(texture);
@@ -55,7 +60,7 @@ function setSpriteTexture(sprite, texture, fallbackColor, textureManager) {
   oldMaterial?.dispose?.();
 }
 
-function metric(context, label, value, x, color) {
+function metric(context: any, label: string, value: unknown, x: number, color: string) {
   context.textAlign = 'left';
   context.textBaseline = 'middle';
   context.fillStyle = color;
@@ -82,7 +87,7 @@ function normalizeSafeRect(viewport: any = {}) {
 
 export class HudScene {
   [key: string]: any;
-  constructor(textureManager) {
+  constructor(textureManager: any) {
     this.textureManager = textureManager;
     this.scene = new THREE.Scene();
     this.camera = new THREE.OrthographicCamera(0, 1, 1, 0, -10, 10);
@@ -100,7 +105,7 @@ export class HudScene {
     this.rightControl = createTextureSprite(null, { color: 0xffffff, textureManager });
     this.rightControl.name = 'HudChoiceRight';
 
-    [this.top, this.status, this.modal, this.leftControl, this.rightControl].forEach((sprite) => {
+    [this.top, this.status, this.modal, this.leftControl, this.rightControl].forEach((sprite: THREE.Sprite) => {
       sprite.renderOrder = 100;
       this.scene.add(sprite);
     });
@@ -216,11 +221,11 @@ export class HudScene {
     this.updateModal(state);
   }
 
-  updateTop(state) {
+  updateTop(state: any) {
     const key = `hud-top:${state.currentValue}:${state.targetValue}:${state.movesRemaining}:${state.phase}`;
     if (key === this.topKey) return;
     this.topKey = key;
-    const texture = this.textureManager.get(key, 1420, 176, (context) => {
+    const texture = this.textureManager.get(key, 1420, 176, (context: any) => {
       metric(context, '当前', state.currentValue ?? '—', 34, '#263238');
       metric(context, '目标', state.targetValue ?? '—', 478, '#263238');
       metric(context, '剩余', state.movesRemaining ?? '—', 894, '#263238');
@@ -235,8 +240,11 @@ export class HudScene {
     setSpriteTexture(this.top, texture, 0xffffff, this.textureManager);
   }
 
-  updateStatus(state, presentation) {
-    const copy = presentation.statusText ?? PHASE_COPY[state.phase] ?? state.message ?? '';
+  updateStatus(state: any, presentation: any) {
+    const copy = presentation.statusText
+      ?? (PHASE_COPY as Readonly<Record<string, string>>)[state.phase]
+      ?? state.message
+      ?? '';
     const selected = presentation.selectedChoice ?? state.selectedChoice;
     const visible = ['ready', 'charging', 'jumping', 'landing'].includes(state.phase);
     this.status.visible = visible;
@@ -247,7 +255,7 @@ export class HudScene {
     const key = `hud-status:${copy}:${selected ?? 'none'}:${state.phase}`;
     if (key === this.statusKey) return;
     this.statusKey = key;
-    const texture = this.textureManager.get(key, 1040, 128, (context, width, height) => {
+    const texture = this.textureManager.get(key, 1040, 128, (context: any, width: number, height: number) => {
       context.textAlign = 'center';
       context.textBaseline = 'middle';
       context.fillStyle = selected == null ? '#263238' : '#16A6A1';
@@ -259,7 +267,7 @@ export class HudScene {
     setSpriteTexture(this.status, texture, 0x263238, this.textureManager);
   }
 
-  updateControls(state, presentation) {
+  updateControls(state: any, presentation: any) {
     const selected = presentation.selectedChoice ?? state.selectedChoice ?? null;
     const choiceControlMap = presentation.choiceControlMap ?? { left: 0, right: 1 };
     const leftSelected = selected === choiceControlMap.left;
@@ -286,12 +294,12 @@ export class HudScene {
     }
   }
 
-  paintControl(sprite, side, active, disabled) {
+  paintControl(sprite: THREE.Sprite, side: 'left' | 'right', active: boolean, disabled: boolean) {
     const key = `hud-control:${side}:${active ? 1 : 0}:${disabled ? 1 : 0}`;
     const keyField = side === 'left' ? 'leftControlKey' : 'rightControlKey';
     if (this[keyField] === key) return;
     this[keyField] = key;
-    const texture = this.textureManager.get(key, 368, 256, (context, width, height, path) => {
+    const texture = this.textureManager.get(key, 368, 256, (context: any, width: number, height: number, path: any) => {
       path(context, 18, 18, width - 36, height - 36, 28);
       context.shadowColor = 'rgba(38,50,56,0.18)';
       context.shadowBlur = 12;
@@ -326,7 +334,7 @@ export class HudScene {
     setSpriteTexture(sprite, texture, active ? 0x16a6a1 : 0xffffff, this.textureManager);
   }
 
-  updateModal(state) {
+  updateModal(state: any) {
     const visible = ['paused', 'won', 'lost'].includes(state.phase);
     this.modal.visible = visible;
     if (!visible) {
@@ -336,7 +344,7 @@ export class HudScene {
     const key = `hud-modal:${state.phase}:${state.message ?? ''}:${state.currentValue}:${state.targetValue}`;
     if (key === this.modalKey) return;
     this.modalKey = key;
-    const texture = this.textureManager.get(key, 1220, 600, (context, width, height, path) => {
+    const texture = this.textureManager.get(key, 1220, 600, (context: any, width: number, height: number, path: any) => {
       const title = state.phase === 'paused' ? '已暂停' : state.phase === 'won' ? '目标命中' : '跃迁失败';
       context.textAlign = 'center';
       context.textBaseline = 'middle';
@@ -356,7 +364,7 @@ export class HudScene {
     setSpriteTexture(this.modal, texture, state.phase === 'lost' ? 0xe53935 : 0xffffff, this.textureManager);
   }
 
-  hitTest(point) {
+  hitTest(point: any) {
     if (rectContains(this.controlRects.pause, point)) return 'pause';
     if (rectContains(this.controlRects.restart, point)) return 'restart';
     if (this.controlState.overlayVisible || this.controlState.phase !== 'ready') return null;
@@ -365,7 +373,7 @@ export class HudScene {
     return null;
   }
 
-  render(renderer) {
+  render(renderer: THREE.WebGLRenderer) {
     renderer.clearDepth();
     renderer.render(this.scene, this.camera);
   }
@@ -387,7 +395,7 @@ export class HudScene {
   }
 
   dispose() {
-    [this.top, this.status, this.modal, this.leftControl, this.rightControl].forEach((sprite) => {
+    [this.top, this.status, this.modal, this.leftControl, this.rightControl].forEach((sprite: THREE.Sprite) => {
       this.textureManager.release(sprite.material?.map);
       sprite.material?.dispose?.();
       sprite.removeFromParent();

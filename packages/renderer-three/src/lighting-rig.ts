@@ -31,7 +31,7 @@ export class LightingRig extends THREE.Group {
     this.add(this.hemisphere, this.key, this.key.target);
   }
 
-  update(focus) {
+  update(focus: THREE.Vector3 | null | undefined) {
     if (!focus) return;
     this.key.position.set(focus.x - 7.5, focus.y + 12.5, focus.z - 6.5);
     this.key.target.position.set(focus.x, 0, focus.z);

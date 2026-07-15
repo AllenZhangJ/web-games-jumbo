@@ -10,6 +10,7 @@
     { "path": "../game-contracts" },
     { "path": "../difficulty" },
     { "path": "../jump-engine" },
-    { "path": "../gameplay" }
+    { "path": "../gameplay" },
+    { "path": "../persistence" }
   ]
 }

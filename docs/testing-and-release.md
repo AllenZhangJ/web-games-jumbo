@@ -2,111 +2,72 @@
 
 ## 当前命令
 
-| 命令 | 当前作用 |
+| 命令 | 作用 |
 |---|---|
-| `npm install` | 按 `package-lock.json` 安装依赖。 |
-| `npm run dev` | 先增量构建 workspace，再在 `127.0.0.1` 启动 Vite。 |
-| `npm run dev:lan` | 先增量构建 workspace，再监听所有网卡供同一局域网手机访问。 |
-| `npm test` | 执行 Node 旧栈回归和 TypeScript 包的 Vitest 契约测试。 |
-| `npm run lint` | 检查 TypeScript workspace 包。 |
-| `npm run typecheck` | strict 检查 workspace 源码，检查 TS 测试，并以 `allowJs/checkJs` 检查剩余 `src` JS。 |
-| `npm run build` | 生成 Web、微信和抖音产物。 |
-| `npm run check` | 依次执行 lint、typecheck、全量测试和三端构建。 |
-| `npm run preview:lan` | 先完成三端构建，再在 4173 端口预览生产 Web。 |
+| `npm ci` | 严格按锁文件安装依赖。 |
+| `npm run dev` | 构建 workspaces 后在 `127.0.0.1` 启动 Vite。 |
+| `npm run dev:lan` | 监听所有网卡，供同一 Wi-Fi 手机访问。 |
+| `npm test` | 运行全部单元、契约、集成、迁移、回放和 soak 测试。 |
+| `npm run test:coverage` | 运行确定性单测层并强制 80% 行/语句/函数、70% 分支。 |
+| `npm run test:soak` | 单独执行 1000 完整会话与 100 局资源测试。 |
+| `npm run typecheck` | strict 检查所有 workspace、入口、测试、构建和配置。 |
+| `npm run check:zero-js` | 拒绝维护 JS、`@ts-nocheck`、宽松 tsconfig 与旧迁移开关。 |
+| `npm run audit:assets` | 审计运行时依赖、许可、归属、角色资源清单和外链。 |
+| `npm run audit:dependencies` | 查询生产依赖高危漏洞。 |
+| `npm run build` | 构建三端、复制许可并检查包体预算。 |
+| `npm run check` | 按顺序执行上述所有可自动化门禁。 |
+| `npm run preview:lan` | 构建后在 4173 端口提供局域网生产预览。 |
 
-当前已有 lint、strict TS、新旧源码类型门禁和静态依赖测试；尚无覆盖率阈值、资源审计或 CI，它们属于后续批次，不能标为已完成。
+GitHub Actions 在 push 与 pull request 上使用 Node 20、`npm ci` 和 `npm run check`。生产依赖审计需要可访问 npm 漏洞服务；离线失败不能伪装成“0 漏洞”。
 
-## 当前自动化证据
+## 第四批自动化证据
 
-第 0 批开始时为 87 项测试；加入文档治理门禁后，当前结果为：
+- 所有维护代码 strict TypeScript；零旧 JS 门禁通过。
+- 全量测试覆盖 Contracts、Difficulty、RNG、Physics、World、Gameplay、Application、Persistence、Content、Feedback、Platform、Renderer、入口、架构和文档。
+- easy/normal/hard 各 10,000 seed，共 30,000 个可解回合。
+- 独立 1,000 个完整 normal 会话全部获胜且步数非负。
+- 100 局 Three 平台视图始终保持 3 个活动资源，结束后完整释放。
+- 存档 v1/v2/v3 fixture 迁移、迁移回写、损坏隔离、动作回放和首帧恢复通过。
+- 5 Gameplay、5 Task、10 Character Manifest 容量证明通过。
+- 确定性单测层收口前采样：行/语句 89.41%、函数 90.83%、分支 70.17%。
+- 生产依赖审计 0 个已知漏洞；资产/许可证审计通过。
+- Web、微信、抖音构建通过；Web JS 651.45 kB、gzip 170.81 kB，Web gzip 预算 180 KiB，小游戏 `game.js` 预算各 700 KiB。
 
-- Node 测试：89/89 通过。
-- Web 构建：通过。
-- 微信 IIFE 构建：通过。
-- 抖音 IIFE 构建：通过。
-- `npm install` 审计：0 个已知漏洞。
-
-第 0 批浏览器基线：
-
-- 视口：390×844。
-- 页面 URL/title、非空首屏和单 Canvas：通过。
-- 左右按钮持续按住后分别选择屏幕左/右候选：通过。
-- 长按期间文本选择和上下文菜单：未出现。
-- CDP `Page.setWebLifecycleState` frozen→active 后 Canvas 保留并可重新开始：通过。
-- 浏览器 warning/error：0。
-- 当前浏览器不支持 `Emulation.setPageVisibilityOverride`，所以真实 `visibilitychange/pagehide` 端到端仍是待验证项。
-
-第一批 P0–P2 收口证据：
-
-- Node 回归：98/98；TypeScript 包测试：6/6；合计 104/104。
-- easy/normal/hard 各 10,000 seed，共 30,000 个可解回合通过。
-- strict TypeScript、ESLint 和全部旧 `src` 的 `allowJs/checkJs` 通过。
-- Web、微信、抖音构建通过；Web JS 为 622,786 bytes，gzip 为 161,826 bytes。
-- 浏览器单 Canvas、左右按钮、失败重开、重载、禁止选择和控制台健康通过。
-- 依赖审计 0 个已知漏洞。
-
-第二批 P3–P5 收口前证据：
-
-- Node 兼容/集成：52/52；workspace Vitest：62/62；合计 114/114。
-- Core/Runtime 已迁移至 `jump-engine`、`gameplay`、`application` strict TypeScript 包，旧 JS 实现已删除。
-- Gameplay/Task 注册表完成 5+5 容量证明，并在 GameSession 中按注入 ID 实际选择。
-- `npm run check` 的 lint、typecheck、全量测试和 Web/微信/抖音构建通过。
-- Web JS 632.86 kB，gzip 165.55 kB；相对第一批增加来自应用边界、注册表与运行时校验，未超过当前兼容报警线。
-- 390×844：单 Canvas 满屏、`user-select: none`、左右按钮各完成一次真实长按成功落地、连续回合与镜头过渡正常，控制台 error/warn 为 0。
-- `npm audit` 为 0 个已知漏洞；`git diff --check` 通过。
-- 未完成：覆盖率阈值、测试 strict、真实 pagehide/pageshow、WebGL 完整恢复和小游戏真机证据。
-
-第三批 P6–P8 收口前证据：
-
-- Node 兼容/集成 40/40；workspace Vitest 84/84；合计 124/124。
-- Renderer、Content、Feedback 进入 private TypeScript workspaces，旧 `src/render3d` JS 删除。
-- Scene/Character 生产注册、10 角色测试容量、切换/回退/销毁和 ContextLifecycle 通过。
-- 程序化声音、震动、独立开关、设置持久化与平台失败隔离通过。
-- lint、typecheck、30,000 seed、Web/微信/抖音构建通过。
-- Web JS 643,245 bytes，Vite 报告 gzip 168.80 kB。
-- 390×844 左右连续长按成功落地、镜头过渡、单 Canvas、禁止选择和 console 0 error/warn 通过。
-- 依赖审计 0 个已知漏洞。
-- 明确保留到第四批：Renderer/测试统一 strict、覆盖率、soak、真实生命周期和小游戏真机证据。
-
-自动化覆盖的主要风险见 [仓库结构中的测试地图](repository-structure.md#tests测试地图)。
+覆盖率统计不包含需要真实 GPU/宿主的 Platform 与 Renderer3D 适配代码，但这些文件仍执行专用单元测试，并由三端构建、浏览器与真机矩阵约束。该分层必须在报告中保持透明，不能称为“全部代码 89%”。
 
 ## 每批开发的强制验证顺序
 
-每批不能以“代码写完”作为完成。必须按以下顺序收口：
-
-1. 运行与本批模块直接相关的最小测试。
-2. 运行完整单元和集成测试。
-3. 检查依赖方向、平台泄漏和构建入口。
-4. 审计竞态：重复启动、重复输入、异步完成、销毁后回调、帧重入。
-5. 审计兜底：资源失败、非法配置、平台能力缺失、清理异常、部分提交。
-6. 审计边界：零尺寸、非有限数、空候选、极端 seed、极长/极短按住、存档版本。
-7. 审计 Web 生命周期：resize、hide/show、pagehide/pageshow、pointercancel、上下文丢失。
-8. 浏览器验证首屏、左右输入、长按、暂停恢复、成功/失败、重开和控制台健康。
-9. 运行三端构建并检查产物边界、许可证和包体变化。
-10. 修复发现的问题，重复上述检查，直到不存在阻断性缺陷。
-11. 校准项目文档、治理状态、未完成项和不确定项。
-12. 检查待提交文件和敏感信息，中文提交并推送。
-
-详细清单见 [批次提交前检查](governance/batch-checklist.md)。
+1. 运行本批直接相关的最小测试。
+2. 运行完整单元、契约、集成、回放和 soak。
+3. 检查依赖方向、平台泄漏、零旧 JS 和构建入口。
+4. 审计竞态：重复启动/输入、异步完成、销毁后回调、帧重入。
+5. 审计兜底：非法配置、旧/坏存档、资源失败、平台能力缺失、清理异常。
+6. 审计边界：零尺寸、非有限数、空候选、极端 seed、蓄力边界、存档版本与回放上限。
+7. 审计 Web 生命周期：resize、hide/show、pagehide/pageshow、pointercancel、context lost/restored。
+8. 浏览器验证首屏、左右长按、刷新恢复、暂停/重开和 console 健康。
+9. 运行覆盖率、依赖/资产/许可证审计、三端构建和包体预算。
+10. 修复发现的问题并重复相关检查。
+11. 校准文档中的完成、未完成和证据强度。
+12. `git diff --check`、暂存审计、中文提交、推送并核对远端哈希。
 
 ## 证据强度
 
 | 声明 | 至少需要的证据 |
 |---|---|
-| 纯规则正确 | 单元测试、边界测试、属性/seed 测试。 |
-| 无竞态 | 可控时钟/Promise 的并发测试，不能只靠代码阅读。 |
-| Web 生命周期正常 | 单元测试加真实浏览器事件验证。 |
-| Three.js 表现正常 | 浏览器截图、控制台日志和交互证据。 |
-| 微信/抖音正常 | 对应开发者工具和 iOS/Android 真机证据。 |
-| 性能达标 | 指定设备上的帧率、内存、draw calls、三角形和包体采样。 |
-| 存档兼容 | 真实旧版 fixture 迁移测试。 |
-| 1000 名单机玩家可用 | 至少 1000 个完整确定性会话的 soak 测试加长时设备运行。 |
+| 纯规则正确 | 单元、边界、属性/seed 测试。 |
+| 无竞态 | 可控时钟/Promise 的并发测试。 |
+| 存档兼容 | 真实旧版 fixture 迁移和首帧恢复测试。 |
+| Web 生命周期正常 | 单元测试加真实浏览器事件。 |
+| Three.js 表现正常 | 浏览器截图、交互和控制台日志。 |
+| 微信/抖音正常 | 对应开发者工具与 iOS/Android 真机。 |
+| 性能达标 | 指定设备的 FPS、内存、draw calls、三角形和包体。 |
+| 1000 名单机玩家可用 | 1000 完整会话 soak 加长时设备运行。 |
 
-窄测试不能证明宽声明。例如 Node 测试通过不能证明微信真机 WebGL2 正常。
+Node 或桌面浏览器通过不能证明小游戏真机通过；开发者工具通过也不能代替 iOS/Android。
 
-## 批次分支与提交
+## 分支、CI 与发布
 
-| 批次 | 分支 | 建议标签 |
+| 批次 | 分支 | 标签 |
 |---|---|---|
 | 第 0 批 | `governance/batch-0-documentation` | `governance-b0` |
 | 第一批 | `governance/batch-1-foundation` | `governance-b1` |
@@ -114,20 +75,20 @@
 | 第三批 | `governance/batch-3-presentation` | `governance-b3` |
 | 第四批 | `governance/batch-4-production` | `governance-b4` |
 
-每批使用多个小型中文提交；批次结束时用一个中文收口提交更新状态与文档。推送后确认远端分支哈希与本地一致，再进入下一批。
+仓库管理员应把 GitHub Actions `quality` 设为 main 的 required check，禁止直接推送并要求至少 1 名 CODEOWNER 审批。仓库内 CI/CODEOWNERS 不能自动替代 GitHub 服务端分支保护设置。
+
+正式发布按 [发布清单](release-checklist.md)执行，并更新 [CHANGELOG](../CHANGELOG.md)。
 
 ## 最终终验
 
-第四批后另开完整终验，不把第四批自己的测试等同于最终验收。终验至少包括：
+第四批远端收口后单独执行最终终验，至少包括：
 
-- 全量单元、契约、集成、回放和覆盖率。
-- 1000 个完整会话 soak。
-- 每个难度的大样本可解性。
-- Web 浏览器完整主流程与生命周期。
-- 微信/抖音三端构建和可获得的真机矩阵。
-- 100 局资源有界测试。
-- 存档版本与迁移 fixture。
-- 5 玩法、5 任务、10 角色测试注册证明。
-- 全量 TypeScript 和零人工维护 `.js` 检查。
+- 全量门禁与独立覆盖率报告。
+- 30,000 seed、1,000 完整会话和 100 局资源 soak。
+- Web 完整主流程、刷新存档恢复和生命周期。
+- 微信/抖音三端构建及可获得的开发者工具/真机矩阵。
+- v1/v2/v3 存档迁移与损坏隔离。
+- 5 玩法、5 任务、10 角色注册证明。
+- 零旧 JS、统一 strict、许可归属和包体预算。
 
-发现问题必须修复并重复相关验证，不能只记录后结束。
+发现阻断问题必须修复、复测、更新文档并追加中文提交，不能只记录后结束。

@@ -2,7 +2,7 @@
 
 更新时间：2026-07-15
 
-当前分支：`governance/batch-3-presentation`
+当前分支：`governance/batch-4-production`
 
 ## 批次状态
 
@@ -11,62 +11,50 @@
 | 第 0 批：文档基线 | 已完成 | 远端收口 `eae92d1`，标签 `governance-b0`。 |
 | 第一批 P0–P2 | 已完成 | 远端收口 `2844c1e`，标签 `governance-b1`。 |
 | 第二批 P3–P5 | 已完成 | 远端收口 `933fcea`，标签 `governance-b2`。 |
-| 第三批 P6–P8 | 已完成 | Renderer、Scene/Character、Feedback 已迁移；124 项测试、三端构建和手机尺寸浏览器验收通过；远端实现提交 `03d84d4` 已确认。 |
-| 第四批 P9–P10 | 未开始 | 存档/回放、全面 strict TS、覆盖率与 CI 尚未完成。 |
-| 最终终验 | 未开始 | 只能在第四批推送后独立执行。 |
+| 第三批 P6–P8 | 已完成 | 远端收口 `c3225c1`，标签 `governance-b3`。 |
+| 第四批 P9–P10 | 进行中 | 实现、自动化与浏览器验收已通过；等待审计收口、中文提交与远端标签。 |
+| 最终终验 | 未开始 | 第四批远端收口后独立执行，不与本批自测混同。 |
 
-## 第三批已实现事实
+## 第四批已实现事实
 
-- `src/render3d` 全部迁入 private `@number-strategy/renderer-three` TypeScript workspace，旧 JS 与根级 Renderer 测试副本删除。
-- Renderer 直接消费 GameSnapshot/GameEvent，并按 World、HUD、Camera、Resource、Context Lifecycle 组件分层。
-- ContextLifecycle 独立处理 lost/restored、preventDefault 和幂等解绑；恢复后清时钟并刷新阴影状态。
-- 新增 strict `@number-strategy/content`：SceneRegistry、CharacterRegistry、ContentSelection、默认场景与默认角色。
-- 生产 Stage 使用 SceneDefinition 的背景、地面、雾和光照；CharacterRig 使用 CharacterDefinition 的 rendererKey、主色与缩放。
-- 测试静态注册 10 个角色 Manifest，覆盖切换、缺失 ID 回退、资源构造失败回退、先建后换和幂等销毁。
-- 新增 strict `@number-strategy/feedback`：GameEvent→声音/震动、独立开关、`feedback-settings@1` 本地持久化和诊断。
-- 声音为运行时原创程序化 WAV；平台能力缺失、播放/震动/存储失败不会阻断主循环。
-- 组合根实际注入 Renderer3D、FeedbackController、AudioFactorySoundPort、Haptic 和 Storage 适配。
-- normal@1 的固定 seed、完整回放、碰撞和冻结截图基线保持通过，未有意调整玩法或视觉手感。
+- 新增 private `@number-strategy/persistence`：`SaveEnvelope@3`、v1/v2/v3 fixture 迁移、校验、版本化动作回放、存储隔离、迁移回写与本地诊断导出。
+- `NumberStrategyGame` 在首帧前恢复本地存档并确定性重放；定义不兼容、动作无法重放或存档损坏时清除旧存档并启动新会话。
+- 新增 private `@number-strategy/platform`，Web、微信、抖音 Canvas/WebGL2/输入/生命周期/音频/震动/存储/分享适配全部迁入该包。
+- `src/entry`、`src/config.ts`、根测试、构建与审计脚本均为 TypeScript；删除旧 JS、`tsconfig.legacy.json`、`tsconfig.tests.json` 和 `allowJs/checkJs`。
+- 所有 workspace、入口、测试与工具均使用基准 `strict: true`；`check:zero-js` 会拒绝维护目录中的 `.js/.mjs/.cjs/.jsx`、`@ts-nocheck`、`strict:false` 和 `allowJs/checkJs`。
+- 确定性单测层覆盖率门禁为行/语句/函数 80%、分支 70%；当前实测高于门槛。平台与 WebGL 适配器由专用测试、三端构建与浏览器/真机矩阵验证，不混入核心覆盖率数字。
+- 新增 1000 个完整 normal 会话 soak、100 局 Three 平台资源有界/最终释放测试和 RNG 快照回放测试。
+- 新增 GitHub Actions、CODEOWNERS、CHANGELOG、发布清单、产物预算、生产依赖漏洞审计和资产/许可证自动审计。
+- 扩展准备保持：5 个 Gameplay、5 个 Task、10 个 Character Manifest 的静态注册容量证明；当前仍只交付 1 个正式玩法、1 个正式任务和 1 个默认程序化角色。
 
-## 第三批验证证据
+## 当前自动化证据
 
-- `npm run lint`、`npm run typecheck`、`npm run check`：通过。
-- Node 兼容/集成 40/40；workspace Vitest 84/84；总计 124/124。
-- 三档各 10,000 seed，共 30,000 可解回合通过。
-- Content 10 角色容量与回退/销毁，Feedback 独立设置/失败隔离，Renderer context lifecycle 均有自动化测试。
-- Web、微信、抖音构建通过；Web JS 643,245 bytes，Vite 报告 gzip 168.80 kB。
-- 390×844：单 Canvas、`user-select: none`、左右各一次真实长按成功落地、连续回合、镜头过渡和音频触发后运行稳定。
-- 浏览器 console error/warn 为 0。
-- `npm audit`：0 个已知漏洞；`git diff --check`：通过。
+- `npm run typecheck`：所有包与根级代码 strict 通过。
+- `npm run lint`、`npm run check:zero-js`：通过；维护目录旧 JavaScript 数量为 0。
+- 全量 Vitest、三档各 10,000 seed 可解性、1000 完整会话 soak 和 100 局资源 soak：通过；最终数量以本批收口运行结果为准。
+- 确定性单测层覆盖率：行/语句 89.41%、函数 90.83%、分支 70.17%（收口前采样）。
+- `npm run audit:assets`：1 个第三方运行时依赖完成许可白名单，内置角色为程序化资源且无外链。
+- `npm audit --omit=dev --audit-level=high`：0 个已知漏洞。
+- Web、微信、抖音构建通过；Web JS 651.45 kB、gzip 170.81 kB，小游戏 `game.js` 受 700 KiB 硬预算约束，三端均包含归属与许可文本。
+- 390×844 生产 Web：左跳 18→23、右跳 23→32；刷新恢复“当前 32 / 剩余 5”；单 Canvas、body/Canvas `user-select:none`、空选区、console 0。
+- 当前局域网 `http://192.168.1.249:4173/` 回连返回生产 HTML；更换 Wi-Fi 后必须重新确认 IP。
 
-## 当前 TypeScript 迁移事实
+## 本批尚未收口
 
-- strict 源码：Contracts、Difficulty、Jump Engine、Gameplay、Task、Application、Content、Feedback。
-- Renderer 源码已经全部为 `.ts`，但为本批兼容迁移暂时关闭 strict，并含宽松类索引签名；这不是最终完成状态。
-- package 测试已为 `.ts`，但 `tsconfig.tests.json` 仍为过渡非 strict。
-- 尚余 13 个 `src/**/*.js`、7 个 `tests/*.js` 和 1 个 `scripts/build.mjs`。
-- 第四批必须迁移上述全部文件，严格化 Renderer 和测试，删除 renderer ESLint 宽松例外、`tsconfig.legacy.json`、`allowJs/checkJs` 和过渡配置，并启用人工维护 `.js` 为 0 门禁。
+- 完成本批健壮性/竞态/兜底/边界/生命周期审计，运行完整 `npm run check`、`git diff --check`，校准测试数量与文档。
+- 中文提交、推送、核对远端哈希并创建 `governance-b4` 标签。
 
-## 明确未完成
+## 仍需项目方或真实设备验证
 
-- SaveEnvelope、版本迁移 fixture、确定性回放、诊断导出和本地存档编排。
-- Renderer 宽松类型清理与所有包统一 strict。
-- 全部平台/入口/测试/构建工具 TypeScript。
-- 覆盖率阈值、1000 完整会话 soak、100 局资源有界测试和资源许可证自动审计。
-- CI、CODEOWNERS、CHANGELOG、发布清单和可在仓库内落地的分支治理文件。
-- Feedback 设置的玩家 HUD 入口；当前已有可持久化 API，但没有可见设置页。
-
-## 当前不明确或证据不足
-
-- 微信/抖音 iOS 与 Android 的 WebGL2、程序化 data-URI 音频、震动、安全区和前后台真机表现。
-- Web pagehide/pageshow、真实 visibilitychange 与 context lost/restored 的完整浏览器端到端证据。
+- 微信/抖音开发者工具与 iOS/Android 真机的 WebGL2、程序化 data-URI 音频、震动、安全区、前后台和本地存档表现。
+- 真实手机 Web 的 `pagehide/pageshow`、`visibilitychange`、WebGL context lost/restored 完整端到端证据。
 - context restored 后所有 GPU 资源在各宿主的完整重建能力。
-- 低端真机长时间运行的帧率、内存、发热和 GPU 资源上限。
-- 当前测试真实行/分支覆盖率。
-- 正式角色与声音资源的最终发行许可；当前默认内容为程序生成且无第三方音频文件。
+- 低端真机至少 10 分钟的帧率、内存、发热与 GPU 资源表现。
+- GitHub 仓库设置中的主分支保护仍需仓库管理员启用；仓库已提供应设为 required 的 `quality` 工作流与 CODEOWNERS。
+- Feedback 设置已有独立持久化 API，但当前没有玩家可见的 HUD 设置页。
 
 ## 状态维护规则
 
-- 只有远端分支哈希确认后，本批才能从“待远端收口”改为“已完成”。
-- 接口、测试 fixture 或开发工具成功不能替代正式内容与目标真机证据。
-- 第四批零 JS/统一 strict 是硬门槛，不得以第三批“已是 `.ts`”延期宽松类型。
+- 只有远端分支哈希确认后，本批才能改为“已完成”并创建批次标签。
+- 自动化、桌面浏览器、开发者工具和真机证据必须按强度分别陈述，不能互相替代。
+- 第四批的零 JS、统一 strict、存档迁移、覆盖率、soak、三端构建与许可审计均为累积硬门槛。

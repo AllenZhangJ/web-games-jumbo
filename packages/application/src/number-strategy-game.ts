@@ -1,4 +1,10 @@
-import type { DifficultyProfile, LegacyGameRules, LegacyJumpPhysics, LegacyWorldOptions } from '@number-strategy/difficulty';
+import {
+  createBuiltinDifficultyRegistry,
+  type DifficultyProfile,
+  type LegacyGameRules,
+  type LegacyJumpPhysics,
+  type LegacyWorldOptions,
+} from '@number-strategy/difficulty';
 import {
   GAME_PHASE,
   applyOperation,
@@ -19,6 +25,15 @@ import {
   type WorldPlatform,
 } from '@number-strategy/jump-engine';
 import type { FeedbackPort, GameCommand, GameEvent, GameSnapshot, StoragePort } from '@number-strategy/game-contracts';
+import {
+  ReplayRecorder,
+  SaveRepository,
+  exportSaveDiagnostics,
+  replaySave,
+  type GameIdentity,
+  type ReplayAction,
+  type SaveEnvelope,
+} from '@number-strategy/persistence';
 import { CommandHandler } from './command-handler.js';
 import { EventCollector } from './event-collector.js';
 import { FixedStepClock } from './fixed-step-clock.js';
@@ -103,6 +118,7 @@ export interface NumberStrategyGameOptions {
   readonly taskRegistry?: TaskRegistry;
   readonly gameplayId?: string;
   readonly taskId?: string;
+  readonly restoreSave?: boolean;
   readonly rendererFactory: RendererFactory;
   readonly feedback?: FeedbackPort;
   readonly storage?: StoragePort;
@@ -152,7 +168,7 @@ export class NumberStrategyGame {
   readonly platform: PlatformPort;
   readonly canvas: unknown;
   readonly renderer: RendererPort;
-  readonly session: GameSession;
+  session: GameSession;
   readonly fixedStepClock = new FixedStepClock();
   readonly lifecycleController = new LifecycleController();
   readonly eventCollector: EventCollector;
@@ -160,6 +176,11 @@ export class NumberStrategyGame {
   readonly commandHandler: CommandHandler<boolean>;
   readonly feedback: FeedbackPort;
   readonly storage: StoragePort;
+  readonly saveRepository: SaveRepository;
+  replayRecorder: ReplayRecorder;
+  restoringReplay = false;
+  restoredActionCount = 0;
+  restoreError: string | null = null;
   jump: ActiveJump | null = null;
   frameId: unknown | null = null;
   activePointerId: number | null = null;
@@ -184,12 +205,13 @@ export class NumberStrategyGame {
   get lifecycle(): ApplicationLifecycle { return this.lifecycleController.state; }
 
   constructor(platform: PlatformPort, {
-    seed = Date.now(),
+    seed,
     difficulty,
     gameplayRegistry,
     taskRegistry,
     gameplayId,
     taskId,
+    restoreSave = true,
     rendererFactory,
     feedback = { handle: () => {}, dispose: () => {} },
     storage = { read: () => undefined, write: () => false, remove: () => false },
@@ -202,19 +224,136 @@ export class NumberStrategyGame {
     }
     this.platform = platform;
     this.canvas = platform.createCanvas();
-    this.session = new GameSession({
-      seed,
-      ...(difficulty === undefined ? {} : { difficulty }),
-      ...(gameplayRegistry === undefined ? {} : { gameplayRegistry }),
-      ...(taskRegistry === undefined ? {} : { taskRegistry }),
-      ...(gameplayId === undefined ? {} : { gameplayId }),
-      ...(taskId === undefined ? {} : { taskId }),
-    });
+    this.storage = storage;
+    this.saveRepository = new SaveRepository(storage);
+    const canRestore = restoreSave
+      && seed === undefined
+      && difficulty === undefined
+      && gameplayId === undefined
+      && taskId === undefined;
+    let loadedSave = canRestore ? this.saveRepository.load() : null;
+    let restoredDifficulty: unknown = difficulty;
+    if (loadedSave) {
+      try {
+        restoredDifficulty = createBuiltinDifficultyRegistry().get(
+          loadedSave.game.difficulty.id,
+          loadedSave.game.difficulty.version,
+        );
+      } catch (error) {
+        this.restoreError = error instanceof Error ? error.message : String(error);
+        this.saveRepository.clear();
+        loadedSave = null;
+      }
+    }
+    const sessionSeed = seed ?? loadedSave?.game.seed ?? Date.now();
+    const sessionGameplayId = gameplayId ?? loadedSave?.game.gameplay.id;
+    const sessionTaskId = taskId ?? loadedSave?.game.task.id;
+    try {
+      this.session = new GameSession({
+        seed: sessionSeed,
+        ...(restoredDifficulty === undefined ? {} : { difficulty: restoredDifficulty }),
+        ...(gameplayRegistry === undefined ? {} : { gameplayRegistry }),
+        ...(taskRegistry === undefined ? {} : { taskRegistry }),
+        ...(sessionGameplayId === undefined ? {} : { gameplayId: sessionGameplayId }),
+        ...(sessionTaskId === undefined ? {} : { taskId: sessionTaskId }),
+      });
+    } catch (error) {
+      if (!loadedSave) throw error;
+      this.restoreError = error instanceof Error ? error.message : String(error);
+      this.saveRepository.clear();
+      loadedSave = null;
+      this.session = new GameSession({
+        seed: seed ?? Date.now(),
+        ...(difficulty === undefined ? {} : { difficulty }),
+        ...(gameplayRegistry === undefined ? {} : { gameplayRegistry }),
+        ...(taskRegistry === undefined ? {} : { taskRegistry }),
+        ...(gameplayId === undefined ? {} : { gameplayId }),
+        ...(taskId === undefined ? {} : { taskId }),
+      });
+    }
     this.renderer = rendererFactory(this.canvas, platform);
     this.feedback = feedback;
-    this.storage = storage;
     this.eventCollector = new EventCollector(() => this.readClock());
     this.commandHandler = new CommandHandler((command) => this.executeCommand(command));
+    this.replayRecorder = new ReplayRecorder(this.gameIdentity());
+    if (loadedSave && this.restoreError === null) this.restoreFromSave(loadedSave);
+  }
+
+  private gameIdentity(): GameIdentity {
+    return Object.freeze({
+      seed: this.seed,
+      difficulty: { id: this.difficulty.id, version: this.difficulty.version },
+      gameplay: {
+        id: this.session.gameplayId,
+        version: this.session.gameplayRegistry.get(this.session.gameplayId).version,
+      },
+      task: {
+        id: this.session.taskId,
+        version: this.session.taskRegistry.get(this.session.taskId).version,
+      },
+    });
+  }
+
+  private recordAction(action: ReplayAction): void {
+    if (this.restoringReplay) return;
+    try {
+      this.replayRecorder.append(action);
+      this.saveRepository.save(this.replayRecorder.envelope(this.readClock()));
+    } catch (error) {
+      this.recordRuntimeError('persistence', error);
+    }
+  }
+
+  private restoreFromSave(envelope: SaveEnvelope): void {
+    this.restoringReplay = true;
+    try {
+      this.restoredActionCount = replaySave(envelope, {
+        jump: (choiceIndex, chargeMs) => {
+          if (!this.debugJump(choiceIndex, chargeMs) || !this.jump) return false;
+          const durationMs = this.jump.trajectory.durationMs;
+          this.update(durationMs);
+          if (this.state.phase === GAME_PHASE.LANDING) this.update(this.gameRules.landingDurationMs);
+          return this.state.phase === GAME_PHASE.READY
+            || this.state.phase === GAME_PHASE.WON
+            || this.state.phase === GAME_PHASE.LOST;
+        },
+        restart: () => {
+          this.restart();
+          return true;
+        },
+        nextRound: () => this.executeCommand({ type: 'next-round' }),
+      });
+      this.replayRecorder = new ReplayRecorder(this.gameIdentity(), envelope.replay.actions);
+    } catch (error) {
+      this.restoreError = error instanceof Error ? error.message : String(error);
+      this.session = new GameSession({
+        seed: envelope.game.seed,
+        difficulty: this.session.difficulty,
+        gameplayRegistry: this.session.gameplayRegistry,
+        taskRegistry: this.session.taskRegistry,
+        gameplayId: this.session.gameplayId,
+        taskId: this.session.taskId,
+      });
+      this.jump = null;
+      this.restoredActionCount = 0;
+      this.replayRecorder = new ReplayRecorder(this.gameIdentity());
+      this.saveRepository.clear();
+    } finally {
+      this.restoringReplay = false;
+      this.eventCollector.clear();
+    }
+  }
+
+  clearSave(): boolean {
+    this.replayRecorder = new ReplayRecorder(this.gameIdentity());
+    return this.saveRepository.clear();
+  }
+
+  exportDiagnostics(): string {
+    return exportSaveDiagnostics(
+      this.replayRecorder.envelope(this.readClock()),
+      this.saveRepository.diagnostics(),
+    );
   }
 
   private executeCommand(command: GameCommand): boolean {
@@ -260,6 +399,7 @@ export class NumberStrategyGame {
         if (!this.state.nextRound()) return false;
         this.clearActivePointer();
         this.resetWorld();
+        this.recordAction({ type: 'next-round' });
         return true;
     }
   }
@@ -532,6 +672,11 @@ export class NumberStrategyGame {
       chargeMs: released.chargeMs,
       targetId: target.id,
     });
+    this.recordAction({
+      type: 'jump',
+      choiceIndex: choiceIndex === 0 ? 0 : 1,
+      chargeMs: released.chargeMs,
+    });
     return true;
   }
 
@@ -579,6 +724,7 @@ export class NumberStrategyGame {
     this.resetWorld();
     this.fixedStepClock.rebase();
     this.eventCollector.emit('restarted', {});
+    this.recordAction({ type: 'restart' });
   }
 
   resolveJump() {
@@ -772,6 +918,12 @@ export class NumberStrategyGame {
       player: { ...this.world.player.position },
       lifecycle: this.lifecycle,
       runtimeErrorCount: this.runtimeErrorCount,
+      persistence: {
+        actions: this.replayRecorder.actions.length,
+        restoredActionCount: this.restoredActionCount,
+        restoreError: this.restoreError,
+        diagnostics: this.saveRepository.diagnostics(),
+      },
       lastRuntimeError: this.lastRuntimeError
         ? {
           source: this.lastRuntimeError.source,

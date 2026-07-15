@@ -19,7 +19,7 @@ export class CameraRig {
     this.resize(1, 1);
   }
 
-  resize(width, height) {
+  resize(width: number, height: number) {
     const safeWidth = Number.isFinite(width) && width > 0 ? width : 1;
     const safeHeight = Number.isFinite(height) && height > 0 ? height : 1;
     this.aspect = Math.max(0.1, safeWidth / safeHeight);
@@ -34,7 +34,10 @@ export class CameraRig {
     this.camera.updateProjectionMatrix();
   }
 
-  calculateFocus({ current, candidates = [], player, origin, jumping = false }, target = new THREE.Vector3()) {
+  calculateFocus(
+    { current, candidates = [], player, origin, jumping = false }: any,
+    target = new THREE.Vector3(),
+  ) {
     const originX = Number.isFinite(origin?.x) ? origin.x : 0;
     const originZ = Number.isFinite(origin?.z) ? origin.z : 0;
     const heading = current?.heading ?? { x: 0, z: 1 };
@@ -43,7 +46,7 @@ export class CameraRig {
     let targetX = currentX + (Number.isFinite(heading.x) ? heading.x : 0) * CAMERA_DEFAULTS.lookAhead;
     let targetZ = currentZ + (Number.isFinite(heading.z) ? heading.z : 1) * CAMERA_DEFAULTS.lookAhead;
 
-    const visibleCandidates = Array.isArray(candidates) ? candidates.filter(Boolean) : [];
+    const visibleCandidates: any[] = Array.isArray(candidates) ? candidates.filter(Boolean) : [];
     if (visibleCandidates.length > 0) {
       const candidateCenter = visibleCandidates.reduce((sum, item) => ({
         x: sum.x + (Number.isFinite(item?.center?.x) ? item.center.x : 0),
@@ -63,7 +66,7 @@ export class CameraRig {
     return target.set(targetX, 0.45, targetZ);
   }
 
-  update(context, deltaSeconds, transition = null) {
+  update(context: any, deltaSeconds: number, transition: any = null) {
     const { reducedMotion = false } = context;
     this.calculateFocus(context, this.desiredFocus);
     if (!this.initialized || reducedMotion) {
