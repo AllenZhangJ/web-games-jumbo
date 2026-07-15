@@ -16,8 +16,8 @@
 
 | 字段 | 内容 |
 |---|---|
-| 构建/commit | `feature/content-expansion` 当前工作树（内容扩容验收） |
-| Web 预览地址 | `http://192.168.1.249:4173/`（2026-07-15 第四批生产构建；更换 Wi-Fi 后重新确认） |
+| 构建/commit | `render-governance-b4` / `5a113d6`（渲染性能四批终验） |
+| Web 预览地址 | `http://192.168.1.249:4173/`（2026-07-15 最新生产构建；HTTP 200） |
 | 微信开发者工具 | 待填写 |
 | 抖音开发者工具 | 待填写 |
 | 微信 iOS 设备 | 待填写 |
@@ -38,7 +38,7 @@
 - [x] 构建脚本枚举并强制 Web gzip 180 KiB、微信/抖音 `game.js` 700 KiB 的项目预算。
 - [ ] 与发行平台账号当前包体限制核对。
 
-当前本地构建：`dist/web` 约 `5.3 MiB`（含 source map），Web JS 672.91 kB、gzip 177.55 kB；`dist/wechat` 与 `dist/douyin` 各约 `692 KiB`，其中 `game.js` 687,289 bytes。发行平台限制仍需在真实账号和开发者工具中核对。
+当前本地构建：`dist/web` 约 `5.3 MiB`（含 source map），Web JS 684.91 kB、gzip 180,771 bytes；`dist/wechat` 与 `dist/douyin` 各约 `704 KiB`，其中 `game.js` 700,008 bytes。发行平台限制仍需在真实账号和开发者工具中核对。
 
 ## 共用 WebGL2 和视觉
 

@@ -38,7 +38,7 @@ GitHub Actions 在 push 与 pull request 上使用 Node 20、`npm ci` 和 `npm r
 - 5 个正式 Gameplay 各执行 1,000 个 normal 初始 seed；5 个正式 Task 和 10 个正式 Character 完成注册、兼容选择、回退与资源销毁测试。
 - 全量 Vitest 25 个文件、158 项测试通过；确定性单测层行/语句 89.91%、函数 93.37%、分支 72.24%。
 - 生产依赖审计 0 个已知漏洞；资产/许可证审计通过。
-- Web、微信、抖音构建通过；Web JS 672.91 kB、gzip 177.55 kB，Web gzip 预算 180 KiB，小游戏 `game.js` 687,289 bytes、预算各 700 KiB。
+- Web、微信、抖音构建通过；Web JS 684.91 kB、gzip 180,771 bytes，Web gzip 预算 180 KiB，小游戏 `game.js` 700,008 bytes、预算各 700 KiB。
 
 覆盖率统计不包含需要真实 GPU/宿主的 Platform 与 Renderer3D 适配代码，但这些文件仍执行专用单元测试，并由三端构建、浏览器与真机矩阵约束。该分层必须在报告中保持透明，不能称为“全部代码 89%”。
 

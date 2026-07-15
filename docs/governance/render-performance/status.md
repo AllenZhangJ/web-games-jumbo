@@ -9,8 +9,9 @@
 | 第一批：基线、契约与守卫 | 已完成 | 提交 `0a0af93`、标签 `render-governance-b1` 与远端分支一致。 |
 | 第二批：资源内核与 HUD | 已完成 | 提交 `15a7ed7`、标签 `render-governance-b2` 与远端分支一致。 |
 | 第三批：帧协调与扩展模块 | 已完成 | 提交 `ff6fde6`、标签 `render-governance-b3` 与远端分支一致。 |
-| 第四批：调度、画质与生产门禁 | 已完成（待远端收口） | 高/低画质选择、独立持久化、首帧后 SaveScheduler、FrameMetrics 和专项命令已通过自动化及 390×844 浏览器验证。 |
-| iPhone 13 Pro 真机性能验收 | 待验证 | 已确认设备/系统/浏览器，尚无本分支设备采样。 |
+| 第四批：调度、画质与生产门禁 | 已完成 | 提交 `5a113d6`、标签 `render-governance-b4` 与远端分支一致；标签后独立终验通过。 |
+| 独立终验 | 已完成（仓库/本机范围） | 专项命令、完整门禁、三端构建和最新 390×844 生产预览通过。 |
+| iPhone 13 Pro 真机性能验收 | 待项目方验证 | 目标为 iOS 26 Chrome；当前地址 `http://192.168.1.249:4173/`，尚无本提交真机采样。 |
 
 状态只能在对应自动化与运行证据通过后更新，不从计划反推完成。
 
@@ -50,3 +51,5 @@
 - 起跳前后 CanvasTexture 创建数不增长，Runtime/console 错误 0。
 - SaveScheduler 浏览器诊断 queued 2、flushes 2、failed 0；集成测试覆盖首帧后写入及 Hide/Destroy 强制刷新。
 - 详细证据见 [第四批验证](batch-4-verification.md)。
+
+独立终验与 iPhone 验收边界见 [最终验证](final-verification.md)。

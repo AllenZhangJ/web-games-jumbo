@@ -1,0 +1,63 @@
+# 渲染性能四批独立终验
+
+终验日期：2026-07-15
+
+终验基线：`render-governance-b4` / `5a113d6`
+
+## 结论
+
+四批渲染性能治理在仓库自动化、本机三端生产构建和 390×844 Chromium 生产预览范围内通过，未发现阻断性缺陷。数值策略、任务、Jump Engine、WorldState、碰撞、左右映射和镜头过渡基线继续通过。
+
+iPhone 13 Pro / iOS 26 / Chrome 真机尚未由项目负责人完成本提交验收，因此项目状态是“可真机验收”，不是“iPhone 已通过”。微信/抖音开发者工具与真机同样不能从 Web 结果推断。
+
+## 标签与远端
+
+| 批次 | 提交 | 标签 |
+|---|---|---|
+| 第一批 | `0a0af93` | `render-governance-b1` |
+| 第二批 | `15a7ed7` | `render-governance-b2` |
+| 第三批 | `ff6fde6` | `render-governance-b3` |
+| 第四批 | `5a113d6` | `render-governance-b4` |
+
+第四批本地 HEAD、远端跟踪分支和标签均为 `5a113d672d4e40bf97afb7f27a2bd81b78dff5ca`。
+
+## 独立自动化
+
+- `test:first-jump`：32 项通过。
+- `test:resource-budget`：7 项通过。
+- `test:renderer-soak`：2 项通过。
+- `test:content-cycle`：9 项通过。
+- 标签后 `npm run check`：25 个文件、158 项测试通过。
+- 覆盖率：行/语句 89.91%、函数 93.37%、分支 72.24%。
+- 30,000 难度 seed、1,000 完整会话和 100 轮平台/特效资源通过。
+- 维护代码零 JavaScript；Renderer 模块矩阵和热路径零 Three 分配守卫通过。
+- 生产依赖 0 个已知漏洞；资产/许可证审计通过。
+
+## 构建
+
+| 产物 | 当前结果 | 预算 |
+|---|---:|---:|
+| Web JS gzip | 180,771 bytes | 180 KiB（184,320 bytes） |
+| 微信 `game.js` | 700,008 bytes | 700 KiB（716,800 bytes） |
+| 抖音 `game.js` | 700,008 bytes | 700 KiB（716,800 bytes） |
+
+最新 Web 入口引用 `assets/index-DYE8x108.js`。当前 Wi-Fi 局域网地址 `http://192.168.1.249:4173/` 返回 HTTP 200。
+
+## 最新浏览器证据
+
+- 页面标题“数域跃迁”，Canvas 和无障碍说明存在，无框架错误层。
+- console warn/error 0，Runtime error 0。
+- 高画质刷新恢复：DPR 2、粒子容量 72、拖尾容量 18、当前纹理 7,728,768 bytes。
+- 固定帧序：world → character → effects → camera → hud → render。
+- 第四批交互测量：高档松手 6.6ms、低档 5.7ms；各 240 帧窗口长帧 0。
+- 高低画质选择、低档刷新保持、切回高档、内容菜单释放和 SaveScheduler 诊断均通过。
+
+## iPhone 13 Pro 验收项
+
+1. 使用 iOS 26 Chrome 打开局域网地址，分别选择高、低画质。
+2. 每档至少完成 10 次长按松手，重点观察起跳和空翻起始时刻。
+3. 验证内容菜单、左右按钮、无复制选区、刷新后画质/存档恢复。
+4. 切后台再返回，确认取消蓄力、暂停、继续和 pending 存档刷新。
+5. 至少连续游玩 10 分钟，记录卡顿、发热、黑屏或页面重载。
+
+项目方验收通过后再合并 `main`、删除专项分支；验收前不把真机项勾选为通过。
