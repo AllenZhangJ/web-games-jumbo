@@ -21,11 +21,14 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:soak": "vitest run tests/session-soak.test.ts packages/renderer-three/test/resource-soak.test.ts",
+    "test:renderer-performance": "vitest run packages/renderer-three/test/performance-baseline.test.ts packages/renderer-three/test/resource-soak.test.ts",
+    "check:render-architecture": "node --import tsx scripts/check-render-architecture.ts",
+    "check:render-hot-path": "node --import tsx scripts/check-render-hot-path.ts",
     "audit:assets": "node --import tsx scripts/audit-assets.ts",
     "audit:dependencies": "npm audit --omit=dev --audit-level=high",
     "build": "npm run build:packages && node --import tsx scripts/build.ts",
     "check:zero-js": "node --import tsx scripts/check-zero-js.ts",
-    "check": "npm run lint && npm run typecheck && npm run test && npm run test:coverage && npm run test:soak && npm run check:zero-js && npm run audit:assets && npm run audit:dependencies && npm run build"
+    "check": "npm run lint && npm run typecheck && npm run test && npm run test:coverage && npm run test:soak && npm run test:renderer-performance && npm run check:zero-js && npm run check:render-architecture && npm run check:render-hot-path && npm run audit:assets && npm run audit:dependencies && npm run build"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

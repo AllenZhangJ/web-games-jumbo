@@ -31,6 +31,9 @@
 - [当前治理状态](governance/status.md)
 - [四批治理独立终验](governance/final-verification.md)
 - [每批提交前检查清单](governance/batch-checklist.md)
+- [渲染性能专项路线图](governance/render-performance/roadmap.md)
+- [渲染性能基线](governance/render-performance/baseline.md)
+- [渲染性能专项状态](governance/render-performance/status.md)
 - [贡献与提交规范](../CONTRIBUTING.md)
 
 ## 架构决策
@@ -40,6 +43,7 @@
 - [ADR-003：`web-jump` 参考与 MIT 合规](decisions/003-web-jump-reference-and-license.md)
 - [ADR-004：采用分批治理的模块化单体](decisions/004-modular-governance-roadmap.md)
 - [ADR-005：正式内容目录与任务驱动胜负](decisions/005-formal-content-catalog-and-task-outcomes.md)
+- [ADR-006：渲染性能模块化单体与资源预算](decisions/006-render-performance-modular-monolith.md)
 
 ## 文档状态规则
 

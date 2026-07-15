@@ -10,6 +10,9 @@
 | `npm test` | 运行全部单元、契约、集成、迁移、回放和 soak 测试。 |
 | `npm run test:coverage` | 运行确定性单测层并强制 80% 行/语句/函数、70% 分支。 |
 | `npm run test:soak` | 单独执行 1000 完整会话与 100 局资源测试。 |
+| `npm run test:renderer-performance` | 执行纹理字节基线、资源作用域与 Renderer soak。 |
+| `npm run check:render-architecture` | 拒绝 Renderer 宿主 API 泄漏与低层模块反向依赖。 |
+| `npm run check:render-hot-path` | 冻结已知热路径分配；第三批将允许数降为零。 |
 | `npm run typecheck` | strict 检查所有 workspace、入口、测试、构建和配置。 |
 | `npm run check:zero-js` | 拒绝维护 JS、`@ts-nocheck`、宽松 tsconfig 与旧迁移开关。 |
 | `npm run audit:assets` | 审计运行时依赖、许可、归属、角色资源清单和外链。 |

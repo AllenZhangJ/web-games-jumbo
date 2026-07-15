@@ -184,6 +184,8 @@ v3 只创建一个上屏 WebGL2 Canvas：
 
 ## 性能与资源边界
 
+渲染性能专项采用 [ADR-006](decisions/006-render-performance-modular-monolith.md)：Renderer 保持单一 private workspace，在包内以 RenderFrame、RenderResourceScope、EffectRuntime 和显式高/低预算建立边界。专项当前状态见 [渲染性能治理](governance/render-performance/status.md)。
+
 - 平台数量保持有界：当前、两个候选和有限历史；未选分支退场后回收。
 - Mesh、Geometry、Material、Texture 和粒子/拖尾节点必须复用或在移除时显式 `dispose()`。
 - 阴影只覆盖当前游戏区域，只为必要对象开启投射/接收；阴影质量可按设备降级。

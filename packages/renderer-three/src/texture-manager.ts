@@ -172,6 +172,21 @@ export class TextureManager {
     this.references.set(texture, count - 1);
   }
 
+  stats() {
+    const cachedTextures = [...this.cache.values()];
+    return Object.freeze({
+      cacheEntries: this.cache.size,
+      cacheBytes: cachedTextures.reduce(
+        (total: number, texture: THREE.Texture) => total + estimateTextureBytes(texture),
+        0,
+      ),
+      referencedTextures: this.references.size,
+      pendingDisposals: this.pendingDisposal.size,
+      fallbackCount: this.fallbackCount,
+      maxEntries: this.maxEntries,
+    });
+  }
+
   dispose() {
     if (this.disposed) return;
     this.disposed = true;
@@ -181,6 +196,14 @@ export class TextureManager {
     this.pendingDisposal.clear();
     this.references.clear();
   }
+}
+
+export function estimateTextureBytes(texture: THREE.Texture | null | undefined): number {
+  const image = texture?.image as { width?: unknown; height?: unknown } | undefined;
+  const width = Number(image?.width);
+  const height = Number(image?.height);
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return 0;
+  return Math.floor(width) * Math.floor(height) * 4;
 }
 
 export function createTextureSprite(texture: any, { color = 0xffffff, textureManager = null }: any = {}) {

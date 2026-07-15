@@ -4,6 +4,8 @@
 
 当前发布分支：`main`
 
+内容扩容后正在 `feature/render-performance-governance` 执行独立渲染性能专项；其状态与证据见 [专项状态](render-performance/status.md)，不改变下表既有 P0–P10 历史。
+
 ## 批次状态
 
 | 批次 | 状态 | 当前事实 |
