@@ -39,7 +39,7 @@
 
 ## 发布前仍需人工完成
 
-- 在当前手机浏览器打开上述地址，完成至少一次左/右长按、刷新恢复、声音与振动开关体验；更换 Wi-Fi 后重新发现 IP。
+- 项目方已于 2026-07-15 确认完成当前 Web 手机版本验收；设备型号、系统版本和录像未记录，因此只作为产品方验收结论，不扩展为具体设备矩阵证据。
 - 将 `dist/wechat`、`dist/douyin` 导入对应开发者工具，填写真实 AppID，并完成 iOS/Android 真机矩阵。
 - 记录至少 10 分钟低端真机 FPS、内存、发热、draw calls 和 context lost/restored 行为。
 - 仓库管理员在 GitHub main 启用 required `quality`、禁止直接推送和至少 1 名 CODEOWNER 审批。

@@ -16,7 +16,7 @@
 
 | 字段 | 内容 |
 |---|---|
-| 构建/commit | `governance/batch-4-production`（第四批收口提交待生成） |
+| 构建/commit | `83e2b93`（四批治理独立终验） |
 | Web 预览地址 | `http://192.168.1.249:4173/`（2026-07-15 第四批生产构建；更换 Wi-Fi 后重新确认） |
 | 微信开发者工具 | 待填写 |
 | 抖音开发者工具 | 待填写 |
@@ -25,7 +25,7 @@
 | 抖音 iOS 设备 | 待填写 |
 | 抖音 Android 设备 | 待填写 |
 | 证据目录 | [`docs/render-final-v3.jpg`](render-final-v3.jpg)、[`public/assets/concept/web-jump-three-v3.png`](../public/assets/concept/web-jump-three-v3.png) |
-| 验收人/日期 | Codex 本机自动化与浏览器验收 / 2026-07-15；项目方真机验收待填写 |
+| 验收人/日期 | Codex 本机自动化与浏览器验收 / 2026-07-15；项目方确认 Web 手机验收完成 / 2026-07-15（设备信息未记录） |
 
 ## 自动化与产物前置检查
 
