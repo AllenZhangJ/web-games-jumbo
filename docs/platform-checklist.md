@@ -29,7 +29,7 @@
 
 ## 自动化与产物前置检查
 
-- [x] `npm run test` 覆盖数值、WorldState、跳跃/碰撞、按钮映射、平台隔离、Renderer、Content、Feedback、Persistence、1000 会话和 100 局资源测试；最终数量以第四批收口记录为准。
+- [x] `npm run test` 的 23 个文件、138 项测试通过，覆盖数值、WorldState、跳跃/碰撞、按钮映射、平台隔离、Renderer、Content、Feedback、Persistence、1000 会话和 100 局资源测试。
 - [x] `npm run build` 生成 `dist/web`、`dist/wechat` 和 `dist/douyin`。
 - [x] 三个分发目录都包含 `THIRD_PARTY_NOTICES.md` 和 `licenses/`。
 - [x] 小游戏构建是可直接加载的 IIFE，不依赖 DOM、Node 或运行时模块加载器。

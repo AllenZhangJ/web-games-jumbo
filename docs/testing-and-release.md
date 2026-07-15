@@ -29,7 +29,7 @@ GitHub Actions 在 push 与 pull request 上使用 Node 20、`npm ci` 和 `npm r
 - 100 局 Three 平台视图始终保持 3 个活动资源，结束后完整释放。
 - 存档 v1/v2/v3 fixture 迁移、迁移回写、损坏隔离、动作回放和首帧恢复通过。
 - 5 Gameplay、5 Task、10 Character Manifest 容量证明通过。
-- 确定性单测层收口前采样：行/语句 89.41%、函数 90.83%、分支 70.17%。
+- 全量 Vitest 23 个文件、138 项测试通过；确定性单测层行/语句 89.42%、函数 90.83%、分支 70.17%。
 - 生产依赖审计 0 个已知漏洞；资产/许可证审计通过。
 - Web、微信、抖音构建通过；Web JS 651.45 kB、gzip 170.81 kB，Web gzip 预算 180 KiB，小游戏 `game.js` 预算各 700 KiB。
 
