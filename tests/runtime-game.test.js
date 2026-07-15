@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { HARD_DIFFICULTY } from '@number-strategy/difficulty';
 import { GAME_RULES } from '../src/config.js';
 import { GAME_PHASE } from '../src/core/game-state.js';
 import { findOperationPath } from '../src/core/operations.js';
@@ -16,7 +17,7 @@ function deferred() {
   return { promise, resolve, reject };
 }
 
-function createHarness({ pendingLoad = null, draw = null } = {}) {
+function createHarness({ pendingLoad = null, draw = null, difficulty = null } = {}) {
   let clock = 0;
   let nextFrameId = 1;
   let failRequestFrame = false;
@@ -92,6 +93,7 @@ function createHarness({ pendingLoad = null, draw = null } = {}) {
   };
   const game = new NumberStrategyGame(platform, {
     seed: 45,
+    ...(difficulty ? { difficulty } : {}),
     rendererFactory: () => renderer,
   });
 
@@ -117,6 +119,18 @@ function createHarness({ pendingLoad = null, draw = null } = {}) {
     },
   };
 }
+
+test('the composition root injects a versioned difficulty into state, physics and world', () => {
+  const harness = createHarness({ difficulty: HARD_DIFFICULTY });
+  const snapshot = harness.game.getDebugSnapshot();
+
+  assert.deepEqual(snapshot.difficulty, { id: 'hard', version: 1 });
+  assert.equal(harness.game.state.movesRemaining, HARD_DIFFICULTY.gameplay.movesPerRound);
+  assert.equal(harness.game.jumpPhysics.maxRange, HARD_DIFFICULTY.jump.maxRange);
+  assert.equal(harness.game.world.historyLimit, HARD_DIFFICULTY.world.historyLimit);
+  assert.notStrictEqual(harness.game.difficulty, HARD_DIFFICULTY);
+  harness.game.destroy();
+});
 
 test('start is idempotent while loading and binds exactly one frame loop', async () => {
   const load = deferred();

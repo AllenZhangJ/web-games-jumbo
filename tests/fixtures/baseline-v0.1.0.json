@@ -1,0 +1,75 @@
+{
+  "version": "0.1.0",
+  "difficulty": "normal@1",
+  "render": {
+    "path": "docs/render-final-v3.jpg",
+    "width": 390,
+    "height": 844,
+    "sha256": "b352c8ac8860a645e92eef164844e31889be6babebad01de87ebde420cf86ef3"
+  },
+  "bundle": {
+    "webJavaScriptBytes": 625112,
+    "webJavaScriptGzipBytes": 164178,
+    "maximumCompatibleWebJavaScriptBytes": 655360
+  },
+  "performance": {
+    "environment": "Node v20.19.5 / Apple Silicon",
+    "operation": "construct 10000 normal GameState initial rounds",
+    "samplesMs": [1212.82, 1226.24, 1162.62, 1039.88, 1058.88],
+    "medianMs": 1162.62,
+    "informationalOnly": true
+  },
+  "initialRounds": [
+    {
+      "seed": 1,
+      "round": 1,
+      "currentValue": 14,
+      "targetValue": 28,
+      "movesRemaining": 7,
+      "choices": ["multiply:2", "add:5"]
+    },
+    {
+      "seed": 7,
+      "round": 1,
+      "currentValue": 6,
+      "targetValue": 30,
+      "movesRemaining": 7,
+      "choices": ["add:9", "add:2"]
+    },
+    {
+      "seed": 45,
+      "round": 1,
+      "currentValue": 6,
+      "targetValue": 69,
+      "movesRemaining": 7,
+      "choices": ["add:3", "add:9"]
+    },
+    {
+      "seed": 110,
+      "round": 1,
+      "currentValue": 7,
+      "targetValue": 62,
+      "movesRemaining": 7,
+      "choices": ["add:9", "add:3"]
+    },
+    {
+      "seed": 4999,
+      "round": 1,
+      "currentValue": 8,
+      "targetValue": 58,
+      "movesRemaining": 7,
+      "choices": ["add:2", "add:9"]
+    }
+  ],
+  "fullReplay": {
+    "seed": 45,
+    "targetValue": 69,
+    "steps": [
+      { "before": 6, "movesBefore": 7, "choice": "add:9", "choiceIndex": 1, "after": 15, "phase": "ready" },
+      { "before": 15, "movesBefore": 6, "choice": "multiply:2", "choiceIndex": 1, "after": 30, "phase": "ready" },
+      { "before": 30, "movesBefore": 5, "choice": "multiply:2", "choiceIndex": 0, "after": 60, "phase": "ready" },
+      { "before": 60, "movesBefore": 4, "choice": "add:9", "choiceIndex": 0, "after": 69, "phase": "won" }
+    ],
+    "final": { "value": 69, "movesRemaining": 3, "phase": "won" }
+  }
+}

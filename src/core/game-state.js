@@ -12,11 +12,71 @@ export const GAME_PHASE = Object.freeze({
   LOST: 'lost',
 });
 
-function createRound(rng, round) {
-  const start = rng.int(GAME_RULES.startingValueMin, GAME_RULES.startingValueMax);
-  const targetBase = rng.int(GAME_RULES.targetMin, GAME_RULES.targetMax);
-  const scaledTarget = Math.max(targetBase, start + 12 + round * 2);
-  const preferredTarget = Math.min(GAME_RULES.maxValue, scaledTarget);
+function normalizeRules(overrides) {
+  const rules = { ...GAME_RULES, ...overrides };
+  const positiveIntegers = [
+    'movesPerRound',
+    'roundTargetOffset',
+    'chargeMinMs',
+    'chargeMaxMs',
+    'landingDurationMs',
+  ];
+  for (const key of positiveIntegers) {
+    if (!Number.isSafeInteger(rules[key]) || rules[key] <= 0) {
+      throw new RangeError(`rules.${key} 必须是正安全整数。`);
+    }
+  }
+  if (!Number.isSafeInteger(rules.roundTargetGrowth) || rules.roundTargetGrowth < 0) {
+    throw new RangeError('rules.roundTargetGrowth 必须是大于等于 0 的安全整数。');
+  }
+  for (const key of [
+    'startingValueMin',
+    'startingValueMax',
+    'targetMin',
+    'targetMax',
+    'minValue',
+    'maxValue',
+  ]) {
+    if (!Number.isSafeInteger(rules[key])) throw new TypeError(`rules.${key} 必须是安全整数。`);
+  }
+  if (
+    rules.startingValueMin > rules.startingValueMax
+    || rules.targetMin > rules.targetMax
+    || rules.minValue > rules.maxValue
+    || rules.chargeMinMs > rules.chargeMaxMs
+  ) throw new RangeError('rules 包含倒置的范围。');
+  if (
+    rules.startingValueMin < rules.minValue
+    || rules.startingValueMax > rules.maxValue
+    || rules.targetMin < rules.minValue
+    || rules.targetMax > rules.maxValue
+  ) throw new RangeError('起始值和目标值必须位于允许数值范围内。');
+  if (!Array.isArray(rules.allowedOperations) || rules.allowedOperations.length < 2) {
+    throw new RangeError('rules.allowedOperations 至少需要两种运算。');
+  }
+  const allowedOperations = new Set(rules.allowedOperations);
+  if (allowedOperations.size !== rules.allowedOperations.length) {
+    throw new RangeError('rules.allowedOperations 不能包含重复运算。');
+  }
+  for (const kind of allowedOperations) {
+    if (!['add', 'subtract', 'multiply', 'divide'].includes(kind)) {
+      throw new RangeError(`rules.allowedOperations 包含未知运算：${String(kind)}。`);
+    }
+  }
+  return Object.freeze({
+    ...rules,
+    allowedOperations: Object.freeze([...allowedOperations]),
+  });
+}
+
+function createRound(rng, round, rules) {
+  const start = rng.int(rules.startingValueMin, rules.startingValueMax);
+  const targetBase = rng.int(rules.targetMin, rules.targetMax);
+  const scaledTarget = Math.max(
+    targetBase,
+    start + rules.roundTargetOffset + round * rules.roundTargetGrowth,
+  );
+  const preferredTarget = Math.min(rules.maxValue, scaledTarget);
 
   // Long-running sessions used to produce targets above maxValue. Even below
   // that ceiling a greedy target can be unreachable in seven operations. Pick
@@ -26,39 +86,42 @@ function createRound(rng, round) {
     const path = findOperationPath({
       value: start,
       target,
-      maxMoves: GAME_RULES.movesPerRound,
-      minValue: GAME_RULES.minValue,
-      maxValue: GAME_RULES.maxValue,
+      maxMoves: rules.movesPerRound,
+      minValue: rules.minValue,
+      maxValue: rules.maxValue,
+      allowedOperations: rules.allowedOperations,
     });
     if (path) return { start, target };
   }
   throw new Error('无法在当前规则内生成可完成的回合。');
 }
 
-function isValidChoice(choice, value) {
+function isValidChoice(choice, value, rules) {
   if (!choice || typeof choice !== 'object') return false;
+  if (!rules.allowedOperations.includes(choice.kind)) return false;
   try {
     const result = applyOperation(value, choice);
-    return result >= GAME_RULES.minValue && result <= GAME_RULES.maxValue;
+    return result >= rules.minValue && result <= rules.maxValue;
   } catch {
     return false;
   }
 }
 
 export class GameState {
-  constructor({ seed = Date.now() } = {}) {
+  constructor({ seed = Date.now(), rules = GAME_RULES } = {}) {
+    this.rules = normalizeRules(rules);
     this.rng = createRng(seed);
     this.round = 1;
     this.resetRound();
   }
 
   resetRound() {
-    const { start, target } = createRound(this.rng, this.round);
+    const { start, target } = createRound(this.rng, this.round, this.rules);
     this.phase = GAME_PHASE.READY;
     this.previousPhase = GAME_PHASE.READY;
     this.currentValue = start;
     this.targetValue = target;
-    this.movesRemaining = GAME_RULES.movesPerRound;
+    this.movesRemaining = this.rules.movesPerRound;
     this.selectedChoice = null;
     this.chargeMs = 0;
     this.jumpProgress = 0;
@@ -77,9 +140,10 @@ export class GameState {
       value,
       target: this.targetValue,
       rng: this.rng,
-      minValue: GAME_RULES.minValue,
-      maxValue: GAME_RULES.maxValue,
+      minValue: this.rules.minValue,
+      maxValue: this.rules.maxValue,
       movesRemaining,
+      allowedOperations: this.rules.allowedOperations,
     });
   }
 
@@ -88,7 +152,7 @@ export class GameState {
       this.phase !== GAME_PHASE.READY
       || this.movesRemaining <= 0
       || !Number.isInteger(choiceIndex)
-      || !isValidChoice(this.choices[choiceIndex], this.currentValue)
+      || !isValidChoice(this.choices[choiceIndex], this.currentValue, this.rules)
     ) return false;
     this.phase = GAME_PHASE.CHARGING;
     this.selectedChoice = choiceIndex;
@@ -100,12 +164,12 @@ export class GameState {
   updateCharge(deltaMs) {
     if (this.phase !== GAME_PHASE.CHARGING) return;
     if (!Number.isFinite(deltaMs) || deltaMs <= 0) return;
-    this.chargeMs = Math.min(GAME_RULES.chargeMaxMs, this.chargeMs + deltaMs);
+    this.chargeMs = Math.min(this.rules.chargeMaxMs, this.chargeMs + deltaMs);
   }
 
   setChargeDuration(durationMs) {
     if (this.phase !== GAME_PHASE.CHARGING || !Number.isFinite(durationMs)) return false;
-    this.chargeMs = Math.min(GAME_RULES.chargeMaxMs, Math.max(0, durationMs));
+    this.chargeMs = Math.min(this.rules.chargeMaxMs, Math.max(0, durationMs));
     return true;
   }
 
@@ -126,7 +190,7 @@ export class GameState {
 
   releaseCharge(_feedback = 'normal') {
     if (this.phase !== GAME_PHASE.CHARGING) return { accepted: false };
-    if (!isValidChoice(this.choices[this.selectedChoice], this.currentValue)) {
+    if (!isValidChoice(this.choices[this.selectedChoice], this.currentValue, this.rules)) {
       this.cancelCharge();
       return { accepted: false, reason: 'invalid-choice' };
     }
@@ -157,7 +221,7 @@ export class GameState {
     if (!operation) throw new Error('跳跃结算缺少已选择的运算。');
     const previousValue = this.currentValue;
     const result = applyOperation(this.currentValue, operation);
-    if (result < GAME_RULES.minValue || result > GAME_RULES.maxValue) {
+    if (result < this.rules.minValue || result > this.rules.maxValue) {
       throw new RangeError('跳跃结算结果超出允许的数值范围。');
     }
     this.currentValue = result;
@@ -171,7 +235,10 @@ export class GameState {
   updateLanding(deltaMs) {
     if (this.phase !== GAME_PHASE.LANDING) return null;
     if (!Number.isFinite(deltaMs) || deltaMs <= 0) return null;
-    this.landingProgress = Math.min(1, this.landingProgress + deltaMs / GAME_RULES.landingDurationMs);
+    this.landingProgress = Math.min(
+      1,
+      this.landingProgress + deltaMs / this.rules.landingDurationMs,
+    );
     if (this.landingProgress < 1) return null;
 
     if (this.currentValue === this.targetValue) {
@@ -199,7 +266,7 @@ export class GameState {
     if (
       !Array.isArray(choices)
       || choices.length !== 2
-      || choices.some((choice) => !isValidChoice(choice, this.currentValue))
+      || choices.some((choice) => !isValidChoice(choice, this.currentValue, this.rules))
       || `${choices[0].kind}:${choices[0].amount}` === `${choices[1].kind}:${choices[1].amount}`
     ) return false;
     this.choices = choices;

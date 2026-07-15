@@ -9,7 +9,8 @@
   → launchGame(createPlatform)
   → generation +1，销毁旧实例/过期启动
   → createPlatform()
-  → new NumberStrategyGame(platform)
+  → new NumberStrategyGame(platform, { difficulty })
+  → 校验并冻结 Difficulty，投影 GameState / Jump / World 配置
   → renderer.resize()
   → renderer.load()
   → 绑定输入、resize、onHide、onShow
@@ -17,6 +18,8 @@
 ```
 
 `launch-game.js` 使用共享 Symbol 保存 generation、当前实例和正在启动的实例。新启动不会等待旧异步加载完成，而是立即使旧 generation 失效并销毁旧对象。
+
+当前默认组合根使用 `normal@1`。`easy@1` 和 `hard@1` 已注册并通过大样本校验，但按已确认决策尚未暴露给玩家。
 
 ## 输入与蓄力
 

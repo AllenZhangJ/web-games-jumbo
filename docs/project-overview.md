@@ -18,6 +18,7 @@
 
 - 当前值、目标值和有限步数。
 - 加、减、乘、除候选运算。
+- 版本化 `easy@1`、`normal@1`、`hard@1`；当前产品只开放 normal。
 - 每轮保证至少存在一条受限步数内的精确解路径。
 - 左右双分支连续世界。
 - 成功、短跳、越过或落在平台外的不同碰撞结果。
@@ -49,20 +50,23 @@
 
 ### 质量基础
 
-- 当前基线为 89 项 Node 自动化测试，其中 2 项用于校验项目文档入口和本地链接。
+- 当前为 104 项自动化测试（98 项 Node 回归和 6 项 TypeScript 包测试）。
+- 三档难度各有 10,000 seed 的可解性验证，默认 normal 还有固定 seed 与完整获胜回放基线。
+- 新 workspace 包使用 strict TypeScript；旧 `src` 已完整进入 `allowJs/checkJs`。
+- `npm run lint`、`npm run typecheck` 和包依赖边界已成为累积门禁。
 - `npm run build` 同时生成 Web、微信和抖音产物。
 - 架构测试会检查 Core/Runtime 与平台 API 泄漏、小游戏 DOM 泄漏和 IIFE 可打包性。
 - 已记录 Three.js 与参考项目的许可证归属。
 
 ## 当前没有完成的能力
 
-- 难度仍由单一全局常量定义，没有版本化 easy/normal/hard 配置。
 - 只有一个正式玩法、一个任务类型和一个角色。
 - 场景、角色和反馈还不是可注册内容包。
 - 平台声音与震动能力尚未被独立 Feedback 系统消费。
 - 平台存储能力尚未形成版本化游戏存档。
 - 没有回放、存档迁移、诊断导出或匿名遥测。
-- 源码仍为 JavaScript；没有 TypeScript、lint、覆盖率和 CI 门禁。
+- Core、Runtime、Renderer、平台和入口仍为 JavaScript，但已受 checkJs 检查；尚未达到全面 TypeScript。
+- 尚无覆盖率阈值和 CI 门禁。
 - 微信/抖音 iOS 与 Android 真机验收仍缺少当前版本证据。
 - WebGL 上下文恢复当前只清理时间并刷新阴影标记，没有证明完整 GPU 资源重建。
 

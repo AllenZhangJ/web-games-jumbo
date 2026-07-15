@@ -26,7 +26,7 @@ Accepted
 
 每批必须保持三端可构建，经过健壮性、竞态、兜底、边界、Web 生命周期和主流程审计，修复阻断问题，校准文档，中文提交并推送后才能进入下一批。第四批后再执行独立终验。
 
-新模块直接使用 TypeScript；旧 JavaScript 渐进迁移。第四批结束时，人工维护的业务源码、测试和构建逻辑不得保留 JavaScript。
+新模块直接使用 strict TypeScript；第一批把全部旧 `src` 纳入 `allowJs/checkJs`，第二批迁移 Core/Runtime/Gameplay/Task/Jump Engine，第三批迁移 Renderer/内容/Feedback，第四批迁移平台/入口/测试/构建工具并删除旧兼容配置。第四批结束时，人工维护的业务源码、测试和构建逻辑不得保留 JavaScript；自动门禁发现一个 `.js` 即失败。
 
 ## 备选方案
 

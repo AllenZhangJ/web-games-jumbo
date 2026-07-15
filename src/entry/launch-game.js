@@ -43,7 +43,13 @@ export function launchGame(createPlatform, {
   gameOptions,
   onError,
   onSuccess,
-} = {}) {
+} = /** @type {{
+  root?: any,
+  createGame?: (platform: any, options: any) => any,
+  gameOptions?: any,
+  onError?: (error: unknown) => void,
+  onSuccess?: (game: any) => void,
+}} */ ({})) {
   const platformFactory = typeof createPlatform === 'function'
     ? createPlatform
     : () => { throw new TypeError('launchGame 需要 createPlatform 函数'); };

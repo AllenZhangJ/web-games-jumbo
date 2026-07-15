@@ -13,7 +13,7 @@ export class CameraRig {
       CAMERA_DEFAULTS.offset.z,
     );
     this.aspect = 1;
-    this.viewHeight = viewHeight;
+    this.viewHeight = /** @type {number} */ (viewHeight);
     this.initialized = false;
     this.resize(1, 1);
   }

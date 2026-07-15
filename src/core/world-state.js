@@ -171,13 +171,14 @@ export function isPointOnPlatform(platform, position, margin = 0) {
 
 function boundPayload(payload = {}) {
   if (!payload || typeof payload !== 'object') throw new TypeError('平台 payload 必须是对象。');
-  const operation = payload.operation && typeof payload.operation === 'object'
-    ? { ...payload.operation }
-    : payload.operation ?? null;
-  const safePayload = {
-    ...payload,
+  const payloadRecord = /** @type {Record<string, any>} */ (payload);
+  const operation = payloadRecord.operation && typeof payloadRecord.operation === 'object'
+    ? { ...payloadRecord.operation }
+    : payloadRecord.operation ?? null;
+  const safePayload = /** @type {Record<string, any>} */ ({
+    ...payloadRecord,
     operation,
-  };
+  });
   return {
     operation,
     preview: safePayload.preview ?? null,
@@ -190,7 +191,7 @@ function boundPayload(payload = {}) {
  */
 export class WorldState {
   constructor({
-    rng = Math.random,
+    rng = /** @type {any} */ (Math.random),
     historyLimit = 3,
     platform = {},
     layout = {},
@@ -203,7 +204,7 @@ export class WorldState {
       throw new RangeError('historyLimit 必须是大于等于 0 的整数。');
     }
 
-    this.rng = rng;
+    this.rng = /** @type {any} */ (rng);
     this.historyLimit = historyLimit;
     this.platformSize = Object.freeze({ ...DEFAULT_PLATFORM, ...platform });
     this.layout = Object.freeze({ ...DEFAULT_LAYOUT, ...layout });

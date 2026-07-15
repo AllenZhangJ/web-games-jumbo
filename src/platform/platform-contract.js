@@ -71,7 +71,15 @@ export function sizeCanvas(canvas, width, height, id = 'unknown') {
  * loop. The public token also lets us suppress a late callback when a host has
  * no matching cancel API.
  */
-export function createFrameScheduler({ request, cancel, now = () => Date.now() } = {}) {
+export function createFrameScheduler({
+  request,
+  cancel,
+  now = () => Date.now(),
+} = /** @type {{
+  request?: (callback: (time: number) => void) => any,
+  cancel?: (id: any) => void,
+  now?: () => number,
+}} */ ({})) {
   let nextToken = 1;
   const pending = new Map();
 

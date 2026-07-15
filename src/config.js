@@ -1,20 +1,17 @@
+import {
+  DEFAULT_DIFFICULTY,
+  defineDifficultyProfile,
+  toLegacyGameRules,
+  toLegacyJumpPhysics,
+  toLegacyWorldOptions,
+} from '@number-strategy/difficulty';
+
 export const DESIGN_WIDTH = 750;
 export const DESIGN_HEIGHT = 1334;
 export const FIXED_STEP_MS = 1000 / 60;
 
-export const GAME_RULES = Object.freeze({
-  startingValueMin: 6,
-  startingValueMax: 18,
-  targetMin: 28,
-  targetMax: 72,
-  movesPerRound: 7,
-  minValue: -99,
-  maxValue: 199,
-  chargeMinMs: 80,
-  chargeMaxMs: 1200,
-  // Keep input locked until the post-landing camera/world transition settles.
-  landingDurationMs: 520,
-});
+export { DEFAULT_DIFFICULTY };
+export const GAME_RULES = toLegacyGameRules(DEFAULT_DIFFICULTY);
 
 export const COLORS = Object.freeze({
   ink: '#263238',
@@ -29,14 +26,15 @@ export const COLORS = Object.freeze({
   white: '#FFFFFF',
 });
 
-export const JUMP_PHYSICS = Object.freeze({
-  minChargeMs: GAME_RULES.chargeMinMs,
-  maxChargeMs: GAME_RULES.chargeMaxMs,
-  minRange: 0.8,
-  maxRange: 7.6,
-  rangeExponent: 1.18,
-  durationMinMs: 520,
-  durationMaxMs: 820,
-  heightMin: 1.1,
-  heightMax: 2.2,
-});
+export const JUMP_PHYSICS = toLegacyJumpPhysics(DEFAULT_DIFFICULTY);
+export const WORLD_OPTIONS = toLegacyWorldOptions(DEFAULT_DIFFICULTY);
+
+export function createRuntimeConfig(difficulty = DEFAULT_DIFFICULTY) {
+  const validatedDifficulty = defineDifficultyProfile(difficulty);
+  return Object.freeze({
+    difficulty: validatedDifficulty,
+    gameRules: toLegacyGameRules(validatedDifficulty),
+    jumpPhysics: toLegacyJumpPhysics(validatedDifficulty),
+    worldOptions: toLegacyWorldOptions(validatedDifficulty),
+  });
+}

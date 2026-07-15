@@ -9,8 +9,9 @@
 3. [运行主流程](runtime-flow.md)：启动、输入、固定步长、跳跃事务和 Web 生命周期。
 4. [技术架构](architecture.md)：现有 v3 架构边界和 Three.js 单 Canvas 约束。
 5. [测试与发布](testing-and-release.md)：测试地图、构建产物和批次提交门禁。
-6. [治理路线图](governance/roadmap.md)：第 0 批到第四批的最终执行基线。
-7. [治理状态](governance/status.md)：当前批次已完成、未完成和仍不明确的事实。
+6. [v0.1.0 行为与工程基线](baselines/v0.1.0.md)：固定 seed、回放、视觉、包体和性能起点。
+7. [治理路线图](governance/roadmap.md)：第 0 批到第四批的最终执行基线。
+8. [治理状态](governance/status.md)：当前批次已完成、未完成和仍不明确的事实。
 
 ## 当前事实文档
 

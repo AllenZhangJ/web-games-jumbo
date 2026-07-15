@@ -200,7 +200,15 @@ export function createMiniGamePlatform(api, id) {
     requestFrame: frames.requestFrame,
     cancelFrame: frames.cancelFrame,
     now,
-    bindInput: ({ onStart = () => {}, onEnd = () => {}, onCancel = () => {} } = {}) => {
+    bindInput: ({
+      onStart = () => {},
+      onEnd = () => {},
+      onCancel = () => {},
+    } = /** @type {{
+      onStart?: (point: any) => void,
+      onEnd?: (point: any) => void,
+      onCancel?: (point: any) => void,
+    }} */ ({})) => {
       const start = (event) => onStart(touchPoint(event, canvas));
       const end = (event) => onEnd(touchPoint(event, canvas));
       const cancel = (event) => onCancel(touchPoint(event, canvas));

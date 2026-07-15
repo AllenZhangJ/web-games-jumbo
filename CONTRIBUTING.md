@@ -37,8 +37,7 @@
 当前最低门槛：
 
 ```bash
-npm test
-npm run build
+npm run check
 ```
 
 治理过程中新增的 lint、typecheck、coverage、contract、integration、replay 和 soak 命令一旦进入主分支，就成为后续提交的累积门槛。

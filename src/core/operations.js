@@ -1,4 +1,5 @@
 const OP_SYMBOLS = Object.freeze({ add: '+', subtract: '−', multiply: '×', divide: '÷' });
+const DEFAULT_OPERATION_KINDS = Object.freeze(Object.keys(OP_SYMBOLS));
 
 function assertInteger(value, name) {
   if (!Number.isSafeInteger(value)) {
@@ -66,7 +67,24 @@ function uniqueOperations(operations) {
   });
 }
 
-function candidatesFor(value, target, maxValue = 199) {
+function normalizeAllowedOperations(allowedOperations = DEFAULT_OPERATION_KINDS) {
+  if (!Array.isArray(allowedOperations) || allowedOperations.length < 2) {
+    throw new RangeError('allowedOperations 至少需要两种运算。');
+  }
+  const allowed = new Set(allowedOperations);
+  if (allowed.size !== allowedOperations.length) {
+    throw new RangeError('allowedOperations 不能包含重复运算。');
+  }
+  for (const kind of allowed) {
+    if (!Object.prototype.hasOwnProperty.call(OP_SYMBOLS, kind)) {
+      throw new Error(`allowedOperations 包含未知运算类型: ${kind}`);
+    }
+  }
+  return allowed;
+}
+
+function candidatesFor(value, target, maxValue = 199, allowedOperations = DEFAULT_OPERATION_KINDS) {
+  const allowed = normalizeAllowedOperations(allowedOperations);
   const delta = target - value;
   const magnitude = Math.max(1, Math.abs(delta));
   const direct = delta >= 0
@@ -81,7 +99,7 @@ function candidatesFor(value, target, maxValue = 199) {
   if (value > 0 && value * 2 <= maxValue) candidates.push({ kind: 'multiply', amount: 2 });
   if (value > 0 && value % 2 === 0) candidates.push({ kind: 'divide', amount: 2 });
   if (value > 0 && value % 3 === 0) candidates.push({ kind: 'divide', amount: 3 });
-  return uniqueOperations(candidates);
+  return uniqueOperations(candidates).filter((operation) => allowed.has(operation.kind));
 }
 
 /**
@@ -96,6 +114,7 @@ export function findOperationPath({
   maxMoves,
   minValue = -99,
   maxValue = 199,
+  allowedOperations = DEFAULT_OPERATION_KINDS,
 }) {
   assertInteger(value, 'value');
   assertInteger(target, 'target');
@@ -113,7 +132,7 @@ export function findOperationPath({
   for (let depth = 0; depth < maxMoves; depth += 1) {
     const nextFrontier = [];
     for (const node of frontier) {
-      for (const operation of candidatesFor(node.value, target, maxValue)) {
+      for (const operation of candidatesFor(node.value, target, maxValue, allowedOperations)) {
         const result = applyOperation(node.value, operation);
         if (result < minValue || result > maxValue || visited.has(result)) continue;
         const path = [...node.path, operation];
@@ -135,6 +154,7 @@ export function generateChoices({
   minValue = -99,
   maxValue = 199,
   movesRemaining = null,
+  allowedOperations = DEFAULT_OPERATION_KINDS,
 }) {
   assertInteger(value, 'value');
   assertInteger(target, 'target');
@@ -143,7 +163,7 @@ export function generateChoices({
     throw new TypeError('rng 必须提供 next() 和 pick(items)。');
   }
 
-  const candidates = candidatesFor(value, target, maxValue)
+  const candidates = candidatesFor(value, target, maxValue, allowedOperations)
     .map((operation) => ({
       ...operation,
       result: applyOperation(value, operation),
@@ -159,7 +179,14 @@ export function generateChoices({
     distanceToTarget(operation.result, target) < distanceToTarget(value, target),
   );
   const plannedPath = Number.isInteger(movesRemaining) && movesRemaining >= 0
-    ? findOperationPath({ value, target, maxMoves: movesRemaining, minValue, maxValue })
+    ? findOperationPath({
+      value,
+      target,
+      maxMoves: movesRemaining,
+      minValue,
+      maxValue,
+      allowedOperations,
+    })
     : null;
   const planned = plannedPath?.[0]
     ? candidates.find((candidate) => operationKey(candidate) === operationKey(plannedPath[0]))

@@ -8,6 +8,7 @@ function shadowMesh(mesh) {
   return mesh;
 }
 
+/** @param {number} [color] */
 function platformMaterial(color = RENDER3D_COLORS.platform) {
   return new THREE.MeshStandardMaterial({
     color,

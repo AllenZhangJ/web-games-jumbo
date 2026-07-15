@@ -5,14 +5,16 @@
 | 命令 | 当前作用 |
 |---|---|
 | `npm install` | 按 `package-lock.json` 安装依赖。 |
-| `npm run dev` | 在 `127.0.0.1` 启动 Vite 开发服务。 |
-| `npm run dev:lan` | 监听本机所有网卡，供同一局域网手机访问。 |
-| `npm test` | 使用 Node 内建测试运行器执行全部测试。 |
+| `npm run dev` | 先增量构建 workspace，再在 `127.0.0.1` 启动 Vite。 |
+| `npm run dev:lan` | 先增量构建 workspace，再监听所有网卡供同一局域网手机访问。 |
+| `npm test` | 执行 Node 旧栈回归和 TypeScript 包的 Vitest 契约测试。 |
+| `npm run lint` | 检查 TypeScript workspace 包。 |
+| `npm run typecheck` | strict 检查新包，并以 `allowJs/checkJs` 检查全部旧 `src`。 |
 | `npm run build` | 生成 Web、微信和抖音产物。 |
-| `npm run check` | 先执行全部测试，再执行三端构建。 |
-| `npm run preview:lan` | 在 4173 端口预览生产 Web 构建。 |
+| `npm run check` | 依次执行 lint、typecheck、全量测试和三端构建。 |
+| `npm run preview:lan` | 先完成三端构建，再在 4173 端口预览生产 Web。 |
 
-当前尚无 `lint`、`typecheck`、覆盖率、架构依赖图、资源审计或 CI 命令；它们属于后续批次交付，不应在现状报告中标为已完成。
+当前已有 lint、strict TS、新旧源码类型门禁和静态依赖测试；尚无覆盖率阈值、资源审计或 CI，它们属于后续批次，不能标为已完成。
 
 ## 当前自动化证据
 

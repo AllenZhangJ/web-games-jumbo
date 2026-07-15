@@ -197,7 +197,15 @@ export function createWebPlatform(environment = globalThis) {
     requestFrame: frames.requestFrame,
     cancelFrame: frames.cancelFrame,
     now,
-    bindInput: ({ onStart = () => {}, onEnd = () => {}, onCancel = () => {} } = {}) => {
+    bindInput: ({
+      onStart = () => {},
+      onEnd = () => {},
+      onCancel = () => {},
+    } = /** @type {{
+      onStart?: (point: any) => void,
+      onEnd?: (point: any) => void,
+      onCancel?: (point: any) => void,
+    }} */ ({})) => {
       const pressedPointers = new Set();
       const start = (event) => {
         preventBrowserGesture(event);

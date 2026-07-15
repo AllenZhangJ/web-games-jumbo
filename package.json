@@ -3,18 +3,37 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
   "description": "基于 Three.js/WebGL 的数值策略跳跃小游戏，包含 Web、抖音和微信平台适配层。",
   "scripts": {
+    "predev": "npm run build:packages",
     "dev": "vite --host 127.0.0.1",
+    "predev:lan": "npm run build:packages",
     "dev:lan": "vite --host 0.0.0.0",
+    "prepreview:lan": "npm run build",
     "preview:lan": "vite preview --host 0.0.0.0 --port 4173 --strictPort --outDir dist/web",
-    "test": "node --test",
-    "build": "node scripts/build.mjs",
-    "check": "npm run test && npm run build"
+    "build:packages": "tsc -b --pretty false",
+    "typecheck": "tsc -b --pretty false && tsc -p tsconfig.legacy.json --pretty false",
+    "lint": "eslint packages --max-warnings 0",
+    "pretest:legacy": "npm run build:packages",
+    "test:legacy": "node --test",
+    "pretest:packages": "npm run build:packages",
+    "test:packages": "vitest run",
+    "test": "npm run test:legacy && npm run test:packages",
+    "build": "npm run build:packages && node scripts/build.mjs",
+    "check": "npm run lint && npm run typecheck && npm run test && npm run build"
   },
   "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/three": "^0.185.1",
     "esbuild": "^0.25.6",
-    "vite": "^7.0.4"
+    "eslint": "^9.30.0",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.35.1",
+    "vite": "^7.0.4",
+    "vitest": "^3.2.4"
   },
   "engines": {
     "node": ">=20"

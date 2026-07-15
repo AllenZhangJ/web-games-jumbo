@@ -1,4 +1,4 @@
-import { FIXED_STEP_MS, GAME_RULES, JUMP_PHYSICS } from '../config.js';
+import { DEFAULT_DIFFICULTY, FIXED_STEP_MS, createRuntimeConfig } from '../config.js';
 import { GAME_PHASE, GameState } from '../core/game-state.js';
 import {
   chargeToPower,
@@ -54,6 +54,7 @@ function pointerIdOf(point) {
 export class NumberStrategyGame {
   constructor(platform, {
     seed = Date.now(),
+    difficulty = DEFAULT_DIFFICULTY,
     rendererFactory = defaultRendererFactory,
   } = {}) {
     if (!platform || typeof platform.createCanvas !== 'function') {
@@ -65,7 +66,12 @@ export class NumberStrategyGame {
     this.platform = platform;
     this.canvas = platform.createCanvas();
     this.seed = seed;
-    this.state = new GameState({ seed });
+    const runtimeConfig = createRuntimeConfig(difficulty);
+    this.difficulty = runtimeConfig.difficulty;
+    this.gameRules = runtimeConfig.gameRules;
+    this.jumpPhysics = runtimeConfig.jumpPhysics;
+    this.worldOptions = runtimeConfig.worldOptions;
+    this.state = new GameState({ seed, rules: this.gameRules });
     this.layoutRng = createRng((seed ^ 0x9e3779b9) >>> 0);
     this.renderer = rendererFactory(this.canvas, platform);
     this.world = null;
@@ -101,7 +107,9 @@ export class NumberStrategyGame {
   resetWorld() {
     this.world = new WorldState({
       rng: this.layoutRng,
-      historyLimit: 3,
+      historyLimit: this.worldOptions.historyLimit,
+      platform: this.worldOptions.platform,
+      layout: this.worldOptions.layout,
       initialCurrent: { preview: this.state.currentValue },
       initialCandidates: worldCandidates(this.state.choices, this.state.currentValue),
     });
@@ -259,7 +267,7 @@ export class NumberStrategyGame {
       origin: this.world.player.position,
       target,
       inset: 0.06,
-      config: JUMP_PHYSICS,
+      config: this.jumpPhysics,
     });
   }
 
@@ -373,7 +381,7 @@ export class NumberStrategyGame {
         targetCenter: target.center,
         targetTopY: target.topY,
         chargeMs: this.state.chargeMs,
-        config: JUMP_PHYSICS,
+        config: this.jumpPhysics,
       });
     } catch (error) {
       this.cancelCharge(null, true);
@@ -391,7 +399,7 @@ export class NumberStrategyGame {
     this.world.player.supportPlatformId = null;
     this.presentation.jumpId += 1;
     this.presentation.jumpProgress = 0;
-    this.presentation.chargePower = chargeToPower(released.chargeMs, JUMP_PHYSICS);
+    this.presentation.chargePower = chargeToPower(released.chargeMs, this.jumpPhysics);
     return true;
   }
 
@@ -507,7 +515,7 @@ export class NumberStrategyGame {
     const phaseAtStart = this.state.phase;
     this.state.updateCharge(deltaMs);
     if (this.state.phase === GAME_PHASE.CHARGING) {
-      this.presentation.chargePower = chargeToPower(this.state.chargeMs, JUMP_PHYSICS);
+      this.presentation.chargePower = chargeToPower(this.state.chargeMs, this.jumpPhysics);
     }
 
     let remainingDeltaMs = phaseAtStart === GAME_PHASE.LANDING || phaseAtStart === GAME_PHASE.LOST
@@ -597,6 +605,10 @@ export class NumberStrategyGame {
       currentValue: this.state.currentValue,
       targetValue: this.state.targetValue,
       movesRemaining: this.state.movesRemaining,
+      difficulty: {
+        id: this.difficulty.id,
+        version: this.difficulty.version,
+      },
       currentPlatformId: this.world.current.id,
       historyIds: this.world.history.map((platform) => platform.id),
       player: { ...this.world.player.position },

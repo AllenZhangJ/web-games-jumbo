@@ -145,14 +145,14 @@ export class Renderer3D {
     };
 
     try {
-      const contextAttributes = {
+      const contextAttributes = /** @type {THREE.WebGLRendererParameters} */ ({
         alpha: false,
         antialias: true,
         depth: true,
         stencil: false,
         powerPreference: 'high-performance',
         preserveDrawingBuffer: false,
-      };
+      });
       const context = this.platform.getWebGLContext?.(canvas, contextAttributes) ?? null;
       this.renderer = new THREE.WebGLRenderer({
         canvas,
