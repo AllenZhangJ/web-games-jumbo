@@ -36,6 +36,8 @@
 - [渲染性能专项状态](governance/render-performance/status.md)
 - [渲染性能第二批验证](governance/render-performance/batch-2-verification.md)
 - [渲染性能第三批验证](governance/render-performance/batch-3-verification.md)
+- [渲染性能第四批验证](governance/render-performance/batch-4-verification.md)
+- [高低画质配置](render-quality.md)
 - [贡献与提交规范](../CONTRIBUTING.md)
 
 ## 架构决策
@@ -46,6 +48,8 @@
 - [ADR-004：采用分批治理的模块化单体](decisions/004-modular-governance-roadmap.md)
 - [ADR-005：正式内容目录与任务驱动胜负](decisions/005-formal-content-catalog-and-task-outcomes.md)
 - [ADR-006：渲染性能模块化单体与资源预算](decisions/006-render-performance-modular-monolith.md)
+- [ADR-007：用户可选高低画质](decisions/007-user-selectable-render-quality.md)
+- [ADR-008：首帧后存档调度](decisions/008-post-render-save-scheduler.md)
 
 ## 文档状态规则
 

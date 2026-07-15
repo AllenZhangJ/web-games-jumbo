@@ -38,6 +38,15 @@ export class LightingRig extends THREE.Group {
     this.key.target.updateMatrixWorld();
   }
 
+  setShadowMapSize(size: number) {
+    const next = Math.max(256, Math.floor(size));
+    if (this.key.shadow.mapSize.width === next && this.key.shadow.mapSize.height === next) return;
+    this.key.shadow.map?.dispose?.();
+    this.key.shadow.map = null;
+    this.key.shadow.mapSize.set(next, next);
+    this.key.shadow.needsUpdate = true;
+  }
+
   dispose() {
     this.key.shadow.map?.dispose?.();
     this.removeFromParent();

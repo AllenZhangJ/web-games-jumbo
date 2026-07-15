@@ -24,7 +24,14 @@ import {
   type WorldState,
   type WorldPlatform,
 } from '@number-strategy/jump-engine';
-import type { FeedbackPort, GameCommand, GameEvent, GameSnapshot, StoragePort } from '@number-strategy/game-contracts';
+import type {
+  FeedbackPort,
+  GameCommand,
+  GameEvent,
+  GameSnapshot,
+  RenderQualityTier,
+  StoragePort,
+} from '@number-strategy/game-contracts';
 import {
   ReplayRecorder,
   SaveRepository,
@@ -40,6 +47,8 @@ import { FixedStepClock } from './fixed-step-clock.js';
 import { GameSession, type SessionPresentation } from './game-session.js';
 import { LifecycleController, type ApplicationLifecycle } from './lifecycle-controller.js';
 import { SnapshotFactory } from './snapshot-factory.js';
+import { SaveScheduler } from './save-scheduler.js';
+import { readRenderQuality, writeRenderQuality } from './render-quality.js';
 import {
   ContentMenuController,
   type ContentMenuCatalog,
@@ -114,9 +123,14 @@ export interface RendererPort {
   choiceIndexForControl?(control: Control, candidates: readonly WorldPlatform[]): number | null;
   getDebugSnapshot?(): unknown;
   selectCharacter?(characterId: string): unknown;
+  setQuality?(quality: RenderQualityTier): unknown;
 }
 
-export type RendererFactory = (canvas: unknown, platform: PlatformPort) => RendererPort;
+export type RendererFactory = (
+  canvas: unknown,
+  platform: PlatformPort,
+  options: { readonly quality: RenderQualityTier },
+) => RendererPort;
 
 export interface NumberStrategyGameOptions {
   readonly seed?: number;
@@ -127,6 +141,8 @@ export interface NumberStrategyGameOptions {
   readonly taskId?: string;
   readonly characterId?: string;
   readonly characterCatalog?: readonly ContentMenuEntry[];
+  readonly quality?: RenderQualityTier;
+  readonly qualityCatalog?: readonly ContentMenuEntry[];
   readonly showContentMenu?: boolean;
   readonly restoreSave?: boolean;
   readonly rendererFactory: RendererFactory;
@@ -187,6 +203,7 @@ export class NumberStrategyGame {
   readonly feedback: FeedbackPort;
   readonly storage: StoragePort;
   readonly saveRepository: SaveRepository;
+  readonly saveScheduler: SaveScheduler;
   replayRecorder: ReplayRecorder;
   restoringReplay = false;
   restoredActionCount = 0;
@@ -203,6 +220,7 @@ export class NumberStrategyGame {
   consecutiveFrameErrors = 0;
   readonly contentMenu: ContentMenuController;
   appliedCharacterId: string;
+  appliedQuality: RenderQualityTier;
 
   get seed(): number { return this.session.seed; }
   get difficulty(): Readonly<DifficultyProfile> { return this.session.difficulty; }
@@ -230,6 +248,11 @@ export class NumberStrategyGame {
       name: '赤红巨宝',
       description: '均衡稳定的经典跃迁者。',
     }],
+    quality,
+    qualityCatalog = [
+      { id: 'high', version: 1, name: '高画质', description: '60 FPS 目标，完整阴影和特效。' },
+      { id: 'low', version: 1, name: '低画质', description: '30 FPS 目标，降低阴影和特效密度。' },
+    ],
     showContentMenu = false,
     restoreSave = true,
     rendererFactory,
@@ -246,6 +269,8 @@ export class NumberStrategyGame {
     this.canvas = platform.createCanvas();
     this.storage = storage;
     this.saveRepository = new SaveRepository(storage);
+    this.saveScheduler = new SaveScheduler(this.saveRepository);
+    this.appliedQuality = quality ?? readRenderQuality(storage);
     const canRestore = restoreSave
       && seed === undefined
       && difficulty === undefined
@@ -292,7 +317,7 @@ export class NumberStrategyGame {
         ...(taskId === undefined ? {} : { taskId }),
       });
     }
-    this.renderer = rendererFactory(this.canvas, platform);
+    this.renderer = rendererFactory(this.canvas, platform, { quality: this.appliedQuality });
     const catalog: ContentMenuCatalog = Object.freeze({
       gameplays: Object.freeze(this.session.gameplayRegistry.list().map((definition) => Object.freeze({
         id: definition.id,
@@ -308,6 +333,7 @@ export class NumberStrategyGame {
         description: definition.presentation.description,
       }))),
       characters: Object.freeze(characterCatalog.map((entry) => Object.freeze({ ...entry }))),
+      qualities: Object.freeze(qualityCatalog.map((entry) => Object.freeze({ ...entry }))),
     });
     this.appliedCharacterId = characterId
       ?? loadedSave?.game.character.id
@@ -318,6 +344,7 @@ export class NumberStrategyGame {
       gameplayId: this.session.gameplayId,
       taskId: this.session.taskId,
       characterId: this.appliedCharacterId,
+      qualityId: this.appliedQuality,
       open: showContentMenu && !loadedSave,
     });
     this.appliedCharacterId = this.contentMenu.characterId;
@@ -358,7 +385,7 @@ export class NumberStrategyGame {
     if (this.restoringReplay) return;
     try {
       this.replayRecorder.append(action);
-      this.saveRepository.save(this.replayRecorder.envelope(this.readClock()));
+      this.saveScheduler.schedule(this.replayRecorder.envelope(this.readClock()));
     } catch (error) {
       this.recordRuntimeError('persistence', error);
     }
@@ -405,6 +432,7 @@ export class NumberStrategyGame {
   }
 
   clearSave(): boolean {
+    this.saveScheduler.cancel();
     this.replayRecorder = new ReplayRecorder(this.gameIdentity());
     return this.saveRepository.clear();
   }
@@ -534,6 +562,7 @@ export class NumberStrategyGame {
       }));
       addCleanup(this.platform.onHide(() => {
         if (this.lifecycle === 'destroyed') return;
+        this.saveScheduler.flush();
         if (
           this.state.phase === GAME_PHASE.CHARGING
           || (this.state.phase === GAME_PHASE.PAUSED
@@ -645,17 +674,19 @@ export class NumberStrategyGame {
       this.contentMenu.gameplayId = this.session.gameplayId;
       this.contentMenu.taskId = this.session.taskId;
       this.contentMenu.characterId = this.appliedCharacterId;
+      this.contentMenu.qualityId = this.appliedQuality;
       try {
         this.renderer.selectCharacter?.(this.appliedCharacterId);
+        this.renderer.setQuality?.(this.appliedQuality);
       } catch (error) {
         this.recordRuntimeError('character-selection', error);
       }
       return true;
     }
     if (control === 'content-apply') return this.applyContentSelection();
-    const cycle = control.match(/^content-(gameplay|task|character)-(prev|next)$/);
+    const cycle = control.match(/^content-(gameplay|task|character|quality)-(prev|next)$/);
     if (!cycle) return false;
-    const kind = cycle[1] as 'gameplay' | 'task' | 'character';
+    const kind = cycle[1] as 'gameplay' | 'task' | 'character' | 'quality';
     const direction = cycle[2] === 'prev' ? -1 : 1;
     this.contentMenu.cycle(kind, direction);
     if (kind === 'character') {
@@ -663,6 +694,13 @@ export class NumberStrategyGame {
         this.renderer.selectCharacter?.(this.contentMenu.characterId);
       } catch (error) {
         this.recordRuntimeError('character-preview', error);
+      }
+    }
+    if (kind === 'quality') {
+      try {
+        this.renderer.setQuality?.(this.contentMenu.qualityId as RenderQualityTier);
+      } catch (error) {
+        this.recordRuntimeError('quality-preview', error);
       }
     }
     return true;
@@ -679,12 +717,16 @@ export class NumberStrategyGame {
         taskId: this.contentMenu.taskId,
       });
       this.renderer.selectCharacter?.(this.contentMenu.characterId);
+      this.renderer.setQuality?.(this.contentMenu.qualityId as RenderQualityTier);
       this.session = nextSession;
       this.appliedCharacterId = this.contentMenu.characterId;
+      this.appliedQuality = this.contentMenu.qualityId as RenderQualityTier;
+      writeRenderQuality(this.storage, this.appliedQuality);
       this.jump = null;
       this.clearActivePointer();
       this.contentMenu.setOpen(false);
       this.replayRecorder = new ReplayRecorder(this.gameIdentity());
+      this.saveScheduler.cancel();
       this.saveRepository.clear();
       this.fixedStepClock.rebase();
       this.eventCollector.emit('content-selected', {
@@ -804,6 +846,7 @@ export class NumberStrategyGame {
     this.world.player.supportPlatformId = null;
     this.presentation.jumpId += 1;
     this.presentation.jumpProgress = 0;
+    this.presentation.jumpReleasedAtMs = this.readClock();
     this.presentation.chargePower = chargeToPower(released.chargeMs, this.jumpPhysics);
     this.eventCollector.emit('jump-started', {
       choiceIndex,
@@ -1032,6 +1075,9 @@ export class NumberStrategyGame {
       if (this.renderer.render(snapshot, events) === false) {
         throw new Error('渲染器未能完成当前帧。');
       }
+      // The first call only arms the save. A later rendered frame performs the
+      // write, after the browser has had a chance to present the jump start.
+      this.saveScheduler.afterRender();
       this.consecutiveFrameErrors = 0;
     } catch (error) {
       this.consecutiveFrameErrors += 1;
@@ -1077,7 +1123,9 @@ export class NumberStrategyGame {
         restoredActionCount: this.restoredActionCount,
         restoreError: this.restoreError,
         diagnostics: this.saveRepository.diagnostics(),
+        scheduler: this.saveScheduler.diagnostics(),
       },
+      quality: this.appliedQuality,
       lastRuntimeError: this.lastRuntimeError
         ? {
           source: this.lastRuntimeError.source,
@@ -1092,6 +1140,7 @@ export class NumberStrategyGame {
   destroy(): void {
     if (this.lifecycle === 'destroyed') return;
     this.lifecycleController.transition('destroyed');
+    this.saveScheduler.flush();
     this.clearActivePointer();
     const frameId = this.frameId;
     this.frameId = null;

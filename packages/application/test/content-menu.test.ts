@@ -14,6 +14,10 @@ const catalog: ContentMenuCatalog = {
     { id: 'red', version: 1, name: '红', description: '红色角色' },
     { id: 'blue', version: 1, name: '蓝', description: '蓝色角色' },
   ],
+  qualities: [
+    { id: 'high', version: 1, name: '高画质', description: '完整效果' },
+    { id: 'low', version: 1, name: '低画质', description: '降低效果' },
+  ],
 };
 
 describe('content menu controller', () => {
@@ -23,16 +27,19 @@ describe('content menu controller', () => {
       gameplayId: 'classic',
       taskId: 'combo',
       characterId: 'red',
+      qualityId: 'high',
     });
     menu.cycle('gameplay', 1);
     expect(menu.gameplayId).toBe('simple');
     expect(menu.taskId).toBe('exact');
     menu.cycle('character', -1);
+    menu.cycle('quality', 1);
     expect(menu.characterId).toBe('blue');
     expect(menu.snapshot()).toMatchObject({
       gameplay: { index: 2, total: 2 },
       task: { index: 1, total: 1 },
       character: { index: 2, total: 2 },
+      quality: { id: 'low', index: 2, total: 2 },
     });
   });
 
@@ -42,6 +49,7 @@ describe('content menu controller', () => {
       gameplayId: 'missing',
       taskId: 'missing',
       characterId: 'missing',
+      qualityId: 'missing',
       open: true,
     });
     expect(menu.snapshot()).toMatchObject({
@@ -49,6 +57,7 @@ describe('content menu controller', () => {
       gameplay: { id: 'classic' },
       task: { id: 'exact' },
       character: { id: 'red' },
+      quality: { id: 'high' },
     });
   });
 });

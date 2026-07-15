@@ -71,10 +71,11 @@ export function createNumberStrategyGame(
     showContentMenu: gameOptions.showContentMenu ?? true,
     feedback,
     storage,
-    rendererFactory: (canvas, rendererPlatform) => (
+    rendererFactory: (canvas, rendererPlatform, runtimeOptions) => (
       new Renderer3D(canvas, rendererPlatform, {
         ...rendererOptions,
         characterId: gameOptions.characterId,
+        quality: runtimeOptions.quality,
       })
     ),
   });

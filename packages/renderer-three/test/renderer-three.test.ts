@@ -206,7 +206,13 @@ test('effect registry isolates factories and built-in runtime obeys quality capa
     new THREE.Group(),
     RENDER_QUALITY_PROFILES.low,
   );
-  expect(runtime.snapshot()).toMatchObject({ id: 'three-core-effects', particles: 0, trailPoints: 0 });
+  expect(runtime.snapshot()).toMatchObject({
+    id: 'three-core-effects',
+    particles: 0,
+    particleCapacity: 24,
+    trailPoints: 0,
+    trailCapacity: 10,
+  });
   expect(() => runtime.dispose()).not.toThrow();
 });
 
@@ -362,12 +368,18 @@ test('HUD exposes the single-canvas content selector and blocks route controls b
       gameplay: { id: 'classic', name: '全能跃迁', description: '经典玩法', index: 1, total: 5 },
       task: { id: 'exact', name: '精确命中', description: '命中目标', index: 1, total: 5 },
       character: { id: 'red', name: '赤红巨宝', description: '经典角色', index: 1, total: 10 },
+      quality: { id: 'high', name: '高画质', description: '完整效果', index: 1, total: 2 },
     },
   });
   expect(hud.snapshot().contentMenuVisible).toBe(true);
   const apply = hud.controlRects.apply;
   expect(hud.hitTest({ x: apply.x + apply.width / 2, y: apply.y + apply.height / 2 }))
     .toBe('content-apply');
+  const qualityNext = hud.controlRects.qualityNext;
+  expect(hud.hitTest({
+    x: qualityNext.x + qualityNext.width / 2,
+    y: qualityNext.y + qualityNext.height / 2,
+  })).toBe('content-quality-next');
   const left = hud.controlRects.left;
   expect(hud.hitTest({ x: left.x + left.width / 2, y: left.y + left.height / 2 })).toBeNull();
   hud.dispose();
@@ -416,6 +428,32 @@ test('Renderer3D contains a draw exception so the outer loop can schedule its ne
   assert.equal(renderer.consecutiveDrawErrors, 1);
   assert.equal(renderer.lastError.phase, 'draw');
   assert.match(renderer.lastError.message, /GPU draw failed/);
+});
+
+test('Renderer3D switches quality through resource, stage and effect boundaries', () => {
+  const calls: string[] = [];
+  const renderer = Object.create(Renderer3D.prototype);
+  Object.assign(renderer, {
+    qualityProfile: RENDER_QUALITY_PROFILES.high,
+    textureManager: { setBudgets: () => calls.push('budgets') },
+    stage: { worldRoot: new THREE.Group(), setQuality: () => calls.push('stage') },
+    effectsRuntime: { dispose: () => calls.push('dispose-effects') },
+    effectRegistry: {
+      create: () => {
+        calls.push('create-effects');
+        return { dispose() {}, snapshot: () => ({}) };
+      },
+    },
+    effectId: 'three-core-effects',
+    frameMetrics: { resetTransient: () => calls.push('metrics') },
+    resize: () => { calls.push('resize'); return true; },
+  });
+  expect(renderer.setQuality('low')).toBe('low');
+  expect(calls).toEqual([
+    'budgets', 'stage', 'dispose-effects', 'create-effects', 'metrics', 'resize',
+  ]);
+  expect(renderer.setQuality('low')).toBe('low');
+  expect(calls).toHaveLength(6);
 });
 
 test('Renderer3D disposal continues after individual listener and resource failures', () => {

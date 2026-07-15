@@ -254,6 +254,13 @@ export class TextureManager {
     );
   }
 
+  setBudgets({ maxBytes, maxDynamicBytes }: { maxBytes: number; maxDynamicBytes: number }) {
+    this.maxBytes = Math.max(1, Math.floor(maxBytes));
+    this.maxDynamicBytes = Math.max(1, Math.floor(maxDynamicBytes));
+    this.evictOverflow();
+    return this.stats();
+  }
+
   acquire(texture: THREE.Texture | null | undefined) {
     if (!texture || this.disposed) return texture;
     this.references.set(texture, (this.references.get(texture) ?? 0) + 1);

@@ -90,6 +90,7 @@ function createHarness({
     drawCalls: number;
     destroyCalls: number;
     selectedCharacters: string[];
+    selectedQualities: string[];
     choiceIndexForControl?: (control: string) => number;
   } = {
     resizeCalls: 0,
@@ -97,6 +98,7 @@ function createHarness({
     drawCalls: 0,
     destroyCalls: 0,
     selectedCharacters: [],
+    selectedQualities: [],
     resize() {
       this.resizeCalls += 1;
     },
@@ -117,6 +119,10 @@ function createHarness({
     selectCharacter(characterId) {
       this.selectedCharacters.push(characterId);
       return { selectedId: characterId };
+    },
+    setQuality(quality) {
+      this.selectedQualities.push(quality);
+      return quality;
     },
     getDebugSnapshot: () => null,
   };
@@ -246,7 +252,13 @@ test('screen-projected control mapping can swap logical candidates without chang
 });
 
 test('the single-canvas content menu applies a compatible gameplay, task and character together', async () => {
+  const settings = new Map();
   const harness = createHarness({
+    storage: {
+      read: (key) => settings.get(key),
+      write: (key, value) => { settings.set(key, value); return true; },
+      remove: (key) => settings.delete(key),
+    },
     gameOptions: {
       showContentMenu: true,
       characterCatalog: [
@@ -267,14 +279,30 @@ test('the single-canvas content menu applies a compatible gameplay, task and cha
     x: 1, y: 1, pointerId: 3, control: 'content-character-next',
   }), true);
   assert.equal(harness.handlers.input.onStart({
-    x: 1, y: 1, pointerId: 4, control: 'content-apply',
+    x: 1, y: 1, pointerId: 4, control: 'content-quality-next',
+  }), true);
+  assert.equal(harness.handlers.input.onStart({
+    x: 1, y: 1, pointerId: 5, control: 'content-apply',
   }), true);
   assert.equal(harness.game.session.gameplayId, 'plus-minus-sprint');
   assert.equal(harness.game.session.taskId, 'near-target');
   assert.equal(harness.game.appliedCharacterId, 'aqua-scout');
+  assert.equal(harness.game.appliedQuality, 'low');
   assert.equal(harness.game.contentMenu.open, false);
   assert.equal(harness.renderer.selectedCharacters.at(-1), 'aqua-scout');
+  assert.equal(harness.renderer.selectedQualities.at(-1), 'low');
+  assert.equal(settings.get('number-strategy.render-quality'), 'low');
   harness.game.destroy();
+
+  const restored = createHarness({
+    storage: {
+      read: (key) => settings.get(key),
+      write: (key, value) => { settings.set(key, value); return true; },
+      remove: (key) => settings.delete(key),
+    },
+  });
+  assert.equal(restored.game.appliedQuality, 'low');
+  restored.game.destroy();
 });
 
 test('start rejects and unbinds when the first frame cannot be scheduled', async () => {
@@ -535,6 +563,41 @@ test('the guaranteed branch completes a formerly unwinnable seed through runtime
   harness.game.destroy();
 });
 
+test('accepted jump save waits for a presented frame and lifecycle hide flushes immediately', async () => {
+  let writes = 0;
+  let saved;
+  const storage = {
+    read: () => saved,
+    write: (_key, value) => { writes += 1; saved = value; return true; },
+    remove: () => { saved = undefined; return true; },
+  };
+  const harness = createHarness({ storage });
+  await harness.game.start();
+  assert.equal(harness.handlers.input.onStart({
+    x: 1, y: 1, pointerId: 91, control: 'choice-left',
+  }), true);
+  harness.setClock(500);
+  assert.equal(harness.handlers.input.onEnd({ x: 1, y: 1, pointerId: 91 }), true);
+  assert.equal(writes, 0);
+  assert.equal(harness.game.getDebugSnapshot().persistence.scheduler.pending, true);
+
+  harness.fireNextFrame(500);
+  assert.equal(writes, 0);
+  assert.equal(harness.game.getDebugSnapshot().persistence.scheduler.readyAfterRender, true);
+  harness.setClock(517);
+  harness.fireNextFrame(517);
+  assert.equal(writes, 1);
+  assert.equal(saved.version, 4);
+
+  assert.equal(harness.handlers.input.onStart({
+    x: 1, y: 1, pointerId: 92, control: 'restart',
+  }), true);
+  assert.equal(writes, 1);
+  harness.handlers.hide();
+  assert.equal(writes, 2);
+  harness.game.destroy();
+});
+
 test('versioned local save replays a stable session before the first rendered frame', () => {
   let saved;
   const storage = {
@@ -548,8 +611,10 @@ test('versioned local save replays a stable session before the first rendered fr
   first.game.update(durationMs);
   if (first.game.state.phase === GAME_PHASE.LANDING) first.game.update(GAME_RULES.landingDurationMs);
   const expected = first.game.getDebugSnapshot();
-  assert.equal(saved.version, 4);
+  assert.equal(saved, undefined);
+  assert.equal(expected.persistence.scheduler.pending, true);
   first.game.destroy();
+  assert.equal(saved.version, 4);
 
   const restored = createHarness({ seed: null, storage });
   const actual = restored.game.getDebugSnapshot();

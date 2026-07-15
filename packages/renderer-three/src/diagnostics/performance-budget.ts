@@ -1,4 +1,6 @@
-export type RenderQualityTier = 'high' | 'low';
+import type { RenderQualityTier } from '@number-strategy/game-contracts';
+
+export type { RenderQualityTier } from '@number-strategy/game-contracts';
 
 export interface RenderQualityProfile {
   readonly id: RenderQualityTier;

@@ -148,7 +148,7 @@ v3 只创建一个上屏 WebGL2 Canvas：
 - `state`：数值、回合、步数、阶段和胜负。
 - `world`：平台快照、稳定 ID 和玩家绝对位置。
 - `presentation`：蓄力比例、选中分支、跳跃姿态、一次性事件和不影响结果的视觉进度。
-- `presentation.contentMenu`：兼容玩法/任务/角色的只读选择快照；Renderer 只负责绘制与命中测试，Application 提交选择。
+- `presentation.contentMenu`：兼容玩法/任务/角色/画质的只读选择快照；Renderer 只负责绘制与命中测试，Application 提交选择。
 
 `platform-view-registry` 以稳定平台 ID 同步 Mesh，不以对象数组下标猜测身份。缺失的 ID 创建 View，仍然存在的 ID 更新位置/状态，从快照移除的 ID 退场并回收。
 
@@ -192,6 +192,8 @@ v3 只创建一个上屏 WebGL2 Canvas：
 - 不启用后处理拖尾；使用轻量几何与对象池。
 - UI 缓存同时受条目数与 RGBA 估算字节约束；被 Sprite 引用的淘汰纹理延迟销毁。内容菜单使用一个可重绘 DynamicCanvasTexture，并在关闭时释放。
 - HudScene 复用 SpriteMaterial，并在 charging 阶段预热 jumping 所需纹理，避免松开按钮的关键帧创建 CanvasTexture。
+- 高/低画质由 Facade 投影为 DPR、纹理、阴影和特效池预算；Scene 只接收所需的 `shadowMapSize` 小契约。
+- FrameMetrics 使用固定窗口记录松手响应、帧时间和长帧，不采集个人信息、不上传数据。
 - 三端生产构建继续使用 esbuild/Vite 路径，不引入参考项目的 Webpack 构建。
 
 目标帧率、draw calls、三角形、GPU 内存和包体属于验收指标，只有真实采样后才能勾选，不在架构文档中预填结果。

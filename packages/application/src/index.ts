@@ -7,3 +7,5 @@ export * from './game-session.js';
 export * from './lifecycle-controller.js';
 export * from './number-strategy-game.js';
 export * from './snapshot-factory.js';
+export * from './save-scheduler.js';
+export * from './render-quality.js';

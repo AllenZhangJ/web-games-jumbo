@@ -2,6 +2,8 @@ export const OPERATION_KINDS = ['add', 'subtract', 'multiply', 'divide'] as cons
 
 export type OperationKind = typeof OPERATION_KINDS[number];
 export type DefinitionId = string;
+export const RENDER_QUALITY_TIERS = ['high', 'low'] as const;
+export type RenderQualityTier = typeof RENDER_QUALITY_TIERS[number];
 
 export interface ValidationIssue {
   readonly path: string;

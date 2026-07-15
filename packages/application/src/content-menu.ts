@@ -13,6 +13,7 @@ export interface ContentMenuCatalog {
   readonly gameplays: readonly GameplayMenuEntry[];
   readonly tasks: readonly ContentMenuEntry[];
   readonly characters: readonly ContentMenuEntry[];
+  readonly qualities: readonly ContentMenuEntry[];
 }
 
 export type ContentMenuControl =
@@ -23,6 +24,8 @@ export type ContentMenuControl =
   | 'content-task-next'
   | 'content-character-prev'
   | 'content-character-next'
+  | 'content-quality-prev'
+  | 'content-quality-next'
   | 'content-apply'
   | 'content-close';
 
@@ -31,6 +34,7 @@ export interface ContentMenuSnapshot {
   readonly gameplay: ContentMenuEntry & { readonly index: number; readonly total: number };
   readonly task: ContentMenuEntry & { readonly index: number; readonly total: number };
   readonly character: ContentMenuEntry & { readonly index: number; readonly total: number };
+  readonly quality: ContentMenuEntry & { readonly index: number; readonly total: number };
 }
 
 function validateEntries(entries: readonly ContentMenuEntry[], path: string): void {
@@ -62,23 +66,27 @@ export class ContentMenuController {
   gameplayId: string;
   taskId: string;
   characterId: string;
+  qualityId: string;
 
   constructor({
     catalog,
     gameplayId,
     taskId,
     characterId,
+    qualityId,
     open = false,
   }: {
     readonly catalog: ContentMenuCatalog;
     readonly gameplayId: string;
     readonly taskId: string;
     readonly characterId: string;
+    readonly qualityId: string;
     readonly open?: boolean;
   }) {
     validateEntries(catalog.gameplays, 'catalog.gameplays');
     validateEntries(catalog.tasks, 'catalog.tasks');
     validateEntries(catalog.characters, 'catalog.characters');
+    validateEntries(catalog.qualities, 'catalog.qualities');
     const taskIds = new Set(catalog.tasks.map(({ id }) => id));
     for (const gameplay of catalog.gameplays) {
       if (gameplay.supportedTaskIds.length === 0) {
@@ -98,6 +106,9 @@ export class ContentMenuController {
     this.characterId = catalog.characters.some(({ id }) => id === characterId)
       ? characterId
       : catalog.characters[0]!.id;
+    this.qualityId = catalog.qualities.some(({ id }) => id === qualityId)
+      ? qualityId
+      : catalog.qualities[0]!.id;
     this.open = open;
   }
 
@@ -111,7 +122,7 @@ export class ContentMenuController {
     this.open = open;
   }
 
-  cycle(kind: 'gameplay' | 'task' | 'character', delta: -1 | 1): void {
+  cycle(kind: 'gameplay' | 'task' | 'character' | 'quality', delta: -1 | 1): void {
     if (kind === 'gameplay') {
       const index = this.catalog.gameplays.findIndex(({ id }) => id === this.gameplayId);
       this.gameplayId = this.catalog.gameplays[cycleIndex(index, this.catalog.gameplays.length, delta)]!.id;
@@ -120,12 +131,21 @@ export class ContentMenuController {
       }
       return;
     }
-    const entries = kind === 'task' ? this.compatibleTasks() : this.catalog.characters;
-    const currentId = kind === 'task' ? this.taskId : this.characterId;
+    const entries = kind === 'task'
+      ? this.compatibleTasks()
+      : kind === 'character'
+        ? this.catalog.characters
+        : this.catalog.qualities;
+    const currentId = kind === 'task'
+      ? this.taskId
+      : kind === 'character'
+        ? this.characterId
+        : this.qualityId;
     const index = entries.findIndex(({ id }) => id === currentId);
     const nextId = entries[cycleIndex(index, entries.length, delta)]!.id;
     if (kind === 'task') this.taskId = nextId;
-    else this.characterId = nextId;
+    else if (kind === 'character') this.characterId = nextId;
+    else this.qualityId = nextId;
   }
 
   snapshot(): ContentMenuSnapshot {
@@ -138,11 +158,13 @@ export class ContentMenuController {
     const tasks = this.compatibleTasks();
     const task = tasks.find(({ id }) => id === this.taskId)!;
     const character = this.catalog.characters.find(({ id }) => id === this.characterId)!;
+    const quality = this.catalog.qualities.find(({ id }) => id === this.qualityId)!;
     return Object.freeze({
       open: this.open,
       gameplay: withPosition(gameplay, this.catalog.gameplays),
       task: withPosition(task, tasks),
       character: withPosition(character, this.catalog.characters),
+      quality: withPosition(quality, this.catalog.qualities),
     });
   }
 }

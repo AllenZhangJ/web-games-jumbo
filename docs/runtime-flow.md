@@ -9,7 +9,7 @@ Web / 微信 / 抖音入口
   → compose-game.ts 绑定 Application + Renderer + Feedback + Storage
   → SaveRepository 读取/校验/迁移本地 SaveEnvelope
   → GameSession 选择 Difficulty / Gameplay / Task
-  → ContentMenu 选择兼容玩法/任务/角色，角色选择交给 Renderer Port
+  → ContentMenu 选择兼容玩法/任务/角色/画质，角色与画质预览交给 Renderer Port
   → 在首帧前按顺序重放动作；失败则清旧存档并新建会话
   → renderer.resize() / load()
   → 绑定 Input / Resize / Hide / Show，调度首帧
@@ -55,7 +55,8 @@ Renderer 内部由 FrameCoordinator 固定执行 `world → character → effect
 4. `GameState.resolveJump/useChoices` 提交数值状态；异常时恢复 RNG，避免半提交。
 5. TaskDefinition 根据当前值、剩余步数和运算历史返回 active/completed/failed。
 6. GameState 应用任务结果，产生 landed/task/won/lost 事件，Renderer 从下一帧快照表现镜头、HUD 和特效。
-6. ReplayRecorder 只在命令成功接受后记录 jump/restart/next-round，并由 SaveRepository 写入完整新 Envelope。
+6. ReplayRecorder 只在命令成功接受后记录 jump/restart/next-round，并把完整新 Envelope 放入 SaveScheduler。
+7. 首个成功 Renderer 帧只 arm pending；后续成功帧在 render 后写入。Hide/PageHide/Destroy 立即 flush。
 
 失败落地不执行运算、不扣步数；存储写入失败不阻断当前会话。存档是确定性动作日志而不是可变对象图，因此恢复过程可校验、可迁移、可重放。
 
@@ -63,7 +64,7 @@ Renderer 内部由 FrameCoordinator 固定执行 `world → character → effect
 
 `GameSession` 接受 GameplayRegistry、TaskRegistry、gameplayId 和 taskId，并在运行前验证定义版本、玩法支持的任务类型、配置和当前应用族的 Session 兼容性。新增同一跳跃应用族的玩法/任务通过注册与组合选择进入，不修改固定步长主循环；完全不同交互模型可新建 Application，但复用 Contracts、Persistence 和 Platform Port。
 
-首次无存档启动会打开单 Canvas 内容菜单；已有存档直接恢复，玩家可用顶部菜单按钮再次进入。切换角色立即预览，点击“开始游戏”后玩法、任务和角色一起提交并清除旧回放，关闭菜单则回退到已应用角色。
+首次无存档启动会打开单 Canvas 内容菜单；已有存档直接恢复，玩家可用顶部菜单按钮再次进入。切换角色和画质立即预览，点击“开始游戏”后玩法、任务、角色和画质一起提交并清除旧回放，关闭菜单则回退到已应用角色与画质。
 
 ## 生命周期
 

@@ -116,6 +116,7 @@ export class HudScene {
       left: null, right: null, pause: null, restart: null, menu: null,
       gameplayPrev: null, gameplayNext: null, taskPrev: null, taskNext: null,
       characterPrev: null, characterNext: null, apply: null, close: null,
+      qualityPrev: null, qualityNext: null,
     };
     this.controlState = {
       phase: 'ready', selectedChoice: null, overlayVisible: false, contentMenuOpen: false,
@@ -231,9 +232,10 @@ export class HudScene {
       height: topControlSize,
     };
     const arrowWidth = contentMenuRect.width * 0.15;
-    const rowHeight = contentMenuRect.height * 0.19;
-    const rowCenters = [0.31, 0.52, 0.73].map((ratio) => contentMenuRect.y + contentMenuRect.height * ratio);
-    const rowKeys = ['gameplay', 'task', 'character'];
+    const rowHeight = contentMenuRect.height * 0.16;
+    const rowCenters = [0.25, 0.42, 0.59, 0.74]
+      .map((ratio) => contentMenuRect.y + contentMenuRect.height * ratio);
+    const rowKeys = ['gameplay', 'task', 'character', 'quality'];
     rowKeys.forEach((key, index) => {
       this.controlRects[`${key}Prev`] = {
         x: contentMenuRect.x + contentMenuRect.width * 0.035,
@@ -466,7 +468,7 @@ export class HudScene {
       this.releaseContentMenuSurface();
       return;
     }
-    const key = `hud-content:${menu.gameplay?.id}:${menu.task?.id}:${menu.character?.id}`;
+    const key = `hud-content:${menu.gameplay?.id}:${menu.task?.id}:${menu.character?.id}:${menu.quality?.id}`;
     if (key === this.contentMenuKey) return;
     this.contentMenuKey = key;
     const surface = this.ensureContentMenuSurface();
@@ -486,9 +488,10 @@ export class HudScene {
         ['玩法', menu.gameplay],
         ['任务', menu.task],
         ['角色', menu.character],
+        ['画质', menu.quality],
       ];
       rows.forEach(([label, entry]: any, index: number) => {
-        const centerY = height * (0.31 + index * 0.21);
+        const centerY = height * [0.25, 0.42, 0.59, 0.74][index]!;
         context.fillStyle = '#78909C';
         context.font = '700 30px "PingFang SC", "Microsoft YaHei", sans-serif';
         context.fillText(`${label}  ${entry.index}/${entry.total}`, width / 2, centerY - 60);
@@ -548,6 +551,7 @@ export class HudScene {
         ['gameplayPrev', 'content-gameplay-prev'], ['gameplayNext', 'content-gameplay-next'],
         ['taskPrev', 'content-task-prev'], ['taskNext', 'content-task-next'],
         ['characterPrev', 'content-character-prev'], ['characterNext', 'content-character-next'],
+        ['qualityPrev', 'content-quality-prev'], ['qualityNext', 'content-quality-next'],
         ['apply', 'content-apply'], ['close', 'content-close'],
       ];
       for (const [rect, control] of contentControls) {

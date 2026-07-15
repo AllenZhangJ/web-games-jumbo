@@ -10,6 +10,7 @@ import {
 import { createBuiltinCharacterRendererRegistry } from '../character/character-renderer-registry.js';
 import { ContextLifecycle } from './context-lifecycle.js';
 import { resolveRenderQualityProfile } from '../diagnostics/performance-budget.js';
+import { FrameMetrics } from '../diagnostics/frame-metrics.js';
 import {
   CAMERA_DEFAULTS,
   clamp,
@@ -145,6 +146,8 @@ export class Renderer3D {
     this.lastError = null;
     this.qualityProfile = resolveRenderQualityProfile(options.quality);
     this.effectRegistry = options.effectRegistry ?? createBuiltinEffectRegistry();
+    this.effectId = options.effectId ?? 'three-core-effects';
+    this.frameMetrics = new FrameMetrics();
     this.sceneRegistry = options.sceneRegistry ?? createBuiltinSceneRegistry();
     this.sceneRendererRegistry = options.sceneRendererRegistry ?? createBuiltinSceneRendererRegistry();
     this.characterRegistry = options.characterRegistry ?? createBuiltinCharacterRegistry();
@@ -189,6 +192,7 @@ export class Renderer3D {
         };
         this.stage = this.sceneRendererRegistry.create(this.renderer, this.sceneSelection.definition);
       }
+      this.stage.setQuality(this.qualityProfile);
       this.textureManager = new TextureManager(platform, {
         maxBytes: this.qualityProfile.uiTextureBudgetBytes,
         maxDynamicBytes: this.qualityProfile.dynamicTextureBudgetBytes,
@@ -203,7 +207,7 @@ export class Renderer3D {
       this.character = this.characterSelection.select(options.characterId ?? DEFAULT_CHARACTER.id);
       this.stage.worldRoot.add(this.character);
       this.effectsRuntime = this.effectRegistry.create(
-        options.effectId ?? 'three-core-effects',
+        this.effectId,
         this.stage.worldRoot,
         this.qualityProfile,
       );
@@ -222,6 +226,7 @@ export class Renderer3D {
         onRestored: () => {
           this.contextLost = false;
           this.lastTime = null;
+          this.frameMetrics.resetTransient();
           if (this.renderer?.shadowMap) this.renderer.shadowMap.needsUpdate = true;
         },
       });
@@ -372,6 +377,22 @@ export class Renderer3D {
     return this.characterSelection.snapshot;
   }
 
+  setQuality(quality: unknown) {
+    const next = resolveRenderQualityProfile(quality);
+    if (next.id === this.qualityProfile.id) return this.qualityProfile.id;
+    this.qualityProfile = next;
+    this.textureManager?.setBudgets?.({
+      maxBytes: next.uiTextureBudgetBytes,
+      maxDynamicBytes: next.dynamicTextureBudgetBytes,
+    });
+    this.stage?.setQuality?.(next);
+    this.effectsRuntime?.dispose?.();
+    this.effectsRuntime = this.effectRegistry.create(this.effectId, this.stage.worldRoot, next);
+    this.frameMetrics.resetTransient();
+    this.resize();
+    return next.id;
+  }
+
   updateWorldLayer(context: any) {
     const { snapshot, state, visual, phase, deltaSeconds } = context;
     const platforms = worldPlatforms(snapshot);
@@ -450,6 +471,15 @@ export class Renderer3D {
       this.missElapsed = 0;
     }
     const visual = normalizePresentation(state, presentation, clamp(this.missElapsed / 0.68));
+    this.frameMetrics.record({
+      nowMs: now,
+      deltaMs: deltaSeconds * 1000,
+      phase,
+      jumpId: finite(visual.jumpId),
+      jumpReleasedAtMs: Number.isFinite(visual.jumpReleasedAtMs)
+        ? visual.jumpReleasedAtMs
+        : null,
+    });
 
     const worldStep = Number.isFinite(snapshot.step) ? snapshot.step : null;
     const stepAdvanced = this.lastWorldStep != null
@@ -588,6 +618,7 @@ export class Renderer3D {
       textureFallbackCount: this.textureManager?.fallbackCount ?? 0,
       quality: this.qualityProfile?.id ?? 'high',
       resources: this.textureManager?.stats?.() ?? null,
+      metrics: this.frameMetrics?.snapshot?.() ?? null,
       effects: this.effectsRuntime?.snapshot?.() ?? null,
       frame: {
         order: this.frameCoordinator?.ids?.() ?? [],

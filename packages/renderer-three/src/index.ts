@@ -3,6 +3,7 @@ export * from './character/character-rig.js';
 export * from './character/character-renderer-registry.js';
 export * from './facade/context-lifecycle.js';
 export * from './diagnostics/performance-budget.js';
+export * from './diagnostics/frame-metrics.js';
 export * from './effects/effect-runtime.js';
 export * from './effects/effect-registry.js';
 export * from './effects/core-effects-runtime.js';

@@ -50,7 +50,9 @@ export class CoreEffectsRuntime implements EffectRuntime<CoreEffectsFrame> {
     return Object.freeze({
       id: this.id,
       particles: this.particles.activeCount(),
+      particleCapacity: this.particles.capacity,
       trailPoints: this.trail.pointCount,
+      trailCapacity: this.trail.maxPoints,
     });
   }
 

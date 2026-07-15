@@ -45,6 +45,12 @@ export class Stage {
     this.lighting.update(focus);
   }
 
+  setQuality(profile: Readonly<{ shadowMapSize: number }>) {
+    this.renderer.shadowMap.enabled = true;
+    this.lighting.setShadowMapSize(profile.shadowMapSize);
+    this.floor.receiveShadow = true;
+  }
+
   render() {
     this.renderer.render(this.scene, this.cameraRig.camera);
   }

@@ -3,6 +3,7 @@ import { RenderResourceScope } from '../src/resources/resource-scope.js';
 import { RENDER_QUALITY_PROFILES, resolveRenderQualityProfile } from '../src/diagnostics/performance-budget.js';
 import { TextureManager } from '../src/resources/texture-manager.js';
 import { HudScene } from '../src/hud/hud-scene.js';
+import { FrameMetrics } from '../src/diagnostics/frame-metrics.js';
 
 function context() {
   return {
@@ -81,6 +82,11 @@ function contentMenu(index: number) {
       id: `character-${index % 10}`, name: `角色 ${index % 10}`, description: '角色描述',
       index: (index % 10) + 1, total: 10,
     },
+    quality: {
+      id: index % 2 === 0 ? 'high' : 'low',
+      name: index % 2 === 0 ? '高画质' : '低画质',
+      description: '画质描述', index: (index % 2) + 1, total: 2,
+    },
   };
 }
 
@@ -129,4 +135,22 @@ test('charging prewarms release-to-jump HUD textures', () => {
   expect(manager.stats().createdTextures).toBe(beforeRelease);
   hud.dispose();
   manager.dispose();
+});
+
+test('frame metrics record release response and long frames without growing storage', () => {
+  const metrics = new FrameMetrics(30);
+  metrics.record({ nowMs: 100, deltaMs: 16, phase: 'jumping', jumpId: 1, jumpReleasedAtMs: 82 });
+  metrics.record({ nowMs: 160, deltaMs: 60, phase: 'jumping', jumpId: 1, jumpReleasedAtMs: 82 });
+  expect(metrics.snapshot()).toMatchObject({
+    samples: 2,
+    averageFrameMs: 38,
+    maxFrameMs: 60,
+    longFrames: 1,
+    lastReleaseResponseMs: 18,
+    maxReleaseResponseMs: 18,
+  });
+  for (let index = 0; index < 60; index += 1) {
+    metrics.record({ nowMs: 200 + index, deltaMs: 16, phase: 'ready', jumpId: 1, jumpReleasedAtMs: null });
+  }
+  expect(metrics.snapshot().samples).toBe(30);
 });

@@ -18,7 +18,7 @@
 - 松开按钮后，状态由 charging 切到 jumping；HUD 可能在同一帧创建并上传顶部、状态、左右控制纹理。
 - TailTrail 在采样点创建 `THREE.Vector3`。
 - ParticleBurst 刷新实例时创建 `THREE.Euler`，即使没有活动粒子也会刷新全部实例矩阵。
-- Replay action 当前同步写入平台 Storage；桌面写入很快，但移动浏览器实现仍会占用释放调用栈。
+- 第一批基线中 Replay action 同步写入平台 Storage；第四批已改为首个表现帧后的 SaveScheduler。
 
 ## 目标
 

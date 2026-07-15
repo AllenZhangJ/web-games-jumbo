@@ -39,6 +39,7 @@ export interface SessionPresentation extends Record<string, unknown> {
   selectedChoice: number | null;
   chargePower: number;
   jumpProgress: number;
+  jumpReleasedAtMs: number | null;
   landingProgress: number;
   lastLanding: LandingResult | null;
   missVisual: MissVisual | null;
@@ -111,6 +112,7 @@ export class GameSession {
       selectedChoice: null,
       chargePower: 0,
       jumpProgress: 0,
+      jumpReleasedAtMs: null,
       landingProgress: 0,
       lastLanding: null,
       missVisual: null,
@@ -139,6 +141,7 @@ export class GameSession {
       selectedChoice: null,
       chargePower: 0,
       jumpProgress: 0,
+      jumpReleasedAtMs: null,
       landingProgress: 0,
       lastLanding: null,
       missVisual: null,
