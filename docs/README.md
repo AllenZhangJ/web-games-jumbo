@@ -29,6 +29,7 @@
 
 - [完整治理路线图](governance/roadmap.md)
 - [当前治理状态](governance/status.md)
+- [四批治理独立终验](governance/final-verification.md)
 - [每批提交前检查清单](governance/batch-checklist.md)
 - [贡献与提交规范](../CONTRIBUTING.md)
 
