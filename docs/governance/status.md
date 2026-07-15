@@ -9,7 +9,7 @@
 | 批次 | 状态 | 当前事实 |
 |---|---|---|
 | 第 0 批：文档基线 | 已完成 | 文档、自动化和浏览器验收通过；远端收口提交 `eae92d1`，标签 `governance-b0`。 |
-| 第一批 P0–P2 | 验证完成，待推送确认 | P0 基线、private workspaces、TS 契约、三档难度和累积门禁已实现；只有远端哈希确认后才改为已完成。 |
+| 第一批 P0–P2 | 已完成 | P0 基线、private workspaces、TS 契约、三档难度和累积门禁已实现；远端实现提交 `f8685ae` 已确认。 |
 | 第二批 P3–P5 | 未开始 | Core/Runtime 仍在原 `src` 结构。 |
 | 第三批 P6–P8 | 未开始 | Renderer、场景、角色和反馈仍为具体实现。 |
 | 第四批 P9–P10 | 未开始 | 尚无存档/回放；源码仍为 JavaScript。 |
@@ -31,6 +31,7 @@
 
 ## 第一批当前证据
 
+- 远端分支 `governance/batch-1-foundation` 与本地实现提交一致：`f8685ae83763404aff0e4d2df28bdc2447d20776`。
 - `@number-strategy/game-contracts` 和 `@number-strategy/difficulty` 为 private strict TypeScript workspace 包。
 - Command、Event、Snapshot、Renderer/Feedback/Storage/Clock Port，以及 Gameplay、Task、Character 版本化契约已建立；具体注册表按路线图在第二/三批实现。
 - `easy@1`、`normal@1`、`hard@1` 均通过运行时 Schema 校验和不可变注册；当前只开放 `normal@1`。

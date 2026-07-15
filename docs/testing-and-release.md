@@ -36,6 +36,15 @@
 - 浏览器 warning/error：0。
 - 当前浏览器不支持 `Emulation.setPageVisibilityOverride`，所以真实 `visibilitychange/pagehide` 端到端仍是待验证项。
 
+第一批 P0–P2 收口证据：
+
+- Node 回归：98/98；TypeScript 包测试：6/6；合计 104/104。
+- easy/normal/hard 各 10,000 seed，共 30,000 个可解回合通过。
+- strict TypeScript、ESLint 和全部旧 `src` 的 `allowJs/checkJs` 通过。
+- Web、微信、抖音构建通过；Web JS 为 622,786 bytes，gzip 为 161,826 bytes。
+- 浏览器单 Canvas、左右按钮、失败重开、重载、禁止选择和控制台健康通过。
+- 依赖审计 0 个已知漏洞。
+
 自动化覆盖的主要风险见 [仓库结构中的测试地图](repository-structure.md#tests测试地图)。
 
 ## 每批开发的强制验证顺序
