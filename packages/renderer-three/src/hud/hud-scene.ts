@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { RENDER3D_COLORS, RENDER3D_DESIGN } from '../constants.js';
-import { createTextureSprite, type DynamicCanvasTexture } from '../texture-manager.js';
+import { createTextureSprite, type DynamicCanvasTexture } from '../resources/texture-manager.js';
 
 const PHASE_COPY = Object.freeze({
   ready: '按住下方箭头蓄力，松开起跳',

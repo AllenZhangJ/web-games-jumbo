@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest';
 import { RenderResourceScope } from '../src/resources/resource-scope.js';
 import { RENDER_QUALITY_PROFILES, resolveRenderQualityProfile } from '../src/diagnostics/performance-budget.js';
-import { TextureManager } from '../src/texture-manager.js';
+import { TextureManager } from '../src/resources/texture-manager.js';
 import { HudScene } from '../src/hud/hud-scene.js';
 
 function context() {

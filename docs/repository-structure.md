@@ -50,6 +50,22 @@ renderer-three   application ← persistence
 | `renderer-three` | World/HUD/Camera/Resource/Context Lifecycle，只消费快照/事件。 |
 | `platform` | Web/微信/抖音 Canvas、输入、帧、生命周期、设备能力与本地存储。 |
 
+### Renderer 内部模块
+
+| 目录 | 责任 |
+|---|---|
+| `facade/` | 对 Application 暴露 Renderer3D；隔离 Context 生命周期和异常。 |
+| `frame/` | 定义帧契约；FrameCoordinator 独占更新顺序。 |
+| `resources/` | 纹理字节预算、动态 Canvas 和资源作用域。 |
+| `scene/` | Stage、Camera、Lighting 和场景渲染注册表。 |
+| `character/` | 程序化 Rig 和角色渲染注册表。 |
+| `world/` | 平台 Mesh 工厂和稳定 ID View 注册表。 |
+| `effects/` | EffectRegistry、粒子和拖尾对象池。 |
+| `hud/` | 单 Canvas HUD、内容菜单和命中测试。 |
+| `diagnostics/` | 高/低画质预算和性能指标契约。 |
+
+模块依赖矩阵由 `npm run check:render-architecture` 执行，热路径 Three 分配由 TypeScript AST 守卫执行。
+
 ## 扩展边界
 
 - 新玩法实现 `GameplayDefinition` 并注册，不在主循环添加 ID 分支。

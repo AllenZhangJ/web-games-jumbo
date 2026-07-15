@@ -1,10 +1,10 @@
 import type { RenderFrame } from '../frame/render-frame.js';
 
-export interface EffectRuntime {
+export interface EffectRuntime<TFrame = RenderFrame> {
   readonly id: string;
-  handle(frame: RenderFrame): void;
+  update(frame: TFrame): void;
   clear(): void;
   dispose(): void;
 }
 
-export type EffectRuntimeFactory = () => EffectRuntime;
+export type EffectRuntimeFactory<TFrame = RenderFrame> = () => EffectRuntime<TFrame>;

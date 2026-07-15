@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { hashString, RENDER3D_COLORS } from './constants.js';
-import { createTextureSprite } from './texture-manager.js';
+import { hashString, RENDER3D_COLORS } from '../constants.js';
+import { createTextureSprite } from '../resources/texture-manager.js';
 
 function shadowMesh<T extends THREE.Mesh>(mesh: T): T {
   mesh.castShadow = true;

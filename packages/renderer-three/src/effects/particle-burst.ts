@@ -4,8 +4,9 @@ const MAX_PARTICLES = 72;
 
 export class ParticleBurst {
   [key: string]: any;
-  constructor(root: THREE.Object3D) {
+  constructor(root: THREE.Object3D, { maxParticles = MAX_PARTICLES } = {}) {
     this.root = root;
+    this.capacity = Math.max(1, Math.min(MAX_PARTICLES, Math.floor(maxParticles)));
     this.geometry = new THREE.TetrahedronGeometry(0.075, 0);
     this.material = new THREE.MeshStandardMaterial({
       color: 0xffffff,
@@ -15,12 +16,12 @@ export class ParticleBurst {
       opacity: 0.9,
       vertexColors: true,
     });
-    this.mesh = new THREE.InstancedMesh(this.geometry, this.material, MAX_PARTICLES);
+    this.mesh = new THREE.InstancedMesh(this.geometry, this.material, this.capacity);
     this.mesh.name = 'LandingParticles';
     this.mesh.castShadow = false;
     this.mesh.frustumCulled = false;
-    this.mesh.count = MAX_PARTICLES;
-    this.particles = Array.from({ length: MAX_PARTICLES }, () => ({
+    this.mesh.count = 0;
+    this.particles = Array.from({ length: this.capacity }, () => ({
       active: false,
       position: new THREE.Vector3(),
       velocity: new THREE.Vector3(),
@@ -31,9 +32,10 @@ export class ParticleBurst {
     this.matrix = new THREE.Matrix4();
     this.quaternion = new THREE.Quaternion();
     this.scale = new THREE.Vector3();
-    this.hiddenScale = new THREE.Vector3(0, 0, 0);
+    this.rotation = new THREE.Euler();
+    this.color = new THREE.Color();
+    this.activeParticleCount = 0;
     this.root.add(this.mesh);
-    this.refreshInstances();
   }
 
   emit(position: any, { color = 0xe53935, count = 18, reducedMotion = false } = {}) {
@@ -41,9 +43,9 @@ export class ParticleBurst {
     const requested = Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 0;
     const amount = reducedMotion ? Math.min(5, requested) : requested;
     let emitted = 0;
-    for (let index = 0; index < this.particles.length && emitted < amount; index += 1) {
+    while (this.activeParticleCount < this.particles.length && emitted < amount) {
+      const index = this.activeParticleCount;
       const particle = this.particles[index];
-      if (particle.active) continue;
       const angle = (emitted / Math.max(1, amount)) * Math.PI * 2 + (emitted % 3) * 0.31;
       const speed = 0.9 + (emitted % 5) * 0.16;
       particle.active = true;
@@ -56,49 +58,61 @@ export class ParticleBurst {
       particle.age = 0;
       particle.life = reducedMotion ? 0.26 : 0.58 + (emitted % 3) * 0.08;
       particle.spin = angle;
-      this.mesh.setColorAt(index, new THREE.Color(color));
+      this.mesh.setColorAt(index, this.color.set(color));
+      this.activeParticleCount += 1;
       emitted += 1;
     }
     if (this.mesh.instanceColor) this.mesh.instanceColor.needsUpdate = true;
   }
 
   update(deltaSeconds: number) {
-    this.particles.forEach((particle: any) => {
-      if (!particle.active) return;
+    if (this.activeParticleCount === 0) return;
+    let writeIndex = 0;
+    for (let readIndex = 0; readIndex < this.activeParticleCount; readIndex += 1) {
+      const particle = this.particles[readIndex];
       particle.age += deltaSeconds;
       if (particle.age >= particle.life) {
         particle.active = false;
-        return;
+        continue;
       }
       particle.velocity.y -= 4.8 * deltaSeconds;
       particle.position.addScaledVector(particle.velocity, deltaSeconds);
       particle.spin += deltaSeconds * 7;
-    });
+      if (writeIndex !== readIndex) {
+        const displaced = this.particles[writeIndex];
+        this.particles[writeIndex] = particle;
+        this.particles[readIndex] = displaced;
+      }
+      writeIndex += 1;
+    }
+    this.activeParticleCount = writeIndex;
     this.refreshInstances();
   }
 
   refreshInstances() {
-    this.particles.forEach((particle: any, index: number) => {
-      if (!particle.active) {
-        this.matrix.compose(particle.position, this.quaternion, this.hiddenScale);
-      } else {
-        const life = 1 - particle.age / particle.life;
-        this.quaternion.setFromEuler(new THREE.Euler(particle.spin, particle.spin * 0.7, 0));
-        this.scale.setScalar(Math.max(0, life));
-        this.matrix.compose(particle.position, this.quaternion, this.scale);
-      }
+    for (let index = 0; index < this.activeParticleCount; index += 1) {
+      const particle = this.particles[index];
+      const life = 1 - particle.age / particle.life;
+      this.rotation.set(particle.spin, particle.spin * 0.7, 0);
+      this.quaternion.setFromEuler(this.rotation);
+      this.scale.setScalar(Math.max(0, life));
+      this.matrix.compose(particle.position, this.quaternion, this.scale);
       this.mesh.setMatrixAt(index, this.matrix);
-    });
-    this.mesh.instanceMatrix.needsUpdate = true;
+    }
+    this.mesh.count = this.activeParticleCount;
+    if (this.activeParticleCount > 0) this.mesh.instanceMatrix.needsUpdate = true;
   }
 
   activeCount() {
-    return this.particles.reduce((count: number, particle: any) => count + (particle.active ? 1 : 0), 0);
+    return this.activeParticleCount;
   }
 
   clear() {
-    this.particles.forEach((particle: any) => { particle.active = false; });
-    this.refreshInstances();
+    for (let index = 0; index < this.activeParticleCount; index += 1) {
+      this.particles[index].active = false;
+    }
+    this.activeParticleCount = 0;
+    this.mesh.count = 0;
   }
 
   dispose() {

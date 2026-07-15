@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { clamp, dampFactor, easeOutBack, RENDER3D_COLORS } from './constants.js';
+import { clamp, dampFactor, easeOutBack, RENDER3D_COLORS } from '../constants.js';
 
 export class PlatformViewRegistry {
   [key: string]: any;

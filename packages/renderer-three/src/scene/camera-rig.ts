@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { CAMERA_DEFAULTS, dampFactor } from './constants.js';
+import { CAMERA_DEFAULTS, dampFactor } from '../constants.js';
 
 export class CameraRig {
   [key: string]: any;

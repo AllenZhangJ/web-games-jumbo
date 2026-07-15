@@ -7,9 +7,9 @@ import {
   createBuiltinCharacterRegistry,
   createBuiltinSceneRegistry,
 } from '@number-strategy/content';
-import { createBuiltinCharacterRendererRegistry } from './character-renderer-registry.js';
+import { createBuiltinCharacterRendererRegistry } from '../character/character-renderer-registry.js';
 import { ContextLifecycle } from './context-lifecycle.js';
-import { resolveRenderQualityProfile } from './diagnostics/performance-budget.js';
+import { resolveRenderQualityProfile } from '../diagnostics/performance-budget.js';
 import {
   CAMERA_DEFAULTS,
   clamp,
@@ -17,14 +17,14 @@ import {
   easeInOutCubic,
   RENDER3D_COLORS,
   RENDER3D_DESIGN,
-} from './constants.js';
-import { ParticleBurst } from './effects/particle-burst.js';
-import { TailTrail } from './effects/tail-trail.js';
-import { HudScene } from './hud/hud-scene.js';
-import { PlatformMeshFactory } from './platform-mesh-factory.js';
-import { PlatformViewRegistry } from './platform-view-registry.js';
-import { createBuiltinSceneRendererRegistry } from './scene-renderer-registry.js';
-import { TextureManager } from './texture-manager.js';
+} from '../constants.js';
+import { createBuiltinEffectRegistry } from '../effects/effect-registry.js';
+import { FrameCoordinator } from '../frame/frame-coordinator.js';
+import { HudScene } from '../hud/hud-scene.js';
+import { PlatformMeshFactory } from '../world/platform-mesh-factory.js';
+import { PlatformViewRegistry } from '../world/platform-view-registry.js';
+import { createBuiltinSceneRendererRegistry } from '../scene/scene-renderer-registry.js';
+import { TextureManager } from '../resources/texture-manager.js';
 
 function finite(value: number, fallback = 0): number {
   return Number.isFinite(value) ? value : fallback;
@@ -121,8 +121,8 @@ export class Renderer3D {
     this.platformFactory = null;
     this.platforms = null;
     this.character = null;
-    this.particles = null;
-    this.trail = null;
+    this.effectsRuntime = null;
+    this.frameCoordinator = null;
     this.hud = null;
     this.ready = false;
     this.disposed = false;
@@ -144,6 +144,7 @@ export class Renderer3D {
     this.consecutiveDrawErrors = 0;
     this.lastError = null;
     this.qualityProfile = resolveRenderQualityProfile(options.quality);
+    this.effectRegistry = options.effectRegistry ?? createBuiltinEffectRegistry();
     this.sceneRegistry = options.sceneRegistry ?? createBuiltinSceneRegistry();
     this.sceneRendererRegistry = options.sceneRendererRegistry ?? createBuiltinSceneRendererRegistry();
     this.characterRegistry = options.characterRegistry ?? createBuiltinCharacterRegistry();
@@ -201,9 +202,20 @@ export class Renderer3D {
       });
       this.character = this.characterSelection.select(options.characterId ?? DEFAULT_CHARACTER.id);
       this.stage.worldRoot.add(this.character);
-      this.particles = new ParticleBurst(this.stage.worldRoot);
-      this.trail = new TailTrail(this.stage.worldRoot);
+      this.effectsRuntime = this.effectRegistry.create(
+        options.effectId ?? 'three-core-effects',
+        this.stage.worldRoot,
+        this.qualityProfile,
+      );
       this.hud = new HudScene(this.textureManager);
+      this.frameCoordinator = new FrameCoordinator([
+        { id: 'world', update: (context: any) => this.updateWorldLayer(context) },
+        { id: 'character', update: (context: any) => this.updateCharacterLayer(context) },
+        { id: 'effects', update: (context: any) => this.updateEffectsLayer(context) },
+        { id: 'camera', update: (context: any) => this.updateCameraLayer(context) },
+        { id: 'hud', update: (context: any) => this.updateHudLayer(context) },
+        { id: 'render', update: () => this.renderPasses() },
+      ]);
 
       this.contextLifecycle = new ContextLifecycle(this.canvas, {
         onLost: () => { this.contextLost = true; },
@@ -335,10 +347,10 @@ export class Renderer3D {
     return null;
   }
 
-  draw(state: any, world: any, presentation: any = {}) {
+  draw(state: any, world: any, presentation: any = {}, events: readonly GameEvent[] = []) {
     if (!this.ready || this.disposed || this.contextLost) return;
     try {
-      this.drawFrame(state, world, presentation);
+      this.drawFrame(state, world, presentation, events);
       this.consecutiveDrawErrors = 0;
       return true;
     } catch (error) {
@@ -348,9 +360,8 @@ export class Renderer3D {
     }
   }
 
-  render(snapshot: GameSnapshot, _events: readonly GameEvent[] = []) {
-    void _events;
-    return this.draw(snapshot?.state, snapshot?.world, snapshot?.presentation ?? {});
+  render(snapshot: GameSnapshot, events: readonly GameEvent[] = []) {
+    return this.draw(snapshot?.state, snapshot?.world, snapshot?.presentation ?? {}, events);
   }
 
   selectCharacter(characterId: string) {
@@ -361,7 +372,67 @@ export class Renderer3D {
     return this.characterSelection.snapshot;
   }
 
-  drawFrame(state: any, world: any, presentation: any = {}) {
+  updateWorldLayer(context: any) {
+    const { snapshot, state, visual, phase, deltaSeconds } = context;
+    const platforms = worldPlatforms(snapshot);
+    const renderContext = {
+      ...visual,
+      current: snapshot.current,
+      candidates: snapshot.candidates ?? [],
+      player: snapshot.player,
+      currentValue: state?.currentValue,
+      worldTransitionProgress: this.worldTransitionProgress,
+      overlayVisible: ['paused', 'won', 'lost'].includes(phase),
+    };
+    context.renderContext = renderContext;
+    this.platforms.sync(platforms, renderContext, deltaSeconds);
+    renderContext.supportHeight = this.platforms.get(snapshot.player.supportPlatformId)?.height
+      ?? snapshot.current.height;
+  }
+
+  updateCharacterLayer(context: any) {
+    this.character.update(context.snapshot.player, context.renderContext, context.deltaSeconds);
+  }
+
+  updateEffectsLayer(context: any) {
+    this.effectsRuntime.update({
+      characterPosition: this.character.position,
+      landingPosition: context.snapshot.player.position,
+      deltaSeconds: context.deltaSeconds,
+      isJumping: context.visual.isJumping,
+      reducedMotion: context.visual.reducedMotion,
+      stepAdvanced: context.stepAdvanced,
+      stepReset: context.stepReset,
+      color: RENDER3D_COLORS.red,
+    });
+    this.lastWorldStep = context.worldStep;
+  }
+
+  updateCameraLayer(context: any) {
+    context.cameraContext.origin = this.visualOrigin;
+    this.stage.updateCamera(
+      context.cameraContext,
+      context.deltaSeconds,
+      context.cameraTransition,
+    );
+    if (this.worldTransitionProgress >= 1) this.worldTransition = null;
+    context.visual.choiceControlMap = screenChoiceControlMap(
+      context.snapshot.candidates ?? [],
+      this.stage.cameraRig.camera,
+      this.visualOrigin,
+    );
+  }
+
+  updateHudLayer(context: any) {
+    this.hud.update(context.state ?? {}, context.visual);
+  }
+
+  drawFrame(
+    state: any,
+    world: any,
+    presentation: any = {},
+    events: readonly GameEvent[] = [],
+  ) {
     if (!this.transform) this.resize();
     if (!this.transform) return;
     const snapshot = worldSnapshot(world);
@@ -445,49 +516,20 @@ export class Renderer3D {
     }
     this.stage.worldRoot.position.set(-this.visualOrigin.x, 0, -this.visualOrigin.z);
 
-    const platforms = worldPlatforms(snapshot);
-    const renderContext = {
-      ...visual,
-      current: snapshot.current,
-      candidates: snapshot.candidates ?? [],
-      player: snapshot.player,
-      currentValue: state?.currentValue,
-      worldTransitionProgress: this.worldTransitionProgress,
-      overlayVisible: ['paused', 'won', 'lost'].includes(phase),
-    };
-    this.platforms.sync(platforms, renderContext, deltaSeconds);
-    renderContext.supportHeight = this.platforms.get(snapshot.player.supportPlatformId)?.height
-      ?? snapshot.current.height;
-    this.character.update(snapshot.player, renderContext, deltaSeconds);
-    this.trail.update(this.character.position, {
-      active: visual.isJumping,
-      reducedMotion: visual.reducedMotion,
-    }, deltaSeconds);
-
-    if (stepAdvanced) {
-      this.particles.emit(snapshot.player.position, {
-        color: RENDER3D_COLORS.red,
-        count: 20,
-        reducedMotion: visual.reducedMotion,
-      });
-    }
-    if (stepReset) {
-      this.particles.clear();
-      this.trail.clear();
-    }
-    this.lastWorldStep = worldStep;
-    this.particles.update(deltaSeconds);
-
-    cameraContext.origin = this.visualOrigin;
-    this.stage.updateCamera(cameraContext, deltaSeconds, cameraTransition);
-    if (this.worldTransitionProgress >= 1) this.worldTransition = null;
-    visual.choiceControlMap = screenChoiceControlMap(
-      snapshot.candidates ?? [],
-      this.stage.cameraRig.camera,
-      this.visualOrigin,
-    );
-    this.hud.update(state ?? {}, visual);
-    this.renderPasses();
+    this.frameCoordinator.run({
+      state,
+      snapshot,
+      visual,
+      phase,
+      deltaSeconds,
+      stepAdvanced,
+      stepReset,
+      worldStep,
+      cameraContext,
+      cameraTransition,
+      events,
+      renderContext: null,
+    });
 
     this.lastPhase = phase;
     this.lastDrawState = {
@@ -546,9 +588,10 @@ export class Renderer3D {
       textureFallbackCount: this.textureManager?.fallbackCount ?? 0,
       quality: this.qualityProfile?.id ?? 'high',
       resources: this.textureManager?.stats?.() ?? null,
-      effects: {
-        particles: this.particles?.activeCount?.() ?? 0,
-        trailPoints: this.trail?.points?.length ?? 0,
+      effects: this.effectsRuntime?.snapshot?.() ?? null,
+      frame: {
+        order: this.frameCoordinator?.ids?.() ?? [],
+        runs: this.frameCoordinator?.runCount ?? 0,
       },
       renderer: {
         calls: info.render.calls,
@@ -589,8 +632,7 @@ export class Renderer3D {
 
     safely('context-lifecycle', () => this.contextLifecycle?.dispose?.());
     safely('hud', () => this.hud?.dispose?.());
-    safely('trail', () => this.trail?.dispose?.());
-    safely('particles', () => this.particles?.dispose?.());
+    safely('effects', () => this.effectsRuntime?.dispose?.());
     safely('character', () => this.characterSelection?.dispose?.());
     if (this.platforms) safely('platforms', () => this.platforms.dispose());
     else safely('platform-factory', () => this.platformFactory?.dispose?.());

@@ -45,6 +45,8 @@ requestFrame
 
 Renderer 只读 `GameSnapshot/GameEvent`，不能持有或改写 `GameState/WorldState`。反馈失败只进入诊断。连续 3 帧不可恢复错误进入显式 `failed` 生命周期并解绑输入。
 
+Renderer 内部由 FrameCoordinator 固定执行 `world → character → effects → camera → hud → render`。各模块只接收当前帧上下文，不互相调用；场景、角色和特效通过版本/rendererKey 注册表创建。粒子与拖尾运行时复用构造期对象，更新方法禁止创建 Three 对象。
+
 ## 成功落地与存档事务
 
 1. Jump Engine 计算脚底真实落点。

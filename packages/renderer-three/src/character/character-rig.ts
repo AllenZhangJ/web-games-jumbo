@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { clamp, dampFactor, easeOutCubic, RENDER3D_COLORS } from './constants.js';
+import { clamp, dampFactor, easeOutCubic, RENDER3D_COLORS } from '../constants.js';
 
 function shadow<T extends THREE.Mesh>(mesh: T): T {
   mesh.castShadow = true;

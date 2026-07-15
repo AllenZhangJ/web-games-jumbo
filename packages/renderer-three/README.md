@@ -10,4 +10,4 @@ Three.js 单 Canvas Renderer。只消费 GameSnapshot/GameEvent，内部按 Worl
 - `diagnostics` 定义高/低画质预算和可观察指标。
 - Facade/FrameCoordinator 可以组合低层模块，低层模块禁止反向依赖。
 
-执行 `npm run check:render-architecture` 和 `npm run check:render-hot-path` 验证边界。当前热路径守卫仍保留两个基线允许点，第三批必须归零。
+执行 `npm run check:render-architecture` 和 `npm run check:render-hot-path` 验证边界。FrameCoordinator 固定执行 `world → character → effects → camera → hud → render`；热路径 AST 守卫要求受检更新方法的 Three 对象分配为零。

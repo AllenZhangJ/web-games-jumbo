@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { SHADOW_DEFAULTS } from './constants.js';
+import { SHADOW_DEFAULTS } from '../constants.js';
 
 export class LightingRig extends THREE.Group {
   [key: string]: any;

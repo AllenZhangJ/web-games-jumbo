@@ -29,10 +29,10 @@ GitHub Actions 在 push 与 pull request 上使用 Node 20、`npm ci` 和 `npm r
 - 全量测试覆盖 Contracts、Difficulty、RNG、Physics、World、Gameplay、Application、Persistence、Content、Feedback、Platform、Renderer、入口、架构和文档。
 - easy/normal/hard 各 10,000 seed，共 30,000 个可解回合。
 - 独立 1,000 个完整 normal 会话全部获胜且步数非负。
-- 100 局 Three 平台视图始终保持 3 个活动资源，结束后完整释放。
+- 100 局 Three 平台视图保持 3 个活动 View；100 轮低画质粒子/拖尾保持固定池并在结束后完整释放。
 - 存档 v1/v2/v3/v4 fixture、迁移回写、损坏隔离、动作回放和首帧恢复通过。
 - 5 个正式 Gameplay 各执行 1,000 个 normal 初始 seed；5 个正式 Task 和 10 个正式 Character 完成注册、兼容选择、回退与资源销毁测试。
-- 全量 Vitest 24 个文件、146 项测试通过；确定性单测层行/语句 89.70%、函数 93.16%、分支 71.44%。
+- 全量 Vitest 25 个文件、155 项测试通过；确定性单测层行/语句 89.70%、函数 93.16%、分支 71.44%。
 - 生产依赖审计 0 个已知漏洞；资产/许可证审计通过。
 - Web、微信、抖音构建通过；Web JS 672.91 kB、gzip 177.55 kB，Web gzip 预算 180 KiB，小游戏 `game.js` 687,289 bytes、预算各 700 KiB。
 

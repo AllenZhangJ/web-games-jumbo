@@ -3,17 +3,20 @@ import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import * as THREE from 'three';
-import { CameraRig } from '../src/camera-rig.js';
-import { CharacterRendererRegistry } from '../src/character-renderer-registry.js';
-import { ContextLifecycle } from '../src/context-lifecycle.js';
+import { CameraRig } from '../src/scene/camera-rig.js';
+import { CharacterRendererRegistry } from '../src/character/character-renderer-registry.js';
+import { ContextLifecycle } from '../src/facade/context-lifecycle.js';
 import { HudScene } from '../src/hud/hud-scene.js';
 import { BUILTIN_CHARACTERS } from '@number-strategy/content';
-import { CharacterRig } from '../src/character-rig.js';
-import { PlatformMeshFactory } from '../src/platform-mesh-factory.js';
-import { PlatformViewRegistry } from '../src/platform-view-registry.js';
-import { Renderer3D, screenChoiceControlMap } from '../src/renderer3d.js';
-import { SceneRendererRegistry } from '../src/scene-renderer-registry.js';
-import { createCanvasSurface, TextureManager } from '../src/texture-manager.js';
+import { CharacterRig } from '../src/character/character-rig.js';
+import { PlatformMeshFactory } from '../src/world/platform-mesh-factory.js';
+import { PlatformViewRegistry } from '../src/world/platform-view-registry.js';
+import { Renderer3D, screenChoiceControlMap } from '../src/facade/renderer3d.js';
+import { SceneRendererRegistry } from '../src/scene/scene-renderer-registry.js';
+import { createCanvasSurface, TextureManager } from '../src/resources/texture-manager.js';
+import { FrameCoordinator } from '../src/frame/frame-coordinator.js';
+import { EffectRegistry, createBuiltinEffectRegistry } from '../src/effects/effect-registry.js';
+import { RENDER_QUALITY_PROFILES } from '../src/diagnostics/performance-budget.js';
 
 const projectRoot = path.resolve(import.meta.dirname, '../../..');
 
@@ -175,6 +178,36 @@ test('scene renderer registry rejects unsupported renderer keys before Stage con
   registry.register('fixture-scene', () => ({ dispose: () => {} }) as never);
   expect(() => registry.register('fixture-scene', () => ({ dispose: () => {} }) as never))
     .toThrow(/重复注册/);
+});
+
+test('frame coordinator owns a deterministic non-duplicated layer order', () => {
+  const calls: string[] = [];
+  const coordinator = new FrameCoordinator([
+    { id: 'world', update: () => calls.push('world') },
+    { id: 'effects', update: () => calls.push('effects') },
+    { id: 'render', update: () => calls.push('render') },
+  ]);
+  coordinator.run({});
+  expect(calls).toEqual(['world', 'effects', 'render']);
+  expect(coordinator.ids()).toEqual(['world', 'effects', 'render']);
+  expect(coordinator.runCount).toBe(1);
+  expect(() => new FrameCoordinator([
+    { id: 'world', update: () => {} },
+    { id: 'world', update: () => {} },
+  ])).toThrow(/重复/);
+});
+
+test('effect registry isolates factories and built-in runtime obeys quality capacity', () => {
+  const registry = new EffectRegistry();
+  expect(() => registry.create('missing', new THREE.Group(), RENDER_QUALITY_PROFILES.high))
+    .toThrow(/未注册特效/);
+  const runtime = createBuiltinEffectRegistry().create(
+    'three-core-effects',
+    new THREE.Group(),
+    RENDER_QUALITY_PROFILES.low,
+  );
+  expect(runtime.snapshot()).toMatchObject({ id: 'three-core-effects', particles: 0, trailPoints: 0 });
+  expect(() => runtime.dispose()).not.toThrow();
 });
 
 test('render3d and runtime have no browser or mini-game platform leakage', async () => {
@@ -397,8 +430,7 @@ test('Renderer3D disposal continues after individual listener and resource failu
     lastError: null,
     contextLifecycle: { dispose: () => { throw new Error('detached'); } },
     hud: { dispose: () => { calls.push('hud'); throw new Error('hud failure'); } },
-    trail: { dispose: () => calls.push('trail') },
-    particles: { dispose: () => calls.push('particles') },
+    effectsRuntime: { dispose: () => calls.push('effects') },
     characterSelection: { dispose: () => calls.push('character') },
     platforms: { dispose: () => calls.push('platforms') },
     textureManager: { dispose: () => calls.push('textures') },
@@ -411,8 +443,7 @@ test('Renderer3D disposal continues after individual listener and resource failu
   assert.doesNotThrow(() => renderer.dispose());
   assert.deepEqual(calls, [
     'hud',
-    'trail',
-    'particles',
+    'effects',
     'character',
     'platforms',
     'textures',

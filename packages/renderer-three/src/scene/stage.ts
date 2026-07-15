@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { RENDER3D_COLORS } from './constants.js';
+import { RENDER3D_COLORS } from '../constants.js';
 import { CameraRig } from './camera-rig.js';
 import { LightingRig } from './lighting-rig.js';
 
