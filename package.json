@@ -1,0 +1,25 @@
+{
+  "name": "number-strategy-jump",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "基于 Three.js/WebGL 的数值策略跳跃小游戏，包含 Web、抖音和微信平台适配层。",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "dev:lan": "vite --host 0.0.0.0",
+    "preview:lan": "vite preview --host 0.0.0.0 --port 4173 --strictPort --outDir dist/web",
+    "test": "node --test",
+    "build": "node scripts/build.mjs",
+    "check": "npm run test && npm run build"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.6",
+    "vite": "^7.0.4"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "three": "0.185.1"
+  }
+}
