@@ -22,6 +22,8 @@ export class ContentSelection<
   resource: TResource | null = null;
   snapshot: ContentSelectionSnapshot | null = null;
   disposed = false;
+  cleanupFailures = 0;
+  lastCleanupError: Error | null = null;
 
   constructor({
     registry,
@@ -73,7 +75,16 @@ export class ContentSelection<
       version: selected.version,
       usedFallback,
     };
-    previous?.dispose();
+    if (previous) {
+      try {
+        previous.dispose();
+      } catch (error) {
+        // Replacement is already committed. A broken old resource must not
+        // make the caller treat the new, valid selection as failed.
+        this.cleanupFailures += 1;
+        this.lastCleanupError = error instanceof Error ? error : new Error(String(error));
+      }
+    }
     return next;
   }
 

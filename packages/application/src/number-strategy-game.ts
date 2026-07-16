@@ -24,14 +24,16 @@ import {
   type WorldState,
   type WorldPlatform,
 } from '@number-strategy/jump-engine';
-import type {
-  FeedbackPort,
-  GameCommand,
-  GameEvent,
-  GameSnapshot,
-  RenderMotionProjection,
-  RenderQualityTier,
-  StoragePort,
+import {
+  RENDER_QUALITY_TIERS,
+  type FeedbackPort,
+  type GameCommand,
+  type GameEvent,
+  type GameSnapshot,
+  type RenderMotionProjection,
+  type RenderQualityTier,
+  type StoragePort,
+  type TaskResult,
 } from '@number-strategy/game-contracts';
 import {
   ReplayRecorder,
@@ -272,7 +274,17 @@ export class NumberStrategyGame {
     this.storage = storage;
     this.saveRepository = new SaveRepository(storage);
     this.saveScheduler = new SaveScheduler(this.saveRepository);
-    this.appliedQuality = quality ?? readRenderQuality(storage);
+    const requestedQuality = quality ?? readRenderQuality(storage);
+    const qualityIds = qualityCatalog.map((entry) => entry?.id);
+    if (
+      qualityIds.length === 0
+      || qualityIds.some((id) => !RENDER_QUALITY_TIERS.includes(id as RenderQualityTier))
+    ) {
+      throw new TypeError('qualityCatalog 只能包含受支持的 high/low 画质。');
+    }
+    this.appliedQuality = qualityIds.includes(requestedQuality)
+      ? requestedQuality
+      : qualityIds[0] as RenderQualityTier;
     const canRestore = restoreSave
       && seed === undefined
       && difficulty === undefined
@@ -319,7 +331,6 @@ export class NumberStrategyGame {
         ...(taskId === undefined ? {} : { taskId }),
       });
     }
-    this.renderer = rendererFactory(this.canvas, platform, { quality: this.appliedQuality });
     const catalog: ContentMenuCatalog = Object.freeze({
       gameplays: Object.freeze(this.session.gameplayRegistry.list().map((definition) => Object.freeze({
         id: definition.id,
@@ -350,6 +361,9 @@ export class NumberStrategyGame {
       open: showContentMenu && !loadedSave,
     });
     this.appliedCharacterId = this.contentMenu.characterId;
+    // Validate every configurable catalog before allocating GPU resources. A
+    // constructor failure must not strand a renderer that callers cannot own.
+    this.renderer = rendererFactory(this.canvas, platform, { quality: this.appliedQuality });
     try {
       this.renderer.selectCharacter?.(this.appliedCharacterId);
     } catch (error) {
@@ -737,7 +751,10 @@ export class NumberStrategyGame {
       this.contentMenu.setOpen(false);
       this.replayRecorder = new ReplayRecorder(this.gameIdentity());
       this.saveScheduler.cancel();
-      this.saveRepository.clear();
+      this.saveScheduler.schedule(this.replayRecorder.envelope(this.readClock()));
+      if (!this.saveScheduler.flush()) {
+        this.recordRuntimeError('persistence', new Error('内容选择存档写入失败，已保留待重试状态。'));
+      }
       this.fixedStepClock.rebase();
       this.snapshotDomainDirty = true;
       this.eventCollector.emit('content-selected', {
@@ -942,6 +959,9 @@ export class NumberStrategyGame {
           value: nextValue,
           movesRemaining: nextMovesRemaining,
         });
+        if (!this.state.canUseChoices(nextChoices, nextValue)) {
+          throw new Error('落地后生成的数值候选无效。');
+        }
         // Commit the fallible world transition before mutating GameState. All
         // state-side validation above is synchronous, so the two truth layers
         // cannot be left half-committed by candidate generation or landing checks.
@@ -1017,7 +1037,7 @@ export class NumberStrategyGame {
     }
 
     const taskResultAtLanding = this.state.phase === GAME_PHASE.LANDING
-      ? this.session.evaluateTask()
+      ? this.evaluateTaskSafely()
       : null;
     const landingEvent = this.state.updateLanding(
       remainingDeltaMs,
@@ -1036,8 +1056,8 @@ export class NumberStrategyGame {
       });
     }
     if (landingEvent) {
-      const taskResult = taskResultAtLanding ?? this.session.evaluateTask();
-      if (taskResult.status !== 'active') {
+      const taskResult = taskResultAtLanding;
+      if (taskResult && taskResult.status !== 'active') {
         this.eventCollector.emit(`task-${taskResult.status}`, {
           taskId: this.session.taskId,
           reason: taskResult.reason,
@@ -1051,6 +1071,17 @@ export class NumberStrategyGame {
         ? this.world.player.position.y
         : floorY;
       this.world.player.position.y = Math.max(floorY, currentY - remainingDeltaMs / 460);
+    }
+  }
+
+  private evaluateTaskSafely(): TaskResult | undefined {
+    try {
+      return this.session.evaluateTask();
+    } catch (error) {
+      this.recordRuntimeError('task-evaluation', error);
+      // A pluggable task must not be able to deadlock the core landing state.
+      // GameState's deterministic reach-number fallback still resolves win/loss.
+      return undefined;
     }
   }
 

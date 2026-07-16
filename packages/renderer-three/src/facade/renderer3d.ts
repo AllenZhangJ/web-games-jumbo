@@ -288,15 +288,19 @@ export class Renderer3D {
     try {
       if (typeof this.renderer.compileAsync === 'function') {
         await this.renderer.compileAsync(this.stage.scene, this.stage.cameraRig.camera);
+        if (this.disposed) throw new Error('Renderer3D 在着色器预热期间已销毁。');
         await this.renderer.compileAsync(this.hud.scene, this.hud.camera);
+        if (this.disposed) throw new Error('Renderer3D 在着色器预热期间已销毁。');
       } else {
         this.renderer.compile(this.stage.scene, this.stage.cameraRig.camera);
         this.renderer.compile(this.hud.scene, this.hud.camera);
       }
       this.platformFactory.prewarm(this.renderer);
     } catch (error) {
+      if (this.disposed) throw error;
       this.captureError('shader-prewarm', error);
     }
+    if (this.disposed) throw new Error('Renderer3D 在加载完成前已销毁。');
     this.ready = true;
     return this;
   }
@@ -412,6 +416,7 @@ export class Renderer3D {
   }
 
   selectCharacter(characterId: string) {
+    if (this.disposed) throw new Error('Renderer3D 已销毁。');
     if (!this.characterSelection || !this.stage) return false;
     const character = this.characterSelection.select(characterId);
     this.character = character;
@@ -420,19 +425,61 @@ export class Renderer3D {
   }
 
   setQuality(quality: unknown) {
+    if (this.disposed) throw new Error('Renderer3D 已销毁。');
     const next = resolveRenderQualityProfile(quality);
     if (next.id === this.qualityProfile.id) return this.qualityProfile.id;
-    this.qualityProfile = next;
-    this.textureManager?.setBudgets?.({
-      maxBytes: next.uiTextureBudgetBytes,
-      maxDynamicBytes: next.dynamicTextureBudgetBytes,
-    });
-    this.stage?.setQuality?.(next);
-    this.effectsRuntime?.dispose?.();
-    this.effectsRuntime = this.effectRegistry.create(this.effectId, this.stage.worldRoot, next);
-    this.frameMetrics.setBudget(next.targetFrameMs, next.longTaskLimitMs);
-    this.frameMetrics.resetTransient();
-    this.resize();
+    const previous = this.qualityProfile;
+    const previousEffects = this.effectsRuntime;
+    let nextEffects = null;
+    try {
+      // Construct the fallible replacement before mutating or disposing the
+      // currently working runtime. This keeps quality preview transactional.
+      nextEffects = this.effectRegistry.create(this.effectId, this.stage.worldRoot, next);
+      this.qualityProfile = next;
+      this.textureManager?.setBudgets?.({
+        maxBytes: next.uiTextureBudgetBytes,
+        maxDynamicBytes: next.dynamicTextureBudgetBytes,
+      });
+      this.stage?.setQuality?.(next);
+      if (this.resize() === false) throw new Error(`画质 ${next.id} 的尺寸更新失败。`);
+      this.effectsRuntime = nextEffects;
+      this.frameMetrics.setBudget(next.targetFrameMs, next.longTaskLimitMs);
+      this.frameMetrics.resetTransient();
+    } catch (error) {
+      try { nextEffects?.dispose?.(); } catch (cleanupError) {
+        this.captureError('quality-rollback-effects', cleanupError);
+      }
+      this.qualityProfile = previous;
+      this.effectsRuntime = previousEffects;
+      try {
+        this.textureManager?.setBudgets?.({
+          maxBytes: previous.uiTextureBudgetBytes,
+          maxDynamicBytes: previous.dynamicTextureBudgetBytes,
+        });
+      } catch (rollbackError) {
+        this.captureError('quality-rollback-textures', rollbackError);
+      }
+      try { this.stage?.setQuality?.(previous); } catch (rollbackError) {
+        this.captureError('quality-rollback-stage', rollbackError);
+      }
+      try {
+        if (this.resize() === false) {
+          this.captureError('quality-rollback-resize', new Error('恢复原画质尺寸失败。'));
+        }
+      } catch (rollbackError) {
+        this.captureError('quality-rollback-resize', rollbackError);
+      }
+      try {
+        this.frameMetrics.setBudget(previous.targetFrameMs, previous.longTaskLimitMs);
+        this.frameMetrics.resetTransient();
+      } catch (rollbackError) {
+        this.captureError('quality-rollback-metrics', rollbackError);
+      }
+      throw error;
+    }
+    try { previousEffects?.dispose?.(); } catch (error) {
+      this.captureError('quality-previous-effects-dispose', error);
+    }
     return next.id;
   }
 

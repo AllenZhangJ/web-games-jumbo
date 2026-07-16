@@ -253,6 +253,10 @@ test('screen-projected control mapping can swap logical candidates without chang
 
 test('the single-canvas content menu applies a compatible gameplay, task and character together', async () => {
   const settings = new Map();
+  const characterCatalog = [
+    { id: 'jumbo-red', version: 1, name: '赤红巨宝', description: '经典角色' },
+    { id: 'aqua-scout', version: 1, name: '青蓝侦察', description: '敏捷角色' },
+  ];
   const harness = createHarness({
     storage: {
       read: (key) => settings.get(key),
@@ -261,10 +265,7 @@ test('the single-canvas content menu applies a compatible gameplay, task and cha
     },
     gameOptions: {
       showContentMenu: true,
-      characterCatalog: [
-        { id: 'jumbo-red', version: 1, name: '赤红巨宝', description: '经典角色' },
-        { id: 'aqua-scout', version: 1, name: '青蓝侦察', description: '敏捷角色' },
-      ],
+      characterCatalog,
     },
   });
   await harness.game.start();
@@ -292,16 +293,22 @@ test('the single-canvas content menu applies a compatible gameplay, task and cha
   assert.equal(harness.renderer.selectedCharacters.at(-1), 'aqua-scout');
   assert.equal(harness.renderer.selectedQualities.at(-1), 'low');
   assert.equal(settings.get('number-strategy.render-quality'), 'low');
+  assert.equal(settings.get('number-strategy.game-save').game.gameplay.id, 'plus-minus-sprint');
   harness.game.destroy();
 
   const restored = createHarness({
+    seed: null,
     storage: {
       read: (key) => settings.get(key),
       write: (key, value) => { settings.set(key, value); return true; },
       remove: (key) => settings.delete(key),
     },
+    gameOptions: { characterCatalog },
   });
   assert.equal(restored.game.appliedQuality, 'low');
+  assert.equal(restored.game.session.gameplayId, 'plus-minus-sprint');
+  assert.equal(restored.game.session.taskId, 'near-target');
+  assert.equal(restored.game.appliedCharacterId, 'aqua-scout');
   restored.game.destroy();
 });
 
@@ -520,6 +527,44 @@ test('failed world commit leaves numeric state untouched', () => {
   assert.equal(harness.game.state.phase, GAME_PHASE.JUMPING);
   assert.equal(harness.game.world.step, before.step);
   assert.equal(harness.game.state.rng.snapshot(), before.rng);
+  harness.game.destroy();
+});
+
+test('invalid generated choices are rejected before either landing truth layer commits', () => {
+  const harness = createHarness();
+  const before = {
+    value: harness.game.state.currentValue,
+    moves: harness.game.state.movesRemaining,
+    step: harness.game.world.step,
+    rng: harness.game.state.rng.snapshot(),
+    platformId: harness.game.world.current.id,
+  };
+  assert.equal(harness.game.debugJump(0), true);
+  harness.game.state.createChoices = () => [
+    { id: 'invalid-a', kind: 'add', amount: 0, label: '+0' },
+    { id: 'invalid-b', kind: 'add', amount: 0, label: '+0' },
+  ];
+
+  assert.throws(() => harness.game.resolveJump(), /生成的数值候选无效/);
+  assert.equal(harness.game.state.currentValue, before.value);
+  assert.equal(harness.game.state.movesRemaining, before.moves);
+  assert.equal(harness.game.state.phase, GAME_PHASE.JUMPING);
+  assert.equal(harness.game.world.step, before.step);
+  assert.equal(harness.game.world.current.id, before.platformId);
+  assert.equal(harness.game.state.rng.snapshot(), before.rng);
+  harness.game.destroy();
+});
+
+test('a broken pluggable task falls back to core landing resolution without killing the loop', () => {
+  const harness = createHarness();
+  harness.game.session.evaluateTask = () => { throw new Error('task plugin failed'); };
+  assert.equal(harness.game.debugJump(0), true);
+  harness.game.update(harness.game.jump.trajectory.durationMs);
+  assert.equal(harness.game.state.phase, GAME_PHASE.LANDING);
+
+  harness.game.update(GAME_RULES.landingDurationMs);
+  assert.notEqual(harness.game.state.phase, GAME_PHASE.LANDING);
+  assert.equal(harness.game.getDebugSnapshot().lastRuntimeError.source, 'task-evaluation');
   harness.game.destroy();
 });
 

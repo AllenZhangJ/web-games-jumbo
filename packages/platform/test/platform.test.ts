@@ -234,6 +234,27 @@ test('frame scheduler treats an undefined host ID as successfully scheduled and 
   assert.equal(scheduler.cancelFrame(first), false);
 });
 
+test('frame scheduler defers a non-conforming synchronous host callback until its token is returned', async () => {
+  let requestReturned = false;
+  let callbackObservedReturn = false;
+  const scheduler = createFrameScheduler({
+    request(callback) {
+      callback(0);
+      return 7;
+    },
+    now: () => 11,
+  });
+
+  const token = scheduler.requestFrame(() => {
+    callbackObservedReturn = requestReturned;
+  });
+  requestReturned = true;
+  assert.equal(token, 1);
+  assert.equal(callbackObservedReturn, false);
+  await Promise.resolve();
+  assert.equal(callbackObservedReturn, true);
+});
+
 test('mini-game RAF uses one host scheduler even when requestAnimationFrame returns undefined', () => {
   const fixture = miniGameApi({ id: 'wechat' });
   let hostCallback;

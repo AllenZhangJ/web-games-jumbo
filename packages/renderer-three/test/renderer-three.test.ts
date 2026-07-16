@@ -512,6 +512,29 @@ test('Renderer3D load fails clearly when required HUD text cannot be rendered', 
   assert.equal(renderer.ready, false);
 });
 
+test('Renderer3D async prewarm cannot resurrect an instance destroyed while loading', async () => {
+  let resolveCompile: (() => void) | undefined;
+  const compile = new Promise<void>((resolve) => { resolveCompile = resolve; });
+  const renderer = Object.create(Renderer3D.prototype);
+  Object.assign(renderer, {
+    disposed: false,
+    ready: false,
+    textureManager: { supportsTextTextures: () => true },
+    renderer: { compileAsync: () => compile },
+    stage: { scene: {}, cameraRig: { camera: {} } },
+    hud: { scene: {}, camera: {} },
+    platformFactory: { prewarm: () => {} },
+    errorCount: 0,
+    lastError: null,
+  });
+  const loading = renderer.load();
+  renderer.disposed = true;
+  resolveCompile?.();
+
+  await assert.rejects(loading, /预热期间已销毁/);
+  assert.equal(renderer.ready, false);
+});
+
 test('Renderer3D contains a draw exception so the outer loop can schedule its next frame', () => {
   const renderer = Object.create(Renderer3D.prototype);
   Object.assign(renderer, {
@@ -552,10 +575,56 @@ test('Renderer3D switches quality through resource, stage and effect boundaries'
   });
   expect(renderer.setQuality('low')).toBe('low');
   expect(calls).toEqual([
-    'budgets', 'stage', 'dispose-effects', 'create-effects', 'metric-budget', 'metrics', 'resize',
+    'create-effects', 'budgets', 'stage', 'resize', 'metric-budget', 'metrics', 'dispose-effects',
   ]);
   expect(renderer.setQuality('low')).toBe('low');
   expect(calls).toHaveLength(7);
+});
+
+test('Renderer3D rolls back a failed quality switch and keeps the previous effects usable', () => {
+  const calls: string[] = [];
+  const previousEffects = { dispose: () => calls.push('dispose-previous'), snapshot: () => ({}) };
+  const renderer = Object.create(Renderer3D.prototype);
+  Object.assign(renderer, {
+    qualityProfile: RENDER_QUALITY_PROFILES.high,
+    textureManager: {
+      setBudgets: ({ maxBytes }) => calls.push(
+        maxBytes === RENDER_QUALITY_PROFILES.low.uiTextureBudgetBytes ? 'budgets-low' : 'budgets-high',
+      ),
+    },
+    stage: {
+      worldRoot: new THREE.Group(),
+      setQuality: (profile) => {
+        calls.push(`stage-${profile.id}`);
+        if (profile.id === 'low') throw new Error('shadow allocation failed');
+      },
+    },
+    effectsRuntime: previousEffects,
+    effectRegistry: {
+      create: (_id, _root, profile) => {
+        calls.push(`create-${profile.id}`);
+        return { dispose: () => calls.push(`dispose-${profile.id}`), snapshot: () => ({}) };
+      },
+    },
+    effectId: 'three-core-effects',
+    frameMetrics: { setBudget() {}, resetTransient() {} },
+    resize: () => { calls.push(`resize-${renderer.qualityProfile.id}`); return true; },
+    errorCount: 0,
+    lastError: null,
+  });
+
+  expect(() => renderer.setQuality('low')).toThrow(/shadow allocation failed/);
+  expect(renderer.qualityProfile).toBe(RENDER_QUALITY_PROFILES.high);
+  expect(renderer.effectsRuntime).toBe(previousEffects);
+  expect(calls).toEqual([
+    'create-low',
+    'budgets-low',
+    'stage-low',
+    'dispose-low',
+    'budgets-high',
+    'stage-high',
+    'resize-high',
+  ]);
 });
 
 test('Renderer3D disposal continues after individual listener and resource failures', () => {

@@ -334,13 +334,21 @@ export class GameState {
     return { type: 'continue' };
   }
 
-  useChoices(choices: unknown): boolean {
+  canUseChoices(
+    choices: unknown,
+    value: unknown = this.currentValue,
+  ): choices is [OperationChoice, OperationChoice] {
+    if (!Number.isSafeInteger(value)) return false;
     if (!Array.isArray(choices) || choices.length !== 2) return false;
     const [first, second] = choices;
-    if (!isValidChoice(first, this.currentValue, this.rules)
-      || !isValidChoice(second, this.currentValue, this.rules)
-      || `${first.kind}:${first.amount}` === `${second.kind}:${second.amount}`) return false;
-    this.choices = [first, second];
+    return isValidChoice(first, value as number, this.rules)
+      && isValidChoice(second, value as number, this.rules)
+      && `${first.kind}:${first.amount}` !== `${second.kind}:${second.amount}`;
+  }
+
+  useChoices(choices: unknown): boolean {
+    if (!this.canUseChoices(choices)) return false;
+    this.choices = [choices[0], choices[1]];
     return true;
   }
 

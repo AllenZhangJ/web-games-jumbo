@@ -25,7 +25,14 @@ export class SaveScheduler {
     this.readyAfterRender = false;
     this.flushes += 1;
     const saved = this.repository.save(envelope);
-    if (!saved) this.failedFlushes += 1;
+    if (!saved) {
+      this.failedFlushes += 1;
+      // Keep the latest unsaved envelope retryable. A storage adapter is allowed
+      // to synchronously queue a newer envelope while save() is running; never
+      // overwrite that newer state with the failed older snapshot.
+      if (this.pending === null) this.pending = envelope;
+      this.readyAfterRender = false;
+    }
     return saved;
   }
 

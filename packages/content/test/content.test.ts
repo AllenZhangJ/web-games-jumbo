@@ -60,4 +60,29 @@ describe('content registries and lifecycle', () => {
     expect(disposed).toEqual([]);
     selection.dispose();
   });
+
+  it('commits a valid replacement even when cleanup of the old resource fails', () => {
+    const registry = new CharacterRegistry()
+      .register(DEFAULT_CHARACTER)
+      .register(createProgrammaticCharacterDefinition(2));
+    const selection = new ContentSelection({
+      registry,
+      fallbackId: DEFAULT_CHARACTER.id,
+      factory: (definition) => ({
+        id: definition.id,
+        dispose: () => {
+          if (definition.id === DEFAULT_CHARACTER.id) throw new Error('old cleanup failed');
+        },
+      }),
+    });
+    selection.select(DEFAULT_CHARACTER.id);
+
+    const replacement = selection.select('aqua-scout');
+    expect(replacement.id).toBe('aqua-scout');
+    expect(selection.resource).toBe(replacement);
+    expect(selection.snapshot).toMatchObject({ selectedId: 'aqua-scout' });
+    expect(selection.cleanupFailures).toBe(1);
+    expect(selection.lastCleanupError?.message).toMatch(/old cleanup failed/);
+    selection.dispose();
+  });
 });

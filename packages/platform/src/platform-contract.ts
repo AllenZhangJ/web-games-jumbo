@@ -106,8 +106,16 @@ export function createFrameScheduler({
       usesHost: false,
     };
     pending.set(token, entry);
+    let hostRequestReturned = false;
 
     const invoke = () => {
+      // A non-conforming host may invoke RAF synchronously. Defer that callback
+      // until requestFrame() has returned its public token, otherwise callers
+      // can recursively schedule frames before recording the current frame id.
+      if (!hostRequestReturned) {
+        void Promise.resolve().then(invoke);
+        return;
+      }
       const current = pending.get(token);
       if (!current?.active) return;
       pending.delete(token);
@@ -119,12 +127,15 @@ export function createFrameScheduler({
       try {
         entry.usesHost = true;
         entry.hostId = request(invoke);
+        hostRequestReturned = true;
         return token;
       } catch {
+        hostRequestReturned = true;
         entry.usesHost = false;
       }
     }
 
+    hostRequestReturned = true;
     entry.timerId = setTimeout(invoke, 16);
     return token;
   };

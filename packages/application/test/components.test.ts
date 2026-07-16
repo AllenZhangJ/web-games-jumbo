@@ -14,6 +14,7 @@ import { FixedStepClock } from '../src/fixed-step-clock.js';
 import { GameSession } from '../src/game-session.js';
 import { LifecycleController } from '../src/lifecycle-controller.js';
 import { SnapshotFactory } from '../src/snapshot-factory.js';
+import { SaveScheduler } from '../src/save-scheduler.js';
 
 describe('application components', () => {
   it('caps elapsed time, advances fixed steps and rebases without background catch-up', () => {
@@ -47,6 +48,34 @@ describe('application components', () => {
         { id: 2, type: 'second', occurredAtMs: 11 },
       ]);
     expect(events.drain()).toEqual([]);
+  });
+
+  it('keeps a failed save retryable and never overwrites a newer reentrant envelope', () => {
+    const saved: unknown[] = [];
+    const state: { scheduler?: SaveScheduler } = {};
+    const first = { id: 'first' };
+    const second = { id: 'second' };
+    let shouldFail = true;
+    const repository = {
+      save(envelope: unknown) {
+        saved.push(envelope);
+        if (shouldFail) {
+          shouldFail = false;
+          state.scheduler?.schedule(second as never);
+          return false;
+        }
+        return true;
+      },
+    };
+    const scheduler = new SaveScheduler(repository as never);
+    state.scheduler = scheduler;
+    scheduler.schedule(first as never);
+
+    expect(scheduler.flush()).toBe(false);
+    expect(scheduler.diagnostics()).toMatchObject({ pending: true, failedFlushes: 1 });
+    expect(scheduler.flush()).toBe(true);
+    expect(saved).toEqual([first, second]);
+    expect(scheduler.diagnostics()).toMatchObject({ pending: false, flushes: 2 });
   });
 
   it('creates renderer-safe snapshots without exposing mutable world truth', () => {
