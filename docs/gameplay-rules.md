@@ -1,5 +1,7 @@
 # 游戏规则与玩法
 
+> **范围说明：** 本文只记录当前已经实现的数值跳台 v3，不是 Arena V1 竞技场规则。下一阶段目标见 [`gameplay/arena-v1-rules.md`](gameplay/arena-v1-rules.md)。
+
 本文记录 v3 当前已经实现的规则。玩法真相位于 `src/core` 与 `src/runtime/game.js`；`src/render3d` 只呈现结果，不能修改数值、世界坐标或碰撞结论。
 
 ## 1. 操作

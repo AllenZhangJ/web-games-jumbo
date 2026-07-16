@@ -1,5 +1,7 @@
 # v3 技术架构
 
+> **范围说明：** 本文描述当前已经实现的数值跳台 v3。Arena V1 的目标边界见 [`architecture/arena-v1-proposal.md`](architecture/arena-v1-proposal.md)，尚未落入代码。
+
 ## 文档状态
 
 本文档记录 v3 重构的目标架构和不可破坏的边界。它不是真机通过报告：即使 Node 测试、Web 预览和三端构建都成功，微信与抖音 iOS/Android 的 WebGL2 上下文、阴影、安全区、触摸、前后台和性能仍需使用最终构建产物验收。
