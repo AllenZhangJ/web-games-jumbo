@@ -114,6 +114,7 @@ export class TextureManager {
     this.cache = new Map<string, THREE.Texture>();
     this.references = new Map<THREE.Texture, number>();
     this.pendingDisposal = new Set<THREE.Texture>();
+    this.pinnedTextures = new Set<THREE.Texture>();
     this.dynamicTextures = new Set<DynamicCanvasTexture>();
     this.fallbackCount = 0;
     this.createdTextures = 0;
@@ -202,13 +203,13 @@ export class TextureManager {
     return resource;
   }
 
-  platformLabel({ operation = '—', preview = '', selected = false, muted = false }: any) {
-    const key = `platform:${operation}:${preview}:${selected ? 1 : 0}:${muted ? 1 : 0}`;
-    return this.get(key, 512, 192, (context: any, width: number, height: number) => {
+  platformLabel({ operation = '—', muted = false }: any) {
+    const key = `platform:${operation}:${muted ? 1 : 0}`;
+    return this.get(key, 256, 96, (context: any, width: number, height: number) => {
       context.textAlign = 'center';
       context.textBaseline = 'middle';
-      context.fillStyle = muted ? '#858b94' : selected ? RENDER3D_COLORS.cyan : RENDER3D_COLORS.label;
-      context.font = '800 112px "PingFang SC", "Microsoft YaHei", sans-serif';
+      context.fillStyle = muted ? '#858b94' : RENDER3D_COLORS.label;
+      context.font = '800 56px "PingFang SC", "Microsoft YaHei", sans-serif';
       context.fillText(String(operation), width / 2, height / 2 + 3);
     });
   }
@@ -231,7 +232,9 @@ export class TextureManager {
 
   evictOverflow() {
     while (this.cache.size > this.maxEntries || this.cacheBytes() > this.maxBytes) {
-      const oldest = this.cache.entries().next().value;
+      const oldest = [...this.cache.entries()].find(([, texture]) => (
+        !this.pinnedTextures.has(texture)
+      ));
       if (!oldest) break;
       const [oldestKey, texture] = oldest;
       this.cache.delete(oldestKey);
@@ -267,6 +270,18 @@ export class TextureManager {
     return texture;
   }
 
+  pin(texture: THREE.Texture | null | undefined) {
+    if (!texture || this.disposed || this.pinnedTextures.has(texture)) return texture;
+    this.pinnedTextures.add(texture);
+    this.acquire(texture);
+    return texture;
+  }
+
+  unpin(texture: THREE.Texture | null | undefined) {
+    if (!texture || !this.pinnedTextures.delete(texture)) return;
+    this.release(texture);
+  }
+
   release(texture: THREE.Texture | null | undefined) {
     if (!texture) return;
     const count = this.references.get(texture) ?? 0;
@@ -297,6 +312,7 @@ export class TextureManager {
       dynamicBytes,
       totalBytes: cacheBytes + pendingBytes + dynamicBytes,
       referencedTextures: this.references.size,
+      pinnedTextures: this.pinnedTextures.size,
       pendingDisposals: this.pendingDisposal.size,
       fallbackCount: this.fallbackCount,
       createdTextures: this.createdTextures,
@@ -315,6 +331,7 @@ export class TextureManager {
     textures.forEach((texture: THREE.Texture) => texture.dispose());
     this.cache.clear();
     this.pendingDisposal.clear();
+    this.pinnedTextures.clear();
     this.references.clear();
     this.dynamicTextures.clear();
   }

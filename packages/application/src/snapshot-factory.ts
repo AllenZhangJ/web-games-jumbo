@@ -4,6 +4,9 @@ import type { GameState } from '@number-strategy/gameplay';
 import type { WorldState } from '@number-strategy/jump-engine';
 
 export class SnapshotFactory {
+  #stateSnapshot: GameSnapshot['state'] | null = null;
+  #worldSnapshot: GameSnapshot['world'] | null = null;
+
   create({
     revision,
     state,
@@ -12,6 +15,7 @@ export class SnapshotFactory {
     difficulty,
     gameplayId,
     taskId,
+    reuseDomain = false,
   }: {
     readonly revision: number;
     readonly state: GameState;
@@ -20,15 +24,11 @@ export class SnapshotFactory {
     readonly difficulty: DifficultyProfile;
     readonly gameplayId: string;
     readonly taskId: string;
+    readonly reuseDomain?: boolean;
   }): GameSnapshot {
-    return Object.freeze({
-      revision,
-      phase: state.phase,
-      gameplayId,
-      taskId,
-      difficultyId: difficulty.id,
-      difficultyVersion: difficulty.version,
-      state: Object.freeze({
+    const stateSnapshot = reuseDomain && this.#stateSnapshot
+      ? this.#stateSnapshot
+      : Object.freeze({
         phase: state.phase,
         previousPhase: state.previousPhase,
         round: state.round,
@@ -42,8 +42,21 @@ export class SnapshotFactory {
         choices: state.choices.map((choice) => ({ ...choice })),
         operationHistory: state.operationHistory.map((operation) => ({ ...operation })),
         message: state.message,
-      }),
-      world: Object.freeze({ ...world.snapshot() }),
+      });
+    const worldSnapshot = reuseDomain && this.#worldSnapshot
+      ? this.#worldSnapshot
+      : Object.freeze({ ...world.snapshot() });
+    this.#stateSnapshot = stateSnapshot;
+    this.#worldSnapshot = worldSnapshot;
+    return Object.freeze({
+      revision,
+      phase: state.phase,
+      gameplayId,
+      taskId,
+      difficultyId: difficulty.id,
+      difficultyVersion: difficulty.version,
+      state: stateSnapshot,
+      world: worldSnapshot,
       presentation: Object.freeze({ ...presentation }),
     });
   }

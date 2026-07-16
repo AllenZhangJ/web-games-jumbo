@@ -42,6 +42,9 @@ test('quality profiles expose explicit high and low budgets', () => {
   expect(resolveRenderQualityProfile('unknown').id).toBe('high');
   expect(RENDER_QUALITY_PROFILES.low.shadowMapSize)
     .toBeLessThan(RENDER_QUALITY_PROFILES.high.shadowMapSize);
+  expect(RENDER_QUALITY_PROFILES.high.shadowMapSize).toBe(512);
+  expect(RENDER_QUALITY_PROFILES.low.shadowMapSize).toBe(256);
+  expect(RENDER_QUALITY_PROFILES.high.pixelRatioCap).toBe(1.75);
 });
 
 test('resource scope disposes owned resources in reverse order and remains idempotent', () => {
@@ -100,16 +103,20 @@ test('cycling all content repaints one menu texture and releases it on close', (
     }, { contentMenu: contentMenu(index) });
   }
   expect(manager.stats()).toMatchObject({
-    dynamicTextures: 1,
-    dynamicBytes: 4_194_304,
-    createdDynamicTextures: 1,
+    dynamicTextures: 2,
+    dynamicBytes: 4_444_224,
+    createdDynamicTextures: 2,
   });
   expect([...manager.cache.keys()].some((key: string) => key.startsWith('hud-content:'))).toBe(false);
 
   hud.update({ phase: 'ready', currentValue: 8, targetValue: 42, movesRemaining: 7 }, {
     contentMenu: { open: false },
   });
-  expect(manager.stats().dynamicTextures).toBe(0);
+  expect(manager.stats()).toMatchObject({
+    dynamicTextures: 2,
+    dynamicBytes: 383_040,
+    createdDynamicTextures: 3,
+  });
   expect(manager.stats().totalBytes).toBeLessThanOrEqual(16 * 1024 * 1024);
   hud.dispose();
   manager.dispose();

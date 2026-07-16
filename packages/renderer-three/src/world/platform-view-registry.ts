@@ -8,16 +8,21 @@ export class PlatformViewRegistry {
     this.factory = factory;
     this.views = new Map<string, any>();
     this.tempColor = new THREE.Color();
+    this.activeIds = new Set<string>();
+    this.synced = false;
+    this.labelBuildsLastFrame = 0;
+    this.totalDeferredLabelBuilds = 0;
+    this.queuedLabelUpdates = 0;
   }
 
   sync(platforms: any, context: any = {}, deltaSeconds = 0) {
-    const activeIds = new Set<string>();
-    const candidates: any[] = Array.isArray(context.candidates) ? context.candidates.filter(Boolean) : [];
-    const renderPlatforms: any[] = Array.isArray(platforms)
-      ? platforms.filter((platform) => platform?.id != null && platform?.center)
-      : [];
+    this.activeIds.clear();
+    this.labelBuildsLastFrame = 0;
+    const candidates: any[] = Array.isArray(context.candidates) ? context.candidates : [];
+    const renderPlatforms: any[] = Array.isArray(platforms) ? platforms : [];
     renderPlatforms.forEach((platform) => {
-      activeIds.add(platform.id);
+      if (platform?.id == null || !platform?.center) return;
+      this.activeIds.add(platform.id);
       let view = this.views.get(platform.id);
       if (!view) {
         view = this.factory.create(platform);
@@ -27,7 +32,25 @@ export class PlatformViewRegistry {
       }
       const candidateIndex = candidates.findIndex((candidate: any) => candidate.id === platform.id);
       const selected = candidateIndex >= 0 && candidateIndex === context.selectedChoice;
-      this.factory.updateLabel(view, platform, { selected, currentValue: context.currentValue });
+      const labelKey = this.factory.labelKey(platform, { selected });
+      if (labelKey === view.labelKey) {
+        view.pendingLabelKey = '';
+        view.pendingLabel = null;
+        this.factory.showLabel(view);
+      } else if (!labelKey) {
+        this.factory.updateLabel(view, platform, { selected, currentValue: context.currentValue });
+      } else if (labelKey !== view.pendingLabelKey) {
+        view.pendingLabelKey = labelKey;
+        view.pendingLabel = {
+          platform: {
+            role: platform.role,
+            operation: platform.operation ? { label: platform.operation.label } : null,
+            preview: platform.preview,
+          },
+          selected,
+        };
+        this.factory.hideLabel(view);
+      }
       this.updateView(view, platform, {
         ...context,
         selected,
@@ -35,11 +58,27 @@ export class PlatformViewRegistry {
       }, deltaSeconds);
     });
 
-    [...this.views.entries()].forEach(([id, view]) => {
-      if (activeIds.has(id)) return;
+    for (const [id, view] of this.views) {
+      if (this.activeIds.has(id)) continue;
       this.factory.disposeView(view);
       this.views.delete(id);
-    });
+    }
+
+    let labelBudget = context.stepAdvanced ? 0 : this.synced ? 1 : 2;
+    for (const view of this.views.values()) {
+      if (labelBudget <= 0) break;
+      if (!view.pendingLabel) continue;
+      const request = view.pendingLabel;
+      this.factory.updateLabel(view, request.platform, { selected: request.selected });
+      labelBudget -= 1;
+      this.labelBuildsLastFrame += 1;
+      this.totalDeferredLabelBuilds += 1;
+    }
+    this.queuedLabelUpdates = 0;
+    for (const view of this.views.values()) {
+      if (view.pendingLabel) this.queuedLabelUpdates += 1;
+    }
+    this.synced = true;
   }
 
   updateView(view: any, platform: any, context: any, deltaSeconds: number) {
@@ -98,6 +137,14 @@ export class PlatformViewRegistry {
 
   ids() {
     return [...this.views.keys()];
+  }
+
+  diagnostics() {
+    return Object.freeze({
+      labelBuildsLastFrame: this.labelBuildsLastFrame,
+      totalDeferredLabelBuilds: this.totalDeferredLabelBuilds,
+      queuedLabelUpdates: this.queuedLabelUpdates,
+    });
   }
 
   dispose() {

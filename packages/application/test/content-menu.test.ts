@@ -35,12 +35,16 @@ describe('content menu controller', () => {
     menu.cycle('character', -1);
     menu.cycle('quality', 1);
     expect(menu.characterId).toBe('blue');
-    expect(menu.snapshot()).toMatchObject({
+    const snapshot = menu.snapshot();
+    expect(snapshot).toMatchObject({
       gameplay: { index: 2, total: 2 },
       task: { index: 1, total: 1 },
       character: { index: 2, total: 2 },
       quality: { id: 'low', index: 2, total: 2 },
     });
+    expect(menu.snapshot()).toBe(snapshot);
+    menu.setOpen(true);
+    expect(menu.snapshot()).not.toBe(snapshot);
   });
 
   it('falls back from stale saved selections without exposing unknown IDs', () => {

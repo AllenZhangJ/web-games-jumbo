@@ -35,13 +35,13 @@
 
 - `npm run typecheck`：所有包与根级代码 strict 通过。
 - `npm run lint`、`npm run check:zero-js`：通过；维护目录旧 JavaScript 数量为 0。
-- 全量 Vitest 24 个文件、146 项测试通过；含三档各 10,000 seed、5 个玩法各 1,000 个初始 seed、1000 完整会话和 100 局资源 soak。
-- 确定性单测层覆盖率：行/语句 89.70%、函数 93.16%、分支 71.44%。
+- 全量 Vitest 26 个文件、160 项测试通过；含三档各 10,000 seed、5 个玩法各 1,000 个初始 seed、1000 完整会话、40 次 120 Hz 跳跃和 100 局资源 soak。
+- 确定性单测层覆盖率：行/语句 90.02%、函数 93.42%、分支 73.00%。
 - `npm run audit:assets`：1 个第三方运行时依赖完成许可白名单，内置角色为程序化资源且无外链。
 - `npm audit --omit=dev --audit-level=high`：0 个已知漏洞。
-- Web、微信、抖音构建通过；Web JS 672.91 kB、gzip 177.55 kB，小游戏 `game.js` 687,289 bytes，三端均包含归属与许可文本。
+- Web、微信、抖音构建通过；Web JS 693,744 bytes、gzip 183,001 bytes，小游戏 `game.js` 709,396 bytes，三端均包含归属与许可文本。
 - 390×844 生产 Web：左跳 18→23、右跳 23→32；刷新恢复“当前 32 / 剩余 5”；单 Canvas、body/Canvas `user-select:none`、空选区、console 0。
-- 当前局域网 `http://192.168.1.249:4173/` 回连返回生产 HTML；更换 Wi-Fi 后必须重新确认 IP。
+- 当前本机验收地址 `http://127.0.0.1:4179/` 返回最新生产 HTML；4173 被本机其他服务占用，本轮按项目方决定不维护手机局域网地址。
 
 ## 最终终验证据
 

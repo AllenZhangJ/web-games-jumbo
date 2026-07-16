@@ -51,7 +51,8 @@ describe('application components', () => {
 
   it('creates renderer-safe snapshots without exposing mutable world truth', () => {
     const session = new GameSession({ seed: 45, difficulty: DEFAULT_DIFFICULTY });
-    const snapshot = new SnapshotFactory().create({
+    const factory = new SnapshotFactory();
+    const input = {
       revision: session.presentation.revision,
       state: session.state,
       world: session.world,
@@ -59,12 +60,24 @@ describe('application components', () => {
       difficulty: session.difficulty,
       gameplayId: session.gameplayId,
       taskId: session.taskId,
-    });
+    };
+    const snapshot = factory.create(input);
     expect(snapshot.gameplayId).toBe('number-strategy-jump');
     expect(snapshot.taskId).toBe('reach-number');
     expect(snapshot.difficultyId).toBe('normal');
     expect(snapshot.world).not.toBe(session.world);
     expect(snapshot.state.currentValue).toBe(session.state.currentValue);
+
+    const displayOnlyFrame = factory.create({ ...input, reuseDomain: true });
+    expect(displayOnlyFrame.state).toBe(snapshot.state);
+    expect(displayOnlyFrame.world).toBe(snapshot.world);
+    expect(displayOnlyFrame.presentation).not.toBe(snapshot.presentation);
+
+    session.world.player.position.x += 1;
+    const advancedFrame = factory.create({ ...input, reuseDomain: false });
+    expect(advancedFrame.world).not.toBe(snapshot.world);
+    expect((advancedFrame.world.player as { position: { x: number } }).position.x)
+      .toBe(session.world.player.position.x);
   });
 
   it('selects registered gameplay and task definitions without changing the main loop', () => {

@@ -60,8 +60,8 @@ function metric(context: any, label: string, value: unknown, x: number, color: s
   context.textAlign = 'left';
   context.textBaseline = 'middle';
   context.fillStyle = color;
-  context.font = '750 80px "PingFang SC", "Microsoft YaHei", sans-serif';
-  context.fillText(`${label} ${value}`, x, 80);
+  context.font = '750 40px "PingFang SC", "Microsoft YaHei", sans-serif';
+  context.fillText(`${label} ${value}`, x, 40);
 }
 
 function normalizeSafeRect(viewport: any = {}) {
@@ -126,6 +126,8 @@ export class HudScene {
     this.modalKey = '';
     this.contentMenuKey = '';
     this.contentMenuSurface = null as DynamicCanvasTexture | null;
+    this.topSurface = null as DynamicCanvasTexture | null;
+    this.statusSurface = null as DynamicCanvasTexture | null;
     this.leftControlKey = '';
     this.rightControlKey = '';
     this.resize(this.viewport);
@@ -264,7 +266,7 @@ export class HudScene {
     };
   }
 
-  update(state: any = {}, presentation: any = {}) {
+  update(state: any = {}, presentation: any = {}, { textureBudget = Number.POSITIVE_INFINITY } = {}) {
     const contentMenuOpen = Boolean(presentation.contentMenu?.open);
     this.controlState = {
       phase: state.phase ?? 'ready',
@@ -272,48 +274,59 @@ export class HudScene {
       overlayVisible: contentMenuOpen || ['paused', 'won', 'lost'].includes(state.phase),
       contentMenuOpen,
     };
-    this.updateTop(state, presentation);
-    this.updateStatus(state, presentation);
+    let remainingTextureBudget = Number.isFinite(textureBudget)
+      ? Math.max(0, Math.floor(textureBudget))
+      : Number.POSITIVE_INFINITY;
+    if (this.updateTop(state, presentation, remainingTextureBudget > 0)) {
+      remainingTextureBudget -= 1;
+    }
+    if (this.updateStatus(state, presentation, remainingTextureBudget > 0)) {
+      remainingTextureBudget -= 1;
+    }
     this.updateControls(state, presentation);
     this.updateModal(state);
     this.updateContentMenu(presentation.contentMenu);
   }
 
-  updateTop(state: any, presentation: any = {}) {
+  updateTop(state: any, presentation: any = {}, allowTextureUpdate = true): boolean {
     const summary = presentation.contentSummary ?? {};
     const summaryText = `${summary.gameplayName ?? ''} · ${summary.taskName ?? ''}`;
     const mode = state.phase === 'paused' ? 'paused' : 'active';
     const key = `hud-top:${state.currentValue}:${state.targetValue}:${state.movesRemaining}:${mode}:${summaryText}`;
-    if (key === this.topKey) return;
+    if (key === this.topKey || !allowTextureUpdate) return false;
     this.topKey = key;
-    const texture = this.textureManager.get(key, 1420, 176, (context: any) => {
-      metric(context, '当前', state.currentValue ?? '—', 34, '#263238');
-      metric(context, '目标', state.targetValue ?? '—', 478, '#263238');
-      metric(context, '剩余', state.movesRemaining ?? '—', 894, '#263238');
+    const surface = this.ensureTopSurface();
+    const painter = (context: any) => {
+      metric(context, '当前', state.currentValue ?? '—', 17, '#263238');
+      metric(context, '目标', state.targetValue ?? '—', 239, '#263238');
+      metric(context, '剩余', state.movesRemaining ?? '—', 447, '#263238');
       context.fillStyle = '#546E7A';
-      context.font = '650 28px "PingFang SC", "Microsoft YaHei", sans-serif';
+      context.font = '650 14px "PingFang SC", "Microsoft YaHei", sans-serif';
       context.textAlign = 'left';
-      context.fillText(summaryText, 38, 150);
+      context.fillText(summaryText, 19, 75);
       context.fillStyle = '#263238';
-      context.font = '750 76px sans-serif';
+      context.font = '750 38px sans-serif';
       context.textAlign = 'center';
       context.textBaseline = 'middle';
-      context.lineWidth = 12;
+      context.lineWidth = 6;
       context.lineCap = 'round';
-      [58, 80, 102].forEach((y) => {
+      [29, 40, 51].forEach((y) => {
         context.beginPath();
-        context.moveTo(1137, y);
-        context.lineTo(1173, y);
+        context.moveTo(568.5, y);
+        context.lineTo(586.5, y);
         context.stroke();
       });
-      context.fillText(state.phase === 'paused' ? '▶' : 'Ⅱ', 1265, 80);
-      context.font = '700 80px sans-serif';
-      context.fillText('↻', 1370, 80);
-    });
+      context.fillText(state.phase === 'paused' ? '▶' : 'Ⅱ', 632.5, 40);
+      context.font = '700 40px sans-serif';
+      context.fillText('↻', 685, 40);
+    };
+    if (surface?.paint(painter)) return true;
+    const texture = this.textureManager.get(key, 710, 88, painter);
     setSpriteTexture(this.top, texture, 0xffffff, this.textureManager);
+    return true;
   }
 
-  updateStatus(state: any, presentation: any) {
+  updateStatus(state: any, presentation: any, allowTextureUpdate = true): boolean {
     const copy = presentation.statusText
       ?? (PHASE_COPY as Readonly<Record<string, string>>)[state.phase]
       ?? state.message
@@ -324,26 +337,34 @@ export class HudScene {
     this.status.visible = visible;
     if (!visible) {
       this.statusKey = '';
-      return;
+      return false;
     }
     const key = `hud-status:${copy}:${selected ?? 'none'}:${state.phase}`;
-    if (key === this.statusKey) return;
+    if (key === this.statusKey || !allowTextureUpdate) return false;
     this.statusKey = key;
-    const texture = this.statusTexture(key, copy, selected, state.phase);
+    const surface = this.ensureStatusSurface();
+    const painter = (context: any, width: number, height: number) => {
+      context.textAlign = 'center';
+      context.textBaseline = 'middle';
+      context.fillStyle = selected == null ? '#263238' : '#16A6A1';
+      context.globalAlpha = state.phase === 'ready' ? 0.68 : 1;
+      context.font = '700 21px "PingFang SC", "Microsoft YaHei", sans-serif';
+      context.fillText(copy, width / 2, height / 2 + 1);
+      context.globalAlpha = 1;
+    };
+    if (surface?.paint(painter)) return true;
+    const texture = this.textureManager.get(key, 520, 64, painter);
     setSpriteTexture(this.status, texture, 0x263238, this.textureManager);
-    if (state.phase === 'charging') {
-      const jumpingKey = `hud-status:${PHASE_COPY.jumping}:${selected ?? 'none'}:jumping`;
-      this.statusTexture(jumpingKey, PHASE_COPY.jumping, selected, 'jumping');
-    }
+    return true;
   }
 
   statusTexture(key: string, copy: string, selected: unknown, phase: string) {
-    return this.textureManager.get(key, 1040, 128, (context: any, width: number, height: number) => {
+    return this.textureManager.get(key, 520, 64, (context: any, width: number, height: number) => {
       context.textAlign = 'center';
       context.textBaseline = 'middle';
       context.fillStyle = selected == null ? '#263238' : '#16A6A1';
       context.globalAlpha = phase === 'ready' ? 0.68 : 1;
-      context.font = '700 42px "PingFang SC", "Microsoft YaHei", sans-serif';
+      context.font = '700 21px "PingFang SC", "Microsoft YaHei", sans-serif';
       context.fillText(copy, width / 2, height / 2 + 1);
       context.globalAlpha = 1;
     });
@@ -537,6 +558,20 @@ export class HudScene {
     return this.contentMenuSurface;
   }
 
+  ensureTopSurface(): DynamicCanvasTexture | null {
+    if (this.topSurface) return this.topSurface;
+    this.topSurface = this.textureManager.createDynamic?.('hud-top', 710, 88) ?? null;
+    setSpriteTexture(this.top, this.topSurface?.texture ?? null, 0xffffff, this.textureManager);
+    return this.topSurface;
+  }
+
+  ensureStatusSurface(): DynamicCanvasTexture | null {
+    if (this.statusSurface) return this.statusSurface;
+    this.statusSurface = this.textureManager.createDynamic?.('hud-status', 520, 64) ?? null;
+    setSpriteTexture(this.status, this.statusSurface?.texture ?? null, 0x263238, this.textureManager);
+    return this.statusSurface;
+  }
+
   releaseContentMenuSurface() {
     if (!this.contentMenuSurface) return;
     const surface = this.contentMenuSurface;
@@ -592,6 +627,16 @@ export class HudScene {
 
   dispose() {
     this.releaseContentMenuSurface();
+    if (this.topSurface) {
+      setSpriteTexture(this.top, null, 0xffffff, this.textureManager);
+      this.topSurface.dispose();
+      this.topSurface = null;
+    }
+    if (this.statusSurface) {
+      setSpriteTexture(this.status, null, 0x263238, this.textureManager);
+      this.statusSurface.dispose();
+      this.statusSurface = null;
+    }
     [this.top, this.status, this.modal, this.contentMenu, this.leftControl, this.rightControl].forEach((sprite: THREE.Sprite) => {
       this.textureManager.release(sprite.material?.map);
       sprite.material?.dispose?.();

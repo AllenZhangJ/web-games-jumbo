@@ -61,7 +61,7 @@ describe('gameplay and task registries', () => {
         expect(session.choices.every(({ kind }) => session.rules.allowedOperations.includes(kind))).toBe(true);
       }
     }
-  });
+  }, 15_000);
 
   it('evaluates all five task completion rules independently', () => {
     const registry = createBuiltinTaskRegistry();

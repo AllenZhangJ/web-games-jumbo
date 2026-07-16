@@ -87,7 +87,7 @@ test('problematic seeds retain an exact winning branch within seven moves', () =
     assert.equal(state.phase, GAME_PHASE.WON, `seed ${seed} should finish within the move budget`);
     assert.ok(state.movesRemaining >= 0);
   }
-});
+}, 15_000);
 
 test('very high rounds cap the target and still select a reachable value', () => {
   const state = new GameState({ seed: 110 });

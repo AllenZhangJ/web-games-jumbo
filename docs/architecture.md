@@ -191,9 +191,11 @@ v3 只创建一个上屏 WebGL2 Canvas：
 - 阴影只覆盖当前游戏区域，只为必要对象开启投射/接收；阴影质量可按设备降级。
 - 不启用后处理拖尾；使用轻量几何与对象池。
 - UI 缓存同时受条目数与 RGBA 估算字节约束；被 Sprite 引用的淘汰纹理延迟销毁。内容菜单使用一个可重绘 DynamicCanvasTexture，并在关闭时释放。
-- HudScene 复用 SpriteMaterial，并在 charging 阶段预热 jumping 所需纹理，避免松开按钮的关键帧创建 CanvasTexture。
+- Application 发布只读 RenderMotionProjection，在固定步长之间采样同一解析轨迹；Renderer 不外推碰撞或落点。
+- HudScene 的顶栏和状态条使用固定 DynamicCanvasTexture；平台标签使用按内置运算预建的 SpriteMaterial 池和启动期预上传纹理。
+- 落地标签、粒子和 HUD 上传通过单帧预算错开，避免同一场景切换帧集中提交 GPU 工作。
 - 高/低画质由 Facade 投影为 DPR、纹理、阴影和特效池预算；Scene 只接收所需的 `shadowMapSize` 小契约。
-- FrameMetrics 使用固定窗口记录松手响应、帧时间和长帧，不采集个人信息、不上传数据。
+- FrameMetrics 使用固定窗口记录 P95/P99、阶段最大帧、松手响应、jank 和空中重复运动率，不采集个人信息、不上传数据。
 - 三端生产构建继续使用 esbuild/Vite 路径，不引入参考项目的 Webpack 构建。
 
 目标帧率、draw calls、三角形、GPU 内存和包体属于验收指标，只有真实采样后才能勾选，不在架构文档中预填结果。

@@ -36,6 +36,7 @@ requestFrame
   → 统一读取 platform.now()
   → FixedStepClock 将 elapsed 限制在 0..100ms
   → 以 1000/60ms 分派 tick Command
+  → 用 jump elapsed + accumulator 生成只读 RenderMotionProjection
   → EventCollector.drain()
   → SnapshotFactory.create()
   → FeedbackPort.handle(events)
@@ -43,9 +44,9 @@ requestFrame
   → 请求下一帧
 ```
 
-Renderer 只读 `GameSnapshot/GameEvent`，不能持有或改写 `GameState/WorldState`。反馈失败只进入诊断。连续 3 帧不可恢复错误进入显式 `failed` 生命周期并解绑输入。
+Renderer 只读 `GameSnapshot/GameEvent`，不能持有或改写 `GameState/WorldState`。RenderMotionProjection 只补足固定步长之间的显示位置与翻转进度，碰撞、落点和回放仍使用 60 Hz 固定步长真相。反馈失败只进入诊断。连续 3 帧不可恢复错误进入显式 `failed` 生命周期并解绑输入。
 
-Renderer 内部由 FrameCoordinator 固定执行 `world → character → effects → camera → hud → render`。各模块只接收当前帧上下文，不互相调用；场景、角色和特效通过版本/rendererKey 注册表创建。粒子与拖尾运行时复用构造期对象，更新方法禁止创建 Three 对象。
+Renderer 内部由 FrameCoordinator 固定执行 `world → character → effects → camera → hud → render`。各模块只接收当前帧上下文，不互相调用；场景、角色和特效通过版本/rendererKey 注册表创建。粒子与拖尾运行时复用构造期对象，更新方法禁止创建 Three 对象。落地标签、粒子和 HUD 动态纹理按帧错峰，平台标签使用预建 SpriteMaterial 池与启动期预上传纹理。
 
 ## 成功落地与存档事务
 
@@ -55,8 +56,8 @@ Renderer 内部由 FrameCoordinator 固定执行 `world → character → effect
 4. `GameState.resolveJump/useChoices` 提交数值状态；异常时恢复 RNG，避免半提交。
 5. TaskDefinition 根据当前值、剩余步数和运算历史返回 active/completed/failed。
 6. GameState 应用任务结果，产生 landed/task/won/lost 事件，Renderer 从下一帧快照表现镜头、HUD 和特效。
-6. ReplayRecorder 只在命令成功接受后记录 jump/restart/next-round，并把完整新 Envelope 放入 SaveScheduler。
-7. 首个成功 Renderer 帧只 arm pending；后续成功帧在 render 后写入。Hide/PageHide/Destroy 立即 flush。
+7. ReplayRecorder 只在命令成功接受后记录 jump/restart/next-round，并把完整新 Envelope 放入 SaveScheduler。
+8. 首个成功 Renderer 帧只 arm pending；后续成功帧在 render 后写入。Hide/PageHide/Destroy 立即 flush。
 
 失败落地不执行运算、不扣步数；存储写入失败不阻断当前会话。存档是确定性动作日志而不是可变对象图，因此恢复过程可校验、可迁移、可重放。
 

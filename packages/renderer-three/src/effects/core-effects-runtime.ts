@@ -12,6 +12,7 @@ export interface CoreEffectsFrame {
   readonly reducedMotion: boolean;
   readonly stepAdvanced: boolean;
   readonly stepReset: boolean;
+  readonly deferLandingBurst?: boolean;
   readonly color: number;
 }
 
@@ -19,6 +20,12 @@ export class CoreEffectsRuntime implements EffectRuntime<CoreEffectsFrame> {
   readonly id = 'three-core-effects';
   readonly particles: ParticleBurst;
   readonly trail: TailTrail;
+  pendingLandingBurst: {
+    position: { x: number; y: number; z: number };
+    color: number;
+    reducedMotion: boolean;
+  } | null = null;
+  landingBurstEmittedThisFrame = false;
 
   constructor(root: THREE.Object3D, profile: RenderQualityProfile) {
     this.particles = new ParticleBurst(root, { maxParticles: profile.particleLimit });
@@ -26,22 +33,34 @@ export class CoreEffectsRuntime implements EffectRuntime<CoreEffectsFrame> {
   }
 
   update(frame: CoreEffectsFrame): void {
+    this.landingBurstEmittedThisFrame = false;
+    if (frame.stepReset) this.clear();
+    if (this.pendingLandingBurst && !frame.deferLandingBurst) {
+      this.particles.emit(this.pendingLandingBurst.position, {
+        color: this.pendingLandingBurst.color,
+        count: 20,
+        reducedMotion: this.pendingLandingBurst.reducedMotion,
+      });
+      this.pendingLandingBurst = null;
+      this.landingBurstEmittedThisFrame = true;
+    }
     this.trail.update(frame.characterPosition, {
       active: frame.isJumping,
       reducedMotion: frame.reducedMotion,
     }, frame.deltaSeconds);
     if (frame.stepAdvanced) {
-      this.particles.emit(frame.landingPosition, {
+      this.pendingLandingBurst = {
+        position: { ...frame.landingPosition },
         color: frame.color,
-        count: 20,
         reducedMotion: frame.reducedMotion,
-      });
+      };
     }
-    if (frame.stepReset) this.clear();
     this.particles.update(frame.deltaSeconds);
   }
 
   clear(): void {
+    this.pendingLandingBurst = null;
+    this.landingBurstEmittedThisFrame = false;
     this.particles.clear();
     this.trail.clear();
   }
@@ -53,6 +72,8 @@ export class CoreEffectsRuntime implements EffectRuntime<CoreEffectsFrame> {
       particleCapacity: this.particles.capacity,
       trailPoints: this.trail.pointCount,
       trailCapacity: this.trail.maxPoints,
+      pendingLandingBurst: Boolean(this.pendingLandingBurst),
+      landingBurstEmittedThisFrame: this.landingBurstEmittedThisFrame,
     });
   }
 

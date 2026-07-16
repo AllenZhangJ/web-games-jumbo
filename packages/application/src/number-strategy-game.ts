@@ -29,6 +29,7 @@ import type {
   GameCommand,
   GameEvent,
   GameSnapshot,
+  RenderMotionProjection,
   RenderQualityTier,
   StoragePort,
 } from '@number-strategy/game-contracts';
@@ -218,6 +219,7 @@ export class NumberStrategyGame {
   lastRuntimeError: RuntimeErrorRecord | null = null;
   runtimeErrorCount = 0;
   consecutiveFrameErrors = 0;
+  snapshotDomainDirty = true;
   readonly contentMenu: ContentMenuController;
   appliedCharacterId: string;
   appliedQuality: RenderQualityTier;
@@ -251,7 +253,7 @@ export class NumberStrategyGame {
     quality,
     qualityCatalog = [
       { id: 'high', version: 1, name: '高画质', description: '60 FPS 目标，完整阴影和特效。' },
-      { id: 'low', version: 1, name: '低画质', description: '30 FPS 目标，降低阴影和特效密度。' },
+      { id: 'low', version: 1, name: '低画质', description: '60 FPS 优先，降低分辨率、阴影和特效密度。' },
     ],
     showContentMenu = false,
     restoreSave = true,
@@ -355,7 +357,11 @@ export class NumberStrategyGame {
     }
     this.feedback = feedback;
     this.eventCollector = new EventCollector(() => this.readClock());
-    this.commandHandler = new CommandHandler((command) => this.executeCommand(command));
+    this.commandHandler = new CommandHandler((command) => {
+      const accepted = this.executeCommand(command);
+      if (accepted) this.snapshotDomainDirty = true;
+      return accepted;
+    });
     this.replayRecorder = new ReplayRecorder(this.gameIdentity());
     if (loadedSave && this.restoreError === null) this.restoreFromSave(loadedSave);
   }
@@ -495,6 +501,7 @@ export class NumberStrategyGame {
   resetWorld(): void {
     this.session.resetWorld();
     this.jump = null;
+    this.snapshotDomainDirty = true;
     this.eventCollector.emit('world-reset', { round: this.state.round });
   }
 
@@ -666,6 +673,7 @@ export class NumberStrategyGame {
       }
       this.clearActivePointer();
       this.contentMenu.setOpen(true);
+      this.snapshotDomainDirty = true;
       return true;
     }
     if (!this.contentMenu.open) return false;
@@ -675,6 +683,7 @@ export class NumberStrategyGame {
       this.contentMenu.taskId = this.session.taskId;
       this.contentMenu.characterId = this.appliedCharacterId;
       this.contentMenu.qualityId = this.appliedQuality;
+      this.snapshotDomainDirty = true;
       try {
         this.renderer.selectCharacter?.(this.appliedCharacterId);
         this.renderer.setQuality?.(this.appliedQuality);
@@ -689,6 +698,7 @@ export class NumberStrategyGame {
     const kind = cycle[1] as 'gameplay' | 'task' | 'character' | 'quality';
     const direction = cycle[2] === 'prev' ? -1 : 1;
     this.contentMenu.cycle(kind, direction);
+    this.snapshotDomainDirty = true;
     if (kind === 'character') {
       try {
         this.renderer.selectCharacter?.(this.contentMenu.characterId);
@@ -729,6 +739,7 @@ export class NumberStrategyGame {
       this.saveScheduler.cancel();
       this.saveRepository.clear();
       this.fixedStepClock.rebase();
+      this.snapshotDomainDirty = true;
       this.eventCollector.emit('content-selected', {
         gameplayId: this.session.gameplayId,
         taskId: this.session.taskId,
@@ -884,6 +895,7 @@ export class NumberStrategyGame {
     this.clearActivePointer();
     const cancelled = this.state.cancelCharge();
     if (!cancelled) return false;
+    this.snapshotDomainDirty = true;
     this.presentation.selectedChoice = null;
     this.presentation.chargePower = 0;
     this.eventCollector.emit('charge-cancelled', {});
@@ -896,13 +908,16 @@ export class NumberStrategyGame {
       || (this.state.phase === GAME_PHASE.PAUSED
         && this.state.previousPhase === GAME_PHASE.CHARGING)
     ) this.cancelCharge(null, true);
-    return this.state.togglePause();
+    const toggled = this.state.togglePause();
+    if (toggled) this.snapshotDomainDirty = true;
+    return toggled;
   }
 
   restart(): void {
     this.clearActivePointer();
     this.state.restart();
     this.resetWorld();
+    this.snapshotDomainDirty = true;
     this.fixedStepClock.rebase();
     this.eventCollector.emit('restarted', {});
     this.recordAction({ type: 'restart' });
@@ -976,6 +991,7 @@ export class NumberStrategyGame {
   update(deltaMs: number): void {
     if (!Number.isFinite(deltaMs) || deltaMs <= 0) return;
     if (this.state.phase === GAME_PHASE.PAUSED) return;
+    this.snapshotDomainDirty = true;
 
     const phaseAtStart = this.state.phase;
     this.state.updateCharge(deltaMs);
@@ -1038,13 +1054,27 @@ export class NumberStrategyGame {
     }
   }
 
+  private createRenderMotionProjection(): RenderMotionProjection | null {
+    if (this.state.phase !== GAME_PHASE.JUMPING || !this.jump) return null;
+    const sampleTimeMs = Math.min(
+      this.jump.trajectory.durationMs,
+      this.jump.elapsedMs + this.fixedStepClock.accumulator,
+    );
+    const sample = sampleJumpTrajectory(this.jump.trajectory, sampleTimeMs);
+    return Object.freeze({
+      playerPosition: Object.freeze({ ...sample.position }),
+      jumpProgress: sample.progress,
+      sampleTimeMs,
+    });
+  }
+
   frame(): void {
     if (this.lifecycle !== 'running') return;
     try {
       // requestAnimationFrame timestamps are not portable across mini-game
       // hosts: some are omitted, some use uptime, while platform.now() may use
       // epoch time. Use one clock consistently for the whole runtime.
-      this.fixedStepClock.advance(this.readClock(), (deltaMs) => {
+      const steps = this.fixedStepClock.advance(this.readClock(), (deltaMs) => {
         this.commandHandler.handle({ type: 'tick', deltaMs });
       });
       const events = this.eventCollector.drain();
@@ -1054,6 +1084,7 @@ export class NumberStrategyGame {
         world: this.world,
         presentation: {
           ...this.presentation,
+          motionProjection: this.createRenderMotionProjection(),
           contentMenu: this.contentMenu.snapshot(),
           contentSummary: {
             gameplayName: this.session.gameplayRegistry.get(this.session.gameplayId).presentation.name,
@@ -1066,7 +1097,9 @@ export class NumberStrategyGame {
         difficulty: this.difficulty,
         gameplayId: this.session.gameplayId,
         taskId: this.session.taskId,
+        reuseDomain: steps === 0 && !this.snapshotDomainDirty,
       });
+      this.snapshotDomainDirty = false;
       try {
         this.feedback.handle(events);
       } catch (error) {
@@ -1100,7 +1133,9 @@ export class NumberStrategyGame {
     this.state.chargeWindow = this.chargeWindowFor(choiceIndex);
     this.state.setChargeDuration(chargeMs ?? this.state.chargeWindow?.idealChargeMs ?? 600);
     this.presentation.selectedChoice = choiceIndex;
-    return this.beginJump();
+    const started = this.beginJump();
+    if (started) this.snapshotDomainDirty = true;
+    return started;
   }
 
   getDebugSnapshot() {

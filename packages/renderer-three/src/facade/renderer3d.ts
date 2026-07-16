@@ -15,7 +15,7 @@ import {
   CAMERA_DEFAULTS,
   clamp,
   dampFactor,
-  easeInOutCubic,
+  easeInOutSine,
   RENDER3D_COLORS,
   RENDER3D_DESIGN,
 } from '../constants.js';
@@ -46,27 +46,41 @@ function worldPlatforms(world: any): any[] {
   ].filter(Boolean);
 }
 
-export function screenChoiceControlMap(candidates: readonly any[] = [], camera: any, origin: any = {}) {
-  const fallback = { left: 0, right: 1 };
-  if (!camera || !Array.isArray(candidates) || candidates.length < 2) return fallback;
+export function screenChoiceControlMap(
+  candidates: readonly any[] = [],
+  camera: any,
+  origin: any = {},
+  points: readonly [THREE.Vector3, THREE.Vector3] | null = null,
+  result: { left: number; right: number } = { left: 0, right: 1 },
+) {
+  result.left = 0;
+  result.right = 1;
+  if (!camera || !Array.isArray(candidates) || candidates.length < 2) return result;
   const originX = finite(origin?.x);
   const originZ = finite(origin?.z);
   try {
     camera.updateMatrixWorld?.();
-    const projected = candidates.slice(0, 2).map((candidate, index) => {
-      const point = new THREE.Vector3(
-        finite(candidate?.center?.x) - originX,
-        finite(candidate?.topY),
-        finite(candidate?.center?.z) - originZ,
-      ).project(camera);
-      return { index, x: point.x };
-    });
-    if (projected.some((entry) => !Number.isFinite(entry.x))) return fallback;
-    projected.sort((left, right) => left.x - right.x);
-    if (Math.abs(projected[0]!.x - projected[1]!.x) < Number.EPSILON) return fallback;
-    return { left: projected[0]!.index, right: projected[1]!.index };
+    const first = points?.[0] ?? new THREE.Vector3();
+    const second = points?.[1] ?? new THREE.Vector3();
+    const firstCandidate = candidates[0];
+    const secondCandidate = candidates[1];
+    first.set(
+      finite(firstCandidate?.center?.x) - originX,
+      finite(firstCandidate?.topY),
+      finite(firstCandidate?.center?.z) - originZ,
+    ).project(camera);
+    second.set(
+      finite(secondCandidate?.center?.x) - originX,
+      finite(secondCandidate?.topY),
+      finite(secondCandidate?.center?.z) - originZ,
+    ).project(camera);
+    if (!Number.isFinite(first.x) || !Number.isFinite(second.x)) return result;
+    if (Math.abs(first.x - second.x) < Number.EPSILON) return result;
+    result.left = first.x < second.x ? 0 : 1;
+    result.right = result.left === 0 ? 1 : 0;
+    return result;
   } catch {
-    return fallback;
+    return result;
   }
 }
 
@@ -86,11 +100,15 @@ function normalizePresentation(state: any, presentation: any, missProgress: numb
       reason: message.includes('不足') ? 'short' : message.includes('越过') ? 'overshoot' : 'outside',
     };
   }
+  const motionProjection = presentation.motionProjection;
+  const projectedProgress = Number.isFinite(motionProjection?.jumpProgress)
+    ? motionProjection.jumpProgress
+    : presentation.jumpProgress ?? state?.jumpProgress ?? 0;
   return {
     ...presentation,
     selectedChoice,
     chargePower,
-    jumpProgress: clamp(presentation.jumpProgress ?? state?.jumpProgress ?? 0),
+    jumpProgress: clamp(projectedProgress),
     landingProgress: clamp(presentation.landingProgress ?? state?.landingProgress ?? 0),
     missVisual,
     reducedMotion: Boolean(presentation.reducedMotion),
@@ -141,13 +159,23 @@ export class Renderer3D {
     this.lastPhase = null;
     this.missElapsed = 0;
     this.lastDrawState = null;
+    this.renderPlayer = {
+      supportPlatformId: null,
+      position: { x: 0, y: 0, z: 0 },
+    };
+    this.choiceProjectionPoints = [new THREE.Vector3(), new THREE.Vector3()];
+    this.projectedChoiceControlMap = { left: 0, right: 1 };
     this.errorCount = 0;
     this.consecutiveDrawErrors = 0;
     this.lastError = null;
     this.qualityProfile = resolveRenderQualityProfile(options.quality);
     this.effectRegistry = options.effectRegistry ?? createBuiltinEffectRegistry();
     this.effectId = options.effectId ?? 'three-core-effects';
-    this.frameMetrics = new FrameMetrics();
+    this.frameMetrics = new FrameMetrics(
+      240,
+      this.qualityProfile.targetFrameMs,
+      this.qualityProfile.longTaskLimitMs,
+    );
     this.sceneRegistry = options.sceneRegistry ?? createBuiltinSceneRegistry();
     this.sceneRendererRegistry = options.sceneRendererRegistry ?? createBuiltinSceneRendererRegistry();
     this.characterRegistry = options.characterRegistry ?? createBuiltinCharacterRegistry();
@@ -257,6 +285,18 @@ export class Renderer3D {
     if (!this.textureManager?.supportsTextTextures()) {
       throw new Error('当前平台无法创建 HUD 所需的 2D Canvas，游戏无法安全显示数值与操作提示。');
     }
+    try {
+      if (typeof this.renderer.compileAsync === 'function') {
+        await this.renderer.compileAsync(this.stage.scene, this.stage.cameraRig.camera);
+        await this.renderer.compileAsync(this.hud.scene, this.hud.camera);
+      } else {
+        this.renderer.compile(this.stage.scene, this.stage.cameraRig.camera);
+        this.renderer.compile(this.hud.scene, this.hud.camera);
+      }
+      this.platformFactory.prewarm(this.renderer);
+    } catch (error) {
+      this.captureError('shader-prewarm', error);
+    }
     this.ready = true;
     return this;
   }
@@ -346,6 +386,8 @@ export class Renderer3D {
       candidates,
       this.stage?.cameraRig?.camera,
       this.visualOrigin,
+      this.choiceProjectionPoints,
+      this.projectedChoiceControlMap,
     );
     if (control === 'choice-left') return map.left;
     if (control === 'choice-right') return map.right;
@@ -388,6 +430,7 @@ export class Renderer3D {
     this.stage?.setQuality?.(next);
     this.effectsRuntime?.dispose?.();
     this.effectsRuntime = this.effectRegistry.create(this.effectId, this.stage.worldRoot, next);
+    this.frameMetrics.setBudget(next.targetFrameMs, next.longTaskLimitMs);
     this.frameMetrics.resetTransient();
     this.resize();
     return next.id;
@@ -400,30 +443,34 @@ export class Renderer3D {
       ...visual,
       current: snapshot.current,
       candidates: snapshot.candidates ?? [],
-      player: snapshot.player,
+      player: this.renderPlayer,
       currentValue: state?.currentValue,
       worldTransitionProgress: this.worldTransitionProgress,
       overlayVisible: ['paused', 'won', 'lost'].includes(phase),
+      stepAdvanced: context.stepAdvanced,
     };
     context.renderContext = renderContext;
     this.platforms.sync(platforms, renderContext, deltaSeconds);
-    renderContext.supportHeight = this.platforms.get(snapshot.player.supportPlatformId)?.height
+    renderContext.supportHeight = this.platforms.get(this.renderPlayer.supportPlatformId)?.height
       ?? snapshot.current.height;
   }
 
   updateCharacterLayer(context: any) {
-    this.character.update(context.snapshot.player, context.renderContext, context.deltaSeconds);
+    this.character.update(this.renderPlayer, context.renderContext, context.deltaSeconds);
   }
 
   updateEffectsLayer(context: any) {
+    const platformWork = this.platforms.diagnostics();
     this.effectsRuntime.update({
       characterPosition: this.character.position,
-      landingPosition: context.snapshot.player.position,
+      landingPosition: this.renderPlayer.position,
       deltaSeconds: context.deltaSeconds,
       isJumping: context.visual.isJumping,
       reducedMotion: context.visual.reducedMotion,
       stepAdvanced: context.stepAdvanced,
       stepReset: context.stepReset,
+      deferLandingBurst: platformWork.labelBuildsLastFrame > 0
+        || platformWork.queuedLabelUpdates > 0,
       color: RENDER3D_COLORS.red,
     });
     this.lastWorldStep = context.worldStep;
@@ -441,11 +488,20 @@ export class Renderer3D {
       context.snapshot.candidates ?? [],
       this.stage.cameraRig.camera,
       this.visualOrigin,
+      this.choiceProjectionPoints,
+      this.projectedChoiceControlMap,
     );
   }
 
   updateHudLayer(context: any) {
-    this.hud.update(context.state ?? {}, context.visual);
+    const platformWork = this.platforms.diagnostics();
+    const hasScheduledGpuUpload = context.stepAdvanced
+      || platformWork.labelBuildsLastFrame > 0
+      || platformWork.queuedLabelUpdates > 0
+      || this.effectsRuntime.landingBurstEmittedThisFrame;
+    this.hud.update(context.state ?? {}, context.visual, {
+      textureBudget: hasScheduledGpuUpload ? 0 : 1,
+    });
   }
 
   drawFrame(
@@ -471,6 +527,17 @@ export class Renderer3D {
       this.missElapsed = 0;
     }
     const visual = normalizePresentation(state, presentation, clamp(this.missElapsed / 0.68));
+    const projectedPosition = visual.motionProjection?.playerPosition;
+    const playerPosition = projectedPosition
+      && Number.isFinite(projectedPosition.x)
+      && Number.isFinite(projectedPosition.y)
+      && Number.isFinite(projectedPosition.z)
+      ? projectedPosition
+      : snapshot.player.position;
+    this.renderPlayer.supportPlatformId = snapshot.player.supportPlatformId ?? null;
+    this.renderPlayer.position.x = finite(playerPosition?.x);
+    this.renderPlayer.position.y = finite(playerPosition?.y);
+    this.renderPlayer.position.z = finite(playerPosition?.z);
     this.frameMetrics.record({
       nowMs: now,
       deltaMs: deltaSeconds * 1000,
@@ -479,6 +546,7 @@ export class Renderer3D {
       jumpReleasedAtMs: Number.isFinite(visual.jumpReleasedAtMs)
         ? visual.jumpReleasedAtMs
         : null,
+      playerPosition: this.renderPlayer.position,
     });
 
     const worldStep = Number.isFinite(snapshot.step) ? snapshot.step : null;
@@ -493,7 +561,7 @@ export class Renderer3D {
     const cameraContext = {
       current: snapshot.current,
       candidates: snapshot.candidates ?? [],
-      player: snapshot.player,
+      player: this.renderPlayer,
       origin: this.visualOrigin,
       jumping: visual.isJumping,
       reducedMotion: visual.reducedMotion,
@@ -531,7 +599,7 @@ export class Renderer3D {
       const travelProgress = clamp(
         (this.worldTransition.elapsed - this.worldTransition.delay) / travelDuration,
       );
-      const easedProgress = easeInOutCubic(travelProgress);
+      const easedProgress = easeInOutSine(travelProgress);
       this.worldTransitionProgress = totalProgress;
       this.visualOrigin.copy(this.worldTransition.fromOrigin)
         .lerp(this.worldTransition.toOrigin, easedProgress);
@@ -571,9 +639,9 @@ export class Renderer3D {
       worldTransitionProgress: this.worldTransitionProgress,
       choiceControlMap: { ...visual.choiceControlMap },
       player: {
-        x: finite(snapshot.player.position?.x),
-        y: finite(snapshot.player.position?.y),
-        z: finite(snapshot.player.position?.z),
+        x: this.renderPlayer.position.x,
+        y: this.renderPlayer.position.y,
+        z: this.renderPlayer.position.z,
       },
     };
   }
@@ -614,6 +682,7 @@ export class Renderer3D {
       camera: this.stage?.cameraRig?.snapshot?.() ?? null,
       platformIds: this.platforms?.ids?.() ?? [],
       platformKinds: (this.platforms?.ids?.() ?? []).map((id: string) => ({ id, kind: this.platforms.get(id)?.kind ?? 'unknown' })),
+      platformWork: this.platforms?.diagnostics?.() ?? null,
       hud: this.hud?.snapshot?.() ?? null,
       textureFallbackCount: this.textureManager?.fallbackCount ?? 0,
       quality: this.qualityProfile?.id ?? 'high',

@@ -11,6 +11,7 @@
 | `npm run test:coverage` | 运行确定性单测层并强制 80% 行/语句/函数、70% 分支。 |
 | `npm run test:soak` | 单独执行 1000 完整会话与 100 局资源测试。 |
 | `npm run test:renderer-performance` | 执行纹理字节基线、资源作用域与 Renderer soak。 |
+| `npm run test:render-jank` | 执行 40 次 120 Hz 运动连续性、落地上传预算与 Renderer 资源压力测试。 |
 | `npm run test:resource-budget` | 单独执行纹理字节预算、动态纹理和帧指标测试。 |
 | `npm run test:first-jump` | 执行松手、HUD 预热、存档调度和首跳相关测试。 |
 | `npm run test:renderer-soak` | 单独执行 100 轮平台/特效资源稳定性。 |
@@ -34,11 +35,12 @@ GitHub Actions 在 push 与 pull request 上使用 Node 20、`npm ci` 和 `npm r
 - easy/normal/hard 各 10,000 seed，共 30,000 个可解回合。
 - 独立 1,000 个完整 normal 会话全部获胜且步数非负。
 - 100 局 Three 平台视图保持 3 个活动 View；100 轮低画质粒子/拖尾保持固定池并在结束后完整释放。
+- 40 次 120 Hz 模拟跳跃覆盖 2,000 个以上空中投影帧，重复投影率不高于 1%；落地标签每帧至多处理一个，复用材质不重复编译。
 - 存档 v1/v2/v3/v4 fixture、迁移回写、损坏隔离、动作回放和首帧恢复通过。
 - 5 个正式 Gameplay 各执行 1,000 个 normal 初始 seed；5 个正式 Task 和 10 个正式 Character 完成注册、兼容选择、回退与资源销毁测试。
-- 全量 Vitest 25 个文件、158 项测试通过；确定性单测层行/语句 89.91%、函数 93.37%、分支 72.24%。
+- 全量 Vitest 26 个文件、160 项测试通过；确定性单测层行/语句 90.02%、函数 93.42%、分支 73.00%。
 - 生产依赖审计 0 个已知漏洞；资产/许可证审计通过。
-- Web、微信、抖音构建通过；Web JS 684.91 kB、gzip 180,771 bytes，Web gzip 预算 180 KiB，小游戏 `game.js` 700,008 bytes、预算各 700 KiB。
+- Web、微信、抖音构建通过；Web JS 693,744 bytes、gzip 183,001 bytes，Web gzip 预算 180 KiB，小游戏 `game.js` 709,396 bytes、预算各 700 KiB。
 
 覆盖率统计不包含需要真实 GPU/宿主的 Platform 与 Renderer3D 适配代码，但这些文件仍执行专用单元测试，并由三端构建、浏览器与真机矩阵约束。该分层必须在报告中保持透明，不能称为“全部代码 89%”。
 

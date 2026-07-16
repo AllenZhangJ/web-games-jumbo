@@ -28,13 +28,13 @@ export const CAMERA_DEFAULTS = Object.freeze({
   far: 80,
   offset: Object.freeze({ x: 4.8, y: 10.8, z: -12.6 }),
   lookAhead: 1.55,
-  transitionDurationSeconds: 0.52,
-  transitionDelaySeconds: 0.08,
+  transitionDurationSeconds: 0.66,
+  transitionDelaySeconds: 0,
   reducedTransitionDurationSeconds: 0.12,
 });
 
 export const SHADOW_DEFAULTS = Object.freeze({
-  mapSize: 1024,
+  mapSize: 512,
   cameraExtent: 10,
 });
 
@@ -62,6 +62,10 @@ export function easeOutCubic(value: number): number {
 export function easeInOutCubic(value: number): number {
   const x = clamp(value);
   return x < 0.5 ? 4 * (x ** 3) : 1 - (((-2 * x) + 2) ** 3) / 2;
+}
+
+export function easeInOutSine(value: number): number {
+  return -(Math.cos(Math.PI * clamp(value)) - 1) / 2;
 }
 
 export function hashString(value: unknown): number {

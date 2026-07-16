@@ -38,6 +38,7 @@
 - [渲染性能第三批验证](governance/render-performance/batch-3-verification.md)
 - [渲染性能第四批验证](governance/render-performance/batch-4-verification.md)
 - [渲染性能四批独立终验](governance/render-performance/final-verification.md)
+- [空中与落地卡顿修复验证](governance/render-performance/jank-remediation.md)
 - [高低画质配置](render-quality.md)
 - [贡献与提交规范](../CONTRIBUTING.md)
 

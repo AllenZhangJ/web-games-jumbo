@@ -67,6 +67,12 @@ export class ContentMenuController {
   taskId: string;
   characterId: string;
   qualityId: string;
+  snapshotCache: ContentMenuSnapshot | null = null;
+  snapshotOpen = false;
+  snapshotGameplayId = '';
+  snapshotTaskId = '';
+  snapshotCharacterId = '';
+  snapshotQualityId = '';
 
   constructor({
     catalog,
@@ -149,6 +155,14 @@ export class ContentMenuController {
   }
 
   snapshot(): ContentMenuSnapshot {
+    if (
+      this.snapshotCache
+      && this.open === this.snapshotOpen
+      && this.gameplayId === this.snapshotGameplayId
+      && this.taskId === this.snapshotTaskId
+      && this.characterId === this.snapshotCharacterId
+      && this.qualityId === this.snapshotQualityId
+    ) return this.snapshotCache;
     const withPosition = (entry: ContentMenuEntry, entries: readonly ContentMenuEntry[]) => Object.freeze({
       ...entry,
       index: entries.findIndex(({ id }) => id === entry.id) + 1,
@@ -159,12 +173,18 @@ export class ContentMenuController {
     const task = tasks.find(({ id }) => id === this.taskId)!;
     const character = this.catalog.characters.find(({ id }) => id === this.characterId)!;
     const quality = this.catalog.qualities.find(({ id }) => id === this.qualityId)!;
-    return Object.freeze({
+    this.snapshotOpen = this.open;
+    this.snapshotGameplayId = this.gameplayId;
+    this.snapshotTaskId = this.taskId;
+    this.snapshotCharacterId = this.characterId;
+    this.snapshotQualityId = this.qualityId;
+    this.snapshotCache = Object.freeze({
       open: this.open,
       gameplay: withPosition(gameplay, this.catalog.gameplays),
       task: withPosition(task, tasks),
       character: withPosition(character, this.catalog.characters),
       quality: withPosition(quality, this.catalog.qualities),
     });
+    return this.snapshotCache;
   }
 }

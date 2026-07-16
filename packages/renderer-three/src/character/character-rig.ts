@@ -1,5 +1,11 @@
 import * as THREE from 'three';
-import { clamp, dampFactor, easeOutCubic, RENDER3D_COLORS } from '../constants.js';
+import {
+  clamp,
+  dampFactor,
+  easeInOutSine,
+  easeOutCubic,
+  RENDER3D_COLORS,
+} from '../constants.js';
 
 function shadow<T extends THREE.Mesh>(mesh: T): T {
   mesh.castShadow = true;
@@ -157,7 +163,7 @@ export class CharacterRig extends THREE.Group {
     const jumpProgress = clamp(context.jumpProgress);
     const flipTurns = this.motionStyle === 'swift' ? 1.35 : this.motionStyle === 'heavy' ? 0.7 : 1;
     this.flipPivot.rotation.x = context.isJumping && !context.reducedMotion
-      ? -Math.PI * 2 * flipTurns * easeOutCubic(jumpProgress)
+      ? -Math.PI * 2 * flipTurns * easeInOutSine(jumpProgress)
       : 0;
 
     const missProgress = clamp(

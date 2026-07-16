@@ -76,6 +76,82 @@ test('Three presentation registry mirrors stable platform IDs without mutating c
   registry.dispose();
 });
 
+test('landing frame defers candidate label textures and drains at most one per later frame', () => {
+  const root = new THREE.Group();
+  const manager = new TextureManager(texturePlatform());
+  const factory = new PlatformMeshFactory(manager);
+  const registry = new PlatformViewRegistry(root, factory);
+  const current = platform('platform-1', 'current', { x: 0, z: 0 });
+  const left = platform('platform-2', 'candidate', { x: -1.3, z: 4 }, {
+    operation: { label: '+6' },
+    preview: 18,
+  });
+  const right = platform('platform-3', 'candidate', { x: 1.3, z: 4 }, {
+    operation: { label: '×2' },
+    preview: 24,
+  });
+  const baseContext = {
+    current,
+    candidates: [left, right],
+    currentValue: 12,
+    player: { supportPlatformId: current.id },
+    reducedMotion: true,
+  };
+  registry.sync([current, left, right], baseContext, 1 / 60);
+  const resourcesBeforeLanding = manager.stats();
+  expect(resourcesBeforeLanding.createdDynamicTextures).toBe(0);
+  expect(factory.labelTextures.size).toBe(21);
+  expect(manager.references.size).toBe(21);
+  expect(manager.pinnedTextures.size).toBe(21);
+  const labelMaterialVersions = factory.labelSlots.map(
+    (slot: any) => slot.sprite.material.version,
+  );
+
+  current.role = 'history';
+  left.role = 'current';
+  const nextLeft = platform('platform-4', 'candidate', { x: -2, z: 8 }, {
+    operation: { label: '−3' },
+    preview: 15,
+  });
+  const nextRight = platform('platform-5', 'candidate', { x: 2, z: 8 }, {
+    operation: { label: '÷2' },
+    preview: 54,
+  });
+  const landedContext = {
+    ...baseContext,
+    current: left,
+    candidates: [nextLeft, nextRight],
+    player: { supportPlatformId: left.id },
+    stepAdvanced: true,
+  };
+  registry.sync([current, left, nextLeft, nextRight], landedContext, 1 / 60);
+  expect(manager.stats().createdTextures).toBe(resourcesBeforeLanding.createdTextures);
+  expect(manager.stats().createdDynamicTextures).toBe(resourcesBeforeLanding.createdDynamicTextures);
+  expect(registry.diagnostics()).toMatchObject({
+    labelBuildsLastFrame: 0,
+    queuedLabelUpdates: 2,
+  });
+
+  registry.sync([current, left, nextLeft, nextRight], {
+    ...landedContext,
+    stepAdvanced: false,
+  }, 1 / 120);
+  expect(manager.stats().createdTextures).toBe(resourcesBeforeLanding.createdTextures);
+  expect(manager.stats().createdDynamicTextures).toBe(resourcesBeforeLanding.createdDynamicTextures);
+  expect(registry.diagnostics()).toMatchObject({
+    labelBuildsLastFrame: 1,
+    queuedLabelUpdates: 1,
+  });
+  registry.sync([current, left, nextLeft, nextRight], {
+    ...landedContext,
+    stepAdvanced: false,
+  }, 1 / 120);
+  expect(factory.labelSlots.map((slot: any) => slot.sprite.material.version))
+    .toEqual(labelMaterialVersions);
+  registry.dispose();
+  manager.dispose();
+});
+
 test('orthographic camera expands its vertical view for a tall phone and stays finite', () => {
   const rig = new CameraRig();
   rig.resize(390, 844);
@@ -213,6 +289,29 @@ test('effect registry isolates factories and built-in runtime obeys quality capa
     trailPoints: 0,
     trailCapacity: 10,
   });
+  runtime.update({
+    characterPosition: { x: 0, y: 0, z: 0 },
+    landingPosition: { x: 1, y: 0, z: 2 },
+    deltaSeconds: 1 / 60,
+    isJumping: false,
+    reducedMotion: false,
+    stepAdvanced: true,
+    stepReset: false,
+    color: 0xe53935,
+  });
+  expect(runtime.snapshot()).toMatchObject({ particles: 0, pendingLandingBurst: true });
+  runtime.update({
+    characterPosition: { x: 1, y: 0, z: 2 },
+    landingPosition: { x: 1, y: 0, z: 2 },
+    deltaSeconds: 1 / 60,
+    isJumping: false,
+    reducedMotion: false,
+    stepAdvanced: false,
+    stepReset: false,
+    color: 0xe53935,
+  });
+  expect(runtime.snapshot()).toMatchObject({ pendingLandingBurst: false });
+  expect(runtime.snapshot().particles).toBeGreaterThan(0);
   expect(() => runtime.dispose()).not.toThrow();
 });
 
@@ -445,15 +544,18 @@ test('Renderer3D switches quality through resource, stage and effect boundaries'
       },
     },
     effectId: 'three-core-effects',
-    frameMetrics: { resetTransient: () => calls.push('metrics') },
+    frameMetrics: {
+      setBudget: () => calls.push('metric-budget'),
+      resetTransient: () => calls.push('metrics'),
+    },
     resize: () => { calls.push('resize'); return true; },
   });
   expect(renderer.setQuality('low')).toBe('low');
   expect(calls).toEqual([
-    'budgets', 'stage', 'dispose-effects', 'create-effects', 'metrics', 'resize',
+    'budgets', 'stage', 'dispose-effects', 'create-effects', 'metric-budget', 'metrics', 'resize',
   ]);
   expect(renderer.setQuality('low')).toBe('low');
-  expect(calls).toHaveLength(6);
+  expect(calls).toHaveLength(7);
 });
 
 test('Renderer3D disposal continues after individual listener and resource failures', () => {

@@ -143,6 +143,13 @@ export interface GameSnapshot {
   readonly presentation: Readonly<Record<string, unknown>>;
 }
 
+/** Render-only trajectory projection. It never replaces authoritative world state. */
+export interface RenderMotionProjection {
+  readonly playerPosition: Readonly<{ x: number; y: number; z: number }>;
+  readonly jumpProgress: number;
+  readonly sampleTimeMs: number;
+}
+
 export interface RendererPort {
   load(): Promise<void>;
   resize(): boolean;
