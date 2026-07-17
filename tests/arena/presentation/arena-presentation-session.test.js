@@ -220,6 +220,35 @@ test('ArenaPresentationSession closes match → result → rematch without rebin
   assert.equal(staleInput.onStart({ pointerId: 9, x: 200, y: 420 }), false);
 });
 
+test('ArenaPresentationSession exposes a read-only progress signal and explicit pause ownership', async () => {
+  const harness = platformHarness();
+  const renderer = rendererHarness();
+  const progress = [];
+  const session = new ArenaPresentationSession(
+    harness.platform,
+    sessionOptions(renderer, {
+      onMatchProgress(value) {
+        progress.push(value);
+      },
+    }),
+  );
+  await session.start();
+  assert.equal(session.setPaused(true), true);
+  assert.equal(session.state, ARENA_PRESENTATION_SESSION_STATE.PAUSED);
+  assert.equal(session.getDebugSnapshot().externallyPaused, true);
+  assert.equal(harness.frames.size, 0);
+  assert.equal(session.setPaused(true), false);
+  assert.equal(session.setPaused(false), true);
+  assert.equal(session.state, ARENA_PRESENTATION_SESSION_STATE.MATCHING);
+  assert.equal(harness.frames.size, 1);
+
+  fireUntil(harness, () => session.state === ARENA_PRESENTATION_SESSION_STATE.RESULT);
+  assert.ok(progress.length > 0);
+  assert.equal(progress.at(-1).phase, 'ended');
+  assert.throws(() => { progress[0].tick = 999; }, /read only|Cannot assign/i);
+  session.destroy();
+});
+
 test('ArenaPresentationSession destroys a pending async start and ignores late completion', async () => {
   const harness = platformHarness();
   let resolveLoad;

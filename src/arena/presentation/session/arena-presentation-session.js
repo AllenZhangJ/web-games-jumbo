@@ -54,6 +54,7 @@ export class ArenaPresentationSession {
   #deferredFailureCleanup;
   #hidden;
   #contextLost;
+  #externallyPaused;
   #resizePending;
   #pendingRematch;
   #matchingElapsed;
@@ -83,6 +84,7 @@ export class ArenaPresentationSession {
     this.#deferredFailureCleanup = false;
     this.#hidden = false;
     this.#contextLost = false;
+    this.#externallyPaused = false;
     this.#resizePending = false;
     this.#pendingRematch = false;
     this.#matchingElapsed = 0;
@@ -305,7 +307,7 @@ export class ArenaPresentationSession {
     this.#renderCurrent([], 0);
     this.#bindLifecycle();
     this.#inputAdapter.start();
-    if (this.#hidden || this.#contextLost) this.#syncPauseState();
+    if (this.#hidden || this.#contextLost || this.#externallyPaused) this.#syncPauseState();
     else this.#startFrameLoop();
   }
 
@@ -334,7 +336,13 @@ export class ArenaPresentationSession {
   }
 
   #startFrameLoop() {
-    if (this.#isTerminal() || this.#hidden || this.#contextLost || this.#destroyRequested) return false;
+    if (
+      this.#isTerminal()
+      || this.#hidden
+      || this.#contextLost
+      || this.#externallyPaused
+      || this.#destroyRequested
+    ) return false;
     return this.#frameLoop.start(({ deltaSeconds }) => this.#onFrame(deltaSeconds));
   }
 
@@ -363,6 +371,11 @@ export class ArenaPresentationSession {
       this.#inputRouter.setMode(ARENA_INPUT_ROUTER_MODE.RESULT);
       this.#accumulator.reset();
     }
+    this.#composition.onMatchProgress(Object.freeze({
+      matchSeed: this.#snapshot.matchSeed,
+      tick: this.#snapshot.tick,
+      phase: this.#snapshot.phase,
+    }));
     return result.events;
   }
 
@@ -465,6 +478,7 @@ export class ArenaPresentationSession {
       this.#renderCurrent(events, deltaSeconds);
       return !this.#hidden
         && !this.#contextLost
+        && !this.#externallyPaused
         && !this.#destroyRequested
         && !this.#isTerminal();
     } finally {
@@ -482,7 +496,7 @@ export class ArenaPresentationSession {
 
   #syncPauseState() {
     if (!this.#matchSession || !this.#inputRouter || this.#isTerminal()) return;
-    const paused = this.#hidden || this.#contextLost;
+    const paused = this.#hidden || this.#contextLost || this.#externallyPaused;
     if (paused) {
       this.#inputRouter.suspend();
       this.#matchSession.setPaused(true);
@@ -605,6 +619,15 @@ export class ArenaPresentationSession {
     return true;
   }
 
+  setPaused(paused) {
+    if (typeof paused !== 'boolean') throw new TypeError('paused 必须是布尔值。');
+    if (this.#isTerminal() || this.#destroyRequested) return false;
+    if (this.#externallyPaused === paused) return false;
+    this.#externallyPaused = paused;
+    this.#syncPauseState();
+    return true;
+  }
+
   getLastPresentationFrame() {
     return this.#lastPresentationFrame;
   }
@@ -616,6 +639,7 @@ export class ArenaPresentationSession {
       matchCount: this.#matchCount,
       hidden: this.#hidden,
       contextLost: this.#contextLost,
+      externallyPaused: this.#externallyPaused,
       resizePending: this.#resizePending,
       pendingRematch: this.#pendingRematch,
       cleaningUp: this.#cleaningUp,

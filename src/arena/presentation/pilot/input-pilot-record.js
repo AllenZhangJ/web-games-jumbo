@@ -18,12 +18,36 @@ export {
   INPUT_PILOT_COMPREHENSION,
 } from './input-pilot-record-fields.js';
 
-export const INPUT_PILOT_RECORD_SCHEMA_VERSION = 1;
+export const INPUT_PILOT_RECORD_SCHEMA_VERSION = 2;
 
 export const INPUT_PILOT_TRIAL_STATUS = Object.freeze({
   COMPLETED: 'completed',
   ABANDONED: 'abandoned',
   INVALIDATED: 'invalidated',
+});
+
+export const INPUT_PILOT_TERMINATION_REASON = Object.freeze({
+  MATCH_ENDED: 'match-ended',
+  MAXIMUM_DURATION_REACHED: 'maximum-duration-reached',
+  PARTICIPANT_ABANDONED: 'participant-abandoned',
+  RUNNING_RECOVERED: 'running-recovered',
+  RUNTIME_FAILED: 'runtime-failed',
+  PROTOCOL_DEVIATION: 'protocol-deviation',
+});
+
+const TERMINATION_REASONS_BY_STATUS = Object.freeze({
+  [INPUT_PILOT_TRIAL_STATUS.COMPLETED]: new Set([
+    INPUT_PILOT_TERMINATION_REASON.MATCH_ENDED,
+  ]),
+  [INPUT_PILOT_TRIAL_STATUS.ABANDONED]: new Set([
+    INPUT_PILOT_TERMINATION_REASON.MAXIMUM_DURATION_REACHED,
+    INPUT_PILOT_TERMINATION_REASON.PARTICIPANT_ABANDONED,
+  ]),
+  [INPUT_PILOT_TRIAL_STATUS.INVALIDATED]: new Set([
+    INPUT_PILOT_TERMINATION_REASON.RUNNING_RECOVERED,
+    INPUT_PILOT_TERMINATION_REASON.RUNTIME_FAILED,
+    INPUT_PILOT_TERMINATION_REASON.PROTOCOL_DEVIATION,
+  ]),
 });
 
 export const INPUT_PILOT_EXCLUSION_REASON = Object.freeze({
@@ -41,6 +65,7 @@ const RECORD_KEYS = new Set([
   'trialId',
   'assignment',
   'trialStatus',
+  'terminationReason',
   'device',
   'eligibility',
   'automated',
@@ -54,6 +79,10 @@ function enumValue(value, values, name) {
   return value;
 }
 
+function nullableEvidence(value, create, name) {
+  return value === null ? null : create(value, name);
+}
+
 export function createInputPilotRecord(definitionValue, value) {
   const definition = createInputPilotDefinition(definitionValue);
   const source = cloneFrozenData(value, 'InputPilotRecord');
@@ -61,23 +90,60 @@ export function createInputPilotRecord(definitionValue, value) {
   if (source.schemaVersion !== INPUT_PILOT_RECORD_SCHEMA_VERSION) {
     throw new RangeError(`不支持 InputPilotRecord schema ${String(source.schemaVersion)}。`);
   }
+  const trialStatus = enumValue(
+    source.trialStatus,
+    INPUT_PILOT_TRIAL_STATUS,
+    'InputPilotRecord.trialStatus',
+  );
+  const terminationReason = enumValue(
+    source.terminationReason,
+    INPUT_PILOT_TERMINATION_REASON,
+    'InputPilotRecord.terminationReason',
+  );
+  if (!TERMINATION_REASONS_BY_STATUS[trialStatus].has(terminationReason)) {
+    throw new RangeError(
+      `InputPilotRecord.terminationReason ${terminationReason} 与 ${trialStatus} 不一致。`,
+    );
+  }
+  const automated = nullableEvidence(
+    source.automated,
+    (value, name) => createInputPilotAutomatedMetrics(
+      value,
+      definition.thresholds.maximumTrialDurationMs,
+      name,
+    ),
+    'InputPilotRecord.automated',
+  );
+  const observer = nullableEvidence(
+    source.observer,
+    createInputPilotObserverReport,
+    'InputPilotRecord.observer',
+  );
+  const selfReport = nullableEvidence(
+    source.selfReport,
+    createInputPilotSelfReport,
+    'InputPilotRecord.selfReport',
+  );
+  if (
+    trialStatus !== INPUT_PILOT_TRIAL_STATUS.INVALIDATED
+    && (automated === null || observer === null || selfReport === null)
+  ) {
+    throw new RangeError('completed/abandoned InputPilotRecord 必须包含完整三类证据。');
+  }
+  if ((observer === null) !== (selfReport === null)) {
+    throw new RangeError('InputPilotRecord 的观察与自评证据必须同时存在或同时缺失。');
+  }
   return Object.freeze({
     schemaVersion: INPUT_PILOT_RECORD_SCHEMA_VERSION,
     trialId: assertNonEmptyString(source.trialId, 'InputPilotRecord.trialId'),
     assignment: validateInputPilotAssignment(definition, source.assignment),
-    trialStatus: enumValue(
-      source.trialStatus,
-      INPUT_PILOT_TRIAL_STATUS,
-      'InputPilotRecord.trialStatus',
-    ),
+    trialStatus,
+    terminationReason,
     device: createInputPilotDevice(source.device),
     eligibility: createInputPilotEligibility(source.eligibility),
-    automated: createInputPilotAutomatedMetrics(
-      source.automated,
-      definition.thresholds.maximumTrialDurationMs,
-    ),
-    observer: createInputPilotObserverReport(source.observer),
-    selfReport: createInputPilotSelfReport(source.selfReport),
+    automated,
+    observer,
+    selfReport,
   });
 }
 

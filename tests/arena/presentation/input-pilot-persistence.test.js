@@ -14,6 +14,7 @@ import {
   INPUT_PILOT_ACTION_OUTCOME,
   INPUT_PILOT_COMPREHENSION,
   INPUT_PILOT_RECORD_SCHEMA_VERSION,
+  INPUT_PILOT_TERMINATION_REASON,
   INPUT_PILOT_TRIAL_STATUS,
   createInputPilotRecord,
 } from '../../../src/arena/presentation/pilot/input-pilot-record.js';
@@ -113,6 +114,10 @@ function selfReport() {
   });
 }
 
+function reviewDraft() {
+  return Object.freeze({ observer: observer(), selfReport: selfReport(), invalidate: false });
+}
+
 function workspaceSequence(definition, participantId = 'pilot-0001') {
   const suffix = participantId.replace(/[^a-zA-Z0-9_-]/g, '-');
   const initial = createInputPilotWorkspace(definition);
@@ -133,9 +138,11 @@ function workspaceSequence(definition, participantId = 'pilot-0001') {
     trialId: `pilot-trial-${suffix}`,
     assignment,
     phase: INPUT_PILOT_TRIAL_PHASE.ENROLLED,
+    terminationReason: null,
     device: device(definition),
     eligibility: eligibility(),
     automated: null,
+    reviewDraft: null,
   });
   const first = advanceInputPilotWorkspace(definition, initial, {
     enrollment,
@@ -145,7 +152,9 @@ function workspaceSequence(definition, participantId = 'pilot-0001') {
   const reviewing = createInputPilotTrialCheckpoint(definition, {
     ...enrolled,
     phase: INPUT_PILOT_TRIAL_PHASE.REVIEWING,
+    terminationReason: INPUT_PILOT_TERMINATION_REASON.MATCH_ENDED,
     automated: automated(),
+    reviewDraft: reviewDraft(),
   });
   const second = advanceInputPilotWorkspace(definition, first, {
     activeTrial: reviewing,
@@ -155,6 +164,7 @@ function workspaceSequence(definition, participantId = 'pilot-0001') {
     trialId: reviewing.trialId,
     assignment,
     trialStatus: INPUT_PILOT_TRIAL_STATUS.COMPLETED,
+    terminationReason: INPUT_PILOT_TERMINATION_REASON.MATCH_ENDED,
     device: reviewing.device,
     eligibility: reviewing.eligibility,
     automated: reviewing.automated,
@@ -185,9 +195,11 @@ function appendCompletedTrial(definition, current, index) {
     trialId: `trial-${participantId}`,
     assignment,
     phase: INPUT_PILOT_TRIAL_PHASE.ENROLLED,
+    terminationReason: null,
     device: device(definition),
     eligibility: eligibility(),
     automated: null,
+    reviewDraft: null,
   });
   const enrollmentWorkspace = advanceInputPilotWorkspace(definition, current, {
     enrollment,
@@ -196,7 +208,9 @@ function appendCompletedTrial(definition, current, index) {
   const reviewing = createInputPilotTrialCheckpoint(definition, {
     ...enrolled,
     phase: INPUT_PILOT_TRIAL_PHASE.REVIEWING,
+    terminationReason: INPUT_PILOT_TERMINATION_REASON.MATCH_ENDED,
     automated: automated(),
+    reviewDraft: reviewDraft(),
   });
   const reviewingWorkspace = advanceInputPilotWorkspace(definition, enrollmentWorkspace, {
     activeTrial: reviewing,
@@ -206,6 +220,7 @@ function appendCompletedTrial(definition, current, index) {
     trialId: reviewing.trialId,
     assignment,
     trialStatus: INPUT_PILOT_TRIAL_STATUS.COMPLETED,
+    terminationReason: INPUT_PILOT_TERMINATION_REASON.MATCH_ENDED,
     device: reviewing.device,
     eligibility: reviewing.eligibility,
     automated: reviewing.automated,
@@ -236,7 +251,7 @@ test('pilot workspace requires every enrollment to be active or terminal exactly
   }), /已存在终态 record/);
 });
 
-test('reviewing checkpoint alone carries validated automated metrics', () => {
+test('reviewing checkpoint alone carries validated automated metrics and recoverable form draft', () => {
   const definition = createArenaInputPilotV1Definition();
   const { enrolled } = workspaceSequence(definition);
   assert.throws(() => createInputPilotTrialCheckpoint(definition, {
@@ -248,6 +263,27 @@ test('reviewing checkpoint alone carries validated automated metrics', () => {
     phase: INPUT_PILOT_TRIAL_PHASE.REVIEWING,
     automated: null,
   }), /只有 reviewing checkpoint/);
+  assert.throws(() => createInputPilotTrialCheckpoint(definition, {
+    ...enrolled,
+    terminationReason: INPUT_PILOT_TERMINATION_REASON.MATCH_ENDED,
+  }), /terminationReason 必须为 null/);
+  assert.throws(() => createInputPilotTrialCheckpoint(definition, {
+    ...enrolled,
+    phase: INPUT_PILOT_TRIAL_PHASE.REVIEWING,
+    terminationReason: null,
+    automated: automated(),
+  }), /必须包含可提交表单的终止原因/);
+  assert.throws(() => createInputPilotTrialCheckpoint(definition, {
+    ...enrolled,
+    reviewDraft: reviewDraft(),
+  }), /reviewDraft 必须为 null/);
+  assert.throws(() => createInputPilotTrialCheckpoint(definition, {
+    ...enrolled,
+    phase: INPUT_PILOT_TRIAL_PHASE.REVIEWING,
+    terminationReason: INPUT_PILOT_TERMINATION_REASON.MATCH_ENDED,
+    automated: automated(),
+    reviewDraft: null,
+  }), /必须包含可恢复的 reviewDraft/);
 });
 
 test('pilot storage lease supports contention, renewal, expiry takeover and explicit release', () => {

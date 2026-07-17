@@ -2,7 +2,7 @@
 
 ## 状态
 
-执行中。本文定义 Stage 6 的完成证据，不表示后续批次已经通过。S6.1～S6.6.3a 已分批完成对应本机门禁；Web 真实浏览器和 100 局 Session soak 已通过。S6.6.3a 已有三端 Storage 结果合同、版本化 Workspace、双槽 Repository、协作 lease 与跨刷新 checkpoint，但 Trial Controller、终态表单/导出、独立采集入口与真实样本尚未完成；微信/抖音开发者工具和目标真机 E3 也仍未通过。实现边界见 [Stage 6 输入、移动与灰盒执行计划](../architecture/arena-stage6-input-movement-plan.md)，决策背景见 [ADR-009](../decisions/009-arena-semantic-input-and-movement-authority.md) 与 [ADR-013](../decisions/013-arena-pilot-local-evidence-workspace.md)。
+执行中。本文定义 Stage 6 的完成证据，不表示后续批次已经通过。S6.1～S6.6.3c 已分批完成对应本机门禁；Web 真实浏览器和 100 局 Session soak 已通过。S6.6.3b/c 已在双槽 Workspace 上补齐 Trial Controller、终态表单/导出、可恢复复核草稿与独立 Web 采集入口，但真实新手 E4 样本、微信/抖音开发者工具和目标真机 E3 仍未通过。实现边界见 [Stage 6 输入、移动与灰盒执行计划](../architecture/arena-stage6-input-movement-plan.md)，决策背景见 [ADR-009](../decisions/009-arena-semantic-input-and-movement-authority.md) 与 [ADR-013](../decisions/013-arena-pilot-local-evidence-workspace.md)。
 
 ## 使用规则
 
@@ -200,7 +200,9 @@ S6.6.1 当前本机合同证据见 [S6.6 输入盲测合同记录](../research/a
 
 S6.6.2 本机运行时证据见 [S6.6.2 盲测运行时门禁记录](../research/arena-stage6-input-pilot-runtime.md)：assignment 先持久化再提交、失败原子回滚、真实已消费 InputFrame 观察、暂停不计时、authority 事件成功判定、一次 assignment 一局和观察失败关闭均有测试；1,000 局 Core 压测仍通过原有 CPU/堆预算。该批当时尚缺的平台存储与跨刷新基础已由 S6.6.3a 接续，独立入口与 E4 仍是阻断项。
 
-S6.6.3a 当前本机持久化证据见 [S6.6.3a 盲测持久化基础门禁记录](../research/arena-stage6-input-pilot-persistence.md)：Platform Storage 明确区分缺失/失败，Workspace 聚合覆盖 assignment、active checkpoint 和 terminal record，A/B 双槽提交带读回、expected revision、协作 lease、损坏回退和未来版本保护；A/B 同 block 共享 match seed。Trial Controller、终态提交、独立入口与 E4 仍是阻断项。
+S6.6.3a 当时的本机持久化证据见 [S6.6.3a 盲测持久化基础门禁记录](../research/arena-stage6-input-pilot-persistence.md)：Platform Storage 明确区分缺失/失败，Workspace 聚合覆盖 assignment、active checkpoint 和 terminal record，A/B 双槽提交带读回、expected revision、协作 lease、损坏回退和未来版本保护；A/B 同 block 共享 match seed。该批当时的 Trial Controller、终态提交与独立 Web 入口阻断已由 S6.6.3b/c 关闭，E4 仍未关闭。
+
+S6.6.3b/c 当前本机与真实浏览器证据见 [盲测终态与 Web 工作台门禁记录](../research/arena-stage6-input-pilot-workbench.md)：入组原子提交、运行中恢复作废、reviewing 草稿跨刷新恢复、单次终态、启动/destroy 竞态、运行时失败关闭、去标识导出和桌面/窄屏 Web 流程均有证据。待完成阻断项已收窄为目标设备 E3、真人新手 E4 与 Mapper 冻结决策。
 
 ## 模糊测试与压力脚本要求
 

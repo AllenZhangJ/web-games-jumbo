@@ -1,6 +1,6 @@
 # ADR-013：Arena 盲测使用版本化本地证据工作区与协作租约
 
-- 状态：已接受（S6.6.3a 持久化基础）
+- 状态：已接受（S6.6.3a～c 已实施）
 - 日期：2026-07-18
 
 ## 背景
@@ -63,7 +63,13 @@ Repository 打开前取得带 owner、revision、acquiredAt 和 expiresAt 的同
 
 ### 6. 不持久化半局 MatchCore
 
-Checkpoint 只保存试验阶段、assignment、环境、资格和 reviewing 阶段的已冻结自动指标，不保存 MatchCore、Bot、Pointer、Renderer 或隐藏难度。后续 Trial Controller 对刷新后的 `running` trial 生成可审计的 invalidated 终态；`reviewing` 可以恢复观察者与自评表单。这一终态编排属于 S6.6.3b，不由 Repository 猜测。
+Checkpoint 只保存试验阶段、assignment、环境、资格、reviewing 阶段的已冻结自动指标和已校验复核草稿，不保存 MatchCore、Bot、Pointer、Renderer 或隐藏难度。S6.6.3b/c 的 Trial Controller 对刷新后的 `running` trial 生成可审计的 invalidated 终态；`reviewing` 恢复观察者与自评草稿。这一终态编排不由 Repository 猜测。
+
+### 7. Trial Controller 是采集生命周期唯一所有者
+
+Controller 在运行时创建前先持久化 `running`，在正常结束、超时或主动结束时先提交带自动指标与草稿的 `reviewing`，再销毁 Runtime。启动失败、运行时失败、运行中刷新和无法完成原子转换均失败关闭；不伪造观察或自评证据。
+
+Web 工作台只通过只读快照和显式 action 与 Controller 交互。具体 `ArenaPresentationSession` 适配放在 `presentation/session`，DOM 与下载放在 `entry`；无渲染 Pilot 层不依赖具体 Session、Three.js 或宿主 API。
 
 ## 被否决方案
 
@@ -101,7 +107,7 @@ localForage/IndexedDB 只覆盖 Web，不能直接解决微信和抖音；Web Lo
 - 每次提交需要槽写入、读回和可选 head 写入，代码与故障矩阵增加。
 - 本地数据可被用户修改，hash 不是安全签名。
 - 协作 lease 不能替代真正的跨进程事务；V1 明确限制为一个观察者采集页面。
-- 本 ADR 不证明独立入口、终态表单、导出、E3/E4 真机或真人盲测已经完成。
+- 独立 Web 入口、终态表单与导出已实施，但仍不证明微信/抖音 pilot UI、目标设备 E3 或真人 E4 盲测已完成。
 
 ## 生效证据
 
@@ -110,3 +116,4 @@ localForage/IndexedDB 只覆盖 Web，不能直接解决微信和抖音；Web Lo
 - Repository 覆盖双槽轮换、读回、head 失败、槽损坏、双损坏修复、同 generation 冲突、打开失败清理和 stale CAS。
 - Web、微信/抖音 adapter 覆盖缺失、成功、删除、JSON/容量/宿主错误与抖音缺失错误码。
 - 当前门禁结果见 [S6.6.3a 持久化基础门禁记录](../research/arena-stage6-input-pilot-persistence.md)。
+- Trial Controller、可恢复复核草稿、导出与独立 Web 入口证据见 [S6.6.3b/c 盲测终态与 Web 工作台门禁记录](../research/arena-stage6-input-pilot-workbench.md)。

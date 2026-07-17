@@ -231,9 +231,15 @@ export function createWebPlatform(environment = globalThis) {
     },
     getViewport: () => {
       const documentElement = env.documentObject.documentElement;
+      let canvasRect = null;
+      try {
+        canvasRect = canvas.getBoundingClientRect?.() ?? null;
+      } catch {
+        canvasRect = null;
+      }
       return {
-        width: positive(env.windowObject.innerWidth, positive(documentElement?.clientWidth, positive(canvas.clientWidth, 1280))),
-        height: positive(env.windowObject.innerHeight, positive(documentElement?.clientHeight, positive(canvas.clientHeight, 720))),
+        width: positive(canvasRect?.width, positive(canvas.clientWidth, positive(env.windowObject.innerWidth, positive(documentElement?.clientWidth, 1280)))),
+        height: positive(canvasRect?.height, positive(canvas.clientHeight, positive(env.windowObject.innerHeight, positive(documentElement?.clientHeight, 720)))),
         pixelRatio: Math.min(positive(env.windowObject.devicePixelRatio, 1), 2),
         safeArea: null,
       };
@@ -329,7 +335,21 @@ export function createWebPlatform(environment = globalThis) {
         [...cleanups].reverse().forEach((cleanup) => cleanup());
       };
     },
-    onResize: (callback) => listen(env.windowObject, 'resize', callback),
+    onResize: (callback) => {
+      const cleanups = [listen(env.windowObject, 'resize', callback)];
+      const ResizeObserverConstructor = env.root.ResizeObserver
+        ?? env.windowObject.ResizeObserver;
+      if (typeof ResizeObserverConstructor === 'function') {
+        try {
+          const observer = new ResizeObserverConstructor(() => callback());
+          observer.observe(canvas);
+          cleanups.push(() => observer.disconnect());
+        } catch {
+          // Window resize remains the conservative fallback.
+        }
+      }
+      return () => cleanups.forEach((cleanup) => cleanup());
+    },
     onShow: (callback) => {
       const handler = () => !env.documentObject.hidden && callback();
       const cleanups = [

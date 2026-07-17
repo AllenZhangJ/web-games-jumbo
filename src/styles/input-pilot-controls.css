@@ -1,0 +1,330 @@
+.pilot-section {
+  padding: 22px 22px 24px;
+  border-bottom: 1px solid var(--pilot-line-soft);
+}
+
+.pilot-section h2 {
+  margin: 0 0 12px;
+  font-size: 16px;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+}
+
+.pilot-section-copy,
+.pilot-footnote,
+.pilot-terminal-note p,
+.pilot-fatal p {
+  margin: 0;
+  color: var(--pilot-muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.pilot-terminal-note {
+  border-left: 4px solid var(--pilot-success);
+  background: #f4faf7;
+}
+
+.pilot-terminal-note h2 {
+  color: var(--pilot-success);
+}
+
+.pilot-environment {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 4px 12px;
+  margin-top: 16px;
+  padding: 12px 0;
+  border-top: 1px solid var(--pilot-line-soft);
+  border-bottom: 1px solid var(--pilot-line-soft);
+  font-size: 13px;
+}
+
+.pilot-environment > span {
+  color: var(--pilot-muted);
+}
+
+.pilot-environment small {
+  grid-column: 2;
+  color: var(--pilot-muted);
+  line-height: 1.5;
+}
+
+.pilot-environment.is-valid small {
+  color: var(--pilot-success);
+}
+
+.pilot-environment.is-warning small {
+  color: var(--pilot-warning);
+}
+
+.pilot-check-list {
+  margin-top: 10px;
+}
+
+.pilot-check-row {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 11px;
+  color: var(--pilot-ink);
+  font-size: 13px;
+  line-height: 1.45;
+  cursor: pointer;
+}
+
+.pilot-check-row input {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  margin: 0;
+  accent-color: var(--pilot-accent);
+}
+
+.pilot-footnote {
+  margin-top: 8px;
+}
+
+.pilot-task {
+  margin: 4px 0 18px;
+  padding: 16px 0;
+  border-top: 1px solid var(--pilot-line-soft);
+  border-bottom: 1px solid var(--pilot-line-soft);
+  font-size: 22px;
+  font-weight: 750;
+  letter-spacing: -0.03em;
+}
+
+.pilot-facts {
+  margin: 0 0 18px;
+}
+
+.pilot-facts div {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  padding: 8px 0;
+  border-bottom: 1px solid var(--pilot-line-soft);
+  font-size: 13px;
+}
+
+.pilot-facts dt {
+  color: var(--pilot-muted);
+}
+
+.pilot-facts dd {
+  margin: 0;
+  font-weight: 650;
+}
+
+.pilot-counter-list {
+  margin-top: 16px;
+}
+
+.pilot-counter-row {
+  display: flex;
+  min-height: 47px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--pilot-line-soft);
+  font-size: 13px;
+}
+
+.pilot-stepper {
+  display: grid;
+  grid-template-columns: 38px 52px 38px;
+  height: 34px;
+  border: 1px solid var(--pilot-line);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.pilot-stepper button,
+.pilot-stepper output {
+  display: grid;
+  min-width: 0;
+  place-items: center;
+  border: 0;
+  background: #fff;
+  color: var(--pilot-ink);
+  font-size: 14px;
+}
+
+.pilot-stepper button {
+  cursor: pointer;
+}
+
+.pilot-stepper button:hover {
+  background: #f0f3f6;
+}
+
+.pilot-stepper output {
+  border-right: 1px solid var(--pilot-line-soft);
+  border-left: 1px solid var(--pilot-line-soft);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.pilot-completion-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 16px;
+  margin-top: 15px;
+}
+
+.pilot-radio-row {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 13px 0 15px;
+  border: 0;
+  border-bottom: 1px solid var(--pilot-line-soft);
+}
+
+.pilot-radio-row legend {
+  padding: 0;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.pilot-radio-row > div {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.pilot-radio-row label {
+  position: relative;
+  cursor: pointer;
+}
+
+.pilot-radio-row input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pilot-radio-row span {
+  display: grid;
+  min-height: 36px;
+  place-items: center;
+  border: 1px solid var(--pilot-line);
+  border-radius: 4px;
+  color: var(--pilot-muted);
+  font-size: 12px;
+}
+
+.pilot-radio-row input:checked + span {
+  border-color: var(--pilot-accent);
+  background: #fff5ef;
+  color: var(--pilot-accent-dark);
+  font-weight: 700;
+}
+
+.pilot-radio-row input:focus-visible + span {
+  outline: 3px solid rgb(255 77 0 / 25%);
+  outline-offset: 2px;
+}
+
+.pilot-invalidation {
+  background: #fafbfc;
+}
+
+.pilot-primary-zone,
+.pilot-secondary-zone {
+  padding: 18px 22px 22px;
+}
+
+.pilot-primary-zone {
+  position: sticky;
+  z-index: 2;
+  bottom: 0;
+  border-top: 1px solid var(--pilot-line-soft);
+  background: var(--pilot-surface);
+}
+
+.pilot-primary,
+.pilot-secondary {
+  width: 100%;
+  min-height: 50px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.pilot-primary {
+  border: 1px solid var(--pilot-accent);
+  background: var(--pilot-accent);
+  color: #fff;
+}
+
+.pilot-primary:hover:not(:disabled) {
+  border-color: var(--pilot-accent-dark);
+  background: var(--pilot-accent-dark);
+}
+
+.pilot-secondary {
+  border: 1px solid var(--pilot-line);
+  background: #fff;
+}
+
+.pilot-danger {
+  border-color: #dabcbc;
+  color: var(--pilot-danger);
+}
+
+.pilot-primary:disabled,
+.pilot-secondary:disabled,
+.pilot-export-bar button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.pilot-fatal {
+  border-left: 4px solid var(--pilot-danger);
+  background: #fff7f7;
+}
+
+.pilot-fatal h2 {
+  color: var(--pilot-danger);
+}
+
+.pilot-export-bar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 13px 14px;
+  border-top: 1px solid var(--pilot-line);
+  background: #fafbfc;
+}
+
+.pilot-export-bar button {
+  min-height: 42px;
+  border: 0;
+  background: transparent;
+  color: #38506f;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.pilot-export-bar button:hover:not(:disabled) {
+  background: #eef2f6;
+}
+
+.pilot-toast {
+  position: fixed;
+  z-index: 10;
+  right: 24px;
+  bottom: 24px;
+  max-width: min(420px, calc(100vw - 48px));
+  padding: 13px 16px;
+  border: 1px solid #ddb9b9;
+  border-radius: 4px;
+  background: #fff7f7;
+  box-shadow: 0 10px 30px rgb(29 44 61 / 14%);
+  color: var(--pilot-danger);
+  font-size: 13px;
+  line-height: 1.5;
+}

@@ -19,6 +19,7 @@ import {
   INPUT_PILOT_COMPREHENSION,
   INPUT_PILOT_EXCLUSION_REASON,
   INPUT_PILOT_RECORD_SCHEMA_VERSION,
+  INPUT_PILOT_TERMINATION_REASON,
   INPUT_PILOT_TRIAL_STATUS,
   createInputPilotRecord,
   getInputPilotRecordExclusionReasons,
@@ -40,6 +41,11 @@ function record(definition, enrollmentIndex, {
   participantId = `pilot-${enrollmentIndex}`,
   success = true,
   trialStatus = INPUT_PILOT_TRIAL_STATUS.COMPLETED,
+  terminationReason = trialStatus === INPUT_PILOT_TRIAL_STATUS.COMPLETED
+    ? INPUT_PILOT_TERMINATION_REASON.MATCH_ENDED
+    : trialStatus === INPUT_PILOT_TRIAL_STATUS.ABANDONED
+      ? INPUT_PILOT_TERMINATION_REASON.PARTICIPANT_ABANDONED
+      : INPUT_PILOT_TERMINATION_REASON.PROTOCOL_DEVIATION,
   platform = 'web',
   formFactor = 'phone',
   orientation = 'portrait',
@@ -56,6 +62,7 @@ function record(definition, enrollmentIndex, {
     trialId: `trial-${enrollmentIndex}`,
     assignment: assignment(definition, enrollmentIndex, participantId),
     trialStatus,
+    terminationReason,
     device: { platform, formFactor, orientation, inputMode },
     eligibility: { priorArenaExperience, priorOtherVariantExposure },
     automated: {
@@ -237,6 +244,29 @@ test('InputPilotRecord separates automated, observer and self-report evidence', 
     INPUT_PILOT_EXCLUSION_REASON.PRIOR_OTHER_VARIANT_EXPOSURE,
     INPUT_PILOT_EXCLUSION_REASON.PLATFORM_MISMATCH,
   ]);
+
+  const recovered = createInputPilotRecord(definition, {
+    ...record(definition, 2, {
+      trialStatus: INPUT_PILOT_TRIAL_STATUS.INVALIDATED,
+      terminationReason: INPUT_PILOT_TERMINATION_REASON.RUNNING_RECOVERED,
+    }),
+    automated: null,
+    observer: null,
+    selfReport: null,
+  });
+  assert.equal(recovered.automated, null);
+  assert.throws(() => createInputPilotRecord(definition, {
+    ...recovered,
+    observer: value.observer,
+  }), /同时存在或同时缺失/);
+  assert.throws(() => createInputPilotRecord(definition, {
+    ...value,
+    automated: null,
+  }), /必须包含完整三类证据/);
+  assert.throws(() => createInputPilotRecord(definition, {
+    ...value,
+    terminationReason: INPUT_PILOT_TERMINATION_REASON.RUNTIME_FAILED,
+  }), /与 completed 不一致/);
 });
 
 test('pilot report recommends only an evidence-aligned candidate and hides participant ids', () => {

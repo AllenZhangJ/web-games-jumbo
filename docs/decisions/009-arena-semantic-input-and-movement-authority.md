@@ -4,7 +4,7 @@
 
 已接受 Rule/Core 边界。A/B Mapper 的产品胜者仍要等 S6.6 盲测后追加决策结果。
 
-实施进度：S6.1 已建立 Character/Input/Replay V4 合同；S6.2 已建立 MovementSystem、多通道 ActionResolver、多 lane ActionExecution、原子 Physics mutation batch 与 next-tick ActionAffordance；S6.3 已建立受限 Bot Movement 观测、语义移动策略和真人时序调度器；S6.4 已建立 Raw/Gesture/Sampler/A-B Mapper 与三端 Pointer Adapter；S6.5 已建立只读灰盒 Renderer、HUD、唯一 Session 组合根和三端 Arena 入口，并通过 Web 真实浏览器与 100 局 soak。S6.6.1 已建立版本化盲测 Definition、确定性区组分配和只读聚合报告；S6.6.2 已建立单写入入组账本、只观察真实消费 InputFrame 的 Session 装饰器和 active-tick 指标；S6.6.3a 已建立版本化 Workspace、双槽 Repository、协作 lease、跨刷新 checkpoint 与 A/B 同 block match seed，见 [ADR-013](013-arena-pilot-local-evidence-workspace.md)。Trial Controller、终态表单/导出、独立采集入口、真实样本与微信/抖音 E3 仍未完成，不能据此视为 Stage 6 完成或冻结 Mapper 胜者。
+实施进度：S6.1 已建立 Character/Input/Replay V4 合同；S6.2 已建立 MovementSystem、多通道 ActionResolver、多 lane ActionExecution、原子 Physics mutation batch 与 next-tick ActionAffordance；S6.3 已建立受限 Bot Movement 观测、语义移动策略和真人时序调度器；S6.4 已建立 Raw/Gesture/Sampler/A-B Mapper 与三端 Pointer Adapter；S6.5 已建立只读灰盒 Renderer、HUD、唯一 Session 组合根和三端 Arena 入口，并通过 Web 真实浏览器与 100 局 soak。S6.6.1～S6.6.3a 已建立盲测 Definition、确定性分组、只读采集运行时、版本化 Workspace、双槽 Repository、协作 lease 与 A/B 同 block match seed；S6.6.3b/c 已建立 Trial Controller、单次终态提交、可恢复复核草稿、去标识导出与独立 Web 采集工作台，见 [ADR-013](013-arena-pilot-local-evidence-workspace.md) 与 [S6.6.3b/c 门禁记录](../research/arena-stage6-input-pilot-workbench.md)。真实样本与微信/抖音目标设备 E3 仍未完成，不能据此视为 Stage 6 完成或冻结 Mapper 胜者。
 
 ## 日期
 

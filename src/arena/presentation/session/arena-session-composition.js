@@ -30,6 +30,7 @@ const OPTION_KEYS = new Set([
   'matchConfig',
   'experimentLabel',
   'onDiagnostic',
+  'onMatchProgress',
 ]);
 
 export const DEFAULT_ARENA_PRESENTATION_MATCH_CONFIG = Object.freeze({
@@ -150,6 +151,8 @@ export function createArenaSessionComposition(platformValue, optionsValue) {
   }
   const onDiagnostic = options.onDiagnostic ?? (() => {});
   requiredFunction(onDiagnostic, 'onDiagnostic');
+  const onMatchProgress = options.onMatchProgress ?? (() => {});
+  requiredFunction(onMatchProgress, 'onMatchProgress');
 
   let matchService = options.matchService;
   if (matchService !== undefined) {
@@ -193,6 +196,7 @@ export function createArenaSessionComposition(platformValue, optionsValue) {
     matchConfig: createMatchConfig(options.matchConfig),
     experimentLabel: options.experimentLabel ?? '',
     onDiagnostic,
+    onMatchProgress,
     ...factories,
   });
 }

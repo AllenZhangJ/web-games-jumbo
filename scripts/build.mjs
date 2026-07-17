@@ -26,6 +26,12 @@ async function buildWeb() {
       outDir: path.join(dist, 'web'),
       emptyOutDir: true,
       sourcemap: true,
+      rollupOptions: {
+        input: {
+          game: path.join(root, 'index.html'),
+          pilot: path.join(root, 'pilot.html'),
+        },
+      },
       // Three.js is intentionally a single shared runtime; 151 kB gzip is
       // within the documented v3 budget, so use a limit that reflects it.
       chunkSizeWarningLimit: 650,

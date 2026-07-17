@@ -47,7 +47,7 @@
 4. 自动指标只能来自只读 Presentation 事件/快照，不得给 MatchCore 增加盲测分支。
 5. 到达 180 秒上限必须转为可审计的放弃记录并释放 Session；App hide 不得偷偷消耗操作时长。
 
-S6.6.2 已实现并通过进程内单写入账本、已消费 InputFrame 观察、active-tick 计时和一次 assignment 一局的本机门禁，证据见 [S6.6.2 盲测运行时门禁记录](arena-stage6-input-pilot-runtime.md)。S6.6.3a 已继续建立平台 Storage 结果合同、Workspace 双槽/CAS、协作 lease 和跨刷新 checkpoint，证据见 [S6.6.3a 持久化基础门禁记录](arena-stage6-input-pilot-persistence.md)。原始记录终态提交、独立 UI 与真机竞态仍未实现，不能用合同或 Node 测试替代。
+S6.6.2 已实现并通过进程内单写入账本、已消费 InputFrame 观察、active-tick 计时和一次 assignment 一局的本机门禁，证据见 [S6.6.2 盲测运行时门禁记录](arena-stage6-input-pilot-runtime.md)。S6.6.3a 已建立平台 Storage 结果合同、Workspace 双槽/CAS、协作 lease 和跨刷新 checkpoint，证据见 [持久化基础门禁记录](arena-stage6-input-pilot-persistence.md)。S6.6.3b/c 已补齐原始记录终态提交、可恢复表单、导出和独立 Web UI，证据见 [盲测终态与 Web 工作台门禁记录](arena-stage6-input-pilot-workbench.md)。目标设备真机竞态和真人 E4 仍未完成，不能用合同、Node 测试或桌面浏览器操作替代。
 
 ## 当前自动化证据
 
