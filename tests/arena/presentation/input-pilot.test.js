@@ -110,6 +110,7 @@ test('InputPilotDefinition and Registry keep the A/B experiment immutable and ve
   assert.equal(definition.thresholds.minimumEligibleSamplesPerVariant, 5);
   assert.equal(definition.thresholds.successWindowMs, 10_000);
   assert.equal(definition.thresholds.maximumTrialDurationMs, 180_000);
+  assert.equal(definition.thresholds.effectiveMovementDistance, 0.05);
   assert.equal(definition.getContentHash(), createArenaInputPilotV1Definition().getContentHash());
   assert.throws(() => { definition.variants[0].id = 'changed'; }, /read only|只读|Cannot assign/i);
 
@@ -137,6 +138,10 @@ test('InputPilotDefinition and Registry keep the A/B experiment immutable and ve
     ...definition.toJSON(),
     surprise: true,
   }), /不支持字段 surprise/);
+  assert.throws(() => createInputPilotDefinition({
+    ...definition.toJSON(),
+    schemaVersion: 1,
+  }), /不支持 InputPilotDefinition schema 1/);
   assert.throws(() => createInputPilotDefinition({
     ...definition.toJSON(),
     assignmentSeed: -1,

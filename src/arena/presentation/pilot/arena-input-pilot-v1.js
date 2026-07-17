@@ -37,6 +37,7 @@ export function createArenaInputPilotV1Definition() {
       minimumEligibleSamplesPerVariant: 5,
       successWindowMs: 10_000,
       maximumTrialDurationMs: 180_000,
+      effectiveMovementDistance: 0.05,
       targetSuccessRate: 0.8,
       winnerMarginRate: 0.1,
     },

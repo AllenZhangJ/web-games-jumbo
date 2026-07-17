@@ -7,7 +7,7 @@ import {
 } from '../../rules/definition-utils.js';
 import { ARENA_INPUT_MAPPER_ID } from '../input/input-mapper-contract.js';
 
-export const INPUT_PILOT_DEFINITION_SCHEMA_VERSION = 1;
+export const INPUT_PILOT_DEFINITION_SCHEMA_VERSION = 2;
 
 export const INPUT_PILOT_PLATFORM = Object.freeze({
   WEB: 'web',
@@ -46,6 +46,7 @@ const THRESHOLD_KEYS = new Set([
   'minimumEligibleSamplesPerVariant',
   'successWindowMs',
   'maximumTrialDurationMs',
+  'effectiveMovementDistance',
   'targetSuccessRate',
   'winnerMarginRate',
 ]);
@@ -60,6 +61,13 @@ function enumValue(value, values, name) {
 function rate(value, name) {
   if (!Number.isFinite(value) || value < 0 || value > 1) {
     throw new RangeError(`${name} 必须位于 [0, 1]。`);
+  }
+  return value;
+}
+
+function positiveFinite(value, name) {
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new RangeError(`${name} 必须是有限正数。`);
   }
   return value;
 }
@@ -140,6 +148,10 @@ function cloneThresholds(value) {
       value.maximumTrialDurationMs,
       1,
       'InputPilotDefinition.thresholds.maximumTrialDurationMs',
+    ),
+    effectiveMovementDistance: positiveFinite(
+      value.effectiveMovementDistance,
+      'InputPilotDefinition.thresholds.effectiveMovementDistance',
     ),
     targetSuccessRate: rate(
       value.targetSuccessRate,

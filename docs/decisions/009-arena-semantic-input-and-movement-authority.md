@@ -4,7 +4,7 @@
 
 已接受 Rule/Core 边界。A/B Mapper 的产品胜者仍要等 S6.6 盲测后追加决策结果。
 
-实施进度：S6.1 已建立 Character/Input/Replay V4 合同；S6.2 已建立 MovementSystem、多通道 ActionResolver、多 lane ActionExecution、原子 Physics mutation batch 与 next-tick ActionAffordance；S6.3 已建立受限 Bot Movement 观测、语义移动策略和真人时序调度器；S6.4 已建立 Raw/Gesture/Sampler/A-B Mapper 与三端 Pointer Adapter；S6.5 已建立只读灰盒 Renderer、HUD、唯一 Session 组合根和三端 Arena 入口，并通过 Web 真实浏览器与 100 局 soak。S6.6.1 当前候选已建立版本化盲测 Definition、确定性区组分配和只读聚合报告，但采集入口与真实样本未完成。微信/抖音 E3 也仍未完成，不能据此视为 Stage 6 完成或冻结 Mapper 胜者。
+实施进度：S6.1 已建立 Character/Input/Replay V4 合同；S6.2 已建立 MovementSystem、多通道 ActionResolver、多 lane ActionExecution、原子 Physics mutation batch 与 next-tick ActionAffordance；S6.3 已建立受限 Bot Movement 观测、语义移动策略和真人时序调度器；S6.4 已建立 Raw/Gesture/Sampler/A-B Mapper 与三端 Pointer Adapter；S6.5 已建立只读灰盒 Renderer、HUD、唯一 Session 组合根和三端 Arena 入口，并通过 Web 真实浏览器与 100 局 soak。S6.6.1 已建立版本化盲测 Definition、确定性区组分配和只读聚合报告；S6.6.2 已建立并通过单写入入组账本、只观察真实消费 InputFrame 的 Session 装饰器和 active-tick 指标本机门禁。平台存储、独立采集入口、真实样本与微信/抖音 E3 仍未完成，不能据此视为 Stage 6 完成或冻结 Mapper 胜者。
 
 ## 日期
 

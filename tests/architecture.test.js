@@ -134,6 +134,24 @@ test('Arena presentation keeps host APIs injected and cannot be imported by auth
   }
 });
 
+test('Arena input pilot remains an optional headless presentation adapter', async () => {
+  const pilotFiles = await listJavaScript(path.resolve('src/arena/presentation/pilot'));
+  assert.ok(pilotFiles.length > 0);
+  for (const file of pilotFiles) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /(?:from\s+['"]three['"]|arena-greybox-renderer|arena-presentation-session|quick-match-service|\/platform\/|\/entry\/)/,
+      `${file} 不应绑定具体 Renderer、Session 组合根、匹配实现或平台入口。`,
+    );
+    assert.doesNotMatch(
+      source,
+      /(?:Date\.now|Math\.random|\bperformance\b|setTimeout|setInterval|requestAnimationFrame|\b(?:window|document|navigator)\b|\b(?:tt|wx)\s*\.)/,
+      `${file} 不应读取墙钟、非确定性随机或宿主全局。`,
+    );
+  }
+});
+
 test('Arena MatchCore POC bundles and executes as a standalone mini-game IIFE', async () => {
   const result = await esbuild({
     entryPoints: [path.resolve('src/arena/entry/match-core-poc.js')],

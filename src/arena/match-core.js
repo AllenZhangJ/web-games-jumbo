@@ -17,23 +17,7 @@ import { assertCharacterRegistry } from './character/character-registry.js';
 import { createCharacterRuntimeReference } from './character/character-runtime.js';
 import { MovementSystem } from './movement/movement-system.js';
 import { createMovementPhysicsPort } from './movement/movement-physics-port.js';
-
-const EVENT = Object.freeze({
-  MATCH_STARTED: 'MatchStarted',
-  EQUIPMENT_SPAWNED: 'EquipmentSpawned',
-  EQUIPMENT_PICKED_UP: 'EquipmentPickedUp',
-  EQUIPMENT_DROPPED: 'EquipmentDropped',
-  EQUIPMENT_DESPAWNED: 'EquipmentDespawned',
-  EQUIPMENT_DROP_FALLBACK: 'EquipmentDropFallback',
-  ACTION_STARTED: 'ActionStarted',
-  HIT_RESOLVED: 'HitResolved',
-  KNOCKBACK_APPLIED: 'KnockbackApplied',
-  DOWN_SMASH_LANDED: 'DownSmashLanded',
-  PLAYER_ELIMINATED: 'PlayerEliminated',
-  PLAYER_RESPAWNED: 'PlayerRespawned',
-  SUDDEN_DEATH_STARTED: 'SuddenDeathStarted',
-  MATCH_ENDED: 'MatchEnded',
-});
+import { ARENA_MATCH_EVENT as EVENT } from './match-event-types.js';
 
 // Equipment positions share the character-body coordinate convention so a
 // dropped item and a configured spawn can use the same validation path. The
@@ -1081,4 +1065,4 @@ export class MatchCore {
   }
 }
 
-export { EVENT as ARENA_MATCH_EVENT };
+export { ARENA_MATCH_EVENT } from './match-event-types.js';

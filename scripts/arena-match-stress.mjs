@@ -3,6 +3,10 @@ import { ARENA_MATCH_PHASE, ARENA_PARTICIPANT_STATUS } from '../src/arena/config
 import { createNeutralInputFrame } from '../src/arena/input-frame.js';
 import { createArenaV1MatchCore } from '../src/arena/arena-v1-match-core.js';
 import { HeadlessMatchRunner, replayMatch } from '../src/arena/replay.js';
+import {
+  assertArenaStressCpuBudget,
+  createArenaStressTiming,
+} from './arena-stress-timing.mjs';
 
 function readPositiveIntegerOption(name, fallback) {
   const prefix = `--${name}=`;
@@ -156,6 +160,7 @@ let verifiedReplays = 0;
 globalThis.gc();
 const startMemory = process.memoryUsage();
 const startedAt = performance.now();
+const startedCpuUsage = process.cpuUsage();
 
 for (let matchIndex = 0; matchIndex < matches; matchIndex += 1) {
   const core = createArenaV1MatchCore({ seed: (0xa11e0000 + matchIndex) >>> 0 });
@@ -207,10 +212,11 @@ for (let matchIndex = 0; matchIndex < matches; matchIndex += 1) {
 }
 
 const elapsedMs = performance.now() - startedAt;
+const cpuUsage = process.cpuUsage(startedCpuUsage);
 globalThis.gc();
 const endMemory = process.memoryUsage();
 const heapGrowthBytes = endMemory.heapUsed - startMemory.heapUsed;
-const averageTickMs = elapsedMs / totalTicks;
+const timing = createArenaStressTiming({ elapsedMs, cpuUsage, totalTicks });
 
 const report = {
   generatedAt: new Date().toISOString(),
@@ -225,8 +231,7 @@ const report = {
   totalEvents,
   averageEventsPerMatch: totalEvents / matches,
   uniqueFinalHashes: finalHashes.size,
-  elapsedMs,
-  averageTickMs,
+  ...timing,
   averageTickBudgetMs,
   startHeapUsedBytes: startMemory.heapUsed,
   endHeapUsedBytes: endMemory.heapUsed,
@@ -239,9 +244,7 @@ const report = {
 
 console.log(JSON.stringify(report, null, 2));
 
-if (averageTickMs > averageTickBudgetMs) {
-  throw new Error(`平均 tick ${averageTickMs.toFixed(6)}ms 超过 ${averageTickBudgetMs}ms 预算。`);
-}
+assertArenaStressCpuBudget(timing, averageTickBudgetMs);
 if (heapGrowthBytes > heapGrowthBudgetBytes) {
   throw new Error(`回收后堆增长 ${heapGrowthBytes}B 超过 ${heapGrowthBudgetBytes}B 预算。`);
 }

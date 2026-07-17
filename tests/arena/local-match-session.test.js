@@ -35,7 +35,10 @@ test('diagnostic failure cannot cancel a valid quick match', () => {
     diagnosticSink: () => { throw new Error('logger unavailable'); },
   }).create({ matchSeed: 15 });
   match.session.start();
-  match.session.step(neutral(match.session.getSnapshot()));
+  const submitted = neutral(match.session.getSnapshot());
+  const accepted = match.session.step(submitted);
+  assert.deepEqual(accepted.input, submitted);
+  assert.ok(Object.isFrozen(accepted.input));
   assert.equal(match.session.getSnapshot().tick, 1);
   match.session.destroy();
 });
@@ -74,6 +77,7 @@ test('LocalMatchSession pause, complete replay and destruction have explicit lif
   assert.throws(() => session.setPaused('yes'), /布尔值/);
   const paused = session.step();
   assert.equal(paused.snapshot.tick, 0);
+  assert.equal(paused.input, null);
   session.setPaused(false);
   const replay = session.runUntilEnded(neutral);
   assert.equal(session.state, LOCAL_MATCH_SESSION_STATE.ENDED);

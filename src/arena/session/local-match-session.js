@@ -149,7 +149,7 @@ export class LocalMatchSession {
   step(playerFrame = null) {
     this.#assertUsable();
     if (this.#state === LOCAL_MATCH_SESSION_STATE.PAUSED) {
-      return { events: [], snapshot: this.#core.getSnapshot() };
+      return { events: [], snapshot: this.#core.getSnapshot(), input: null };
     }
     if (this.#state !== LOCAL_MATCH_SESSION_STATE.RUNNING) {
       throw new Error(`LocalMatchSession 无法在 ${this.#state} 状态 step。`);
@@ -171,7 +171,7 @@ export class LocalMatchSession {
         if (snapshot.phase === ARENA_MATCH_PHASE.ENDED) {
           this.#state = LOCAL_MATCH_SESSION_STATE.ENDED;
         }
-        return { events, snapshot };
+        return { events, snapshot, input: normalizedPlayer };
       } catch (error) {
         const failure = normalizeThrownError(error, 'LocalMatchSession step 失败');
         const cleanupErrors = this.#cleanup();
