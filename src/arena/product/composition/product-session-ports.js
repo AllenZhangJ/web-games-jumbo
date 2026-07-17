@@ -42,6 +42,7 @@ export function validateProductMatchCoordinator(value) {
     'start',
     'setPaused',
     'step',
+    'getMatchSnapshot',
     'getResult',
     'release',
     'resetFailure',

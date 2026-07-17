@@ -346,6 +346,12 @@ export class ProductSessionController {
     }
   }
 
+  getActiveMatchSnapshot() {
+    const state = this.#stateMachine.getSnapshot();
+    if (state.state === PRODUCT_SESSION_STATE.DESTROYED) return null;
+    return this.#matchCoordinator.getMatchSnapshot();
+  }
+
   commitReward() {
     this.#assertForeground(PRODUCT_SESSION_STATE.RESULTS);
     if (this.#committingReward) throw new Error('ProductSessionController.commitReward() 不可重入。');

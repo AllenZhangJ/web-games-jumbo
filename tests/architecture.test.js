@@ -23,6 +23,10 @@ async function listJavaScript(directory) {
   return result;
 }
 
+function withoutStaticImports(source) {
+  return source.replace(/^\s*import[\s\S]*?;\s*$/gm, '');
+}
+
 test('core and runtime layers never call tt.* or wx.* directly', async () => {
   const root = path.resolve('src');
   const directories = ['core', 'runtime', 'render', 'render3d']
@@ -260,6 +264,24 @@ test('Arena Stage 8 product sublayers preserve state/profile/match/composition d
     /(?:\/product\/|\/ai\/|\/session\/|\/matchmaking\/|\/presentation\/|Date\.now|Math\.random)/,
     'MatchContentSelection 必须保持为无产品聚合、无 Bot、无宿主的权威数据合同。',
   );
+});
+
+test('Arena S8.5 product presentation contracts remain host-free and do not own Product composition', async () => {
+  const files = await listJavaScript(path.resolve('src/arena/presentation/product'));
+  assert.ok(files.length >= 8);
+  for (const file of files) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /from\s+['"](?:three|node:|[^'"]*(?:\/composition\/|renderer|\/session\/|platform|entry|quick-match-service|match-core)[^'"]*)['"]/,
+      `${file} 应保持为无宿主、无 Renderer、无产品组合根的 S8.5 表现合同。`,
+    );
+    assert.doesNotMatch(
+      withoutStaticImports(source),
+      /(?:Date\.now|Math\.random|\bperformance\b|setTimeout|setInterval|requestAnimationFrame|\b(?:window|document|navigator|localStorage|sessionStorage)\b|\b(?:tt|wx)\s*\.)/,
+      `${file} 应保持为无宿主的 S8.5 表现合同。`,
+    );
+  }
 });
 
 test('Arena MatchCore POC bundles and executes as a standalone mini-game IIFE', async () => {
