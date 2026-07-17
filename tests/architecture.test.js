@@ -181,7 +181,7 @@ test('Arena bot layers preserve dependency direction and tick determinism', asyn
     const source = await readFile(file, 'utf8');
     assert.doesNotMatch(
       source,
-      /(?:match-core|\/replay|\/session|\/matchmaking|render3d|\/platform)/,
+      /(?:match-core|movement-system|movement-physics|\/physics\/|\/replay|\/session|\/matchmaking|render3d|\/platform)/,
       `${file} 越过了 BotPolicy 的受限输入边界`,
     );
     assert.doesNotMatch(

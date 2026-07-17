@@ -4,7 +4,7 @@
 
 已接受 Rule/Core 边界。A/B Mapper 的产品胜者仍要等 S6.6 盲测后追加决策结果。
 
-实施进度：S6.1 已建立 CharacterDefinition/Registry/Runtime 边界、组合期不可变内容快照、InputFrame V4 和 Replay V4；S6.2 已建立 MovementSystem、多通道 ActionResolver、多 lane ActionExecution、原子 Physics mutation batch 与 next-tick ActionAffordance。Bot、InputMapper、触控生命周期和灰盒表现仍按 S6.3～S6.6 分批验收，不因本 ADR 的 Rule/Core 边界已接受而视为完成。
+实施进度：S6.1 已建立 Character/Input/Replay V4 合同；S6.2 已建立 MovementSystem、多通道 ActionResolver、多 lane ActionExecution、原子 Physics mutation batch 与 next-tick ActionAffordance；S6.3 当前候选已建立受限 Bot Movement 观测、语义移动策略和真人时序调度器。InputMapper、触控生命周期和灰盒表现仍按 S6.4～S6.6 分批验收，不因前三批通过而视为 Stage 6 完成。
 
 ## 日期
 

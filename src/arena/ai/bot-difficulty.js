@@ -24,6 +24,8 @@ const RAW_PROFILES = {
     targetPredictionTicks: 0,
     threatAwareness: 0.15,
     attackRangeScale: 0.95,
+    minimumMobilityIntervalTicks: 24,
+    crouchHoldTicks: 8,
   },
   [BOT_DIFFICULTY_ID.NORMAL]: {
     observationDelayTicks: 8,
@@ -38,6 +40,8 @@ const RAW_PROFILES = {
     targetPredictionTicks: 1,
     threatAwareness: 0.6,
     attackRangeScale: 0.88,
+    minimumMobilityIntervalTicks: 18,
+    crouchHoldTicks: 10,
   },
   [BOT_DIFFICULTY_ID.HARD]: {
     // 100 ms observation delay at 60 Hz keeps the strongest bot inside a
@@ -54,6 +58,8 @@ const RAW_PROFILES = {
     targetPredictionTicks: 1,
     threatAwareness: 0.55,
     attackRangeScale: 0.9,
+    minimumMobilityIntervalTicks: 14,
+    crouchHoldTicks: 12,
   },
 };
 
@@ -64,6 +70,8 @@ function validateProfile(id, profile) {
     'replanJitterTicks',
     'maximumPauseTicks',
     'targetPredictionTicks',
+    'minimumMobilityIntervalTicks',
+    'crouchHoldTicks',
   ]) {
     if (!Number.isSafeInteger(profile[field]) || profile[field] < 0) {
       throw new RangeError(`Bot ${id}.${field} 必须是非负安全整数。`);
@@ -74,6 +82,9 @@ function validateProfile(id, profile) {
   }
   if (profile.maximumPauseTicks < 2) {
     throw new RangeError(`Bot ${id}.maximumPauseTicks 必须至少为 2。`);
+  }
+  if (profile.minimumMobilityIntervalTicks < 4 || profile.crouchHoldTicks < 2) {
+    throw new RangeError(`Bot ${id} mobility tick 配置低于真人输入边界。`);
   }
   for (const field of [
     'actionCommitChance',

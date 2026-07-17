@@ -43,6 +43,8 @@ test('hard bot remains human-limited instead of receiving instant perfect contro
   assert.ok(hard.directionJitterRadians > 0);
   assert.ok(hard.actionCommitChance < 1);
   assert.ok(hard.shortPauseChance > 0);
+  assert.ok(hard.minimumMobilityIntervalTicks >= 14);
+  assert.ok(hard.crouchHoldTicks >= 8);
 });
 
 test('bot pursues only visible reachable equipment through ordinary bounded movement input', () => {

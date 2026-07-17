@@ -2,7 +2,7 @@
 
 ## 文档状态
 
-已接受整体边界；阶段 1 已选择项目内轻量街机物理，阶段 2 已落地无渲染 MatchCore，阶段 3 已落地隐藏机器人与本地快速匹配，阶段 4 已落地数据驱动 Rule/Core 装备闭环，阶段 5 已落地独立地图权威时间轴。Stage 6 当前已落地 S6.1 Character/Input/Replay 合同和 S6.2 Movement Rule/Core 候选；Bot 新移动能力、触控和灰盒表现仍未实现。决策见 [ADR-005](../decisions/005-arena-lightweight-physics.md)、[ADR-006](../decisions/006-arena-local-tick-utility-bot.md)、[ADR-007](../decisions/007-arena-rule-core-governance.md)、[ADR-008](../decisions/008-arena-map-authority-timeline.md) 和 [ADR-009](../decisions/009-arena-semantic-input-and-movement-authority.md)。
+已接受整体边界；阶段 1 已选择项目内轻量街机物理，阶段 2 已落地无渲染 MatchCore，阶段 3 已落地隐藏机器人与本地快速匹配，阶段 4 已落地数据驱动 Rule/Core 装备闭环，阶段 5 已落地独立地图权威时间轴。Stage 6 当前已落地 S6.1 Character/Input/Replay、S6.2 Movement Rule/Core 和 S6.3 Bot 同权移动候选；触控、灰盒表现和盲测仍未实现。决策见 [ADR-005](../decisions/005-arena-lightweight-physics.md)、[ADR-006](../decisions/006-arena-local-tick-utility-bot.md)、[ADR-007](../decisions/007-arena-rule-core-governance.md)、[ADR-008](../decisions/008-arena-map-authority-timeline.md) 和 [ADR-009](../decisions/009-arena-semantic-input-and-movement-authority.md)。
 
 本文同时记录已落地边界与后续目标；未明确标记为已落地的模块仍不是当前能力。Stage 6～9 的后续架构处于提议阶段，分别见 [Stage 6](arena-stage6-input-movement-plan.md)、[Stage 7](arena-stage7-presentation-plan.md)、[Stage 8](arena-stage8-product-progression-plan.md)、[Stage 9](arena-stage9-convergence-plan.md) 执行计划，以及 [ADR-009](../decisions/009-arena-semantic-input-and-movement-authority.md)、[ADR-010](../decisions/010-arena-semantic-presentation-and-assets.md)、[ADR-011](../decisions/011-arena-versioned-local-progression.md)、[ADR-012](../decisions/012-arena-reproducible-convergence.md)。当前 v3 架构仍见 [`../architecture.md`](../architecture.md)。
 

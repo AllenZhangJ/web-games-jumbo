@@ -1,3 +1,4 @@
+import { ARENA_PARTICIPANT_STATUS } from '../config.js';
 import { normalizeInputFrame } from '../input-frame.js';
 import { createRng } from '../../shared/deterministic-rng.js';
 import { getBotDifficultyProfile } from './bot-difficulty.js';
@@ -9,6 +10,11 @@ import {
 } from './bot-observation.js';
 import { createBotPersonality } from './bot-personality.js';
 import { selectHighestUtility } from './utility-arbitrator.js';
+import {
+  BOT_MOBILITY_INTENT,
+  selectBotMobilityIntent,
+} from './bot-mobility-policy.js';
+import { BotMobilityScheduler } from './bot-mobility-scheduler.js';
 
 function uint32(value, name) {
   if (!Number.isSafeInteger(value) || value < 0 || value > 0xffffffff) {
@@ -29,6 +35,8 @@ export class BotController {
   #nextPlanTick;
   #pauseUntilTick;
   #actionTick;
+  #mobilityScheduler;
+  #lastMobilityIntent;
   #lastCommandTick;
   #destroyed;
 
@@ -55,6 +63,11 @@ export class BotController {
     this.#nextPlanTick = 0;
     this.#pauseUntilTick = 0;
     this.#actionTick = -1;
+    this.#mobilityScheduler = new BotMobilityScheduler({
+      minimumIntervalTicks: this.#difficulty.minimumMobilityIntervalTicks,
+      crouchHoldTicks: this.#difficulty.crouchHoldTicks,
+    });
+    this.#lastMobilityIntent = BOT_MOBILITY_INTENT.NONE;
     this.#lastCommandTick = -1;
     this.#destroyed = false;
   }
@@ -111,6 +124,16 @@ export class BotController {
       && this.#rng.next() < this.#difficulty.actionCommitChance
       ? observation.commandTick
       : -1;
+    const canMove = observation.self.status === ARENA_PARTICIPANT_STATUS.ACTIVE
+      && observation.self.hitstunTicks === 0;
+    this.#lastMobilityIntent = selectBotMobilityIntent({ observation, decision });
+    this.#mobilityScheduler.schedule({
+      tick: observation.commandTick,
+      intent: this.#lastMobilityIntent,
+      committed: this.#lastMobilityIntent !== BOT_MOBILITY_INTENT.NONE
+        && this.#rng.next() < this.#difficulty.actionCommitChance,
+      canMove,
+    });
     if (
       decision.goalId !== BOT_GOAL_ID.RECOVER_EDGE
       && decision.goalId !== BOT_GOAL_ID.AVOID_MAP_HAZARD
@@ -152,6 +175,9 @@ export class BotController {
       }
     }
     const primaryPressed = observation.commandTick === this.#actionTick;
+    const canMove = observation.self.status === ARENA_PARTICIPANT_STATUS.ACTIVE
+      && observation.self.hitstunTicks === 0;
+    const mobility = this.#mobilityScheduler.sample(observation.commandTick, { canMove });
     const frame = normalizeInputFrame({
       tick: observation.commandTick,
       participantId: this.#participantId,
@@ -159,9 +185,9 @@ export class BotController {
       moveZ,
       primaryPressed,
       primaryHeld: primaryPressed,
-      jumpPressed: false,
-      jumpHeld: false,
-      slamPressed: false,
+      jumpPressed: mobility.jumpPressed,
+      jumpHeld: mobility.jumpHeld,
+      slamPressed: mobility.slamPressed,
     }, {
       expectedTick: observation.commandTick,
       participantIds: [this.#participantId],
@@ -186,6 +212,8 @@ export class BotController {
       pauseUntilTick: this.#pauseUntilTick,
       goalId: this.#currentPlan?.goalId ?? null,
       goalScore: this.#currentPlan?.score ?? null,
+      mobilityIntent: this.#lastMobilityIntent,
+      mobility: this.#mobilityScheduler.getDebugSnapshot(),
     };
   }
 
@@ -194,5 +222,6 @@ export class BotController {
     this.#destroyed = true;
     this.#sourceSnapshots.length = 0;
     this.#currentPlan = null;
+    this.#mobilityScheduler.destroy();
   }
 }

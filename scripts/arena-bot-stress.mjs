@@ -6,6 +6,7 @@ import { createNeutralInputFrame, normalizeInputFrame } from '../src/arena/input
 import { QuickMatchService } from '../src/arena/matchmaking/quick-match-service.js';
 import { createMatchAssignment } from '../src/arena/matchmaking/match-assignment.js';
 import { replayMatch } from '../src/arena/replay.js';
+import { BotController } from '../src/arena/ai/bot-controller.js';
 
 const CHARACTER_REGISTRY = createArenaV1CharacterRegistry();
 // Arena rewards displacement eliminations, not hit farming. A stronger bot can
@@ -34,6 +35,10 @@ function finiteInput(frame) {
     && Math.hypot(frame.moveX, frame.moveZ) <= 1 + 1e-12;
 }
 
+function increment(map, key) {
+  map.set(key, (map.get(key) ?? 0) + 1);
+}
+
 function createStats(id) {
   return {
     difficultyId: id,
@@ -50,6 +55,16 @@ function createStats(id) {
     botDeaths: 0,
     botUncreditedDeaths: 0,
     playerDeaths: 0,
+    movementInputs: {
+      jumpPressed: 0,
+      crouchHoldStarted: 0,
+      slamPressed: 0,
+      walkTicks: 0,
+      runTicks: 0,
+    },
+    movementActions: new Map(),
+    downSmashLandings: 0,
+    mapEvents: new Map(),
     replayChecks: 0,
     hashes: new Set(),
   };
@@ -63,6 +78,17 @@ function finishStats(stats) {
   const averageEliminations = stats.eliminations / stats.matches;
   const averageBotDeaths = stats.botDeaths / stats.matches;
   const averagePlayerDeaths = stats.playerDeaths / stats.matches;
+  const movementActions = Object.fromEntries([...stats.movementActions.entries()].sort());
+  const mapEvents = Object.fromEntries([...stats.mapEvents.entries()].sort());
+  const mobilityInputAttempts = stats.movementInputs.jumpPressed
+    + stats.movementInputs.crouchHoldStarted
+    + stats.movementInputs.slamPressed;
+  const mobilityActionStarts = [
+    'movement.explicit-ground-jump',
+    'movement.explicit-air-jump',
+    'movement.explicit-crouch-begin',
+    'movement.down-smash',
+  ].reduce((total, actionId) => total + (movementActions[actionId] ?? 0), 0);
   return {
     difficultyId: stats.difficultyId,
     matches: stats.matches,
@@ -80,10 +106,19 @@ function finishStats(stats) {
     averageBotUncreditedDeaths: stats.botUncreditedDeaths / stats.matches,
     averagePlayerDeaths,
     lifePressure: averagePlayerDeaths - averageBotDeaths,
+    movementInputs: { ...stats.movementInputs },
+    movementActions,
+    downSmashLandings: stats.downSmashLandings,
+    mapEvents,
+    mobilityInputAttempts,
+    mobilityActionStarts,
+    mobilityInputFailureRate: mobilityInputAttempts > 0
+      ? Math.max(0, mobilityInputAttempts - mobilityActionStarts) / mobilityInputAttempts
+      : 0,
     hitRatePerThousandTicks,
     eliminationRatePerThousandTicks,
     // Match duration is now partly a survival outcome. A per-tick denominator
-    // would penalize a stronger bot for keeping the match alive, so the Stage4
+    // would penalize a stronger bot for keeping the match alive, so the S6.3
     // gate uses per-match combat output and reports efficiency separately.
     capabilityIndex:
       averageEliminations * CAPABILITY_WEIGHTS.eliminations
@@ -184,12 +219,12 @@ function createHumanBaseline(config) {
 function runBenchmarkMatch(seed, difficultyId, replaySample) {
   const configOverrides = { preparingTicks: 0 };
   const config = createArenaV1MatchConfig(configOverrides);
-  const match = new QuickMatchService({ allowDifficultyOverride: true }).create({
-    matchSeed: seed,
-    difficultyOverride: difficultyId,
-    config: configOverrides,
-  });
-  const benchmarkPlayer = createHumanBaseline(config);
+  const botCharacterId = config.participantCharacters.find(
+    ({ participantId }) => participantId === 'player-2',
+  )?.definitionId;
+  const botRunInputThreshold = CHARACTER_REGISTRY.require(
+    botCharacterId,
+  ).movement.runInputThreshold;
   const metrics = {
     actions: 0,
     equipmentActions: 0,
@@ -199,7 +234,49 @@ function runBenchmarkMatch(seed, difficultyId, replaySample) {
     botDeaths: 0,
     botUncreditedDeaths: 0,
     playerDeaths: 0,
+    movementInputs: {
+      jumpPressed: 0,
+      crouchHoldStarted: 0,
+      slamPressed: 0,
+      walkTicks: 0,
+      runTicks: 0,
+    },
+    movementActions: new Map(),
+    downSmashLandings: 0,
+    mapEvents: new Map(),
   };
+  let previousJumpHeld = false;
+  const match = new QuickMatchService({
+    allowDifficultyOverride: true,
+    botControllerFactory(options) {
+      const controller = new BotController(options);
+      return {
+        createInput(snapshot) {
+          const frame = controller.createInput(snapshot);
+          const magnitude = Math.hypot(frame.moveX, frame.moveZ);
+          if (frame.jumpPressed) metrics.movementInputs.jumpPressed += 1;
+          if (frame.slamPressed) metrics.movementInputs.slamPressed += 1;
+          if (frame.jumpHeld && !previousJumpHeld) {
+            metrics.movementInputs.crouchHoldStarted += 1;
+          }
+          previousJumpHeld = frame.jumpHeld;
+          if (magnitude > 1e-7) {
+            if (magnitude < botRunInputThreshold) metrics.movementInputs.walkTicks += 1;
+            else metrics.movementInputs.runTicks += 1;
+          }
+          return frame;
+        },
+        destroy() {
+          controller.destroy();
+        },
+      };
+    },
+  }).create({
+    matchSeed: seed,
+    difficultyOverride: difficultyId,
+    config: configOverrides,
+  });
+  const benchmarkPlayer = createHumanBaseline(config);
   try {
     match.session.start();
     while (match.session.state !== 'ended') {
@@ -209,7 +286,9 @@ function runBenchmarkMatch(seed, difficultyId, replaySample) {
       for (const event of events) {
         if (event.type === 'ActionStarted' && event.participantId === 'player-2') {
           metrics.actions += 1;
-          if (event.action !== 'base-push') metrics.equipmentActions += 1;
+          if (event.action.startsWith('movement.')) {
+            increment(metrics.movementActions, event.action);
+          } else if (event.action !== 'base-push') metrics.equipmentActions += 1;
         } else if (
           event.type === 'EquipmentPickedUp'
           && event.participantId === 'player-2'
@@ -221,6 +300,16 @@ function runBenchmarkMatch(seed, difficultyId, replaySample) {
           event.type === 'PlayerEliminated'
           && event.creditedAttackerId === 'player-2'
         ) metrics.eliminations += 1;
+        if (event.type === 'DownSmashLanded' && event.participantId === 'player-2') {
+          metrics.downSmashLandings += 1;
+        }
+        if (
+          event.type === 'MapEventWarned'
+          || event.type === 'MapEventStarted'
+          || event.type === 'MapEventEnded'
+          || event.type === 'MapSurfaceCollapsed'
+          || event.type === 'MapEquipmentWaveReleased'
+        ) increment(metrics.mapEvents, event.type);
         if (event.type === 'PlayerEliminated' && event.participantId === 'player-2') {
           metrics.botDeaths += 1;
           if (event.creditedAttackerId === null) metrics.botUncreditedDeaths += 1;
@@ -268,6 +357,19 @@ for (const difficultyId of BOT_DIFFICULTY_IDS) {
     stats.botDeaths += result.botDeaths;
     stats.botUncreditedDeaths += result.botUncreditedDeaths;
     stats.playerDeaths += result.playerDeaths;
+    for (const [key, value] of Object.entries(result.movementInputs)) {
+      stats.movementInputs[key] += value;
+    }
+    for (const [actionId, count] of result.movementActions) {
+      stats.movementActions.set(
+        actionId,
+        (stats.movementActions.get(actionId) ?? 0) + count,
+      );
+    }
+    stats.downSmashLandings += result.downSmashLandings;
+    for (const [eventType, count] of result.mapEvents) {
+      stats.mapEvents.set(eventType, (stats.mapEvents.get(eventType) ?? 0) + count);
+    }
     stats.replayChecks += result.replayChecked ? 1 : 0;
     stats.hashes.add(result.finalHash);
     if (result.result.isDraw) stats.draws += 1;
@@ -307,7 +409,7 @@ for (let index = 1; index < results.length; index += 1) {
       + `${results[index].lifePressure}`,
     );
   }
-  // Stage 5 validates relative ability, not release win-rate balance. Permit
+  // S6.3 validates relative ability, not release win-rate balance. Permit
   // one worst-case binomial standard error so small deterministic samples do
   // not force tuning to a single benchmark's third-life discontinuities. The
   // allowance shrinks with sample size; Stage 9 will freeze confidence bands.
@@ -317,6 +419,33 @@ for (let index = 1; index < results.length; index += 1) {
       `难度得分率回退超过统计容差：${results[index - 1].difficultyId} `
       + `${results[index - 1].scoreRate} > ${results[index].difficultyId} `
       + `${results[index].scoreRate}（容差 ${scoreRateTolerance}）`,
+    );
+  }
+}
+
+const REQUIRED_MOVEMENT_ACTIONS = Object.freeze([
+  'movement.explicit-ground-jump',
+  'movement.explicit-air-jump',
+  'movement.explicit-crouch-begin',
+  'movement.explicit-crouch-release',
+  'movement.down-smash',
+]);
+for (const result of results) {
+  for (const actionId of REQUIRED_MOVEMENT_ACTIONS) {
+    if ((result.movementActions[actionId] ?? 0) < 1) {
+      throw new Error(`${result.difficultyId} 未覆盖 Bot movement action ${actionId}。`);
+    }
+  }
+  if (
+    result.downSmashLandings < 1
+    || result.movementInputs.walkTicks < 1
+    || result.movementInputs.runTicks < 1
+    || (result.mapEvents.MapEventWarned ?? 0) < 1
+    || (result.mapEvents.MapEventStarted ?? 0) < 1
+  ) throw new Error(`${result.difficultyId} Bot movement 成功/走跑覆盖不足。`);
+  if (result.averageBotUncreditedDeaths > 0.5) {
+    throw new Error(
+      `${result.difficultyId} 平均地图无归属死亡 ${result.averageBotUncreditedDeaths} 过高。`,
     );
   }
 }

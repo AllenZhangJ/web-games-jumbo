@@ -6,10 +6,18 @@ import {
 } from '../config.js';
 import { EQUIPMENT_LOCATION_STATE } from '../equipment/equipment-runtime.js';
 import { serializeMapRuntimeSnapshot } from '../map/map-serializer.js';
+import {
+  MOVEMENT_MODE,
+  MOVEMENT_RUNTIME_SCHEMA_VERSION,
+} from '../movement/movement-runtime.js';
 
 const MATCH_PHASES = new Set(Object.values(ARENA_MATCH_PHASE));
 const PARTICIPANT_STATUSES = new Set(Object.values(ARENA_PARTICIPANT_STATUS));
 const ACTION_PHASES = new Set(Object.values(ARENA_ACTION_PHASE));
+const MOVEMENT_MODES = new Set(Object.values(MOVEMENT_MODE));
+const AFFORDANCE_KINDS = new Set(['none', 'ignored', 'selected']);
+const AFFORDANCE_CHANNELS = Object.freeze(['primary', 'jump', 'slam']);
+const ACTION_LANES = new Set(['combat', 'locomotion', 'interaction']);
 
 function compareText(left, right) {
   if (left < right) return -1;
@@ -132,6 +140,80 @@ function copyActionRule(value, name) {
   };
 }
 
+function copyMovement(value, name) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new TypeError(`${name} 必须是公开 MovementSnapshot。`);
+  }
+  if (value.schemaVersion !== MOVEMENT_RUNTIME_SCHEMA_VERSION) {
+    throw new RangeError(`${name}.schemaVersion 无效。`);
+  }
+  if (!MOVEMENT_MODES.has(value.mode)) throw new RangeError(`${name}.mode 无效。`);
+  if (typeof value.grounded !== 'boolean') {
+    throw new TypeError(`${name}.grounded 必须是布尔值。`);
+  }
+  return {
+    schemaVersion: MOVEMENT_RUNTIME_SCHEMA_VERSION,
+    mode: value.mode,
+    airJumpsUsed: nonNegativeInteger(value.airJumpsUsed, `${name}.airJumpsUsed`),
+    crouchChargeTicks: nonNegativeInteger(
+      value.crouchChargeTicks,
+      `${name}.crouchChargeTicks`,
+    ),
+    grounded: value.grounded,
+  };
+}
+
+function copyAffordanceOutcome(value, name) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new TypeError(`${name} 必须是公开 ActionAffordance outcome。`);
+  }
+  if (!AFFORDANCE_KINDS.has(value.kind)) throw new RangeError(`${name}.kind 无效。`);
+  const lane = value.lane ?? null;
+  if (lane !== null && !ACTION_LANES.has(lane)) throw new RangeError(`${name}.lane 无效。`);
+  const actionDefinitionId = value.actionDefinitionId ?? null;
+  const source = value.source ?? null;
+  if (actionDefinitionId !== null) {
+    nonEmptyString(actionDefinitionId, `${name}.actionDefinitionId`);
+  }
+  if (source !== null) nonEmptyString(source, `${name}.source`);
+  return {
+    kind: value.kind,
+    actionDefinitionId,
+    lane,
+    source,
+    reason: nonEmptyString(value.reason, `${name}.reason`),
+  };
+}
+
+function copyActionAffordance(value, participantId, name) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new TypeError(`${name} 必须是公开 ActionAffordance。`);
+  }
+  const affordanceParticipantId = nonEmptyString(
+    value.participantId,
+    `${name}.participantId`,
+  );
+  if (affordanceParticipantId !== participantId) {
+    throw new RangeError(`${name}.participantId 与 participant 不一致。`);
+  }
+  if (!value.channels || typeof value.channels !== 'object' || Array.isArray(value.channels)) {
+    throw new TypeError(`${name}.channels 无效。`);
+  }
+  const primaryActionDefinitionId = value.primaryActionDefinitionId ?? null;
+  if (primaryActionDefinitionId !== null) {
+    nonEmptyString(primaryActionDefinitionId, `${name}.primaryActionDefinitionId`);
+  }
+  return {
+    tick: nonNegativeInteger(value.tick, `${name}.tick`),
+    participantId: affordanceParticipantId,
+    primaryActionDefinitionId,
+    channels: Object.fromEntries(AFFORDANCE_CHANNELS.map((channel) => [
+      channel,
+      copyAffordanceOutcome(value.channels[channel], `${name}.channels.${channel}`),
+    ])),
+  };
+}
+
 function copyParticipant(participant, name) {
   if (!participant || typeof participant !== 'object') throw new TypeError(`${name} 不存在。`);
   if (typeof participant.id !== 'string' || participant.id.length === 0) {
@@ -188,6 +270,12 @@ function copyParticipant(participant, name) {
       ticksRemaining: participant.action?.ticksRemaining,
     },
     actionRule: copyActionRule(participant.actionRule, `${name}.actionRule`),
+    movement: copyMovement(participant.movement, `${name}.movement`),
+    actionAffordance: copyActionAffordance(
+      participant.actionAffordance,
+      participant.id,
+      `${name}.actionAffordance`,
+    ),
     equipment: copyHeldEquipment(participant.equipment, `${name}.equipment`),
     position: finiteVector(participant.position, `${name}.position`),
     velocity: finiteVector(participant.velocity, `${name}.velocity`),
@@ -228,6 +316,13 @@ function validateSourceSnapshot(snapshot, name) {
   }
   const ids = snapshot.participants.map((participant) => participant?.id);
   if (new Set(ids).size !== ids.length) throw new RangeError(`${name} 参赛者 ID 必须唯一。`);
+  for (const [index, participant] of snapshot.participants.entries()) {
+    if (participant?.actionAffordance?.tick !== snapshot.tick) {
+      throw new RangeError(
+        `${name}.participants[${index}].actionAffordance.tick 必须与快照 tick 一致。`,
+      );
+    }
+  }
   if (!Array.isArray(snapshot.equipment)) throw new TypeError(`${name}.equipment 必须是数组。`);
   copyMapSnapshot(snapshot.map, `${name}.map`);
   return snapshot;

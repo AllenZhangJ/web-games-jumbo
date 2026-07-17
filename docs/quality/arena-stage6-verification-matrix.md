@@ -2,7 +2,7 @@
 
 ## 状态
 
-执行中。本文定义 Stage 6 的完成证据，不表示后续批次已经通过。S6.1 已提交；S6.2 Movement Rule/Core 当前候选已通过本机 E1/E2 门禁；S6.3～S6.6 仍未通过。实现边界见 [Stage 6 输入、移动与灰盒执行计划](../architecture/arena-stage6-input-movement-plan.md)，决策背景见 [ADR-009](../decisions/009-arena-semantic-input-and-movement-authority.md)。
+执行中。本文定义 Stage 6 的完成证据，不表示后续批次已经通过。S6.1～S6.2 已提交；S6.3 Bot 公平性当前候选已通过本机 E1/E2 门禁；S6.4～S6.6 仍未通过。实现边界见 [Stage 6 输入、移动与灰盒执行计划](../architecture/arena-stage6-input-movement-plan.md)，决策背景见 [ADR-009](../decisions/009-arena-semantic-input-and-movement-authority.md)。
 
 ## 使用规则
 
@@ -110,6 +110,17 @@ S6.2 退出门：纯 Node 可以完成走、跑、普通跳、蹲跳、二段跳
 | S6-B06 | 新动作加入后能力仍有序且可解释 | E2 | 三档能力指标、跳跃成功/失败、地图自杀和下砸使用率；困难仍在真人输入范围 |
 
 S6.3 退出门：机器人压力脚本覆盖三档、动态地图和全部移动动作；回放抽检一致，且架构测试证明无权威层旁路。
+
+### S6.3 当前证据
+
+| 证据 | 结果 | 边界 |
+|---|---|---|
+| `npm test` | 280/280 通过 | E1；含观测延迟/深冻结、affordance tick 一致、调度连续性、架构禁止依赖与 App/Session 回归 |
+| `npm run arena:bot:stress` | 900 局、9 份回放、900 唯一 hash；能力指数 `7.50 < 18.72 < 19.51` | E2；三档全动作、走跑、下砸落地和动态地图均有覆盖 |
+| 无归属 Bot 死亡 | 平均 `0.010 / 0.003 / 0.007` 次/局 | E2；未见高难度依靠大量地图自杀或非人类移动 |
+| 依赖方向门禁 | Bot 层禁止 MatchCore、MovementSystem、Physics、Session、Replay、Renderer 依赖 | E1；只允许公开状态值与 V4 InputFrame |
+
+完整原始计数与未证明边界见 [S6.3 Bot 移动与公平性门禁记录](../research/arena-stage6-bot-movement-results.md)。此处不冻结 Stage 9 发行胜率。
 
 ## S6.4 输入适配器与竞态
 

@@ -6,6 +6,7 @@ import {
   createBotArenaView,
   createBotObservation,
 } from '../../src/arena/ai/bot-observation.js';
+import { createNeutralInputFrame } from '../../src/arena/input-frame.js';
 
 test('BotObservation exposes only public delayed opponent state and is deeply frozen', () => {
   const core = createArenaV1MatchCore({ seed: 9, config: { preparingTicks: 0 } });
@@ -28,10 +29,47 @@ test('BotObservation exposes only public delayed opponent state and is deeply fr
   assert.equal(observation.equipment[0].originPosition, undefined);
   assert.equal(observation.equipment[0].revision, undefined);
   assert.equal(observation.self.equipment, null);
+  assert.equal(observation.self.movement.grounded, true);
+  assert.equal(observation.self.movement.jumpBufferTicksRemaining, undefined);
+  assert.equal(observation.self.movement.coyoteTicksRemaining, undefined);
+  assert.equal(observation.self.movement.revision, undefined);
+  assert.equal(observation.self.actionAffordance.channels.jump.kind, 'selected');
   assert.ok(Object.isFrozen(observation));
   assert.ok(Object.isFrozen(observation.opponent.position));
+  assert.ok(Object.isFrozen(observation.self.movement));
+  assert.ok(Object.isFrozen(observation.self.actionAffordance.channels.jump));
   assert.ok(Object.isFrozen(observation.equipment[0].position));
   assert.throws(() => { observation.opponent.position.x = 999; }, TypeError);
+  core.destroy();
+});
+
+test('BotObservation keeps self movement current while delaying opponent movement and affordance', () => {
+  const core = createArenaV1MatchCore({ seed: 10, config: { preparingTicks: 0 } });
+  const beforeJump = cloneBotSourceSnapshot(core.getSnapshot());
+  core.step([
+    { ...createNeutralInputFrame(0, 'player-1'), jumpPressed: true },
+    { ...createNeutralInputFrame(0, 'player-2'), jumpPressed: true },
+  ]);
+  const afterJump = cloneBotSourceSnapshot(core.getSnapshot());
+  const observation = createBotObservation({
+    commandSnapshot: afterJump,
+    delayedSnapshot: beforeJump,
+    selfId: 'player-2',
+    arena: createBotArenaView(
+      core.config.arena,
+      core.getCharacterDefinition('player-2').collision.radius,
+    ),
+  });
+  assert.equal(observation.commandTick, 1);
+  assert.equal(observation.observedTick, 0);
+  assert.equal(observation.self.movement.grounded, false);
+  assert.equal(observation.self.actionAffordance.tick, 1);
+  assert.equal(observation.opponent.movement.grounded, true);
+  assert.equal(observation.opponent.actionAffordance.tick, 0);
+  assert.notEqual(
+    observation.self.actionAffordance.channels.jump.actionDefinitionId,
+    observation.opponent.actionAffordance.channels.jump.actionDefinitionId,
+  );
   core.destroy();
 });
 
@@ -92,6 +130,27 @@ test('BotObservation rejects future information', () => {
     commandSnapshot: earlier,
     delayedSnapshot: later,
   }), /未来快照/);
+  core.destroy();
+});
+
+test('BotObservation rejects action affordance from a different tick', () => {
+  const core = createArenaV1MatchCore({ seed: 5, config: { preparingTicks: 0 } });
+  const snapshot = core.getSnapshot();
+  const mismatched = {
+    ...snapshot,
+    participants: snapshot.participants.map((participant, index) => (
+      index === 0
+        ? {
+          ...participant,
+          actionAffordance: {
+            ...participant.actionAffordance,
+            tick: snapshot.tick + 1,
+          },
+        }
+        : participant
+    )),
+  };
+  assert.throws(() => cloneBotSourceSnapshot(mismatched), /actionAffordance\.tick.*快照 tick/);
   core.destroy();
 });
 
