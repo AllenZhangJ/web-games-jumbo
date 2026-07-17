@@ -46,9 +46,10 @@ npm run arena:poc:build
 npm run arena:stress
 npm run arena:map:stress
 npm run arena:movement:stress
+npm run arena:input:fuzz
 ```
 
-`arena:poc:build` 生成 Web、微信、抖音无渲染 MatchCore POC；`arena:stress` 连续运行 1,000 局；`arena:map:stress` 让 100 个 seed 完整跑满 120 秒地图时间轴；`arena:movement:stress` 用 100 个 seed 覆盖走跑、跳跃、蹲跳、二段跳、下砸、地图塌陷和回放一致性。
+`arena:poc:build` 生成 Web、微信、抖音无渲染 MatchCore POC；`arena:stress` 连续运行 1,000 局；`arena:map:stress` 让 100 个 seed 完整跑满 120 秒地图时间轴；`arena:movement:stress` 用 100 个 seed 覆盖走跑、跳跃、蹲跳、二段跳、下砸、地图塌陷和回放一致性；`arena:input:fuzz` 随机验证两套 Mapper 的多指、取消、resize、暂停恢复和完整回放。
 
 Arena 阶段 3 机器人验证：
 

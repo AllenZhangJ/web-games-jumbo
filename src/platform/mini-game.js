@@ -44,8 +44,11 @@ function viewportFrom(api) {
   };
 }
 
-function touchPoint(event, canvas) {
-  const touch = event?.changedTouches?.[0] ?? event?.touches?.[0] ?? { clientX: 0, clientY: 0 };
+function touchPoint(touch, canvas) {
+  const pointerId = Number.isSafeInteger(touch.identifier) && touch.identifier >= 0
+    ? touch.identifier
+    : null;
+  if (pointerId === null) return null;
   const viewport = viewportFrom(canvas.__platformApi);
   const sourceX = [touch.clientX, touch.x, touch.pageX].find(Number.isFinite) ?? 0;
   const sourceY = [touch.clientY, touch.y, touch.pageY].find(Number.isFinite) ?? 0;
@@ -54,8 +57,27 @@ function touchPoint(event, canvas) {
   return {
     x: (sourceX / viewport.width) * canvasWidth,
     y: (sourceY / viewport.height) * canvasHeight,
-    pointerId: touch.identifier ?? 0,
+    pointerId,
   };
+}
+
+function touchPoints(event, canvas) {
+  try {
+    const changed = event?.changedTouches;
+    const current = event?.touches;
+    const source = changed && Number.isSafeInteger(changed.length) ? changed : current;
+    if (!source || !Number.isSafeInteger(source.length) || source.length < 1) return [];
+    const points = [];
+    for (let index = 0; index < source.length; index += 1) {
+      const touch = source[index];
+      if (!touch || typeof touch !== 'object') continue;
+      const value = touchPoint(touch, canvas);
+      if (value) points.push(value);
+    }
+    return points;
+  } catch {
+    return [];
+  }
 }
 
 function createOffscreenCanvas(api, id, mainCanvas, width, height) {
@@ -141,7 +163,7 @@ export function createMiniGamePlatform(api, id) {
   if (!api || typeof api.createCanvas !== 'function') {
     throw new Error(`[${id}] 未检测到小游戏 createCanvas API`);
   }
-  const missingTouchApis = ['onTouchStart', 'onTouchEnd']
+  const missingTouchApis = ['onTouchStart', 'onTouchMove', 'onTouchEnd']
     .filter((name) => typeof api[name] !== 'function');
   if (missingTouchApis.length > 0) {
     throw hostError(id, `宿主缺少必要触摸 API：${missingTouchApis.join('、')}`);
@@ -200,13 +222,23 @@ export function createMiniGamePlatform(api, id) {
     requestFrame: frames.requestFrame,
     cancelFrame: frames.cancelFrame,
     now,
-    bindInput: ({ onStart = () => {}, onEnd = () => {}, onCancel = () => {} } = {}) => {
-      const start = (event) => onStart(touchPoint(event, canvas));
-      const end = (event) => onEnd(touchPoint(event, canvas));
-      const cancel = (event) => onCancel(touchPoint(event, canvas));
+    bindInput: ({
+      onStart = () => {},
+      onMove = () => {},
+      onEnd = () => {},
+      onCancel = () => {},
+    } = {}) => {
+      const dispatch = (callback) => (event) => {
+        for (const point of touchPoints(event, canvas)) callback(point);
+      };
+      const start = dispatch(onStart);
+      const move = dispatch(onMove);
+      const end = dispatch(onEnd);
+      const cancel = dispatch(onCancel);
       const cleanups = [];
       try {
         cleanups.push(subscribeHost(api, 'onTouchStart', 'offTouchStart', start, { required: true, id }));
+        cleanups.push(subscribeHost(api, 'onTouchMove', 'offTouchMove', move, { required: true, id }));
         cleanups.push(subscribeHost(api, 'onTouchEnd', 'offTouchEnd', end, { required: true, id }));
         cleanups.push(subscribeHost(api, 'onTouchCancel', 'offTouchCancel', cancel, { id }));
       } catch (error) {

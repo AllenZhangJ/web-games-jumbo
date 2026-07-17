@@ -117,6 +117,14 @@ test('MovementActionCandidateProvider derives explicit and context choices only 
     contextual.outcomes[0].actionDefinitionId,
     STAGE6_MOVEMENT_ACTION_ID.CONTEXT_GROUND_JUMP,
   );
+  const contextualCrouch = resolve(
+    [baseUnavailable, ...candidates],
+    input({ primaryHeld: true }),
+  );
+  assert.equal(
+    contextualCrouch.outcomes[0].actionDefinitionId,
+    STAGE6_MOVEMENT_ACTION_ID.CONTEXT_CROUCH_BEGIN,
+  );
   assert.equal(provider.getCandidates(capabilities()), candidates);
   assert.notEqual(provider.getCandidates(capabilities({ grounded: false })), candidates);
   assert.ok(Object.isFrozen(candidates));

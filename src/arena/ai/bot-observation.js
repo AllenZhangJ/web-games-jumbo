@@ -16,7 +16,7 @@ const PARTICIPANT_STATUSES = new Set(Object.values(ARENA_PARTICIPANT_STATUS));
 const ACTION_PHASES = new Set(Object.values(ARENA_ACTION_PHASE));
 const MOVEMENT_MODES = new Set(Object.values(MOVEMENT_MODE));
 const AFFORDANCE_KINDS = new Set(['none', 'ignored', 'selected']);
-const AFFORDANCE_CHANNELS = Object.freeze(['primary', 'jump', 'slam']);
+const AFFORDANCE_CHANNELS = Object.freeze(['primary', 'primaryHold', 'jump', 'slam']);
 const ACTION_LANES = new Set(['combat', 'locomotion', 'interaction']);
 
 function compareText(left, right) {

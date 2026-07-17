@@ -10,29 +10,52 @@ const PROJECT_KEYS = new Set([
   'activeConflictTags',
 ]);
 
-const CHANNEL_INPUTS = Object.freeze({
-  [ACTION_INPUT_CHANNEL.PRIMARY]: Object.freeze({
-    primaryPressed: true,
-    primaryHeld: false,
-    jumpPressed: false,
-    jumpHeld: false,
-    slamPressed: false,
+// Probe names are presentation-facing semantic slots. They intentionally do
+// not expose pointer state or let presentation select an action definition.
+const CHANNEL_PROBES = Object.freeze({
+  primary: Object.freeze({
+    inputChannel: ACTION_INPUT_CHANNEL.PRIMARY,
+    input: Object.freeze({
+      primaryPressed: true,
+      primaryHeld: false,
+      jumpPressed: false,
+      jumpHeld: false,
+      slamPressed: false,
+    }),
   }),
-  [ACTION_INPUT_CHANNEL.JUMP]: Object.freeze({
-    primaryPressed: false,
-    primaryHeld: false,
-    jumpPressed: true,
-    jumpHeld: false,
-    slamPressed: false,
+  primaryHold: Object.freeze({
+    inputChannel: ACTION_INPUT_CHANNEL.PRIMARY,
+    input: Object.freeze({
+      primaryPressed: false,
+      primaryHeld: true,
+      jumpPressed: false,
+      jumpHeld: false,
+      slamPressed: false,
+    }),
   }),
-  [ACTION_INPUT_CHANNEL.SLAM]: Object.freeze({
-    primaryPressed: false,
-    primaryHeld: false,
-    jumpPressed: false,
-    jumpHeld: false,
-    slamPressed: true,
+  jump: Object.freeze({
+    inputChannel: ACTION_INPUT_CHANNEL.JUMP,
+    input: Object.freeze({
+      primaryPressed: false,
+      primaryHeld: false,
+      jumpPressed: true,
+      jumpHeld: false,
+      slamPressed: false,
+    }),
+  }),
+  slam: Object.freeze({
+    inputChannel: ACTION_INPUT_CHANNEL.SLAM,
+    input: Object.freeze({
+      primaryPressed: false,
+      primaryHeld: false,
+      jumpPressed: false,
+      jumpHeld: false,
+      slamPressed: true,
+    }),
   }),
 });
+
+const PRIMARY_PRESS_INPUT = CHANNEL_PROBES.primary.input;
 
 function projectOutcome(outcome) {
   return Object.freeze({
@@ -70,19 +93,21 @@ export class ActionAffordanceProjector {
       activeConflictTags,
     } = options;
     const channels = {};
-    for (const [channel, input] of Object.entries(CHANNEL_INPUTS)) {
+    for (const [probeName, probe] of Object.entries(CHANNEL_PROBES)) {
       const resolution = this.#resolver.resolve({
         tick,
         participantId,
         canAct,
-        input,
+        input: probe.input,
         candidates,
         occupiedLanes,
         activeConflictTags,
       });
-      const outcome = resolution.outcomes.find(({ inputChannel }) => inputChannel === channel)
+      const outcome = resolution.outcomes.find((candidate) => (
+        candidate.inputChannel === probe.inputChannel
+      ))
         ?? resolution.outcomes[0];
-      channels[channel] = projectOutcome(outcome);
+      channels[probeName] = projectOutcome(outcome);
     }
     let primaryActionDefinitionId =
       channels[ACTION_INPUT_CHANNEL.PRIMARY].actionDefinitionId;
@@ -94,7 +119,7 @@ export class ActionAffordanceProjector {
         tick,
         participantId,
         canAct: true,
-        input: CHANNEL_INPUTS[ACTION_INPUT_CHANNEL.PRIMARY],
+        input: PRIMARY_PRESS_INPUT,
         candidates,
         occupiedLanes,
         activeConflictTags,

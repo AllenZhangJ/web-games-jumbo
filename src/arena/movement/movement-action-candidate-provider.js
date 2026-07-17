@@ -116,6 +116,12 @@ export class MovementActionCandidateProvider {
         'context-ground-jump-unavailable',
       ),
       candidate(
+        STAGE6_MOVEMENT_ACTION_ID.CONTEXT_CROUCH_BEGIN,
+        ACTION_PRIORITY.BASE - 30,
+        value.canBeginCrouchJump,
+        'context-crouch-jump-unavailable',
+      ),
+      candidate(
         STAGE6_MOVEMENT_ACTION_ID.CONTEXT_AIR_JUMP,
         ACTION_PRIORITY.BASE - 20,
         value.canAirJump,

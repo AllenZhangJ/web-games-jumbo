@@ -298,6 +298,10 @@ test('snapshot action affordance is derived by the same resolver without becomin
   );
   assert.equal(farPlayer.actionAffordance.channels.primary.kind, 'selected');
   assert.equal(
+    farPlayer.actionAffordance.channels.primaryHold.actionDefinitionId,
+    STAGE6_MOVEMENT_ACTION_ID.CONTEXT_CROUCH_BEGIN,
+  );
+  assert.equal(
     farPlayer.actionAffordance.channels.jump.actionDefinitionId,
     STAGE6_MOVEMENT_ACTION_ID.EXPLICIT_GROUND_JUMP,
   );
@@ -324,6 +328,8 @@ test('snapshot action affordance is derived by the same resolver without becomin
   const closeAffordance = close.getSnapshot().participants[0].actionAffordance;
   assert.equal(closeAffordance.primaryActionDefinitionId, STAGE4_ACTION_ID.BASE_PUSH);
   assert.equal(closeAffordance.channels.primary.source, 'base-action-provider');
+  assert.equal(closeAffordance.channels.primary.lane, 'combat');
+  assert.equal(closeAffordance.channels.primaryHold.lane, 'locomotion');
   close.destroy();
 });
 

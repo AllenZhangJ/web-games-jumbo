@@ -30,20 +30,28 @@ function normalizePointer(event, canvas) {
   const displayHeight = positive(rect?.height, positive(canvas.clientHeight, positive(canvas.height, 1)));
   const bufferWidth = positive(canvas.width, displayWidth);
   const bufferHeight = positive(canvas.height, displayHeight);
-  const clientX = finite(event?.clientX, left);
-  const clientY = finite(event?.clientY, top);
+  const clientX = finite(safeProperty(event, 'clientX'), left);
+  const clientY = finite(safeProperty(event, 'clientY'), top);
   return {
     x: ((clientX - left) / displayWidth) * bufferWidth,
     y: ((clientY - top) / displayHeight) * bufferHeight,
-    pointerId: Number.isFinite(event?.pointerId) ? event.pointerId : 0,
+    pointerId: pointerIdentifier(event),
   };
 }
 
-function listen(target, type, callback, options) {
-  if (typeof target?.addEventListener !== 'function') return () => {};
+function listen(target, type, callback, options, { required = false } = {}) {
+  if (typeof target?.addEventListener !== 'function') {
+    if (required) throw new Error(`[web] 缺少必需事件监听能力：${type}`);
+    return () => {};
+  }
   try {
     target.addEventListener(type, callback, options);
-  } catch {
+  } catch (cause) {
+    if (required) {
+      const error = new Error(`[web] 注册必需事件 ${type} 失败`);
+      error.cause = cause;
+      throw error;
+    }
     return () => {};
   }
   let active = true;
@@ -72,6 +80,11 @@ function safeProperty(object, key) {
   } catch {
     return undefined;
   }
+}
+
+function pointerIdentifier(event) {
+  const value = safeProperty(event, 'pointerId');
+  return Number.isSafeInteger(value) && value >= 0 ? value : null;
 }
 
 function webEnvironment(environment) {
@@ -197,11 +210,17 @@ export function createWebPlatform(environment = globalThis) {
     requestFrame: frames.requestFrame,
     cancelFrame: frames.cancelFrame,
     now,
-    bindInput: ({ onStart = () => {}, onEnd = () => {}, onCancel = () => {} } = {}) => {
+    bindInput: ({
+      onStart = () => {},
+      onMove = () => {},
+      onEnd = () => {},
+      onCancel = () => {},
+    } = {}) => {
       const pressedPointers = new Set();
       const start = (event) => {
+        const pointerId = pointerIdentifier(event);
+        if (pointerId === null) return;
         preventBrowserGesture(event);
-        const pointerId = Number.isFinite(event?.pointerId) ? event.pointerId : 0;
         if (pressedPointers.has(pointerId)) return;
         pressedPointers.add(pointerId);
         try {
@@ -211,9 +230,17 @@ export function createWebPlatform(environment = globalThis) {
         }
         onStart(normalizePointer(event, canvas));
       };
-      const end = (event) => {
+      const move = (event) => {
+        const pointerId = pointerIdentifier(event);
+        if (pointerId === null) return;
+        if (!pressedPointers.has(pointerId)) return;
         preventBrowserGesture(event);
-        const pointerId = Number.isFinite(event?.pointerId) ? event.pointerId : 0;
+        onMove(normalizePointer(event, canvas));
+      };
+      const end = (event) => {
+        const pointerId = pointerIdentifier(event);
+        if (pointerId === null) return;
+        preventBrowserGesture(event);
         if (!pressedPointers.delete(pointerId)) return;
         try {
           canvas.releasePointerCapture?.(pointerId);
@@ -223,26 +250,51 @@ export function createWebPlatform(environment = globalThis) {
         onEnd(normalizePointer(event, canvas));
       };
       const cancel = (event) => {
+        const pointerId = pointerIdentifier(event);
+        if (pointerId === null) return;
         preventBrowserGesture(event);
-        const pointerId = Number.isFinite(event?.pointerId) ? event.pointerId : 0;
         if (!pressedPointers.delete(pointerId)) return;
         onCancel(normalizePointer(event, canvas));
       };
-      const cleanups = [
-        listen(canvas, 'pointerdown', start, { passive: false }),
-        listen(canvas, 'pointerup', end, { passive: false }),
-        listen(canvas, 'pointercancel', cancel, { passive: false }),
-        listen(canvas, 'lostpointercapture', cancel),
-        listen(canvas, 'contextmenu', preventBrowserGesture),
-        listen(canvas, 'selectstart', preventBrowserGesture),
-        listen(canvas, 'dragstart', preventBrowserGesture),
-        listen(canvas, 'gesturestart', preventBrowserGesture, { passive: false }),
-        listen(env.windowObject, 'pointerup', end, { passive: false }),
-        listen(env.windowObject, 'pointercancel', cancel, { passive: false }),
-      ];
+      const cleanups = [];
+      try {
+        cleanups.push(listen(canvas, 'pointerdown', start, { passive: false }, { required: true }));
+        cleanups.push(listen(canvas, 'pointerup', end, { passive: false }));
+        cleanups.push(listen(canvas, 'pointercancel', cancel, { passive: false }));
+        cleanups.push(listen(canvas, 'lostpointercapture', cancel));
+        cleanups.push(listen(canvas, 'contextmenu', preventBrowserGesture));
+        cleanups.push(listen(canvas, 'selectstart', preventBrowserGesture));
+        cleanups.push(listen(canvas, 'dragstart', preventBrowserGesture));
+        cleanups.push(listen(canvas, 'gesturestart', preventBrowserGesture, { passive: false }));
+        cleanups.push(listen(
+          env.windowObject,
+          'pointerup',
+          end,
+          { passive: false },
+          { required: true },
+        ));
+        cleanups.push(listen(
+          env.windowObject,
+          'pointermove',
+          move,
+          { passive: false },
+          { required: true },
+        ));
+        cleanups.push(listen(
+          env.windowObject,
+          'pointercancel',
+          cancel,
+          { passive: false },
+          { required: true },
+        ));
+      } catch (error) {
+        pressedPointers.clear();
+        [...cleanups].reverse().forEach((cleanup) => cleanup());
+        throw error;
+      }
       return () => {
         pressedPointers.clear();
-        cleanups.forEach((cleanup) => cleanup());
+        [...cleanups].reverse().forEach((cleanup) => cleanup());
       };
     },
     onResize: (callback) => listen(env.windowObject, 'resize', callback),
@@ -251,6 +303,7 @@ export function createWebPlatform(environment = globalThis) {
       const cleanups = [
         listen(env.documentObject, 'visibilitychange', handler),
         listen(env.windowObject, 'pageshow', handler),
+        listen(env.windowObject, 'focus', handler),
       ];
       return () => cleanups.forEach((cleanup) => cleanup());
     },
@@ -260,6 +313,7 @@ export function createWebPlatform(environment = globalThis) {
       const cleanups = [
         listen(env.documentObject, 'visibilitychange', handler),
         listen(env.windowObject, 'pagehide', pageHide),
+        listen(env.windowObject, 'blur', pageHide),
       ];
       return () => cleanups.forEach((cleanup) => cleanup());
     },

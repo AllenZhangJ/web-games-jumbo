@@ -43,6 +43,7 @@ function miniGameApi({ id, withNativeOffscreen = true } = {}) {
     requestAnimationFrame: () => 1,
     cancelAnimationFrame() {},
     onTouchStart() {},
+    onTouchMove() {},
     onTouchEnd() {},
   };
   if (withNativeOffscreen) {
@@ -295,6 +296,49 @@ test('mini-game rejects missing required touch APIs before renderer startup', ()
   );
 });
 
+test('mini-game requires touch move and dispatches every changed touch independently', () => {
+  const missing = miniGameApi({ id: 'wechat' });
+  delete missing.api.onTouchMove;
+  assert.throws(
+    () => createMiniGamePlatform(missing.api, 'wechat'),
+    /\[wechat\].*onTouchMove/,
+  );
+
+  const fixture = miniGameApi({ id: 'wechat' });
+  const handlers = {};
+  for (const name of ['Start', 'Move', 'End', 'Cancel']) {
+    fixture.api[`onTouch${name}`] = (callback) => { handlers[name.toLowerCase()] = callback; };
+    fixture.api[`offTouch${name}`] = (callback) => {
+      if (handlers[name.toLowerCase()] === callback) delete handlers[name.toLowerCase()];
+    };
+  }
+  const platform = createMiniGamePlatform(fixture.api, 'wechat');
+  const observed = [];
+  const cleanup = platform.bindInput({
+    onStart: (value) => observed.push(['start', value.pointerId]),
+    onMove: (value) => observed.push(['move', value.pointerId]),
+    onEnd: (value) => observed.push(['end', value.pointerId]),
+    onCancel: (value) => observed.push(['cancel', value.pointerId]),
+  });
+  const touches = [
+    { identifier: 4, clientX: 20, clientY: 30 },
+    { identifier: 7, clientX: 300, clientY: 500 },
+  ];
+  handlers.start({ changedTouches: touches });
+  handlers.move({ changedTouches: touches });
+  handlers.end({ changedTouches: touches });
+  assert.deepEqual(observed, [
+    ['start', 4], ['start', 7],
+    ['move', 4], ['move', 7],
+    ['end', 4], ['end', 7],
+  ]);
+  handlers.end({ changedTouches: [], touches: [touches[0]] });
+  handlers.start({ changedTouches: [{ identifier: -1, clientX: 0, clientY: 0 }] });
+  assert.equal(observed.length, 6);
+  cleanup();
+  assert.deepEqual(handlers, {});
+});
+
 test('mini-game offscreen fallback never resizes a main Canvas returned twice', () => {
   const fixture = miniGameApi({ id: 'wechat', withNativeOffscreen: false });
   fixture.api.createCanvas = () => fixture.mainCanvas;
@@ -348,9 +392,11 @@ test('Web input remains finite on a zero-size Canvas and window completion is de
   };
   const platform = createWebPlatform(environment);
   const starts = [];
+  const moves = [];
   const ends = [];
   const cleanup = platform.bindInput({
     onStart: (point) => starts.push(point),
+    onMove: (point) => moves.push(point),
     onEnd: (point) => ends.push(point),
     onCancel() {},
   });
@@ -367,12 +413,21 @@ test('Web input remains finite on a zero-size Canvas and window completion is de
   canvasListeners.get('dragstart')(event);
   canvasListeners.get('gesturestart')(event);
   canvasListeners.get('pointerdown')(event);
+  windowListeners.get('pointermove')(event);
   windowListeners.get('pointerup')(event);
   canvasListeners.get('pointerup')(event);
   assert.equal(starts.length, 1);
+  assert.equal(moves.length, 1);
   assert.equal(ends.length, 1);
-  assert.equal(prevented, 7);
-  assert.ok([starts[0].x, starts[0].y, ends[0].x, ends[0].y].every(Number.isFinite));
+  assert.equal(prevented, 8);
+  assert.ok([
+    starts[0].x,
+    starts[0].y,
+    moves[0].x,
+    moves[0].y,
+    ends[0].x,
+    ends[0].y,
+  ].every(Number.isFinite));
   cleanup();
   assert.equal(canvasListeners.has('pointerdown'), false);
   assert.equal(canvasListeners.has('contextmenu'), false);
@@ -380,6 +435,47 @@ test('Web input remains finite on a zero-size Canvas and window completion is de
   assert.equal(canvasListeners.has('dragstart'), false);
   assert.equal(canvasListeners.has('gesturestart'), false);
   assert.equal(windowListeners.has('pointerup'), false);
+  assert.equal(windowListeners.has('pointermove'), false);
+});
+
+test('Web input rejects malformed pointer IDs and rolls back partial required bindings', () => {
+  const canvasListeners = new Map();
+  const windowListeners = new Map();
+  const mainCanvas = canvasWithContext();
+  mainCanvas.addEventListener = (type, callback) => canvasListeners.set(type, callback);
+  mainCanvas.removeEventListener = (type, callback) => {
+    if (canvasListeners.get(type) === callback) canvasListeners.delete(type);
+  };
+  const environment = {
+    document: {
+      hidden: false,
+      querySelector: () => mainCanvas,
+      createElement: () => canvasWithContext(),
+      addEventListener() {},
+      removeEventListener() {},
+    },
+    window: {
+      addEventListener(type, callback) {
+        if (type === 'pointermove') throw new Error('blocked pointermove');
+        windowListeners.set(type, callback);
+      },
+      removeEventListener(type, callback) {
+        if (windowListeners.get(type) === callback) windowListeners.delete(type);
+      },
+    },
+  };
+  const platform = createWebPlatform(environment);
+  assert.throws(() => platform.bindInput(), /pointermove/);
+  assert.equal(canvasListeners.size, 0);
+  assert.equal(windowListeners.size, 0);
+
+  environment.window.addEventListener = (type, callback) => windowListeners.set(type, callback);
+  let starts = 0;
+  const cleanup = platform.bindInput({ onStart: () => { starts += 1; } });
+  canvasListeners.get('pointerdown')({ pointerId: -1 });
+  canvasListeners.get('pointerdown')({ pointerId: 1.5 });
+  assert.equal(starts, 0);
+  cleanup();
 });
 
 test('Web storage and share failures return safe values without rejection', async () => {

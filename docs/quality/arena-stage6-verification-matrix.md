@@ -2,7 +2,7 @@
 
 ## 状态
 
-执行中。本文定义 Stage 6 的完成证据，不表示后续批次已经通过。S6.1～S6.2 已提交；S6.3 Bot 公平性当前候选已通过本机 E1/E2 门禁；S6.4～S6.6 仍未通过。实现边界见 [Stage 6 输入、移动与灰盒执行计划](../architecture/arena-stage6-input-movement-plan.md)，决策背景见 [ADR-009](../decisions/009-arena-semantic-input-and-movement-authority.md)。
+执行中。本文定义 Stage 6 的完成证据，不表示后续批次已经通过。S6.1～S6.3 已提交；S6.4 输入适配当前候选已通过本机 E1/E2，真实三端 E3 尚未关闭；S6.5～S6.6 未通过。实现边界见 [Stage 6 输入、移动与灰盒执行计划](../architecture/arena-stage6-input-movement-plan.md)，决策背景见 [ADR-009](../decisions/009-arena-semantic-input-and-movement-authority.md)。
 
 ## 使用规则
 
@@ -152,6 +152,8 @@ S6.3 退出门：机器人压力脚本覆盖三档、动态地图和全部移动
 
 S6.4 退出门：上述场景均有自动化测试；Web、微信开发者工具、抖音开发者工具至少各完成一次多点触控、取消和前后台冒烟。
 
+当前本机证据：29 项输入/集成/架构定向测试通过；30/60/120Hz 外层调度得到相同 180 个规范帧、最终快照和 hash；80 局输入 fuzz 覆盖 72,000 tick、4 份完整回放、878 次 resize、480 次暂停恢复和 2,820 次合法 cancel。详情见 [S6.4 输入与竞态门禁记录](../research/arena-stage6-input-results.md)。Web/微信/抖音 E3 未执行，因此这里不标记完整退出。
+
 ## S6.5 灰盒 Presentation 与 Session
 
 | ID | 阻断要求 | 最低证据 | 必须验证的内容 |
@@ -225,7 +227,7 @@ npm run build
 git diff --check
 ```
 
-其中 `arena:movement:stress` 已在 S6.2 实现；`arena:input:fuzz` 和 `arena:session:soak` 仍分别是 S6.4/S6.5 计划命令，不得在实现前伪造为已通过。
+其中 `arena:movement:stress` 已在 S6.2 实现；`arena:input:fuzz` 已在 S6.4 实现并通过当前 80 局门禁；`arena:session:soak` 仍是 S6.5 计划命令，不得在实现前伪造为已通过。
 
 最终完成判定还需要：
 
