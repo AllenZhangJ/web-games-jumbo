@@ -167,6 +167,28 @@ test('Arena device acceptance remains pure evidence data behind a Node-only CLI'
   }
 });
 
+test('Arena Stage 7 contracts remain host-free behind an injected Three view factory', async () => {
+  const directories = [
+    'src/arena/presentation/animation',
+    'src/arena/presentation/assets',
+    'src/arena/presentation/character',
+  ].map((directory) => path.resolve(directory));
+  const files = (await Promise.all(directories.map(listJavaScript))).flat();
+  files.push(
+    path.resolve('src/arena/presentation/content/character-presentation-definition.js'),
+    path.resolve('src/arena/presentation/content/character-presentation-registry.js'),
+  );
+  assert.ok(files.length > 5);
+  for (const file of files) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /(?:from\s+['"](?:three|node:|[^'"]*(?:renderer|session|platform|entry|match-core)[^'"]*)['"]|Date\.now|Math\.random|\bperformance\b|requestAnimationFrame|\b(?:window|document|navigator)\b|\b(?:tt|wx)\s*\.)/,
+      `${file} 应保持为可无渲染测试的 Stage 7 合同层。`,
+    );
+  }
+});
+
 test('Arena MatchCore POC bundles and executes as a standalone mini-game IIFE', async () => {
   const result = await esbuild({
     entryPoints: [path.resolve('src/arena/entry/match-core-poc.js')],

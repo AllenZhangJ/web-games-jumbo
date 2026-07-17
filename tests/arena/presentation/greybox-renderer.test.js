@@ -125,7 +125,7 @@ test('ArenaWorldStage syncs programmatic views without mutating authority-derive
   assert.equal(debug.equipmentCount, 3);
   assert.equal(debug.effectCount, 1);
   assert.deepEqual(
-    debug.characters.map(({ geometry }) => geometry),
+    debug.characters.map(({ view }) => view.geometry),
     ['chibi-runner', 'wind-up-robot'],
   );
   assert.deepEqual(camera.inputBasis.screenUp, { x: 0, z: 1 });
@@ -235,6 +235,7 @@ test('Arena Three presentation sources do not call authority mutation APIs', asy
     'character-view-registry.js',
     'equipment-view-registry.js',
     'programmatic-character-view.js',
+    'programmatic-character-view-factory.js',
     'surface-view-registry.js',
   ];
   const source = (await Promise.all(files.map((file) => readFile(

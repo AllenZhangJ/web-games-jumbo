@@ -86,15 +86,41 @@ function actionView(participant, tick, content) {
   });
 }
 
-function participantView(participant, content) {
-  const definition = content.characters[participant.characterDefinitionId];
-  if (!definition) {
-    throw new RangeError(`缺少 character presentation ${participant.characterDefinitionId}。`);
+function participantActionView(participant, content) {
+  if (!participant.action || typeof participant.action !== 'object') {
+    throw new TypeError(`${participant.id}.action 不存在。`);
   }
+  const definitionId = participant.action.definitionId;
+  const presentation = definitionId === null ? null : content.actions[definitionId];
+  if (definitionId !== null && !presentation) {
+    throw new RangeError(`缺少 action presentation ${definitionId}。`);
+  }
+  return Object.freeze({
+    ...cloneFrozen(participant.action),
+    presentationSemantic: presentation?.semantic ?? null,
+    animationCategory: presentation?.animationCategory ?? null,
+  });
+}
+
+function participantView(participant, content) {
+  if (!content.characterPresentationRegistry?.requireDefaultForCharacter) {
+    throw new TypeError('presentation content 缺少 CharacterPresentationRegistry。');
+  }
+  const definition = content.characterPresentationRegistry.requireDefaultForCharacter(
+    participant.characterDefinitionId,
+  );
   return Object.freeze({
     id: nonEmptyString(participant.id, 'participant.id'),
     characterDefinitionId: participant.characterDefinitionId,
-    appearance: definition,
+    appearance: Object.freeze({
+      presentationId: definition.id,
+      definitionHash: definition.getContentHash(),
+      modelAssetId: definition.modelAssetId,
+      rigProfileId: definition.rigProfileId,
+      materialProfileId: definition.materialProfileId,
+      outlineProfileId: definition.outlineProfileId,
+      direction: definition.direction,
+    }),
     status: participant.status,
     lives: integerAtLeast(participant.lives, 0, `${participant.id}.lives`),
     eliminations: integerAtLeast(
@@ -112,7 +138,7 @@ function participantView(participant, content) {
     velocity: finiteVector3(participant.velocity, `${participant.id}.velocity`),
     facing: finiteFacing(participant.facing, `${participant.id}.facing`),
     grounded: Boolean(participant.grounded),
-    action: cloneFrozen(participant.action),
+    action: participantActionView(participant, content),
     movement: cloneFrozen(participant.movement),
     equipment: cloneFrozen(participant.equipment),
   });

@@ -2,7 +2,7 @@
 
 ## 文档状态
 
-提议，2026-07-17。本文定义 Stage 7 的长期模块边界和退出证据，不表示正式角色资产已经制作或接入。只有 Stage 6 输入映射通过盲测并冻结后，玩法级动作语义才允许进入批量动画生产。
+执行中，2026-07-18。S7.1 已建立版本化角色表现、资产、动画语义、六方向与运行时生命周期合同，并把原有程序化角色迁到可替换 Factory 后；它仍是灰盒占位，不表示正式角色资产已经制作或接入。只有 Stage 6 输入映射通过盲测并冻结后，玩法级动作语义才允许进入 S7.2 及后续正式动画生产。
 
 ## 目标与非目标
 
@@ -31,9 +31,9 @@ Stage 7 把已经稳定的权威快照和事件翻译成可读的角色、动画
 
 ### 2. 角色表现定义
 
-`CharacterPresentationDefinition` 属于 Presentation/Content，建议至少包含：
+`CharacterPresentationDefinition` 属于 Presentation/Content，当前包含：
 
-- `presentationId`、适配的 `characterId` 与内容版本。
+- 稳定 `id`、适配的 `characterDefinitionId`、默认表现标记与内容版本。
 - `modelAssetId`、`rigProfileId`、材质与轮廓 profile。
 - `animationMap`：从稳定动作语义到资产 clip 的映射与回退链。
 - 六方向映射策略，以及角色默认正面轴。
@@ -48,13 +48,13 @@ Definition 在注册后深冻结；资产 URL 由独立 `PresentationAssetRegist
 
 ```text
 idle / walk / run
-jump / crouch-jump / double-jump / down-smash / land
+jump / crouch-charge / crouch-jump / double-jump / down-smash / land
 attack-windup / attack-active / equipment / defend
 hitstun / knockback / eliminated
-win / lose
+win / lose / draw
 ```
 
-`AnimationSemanticResolver` 从 `MotionSnapshot`、权威动作阶段和已发生事件推导语义。clip 缺失时按 Definition 的显式回退链降级，禁止通过猜测 clip 名静默成功。
+`AnimationSemanticResolver` 从只读 Participant Snapshot、权威动作阶段和已发生事件推导基础动作与覆盖动作两条语义。clip 缺失时按 Definition 的显式有序回退链降级，禁止通过猜测 clip 名静默成功。
 
 ### 4. 表现事件
 
@@ -80,9 +80,9 @@ src/arena/presentation/
 
 职责边界：
 
-- `AssetLoaderPort` 隔离 Three.js 加载器与平台路径差异。
+- `PresentationAssetLoaderPort` 隔离 Three.js 加载器与平台路径差异；返回带同步 `release()` 的 lease。
 - `CharacterViewFactory` 只创建实例并登记资源所有权。
-- `CharacterViewRuntime` 只把快照映射到 transform、方向和当前语义。
+- `CharacterViewRuntime` 每个参与者独占语义解析器、六方向解析器和 View，只把快照映射到 transform、方向和当前语义。
 - `AnimationController` 每个角色实例拥有独立 `AnimationMixer`，不得共享可变动作状态。
 - `AttachmentSlotSystem` 只接受白名单插槽，不通过骨骼遍历隐式寻找未知节点。
 - `EffectStrategyRegistry` 与 `AudioStrategyRegistry` 按权威事件类型分派，不集中成巨型 `switch`。
@@ -118,7 +118,8 @@ src/arena/presentation/
 
 - 带骨骼角色使用 `SkeletonUtils.clone` 或等价的安全克隆路径，不直接 `Object3D.clone()` 后共享可变骨骼。
 - 几何和不可变材质可以共享，但缓存必须显式记录引用计数与释放所有者。
-- 加载请求带 session generation/token；页面销毁或切局后到达的旧结果立即释放，不能挂入新场景。
+- 每个加载任务只允许一次启动并去重并发 `load()`；页面销毁或切局后到达的旧结果立即释放，不能挂入新场景。
+- `release()` 首次失败时保留 lease，使上层生命周期能够重试清理；底层释放实现必须同步且可重试。
 - 上下文恢复从最新快照和当前内容注册表重建，不尝试继续使用已失效 GPU 对象。
 - 对象池只在 Stage 9 测量证明高频创建是瓶颈后引入；池化不能掩盖资源泄漏。
 
@@ -136,10 +137,14 @@ src/arena/presentation/
 - 建立 Presentation Definition、Asset Registry、语义解析与资源生命周期合同。
 - 用程序化占位体证明 renderer 开关不改变回放 hash。
 
+状态：代码与本机自动门禁已落地。程序化 Q 版人物和发条机器人已从投影帧中的 `geometry` 字段迁出，统一经过 `PresentationAssetRegistry → CharacterPresentationRegistry → CharacterViewFactory → CharacterViewRuntime`。已覆盖显式动画回退、基础/覆盖语义、六方向迟滞、迟到加载、释放重试、角色移除和同步失败关闭。浏览器视觉证据与完整门禁见 [S7.1 结果记录](../research/arena-stage7-presentation-contract-results.md)。
+
 ### S7.2 单角色单骨架纵切
 
 - 只接入一个经过校验的角色和最小动作集。
 - 验证加载失败、clip 缺失、暂停、恢复、重复事件和销毁后迟到回调。
+
+状态：未开始。受 Stage 6 E3/E4 与 Mapper 冻结门禁阻断，不提前选择正式动作资产。
 
 ### S7.3 双角色与外观插槽
 
@@ -164,3 +169,10 @@ src/arena/presentation/
 - 迟到加载、切局、前后台、上下文丢失和重复事件均不会串局或泄漏资源。
 - GLB 校验、资产清单、小屏可读性和三端最终包证据齐全。
 - 任何表现降级均不删除危险预警或改变 60 Hz 权威 tick。
+
+## S7.1 明确未完成项
+
+- 没有接入 GLB、骨骼、AnimationMixer、正式材质、手稿轮廓或正式动作片段。
+- 没有实现服装、翅膀、挂件和拖尾实例；本批只冻结六类白名单插槽合同。
+- 没有完成微信、抖音或目标真机表现验收，也没有冻结资产与性能预算。
+- 没有解除 Stage 6 E3 设备证据、E4 真实新手盲测及 Mapper 胜者冻结门禁。

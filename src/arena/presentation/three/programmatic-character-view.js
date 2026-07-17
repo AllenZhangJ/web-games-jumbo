@@ -1,4 +1,8 @@
 import * as THREE from 'three';
+import {
+  ARENA_ANIMATION_SEMANTIC,
+  ARENA_ANIMATION_SEMANTIC_IDS,
+} from '../animation/animation-semantics.js';
 import { disposeThreeObject } from './dispose-three-resources.js';
 import { ARENA_GREYBOX_COLOR } from './greybox-style.js';
 import { createProgrammaticEquipment } from './programmatic-equipment.js';
@@ -132,6 +136,8 @@ function buildCharacter(geometry) {
 
 export class ProgrammaticCharacterView {
   #participantId;
+  #presentationId;
+  #presentationHash;
   #geometry;
   #visualRoot;
   #armLeft;
@@ -141,16 +147,25 @@ export class ProgrammaticCharacterView {
   #attachment;
   #heldEquipment;
   #snapshot;
+  #animation;
   #elapsed;
   #disposed;
 
-  constructor({ participantId, appearance }) {
+  constructor({ participantId, presentationDefinition, assetDefinition }) {
     if (typeof participantId !== 'string' || participantId.length === 0) {
       throw new TypeError('ProgrammaticCharacterView.participantId 必须是非空字符串。');
     }
-    const built = buildCharacter(appearance?.geometry);
+    if (!presentationDefinition?.id || typeof presentationDefinition.getContentHash !== 'function') {
+      throw new TypeError('ProgrammaticCharacterView 需要 presentation Definition。');
+    }
+    if (!assetDefinition?.sourceKey) {
+      throw new TypeError('ProgrammaticCharacterView 需要 asset Definition。');
+    }
+    const built = buildCharacter(assetDefinition.sourceKey);
     this.#participantId = participantId;
-    this.#geometry = appearance.geometry;
+    this.#presentationId = presentationDefinition.id;
+    this.#presentationHash = presentationDefinition.getContentHash();
+    this.#geometry = assetDefinition.sourceKey;
     this.root = new THREE.Group();
     this.root.name = `ArenaCharacter:${participantId}`;
     this.#visualRoot = built.root;
@@ -163,6 +178,7 @@ export class ProgrammaticCharacterView {
     this.#attachment = built.attachment;
     this.#heldEquipment = null;
     this.#snapshot = null;
+    this.#animation = null;
     this.#elapsed = 0;
     this.#disposed = false;
   }
@@ -174,6 +190,14 @@ export class ProgrammaticCharacterView {
   get geometry() {
     this.#assertUsable();
     return this.#geometry;
+  }
+
+  getAnimationCapabilities() {
+    this.#assertUsable();
+    return Object.freeze({
+      proceduralKeys: ARENA_ANIMATION_SEMANTIC_IDS,
+      clipKeys: Object.freeze([]),
+    });
   }
 
   #syncEquipment(equipment) {
@@ -193,15 +217,27 @@ export class ProgrammaticCharacterView {
     this.#heldEquipment = held;
   }
 
-  sync(snapshot, { snap = false } = {}) {
+  sync(snapshot, { snap = false, animation, direction } = {}) {
     this.#assertUsable();
     if (snapshot.id !== this.#participantId) throw new RangeError('角色快照身份不一致。');
+    if (
+      snapshot.appearance?.presentationId !== this.#presentationId
+      || snapshot.appearance?.definitionHash !== this.#presentationHash
+    ) throw new RangeError('程序化角色 presentation Definition 不一致。');
+    if (!animation?.semantics || !animation?.baseBinding) {
+      throw new TypeError('程序化角色缺少 animation resolution。');
+    }
+    if (!direction?.worldFacing || !Number.isFinite(direction.modelFrontYawRadians)) {
+      throw new TypeError('程序化角色缺少 six-sector direction resolution。');
+    }
     const position = toVisualPosition(snapshot.position);
     if (snap || this.#snapshot === null) this.root.position.set(position.x, position.y, position.z);
     this.root.userData.targetPosition = position;
-    this.root.rotation.y = visualFacingYaw(snapshot.facing);
+    this.root.rotation.y = visualFacingYaw(direction.worldFacing)
+      - direction.modelFrontYawRadians;
     this.#syncEquipment(snapshot.equipment);
     this.#snapshot = snapshot;
+    this.#animation = Object.freeze({ ...animation, direction });
   }
 
   update(deltaSeconds) {
@@ -212,8 +248,12 @@ export class ProgrammaticCharacterView {
     const target = this.root.userData.targetPosition;
     const blend = 1 - Math.exp(-20 * delta);
     this.root.position.lerp(new THREE.Vector3(target.x, target.y, target.z), blend);
+    const baseSemantic = this.#animation.semantics.baseSemantic;
+    const overlaySemantic = this.#animation.semantics.overlaySemantic;
     const speed = Math.hypot(this.#snapshot.velocity.x, this.#snapshot.velocity.z);
-    const locomotion = Math.min(1, speed / 6);
+    const locomotion = baseSemantic === ARENA_ANIMATION_SEMANTIC.RUN
+      ? Math.min(1, speed / 6)
+      : baseSemantic === ARENA_ANIMATION_SEMANTIC.WALK ? Math.min(0.65, speed / 6) : 0;
     const cycle = this.#elapsed * (5 + locomotion * 8);
     const swing = Math.sin(cycle) * 0.65 * locomotion;
     this.#armLeft.rotation.x = swing;
@@ -221,13 +261,21 @@ export class ProgrammaticCharacterView {
     this.#legLeft.rotation.x = -swing;
     this.#legRight.rotation.x = swing;
     const airborne = !this.#snapshot.grounded;
-    const actionPulse = this.#snapshot.action?.phase === 'active' ? 1 : 0;
+    const actionPulse = overlaySemantic === ARENA_ANIMATION_SEMANTIC.ATTACK_ACTIVE
+      || overlaySemantic === ARENA_ANIMATION_SEMANTIC.EQUIPMENT
+      || overlaySemantic === ARENA_ANIMATION_SEMANTIC.DEFEND ? 1 : 0;
+    const crouch = baseSemantic === ARENA_ANIMATION_SEMANTIC.CROUCH_CHARGE ? 1 : 0;
+    const downSmash = baseSemantic === ARENA_ANIMATION_SEMANTIC.DOWN_SMASH ? 1 : 0;
     this.#visualRoot.position.y = -0.05
       + (airborne ? 0.06 : Math.abs(Math.sin(cycle)) * 0.035 * locomotion);
     this.#visualRoot.rotation.z = airborne
       ? Math.max(-0.22, Math.min(0.22, -this.#snapshot.velocity.y * 0.018))
       : 0;
-    this.#visualRoot.scale.setScalar(1 + actionPulse * 0.08);
+    this.#visualRoot.scale.set(
+      1 + actionPulse * 0.08 + crouch * 0.08,
+      1 - crouch * 0.18 + downSmash * 0.08,
+      1 + crouch * 0.08,
+    );
     const visible = this.#snapshot.status === 'active'
       && (this.#snapshot.invulnerableTicks === 0 || Math.floor(this.#elapsed * 12) % 2 === 0);
     this.root.visible = visible;
@@ -237,8 +285,13 @@ export class ProgrammaticCharacterView {
     this.#assertUsable();
     return Object.freeze({
       participantId: this.#participantId,
+      presentationId: this.#presentationId,
+      presentationHash: this.#presentationHash,
       geometry: this.#geometry,
       hasSnapshot: this.#snapshot !== null,
+      baseSemantic: this.#animation?.semantics.baseSemantic ?? null,
+      overlaySemantic: this.#animation?.semantics.overlaySemantic ?? null,
+      directionId: this.#animation?.direction.id ?? null,
       heldEquipmentDefinitionId: this.#heldEquipment?.userData.definitionId ?? null,
       objectCount: (() => {
         let count = 0;

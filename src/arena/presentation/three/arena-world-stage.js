@@ -10,6 +10,7 @@ import { EquipmentViewRegistry } from './equipment-view-registry.js';
 import { GreyboxEventEffects } from './greybox-event-effects.js';
 import { ARENA_GREYBOX_COLOR, ARENA_GREYBOX_DESIGN } from './greybox-style.js';
 import { SurfaceViewRegistry } from './surface-view-registry.js';
+import { ProgrammaticCharacterViewFactory } from './programmatic-character-view-factory.js';
 
 function countObjects(root) {
   let count = 0;
@@ -29,7 +30,7 @@ export class ArenaWorldStage {
   #lastEffectSequence;
   #disposed;
 
-  constructor({ content = ARENA_V1_GREYBOX_CONTENT } = {}) {
+  constructor({ content = ARENA_V1_GREYBOX_CONTENT, characterViewFactory = null } = {}) {
     this.#content = content;
     this.scene = new THREE.Scene();
     this.scene.name = 'ArenaGreyboxScene';
@@ -93,7 +94,13 @@ export class ArenaWorldStage {
     this.#disposed = false;
     try {
       this.#surfaces = new SurfaceViewRegistry(this.surfaceRoot, content.map.surfaces);
-      this.#characters = new CharacterViewRegistry(this.characterRoot);
+      this.#characters = new CharacterViewRegistry(this.characterRoot, {
+        presentationRegistry: content.characterPresentationRegistry,
+        viewFactory: characterViewFactory ?? new ProgrammaticCharacterViewFactory({
+          assetRegistry: content.assetRegistry,
+        }),
+        actionPresentations: content.actions,
+      });
       this.#equipment = new EquipmentViewRegistry(this.equipmentRoot);
       this.#effects = new GreyboxEventEffects(this.effectRoot);
     } catch (error) {
@@ -136,7 +143,10 @@ export class ArenaWorldStage {
       this.#lastEffectSequence = -1;
     }
     this.#surfaces.sync(frame.world.map, { snap: this.#lastTick < 0 || matchChanged });
-    this.#characters.sync(frame.world.participants, { snap: this.#lastTick < 0 || matchChanged });
+    this.#characters.sync(frame, {
+      snap: this.#lastTick < 0 || matchChanged,
+      cameraModel: this.#cameraModel,
+    });
     this.#equipment.sync(frame.world.equipment, { snap: this.#lastTick < 0 || matchChanged });
     const unseenEvents = frame.events.filter(({ sequence }) => sequence > this.#lastEffectSequence);
     this.#effects.consume(

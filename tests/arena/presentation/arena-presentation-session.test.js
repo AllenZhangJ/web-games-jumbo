@@ -160,7 +160,10 @@ test('ArenaPresentationSession closes match → result → rematch without rebin
   assert.equal(harness.activeLifecycleCount(), 3);
   assert.equal(harness.activeCanvasCount(), 2);
   assert.ok(harness.input);
-  assert.equal(renderer.frames[0].world.participants[1].appearance.geometry, 'wind-up-robot');
+  assert.match(
+    renderer.frames[0].world.participants[1].appearance.modelAssetId,
+    /wind-up-cube\.programmatic\.v1$/,
+  );
 
   fireUntil(harness, () => session.state === ARENA_PRESENTATION_SESSION_STATE.RESULT);
   const resultFrame = session.getLastPresentationFrame();

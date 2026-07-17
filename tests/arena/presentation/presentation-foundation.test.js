@@ -28,6 +28,7 @@ function createCore() {
 }
 
 test('Arena greybox content copies frozen authority geometry and presentation semantics', () => {
+  assert.equal(ARENA_V1_GREYBOX_CONTENT.schemaVersion, 2);
   assert.equal(ARENA_V1_GREYBOX_CONTENT.map.id, STAGE5_MAP_DEFINITION.id);
   assert.deepEqual(
     ARENA_V1_GREYBOX_CONTENT.map.surfaces,
@@ -35,6 +36,8 @@ test('Arena greybox content copies frozen authority geometry and presentation se
   );
   assert.equal(ARENA_V1_GREYBOX_CONTENT.actions['base-push'].label, '推击');
   assert.equal(ARENA_V1_GREYBOX_CONTENT.equipment.hammer.semantic, 'heavy-smash');
+  assert.equal(ARENA_V1_GREYBOX_CONTENT.assetRegistry.size, 2);
+  assert.equal(ARENA_V1_GREYBOX_CONTENT.characterPresentationRegistry.size, 2);
   assert.ok(Object.isFrozen(ARENA_V1_GREYBOX_CONTENT.map.surfaces[0].center));
   assert.throws(() => {
     ARENA_V1_GREYBOX_CONTENT.map.surfaces[0].center.x = 99;
@@ -58,6 +61,8 @@ test('Arena frame projector reads ActionAffordance and exposes no hidden bot dif
   assert.equal(frame.hud.opponent.displayName, '发条新秀');
   assert.equal(JSON.stringify(frame).includes('difficulty'), false);
   assert.equal(JSON.stringify(frame).includes('bot'), false);
+  assert.equal('geometry' in frame.world.participants[0].appearance, false);
+  assert.match(frame.world.participants[0].appearance.definitionHash, /^[0-9a-f]{8}$/);
   const enabledById = Object.fromEntries(source.map.surfaces.map(({ id, enabled }) => [id, enabled]));
   assert.deepEqual(
     frame.world.map.surfaces.map(({ id, enabled }) => ({ id, enabled })),

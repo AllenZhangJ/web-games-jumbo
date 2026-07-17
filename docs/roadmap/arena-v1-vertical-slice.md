@@ -177,6 +177,8 @@
 
 技术执行顺序与资产/生命周期边界见 [Stage 7 角色、动画与反馈执行计划](../architecture/arena-stage7-presentation-plan.md)，架构决策草案见 [ADR-010](../decisions/010-arena-semantic-presentation-and-assets.md)。在 Stage 6 输入语义冻结前不进入批量正式动画生产。
 
+状态：S7.1 合同与程序化占位实例已落地；正式角色、骨骼动画、外观附件和音画反馈未开始。S7.2 仍受 Stage 6 E3/E4 与 Mapper 冻结门禁阻断。
+
 交付：
 
 - Q 版跑酷学徒与拟人发条方块机器人两名正式角色。
