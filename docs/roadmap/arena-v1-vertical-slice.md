@@ -30,7 +30,7 @@
 | 9 | 平衡、可靠性与性能收敛 | 批量模拟、长稳、三端预算通过 |
 | 10 | 发布候选与冻结 | RC 验收、回滚证据、发行清单完成 |
 
-当前进度：阶段 0 已提交；阶段 1、2、3 的代码与本机自动化门禁已完成；阶段 4 的 Rule/Core/Bot 装备闭环已通过本机测试、压力与回放门禁，数值仍是后续灰盒与平衡的基线，不是发行冻结。三端产物已生成，但开发者工具和目标真机的加载、启动与整帧性能证据仍属于后续实机验收，不能由无渲染 Node 压测代替。
+当前进度：阶段 0 已提交；阶段 1、2、3 的代码与本机自动化门禁已完成；阶段 4 已独立提交推送；阶段 5 的 Map Rule/Core/Bot 骨架、回放和时间轴压测已在本地落地，尚待本阶段提交。所有数值仍是后续灰盒与平衡的基线，不是发行冻结。三端开发者工具与目标真机证据仍属后续验收，不能由无渲染 Node 压测代替。
 
 ## 阶段 0：文档、概念图与决策基线
 
@@ -136,6 +136,8 @@
 
 ## 阶段 5：首张地图形成资源与淘汰闭环
 
+状态：本机无渲染骨架和门禁已完成。首图使用 3×3 深渊平台、交替风场、30/60/90/120 秒装备波、60/90/110 秒分阶段塌陷，中心安全岛永久保留。地图选择已收口到共享 Authority Content/MapRegistry，批次使用恰好一次提交，Bot 按真实 surface 并集识别动态边缘。架构见 [Stage 5 地图权威执行管线](../architecture/arena-stage5-map-pipeline.md)，决策见 [ADR-008](../decisions/008-arena-map-authority-timeline.md)，证据见 [地图压测结果](../research/arena-map-stress-results.md)。
+
 交付：
 
 - 一张深渊竞技场。
@@ -151,6 +153,8 @@
 - 地图 RNG 与对手形象、机器人难度和装备 RNG 相互独立。
 
 ## 阶段 6：触控灰盒可玩版
+
+技术执行顺序与模块边界见 [Stage 6 输入、移动与灰盒执行计划](../architecture/arena-stage6-input-movement-plan.md)，逐项证据见 [Stage 6 验收与证据矩阵](../quality/arena-stage6-verification-matrix.md)，架构决策草案见 [ADR-009](../decisions/009-arena-semantic-input-and-movement-authority.md)。该 ADR 在 Rule/Core 骨架通过前保持提议状态，A/B 胜者在盲测后冻结。
 
 交付：
 
@@ -168,6 +172,8 @@
 - 从快速匹配到结算可以连续完成多局，没有比赛状态或资源泄漏。
 
 ## 阶段 7：角色、动画与反馈系统
+
+技术执行顺序与资产/生命周期边界见 [Stage 7 角色、动画与反馈执行计划](../architecture/arena-stage7-presentation-plan.md)，架构决策草案见 [ADR-010](../decisions/010-arena-semantic-presentation-and-assets.md)。在 Stage 6 输入语义冻结前不进入批量正式动画生产。
 
 交付：
 
@@ -187,6 +193,8 @@
 
 ## 阶段 8：完整局外产品循环
 
+产品状态机、双槽本地存档、迁移、幂等奖励和对称内容池见 [Stage 8 局外产品循环与本地进度执行计划](../architecture/arena-stage8-product-progression-plan.md)，决策草案见 [ADR-011](../decisions/011-arena-versioned-local-progression.md)。
+
 交付：
 
 - 角色选择或随机、快速匹配、短准备、对局、结算、奖励、解锁和再来一局。
@@ -202,6 +210,8 @@
 - 首次启动、升级存档、损坏存档恢复、切后台和重开均有确定行为。
 
 ## 阶段 9：平衡、可靠性与性能收敛
+
+可复现实验、黄金回放、输入模糊、长稳和表现降级见 [Stage 9 平衡、可靠性与性能收敛计划](../architecture/arena-stage9-convergence-plan.md)，决策草案见 [ADR-012](../decisions/012-arena-reproducible-convergence.md)。
 
 交付：
 
@@ -238,9 +248,8 @@
 
 完整的决策时点、备选与推荐默认见 [Stage 5～9 决策门](stage5-9-decision-gates.md)。以下事项不应在没有对应证据时凭文档冻结：
 
-1. 阶段 5：首图使用风场还是旋转机关，以及缩圈还是加速塌陷。
-2. 阶段 6：在单动作键约束下，主动起跳、蹲跳、二段跳、下砸与装备技能的最终输入映射。
-3. 阶段 9：三端具体帧时间、内存、包体和启动预算，以目标机型实测后冻结。
+1. 阶段 6：在单动作键约束下，主动起跳、蹲跳、二段跳、下砸与装备技能的最终输入映射。
+2. 阶段 9：三端具体帧时间、内存、包体和启动预算，以目标机型实测后冻结。
 
 ## 延后项目
 

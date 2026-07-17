@@ -2,9 +2,9 @@
 
 ## 文档状态
 
-已接受整体边界；阶段 1 已通过 POC 选择项目内轻量街机物理，阶段 2 已落地无渲染 MatchCore，阶段 3 已落地隐藏机器人、本地快速匹配和统一会话生命周期。物理选择见 [ADR-005](../decisions/005-arena-lightweight-physics.md)，机器人选择见 [ADR-006](../decisions/006-arena-local-tick-utility-bot.md)。
+已接受整体边界；阶段 1 已选择项目内轻量街机物理，阶段 2 已落地无渲染 MatchCore，阶段 3 已落地隐藏机器人与本地快速匹配，阶段 4 已落地数据驱动 Rule/Core 装备闭环，阶段 5 已落地独立地图权威时间轴。决策见 [ADR-005](../decisions/005-arena-lightweight-physics.md)、[ADR-006](../decisions/006-arena-local-tick-utility-bot.md)、[ADR-007](../decisions/007-arena-rule-core-governance.md) 和 [ADR-008](../decisions/008-arena-map-authority-timeline.md)。
 
-本文同时记录已落地边界与后续目标；未明确标记为已落地的模块仍不是当前能力。当前 v3 架构仍见 [`../architecture.md`](../architecture.md)。
+本文同时记录已落地边界与后续目标；未明确标记为已落地的模块仍不是当前能力。Stage 6～9 的后续架构处于提议阶段，分别见 [Stage 6](arena-stage6-input-movement-plan.md)、[Stage 7](arena-stage7-presentation-plan.md)、[Stage 8](arena-stage8-product-progression-plan.md)、[Stage 9](arena-stage9-convergence-plan.md) 执行计划，以及 [ADR-009](../decisions/009-arena-semantic-input-and-movement-authority.md)、[ADR-010](../decisions/010-arena-semantic-presentation-and-assets.md)、[ADR-011](../decisions/011-arena-versioned-local-progression.md)、[ADR-012](../decisions/012-arena-reproducible-convergence.md)。当前 v3 架构仍见 [`../architecture.md`](../architecture.md)。
 
 ## 目标
 
@@ -40,6 +40,8 @@ src/arena/
 ├── replay.js                 # 输入录制、checkpoint 与严格回放
 ├── state-hash.js             # 量化权威状态 hash
 ├── physics/                  # PhysicsAdapter 与轻量物理实现
+├── action/ equipment/ rules/ # 动作、装备与 RuleEngine 权威子系统
+├── map/ composition/ content/ # 地图 Definition、时间轴、策略与组合根
 ├── runtime/                  # 外层帧率到固定 60Hz tick 的编排
 ├── content/                  # 不含玩法权限的虚构对手资料
 ├── matchmaking/              # seed、对手、隐藏难度和独立随机流分配
@@ -128,3 +130,12 @@ POC 结论为项目内轻量街机物理。Rapier 候选代码与依赖已移除
 - 可选的本地统计。
 
 存档不是玩法真相，不参与单局命中、装备刷新或机器人难度分配；三档难度只由本局 seed 随机决定，不按玩家胜负暗中自适应。
+
+## 后续长期边界
+
+- Stage 6：Platform 输入先转换为语义 `InputFrame`；Movement 和 Action Rule 统一决定合法动作，UI 只展示同源 affordance。
+- Stage 7：玩法角色定义与表现角色定义分离；不同骨架共享动画语义，root motion 和动画事件不能驱动权威结果。
+- Stage 8：产品壳使用显式状态机；本地 Profile 使用版本化双槽协议和幂等奖励；解锁只扩大双方共享内容池。
+- Stage 9：平衡候选通过固定 seed、版本/hash、黄金回放和目标设备报告收敛；低档设备只降级表现，Core 保持 60 Hz。
+
+这些边界先以 Proposed ADR 管理。只有对应阶段的自动化、运行时和用户验收证据齐全后，才把 ADR 改为已接受。

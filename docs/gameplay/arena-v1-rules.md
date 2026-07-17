@@ -124,13 +124,13 @@ MapDefinition
   suddenDeathRule
 ```
 
-首张地图包含：
+首张地图已锁定为 3×3 深渊平台：
 
-- 深渊淘汰边界。
-- 分阶段塌陷地面。
-- 一个风场或旋转机关。
-- 一个预告式装备刷新点。
-- 对局后半段的缩圈或加速塌陷。
+- 向东与向西风场交替开启，提前 2 秒预警；风力只由权威 tick 施加。
+- 30、60、90、120 秒释放装备波，提前 3 秒公开落点，装备类型到释放时才公开。
+- 60 秒塌陷四角，90 秒塌陷南北，110 秒塌陷东西，都提前 3 秒预警。
+- 中心平台、两个重生点和中心装备点永久保留。
+- 已塌陷点不再刷新装备；留在塌陷区的无主装备在同 tick 权威回收。
 
 地图事件由逻辑 tick 和 seed 驱动。Renderer 只播放已经确定的预警和结果。
 
@@ -154,6 +154,7 @@ MatchCore 输出但不由 Renderer 创建的事件至少包括：
 
 - `EquipmentSpawned`
 - `EquipmentPickedUp`
+- `EquipmentDespawned`
 - `ActionStarted`
 - `HitResolved`
 - `KnockbackApplied`
