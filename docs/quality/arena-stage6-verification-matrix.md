@@ -2,7 +2,7 @@
 
 ## 状态
 
-执行中。本文定义 Stage 6 的完成证据，不表示后续批次已经通过。S6.1～S6.5.3 已提交；S6.5.4 当前候选已通过 Web 真实浏览器和 100 局 Session soak，但微信/抖音开发者工具、目标真机 E3 与 S6.6 盲测仍未通过。实现边界见 [Stage 6 输入、移动与灰盒执行计划](../architecture/arena-stage6-input-movement-plan.md)，决策背景见 [ADR-009](../decisions/009-arena-semantic-input-and-movement-authority.md)。
+执行中。本文定义 Stage 6 的完成证据，不表示后续批次已经通过。S6.1～S6.5.4 已提交；Web 真实浏览器和 100 局 Session soak 已通过。S6.6.1 当前候选已有盲测 Definition、确定性分组和报告合同，但采集入口与真实样本尚未完成；微信/抖音开发者工具和目标真机 E3 也仍未通过。实现边界见 [Stage 6 输入、移动与灰盒执行计划](../architecture/arena-stage6-input-movement-plan.md)，决策背景见 [ADR-009](../decisions/009-arena-semantic-input-and-movement-authority.md)。
 
 ## 使用规则
 
@@ -195,6 +195,8 @@ S6.5 退出门：必须有当前构建的 Web 截图/录屏和开发者工具运
 - 方案冻结必须记录选择理由、被拒方案问题和最终 Mapper 配置；ADR-009 再从“提议”更新为“已接受”。
 
 这些是 Stage 6 的默认 pilot 门槛，不是发行级统计结论。Stage 9 仍需更大样本和平衡/设备数据。
+
+S6.6.1 当前本机合同证据见 [S6.6 输入盲测合同记录](../research/arena-stage6-input-pilot-contract.md)：固定 Definition 与分组 seed、每个完整区组 A/B 平衡、assignment 防误改、记录来源分离、无效样本排除、真实放弃保留、去标识聚合和保守候选判定均有自动化测试。该证据不能替代采集入口竞态测试或 E4 真人记录。
 
 ## 模糊测试与压力脚本要求
 

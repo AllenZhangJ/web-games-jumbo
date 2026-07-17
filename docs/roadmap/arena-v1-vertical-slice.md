@@ -30,7 +30,7 @@
 | 9 | 平衡、可靠性与性能收敛 | 批量模拟、长稳、三端预算通过 |
 | 10 | 发布候选与冻结 | RC 验收、回滚证据、发行清单完成 |
 
-当前进度：阶段 0～5 已分阶段提交并推送，Stage 6 的 S6.1～S6.5.3 已提交。S6.5.4 当前候选已让三端入口承载 Arena 灰盒，并通过 Web 桌面/竖屏结果与重赛闭环、100 局 Session soak；微信/抖音开发者工具和目标真机 E3、S6.6 盲测冻结仍未完成。所有数值仍是后续灰盒与平衡的基线，不是发行冻结；Web 或 Node 证据不能替代两端真机证据。
+当前进度：阶段 0～5 与 Stage 6 的 S6.1～S6.5.4 已分批提交并推送。三端入口已承载 Arena 灰盒，并通过 Web 桌面/竖屏结果与重赛闭环、100 局 Session soak；S6.6.1 当前候选已建立盲测合同和确定性分组。微信/抖音开发者工具和目标真机 E3、盲测采集入口与真实新手样本仍未完成。所有数值仍是后续灰盒与平衡的基线，不是发行冻结；Web 或 Node 证据不能替代两端真机证据。
 
 ## 阶段 0：文档、概念图与决策基线
 
@@ -156,7 +156,7 @@
 
 技术执行顺序与模块边界见 [Stage 6 输入、移动与灰盒执行计划](../architecture/arena-stage6-input-movement-plan.md)，逐项证据见 [Stage 6 验收与证据矩阵](../quality/arena-stage6-verification-matrix.md)，架构决策草案见 [ADR-009](../decisions/009-arena-semantic-input-and-movement-authority.md)。该 ADR 在 Rule/Core 骨架通过前保持提议状态，A/B 胜者在盲测后冻结。
 
-状态：S6.1～S6.5.3 已提交；S6.5.4 当前候选已完成 Web 真实浏览器与 Session soak，详细数据见 [S6.5 灰盒与 Session 门禁记录](../research/arena-stage6-presentation-results.md)。微信/抖音开发者工具与目标真机 E3、S6.6 盲测均未完成，因此 Stage 6 仍为执行中。
+状态：S6.1～S6.5.4 已提交，Web 真实浏览器与 Session soak 数据见 [S6.5 灰盒与 Session 门禁记录](../research/arena-stage6-presentation-results.md)。S6.6.1 当前候选已建立 [输入盲测合同](../research/arena-stage6-input-pilot-contract.md)，但采集入口、真实样本、微信/抖音开发者工具与目标真机 E3 均未完成，因此 Stage 6 仍为执行中。
 
 交付：
 
