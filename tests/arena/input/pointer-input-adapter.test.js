@@ -105,6 +105,7 @@ test('PointerInputAdapter rolls back partial binding and contains late/error cal
     state: 'idle',
     cleanupCount: 0,
     destroyRequested: false,
+    manageLifecycle: true,
   });
   adapter.destroy();
   sampler.destroy();
@@ -164,4 +165,26 @@ test('PointerInputAdapter contains destroy reentry during start and stop cleanup
   assert.equal(stoppingAdapter.getDebugSnapshot().state, 'destroyed');
   stoppingAdapter.destroy();
   stoppingSampler.destroy();
+});
+
+test('PointerInputAdapter can leave resize/show/hide ownership to its parent Session', () => {
+  const harness = platformHarness();
+  const sampler = new InputSampler({
+    participantId: 'player-1',
+    viewport: { width: 400, height: 800 },
+    mapper: createGestureInputMapperA(),
+  });
+  const adapter = new PointerInputAdapter({
+    platform: harness.platform,
+    sampler,
+    viewportProvider: () => ({ width: 400, height: 800 }),
+    manageLifecycle: false,
+  });
+  assert.equal(adapter.start(), true);
+  assert.deepEqual([...harness.active], ['input']);
+  assert.equal(adapter.getDebugSnapshot().manageLifecycle, false);
+  assert.equal(adapter.stop(), true);
+  assert.equal(harness.active.size, 0);
+  adapter.destroy();
+  sampler.destroy();
 });

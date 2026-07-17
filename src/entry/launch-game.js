@@ -1,5 +1,3 @@
-import { NumberStrategyGame } from '../runtime/game.js';
-
 const STARTUP_STATE = Symbol.for('number-strategy-jump.startup-state');
 
 function coordinator(root) {
@@ -39,7 +37,7 @@ function exposeGame(root, game) {
  */
 export function launchGame(createPlatform, {
   root = globalThis,
-  createGame = (platform, options) => new NumberStrategyGame(platform, options),
+  createGame,
   gameOptions,
   onError,
   onSuccess,
@@ -47,6 +45,9 @@ export function launchGame(createPlatform, {
   const platformFactory = typeof createPlatform === 'function'
     ? createPlatform
     : () => { throw new TypeError('launchGame 需要 createPlatform 函数'); };
+  const gameFactory = typeof createGame === 'function'
+    ? createGame
+    : () => { throw new TypeError('launchGame 需要 createGame 函数'); };
   const state = coordinator(root);
   const generation = state.generation + 1;
   state.generation = generation;
@@ -66,7 +67,7 @@ export function launchGame(createPlatform, {
     try {
       const platform = await platformFactory();
       if (generation !== state.generation) return null;
-      game = createGame(platform, gameOptions);
+      game = gameFactory(platform, gameOptions);
       state.starting = game;
       await game.start();
       if (generation !== state.generation) {

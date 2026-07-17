@@ -120,7 +120,7 @@ function mainCanvasFrom(environment) {
   try {
     canvas = createElement.call(environment.documentObject, 'canvas');
     canvas.id = 'game';
-    canvas.setAttribute?.('aria-label', '数值策略跳跃游戏画布');
+    canvas.setAttribute?.('aria-label', '竞技场跑酷对决游戏画布');
     parent.appendChild(canvas);
     return prepareCanvas(canvas, 'web');
   } catch (cause) {

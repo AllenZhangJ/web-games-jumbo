@@ -33,8 +33,15 @@ export class PointerInputAdapter {
   #cleanups;
   #state;
   #destroyRequested;
+  #manageLifecycle;
 
-  constructor({ platform, sampler, viewportProvider, onError = () => {} }) {
+  constructor({
+    platform,
+    sampler,
+    viewportProvider,
+    onError = () => {},
+    manageLifecycle = true,
+  }) {
     this.#platform = validatePlatform(platform);
     this.#sampler = validateSampler(sampler);
     this.#viewportProvider = requiredFunction(
@@ -45,6 +52,10 @@ export class PointerInputAdapter {
     this.#cleanups = [];
     this.#state = 'idle';
     this.#destroyRequested = false;
+    if (typeof manageLifecycle !== 'boolean') {
+      throw new TypeError('PointerInputAdapter.manageLifecycle 必须是布尔值。');
+    }
+    this.#manageLifecycle = manageLifecycle;
     Object.freeze(this);
   }
 
@@ -98,11 +109,13 @@ export class PointerInputAdapter {
         onEnd: this.#dispatch((point) => this.#sampler.pointerEnd(point)),
         onCancel: this.#dispatch((point) => this.#sampler.pointerCancel(point)),
       }));
-      register(this.#platform.onResize(this.#dispatch(() => (
-        this.#sampler.resize(this.#viewportProvider())
-      ))));
-      register(this.#platform.onHide(this.#dispatch(() => this.#sampler.suspend())));
-      register(this.#platform.onShow(this.#dispatch(() => this.#sampler.resume())));
+      if (this.#manageLifecycle) {
+        register(this.#platform.onResize(this.#dispatch(() => (
+          this.#sampler.resize(this.#viewportProvider())
+        ))));
+        register(this.#platform.onHide(this.#dispatch(() => this.#sampler.suspend())));
+        register(this.#platform.onShow(this.#dispatch(() => this.#sampler.resume())));
+      }
       this.#cleanups = cleanups;
       this.#state = 'started';
       return true;
@@ -130,6 +143,7 @@ export class PointerInputAdapter {
       state: this.#state,
       cleanupCount: this.#cleanups.length,
       destroyRequested: this.#destroyRequested,
+      manageLifecycle: this.#manageLifecycle,
     });
   }
 

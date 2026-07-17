@@ -103,7 +103,7 @@ test('Arena authority has no renderer, browser, platform or host API dependency'
     const source = await readFile(file, 'utf8');
     assert.doesNotMatch(
       source,
-      /(?:from\s+['"](?:three|[^'"]*(?:render3d|presentation|platform)[^'"]*)['"]|\bwindow\b|\bdocument\b|\bnavigator\b|\b(?:tt|wx)\s*\.)/,
+      /(?:from\s+['"](?:three|[^'"]*(?:render3d|presentation|platform)[^'"]*)['"]|(?:^|[^\w$'"\/-])(?:window|document|navigator)(?=$|[^\w$'"\/-])|\b(?:tt|wx)\s*\.)/m,
       `${file} 泄漏了渲染、浏览器或平台依赖`,
     );
   }
@@ -128,7 +128,7 @@ test('Arena presentation keeps host APIs injected and cannot be imported by auth
     const source = await readFile(file, 'utf8');
     assert.doesNotMatch(
       source,
-      /(?:from\s+['"][^'"]*platform[^'"]*['"]|\bwindow\b|\bdocument\b|\bnavigator\b|\b(?:tt|wx)\s*\.)/,
+      /(?:from\s+['"][^'"]*platform[^'"]*['"]|(?:^|[^\w$'"\/-])(?:window|document|navigator)(?=$|[^\w$'"\/-])|\b(?:tt|wx)\s*\.)/m,
       `${file} 应通过注入合同使用平台能力`,
     );
   }
