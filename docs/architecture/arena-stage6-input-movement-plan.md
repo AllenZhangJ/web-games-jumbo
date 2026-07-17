@@ -4,13 +4,13 @@
 
 执行中。本文冻结实现边界与验收顺序，不提前冻结 A/B 输入方案的产品胜者。Stage 6 继续按 `Rule → Core → Bot → Presentation` 分批落地。
 
-S6.1～S6.3 已提交。S6.4 当前候选已实现 RawControlState、Gesture Recognizer、InputSampler、A/B Mapper、键盘调试输入及 Web/微信/抖音 Pointer 绑定，并通过本机 E1/E2、80 局输入 fuzz 和 30/60/120Hz 一致性门禁；三端开发者工具与目标真机 E3 仍需随 S6.5 可视 Session 验收。S6.5～S6.6 尚未实现，A/B Mapper 胜者仍未冻结。
+S6.1～S6.5.3 已提交并推送；S6.5.4 当前候选已完成 Web 真实浏览器桌面/竖屏、结果/重赛闭环和 100 局 Session soak。微信、抖音开发者工具与目标真机 E3 仍未执行，S6.6 A/B 新手盲测也未开始，因此 Mapper 胜者和手势阈值仍未冻结。
 
 逐项完成证据与阻断级门禁见 [Stage 6 验收与证据矩阵](../quality/arena-stage6-verification-matrix.md)。
 
-## S6.4 当前边界与缺口
+## S6.5 当前边界与缺口
 
-截至 S6.4 当前候选：
+截至 S6.5.4 当前候选：
 
 - `InputFrame V4` 的 `primary/jump/slam` 已进入同一 Resolver/Movement/Physics 权威链路。
 - `BotObservation` 已只投影公开 MovementSnapshot/ActionAffordance；当前自身状态可即时读取，对手和世界仍按难度延迟。
@@ -18,9 +18,11 @@ S6.1～S6.3 已提交。S6.4 当前候选已实现 RawControlState、Gesture Rec
 - RawControlState、InputSampler、Gesture Recognizer、Mapper A/B 和平台 Pointer Adapter 已拆分实现；Pointer、像素、墙钟和 Mapper ID 均未进入权威帧。
 - 方案 B 的点击、长按和下拖只读取 Rule 投影的 `ActionAffordance`；输入层不复制命中距离、装备优先级或动作 ID 选择。
 - 本机已覆盖多指、同帧按下释放、乱序/陌生 pointer、resize、暂停恢复、迟到回调、重入 destroy、回放和外层帧率差异；证据见 [S6.4 输入与竞态门禁记录](../research/arena-stage6-input-results.md)。
-- Arena 仍没有灰盒 Renderer、HUD 或可视 Session 组合根，因此尚无 Web、微信、抖音开发者工具中的真实触摸和前后台 E3 证据。
+- Arena 已有只读投影、程序化灰盒 Renderer、HUD、输入路由、固定帧循环和唯一 Session 组合根；默认三端入口不再加载旧数值跳台 runtime。
+- Web 已完成桌面与 390×844 竖屏运行、动作键、比赛结束和重赛冒烟，fresh tab 为 0 error / 0 warning；100 局 soak 后 RAF、生命周期监听器、Canvas 监听器和输入绑定均归零。
+- 微信、抖音目前只有构建和宿主合同 E2，尚无两端开发者工具、目标真机触控、前后台、WebGL context loss 与安全区 E3。
 
-因此当前可以进入 S6.5 灰盒与 Session 组合，但不能把 Node 模拟当作三端触控验收，也不能在 S6.6 盲测前冻结 Mapper 胜者和手势阈值。
+因此当前可以完成 S6.5 的本机 Web 门并准备两端开发者工具 E3，但不能用 Web 或 Node soak 代替微信/抖音真机证据，也不能在 S6.6 盲测前冻结 Mapper 胜者和手势阈值。
 
 ## 目标依赖链
 

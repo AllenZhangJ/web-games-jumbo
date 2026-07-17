@@ -87,7 +87,7 @@ export class ArenaGreyboxRenderer {
       this.#renderer.toneMapping = THREE.ACESFilmicToneMapping;
       this.#renderer.toneMappingExposure = 1.05;
       this.#renderer.shadowMap.enabled = true;
-      this.#renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      this.#renderer.shadowMap.type = THREE.PCFShadowMap;
       this.#renderer.setClearColor?.(ARENA_GREYBOX_COLOR.background, 1);
       this.#renderer.autoClear = false;
       this.#stage = new ArenaWorldStage();

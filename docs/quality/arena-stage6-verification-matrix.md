@@ -2,7 +2,7 @@
 
 ## 状态
 
-执行中。本文定义 Stage 6 的完成证据，不表示后续批次已经通过。S6.1～S6.3 已提交；S6.4 输入适配当前候选已通过本机 E1/E2，真实三端 E3 尚未关闭；S6.5～S6.6 未通过。实现边界见 [Stage 6 输入、移动与灰盒执行计划](../architecture/arena-stage6-input-movement-plan.md)，决策背景见 [ADR-009](../decisions/009-arena-semantic-input-and-movement-authority.md)。
+执行中。本文定义 Stage 6 的完成证据，不表示后续批次已经通过。S6.1～S6.5.3 已提交；S6.5.4 当前候选已通过 Web 真实浏览器和 100 局 Session soak，但微信/抖音开发者工具、目标真机 E3 与 S6.6 盲测仍未通过。实现边界见 [Stage 6 输入、移动与灰盒执行计划](../architecture/arena-stage6-input-movement-plan.md)，决策背景见 [ADR-009](../decisions/009-arena-semantic-input-and-movement-authority.md)。
 
 ## 使用规则
 
@@ -227,7 +227,7 @@ npm run build
 git diff --check
 ```
 
-其中 `arena:movement:stress` 已在 S6.2 实现；`arena:input:fuzz` 已在 S6.4 实现并通过当前 80 局门禁；`arena:session:soak` 仍是 S6.5 计划命令，不得在实现前伪造为已通过。
+其中 `arena:movement:stress` 已在 S6.2 实现；`arena:input:fuzz` 已在 S6.4 实现并通过当前 80 局门禁；`arena:session:soak` 已在 S6.5.4 实现并通过 100 局、9 次前后台、6 次 context loss/restore、14 次 resize 门禁。当前数据见 [S6.5 灰盒与 Session 门禁记录](../research/arena-stage6-presentation-results.md)。
 
 最终完成判定还需要：
 
