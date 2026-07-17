@@ -106,7 +106,7 @@ test('Arena authority has no renderer, browser, platform or host API dependency'
     assert.doesNotMatch(source, /@dimforge\/rapier/, `${file} 仍依赖已拒绝的 Rapier POC`);
     assert.doesNotMatch(
       source,
-      /(?:\.at\s*\(|\bAggregateError\b|\bstructuredClone\b)/,
+      /(?:\.at\s*\(|\bAggregateError\b|\bstructuredClone\b|\bObject\.hasOwn\b)/,
       `${file} 使用了超出 ES2020 且未提供 polyfill 的内建 API`,
     );
   }
@@ -130,7 +130,7 @@ test('Arena MatchCore POC bundles and executes as a standalone mini-game IIFE', 
   try {
     Function(result.outputFiles[0].text)();
     assert.equal(globalThis.__arenaMatchPoc?.ok, true);
-    assert.equal(globalThis.__arenaMatchPoc?.backend, 'lightweight-v1');
+    assert.equal(globalThis.__arenaMatchPoc?.backend, 'lightweight-v2');
   } finally {
     if (previous === undefined) delete globalThis.__arenaMatchPoc;
     else globalThis.__arenaMatchPoc = previous;
@@ -215,7 +215,7 @@ test('Arena bot layers preserve dependency direction and tick determinism', asyn
 });
 
 test('Arena Rule/Core foundation preserves dependency direction and deterministic APIs', async () => {
-  const directories = ['rules', 'action', 'equipment']
+  const directories = ['rules', 'action', 'equipment', 'map']
     .map((directory) => path.resolve('src/arena', directory));
   const files = (await Promise.all(directories.map(listJavaScript))).flat();
   for (const file of files) {

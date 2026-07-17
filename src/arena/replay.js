@@ -3,7 +3,7 @@ import { normalizeInputFrames } from './input-frame.js';
 import { MatchCore } from './match-core.js';
 import { createArenaV1MatchCore } from './arena-v1-match-core.js';
 
-export const ARENA_REPLAY_SCHEMA_VERSION = 2;
+export const ARENA_REPLAY_SCHEMA_VERSION = 3;
 
 function copyInput(frame) {
   return {

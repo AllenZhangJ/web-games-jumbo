@@ -139,8 +139,38 @@ test('failed or reentrant drop leaves ownership unchanged', () => {
     isPositionValid: () => false,
   });
   assert.equal(emergency.fallbackUsed, true);
-  assert.equal(emergency.diagnosticCode, 'equipment-drop-fallback-origin-spawn-invalid');
+  assert.equal(emergency.despawned, true);
+  assert.equal(emergency.diagnosticCode, 'equipment-drop-no-valid-position');
+  assert.equal(emergency.equipment.locationState, EQUIPMENT_LOCATION_STATE.DESPAWNED);
+  assert.equal(emergency.equipment.position, null);
   assert.equal(system.getHeldEquipment('player-1'), null);
+  system.destroy();
+});
+
+test('invalid world equipment is despawned atomically while held equipment remains owned', () => {
+  const { system } = createSystem();
+  spawnHammer(system);
+  system.spawn({
+    instanceId: 'equipment-2',
+    definitionId: STAGE4_EQUIPMENT_ID.CHAIN,
+    spawnId: 'right-spawn',
+    position: { x: 2, y: 1, z: 0 },
+  });
+  system.resolvePickups({ participants: participants(), contestSeed: 1 });
+  assert.throws(() => system.despawnInvalidWorldEquipment({
+    isPositionValid() {
+      system.despawnInvalidWorldEquipment({ isPositionValid: () => true });
+      return false;
+    },
+  }), /不可重入/);
+  assert.equal(system.getSnapshot('equipment-2').locationState, EQUIPMENT_LOCATION_STATE.SPAWNED);
+
+  const despawned = system.despawnInvalidWorldEquipment({
+    isPositionValid: (position) => position.x < 1,
+  });
+  assert.deepEqual(despawned.map(({ instanceId }) => instanceId), ['equipment-2']);
+  assert.equal(despawned[0].locationState, EQUIPMENT_LOCATION_STATE.DESPAWNED);
+  assert.equal(system.getHeldEquipment('player-1').instanceId, 'equipment-1');
   system.destroy();
 });
 

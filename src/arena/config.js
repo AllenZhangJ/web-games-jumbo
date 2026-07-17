@@ -1,4 +1,5 @@
 import { ARENA_ACTION_PHASE } from './action/action-state.js';
+import { createStaticMapDefinition } from './map/map-definition.js';
 import { cloneFrozenData } from './rules/definition-utils.js';
 
 export const ARENA_TICK_RATE = 60;
@@ -86,6 +87,7 @@ const MATCH_OVERRIDE_KEYS = Object.freeze(new Set([
   'invulnerableTicks',
   'lastHitCreditTicks',
   'basePush',
+  'mapDefinitionId',
   'equipment',
   'arena',
   'character',
@@ -97,11 +99,11 @@ const EQUIPMENT_KEYS = Object.freeze(new Set(['initialSpawns']));
 const EQUIPMENT_SPAWN_KEYS = Object.freeze(new Set(['id', 'definitionId', 'position']));
 
 export const ARENA_MATCH_DEFAULTS = Object.freeze({
-  // V2 adds authoritative ActionDefinition IDs and EquipmentRuntime state to
-  // snapshots/hashes. V1 replays must fail explicitly instead of silently
-  // running under different combat semantics.
-  schemaVersion: 2,
-  physicsBackendVersion: 'lightweight-v1',
+  // V3 adds MapDefinition, timeline/runtime state and mutable surface support.
+  // Older replays must fail explicitly rather than run under new map rules.
+  schemaVersion: 3,
+  physicsBackendVersion: 'lightweight-v2',
+  mapDefinitionId: createStaticMapDefinition(PHYSICS_POC_ARENA).id,
   participantIds: Object.freeze(['player-1', 'player-2']),
   livesPerParticipant: 3,
   preparingTicks: 180,
@@ -289,11 +291,17 @@ export function createArenaMatchConfig(overrides = {}) {
     || !Number.isFinite(basePush.verticalImpulse / character.mass)
   ) throw new RangeError('basePush impulse 与 character.mass 组合后必须产生有限速度。');
 
+  const mapDefinitionId = overrides.mapDefinitionId ?? ARENA_MATCH_DEFAULTS.mapDefinitionId;
+  if (typeof mapDefinitionId !== 'string' || mapDefinitionId.trim().length === 0) {
+    throw new TypeError('mapDefinitionId 必须是非空字符串。');
+  }
+
   return deepFreeze({
     schemaVersion: ARENA_MATCH_DEFAULTS.schemaVersion,
     physicsBackendVersion: ARENA_MATCH_DEFAULTS.physicsBackendVersion,
     tickRate: ARENA_TICK_RATE,
     fixedDeltaSeconds: ARENA_FIXED_DT,
+    mapDefinitionId,
     participantIds: [...participantIds].sort(),
     livesPerParticipant: integerAtLeast(
       overrides.livesPerParticipant ?? ARENA_MATCH_DEFAULTS.livesPerParticipant,

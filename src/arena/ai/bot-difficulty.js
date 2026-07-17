@@ -50,10 +50,10 @@ const RAW_PROFILES = {
     shortPauseChance: 0.01,
     maximumPauseTicks: 3,
     maximumInputMagnitude: 0.98,
-    edgeSafetyMargin: 1.65,
+    edgeSafetyMargin: 1.5,
     targetPredictionTicks: 1,
-    threatAwareness: 0.7,
-    attackRangeScale: 0.82,
+    threatAwareness: 0.55,
+    attackRangeScale: 0.9,
   },
 };
 

@@ -26,8 +26,41 @@ function readPositiveNumberOption(name, fallback) {
   return value;
 }
 
-function assertFiniteSnapshot(snapshot) {
-  const values = [snapshot.tick, snapshot.activeTick, snapshot.remainingTicks];
+function assertFiniteSnapshot(snapshot, config) {
+  const values = [
+    snapshot.tick,
+    snapshot.activeTick,
+    snapshot.remainingTicks,
+    snapshot.map.nextActiveTick,
+    snapshot.map.revision,
+  ];
+  const enabledSurfaceIds = new Set(snapshot.map.surfaces
+    .filter(({ enabled }) => enabled)
+    .map(({ id }) => id));
+  if (enabledSurfaceIds.size === 0) {
+    throw new Error(`tick ${snapshot.tick} 地图已无可用 surface。`);
+  }
+  if (
+    snapshot.map.nextActiveTick !== snapshot.activeTick
+    && !(
+      snapshot.phase === ARENA_MATCH_PHASE.ENDED
+      && snapshot.map.nextActiveTick === snapshot.activeTick + 1
+    )
+  ) {
+    throw new Error(
+      `tick ${snapshot.tick} map.nextActiveTick ${snapshot.map.nextActiveTick}`
+      + ` 与 activeTick ${snapshot.activeTick} 失配。`,
+    );
+  }
+  for (const surface of snapshot.map.surfaces) values.push(surface.revision);
+  for (const occurrence of snapshot.map.occurrences) {
+    values.push(
+      occurrence.warningTick,
+      occurrence.startTick,
+      occurrence.endTick ?? 0,
+      occurrence.revision,
+    );
+  }
   for (const participant of snapshot.participants) {
     values.push(
       participant.lives,
@@ -45,6 +78,24 @@ function assertFiniteSnapshot(snapshot) {
       participant.facing.x,
       participant.facing.z,
     );
+    if (
+      participant.grounded
+      && (!participant.supportSurfaceId || !enabledSurfaceIds.has(participant.supportSurfaceId))
+    ) {
+      throw new Error(`tick ${snapshot.tick} ${participant.id} 站在已失效 surface。`);
+    }
+  }
+  for (const equipment of snapshot.equipment) {
+    if (equipment.position === null) continue;
+    values.push(equipment.position.x, equipment.position.y, equipment.position.z);
+    const supported = config.arena.surfaces.some((surface) => (
+      enabledSurfaceIds.has(surface.id)
+      && Math.abs(equipment.position.x - surface.center.x) <= surface.halfExtents.x
+      && Math.abs(equipment.position.z - surface.center.z) <= surface.halfExtents.z
+    ));
+    if (!supported) {
+      throw new Error(`tick ${snapshot.tick} 装备 ${equipment.instanceId} 停留在已失效地图区域。`);
+    }
   }
   if (!values.every(Number.isFinite)) throw new Error(`tick ${snapshot.tick} 出现非有限状态。`);
 }
@@ -117,7 +168,7 @@ for (let matchIndex = 0; matchIndex < matches; matchIndex += 1) {
 
     while (core.phase !== ARENA_MATCH_PHASE.ENDED && core.tick < maximumTicks) {
       const snapshot = core.getSnapshot();
-      assertFiniteSnapshot(snapshot);
+      assertFiniteSnapshot(snapshot, core.config);
       const frames = createBotFrames(snapshot, matchIndex);
       const events = runner ? runner.step(frames) : core.step(frames);
       matchEvents += events.length;
@@ -128,7 +179,7 @@ for (let matchIndex = 0; matchIndex < matches; matchIndex += 1) {
       throw new Error(`第 ${matchIndex} 局没有在权威时限内结束。`);
     }
     const finalSnapshot = core.getSnapshot();
-    assertFiniteSnapshot(finalSnapshot);
+    assertFiniteSnapshot(finalSnapshot, core.config);
     if (!core.result) throw new Error(`第 ${matchIndex} 局结束但没有 result。`);
     if (matchEvents > 2_000) throw new Error(`第 ${matchIndex} 局事件数失控：${matchEvents}。`);
 

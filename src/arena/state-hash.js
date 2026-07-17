@@ -89,6 +89,36 @@ export function createMatchStateHash(snapshot) {
       equipment.revision,
     );
   }
+  if (!snapshot.map || !Array.isArray(snapshot.map.surfaces) || !Array.isArray(snapshot.map.occurrences)) {
+    throw new TypeError('状态 hash 缺少 map runtime 快照。');
+  }
+  fields.push(
+    snapshot.map.schemaVersion,
+    snapshot.map.definitionId,
+    snapshot.map.nextActiveTick,
+    snapshot.map.revision,
+  );
+  for (const surface of [...snapshot.map.surfaces].sort((left, right) => (
+    compareText(left.id, right.id)
+  ))) {
+    fields.push(surface.id, surface.enabled ? 1 : 0, surface.revision);
+  }
+  for (const occurrence of [...snapshot.map.occurrences].sort((left, right) => (
+    compareText(left.occurrenceId, right.occurrenceId)
+  ))) {
+    fields.push(
+      occurrence.occurrenceId,
+      occurrence.eventId,
+      occurrence.kind,
+      occurrence.warningTick,
+      occurrence.startTick,
+      occurrence.endTick ?? -1,
+      occurrence.phase,
+      occurrence.revision,
+      createDeterministicDataHash(occurrence.publicPayload, 'map occurrence public payload'),
+      createDeterministicDataHash(occurrence.privatePlan ?? null, 'map occurrence private plan'),
+    );
+  }
   for (const [name, state] of Object.entries(snapshot.rngStates).sort(([a], [b]) => (
     compareText(a, b)
   ))) {

@@ -50,6 +50,8 @@ const REQUIRED_ENGINE_METHODS = Object.freeze([
   'resolveEquipmentPickups',
   'updateEquipmentLastSafePosition',
   'dropEquipment',
+  'despawnInvalidWorldEquipment',
+  'requireEquipmentDefinition',
   'getContentHash',
   'getParticipantActionRule',
   'destroy',
@@ -185,6 +187,7 @@ export class ArenaRuleEngine {
   #targetingRegistry;
   #effectRegistry;
   #commandRegistry;
+  #equipmentRegistry;
   #equipmentSystem;
   #contentHash;
   #destroyed;
@@ -222,6 +225,7 @@ export class ArenaRuleEngine {
     this.#targetingRegistry = targetingRegistry;
     this.#effectRegistry = effectRegistry;
     this.#commandRegistry = commandRegistry;
+    this.#equipmentRegistry = equipmentRegistry;
     this.#contentHash = createDeterministicDataHash({
       actions: actionRegistry.list(),
       equipment: equipmentRegistry.list(),
@@ -235,6 +239,11 @@ export class ArenaRuleEngine {
     this.#committing = false;
     this.#failed = false;
     Object.freeze(this);
+  }
+
+  requireEquipmentDefinition(definitionId) {
+    this.#assertUsable();
+    return this.#equipmentRegistry.require(definitionId);
   }
 
   #assertUsable() {
@@ -504,6 +513,11 @@ export class ArenaRuleEngine {
   dropEquipment(participantId, options) {
     this.#assertUsable();
     return this.#equipmentSystem.dropOwned(participantId, options);
+  }
+
+  despawnInvalidWorldEquipment(options) {
+    this.#assertUsable();
+    return this.#equipmentSystem.despawnInvalidWorldEquipment(options);
   }
 
   resetParticipant(participantId) {

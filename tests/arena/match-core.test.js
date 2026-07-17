@@ -8,6 +8,7 @@ import { createNeutralInputFrame } from '../../src/arena/input-frame.js';
 import { ARENA_MATCH_EVENT } from '../../src/arena/match-core.js';
 import { createArenaV1MatchCore } from '../../src/arena/arena-v1-match-core.js';
 import { createLightweightPhysicsWorld } from '../../src/arena/physics/lightweight-physics.js';
+import { createArenaV1RuleEngine } from '../../src/arena/composition/arena-v1-rule-engine.js';
 
 const TEST_ARENA = Object.freeze({
   killY: -3,
@@ -190,6 +191,75 @@ test('authority config rejects accessors and unknown wrapper fields before invok
   );
 });
 
+test('MatchCore cleans an incomplete or failed map authority during construction', () => {
+  let incompleteDestroyed = 0;
+  assert.throws(() => createArenaV1MatchCore({
+    config: { arena: TEST_ARENA },
+    mapSystemFactory() {
+      return {
+        destroy() { incompleteDestroyed += 1; },
+      };
+    },
+  }), /缺少 advance/);
+  assert.equal(incompleteDestroyed, 1);
+
+  let failedDestroyed = 0;
+  assert.throws(() => createArenaV1MatchCore({
+    config: { arena: TEST_ARENA },
+    mapSystemFactory() {
+      return {
+        advance() {},
+        commit() {},
+        getSnapshot() {},
+        getStateSnapshot() {},
+        getContentHash() { throw new Error('map content failed'); },
+        isSurfaceEnabled() { return true; },
+        isPositionOnEnabledSurface() { return true; },
+        destroy() {
+          failedDestroyed += 1;
+          throw new Error('map cleanup failed');
+        },
+      };
+    },
+  }), (error) => {
+    assert.match(error.originalError?.message, /map content failed/);
+    assert.equal(error.cleanupErrors?.length, 1);
+    assert.match(error.cleanupErrors[0].message, /map cleanup failed/);
+    return true;
+  });
+  assert.equal(failedDestroyed, 1);
+});
+
+test('registered map equipment is validated against the actual injected RuleEngine catalog', () => {
+  let destroyCalls = 0;
+  assert.throws(() => createArenaV1MatchCore({
+    ruleEngineFactory(context) {
+      const engine = createArenaV1RuleEngine(context);
+      return new Proxy(engine, {
+        get(target, property) {
+          if (property === 'requireEquipmentDefinition') {
+            return (definitionId) => {
+              if (definitionId === 'hammer') {
+                throw new RangeError('injected rules do not support hammer');
+              }
+              return target.requireEquipmentDefinition(definitionId);
+            };
+          }
+          if (property === 'destroy') {
+            return () => {
+              destroyCalls += 1;
+              target.destroy();
+            };
+          }
+          const value = Reflect.get(target, property, target);
+          return typeof value === 'function' ? value.bind(target) : value;
+        },
+      });
+    },
+  }), /do not support hammer/);
+  assert.equal(destroyCalls, 1);
+});
+
 test('MatchCore tick failure preserves cleanup causes and retries unfinished resources', () => {
   let destroyAttempts = 0;
   let rawWorld = null;
@@ -335,12 +405,9 @@ test('three eliminations respawn twice with invulnerability and then end the mat
 
 test('simultaneous final falls produce a deterministic draw', () => {
   const arena = {
-    killY: -1,
+    killY: 1.01,
     surfaces: TEST_ARENA.surfaces,
-    spawns: [
-      { x: -8, y: 1, z: 0 },
-      { x: 8, y: 1, z: 0 },
-    ],
+    spawns: TEST_ARENA.spawns,
   };
   const core = createFastCore({
     arena,

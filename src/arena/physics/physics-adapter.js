@@ -2,6 +2,7 @@ const REQUIRED_WORLD_METHODS = Object.freeze([
   'addCharacter',
   'setMovementIntent',
   'applyImpulse',
+  'setSurfaceEnabled',
   'step',
   'getCharacterState',
   'resetCharacter',
@@ -71,6 +72,7 @@ export function validateArenaDefinition(arena) {
       center: { ...surface.center },
       halfExtents: { ...surface.halfExtents },
       topY: surface.center.y + surface.halfExtents.y,
+      enabled: true,
     };
   });
   return { killY: arena.killY, surfaces };

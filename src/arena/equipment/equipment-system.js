@@ -12,6 +12,7 @@ import { assertKnownKeys, assertNonEmptyString } from '../rules/definition-utils
 
 const PICKUP_OPTIONS_KEYS = new Set(['participants', 'contestSeed']);
 const DROP_OPTIONS_KEYS = new Set(['isPositionValid']);
+const RECONCILE_OPTIONS_KEYS = new Set(['isPositionValid']);
 const PICKUP_PARTICIPANT_KEYS = new Set(['id', 'position', 'eligible']);
 const POSITION_KEYS = new Set(['x', 'y', 'z']);
 
@@ -250,17 +251,52 @@ export class EquipmentSystem {
         originPosition: runtime.originPosition,
         isPositionValid,
       });
-      runtime.locationState = EQUIPMENT_LOCATION_STATE.DROPPED;
+      runtime.locationState = drop.despawned
+        ? EQUIPMENT_LOCATION_STATE.DESPAWNED
+        : EQUIPMENT_LOCATION_STATE.DROPPED;
       runtime.ownerId = null;
-      runtime.position = { ...drop.position };
+      runtime.position = drop.position ? { ...drop.position } : null;
       runtime.revision += 1;
       this.#heldByParticipant.delete(id);
       return Object.freeze({
         participantId: id,
         equipment: createEquipmentRuntimeSnapshot(runtime),
         fallbackUsed: drop.fallbackUsed,
+        despawned: drop.despawned,
         diagnosticCode: drop.diagnosticCode,
       });
+    });
+  }
+
+  despawnInvalidWorldEquipment(options) {
+    return this.#runMutation(() => {
+      assertKnownKeys(options, RECONCILE_OPTIONS_KEYS, 'EquipmentSystem reconcile options');
+      const { isPositionValid } = options;
+      if (typeof isPositionValid !== 'function') {
+        throw new TypeError('EquipmentSystem reconcile 需要 isPositionValid。');
+      }
+      const invalid = [];
+      for (const runtime of [...this.#runtimes.values()].sort((left, right) => (
+        compareStrings(left.instanceId, right.instanceId)
+      ))) {
+        if (
+          runtime.locationState !== EQUIPMENT_LOCATION_STATE.SPAWNED
+          && runtime.locationState !== EQUIPMENT_LOCATION_STATE.DROPPED
+        ) continue;
+        const snapshot = createEquipmentRuntimeSnapshot(runtime);
+        const valid = isPositionValid(snapshot.position);
+        if (typeof valid !== 'boolean') {
+          throw new TypeError('EquipmentSystem reconcile isPositionValid 必须返回布尔值。');
+        }
+        if (!valid) invalid.push(runtime);
+      }
+      return Object.freeze(invalid.map((runtime) => {
+        runtime.locationState = EQUIPMENT_LOCATION_STATE.DESPAWNED;
+        runtime.ownerId = null;
+        runtime.position = null;
+        runtime.revision += 1;
+        return createEquipmentRuntimeSnapshot(runtime);
+      }));
     });
   }
 

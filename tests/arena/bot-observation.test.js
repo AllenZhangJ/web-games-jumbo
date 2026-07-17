@@ -43,7 +43,7 @@ test('BotObservation delays world equipment and opponent ownership but keeps sel
         initialSpawns: [{
           id: 'pickup-now',
           definitionId: 'hammer',
-          position: { x: -2.4, y: 1.02, z: 0 },
+          position: { x: -1.2, y: 1.02, z: 0 },
         }],
       },
     },

@@ -35,7 +35,8 @@ function limitHorizontalVelocity(vx, vz, limit) {
 }
 
 function isOverSurface(body, surface) {
-  return Math.abs(body.x - surface.center.x) <= surface.halfExtents.x + CONTACT_EPSILON
+  return surface.enabled
+    && Math.abs(body.x - surface.center.x) <= surface.halfExtents.x + CONTACT_EPSILON
     && Math.abs(body.z - surface.center.z) <= surface.halfExtents.z + CONTACT_EPSILON;
 }
 
@@ -156,6 +157,26 @@ class LightweightPhysicsWorld {
       body.grounded = false;
       body.supportSurfaceId = null;
     }
+  }
+
+  setSurfaceEnabled(surfaceId, enabled) {
+    this.#assertUsable();
+    if (typeof surfaceId !== 'string' || surfaceId.length === 0) {
+      throw new TypeError('surfaceId 必须是非空字符串。');
+    }
+    if (typeof enabled !== 'boolean') throw new TypeError('surface enabled 必须是布尔值。');
+    const surface = this.#arena.surfaces.find(({ id }) => id === surfaceId);
+    if (!surface) throw new RangeError(`未知 physics surface ${surfaceId}。`);
+    if (surface.enabled === enabled) return false;
+    surface.enabled = enabled;
+    if (!enabled) {
+      for (const body of this.#characters.values()) {
+        if (body.supportSurfaceId !== surfaceId) continue;
+        body.grounded = false;
+        body.supportSurfaceId = null;
+      }
+    }
+    return true;
   }
 
   step(deltaSeconds) {

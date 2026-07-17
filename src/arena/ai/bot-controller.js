@@ -112,6 +112,7 @@ export class BotController {
       : -1;
     if (
       decision.goalId !== BOT_GOAL_ID.RECOVER_EDGE
+      && decision.goalId !== BOT_GOAL_ID.AVOID_MAP_HAZARD
       && decision.goalId !== BOT_GOAL_ID.EVADE_THREAT
       && decision.goalId !== BOT_GOAL_ID.ACQUIRE_EQUIPMENT
       && decision.goalId !== BOT_GOAL_ID.ATTACK

@@ -28,6 +28,7 @@ export function resolveEquipmentDrop(options) {
     return Object.freeze({
       position: lastSafe,
       fallbackUsed: false,
+      despawned: false,
       diagnosticCode: null,
     });
   }
@@ -36,10 +37,11 @@ export function resolveEquipmentDrop(options) {
     throw new TypeError('isPositionValid 必须返回布尔值。');
   }
   return Object.freeze({
-    position: origin,
+    position: originValid ? origin : null,
     fallbackUsed: true,
+    despawned: !originValid,
     diagnosticCode: originValid
       ? 'equipment-drop-fallback-origin-spawn'
-      : 'equipment-drop-fallback-origin-spawn-invalid',
+      : 'equipment-drop-no-valid-position',
   });
 }

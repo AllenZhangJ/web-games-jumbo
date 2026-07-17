@@ -6,14 +6,15 @@ import {
 } from '../content/stage4-equipment.js';
 import { ArenaRuleEngine } from '../rules/arena-rule-engine.js';
 import { createDefaultRuleCommandRegistry } from '../rules/default-rule-command-handlers.js';
+import { assertArenaV1AuthorityContent } from './arena-v1-authority-content.js';
 
-export function createArenaV1RuleEngine({ participantIds, config }) {
+export function createArenaV1RuleEngine({ participantIds, config, authorityContent = null }) {
   if (!config || typeof config !== 'object') {
     throw new TypeError('createArenaV1RuleEngine 需要已验证 match config。');
   }
-  const { actionRegistry, equipmentRegistry } = createStage4ContentRegistries({
-    basePush: config.basePush,
-  });
+  const { actionRegistry, equipmentRegistry } = authorityContent
+    ? assertArenaV1AuthorityContent(authorityContent)
+    : createStage4ContentRegistries({ basePush: config.basePush });
   return new ArenaRuleEngine({
     participantIds,
     baseActionDefinitionId: STAGE4_ACTION_ID.BASE_PUSH,

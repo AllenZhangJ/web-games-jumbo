@@ -26,6 +26,12 @@ test('lightweight world implements the complete adapter and rejects invalid life
     ...PHYSICS_POC_CHARACTER,
   });
   assert.equal(world.getCharacterState('player-1').grounded, true);
+  assert.equal(world.setSurfaceEnabled('main-platform', false), true);
+  assert.equal(world.getCharacterState('player-1').grounded, false);
+  assert.equal(world.setSurfaceEnabled('main-platform', false), false);
+  assert.equal(world.setSurfaceEnabled('main-platform', true), true);
+  world.resetCharacter('player-1', { position: PHYSICS_POC_ARENA.spawns[0] });
+  assert.equal(world.getCharacterState('player-1').grounded, true);
   world.applyImpulse('player-1', { x: 1, y: 0, z: 0 });
   assert.equal(world.getCharacterState('player-1').grounded, true);
   assert.throws(() => world.step(1 / 30), /只接受固定步长/);

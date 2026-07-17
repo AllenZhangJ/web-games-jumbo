@@ -82,7 +82,7 @@ test('tampered replay is rejected at a deterministic checkpoint', () => {
   const runner = new HeadlessMatchRunner(core, { checkpointInterval: 10 });
   const replay = runner.runUntilEnded(scriptedFrames);
   const tampered = JSON.parse(JSON.stringify(replay));
-  tampered.inputFrames[20].moveX *= -1;
+  tampered.inputFrames[0].actionPressed = !tampered.inputFrames[0].actionPressed;
   assert.throws(() => replayMatch(tampered), /分叉|最终 hash/);
   core.destroy();
 });

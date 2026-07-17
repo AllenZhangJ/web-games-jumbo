@@ -6,9 +6,11 @@ import {
 import { normalizeInputFrames } from './input-frame.js';
 import { createLightweightPhysicsWorld } from './physics/lightweight-physics.js';
 import { assertPhysicsWorld } from './physics/physics-adapter.js';
+import { assertArenaMapSystem } from './map/map-system.js';
 import { assertArenaRuleEngine } from './rules/arena-rule-engine.js';
 import { createArenaConfigHash, createMatchStateHash } from './state-hash.js';
 import { createRng, deriveSeed } from '../shared/deterministic-rng.js';
+import { createDeterministicDataHash } from '../shared/deterministic-data-hash.js';
 import { combineCleanupFailure, normalizeThrownError } from './lifecycle-error.js';
 
 const EVENT = Object.freeze({
@@ -16,6 +18,7 @@ const EVENT = Object.freeze({
   EQUIPMENT_SPAWNED: 'EquipmentSpawned',
   EQUIPMENT_PICKED_UP: 'EquipmentPickedUp',
   EQUIPMENT_DROPPED: 'EquipmentDropped',
+  EQUIPMENT_DESPAWNED: 'EquipmentDespawned',
   EQUIPMENT_DROP_FALLBACK: 'EquipmentDropFallback',
   ACTION_STARTED: 'ActionStarted',
   HIT_RESOLVED: 'HitResolved',
@@ -59,6 +62,15 @@ function cloneResult(result) {
   return result ? { ...result } : null;
 }
 
+function cloneSnapshotData(value) {
+  if (value === null || typeof value !== 'object') return value;
+  if (Array.isArray(value)) return value.map(cloneSnapshotData);
+  return Object.fromEntries(Object.entries(value).map(([key, child]) => [
+    key,
+    cloneSnapshotData(child),
+  ]));
+}
+
 function compareText(left, right) {
   if (left < right) return -1;
   if (left > right) return 1;
@@ -76,6 +88,7 @@ export class MatchCore {
   #ruleContentHash;
   #physics;
   #rules;
+  #map;
   #participants;
   #rngStreams;
   #events;
@@ -91,16 +104,22 @@ export class MatchCore {
   #cleanupConstructionFailure(error) {
     const cleanupErrors = [];
     try {
-      this.#physics?.destroy();
+      if (typeof this.#physics?.destroy === 'function') this.#physics.destroy();
       this.#physics = null;
     } catch (cleanupError) {
       cleanupErrors.push(normalizeThrownError(cleanupError, 'MatchCore physics 构造清理失败'));
     }
     try {
-      this.#rules?.destroy();
+      if (typeof this.#rules?.destroy === 'function') this.#rules.destroy();
       this.#rules = null;
     } catch (cleanupError) {
       cleanupErrors.push(normalizeThrownError(cleanupError, 'MatchCore rules 构造清理失败'));
+    }
+    try {
+      if (typeof this.#map?.destroy === 'function') this.#map.destroy();
+      this.#map = null;
+    } catch (cleanupError) {
+      cleanupErrors.push(normalizeThrownError(cleanupError, 'MatchCore map 构造清理失败'));
     }
     this.#destroyed = true;
     return combineCleanupFailure(
@@ -115,10 +134,14 @@ export class MatchCore {
     config = {},
     physicsFactory = createLightweightPhysicsWorld,
     ruleEngineFactory,
+    mapSystemFactory,
   } = {}) {
     if (typeof physicsFactory !== 'function') throw new TypeError('physicsFactory 必须是函数。');
     if (typeof ruleEngineFactory !== 'function') {
       throw new TypeError('MatchCore 需要显式 ruleEngineFactory。');
+    }
+    if (typeof mapSystemFactory !== 'function') {
+      throw new TypeError('MatchCore 需要显式 mapSystemFactory。');
     }
     this.#matchSeed = normalizeSeed(seed);
     this.#config = createArenaMatchConfig(config);
@@ -144,16 +167,30 @@ export class MatchCore {
     this.#participants = new Map();
     this.#physics = null;
     this.#rules = null;
+    this.#map = null;
     try {
-      this.#rules = assertArenaRuleEngine(ruleEngineFactory({
+      this.#rules = ruleEngineFactory({
         participantIds: this.config.participantIds,
         config: this.config,
-      }));
-      this.#ruleContentHash = this.#rules.getContentHash();
+      });
+      assertArenaRuleEngine(this.#rules);
+      this.#map = mapSystemFactory({
+        config: this.config,
+        matchSeed: this.matchSeed,
+        equipmentDefinitionCatalog: Object.freeze({
+          require: (definitionId) => this.#rules.requireEquipmentDefinition(definitionId),
+        }),
+      });
+      assertArenaMapSystem(this.#map);
+      this.#ruleContentHash = createDeterministicDataHash({
+        combat: this.#rules.getContentHash(),
+        map: this.#map.getContentHash(),
+      }, 'Arena authority content');
       if (typeof this.#ruleContentHash !== 'string' || !/^[0-9a-f]{8}$/.test(this.#ruleContentHash)) {
         throw new TypeError('ruleEngine content hash 必须是 8 位十六进制字符串。');
       }
-      this.#physics = assertPhysicsWorld(physicsFactory({ arena: this.config.arena }));
+      this.#physics = physicsFactory({ arena: this.config.arena });
+      assertPhysicsWorld(this.#physics);
       for (let index = 0; index < this.config.participantIds.length; index += 1) {
         const id = this.config.participantIds[index];
         const participant = createParticipant(id, this.config.livesPerParticipant, index);
@@ -305,6 +342,7 @@ export class MatchCore {
     this.#startRunningIfNeeded();
     this.#advanceParticipantTimers();
     this.#rules.advanceTimers();
+    this.#advanceMapState();
     this.#updateEquipmentState();
     const frameById = new Map(frames.map((frame) => [frame.participantId, frame]));
     const startedActions = this.#rules.resolveActions({
@@ -370,7 +408,8 @@ export class MatchCore {
       || position.y <= this.config.arena.killY
     ) return false;
     return this.config.arena.surfaces.some((surface) => (
-      Math.abs(position.x - surface.center.x) <= surface.halfExtents.x
+      this.#map.isSurfaceEnabled(surface.id)
+      && Math.abs(position.x - surface.center.x) <= surface.halfExtents.x
       && Math.abs(position.z - surface.center.z) <= surface.halfExtents.z
       && Math.abs(
         position.y
@@ -382,6 +421,54 @@ export class MatchCore {
           )
       ) <= EQUIPMENT_SURFACE_HEIGHT_TOLERANCE
     ));
+  }
+
+  #advanceMapState() {
+    const batch = this.#map.advance({
+      activeTick: this.#activeTick,
+      actors: this.config.participantIds.map((id) => {
+        const participant = this.#participants.get(id);
+        const physics = this.#physics.getCharacterState(id);
+        return {
+          id,
+          position: { ...physics.position },
+          eligible: participant.status === ARENA_PARTICIPANT_STATUS.ACTIVE,
+        };
+      }),
+    });
+    this.#map.commit(batch, {
+      applyImpulse: (participantId, impulse) => {
+        this.#physics.applyImpulse(participantId, impulse);
+      },
+      setSurfaceEnabled: (surfaceId, enabled) => {
+        this.#physics.setSurfaceEnabled(surfaceId, enabled);
+      },
+      spawnEquipment: (spawn) => {
+        if (!this.#isEquipmentPositionValid(spawn.position)) {
+          throw new RangeError(`map equipment spawn ${spawn.spawnId} 不在可用竞技场表面。`);
+        }
+        const equipment = this.#rules.spawnEquipment(spawn);
+        this.#emit(EVENT.EQUIPMENT_SPAWNED, {
+          equipmentInstanceId: equipment.instanceId,
+          equipmentDefinitionId: equipment.definitionId,
+          spawnId: equipment.spawnId,
+          position: equipment.position ? { ...equipment.position } : null,
+        });
+      },
+    });
+    for (const event of batch.events) {
+      const { type, ...payload } = event;
+      this.#emit(type, payload);
+    }
+    for (const equipment of this.#rules.despawnInvalidWorldEquipment({
+      isPositionValid: (position) => this.#isEquipmentPositionValid(position),
+    })) {
+      this.#emit(EVENT.EQUIPMENT_DESPAWNED, {
+        equipmentInstanceId: equipment.instanceId,
+        equipmentDefinitionId: equipment.definitionId,
+        reason: 'invalid-map-surface',
+      });
+    }
   }
 
   #updateEquipmentState() {
@@ -482,12 +569,21 @@ export class MatchCore {
         isPositionValid: (position) => this.#isEquipmentPositionValid(position),
       });
       if (dropped) {
-        this.#emit(EVENT.EQUIPMENT_DROPPED, {
-          participantId: participant.id,
-          equipmentInstanceId: dropped.equipment.instanceId,
-          equipmentDefinitionId: dropped.equipment.definitionId,
-          position: { ...dropped.equipment.position },
-        });
+        if (dropped.despawned) {
+          this.#emit(EVENT.EQUIPMENT_DESPAWNED, {
+            participantId: participant.id,
+            equipmentInstanceId: dropped.equipment.instanceId,
+            equipmentDefinitionId: dropped.equipment.definitionId,
+            reason: 'no-valid-drop-position',
+          });
+        } else {
+          this.#emit(EVENT.EQUIPMENT_DROPPED, {
+            participantId: participant.id,
+            equipmentInstanceId: dropped.equipment.instanceId,
+            equipmentDefinitionId: dropped.equipment.definitionId,
+            position: { ...dropped.equipment.position },
+          });
+        }
         if (dropped.fallbackUsed) {
           this.#emit(EVENT.EQUIPMENT_DROP_FALLBACK, {
             participantId: participant.id,
@@ -532,13 +628,17 @@ export class MatchCore {
   }
 
   #chooseRespawn(participant) {
+    const validSpawns = this.config.arena.spawns.filter((spawn) => (
+      this.#map.isPositionOnEnabledSurface(spawn)
+    ));
+    if (validSpawns.length === 0) throw new Error('当前地图没有合法重生点。');
     const opponents = this.config.participantIds
       .filter((id) => id !== participant.id)
       .map((id) => this.#participants.get(id))
       .filter((value) => value.status === ARENA_PARTICIPANT_STATUS.ACTIVE)
       .map((value) => this.#physics.getCharacterState(value.id));
-    if (opponents.length === 0) return this.config.arena.spawns[participant.spawnIndex];
-    return this.config.arena.spawns
+    if (opponents.length === 0) return validSpawns[participant.spawnIndex % validSpawns.length];
+    return validSpawns
       .map((spawn, index) => ({
         spawn,
         index,
@@ -689,6 +789,9 @@ export class MatchCore {
         cooldownRemainingTicks: equipment.cooldownRemainingTicks,
         revision: equipment.revision,
       })),
+      map: cloneSnapshotData(includeInternal
+        ? this.#map.getStateSnapshot()
+        : this.#map.getSnapshot()),
       result: cloneResult(this.#result),
     };
     if (includeInternal) {
@@ -724,6 +827,7 @@ export class MatchCore {
         invulnerableTicks: this.config.invulnerableTicks,
         lastHitCreditTicks: this.config.lastHitCreditTicks,
         basePush: { ...this.config.basePush },
+        mapDefinitionId: this.config.mapDefinitionId,
         equipment: {
           initialSpawns: this.config.equipment.initialSpawns.map((spawn) => ({
             id: spawn.id,
@@ -746,7 +850,7 @@ export class MatchCore {
   }
 
   destroy() {
-    if (this.#destroyed && !this.#rules && !this.#physics) return;
+    if (this.#destroyed && !this.#rules && !this.#map && !this.#physics) return;
     if (this.#stepping) throw new Error('step() 期间不能销毁 MatchCore。');
     this.#destroyed = true;
     this.#events.length = 0;
@@ -758,6 +862,14 @@ export class MatchCore {
         this.#rules = null;
       } catch (error) {
         errors.push(normalizeThrownError(error, 'MatchCore rules 清理失败'));
+      }
+    }
+    if (this.#map) {
+      try {
+        this.#map.destroy();
+        this.#map = null;
+      } catch (error) {
+        errors.push(normalizeThrownError(error, 'MatchCore map 清理失败'));
       }
     }
     if (this.#physics) {

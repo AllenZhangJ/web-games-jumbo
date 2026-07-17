@@ -2,8 +2,10 @@ import {
   ARENA_ACTION_PHASE,
   ARENA_MATCH_PHASE,
   ARENA_PARTICIPANT_STATUS,
+  ARENA_PHYSICS,
 } from '../config.js';
 import { EQUIPMENT_LOCATION_STATE } from '../equipment/equipment-runtime.js';
+import { serializeMapRuntimeSnapshot } from '../map/map-serializer.js';
 
 const MATCH_PHASES = new Set(Object.values(ARENA_MATCH_PHASE));
 const PARTICIPANT_STATUSES = new Set(Object.values(ARENA_PARTICIPANT_STATUS));
@@ -198,6 +200,17 @@ function copyParticipant(participant, name) {
   };
 }
 
+function copyMapSnapshot(value, name) {
+  try {
+    return serializeMapRuntimeSnapshot(value);
+  } catch (error) {
+    const ErrorType = error instanceof RangeError ? RangeError : TypeError;
+    const wrapped = new ErrorType(`${name}: ${error instanceof Error ? error.message : String(error)}`);
+    wrapped.originalError = error;
+    throw wrapped;
+  }
+}
+
 function validateSourceSnapshot(snapshot, name) {
   if (!snapshot || typeof snapshot !== 'object') throw new TypeError(`${name} 必须是快照。`);
   if (!Number.isSafeInteger(snapshot.tick) || snapshot.tick < 0) {
@@ -212,6 +225,7 @@ function validateSourceSnapshot(snapshot, name) {
   const ids = snapshot.participants.map((participant) => participant?.id);
   if (new Set(ids).size !== ids.length) throw new RangeError(`${name} 参赛者 ID 必须唯一。`);
   if (!Array.isArray(snapshot.equipment)) throw new TypeError(`${name}.equipment 必须是数组。`);
+  copyMapSnapshot(snapshot.map, `${name}.map`);
   return snapshot;
 }
 
@@ -232,10 +246,15 @@ export function cloneBotSourceSnapshot(snapshot) {
       ))
       .map((equipment, index) => copyVisibleEquipment(equipment, `equipment[${index}]`))
       .sort((left, right) => compareText(left.instanceId, right.instanceId)),
+    map: copyMapSnapshot(snapshot.map, 'map'),
   });
 }
 
-export function createBotArenaView(arena, characterRadius) {
+export function createBotArenaView(
+  arena,
+  characterRadius,
+  maximumStepHeight = ARENA_PHYSICS.maxStepHeight,
+) {
   if (
     !arena
     || typeof arena !== 'object'
@@ -248,10 +267,14 @@ export function createBotArenaView(arena, characterRadius) {
   if (!Number.isFinite(characterRadius) || characterRadius <= 0) {
     throw new RangeError('Bot characterRadius 必须大于 0。');
   }
+  if (!Number.isFinite(maximumStepHeight) || maximumStepHeight <= 0) {
+    throw new RangeError('Bot maximumStepHeight 必须大于 0。');
+  }
   const surfaceIds = new Set();
   return deepFreeze({
     killY: arena.killY,
     characterRadius,
+    maximumStepHeight,
     surfaces: arena.surfaces.map((surface, index) => {
       if (!surface || typeof surface.id !== 'string' || surface.id.length === 0) {
         throw new TypeError(`arena.surfaces[${index}].id 必须是非空字符串。`);
@@ -307,7 +330,7 @@ export function createBotObservation({
   const copiedSelf = copyParticipant(self, 'observation.self');
   const copiedOpponent = copyParticipant(opponent, 'observation.opponent');
   return deepFreeze({
-    schemaVersion: 2,
+    schemaVersion: 3,
     commandTick: commandSnapshot.tick,
     observedTick: delayedSnapshot.tick,
     phase: commandSnapshot.phase,
@@ -319,6 +342,7 @@ export function createBotObservation({
     equipment: delayedSnapshot.equipment.map((value, index) => (
       copyVisibleEquipment(value, `observation.equipment[${index}]`)
     )),
+    map: copyMapSnapshot(delayedSnapshot.map, 'observation.map'),
     arena,
     actionRule: copiedSelf.actionRule,
     opponentActionRule: copiedOpponent.actionRule,
