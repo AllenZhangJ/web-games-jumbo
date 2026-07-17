@@ -31,6 +31,11 @@ const TERMINAL_STATES = new Set([
   PRODUCT_SESSION_STATE.FATAL_ERROR,
   PRODUCT_SESSION_STATE.DESTROYED,
 ]);
+const RESULT_STATES = new Set([
+  PRODUCT_SESSION_STATE.RESULTS,
+  PRODUCT_SESSION_STATE.REWARD,
+  PRODUCT_SESSION_STATE.UNLOCK,
+]);
 const ERROR_MESSAGE_BY_CODE = Object.freeze({
   [PRODUCT_SESSION_ERROR_CODE.PROFILE_LOAD_FAILED]: 'error.profile-load-failed',
   [PRODUCT_SESSION_ERROR_CODE.PROFILE_SAVE_FAILED]: 'error.profile-save-failed',
@@ -234,7 +239,9 @@ export function createProductSessionViewModel(snapshotValue, {
   const busy = BUSY_STATES.has(currentActiveState);
   const terminal = TERMINAL_STATES.has(currentActiveState);
   const inputEnabled = !suspended && !busy && !terminal;
-  const result = resultView(lastMatchResult ?? source.match?.result ?? null);
+  const result = RESULT_STATES.has(currentActiveState)
+    ? resultView(lastMatchResult ?? source.match?.result ?? null)
+    : null;
   const profile = profileView(source, contentRegistry, messages);
   const reward = rewardView(source, contentRegistry, messages);
   if (

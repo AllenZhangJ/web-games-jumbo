@@ -2,7 +2,7 @@
 
 ## 文档状态
 
-执行中，2026-07-18。S8.1 已落地不可变 PlayerProfile、严格同步 Storage Port、连续迁移 Registry、A/B 双槽 Repository、协作 lease、未来版本保护与故障压力门禁。S8.2 已落地无 UI 显式产品状态机、角色选择保存、单 Match 所有权、QuickMatch 集成、挂起恢复与异步竞态门禁。S8.3 已落地权威结果校验、奖励/解锁 Definition 与 Registry、纯 Resolver、唯一 Profile 写入者、幂等 grant 和 reward/unlock 状态。S8.4 已落地双方共享冻结池、Authority Content 投影、Replay V5、快捷重赛与连续局隔离。S8.5.1 已落地无宿主 Screen/Message/Content ViewModel、串行 UI Intent 和非拥有 Match 表现桥；三端产品 UI、统一 FrameLoop/生命周期与真实宿主验收仍属于后续 S8.5。
+执行中，2026-07-18。S8.1 已落地不可变 PlayerProfile、严格同步 Storage Port、连续迁移 Registry、A/B 双槽 Repository、协作 lease、未来版本保护与故障压力门禁。S8.2 已落地无 UI 显式产品状态机、角色选择保存、单 Match 所有权、QuickMatch 集成、挂起恢复与异步竞态门禁。S8.3 已落地权威结果校验、奖励/解锁 Definition 与 Registry、纯 Resolver、唯一 Profile 写入者、幂等 grant 和 reward/unlock 状态。S8.4 已落地双方共享冻结池、Authority Content 投影、Replay V5、快捷重赛与连续局隔离。S8.5.1～S8.5.2 已落地无宿主 Screen/Message/Content ViewModel、串行 UI Intent、非拥有 Match 表现桥和自动奖励/重试 Flow；三端产品 UI、统一 FrameLoop/生命周期与真实宿主验收仍属于后续 S8.5。
 
 ## 已接受默认值
 
@@ -156,7 +156,7 @@ PlayerProfile + Content Definitions
 - 首装、旧存档升级、损坏恢复、容量/写失败、前后台、重启和再来一局留证。
 - 检查 UI、无障碍文本、本地化和诊断均不泄漏机器人难度。
 
-状态：S8.5.1 无宿主产品表现合同已完成。V1 Screen Registry 覆盖所有产品状态，中文 Message Catalog 与内容表现 Registry 可校验，ViewModel 只发布脱敏公开数据，Intent Dispatcher 串行化快速点击；`ProductMatchPresentationRuntime` 通过 ProductController 的只读快照和普通 `InputFrame` 复用既有 Arena frame projector，不创建第二局 Match。设计边界见 [ADR-018](../decisions/018-arena-product-presentation-contracts.md) 与 [S8.5.1 结果记录](../research/arena-stage8-product-presentation-foundation.md)。Product Presentation Session、自动奖励提交、三端页面/无障碍绑定和真实设备留证仍未完成。
+状态：S8.5.1～S8.5.2 无宿主产品表现合同与 Flow 已完成。V1 Screen Registry 覆盖所有产品状态，中文 Message Catalog 与内容表现 Registry 可校验，ViewModel 只发布脱敏公开数据，Intent Dispatcher 串行化快速点击；`ProductMatchPresentationRuntime` 通过 ProductController 的只读快照和普通 `InputFrame` 复用既有 Arena frame projector，不创建第二局 Match；`ProductPresentationFlow` 统一自动奖励、保存失败重试、展示缓存和前后台语义。设计边界见 [ADR-018](../decisions/018-arena-product-presentation-contracts.md) 与 [S8.5.1～S8.5.2 结果记录](../research/arena-stage8-product-presentation-foundation.md)。Product Presentation Session、三端页面/无障碍绑定和真实设备留证仍未完成。
 
 ## 阻断门禁
 

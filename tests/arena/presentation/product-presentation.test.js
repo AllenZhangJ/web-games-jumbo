@@ -23,6 +23,10 @@ import {
   PRODUCT_MATCH_PRESENTATION_RUNTIME_STATE,
   ProductMatchPresentationRuntime,
 } from '../../../src/arena/presentation/product/product-match-presentation-runtime.js';
+import {
+  PRODUCT_PRESENTATION_FLOW_STATE,
+  ProductPresentationFlow,
+} from '../../../src/arena/presentation/product/product-presentation-flow.js';
 import { createProductSessionViewModel } from '../../../src/arena/presentation/product/product-session-view-model.js';
 import {
   PRODUCT_UI_INTENT_ID,
@@ -238,10 +242,11 @@ test('ProductSession ViewModel projects home, matching, suspension and reward wi
 
   const matching = viewModel(productSnapshot(PRODUCT_SESSION_STATE.MATCHING, {
     publicMatchInfo: publicMatchInfo(),
-  }));
+  }), { lastMatchResult: matchResult() });
   assert.equal(matching.busy, true);
   assert.equal(matching.inputEnabled, false);
   assert.equal(matching.match.opponent.displayName, '挑战者77');
+  assert.equal(matching.result, null);
   assert.doesNotMatch(
     JSON.stringify(matching),
     /difficulty|\bbot\b|机器人|简单|普通|困难/i,
@@ -551,4 +556,188 @@ test('Product match presentation runtime cleans an invalid constructed event win
   }), /eventWindow 不符合合同/);
   assert.equal(destroyCalls, 1);
   assert.equal(harness.destroyCalls, 0);
+});
+
+function productFlowHarness({ storage = memoryStorage(), seed = 9901 } = {}) {
+  const controller = createArenaV1ProductSession({
+    storage,
+    ownerId: `product-flow-${seed}`,
+    wallNow: () => 2_000,
+    seedSource: { nextSeed: () => seed },
+    keyPrefix: `test.product-flow.${seed}`,
+    matchConfig: {
+      preparingTicks: 0,
+      suddenDeathStartTick: 3,
+      hardLimitTicks: 6,
+    },
+  });
+  const inputSource = {
+    sample: (tick) => createNeutralInputFrame(tick, 'player-1'),
+  };
+  return {
+    controller,
+    flow: new ProductPresentationFlow({ controller, inputSource }),
+  };
+}
+
+test('ProductPresentationFlow completes boot, one owned match, automatic reward and return home', async () => {
+  const { controller, flow } = productFlowHarness();
+  const ready = await flow.start();
+  assert.equal(ready.viewModel.activeState, PRODUCT_SESSION_STATE.READY);
+  const first = flow.dispatch({ id: PRODUCT_UI_INTENT_ID.START_MATCH });
+  const duplicate = flow.dispatch({ id: PRODUCT_UI_INTENT_ID.START_MATCH });
+  assert.equal(first, duplicate);
+  const started = await first;
+  assert.equal(started.viewModel.activeState, PRODUCT_SESSION_STATE.IN_MATCH);
+  assert.equal(started.hasMatchRuntime, true);
+  assert.equal(controller.getSnapshot().match.hasRuntime, true);
+
+  let snapshot = started;
+  for (let index = 0; index < 12 && snapshot.viewModel.activeState === PRODUCT_SESSION_STATE.IN_MATCH; index += 1) {
+    snapshot = flow.stepMatch();
+  }
+  assert.equal(snapshot.viewModel.activeState, PRODUCT_SESSION_STATE.REWARD);
+  assert.equal(snapshot.viewModel.result !== null, true);
+  assert.equal(snapshot.viewModel.reward.committed, true);
+  assert.equal(snapshot.hasMatchRuntime, false);
+  assert.equal(controller.getSnapshot().match.hasRuntime, false);
+  assert.equal(snapshot.matchFrame.hud.result !== null, true);
+
+  const home = await flow.dispatch({ id: PRODUCT_UI_INTENT_ID.CONTINUE_REWARD });
+  assert.equal(home.viewModel.activeState, PRODUCT_SESSION_STATE.READY);
+  assert.equal(home.viewModel.result, null);
+  assert.equal(home.matchFrame, null);
+  flow.destroy();
+  assert.equal(flow.state, PRODUCT_PRESENTATION_FLOW_STATE.DESTROYED);
+  assert.equal(controller.state, PRODUCT_SESSION_STATE.READY);
+  controller.destroy();
+});
+
+test('ProductPresentationFlow preserves result and Match runtime across reward-save retry', async () => {
+  const base = memoryStorage();
+  let failWrites = 0;
+  const storage = {
+    ...base,
+    storageWrite(key, value) {
+      if (failWrites > 0) {
+        failWrites -= 1;
+        return false;
+      }
+      return base.storageWrite(key, value);
+    },
+  };
+  const { controller, flow } = productFlowHarness({ storage, seed: 9902 });
+  await flow.start();
+  await flow.dispatch({ id: PRODUCT_UI_INTENT_ID.START_MATCH });
+  failWrites = 1;
+  let snapshot = flow.getSnapshot();
+  for (let index = 0; index < 12 && snapshot.viewModel.activeState === PRODUCT_SESSION_STATE.IN_MATCH; index += 1) {
+    snapshot = flow.stepMatch();
+  }
+  assert.equal(snapshot.viewModel.activeState, PRODUCT_SESSION_STATE.RECOVERABLE_ERROR);
+  assert.equal(
+    controller.getSnapshot().state.recoveryState,
+    PRODUCT_SESSION_STATE.RESULTS,
+  );
+  assert.equal(snapshot.hasMatchRuntime, true);
+  assert.equal(snapshot.matchRuntimeState, PRODUCT_MATCH_PRESENTATION_RUNTIME_STATE.RESULT);
+  assert.equal(snapshot.matchFrame.hud.result !== null, true);
+
+  const rewarded = await flow.dispatch({ id: PRODUCT_UI_INTENT_ID.RETRY });
+  assert.equal(rewarded.viewModel.activeState, PRODUCT_SESSION_STATE.REWARD);
+  assert.equal(rewarded.viewModel.result !== null, true);
+  assert.equal(rewarded.hasMatchRuntime, false);
+  assert.equal(rewarded.viewModel.reward.committed, true);
+  assert.doesNotMatch(
+    JSON.stringify(rewarded),
+    /difficulty|\bbot\b|机器人|简单|普通|困难|opponent-9902/i,
+  );
+  flow.destroy();
+  controller.destroy();
+});
+
+test('ProductPresentationFlow lifecycle pauses authority and never owns the controller', async () => {
+  const { controller, flow } = productFlowHarness({ seed: 9903 });
+  await flow.start();
+  await flow.dispatch({ id: PRODUCT_UI_INTENT_ID.START_MATCH });
+  const before = controller.getActiveMatchSnapshot().tick;
+  const hidden = flow.hide();
+  assert.equal(hidden.viewModel.suspended, true);
+  assert.throws(() => flow.stepMatch(), /挂起/);
+  assert.equal(controller.getActiveMatchSnapshot().tick, before);
+  const shown = flow.show();
+  assert.equal(shown.viewModel.activeState, PRODUCT_SESSION_STATE.IN_MATCH);
+  flow.stepMatch();
+  assert.equal(controller.getActiveMatchSnapshot().tick, before + 1);
+  flow.destroy();
+  assert.notEqual(controller.state, PRODUCT_SESSION_STATE.DESTROYED);
+  controller.destroy();
+});
+
+test('ProductPresentationFlow cleans an invalid match runtime candidate before failing closed', async () => {
+  const controller = createArenaV1ProductSession({
+    storage: memoryStorage(),
+    ownerId: 'product-flow-invalid-runtime',
+    wallNow: () => 3_000,
+    seedSource: { nextSeed: () => 9904 },
+    keyPrefix: 'test.product-flow.invalid-runtime',
+  });
+  await controller.boot();
+  controller.openCharacterSelect();
+  await controller.requestMatch();
+  let destroyCalls = 0;
+  const flow = new ProductPresentationFlow({
+    controller,
+    inputSource: { sample: (tick) => createNeutralInputFrame(tick, 'player-1') },
+    matchRuntimeFactory: () => ({
+      start() {},
+      destroy() { destroyCalls += 1; },
+    }),
+  });
+  assert.throws(() => flow.synchronize(), /matchRuntime 不符合合同/);
+  assert.equal(flow.state, PRODUCT_PRESENTATION_FLOW_STATE.FAILED);
+  assert.equal(destroyCalls, 1);
+  assert.equal(controller.state, PRODUCT_SESSION_STATE.PREPARING);
+  flow.destroy();
+  assert.notEqual(controller.state, PRODUCT_SESSION_STATE.DESTROYED);
+  controller.destroy();
+});
+
+test('ProductPresentationFlow retries owned runtime cleanup and leaves controller ownership outside', async () => {
+  const controller = createArenaV1ProductSession({
+    storage: memoryStorage(),
+    ownerId: 'product-flow-cleanup-retry',
+    wallNow: () => 3_100,
+    seedSource: { nextSeed: () => 9905 },
+    keyPrefix: 'test.product-flow.cleanup-retry',
+  });
+  let destroyCalls = 0;
+  const flow = new ProductPresentationFlow({
+    controller,
+    inputSource: { sample: (tick) => createNeutralInputFrame(tick, 'player-1') },
+    matchRuntimeFactory: (options) => {
+      const runtime = new ProductMatchPresentationRuntime(options);
+      return {
+        get state() { return runtime.state; },
+        start: () => runtime.start(),
+        step: () => runtime.step(),
+        getLastMatchResult: () => runtime.getLastMatchResult(),
+        destroy() {
+          destroyCalls += 1;
+          if (destroyCalls === 1) throw new Error('flow runtime cleanup failed');
+          runtime.destroy();
+        },
+      };
+    },
+  });
+  await flow.start();
+  await flow.dispatch({ id: PRODUCT_UI_INTENT_ID.START_MATCH });
+  assert.throws(() => flow.destroy(), /清理未完整完成/);
+  assert.equal(flow.state, PRODUCT_PRESENTATION_FLOW_STATE.FAILED);
+  assert.equal(flow.getSnapshot().cleanupIncomplete, true);
+  flow.destroy();
+  assert.equal(flow.state, PRODUCT_PRESENTATION_FLOW_STATE.DESTROYED);
+  assert.equal(destroyCalls, 2);
+  assert.notEqual(controller.state, PRODUCT_SESSION_STATE.DESTROYED);
+  controller.destroy();
 });
