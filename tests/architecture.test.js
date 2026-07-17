@@ -95,19 +95,41 @@ test('mini-game entries bundle without importing the web platform', async () => 
 });
 
 test('Arena authority has no renderer, browser, platform or host API dependency', async () => {
-  const files = await listJavaScript(path.resolve('src/arena'));
-  for (const file of files) {
+  const arenaRoot = path.resolve('src/arena');
+  const files = await listJavaScript(arenaRoot);
+  const presentationSegment = `${path.sep}presentation${path.sep}`;
+  const authorityFiles = files.filter((file) => !file.includes(presentationSegment));
+  for (const file of authorityFiles) {
     const source = await readFile(file, 'utf8');
     assert.doesNotMatch(
       source,
-      /(?:from\s+['"]three['"]|render3d|src\/platform|\.\.\/platform|\bwindow\b|\bdocument\b|\bnavigator\b|\b(?:tt|wx)\s*\.)/,
+      /(?:from\s+['"](?:three|[^'"]*(?:render3d|presentation|platform)[^'"]*)['"]|\bwindow\b|\bdocument\b|\bnavigator\b|\b(?:tt|wx)\s*\.)/,
       `${file} 泄漏了渲染、浏览器或平台依赖`,
     );
+  }
+  for (const file of files) {
+    const source = await readFile(file, 'utf8');
     assert.doesNotMatch(source, /@dimforge\/rapier/, `${file} 仍依赖已拒绝的 Rapier POC`);
     assert.doesNotMatch(
       source,
       /(?:\.at\s*\(|\bAggregateError\b|\bstructuredClone\b|\bObject\.hasOwn\b)/,
       `${file} 使用了超出 ES2020 且未提供 polyfill 的内建 API`,
+    );
+  }
+});
+
+test('Arena presentation keeps host APIs injected and cannot be imported by authority', async () => {
+  const arenaRoot = path.resolve('src/arena');
+  const files = await listJavaScript(arenaRoot);
+  const presentationSegment = `${path.sep}presentation${path.sep}`;
+  const presentationFiles = files.filter((file) => file.includes(presentationSegment));
+  assert.ok(presentationFiles.length > 0);
+  for (const file of presentationFiles) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /(?:from\s+['"][^'"]*platform[^'"]*['"]|\bwindow\b|\bdocument\b|\bnavigator\b|\b(?:tt|wx)\s*\.)/,
+      `${file} 应通过注入合同使用平台能力`,
     );
   }
 });
