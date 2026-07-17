@@ -2,7 +2,7 @@
 
 ## 文档状态
 
-执行中，2026-07-18。S8.1 已落地不可变 PlayerProfile、严格同步 Storage Port、连续迁移 Registry、A/B 双槽 Repository、协作 lease、未来版本保护与故障压力门禁。S8.2 已落地无 UI 显式产品状态机、角色选择保存、单 Match 所有权、QuickMatch 集成、挂起恢复与异步竞态门禁。奖励、对称内容池和三端产品验收仍未开始。
+执行中，2026-07-18。S8.1 已落地不可变 PlayerProfile、严格同步 Storage Port、连续迁移 Registry、A/B 双槽 Repository、协作 lease、未来版本保护与故障压力门禁。S8.2 已落地无 UI 显式产品状态机、角色选择保存、单 Match 所有权、QuickMatch 集成、挂起恢复与异步竞态门禁。S8.3 已落地权威结果校验、奖励/解锁 Definition 与 Registry、纯 Resolver、唯一 Profile 写入者、幂等 grant 和 reward/unlock 状态。对称内容池、快捷再来一局和三端产品验收仍未开始。
 
 ## 已接受默认值
 
@@ -25,7 +25,7 @@ in-match -> results -> reward -> unlock? -> ready/rematch
 任意状态 -> destroyed
 ```
 
-S8.2 当前实现截至 `results -> ready`；`reward/unlock/rematch` 仍由 S8.3/S8.4 增加，不用空状态伪装为已完成能力。挂起快照同时发布可见 `state=suspended` 和后台可推进的 `activeState`，异步 matching 完成时只更新恢复目标。
+S8.3 当前实现截至 `results -> reward -> unlock? -> ready`；`rematch` 仍由 S8.4 增加，不用普通返回 ready 伪装为快捷再来一局。挂起快照同时发布可见 `state=suspended` 和后台可推进的 `activeState`，异步 matching 完成时只更新恢复目标。
 
 约束：
 
@@ -97,7 +97,7 @@ hash 只用于发现截断、损坏或部分写入，不声称能够阻止玩家
 ## 奖励幂等与生命周期
 
 - 只有权威比赛进入最终 `MatchResult` 后才能生成奖励。
-- 奖励事务使用稳定的 match/result signature 作为 `grantId`；Profile 保存有界已提交集合或等价摘要。
+- 奖励事务使用当前 Profile revision、match seed 与已校验 authority hash 组成 `grantId`；Profile V1 在单未结算结果假设下只保存最近一次 grant。
 - `results` 页面重建、重复点击、切后台、存储失败重试都提交同一 `grantId`，不会重复增加经验或重复解锁。
 - 存储失败时 UI 可以显示“进度尚未保存”并允许安全重试；不能声称奖励已永久保存。
 - V1 不依赖墙上时间实现每日奖励，避免时钟篡改、跨时区和离线补偿成为首版阻断项。
@@ -141,6 +141,8 @@ PlayerProfile + Content Definitions
 
 - 从 MatchResult 幂等提交单一进度。
 - 完成角色、外观、装备图鉴和地图内容解锁定义。
+
+状态：已完成无 UI 基础。当前完成奖励 100、胜利加成 25、平局加成 10；所有已实现内容保持解锁，生产 Registry 不编造尚不存在的 UnlockDefinition。Definition/Registry、纯 Resolver、RewardCommitter、唯一 `PlayerProfileService` 写入者、grant 去重和 reward/unlock 生命周期已经落地。详见 [ADR-016](../decisions/016-arena-local-match-reward-transaction.md) 与 [S8.3 结果记录](../research/arena-stage8-reward-progression-results.md)。
 
 ### S8.4 对称内容与再来一局
 

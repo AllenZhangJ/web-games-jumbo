@@ -9,6 +9,22 @@ import {
 export const PRODUCT_MATCH_RESULT_SCHEMA_VERSION = 1;
 
 const RESULT_KEYS = new Set(['winnerId', 'reason', 'isDraw', 'endedAtTick']);
+const AUTHORITY_IDENTITY_KEYS = new Set([
+  'replaySchemaVersion',
+  'ruleSchemaVersion',
+  'physicsBackendVersion',
+  'configHash',
+  'ruleContentHash',
+  'finalHash',
+]);
+const PRODUCT_RESULT_KEYS = new Set([
+  'schemaVersion',
+  'matchSeed',
+  'authorityIdentity',
+  'authorityResult',
+  'opponent',
+  'authorityHash',
+]);
 
 export function assertProductMatchSeed(value, name = 'ProductMatch matchSeed') {
   if (!Number.isSafeInteger(value) || value < 0 || value > 0xffffffff) {
@@ -29,6 +45,28 @@ function positiveInteger(value, name) {
     throw new RangeError(`${name} 必须是正安全整数。`);
   }
   return value;
+}
+
+function authorityIdentity(value) {
+  const source = cloneFrozenData(value, 'ProductMatch authorityIdentity');
+  assertKnownKeys(source, AUTHORITY_IDENTITY_KEYS, 'ProductMatch authorityIdentity');
+  return Object.freeze({
+    replaySchemaVersion: positiveInteger(
+      source.replaySchemaVersion,
+      'ProductMatch replaySchemaVersion',
+    ),
+    ruleSchemaVersion: positiveInteger(
+      source.ruleSchemaVersion,
+      'ProductMatch ruleSchemaVersion',
+    ),
+    physicsBackendVersion: assertNonEmptyString(
+      source.physicsBackendVersion,
+      'ProductMatch physicsBackendVersion',
+    ),
+    configHash: hash(source.configHash, 'ProductMatch configHash'),
+    ruleContentHash: hash(source.ruleContentHash, 'ProductMatch ruleContentHash'),
+    finalHash: hash(source.finalHash, 'ProductMatch finalHash'),
+  });
 }
 
 export function createProductPublicOpponent(value) {
@@ -83,7 +121,7 @@ export function createProductMatchResult({ matchSeed, opponent, replay }) {
   }
   const copiedOpponent = createProductPublicOpponent(opponent);
   const copiedResult = authorityResult(replay.result);
-  const identity = Object.freeze({
+  const identity = authorityIdentity({
     replaySchemaVersion: positiveInteger(
       replay.replaySchemaVersion,
       'ProductMatch replaySchemaVersion',
@@ -103,9 +141,32 @@ export function createProductMatchResult({ matchSeed, opponent, replay }) {
     authorityIdentity: identity,
     authorityResult: copiedResult,
   });
-  return Object.freeze({
+  return validateProductMatchResult({
     ...authority,
     opponent: copiedOpponent,
     authorityHash: createDeterministicDataHash(authority, 'ProductMatchResult authority'),
+  });
+}
+
+export function validateProductMatchResult(value) {
+  const source = cloneFrozenData(value, 'ProductMatchResult');
+  assertKnownKeys(source, PRODUCT_RESULT_KEYS, 'ProductMatchResult');
+  if (source.schemaVersion !== PRODUCT_MATCH_RESULT_SCHEMA_VERSION) {
+    throw new RangeError(`不支持 ProductMatchResult schema ${String(source.schemaVersion)}。`);
+  }
+  const authority = Object.freeze({
+    schemaVersion: PRODUCT_MATCH_RESULT_SCHEMA_VERSION,
+    matchSeed: assertProductMatchSeed(source.matchSeed),
+    authorityIdentity: authorityIdentity(source.authorityIdentity),
+    authorityResult: authorityResult(source.authorityResult),
+  });
+  const expectedHash = createDeterministicDataHash(authority, 'ProductMatchResult authority');
+  if (hash(source.authorityHash, 'ProductMatchResult authorityHash') !== expectedHash) {
+    throw new RangeError('ProductMatchResult authorityHash 与权威内容不一致。');
+  }
+  return Object.freeze({
+    ...authority,
+    opponent: createProductPublicOpponent(source.opponent),
+    authorityHash: expectedHash,
   });
 }

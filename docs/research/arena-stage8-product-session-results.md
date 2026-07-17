@@ -6,6 +6,8 @@ S8.2 已完成无 UI 产品闭环基础：Profile 启动与角色选择、本地
 
 本批不接页面、Renderer、奖励、解锁节奏、双方共享内容池或再来一局快捷意图；这些仍分别属于 S8.3～S8.5。
 
+后续状态：S8.3 已实现奖励、解锁解析和 reward/unlock 状态；见 [S8.3 结果记录](arena-stage8-reward-progression-results.md)。本文件保留 S8.2 当时的范围与证据。
+
 ## 落地边界
 
 ```text

@@ -5,7 +5,7 @@ import { ProductSessionController } from '../../../src/arena/product/composition
 import { ARENA_V1_PLAYER_PROFILE_DEFINITION } from '../../../src/arena/product/content/arena-v1-player-profile-definition.js';
 import { ProductMatchCoordinator } from '../../../src/arena/product/matchmaking/product-match-coordinator.js';
 import { createPlayerProfile } from '../../../src/arena/product/profile/player-profile.js';
-import { PlayerProfileSelectionService } from '../../../src/arena/product/profile/player-profile-selection-service.js';
+import { PlayerProfilePersistenceError } from '../../../src/arena/product/profile/player-profile-service.js';
 import { ProductSessionStateMachine } from '../../../src/arena/product/state/product-session-state-machine.js';
 import { PRODUCT_SESSION_STATE } from '../../../src/arena/product/state/product-session-transition-definition.js';
 
@@ -83,16 +83,40 @@ function profileServiceHarness({ openPromise = null, failOpenCount = 0 } = {}) {
       });
       return profile;
     },
+    commitProgressionGrant() {
+      throw new Error('unexpected progression grant');
+    },
     destroy() { destroyed = true; },
   };
 }
 
-function controllerHarness({ profileService, matchFactory }) {
+function rewardOutcome(profileService, result, unlocks = {}) {
+  return Object.freeze({
+    grant: Object.freeze({
+      resultAuthorityHash: result.authorityHash,
+      experienceDelta: 100,
+      unlocks: Object.freeze({
+        characterIds: Object.freeze(unlocks.characterIds ?? []),
+        appearanceIds: Object.freeze(unlocks.appearanceIds ?? []),
+        equipmentIds: Object.freeze(unlocks.equipmentIds ?? []),
+        mapIds: Object.freeze(unlocks.mapIds ?? []),
+      }),
+    }),
+    committed: true,
+    duplicate: false,
+    profile: profileService.getSnapshot(),
+  });
+}
+
+function controllerHarness({ profileService, matchFactory, rewardCommitter = null }) {
   const coordinator = new ProductMatchCoordinator({ matchFactory });
   const controller = new ProductSessionController({
     stateMachine: new ProductSessionStateMachine(),
     profileService,
     matchCoordinator: coordinator,
+    rewardCommitter: rewardCommitter ?? {
+      commit: (result) => rewardOutcome(profileService, result),
+    },
   });
   return { controller, coordinator };
 }
@@ -196,7 +220,9 @@ test('ProductSessionController owns one match across rapid clicks, background pr
   controller.hide();
   controller.show();
   controller.show();
-  controller.dismissResults();
+  controller.commitReward();
+  assert.equal(controller.state, PRODUCT_SESSION_STATE.REWARD);
+  controller.continueReward();
   assert.equal(controller.state, PRODUCT_SESSION_STATE.READY);
   assert.equal(runtime.destroys, 1);
   controller.destroy();
@@ -230,6 +256,98 @@ test('ProductSessionController converts operational startup and match failures i
   await controller.requestMatch();
   assert.equal(controller.state, PRODUCT_SESSION_STATE.PREPARING);
   controller.destroy();
+});
+
+test('reward persistence rejection keeps the authoritative result alive for an exact retry', async () => {
+  const profileService = profileServiceHarness();
+  let attempts = 0;
+  const { controller } = controllerHarness({
+    profileService,
+    matchFactory: { create: () => fakeRuntime() },
+    rewardCommitter: {
+      commit(result) {
+        attempts += 1;
+        if (attempts === 1) {
+          throw new PlayerProfilePersistenceError('reward rejected', { recoverable: true });
+        }
+        return rewardOutcome(profileService, result);
+      },
+    },
+  });
+  await controller.boot();
+  controller.openCharacterSelect();
+  await controller.requestMatch();
+  controller.beginMatch();
+  controller.stepMatch();
+  const failed = controller.commitReward();
+  assert.equal(failed.state.state, PRODUCT_SESSION_STATE.RECOVERABLE_ERROR);
+  assert.equal(failed.state.recoveryState, PRODUCT_SESSION_STATE.RESULTS);
+  assert.equal(failed.match.hasRuntime, true);
+  await controller.retry();
+  assert.equal(controller.state, PRODUCT_SESSION_STATE.RESULTS);
+  const rewarded = controller.commitReward();
+  assert.equal(rewarded.state.state, PRODUCT_SESSION_STATE.REWARD);
+  assert.equal(rewarded.match.hasRuntime, false);
+  assert.equal(attempts, 2);
+  controller.continueReward();
+  controller.destroy();
+});
+
+test('reward and unlock states survive background lifecycle without losing presentation data', async () => {
+  const profileService = profileServiceHarness();
+  const { controller } = controllerHarness({
+    profileService,
+    matchFactory: { create: () => fakeRuntime() },
+    rewardCommitter: {
+      commit: (result) => rewardOutcome(profileService, result, { appearanceIds: ['paper-cape'] }),
+    },
+  });
+  await controller.boot();
+  controller.openCharacterSelect();
+  await controller.requestMatch();
+  controller.beginMatch();
+  controller.stepMatch();
+  controller.commitReward();
+  controller.hide();
+  assert.equal(controller.getSnapshot().state.activeState, PRODUCT_SESSION_STATE.REWARD);
+  assert.deepEqual(controller.getSnapshot().reward.grant.unlocks.appearanceIds, ['paper-cape']);
+  controller.show();
+  controller.continueReward();
+  assert.equal(controller.state, PRODUCT_SESSION_STATE.UNLOCK);
+  controller.hide();
+  controller.show();
+  controller.dismissUnlocks();
+  assert.equal(controller.state, PRODUCT_SESSION_STATE.READY);
+  assert.equal(controller.getSnapshot().reward, null);
+  controller.destroy();
+});
+
+test('cleanup failure after a persisted reward fails closed without a second grant', async () => {
+  const profileService = profileServiceHarness();
+  const runtime = fakeRuntime({ destroyFailures: 1 });
+  let grants = 0;
+  const { controller } = controllerHarness({
+    profileService,
+    matchFactory: { create: () => runtime },
+    rewardCommitter: {
+      commit(result) {
+        grants += 1;
+        return rewardOutcome(profileService, result);
+      },
+    },
+  });
+  await controller.boot();
+  controller.openCharacterSelect();
+  await controller.requestMatch();
+  controller.beginMatch();
+  controller.stepMatch();
+  const failed = controller.commitReward();
+  assert.equal(failed.state.state, PRODUCT_SESSION_STATE.FATAL_ERROR);
+  assert.equal(failed.lastError.code, 'reward-processing-failed');
+  assert.equal(grants, 1);
+  assert.equal(runtime.destroys, 2);
+  controller.destroy();
+  assert.equal(grants, 1);
 });
 
 test('destroy during asynchronous match creation rejects late ownership and remains idempotent', async () => {
@@ -337,7 +455,10 @@ test('Arena V1 product composition runs a complete headless 1v1 without leaking 
   const visible = JSON.stringify(controller.getSnapshot());
   assert.doesNotMatch(visible, /difficulty|\bbot\b|机器人|简单|普通|困难/i);
   assert.equal(diagnostics.some(({ type }) => type === 'match-assignment'), true);
-  controller.dismissResults();
+  const rewarded = controller.commitReward();
+  assert.equal(rewarded.reward.grant.experienceDelta >= 100, true);
+  assert.equal(rewarded.profile.progression.experience >= 100, true);
+  controller.continueReward();
   assert.equal(controller.state, PRODUCT_SESSION_STATE.READY);
   controller.destroy();
   assert.equal(controller.getSnapshot().profile, null);

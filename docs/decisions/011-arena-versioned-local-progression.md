@@ -1,6 +1,6 @@
 # ADR-011：Arena 使用版本化双槽本地进度与对称内容池
 
-- 状态：部分生效（S8.1 存档协议与 S8.2 产品生命周期已接受；奖励与对称内容池仍为提议）
+- 状态：部分生效（S8.1 存档、S8.2 产品生命周期与 S8.3 奖励已接受；对称内容池仍为提议）
 - 日期：2026-07-18
 
 ## 背景
@@ -30,11 +30,14 @@ S8.1 将 Pilot 与 Product 共用的仅限于严格同步 Storage Port 和具名
 
 S8.2 使用独立显式产品状态机、Profile 选择服务和单 Match Coordinator 连接上述 Repository 与本地快速匹配；它不改变存档协议，也不把 MatchCore 生命周期并入 Profile。异步去重、挂起恢复、迟到资源和销毁重试见 [ADR-015](015-arena-headless-product-session-lifecycle.md)。
 
+S8.3 将选择服务升级为唯一 `PlayerProfileService` 写入者，并以 Profile revision、match seed 和已校验 authority hash 组成当前本地事务 grantId。Profile V1 只保留最近一次 grant，适用范围严格限制为单会话、单未结算结果；完整边界见 [ADR-016](016-arena-local-match-reward-transaction.md)。
+
 当前 `v1` 是第一个生产 Profile schema，没有编造 `v0` 历史迁移。迁移 Registry 已通过合成的连续多版本链验证；首次真实升级时必须新增固定历史 fixture，不能修改旧迁移函数。
 
 ## GitHub 借鉴边界
 
 - [redux-persist](https://github.com/rt2zz/redux-persist)，参考 commit `d8b01a085e3679db43503a3858e8d4759d6f22fa`，MIT：借鉴“存储版本 -> 迁移 -> 最终协调/校验”的思路，不引入 Redux 或 redux-persist 运行时。
+- [stripe-node](https://github.com/stripe/stripe-node/tree/1bb09ad9866e3dcb516948eacc89373824a02523)，参考 commit `1bb09ad9866e3dcb516948eacc89373824a02523`，MIT：借鉴同一逻辑操作重试复用稳定 idempotency key 的协议思想，不引入支付或网络依赖。
 - 不引入 localForage。项目已有覆盖三端的 Storage Contract，首版需要的是存档协议、迁移和生命周期治理，不是再增加一层面向浏览器存储后端的抽象。
 
 本 ADR 不复制第三方代码，不新增依赖。
@@ -77,4 +80,4 @@ S8.2 使用独立显式产品状态机、Profile 选择服务和单 Match Coordi
 - 连续多局和生命周期竞态不会重叠 session 或串局。
 - 双方共享内容池自动化检查通过后，将状态改为“已接受”。
 
-S8.1 的双槽故障注入、未来版本保护、竞争租约、生命周期、架构隔离和 500 次故障压力门禁已满足；其实现结论见 [S8.1 结果记录](../research/arena-stage8-profile-persistence-results.md)。S8.2 的无 UI 状态机、真实本地比赛集成、竞态与 200 局压力也已满足，见 [S8.2 结果记录](../research/arena-stage8-product-session-results.md)。本 ADR 仍未整体接受，是因为奖励幂等、共享内容池和三端产品生命周期尚未落地。
+S8.1 的双槽故障注入、未来版本保护、竞争租约、生命周期、架构隔离和 500 次故障压力门禁已满足；其实现结论见 [S8.1 结果记录](../research/arena-stage8-profile-persistence-results.md)。S8.2 的无 UI 状态机、真实本地比赛集成、竞态与 200 局压力也已满足，见 [S8.2 结果记录](../research/arena-stage8-product-session-results.md)。S8.3 的奖励幂等、解锁解析与奖励生命周期已满足，见 [S8.3 结果记录](../research/arena-stage8-reward-progression-results.md)。本 ADR 仍未整体接受，是因为共享内容池和三端产品生命周期尚未落地。

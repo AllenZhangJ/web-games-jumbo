@@ -2,9 +2,7 @@ import { normalizeThrownError } from '../../lifecycle-error.js';
 import {
   PRODUCT_MATCH_COORDINATOR_STATE,
 } from '../matchmaking/product-match-coordinator.js';
-import {
-  PlayerProfileSelectionPersistenceError,
-} from '../profile/player-profile-selection-service.js';
+import { PlayerProfilePersistenceError } from '../profile/player-profile-service.js';
 import {
   PRODUCT_SESSION_EVENT,
   PRODUCT_SESSION_STATE,
@@ -18,34 +16,47 @@ import {
   validateProductDiagnosticSink,
   validateProductMatchCoordinator,
   validateProductProfileService,
+  validateProductRewardCommitter,
   validateProductSessionStateMachine,
 } from './product-session-ports.js';
 
-export const PRODUCT_SESSION_SNAPSHOT_SCHEMA_VERSION = 1;
+export const PRODUCT_SESSION_SNAPSHOT_SCHEMA_VERSION = 2;
 
 export class ProductSessionController {
   #stateMachine;
   #profileService;
   #matchCoordinator;
+  #rewardCommitter;
   #diagnosticSink;
   #bootPromise;
   #matchRequestPromise;
   #profileSnapshot;
+  #rewardSnapshot;
   #lastError;
   #destroying;
   #stepping;
+  #committingReward;
 
-  constructor({ stateMachine, profileService, matchCoordinator, diagnosticSink = null }) {
+  constructor({
+    stateMachine,
+    profileService,
+    matchCoordinator,
+    rewardCommitter,
+    diagnosticSink = null,
+  }) {
     this.#stateMachine = validateProductSessionStateMachine(stateMachine);
     this.#profileService = validateProductProfileService(profileService);
     this.#matchCoordinator = validateProductMatchCoordinator(matchCoordinator);
+    this.#rewardCommitter = validateProductRewardCommitter(rewardCommitter);
     this.#diagnosticSink = validateProductDiagnosticSink(diagnosticSink);
     this.#bootPromise = null;
     this.#matchRequestPromise = null;
     this.#profileSnapshot = null;
+    this.#rewardSnapshot = null;
     this.#lastError = null;
     this.#destroying = false;
     this.#stepping = false;
+    this.#committingReward = false;
     Object.freeze(this);
   }
 
@@ -143,6 +154,8 @@ export class ProductSessionController {
       || state.activeState === PRODUCT_SESSION_STATE.PREPARING
       || state.activeState === PRODUCT_SESSION_STATE.IN_MATCH
       || state.activeState === PRODUCT_SESSION_STATE.RESULTS
+      || state.activeState === PRODUCT_SESSION_STATE.REWARD
+      || state.activeState === PRODUCT_SESSION_STATE.UNLOCK
     ) return Promise.resolve(this.getSnapshot());
     this.#assertForeground(PRODUCT_SESSION_STATE.BOOT);
     this.#stateMachine.dispatch(PRODUCT_SESSION_EVENT.BOOT_REQUESTED);
@@ -204,7 +217,10 @@ export class ProductSessionController {
       this.#lastError = null;
       return this.getSnapshot();
     } catch (error) {
-      if (!(error instanceof PlayerProfileSelectionPersistenceError)) throw error;
+      if (!(error instanceof PlayerProfilePersistenceError)) throw error;
+      if (!error.recoverable) {
+        return this.#fatal(PRODUCT_SESSION_ERROR_CODE.PROFILE_SAVE_FAILED, error);
+      }
       return this.#recover(
         PRODUCT_SESSION_ERROR_CODE.PROFILE_SAVE_FAILED,
         PRODUCT_SESSION_STATE.CHARACTER_SELECT,
@@ -220,6 +236,7 @@ export class ProductSessionController {
       && this.#matchRequestPromise
     ) return this.#matchRequestPromise;
     this.#assertForeground(PRODUCT_SESSION_STATE.CHARACTER_SELECT);
+    this.#rewardSnapshot = null;
     this.#stateMachine.dispatch(PRODUCT_SESSION_EVENT.MATCH_REQUESTED);
 
     let operation;
@@ -288,16 +305,56 @@ export class ProductSessionController {
     }
   }
 
-  dismissResults() {
+  commitReward() {
     this.#assertForeground(PRODUCT_SESSION_STATE.RESULTS);
+    if (this.#committingReward) throw new Error('ProductSessionController.commitReward() 不可重入。');
+    this.#committingReward = true;
     try {
+      const result = this.#matchCoordinator.getResult();
+      if (result === null) throw new Error('ProductSession results 缺少权威比赛结果。');
+      const outcome = this.#rewardCommitter.commit(result);
+      this.#profileSnapshot = outcome.profile;
+      this.#rewardSnapshot = Object.freeze({
+        grant: outcome.grant,
+        committed: outcome.committed,
+        duplicate: outcome.duplicate,
+      });
       this.#matchCoordinator.release();
-      this.#stateMachine.dispatch(PRODUCT_SESSION_EVENT.RESULTS_DISMISSED);
+      this.#stateMachine.dispatch(PRODUCT_SESSION_EVENT.REWARD_COMMITTED);
       this.#lastError = null;
       return this.getSnapshot();
     } catch (error) {
-      return this.#fatal(PRODUCT_SESSION_ERROR_CODE.CLEANUP_FAILED, error);
+      if (error instanceof PlayerProfilePersistenceError && error.recoverable) {
+        return this.#recover(
+          PRODUCT_SESSION_ERROR_CODE.REWARD_SAVE_FAILED,
+          PRODUCT_SESSION_STATE.RESULTS,
+          error,
+        );
+      }
+      return this.#fatal(PRODUCT_SESSION_ERROR_CODE.REWARD_PROCESSING_FAILED, error);
+    } finally {
+      this.#committingReward = false;
     }
+  }
+
+  continueReward() {
+    this.#assertForeground(PRODUCT_SESSION_STATE.REWARD);
+    const hasUnlocks = this.#rewardSnapshot !== null
+      && Object.values(this.#rewardSnapshot.grant.unlocks).some((ids) => ids.length > 0);
+    this.#stateMachine.dispatch(
+      hasUnlocks
+        ? PRODUCT_SESSION_EVENT.UNLOCK_PRESENTED
+        : PRODUCT_SESSION_EVENT.REWARD_DISMISSED,
+    );
+    if (!hasUnlocks) this.#rewardSnapshot = null;
+    return this.getSnapshot();
+  }
+
+  dismissUnlocks() {
+    this.#assertForeground(PRODUCT_SESSION_STATE.UNLOCK);
+    this.#stateMachine.dispatch(PRODUCT_SESSION_EVENT.UNLOCK_DISMISSED);
+    this.#rewardSnapshot = null;
+    return this.getSnapshot();
   }
 
   retry() {
@@ -336,6 +393,9 @@ export class ProductSessionController {
   destroy() {
     if (this.#destroying) throw new Error('ProductSessionController.destroy() 不可重入。');
     if (this.#stepping) throw new Error('stepMatch() 期间不能销毁 ProductSessionController。');
+    if (this.#committingReward) {
+      throw new Error('commitReward() 期间不能销毁 ProductSessionController。');
+    }
     this.#destroying = true;
     this.#stateMachine.destroy();
     const errors = [];
@@ -351,6 +411,7 @@ export class ProductSessionController {
         errors.push(normalizeThrownError(error, 'Product profile 销毁失败'));
       }
       this.#profileSnapshot = null;
+      this.#rewardSnapshot = null;
       if (errors.length > 0) {
         this.#lastError = createProductSessionPublicError(PRODUCT_SESSION_ERROR_CODE.CLEANUP_FAILED);
         const failure = createProductSessionCleanupFailure(errors);
@@ -373,6 +434,7 @@ export class ProductSessionController {
         ? null
         : this.#profileSnapshot,
       match: this.#matchCoordinator.getSnapshot(),
+      reward: state.state === PRODUCT_SESSION_STATE.DESTROYED ? null : this.#rewardSnapshot,
       lastError: this.#lastError,
     });
   }

@@ -27,8 +27,13 @@ export function validateProductProfileService(value) {
     'open',
     'getSnapshot',
     'selectCharacter',
+    'commitProgressionGrant',
     'destroy',
   ], 'ProfileService');
+}
+
+export function validateProductRewardCommitter(value) {
+  return validateMethods(value, ['commit'], 'RewardCommitter');
 }
 
 export function validateProductMatchCoordinator(value) {

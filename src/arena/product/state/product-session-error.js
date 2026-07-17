@@ -1,6 +1,8 @@
 export const PRODUCT_SESSION_ERROR_CODE = Object.freeze({
   PROFILE_LOAD_FAILED: 'profile-load-failed',
   PROFILE_SAVE_FAILED: 'profile-save-failed',
+  REWARD_SAVE_FAILED: 'reward-save-failed',
+  REWARD_PROCESSING_FAILED: 'reward-processing-failed',
   MATCH_PREPARE_FAILED: 'match-prepare-failed',
   MATCH_RUNTIME_FAILED: 'match-runtime-failed',
   LIFECYCLE_FAILED: 'lifecycle-failed',

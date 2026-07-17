@@ -8,10 +8,10 @@ import {
 import { createProductMatchResult } from '../../../src/arena/product/matchmaking/product-match-result.js';
 import { createPlayerProfile } from '../../../src/arena/product/profile/player-profile.js';
 import {
-  PlayerProfileSelectionPersistenceError,
-  PlayerProfileSelectionService,
-  PLAYER_PROFILE_SELECTION_SERVICE_STATE,
-} from '../../../src/arena/product/profile/player-profile-selection-service.js';
+  PlayerProfilePersistenceError,
+  PlayerProfileService,
+  PLAYER_PROFILE_SERVICE_STATE,
+} from '../../../src/arena/product/profile/player-profile-service.js';
 import { ProductSessionStateMachine } from '../../../src/arena/product/state/product-session-state-machine.js';
 import {
   PRODUCT_SESSION_EVENT,
@@ -33,13 +33,18 @@ function profileRepositoryHarness() {
   let profile = createPlayerProfile(ARENA_V1_PLAYER_PROFILE_DEFINITION);
   let commits = 0;
   let rejectCommit = false;
+  let rejectSnapshot = false;
   let destroyFailures = 0;
   return {
     get commits() { return commits; },
     set rejectCommit(value) { rejectCommit = value; },
+    set rejectSnapshot(value) { rejectSnapshot = value; },
     set destroyFailures(value) { destroyFailures = value; },
     open() { return profile; },
-    getSnapshot() { return profile; },
+    getSnapshot() {
+      if (rejectSnapshot) throw new Error('repository snapshot failed');
+      return profile;
+    },
     compareAndSet(next, expectedRevision) {
       commits += 1;
       if (rejectCommit) {
@@ -225,9 +230,9 @@ test('ProductSession recoverable, fatal and destroy lifecycles preserve explicit
   assert.equal(machine.getSnapshot().state, PRODUCT_SESSION_STATE.DESTROYED);
 });
 
-test('PlayerProfileSelectionService persists only changed unlocked selections', () => {
+test('PlayerProfileService persists only changed unlocked selections', () => {
   const repository = profileRepositoryHarness();
-  const service = new PlayerProfileSelectionService({
+  const service = new PlayerProfileService({
     definition: ARENA_V1_PLAYER_PROFILE_DEFINITION,
     repository,
   });
@@ -243,12 +248,12 @@ test('PlayerProfileSelectionService persists only changed unlocked selections', 
   assert.equal(service.getSnapshot().revision, 1);
   service.destroy();
   service.destroy();
-  assert.equal(service.state, PLAYER_PROFILE_SELECTION_SERVICE_STATE.DESTROYED);
+  assert.equal(service.state, PLAYER_PROFILE_SERVICE_STATE.DESTROYED);
 });
 
-test('PlayerProfileSelectionService exposes retryable commit rejection and retryable cleanup', () => {
+test('PlayerProfileService exposes retryable commit rejection and retryable cleanup', () => {
   const repository = profileRepositoryHarness();
-  const service = new PlayerProfileSelectionService({
+  const service = new PlayerProfileService({
     definition: ARENA_V1_PLAYER_PROFILE_DEFINITION,
     repository,
   });
@@ -256,7 +261,7 @@ test('PlayerProfileSelectionService exposes retryable commit rejection and retry
   repository.rejectCommit = true;
   assert.throws(
     () => service.selectCharacter('wind-up-cube'),
-    PlayerProfileSelectionPersistenceError,
+    PlayerProfilePersistenceError,
   );
   assert.equal(service.getSnapshot().revision, 0);
   repository.rejectCommit = false;
@@ -264,9 +269,27 @@ test('PlayerProfileSelectionService exposes retryable commit rejection and retry
 
   repository.destroyFailures = 1;
   assert.throws(() => service.destroy(), /cleanup failed/);
-  assert.equal(service.state, PLAYER_PROFILE_SELECTION_SERVICE_STATE.OPEN);
+  assert.equal(service.state, PLAYER_PROFILE_SERVICE_STATE.OPEN);
   service.destroy();
-  assert.equal(service.state, PLAYER_PROFILE_SELECTION_SERVICE_STATE.DESTROYED);
+  assert.equal(service.state, PLAYER_PROFILE_SERVICE_STATE.DESTROYED);
+});
+
+test('PlayerProfileService fails closed when a committed profile cannot be read back', () => {
+  const repository = profileRepositoryHarness();
+  const service = new PlayerProfileService({
+    definition: ARENA_V1_PLAYER_PROFILE_DEFINITION,
+    repository,
+  });
+  service.open();
+  repository.rejectSnapshot = true;
+  assert.throws(
+    () => service.selectCharacter('wind-up-cube'),
+    (error) => error instanceof PlayerProfilePersistenceError && error.recoverable === false,
+  );
+  assert.equal(service.state, PLAYER_PROFILE_SERVICE_STATE.FAILED);
+  assert.throws(() => service.getSnapshot(), /失败关闭/);
+  repository.rejectSnapshot = false;
+  service.destroy();
 });
 
 test('ProductMatchCoordinator deduplicates prepare and applies pause before a late runtime starts', async () => {

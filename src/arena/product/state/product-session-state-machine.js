@@ -5,12 +5,13 @@ import {
 } from './product-session-transition-definition.js';
 import { createProductSessionTransitionRegistry } from './product-session-transition-registry.js';
 
-export const PRODUCT_SESSION_STATE_SNAPSHOT_SCHEMA_VERSION = 1;
+export const PRODUCT_SESSION_STATE_SNAPSHOT_SCHEMA_VERSION = 2;
 
 const RECOVERY_STATES = new Set([
   PRODUCT_SESSION_STATE.BOOT,
   PRODUCT_SESSION_STATE.READY,
   PRODUCT_SESSION_STATE.CHARACTER_SELECT,
+  PRODUCT_SESSION_STATE.RESULTS,
 ]);
 
 function copyTransition(value) {

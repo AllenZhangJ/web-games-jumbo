@@ -4,10 +4,15 @@ import {
   normalizeThrownError,
 } from '../../lifecycle-error.js';
 import { ARENA_V1_PLAYER_PROFILE_DEFINITION } from '../content/arena-v1-player-profile-definition.js';
+import {
+  ARENA_V1_MATCH_REWARD_ID,
+  ARENA_V1_PROGRESSION_REGISTRY,
+} from '../content/arena-v1-progression-content.js';
 import { ProductMatchCoordinator } from '../matchmaking/product-match-coordinator.js';
 import { QuickMatchProductFactory } from '../matchmaking/quick-match-product-factory.js';
 import { PlayerProfileRepository } from '../persistence/player-profile-repository.js';
-import { PlayerProfileSelectionService } from '../profile/player-profile-selection-service.js';
+import { PlayerProfileService } from '../profile/player-profile-service.js';
+import { RewardCommitter } from '../progression/reward-committer.js';
 import { ProductSessionStateMachine } from '../state/product-session-state-machine.js';
 import { ProductSessionController } from './product-session-controller.js';
 
@@ -64,7 +69,7 @@ export function createArenaV1ProductSession({
       wallNow,
       keyPrefix,
     });
-    profileService = new PlayerProfileSelectionService({
+    profileService = new PlayerProfileService({
       definition: ARENA_V1_PLAYER_PROFILE_DEFINITION,
       repository,
     });
@@ -76,10 +81,17 @@ export function createArenaV1ProductSession({
     });
     const matchFactory = new QuickMatchProductFactory({ quickMatchService, matchConfig });
     matchCoordinator = new ProductMatchCoordinator({ matchFactory });
+    const rewardCommitter = new RewardCommitter({
+      registry: ARENA_V1_PROGRESSION_REGISTRY,
+      rewardDefinitionId: ARENA_V1_MATCH_REWARD_ID,
+      profileDefinition: ARENA_V1_PLAYER_PROFILE_DEFINITION,
+      profileService,
+    });
     controller = new ProductSessionController({
       stateMachine: new ProductSessionStateMachine(),
       profileService,
       matchCoordinator,
+      rewardCommitter,
       diagnosticSink: (detail) => report(sink, { type: 'product-lifecycle', detail }),
     });
     profileService = null;

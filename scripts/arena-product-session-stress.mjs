@@ -60,6 +60,8 @@ function createController() {
 const authorityHashes = new Set();
 let lifecycleTransitions = 0;
 let maximumTicks = 0;
+let expectedExperience = 0;
+let latestGrantId = null;
 
 try {
   controller = createController();
@@ -112,7 +114,20 @@ try {
     }
     authorityHashes.add(result.authorityHash);
     maximumTicks = Math.max(maximumTicks, result.authorityResult.endedAtTick);
-    controller.dismissResults();
+    const rewarded = controller.commitReward();
+    if (rewarded.state.state !== PRODUCT_SESSION_STATE.REWARD || rewarded.match.hasRuntime) {
+      throw new Error(`第 ${matchIndex} 局奖励提交后未释放 Match。`);
+    }
+    expectedExperience += rewarded.reward.grant.experienceDelta;
+    latestGrantId = rewarded.reward.grant.grantId;
+    if (rewarded.profile.progression.experience !== expectedExperience) {
+      throw new Error(`第 ${matchIndex} 局累计经验不一致。`);
+    }
+    if (rewarded.profile.progression.committedGrantIds[0] !== latestGrantId) {
+      throw new Error(`第 ${matchIndex} 局最新奖励幂等键未持久化。`);
+    }
+    controller.continueReward();
+    if (controller.state === PRODUCT_SESSION_STATE.UNLOCK) controller.dismissUnlocks();
 
     if ((matchIndex + 1) % 25 === 0 && matchIndex + 1 < matches) {
       controller.destroy();
@@ -120,6 +135,12 @@ try {
       const restored = await controller.boot();
       if (restored.profile.selection.characterId !== 'wind-up-cube') {
         throw new Error('产品重启后角色选择未恢复。');
+      }
+      if (restored.profile.progression.experience !== expectedExperience) {
+        throw new Error('产品重启后累计经验未恢复。');
+      }
+      if (restored.profile.progression.committedGrantIds[0] !== latestGrantId) {
+        throw new Error('产品重启后最新奖励幂等键未恢复。');
       }
     }
   }
@@ -137,6 +158,8 @@ try {
     lifecycleTransitions,
     maximumTicks,
     restarts: ownerGeneration - 1,
+    experience: snapshot.profile.progression.experience,
+    latestGrantId,
   }));
 } finally {
   controller?.destroy();

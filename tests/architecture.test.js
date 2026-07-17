@@ -230,6 +230,15 @@ test('Arena Stage 8 product sublayers preserve state/profile/match/composition d
       `${file} 不应反向持有产品组合根或 Profile 聚合。`,
     );
   }
+  const progressionFiles = await listJavaScript(path.resolve('src/arena/product/progression'));
+  for (const file of progressionFiles) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /(?:\/product\/)?(?:composition|persistence)\//,
+      `${file} 不应持有产品组合根或直接写入 Repository。`,
+    );
+  }
 });
 
 test('Arena MatchCore POC bundles and executes as a standalone mini-game IIFE', async () => {
