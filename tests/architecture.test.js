@@ -93,3 +93,46 @@ test('mini-game entries bundle without importing the web platform', async () => 
     assert.doesNotMatch(result.outputFiles[0].text, /^\s*(?:import|export)\b/m);
   }
 });
+
+test('Arena authority has no renderer, browser, platform or host API dependency', async () => {
+  const files = await listJavaScript(path.resolve('src/arena'));
+  for (const file of files) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /(?:from\s+['"]three['"]|render3d|src\/platform|\.\.\/platform|\bwindow\b|\bdocument\b|\bnavigator\b|\b(?:tt|wx)\s*\.)/,
+      `${file} 泄漏了渲染、浏览器或平台依赖`,
+    );
+    assert.doesNotMatch(source, /@dimforge\/rapier/, `${file} 仍依赖已拒绝的 Rapier POC`);
+    assert.doesNotMatch(
+      source,
+      /(?:\.at\s*\(|\bAggregateError\b|\bstructuredClone\b)/,
+      `${file} 使用了超出 ES2020 且未提供 polyfill 的内建 API`,
+    );
+  }
+});
+
+test('Arena MatchCore POC bundles and executes as a standalone mini-game IIFE', async () => {
+  const result = await esbuild({
+    entryPoints: [path.resolve('src/arena/entry/match-core-poc.js')],
+    bundle: true,
+    write: false,
+    format: 'iife',
+    platform: 'neutral',
+    target: 'es2020',
+    treeShaking: true,
+    minify: true,
+    logLevel: 'silent',
+  });
+  assert.equal(result.outputFiles.length, 1);
+  assert.doesNotMatch(result.outputFiles[0].text, /^\s*(?:import|export)\b/m);
+  const previous = globalThis.__arenaMatchPoc;
+  try {
+    Function(result.outputFiles[0].text)();
+    assert.equal(globalThis.__arenaMatchPoc?.ok, true);
+    assert.equal(globalThis.__arenaMatchPoc?.backend, 'lightweight-v1');
+  } finally {
+    if (previous === undefined) delete globalThis.__arenaMatchPoc;
+    else globalThis.__arenaMatchPoc = previous;
+  }
+});

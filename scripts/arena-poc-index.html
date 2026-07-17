@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+    <title>Arena MatchCore POC 验收</title>
+    <style>
+      :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: max(24px, env(safe-area-inset-top)) 20px max(24px, env(safe-area-inset-bottom));
+        color: #edf7ff;
+        background:
+          radial-gradient(circle at 18% 12%, rgba(50, 210, 255, .18), transparent 30%),
+          radial-gradient(circle at 88% 82%, rgba(135, 91, 255, .22), transparent 36%),
+          #07111f;
+      }
+      main { width: min(720px, 100%); }
+      .eyebrow { margin: 0 0 10px; color: #79dcff; font: 700 12px/1.2 ui-monospace, monospace; letter-spacing: .16em; }
+      h1 { margin: 0; font-size: clamp(28px, 6vw, 48px); line-height: 1.04; letter-spacing: -.04em; }
+      .lede { max-width: 58ch; margin: 14px 0 24px; color: #9fb3c8; line-height: 1.65; }
+      .card {
+        overflow: hidden;
+        border: 1px solid rgba(143, 213, 255, .18);
+        border-radius: 24px;
+        background: rgba(10, 25, 43, .82);
+        box-shadow: 0 24px 80px rgba(0, 0, 0, .34);
+        backdrop-filter: blur(18px);
+      }
+      .status { display: flex; gap: 14px; align-items: center; padding: 22px 24px; border-bottom: 1px solid rgba(143, 213, 255, .12); }
+      .dot { width: 13px; height: 13px; flex: 0 0 auto; border-radius: 50%; background: #ffd166; box-shadow: 0 0 24px currentColor; }
+      [data-state="passed"] .dot { color: #4ff0a8; background: currentColor; }
+      [data-state="failed"] .dot { color: #ff6b7a; background: currentColor; }
+      .status strong { display: block; font-size: 17px; }
+      .status span { display: block; margin-top: 3px; color: #8499ae; font-size: 13px; }
+      dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; margin: 0; background: rgba(143, 213, 255, .1); }
+      dl div { min-width: 0; padding: 18px 24px; background: #0b1b2e; }
+      dt { color: #8197ac; font-size: 12px; }
+      dd { overflow: hidden; margin: 7px 0 0; font: 700 16px/1.3 ui-monospace, monospace; text-overflow: ellipsis; white-space: nowrap; }
+      .actions { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 18px 24px; }
+      .actions p { margin: 0; color: #7f96aa; font-size: 12px; }
+      button { border: 1px solid rgba(121, 220, 255, .35); border-radius: 999px; padding: 10px 16px; color: #dff8ff; background: rgba(29, 113, 148, .24); font: inherit; font-weight: 700; cursor: pointer; }
+      button:hover { background: rgba(29, 113, 148, .42); }
+      button:focus-visible { outline: 3px solid #79dcff; outline-offset: 3px; }
+      pre { max-height: 230px; margin: 0; overflow: auto; padding: 18px 24px; border-top: 1px solid rgba(143, 213, 255, .12); color: #b9e9ff; background: #06101c; font: 12px/1.6 ui-monospace, monospace; }
+      [hidden] { display: none; }
+      @media (max-width: 520px) {
+        body { place-items: start center; }
+        dl { grid-template-columns: 1fr; }
+        .actions { align-items: stretch; flex-direction: column; }
+        button { width: 100%; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">ARENA V1 · HEADLESS ACCEPTANCE</p>
+      <h1>MatchCore 权威逻辑验收</h1>
+      <p class="lede">该页面不渲染正式角色与地图，只验证同一份 1v1 权威逻辑能独立运行、稳定结算并输出有限状态。</p>
+      <section class="card" id="report" data-state="running" aria-live="polite">
+        <div class="status">
+          <i class="dot" aria-hidden="true"></i>
+          <div><strong id="status-title">验证运行中</strong><span id="status-detail">正在执行固定步长比赛…</span></div>
+        </div>
+        <dl>
+          <div><dt>物理后端</dt><dd id="backend">—</dd></div>
+          <div><dt>逻辑频率</dt><dd id="tick-rate">—</dd></div>
+          <div><dt>模拟 tick</dt><dd id="ticks">—</dd></div>
+          <div><dt>最终 hash</dt><dd id="hash">—</dd></div>
+          <div><dt>结算原因</dt><dd id="reason">—</dd></div>
+          <div><dt>胜者</dt><dd id="winner">—</dd></div>
+        </dl>
+        <div class="actions">
+          <p>结果来自 <code>globalThis.__arenaMatchPoc</code></p>
+          <button id="toggle" type="button" aria-expanded="false" disabled>查看权威结果</button>
+        </div>
+        <pre id="raw" hidden></pre>
+      </section>
+    </main>
+    <script src="./match-core-poc.js"></script>
+    <script>
+      (() => {
+        const result = globalThis.__arenaMatchPoc;
+        const report = document.querySelector('#report');
+        const toggle = document.querySelector('#toggle');
+        const raw = document.querySelector('#raw');
+        const put = (id, value) => { document.querySelector(id).textContent = value ?? '—'; };
+        if (!result || !result.ok) {
+          report.dataset.state = 'failed';
+          put('#status-title', '验证失败');
+          put('#status-detail', result?.error ?? '未收到 MatchCore 结果');
+          raw.textContent = JSON.stringify(result ?? null, null, 2);
+        } else {
+          report.dataset.state = 'passed';
+          put('#status-title', '验证通过');
+          put('#status-detail', '比赛已结算，状态均为有限数');
+          put('#backend', result.backend);
+          put('#tick-rate', `${result.tickRate} Hz`);
+          put('#ticks', result.simulatedTicks);
+          put('#hash', result.finalHash);
+          put('#reason', result.result?.reason);
+          put('#winner', result.result?.winnerId ?? '平局');
+          raw.textContent = JSON.stringify(result, null, 2);
+          toggle.disabled = false;
+        }
+        toggle.addEventListener('click', () => {
+          const expanded = toggle.getAttribute('aria-expanded') === 'true';
+          toggle.setAttribute('aria-expanded', String(!expanded));
+          toggle.textContent = expanded ? '查看权威结果' : '收起权威结果';
+          raw.hidden = expanded;
+        });
+      })();
+    </script>
+  </body>
+</html>

@@ -5,6 +5,10 @@
   "type": "module",
   "description": "基于 Three.js/WebGL 的数值策略跳跃小游戏，包含 Web、抖音和微信平台适配层。",
   "scripts": {
+    "arena:poc": "node scripts/arena-physics-poc.mjs",
+    "arena:poc:build": "node scripts/build-arena-poc.mjs",
+    "arena:poc:stress": "node scripts/arena-physics-poc.mjs --stress-ticks=100000",
+    "arena:stress": "node --expose-gc scripts/arena-match-stress.mjs --matches=1000",
     "dev": "vite --host 127.0.0.1",
     "dev:lan": "vite --host 0.0.0.0",
     "preview:lan": "vite preview --host 0.0.0.0 --port 4173 --strictPort --outDir dist/web",

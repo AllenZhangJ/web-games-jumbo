@@ -2,9 +2,9 @@
 
 ## 文档状态
 
-已接受整体边界；具体物理实现仍待阶段 1 POC 决定。
+已接受整体边界；阶段 1 已通过 POC 选择项目内轻量街机物理，阶段 2 已落地无渲染 MatchCore。物理选择见 [ADR-005](../decisions/005-arena-lightweight-physics.md)。
 
-本文描述 Arena V1 目标架构，不表示当前代码已经实现这些模块。当前 v3 架构仍见 [`../architecture.md`](../architecture.md)。
+本文同时记录已落地边界与后续目标；未明确标记为已落地的模块仍不是当前能力。当前 v3 架构仍见 [`../architecture.md`](../architecture.md)。
 
 ## 目标
 
@@ -28,21 +28,23 @@ BotPolicy ──────┘                                      │
 
 真人输入和机器人输入在进入 MatchCore 前已经统一。BotPolicy 不能获得可写的 MatchState，也不能直接提交命中或胜负。
 
-## 目标模块边界
+## 已落地模块边界
 
-建议新增独立的 `src/arena` 领域，避免把未完成的竞技场规则混入当前 `src/core`：
+Arena 使用独立的 `src/arena` 领域，没有改写当前 `src/core` 的数值跳台规则：
 
 ```text
 src/arena/
-├── core/          # 比赛状态机、移动、碰撞、击飞、淘汰、重生
-├── content/       # 角色模板、装备和地图数据
-├── ai/            # 感知快照、目标评估、难度参数、InputFrame 输出
-├── matchmaking/   # 本地快速匹配、虚构对手形象和隐藏难度分配
-├── runtime/       # 固定步长、输入采样、回放、快照与事件编排
-└── tests/         # seed、回放、批量模拟和机器人公平性测试
+├── config.js                 # 版本化比赛、物理、角色和时间配置
+├── input-frame.js            # 玩家与机器人共用的输入合同
+├── match-core.js             # 权威比赛状态机、击飞、淘汰和重生
+├── replay.js                 # 输入录制、checkpoint 与严格回放
+├── state-hash.js             # 量化权威状态 hash
+├── physics/                  # PhysicsAdapter 与轻量物理实现
+├── runtime/                  # 外层帧率到固定 60Hz tick 的编排
+└── entry/                    # 无渲染三端 POC 入口
 ```
 
-这只是目标目录；阶段 1 开始前应根据最小 API 再确认文件粒度，避免先建空架构。
+`content/`、`ai/` 和 `matchmaking/` 要等对应阶段出现真实合同后再新增，不预建空目录。
 
 ## MatchCore 权威状态
 
@@ -53,13 +55,15 @@ MatchCore 独占：
 - 地图碰撞面、淘汰边界、机关状态、刷新点和事件时间轴。
 - 命中、冲量、硬直、拾取、淘汰、重生和胜负结果。
 
+权威字段与内部状态转换均使用语言级私有边界；公开配置为深冻结只读值。合法输入在进入 tick 前完成校验，tick 内部若发生异常则 fail-closed 销毁本局，不允许在半更新状态上继续推进。
+
 Renderer 不得使用模型碰撞盒、骨骼位置或动画事件反向修改这些状态。
 
 ## 快照与事件
 
 每帧表现输入分为：
 
-- `MatchSnapshot`：可插值的当前权威状态。
+- `MatchSnapshot`：可插值的当前权威状态，不暴露 RNG 内部状态。
 - `PresentationEvent[]`：已发生的命中、拾取、机关、淘汰和结算事件。
 
 事件必须带稳定 ID、tick 和参与者 ID，使表现层可以去重、追赶或在上下文恢复后重建。
@@ -87,16 +91,17 @@ BotPolicy 每次决策只读取受限的 `BotObservation`：
 - MatchCore 使用固定 tick，不读取墙上时间。
 - 地图、装备和机器人扰动使用可命名的独立 RNG 流。
 - 输入可以记录并无渲染回放。
-- 定期计算轻量状态 hash，定位未来的回放或跨平台差异。
+- 录制只在权威 tick 成功后提交；回放必须包含连续完整输入、递增 checkpoint、最终结算与一致事件，并在所有异常路径释放重放 Core。
+- 配置先生成稳定签名，运行中定期计算轻量状态 hash，定位配置篡改、回放或跨平台差异。
 - 批量模拟以是否结束、平均时长、自杀率、装备争夺率和地图击杀来源作为机器人调优证据。
 
 ## 物理 POC
 
-阶段 1 比较三条路径：
+阶段 1 先评估三条路径，并对具备可用 JavaScript/WASM 分发的两条路径执行统一 POC：
 
 1. 项目内轻量街机物理：圆/胶囊角色、简单平台面、显式冲量。
 2. Rapier WASM：成熟碰撞、刚体和查询能力。
-3. Box3D 3D WASM：跨平台确定性和录制/回放能力。
+3. Box3D 3D WASM：因当前仍为 C17 alpha 且缺少成熟官方 JavaScript/WASM 分发，只做可用性评估，不进入可执行候选。
 
 选择门禁：
 
@@ -106,7 +111,7 @@ BotPolicy 每次决策只读取受限的 `BotObservation`：
 - 可实现稳定、可调而不是过度真实的击飞手感。
 - 回放和批量测试结果可复现。
 
-POC 完成前不新增物理依赖，也不把第三方刚体对象设为对外玩法 API。
+POC 结论为项目内轻量街机物理。Rapier 候选代码与依赖已移除；公共玩法 API 只交换普通数值对象。完整数据见 [物理 POC 结果](../research/arena-physics-poc-results.md)。
 
 ## 本地成长
 
