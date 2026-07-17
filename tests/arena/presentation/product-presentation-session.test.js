@@ -174,6 +174,15 @@ function rendererHarness({
         : viewModel.screen.secondaryAction;
       return action?.enabled ? action.intent : null;
     },
+    bindUiIntent(handlers) {
+      this.uiIntentHandlers = handlers;
+      let active = true;
+      return () => {
+        if (!active) return;
+        active = false;
+        if (this.uiIntentHandlers === handlers) this.uiIntentHandlers = null;
+      };
+    },
     handleContextLost(event) {
       event?.preventDefault?.();
       this.contextLost = true;

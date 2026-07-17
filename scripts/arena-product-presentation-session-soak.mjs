@@ -127,6 +127,7 @@ function rendererHarness() {
     },
     getInputViewport: () => ({ width: 400, height: 800 }),
     hitTestUi: () => null,
+    bindUiIntent: () => () => {},
     handleContextLost(event) {
       event?.preventDefault?.();
       this.contextLost = true;

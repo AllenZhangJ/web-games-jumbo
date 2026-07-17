@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+    <meta name="theme-color" content="#f2eee5" />
+    <meta name="robots" content="noindex,nofollow" />
+    <title>深渊竞技场 · 产品流程</title>
+  </head>
+  <body>
+    <main class="product-shell" aria-label="深渊竞技场">
+      <canvas
+        id="game"
+        aria-label="竞技场 1 对 1 跑酷对决画布"
+        aria-describedby="game-instructions"
+      ></canvas>
+
+      <section
+        id="arena-product-ui"
+        class="product-ui"
+        aria-labelledby="product-title"
+        aria-describedby="product-body"
+        aria-busy="true"
+      >
+        <div class="product-rail" aria-hidden="true">
+          <span>A // 01</span>
+          <span class="product-rail-line"></span>
+          <span>ABYSS</span>
+        </div>
+
+        <header class="product-header">
+          <p id="product-kicker" class="product-kicker">ARENA LINK</p>
+          <h1 id="product-title">正在读取进度</h1>
+          <span class="product-title-rule" aria-hidden="true"></span>
+          <p id="product-body"></p>
+        </header>
+
+        <div class="product-visual-stack">
+          <section class="product-visual product-loading" data-product-visual="loading" aria-label="加载中">
+            <span class="product-loader" aria-hidden="true"></span>
+            <p>正在连接竞技场</p>
+          </section>
+
+          <section class="product-visual product-home" data-product-visual="home" hidden>
+            <div class="product-hero-frame">
+              <img id="product-hero-image" alt="" draggable="false" />
+            </div>
+            <p class="product-match-note"><span>1V1</span> 装备 · 地图 · 击飞</p>
+          </section>
+
+          <section class="product-visual product-character-select" data-product-visual="character-select" hidden>
+            <div id="product-character-list" class="product-character-list" role="radiogroup" aria-label="可选角色"></div>
+            <p class="product-caption">角色提供基础手感，装备决定本局玩法</p>
+          </section>
+
+          <section class="product-visual product-matching" data-product-visual="matching" hidden>
+            <div class="product-versus">
+              <article class="product-fighter-card">
+                <img id="product-matching-player-image" alt="" draggable="false" />
+                <strong id="product-matching-player-name">挑战者</strong>
+              </article>
+              <span class="product-vs-mark" aria-hidden="true">VS</span>
+              <article class="product-fighter-card is-opponent">
+                <img id="product-matching-opponent-image" alt="" draggable="false" />
+                <strong id="product-matching-opponent-name">神秘挑战者</strong>
+              </article>
+            </div>
+            <div class="product-search-track" aria-hidden="true"><span></span></div>
+            <p class="product-caption">正在建立 1 对 1 对局</p>
+          </section>
+
+          <section class="product-visual product-result" data-product-visual="result" hidden>
+            <div class="product-result-emblem" aria-hidden="true">
+              <span id="product-result-mark">WIN</span>
+            </div>
+            <img id="product-result-image" alt="" draggable="false" />
+            <strong id="product-reward-value" class="product-reward-value"></strong>
+          </section>
+
+          <section class="product-visual product-result" data-product-visual="reward" hidden>
+            <div class="product-result-emblem" aria-hidden="true">
+              <span id="product-reward-mark">WIN</span>
+            </div>
+            <img id="product-reward-image" class="product-reward-echo" alt="" draggable="false" />
+            <strong id="product-reward-scene-value" class="product-reward-value">奖励结算完成</strong>
+          </section>
+
+          <section class="product-visual product-unlock" data-product-visual="unlock" hidden>
+            <div class="product-unlock-frame">
+              <span class="product-new-badge">NEW</span>
+              <img id="product-unlock-image" alt="" draggable="false" />
+            </div>
+            <strong id="product-unlock-name"></strong>
+          </section>
+
+          <section class="product-visual product-error" data-product-visual="recoverable-error" hidden>
+            <span class="product-error-glyph" aria-hidden="true">!</span>
+            <p id="product-error-message"></p>
+            <small>本地进度不会丢失</small>
+          </section>
+
+          <section class="product-visual product-error" data-product-visual="fatal-error" hidden>
+            <span class="product-error-glyph" aria-hidden="true">×</span>
+            <p>请重新进入游戏</p>
+          </section>
+
+          <section class="product-visual product-error" data-product-visual="destroyed" hidden>
+            <span class="product-error-glyph" aria-hidden="true">—</span>
+            <p>本次竞技场会话已结束</p>
+          </section>
+        </div>
+
+        <footer class="product-actions" aria-label="当前可用操作">
+          <button id="product-primary-action" class="product-action is-primary" data-product-intent="primary" type="button" hidden></button>
+          <button id="product-secondary-action" class="product-action is-secondary" data-product-intent="secondary" type="button" hidden></button>
+        </footer>
+
+        <p id="product-live" class="sr-only" aria-live="polite" aria-atomic="true">正在读取进度</p>
+      </section>
+
+      <p class="sr-only" id="game-instructions">
+        左侧区域控制移动和跑跳，右侧动作键根据当前状态执行攻击、下砸或装备动作。争夺装备并把对手击出平台。
+      </p>
+    </main>
+    <script type="module" src="/src/entry/web-product.js"></script>
+  </body>
+</html>

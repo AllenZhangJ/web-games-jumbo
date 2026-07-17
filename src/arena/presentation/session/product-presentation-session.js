@@ -32,6 +32,7 @@ function validateRenderer(value) {
     'resize',
     'getInputViewport',
     'hitTestUi',
+    'bindUiIntent',
     'handleContextLost',
     'handleContextRestored',
     'dispose',
@@ -460,6 +461,13 @@ export class ProductPresentationSession {
       inputSource: this.#inputRouter,
     });
     validateFlow(this.#flow);
+    this.#registerCleanup(this.#renderer.bindUiIntent({
+      onIntent: (intent) => this.#dispatchIntent(intent),
+      onRejected: (error, intent) => this.#report('ui-intent-rejected', {
+        message: error?.message ?? String(error),
+        intentId: intent?.id ?? null,
+      }),
+    }), 'renderer.bindUiIntent');
     this.#inputAdapter = this.#composition.inputAdapterFactory({
       platform: this.#composition.platform,
       sampler: this.#inputRouter,

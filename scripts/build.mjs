@@ -30,6 +30,7 @@ async function buildWeb() {
         input: {
           game: path.join(root, 'index.html'),
           pilot: path.join(root, 'pilot.html'),
+          product: path.join(root, 'product.html'),
         },
       },
       // Three.js is intentionally a single shared runtime; 151 kB gzip is
