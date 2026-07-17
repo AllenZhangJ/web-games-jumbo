@@ -2,6 +2,7 @@ const REQUIRED_WORLD_METHODS = Object.freeze([
   'addCharacter',
   'setMovementIntent',
   'applyImpulse',
+  'applyCharacterMutationBatch',
   'setSurfaceEnabled',
   'step',
   'getCharacterState',

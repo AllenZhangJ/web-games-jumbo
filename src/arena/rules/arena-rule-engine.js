@@ -15,6 +15,11 @@ import {
   assertNonEmptyString,
   cloneFrozenData,
 } from './definition-utils.js';
+import {
+  createMovementCommand,
+  isMovementCommandKind,
+} from '../movement/movement-command.js';
+import { ActionAffordanceProjector } from '../action/action-affordance.js';
 
 export const ARENA_RULE_EVENT = Object.freeze({
   ACTION_STARTED: 'ActionStarted',
@@ -22,8 +27,20 @@ export const ARENA_RULE_EVENT = Object.freeze({
   KNOCKBACK_APPLIED: 'KnockbackApplied',
 });
 
-const RESOLVE_ACTION_KEYS = new Set(['tick', 'actors', 'inputFrames']);
+const RESOLVE_ACTION_KEYS = new Set([
+  'tick',
+  'actors',
+  'inputFrames',
+  'additionalCandidates',
+]);
+const ADDITIONAL_CANDIDATE_ENTRY_KEYS = new Set(['participantId', 'candidates']);
 const RESOLVE_ACTIVE_KEYS = new Set(['actors']);
+const AFFORDANCE_KEYS = new Set([
+  'tick',
+  'participantId',
+  'actors',
+  'additionalCandidates',
+]);
 const COMMIT_KEYS = new Set(['recordHit', 'applyHitstun', 'applyImpulse']);
 const ACTOR_KEYS = new Set(['id', 'canAct', 'targetable', 'position', 'facing']);
 const INPUT_FRAME_KEYS = new Set([
@@ -56,6 +73,8 @@ const REQUIRED_ENGINE_METHODS = Object.freeze([
   'despawnInvalidWorldEquipment',
   'requireEquipmentDefinition',
   'getContentHash',
+  'getMovementActionCandidates',
+  'getActionAffordance',
   'getParticipantActionRule',
   'destroy',
 ]);
@@ -113,16 +132,47 @@ function enrichCommand(command, metadata) {
   return cloneFrozenData({ ...command, ...metadata }, 'RuleCommand');
 }
 
-function createBaseCandidate(actionDefinitionId) {
+function createBaseCandidate(actionDefinitionId, available) {
   return Object.freeze({
     id: `base:${actionDefinitionId}`,
     actionDefinitionId,
     source: 'base-action-provider',
     priority: ACTION_PRIORITY.BASE,
-    available: true,
+    available,
     blocksFallback: false,
-    unavailableReason: null,
+    unavailableReason: available ? null : 'no-base-action-target',
   });
+}
+
+function cloneAdditionalCandidates(values, participantIds) {
+  if (values === undefined) return new Map(participantIds.map((id) => [id, Object.freeze([])]));
+  if (!Array.isArray(values)) throw new TypeError('additionalCandidates 必须是数组。');
+  const result = new Map(participantIds.map((id) => [id, Object.freeze([])]));
+  const seen = new Set();
+  for (let index = 0; index < values.length; index += 1) {
+    const entry = cloneFrozenData(values[index], `additionalCandidates[${index}]`);
+    assertKnownKeys(
+      entry,
+      ADDITIONAL_CANDIDATE_ENTRY_KEYS,
+      `additionalCandidates[${index}]`,
+    );
+    const participantId = assertNonEmptyString(
+      entry.participantId,
+      `additionalCandidates[${index}].participantId`,
+    );
+    if (!result.has(participantId)) {
+      throw new RangeError(`additionalCandidates 包含未知 participant ${participantId}。`);
+    }
+    if (seen.has(participantId)) {
+      throw new RangeError(`additionalCandidates 包含重复 participant ${participantId}。`);
+    }
+    if (!Array.isArray(entry.candidates)) {
+      throw new TypeError(`additionalCandidates[${index}].candidates 必须是数组。`);
+    }
+    seen.add(participantId);
+    result.set(participantId, entry.candidates);
+  }
+  return result;
 }
 
 function createPublicActionRule(definition) {
@@ -187,6 +237,8 @@ export class ArenaRuleEngine {
   #actionRegistry;
   #actionResolver;
   #actionExecution;
+  #movementCandidateProvider;
+  #actionAffordanceProjector;
   #targetingRegistry;
   #effectRegistry;
   #commandRegistry;
@@ -205,6 +257,7 @@ export class ArenaRuleEngine {
     targetingRegistry,
     effectRegistry,
     commandRegistry,
+    movementCandidateProvider,
   }) {
     if (
       !Array.isArray(participantIds)
@@ -225,6 +278,13 @@ export class ArenaRuleEngine {
     }
     this.#actionResolver = new ActionResolver({ actionRegistry });
     this.#actionExecution = new ActionExecutionSystem({ participantIds, actionRegistry });
+    if (!movementCandidateProvider || typeof movementCandidateProvider.getCandidates !== 'function') {
+      throw new TypeError('ArenaRuleEngine 需要 movementCandidateProvider.getCandidates()。');
+    }
+    this.#movementCandidateProvider = movementCandidateProvider;
+    this.#actionAffordanceProjector = new ActionAffordanceProjector({
+      resolver: this.#actionResolver,
+    });
     this.#targetingRegistry = targetingRegistry;
     this.#effectRegistry = effectRegistry;
     this.#commandRegistry = commandRegistry;
@@ -267,6 +327,24 @@ export class ArenaRuleEngine {
     return Object.freeze(result);
   }
 
+  #createCandidates(participantId, actors, additionalCandidates) {
+    const actor = actors.find(({ id }) => id === participantId);
+    const baseDefinition = this.#actionRegistry.require(this.#baseActionDefinitionId);
+    const baseTargets = this.#targetingRegistry.resolve({
+      definition: baseDefinition,
+      source: actor,
+      candidates: actors.filter(({ id, targetable }) => id !== participantId && targetable),
+    });
+    const candidates = [createBaseCandidate(
+      this.#baseActionDefinitionId,
+      baseTargets.length > 0,
+    )];
+    const equipmentCandidate = this.#equipmentSystem.getActionCandidate(participantId);
+    if (equipmentCandidate) candidates.push(equipmentCandidate);
+    candidates.push(...additionalCandidates);
+    return Object.freeze(candidates);
+  }
+
   advanceTimers() {
     this.#assertUsable();
     return Object.freeze({
@@ -305,25 +383,37 @@ export class ArenaRuleEngine {
       frameById.size !== this.#participantIds.length
       || this.#participantIds.some((id) => !frameById.has(id))
     ) throw new RangeError('ArenaRuleEngine inputFrames 必须覆盖全部 participants。');
+    const additionalCandidates = cloneAdditionalCandidates(
+      options.additionalCandidates,
+      this.#participantIds,
+    );
     const actorsById = new Map(actors.map((actor) => [actor.id, actor]));
     const resolutions = this.#participantIds.map((participantId) => {
       const actor = actorsById.get(participantId);
-      const actionState = this.#actionExecution.getSnapshot(participantId);
-      const candidates = [createBaseCandidate(this.#baseActionDefinitionId)];
-      const equipmentCandidate = this.#equipmentSystem.getActionCandidate(participantId);
-      if (equipmentCandidate) candidates.push(equipmentCandidate);
+      const candidates = this.#createCandidates(
+        participantId,
+        actors,
+        additionalCandidates.get(participantId),
+      );
+      const constraints = this.#actionExecution.getConstraints(participantId);
       return this.#actionResolver.resolve({
         tick,
         participantId,
-        canAct: actor.canAct && actionState.phase === ARENA_ACTION_PHASE.IDLE,
+        canAct: actor.canAct,
         input: {
           primaryPressed: frameById.get(participantId).primaryPressed,
           primaryHeld: frameById.get(participantId).primaryHeld,
+          jumpPressed: frameById.get(participantId).jumpPressed,
+          jumpHeld: frameById.get(participantId).jumpHeld,
+          slamPressed: frameById.get(participantId).slamPressed,
         },
         candidates,
+        occupiedLanes: constraints.occupiedLanes,
+        activeConflictTags: constraints.activeConflictTags,
       });
     });
-    const selected = resolutions.filter(({ kind }) => kind === ACTION_RESOLUTION_KIND.SELECTED);
+    const outcomes = resolutions.flatMap(({ outcomes: batchOutcomes }) => batchOutcomes);
+    const selected = outcomes.filter(({ kind }) => kind === ACTION_RESOLUTION_KIND.SELECTED);
     for (const resolution of selected) {
       if (resolution.source === 'equipment-system') {
         this.#equipmentSystem.assertActionCanStart(
@@ -369,11 +459,25 @@ export class ArenaRuleEngine {
         }
       }
     }
+    const movementCommands = [];
+    const ruleCommands = [];
+    for (const command of commands) {
+      if (isMovementCommandKind(command.kind)) {
+        movementCommands.push(createMovementCommand({
+          kind: command.kind,
+          participantId: command.participantId,
+          actionDefinitionId: command.actionDefinitionId,
+        }));
+      } else {
+        ruleCommands.push(command);
+      }
+    }
     return Object.freeze({
-      resolutions: Object.freeze(resolutions),
+      resolutions: Object.freeze(outcomes),
       starts,
       hits: Object.freeze([]),
-      commands: Object.freeze(commands),
+      commands: Object.freeze(ruleCommands),
+      movementCommands: Object.freeze(movementCommands),
       events: Object.freeze(events),
     });
   }
@@ -383,7 +487,7 @@ export class ArenaRuleEngine {
     assertKnownKeys(options, RESOLVE_ACTIVE_KEYS, 'ArenaRuleEngine resolveActive options');
     const actors = this.#cloneActors(options.actors);
     const actorsById = new Map(actors.map((actor) => [actor.id, actor]));
-    const active = this.#actionExecution.listSnapshots().filter(({ phase }) => (
+    const active = this.#actionExecution.listAllSnapshots().filter(({ phase }) => (
       phase === ARENA_ACTION_PHASE.ACTIVE
     ));
     const guards = [];
@@ -472,6 +576,7 @@ export class ArenaRuleEngine {
       starts: Object.freeze([]),
       hits: Object.freeze(hits),
       commands: guardedCommands,
+      movementCommands: Object.freeze([]),
       events: Object.freeze(events),
     });
   }
@@ -557,6 +662,41 @@ export class ArenaRuleEngine {
   getContentHash() {
     this.#assertUsable();
     return this.#contentHash;
+  }
+
+  getMovementActionCandidates(capabilities) {
+    this.#assertUsable();
+    return this.#movementCandidateProvider.getCandidates(capabilities);
+  }
+
+  getActionAffordance(options) {
+    this.#assertUsable();
+    assertKnownKeys(options, AFFORDANCE_KEYS, 'ArenaRuleEngine action affordance options');
+    const tick = assertIntegerAtLeast(options.tick, 0, 'ArenaRuleEngine affordance tick');
+    const participantId = assertNonEmptyString(
+      options.participantId,
+      'ArenaRuleEngine affordance participantId',
+    );
+    if (!this.#participantIds.includes(participantId)) {
+      throw new RangeError(`未知 affordance participant ${participantId}。`);
+    }
+    const actors = this.#cloneActors(options.actors);
+    const actor = actors.find(({ id }) => id === participantId);
+    const additionalCandidates = cloneAdditionalCandidates(
+      options.additionalCandidates === undefined
+        ? undefined
+        : [{ participantId, candidates: options.additionalCandidates }],
+      this.#participantIds,
+    ).get(participantId);
+    const constraints = this.#actionExecution.getNextTickConstraints(participantId);
+    return this.#actionAffordanceProjector.project({
+      tick,
+      participantId,
+      canAct: actor.canAct,
+      candidates: this.#createCandidates(participantId, actors, additionalCandidates),
+      occupiedLanes: constraints.occupiedLanes,
+      activeConflictTags: constraints.activeConflictTags,
+    });
   }
 
   getParticipantActionRule(participantId) {

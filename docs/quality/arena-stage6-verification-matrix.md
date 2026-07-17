@@ -2,7 +2,7 @@
 
 ## 状态
 
-提议中。本文定义 Stage 6 的完成证据，不表示任何尚未实现的项目已经通过。S6.1 候选已在 2026-07-17 的当前未提交工作区通过本机 E1/E2 门禁；S6.2～S6.6 仍未通过。实现边界见 [Stage 6 输入、移动与灰盒执行计划](../architecture/arena-stage6-input-movement-plan.md)，决策背景见 [ADR-009](../decisions/009-arena-semantic-input-and-movement-authority.md)。
+执行中。本文定义 Stage 6 的完成证据，不表示后续批次已经通过。S6.1 已提交；S6.2 Movement Rule/Core 当前候选已通过本机 E1/E2 门禁；S6.3～S6.6 仍未通过。实现边界见 [Stage 6 输入、移动与灰盒执行计划](../architecture/arena-stage6-input-movement-plan.md)，决策背景见 [ADR-009](../decisions/009-arena-semantic-input-and-movement-authority.md)。
 
 ## 使用规则
 
@@ -85,6 +85,18 @@ S6.1 退出门：现有 Stage 5 地图、装备、Bot 和 MatchCore 脚本全部
 | S6-M14 | 新增移动动作无需修改 MatchCore 类型分支 | E1/扩展测试 | 测试动作通过 Definition、Candidate Provider、Strategy/Command 注册接入 |
 
 S6.2 退出门：纯 Node 可以完成走、跑、普通跳、蹲跳、二段跳和下砸；同 seed、同 V4 输入得到相同事件、checkpoint 和最终 hash。
+
+### S6.2 当前证据
+
+| 证据 | 结果 | 边界 |
+|---|---|---|
+| `npm test` | 276/276 通过 | E1；含原子批次、重入/失败关闭、缓冲跳主流程、tick 边界、affordance 同源与 participant 顺序 |
+| `npm run arena:movement:stress` | 100 局、99,732 tick、3 份回放、100 唯一 hash；全部移动动作有覆盖 | E2；3 个长局覆盖地图塌陷，不是触控/真机证据 |
+| `npm run arena:stress` | 1,000/1,000 结束、921,560 tick、5 份回放、1,000 唯一 hash | E2；平均 0.23615ms/tick，GC 后堆增长 4.16MB |
+| `npm run arena:map:stress` | 100 局、720,100 tick、3 份回放、100 唯一 hash | E2；Stage 5 长时间轴回归通过 |
+| Bot 回归 | 900 局原始数据、9 份回放、每档 300 唯一 hash；最终目标型指标 90 局复验通过 | 只证明 S6.2 未破坏旧 Bot；Bot 尚不会使用新动作，不能关闭 S6.3 |
+
+完整命令、动作计数、性能与限制见 [S6.2 Movement 门禁记录](../research/arena-stage6-movement-results.md)。
 
 ## S6.3 Bot 公平性
 
@@ -202,7 +214,7 @@ npm run build
 git diff --check
 ```
 
-其中 `arena:movement:stress`、`arena:input:fuzz` 和 `arena:session:soak` 目前仍是计划命令，不得在实现前伪造为已通过。
+其中 `arena:movement:stress` 已在 S6.2 实现；`arena:input:fuzz` 和 `arena:session:soak` 仍分别是 S6.4/S6.5 计划命令，不得在实现前伪造为已通过。
 
 最终完成判定还需要：
 

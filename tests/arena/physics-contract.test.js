@@ -6,6 +6,7 @@ import {
   normalizeMovementIntent,
 } from '../../src/arena/physics/physics-adapter.js';
 import { createLightweightPhysicsWorld } from '../../src/arena/physics/lightweight-physics.js';
+import { createMovementPhysicsPort } from '../../src/arena/movement/movement-physics-port.js';
 
 test('movement intent clamps and normalizes without exceeding unit length', () => {
   assert.deepEqual(normalizeMovementIntent(0.5, -0.25), { x: 0.5, z: -0.25 });
@@ -34,6 +35,13 @@ test('lightweight world implements the complete adapter and rejects invalid life
   assert.equal(world.getCharacterState('player-1').grounded, true);
   world.applyImpulse('player-1', { x: 1, y: 0, z: 0 });
   assert.equal(world.getCharacterState('player-1').grounded, true);
+  world.applyCharacterMutationBatch([{
+    kind: 'set-vertical-speed',
+    participantId: 'player-1',
+    speed: -12,
+  }]);
+  assert.equal(world.getCharacterState('player-1').velocity.y, -12);
+  assert.equal(world.getCharacterState('player-1').grounded, false);
   assert.throws(() => world.step(1 / 30), /只接受固定步长/);
   world.resetCharacter('player-1', {
     position: PHYSICS_POC_ARENA.spawns[0],
@@ -82,5 +90,50 @@ test('pair separation refreshes ground support at a platform edge in the same ti
   world.step(1 / 60);
   assert.equal(world.getCharacterState('player-1').grounded, false);
   assert.equal(world.getCharacterState('player-2').grounded, false);
+  world.destroy();
+});
+
+test('physics and movement mutation batches validate fully before their single commit boundary', () => {
+  const world = createLightweightPhysicsWorld({ arena: PHYSICS_POC_ARENA });
+  world.addCharacter({
+    id: 'normal',
+    position: PHYSICS_POC_ARENA.spawns[0],
+    ...PHYSICS_POC_CHARACTER,
+  });
+  world.addCharacter({
+    id: 'tiny',
+    position: PHYSICS_POC_ARENA.spawns[1],
+    ...PHYSICS_POC_CHARACTER,
+    mass: Number.MIN_VALUE,
+  });
+  const beforePhysicsBatch = world.getCharacterState('normal');
+  assert.throws(() => world.applyCharacterMutationBatch([
+    {
+      kind: 'apply-impulse',
+      participantId: 'normal',
+      impulse: { x: 0, y: 2, z: 0 },
+    },
+    {
+      kind: 'apply-impulse',
+      participantId: 'tiny',
+      impulse: { x: 0, y: 2, z: 0 },
+    },
+  ]), /必须产生有限速度/);
+  assert.deepEqual(world.getCharacterState('normal'), beforePhysicsBatch);
+
+  const movementPort = createMovementPhysicsPort(world);
+  const beforeMovementBatch = world.getCharacterState('normal');
+  assert.throws(() => movementPort.applyBatch([
+    {
+      kind: 'apply-impulse',
+      participantId: 'normal',
+      impulse: { x: 0, y: 2, z: 0 },
+    },
+    {
+      kind: 'unknown-mutation',
+      participantId: 'tiny',
+    },
+  ]), /kind 不受支持/);
+  assert.deepEqual(world.getCharacterState('normal'), beforeMovementBatch);
   world.destroy();
 });

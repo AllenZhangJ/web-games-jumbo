@@ -6,11 +6,24 @@ import {
   cloneFrozenStringSet,
 } from '../rules/definition-utils.js';
 
-export const ACTION_DEFINITION_SCHEMA_VERSION = 1;
+export const ACTION_DEFINITION_SCHEMA_VERSION = 2;
+
+export const ACTION_INPUT_CHANNEL = Object.freeze({
+  PRIMARY: 'primary',
+  JUMP: 'jump',
+  SLAM: 'slam',
+});
+
+export const ACTION_LANE = Object.freeze({
+  COMBAT: 'combat',
+  LOCOMOTION: 'locomotion',
+  INTERACTION: 'interaction',
+});
 
 export const ACTION_INPUT_TRIGGER = Object.freeze({
   PRESSED: 'pressed',
   HELD: 'held',
+  RELEASED: 'released',
 });
 
 export const ACTION_EFFECT_TRIGGER = Object.freeze({
@@ -24,24 +37,35 @@ const DEFINITION_KEYS = new Set([
   'id',
   'kind',
   'input',
+  'lane',
+  'conflictTags',
   'timing',
   'targeting',
   'effects',
   'tags',
 ]);
-const INPUT_KEYS = new Set(['trigger']);
+const INPUT_KEYS = new Set(['channel', 'trigger']);
 const TIMING_KEYS = new Set(['windupTicks', 'activeTicks', 'recoveryTicks', 'cooldownTicks']);
 const TARGETING_KEYS = new Set(['kind', 'parameters']);
 const EFFECT_KEYS = new Set(['id', 'kind', 'trigger', 'parameters']);
 const INPUT_TRIGGERS = new Set(Object.values(ACTION_INPUT_TRIGGER));
+const INPUT_CHANNELS = new Set(Object.values(ACTION_INPUT_CHANNEL));
+const ACTION_LANES = new Set(Object.values(ACTION_LANE));
 const EFFECT_TRIGGERS = new Set(Object.values(ACTION_EFFECT_TRIGGER));
 
 function cloneInput(value, name) {
   assertKnownKeys(value, INPUT_KEYS, name);
+  if (!INPUT_CHANNELS.has(value.channel)) {
+    throw new RangeError(`${name}.channel 不受支持：${String(value.channel)}。`);
+  }
   if (!INPUT_TRIGGERS.has(value.trigger)) {
     throw new RangeError(`${name}.trigger 不受支持：${String(value.trigger)}。`);
   }
-  return Object.freeze({ trigger: value.trigger });
+  if (
+    value.channel === ACTION_INPUT_CHANNEL.SLAM
+    && value.trigger !== ACTION_INPUT_TRIGGER.PRESSED
+  ) throw new RangeError(`${name} 的 slam 通道只支持 pressed trigger。`);
+  return Object.freeze({ channel: value.channel, trigger: value.trigger });
 }
 
 function cloneTiming(value, name) {
@@ -92,11 +116,19 @@ export function createActionDefinition(value) {
       `ActionDefinition.schemaVersion 必须是 ${ACTION_DEFINITION_SCHEMA_VERSION}。`,
     );
   }
+  if (!ACTION_LANES.has(value.lane)) {
+    throw new RangeError(`ActionDefinition.lane 不受支持：${String(value.lane)}。`);
+  }
   return Object.freeze({
     schemaVersion: ACTION_DEFINITION_SCHEMA_VERSION,
     id: assertNonEmptyString(value.id, 'ActionDefinition.id'),
     kind: assertNonEmptyString(value.kind, 'ActionDefinition.kind'),
     input: cloneInput(value.input, 'ActionDefinition.input'),
+    lane: value.lane,
+    conflictTags: cloneFrozenStringSet(
+      value.conflictTags,
+      'ActionDefinition.conflictTags',
+    ),
     timing: cloneTiming(value.timing, 'ActionDefinition.timing'),
     targeting: cloneTargeting(value.targeting, 'ActionDefinition.targeting'),
     effects: cloneEffects(value.effects, 'ActionDefinition.effects'),

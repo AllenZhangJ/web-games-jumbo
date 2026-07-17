@@ -125,6 +125,40 @@ test('rule content hash and public action view follow the immutable registered c
   tuned.destroy();
 });
 
+test('ActionAffordance is a frozen next-tick projection of the same resolver candidates', () => {
+  const engine = createEngine();
+  const currentActors = actors();
+  const affordance = engine.getActionAffordance({
+    tick: 0,
+    participantId: 'player-1',
+    actors: currentActors,
+  });
+  assert.equal(affordance.primaryActionDefinitionId, STAGE4_ACTION_ID.BASE_PUSH);
+  assert.equal(affordance.channels.primary.kind, 'selected');
+  assert.ok(Object.isFrozen(affordance));
+  assert.ok(Object.isFrozen(affordance.channels));
+  assert.ok(Object.isFrozen(affordance.channels.primary));
+
+  const resolved = engine.resolveActions({
+    tick: 0,
+    actors: currentActors,
+    inputFrames: frames(0, ['player-1']),
+  });
+  assert.equal(resolved.starts[0].actionDefinitionId, affordance.primaryActionDefinitionId);
+  assert.throws(() => engine.getActionAffordance({
+    tick: 1,
+    participantId: 'unknown',
+    actors: currentActors,
+  }), /未知 affordance participant/);
+  assert.throws(() => engine.getActionAffordance({
+    tick: 1,
+    participantId: 'player-1',
+    actors: currentActors,
+    leaked: true,
+  }), /不支持字段 leaked/);
+  engine.destroy();
+});
+
 test('same-tick symmetric actions collect both hits before interruption commits', () => {
   const engine = createEngine();
   engine.resolveActions({

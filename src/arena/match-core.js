@@ -15,6 +15,8 @@ import { combineCleanupFailure, normalizeThrownError } from './lifecycle-error.j
 import { createCharacterPhysicsProfile } from './character/character-physics-profile.js';
 import { assertCharacterRegistry } from './character/character-registry.js';
 import { createCharacterRuntimeReference } from './character/character-runtime.js';
+import { MovementSystem } from './movement/movement-system.js';
+import { createMovementPhysicsPort } from './movement/movement-physics-port.js';
 
 const EVENT = Object.freeze({
   MATCH_STARTED: 'MatchStarted',
@@ -26,6 +28,7 @@ const EVENT = Object.freeze({
   ACTION_STARTED: 'ActionStarted',
   HIT_RESOLVED: 'HitResolved',
   KNOCKBACK_APPLIED: 'KnockbackApplied',
+  DOWN_SMASH_LANDED: 'DownSmashLanded',
   PLAYER_ELIMINATED: 'PlayerEliminated',
   PLAYER_RESPAWNED: 'PlayerRespawned',
   SUDDEN_DEATH_STARTED: 'SuddenDeathStarted',
@@ -92,6 +95,8 @@ export class MatchCore {
   #characterRegistry;
   #characterRuntimes;
   #physics;
+  #movement;
+  #movementPhysicsPort;
   #rules;
   #map;
   #participants;
@@ -108,6 +113,13 @@ export class MatchCore {
 
   #cleanupConstructionFailure(error) {
     const cleanupErrors = [];
+    try {
+      if (typeof this.#movement?.destroy === 'function') this.#movement.destroy();
+      this.#movement = null;
+      this.#movementPhysicsPort = null;
+    } catch (cleanupError) {
+      cleanupErrors.push(normalizeThrownError(cleanupError, 'MatchCore movement 构造清理失败'));
+    }
     try {
       if (typeof this.#physics?.destroy === 'function') this.#physics.destroy();
       this.#physics = null;
@@ -175,6 +187,8 @@ export class MatchCore {
     this.#participants = new Map();
     this.#characterRuntimes = new Map();
     this.#physics = null;
+    this.#movement = null;
+    this.#movementPhysicsPort = null;
     this.#rules = null;
     this.#map = null;
     try {
@@ -195,6 +209,15 @@ export class MatchCore {
           );
         }
       }
+      this.#movement = new MovementSystem({
+        participantCharacters: this.config.participantIds.map((participantId) => {
+          const runtime = this.#characterRuntimes.get(participantId);
+          return {
+            participantId,
+            characterDefinition: this.#characterRegistry.require(runtime.definitionId),
+          };
+        }),
+      });
       this.#rules = ruleEngineFactory({
         participantIds: this.config.participantIds,
         config: this.config,
@@ -221,6 +244,7 @@ export class MatchCore {
       }
       this.#physics = physicsFactory({ arena: this.config.arena });
       assertPhysicsWorld(this.#physics);
+      this.#movementPhysicsPort = createMovementPhysicsPort(this.#physics);
       for (let index = 0; index < this.config.participantIds.length; index += 1) {
         const id = this.config.participantIds[index];
         const participant = createParticipant(id, this.config.livesPerParticipant, index);
@@ -384,16 +408,20 @@ export class MatchCore {
     this.#advanceMapState();
     this.#updateEquipmentState();
     const frameById = new Map(frames.map((frame) => [frame.participantId, frame]));
+    const movementPreparation = this.#prepareMovement(frameById);
     const startedActions = this.#rules.resolveActions({
       tick: this.#tick,
       actors: this.#createRuleActors(),
-      inputFrames: frames,
+      inputFrames: movementPreparation.resolutionInputFrames ?? frames,
+      additionalCandidates: movementPreparation.additionalCandidates,
     });
+    this.#movement.execute(startedActions.movementCommands, this.#movementPhysicsPort);
     this.#commitRuleBatch(startedActions);
     const activeActions = this.#rules.resolveActiveActions({ actors: this.#createRuleActors() });
     this.#commitRuleBatch(activeActions);
     this.#applyMovementIntents(frameById);
     this.#physics.step(this.config.fixedDeltaSeconds);
+    this.#completeMovement();
     this.#resolveEliminations();
 
     if (this.#phase !== ARENA_MATCH_PHASE.ENDED) {
@@ -436,6 +464,82 @@ export class MatchCore {
         facing: { ...physics.facing },
       };
     });
+  }
+
+  #prepareMovement(frameById) {
+    const contacts = [];
+    const inputs = [];
+    const availability = [];
+    for (const participantId of this.config.participantIds) {
+      const participant = this.#participants.get(participantId);
+      const physics = this.#physics.getCharacterState(participantId);
+      const frame = frameById.get(participantId);
+      contacts.push({ participantId, grounded: physics.grounded });
+      inputs.push({
+        tick: this.#tick,
+        participantId,
+        jumpPressed: frame.jumpPressed,
+        jumpHeld: frame.jumpHeld,
+      });
+      availability.push({
+        participantId,
+        canMove: participant.status === ARENA_PARTICIPANT_STATUS.ACTIVE
+          && participant.hitstunTicks === 0,
+      });
+    }
+    this.#movement.prepareTick({
+      tick: this.#tick,
+      contacts,
+      inputs,
+      availability,
+    });
+    const additionalCandidates = [];
+    let resolutionInputFrames = null;
+    for (let index = 0; index < this.config.participantIds.length; index += 1) {
+      const participantId = this.config.participantIds[index];
+      const capabilities = this.#movement.getCapabilities(participantId);
+      additionalCandidates.push(Object.freeze({
+        participantId,
+        candidates: this.#rules.getMovementActionCandidates(capabilities),
+      }));
+      const frame = frameById.get(participantId);
+      // Replay records only real semantic edges. A buffered press is an
+      // authoritative Movement derivation and is re-presented to the same
+      // resolver on the first legal grounded tick until consumed or expired.
+      if (
+        capabilities.hasBufferedJump
+        && capabilities.canGroundJump
+        && !frame.jumpPressed
+      ) {
+        resolutionInputFrames ??= this.config.participantIds.map((id) => frameById.get(id));
+        resolutionInputFrames[index] = Object.freeze({ ...frame, jumpPressed: true });
+      }
+    }
+    return Object.freeze({
+      additionalCandidates: Object.freeze(additionalCandidates),
+      resolutionInputFrames: resolutionInputFrames
+        ? Object.freeze(resolutionInputFrames)
+        : null,
+    });
+  }
+
+  #completeMovement() {
+    const transitions = this.#movement.completeTick({
+      tick: this.#tick,
+      contacts: this.config.participantIds.map((participantId) => ({
+        participantId,
+        grounded: this.#physics.getCharacterState(participantId).grounded,
+      })),
+    });
+    for (const transition of transitions) {
+      if (transition.kind !== 'down-smash-landed') {
+        throw new RangeError(`未知 Movement transition ${transition.kind}。`);
+      }
+      this.#emit(EVENT.DOWN_SMASH_LANDED, {
+        participantId: transition.participantId,
+        action: transition.actionDefinitionId,
+      });
+    }
   }
 
   #isEquipmentPositionValid(position) {
@@ -576,7 +680,8 @@ export class MatchCore {
       ) {
         this.#physics.setMovementIntent(id, 0, 0);
       } else {
-        this.#physics.setMovementIntent(id, frame.moveX, frame.moveZ);
+        const intent = this.#movement.projectHorizontalIntent(id, frame.moveX, frame.moveZ);
+        this.#physics.setMovementIntent(id, intent.x, intent.z);
       }
     }
   }
@@ -639,6 +744,7 @@ export class MatchCore {
       participant.hitstunTicks = 0;
       participant.invulnerableTicks = 0;
       this.#rules.resetParticipant(participant.id);
+      this.#movement.resetParticipant(participant.id);
       this.#physics.resetCharacter(participant.id, {
         position: this.#holdingPosition(participant),
         velocity: { x: 0, y: 0, z: 0 },
@@ -700,6 +806,7 @@ export class MatchCore {
     participant.lastHitBy = null;
     participant.lastHitTick = -1;
     this.#rules.resetParticipant(participant.id);
+    this.#movement.resetParticipant(participant.id);
     this.#physics.resetCharacter(participant.id, {
       position: spawn,
       velocity: { x: 0, y: 0, z: 0 },
@@ -765,6 +872,12 @@ export class MatchCore {
 
   #createSnapshot(includeInternal) {
     this.#assertUsable();
+    // ActionAffordance is a public next-input projection, not authority state.
+    // Internal hash snapshots omit it entirely instead of recomputing derived data.
+    const ruleActors = includeInternal ? null : this.#createRuleActors();
+    const ruleActorById = includeInternal
+      ? null
+      : new Map(ruleActors.map((actor) => [actor.id, actor]));
     const snapshot = {
       schemaVersion: this.config.schemaVersion,
       physicsBackendVersion: this.config.physicsBackendVersion,
@@ -800,6 +913,28 @@ export class MatchCore {
             };
           })(),
           actionRule: this.#rules.getParticipantActionRule(id),
+          movement: (() => {
+            const movement = this.#movement.getSnapshot(id);
+            return {
+              ...movement,
+              grounded: physics.grounded,
+            };
+          })(),
+          ...(includeInternal ? {} : {
+            actionAffordance: (() => {
+              const actor = ruleActorById.get(id);
+              const capabilities = this.#movement.projectCapabilities(id, {
+                grounded: physics.grounded,
+                canMove: actor.canAct,
+              });
+              return cloneSnapshotData(this.#rules.getActionAffordance({
+                tick: this.#tick,
+                participantId: id,
+                actors: ruleActors,
+                additionalCandidates: this.#rules.getMovementActionCandidates(capabilities),
+              }));
+            })(),
+          }),
           equipment: (() => {
             const equipment = this.#rules.getHeldEquipment(id);
             return equipment ? {
@@ -892,13 +1027,28 @@ export class MatchCore {
   }
 
   destroy() {
-    if (this.#destroyed && !this.#rules && !this.#map && !this.#physics) return;
+    if (
+      this.#destroyed
+      && !this.#movement
+      && !this.#rules
+      && !this.#map
+      && !this.#physics
+    ) return;
     if (this.#stepping) throw new Error('step() 期间不能销毁 MatchCore。');
     this.#destroyed = true;
     this.#events.length = 0;
     this.#participants.clear();
     this.#characterRuntimes.clear();
     const errors = [];
+    if (this.#movement) {
+      try {
+        this.#movement.destroy();
+        this.#movement = null;
+        this.#movementPhysicsPort = null;
+      } catch (error) {
+        errors.push(normalizeThrownError(error, 'MatchCore movement 清理失败'));
+      }
+    }
     if (this.#rules) {
       try {
         this.#rules.destroy();

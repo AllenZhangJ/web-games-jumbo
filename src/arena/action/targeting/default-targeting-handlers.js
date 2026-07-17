@@ -6,6 +6,7 @@ import { TargetingRegistry } from './targeting-registry.js';
 
 const CONE_KEYS = new Set(['range', 'minimumFacingDot', 'maximumVerticalDifference']);
 const CAPSULE_KEYS = new Set(['range', 'radius', 'maximumVerticalDifference']);
+const EMPTY_KEYS = new Set();
 
 function assertActor(value, name) {
   if (
@@ -106,6 +107,13 @@ function resolveCapsule({ parameters, source, candidates }) {
 
 export function createDefaultTargetingRegistry() {
   return new TargetingRegistry([
+    {
+      kind: 'none',
+      validateParameters: (parameters, actionId) => {
+        assertKnownKeys(parameters, EMPTY_KEYS, `${actionId}.targeting.parameters`);
+      },
+      resolveTargets: () => [],
+    },
     {
       kind: 'facing-cone',
       validateParameters: validateCone,

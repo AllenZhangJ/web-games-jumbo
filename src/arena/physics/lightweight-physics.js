@@ -12,6 +12,10 @@ import {
 } from './physics-adapter.js';
 
 const CONTACT_EPSILON = 1e-7;
+const PHYSICS_CHARACTER_MUTATION_KIND = Object.freeze({
+  APPLY_IMPULSE: 'apply-impulse',
+  SET_VERTICAL_SPEED: 'set-vertical-speed',
+});
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -137,25 +141,93 @@ class LightweightPhysicsWorld {
   }
 
   applyImpulse(id, impulse) {
-    const body = this.#requireCharacter(id);
-    assertVector3(impulse, 'impulse');
-    const deltaX = impulse.x / body.mass;
-    const deltaY = impulse.y / body.mass;
-    const deltaZ = impulse.z / body.mass;
-    if (![deltaX, deltaY, deltaZ].every(Number.isFinite)) {
-      throw new RangeError('impulse 与角色质量组合后必须产生有限速度。');
+    return this.applyCharacterMutationBatch([{
+      kind: PHYSICS_CHARACTER_MUTATION_KIND.APPLY_IMPULSE,
+      participantId: id,
+      impulse,
+    }]);
+  }
+
+  applyCharacterMutationBatch(mutations) {
+    this.#assertUsable();
+    if (!Array.isArray(mutations)) {
+      throw new TypeError('physics character mutations 必须是数组。');
     }
-    const horizontal = limitHorizontalVelocity(
-      body.vx + deltaX,
-      body.vz + deltaZ,
-      this.#config.maxHorizontalSpeed,
-    );
-    body.vx = horizontal.x;
-    body.vy = clamp(body.vy + deltaY, -this.#config.maxVerticalSpeed, this.#config.maxVerticalSpeed);
-    body.vz = horizontal.z;
-    if (Math.abs(deltaY) > CONTACT_EPSILON) {
-      body.grounded = false;
-      body.supportSurfaceId = null;
+    const drafts = new Map();
+    const seenParticipants = new Set();
+    for (let index = 0; index < mutations.length; index += 1) {
+      const mutation = mutations[index];
+      if (!mutation || typeof mutation !== 'object') {
+        throw new TypeError(`physics character mutations[${index}] 必须是对象。`);
+      }
+      const participantId = mutation.participantId;
+      if (typeof participantId !== 'string' || participantId.length === 0) {
+        throw new TypeError(`physics character mutations[${index}].participantId 无效。`);
+      }
+      if (seenParticipants.has(participantId)) {
+        throw new RangeError(`physics character mutations 重复 ${participantId}。`);
+      }
+      seenParticipants.add(participantId);
+      const body = this.#requireCharacter(participantId);
+      const draft = {
+        body,
+        vx: body.vx,
+        vy: body.vy,
+        vz: body.vz,
+        grounded: body.grounded,
+        supportSurfaceId: body.supportSurfaceId,
+      };
+      if (mutation.kind === PHYSICS_CHARACTER_MUTATION_KIND.APPLY_IMPULSE) {
+        assertVector3(mutation.impulse, `physics character mutations[${index}].impulse`);
+        const deltaX = mutation.impulse.x / body.mass;
+        const deltaY = mutation.impulse.y / body.mass;
+        const deltaZ = mutation.impulse.z / body.mass;
+        if (![deltaX, deltaY, deltaZ].every(Number.isFinite)) {
+          throw new RangeError('impulse 与角色质量组合后必须产生有限速度。');
+        }
+        const horizontal = limitHorizontalVelocity(
+          body.vx + deltaX,
+          body.vz + deltaZ,
+          this.#config.maxHorizontalSpeed,
+        );
+        draft.vx = horizontal.x;
+        draft.vy = clamp(
+          body.vy + deltaY,
+          -this.#config.maxVerticalSpeed,
+          this.#config.maxVerticalSpeed,
+        );
+        draft.vz = horizontal.z;
+        if (Math.abs(deltaY) > CONTACT_EPSILON) {
+          draft.grounded = false;
+          draft.supportSurfaceId = null;
+        }
+      } else if (mutation.kind === PHYSICS_CHARACTER_MUTATION_KIND.SET_VERTICAL_SPEED) {
+        assertFiniteNumber(
+          mutation.speed,
+          `physics character mutations[${index}].speed`,
+        );
+        draft.vy = clamp(
+          mutation.speed,
+          -this.#config.maxVerticalSpeed,
+          this.#config.maxVerticalSpeed,
+        );
+        if (Math.abs(draft.vy) > CONTACT_EPSILON) {
+          draft.grounded = false;
+          draft.supportSurfaceId = null;
+        }
+      } else {
+        throw new RangeError(
+          `未知 physics character mutation ${String(mutation.kind)}。`,
+        );
+      }
+      drafts.set(participantId, draft);
+    }
+    for (const draft of drafts.values()) {
+      draft.body.vx = draft.vx;
+      draft.body.vy = draft.vy;
+      draft.body.vz = draft.vz;
+      draft.body.grounded = draft.grounded;
+      draft.body.supportSurfaceId = draft.supportSurfaceId;
     }
   }
 

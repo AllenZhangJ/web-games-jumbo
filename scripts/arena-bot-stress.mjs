@@ -8,6 +8,14 @@ import { createMatchAssignment } from '../src/arena/matchmaking/match-assignment
 import { replayMatch } from '../src/arena/replay.js';
 
 const CHARACTER_REGISTRY = createArenaV1CharacterRegistry();
+// Arena rewards displacement eliminations, not hit farming. A stronger bot can
+// finish a life in fewer resolved hits, so the gate combines match outcomes
+// only; hit rate remains a reported diagnostic and cannot inflate capability.
+const CAPABILITY_WEIGHTS = Object.freeze({
+  eliminations: 4,
+  scoreRate: 4,
+  lifePressure: 2,
+});
 
 function readPositiveInteger(name, fallback) {
   const prefix = `--${name}=`;
@@ -77,7 +85,11 @@ function finishStats(stats) {
     // Match duration is now partly a survival outcome. A per-tick denominator
     // would penalize a stronger bot for keeping the match alive, so the Stage4
     // gate uses per-match combat output and reports efficiency separately.
-    capabilityIndex: averageHits + averageEliminations * 2,
+    capabilityIndex:
+      averageEliminations * CAPABILITY_WEIGHTS.eliminations
+      + score / stats.matches * CAPABILITY_WEIGHTS.scoreRate
+      + (averagePlayerDeaths - averageBotDeaths) * CAPABILITY_WEIGHTS.lifePressure,
+    capabilityWeights: CAPABILITY_WEIGHTS,
     replayChecks: stats.replayChecks,
     uniqueFinalHashes: stats.hashes.size,
   };

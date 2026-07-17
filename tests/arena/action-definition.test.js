@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import {
   ACTION_DEFINITION_SCHEMA_VERSION,
   ACTION_EFFECT_TRIGGER,
+  ACTION_INPUT_CHANNEL,
   ACTION_INPUT_TRIGGER,
+  ACTION_LANE,
   createActionDefinition,
 } from '../../src/arena/action/action-definition.js';
 import { ActionRegistry } from '../../src/arena/action/action-registry.js';
@@ -13,7 +15,12 @@ function rawAction(id = 'test-action') {
     schemaVersion: ACTION_DEFINITION_SCHEMA_VERSION,
     id,
     kind: 'test',
-    input: { trigger: ACTION_INPUT_TRIGGER.PRESSED },
+    input: {
+      channel: ACTION_INPUT_CHANNEL.PRIMARY,
+      trigger: ACTION_INPUT_TRIGGER.PRESSED,
+    },
+    lane: ACTION_LANE.COMBAT,
+    conflictTags: ['upper-body'],
     timing: { windupTicks: 1, activeTicks: 2, recoveryTicks: 3, cooldownTicks: 4 },
     targeting: { kind: 'self', parameters: { radius: 1 } },
     effects: [{
@@ -36,10 +43,22 @@ test('ActionDefinition clones and deeply freezes serializable rule data', () => 
   assert.ok(Object.isFrozen(definition));
   assert.ok(Object.isFrozen(definition.timing));
   assert.ok(Object.isFrozen(definition.effects[0].parameters.labels));
+  assert.ok(Object.isFrozen(definition.conflictTags));
   assert.throws(() => { definition.timing.activeTicks = 99; }, TypeError);
 });
 
 test('ActionDefinition rejects schema drift and non-deterministic payloads', () => {
+  assert.throws(
+    () => createActionDefinition({
+      ...rawAction(),
+      input: { channel: ACTION_INPUT_CHANNEL.SLAM, trigger: ACTION_INPUT_TRIGGER.HELD },
+    }),
+    /slam 通道只支持 pressed/,
+  );
+  assert.throws(
+    () => createActionDefinition({ ...rawAction(), lane: 'cinematic' }),
+    /lane 不受支持/,
+  );
   assert.throws(
     () => createActionDefinition({ ...rawAction(), damage: 10 }),
     /不支持字段 damage/,

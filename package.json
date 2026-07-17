@@ -10,6 +10,7 @@
     "arena:poc:stress": "node scripts/arena-physics-poc.mjs --stress-ticks=100000",
     "arena:stress": "node --expose-gc scripts/arena-match-stress.mjs --matches=1000",
     "arena:map:stress": "node scripts/arena-map-stress.mjs --matches=100",
+    "arena:movement:stress": "node scripts/arena-movement-stress.mjs --matches=100",
     "arena:bot:stress": "node scripts/arena-bot-stress.mjs --matches=300",
     "dev": "vite --host 127.0.0.1",
     "dev:lan": "vite --host 0.0.0.0",

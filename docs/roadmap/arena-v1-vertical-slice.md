@@ -30,7 +30,7 @@
 | 9 | 平衡、可靠性与性能收敛 | 批量模拟、长稳、三端预算通过 |
 | 10 | 发布候选与冻结 | RC 验收、回滚证据、发行清单完成 |
 
-当前进度：阶段 0～5 已分阶段提交并推送。Stage 6 当前只完成 S6.1 候选：不可变 Character Definition/Registry/Runtime 边界、赛前内容快照、InputFrame/Replay V4、角色内容 hash 和 Stage5 中性兼容门禁。S6.2 Movement 至 S6.6 均未完成，当前 Stage6 候选也尚未提交。所有数值仍是后续灰盒与平衡的基线，不是发行冻结。三端开发者工具与目标真机证据仍属后续验收，不能由无渲染 Node 压测代替。
+当前进度：阶段 0～5 已分阶段提交并推送。Stage 6 的 S6.1 已提交；S6.2 Movement Rule/Core 当前候选已完成不可变 Movement Runtime/Serializer、走跑、coyote/buffer、普通跳、蹲跳、二段跳、下砸、多通道/lane Action 解析、原子 Physics Port、ActionAffordance、回放与压力门禁。S6.3 Bot 新动作至 S6.6 盲测冻结均未完成。所有数值仍是后续灰盒与平衡的基线，不是发行冻结；三端开发者工具与目标真机证据不能由无渲染 Node 压测代替。
 
 ## 阶段 0：文档、概念图与决策基线
 

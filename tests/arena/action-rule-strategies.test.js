@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import {
   ACTION_DEFINITION_SCHEMA_VERSION,
   ACTION_EFFECT_TRIGGER,
+  ACTION_INPUT_CHANNEL,
   ACTION_INPUT_TRIGGER,
+  ACTION_LANE,
 } from '../../src/arena/action/action-definition.js';
 import { ActionRegistry } from '../../src/arena/action/action-registry.js';
 import { ActionEffectRegistry } from '../../src/arena/action/effects/action-effect-registry.js';
@@ -115,7 +117,12 @@ test('strategy registries reject unsupported kinds and invalid specialized param
     schemaVersion: ACTION_DEFINITION_SCHEMA_VERSION,
     id: 'unsupported-action',
     kind: 'test',
-    input: { trigger: ACTION_INPUT_TRIGGER.PRESSED },
+    input: {
+      channel: ACTION_INPUT_CHANNEL.PRIMARY,
+      trigger: ACTION_INPUT_TRIGGER.PRESSED,
+    },
+    lane: ACTION_LANE.COMBAT,
+    conflictTags: [],
     timing: { windupTicks: 0, activeTicks: 1, recoveryTicks: 0, cooldownTicks: 0 },
     targeting: { kind: 'telepathy', parameters: {} },
     effects: [{

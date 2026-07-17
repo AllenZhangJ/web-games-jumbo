@@ -2,7 +2,7 @@
 
 一款以“左右选择数值运算 + 按住蓄力跳跃”为核心的竖屏小游戏。v3 保留现有数值策略、连续世界、真实落点、碰撞规则、测试和 Web/微信/抖音平台适配层，将原 Canvas 2D 表现层重构为 Three.js/WebGL2 三维场景。
 
-> **项目状态：** 当前可视产品仍是数值跳台 v3。Arena V1 已完成独立轻量物理、无渲染 1v1 MatchCore、隐藏本地机器人、三件装备、Stage 5 地图权威时间轴，以及 Stage 6 S6.1 的 Character/Input/Replay V4 候选合同；Movement、Arena 可视渲染与触控灰盒尚未接入。两条领域代码保持隔离。
+> **项目状态：** 当前可视产品仍是数值跳台 v3。Arena V1 已完成独立轻量物理、无渲染 1v1 MatchCore、隐藏本地机器人、三件装备、Stage 5 地图权威时间轴，以及 Stage 6 S6.1～S6.2 的 Character/Input/Replay V4 与 Movement Rule/Core 候选；Bot 新移动能力、Arena 可视渲染、触控灰盒和 A/B 盲测尚未接入。两条领域代码保持隔离。
 
 v3 的动作与构图参考开源项目 [`shenmaxg/web-jump`](https://github.com/shenmaxg/web-jump)，但不使用它的单路线玩法作为游戏规则，也不直接复用来源不明的品牌纹理。参考代码的 MIT 许可与归属见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
@@ -45,9 +45,10 @@ npm run arena:poc:stress
 npm run arena:poc:build
 npm run arena:stress
 npm run arena:map:stress
+npm run arena:movement:stress
 ```
 
-`arena:poc:build` 生成 Web、微信、抖音无渲染 MatchCore POC；`arena:stress` 连续运行 1,000 局；`arena:map:stress` 让 100 个 seed 完整跑满 120 秒地图时间轴。
+`arena:poc:build` 生成 Web、微信、抖音无渲染 MatchCore POC；`arena:stress` 连续运行 1,000 局；`arena:map:stress` 让 100 个 seed 完整跑满 120 秒地图时间轴；`arena:movement:stress` 用 100 个 seed 覆盖走跑、跳跃、蹲跳、二段跳、下砸、地图塌陷和回放一致性。
 
 Arena 阶段 3 机器人验证：
 

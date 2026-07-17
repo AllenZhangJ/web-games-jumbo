@@ -2,6 +2,7 @@ import { createArenaV1MapRegistry } from '../content/arena-v1-maps.js';
 import { createArenaV1CharacterRegistry } from '../content/arena-v1-characters.js';
 import { createCharacterRegistrySnapshot } from '../character/character-registry.js';
 import { createStage4ContentRegistries } from '../content/stage4-equipment.js';
+import { STAGE6_MOVEMENT_ACTION_DEFINITIONS } from '../content/stage6-movement-actions.js';
 import { assertKnownKeys } from '../rules/definition-utils.js';
 
 const REQUIRED_REGISTRY_METHODS = Object.freeze(['require', 'list']);
@@ -41,6 +42,7 @@ export function createArenaV1AuthorityContent(config, {
   }
   const { actionRegistry, equipmentRegistry } = createStage4ContentRegistries({
     basePush: config.basePush,
+    additionalActionDefinitions: STAGE6_MOVEMENT_ACTION_DEFINITIONS,
   });
   assertRegistry(mapRegistry, 'Arena V1 mapRegistry');
   const characterRegistrySnapshot = createCharacterRegistrySnapshot(characterRegistry);

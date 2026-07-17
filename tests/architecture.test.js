@@ -130,7 +130,7 @@ test('Arena MatchCore POC bundles and executes as a standalone mini-game IIFE', 
   try {
     Function(result.outputFiles[0].text)();
     assert.equal(globalThis.__arenaMatchPoc?.ok, true);
-    assert.equal(globalThis.__arenaMatchPoc?.backend, 'lightweight-v2');
+    assert.equal(globalThis.__arenaMatchPoc?.backend, 'lightweight-v3');
   } finally {
     if (previous === undefined) delete globalThis.__arenaMatchPoc;
     else globalThis.__arenaMatchPoc = previous;

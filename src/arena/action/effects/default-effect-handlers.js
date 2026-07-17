@@ -101,7 +101,10 @@ function validateInterrupt(parameters, actionId) {
   assertKnownKeys(parameters, EMPTY_KEYS, `${actionId}.interruptAction`);
 }
 
-export function createDefaultActionEffectRegistry() {
+export function createDefaultActionEffectRegistry(additionalHandlers = []) {
+  if (!Array.isArray(additionalHandlers)) {
+    throw new TypeError('additional ActionEffect handlers 必须是数组。');
+  }
   return new ActionEffectRegistry([
     {
       kind: 'apply-hitstun',
@@ -197,5 +200,6 @@ export function createDefaultActionEffectRegistry() {
         participantId: requireActor(context, 'target').id,
       }],
     },
+    ...additionalHandlers,
   ]);
 }

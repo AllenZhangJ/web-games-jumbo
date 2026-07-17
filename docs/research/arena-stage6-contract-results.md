@@ -1,5 +1,7 @@
 # Arena Stage 6 S6.1 合同门禁记录
 
+> 本文是 S6.1 提交时的历史证据，不随后续批次改写。S6.2 Movement 已在后续候选实现，最新证据见 [S6.2 Movement 门禁记录](arena-stage6-movement-results.md)。
+
 ## 结论
 
 2026-07-17 的当前未提交 Stage 6 工作区已通过 S6.1 本机 E1/E2 退出门。这只证明 Character 内容合同、InputFrame/Replay V4 和 Stage4/5 中性兼容可以作为 S6.2 输入，不证明 Movement、触控、灰盒表现、真机或 A/B 盲测已完成。
@@ -49,7 +51,7 @@
 
 ## 不能由本记录推断的事项
 
-- `arena:movement:stress`、`arena:input:fuzz` 和 `arena:session:soak` 尚未实现，因此 S6.2、S6.4 和 S6.5 不能关闭。
+- 在本记录对应的 S6.1 提交时，`arena:movement:stress`、`arena:input:fuzz` 和 `arena:session:soak` 均尚未实现，因此当时不能关闭 S6.2、S6.4 和 S6.5；后续状态以各批次门禁记录为准。
 - 构建成功不等于微信、抖音开发者工具或目标真机通过。
 - 无渲染回放不能证明动画/特效关闭后 hash 一致，该证据要等 Presentation 路径存在后采集。
 - 没有新手 A/B 盲测，不允许冻结 Mapper 胜者或宣称“10 秒学会”已验证。

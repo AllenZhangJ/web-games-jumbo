@@ -5,6 +5,13 @@ import { ActionRegistry } from '../../src/arena/action/action-registry.js';
 import { ACTION_RESOLUTION_KIND } from '../../src/arena/action/action-resolver.js';
 import { ARENA_ACTION_PHASE } from '../../src/arena/action/action-state.js';
 import {
+  ACTION_DEFINITION_SCHEMA_VERSION,
+  ACTION_EFFECT_TRIGGER,
+  ACTION_INPUT_CHANNEL,
+  ACTION_INPUT_TRIGGER,
+  ACTION_LANE,
+} from '../../src/arena/action/action-definition.js';
+import {
   STAGE4_ACTION_DEFINITIONS,
   STAGE4_ACTION_ID,
 } from '../../src/arena/content/stage4-equipment.js';
@@ -18,15 +25,49 @@ function createSystem() {
   });
 }
 
-function selected(participantId, actionDefinitionId, candidateId = `${participantId}-candidate`) {
+function selected(
+  participantId,
+  actionDefinitionId,
+  candidateId = `${participantId}-candidate`,
+  {
+    inputChannel = ACTION_INPUT_CHANNEL.PRIMARY,
+    lane = ACTION_LANE.COMBAT,
+  } = {},
+) {
   return {
     kind: ACTION_RESOLUTION_KIND.SELECTED,
     tick: 0,
     participantId,
+    inputChannel,
+    lane,
     reason: 'candidate-selected',
     candidateId,
     actionDefinitionId,
     source: 'test',
+  };
+}
+
+function testAction(id, {
+  inputChannel,
+  lane,
+  conflictTags = [],
+}) {
+  return {
+    schemaVersion: ACTION_DEFINITION_SCHEMA_VERSION,
+    id,
+    kind: 'test',
+    input: { channel: inputChannel, trigger: ACTION_INPUT_TRIGGER.PRESSED },
+    lane,
+    conflictTags,
+    timing: { windupTicks: 0, activeTicks: 2, recoveryTicks: 0, cooldownTicks: 0 },
+    targeting: { kind: 'self', parameters: {} },
+    effects: [{
+      id: `${id}-effect`,
+      kind: 'test',
+      trigger: ACTION_EFFECT_TRIGGER.ACTION_STARTED,
+      parameters: {},
+    }],
+    tags: [],
   };
 }
 
@@ -110,4 +151,119 @@ test('interrupt and reset clear action identity without exposing mutable state',
   assert.equal(system.getSnapshot('player-2').phase, ARENA_ACTION_PHASE.IDLE);
   system.reset('player-1');
   assert.throws(() => system.getSnapshot('unknown'), /未知 action participant/);
+});
+
+test('combat and locomotion lanes advance independently from one participant', () => {
+  const jump = testAction('jump', {
+    inputChannel: ACTION_INPUT_CHANNEL.JUMP,
+    lane: ACTION_LANE.LOCOMOTION,
+  });
+  const system = new ActionExecutionSystem({
+    participantIds: PARTICIPANTS,
+    actionRegistry: new ActionRegistry([...STAGE4_ACTION_DEFINITIONS, jump]),
+  });
+  const starts = system.start([
+    selected('player-1', STAGE4_ACTION_ID.BASE_PUSH, 'attack', {
+      inputChannel: ACTION_INPUT_CHANNEL.PRIMARY,
+      lane: ACTION_LANE.COMBAT,
+    }),
+    selected('player-1', jump.id, 'jump', {
+      inputChannel: ACTION_INPUT_CHANNEL.JUMP,
+      lane: ACTION_LANE.LOCOMOTION,
+    }),
+  ]);
+  assert.deepEqual(starts.map(({ lane }) => lane), [ACTION_LANE.COMBAT, ACTION_LANE.LOCOMOTION]);
+  assert.equal(
+    system.getLaneSnapshot('player-1', ACTION_LANE.LOCOMOTION).phase,
+    ARENA_ACTION_PHASE.ACTIVE,
+  );
+  assert.deepEqual(system.getConstraints('player-1').occupiedLanes, [
+    ACTION_LANE.COMBAT,
+    ACTION_LANE.LOCOMOTION,
+  ]);
+  assert.deepEqual(
+    system.listAllSnapshots()
+      .filter(({ participantId, phase }) => (
+        participantId === 'player-1' && phase !== ARENA_ACTION_PHASE.IDLE
+      ))
+      .map(({ lane }) => lane),
+    [ACTION_LANE.COMBAT, ACTION_LANE.LOCOMOTION],
+  );
+  assert.deepEqual(
+    system.interrupt(['player-1']).map(({ lane }) => lane),
+    [ACTION_LANE.COMBAT, ACTION_LANE.LOCOMOTION],
+  );
+});
+
+test('multi-lane start validates input uniqueness and conflicts before mutating any lane', () => {
+  const primaryLocomotion = testAction('primary-locomotion', {
+    inputChannel: ACTION_INPUT_CHANNEL.PRIMARY,
+    lane: ACTION_LANE.LOCOMOTION,
+  });
+  const attack = testAction('full-body-attack', {
+    inputChannel: ACTION_INPUT_CHANNEL.PRIMARY,
+    lane: ACTION_LANE.COMBAT,
+    conflictTags: ['full-body'],
+  });
+  const jump = testAction('full-body-jump', {
+    inputChannel: ACTION_INPUT_CHANNEL.JUMP,
+    lane: ACTION_LANE.LOCOMOTION,
+    conflictTags: ['full-body'],
+  });
+  const system = new ActionExecutionSystem({
+    participantIds: PARTICIPANTS,
+    actionRegistry: new ActionRegistry([primaryLocomotion, attack, jump]),
+  });
+  assert.throws(() => system.start([
+    selected('player-1', attack.id, 'attack'),
+    selected('player-1', primaryLocomotion.id, 'locomotion', {
+      inputChannel: ACTION_INPUT_CHANNEL.PRIMARY,
+      lane: ACTION_LANE.LOCOMOTION,
+    }),
+  ]), /重复 action start participant\/input/);
+  assert.deepEqual(system.getConstraints('player-1').occupiedLanes, []);
+
+  assert.throws(() => system.start([
+    selected('player-1', attack.id, 'attack'),
+    selected('player-1', jump.id, 'jump', {
+      inputChannel: ACTION_INPUT_CHANNEL.JUMP,
+      lane: ACTION_LANE.LOCOMOTION,
+    }),
+  ]), /conflictTags 冲突/);
+  assert.deepEqual(system.getConstraints('player-1').occupiedLanes, []);
+
+  assert.throws(() => system.start([
+    selected('player-1', jump.id, 'wrong-lane', {
+      inputChannel: ACTION_INPUT_CHANNEL.JUMP,
+      lane: ACTION_LANE.COMBAT,
+    }),
+  ]), /lane\/input 与定义不一致/);
+  assert.deepEqual(system.getConstraints('player-1').occupiedLanes, []);
+});
+
+test('next-tick constraints project the same advance transition without mutating action state', () => {
+  const jump = {
+    ...testAction('single-tick-jump', {
+      inputChannel: ACTION_INPUT_CHANNEL.JUMP,
+      lane: ACTION_LANE.LOCOMOTION,
+    }),
+    timing: { windupTicks: 0, activeTicks: 1, recoveryTicks: 0, cooldownTicks: 0 },
+  };
+  const system = new ActionExecutionSystem({
+    participantIds: PARTICIPANTS,
+    actionRegistry: new ActionRegistry([...STAGE4_ACTION_DEFINITIONS, jump]),
+  });
+  system.start([
+    selected('player-1', jump.id, 'jump', {
+      inputChannel: ACTION_INPUT_CHANNEL.JUMP,
+      lane: ACTION_LANE.LOCOMOTION,
+    }),
+  ]);
+  const before = system.getLaneSnapshot('player-1', ACTION_LANE.LOCOMOTION);
+  assert.deepEqual(system.getConstraints('player-1').occupiedLanes, [ACTION_LANE.LOCOMOTION]);
+  assert.deepEqual(system.getNextTickConstraints('player-1').occupiedLanes, []);
+  assert.deepEqual(system.getLaneSnapshot('player-1', ACTION_LANE.LOCOMOTION), before);
+
+  system.start([selected('player-2', STAGE4_ACTION_ID.BASE_PUSH)]);
+  assert.deepEqual(system.getNextTickConstraints('player-2').occupiedLanes, [ACTION_LANE.COMBAT]);
 });

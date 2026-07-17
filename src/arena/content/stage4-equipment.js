@@ -1,7 +1,9 @@
 import {
   ACTION_DEFINITION_SCHEMA_VERSION,
   ACTION_EFFECT_TRIGGER,
+  ACTION_INPUT_CHANNEL,
   ACTION_INPUT_TRIGGER,
+  ACTION_LANE,
   createActionDefinition,
 } from '../action/action-definition.js';
 import { ActionRegistry } from '../action/action-registry.js';
@@ -48,7 +50,12 @@ export const STAGE4_INITIAL_EQUIPMENT_SPAWNS = Object.freeze([
 function action(value) {
   return createActionDefinition({
     schemaVersion: ACTION_DEFINITION_SCHEMA_VERSION,
-    input: { trigger: ACTION_INPUT_TRIGGER.PRESSED },
+    input: {
+      channel: ACTION_INPUT_CHANNEL.PRIMARY,
+      trigger: ACTION_INPUT_TRIGGER.PRESSED,
+    },
+    lane: ACTION_LANE.COMBAT,
+    conflictTags: [],
     tags: [],
     ...value,
   });
@@ -261,8 +268,17 @@ function createConfiguredActionDefinitions(basePush) {
   }));
 }
 
-export function createStage4ContentRegistries({ basePush = null } = {}) {
-  const actionRegistry = new ActionRegistry(createConfiguredActionDefinitions(basePush));
+export function createStage4ContentRegistries({
+  basePush = null,
+  additionalActionDefinitions = [],
+} = {}) {
+  if (!Array.isArray(additionalActionDefinitions)) {
+    throw new TypeError('additionalActionDefinitions 必须是数组。');
+  }
+  const actionRegistry = new ActionRegistry([
+    ...createConfiguredActionDefinitions(basePush),
+    ...additionalActionDefinitions,
+  ]);
   const equipmentRegistry = new EquipmentRegistry({
     definitions: STAGE4_EQUIPMENT_DEFINITIONS,
     actionRegistry,

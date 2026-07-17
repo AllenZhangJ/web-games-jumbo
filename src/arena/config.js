@@ -104,7 +104,7 @@ export const ARENA_MATCH_DEFAULTS = Object.freeze({
   // V4 replaces physical character tuning and action booleans with registered
   // CharacterDefinition references and semantic InputFrame fields.
   schemaVersion: 4,
-  physicsBackendVersion: 'lightweight-v2',
+  physicsBackendVersion: 'lightweight-v3',
   mapDefinitionId: createStaticMapDefinition(PHYSICS_POC_ARENA).id,
   participantIds: Object.freeze(['player-1', 'player-2']),
   livesPerParticipant: 3,
