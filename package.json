@@ -14,6 +14,7 @@
     "arena:bot:stress": "node scripts/arena-bot-stress.mjs --matches=300",
     "arena:input:fuzz": "node scripts/arena-input-fuzz.mjs --matches=40",
     "arena:session:soak": "node --expose-gc scripts/arena-presentation-session-soak.mjs --matches=100",
+    "arena:device:evidence": "node scripts/arena-device-evidence.mjs",
     "dev": "vite --host 127.0.0.1",
     "dev:lan": "vite --host 0.0.0.0",
     "preview:lan": "vite preview --host 0.0.0.0 --port 4173 --strictPort --outDir dist/web",

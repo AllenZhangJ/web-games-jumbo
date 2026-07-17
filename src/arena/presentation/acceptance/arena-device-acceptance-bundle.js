@@ -1,0 +1,184 @@
+import { createDeterministicDataHash } from '../../../shared/deterministic-data-hash.js';
+import {
+  assertKnownKeys,
+  assertNonEmptyString,
+  cloneFrozenData,
+} from '../../rules/definition-utils.js';
+import { createArenaDeviceAcceptanceDefinition } from './arena-device-acceptance-definition.js';
+import {
+  createArenaDeviceAcceptanceRecord,
+  isArenaDeviceAcceptanceRecordPassing,
+} from './arena-device-acceptance-record.js';
+
+export const ARENA_DEVICE_ACCEPTANCE_BUNDLE_SCHEMA_VERSION = 1;
+export const ARENA_DEVICE_ACCEPTANCE_REPORT_SCHEMA_VERSION = 1;
+
+export const ARENA_DEVICE_ACCEPTANCE_REPORT_STATUS = Object.freeze({
+  READY: 'ready',
+  FAILED: 'failed',
+  INCOMPLETE: 'incomplete',
+});
+
+const BUNDLE_KEYS = new Set([
+  'schemaVersion',
+  'definitionId',
+  'definitionHash',
+  'commit',
+  'buildId',
+  'createdAt',
+  'records',
+]);
+const GIT_COMMIT_PATTERN = /^[0-9a-f]{40}$/;
+const ISO_INSTANT_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+const MAXIMUM_RECORDS = 100;
+
+function isoInstant(value, name) {
+  if (typeof value !== 'string' || !ISO_INSTANT_PATTERN.test(value)) {
+    throw new TypeError(`${name} 必须是带毫秒的 UTC ISO-8601 时间。`);
+  }
+  const milliseconds = Date.parse(value);
+  if (!Number.isFinite(milliseconds) || new Date(milliseconds).toISOString() !== value) {
+    throw new RangeError(`${name} 不是有效 UTC 时间。`);
+  }
+  return value;
+}
+
+function compareText(left, right) {
+  if (left < right) return -1;
+  if (left > right) return 1;
+  return 0;
+}
+
+function boundedString(value, maximumLength, name) {
+  const text = assertNonEmptyString(value, name);
+  if (text.length > maximumLength) {
+    throw new RangeError(`${name} 不能超过 ${maximumLength} 个字符。`);
+  }
+  return text;
+}
+
+export function createArenaDeviceAcceptanceBundle(definitionValue, value) {
+  const definition = createArenaDeviceAcceptanceDefinition(definitionValue);
+  const source = cloneFrozenData(value, 'ArenaDeviceAcceptanceBundle');
+  assertKnownKeys(source, BUNDLE_KEYS, 'ArenaDeviceAcceptanceBundle');
+  if (source.schemaVersion !== ARENA_DEVICE_ACCEPTANCE_BUNDLE_SCHEMA_VERSION) {
+    throw new RangeError(
+      `不支持 ArenaDeviceAcceptanceBundle schema ${String(source.schemaVersion)}。`,
+    );
+  }
+  if (source.definitionId !== definition.id) {
+    throw new RangeError('ArenaDeviceAcceptanceBundle.definitionId 与当前定义不一致。');
+  }
+  const definitionHash = definition.getContentHash();
+  if (source.definitionHash !== definitionHash) {
+    throw new RangeError('ArenaDeviceAcceptanceBundle.definitionHash 与当前定义不一致。');
+  }
+  if (typeof source.commit !== 'string' || !GIT_COMMIT_PATTERN.test(source.commit)) {
+    throw new TypeError('ArenaDeviceAcceptanceBundle.commit 必须是 40 位小写 Git commit。');
+  }
+  const buildId = boundedString(source.buildId, 128, 'ArenaDeviceAcceptanceBundle.buildId');
+  if (!Array.isArray(source.records)) {
+    throw new TypeError('ArenaDeviceAcceptanceBundle.records 必须是数组。');
+  }
+  if (source.records.length > MAXIMUM_RECORDS) {
+    throw new RangeError(`ArenaDeviceAcceptanceBundle.records 不能超过 ${MAXIMUM_RECORDS} 项。`);
+  }
+  const recordIds = new Set();
+  const runIds = new Set();
+  const artifactPaths = new Map();
+  const records = source.records.map((value, index) => {
+    const record = createArenaDeviceAcceptanceRecord(definition, value);
+    if (record.commit !== source.commit) {
+      throw new RangeError(`records[${index}].commit 与 bundle commit 不一致。`);
+    }
+    if (record.buildId !== buildId) {
+      throw new RangeError(`records[${index}].buildId 与 bundle buildId 不一致。`);
+    }
+    if (recordIds.has(record.recordId)) {
+      throw new RangeError(`重复的设备证据 recordId ${record.recordId}。`);
+    }
+    if (runIds.has(record.runId)) {
+      throw new RangeError(`重复的设备证据 runId ${record.runId}。`);
+    }
+    recordIds.add(record.recordId);
+    runIds.add(record.runId);
+    for (const artifact of record.artifacts) {
+      const previousRunId = artifactPaths.get(artifact.path);
+      if (previousRunId !== undefined) {
+        throw new RangeError(
+          `artifact 路径 ${artifact.path} 被 ${previousRunId} 与 ${record.runId} 重复使用。`,
+        );
+      }
+      artifactPaths.set(artifact.path, record.runId);
+    }
+    return record;
+  });
+  const createdAt = isoInstant(source.createdAt, 'ArenaDeviceAcceptanceBundle.createdAt');
+  if (records.some((record) => record.performedAt > createdAt)) {
+    throw new RangeError('ArenaDeviceAcceptanceBundle.createdAt 不能早于设备运行记录。');
+  }
+  return Object.freeze({
+    schemaVersion: ARENA_DEVICE_ACCEPTANCE_BUNDLE_SCHEMA_VERSION,
+    definitionId: definition.id,
+    definitionHash,
+    commit: source.commit,
+    buildId,
+    createdAt,
+    records: Object.freeze(records.sort((left, right) => compareText(left.recordId, right.recordId))),
+  });
+}
+
+export function createArenaDeviceAcceptanceReport(definitionValue, bundleValue) {
+  const definition = createArenaDeviceAcceptanceDefinition(definitionValue);
+  const bundle = createArenaDeviceAcceptanceBundle(definition, bundleValue);
+  const targets = definition.targets.map((target) => {
+    const records = bundle.records.filter(({ targetId }) => targetId === target.id);
+    const passingRuns = records.filter(isArenaDeviceAcceptanceRecordPassing).length;
+    const failingRuns = records.length - passingRuns;
+    let status = ARENA_DEVICE_ACCEPTANCE_REPORT_STATUS.INCOMPLETE;
+    if (failingRuns > 0) {
+      status = ARENA_DEVICE_ACCEPTANCE_REPORT_STATUS.FAILED;
+    } else if (passingRuns >= target.minimumPassingRuns) {
+      status = ARENA_DEVICE_ACCEPTANCE_REPORT_STATUS.READY;
+    }
+    return Object.freeze({
+      targetId: target.id,
+      platform: target.platform,
+      executionSurface: target.executionSurface,
+      minimumPassingRuns: target.minimumPassingRuns,
+      passingRuns,
+      failingRuns,
+      status,
+    });
+  });
+  const missingTargetIds = targets
+    .filter(({ status }) => status === ARENA_DEVICE_ACCEPTANCE_REPORT_STATUS.INCOMPLETE)
+    .map(({ targetId }) => targetId);
+  const failingTargetIds = targets
+    .filter(({ status }) => status === ARENA_DEVICE_ACCEPTANCE_REPORT_STATUS.FAILED)
+    .map(({ targetId }) => targetId);
+  const status = targets.every(({ status: targetStatus }) => (
+    targetStatus === ARENA_DEVICE_ACCEPTANCE_REPORT_STATUS.READY
+  ))
+    ? ARENA_DEVICE_ACCEPTANCE_REPORT_STATUS.READY
+    : failingTargetIds.length > 0
+      ? ARENA_DEVICE_ACCEPTANCE_REPORT_STATUS.FAILED
+      : ARENA_DEVICE_ACCEPTANCE_REPORT_STATUS.INCOMPLETE;
+  return cloneFrozenData({
+    schemaVersion: ARENA_DEVICE_ACCEPTANCE_REPORT_SCHEMA_VERSION,
+    definitionId: definition.id,
+    definitionHash: definition.getContentHash(),
+    commit: bundle.commit,
+    buildId: bundle.buildId,
+    sourceDataHash: createDeterministicDataHash(bundle, 'ArenaDeviceAcceptanceReport bundle'),
+    status,
+    recordCount: bundle.records.length,
+    passingRunCount: bundle.records.filter(isArenaDeviceAcceptanceRecordPassing).length,
+    failingRunCount: bundle.records.filter((record) => (
+      !isArenaDeviceAcceptanceRecordPassing(record)
+    )).length,
+    missingTargetIds,
+    failingTargetIds,
+    targets,
+  }, 'ArenaDeviceAcceptanceReport');
+}

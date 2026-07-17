@@ -152,6 +152,21 @@ test('Arena input pilot remains an optional headless presentation adapter', asyn
   }
 });
 
+test('Arena device acceptance remains pure evidence data behind a Node-only CLI', async () => {
+  const acceptanceFiles = await listJavaScript(
+    path.resolve('src/arena/presentation/acceptance'),
+  );
+  assert.ok(acceptanceFiles.length > 0);
+  for (const file of acceptanceFiles) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /(?:from\s+['"](?:node:|three|[^'"]*(?:renderer|session|platform|entry)[^'"]*)['"]|Date\.now|Math\.random|\bperformance\b|\b(?:window|document|navigator)\b|\b(?:tt|wx)\s*\.)/,
+      `${file} 应保持为无宿主、无渲染的设备证据数据层。`,
+    );
+  }
+});
+
 test('Arena MatchCore POC bundles and executes as a standalone mini-game IIFE', async () => {
   const result = await esbuild({
     entryPoints: [path.resolve('src/arena/entry/match-core-poc.js')],

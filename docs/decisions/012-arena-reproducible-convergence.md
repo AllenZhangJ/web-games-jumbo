@@ -22,6 +22,8 @@ Stage 9 需要同时收敛对局时长、三档隐藏机器人、装备争夺、
 
 低档设备可通过版本化 `PresentationQualityDefinition` 降低阴影、轮廓、粒子、拖尾、分辨率与表现帧率；Core 始终保持 60 Hz，必要规则提示不能被删除。
 
+设备证据沿用 [ADR-014](014-arena-versioned-device-acceptance-evidence.md) 已接受的 Definition/Record/Bundle/Report、完整 commit/build 绑定和内容寻址附件边界。Stage 9 通过新 Definition 增加低档/主流机与性能指标，不修改 Stage 6 记录，也不将墙钟或设备信息写入 Core/Replay。
+
 ## GitHub 借鉴边界
 
 - Three.js 的 `renderer.info` 作为 draw call、program、geometry、texture 等基础数据源，版本与固定参考见 ADR-010。
