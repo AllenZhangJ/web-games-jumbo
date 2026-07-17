@@ -93,3 +93,5 @@ npm run arena:product:stress
 - 角色选择尚未传入双方冻结内容池，当前比赛仍使用现有 Authority Content；该连接属于 S8.4。
 - `preparing` 已有显式边界，但 Stage 7 正式资产加载和失败降级尚未接入。
 - 尚未完成 Stage 8 首装/旧存档/容量失败三端设备证据；属于 S8.5。
+
+> 后续状态：S8.3 已补齐奖励事务，S8.4 已补齐双方冻结内容池、Replay V5 与快捷重赛；本文件保留 S8.2 提交时的历史证据。最新结果见 [S8.4 结果记录](arena-stage8-content-pool-results.md)。

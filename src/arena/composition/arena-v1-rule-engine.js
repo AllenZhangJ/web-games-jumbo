@@ -20,6 +20,7 @@ export function createArenaV1RuleEngine({ participantIds, config, authorityConte
     : createStage4ContentRegistries({
       basePush: config.basePush,
       additionalActionDefinitions: STAGE6_MOVEMENT_ACTION_DEFINITIONS,
+      equipmentDefinitionIds: config.contentSelection?.equipmentDefinitionIds ?? null,
     });
   return new ArenaRuleEngine({
     participantIds,

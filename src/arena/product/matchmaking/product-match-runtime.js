@@ -1,4 +1,5 @@
 import { cloneFrozenData } from '../../rules/definition-utils.js';
+import { createMatchContentPublicView } from '../../content/match-content-selection.js';
 import {
   assertProductMatchSeed,
   createProductMatchResult,
@@ -40,6 +41,7 @@ export class ProductMatchRuntime {
   #session;
   #matchSeed;
   #opponent;
+  #content;
   #state;
   #pauseRequested;
   #stepping;
@@ -50,6 +52,7 @@ export class ProductMatchRuntime {
     this.#session = localMatch.session;
     this.#matchSeed = assertProductMatchSeed(localMatch.matchSeed);
     this.#opponent = createProductPublicOpponent(localMatch.opponent);
+    this.#content = createMatchContentPublicView(localMatch.content);
     this.#state = PRODUCT_MATCH_RUNTIME_STATE.CREATED;
     this.#pauseRequested = false;
     this.#stepping = false;
@@ -122,6 +125,7 @@ export class ProductMatchRuntime {
         this.#result = createProductMatchResult({
           matchSeed: this.#matchSeed,
           opponent: this.#opponent,
+          content: this.#content,
           replay: this.#session.exportReplay(),
         });
         this.#state = PRODUCT_MATCH_RUNTIME_STATE.ENDED;
@@ -149,6 +153,7 @@ export class ProductMatchRuntime {
     return Object.freeze({
       matchSeed: this.#matchSeed,
       opponent: this.#opponent,
+      content: this.#content,
     });
   }
 
@@ -166,6 +171,7 @@ export class ProductMatchRuntime {
     this.#session.destroy();
     this.#session = null;
     this.#opponent = null;
+    this.#content = null;
     this.#result = null;
     this.#pauseRequested = true;
     this.#state = PRODUCT_MATCH_RUNTIME_STATE.DESTROYED;

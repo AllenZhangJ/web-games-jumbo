@@ -989,6 +989,7 @@ export class MatchCore {
         participantCharacters: this.config.participantCharacters.map((assignment) => ({
           ...assignment,
         })),
+        contentSelection: this.config.contentSelection,
         mapDefinitionId: this.config.mapDefinitionId,
         equipment: {
           initialSpawns: this.config.equipment.initialSpawns.map((spawn) => ({

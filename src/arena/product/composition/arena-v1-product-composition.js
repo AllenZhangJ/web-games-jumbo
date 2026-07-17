@@ -5,6 +5,13 @@ import {
 } from '../../lifecycle-error.js';
 import { ARENA_V1_PLAYER_PROFILE_DEFINITION } from '../content/arena-v1-player-profile-definition.js';
 import {
+  ARENA_V1_CONTENT_REPLACEMENT_REGISTRY,
+  ARENA_V1_MATCH_CONTENT_CATALOG,
+  ARENA_V1_MATCH_CONTENT_POOL_DEFINITION,
+} from '../content/arena-v1-match-content.js';
+import { MatchContentPoolResolver } from '../content-pool/match-content-pool-resolver.js';
+import { ProfileContentPoolProvider } from '../content-pool/profile-content-pool-provider.js';
+import {
   ARENA_V1_MATCH_REWARD_ID,
   ARENA_V1_PROGRESSION_REGISTRY,
 } from '../content/arena-v1-progression-content.js';
@@ -75,8 +82,19 @@ export function createArenaV1ProductSession({
     });
     repository = null;
 
+    const contentPoolResolver = new MatchContentPoolResolver({
+      definition: ARENA_V1_MATCH_CONTENT_POOL_DEFINITION,
+      catalog: ARENA_V1_MATCH_CONTENT_CATALOG,
+      replacementRegistry: ARENA_V1_CONTENT_REPLACEMENT_REGISTRY,
+      profileDefinition: ARENA_V1_PLAYER_PROFILE_DEFINITION,
+    });
+    const contentPoolProvider = new ProfileContentPoolProvider({
+      profileService,
+      resolver: contentPoolResolver,
+    });
     const quickMatchService = new QuickMatchService({
       seedSource,
+      contentPoolProvider,
       diagnosticSink: (detail) => report(sink, { type: 'match-assignment', detail }),
     });
     const matchFactory = new QuickMatchProductFactory({ quickMatchService, matchConfig });

@@ -106,19 +106,19 @@ test('tampered replay config or recorded result is rejected even without changin
   core.destroy();
 });
 
-test('Replay V4 rejects V3 and legacy action fields instead of silently adapting them', () => {
+test('Replay V5 rejects V4 and legacy action fields instead of silently adapting them', () => {
   const core = createReplayCore();
   const replay = new HeadlessMatchRunner(core, { checkpointInterval: 20 })
     .runUntilEnded(scriptedFrames);
   const oldSchema = structuredClone(replay);
-  oldSchema.replaySchemaVersion = 3;
+  oldSchema.replaySchemaVersion = 4;
   let factoryCalls = 0;
   assert.throws(() => replayMatch(oldSchema, {
     coreFactory() {
       factoryCalls += 1;
       return createReplayCore();
     },
-  }), /不支持 replay schema 3/);
+  }), /不支持 replay schema 4/);
   assert.equal(factoryCalls, 0);
 
   const legacyInput = structuredClone(replay);

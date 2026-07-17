@@ -2,6 +2,11 @@ import { BotController } from '../ai/bot-controller.js';
 import { combineCleanupFailure, normalizeThrownError } from '../lifecycle-error.js';
 import { MatchCore } from '../match-core.js';
 import { createArenaV1MatchCore } from '../arena-v1-match-core.js';
+import {
+  createMatchContentPublicView,
+  createMatchContentSelection,
+} from '../content/match-content-selection.js';
+import { cloneFrozenData } from '../rules/definition-utils.js';
 import { LocalMatchSession } from '../session/local-match-session.js';
 import {
   copyMatchAssignmentDiagnostics,
@@ -47,6 +52,35 @@ function validateSession(session) {
   return session;
 }
 
+function validateContentPoolProvider(value) {
+  if (value !== null && (!value || typeof value.resolve !== 'function')) {
+    throw new TypeError('contentPoolProvider 必须实现 resolve()。');
+  }
+  return value;
+}
+
+function resolveContentPool(provider, matchSeed, config) {
+  if (provider === null) return Object.freeze({ config, content: null });
+  const baseConfig = cloneFrozenData(config, 'QuickMatch config');
+  if (Object.prototype.hasOwnProperty.call(baseConfig, 'contentSelection')) {
+    throw new RangeError(
+      '启用 contentPoolProvider 时不能由调用者覆盖 contentSelection。',
+    );
+  }
+  const pool = cloneFrozenData(
+    provider.resolve({ matchSeed }),
+    'QuickMatch frozen content pool',
+  );
+  if (pool.matchSeed !== matchSeed) {
+    throw new RangeError('QuickMatch content pool matchSeed 与匹配分配不一致。');
+  }
+  const selection = createMatchContentSelection(pool.selection);
+  return Object.freeze({
+    config: Object.freeze({ ...baseConfig, contentSelection: selection }),
+    content: createMatchContentPublicView(selection),
+  });
+}
+
 export class QuickMatchService {
   #seedSource;
   #coreFactory;
@@ -54,6 +88,7 @@ export class QuickMatchService {
   #sessionFactory;
   #diagnosticSink;
   #allowDifficultyOverride;
+  #contentPoolProvider;
 
   constructor({
     seedSource = null,
@@ -62,6 +97,7 @@ export class QuickMatchService {
     sessionFactory = (options) => new LocalMatchSession(options),
     diagnosticSink = null,
     allowDifficultyOverride = false,
+    contentPoolProvider = null,
   } = {}) {
     if (seedSource !== null && typeof seedSource.nextSeed !== 'function') {
       throw new TypeError('seedSource 必须实现 nextSeed()。');
@@ -75,6 +111,7 @@ export class QuickMatchService {
     this.#sessionFactory = validateFactory(sessionFactory, 'sessionFactory');
     this.#diagnosticSink = diagnosticSink;
     this.#allowDifficultyOverride = Boolean(allowDifficultyOverride);
+    this.#contentPoolProvider = validateContentPoolProvider(contentPoolProvider);
   }
 
   #nextSeed(explicitSeed) {
@@ -99,7 +136,15 @@ export class QuickMatchService {
     let controller = null;
     let session = null;
     try {
-      core = this.#coreFactory({ seed: assignment.matchSeed, config });
+      const resolvedContent = resolveContentPool(
+        this.#contentPoolProvider,
+        assignment.matchSeed,
+        config,
+      );
+      core = this.#coreFactory({
+        seed: assignment.matchSeed,
+        config: resolvedContent.config,
+      });
       if (!(core instanceof MatchCore)) throw new TypeError('coreFactory 必须返回 MatchCore。');
       const botCharacter = core.getCharacterDefinition('player-2');
       controller = this.#botControllerFactory({
@@ -131,6 +176,7 @@ export class QuickMatchService {
       return Object.freeze({
         matchSeed: assignment.matchSeed,
         opponent: Object.freeze({ ...assignment.opponent }),
+        content: resolvedContent.content,
         session,
       });
     } catch (error) {

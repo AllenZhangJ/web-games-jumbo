@@ -8,6 +8,7 @@ import { createPlayerProfile } from '../../../src/arena/product/profile/player-p
 import { PlayerProfilePersistenceError } from '../../../src/arena/product/profile/player-profile-service.js';
 import { ProductSessionStateMachine } from '../../../src/arena/product/state/product-session-state-machine.js';
 import { PRODUCT_SESSION_STATE } from '../../../src/arena/product/state/product-session-transition-definition.js';
+import { TEST_MATCH_CONTENT_PUBLIC_VIEW } from './stage8-test-content.js';
 
 function clone(value) {
   return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
@@ -52,6 +53,7 @@ function fakeRuntime({ endAfterSteps = 1, destroyFailures = 0 } = {}) {
           portraitKey: 'portrait-42',
           appearanceKey: 'appearance-42',
         }),
+        content: TEST_MATCH_CONTENT_PUBLIC_VIEW,
       });
     },
     getResult() { return result; },
@@ -319,6 +321,97 @@ test('reward and unlock states survive background lifecycle without losing prese
   controller.dismissUnlocks();
   assert.equal(controller.state, PRODUCT_SESSION_STATE.READY);
   assert.equal(controller.getSnapshot().reward, null);
+  controller.destroy();
+});
+
+test('reward rematch deduplicates rapid clicks, preserves reward on failure and clears it on prepare success', async () => {
+  const profileService = profileServiceHarness();
+  const firstRuntime = fakeRuntime();
+  const secondRuntime = fakeRuntime();
+  const pendingSecond = deferred();
+  let createCalls = 0;
+  const { controller } = controllerHarness({
+    profileService,
+    matchFactory: {
+      create() {
+        createCalls += 1;
+        if (createCalls === 1) return firstRuntime;
+        if (createCalls === 2) throw new Error('temporary rematch prepare failure');
+        return pendingSecond.promise;
+      },
+    },
+  });
+  await controller.boot();
+  controller.openCharacterSelect();
+  await controller.requestMatch();
+  controller.beginMatch();
+  controller.stepMatch();
+  const rewarded = controller.commitReward();
+  const originalReward = rewarded.reward;
+  assert.equal(firstRuntime.destroys, 1);
+
+  const failed = await controller.requestRematch();
+  assert.equal(failed.state.state, PRODUCT_SESSION_STATE.RECOVERABLE_ERROR);
+  assert.equal(failed.state.recoveryState, PRODUCT_SESSION_STATE.REWARD);
+  assert.equal(failed.reward, originalReward);
+  await controller.retry();
+  assert.equal(controller.state, PRODUCT_SESSION_STATE.REWARD);
+  assert.equal(controller.getSnapshot().reward, originalReward);
+
+  const firstRequest = controller.requestRematch();
+  const duplicateRequest = controller.requestRematch();
+  assert.equal(firstRequest, duplicateRequest);
+  assert.equal(controller.getSnapshot().reward, originalReward);
+  controller.hide();
+  pendingSecond.resolve(secondRuntime);
+  await firstRequest;
+  assert.equal(createCalls, 3);
+  assert.equal(controller.getSnapshot().state.state, PRODUCT_SESSION_STATE.SUSPENDED);
+  assert.equal(controller.getSnapshot().state.activeState, PRODUCT_SESSION_STATE.PREPARING);
+  assert.equal(controller.getSnapshot().reward, null);
+  assert.equal(secondRuntime.paused, true);
+  controller.show();
+  controller.beginMatch();
+  controller.stepMatch();
+  controller.commitReward();
+  controller.continueReward();
+  controller.destroy();
+});
+
+test('unlock rematch failure returns to unlock with the exact presentation snapshot', async () => {
+  const profileService = profileServiceHarness();
+  let createCalls = 0;
+  const { controller } = controllerHarness({
+    profileService,
+    matchFactory: {
+      create() {
+        createCalls += 1;
+        if (createCalls === 1) return fakeRuntime();
+        throw new Error('unlock rematch unavailable');
+      },
+    },
+    rewardCommitter: {
+      commit: (result) => rewardOutcome(profileService, result, {
+        appearanceIds: ['paper-cape'],
+      }),
+    },
+  });
+  await controller.boot();
+  controller.openCharacterSelect();
+  await controller.requestMatch();
+  controller.beginMatch();
+  controller.stepMatch();
+  controller.commitReward();
+  controller.continueReward();
+  const unlockSnapshot = controller.getSnapshot().reward;
+  assert.equal(controller.state, PRODUCT_SESSION_STATE.UNLOCK);
+  const failed = await controller.requestRematch();
+  assert.equal(failed.state.recoveryState, PRODUCT_SESSION_STATE.UNLOCK);
+  assert.equal(failed.reward, unlockSnapshot);
+  await controller.retry();
+  assert.equal(controller.state, PRODUCT_SESSION_STATE.UNLOCK);
+  assert.equal(controller.getSnapshot().reward, unlockSnapshot);
+  controller.dismissUnlocks();
   controller.destroy();
 });
 

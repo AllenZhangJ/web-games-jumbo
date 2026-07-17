@@ -239,6 +239,27 @@ test('Arena Stage 8 product sublayers preserve state/profile/match/composition d
       `${file} 不应持有产品组合根或直接写入 Repository。`,
     );
   }
+
+  const contentPoolFiles = await listJavaScript(
+    path.resolve('src/arena/product/content-pool'),
+  );
+  for (const file of contentPoolFiles) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /(?:\/product\/)?(?:composition|persistence|matchmaking)\/|\/session\/|\/presentation\//,
+      `${file} 不应反向持有产品组合、持久化、匹配运行时或表现层。`,
+    );
+  }
+  const authoritySelection = await readFile(
+    path.resolve('src/arena/content/match-content-selection.js'),
+    'utf8',
+  );
+  assert.doesNotMatch(
+    authoritySelection,
+    /(?:\/product\/|\/ai\/|\/session\/|\/matchmaking\/|\/presentation\/|Date\.now|Math\.random)/,
+    'MatchContentSelection 必须保持为无产品聚合、无 Bot、无宿主的权威数据合同。',
+  );
 });
 
 test('Arena MatchCore POC bundles and executes as a standalone mini-game IIFE', async () => {

@@ -5,7 +5,7 @@ import { createArenaV1MatchCore } from './arena-v1-match-core.js';
 import { cloneFrozenData } from './rules/definition-utils.js';
 import { createDeterministicDataHash } from '../shared/deterministic-data-hash.js';
 
-export const ARENA_REPLAY_SCHEMA_VERSION = 4;
+export const ARENA_REPLAY_SCHEMA_VERSION = 5;
 
 function copyInput(frame) {
   return {

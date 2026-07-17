@@ -114,7 +114,11 @@ export class ProductSessionController {
     return this.getSnapshot();
   }
 
-  #resetFailedMatchOrFatal(originalError, recoveryCode) {
+  #resetFailedMatchOrFatal(
+    originalError,
+    recoveryCode,
+    recoveryState = PRODUCT_SESSION_STATE.CHARACTER_SELECT,
+  ) {
     try {
       if (this.#matchCoordinator.state === PRODUCT_MATCH_COORDINATOR_STATE.FAILED) {
         this.#matchCoordinator.resetFailure();
@@ -133,7 +137,7 @@ export class ProductSessionController {
     }
     return this.#recover(
       recoveryCode,
-      PRODUCT_SESSION_STATE.CHARACTER_SELECT,
+      recoveryState,
       originalError,
     );
   }
@@ -229,15 +233,19 @@ export class ProductSessionController {
     }
   }
 
-  requestMatch() {
+  #prepareMatch({
+    sourceState,
+    requestEvent,
+    recoveryState,
+    clearRewardOnSuccess,
+  }) {
     const current = this.#stateMachine.getSnapshot();
     if (
       current.activeState === PRODUCT_SESSION_STATE.MATCHING
       && this.#matchRequestPromise
     ) return this.#matchRequestPromise;
-    this.#assertForeground(PRODUCT_SESSION_STATE.CHARACTER_SELECT);
-    this.#rewardSnapshot = null;
-    this.#stateMachine.dispatch(PRODUCT_SESSION_EVENT.MATCH_REQUESTED);
+    this.#assertForeground(sourceState);
+    this.#stateMachine.dispatch(requestEvent);
 
     let operation;
     operation = Promise.resolve()
@@ -252,6 +260,7 @@ export class ProductSessionController {
           this.#matchCoordinator.setPaused(true);
         }
         this.#stateMachine.dispatch(PRODUCT_SESSION_EVENT.MATCH_PREPARED);
+        if (clearRewardOnSuccess) this.#rewardSnapshot = null;
         this.#lastError = null;
         return this.getSnapshot();
       })
@@ -260,6 +269,7 @@ export class ProductSessionController {
         return this.#resetFailedMatchOrFatal(
           error,
           PRODUCT_SESSION_ERROR_CODE.MATCH_PREPARE_FAILED,
+          recoveryState,
         );
       })
       .finally(() => {
@@ -267,6 +277,37 @@ export class ProductSessionController {
       });
     this.#matchRequestPromise = operation;
     return operation;
+  }
+
+  requestMatch() {
+    return this.#prepareMatch({
+      sourceState: PRODUCT_SESSION_STATE.CHARACTER_SELECT,
+      requestEvent: PRODUCT_SESSION_EVENT.MATCH_REQUESTED,
+      recoveryState: PRODUCT_SESSION_STATE.CHARACTER_SELECT,
+      clearRewardOnSuccess: false,
+    });
+  }
+
+  requestRematch() {
+    const current = this.#stateMachine.getSnapshot();
+    if (
+      current.activeState === PRODUCT_SESSION_STATE.MATCHING
+      && this.#matchRequestPromise
+    ) return this.#matchRequestPromise;
+    if (
+      current.activeState !== PRODUCT_SESSION_STATE.REWARD
+      && current.activeState !== PRODUCT_SESSION_STATE.UNLOCK
+    ) {
+      throw new Error(
+        `ProductSession 只能从 reward/unlock 快捷重赛，当前为 ${current.activeState}。`,
+      );
+    }
+    return this.#prepareMatch({
+      sourceState: current.activeState,
+      requestEvent: PRODUCT_SESSION_EVENT.REMATCH_REQUESTED,
+      recoveryState: current.activeState,
+      clearRewardOnSuccess: true,
+    });
   }
 
   beginMatch() {

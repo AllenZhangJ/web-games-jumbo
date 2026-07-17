@@ -1,4 +1,5 @@
 import { createDeterministicDataHash } from '../../../shared/deterministic-data-hash.js';
+import { createMatchContentPublicView } from '../../content/match-content-selection.js';
 import {
   assertIntegerAtLeast,
   assertKnownKeys,
@@ -6,7 +7,7 @@ import {
   cloneFrozenData,
 } from '../../rules/definition-utils.js';
 
-export const PRODUCT_MATCH_RESULT_SCHEMA_VERSION = 1;
+export const PRODUCT_MATCH_RESULT_SCHEMA_VERSION = 2;
 
 const RESULT_KEYS = new Set(['winnerId', 'reason', 'isDraw', 'endedAtTick']);
 const AUTHORITY_IDENTITY_KEYS = new Set([
@@ -22,6 +23,7 @@ const PRODUCT_RESULT_KEYS = new Set([
   'matchSeed',
   'authorityIdentity',
   'authorityResult',
+  'content',
   'opponent',
   'authorityHash',
 ]);
@@ -83,6 +85,7 @@ export function createProductPublicMatchInfo(value) {
   return Object.freeze({
     matchSeed: assertProductMatchSeed(source.matchSeed),
     opponent: createProductPublicOpponent(source.opponent),
+    content: createMatchContentPublicView(source.content),
   });
 }
 
@@ -110,7 +113,12 @@ function authorityResult(value) {
   });
 }
 
-export function createProductMatchResult({ matchSeed, opponent, replay }) {
+function sameContent(left, right) {
+  return left.contentHash === right.contentHash
+    && JSON.stringify(left) === JSON.stringify(right);
+}
+
+export function createProductMatchResult({ matchSeed, opponent, content, replay }) {
   if (!replay || typeof replay !== 'object') {
     throw new TypeError('ProductMatchResult 需要完整 replay。');
   }
@@ -120,6 +128,11 @@ export function createProductMatchResult({ matchSeed, opponent, replay }) {
     throw new RangeError('ProductMatch match seed 与 replay 不一致。');
   }
   const copiedOpponent = createProductPublicOpponent(opponent);
+  const copiedContent = createMatchContentPublicView(content);
+  const replayContent = createMatchContentPublicView(replay.config?.contentSelection);
+  if (!sameContent(copiedContent, replayContent)) {
+    throw new RangeError('ProductMatch content 与 replay 权威配置不一致。');
+  }
   const copiedResult = authorityResult(replay.result);
   const identity = authorityIdentity({
     replaySchemaVersion: positiveInteger(
@@ -140,6 +153,7 @@ export function createProductMatchResult({ matchSeed, opponent, replay }) {
     matchSeed: normalizedMatchSeed,
     authorityIdentity: identity,
     authorityResult: copiedResult,
+    content: copiedContent,
   });
   return validateProductMatchResult({
     ...authority,
@@ -159,6 +173,7 @@ export function validateProductMatchResult(value) {
     matchSeed: assertProductMatchSeed(source.matchSeed),
     authorityIdentity: authorityIdentity(source.authorityIdentity),
     authorityResult: authorityResult(source.authorityResult),
+    content: createMatchContentPublicView(source.content),
   });
   const expectedHash = createDeterministicDataHash(authority, 'ProductMatchResult authority');
   if (hash(source.authorityHash, 'ProductMatchResult authorityHash') !== expectedHash) {

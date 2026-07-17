@@ -58,7 +58,9 @@ function createController() {
 }
 
 const authorityHashes = new Set();
+const contentHashes = new Set();
 let lifecycleTransitions = 0;
+let rematches = 0;
 let maximumTicks = 0;
 let expectedExperience = 0;
 let latestGrantId = null;
@@ -71,10 +73,16 @@ try {
   controller.closeCharacterSelect();
 
   for (let matchIndex = 0; matchIndex < matches; matchIndex += 1) {
-    controller.openCharacterSelect();
-    const firstRequest = controller.requestMatch();
-    const duplicateRequest = controller.requestMatch();
+    const isRematch = controller.state === PRODUCT_SESSION_STATE.REWARD;
+    if (!isRematch) controller.openCharacterSelect();
+    const firstRequest = isRematch
+      ? controller.requestRematch()
+      : controller.requestMatch();
+    const duplicateRequest = isRematch
+      ? controller.requestRematch()
+      : controller.requestMatch();
     if (firstRequest !== duplicateRequest) throw new Error('快速连点创建了不同匹配 Promise。');
+    if (isRematch) rematches += 1;
     if (matchIndex % 3 === 0) {
       controller.hide();
       lifecycleTransitions += 1;
@@ -86,6 +94,13 @@ try {
       }
       controller.show();
       lifecycleTransitions += 1;
+    }
+    const preparedContent = controller.getSnapshot().match.publicMatchInfo?.content;
+    if (!preparedContent || !/^[0-9a-f]{8}$/.test(preparedContent.contentHash)) {
+      throw new Error(`第 ${matchIndex} 局缺少冻结内容身份。`);
+    }
+    if (/sourceProfileRevision|poolHash|difficulty/i.test(JSON.stringify(preparedContent))) {
+      throw new Error(`第 ${matchIndex} 局公开内容泄漏产品来源或难度。`);
     }
     controller.beginMatch();
 
@@ -109,10 +124,17 @@ try {
     if (!/^[0-9a-f]{8}$/.test(result.authorityHash)) {
       throw new Error(`第 ${matchIndex} 局 authorityHash 无效。`);
     }
+    if (result.content.contentHash !== preparedContent.contentHash) {
+      throw new Error(`第 ${matchIndex} 局准备内容与结算内容串局。`);
+    }
+    if (result.content.participantCharacters.length !== 2) {
+      throw new Error(`第 ${matchIndex} 局内容没有覆盖双方角色。`);
+    }
     if (/difficulty|\bbot\b|机器人|简单|普通|困难/i.test(JSON.stringify(controller.getSnapshot()))) {
       throw new Error(`第 ${matchIndex} 局公开快照泄漏隐藏匹配信息。`);
     }
     authorityHashes.add(result.authorityHash);
+    contentHashes.add(result.content.contentHash);
     maximumTicks = Math.max(maximumTicks, result.authorityResult.endedAtTick);
     const rewarded = controller.commitReward();
     if (rewarded.state.state !== PRODUCT_SESSION_STATE.REWARD || rewarded.match.hasRuntime) {
@@ -126,10 +148,16 @@ try {
     if (rewarded.profile.progression.committedGrantIds[0] !== latestGrantId) {
       throw new Error(`第 ${matchIndex} 局最新奖励幂等键未持久化。`);
     }
-    controller.continueReward();
-    if (controller.state === PRODUCT_SESSION_STATE.UNLOCK) controller.dismissUnlocks();
+    const shouldRestart = (matchIndex + 1) % 25 === 0 && matchIndex + 1 < matches;
+    const shouldRematch = !shouldRestart
+      && matchIndex + 1 < matches
+      && matchIndex % 2 === 0;
+    if (!shouldRematch) {
+      controller.continueReward();
+      if (controller.state === PRODUCT_SESSION_STATE.UNLOCK) controller.dismissUnlocks();
+    }
 
-    if ((matchIndex + 1) % 25 === 0 && matchIndex + 1 < matches) {
+    if (shouldRestart) {
       controller.destroy();
       controller = createController();
       const restored = await controller.boot();
@@ -155,7 +183,9 @@ try {
     ok: true,
     matches,
     authorityHashCount: authorityHashes.size,
+    contentHashCount: contentHashes.size,
     lifecycleTransitions,
+    rematches,
     maximumTicks,
     restarts: ownerGeneration - 1,
     experience: snapshot.profile.progression.experience,

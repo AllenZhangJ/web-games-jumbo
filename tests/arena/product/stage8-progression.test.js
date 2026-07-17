@@ -19,6 +19,7 @@ import {
   UNLOCK_DEFINITION_SCHEMA_VERSION,
   UNLOCK_KIND,
 } from '../../../src/arena/product/progression/unlock-definition.js';
+import { TEST_MATCH_CONTENT_PUBLIC_VIEW } from './stage8-test-content.js';
 
 function matchResult({ winnerId = 'player-1', seed = 7 } = {}) {
   return createProductMatchResult({
@@ -29,14 +30,16 @@ function matchResult({ winnerId = 'player-1', seed = 7 } = {}) {
       portraitKey: `portrait-${seed}`,
       appearanceKey: `appearance-${seed}`,
     },
+    content: TEST_MATCH_CONTENT_PUBLIC_VIEW,
     replay: {
-      replaySchemaVersion: 4,
-      schemaVersion: 4,
+      replaySchemaVersion: 5,
+      schemaVersion: 5,
       physicsBackendVersion: 'lightweight-v3',
       configHash: '12345678',
       ruleContentHash: 'abcdef01',
       finalHash: seed.toString(16).padStart(8, '0'),
       matchSeed: seed,
+      config: { contentSelection: TEST_MATCH_CONTENT_PUBLIC_VIEW },
       result: {
         winnerId,
         reason: winnerId === null ? 'hard-limit-draw' : 'last-participant-standing',

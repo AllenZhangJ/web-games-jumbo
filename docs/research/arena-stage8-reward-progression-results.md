@@ -90,3 +90,5 @@ npm run arena:product:stress
 - S8.5 尚未接 Web、微信、抖音产品 UI 和真实 App 生命周期回调。
 - 当前没有正式新内容和正式经验曲线样本，100/25/10 仍是已接受的首版基础值。
 - 本地 Profile 不具备防篡改能力，不能用于有价值排行或安全结算。
+
+> 后续状态：S8.4 已补齐双方冻结内容池、Replay V5、ProductMatchResult V2、快捷重赛和连续局隔离；本文件保留 S8.3 提交时的历史证据。最新结果见 [S8.4 结果记录](arena-stage8-content-pool-results.md)。

@@ -1,5 +1,6 @@
 import { ARENA_ACTION_PHASE } from './action/action-state.js';
 import { ARENA_V1_DEFAULT_CHARACTER_ID } from './content/arena-v1-character-ids.js';
+import { createMatchContentSelection } from './content/match-content-selection.js';
 import { createStaticMapDefinition } from './map/map-definition.js';
 import { cloneFrozenData } from './rules/definition-utils.js';
 
@@ -92,6 +93,7 @@ const MATCH_OVERRIDE_KEYS = Object.freeze(new Set([
   'equipment',
   'arena',
   'participantCharacters',
+  'contentSelection',
 ]));
 const ARENA_KEYS = Object.freeze(new Set(['killY', 'surfaces', 'spawns']));
 const SURFACE_KEYS = Object.freeze(new Set(['id', 'center', 'halfExtents']));
@@ -101,9 +103,9 @@ const EQUIPMENT_SPAWN_KEYS = Object.freeze(new Set(['id', 'definitionId', 'posit
 const PARTICIPANT_CHARACTER_KEYS = Object.freeze(new Set(['participantId', 'definitionId']));
 
 export const ARENA_MATCH_DEFAULTS = Object.freeze({
-  // V4 replaces physical character tuning and action booleans with registered
-  // CharacterDefinition references and semantic InputFrame fields.
-  schemaVersion: 4,
+  // V5 adds a replayable, versioned authority content selection. The semantic
+  // InputFrame and CharacterDefinition contracts introduced in V4 remain intact.
+  schemaVersion: 5,
   physicsBackendVersion: 'lightweight-v3',
   mapDefinitionId: createStaticMapDefinition(PHYSICS_POC_ARENA).id,
   participantIds: Object.freeze(['player-1', 'player-2']),
@@ -319,6 +321,39 @@ export function createArenaMatchConfig(overrides = {}) {
     throw new TypeError('mapDefinitionId 必须是非空字符串。');
   }
 
+  const contentSelection = overrides.contentSelection === undefined
+    || overrides.contentSelection === null
+    ? null
+    : createMatchContentSelection(overrides.contentSelection);
+  const participantCharacters = cloneParticipantCharacters(
+    overrides.participantCharacters,
+    participantIds,
+  );
+  const equipment = cloneEquipment(overrides.equipment ?? ARENA_MATCH_DEFAULTS.equipment);
+  if (contentSelection !== null) {
+    if (mapDefinitionId !== contentSelection.selectedMapDefinitionId) {
+      throw new RangeError('match mapDefinitionId 与 MatchContentSelection 选择不一致。');
+    }
+    if (
+      contentSelection.participantCharacters.length !== participantCharacters.length
+      || contentSelection.participantCharacters.some((assignment, index) => (
+        assignment.participantId !== participantCharacters[index].participantId
+        || assignment.definitionId !== participantCharacters[index].definitionId
+      ))
+    ) {
+      throw new RangeError(
+        'match participantCharacters 与 MatchContentSelection 分配不一致。',
+      );
+    }
+    for (const spawn of equipment.initialSpawns) {
+      if (!contentSelection.equipmentDefinitionIds.includes(spawn.definitionId)) {
+        throw new RangeError(
+          `match equipment spawn ${spawn.id} 不在 MatchContentSelection 装备池。`,
+        );
+      }
+    }
+  }
+
   return deepFreeze({
     schemaVersion: ARENA_MATCH_DEFAULTS.schemaVersion,
     physicsBackendVersion: ARENA_MATCH_DEFAULTS.physicsBackendVersion,
@@ -354,11 +389,9 @@ export function createArenaMatchConfig(overrides = {}) {
       'lastHitCreditTicks',
     ),
     basePush,
-    participantCharacters: cloneParticipantCharacters(
-      overrides.participantCharacters,
-      participantIds,
-    ),
-    equipment: cloneEquipment(overrides.equipment ?? ARENA_MATCH_DEFAULTS.equipment),
+    participantCharacters,
+    contentSelection,
+    equipment,
     arena: cloneArena(overrides.arena ?? PHYSICS_POC_ARENA),
   });
 }

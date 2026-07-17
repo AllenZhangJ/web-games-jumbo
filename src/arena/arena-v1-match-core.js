@@ -1,6 +1,8 @@
 import { createArenaV1RuleEngine } from './composition/arena-v1-rule-engine.js';
 import { createArenaV1MapSystem } from './composition/arena-v1-map-system.js';
 import { createArenaV1AuthorityContent } from './composition/arena-v1-authority-content.js';
+import { createArenaV1SelectedAuthorityRegistries } from './composition/arena-v1-content-selection.js';
+import { createMatchContentSelection } from './content/match-content-selection.js';
 import { STAGE4_INITIAL_EQUIPMENT_SPAWNS } from './content/stage4-equipment.js';
 import { createArenaV1CharacterRegistry } from './content/arena-v1-characters.js';
 import { createArenaV1MapRegistry } from './content/arena-v1-maps.js';
@@ -27,8 +29,19 @@ const MATCH_CORE_OPTION_KEYS = new Set([
 
 function resolveArenaV1Config(configValue = {}, mapRegistry = createArenaV1MapRegistry()) {
   const config = cloneFrozenData(configValue, 'Arena V1 config');
+  const contentSelection = config.contentSelection === undefined
+    || config.contentSelection === null
+    ? null
+    : createMatchContentSelection(config.contentSelection);
   const hasCustomArena = Object.prototype.hasOwnProperty.call(config, 'arena');
-  const requestedMapDefinitionId = config.mapDefinitionId;
+  const requestedMapDefinitionId = config.mapDefinitionId
+    ?? contentSelection?.selectedMapDefinitionId;
+  if (
+    contentSelection !== null
+    && requestedMapDefinitionId !== contentSelection.selectedMapDefinitionId
+  ) {
+    throw new RangeError('mapDefinitionId 与 MatchContentSelection 选择不一致。');
+  }
   let arena;
   let mapDefinitionId;
   if (hasCustomArena) {
@@ -43,12 +56,24 @@ function resolveArenaV1Config(configValue = {}, mapRegistry = createArenaV1MapRe
   }
   const equipment = Object.prototype.hasOwnProperty.call(config, 'equipment')
     ? config.equipment
-    : { initialSpawns: hasCustomArena ? [] : STAGE4_INITIAL_EQUIPMENT_SPAWNS };
+    : {
+      initialSpawns: hasCustomArena
+        ? []
+        : STAGE4_INITIAL_EQUIPMENT_SPAWNS.filter((spawn) => (
+          contentSelection === null
+          || contentSelection.equipmentDefinitionIds.includes(spawn.definitionId)
+        )),
+    };
   return {
     ...config,
     arena,
     mapDefinitionId,
     equipment,
+    ...(contentSelection === null ? {} : {
+      contentSelection,
+      participantCharacters: config.participantCharacters
+        ?? contentSelection.participantCharacters,
+    }),
   };
 }
 
@@ -59,11 +84,23 @@ export function createArenaV1MatchConfig(config = {}) {
 export function createArenaV1MatchCore(options = {}) {
   assertKnownKeys(options, MATCH_CORE_OPTION_KEYS, 'createArenaV1MatchCore options');
   const descriptors = Object.getOwnPropertyDescriptors(options);
-  const mapRegistry = createArenaV1MapRegistry();
-  const characterRegistry = descriptors.characterRegistry?.value
+  const fullMapRegistry = createArenaV1MapRegistry();
+  const fullCharacterRegistry = descriptors.characterRegistry?.value
     ?? createArenaV1CharacterRegistry();
+  const configValue = descriptors.config?.value ?? {};
+  const rawConfig = cloneFrozenData(configValue, 'Arena V1 config');
+  const selected = rawConfig.contentSelection === undefined
+    || rawConfig.contentSelection === null
+    ? null
+    : createArenaV1SelectedAuthorityRegistries({
+      selection: rawConfig.contentSelection,
+      mapRegistry: fullMapRegistry,
+      characterRegistry: fullCharacterRegistry,
+    });
+  const mapRegistry = selected?.mapRegistry ?? fullMapRegistry;
+  const characterRegistry = selected?.characterRegistry ?? fullCharacterRegistry;
   const configOverrides = resolveArenaV1Config(
-    descriptors.config?.value ?? {},
+    rawConfig,
     mapRegistry,
   );
   const authorityContent = createArenaV1AuthorityContent(

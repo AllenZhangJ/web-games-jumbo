@@ -1,6 +1,6 @@
 # ADR-011：Arena 使用版本化双槽本地进度与对称内容池
 
-- 状态：部分生效（S8.1 存档、S8.2 产品生命周期与 S8.3 奖励已接受；对称内容池仍为提议）
+- 状态：已接受（S8.1～S8.4 已实施；S8.5 三端验收仍独立执行）
 - 日期：2026-07-18
 
 ## 背景
@@ -31,6 +31,8 @@ S8.1 将 Pilot 与 Product 共用的仅限于严格同步 Storage Port 和具名
 S8.2 使用独立显式产品状态机、Profile 选择服务和单 Match Coordinator 连接上述 Repository 与本地快速匹配；它不改变存档协议，也不把 MatchCore 生命周期并入 Profile。异步去重、挂起恢复、迟到资源和销毁重试见 [ADR-015](015-arena-headless-product-session-lifecycle.md)。
 
 S8.3 将选择服务升级为唯一 `PlayerProfileService` 写入者，并以 Profile revision、match seed 和已校验 authority hash 组成当前本地事务 grantId。Profile V1 只保留最近一次 grant，适用范围严格限制为单会话、单未结算结果；完整边界见 [ADR-016](016-arena-local-match-reward-transaction.md)。
+
+S8.4 以独立 Catalog、显式替代 Registry 和纯 Resolver 生成 `FrozenMatchContentPool`，只把版本化 `MatchContentSelection` 送入 MatchConfig/Replay V5。Authority Content 为角色、装备、动作和地图建立本局 Registry/Definition 投影；Profile provenance 不进入 Core。快捷重赛从 reward/unlock 直接进入 matching，失败恢复原展示。完整边界见 [ADR-017](017-arena-frozen-symmetric-match-content.md)。
 
 当前 `v1` 是第一个生产 Profile schema，没有编造 `v0` 历史迁移。迁移 Registry 已通过合成的连续多版本链验证；首次真实升级时必须新增固定历史 fixture，不能修改旧迁移函数。
 
@@ -80,4 +82,4 @@ S8.3 将选择服务升级为唯一 `PlayerProfileService` 写入者，并以 Pr
 - 连续多局和生命周期竞态不会重叠 session 或串局。
 - 双方共享内容池自动化检查通过后，将状态改为“已接受”。
 
-S8.1 的双槽故障注入、未来版本保护、竞争租约、生命周期、架构隔离和 500 次故障压力门禁已满足；其实现结论见 [S8.1 结果记录](../research/arena-stage8-profile-persistence-results.md)。S8.2 的无 UI 状态机、真实本地比赛集成、竞态与 200 局压力也已满足，见 [S8.2 结果记录](../research/arena-stage8-product-session-results.md)。S8.3 的奖励幂等、解锁解析与奖励生命周期已满足，见 [S8.3 结果记录](../research/arena-stage8-reward-progression-results.md)。本 ADR 仍未整体接受，是因为共享内容池和三端产品生命周期尚未落地。
+S8.1 的双槽故障注入、未来版本保护、竞争租约、生命周期、架构隔离和 500 次故障压力门禁已满足；其实现结论见 [S8.1 结果记录](../research/arena-stage8-profile-persistence-results.md)。S8.2 的无 UI 状态机、真实本地比赛集成、竞态与 200 局压力也已满足，见 [S8.2 结果记录](../research/arena-stage8-product-session-results.md)。S8.3 的奖励幂等、解锁解析与奖励生命周期已满足，见 [S8.3 结果记录](../research/arena-stage8-reward-progression-results.md)。S8.4 的共享池、Replay V5、快捷重赛和连续局隔离已满足，见 [S8.4 结果记录](../research/arena-stage8-content-pool-results.md)。因此本 ADR 的架构生效条件已经关闭；S8.5 的真实宿主证据仍是 Stage 8 完成门，不能由 Node 门禁替代。

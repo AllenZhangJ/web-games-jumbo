@@ -43,6 +43,7 @@ export function createArenaV1AuthorityContent(config, {
   const { actionRegistry, equipmentRegistry } = createStage4ContentRegistries({
     basePush: config.basePush,
     additionalActionDefinitions: STAGE6_MOVEMENT_ACTION_DEFINITIONS,
+    equipmentDefinitionIds: config.contentSelection?.equipmentDefinitionIds ?? null,
   });
   assertRegistry(mapRegistry, 'Arena V1 mapRegistry');
   const characterRegistrySnapshot = createCharacterRegistrySnapshot(characterRegistry);

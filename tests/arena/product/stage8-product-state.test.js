@@ -18,6 +18,7 @@ import {
   PRODUCT_SESSION_STATE,
 } from '../../../src/arena/product/state/product-session-transition-definition.js';
 import { ProductSessionTransitionRegistry } from '../../../src/arena/product/state/product-session-transition-registry.js';
+import { TEST_MATCH_CONTENT_PUBLIC_VIEW } from './stage8-test-content.js';
 
 function deferred() {
   let resolve;
@@ -100,6 +101,7 @@ function runtimeHarness({ endAfterSteps = 1, destroyFailures = 0 } = {}) {
           portraitKey: 'portrait-1',
           appearanceKey: 'appearance-1',
         }),
+        content: TEST_MATCH_CONTENT_PUBLIC_VIEW,
       });
     },
     getResult() { return result; },
@@ -121,6 +123,16 @@ test('ProductSession transition registry is immutable and rejects ambiguous defi
       .toState,
     PRODUCT_SESSION_STATE.MATCHING,
   );
+  assert.equal(
+    registry.resolve(PRODUCT_SESSION_EVENT.REMATCH_REQUESTED, PRODUCT_SESSION_STATE.REWARD)
+      .toState,
+    PRODUCT_SESSION_STATE.MATCHING,
+  );
+  assert.equal(
+    registry.resolve(PRODUCT_SESSION_EVENT.REMATCH_REQUESTED, PRODUCT_SESSION_STATE.UNLOCK)
+      .toState,
+    PRODUCT_SESSION_STATE.MATCHING,
+  );
   assert.throws(() => new ProductSessionTransitionRegistry([
     definitions[0],
     definitions[0],
@@ -133,13 +145,14 @@ test('ProductSession transition registry is immutable and rejects ambiguous defi
 
 test('ProductMatchResult binds replay seed and strips non-public opponent fields from authority output', () => {
   const replay = {
-    replaySchemaVersion: 4,
-    schemaVersion: 4,
+    replaySchemaVersion: 5,
+    schemaVersion: 5,
     physicsBackendVersion: 'lightweight-v3',
     configHash: '12345678',
     ruleContentHash: 'abcdef01',
     finalHash: '11223344',
     matchSeed: 12,
+    config: { contentSelection: TEST_MATCH_CONTENT_PUBLIC_VIEW },
     result: {
       winnerId: 'player-1',
       reason: 'last-participant-standing',
@@ -156,6 +169,7 @@ test('ProductMatchResult binds replay seed and strips non-public opponent fields
       appearanceKey: 'appearance-12',
       difficultyId: 'hard',
     },
+    content: TEST_MATCH_CONTENT_PUBLIC_VIEW,
     replay,
   });
   assert.equal(Object.isFrozen(result), true);
@@ -166,6 +180,7 @@ test('ProductMatchResult binds replay seed and strips non-public opponent fields
     () => createProductMatchResult({
       matchSeed: 13,
       opponent: result.opponent,
+      content: result.content,
       replay,
     }),
     /seed 与 replay 不一致/,
@@ -174,12 +189,28 @@ test('ProductMatchResult binds replay seed and strips non-public opponent fields
     () => createProductMatchResult({
       matchSeed: 12,
       opponent: result.opponent,
+      content: result.content,
       replay: {
         ...replay,
         result: { ...replay.result, winnerId: null },
       },
     }),
     /胜者与平局标记不一致/,
+  );
+  assert.throws(
+    () => {
+      const { contentHash: ignored, ...content } = result.content;
+      return createProductMatchResult({
+        matchSeed: 12,
+        opponent: result.opponent,
+        content: {
+          ...content,
+          contentVersion: result.content.contentVersion + 1,
+        },
+        replay,
+      });
+    },
+    /content 与 replay 权威配置不一致/,
   );
 });
 

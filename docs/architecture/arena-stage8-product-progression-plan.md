@@ -2,7 +2,7 @@
 
 ## 文档状态
 
-执行中，2026-07-18。S8.1 已落地不可变 PlayerProfile、严格同步 Storage Port、连续迁移 Registry、A/B 双槽 Repository、协作 lease、未来版本保护与故障压力门禁。S8.2 已落地无 UI 显式产品状态机、角色选择保存、单 Match 所有权、QuickMatch 集成、挂起恢复与异步竞态门禁。S8.3 已落地权威结果校验、奖励/解锁 Definition 与 Registry、纯 Resolver、唯一 Profile 写入者、幂等 grant 和 reward/unlock 状态。对称内容池、快捷再来一局和三端产品验收仍未开始。
+执行中，2026-07-18。S8.1 已落地不可变 PlayerProfile、严格同步 Storage Port、连续迁移 Registry、A/B 双槽 Repository、协作 lease、未来版本保护与故障压力门禁。S8.2 已落地无 UI 显式产品状态机、角色选择保存、单 Match 所有权、QuickMatch 集成、挂起恢复与异步竞态门禁。S8.3 已落地权威结果校验、奖励/解锁 Definition 与 Registry、纯 Resolver、唯一 Profile 写入者、幂等 grant 和 reward/unlock 状态。S8.4 已落地双方共享冻结池、Authority Content 投影、Replay V5、快捷重赛与连续局隔离。三端产品 UI 和真实宿主验收仍属于 S8.5。
 
 ## 已接受默认值
 
@@ -25,7 +25,7 @@ in-match -> results -> reward -> unlock? -> ready/rematch
 任意状态 -> destroyed
 ```
 
-S8.3 当前实现截至 `results -> reward -> unlock? -> ready`；`rematch` 仍由 S8.4 增加，不用普通返回 ready 伪装为快捷再来一局。挂起快照同时发布可见 `state=suspended` 和后台可推进的 `activeState`，异步 matching 完成时只更新恢复目标。
+S8.4 当前实现支持 `results -> reward -> unlock? -> ready`，也支持 `reward/unlock -> matching -> preparing` 的快捷重赛，不用普通返回 ready 伪装。挂起快照同时发布可见 `state=suspended` 和后台可推进的 `activeState`，异步 matching 完成时只更新恢复目标。
 
 约束：
 
@@ -148,6 +148,8 @@ PlayerProfile + Content Definitions
 
 - 每局生成双方共享冻结池，并连接现有 Authority Content。
 - 连续多局验证状态、资源、随机流和奖励不串局。
+
+状态：已完成无 UI 基础。已建立 MatchContentPool Definition/Catalog/Replacement Registry、纯 Resolver、产品 provenance 与权威选择分界、Registry/地图投影、Match/Replay V5、ProductMatchResult V2 和 reward/unlock 快捷重赛；200 局压力覆盖 96 次快捷重赛。详见 [ADR-017](../decisions/017-arena-frozen-symmetric-match-content.md) 与 [S8.4 结果记录](../research/arena-stage8-content-pool-results.md)。
 
 ### S8.5 产品与三端验收
 

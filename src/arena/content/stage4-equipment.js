@@ -15,6 +15,7 @@ import {
   createEquipmentDefinition,
 } from '../equipment/equipment-definition.js';
 import { EquipmentRegistry } from '../equipment/equipment-registry.js';
+import { cloneFrozenData, cloneFrozenStringSet } from '../rules/definition-utils.js';
 
 export const STAGE4_ACTION_ID = Object.freeze({
   BASE_PUSH: 'base-push',
@@ -271,16 +272,38 @@ function createConfiguredActionDefinitions(basePush) {
 export function createStage4ContentRegistries({
   basePush = null,
   additionalActionDefinitions = [],
+  equipmentDefinitionIds = null,
 } = {}) {
   if (!Array.isArray(additionalActionDefinitions)) {
     throw new TypeError('additionalActionDefinitions 必须是数组。');
   }
+  const selectedEquipmentIds = equipmentDefinitionIds === null
+    ? Object.freeze(STAGE4_EQUIPMENT_DEFINITIONS.map(({ id }) => id))
+    : cloneFrozenStringSet(
+      cloneFrozenData(equipmentDefinitionIds, 'equipmentDefinitionIds'),
+      'equipmentDefinitionIds',
+    );
+  const knownEquipmentIds = new Set(STAGE4_EQUIPMENT_DEFINITIONS.map(({ id }) => id));
+  for (const definitionId of selectedEquipmentIds) {
+    if (!knownEquipmentIds.has(definitionId)) {
+      throw new RangeError(`未知 Stage 4 EquipmentDefinition ${definitionId}。`);
+    }
+  }
+  const equipmentDefinitions = STAGE4_EQUIPMENT_DEFINITIONS.filter(({ id }) => (
+    selectedEquipmentIds.includes(id)
+  ));
+  const selectedActionIds = new Set(equipmentDefinitions.map(({ actionDefinitionId }) => (
+    actionDefinitionId
+  )));
+  const actionDefinitions = createConfiguredActionDefinitions(basePush).filter((definition) => (
+    definition.id === STAGE4_ACTION_ID.BASE_PUSH || selectedActionIds.has(definition.id)
+  ));
   const actionRegistry = new ActionRegistry([
-    ...createConfiguredActionDefinitions(basePush),
+    ...actionDefinitions,
     ...additionalActionDefinitions,
   ]);
   const equipmentRegistry = new EquipmentRegistry({
-    definitions: STAGE4_EQUIPMENT_DEFINITIONS,
+    definitions: equipmentDefinitions,
     actionRegistry,
   });
   return Object.freeze({ actionRegistry, equipmentRegistry });
