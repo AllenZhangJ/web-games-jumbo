@@ -25,13 +25,13 @@ test('bot threat evaluation uses the delayed opponent equipment action range', (
       },
     },
   });
-  core.step([{ ...createNeutralInputFrame(0, 'player-1'), actionPressed: true, actionHeld: true }]);
+  core.step([{ ...createNeutralInputFrame(0, 'player-1'), primaryPressed: true, primaryHeld: true }]);
   const source = cloneBotSourceSnapshot(core.getSnapshot());
   const observation = createBotObservation({
     commandSnapshot: source,
     delayedSnapshot: source,
     selfId: 'player-2',
-    arena: createBotArenaView(core.config.arena, core.config.character.radius),
+    arena: createBotArenaView(core.config.arena, core.getCharacterDefinition('player-2').collision.radius),
   });
   assert.equal(observation.opponentActionRule.definitionId, 'chain-pull');
   assert.ok(observation.opponentActionRule.range > observation.actionRule.range);
@@ -64,7 +64,7 @@ test('bot reacts only to publicly observed collapse warnings and uses ordinary m
   const common = {
     commandSnapshot: withWarning,
     selfId: 'player-2',
-    arena: createBotArenaView(core.config.arena, core.config.character.radius),
+    arena: createBotArenaView(core.config.arena, core.getCharacterDefinition('player-2').collision.radius),
   };
   const delayedObservation = createBotObservation({
     ...common,
@@ -107,7 +107,7 @@ test('hard bot can finish edge recovery on the final center platform', () => {
     commandSnapshot: source,
     delayedSnapshot: source,
     selfId: 'player-2',
-    arena: createBotArenaView(core.config.arena, core.config.character.radius),
+    arena: createBotArenaView(core.config.arena, core.getCharacterDefinition('player-2').collision.radius),
   });
   const decision = selectHighestUtility(getArenaBotEvaluators(), {
     observation,
@@ -138,7 +138,7 @@ test('bot treats missing corners of a plus-shaped topology as real outer edges',
     commandSnapshot: source,
     delayedSnapshot: source,
     selfId: 'player-2',
-    arena: createBotArenaView(core.config.arena, core.config.character.radius),
+    arena: createBotArenaView(core.config.arena, core.getCharacterDefinition('player-2').collision.radius),
   });
   const decision = selectHighestUtility(getArenaBotEvaluators(), {
     observation,

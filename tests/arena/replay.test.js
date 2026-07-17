@@ -23,7 +23,7 @@ function scriptedFrames(snapshot) {
     ...createNeutralInputFrame(snapshot.tick, participant.id),
     moveX: index === 0 ? 0.7 : -0.6,
     moveZ: snapshot.tick % 100 < 50 ? 0.2 : -0.2,
-    actionPressed: snapshot.tick % (index === 0 ? 37 : 53) === 0,
+    primaryPressed: snapshot.tick % (index === 0 ? 37 : 53) === 0,
   }));
 }
 
@@ -82,7 +82,7 @@ test('tampered replay is rejected at a deterministic checkpoint', () => {
   const runner = new HeadlessMatchRunner(core, { checkpointInterval: 10 });
   const replay = runner.runUntilEnded(scriptedFrames);
   const tampered = JSON.parse(JSON.stringify(replay));
-  tampered.inputFrames[0].actionPressed = !tampered.inputFrames[0].actionPressed;
+  tampered.inputFrames[0].primaryPressed = !tampered.inputFrames[0].primaryPressed;
   assert.throws(() => replayMatch(tampered), /分叉|最终 hash/);
   core.destroy();
 });
@@ -103,6 +103,28 @@ test('tampered replay config or recorded result is rejected even without changin
   const changedResult = structuredClone(replay);
   changedResult.result.reason = 'tampered';
   assert.throws(() => replayMatch(changedResult), /结算结果不一致/);
+  core.destroy();
+});
+
+test('Replay V4 rejects V3 and legacy action fields instead of silently adapting them', () => {
+  const core = createReplayCore();
+  const replay = new HeadlessMatchRunner(core, { checkpointInterval: 20 })
+    .runUntilEnded(scriptedFrames);
+  const oldSchema = structuredClone(replay);
+  oldSchema.replaySchemaVersion = 3;
+  let factoryCalls = 0;
+  assert.throws(() => replayMatch(oldSchema, {
+    coreFactory() {
+      factoryCalls += 1;
+      return createReplayCore();
+    },
+  }), /不支持 replay schema 3/);
+  assert.equal(factoryCalls, 0);
+
+  const legacyInput = structuredClone(replay);
+  legacyInput.inputFrames[0].actionPressed = legacyInput.inputFrames[0].primaryPressed;
+  delete legacyInput.inputFrames[0].primaryPressed;
+  assert.throws(() => replayMatch(legacyInput), /actionPressed|primaryPressed/);
   core.destroy();
 });
 

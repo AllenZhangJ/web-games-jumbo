@@ -40,6 +40,7 @@ export function createMatchStateHash(snapshot) {
   for (const participant of snapshot.participants) {
     fields.push(
       participant.id,
+      participant.characterDefinitionId,
       participant.status,
       participant.lives,
       participant.eliminations,

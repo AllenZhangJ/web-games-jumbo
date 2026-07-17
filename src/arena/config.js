@@ -1,4 +1,5 @@
 import { ARENA_ACTION_PHASE } from './action/action-state.js';
+import { ARENA_V1_DEFAULT_CHARACTER_ID } from './content/arena-v1-character-ids.js';
 import { createStaticMapDefinition } from './map/map-definition.js';
 import { cloneFrozenData } from './rules/definition-utils.js';
 
@@ -90,18 +91,19 @@ const MATCH_OVERRIDE_KEYS = Object.freeze(new Set([
   'mapDefinitionId',
   'equipment',
   'arena',
-  'character',
+  'participantCharacters',
 ]));
 const ARENA_KEYS = Object.freeze(new Set(['killY', 'surfaces', 'spawns']));
 const SURFACE_KEYS = Object.freeze(new Set(['id', 'center', 'halfExtents']));
 const VECTOR3_KEYS = Object.freeze(new Set(['x', 'y', 'z']));
 const EQUIPMENT_KEYS = Object.freeze(new Set(['initialSpawns']));
 const EQUIPMENT_SPAWN_KEYS = Object.freeze(new Set(['id', 'definitionId', 'position']));
+const PARTICIPANT_CHARACTER_KEYS = Object.freeze(new Set(['participantId', 'definitionId']));
 
 export const ARENA_MATCH_DEFAULTS = Object.freeze({
-  // V3 adds MapDefinition, timeline/runtime state and mutable surface support.
-  // Older replays must fail explicitly rather than run under new map rules.
-  schemaVersion: 3,
+  // V4 replaces physical character tuning and action booleans with registered
+  // CharacterDefinition references and semantic InputFrame fields.
+  schemaVersion: 4,
   physicsBackendVersion: 'lightweight-v2',
   mapDefinitionId: createStaticMapDefinition(PHYSICS_POC_ARENA).id,
   participantIds: Object.freeze(['player-1', 'player-2']),
@@ -135,19 +137,6 @@ function assertKnownKeys(value, allowedKeys, name) {
   for (const key of Object.keys(value)) {
     if (!allowedKeys.has(key)) throw new RangeError(`${name} 不支持字段 ${key}。`);
   }
-}
-
-function cloneCharacter(overrides = {}) {
-  const allowedKeys = new Set(Object.keys(PHYSICS_POC_CHARACTER));
-  assertKnownKeys(overrides, allowedKeys, 'match character');
-  const character = { ...PHYSICS_POC_CHARACTER, ...overrides };
-  for (const [name, value] of Object.entries(character)) {
-    positiveFinite(value, `character.${name}`);
-  }
-  if (!Number.isFinite(character.radius + character.halfHeight)) {
-    throw new RangeError('character.radius 与 halfHeight 组合后必须是有限数。');
-  }
-  return character;
 }
 
 function cloneVector3(value, name, { positive = false } = {}) {
@@ -237,6 +226,46 @@ function cloneEquipment(value) {
   };
 }
 
+function cloneParticipantCharacters(value, participantIds) {
+  const assignments = value ?? participantIds.map((participantId) => ({
+    participantId,
+    definitionId: ARENA_V1_DEFAULT_CHARACTER_ID,
+  }));
+  if (!Array.isArray(assignments) || assignments.length !== participantIds.length) {
+    throw new RangeError('participantCharacters 必须恰好覆盖全部 participants。');
+  }
+  const expectedIds = new Set(participantIds);
+  const assignedIds = new Set();
+  const result = assignments.map((assignment, index) => {
+    const name = `participantCharacters[${index}]`;
+    assertKnownKeys(assignment, PARTICIPANT_CHARACTER_KEYS, name);
+    if (
+      typeof assignment.participantId !== 'string'
+      || assignment.participantId.trim().length === 0
+      || !expectedIds.has(assignment.participantId)
+    ) throw new RangeError(`${name}.participantId 必须引用本局 participant。`);
+    if (assignedIds.has(assignment.participantId)) {
+      throw new RangeError(`participantCharacters 重复 participant ${assignment.participantId}。`);
+    }
+    assignedIds.add(assignment.participantId);
+    if (typeof assignment.definitionId !== 'string' || assignment.definitionId.trim().length === 0) {
+      throw new TypeError(`${name}.definitionId 必须是非空字符串。`);
+    }
+    return {
+      participantId: assignment.participantId,
+      definitionId: assignment.definitionId,
+    };
+  });
+  if (assignedIds.size !== expectedIds.size) {
+    throw new RangeError('participantCharacters 没有覆盖全部 participants。');
+  }
+  return result.sort((left, right) => {
+    if (left.participantId < right.participantId) return -1;
+    if (left.participantId > right.participantId) return 1;
+    return 0;
+  });
+}
+
 function deepFreeze(value) {
   if (!value || typeof value !== 'object' || Object.isFrozen(value)) return value;
   for (const child of Object.values(value)) deepFreeze(child);
@@ -285,12 +314,6 @@ export function createArenaMatchConfig(overrides = {}) {
     integerAtLeast(basePush[name], 1, `basePush.${name}`);
   }
 
-  const character = cloneCharacter(overrides.character);
-  if (
-    !Number.isFinite(basePush.horizontalImpulse / character.mass)
-    || !Number.isFinite(basePush.verticalImpulse / character.mass)
-  ) throw new RangeError('basePush impulse 与 character.mass 组合后必须产生有限速度。');
-
   const mapDefinitionId = overrides.mapDefinitionId ?? ARENA_MATCH_DEFAULTS.mapDefinitionId;
   if (typeof mapDefinitionId !== 'string' || mapDefinitionId.trim().length === 0) {
     throw new TypeError('mapDefinitionId 必须是非空字符串。');
@@ -331,8 +354,11 @@ export function createArenaMatchConfig(overrides = {}) {
       'lastHitCreditTicks',
     ),
     basePush,
+    participantCharacters: cloneParticipantCharacters(
+      overrides.participantCharacters,
+      participantIds,
+    ),
     equipment: cloneEquipment(overrides.equipment ?? ARENA_MATCH_DEFAULTS.equipment),
     arena: cloneArena(overrides.arena ?? PHYSICS_POC_ARENA),
-    character,
   });
 }

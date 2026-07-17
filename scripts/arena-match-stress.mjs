@@ -127,8 +127,8 @@ function createBotFrames(snapshot, matchIndex) {
       ...frame,
       moveX: directionX - directionZ * strafe,
       moveZ: directionZ + directionX * strafe,
-      actionPressed: distance <= 1.48 && (snapshot.tick + attackOffset) % cadence === 0,
-      actionHeld: distance <= 1.48,
+      primaryPressed: distance <= 1.48 && (snapshot.tick + attackOffset) % cadence === 0,
+      primaryHeld: distance <= 1.48,
     };
   });
 }

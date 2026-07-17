@@ -70,7 +70,7 @@ function runUntil(core, predicate, maxTicks = 240) {
 }
 
 function attackAndWaitForElimination(core) {
-  const events = [...step(core, { 'player-1': { actionPressed: true, actionHeld: true } })];
+  const events = [...step(core, { 'player-1': { primaryPressed: true, primaryHeld: true } })];
   for (let index = 0; index < 240; index += 1) {
     if (events.some((event) => event.type === ARENA_MATCH_EVENT.PLAYER_ELIMINATED)) return events;
     events.push(...step(core));
@@ -126,7 +126,7 @@ test('base push timing advances exactly once per authoritative tick', () => {
       hitstunTicks: 6,
     },
   });
-  const started = step(core, { 'player-1': { actionPressed: true, actionHeld: true } });
+  const started = step(core, { 'player-1': { primaryPressed: true, primaryHeld: true } });
   assert.equal(started.find((event) => event.type === ARENA_MATCH_EVENT.ACTION_STARTED)?.tick, 0);
   for (let tick = 1; tick < 8; tick += 1) {
     assert.equal(
@@ -139,14 +139,21 @@ test('base push timing advances exactly once per authoritative tick', () => {
   core.destroy();
 });
 
-test('character tuning cannot override authoritative identity or inject unknown fields', () => {
+test('character selection cannot inject tuning or unknown config fields', () => {
   assert.throws(
     () => createArenaV1MatchCore({ config: { character: { id: 'hijack' } } }),
-    /不支持字段 id/,
+    /match config 不支持字段 character/,
   );
   assert.throws(
-    () => createArenaV1MatchCore({ config: { character: { moveSpeed: Number.NaN } } }),
-    /character\.moveSpeed.*非有限数/,
+    () => createArenaV1MatchCore({
+      config: {
+        participantCharacters: [
+          { participantId: 'player-1', definitionId: 'parkour-apprentice', model: 'bad.glb' },
+          { participantId: 'player-2', definitionId: 'parkour-apprentice' },
+        ],
+      },
+    }),
+    /participantCharacters\[0\] 不支持字段 model/,
   );
   assert.throws(
     () => createArenaV1MatchCore({ config: { basePush: { damage: 999 } } }),
@@ -311,33 +318,24 @@ test('invalid input fails before mutation and leaves MatchCore usable', () => {
   core.destroy();
 });
 
-test('caller-owned InputFrame cannot re-enter or destroy MatchCore during validation', () => {
+test('caller-owned InputFrame accessors are rejected without execution and leave MatchCore usable', () => {
   const core = createFastCore();
-  let reentryError = null;
-  let destroyError = null;
+  let getterCalls = 0;
   const frame = {
     tick: 0,
     get participantId() {
-      try {
-        core.step([]);
-      } catch (error) {
-        reentryError = error;
-      }
-      try {
-        core.destroy();
-      } catch (error) {
-        destroyError = error;
-      }
+      getterCalls += 1;
       return 'player-1';
     },
     moveX: 0,
     moveZ: 0,
-    actionPressed: false,
-    actionHeld: false,
+    primaryPressed: false,
+    primaryHeld: false,
   };
-  core.step([frame]);
-  assert.match(reentryError?.message, /不可重入/);
-  assert.match(destroyError?.message, /step\(\) 期间不能销毁/);
+  assert.throws(() => core.step([frame]), /数据字段/);
+  assert.equal(getterCalls, 0);
+  assert.equal(core.tick, 0);
+  core.step([]);
   assert.equal(core.tick, 1);
   core.destroy();
 });
@@ -361,8 +359,8 @@ test('base push has windup, hits once, applies hitstun and produces authoritativ
 test('same-tick symmetric attacks trade without participant-order advantage', () => {
   const core = createFastCore();
   step(core, {
-    'player-1': { actionPressed: true, actionHeld: true },
-    'player-2': { actionPressed: true, actionHeld: true },
+    'player-1': { primaryPressed: true, primaryHeld: true },
+    'player-2': { primaryPressed: true, primaryHeld: true },
   });
   const events = step(core);
   const hits = events.filter((event) => event.type === ARENA_MATCH_EVENT.HIT_RESOLVED);
@@ -467,8 +465,8 @@ test('same seed and inputs produce identical hashes and event IDs', () => {
   const second = createFastCore();
   for (let tick = 0; tick < 300; tick += 1) {
     const overrides = {
-      'player-1': { moveX: tick % 120 < 60 ? 0.7 : -0.7, actionPressed: tick % 40 === 0 },
-      'player-2': { moveX: tick % 160 < 80 ? -0.6 : 0.6, actionPressed: tick % 55 === 0 },
+      'player-1': { moveX: tick % 120 < 60 ? 0.7 : -0.7, primaryPressed: tick % 40 === 0 },
+      'player-2': { moveX: tick % 160 < 80 ? -0.6 : 0.6, primaryPressed: tick % 55 === 0 },
     };
     const firstEvents = step(first, overrides);
     const secondEvents = step(second, overrides);

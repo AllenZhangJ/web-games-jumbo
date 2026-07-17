@@ -38,13 +38,14 @@
 ```text
 InputFrame
   tick
-  moveX
-  moveZ
-  actionPressed
-  actionHeld
+  participantId
+  moveX / moveZ
+  primaryPressed / primaryHeld
+  jumpPressed / jumpHeld
+  slamPressed
 ```
 
-机器人不能直接调用击飞、拾取、移动或淘汰函数。
+`primary` 只表示请求上下文动作，不直接表示攻击或装备 ID。Pointer ID、像素坐标、墙钟、平台事件和 A/B Mapper ID 不进入权威输入或回放。S6.1 只冻结了该合同；`jump/slam` 在 S6.2 Movement 落地前保持中性。机器人不能直接调用击飞、拾取、移动或淘汰函数。
 
 ## 动作键解析
 
@@ -75,7 +76,7 @@ InputFrame
 - 重量或击飞抗性。
 - 转向与制动响应。
 
-第一版不允许角色拥有专属主动技能。相同装备必须保持相同用途，角色参数只能改变使用节奏，不能改变装备类别。
+Arena V1 首发的跑酷学徒与发条方块先共享同一套碰撞、移动和跳跃基线，把变量留给装备、地图和站位。第一版不允许角色拥有专属主动技能。相同装备必须保持相同用途；未来如果引入有限参数差异，必须作为新的内容版本经过对称性与批量平衡门禁。
 
 ## 装备合同
 

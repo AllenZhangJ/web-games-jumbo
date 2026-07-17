@@ -72,7 +72,7 @@ test('map timeline state participates in replay and state hash', () => {
   const runner = new HeadlessMatchRunner(core, { checkpointInterval: 300 });
   while (core.phase !== 'ended') runner.step(neutralFrames(core));
   const replay = runner.exportReplay();
-  assert.equal(replay.replaySchemaVersion, 3);
+  assert.equal(replay.replaySchemaVersion, 4);
   assert.equal(replay.config.mapDefinitionId, STAGE5_MAP_ID);
   assert.ok(replay.events.some((event) => event.type === ARENA_MAP_EVENT.EVENT_WARNED));
   assert.equal(replayMatch(replay).finalHash, replay.finalHash);

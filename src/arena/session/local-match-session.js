@@ -136,13 +136,14 @@ export class LocalMatchSession {
 
   #normalizePlayerFrame(frame) {
     const candidate = frame ?? createNeutralInputFrame(this.#core.tick, this.#playerParticipantId);
-    if (candidate.participantId !== this.#playerParticipantId) {
+    const normalized = normalizeInputFrame(candidate, {
+      expectedTick: this.#core.tick,
+      participantIds: this.#core.config.participantIds,
+    });
+    if (normalized.participantId !== this.#playerParticipantId) {
       throw new RangeError('玩家输入不能控制隐藏对手。');
     }
-    return normalizeInputFrame(candidate, {
-      expectedTick: this.#core.tick,
-      participantIds: [this.#playerParticipantId],
-    });
+    return normalized;
   }
 
   step(playerFrame = null) {

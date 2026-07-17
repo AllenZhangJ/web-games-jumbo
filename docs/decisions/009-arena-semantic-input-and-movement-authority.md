@@ -4,6 +4,8 @@
 
 提议。Stage 6 Rule/Core 骨架通过后转为已接受；A/B Mapper 的产品胜者要等盲测后追加决策结果。
 
+实施进度：S6.1 已建立 CharacterDefinition/Registry/Runtime 边界、组合期不可变内容快照、InputFrame V4 和 Replay V4；MovementSystem、多 lane ActionResolver 和 ActionAffordance 尚未落地，不因前置合同通过而提前接受整个 ADR。
+
 ## 日期
 
 2026-07-17。

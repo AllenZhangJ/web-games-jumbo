@@ -6,13 +6,15 @@ import { createArenaV1MatchCore } from '../../src/arena/arena-v1-match-core.js';
 import { BOT_GOAL_ID } from '../../src/arena/ai/bot-goals.js';
 
 function createController(core, difficultyId = 'hard') {
+  const character = core.getCharacterDefinition('player-2');
   return new BotController({
     participantId: 'player-2',
     difficultyId,
     behaviorSeed: 100,
     personalitySeed: 200,
     arena: core.config.arena,
-    characterRadius: core.config.character.radius,
+    characterRadius: character.collision.radius,
+    maximumStepHeight: character.movement.automaticStepHeight,
   });
 }
 
@@ -49,7 +51,7 @@ test('bot pursues only visible reachable equipment through ordinary bounded move
   const frame = controller.createInput(core.getSnapshot());
   const debug = controller.getDebugSnapshot();
   assert.equal(debug.goalId, BOT_GOAL_ID.ACQUIRE_EQUIPMENT);
-  assert.equal(frame.actionPressed, false);
+  assert.equal(frame.primaryPressed, false);
   assert.ok(Math.hypot(frame.moveX, frame.moveZ) > 0);
   assert.ok(Math.hypot(frame.moveX, frame.moveZ) <= 1 + 1e-12);
   controller.destroy();

@@ -39,6 +39,7 @@ export class BotController {
     personalitySeed,
     arena,
     characterRadius,
+    maximumStepHeight,
   }) {
     if (typeof participantId !== 'string' || participantId.length === 0) {
       throw new TypeError('Bot participantId 必须是非空字符串。');
@@ -47,7 +48,7 @@ export class BotController {
     this.#difficulty = getBotDifficultyProfile(difficultyId);
     this.#personality = createBotPersonality(uint32(personalitySeed, 'personalitySeed'));
     this.#rng = createRng(uint32(behaviorSeed, 'behaviorSeed'));
-    this.#arena = createBotArenaView(arena, characterRadius);
+    this.#arena = createBotArenaView(arena, characterRadius, maximumStepHeight);
     this.#sourceSnapshots = [];
     this.#currentPlan = null;
     this.#directionOffsetRadians = 0;
@@ -150,14 +151,17 @@ export class BotController {
         moveZ = (directionX * sine + directionZ * cosine) * magnitude;
       }
     }
-    const actionPressed = observation.commandTick === this.#actionTick;
+    const primaryPressed = observation.commandTick === this.#actionTick;
     const frame = normalizeInputFrame({
       tick: observation.commandTick,
       participantId: this.#participantId,
       moveX,
       moveZ,
-      actionPressed,
-      actionHeld: actionPressed,
+      primaryPressed,
+      primaryHeld: primaryPressed,
+      jumpPressed: false,
+      jumpHeld: false,
+      slamPressed: false,
     }, {
       expectedTick: observation.commandTick,
       participantIds: [this.#participantId],

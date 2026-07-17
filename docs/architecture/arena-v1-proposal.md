@@ -2,7 +2,7 @@
 
 ## 文档状态
 
-已接受整体边界；阶段 1 已选择项目内轻量街机物理，阶段 2 已落地无渲染 MatchCore，阶段 3 已落地隐藏机器人与本地快速匹配，阶段 4 已落地数据驱动 Rule/Core 装备闭环，阶段 5 已落地独立地图权威时间轴。决策见 [ADR-005](../decisions/005-arena-lightweight-physics.md)、[ADR-006](../decisions/006-arena-local-tick-utility-bot.md)、[ADR-007](../decisions/007-arena-rule-core-governance.md) 和 [ADR-008](../decisions/008-arena-map-authority-timeline.md)。
+已接受整体边界；阶段 1 已选择项目内轻量街机物理，阶段 2 已落地无渲染 MatchCore，阶段 3 已落地隐藏机器人与本地快速匹配，阶段 4 已落地数据驱动 Rule/Core 装备闭环，阶段 5 已落地独立地图权威时间轴。Stage 6 当前只落地 S6.1 Character/Input/Replay 合同，Movement 、触控和灰盒表现仍未实现。决策见 [ADR-005](../decisions/005-arena-lightweight-physics.md)、[ADR-006](../decisions/006-arena-local-tick-utility-bot.md)、[ADR-007](../decisions/007-arena-rule-core-governance.md) 和 [ADR-008](../decisions/008-arena-map-authority-timeline.md)。
 
 本文同时记录已落地边界与后续目标；未明确标记为已落地的模块仍不是当前能力。Stage 6～9 的后续架构处于提议阶段，分别见 [Stage 6](arena-stage6-input-movement-plan.md)、[Stage 7](arena-stage7-presentation-plan.md)、[Stage 8](arena-stage8-product-progression-plan.md)、[Stage 9](arena-stage9-convergence-plan.md) 执行计划，以及 [ADR-009](../decisions/009-arena-semantic-input-and-movement-authority.md)、[ADR-010](../decisions/010-arena-semantic-presentation-and-assets.md)、[ADR-011](../decisions/011-arena-versioned-local-progression.md)、[ADR-012](../decisions/012-arena-reproducible-convergence.md)。当前 v3 架构仍见 [`../architecture.md`](../architecture.md)。
 
@@ -40,6 +40,7 @@ src/arena/
 ├── replay.js                 # 输入录制、checkpoint 与严格回放
 ├── state-hash.js             # 量化权威状态 hash
 ├── physics/                  # PhysicsAdapter 与轻量物理实现
+├── character/                # 不可变 Definition、Registry 快照、Runtime 引用与物理投影
 ├── action/ equipment/ rules/ # 动作、装备与 RuleEngine 权威子系统
 ├── map/ composition/ content/ # 地图 Definition、时间轴、策略与组合根
 ├── runtime/                  # 外层帧率到固定 60Hz tick 的编排
@@ -99,7 +100,7 @@ BotController 每个逻辑 tick 只读取受限的 `BotObservation`：
 - 地图、装备和机器人扰动使用可命名的独立 RNG 流。
 - 输入可以记录并无渲染回放。
 - 录制只在权威 tick 成功后提交；回放必须包含连续完整输入、递增 checkpoint、最终结算与一致事件，并在所有异常路径释放重放 Core。
-- 对局配置生成 `configHash`，完整 Action/Equipment Definition 生成独立 `ruleContentHash`；运行中计算轻量状态 hash，定位配置篡改、内容版本错配、回放或跨平台差异。
+- 对局配置生成 `configHash`，完整 Action/Equipment/Map/Character Authority Content 生成独立 `ruleContentHash`；运行中计算轻量状态 hash，定位配置篡改、内容版本错配、回放或跨平台差异。
 - 阶段 3 批量模拟以是否结束、平均时长、命中与淘汰效率作为机器人骨架证据；装备争夺率、地图击杀来源和最终胜率在对应规则接入后补齐。
 
 ## 物理 POC

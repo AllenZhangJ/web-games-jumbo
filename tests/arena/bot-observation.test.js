@@ -14,8 +14,9 @@ test('BotObservation exposes only public delayed opponent state and is deeply fr
     commandSnapshot: source,
     delayedSnapshot: source,
     selfId: 'player-2',
-    arena: createBotArenaView(core.config.arena, core.config.character.radius),
+    arena: createBotArenaView(core.config.arena, core.getCharacterDefinition('player-2').collision.radius),
   });
+  assert.equal(observation.schemaVersion, 4);
   assert.equal(observation.self.id, 'player-2');
   assert.equal(observation.opponent.id, 'player-1');
   assert.equal(observation.matchSeed, undefined);
@@ -53,7 +54,7 @@ test('BotObservation delays world equipment and opponent ownership but keeps sel
   const afterPickup = cloneBotSourceSnapshot(core.getSnapshot());
   const common = {
     selfId: 'player-2',
-    arena: createBotArenaView(core.config.arena, core.config.character.radius),
+    arena: createBotArenaView(core.config.arena, core.getCharacterDefinition('player-2').collision.radius),
   };
   const delayed = createBotObservation({
     ...common,
@@ -84,7 +85,7 @@ test('BotObservation rejects future information', () => {
   const later = cloneBotSourceSnapshot(core.getSnapshot());
   const common = {
     selfId: 'player-2',
-    arena: createBotArenaView(core.config.arena, core.config.character.radius),
+    arena: createBotArenaView(core.config.arena, core.getCharacterDefinition('player-2').collision.radius),
   };
   assert.throws(() => createBotObservation({
     ...common,
@@ -100,7 +101,7 @@ test('BotObservation rejects mismatched identities and safely copies objective d
   const common = {
     commandSnapshot: source,
     selfId: 'player-2',
-    arena: createBotArenaView(core.config.arena, core.config.character.radius),
+    arena: createBotArenaView(core.config.arena, core.getCharacterDefinition('player-2').collision.radius),
   };
   const mismatched = {
     ...source,

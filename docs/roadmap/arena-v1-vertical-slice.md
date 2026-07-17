@@ -30,7 +30,7 @@
 | 9 | 平衡、可靠性与性能收敛 | 批量模拟、长稳、三端预算通过 |
 | 10 | 发布候选与冻结 | RC 验收、回滚证据、发行清单完成 |
 
-当前进度：阶段 0 已提交；阶段 1、2、3 的代码与本机自动化门禁已完成；阶段 4 已独立提交推送；阶段 5 的 Map Rule/Core/Bot 骨架、回放和时间轴压测已在本地落地，尚待本阶段提交。所有数值仍是后续灰盒与平衡的基线，不是发行冻结。三端开发者工具与目标真机证据仍属后续验收，不能由无渲染 Node 压测代替。
+当前进度：阶段 0～5 已分阶段提交并推送。Stage 6 当前只完成 S6.1 候选：不可变 Character Definition/Registry/Runtime 边界、赛前内容快照、InputFrame/Replay V4、角色内容 hash 和 Stage5 中性兼容门禁。S6.2 Movement 至 S6.6 均未完成，当前 Stage6 候选也尚未提交。所有数值仍是后续灰盒与平衡的基线，不是发行冻结。三端开发者工具与目标真机证据仍属后续验收，不能由无渲染 Node 压测代替。
 
 ## 阶段 0：文档、概念图与决策基线
 
@@ -155,6 +155,8 @@
 ## 阶段 6：触控灰盒可玩版
 
 技术执行顺序与模块边界见 [Stage 6 输入、移动与灰盒执行计划](../architecture/arena-stage6-input-movement-plan.md)，逐项证据见 [Stage 6 验收与证据矩阵](../quality/arena-stage6-verification-matrix.md)，架构决策草案见 [ADR-009](../decisions/009-arena-semantic-input-and-movement-authority.md)。该 ADR 在 Rule/Core 骨架通过前保持提议状态，A/B 胜者在盲测后冻结。
+
+状态：S6.1 候选的 Character/Input/Replay 合同和无渲染兼容门禁已通过；尚未进入 Movement Rule/Core，更不表示触控、灰盒或盲测完成。
 
 交付：
 

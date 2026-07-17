@@ -19,7 +19,7 @@ export const ACTION_PRIORITY = Object.freeze({
 });
 
 const CONTEXT_KEYS = new Set(['tick', 'participantId', 'canAct', 'input', 'candidates']);
-const INPUT_KEYS = new Set(['actionPressed', 'actionHeld']);
+const INPUT_KEYS = new Set(['primaryPressed', 'primaryHeld']);
 const CANDIDATE_KEYS = new Set([
   'id',
   'actionDefinitionId',
@@ -62,8 +62,8 @@ function cloneCandidate(value, index) {
 }
 
 function isTriggered(definition, input) {
-  if (definition.input.trigger === ACTION_INPUT_TRIGGER.PRESSED) return input.actionPressed;
-  if (definition.input.trigger === ACTION_INPUT_TRIGGER.HELD) return input.actionHeld;
+  if (definition.input.trigger === ACTION_INPUT_TRIGGER.PRESSED) return input.primaryPressed;
+  if (definition.input.trigger === ACTION_INPUT_TRIGGER.HELD) return input.primaryHeld;
   throw new RangeError(`ActionDefinition ${definition.id} 使用未知 input trigger。`);
 }
 
@@ -94,8 +94,8 @@ export class ActionResolver {
     }
     assertKnownKeys(context.input, INPUT_KEYS, 'ActionResolutionContext.input');
     if (
-      typeof context.input.actionPressed !== 'boolean'
-      || typeof context.input.actionHeld !== 'boolean'
+      typeof context.input.primaryPressed !== 'boolean'
+      || typeof context.input.primaryHeld !== 'boolean'
     ) throw new TypeError('ActionResolutionContext.input 必须包含布尔动作输入。');
     if (!Array.isArray(context.candidates)) {
       throw new TypeError('ActionResolutionContext.candidates 必须是数组。');
@@ -113,10 +113,10 @@ export class ActionResolver {
     candidates.sort(compareCandidates);
 
     const input = Object.freeze({
-      actionPressed: context.input.actionPressed,
-      actionHeld: context.input.actionHeld,
+      primaryPressed: context.input.primaryPressed,
+      primaryHeld: context.input.primaryHeld,
     });
-    const hasActionIntent = input.actionPressed || input.actionHeld;
+    const hasActionIntent = input.primaryPressed || input.primaryHeld;
     if (!hasActionIntent) {
       return freezeResult({
         kind: ACTION_RESOLUTION_KIND.NONE,

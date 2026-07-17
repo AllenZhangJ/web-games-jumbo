@@ -1,4 +1,23 @@
 import { normalizeMovementIntent } from './physics/physics-adapter.js';
+import {
+  assertKnownKeys,
+  assertNonEmptyString,
+  cloneFrozenData,
+} from './rules/definition-utils.js';
+
+export const ARENA_INPUT_FRAME_SCHEMA_VERSION = 4;
+
+const INPUT_FRAME_KEYS = new Set([
+  'tick',
+  'participantId',
+  'moveX',
+  'moveZ',
+  'primaryPressed',
+  'primaryHeld',
+  'jumpPressed',
+  'jumpHeld',
+  'slamPressed',
+]);
 
 function assertTick(value, name = 'tick') {
   if (!Number.isSafeInteger(value) || value < 0) {
@@ -9,56 +28,74 @@ function assertTick(value, name = 'tick') {
 
 export function createNeutralInputFrame(tick, participantId) {
   assertTick(tick);
-  if (typeof participantId !== 'string' || participantId.length === 0) {
-    throw new TypeError('participantId 必须是非空字符串。');
-  }
-  return {
+  const normalizedParticipantId = assertNonEmptyString(participantId, 'participantId');
+  return Object.freeze({
     tick,
-    participantId,
+    participantId: normalizedParticipantId,
     moveX: 0,
     moveZ: 0,
-    actionPressed: false,
-    actionHeld: false,
-  };
+    primaryPressed: false,
+    primaryHeld: false,
+    jumpPressed: false,
+    jumpHeld: false,
+    slamPressed: false,
+  });
 }
 
-export function normalizeInputFrame(frame, { expectedTick, participantIds } = {}) {
-  if (!frame || typeof frame !== 'object') throw new TypeError('InputFrame 必须是对象。');
-  assertTick(frame.tick, 'InputFrame.tick');
-  if (expectedTick !== undefined && frame.tick !== expectedTick) {
-    throw new RangeError(`InputFrame.tick ${frame.tick} 与当前 tick ${expectedTick} 不一致。`);
+function normalizeClonedInputFrame(source, { expectedTick, participantIds } = {}) {
+  assertKnownKeys(source, INPUT_FRAME_KEYS, 'InputFrame');
+  assertTick(source.tick, 'InputFrame.tick');
+  if (expectedTick !== undefined && source.tick !== expectedTick) {
+    throw new RangeError(`InputFrame.tick ${source.tick} 与当前 tick ${expectedTick} 不一致。`);
   }
-  if (typeof frame.participantId !== 'string' || frame.participantId.length === 0) {
-    throw new TypeError('InputFrame.participantId 必须是非空字符串。');
+  const participantId = assertNonEmptyString(source.participantId, 'InputFrame.participantId');
+  if (participantIds && !participantIds.includes(participantId)) {
+    throw new RangeError(`未知 participant ${participantId}。`);
   }
-  if (participantIds && !participantIds.includes(frame.participantId)) {
-    throw new RangeError(`未知 participant ${frame.participantId}。`);
+  for (const field of [
+    'primaryPressed',
+    'primaryHeld',
+    'jumpPressed',
+    'jumpHeld',
+    'slamPressed',
+  ]) {
+    if (typeof source[field] !== 'boolean') {
+      throw new TypeError(`InputFrame.${field} 必须是布尔值。`);
+    }
   }
-  if (typeof frame.actionPressed !== 'boolean' || typeof frame.actionHeld !== 'boolean') {
-    throw new TypeError('InputFrame 的 actionPressed/actionHeld 必须是布尔值。');
-  }
-  const movement = normalizeMovementIntent(frame.moveX, frame.moveZ);
-  return {
-    tick: frame.tick,
-    participantId: frame.participantId,
+  const movement = normalizeMovementIntent(source.moveX, source.moveZ);
+  return Object.freeze({
+    tick: source.tick,
+    participantId,
     moveX: movement.x,
     moveZ: movement.z,
-    actionPressed: frame.actionPressed,
-    actionHeld: frame.actionHeld,
-  };
+    primaryPressed: source.primaryPressed,
+    primaryHeld: source.primaryHeld,
+    jumpPressed: source.jumpPressed,
+    jumpHeld: source.jumpHeld,
+    slamPressed: source.slamPressed,
+  });
+}
+
+export function normalizeInputFrame(frame, options = {}) {
+  return normalizeClonedInputFrame(cloneFrozenData(frame, 'InputFrame'), options);
 }
 
 export function normalizeInputFrames(frames, { tick, participantIds }) {
-  if (!Array.isArray(frames)) throw new TypeError('InputFrame 集合必须是数组。');
+  const sourceFrames = cloneFrozenData(frames, 'InputFrame 集合');
+  if (!Array.isArray(sourceFrames)) throw new TypeError('InputFrame 集合必须是数组。');
   const byParticipant = new Map();
-  for (const frame of frames) {
-    const normalized = normalizeInputFrame(frame, { expectedTick: tick, participantIds });
+  for (const frame of sourceFrames) {
+    const normalized = normalizeClonedInputFrame(frame, {
+      expectedTick: tick,
+      participantIds,
+    });
     if (byParticipant.has(normalized.participantId)) {
       throw new RangeError(`tick ${tick} 包含重复输入 ${normalized.participantId}。`);
     }
     byParticipant.set(normalized.participantId, normalized);
   }
-  return participantIds.map((participantId) => (
+  return Object.freeze(participantIds.map((participantId) => (
     byParticipant.get(participantId) ?? createNeutralInputFrame(tick, participantId)
-  ));
+  )));
 }

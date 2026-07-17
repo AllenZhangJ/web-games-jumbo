@@ -31,8 +31,11 @@ const INPUT_FRAME_KEYS = new Set([
   'participantId',
   'moveX',
   'moveZ',
-  'actionPressed',
-  'actionHeld',
+  'primaryPressed',
+  'primaryHeld',
+  'jumpPressed',
+  'jumpHeld',
+  'slamPressed',
 ]);
 const POSITION_KEYS = new Set(['x', 'y', 'z']);
 const FACING_KEYS = new Set(['x', 'z']);
@@ -287,7 +290,13 @@ export class ArenaRuleEngine {
       }
       const participantId = assertNonEmptyString(frame.participantId, 'InputFrame.participantId');
       if (frameById.has(participantId)) throw new RangeError(`重复 InputFrame ${participantId}。`);
-      if (typeof frame.actionPressed !== 'boolean' || typeof frame.actionHeld !== 'boolean') {
+      if ([
+        frame.primaryPressed,
+        frame.primaryHeld,
+        frame.jumpPressed,
+        frame.jumpHeld,
+        frame.slamPressed,
+      ].some((value) => typeof value !== 'boolean')) {
         throw new TypeError('InputFrame 动作字段必须是布尔值。');
       }
       frameById.set(participantId, frame);
@@ -308,8 +317,8 @@ export class ArenaRuleEngine {
         participantId,
         canAct: actor.canAct && actionState.phase === ARENA_ACTION_PHASE.IDLE,
         input: {
-          actionPressed: frameById.get(participantId).actionPressed,
-          actionHeld: frameById.get(participantId).actionHeld,
+          primaryPressed: frameById.get(participantId).primaryPressed,
+          primaryHeld: frameById.get(participantId).primaryHeld,
         },
         candidates,
       });

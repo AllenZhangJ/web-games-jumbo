@@ -171,6 +171,10 @@ function copyParticipant(participant, name) {
   }
   return {
     id: participant.id,
+    characterDefinitionId: nonEmptyString(
+      participant.characterDefinitionId,
+      `${name}.characterDefinitionId`,
+    ),
     status: participant.status,
     lives: participant.lives,
     eliminations: participant.eliminations,
@@ -330,7 +334,7 @@ export function createBotObservation({
   const copiedSelf = copyParticipant(self, 'observation.self');
   const copiedOpponent = copyParticipant(opponent, 'observation.opponent');
   return deepFreeze({
-    schemaVersion: 3,
+    schemaVersion: 4,
     commandTick: commandSnapshot.tick,
     observedTick: delayedSnapshot.tick,
     phase: commandSnapshot.phase,

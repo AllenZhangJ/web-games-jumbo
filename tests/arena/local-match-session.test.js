@@ -123,30 +123,28 @@ test('rapid App pause/resume never advances a paused tick or desynchronizes the 
   }
 });
 
-test('caller-owned InputFrame cannot re-enter a session during validation', () => {
+test('caller-owned InputFrame accessors are rejected without execution and session remains usable', () => {
   const { session } = new QuickMatchService().create({
     matchSeed: 25,
     config: { preparingTicks: 0 },
   });
   session.start();
-  let nestedError = null;
+  let getterCalls = 0;
   const frame = {
     tick: 0,
     get participantId() {
-      try {
-        session.step();
-      } catch (error) {
-        nestedError = error;
-      }
+      getterCalls += 1;
       return 'player-1';
     },
     moveX: 0,
     moveZ: 0,
-    actionPressed: false,
-    actionHeld: false,
+    primaryPressed: false,
+    primaryHeld: false,
   };
-  session.step(frame);
-  assert.match(nestedError?.message, /不可重入/);
+  assert.throws(() => session.step(frame), /数据字段/);
+  assert.equal(getterCalls, 0);
+  assert.equal(session.getSnapshot().tick, 0);
+  session.step();
   assert.equal(session.getSnapshot().tick, 1);
   session.destroy();
 });

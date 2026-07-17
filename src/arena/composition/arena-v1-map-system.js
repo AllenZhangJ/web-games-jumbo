@@ -11,6 +11,7 @@ import {
   createStaticMapDefinition,
 } from '../map/map-definition.js';
 import { ArenaMapSystem } from '../map/map-system.js';
+import { validateCharacterSpawnSafety } from '../map/map-character-safety-validator.js';
 import { validateWalkableMapTopology } from '../map/map-topology-validator.js';
 import {
   assertArenaV1AuthorityContent,
@@ -43,6 +44,7 @@ export function createArenaV1MapSystem({
   config,
   matchSeed,
   equipmentDefinitionCatalog = null,
+  characterDefinitionCatalog = null,
   authorityContent = null,
 }) {
   const content = authorityContent
@@ -53,11 +55,39 @@ export function createArenaV1MapSystem({
   if (!equipmentRegistry || typeof equipmentRegistry.require !== 'function') {
     throw new TypeError('createArenaV1MapSystem 需要 EquipmentDefinition catalog。');
   }
+  const characterRegistry = characterDefinitionCatalog ?? content.characterRegistry;
+  if (!characterRegistry || typeof characterRegistry.require !== 'function') {
+    throw new TypeError('createArenaV1MapSystem 需要 CharacterDefinition catalog。');
+  }
+  if (!Array.isArray(config.participantCharacters) || config.participantCharacters.length === 0) {
+    throw new RangeError('createArenaV1MapSystem 需要 participantCharacters。');
+  }
+  const selectedCharacters = config.participantIds.map((participantId) => {
+    const assignment = config.participantCharacters.find((candidate) => (
+      candidate.participantId === participantId
+    ));
+    if (!assignment) {
+      throw new RangeError(`participant ${participantId} 没有 CharacterDefinition 分配。`);
+    }
+    return characterRegistry.require(assignment.definitionId);
+  });
+  const characterRadius = Math.max(...selectedCharacters.map(({ collision }) => collision.radius));
+  const maximumStepHeight = Math.min(...selectedCharacters.map(
+    ({ movement }) => movement.automaticStepHeight,
+  ));
   const strategyRegistry = createDefaultMapEventStrategyRegistry();
-  validateDefaultMapSafety(mapDefinition);
+  const permanentSafeSurfaceIds = validateDefaultMapSafety(mapDefinition);
   validateWalkableMapTopology(mapDefinition, {
-    characterRadius: config.character.radius,
-    maximumStepHeight: ARENA_PHYSICS.maxStepHeight,
+    characterRadius,
+    maximumStepHeight,
+  });
+  validateCharacterSpawnSafety(mapDefinition, {
+    characterSpawns: selectedCharacters.map(({ id, collision }) => ({
+      characterId: id,
+      collision,
+    })),
+    permanentSafeSurfaceIds,
+    groundProbeTolerance: ARENA_PHYSICS.groundProbeTolerance,
   });
   return new ArenaMapSystem({
     mapDefinition,

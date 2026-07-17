@@ -47,7 +47,7 @@ function context(candidates, overrides = {}) {
     tick: 12,
     participantId: 'player-1',
     canAct: true,
-    input: { actionPressed: true, actionHeld: true },
+    input: { primaryPressed: true, primaryHeld: true },
     candidates,
     ...overrides,
   };
@@ -100,7 +100,7 @@ test('unavailable participant and neutral input have explicit non-action outcome
   assert.equal(unavailable.reason, 'participant-unavailable');
 
   const neutral = value.resolve(context([], {
-    input: { actionPressed: false, actionHeld: false },
+    input: { primaryPressed: false, primaryHeld: false },
   }));
   assert.equal(neutral.kind, ACTION_RESOLUTION_KIND.NONE);
   assert.equal(neutral.reason, 'no-input');

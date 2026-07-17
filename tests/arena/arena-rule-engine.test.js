@@ -33,8 +33,11 @@ function frames(tick, pressedIds = []) {
     participantId,
     moveX: 0,
     moveZ: 0,
-    actionPressed: pressedIds.includes(participantId),
-    actionHeld: pressedIds.includes(participantId),
+    primaryPressed: pressedIds.includes(participantId),
+    primaryHeld: pressedIds.includes(participantId),
+    jumpPressed: false,
+    jumpHeld: false,
+    slamPressed: false,
   }));
 }
 

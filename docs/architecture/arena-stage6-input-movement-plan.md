@@ -2,15 +2,17 @@
 
 ## 状态
 
-提议中。本文只冻结实现边界与验收顺序，不提前冻结 A/B 输入方案的产品胜者。Stage 5 合并后，Stage 6 必须继续按 `Rule → Core → Bot → Presentation` 分批落地。
+提议中。本文只冻结实现边界与验收顺序，不提前冻结 A/B 输入方案的产品胜者。Stage 6 必须继续按 `Rule → Core → Bot → Presentation` 分批落地。
+
+S6.1 的 Character 纯数据合同、比赛级内容快照、InputFrame V4、Replay V4 与严格旧版拒绝已在当前 Stage 6 候选工作区落地，并通过本机 E1/E2 门禁。S6.2 Movement 及其后批次仍未实现，ADR-009 因此仍保持“提议”。
 
 逐项完成证据与阻断级门禁见 [Stage 6 验收与证据矩阵](../quality/arena-stage6-verification-matrix.md)。
 
-## 当前缺口
+## S6.1 之后的当前缺口
 
-截至 Stage 5：
+截至 S6.1 候选：
 
-- `InputFrame` 只有二维移动和一个动作键，没有跳跃、二段跳或下砸语义。
+- `InputFrame V4` 已能记录 `primary/jump/slam`，但新增的竖直意图在 S6.2 前保持中性，不会偷偷触发玩法。
 - 轻量物理拥有位置、速度、接地和支撑面，但没有移动规则、跳跃次数或输入缓冲。
 - `ActionResolver` 已统一基础攻击与装备，却仍是单动作通道、单结果。
 - Arena 还没有触控适配器、灰盒 Renderer、HUD 或可视 Session 组合根。

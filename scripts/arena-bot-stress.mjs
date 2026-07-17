@@ -1,10 +1,13 @@
 import { performance } from 'node:perf_hooks';
 import { BOT_DIFFICULTY_IDS } from '../src/arena/ai/bot-difficulty.js';
 import { createArenaV1MatchConfig } from '../src/arena/arena-v1-match-core.js';
+import { createArenaV1CharacterRegistry } from '../src/arena/content/arena-v1-characters.js';
 import { createNeutralInputFrame, normalizeInputFrame } from '../src/arena/input-frame.js';
 import { QuickMatchService } from '../src/arena/matchmaking/quick-match-service.js';
 import { createMatchAssignment } from '../src/arena/matchmaking/match-assignment.js';
 import { replayMatch } from '../src/arena/replay.js';
+
+const CHARACTER_REGISTRY = createArenaV1CharacterRegistry();
 
 function readPositiveInteger(name, fallback) {
   const prefix = `--${name}=`;
@@ -98,6 +101,10 @@ function verifyDifficultyDistribution(sampleCount = 10_000) {
 }
 
 function createHumanBaseline(config) {
+  const playerCharacterId = config.participantCharacters.find(
+    ({ participantId }) => participantId === 'player-1',
+  )?.definitionId;
+  const characterRadius = CHARACTER_REGISTRY.require(playerCharacterId).collision.radius;
   const history = [];
   let nextDecisionTick = 0;
   let moveX = 0;
@@ -107,7 +114,7 @@ function createHumanBaseline(config) {
     if (history.length > 11) history.shift();
     const self = snapshot.participants.find((participant) => participant.id === 'player-1');
     if (self.status !== 'active') return createNeutralInputFrame(snapshot.tick, 'player-1');
-    let actionPressed = false;
+    let primaryPressed = false;
     if (snapshot.tick >= nextDecisionTick) {
       nextDecisionTick = snapshot.tick + 8;
       const delayed = history[0];
@@ -117,7 +124,7 @@ function createHumanBaseline(config) {
       const clearance = Math.min(
         surface.halfExtents.x - Math.abs(self.position.x - surface.center.x),
         surface.halfExtents.z - Math.abs(self.position.z - surface.center.z),
-      ) - config.character.radius;
+      ) - characterRadius;
       const target = clearance < 1.25 ? surface.center : opponent.position;
       const dx = target.x - self.position.x;
       const dz = target.z - self.position.z;
@@ -141,7 +148,7 @@ function createHumanBaseline(config) {
           ? (opponent.position.z - self.position.z) / opponentDistance
           : self.facing.z;
         const facingDot = directionX * self.facing.x + directionZ * self.facing.z;
-        actionPressed = opponentDistance <= config.basePush.range * 0.92
+        primaryPressed = opponentDistance <= config.basePush.range * 0.92
           && facingDot >= config.basePush.minimumFacingDot;
       }
     }
@@ -150,8 +157,11 @@ function createHumanBaseline(config) {
       participantId: 'player-1',
       moveX,
       moveZ,
-      actionPressed,
-      actionHeld: actionPressed,
+      primaryPressed,
+      primaryHeld: primaryPressed,
+      jumpPressed: false,
+      jumpHeld: false,
+      slamPressed: false,
     }, {
       expectedTick: snapshot.tick,
       participantIds: ['player-1'],

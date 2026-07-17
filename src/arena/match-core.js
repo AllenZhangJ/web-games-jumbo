@@ -12,6 +12,9 @@ import { createArenaConfigHash, createMatchStateHash } from './state-hash.js';
 import { createRng, deriveSeed } from '../shared/deterministic-rng.js';
 import { createDeterministicDataHash } from '../shared/deterministic-data-hash.js';
 import { combineCleanupFailure, normalizeThrownError } from './lifecycle-error.js';
+import { createCharacterPhysicsProfile } from './character/character-physics-profile.js';
+import { assertCharacterRegistry } from './character/character-registry.js';
+import { createCharacterRuntimeReference } from './character/character-runtime.js';
 
 const EVENT = Object.freeze({
   MATCH_STARTED: 'MatchStarted',
@@ -86,6 +89,8 @@ export class MatchCore {
   #config;
   #configHash;
   #ruleContentHash;
+  #characterRegistry;
+  #characterRuntimes;
   #physics;
   #rules;
   #map;
@@ -122,6 +127,7 @@ export class MatchCore {
       cleanupErrors.push(normalizeThrownError(cleanupError, 'MatchCore map 构造清理失败'));
     }
     this.#destroyed = true;
+    this.#characterRuntimes?.clear();
     return combineCleanupFailure(
       normalizeThrownError(error, 'MatchCore 构造失败'),
       cleanupErrors,
@@ -135,6 +141,7 @@ export class MatchCore {
     physicsFactory = createLightweightPhysicsWorld,
     ruleEngineFactory,
     mapSystemFactory,
+    characterRegistry,
   } = {}) {
     if (typeof physicsFactory !== 'function') throw new TypeError('physicsFactory 必须是函数。');
     if (typeof ruleEngineFactory !== 'function') {
@@ -143,6 +150,7 @@ export class MatchCore {
     if (typeof mapSystemFactory !== 'function') {
       throw new TypeError('MatchCore 需要显式 mapSystemFactory。');
     }
+    this.#characterRegistry = assertCharacterRegistry(characterRegistry);
     this.#matchSeed = normalizeSeed(seed);
     this.#config = createArenaMatchConfig(config);
     this.#configHash = createArenaConfigHash(this.#config);
@@ -165,10 +173,28 @@ export class MatchCore {
       ]),
     );
     this.#participants = new Map();
+    this.#characterRuntimes = new Map();
     this.#physics = null;
     this.#rules = null;
     this.#map = null;
     try {
+      for (const assignment of this.config.participantCharacters) {
+        const runtime = createCharacterRuntimeReference({
+          participantId: assignment.participantId,
+          definitionId: assignment.definitionId,
+          characterRegistry: this.#characterRegistry,
+        });
+        this.#characterRuntimes.set(runtime.participantId, runtime);
+        const definition = this.#characterRegistry.require(runtime.definitionId);
+        if (
+          !Number.isFinite(this.config.basePush.horizontalImpulse / definition.collision.mass)
+          || !Number.isFinite(this.config.basePush.verticalImpulse / definition.collision.mass)
+        ) {
+          throw new RangeError(
+            `basePush impulse 与 CharacterDefinition ${definition.id} 的质量组合后无效。`,
+          );
+        }
+      }
       this.#rules = ruleEngineFactory({
         participantIds: this.config.participantIds,
         config: this.config,
@@ -180,11 +206,15 @@ export class MatchCore {
         equipmentDefinitionCatalog: Object.freeze({
           require: (definitionId) => this.#rules.requireEquipmentDefinition(definitionId),
         }),
+        characterDefinitionCatalog: Object.freeze({
+          require: (definitionId) => this.#characterRegistry.require(definitionId),
+        }),
       });
       assertArenaMapSystem(this.#map);
       this.#ruleContentHash = createDeterministicDataHash({
         combat: this.#rules.getContentHash(),
         map: this.#map.getContentHash(),
+        characters: this.#characterRegistry.list(),
       }, 'Arena authority content');
       if (typeof this.#ruleContentHash !== 'string' || !/^[0-9a-f]{8}$/.test(this.#ruleContentHash)) {
         throw new TypeError('ruleEngine content hash 必须是 8 位十六进制字符串。');
@@ -195,10 +225,12 @@ export class MatchCore {
         const id = this.config.participantIds[index];
         const participant = createParticipant(id, this.config.livesPerParticipant, index);
         this.#participants.set(id, participant);
+        const runtime = this.#characterRuntimes.get(id);
+        const definition = this.#characterRegistry.require(runtime.definitionId);
         this.#physics.addCharacter({
           id,
           position: this.config.arena.spawns[index],
-          ...this.config.character,
+          ...createCharacterPhysicsProfile(definition),
         });
         this.#physics.resetCharacter(id, {
           position: this.config.arena.spawns[index],
@@ -253,6 +285,13 @@ export class MatchCore {
 
   get result() {
     return cloneResult(this.#result);
+  }
+
+  getCharacterDefinition(participantId) {
+    this.#assertUsable();
+    const runtime = this.#characterRuntimes.get(participantId);
+    if (!runtime) throw new RangeError(`未知 character participant ${String(participantId)}。`);
+    return this.#characterRegistry.require(runtime.definitionId);
   }
 
   #assertUsable() {
@@ -407,20 +446,20 @@ export class MatchCore {
       || !Number.isFinite(position.z)
       || position.y <= this.config.arena.killY
     ) return false;
-    return this.config.arena.surfaces.some((surface) => (
-      this.#map.isSurfaceEnabled(surface.id)
-      && Math.abs(position.x - surface.center.x) <= surface.halfExtents.x
-      && Math.abs(position.z - surface.center.z) <= surface.halfExtents.z
-      && Math.abs(
-        position.y
-          - (
-            surface.center.y
-            + surface.halfExtents.y
-            + this.config.character.radius
-            + this.config.character.halfHeight
-          )
-      ) <= EQUIPMENT_SURFACE_HEIGHT_TOLERANCE
-    ));
+    return this.config.arena.surfaces.some((surface) => {
+      if (
+        !this.#map.isSurfaceEnabled(surface.id)
+        || Math.abs(position.x - surface.center.x) > surface.halfExtents.x
+        || Math.abs(position.z - surface.center.z) > surface.halfExtents.z
+      ) return false;
+      const surfaceTop = surface.center.y + surface.halfExtents.y;
+      return [...this.#characterRuntimes.values()].some((runtime) => {
+        const collision = this.#characterRegistry.require(runtime.definitionId).collision;
+        return Math.abs(
+          position.y - (surfaceTop + collision.radius + collision.halfHeight)
+        ) <= EQUIPMENT_SURFACE_HEIGHT_TOLERANCE;
+      });
+    });
   }
 
   #advanceMapState() {
@@ -742,6 +781,7 @@ export class MatchCore {
         const physics = this.#physics.getCharacterState(id);
         return {
           id,
+          characterDefinitionId: this.#characterRuntimes.get(id).definitionId,
           status: participant.status,
           lives: participant.lives,
           eliminations: participant.eliminations,
@@ -827,6 +867,9 @@ export class MatchCore {
         invulnerableTicks: this.config.invulnerableTicks,
         lastHitCreditTicks: this.config.lastHitCreditTicks,
         basePush: { ...this.config.basePush },
+        participantCharacters: this.config.participantCharacters.map((assignment) => ({
+          ...assignment,
+        })),
         mapDefinitionId: this.config.mapDefinitionId,
         equipment: {
           initialSpawns: this.config.equipment.initialSpawns.map((spawn) => ({
@@ -844,7 +887,6 @@ export class MatchCore {
           })),
           spawns: this.config.arena.spawns.map((spawn) => ({ ...spawn })),
         },
-        character: { ...this.config.character },
       },
     };
   }
@@ -855,6 +897,7 @@ export class MatchCore {
     this.#destroyed = true;
     this.#events.length = 0;
     this.#participants.clear();
+    this.#characterRuntimes.clear();
     const errors = [];
     if (this.#rules) {
       try {

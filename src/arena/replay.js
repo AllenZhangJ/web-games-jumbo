@@ -2,8 +2,10 @@ import { ARENA_MATCH_PHASE } from './config.js';
 import { normalizeInputFrames } from './input-frame.js';
 import { MatchCore } from './match-core.js';
 import { createArenaV1MatchCore } from './arena-v1-match-core.js';
+import { cloneFrozenData } from './rules/definition-utils.js';
+import { createDeterministicDataHash } from '../shared/deterministic-data-hash.js';
 
-export const ARENA_REPLAY_SCHEMA_VERSION = 3;
+export const ARENA_REPLAY_SCHEMA_VERSION = 4;
 
 function copyInput(frame) {
   return {
@@ -11,8 +13,11 @@ function copyInput(frame) {
     participantId: frame.participantId,
     moveX: frame.moveX,
     moveZ: frame.moveZ,
-    actionPressed: frame.actionPressed,
-    actionHeld: frame.actionHeld,
+    primaryPressed: frame.primaryPressed,
+    primaryHeld: frame.primaryHeld,
+    jumpPressed: frame.jumpPressed,
+    jumpHeld: frame.jumpHeld,
+    slamPressed: frame.slamPressed,
   };
 }
 
@@ -129,45 +134,45 @@ export class HeadlessMatchRunner {
 }
 
 function validateReplay(replay) {
-  if (!replay || typeof replay !== 'object') throw new TypeError('replay 必须是对象。');
-  if (replay.replaySchemaVersion !== ARENA_REPLAY_SCHEMA_VERSION) {
-    throw new RangeError(`不支持 replay schema ${replay.replaySchemaVersion}。`);
+  const source = cloneFrozenData(replay, 'replay');
+  if (source.replaySchemaVersion !== ARENA_REPLAY_SCHEMA_VERSION) {
+    throw new RangeError(`不支持 replay schema ${source.replaySchemaVersion}。`);
   }
-  if (!Number.isSafeInteger(replay.schemaVersion) || replay.schemaVersion < 1) {
+  if (!Number.isSafeInteger(source.schemaVersion) || source.schemaVersion < 1) {
     throw new TypeError('replay.schemaVersion 必须是正安全整数。');
   }
   if (
-    typeof replay.physicsBackendVersion !== 'string'
-    || replay.physicsBackendVersion.length === 0
+    typeof source.physicsBackendVersion !== 'string'
+    || source.physicsBackendVersion.length === 0
   ) throw new TypeError('replay.physicsBackendVersion 必须是非空字符串。');
   for (const field of ['configHash', 'ruleContentHash']) {
-    if (typeof replay[field] !== 'string' || !/^[0-9a-f]{8}$/.test(replay[field])) {
+    if (typeof source[field] !== 'string' || !/^[0-9a-f]{8}$/.test(source[field])) {
       throw new TypeError(`replay.${field} 必须是 8 位十六进制 hash。`);
     }
   }
   if (
-    !Number.isSafeInteger(replay.matchSeed)
-    || replay.matchSeed < 0
-    || replay.matchSeed > 0xffffffff
+    !Number.isSafeInteger(source.matchSeed)
+    || source.matchSeed < 0
+    || source.matchSeed > 0xffffffff
   ) throw new RangeError('replay.matchSeed 必须是 uint32。');
   if (
-    !Array.isArray(replay.inputFrames)
-    || !Array.isArray(replay.checkpoints)
-    || !Array.isArray(replay.events)
+    !Array.isArray(source.inputFrames)
+    || !Array.isArray(source.checkpoints)
+    || !Array.isArray(source.events)
   ) {
     throw new TypeError('replay 缺少 inputFrames、checkpoints 或 events。');
   }
-  if (!replay.config || typeof replay.config !== 'object') {
+  if (!source.config || typeof source.config !== 'object') {
     throw new TypeError('replay 缺少 config。');
   }
-  if (!replay.result || typeof replay.result !== 'object') {
+  if (!source.result || typeof source.result !== 'object') {
     throw new TypeError('replay 必须包含完整结算结果。');
   }
-  if (typeof replay.finalHash !== 'string' || !/^[0-9a-f]{8}$/.test(replay.finalHash)) {
+  if (typeof source.finalHash !== 'string' || !/^[0-9a-f]{8}$/.test(source.finalHash)) {
     throw new TypeError('replay.finalHash 必须是 8 位十六进制 hash。');
   }
   let previousTick = -1;
-  for (const checkpoint of replay.checkpoints) {
+  for (const checkpoint of source.checkpoints) {
     if (
       !checkpoint
       || !Number.isSafeInteger(checkpoint.tick)
@@ -178,14 +183,14 @@ function validateReplay(replay) {
     if (checkpoint.tick <= previousTick) throw new RangeError('replay checkpoint tick 必须严格递增。');
     previousTick = checkpoint.tick;
   }
-  if (replay.checkpoints.length === 0 || replay.checkpoints[0].tick !== 0) {
+  if (source.checkpoints.length === 0 || source.checkpoints[0].tick !== 0) {
     throw new RangeError('replay 必须包含 tick 0 的初始 checkpoint。');
   }
-  return replay;
+  return source;
 }
 
 export function replayMatch(replay, { coreFactory = createArenaV1MatchCore } = {}) {
-  validateReplay(replay);
+  replay = validateReplay(replay);
   if (typeof coreFactory !== 'function') throw new TypeError('coreFactory 必须是函数。');
   const core = coreFactory({ seed: replay.matchSeed, config: replay.config });
   if (!(core instanceof MatchCore)) throw new TypeError('coreFactory 必须返回 MatchCore。');
@@ -246,10 +251,16 @@ export function replayMatch(replay, { coreFactory = createArenaV1MatchCore } = {
     if (finalHash !== replay.finalHash) {
       throw new Error(`回放最终 hash 不一致：期望 ${replay.finalHash}，实际 ${finalHash}。`);
     }
-    if (JSON.stringify(replayedEvents) !== JSON.stringify(replay.events)) {
+    if (
+      createDeterministicDataHash(replayedEvents, 'replayed events')
+      !== createDeterministicDataHash(replay.events, 'recorded events')
+    ) {
       throw new Error('回放事件序列不一致。');
     }
-    if (JSON.stringify(result) !== JSON.stringify(replay.result)) {
+    if (
+      createDeterministicDataHash(result, 'replayed result')
+      !== createDeterministicDataHash(replay.result, 'recorded result')
+    ) {
       throw new Error('回放结算结果不一致。');
     }
     return { finalHash, result, events: replayedEvents };

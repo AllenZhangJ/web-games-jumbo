@@ -17,7 +17,7 @@ try {
       ...createNeutralInputFrame(core.tick, participantId),
       moveX: index === 0 ? 0.65 : -0.6,
       moveZ: core.tick % 120 < 60 ? 0.2 : -0.2,
-      actionPressed: core.tick % (index === 0 ? 37 : 53) === 0,
+      primaryPressed: core.tick % (index === 0 ? 37 : 53) === 0,
     }));
     core.step(frames);
   }

@@ -55,7 +55,7 @@ function step(core, values) {
 test('MatchCore automatically picks up equipment and resolves its action on the same input path', () => {
   const core = createEquipmentCore();
   const first = step(core, {
-    'player-1': { actionPressed: true, actionHeld: true },
+    'player-1': { primaryPressed: true, primaryHeld: true },
   });
   assert.deepEqual(first.map(({ type }) => type), [
     ARENA_MATCH_EVENT.MATCH_STARTED,
@@ -80,11 +80,11 @@ test('MatchCore automatically picks up equipment and resolves its action on the 
 
 test('equipment cooldown consumes action input instead of falling back to base push', () => {
   const core = createEquipmentCore();
-  step(core, { 'player-1': { actionPressed: true, actionHeld: true } });
+  step(core, { 'player-1': { primaryPressed: true, primaryHeld: true } });
   for (let tick = 0; tick < 46; tick += 1) step(core);
   assert.equal(core.getSnapshot().participants[0].action.phase, 'idle');
   assert.ok(core.getSnapshot().participants[0].equipment.cooldownRemainingTicks > 0);
-  const blocked = step(core, { 'player-1': { actionPressed: true, actionHeld: true } });
+  const blocked = step(core, { 'player-1': { primaryPressed: true, primaryHeld: true } });
   assert.equal(blocked.some(({ type }) => type === ARENA_MATCH_EVENT.ACTION_STARTED), false);
   assert.equal(core.getSnapshot().participants[0].action.phase, 'idle');
   core.destroy();
@@ -101,7 +101,7 @@ test('chain pull and shield charge execute through the same MatchCore action pat
     },
   });
   const chainStarted = step(chain, {
-    'player-1': { actionPressed: true, actionHeld: true },
+    'player-1': { primaryPressed: true, primaryHeld: true },
   });
   assert.equal(
     chainStarted.find(({ type }) => type === ARENA_MATCH_EVENT.ACTION_STARTED).action,
@@ -128,7 +128,7 @@ test('chain pull and shield charge execute through the same MatchCore action pat
   });
   const beforeX = shield.getSnapshot().participants[0].position.x;
   const shieldStarted = step(shield, {
-    'player-1': { actionPressed: true, actionHeld: true },
+    'player-1': { primaryPressed: true, primaryHeld: true },
   });
   assert.equal(
     shieldStarted.find(({ type }) => type === ARENA_MATCH_EVENT.ACTION_STARTED).action,

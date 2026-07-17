@@ -101,13 +101,15 @@ export class QuickMatchService {
     try {
       core = this.#coreFactory({ seed: assignment.matchSeed, config });
       if (!(core instanceof MatchCore)) throw new TypeError('coreFactory 必须返回 MatchCore。');
+      const botCharacter = core.getCharacterDefinition('player-2');
       controller = this.#botControllerFactory({
         participantId: 'player-2',
         difficultyId: assignment.effectiveDifficultyId,
         behaviorSeed: assignment.seeds.botBehavior,
         personalitySeed: assignment.seeds.botPersonality,
         arena: core.config.arena,
-        characterRadius: core.config.character.radius,
+        characterRadius: botCharacter.collision.radius,
+        maximumStepHeight: botCharacter.movement.automaticStepHeight,
       });
       session = this.#sessionFactory({
         core,
