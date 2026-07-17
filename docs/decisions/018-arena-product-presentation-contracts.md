@@ -1,6 +1,6 @@
 # ADR-018：Arena 产品表现使用版本化 ViewModel、意图端口与非拥有 Match 桥
 
-- 状态：已接受（S8.5.1～S8.5.2 已实施）
+- 状态：已接受（S8.5.1～S8.5.3 已实施）
 - 日期：2026-07-18
 
 ## 背景
@@ -47,13 +47,17 @@ Renderer / UI / Audio（后续宿主组合）
 - 比赛结束结果可作为有界只读表现缓存，供奖励提交释放 Runtime 后继续显示；缓存不是第二份权威状态。
 - 输入、投影或权威 step 任一失败后桥立即失败关闭，不重放已推进 tick。
 
-### 4. 宿主与 Renderer 留在下一层组合
+### 4. Session 是唯一宿主资源所有者
 
-本批合同不依赖 Three.js、DOM、平台 API、墙钟、定时器或产品组合根。Web、微信和抖音将分别提供 UI/Canvas 宿主适配，但共享同一 ViewModel、Intent 和 Match frame。
+产品合同与 Flow 不依赖 Three.js、DOM、平台 API、墙钟、定时器或产品组合根。Web、微信和抖音分别提供 UI/Canvas 宿主适配，但共享同一 ViewModel、Intent 和 Match frame。
 
 S8.5.2 新增的 `ProductPresentationFlow` 负责无宿主业务编排：发现 preparing 后创建唯一 Match 表现桥，推进完成后先冻结公开结果再自动提交奖励；保存失败保留结果与 Runtime，`retry` 回到 results 后提交同一事务；成功进入 reward 后释放 Match 表现资源。Flow 拥有 Dispatcher 和 Match 表现桥，但仍不拥有 Controller 或输入源，对外只发布 ViewModel、Arena frame 与自身生命周期状态。
 
-FrameLoop、前后台宿主回调、Renderer、UI 资源和最终 Controller 销毁仍由后续 Product Presentation Session 统一管理。
+S8.5.3 新增 `ProductPresentationSession` 和严格组合根。Session 是 Controller、Flow、InputRouter、Pointer Adapter、FrameLoop、Renderer 与宿主绑定的唯一最终所有者；Flow 仍只借用 Controller/Input，Renderer 仍只消费 ViewModel/Match frame。UI 与 gameplay 输入由 `ProductInputRouter` 事务切换，前后台和 WebGL context loss 都停止帧循环、清空 wall-time 累积并暂停权威 tick。
+
+Session 也负责 Profile lease 心跳：前台每 20 秒续租，未确认的瞬时失败按 1 秒重试，恢复前台时在继续权威 step 前强制检查。角色选择和奖励写入前再次续租；确认租约已过期、被取代或无法验证时，Repository 关闭写入，Flow 释放 Match 表现资源并发布脱敏 fatal ViewModel。心跳只保护本地单实例写入所有权，不扩大为跨进程强事务承诺。
+
+正式 Product Renderer 仍由下一批实现并注入 Session；在它完成前不切换三端默认入口。Session 不回退复用会自行创建 Match 的旧 `ArenaPresentationSession`。
 
 ## 被否决方案
 
@@ -84,7 +88,7 @@ FrameLoop、前后台宿主回调、Renderer、UI 资源和最终 Controller 销
 
 代价：
 
-- 仍需要 Product Presentation Session 组合 FrameLoop、Renderer、UI 和 App 生命周期。
+- 仍需要正式 Product Renderer、三端 Platform 组合、无障碍宿主和设备证据。
 - 奖励页需要显式保存上一局公开结果，不能在 Match 释放后重新读取 Runtime。
 - 匹配取消必须先补齐 Product/Coordinator 协议才能进入 UI。
 
@@ -100,5 +104,8 @@ FrameLoop、前后台宿主回调、Renderer、UI 资源和最终 Controller 销
 - 真实 Arena V1 Product Match 通过非拥有桥生成既有 Arena frame，直到权威结果。
 - 事件重复、权威 step 失败、构造失败和清理重试均有门禁。
 - Flow 覆盖自动奖励、保存失败精确重试、前后台暂停、候选清理和非拥有销毁。
+- Session 覆盖真实 Product 单局/重赛、启动中 hide、迟到 Renderer load、迟到帧、context loss、无效输入、Flow 失败、候选回滚和清理重试。
+- 100 局 Product Session soak 覆盖连续重赛、20 秒 Profile lease 心跳、前后台、context restore、resize、唯一 seed/hash 与资源归零；后台超过租约时恢复前先失败关闭。
+- Pointer、Canvas Listener 与 Renderer 首次清理失败时保留资源句柄；再次 destroy 可完成清理。
 
-阶段记录见 [S8.5.1 产品表现合同基础](../research/arena-stage8-product-presentation-foundation.md)。
+阶段记录见 [S8.5.1～S8.5.3 产品表现基础](../research/arena-stage8-product-presentation-foundation.md)。

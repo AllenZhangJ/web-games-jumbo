@@ -76,6 +76,7 @@ function repositoryHarness() {
     get commits() { return commits; },
     open() { return profile; },
     getSnapshot() { return profile; },
+    renewLease() { return true; },
     compareAndSet(next, expectedRevision) {
       assert.equal(expectedRevision, profile.revision);
       commits += 1;

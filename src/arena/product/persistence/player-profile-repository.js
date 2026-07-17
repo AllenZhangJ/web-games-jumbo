@@ -252,7 +252,25 @@ export class PlayerProfileRepository {
 
   renewLease() {
     this.#assertOpen();
-    return this.#lease.renew();
+    let renewalError = null;
+    try {
+      if (this.#lease.renew()) return true;
+    } catch (error) {
+      renewalError = error;
+    }
+    try {
+      this.#lease.assertHeld();
+    } catch (verificationError) {
+      this.#state = 'failed';
+      const failure = new PlayerProfileIndeterminateWriteError(
+        'PlayerProfile 租约已过期、被取代或无法确认，仓储已关闭写入。',
+      );
+      failure.cause = renewalError ?? verificationError;
+      if (renewalError !== null) failure.verificationError = verificationError;
+      throw failure;
+    }
+    if (renewalError !== null) throw renewalError;
+    return false;
   }
 
   compareAndSet(nextValue, expectedRevisionValue) {

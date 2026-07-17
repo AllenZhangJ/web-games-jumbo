@@ -77,6 +77,7 @@ function profileServiceHarness({ openPromise = null, failOpenCount = 0 } = {}) {
       return openPromise ?? profile;
     },
     getSnapshot() { return profile; },
+    renewLease() { return true; },
     selectCharacter(characterId) {
       profile = Object.freeze({
         ...profile,
@@ -485,6 +486,41 @@ test('lifecycle pause failure fails closed and destroys the owned match', async 
   assert.equal(failed.state.state, PRODUCT_SESSION_STATE.FATAL_ERROR);
   assert.equal(runtime.destroys, 1);
   assert.equal(failed.match.state, 'destroyed');
+  controller.destroy();
+});
+
+test('ProductSessionController keeps transient lease renewal invisible and fails closed on lease loss', async () => {
+  const runtime = fakeRuntime({ endAfterSteps: 10 });
+  const profileService = profileServiceHarness();
+  let renewalAttempts = 0;
+  profileService.renewLease = () => {
+    renewalAttempts += 1;
+    if (renewalAttempts === 1) {
+      throw new PlayerProfilePersistenceError('temporary lease write failure', {
+        recoverable: true,
+      });
+    }
+    if (renewalAttempts === 2) return true;
+    throw new PlayerProfilePersistenceError('lease lost', { recoverable: false });
+  };
+  const { controller } = controllerHarness({
+    profileService,
+    matchFactory: { create: () => runtime },
+  });
+  await controller.boot();
+  const deferredRenewal = controller.renewProfileLease();
+  assert.equal(deferredRenewal.renewed, false);
+  assert.equal(controller.state, PRODUCT_SESSION_STATE.READY);
+  assert.equal(controller.renewProfileLease().renewed, true);
+
+  controller.openCharacterSelect();
+  await controller.requestMatch();
+  controller.beginMatch();
+  const lost = controller.renewProfileLease();
+  assert.equal(lost.renewed, false);
+  assert.equal(lost.productSnapshot.state.state, PRODUCT_SESSION_STATE.FATAL_ERROR);
+  assert.equal(lost.productSnapshot.lastError.code, 'profile-save-failed');
+  assert.equal(runtime.destroys, 1);
   controller.destroy();
 });
 

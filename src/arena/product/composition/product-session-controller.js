@@ -352,6 +352,31 @@ export class ProductSessionController {
     return this.#matchCoordinator.getMatchSnapshot();
   }
 
+  renewProfileLease() {
+    const state = this.#stateMachine.getSnapshot();
+    if (state.state === PRODUCT_SESSION_STATE.DESTROYED) {
+      return Object.freeze({ renewed: false, productSnapshot: this.getSnapshot() });
+    }
+    if (this.#profileSnapshot === null) {
+      return Object.freeze({ renewed: false, productSnapshot: this.getSnapshot() });
+    }
+    if (state.activeState === PRODUCT_SESSION_STATE.FATAL_ERROR) {
+      return Object.freeze({ renewed: false, productSnapshot: this.getSnapshot() });
+    }
+    if (this.#destroying) throw new Error('ProductSessionController 正在销毁。');
+    try {
+      this.#profileService.renewLease();
+      return Object.freeze({ renewed: true, productSnapshot: this.getSnapshot() });
+    } catch (error) {
+      if (error instanceof PlayerProfilePersistenceError && error.recoverable) {
+        this.#report('profile-lease-renew-deferred', error);
+        return Object.freeze({ renewed: false, productSnapshot: this.getSnapshot() });
+      }
+      const productSnapshot = this.#fatal(PRODUCT_SESSION_ERROR_CODE.PROFILE_SAVE_FAILED, error);
+      return Object.freeze({ renewed: false, productSnapshot });
+    }
+  }
+
   commitReward() {
     this.#assertForeground(PRODUCT_SESSION_STATE.RESULTS);
     if (this.#committingReward) throw new Error('ProductSessionController.commitReward() 不可重入。');
@@ -371,12 +396,15 @@ export class ProductSessionController {
       this.#lastError = null;
       return this.getSnapshot();
     } catch (error) {
-      if (error instanceof PlayerProfilePersistenceError && error.recoverable) {
-        return this.#recover(
-          PRODUCT_SESSION_ERROR_CODE.REWARD_SAVE_FAILED,
-          PRODUCT_SESSION_STATE.RESULTS,
-          error,
-        );
+      if (error instanceof PlayerProfilePersistenceError) {
+        if (error.recoverable) {
+          return this.#recover(
+            PRODUCT_SESSION_ERROR_CODE.REWARD_SAVE_FAILED,
+            PRODUCT_SESSION_STATE.RESULTS,
+            error,
+          );
+        }
+        return this.#fatal(PRODUCT_SESSION_ERROR_CODE.REWARD_SAVE_FAILED, error);
       }
       return this.#fatal(PRODUCT_SESSION_ERROR_CODE.REWARD_PROCESSING_FAILED, error);
     } finally {

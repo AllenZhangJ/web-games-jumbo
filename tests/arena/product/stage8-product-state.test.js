@@ -8,6 +8,9 @@ import {
 import { createProductMatchResult } from '../../../src/arena/product/matchmaking/product-match-result.js';
 import { createPlayerProfile } from '../../../src/arena/product/profile/player-profile.js';
 import {
+  PlayerProfileIndeterminateWriteError,
+} from '../../../src/arena/product/persistence/profile-persistence-errors.js';
+import {
   PlayerProfilePersistenceError,
   PlayerProfileService,
   PLAYER_PROFILE_SERVICE_STATE,
@@ -36,15 +39,26 @@ function profileRepositoryHarness() {
   let rejectCommit = false;
   let rejectSnapshot = false;
   let destroyFailures = 0;
+  let renewResult = true;
+  let renewError = null;
+  let renewals = 0;
   return {
     get commits() { return commits; },
+    get renewals() { return renewals; },
     set rejectCommit(value) { rejectCommit = value; },
     set rejectSnapshot(value) { rejectSnapshot = value; },
     set destroyFailures(value) { destroyFailures = value; },
+    set renewResult(value) { renewResult = value; },
+    set renewError(value) { renewError = value; },
     open() { return profile; },
     getSnapshot() {
       if (rejectSnapshot) throw new Error('repository snapshot failed');
       return profile;
+    },
+    renewLease() {
+      renewals += 1;
+      if (renewError) throw renewError;
+      return renewResult;
     },
     compareAndSet(next, expectedRevision) {
       commits += 1;
@@ -303,6 +317,35 @@ test('PlayerProfileService exposes retryable commit rejection and retryable clea
   assert.equal(service.state, PLAYER_PROFILE_SERVICE_STATE.OPEN);
   service.destroy();
   assert.equal(service.state, PLAYER_PROFILE_SERVICE_STATE.DESTROYED);
+});
+
+test('PlayerProfileService retries transient lease renewal and closes writes after confirmed loss', () => {
+  const repository = profileRepositoryHarness();
+  const service = new PlayerProfileService({
+    definition: ARENA_V1_PLAYER_PROFILE_DEFINITION,
+    repository,
+  });
+  service.open();
+  repository.renewResult = false;
+  assert.throws(
+    () => service.renewLease(),
+    (error) => error instanceof PlayerProfilePersistenceError && error.recoverable === true,
+  );
+  assert.equal(service.state, PLAYER_PROFILE_SERVICE_STATE.OPEN);
+  repository.renewResult = true;
+  assert.equal(service.renewLease(), true);
+  const renewalsBeforeWrite = repository.renewals;
+  service.selectCharacter('wind-up-cube');
+  assert.equal(repository.renewals, renewalsBeforeWrite + 1);
+
+  repository.renewError = new PlayerProfileIndeterminateWriteError('lease lost');
+  assert.throws(
+    () => service.renewLease(),
+    (error) => error instanceof PlayerProfilePersistenceError && error.recoverable === false,
+  );
+  assert.equal(service.state, PLAYER_PROFILE_SERVICE_STATE.FAILED);
+  assert.throws(() => service.selectCharacter('parkour-apprentice'), /失败关闭/);
+  service.destroy();
 });
 
 test('PlayerProfileService fails closed when a committed profile cannot be read back', () => {

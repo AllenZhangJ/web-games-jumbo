@@ -1,3 +1,8 @@
+import {
+  combineCleanupFailure,
+  normalizeThrownError,
+} from '../../lifecycle-error.js';
+
 function requiredFunction(value, name) {
   if (typeof value !== 'function') throw new TypeError(`${name} 必须是函数。`);
   return value;
@@ -76,9 +81,20 @@ export class PointerInputAdapter {
   }
 
   #cleanup(values) {
+    const failed = [];
+    const errors = [];
     for (const cleanup of [...values].reverse()) {
-      try { cleanup(); } catch (error) { this.#report(error); }
+      try {
+        cleanup();
+      } catch (error) {
+        const failure = normalizeThrownError(error, 'PointerInputAdapter 绑定清理失败');
+        failed.push(cleanup);
+        errors.push(failure);
+        this.#report(failure);
+      }
     }
+    failed.reverse();
+    return Object.freeze({ failed, errors });
   }
 
   start() {
@@ -89,6 +105,9 @@ export class PointerInputAdapter {
     if (this.#state === 'starting') throw new Error('PointerInputAdapter.start() 不可重入。');
     if (this.#state === 'stopping') {
       throw new Error('PointerInputAdapter.stop() 期间不能 start。');
+    }
+    if (this.#cleanups.length > 0) {
+      throw new Error('PointerInputAdapter 存在未完成清理，不能重新 start。');
     }
     this.#state = 'starting';
     const cleanups = [];
@@ -120,21 +139,39 @@ export class PointerInputAdapter {
       this.#state = 'started';
       return true;
     } catch (error) {
-      this.#cleanup(cleanups.filter((cleanup) => typeof cleanup === 'function'));
-      this.#state = this.#destroyRequested ? 'destroyed' : 'idle';
-      throw error;
+      const cleanup = this.#cleanup(
+        cleanups.filter((cleanup) => typeof cleanup === 'function'),
+      );
+      this.#cleanups = cleanup.failed;
+      this.#state = this.#destroyRequested && cleanup.failed.length === 0
+        ? 'destroyed'
+        : 'idle';
+      throw combineCleanupFailure(
+        normalizeThrownError(error, 'PointerInputAdapter 启动失败'),
+        cleanup.errors,
+        'PointerInputAdapter 启动失败且绑定清理未完整完成。',
+      );
     }
   }
 
   stop() {
-    if (this.#state === 'destroyed' || this.#state === 'idle') return false;
+    if (this.#state === 'destroyed') return false;
+    if (this.#state === 'idle' && this.#cleanups.length === 0) return false;
     if (this.#state === 'starting') throw new Error('PointerInputAdapter.start() 期间不能 stop。');
     if (this.#state === 'stopping') return false;
     this.#state = 'stopping';
     const cleanups = this.#cleanups.splice(0);
-    this.#cleanup(cleanups);
+    const cleanup = this.#cleanup(cleanups);
+    this.#cleanups = cleanup.failed;
     try { this.#sampler.suspend(); } catch (error) { this.#report(error); }
-    this.#state = this.#destroyRequested ? 'destroyed' : 'idle';
+    this.#state = this.#destroyRequested && cleanup.failed.length === 0
+      ? 'destroyed'
+      : 'idle';
+    if (cleanup.errors.length > 0) {
+      const failure = new Error('PointerInputAdapter 绑定清理未完整完成。');
+      failure.cleanupErrors = cleanup.errors;
+      throw failure;
+    }
     return true;
   }
 
@@ -148,10 +185,10 @@ export class PointerInputAdapter {
   }
 
   destroy() {
-    if (this.#state === 'destroyed' || this.#destroyRequested) return;
+    if (this.#state === 'destroyed' && this.#cleanups.length === 0) return;
     this.#destroyRequested = true;
     if (this.#state === 'starting' || this.#state === 'stopping') return;
     this.stop();
-    this.#state = 'destroyed';
+    if (this.#cleanups.length === 0) this.#state = 'destroyed';
   }
 }

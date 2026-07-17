@@ -188,3 +188,80 @@ test('PointerInputAdapter can leave resize/show/hide ownership to its parent Ses
   adapter.destroy();
   sampler.destroy();
 });
+
+test('PointerInputAdapter retains and retries a host binding cleanup that fails once', () => {
+  const sampler = new InputSampler({
+    participantId: 'player-1',
+    viewport: { width: 400, height: 800 },
+    mapper: createGestureInputMapperA(),
+  });
+  let active = true;
+  let cleanupAttempts = 0;
+  const adapter = new PointerInputAdapter({
+    platform: {
+      bindInput: () => () => {
+        cleanupAttempts += 1;
+        if (cleanupAttempts === 1) throw new Error('input cleanup failed once');
+        active = false;
+      },
+      onResize: () => () => {},
+      onHide: () => () => {},
+      onShow: () => () => {},
+    },
+    sampler,
+    viewportProvider: () => ({ width: 400, height: 800 }),
+    manageLifecycle: false,
+  });
+  adapter.start();
+  assert.throws(() => adapter.destroy(), /绑定清理未完整完成/);
+  assert.equal(active, true);
+  assert.deepEqual(adapter.getDebugSnapshot(), {
+    state: 'idle',
+    cleanupCount: 1,
+    destroyRequested: true,
+    manageLifecycle: false,
+  });
+
+  adapter.destroy();
+  assert.equal(active, false);
+  assert.equal(cleanupAttempts, 2);
+  assert.equal(adapter.getDebugSnapshot().state, 'destroyed');
+  sampler.destroy();
+});
+
+test('PointerInputAdapter preserves a failed rollback cleanup after partial start', () => {
+  const sampler = new InputSampler({
+    participantId: 'player-1',
+    viewport: { width: 400, height: 800 },
+    mapper: createGestureInputMapperA(),
+  });
+  let active = true;
+  let cleanupAttempts = 0;
+  const adapter = new PointerInputAdapter({
+    platform: {
+      bindInput: () => () => {
+        cleanupAttempts += 1;
+        if (cleanupAttempts === 1) throw new Error('rollback cleanup failed once');
+        active = false;
+      },
+      onResize: () => { throw new Error('resize binding failed'); },
+      onHide: () => () => {},
+      onShow: () => () => {},
+    },
+    sampler,
+    viewportProvider: () => ({ width: 400, height: 800 }),
+  });
+  assert.throws(
+    () => adapter.start(),
+    /启动失败且绑定清理未完整完成/,
+  );
+  assert.equal(active, true);
+  assert.equal(adapter.getDebugSnapshot().cleanupCount, 1);
+  assert.throws(() => adapter.start(), /未完成清理/);
+
+  adapter.destroy();
+  assert.equal(active, false);
+  assert.equal(cleanupAttempts, 2);
+  assert.equal(adapter.getDebugSnapshot().state, 'destroyed');
+  sampler.destroy();
+});

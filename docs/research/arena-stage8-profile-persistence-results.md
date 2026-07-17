@@ -21,6 +21,7 @@
 - 写入确认阶段观察到未来 schema 时原地保留数据并关闭当前 writer，不把它当损坏数据删除。
 - 同 generation 不同 hash 的双槽拒绝自动选边；陈旧内存、外部存储变化、过期 lease 和并发 writer 均拒绝提交。
 - lease 获取阶段的未确认候选会尝试清理；同步合同拒绝并收容异步宿主回调。释放或 Repository 销毁清理失败时保留可重试所有权，不发布半打开/半销毁状态。
+- lease 续租返回未确认但旧租约仍有效时允许上层短间隔重试；确认过期、被取代或无法验证时 Repository 立即进入失败关闭。角色选择和奖励提交在写槽前先续租，避免在租约边界写入。
 - 两槽都损坏时发布默认不可变 Profile，但首次验证提交前不覆盖原始槽；诊断只包含计数/布尔状态，不暴露原始值。
 
 ## 验证
@@ -29,6 +30,7 @@
 - Pilot 持久化回归通过，证明共享 Storage Port/Lease 抽取没有改变既有 Workspace 行为。
 - 架构测试禁止 Product/Storage 引入 MatchCore、Session、Presentation、Three.js、平台/DOM、墙钟或非注入随机。
 - `arena:profile:stress` 完成 500 次提交、17 次写后读失败回滚、29 次 head 失败、16 次非当前槽损坏和多次销毁/重开；最终 revision/经验/grant 数量均为 500，数据 key 保持 A/B/head 三个有界 key。
+- S8.5.3 Product Session soak 连续 100 局跨越默认 60 秒 lease，并覆盖 20 秒心跳、瞬时失败重试和后台过期恢复前失败关闭。
 
 ## 明确未完成
 

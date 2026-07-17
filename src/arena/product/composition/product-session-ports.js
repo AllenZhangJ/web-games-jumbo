@@ -26,6 +26,7 @@ export function validateProductProfileService(value) {
   return validateMethods(value, [
     'open',
     'getSnapshot',
+    'renewLease',
     'selectCharacter',
     'commitProgressionGrant',
     'destroy',

@@ -459,6 +459,26 @@ test('lease contention and expiry prevent concurrent or stale writers', () => {
   first.destroy();
 });
 
+test('profile lease renewal retries a confirmed transient failure and fails closed after expiry', () => {
+  const harness = storageHarness();
+  let now = 1_000;
+  const repo = repository(harness, 'renew-owner', () => now);
+  repo.open();
+  const leaseKey = repo.getStorageKeys().lease;
+
+  now = 20_000;
+  harness.writeFailures.add(leaseKey);
+  assert.equal(repo.renewLease(), false);
+  assert.equal(repo.getSnapshot().revision, 0);
+
+  harness.writeFailures.delete(leaseKey);
+  assert.equal(repo.renewLease(), true);
+  now = 80_000;
+  assert.throws(() => repo.renewLease(), PlayerProfileIndeterminateWriteError);
+  assert.throws(() => repo.getSnapshot(), PlayerProfileIndeterminateWriteError);
+  repo.destroy();
+});
+
 test('shared lease confirms thrown host mutations and retains ownership for release retry', () => {
   const harness = storageHarness();
   const key = 'test.shared-lease';

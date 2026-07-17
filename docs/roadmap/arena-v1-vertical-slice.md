@@ -199,7 +199,7 @@
 
 产品状态机、双槽本地存档、迁移、幂等奖励和对称内容池见 [Stage 8 局外产品循环与本地进度执行计划](../architecture/arena-stage8-product-progression-plan.md)，决策见 [ADR-011](../decisions/011-arena-versioned-local-progression.md) 与 [ADR-017](../decisions/017-arena-frozen-symmetric-match-content.md)。
 
-状态：S8.1～S8.4 无 UI 基础已完成；Profile/存储、产品状态机、奖励/解锁、双方共享内容池、Replay V5 和快捷重赛已通过自动门禁。S8.5.1～S8.5.2 已建立版本化页面/本地化/内容 ViewModel、串行 UI 意图、单 Match 非拥有表现桥和自动奖励/重试 Flow；Product Presentation Session、三端真实页面、无障碍宿主绑定与设备证据尚未完成。
+状态：S8.1～S8.4 无 UI 基础已完成；Profile/存储、产品状态机、奖励/解锁、双方共享内容池、Replay V5 和快捷重赛已通过自动门禁。S8.5.1～S8.5.3 已建立版本化页面/本地化/内容 ViewModel、串行 UI 意图、单 Match 非拥有表现桥、自动奖励/重试 Flow 和统一产品表现 Session；三端正式 Renderer/页面、无障碍宿主绑定与设备证据尚未完成。
 
 交付：
 

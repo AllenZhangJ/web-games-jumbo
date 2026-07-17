@@ -7,6 +7,9 @@ import {
 } from '../../rules/definition-utils.js';
 import { advancePlayerProfile, createPlayerProfile } from './player-profile.js';
 import { createPlayerProfileDefinition } from './player-profile-definition.js';
+import {
+  PlayerProfileIndeterminateWriteError,
+} from '../persistence/profile-persistence-errors.js';
 
 export const PLAYER_PROFILE_SERVICE_STATE = Object.freeze({
   CREATED: 'created',
@@ -22,7 +25,7 @@ function validateRepository(repository) {
   if (!repository || typeof repository !== 'object') {
     throw new TypeError('PlayerProfileService 需要 Repository。');
   }
-  for (const method of ['open', 'getSnapshot', 'compareAndSet', 'destroy']) {
+  for (const method of ['open', 'getSnapshot', 'renewLease', 'compareAndSet', 'destroy']) {
     if (typeof repository[method] !== 'function') {
       throw new TypeError(`PlayerProfile Repository 缺少 ${method}()。`);
     }
@@ -116,6 +119,7 @@ export class PlayerProfileService {
   }
 
   #commit(next, message) {
+    this.renewLease();
     this.#transitioning = true;
     try {
       let commit;
@@ -184,6 +188,36 @@ export class PlayerProfileService {
   getSnapshot() {
     this.#assertOpen();
     return this.#profile;
+  }
+
+  renewLease() {
+    this.#assertOpen();
+    this.#transitioning = true;
+    try {
+      try {
+        if (this.#repository.renewLease() === true) return true;
+        throw new PlayerProfilePersistenceError('PlayerProfile 租约续租暂未确认。', {
+          reason: 'lease-renewal-unconfirmed',
+          recoverable: true,
+        });
+      } catch (error) {
+        if (error instanceof PlayerProfilePersistenceError) throw error;
+        const recoverable = !(error instanceof PlayerProfileIndeterminateWriteError);
+        if (!recoverable) this.#state = PLAYER_PROFILE_SERVICE_STATE.FAILED;
+        throw new PlayerProfilePersistenceError(
+          recoverable
+            ? 'PlayerProfile 租约续租暂时失败。'
+            : 'PlayerProfile 租约已丢失。',
+          {
+            cause: error,
+            reason: recoverable ? 'lease-renewal-failed' : 'lease-lost',
+            recoverable,
+          },
+        );
+      }
+    } finally {
+      this.#transitioning = false;
+    }
   }
 
   selectCharacter(characterIdValue) {

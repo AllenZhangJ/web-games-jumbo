@@ -30,6 +30,7 @@ function validateController(value) {
     'commitReward',
     'getSnapshot',
     'hide',
+    'renewProfileLease',
     'show',
   ]) {
     if (typeof value[method] !== 'function') {
@@ -391,6 +392,17 @@ export class ProductPresentationFlow {
       this.#stepping = false;
     }
     return this.synchronize();
+  }
+
+  heartbeat() {
+    this.#assertUsable();
+    if (this.#synchronizing) throw new Error('同步期间不能 heartbeat ProductPresentationFlow。');
+    if (this.#stepping) throw new Error('stepMatch() 期间不能 heartbeat ProductPresentationFlow。');
+    const outcome = this.#controller.renewProfileLease();
+    return Object.freeze({
+      renewed: outcome.renewed,
+      snapshot: this.synchronize(),
+    });
   }
 
   hide() {

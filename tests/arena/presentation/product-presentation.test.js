@@ -24,6 +24,10 @@ import {
   ProductMatchPresentationRuntime,
 } from '../../../src/arena/presentation/product/product-match-presentation-runtime.js';
 import {
+  PRODUCT_INPUT_ROUTER_MODE,
+  ProductInputRouter,
+} from '../../../src/arena/presentation/product/product-input-router.js';
+import {
   PRODUCT_PRESENTATION_FLOW_STATE,
   ProductPresentationFlow,
 } from '../../../src/arena/presentation/product/product-presentation-flow.js';
@@ -674,6 +678,38 @@ test('ProductPresentationFlow lifecycle pauses authority and never owns the cont
   controller.destroy();
 });
 
+test('ProductPresentationFlow heartbeat releases match presentation after a confirmed lease expiry', async () => {
+  let wallNow = 2_000;
+  const controller = createArenaV1ProductSession({
+    storage: memoryStorage(),
+    ownerId: 'product-flow-expired-lease',
+    wallNow: () => wallNow,
+    seedSource: { nextSeed: () => 9906 },
+    keyPrefix: 'test.product-flow.expired-lease',
+    matchConfig: {
+      preparingTicks: 0,
+      suddenDeathStartTick: 3,
+      hardLimitTicks: 6,
+    },
+  });
+  const flow = new ProductPresentationFlow({
+    controller,
+    inputSource: { sample: (tick) => createNeutralInputFrame(tick, 'player-1') },
+  });
+  await flow.start();
+  await flow.dispatch({ id: PRODUCT_UI_INTENT_ID.START_MATCH });
+  assert.equal(flow.getSnapshot().hasMatchRuntime, true);
+
+  wallNow = 62_000;
+  const heartbeat = flow.heartbeat();
+  assert.equal(heartbeat.renewed, false);
+  assert.equal(heartbeat.snapshot.viewModel.activeState, PRODUCT_SESSION_STATE.FATAL_ERROR);
+  assert.equal(heartbeat.snapshot.viewModel.error.code, 'profile-save-failed');
+  assert.equal(heartbeat.snapshot.hasMatchRuntime, false);
+  flow.destroy();
+  controller.destroy();
+});
+
 test('ProductPresentationFlow cleans an invalid match runtime candidate before failing closed', async () => {
   const controller = createArenaV1ProductSession({
     storage: memoryStorage(),
@@ -740,4 +776,118 @@ test('ProductPresentationFlow retries owned runtime cleanup and leaves controlle
   assert.equal(destroyCalls, 2);
   assert.notEqual(controller.state, PRODUCT_SESSION_STATE.DESTROYED);
   controller.destroy();
+});
+
+function inputSamplerHarness({ failResume = false } = {}) {
+  const calls = [];
+  let suspended = false;
+  return {
+    calls,
+    sampler: {
+      pointerStart(point) { calls.push(['start', point]); return true; },
+      pointerMove(point) { calls.push(['move', point]); return true; },
+      pointerEnd(point) { calls.push(['end', point]); return true; },
+      pointerCancel(point) { calls.push(['cancel', point]); return true; },
+      resize(viewport) { calls.push(['resize', viewport]); return true; },
+      suspend() { suspended = true; calls.push(['suspend']); return true; },
+      resume() {
+        calls.push(['resume']);
+        if (failResume) throw new Error('sampler resume failed');
+        suspended = false;
+        return true;
+      },
+      sample(tick, options) {
+        calls.push(['sample', tick, options]);
+        if (suspended) throw new Error('sampled while suspended');
+        return { tick, options };
+      },
+      destroy() { calls.push(['destroy']); },
+      getDebugSnapshot() { return { suspended }; },
+    },
+  };
+}
+
+test('ProductInputRouter commits only a same-intent UI tap and contains async rejection', async () => {
+  const harness = inputSamplerHarness();
+  const intents = [];
+  const rejections = [];
+  const router = new ProductInputRouter({
+    sampler: harness.sampler,
+    viewport: { width: 200, height: 100 },
+    hitTestUi(point) {
+      if (point.x < 80) return { id: PRODUCT_UI_INTENT_ID.START_MATCH };
+      if (point.x > 120) return { id: PRODUCT_UI_INTENT_ID.OPEN_CHARACTER_SELECT };
+      return null;
+    },
+    onIntent(intent) {
+      intents.push(intent);
+      if (intent.id === PRODUCT_UI_INTENT_ID.OPEN_CHARACTER_SELECT) {
+        return Promise.reject(new Error('intent rejected'));
+      }
+      return Promise.resolve();
+    },
+    onIntentRejected: (error, intent) => rejections.push([error.message, intent.id]),
+  });
+  router.setMode(PRODUCT_INPUT_ROUTER_MODE.UI);
+  assert.equal(router.pointerStart({ x: 20, y: 20, pointerId: 1 }), true);
+  assert.equal(router.pointerEnd({ x: 20, y: 20, pointerId: 1 }), true);
+  assert.equal(intents[0].id, PRODUCT_UI_INTENT_ID.START_MATCH);
+
+  assert.equal(router.pointerStart({ x: 20, y: 20, pointerId: 2 }), true);
+  assert.equal(router.pointerEnd({ x: 180, y: 20, pointerId: 2 }), false);
+  assert.equal(intents.length, 1);
+  assert.equal(router.pointerStart({ x: 180, y: 20, pointerId: 3 }), true);
+  assert.equal(router.pointerEnd({ x: 180, y: 20, pointerId: 3 }), true);
+  await Promise.resolve();
+  await Promise.resolve();
+  assert.deepEqual(rejections, [['intent rejected', PRODUCT_UI_INTENT_ID.OPEN_CHARACTER_SELECT]]);
+  router.destroy();
+});
+
+test('ProductInputRouter isolates gameplay sampling, lifecycle and transactional mode changes', () => {
+  const harness = inputSamplerHarness();
+  const router = new ProductInputRouter({
+    sampler: harness.sampler,
+    viewport: { width: 200, height: 100 },
+    hitTestUi: () => null,
+    onIntent: () => {},
+  });
+  assert.throws(() => router.sample(0), /仅能在活跃 gameplay/);
+  router.setMode(PRODUCT_INPUT_ROUTER_MODE.GAMEPLAY);
+  assert.equal(router.pointerStart({ x: 2, y: 3, pointerId: 1 }), true);
+  assert.deepEqual(router.sample(0, { actionAffordance: null }), {
+    tick: 0,
+    options: { actionAffordance: null },
+  });
+  router.suspend();
+  assert.throws(() => router.sample(1), /仅能在活跃 gameplay/);
+  router.resume();
+  assert.deepEqual(router.sample(1), { tick: 1, options: undefined });
+  router.setMode(PRODUCT_INPUT_ROUTER_MODE.UI);
+  assert.throws(() => router.sample(2), /仅能在活跃 gameplay/);
+  const replacement = inputSamplerHarness();
+  assert.equal(router.replaceSampler(replacement.sampler), true);
+  assert.equal(harness.calls.at(-1)[0], 'destroy');
+  assert.deepEqual(
+    replacement.calls.slice(0, 2).map(([name]) => name),
+    ['resize', 'suspend'],
+  );
+  router.setMode(PRODUCT_INPUT_ROUTER_MODE.GAMEPLAY);
+  assert.deepEqual(router.sample(0), { tick: 0, options: undefined });
+  router.destroy();
+  assert.equal(replacement.calls.at(-1)[0], 'destroy');
+
+  const failingHarness = inputSamplerHarness({ failResume: true });
+  const failing = new ProductInputRouter({
+    sampler: failingHarness.sampler,
+    viewport: { width: 200, height: 100 },
+    hitTestUi: () => null,
+    onIntent: () => {},
+  });
+  assert.throws(
+    () => failing.setMode(PRODUCT_INPUT_ROUTER_MODE.GAMEPLAY),
+    /sampler resume failed/,
+  );
+  assert.equal(failing.getDebugSnapshot().mode, PRODUCT_INPUT_ROUTER_MODE.INACTIVE);
+  failing.destroy();
 });

@@ -284,6 +284,26 @@ test('Arena S8.5 product presentation contracts remain host-free and do not own 
   }
 });
 
+test('Arena S8.5 Product Session is the injected host root and never reuses Stage 6 ownership', async () => {
+  const files = [
+    path.resolve('src/arena/presentation/session/product-presentation-session.js'),
+    path.resolve('src/arena/presentation/session/product-presentation-session-composition.js'),
+  ];
+  for (const file of files) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /from\s+['"](?:three|[^'"]*(?:\/platform\/|\/entry\/|arena-presentation-session|arena-greybox-renderer)[^'"]*)['"]/,
+      `${file} 必须注入 Platform/Renderer，且不能复用 Stage 6 的 Match 所有权根。`,
+    );
+    assert.doesNotMatch(
+      withoutStaticImports(source),
+      /(?:Date\.now|Math\.random|\bperformance\b|setTimeout|setInterval|requestAnimationFrame|\b(?:window|document|navigator|localStorage|sessionStorage)\b|\b(?:tt|wx)\s*\.)/,
+      `${file} 不应绕过注入合同读取宿主能力。`,
+    );
+  }
+});
+
 test('Arena MatchCore POC bundles and executes as a standalone mini-game IIFE', async () => {
   const result = await esbuild({
     entryPoints: [path.resolve('src/arena/entry/match-core-poc.js')],
