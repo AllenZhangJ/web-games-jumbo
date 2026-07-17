@@ -1,3 +1,6 @@
+import { ARENA_ACTION_PHASE } from './action/action-state.js';
+import { cloneFrozenData } from './rules/definition-utils.js';
+
 export const ARENA_TICK_RATE = 60;
 export const ARENA_FIXED_DT = 1 / ARENA_TICK_RATE;
 
@@ -59,12 +62,7 @@ export const ARENA_PARTICIPANT_STATUS = Object.freeze({
   ELIMINATED: 'eliminated',
 });
 
-export const ARENA_ACTION_PHASE = Object.freeze({
-  IDLE: 'idle',
-  WINDUP: 'windup',
-  ACTIVE: 'active',
-  RECOVERY: 'recovery',
-});
+export { ARENA_ACTION_PHASE };
 
 const DEFAULT_BASE_PUSH = Object.freeze({
   range: 1.5,
@@ -88,15 +86,21 @@ const MATCH_OVERRIDE_KEYS = Object.freeze(new Set([
   'invulnerableTicks',
   'lastHitCreditTicks',
   'basePush',
+  'equipment',
   'arena',
   'character',
 ]));
 const ARENA_KEYS = Object.freeze(new Set(['killY', 'surfaces', 'spawns']));
 const SURFACE_KEYS = Object.freeze(new Set(['id', 'center', 'halfExtents']));
 const VECTOR3_KEYS = Object.freeze(new Set(['x', 'y', 'z']));
+const EQUIPMENT_KEYS = Object.freeze(new Set(['initialSpawns']));
+const EQUIPMENT_SPAWN_KEYS = Object.freeze(new Set(['id', 'definitionId', 'position']));
 
 export const ARENA_MATCH_DEFAULTS = Object.freeze({
-  schemaVersion: 1,
+  // V2 adds authoritative ActionDefinition IDs and EquipmentRuntime state to
+  // snapshots/hashes. V1 replays must fail explicitly instead of silently
+  // running under different combat semantics.
+  schemaVersion: 2,
   physicsBackendVersion: 'lightweight-v1',
   participantIds: Object.freeze(['player-1', 'player-2']),
   livesPerParticipant: 3,
@@ -107,6 +111,7 @@ export const ARENA_MATCH_DEFAULTS = Object.freeze({
   invulnerableTicks: 90,
   lastHitCreditTicks: 300,
   basePush: DEFAULT_BASE_PUSH,
+  equipment: Object.freeze({ initialSpawns: Object.freeze([]) }),
 });
 
 function integerAtLeast(value, minimum, name) {
@@ -202,6 +207,34 @@ function cloneArena(arena) {
   };
 }
 
+function cloneEquipment(value) {
+  assertKnownKeys(value, EQUIPMENT_KEYS, 'match equipment');
+  if (!Array.isArray(value.initialSpawns)) {
+    throw new TypeError('match equipment.initialSpawns 必须是数组。');
+  }
+  const ids = new Set();
+  return {
+    initialSpawns: value.initialSpawns.map((spawn, index) => {
+      const name = `match equipment.initialSpawns[${index}]`;
+      assertKnownKeys(spawn, EQUIPMENT_SPAWN_KEYS, name);
+      if (
+        typeof spawn.id !== 'string'
+        || spawn.id.trim().length === 0
+        || ids.has(spawn.id)
+      ) throw new RangeError(`${name}.id 必须是唯一非空字符串。`);
+      ids.add(spawn.id);
+      if (typeof spawn.definitionId !== 'string' || spawn.definitionId.trim().length === 0) {
+        throw new TypeError(`${name}.definitionId 必须是非空字符串。`);
+      }
+      return {
+        id: spawn.id,
+        definitionId: spawn.definitionId,
+        position: cloneVector3(spawn.position, `${name}.position`),
+      };
+    }),
+  };
+}
+
 function deepFreeze(value) {
   if (!value || typeof value !== 'object' || Object.isFrozen(value)) return value;
   for (const child of Object.values(value)) deepFreeze(child);
@@ -209,6 +242,9 @@ function deepFreeze(value) {
 }
 
 export function createArenaMatchConfig(overrides = {}) {
+  // Clone through data descriptors before any property read. This prevents
+  // caller-owned accessors/prototypes from executing inside authority setup.
+  overrides = cloneFrozenData(overrides, 'match config');
   assertKnownKeys(overrides, MATCH_OVERRIDE_KEYS, 'match config');
   const participantIds = overrides.participantIds ?? ARENA_MATCH_DEFAULTS.participantIds;
   if (
@@ -287,6 +323,7 @@ export function createArenaMatchConfig(overrides = {}) {
       'lastHitCreditTicks',
     ),
     basePush,
+    equipment: cloneEquipment(overrides.equipment ?? ARENA_MATCH_DEFAULTS.equipment),
     arena: cloneArena(overrides.arena ?? PHYSICS_POC_ARENA),
     character,
   });

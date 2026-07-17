@@ -4,7 +4,6 @@ import { getBotDifficultyProfile } from './bot-difficulty.js';
 import { getArenaBotEvaluators, BOT_GOAL_ID } from './bot-goals.js';
 import {
   cloneBotSourceSnapshot,
-  createBotActionRuleView,
   createBotArenaView,
   createBotObservation,
 } from './bot-observation.js';
@@ -24,7 +23,6 @@ export class BotController {
   #personality;
   #rng;
   #arena;
-  #actionRule;
   #sourceSnapshots;
   #currentPlan;
   #directionOffsetRadians;
@@ -41,7 +39,6 @@ export class BotController {
     personalitySeed,
     arena,
     characterRadius,
-    basePush,
   }) {
     if (typeof participantId !== 'string' || participantId.length === 0) {
       throw new TypeError('Bot participantId 必须是非空字符串。');
@@ -51,7 +48,6 @@ export class BotController {
     this.#personality = createBotPersonality(uint32(personalitySeed, 'personalitySeed'));
     this.#rng = createRng(uint32(behaviorSeed, 'behaviorSeed'));
     this.#arena = createBotArenaView(arena, characterRadius);
-    this.#actionRule = createBotActionRuleView(basePush);
     this.#sourceSnapshots = [];
     this.#currentPlan = null;
     this.#directionOffsetRadians = 0;
@@ -89,7 +85,6 @@ export class BotController {
       delayedSnapshot: this.#sourceSnapshots[delayedIndex],
       selfId: this.#participantId,
       arena: this.#arena,
-      actionRule: this.#actionRule,
     });
   }
 
@@ -118,6 +113,7 @@ export class BotController {
     if (
       decision.goalId !== BOT_GOAL_ID.RECOVER_EDGE
       && decision.goalId !== BOT_GOAL_ID.EVADE_THREAT
+      && decision.goalId !== BOT_GOAL_ID.ACQUIRE_EQUIPMENT
       && decision.goalId !== BOT_GOAL_ID.ATTACK
       && this.#rng.next() < this.#difficulty.shortPauseChance
     ) {

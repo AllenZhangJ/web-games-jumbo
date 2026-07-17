@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createNeutralInputFrame } from '../../src/arena/input-frame.js';
-import { MatchCore } from '../../src/arena/match-core.js';
+import { createArenaV1MatchCore } from '../../src/arena/arena-v1-match-core.js';
 import { replayMatch } from '../../src/arena/replay.js';
 import { QuickMatchService } from '../../src/arena/matchmaking/quick-match-service.js';
 import {
@@ -152,7 +152,7 @@ test('caller-owned InputFrame cannot re-enter a session during validation', () =
 });
 
 test('failed LocalMatchSession construction does not take ownership of the core', () => {
-  const core = new MatchCore({ seed: 16 });
+  const core = createArenaV1MatchCore({ seed: 16 });
   assert.throws(() => new LocalMatchSession({
     core,
     botController: { createInput() {}, destroy() {} },
@@ -185,7 +185,7 @@ test('QuickMatchService cleans partial ownership when a later factory fails', ()
   let controllerDestroyed = false;
   const service = new QuickMatchService({
     coreFactory: (options) => {
-      core = new MatchCore(options);
+      core = createArenaV1MatchCore(options);
       return core;
     },
     botControllerFactory: () => ({
@@ -213,7 +213,7 @@ test('QuickMatchService rejects an incomplete session contract before returning 
 });
 
 test('bot or authoritative step failures destroy the entire local session', () => {
-  const core = new MatchCore({ seed: 19, config: { preparingTicks: 0 } });
+  const core = createArenaV1MatchCore({ seed: 19, config: { preparingTicks: 0 } });
   let controllerDestroyed = false;
   const session = new LocalMatchSession({
     core,
@@ -240,7 +240,7 @@ test('bot or authoritative step failures destroy the entire local session', () =
 
 test('frozen internal errors and cleanup failures preserve both causes', () => {
   const original = Object.freeze(new Error('frozen bot failure'));
-  const core = new MatchCore({ seed: 26, config: { preparingTicks: 0 } });
+  const core = createArenaV1MatchCore({ seed: 26, config: { preparingTicks: 0 } });
   let controllerCleanupAttempts = 0;
   const session = new LocalMatchSession({
     core,

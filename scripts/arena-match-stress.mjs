@@ -1,7 +1,7 @@
 import { performance } from 'node:perf_hooks';
 import { ARENA_MATCH_PHASE, ARENA_PARTICIPANT_STATUS } from '../src/arena/config.js';
 import { createNeutralInputFrame } from '../src/arena/input-frame.js';
-import { MatchCore } from '../src/arena/match-core.js';
+import { createArenaV1MatchCore } from '../src/arena/arena-v1-match-core.js';
 import { HeadlessMatchRunner, replayMatch } from '../src/arena/replay.js';
 
 function readPositiveIntegerOption(name, fallback) {
@@ -107,7 +107,7 @@ const startMemory = process.memoryUsage();
 const startedAt = performance.now();
 
 for (let matchIndex = 0; matchIndex < matches; matchIndex += 1) {
-  const core = new MatchCore({ seed: (0xa11e0000 + matchIndex) >>> 0 });
+  const core = createArenaV1MatchCore({ seed: (0xa11e0000 + matchIndex) >>> 0 });
   try {
     const runner = matchIndex < replaySamples
       ? new HeadlessMatchRunner(core, { checkpointInterval: 300 })

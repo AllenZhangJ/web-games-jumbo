@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { BotController } from '../../src/arena/ai/bot-controller.js';
 import { BOT_DIFFICULTY_PROFILES } from '../../src/arena/ai/bot-difficulty.js';
-import { MatchCore } from '../../src/arena/match-core.js';
+import { createArenaV1MatchCore } from '../../src/arena/arena-v1-match-core.js';
+import { BOT_GOAL_ID } from '../../src/arena/ai/bot-goals.js';
 
 function createController(core, difficultyId = 'hard') {
   return new BotController({
@@ -12,12 +13,11 @@ function createController(core, difficultyId = 'hard') {
     personalitySeed: 200,
     arena: core.config.arena,
     characterRadius: core.config.character.radius,
-    basePush: core.config.basePush,
   });
 }
 
 test('same bot seed and observations produce identical bounded InputFrames', () => {
-  const core = new MatchCore({ seed: 3, config: { preparingTicks: 0 } });
+  const core = createArenaV1MatchCore({ seed: 3, config: { preparingTicks: 0 } });
   const first = createController(core);
   const second = createController(core);
   for (let tick = 0; tick < 180; tick += 1) {
@@ -43,8 +43,21 @@ test('hard bot remains human-limited instead of receiving instant perfect contro
   assert.ok(hard.shortPauseChance > 0);
 });
 
+test('bot pursues only visible reachable equipment through ordinary bounded movement input', () => {
+  const core = createArenaV1MatchCore({ seed: 41, config: { preparingTicks: 0 } });
+  const controller = createController(core, 'hard');
+  const frame = controller.createInput(core.getSnapshot());
+  const debug = controller.getDebugSnapshot();
+  assert.equal(debug.goalId, BOT_GOAL_ID.ACQUIRE_EQUIPMENT);
+  assert.equal(frame.actionPressed, false);
+  assert.ok(Math.hypot(frame.moveX, frame.moveZ) > 0);
+  assert.ok(Math.hypot(frame.moveX, frame.moveZ) <= 1 + 1e-12);
+  controller.destroy();
+  core.destroy();
+});
+
 test('BotController enforces consecutive ticks and idempotent destruction', () => {
-  const core = new MatchCore({ seed: 5, config: { preparingTicks: 0 } });
+  const core = createArenaV1MatchCore({ seed: 5, config: { preparingTicks: 0 } });
   const controller = createController(core, 'normal');
   controller.createInput(core.getSnapshot());
   core.step([]);

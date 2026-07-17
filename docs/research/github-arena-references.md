@@ -18,6 +18,26 @@
 
 Arena V1 的“快速匹配”只创建本地 1v1，不引入 Colyseus、Nakama 或 P2P 网络。网络候选仅作为未来真人对战研究留档。
 
+## 阶段 4 Rule/Core 架构复核
+
+本轮新增复核没有复制代码或新增依赖，决策细节见 [ADR-007](../decisions/007-arena-rule-core-governance.md)。
+
+### [`ecsyjs/ecsy`](https://github.com/ecsyjs/ecsy)
+
+借鉴 Component 只保存数据、System 保存逻辑、System 按明确顺序执行和 World 负责作用域的边界。仓库自述仍为高度实验性，最近发布与维护节奏不适合作为 3～5 年核心依赖，因此只吸收原则。
+
+### [`NateTheGreatt/bitECS`](https://github.com/NateTheGreatt/bitECS)
+
+借鉴小型数据导向 ECS、查询和序列化设计。项目采用 MPL-2.0，当前不复制其实现；Arena V1 的实体规模也尚未证明引入 ECS 存储和查询迁移的收益。
+
+### [`boardgameio/boardgame.io`](https://github.com/boardgameio/boardgame.io)
+
+借鉴以 move/command 描述权威状态变化、视图无关模拟、日志与 time-travel 的思想。不引入回合、房间和网络框架；Arena 的实时固定 tick 仍由项目内 Core 管理。
+
+### [`statelyai/xstate`](https://github.com/statelyai/xstate)
+
+借鉴显式状态、事件、转换表和模型测试。当前不引入 Actor 运行时或异步计时语义，避免让权威 tick 生命周期绑定第三方解释器。
+
 ## 阶段 3 AI 实现复核
 
 ### [`Mugen87/yuka`](https://github.com/Mugen87/yuka)

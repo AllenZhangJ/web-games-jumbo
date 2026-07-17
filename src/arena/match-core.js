@@ -1,5 +1,4 @@
 import {
-  ARENA_ACTION_PHASE,
   ARENA_MATCH_PHASE,
   ARENA_PARTICIPANT_STATUS,
   createArenaMatchConfig,
@@ -7,11 +6,17 @@ import {
 import { normalizeInputFrames } from './input-frame.js';
 import { createLightweightPhysicsWorld } from './physics/lightweight-physics.js';
 import { assertPhysicsWorld } from './physics/physics-adapter.js';
+import { assertArenaRuleEngine } from './rules/arena-rule-engine.js';
 import { createArenaConfigHash, createMatchStateHash } from './state-hash.js';
 import { createRng, deriveSeed } from '../shared/deterministic-rng.js';
+import { combineCleanupFailure, normalizeThrownError } from './lifecycle-error.js';
 
 const EVENT = Object.freeze({
   MATCH_STARTED: 'MatchStarted',
+  EQUIPMENT_SPAWNED: 'EquipmentSpawned',
+  EQUIPMENT_PICKED_UP: 'EquipmentPickedUp',
+  EQUIPMENT_DROPPED: 'EquipmentDropped',
+  EQUIPMENT_DROP_FALLBACK: 'EquipmentDropFallback',
   ACTION_STARTED: 'ActionStarted',
   HIT_RESOLVED: 'HitResolved',
   KNOCKBACK_APPLIED: 'KnockbackApplied',
@@ -21,17 +26,17 @@ const EVENT = Object.freeze({
   MATCH_ENDED: 'MatchEnded',
 });
 
+// Equipment positions share the character-body coordinate convention so a
+// dropped item and a configured spawn can use the same validation path. The
+// tolerance covers the physics world's small ground-probe/snap offset without
+// accepting unreachable items floating above or buried below a surface.
+const EQUIPMENT_SURFACE_HEIGHT_TOLERANCE = 0.1;
+
 function normalizeSeed(seed) {
   if (!Number.isSafeInteger(seed) || seed < 0 || seed > 0xffffffff) {
     throw new RangeError('match seed 必须是 uint32 整数。');
   }
   return seed;
-}
-
-function resetAction(action) {
-  action.phase = ARENA_ACTION_PHASE.IDLE;
-  action.ticksRemaining = 0;
-  action.hitTargets.clear();
 }
 
 function createParticipant(id, lives, spawnIndex) {
@@ -47,16 +52,17 @@ function createParticipant(id, lives, spawnIndex) {
     respawnTicks: 0,
     lastHitBy: null,
     lastHitTick: -1,
-    action: {
-      phase: ARENA_ACTION_PHASE.IDLE,
-      ticksRemaining: 0,
-      hitTargets: new Set(),
-    },
   };
 }
 
 function cloneResult(result) {
   return result ? { ...result } : null;
+}
+
+function compareText(left, right) {
+  if (left < right) return -1;
+  if (left > right) return 1;
+  return 0;
 }
 
 /**
@@ -67,7 +73,9 @@ export class MatchCore {
   #matchSeed;
   #config;
   #configHash;
+  #ruleContentHash;
   #physics;
+  #rules;
   #participants;
   #rngStreams;
   #events;
@@ -78,12 +86,44 @@ export class MatchCore {
   #phase;
   #result;
   #eventSequence;
+  #stepping;
 
-  constructor({ seed = 1, config = {}, physicsFactory = createLightweightPhysicsWorld } = {}) {
+  #cleanupConstructionFailure(error) {
+    const cleanupErrors = [];
+    try {
+      this.#physics?.destroy();
+      this.#physics = null;
+    } catch (cleanupError) {
+      cleanupErrors.push(normalizeThrownError(cleanupError, 'MatchCore physics 构造清理失败'));
+    }
+    try {
+      this.#rules?.destroy();
+      this.#rules = null;
+    } catch (cleanupError) {
+      cleanupErrors.push(normalizeThrownError(cleanupError, 'MatchCore rules 构造清理失败'));
+    }
+    this.#destroyed = true;
+    return combineCleanupFailure(
+      normalizeThrownError(error, 'MatchCore 构造失败'),
+      cleanupErrors,
+      'MatchCore 构造失败且清理未完整完成。',
+    );
+  }
+
+  constructor({
+    seed = 1,
+    config = {},
+    physicsFactory = createLightweightPhysicsWorld,
+    ruleEngineFactory,
+  } = {}) {
     if (typeof physicsFactory !== 'function') throw new TypeError('physicsFactory 必须是函数。');
+    if (typeof ruleEngineFactory !== 'function') {
+      throw new TypeError('MatchCore 需要显式 ruleEngineFactory。');
+    }
     this.#matchSeed = normalizeSeed(seed);
     this.#config = createArenaMatchConfig(config);
     this.#configHash = createArenaConfigHash(this.#config);
+    this.#ruleContentHash = null;
     this.#tick = 0;
     this.#activeTick = 0;
     this.#phase = this.config.preparingTicks > 0
@@ -94,15 +134,26 @@ export class MatchCore {
     this.#events = [];
     this.#started = false;
     this.#destroyed = false;
+    this.#stepping = false;
     this.#rngStreams = Object.fromEntries(
       ['spawn', 'map', 'equipment', 'bot', 'presentation'].map((name) => [
         name,
         createRng(deriveSeed(this.matchSeed, name)),
       ]),
     );
-    this.#physics = assertPhysicsWorld(physicsFactory({ arena: this.config.arena }));
     this.#participants = new Map();
+    this.#physics = null;
+    this.#rules = null;
     try {
+      this.#rules = assertArenaRuleEngine(ruleEngineFactory({
+        participantIds: this.config.participantIds,
+        config: this.config,
+      }));
+      this.#ruleContentHash = this.#rules.getContentHash();
+      if (typeof this.#ruleContentHash !== 'string' || !/^[0-9a-f]{8}$/.test(this.#ruleContentHash)) {
+        throw new TypeError('ruleEngine content hash 必须是 8 位十六进制字符串。');
+      }
+      this.#physics = assertPhysicsWorld(physicsFactory({ arena: this.config.arena }));
       for (let index = 0; index < this.config.participantIds.length; index += 1) {
         const id = this.config.participantIds[index];
         const participant = createParticipant(id, this.config.livesPerParticipant, index);
@@ -118,11 +169,20 @@ export class MatchCore {
           facing: { x: index === 0 ? 1 : -1, z: 0 },
         });
       }
+      for (const spawn of this.config.equipment.initialSpawns) {
+        if (!this.#isEquipmentPositionValid(spawn.position)) {
+          throw new RangeError(`equipment spawn ${spawn.id} 不在合法竞技场表面。`);
+        }
+        this.#rules.spawnEquipment({
+          instanceId: `initial:${spawn.id}`,
+          definitionId: spawn.definitionId,
+          spawnId: spawn.id,
+          position: spawn.position,
+        });
+      }
     } catch (error) {
       this.#participants.clear();
-      this.#physics.destroy();
-      this.#destroyed = true;
-      throw error;
+      throw this.#cleanupConstructionFailure(error);
     }
   }
 
@@ -140,6 +200,10 @@ export class MatchCore {
 
   get configHash() {
     return this.#configHash;
+  }
+
+  get ruleContentHash() {
+    return this.#ruleContentHash;
   }
 
   get activeTick() {
@@ -175,28 +239,54 @@ export class MatchCore {
     if (this.#started || this.#phase !== ARENA_MATCH_PHASE.RUNNING) return;
     this.#started = true;
     this.#emit(EVENT.MATCH_STARTED, { participantIds: [...this.config.participantIds] });
+    for (const equipment of this.#rules.listEquipmentSnapshots()) {
+      this.#emit(EVENT.EQUIPMENT_SPAWNED, {
+        equipmentInstanceId: equipment.instanceId,
+        equipmentDefinitionId: equipment.definitionId,
+        spawnId: equipment.spawnId,
+        position: equipment.position ? { ...equipment.position } : null,
+      });
+    }
   }
 
   step(inputFrames = []) {
     this.#assertUsable();
     if (this.#phase === ARENA_MATCH_PHASE.ENDED) throw new Error('比赛已经结束，不能继续 step。');
-    const frames = normalizeInputFrames(inputFrames, {
-      tick: this.#tick,
-      participantIds: this.config.participantIds,
-    });
-    this.#events = [];
+    if (this.#stepping) throw new Error('MatchCore.step() 不可重入。');
+    this.#stepping = true;
     try {
-      return this.#stepNormalized(frames);
-    } catch (error) {
+      const frames = normalizeInputFrames(inputFrames, {
+        tick: this.#tick,
+        participantIds: this.config.participantIds,
+      });
+      this.#events = [];
       try {
-        this.destroy();
-      } catch (cleanupError) {
-        const combinedError = new Error('MatchCore tick 失败且清理未完整完成。');
-        combinedError.originalError = error;
-        combinedError.cleanupError = cleanupError;
-        throw combinedError;
+        return this.#stepNormalized(frames);
+      } catch (error) {
+        const failure = normalizeThrownError(error, 'MatchCore tick 失败');
+        // Internal fail-closed cleanup is allowed after the authoritative
+        // mutation phase unwinds; external destroy() remains blocked while a
+        // caller-owned input is being validated.
+        this.#stepping = false;
+        try {
+          this.destroy();
+        } catch (cleanupError) {
+          const cleanupErrors = Array.isArray(cleanupError?.causes)
+            ? cleanupError.causes.map((cause) => normalizeThrownError(
+              cause,
+              'MatchCore tick 清理失败',
+            ))
+            : [normalizeThrownError(cleanupError, 'MatchCore tick 清理失败')];
+          throw combineCleanupFailure(
+            failure,
+            cleanupErrors,
+            'MatchCore tick 失败且清理未完整完成。',
+          );
+        }
+        throw failure;
       }
-      throw error;
+    } finally {
+      this.#stepping = false;
     }
   }
 
@@ -214,9 +304,17 @@ export class MatchCore {
 
     this.#startRunningIfNeeded();
     this.#advanceParticipantTimers();
+    this.#rules.advanceTimers();
+    this.#updateEquipmentState();
     const frameById = new Map(frames.map((frame) => [frame.participantId, frame]));
-    this.#startRequestedActions(frameById);
-    this.#resolveActiveActions();
+    const startedActions = this.#rules.resolveActions({
+      tick: this.#tick,
+      actors: this.#createRuleActors(),
+      inputFrames: frames,
+    });
+    this.#commitRuleBatch(startedActions);
+    const activeActions = this.#rules.resolveActiveActions({ actors: this.#createRuleActors() });
+    this.#commitRuleBatch(activeActions);
     this.#applyMovementIntents(frameById);
     this.#physics.step(this.config.fixedDeltaSeconds);
     this.#resolveEliminations();
@@ -244,107 +342,101 @@ export class MatchCore {
       if (participant.status !== ARENA_PARTICIPANT_STATUS.ACTIVE) continue;
       if (participant.hitstunTicks > 0) participant.hitstunTicks -= 1;
       if (participant.invulnerableTicks > 0) participant.invulnerableTicks -= 1;
-      this.#advanceAction(participant);
     }
   }
 
-  #advanceAction(participant) {
-    const action = participant.action;
-    if (action.phase === ARENA_ACTION_PHASE.IDLE) return;
-    action.ticksRemaining -= 1;
-    if (action.ticksRemaining > 0) return;
-    const rule = this.config.basePush;
-    if (action.phase === ARENA_ACTION_PHASE.WINDUP) {
-      action.phase = ARENA_ACTION_PHASE.ACTIVE;
-      action.ticksRemaining = rule.activeTicks;
-      action.hitTargets.clear();
-    } else if (action.phase === ARENA_ACTION_PHASE.ACTIVE) {
-      action.phase = ARENA_ACTION_PHASE.RECOVERY;
-      action.ticksRemaining = rule.recoveryTicks;
-    } else {
-      resetAction(action);
-    }
-  }
-
-  #startRequestedActions(frameById) {
-    for (const id of this.config.participantIds) {
+  #createRuleActors() {
+    return this.config.participantIds.map((id) => {
       const participant = this.#participants.get(id);
-      const frame = frameById.get(id);
+      const physics = this.#physics.getCharacterState(id);
+      return {
+        id,
+        canAct: participant.status === ARENA_PARTICIPANT_STATUS.ACTIVE
+          && participant.hitstunTicks === 0,
+        targetable: participant.status === ARENA_PARTICIPANT_STATUS.ACTIVE
+          && participant.invulnerableTicks === 0,
+        position: { ...physics.position },
+        facing: { ...physics.facing },
+      };
+    });
+  }
+
+  #isEquipmentPositionValid(position) {
+    if (
+      !position
+      || !Number.isFinite(position.x)
+      || !Number.isFinite(position.y)
+      || !Number.isFinite(position.z)
+      || position.y <= this.config.arena.killY
+    ) return false;
+    return this.config.arena.surfaces.some((surface) => (
+      Math.abs(position.x - surface.center.x) <= surface.halfExtents.x
+      && Math.abs(position.z - surface.center.z) <= surface.halfExtents.z
+      && Math.abs(
+        position.y
+          - (
+            surface.center.y
+            + surface.halfExtents.y
+            + this.config.character.radius
+            + this.config.character.halfHeight
+          )
+      ) <= EQUIPMENT_SURFACE_HEIGHT_TOLERANCE
+    ));
+  }
+
+  #updateEquipmentState() {
+    const participants = this.config.participantIds.map((id) => {
+      const participant = this.#participants.get(id);
+      const physics = this.#physics.getCharacterState(id);
       if (
-        participant.status !== ARENA_PARTICIPANT_STATUS.ACTIVE
-        || participant.hitstunTicks > 0
-        || participant.action.phase !== ARENA_ACTION_PHASE.IDLE
-        || !frame.actionPressed
-      ) continue;
-      participant.action.phase = ARENA_ACTION_PHASE.WINDUP;
-      participant.action.ticksRemaining = this.config.basePush.windupTicks;
-      participant.action.hitTargets.clear();
-      this.#emit(EVENT.ACTION_STARTED, { participantId: id, action: 'base-push' });
+        participant.status === ARENA_PARTICIPANT_STATUS.ACTIVE
+        && physics.grounded
+        && physics.supportSurfaceId
+        && this.#rules.getHeldEquipment(id)
+      ) this.#rules.updateEquipmentLastSafePosition(id, physics.position);
+      return {
+        id,
+        position: { ...physics.position },
+        eligible: participant.status === ARENA_PARTICIPANT_STATUS.ACTIVE,
+      };
+    });
+    const pickups = this.#rules.resolveEquipmentPickups({
+      participants,
+      contestSeed: deriveSeed(this.matchSeed, `equipment-pickup:${this.#tick}`),
+    });
+    for (const pickup of pickups) {
+      const equipment = this.#rules.getEquipmentSnapshot(pickup.equipmentInstanceId);
+      const participant = participants.find(({ id }) => id === pickup.participantId);
+      const physics = this.#physics.getCharacterState(pickup.participantId);
+      if (physics.grounded && physics.supportSurfaceId) {
+        this.#rules.updateEquipmentLastSafePosition(pickup.participantId, participant.position);
+      }
+      this.#emit(EVENT.EQUIPMENT_PICKED_UP, {
+        participantId: pickup.participantId,
+        equipmentInstanceId: equipment.instanceId,
+        equipmentDefinitionId: equipment.definitionId,
+      });
     }
   }
 
-  #resolveActiveActions() {
-    const rule = this.config.basePush;
-    const resolvedHits = [];
-    for (const attackerId of this.config.participantIds) {
-      const attacker = this.#participants.get(attackerId);
-      if (
-        attacker.status !== ARENA_PARTICIPANT_STATUS.ACTIVE
-        || attacker.hitstunTicks > 0
-        || attacker.action.phase !== ARENA_ACTION_PHASE.ACTIVE
-      ) continue;
-      const attackerState = this.#physics.getCharacterState(attackerId);
-      for (const targetId of this.config.participantIds) {
-        if (targetId === attackerId || attacker.action.hitTargets.has(targetId)) continue;
+  #commitRuleBatch(batch) {
+    this.#rules.commit(batch, {
+      recordHit: (attackerId, targetId) => {
         const target = this.#participants.get(targetId);
-        if (
-          target.status !== ARENA_PARTICIPANT_STATUS.ACTIVE
-          || target.invulnerableTicks > 0
-        ) continue;
-        const targetState = this.#physics.getCharacterState(targetId);
-        const dx = targetState.position.x - attackerState.position.x;
-        const dz = targetState.position.z - attackerState.position.z;
-        const distance = Math.hypot(dx, dz);
-        if (
-          distance > rule.range
-          || Math.abs(targetState.position.y - attackerState.position.y)
-            > rule.maximumVerticalDifference
-        ) continue;
-        const directionX = distance > 1e-7 ? dx / distance : attackerState.facing.x;
-        const directionZ = distance > 1e-7 ? dz / distance : attackerState.facing.z;
-        const facingDot = directionX * attackerState.facing.x
-          + directionZ * attackerState.facing.z;
-        if (facingDot < rule.minimumFacingDot) continue;
-
-        attacker.action.hitTargets.add(targetId);
-        const impulse = {
-          x: directionX * rule.horizontalImpulse,
-          y: rule.verticalImpulse,
-          z: directionZ * rule.horizontalImpulse,
-        };
-        resolvedHits.push({ attackerId, targetId, impulse });
-      }
-    }
-
-    // Collect before mutating so symmetric attacks on the same tick can trade;
-    // participant ID order must never grant an implicit first-hit advantage.
-    for (const { attackerId, targetId, impulse } of resolvedHits) {
-      const target = this.#participants.get(targetId);
-      target.hitstunTicks = Math.max(target.hitstunTicks, rule.hitstunTicks);
-      target.lastHitBy = attackerId;
-      target.lastHitTick = this.#tick;
-      resetAction(target.action);
-      this.#physics.applyImpulse(targetId, impulse);
-      this.#emit(EVENT.HIT_RESOLVED, {
-        attackerId,
-        targetId,
-        action: 'base-push',
-      });
-      this.#emit(EVENT.KNOCKBACK_APPLIED, {
-        attackerId,
-        targetId,
-        impulse,
-      });
+        target.lastHitBy = attackerId;
+        target.lastHitTick = this.#tick;
+      },
+      applyHitstun: (participantId, ticks) => {
+        const participant = this.#participants.get(participantId);
+        participant.hitstunTicks = Math.max(participant.hitstunTicks, ticks);
+      },
+      applyImpulse: (participantId, impulse) => {
+        this.#physics.applyImpulse(participantId, impulse);
+      },
+    });
+    for (const event of batch.events) {
+      const { type, ...payload } = event;
+      this.#emit(type, payload);
     }
   }
 
@@ -386,6 +478,24 @@ export class MatchCore {
         remainingLives: participant.lives,
         creditedAttackerId: creditedAttacker?.id ?? null,
       });
+      const dropped = this.#rules.dropEquipment(participant.id, {
+        isPositionValid: (position) => this.#isEquipmentPositionValid(position),
+      });
+      if (dropped) {
+        this.#emit(EVENT.EQUIPMENT_DROPPED, {
+          participantId: participant.id,
+          equipmentInstanceId: dropped.equipment.instanceId,
+          equipmentDefinitionId: dropped.equipment.definitionId,
+          position: { ...dropped.equipment.position },
+        });
+        if (dropped.fallbackUsed) {
+          this.#emit(EVENT.EQUIPMENT_DROP_FALLBACK, {
+            participantId: participant.id,
+            equipmentInstanceId: dropped.equipment.instanceId,
+            diagnosticCode: dropped.diagnosticCode,
+          });
+        }
+      }
       const terminal = this.#phase === ARENA_MATCH_PHASE.SUDDEN_DEATH || participant.lives === 0;
       participant.status = terminal
         ? ARENA_PARTICIPANT_STATUS.ELIMINATED
@@ -393,7 +503,7 @@ export class MatchCore {
       participant.respawnTicks = terminal ? 0 : this.config.respawnTicks;
       participant.hitstunTicks = 0;
       participant.invulnerableTicks = 0;
-      resetAction(participant.action);
+      this.#rules.resetParticipant(participant.id);
       this.#physics.resetCharacter(participant.id, {
         position: this.#holdingPosition(participant),
         velocity: { x: 0, y: 0, z: 0 },
@@ -450,7 +560,7 @@ export class MatchCore {
     participant.invulnerableTicks = this.config.invulnerableTicks;
     participant.lastHitBy = null;
     participant.lastHitTick = -1;
-    resetAction(participant.action);
+    this.#rules.resetParticipant(participant.id);
     this.#physics.resetCharacter(participant.id, {
       position: spawn,
       velocity: { x: 0, y: 0, z: 0 },
@@ -481,7 +591,11 @@ export class MatchCore {
     if (this.#phase === ARENA_MATCH_PHASE.ENDED) return;
     const ranked = this.config.participantIds
       .map((id) => this.#participants.get(id))
-      .sort((a, b) => b.lives - a.lives || b.eliminations - a.eliminations || a.id.localeCompare(b.id));
+      .sort((a, b) => (
+        b.lives - a.lives
+        || b.eliminations - a.eliminations
+        || compareText(a.id, b.id)
+      ));
     const tied = ranked[0].lives === ranked[1].lives
       && ranked[0].eliminations === ranked[1].eliminations;
     this.#endMatch({
@@ -516,6 +630,7 @@ export class MatchCore {
       schemaVersion: this.config.schemaVersion,
       physicsBackendVersion: this.config.physicsBackendVersion,
       configHash: this.configHash,
+      ruleContentHash: this.ruleContentHash,
       matchSeed: this.matchSeed,
       tick: this.#tick,
       activeTick: this.#activeTick,
@@ -536,10 +651,23 @@ export class MatchCore {
           respawnTicks: participant.respawnTicks,
           lastHitBy: participant.lastHitBy,
           lastHitTick: participant.lastHitTick,
-          action: {
-            phase: participant.action.phase,
-            ticksRemaining: participant.action.ticksRemaining,
-          },
+          action: (() => {
+            const action = this.#rules.getActionSnapshot(id);
+            return {
+              definitionId: action.definitionId,
+              phase: action.phase,
+              ticksRemaining: action.ticksRemaining,
+            };
+          })(),
+          actionRule: this.#rules.getParticipantActionRule(id),
+          equipment: (() => {
+            const equipment = this.#rules.getHeldEquipment(id);
+            return equipment ? {
+              instanceId: equipment.instanceId,
+              definitionId: equipment.definitionId,
+              cooldownRemainingTicks: equipment.cooldownRemainingTicks,
+            } : null;
+          })(),
           position: { ...physics.position },
           velocity: { ...physics.velocity },
           facing: { ...physics.facing },
@@ -547,6 +675,20 @@ export class MatchCore {
           supportSurfaceId: physics.supportSurfaceId,
         };
       }),
+      equipment: this.#rules.listEquipmentSnapshots().map((equipment) => ({
+        schemaVersion: equipment.schemaVersion,
+        instanceId: equipment.instanceId,
+        definitionId: equipment.definitionId,
+        spawnId: equipment.spawnId,
+        locationState: equipment.locationState,
+        ownerId: equipment.ownerId,
+        position: equipment.position ? { ...equipment.position } : null,
+        lastSafePosition: equipment.lastSafePosition
+          ? { ...equipment.lastSafePosition }
+          : null,
+        cooldownRemainingTicks: equipment.cooldownRemainingTicks,
+        revision: equipment.revision,
+      })),
       result: cloneResult(this.#result),
     };
     if (includeInternal) {
@@ -570,6 +712,7 @@ export class MatchCore {
       schemaVersion: this.config.schemaVersion,
       physicsBackendVersion: this.config.physicsBackendVersion,
       configHash: this.configHash,
+      ruleContentHash: this.ruleContentHash,
       matchSeed: this.matchSeed,
       config: {
         participantIds: [...this.config.participantIds],
@@ -581,6 +724,13 @@ export class MatchCore {
         invulnerableTicks: this.config.invulnerableTicks,
         lastHitCreditTicks: this.config.lastHitCreditTicks,
         basePush: { ...this.config.basePush },
+        equipment: {
+          initialSpawns: this.config.equipment.initialSpawns.map((spawn) => ({
+            id: spawn.id,
+            definitionId: spawn.definitionId,
+            position: { ...spawn.position },
+          })),
+        },
         arena: {
           killY: this.config.arena.killY,
           surfaces: this.config.arena.surfaces.map((surface) => ({
@@ -596,11 +746,33 @@ export class MatchCore {
   }
 
   destroy() {
-    if (this.#destroyed) return;
+    if (this.#destroyed && !this.#rules && !this.#physics) return;
+    if (this.#stepping) throw new Error('step() 期间不能销毁 MatchCore。');
     this.#destroyed = true;
     this.#events.length = 0;
     this.#participants.clear();
-    this.#physics.destroy();
+    const errors = [];
+    if (this.#rules) {
+      try {
+        this.#rules.destroy();
+        this.#rules = null;
+      } catch (error) {
+        errors.push(normalizeThrownError(error, 'MatchCore rules 清理失败'));
+      }
+    }
+    if (this.#physics) {
+      try {
+        this.#physics.destroy();
+        this.#physics = null;
+      } catch (error) {
+        errors.push(normalizeThrownError(error, 'MatchCore physics 清理失败'));
+      }
+    }
+    if (errors.length > 0) {
+      const cleanupError = new Error('MatchCore 清理未完整完成。');
+      cleanupError.causes = errors;
+      throw cleanupError;
+    }
   }
 }
 

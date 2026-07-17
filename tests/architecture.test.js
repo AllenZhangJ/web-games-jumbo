@@ -186,7 +186,7 @@ test('Arena bot layers preserve dependency direction and tick determinism', asyn
     );
     assert.doesNotMatch(
       source,
-      /(?:Date\.now|Math\.random|\bperformance\b|setTimeout|setInterval)/,
+      /(?:Date\.now|Math\.random|\bperformance\b|setTimeout|setInterval|localeCompare)/,
       `${file} 使用了墙钟或非确定性随机源`,
     );
   }
@@ -206,5 +206,39 @@ test('Arena bot layers preserve dependency direction and tick determinism', asyn
       /(?:\/ai\/|\/matchmaking\/|\/session\/)/,
       `${file} 反向依赖了机器人或匹配编排`,
     );
+    assert.doesNotMatch(
+      source,
+      /localeCompare/,
+      `${file} 使用了受运行环境 locale 影响的排序`,
+    );
   }
+});
+
+test('Arena Rule/Core foundation preserves dependency direction and deterministic APIs', async () => {
+  const directories = ['rules', 'action', 'equipment']
+    .map((directory) => path.resolve('src/arena', directory));
+  const files = (await Promise.all(directories.map(listJavaScript))).flat();
+  for (const file of files) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /(?:\/ai\/|\/session\/|\/matchmaking\/|\/content\/|match-core|replay|render3d|\/platform\/|from\s+['"]three['"])/,
+      `${file} 违反了 Rule/Core 单向依赖。`,
+    );
+    assert.doesNotMatch(
+      source,
+      /(?:Date\.now|Math\.random|\bperformance\b|setTimeout|setInterval|requestAnimationFrame|localeCompare)/,
+      `${file} 使用了墙钟、非确定性随机或表现调度。`,
+    );
+  }
+
+  const resolverSource = await readFile(
+    path.resolve('src/arena/action/action-resolver.js'),
+    'utf8',
+  );
+  assert.doesNotMatch(
+    resolverSource,
+    /(?:hammer|chain|shield|EquipmentRuntime|EquipmentSystem)/i,
+    'ActionResolver 不应知道具体装备或装备运行时实现。',
+  );
 });

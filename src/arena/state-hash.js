@@ -1,3 +1,8 @@
+import {
+  createDeterministicDataHash,
+  createFnv1aHash,
+} from '../shared/deterministic-data-hash.js';
+
 function finiteInteger(value, scale = 1_000_000) {
   if (!Number.isFinite(value)) throw new TypeError('状态 hash 不能包含非有限数。');
   const quantized = Math.round(value * scale);
@@ -7,35 +12,15 @@ function finiteInteger(value, scale = 1_000_000) {
   return Object.is(quantized, -0) ? 0 : quantized;
 }
 
-function fnv1a(text) {
-  let hash = 0x811c9dc5;
-  for (let index = 0; index < text.length; index += 1) {
-    hash ^= text.charCodeAt(index);
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return (hash >>> 0).toString(16).padStart(8, '0');
-}
-
-function canonicalize(value) {
-  if (value === null) return 'null';
-  if (typeof value === 'number') {
-    if (!Number.isFinite(value)) throw new TypeError('配置签名不能包含非有限数。');
-    return `n:${Object.is(value, -0) ? 0 : value}`;
-  }
-  if (typeof value === 'string') return `s:${JSON.stringify(value)}`;
-  if (typeof value === 'boolean') return value ? 'b:1' : 'b:0';
-  if (Array.isArray(value)) return `[${value.map(canonicalize).join(',')}]`;
-  if (value && typeof value === 'object') {
-    return `{${Object.keys(value).sort().map((key) => (
-      `${JSON.stringify(key)}:${canonicalize(value[key])}`
-    )).join(',')}}`;
-  }
-  throw new TypeError(`配置签名不支持 ${typeof value}。`);
+function compareText(left, right) {
+  if (left < right) return -1;
+  if (left > right) return 1;
+  return 0;
 }
 
 export function createArenaConfigHash(config) {
   if (!config || typeof config !== 'object') throw new TypeError('config 必须是对象。');
-  return fnv1a(canonicalize(config));
+  return createDeterministicDataHash(config, 'Arena config');
 }
 
 export function createMatchStateHash(snapshot) {
@@ -44,6 +29,7 @@ export function createMatchStateHash(snapshot) {
     snapshot.schemaVersion,
     snapshot.physicsBackendVersion,
     snapshot.configHash,
+    snapshot.ruleContentHash,
     snapshot.matchSeed,
     snapshot.tick,
     snapshot.activeTick,
@@ -61,8 +47,12 @@ export function createMatchStateHash(snapshot) {
       participant.hitstunTicks,
       participant.invulnerableTicks,
       participant.respawnTicks,
+      participant.action.definitionId ?? '',
       participant.action.phase,
       participant.action.ticksRemaining,
+      participant.equipment?.instanceId ?? '',
+      participant.equipment?.definitionId ?? '',
+      participant.equipment?.cooldownRemainingTicks ?? 0,
       participant.lastHitBy ?? '',
       participant.lastHitTick,
       finiteInteger(participant.position.x),
@@ -77,7 +67,31 @@ export function createMatchStateHash(snapshot) {
       participant.supportSurfaceId ?? '',
     );
   }
-  for (const [name, state] of Object.entries(snapshot.rngStates).sort(([a], [b]) => a.localeCompare(b))) {
+  for (const equipment of [...snapshot.equipment].sort((left, right) => {
+    if (left.instanceId < right.instanceId) return -1;
+    if (left.instanceId > right.instanceId) return 1;
+    return 0;
+  })) {
+    fields.push(
+      equipment.schemaVersion,
+      equipment.instanceId,
+      equipment.definitionId,
+      equipment.spawnId,
+      equipment.locationState,
+      equipment.ownerId ?? '',
+      equipment.position ? finiteInteger(equipment.position.x) : '',
+      equipment.position ? finiteInteger(equipment.position.y) : '',
+      equipment.position ? finiteInteger(equipment.position.z) : '',
+      equipment.lastSafePosition ? finiteInteger(equipment.lastSafePosition.x) : '',
+      equipment.lastSafePosition ? finiteInteger(equipment.lastSafePosition.y) : '',
+      equipment.lastSafePosition ? finiteInteger(equipment.lastSafePosition.z) : '',
+      equipment.cooldownRemainingTicks,
+      equipment.revision,
+    );
+  }
+  for (const [name, state] of Object.entries(snapshot.rngStates).sort(([a], [b]) => (
+    compareText(a, b)
+  ))) {
     fields.push(name, state);
   }
   fields.push(
@@ -86,5 +100,5 @@ export function createMatchStateHash(snapshot) {
     snapshot.result?.isDraw ? 1 : 0,
     snapshot.result?.endedAtTick ?? -1,
   );
-  return fnv1a(JSON.stringify(fields));
+  return createFnv1aHash(JSON.stringify(fields));
 }

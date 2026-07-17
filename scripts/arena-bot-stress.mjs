@@ -32,6 +32,8 @@ function createStats(id) {
     losses: 0,
     ticks: 0,
     actions: 0,
+    equipmentActions: 0,
+    equipmentPickups: 0,
     hits: 0,
     eliminations: 0,
     replayChecks: 0,
@@ -43,6 +45,8 @@ function finishStats(stats) {
   const score = stats.wins + stats.draws * 0.5;
   const hitRatePerThousandTicks = stats.hits / stats.ticks * 1_000;
   const eliminationRatePerThousandTicks = stats.eliminations / stats.ticks * 1_000;
+  const averageHits = stats.hits / stats.matches;
+  const averageEliminations = stats.eliminations / stats.matches;
   return {
     difficultyId: stats.difficultyId,
     matches: stats.matches,
@@ -52,11 +56,16 @@ function finishStats(stats) {
     scoreRate: score / stats.matches,
     averageTicks: stats.ticks / stats.matches,
     averageActions: stats.actions / stats.matches,
-    averageHits: stats.hits / stats.matches,
-    averageEliminations: stats.eliminations / stats.matches,
+    averageEquipmentActions: stats.equipmentActions / stats.matches,
+    averageEquipmentPickups: stats.equipmentPickups / stats.matches,
+    averageHits,
+    averageEliminations,
     hitRatePerThousandTicks,
     eliminationRatePerThousandTicks,
-    capabilityIndex: hitRatePerThousandTicks + eliminationRatePerThousandTicks * 2,
+    // Match duration is now partly a survival outcome. A per-tick denominator
+    // would penalize a stronger bot for keeping the match alive, so the Stage4
+    // gate uses per-match combat output and reports efficiency separately.
+    capabilityIndex: averageHits + averageEliminations * 2,
     replayChecks: stats.replayChecks,
     uniqueFinalHashes: stats.hashes.size,
   };
@@ -150,7 +159,13 @@ function runBenchmarkMatch(seed, difficultyId, replaySample) {
     config: configOverrides,
   });
   const benchmarkPlayer = createHumanBaseline(config);
-  const metrics = { actions: 0, hits: 0, eliminations: 0 };
+  const metrics = {
+    actions: 0,
+    equipmentActions: 0,
+    equipmentPickups: 0,
+    hits: 0,
+    eliminations: 0,
+  };
   try {
     match.session.start();
     while (match.session.state !== 'ended') {
@@ -160,6 +175,12 @@ function runBenchmarkMatch(seed, difficultyId, replaySample) {
       for (const event of events) {
         if (event.type === 'ActionStarted' && event.participantId === 'player-2') {
           metrics.actions += 1;
+          if (event.action !== 'base-push') metrics.equipmentActions += 1;
+        } else if (
+          event.type === 'EquipmentPickedUp'
+          && event.participantId === 'player-2'
+        ) {
+          metrics.equipmentPickups += 1;
         } else if (event.type === 'HitResolved' && event.attackerId === 'player-2') {
           metrics.hits += 1;
         } else if (
@@ -198,6 +219,8 @@ for (const difficultyId of BOT_DIFFICULTY_IDS) {
     stats.matches += 1;
     stats.ticks += result.ticks;
     stats.actions += result.actions;
+    stats.equipmentActions += result.equipmentActions;
+    stats.equipmentPickups += result.equipmentPickups;
     stats.hits += result.hits;
     stats.eliminations += result.eliminations;
     stats.replayChecks += result.replayChecked ? 1 : 0;
@@ -225,6 +248,13 @@ for (let index = 1; index < results.length; index += 1) {
       `难度能力指数未保持顺序：${results[index - 1].difficultyId} `
       + `${results[index - 1].capabilityIndex} > ${results[index].difficultyId} `
       + `${results[index].capabilityIndex}`,
+    );
+  }
+  if (results[index].scoreRate + 1e-12 < results[index - 1].scoreRate) {
+    throw new Error(
+      `难度得分率未保持顺序：${results[index - 1].difficultyId} `
+      + `${results[index - 1].scoreRate} > ${results[index].difficultyId} `
+      + `${results[index].scoreRate}`,
     );
   }
 }

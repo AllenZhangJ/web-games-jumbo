@@ -1,8 +1,9 @@
 import { ARENA_MATCH_PHASE } from './config.js';
 import { normalizeInputFrames } from './input-frame.js';
 import { MatchCore } from './match-core.js';
+import { createArenaV1MatchCore } from './arena-v1-match-core.js';
 
-export const ARENA_REPLAY_SCHEMA_VERSION = 1;
+export const ARENA_REPLAY_SCHEMA_VERSION = 2;
 
 function copyInput(frame) {
   return {
@@ -132,6 +133,23 @@ function validateReplay(replay) {
   if (replay.replaySchemaVersion !== ARENA_REPLAY_SCHEMA_VERSION) {
     throw new RangeError(`不支持 replay schema ${replay.replaySchemaVersion}。`);
   }
+  if (!Number.isSafeInteger(replay.schemaVersion) || replay.schemaVersion < 1) {
+    throw new TypeError('replay.schemaVersion 必须是正安全整数。');
+  }
+  if (
+    typeof replay.physicsBackendVersion !== 'string'
+    || replay.physicsBackendVersion.length === 0
+  ) throw new TypeError('replay.physicsBackendVersion 必须是非空字符串。');
+  for (const field of ['configHash', 'ruleContentHash']) {
+    if (typeof replay[field] !== 'string' || !/^[0-9a-f]{8}$/.test(replay[field])) {
+      throw new TypeError(`replay.${field} 必须是 8 位十六进制 hash。`);
+    }
+  }
+  if (
+    !Number.isSafeInteger(replay.matchSeed)
+    || replay.matchSeed < 0
+    || replay.matchSeed > 0xffffffff
+  ) throw new RangeError('replay.matchSeed 必须是 uint32。');
   if (
     !Array.isArray(replay.inputFrames)
     || !Array.isArray(replay.checkpoints)
@@ -166,12 +184,17 @@ function validateReplay(replay) {
   return replay;
 }
 
-export function replayMatch(replay, { coreFactory = (options) => new MatchCore(options) } = {}) {
+export function replayMatch(replay, { coreFactory = createArenaV1MatchCore } = {}) {
   validateReplay(replay);
   if (typeof coreFactory !== 'function') throw new TypeError('coreFactory 必须是函数。');
   const core = coreFactory({ seed: replay.matchSeed, config: replay.config });
   if (!(core instanceof MatchCore)) throw new TypeError('coreFactory 必须返回 MatchCore。');
   try {
+    if (core.config.schemaVersion !== replay.schemaVersion) {
+      throw new Error(
+        `回放规则版本 ${replay.schemaVersion} 与当前 ${core.config.schemaVersion} 不一致。`,
+      );
+    }
     if (core.config.physicsBackendVersion !== replay.physicsBackendVersion) {
       throw new Error(
         `回放物理版本 ${replay.physicsBackendVersion} 与当前 ${core.config.physicsBackendVersion} 不一致。`,
@@ -179,6 +202,11 @@ export function replayMatch(replay, { coreFactory = (options) => new MatchCore(o
     }
     if (core.configHash !== replay.configHash) {
       throw new Error(`回放配置签名 ${replay.configHash} 与当前 ${core.configHash} 不一致。`);
+    }
+    if (core.ruleContentHash !== replay.ruleContentHash) {
+      throw new Error(
+        `回放规则内容签名 ${replay.ruleContentHash} 与当前 ${core.ruleContentHash} 不一致。`,
+      );
     }
     const checkpointByTick = new Map(replay.checkpoints.map((checkpoint) => [
       checkpoint.tick,

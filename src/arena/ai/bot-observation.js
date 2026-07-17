@@ -3,10 +3,17 @@ import {
   ARENA_MATCH_PHASE,
   ARENA_PARTICIPANT_STATUS,
 } from '../config.js';
+import { EQUIPMENT_LOCATION_STATE } from '../equipment/equipment-runtime.js';
 
 const MATCH_PHASES = new Set(Object.values(ARENA_MATCH_PHASE));
 const PARTICIPANT_STATUSES = new Set(Object.values(ARENA_PARTICIPANT_STATUS));
 const ACTION_PHASES = new Set(Object.values(ARENA_ACTION_PHASE));
+
+function compareText(left, right) {
+  if (left < right) return -1;
+  if (left > right) return 1;
+  return 0;
+}
 
 function deepFreeze(value) {
   if (!value || typeof value !== 'object' || Object.isFrozen(value)) return value;
@@ -58,6 +65,71 @@ function finiteVector(value, name) {
   return { x: value.x, y: value.y, z: value.z };
 }
 
+function nonEmptyString(value, name) {
+  if (typeof value !== 'string' || value.length === 0) {
+    throw new TypeError(`${name} 必须是非空字符串。`);
+  }
+  return value;
+}
+
+function copyHeldEquipment(value, name) {
+  if (value === null || value === undefined) return null;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new TypeError(`${name} 必须为空或装备快照。`);
+  }
+  return {
+    instanceId: nonEmptyString(value.instanceId, `${name}.instanceId`),
+    definitionId: nonEmptyString(value.definitionId, `${name}.definitionId`),
+    cooldownRemainingTicks: nonNegativeInteger(
+      value.cooldownRemainingTicks,
+      `${name}.cooldownRemainingTicks`,
+    ),
+  };
+}
+
+function copyVisibleEquipment(value, name) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new TypeError(`${name} 必须是装备快照。`);
+  }
+  if (
+    value.locationState !== EQUIPMENT_LOCATION_STATE.SPAWNED
+    && value.locationState !== EQUIPMENT_LOCATION_STATE.DROPPED
+  ) throw new RangeError(`${name}.locationState 不是可见世界状态。`);
+  return {
+    instanceId: nonEmptyString(value.instanceId, `${name}.instanceId`),
+    definitionId: nonEmptyString(value.definitionId, `${name}.definitionId`),
+    locationState: value.locationState,
+    position: finiteVector(value.position, `${name}.position`),
+  };
+}
+
+function copyActionRule(value, name) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new TypeError(`${name} 必须是公开动作规则。`);
+  }
+  for (const field of ['range', 'minimumFacingDot', 'maximumVerticalDifference']) {
+    if (!Number.isFinite(value[field])) throw new TypeError(`${name}.${field} 必须是有限数。`);
+  }
+  if (value.range <= 0 || value.maximumVerticalDifference <= 0) {
+    throw new RangeError(`${name} 距离必须大于 0。`);
+  }
+  if (value.minimumFacingDot < -1 || value.minimumFacingDot > 1) {
+    throw new RangeError(`${name}.minimumFacingDot 必须位于 [-1, 1]。`);
+  }
+  const activeTicks = nonNegativeInteger(value.activeTicks, `${name}.activeTicks`);
+  if (activeTicks < 1) throw new RangeError(`${name}.activeTicks 必须大于 0。`);
+  return {
+    definitionId: nonEmptyString(value.definitionId, `${name}.definitionId`),
+    targetingKind: nonEmptyString(value.targetingKind, `${name}.targetingKind`),
+    range: value.range,
+    minimumFacingDot: value.minimumFacingDot,
+    maximumVerticalDifference: value.maximumVerticalDifference,
+    windupTicks: nonNegativeInteger(value.windupTicks, `${name}.windupTicks`),
+    activeTicks,
+    recoveryTicks: nonNegativeInteger(value.recoveryTicks, `${name}.recoveryTicks`),
+  };
+}
+
 function copyParticipant(participant, name) {
   if (!participant || typeof participant !== 'object') throw new TypeError(`${name} 不存在。`);
   if (typeof participant.id !== 'string' || participant.id.length === 0) {
@@ -80,6 +152,10 @@ function copyParticipant(participant, name) {
     throw new RangeError(`${name}.action.phase 无效。`);
   }
   nonNegativeInteger(participant.action.ticksRemaining, `${name}.action.ticksRemaining`);
+  if (
+    participant.action.definitionId !== null
+    && participant.action.definitionId !== undefined
+  ) nonEmptyString(participant.action.definitionId, `${name}.action.definitionId`);
   if (typeof participant.grounded !== 'boolean') {
     throw new TypeError(`${name}.grounded 必须是布尔值。`);
   }
@@ -101,9 +177,12 @@ function copyParticipant(participant, name) {
     invulnerableTicks: participant.invulnerableTicks,
     respawnTicks: participant.respawnTicks,
     action: {
+      definitionId: participant.action.definitionId ?? null,
       phase: participant.action?.phase,
       ticksRemaining: participant.action?.ticksRemaining,
     },
+    actionRule: copyActionRule(participant.actionRule, `${name}.actionRule`),
+    equipment: copyHeldEquipment(participant.equipment, `${name}.equipment`),
     position: finiteVector(participant.position, `${name}.position`),
     velocity: finiteVector(participant.velocity, `${name}.velocity`),
     facing: (() => {
@@ -132,6 +211,7 @@ function validateSourceSnapshot(snapshot, name) {
   }
   const ids = snapshot.participants.map((participant) => participant?.id);
   if (new Set(ids).size !== ids.length) throw new RangeError(`${name} 参赛者 ID 必须唯一。`);
+  if (!Array.isArray(snapshot.equipment)) throw new TypeError(`${name}.equipment 必须是数组。`);
   return snapshot;
 }
 
@@ -145,6 +225,13 @@ export function cloneBotSourceSnapshot(snapshot) {
     participants: snapshot.participants.map((participant, index) => (
       copyParticipant(participant, `participants[${index}]`)
     )),
+    equipment: snapshot.equipment
+      .filter(({ locationState }) => (
+        locationState === EQUIPMENT_LOCATION_STATE.SPAWNED
+        || locationState === EQUIPMENT_LOCATION_STATE.DROPPED
+      ))
+      .map((equipment, index) => copyVisibleEquipment(equipment, `equipment[${index}]`))
+      .sort((left, right) => compareText(left.instanceId, right.instanceId)),
   });
 }
 
@@ -189,31 +276,11 @@ export function createBotArenaView(arena, characterRadius) {
   });
 }
 
-export function createBotActionRuleView(basePush) {
-  if (!basePush || typeof basePush !== 'object') throw new TypeError('Bot action rule 不存在。');
-  for (const field of ['range', 'minimumFacingDot', 'maximumVerticalDifference']) {
-    if (!Number.isFinite(basePush[field])) throw new TypeError(`Bot action rule.${field} 必须是有限数。`);
-  }
-  if (basePush.range <= 0 || basePush.maximumVerticalDifference <= 0) {
-    throw new RangeError('Bot action rule 距离必须大于 0。');
-  }
-  if (basePush.minimumFacingDot < -1 || basePush.minimumFacingDot > 1) {
-    throw new RangeError('Bot action rule.minimumFacingDot 必须位于 [-1, 1]。');
-  }
-  return deepFreeze({
-    id: 'base-push',
-    range: basePush.range,
-    minimumFacingDot: basePush.minimumFacingDot,
-    maximumVerticalDifference: basePush.maximumVerticalDifference,
-  });
-}
-
 export function createBotObservation({
   commandSnapshot,
   delayedSnapshot,
   selfId,
   arena,
-  actionRule,
   objectives = [],
 }) {
   validateSourceSnapshot(commandSnapshot, 'commandSnapshot');
@@ -237,16 +304,24 @@ export function createBotObservation({
     || !delayedIds.has(opponentId)
   ) throw new RangeError('Bot observation 前后快照的参赛者身份不一致。');
   const opponent = delayedSnapshot.participants.find((participant) => participant.id === opponentId);
+  const copiedSelf = copyParticipant(self, 'observation.self');
+  const copiedOpponent = copyParticipant(opponent, 'observation.opponent');
   return deepFreeze({
-    schemaVersion: 1,
+    schemaVersion: 2,
     commandTick: commandSnapshot.tick,
     observedTick: delayedSnapshot.tick,
     phase: commandSnapshot.phase,
     remainingTicks: commandSnapshot.remainingTicks,
-    self: copyParticipant(self, 'observation.self'),
-    opponent: copyParticipant(opponent, 'observation.opponent'),
+    self: copiedSelf,
+    opponent: copiedOpponent,
+    // World resources and the opponent are delayed by the same observation
+    // budget. The bot may read its own current equipment/cooldown only.
+    equipment: delayedSnapshot.equipment.map((value, index) => (
+      copyVisibleEquipment(value, `observation.equipment[${index}]`)
+    )),
     arena,
-    actionRule,
+    actionRule: copiedSelf.actionRule,
+    opponentActionRule: copiedOpponent.actionRule,
     objectives: objectives.map((objective, index) => (
       cloneReadonlyValue(objective, `Bot objectives[${index}]`)
     )),

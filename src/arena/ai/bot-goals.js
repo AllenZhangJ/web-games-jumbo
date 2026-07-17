@@ -9,6 +9,7 @@ export const BOT_GOAL_ID = Object.freeze({
   INACTIVE: 'inactive',
   RECOVER_EDGE: 'recover-edge',
   EVADE_THREAT: 'evade-threat',
+  ACQUIRE_EQUIPMENT: 'acquire-equipment',
   ATTACK: 'attack',
   REPOSITION: 'reposition',
   CONTROL_CENTER: 'control-center',
@@ -16,6 +17,12 @@ export const BOT_GOAL_ID = Object.freeze({
 
 function distance2d(first, second) {
   return Math.hypot(second.x - first.x, second.z - first.z);
+}
+
+function compareText(left, right) {
+  if (left < right) return -1;
+  if (left > right) return 1;
+  return 0;
 }
 
 function surfaceContains(surface, position, radius = 0) {
@@ -100,6 +107,24 @@ function canAct(observation) {
     && observation.opponent.invulnerableTicks === 0;
 }
 
+function nearestReachableEquipment(observation) {
+  if (observation.self.equipment || observation.self.status !== ARENA_PARTICIPANT_STATUS.ACTIVE) {
+    return null;
+  }
+  const surface = supportSurface(observation, observation.self);
+  if (!surface) return null;
+  return observation.equipment
+    .filter(({ position }) => surfaceContains(surface, position, observation.arena.characterRadius))
+    .map((equipment) => ({
+      equipment,
+      distance: distance2d(observation.self.position, equipment.position),
+    }))
+    .sort((left, right) => (
+      left.distance - right.distance
+      || compareText(left.equipment.instanceId, right.equipment.instanceId)
+    ))[0] ?? null;
+}
+
 const EVALUATORS = Object.freeze([
   Object.freeze({
     id: BOT_GOAL_ID.INACTIVE,
@@ -151,7 +176,7 @@ const EVALUATORS = Object.freeze([
         || observation.opponent.action.phase === ARENA_ACTION_PHASE.ACTIVE;
       if (!threatening) return 0;
       const distance = distance2d(observation.self.position, observation.opponent.position);
-      if (distance > observation.actionRule.range * 1.45) return 0;
+      if (distance > observation.opponentActionRule.range * 1.45) return 0;
       return Math.min(0.97, 0.35 + profile.threatAwareness * 0.62);
     },
     createPlan: ({ observation, profile }) => {
@@ -171,6 +196,31 @@ const EVALUATORS = Object.freeze([
           z: observation.self.position.z + directionZ * 1.6 + centerZ * 0.45,
         }, surface, observation.arena.characterRadius + profile.edgeSafetyMargin * 0.45),
         speedScale: 1,
+        actionCandidate: false,
+      };
+    },
+  }),
+  Object.freeze({
+    id: BOT_GOAL_ID.ACQUIRE_EQUIPMENT,
+    priority: 82,
+    score: ({ observation, personality }) => {
+      const target = nearestReachableEquipment(observation);
+      if (!target) return 0;
+      const distanceScore = Math.max(0, 1 - target.distance / 12);
+      return Math.min(0.93, 0.7 + distanceScore * 0.16 + personality.patience * 0.07);
+    },
+    createPlan: ({ observation, profile }) => {
+      const target = nearestReachableEquipment(observation);
+      const surface = supportSurface(observation, observation.self);
+      return {
+        target: target
+          ? clampTargetToSurface(
+            target.equipment.position,
+            surface,
+            observation.arena.characterRadius + profile.edgeSafetyMargin * 0.25,
+          )
+          : { ...observation.self.position },
+        speedScale: target ? 1 : 0,
         actionCandidate: false,
       };
     },

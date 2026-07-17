@@ -1,6 +1,7 @@
 import { BotController } from '../ai/bot-controller.js';
 import { combineCleanupFailure, normalizeThrownError } from '../lifecycle-error.js';
 import { MatchCore } from '../match-core.js';
+import { createArenaV1MatchCore } from '../arena-v1-match-core.js';
 import { LocalMatchSession } from '../session/local-match-session.js';
 import {
   copyMatchAssignmentDiagnostics,
@@ -56,7 +57,7 @@ export class QuickMatchService {
 
   constructor({
     seedSource = null,
-    coreFactory = (options) => new MatchCore(options),
+    coreFactory = createArenaV1MatchCore,
     botControllerFactory = (options) => new BotController(options),
     sessionFactory = (options) => new LocalMatchSession(options),
     diagnosticSink = null,
@@ -107,7 +108,6 @@ export class QuickMatchService {
         personalitySeed: assignment.seeds.botPersonality,
         arena: core.config.arena,
         characterRadius: core.config.character.radius,
-        basePush: core.config.basePush,
       });
       session = this.#sessionFactory({
         core,

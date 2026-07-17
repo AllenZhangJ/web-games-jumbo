@@ -5,7 +5,9 @@ import {
   ARENA_PARTICIPANT_STATUS,
 } from '../../src/arena/config.js';
 import { createNeutralInputFrame } from '../../src/arena/input-frame.js';
-import { ARENA_MATCH_EVENT, MatchCore } from '../../src/arena/match-core.js';
+import { ARENA_MATCH_EVENT } from '../../src/arena/match-core.js';
+import { createArenaV1MatchCore } from '../../src/arena/arena-v1-match-core.js';
+import { createLightweightPhysicsWorld } from '../../src/arena/physics/lightweight-physics.js';
 
 const TEST_ARENA = Object.freeze({
   killY: -3,
@@ -21,7 +23,7 @@ const TEST_ARENA = Object.freeze({
 });
 
 function createFastCore(overrides = {}) {
-  return new MatchCore({
+  return createArenaV1MatchCore({
     seed: 42,
     config: {
       arena: TEST_ARENA,
@@ -138,24 +140,24 @@ test('base push timing advances exactly once per authoritative tick', () => {
 
 test('character tuning cannot override authoritative identity or inject unknown fields', () => {
   assert.throws(
-    () => new MatchCore({ config: { character: { id: 'hijack' } } }),
+    () => createArenaV1MatchCore({ config: { character: { id: 'hijack' } } }),
     /不支持字段 id/,
   );
   assert.throws(
-    () => new MatchCore({ config: { character: { moveSpeed: Number.NaN } } }),
-    /character\.moveSpeed 必须大于 0/,
+    () => createArenaV1MatchCore({ config: { character: { moveSpeed: Number.NaN } } }),
+    /character\.moveSpeed.*非有限数/,
   );
   assert.throws(
-    () => new MatchCore({ config: { basePush: { damage: 999 } } }),
+    () => createArenaV1MatchCore({ config: { basePush: { damage: 999 } } }),
     /basePush 不支持字段 damage/,
   );
   assert.throws(
-    () => new MatchCore({ config: { hardLimitTick: 9_000 } }),
+    () => createArenaV1MatchCore({ config: { hardLimitTick: 9_000 } }),
     /match config 不支持字段 hardLimitTick/,
   );
-  assert.throws(() => new MatchCore({ seed: 1.5 }), /uint32/);
-  assert.throws(() => new MatchCore({ seed: -1 }), /uint32/);
-  assert.throws(() => new MatchCore({
+  assert.throws(() => createArenaV1MatchCore({ seed: 1.5 }), /uint32/);
+  assert.throws(() => createArenaV1MatchCore({ seed: -1 }), /uint32/);
+  assert.throws(() => createArenaV1MatchCore({
     config: {
       arena: {
         killY: -5,
@@ -164,10 +166,68 @@ test('character tuning cannot override authoritative identity or inject unknown 
           center: { x: 0, y: 0, z: 0 },
           halfExtents: { x: 1, y: 0, z: 1 },
         }],
-        spawns: [{ x: 0, y: 1, z: 0 }, { x: Number.NaN, y: 1, z: 0 }],
+        spawns: [{ x: 0, y: 1, z: 0 }, { x: 1, y: 1, z: 0 }],
       },
     },
   }), /halfExtents\.y 必须大于 0/);
+});
+
+test('authority config rejects accessors and unknown wrapper fields before invoking caller code', () => {
+  let getterCalls = 0;
+  const config = {};
+  Object.defineProperty(config, 'preparingTicks', {
+    enumerable: true,
+    get() {
+      getterCalls += 1;
+      return 0;
+    },
+  });
+  assert.throws(() => createArenaV1MatchCore({ config }), /可枚举数据字段/);
+  assert.equal(getterCalls, 0);
+  assert.throws(
+    () => createArenaV1MatchCore({ config: {}, surpriseFactory: () => null }),
+    /options 不支持字段 surpriseFactory/,
+  );
+});
+
+test('MatchCore tick failure preserves cleanup causes and retries unfinished resources', () => {
+  let destroyAttempts = 0;
+  let rawWorld = null;
+  const physicsFactory = ({ arena }) => {
+    rawWorld = createLightweightPhysicsWorld({ arena });
+    return new Proxy(rawWorld, {
+      get(target, property) {
+        if (property === 'step') return () => { throw new Error('physics step failed'); };
+        if (property === 'destroy') {
+          return () => {
+            destroyAttempts += 1;
+            if (destroyAttempts === 1) throw new Error('physics cleanup failed');
+            target.destroy();
+          };
+        }
+        const value = Reflect.get(target, property, target);
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+    });
+  };
+  const core = createArenaV1MatchCore({
+    physicsFactory,
+    config: { preparingTicks: 0 },
+  });
+  assert.throws(
+    () => core.step(inputs(core)),
+    (error) => {
+      assert.match(error.originalError?.message, /physics step failed/);
+      assert.equal(error.cleanupErrors?.length, 1);
+      assert.match(error.cleanupErrors[0].message, /physics cleanup failed/);
+      return true;
+    },
+  );
+  assert.throws(() => core.getSnapshot(), /已销毁/);
+  core.destroy();
+  core.destroy();
+  assert.equal(destroyAttempts, 2);
+  assert.ok(rawWorld);
 });
 
 test('invalid input fails before mutation and leaves MatchCore usable', () => {
@@ -177,6 +237,37 @@ test('invalid input fails before mutation and leaves MatchCore usable', () => {
   assert.equal(core.tick, 0);
   assert.equal(core.getSnapshot().phase, ARENA_MATCH_PHASE.RUNNING);
   step(core);
+  assert.equal(core.tick, 1);
+  core.destroy();
+});
+
+test('caller-owned InputFrame cannot re-enter or destroy MatchCore during validation', () => {
+  const core = createFastCore();
+  let reentryError = null;
+  let destroyError = null;
+  const frame = {
+    tick: 0,
+    get participantId() {
+      try {
+        core.step([]);
+      } catch (error) {
+        reentryError = error;
+      }
+      try {
+        core.destroy();
+      } catch (error) {
+        destroyError = error;
+      }
+      return 'player-1';
+    },
+    moveX: 0,
+    moveZ: 0,
+    actionPressed: false,
+    actionHeld: false,
+  };
+  core.step([frame]);
+  assert.match(reentryError?.message, /不可重入/);
+  assert.match(destroyError?.message, /step\(\) 期间不能销毁/);
   assert.equal(core.tick, 1);
   core.destroy();
 });

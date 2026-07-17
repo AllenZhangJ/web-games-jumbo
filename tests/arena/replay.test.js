@@ -2,13 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ARENA_MATCH_PHASE } from '../../src/arena/config.js';
 import { createNeutralInputFrame } from '../../src/arena/input-frame.js';
-import { MatchCore } from '../../src/arena/match-core.js';
+import { createArenaV1MatchCore } from '../../src/arena/arena-v1-match-core.js';
 import { createLightweightPhysicsWorld } from '../../src/arena/physics/lightweight-physics.js';
 import { HeadlessMatchRunner, replayMatch } from '../../src/arena/replay.js';
 import { FixedStepMatchRuntime } from '../../src/arena/runtime/fixed-step-match-runtime.js';
 
 function createReplayCore() {
-  return new MatchCore({
+  return createArenaV1MatchCore({
     seed: 777,
     config: {
       preparingTicks: 0,
@@ -40,7 +40,7 @@ test('headless replay reproduces checkpoints, final hash, result and events', ()
 });
 
 test('runner records a tick only after the authoritative step succeeds', () => {
-  const core = new MatchCore({
+  const core = createArenaV1MatchCore({
     config: { preparingTicks: 0 },
     physicsFactory(options) {
       const world = createLightweightPhysicsWorld(options);
@@ -94,6 +94,12 @@ test('tampered replay config or recorded result is rejected even without changin
   const changedConfig = structuredClone(replay);
   changedConfig.config.basePush.horizontalImpulse += 1;
   assert.throws(() => replayMatch(changedConfig), /配置签名/);
+  const changedContentHash = structuredClone(replay);
+  changedContentHash.ruleContentHash = '00000000';
+  assert.throws(() => replayMatch(changedContentHash), /规则内容签名/);
+  const oldRuleSchema = structuredClone(replay);
+  oldRuleSchema.schemaVersion -= 1;
+  assert.throws(() => replayMatch(oldRuleSchema), /回放规则版本/);
   const changedResult = structuredClone(replay);
   changedResult.result.reason = 'tampered';
   assert.throws(() => replayMatch(changedResult), /结算结果不一致/);
@@ -110,7 +116,7 @@ test('truncated, incomplete or duplicate-checkpoint replays fail and always dest
   let replayCore;
   assert.throws(() => replayMatch(truncated, {
     coreFactory(options) {
-      replayCore = new MatchCore(options);
+      replayCore = createArenaV1MatchCore(options);
       return replayCore;
     },
   }), /尚未结算/);
@@ -127,7 +133,7 @@ test('truncated, incomplete or duplicate-checkpoint replays fail and always dest
 });
 
 function runAtRenderRate(renderRate) {
-  const core = new MatchCore({
+  const core = createArenaV1MatchCore({
     seed: 99,
     config: {
       preparingTicks: 0,

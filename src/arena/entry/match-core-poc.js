@@ -1,9 +1,9 @@
 import { createNeutralInputFrame } from '../input-frame.js';
-import { MatchCore } from '../match-core.js';
+import { createArenaV1MatchCore } from '../arena-v1-match-core.js';
 
 let core = null;
 try {
-  core = new MatchCore({
+  core = createArenaV1MatchCore({
     seed: 0xa11e5eed,
     config: {
       preparingTicks: 0,
