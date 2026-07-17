@@ -24,6 +24,16 @@
 
 Three.js 提供 WebGL 渲染器、Scene、Camera、Geometry、Material、Light 和其他三维基础设施。
 
+## Yuka
+
+- 来源：<https://github.com/Mugen87/yuka>
+- 参考基线：`10591304811222d6856020d5de129b39ef43b58d`
+- 许可：MIT License
+- 版权：Copyright © 2023 Yuka authors
+- 许可全文：[`licenses/yuka-LICENSE`](licenses/yuka-LICENSE)
+
+Arena V1 的项目内效用仲裁器改编了 Yuka `GoalEvaluator` / `Think` 的最高效用选择结构。项目没有打包 Yuka 依赖，也没有复制其实体、目标栈、感知或墙钟调度系统。
+
 ## 分发要求
 
 如果分发的 Web、微信或抖音构建中包含上述软件或其实质部分，分发包必须同时携带本文件和对应的完整许可文本。

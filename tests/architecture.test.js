@@ -136,3 +136,75 @@ test('Arena MatchCore POC bundles and executes as a standalone mini-game IIFE', 
     else globalThis.__arenaMatchPoc = previous;
   }
 });
+
+test('Arena local quick match bundles and executes without a browser or renderer', async () => {
+  const result = await esbuild({
+    stdin: {
+      contents: `
+        import { QuickMatchService } from './src/arena/matchmaking/quick-match-service.js';
+        const match = new QuickMatchService().create({ matchSeed: 20260717 });
+        match.session.start();
+        match.session.step();
+        globalThis.__arenaLocalMatchPoc = {
+          ok: match.session.getSnapshot().tick === 1,
+          opponentId: match.opponent.id,
+        };
+        match.session.destroy();
+      `,
+      resolveDir: path.resolve('.'),
+      sourcefile: 'arena-local-match-smoke.js',
+    },
+    bundle: true,
+    write: false,
+    format: 'iife',
+    platform: 'neutral',
+    target: 'es2020',
+    treeShaking: true,
+    minify: true,
+    logLevel: 'silent',
+  });
+  assert.equal(result.outputFiles.length, 1);
+  const previous = globalThis.__arenaLocalMatchPoc;
+  try {
+    Function(result.outputFiles[0].text)();
+    assert.equal(globalThis.__arenaLocalMatchPoc?.ok, true);
+    assert.match(globalThis.__arenaLocalMatchPoc?.opponentId, /^opponent-/);
+  } finally {
+    if (previous === undefined) delete globalThis.__arenaLocalMatchPoc;
+    else globalThis.__arenaLocalMatchPoc = previous;
+  }
+});
+
+test('Arena bot layers preserve dependency direction and tick determinism', async () => {
+  const aiFiles = await listJavaScript(path.resolve('src/arena/ai'));
+  for (const file of aiFiles) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /(?:match-core|\/replay|\/session|\/matchmaking|render3d|\/platform)/,
+      `${file} 越过了 BotPolicy 的受限输入边界`,
+    );
+    assert.doesNotMatch(
+      source,
+      /(?:Date\.now|Math\.random|\bperformance\b|setTimeout|setInterval)/,
+      `${file} 使用了墙钟或非确定性随机源`,
+    );
+  }
+
+  const authorityFiles = [
+    'src/arena/config.js',
+    'src/arena/input-frame.js',
+    'src/arena/match-core.js',
+    'src/arena/replay.js',
+    'src/arena/state-hash.js',
+    ...await listJavaScript(path.resolve('src/arena/physics')),
+  ];
+  for (const file of authorityFiles) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /(?:\/ai\/|\/matchmaking\/|\/session\/)/,
+      `${file} 反向依赖了机器人或匹配编排`,
+    );
+  }
+});

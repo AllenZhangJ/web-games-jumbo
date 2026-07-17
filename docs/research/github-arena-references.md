@@ -18,6 +18,31 @@
 
 Arena V1 的“快速匹配”只创建本地 1v1，不引入 Colyseus、Nakama 或 P2P 网络。网络候选仅作为未来真人对战研究留档。
 
+## 阶段 3 AI 实现复核
+
+### [`Mugen87/yuka`](https://github.com/Mugen87/yuka)
+
+固定参考 commit `10591304811222d6856020d5de129b39ef43b58d`，MIT。
+
+- 改编：`GoalEvaluator` / `Think` 的最高效用仲裁结构，并保留许可与归属。
+- 不引入：实体系统、目标栈、导航、感知序列化和完整 npm 依赖。
+- 明确拒绝：`Regulator` 基于经过墙钟时间控制更新频率；Arena 必须使用整数 tick 才能严格回放。
+
+### [`libgdx/gdx-ai`](https://github.com/libgdx/gdx-ai)
+
+固定参考 commit `6726e345248ddcad7cec0737f6ad83e4e028266d`，Apache-2.0。只借鉴 Scheduler 所表达的“AI 任务按不同频率运行”和层级调度原则；不复制 Java 代码，不引入 libGDX 或行为树解析器。
+
+### Motumbo 阶段 3 复核
+
+固定参考 commit `141cb972982e08b3ca5552ae75a7e58388314e4b`，MIT。阶段 3 重点借鉴：
+
+- 世界随机与每个 Bot 的随机子流隔离。
+- 个性决定风格、难度决定技能质量，两者不固定绑定。
+- 机器人低频重规划，在规划之间持续输出普通输入。
+- 先处理危险地面、边缘安全和卡死恢复，再争夺目标或追击。
+
+不复制其 C/Box3D 实现，也不把机器人放进 MatchCore；本项目坚持受限 `BotObservation → InputFrame` 边界。
+
 ## 竞技场与击飞
 
 ### [`axelromero99/motumbo`](https://github.com/axelromero99/motumbo)
