@@ -1,0 +1,143 @@
+import { createArenaV1ProductSession } from '../src/arena/product/composition/arena-v1-product-composition.js';
+import { PRODUCT_SESSION_STATE } from '../src/arena/product/state/product-session-transition-definition.js';
+
+function positiveIntegerFlag(name, fallback) {
+  const prefix = `--${name}=`;
+  const argument = process.argv.slice(2).find((value) => value.startsWith(prefix));
+  if (!argument) return fallback;
+  const value = Number(argument.slice(prefix.length));
+  if (!Number.isSafeInteger(value) || value < 1) {
+    throw new RangeError(`${name} 必须是正安全整数。`);
+  }
+  return value;
+}
+
+function clone(value) {
+  return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
+}
+
+function createStorage() {
+  const values = new Map();
+  return {
+    storageRead(key) {
+      return values.has(key)
+        ? { ok: true, found: true, value: clone(values.get(key)) }
+        : { ok: true, found: false, value: undefined };
+    },
+    storageWrite(key, value) {
+      values.set(key, clone(value));
+      return true;
+    },
+    storageDelete(key) {
+      values.delete(key);
+      return true;
+    },
+  };
+}
+
+const matches = positiveIntegerFlag('matches', 200);
+const storage = createStorage();
+let nextSeed = 10_000;
+let ownerGeneration = 0;
+let controller = null;
+
+function createController() {
+  ownerGeneration += 1;
+  return createArenaV1ProductSession({
+    storage,
+    ownerId: `product-stress-${ownerGeneration}`,
+    wallNow: () => 10_000 + ownerGeneration,
+    seedSource: { nextSeed: () => nextSeed += 1 },
+    keyPrefix: 'stress.product-session',
+    matchConfig: {
+      preparingTicks: 0,
+      suddenDeathStartTick: 30,
+      hardLimitTicks: 60,
+    },
+  });
+}
+
+const authorityHashes = new Set();
+let lifecycleTransitions = 0;
+let maximumTicks = 0;
+
+try {
+  controller = createController();
+  await controller.boot();
+  controller.openCharacterSelect();
+  controller.selectCharacter('wind-up-cube');
+  controller.closeCharacterSelect();
+
+  for (let matchIndex = 0; matchIndex < matches; matchIndex += 1) {
+    controller.openCharacterSelect();
+    const firstRequest = controller.requestMatch();
+    const duplicateRequest = controller.requestMatch();
+    if (firstRequest !== duplicateRequest) throw new Error('快速连点创建了不同匹配 Promise。');
+    if (matchIndex % 3 === 0) {
+      controller.hide();
+      lifecycleTransitions += 1;
+    }
+    await firstRequest;
+    if (controller.state === PRODUCT_SESSION_STATE.SUSPENDED) {
+      if (controller.getSnapshot().state.activeState !== PRODUCT_SESSION_STATE.PREPARING) {
+        throw new Error('后台匹配完成后恢复目标不是 preparing。');
+      }
+      controller.show();
+      lifecycleTransitions += 1;
+    }
+    controller.beginMatch();
+
+    let finalStep = null;
+    for (let tickIndex = 0; tickIndex < 100; tickIndex += 1) {
+      if (tickIndex === 2 && matchIndex % 2 === 0) {
+        controller.hide();
+        controller.hide();
+        lifecycleTransitions += 1;
+        controller.show();
+        controller.show();
+        lifecycleTransitions += 1;
+      }
+      finalStep = controller.stepMatch();
+      if (controller.state === PRODUCT_SESSION_STATE.RESULTS) break;
+    }
+    if (controller.state !== PRODUCT_SESSION_STATE.RESULTS || !finalStep?.matchStep?.result) {
+      throw new Error(`第 ${matchIndex} 局未在压力上限内结算。`);
+    }
+    const result = finalStep.matchStep.result;
+    if (!/^[0-9a-f]{8}$/.test(result.authorityHash)) {
+      throw new Error(`第 ${matchIndex} 局 authorityHash 无效。`);
+    }
+    if (/difficulty|\bbot\b|机器人|简单|普通|困难/i.test(JSON.stringify(controller.getSnapshot()))) {
+      throw new Error(`第 ${matchIndex} 局公开快照泄漏隐藏匹配信息。`);
+    }
+    authorityHashes.add(result.authorityHash);
+    maximumTicks = Math.max(maximumTicks, result.authorityResult.endedAtTick);
+    controller.dismissResults();
+
+    if ((matchIndex + 1) % 25 === 0 && matchIndex + 1 < matches) {
+      controller.destroy();
+      controller = createController();
+      const restored = await controller.boot();
+      if (restored.profile.selection.characterId !== 'wind-up-cube') {
+        throw new Error('产品重启后角色选择未恢复。');
+      }
+    }
+  }
+
+  const snapshot = controller.getSnapshot();
+  if (snapshot.state.state !== PRODUCT_SESSION_STATE.READY || snapshot.match.hasRuntime) {
+    throw new Error('压力结束后产品未回到无 Match 资源的 ready。');
+  }
+  controller.destroy();
+  controller = null;
+  console.log(JSON.stringify({
+    ok: true,
+    matches,
+    authorityHashCount: authorityHashes.size,
+    lifecycleTransitions,
+    maximumTicks,
+    restarts: ownerGeneration - 1,
+  }));
+} finally {
+  controller?.destroy();
+}

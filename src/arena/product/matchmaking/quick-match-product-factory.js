@@ -1,0 +1,45 @@
+import { combineCleanupFailure, normalizeThrownError } from '../../lifecycle-error.js';
+import { cloneFrozenData } from '../../rules/definition-utils.js';
+import { ProductMatchRuntime } from './product-match-runtime.js';
+
+function validateQuickMatchService(value) {
+  if (!value || typeof value.create !== 'function') {
+    throw new TypeError('QuickMatchProductFactory 需要 QuickMatchService 合同。');
+  }
+  return value;
+}
+
+export class QuickMatchProductFactory {
+  #quickMatchService;
+  #matchConfig;
+
+  constructor({ quickMatchService, matchConfig = {} }) {
+    this.#quickMatchService = validateQuickMatchService(quickMatchService);
+    this.#matchConfig = cloneFrozenData(matchConfig, 'QuickMatchProductFactory matchConfig');
+    Object.freeze(this);
+  }
+
+  create() {
+    let localMatch = null;
+    try {
+      // The product surface intentionally exposes neither difficulty override
+      // nor hidden assignment diagnostics.
+      localMatch = this.#quickMatchService.create({ config: this.#matchConfig });
+      return new ProductMatchRuntime(localMatch);
+    } catch (error) {
+      const cleanupErrors = [];
+      if (localMatch?.session && typeof localMatch.session.destroy === 'function') {
+        try {
+          localMatch.session.destroy();
+        } catch (cleanupError) {
+          cleanupErrors.push(cleanupError);
+        }
+      }
+      throw combineCleanupFailure(
+        normalizeThrownError(error, 'QuickMatchProductFactory 创建失败'),
+        cleanupErrors,
+        'QuickMatchProductFactory 创建失败且清理未完整完成。',
+      );
+    }
+  }
+}

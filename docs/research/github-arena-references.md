@@ -36,7 +36,7 @@ Arena V1 的“快速匹配”只创建本地 1v1，不引入 Colyseus、Nakama 
 
 ### [`statelyai/xstate`](https://github.com/statelyai/xstate)
 
-借鉴显式状态、事件、转换表和模型测试。当前不引入 Actor 运行时或异步计时语义，避免让权威 tick 生命周期绑定第三方解释器。
+固定参考 commit `9d9b9f1439b773979c5120a793215f5aa4568d8f`，MIT。借鉴显式状态、事件、转换表和模型测试。S8.2 已以项目内小型 Definition/Registry/StateMachine 落地产品生命周期；不复制实现，不引入 Actor 运行时或异步计时语义，避免让权威 tick 和产品资源所有权绑定第三方解释器。详见 [ADR-015](../decisions/015-arena-headless-product-session-lifecycle.md)。
 
 ## 阶段 3 AI 实现复核
 

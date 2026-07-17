@@ -1,6 +1,6 @@
 # ADR-011：Arena 使用版本化双槽本地进度与对称内容池
 
-- 状态：部分生效（S8.1 存档协议已接受；奖励与对称内容池仍为提议）
+- 状态：部分生效（S8.1 存档协议与 S8.2 产品生命周期已接受；奖励与对称内容池仍为提议）
 - 日期：2026-07-18
 
 ## 背景
@@ -27,6 +27,8 @@ S6.6.3a 已先为盲测证据落地 `storageRead/storageWrite/storageDelete` 的
 同一局的玩家、隐藏对手、装备随机与地图规则使用相同的冻结内容池。解锁只扩大双方共享内容范围，不改变生命、速度、跳跃、冷却、击退或掉落概率。
 
 S8.1 将 Pilot 与 Product 共用的仅限于严格同步 Storage Port 和具名 lease 协议；二者的 Definition、聚合、envelope、repository 和生命周期继续完全独立。Profile 存储 key 只绑定稳定 Definition ID，不绑定内容 hash，防止新增默认内容或调整上限让旧存档整体失效。写入异常后以完整读回为最终依据：新槽已验证即提交，head 失败只记为非权威提示失败；无法确认且无法回滚时仓储进入 fail-closed，未来 schema 在任何读写确认阶段都原地保留。
+
+S8.2 使用独立显式产品状态机、Profile 选择服务和单 Match Coordinator 连接上述 Repository 与本地快速匹配；它不改变存档协议，也不把 MatchCore 生命周期并入 Profile。异步去重、挂起恢复、迟到资源和销毁重试见 [ADR-015](015-arena-headless-product-session-lifecycle.md)。
 
 当前 `v1` 是第一个生产 Profile schema，没有编造 `v0` 历史迁移。迁移 Registry 已通过合成的连续多版本链验证；首次真实升级时必须新增固定历史 fixture，不能修改旧迁移函数。
 
@@ -75,4 +77,4 @@ S8.1 将 Pilot 与 Product 共用的仅限于严格同步 Storage Port 和具名
 - 连续多局和生命周期竞态不会重叠 session 或串局。
 - 双方共享内容池自动化检查通过后，将状态改为“已接受”。
 
-S8.1 的双槽故障注入、未来版本保护、竞争租约、生命周期、架构隔离和 500 次故障压力门禁已满足；其实现结论见 [S8.1 结果记录](../research/arena-stage8-profile-persistence-results.md)。本 ADR 仍未整体接受，是因为奖励幂等、共享内容池、产品状态机和三端生命周期尚未落地。
+S8.1 的双槽故障注入、未来版本保护、竞争租约、生命周期、架构隔离和 500 次故障压力门禁已满足；其实现结论见 [S8.1 结果记录](../research/arena-stage8-profile-persistence-results.md)。S8.2 的无 UI 状态机、真实本地比赛集成、竞态与 200 局压力也已满足，见 [S8.2 结果记录](../research/arena-stage8-product-session-results.md)。本 ADR 仍未整体接受，是因为奖励幂等、共享内容池和三端产品生命周期尚未落地。

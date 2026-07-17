@@ -2,7 +2,7 @@
 
 ## 文档状态
 
-执行中，2026-07-18。S8.1 已落地不可变 PlayerProfile、严格同步 Storage Port、连续迁移 Registry、A/B 双槽 Repository、协作 lease、未来版本保护与故障压力门禁。产品状态机、奖励、对称内容池和三端产品验收仍未开始。
+执行中，2026-07-18。S8.1 已落地不可变 PlayerProfile、严格同步 Storage Port、连续迁移 Registry、A/B 双槽 Repository、协作 lease、未来版本保护与故障压力门禁。S8.2 已落地无 UI 显式产品状态机、角色选择保存、单 Match 所有权、QuickMatch 集成、挂起恢复与异步竞态门禁。奖励、对称内容池和三端产品验收仍未开始。
 
 ## 已接受默认值
 
@@ -24,6 +24,8 @@ in-match -> results -> reward -> unlock? -> ready/rematch
 任意不可恢复错误 -> recoverable-error / fatal-error
 任意状态 -> destroyed
 ```
+
+S8.2 当前实现截至 `results -> ready`；`reward/unlock/rematch` 仍由 S8.3/S8.4 增加，不用空状态伪装为已完成能力。挂起快照同时发布可见 `state=suspended` 和后台可推进的 `activeState`，异步 matching 完成时只更新恢复目标。
 
 约束：
 
@@ -132,6 +134,8 @@ PlayerProfile + Content Definitions
 
 - 接入启动、选择、匹配、准备、比赛、结算和返回。
 - 验证重复事件、快速点击、前后台、启动失败和销毁。
+
+状态：已完成无 UI 基础。已建立不可变转换 Definition、Registry、StateMachine、Profile 选择服务、QuickMatch Product Runtime、单 Runtime Coordinator、Controller 与组合根；真实本地 1v1、异步迟到资源、清理重试和 200 局压力已通过。详见 [ADR-015](../decisions/015-arena-headless-product-session-lifecycle.md) 与 [S8.2 结果记录](../research/arena-stage8-product-session-results.md)。本批未接产品 UI、奖励、共享内容池或快捷再来一局。
 
 ### S8.3 奖励与解锁
 

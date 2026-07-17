@@ -189,7 +189,7 @@ test('Arena Stage 7 contracts remain host-free behind an injected Three view fac
   }
 });
 
-test('Arena Stage 8 profile persistence remains host-free and outside match authority', async () => {
+test('Arena Stage 8 product orchestration remains host-free and outside match authority', async () => {
   const directories = [
     'src/arena/product',
     'src/arena/storage',
@@ -200,8 +200,34 @@ test('Arena Stage 8 profile persistence remains host-free and outside match auth
     const source = await readFile(file, 'utf8');
     assert.doesNotMatch(
       source,
-      /(?:from\s+['"](?:three|node:|[^'"]*(?:presentation|renderer|session|match-core|platform|entry)[^'"]*)['"]|Date\.now|Math\.random|\bperformance\b|setTimeout|setInterval|requestAnimationFrame|\b(?:window|document|navigator|localStorage|sessionStorage)\b|\b(?:tt|wx)\s*\.)/,
-      `${file} 应保持为注入存储与墙钟的 Stage 8 产品数据层。`,
+      /(?:from\s+['"](?:three|node:|[^'"]*(?:presentation|renderer|\/session\/|match-core|platform|entry)[^'"]*)['"]|Date\.now|Math\.random|\bperformance\b|setTimeout|setInterval|requestAnimationFrame|\b(?:window|document|navigator|localStorage|sessionStorage)\b|\b(?:tt|wx)\s*\.)/,
+      `${file} 应保持为注入存储、墙钟与匹配端口的 Stage 8 产品层。`,
+    );
+  }
+});
+
+test('Arena Stage 8 product sublayers preserve state/profile/match/composition dependency direction', async () => {
+  const restrictedDirectories = [
+    'src/arena/product/state',
+    'src/arena/product/profile',
+    'src/arena/product/persistence',
+  ].map((directory) => path.resolve(directory));
+  const files = (await Promise.all(restrictedDirectories.map(listJavaScript))).flat();
+  for (const file of files) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /(?:\/product\/)?(?:composition|matchmaking)\//,
+      `${file} 不应反向依赖产品组合根或匹配运行时。`,
+    );
+  }
+  const matchmakingFiles = await listJavaScript(path.resolve('src/arena/product/matchmaking'));
+  for (const file of matchmakingFiles) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /(?:\/product\/)?(?:composition|profile|persistence)\//,
+      `${file} 不应反向持有产品组合根或 Profile 聚合。`,
     );
   }
 });
