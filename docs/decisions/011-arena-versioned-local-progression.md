@@ -7,6 +7,8 @@
 
 Stage 8 需要完成角色选择、快速匹配、结算、奖励、解锁和再来一局。首版运行在 Web、微信和抖音，复用现有 Platform Storage Contract，不建设账号或云服务。
 
+S6.6.3a 已先为盲测证据落地 `storageRead/storageWrite/storageDelete` 的明确结果语义、双槽读回和未来版本保护。Stage 8 复用这些平台与协议能力，但 PlayerProfile、迁移和奖励仍是独立聚合，不复用 Pilot Workspace 数据模型。
+
 单 key 原地覆盖无法保证异常退出时仍有有效数据；直接 `JSON.parse` 后使用也无法抵御损坏结构、未来版本或异常 getter。奖励页面和 App 生命周期还可能重复提交同一比赛结果。装备/地图解锁若只增强玩家，又会破坏隐藏机器人 1v1 的公平性。
 
 ## 决策

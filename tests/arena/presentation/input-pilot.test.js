@@ -160,6 +160,8 @@ test('block assignment is reproducible, append-stable and balanced in every comp
   const assignments = Array.from({ length: 20 }, (_, index) => assignment(definition, index));
   for (let index = 0; index < assignments.length; index += 2) {
     assert.equal(new Set(assignments.slice(index, index + 2).map(({ variantId }) => variantId)).size, 2);
+    assert.equal(assignments[index].matchSeed, assignments[index + 1].matchSeed);
+    if (index > 0) assert.notEqual(assignments[index].matchSeed, assignments[index - 1].matchSeed);
   }
   assert.deepEqual(assignment(definition, 7), assignments[7]);
   assert.equal(
@@ -181,6 +183,14 @@ test('block assignment is reproducible, append-stable and balanced in every comp
     ...assignments[0],
     assignmentSeed: 0x66060002,
   }), /无法由分组合同复现/);
+  assert.throws(() => validateInputPilotAssignment(definition, {
+    ...assignments[0],
+    matchSeed: assignments[0].matchSeed + 1,
+  }), /无法由分组合同复现/);
+  assert.throws(() => validateInputPilotAssignment(definition, {
+    ...assignments[0],
+    schemaVersion: 1,
+  }), /不支持 InputPilotAssignment schema 1/);
   assert.equal(assignments[0].schemaVersion, INPUT_PILOT_ASSIGNMENT_SCHEMA_VERSION);
 });
 

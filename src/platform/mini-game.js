@@ -18,6 +18,16 @@ function hostError(id, message, cause) {
   return error;
 }
 
+function isMissingStorageError(error) {
+  try {
+    const code = error?.errorCode ?? error?.errCode ?? error?.code;
+    const message = error?.errMsg ?? error?.message ?? '';
+    return Number(code) === 100599 || /data\s+not\s+found/i.test(String(message));
+  } catch {
+    return false;
+  }
+}
+
 function viewportFrom(api) {
   let info = null;
   for (const readInfo of [api.getWindowInfo, api.getSystemInfoSync]) {
@@ -203,6 +213,53 @@ export function createMiniGamePlatform(api, id) {
       ? (frameId) => canvas.cancelAnimationFrame(frameId)
       : undefined;
   const frames = createFrameScheduler({ request: requestHostFrame, cancel: cancelHostFrame, now });
+  const storageRead = (key) => {
+    if (typeof api.getStorageSync !== 'function') {
+      return { ok: false, found: false, value: undefined };
+    }
+    let knownPresent = false;
+    if (typeof api.getStorageInfoSync === 'function') {
+      try {
+        const info = api.getStorageInfoSync();
+        if (Array.isArray(info?.keys) && !info.keys.includes(key)) {
+          return { ok: true, found: false, value: undefined };
+        }
+        knownPresent = Array.isArray(info?.keys) && info.keys.includes(key);
+      } catch {
+        // Fall through to the direct read. Some host versions expose the API
+        // but fail to return storage metadata under memory pressure.
+      }
+    }
+    try {
+      const value = api.getStorageSync(key);
+      return value === undefined
+        ? { ok: !knownPresent, found: false, value: undefined }
+        : { ok: true, found: true, value };
+    } catch (error) {
+      if (isMissingStorageError(error)) {
+        return { ok: true, found: false, value: undefined };
+      }
+      return { ok: false, found: false, value: undefined };
+    }
+  };
+  const storageWrite = (key, value) => {
+    try {
+      if (typeof api.setStorageSync !== 'function' || value === undefined) return false;
+      api.setStorageSync(key, value);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  const storageDelete = (key) => {
+    try {
+      if (typeof api.removeStorageSync !== 'function') return false;
+      api.removeStorageSync(key);
+      return true;
+    } catch {
+      return false;
+    }
+  };
 
   return createPlatformContract({
     id,
@@ -222,6 +279,7 @@ export function createMiniGamePlatform(api, id) {
     requestFrame: frames.requestFrame,
     cancelFrame: frames.cancelFrame,
     now,
+    wallNow: () => Date.now(),
     bindInput: ({
       onStart = () => {},
       onMove = () => {},
@@ -269,20 +327,14 @@ export function createMiniGamePlatform(api, id) {
       }
     },
     storageGet: (key) => {
-      try {
-        return api.getStorageSync?.(key);
-      } catch {
-        return undefined;
-      }
+      const result = storageRead(key);
+      return result.ok && result.found ? result.value : undefined;
     },
-    storageSet: (key, value) => {
-      try {
-        api.setStorageSync?.(key, value);
-        return typeof api.setStorageSync === 'function';
-      } catch {
-        return false;
-      }
-    },
+    storageSet: storageWrite,
+    storageRemove: storageDelete,
+    storageRead,
+    storageWrite,
+    storageDelete,
     share: async (payload) => {
       if (typeof api.shareAppMessage !== 'function') return false;
       try {

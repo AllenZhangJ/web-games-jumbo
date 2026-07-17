@@ -8,7 +8,7 @@ import {
 } from '../../rules/definition-utils.js';
 import { createInputPilotDefinition } from './input-pilot-definition.js';
 
-export const INPUT_PILOT_ASSIGNMENT_SCHEMA_VERSION = 1;
+export const INPUT_PILOT_ASSIGNMENT_SCHEMA_VERSION = 2;
 
 const ASSIGNMENT_KEYS = new Set([
   'schemaVersion',
@@ -16,6 +16,7 @@ const ASSIGNMENT_KEYS = new Set([
   'definitionHash',
   'assignmentId',
   'assignmentSeed',
+  'matchSeed',
   'participantId',
   'enrollmentIndex',
   'variantId',
@@ -56,10 +57,15 @@ export function createInputPilotAssignment({
   const blockIndex = Math.floor(enrollmentIndex / definition.variants.length);
   const positionInBlock = enrollmentIndex % definition.variants.length;
   const variant = shuffledVariants(definition, assignmentSeed, blockIndex)[positionInBlock];
+  const matchSeed = deriveSeed(
+    assignmentSeed,
+    `${definition.id}:match-seed-block:${blockIndex}`,
+  );
   const definitionHash = definition.getContentHash();
   const assignmentHash = createDeterministicDataHash({
     definitionHash,
     assignmentSeed,
+    matchSeed,
     participantId,
     enrollmentIndex,
   }, 'InputPilotAssignment identity');
@@ -69,6 +75,7 @@ export function createInputPilotAssignment({
     definitionHash,
     assignmentId: `pilot-assignment-${assignmentHash}`,
     assignmentSeed,
+    matchSeed,
     participantId,
     enrollmentIndex,
     variantId: variant.id,

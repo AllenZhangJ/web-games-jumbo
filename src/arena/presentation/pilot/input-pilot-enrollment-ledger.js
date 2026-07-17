@@ -89,6 +89,11 @@ function normalizeInitialState(definition, value) {
   return createLedgerSnapshot(definition, revision, assignments);
 }
 
+export function createInputPilotEnrollmentSnapshot(definitionValue, value = null) {
+  const definition = createInputPilotDefinition(definitionValue);
+  return normalizeInitialState(definition, value);
+}
+
 function validatePersistence(value) {
   if (typeof value !== 'function') {
     throw new TypeError('InputPilotEnrollmentLedger.persist 必须是函数。');
@@ -107,7 +112,7 @@ export class InputPilotEnrollmentLedger {
     const definition = createInputPilotDefinition(definitionValue);
     this.#definition = definition;
     this.#persist = validatePersistence(persist);
-    this.#snapshot = normalizeInitialState(definition, initialState);
+    this.#snapshot = createInputPilotEnrollmentSnapshot(definition, initialState);
     this.#mutating = false;
     this.#destroyed = false;
     Object.freeze(this);

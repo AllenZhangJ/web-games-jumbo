@@ -178,6 +178,37 @@ export function createWebPlatform(environment = globalThis) {
       : undefined,
     now,
   });
+  const storageRead = (key) => {
+    try {
+      if (!env.storage?.getItem) return { ok: false, found: false, value: undefined };
+      const value = env.storage.getItem(key);
+      return value == null
+        ? { ok: true, found: false, value: undefined }
+        : { ok: true, found: true, value: JSON.parse(value) };
+    } catch {
+      return { ok: false, found: false, value: undefined };
+    }
+  };
+  const storageWrite = (key, value) => {
+    try {
+      if (!env.storage?.setItem) return false;
+      const serialized = JSON.stringify(value);
+      if (typeof serialized !== 'string') return false;
+      env.storage.setItem(key, serialized);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  const storageDelete = (key) => {
+    try {
+      if (!env.storage?.removeItem) return false;
+      env.storage.removeItem(key);
+      return true;
+    } catch {
+      return false;
+    }
+  };
 
   return createPlatformContract({
     id: 'web',
@@ -210,6 +241,7 @@ export function createWebPlatform(environment = globalThis) {
     requestFrame: frames.requestFrame,
     cancelFrame: frames.cancelFrame,
     now,
+    wallNow: () => Date.now(),
     bindInput: ({
       onStart = () => {},
       onMove = () => {},
@@ -333,22 +365,14 @@ export function createWebPlatform(environment = globalThis) {
       }
     },
     storageGet: (key) => {
-      try {
-        const value = env.storage?.getItem(key);
-        return value == null ? undefined : JSON.parse(value);
-      } catch {
-        return undefined;
-      }
+      const result = storageRead(key);
+      return result.ok && result.found ? result.value : undefined;
     },
-    storageSet: (key, value) => {
-      try {
-        if (!env.storage?.setItem) return false;
-        env.storage.setItem(key, JSON.stringify(value));
-        return true;
-      } catch {
-        return false;
-      }
-    },
+    storageSet: storageWrite,
+    storageRemove: storageDelete,
+    storageRead,
+    storageWrite,
+    storageDelete,
     share: async (payload) => {
       if (!env.navigatorObject?.share) return false;
       try {

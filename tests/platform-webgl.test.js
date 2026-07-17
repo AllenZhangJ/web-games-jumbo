@@ -31,6 +31,7 @@ function miniGameApi({ id, withNativeOffscreen = true } = {}) {
   const fallbackCanvas = canvasWithContext();
   const nativeOffscreen = canvasWithContext();
   const offscreenCalls = [];
+  const storageValues = new Map();
   let createCanvasCalls = 0;
   const safeArea = { left: 0, top: 42, right: 390, bottom: 820, width: 390, height: 778 };
   const api = {
@@ -45,6 +46,18 @@ function miniGameApi({ id, withNativeOffscreen = true } = {}) {
     onTouchStart() {},
     onTouchMove() {},
     onTouchEnd() {},
+    getStorageSync(key) {
+      return storageValues.get(key);
+    },
+    getStorageInfoSync() {
+      return { keys: [...storageValues.keys()] };
+    },
+    setStorageSync(key, value) {
+      storageValues.set(key, value);
+    },
+    removeStorageSync(key) {
+      storageValues.delete(key);
+    },
   };
   if (withNativeOffscreen) {
     api.createOffscreenCanvas = (...args) => {
@@ -60,6 +73,7 @@ function miniGameApi({ id, withNativeOffscreen = true } = {}) {
     nativeOffscreen,
     offscreenCalls,
     safeArea,
+    storageValues,
     createCanvasCalls: () => createCanvasCalls,
   };
 }
@@ -70,6 +84,9 @@ test('platform contract adds WebGL capabilities without changing existing defaul
   assert.equal(typeof platform.createCanvas, 'function');
   assert.equal(typeof platform.createOffscreenCanvas, 'function');
   assert.equal(typeof platform.getWebGLContext, 'function');
+  assert.equal(typeof platform.wallNow, 'function');
+  assert.equal(platform.storageSet('missing', {}), false);
+  assert.equal(platform.storageRemove('missing'), false);
   assert.throws(
     () => platform.createOffscreenCanvas(16, 16),
     /\[test\].*createOffscreenCanvas/,
@@ -103,6 +120,68 @@ test('Douyin uses the no-argument native offscreen API', () => {
   assert.deepEqual(fixture.offscreenCalls, [[]]);
   assert.equal(offscreen.width, 96);
   assert.equal(offscreen.height, 48);
+});
+
+test('mini-game storage distinguishes missing values, commits synchronously and deletes explicitly', () => {
+  const fixture = miniGameApi({ id: 'wechat' });
+  const platform = createMiniGamePlatform(fixture.api, fixture.id);
+  assert.deepEqual(platform.storageRead('pilot'), {
+    ok: true,
+    found: false,
+    value: undefined,
+  });
+  assert.equal(platform.storageWrite('pilot', { revision: 1 }), true);
+  assert.deepEqual(platform.storageRead('pilot'), {
+    ok: true,
+    found: true,
+    value: { revision: 1 },
+  });
+  assert.deepEqual(platform.storageGet('pilot'), { revision: 1 });
+  assert.equal(platform.storageDelete('pilot'), true);
+  assert.equal(fixture.storageValues.has('pilot'), false);
+  assert.equal(platform.storageWrite('pilot', undefined), false);
+  assert.equal(fixture.storageValues.has('pilot'), false);
+
+  fixture.storageValues.set('inconsistent', undefined);
+  assert.deepEqual(platform.storageRead('inconsistent'), {
+    ok: false,
+    found: false,
+    value: undefined,
+  });
+
+  fixture.storageValues.set('pilot', { revision: 1 });
+  fixture.api.getStorageSync = () => { throw new Error('blocked'); };
+  fixture.api.setStorageSync = () => { throw new Error('full'); };
+  fixture.api.removeStorageSync = () => { throw new Error('blocked'); };
+  assert.deepEqual(platform.storageRead('pilot'), {
+    ok: false,
+    found: false,
+    value: undefined,
+  });
+  assert.equal(platform.storageWrite('pilot', { revision: 2 }), false);
+  assert.equal(platform.storageDelete('pilot'), false);
+});
+
+test('mini-game storage recognizes the documented Douyin missing-key error', () => {
+  const fixture = miniGameApi({ id: 'douyin' });
+  delete fixture.api.getStorageInfoSync;
+  fixture.api.getStorageSync = () => {
+    throw Object.assign(new Error('data not found, key == pilot'), { errorCode: 100599 });
+  };
+  const platform = createMiniGamePlatform(fixture.api, fixture.id);
+  assert.deepEqual(platform.storageRead('pilot'), {
+    ok: true,
+    found: false,
+    value: undefined,
+  });
+  fixture.api.getStorageSync = () => {
+    throw Object.assign(new Error('storage unavailable'), { errorCode: 100500 });
+  };
+  assert.deepEqual(platform.storageRead('pilot'), {
+    ok: false,
+    found: false,
+    value: undefined,
+  });
 });
 
 test('offscreen Canvas rejects invalid dimensions before calling a host API', () => {
@@ -501,6 +580,7 @@ test('Web storage and share failures return safe values without rejection', asyn
     localStorage: {
       getItem: () => '{broken json',
       setItem: () => { throw new Error('quota'); },
+      removeItem: () => { throw new Error('blocked'); },
     },
     navigator: {
       share: async () => { throw Object.assign(new Error('cancel'), { name: 'AbortError' }); },
@@ -509,7 +589,49 @@ test('Web storage and share failures return safe values without rejection', asyn
   const platform = createWebPlatform(environment);
   assert.equal(platform.storageGet('save'), undefined);
   assert.equal(platform.storageSet('save', { score: 1 }), false);
+  assert.equal(platform.storageRemove('save'), false);
+  assert.deepEqual(platform.storageRead('save'), {
+    ok: false,
+    found: false,
+    value: undefined,
+  });
+  assert.equal(platform.storageWrite('save', { score: 1 }), false);
+  assert.equal(platform.storageDelete('save'), false);
   assert.equal(await platform.share({ title: 'test' }), false);
+});
+
+test('Web storage distinguishes missing values and round-trips JSON before deletion', () => {
+  const values = new Map();
+  const mainCanvas = canvasWithContext();
+  mainCanvas.addEventListener = () => {};
+  mainCanvas.removeEventListener = () => {};
+  const platform = createWebPlatform({
+    document: {
+      querySelector: () => mainCanvas,
+      createElement: () => canvasWithContext(),
+    },
+    window: {},
+    localStorage: {
+      getItem: (key) => values.get(key) ?? null,
+      setItem: (key, value) => values.set(key, value),
+      removeItem: (key) => values.delete(key),
+    },
+  });
+  assert.deepEqual(platform.storageRead('pilot'), {
+    ok: true,
+    found: false,
+    value: undefined,
+  });
+  assert.equal(platform.storageWrite('pilot', { revision: 1 }), true);
+  assert.deepEqual(platform.storageRead('pilot'), {
+    ok: true,
+    found: true,
+    value: { revision: 1 },
+  });
+  assert.equal(platform.storageDelete('pilot'), true);
+  assert.equal(values.has('pilot'), false);
+  assert.equal(platform.storageWrite('pilot', undefined), false);
+  assert.equal(values.has('pilot'), false);
 });
 
 test('Web platform creates and mounts a fallback main Canvas when #game is missing', () => {

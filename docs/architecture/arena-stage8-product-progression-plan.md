@@ -61,7 +61,7 @@ src/arena/product/
 
 ### 双槽提交
 
-Platform Contract 的 `storageSet` 不提供跨 key 原子事务，因此使用 `A/B` 两个数据槽和一个 head 提示：
+Platform Contract 的 `storageWrite` 只确认单次同步调用，不提供跨 key 原子事务，因此使用 `A/B` 两个数据槽和一个 head 提示。Stage 8 复用 S6.6.3a 已落地的 `storageRead/storageWrite/storageDelete` 结果语义，不再把“缺失”和“读取失败”折叠处理：
 
 1. 启动时分别读取 A、B，不盲信 head。
 2. 对每个槽完成 envelope、hash、schema 与 payload 校验。
