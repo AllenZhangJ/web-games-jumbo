@@ -189,6 +189,23 @@ test('Arena Stage 7 contracts remain host-free behind an injected Three view fac
   }
 });
 
+test('Arena Stage 8 profile persistence remains host-free and outside match authority', async () => {
+  const directories = [
+    'src/arena/product',
+    'src/arena/storage',
+  ].map((directory) => path.resolve(directory));
+  const files = (await Promise.all(directories.map(listJavaScript))).flat();
+  assert.ok(files.length >= 8);
+  for (const file of files) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /(?:from\s+['"](?:three|node:|[^'"]*(?:presentation|renderer|session|match-core|platform|entry)[^'"]*)['"]|Date\.now|Math\.random|\bperformance\b|setTimeout|setInterval|requestAnimationFrame|\b(?:window|document|navigator|localStorage|sessionStorage)\b|\b(?:tt|wx)\s*\.)/,
+      `${file} 应保持为注入存储与墙钟的 Stage 8 产品数据层。`,
+    );
+  }
+});
+
 test('Arena MatchCore POC bundles and executes as a standalone mini-game IIFE', async () => {
   const result = await esbuild({
     entryPoints: [path.resolve('src/arena/entry/match-core-poc.js')],

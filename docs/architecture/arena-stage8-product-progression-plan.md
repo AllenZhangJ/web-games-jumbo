@@ -2,7 +2,7 @@
 
 ## 文档状态
 
-提议，2026-07-17。本文把快速匹配、角色选择、结算、奖励、解锁和再来一局收口为可恢复的产品状态机，同时保持本地隐藏机器人、公平共享内容池和无数值成长边界。
+执行中，2026-07-18。S8.1 已落地不可变 PlayerProfile、严格同步 Storage Port、连续迁移 Registry、A/B 双槽 Repository、协作 lease、未来版本保护与故障压力门禁。产品状态机、奖励、对称内容池和三端产品验收仍未开始。
 
 ## 已接受默认值
 
@@ -123,6 +123,10 @@ PlayerProfile + Content Definitions
 
 - 建立 schema、双槽 Repository、校验、迁移和损坏恢复。
 - 使用固定 fixture 覆盖每个历史版本与未来版本拒绝。
+
+状态：代码与本机自动门禁已落地。当前首个正式 schema 为 `v1`，不存在可伪造的历史生产 schema，因此本批以独立合成迁移链验证 `N → N+1` 的连续性、纯度和确定性；从下一次 schema 升级开始，每个真实历史版本必须保留固定 fixture。实现与故障矩阵见 [S8.1 结果记录](../research/arena-stage8-profile-persistence-results.md)。
+
+当前 Definition 为保持已实现玩法不被存档层意外裁剪，默认解锁现有两个角色、三件装备和唯一地图；这只是兼容性 bootstrap，不是 S8.3 的正式解锁节奏。外观默认为空，Profile 不引用 Stage 7 灰盒资产 ID。
 
 ### S8.2 产品状态机
 

@@ -622,6 +622,26 @@ test('workspace repository detects storage changes after open and an expired lea
   expired.destroy();
 });
 
+test('workspace repository preserves a retryable lifecycle when lease cleanup fails', () => {
+  const definition = createArenaInputPilotV1Definition();
+  const harness = storageHarness();
+  const repository = new InputPilotWorkspaceRepository({
+    definition,
+    storage: harness.port,
+    ownerId: 'page-cleanup-retry',
+    wallNow: () => 1000,
+  });
+  repository.open();
+  const keys = repository.getStorageKeys();
+  harness.deleteFailures.add(keys.lease);
+  assert.throws(() => repository.destroy(), /未能确认释放/);
+  assert.equal(repository.getSnapshot().revision, 0);
+  harness.deleteFailures.delete(keys.lease);
+  repository.destroy();
+  repository.destroy();
+  assert.equal(harness.values.has(keys.lease), false);
+});
+
 test('workspace repository falls back from a corrupt newest slot without exposing raw data', () => {
   const definition = createArenaInputPilotV1Definition();
   const harness = storageHarness();

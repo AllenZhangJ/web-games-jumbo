@@ -254,17 +254,14 @@ export class InputPilotWorkspaceRepository {
   destroy() {
     if (this.#state === 'destroyed') return;
     if (this.#writing) throw new Error('写入期间不能销毁 InputPilotWorkspaceRepository。');
-    try {
-      this.#lease.destroy();
-    } finally {
-      this.#definition = null;
-      this.#storage = null;
-      this.#lease = null;
-      this.#keys = null;
-      this.#workspace = null;
-      this.#envelope = null;
-      this.#slot = null;
-      this.#state = 'destroyed';
-    }
+    this.#lease.destroy();
+    this.#definition = null;
+    this.#storage = null;
+    this.#lease = null;
+    this.#keys = null;
+    this.#workspace = null;
+    this.#envelope = null;
+    this.#slot = null;
+    this.#state = 'destroyed';
   }
 }
