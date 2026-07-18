@@ -87,6 +87,7 @@ async function buildWeb() {
         input: {
           game: path.join(root, 'index.html'),
           pilot: path.join(root, 'pilot.html'),
+          study: path.join(root, 'study.html'),
           product: path.join(root, 'product.html'),
           greybox: path.join(root, 'greybox.html'),
         },

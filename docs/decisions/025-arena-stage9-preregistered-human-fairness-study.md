@@ -1,6 +1,6 @@
 # ADR-025：Arena S9.5 使用预注册、隐藏分组和逐 Tick 可复验的真人公平性研究
 
-- 状态：已接受；S9.5a 合同、采集端口与复验 CLI 已实施，独立采集工作台和真实样本待完成
+- 状态：已接受；S9.5a 合同/复验与 S9.5b 独立采集工作台/离线入库已实施，真实样本待完成
 - 日期：2026-07-18
 
 ## 背景
@@ -57,6 +57,10 @@ Product Match 增加默认关闭、同步、只读的完成端口。端口只收
 3. 用生产 Bot Profile、行为 seed 和个性 seed 逐 Tick 重新生成 `player-2` 输入并逐帧比对。
 4. 重建 Product Match Result，再计算 arm/总体 Report。
 
+S9.5b 的 Web 工作台只持久化 assignment、生命周期检查点和已下载文件回执，不把大 Replay 放进同步 Storage。完整 Replay 在 Product 同步完成端口进入内存 Capture，终态后才异步计算原始包 SHA-256 并触发下载。运行中或复核中刷新一律变成零局 `running-recovered` 作废，不恢复半局，也不把内存丢失的数据补写为完成。
+
+单参与者原始包不是最终证据。操作员还必须导出最新 Workspace 审计账本；离线 ingester 会用终态 receipt 的 assignment/status/package ID/SHA-256/大小核对每个原始包，防止“声明文件丢失并作废”后误选旧完成包。随后它取得完整 clean Web 构建目录，重算 `arena-build-manifest.json` 的每个产物，并在 commit/build、逐 Tick Replay/Bot 与全部 Record 合同通过后才原子发布 Bundle。最终 evidence CLI 同样强制提供该 clean build 根目录并核对归档 Workspace。
+
 工程测试、模拟参与者或手写 JSON 都不能替代真实人的 Record。
 
 ## 后果
@@ -64,7 +68,7 @@ Product Match 增加默认关闭、同步、只读的完成端口。端口只收
 - S9.5 结论可绑定到准确候选并独立复验，机器人不能通过未来信息、特殊难度覆盖或另一条输入路径获得优势。
 - 研究至少需要 90 名合格完成者，实际招募数会因退出和预注册排除高于 90。
 - Replay 证据体积和复验时间增加；它们只存在于研究/CLI 路径，不进入生产权威热路径。
-- S9.5a 工程基础完成不等于 S9.5 冻结。独立采集工作台、知情同意流程、真实参与者和最终 Bundle 仍是外部阻断项。
+- S9.5a/b 工程基础完成不等于 S9.5 冻结。知情同意执行、真实参与者和最终 Bundle 仍是外部阻断项。
 
 ## 拒绝的替代方案
 

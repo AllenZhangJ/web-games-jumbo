@@ -36,6 +36,7 @@
     "arena:product:device:evidence": "node scripts/arena-device-evidence.mjs --definition arena.stage8.product-device-acceptance.v1",
     "arena:performance:evidence": "node scripts/arena-device-evidence.mjs --definition arena.stage9.performance-device-acceptance.v1",
     "arena:human-fairness:evidence": "node scripts/arena-human-fairness-evidence.mjs",
+    "arena:human-fairness:ingest": "node scripts/arena-human-fairness-ingest.mjs",
     "arena:build:verify": "node scripts/arena-build-manifest.mjs",
     "arena:build:budget": "node scripts/arena-build-budget.mjs",
     "dev": "vite --host 127.0.0.1",

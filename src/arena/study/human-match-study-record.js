@@ -83,6 +83,21 @@ const RECORD_KEYS = new Set([
   'matches',
   'selfReport',
 ]);
+const SUBMISSION_KEYS = new Set([
+  'recordId',
+  'definitionId',
+  'definitionHash',
+  'commit',
+  'buildId',
+  'performedAt',
+  'operatorId',
+  'assignment',
+  'status',
+  'terminationReason',
+  'environment',
+  'eligibility',
+  'selfReport',
+]);
 const ENVIRONMENT_KEYS = new Set(['platform', 'formFactor', 'orientation', 'inputMode']);
 const ELIGIBILITY_KEYS = new Set([
   'consentConfirmed',
@@ -239,6 +254,61 @@ function cloneSelfReport(value) {
   });
 }
 
+/**
+ * Validates the participant-level metadata shared by a raw capture package
+ * and its later materialized evidence Record. Keeping this contract separate
+ * prevents browser capture code and the offline evidence ingester from
+ * developing subtly different privacy, status or candidate rules.
+ */
+export function createHumanMatchStudySubmission(definitionValue, value) {
+  const definition = createHumanMatchStudyDefinition(definitionValue);
+  const source = cloneFrozenData(value, 'HumanMatchStudySubmission');
+  assertKnownKeys(source, SUBMISSION_KEYS, 'HumanMatchStudySubmission');
+  if (
+    source.definitionId !== definition.id
+    || source.definitionHash !== definition.getContentHash()
+  ) throw new RangeError('HumanMatchStudySubmission 与当前 Definition 身份不一致。');
+  if (typeof source.commit !== 'string' || !GIT_COMMIT_PATTERN.test(source.commit)) {
+    throw new TypeError('HumanMatchStudySubmission.commit 必须是 40 位小写 commit。');
+  }
+  const assignment = validateHumanMatchStudyAssignment(definition, source.assignment);
+  const status = enumValue(
+    source.status,
+    HUMAN_MATCH_STUDY_STATUS,
+    'HumanMatchStudySubmission.status',
+  );
+  const terminationReason = enumValue(
+    source.terminationReason,
+    HUMAN_MATCH_STUDY_TERMINATION_REASON,
+    'HumanMatchStudySubmission.terminationReason',
+  );
+  if (!TERMINATION_REASONS_BY_STATUS[status].has(terminationReason)) {
+    throw new RangeError(
+      `HumanMatchStudySubmission.terminationReason ${terminationReason} `
+      + `与 ${status} 不一致。`,
+    );
+  }
+  const selfReport = cloneSelfReport(source.selfReport);
+  if (status === HUMAN_MATCH_STUDY_STATUS.COMPLETED && selfReport === null) {
+    throw new RangeError('completed HumanMatchStudySubmission 必须包含终局自评。');
+  }
+  return Object.freeze({
+    recordId: boundedString(source.recordId, 128, 'HumanMatchStudySubmission.recordId'),
+    definitionId: definition.id,
+    definitionHash: definition.getContentHash(),
+    commit: source.commit,
+    buildId: boundedString(source.buildId, 128, 'HumanMatchStudySubmission.buildId'),
+    performedAt: isoInstant(source.performedAt, 'HumanMatchStudySubmission.performedAt'),
+    operatorId: boundedString(source.operatorId, 128, 'HumanMatchStudySubmission.operatorId'),
+    assignment,
+    status,
+    terminationReason,
+    environment: cloneEnvironment(source.environment),
+    eligibility: cloneEligibility(source.eligibility),
+    selfReport,
+  });
+}
+
 export function createHumanMatchStudyRecord(definitionValue, value) {
   const definition = createHumanMatchStudyDefinition(definitionValue);
   const source = cloneFrozenData(value, 'HumanMatchStudyRecord');
@@ -246,29 +316,9 @@ export function createHumanMatchStudyRecord(definitionValue, value) {
   if (source.schemaVersion !== HUMAN_MATCH_STUDY_RECORD_SCHEMA_VERSION) {
     throw new RangeError(`不支持 HumanMatchStudyRecord schema ${String(source.schemaVersion)}。`);
   }
-  if (
-    source.definitionId !== definition.id
-    || source.definitionHash !== definition.getContentHash()
-  ) throw new RangeError('HumanMatchStudyRecord 与当前 Definition 身份不一致。');
-  if (typeof source.commit !== 'string' || !GIT_COMMIT_PATTERN.test(source.commit)) {
-    throw new TypeError('HumanMatchStudyRecord.commit 必须是 40 位小写 commit。');
-  }
-  const assignment = validateHumanMatchStudyAssignment(definition, source.assignment);
-  const status = enumValue(
-    source.status,
-    HUMAN_MATCH_STUDY_STATUS,
-    'HumanMatchStudyRecord.status',
-  );
-  const terminationReason = enumValue(
-    source.terminationReason,
-    HUMAN_MATCH_STUDY_TERMINATION_REASON,
-    'HumanMatchStudyRecord.terminationReason',
-  );
-  if (!TERMINATION_REASONS_BY_STATUS[status].has(terminationReason)) {
-    throw new RangeError(
-      `HumanMatchStudyRecord.terminationReason ${terminationReason} 与 ${status} 不一致。`,
-    );
-  }
+  const submission = createHumanMatchStudySubmission(definition, Object.fromEntries(
+    [...SUBMISSION_KEYS].map((key) => [key, source[key]]),
+  ));
   if (!Array.isArray(source.matches)) {
     throw new TypeError('HumanMatchStudyRecord.matches 必须是数组。');
   }
@@ -276,32 +326,16 @@ export function createHumanMatchStudyRecord(definitionValue, value) {
     throw new RangeError('HumanMatchStudyRecord.matches 超过 Study 预注册数量。');
   }
   if (
-    status === HUMAN_MATCH_STUDY_STATUS.COMPLETED
+    submission.status === HUMAN_MATCH_STUDY_STATUS.COMPLETED
     && source.matches.length !== definition.matchesPerParticipant
   ) throw new RangeError('completed HumanMatchStudyRecord 必须包含完整预注册对局。');
   const matches = Object.freeze(source.matches.map((match, index) => (
-    cloneMatch(definition, assignment, match, index)
+    cloneMatch(definition, submission.assignment, match, index)
   )));
-  const selfReport = cloneSelfReport(source.selfReport);
-  if (status === HUMAN_MATCH_STUDY_STATUS.COMPLETED && selfReport === null) {
-    throw new RangeError('completed HumanMatchStudyRecord 必须包含终局自评。');
-  }
   return Object.freeze({
     schemaVersion: HUMAN_MATCH_STUDY_RECORD_SCHEMA_VERSION,
-    recordId: boundedString(source.recordId, 128, 'HumanMatchStudyRecord.recordId'),
-    definitionId: definition.id,
-    definitionHash: definition.getContentHash(),
-    commit: source.commit,
-    buildId: boundedString(source.buildId, 128, 'HumanMatchStudyRecord.buildId'),
-    performedAt: isoInstant(source.performedAt, 'HumanMatchStudyRecord.performedAt'),
-    operatorId: boundedString(source.operatorId, 128, 'HumanMatchStudyRecord.operatorId'),
-    assignment,
-    status,
-    terminationReason,
-    environment: cloneEnvironment(source.environment),
-    eligibility: cloneEligibility(source.eligibility),
+    ...submission,
     matches,
-    selfReport,
   });
 }
 

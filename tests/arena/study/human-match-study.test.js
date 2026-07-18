@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import {
   mkdir,
   mkdtemp,
+  readFile,
   rm,
   writeFile,
 } from 'node:fs/promises';
@@ -36,6 +37,9 @@ import {
   HumanMatchStudyCaptureSession,
 } from '../../../src/arena/study/human-match-study-capture-session.js';
 import {
+  createHumanMatchStudyCapturePackage,
+} from '../../../src/arena/study/human-match-study-capture-package.js';
+import {
   HUMAN_MATCH_STUDY_DEFINITION_SCHEMA_VERSION,
   createHumanMatchStudyDefinition,
 } from '../../../src/arena/study/human-match-study-definition.js';
@@ -58,8 +62,28 @@ import {
   TEST_MATCH_CONTENT_PUBLIC_VIEW,
   TEST_MATCH_CONTENT_SELECTION,
 } from '../product/stage8-test-content.js';
+import {
+  writeArenaBuildManifest,
+} from '../../../scripts/lib/arena-build-manifest-files.mjs';
 
 const COMMIT = '1'.repeat(40);
+
+async function createTestStudyBuild(root) {
+  const buildRoot = path.join(root, 'clean-web-build');
+  await mkdir(buildRoot, { recursive: true });
+  for (const fileName of ['greybox.html', 'index.html', 'product.html', 'study.html']) {
+    await writeFile(path.join(buildRoot, fileName), `<p>${fileName}</p>\n`);
+  }
+  await writeArenaBuildManifest({
+    outDir: buildRoot,
+    buildId: 'build-study-1',
+    commit: COMMIT,
+    sourceDirty: false,
+    target: 'web',
+    defaultEntry: 'product',
+  });
+  return buildRoot;
+}
 
 function definitionValue() {
   const value = structuredClone(createArenaStage9HumanFairnessV1Definition().toJSON());
@@ -473,6 +497,31 @@ test('human fairness evidence CLI describes V1 and reports an empty bundle as in
 
   const root = await mkdtemp(path.join(os.tmpdir(), 'arena-human-fairness-'));
   try {
+    const buildRoot = await createTestStudyBuild(root);
+    const workspaceBytes = Buffer.from(`${JSON.stringify({
+      schemaVersion: 1,
+      definitionId: definition.id,
+      definitionHash: definition.getContentHash(),
+      revision: 0,
+      activeTrial: null,
+      receipts: [],
+    }, null, 2)}\n`);
+    await writeFile(path.join(root, 'workspace-audit.json'), workspaceBytes);
+    await writeFile(path.join(root, 'capture-package-manifest.json'), `${JSON.stringify({
+      schemaVersion: 1,
+      definitionId: definition.id,
+      definitionHash: definition.getContentHash(),
+      commit: COMMIT,
+      buildId: 'build-study-1',
+      workspace: {
+        sourceSha256: createHash('sha256').update(workspaceBytes).digest('hex'),
+        sourceByteLength: workspaceBytes.byteLength,
+        revision: 0,
+        receiptCount: 0,
+        archivedPath: 'workspace-audit.json',
+      },
+      packages: [],
+    }, null, 2)}\n`);
     const bundlePath = path.join(root, 'study-evidence.json');
     await writeFile(bundlePath, `${JSON.stringify({
       schemaVersion: HUMAN_MATCH_STUDY_BUNDLE_SCHEMA_VERSION,
@@ -487,6 +536,8 @@ test('human fairness evidence CLI describes V1 and reports an empty bundle as in
       'scripts/arena-human-fairness-evidence.mjs',
       '--bundle',
       bundlePath,
+      '--build-root',
+      buildRoot,
     ], { cwd: path.resolve('.'), encoding: 'utf8' });
     assert.equal(incomplete.status, 2, incomplete.stderr);
     const output = JSON.parse(incomplete.stdout);
@@ -531,28 +582,105 @@ test('Human Match Study CLI reproduces authority and every hidden Bot input', as
   source.selfReport = null;
   const root = await mkdtemp(path.join(os.tmpdir(), 'arena-human-replay-'));
   try {
-    const artifact = source.matches[0].replayArtifact;
-    const replayBytes = Buffer.from(`${JSON.stringify(replay, null, 2)}\n`);
-    await mkdir(path.join(root, path.dirname(artifact.path)), { recursive: true });
-    await writeFile(path.join(root, artifact.path), replayBytes);
-    artifact.byteLength = replayBytes.length;
-    artifact.sha256 = createHash('sha256').update(replayBytes).digest('hex');
-    const bundlePath = path.join(root, 'human-fairness-evidence.json');
-    await writeFile(bundlePath, `${JSON.stringify({
-      schemaVersion: HUMAN_MATCH_STUDY_BUNDLE_SCHEMA_VERSION,
+    const buildRoot = await createTestStudyBuild(root);
+    const {
+      schemaVersion: ignoredRecordSchemaVersion,
+      matches: ignoredRecordMatches,
+      ...captureSubmission
+    } = source;
+    const capturePackage = createHumanMatchStudyCapturePackage(definition, {
+      ...captureSubmission,
+      matches: [{
+        matchIndex: 0,
+        result: source.matches[0].result,
+        replay,
+      }],
+    });
+    assert.equal(ignoredRecordSchemaVersion, HUMAN_MATCH_STUDY_RECORD_SCHEMA_VERSION);
+    assert.equal(ignoredRecordMatches.length, 1);
+    const packagePath = path.join(root, 'capture-package.json');
+    const packageBytes = Buffer.from(`${JSON.stringify(capturePackage, null, 2)}\n`);
+    await writeFile(packagePath, packageBytes);
+    const workspacePath = path.join(root, 'workspace-audit.json');
+    const workspaceSource = {
+      schemaVersion: 1,
       definitionId: definition.id,
       definitionHash: definition.getContentHash(),
-      commit: COMMIT,
-      buildId: 'build-study-1',
-      createdAt: '2026-07-18T00:01:00.000Z',
-      records: [source],
-    }, null, 2)}\n`);
+      revision: 1,
+      activeTrial: null,
+      receipts: [{
+        schemaVersion: 1,
+        trialId: capturePackage.recordId,
+        assignment: capturePackage.assignment,
+        status: capturePackage.status,
+        terminationReason: capturePackage.terminationReason,
+        packageReceipt: {
+          packageId: capturePackage.packageId,
+          fileName: path.basename(packagePath),
+          sha256: createHash('sha256').update(packageBytes).digest('hex'),
+          byteLength: packageBytes.byteLength,
+        },
+        confirmedAt: '2026-07-18T00:01:00.000Z',
+      }],
+    };
+    await writeFile(workspacePath, `${JSON.stringify(workspaceSource, null, 2)}\n`);
+    const ingestRoot = path.join(root, 'ingested');
+    const ingested = spawnSync(process.execPath, [
+      'scripts/arena-human-fairness-ingest.mjs',
+      '--package',
+      packagePath,
+      '--workspace',
+      workspacePath,
+      '--build-root',
+      buildRoot,
+      '--output',
+      ingestRoot,
+    ], {
+      cwd: path.resolve('.'),
+      encoding: 'utf8',
+      maxBuffer: 16 * 1024 * 1024,
+    });
+    assert.equal(ingested.status, 0, ingested.stderr);
+    const ingestSummary = JSON.parse(ingested.stdout);
+    assert.equal(ingestSummary.recordCount, 1);
+    assert.equal(ingestSummary.replayCount, 1);
+    const mismatchedWorkspace = structuredClone(workspaceSource);
+    mismatchedWorkspace.receipts[0].packageReceipt.sha256 = 'f'.repeat(64);
+    const mismatchedWorkspacePath = path.join(root, 'workspace-mismatched.json');
+    await writeFile(
+      mismatchedWorkspacePath,
+      `${JSON.stringify(mismatchedWorkspace, null, 2)}\n`,
+    );
+    const rejectedIngest = spawnSync(process.execPath, [
+      'scripts/arena-human-fairness-ingest.mjs',
+      '--package',
+      packagePath,
+      '--workspace',
+      mismatchedWorkspacePath,
+      '--build-root',
+      buildRoot,
+      '--output',
+      path.join(root, 'rejected-ingest'),
+    ], {
+      cwd: path.resolve('.'),
+      encoding: 'utf8',
+      maxBuffer: 16 * 1024 * 1024,
+    });
+    assert.equal(rejectedIngest.status, 1);
+    assert.match(rejectedIngest.stderr, /workspace receipt 0/);
+    const evidenceRoot = path.join(ingestRoot, 'evidence');
+    const bundlePath = path.join(evidenceRoot, 'human-fairness-evidence.json');
+    const ingestedBundle = JSON.parse(await readFile(bundlePath, 'utf8'));
+    assert.equal(ingestedBundle.records[0].recordId, source.recordId);
+    assert.equal(ingestedBundle.records[0].matches.length, 1);
     const command = spawnSync(process.execPath, [
       'scripts/arena-human-fairness-evidence.mjs',
       '--bundle',
       bundlePath,
+      '--build-root',
+      buildRoot,
       '--artifacts-root',
-      root,
+      evidenceRoot,
     ], {
       cwd: path.resolve('.'),
       encoding: 'utf8',
@@ -565,6 +693,25 @@ test('Human Match Study CLI reproduces authority and every hidden Bot input', as
     assert.equal(output.verifiedMatches[0].matchSeed, matchSeed);
     assert.equal(output.verifiedMatches[0].difficultyId, assignment.difficultyId);
     assert.equal(output.verifiedMatches[0].finalHash, replay.finalHash);
+    const ingestManifestPath = path.join(evidenceRoot, 'capture-package-manifest.json');
+    const tamperedManifest = JSON.parse(await readFile(ingestManifestPath, 'utf8'));
+    tamperedManifest.packages[0].sourceFileName = 'unrelated-package.json';
+    await writeFile(ingestManifestPath, `${JSON.stringify(tamperedManifest, null, 2)}\n`);
+    const rejectedEvidence = spawnSync(process.execPath, [
+      'scripts/arena-human-fairness-evidence.mjs',
+      '--bundle',
+      bundlePath,
+      '--build-root',
+      buildRoot,
+      '--artifacts-root',
+      evidenceRoot,
+    ], {
+      cwd: path.resolve('.'),
+      encoding: 'utf8',
+      maxBuffer: 16 * 1024 * 1024,
+    });
+    assert.equal(rejectedEvidence.status, 1);
+    assert.match(rejectedEvidence.stderr, /workspace\/package receipt 0/);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

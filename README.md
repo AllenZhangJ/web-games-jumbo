@@ -2,7 +2,7 @@
 
 一款以“左右选择数值运算 + 按住蓄力跳跃”为核心的竖屏小游戏。v3 保留现有数值策略、连续世界、真实落点、碰撞规则、测试和 Web/微信/抖音平台适配层，将原 Canvas 2D 表现层重构为 Three.js/WebGL2 三维场景。
 
-> **项目状态：** Web、微信、抖音默认入口已切换到 Arena V1 Product Session：独立轻量物理、1v1 MatchCore、隐藏本地机器人、三件装备、地图时间轴、语义移动/触控、程序化角色、HUD、角色选择、奖励和重赛已连成产品闭环。Web 使用语义 DOM，微信/抖音共享单 Canvas Product UI；Web `/greybox.html` 与小游戏 `game-greybox.js`/`build:greybox` 保留可执行回退。Stage 8 S8.1～S8.5.5 已落地；S8.5.6 六目标设备证据合同与三端构建 Manifest 已就绪，但微信/抖音开发者工具及两端 iOS/Android 真机 Record 尚未采集。Stage 9 S9.1～S9.3 已建立实验、Replay V5、fuzz、生命周期回归门与 11 条命 Product 默认；S9.4a 已建立 high/medium/low 质量 Definition、有界性能 Probe、六目标性能 Policy/证据和三端包体预算；S9.5a 已建立预注册真人研究、同 Product 采集端口与逐 Tick Replay/Bot 复验 CLI。六个真实 target Record、独立可恢复真人采集工作台与至少 90 名合格完成者证据仍未完成。Web 真实浏览器、小游戏宿主组合、100 局旧表现 Session soak 和 100 局 Product Presentation Session soak 已通过；目标真机 E3 与 A/B 新手盲测仍未完成。数值跳台 v3 代码与资产继续保留，两条领域代码保持隔离。
+> **项目状态：** Web、微信、抖音默认入口已切换到 Arena V1 Product Session：独立轻量物理、1v1 MatchCore、隐藏本地机器人、三件装备、地图时间轴、语义移动/触控、程序化角色、HUD、角色选择、奖励和重赛已连成产品闭环。Web 使用语义 DOM，微信/抖音共享单 Canvas Product UI；Web `/greybox.html` 与小游戏 `game-greybox.js`/`build:greybox` 保留可执行回退。Stage 8 S8.1～S8.5.5 已落地；S8.5.6 六目标设备证据合同与三端构建 Manifest 已就绪，但微信/抖音开发者工具及两端 iOS/Android 真机 Record 尚未采集。Stage 9 S9.1～S9.3 已建立实验、Replay V5、fuzz、生命周期回归门与 11 条命 Product 默认；S9.4a 已建立 high/medium/low 质量 Definition、有界性能 Probe、六目标性能 Policy/证据和三端包体预算；S9.5a/b 已建立预注册真人研究、同 Product 采集端口、独立可恢复 Web 工作台、离线原子入库与逐 Tick Replay/Bot 复验。六个真实 target Record 与至少 90 名合格完成者证据仍未完成。Web 真实浏览器、小游戏宿主组合、100 局旧表现 Session soak 和 100 局 Product Presentation Session soak 已通过；目标真机 E3 与 A/B 新手盲测仍未完成。数值跳台 v3 代码与资产继续保留，两条领域代码保持隔离。
 
 v3 的动作与构图参考开源项目 [`shenmaxg/web-jump`](https://github.com/shenmaxg/web-jump)，但不使用它的单路线玩法作为游戏规则，也不直接复用来源不明的品牌纹理。参考代码的 MIT 许可与归属见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
@@ -114,7 +114,9 @@ Stage 9 无渲染实验入口为 `npm run arena:experiment`。默认 suite 是 3
 
 Stage 9 表现性能使用 `npm run arena:build:budget` 重算三端包体门，使用 `npm run arena:performance:evidence -- --describe` 查看六个目标机的质量、帧时间、资源、内存与生命周期合同。完整操作见 [S9.4 性能与长稳验收手册](docs/acceptance/stage9/README.md)。本机/桌面门通过只证明工程基础，不能替代真实 target Record。
 
-Stage 9 真人公平性使用 `npm run arena:human-fairness:evidence -- --describe` 查看固定三隐藏组、样本、胜率、感知与时长门。正式 Bundle 会逐 Tick 重生机器人输入并严格重放；完整协议见 [S9.5 真人公平性验收手册](docs/acceptance/stage9-human-fairness/README.md)。当前合同与采集端口通过不等于已有真人证据。
+Stage 9 真人公平性使用 `npm run arena:human-fairness:evidence -- --describe` 查看固定三隐藏组、样本、胜率、感知与时长门。正式 Bundle 会逐 Tick 重生机器人输入并严格重放；完整协议见 [S9.5 真人公平性验收手册](docs/acceptance/stage9-human-fairness/README.md)。当前合同、工作台与复验通过不等于已有真人证据。
+
+最终 clean Web 构建可通过 `/study.html` 打开独立 S9.5 工作台。单参与者原始包使用 `arena:human-fairness:ingest` 离线入库；入库和最终 `arena:human-fairness:evidence` 都强制提供 `--build-root`，重算完整构建 Manifest 后才接受 commit/build 身份。
 
 ## v3 架构
 

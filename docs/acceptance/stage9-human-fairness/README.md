@@ -2,9 +2,9 @@
 
 ## 当前状态
 
-S9.5a 已具备版本化 Definition、隐藏 block 分组、生产 seed、Product 完成端口、内存 Capture Session、Record/Bundle/Report 和逐 Tick Replay/Bot 复验 CLI。尚未提供面向操作员的独立可恢复采集工作台，也尚未采集真实参与者；因此当前只能称“工程证据基础完成”，不能称 S9.5 公平性通过。
+S9.5a 已具备版本化 Definition、隐藏 block 分组、生产 seed、Product 完成端口、内存 Capture Session、Record/Bundle/Report 和逐 Tick Replay/Bot 复验 CLI。S9.5b 已新增独立 `study.html` 工作台、双槽 Workspace、协作租约、运行中恢复作废、单参与者原始包、离线原子入库和 clean Web build 强绑定。尚未采集真实参与者，因此当前只能称“采集与复验工程基础完成”，不能称 S9.5 公平性通过。
 
-完整决策依据见 [ADR-025](../../decisions/025-arena-stage9-preregistered-human-fairness-study.md)。
+完整决策依据见 [ADR-025](../../decisions/025-arena-stage9-preregistered-human-fairness-study.md)，本机门禁记录见 [S9.5b 工作台与离线入库](../../research/arena-stage9-s9.5b-human-study-workbench.md)。
 
 ## 冻结前提
 
@@ -14,6 +14,7 @@ S9.5a 已具备版本化 Definition、隐藏 block 分组、生产 seed、Produc
 4. 每个 arm 至少 30 名合格完成者；最低总计 90 名完成者、270 局，实际招募应预留退出和失效。
 5. 使用去标识 `participantId`；参与者真实身份与联系方式不得进入仓库证据。
 6. 先完成知情同意与资格核对，再生成 assignment。
+7. 使用 `npm run arena:build:verify -- --require-clean-source` 通过的 Web 构建；工作台和最终 CLI 都必须绑定同一个 `arena-build-manifest.json`。
 
 查看不可修改的 V1：
 
@@ -23,19 +24,20 @@ npm run arena:human-fairness:evidence -- --describe
 
 ## 单名参与者流程
 
-1. 按实际入组顺序分配从 0 开始的 `enrollmentIndex`，同一人不得重复参加。
-2. 资格字段在开始前固定：同意、既往 Arena 经验、既往研究暴露、提示偏离、操作员协助。
-3. 只向参与者展示 Definition 中的提示：
+1. 从最终 clean Web 构建打开 `/study.html`。dirty build、桌面/鼠标、横屏或非手机环境只允许查看工作台，正式入组按钮会被禁用。
+2. 按实际入组顺序分配从 0 开始的 `enrollmentIndex`，同一人不得重复参加；工作台只生成随机去标识 ID。
+3. 资格字段在开始前固定：同意、既往 Arena 经验、既往研究暴露、提示偏离、操作员协助。
+4. 只向参与者展示 Definition 中的提示：
 
    > 完成三局 1v1 对局，尽可能利用装备和地图将对手击出平台。
 
-4. 不展示或口头透露 arm、easy/normal/hard、seed、机器人身份；也不得宣称对手是真人。
-5. 使用 `HumanMatchStudyCaptureSession.getPresentationPorts()` 返回的 `seedSource` 与 `matchCompletionSink` 注入正常 Product Presentation Session。不得另建简化比赛或难度覆盖。
-6. 连续完成三局。缺失 Replay、运行失败、恢复了半局状态或协议偏离时，停止本次 Trial 并记录 `invalidated`；参与者主动停止记录 `abandoned`。
-7. 三局结束后一次性记录：对手类型猜测（human/bot/unsure）、公平性 1～5、自然度 1～5、是否愿意再来一局。
-8. 导出 Operator Capture，将每局 Replay 保存为独立 JSON，再形成包含 SHA-256 和 byte length 的终态 Record。原始 Capture 不等于可提交证据。
+5. 不展示或口头透露 arm、easy/normal/hard、seed、机器人身份；也不得宣称对手是真人。
+6. 工作台把 `HumanMatchStudyCaptureSession.getPresentationPorts()` 注入正常 Product Presentation Session。不得另建简化比赛或难度覆盖。
+7. 连续完成三局。缺失 Replay、运行失败、恢复了半局状态或协议偏离时，停止本次 Trial 并记录 `invalidated`；参与者主动停止记录 `abandoned`。
+8. 三局结束后一次性记录：对手类型猜测（human/bot/unsure）、公平性 1～5、自然度 1～5、是否愿意再来一局。
+9. 点击“生成并下载原始采集包”，在系统下载目录核对文件名和 SHA-256 后再点击确认。若文件没有落盘，必须选择“文件未保存”，当前 assignment 将生成零局 `running-recovered` 作废包。
 
-采集端口为同步端口，禁止在 Product `step()` 内直接执行网络或异步文件 I/O。当前独立持久化工作台未完成前，不应开展正式大样本；临时 harness 只允许做内部流程演练。
+采集端口为同步端口，禁止在 Product `step()` 内直接执行网络或异步文件 I/O。Workspace 只持久化小型生命周期检查点与导出回执；完整 Replay 仅在当次内存 Capture 中存在。刷新或崩溃后不恢复半局，也不声称保留了已丢失 Replay，而是自动进入可审计作废流程。
 
 ## Record 规则
 
@@ -46,30 +48,48 @@ npm run arena:human-fairness:evidence -- --describe
 - 同一 Bundle 内 record、participant、assignment、enrollment、match seed、artifact ID/path 均唯一。
 - Bundle 只能包含同一 commit/build，`createdAt` 不得早于任一 Record。
 
-建议目录：
+把所有单参与者原始包放在仓库外的受控目录，再执行一次禁止覆盖的离线入库：
 
-```text
-docs/acceptance/stage9-human-fairness/<build-id>/
-├── human-fairness-evidence.json
-└── participants/
-    ├── participant-000/
-    │   ├── match-0.json
-    │   ├── match-1.json
-    │   └── match-2.json
-    └── ...
+```bash
+npm run arena:human-fairness:ingest -- \
+  --package /secure/captures/human-study-package-aaaa1111.json \
+  --package /secure/captures/human-study-package-bbbb2222.json \
+  --workspace /secure/captures/human-study-workspace-r360.json \
+  --build-root dist/web \
+  --output /secure/evidence/<build-id>
 ```
 
-不要把姓名、手机号、录音、聊天或设备唯一标识放进此目录。若研究管理确需保存身份映射，应由项目方在仓库外按适用隐私规则独立管理。
+`--output` 必须不存在。CLI 先复验 clean Web build、所有包的 commit/build、连续 enrollment、每局 Replay 与逐 Tick Bot 输入，再以一个 `evidence/` 子目录原子发布；失败不留下可误认成完成证据的 Bundle。
+
+生成目录：
+
+```text
+/secure/evidence/<build-id>/
+└── evidence/
+    ├── human-fairness-evidence.json
+    ├── capture-package-manifest.json
+    ├── workspace-audit.json
+    ├── raw-capture-packages/
+    └── replays/
+        ├── enrollment-0000/
+        │   ├── match-00.json
+        │   ├── match-01.json
+        │   └── match-02.json
+        └── ...
+```
+
+不要把姓名、手机号、录音、聊天或设备唯一标识放进原始包或证据目录。若研究管理确需保存身份映射，应由项目方在仓库外按适用隐私规则独立管理。
 
 ## 机器复验
 
 ```bash
 npm run arena:human-fairness:evidence -- \
-  --bundle docs/acceptance/stage9-human-fairness/<build-id>/human-fairness-evidence.json \
-  --artifacts-root docs/acceptance/stage9-human-fairness/<build-id>
+  --bundle /secure/evidence/<build-id>/evidence/human-fairness-evidence.json \
+  --artifacts-root /secure/evidence/<build-id>/evidence \
+  --build-root dist/web
 ```
 
-CLI 会校验附件边界和 SHA-256，严格重放权威逻辑，并逐 Tick 重生隐藏 Bot 输入。退出码：
+CLI 会先重算 clean Web 构建 Manifest，再校验附件边界和 SHA-256，严格重放权威逻辑，并逐 Tick 重生隐藏 Bot 输入。退出码：
 
 - `0`：三个 arm 样本齐备且全部预注册门通过，Report 为 `ready`。
 - `2`：样本不足或真实指标失败，Report 为 `incomplete`/`failed`。

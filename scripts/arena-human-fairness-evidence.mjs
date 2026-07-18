@@ -1,4 +1,6 @@
+import { createHash } from 'node:crypto';
 import path from 'node:path';
+import { createDeterministicDataHash } from '../src/shared/deterministic-data-hash.js';
 import {
   createArenaStage9HumanFairnessV1Definition,
 } from '../src/arena/study/arena-stage9-human-fairness-v1.js';
@@ -13,19 +15,78 @@ import {
   verifyHumanMatchStudyReplay,
 } from '../src/arena/study/human-match-study-replay-verifier.js';
 import {
+  materializeHumanMatchStudyCapturePackage,
+  validateHumanMatchStudyCapturePackage,
+} from '../src/arena/study/human-match-study-capture-package.js';
+import {
+  createHumanMatchStudyWorkspace,
+} from '../src/arena/study/human-match-study-workspace.js';
+import {
   readVerifiedEvidenceArtifact,
   readVerifiedTextFile,
   resolveEvidenceRoot,
 } from './lib/evidence-file-verifier.mjs';
+import {
+  verifyArenaBuildManifestDirectory,
+} from './lib/arena-build-manifest-files.mjs';
 
 const MAXIMUM_BUNDLE_BYTES = 5 * 1024 * 1024;
 const MAXIMUM_REPLAY_BYTES = 64 * 1024 * 1024;
+const MAXIMUM_WORKSPACE_BYTES = 5 * 1024 * 1024;
+const MAXIMUM_INGEST_MANIFEST_BYTES = 5 * 1024 * 1024;
+const MAXIMUM_CAPTURE_PACKAGE_BYTES = 256 * 1024 * 1024;
+
+const INGEST_MANIFEST_KEYS = new Set([
+  'schemaVersion',
+  'definitionId',
+  'definitionHash',
+  'commit',
+  'buildId',
+  'workspace',
+  'packages',
+]);
+const INGEST_WORKSPACE_KEYS = new Set([
+  'sourceSha256',
+  'sourceByteLength',
+  'revision',
+  'receiptCount',
+  'archivedPath',
+]);
+const INGEST_PACKAGE_KEYS = new Set([
+  'packageId',
+  'enrollmentIndex',
+  'sourceFileName',
+  'sourceSha256',
+  'sourceByteLength',
+  'archivedPath',
+]);
+
+function assertExactKeys(value, keys, label) {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    throw new TypeError(`${label} 必须是对象。`);
+  }
+  for (const key of Object.keys(value)) {
+    if (!keys.has(key)) throw new RangeError(`${label} 包含未知字段 ${key}。`);
+  }
+  for (const key of keys) {
+    if (!Object.hasOwn(value, key)) throw new RangeError(`${label} 缺少字段 ${key}。`);
+  }
+}
+
+function canonicalJsonBytes(value) {
+  return Buffer.from(`${JSON.stringify(value, null, 2)}\n`);
+}
+
+function sameDeterministicData(left, right, label) {
+  return createDeterministicDataHash(left, `${label} left`)
+    === createDeterministicDataHash(right, `${label} right`);
+}
 
 function usage() {
   return [
     'Usage:',
     '  npm run arena:human-fairness:evidence -- --describe',
-    '  npm run arena:human-fairness:evidence -- --bundle <study-evidence.json> [--artifacts-root <dir>]',
+    '  npm run arena:human-fairness:evidence -- --bundle <study-evidence.json> --build-root <clean-web-build> [--artifacts-root <dir>]',
     '',
     'Exit codes: 0=ready, 2=incomplete/failed, 1=invalid evidence or I/O failure.',
   ].join('\n');
@@ -34,6 +95,7 @@ function usage() {
 function parseArgs(values) {
   const result = {
     bundle: null,
+    buildRoot: null,
     artifactsRoot: null,
     describe: false,
     help: false,
@@ -51,7 +113,7 @@ function parseArgs(values) {
       result.describe = true;
       continue;
     }
-    const match = argument.match(/^--(bundle|artifacts-root)(?:=(.*))?$/);
+    const match = argument.match(/^--(bundle|build-root|artifacts-root)(?:=(.*))?$/);
     if (!match) throw new Error(`未知参数 ${argument}。\n${usage()}`);
     const key = match[1];
     if (seen.has(key)) throw new Error(`参数 --${key} 不能重复。`);
@@ -60,13 +122,15 @@ function parseArgs(values) {
     const value = inlineValue === undefined ? values[++index] : inlineValue;
     if (!value || value.startsWith('--')) throw new Error(`参数 --${key} 缺少值。`);
     if (key === 'bundle') result.bundle = value;
+    else if (key === 'build-root') result.buildRoot = value;
     else result.artifactsRoot = value;
   }
   if (result.help) return result;
-  if (result.describe && (result.bundle || result.artifactsRoot)) {
-    throw new Error('--describe 不能与 --bundle 或 --artifacts-root 同时使用。');
+  if (result.describe && (result.bundle || result.buildRoot || result.artifactsRoot)) {
+    throw new Error('--describe 不能与 --bundle、--build-root 或 --artifacts-root 同时使用。');
   }
   if (!result.describe && !result.bundle) throw new Error(`缺少 --bundle。\n${usage()}`);
+  if (!result.describe && !result.buildRoot) throw new Error(`缺少 --build-root。\n${usage()}`);
   return result;
 }
 
@@ -118,6 +182,125 @@ async function verifyReplays(definition, bundle, rootValue) {
   return Object.freeze(verifiedMatches);
 }
 
+async function verifyIngestAudit(definition, bundle, artifactsRootValue) {
+  const artifactsRoot = await resolveEvidenceRoot(artifactsRootValue);
+  const manifestSource = await readVerifiedEvidenceArtifact({
+    root: artifactsRoot,
+    relativePath: 'capture-package-manifest.json',
+    expectedByteLength: null,
+    expectedSha256: null,
+    maximumBytes: MAXIMUM_INGEST_MANIFEST_BYTES,
+    label: 'human fairness ingest manifest',
+  });
+  const manifest = JSON.parse(manifestSource.text);
+  assertExactKeys(manifest, INGEST_MANIFEST_KEYS, 'Human Match Study ingest manifest');
+  if (
+    manifest.schemaVersion !== 1
+    || manifest.definitionId !== definition.id
+    || manifest.definitionHash !== definition.getContentHash()
+    || manifest.commit !== bundle.commit
+    || manifest.buildId !== bundle.buildId
+  ) throw new Error('Human Match Study ingest manifest 与 Bundle 身份不一致。');
+  assertExactKeys(
+    manifest.workspace,
+    INGEST_WORKSPACE_KEYS,
+    'Human Match Study ingest manifest.workspace',
+  );
+  if (manifest.workspace.archivedPath !== 'workspace-audit.json') {
+    throw new Error('Human Match Study workspace audit 必须使用固定归档路径。');
+  }
+  const source = await readVerifiedEvidenceArtifact({
+    root: artifactsRoot,
+    relativePath: manifest.workspace.archivedPath,
+    expectedByteLength: manifest.workspace.sourceByteLength,
+    expectedSha256: manifest.workspace.sourceSha256,
+    maximumBytes: MAXIMUM_WORKSPACE_BYTES,
+    label: 'human fairness workspace audit',
+  });
+  const workspace = createHumanMatchStudyWorkspace(definition, JSON.parse(source.text));
+  if (workspace.activeTrial !== null) {
+    throw new Error('Human Match Study workspace audit 仍有 active trial。');
+  }
+  if (
+    workspace.revision !== manifest.workspace.revision
+    || workspace.receipts.length !== manifest.workspace.receiptCount
+    || workspace.receipts.length !== bundle.records.length
+  ) {
+    throw new Error('Human Match Study workspace receipts 与 Bundle records 数量不一致。');
+  }
+  if (
+    !Array.isArray(manifest.packages)
+    || manifest.packages.length !== bundle.records.length
+  ) throw new Error('Human Match Study ingest manifest packages 数量不一致。');
+  const paths = new Set();
+  for (const [index, receipt] of workspace.receipts.entries()) {
+    const record = bundle.records[index];
+    const packageEntry = manifest.packages[index];
+    assertExactKeys(
+      packageEntry,
+      INGEST_PACKAGE_KEYS,
+      `Human Match Study ingest manifest.packages[${index}]`,
+    );
+    if (
+      receipt.trialId !== record.recordId
+      || receipt.assignment.assignmentId !== record.assignment.assignmentId
+      || receipt.assignment.enrollmentIndex !== record.assignment.enrollmentIndex
+      || receipt.status !== record.status
+      || receipt.terminationReason !== record.terminationReason
+      || packageEntry.packageId !== receipt.packageReceipt.packageId
+      || packageEntry.enrollmentIndex !== record.assignment.enrollmentIndex
+      || packageEntry.sourceFileName !== receipt.packageReceipt.fileName
+      || packageEntry.sourceSha256 !== receipt.packageReceipt.sha256
+      || packageEntry.sourceByteLength !== receipt.packageReceipt.byteLength
+      || paths.has(packageEntry.archivedPath)
+    ) throw new Error(`workspace/package receipt ${index} 与 Bundle record 不一致。`);
+    paths.add(packageEntry.archivedPath);
+    const rawSource = await readVerifiedEvidenceArtifact({
+      root: artifactsRoot,
+      relativePath: packageEntry.archivedPath,
+      expectedByteLength: packageEntry.sourceByteLength,
+      expectedSha256: packageEntry.sourceSha256,
+      maximumBytes: MAXIMUM_CAPTURE_PACKAGE_BYTES,
+      label: `human fairness raw capture package ${index}`,
+    });
+    const capturePackage = validateHumanMatchStudyCapturePackage(
+      definition,
+      JSON.parse(rawSource.text),
+    );
+    if (
+      capturePackage.packageId !== packageEntry.packageId
+      || capturePackage.recordId !== record.recordId
+      || capturePackage.commit !== record.commit
+      || capturePackage.buildId !== record.buildId
+    ) throw new Error(`raw capture package ${index} 与 Bundle record 身份不一致。`);
+    const materialized = materializeHumanMatchStudyCapturePackage(
+      definition,
+      capturePackage,
+      record.matches.map(({ replayArtifact }) => replayArtifact),
+    );
+    if (!sameDeterministicData(
+      materialized,
+      record,
+      `Human Match Study materialized record ${index}`,
+    )) throw new Error(`raw capture package ${index} 无法重建 Bundle record。`);
+    for (const [matchIndex, match] of capturePackage.matches.entries()) {
+      const bytes = canonicalJsonBytes(match.replay);
+      const artifact = record.matches[matchIndex].replayArtifact;
+      if (
+        bytes.byteLength !== artifact.byteLength
+        || createHash('sha256').update(bytes).digest('hex') !== artifact.sha256
+      ) throw new Error(`raw capture package ${index} match ${matchIndex} 与 Replay 不一致。`);
+    }
+  }
+  return Object.freeze({
+    revision: workspace.revision,
+    receiptCount: workspace.receipts.length,
+    sha256: source.sha256,
+    ingestManifestSha256: manifestSource.sha256,
+    rawPackageCount: manifest.packages.length,
+  });
+}
+
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   if (options.help) {
@@ -143,9 +326,26 @@ async function main() {
   }
   const bundlePath = path.resolve(options.bundle);
   const artifactsRoot = path.resolve(options.artifactsRoot ?? path.dirname(bundlePath));
+  const buildManifest = await verifyArenaBuildManifestDirectory(
+    path.resolve(options.buildRoot),
+    { requireCleanSource: true },
+  );
+  if (
+    buildManifest.target !== 'web'
+    || buildManifest.getArtifact('study.html') === null
+  ) throw new Error('Human Match Study 必须绑定包含 study.html 的 clean Web 构建。');
   const bundle = createHumanMatchStudyBundle(
     definition,
     await readBundleSource(bundlePath),
+  );
+  if (
+    bundle.commit !== buildManifest.commit
+    || bundle.buildId !== buildManifest.buildId
+  ) throw new Error('Human Match Study Bundle 与 clean Web build 不一致。');
+  const workspaceAudit = await verifyIngestAudit(
+    definition,
+    bundle,
+    artifactsRoot,
   );
   const report = createHumanMatchStudyReport(definition, bundle.records);
   const verifiedMatches = await verifyReplays(definition, bundle, artifactsRoot);
@@ -154,6 +354,8 @@ async function main() {
     definitionHash: definition.getContentHash(),
     commit: bundle.commit,
     buildId: bundle.buildId,
+    buildManifestHash: buildManifest.getContentHash(),
+    workspaceAudit,
     verifiedMatchCount: verifiedMatches.length,
     verifiedMatches,
     report,

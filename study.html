@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+    <meta name="theme-color" content="#e9e6de" />
+    <meta name="robots" content="noindex,nofollow" />
+    <title>Arena S9.5 真人公平性采集</title>
+  </head>
+  <body>
+    <main id="human-study-app" class="study-app" aria-label="Arena S9.5 真人公平性采集工作台">
+      <section id="study-operator-shell" class="study-operator-shell">
+        <header class="study-header">
+          <div>
+            <p class="study-kicker">S9.5 / EVIDENCE DESK</p>
+            <h1>真人公平性采集</h1>
+            <p class="study-lead">三局 1v1 · 去标识 · 中断即作废 · 离线复验</p>
+          </div>
+          <span id="study-phase" class="study-phase">LOADING</span>
+        </header>
+
+        <section class="study-summary" aria-label="采集状态">
+          <article>
+            <span>当前状态</span>
+            <strong id="study-status">正在读取检查点</strong>
+          </article>
+          <article>
+            <span>完成归档</span>
+            <strong><b id="study-record-count">0</b> 人</strong>
+          </article>
+          <article>
+            <span>当前进度</span>
+            <strong id="study-progress">0 / 3</strong>
+          </article>
+        </section>
+
+        <section class="study-context">
+          <p><span>BUILD</span><strong id="study-build">正在校验构建</strong></p>
+          <p><span>ENV</span><strong id="study-environment">正在检测环境</strong></p>
+          <p><span>SUBJECT</span><strong id="study-participant-id">尚未入组</strong></p>
+        </section>
+        <button id="study-export-workspace" class="study-audit-action" type="button">
+          导出当前工作区审计账本
+        </button>
+
+        <p id="study-error" class="study-alert" role="alert" hidden></p>
+
+        <section id="study-enrollment" class="study-panel">
+          <div class="study-panel-heading">
+            <span>01</span>
+            <div>
+              <h2>资格与知情同意</h2>
+              <p>不录入姓名、手机号或其他直接身份信息。</p>
+            </div>
+          </div>
+          <label class="study-field">
+            <span>去标识操作员编号</span>
+            <input id="study-operator-id" type="text" maxlength="128" autocomplete="off" placeholder="例如 OP-A01" />
+          </label>
+          <div class="study-check-grid">
+            <label><input id="study-consent" type="checkbox" /><span>已完成知情同意</span></label>
+            <label><input id="study-prior-arena" type="checkbox" /><span>玩过本 Arena 版本</span></label>
+            <label><input id="study-prior-study" type="checkbox" /><span>参加过本研究</span></label>
+            <label><input id="study-briefing-deviation" type="checkbox" /><span>讲解偏离标准提示</span></label>
+            <label><input id="study-operator-assistance" type="checkbox" /><span>操作员提供过玩法协助</span></label>
+          </div>
+          <div class="study-protocol-note">
+            <strong>标准提示</strong>
+            <p>完成三局 1v1 对局，尽可能利用装备和地图将对手击出平台。</p>
+          </div>
+          <button id="study-enroll" class="study-action is-primary" type="button">锁定匿名编号并入组</button>
+        </section>
+
+        <section id="study-enrolled" class="study-panel" hidden>
+          <div class="study-panel-heading">
+            <span>02</span>
+            <div>
+              <h2>交接参与者</h2>
+              <p>将手机交给参与者。不要解释对手身份、分组或策略。</p>
+            </div>
+          </div>
+          <div class="study-hand-off">
+            <b>READY</b>
+            <p>确认手机保持竖屏，参与者可独立完成三局对战。</p>
+          </div>
+          <div class="study-action-row">
+            <button id="study-start" class="study-action is-primary" type="button">开始三局采集</button>
+            <button id="study-invalidate-enrolled" class="study-action is-secondary" type="button">赛前作废</button>
+          </div>
+        </section>
+
+        <section id="study-review" class="study-panel" hidden>
+          <div class="study-panel-heading">
+            <span>03</span>
+            <div>
+              <h2>终局复核与导出</h2>
+              <p>完整 Replay 不进本地工作区；本步骤生成单参与者原始包。</p>
+            </div>
+          </div>
+          <fieldset id="study-review-questions" class="study-review-questions">
+            <legend>请由参与者独立回答</legend>
+            <div class="study-question">
+              <span>你认为刚才的对手是？</span>
+              <div class="study-choice-row">
+                <label><input type="radio" name="study-opponent-guess" value="human" /><span>真人</span></label>
+                <label><input type="radio" name="study-opponent-guess" value="bot" /><span>电脑</span></label>
+                <label><input type="radio" name="study-opponent-guess" value="unsure" /><span>不确定</span></label>
+              </div>
+            </div>
+            <label class="study-field">
+              <span>对局公平感（1～5）</span>
+              <select id="study-fairness">
+                <option value="1">1 · 很不公平</option>
+                <option value="2">2</option>
+                <option value="3" selected>3 · 一般</option>
+                <option value="4">4</option>
+                <option value="5">5 · 很公平</option>
+              </select>
+            </label>
+            <label class="study-field">
+              <span>对手行为自然度（1～5）</span>
+              <select id="study-naturalness">
+                <option value="1">1 · 很不自然</option>
+                <option value="2">2</option>
+                <option value="3" selected>3 · 一般</option>
+                <option value="4">4</option>
+                <option value="5">5 · 很自然</option>
+              </select>
+            </label>
+            <label class="study-inline-check">
+              <input id="study-would-rematch" type="checkbox" />
+              <span>愿意立即再来一局</span>
+            </label>
+          </fieldset>
+          <button id="study-export" class="study-action is-primary" type="button">生成并下载原始采集包</button>
+        </section>
+
+        <section id="study-export-pending" class="study-panel" hidden>
+          <div class="study-panel-heading">
+            <span>04</span>
+            <div>
+              <h2>确认文件已归档</h2>
+              <p>先在系统下载目录核对文件，再确认。工作台无法替代操作系统确认落盘。</p>
+            </div>
+          </div>
+          <dl class="study-package">
+            <div><dt>文件名</dt><dd id="study-package-name">—</dd></div>
+            <div><dt>SHA-256</dt><dd id="study-package-hash">—</dd></div>
+          </dl>
+          <div class="study-action-row">
+            <button id="study-confirm" class="study-action is-primary" type="button">已核对，确认归档</button>
+            <button id="study-file-lost" class="study-action is-secondary" type="button">文件未保存</button>
+          </div>
+        </section>
+      </section>
+
+      <section id="study-participant-shell" class="product-shell study-participant-shell" aria-label="三局 1 对 1 对战" hidden>
+        <canvas id="game" aria-label="竞技场 1 对 1 跑酷对决画布" aria-describedby="game-instructions"></canvas>
+        <section id="arena-product-ui" class="product-ui" aria-labelledby="product-title" aria-describedby="product-body" aria-busy="true">
+          <div class="product-rail" aria-hidden="true">
+            <span>A // 01</span><span class="product-rail-line"></span><span>ABYSS</span>
+          </div>
+          <header class="product-header">
+            <p id="product-kicker" class="product-kicker">ARENA LINK</p>
+            <h1 id="product-title">正在读取进度</h1>
+            <span class="product-title-rule" aria-hidden="true"></span>
+            <p id="product-body"></p>
+          </header>
+          <div class="product-visual-stack">
+            <section class="product-visual product-loading" data-product-visual="loading" aria-label="加载中">
+              <span class="product-loader" aria-hidden="true"></span><p>正在连接竞技场</p>
+            </section>
+            <section class="product-visual product-home" data-product-visual="home" hidden>
+              <div class="product-hero-frame"><img id="product-hero-image" alt="" draggable="false" /></div>
+              <p class="product-match-note"><span>1V1</span> 装备 · 地图 · 击飞</p>
+            </section>
+            <section class="product-visual product-character-select" data-product-visual="character-select" hidden>
+              <div id="product-character-list" class="product-character-list" role="radiogroup" aria-label="可选角色"></div>
+              <p class="product-caption">角色提供基础手感，装备决定本局玩法</p>
+            </section>
+            <section class="product-visual product-matching" data-product-visual="matching" hidden>
+              <div class="product-versus">
+                <article class="product-fighter-card"><img id="product-matching-player-image" alt="" draggable="false" /><strong id="product-matching-player-name">挑战者</strong></article>
+                <span class="product-vs-mark" aria-hidden="true">VS</span>
+                <article class="product-fighter-card is-opponent"><img id="product-matching-opponent-image" alt="" draggable="false" /><strong id="product-matching-opponent-name">神秘挑战者</strong></article>
+              </div>
+              <div class="product-search-track" aria-hidden="true"><span></span></div>
+              <p class="product-caption">正在建立 1 对 1 对局</p>
+            </section>
+            <section class="product-visual product-result" data-product-visual="result" hidden>
+              <div class="product-result-emblem" aria-hidden="true"><span id="product-result-mark">WIN</span></div>
+              <img id="product-result-image" alt="" draggable="false" /><strong id="product-reward-value" class="product-reward-value"></strong>
+            </section>
+            <section class="product-visual product-result" data-product-visual="reward" hidden>
+              <div class="product-result-emblem" aria-hidden="true"><span id="product-reward-mark">WIN</span></div>
+              <img id="product-reward-image" class="product-reward-echo" alt="" draggable="false" />
+              <strong id="product-reward-scene-value" class="product-reward-value">奖励结算完成</strong>
+            </section>
+            <section class="product-visual product-unlock" data-product-visual="unlock" hidden>
+              <div class="product-unlock-frame"><span class="product-new-badge">NEW</span><img id="product-unlock-image" alt="" draggable="false" /></div>
+              <strong id="product-unlock-name"></strong>
+            </section>
+            <section class="product-visual product-error" data-product-visual="recoverable-error" hidden>
+              <span class="product-error-glyph" aria-hidden="true">!</span><p id="product-error-message"></p><small>本地进度不会丢失</small>
+            </section>
+            <section class="product-visual product-error" data-product-visual="fatal-error" hidden>
+              <span class="product-error-glyph" aria-hidden="true">×</span><p>请联系操作员</p>
+            </section>
+            <section class="product-visual product-error" data-product-visual="destroyed" hidden>
+              <span class="product-error-glyph" aria-hidden="true">—</span><p>本次会话已结束</p>
+            </section>
+          </div>
+          <footer class="product-actions" aria-label="当前可用操作">
+            <button id="product-primary-action" class="product-action is-primary" data-product-intent="primary" type="button" hidden></button>
+            <button id="product-secondary-action" class="product-action is-secondary" data-product-intent="secondary" type="button" hidden></button>
+          </footer>
+          <p id="product-live" class="sr-only" aria-live="polite" aria-atomic="true">正在读取进度</p>
+        </section>
+        <p class="sr-only" id="game-instructions">左侧控制移动和跑跳，右侧动作键会根据状态攻击、下砸或使用装备。</p>
+      </section>
+
+      <aside id="study-running-bar" class="study-running-bar" hidden>
+        <span>三局采集进行中 · <b id="study-running-progress">1V1</b></span>
+        <button id="study-abandon" type="button">操作员中止</button>
+      </aside>
+    </main>
+    <script type="module" src="/src/entry/web-human-match-study.js"></script>
+  </body>
+</html>
