@@ -284,6 +284,34 @@ test('Arena Stage 9 human study stays headless, host-free and outside authority 
   }
 });
 
+test('Arena release handoff stays outside authority and only composes host-free evidence contracts', async () => {
+  const releaseRoot = path.resolve('src/arena-release');
+  const releaseFiles = await listJavaScript(releaseRoot);
+  assert.ok(releaseFiles.length >= 5);
+  for (const file of releaseFiles) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /from\s+['"](?:node:|three|[^'"]*(?:\/platform\/|\/entry\/|\/session\/|\/renderer\/|\/three\/)[^'"]*)['"]/,
+      `${file} 只能组合无宿主证据合同，不能拥有 Node、平台、Session 或 Renderer。`,
+    );
+    assert.doesNotMatch(
+      withoutStaticImports(source),
+      /(?:Date\.now|Math\.random|setTimeout|setInterval|requestAnimationFrame|\bperformance\s*(?:\.|\[)|\b(?:window|document|navigator|localStorage|sessionStorage)\b|\b(?:tt|wx)\s*\.)/,
+      `${file} 不应直接读取墙钟、随机或宿主全局。`,
+    );
+  }
+  const arenaFiles = await listJavaScript(path.resolve('src/arena'));
+  for (const file of arenaFiles) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /from\s+['"][^'"]*arena-release\//,
+      `${file} 不应从权威、Bot、产品或表现层反向依赖 Release 交接层。`,
+    );
+  }
+});
+
 test('Arena Stage 7 contracts remain host-free behind an injected Three view factory', async () => {
   const directories = [
     'src/arena/presentation/animation',

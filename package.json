@@ -39,6 +39,7 @@
     "arena:human-fairness:ingest": "node scripts/arena-human-fairness-ingest.mjs",
     "arena:build:verify": "node scripts/arena-build-manifest.mjs",
     "arena:build:budget": "node scripts/arena-build-budget.mjs",
+    "arena:stage9:readiness": "node scripts/arena-stage9-readiness.mjs",
     "dev": "vite --host 127.0.0.1",
     "dev:lan": "vite --host 0.0.0.0",
     "preview:lan": "vite preview --host 0.0.0.0 --port 4173 --strictPort --outDir dist/web",

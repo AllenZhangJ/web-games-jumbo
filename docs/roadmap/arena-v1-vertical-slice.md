@@ -30,7 +30,7 @@
 | 9 | 平衡、可靠性与性能收敛 | 批量模拟、长稳、三端预算通过 |
 | 10 | 发布候选与冻结 | RC 验收、回滚证据、发行清单完成 |
 
-当前进度：阶段 0～5 与 Stage 6 的 S6.1～S6.6.3a 已分批完成对应本机门禁。三端入口已承载 Arena 灰盒，并通过 Web 桌面/竖屏结果与重赛闭环、100 局 Session soak；S6.6.3a 已在账本、Session 观察和自动指标之上建立三端 Storage 结果合同、版本化 Workspace、双槽 Repository、协作 lease 与跨刷新 checkpoint。微信/抖音开发者工具和目标真机 E3、Trial Controller、终态表单/导出、独立盲测入口与真实新手样本仍未完成。所有数值仍是后续灰盒与平衡的基线，不是发行冻结；Web 或 Node 证据不能替代两端真机证据。
+当前进度：阶段 0～5 已完成工程基础；Stage 6 S6.1～S6.6.4 已完成本机合同、Trial Controller、终态表单/导出、独立盲测入口和 E3 设备证据合同，目标设备 E3、真实新手 E4 与 Mapper 冻结仍未完成。Stage 7 完成 S7.1 程序化占位与表现合同，正式双角色资产仍未生产。Stage 8 S8.1～S8.5.5 已形成三端默认产品入口，最终设备 Record 待采集。Stage 9 S9.1～S9.5b 已形成实验、回归、11 条命候选、性能/真人证据合同与采集工作台；S9.6a 已增加 12 门 RC 交接和材料完整性预检。六目标真机、输入盲测、正式资产、至少 90 名真人样本及 producer 语义交接仍未关闭，因此当前不是发行冻结；Web 或 Node 证据不能替代真机与真人证据。
 
 ## 阶段 0：文档、概念图与决策基线
 
@@ -156,7 +156,7 @@
 
 技术执行顺序与模块边界见 [Stage 6 输入、移动与灰盒执行计划](../architecture/arena-stage6-input-movement-plan.md)，逐项证据见 [Stage 6 验收与证据矩阵](../quality/arena-stage6-verification-matrix.md)，架构决策草案见 [ADR-009](../decisions/009-arena-semantic-input-and-movement-authority.md)。该 ADR 在 Rule/Core 骨架通过前保持提议状态，A/B 胜者在盲测后冻结。
 
-状态：S6.1～S6.6.3a 已完成对应本机门禁，Web 真实浏览器与 Session soak 数据见 [S6.5 灰盒与 Session 门禁记录](../research/arena-stage6-presentation-results.md)，盲测合同见 [S6.6.1 输入盲测合同](../research/arena-stage6-input-pilot-contract.md)，运行时基础见 [S6.6.2 盲测运行时门禁记录](../research/arena-stage6-input-pilot-runtime.md)，持久化基础见 [S6.6.3a 门禁记录](../research/arena-stage6-input-pilot-persistence.md) 与 [ADR-013](../decisions/013-arena-pilot-local-evidence-workspace.md)。Trial Controller、终态表单/导出、独立入口、真实样本、微信/抖音开发者工具与目标真机 E3 均未完成，因此 Stage 6 仍为执行中。
+状态：S6.1～S6.6.4 已完成对应本机门禁，Web 真实浏览器与 Session soak 数据见 [S6.5 灰盒与 Session 门禁记录](../research/arena-stage6-presentation-results.md)，盲测合同、运行时、持久化与独立工作台分别见 [S6.6.1 输入盲测合同](../research/arena-stage6-input-pilot-contract.md)、[S6.6.2 运行时门禁](../research/arena-stage6-input-pilot-runtime.md)、[S6.6.3a 持久化门禁](../research/arena-stage6-input-pilot-persistence.md) 与 [S6.6.3b/c 工作台门禁](../research/arena-stage6-input-pilot-workbench.md)。真实新手 E4、微信/抖音开发者工具与目标真机 E3 尚未执行，因此 Mapper 尚未冻结，Stage 6 仍为执行中。
 
 交付：
 
@@ -199,7 +199,7 @@
 
 产品状态机、双槽本地存档、迁移、幂等奖励和对称内容池见 [Stage 8 局外产品循环与本地进度执行计划](../architecture/arena-stage8-product-progression-plan.md)，决策见 [ADR-011](../decisions/011-arena-versioned-local-progression.md) 与 [ADR-017](../decisions/017-arena-frozen-symmetric-match-content.md)。
 
-状态：S8.1～S8.4 无 UI 基础已完成；Profile/存储、产品状态机、奖励/解锁、双方共享内容池、Replay V5 和快捷重赛已通过自动门禁。S8.5.1～S8.5.3 已建立版本化页面/本地化/内容 ViewModel、串行 UI 意图、单 Match 非拥有表现桥、自动奖励/重试 Flow 和统一产品表现 Session；三端正式 Renderer/页面、无障碍宿主绑定与设备证据尚未完成。
+状态：S8.1～S8.5.5 已完成 Profile/存储、产品状态机、奖励/解锁、双方共享内容池、Replay V5、快捷重赛、产品表现 Session、正式组合 Renderer、Web DOM Surface、小游戏 Canvas Surface 与三端默认 Product 入口。S8.5.6 设备 Definition、Record、附件与构建 Manifest 合同已就绪；最终微信/抖音开发者工具和六目标真机 Record 尚未完成。
 
 交付：
 
@@ -218,6 +218,8 @@
 ## 阶段 9：平衡、可靠性与性能收敛
 
 可复现实验、黄金回放、输入模糊、长稳和表现降级见 [Stage 9 平衡、可靠性与性能收敛计划](../architecture/arena-stage9-convergence-plan.md)，决策草案见 [ADR-012](../decisions/012-arena-reproducible-convergence.md)。
+
+状态：S9.1～S9.3 自动收敛基础和 11 条命 validation 已完成；S9.4a/S9.5a-b 的性能、设备、真人研究与采集合同已完成，但真实 target 和真人样本尚未采集。S9.6a 已建立不可变 RC 交接候选、12 个必选门和材料完整性预检；producer 语义适配尚未完成，详见 [Stage 4～9 证据矩阵](../quality/arena-stage4-9-evidence-matrix.md)。
 
 交付：
 
