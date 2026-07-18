@@ -14,6 +14,9 @@ import {
   readVerifiedTextFile,
   resolveEvidenceRoot,
 } from './lib/evidence-file-verifier.mjs';
+import {
+  verifyArenaStage9ReleaseProducerEvidence,
+} from './lib/arena-stage9-release-producers.mjs';
 
 const MAXIMUM_BUNDLE_BYTES = 5 * 1024 * 1024;
 
@@ -23,7 +26,7 @@ function usage() {
     '  npm run arena:stage9:readiness -- --describe',
     '  npm run arena:stage9:readiness -- --bundle <candidate.json> [--artifacts-root <dir>]',
     '',
-    '该命令只做交接聚合与材料完整性校验；每个 Gate 的语义结论必须由 Definition 指定的 producer 生成。',
+    '该命令执行交接聚合、材料完整性校验和已支持 producer 的语义复验；其他 Gate 保持未验证。',
     'Exit codes: 0=ready, 2=incomplete/failed, 1=invalid evidence or I/O failure.',
   ].join('\n');
 }
@@ -96,12 +99,20 @@ async function verifyMaterials(bundle, rootValue) {
         path: material.path,
         sha256: verified.sha256,
         byteLength: verified.byteLength,
+        resolvedPath: verified.resolvedPath,
+        fileIdentity: verified.fileIdentity,
       }));
     }
   }
-  return Object.freeze([...verifiedByPath.values()].sort((left, right) => (
-    left.path < right.path ? -1 : left.path > right.path ? 1 : 0
-  )));
+  const publicMaterials = [...verifiedByPath.values()].map((material) => Object.freeze({
+    path: material.path,
+    sha256: material.sha256,
+    byteLength: material.byteLength,
+  })).sort((left, right) => (left.path < right.path ? -1 : left.path > right.path ? 1 : 0));
+  return Object.freeze({
+    publicMaterials: Object.freeze(publicMaterials),
+    byPath: verifiedByPath,
+  });
 }
 
 async function main() {
@@ -115,8 +126,9 @@ async function main() {
     console.log(JSON.stringify({
       definition: definition.toJSON(),
       definitionHash: definition.getContentHash(),
-      verificationScope: 'aggregation-and-material-integrity-preflight',
-      producerSemanticVerification: 'not-yet-enabled',
+      verificationScope: 'aggregation-material-integrity-and-supported-producer-verification',
+      producerSemanticVerification: 'partial',
+      supportedProducerIds: ['arena:build:budget', 'arena:build:verify'],
     }, null, 2));
     return;
   }
@@ -130,12 +142,25 @@ async function main() {
     bundle,
     path.resolve(options.artifactsRoot ?? path.dirname(bundlePath)),
   );
-  const report = createArenaReleaseReadinessReport(definition, bundle);
+  const producerEvidence = await verifyArenaStage9ReleaseProducerEvidence({
+    definition,
+    bundle,
+    verifiedMaterialsByPath: verifiedMaterials.byPath,
+  });
+  const report = createArenaReleaseReadinessReport(definition, bundle, {
+    verifiedEvidence: producerEvidence.map(({ gateId, evidenceHash }) => ({
+      gateId,
+      evidenceHash,
+    })),
+  });
   console.log(JSON.stringify({
-    verificationScope: 'aggregation-and-material-integrity-preflight',
-    producerSemanticVerification: 'not-yet-enabled',
-    verifiedMaterialCount: verifiedMaterials.length,
-    verifiedMaterials,
+    verificationScope: 'aggregation-material-integrity-and-supported-producer-verification',
+    producerSemanticVerification: 'partial',
+    supportedProducerIds: ['arena:build:budget', 'arena:build:verify'],
+    verifiedProducerEvidenceCount: producerEvidence.length,
+    verifiedProducerEvidence: producerEvidence,
+    verifiedMaterialCount: verifiedMaterials.publicMaterials.length,
+    verifiedMaterials: verifiedMaterials.publicMaterials,
     report,
   }, null, 2));
   if (report.status !== ARENA_RELEASE_READINESS_STATUS.READY) process.exitCode = 2;

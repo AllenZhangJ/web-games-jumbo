@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -27,6 +27,20 @@ import {
   ARENA_STAGE9_RC_HANDOFF_GATE_ID,
   createArenaStage9RcHandoffV1Definition,
 } from '../../src/arena-release/arena-stage9-rc-handoff-v1.js';
+import {
+  createArenaBuildBudgetReleaseResult,
+  createArenaBuildIntegrityReleaseResult,
+} from '../../src/arena-release/build-release-evidence.js';
+import {
+  verifyArenaReleaseEvidenceProducerResult,
+} from '../../src/arena-release/release-evidence-verification.js';
+import {
+  ARENA_BUILD_MANIFEST_FILENAME,
+  createArenaBuildManifest,
+} from '../../src/arena/presentation/acceptance/arena-build-manifest.js';
+import {
+  writeArenaBuildManifest,
+} from '../../scripts/lib/arena-build-manifest-files.mjs';
 
 const COMMIT = 'a'.repeat(40);
 const BUILD_ID = 'arena-release-test';
@@ -92,6 +106,48 @@ function bundleValue(definition, evidence, overrides = {}) {
     evidence,
     ...overrides,
   };
+}
+
+async function writeBuildTarget(root, target, { sourceDirty = false } = {}) {
+  const directory = path.join(root, target);
+  await mkdir(directory, { recursive: true });
+  const files = target === 'web'
+    ? [
+      ['greybox.html', 'greybox'],
+      ['index.html', 'index'],
+      ['product.html', 'product'],
+    ]
+    : [
+      ['game-greybox.js', 'greybox'],
+      ['game-product.js', 'product'],
+      ['game.js', 'product'],
+      ['game.json', '{}'],
+      ['project.config.json', '{}'],
+    ];
+  for (const [file, content] of files) await writeFile(path.join(directory, file), content);
+  const manifest = await writeArenaBuildManifest({
+    outDir: directory,
+    buildId: BUILD_ID,
+    commit: COMMIT,
+    sourceDirty,
+    target,
+    defaultEntry: 'product',
+  });
+  const manifestBytes = await readFile(path.join(directory, ARENA_BUILD_MANIFEST_FILENAME));
+  return Object.freeze({
+    manifest,
+    material: Object.freeze({
+      path: `${target}/${ARENA_BUILD_MANIFEST_FILENAME}`,
+      sha256: createHash('sha256').update(manifestBytes).digest('hex'),
+      byteLength: manifestBytes.byteLength,
+    }),
+  });
+}
+
+async function writeThreeTargetBuild(root, options = {}) {
+  return Promise.all(['web', 'wechat', 'douyin'].map((target) => (
+    writeBuildTarget(root, target, options)
+  )));
 }
 
 test('Stage 9 RC handoff V1 固定全部真实门禁且不把外部证据当作已完成', () => {
@@ -304,6 +360,215 @@ test('Release Report 已验证失败和 dirty source 均 fail closed', () => {
   assert.equal(dirty.freezeEligible, false);
 });
 
+test('Build release producers use one three-target identity and fail closed on dirty or budget drift', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'arena-build-release-result-'));
+  try {
+    const targets = await writeThreeTargetBuild(directory);
+    const manifests = targets.map(({ manifest }) => manifest);
+    const integrity = createArenaBuildIntegrityReleaseResult(manifests);
+    const budget = createArenaBuildBudgetReleaseResult(manifests);
+    assert.equal(integrity.status, ARENA_RELEASE_EVIDENCE_STATUS.READY);
+    assert.equal(budget.status, ARENA_RELEASE_EVIDENCE_STATUS.READY);
+    assert.equal(integrity.commit, COMMIT);
+    assert.equal(budget.buildId, BUILD_ID);
+    const dirtyManifests = manifests.map((manifest) => createArenaBuildManifest({
+      ...manifest.toJSON(),
+      sourceDirty: true,
+    }));
+    assert.equal(
+      createArenaBuildIntegrityReleaseResult(dirtyManifests).status,
+      ARENA_RELEASE_EVIDENCE_STATUS.FAILED,
+    );
+    assert.equal(
+      createArenaBuildBudgetReleaseResult(dirtyManifests).status,
+      ARENA_RELEASE_EVIDENCE_STATUS.FAILED,
+    );
+    assert.throws(
+      () => createArenaBuildIntegrityReleaseResult([
+        manifests[0],
+        manifests[1],
+        createArenaBuildManifest({ ...manifests[2].toJSON(), commit: 'b'.repeat(40) }),
+      ]),
+      /同一 commit\/build/,
+    );
+    const oversizedWeb = createArenaBuildManifest({
+      ...manifests.find(({ target }) => target === 'web').toJSON(),
+      artifacts: manifests.find(({ target }) => target === 'web').artifacts.map((artifact, index) => (
+        index === 0 ? { ...artifact, byteLength: 5 * 1024 * 1024 } : artifact
+      )),
+    });
+    assert.equal(
+      createArenaBuildBudgetReleaseResult([
+        oversizedWeb,
+        ...manifests.filter(({ target }) => target !== 'web'),
+      ]).status,
+      ARENA_RELEASE_EVIDENCE_STATUS.FAILED,
+    );
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('Release producer verifier rejects forged result status, hash and candidate membership', () => {
+  const definition = createArenaStage9RcHandoffV1Definition();
+  const gate = definition.requireGate(ARENA_STAGE9_RC_HANDOFF_GATE_ID.BUILD_INTEGRITY);
+  const statementValue = {
+    schemaVersion: ARENA_RELEASE_EVIDENCE_STATEMENT_SCHEMA_VERSION,
+    gateId: gate.id,
+    producerId: gate.producerId,
+    requirementHash: gate.requirementHash,
+    commit: COMMIT,
+    buildId: BUILD_ID,
+    status: ARENA_RELEASE_EVIDENCE_STATUS.READY,
+    resultHash: '12345678',
+    materials: [{
+      path: 'build-manifest.json',
+      sha256: SHA_A,
+      byteLength: 100,
+    }],
+  };
+  const bundle = createArenaReleaseCandidateBundle(
+    definition,
+    bundleValue(definition, [statementValue]),
+  );
+  const valid = verifyArenaReleaseEvidenceProducerResult({
+    definition,
+    bundle,
+    statement: statementValue,
+    result: {
+      commit: COMMIT,
+      buildId: BUILD_ID,
+      status: ARENA_RELEASE_EVIDENCE_STATUS.READY,
+      resultHash: '12345678',
+    },
+  });
+  assert.equal(valid.gateId, gate.id);
+  assert.throws(
+    () => verifyArenaReleaseEvidenceProducerResult({
+      definition,
+      bundle,
+      statement: statementValue,
+      result: {
+        commit: COMMIT,
+        buildId: BUILD_ID,
+        status: ARENA_RELEASE_EVIDENCE_STATUS.FAILED,
+        resultHash: '12345678',
+      },
+    }),
+    /status 与 producer 复算结果不一致/,
+  );
+  assert.throws(
+    () => verifyArenaReleaseEvidenceProducerResult({
+      definition,
+      bundle,
+      statement: statementValue,
+      result: {
+        commit: COMMIT,
+        buildId: BUILD_ID,
+        status: ARENA_RELEASE_EVIDENCE_STATUS.READY,
+        resultHash: '87654321',
+      },
+    }),
+    /resultHash 与 producer 复算结果不一致/,
+  );
+  const otherGate = definition.requireGate(ARENA_STAGE9_RC_HANDOFF_GATE_ID.BUILD_BUDGET);
+  assert.throws(
+    () => verifyArenaReleaseEvidenceProducerResult({
+      definition,
+      bundle,
+      statement: {
+        ...statementValue,
+        gateId: otherGate.id,
+        producerId: otherGate.producerId,
+        requirementHash: otherGate.requirementHash,
+      },
+      result: {
+        commit: COMMIT,
+        buildId: BUILD_ID,
+        status: ARENA_RELEASE_EVIDENCE_STATUS.READY,
+        resultHash: '12345678',
+      },
+    }),
+    /不属于当前候选/,
+  );
+});
+
+test('Stage 9 readiness CLI semantically verifies build integrity and budget from one manifest set', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'arena-stage9-build-producers-'));
+  try {
+    const targets = await writeThreeTargetBuild(directory);
+    const definition = createArenaStage9RcHandoffV1Definition();
+    const materials = targets.map(({ material }) => material);
+    const manifests = targets.map(({ manifest }) => manifest);
+    const buildResults = new Map([
+      [
+        ARENA_STAGE9_RC_HANDOFF_GATE_ID.BUILD_INTEGRITY,
+        createArenaBuildIntegrityReleaseResult(manifests),
+      ],
+      [
+        ARENA_STAGE9_RC_HANDOFF_GATE_ID.BUILD_BUDGET,
+        createArenaBuildBudgetReleaseResult(manifests),
+      ],
+    ]);
+    const evidence = [...buildResults].map(([gateId, result]) => {
+      const gate = definition.requireGate(gateId);
+      return {
+        schemaVersion: ARENA_RELEASE_EVIDENCE_STATEMENT_SCHEMA_VERSION,
+        gateId,
+        producerId: gate.producerId,
+        requirementHash: gate.requirementHash,
+        commit: COMMIT,
+        buildId: BUILD_ID,
+        status: result.status,
+        resultHash: result.resultHash,
+        materials,
+      };
+    });
+    const candidate = {
+      schemaVersion: ARENA_RELEASE_CANDIDATE_BUNDLE_SCHEMA_VERSION,
+      definitionId: definition.id,
+      definitionHash: definition.getContentHash(),
+      commit: COMMIT,
+      buildId: BUILD_ID,
+      sourceDirty: false,
+      evidence,
+    };
+    const bundlePath = path.join(directory, 'candidate.json');
+    await writeFile(bundlePath, `${JSON.stringify(candidate, null, 2)}\n`);
+    const command = spawnSync(process.execPath, [
+      'scripts/arena-stage9-readiness.mjs',
+      '--bundle',
+      bundlePath,
+      '--artifacts-root',
+      directory,
+    ], { cwd: process.cwd(), encoding: 'utf8' });
+    assert.equal(command.status, 2, command.stderr);
+    const output = JSON.parse(command.stdout);
+    assert.equal(output.verifiedMaterialCount, 3);
+    assert.equal(output.verifiedProducerEvidenceCount, 2);
+    assert.equal(output.report.verifiedEvidenceCount, 2);
+    assert.equal(output.report.readyGateCount, 2);
+    assert.equal(output.report.status, ARENA_RELEASE_READINESS_STATUS.INCOMPLETE);
+    for (const gateId of buildResults.keys()) {
+      const gate = output.report.gates.find((value) => value.gateId === gateId);
+      assert.equal(gate.evidenceVerified, true);
+      assert.equal(gate.status, ARENA_RELEASE_EVIDENCE_STATUS.READY);
+    }
+    await writeFile(path.join(directory, 'web', 'index.html'), 'tampered');
+    const rejected = spawnSync(process.execPath, [
+      'scripts/arena-stage9-readiness.mjs',
+      '--bundle',
+      bundlePath,
+      '--artifacts-root',
+      directory,
+    ], { cwd: process.cwd(), encoding: 'utf8' });
+    assert.equal(rejected.status, 1);
+    assert.match(rejected.stderr, /构建产物 index\.html 与 Manifest 不一致/);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 test('Stage 9 readiness CLI 校验材料完整性但不会把声明当 producer 结论', async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'arena-stage9-readiness-'));
   try {
@@ -345,7 +610,8 @@ test('Stage 9 readiness CLI 校验材料完整性但不会把声明当 producer 
     assert.equal(command.status, 2, command.stderr);
     const output = JSON.parse(command.stdout);
     assert.equal(output.verifiedMaterialCount, 1);
-    assert.equal(output.producerSemanticVerification, 'not-yet-enabled');
+    assert.equal(output.producerSemanticVerification, 'partial');
+    assert.equal(output.verifiedProducerEvidenceCount, 0);
     assert.equal(output.report.status, ARENA_RELEASE_READINESS_STATUS.INCOMPLETE);
     assert.equal(output.report.freezeEligible, false);
     const secondGate = definition.requireGate(ARENA_STAGE9_RC_HANDOFF_GATE_ID.REGRESSION);
