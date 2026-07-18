@@ -4,7 +4,10 @@ import {
   assertNonEmptyString,
   cloneFrozenData,
 } from '../../rules/definition-utils.js';
-import { createArenaDeviceAcceptanceDefinition } from './arena-device-acceptance-definition.js';
+import {
+  ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND,
+  createArenaDeviceAcceptanceDefinition,
+} from './arena-device-acceptance-definition.js';
 import {
   createArenaDeviceAcceptanceRecord,
   isArenaDeviceAcceptanceRecordPassing,
@@ -86,6 +89,7 @@ export function createArenaDeviceAcceptanceBundle(definitionValue, value) {
   const recordIds = new Set();
   const runIds = new Set();
   const artifactPaths = new Map();
+  const buildManifestsByPlatform = new Map();
   const records = source.records.map((value, index) => {
     const record = createArenaDeviceAcceptanceRecord(definition, value);
     if (record.commit !== source.commit) {
@@ -102,14 +106,36 @@ export function createArenaDeviceAcceptanceBundle(definitionValue, value) {
     }
     recordIds.add(record.recordId);
     runIds.add(record.runId);
+    const target = definition.getTarget(record.targetId);
     for (const artifact of record.artifacts) {
-      const previousRunId = artifactPaths.get(artifact.path);
-      if (previousRunId !== undefined) {
+      const previous = artifactPaths.get(artifact.path);
+      const sharedBuildManifest = previous?.kind
+        === ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.BUILD_MANIFEST
+        && artifact.kind === ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.BUILD_MANIFEST;
+      if (previous !== undefined && !sharedBuildManifest) {
         throw new RangeError(
-          `artifact 路径 ${artifact.path} 被 ${previousRunId} 与 ${record.runId} 重复使用。`,
+          `artifact 路径 ${artifact.path} 被 ${previous.runId} 与 ${record.runId} 重复使用。`,
         );
       }
-      artifactPaths.set(artifact.path, record.runId);
+      artifactPaths.set(artifact.path, { runId: record.runId, kind: artifact.kind });
+      if (artifact.kind === ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.BUILD_MANIFEST) {
+        const previousManifest = buildManifestsByPlatform.get(target.platform);
+        if (
+          previousManifest !== undefined
+          && (
+            previousManifest.sha256 !== artifact.sha256
+            || previousManifest.byteLength !== artifact.byteLength
+          )
+        ) {
+          throw new RangeError(
+            `平台 ${target.platform} 的 Record 必须引用同一构建 Manifest。`,
+          );
+        }
+        buildManifestsByPlatform.set(target.platform, {
+          sha256: artifact.sha256,
+          byteLength: artifact.byteLength,
+        });
+      }
     }
     return record;
   });

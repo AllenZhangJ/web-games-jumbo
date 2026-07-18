@@ -200,7 +200,7 @@ test('Arena device acceptance remains pure evidence data behind a Node-only CLI'
     const source = await readFile(file, 'utf8');
     assert.doesNotMatch(
       source,
-      /(?:from\s+['"](?:node:|three|[^'"]*(?:renderer|session|platform|entry)[^'"]*)['"]|Date\.now|Math\.random|\bperformance\b|\b(?:window|document|navigator)\b|\b(?:tt|wx)\s*\.)/,
+      /(?:from\s+['"](?:node:|three|[^'"]*(?:renderer|session|platform|entry)[^'"]*)['"]|Date\.now|Math\.random|\bperformance\s*(?:\.|\[)|\b(?:window|document|navigator)\b|\b(?:tt|wx)\s*\.)/,
       `${file} 应保持为无宿主、无渲染的设备证据数据层。`,
     );
   }

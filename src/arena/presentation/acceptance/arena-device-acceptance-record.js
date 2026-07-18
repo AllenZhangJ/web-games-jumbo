@@ -120,15 +120,21 @@ function cloneClient(value, target) {
   });
 }
 
-function cloneDevice(value) {
+function cloneDevice(value, target) {
   const name = 'ArenaDeviceAcceptanceRecord.device';
   assertKnownKeys(value, DEVICE_KEYS, name);
-  return Object.freeze({
+  const device = Object.freeze({
     manufacturer: boundedString(value.manufacturer, 128, `${name}.manufacturer`),
     model: boundedString(value.model, 128, `${name}.model`),
     osName: boundedString(value.osName, 128, `${name}.osName`),
     osVersion: boundedString(value.osVersion, 128, `${name}.osVersion`),
   });
+  if (target.requiredOsNames && !target.requiredOsNames.includes(device.osName)) {
+    throw new RangeError(
+      `target ${target.id} 只接受系统：${target.requiredOsNames.join('、')}。`,
+    );
+  }
+  return device;
 }
 
 function cloneArtifacts(values, target) {
@@ -253,7 +259,7 @@ export function createArenaDeviceAcceptanceRecord(definitionValue, value) {
     performedAt: isoInstant(source.performedAt, 'ArenaDeviceAcceptanceRecord.performedAt'),
     operatorId: boundedString(source.operatorId, 128, 'ArenaDeviceAcceptanceRecord.operatorId'),
     client: cloneClient(source.client, target),
-    device: cloneDevice(source.device),
+    device: cloneDevice(source.device, target),
     orientation: exactValue(
       source.orientation,
       'portrait',

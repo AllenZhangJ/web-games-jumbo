@@ -8,23 +8,41 @@ import {
   createArenaDeviceAcceptanceReport,
 } from '../src/arena/presentation/acceptance/arena-device-acceptance-bundle.js';
 import {
-  createArenaStage6DeviceAcceptanceV1Definition,
-} from '../src/arena/presentation/acceptance/arena-stage6-device-acceptance-v1.js';
+  ARENA_DEFAULT_DEVICE_ACCEPTANCE_DEFINITION_ID,
+  createArenaDeviceAcceptanceDefinitionById,
+  listArenaDeviceAcceptanceDefinitionIds,
+} from '../src/arena/presentation/acceptance/arena-device-acceptance-catalog.js';
+import {
+  ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND,
+} from '../src/arena/presentation/acceptance/arena-device-acceptance-definition.js';
+import {
+  ARENA_BUILD_DEFAULT_ENTRY,
+  createArenaBuildManifest,
+} from '../src/arena/presentation/acceptance/arena-build-manifest.js';
 
 const MAXIMUM_BUNDLE_BYTES = 5 * 1024 * 1024;
+const MAXIMUM_BUILD_MANIFEST_BYTES = 5 * 1024 * 1024;
 
 function usage() {
   return [
     'Usage:',
-    '  npm run arena:device:evidence -- --describe',
-    '  npm run arena:device:evidence -- --bundle <device-evidence.json> [--artifacts-root <dir>]',
+    '  npm run arena:device:evidence -- --describe [--definition <id>]',
+    '  npm run arena:device:evidence -- --bundle <device-evidence.json> [--artifacts-root <dir>] [--definition <id>]',
+    '',
+    `Definitions: ${listArenaDeviceAcceptanceDefinitionIds().join(', ')}`,
     '',
     'Exit codes: 0=ready, 2=incomplete/failed, 1=invalid evidence or I/O failure.',
   ].join('\n');
 }
 
 function parseArgs(values) {
-  const result = { bundle: null, artifactsRoot: null, describe: false, help: false };
+  const result = {
+    bundle: null,
+    artifactsRoot: null,
+    definitionId: ARENA_DEFAULT_DEVICE_ACCEPTANCE_DEFINITION_ID,
+    describe: false,
+    help: false,
+  };
   const seen = new Set();
   for (let index = 0; index < values.length; index += 1) {
     const argument = values[index];
@@ -38,7 +56,7 @@ function parseArgs(values) {
       result.describe = true;
       continue;
     }
-    const match = argument.match(/^--(bundle|artifacts-root)(?:=(.*))?$/);
+    const match = argument.match(/^--(bundle|artifacts-root|definition)(?:=(.*))?$/);
     if (!match) throw new Error(`未知参数 ${argument}。\n${usage()}`);
     const key = match[1];
     if (seen.has(key)) throw new Error(`参数 --${key} 不能重复。`);
@@ -47,7 +65,8 @@ function parseArgs(values) {
     const value = inlineValue === undefined ? values[++index] : inlineValue;
     if (!value || value.startsWith('--')) throw new Error(`参数 --${key} 缺少值。`);
     if (key === 'bundle') result.bundle = value;
-    else result.artifactsRoot = value;
+    else if (key === 'artifacts-root') result.artifactsRoot = value;
+    else result.definitionId = value;
   }
   if (result.help) return result;
   if (result.describe && (result.bundle || result.artifactsRoot)) {
@@ -67,6 +86,17 @@ async function hashOpenFile(fileHandle) {
   const hash = createHash('sha256');
   for await (const chunk of fileHandle.createReadStream({ autoClose: false })) hash.update(chunk);
   return hash.digest('hex');
+}
+
+async function readSmallOpenFile(fileHandle, size, label) {
+  if (size > BigInt(MAXIMUM_BUILD_MANIFEST_BYTES)) {
+    throw new Error(`${label} 不能超过 ${MAXIMUM_BUILD_MANIFEST_BYTES} bytes。`);
+  }
+  const length = Number(size);
+  const buffer = Buffer.alloc(length);
+  const { bytesRead } = await fileHandle.read(buffer, 0, length, 0);
+  if (bytesRead !== length) throw new Error(`${label} 未完整读取。`);
+  return buffer.toString('utf8');
 }
 
 function sameFileState(left, right) {
@@ -103,7 +133,7 @@ async function readBundleSource(bundlePath) {
   }
 }
 
-async function verifyArtifacts(bundle, rootValue) {
+async function verifyArtifacts(definition, bundle, rootValue) {
   const root = await realpath(rootValue);
   const verified = [];
   const verifiedPaths = new Map();
@@ -116,12 +146,18 @@ async function verifyArtifacts(bundle, rootValue) {
         throw new Error(`artifact ${artifact.path} 通过符号链接逃逸证据根目录。`);
       }
       const previousPath = verifiedPaths.get(resolved);
-      if (previousPath) {
-        throw new Error(`artifact ${artifact.path} 与 ${previousPath} 指向同一路径。`);
+      const isBuildManifest = artifact.kind
+        === ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.BUILD_MANIFEST;
+      const sharedBuildManifestPath = previousPath?.kind
+        === ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.BUILD_MANIFEST
+        && isBuildManifest;
+      if (previousPath && !sharedBuildManifestPath) {
+        throw new Error(`artifact ${artifact.path} 与 ${previousPath.path} 指向同一路径。`);
       }
       const fileHandle = await open(resolved, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
       let metadata;
       let sha256;
+      let buildManifest = null;
       try {
         metadata = await fileHandle.stat({ bigint: true });
         if (!metadata.isFile()) throw new Error(`artifact ${artifact.path} 不是普通文件。`);
@@ -131,6 +167,13 @@ async function verifyArtifacts(bundle, rootValue) {
           );
         }
         sha256 = await hashOpenFile(fileHandle);
+        if (artifact.kind === ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.BUILD_MANIFEST) {
+          buildManifest = createArenaBuildManifest(JSON.parse(await readSmallOpenFile(
+            fileHandle,
+            metadata.size,
+            `artifact ${artifact.path}`,
+          )));
+        }
         const metadataAfterHash = await fileHandle.stat({ bigint: true });
         if (!sameFileState(metadata, metadataAfterHash)) {
           throw new Error(`artifact ${artifact.path} 在校验期间发生变化。`);
@@ -145,19 +188,40 @@ async function verifyArtifacts(bundle, rootValue) {
       }
       const fileIdentity = `${metadata.dev}:${metadata.ino}`;
       const previousFile = verifiedFiles.get(fileIdentity);
-      if (previousFile) {
-        throw new Error(`artifact ${artifact.path} 与 ${previousFile} 指向同一文件。`);
+      const sharedBuildManifestFile = previousFile?.kind
+        === ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.BUILD_MANIFEST
+        && isBuildManifest;
+      if (previousFile && !sharedBuildManifestFile) {
+        throw new Error(`artifact ${artifact.path} 与 ${previousFile.path} 指向同一文件。`);
       }
       const previousHash = verifiedHashes.get(sha256);
-      if (previousHash) {
-        throw new Error(`artifact ${artifact.path} 与 ${previousHash} 内容重复。`);
+      const sharedBuildManifestHash = previousHash?.kind
+        === ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.BUILD_MANIFEST
+        && isBuildManifest;
+      if (previousHash && !sharedBuildManifestHash) {
+        throw new Error(`artifact ${artifact.path} 与 ${previousHash.path} 内容重复。`);
       }
       if (sha256 !== artifact.sha256) {
         throw new Error(`artifact ${artifact.path} SHA-256 不一致。`);
       }
-      verifiedPaths.set(resolved, artifact.path);
-      verifiedFiles.set(fileIdentity, artifact.path);
-      verifiedHashes.set(sha256, artifact.path);
+      if (buildManifest !== null) {
+        if (buildManifest.sourceDirty) throw new Error('设备验收不能使用非干净源码构建。');
+        if (buildManifest.commit !== bundle.commit) {
+          throw new Error(`构建 Manifest ${artifact.path} commit 与 Bundle 不一致。`);
+        }
+        if (buildManifest.buildId !== bundle.buildId) {
+          throw new Error(`构建 Manifest ${artifact.path} buildId 与 Bundle 不一致。`);
+        }
+        if (buildManifest.target !== definition.getTarget(record.targetId).platform) {
+          throw new Error(`构建 Manifest ${artifact.path} 平台与 target 不一致。`);
+        }
+        if (buildManifest.defaultEntry !== ARENA_BUILD_DEFAULT_ENTRY.PRODUCT) {
+          throw new Error(`构建 Manifest ${artifact.path} 默认入口不是 product。`);
+        }
+      }
+      verifiedPaths.set(resolved, { path: artifact.path, kind: artifact.kind });
+      verifiedFiles.set(fileIdentity, { path: artifact.path, kind: artifact.kind });
+      verifiedHashes.set(sha256, { path: artifact.path, kind: artifact.kind });
       verified.push(Object.freeze({
         runId: record.runId,
         artifactId: artifact.id,
@@ -176,7 +240,7 @@ async function main() {
     console.log(usage());
     return;
   }
-  const definition = createArenaStage6DeviceAcceptanceV1Definition();
+  const definition = createArenaDeviceAcceptanceDefinitionById(options.definitionId);
   if (options.describe) {
     console.log(JSON.stringify({
       definition: definition.toJSON(),
@@ -188,7 +252,7 @@ async function main() {
   const artifactRoot = path.resolve(options.artifactsRoot ?? path.dirname(bundlePath));
   const source = JSON.parse(await readBundleSource(bundlePath));
   const bundle = createArenaDeviceAcceptanceBundle(definition, source);
-  const artifacts = await verifyArtifacts(bundle, artifactRoot);
+  const artifacts = await verifyArtifacts(definition, bundle, artifactRoot);
   const report = createArenaDeviceAcceptanceReport(definition, bundle);
   console.log(JSON.stringify({
     verifiedArtifactCount: artifacts.length,

@@ -22,6 +22,7 @@ export const ARENA_DEVICE_ACCEPTANCE_SURFACE = Object.freeze({
 });
 
 export const ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND = Object.freeze({
+  BUILD_MANIFEST: 'build-manifest',
   SCREENSHOT: 'screenshot',
   VIDEO: 'video',
   LOG: 'log',
@@ -36,6 +37,7 @@ const TARGET_KEYS = new Set([
   'minimumPassingRuns',
   'requiredCheckIds',
   'requiredArtifactKinds',
+  'requiredOsNames',
 ]);
 const MAXIMUM_CHECKS = 128;
 const MAXIMUM_TARGETS = 128;
@@ -111,7 +113,13 @@ function cloneTargets(values, checkIds) {
     for (const kind of requiredArtifactKinds) {
       enumValue(kind, ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND, `${name}.requiredArtifactKinds`);
     }
-    return Object.freeze({
+    const requiredOsNames = value.requiredOsNames === undefined
+      ? null
+      : cloneFrozenStringSet(value.requiredOsNames, `${name}.requiredOsNames`);
+    if (requiredOsNames !== null && requiredOsNames.length === 0) {
+      throw new RangeError(`${name}.requiredOsNames 不能是空数组。`);
+    }
+    const target = {
       id,
       platform: enumValue(
         value.platform,
@@ -130,7 +138,9 @@ function cloneTargets(values, checkIds) {
       ),
       requiredCheckIds,
       requiredArtifactKinds,
-    });
+    };
+    if (requiredOsNames !== null) target.requiredOsNames = requiredOsNames;
+    return Object.freeze(target);
   });
   return Object.freeze(targets.sort((left, right) => compareText(left.id, right.id)));
 }
