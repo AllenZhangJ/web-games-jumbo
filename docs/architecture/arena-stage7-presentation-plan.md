@@ -2,7 +2,7 @@
 
 ## 文档状态
 
-执行中，2026-07-18。S7.1 已建立版本化角色表现、资产、动画语义、六方向与运行时生命周期合同，并把原有程序化角色迁到可替换 Factory 后；它仍是灰盒占位，不表示正式角色资产已经制作或接入。只有 Stage 6 输入映射通过盲测并冻结后，玩法级动作语义才允许进入 S7.2 及后续正式动画生产。
+执行中，2026-07-18。S7.1 已建立版本化角色表现、资产、动画语义、六方向与运行时生命周期合同，并把原有程序化角色迁到可替换 Factory 后；随后补充了来源中立的 Formal Asset Intake Policy、Definition/内容/许可/证明绑定与文件复验器。它们仍不表示正式角色资产已经制作或接入。只有 Stage 6 输入映射通过盲测并冻结后，玩法级动作语义才允许进入 S7.2 及后续正式动画生产。
 
 ## 目标与非目标
 
@@ -139,6 +139,8 @@ src/arena/presentation/
 
 状态：代码与本机自动门禁已落地。程序化 Q 版人物和发条机器人已从投影帧中的 `geometry` 字段迁出，统一经过 `PresentationAssetRegistry → CharacterPresentationRegistry → CharacterViewFactory → CharacterViewRuntime`。已覆盖显式动画回退、基础/覆盖语义、六方向迟滞、迟到加载、释放重试、角色移除和同步失败关闭。浏览器视觉证据与完整门禁见 [S7.1 结果记录](../research/arena-stage7-presentation-contract-results.md)。
 
+S7.1 的治理补充已落地 `FormalAssetIntakePolicy → FormalAssetIntakeBundle → FormalAssetProvenanceRecord → 文件复验器`，用来在真实资产注册前绑定来源、revision、Definition hash、内容 SHA-256、许可文本与授权证明。它明确拒绝灰盒/程序化 Provider，只产生 `verified-intake-only`，不替代 S7.2～S7.5。见 [ADR-027](../decisions/027-arena-formal-asset-intake-provenance.md) 与 [正式资产入库手册](../acceptance/stage7-formal-assets/README.md)。
+
 ### S7.2 单角色单骨架纵切
 
 - 只接入一个经过校验的角色和最小动作集。
@@ -176,3 +178,4 @@ src/arena/presentation/
 - 没有实现服装、翅膀、挂件和拖尾实例；本批只冻结六类白名单插槽合同。
 - 没有完成微信、抖音或目标真机表现验收，也没有冻结资产与性能预算。
 - 没有解除 Stage 6 E3 设备证据、E4 真实新手盲测及 Mapper 胜者冻结门禁。
+- 没有真实 Intake Bundle；来源中立合同没有替项目方选择资产、许可、造型或成本。

@@ -30,7 +30,7 @@
 | 9 | 平衡、可靠性与性能收敛 | 批量模拟、长稳、三端预算通过 |
 | 10 | 发布候选与冻结 | RC 验收、回滚证据、发行清单完成 |
 
-当前进度：阶段 0～5 已完成工程基础；Stage 6 S6.1～S6.6.4 已完成本机合同、Trial Controller、终态表单/导出、独立盲测入口、E3 设备证据合同和 release producer，目标设备 E3、真实新手 E4 与 Mapper 冻结仍未完成。Stage 7 完成 S7.1 程序化占位与表现合同，正式双角色资产仍未生产。Stage 8 S8.1～S8.5.5 已形成三端默认产品入口，最终设备 Record 待采集。Stage 9 S9.1～S9.5b 已形成实验、回归、11 条命候选、性能/真人证据合同与采集工作台；S9.6a 已增加 12 门 RC 交接，S9.6b1-b5b 已接入十一个 producer。六目标真机、输入盲测、正式资产、至少 90 名真人样本及正式资产 producer 仍未关闭，因此当前不是发行冻结；Web 或 Node 证据不能替代真机与真人证据。
+当前进度：阶段 0～5 已完成工程基础；Stage 6 S6.1～S6.6.4 已完成本机合同、Trial Controller、终态表单/导出、独立盲测入口、E3 设备证据合同和 release producer，目标设备 E3、真实新手 E4 与 Mapper 冻结仍未完成。Stage 7 完成 S7.1 程序化占位、表现合同和拒绝灰盒的 Formal Asset Intake 来源/许可/文件复验合同，真实 Intake Bundle 与正式双角色资产仍未生产。Stage 8 S8.1～S8.5.5 已形成三端默认产品入口，最终设备 Record 待采集。Stage 9 S9.1～S9.5b 已形成实验、回归、11 条命候选、性能/真人证据合同与采集工作台；S9.6a 已增加 12 门 RC 交接，S9.6b1-b5b 已接入十一个 producer。六目标真机、输入盲测、正式资产、至少 90 名真人样本及正式资产 producer 仍未关闭，因此当前不是发行冻结；Web 或 Node 证据不能替代真机与真人证据。
 
 ## 阶段 0：文档、概念图与决策基线
 
@@ -177,7 +177,7 @@
 
 技术执行顺序与资产/生命周期边界见 [Stage 7 角色、动画与反馈执行计划](../architecture/arena-stage7-presentation-plan.md)，架构决策草案见 [ADR-010](../decisions/010-arena-semantic-presentation-and-assets.md)。在 Stage 6 输入语义冻结前不进入批量正式动画生产。
 
-状态：S7.1 合同与程序化占位实例已落地；正式角色、骨骼动画、外观附件和音画反馈未开始。S7.2 仍受 Stage 6 E3/E4 与 Mapper 冻结门禁阻断。
+状态：S7.1 合同与程序化占位实例已落地，并补充了不选择具体资产的 Formal Asset Intake Policy、provenance Bundle 和文件复验器；正式角色、真实授权 Bundle、骨骼动画、外观附件和音画反馈未开始。S7.2 仍受 Stage 6 E3/E4、Mapper 冻结以及项目方资产来源/授权/成本输入门禁阻断。
 
 交付：
 

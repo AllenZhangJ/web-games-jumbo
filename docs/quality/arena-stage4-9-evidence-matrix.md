@@ -11,7 +11,7 @@
 | Gate | 覆盖阶段 | 已有能力 | 当前缺口 | 当前状态 |
 |---|---|---|---|---|
 | `stage6.input-pilot` | S6.6 | A/B Definition、区组分配、运行时观察、按 build 隔离的双槽工作区、Evidence Bundle、Audit/report/build/E3 release producer | 目标设备 E3、真实新手 E4、`candidate-winner` 与最终 Evidence Statement | incomplete（外部） |
-| `stage7.formal-assets` | S7.2～S7.5 | 角色/资产/动画语义 Registry、六方向、程序化占位和生命周期合同 | 两个正式角色、GLB/动作/附件/音画、预算、许可和真机可读性 | incomplete（内容生产） |
+| `stage7.formal-assets` | S7.2～S7.5 | 角色/资产/动画语义 Registry、六方向、程序化占位、生命周期合同，以及拒绝灰盒的 Formal Asset Intake 来源/许可/文件复验合同 | 真实 Intake Bundle、两个正式角色、GLB/动作/附件/音画、实测预算 Policy、reduced-motion 和真机可读性 | incomplete（项目方输入与内容生产） |
 | `stage9.golden-replay` | S4～S9.2 | Replay V5 四类黄金场景、严格重放/再生成、历史拒绝及 release producer | 最终候选 clean commit 的 Evidence Statement | incomplete（候选材料） |
 | `stage9.regression` | S9.2 | 固定 Regression Definition、无 shell 受限编排、input fuzz、六文件 lifecycle、两条 100 局 soak、200 局 Product stress、原子 Report 及 release producer | 最终候选 clean commit 的 Evidence Report/Statement；开发中的 shell 聚合不可复用 | incomplete（候选材料） |
 | `stage9.balance-validation` | S9.3 | 900 局 11 条命 validation、可重建 Report Bundle、Product 默认及 release producer | 最终候选 clean commit 重跑 900 局并形成 Evidence Statement；旧 commit Report 不可复用 | incomplete（候选材料） |

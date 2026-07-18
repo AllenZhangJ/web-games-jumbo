@@ -43,6 +43,7 @@
     "arena:stage9:readiness": "node scripts/arena-stage9-readiness.mjs",
     "arena:defects:verify": "node scripts/arena-defects.mjs",
     "arena:input-pilot:evidence": "node scripts/arena-input-pilot-evidence.mjs",
+    "arena:assets:intake:verify": "node scripts/arena-formal-asset-intake.mjs",
     "dev": "vite --host 127.0.0.1",
     "dev:lan": "vite --host 0.0.0.0",
     "preview:lan": "vite preview --host 0.0.0.0 --port 4173 --strictPort --outDir dist/web",

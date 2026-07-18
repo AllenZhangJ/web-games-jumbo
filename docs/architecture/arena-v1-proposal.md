@@ -2,7 +2,7 @@
 
 ## 文档状态
 
-已接受整体边界；阶段 1～5 已分别落地轻量街机物理、无渲染 MatchCore、隐藏机器人、本地快速匹配、数据驱动装备 Rule/Core 和地图权威时间轴。Stage 6 的 Character/Input/Replay、Movement、Bot 同权移动、三端输入、灰盒、HUD、Session、盲测工作台、五目标 E3 证据合同与 release producer 已建立，但真实新手 E4 和目标设备 E3 Record 未完成。Stage 7 S7.1 已落地版本化表现/资产/动画/六方向合同，正式 GLB 与动画尚未生产。Stage 8 S8.1～S8.5.5 已形成 Profile、产品状态机、奖励/解锁、对称内容池、Product Presentation 与三端默认产品入口，S8.5.6 六目标证据合同已建立但外部 Record 未采集。Stage 9 S9.1～S9.3 已落地实验、黄金回放、回归门和通过独立 900 局 validation 的 11 条命 Product 默认；S9.4a/S9.5a-b 已建立性能、设备和真人研究合同，S9.6a 已建立 12 门 RC 交接预检，S9.6b1-b5b 已接入十一个 producer，尚缺正式资产一门。核心决策见 ADR-005～ADR-026。
+已接受整体边界；阶段 1～5 已分别落地轻量街机物理、无渲染 MatchCore、隐藏机器人、本地快速匹配、数据驱动装备 Rule/Core 和地图权威时间轴。Stage 6 的 Character/Input/Replay、Movement、Bot 同权移动、三端输入、灰盒、HUD、Session、盲测工作台、五目标 E3 证据合同与 release producer 已建立，但真实新手 E4 和目标设备 E3 Record 未完成。Stage 7 S7.1 已落地版本化表现/资产/动画/六方向合同，并补充拒绝灰盒的 Formal Asset Intake 来源/许可/文件复验合同；正式 GLB、真实 Intake Bundle 与动画尚未生产。Stage 8 S8.1～S8.5.5 已形成 Profile、产品状态机、奖励/解锁、对称内容池、Product Presentation 与三端默认产品入口，S8.5.6 六目标证据合同已建立但外部 Record 未采集。Stage 9 S9.1～S9.3 已落地实验、黄金回放、回归门和通过独立 900 局 validation 的 11 条命 Product 默认；S9.4a/S9.5a-b 已建立性能、设备和真人研究合同，S9.6a 已建立 12 门 RC 交接预检，S9.6b1-b5b 已接入十一个 producer，尚缺正式资产一门。核心决策见 ADR-005～ADR-027。
 
 本文同时记录已落地边界与后续目标；未明确标记为已落地的模块仍不是当前能力。Stage 6 E3/E4、Stage 7 S7.2～S7.5、Stage 8 S8.5.6、Stage 9 S9.4b/S9.5c 与 S9.6b 仍在执行。分别见 [Stage 6](arena-stage6-input-movement-plan.md)、[Stage 7](arena-stage7-presentation-plan.md)、[Stage 8](arena-stage8-product-progression-plan.md)、[Stage 9](arena-stage9-convergence-plan.md)、[Stage 4～9 证据矩阵](../quality/arena-stage4-9-evidence-matrix.md) 和 [Stage 4～9 项目方决策门](arena-stage4-9-decision-gates.md)。当前 v3 架构仍见 [`../architecture.md`](../architecture.md)。
 

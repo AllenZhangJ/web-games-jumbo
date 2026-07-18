@@ -3,7 +3,7 @@
 - 状态：已接受 S7.1 合同边界；正式资产路径仍待 Stage 6 E3/E4 与 Mapper 冻结
 - 日期：2026-07-18
 
-实施进度：S7.1 已建立不可变 `PresentationAssetDefinition/Registry`、`CharacterPresentationDefinition/Registry`、基础/覆盖动画语义、显式有序回退、相机相对六方向迟滞、`CharacterViewRuntime` 与可注入 `CharacterViewFactory`。原程序化 Q 版人物和发条机器人仅作为 Provider 占位实例接入；GLB、骨骼、正式动画、外观附件、音画反馈和三端资产验收尚未开始。
+实施进度：S7.1 已建立不可变 `PresentationAssetDefinition/Registry`、`CharacterPresentationDefinition/Registry`、基础/覆盖动画语义、显式有序回退、相机相对六方向迟滞、`CharacterViewRuntime` 与可注入 `CharacterViewFactory`。原程序化 Q 版人物和发条机器人仅作为 Provider 占位实例接入；来源/许可/证明的正式入库治理由 [ADR-027](027-arena-formal-asset-intake-provenance.md) 补充。GLB、骨骼、正式动画、外观附件、音画反馈和三端资产验收尚未开始。
 
 ## 背景
 
