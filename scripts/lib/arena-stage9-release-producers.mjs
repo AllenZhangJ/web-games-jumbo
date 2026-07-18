@@ -14,6 +14,9 @@ import {
   createArenaGoldenReplayReleaseResult,
 } from '../../src/arena-release/golden-replay-release-evidence.js';
 import {
+  createArenaRegressionReleaseResult,
+} from '../../src/arena-release/regression-release-evidence.js';
+import {
   verifyArenaReleaseEvidenceProducerResult,
 } from '../../src/arena-release/release-evidence-verification.js';
 import {
@@ -37,11 +40,13 @@ import { readVerifiedTextFile } from './evidence-file-verifier.mjs';
 const MAXIMUM_BUILD_MANIFEST_BYTES = 5 * 1024 * 1024;
 const MAXIMUM_GOLDEN_REPLAY_BYTES = 32 * 1024 * 1024;
 const MAXIMUM_BALANCE_REPORT_BYTES = 64 * 1024 * 1024;
+const MAXIMUM_REGRESSION_REPORT_BYTES = 1024 * 1024;
 
 export const ARENA_STAGE9_SUPPORTED_RELEASE_PRODUCER_IDS = Object.freeze([
   'arena:build:budget',
   'arena:build:verify',
   'arena:experiment:report:verify',
+  'arena:regression:evidence',
   'arena:replay:verify',
 ]);
 
@@ -51,6 +56,7 @@ const SUPPORTED_BUILD_GATES = new Set([
 ]);
 const SUPPORTED_SOURCE_GATES = new Set([
   ARENA_STAGE9_RC_HANDOFF_GATE_ID.GOLDEN_REPLAY,
+  ARENA_STAGE9_RC_HANDOFF_GATE_ID.REGRESSION,
   ARENA_STAGE9_RC_HANDOFF_GATE_ID.BALANCE_VALIDATION,
 ]);
 
@@ -191,6 +197,20 @@ async function verifyBalanceValidation(statement, verifiedMaterialsByPath, bundl
   });
 }
 
+async function verifyRegression(statement, verifiedMaterialsByPath, commit) {
+  if (statement.materials.length !== 1) {
+    throw new RangeError('Regression release evidence 必须只引用一个原子 Report。');
+  }
+  const material = statement.materials[0];
+  const reportRead = await readVerifiedJsonMaterial(
+    material,
+    verifiedMaterialsByPath,
+    `regression evidence report ${material.path}`,
+    MAXIMUM_REGRESSION_REPORT_BYTES,
+  );
+  return createArenaRegressionReleaseResult({ commit, report: reportRead.value });
+}
+
 function assertSourceIdentity(bundle, sourceIdentity) {
   if (!sourceIdentity || typeof sourceIdentity !== 'object') {
     throw new TypeError('Source release producer 需要当前 Git source identity。');
@@ -238,6 +258,8 @@ export async function verifyArenaStage9ReleaseProducerEvidence({
       result = await verifyGoldenReplay(statement, verifiedMaterialsByPath, bundle.commit);
     } else if (statement.gateId === ARENA_STAGE9_RC_HANDOFF_GATE_ID.BALANCE_VALIDATION) {
       result = await verifyBalanceValidation(statement, verifiedMaterialsByPath, bundle);
+    } else if (statement.gateId === ARENA_STAGE9_RC_HANDOFF_GATE_ID.REGRESSION) {
+      result = await verifyRegression(statement, verifiedMaterialsByPath, bundle.commit);
     } else continue;
     verifiedEvidence.push(verifyArenaReleaseEvidenceProducerResult({
       definition,

@@ -18,6 +18,7 @@
     "arena:replay:promote": "node scripts/arena-golden-replay.mjs",
     "arena:regression:lifecycle": "node --test tests/arena/local-match-session.test.js tests/arena/replay.test.js tests/arena/input/pointer-input-adapter.test.js tests/arena/product/stage8-product-session.test.js tests/arena/product/stage8-profile-persistence.test.js tests/arena/presentation/product-presentation-session.test.js",
     "arena:regression": "npm run arena:replay:verify && npm run arena:input:fuzz && npm run arena:regression:lifecycle && npm run arena:session:soak && npm run arena:product:session:soak",
+    "arena:regression:evidence": "node scripts/arena-regression-evidence.mjs",
     "arena:session:soak": "node --expose-gc scripts/arena-presentation-session-soak.mjs --matches=100",
     "arena:product:session:soak": "node --expose-gc scripts/arena-product-presentation-session-soak.mjs --matches=100",
     "arena:profile:stress": "node scripts/arena-profile-persistence-stress.mjs --commits=500",
