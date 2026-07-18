@@ -4,6 +4,7 @@ import {
   assertArenaStressCpuBudget,
   createArenaStressTiming,
 } from '../../scripts/arena-stress-timing.mjs';
+import { assertArenaGitSourceIdentityStable } from '../../scripts/arena-git-source-identity.mjs';
 
 test('Arena stress timing separates process cost from suspension-inflated wall time', () => {
   const timing = createArenaStressTiming({
@@ -33,4 +34,17 @@ test('Arena stress timing still rejects a real process CPU regression', () => {
     () => assertArenaStressCpuBudget(timing, 0.25),
     /平均 CPU tick 0\.300000ms 超过 0\.25ms/,
   );
+});
+
+test('Arena source identity gate rejects commit or dirty-state drift', () => {
+  const clean = { sourceCommit: 'a'.repeat(40), sourceDirty: false };
+  assert.doesNotThrow(() => assertArenaGitSourceIdentityStable(clean, { ...clean }));
+  assert.throws(() => assertArenaGitSourceIdentityStable(clean, {
+    ...clean,
+    sourceDirty: true,
+  }), /Git commit 或工作区 dirty 状态发生变化/);
+  assert.throws(() => assertArenaGitSourceIdentityStable(clean, {
+    sourceCommit: 'b'.repeat(40),
+    sourceDirty: false,
+  }), /Git commit 或工作区 dirty 状态发生变化/);
 });

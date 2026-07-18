@@ -248,7 +248,7 @@ export class SimulationExperimentRunner {
         this.#definition.candidate.authority,
       );
       snapshot = validateSnapshot(simulationCase.getSnapshot(), `SimulationCase ${seed} snapshot`);
-      const begin = cloneFrozenData({ seed, metadata, initialSnapshot: snapshot }, 'collector begin');
+      const begin = Object.freeze({ seed, metadata, initialSnapshot: snapshot });
       invokeCollectors(collectors, 'beginCase', begin);
       let stepCount = 0;
       while (!isCaseComplete(simulationCase)) {
@@ -261,14 +261,14 @@ export class SimulationExperimentRunner {
         snapshot = step.snapshot;
         eventCount += step.events.length;
         stepCount += 1;
-        const observation = cloneFrozenData({ seed, metadata, ...step }, 'collector observation');
+        const observation = Object.freeze({ seed, metadata, ...step });
         invokeCollectors(collectors, 'observeStep', observation);
       }
       const exported = validateResult(simulationCase.exportResult());
       const cleanupFailure = destroyCase(simulationCase);
       simulationCase = null;
       if (cleanupFailure) throw cleanupFailure;
-      const completed = cloneFrozenData({
+      const completed = Object.freeze({
         seed,
         metadata,
         finalSnapshot: snapshot,
@@ -276,7 +276,7 @@ export class SimulationExperimentRunner {
         eventCount,
         finalHash: exported.finalHash,
         result: exported.result,
-      }, 'collector completion');
+      });
       invokeCollectors(collectors, 'completeCase', completed);
       return Object.freeze({
         seed,
@@ -295,14 +295,14 @@ export class SimulationExperimentRunner {
       }
       const failure = destroyCase(simulationCase, error);
       simulationCase = null;
-      const failed = cloneFrozenData({
+      const failed = Object.freeze({
         seed,
         metadata,
         lastSnapshot: snapshot,
         ticks: snapshot?.tick ?? 0,
         eventCount,
         failure: failureData(failure),
-      }, 'collector failure');
+      });
       invokeCollectors(collectors, 'failCase', failed);
       return Object.freeze({
         seed,

@@ -1,8 +1,8 @@
-# Arena Stage 9 S9.1a 可复现实验基础结果
+# Arena Stage 9 S9.1a～S9.1b 可复现实验基础与 MatchCore 迁移结果
 
 ## 结论
 
-S9.1 的第一批基础已经落地，但 S9.1 尚未整体完成。仓库现在具有不可变实验 Definition、版本化 Workload/Collector Registry、无宿主 Runner 和机器可读 Report；现有 Match/Map/Bot 压测仍需逐条迁移并保留专业断言。
+S9.1a 实验基础与 S9.1b MatchCore 迁移已经落地，但 S9.1 尚未整体完成。仓库现在具有不可变实验 Definition、版本化 Workload/Collector Registry、无宿主 Runner 和机器可读 Report；MatchCore 专业断言已接入，Map/Bot/Movement 仍需逐条迁移。
 
 ## 已实现边界
 
@@ -14,6 +14,14 @@ S9.1 的第一批基础已经落地，但 S9.1 尚未整体完成。仓库现在
 - dirty source 可用 `--allow-dirty` 做开发验证，但 Report 保持 `freezeEligible=false`。
 - CLI 会在运行后复核 Git commit 与 dirty 状态；实验期间身份漂移时拒绝发布 Report，避免把竞态窗口内的结果误送入冻结评审。
 - Match Summary 同时输出原始计数、分母和派生值，0 分母用 `null`，不生成 `NaN` 或伪造 0%。
+
+## MatchCore 专业迁移边界
+
+- `arena.stage9.matchcore-invariants` 固定原 1,000 局压测的序列索引输入节奏，并继续只通过标准 `InputFrame` 驱动 MatchCore。
+- workload case 每 tick 检查有限状态、地图至少一个有效 surface、ground support、装备位置、地图 tick 对齐和单局事件上限。
+- Definition 明确登记抽样 replay seed；被抽样 case 必须严格重放并得到相同最终 hash，Collector 同时核对 replay 分母。
+- MatchCore Collector 输出失败局、tick/事件分母、结果原因、赢家、事件分布、回放数和唯一最终 hash，不把失败局的部分统计混入成功样本。
+- 通用 Runner 与 Node CPU/heap benchmark 直接驱动同一个版本化 case。前者测确定性编排，后者测 Core 路径；Node 墙钟、CPU 和内存不进入确定性 `resultHash`。
 
 ## 第一条 workload 的解释边界
 
@@ -32,6 +40,12 @@ npm run arena:experiment
 
 # 开发期小样本；仍会明确标记为不可冻结
 npm run arena:experiment -- --cases=2 --allow-dirty
+
+# MatchCore 专业实验：1,000 局、5 个显式 replay seed
+npm run arena:experiment:matchcore
+
+# 同一 workload case 的 Node CPU/GC 门禁
+npm run arena:stress
 ```
 
 退出码 `0` 表示全部 case 通过且源码干净，或调用者明确允许 dirty 开发运行；退出码 `2` 表示 case 失败或 dirty candidate 不可冻结；退出码 `1` 表示 Definition、Registry、Runner、Collector、Git 或 I/O 合同失败。
@@ -45,10 +59,12 @@ npm run arena:experiment -- --cases=2 --allow-dirty
 - Collector 失败使 Runner fail closed，同时回收活动 case 与全部 Collector。
 - 两局真实 Arena V1 小时限集成实验完成，Match Summary 分母完整且两次运行 hash 一致。
 - 实际默认配置的 30 个固定 seed dirty 开发运行全部完成：29,939 tick、2,144 个事件、30 个唯一最终 hash；Report 正确保持 `freezeEligible=false`。脚本双方不同节奏得到 `player-1 21 / player-2 9`，该分布只作为“此 workload 不可用于公平性结论”的验证，不是平衡候选证据。
+- MatchCore 小时限集成验证覆盖 2 局、1 个抽样 replay、唯一最终 hash、事件上限失败和两次运行 `resultHash` 一致；正式 1,000 局结果继续记录在 [MatchCore 批量压测](arena-matchcore-stress-results.md)。
+- 同一 workload case 的 1,000 局 dirty 开发候选 CPU/GC 门完成 1,026,775 tick：1,000/1,000 完成、5/5 replay、1,000 个唯一 hash、0 不变量失败，平均 `0.239613ms/tick`，GC 后堆增长 `3,970,416B`；由于 `sourceDirty=true`，该结果不作为冻结证据。
 
 ## 尚未完成
 
-- 迁移 Match/Map/Bot/Movement 专业压测与 CPU/heap 采集。
+- 迁移 Map/Bot/Movement 专业压测；MatchCore 已完成。
 - S9.2 黄金回放 manifest、历史 schema 拒绝和最小失败语料。
 - S9.3 预注册平衡候选与真人阈值。
 - S9.4 质量 profile、目标设备性能 Definition 和六类低档/主流设备证据。

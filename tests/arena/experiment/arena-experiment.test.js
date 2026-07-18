@@ -21,6 +21,14 @@ import {
   createArenaStage9S91ExperimentDefinition,
   createArenaStage9S91ExperimentRegistries,
 } from '../../../src/arena/experiment/arena-v1-experiment-composition.js';
+import {
+  createArenaStage9MatchCoreExperimentDefinition,
+  createArenaStage9MatchCoreExperimentRegistries,
+} from '../../../src/arena/experiment/arena-matchcore-experiment-composition.js';
+import {
+  ARENA_V1_MATCHCORE_STRESS_INPUT_DEFAULT_TUNING,
+  createArenaV1MatchCoreStressInputStrategy,
+} from '../../../src/arena/experiment/arena-v1-matchcore-stress-strategy.js';
 
 const COMMIT = 'c'.repeat(40);
 const AUTHORITY = Object.freeze({
@@ -190,6 +198,62 @@ test('SimulationRunner produces the same deterministic result across environment
   second.destroy();
 });
 
+test('SimulationRunner clones case-owned step data once and exposes a deeply frozen observation', () => {
+  const definition = createArenaExperimentDefinition(definitionValue({
+    seedSet: { kind: 'explicit', values: [1] },
+  }));
+  let caseOwnedEvent = null;
+  let observedEventType = null;
+  const runner = createRunner(
+    definition,
+    ({ seed }) => {
+      const simulationCase = createFakeCase(seed, { steps: 1 });
+      const originalStep = simulationCase.step.bind(simulationCase);
+      simulationCase.step = () => {
+        const step = originalStep();
+        caseOwnedEvent = step.events[0];
+        return step;
+      };
+      return simulationCase;
+    },
+    {
+      id: 'collector.test',
+      version: 1,
+      create() {
+        return {
+          beginCase(context) {
+            assert.equal(Object.isFrozen(context), true);
+            assert.equal(Object.isFrozen(context.initialSnapshot), true);
+          },
+          observeStep(observation) {
+            assert.equal(Object.isFrozen(observation), true);
+            assert.equal(Object.isFrozen(observation.inputFrames), true);
+            assert.equal(Object.isFrozen(observation.inputFrames[0]), true);
+            assert.equal(Object.isFrozen(observation.events), true);
+            assert.equal(Object.isFrozen(observation.events[0]), true);
+            assert.equal(Object.isFrozen(observation.snapshot), true);
+            assert.throws(() => {
+              observation.events[0].type = 'Mutated';
+            }, /read only|Cannot assign/i);
+            observedEventType = observation.events[0].type;
+          },
+          completeCase() {},
+          failCase() {},
+          getResult() { return { observedEventType }; },
+          destroy() {},
+        };
+      },
+    },
+  );
+  const report = runner.run({
+    generatedAt: '2026-07-18T00:00:00.000Z',
+    environment: ENVIRONMENT,
+  });
+  caseOwnedEvent.type = 'CaseOwnedMutation';
+  assert.equal(report.metrics[0].data.observedEventType, 'MatchEnded');
+  runner.destroy();
+});
+
 test('case failure is reported, partial metrics are discarded and the failure threshold stops seeds', () => {
   const definition = createArenaExperimentDefinition(definitionValue({
     seedSet: { kind: 'explicit', values: [1, 2, 3] },
@@ -352,4 +416,164 @@ test('Arena V1 S9.1 composition runs headlessly with explicit denominators and s
   assert.equal(first.metrics[0].data.denominators.plannedCases, 2);
   assert.ok(first.metrics[0].data.denominators.totalTicks > 0);
   assert.equal(first.metrics[0].data.raw.failedCases, 0);
+});
+
+test('scripted-pressure v1 keeps its golden default seed after Strategy extraction', () => {
+  const definition = createArenaStage9S91ExperimentDefinition({
+    sourceCommit: COMMIT,
+    sourceDirty: false,
+    caseCount: 1,
+  });
+  const runner = new SimulationExperimentRunner({
+    definition,
+    ...createArenaStage9S91ExperimentRegistries(),
+  });
+  const report = runner.run({
+    generatedAt: '2026-07-18T00:00:00.000Z',
+    environment: ENVIRONMENT,
+  });
+  assert.equal(report.cases[0].finalHash, '4347a2ff');
+  assert.equal(report.cases[0].ticks, 878);
+  runner.destroy();
+});
+
+test('MatchCore invariant suite preserves professional assertions and sampled replay deterministically', () => {
+  const definition = createArenaStage9MatchCoreExperimentDefinition({
+    sourceCommit: COMMIT,
+    sourceDirty: false,
+    firstSeed: 201,
+    caseCount: 2,
+    replaySampleCount: 1,
+    config: {
+      preparingTicks: 0,
+      suddenDeathStartTick: 120,
+      hardLimitTicks: 180,
+    },
+  });
+  const run = (generatedAt) => {
+    const runner = new SimulationExperimentRunner({
+      definition,
+      ...createArenaStage9MatchCoreExperimentRegistries(),
+    });
+    try {
+      return runner.run({ generatedAt, environment: ENVIRONMENT });
+    } finally {
+      runner.destroy();
+    }
+  };
+  const first = run('2026-07-18T00:00:00.000Z');
+  const second = run('2026-07-19T00:00:00.000Z');
+  assert.equal(first.outcome, ARENA_EXPERIMENT_OUTCOME.PASSED);
+  assert.equal(first.resultHash, second.resultHash);
+  assert.equal(first.completedCaseCount, 2);
+  assert.equal(first.metrics[0].data.raw.verifiedReplays, 1);
+  assert.equal(first.metrics[0].data.raw.uniqueFinalHashes, 2);
+  assert.equal(first.metrics[0].data.derived.allFinalHashesUnique, true);
+  assert.equal(first.metrics[0].data.derived.replayVerificationRate, 1);
+  assert.equal(first.cases[0].result.replayVerified, true);
+  assert.equal(first.cases[1].result.replayVerified, false);
+});
+
+test('MatchCore stress strategy preserves the legacy sequence-index cadence', () => {
+  const participantIds = ['player-1', 'player-2'];
+  const createSnapshot = (tick) => ({
+    tick,
+    participants: [
+      {
+        id: 'player-1',
+        status: 'active',
+        position: { x: -0.5, z: 0 },
+        facing: { x: 1, z: 0 },
+      },
+      {
+        id: 'player-2',
+        status: 'active',
+        position: { x: 0.5, z: 0 },
+        facing: { x: -1, z: 0 },
+      },
+    ],
+  });
+  const firstSeed = 0xa11e0000;
+  const parameters = {
+    ...ARENA_V1_MATCHCORE_STRESS_INPUT_DEFAULT_TUNING,
+    sequenceFirstSeed: firstSeed,
+  };
+  const first = createArenaV1MatchCoreStressInputStrategy({
+    matchSeed: firstSeed,
+    participantIds,
+    parameters,
+  });
+  const firstFrames = first.createFrames(createSnapshot(0));
+  assert.equal(firstFrames[0].primaryPressed, true);
+  assert.equal(firstFrames[1].primaryPressed, false);
+
+  const second = createArenaV1MatchCoreStressInputStrategy({
+    matchSeed: firstSeed + 1,
+    participantIds,
+    parameters,
+  });
+  assert.equal(second.createFrames(createSnapshot(25))[0].primaryPressed, true);
+  assert.equal(second.createFrames(createSnapshot(24))[1].primaryPressed, true);
+});
+
+test('MatchCore invariant suite records an event ceiling breach as a case failure', () => {
+  const definition = createArenaStage9MatchCoreExperimentDefinition({
+    sourceCommit: COMMIT,
+    sourceDirty: false,
+    firstSeed: 301,
+    caseCount: 1,
+    replaySampleCount: 0,
+    maximumEventsPerCase: 1,
+    config: {
+      preparingTicks: 0,
+      suddenDeathStartTick: 120,
+      hardLimitTicks: 180,
+    },
+  });
+  const runner = new SimulationExperimentRunner({
+    definition,
+    ...createArenaStage9MatchCoreExperimentRegistries(),
+  });
+  const report = runner.run({
+    generatedAt: '2026-07-18T00:00:00.000Z',
+    environment: ENVIRONMENT,
+  });
+  assert.equal(report.outcome, ARENA_EXPERIMENT_OUTCOME.FAILED);
+  assert.equal(report.failedCaseCount, 1);
+  assert.match(report.cases[0].failure.message, /事件数超过 1/);
+  assert.equal(report.metrics[0].data.raw.failedCases, 1);
+  assert.equal(report.metrics[0].data.raw.totalEvents, 0);
+  assert.equal(report.metrics[0].data.derived.allFinalHashesUnique, null);
+  runner.destroy();
+});
+
+test('MatchCore experiment composition rejects ambiguous replay sampling before probing cases', () => {
+  assert.throws(() => createArenaStage9MatchCoreExperimentDefinition({
+    sourceCommit: COMMIT,
+    sourceDirty: false,
+    caseCount: 2,
+    replaySampleCount: 3,
+  }), /replaySampleCount/);
+
+  const accessor = { ...ARENA_V1_MATCHCORE_STRESS_INPUT_DEFAULT_TUNING };
+  Object.defineProperty(accessor, 'cadenceTicks', { enumerable: true, get() {
+    throw new Error('input tuning accessor must not run');
+  } });
+  assert.throws(() => createArenaStage9MatchCoreExperimentDefinition({
+    sourceCommit: COMMIT,
+    sourceDirty: false,
+    caseCount: 1,
+    replaySampleCount: 0,
+    inputParameters: accessor,
+  }), /数据字段|访问器/);
+  assert.throws(() => createArenaStage9MatchCoreExperimentDefinition({
+    sourceCommit: COMMIT,
+    sourceDirty: false,
+    caseCount: 1,
+    replaySampleCount: 0,
+    inputParameters: {
+      ...ARENA_V1_MATCHCORE_STRESS_INPUT_DEFAULT_TUNING,
+      sequenceFirstSeed: 1,
+    },
+  }), /不能覆盖 sequenceFirstSeed/);
 });

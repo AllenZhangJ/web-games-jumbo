@@ -1,6 +1,6 @@
 # ADR-012：Arena 使用可复现实验收敛并只降级表现层
 
-- 状态：已接受；S9.1a 已实施，S9.3/S9.4 冻结输入待确认
+- 状态：已接受；S9.1a 与 S9.1b MatchCore 迁移已实施，S9.3/S9.4 冻结输入待确认
 - 日期：2026-07-17
 
 ## 背景
@@ -21,6 +21,8 @@ S9.1a 将该边界实现为四层显式合同：
 4. `ArenaExperimentReport` 将环境元数据与确定性结果分离。环境和生成时间不进入 `resultHash`，dirty candidate 永远不能获得 `freezeEligible=true`。
 
 单个 case 的 Core/场景失败会保留 seed、tick、事件数和有界结构化错误并按 Definition 阈值停止；Collector 或编排合同异常会使 Runner 整体失败，已创建 case/collector 仍必须清理。这样不会用残缺聚合结果掩盖采集器故障。
+
+S9.1b 将原 MatchCore 专业压测实现为一个版本化 case，同时由两种外层驱动：`SimulationExperimentRunner` 负责不可变 Definition、深冻结观察、Collector 和确定性 Report；Node 压测脚本直接驱动同一个 case，负责 `process.cpuUsage`、GC 与 heap 预算。二者共享输入 Strategy、状态不变量、事件上限和抽样回放实现，但不把通用编排成本冒充为 Core tick 成本，也不把 Node 墙钟/内存写入确定性 Report。
 
 维护按规则大版本分组的黄金回放语料。当前版本必须严格重放；不兼容升级创建新目录，旧语料保留并验证明确拒绝。fuzz、soak 或真机发现的阻断缺陷缩减为最小复现并进入长期回归集。
 
