@@ -1,5 +1,7 @@
 # Arena Stage 6 S6.3 Bot 移动与公平性门禁记录
 
+> 本文保留 S6.3 历史基线。当前 `arena:bot:stress` 已改为驱动 Stage 9 同-seed easy/normal/hard paired workload；当前迁移证据见 [S9.1 专业实验记录](arena-stage9-s9.1-experiment-foundation.md)。
+
 ## 范围与结论
 
 - 日期：2026-07-17。

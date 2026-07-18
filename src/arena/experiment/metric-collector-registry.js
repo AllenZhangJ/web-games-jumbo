@@ -67,21 +67,31 @@ export class MetricCollectorRegistry {
   createCollectors(definitionValue) {
     const definition = this.assertDefinition(definitionValue);
     const created = [];
+    let pendingInstance = null;
     try {
       for (const reference of definition.collectors) {
         const entry = this.#entries.get(reference.id);
+        pendingInstance = entry.create({ definition });
         created.push(Object.freeze({
           id: entry.id,
           version: entry.version,
           instance: assertCollector(
-            entry.create({ definition }),
+            pendingInstance,
             `MetricCollector ${entry.id}`,
           ),
         }));
+        pendingInstance = null;
       }
       return Object.freeze(created);
     } catch (error) {
       const cleanupErrors = [];
+      if (pendingInstance && typeof pendingInstance.destroy === 'function') {
+        try {
+          pendingInstance.destroy();
+        } catch (cleanupError) {
+          cleanupErrors.push(cleanupError);
+        }
+      }
       for (let index = created.length - 1; index >= 0; index -= 1) {
         try {
           created[index].instance.destroy();

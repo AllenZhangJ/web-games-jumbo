@@ -19,6 +19,10 @@ import {
   createArenaV1MatchCoreInvariantWorkloadEntry,
 } from './arena-v1-matchcore-invariant-workload.js';
 import { ARENA_V1_MATCHCORE_STRESS_INPUT_DEFAULT_TUNING } from './arena-v1-matchcore-stress-strategy.js';
+import {
+  createArenaExperimentReplaySeeds,
+  createContiguousArenaExperimentSeedRange,
+} from './experiment-seed-utils.js';
 
 export const ARENA_STAGE9_MATCHCORE_EXPERIMENT_ID =
   'arena.stage9.s9.1.matchcore-invariants.v1';
@@ -45,25 +49,7 @@ export function createArenaStage9MatchCoreExperimentDefinition({
   maximumEventsPerCase = ARENA_V1_MATCHCORE_INVARIANT_DEFAULT_PARAMETERS.maximumEventsPerCase,
   maximumFailedCases = 0,
 } = {}) {
-  if (!Number.isSafeInteger(caseCount) || caseCount < 1 || caseCount > 100_000) {
-    throw new RangeError('caseCount 必须是 1～100000 的安全整数。');
-  }
-  if (
-    !Number.isSafeInteger(replaySampleCount)
-    || replaySampleCount < 0
-    || replaySampleCount > Math.min(caseCount, 1_000)
-  ) {
-    throw new RangeError('replaySampleCount 必须介于 0 与 caseCount/1000 上限之间。');
-  }
-  const lastSeed = firstSeed + caseCount - 1;
-  if (
-    !Number.isSafeInteger(firstSeed)
-    || firstSeed < 0
-    || !Number.isSafeInteger(lastSeed)
-    || lastSeed > 0xffffffff
-  ) {
-    throw new RangeError('firstSeed + caseCount 必须位于 uint32。');
-  }
+  const range = createContiguousArenaExperimentSeedRange(firstSeed, caseCount);
   const clonedInputParameters = cloneFrozenData(
     inputParameters,
     'MatchCore experiment inputParameters',
@@ -71,11 +57,12 @@ export function createArenaStage9MatchCoreExperimentDefinition({
   if (Object.prototype.hasOwnProperty.call(clonedInputParameters, 'sequenceFirstSeed')) {
     throw new RangeError('MatchCore experiment inputParameters 不能覆盖 sequenceFirstSeed。');
   }
-  const metadata = readProbeMetadata({ seed: firstSeed, config });
-  const replaySeeds = Object.freeze(Array.from(
-    { length: replaySampleCount },
-    (_, index) => firstSeed + index,
-  ));
+  const metadata = readProbeMetadata({ seed: range.firstSeed, config });
+  const plannedSeeds = Array.from(
+    { length: range.caseCount },
+    (_, index) => range.firstSeed + index,
+  );
+  const replaySeeds = createArenaExperimentReplaySeeds(plannedSeeds, replaySampleCount);
   return createArenaExperimentDefinition({
     schemaVersion: ARENA_EXPERIMENT_DEFINITION_SCHEMA_VERSION,
     id: ARENA_STAGE9_MATCHCORE_EXPERIMENT_ID,
@@ -95,14 +82,14 @@ export function createArenaStage9MatchCoreExperimentDefinition({
     },
     seedSet: {
       kind: ARENA_EXPERIMENT_SEED_SET_KIND.RANGE,
-      first: firstSeed,
-      last: lastSeed,
+      first: range.firstSeed,
+      last: range.lastSeed,
     },
     workload: {
       id: ARENA_V1_MATCHCORE_INVARIANT_WORKLOAD_ID,
       version: ARENA_V1_MATCHCORE_INVARIANT_WORKLOAD_VERSION,
       parameters: {
-        input: { ...clonedInputParameters, sequenceFirstSeed: firstSeed },
+        input: { ...clonedInputParameters, sequenceFirstSeed: range.firstSeed },
         replaySeeds,
         replayCheckpointInterval,
         maximumEventsPerCase,

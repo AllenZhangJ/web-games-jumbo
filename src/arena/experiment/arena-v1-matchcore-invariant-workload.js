@@ -15,6 +15,7 @@ import {
   createArenaV1MatchCoreStressInputParameters,
   createArenaV1MatchCoreStressInputStrategy,
 } from './arena-v1-matchcore-stress-strategy.js';
+import { cloneArenaExperimentReplaySeeds } from './experiment-seed-utils.js';
 
 export const ARENA_V1_MATCHCORE_INVARIANT_WORKLOAD_ID =
   'arena.stage9.matchcore-invariants';
@@ -36,34 +37,15 @@ const PARAMETER_KEYS = new Set([
   'replayCheckpointInterval',
   'maximumEventsPerCase',
 ]);
-const UINT32_MAXIMUM = 0xffffffff;
-const MAXIMUM_REPLAY_SEEDS = 1_000;
-
-function cloneReplaySeeds(value) {
-  if (!Array.isArray(value)) throw new TypeError('matchcore invariants replaySeeds 必须是数组。');
-  if (value.length > MAXIMUM_REPLAY_SEEDS) {
-    throw new RangeError(`matchcore invariants replaySeeds 不能超过 ${MAXIMUM_REPLAY_SEEDS} 项。`);
-  }
-  const seeds = value.map((seed, index) => {
-    if (!Number.isSafeInteger(seed) || seed < 0 || seed > UINT32_MAXIMUM) {
-      throw new RangeError(`matchcore invariants replaySeeds[${index}] 必须是 uint32。`);
-    }
-    return seed;
-  });
-  for (let index = 1; index < seeds.length; index += 1) {
-    if (seeds[index] <= seeds[index - 1]) {
-      throw new RangeError('matchcore invariants replaySeeds 必须严格递增且不重复。');
-    }
-  }
-  return Object.freeze(seeds);
-}
-
 export function createArenaV1MatchCoreInvariantParameters(value) {
   const source = cloneFrozenData(value, 'matchcore invariant parameters');
   assertKnownKeys(source, PARAMETER_KEYS, 'matchcore invariant parameters');
   return Object.freeze({
     input: createArenaV1MatchCoreStressInputParameters(source.input),
-    replaySeeds: cloneReplaySeeds(source.replaySeeds),
+    replaySeeds: cloneArenaExperimentReplaySeeds(
+      source.replaySeeds,
+      'matchcore invariants replaySeeds',
+    ),
     replayCheckpointInterval: assertIntegerAtLeast(
       source.replayCheckpointInterval,
       1,

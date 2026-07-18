@@ -1,21 +1,12 @@
 import { assertNonEmptyString, cloneFrozenData } from '../rules/definition-utils.js';
+import {
+  createSortedMetricCountRecord,
+  incrementMetricCount,
+  metricRatioOrNull,
+} from './experiment-metric-utils.js';
 
 export const ARENA_MATCH_SUMMARY_COLLECTOR_ID = 'arena.stage9.match-summary';
 export const ARENA_MATCH_SUMMARY_COLLECTOR_VERSION = 1;
-
-function increment(map, key, amount = 1) {
-  map.set(key, (map.get(key) ?? 0) + amount);
-}
-
-function sortedObject(map) {
-  return Object.fromEntries([...map.entries()].sort(([left], [right]) => (
-    left < right ? -1 : left > right ? 1 : 0
-  )));
-}
-
-function ratio(numerator, denominator) {
-  return denominator === 0 ? null : numerator / denominator;
-}
 
 class ArenaMatchSummaryCollector {
   #plannedCases;
@@ -83,7 +74,7 @@ class ArenaMatchSummaryCollector {
     }
     for (const event of observation.events) {
       const type = assertNonEmptyString(event.type, 'Arena match summary event.type');
-      increment(this.#active.events, type);
+      incrementMetricCount(this.#active.events, type);
       this.#active.eventCount += 1;
     }
     for (const frame of observation.inputFrames) {
@@ -115,9 +106,11 @@ class ArenaMatchSummaryCollector {
     this.#primaryPresses += this.#active.primaryPresses;
     this.#jumpPresses += this.#active.jumpPresses;
     this.#slamPresses += this.#active.slamPresses;
-    for (const [type, count] of this.#active.events) increment(this.#eventCounts, type, count);
-    increment(this.#resultReasons, reason);
-    increment(this.#winners, winner);
+    for (const [type, count] of this.#active.events) {
+      incrementMetricCount(this.#eventCounts, type, count);
+    }
+    incrementMetricCount(this.#resultReasons, reason);
+    incrementMetricCount(this.#winners, winner);
     this.#finalHashes.add(context.finalHash);
     this.#active = null;
   }
@@ -132,7 +125,7 @@ class ArenaMatchSummaryCollector {
       'Arena match summary failure.name',
     );
     this.#failedCases += 1;
-    increment(this.#failureNames, failureName);
+    incrementMetricCount(this.#failureNames, failureName);
     this.#active = null;
   }
 
@@ -157,16 +150,25 @@ class ArenaMatchSummaryCollector {
         minimumTicks: this.#minimumTicks,
         maximumTicks: this.#completedCases === 0 ? null : this.#maximumTicks,
         uniqueFinalHashes: this.#finalHashes.size,
-        eventCounts: sortedObject(this.#eventCounts),
-        resultReasons: sortedObject(this.#resultReasons),
-        winners: sortedObject(this.#winners),
-        failureNames: sortedObject(this.#failureNames),
+        eventCounts: createSortedMetricCountRecord(this.#eventCounts),
+        resultReasons: createSortedMetricCountRecord(this.#resultReasons),
+        winners: createSortedMetricCountRecord(this.#winners),
+        failureNames: createSortedMetricCountRecord(this.#failureNames),
       },
       derived: {
-        completionRate: ratio(this.#completedCases, executedCases),
-        averageTicksPerCompletedCase: ratio(this.#totalTicks, this.#completedCases),
-        averageEventsPerCompletedCase: ratio(this.#totalEvents, this.#completedCases),
-        primaryPressRatePerInputFrame: ratio(this.#primaryPresses, this.#totalInputFrames),
+        completionRate: metricRatioOrNull(this.#completedCases, executedCases),
+        averageTicksPerCompletedCase: metricRatioOrNull(
+          this.#totalTicks,
+          this.#completedCases,
+        ),
+        averageEventsPerCompletedCase: metricRatioOrNull(
+          this.#totalEvents,
+          this.#completedCases,
+        ),
+        primaryPressRatePerInputFrame: metricRatioOrNull(
+          this.#primaryPresses,
+          this.#totalInputFrames,
+        ),
       },
     }, 'ArenaMatchSummaryCollector result');
   }

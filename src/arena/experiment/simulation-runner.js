@@ -237,11 +237,12 @@ export class SimulationExperimentRunner {
     let snapshot = null;
     let eventCount = 0;
     try {
-      simulationCase = assertSimulationCase(workload.createCase({
+      simulationCase = workload.createCase({
         seed,
         candidate: this.#definition.candidate,
         parameters: this.#definition.workload.parameters,
-      }), `SimulationCase seed ${seed}`);
+      });
+      assertSimulationCase(simulationCase, `SimulationCase seed ${seed}`);
       metadata = validateMetadata(
         simulationCase.getMetadata(),
         seed,

@@ -7,8 +7,9 @@ import {
   cloneFrozenData,
 } from '../rules/definition-utils.js';
 import { createArenaExperimentDefinition } from './experiment-definition.js';
+import { readArenaMetricGate } from './metric-gate.js';
 
-export const ARENA_EXPERIMENT_REPORT_SCHEMA_VERSION = 1;
+export const ARENA_EXPERIMENT_REPORT_SCHEMA_VERSION = 2;
 
 export const ARENA_EXPERIMENT_CASE_STATUS = Object.freeze({
   COMPLETED: 'completed',
@@ -146,7 +147,19 @@ export function createArenaExperimentReport(definitionValue, value) {
   const failedCaseCount = cases.length - completedCaseCount;
   const plannedCaseCount = definition.getSeeds().length;
   const remainingCaseCount = plannedCaseCount - cases.length;
-  const outcome = failedCaseCount === 0 && remainingCaseCount === 0
+  const failedMetricGates = Object.freeze(metrics.flatMap((metric) => {
+    const gate = readArenaMetricGate(metric.data);
+    if (gate === null || gate.passed) return [];
+    return [Object.freeze({
+      collectorId: metric.id,
+      failedCheckIds: Object.freeze(gate.checks
+        .filter(({ passed }) => !passed)
+        .map(({ id }) => id)),
+    })];
+  }));
+  const outcome = failedCaseCount === 0
+    && remainingCaseCount === 0
+    && failedMetricGates.length === 0
     ? ARENA_EXPERIMENT_OUTCOME.PASSED
     : ARENA_EXPERIMENT_OUTCOME.FAILED;
   const deterministicResult = Object.freeze({
@@ -170,6 +183,8 @@ export function createArenaExperimentReport(definitionValue, value) {
     completedCaseCount,
     failedCaseCount,
     remainingCaseCount,
+    failedMetricGateCount: failedMetricGates.length,
+    failedMetricGates,
     cases,
     metrics,
     resultHash: createDeterministicDataHash(

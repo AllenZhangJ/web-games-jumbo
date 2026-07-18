@@ -1,6 +1,7 @@
 # Arena Stage 6 S6.2 Movement 门禁记录
 
 > 本文是 S6.2 提交时的历史证据。S6.3 Bot 移动的当前证据见 [S6.3 门禁记录](arena-stage6-bot-movement-results.md)。
+> 当前 `arena:movement:stress` 已改为驱动 Stage 9 版本化 workload，并让全部样本使用统一长时限；当前迁移证据见 [S9.1 专业实验记录](arena-stage9-s9.1-experiment-foundation.md)。
 
 ## 范围与结论
 

@@ -1,6 +1,6 @@
 # ADR-012：Arena 使用可复现实验收敛并只降级表现层
 
-- 状态：已接受；S9.1a 与 S9.1b MatchCore 迁移已实施，S9.3/S9.4 冻结输入待确认
+- 状态：已接受；S9.1a～S9.1c 已实施，S9.2～S9.5 待执行
 - 日期：2026-07-17
 
 ## 背景
@@ -18,11 +18,18 @@ S9.1a 将该边界实现为四层显式合同：
 1. `ArenaExperimentDefinition` 只保存冻结数据，并固定 source dirty 状态、完整 Match config、Authority 身份、seed、workload、collector 与停止条件。
 2. `SimulationWorkloadRegistry` 只组合版本完全匹配的 case factory；输入基准属于 workload 版本，不作为 Runner 内的隐藏分支。
 3. `MetricCollectorRegistry` 创建实验级 Collector；Runner 只传深冻结观察，Collector 不持有 Core、Bot 或 RNG。
-4. `ArenaExperimentReport` 将环境元数据与确定性结果分离。环境和生成时间不进入 `resultHash`，dirty candidate 永远不能获得 `freezeEligible=true`。
+4. `ArenaExperimentReport` 将环境元数据与确定性结果分离。环境和生成时间不进入 `resultHash`，dirty candidate 永远不能获得 `freezeEligible=true`。Report schema V2 识别 Collector 输出的版本化 `ArenaMetricGate`；case 全部完成但专业覆盖、顺序或阈值门失败时，报告仍为失败且不可冻结。
 
 单个 case 的 Core/场景失败会保留 seed、tick、事件数和有界结构化错误并按 Definition 阈值停止；Collector 或编排合同异常会使 Runner 整体失败，已创建 case/collector 仍必须清理。这样不会用残缺聚合结果掩盖采集器故障。
 
 S9.1b 将原 MatchCore 专业压测实现为一个版本化 case，同时由两种外层驱动：`SimulationExperimentRunner` 负责不可变 Definition、深冻结观察、Collector 和确定性 Report；Node 压测脚本直接驱动同一个 case，负责 `process.cpuUsage`、GC 与 heap 预算。二者共享输入 Strategy、状态不变量、事件上限和抽样回放实现，但不把通用编排成本冒充为 Core tick 成本，也不把 Node 墙钟/内存写入确定性 Report。
+
+S9.1c 将 Map、Movement 与 Bot 专业压测迁入同一合同：
+
+- Map case 独占时间轴/公开快照/最终安全面断言，Collector 独占跨 seed 精确事件、回放与唯一 hash 门。
+- Movement 的随机输入成为版本化 Strategy，只能由 match seed 具名流生成普通 `InputFrame`；全部样本使用统一长时限 candidate，避免同一 Definition 内隐式切换 Match config。
+- Bot 的一个 case 使用同一 match seed 顺序运行 easy/normal/hard 三局，形成 paired sample；三局共享 Core config、地图/装备随机与基准玩家，只允许 Bot Profile 不同。能力指标、难度分布和工作负载分别由独立 Collector/Policy/Workload 负责。
+- 原 `arena:map:stress`、`arena:movement:stress`、`arena:bot:stress` 只保留宿主参数、计时与兼容摘要，并直接驱动相同版本化 workload，禁止再维护第二份规则循环。
 
 维护按规则大版本分组的黄金回放语料。当前版本必须严格重放；不兼容升级创建新目录，旧语料保留并验证明确拒绝。fuzz、soak 或真机发现的阻断缺陷缩减为最小复现并进入长期回归集。
 

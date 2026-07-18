@@ -9,26 +9,38 @@ import {
   createArenaStage9MatchCoreExperimentRegistries,
 } from '../src/arena/experiment/arena-matchcore-experiment-composition.js';
 import {
+  createArenaStage9MapExperimentDefinition,
+  createArenaStage9MapExperimentRegistries,
+} from '../src/arena/experiment/arena-map-experiment-composition.js';
+import {
+  createArenaStage9MovementExperimentDefinition,
+  createArenaStage9MovementExperimentRegistries,
+} from '../src/arena/experiment/arena-movement-experiment-composition.js';
+import {
+  createArenaStage9BotExperimentDefinition,
+  createArenaStage9BotExperimentRegistries,
+} from '../src/arena/experiment/arena-bot-experiment-composition.js';
+import {
   ARENA_EXPERIMENT_OUTCOME,
 } from '../src/arena/experiment/experiment-report.js';
-import { SimulationExperimentRunner } from '../src/arena/experiment/simulation-runner.js';
-import {
-  assertArenaGitSourceIdentityStable,
-  readArenaGitSourceIdentity,
-} from './arena-git-source-identity.mjs';
+import { readArenaGitSourceIdentity } from './arena-git-source-identity.mjs';
+import { runArenaNodeExperiment } from './arena-node-experiment-runner.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SUITE = Object.freeze({
   SCRIPTED_PRESSURE: 'scripted-pressure',
   MATCHCORE_INVARIANTS: 'matchcore-invariants',
+  MAP_TIMELINE: 'map-timeline',
+  MOVEMENT_STRESS: 'movement-stress',
+  BOT_CAPABILITY: 'bot-capability',
 });
 
 function usage() {
   return [
     'Usage:',
-    '  npm run arena:experiment -- [--suite=scripted-pressure|matchcore-invariants]',
+    '  npm run arena:experiment -- [--suite=scripted-pressure|matchcore-invariants|map-timeline|movement-stress|bot-capability]',
     '    [--cases=<n>] [--first-seed=<uint32>] [--replay-samples=<n>]',
-    '    [--describe] [--allow-dirty]',
+    '    [--describe] [--summary] [--allow-dirty]',
     '',
     'Exit codes: 0=passed (or explicitly allowed dirty), 2=failed/dirty, 1=invalid or runtime failure.',
   ].join('\n');
@@ -49,6 +61,7 @@ function parseArgs(values) {
     firstSeed: null,
     replaySamples: null,
     describe: false,
+    summary: false,
     allowDirty: false,
     help: false,
   };
@@ -58,10 +71,11 @@ function parseArgs(values) {
       result.help = true;
       continue;
     }
-    if (argument === '--describe' || argument === '--allow-dirty') {
+    if (argument === '--describe' || argument === '--summary' || argument === '--allow-dirty') {
       if (seen.has(argument)) throw new Error(`参数 ${argument} 不能重复。`);
       seen.add(argument);
       if (argument === '--describe') result.describe = true;
+      else if (argument === '--summary') result.summary = true;
       else result.allowDirty = true;
       continue;
     }
@@ -87,7 +101,34 @@ function parseArgs(values) {
       result.replaySamples = parseInteger(match[2], 0, 1_000, 'replay-samples');
     }
   }
+  if (result.describe && result.summary) {
+    throw new RangeError('--describe 与 --summary 不能同时使用。');
+  }
   return result;
+}
+
+function createReportSummary(suite, report) {
+  return Object.freeze({
+    suite,
+    definitionId: report.definitionId,
+    definitionHash: report.definitionHash,
+    outcome: report.outcome,
+    freezeEligible: report.freezeEligible,
+    stoppedEarly: report.stoppedEarly,
+    plannedCaseCount: report.plannedCaseCount,
+    executedCaseCount: report.executedCaseCount,
+    completedCaseCount: report.completedCaseCount,
+    failedCaseCount: report.failedCaseCount,
+    remainingCaseCount: report.remainingCaseCount,
+    failedMetricGateCount: report.failedMetricGateCount,
+    failedMetricGates: report.failedMetricGates,
+    metrics: report.metrics.map(({ id, version, data }) => Object.freeze({
+      id,
+      version,
+      gate: data.gate ?? null,
+    })),
+    resultHash: report.resultHash,
+  });
 }
 
 function createSuite(options, source) {
@@ -104,14 +145,48 @@ function createSuite(options, source) {
       registries: createArenaStage9S91ExperimentRegistries(),
     });
   }
+  if (options.suite === SUITE.MATCHCORE_INVARIANTS) {
+    return Object.freeze({
+      definition: createArenaStage9MatchCoreExperimentDefinition({
+        ...source,
+        firstSeed: options.firstSeed ?? 0xa11e0000,
+        caseCount: options.cases ?? 1_000,
+        replaySampleCount: options.replaySamples ?? 5,
+      }),
+      registries: createArenaStage9MatchCoreExperimentRegistries(),
+    });
+  }
+  if (options.suite === SUITE.MAP_TIMELINE) {
+    return Object.freeze({
+      definition: createArenaStage9MapExperimentDefinition({
+        ...source,
+        firstSeed: options.firstSeed ?? 0x5a6e0000,
+        caseCount: options.cases ?? 100,
+        replaySampleCount: options.replaySamples ?? 3,
+      }),
+      registries: createArenaStage9MapExperimentRegistries(),
+    });
+  }
+  if (options.firstSeed !== null) {
+    throw new RangeError(`${options.suite} suite 使用固定显式 seed 集，不接受 --first-seed。`);
+  }
+  if (options.suite === SUITE.MOVEMENT_STRESS) {
+    return Object.freeze({
+      definition: createArenaStage9MovementExperimentDefinition({
+        ...source,
+        caseCount: options.cases ?? 100,
+        replaySampleCount: options.replaySamples ?? 3,
+      }),
+      registries: createArenaStage9MovementExperimentRegistries(),
+    });
+  }
   return Object.freeze({
-    definition: createArenaStage9MatchCoreExperimentDefinition({
+    definition: createArenaStage9BotExperimentDefinition({
       ...source,
-      firstSeed: options.firstSeed ?? 0xa11e0000,
-      caseCount: options.cases ?? 1_000,
-      replaySampleCount: options.replaySamples ?? 5,
+      caseCount: options.cases ?? 300,
+      replaySampleCount: options.replaySamples ?? 3,
     }),
-    registries: createArenaStage9MatchCoreExperimentRegistries(),
+    registries: createArenaStage9BotExperimentRegistries(),
   });
 }
 
@@ -131,26 +206,23 @@ async function main() {
     }, null, 2));
     return;
   }
-  const runner = new SimulationExperimentRunner({ definition, ...registries });
-  try {
-    const report = runner.run({
-      generatedAt: new Date().toISOString(),
-      environment: {
-        runtimeName: 'node',
-        runtimeVersion: process.version,
-        platform: process.platform,
-        architecture: process.arch,
-      },
-    });
-    assertArenaGitSourceIdentityStable(source, await readArenaGitSourceIdentity(root));
-    console.log(JSON.stringify({ suite: options.suite, definition: definition.toJSON(), report }, null, 2));
-    if (
-      report.outcome !== ARENA_EXPERIMENT_OUTCOME.PASSED
-      || (!report.freezeEligible && !options.allowDirty)
-    ) process.exitCode = 2;
-  } finally {
-    runner.destroy();
-  }
+  const report = await runArenaNodeExperiment({
+    root,
+    source,
+    definition,
+    registries,
+  });
+  console.log(JSON.stringify(
+    options.summary
+      ? createReportSummary(options.suite, report)
+      : { suite: options.suite, definition: definition.toJSON(), report },
+    null,
+    2,
+  ));
+  if (
+    report.outcome !== ARENA_EXPERIMENT_OUTCOME.PASSED
+    || (!report.freezeEligible && !options.allowDirty)
+  ) process.exitCode = 2;
 }
 
 main().catch((error) => {

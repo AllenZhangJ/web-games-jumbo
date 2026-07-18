@@ -1,22 +1,15 @@
 import { assertNonEmptyString, cloneFrozenData } from '../rules/definition-utils.js';
+import { createArenaMetricGate } from './metric-gate.js';
+import { assertArenaExperimentReplaySeedsPlanned } from './experiment-seed-utils.js';
+import {
+  createSortedMetricCountRecord,
+  incrementMetricCount,
+  metricRatioOrNull,
+} from './experiment-metric-utils.js';
 
 export const ARENA_MATCHCORE_INVARIANT_COLLECTOR_ID =
   'arena.stage9.matchcore-invariants';
 export const ARENA_MATCHCORE_INVARIANT_COLLECTOR_VERSION = 1;
-
-function increment(map, key, amount = 1) {
-  map.set(key, (map.get(key) ?? 0) + amount);
-}
-
-function sortedObject(map) {
-  return Object.fromEntries([...map.entries()].sort(([left], [right]) => (
-    left < right ? -1 : left > right ? 1 : 0
-  )));
-}
-
-function ratio(numerator, denominator) {
-  return denominator === 0 ? null : numerator / denominator;
-}
 
 class ArenaMatchCoreInvariantCollector {
   #plannedCases;
@@ -38,16 +31,15 @@ class ArenaMatchCoreInvariantCollector {
 
   constructor(definition) {
     const plannedSeeds = definition.getSeeds();
-    const plannedSeedSet = new Set(plannedSeeds);
     const replaySeeds = definition.workload.parameters.replaySeeds;
     if (!Array.isArray(replaySeeds)) {
       throw new TypeError('MatchCore invariant collector 需要 workload replaySeeds。');
     }
-    for (const seed of replaySeeds) {
-      if (!plannedSeedSet.has(seed)) {
-        throw new RangeError(`MatchCore invariant replay seed ${seed} 不在 Definition seed 集。`);
-      }
-    }
+    assertArenaExperimentReplaySeedsPlanned(
+      replaySeeds,
+      plannedSeeds,
+      'MatchCore invariant replay',
+    );
     this.#plannedCases = plannedSeeds.length;
     this.#plannedReplaySeeds = new Set(replaySeeds);
     this.#active = null;
@@ -92,7 +84,7 @@ class ArenaMatchCoreInvariantCollector {
     this.#active.lastTick = observation.snapshot.tick;
     for (const event of observation.events) {
       const type = assertNonEmptyString(event.type, 'MatchCore invariant event.type');
-      increment(this.#active.events, type);
+      incrementMetricCount(this.#active.events, type);
       this.#active.eventCount += 1;
     }
   }
@@ -130,9 +122,11 @@ class ArenaMatchCoreInvariantCollector {
       : Math.min(this.#minimumTicks, context.ticks);
     this.#maximumTicks = Math.max(this.#maximumTicks, context.ticks);
     this.#totalEvents += context.eventCount;
-    for (const [type, count] of this.#active.events) increment(this.#eventCounts, type, count);
-    increment(this.#resultReasons, reason);
-    increment(this.#winners, winner);
+    for (const [type, count] of this.#active.events) {
+      incrementMetricCount(this.#eventCounts, type, count);
+    }
+    incrementMetricCount(this.#resultReasons, reason);
+    incrementMetricCount(this.#winners, winner);
     this.#finalHashes.add(context.finalHash);
     this.#active = null;
   }
@@ -147,7 +141,7 @@ class ArenaMatchCoreInvariantCollector {
       'MatchCore invariant failure.name',
     );
     this.#failedCases += 1;
-    increment(this.#failureNames, failureName);
+    incrementMetricCount(this.#failureNames, failureName);
     this.#active = null;
   }
 
@@ -155,7 +149,20 @@ class ArenaMatchCoreInvariantCollector {
     this.#assertUsable();
     if (this.#active !== null) throw new Error('活动 case 完成前不能导出 MatchCore invariant 指标。');
     const executedCases = this.#completedCases + this.#failedCases;
+    const allFinalHashesUnique = this.#completedCases === 0
+      ? null
+      : this.#finalHashes.size === this.#completedCases;
     return cloneFrozenData({
+      gate: createArenaMetricGate([
+        {
+          id: 'replay.samples-verified',
+          passed: this.#verifiedReplays === this.#plannedReplaySeeds.size,
+        },
+        {
+          id: 'seed.final-hashes-unique',
+          passed: allFinalHashesUnique === true,
+        },
+      ]),
       denominators: {
         plannedCases: this.#plannedCases,
         executedCases,
@@ -170,22 +177,26 @@ class ArenaMatchCoreInvariantCollector {
         minimumTicks: this.#minimumTicks,
         maximumTicks: this.#completedCases === 0 ? null : this.#maximumTicks,
         uniqueFinalHashes: this.#finalHashes.size,
-        eventCounts: sortedObject(this.#eventCounts),
-        resultReasons: sortedObject(this.#resultReasons),
-        winners: sortedObject(this.#winners),
-        failureNames: sortedObject(this.#failureNames),
+        eventCounts: createSortedMetricCountRecord(this.#eventCounts),
+        resultReasons: createSortedMetricCountRecord(this.#resultReasons),
+        winners: createSortedMetricCountRecord(this.#winners),
+        failureNames: createSortedMetricCountRecord(this.#failureNames),
       },
       derived: {
-        completionRate: ratio(this.#completedCases, executedCases),
-        replayVerificationRate: ratio(
+        completionRate: metricRatioOrNull(this.#completedCases, executedCases),
+        replayVerificationRate: metricRatioOrNull(
           this.#verifiedReplays,
           this.#plannedReplaySeeds.size,
         ),
-        averageTicksPerCompletedCase: ratio(this.#totalTicks, this.#completedCases),
-        averageEventsPerCompletedCase: ratio(this.#totalEvents, this.#completedCases),
-        allFinalHashesUnique: this.#completedCases === 0
-          ? null
-          : this.#finalHashes.size === this.#completedCases,
+        averageTicksPerCompletedCase: metricRatioOrNull(
+          this.#totalTicks,
+          this.#completedCases,
+        ),
+        averageEventsPerCompletedCase: metricRatioOrNull(
+          this.#totalEvents,
+          this.#completedCases,
+        ),
+        allFinalHashesUnique,
       },
     }, 'ArenaMatchCoreInvariantCollector result');
   }

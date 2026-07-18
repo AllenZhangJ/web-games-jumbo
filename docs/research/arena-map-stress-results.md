@@ -1,5 +1,7 @@
 # Arena Stage 5 地图时间轴压测结果
 
+> 本文保留 Stage 5 历史基线。当前 `arena:map:stress` 已改为驱动 Stage 9 `arena.stage9.map-timeline` 版本化 workload/collector，当前迁移证据见 [S9.1 专业实验记录](arena-stage9-s9.1-experiment-foundation.md)。
+
 ## 状态
 
 Stage 5 本机无渲染地图门禁已通过，复测于 2026-07-17。本结果验证权威地图时间轴，不等价于预警美术、角色可读性或目标真机性能。

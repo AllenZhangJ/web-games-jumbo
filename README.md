@@ -2,7 +2,7 @@
 
 一款以“左右选择数值运算 + 按住蓄力跳跃”为核心的竖屏小游戏。v3 保留现有数值策略、连续世界、真实落点、碰撞规则、测试和 Web/微信/抖音平台适配层，将原 Canvas 2D 表现层重构为 Three.js/WebGL2 三维场景。
 
-> **项目状态：** Web、微信、抖音默认入口已切换到 Arena V1 Product Session：独立轻量物理、1v1 MatchCore、隐藏本地机器人、三件装备、地图时间轴、语义移动/触控、程序化角色、HUD、角色选择、奖励和重赛已连成产品闭环。Web 使用语义 DOM，微信/抖音共享单 Canvas Product UI；Web `/greybox.html` 与小游戏 `game-greybox.js`/`build:greybox` 保留可执行回退。Stage 8 S8.1～S8.5.5 已落地；S8.5.6 六目标设备证据合同与三端构建 Manifest 已就绪，但微信/抖音开发者工具及两端 iOS/Android 真机 Record 尚未采集。Stage 9 S9.1a 已建立版本化无渲染实验基础，S9.1b 已迁移 MatchCore 状态不变量、事件上限、seed 隔离、抽样回放及 CPU/heap 门禁；Map/Bot/Movement 迁移、黄金回放、平衡与设备性能冻结仍未完成。Web 真实浏览器、小游戏宿主组合、100 局旧表现 Session soak 和 100 局 Product Presentation Session soak 已通过；目标真机 E3 与 A/B 新手盲测仍未完成。数值跳台 v3 代码与资产继续保留，两条领域代码保持隔离。
+> **项目状态：** Web、微信、抖音默认入口已切换到 Arena V1 Product Session：独立轻量物理、1v1 MatchCore、隐藏本地机器人、三件装备、地图时间轴、语义移动/触控、程序化角色、HUD、角色选择、奖励和重赛已连成产品闭环。Web 使用语义 DOM，微信/抖音共享单 Canvas Product UI；Web `/greybox.html` 与小游戏 `game-greybox.js`/`build:greybox` 保留可执行回退。Stage 8 S8.1～S8.5.5 已落地；S8.5.6 六目标设备证据合同与三端构建 Manifest 已就绪，但微信/抖音开发者工具及两端 iOS/Android 真机 Record 尚未采集。Stage 9 S9.1a～S9.1c 已建立版本化无渲染实验基础，并迁移 MatchCore、Map、Movement、Bot 专业压测；黄金回放语料、平衡候选与设备性能冻结仍未完成。Web 真实浏览器、小游戏宿主组合、100 局旧表现 Session soak 和 100 局 Product Presentation Session soak 已通过；目标真机 E3 与 A/B 新手盲测仍未完成。数值跳台 v3 代码与资产继续保留，两条领域代码保持隔离。
 
 v3 的动作与构图参考开源项目 [`shenmaxg/web-jump`](https://github.com/shenmaxg/web-jump)，但不使用它的单路线玩法作为游戏规则，也不直接复用来源不明的品牌纹理。参考代码的 MIT 许可与归属见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
@@ -45,12 +45,15 @@ npm run arena:poc:stress
 npm run arena:poc:build
 npm run arena:stress
 npm run arena:experiment:matchcore
+npm run arena:experiment:map
+npm run arena:experiment:movement
+npm run arena:experiment:bot
 npm run arena:map:stress
 npm run arena:movement:stress
 npm run arena:input:fuzz
 ```
 
-`arena:poc:build` 生成 Web、微信、抖音无渲染 MatchCore POC；`arena:experiment:matchcore` 通过通用 Runner 连续运行 1,000 局版本化 MatchCore 实验；`arena:stress` 直接驱动同一 workload case 测量 CPU/GC，避免把通用实验编排成本误算为 Core 成本。`arena:map:stress` 让 100 个 seed 完整跑满 120 秒地图时间轴；`arena:movement:stress` 用 100 个 seed 覆盖走跑、跳跃、蹲跳、二段跳、下砸、地图塌陷和回放一致性；`arena:input:fuzz` 随机验证两套 Mapper 的多指、取消、resize、暂停恢复和完整回放。
+`arena:poc:build` 生成 Web、微信、抖音无渲染 MatchCore POC；四条 `arena:experiment:*` 命令通过通用 Runner 运行版本化专业实验；`arena:stress` 直接驱动同一 MatchCore workload case 测量 CPU/GC，避免把通用编排成本误算为 Core 成本。旧的 Map/Movement/Bot stress 命令继续保留，但只负责 Node 宿主计时和兼容摘要，不再复制权威驱动或专业断言。Movement 的 Stage 9 门让全部 100 个 seed 使用 4,200 tick 长时限，统一覆盖地图塌陷；`arena:input:fuzz` 随机验证两套 Mapper 的多指、取消、resize、暂停恢复和完整回放。
 
 Arena 阶段 3 机器人验证：
 
@@ -58,7 +61,7 @@ Arena 阶段 3 机器人验证：
 npm run arena:bot:stress
 ```
 
-该门禁检查 10,000 个 seed 的隐藏难度分布，并用 900 局无渲染对局验证三档行为效率、确定性回放和人类可操作约束。它不替代装备与地图闭环后的最终胜率平衡。
+该门禁检查 10,000 个 seed 的隐藏难度分布，并用 300 个 paired seed 分别运行 easy/normal/hard，共 900 局无渲染对局。三档共享相同地图、装备和对手随机条件，难度差异只来自 Bot Profile；它验证相对能力、回放和人类输入边界，不替代真人数据下的最终胜率平衡。
 
 构建产物：
 
@@ -98,7 +101,7 @@ npm run preview:lan
 
 每次构建会在三端目录生成 `arena-build-manifest.json`。使用 `npm run arena:build:verify` 重算全部产物；正式设备证据还必须增加 `-- --require-clean-source`。Stage 8 Definition 与证据校验使用 `npm run arena:product:device:evidence -- --describe`，执行手册见 [Stage 8 产品设备验收](docs/acceptance/stage8/README.md)。
 
-Stage 9 无渲染实验入口为 `npm run arena:experiment`。默认 suite 是 30-seed `scripted-pressure` 基础验证；增加 `-- --suite=matchcore-invariants --cases=1000 --replay-samples=5` 可运行 MatchCore 专业实验。先用 `--describe` 审核固定 commit、完整 Match config、Authority hash、seed、workload、collector 和停止条件；只有 clean source 且全部 case 通过的 Report 才会标记 `freezeEligible=true`。开发中可显式增加 `--allow-dirty` 检查逻辑，但该结果不能进入冻结评审。
+Stage 9 无渲染实验入口为 `npm run arena:experiment`。默认 suite 是 30-seed `scripted-pressure` 基础验证；专业 suite 为 `matchcore-invariants`、`map-timeline`、`movement-stress` 和 `bot-capability`。先用 `--describe` 审核固定 commit、完整 Match config、Authority hash、seed、workload、collector 和停止条件；只有 clean source、全部 case 完成且全部 Collector 阻断门通过时，Report 才会标记 `freezeEligible=true`。开发中可显式增加 `--allow-dirty` 检查逻辑，但该结果不能进入冻结评审。
 
 ## v3 架构
 
