@@ -5,6 +5,10 @@ import {
   cloneFrozenData,
   cloneFrozenStringSet,
 } from '../arena/rules/definition-utils.js';
+import {
+  assertEvidenceGitCommit,
+  assertEvidenceUtcInstant,
+} from '../arena/evidence/evidence-value-contract.js';
 
 export const ARENA_DEFECT_LEDGER_SCHEMA_VERSION = 1;
 export const ARENA_DEFECT_REPORT_SCHEMA_VERSION = 1;
@@ -54,8 +58,6 @@ const RISK_KEYS = new Set([
   'reviewTrigger',
   'defectIds',
 ]);
-const GIT_COMMIT_PATTERN = /^[0-9a-f]{40}$/;
-const ISO_INSTANT_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 const ID_PATTERN = /^[a-z0-9]+(?:[._-][a-z0-9]+)*$/;
 const MAXIMUM_ENTRIES = 10_000;
 
@@ -71,17 +73,6 @@ function identifier(value, name) {
   const result = boundedText(value, 128, name);
   if (!ID_PATTERN.test(result)) throw new TypeError(`${name} 必须是规范化小写标识符。`);
   return result;
-}
-
-function isoInstant(value, name) {
-  if (typeof value !== 'string' || !ISO_INSTANT_PATTERN.test(value)) {
-    throw new TypeError(`${name} 必须是带毫秒的 UTC ISO-8601 时间。`);
-  }
-  const timestamp = Date.parse(value);
-  if (!Number.isFinite(timestamp) || new Date(timestamp).toISOString() !== value) {
-    throw new RangeError(`${name} 不是有效 UTC 时间。`);
-  }
-  return value;
 }
 
 function enumValue(value, values, name) {
@@ -156,9 +147,7 @@ export function createArenaDefectLedger(value) {
   if (source.schemaVersion !== ARENA_DEFECT_LEDGER_SCHEMA_VERSION) {
     throw new RangeError(`不支持 ArenaDefectLedger schema ${String(source.schemaVersion)}。`);
   }
-  if (typeof source.commit !== 'string' || !GIT_COMMIT_PATTERN.test(source.commit)) {
-    throw new TypeError('ArenaDefectLedger.commit 必须是 40 位小写 Git commit。');
-  }
+  const commit = assertEvidenceGitCommit(source.commit, 'ArenaDefectLedger.commit');
   if (typeof source.knownIssuesComplete !== 'boolean') {
     throw new TypeError('ArenaDefectLedger.knownIssuesComplete 必须是布尔值。');
   }
@@ -198,8 +187,11 @@ export function createArenaDefectLedger(value) {
   }
   return Object.freeze({
     schemaVersion: ARENA_DEFECT_LEDGER_SCHEMA_VERSION,
-    commit: source.commit,
-    reviewedAt: isoInstant(source.reviewedAt, 'ArenaDefectLedger.reviewedAt'),
+    commit,
+    reviewedAt: assertEvidenceUtcInstant(
+      source.reviewedAt,
+      'ArenaDefectLedger.reviewedAt',
+    ),
     reviewerId: identifier(source.reviewerId, 'ArenaDefectLedger.reviewerId'),
     knownIssuesComplete: source.knownIssuesComplete,
     defects,

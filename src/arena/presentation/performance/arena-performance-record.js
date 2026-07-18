@@ -5,6 +5,10 @@ import {
   assertNonEmptyString,
   cloneFrozenData,
 } from '../../rules/definition-utils.js';
+import {
+  assertEvidenceGitCommit,
+  assertEvidenceUtcInstant,
+} from '../../evidence/evidence-value-contract.js';
 import { createArenaPerformancePolicyDefinition } from './arena-performance-policy-definition.js';
 
 export const ARENA_PERFORMANCE_RECORD_SCHEMA_VERSION = 1;
@@ -73,9 +77,7 @@ const RESOURCE_KEYS = new Set([
   'jsHeapBytes',
   'processMemoryBytes',
 ]);
-const GIT_COMMIT_PATTERN = /^[0-9a-f]{40}$/;
 const HASH_PATTERN = /^[0-9a-f]{8}$/;
-const ISO_INSTANT_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 const MAXIMUM_FRAMES = 1_000_000;
 const MAXIMUM_RESOURCES = 100_000;
 const MAXIMUM_MILESTONES = 128;
@@ -89,17 +91,6 @@ function boundedString(value, maximumLength, name) {
 function hashValue(value, name) {
   if (typeof value !== 'string' || !HASH_PATTERN.test(value)) {
     throw new TypeError(`${name} 必须是 8 位小写十六进制 hash。`);
-  }
-  return value;
-}
-
-function isoInstant(value, name) {
-  if (typeof value !== 'string' || !ISO_INSTANT_PATTERN.test(value)) {
-    throw new TypeError(`${name} 必须是带毫秒的 UTC ISO-8601 时间。`);
-  }
-  const timestamp = Date.parse(value);
-  if (!Number.isFinite(timestamp) || new Date(timestamp).toISOString() !== value) {
-    throw new RangeError(`${name} 不是有效 UTC 时间。`);
   }
   return value;
 }
@@ -330,9 +321,7 @@ export function createArenaPerformanceRecord(policyValue, value) {
   if (source.policyId !== policy.id || source.policyHash !== policy.getContentHash()) {
     throw new RangeError('ArenaPerformanceRecord Policy 身份不一致。');
   }
-  if (typeof source.commit !== 'string' || !GIT_COMMIT_PATTERN.test(source.commit)) {
-    throw new TypeError('ArenaPerformanceRecord.commit 必须是 40 位小写 commit。');
-  }
+  const commit = assertEvidenceGitCommit(source.commit, 'ArenaPerformanceRecord.commit');
   const targetId = boundedString(source.targetId, 128, 'ArenaPerformanceRecord.targetId');
   const target = policy.getTarget(targetId);
   if (!target) throw new RangeError(`未知 performance target ${targetId}。`);
@@ -341,11 +330,14 @@ export function createArenaPerformanceRecord(policyValue, value) {
     recordId: boundedString(source.recordId, 128, 'ArenaPerformanceRecord.recordId'),
     policyId: policy.id,
     policyHash: policy.getContentHash(),
-    commit: source.commit,
+    commit,
     buildId: boundedString(source.buildId, 128, 'ArenaPerformanceRecord.buildId'),
     targetId,
     runId: boundedString(source.runId, 128, 'ArenaPerformanceRecord.runId'),
-    performedAt: isoInstant(source.performedAt, 'ArenaPerformanceRecord.performedAt'),
+    performedAt: assertEvidenceUtcInstant(
+      source.performedAt,
+      'ArenaPerformanceRecord.performedAt',
+    ),
     capture: cloneCapture(source.capture, target),
   });
 }

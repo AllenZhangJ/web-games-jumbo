@@ -5,6 +5,10 @@ import {
   cloneFrozenData,
 } from '../rules/definition-utils.js';
 import {
+  assertEvidenceSha256,
+  assertEvidenceUtcInstant,
+} from '../evidence/evidence-value-contract.js';
+import {
   createHumanMatchStudyAssignment,
   validateHumanMatchStudyAssignment,
 } from './human-match-study-assignment.js';
@@ -66,19 +70,6 @@ const PACKAGE_RECEIPT_KEYS = new Set([
   'sha256',
   'byteLength',
 ]);
-const SHA256_PATTERN = /^[0-9a-f]{64}$/;
-const ISO_INSTANT_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
-
-function isoInstant(value, name) {
-  if (typeof value !== 'string' || !ISO_INSTANT_PATTERN.test(value)) {
-    throw new TypeError(`${name} 必须是带毫秒的 UTC ISO-8601 时间。`);
-  }
-  const timestamp = Date.parse(value);
-  if (!Number.isFinite(timestamp) || new Date(timestamp).toISOString() !== value) {
-    throw new RangeError(`${name} 不是有效 UTC 时间。`);
-  }
-  return value;
-}
 
 function boundedString(value, maximumLength, name) {
   const text = assertNonEmptyString(value, name);
@@ -103,13 +94,10 @@ function validatePackageReceipt(value, name) {
     || fileName === '.'
     || fileName === '..'
   ) throw new RangeError(`${name}.fileName 必须是单一安全文件名。`);
-  if (typeof value.sha256 !== 'string' || !SHA256_PATTERN.test(value.sha256)) {
-    throw new TypeError(`${name}.sha256 必须是 64 位小写 SHA-256。`);
-  }
   return Object.freeze({
     packageId: boundedString(value.packageId, 128, `${name}.packageId`),
     fileName,
-    sha256: value.sha256,
+    sha256: assertEvidenceSha256(value.sha256, `${name}.sha256`),
     byteLength: assertIntegerAtLeast(value.byteLength, 1, `${name}.byteLength`),
   });
 }
@@ -242,7 +230,10 @@ export function createHumanMatchStudyReceipt(definitionValue, checkpointValue, c
     || checkpoint.packageReceipt === null
     || checkpoint.terminalStatus === null
   ) throw new RangeError('只有 export-pending checkpoint 可以确认归档。');
-  const confirmedAt = isoInstant(confirmedAtValue, 'HumanMatchStudyReceipt.confirmedAt');
+  const confirmedAt = assertEvidenceUtcInstant(
+    confirmedAtValue,
+    'HumanMatchStudyReceipt.confirmedAt',
+  );
   if (confirmedAt < checkpoint.performedAt) {
     throw new RangeError('HumanMatchStudyReceipt.confirmedAt 不能早于参与者入组。');
   }
@@ -307,7 +298,10 @@ export function validateHumanMatchStudyReceipt(definitionValue, value) {
     status,
     terminationReason,
     packageReceipt,
-    confirmedAt: isoInstant(source.confirmedAt, 'HumanMatchStudyReceipt.confirmedAt'),
+    confirmedAt: assertEvidenceUtcInstant(
+      source.confirmedAt,
+      'HumanMatchStudyReceipt.confirmedAt',
+    ),
   });
 }
 

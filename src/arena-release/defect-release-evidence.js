@@ -1,13 +1,12 @@
 import { createDeterministicDataHash } from '../shared/deterministic-data-hash.js';
 import { cloneFrozenData } from '../arena/rules/definition-utils.js';
+import { assertEvidenceGitCommit } from '../arena/evidence/evidence-value-contract.js';
 import {
   ARENA_DEFECT_REPORT_STATUS,
   createArenaDefectLedger,
   createArenaDefectReport,
 } from './defect-ledger.js';
 import { ARENA_RELEASE_EVIDENCE_STATUS } from './release-evidence-statement.js';
-
-const GIT_COMMIT_PATTERN = /^[0-9a-f]{40}$/;
 
 function releaseStatus(status) {
   if (status === ARENA_DEFECT_REPORT_STATUS.READY) return ARENA_RELEASE_EVIDENCE_STATUS.READY;
@@ -19,9 +18,7 @@ function releaseStatus(status) {
 }
 
 export function createArenaDefectReleaseResult({ commit, sourceDirty, ledger: ledgerValue }) {
-  if (typeof commit !== 'string' || !GIT_COMMIT_PATTERN.test(commit)) {
-    throw new TypeError('Defect release result.commit 必须是 40 位小写 Git commit。');
-  }
+  assertEvidenceGitCommit(commit, 'Defect release result.commit');
   if (typeof sourceDirty !== 'boolean') {
     throw new TypeError('Defect release result.sourceDirty 必须是布尔值。');
   }

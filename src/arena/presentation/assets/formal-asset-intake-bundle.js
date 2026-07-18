@@ -6,6 +6,9 @@ import {
   cloneFrozenData,
 } from '../../rules/definition-utils.js';
 import {
+  assertEvidenceUtcInstant,
+} from '../../evidence/evidence-value-contract.js';
+import {
   createFormalAssetIntakePolicy,
 } from './formal-asset-intake-policy.js';
 import {
@@ -25,24 +28,12 @@ const BUNDLE_KEYS = new Set([
   'assets',
   'records',
 ]);
-const ISO_INSTANT_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 const MAXIMUM_ASSETS = 1_024;
 
 function compareText(left, right) {
   if (left < right) return -1;
   if (left > right) return 1;
   return 0;
-}
-
-function isoInstant(value, name) {
-  if (typeof value !== 'string' || !ISO_INSTANT_PATTERN.test(value)) {
-    throw new TypeError(`${name} 必须是带毫秒的 UTC ISO-8601 时间。`);
-  }
-  const milliseconds = Date.parse(value);
-  if (!Number.isFinite(milliseconds) || new Date(milliseconds).toISOString() !== value) {
-    throw new RangeError(`${name} 不是有效 UTC 时间。`);
-  }
-  return value;
 }
 
 function validateAssetPolicy(asset, policy) {
@@ -135,7 +126,10 @@ export class FormalAssetIntakeBundle {
       throw new RangeError(`正式资产 ${missingAsset.id} 缺少 provenance record。`);
     }
     assertSharedArtifactStable(records);
-    const createdAt = isoInstant(source.createdAt, 'FormalAssetIntakeBundle.createdAt');
+    const createdAt = assertEvidenceUtcInstant(
+      source.createdAt,
+      'FormalAssetIntakeBundle.createdAt',
+    );
     if (records.some((record) => record.approvedAt > createdAt)) {
       throw new RangeError('FormalAssetIntakeBundle.createdAt 不能早于资产批准时间。');
     }

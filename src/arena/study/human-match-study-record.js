@@ -11,6 +11,11 @@ import {
   cloneFrozenData,
 } from '../rules/definition-utils.js';
 import {
+  assertEvidenceGitCommit,
+  assertEvidenceSha256,
+  assertEvidenceUtcInstant,
+} from '../evidence/evidence-value-contract.js';
+import {
   validateHumanMatchStudyAssignment,
 } from './human-match-study-assignment.js';
 import {
@@ -114,9 +119,6 @@ const SELF_REPORT_KEYS = new Set([
   'naturalnessRating',
   'wouldRematch',
 ]);
-const SHA256_PATTERN = /^[0-9a-f]{64}$/;
-const GIT_COMMIT_PATTERN = /^[0-9a-f]{40}$/;
-const ISO_INSTANT_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 
 function boundedString(value, maximumLength, name) {
   const result = assertNonEmptyString(value, name);
@@ -135,17 +137,6 @@ function enumValue(value, values, name) {
 
 function booleanValue(value, name) {
   if (typeof value !== 'boolean') throw new TypeError(`${name} 必须是布尔值。`);
-  return value;
-}
-
-function isoInstant(value, name) {
-  if (typeof value !== 'string' || !ISO_INSTANT_PATTERN.test(value)) {
-    throw new TypeError(`${name} 必须是带毫秒的 UTC ISO-8601 时间。`);
-  }
-  const timestamp = Date.parse(value);
-  if (!Number.isFinite(timestamp) || new Date(timestamp).toISOString() !== value) {
-    throw new RangeError(`${name} 不是有效 UTC 时间。`);
-  }
   return value;
 }
 
@@ -180,13 +171,10 @@ function cloneArtifact(value, name) {
     || path.includes('\\')
     || path.split('/').some((part) => part === '' || part === '.' || part === '..')
   ) throw new RangeError(`${name}.path 必须是规范的相对 POSIX 路径。`);
-  if (typeof value.sha256 !== 'string' || !SHA256_PATTERN.test(value.sha256)) {
-    throw new TypeError(`${name}.sha256 必须是 64 位小写十六进制。`);
-  }
   return Object.freeze({
     id: boundedString(value.id, 128, `${name}.id`),
     path,
-    sha256: value.sha256,
+    sha256: assertEvidenceSha256(value.sha256, `${name}.sha256`),
     byteLength: assertIntegerAtLeast(value.byteLength, 1, `${name}.byteLength`),
   });
 }
@@ -268,9 +256,7 @@ export function createHumanMatchStudySubmission(definitionValue, value) {
     source.definitionId !== definition.id
     || source.definitionHash !== definition.getContentHash()
   ) throw new RangeError('HumanMatchStudySubmission 与当前 Definition 身份不一致。');
-  if (typeof source.commit !== 'string' || !GIT_COMMIT_PATTERN.test(source.commit)) {
-    throw new TypeError('HumanMatchStudySubmission.commit 必须是 40 位小写 commit。');
-  }
+  const commit = assertEvidenceGitCommit(source.commit, 'HumanMatchStudySubmission.commit');
   const assignment = validateHumanMatchStudyAssignment(definition, source.assignment);
   const status = enumValue(
     source.status,
@@ -296,9 +282,12 @@ export function createHumanMatchStudySubmission(definitionValue, value) {
     recordId: boundedString(source.recordId, 128, 'HumanMatchStudySubmission.recordId'),
     definitionId: definition.id,
     definitionHash: definition.getContentHash(),
-    commit: source.commit,
+    commit,
     buildId: boundedString(source.buildId, 128, 'HumanMatchStudySubmission.buildId'),
-    performedAt: isoInstant(source.performedAt, 'HumanMatchStudySubmission.performedAt'),
+    performedAt: assertEvidenceUtcInstant(
+      source.performedAt,
+      'HumanMatchStudySubmission.performedAt',
+    ),
     operatorId: boundedString(source.operatorId, 128, 'HumanMatchStudySubmission.operatorId'),
     assignment,
     status,

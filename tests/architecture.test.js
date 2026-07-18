@@ -227,6 +227,46 @@ test('Arena quality and performance contracts remain host-free and cannot own re
   }
 });
 
+test('Arena Evidence Value Contract stays scalar-only and outside authority dependencies', async () => {
+  const evidenceRoot = path.resolve('src/arena/evidence');
+  const evidenceFiles = await listJavaScript(evidenceRoot);
+  assert.ok(evidenceFiles.length >= 1);
+  for (const file of evidenceFiles) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /from\s+['"](?:node:|three|[^'"]*(?:presentation|study|experiment|regression|product|release|platform|entry|session|renderer)[^'"]*)['"]|Date\.now|Math\.random|setTimeout|setInterval|requestAnimationFrame|\b(?:window|document|navigator)\b|\b(?:tt|wx)\s*\./,
+      `${file} 必须保持为只依赖 Rule 数据工具的证据标量合同。`,
+    );
+  }
+  const authorityDirectories = [
+    'src/arena/action',
+    'src/arena/ai',
+    'src/arena/character',
+    'src/arena/composition',
+    'src/arena/content',
+    'src/arena/equipment',
+    'src/arena/map',
+    'src/arena/matchmaking',
+    'src/arena/movement',
+    'src/arena/physics',
+    'src/arena/rules',
+    'src/arena/runtime',
+    'src/arena/session',
+  ];
+  const authorityFiles = (await Promise.all(authorityDirectories.map((directory) => (
+    listJavaScript(path.resolve(directory))
+  )))).flat();
+  for (const file of authorityFiles) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /from\s+['"][^'"]*(?:\/|^)evidence\//,
+      `${file} 的权威、Bot 或 Session 代码不应依赖验收证据。`,
+    );
+  }
+});
+
 test('Arena Stage 9 experiment orchestration stays headless and outside presentation/platform code', async () => {
   const experimentFiles = await listJavaScript(path.resolve('src/arena/experiment'));
   assert.ok(experimentFiles.length >= 7);
@@ -314,6 +354,7 @@ test('Arena release handoff stays outside authority and only composes host-free 
 
 test('Arena Stage 7 contracts remain host-free behind an injected Three view factory', async () => {
   const directories = [
+    'src/arena/evidence',
     'src/arena/presentation/animation',
     'src/arena/presentation/assets',
     'src/arena/presentation/character',

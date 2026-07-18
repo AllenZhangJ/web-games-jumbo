@@ -3,6 +3,10 @@ import {
   assertNonEmptyString,
   cloneFrozenData,
 } from '../rules/definition-utils.js';
+import {
+  assertEvidenceGitCommit,
+  assertEvidenceUtcInstant,
+} from '../evidence/evidence-value-contract.js';
 import { createHumanMatchStudyDefinition } from './human-match-study-definition.js';
 import { createHumanMatchStudyRecord } from './human-match-study-record.js';
 
@@ -17,8 +21,6 @@ const BUNDLE_KEYS = new Set([
   'createdAt',
   'records',
 ]);
-const GIT_COMMIT_PATTERN = /^[0-9a-f]{40}$/;
-const ISO_INSTANT_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 const MAXIMUM_RECORDS = 10_000;
 
 function boundedString(value, maximumLength, name) {
@@ -27,17 +29,6 @@ function boundedString(value, maximumLength, name) {
     throw new RangeError(`${name} 不能超过 ${maximumLength} 字符。`);
   }
   return result;
-}
-
-function isoInstant(value, name) {
-  if (typeof value !== 'string' || !ISO_INSTANT_PATTERN.test(value)) {
-    throw new TypeError(`${name} 必须是带毫秒的 UTC ISO-8601 时间。`);
-  }
-  const timestamp = Date.parse(value);
-  if (!Number.isFinite(timestamp) || new Date(timestamp).toISOString() !== value) {
-    throw new RangeError(`${name} 不是有效 UTC 时间。`);
-  }
-  return value;
 }
 
 function compareRecords(left, right) {
@@ -62,11 +53,12 @@ export function createHumanMatchStudyBundle(definitionValue, value) {
     source.definitionId !== definition.id
     || source.definitionHash !== definition.getContentHash()
   ) throw new RangeError('HumanMatchStudyBundle 与当前 Definition 身份不一致。');
-  if (typeof source.commit !== 'string' || !GIT_COMMIT_PATTERN.test(source.commit)) {
-    throw new TypeError('HumanMatchStudyBundle.commit 必须是 40 位小写 commit。');
-  }
+  const commit = assertEvidenceGitCommit(source.commit, 'HumanMatchStudyBundle.commit');
   const buildId = boundedString(source.buildId, 128, 'HumanMatchStudyBundle.buildId');
-  const createdAt = isoInstant(source.createdAt, 'HumanMatchStudyBundle.createdAt');
+  const createdAt = assertEvidenceUtcInstant(
+    source.createdAt,
+    'HumanMatchStudyBundle.createdAt',
+  );
   if (!Array.isArray(source.records)) {
     throw new TypeError('HumanMatchStudyBundle.records 必须是数组。');
   }
@@ -90,7 +82,7 @@ export function createHumanMatchStudyBundle(definitionValue, value) {
   };
   const records = source.records.map((recordValue, index) => {
     const record = createHumanMatchStudyRecord(definition, recordValue);
-    if (record.commit !== source.commit) {
+    if (record.commit !== commit) {
       throw new RangeError(`HumanMatchStudyBundle.records[${index}].commit 与 Bundle 不一致。`);
     }
     if (record.buildId !== buildId) {
@@ -126,7 +118,7 @@ export function createHumanMatchStudyBundle(definitionValue, value) {
     schemaVersion: HUMAN_MATCH_STUDY_BUNDLE_SCHEMA_VERSION,
     definitionId: definition.id,
     definitionHash: definition.getContentHash(),
-    commit: source.commit,
+    commit,
     buildId,
     createdAt,
     records: Object.freeze(records.sort(compareRecords)),

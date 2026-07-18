@@ -4,6 +4,7 @@ import {
   assertNonEmptyString,
   cloneFrozenData,
 } from '../arena/rules/definition-utils.js';
+import { assertEvidenceGitCommit } from '../arena/evidence/evidence-value-contract.js';
 import { createArenaReleaseEvidenceStatement } from './release-evidence-statement.js';
 import { createArenaReleaseReadinessDefinition } from './release-readiness-definition.js';
 
@@ -18,7 +19,6 @@ const BUNDLE_KEYS = new Set([
   'sourceDirty',
   'evidence',
 ]);
-const GIT_COMMIT_PATTERN = /^[0-9a-f]{40}$/;
 const HASH_PATTERN = /^[0-9a-f]{8}$/;
 
 function boundedText(value, maximumLength, name) {
@@ -51,9 +51,10 @@ export class ArenaReleaseCandidateBundle {
         'ArenaReleaseCandidateBundle.definitionHash 与当前 Definition 不一致。',
       );
     }
-    if (typeof source.commit !== 'string' || !GIT_COMMIT_PATTERN.test(source.commit)) {
-      throw new TypeError('ArenaReleaseCandidateBundle.commit 必须是 40 位小写 Git commit。');
-    }
+    const commit = assertEvidenceGitCommit(
+      source.commit,
+      'ArenaReleaseCandidateBundle.commit',
+    );
     const buildId = boundedText(source.buildId, 128, 'ArenaReleaseCandidateBundle.buildId');
     if (typeof source.sourceDirty !== 'boolean') {
       throw new TypeError('ArenaReleaseCandidateBundle.sourceDirty 必须是布尔值。');
@@ -73,7 +74,7 @@ export class ArenaReleaseCandidateBundle {
         throw new RangeError(`重复的 Release evidence gate ${statement.gateId}。`);
       }
       gateIds.add(statement.gateId);
-      if (statement.commit !== source.commit) {
+      if (statement.commit !== commit) {
         throw new RangeError(`Release evidence ${statement.gateId}.commit 与候选不一致。`);
       }
       if (statement.buildId !== null && statement.buildId !== buildId) {
@@ -103,7 +104,7 @@ export class ArenaReleaseCandidateBundle {
       },
       definitionId: { value: definition.id, enumerable: true },
       definitionHash: { value: definition.getContentHash(), enumerable: true },
-      commit: { value: source.commit, enumerable: true },
+      commit: { value: commit, enumerable: true },
       buildId: { value: buildId, enumerable: true },
       sourceDirty: { value: source.sourceDirty, enumerable: true },
       evidence: { value: Object.freeze(evidence), enumerable: true },

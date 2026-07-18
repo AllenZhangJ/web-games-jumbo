@@ -2,6 +2,7 @@ import {
   assertKnownKeys,
   cloneFrozenData,
 } from '../arena/rules/definition-utils.js';
+import { assertEvidenceGitCommit } from '../arena/evidence/evidence-value-contract.js';
 import {
   ARENA_RELEASE_EVIDENCE_STATUS,
   createArenaReleaseEvidenceStatement,
@@ -10,7 +11,6 @@ import { createArenaReleaseCandidateBundle } from './release-candidate-bundle.js
 import { createArenaReleaseReadinessDefinition } from './release-readiness-definition.js';
 
 const RESULT_KEYS = new Set(['commit', 'buildId', 'status', 'resultHash']);
-const GIT_COMMIT_PATTERN = /^[0-9a-f]{40}$/;
 const RESULT_HASH_PATTERN = /^(?:[0-9a-f]{8}|[0-9a-f]{64})$/;
 
 export function verifyArenaReleaseEvidenceProducerResult({
@@ -28,9 +28,7 @@ export function verifyArenaReleaseEvidenceProducerResult({
   }
   const result = cloneFrozenData(resultValue, `Release producer result ${statement.gateId}`);
   assertKnownKeys(result, RESULT_KEYS, `Release producer result ${statement.gateId}`);
-  if (typeof result.commit !== 'string' || !GIT_COMMIT_PATTERN.test(result.commit)) {
-    throw new TypeError(`Release producer ${statement.gateId}.commit 必须是 40 位小写 Git commit。`);
-  }
+  assertEvidenceGitCommit(result.commit, `Release producer ${statement.gateId}.commit`);
   if (result.buildId !== null && (typeof result.buildId !== 'string' || result.buildId.length === 0)) {
     throw new TypeError(`Release producer ${statement.gateId}.buildId 必须是 null 或非空字符串。`);
   }

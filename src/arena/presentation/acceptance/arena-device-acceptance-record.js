@@ -1,10 +1,16 @@
 import {
   assertIntegerAtLeast,
   assertKnownKeys,
-  assertNonEmptyString,
   cloneFrozenData,
   cloneFrozenStringSet,
 } from '../../rules/definition-utils.js';
+import {
+  assertEvidenceBoundedString,
+  assertEvidenceGitCommit,
+  assertEvidenceRelativePath,
+  assertEvidenceSha256,
+  assertEvidenceUtcInstant,
+} from '../../evidence/evidence-value-contract.js';
 import {
   ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND,
   ARENA_DEVICE_ACCEPTANCE_PLATFORM,
@@ -40,10 +46,6 @@ const CLIENT_KEYS = new Set(['name', 'version', 'baseLibraryVersion']);
 const DEVICE_KEYS = new Set(['manufacturer', 'model', 'osName', 'osVersion']);
 const CHECK_KEYS = new Set(['id', 'result', 'notes', 'artifactIds']);
 const ARTIFACT_KEYS = new Set(['id', 'kind', 'path', 'sha256', 'byteLength']);
-const GIT_COMMIT_PATTERN = /^[0-9a-f]{40}$/;
-const SHA256_PATTERN = /^[0-9a-f]{64}$/;
-const ISO_INSTANT_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
-const CONTROL_CHARACTER_PATTERN = /[\u0000-\u001f\u007f]/;
 const MAXIMUM_ARTIFACTS = 64;
 
 function enumValue(value, values, name) {
@@ -59,42 +61,11 @@ function exactValue(value, expected, name) {
 }
 
 function boundedString(value, maximumLength, name) {
-  const text = assertNonEmptyString(value, name);
-  if (text.length > maximumLength) {
-    throw new RangeError(`${name} 不能超过 ${maximumLength} 个字符。`);
-  }
-  return text;
+  return assertEvidenceBoundedString(value, maximumLength, name);
 }
 
 function nullableBoundedString(value, maximumLength, name) {
   return value === null ? null : boundedString(value, maximumLength, name);
-}
-
-function isoInstant(value, name) {
-  if (typeof value !== 'string' || !ISO_INSTANT_PATTERN.test(value)) {
-    throw new TypeError(`${name} 必须是带毫秒的 UTC ISO-8601 时间。`);
-  }
-  const milliseconds = Date.parse(value);
-  if (!Number.isFinite(milliseconds) || new Date(milliseconds).toISOString() !== value) {
-    throw new RangeError(`${name} 不是有效 UTC 时间。`);
-  }
-  return value;
-}
-
-function relativeArtifactPath(value, name) {
-  const artifactPath = boundedString(value, 512, name);
-  if (
-    artifactPath.includes('\\')
-    || artifactPath.startsWith('/')
-    || artifactPath.includes('://')
-    || /^[A-Za-z]:/.test(artifactPath)
-    || CONTROL_CHARACTER_PATTERN.test(artifactPath)
-  ) throw new RangeError(`${name} 必须是使用 / 的相对路径。`);
-  const segments = artifactPath.split('/');
-  if (segments.some((segment) => segment === '' || segment === '.' || segment === '..')) {
-    throw new RangeError(`${name} 不能包含空段、. 或 ..。`);
-  }
-  return artifactPath;
 }
 
 function cloneClient(value, target) {
@@ -154,19 +125,16 @@ function cloneArtifacts(values, target) {
     const id = boundedString(value.id, 128, `${name}.id`);
     if (ids.has(id)) throw new RangeError(`重复的设备证据 artifact ${id}。`);
     ids.add(id);
-    const artifactPath = relativeArtifactPath(value.path, `${name}.path`);
+    const artifactPath = assertEvidenceRelativePath(value.path, `${name}.path`);
     if (paths.has(artifactPath)) {
       throw new RangeError(`同一运行不能重复引用 artifact 路径 ${artifactPath}。`);
     }
     paths.add(artifactPath);
-    if (typeof value.sha256 !== 'string' || !SHA256_PATTERN.test(value.sha256)) {
-      throw new TypeError(`${name}.sha256 必须是 64 位小写十六进制 SHA-256。`);
-    }
     return Object.freeze({
       id,
       kind: enumValue(value.kind, ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND, `${name}.kind`),
       path: artifactPath,
-      sha256: value.sha256,
+      sha256: assertEvidenceSha256(value.sha256, `${name}.sha256`),
       byteLength: assertIntegerAtLeast(value.byteLength, 1, `${name}.byteLength`),
     });
   });
@@ -234,9 +202,10 @@ export function createArenaDeviceAcceptanceRecord(definitionValue, value) {
   if (source.definitionHash !== definition.getContentHash()) {
     throw new RangeError('ArenaDeviceAcceptanceRecord.definitionHash 与当前定义不一致。');
   }
-  if (typeof source.commit !== 'string' || !GIT_COMMIT_PATTERN.test(source.commit)) {
-    throw new TypeError('ArenaDeviceAcceptanceRecord.commit 必须是 40 位小写 Git commit。');
-  }
+  const commit = assertEvidenceGitCommit(
+    source.commit,
+    'ArenaDeviceAcceptanceRecord.commit',
+  );
   const targetId = boundedString(source.targetId, 128, 'ArenaDeviceAcceptanceRecord.targetId');
   const target = definition.getTarget(targetId);
   if (!target) throw new RangeError(`未知设备验收 target ${targetId}。`);
@@ -252,11 +221,14 @@ export function createArenaDeviceAcceptanceRecord(definitionValue, value) {
     recordId: boundedString(source.recordId, 128, 'ArenaDeviceAcceptanceRecord.recordId'),
     definitionId: definition.id,
     definitionHash: definition.getContentHash(),
-    commit: source.commit,
+    commit,
     buildId: boundedString(source.buildId, 128, 'ArenaDeviceAcceptanceRecord.buildId'),
     targetId,
     runId: boundedString(source.runId, 128, 'ArenaDeviceAcceptanceRecord.runId'),
-    performedAt: isoInstant(source.performedAt, 'ArenaDeviceAcceptanceRecord.performedAt'),
+    performedAt: assertEvidenceUtcInstant(
+      source.performedAt,
+      'ArenaDeviceAcceptanceRecord.performedAt',
+    ),
     operatorId: boundedString(source.operatorId, 128, 'ArenaDeviceAcceptanceRecord.operatorId'),
     client: cloneClient(source.client, target),
     device: cloneDevice(source.device, target),

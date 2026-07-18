@@ -1,9 +1,13 @@
 import { createDeterministicDataHash } from '../../../shared/deterministic-data-hash.js';
 import {
   assertKnownKeys,
-  assertNonEmptyString,
   cloneFrozenData,
 } from '../../rules/definition-utils.js';
+import {
+  assertEvidenceBoundedString,
+  assertEvidenceGitCommit,
+  assertEvidenceUtcInstant,
+} from '../../evidence/evidence-value-contract.js';
 import {
   ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND,
   createArenaDeviceAcceptanceDefinition,
@@ -31,20 +35,7 @@ const BUNDLE_KEYS = new Set([
   'createdAt',
   'records',
 ]);
-const GIT_COMMIT_PATTERN = /^[0-9a-f]{40}$/;
-const ISO_INSTANT_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 const MAXIMUM_RECORDS = 100;
-
-function isoInstant(value, name) {
-  if (typeof value !== 'string' || !ISO_INSTANT_PATTERN.test(value)) {
-    throw new TypeError(`${name} 必须是带毫秒的 UTC ISO-8601 时间。`);
-  }
-  const milliseconds = Date.parse(value);
-  if (!Number.isFinite(milliseconds) || new Date(milliseconds).toISOString() !== value) {
-    throw new RangeError(`${name} 不是有效 UTC 时间。`);
-  }
-  return value;
-}
 
 function compareText(left, right) {
   if (left < right) return -1;
@@ -53,11 +44,7 @@ function compareText(left, right) {
 }
 
 function boundedString(value, maximumLength, name) {
-  const text = assertNonEmptyString(value, name);
-  if (text.length > maximumLength) {
-    throw new RangeError(`${name} 不能超过 ${maximumLength} 个字符。`);
-  }
-  return text;
+  return assertEvidenceBoundedString(value, maximumLength, name);
 }
 
 export function createArenaDeviceAcceptanceBundle(definitionValue, value) {
@@ -76,9 +63,10 @@ export function createArenaDeviceAcceptanceBundle(definitionValue, value) {
   if (source.definitionHash !== definitionHash) {
     throw new RangeError('ArenaDeviceAcceptanceBundle.definitionHash 与当前定义不一致。');
   }
-  if (typeof source.commit !== 'string' || !GIT_COMMIT_PATTERN.test(source.commit)) {
-    throw new TypeError('ArenaDeviceAcceptanceBundle.commit 必须是 40 位小写 Git commit。');
-  }
+  const commit = assertEvidenceGitCommit(
+    source.commit,
+    'ArenaDeviceAcceptanceBundle.commit',
+  );
   const buildId = boundedString(source.buildId, 128, 'ArenaDeviceAcceptanceBundle.buildId');
   if (!Array.isArray(source.records)) {
     throw new TypeError('ArenaDeviceAcceptanceBundle.records 必须是数组。');
@@ -92,7 +80,7 @@ export function createArenaDeviceAcceptanceBundle(definitionValue, value) {
   const buildManifestsByPlatform = new Map();
   const records = source.records.map((value, index) => {
     const record = createArenaDeviceAcceptanceRecord(definition, value);
-    if (record.commit !== source.commit) {
+    if (record.commit !== commit) {
       throw new RangeError(`records[${index}].commit 与 bundle commit 不一致。`);
     }
     if (record.buildId !== buildId) {
@@ -139,7 +127,10 @@ export function createArenaDeviceAcceptanceBundle(definitionValue, value) {
     }
     return record;
   });
-  const createdAt = isoInstant(source.createdAt, 'ArenaDeviceAcceptanceBundle.createdAt');
+  const createdAt = assertEvidenceUtcInstant(
+    source.createdAt,
+    'ArenaDeviceAcceptanceBundle.createdAt',
+  );
   if (records.some((record) => record.performedAt > createdAt)) {
     throw new RangeError('ArenaDeviceAcceptanceBundle.createdAt 不能早于设备运行记录。');
   }
@@ -147,7 +138,7 @@ export function createArenaDeviceAcceptanceBundle(definitionValue, value) {
     schemaVersion: ARENA_DEVICE_ACCEPTANCE_BUNDLE_SCHEMA_VERSION,
     definitionId: definition.id,
     definitionHash,
-    commit: source.commit,
+    commit,
     buildId,
     createdAt,
     records: Object.freeze(records.sort((left, right) => compareText(left.recordId, right.recordId))),

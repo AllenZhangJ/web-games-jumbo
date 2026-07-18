@@ -1,5 +1,6 @@
 import { createDeterministicDataHash } from '../shared/deterministic-data-hash.js';
 import { cloneFrozenData } from '../arena/rules/definition-utils.js';
+import { assertEvidenceGitCommit } from '../arena/evidence/evidence-value-contract.js';
 import {
   createArenaStage9BalanceValidationExperimentDefinition,
 } from '../arena/experiment/arena-balance-validation-composition.js';
@@ -12,16 +13,13 @@ import {
 import { ARENA_RELEASE_EVIDENCE_STATUS } from './release-evidence-statement.js';
 
 const BALANCE_VALIDATION_SUITE = 'balance-validation';
-const GIT_COMMIT_PATTERN = /^[0-9a-f]{40}$/;
 
 export function createArenaBalanceValidationReleaseResult({
   commit,
   sourceDirty,
   reportBundle: bundleValue,
 }) {
-  if (typeof commit !== 'string' || !GIT_COMMIT_PATTERN.test(commit)) {
-    throw new TypeError('Balance validation release result.commit 必须是 40 位小写 Git commit。');
-  }
+  assertEvidenceGitCommit(commit, 'Balance validation release result.commit');
   if (typeof sourceDirty !== 'boolean') {
     throw new TypeError('Balance validation release result.sourceDirty 必须是布尔值。');
   }

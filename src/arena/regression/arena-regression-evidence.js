@@ -3,6 +3,7 @@ import {
   assertKnownKeys,
   cloneFrozenData,
 } from '../rules/definition-utils.js';
+import { isEvidenceUtcInstant } from '../evidence/evidence-value-contract.js';
 import {
   cloneArenaRegressionEvidenceComponents,
 } from './arena-regression-evidence-components.js';
@@ -43,7 +44,6 @@ const REPORT_INPUT_KEYS = new Set([
   'components',
 ]);
 const RUNTIME_KEYS = new Set(['name', 'version', 'platform', 'architecture']);
-const ISO_INSTANT_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 const COMMIT_PATTERN = /^[0-9a-f]{40}$/;
 const HASH_PATTERN = /^[0-9a-f]{8}$/;
 
@@ -67,7 +67,7 @@ function normalizeCore(value) {
     throw new Error('ArenaRegressionEvidence 只能来自 clean source。');
   }
   const generatedAtMillis = typeof value.generatedAt === 'string'
-    && ISO_INSTANT_PATTERN.test(value.generatedAt)
+    && isEvidenceUtcInstant(value.generatedAt)
     ? Date.parse(value.generatedAt)
     : Number.NaN;
   if (

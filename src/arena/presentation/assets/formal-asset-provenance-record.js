@@ -1,9 +1,14 @@
 import {
   assertIntegerAtLeast,
   assertKnownKeys,
-  assertNonEmptyString,
   cloneFrozenData,
 } from '../../rules/definition-utils.js';
+import {
+  assertEvidenceBoundedString,
+  assertEvidenceRelativePath,
+  assertEvidenceSha256,
+  assertEvidenceUtcInstant,
+} from '../../evidence/evidence-value-contract.js';
 import { createFormalAssetIntakePolicy } from './formal-asset-intake-policy.js';
 import { assertPresentationAssetRegistry } from './presentation-asset-registry.js';
 
@@ -36,55 +41,17 @@ const LICENSE_KEYS = new Set([
   'attributionRequired',
   'attributionText',
 ]);
-const SHA256_PATTERN = /^[0-9a-f]{64}$/;
-const ISO_INSTANT_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
-const CONTROL_CHARACTER_PATTERN = /[\u0000-\u001f\u007f]/;
-
 function boundedString(value, maximumLength, name) {
-  const text = assertNonEmptyString(value, name);
-  if (text.length > maximumLength) {
-    throw new RangeError(`${name} 不能超过 ${maximumLength} 个字符。`);
-  }
-  if (CONTROL_CHARACTER_PATTERN.test(text)) {
-    throw new RangeError(`${name} 不能包含控制字符。`);
-  }
-  return text;
-}
-
-function isoInstant(value, name) {
-  if (typeof value !== 'string' || !ISO_INSTANT_PATTERN.test(value)) {
-    throw new TypeError(`${name} 必须是带毫秒的 UTC ISO-8601 时间。`);
-  }
-  const milliseconds = Date.parse(value);
-  if (!Number.isFinite(milliseconds) || new Date(milliseconds).toISOString() !== value) {
-    throw new RangeError(`${name} 不是有效 UTC 时间。`);
-  }
-  return value;
-}
-
-function relativeArtifactPath(value, name) {
-  const artifactPath = boundedString(value, 512, name);
-  if (
-    artifactPath.includes('\\')
-    || artifactPath.startsWith('/')
-    || artifactPath.includes('://')
-    || /^[A-Za-z]:/.test(artifactPath)
-  ) throw new RangeError(`${name} 必须是使用 / 的相对路径。`);
-  const segments = artifactPath.split('/');
-  if (segments.some((segment) => segment === '' || segment === '.' || segment === '..')) {
-    throw new RangeError(`${name} 不能包含空段、. 或 ..。`);
-  }
-  return artifactPath;
+  return assertEvidenceBoundedString(value, maximumLength, name, {
+    rejectControlCharacters: true,
+  });
 }
 
 function cloneArtifact(value, name) {
   assertKnownKeys(value, ARTIFACT_KEYS, name);
-  if (typeof value.sha256 !== 'string' || !SHA256_PATTERN.test(value.sha256)) {
-    throw new TypeError(`${name}.sha256 必须是 64 位小写十六进制 SHA-256。`);
-  }
   return Object.freeze({
-    path: relativeArtifactPath(value.path, `${name}.path`),
-    sha256: value.sha256,
+    path: assertEvidenceRelativePath(value.path, `${name}.path`),
+    sha256: assertEvidenceSha256(value.sha256, `${name}.sha256`),
     byteLength: assertIntegerAtLeast(value.byteLength, 1, `${name}.byteLength`),
   });
 }
@@ -157,8 +124,14 @@ export function createFormalAssetProvenanceRecord({
   if (!policy.allowedSourceKinds.includes(sourceKind)) {
     throw new RangeError(`FormalAssetProvenanceRecord.sourceKind 不受 Policy 允许：${sourceKind}。`);
   }
-  const acquiredAt = isoInstant(source.acquiredAt, 'FormalAssetProvenanceRecord.acquiredAt');
-  const approvedAt = isoInstant(source.approvedAt, 'FormalAssetProvenanceRecord.approvedAt');
+  const acquiredAt = assertEvidenceUtcInstant(
+    source.acquiredAt,
+    'FormalAssetProvenanceRecord.acquiredAt',
+  );
+  const approvedAt = assertEvidenceUtcInstant(
+    source.approvedAt,
+    'FormalAssetProvenanceRecord.approvedAt',
+  );
   if (approvedAt < acquiredAt) {
     throw new RangeError('FormalAssetProvenanceRecord.approvedAt 不能早于 acquiredAt。');
   }

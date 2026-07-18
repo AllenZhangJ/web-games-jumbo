@@ -6,6 +6,7 @@ import {
   assertPlainRecord,
   cloneFrozenData,
 } from '../rules/definition-utils.js';
+import { assertEvidenceUtcInstant } from '../evidence/evidence-value-contract.js';
 import { createArenaExperimentDefinition } from './experiment-definition.js';
 import { readArenaMetricGate } from './metric-gate.js';
 
@@ -34,19 +35,7 @@ const CASE_KEYS = new Set([
 ]);
 const FAILURE_KEYS = new Set(['name', 'message']);
 const METRIC_KEYS = new Set(['id', 'version', 'data']);
-const ISO_INSTANT_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 const HASH_PATTERN = /^[0-9a-f]{8}$/;
-
-function isoInstant(value, name) {
-  if (typeof value !== 'string' || !ISO_INSTANT_PATTERN.test(value)) {
-    throw new TypeError(`${name} 必须是带毫秒的 UTC ISO-8601 时间。`);
-  }
-  const milliseconds = Date.parse(value);
-  if (!Number.isFinite(milliseconds) || new Date(milliseconds).toISOString() !== value) {
-    throw new RangeError(`${name} 不是有效 UTC 时间。`);
-  }
-  return value;
-}
 
 function cloneEnvironment(value) {
   const name = 'ArenaExperimentReport.environment';
@@ -172,7 +161,10 @@ export function createArenaExperimentReport(definitionValue, value) {
     schemaVersion: ARENA_EXPERIMENT_REPORT_SCHEMA_VERSION,
     definitionId: definition.id,
     definitionHash: definition.getContentHash(),
-    generatedAt: isoInstant(source.generatedAt, 'ArenaExperimentReport.generatedAt'),
+    generatedAt: assertEvidenceUtcInstant(
+      source.generatedAt,
+      'ArenaExperimentReport.generatedAt',
+    ),
     environment: cloneEnvironment(source.environment),
     outcome,
     freezeEligible: outcome === ARENA_EXPERIMENT_OUTCOME.PASSED

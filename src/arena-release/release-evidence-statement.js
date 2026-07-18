@@ -6,6 +6,11 @@ import {
   cloneFrozenData,
 } from '../arena/rules/definition-utils.js';
 import {
+  assertEvidenceGitCommit,
+  assertEvidenceRelativePath,
+  assertEvidenceSha256,
+} from '../arena/evidence/evidence-value-contract.js';
+import {
   ARENA_RELEASE_EVIDENCE_SUBJECT_SCOPE,
   createArenaReleaseReadinessDefinition,
 } from './release-readiness-definition.js';
@@ -30,10 +35,8 @@ const STATEMENT_KEYS = new Set([
   'materials',
 ]);
 const MATERIAL_KEYS = new Set(['path', 'sha256', 'byteLength']);
-const GIT_COMMIT_PATTERN = /^[0-9a-f]{40}$/;
 const HASH_PATTERN = /^(?:[0-9a-f]{8}|[0-9a-f]{64})$/;
 const CONTENT_HASH_PATTERN = /^[0-9a-f]{8}$/;
-const SHA256_PATTERN = /^[0-9a-f]{64}$/;
 const MAXIMUM_MATERIALS = 128;
 const MAXIMUM_MATERIAL_BYTES = 512 * 1024 * 1024;
 
@@ -41,18 +44,6 @@ function boundedText(value, maximumLength, name) {
   const text = assertNonEmptyString(value, name);
   if (text.length > maximumLength) {
     throw new RangeError(`${name} 不能超过 ${maximumLength} 个字符。`);
-  }
-  return text;
-}
-
-function relativeMaterialPath(value, name) {
-  const text = boundedText(value, 512, name);
-  if (
-    text.startsWith('/')
-    || text.includes('\\')
-    || text.split('/').some((segment) => segment === '' || segment === '.' || segment === '..')
-  ) {
-    throw new RangeError(`${name} 必须是规范化的相对路径。`);
   }
   return text;
 }
@@ -70,17 +61,18 @@ function cloneMaterials(values) {
   return Object.freeze(values.map((value, index) => {
     const name = `ArenaReleaseEvidenceStatement.materials[${index}]`;
     assertKnownKeys(value, MATERIAL_KEYS, name);
-    const materialPath = relativeMaterialPath(value.path, `${name}.path`);
+    const materialPath = assertEvidenceRelativePath(value.path, `${name}.path`);
     if (paths.has(materialPath)) throw new RangeError(`重复的 Release material ${materialPath}。`);
     paths.add(materialPath);
-    if (typeof value.sha256 !== 'string' || !SHA256_PATTERN.test(value.sha256)) {
-      throw new TypeError(`${name}.sha256 必须是 64 位小写十六进制 SHA-256。`);
-    }
     const byteLength = assertIntegerAtLeast(value.byteLength, 1, `${name}.byteLength`);
     if (byteLength > MAXIMUM_MATERIAL_BYTES) {
       throw new RangeError(`${name}.byteLength 超过 ${MAXIMUM_MATERIAL_BYTES} 字节上限。`);
     }
-    return Object.freeze({ path: materialPath, sha256: value.sha256, byteLength });
+    return Object.freeze({
+      path: materialPath,
+      sha256: assertEvidenceSha256(value.sha256, `${name}.sha256`),
+      byteLength,
+    });
   }).sort((left, right) => (left.path < right.path ? -1 : left.path > right.path ? 1 : 0)));
 }
 
@@ -103,9 +95,10 @@ export class ArenaReleaseEvidenceStatement {
       || !CONTENT_HASH_PATTERN.test(source.requirementHash)
       || source.requirementHash !== gate.requirementHash
     ) throw new RangeError(`Release gate ${gate.id} requirementHash 与 Definition 不一致。`);
-    if (typeof source.commit !== 'string' || !GIT_COMMIT_PATTERN.test(source.commit)) {
-      throw new TypeError('ArenaReleaseEvidenceStatement.commit 必须是 40 位小写 Git commit。');
-    }
+    const commit = assertEvidenceGitCommit(
+      source.commit,
+      'ArenaReleaseEvidenceStatement.commit',
+    );
     const buildId = source.buildId === null
       ? null
       : boundedText(source.buildId, 128, 'ArenaReleaseEvidenceStatement.buildId');
@@ -135,7 +128,7 @@ export class ArenaReleaseEvidenceStatement {
       gateId: { value: gate.id, enumerable: true },
       producerId: { value: gate.producerId, enumerable: true },
       requirementHash: { value: gate.requirementHash, enumerable: true },
-      commit: { value: source.commit, enumerable: true },
+      commit: { value: commit, enumerable: true },
       buildId: { value: buildId, enumerable: true },
       status: { value: source.status, enumerable: true },
       resultHash: { value: source.resultHash, enumerable: true },

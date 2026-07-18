@@ -2,9 +2,14 @@ import { createDeterministicDataHash } from '../../../shared/deterministic-data-
 import {
   assertIntegerAtLeast,
   assertKnownKeys,
-  assertNonEmptyString,
   cloneFrozenData,
 } from '../../rules/definition-utils.js';
+import {
+  assertEvidenceBoundedString,
+  assertEvidenceGitCommit,
+  assertEvidenceRelativePath,
+  assertEvidenceSha256,
+} from '../../evidence/evidence-value-contract.js';
 import {
   ARENA_DEVICE_ACCEPTANCE_PLATFORM,
 } from './arena-device-acceptance-definition.js';
@@ -27,9 +32,6 @@ const MANIFEST_KEYS = new Set([
   'artifacts',
 ]);
 const ARTIFACT_KEYS = new Set(['path', 'sha256', 'byteLength']);
-const GIT_COMMIT_PATTERN = /^[0-9a-f]{40}$/;
-const SHA256_PATTERN = /^[0-9a-f]{64}$/;
-const CONTROL_CHARACTER_PATTERN = /[\u0000-\u001f\u007f]/;
 const MAXIMUM_ARTIFACTS = 4_096;
 
 function enumValue(value, values, name) {
@@ -39,27 +41,8 @@ function enumValue(value, values, name) {
   return value;
 }
 
-function boundedString(value, maximumLength, name) {
-  const text = assertNonEmptyString(value, name);
-  if (text.length > maximumLength) {
-    throw new RangeError(`${name} 不能超过 ${maximumLength} 个字符。`);
-  }
-  return text;
-}
-
 function relativePath(value, name) {
-  const artifactPath = boundedString(value, 512, name);
-  if (
-    artifactPath.includes('\\')
-    || artifactPath.startsWith('/')
-    || artifactPath.includes('://')
-    || /^[A-Za-z]:/.test(artifactPath)
-    || CONTROL_CHARACTER_PATTERN.test(artifactPath)
-  ) throw new RangeError(`${name} 必须是使用 / 的相对路径。`);
-  const segments = artifactPath.split('/');
-  if (segments.some((segment) => segment === '' || segment === '.' || segment === '..')) {
-    throw new RangeError(`${name} 不能包含空段、. 或 ..。`);
-  }
+  const artifactPath = assertEvidenceRelativePath(value, name);
   if (artifactPath === ARENA_BUILD_MANIFEST_FILENAME) {
     throw new RangeError('构建 Manifest 不能把自身列为产物。');
   }
@@ -80,12 +63,9 @@ function cloneArtifacts(values) {
     const artifactPath = relativePath(value.path, `${name}.path`);
     if (paths.has(artifactPath)) throw new RangeError(`重复的构建产物路径 ${artifactPath}。`);
     paths.add(artifactPath);
-    if (typeof value.sha256 !== 'string' || !SHA256_PATTERN.test(value.sha256)) {
-      throw new TypeError(`${name}.sha256 必须是 64 位小写十六进制 SHA-256。`);
-    }
     return Object.freeze({
       path: artifactPath,
-      sha256: value.sha256,
+      sha256: assertEvidenceSha256(value.sha256, `${name}.sha256`),
       byteLength: assertIntegerAtLeast(value.byteLength, 0, `${name}.byteLength`),
     });
   });
@@ -128,9 +108,7 @@ export class ArenaBuildManifest {
     if (source.schemaVersion !== ARENA_BUILD_MANIFEST_SCHEMA_VERSION) {
       throw new RangeError(`不支持 ArenaBuildManifest schema ${String(source.schemaVersion)}。`);
     }
-    if (typeof source.commit !== 'string' || !GIT_COMMIT_PATTERN.test(source.commit)) {
-      throw new TypeError('ArenaBuildManifest.commit 必须是 40 位小写 Git commit。');
-    }
+    const commit = assertEvidenceGitCommit(source.commit, 'ArenaBuildManifest.commit');
     if (typeof source.sourceDirty !== 'boolean') {
       throw new TypeError('ArenaBuildManifest.sourceDirty 必须是布尔值。');
     }
@@ -149,10 +127,14 @@ export class ArenaBuildManifest {
     Object.defineProperties(this, {
       schemaVersion: { value: ARENA_BUILD_MANIFEST_SCHEMA_VERSION, enumerable: true },
       buildId: {
-        value: boundedString(source.buildId, 128, 'ArenaBuildManifest.buildId'),
+        value: assertEvidenceBoundedString(
+          source.buildId,
+          128,
+          'ArenaBuildManifest.buildId',
+        ),
         enumerable: true,
       },
-      commit: { value: source.commit, enumerable: true },
+      commit: { value: commit, enumerable: true },
       sourceDirty: { value: source.sourceDirty, enumerable: true },
       target: { value: target, enumerable: true },
       defaultEntry: { value: defaultEntry, enumerable: true },
