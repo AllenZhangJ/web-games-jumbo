@@ -206,6 +206,7 @@ test('WebProductUiSurface renders stable semantic controls and serializes DOM in
   ), true);
   assert.deepEqual(surface.getInputViewport(), { width: 800, height: 1600 });
   surface.render(viewModel());
+  assert.equal(surface.requiresCompositeFrame(), false);
   assert.equal(root.querySelector('#product-title').textContent, '竞技场');
   const primary = root.querySelector('#product-primary-action');
   assert.equal(primary.textContent, '开始匹配');
@@ -232,6 +233,7 @@ test('WebProductUiSurface renders stable semantic controls and serializes DOM in
   const cards = root.querySelector('#product-character-list').querySelectorAll('button');
   assert.equal(cards.length, 2);
   assert.equal(cards[0].getAttribute('aria-checked'), 'true');
+  assert.equal(cards[0].getAttribute('aria-label'), '跑酷学徒');
   surface.render(viewModel('character-select', {
     revision: 3,
     characterOptions: [
@@ -253,6 +255,7 @@ test('WebProductUiSurface renders stable semantic controls and serializes DOM in
   assert.equal(updatedCards[0], cards[0]);
   assert.equal(updatedCards[1], cards[1]);
   assert.equal(updatedCards[1].getAttribute('aria-checked'), 'true');
+  assert.equal(updatedCards[1].getAttribute('aria-label'), '发条方块');
   cleanup();
   surface.dispose();
   surface.dispose();

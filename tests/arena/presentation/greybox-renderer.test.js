@@ -185,11 +185,23 @@ test('ArenaGreyboxRenderer draws world and HUD, pauses on context loss and relea
   renderer.render(frame, { deltaSeconds: 1 / 60, mapperLabel: '方案 A' });
   assert.equal(renderer.getDebugSnapshot().stage.objectCount, objectCount);
 
+  const overlay = {
+    presented: 0,
+    present(target) {
+      this.presented += 1;
+      target.render({}, {});
+      return true;
+    },
+  };
+  assert.equal(renderer.renderComposite(null, overlay), true);
+  assert.equal(overlay.presented, 1);
+  assert.equal(webgl.renderCount, 5);
+
   let prevented = false;
   assert.equal(renderer.handleContextLost({ preventDefault: () => { prevented = true; } }), true);
   assert.equal(prevented, true);
   assert.equal(renderer.render(frame), false);
-  assert.equal(webgl.renderCount, 4);
+  assert.equal(webgl.renderCount, 5);
   assert.equal(renderer.handleContextRestored(), true);
   assert.equal(renderer.state, ARENA_GREYBOX_RENDERER_STATE.READY);
 

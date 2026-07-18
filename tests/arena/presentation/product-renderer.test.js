@@ -15,6 +15,11 @@ function childHarness({ disposeFailures = 0 } = {}) {
     contextLost: false,
     async load() { this.loaded += 1; return this; },
     render(frame, options) { this.rendered.push({ frame, options }); return !this.contextLost; },
+    renderComposite(frame, overlay, options) {
+      this.rendered.push({ frame, overlay, options });
+      if (this.contextLost) return false;
+      return overlay.present({ render() {} });
+    },
     resize(viewport) { this.resized.push(viewport); return true; },
     getInputViewport: () => ({ width: 800, height: 1600 }),
     handleContextLost(event) {
@@ -37,7 +42,7 @@ function childHarness({ disposeFailures = 0 } = {}) {
   };
 }
 
-function surfaceHarness({ disposeFailures = 0, loadPromise = null } = {}) {
+function surfaceHarness({ disposeFailures = 0, loadPromise = null, composite = true } = {}) {
   let remainingDisposeFailures = disposeFailures;
   return {
     loaded: 0,
@@ -45,6 +50,7 @@ function surfaceHarness({ disposeFailures = 0, loadPromise = null } = {}) {
     resized: [],
     disposed: false,
     handlers: null,
+    presented: 0,
     async load() { this.loaded += 1; if (loadPromise) await loadPromise; return this; },
     render(viewModel, options) { this.rendered.push({ viewModel, options }); return true; },
     resize(viewport, inputViewport) {
@@ -53,6 +59,8 @@ function surfaceHarness({ disposeFailures = 0, loadPromise = null } = {}) {
     },
     getInputViewport: (fallback) => fallback,
     hitTestUi: (point, viewport, viewModel) => ({ point, viewport, viewModel }),
+    requiresCompositeFrame: () => composite,
+    present() { this.presented += 1; return true; },
     bindIntent(handlers) {
       this.handlers = handlers;
       let active = true;
@@ -96,15 +104,18 @@ test('ProductRenderer keeps product UI and gameplay frames on separate read-only
   const viewModel = { screen: { sceneId: 'home' } };
   assert.equal(renderer.render({ viewModel, matchFrame: null }, { deltaSeconds: 0 }), true);
   assert.equal(surface.rendered.length, 1);
-  assert.equal(gameplay.rendered.length, 0);
+  assert.equal(gameplay.rendered.length, 1);
+  assert.equal(gameplay.rendered[0].frame, null);
+  assert.equal(gameplay.rendered[0].overlay, surface);
 
   const matchFrame = { source: { tick: 4 } };
   renderer.render({ viewModel: { screen: { sceneId: 'gameplay' } }, matchFrame }, {
     deltaSeconds: 1 / 60,
   });
   assert.equal(surface.rendered.length, 2);
-  assert.equal(gameplay.rendered.length, 1);
-  assert.equal(gameplay.rendered[0].frame, matchFrame);
+  assert.equal(surface.presented, 2);
+  assert.equal(gameplay.rendered.length, 2);
+  assert.equal(gameplay.rendered[1].frame, matchFrame);
   assert.deepEqual(renderer.getInputViewport(), { width: 800, height: 1600 });
 
   const handlers = { onIntent: () => {}, onRejected: () => {} };
@@ -130,6 +141,19 @@ test('ProductRenderer propagates context loss and resumes only after child resto
   assert.equal(renderer.handleContextRestored(), true);
   assert.equal(gameplay.contextLost, false);
   assert.equal(renderer.state, PRODUCT_RENDERER_STATE.READY);
+  renderer.dispose();
+});
+
+test('ProductRenderer skips an empty canvas pass for host-native menu surfaces', async () => {
+  const surface = surfaceHarness({ composite: false });
+  const { renderer, gameplay } = rendererHarness({ surface });
+  await renderer.load();
+  renderer.render({ viewModel: { screen: { sceneId: 'home' } }, matchFrame: null });
+  assert.equal(gameplay.rendered.length, 0);
+  const matchFrame = { source: { tick: 1 } };
+  renderer.render({ viewModel: { screen: { sceneId: 'gameplay' } }, matchFrame });
+  assert.equal(gameplay.rendered.length, 1);
+  assert.equal(gameplay.rendered[0].frame, matchFrame);
   renderer.dispose();
 });
 
@@ -197,14 +221,16 @@ test('ProductRenderer retains only failed children and completes cleanup on retr
 
 test('ProductRenderer rejects incomplete child contracts and clears owned candidates', () => {
   const gameplay = childHarness();
+  let invalidSurfaceDisposed = false;
   assert.throws(
     () => new ProductRenderer({
       canvas: { getContext: () => ({}) },
       platform: {},
       gameplayRendererFactory: () => gameplay,
-      uiSurfaceFactory: () => ({}),
+      uiSurfaceFactory: () => ({ dispose() { invalidSurfaceDisposed = true; } }),
     }),
     /初始化失败/,
   );
   assert.equal(gameplay.disposed, true);
+  assert.equal(invalidSurfaceDisposed, true);
 });

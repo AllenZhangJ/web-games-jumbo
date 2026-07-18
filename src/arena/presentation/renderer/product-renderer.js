@@ -26,6 +26,8 @@ function validateSurface(value) {
     'getInputViewport',
     'hitTestUi',
     'bindIntent',
+    'requiresCompositeFrame',
+    'present',
     'dispose',
   ]) requiredFunction(value[method], `ProductRenderer.uiSurface.${method}`);
   return value;
@@ -38,6 +40,7 @@ function validateGameplayRenderer(value) {
   for (const method of [
     'load',
     'render',
+    'renderComposite',
     'resize',
     'getInputViewport',
     'handleContextLost',
@@ -100,11 +103,13 @@ export class ProductRenderer {
     this.#rendering = false;
     this.#lastError = null;
     try {
-      this.#gameplayRenderer = validateGameplayRenderer(gameplayRendererFactory({
+      this.#gameplayRenderer = gameplayRendererFactory({
         canvas,
         platform,
-      }));
-      this.#uiSurface = validateSurface(uiSurfaceFactory({ canvas, platform }));
+      });
+      validateGameplayRenderer(this.#gameplayRenderer);
+      this.#uiSurface = uiSurfaceFactory({ canvas, platform });
+      validateSurface(this.#uiSurface);
     } catch (error) {
       const cause = normalizeThrownError(error, 'ProductRenderer 初始化失败');
       this.#lastError = cause;
@@ -194,8 +199,15 @@ export class ProductRenderer {
     try {
       const surfaceRendered = this.#uiSurface.render(frame.viewModel, options);
       if (surfaceRendered === false) return false;
-      if (frame.matchFrame === null || frame.matchFrame === undefined) return true;
-      return this.#gameplayRenderer.render(frame.matchFrame, options) !== false;
+      if (
+        (frame.matchFrame === null || frame.matchFrame === undefined)
+        && this.#uiSurface.requiresCompositeFrame() === false
+      ) return true;
+      return this.#gameplayRenderer.renderComposite(
+        frame.matchFrame ?? null,
+        this.#uiSurface,
+        options,
+      ) !== false;
     } catch (error) {
       this.#lastError = normalizeThrownError(error, 'ProductRenderer 渲染失败');
       throw error;

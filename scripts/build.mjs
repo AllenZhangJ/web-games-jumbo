@@ -6,6 +6,10 @@ import { build as viteBuild } from 'vite';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dist = path.join(root, 'dist');
+const miniEntryMode = process.env.ARENA_MINI_ENTRY_MODE ?? 'product';
+if (!['product', 'greybox'].includes(miniEntryMode)) {
+  throw new RangeError('ARENA_MINI_ENTRY_MODE 只支持 product 或 greybox。');
+}
 
 async function copyThirdPartyNotices(outDir) {
   await Promise.all([
@@ -31,22 +35,28 @@ async function buildWeb() {
           game: path.join(root, 'index.html'),
           pilot: path.join(root, 'pilot.html'),
           product: path.join(root, 'product.html'),
+          greybox: path.join(root, 'greybox.html'),
+        },
+        output: {
+          manualChunks(id) {
+            return id.includes(`${path.sep}node_modules${path.sep}three${path.sep}`)
+              ? 'three'
+              : undefined;
+          },
         },
       },
-      // Three.js is intentionally a single shared runtime; 151 kB gzip is
-      // within the documented v3 budget, so use a limit that reflects it.
+      // Three.js is intentionally one shared runtime chunk; the current
+      // production artifact is about 131 kB gzip, within the v3 budget.
       chunkSizeWarningLimit: 650,
     },
   });
   await copyThirdPartyNotices(path.join(dist, 'web'));
 }
 
-async function buildMiniGame(target, entryPoint, config, projectConfig) {
-  const outDir = path.join(dist, target);
-  await mkdir(outDir, { recursive: true });
+async function bundleMiniGame(entryPoint, outfile) {
   await esbuild({
     entryPoints: [path.join(root, entryPoint)],
-    outfile: path.join(outDir, 'game.js'),
+    outfile,
     bundle: true,
     format: 'iife',
     platform: 'neutral',
@@ -57,6 +67,21 @@ async function buildMiniGame(target, entryPoint, config, projectConfig) {
     sourcemap: false,
     legalComments: 'none',
   });
+}
+
+async function buildMiniGame(target, productEntryPoint, greyboxEntryPoint, config, projectConfig) {
+  const outDir = path.join(dist, target);
+  await mkdir(outDir, { recursive: true });
+  const productBundle = path.join(outDir, 'game-product.js');
+  const greyboxBundle = path.join(outDir, 'game-greybox.js');
+  await Promise.all([
+    bundleMiniGame(productEntryPoint, productBundle),
+    bundleMiniGame(greyboxEntryPoint, greyboxBundle),
+  ]);
+  await cp(
+    miniEntryMode === 'greybox' ? greyboxBundle : productBundle,
+    path.join(outDir, 'game.js'),
+  );
   await cp(path.join(root, 'public/assets'), path.join(outDir, 'assets'), {
     recursive: true,
     filter: (source) => !source.includes(`${path.sep}concept`),
@@ -72,6 +97,7 @@ await Promise.all([
   buildMiniGame(
     'douyin',
     'src/entry/douyin.js',
+    'src/entry/douyin-greybox.js',
     { deviceOrientation: 'portrait', showStatusBar: false },
     {
       appid: '',
@@ -82,6 +108,7 @@ await Promise.all([
   buildMiniGame(
     'wechat',
     'src/entry/wechat.js',
+    'src/entry/wechat-greybox.js',
     { deviceOrientation: 'portrait', showStatusBar: false },
     {
       appid: '',
@@ -92,4 +119,4 @@ await Promise.all([
   ),
 ]);
 
-console.log('构建完成: dist/web, dist/douyin, dist/wechat');
+console.log(`构建完成: dist/web, dist/douyin, dist/wechat（小游戏默认入口：${miniEntryMode}）`);

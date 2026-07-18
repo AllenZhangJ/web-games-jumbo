@@ -2,7 +2,7 @@
 
 ## 文档状态
 
-执行中，2026-07-18。S8.1 已落地不可变 PlayerProfile、严格同步 Storage Port、连续迁移 Registry、A/B 双槽 Repository、协作 lease、未来版本保护与故障压力门禁。S8.2 已落地无 UI 显式产品状态机、角色选择保存、单 Match 所有权、QuickMatch 集成、挂起恢复与异步竞态门禁。S8.3 已落地权威结果校验、奖励/解锁 Definition 与 Registry、纯 Resolver、唯一 Profile 写入者、幂等 grant 和 reward/unlock 状态。S8.4 已落地双方共享冻结池、Authority Content 投影、Replay V5、快捷重赛与连续局隔离。S8.5.1～S8.5.4 已落地产品表现合同、统一 Session、正式组合 Renderer、Web 语义 DOM 宿主和真实导航 teardown；三端默认入口、小游戏 Canvas UI Surface 与最终设备证据仍属于后续 S8.5。
+执行中，2026-07-18。S8.1 已落地不可变 PlayerProfile、严格同步 Storage Port、连续迁移 Registry、A/B 双槽 Repository、协作 lease、未来版本保护与故障压力门禁。S8.2 已落地无 UI 显式产品状态机、角色选择保存、单 Match 所有权、QuickMatch 集成、挂起恢复与异步竞态门禁。S8.3 已落地权威结果校验、奖励/解锁 Definition 与 Registry、纯 Resolver、唯一 Profile 写入者、幂等 grant 和 reward/unlock 状态。S8.4 已落地双方共享冻结池、Authority Content 投影、Replay V5、快捷重赛与连续局隔离。S8.5.1～S8.5.5 已落地产品表现合同、统一 Session、正式组合 Renderer、Web 语义 DOM、小游戏单 Canvas UI Surface、三端默认产品入口、显式灰盒回退和真实导航 teardown；最终开发者工具/真机证据仍属于 S8.5.6。
 
 ## 已接受默认值
 
@@ -156,9 +156,9 @@ PlayerProfile + Content Definitions
 - 首装、旧存档升级、损坏恢复、容量/写失败、前后台、重启和再来一局留证。
 - 检查 UI、无障碍文本、本地化和诊断均不泄漏机器人难度。
 
-状态：S8.5.1～S8.5.4 已完成产品表现合同、Flow、统一 Session、正式组合 Renderer 与独立 Web 产品宿主。V1 Screen Registry 覆盖所有产品状态，中文 Message Catalog 与内容表现 Registry 可校验，ViewModel 只发布脱敏公开数据，Intent Dispatcher 串行化快速点击；`ProductMatchPresentationRuntime` 通过 ProductController 的只读快照和普通 `InputFrame` 复用既有 Arena frame projector，不创建第二局 Match；`ProductPresentationFlow` 统一自动奖励、保存失败重试和展示缓存；`ProductPresentationSession` 统一 Controller、Flow、Input、FrameLoop、Renderer 与宿主生命周期所有权，并以 20 秒心跳和前台恢复强制检查维持 Profile lease。`ProductRenderer` 分离比赛 Three 帧和产品 UI ViewModel；Web DOM 已覆盖语义按钮、角色单选、状态公告、键盘焦点、reduced motion、reload/pagehide lease 释放与真实浏览器交互。设计边界见 [ADR-018](../decisions/018-arena-product-presentation-contracts.md)、[ADR-019](../decisions/019-arena-product-renderer-and-web-host.md)、[S8.5.1～S8.5.3 结果](../research/arena-stage8-product-presentation-foundation.md) 与 [S8.5.4 结果](../research/arena-stage8-product-renderer-web-results.md)。三端默认入口、小游戏 Canvas UI Surface 与最终设备留证仍未完成。
+状态：S8.5.1～S8.5.5 已完成产品表现合同、Flow、统一 Session、正式组合 Renderer、Web DOM Surface、小游戏 Canvas Surface 与三端默认产品入口。V1 Screen Registry 覆盖所有产品状态，中文 Message Catalog 与内容表现 Registry 可校验，ViewModel 只发布脱敏公开数据，Intent Dispatcher 串行化快速点击；`ProductMatchPresentationRuntime` 通过 ProductController 的只读快照和普通 `InputFrame` 复用既有 Arena frame projector，不创建第二局 Match；`ProductPresentationFlow` 统一自动奖励、保存失败重试和展示缓存；`ProductPresentationSession` 统一 Controller、Flow、Input、FrameLoop、Renderer 与宿主生命周期所有权，并以 20 秒心跳和前台恢复强制检查维持 Profile lease。`ProductRenderer` 通过唯一 `ArenaGreyboxRenderer` 合成比赛帧和产品 Surface；Web DOM 覆盖语义按钮、角色单选、状态公告、键盘焦点、reduced motion、reload/pagehide lease 释放，小游戏离屏 2D Canvas 通过 CanvasTexture 叠层并由同一 InputRouter 命中。Web `/greybox.html` 与小游戏双 bundle/构建变量提供显式回退。设计边界见 [ADR-018](../decisions/018-arena-product-presentation-contracts.md)、[ADR-019](../decisions/019-arena-product-renderer-and-web-host.md)、[ADR-020](../decisions/020-arena-canvas-product-surface-and-default-entries.md)、[S8.5.1～S8.5.3 结果](../research/arena-stage8-product-presentation-foundation.md)、[S8.5.4 结果](../research/arena-stage8-product-renderer-web-results.md) 与 [S8.5.5 结果](../research/arena-stage8-canvas-product-entry-results.md)。最终开发者工具和真机留证仍未完成。
 
-剩余顺序：S8.5.5 分别组合 Web、微信、抖音入口并保留旧入口回退开关；S8.5.6 用最终构建完成首装、损坏存档、写失败、前后台、重赛与资源长稳的三端证据，关闭 Stage 8。
+剩余顺序：S8.5.6 用最终构建完成首装、损坏存档、写失败、前后台、重赛与资源长稳的微信/抖音开发者工具和目标真机证据，关闭 Stage 8。
 
 ## 阻断门禁
 

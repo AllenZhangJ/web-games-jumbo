@@ -136,7 +136,9 @@ export class WebProductUiSurface {
     if (!image || !label) throw new Error(`角色卡片 ${card.id} 结构不完整。`);
     button.className = `product-character-card${card.selected ? ' is-selected' : ''}`;
     button.setAttribute('aria-checked', String(card.selected));
-    button.setAttribute('aria-label', `${card.name}${card.selected ? '，当前已选择' : ''}`);
+    // role=radio + aria-checked already announces selection. Keep the name
+    // stable while a click commits so assistive tech and automation retain it.
+    button.setAttribute('aria-label', card.name);
     button.disabled = !card.enabled || this.#dispatching;
     setImage(image, card.asset, '');
     image.draggable = false;
@@ -289,6 +291,16 @@ export class WebProductUiSurface {
 
   hitTestUi() {
     return null;
+  }
+
+  present() {
+    this.#assertReady();
+    return true;
+  }
+
+  requiresCompositeFrame() {
+    this.#assertReady();
+    return false;
   }
 
   bindIntent({ onIntent, onRejected = () => {} } = {}) {

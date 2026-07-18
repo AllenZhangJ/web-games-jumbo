@@ -148,6 +148,24 @@ export class ArenaGreyboxRenderer {
   }
 
   render(frame, { deltaSeconds = 0, mode = 'match', mapperLabel = '' } = {}) {
+    if (frame === null || frame === undefined) {
+      throw new TypeError('ArenaGreyboxRenderer.render() 需要比赛表现帧。');
+    }
+    return this.#renderFrame(frame, null, { deltaSeconds, mode, mapperLabel });
+  }
+
+  renderComposite(
+    frame,
+    overlay,
+    { deltaSeconds = 0, mode = 'match', mapperLabel = '' } = {},
+  ) {
+    if (!overlay || typeof overlay.present !== 'function') {
+      throw new TypeError('ArenaGreyboxRenderer.renderComposite() 需要 overlay.present()。');
+    }
+    return this.#renderFrame(frame, overlay, { deltaSeconds, mode, mapperLabel });
+  }
+
+  #renderFrame(frame, overlay, { deltaSeconds, mode, mapperLabel }) {
     if (this.#state === ARENA_GREYBOX_RENDERER_STATE.CONTEXT_LOST) return false;
     if (this.#state !== ARENA_GREYBOX_RENDERER_STATE.READY) {
       throw new Error(`ArenaGreyboxRenderer 无法在 ${this.#state} 状态 render。`);
@@ -155,13 +173,19 @@ export class ArenaGreyboxRenderer {
     if (this.#rendering) throw new Error('ArenaGreyboxRenderer.render() 不可重入。');
     this.#rendering = true;
     try {
-      this.#stage.sync(frame);
-      this.#stage.update(deltaSeconds);
-      this.#hud.sync(frame, { mode, mapperLabel });
       this.#renderer.clear(true, true, true);
-      this.#renderer.render(this.#stage.scene, this.#stage.camera);
-      this.#renderer.clearDepth();
-      this.#hud.render(this.#renderer);
+      if (frame !== null && frame !== undefined) {
+        this.#stage.sync(frame);
+        this.#stage.update(deltaSeconds);
+        this.#hud.sync(frame, { mode, mapperLabel });
+        this.#renderer.render(this.#stage.scene, this.#stage.camera);
+        this.#renderer.clearDepth();
+        this.#hud.render(this.#renderer);
+      }
+      if (overlay !== null) {
+        this.#renderer.clearDepth();
+        if (overlay.present(this.#renderer) === false) return false;
+      }
       return true;
     } catch (error) {
       this.#lastError = error;

@@ -1,12 +1,12 @@
 import { createWeChatPlatform } from '../platform/wechat.js';
-import { createCanvasArenaProductGame } from './create-canvas-arena-product-game.js';
+import { createArenaGame } from './create-arena-game.js';
 import { launchGame } from './launch-game.js';
 import { showMiniGameStartupError } from './mini-game-startup-fallback.js';
 
 void launchGame(() => createWeChatPlatform(), {
-  createGame: createCanvasArenaProductGame,
+  createGame: createArenaGame,
   onError: (error) => {
-    console.error('微信小游戏产品流程启动失败', error);
+    console.error('微信小游戏灰盒回退入口启动失败', error);
     showMiniGameStartupError(globalThis.wx, '游戏启动失败');
   },
 });

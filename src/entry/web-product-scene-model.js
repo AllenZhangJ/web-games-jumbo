@@ -1,3 +1,5 @@
+import { createProductUiSceneModel } from '../arena/presentation/product/product-ui-scene-model.js';
+
 const ASSET_BASE = './assets/arena-product';
 
 export const WEB_PRODUCT_ASSET = Object.freeze({
@@ -11,75 +13,32 @@ const CHARACTER_ASSET_BY_ID = Object.freeze({
   'wind-up-cube': WEB_PRODUCT_ASSET.WIND_UP_CUBE,
 });
 
-const KICKER_BY_SCENE = Object.freeze({
-  loading: 'ARENA LINK',
-  home: 'QUICK MATCH',
-  'character-select': 'LOADOUT',
-  matching: 'MATCH LINK',
-  gameplay: 'LIVE ARENA',
-  result: 'MATCH REPORT',
-  reward: 'MATCH REPORT',
-  unlock: 'NEW DROP',
-  'recoverable-error': 'RECOVERY',
-  'fatal-error': 'SYSTEM NOTICE',
-  destroyed: 'SESSION CLOSED',
-});
-
-function selectedCharacter(viewModel) {
-  return viewModel.characterOptions.find(({ selected }) => selected)
-    ?? viewModel.characterOptions[0]
-    ?? null;
-}
-
 function characterAsset(characterDefinitionId) {
   return CHARACTER_ASSET_BY_ID[characterDefinitionId] ?? WEB_PRODUCT_ASSET.PARKOUR_APPRENTICE;
 }
 
-function characterCards(viewModel) {
-  return Object.freeze(viewModel.characterOptions.map((option) => Object.freeze({
-    id: option.characterDefinitionId,
-    name: option.name,
-    asset: characterAsset(option.characterDefinitionId),
-    selected: option.selected,
-    enabled: viewModel.inputEnabled,
-    intent: option.selectIntent,
+function characterCards(model) {
+  return Object.freeze(model.characterCards.map((card) => Object.freeze({
+    ...card,
+    asset: characterAsset(card.id),
   })));
 }
 
 export function createWebProductSceneModel(viewModel) {
-  if (!viewModel || typeof viewModel !== 'object' || !viewModel.screen) {
-    throw new TypeError('Web Product UI 需要公开 ViewModel。');
-  }
-  const scene = viewModel.screen.sceneId;
-  const selected = selectedCharacter(viewModel);
-  const unlock = viewModel.unlocks[0] ?? null;
-  const unlockAsset = unlock?.contentId
-    ? characterAsset(unlock.contentId)
+  const model = createProductUiSceneModel(viewModel);
+  const unlockAsset = model.unlock?.id
+    ? characterAsset(model.unlock.id)
     : WEB_PRODUCT_ASSET.WIND_UP_CUBE;
   return Object.freeze({
-    revision: viewModel.revision,
-    scene,
-    gameplay: scene === 'gameplay',
-    busy: viewModel.busy || viewModel.suspended,
-    terminal: viewModel.terminal,
-    kicker: KICKER_BY_SCENE[scene] ?? 'ABYSS ARENA',
-    title: viewModel.screen.title,
-    body: viewModel.screen.body ?? '',
-    announcement: viewModel.screen.announcement,
-    primaryAction: viewModel.screen.primaryAction,
-    secondaryAction: viewModel.screen.secondaryAction,
-    selectedCharacterName: selected?.name ?? '挑战者',
-    selectedCharacterAsset: selected
-      ? characterAsset(selected.characterDefinitionId)
+    ...model,
+    selectedCharacterName: model.selectedCharacter?.name ?? '挑战者',
+    selectedCharacterAsset: model.selectedCharacter
+      ? characterAsset(model.selectedCharacter.id)
       : WEB_PRODUCT_ASSET.PARKOUR_APPRENTICE,
-    opponentName: viewModel.match?.opponent?.displayName ?? '神秘挑战者',
     opponentPortraitAsset: WEB_PRODUCT_ASSET.WIND_UP_CUBE,
     lobbyAsset: WEB_PRODUCT_ASSET.LOBBY_DUO,
-    characterCards: characterCards(viewModel),
-    outcome: viewModel.result?.outcome ?? null,
-    experienceDelta: viewModel.reward?.experienceDelta ?? null,
-    unlockName: unlock?.name ?? '',
+    characterCards: characterCards(model),
+    unlockName: model.unlock?.name ?? '',
     unlockAsset,
-    errorMessage: viewModel.error?.message ?? '',
   });
 }

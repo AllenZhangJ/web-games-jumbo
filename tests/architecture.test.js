@@ -49,6 +49,8 @@ test('mini-game platform and entries do not depend on browser DOM globals', asyn
     'src/platform/wechat.js',
     'src/entry/douyin.js',
     'src/entry/wechat.js',
+    'src/entry/douyin-greybox.js',
+    'src/entry/wechat-greybox.js',
   ];
   for (const file of files) {
     const source = await readFile(file, 'utf8');
@@ -93,6 +95,39 @@ test('mini-game entries bundle without importing the web platform', async () => 
       logLevel: 'silent',
     });
     const inputs = Object.keys(result.metafile.inputs);
+    assert.ok(!inputs.some((input) => input.endsWith('src/platform/web.js')));
+    assert.ok(inputs.some((input) => input.endsWith(
+      'src/arena/presentation/canvas/product-canvas-ui-surface.js',
+    )));
+    assert.ok(inputs.some((input) => input.endsWith(
+      'src/arena/presentation/session/product-presentation-session.js',
+    )));
+    assert.doesNotMatch(result.outputFiles[0].text, /^\s*(?:import|export)\b/m);
+  }
+});
+
+test('mini-game greybox rollback entries remain independently executable', async () => {
+  for (const entryPoint of [
+    'src/entry/douyin-greybox.js',
+    'src/entry/wechat-greybox.js',
+  ]) {
+    const result = await esbuild({
+      entryPoints: [path.resolve(entryPoint)],
+      bundle: true,
+      write: false,
+      format: 'iife',
+      platform: 'neutral',
+      target: 'es2020',
+      metafile: true,
+      logLevel: 'silent',
+    });
+    const inputs = Object.keys(result.metafile.inputs);
+    assert.ok(inputs.some((input) => input.endsWith(
+      'src/arena/presentation/session/arena-presentation-session.js',
+    )));
+    assert.ok(!inputs.some((input) => input.endsWith(
+      'src/arena/presentation/canvas/product-canvas-ui-surface.js',
+    )));
     assert.ok(!inputs.some((input) => input.endsWith('src/platform/web.js')));
     assert.doesNotMatch(result.outputFiles[0].text, /^\s*(?:import|export)\b/m);
   }
