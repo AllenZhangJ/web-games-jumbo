@@ -6,10 +6,13 @@ import {
   createArenaExperimentDefinition,
 } from './experiment-definition.js';
 import {
-  assertArenaExperimentCaseCount,
   createArenaExperimentReplaySeeds,
-  createSortedArenaExperimentSeeds,
 } from './experiment-seed-utils.js';
+import {
+  ARENA_STAGE9_BOT_SEED_BASE,
+  ARENA_STAGE9_BOT_SEED_STEP,
+  createArenaStage9BotSeeds,
+} from './arena-bot-capability-seeds.js';
 import { MetricCollectorRegistry } from './metric-collector-registry.js';
 import { SimulationWorkloadRegistry } from './simulation-workload-registry.js';
 import {
@@ -30,17 +33,8 @@ import {
 } from './arena-v1-bot-capability-workload.js';
 
 export const ARENA_STAGE9_BOT_EXPERIMENT_ID = 'arena.stage9.s9.1.bot-capability.v1';
-export const ARENA_STAGE9_BOT_SEED_BASE = 0x6d2b79f5;
-export const ARENA_STAGE9_BOT_SEED_STEP = 2_654_435_761;
+export { ARENA_STAGE9_BOT_SEED_BASE, ARENA_STAGE9_BOT_SEED_STEP };
 export const ARENA_STAGE9_BOT_DEFAULT_CONFIG = Object.freeze({ preparingTicks: 0 });
-
-function createBotSeeds(caseCountValue) {
-  const caseCount = assertArenaExperimentCaseCount(caseCountValue);
-  return createSortedArenaExperimentSeeds(Array.from(
-    { length: caseCount },
-    (_, index) => (index * ARENA_STAGE9_BOT_SEED_STEP + ARENA_STAGE9_BOT_SEED_BASE) >>> 0,
-  ), 'bot experiment seeds');
-}
 
 function readProbeMetadata({ seed, config }) {
   const core = createArenaV1MatchCore({ seed, config });
@@ -61,7 +55,7 @@ export function createArenaStage9BotExperimentDefinition({
   maximumEventsPerCase = ARENA_V1_BOT_CAPABILITY_DEFAULT_PARAMETERS.maximumEventsPerCase,
   maximumFailedCases = 0,
 } = {}) {
-  const seeds = createBotSeeds(caseCount);
+  const seeds = createArenaStage9BotSeeds(caseCount);
   const replaySeeds = createArenaExperimentReplaySeeds(seeds, replaySampleCount);
   const metadata = readProbeMetadata({ seed: seeds[0], config });
   return createArenaExperimentDefinition({

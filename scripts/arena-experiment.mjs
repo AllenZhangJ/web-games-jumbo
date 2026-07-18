@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import {
   createArenaStage9S91ExperimentDefinition,
@@ -21,8 +22,15 @@ import {
   createArenaStage9BotExperimentRegistries,
 } from '../src/arena/experiment/arena-bot-experiment-composition.js';
 import {
+  createArenaStage9BalanceExperimentDefinition,
+  createArenaStage9BalanceExperimentRegistries,
+} from '../src/arena/experiment/arena-balance-experiment-composition.js';
+import {
   ARENA_EXPERIMENT_OUTCOME,
 } from '../src/arena/experiment/experiment-report.js';
+import {
+  createArenaExperimentReportBundle,
+} from '../src/arena/experiment/experiment-report-bundle.js';
 import { readArenaGitSourceIdentity } from './arena-git-source-identity.mjs';
 import { runArenaNodeExperiment } from './arena-node-experiment-runner.mjs';
 
@@ -33,14 +41,15 @@ const SUITE = Object.freeze({
   MAP_TIMELINE: 'map-timeline',
   MOVEMENT_STRESS: 'movement-stress',
   BOT_CAPABILITY: 'bot-capability',
+  BALANCE_CANDIDATE: 'balance-candidate',
 });
 
 function usage() {
   return [
     'Usage:',
-    '  npm run arena:experiment -- [--suite=scripted-pressure|matchcore-invariants|map-timeline|movement-stress|bot-capability]',
+    '  npm run arena:experiment -- [--suite=scripted-pressure|matchcore-invariants|map-timeline|movement-stress|bot-capability|balance-candidate]',
     '    [--cases=<n>] [--first-seed=<uint32>] [--replay-samples=<n>]',
-    '    [--describe] [--summary] [--allow-dirty]',
+    '    [--describe] [--summary] [--allow-dirty] [--output=<new-json-file>]',
     '',
     'Exit codes: 0=passed (or explicitly allowed dirty), 2=failed/dirty, 1=invalid or runtime failure.',
   ].join('\n');
@@ -63,6 +72,7 @@ function parseArgs(values) {
     describe: false,
     summary: false,
     allowDirty: false,
+    output: null,
     help: false,
   };
   const seen = new Set();
@@ -89,6 +99,13 @@ function parseArgs(values) {
       result.suite = suiteMatch[1];
       continue;
     }
+    const outputMatch = argument.match(/^--output=(.+)$/);
+    if (outputMatch) {
+      if (seen.has('output')) throw new Error('参数 --output 不能重复。');
+      seen.add('output');
+      result.output = outputMatch[1];
+      continue;
+    }
     const match = argument.match(/^--(cases|first-seed|replay-samples)=(.+)$/);
     if (!match) throw new Error(`未知参数 ${argument}。\n${usage()}`);
     if (seen.has(match[1])) throw new Error(`参数 --${match[1]} 不能重复。`);
@@ -104,10 +121,24 @@ function parseArgs(values) {
   if (result.describe && result.summary) {
     throw new RangeError('--describe 与 --summary 不能同时使用。');
   }
+  if (result.describe && result.output !== null) {
+    throw new RangeError('--describe 不生成 Report，不能与 --output 同时使用。');
+  }
   return result;
 }
 
-function createReportSummary(suite, report) {
+async function writeReportBundle(outputValue, bundle) {
+  const output = path.resolve(root, outputValue);
+  if (path.extname(output) !== '.json') throw new RangeError('--output 必须是 .json 文件。');
+  await mkdir(path.dirname(output), { recursive: true });
+  await writeFile(output, `${JSON.stringify(bundle, null, 2)}\n`, {
+    encoding: 'utf8',
+    flag: 'wx',
+  });
+  return output;
+}
+
+function createReportSummary(suite, report, bundleHash = null) {
   return Object.freeze({
     suite,
     definitionId: report.definitionId,
@@ -128,6 +159,7 @@ function createReportSummary(suite, report) {
       gate: data.gate ?? null,
     })),
     resultHash: report.resultHash,
+    bundleHash,
   });
 }
 
@@ -165,6 +197,19 @@ function createSuite(options, source) {
         replaySampleCount: options.replaySamples ?? 3,
       }),
       registries: createArenaStage9MapExperimentRegistries(),
+    });
+  }
+  if (options.suite === SUITE.BALANCE_CANDIDATE) {
+    if (
+      options.cases !== null
+      || options.firstSeed !== null
+      || options.replaySamples !== null
+    ) {
+      throw new RangeError('balance-candidate 使用预注册固定样本，不接受采样覆盖参数。');
+    }
+    return Object.freeze({
+      definition: createArenaStage9BalanceExperimentDefinition(source),
+      registries: createArenaStage9BalanceExperimentRegistries(),
     });
   }
   if (options.firstSeed !== null) {
@@ -212,10 +257,18 @@ async function main() {
     definition,
     registries,
   });
+  const bundle = createArenaExperimentReportBundle({
+    suite: options.suite,
+    definition,
+    report,
+  });
+  const output = options.output === null
+    ? null
+    : await writeReportBundle(options.output, bundle);
   console.log(JSON.stringify(
     options.summary
-      ? createReportSummary(options.suite, report)
-      : { suite: options.suite, definition: definition.toJSON(), report },
+      ? { ...createReportSummary(options.suite, report, bundle.bundleHash), output }
+      : { ...bundle, output },
     null,
     2,
   ));

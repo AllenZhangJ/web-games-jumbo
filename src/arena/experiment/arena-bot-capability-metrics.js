@@ -2,6 +2,11 @@ import {
   createSortedMetricCountRecord,
   metricRatioOrNull,
 } from './experiment-metric-utils.js';
+import {
+  assertIntegerAtLeast,
+  assertKnownKeys,
+  cloneFrozenData,
+} from '../rules/definition-utils.js';
 
 export const ARENA_BOT_CAPABILITY_PARTICIPANT_ID = 'player-2';
 export const ARENA_BOT_CAPABILITY_WEIGHTS = Object.freeze({
@@ -23,6 +28,56 @@ export const ARENA_BOT_CAPABILITY_MAP_EVENT_TYPES = Object.freeze([
   'MapSurfaceCollapsed',
   'MapEquipmentWaveReleased',
 ]);
+
+export const ARENA_BOT_CAPABILITY_DEFAULT_GATE_POLICY = Object.freeze({
+  minimumCompletedPairedCases: 1,
+  maximumAverageUncreditedDeaths: 0.5,
+  minimumCapabilityIndexDelta: 0,
+  minimumLifePressureDelta: 0,
+  scoreRateToleranceScale: 0.5,
+});
+
+const GATE_POLICY_KEYS = new Set(Object.keys(ARENA_BOT_CAPABILITY_DEFAULT_GATE_POLICY));
+
+function finiteAtLeast(value, minimum, name) {
+  if (!Number.isFinite(value) || value < minimum) {
+    throw new RangeError(`${name} 必须是大于等于 ${minimum} 的有限数。`);
+  }
+  return value;
+}
+
+export function createArenaBotCapabilityGatePolicyDefinition(value = {}) {
+  const source = cloneFrozenData(value, 'ArenaBotCapabilityGatePolicy');
+  assertKnownKeys(source, GATE_POLICY_KEYS, 'ArenaBotCapabilityGatePolicy');
+  const merged = { ...ARENA_BOT_CAPABILITY_DEFAULT_GATE_POLICY, ...source };
+  return Object.freeze({
+    minimumCompletedPairedCases: assertIntegerAtLeast(
+      merged.minimumCompletedPairedCases,
+      1,
+      'ArenaBotCapabilityGatePolicy.minimumCompletedPairedCases',
+    ),
+    maximumAverageUncreditedDeaths: finiteAtLeast(
+      merged.maximumAverageUncreditedDeaths,
+      0,
+      'ArenaBotCapabilityGatePolicy.maximumAverageUncreditedDeaths',
+    ),
+    minimumCapabilityIndexDelta: finiteAtLeast(
+      merged.minimumCapabilityIndexDelta,
+      0,
+      'ArenaBotCapabilityGatePolicy.minimumCapabilityIndexDelta',
+    ),
+    minimumLifePressureDelta: finiteAtLeast(
+      merged.minimumLifePressureDelta,
+      0,
+      'ArenaBotCapabilityGatePolicy.minimumLifePressureDelta',
+    ),
+    scoreRateToleranceScale: finiteAtLeast(
+      merged.scoreRateToleranceScale,
+      0,
+      'ArenaBotCapabilityGatePolicy.scoreRateToleranceScale',
+    ),
+  });
+}
 
 export function createArenaBotDifficultyMetricState(difficultyId) {
   return {
@@ -124,11 +179,19 @@ export function createArenaBotCapabilityGatePolicy({
   difficulties,
   completedCases,
   replaySeedCount,
+  gatePolicy: gatePolicyValue = ARENA_BOT_CAPABILITY_DEFAULT_GATE_POLICY,
 }) {
-  const checks = [{
-    id: 'replay.samples-verified',
-    passed: difficulties.every(({ replayChecks }) => replayChecks === replaySeedCount),
-  }];
+  const gatePolicy = createArenaBotCapabilityGatePolicyDefinition(gatePolicyValue);
+  const checks = [
+    {
+      id: 'sample.completed-paired-cases',
+      passed: completedCases >= gatePolicy.minimumCompletedPairedCases,
+    },
+    {
+      id: 'replay.samples-verified',
+      passed: difficulties.every(({ replayChecks }) => replayChecks === replaySeedCount),
+    },
+  ];
   for (const result of difficulties) {
     checks.push({
       id: `difficulty.${result.difficultyId}.final-hashes-unique`,
@@ -164,11 +227,14 @@ export function createArenaBotCapabilityGatePolicy({
       {
         id: `difficulty.${result.difficultyId}.uncredited-deaths.bounded`,
         passed: result.averageBotUncreditedDeaths !== null
-          && result.averageBotUncreditedDeaths <= 0.5,
+          && result.averageBotUncreditedDeaths
+            <= gatePolicy.maximumAverageUncreditedDeaths,
       },
     );
   }
-  const scoreRateTolerance = completedCases > 0 ? 0.5 / Math.sqrt(completedCases) : null;
+  const scoreRateTolerance = completedCases > 0
+    ? gatePolicy.scoreRateToleranceScale / Math.sqrt(completedCases)
+    : null;
   for (let index = 1; index < difficulties.length; index += 1) {
     const previous = difficulties[index - 1];
     const current = difficulties[index];
@@ -177,13 +243,15 @@ export function createArenaBotCapabilityGatePolicy({
         id: `ordering.${previous.difficultyId}-${current.difficultyId}.capability`,
         passed: current.capabilityIndex !== null
           && previous.capabilityIndex !== null
-          && current.capabilityIndex + 1e-12 >= previous.capabilityIndex,
+          && current.capabilityIndex + 1e-12
+            >= previous.capabilityIndex + gatePolicy.minimumCapabilityIndexDelta,
       },
       {
         id: `ordering.${previous.difficultyId}-${current.difficultyId}.life-pressure`,
         passed: current.lifePressure !== null
           && previous.lifePressure !== null
-          && current.lifePressure + 1e-12 >= previous.lifePressure,
+          && current.lifePressure + 1e-12
+            >= previous.lifePressure + gatePolicy.minimumLifePressureDelta,
       },
       {
         id: `ordering.${previous.difficultyId}-${current.difficultyId}.score-rate`,
@@ -194,5 +262,9 @@ export function createArenaBotCapabilityGatePolicy({
       },
     );
   }
-  return Object.freeze({ checks: Object.freeze(checks), scoreRateTolerance });
+  return Object.freeze({
+    checks: Object.freeze(checks),
+    scoreRateTolerance,
+    gatePolicy,
+  });
 }

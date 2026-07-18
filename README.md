@@ -48,6 +48,8 @@ npm run arena:experiment:matchcore
 npm run arena:experiment:map
 npm run arena:experiment:movement
 npm run arena:experiment:bot
+npm run arena:experiment:balance
+npm run arena:experiment:report:verify -- <report.json>
 npm run arena:map:stress
 npm run arena:movement:stress
 npm run arena:input:fuzz
@@ -55,7 +57,7 @@ npm run arena:replay:verify
 npm run arena:regression
 ```
 
-`arena:poc:build` 生成 Web、微信、抖音无渲染 MatchCore POC；四条 `arena:experiment:*` 命令通过通用 Runner 运行版本化专业实验；`arena:stress` 直接驱动同一 MatchCore workload case 测量 CPU/GC，避免把通用编排成本误算为 Core 成本。旧的 Map/Movement/Bot stress 命令继续保留，但只负责 Node 宿主计时和兼容摘要，不再复制权威驱动或专业断言。Movement 的 Stage 9 门让全部 100 个 seed 使用 4,200 tick 长时限，统一覆盖地图塌陷；`arena:input:fuzz` 随机验证两套 Mapper 的多指、取消、resize、暂停恢复和完整回放，也可通过 `--mapper`、`--match-index`、`--match-seed` 将失败隔离为单一严格回放 case。`arena:replay:verify` 对提交的 Replay V5 语料同时执行严格重放与场景再生成；`arena:regression` 再组合 input fuzz、生命周期矩阵和两条 100 局 Session soak。
+`arena:poc:build` 生成 Web、微信、抖音无渲染 MatchCore POC；专业 `arena:experiment:*` 命令通过通用 Runner 运行版本化实验；`arena:stress` 直接驱动同一 MatchCore workload case 测量 CPU/GC，避免把通用编排成本误算为 Core 成本。`arena:experiment:balance` 使用不可由 CLI 改写的 300 个 paired seed，共运行 900 局 S9.3 基线；Collector 阈值进入 Definition V2 hash。使用 `--output=<new.json>` 可写入禁止覆盖的完整 Report Bundle，随后由 `arena:experiment:report:verify` 重构并校验。旧的 Map/Movement/Bot stress 命令继续保留宿主计时和兼容摘要，不复制权威驱动或专业断言。Movement 的 Stage 9 门让全部 100 个 seed 使用 4,200 tick 长时限，统一覆盖地图塌陷；`arena:input:fuzz` 随机验证两套 Mapper 的多指、取消、resize、暂停恢复和完整回放，也可通过 `--mapper`、`--match-index`、`--match-seed` 将失败隔离为单一严格回放 case。`arena:replay:verify` 对提交的 Replay V5 语料同时执行严格重放与场景再生成；`arena:regression` 再组合 input fuzz、生命周期矩阵和两条 100 局 Session soak。
 
 Arena 阶段 3 机器人验证：
 
@@ -103,7 +105,7 @@ npm run preview:lan
 
 每次构建会在三端目录生成 `arena-build-manifest.json`。使用 `npm run arena:build:verify` 重算全部产物；正式设备证据还必须增加 `-- --require-clean-source`。Stage 8 Definition 与证据校验使用 `npm run arena:product:device:evidence -- --describe`，执行手册见 [Stage 8 产品设备验收](docs/acceptance/stage8/README.md)。
 
-Stage 9 无渲染实验入口为 `npm run arena:experiment`。默认 suite 是 30-seed `scripted-pressure` 基础验证；专业 suite 为 `matchcore-invariants`、`map-timeline`、`movement-stress` 和 `bot-capability`。先用 `--describe` 审核固定 commit、完整 Match config、Authority hash、seed、workload、collector 和停止条件；只有 clean source、全部 case 完成且全部 Collector 阻断门通过时，Report 才会标记 `freezeEligible=true`。开发中可显式增加 `--allow-dirty` 检查逻辑，但该结果不能进入冻结评审。
+Stage 9 无渲染实验入口为 `npm run arena:experiment`。默认 suite 是 30-seed `scripted-pressure` 基础验证；专业 suite 为 `matchcore-invariants`、`map-timeline`、`movement-stress`、`bot-capability` 和固定样本的 `balance-candidate`。先用 `--describe` 审核固定 commit、完整 Match config、Authority hash、seed、workload、collector 参数和停止条件；只有 clean source、全部 case 完成且全部 Collector 阻断门通过时，Report 才会标记 `freezeEligible=true`。这里的可冻结只表示实验资产可复现，不等于真人公平性或发布批准。开发中可显式增加 `--allow-dirty` 检查逻辑，但该结果不能进入冻结评审。
 
 ## v3 架构
 

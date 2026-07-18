@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  ARENA_EXPERIMENT_DEFINITION_LEGACY_SCHEMA_VERSION,
   ARENA_EXPERIMENT_DEFINITION_SCHEMA_VERSION,
   ARENA_EXPERIMENT_SEED_SET_KIND,
   createArenaExperimentDefinition,
@@ -8,6 +9,10 @@ import {
 import {
   ARENA_EXPERIMENT_OUTCOME,
 } from '../../../src/arena/experiment/experiment-report.js';
+import {
+  createArenaExperimentReportBundle,
+  readArenaExperimentReportBundle,
+} from '../../../src/arena/experiment/experiment-report-bundle.js';
 import { MetricCollectorRegistry } from '../../../src/arena/experiment/metric-collector-registry.js';
 import {
   SIMULATION_EXPERIMENT_RUNNER_STATE,
@@ -42,6 +47,19 @@ import {
   createArenaStage9BotExperimentDefinition,
   createArenaStage9BotExperimentRegistries,
 } from '../../../src/arena/experiment/arena-bot-experiment-composition.js';
+import {
+  ARENA_STAGE9_BALANCE_CASE_COUNT,
+  ARENA_STAGE9_BALANCE_EXPERIMENT_ID,
+  ARENA_STAGE9_BALANCE_POLICY_V1,
+  createArenaStage9BalanceExperimentDefinition,
+} from '../../../src/arena/experiment/arena-balance-experiment-composition.js';
+import {
+  ARENA_BALANCE_CANDIDATE_COLLECTOR_ID,
+  ARENA_BALANCE_CANDIDATE_COLLECTOR_VERSION,
+  createArenaBalanceCandidateCollectorEntry,
+  createArenaBalanceCandidateCollectorParameters,
+} from '../../../src/arena/experiment/arena-balance-candidate-collector.js';
+import { createArenaBalancePolicy } from '../../../src/arena/experiment/arena-balance-policy.js';
 import { parseArenaStressIntegerOptions } from '../../../scripts/arena-stress-cli.mjs';
 
 const COMMIT = 'c'.repeat(40);
@@ -160,6 +178,7 @@ test('ExperimentDefinition freezes candidate, seed, workload and collector ident
   const definition = createArenaExperimentDefinition(definitionValue());
   assert.deepEqual(definition.getSeeds(), [1, 2]);
   assert.equal(Object.isFrozen(definition.candidate.matchConfig), true);
+  assert.equal(Object.isFrozen(definition.collectors[0].parameters), true);
   assert.equal(definition.getContentHash(), definition.getContentHash());
   assert.throws(() => {
     definition.candidate.matchConfig.preparingTicks = 9;
@@ -170,11 +189,61 @@ test('ExperimentDefinition freezes candidate, seed, workload and collector ident
   assert.throws(() => createArenaExperimentDefinition(definitionValue({
     workload: { id: 'workload.test', version: 1, parameters: {}, future: true },
   })), /不支持字段 future/);
+  const withCollectorPolicy = createArenaExperimentDefinition(definitionValue({
+    collectors: [{
+      id: 'collector.test',
+      version: 1,
+      parameters: { threshold: 0.5 },
+    }],
+  }));
+  assert.notEqual(withCollectorPolicy.getContentHash(), definition.getContentHash());
+  const legacy = createArenaExperimentDefinition({
+    ...definitionValue(),
+    schemaVersion: ARENA_EXPERIMENT_DEFINITION_LEGACY_SCHEMA_VERSION,
+  });
+  assert.equal(legacy.schemaVersion, ARENA_EXPERIMENT_DEFINITION_LEGACY_SCHEMA_VERSION);
+  assert.equal(Object.hasOwn(legacy.collectors[0], 'parameters'), false);
+  assert.throws(() => createArenaExperimentDefinition({
+    ...definitionValue(),
+    schemaVersion: ARENA_EXPERIMENT_DEFINITION_LEGACY_SCHEMA_VERSION,
+    collectors: [{ id: 'collector.test', version: 1, parameters: {} }],
+  }), /不支持字段 parameters/);
   const accessor = definitionValue();
   Object.defineProperty(accessor.candidate, 'sourceCommit', { enumerable: true, get() {
     throw new Error('accessor must not run');
   } });
   assert.throws(() => createArenaExperimentDefinition(accessor), /数据字段|访问器/);
+});
+
+test('MetricCollectorRegistry validates and injects pre-registered collector parameters', () => {
+  let received = null;
+  const definition = createArenaExperimentDefinition(definitionValue({
+    seedSet: { kind: 'explicit', values: [1] },
+    collectors: [{
+      id: 'collector.test',
+      version: 1,
+      parameters: { threshold: 0.5 },
+    }],
+  }));
+  const registry = new MetricCollectorRegistry([{
+    id: 'collector.test',
+    version: 1,
+    validateParameters(parameters) {
+      assert.deepEqual(parameters, { threshold: 0.5 });
+      return parameters;
+    },
+    create({ parameters }) {
+      received = parameters;
+      return createFakeCollectorEntry().create();
+    },
+  }]);
+  const created = registry.createCollectors(definition);
+  assert.deepEqual(received, { threshold: 0.5 });
+  assert.equal(Object.isFrozen(received), true);
+  created[0].instance.destroy();
+
+  const rejectingDefault = new MetricCollectorRegistry([createFakeCollectorEntry()]);
+  assert.throws(() => rejectingDefault.assertDefinition(definition), /不支持字段 threshold/);
 });
 
 test('SimulationRunner produces the same deterministic result across environment metadata', () => {
@@ -210,6 +279,35 @@ test('SimulationRunner produces the same deterministic result across environment
   assert.equal(reportA.resultHash, reportB.resultHash);
   assert.notEqual(reportA.generatedAt, reportB.generatedAt);
   second.destroy();
+});
+
+test('versioned experiment report bundle reconstructs derived fields and rejects tampering', () => {
+  const definition = createArenaExperimentDefinition(definitionValue({
+    seedSet: { kind: 'explicit', values: [1] },
+  }));
+  const runner = createRunner(definition, ({ seed }) => createFakeCase(seed));
+  const report = runner.run({
+    generatedAt: '2026-07-18T00:00:00.000Z',
+    environment: ENVIRONMENT,
+  });
+  runner.destroy();
+  const bundle = createArenaExperimentReportBundle({
+    suite: 'test-suite',
+    definition,
+    report,
+  });
+  assert.equal(readArenaExperimentReportBundle(bundle).bundleHash, bundle.bundleHash);
+
+  const tamperedResult = structuredClone(bundle);
+  tamperedResult.report.outcome = 'failed';
+  assert.throws(() => readArenaExperimentReportBundle(tamperedResult), /漂移|bundleHash/);
+  const tamperedMetric = structuredClone(bundle);
+  tamperedMetric.report.metrics[0].data.completed = 99;
+  assert.throws(() => readArenaExperimentReportBundle(tamperedMetric), /漂移|bundleHash/);
+  assert.throws(() => readArenaExperimentReportBundle({
+    ...bundle,
+    future: true,
+  }), /不支持字段 future/);
 });
 
 test('SimulationRunner clones case-owned step data once and exposes a deeply frozen observation', () => {
@@ -822,6 +920,195 @@ test('Bot suite runs easy/normal/hard as same-seed paired matches and keeps dete
   assert.deepEqual(first.failedMetricGates.map(({ collectorId }) => collectorId), [
     'arena.stage9.bot-capability',
   ]);
+});
+
+test('S9.3 balance definition pre-registers immutable fixed samples and feasible policy ranges', () => {
+  const definition = createArenaStage9BalanceExperimentDefinition({
+    sourceCommit: COMMIT,
+    sourceDirty: false,
+  });
+  assert.equal(definition.id, ARENA_STAGE9_BALANCE_EXPERIMENT_ID);
+  assert.equal(definition.getSeeds().length, ARENA_STAGE9_BALANCE_CASE_COUNT);
+  assert.equal(definition.schemaVersion, 2);
+  assert.equal(definition.limits.maximumFailedCases, 0);
+  assert.deepEqual(
+    definition.collectors.find(({ id }) => id === ARENA_BALANCE_CANDIDATE_COLLECTOR_ID)
+      .parameters.policy,
+    ARENA_STAGE9_BALANCE_POLICY_V1,
+  );
+  assert.equal(Object.isFrozen(definition.collectors[0].parameters), true);
+
+  const impossible = structuredClone(ARENA_STAGE9_BALANCE_POLICY_V1);
+  impossible.equipment.minimumPickupSharePerDefinition = 0.4;
+  assert.throws(() => createArenaBalancePolicy(impossible), /最小占比总和不可实现/);
+  const unknown = structuredClone(ARENA_STAGE9_BALANCE_POLICY_V1);
+  unknown.duration.futureThreshold = 1;
+  assert.throws(() => createArenaBalancePolicy(unknown), /不支持字段 futureThreshold/);
+});
+
+function createSyntheticBalancePolicy() {
+  return {
+    schemaVersion: 1,
+    minimumCompletedPairedCases: 1,
+    duration: {
+      targetMinimumTicks: 50,
+      targetMaximumTicks: 150,
+      minimumTargetShare: 1,
+      ultraShortMaximumTicks: 10,
+      maximumUltraShortShare: 0,
+      maximumTimeoutShare: 1,
+    },
+    equipment: {
+      actionBindings: [{
+        equipmentDefinitionId: 'chain',
+        actionDefinitionId: 'chain-pull',
+      }],
+      minimumPickupsPerDefinition: 1,
+      minimumActionsPerDefinition: 1,
+      minimumHitsPerDefinition: 1,
+      minimumPickupSharePerDefinition: 1,
+      maximumPickupSharePerDefinition: 1,
+      minimumActionSharePerDefinition: 1,
+      maximumActionSharePerDefinition: 1,
+      minimumHitSharePerDefinition: 1,
+      maximumHitSharePerDefinition: 1,
+    },
+    elimination: {
+      minimumCreditedShare: 0.4,
+      minimumEquipmentAttributedShare: 0.4,
+      maximumEquipmentAttributedShare: 0.6,
+      minimumEnvironmentShare: 0.4,
+    },
+  };
+}
+
+function createSyntheticBalanceCollector() {
+  const policy = createSyntheticBalancePolicy();
+  const parameters = createArenaBalanceCandidateCollectorParameters({ policy });
+  const definition = createArenaExperimentDefinition(definitionValue({
+    seedSet: { kind: 'explicit', values: [1] },
+    candidate: {
+      ...definitionValue().candidate,
+      matchConfig: { preparingTicks: 0, lastHitCreditTicks: 30 },
+    },
+    collectors: [{
+      id: ARENA_BALANCE_CANDIDATE_COLLECTOR_ID,
+      version: ARENA_BALANCE_CANDIDATE_COLLECTOR_VERSION,
+      parameters,
+    }],
+  }));
+  return createArenaBalanceCandidateCollectorEntry().create({ definition, parameters });
+}
+
+function observeSyntheticBalanceDifficulty(collector, difficultyId, {
+  creditedEliminationTick = 2,
+} = {}) {
+  collector.observeStep({
+    seed: 1,
+    snapshot: { tick: 1, difficultyId, matchTick: 1 },
+    inputFrames: [],
+    events: [
+      {
+        type: 'EquipmentSpawned',
+        tick: 0,
+        equipmentDefinitionId: 'chain',
+      },
+      {
+        type: 'EquipmentPickedUp',
+        tick: 0,
+        equipmentDefinitionId: 'chain',
+      },
+      { type: 'ActionStarted', tick: 1, action: 'chain-pull' },
+      {
+        type: 'HitResolved',
+        tick: 1,
+        action: 'chain-pull',
+        attackerId: 'player-2',
+        targetId: 'player-1',
+      },
+      {
+        type: 'PlayerEliminated',
+        tick: creditedEliminationTick,
+        participantId: 'player-1',
+        creditedAttackerId: 'player-2',
+      },
+      {
+        type: 'PlayerEliminated',
+        tick: 3,
+        participantId: 'player-2',
+        creditedAttackerId: null,
+      },
+    ],
+  });
+}
+
+test('balance collector attributes equipment/environment eliminations and discards failed partial cases', () => {
+  const collector = createSyntheticBalanceCollector();
+  collector.beginCase({ seed: 1 });
+  for (const difficultyId of ['easy', 'normal', 'hard']) {
+    observeSyntheticBalanceDifficulty(collector, difficultyId);
+  }
+  collector.completeCase({
+    seed: 1,
+    eventCount: 18,
+    result: {
+      difficulties: ['easy', 'normal', 'hard'].map((difficultyId) => ({
+        difficultyId,
+        ticks: 100,
+        outcome: {
+          reason: 'lives-exhausted',
+          winnerId: 'player-2',
+          isDraw: false,
+        },
+      })),
+    },
+  });
+  const result = collector.getResult();
+  assert.equal(result.gate.passed, true);
+  assert.equal(result.denominators.completedMatches, 3);
+  assert.equal(result.denominators.totalEliminations, 6);
+  assert.equal(result.derived.overall.equipmentAttributedEliminations, 3);
+  assert.equal(result.derived.overall.uncreditedEnvironmentEliminations, 3);
+  assert.equal(result.derived.overall.equipment.definitions.chain.hits, 3);
+  collector.destroy();
+
+  const failed = createSyntheticBalanceCollector();
+  failed.beginCase({ seed: 1 });
+  observeSyntheticBalanceDifficulty(failed, 'easy');
+  failed.failCase({ seed: 1, failure: { name: 'ForcedFailure' } });
+  const failedResult = failed.getResult();
+  assert.equal(failedResult.raw.failedPairedCases, 1);
+  assert.equal(failedResult.denominators.totalEliminations, 0);
+  assert.equal(failedResult.derived.overall.equipment.definitions.chain.hits, 0);
+  failed.destroy();
+
+  const outOfOrder = createSyntheticBalanceCollector();
+  outOfOrder.beginCase({ seed: 1 });
+  for (const difficultyId of ['easy', 'normal', 'hard']) {
+    observeSyntheticBalanceDifficulty(outOfOrder, difficultyId, {
+      creditedEliminationTick: 0,
+    });
+  }
+  outOfOrder.completeCase({
+    seed: 1,
+    eventCount: 18,
+    result: {
+      difficulties: ['easy', 'normal', 'hard'].map((difficultyId) => ({
+        difficultyId,
+        ticks: 100,
+        outcome: {
+          reason: 'lives-exhausted',
+          winnerId: 'player-2',
+          isDraw: false,
+        },
+      })),
+    },
+  });
+  assert.equal(
+    outOfOrder.getResult().derived.overall.equipmentAttributedEliminations,
+    0,
+  );
+  outOfOrder.destroy();
 });
 
 test('professional experiment compositions reject ambiguous sampling and CLI drift', () => {

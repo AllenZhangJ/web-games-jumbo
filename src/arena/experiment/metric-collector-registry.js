@@ -2,10 +2,12 @@ import {
   assertIntegerAtLeast,
   assertKnownKeys,
   assertNonEmptyString,
+  assertPlainRecord,
+  cloneFrozenData,
 } from '../rules/definition-utils.js';
 import { createArenaExperimentDefinition } from './experiment-definition.js';
 
-const ENTRY_KEYS = new Set(['id', 'version', 'create']);
+const ENTRY_KEYS = new Set(['id', 'version', 'validateParameters', 'create']);
 const COLLECTOR_METHODS = Object.freeze([
   'beginCase',
   'observeStep',
@@ -27,11 +29,29 @@ function normalizeEntry(value, index) {
   const name = `MetricCollectorRegistry.entries[${index}]`;
   assertKnownKeys(value, ENTRY_KEYS, name);
   if (typeof value.create !== 'function') throw new TypeError(`${name}.create 必须是函数。`);
+  if (
+    value.validateParameters !== undefined
+    && typeof value.validateParameters !== 'function'
+  ) throw new TypeError(`${name}.validateParameters 必须是函数。`);
   return Object.freeze({
     id: assertNonEmptyString(value.id, `${name}.id`),
     version: assertIntegerAtLeast(value.version, 1, `${name}.version`),
+    validateParameters: value.validateParameters ?? ((parameters) => {
+      assertKnownKeys(parameters, new Set(), `${name} parameters`);
+      return Object.freeze({});
+    }),
     create: value.create,
   });
+}
+
+function validateCollectorParameters(entry, reference) {
+  const validated = entry.validateParameters(reference.parameters ?? {});
+  const parameters = cloneFrozenData(
+    validated,
+    `MetricCollector ${entry.id} validated parameters`,
+  );
+  assertPlainRecord(parameters, `MetricCollector ${entry.id} validated parameters`);
+  return parameters;
 }
 
 export class MetricCollectorRegistry {
@@ -60,6 +80,7 @@ export class MetricCollectorRegistry {
           `MetricCollector ${entry.id} 版本 ${entry.version} 与 Definition ${reference.version} 不一致。`,
         );
       }
+      validateCollectorParameters(entry, reference);
     }
     return definition;
   }
@@ -71,7 +92,8 @@ export class MetricCollectorRegistry {
     try {
       for (const reference of definition.collectors) {
         const entry = this.#entries.get(reference.id);
-        pendingInstance = entry.create({ definition });
+        const parameters = validateCollectorParameters(entry, reference);
+        pendingInstance = entry.create({ definition, parameters });
         created.push(Object.freeze({
           id: entry.id,
           version: entry.version,

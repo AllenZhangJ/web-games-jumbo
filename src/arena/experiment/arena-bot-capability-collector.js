@@ -14,18 +14,38 @@ import {
 import {
   ARENA_BOT_CAPABILITY_MAP_EVENT_TYPES,
   ARENA_BOT_CAPABILITY_PARTICIPANT_ID,
+  ARENA_BOT_CAPABILITY_DEFAULT_GATE_POLICY,
   createArenaBotCapabilityGatePolicy,
+  createArenaBotCapabilityGatePolicyDefinition,
   createArenaBotDifficultyMetricState,
   finishArenaBotDifficultyMetricState,
 } from './arena-bot-capability-metrics.js';
 
 export const ARENA_BOT_CAPABILITY_COLLECTOR_ID = 'arena.stage9.bot-capability';
 export const ARENA_BOT_CAPABILITY_COLLECTOR_VERSION = 1;
+export const ARENA_BOT_CAPABILITY_COLLECTOR_DEFAULT_PARAMETERS = Object.freeze({
+  gatePolicy: ARENA_BOT_CAPABILITY_DEFAULT_GATE_POLICY,
+});
+
+const PARAMETER_KEYS = new Set(['gatePolicy']);
+
+export function createArenaBotCapabilityCollectorParameters(value = {}) {
+  const source = cloneFrozenData(value, 'ArenaBotCapabilityCollector parameters');
+  for (const key of Object.keys(source)) {
+    if (!PARAMETER_KEYS.has(key)) {
+      throw new RangeError(`ArenaBotCapabilityCollector parameters 不支持字段 ${key}。`);
+    }
+  }
+  return Object.freeze({
+    gatePolicy: createArenaBotCapabilityGatePolicyDefinition(source.gatePolicy ?? {}),
+  });
+}
 
 class ArenaBotCapabilityCollector {
   #plannedCases;
   #replaySeeds;
   #botRunInputThreshold;
+  #gatePolicy;
   #active;
   #stats;
   #completedCases;
@@ -34,7 +54,7 @@ class ArenaBotCapabilityCollector {
   #failureNames;
   #destroyed;
 
-  constructor(definition) {
+  constructor(definition, parameters) {
     const plannedSeeds = definition.getSeeds();
     const replaySeeds = cloneArenaExperimentReplaySeeds(
       definition.workload.parameters.replaySeeds,
@@ -50,6 +70,7 @@ class ArenaBotCapabilityCollector {
     )?.definitionId;
     this.#botRunInputThreshold = createArenaV1CharacterRegistry()
       .require(botCharacterId).movement.runInputThreshold;
+    this.#gatePolicy = createArenaBotCapabilityCollectorParameters(parameters).gatePolicy;
     this.#plannedCases = plannedSeeds.length;
     this.#replaySeeds = new Set(replaySeeds);
     this.#active = null;
@@ -238,6 +259,7 @@ class ArenaBotCapabilityCollector {
       difficulties,
       completedCases: this.#completedCases,
       replaySeedCount: this.#replaySeeds.size,
+      gatePolicy: this.#gatePolicy,
     });
     return cloneFrozenData({
       gate: createArenaMetricGate(policy.checks),
@@ -260,6 +282,7 @@ class ArenaBotCapabilityCollector {
           this.#completedCases + this.#failedCases,
         ),
         scoreRateTolerance: policy.scoreRateTolerance,
+        gatePolicy: policy.gatePolicy,
         difficulties,
       },
     }, 'ArenaBotCapabilityCollector result');
@@ -269,6 +292,7 @@ class ArenaBotCapabilityCollector {
     if (this.#destroyed) return;
     this.#destroyed = true;
     this.#active = null;
+    this.#gatePolicy = null;
     this.#replaySeeds.clear();
     for (const stats of this.#stats.values()) {
       stats.movementActions.clear();
@@ -284,6 +308,9 @@ export function createArenaBotCapabilityCollectorEntry() {
   return Object.freeze({
     id: ARENA_BOT_CAPABILITY_COLLECTOR_ID,
     version: ARENA_BOT_CAPABILITY_COLLECTOR_VERSION,
-    create: ({ definition }) => new ArenaBotCapabilityCollector(definition),
+    validateParameters: createArenaBotCapabilityCollectorParameters,
+    create: ({ definition, parameters }) => (
+      new ArenaBotCapabilityCollector(definition, parameters)
+    ),
   });
 }

@@ -7,7 +7,8 @@ import {
   cloneFrozenData,
 } from '../rules/definition-utils.js';
 
-export const ARENA_EXPERIMENT_DEFINITION_SCHEMA_VERSION = 1;
+export const ARENA_EXPERIMENT_DEFINITION_SCHEMA_VERSION = 2;
+export const ARENA_EXPERIMENT_DEFINITION_LEGACY_SCHEMA_VERSION = 1;
 
 export const ARENA_EXPERIMENT_SEED_SET_KIND = Object.freeze({
   EXPLICIT: 'explicit',
@@ -40,7 +41,8 @@ const AUTHORITY_KEYS = new Set([
 ]);
 const SEED_SET_KEYS = new Set(['kind', 'values', 'first', 'last']);
 const WORKLOAD_KEYS = new Set(['id', 'version', 'parameters']);
-const COLLECTOR_KEYS = new Set(['id', 'version']);
+const COLLECTOR_KEYS_V1 = new Set(['id', 'version']);
+const COLLECTOR_KEYS_V2 = new Set(['id', 'version', 'parameters']);
 const LIMIT_KEYS = new Set(['maximumTicksPerCase', 'maximumFailedCases']);
 const HASH_PATTERN = /^[0-9a-f]{8}$/;
 const COMMIT_PATTERN = /^[0-9a-f]{40}$/;
@@ -171,7 +173,7 @@ function cloneWorkload(value) {
   });
 }
 
-function cloneCollectors(values) {
+function cloneCollectors(values, schemaVersion) {
   if (!Array.isArray(values) || values.length === 0) {
     throw new RangeError('ArenaExperimentDefinition.collectors 不能为空。');
   }
@@ -181,14 +183,26 @@ function cloneCollectors(values) {
   const ids = new Set();
   const collectors = values.map((value, index) => {
     const name = `ArenaExperimentDefinition.collectors[${index}]`;
-    assertKnownKeys(value, COLLECTOR_KEYS, name);
+    assertKnownKeys(
+      value,
+      schemaVersion === ARENA_EXPERIMENT_DEFINITION_LEGACY_SCHEMA_VERSION
+        ? COLLECTOR_KEYS_V1
+        : COLLECTOR_KEYS_V2,
+      name,
+    );
     const id = identifier(value.id, `${name}.id`);
     if (ids.has(id)) throw new RangeError(`重复的实验 collector ${id}。`);
     ids.add(id);
-    return Object.freeze({
+    const reference = {
       id,
       version: assertIntegerAtLeast(value.version, 1, `${name}.version`),
-    });
+    };
+    if (schemaVersion !== ARENA_EXPERIMENT_DEFINITION_LEGACY_SCHEMA_VERSION) {
+      const parameters = cloneFrozenData(value.parameters ?? {}, `${name}.parameters`);
+      assertPlainRecord(parameters, `${name}.parameters`);
+      reference.parameters = parameters;
+    }
+    return Object.freeze(reference);
   });
   return Object.freeze(collectors.sort((left, right) => (
     left.id < right.id ? -1 : left.id > right.id ? 1 : 0
@@ -216,12 +230,15 @@ export class ArenaExperimentDefinition {
   constructor(value) {
     const source = cloneFrozenData(value, 'ArenaExperimentDefinition');
     assertKnownKeys(source, DEFINITION_KEYS, 'ArenaExperimentDefinition');
-    if (source.schemaVersion !== ARENA_EXPERIMENT_DEFINITION_SCHEMA_VERSION) {
+    if (
+      source.schemaVersion !== ARENA_EXPERIMENT_DEFINITION_SCHEMA_VERSION
+      && source.schemaVersion !== ARENA_EXPERIMENT_DEFINITION_LEGACY_SCHEMA_VERSION
+    ) {
       throw new RangeError(`不支持 ArenaExperimentDefinition schema ${String(source.schemaVersion)}。`);
     }
     Object.defineProperties(this, {
       schemaVersion: {
-        value: ARENA_EXPERIMENT_DEFINITION_SCHEMA_VERSION,
+        value: source.schemaVersion,
         enumerable: true,
       },
       id: { value: identifier(source.id, 'ArenaExperimentDefinition.id'), enumerable: true },
@@ -240,7 +257,10 @@ export class ArenaExperimentDefinition {
       candidate: { value: cloneCandidate(source.candidate), enumerable: true },
       seedSet: { value: cloneSeedSet(source.seedSet), enumerable: true },
       workload: { value: cloneWorkload(source.workload), enumerable: true },
-      collectors: { value: cloneCollectors(source.collectors), enumerable: true },
+      collectors: {
+        value: cloneCollectors(source.collectors, source.schemaVersion),
+        enumerable: true,
+      },
       limits: { value: cloneLimits(source.limits), enumerable: true },
     });
     Object.freeze(this);

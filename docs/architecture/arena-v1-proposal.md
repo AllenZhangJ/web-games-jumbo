@@ -2,9 +2,9 @@
 
 ## 文档状态
 
-已接受整体边界；阶段 1～5 已分别落地轻量街机物理、无渲染 MatchCore、隐藏机器人、本地快速匹配、数据驱动装备 Rule/Core 和地图权威时间轴。Stage 6 的 Character/Input/Replay、Movement、Bot 同权移动、三端输入、灰盒、HUD、Session、盲测工作台与五目标 E3 证据合同已建立，但真实新手 E4 和目标设备 E3 Record 未完成。Stage 7 S7.1 已落地版本化表现/资产/动画/六方向合同，正式 GLB 与动画尚未生产。Stage 8 S8.1～S8.5.5 已形成 Profile、产品状态机、奖励/解锁、对称内容池、Product Presentation 与三端默认产品入口，S8.5.6 六目标证据合同已建立但外部 Record 未采集。Stage 9 S9.1a～S9.1c 已落地 Experiment Definition、Registry、无宿主 Runner、Metric Gate 和专业实验；S9.2 已落地 Replay V5 黄金语料、显式历史拒绝、fuzz 隔离与生命周期回归门。核心决策见 ADR-005～ADR-021。
+已接受整体边界；阶段 1～5 已分别落地轻量街机物理、无渲染 MatchCore、隐藏机器人、本地快速匹配、数据驱动装备 Rule/Core 和地图权威时间轴。Stage 6 的 Character/Input/Replay、Movement、Bot 同权移动、三端输入、灰盒、HUD、Session、盲测工作台与五目标 E3 证据合同已建立，但真实新手 E4 和目标设备 E3 Record 未完成。Stage 7 S7.1 已落地版本化表现/资产/动画/六方向合同，正式 GLB 与动画尚未生产。Stage 8 S8.1～S8.5.5 已形成 Profile、产品状态机、奖励/解锁、对称内容池、Product Presentation 与三端默认产品入口，S8.5.6 六目标证据合同已建立但外部 Record 未采集。Stage 9 S9.1～S9.2 已落地实验、黄金回放和回归门；S9.3a 已建立参数化 Definition V2、预注册平衡 Policy 与可验证 Report Bundle。核心决策见 ADR-005～ADR-022。
 
-本文同时记录已落地边界与后续目标；未明确标记为已落地的模块仍不是当前能力。Stage 6、Stage 7 S7.1 与 Stage 8 S8.5.6 外部验收仍在执行；Stage 9 S9.1～S9.2 实现边界已完成，平衡与性能冻结仍未完成。分别见 [Stage 6](arena-stage6-input-movement-plan.md)、[Stage 7](arena-stage7-presentation-plan.md)、[Stage 8](arena-stage8-product-progression-plan.md)、[Stage 9](arena-stage9-convergence-plan.md) 和 [Stage 4～9 项目方决策门](arena-stage4-9-decision-gates.md)。当前 v3 架构仍见 [`../architecture.md`](../architecture.md)。
+本文同时记录已落地边界与后续目标；未明确标记为已落地的模块仍不是当前能力。Stage 6、Stage 7 S7.1 与 Stage 8 S8.5.6 外部验收仍在执行；Stage 9 S9.1～S9.3a 实现边界已完成，第一份 clean 平衡 baseline、真人公平性与性能冻结仍未完成。分别见 [Stage 6](arena-stage6-input-movement-plan.md)、[Stage 7](arena-stage7-presentation-plan.md)、[Stage 8](arena-stage8-product-progression-plan.md)、[Stage 9](arena-stage9-convergence-plan.md) 和 [Stage 4～9 项目方决策门](arena-stage4-9-decision-gates.md)。当前 v3 架构仍见 [`../architecture.md`](../architecture.md)。
 
 ## 目标
 
