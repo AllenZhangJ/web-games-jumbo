@@ -1,6 +1,6 @@
 # ADR-012：Arena 使用可复现实验收敛并只降级表现层
 
-- 状态：提议
+- 状态：已接受；S9.1a 已实施，S9.3/S9.4 冻结输入待确认
 - 日期：2026-07-17
 
 ## 背景
@@ -12,6 +12,15 @@ Stage 9 需要同时收敛对局时长、三档隐藏机器人、装备争夺、
 ## 决策
 
 每个平衡候选都使用不可变 `ExperimentDefinition`，固定代码 commit、规则/内容版本和 hash、seed 集、基准策略、指标 schema 与停止条件。`SimulationRunner` 通过公开合同运行，`MetricCollector` 只读快照、事件和最终结果，输出包含原始计数与分母的机器可读报告。
+
+S9.1a 将该边界实现为四层显式合同：
+
+1. `ArenaExperimentDefinition` 只保存冻结数据，并固定 source dirty 状态、完整 Match config、Authority 身份、seed、workload、collector 与停止条件。
+2. `SimulationWorkloadRegistry` 只组合版本完全匹配的 case factory；输入基准属于 workload 版本，不作为 Runner 内的隐藏分支。
+3. `MetricCollectorRegistry` 创建实验级 Collector；Runner 只传深冻结观察，Collector 不持有 Core、Bot 或 RNG。
+4. `ArenaExperimentReport` 将环境元数据与确定性结果分离。环境和生成时间不进入 `resultHash`，dirty candidate 永远不能获得 `freezeEligible=true`。
+
+单个 case 的 Core/场景失败会保留 seed、tick、事件数和有界结构化错误并按 Definition 阈值停止；Collector 或编排合同异常会使 Runner 整体失败，已创建 case/collector 仍必须清理。这样不会用残缺聚合结果掩盖采集器故障。
 
 维护按规则大版本分组的黄金回放语料。当前版本必须严格重放；不兼容升级创建新目录，旧语料保留并验证明确拒绝。fuzz、soak 或真机发现的阻断缺陷缩减为最小复现并进入长期回归集。
 
@@ -66,9 +75,10 @@ Stage 9 需要同时收敛对局时长、三档隐藏机器人、装备争夺、
 - 需要维护实验 manifest、黄金语料、报告 schema、目标机矩阵和证据归档。
 - 精确预算必须等待目标设备确认与最终包实测，不能只靠架构阶段预估。
 
-## 生效条件
+## 分批生效与剩余条件
 
-- Stage 6～8 的主流程和内容合同稳定。
-- 项目方确认三端低档/主流目标机与可接受的 30 FPS 表现降级。
-- 实验 Runner、黄金回放、fuzz、soak 与三端性能报告可重复运行。
-- 冻结评审通过后将状态改为“已接受”，进入 Stage 10 RC。
+- S9.1 实验合同现在生效；后续专业压测必须按 workload/collector 扩展，不能把特殊统计重新写进通用 Runner。
+- S9.2 仍需建立黄金回放 manifest、严格历史拒绝和失败样本缩减流程。
+- S9.3 前仍需真人数据与平衡阈值，首条 scripted-pressure workload 不能代表最终公平性。
+- S9.4 前仍需项目方确认三端低档/主流目标机与可接受的 30 FPS 表现降级。
+- 只有实验、黄金回放、fuzz、soak、三端性能证据和冻结评审全部通过，才能进入 Stage 10 RC。

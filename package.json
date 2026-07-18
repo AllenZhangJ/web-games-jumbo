@@ -17,6 +17,7 @@
     "arena:product:session:soak": "node --expose-gc scripts/arena-product-presentation-session-soak.mjs --matches=100",
     "arena:profile:stress": "node scripts/arena-profile-persistence-stress.mjs --commits=500",
     "arena:product:stress": "node scripts/arena-product-session-stress.mjs --matches=200",
+    "arena:experiment": "node scripts/arena-experiment.mjs",
     "arena:device:evidence": "node scripts/arena-device-evidence.mjs",
     "arena:product:device:evidence": "node scripts/arena-device-evidence.mjs --definition arena.stage8.product-device-acceptance.v1",
     "arena:build:verify": "node scripts/arena-build-manifest.mjs",

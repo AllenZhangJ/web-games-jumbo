@@ -206,6 +206,19 @@ test('Arena device acceptance remains pure evidence data behind a Node-only CLI'
   }
 });
 
+test('Arena Stage 9 experiment orchestration stays headless and outside presentation/platform code', async () => {
+  const experimentFiles = await listJavaScript(path.resolve('src/arena/experiment'));
+  assert.ok(experimentFiles.length >= 7);
+  for (const file of experimentFiles) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /(?:from\s+['"](?:node:|three|[^'"]*(?:presentation|renderer|platform|entry)[^'"]*)['"]|Date\.now|Math\.random|\bperformance\s*(?:\.|\[)|setTimeout|setInterval|requestAnimationFrame|\b(?:window|document|navigator)\b|\b(?:tt|wx)\s*\.)/,
+      `${file} 应保持为无宿主、无渲染、无墙钟的 Stage 9 实验层。`,
+    );
+  }
+});
+
 test('Arena Stage 7 contracts remain host-free behind an injected Three view factory', async () => {
   const directories = [
     'src/arena/presentation/animation',
