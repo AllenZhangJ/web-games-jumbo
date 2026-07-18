@@ -33,3 +33,9 @@ arena-v1-balance-lives-exploration-v1--<source-commit-short>.json
 机器可读证据：[9/11/13 条命探索 Bundle](arena-v1-balance-lives-exploration-v1--ac140e2d1a99.json)。13 条命因 Bot easy→normal score-rate 排序失败而不具备选择资格；这不改变 11 条命的机器选择。
 
 下一份证据必须来自预注册的 `arena-v1.balance-lives-11.validation.v1`，使用 index `[20,000, 20,300)` 的 300 paired seed；结果产生前不预留“通过”结论。
+
+| Candidate | Source commit | Definition / Result / Bundle | 完整性 | 结论 |
+| --- | --- | --- | --- | --- |
+| `arena-v1.balance-lives-11.validation.v1` | `594d49ec8eba` | `81040fb7` / `2ed504b0` / `7581b210` | 300 paired case、900 局、15 replay check、0 case/Metric Gate 失败 | `passed`，`freezeEligible=true`；可提升为 Product 默认 |
+
+机器可读证据：[11 条命 validation Report Bundle](arena-v1-balance-lives-11-validation-v1--594d49ec8eba--81040fb7.json)。该报告验证候选配置，不自动修改 Product 默认；提升必须另有代码与回归门。

@@ -1,6 +1,6 @@
 # ADR-023：Arena S9.3b 使用隔离 seed 的单变量候选探索
 
-- 状态：已接受；首份 clean exploration 已完成，11 条命进入 validation
+- 状态：已接受；11 条命已通过隔离 validation，Product 提升待落地
 - 日期：2026-07-18
 
 ## 背景
@@ -54,10 +54,20 @@ clean source `ac140e2d1a99e22d35f3109ae31089803728b9f3` 上的 60 paired explora
 
 探索只证明 11 条命是本轮预注册矩阵中的机器胜者。它必须在 index `[20,000, 20,300)` 的未运行 cohort 上再次通过，才能成为可冻结平衡候选。
 
+## 首次 validation 结论
+
+clean source `594d49ec8ebaa1bd6ba588ad9be70d6546fa04b0` 上的 300 paired validation 已完成，共 900 局、15 条严格回放、0 case 失败，Definition/Result/Bundle hash 为 `81040fb7` / `2ed504b0` / `7581b210`，`freezeEligible=true`。
+
+- 目标时长占比 87.44%，中位数 7,448 tick，超短局 0，超时局 0.89%。
+- 有攻击归属淘汰 93.61%，装备归因淘汰 67.19%，无归属环境/自身淘汰 6.39%。
+- easy/normal/hard 工程胜率为 48.00%/53.00%/60.67%，三档 capability、life pressure 与 score-rate 排序全部通过。
+- 三件装备数量/占比、未知装备事件、300 个 unique final hash、15 条严格回放与 Bot 隐藏分配分布全部通过。
+
+验证结果与 exploration 的目标时长占比（87.22%）和中位数（7,439 tick）接近，11 条命不再只是探索样本上的胜者，已具备提升为 Product 默认的证据。提升时不修改 MatchCore 通用默认，而新增共享不可变 Balance Definition 并由 Product 组合消费。
+
 ## 剩余条件
 
-- 将机器选中的 11 条命固定为新的正式 candidate ID。
-- 在隔离的 300 paired validation seed 上运行正式报告；未通过则保留失败并进入新的预注册候选。
+- 将已验证的 11 条命配置提升为 Product 默认，并验证 Product 实际生成的权威快照。
 - 后续为长时实验设计确定性进度证据与可安全续跑边界；本次已完成证据不因运行耗时重写。
 
 固定 validation Definition 与门禁见 [11 条命隔离验证预注册](../research/arena-stage9-s9.3b-lives-11-validation-preregistration.md)。
