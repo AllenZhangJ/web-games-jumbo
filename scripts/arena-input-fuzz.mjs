@@ -9,17 +9,52 @@ import {
 } from '../src/arena/presentation/input/input-mapper-contract.js';
 import { InputSampler } from '../src/arena/presentation/input/input-sampler.js';
 import { HeadlessMatchRunner, replayMatch } from '../src/arena/replay.js';
+import { createArenaInputFuzzFailureCandidate } from '../src/arena/regression/input-fuzz-regression-candidate.js';
+import { combineCleanupFailure, normalizeThrownError } from '../src/arena/lifecycle-error.js';
 import { createRng, deriveSeed } from '../src/shared/deterministic-rng.js';
 
-function readPositiveInteger(name, fallback) {
-  const prefix = `--${name}=`;
-  const raw = process.argv.find((argument) => argument.startsWith(prefix))?.slice(prefix.length);
-  if (raw === undefined) return fallback;
-  const value = Number(raw);
-  if (!Number.isSafeInteger(value) || value < 1) {
-    throw new RangeError(`${name} 必须是正安全整数。`);
+function parseInteger(value, minimum, maximum, name) {
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed < minimum || parsed > maximum) {
+    throw new RangeError(`${name} 必须是 ${minimum}～${maximum} 的安全整数。`);
   }
-  return value;
+  return parsed;
+}
+
+function parseArgs(values) {
+  const result = {
+    matches: 40,
+    replaySamples: 2,
+    mapperId: null,
+    matchIndex: null,
+    matchSeed: null,
+  };
+  const seen = new Set();
+  for (const argument of values) {
+    const match = argument.match(/^--(matches|replay-samples|mapper|match-index|match-seed)=(.+)$/);
+    if (!match) throw new Error(`未知 input fuzz 参数 ${argument}。`);
+    if (seen.has(match[1])) throw new Error(`input fuzz 参数 --${match[1]} 不能重复。`);
+    seen.add(match[1]);
+    if (match[1] === 'matches') result.matches = parseInteger(match[2], 1, 100_000, 'matches');
+    else if (match[1] === 'replay-samples') {
+      result.replaySamples = parseInteger(match[2], 1, 1_000, 'replay-samples');
+    } else if (match[1] === 'match-index') {
+      result.matchIndex = parseInteger(match[2], 0, 100_000, 'match-index');
+    } else if (match[1] === 'match-seed') {
+      result.matchSeed = parseInteger(match[2], 0, 0xffffffff, 'match-seed');
+    } else result.mapperId = match[2];
+  }
+  if ((result.mapperId === null) !== (result.matchIndex === null)) {
+    throw new Error('--mapper 与 --match-index 必须同时提供。');
+  }
+  if (
+    result.mapperId !== null
+    && !Object.values(ARENA_INPUT_MAPPER_ID).includes(result.mapperId)
+  ) throw new RangeError(`未知 InputMapper ${result.mapperId}。`);
+  if (result.matchSeed !== null && result.mapperId === null) {
+    throw new Error('--match-seed 只允许用于单 case 复现模式。');
+  }
+  return Object.freeze(result);
 }
 
 function increment(record, key) {
@@ -162,10 +197,41 @@ function assertSnapshot(snapshot) {
   }
 }
 
-function runMatch({ mapperDefinition, index, replaySample, operations, frameCounts }) {
-  const seed = (0x64040000 + index * 2_654_435_761 + (
+function cleanupRunResources(resources, originalError) {
+  const cleanupErrors = [];
+  for (const resource of resources) {
+    if (!resource || typeof resource.destroy !== 'function') continue;
+    try {
+      resource.destroy();
+    } catch (error) {
+      cleanupErrors.push(error);
+    }
+  }
+  if (cleanupErrors.length > 0) {
+    const combined = combineCleanupFailure(
+      originalError ?? new Error('Input fuzz 资源清理失败。'),
+      cleanupErrors,
+      'Input fuzz 失败且资源清理未完整完成。',
+    );
+    if (originalError?.regressionCandidate) {
+      combined.regressionCandidate = originalError.regressionCandidate;
+    }
+    throw combined;
+  }
+  if (originalError) throw originalError;
+}
+
+function runMatch({
+  mapperDefinition,
+  index,
+  seedOverride,
+  replaySample,
+  operations,
+  frameCounts,
+}) {
+  const seed = seedOverride ?? ((0x64040000 + index * 2_654_435_761 + (
     mapperDefinition.id === ARENA_INPUT_MAPPER_ID.CONTEXT_PRIMARY ? 0x9e3779b9 : 0
-  )) >>> 0;
+  )) >>> 0);
   const rng = createRng(deriveSeed(seed, `input-fuzz:${mapperDefinition.id}`));
   const core = createArenaV1MatchCore({
     seed,
@@ -186,6 +252,8 @@ function runMatch({ mapperDefinition, index, replaySample, operations, frameCoun
   const runner = replaySample ? new HeadlessMatchRunner(core, { checkpointInterval: 150 }) : null;
   const active = new Map();
   let viewport = { width: 400, height: 800 };
+  let result = null;
+  let failure = null;
   try {
     while (core.phase !== ARENA_MATCH_PHASE.ENDED) {
       const snapshot = core.getSnapshot();
@@ -249,93 +317,140 @@ function runMatch({ mapperDefinition, index, replaySample, operations, frameCoun
       const replayed = replayMatch(replay);
       if (replayed.finalHash !== replay.finalHash) throw new Error('输入 fuzz 回放分叉。');
     }
-    return { seed, hash: core.getStateHash(), replayVerified: Boolean(runner) };
+    result = { seed, hash: core.getStateHash(), replayVerified: Boolean(runner) };
   } catch (error) {
-    error.message = `${mapperDefinition.id} match ${index} seed ${seed}: ${error.message}`;
-    throw error;
-  } finally {
-    runner?.destroy();
-    sampler.destroy();
-    core.destroy();
-  }
-}
-
-const matchesPerMapper = readPositiveInteger('matches', 40);
-const replaySamples = Math.min(
-  matchesPerMapper,
-  readPositiveInteger('replay-samples', 2),
-);
-const operations = {};
-const frameCounts = {};
-const hashes = new Set();
-const mapperResults = {};
-let verifiedReplays = 0;
-const startedAt = performance.now();
-
-for (const mapperDefinition of MAPPERS) {
-  const result = { matches: 0, uniqueFinalHashes: 0, replayChecks: 0 };
-  const mapperHashes = new Set();
-  for (let index = 0; index < matchesPerMapper; index += 1) {
-    const match = runMatch({
-      mapperDefinition,
-      index,
-      replaySample: index < replaySamples,
-      operations,
-      frameCounts,
-    });
-    result.matches += 1;
-    if (match.replayVerified) {
-      result.replayChecks += 1;
-      verifiedReplays += 1;
+    const normalized = error instanceof Error ? error : new Error(String(error));
+    const contextual = new Error(
+      `${mapperDefinition.id} match ${index} seed ${seed}: ${normalized.message}`,
+    );
+    contextual.name = normalized.name || 'Error';
+    try {
+      contextual.regressionCandidate = createArenaInputFuzzFailureCandidate({
+        mapperId: mapperDefinition.id,
+        matchIndex: index,
+        matchSeed: seed,
+        failure: normalized,
+      });
+    } catch (candidateError) {
+      contextual.regressionCandidateCreationError = normalizeThrownError(
+        candidateError,
+        'Input fuzz 回归候选生成失败',
+      );
     }
-    mapperHashes.add(match.hash);
-    hashes.add(match.hash);
+    failure = contextual;
   }
-  result.uniqueFinalHashes = mapperHashes.size;
-  if (mapperHashes.size !== matchesPerMapper) {
-    throw new Error(`${mapperDefinition.id} 最终 hash 只有 ${mapperHashes.size}/${matchesPerMapper} 个唯一值。`);
-  }
-  mapperResults[mapperDefinition.id] = result;
+  cleanupRunResources([runner, sampler, core], failure);
+  return result;
 }
 
-for (const requiredOperation of [
-  'startAccepted',
-  'moveAccepted',
-  'endAccepted',
-  'cancelAccepted',
-  'tapAccepted',
-  'foreignRejected',
-  'resize',
-  'suspendResume',
-]) {
-  if (!operations[requiredOperation]) {
-    throw new Error(`input fuzz 未覆盖 ${requiredOperation}。`);
+function assertBatchCoverage(operations, frameCounts) {
+  for (const requiredOperation of [
+    'startAccepted',
+    'moveAccepted',
+    'endAccepted',
+    'cancelAccepted',
+    'tapAccepted',
+    'foreignRejected',
+    'resize',
+    'suspendResume',
+  ]) {
+    if (!operations[requiredOperation]) {
+      throw new Error(`input fuzz 未覆盖 ${requiredOperation}。`);
+    }
   }
-}
-for (const mapperId of Object.values(ARENA_INPUT_MAPPER_ID)) {
-  if (!(frameCounts[`${mapperId}:primaryPressed`] > 0)) {
-    throw new Error(`${mapperId} 未生成 primaryPressed。`);
+  for (const mapperId of Object.values(ARENA_INPUT_MAPPER_ID)) {
+    if (!(frameCounts[`${mapperId}:primaryPressed`] > 0)) {
+      throw new Error(`${mapperId} 未生成 primaryPressed。`);
+    }
+    if (!(frameCounts[`${mapperId}:slamPressed`] > 0)) {
+      throw new Error(`${mapperId} 未生成 slamPressed。`);
+    }
   }
-  if (!(frameCounts[`${mapperId}:slamPressed`] > 0)) {
-    throw new Error(`${mapperId} 未生成 slamPressed。`);
+  if (!(frameCounts[`${ARENA_INPUT_MAPPER_ID.GESTURE_MOBILITY}:jumpPressed`] > 0)) {
+    throw new Error('Mapper A 未生成 jumpPressed。');
   }
-}
-if (!(frameCounts[`${ARENA_INPUT_MAPPER_ID.GESTURE_MOBILITY}:jumpPressed`] > 0)) {
-  throw new Error('Mapper A 未生成 jumpPressed。');
-}
-if (!(frameCounts[`${ARENA_INPUT_MAPPER_ID.CONTEXT_PRIMARY}:primaryHeld`] > 0)) {
-  throw new Error('Mapper B 未生成上下文蹲跳 held。');
+  if (!(frameCounts[`${ARENA_INPUT_MAPPER_ID.CONTEXT_PRIMARY}:primaryHeld`] > 0)) {
+    throw new Error('Mapper B 未生成上下文蹲跳 held。');
+  }
 }
 
-console.log(JSON.stringify({
-  generatedAt: new Date().toISOString(),
-  matchesPerMapper,
-  totalMatches: matchesPerMapper * MAPPERS.length,
-  replaySamplesPerMapper: replaySamples,
-  verifiedReplays,
-  uniqueFinalHashes: hashes.size,
-  elapsedMs: performance.now() - startedAt,
-  mappers: mapperResults,
-  operations,
-  frameCounts,
-}, null, 2));
+function main() {
+  const options = parseArgs(process.argv.slice(2));
+  const reproductionMode = options.mapperId !== null;
+  const mapperDefinitions = reproductionMode
+    ? MAPPERS.filter(({ id }) => id === options.mapperId)
+    : MAPPERS;
+  const replaySamples = Math.min(options.matches, options.replaySamples);
+  const operations = {};
+  const frameCounts = {};
+  const hashes = new Set();
+  const mapperResults = {};
+  let reproductionCase = null;
+  let verifiedReplays = 0;
+  const startedAt = performance.now();
+  for (const mapperDefinition of mapperDefinitions) {
+    const result = { matches: 0, uniqueFinalHashes: 0, replayChecks: 0 };
+    const mapperHashes = new Set();
+    const indexes = reproductionMode
+      ? [options.matchIndex]
+      : Array.from({ length: options.matches }, (_, index) => index);
+    for (const index of indexes) {
+      const match = runMatch({
+        mapperDefinition,
+        index,
+        seedOverride: reproductionMode ? options.matchSeed : null,
+        replaySample: reproductionMode || index < replaySamples,
+        operations,
+        frameCounts,
+      });
+      result.matches += 1;
+      if (match.replayVerified) {
+        result.replayChecks += 1;
+        verifiedReplays += 1;
+      }
+      mapperHashes.add(match.hash);
+      hashes.add(match.hash);
+      if (reproductionMode) {
+        reproductionCase = Object.freeze({
+          mapperId: mapperDefinition.id,
+          matchIndex: index,
+          matchSeed: match.seed,
+        });
+      }
+    }
+    result.uniqueFinalHashes = mapperHashes.size;
+    if (mapperHashes.size !== indexes.length) {
+      throw new Error(
+        `${mapperDefinition.id} 最终 hash 只有 ${mapperHashes.size}/${indexes.length} 个唯一值。`,
+      );
+    }
+    mapperResults[mapperDefinition.id] = result;
+  }
+  if (!reproductionMode) assertBatchCoverage(operations, frameCounts);
+  console.log(JSON.stringify({
+    generatedAt: new Date().toISOString(),
+    mode: reproductionMode ? 'single-case-reproduction' : 'batch-fuzz',
+    reproductionCase,
+    matchesPerMapper: reproductionMode ? 1 : options.matches,
+    totalMatches: reproductionMode ? 1 : options.matches * MAPPERS.length,
+    replaySamplesPerMapper: reproductionMode ? 1 : replaySamples,
+    verifiedReplays,
+    uniqueFinalHashes: hashes.size,
+    elapsedMs: performance.now() - startedAt,
+    mappers: mapperResults,
+    operations,
+    frameCounts,
+  }, null, 2));
+}
+
+try {
+  main();
+} catch (error) {
+  if (error?.regressionCandidate) {
+    console.error(JSON.stringify({
+      status: 'failed',
+      regressionCandidate: error.regressionCandidate,
+    }, null, 2));
+  } else console.error(error instanceof Error ? error.message : String(error));
+  process.exitCode = 1;
+}

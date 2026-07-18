@@ -219,6 +219,19 @@ test('Arena Stage 9 experiment orchestration stays headless and outside presenta
   }
 });
 
+test('Arena Stage 9 regression corpus stays headless and keeps Node IO in scripts', async () => {
+  const regressionFiles = await listJavaScript(path.resolve('src/arena/regression'));
+  assert.ok(regressionFiles.length >= 5);
+  for (const file of regressionFiles) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /(?:from\s+['"](?:node:|three|[^'"]*(?:presentation|renderer|platform|entry)[^'"]*)['"]|Date\.now|Math\.random|\bperformance\s*(?:\.|\[)|setTimeout|setInterval|requestAnimationFrame|\b(?:window|document|navigator)\b|\b(?:tt|wx)\s*\.)/,
+      `${file} 应保持为无宿主、无渲染的 Stage 9 回归层。`,
+    );
+  }
+});
+
 test('Arena Stage 7 contracts remain host-free behind an injected Three view factory', async () => {
   const directories = [
     'src/arena/presentation/animation',

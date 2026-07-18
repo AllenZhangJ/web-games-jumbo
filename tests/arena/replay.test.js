@@ -4,7 +4,11 @@ import { ARENA_MATCH_PHASE } from '../../src/arena/config.js';
 import { createNeutralInputFrame } from '../../src/arena/input-frame.js';
 import { createArenaV1MatchCore } from '../../src/arena/arena-v1-match-core.js';
 import { createLightweightPhysicsWorld } from '../../src/arena/physics/lightweight-physics.js';
-import { HeadlessMatchRunner, replayMatch } from '../../src/arena/replay.js';
+import {
+  ARENA_REPLAY_ERROR_CODE,
+  HeadlessMatchRunner,
+  replayMatch,
+} from '../../src/arena/replay.js';
 import { FixedStepMatchRuntime } from '../../src/arena/runtime/fixed-step-match-runtime.js';
 
 function createReplayCore() {
@@ -113,12 +117,19 @@ test('Replay V5 rejects V4 and legacy action fields instead of silently adapting
   const oldSchema = structuredClone(replay);
   oldSchema.replaySchemaVersion = 4;
   let factoryCalls = 0;
-  assert.throws(() => replayMatch(oldSchema, {
-    coreFactory() {
-      factoryCalls += 1;
-      return createReplayCore();
-    },
-  }), /不支持 replay schema 4/);
+  let failure;
+  try {
+    replayMatch(oldSchema, {
+      coreFactory() {
+        factoryCalls += 1;
+        return createReplayCore();
+      },
+    });
+  } catch (error) {
+    failure = error;
+  }
+  assert.match(failure?.message ?? '', /不支持 replay schema 4/);
+  assert.equal(failure.code, ARENA_REPLAY_ERROR_CODE.UNSUPPORTED_SCHEMA);
   assert.equal(factoryCalls, 0);
 
   const legacyInput = structuredClone(replay);
@@ -151,6 +162,24 @@ test('truncated, incomplete or duplicate-checkpoint replays fail and always dest
   const duplicateCheckpoint = structuredClone(replay);
   duplicateCheckpoint.checkpoints.splice(1, 0, { ...duplicateCheckpoint.checkpoints[0] });
   assert.throws(() => replayMatch(duplicateCheckpoint), /严格递增/);
+  source.destroy();
+});
+
+test('replay destroys an invalid factory result before rejecting the factory contract', () => {
+  const source = createReplayCore();
+  const replay = new HeadlessMatchRunner(source, { checkpointInterval: 20 })
+    .runUntilEnded(scriptedFrames);
+  let destroyCalls = 0;
+  assert.throws(() => replayMatch(replay, {
+    coreFactory() {
+      return {
+        destroy() {
+          destroyCalls += 1;
+        },
+      };
+    },
+  }), /coreFactory 必须返回 MatchCore/);
+  assert.equal(destroyCalls, 1);
   source.destroy();
 });
 

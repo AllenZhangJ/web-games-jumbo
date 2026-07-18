@@ -2,10 +2,28 @@ import { ARENA_MATCH_PHASE } from './config.js';
 import { normalizeInputFrames } from './input-frame.js';
 import { MatchCore } from './match-core.js';
 import { createArenaV1MatchCore } from './arena-v1-match-core.js';
+import { combineCleanupFailure, normalizeThrownError } from './lifecycle-error.js';
 import { cloneFrozenData } from './rules/definition-utils.js';
 import { createDeterministicDataHash } from '../shared/deterministic-data-hash.js';
 
 export const ARENA_REPLAY_SCHEMA_VERSION = 5;
+
+export const ARENA_REPLAY_ERROR_CODE = Object.freeze({
+  UNSUPPORTED_SCHEMA: 'arena.replay.unsupported-schema',
+});
+
+export class ArenaReplayCompatibilityError extends RangeError {
+  constructor(actualSchemaVersion) {
+    super(
+      `不支持 replay schema ${String(actualSchemaVersion)}；`
+      + `当前仅支持 ${ARENA_REPLAY_SCHEMA_VERSION}。`,
+    );
+    this.name = 'ArenaReplayCompatibilityError';
+    this.code = ARENA_REPLAY_ERROR_CODE.UNSUPPORTED_SCHEMA;
+    this.actualSchemaVersion = actualSchemaVersion;
+    this.expectedSchemaVersion = ARENA_REPLAY_SCHEMA_VERSION;
+  }
+}
 
 function copyInput(frame) {
   return {
@@ -136,7 +154,7 @@ export class HeadlessMatchRunner {
 function validateReplay(replay) {
   const source = cloneFrozenData(replay, 'replay');
   if (source.replaySchemaVersion !== ARENA_REPLAY_SCHEMA_VERSION) {
-    throw new RangeError(`不支持 replay schema ${source.replaySchemaVersion}。`);
+    throw new ArenaReplayCompatibilityError(source.replaySchemaVersion);
   }
   if (!Number.isSafeInteger(source.schemaVersion) || source.schemaVersion < 1) {
     throw new TypeError('replay.schemaVersion 必须是正安全整数。');
@@ -193,7 +211,22 @@ export function replayMatch(replay, { coreFactory = createArenaV1MatchCore } = {
   replay = validateReplay(replay);
   if (typeof coreFactory !== 'function') throw new TypeError('coreFactory 必须是函数。');
   const core = coreFactory({ seed: replay.matchSeed, config: replay.config });
-  if (!(core instanceof MatchCore)) throw new TypeError('coreFactory 必须返回 MatchCore。');
+  if (!(core instanceof MatchCore)) {
+    const failure = new TypeError('coreFactory 必须返回 MatchCore。');
+    const cleanupErrors = [];
+    if (core && typeof core.destroy === 'function') {
+      try {
+        core.destroy();
+      } catch (error) {
+        cleanupErrors.push(error);
+      }
+    }
+    throw combineCleanupFailure(
+      normalizeThrownError(failure, 'Replay Core factory 合同无效'),
+      cleanupErrors,
+      'Replay Core factory 合同无效且清理未完整完成。',
+    );
+  }
   try {
     if (core.config.schemaVersion !== replay.schemaVersion) {
       throw new Error(
