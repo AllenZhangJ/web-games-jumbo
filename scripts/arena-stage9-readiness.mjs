@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   ARENA_RELEASE_READINESS_STATUS,
   createArenaReleaseReadinessReport,
@@ -15,10 +16,17 @@ import {
   resolveEvidenceRoot,
 } from './lib/evidence-file-verifier.mjs';
 import {
+  ARENA_STAGE9_SUPPORTED_RELEASE_PRODUCER_IDS,
+  arenaStage9ReleaseRequiresSourceIdentity,
   verifyArenaStage9ReleaseProducerEvidence,
 } from './lib/arena-stage9-release-producers.mjs';
+import {
+  assertArenaGitSourceIdentityStable,
+  readArenaGitSourceIdentity,
+} from './arena-git-source-identity.mjs';
 
 const MAXIMUM_BUNDLE_BYTES = 5 * 1024 * 1024;
+const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 function usage() {
   return [
@@ -128,7 +136,7 @@ async function main() {
       definitionHash: definition.getContentHash(),
       verificationScope: 'aggregation-material-integrity-and-supported-producer-verification',
       producerSemanticVerification: 'partial',
-      supportedProducerIds: ['arena:build:budget', 'arena:build:verify'],
+      supportedProducerIds: ARENA_STAGE9_SUPPORTED_RELEASE_PRODUCER_IDS,
     }, null, 2));
     return;
   }
@@ -142,11 +150,22 @@ async function main() {
     bundle,
     path.resolve(options.artifactsRoot ?? path.dirname(bundlePath)),
   );
+  const requiresSourceIdentity = arenaStage9ReleaseRequiresSourceIdentity(bundle);
+  const sourceIdentity = requiresSourceIdentity
+    ? await readArenaGitSourceIdentity(repositoryRoot)
+    : null;
   const producerEvidence = await verifyArenaStage9ReleaseProducerEvidence({
     definition,
     bundle,
     verifiedMaterialsByPath: verifiedMaterials.byPath,
+    sourceIdentity,
   });
+  if (requiresSourceIdentity) {
+    assertArenaGitSourceIdentityStable(
+      sourceIdentity,
+      await readArenaGitSourceIdentity(repositoryRoot),
+    );
+  }
   const report = createArenaReleaseReadinessReport(definition, bundle, {
     verifiedEvidence: producerEvidence.map(({ gateId, evidenceHash }) => ({
       gateId,
@@ -156,7 +175,7 @@ async function main() {
   console.log(JSON.stringify({
     verificationScope: 'aggregation-material-integrity-and-supported-producer-verification',
     producerSemanticVerification: 'partial',
-    supportedProducerIds: ['arena:build:budget', 'arena:build:verify'],
+    supportedProducerIds: ARENA_STAGE9_SUPPORTED_RELEASE_PRODUCER_IDS,
     verifiedProducerEvidenceCount: producerEvidence.length,
     verifiedProducerEvidence: producerEvidence,
     verifiedMaterialCount: verifiedMaterials.publicMaterials.length,

@@ -5,6 +5,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { createArenaV1MatchCore } from '../../src/arena/arena-v1-match-core.js';
 import {
   ARENA_RELEASE_CANDIDATE_BUNDLE_SCHEMA_VERSION,
   createArenaReleaseCandidateBundle,
@@ -28,9 +29,15 @@ import {
   createArenaStage9RcHandoffV1Definition,
 } from '../../src/arena-release/arena-stage9-rc-handoff-v1.js';
 import {
+  createArenaBalanceValidationReleaseResult,
+} from '../../src/arena-release/balance-validation-release-evidence.js';
+import {
   createArenaBuildBudgetReleaseResult,
   createArenaBuildIntegrityReleaseResult,
 } from '../../src/arena-release/build-release-evidence.js';
+import {
+  createArenaGoldenReplayReleaseResult,
+} from '../../src/arena-release/golden-replay-release-evidence.js';
 import {
   verifyArenaReleaseEvidenceProducerResult,
 } from '../../src/arena-release/release-evidence-verification.js';
@@ -41,6 +48,25 @@ import {
 import {
   writeArenaBuildManifest,
 } from '../../scripts/lib/arena-build-manifest-files.mjs';
+import {
+  verifyArenaStage9ReleaseProducerEvidence,
+} from '../../scripts/lib/arena-stage9-release-producers.mjs';
+import {
+  createArenaStage9BalanceValidationExperimentDefinition,
+} from '../../src/arena/experiment/arena-balance-validation-composition.js';
+import { createArenaExperimentReport } from '../../src/arena/experiment/experiment-report.js';
+import {
+  createArenaExperimentReportBundle,
+} from '../../src/arena/experiment/experiment-report-bundle.js';
+import {
+  createArenaV1GoldenReplayScenarioRegistry,
+} from '../../src/arena/regression/arena-v1-golden-replay-scenarios.js';
+import {
+  createArenaGoldenReplayManifest,
+} from '../../src/arena/regression/golden-replay-manifest.js';
+import {
+  verifyArenaGoldenReplayCorpus,
+} from '../../src/arena/regression/golden-replay-verifier.js';
 
 const COMMIT = 'a'.repeat(40);
 const BUILD_ID = 'arena-release-test';
@@ -148,6 +174,24 @@ async function writeThreeTargetBuild(root, options = {}) {
   return Promise.all(['web', 'wechat', 'douyin'].map((target) => (
     writeBuildTarget(root, target, options)
   )));
+}
+
+async function writeVerifiedMaterial(root, relativePath, bytesValue) {
+  const bytes = Buffer.isBuffer(bytesValue) ? bytesValue : Buffer.from(bytesValue);
+  const resolvedPath = path.join(root, ...relativePath.split('/'));
+  await mkdir(path.dirname(resolvedPath), { recursive: true });
+  await writeFile(resolvedPath, bytes);
+  const sha256 = createHash('sha256').update(bytes).digest('hex');
+  return Object.freeze({
+    material: Object.freeze({ path: relativePath, sha256, byteLength: bytes.byteLength }),
+    verified: Object.freeze({
+      path: relativePath,
+      sha256,
+      byteLength: bytes.byteLength,
+      resolvedPath,
+      fileIdentity: `test:${relativePath}`,
+    }),
+  });
 }
 
 test('Stage 9 RC handoff V1 固定全部真实门禁且不把外部证据当作已完成', () => {
@@ -493,6 +537,172 @@ test('Release producer verifier rejects forged result status, hash and candidate
   );
 });
 
+test('Golden replay release producer replays the exact material set on one clean source identity', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'arena-release-golden-replay-'));
+  try {
+    const fixtureRoot = path.resolve('tests/arena/fixtures/replays/v5');
+    const manifestBytes = await readFile(path.join(fixtureRoot, 'manifest.json'));
+    const manifest = createArenaGoldenReplayManifest(JSON.parse(manifestBytes));
+    const fixtureValues = await Promise.all(manifest.entries.map(async ({ file }) => ({
+      file,
+      replay: JSON.parse(await readFile(path.join(fixtureRoot, file), 'utf8')),
+    })));
+    const verification = verifyArenaGoldenReplayCorpus({
+      manifest,
+      fixtures: fixtureValues,
+      scenarioRegistry: createArenaV1GoldenReplayScenarioRegistry(),
+      coreFactory: createArenaV1MatchCore,
+    });
+    const result = createArenaGoldenReplayReleaseResult({ commit: COMMIT, verification });
+    const written = [
+      await writeVerifiedMaterial(directory, 'replays/v5/manifest.json', manifestBytes),
+      ...await Promise.all(manifest.entries.map(async ({ file }) => writeVerifiedMaterial(
+        directory,
+        `replays/v5/${file}`,
+        await readFile(path.join(fixtureRoot, file)),
+      ))),
+    ];
+    const definition = createArenaStage9RcHandoffV1Definition();
+    const gate = definition.requireGate(ARENA_STAGE9_RC_HANDOFF_GATE_ID.GOLDEN_REPLAY);
+    const statement = {
+      schemaVersion: ARENA_RELEASE_EVIDENCE_STATEMENT_SCHEMA_VERSION,
+      gateId: gate.id,
+      producerId: gate.producerId,
+      requirementHash: gate.requirementHash,
+      commit: COMMIT,
+      buildId: null,
+      status: result.status,
+      resultHash: result.resultHash,
+      materials: written.map(({ material }) => material),
+    };
+    const bundle = createArenaReleaseCandidateBundle(
+      definition,
+      bundleValue(definition, [statement]),
+    );
+    const verified = await verifyArenaStage9ReleaseProducerEvidence({
+      definition,
+      bundle,
+      verifiedMaterialsByPath: new Map(written.map(({ material, verified: value }) => (
+        [material.path, value]
+      ))),
+      sourceIdentity: { sourceCommit: COMMIT, sourceDirty: false },
+    });
+    assert.equal(verified.length, 1);
+    assert.equal(verified[0].gateId, gate.id);
+    await assert.rejects(
+      verifyArenaStage9ReleaseProducerEvidence({
+        definition,
+        bundle,
+        verifiedMaterialsByPath: new Map(written.map(({ material, verified: value }) => (
+          [material.path, value]
+        ))),
+        sourceIdentity: { sourceCommit: 'b'.repeat(40), sourceDirty: false },
+      }),
+      /Git identity 与候选不一致/,
+    );
+    const dirtyBundle = createArenaReleaseCandidateBundle(
+      definition,
+      bundleValue(definition, [statement], { sourceDirty: true }),
+    );
+    await assert.rejects(
+      verifyArenaStage9ReleaseProducerEvidence({
+        definition,
+        bundle: dirtyBundle,
+        verifiedMaterialsByPath: new Map(written.map(({ material, verified: value }) => (
+          [material.path, value]
+        ))),
+        sourceIdentity: { sourceCommit: COMMIT, sourceDirty: true },
+      }),
+      /只能在 clean candidate checkout/,
+    );
+    await writeFile(written[1].verified.resolvedPath, '{}\n');
+    await assert.rejects(
+      verifyArenaStage9ReleaseProducerEvidence({
+        definition,
+        bundle,
+        verifiedMaterialsByPath: new Map(written.map(({ material, verified: value }) => (
+          [material.path, value]
+        ))),
+        sourceIdentity: { sourceCommit: COMMIT, sourceDirty: false },
+      }),
+      /producer 复验前发生变化/,
+    );
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('Balance release producer rebuilds the fixed report and rejects an old commit definition', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'arena-release-balance-'));
+  try {
+    const committedPath = path.resolve(
+      'docs/quality/arena-stage9/balance/arena-v1-balance-lives-11-validation-v1--594d49ec8eba--81040fb7.json',
+    );
+    const committed = JSON.parse(await readFile(committedPath, 'utf8'));
+    assert.throws(
+      () => createArenaBalanceValidationReleaseResult({
+        commit: COMMIT,
+        sourceDirty: false,
+        reportBundle: committed,
+      }),
+      /Definition\/commit 不一致/,
+    );
+    const definitionForCommit = createArenaStage9BalanceValidationExperimentDefinition({
+      sourceCommit: COMMIT,
+      sourceDirty: false,
+    });
+    const reboundReport = createArenaExperimentReport(definitionForCommit, {
+      generatedAt: committed.report.generatedAt,
+      environment: committed.report.environment,
+      cases: committed.report.cases,
+      metrics: committed.report.metrics,
+    });
+    const rebound = createArenaExperimentReportBundle({
+      suite: 'balance-validation',
+      definition: definitionForCommit,
+      report: reboundReport,
+    });
+    const result = createArenaBalanceValidationReleaseResult({
+      commit: COMMIT,
+      sourceDirty: false,
+      reportBundle: rebound,
+    });
+    assert.equal(result.status, ARENA_RELEASE_EVIDENCE_STATUS.READY);
+    const written = await writeVerifiedMaterial(
+      directory,
+      'balance-validation.json',
+      `${JSON.stringify(rebound)}\n`,
+    );
+    const definition = createArenaStage9RcHandoffV1Definition();
+    const gate = definition.requireGate(ARENA_STAGE9_RC_HANDOFF_GATE_ID.BALANCE_VALIDATION);
+    const statement = {
+      schemaVersion: ARENA_RELEASE_EVIDENCE_STATEMENT_SCHEMA_VERSION,
+      gateId: gate.id,
+      producerId: gate.producerId,
+      requirementHash: gate.requirementHash,
+      commit: COMMIT,
+      buildId: null,
+      status: result.status,
+      resultHash: result.resultHash,
+      materials: [written.material],
+    };
+    const bundle = createArenaReleaseCandidateBundle(
+      definition,
+      bundleValue(definition, [statement]),
+    );
+    const verified = await verifyArenaStage9ReleaseProducerEvidence({
+      definition,
+      bundle,
+      verifiedMaterialsByPath: new Map([[written.material.path, written.verified]]),
+      sourceIdentity: { sourceCommit: COMMIT, sourceDirty: false },
+    });
+    assert.equal(verified.length, 1);
+    assert.equal(verified[0].gateId, gate.id);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 test('Stage 9 readiness CLI semantically verifies build integrity and budget from one manifest set', async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'arena-stage9-build-producers-'));
   try {
@@ -573,10 +783,10 @@ test('Stage 9 readiness CLI 校验材料完整性但不会把声明当 producer 
   const directory = await mkdtemp(path.join(os.tmpdir(), 'arena-stage9-readiness-'));
   try {
     const definition = createArenaStage9RcHandoffV1Definition();
-    const gate = definition.requireGate(ARENA_STAGE9_RC_HANDOFF_GATE_ID.GOLDEN_REPLAY);
+    const gate = definition.requireGate(ARENA_STAGE9_RC_HANDOFF_GATE_ID.REGRESSION);
     const materialBytes = Buffer.from('{"status":"ready"}\n');
     const material = {
-      path: 'golden-replay-output.json',
+      path: 'regression-output.json',
       sha256: createHash('sha256').update(materialBytes).digest('hex'),
       byteLength: materialBytes.byteLength,
     };
@@ -611,10 +821,16 @@ test('Stage 9 readiness CLI 校验材料完整性但不会把声明当 producer 
     const output = JSON.parse(command.stdout);
     assert.equal(output.verifiedMaterialCount, 1);
     assert.equal(output.producerSemanticVerification, 'partial');
+    assert.deepEqual(output.supportedProducerIds, [
+      'arena:build:budget',
+      'arena:build:verify',
+      'arena:experiment:report:verify',
+      'arena:replay:verify',
+    ]);
     assert.equal(output.verifiedProducerEvidenceCount, 0);
     assert.equal(output.report.status, ARENA_RELEASE_READINESS_STATUS.INCOMPLETE);
     assert.equal(output.report.freezeEligible, false);
-    const secondGate = definition.requireGate(ARENA_STAGE9_RC_HANDOFF_GATE_ID.REGRESSION);
+    const secondGate = definition.requireGate(ARENA_STAGE9_RC_HANDOFF_GATE_ID.DEFECTS);
     const duplicateMaterial = { ...material, path: 'copied-output.json' };
     const duplicateCandidate = {
       ...candidate,

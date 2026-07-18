@@ -19,6 +19,6 @@ export function assertArenaGitSourceIdentityStable(before, after) {
     before?.sourceCommit !== after?.sourceCommit
     || before?.sourceDirty !== after?.sourceDirty
   ) {
-    throw new Error('实验运行期间 Git commit 或工作区 dirty 状态发生变化，拒绝发布报告。');
+    throw new Error('校验运行期间 Git commit 或工作区 dirty 状态发生变化，拒绝发布结果。');
   }
 }
