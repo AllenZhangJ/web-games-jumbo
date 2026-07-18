@@ -4,6 +4,8 @@
 
 S9.6b5a 已建立 `ArenaDefectLedger`、派生 Report、`arena:defects:verify` CLI 和 release producer。工程合同通过不代表当前候选已完成缺陷复核；只有最终 clean commit 的真实账本和 Evidence Statement 才能关闭 `stage9.defects`。
 
+S9.6b5b 同时补齐 `arena:input-pilot:evidence`；该门的采集和交接步骤独立记录在 [S6.6 Input Pilot 正式证据手册](../stage6-input-pilot/README.md)。
+
 查看固定合同：
 
 ```bash

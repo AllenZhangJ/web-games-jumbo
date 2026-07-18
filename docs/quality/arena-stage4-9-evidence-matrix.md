@@ -4,13 +4,13 @@
 
 本矩阵以 `arena.stage9.rc-handoff.v1` 为机器权威门集，说明当前工程证据能证明什么、还缺什么。`ready` 只允许由 Gate 指定的 producer 语义复验形成；材料存在、单测通过或文档写明“完成”均不能自动替代。
 
-当前为 S9.6b5a：候选/证据/报告合同和材料完整性预检已完成，十个 Gate 已启用语义复算；缺陷门已具备版本化账本和 producer，输入盲测与正式资产仍缺 producer，四类外部门仍缺真实材料，因此还不存在可冻结的 S9.6 候选。
+当前为 S9.6b5b：候选/证据/报告合同和材料完整性预检已完成，十一个 Gate 已启用语义复算；输入盲测已绑定原始 Audit、clean Web build 和同候选 Stage 6 E3，仅正式资产仍缺 producer，四类外部门仍缺真实材料，因此还不存在可冻结的 S9.6 候选。
 
 ## 当前矩阵
 
 | Gate | 覆盖阶段 | 已有能力 | 当前缺口 | 当前状态 |
 |---|---|---|---|---|
-| `stage6.input-pilot` | S6.6 | A/B Definition、区组分配、运行时观察、双槽工作区、独立工作台与报告 | 目标设备 E3、真实新手 E4、最终 Mapper 决策和 release producer | incomplete（外部 + 工程） |
+| `stage6.input-pilot` | S6.6 | A/B Definition、区组分配、运行时观察、按 build 隔离的双槽工作区、Evidence Bundle、Audit/report/build/E3 release producer | 目标设备 E3、真实新手 E4、`candidate-winner` 与最终 Evidence Statement | incomplete（外部） |
 | `stage7.formal-assets` | S7.2～S7.5 | 角色/资产/动画语义 Registry、六方向、程序化占位和生命周期合同 | 两个正式角色、GLB/动作/附件/音画、预算、许可和真机可读性 | incomplete（内容生产） |
 | `stage9.golden-replay` | S4～S9.2 | Replay V5 四类黄金场景、严格重放/再生成、历史拒绝及 release producer | 最终候选 clean commit 的 Evidence Statement | incomplete（候选材料） |
 | `stage9.regression` | S9.2 | 固定 Regression Definition、无 shell 受限编排、input fuzz、六文件 lifecycle、两条 100 局 soak、200 局 Product stress、原子 Report 及 release producer | 最终候选 clean commit 的 Evidence Report/Statement；开发中的 shell 聚合不可复用 | incomplete（候选材料） |
@@ -34,4 +34,4 @@
 
 ## 下一工程批次
 
-S9.6b1-b5a 已完成十个 producer。下一批补齐 Input Pilot 的 build/E3 强绑定；Formal Assets 必须等待 S7.2～S7.5 真实资产、预算和许可合同，不能用 S7.1 程序化占位提前生成通过证据。任何 producer 只能输出自己的窄证据，不能直接修改总 Report。
+S9.6b1-b5b 已完成十一个 producer。剩余 Formal Assets 必须等待 S7.2～S7.5 真实资产、预算和许可合同，不能用 S7.1 程序化占位提前生成通过证据。任何 producer 只能输出自己的窄证据，不能直接修改总 Report。

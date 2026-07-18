@@ -1,12 +1,38 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { InputPilotFormModel } from '../../../src/arena/presentation/pilot/input-pilot-form-model.js';
+import {
+  ARENA_BUILD_MANIFEST_SCHEMA_VERSION,
+} from '../../../src/arena/presentation/acceptance/arena-build-manifest.js';
 import { INPUT_PILOT_COMPREHENSION } from '../../../src/arena/presentation/pilot/input-pilot-record.js';
 import { downloadInputPilotJson } from '../../../src/entry/input-pilot-json-download.js';
+import {
+  loadInputPilotBuildIdentity,
+} from '../../../src/entry/input-pilot-build-identity.js';
 import {
   createInputPilotPageOwnerId,
   detectInputPilotWebEnvironment,
 } from '../../../src/entry/input-pilot-web-environment.js';
+
+const COMMIT = 'a'.repeat(40);
+const SHA256 = 'b'.repeat(64);
+
+function buildManifest({ sourceDirty = false, includePilot = true } = {}) {
+  return {
+    schemaVersion: ARENA_BUILD_MANIFEST_SCHEMA_VERSION,
+    buildId: 'arena-input-pilot-build',
+    commit: COMMIT,
+    sourceDirty,
+    target: 'web',
+    defaultEntry: 'product',
+    artifacts: [
+      'greybox.html',
+      'index.html',
+      'product.html',
+      ...(includePilot ? ['pilot.html'] : []),
+    ].map((artifactPath) => ({ path: artifactPath, sha256: SHA256, byteLength: 1 })),
+  };
+}
 
 test('pilot form model bounds counters and restores a persisted review draft', () => {
   const model = new InputPilotFormModel();
@@ -71,6 +97,30 @@ test('web pilot environment distinguishes coarse phone touch from desktop mouse'
   assert.equal(desktop.formFactor, 'desktop');
   assert.equal(desktop.orientation, 'landscape');
   assert.equal(desktop.inputMode, 'mouse');
+});
+
+test('Input Pilot formal collection requires a clean Web build containing pilot.html', async () => {
+  const clean = await loadInputPilotBuildIdentity({
+    fetch: async () => ({ ok: true, json: async () => buildManifest() }),
+  });
+  assert.equal(clean.collectable, true);
+  assert.equal(clean.manifest.commit, COMMIT);
+  const dirty = await loadInputPilotBuildIdentity({
+    fetch: async () => ({
+      ok: true,
+      json: async () => buildManifest({ sourceDirty: true }),
+    }),
+  });
+  assert.equal(dirty.collectable, false);
+  assert.equal(dirty.reason, 'dirty-source-build');
+  const missing = await loadInputPilotBuildIdentity({
+    fetch: async () => ({
+      ok: true,
+      json: async () => buildManifest({ includePilot: false }),
+    }),
+  });
+  assert.equal(missing.collectable, false);
+  assert.equal(missing.reason, 'build-manifest-invalid');
 });
 
 test('web pilot owner ids prefer crypto and JSON export revokes its temporary URL', () => {

@@ -64,6 +64,9 @@ import {
 import {
   verifyArenaHumanFairnessEvidence,
 } from './arena-human-fairness-evidence-verifier.mjs';
+import {
+  verifyArenaInputPilotEvidence,
+} from './arena-input-pilot-evidence-verifier.mjs';
 import { readVerifiedTextFile } from './evidence-file-verifier.mjs';
 
 const MAXIMUM_BUILD_MANIFEST_BYTES = 5 * 1024 * 1024;
@@ -74,6 +77,7 @@ const MAXIMUM_DEVICE_BUNDLE_BYTES = 5 * 1024 * 1024;
 const MAXIMUM_HUMAN_BUNDLE_BYTES = 5 * 1024 * 1024;
 const MAXIMUM_HUMAN_INGEST_MANIFEST_BYTES = 5 * 1024 * 1024;
 const MAXIMUM_DEFECT_LEDGER_BYTES = 5 * 1024 * 1024;
+const MAXIMUM_INPUT_PILOT_BUNDLE_BYTES = 32 * 1024 * 1024;
 
 export const ARENA_STAGE9_SUPPORTED_RELEASE_PRODUCER_IDS = Object.freeze([
   'arena:build:budget',
@@ -82,6 +86,7 @@ export const ARENA_STAGE9_SUPPORTED_RELEASE_PRODUCER_IDS = Object.freeze([
   'arena:device:evidence',
   'arena:experiment:report:verify',
   'arena:human-fairness:evidence',
+  'arena:input-pilot:evidence',
   'arena:performance:evidence',
   'arena:product:device:evidence',
   'arena:regression:evidence',
@@ -431,6 +436,74 @@ async function verifyHumanFairnessEvidence(
   return createArenaHumanFairnessReleaseResult({ bundle: verification.bundle });
 }
 
+async function verifyInputPilotEvidence(
+  statement,
+  bundle,
+  verifiedMaterialsByPath,
+  canonicalBuildHashes,
+) {
+  if (statement.materials.length !== 2) {
+    throw new RangeError('Input Pilot release evidence 必须引用 Evidence Bundle 与 Web Build Manifest。');
+  }
+  const evidenceMaterial = requireNamedMaterial(
+    statement,
+    'input-pilot-evidence.json',
+    'Input Pilot release evidence',
+  );
+  const buildMaterial = requireNamedMaterial(
+    statement,
+    ARENA_BUILD_MANIFEST_FILENAME,
+    'Input Pilot release evidence',
+  );
+  const stage6Statement = bundle.evidence.find(({ gateId }) => (
+    gateId === ARENA_STAGE9_RC_HANDOFF_GATE_ID.STAGE6_DEVICE
+  ));
+  if (!stage6Statement) {
+    throw new Error('Input Pilot release evidence 缺少同候选 Stage 6 Device Gate。');
+  }
+  const deviceMaterial = requireSingleNamedMaterial(
+    stage6Statement,
+    'device-evidence.json',
+    'Stage 6 Device release evidence',
+  );
+  const [evidenceRead, buildRead, deviceRead] = await Promise.all([
+    readVerifiedJsonMaterial(
+      evidenceMaterial,
+      verifiedMaterialsByPath,
+      `input pilot evidence bundle ${evidenceMaterial.path}`,
+      MAXIMUM_INPUT_PILOT_BUNDLE_BYTES,
+    ),
+    readVerifiedJsonMaterial(
+      buildMaterial,
+      verifiedMaterialsByPath,
+      `input pilot build manifest ${buildMaterial.path}`,
+      MAXIMUM_BUILD_MANIFEST_BYTES,
+    ),
+    readVerifiedJsonMaterial(
+      deviceMaterial,
+      verifiedMaterialsByPath,
+      `input pilot Stage 6 device evidence ${deviceMaterial.path}`,
+      MAXIMUM_DEVICE_BUNDLE_BYTES,
+    ),
+  ]);
+  const verification = await verifyArenaInputPilotEvidence({
+    evidenceBundleValue: evidenceRead.value,
+    buildRoot: path.dirname(buildRead.verified.resolvedPath),
+    deviceEvidenceBundleValue: deviceRead.value,
+    deviceArtifactsRoot: path.dirname(deviceRead.verified.resolvedPath),
+  });
+  const declaredBuildManifest = createArenaBuildManifest(buildRead.value);
+  if (verification.buildManifest.getContentHash() !== declaredBuildManifest.getContentHash()) {
+    throw new Error('Input Pilot Build Manifest 在 producer 复验期间发生变化。');
+  }
+  assertCanonicalBuildManifest(
+    { platform: declaredBuildManifest.target, sha256: buildRead.verified.sha256 },
+    canonicalBuildHashes,
+    'Input Pilot release evidence',
+  );
+  return verification.result;
+}
+
 async function readCanonicalBuildHashes(bundle, verifiedMaterialsByPath, cache) {
   const statement = bundle.evidence.find(({ gateId }) => (
     gateId === ARENA_STAGE9_RC_HANDOFF_GATE_ID.BUILD_INTEGRITY
@@ -512,6 +585,13 @@ export async function verifyArenaStage9ReleaseProducerEvidence({
       result = await verifyRegression(statement, verifiedMaterialsByPath, bundle.commit);
     } else if (statement.gateId === ARENA_STAGE9_RC_HANDOFF_GATE_ID.DEFECTS) {
       result = await verifyDefects(statement, verifiedMaterialsByPath, bundle);
+    } else if (statement.gateId === ARENA_STAGE9_RC_HANDOFF_GATE_ID.INPUT_PILOT) {
+      result = await verifyInputPilotEvidence(
+        statement,
+        bundle,
+        verifiedMaterialsByPath,
+        canonicalBuildHashes,
+      );
     } else if (SUPPORTED_EXTERNAL_BUILD_GATES.has(statement.gateId)) {
       result = statement.gateId === ARENA_STAGE9_RC_HANDOFF_GATE_ID.HUMAN_FAIRNESS
         ? await verifyHumanFairnessEvidence(

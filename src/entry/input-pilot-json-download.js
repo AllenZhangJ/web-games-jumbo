@@ -7,7 +7,7 @@ export function downloadInputPilotJson(root, {
   revision,
   value,
 }) {
-  if (kind !== 'aggregate' && kind !== 'audit') {
+  if (kind !== 'aggregate' && kind !== 'audit' && kind !== 'evidence') {
     throw new RangeError(`未知 Pilot 导出类型 ${String(kind)}。`);
   }
   const documentObject = root?.document;

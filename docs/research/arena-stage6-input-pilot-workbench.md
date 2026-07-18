@@ -2,7 +2,7 @@
 
 ## 结论
 
-2026-07-18 的 S6.6.3b/c 已建立可恢复的 `Trial Controller`、单次终态提交、观察/复核草稿、去标识汇总与审计导出，并新增与正式游戏入口分离的 Web `pilot.html` 工作台。运行中刷新不恢复半局 `MatchCore`，而生成可审计的作废记录；复核阶段刷新则恢复全部草稿。
+2026-07-18 的 S6.6.3b/c 已建立可恢复的 `Trial Controller`、单次终态提交、观察/复核草稿、去标识汇总与审计导出，并新增与正式游戏入口分离的 Web `pilot.html` 工作台。运行中刷新不恢复半局 `MatchCore`，而生成可审计的作废记录；复核阶段刷新则恢复全部草稿。S9.6b5b 又增加 clean build 身份加载、按 Manifest 隔离 Workspace、正式 Evidence Bundle 与 release producer；操作步骤见 [S6.6 Input Pilot 正式证据手册](../acceptance/stage6-input-pilot/README.md)。
 
 本批只关闭独立 Web 采集入口的本机 E1/E2 与真实浏览器工作流证据，不关闭 E3/E4：未招募新受测者，未在目标手机、微信或抖音开发者工具采集证据，不生成 Mapper 胜者。
 
@@ -37,7 +37,7 @@ InputPilotPresentationRuntime
 ## 数据与隐私边界
 
 - 页面自动产生 `pilot-0001` 形式的本地匿名编号，不采集姓名、账号、原始触点、隐藏机器人难度或墙钟对局轨迹。
-- 汇总导出不包含 participant/trial/assignment 明细；审计导出保留匿名原始记录，且 active trial 存在时拒绝导出。
+- 汇总导出不包含 participant/trial/assignment 明细；审计导出保留匿名原始记录，且 active trial 存在时拒绝导出。正式 Evidence Bundle 还绑定当前 clean Web Manifest，dirty/无 Manifest 工作台不能入组或导出发布证据。
 - 环境不符合 `Web + 手机 + 竖屏 + 触控` 时页面明示警告，记录仍可保存但会被聚合器排除。
 - 本地双槽与 hash 用于损坏检测，不是加密、签名或服务器级取证。
 

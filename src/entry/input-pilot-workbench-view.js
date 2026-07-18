@@ -311,6 +311,7 @@ export class InputPilotWorkbenchView {
   #enrollmentMarkup(snapshot) {
     const index = snapshot.workspace.enrollment.revision + 1;
     const environmentMatches = sameEnvironment(this.#environment, this.#definition.environment);
+    const evidence = snapshot.evidence ?? { collectable: true, reason: null, buildId: null };
     return `
       ${snapshot.state === INPUT_PILOT_TRIAL_CONTROLLER_STATE.TERMINAL ? `
         <section class="pilot-section pilot-terminal-note">
@@ -320,6 +321,11 @@ export class InputPilotWorkbenchView {
       ` : ''}
       <section class="pilot-section">
         <h2>入组确认</h2>
+        <div class="pilot-environment ${evidence.collectable ? 'is-valid' : 'is-warning'}">
+          <span>证据构建</span>
+          <strong>${evidence.buildId ?? '未识别'}</strong>
+          <small>${evidence.collectable ? 'clean build，可形成正式证据' : `已阻断：${evidence.reason}`}</small>
+        </div>
         <p class="pilot-section-copy">下一位匿名编号 <strong>pilot-${String(index).padStart(4, '0')}</strong>。页面不会记录姓名、账号或原始触点。</p>
         <div class="pilot-environment ${environmentMatches ? 'is-valid' : 'is-warning'}">
           <span>当前环境</span>
@@ -339,7 +345,7 @@ export class InputPilotWorkbenchView {
         <p class="pilot-footnote">勾选不会阻止测试，但该记录不会进入主要指标。</p>
       </section>
       <div class="pilot-primary-zone">
-        <button type="button" class="pilot-primary" data-action="enroll" ${this.#busy ? 'disabled' : ''}>${snapshot.state === INPUT_PILOT_TRIAL_CONTROLLER_STATE.TERMINAL ? '准备下一位' : '建立匿名记录'}</button>
+        <button type="button" class="pilot-primary" data-action="enroll" ${this.#busy || !evidence.collectable ? 'disabled' : ''}>${snapshot.state === INPUT_PILOT_TRIAL_CONTROLLER_STATE.TERMINAL ? '准备下一位' : '建立匿名记录'}</button>
       </div>
     `;
   }
@@ -427,9 +433,10 @@ export class InputPilotWorkbenchView {
       this.#restoredTrialId = activeTrial.trialId;
     }
     const enrollmentRevision = snapshot.workspace?.enrollment.revision ?? 0;
+    const evidence = snapshot.evidence ?? { collectable: true, buildId: null };
     const meta = this.#root.querySelector('[data-pilot-meta]');
     const status = this.#root.querySelector('[data-pilot-status]');
-    meta.textContent = `记录 ${enrollmentRevision} 份 · 方案隐藏 · ${environmentText(this.#environment)}`;
+    meta.textContent = `记录 ${enrollmentRevision} 份 · 方案隐藏 · ${environmentText(this.#environment)}${evidence.buildId ? ` · ${evidence.buildId}` : ''}`;
     status.textContent = this.#busy ? '处理中' : stateLabel(snapshot.state);
     status.dataset.state = snapshot.state;
     this.#root.querySelector('[data-pilot-progress]').innerHTML = this.#progressMarkup(snapshot.state);
@@ -439,7 +446,8 @@ export class InputPilotWorkbenchView {
     const canAudit = snapshot.workspace?.activeTrial === null;
     exportBar.innerHTML = `
       <button type="button" data-action="exportAggregate" ${snapshot.workspace ? '' : 'disabled'}>导出匿名汇总</button>
-      <button type="button" data-action="exportAudit" ${canAudit ? '' : 'disabled'}>导出审计数据</button>
+      <button type="button" data-action="exportAudit" ${canAudit ? '' : 'disabled'}>导出原始审计</button>
+      <button type="button" data-action="exportEvidence" ${canAudit && evidence.collectable ? '' : 'disabled'}>导出发布证据</button>
     `;
 
     const overlay = this.#root.querySelector('[data-pilot-overlay]');

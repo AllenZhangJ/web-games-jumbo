@@ -1,9 +1,14 @@
 import { createArenaInputPilotV1Definition } from '../arena/presentation/pilot/arena-input-pilot-v1.js';
+import {
+  INPUT_PILOT_EVIDENCE_BUNDLE_SCHEMA_VERSION,
+  createInputPilotEvidenceBundle,
+} from '../arena/presentation/pilot/input-pilot-evidence-bundle.js';
 import { InputPilotFormModel } from '../arena/presentation/pilot/input-pilot-form-model.js';
 import { InputPilotTrialController } from '../arena/presentation/pilot/input-pilot-trial-controller.js';
 import { InputPilotWorkspaceRepository } from '../arena/presentation/pilot/input-pilot-workspace-repository.js';
 import { InputPilotPresentationRuntime } from '../arena/presentation/session/input-pilot-presentation-runtime.js';
 import { downloadInputPilotJson } from './input-pilot-json-download.js';
+import { loadInputPilotBuildIdentity } from './input-pilot-build-identity.js';
 import {
   createInputPilotPageOwnerId,
   detectInputPilotWebEnvironment,
@@ -21,10 +26,12 @@ export class InputPilotWebApp {
   #platform;
   #definition;
   #environment;
+  #buildIdentity;
   #controller;
   #view;
   #heartbeatToken;
   #cleanups;
+  #startPromise;
   #started;
   #destroyed;
 
@@ -46,44 +53,92 @@ export class InputPilotWebApp {
       definition: this.#definition,
       environment: this.#environment,
     });
-    let controller = null;
+    this.#buildIdentity = Object.freeze({
+      collectable: false,
+      reason: 'build-manifest-loading',
+      manifest: null,
+    });
+    this.#controller = null;
+    this.#heartbeatToken = null;
+    this.#cleanups = [];
+    this.#startPromise = null;
+    this.#started = false;
+    this.#destroyed = false;
+    Object.freeze(this);
+  }
+
+  #createController() {
+    if (this.#controller !== null) throw new Error('InputPilotWebApp Controller 已创建。');
+    const manifest = this.#buildIdentity.manifest;
+    const keyPrefix = manifest === null
+      ? undefined
+      : [
+        'arena.input-pilot',
+        this.#definition.id,
+        this.#definition.getContentHash(),
+        manifest.commit,
+        manifest.buildId,
+        manifest.getContentHash(),
+      ].join('.');
     const runtimeFactory = (trial) => new InputPilotPresentationRuntime({
       platform: this.#platform,
       ...trial,
       onProgress: () => {
-        const previous = controller.state;
+        const previous = this.#controller.state;
         const accepted = trial.onProgress(this.#view.getReview());
-        if (controller.state !== previous) this.#view.render(controller.getSnapshot());
+        if (this.#controller.state !== previous) this.#render();
         return accepted;
       },
       onFailure: (error) => {
         try {
           return trial.onFailure(error);
         } finally {
-          this.#view.render(controller.getSnapshot());
+          this.#render();
         }
       },
     });
-    controller = new InputPilotTrialController({
+    this.#controller = new InputPilotTrialController({
       definition: this.#definition,
       repository: new InputPilotWorkspaceRepository({
         definition: this.#definition,
         storage: this.#platform,
-        ownerId: createInputPilotPageOwnerId(root),
+        ownerId: createInputPilotPageOwnerId(this.#root),
         wallNow: () => this.#platform.wallNow(),
+        keyPrefix,
       }),
       runtimeFactory,
     });
-    this.#controller = controller;
-    this.#heartbeatToken = null;
-    this.#cleanups = [];
-    this.#started = false;
-    this.#destroyed = false;
-    Object.freeze(this);
+  }
+
+  #snapshot() {
+    const snapshot = this.#controller?.getSnapshot() ?? Object.freeze({
+      state: 'created',
+      workspace: null,
+      lastRecord: null,
+      lastError: null,
+    });
+    const manifest = this.#buildIdentity.manifest;
+    return Object.freeze({
+      ...snapshot,
+      evidence: Object.freeze({
+        collectable: this.#buildIdentity.collectable,
+        reason: this.#buildIdentity.reason,
+        commit: manifest?.commit ?? null,
+        buildId: manifest?.buildId ?? null,
+        buildManifestHash: manifest?.getContentHash() ?? null,
+      }),
+    });
+  }
+
+  #assertCollectableBuild() {
+    if (!this.#buildIdentity.collectable || this.#buildIdentity.manifest === null) {
+      throw new Error(`当前构建不能采集正式 Input Pilot 证据：${this.#buildIdentity.reason}。`);
+    }
+    return this.#buildIdentity.manifest;
   }
 
   #render() {
-    this.#view.render(this.#controller.getSnapshot());
+    this.#view.render(this.#snapshot());
   }
 
   #handleLifecycle(operation) {
@@ -121,8 +176,9 @@ export class InputPilotWebApp {
 
   #actions() {
     return Object.freeze({
-      getSnapshot: () => this.#controller.getSnapshot(),
+      getSnapshot: () => this.#snapshot(),
       enroll: () => {
+        this.#assertCollectableBuild();
         const eligibility = this.#view.getEnrollment();
         const enrollmentIndex = this.#controller.getSnapshot().workspace.enrollment.revision;
         this.#controller.enroll({
@@ -152,36 +208,66 @@ export class InputPilotWebApp {
           value,
         });
       },
+      exportEvidence: () => {
+        const manifest = this.#assertCollectableBuild();
+        const audit = this.#controller.exportAuditBundle();
+        const value = createInputPilotEvidenceBundle(this.#definition, {
+          schemaVersion: INPUT_PILOT_EVIDENCE_BUNDLE_SCHEMA_VERSION,
+          commit: manifest.commit,
+          buildId: manifest.buildId,
+          buildManifestHash: manifest.getContentHash(),
+          audit,
+        });
+        return downloadInputPilotJson(this.#root, {
+          kind: 'evidence',
+          revision: audit.workspaceRevision,
+          value,
+        });
+      },
     });
   }
 
-  start() {
-    if (this.#destroyed) return Promise.reject(new Error('InputPilotWebApp 已销毁。'));
-    if (this.#started) return Promise.resolve(this);
+  async #startOnce() {
     try {
+      const buildIdentity = await loadInputPilotBuildIdentity(this.#root);
+      if (this.#destroyed) throw new Error('InputPilotWebApp 在启动期间已销毁。');
+      this.#buildIdentity = buildIdentity;
+      this.#createController();
       this.#controller.open();
       this.#view.bind(this.#actions());
       this.#bindLifecycle();
       this.#started = true;
       this.#render();
-      return Promise.resolve(this);
+      return this;
     } catch (error) {
       try {
         this.destroy();
-        return Promise.reject(error);
       } catch (cleanupError) {
         const failure = new Error('InputPilotWebApp 启动失败且清理未完整完成。', {
           cause: error,
         });
         failure.cleanupError = cleanupError;
-        return Promise.reject(failure);
+        throw failure;
       }
+      throw error;
     }
+  }
+
+  start() {
+    if (this.#destroyed) return Promise.reject(new Error('InputPilotWebApp 已销毁。'));
+    if (this.#started) return Promise.resolve(this);
+    if (this.#startPromise !== null) return this.#startPromise;
+    const pending = this.#startOnce();
+    const settled = pending.finally(() => {
+      if (this.#startPromise === settled) this.#startPromise = null;
+    });
+    this.#startPromise = settled;
+    return settled;
   }
 
   getSnapshot() {
     if (this.#destroyed) return Object.freeze({ state: 'destroyed' });
-    return this.#controller.getSnapshot();
+    return this.#snapshot();
   }
 
   destroy() {
@@ -202,6 +288,8 @@ export class InputPilotWebApp {
     this.#platform = null;
     this.#definition = null;
     this.#environment = null;
+    this.#buildIdentity = null;
+    this.#startPromise = null;
     this.#root = null;
     if (errors.length > 0) {
       const failure = new Error('InputPilotWebApp 清理未完整完成。');

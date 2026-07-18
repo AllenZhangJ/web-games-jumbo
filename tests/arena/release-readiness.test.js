@@ -972,6 +972,7 @@ test('Stage 9 readiness CLI 校验未接入材料完整性但不会把声明当 
       'arena:device:evidence',
       'arena:experiment:report:verify',
       'arena:human-fairness:evidence',
+      'arena:input-pilot:evidence',
       'arena:performance:evidence',
       'arena:product:device:evidence',
       'arena:regression:evidence',
