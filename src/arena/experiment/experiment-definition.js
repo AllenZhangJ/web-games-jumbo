@@ -6,6 +6,7 @@ import {
   assertPlainRecord,
   cloneFrozenData,
 } from '../rules/definition-utils.js';
+import { assertEvidenceGitCommit } from '../evidence/evidence-value-contract.js';
 
 export const ARENA_EXPERIMENT_DEFINITION_SCHEMA_VERSION = 2;
 export const ARENA_EXPERIMENT_DEFINITION_LEGACY_SCHEMA_VERSION = 1;
@@ -45,7 +46,6 @@ const COLLECTOR_KEYS_V1 = new Set(['id', 'version']);
 const COLLECTOR_KEYS_V2 = new Set(['id', 'version', 'parameters']);
 const LIMIT_KEYS = new Set(['maximumTicksPerCase', 'maximumFailedCases']);
 const HASH_PATTERN = /^[0-9a-f]{8}$/;
-const COMMIT_PATTERN = /^[0-9a-f]{40}$/;
 const ID_PATTERN = /^[a-z0-9][a-z0-9._-]{0,127}$/;
 const UINT32_MAXIMUM = 0xffffffff;
 const MAXIMUM_CASES = 100_000;
@@ -103,9 +103,7 @@ function cloneAuthority(value) {
 function cloneCandidate(value) {
   const name = 'ArenaExperimentDefinition.candidate';
   assertKnownKeys(value, CANDIDATE_KEYS, name);
-  if (typeof value.sourceCommit !== 'string' || !COMMIT_PATTERN.test(value.sourceCommit)) {
-    throw new TypeError(`${name}.sourceCommit 必须是 40 位小写 Git commit。`);
-  }
+  const sourceCommit = assertEvidenceGitCommit(value.sourceCommit, `${name}.sourceCommit`);
   if (typeof value.sourceDirty !== 'boolean') {
     throw new TypeError(`${name}.sourceDirty 必须是布尔值。`);
   }
@@ -113,7 +111,7 @@ function cloneCandidate(value) {
   assertPlainRecord(matchConfig, `${name}.matchConfig`);
   return Object.freeze({
     id: identifier(value.id, `${name}.id`),
-    sourceCommit: value.sourceCommit,
+    sourceCommit,
     sourceDirty: value.sourceDirty,
     matchConfig,
     authority: cloneAuthority(value.authority),

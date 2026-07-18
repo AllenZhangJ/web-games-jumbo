@@ -265,6 +265,33 @@ test('Arena Evidence Value Contract stays scalar-only and outside authority depe
       `${file} 的权威、Bot 或 Session 代码不应依赖验收证据。`,
     );
   }
+
+  const evidenceConsumerDirectories = [
+    'src/arena-release',
+    'src/arena/experiment',
+    'src/arena/presentation/acceptance',
+    'src/arena/presentation/assets',
+    'src/arena/presentation/performance',
+    'src/arena/presentation/pilot',
+    'src/arena/regression',
+    'src/arena/study',
+  ];
+  const evidenceConsumerFiles = (await Promise.all(
+    evidenceConsumerDirectories.map((directory) => listJavaScript(path.resolve(directory))),
+  )).flat();
+  for (const file of evidenceConsumerFiles) {
+    const source = await readFile(file, 'utf8');
+    assert.equal(
+      source.includes('/^[0-9a-f]{40}$/'),
+      false,
+      `${file} 不得复制 Git commit 正则，应使用 Evidence Value Contract。`,
+    );
+    assert.doesNotMatch(
+      source,
+      /\b(?:UTC_)?ISO_INSTANT_PATTERN\b|Date\.parse\(/,
+      `${file} 不得复制 UTC instant 解析，应使用 Evidence Value Contract。`,
+    );
+  }
 });
 
 test('Arena Stage 9 experiment orchestration stays headless and outside presentation/platform code', async () => {

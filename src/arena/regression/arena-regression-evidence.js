@@ -3,7 +3,10 @@ import {
   assertKnownKeys,
   cloneFrozenData,
 } from '../rules/definition-utils.js';
-import { isEvidenceUtcInstant } from '../evidence/evidence-value-contract.js';
+import {
+  assertEvidenceGitCommit,
+  assertEvidenceUtcInstant,
+} from '../evidence/evidence-value-contract.js';
 import {
   cloneArenaRegressionEvidenceComponents,
 } from './arena-regression-evidence-components.js';
@@ -44,7 +47,6 @@ const REPORT_INPUT_KEYS = new Set([
   'components',
 ]);
 const RUNTIME_KEYS = new Set(['name', 'version', 'platform', 'architecture']);
-const COMMIT_PATTERN = /^[0-9a-f]{40}$/;
 const HASH_PATTERN = /^[0-9a-f]{8}$/;
 
 function cloneRuntime(value) {
@@ -60,27 +62,24 @@ function cloneRuntime(value) {
 
 function normalizeCore(value) {
   assertKnownKeys(value, REPORT_INPUT_KEYS, 'ArenaRegressionEvidence input');
-  if (typeof value.sourceCommit !== 'string' || !COMMIT_PATTERN.test(value.sourceCommit)) {
-    throw new TypeError('ArenaRegressionEvidence.sourceCommit 必须是 40 位小写 Git commit。');
-  }
+  const sourceCommit = assertEvidenceGitCommit(
+    value.sourceCommit,
+    'ArenaRegressionEvidence.sourceCommit',
+  );
   if (value.sourceDirty !== false) {
     throw new Error('ArenaRegressionEvidence 只能来自 clean source。');
   }
-  const generatedAtMillis = typeof value.generatedAt === 'string'
-    && isEvidenceUtcInstant(value.generatedAt)
-    ? Date.parse(value.generatedAt)
-    : Number.NaN;
-  if (
-    !Number.isFinite(generatedAtMillis)
-    || new Date(generatedAtMillis).toISOString() !== value.generatedAt
-  ) throw new TypeError('ArenaRegressionEvidence.generatedAt 必须是有效 UTC ISO 时间。');
+  const generatedAt = assertEvidenceUtcInstant(
+    value.generatedAt,
+    'ArenaRegressionEvidence.generatedAt',
+  );
   return cloneFrozenData({
     schemaVersion: ARENA_REGRESSION_EVIDENCE_SCHEMA_VERSION,
     definitionId: ARENA_STAGE9_REGRESSION_EVIDENCE_V1_ID,
     definitionHash: createArenaStage9RegressionEvidenceV1DefinitionHash(),
-    sourceCommit: value.sourceCommit,
+    sourceCommit,
     sourceDirty: false,
-    generatedAt: value.generatedAt,
+    generatedAt,
     runtime: cloneRuntime(value.runtime),
     components: cloneArenaRegressionEvidenceComponents(value.components),
     status: 'passed',

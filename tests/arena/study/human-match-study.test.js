@@ -293,9 +293,19 @@ test('HumanMatchStudyRecord binds production opponent, natural difficulty, repla
   const incomplete = structuredClone(source);
   incomplete.matches.pop();
   assert.throws(() => createHumanMatchStudyRecord(definition, incomplete), /完整预注册对局/);
-  const traversal = structuredClone(source);
-  traversal.matches[0].replayArtifact.path = '../replay.json';
-  assert.throws(() => createHumanMatchStudyRecord(definition, traversal), /相对 POSIX/);
+  for (const invalidPath of [
+    '../replay.json',
+    'C:/replay.json',
+    'https://example.com/replay.json',
+    'participant-0/replay\u0000.json',
+  ]) {
+    const invalidArtifact = structuredClone(source);
+    invalidArtifact.matches[0].replayArtifact.path = invalidPath;
+    assert.throws(
+      () => createHumanMatchStudyRecord(definition, invalidArtifact),
+      /相对路径|空段|控制字符/,
+    );
+  }
 
   const assisted = completedRecord(definition, 1);
   assisted.eligibility.operatorAssistance = true;

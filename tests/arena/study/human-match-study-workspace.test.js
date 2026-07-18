@@ -341,6 +341,13 @@ test('workspace rejects non-monotonic progress and mismatched package receipts',
     }),
     /不一致/,
   );
+  assert.throws(
+    () => controller.markExportPending(capturePackage, {
+      ...packageReceipt(capturePackage),
+      fileName: 'capture\u0000.json',
+    }),
+    /控制字符/,
+  );
 
   controller.destroy();
 });

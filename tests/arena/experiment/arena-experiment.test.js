@@ -234,6 +234,12 @@ test('ExperimentDefinition freezes candidate, seed, workload and collector ident
     schemaVersion: ARENA_EXPERIMENT_DEFINITION_LEGACY_SCHEMA_VERSION,
     collectors: [{ id: 'collector.test', version: 1, parameters: {} }],
   }), /不支持字段 parameters/);
+  const invalidCommit = definitionValue();
+  invalidCommit.candidate.sourceCommit = 'A'.repeat(40);
+  assert.throws(
+    () => createArenaExperimentDefinition(invalidCommit),
+    /小写 Git commit/,
+  );
   const accessor = definitionValue();
   Object.defineProperty(accessor.candidate, 'sourceCommit', { enumerable: true, get() {
     throw new Error('accessor must not run');

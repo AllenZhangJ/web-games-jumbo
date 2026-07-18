@@ -12,6 +12,7 @@ import {
 } from '../rules/definition-utils.js';
 import {
   assertEvidenceGitCommit,
+  assertEvidenceRelativePath,
   assertEvidenceSha256,
   assertEvidenceUtcInstant,
 } from '../evidence/evidence-value-contract.js';
@@ -165,15 +166,9 @@ function cloneEligibility(value) {
 
 function cloneArtifact(value, name) {
   assertKnownKeys(value, ARTIFACT_KEYS, name);
-  const path = boundedString(value.path, 512, `${name}.path`);
-  if (
-    path.startsWith('/')
-    || path.includes('\\')
-    || path.split('/').some((part) => part === '' || part === '.' || part === '..')
-  ) throw new RangeError(`${name}.path 必须是规范的相对 POSIX 路径。`);
   return Object.freeze({
     id: boundedString(value.id, 128, `${name}.id`),
-    path,
+    path: assertEvidenceRelativePath(value.path, `${name}.path`),
     sha256: assertEvidenceSha256(value.sha256, `${name}.sha256`),
     byteLength: assertIntegerAtLeast(value.byteLength, 1, `${name}.byteLength`),
   });

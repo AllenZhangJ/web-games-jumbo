@@ -5,6 +5,7 @@ import {
   cloneFrozenData,
 } from '../rules/definition-utils.js';
 import {
+  assertEvidenceBoundedString,
   assertEvidenceSha256,
   assertEvidenceUtcInstant,
 } from '../evidence/evidence-value-contract.js';
@@ -87,7 +88,9 @@ function enumValue(value, values, name) {
 function validatePackageReceipt(value, name) {
   if (value === null) return null;
   assertKnownKeys(value, PACKAGE_RECEIPT_KEYS, name);
-  const fileName = boundedString(value.fileName, 192, `${name}.fileName`);
+  const fileName = assertEvidenceBoundedString(value.fileName, 192, `${name}.fileName`, {
+    rejectControlCharacters: true,
+  });
   if (
     fileName.includes('/')
     || fileName.includes('\\')
