@@ -50,6 +50,7 @@ npm run arena:experiment:movement
 npm run arena:experiment:bot
 npm run arena:experiment:balance
 npm run arena:experiment:balance:explore -- --describe
+npm run arena:experiment:balance:validate:describe
 npm run arena:experiment:report:verify -- <report.json>
 npm run arena:map:stress
 npm run arena:movement:stress

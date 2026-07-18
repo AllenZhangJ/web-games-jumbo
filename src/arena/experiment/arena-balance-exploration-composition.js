@@ -2,7 +2,14 @@ import {
   createArenaBalanceCandidateExperimentDefinition,
   createArenaBalanceCandidateExperimentRegistries,
 } from './arena-balance-experiment-factory.js';
-import { createArenaStage9BotSeedCohort } from './arena-bot-capability-seeds.js';
+import {
+  ARENA_STAGE9_BALANCE_EXPLORATION_CASE_COUNT,
+  ARENA_STAGE9_BALANCE_EXPLORATION_FIRST_SEED_INDEX,
+  ARENA_STAGE9_BALANCE_VALIDATION_CASE_COUNT,
+  ARENA_STAGE9_BALANCE_VALIDATION_FIRST_SEED_INDEX,
+  createArenaStage9BalanceExplorationSeeds,
+  createArenaStage9BalanceValidationSeeds,
+} from './arena-stage9-balance-cohorts.js';
 import {
   createArenaStage9BalanceBotGatePolicy,
   createArenaStage9BalancePolicy,
@@ -10,11 +17,16 @@ import {
 
 export const ARENA_STAGE9_BALANCE_EXPLORATION_ID =
   'arena.stage9.s9.3b.lives-exploration.v1';
-export const ARENA_STAGE9_BALANCE_EXPLORATION_FIRST_SEED_INDEX = 10_000;
-export const ARENA_STAGE9_BALANCE_EXPLORATION_CASE_COUNT = 60;
 export const ARENA_STAGE9_BALANCE_EXPLORATION_REPLAY_SAMPLE_COUNT = 2;
-export const ARENA_STAGE9_BALANCE_VALIDATION_FIRST_SEED_INDEX = 20_000;
-export const ARENA_STAGE9_BALANCE_VALIDATION_CASE_COUNT = 300;
+
+export {
+  ARENA_STAGE9_BALANCE_EXPLORATION_CASE_COUNT,
+  ARENA_STAGE9_BALANCE_EXPLORATION_FIRST_SEED_INDEX,
+  ARENA_STAGE9_BALANCE_VALIDATION_CASE_COUNT,
+  ARENA_STAGE9_BALANCE_VALIDATION_FIRST_SEED_INDEX,
+  createArenaStage9BalanceExplorationSeeds,
+  createArenaStage9BalanceValidationSeeds,
+};
 
 export const ARENA_STAGE9_BALANCE_EXPLORATION_CANDIDATES = Object.freeze([
   Object.freeze({
@@ -33,20 +45,6 @@ export const ARENA_STAGE9_BALANCE_EXPLORATION_CANDIDATES = Object.freeze([
     livesPerParticipant: 13,
   }),
 ]);
-
-export function createArenaStage9BalanceExplorationSeeds() {
-  return createArenaStage9BotSeedCohort({
-    firstIndex: ARENA_STAGE9_BALANCE_EXPLORATION_FIRST_SEED_INDEX,
-    caseCount: ARENA_STAGE9_BALANCE_EXPLORATION_CASE_COUNT,
-  });
-}
-
-export function createArenaStage9BalanceValidationSeeds() {
-  return createArenaStage9BotSeedCohort({
-    firstIndex: ARENA_STAGE9_BALANCE_VALIDATION_FIRST_SEED_INDEX,
-    caseCount: ARENA_STAGE9_BALANCE_VALIDATION_CASE_COUNT,
-  });
-}
 
 export function createArenaStage9BalanceExplorationDefinitions({
   sourceCommit,

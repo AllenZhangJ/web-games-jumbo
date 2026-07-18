@@ -2,7 +2,7 @@
 
 ## 文档状态
 
-执行中，2026-07-18。S9.1a～S9.1c 实验与专业 workload 已落地，S9.2 已建立版本化 Replay V5 黄金语料、严格历史拒绝、input fuzz 单例复现与生命周期回归门。S9.3a 已建立 Definition V2 Collector 参数并保留首份 900 局失败 baseline；S9.3b 已完成 9/11/13 条命、共 540 局的隔离探索并机器选择 11 条命，后续 300 paired validation 尚未运行。S9.4～S9.5 仍未开始。Stage 8 已提供版本化设备证据和构建 Manifest 边界；Stage 9 性能指标 Definition、精确设备与预算仍需在真机门禁前由项目方确认。
+执行中，2026-07-18。S9.1a～S9.1c 实验与专业 workload 已落地，S9.2 已建立版本化 Replay V5 黄金语料、严格历史拒绝、input fuzz 单例复现与生命周期回归门。S9.3a 已建立 Definition V2 Collector 参数并保留首份 900 局失败 baseline；S9.3b 已完成 9/11/13 条命、共 540 局的隔离探索并机器选择 11 条命，固定 300 paired validation 合同已建立、尚未运行。S9.4～S9.5 仍未开始。Stage 8 已提供版本化设备证据和构建 Manifest 边界；Stage 9 性能指标 Definition、精确设备与预算仍需在真机门禁前由项目方确认。
 
 ## 收敛原则
 

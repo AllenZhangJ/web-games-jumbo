@@ -26,12 +26,19 @@ import {
   createArenaStage9BalanceExperimentRegistries,
 } from '../src/arena/experiment/arena-balance-experiment-composition.js';
 import {
+  createArenaStage9BalanceValidationExperimentDefinition,
+  createArenaStage9BalanceValidationExperimentRegistries,
+} from '../src/arena/experiment/arena-balance-validation-composition.js';
+import {
   ARENA_EXPERIMENT_OUTCOME,
 } from '../src/arena/experiment/experiment-report.js';
 import {
   createArenaExperimentReportBundle,
 } from '../src/arena/experiment/experiment-report-bundle.js';
-import { readArenaGitSourceIdentity } from './arena-git-source-identity.mjs';
+import {
+  assertArenaGitSourceIdentityStable,
+  readArenaGitSourceIdentity,
+} from './arena-git-source-identity.mjs';
 import { runArenaNodeExperiment } from './arena-node-experiment-runner.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -42,12 +49,13 @@ const SUITE = Object.freeze({
   MOVEMENT_STRESS: 'movement-stress',
   BOT_CAPABILITY: 'bot-capability',
   BALANCE_CANDIDATE: 'balance-candidate',
+  BALANCE_VALIDATION: 'balance-validation',
 });
 
 function usage() {
   return [
     'Usage:',
-    '  npm run arena:experiment -- [--suite=scripted-pressure|matchcore-invariants|map-timeline|movement-stress|bot-capability|balance-candidate]',
+    '  npm run arena:experiment -- [--suite=scripted-pressure|matchcore-invariants|map-timeline|movement-stress|bot-capability|balance-candidate|balance-validation]',
     '    [--cases=<n>] [--first-seed=<uint32>] [--replay-samples=<n>]',
     '    [--describe] [--summary] [--allow-dirty] [--output=<new-json-file>]',
     '',
@@ -212,6 +220,22 @@ function createSuite(options, source) {
       registries: createArenaStage9BalanceExperimentRegistries(),
     });
   }
+  if (options.suite === SUITE.BALANCE_VALIDATION) {
+    if (
+      options.cases !== null
+      || options.firstSeed !== null
+      || options.replaySamples !== null
+    ) {
+      throw new RangeError('balance-validation 使用预注册固定样本，不接受采样覆盖参数。');
+    }
+    if (options.allowDirty) {
+      throw new RangeError('balance-validation 不接受 --allow-dirty。');
+    }
+    return Object.freeze({
+      definition: createArenaStage9BalanceValidationExperimentDefinition(source),
+      registries: createArenaStage9BalanceValidationExperimentRegistries(),
+    });
+  }
   if (options.firstSeed !== null) {
     throw new RangeError(`${options.suite} suite 使用固定显式 seed 集，不接受 --first-seed。`);
   }
@@ -242,6 +266,13 @@ async function main() {
     return;
   }
   const source = await readArenaGitSourceIdentity(root);
+  if (
+    options.suite === SUITE.BALANCE_VALIDATION
+    && !options.describe
+    && source.sourceDirty
+  ) {
+    throw new Error('balance-validation 只能在干净 source commit 上运行。');
+  }
   const { definition, registries } = createSuite(options, source);
   if (options.describe) {
     console.log(JSON.stringify({
@@ -262,6 +293,7 @@ async function main() {
     definition,
     report,
   });
+  assertArenaGitSourceIdentityStable(source, await readArenaGitSourceIdentity(root));
   const output = options.output === null
     ? null
     : await writeReportBundle(options.output, bundle);

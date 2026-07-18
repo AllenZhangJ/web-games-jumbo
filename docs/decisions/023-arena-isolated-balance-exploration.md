@@ -59,3 +59,5 @@ clean source `ac140e2d1a99e22d35f3109ae31089803728b9f3` 上的 60 paired explora
 - 将机器选中的 11 条命固定为新的正式 candidate ID。
 - 在隔离的 300 paired validation seed 上运行正式报告；未通过则保留失败并进入新的预注册候选。
 - 后续为长时实验设计确定性进度证据与可安全续跑边界；本次已完成证据不因运行耗时重写。
+
+固定 validation Definition 与门禁见 [11 条命隔离验证预注册](../research/arena-stage9-s9.3b-lives-11-validation-preregistration.md)。

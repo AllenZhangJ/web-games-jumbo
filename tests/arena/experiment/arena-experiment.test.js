@@ -50,6 +50,7 @@ import {
 } from '../../../src/arena/experiment/arena-bot-experiment-composition.js';
 import {
   ARENA_STAGE9_BALANCE_CASE_COUNT,
+  ARENA_STAGE9_BALANCE_BOT_GATE_POLICY_V1,
   ARENA_STAGE9_BALANCE_EXPERIMENT_ID,
   ARENA_STAGE9_BALANCE_POLICY_V1,
   createArenaStage9BalanceExperimentDefinition,
@@ -67,6 +68,13 @@ import {
 import {
   createArenaBalanceExplorationSelection,
 } from '../../../src/arena/experiment/arena-balance-exploration-selection.js';
+import {
+  ARENA_STAGE9_BALANCE_VALIDATION_CANDIDATE_ID,
+  ARENA_STAGE9_BALANCE_VALIDATION_EXPERIMENT_ID,
+  ARENA_STAGE9_BALANCE_VALIDATION_REPLAY_SAMPLE_COUNT,
+  ARENA_STAGE9_BALANCE_SELECTION_BUNDLE_HASH,
+  createArenaStage9BalanceValidationExperimentDefinition,
+} from '../../../src/arena/experiment/arena-balance-validation-composition.js';
 import {
   createArenaStage9BotSeeds,
 } from '../../../src/arena/experiment/arena-bot-capability-seeds.js';
@@ -989,6 +997,40 @@ test('S9.3b exploration uses immutable candidates and disjoint baseline/explorat
     definition.getSeeds().length === exploration.length
   )));
   assert.ok(definitions.every(({ workload }) => workload.parameters.maximumEventsPerCase === 100_000));
+});
+
+test('S9.3b validation fixes the machine-selected candidate on the isolated 300-seed cohort', () => {
+  const expectedSeeds = createArenaStage9BalanceValidationSeeds();
+  const definition = createArenaStage9BalanceValidationExperimentDefinition({
+    sourceCommit: COMMIT,
+    sourceDirty: false,
+  });
+  assert.equal(definition.id, ARENA_STAGE9_BALANCE_VALIDATION_EXPERIMENT_ID);
+  assert.equal(definition.candidate.id, ARENA_STAGE9_BALANCE_VALIDATION_CANDIDATE_ID);
+  assert.equal(definition.candidate.matchConfig.livesPerParticipant, 11);
+  assert.deepEqual(definition.getSeeds(), expectedSeeds);
+  assert.equal(definition.getSeeds().length, 300);
+  assert.equal(
+    definition.workload.parameters.replaySeeds.length,
+    ARENA_STAGE9_BALANCE_VALIDATION_REPLAY_SAMPLE_COUNT,
+  );
+  assert.equal(definition.workload.parameters.maximumEventsPerCase, 100_000);
+  assert.deepEqual(
+    definition.collectors.find(({ id }) => id === ARENA_BALANCE_CANDIDATE_COLLECTOR_ID)
+      .parameters.policy,
+    ARENA_STAGE9_BALANCE_POLICY_V1,
+  );
+  assert.deepEqual(
+    definition.collectors.find(({ id }) => id === 'arena.stage9.bot-capability')
+      .parameters.gatePolicy,
+    ARENA_STAGE9_BALANCE_BOT_GATE_POLICY_V1,
+  );
+  assert.equal(ARENA_STAGE9_BALANCE_SELECTION_BUNDLE_HASH, '6322f4fa');
+  assert.throws(() => createArenaStage9BalanceValidationExperimentDefinition({
+    sourceCommit: COMMIT,
+    sourceDirty: false,
+    livesPerParticipant: 13,
+  }), /不支持字段 livesPerParticipant/);
 });
 
 function createSyntheticBalancePolicy() {
