@@ -30,7 +30,11 @@ export class ArenaWorldStage {
   #lastEffectSequence;
   #disposed;
 
-  constructor({ content = ARENA_V1_GREYBOX_CONTENT, characterViewFactory = null } = {}) {
+  constructor({
+    content = ARENA_V1_GREYBOX_CONTENT,
+    characterViewFactory = null,
+    maximumEffects = ARENA_GREYBOX_DESIGN.maximumEffects,
+  } = {}) {
     this.#content = content;
     this.scene = new THREE.Scene();
     this.scene.name = 'ArenaGreyboxScene';
@@ -102,7 +106,7 @@ export class ArenaWorldStage {
         actionPresentations: content.actions,
       });
       this.#equipment = new EquipmentViewRegistry(this.equipmentRoot);
-      this.#effects = new GreyboxEventEffects(this.effectRoot);
+      this.#effects = new GreyboxEventEffects(this.effectRoot, { maximumEffects });
     } catch (error) {
       this.dispose();
       throw error;

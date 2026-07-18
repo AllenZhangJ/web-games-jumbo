@@ -14,9 +14,10 @@ export function createArenaProductRendererFactory({
   if (gameplayRendererFactory !== undefined) {
     requiredFunction(gameplayRendererFactory, 'gameplayRendererFactory');
   }
-  return ({ canvas, platform }) => new ProductRenderer({
+  return ({ canvas, platform, qualityDefinition }) => new ProductRenderer({
     canvas,
     platform,
+    qualityDefinition,
     uiSurfaceFactory,
     ...(gameplayRendererFactory === undefined ? {} : { gameplayRendererFactory }),
   });

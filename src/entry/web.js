@@ -6,6 +6,10 @@ import { bindWebGameTeardown } from './web-game-teardown.js';
 import { launchGame } from './launch-game.js';
 import { WebProductUiSurface } from './web-product-ui-surface.js';
 import { clearWebStartupError, showWebStartupError } from './web-startup-fallback.js';
+import { resolveArenaPresentationQualityForLaunch } from './arena-presentation-quality-launch.js';
+import {
+  createArenaPresentationMemoryProviderForLaunch,
+} from './arena-presentation-memory-launch.js';
 
 function productUiRoot() {
   const root = globalThis.document?.querySelector?.('#arena-product-ui');
@@ -21,7 +25,17 @@ const rendererFactory = createArenaProductRendererFactory({
 });
 
 function createWebProductGame(platform) {
-  return createArenaProductGame(platform, { rendererFactory });
+  return createArenaProductGame(platform, {
+    rendererFactory,
+    qualityDefinition: resolveArenaPresentationQualityForLaunch({
+      root: globalThis,
+      platformId: platform.id,
+    }),
+    performanceMemoryProvider: createArenaPresentationMemoryProviderForLaunch({
+      root: globalThis,
+      platformId: platform.id,
+    }),
+  });
 }
 
 bindWebGameTeardown(globalThis);

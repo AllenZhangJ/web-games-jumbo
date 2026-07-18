@@ -14,6 +14,12 @@ import {
   verifyArenaBuildManifestDirectory,
   writeArenaBuildManifest,
 } from '../../../scripts/lib/arena-build-manifest-files.mjs';
+import {
+  createArenaStage9BuildBudgetV1Policy,
+} from '../../../src/arena/presentation/performance/arena-build-budget-policy.js';
+import {
+  createArenaBuildBudgetReport,
+} from '../../../src/arena/presentation/performance/arena-build-budget-report.js';
 
 const COMMIT = 'b'.repeat(40);
 
@@ -51,6 +57,44 @@ test('ArenaBuildManifest freezes required Web and mini-game artifacts and defaul
     ...manifest.toJSON(),
     artifacts: manifest.artifacts.filter(({ path: artifactPath }) => artifactPath !== 'game.json'),
   }), /缺少 game.json/);
+});
+
+test('Stage 9 build budget separates package failure from clean evidence eligibility', () => {
+  const policy = createArenaStage9BuildBudgetV1Policy();
+  const product = artifact('game-product.js', 100, '1');
+  const value = {
+    schemaVersion: ARENA_BUILD_MANIFEST_SCHEMA_VERSION,
+    buildId: 'budget-build',
+    commit: COMMIT,
+    sourceDirty: true,
+    target: 'wechat',
+    defaultEntry: ARENA_BUILD_DEFAULT_ENTRY.PRODUCT,
+    artifacts: [
+      artifact('game-greybox.js', 100, '2'),
+      product,
+      { ...product, path: 'game.js' },
+      artifact('game.json', 10, '3'),
+      artifact('project.config.json', 10, '4'),
+    ],
+  };
+  const development = createArenaBuildBudgetReport(policy, value);
+  assert.equal(development.status, 'passed');
+  assert.equal(development.freezeEligible, false);
+  const clean = createArenaBuildBudgetReport(policy, { ...value, sourceDirty: false });
+  assert.equal(clean.freezeEligible, true);
+  assert.equal(clean.policyHash, policy.getContentHash());
+
+  const oversized = createArenaBuildBudgetReport(policy, {
+    ...value,
+    artifacts: [
+      ...value.artifacts,
+      artifact('oversized.js', 4 * 1024 * 1024, '5'),
+    ],
+  });
+  assert.equal(oversized.status, 'failed');
+  assert.ok(oversized.failedGateIds.includes('delivery-bytes'));
+  assert.ok(oversized.failedGateIds.includes('javascript-bytes'));
+  assert.ok(oversized.failedGateIds.includes('largest-delivery-artifact-bytes'));
 });
 
 test('build manifest file helper detects mutation and unexpected output files', async () => {

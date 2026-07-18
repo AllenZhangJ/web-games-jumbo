@@ -16,12 +16,22 @@ import {
   ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND,
 } from '../src/arena/presentation/acceptance/arena-device-acceptance-definition.js';
 import {
+  ARENA_STAGE9_PERFORMANCE_DEVICE_ACCEPTANCE_V1_ID,
+} from '../src/arena/presentation/acceptance/arena-stage9-performance-device-acceptance-v1.js';
+import {
   ARENA_BUILD_DEFAULT_ENTRY,
   createArenaBuildManifest,
 } from '../src/arena/presentation/acceptance/arena-build-manifest.js';
+import {
+  createArenaPerformanceEvidenceReport,
+} from '../src/arena/presentation/performance/arena-performance-evidence.js';
+import {
+  createArenaStage9PerformanceV1Policy,
+} from '../src/arena/presentation/performance/arena-stage9-performance-v1.js';
 
 const MAXIMUM_BUNDLE_BYTES = 5 * 1024 * 1024;
 const MAXIMUM_BUILD_MANIFEST_BYTES = 5 * 1024 * 1024;
+const MAXIMUM_PERFORMANCE_TRACE_BYTES = 64 * 1024 * 1024;
 
 function usage() {
   return [
@@ -88,9 +98,9 @@ async function hashOpenFile(fileHandle) {
   return hash.digest('hex');
 }
 
-async function readSmallOpenFile(fileHandle, size, label) {
-  if (size > BigInt(MAXIMUM_BUILD_MANIFEST_BYTES)) {
-    throw new Error(`${label} 不能超过 ${MAXIMUM_BUILD_MANIFEST_BYTES} bytes。`);
+async function readSmallOpenFile(fileHandle, size, label, maximumBytes) {
+  if (size > BigInt(maximumBytes)) {
+    throw new Error(`${label} 不能超过 ${maximumBytes} bytes。`);
   }
   const length = Number(size);
   const buffer = Buffer.alloc(length);
@@ -136,6 +146,7 @@ async function readBundleSource(bundlePath) {
 async function verifyArtifacts(definition, bundle, rootValue) {
   const root = await realpath(rootValue);
   const verified = [];
+  const performanceRecords = [];
   const verifiedPaths = new Map();
   const verifiedFiles = new Map();
   const verifiedHashes = new Map();
@@ -158,6 +169,7 @@ async function verifyArtifacts(definition, bundle, rootValue) {
       let metadata;
       let sha256;
       let buildManifest = null;
+      let performanceRecord = null;
       try {
         metadata = await fileHandle.stat({ bigint: true });
         if (!metadata.isFile()) throw new Error(`artifact ${artifact.path} 不是普通文件。`);
@@ -172,7 +184,16 @@ async function verifyArtifacts(definition, bundle, rootValue) {
             fileHandle,
             metadata.size,
             `artifact ${artifact.path}`,
+            MAXIMUM_BUILD_MANIFEST_BYTES,
           )));
+        }
+        if (artifact.kind === ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.PERFORMANCE_TRACE) {
+          performanceRecord = JSON.parse(await readSmallOpenFile(
+            fileHandle,
+            metadata.size,
+            `artifact ${artifact.path}`,
+            MAXIMUM_PERFORMANCE_TRACE_BYTES,
+          ));
         }
         const metadataAfterHash = await fileHandle.stat({ bigint: true });
         if (!sameFileState(metadata, metadataAfterHash)) {
@@ -229,9 +250,19 @@ async function verifyArtifacts(definition, bundle, rootValue) {
         byteLength: Number(metadata.size),
         sha256,
       }));
+      if (performanceRecord !== null) {
+        performanceRecords.push(Object.freeze({
+          runId: record.runId,
+          artifactId: artifact.id,
+          source: performanceRecord,
+        }));
+      }
     }
   }
-  return Object.freeze(verified);
+  return Object.freeze({
+    artifacts: Object.freeze(verified),
+    performanceRecords: Object.freeze(performanceRecords),
+  });
 }
 
 async function main() {
@@ -242,24 +273,48 @@ async function main() {
   }
   const definition = createArenaDeviceAcceptanceDefinitionById(options.definitionId);
   if (options.describe) {
-    console.log(JSON.stringify({
+    const description = {
       definition: definition.toJSON(),
       definitionHash: definition.getContentHash(),
-    }, null, 2));
+    };
+    if (definition.id === ARENA_STAGE9_PERFORMANCE_DEVICE_ACCEPTANCE_V1_ID) {
+      const performancePolicy = createArenaStage9PerformanceV1Policy();
+      description.performancePolicy = performancePolicy.toJSON();
+      description.performancePolicyHash = performancePolicy.getContentHash();
+    }
+    console.log(JSON.stringify(description, null, 2));
     return;
   }
   const bundlePath = path.resolve(options.bundle);
   const artifactRoot = path.resolve(options.artifactsRoot ?? path.dirname(bundlePath));
   const source = JSON.parse(await readBundleSource(bundlePath));
   const bundle = createArenaDeviceAcceptanceBundle(definition, source);
-  const artifacts = await verifyArtifacts(definition, bundle, artifactRoot);
+  const verified = await verifyArtifacts(definition, bundle, artifactRoot);
   const report = createArenaDeviceAcceptanceReport(definition, bundle);
+  let performanceReport = null;
+  if (definition.id === ARENA_STAGE9_PERFORMANCE_DEVICE_ACCEPTANCE_V1_ID) {
+    performanceReport = createArenaPerformanceEvidenceReport({
+      deviceDefinition: definition,
+      deviceBundle: bundle,
+      performancePolicy: createArenaStage9PerformanceV1Policy(),
+      performanceRecords: verified.performanceRecords.map(({ source: value }) => value),
+    });
+  } else if (verified.performanceRecords.length > 0) {
+    throw new Error(`Definition ${definition.id} 不接受 Performance Trace。`);
+  }
   console.log(JSON.stringify({
-    verifiedArtifactCount: artifacts.length,
-    artifacts,
+    verifiedArtifactCount: verified.artifacts.length,
+    artifacts: verified.artifacts,
     report,
+    ...(performanceReport === null ? {} : { performanceReport }),
   }, null, 2));
-  if (report.status !== ARENA_DEVICE_ACCEPTANCE_REPORT_STATUS.READY) process.exitCode = 2;
+  if (
+    report.status !== ARENA_DEVICE_ACCEPTANCE_REPORT_STATUS.READY
+    || (
+      performanceReport !== null
+      && performanceReport.status !== ARENA_DEVICE_ACCEPTANCE_REPORT_STATUS.READY
+    )
+  ) process.exitCode = 2;
 }
 
 main().catch((error) => {

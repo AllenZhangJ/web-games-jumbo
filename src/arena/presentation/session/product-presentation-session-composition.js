@@ -6,8 +6,16 @@ import { createArenaInputMapper } from '../input/create-arena-input-mapper.js';
 import { ARENA_INPUT_MAPPER_ID } from '../input/input-mapper-contract.js';
 import { InputSampler } from '../input/input-sampler.js';
 import { PointerInputAdapter } from '../input/pointer-input-adapter.js';
+import { PresentationPerformanceProbe } from '../performance/presentation-performance-probe.js';
 import { ProductInputRouter } from '../product/product-input-router.js';
 import { ProductPresentationFlow } from '../product/product-presentation-flow.js';
+import {
+  ARENA_V1_DEFAULT_PRESENTATION_QUALITY,
+} from '../quality/arena-v1-presentation-quality.js';
+import {
+  createPresentationQualityDefinition,
+} from '../quality/presentation-quality-definition.js';
+import { PresentationRenderPacer } from '../quality/presentation-render-pacer.js';
 import { FixedTickAccumulator } from './fixed-tick-accumulator.js';
 import { PresentationFrameLoop } from './presentation-frame-loop.js';
 
@@ -20,6 +28,7 @@ const OPTION_KEYS = new Set([
   'matchConfig',
   'maximumCatchUpTicks',
   'profileLeaseHeartbeatIntervalMs',
+  'qualityDefinition',
   'rendererFactory',
   'controllerFactory',
   'flowFactory',
@@ -29,6 +38,9 @@ const OPTION_KEYS = new Set([
   'inputAdapterFactory',
   'frameLoopFactory',
   'accumulatorFactory',
+  'renderPacerFactory',
+  'performanceProbeFactory',
+  'performanceMemoryProvider',
   'onDiagnostic',
 ]);
 
@@ -158,6 +170,11 @@ export function createProductPresentationSessionComposition(platformValue, optio
   }
   const onDiagnostic = options.onDiagnostic ?? (() => {});
   requiredFunction(onDiagnostic, 'ProductPresentationSession.onDiagnostic');
+  const performanceMemoryProvider = options.performanceMemoryProvider ?? (() => null);
+  requiredFunction(
+    performanceMemoryProvider,
+    'ProductPresentationSession.performanceMemoryProvider',
+  );
   if (options.seedSource !== undefined && options.initialSeed !== undefined) {
     throw new RangeError('seedSource 与 initialSeed 不能同时配置。');
   }
@@ -172,6 +189,9 @@ export function createProductPresentationSessionComposition(platformValue, optio
   const matchConfig = options.matchConfig === undefined
     ? Object.freeze({})
     : cloneFrozenData(options.matchConfig, 'ProductPresentationSession matchConfig');
+  const qualityDefinition = createPresentationQualityDefinition(
+    options.qualityDefinition ?? ARENA_V1_DEFAULT_PRESENTATION_QUALITY,
+  );
   const factories = {
     rendererFactory: options.rendererFactory,
     controllerFactory: options.controllerFactory ?? createArenaV1ProductSession,
@@ -182,6 +202,10 @@ export function createProductPresentationSessionComposition(platformValue, optio
     inputAdapterFactory: options.inputAdapterFactory ?? ((args) => new PointerInputAdapter(args)),
     frameLoopFactory: options.frameLoopFactory ?? ((args) => new PresentationFrameLoop(args)),
     accumulatorFactory: options.accumulatorFactory ?? ((args) => new FixedTickAccumulator(args)),
+    renderPacerFactory: options.renderPacerFactory
+      ?? ((args) => new PresentationRenderPacer(args)),
+    performanceProbeFactory: options.performanceProbeFactory
+      ?? ((args) => new PresentationPerformanceProbe(args)),
   };
   for (const [name, factory] of Object.entries(factories)) {
     requiredFunction(factory, `ProductPresentationSession.${name}`);
@@ -197,10 +221,12 @@ export function createProductPresentationSessionComposition(platformValue, optio
       ? 'arena.product.v1'
       : nonEmptyString(options.keyPrefix, 'ProductPresentationSession.keyPrefix'),
     matchConfig,
+    qualityDefinition,
     fixedDeltaSeconds: ARENA_FIXED_DT,
     maximumCatchUpTicks,
     profileLeaseHeartbeatIntervalMs,
     profileLeaseRetryIntervalMs: Math.min(1_000, profileLeaseHeartbeatIntervalMs),
+    performanceMemoryProvider,
     onDiagnostic,
     ...factories,
   });

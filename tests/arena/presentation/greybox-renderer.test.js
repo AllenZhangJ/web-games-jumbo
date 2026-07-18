@@ -4,6 +4,10 @@ import { readFile } from 'node:fs/promises';
 import { createArenaV1MatchCore } from '../../../src/arena/arena-v1-match-core.js';
 import { ARENA_V1_CHARACTER_ID } from '../../../src/arena/content/arena-v1-character-ids.js';
 import { PresentationEventWindow } from '../../../src/arena/presentation/events/presentation-event-window.js';
+import {
+  ARENA_V1_PRESENTATION_QUALITY_ID,
+  ARENA_V1_PRESENTATION_QUALITY_REGISTRY,
+} from '../../../src/arena/presentation/quality/arena-v1-presentation-quality.js';
 import { projectArenaPresentationFrame } from '../../../src/arena/presentation/projection/arena-frame-projector.js';
 import {
   ArenaGreyboxRenderer,
@@ -48,8 +52,8 @@ function frameFrom(snapshot, events = []) {
   });
 }
 
-function fake2dContext() {
-  return Object.fromEntries([
+function fake2dContext(renderedText = null) {
+  const context = Object.fromEntries([
     'setTransform',
     'clearRect',
     'beginPath',
@@ -63,16 +67,20 @@ function fake2dContext() {
     'fillRect',
     'fillText',
   ].map((name) => [name, () => {}]));
+  if (renderedText !== null) {
+    context.fillText = (value) => renderedText.push(String(value));
+  }
+  return context;
 }
 
-function fakePlatform() {
+function fakePlatform(renderedText = null) {
   return {
     getWebGLContext: () => ({}),
     getViewport: () => ({ width: 390, height: 844, pixelRatio: 2, safeArea: null }),
     createOffscreenCanvas: (width, height) => ({
       width: typeof width === 'object' ? width.width : width,
       height: typeof width === 'object' ? width.height : height,
-      getContext: (kind) => kind === '2d' ? fake2dContext() : null,
+      getContext: (kind) => kind === '2d' ? fake2dContext(renderedText) : null,
     }),
   };
 }
@@ -80,6 +88,11 @@ function fakePlatform() {
 function fakeWebGLRenderer(canvas) {
   return {
     shadowMap: {},
+    info: {
+      render: { calls: 5, triangles: 2_400, points: 0, lines: 12 },
+      memory: { geometries: 14, textures: 4 },
+      programs: [{}, {}],
+    },
     renderCount: 0,
     clearCount: 0,
     disposed: false,
@@ -239,6 +252,58 @@ test('ArenaGreyboxRenderer cleans partial WebGL/Scene ownership when HUD capabil
   }), /Renderer 初始化失败/);
   assert.equal(webgl.disposed, true);
   assert.equal(webgl.contextForced, true);
+});
+
+test('low presentation quality lowers only renderer cost and exposes machine-readable counters', async () => {
+  const canvas = { width: 1, height: 1, style: {}, getContext: () => ({}) };
+  const webgl = fakeWebGLRenderer(canvas);
+  let contextOptions = null;
+  const renderer = new ArenaGreyboxRenderer({
+    canvas,
+    platform: fakePlatform(),
+    qualityDefinition: ARENA_V1_PRESENTATION_QUALITY_REGISTRY.require(
+      ARENA_V1_PRESENTATION_QUALITY_ID.LOW,
+    ),
+    webglRendererFactory: (options) => {
+      contextOptions = options;
+      return webgl;
+    },
+  });
+  await renderer.load();
+  assert.equal(contextOptions.antialias, false);
+  assert.equal(webgl.shadowMap.enabled, false);
+  assert.equal(webgl.pixelRatio, 1);
+  assert.equal(renderer.getDebugSnapshot().stage.maximumEffects, 8);
+  assert.deepEqual(renderer.getPerformanceSnapshot(), {
+    drawCalls: 5,
+    triangles: 2_400,
+    points: 0,
+    lines: 12,
+    programs: 2,
+    geometries: 14,
+    textures: 4,
+    jsHeapBytes: null,
+    processMemoryBytes: null,
+  });
+  renderer.dispose();
+});
+
+test('Arena HUD renders the authoritative life count instead of a fixed three-dot placeholder', async () => {
+  const core = createCore();
+  const snapshot = core.getSnapshot();
+  for (const participant of snapshot.participants) participant.lives = 11;
+  const renderedText = [];
+  const canvas = { width: 1, height: 1, style: {}, getContext: () => ({}) };
+  const renderer = new ArenaGreyboxRenderer({
+    canvas,
+    platform: fakePlatform(renderedText),
+    webglRendererFactory: () => fakeWebGLRenderer(canvas),
+  });
+  await renderer.load();
+  renderer.render(frameFrom(snapshot));
+  assert.equal(renderedText.filter((value) => value === '×11').length, 2);
+  renderer.dispose();
+  core.destroy();
 });
 
 test('Arena Three presentation sources do not call authority mutation APIs', async () => {

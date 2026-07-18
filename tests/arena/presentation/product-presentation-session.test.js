@@ -4,6 +4,10 @@ import { PRODUCT_SESSION_STATE } from '../../../src/arena/product/state/product-
 import { PRODUCT_INPUT_ROUTER_MODE } from '../../../src/arena/presentation/product/product-input-router.js';
 import { ProductPresentationFlow } from '../../../src/arena/presentation/product/product-presentation-flow.js';
 import {
+  ARENA_V1_PRESENTATION_QUALITY_ID,
+  ARENA_V1_PRESENTATION_QUALITY_REGISTRY,
+} from '../../../src/arena/presentation/quality/arena-v1-presentation-quality.js';
+import {
   PRODUCT_PRESENTATION_SESSION_STATE,
   ProductPresentationSession,
 } from '../../../src/arena/presentation/session/product-presentation-session.js';
@@ -138,6 +142,7 @@ function rendererHarness({
   disposeFailures = 0,
   resizeFailures = 0,
   onRender = null,
+  performanceSnapshot = null,
 } = {}) {
   let remainingDisposeFailures = disposeFailures;
   let remainingResizeFailures = resizeFailures;
@@ -192,6 +197,9 @@ function rendererHarness({
       if (!this.contextLost) return false;
       this.contextLost = false;
       return true;
+    },
+    getPerformanceSnapshot() {
+      return performanceSnapshot;
     },
     dispose() {
       this.disposeAttempts += 1;
@@ -287,6 +295,7 @@ test('ProductPresentationSession closes UI tap → real match → reward → rem
     lifecycle: harness.activeLifecycleCount(),
     canvas: harness.activeCanvasCount(),
   }, bindingCounts);
+  assert.equal(session.getPerformanceSnapshot().observedMatchCount, 2);
 
   const staleInput = harness.input;
   session.destroy();
@@ -298,6 +307,96 @@ test('ProductPresentationSession closes UI tap → real match → reward → rem
   assert.equal(harness.input, null);
   assert.equal(renderer.disposed, true);
   assert.equal(staleInput.onStart({ pointerId: 8, x: 1, y: 1 }), false);
+});
+
+test('30 FPS presentation pacing preserves the same 60 Hz authority frames as high quality', async () => {
+  async function run(qualityId) {
+    const harness = platformHarness();
+    const renderer = rendererHarness();
+    const session = new ProductPresentationSession(harness.platform, sessionOptions(renderer, {
+      initialSeed: 77_001,
+      qualityDefinition: ARENA_V1_PRESENTATION_QUALITY_REGISTRY.require(qualityId),
+      matchConfig: {
+        preparingTicks: 0,
+        suddenDeathStartTick: 120,
+        hardLimitTicks: 180,
+      },
+    }));
+    await session.start();
+    harness.tap(100);
+    await settleUntil(() => (
+      session.getLastSnapshot()?.viewModel.activeState === PRODUCT_SESSION_STATE.IN_MATCH
+    ));
+    const rendersBeforeFrames = renderer.frames.length;
+    for (let index = 1; index <= 8; index += 1) {
+      harness.fireFrame(index * (1000 / 60));
+    }
+    const result = {
+      frame: structuredClone(session.getLastSnapshot().matchFrame),
+      runtimeRenderCount: renderer.frames.length - rendersBeforeFrames,
+      performance: session.finishPerformanceCapture(),
+    };
+    session.destroy();
+    return result;
+  }
+
+  const high = await run(ARENA_V1_PRESENTATION_QUALITY_ID.HIGH);
+  const low = await run(ARENA_V1_PRESENTATION_QUALITY_ID.LOW);
+  assert.deepEqual(low.frame, high.frame);
+  assert.equal(high.frame.source.tick, 7);
+  assert.equal(high.runtimeRenderCount, 7);
+  assert.equal(low.runtimeRenderCount, 3);
+  assert.equal(high.performance.observerErrorCount, 0);
+  assert.equal(low.performance.observerErrorCount, 0);
+  assert.equal(low.performance.probe.state, 'stopped');
+  assert.equal(low.performance.probe.observedFrameCount, 8);
+  assert.equal(low.performance.probe.frames.filter(({ rendered }) => rendered).length, 3);
+});
+
+test('ProductPresentationSession records injected memory evidence without giving the observer lifecycle ownership', async () => {
+  const harness = platformHarness();
+  const renderer = rendererHarness({
+    performanceSnapshot: {
+      drawCalls: 4,
+      triangles: 100,
+      points: 0,
+      lines: 0,
+      programs: 2,
+      geometries: 8,
+      textures: 3,
+      jsHeapBytes: null,
+      processMemoryBytes: null,
+    },
+  });
+  const session = new ProductPresentationSession(harness.platform, sessionOptions(renderer, {
+    performanceMemoryProvider: () => ({
+      jsHeapBytes: 12_345,
+      processMemoryBytes: 67_890,
+    }),
+  }));
+  await session.start();
+  harness.fireFrame();
+  harness.fireFrame();
+  const capture = session.finishPerformanceCapture();
+  assert.equal(capture.observerErrorCount, 0);
+  assert.equal(capture.probe.resources[0].drawCalls, 4);
+  assert.equal(capture.probe.resources[0].jsHeapBytes, 12_345);
+  assert.equal(capture.probe.resources[0].processMemoryBytes, 67_890);
+  session.destroy();
+
+  const failingHarness = platformHarness();
+  const failingSession = new ProductPresentationSession(
+    failingHarness.platform,
+    sessionOptions(rendererHarness(), {
+      performanceMemoryProvider: () => ({ unknownBytes: 1 }),
+    }),
+  );
+  await failingSession.start();
+  failingHarness.fireFrame();
+  failingHarness.fireFrame();
+  assert.equal(failingSession.state, PRODUCT_PRESENTATION_SESSION_STATE.RUNNING);
+  assert.ok(failingSession.getPerformanceSnapshot().observerErrorCount > 0);
+  failingSession.destroy();
 });
 
 test('ProductPresentationSession pauses authority across hide/show and WebGL context loss without catch-up', async () => {
@@ -460,6 +559,23 @@ test('ProductPresentationSession rolls back partial lifecycle binding and invali
   assert.equal(candidateRenderer.disposed, true);
   assert.equal(candidateSession.state, PRODUCT_PRESENTATION_SESSION_STATE.FAILED);
   candidateSession.destroy();
+
+  const probeHarness = platformHarness();
+  const probeRenderer = rendererHarness();
+  let probeDestroyCalls = 0;
+  const probeSession = new ProductPresentationSession(
+    probeHarness.platform,
+    sessionOptions(probeRenderer, {
+      performanceProbeFactory: () => ({
+        destroy() { probeDestroyCalls += 1; },
+      }),
+    }),
+  );
+  await assert.rejects(probeSession.start(), /performanceProbe 缺少 start/);
+  assert.equal(probeDestroyCalls, 1);
+  assert.equal(probeRenderer.disposed, false);
+  assert.equal(probeSession.state, PRODUCT_PRESENTATION_SESSION_STATE.FAILED);
+  probeSession.destroy();
 
   const retryHarness = platformHarness();
   const retryRenderer = rendererHarness();

@@ -61,12 +61,17 @@ class PulseEffect {
 export class GreyboxEventEffects {
   #root;
   #effects;
+  #maximumEffects;
   #disposed;
 
-  constructor(root) {
+  constructor(root, { maximumEffects = ARENA_GREYBOX_DESIGN.maximumEffects } = {}) {
     if (!root?.add) throw new TypeError('GreyboxEventEffects 需要 Object3D root。');
+    if (!Number.isSafeInteger(maximumEffects) || maximumEffects < 0 || maximumEffects > 256) {
+      throw new RangeError('GreyboxEventEffects.maximumEffects 必须是 0～256 的安全整数。');
+    }
     this.#root = root;
     this.#effects = [];
+    this.#maximumEffects = maximumEffects;
     this.#disposed = false;
   }
 
@@ -91,7 +96,7 @@ export class GreyboxEventEffects {
       });
       this.#effects.push(effect);
       this.#root.add(effect.root);
-      while (this.#effects.length > ARENA_GREYBOX_DESIGN.maximumEffects) {
+      while (this.#effects.length > this.#maximumEffects) {
         this.#effects.shift().dispose();
       }
     }
@@ -116,7 +121,10 @@ export class GreyboxEventEffects {
 
   getDebugSnapshot() {
     this.#assertUsable();
-    return Object.freeze({ effectCount: this.#effects.length });
+    return Object.freeze({
+      effectCount: this.#effects.length,
+      maximumEffects: this.#maximumEffects,
+    });
   }
 
   dispose() {

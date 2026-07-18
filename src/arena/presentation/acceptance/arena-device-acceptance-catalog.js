@@ -6,6 +6,10 @@ import {
   ARENA_STAGE8_PRODUCT_DEVICE_ACCEPTANCE_V1_ID,
   createArenaStage8ProductDeviceAcceptanceV1Definition,
 } from './arena-stage8-product-device-acceptance-v1.js';
+import {
+  ARENA_STAGE9_PERFORMANCE_DEVICE_ACCEPTANCE_V1_ID,
+  createArenaStage9PerformanceDeviceAcceptanceV1Definition,
+} from './arena-stage9-performance-device-acceptance-v1.js';
 
 export const ARENA_DEFAULT_DEVICE_ACCEPTANCE_DEFINITION_ID =
   ARENA_STAGE6_DEVICE_ACCEPTANCE_V1_ID;
@@ -13,6 +17,7 @@ export const ARENA_DEFAULT_DEVICE_ACCEPTANCE_DEFINITION_ID =
 const IDS = Object.freeze([
   ARENA_STAGE6_DEVICE_ACCEPTANCE_V1_ID,
   ARENA_STAGE8_PRODUCT_DEVICE_ACCEPTANCE_V1_ID,
+  ARENA_STAGE9_PERFORMANCE_DEVICE_ACCEPTANCE_V1_ID,
 ]);
 
 export function listArenaDeviceAcceptanceDefinitionIds() {
@@ -25,6 +30,9 @@ export function createArenaDeviceAcceptanceDefinitionById(id) {
   }
   if (id === ARENA_STAGE8_PRODUCT_DEVICE_ACCEPTANCE_V1_ID) {
     return createArenaStage8ProductDeviceAcceptanceV1Definition();
+  }
+  if (id === ARENA_STAGE9_PERFORMANCE_DEVICE_ACCEPTANCE_V1_ID) {
+    return createArenaStage9PerformanceDeviceAcceptanceV1Definition();
   }
   throw new RangeError(`未知 Arena 设备验收 Definition：${String(id)}。`);
 }

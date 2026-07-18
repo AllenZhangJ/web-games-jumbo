@@ -26,6 +26,7 @@ export const ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND = Object.freeze({
   SCREENSHOT: 'screenshot',
   VIDEO: 'video',
   LOG: 'log',
+  PERFORMANCE_TRACE: 'performance-trace',
 });
 
 const DEFINITION_KEYS = new Set(['schemaVersion', 'id', 'stage', 'checks', 'targets']);

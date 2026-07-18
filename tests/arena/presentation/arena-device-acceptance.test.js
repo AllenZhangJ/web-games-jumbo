@@ -19,6 +19,21 @@ import {
   createArenaStage8ProductDeviceAcceptanceV1Definition,
 } from '../../../src/arena/presentation/acceptance/arena-stage8-product-device-acceptance-v1.js';
 import {
+  createArenaStage9PerformanceDeviceAcceptanceV1Definition,
+  ARENA_STAGE9_PERFORMANCE_DEVICE_CHECK_ID,
+} from '../../../src/arena/presentation/acceptance/arena-stage9-performance-device-acceptance-v1.js';
+import {
+  ARENA_PERFORMANCE_RECORD_SCHEMA_VERSION,
+} from '../../../src/arena/presentation/performance/arena-performance-record.js';
+import {
+  ARENA_STAGE9_PERFORMANCE_TARGET_ID,
+  createArenaStage9PerformanceV1Policy,
+} from '../../../src/arena/presentation/performance/arena-stage9-performance-v1.js';
+import {
+  ARENA_V1_PRESENTATION_QUALITY_ID,
+  ARENA_V1_PRESENTATION_QUALITY_REGISTRY,
+} from '../../../src/arena/presentation/quality/arena-v1-presentation-quality.js';
+import {
   ARENA_DEVICE_ACCEPTANCE_BUNDLE_SCHEMA_VERSION,
   ARENA_DEVICE_ACCEPTANCE_REPORT_STATUS,
   createArenaDeviceAcceptanceBundle,
@@ -44,7 +59,10 @@ function fakeArtifact(runId, id, kind) {
     ? 'png'
     : kind === ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.VIDEO
       ? 'mp4'
-      : kind === ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.BUILD_MANIFEST ? 'json' : 'txt';
+      : kind === ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.BUILD_MANIFEST
+        || kind === ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.PERFORMANCE_TRACE
+        ? 'json'
+        : 'txt';
   return {
     id,
     kind,
@@ -64,6 +82,7 @@ function recordValue(definition, targetId, {
   const artifactIdByKind = {
     [ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.BUILD_MANIFEST]: 'manifest',
     [ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.LOG]: 'log',
+    [ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.PERFORMANCE_TRACE]: 'performance',
     [ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.SCREENSHOT]: 'screen',
     [ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.VIDEO]: 'video',
   };
@@ -144,6 +163,24 @@ test('Stage 6 device acceptance definition fixes five targets without entering a
     ...definition.toJSON(),
     checks: [...definition.checks, { id: 'unused-check', title: '未使用检查' }],
   }), /check unused-check 未被任何 target 引用/);
+});
+
+test('Stage 9 performance acceptance fixes six OS/class targets and requires trace evidence', () => {
+  const definition = createArenaStage9PerformanceDeviceAcceptanceV1Definition();
+  assert.equal(definition.targets.length, 6);
+  assert.equal(definition.checks.length, 8);
+  assert.deepEqual(definition.getTarget('web-low-device').requiredOsNames, ['Android']);
+  assert.deepEqual(definition.getTarget('web-mainstream-device').requiredOsNames, ['iOS']);
+  assert.ok(definition.targets.every(({ requiredArtifactKinds }) => (
+    requiredArtifactKinds.includes(ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.PERFORMANCE_TRACE)
+  )));
+  const record = createArenaDeviceAcceptanceRecord(
+    definition,
+    recordValue(definition, 'web-low-device'),
+  );
+  assert.equal(record.artifacts.some(({ kind }) => (
+    kind === ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.PERFORMANCE_TRACE
+  )), true);
 });
 
 test('Stage 8 product acceptance separates developer-tool faults from iOS/Android runtime evidence', () => {
@@ -367,6 +404,87 @@ function miniBuildManifest(platform) {
   });
 }
 
+function webBuildManifest() {
+  return createArenaBuildManifest({
+    schemaVersion: ARENA_BUILD_MANIFEST_SCHEMA_VERSION,
+    buildId: BUILD_ID,
+    commit: COMMIT,
+    sourceDirty: false,
+    target: 'web',
+    defaultEntry: ARENA_BUILD_DEFAULT_ENTRY.PRODUCT,
+    artifacts: [
+      { path: 'greybox.html', sha256: '1'.repeat(64), byteLength: 10 },
+      { path: 'index.html', sha256: '2'.repeat(64), byteLength: 10 },
+      { path: 'product.html', sha256: '3'.repeat(64), byteLength: 10 },
+    ],
+  });
+}
+
+function shortPerformanceRecord(policy, targetId, runId) {
+  const quality = ARENA_V1_PRESENTATION_QUALITY_REGISTRY.require(
+    ARENA_V1_PRESENTATION_QUALITY_ID.LOW,
+  );
+  const frames = [0, 33, 66, 99].map((elapsedMs, index) => ({
+    sequence: index + 1,
+    elapsedMs,
+    deltaMicroseconds: index === 0 ? 0 : 33_000,
+    coreSteps: index === 0 ? 0 : 2,
+    droppedMicroseconds: 0,
+    rendered: true,
+    renderDurationMicroseconds: 4_000,
+  }));
+  return {
+    schemaVersion: ARENA_PERFORMANCE_RECORD_SCHEMA_VERSION,
+    recordId: `performance-${runId}`,
+    policyId: policy.id,
+    policyHash: policy.getContentHash(),
+    commit: COMMIT,
+    buildId: BUILD_ID,
+    targetId,
+    runId,
+    performedAt: PERFORMED_AT,
+    capture: {
+      qualityDefinitionId: quality.id,
+      qualityDefinitionHash: quality.getContentHash(),
+      observerErrorCount: 0,
+      observedMatchCount: 1,
+      lifecycle: {
+        hideCount: 1,
+        showCount: 1,
+        contextLostCount: 1,
+        contextRestoredCount: 1,
+      },
+      probe: {
+        schemaVersion: 1,
+        state: 'stopped',
+        durationMs: 120,
+        maximumFrameSamples: 10,
+        maximumResourceSamples: 10,
+        resourceSampleIntervalFrames: 1,
+        observedFrameCount: frames.length,
+        recordedFrameCount: frames.length,
+        droppedFrameSampleCount: 0,
+        droppedResourceSampleCount: 0,
+        milestones: [{ id: 'interactive', elapsedMs: 10 }],
+        frames,
+        resources: frames.map((frame) => ({
+          frameSequence: frame.sequence,
+          elapsedMs: frame.elapsedMs,
+          drawCalls: 8,
+          triangles: 1_000,
+          points: 0,
+          lines: 0,
+          programs: 2,
+          geometries: 10,
+          textures: 4,
+          jsHeapBytes: null,
+          processMemoryBytes: null,
+        })),
+      },
+    },
+  };
+}
+
 async function writeStage8ArtifactRecords(root, definition) {
   const manifests = new Map();
   for (const platform of ['douyin', 'wechat']) {
@@ -559,6 +677,67 @@ test('Stage 8 evidence CLI validates clean shared build manifests for all six ta
     assert.equal(output.verifiedArtifactCount, 24);
     assert.equal(output.report.status, ARENA_DEVICE_ACCEPTANCE_REPORT_STATUS.READY);
     assert.equal(output.report.passingRunCount, 6);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('Stage 9 evidence CLI parses the trace artifact and recomputes a bound performance failure', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'arena-stage9-performance-evidence-'));
+  try {
+    const definition = createArenaStage9PerformanceDeviceAcceptanceV1Definition();
+    const policy = createArenaStage9PerformanceV1Policy();
+    const targetId = ARENA_STAGE9_PERFORMANCE_TARGET_ID.WEB_LOW;
+    const base = recordValue(definition, targetId);
+    base.checks = base.checks.map((check) => ({
+      ...check,
+      result: check.id === ARENA_STAGE9_PERFORMANCE_DEVICE_CHECK_ID.PERFORMANCE_BUDGET
+        ? ARENA_DEVICE_ACCEPTANCE_CHECK_RESULT.FAILED
+        : ARENA_DEVICE_ACCEPTANCE_CHECK_RESULT.PASSED,
+    }));
+    const trace = shortPerformanceRecord(policy, targetId, base.runId);
+    const manifestBytes = Buffer.from(`${JSON.stringify(webBuildManifest(), null, 2)}\n`);
+    const traceBytes = Buffer.from(`${JSON.stringify(trace, null, 2)}\n`);
+    const artifacts = [];
+    for (const artifact of base.artifacts) {
+      const content = artifact.kind === ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.BUILD_MANIFEST
+        ? manifestBytes
+        : artifact.kind === ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.PERFORMANCE_TRACE
+          ? traceBytes
+          : Buffer.from(`artifact:${base.runId}:${artifact.kind}`, 'utf8');
+      const file = path.join(root, artifact.path);
+      await mkdir(path.dirname(file), { recursive: true });
+      await writeFile(file, content);
+      artifacts.push({
+        ...artifact,
+        byteLength: content.length,
+        sha256: createHash('sha256').update(content).digest('hex'),
+      });
+    }
+    const bundlePath = path.join(root, 'device-evidence.json');
+    await writeFile(bundlePath, `${JSON.stringify(bundleValue(definition, [{
+      ...base,
+      artifacts,
+    }]), null, 2)}\n`);
+    const command = spawnSync(process.execPath, [
+      'scripts/arena-device-evidence.mjs',
+      '--definition',
+      definition.id,
+      '--bundle',
+      bundlePath,
+      '--artifacts-root',
+      root,
+    ], { cwd: path.resolve('.'), encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 });
+    assert.equal(command.status, 2, command.stderr);
+    const output = JSON.parse(command.stdout);
+    assert.equal(output.verifiedArtifactCount, 5);
+    assert.equal(output.report.status, ARENA_DEVICE_ACCEPTANCE_REPORT_STATUS.FAILED);
+    assert.equal(output.performanceReport.status, ARENA_DEVICE_ACCEPTANCE_REPORT_STATUS.FAILED);
+    assert.equal(output.performanceReport.performanceReports.length, 1);
+    assert.equal(
+      output.performanceReport.performanceReports[0].report.targetId,
+      targetId,
+    );
   } finally {
     await rm(root, { recursive: true, force: true });
   }

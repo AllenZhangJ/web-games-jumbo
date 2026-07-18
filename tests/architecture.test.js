@@ -206,6 +206,27 @@ test('Arena device acceptance remains pure evidence data behind a Node-only CLI'
   }
 });
 
+test('Arena quality and performance contracts remain host-free and cannot own rendering', async () => {
+  const files = (await Promise.all([
+    'src/arena/presentation/quality',
+    'src/arena/presentation/performance',
+  ].map((directory) => listJavaScript(path.resolve(directory))))).flat();
+  assert.ok(files.length >= 8);
+  for (const file of files) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /from\s+['"](?:node:|three|[^'"]*(?:\/platform\/|\/entry\/|\/session\/|\/renderer\/|\/three\/)[^'"]*)['"]/,
+      `${file} 不应拥有 Node、宿主、Session 或 Renderer。`,
+    );
+    assert.doesNotMatch(
+      withoutStaticImports(source),
+      /(?:Date\.now|Math\.random|setTimeout|setInterval|requestAnimationFrame|\b(?:window|document|navigator|localStorage|sessionStorage)\b|\b(?:tt|wx)\s*\.)/,
+      `${file} 不应直接读取墙钟、随机或宿主全局。`,
+    );
+  }
+});
+
 test('Arena Stage 9 experiment orchestration stays headless and outside presentation/platform code', async () => {
   const experimentFiles = await listJavaScript(path.resolve('src/arena/experiment'));
   assert.ok(experimentFiles.length >= 7);
@@ -359,7 +380,7 @@ test('Arena S8.5 Product Session is the injected host root and never reuses Stag
     );
     assert.doesNotMatch(
       withoutStaticImports(source),
-      /(?:Date\.now|Math\.random|\bperformance\b|setTimeout|setInterval|requestAnimationFrame|\b(?:window|document|navigator|localStorage|sessionStorage)\b|\b(?:tt|wx)\s*\.)/,
+      /(?:Date\.now|Math\.random|\bperformance\s*(?:\.|\[)|setTimeout|setInterval|requestAnimationFrame|\b(?:window|document|navigator|localStorage|sessionStorage)\b|\b(?:tt|wx)\s*\.)/,
       `${file} 不应绕过注入合同读取宿主能力。`,
     );
   }

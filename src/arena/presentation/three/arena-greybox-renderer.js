@@ -1,4 +1,10 @@
 import * as THREE from 'three';
+import {
+  ARENA_V1_DEFAULT_PRESENTATION_QUALITY,
+} from '../quality/arena-v1-presentation-quality.js';
+import {
+  createPresentationQualityDefinition,
+} from '../quality/presentation-quality-definition.js';
 import { ArenaHudLayer } from './arena-hud-layer.js';
 import { ARENA_GREYBOX_COLOR, ARENA_GREYBOX_DESIGN } from './greybox-style.js';
 import { ArenaWorldStage } from './arena-world-stage.js';
@@ -16,7 +22,7 @@ function validatePlatform(value) {
   return value;
 }
 
-function normalizeViewport(value) {
+function normalizeViewport(value, maximumPixelRatio) {
   if (!value || !Number.isFinite(value.width) || !Number.isFinite(value.height)) {
     throw new TypeError('Arena viewport width/height 必须是有限数。');
   }
@@ -27,7 +33,7 @@ function normalizeViewport(value) {
     width: value.width,
     height: value.height,
     pixelRatio: Math.max(0.5, Math.min(
-      ARENA_GREYBOX_DESIGN.maximumPixelRatio,
+      maximumPixelRatio,
       Number.isFinite(value.pixelRatio) ? value.pixelRatio : 1,
     )),
     safeArea: value.safeArea ?? null,
@@ -51,13 +57,20 @@ export class ArenaGreyboxRenderer {
   #viewport;
   #rendering;
   #lastError;
+  #qualityDefinition;
 
-  constructor({ canvas, platform, webglRendererFactory = (options) => new THREE.WebGLRenderer(options) }) {
+  constructor({
+    canvas,
+    platform,
+    qualityDefinition = ARENA_V1_DEFAULT_PRESENTATION_QUALITY,
+    webglRendererFactory = (options) => new THREE.WebGLRenderer(options),
+  }) {
     if (!canvas || typeof canvas.getContext !== 'function') {
       throw new TypeError('ArenaGreyboxRenderer 需要 Canvas。');
     }
     this.canvas = canvas;
     this.#platform = validatePlatform(platform);
+    this.#qualityDefinition = createPresentationQualityDefinition(qualityDefinition);
     this.#renderer = null;
     this.#stage = null;
     this.#hud = null;
@@ -68,7 +81,7 @@ export class ArenaGreyboxRenderer {
     try {
       const contextAttributes = {
         alpha: false,
-        antialias: true,
+        antialias: this.#qualityDefinition.antialiasEnabled,
         depth: true,
         stencil: false,
         powerPreference: 'high-performance',
@@ -86,11 +99,13 @@ export class ArenaGreyboxRenderer {
       this.#renderer.outputColorSpace = THREE.SRGBColorSpace;
       this.#renderer.toneMapping = THREE.ACESFilmicToneMapping;
       this.#renderer.toneMappingExposure = 1.05;
-      this.#renderer.shadowMap.enabled = true;
+      this.#renderer.shadowMap.enabled = this.#qualityDefinition.shadowsEnabled;
       this.#renderer.shadowMap.type = THREE.PCFShadowMap;
       this.#renderer.setClearColor?.(ARENA_GREYBOX_COLOR.background, 1);
       this.#renderer.autoClear = false;
-      this.#stage = new ArenaWorldStage();
+      this.#stage = new ArenaWorldStage({
+        maximumEffects: this.#qualityDefinition.maximumEffects,
+      });
       this.#hud = new ArenaHudLayer(platform);
     } catch (error) {
       this.#lastError = error;
@@ -134,7 +149,7 @@ export class ArenaGreyboxRenderer {
       this.#state === ARENA_GREYBOX_RENDERER_STATE.DISPOSED
       || this.#state === ARENA_GREYBOX_RENDERER_STATE.FAILED
     ) return false;
-    const normalized = normalizeViewport(viewport);
+    const normalized = normalizeViewport(viewport, this.#qualityDefinition.maximumPixelRatio);
     this.#viewport = normalized;
     this.#renderer.setPixelRatio(normalized.pixelRatio);
     this.#renderer.setSize(normalized.width, normalized.height, false);
@@ -232,11 +247,35 @@ export class ArenaGreyboxRenderer {
     }
     return Object.freeze({
       state: this.#state,
+      qualityDefinitionId: this.#qualityDefinition.id,
+      qualityDefinitionHash: this.#qualityDefinition.getContentHash(),
       viewport: this.#viewport,
       inputViewport: this.#viewport ? this.getInputViewport() : null,
       lastError: this.#lastError,
       stage: this.#stage?.getDebugSnapshot() ?? null,
       hud: this.#hud?.getDebugSnapshot() ?? null,
+    });
+  }
+
+  getPerformanceSnapshot() {
+    if (this.#state === ARENA_GREYBOX_RENDERER_STATE.DISPOSED) return null;
+    const info = this.#renderer?.info ?? null;
+    const render = info?.render ?? null;
+    const memory = info?.memory ?? null;
+    const programs = info?.programs;
+    const integerOrNull = (value) => (
+      Number.isSafeInteger(value) && value >= 0 ? value : null
+    );
+    return Object.freeze({
+      drawCalls: integerOrNull(render?.calls),
+      triangles: integerOrNull(render?.triangles),
+      points: integerOrNull(render?.points),
+      lines: integerOrNull(render?.lines),
+      programs: Array.isArray(programs) ? programs.length : integerOrNull(programs),
+      geometries: integerOrNull(memory?.geometries),
+      textures: integerOrNull(memory?.textures),
+      jsHeapBytes: null,
+      processMemoryBytes: null,
     });
   }
 

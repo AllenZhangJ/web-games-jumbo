@@ -75,14 +75,19 @@ function font(size, weight = 700) {
 
 function drawLives(context, { x, y, lives, align, color, scale }) {
   const radius = 7 * scale;
-  const gap = 20 * scale;
-  for (let index = 0; index < 3; index += 1) {
-    const offset = align === 'right' ? -index * gap : index * gap;
-    context.beginPath();
-    context.arc(x + offset, y, radius, 0, Math.PI * 2);
-    context.fillStyle = index < lives ? color : 'rgba(38,50,56,0.16)';
-    context.fill();
-  }
+  context.beginPath();
+  context.arc(x, y, radius, 0, Math.PI * 2);
+  context.fillStyle = lives > 0 ? color : 'rgba(38,50,56,0.16)';
+  context.fill();
+  context.font = font(14 * scale, 800);
+  context.textBaseline = 'middle';
+  context.textAlign = align === 'right' ? 'right' : 'left';
+  context.fillStyle = '#263238';
+  context.fillText(
+    `×${lives}`,
+    x + (align === 'right' ? -12 : 12) * scale,
+    y + 0.5 * scale,
+  );
 }
 
 function drawControlRing(context, x, y, radius, { active = false } = {}) {

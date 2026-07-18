@@ -1,9 +1,14 @@
 import { normalizeThrownError } from '../../lifecycle-error.js';
 import { PRODUCT_SESSION_STATE } from '../../product/state/product-session-transition-definition.js';
 import { PRODUCT_INPUT_ROUTER_MODE } from '../product/product-input-router.js';
+import { PRODUCT_UI_INTENT_ID } from '../product/product-ui-intent.js';
 import {
   PRODUCT_PRESENTATION_FLOW_STATE,
 } from '../product/product-presentation-flow.js';
+import {
+  createPresentationMemorySnapshot,
+  mergePresentationMemorySnapshot,
+} from '../performance/presentation-memory-snapshot.js';
 import { createProductPresentationSessionComposition } from './product-presentation-session-composition.js';
 
 export const PRODUCT_PRESENTATION_SESSION_STATE = Object.freeze({
@@ -126,6 +131,34 @@ function validateFrameLoop(value) {
   return value;
 }
 
+function validateRenderPacer(value) {
+  if (
+    !value
+    || typeof value.shouldRender !== 'function'
+    || typeof value.reset !== 'function'
+  ) throw new TypeError('ProductPresentationSession renderPacer 不符合合同。');
+  return value;
+}
+
+function validatePerformanceProbe(value) {
+  if (!value || typeof value !== 'object') {
+    throw new TypeError('ProductPresentationSession performanceProbe 无效。');
+  }
+  for (const method of [
+    'start',
+    'markMilestone',
+    'recordFrame',
+    'stop',
+    'getSnapshot',
+    'destroy',
+  ]) {
+    if (typeof value[method] !== 'function') {
+      throw new TypeError(`ProductPresentationSession performanceProbe 缺少 ${method}()。`);
+    }
+  }
+  return value;
+}
+
 function cleanupFailure(errors) {
   if (errors.length === 0) return null;
   const failure = new Error('ProductPresentationSession 清理未完整完成。');
@@ -158,6 +191,15 @@ export class ProductPresentationSession {
   #inputAdapter;
   #accumulator;
   #frameLoop;
+  #renderPacer;
+  #performanceProbe;
+  #performanceProbeErrorCount;
+  #lastPerformanceSnapshot;
+  #lastPublishTelemetry;
+  #firstMatchMilestoneRecorded;
+  #performanceObservedMatchCount;
+  #performanceMatchActive;
+  #performanceLifecycleCounters;
   #bindings;
   #lastSnapshot;
   #inputMatchActive;
@@ -187,6 +229,20 @@ export class ProductPresentationSession {
     this.#inputAdapter = null;
     this.#accumulator = null;
     this.#frameLoop = null;
+    this.#renderPacer = null;
+    this.#performanceProbe = null;
+    this.#performanceProbeErrorCount = 0;
+    this.#lastPerformanceSnapshot = null;
+    this.#lastPublishTelemetry = null;
+    this.#firstMatchMilestoneRecorded = false;
+    this.#performanceObservedMatchCount = 0;
+    this.#performanceMatchActive = false;
+    this.#performanceLifecycleCounters = {
+      hideCount: 0,
+      showCount: 0,
+      contextLostCount: 0,
+      contextRestoredCount: 0,
+    };
     this.#bindings = [];
     this.#lastSnapshot = null;
     this.#inputMatchActive = false;
@@ -209,6 +265,35 @@ export class ProductPresentationSession {
     try { this.#composition.onDiagnostic(Object.freeze({ type, ...detail })); } catch {
       // Diagnostics are observational and cannot own Product lifecycle.
     }
+  }
+
+  #performanceNow() {
+    try {
+      const value = this.#composition.platform.now();
+      if (Number.isFinite(value) && value >= 0) return value;
+    } catch {
+      // Performance observation must not own Product lifecycle.
+    }
+    return null;
+  }
+
+  #observePerformance(method, ...args) {
+    if (this.#performanceProbe === null) return false;
+    try {
+      return this.#performanceProbe[method](...args);
+    } catch (error) {
+      this.#performanceProbeErrorCount += 1;
+      this.#report('performance-probe-error', {
+        method,
+        message: error?.message ?? String(error),
+      });
+      return false;
+    }
+  }
+
+  #markPerformanceMilestone(id, timestampMs = this.#performanceNow()) {
+    if (timestampMs === null) return false;
+    return this.#observePerformance('markMilestone', id, timestampMs);
   }
 
   #guardHost(callback) {
@@ -254,16 +339,19 @@ export class ProductPresentationSession {
     const platform = this.#composition.platform;
     this.#registerCleanup(platform.onResize(this.#guardHost(() => this.#handleResize())), 'onResize');
     this.#registerCleanup(platform.onHide(this.#guardHost(() => {
+      this.#performanceLifecycleCounters.hideCount += 1;
       this.#hidden = true;
       this.#syncPauseState();
     })), 'onHide');
     this.#registerCleanup(platform.onShow(this.#guardHost(() => {
+      this.#performanceLifecycleCounters.showCount += 1;
       this.#hidden = false;
       this.#syncPauseState();
     })), 'onShow');
     this.#registerCleanup(this.#bindCanvasEvent(
       'webglcontextlost',
       this.#guardHost((event) => {
+        this.#performanceLifecycleCounters.contextLostCount += 1;
         this.#renderer.handleContextLost(event);
         this.#contextLost = true;
         this.#syncPauseState();
@@ -273,6 +361,7 @@ export class ProductPresentationSession {
       'webglcontextrestored',
       this.#guardHost(() => {
         if (!this.#renderer.handleContextRestored()) return;
+        this.#performanceLifecycleCounters.contextRestoredCount += 1;
         this.#contextLost = false;
         if (!this.#inputRouter) {
           this.#resizePending = true;
@@ -365,16 +454,65 @@ export class ProductPresentationSession {
     return snapshot;
   }
 
-  #publish(snapshot, deltaSeconds) {
+  #publish(snapshot, deltaSeconds, { forceRender = false } = {}) {
     this.#lastSnapshot = snapshot;
+    const performanceInMatch = snapshot?.viewModel?.activeState === PRODUCT_SESSION_STATE.IN_MATCH;
+    const matchSeed = snapshot?.matchFrame?.source?.matchSeed;
+    if (
+      performanceInMatch
+      && !this.#performanceMatchActive
+      && Number.isSafeInteger(matchSeed)
+      && matchSeed >= 0
+      && matchSeed <= 0xffffffff
+    ) {
+      this.#performanceObservedMatchCount += 1;
+    }
+    this.#performanceMatchActive = performanceInMatch;
     this.#updateInputMode(snapshot);
+    this.#lastPublishTelemetry = Object.freeze({
+      rendered: false,
+      renderDurationMs: null,
+      resources: null,
+    });
     if (this.#hidden || this.#contextLost || this.#destroyRequested || this.#isTerminal()) {
       return true;
     }
+    if (!this.#renderPacer.shouldRender(deltaSeconds, { force: forceRender })) return true;
+    const renderStartedAtMs = this.#performanceNow();
     const rendered = this.#renderer.render(Object.freeze({
       viewModel: snapshot.viewModel,
       matchFrame: snapshot.matchFrame,
     }), { deltaSeconds });
+    const renderEndedAtMs = this.#performanceNow();
+    let resources = null;
+    try { resources = this.#renderer.getPerformanceSnapshot?.() ?? null; } catch (error) {
+      this.#performanceProbeErrorCount += 1;
+      this.#report('performance-probe-error', {
+        method: 'renderer.getPerformanceSnapshot',
+        message: error?.message ?? String(error),
+      });
+    }
+    try {
+      const memory = createPresentationMemorySnapshot(
+        this.#composition.performanceMemoryProvider(),
+      );
+      resources = mergePresentationMemorySnapshot(resources, memory);
+    } catch (error) {
+      this.#performanceProbeErrorCount += 1;
+      this.#report('performance-probe-error', {
+        method: 'performanceMemoryProvider',
+        message: error?.message ?? String(error),
+      });
+    }
+    this.#lastPublishTelemetry = Object.freeze({
+      rendered: rendered !== false,
+      renderDurationMs: renderStartedAtMs !== null
+        && renderEndedAtMs !== null
+        && renderEndedAtMs >= renderStartedAtMs
+        ? renderEndedAtMs - renderStartedAtMs
+        : null,
+      resources,
+    });
     if (rendered === false) {
       this.#contextLost = true;
       if (this.#state !== PRODUCT_PRESENTATION_SESSION_STATE.STARTING) {
@@ -391,11 +529,16 @@ export class ProductPresentationSession {
     if (this.#flow === null) {
       return Promise.reject(new Error('ProductPresentationSession 尚未完成启动。'));
     }
+    if (
+      intent?.id === PRODUCT_UI_INTENT_ID.START_MATCH
+      || intent?.id === PRODUCT_UI_INTENT_ID.REQUEST_MATCH
+      || intent?.id === PRODUCT_UI_INTENT_ID.REQUEST_REMATCH
+    ) this.#markPerformanceMilestone('first-match-requested');
     return this.#flow.dispatch(intent).then(
       (snapshot) => {
         if (snapshot === null || this.#isTerminal() || this.#destroyRequested) return snapshot;
         try {
-          this.#publish(snapshot, 0);
+          this.#publish(snapshot, 0, { forceRender: true });
           return this.#lastSnapshot;
         } catch (error) {
           throw this.#fail(error);
@@ -411,14 +554,23 @@ export class ProductPresentationSession {
   }
 
   async #initialize() {
+    this.#renderPacer = validateRenderPacer(this.#composition.renderPacerFactory({
+      qualityDefinition: this.#composition.qualityDefinition,
+    }));
+    this.#performanceProbe = this.#composition.performanceProbeFactory();
+    validatePerformanceProbe(this.#performanceProbe);
+    const probeStartedAtMs = this.#performanceNow();
+    if (probeStartedAtMs !== null) this.#observePerformance('start', probeStartedAtMs);
     this.#canvas = validateCanvas(this.#composition.platform.createCanvas());
     this.#renderer = this.#composition.rendererFactory({
       canvas: this.#canvas,
       platform: this.#composition.platform,
+      qualityDefinition: this.#composition.qualityDefinition,
     });
     validateRenderer(this.#renderer);
     this.#bindLifecycle();
     await this.#renderer.load();
+    this.#markPerformanceMilestone('renderer-ready');
     if (this.#destroyRequested || this.#state === PRODUCT_PRESENTATION_SESSION_STATE.DESTROYED) {
       throw new Error('ProductPresentationSession 启动已取消。');
     }
@@ -435,6 +587,7 @@ export class ProductPresentationSession {
       diagnosticSink: (detail) => this.#report('product', { detail }),
     });
     validateController(this.#controller);
+    this.#markPerformanceMilestone('controller-ready');
     let sampler = this.#createSampler();
     try {
       this.#inputRouter = this.#composition.inputRouterFactory({
@@ -492,7 +645,7 @@ export class ProductPresentationSession {
 
     this.#lastSnapshot = this.#flow.getSnapshot();
     this.#updateInputMode(this.#lastSnapshot);
-    this.#publish(this.#lastSnapshot, 0);
+    this.#publish(this.#lastSnapshot, 0, { forceRender: true });
     const startingFlow = this.#flow.start();
     await Promise.resolve();
     this.#inputAdapter.start();
@@ -509,7 +662,8 @@ export class ProductPresentationSession {
       heartbeatNow,
       this.#composition.profileLeaseHeartbeatIntervalMs,
     );
-    this.#publish(this.#lastSnapshot ?? this.#flow.getSnapshot(), 0);
+    this.#publish(this.#lastSnapshot ?? this.#flow.getSnapshot(), 0, { forceRender: true });
+    this.#markPerformanceMilestone('interactive');
     this.#syncPauseState();
   }
 
@@ -550,18 +704,24 @@ export class ProductPresentationSession {
       || this.#destroyRequested
       || this.#lastSnapshot?.viewModel?.terminal
     ) return false;
-    return this.#frameLoop.start(({ deltaSeconds }) => this.#onFrame(deltaSeconds));
+    return this.#frameLoop.start(({ timestamp, deltaSeconds }) => (
+      this.#onFrame(timestamp, deltaSeconds)
+    ));
   }
 
-  #onFrame(deltaSeconds) {
+  #onFrame(timestamp, deltaSeconds) {
     if (this.#destroyRequested) return false;
     if (this.#processingFrame) throw new Error('ProductPresentationSession frame 不可重入。');
     this.#processingFrame = true;
     try {
       if (this.#resizePending) this.#applyResize();
       let snapshot = this.#heartbeatIfDue();
+      let coreSteps = 0;
+      let droppedSeconds = 0;
       if (snapshot.viewModel.activeState === PRODUCT_SESSION_STATE.IN_MATCH) {
         const batch = this.#accumulator.push(deltaSeconds);
+        coreSteps = batch.steps;
+        droppedSeconds = batch.droppedSeconds;
         if (batch.droppedSeconds > 0) {
           this.#report('presentation-backlog-dropped', {
             droppedSeconds: batch.droppedSeconds,
@@ -577,6 +737,24 @@ export class ProductPresentationSession {
         this.#accumulator.reset();
       }
       this.#publish(snapshot, deltaSeconds);
+      if (
+        !this.#firstMatchMilestoneRecorded
+        && snapshot.viewModel.activeState === PRODUCT_SESSION_STATE.IN_MATCH
+      ) {
+        this.#firstMatchMilestoneRecorded = this.#markPerformanceMilestone(
+          'first-match-ready',
+          timestamp,
+        );
+      }
+      this.#observePerformance('recordFrame', {
+        timestampMs: timestamp,
+        deltaSeconds,
+        coreSteps,
+        droppedSeconds,
+        rendered: this.#lastPublishTelemetry?.rendered ?? false,
+        renderDurationMs: this.#lastPublishTelemetry?.renderDurationMs ?? null,
+        resources: this.#lastPublishTelemetry?.resources ?? null,
+      });
       return !this.#hidden
         && !this.#contextLost
         && !this.#externallyPaused
@@ -619,7 +797,7 @@ export class ProductPresentationSession {
     }
     this.#applyResize();
     if (this.#lastSnapshot && !this.#hidden && !this.#contextLost) {
-      this.#publish(this.#lastSnapshot, 0);
+      this.#publish(this.#lastSnapshot, 0, { forceRender: true });
     }
   }
 
@@ -642,8 +820,9 @@ export class ProductPresentationSession {
     this.#inputRouter.resume();
     this.#updateInputMode(this.#lastSnapshot);
     this.#accumulator.reset();
+    this.#renderPacer.reset();
     this.#state = PRODUCT_PRESENTATION_SESSION_STATE.RUNNING;
-    this.#publish(this.#lastSnapshot, 0);
+    this.#publish(this.#lastSnapshot, 0, { forceRender: true });
     this.#startFrameLoop();
   }
 
@@ -664,6 +843,53 @@ export class ProductPresentationSession {
     return this.#lastSnapshot;
   }
 
+  getPerformanceSnapshot() {
+    let probe = this.#lastPerformanceSnapshot;
+    if (this.#performanceProbe !== null) {
+      try { probe = this.#performanceProbe.getSnapshot(); } catch (error) {
+        this.#performanceProbeErrorCount += 1;
+        this.#report('performance-probe-error', {
+          method: 'getSnapshot',
+          message: error?.message ?? String(error),
+        });
+      }
+    }
+    return Object.freeze({
+      qualityDefinitionId: this.#composition.qualityDefinition.id,
+      qualityDefinitionHash: this.#composition.qualityDefinition.getContentHash(),
+      observerErrorCount: this.#performanceProbeErrorCount,
+      observedMatchCount: this.#performanceObservedMatchCount,
+      lifecycle: Object.freeze({ ...this.#performanceLifecycleCounters }),
+      probe,
+    });
+  }
+
+  #finalizePerformanceProbe() {
+    if (this.#performanceProbe === null) return this.getPerformanceSnapshot();
+    const stoppedAtMs = this.#performanceNow();
+    if (stoppedAtMs !== null) this.#observePerformance('stop', stoppedAtMs);
+    try { this.#lastPerformanceSnapshot = this.#performanceProbe.getSnapshot(); } catch (error) {
+      this.#performanceProbeErrorCount += 1;
+      this.#report('performance-probe-error', {
+        method: 'finalize.getSnapshot',
+        message: error?.message ?? String(error),
+      });
+    }
+    try { this.#performanceProbe.destroy(); } catch (error) {
+      this.#performanceProbeErrorCount += 1;
+      this.#report('performance-probe-error', {
+        method: 'finalize.destroy',
+        message: error?.message ?? String(error),
+      });
+    }
+    this.#performanceProbe = null;
+    return this.getPerformanceSnapshot();
+  }
+
+  finishPerformanceCapture() {
+    return this.#finalizePerformanceProbe();
+  }
+
   getDebugSnapshot() {
     return Object.freeze({
       state: this.#state,
@@ -680,6 +906,8 @@ export class ProductPresentationSession {
       input: this.#inputRouter?.getDebugSnapshot?.() ?? null,
       frameLoop: this.#frameLoop?.getDebugSnapshot?.() ?? null,
       accumulator: this.#accumulator?.getDebugSnapshot?.() ?? null,
+      renderPacer: this.#renderPacer?.getDebugSnapshot?.() ?? null,
+      performance: this.getPerformanceSnapshot(),
       nextProfileLeaseHeartbeatAtMs: this.#nextProfileLeaseHeartbeatAtMs,
     });
   }
@@ -694,6 +922,9 @@ export class ProductPresentationSession {
         else {
           try { this.#frameLoop.destroy(); this.#frameLoop = null; } catch (error) { errors.push(error); }
         }
+      }
+      if (this.#performanceProbe !== null) {
+        this.#finalizePerformanceProbe();
       }
       if (this.#inputAdapter !== null) {
         if (typeof this.#inputAdapter?.destroy !== 'function') this.#inputAdapter = null;
@@ -733,6 +964,8 @@ export class ProductPresentationSession {
       }
       if (this.#renderer === null && this.#bindings.length === 0) this.#canvas = null;
       this.#accumulator = null;
+      this.#renderPacer = null;
+      this.#lastPublishTelemetry = null;
       this.#lastSnapshot = null;
       this.#inputMatchActive = false;
       this.#hasAssignedMatchSampler = false;

@@ -85,6 +85,7 @@ export class ProductRenderer {
   constructor({
     canvas,
     platform,
+    qualityDefinition,
     gameplayRendererFactory = (args) => new ArenaGreyboxRenderer(args),
     uiSurfaceFactory,
   }) {
@@ -106,6 +107,7 @@ export class ProductRenderer {
       this.#gameplayRenderer = gameplayRendererFactory({
         canvas,
         platform,
+        ...(qualityDefinition === undefined ? {} : { qualityDefinition }),
       });
       validateGameplayRenderer(this.#gameplayRenderer);
       this.#uiSurface = uiSurfaceFactory({ canvas, platform });
@@ -271,6 +273,11 @@ export class ProductRenderer {
       gameplay: this.#gameplayRenderer?.getDebugSnapshot?.() ?? null,
       ui: this.#uiSurface?.getDebugSnapshot?.() ?? null,
     });
+  }
+
+  getPerformanceSnapshot() {
+    this.#assertUsable();
+    return this.#gameplayRenderer?.getPerformanceSnapshot?.() ?? null;
   }
 
   dispose() {
