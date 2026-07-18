@@ -1,8 +1,13 @@
 import { QuickMatchService } from '../../matchmaking/quick-match-service.js';
+import { ARENA_V1_BALANCE_DEFINITION } from '../../content/arena-v1-balance.js';
 import {
   combineCleanupFailure,
   normalizeThrownError,
 } from '../../lifecycle-error.js';
+import {
+  assertPlainRecord,
+  cloneFrozenData,
+} from '../../rules/definition-utils.js';
 import { ARENA_V1_PLAYER_PROFILE_DEFINITION } from '../content/arena-v1-player-profile-definition.js';
 import {
   ARENA_V1_CONTENT_REPLACEMENT_REGISTRY,
@@ -37,6 +42,18 @@ function report(sink, value) {
     // Diagnostics cannot gain ownership of product or match lifecycle.
   }
 }
+
+function createProductMatchConfig(value) {
+  const overrides = value === undefined
+    ? Object.freeze({})
+    : cloneFrozenData(value, 'Arena V1 Product matchConfig');
+  assertPlainRecord(overrides, 'Arena V1 Product matchConfig');
+  return cloneFrozenData({
+    ...ARENA_V1_BALANCE_DEFINITION.matchConfig,
+    ...overrides,
+  }, 'Arena V1 Product resolved matchConfig');
+}
+
 function cleanupOwned(values) {
   const errors = [];
   for (const value of values) {
@@ -55,11 +72,12 @@ export function createArenaV1ProductSession({
   ownerId,
   wallNow,
   seedSource,
-  matchConfig = {},
+  matchConfig,
   keyPrefix,
   diagnosticSink = null,
 } = {}) {
   const sink = validateDiagnosticSink(diagnosticSink);
+  const resolvedMatchConfig = createProductMatchConfig(matchConfig);
   if (!seedSource || typeof seedSource.nextSeed !== 'function') {
     throw new TypeError('Arena V1 Product 需要 match seedSource.nextSeed()。');
   }
@@ -97,7 +115,10 @@ export function createArenaV1ProductSession({
       contentPoolProvider,
       diagnosticSink: (detail) => report(sink, { type: 'match-assignment', detail }),
     });
-    const matchFactory = new QuickMatchProductFactory({ quickMatchService, matchConfig });
+    const matchFactory = new QuickMatchProductFactory({
+      quickMatchService,
+      matchConfig: resolvedMatchConfig,
+    });
     matchCoordinator = new ProductMatchCoordinator({ matchFactory });
     const rewardCommitter = new RewardCommitter({
       registry: ARENA_V1_PROGRESSION_REGISTRY,

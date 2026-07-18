@@ -39,3 +39,5 @@ arena-v1-balance-lives-exploration-v1--<source-commit-short>.json
 | `arena-v1.balance-lives-11.validation.v1` | `594d49ec8eba` | `81040fb7` / `2ed504b0` / `7581b210` | 300 paired case、900 局、15 replay check、0 case/Metric Gate 失败 | `passed`，`freezeEligible=true`；可提升为 Product 默认 |
 
 机器可读证据：[11 条命 validation Report Bundle](arena-v1-balance-lives-11-validation-v1--594d49ec8eba--81040fb7.json)。该报告验证候选配置，不自动修改 Product 默认；提升必须另有代码与回归门。
+
+Product 提升由共享 Definition `arena-v1.balance-lives-11.v1` 承载；它只改变 Product 默认组合，不覆盖历史报告，也不修改 MatchCore 通用默认。产品权威快照回归门要求双方初始生命均为 11。

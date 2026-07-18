@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { ARENA_V1_BALANCE_DEFINITION } from '../../../src/arena/content/arena-v1-balance.js';
 import {
   ARENA_EXPERIMENT_DEFINITION_LEGACY_SCHEMA_VERSION,
   ARENA_EXPERIMENT_DEFINITION_SCHEMA_VERSION,
@@ -1008,6 +1009,10 @@ test('S9.3b validation fixes the machine-selected candidate on the isolated 300-
   assert.equal(definition.id, ARENA_STAGE9_BALANCE_VALIDATION_EXPERIMENT_ID);
   assert.equal(definition.candidate.id, ARENA_STAGE9_BALANCE_VALIDATION_CANDIDATE_ID);
   assert.equal(definition.candidate.matchConfig.livesPerParticipant, 11);
+  assert.equal(
+    definition.candidate.matchConfig.livesPerParticipant,
+    ARENA_V1_BALANCE_DEFINITION.matchConfig.livesPerParticipant,
+  );
   assert.deepEqual(definition.getSeeds(), expectedSeeds);
   assert.equal(definition.getSeeds().length, 300);
   assert.equal(

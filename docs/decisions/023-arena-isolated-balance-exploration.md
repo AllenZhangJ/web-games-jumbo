@@ -1,6 +1,6 @@
 # ADR-023：Arena S9.3b 使用隔离 seed 的单变量候选探索
 
-- 状态：已接受；11 条命已通过隔离 validation，Product 提升待落地
+- 状态：已接受并实施；11 条命已通过隔离 validation 并提升为 Product 默认
 - 日期：2026-07-18
 
 ## 背景
@@ -63,11 +63,10 @@ clean source `594d49ec8ebaa1bd6ba588ad9be70d6546fa04b0` 上的 300 paired valida
 - easy/normal/hard 工程胜率为 48.00%/53.00%/60.67%，三档 capability、life pressure 与 score-rate 排序全部通过。
 - 三件装备数量/占比、未知装备事件、300 个 unique final hash、15 条严格回放与 Bot 隐藏分配分布全部通过。
 
-验证结果与 exploration 的目标时长占比（87.22%）和中位数（7,439 tick）接近，11 条命不再只是探索样本上的胜者，已具备提升为 Product 默认的证据。提升时不修改 MatchCore 通用默认，而新增共享不可变 Balance Definition 并由 Product 组合消费。
+验证结果与 exploration 的目标时长占比（87.22%）和中位数（7,439 tick）接近，11 条命不再只是探索样本上的胜者。共享不可变 Definition `arena-v1.balance-lives-11.v1` 现由 validation 与 Product 组合共同消费；Product 默认提升不修改 MatchCore 通用默认，显式覆盖仍保留给测试与未来 Mode。
 
 ## 剩余条件
 
-- 将已验证的 11 条命配置提升为 Product 默认，并验证 Product 实际生成的权威快照。
 - 后续为长时实验设计确定性进度证据与可安全续跑边界；本次已完成证据不因运行耗时重写。
 
 固定 validation Definition 与门禁见 [11 条命隔离验证预注册](../research/arena-stage9-s9.3b-lives-11-validation-preregistration.md)。

@@ -1,4 +1,5 @@
 import { assertKnownKeys } from '../rules/definition-utils.js';
+import { ARENA_V1_BALANCE_DEFINITION } from '../content/arena-v1-balance.js';
 import {
   createArenaBalanceCandidateExperimentDefinition,
   createArenaBalanceCandidateExperimentRegistries,
@@ -18,9 +19,8 @@ export const ARENA_STAGE9_BALANCE_VALIDATION_CANDIDATE_ID =
   'arena-v1.balance-lives-11.validation.v1';
 export const ARENA_STAGE9_BALANCE_VALIDATION_REPLAY_SAMPLE_COUNT = 5;
 export const ARENA_STAGE9_BALANCE_SELECTION_BUNDLE_HASH = '6322f4fa';
-export const ARENA_STAGE9_BALANCE_VALIDATION_CONFIG = Object.freeze({
-  livesPerParticipant: 11,
-});
+export const ARENA_STAGE9_BALANCE_VALIDATION_CONFIG =
+  ARENA_V1_BALANCE_DEFINITION.matchConfig;
 
 const DEFINITION_OPTIONS_KEYS = new Set(['sourceCommit', 'sourceDirty']);
 

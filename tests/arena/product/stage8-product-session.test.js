@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createArenaV1ProductSession } from '../../../src/arena/product/composition/arena-v1-product-composition.js';
+import { ARENA_V1_BALANCE_DEFINITION } from '../../../src/arena/content/arena-v1-balance.js';
 import { ProductSessionController } from '../../../src/arena/product/composition/product-session-controller.js';
 import { ARENA_V1_PLAYER_PROFILE_DEFINITION } from '../../../src/arena/product/content/arena-v1-player-profile-definition.js';
 import { ProductMatchCoordinator } from '../../../src/arena/product/matchmaking/product-match-coordinator.js';
@@ -568,6 +569,13 @@ test('Arena V1 product composition runs a complete headless 1v1 without leaking 
   await controller.requestMatch();
   controller.beginMatch();
   const first = controller.stepMatch();
+  assert.equal(ARENA_V1_BALANCE_DEFINITION.matchConfig.livesPerParticipant, 11);
+  assert.equal(Object.isFrozen(ARENA_V1_BALANCE_DEFINITION), true);
+  assert.equal(Object.isFrozen(ARENA_V1_BALANCE_DEFINITION.matchConfig), true);
+  assert.deepEqual(
+    first.matchStep.snapshot.participants.map(({ lives }) => lives),
+    [11, 11],
+  );
   const tick = first.matchStep.snapshot.tick;
   controller.hide();
   assert.throws(() => controller.stepMatch(), /挂起/);
@@ -591,6 +599,18 @@ test('Arena V1 product composition runs a complete headless 1v1 without leaking 
   assert.equal(controller.state, PRODUCT_SESSION_STATE.READY);
   controller.destroy();
   assert.equal(controller.getSnapshot().profile, null);
+});
+
+test('Arena V1 product balance defaults reject malformed match config before acquiring resources', () => {
+  const seedSource = { nextSeed: () => 1 };
+  assert.throws(() => createArenaV1ProductSession({
+    seedSource,
+    matchConfig: null,
+  }), /matchConfig.*普通对象/);
+  assert.throws(() => createArenaV1ProductSession({
+    seedSource,
+    matchConfig: [],
+  }), /matchConfig.*普通对象/);
 });
 
 test('Arena V1 composition persists character selection across a clean product restart', async () => {
