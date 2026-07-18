@@ -28,6 +28,7 @@
     "arena:experiment:movement": "node scripts/arena-experiment.mjs --suite=movement-stress --cases=100 --replay-samples=3 --summary",
     "arena:experiment:bot": "node scripts/arena-experiment.mjs --suite=bot-capability --cases=300 --replay-samples=3 --summary",
     "arena:experiment:balance": "node scripts/arena-experiment.mjs --suite=balance-candidate --summary",
+    "arena:experiment:balance:explore": "node scripts/arena-balance-exploration.mjs",
     "arena:experiment:report:verify": "node scripts/arena-experiment-report.mjs",
     "arena:device:evidence": "node scripts/arena-device-evidence.mjs",
     "arena:product:device:evidence": "node scripts/arena-device-evidence.mjs --definition arena.stage8.product-device-acceptance.v1",

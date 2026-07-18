@@ -8,6 +8,7 @@ import {
 } from '../../../src/arena/experiment/experiment-definition.js';
 import {
   ARENA_EXPERIMENT_OUTCOME,
+  createArenaExperimentReport,
 } from '../../../src/arena/experiment/experiment-report.js';
 import {
   createArenaExperimentReportBundle,
@@ -53,6 +54,22 @@ import {
   ARENA_STAGE9_BALANCE_POLICY_V1,
   createArenaStage9BalanceExperimentDefinition,
 } from '../../../src/arena/experiment/arena-balance-experiment-composition.js';
+import {
+  ARENA_STAGE9_BALANCE_EXPLORATION_CANDIDATES,
+  createArenaStage9BalanceExplorationDefinitions,
+  createArenaStage9BalanceExplorationSeeds,
+  createArenaStage9BalanceValidationSeeds,
+} from '../../../src/arena/experiment/arena-balance-exploration-composition.js';
+import {
+  createArenaBalanceExplorationBundle,
+  readArenaBalanceExplorationBundle,
+} from '../../../src/arena/experiment/arena-balance-exploration-bundle.js';
+import {
+  createArenaBalanceExplorationSelection,
+} from '../../../src/arena/experiment/arena-balance-exploration-selection.js';
+import {
+  createArenaStage9BotSeeds,
+} from '../../../src/arena/experiment/arena-bot-capability-seeds.js';
 import {
   ARENA_BALANCE_CANDIDATE_COLLECTOR_ID,
   ARENA_BALANCE_CANDIDATE_COLLECTOR_VERSION,
@@ -944,6 +961,34 @@ test('S9.3 balance definition pre-registers immutable fixed samples and feasible
   const unknown = structuredClone(ARENA_STAGE9_BALANCE_POLICY_V1);
   unknown.duration.futureThreshold = 1;
   assert.throws(() => createArenaBalancePolicy(unknown), /不支持字段 futureThreshold/);
+
+  const recordedBaseline = createArenaStage9BalanceExperimentDefinition({
+    sourceCommit: 'cb1b3744c06e98412296f885a1fbaa57a069a5d0',
+    sourceDirty: false,
+  });
+  assert.equal(recordedBaseline.getContentHash(), 'edbd9f89');
+});
+
+test('S9.3b exploration uses immutable candidates and disjoint baseline/exploration/validation seeds', () => {
+  const baseline = createArenaStage9BotSeeds(ARENA_STAGE9_BALANCE_CASE_COUNT);
+  const exploration = createArenaStage9BalanceExplorationSeeds();
+  const validation = createArenaStage9BalanceValidationSeeds();
+  const all = [...baseline, ...exploration, ...validation];
+  assert.equal(new Set(all).size, all.length);
+
+  const definitions = createArenaStage9BalanceExplorationDefinitions({
+    sourceCommit: COMMIT,
+    sourceDirty: false,
+  });
+  assert.equal(definitions.length, 3);
+  assert.deepEqual(
+    definitions.map(({ candidate }) => candidate.matchConfig.livesPerParticipant),
+    [9, 11, 13],
+  );
+  assert.ok(definitions.every((definition) => (
+    definition.getSeeds().length === exploration.length
+  )));
+  assert.ok(definitions.every(({ workload }) => workload.parameters.maximumEventsPerCase === 100_000));
 });
 
 function createSyntheticBalancePolicy() {
@@ -981,6 +1026,184 @@ function createSyntheticBalancePolicy() {
     },
   };
 }
+
+function createSyntheticExplorationReportBundle(candidate, observed, { caseFailed = false } = {}) {
+  const definition = createArenaExperimentDefinition(definitionValue({
+    id: candidate.experimentId,
+    seedSet: { kind: 'explicit', values: [1] },
+    candidate: {
+      ...definitionValue().candidate,
+      id: candidate.candidateId,
+      matchConfig: {
+        livesPerParticipant: candidate.livesPerParticipant,
+      },
+    },
+    collectors: [
+      {
+        id: ARENA_BALANCE_CANDIDATE_COLLECTOR_ID,
+        version: ARENA_BALANCE_CANDIDATE_COLLECTOR_VERSION,
+        parameters: {},
+      },
+      {
+        id: 'arena.stage9.bot-capability',
+        version: 1,
+        parameters: {},
+      },
+    ],
+  }));
+  const balanceChecks = [
+    { id: 'sample.completed-paired-cases', passed: true },
+    { id: 'difficulty.easy.sample-complete', passed: true },
+    { id: 'difficulty.normal.sample-complete', passed: true },
+    { id: 'difficulty.hard.sample-complete', passed: true },
+    { id: 'equipment.no-untracked-events', passed: true },
+    { id: 'duration.target-share', passed: observed.targetDurationShare === 1 },
+  ];
+  const report = createArenaExperimentReport(definition, {
+    generatedAt: '2026-07-18T00:00:00.000Z',
+    environment: ENVIRONMENT,
+    cases: [caseFailed ? {
+      seed: 1,
+      status: 'failed',
+      ticks: 0,
+      eventCount: 0,
+      finalHash: null,
+      result: null,
+      failure: { name: 'SyntheticFailure', message: 'synthetic case failure' },
+    } : {
+      seed: 1,
+      status: 'completed',
+      ticks: 100,
+      eventCount: 1,
+      finalHash: '1234abcd',
+      result: { outcome: 'synthetic' },
+      failure: null,
+    }],
+    metrics: [
+      {
+        id: ARENA_BALANCE_CANDIDATE_COLLECTOR_ID,
+        version: ARENA_BALANCE_CANDIDATE_COLLECTOR_VERSION,
+        data: {
+          gate: createArenaMetricGate(balanceChecks),
+          policy: createSyntheticBalancePolicy(),
+          derived: {
+            overall: {
+              targetDurationShare: observed.targetDurationShare,
+              ultraShortShare: observed.ultraShortShare,
+              timeoutShare: observed.timeoutShare,
+              creditedEliminationShare: observed.creditedEliminationShare,
+              equipmentAttributedEliminationShare:
+                observed.equipmentAttributedEliminationShare,
+              uncreditedEnvironmentEliminationShare: observed.environmentShare,
+              medianTicks: observed.medianTicks,
+            },
+          },
+        },
+      },
+      {
+        id: 'arena.stage9.bot-capability',
+        version: 1,
+        data: { gate: createArenaMetricGate([{ id: 'bot.valid', passed: true }]) },
+      },
+    ],
+  });
+  return createArenaExperimentReportBundle({
+    suite: 'balance-candidate',
+    definition,
+    report,
+  });
+}
+
+test('S9.3b exploration selects only by pre-registered penalty and rejects bundle tampering', () => {
+  const reportBundles = [
+    createSyntheticExplorationReportBundle(
+      ARENA_STAGE9_BALANCE_EXPLORATION_CANDIDATES[0],
+      {
+        targetDurationShare: 0.4,
+        ultraShortShare: 0.2,
+        timeoutShare: 0,
+        creditedEliminationShare: 0.9,
+        equipmentAttributedEliminationShare: 0.7,
+        environmentShare: 0.1,
+        medianTicks: 80,
+      },
+    ),
+    createSyntheticExplorationReportBundle(
+      ARENA_STAGE9_BALANCE_EXPLORATION_CANDIDATES[1],
+      {
+        targetDurationShare: 1,
+        ultraShortShare: 0,
+        timeoutShare: 0,
+        creditedEliminationShare: 0.9,
+        equipmentAttributedEliminationShare: 0.5,
+        environmentShare: 0.5,
+        medianTicks: 100,
+      },
+    ),
+    createSyntheticExplorationReportBundle(
+      ARENA_STAGE9_BALANCE_EXPLORATION_CANDIDATES[2],
+      {
+        targetDurationShare: 0.8,
+        ultraShortShare: 0,
+        timeoutShare: 0.2,
+        creditedEliminationShare: 0.9,
+        equipmentAttributedEliminationShare: 0.5,
+        environmentShare: 0.5,
+        medianTicks: 150,
+      },
+    ),
+  ];
+  const expectedCandidates = ARENA_STAGE9_BALANCE_EXPLORATION_CANDIDATES;
+  const selection = createArenaBalanceExplorationSelection(reportBundles, {
+    expectedCandidates,
+  });
+  assert.equal(
+    selection.selectedCandidateId,
+    ARENA_STAGE9_BALANCE_EXPLORATION_CANDIDATES[1].candidateId,
+  );
+  assert.equal(selection.rankings[0].penalty, 0);
+
+  const bundle = createArenaBalanceExplorationBundle({
+    id: 'arena.stage9.test-balance-exploration.v1',
+    expectedCandidates,
+    reportBundles,
+  });
+  assert.deepEqual(readArenaBalanceExplorationBundle(bundle), bundle);
+  const tampered = structuredClone(bundle);
+  tampered.selection.selectedCandidateId = expectedCandidates[0].candidateId;
+  assert.throws(() => readArenaBalanceExplorationBundle(tampered), /selection 校验失败/);
+
+  const failedReportBundles = [...reportBundles];
+  failedReportBundles[0] = createSyntheticExplorationReportBundle(
+    ARENA_STAGE9_BALANCE_EXPLORATION_CANDIDATES[0],
+    {
+      targetDurationShare: null,
+      ultraShortShare: null,
+      timeoutShare: null,
+      creditedEliminationShare: null,
+      equipmentAttributedEliminationShare: null,
+      environmentShare: null,
+      medianTicks: null,
+    },
+    { caseFailed: true },
+  );
+  const failurePreservingBundle = createArenaBalanceExplorationBundle({
+    id: 'arena.stage9.test-balance-exploration-with-failure.v1',
+    expectedCandidates,
+    reportBundles: failedReportBundles,
+  });
+  assert.equal(
+    failurePreservingBundle.selection.selectedCandidateId,
+    ARENA_STAGE9_BALANCE_EXPLORATION_CANDIDATES[1].candidateId,
+  );
+  const failedRanking = failurePreservingBundle.selection.rankings.find(({ candidateId }) => (
+    candidateId === ARENA_STAGE9_BALANCE_EXPLORATION_CANDIDATES[0].candidateId
+  ));
+  assert.equal(failedRanking.eligible, false);
+  assert.equal(failedRanking.metricsAvailable, false);
+  assert.equal(readArenaBalanceExplorationBundle(failurePreservingBundle).bundleHash,
+    failurePreservingBundle.bundleHash);
+});
 
 function createSyntheticBalanceCollector() {
   const policy = createSyntheticBalancePolicy();
