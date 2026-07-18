@@ -927,10 +927,10 @@ test('Stage 9 readiness CLI 校验未接入材料完整性但不会把声明当 
   const directory = await mkdtemp(path.join(os.tmpdir(), 'arena-stage9-readiness-'));
   try {
     const definition = createArenaStage9RcHandoffV1Definition();
-    const gate = definition.requireGate(ARENA_STAGE9_RC_HANDOFF_GATE_ID.DEFECTS);
+    const gate = definition.requireGate(ARENA_STAGE9_RC_HANDOFF_GATE_ID.FORMAL_ASSETS);
     const materialBytes = Buffer.from('{"status":"ready"}\n');
     const material = {
-      path: 'defects-output.json',
+      path: 'assets-output.json',
       sha256: createHash('sha256').update(materialBytes).digest('hex'),
       byteLength: materialBytes.byteLength,
     };
@@ -947,7 +947,7 @@ test('Stage 9 readiness CLI 校验未接入材料完整性但不会把声明当 
         producerId: gate.producerId,
         requirementHash: gate.requirementHash,
         commit: COMMIT,
-        buildId: null,
+        buildId: BUILD_ID,
         status: ARENA_RELEASE_EVIDENCE_STATUS.READY,
         resultHash: 'abcdef12',
         materials: [material],
@@ -968,6 +968,7 @@ test('Stage 9 readiness CLI 校验未接入材料完整性但不会把声明当 
     assert.deepEqual(output.supportedProducerIds, [
       'arena:build:budget',
       'arena:build:verify',
+      'arena:defects:verify',
       'arena:device:evidence',
       'arena:experiment:report:verify',
       'arena:human-fairness:evidence',

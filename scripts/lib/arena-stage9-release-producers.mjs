@@ -11,6 +11,9 @@ import {
   createArenaBuildIntegrityReleaseResult,
 } from '../../src/arena-release/build-release-evidence.js';
 import {
+  createArenaDefectReleaseResult,
+} from '../../src/arena-release/defect-release-evidence.js';
+import {
   createArenaPerformanceDeviceReleaseResult,
   createArenaStage6DeviceReleaseResult,
   createArenaStage8ProductDeviceReleaseResult,
@@ -70,10 +73,12 @@ const MAXIMUM_REGRESSION_REPORT_BYTES = 1024 * 1024;
 const MAXIMUM_DEVICE_BUNDLE_BYTES = 5 * 1024 * 1024;
 const MAXIMUM_HUMAN_BUNDLE_BYTES = 5 * 1024 * 1024;
 const MAXIMUM_HUMAN_INGEST_MANIFEST_BYTES = 5 * 1024 * 1024;
+const MAXIMUM_DEFECT_LEDGER_BYTES = 5 * 1024 * 1024;
 
 export const ARENA_STAGE9_SUPPORTED_RELEASE_PRODUCER_IDS = Object.freeze([
   'arena:build:budget',
   'arena:build:verify',
+  'arena:defects:verify',
   'arena:device:evidence',
   'arena:experiment:report:verify',
   'arena:human-fairness:evidence',
@@ -91,6 +96,7 @@ const SUPPORTED_SOURCE_GATES = new Set([
   ARENA_STAGE9_RC_HANDOFF_GATE_ID.GOLDEN_REPLAY,
   ARENA_STAGE9_RC_HANDOFF_GATE_ID.REGRESSION,
   ARENA_STAGE9_RC_HANDOFF_GATE_ID.BALANCE_VALIDATION,
+  ARENA_STAGE9_RC_HANDOFF_GATE_ID.DEFECTS,
 ]);
 const SUPPORTED_EXTERNAL_BUILD_GATES = new Set([
   ARENA_STAGE9_RC_HANDOFF_GATE_ID.STAGE6_DEVICE,
@@ -248,6 +254,25 @@ async function verifyRegression(statement, verifiedMaterialsByPath, commit) {
     MAXIMUM_REGRESSION_REPORT_BYTES,
   );
   return createArenaRegressionReleaseResult({ commit, report: reportRead.value });
+}
+
+async function verifyDefects(statement, verifiedMaterialsByPath, bundle) {
+  const material = requireSingleNamedMaterial(
+    statement,
+    'defect-ledger.json',
+    'Defect release evidence',
+  );
+  const ledgerRead = await readVerifiedJsonMaterial(
+    material,
+    verifiedMaterialsByPath,
+    `defect ledger ${material.path}`,
+    MAXIMUM_DEFECT_LEDGER_BYTES,
+  );
+  return createArenaDefectReleaseResult({
+    commit: bundle.commit,
+    sourceDirty: bundle.sourceDirty,
+    ledger: ledgerRead.value,
+  });
 }
 
 function requireSingleNamedMaterial(statement, fileName, label) {
@@ -485,6 +510,8 @@ export async function verifyArenaStage9ReleaseProducerEvidence({
       result = await verifyBalanceValidation(statement, verifiedMaterialsByPath, bundle);
     } else if (statement.gateId === ARENA_STAGE9_RC_HANDOFF_GATE_ID.REGRESSION) {
       result = await verifyRegression(statement, verifiedMaterialsByPath, bundle.commit);
+    } else if (statement.gateId === ARENA_STAGE9_RC_HANDOFF_GATE_ID.DEFECTS) {
+      result = await verifyDefects(statement, verifiedMaterialsByPath, bundle);
     } else if (SUPPORTED_EXTERNAL_BUILD_GATES.has(statement.gateId)) {
       result = statement.gateId === ARENA_STAGE9_RC_HANDOFF_GATE_ID.HUMAN_FAIRNESS
         ? await verifyHumanFairnessEvidence(

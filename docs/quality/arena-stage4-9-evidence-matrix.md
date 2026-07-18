@@ -4,7 +4,7 @@
 
 本矩阵以 `arena.stage9.rc-handoff.v1` 为机器权威门集，说明当前工程证据能证明什么、还缺什么。`ready` 只允许由 Gate 指定的 producer 语义复验形成；材料存在、单测通过或文档写明“完成”均不能自动替代。
 
-当前为 S9.6b4：候选/证据/报告合同和材料完整性预检已完成，构建、黄金回放、平衡验证、组合回归、Stage 6/8 设备、性能和真人研究共九个 Gate 已启用语义复算；输入盲测、正式资产和缺陷账本仍缺 producer，四类外部门仍缺真实材料，因此还不存在可冻结的 S9.6 候选。
+当前为 S9.6b5a：候选/证据/报告合同和材料完整性预检已完成，十个 Gate 已启用语义复算；缺陷门已具备版本化账本和 producer，输入盲测与正式资产仍缺 producer，四类外部门仍缺真实材料，因此还不存在可冻结的 S9.6 候选。
 
 ## 当前矩阵
 
@@ -21,7 +21,7 @@
 | `stage9.stage8-product-device` | S8/S9.4 | 产品闭环 Device Definition、Canvas/DOM 正式入口、构建绑定及 release producer | 六目标设备正式 Record 与最终 Evidence Statement | incomplete（外部） |
 | `stage9.performance-device` | S9.4 | Quality Definition、Probe、Policy、Trace/Record/Report、六 target 及 release producer | 六目标设备十分钟/三局/内存/恢复证据与最终 Statement | incomplete（外部） |
 | `stage9.human-fairness` | S9.5 | 预注册三隐藏组、工作台、离线入库、Replay/Bot 逐 Tick 复验及 release producer | 至少 90 名合格完成者、270 局、退出/失效账本和最终 Report/Statement | incomplete（外部） |
-| `stage9.defects` | S9.6 | 自动回归和各阶段结果记录 | 版本化缺陷/已知问题/剩余风险账本及 producer | incomplete（工程） |
+| `stage9.defects` | S9.6 | 版本化 Defect Ledger、派生 Report、开放严重度/风险 owner/解决证据约束及 release producer | 最终 clean commit 的完整人工复核账本与 Evidence Statement | incomplete（候选材料） |
 
 ## 不可替代关系
 
@@ -34,4 +34,4 @@
 
 ## 下一工程批次
 
-S9.6b1-b4 已完成九个 producer。下一批补齐 Input Pilot、Asset 和 Defect 三类尚不存在的正式 evidence producer，并继续让真实 Device/Performance/Human 材料保持外部阻断。任何 producer 只能输出自己的窄证据，不能直接修改总 Report。
+S9.6b1-b5a 已完成十个 producer。下一批补齐 Input Pilot 的 build/E3 强绑定；Formal Assets 必须等待 S7.2～S7.5 真实资产、预算和许可合同，不能用 S7.1 程序化占位提前生成通过证据。任何 producer 只能输出自己的窄证据，不能直接修改总 Report。
