@@ -99,3 +99,5 @@ npm run arena:performance:evidence -- \
 ```
 
 退出码 `0` 且 Device Report 与 Performance Report 都为 `ready` 才能关闭 S9.4。退出码 `2` 表示证据不完整或真实失败；退出码 `1` 表示合同、身份、附件或 I/O 无效。任何一种都不能手工改成通过。
+
+进入 S9.6 候选时，`stage9.performance-device` Evidence Statement 只登记该目录的 `device-evidence.json` 顶层索引。Readiness producer 会复用上述 verifier 重新打开 Bundle 登记的 Manifest、Trace、日志、截图和录像，并重算 Device/Performance Report；不要把 CLI stdout 摘要当成发布材料，也不要把不完整 Bundle 声明成 `ready`。

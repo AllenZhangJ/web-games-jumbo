@@ -968,7 +968,11 @@ test('Stage 9 readiness CLI 校验未接入材料完整性但不会把声明当 
     assert.deepEqual(output.supportedProducerIds, [
       'arena:build:budget',
       'arena:build:verify',
+      'arena:device:evidence',
       'arena:experiment:report:verify',
+      'arena:human-fairness:evidence',
+      'arena:performance:evidence',
+      'arena:product:device:evidence',
       'arena:regression:evidence',
       'arena:replay:verify',
     ]);

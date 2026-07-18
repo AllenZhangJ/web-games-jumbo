@@ -96,3 +96,5 @@ CLI 会先重算 clean Web 构建 Manifest，再校验附件边界和 SHA-256，
 - `1`：合同、身份、路径、附件、Replay 或 I/O 无效。
 
 只有退出码 0、真实参与者记录、六目标 S9.4 设备证据同时齐备，才可进入 S9.5 冻结评审。任何自动化或内部演练数据都必须与正式 Bundle 隔离。
+
+进入 S9.6 候选时，`stage9.human-fairness` Evidence Statement 精确登记三个顶层索引：`human-fairness-evidence.json`、同目录的 `capture-package-manifest.json`，以及所绑定 clean Web 构建的 `arena-build-manifest.json`。Readiness producer 会从这些索引递归读回 Workspace、原始包、Replay 和构建产物；无需也不能用截断材料清单替代。样本不足的合法 Bundle 会稳定产生 `incomplete`，不会因为候选声明而升级。

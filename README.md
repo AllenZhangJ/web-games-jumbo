@@ -2,7 +2,7 @@
 
 一款以“左右选择数值运算 + 按住蓄力跳跃”为核心的竖屏小游戏。v3 保留现有数值策略、连续世界、真实落点、碰撞规则、测试和 Web/微信/抖音平台适配层，将原 Canvas 2D 表现层重构为 Three.js/WebGL2 三维场景。
 
-> **项目状态：** Web、微信、抖音默认入口已切换到 Arena V1 Product Session：独立轻量物理、1v1 MatchCore、隐藏本地机器人、三件装备、地图时间轴、语义移动/触控、程序化角色、HUD、角色选择、奖励和重赛已连成产品闭环。Web 使用语义 DOM，微信/抖音共享单 Canvas Product UI；Web `/greybox.html` 与小游戏 `game-greybox.js`/`build:greybox` 保留可执行回退。Stage 8 S8.1～S8.5.5 已落地；S8.5.6 六目标设备证据合同与三端构建 Manifest 已就绪，但微信/抖音开发者工具及两端 iOS/Android 真机 Record 尚未采集。Stage 9 S9.1～S9.3 已建立实验、Replay V5、fuzz、生命周期回归门与 11 条命 Product 默认；S9.4a 已建立 high/medium/low 质量 Definition、有界性能 Probe、六目标性能 Policy/证据和三端包体预算；S9.5a/b 已建立预注册真人研究、同 Product 采集端口、独立可恢复 Web 工作台、离线原子入库与逐 Tick Replay/Bot 复验；S9.6a 已固定 12 门 RC 交接，S9.6b1-b3 已让构建完整性、包体预算、黄金回放、平衡验证和组合回归五门语义复算，其余 Gate 仍保持未验证。正式双角色、六个真实 target Record、输入 A/B 真人盲测与至少 90 名合格完成者仍未完成。数值跳台 v3 代码与资产继续保留，两条领域代码保持隔离。
+> **项目状态：** Web、微信、抖音默认入口已切换到 Arena V1 Product Session：独立轻量物理、1v1 MatchCore、隐藏本地机器人、三件装备、地图时间轴、语义移动/触控、程序化角色、HUD、角色选择、奖励和重赛已连成产品闭环。Web 使用语义 DOM，微信/抖音共享单 Canvas Product UI；Web `/greybox.html` 与小游戏 `game-greybox.js`/`build:greybox` 保留可执行回退。Stage 8 S8.1～S8.5.5 已落地；S8.5.6 六目标设备证据合同与三端构建 Manifest 已就绪，但微信/抖音开发者工具及两端 iOS/Android 真机 Record 尚未采集。Stage 9 S9.1～S9.3 已建立实验、Replay V5、fuzz、生命周期回归门与 11 条命 Product 默认；S9.4a 已建立 high/medium/low 质量 Definition、有界性能 Probe、六目标性能 Policy/证据和三端包体预算；S9.5a/b 已建立预注册真人研究、同 Product 采集端口、独立可恢复 Web 工作台、离线原子入库与逐 Tick Replay/Bot 复验；S9.6a 已固定 12 门 RC 交接，S9.6b1-b4 已让构建、回放、平衡、回归、Stage 6/8 设备、性能和真人研究共九门支持语义复算，输入盲测、正式资产与缺陷账本三门仍保持未验证。正式双角色、六个真实 target Record、输入 A/B 真人盲测与至少 90 名合格完成者仍未完成。数值跳台 v3 代码与资产继续保留，两条领域代码保持隔离。
 
 v3 的动作与构图参考开源项目 [`shenmaxg/web-jump`](https://github.com/shenmaxg/web-jump)，但不使用它的单路线玩法作为游戏规则，也不直接复用来源不明的品牌纹理。参考代码的 MIT 许可与归属见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
@@ -120,7 +120,7 @@ Stage 9 真人公平性使用 `npm run arena:human-fairness:evidence -- --descri
 
 最终 clean Web 构建可通过 `/study.html` 打开独立 S9.5 工作台。单参与者原始包使用 `arena:human-fairness:ingest` 离线入库；入库和最终 `arena:human-fairness:evidence` 都强制提供 `--build-root`，重算完整构建 Manifest 后才接受 commit/build 身份。
 
-Stage 9 RC 交接门使用 `npm run arena:stage9:readiness -- --describe` 查看。S9.6b1-b3 已启用五个 producer：构建两门复用同一组三端 Manifest 并重新遍历产物；黄金回放从精确材料集严格重放并再生成；平衡验证重建固定 `balance-validation` Report Bundle；组合回归复算固定五项结果及资源/内存阈值。source producer 还要求当前 clean checkout 与候选 commit 完全一致且复验前后身份稳定。其余 producer 尚未适配，候选 JSON 中未经复算的 `ready` 仍按 incomplete 处理；完整缺口见 [Stage 4～9 证据矩阵](docs/quality/arena-stage4-9-evidence-matrix.md)。
+Stage 9 RC 交接门使用 `npm run arena:stage9:readiness -- --describe` 查看。S9.6b1-b4 已启用九个 producer：构建两门复用同一组三端 Manifest 并重新遍历产物；黄金回放、平衡验证与原子组合回归各自重算；Stage 6/8 设备、性能和真人研究复用原 CLI 的共享 verifier，递归读回附件、Trace、Workspace、原始包、Replay 与 clean Web build。外部材料即使合同合法，样本不足仍只能得到 `incomplete`。source producer 还要求当前 clean checkout 与候选 commit 完全一致且复验前后身份稳定。输入盲测、正式资产和缺陷账本尚未适配，候选 JSON 中未经复算的 `ready` 仍按 incomplete 处理；完整缺口见 [Stage 4～9 证据矩阵](docs/quality/arena-stage4-9-evidence-matrix.md)。
 
 ## v3 架构
 

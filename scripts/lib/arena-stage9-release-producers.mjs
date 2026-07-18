@@ -11,8 +11,16 @@ import {
   createArenaBuildIntegrityReleaseResult,
 } from '../../src/arena-release/build-release-evidence.js';
 import {
+  createArenaPerformanceDeviceReleaseResult,
+  createArenaStage6DeviceReleaseResult,
+  createArenaStage8ProductDeviceReleaseResult,
+} from '../../src/arena-release/device-release-evidence.js';
+import {
   createArenaGoldenReplayReleaseResult,
 } from '../../src/arena-release/golden-replay-release-evidence.js';
+import {
+  createArenaHumanFairnessReleaseResult,
+} from '../../src/arena-release/human-fairness-release-evidence.js';
 import {
   createArenaRegressionReleaseResult,
 } from '../../src/arena-release/regression-release-evidence.js';
@@ -23,6 +31,18 @@ import {
   ARENA_BUILD_MANIFEST_FILENAME,
   createArenaBuildManifest,
 } from '../../src/arena/presentation/acceptance/arena-build-manifest.js';
+import {
+  ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND,
+} from '../../src/arena/presentation/acceptance/arena-device-acceptance-definition.js';
+import {
+  createArenaStage6DeviceAcceptanceV1Definition,
+} from '../../src/arena/presentation/acceptance/arena-stage6-device-acceptance-v1.js';
+import {
+  createArenaStage8ProductDeviceAcceptanceV1Definition,
+} from '../../src/arena/presentation/acceptance/arena-stage8-product-device-acceptance-v1.js';
+import {
+  createArenaStage9PerformanceDeviceAcceptanceV1Definition,
+} from '../../src/arena/presentation/acceptance/arena-stage9-performance-device-acceptance-v1.js';
 import {
   createArenaV1GoldenReplayScenarioRegistry,
 } from '../../src/arena/regression/arena-v1-golden-replay-scenarios.js';
@@ -35,17 +55,30 @@ import {
 import {
   verifyArenaBuildManifestDirectory,
 } from './arena-build-manifest-files.mjs';
+import {
+  verifyArenaDeviceEvidence,
+} from './arena-device-evidence-verifier.mjs';
+import {
+  verifyArenaHumanFairnessEvidence,
+} from './arena-human-fairness-evidence-verifier.mjs';
 import { readVerifiedTextFile } from './evidence-file-verifier.mjs';
 
 const MAXIMUM_BUILD_MANIFEST_BYTES = 5 * 1024 * 1024;
 const MAXIMUM_GOLDEN_REPLAY_BYTES = 32 * 1024 * 1024;
 const MAXIMUM_BALANCE_REPORT_BYTES = 64 * 1024 * 1024;
 const MAXIMUM_REGRESSION_REPORT_BYTES = 1024 * 1024;
+const MAXIMUM_DEVICE_BUNDLE_BYTES = 5 * 1024 * 1024;
+const MAXIMUM_HUMAN_BUNDLE_BYTES = 5 * 1024 * 1024;
+const MAXIMUM_HUMAN_INGEST_MANIFEST_BYTES = 5 * 1024 * 1024;
 
 export const ARENA_STAGE9_SUPPORTED_RELEASE_PRODUCER_IDS = Object.freeze([
   'arena:build:budget',
   'arena:build:verify',
+  'arena:device:evidence',
   'arena:experiment:report:verify',
+  'arena:human-fairness:evidence',
+  'arena:performance:evidence',
+  'arena:product:device:evidence',
   'arena:regression:evidence',
   'arena:replay:verify',
 ]);
@@ -58,6 +91,12 @@ const SUPPORTED_SOURCE_GATES = new Set([
   ARENA_STAGE9_RC_HANDOFF_GATE_ID.GOLDEN_REPLAY,
   ARENA_STAGE9_RC_HANDOFF_GATE_ID.REGRESSION,
   ARENA_STAGE9_RC_HANDOFF_GATE_ID.BALANCE_VALIDATION,
+]);
+const SUPPORTED_EXTERNAL_BUILD_GATES = new Set([
+  ARENA_STAGE9_RC_HANDOFF_GATE_ID.STAGE6_DEVICE,
+  ARENA_STAGE9_RC_HANDOFF_GATE_ID.STAGE8_PRODUCT_DEVICE,
+  ARENA_STAGE9_RC_HANDOFF_GATE_ID.PERFORMANCE_DEVICE,
+  ARENA_STAGE9_RC_HANDOFF_GATE_ID.HUMAN_FAIRNESS,
 ]);
 
 async function readVerifiedJsonMaterial(
@@ -211,6 +250,186 @@ async function verifyRegression(statement, verifiedMaterialsByPath, commit) {
   return createArenaRegressionReleaseResult({ commit, report: reportRead.value });
 }
 
+function requireSingleNamedMaterial(statement, fileName, label) {
+  if (
+    statement.materials.length !== 1
+    || path.posix.basename(statement.materials[0].path) !== fileName
+  ) throw new RangeError(`${label} 必须只引用一个 ${fileName}。`);
+  return statement.materials[0];
+}
+
+function assertCanonicalBuildManifest(buildManifest, canonicalBuildHashes, label) {
+  const expected = canonicalBuildHashes?.get(buildManifest.platform);
+  if (expected && expected !== buildManifest.sha256) {
+    throw new Error(`${label} 的 ${buildManifest.platform} Manifest 与最终构建门不一致。`);
+  }
+}
+
+function registerDeviceArtifacts(statement, verification, artifactHashes) {
+  for (const artifact of verification.artifactIdentities) {
+    if (artifact.kind === ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.BUILD_MANIFEST) continue;
+    const previous = artifactHashes.get(artifact.sha256);
+    if (previous && previous.gateId !== statement.gateId) {
+      throw new Error(
+        `Release gate ${statement.gateId} artifact ${artifact.path} 与 ${previous.gateId} 的 ${previous.path} 复用了相同内容。`,
+      );
+    }
+    artifactHashes.set(artifact.sha256, Object.freeze({
+      gateId: statement.gateId,
+      path: artifact.path,
+    }));
+  }
+}
+
+async function verifyDeviceEvidence(
+  statement,
+  verifiedMaterialsByPath,
+  canonicalBuildHashes,
+  artifactHashes,
+) {
+  const material = requireSingleNamedMaterial(
+    statement,
+    'device-evidence.json',
+    `Release gate ${statement.gateId}`,
+  );
+  const bundleRead = await readVerifiedJsonMaterial(
+    material,
+    verifiedMaterialsByPath,
+    `device evidence bundle ${material.path}`,
+    MAXIMUM_DEVICE_BUNDLE_BYTES,
+  );
+  let definition;
+  let resultFactory;
+  if (statement.gateId === ARENA_STAGE9_RC_HANDOFF_GATE_ID.STAGE6_DEVICE) {
+    definition = createArenaStage6DeviceAcceptanceV1Definition();
+    resultFactory = createArenaStage6DeviceReleaseResult;
+  } else if (statement.gateId === ARENA_STAGE9_RC_HANDOFF_GATE_ID.STAGE8_PRODUCT_DEVICE) {
+    definition = createArenaStage8ProductDeviceAcceptanceV1Definition();
+    resultFactory = createArenaStage8ProductDeviceReleaseResult;
+  } else {
+    definition = createArenaStage9PerformanceDeviceAcceptanceV1Definition();
+    resultFactory = createArenaPerformanceDeviceReleaseResult;
+  }
+  const verification = await verifyArenaDeviceEvidence({
+    definition,
+    bundleValue: bundleRead.value,
+    artifactsRoot: path.dirname(bundleRead.verified.resolvedPath),
+  });
+  for (const buildManifest of verification.buildManifests) {
+    assertCanonicalBuildManifest(
+      buildManifest,
+      canonicalBuildHashes,
+      `Release gate ${statement.gateId}`,
+    );
+  }
+  registerDeviceArtifacts(statement, verification, artifactHashes);
+  return statement.gateId === ARENA_STAGE9_RC_HANDOFF_GATE_ID.PERFORMANCE_DEVICE
+    ? resultFactory({
+      bundle: verification.bundle,
+      performanceRecords: verification.performanceRecords.map(({ source }) => source),
+    })
+    : resultFactory({ bundle: verification.bundle });
+}
+
+function requireNamedMaterial(statement, fileName, label) {
+  const matches = statement.materials.filter(({ path: materialPath }) => (
+    path.posix.basename(materialPath) === fileName
+  ));
+  if (matches.length !== 1) throw new RangeError(`${label} 必须且只能引用一个 ${fileName}。`);
+  return matches[0];
+}
+
+async function verifyHumanFairnessEvidence(
+  statement,
+  verifiedMaterialsByPath,
+  canonicalBuildHashes,
+) {
+  if (statement.materials.length !== 3) {
+    throw new RangeError('Human fairness release evidence 必须引用 Bundle、采集 Manifest 与 Web Build Manifest。');
+  }
+  const bundleMaterial = requireNamedMaterial(
+    statement,
+    'human-fairness-evidence.json',
+    'Human fairness release evidence',
+  );
+  const ingestMaterial = requireNamedMaterial(
+    statement,
+    'capture-package-manifest.json',
+    'Human fairness release evidence',
+  );
+  const buildMaterial = requireNamedMaterial(
+    statement,
+    ARENA_BUILD_MANIFEST_FILENAME,
+    'Human fairness release evidence',
+  );
+  const [bundleRead, ingestRead, buildRead] = await Promise.all([
+    readVerifiedJsonMaterial(
+      bundleMaterial,
+      verifiedMaterialsByPath,
+      `human fairness bundle ${bundleMaterial.path}`,
+      MAXIMUM_HUMAN_BUNDLE_BYTES,
+    ),
+    readVerifiedJsonMaterial(
+      ingestMaterial,
+      verifiedMaterialsByPath,
+      `human fairness ingest manifest ${ingestMaterial.path}`,
+      MAXIMUM_HUMAN_INGEST_MANIFEST_BYTES,
+    ),
+    readVerifiedJsonMaterial(
+      buildMaterial,
+      verifiedMaterialsByPath,
+      `human fairness build manifest ${buildMaterial.path}`,
+      MAXIMUM_BUILD_MANIFEST_BYTES,
+    ),
+  ]);
+  const artifactsRoot = path.dirname(bundleRead.verified.resolvedPath);
+  if (path.dirname(ingestRead.verified.resolvedPath) !== artifactsRoot) {
+    throw new RangeError('Human fairness Bundle 与 capture-package-manifest.json 必须位于同一实际目录。');
+  }
+  const verification = await verifyArenaHumanFairnessEvidence({
+    bundleValue: bundleRead.value,
+    artifactsRoot,
+    buildRoot: path.dirname(buildRead.verified.resolvedPath),
+  });
+  if (verification.workspaceAudit.ingestManifestSha256 !== ingestRead.verified.sha256) {
+    throw new Error('Human fairness 采集 Manifest 在 producer 复验期间发生变化。');
+  }
+  const declaredBuildManifest = createArenaBuildManifest(buildRead.value);
+  if (verification.buildManifest.getContentHash() !== declaredBuildManifest.getContentHash()) {
+    throw new Error('Human fairness Build Manifest 在 producer 复验期间发生变化。');
+  }
+  assertCanonicalBuildManifest(
+    { platform: declaredBuildManifest.target, sha256: buildRead.verified.sha256 },
+    canonicalBuildHashes,
+    'Human fairness release evidence',
+  );
+  return createArenaHumanFairnessReleaseResult({ bundle: verification.bundle });
+}
+
+async function readCanonicalBuildHashes(bundle, verifiedMaterialsByPath, cache) {
+  const statement = bundle.evidence.find(({ gateId }) => (
+    gateId === ARENA_STAGE9_RC_HANDOFF_GATE_ID.BUILD_INTEGRITY
+  )) ?? bundle.evidence.find(({ gateId }) => (
+    gateId === ARENA_STAGE9_RC_HANDOFF_GATE_ID.BUILD_BUDGET
+  ));
+  if (!statement) return null;
+  const manifests = await readBuildManifests(statement, verifiedMaterialsByPath, cache);
+  return new Map(manifests.map((manifest, index) => [
+    manifest.target,
+    statement.materials[index].sha256,
+  ]));
+}
+
+async function assertCanonicalBuildStable(bundle, verifiedMaterialsByPath, expected) {
+  if (expected === null) return;
+  const current = await readCanonicalBuildHashes(bundle, verifiedMaterialsByPath, new Map());
+  if (
+    current === null
+    || current.size !== expected.size
+    || [...expected].some(([platform, sha256]) => current.get(platform) !== sha256)
+  ) throw new Error('最终构建材料在 release producer 复验期间发生变化。');
+}
+
 function assertSourceIdentity(bundle, sourceIdentity) {
   if (!sourceIdentity || typeof sourceIdentity !== 'object') {
     throw new TypeError('Source release producer 需要当前 Git source identity。');
@@ -238,6 +457,12 @@ export async function verifyArenaStage9ReleaseProducerEvidence({
   if (arenaStage9ReleaseRequiresSourceIdentity(bundle)) assertSourceIdentity(bundle, sourceIdentity);
   const verifiedEvidence = [];
   const buildManifestCache = new Map();
+  const canonicalBuildHashes = await readCanonicalBuildHashes(
+    bundle,
+    verifiedMaterialsByPath,
+    buildManifestCache,
+  );
+  const deviceArtifactHashes = new Map();
   for (const statement of bundle.evidence) {
     let result;
     if (SUPPORTED_BUILD_GATES.has(statement.gateId)) {
@@ -260,6 +485,19 @@ export async function verifyArenaStage9ReleaseProducerEvidence({
       result = await verifyBalanceValidation(statement, verifiedMaterialsByPath, bundle);
     } else if (statement.gateId === ARENA_STAGE9_RC_HANDOFF_GATE_ID.REGRESSION) {
       result = await verifyRegression(statement, verifiedMaterialsByPath, bundle.commit);
+    } else if (SUPPORTED_EXTERNAL_BUILD_GATES.has(statement.gateId)) {
+      result = statement.gateId === ARENA_STAGE9_RC_HANDOFF_GATE_ID.HUMAN_FAIRNESS
+        ? await verifyHumanFairnessEvidence(
+          statement,
+          verifiedMaterialsByPath,
+          canonicalBuildHashes,
+        )
+        : await verifyDeviceEvidence(
+          statement,
+          verifiedMaterialsByPath,
+          canonicalBuildHashes,
+          deviceArtifactHashes,
+        );
     } else continue;
     verifiedEvidence.push(verifyArenaReleaseEvidenceProducerResult({
       definition,
@@ -268,5 +506,6 @@ export async function verifyArenaStage9ReleaseProducerEvidence({
       result,
     }));
   }
+  await assertCanonicalBuildStable(bundle, verifiedMaterialsByPath, canonicalBuildHashes);
   return Object.freeze(verifiedEvidence);
 }

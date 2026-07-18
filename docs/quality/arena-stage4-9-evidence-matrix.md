@@ -4,7 +4,7 @@
 
 本矩阵以 `arena.stage9.rc-handoff.v1` 为机器权威门集，说明当前工程证据能证明什么、还缺什么。`ready` 只允许由 Gate 指定的 producer 语义复验形成；材料存在、单测通过或文档写明“完成”均不能自动替代。
 
-当前为 S9.6b3：候选/证据/报告合同和材料完整性预检已完成，构建完整性、构建预算、黄金回放、平衡验证与组合回归 producer 已启用语义复算；其余七个 Gate 尚未适配或缺少真实材料，因此还不存在可冻结的 S9.6 候选。
+当前为 S9.6b4：候选/证据/报告合同和材料完整性预检已完成，构建、黄金回放、平衡验证、组合回归、Stage 6/8 设备、性能和真人研究共九个 Gate 已启用语义复算；输入盲测、正式资产和缺陷账本仍缺 producer，四类外部门仍缺真实材料，因此还不存在可冻结的 S9.6 候选。
 
 ## 当前矩阵
 
@@ -17,10 +17,10 @@
 | `stage9.balance-validation` | S9.3 | 900 局 11 条命 validation、可重建 Report Bundle、Product 默认及 release producer | 最终候选 clean commit 重跑 900 局并形成 Evidence Statement；旧 commit Report 不可复用 | incomplete（候选材料） |
 | `stage9.build-integrity` | S9.4 | 三端 Manifest、产物 hash、同 commit/build 和 clean source 校验；release producer 已复算实际产物 | 最终候选 clean build 的 Evidence Statement | incomplete（候选材料） |
 | `stage9.build-budget` | S9.4 | 三端 4 MiB 内部预算与可重算 Report；release producer 与完整性门复用同一材料 | 最终候选 clean build 的 Evidence Statement | incomplete（候选材料） |
-| `stage9.stage6-device` | S6/S9.4 | 版本化 E3 Device Definition、Record、附件和 Manifest 验证 | Web/微信/抖音目标真机 Record | incomplete（外部） |
-| `stage9.stage8-product-device` | S8/S9.4 | 产品闭环 Device Definition、Canvas/DOM 正式入口与证据合同 | 六目标设备正式 Record | incomplete（外部） |
-| `stage9.performance-device` | S9.4 | Quality Definition、Probe、Policy、Trace/Record/Report 与六 target | 六目标设备十分钟/三局/内存/恢复证据 | incomplete（外部） |
-| `stage9.human-fairness` | S9.5 | 预注册三隐藏组、工作台、离线入库、Replay/Bot 逐 Tick 复验 | 至少 90 名合格完成者、270 局、退出/失效账本和最终 Report | incomplete（外部） |
+| `stage9.stage6-device` | S6/S9.4 | 版本化 E3 Device Definition、Record、附件校验及复用同一 verifier 的 release producer | Web/微信/抖音目标真机 Record 与最终 Evidence Statement | incomplete（外部） |
+| `stage9.stage8-product-device` | S8/S9.4 | 产品闭环 Device Definition、Canvas/DOM 正式入口、构建绑定及 release producer | 六目标设备正式 Record 与最终 Evidence Statement | incomplete（外部） |
+| `stage9.performance-device` | S9.4 | Quality Definition、Probe、Policy、Trace/Record/Report、六 target 及 release producer | 六目标设备十分钟/三局/内存/恢复证据与最终 Statement | incomplete（外部） |
+| `stage9.human-fairness` | S9.5 | 预注册三隐藏组、工作台、离线入库、Replay/Bot 逐 Tick 复验及 release producer | 至少 90 名合格完成者、270 局、退出/失效账本和最终 Report/Statement | incomplete（外部） |
 | `stage9.defects` | S9.6 | 自动回归和各阶段结果记录 | 版本化缺陷/已知问题/剩余风险账本及 producer | incomplete（工程） |
 
 ## 不可替代关系
@@ -34,4 +34,4 @@
 
 ## 下一工程批次
 
-S9.6b1-b3 已完成五个 producer。下一批复用现有 Device/Performance/Human verifier 输出并保持各自 Definition 边界；随后补齐 Input Pilot、Asset 和 Defect 三类尚不存在的正式 evidence producer。任何 producer 只能输出自己的窄证据，不能直接修改总 Report。
+S9.6b1-b4 已完成九个 producer。下一批补齐 Input Pilot、Asset 和 Defect 三类尚不存在的正式 evidence producer，并继续让真实 Device/Performance/Human 材料保持外部阻断。任何 producer 只能输出自己的窄证据，不能直接修改总 Report。

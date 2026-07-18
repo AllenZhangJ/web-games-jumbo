@@ -125,3 +125,5 @@ npm run arena:product:device:evidence -- \
 - 退出码 `1`：Definition、OS、commit/build、Manifest、路径、大小、SHA-256 或文件读取无效。
 
 只有 Report 为 `ready` 才能关闭 S8.5.6 和 Stage 8。
+
+进入 S9.6 候选时，`stage9.stage8-product-device` Evidence Statement 只登记该目录的 `device-evidence.json` 顶层索引。Readiness producer 会复用同一 verifier 重新打开 Bundle 登记的构建 Manifest、日志、截图和录像，并重算固定 Stage 8 Definition 的 Report；不完整或失败 Record 不能被候选声明提升。

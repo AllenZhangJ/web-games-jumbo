@@ -137,6 +137,8 @@ npm run arena:device:evidence -- \
 
 当前构建只要有一条最终失败 Record，就不能用后续成功 Record 抵消。修复后必须生成新 commit/build ID 和新 Bundle。
 
+进入 S9.6 候选时，`stage9.stage6-device` Evidence Statement 只登记该目录的 `device-evidence.json` 顶层索引。Readiness producer 会复用同一 verifier 重新打开全部日志、截图和录像，再重算固定 Stage 6 Definition 的 Report；不接受 CLI stdout 摘要或人工 `ready`。
+
 ## E4 执行顺序
 
 E3 全部通过后才开始计入 E4 样本，避免把设备/宿主缺陷误计为玩家不理解。
