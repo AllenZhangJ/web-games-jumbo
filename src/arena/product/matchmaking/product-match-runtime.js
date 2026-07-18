@@ -37,6 +37,13 @@ function validateLocalMatch(localMatch) {
   return localMatch;
 }
 
+function validateCompletionSink(value) {
+  if (value !== null && typeof value !== 'function') {
+    throw new TypeError('ProductMatchRuntime completionSink 必须是函数或 null。');
+  }
+  return value;
+}
+
 export class ProductMatchRuntime {
   #session;
   #matchSeed;
@@ -46,8 +53,9 @@ export class ProductMatchRuntime {
   #pauseRequested;
   #stepping;
   #result;
+  #completionSink;
 
-  constructor(localMatchValue) {
+  constructor(localMatchValue, { completionSink = null } = {}) {
     const localMatch = validateLocalMatch(localMatchValue);
     this.#session = localMatch.session;
     this.#matchSeed = assertProductMatchSeed(localMatch.matchSeed);
@@ -57,6 +65,7 @@ export class ProductMatchRuntime {
     this.#pauseRequested = false;
     this.#stepping = false;
     this.#result = null;
+    this.#completionSink = validateCompletionSink(completionSink);
     Object.freeze(this);
   }
 
@@ -122,12 +131,24 @@ export class ProductMatchRuntime {
     try {
       const outcome = this.#session.step(playerFrame);
       if (this.#session.state === 'ended') {
-        this.#result = createProductMatchResult({
+        const replay = cloneFrozenData(
+          this.#session.exportReplay(),
+          'ProductMatchRuntime completion replay',
+        );
+        const result = createProductMatchResult({
           matchSeed: this.#matchSeed,
           opponent: this.#opponent,
           content: this.#content,
-          replay: this.#session.exportReplay(),
+          replay,
         });
+        const completion = this.#completionSink?.(Object.freeze({ result, replay }));
+        if (completion && typeof completion.then === 'function') {
+          Promise.resolve(completion).catch(() => {
+            // ProductMatchRuntime is synchronous; contain a late rejection after rejecting the port.
+          });
+          throw new TypeError('ProductMatchRuntime completionSink 必须同步完成。');
+        }
+        this.#result = result;
         this.#state = PRODUCT_MATCH_RUNTIME_STATE.ENDED;
       }
       return Object.freeze({
@@ -173,6 +194,7 @@ export class ProductMatchRuntime {
     this.#opponent = null;
     this.#content = null;
     this.#result = null;
+    this.#completionSink = null;
     this.#pauseRequested = true;
     this.#state = PRODUCT_MATCH_RUNTIME_STATE.DESTROYED;
   }

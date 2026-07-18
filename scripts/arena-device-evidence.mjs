@@ -1,6 +1,3 @@
-import { constants } from 'node:fs';
-import { open, realpath, stat } from 'node:fs/promises';
-import { createHash } from 'node:crypto';
 import path from 'node:path';
 import {
   ARENA_DEVICE_ACCEPTANCE_REPORT_STATUS,
@@ -28,6 +25,11 @@ import {
 import {
   createArenaStage9PerformanceV1Policy,
 } from '../src/arena/presentation/performance/arena-stage9-performance-v1.js';
+import {
+  readVerifiedEvidenceArtifact,
+  readVerifiedTextFile,
+  resolveEvidenceRoot,
+} from './lib/evidence-file-verifier.mjs';
 
 const MAXIMUM_BUNDLE_BYTES = 5 * 1024 * 1024;
 const MAXIMUM_BUILD_MANIFEST_BYTES = 5 * 1024 * 1024;
@@ -86,65 +88,15 @@ function parseArgs(values) {
   return result;
 }
 
-function isWithinRoot(root, target) {
-  const relative = path.relative(root, target);
-  return relative !== '' && !relative.startsWith(`..${path.sep}`) && relative !== '..'
-    && !path.isAbsolute(relative);
-}
-
-async function hashOpenFile(fileHandle) {
-  const hash = createHash('sha256');
-  for await (const chunk of fileHandle.createReadStream({ autoClose: false })) hash.update(chunk);
-  return hash.digest('hex');
-}
-
-async function readSmallOpenFile(fileHandle, size, label, maximumBytes) {
-  if (size > BigInt(maximumBytes)) {
-    throw new Error(`${label} 不能超过 ${maximumBytes} bytes。`);
-  }
-  const length = Number(size);
-  const buffer = Buffer.alloc(length);
-  const { bytesRead } = await fileHandle.read(buffer, 0, length, 0);
-  if (bytesRead !== length) throw new Error(`${label} 未完整读取。`);
-  return buffer.toString('utf8');
-}
-
-function sameFileState(left, right) {
-  return left.dev === right.dev
-    && left.ino === right.ino
-    && left.size === right.size
-    && left.mtimeNs === right.mtimeNs
-    && left.ctimeNs === right.ctimeNs;
-}
-
 async function readBundleSource(bundlePath) {
-  const fileHandle = await open(
-    bundlePath,
-    constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0),
-  );
-  try {
-    const metadata = await fileHandle.stat({ bigint: true });
-    if (!metadata.isFile()) throw new Error('device evidence bundle 不是普通文件。');
-    if (metadata.size > BigInt(MAXIMUM_BUNDLE_BYTES)) {
-      throw new Error(`device evidence bundle 不能超过 ${MAXIMUM_BUNDLE_BYTES} bytes。`);
-    }
-    const source = await fileHandle.readFile('utf8');
-    const metadataAfterRead = await fileHandle.stat({ bigint: true });
-    if (!sameFileState(metadata, metadataAfterRead)) {
-      throw new Error('device evidence bundle 在读取期间发生变化。');
-    }
-    const pathMetadataAfterRead = await stat(bundlePath, { bigint: true });
-    if (!sameFileState(metadata, pathMetadataAfterRead)) {
-      throw new Error('device evidence bundle 在读取期间被替换。');
-    }
-    return source;
-  } finally {
-    await fileHandle.close();
-  }
+  return (await readVerifiedTextFile(bundlePath, {
+    label: 'device evidence bundle',
+    maximumBytes: MAXIMUM_BUNDLE_BYTES,
+  })).text;
 }
 
 async function verifyArtifacts(definition, bundle, rootValue) {
-  const root = await realpath(rootValue);
+  const root = await resolveEvidenceRoot(rootValue);
   const verified = [];
   const performanceRecords = [];
   const verifiedPaths = new Map();
@@ -152,10 +104,26 @@ async function verifyArtifacts(definition, bundle, rootValue) {
   const verifiedHashes = new Map();
   for (const record of bundle.records) {
     for (const artifact of record.artifacts) {
-      const resolved = await realpath(path.resolve(root, artifact.path));
-      if (!isWithinRoot(root, resolved)) {
-        throw new Error(`artifact ${artifact.path} 通过符号链接逃逸证据根目录。`);
-      }
+      const checked = await readVerifiedEvidenceArtifact({
+        root,
+        relativePath: artifact.path,
+        expectedByteLength: artifact.byteLength,
+        expectedSha256: artifact.sha256,
+        maximumBytes: artifact.kind === ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.PERFORMANCE_TRACE
+          ? MAXIMUM_PERFORMANCE_TRACE_BYTES
+          : artifact.kind === ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.BUILD_MANIFEST
+            ? MAXIMUM_BUILD_MANIFEST_BYTES
+            : null,
+        includeText: artifact.kind === ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.PERFORMANCE_TRACE
+          || artifact.kind === ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.BUILD_MANIFEST,
+      });
+      const {
+        byteLength,
+        fileIdentity,
+        resolvedPath: resolved,
+        sha256,
+        text,
+      } = checked;
       const previousPath = verifiedPaths.get(resolved);
       const isBuildManifest = artifact.kind
         === ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.BUILD_MANIFEST;
@@ -165,49 +133,14 @@ async function verifyArtifacts(definition, bundle, rootValue) {
       if (previousPath && !sharedBuildManifestPath) {
         throw new Error(`artifact ${artifact.path} 与 ${previousPath.path} 指向同一路径。`);
       }
-      const fileHandle = await open(resolved, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
-      let metadata;
-      let sha256;
       let buildManifest = null;
       let performanceRecord = null;
-      try {
-        metadata = await fileHandle.stat({ bigint: true });
-        if (!metadata.isFile()) throw new Error(`artifact ${artifact.path} 不是普通文件。`);
-        if (metadata.size !== BigInt(artifact.byteLength)) {
-          throw new Error(
-            `artifact ${artifact.path} 大小不一致：${metadata.size} != ${artifact.byteLength}。`,
-          );
-        }
-        sha256 = await hashOpenFile(fileHandle);
-        if (artifact.kind === ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.BUILD_MANIFEST) {
-          buildManifest = createArenaBuildManifest(JSON.parse(await readSmallOpenFile(
-            fileHandle,
-            metadata.size,
-            `artifact ${artifact.path}`,
-            MAXIMUM_BUILD_MANIFEST_BYTES,
-          )));
-        }
-        if (artifact.kind === ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.PERFORMANCE_TRACE) {
-          performanceRecord = JSON.parse(await readSmallOpenFile(
-            fileHandle,
-            metadata.size,
-            `artifact ${artifact.path}`,
-            MAXIMUM_PERFORMANCE_TRACE_BYTES,
-          ));
-        }
-        const metadataAfterHash = await fileHandle.stat({ bigint: true });
-        if (!sameFileState(metadata, metadataAfterHash)) {
-          throw new Error(`artifact ${artifact.path} 在校验期间发生变化。`);
-        }
-      } finally {
-        await fileHandle.close();
+      if (artifact.kind === ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.BUILD_MANIFEST) {
+        buildManifest = createArenaBuildManifest(JSON.parse(text));
       }
-      const resolvedAfterHash = await realpath(path.resolve(root, artifact.path));
-      const metadataAfterClose = await stat(resolvedAfterHash, { bigint: true });
-      if (resolvedAfterHash !== resolved || !sameFileState(metadata, metadataAfterClose)) {
-        throw new Error(`artifact ${artifact.path} 在校验期间被替换。`);
+      if (artifact.kind === ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.PERFORMANCE_TRACE) {
+        performanceRecord = JSON.parse(text);
       }
-      const fileIdentity = `${metadata.dev}:${metadata.ino}`;
       const previousFile = verifiedFiles.get(fileIdentity);
       const sharedBuildManifestFile = previousFile?.kind
         === ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.BUILD_MANIFEST
@@ -221,9 +154,6 @@ async function verifyArtifacts(definition, bundle, rootValue) {
         && isBuildManifest;
       if (previousHash && !sharedBuildManifestHash) {
         throw new Error(`artifact ${artifact.path} 与 ${previousHash.path} 内容重复。`);
-      }
-      if (sha256 !== artifact.sha256) {
-        throw new Error(`artifact ${artifact.path} SHA-256 不一致。`);
       }
       if (buildManifest !== null) {
         if (buildManifest.sourceDirty) throw new Error('设备验收不能使用非干净源码构建。');
@@ -247,7 +177,7 @@ async function verifyArtifacts(definition, bundle, rootValue) {
         runId: record.runId,
         artifactId: artifact.id,
         path: artifact.path,
-        byteLength: Number(metadata.size),
+        byteLength,
         sha256,
       }));
       if (performanceRecord !== null) {

@@ -73,6 +73,7 @@ export function createArenaV1ProductSession({
   wallNow,
   seedSource,
   matchConfig,
+  matchCompletionSink = null,
   keyPrefix,
   diagnosticSink = null,
 } = {}) {
@@ -118,6 +119,7 @@ export function createArenaV1ProductSession({
     const matchFactory = new QuickMatchProductFactory({
       quickMatchService,
       matchConfig: resolvedMatchConfig,
+      completionSink: matchCompletionSink,
     });
     matchCoordinator = new ProductMatchCoordinator({ matchFactory });
     const rewardCommitter = new RewardCommitter({

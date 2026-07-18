@@ -531,6 +531,13 @@ test('device evidence CLI verifies artifact containment, size and SHA-256', asyn
     for (const target of definition.targets) {
       records.push(await writeArtifactRecord(root, definition, target.id));
     }
+    const largeVideo = records[0].artifacts.find(({ kind }) => (
+      kind === ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.VIDEO
+    ));
+    const largeVideoBytes = Buffer.alloc(5 * 1024 * 1024 + 1, 0x5a);
+    await writeFile(path.join(root, largeVideo.path), largeVideoBytes);
+    largeVideo.byteLength = largeVideoBytes.length;
+    largeVideo.sha256 = createHash('sha256').update(largeVideoBytes).digest('hex');
     const bundle = bundleValue(definition, records);
     const bundlePath = path.join(root, 'device-evidence.json');
     await writeFile(bundlePath, `${JSON.stringify(bundle, null, 2)}\n`);

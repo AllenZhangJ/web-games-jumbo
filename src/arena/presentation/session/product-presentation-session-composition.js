@@ -26,6 +26,7 @@ const OPTION_KEYS = new Set([
   'ownerId',
   'keyPrefix',
   'matchConfig',
+  'matchCompletionSink',
   'maximumCatchUpTicks',
   'profileLeaseHeartbeatIntervalMs',
   'qualityDefinition',
@@ -189,6 +190,13 @@ export function createProductPresentationSessionComposition(platformValue, optio
   const matchConfig = options.matchConfig === undefined
     ? Object.freeze({})
     : cloneFrozenData(options.matchConfig, 'ProductPresentationSession matchConfig');
+  const matchCompletionSink = options.matchCompletionSink ?? null;
+  if (matchCompletionSink !== null) {
+    requiredFunction(
+      matchCompletionSink,
+      'ProductPresentationSession.matchCompletionSink',
+    );
+  }
   const qualityDefinition = createPresentationQualityDefinition(
     options.qualityDefinition ?? ARENA_V1_DEFAULT_PRESENTATION_QUALITY,
   );
@@ -221,6 +229,7 @@ export function createProductPresentationSessionComposition(platformValue, optio
       ? 'arena.product.v1'
       : nonEmptyString(options.keyPrefix, 'ProductPresentationSession.keyPrefix'),
     matchConfig,
+    matchCompletionSink,
     qualityDefinition,
     fixedDeltaSeconds: ARENA_FIXED_DT,
     maximumCatchUpTicks,

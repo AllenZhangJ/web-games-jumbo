@@ -3,7 +3,10 @@ import { normalizeInputFrames } from './input-frame.js';
 import { MatchCore } from './match-core.js';
 import { createArenaV1MatchCore } from './arena-v1-match-core.js';
 import { combineCleanupFailure, normalizeThrownError } from './lifecycle-error.js';
-import { cloneFrozenData } from './rules/definition-utils.js';
+import {
+  assertKnownKeys,
+  cloneFrozenData,
+} from './rules/definition-utils.js';
 import { createDeterministicDataHash } from '../shared/deterministic-data-hash.js';
 
 export const ARENA_REPLAY_SCHEMA_VERSION = 5;
@@ -11,6 +14,21 @@ export const ARENA_REPLAY_SCHEMA_VERSION = 5;
 export const ARENA_REPLAY_ERROR_CODE = Object.freeze({
   UNSUPPORTED_SCHEMA: 'arena.replay.unsupported-schema',
 });
+
+const REPLAY_KEYS = new Set([
+  'replaySchemaVersion',
+  'schemaVersion',
+  'physicsBackendVersion',
+  'configHash',
+  'ruleContentHash',
+  'matchSeed',
+  'config',
+  'inputFrames',
+  'checkpoints',
+  'events',
+  'finalHash',
+  'result',
+]);
 
 export class ArenaReplayCompatibilityError extends RangeError {
   constructor(actualSchemaVersion) {
@@ -153,6 +171,7 @@ export class HeadlessMatchRunner {
 
 function validateReplay(replay) {
   const source = cloneFrozenData(replay, 'replay');
+  assertKnownKeys(source, REPLAY_KEYS, 'replay');
   if (source.replaySchemaVersion !== ARENA_REPLAY_SCHEMA_VERSION) {
     throw new ArenaReplayCompatibilityError(source.replaySchemaVersion);
   }
@@ -207,9 +226,18 @@ function validateReplay(replay) {
   return source;
 }
 
-export function replayMatch(replay, { coreFactory = createArenaV1MatchCore } = {}) {
+export function replayMatch(
+  replay,
+  {
+    coreFactory = createArenaV1MatchCore,
+    beforeStep = null,
+  } = {},
+) {
   replay = validateReplay(replay);
   if (typeof coreFactory !== 'function') throw new TypeError('coreFactory 必须是函数。');
+  if (beforeStep !== null && typeof beforeStep !== 'function') {
+    throw new TypeError('beforeStep 必须是函数或 null。');
+  }
   const core = coreFactory({ seed: replay.matchSeed, config: replay.config });
   if (!(core instanceof MatchCore)) {
     const failure = new TypeError('coreFactory 必须返回 MatchCore。');
@@ -264,6 +292,19 @@ export function replayMatch(replay, { coreFactory = createArenaV1MatchCore } = {
       }
       if (frames.length !== core.config.participantIds.length) {
         throw new Error(`回放输入在 tick ${tick} 不完整或不连续。`);
+      }
+      if (beforeStep !== null) {
+        const verification = beforeStep(Object.freeze({
+          snapshot: cloneFrozenData(core.getSnapshot(), 'replay beforeStep snapshot'),
+          frames: Object.freeze(frames.map((frame) => Object.freeze(copyInput(frame)))),
+        }));
+        if (verification && typeof verification.then === 'function') {
+          Promise.resolve(verification).catch(() => {
+            // The synchronous replay contract already rejected this verifier.
+            // Contain a late async rejection so it cannot escape the caller.
+          });
+          throw new TypeError('replay beforeStep 必须同步完成。');
+        }
       }
       replayedEvents.push(...core.step(frames));
       const expected = checkpointByTick.get(core.tick);

@@ -13,7 +13,7 @@
 | Stage 6 | 当前否，动画生产前需确认证据 | 单动作键下跳跃/二段跳/下砸的映射 | 先实现 A/B 两种灰盒，盲测后冻结 |
 | Stage 7 | 否，默认已接受 | 正式资产是真 3D 低多边形还是六方向序列帧 | **真 3D 低多边形 + 手稿轮廓** |
 | Stage 8 | 否，默认已接受 | 装备/地图解锁如何不破坏对称性 | **解锁扩大双方共享内容池，局内无数值成长** |
-| Stage 9 | 当前否；S9.3/S9.4 冻结前需要 | 三端目标机型、平衡阈值与精确包体/内存预算 | S9.1 实验基础先按固定 seed/hash 推进；主流机 60 FPS，低档机允许表现降级到 30 FPS，规则 tick 仍为 60 Hz |
+| Stage 9 | 当前无数值决策；S9.4/S9.5 冻结受外部证据阻塞 | 六目标真机/宿主权限；S9.5 真实新手、知情同意/隐私条件与操作人员 | S9.4 V1 性能预算和 S9.5 V1 三隐藏组/30 完成者每组均已版本化；否决时新建版本，不回写 |
 
 ## Stage 5：首图
 
@@ -68,12 +68,12 @@ Stage 5 已依此实现并通过完整时间轴压测，不再是待决策项。
 
 ## Stage 9：目标设备与预算
 
-开始真机冻结前，需要用户提供或确认：
+开始真机与真人冻结前，需要项目方提供：
 
 1. Web、微信、抖音各一台低档目标机和一台主流目标机。
-2. 低档机允许只降级阴影、轮廓、粒子和拖尾后运行 30 FPS；该默认已经接受，Core 仍保持 60 Hz。
-3. 首包与总包体预算，以当时目标平台官方限制为上界，不在未做真机测量时伪造精确数字。
+2. 微信/抖音开发者工具登录和对应真机调试权限。
+3. S9.5 真实新手、知情同意/隐私执行条件和操作人员；研究数值不再等待临场选择。
 
-无论表现层使用 60 还是 30 FPS，权威 Core 均保持 60 Hz 固定 tick，回放 hash 不得变化。
+S9.4 已接受低档 30 FPS/high 60 FPS、Core 60 Hz 及版本化内存/包体门。S9.5 已接受三局/人、三隐藏平行组、至少 30 完成者/组和预注册胜率/感知门。无论表现层使用 60 还是 30 FPS，权威 Core 均保持 60 Hz 固定 tick，回放 hash 不得变化。
 
-完整冻结流程见 [Stage 9 平衡、可靠性与性能收敛计划](../architecture/arena-stage9-convergence-plan.md) 与 [ADR-012](../decisions/012-arena-reproducible-convergence.md)。
+完整冻结流程见 [Stage 9 平衡、可靠性与性能收敛计划](../architecture/arena-stage9-convergence-plan.md)、[ADR-024](../decisions/024-arena-stage9-performance-evidence-and-quality-degradation.md) 与 [ADR-025](../decisions/025-arena-stage9-preregistered-human-fairness-study.md)。

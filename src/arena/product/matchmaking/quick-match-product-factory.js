@@ -12,10 +12,15 @@ function validateQuickMatchService(value) {
 export class QuickMatchProductFactory {
   #quickMatchService;
   #matchConfig;
+  #completionSink;
 
-  constructor({ quickMatchService, matchConfig = {} }) {
+  constructor({ quickMatchService, matchConfig = {}, completionSink = null }) {
     this.#quickMatchService = validateQuickMatchService(quickMatchService);
     this.#matchConfig = cloneFrozenData(matchConfig, 'QuickMatchProductFactory matchConfig');
+    if (completionSink !== null && typeof completionSink !== 'function') {
+      throw new TypeError('QuickMatchProductFactory completionSink 必须是函数或 null。');
+    }
+    this.#completionSink = completionSink;
     Object.freeze(this);
   }
 
@@ -25,7 +30,7 @@ export class QuickMatchProductFactory {
       // The product surface intentionally exposes neither difficulty override
       // nor hidden assignment diagnostics.
       localMatch = this.#quickMatchService.create({ config: this.#matchConfig });
-      return new ProductMatchRuntime(localMatch);
+      return new ProductMatchRuntime(localMatch, { completionSink: this.#completionSink });
     } catch (error) {
       const cleanupErrors = [];
       if (localMatch?.session && typeof localMatch.session.destroy === 'function') {

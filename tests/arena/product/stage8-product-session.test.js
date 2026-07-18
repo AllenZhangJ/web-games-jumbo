@@ -548,6 +548,7 @@ test('ProductSessionController retries incomplete aggregate cleanup after enteri
 test('Arena V1 product composition runs a complete headless 1v1 without leaking hidden difficulty', async () => {
   const storage = storageHarness();
   const diagnostics = [];
+  const completions = [];
   let seed = 100;
   const controller = createArenaV1ProductSession({
     storage: storage.port,
@@ -561,6 +562,11 @@ test('Arena V1 product composition runs a complete headless 1v1 without leaking 
     },
     keyPrefix: 'test.product-session',
     diagnosticSink: (value) => diagnostics.push(value),
+    matchCompletionSink: (value) => {
+      assert.ok(Object.isFrozen(value));
+      assert.ok(Object.isFrozen(value.replay));
+      completions.push(value);
+    },
   });
 
   await controller.boot();
@@ -589,6 +595,8 @@ test('Arena V1 product composition runs a complete headless 1v1 without leaking 
   assert.ok(last.matchStep.snapshot.tick > tick);
   assert.match(last.matchStep.result.authorityHash, /^[0-9a-f]{8}$/);
   assert.equal(last.matchStep.result.matchSeed, 101);
+  assert.equal(completions.length, 1);
+  assert.deepEqual(completions[0].result, last.matchStep.result);
   const visible = JSON.stringify(controller.getSnapshot());
   assert.doesNotMatch(visible, /difficulty|\bbot\b|机器人|简单|普通|困难/i);
   assert.equal(diagnostics.some(({ type }) => type === 'match-assignment'), true);

@@ -43,6 +43,28 @@ test('headless replay reproduces checkpoints, final hash, result and events', ()
   core.destroy();
 });
 
+test('replay beforeStep sees immutable copies and rejects asynchronous verification', () => {
+  const core = createReplayCore();
+  const runner = new HeadlessMatchRunner(core, { checkpointInterval: 20 });
+  const replay = runner.runUntilEnded(scriptedFrames);
+  let observedSteps = 0;
+  replayMatch(replay, {
+    beforeStep({ snapshot, frames }) {
+      observedSteps += 1;
+      assert.ok(Object.isFrozen(snapshot));
+      assert.ok(Object.isFrozen(frames));
+      assert.ok(Object.isFrozen(frames[0]));
+      assert.throws(() => { frames[0].moveX = 0; }, TypeError);
+    },
+  });
+  assert.equal(observedSteps, replay.inputFrames.length / 2);
+  assert.throws(
+    () => replayMatch(replay, { beforeStep: async () => true }),
+    /必须同步完成/,
+  );
+  runner.destroy();
+});
+
 test('runner records a tick only after the authoritative step succeeds', () => {
   const core = createArenaV1MatchCore({
     config: { preparingTicks: 0 },
@@ -107,6 +129,15 @@ test('tampered replay config or recorded result is rejected even without changin
   const changedResult = structuredClone(replay);
   changedResult.result.reason = 'tampered';
   assert.throws(() => replayMatch(changedResult), /结算结果不一致/);
+  core.destroy();
+});
+
+test('Replay V5 rejects undeclared top-level evidence fields', () => {
+  const core = createReplayCore();
+  const replay = new HeadlessMatchRunner(core, { checkpointInterval: 20 })
+    .runUntilEnded(scriptedFrames);
+  replay.operatorNotes = 'must not enter authority replay';
+  assert.throws(() => replayMatch(replay), /不支持字段 operatorNotes/);
   core.destroy();
 });
 

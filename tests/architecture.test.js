@@ -253,6 +253,37 @@ test('Arena Stage 9 regression corpus stays headless and keeps Node IO in script
   }
 });
 
+test('Arena Stage 9 human study stays headless, host-free and outside authority ownership', async () => {
+  const arenaRoot = path.resolve('src/arena');
+  const studyRoot = path.join(arenaRoot, 'study');
+  const studyFiles = await listJavaScript(studyRoot);
+  assert.ok(studyFiles.length >= 7);
+  for (const file of studyFiles) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /from\s+['"](?:node:|three|[^'"]*(?:presentation|renderer|platform|entry|\/session\/)[^'"]*)['"]/,
+      `${file} 不应拥有 Node、宿主、Session、Renderer 或入口。`,
+    );
+    assert.doesNotMatch(
+      withoutStaticImports(source),
+      /(?:Date\.now|Math\.random|setTimeout|setInterval|requestAnimationFrame|\bperformance\s*(?:\.|\[)|\b(?:window|document|navigator|localStorage|sessionStorage)\b|\b(?:tt|wx)\s*\.)/,
+      `${file} 不应直接读取墙钟、随机或宿主全局。`,
+    );
+  }
+  const nonStudyFiles = (await listJavaScript(arenaRoot)).filter(
+    (file) => !file.startsWith(`${studyRoot}${path.sep}`),
+  );
+  for (const file of nonStudyFiles) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /from\s+['"][^'"]*(?:\/|^)study\//,
+      `${file} 不应让权威、Bot、产品或表现层反向依赖 Study。`,
+    );
+  }
+});
+
 test('Arena Stage 7 contracts remain host-free behind an injected Three view factory', async () => {
   const directories = [
     'src/arena/presentation/animation',

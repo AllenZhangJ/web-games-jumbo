@@ -583,6 +583,7 @@ export class ProductPresentationSession {
       wallNow: () => this.#composition.platform.wallNow(),
       seedSource: this.#composition.seedSource,
       matchConfig: this.#composition.matchConfig,
+      matchCompletionSink: this.#composition.matchCompletionSink,
       keyPrefix: this.#composition.keyPrefix,
       diagnosticSink: (detail) => this.#report('product', { detail }),
     });
