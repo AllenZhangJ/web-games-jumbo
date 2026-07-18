@@ -71,8 +71,10 @@ export class PlayerProfileRepository {
     migrationRegistry: migrationRegistryValue,
     storage,
     ownerId,
+    leaseHolderId = ownerId,
     wallNow,
     leaseDurationMs = 60_000,
+    leaseTakeoverSameOwner = false,
     keyPrefix,
   }) {
     const definition = createPlayerProfileDefinition(definitionValue);
@@ -93,8 +95,10 @@ export class PlayerProfileRepository {
       storage,
       key: this.#keys.lease,
       ownerId,
+      holderId: leaseHolderId,
       wallNow,
       durationMs: leaseDurationMs,
+      takeoverSameOwner: leaseTakeoverSameOwner,
       label: 'PlayerProfile Lease',
     });
     this.#profile = null;

@@ -6,21 +6,33 @@ import {
 } from '../rules/definition-utils.js';
 import { createSynchronousStoragePort } from './synchronous-storage-port.js';
 
-export const SYNCHRONOUS_STORAGE_LEASE_SCHEMA_VERSION = 1;
+const LEGACY_SYNCHRONOUS_STORAGE_LEASE_SCHEMA_VERSION = 1;
+export const SYNCHRONOUS_STORAGE_LEASE_SCHEMA_VERSION = 2;
 
-const LEASE_KEYS = new Set([
+const LEGACY_LEASE_KEYS = new Set([
   'schemaVersion',
   'ownerId',
   'revision',
   'acquiredAtMs',
   'expiresAtMs',
 ]);
+const LEASE_KEYS = new Set([...LEGACY_LEASE_KEYS, 'holderId']);
 
 function validateLease(value, label) {
-  assertKnownKeys(value, LEASE_KEYS, `${label} value`);
-  if (value.schemaVersion !== SYNCHRONOUS_STORAGE_LEASE_SCHEMA_VERSION) {
-    throw new RangeError(`${label} 不支持 schema ${String(value.schemaVersion)}。`);
+  const schemaVersion = value?.schemaVersion;
+  if (
+    schemaVersion !== LEGACY_SYNCHRONOUS_STORAGE_LEASE_SCHEMA_VERSION
+    && schemaVersion !== SYNCHRONOUS_STORAGE_LEASE_SCHEMA_VERSION
+  ) {
+    throw new RangeError(`${label} 不支持 schema ${String(schemaVersion)}。`);
   }
+  assertKnownKeys(
+    value,
+    schemaVersion === LEGACY_SYNCHRONOUS_STORAGE_LEASE_SCHEMA_VERSION
+      ? LEGACY_LEASE_KEYS
+      : LEASE_KEYS,
+    `${label} value`,
+  );
   const acquiredAtMs = assertIntegerAtLeast(
     value.acquiredAtMs,
     0,
@@ -31,9 +43,13 @@ function validateLease(value, label) {
     acquiredAtMs + 1,
     `${label}.expiresAtMs`,
   );
+  const ownerId = assertNonEmptyString(value.ownerId, `${label}.ownerId`);
   return Object.freeze({
     schemaVersion: SYNCHRONOUS_STORAGE_LEASE_SCHEMA_VERSION,
-    ownerId: assertNonEmptyString(value.ownerId, `${label}.ownerId`),
+    ownerId,
+    holderId: schemaVersion === LEGACY_SYNCHRONOUS_STORAGE_LEASE_SCHEMA_VERSION
+      ? ownerId
+      : assertNonEmptyString(value.holderId, `${label}.holderId`),
     revision: assertIntegerAtLeast(value.revision, 1, `${label}.revision`),
     acquiredAtMs,
     expiresAtMs,
@@ -42,6 +58,7 @@ function validateLease(value, label) {
 
 function sameLease(left, right) {
   return left.ownerId === right.ownerId
+    && left.holderId === right.holderId
     && left.revision === right.revision
     && left.acquiredAtMs === right.acquiredAtMs
     && left.expiresAtMs === right.expiresAtMs;
@@ -58,9 +75,11 @@ export class SynchronousStorageLease {
   #storage;
   #key;
   #ownerId;
+  #holderId;
   #wallNow;
   #durationMs;
   #label;
+  #takeoverSameOwner;
   #held;
   #lease;
   #lastNow;
@@ -71,14 +90,17 @@ export class SynchronousStorageLease {
     storage,
     key,
     ownerId,
+    holderId = ownerId,
     wallNow,
     durationMs = 60_000,
+    takeoverSameOwner = false,
     label: labelValue = 'SynchronousStorageLease',
   }) {
     this.#label = assertNonEmptyString(labelValue, 'SynchronousStorageLease.label');
     this.#storage = createSynchronousStoragePort(storage, { label: this.#label });
     this.#key = assertNonEmptyString(key, `${this.#label}.key`);
     this.#ownerId = assertNonEmptyString(ownerId, `${this.#label}.ownerId`);
+    this.#holderId = assertNonEmptyString(holderId, `${this.#label}.holderId`);
     if (typeof wallNow !== 'function') throw new TypeError('wallNow 必须是函数。');
     this.#wallNow = wallNow;
     this.#durationMs = assertIntegerAtLeast(
@@ -86,6 +108,15 @@ export class SynchronousStorageLease {
       1000,
       `${this.#label}.durationMs`,
     );
+    if (typeof takeoverSameOwner !== 'boolean') {
+      throw new TypeError(`${this.#label}.takeoverSameOwner 必须是布尔值。`);
+    }
+    if (takeoverSameOwner && this.#holderId === this.#ownerId) {
+      throw new RangeError(
+        `${this.#label}.holderId 在 same-owner takeover 模式下必须唯一且不能等于 ownerId。`,
+      );
+    }
+    this.#takeoverSameOwner = takeoverSameOwner;
     this.#held = false;
     this.#lease = null;
     this.#lastNow = null;
@@ -175,10 +206,15 @@ export class SynchronousStorageLease {
     try {
       const now = this.#now();
       const current = this.#read();
-      if (current && current.expiresAtMs > now) return false;
+      if (
+        current
+        && current.expiresAtMs > now
+        && !(this.#takeoverSameOwner && current.ownerId === this.#ownerId)
+      ) return false;
       const next = validateLease({
         schemaVersion: SYNCHRONOUS_STORAGE_LEASE_SCHEMA_VERSION,
         ownerId: this.#ownerId,
+        holderId: this.#holderId,
         revision: (current?.revision ?? 0) + 1,
         acquiredAtMs: now,
         expiresAtMs: now + this.#durationMs,
@@ -313,6 +349,8 @@ export class SynchronousStorageLease {
     this.#storage = null;
     this.#wallNow = null;
     this.#ownerId = null;
+    this.#holderId = null;
+    this.#takeoverSameOwner = false;
     this.#key = null;
     this.#destroyed = true;
   }

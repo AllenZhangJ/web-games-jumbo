@@ -1,3 +1,5 @@
+import { createRuntimeInstanceId } from './runtime-instance-id.js';
+
 function finitePositive(value, fallback) {
   const number = Number(value);
   return Number.isFinite(number) && number > 0 ? number : fallback;
@@ -38,23 +40,5 @@ export function createWebResearchPageOwnerId(
   root = globalThis,
   prefix = 'research-page',
 ) {
-  try {
-    if (typeof root.crypto?.randomUUID === 'function') {
-      return `${prefix}-${root.crypto.randomUUID()}`;
-    }
-    if (typeof root.crypto?.getRandomValues === 'function') {
-      const values = new Uint32Array(4);
-      root.crypto.getRandomValues(values);
-      return `${prefix}-${[...values].map(
-        (value) => value.toString(16).padStart(8, '0'),
-      ).join('')}`;
-    }
-  } catch {
-    // A deterministic fallback still lets the lease fail closed on collision.
-  }
-  const wall = Number.isFinite(root.Date?.now?.()) ? root.Date.now() : Date.now();
-  const monotonic = Number.isFinite(root.performance?.now?.())
-    ? Math.floor(root.performance.now() * 1000)
-    : 0;
-  return `${prefix}-fallback-${wall}-${monotonic}`;
+  return createRuntimeInstanceId(root, prefix);
 }

@@ -192,6 +192,10 @@ export function getRequiredWebGL2Context(canvas, attributes = {}, id = 'unknown'
 export function createPlatformContract(overrides = {}) {
   const id = overrides.id ?? 'unknown';
   const frameScheduler = createFrameScheduler();
+  const storageConcurrency = overrides.storageConcurrency ?? 'multi-runtime';
+  if (!['multi-runtime', 'single-active-runtime'].includes(storageConcurrency)) {
+    throw platformError(id, `未知 storageConcurrency ${String(storageConcurrency)}`);
+  }
   return {
     id,
     createCanvas: () => null,
@@ -219,5 +223,6 @@ export function createPlatformContract(overrides = {}) {
     storageDelete: () => false,
     share: () => Promise.resolve(false),
     ...overrides,
+    storageConcurrency,
   };
 }

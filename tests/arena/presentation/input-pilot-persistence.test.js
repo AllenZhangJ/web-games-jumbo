@@ -392,7 +392,10 @@ test('pilot storage lease repairs malformed ephemeral data but protects future s
   });
   assert.throws(() => future.acquire(), /来自未来 schema/);
   future.destroy();
-  assert.equal(harness.values.get('pilot.lease').schemaVersion, 2);
+  assert.equal(
+    harness.values.get('pilot.lease').schemaVersion,
+    INPUT_PILOT_STORAGE_LEASE_SCHEMA_VERSION + 1,
+  );
 });
 
 test('pilot storage lease rejects a backwards wall clock and failed write confirmation', () => {

@@ -195,7 +195,11 @@ export function createMiniGamePlatform(api, id) {
   const now = () => {
     try {
       const value = performanceObject?.now?.();
-      if (Number.isFinite(value)) return value;
+      if (Number.isFinite(value)) {
+        // Douyin's mini-game performance clock is reported in microseconds,
+        // while PresentationFrameLoop consumes DOM-style milliseconds.
+        return id === 'douyin' ? value / 1000 : value;
+      }
     } catch {
       // Fall through to a clock that is always available in JS runtimes.
     }
@@ -263,6 +267,7 @@ export function createMiniGamePlatform(api, id) {
 
   return createPlatformContract({
     id,
+    storageConcurrency: 'single-active-runtime',
     createCanvas: () => canvas,
     createOffscreenCanvas: (width, height) => createOffscreenCanvas(api, id, canvas, width, height),
     getWebGLContext: (targetCanvas, attributes) => (

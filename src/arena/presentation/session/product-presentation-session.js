@@ -580,11 +580,13 @@ export class ProductPresentationSession {
     this.#controller = this.#composition.controllerFactory({
       storage: this.#composition.platform,
       ownerId: this.#composition.ownerId,
+      profileLeaseHolderId: this.#composition.profileLeaseHolderId,
       wallNow: () => this.#composition.platform.wallNow(),
       seedSource: this.#composition.seedSource,
       matchConfig: this.#composition.matchConfig,
       matchCompletionSink: this.#composition.matchCompletionSink,
       keyPrefix: this.#composition.keyPrefix,
+      profileLeaseTakeoverSameOwner: this.#composition.profileLeaseTakeoverSameOwner,
       diagnosticSink: (detail) => this.#report('product', { detail }),
     });
     validateController(this.#controller);

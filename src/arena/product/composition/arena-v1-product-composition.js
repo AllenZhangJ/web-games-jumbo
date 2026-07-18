@@ -70,11 +70,13 @@ function cleanupOwned(values) {
 export function createArenaV1ProductSession({
   storage,
   ownerId,
+  profileLeaseHolderId = ownerId,
   wallNow,
   seedSource,
   matchConfig,
   matchCompletionSink = null,
   keyPrefix,
+  profileLeaseTakeoverSameOwner = false,
   diagnosticSink = null,
 } = {}) {
   const sink = validateDiagnosticSink(diagnosticSink);
@@ -92,8 +94,10 @@ export function createArenaV1ProductSession({
       definition: ARENA_V1_PLAYER_PROFILE_DEFINITION,
       storage,
       ownerId,
+      leaseHolderId: profileLeaseHolderId,
       wallNow,
       keyPrefix,
+      leaseTakeoverSameOwner: profileLeaseTakeoverSameOwner,
     });
     profileService = new PlayerProfileService({
       definition: ARENA_V1_PLAYER_PROFILE_DEFINITION,

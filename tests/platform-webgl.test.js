@@ -81,6 +81,7 @@ function miniGameApi({ id, withNativeOffscreen = true } = {}) {
 test('platform contract adds WebGL capabilities without changing existing defaults', () => {
   const platform = createPlatformContract({ id: 'test' });
   assert.equal(platform.id, 'test');
+  assert.equal(platform.storageConcurrency, 'multi-runtime');
   assert.equal(typeof platform.createCanvas, 'function');
   assert.equal(typeof platform.createOffscreenCanvas, 'function');
   assert.equal(typeof platform.getWebGLContext, 'function');
@@ -91,6 +92,10 @@ test('platform contract adds WebGL capabilities without changing existing defaul
     () => platform.createOffscreenCanvas(16, 16),
     /\[test\].*createOffscreenCanvas/,
   );
+  assert.throws(
+    () => createPlatformContract({ id: 'test', storageConcurrency: 'unknown' }),
+    /storageConcurrency/,
+  );
 });
 
 test('WeChat uses its options-based offscreen API and preserves viewport safe area', () => {
@@ -99,6 +104,7 @@ test('WeChat uses its options-based offscreen API and preserves viewport safe ar
   const offscreen = platform.createOffscreenCanvas(128.9, 64.2);
 
   assert.equal(platform.createCanvas(), fixture.mainCanvas);
+  assert.equal(platform.storageConcurrency, 'single-active-runtime');
   assert.equal(offscreen, fixture.nativeOffscreen);
   assert.deepEqual(fixture.offscreenCalls, [[{ type: '2d', width: 128, height: 64 }]]);
   assert.equal(offscreen.width, 128);
@@ -344,6 +350,14 @@ test('mini-game RAF uses one host scheduler even when requestAnimationFrame retu
   hostCallback();
   assert.deepEqual(cancelled, [undefined]);
   assert.equal(platform.cancelFrame(token), false);
+});
+
+test('Douyin mini-game normalizes its microsecond performance clock to milliseconds', () => {
+  const fixture = miniGameApi({ id: 'douyin' });
+  fixture.api.getPerformance = () => ({ now: () => 1_250_000 });
+  const platform = createMiniGamePlatform(fixture.api, 'douyin');
+
+  assert.equal(platform.now(), 1_250);
 });
 
 test('mini-game RAF falls back to Canvas and cancellation suppresses a late host callback', () => {

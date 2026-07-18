@@ -24,11 +24,13 @@ const OPTION_KEYS = new Set([
   'seedSource',
   'initialSeed',
   'ownerId',
+  'profileLeaseHolderId',
   'keyPrefix',
   'matchConfig',
   'matchCompletionSink',
   'maximumCatchUpTicks',
   'profileLeaseHeartbeatIntervalMs',
+  'profileLeaseTakeoverSameOwner',
   'qualityDefinition',
   'rendererFactory',
   'controllerFactory',
@@ -166,6 +168,10 @@ export function createProductPresentationSessionComposition(platformValue, optio
     30_000,
     'profileLeaseHeartbeatIntervalMs',
   );
+  const profileLeaseTakeoverSameOwner = options.profileLeaseTakeoverSameOwner ?? false;
+  if (typeof profileLeaseTakeoverSameOwner !== 'boolean') {
+    throw new TypeError('profileLeaseTakeoverSameOwner 必须是布尔值。');
+  }
   if (options.rendererFactory === undefined) {
     throw new TypeError('ProductPresentationSession 当前需要显式 rendererFactory。');
   }
@@ -218,13 +224,26 @@ export function createProductPresentationSessionComposition(platformValue, optio
   for (const [name, factory] of Object.entries(factories)) {
     requiredFunction(factory, `ProductPresentationSession.${name}`);
   }
+  const ownerId = options.ownerId === undefined
+    ? nextOwnerId(platform)
+    : nonEmptyString(options.ownerId, 'ProductPresentationSession.ownerId');
+  const profileLeaseHolderId = options.profileLeaseHolderId === undefined
+    ? ownerId
+    : nonEmptyString(
+      options.profileLeaseHolderId,
+      'ProductPresentationSession.profileLeaseHolderId',
+    );
+  if (profileLeaseTakeoverSameOwner && profileLeaseHolderId === ownerId) {
+    throw new RangeError(
+      'profileLeaseTakeoverSameOwner 启用时必须提供不同于 ownerId 的唯一 profileLeaseHolderId。',
+    );
+  }
   return Object.freeze({
     platform,
     mapperId,
     seedSource,
-    ownerId: options.ownerId === undefined
-      ? nextOwnerId(platform)
-      : nonEmptyString(options.ownerId, 'ProductPresentationSession.ownerId'),
+    ownerId,
+    profileLeaseHolderId,
     keyPrefix: options.keyPrefix === undefined
       ? 'arena.product.v1'
       : nonEmptyString(options.keyPrefix, 'ProductPresentationSession.keyPrefix'),
@@ -234,6 +253,7 @@ export function createProductPresentationSessionComposition(platformValue, optio
     fixedDeltaSeconds: ARENA_FIXED_DT,
     maximumCatchUpTicks,
     profileLeaseHeartbeatIntervalMs,
+    profileLeaseTakeoverSameOwner,
     profileLeaseRetryIntervalMs: Math.min(1_000, profileLeaseHeartbeatIntervalMs),
     performanceMemoryProvider,
     onDiagnostic,

@@ -503,6 +503,83 @@ test('shared lease confirms thrown host mutations and retains ownership for rele
   lease.destroy();
 });
 
+test('opt-in same-owner takeover fences a stale single-host runtime before writes', () => {
+  const harness = storageHarness();
+  const key = 'test.single-host-takeover';
+  assert.throws(() => new SynchronousStorageLease({
+    storage: harness.port,
+    key,
+    ownerId: 'single-host-owner',
+    wallNow: () => 1000,
+    takeoverSameOwner: true,
+  }), /holderId.*不能等于 ownerId/);
+  const first = new SynchronousStorageLease({
+    storage: harness.port,
+    key,
+    ownerId: 'single-host-owner',
+    holderId: 'runtime-a',
+    wallNow: () => 1000,
+  });
+  const replacement = new SynchronousStorageLease({
+    storage: harness.port,
+    key,
+    ownerId: 'single-host-owner',
+    holderId: 'runtime-b',
+    wallNow: () => 1000,
+    takeoverSameOwner: true,
+  });
+  assert.equal(first.acquire(), true);
+  assert.equal(replacement.acquire(), true);
+  assert.equal(harness.values.get(key).schemaVersion, 2);
+  assert.equal(harness.values.get(key).holderId, 'runtime-b');
+  assert.equal(replacement.getStatus().revision, 2);
+  assert.throws(() => first.assertHeld(), /过期或被其他页面取代/);
+  assert.equal(first.release(), true);
+  assert.equal(replacement.assertHeld(), true);
+  assert.equal(replacement.release(), true);
+  first.destroy();
+  replacement.destroy();
+});
+
+test('lease v2 reads legacy v1 but writes a future-safe holder schema', () => {
+  const harness = storageHarness();
+  const key = 'test.legacy-lease-upgrade';
+  harness.values.set(key, {
+    schemaVersion: 1,
+    ownerId: 'single-host-owner',
+    revision: 7,
+    acquiredAtMs: 1000,
+    expiresAtMs: 61_000,
+  });
+  const blocked = new SynchronousStorageLease({
+    storage: harness.port,
+    key,
+    ownerId: 'other-owner',
+    wallNow: () => 2000,
+  });
+  assert.equal(blocked.acquire(), false);
+
+  const replacement = new SynchronousStorageLease({
+    storage: harness.port,
+    key,
+    ownerId: 'single-host-owner',
+    holderId: 'runtime-v2',
+    wallNow: () => 2000,
+    takeoverSameOwner: true,
+  });
+  assert.equal(replacement.acquire(), true);
+  assert.deepEqual(harness.values.get(key), {
+    schemaVersion: 2,
+    ownerId: 'single-host-owner',
+    holderId: 'runtime-v2',
+    revision: 8,
+    acquiredAtMs: 2000,
+    expiresAtMs: 62_000,
+  });
+  replacement.destroy();
+  blocked.destroy();
+});
+
 test('shared lease cleans a persisted candidate when acquisition read-back fails', () => {
   const harness = storageHarness();
   const key = 'test.failed-acquire-lease';
