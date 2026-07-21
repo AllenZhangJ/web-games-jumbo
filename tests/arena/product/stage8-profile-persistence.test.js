@@ -18,7 +18,7 @@ import {
   validatePlayerProfileSaveEnvelope,
 } from '@number-strategy-jump/arena-profile-contracts';
 import { PlayerProfileRepository } from '../../../src/arena/product/persistence/player-profile-repository.js';
-import { SynchronousStorageLease } from '../../../src/arena/storage/synchronous-storage-lease.js';
+import { SynchronousStorageLease } from '@number-strategy-jump/arena-storage';
 
 function clone(value) {
   return value === undefined ? undefined : JSON.parse(JSON.stringify(value));

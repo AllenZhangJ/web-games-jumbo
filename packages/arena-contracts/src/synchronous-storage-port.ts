@@ -22,25 +22,67 @@ export interface SynchronousStoragePortOptions {
 type UnknownFunction = (...args: unknown[]) => unknown;
 
 const READ_RESULT_KEYS = new Set(['ok', 'found', 'value']);
+const PORT_OPTION_KEYS = new Set(['label']);
 
-function requiredFunction(value: unknown, name: string): UnknownFunction {
-  if (typeof value !== 'function') throw new TypeError(`${name} 必须是函数。`);
-  return value as UnknownFunction;
+function snapshotMethod(value: object, methodName: string, label: string): UnknownFunction {
+  let current: object | null = value;
+  const visited = new Set<object>();
+  while (current !== null && !visited.has(current)) {
+    visited.add(current);
+    const descriptor = Object.getOwnPropertyDescriptor(current, methodName);
+    if (descriptor) {
+      if (!Object.prototype.hasOwnProperty.call(descriptor, 'value')) {
+        throw new TypeError(`${label}.${methodName} 不得是访问器。`);
+      }
+      if (typeof descriptor.value !== 'function') {
+        throw new TypeError(`${label}.${methodName} 必须是函数。`);
+      }
+      return descriptor.value as UnknownFunction;
+    }
+    current = Object.getPrototypeOf(current) as object | null;
+  }
+  throw new TypeError(`${label}.${methodName} 必须是函数。`);
+}
+
+function findThenMethod(value: object): UnknownFunction | null {
+  let current: object | null = value;
+  const visited = new Set<object>();
+  while (current !== null && !visited.has(current)) {
+    visited.add(current);
+    const descriptor = Object.getOwnPropertyDescriptor(current, 'then');
+    if (descriptor) {
+      if (!Object.prototype.hasOwnProperty.call(descriptor, 'value')) return null;
+      return typeof descriptor.value === 'function' ? descriptor.value as UnknownFunction : null;
+    }
+    current = Object.getPrototypeOf(current) as object | null;
+  }
+  return null;
 }
 
 function rejectAsync<T>(value: T, name: string): T {
-  if (
-    value !== null
-    && (typeof value === 'object' || typeof value === 'function')
-    && typeof (value as { then?: unknown }).then === 'function'
-  ) {
-    Promise.resolve(value).catch(() => {
-      // The synchronous contract has already rejected this host call. Contain
-      // a late rejection so it cannot escape into an App lifecycle callback.
-    });
+  if (value !== null && (typeof value === 'object' || typeof value === 'function')) {
+    const thenMethod = findThenMethod(value as object);
+    if (!thenMethod) return value;
+    try {
+      thenMethod.call(value, undefined, () => undefined);
+    } catch {
+      // The synchronous boundary rejects the value regardless. A native
+      // Promise is observed here only to contain a possible late rejection.
+    }
     throw new TypeError(`${name} 必须同步完成。`);
   }
   return value;
+}
+
+function normalizeLabel(options: SynchronousStoragePortOptions): string {
+  assertKnownKeys(options, PORT_OPTION_KEYS, 'SynchronousStoragePort options');
+  const descriptor = Object.getOwnPropertyDescriptor(options, 'label');
+  return assertNonEmptyString(
+    descriptor && Object.prototype.hasOwnProperty.call(descriptor, 'value')
+      ? descriptor.value
+      : 'Synchronous Storage',
+    'SynchronousStoragePort.label',
+  );
 }
 
 /**
@@ -50,14 +92,13 @@ function rejectAsync<T>(value: T, name: string): T {
  */
 export function createSynchronousStoragePort(
   value: unknown,
-  { label: labelValue = 'Synchronous Storage' }: SynchronousStoragePortOptions = {},
+  options: SynchronousStoragePortOptions = {},
 ): Readonly<SynchronousStoragePort> {
-  const label = assertNonEmptyString(labelValue, 'SynchronousStoragePort.label');
+  const label = normalizeLabel(options);
   if (!value || typeof value !== 'object') throw new TypeError(`${label} Port 无效。`);
-  const host = value as Record<string, unknown>;
-  const storageRead = requiredFunction(host.storageRead, `${label}.storageRead`);
-  const storageWrite = requiredFunction(host.storageWrite, `${label}.storageWrite`);
-  const storageDelete = requiredFunction(host.storageDelete, `${label}.storageDelete`);
+  const storageRead = snapshotMethod(value, 'storageRead', label);
+  const storageWrite = snapshotMethod(value, 'storageWrite', label);
+  const storageDelete = snapshotMethod(value, 'storageDelete', label);
   return Object.freeze({
     read(keyValue: string): SynchronousStorageReadResult {
       const key = assertNonEmptyString(keyValue, `${label} key`);

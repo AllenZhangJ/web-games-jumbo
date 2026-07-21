@@ -7,7 +7,7 @@ import {
   normalizeThrownError,
 } from '@number-strategy-jump/arena-contracts';
 import { createSynchronousStoragePort } from '@number-strategy-jump/arena-contracts';
-import { SynchronousStorageLease } from '../../storage/synchronous-storage-lease.js';
+import { SynchronousStorageLease } from '@number-strategy-jump/arena-storage';
 import {
   PlayerProfileFutureSchemaError,
   PlayerProfileIndeterminateWriteError,

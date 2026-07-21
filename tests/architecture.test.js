@@ -777,6 +777,17 @@ test('Arena Rule/Core foundation preserves dependency direction and deterministi
     );
   }
 
+  const storageFiles = await listJavaScript(path.resolve('packages/arena-storage/src'));
+  assert.ok(storageFiles.length >= 2);
+  for (const file of storageFiles) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /(?:from\s+['"](?:node:|three|[^'"]*(?:product|study|pilot|presentation|platform|entry)[^'"]*)['"]|Date\.now|Math\.random|setTimeout|setInterval|requestAnimationFrame|\b(?:window|document|navigator|localStorage|sessionStorage)\b|\b(?:tt|wx)\s*\.)/,
+      `${file} 只能依赖同步存储合同与注入的墙钟。`,
+    );
+  }
+
   const resolverSource = await readFile(
     path.resolve('packages/arena-core/src/action-resolver.ts'),
     'utf8',
@@ -959,6 +970,16 @@ test('Arena Rule/Core foundation preserves dependency direction and deterministi
       '@number-strategy-jump/arena-progression',
     ],
     'arena-product-progression 只能组合纯结果、Profile 合同与成长合同。',
+  );
+
+  const storagePackage = JSON.parse(await readFile(
+    path.resolve('packages/arena-storage/package.json'),
+    'utf8',
+  ));
+  assert.deepEqual(
+    Object.keys(storagePackage.dependencies).sort(),
+    ['@number-strategy-jump/arena-contracts'],
+    'arena-storage 只能依赖底层同步存储合同。',
   );
 
   const matchCoreSource = await readFile(

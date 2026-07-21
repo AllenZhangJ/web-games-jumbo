@@ -150,6 +150,42 @@ describe('Arena deterministic contracts', () => {
     }).write('profile', null)).toThrow(/同步完成/);
   });
 
+  it('snapshots storage methods and rejects method or option accessors without executing them', () => {
+    let getterCalls = 0;
+    const hostile = Object.defineProperty({}, 'storageRead', {
+      enumerable: true,
+      get() {
+        getterCalls += 1;
+        return () => ({ ok: true, found: false, value: undefined });
+      },
+    });
+    Object.defineProperties(hostile, {
+      storageWrite: { enumerable: true, value: () => true },
+      storageDelete: { enumerable: true, value: () => true },
+    });
+    expect(() => createSynchronousStoragePort(hostile)).toThrow(/访问器/);
+    expect(getterCalls).toBe(0);
+
+    const host = {
+      storageRead: () => ({ ok: true, found: false, value: undefined }),
+      storageWrite: () => true,
+      storageDelete: () => true,
+    };
+    const port = createSynchronousStoragePort(host);
+    host.storageRead = () => ({ ok: false, found: false, value: undefined });
+    expect(port.read('snapshot')).toEqual({ ok: true, found: false, value: undefined });
+
+    const options = Object.defineProperty({}, 'label', {
+      enumerable: true,
+      get() {
+        getterCalls += 1;
+        return 'hostile';
+      },
+    });
+    expect(() => createSynchronousStoragePort(host, options)).toThrow(/数据字段/);
+    expect(getterCalls).toBe(0);
+  });
+
   it('deeply freezes canonical data without trusting accessors or insertion order', () => {
     const left = cloneFrozenData({ z: [3, 2, 1], a: { enabled: true } });
     const right = { a: { enabled: true }, z: [3, 2, 1] };
