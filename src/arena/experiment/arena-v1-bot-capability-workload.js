@@ -1,4 +1,4 @@
-import { BotController } from '../ai/bot-controller.js';
+import { BotController } from '@number-strategy-jump/arena-bot';
 import { BOT_DIFFICULTY_IDS, getBotDifficultyProfile } from '@number-strategy-jump/arena-bot';
 import { createArenaV1MatchCore } from '../arena-v1-match-core.js';
 import { combineCleanupFailure, normalizeThrownError } from '@number-strategy-jump/arena-contracts';

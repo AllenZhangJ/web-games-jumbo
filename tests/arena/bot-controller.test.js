@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { BotController } from '../../src/arena/ai/bot-controller.js';
 import {
   BOT_DIFFICULTY_PROFILES,
   BOT_GOAL_ID,
+  BotController,
 } from '@number-strategy-jump/arena-bot';
 import { createArenaV1MatchCore } from '../../src/arena/arena-v1-match-core.js';
 
@@ -72,5 +72,71 @@ test('BotController enforces consecutive ticks and idempotent destruction', () =
   controller.destroy();
   controller.destroy();
   assert.throws(() => controller.createInput(core.getSnapshot()), /已销毁/);
+  core.destroy();
+});
+
+test('invalid snapshot identity does not consume history or RNG and the same tick remains retryable', () => {
+  const core = createArenaV1MatchCore({ seed: 13, config: { preparingTicks: 0 } });
+  const recovering = createController(core, 'hard');
+  const fresh = createController(core, 'hard');
+  const snapshot = core.getSnapshot();
+  const invalid = structuredClone(snapshot);
+  invalid.participants[1].id = 'intruder';
+  assert.throws(() => recovering.createInput(invalid), /participant 身份不一致|参赛者身份不一致/);
+  assert.deepEqual(recovering.getDebugSnapshot(), fresh.getDebugSnapshot());
+  assert.deepEqual(recovering.createInput(snapshot), fresh.createInput(snapshot));
+  recovering.destroy();
+  fresh.destroy();
+  core.destroy();
+});
+
+test('debug snapshot is deeply frozen and cannot mutate controller state', () => {
+  const core = createArenaV1MatchCore({ seed: 17, config: { preparingTicks: 0 } });
+  const controller = createController(core, 'normal');
+  controller.createInput(core.getSnapshot());
+  const debug = controller.getDebugSnapshot();
+  assert.equal(Object.isFrozen(debug), true);
+  assert.equal(Object.isFrozen(debug.personality), true);
+  assert.equal(Object.isFrozen(debug.mobility), true);
+  assert.throws(() => { debug.mobility.nextMobilityTick = 999; }, TypeError);
+  assert.notEqual(controller.getDebugSnapshot().mobility.nextMobilityTick, 999);
+  controller.destroy();
+  core.destroy();
+});
+
+test('createInput rejects reentrancy without poisoning the retryable input boundary', () => {
+  const core = createArenaV1MatchCore({ seed: 19, config: { preparingTicks: 0 } });
+  const controller = createController(core, 'hard');
+  const fresh = createController(core, 'hard');
+  const snapshot = core.getSnapshot();
+  let reentered = false;
+  const proxy = new Proxy(snapshot, {
+    getOwnPropertyDescriptor(target, property) {
+      if (!reentered) {
+        reentered = true;
+        controller.createInput(snapshot);
+      }
+      return Reflect.getOwnPropertyDescriptor(target, property);
+    },
+  });
+  assert.throws(() => controller.createInput(proxy), /不允许重入/);
+  assert.deepEqual(controller.createInput(snapshot), fresh.createInput(snapshot));
+  controller.destroy();
+  fresh.destroy();
+  core.destroy();
+});
+
+test('an internal planning failure destroys the controller instead of continuing partial state', () => {
+  const core = createArenaV1MatchCore({ seed: 23, config: { preparingTicks: 0 } });
+  const controller = createController(core, 'hard');
+  const cosine = Math.cos;
+  Math.cos = () => { throw new Error('forced internal failure'); };
+  try {
+    assert.throws(() => controller.createInput(core.getSnapshot()), /forced internal failure/);
+  } finally {
+    Math.cos = cosine;
+  }
+  assert.throws(() => controller.createInput(core.getSnapshot()), /已销毁/);
+  controller.destroy();
   core.destroy();
 });

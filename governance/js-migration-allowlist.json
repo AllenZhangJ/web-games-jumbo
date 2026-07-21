@@ -62,7 +62,6 @@
     "src/arena-release/release-evidence-verification.js",
     "src/arena-release/release-readiness-definition.js",
     "src/arena-release/release-readiness-report.js",
-    "src/arena/ai/bot-controller.js",
     "src/arena/arena-v1-match-core.js",
     "src/arena/composition/arena-v1-authority-content.js",
     "src/arena/composition/arena-v1-content-selection.js",

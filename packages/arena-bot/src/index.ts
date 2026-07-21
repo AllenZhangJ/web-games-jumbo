@@ -61,6 +61,11 @@ export type {
   BotMobilitySample,
   BotMobilitySchedulerOptions,
 } from './bot-mobility-scheduler.js';
+export { BotController } from './bot-controller.js';
+export type {
+  BotControllerDebugSnapshot,
+  BotControllerOptions,
+} from './bot-controller.js';
 export type {
   BotActionAffordance,
   BotActionAffordanceOutcome,

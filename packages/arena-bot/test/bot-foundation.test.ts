@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   BOT_DIFFICULTY_IDS,
   BOT_DIFFICULTY_PROFILES,
+  BotController,
   BotMobilityScheduler,
   cloneBotSourceSnapshot,
   createBotArenaView,
@@ -160,6 +161,25 @@ describe('arena-bot deterministic foundation', () => {
       },
     });
     expect(() => createBotObservation(options)).toThrow(/数据字段|访问器/);
+    expect(getterCalls).toBe(0);
+  });
+
+  it('rejects controller option accessors without executing caller code', () => {
+    let getterCalls = 0;
+    const options = Object.defineProperty({
+      difficultyId: 'hard',
+      behaviorSeed: 1,
+      personalitySeed: 2,
+      arena: {},
+      characterRadius: 0.4,
+    }, 'participantId', {
+      enumerable: true,
+      get() {
+        getterCalls += 1;
+        return 'player-2';
+      },
+    });
+    expect(() => new BotController(options as never)).toThrow(/数据字段/);
     expect(getterCalls).toBe(0);
   });
 });
