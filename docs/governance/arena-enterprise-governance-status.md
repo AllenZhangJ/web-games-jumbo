@@ -31,7 +31,7 @@
 | G1 治理外壳/唯一产品 | 已完成 | Arena 已成为唯一生产产品；旧产品实现/专属测试/资产/规范已退役；strict TS、ESLint、Vitest、CI、CODEOWNERS、JS 递减清单和唯一产物门禁已启用 |
 | G2 Definition/合同/配置 | 已完成 | strict TS `arena-contracts`、`arena-definitions`、`arena-profile-contracts` 与 `arena-platform-contracts` 已承接确定性、输入/事件、权威快照、同步存储、平台能力、玩家档案/存档协议，以及动作/角色/装备/地图 Definition、只读 Registry 和唯一 Gameplay V2 数值配置；受审计 JavaScript 已降至 500 个 |
 | G3 Rule/Core/Replay | 已完成 | strict TS `arena-core`、`arena-movement`、`arena-physics`、`arena-equipment`、`arena-map` 与 `arena-match` 已承接规则/移动/物理/装备、完整地图权威链、比赛配置、Participant/Timeline 唯一写入者、角色 Runtime/物理投影、状态 hash、完整 MatchCore 编排、fixed-step Runtime 与 Replay；黄金语料保持 `0dace228` |
-| G4 Bot/Product/Persistence | 进行中 | strict TS `arena-bot` 已承接难度配置、人格生成与纯效用裁决；Bot observation/navigation/policy/controller、Quick Match、Product 与 Persistence 仍待分批迁移 |
+| G4 Bot/Product/Persistence | 进行中 | strict TS `arena-bot` 已承接难度配置、人格生成、纯效用裁决、受限观察与地图导航；Bot policy/scheduler/goals/controller、Quick Match、Product 与 Persistence 仍待分批迁移 |
 | G5 Presentation/资产/反馈 | 未开始 | 正式资产预算通过；审批字段与唯一正常路径仍待治理 |
 | G6 Platform/入口/构建 | 未开始 | 三端默认入口是 Product，但生产交付未与开发页面彻底隔离 |
 | G7 零 JS/完整质量门 | 未开始 | ESLint、strict TypeScript、Vitest 和 JavaScript 精确递减门禁已作为迁移护栏运行；coverage 阈值、测试归包和零 JS 尚未完成 |
@@ -55,7 +55,7 @@
 
 ## 当前不可合并原因
 
-1. 当前 440 个受维护 JavaScript 文件仍在精确允许清单中，Bot 其余层、Product/Persistence、Presentation/Platform 和应用组合适配尚未完成 strict TypeScript workspace 迁移。
+1. 当前 438 个受维护 JavaScript 文件仍在精确允许清单中，Bot policy/scheduler/goals/controller、Product/Persistence、Presentation/Platform 和应用组合适配尚未完成 strict TypeScript workspace 迁移。
 2. Vitest 当前保护底层合同包和治理门禁；Arena 其余测试尚待按 workspace 迁移并建立正式 coverage 阈值与零 JS 门禁。
 3. 正式资产最终审批与完整安全/依赖长期治理尚未闭环。
 4. 文档仍含迁移前阶段性叙述，尚未完成 G9 全量链接、状态与命令归真。
@@ -349,3 +349,14 @@
 - 干净提交 `da236490323a257d6f2fa9eb3cca513a308c69c3` 的统一 `npm run check` 通过：642/642 Node、87/87 strict package/治理、94/94 生命周期、120 场 fuzz/6 次 Replay、Presentation/Product 各 100 场 soak、0 个生产依赖漏洞、三端 clean build/预算和唯一生产产物检查均通过。
 - 黄金 Replay manifest 与四组 replay/final hash 保持 `0dace228`、`17b60bcb/c9cd7e73`、`543a7a80/33a33688`、`2e092bc6/389b7142`、`b68c763e/ee341734`；正式资产结果保持 `82a8b378`。JavaScript 精确允许清单由 443 降至 440。
 - G4 仍在进行中；下一批迁移 Bot observation 与地图导航公开合同，再迁 policy/scheduler/controller，之后才进入 Quick Match、Product 状态机和 Persistence 生命周期，不以本批基础能力冒充 G4 完成。
+
+## G4.2 Bot 受限观察与地图导航迁移证据
+
+- Bot observation 与 map navigation 已从 `src/arena/ai` 迁入 `@number-strategy-jump/arena-bot` strict TypeScript 公共 API，旧两个 JavaScript 实现删除；生产控制器、目标层与测试统一从包入口消费。Bot 包依赖精确扩展为 `arena-contracts`、`arena-equipment`、`arena-map`、`arena-match` 与 `arena-movement`，未依赖 MatchCore 私有实现、Session、Matchmaking、Product、Presentation、Three.js、DOM、平台、墙钟或未注入随机源。
+- 受限观察为当前/历史公开快照、actor/target、动作 affordance、可见装备、地图公开 occurrence 与 observation tick 建立显式不可变合同；未来快照、身份错配、affordance tick 漂移、非法 phase/mode、私有地图计划、非法可见装备和 schema 漂移在进入 Bot 决策前拒绝。地图导航只消费公开 warning/active payload 与已启用 surface，不读取未来时间线、装备身份或权威私有计划。
+- 外部 source/options/arena/objective 与嵌套公开快照均通过数据 descriptor 边界读取，访问器在执行前拒绝，恶意 getter 调用次数为零；由模块自身构造并深冻结的观察源与 arena view 使用模块私有 `WeakSet` 登记的安全快速路径，外部对象不能伪造信任身份，弱引用也不阻止生命周期回收。
+- 初版严格边界在本机 180 tick 定向测试中约为 795 ms，未作为可接受实现保留；消除内部快照重复深校验和冻结后，本机同一定向观测约为 181 ms，优于迁移前曾观测的约 198 ms。以上仅是本机定向观测，不替代 iPhone 13 Pro / iOS 26 / Chrome 的真机帧率、温升与触控验收。
+- 干净代码提交 `6bd7feaddcf2f8c723b0a9d3475af6854a85e004` 的统一 `npm run check` 通过：642/642 Node、88/88 strict package/治理、94/94 生命周期、120 场 fuzz/6 次 Replay、Presentation/Product 各 100 场 soak、0 个生产依赖漏洞、三端 clean build/预算和唯一生产产物检查均通过；黄金 Replay manifest 及四组 replay/final hash 保持 `0dace228`、`17b60bcb/c9cd7e73`、`543a7a80/33a33688`、`2e092bc6/389b7142`、`b68c763e/ee341734`。
+- 同一干净提交上的 Bot 专项压力完成 easy/normal/hard 各 300 场、共 900 场，耗时 `1543713.604708 ms`，结果 hash `12dcdc7e`，`sourceDirty=false`、`outcome=passed`、`freezeEligible=true`。三档 capability index 为 `7.62 / 18.34 / 19.453333333333333`，score rate 为 `0.44333333333333336 / 0.8566666666666667 / 0.89`，life pressure 为 `-0.4700000000000002 / 1.9433333333333334 / 2.3`；能力、得分率和生存压力均保持 easy < normal < hard。
+- 压力测试中每档均得到 300 个唯一 final hash 并完成 3 次 Replay 复验；难度分布 `0.3308 / 0.3396 / 0.3296`（easy/normal/hard），地面跳、二段跳、蹲下/释放、下砸、步行、跑动、地图 warning/start、未归因死亡上限和全部梯度 gate 均通过。JavaScript 精确允许清单由 440 降至 438。
+- G4 仍在进行中；下一批按依赖方向迁移 mobility policy、scheduler、goals 与 controller，随后治理 Quick Match/Session、Product 状态机和 Profile Repository/租约/迁移生命周期。本批未改变 Gameplay V2 数值、攻击挥空、移动/跳跃、武器动作、Bot 随机流、权威 tick、Replay schema 或黄金 hash。
