@@ -17,7 +17,7 @@ import {
   advancePlayerProfile,
   createPlayerProfile,
 } from '@number-strategy-jump/arena-profile-contracts';
-import { PlayerProfileService } from '../../../src/arena/product/profile/player-profile-service.js';
+import { PlayerProfileService } from '@number-strategy-jump/arena-profile-service';
 import {
   RewardCommitter,
   resolveMatchReward,

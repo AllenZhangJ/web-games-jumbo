@@ -9,7 +9,7 @@ import { ProductSessionController } from '../../../src/arena/product/composition
 import { ARENA_V1_PLAYER_PROFILE_DEFINITION } from '../../../src/arena/product/content/arena-v1-player-profile-definition.js';
 import { ProductMatchCoordinator } from '../../../src/arena/product/matchmaking/product-match-coordinator.js';
 import { createPlayerProfile } from '@number-strategy-jump/arena-profile-contracts';
-import { PlayerProfilePersistenceError } from '../../../src/arena/product/profile/player-profile-service.js';
+import { PlayerProfilePersistenceError } from '@number-strategy-jump/arena-profile-service';
 import {
   PRODUCT_SESSION_STATE,
   ProductSessionStateMachine,

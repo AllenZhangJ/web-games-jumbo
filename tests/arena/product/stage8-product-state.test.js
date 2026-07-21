@@ -14,7 +14,7 @@ import {
   PlayerProfilePersistenceError,
   PlayerProfileService,
   PLAYER_PROFILE_SERVICE_STATE,
-} from '../../../src/arena/product/profile/player-profile-service.js';
+} from '@number-strategy-jump/arena-profile-service';
 import {
   PRODUCT_SESSION_EVENT,
   PRODUCT_SESSION_STATE,

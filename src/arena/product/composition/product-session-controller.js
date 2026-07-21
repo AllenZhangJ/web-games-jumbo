@@ -2,7 +2,7 @@ import { normalizeThrownError } from '@number-strategy-jump/arena-contracts';
 import {
   PRODUCT_MATCH_COORDINATOR_STATE,
 } from '../matchmaking/product-match-coordinator.js';
-import { PlayerProfilePersistenceError } from '../profile/player-profile-service.js';
+import { PlayerProfilePersistenceError } from '@number-strategy-jump/arena-profile-service';
 import {
   PRODUCT_SESSION_EVENT,
   PRODUCT_SESSION_STATE,

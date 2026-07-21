@@ -18,6 +18,7 @@
     { "path": "./packages/arena-quick-match" },
     { "path": "./packages/arena-session" },
     { "path": "./packages/arena-profile-contracts" },
+    { "path": "./packages/arena-profile-service" },
     { "path": "./packages/arena-platform-contracts" }
   ]
 }
