@@ -2,7 +2,7 @@
 
 - 状态：已接受（S8.2 已实施）
 - 日期：2026-07-18
-- 治理更新：2026-07-21，匹配 Runtime/Factory/Coordinator 已迁入 strict `arena-product-match`；Controller/Composition 仍待治理
+- 治理更新：2026-07-21，匹配 Runtime/Factory/Coordinator 已迁入 strict `arena-product-match`，Controller 已迁入 strict `arena-product-session`；Composition 仍待治理
 
 ## 背景
 
@@ -50,6 +50,8 @@ character-select -> matching -> preparing -> in-match -> results -> ready
 - 可恢复的 Profile/匹配资源失败进入带稳定公开错误码的 `recoverable-error`。
 - pause、状态合同或清理失败会失败关闭并清理比赛；玩家可见快照不暴露内部异常文本、机器人身份或隐藏难度。
 - aggregate destroy 先发布 `destroyed`，再分别清理 Match 与 Profile；任一失败保留可重试所有权并向调用方抛出聚合错误。
+
+治理迁移将该规则扩展为可执行端口门禁：StateMachine、ProfileService、MatchCoordinator 与 RewardCommitter 方法在构造期快照，全部同步意图不可重入且不得返回 Promise；fatal/destroy 状态未成功发布时不调用外部资源清理，异步 Profile 在 destroy 后迟到成功会重新承担清理责任。Profile 与奖励只在低频事务边界复制冻结，逐帧 Match 快照不增加深拷贝。
 
 ### 4. 产品层保持无宿主、无渲染
 
