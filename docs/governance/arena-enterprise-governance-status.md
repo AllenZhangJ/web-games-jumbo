@@ -30,7 +30,7 @@
 | G0 基线冻结 | 已完成 | 自动化、压力、资产和三端构建通过；ADR/计划/证据已落盘；tag `arena-product-baseline-51e2822` 指向基线提交 |
 | G1 治理外壳/唯一产品 | 已完成 | Arena 已成为唯一生产产品；旧产品实现/专属测试/资产/规范已退役；strict TS、ESLint、Vitest、CI、CODEOWNERS、JS 递减清单和唯一产物门禁已启用 |
 | G2 Definition/合同/配置 | 已完成 | strict TS `arena-contracts`、`arena-definitions`、`arena-profile-contracts` 与 `arena-platform-contracts` 已承接确定性、输入/事件、权威快照、同步存储、平台能力、玩家档案/存档协议，以及动作/角色/装备/地图 Definition、只读 Registry 和唯一 Gameplay V2 数值配置；受审计 JavaScript 已降至 500 个 |
-| G3 Rule/Core/Replay | 进行中 | strict TS `arena-core`、`arena-movement`、`arena-physics`、`arena-equipment`、`arena-map` 与 `arena-match` 已承接规则/移动/物理/装备、完整地图权威链及比赛配置边界；MatchCore、Replay 与胜负/固定 tick 编排仍待迁移 |
+| G3 Rule/Core/Replay | 进行中 | strict TS `arena-core`、`arena-movement`、`arena-physics`、`arena-equipment`、`arena-map` 与 `arena-match` 已承接规则/移动/物理/装备、完整地图权威链、比赛配置及 Participant 唯一写入者；MatchCore、Replay 与阶段/结果/fixed tick 编排仍待迁移 |
 | G4 Bot/Product/Persistence | 未开始 | 当前功能与压力证据存在，尚未迁入 strict TS workspace |
 | G5 Presentation/资产/反馈 | 未开始 | 正式资产预算通过；审批字段与唯一正常路径仍待治理 |
 | G6 Platform/入口/构建 | 未开始 | 三端默认入口是 Product，但生产交付未与开发页面彻底隔离 |
@@ -283,3 +283,13 @@
 - `arena-match` 的依赖精确限定为 `arena-contracts`、`arena-core`、`arena-definitions` 与 `arena-physics`；架构门禁审计该依赖集和全部源码，禁止 Bot、Product、Presentation、Three.js、DOM、平台、墙钟或未注入随机源。
 - strict 公共包测试增至 65 项，其中新增默认配置逐项映射、深冻结、getter 零执行、schema/hash/分配漂移拒绝和角色稳定 ID 测试；164 项 MatchCore、Replay、内容池、Bot、Presentation 与架构定向回归通过，JavaScript 精确允许清单由 452 降至 449。
 - G3 下一批抽取 Participant/胜负阶段唯一写入者，再把 MatchCore 编排迁入 `arena-match`；本批未改变生命、准备/决胜/硬时限、出生、装备、攻击/移动/跳跃数值、Replay schema 或黄金 hash。
+
+## G3.16 Participant 权威状态唯一写入者迁移证据
+
+- `MatchParticipantSystem` 已进入 `arena-match` strict TypeScript 公共 API，成为双方生命、active/respawning/eliminated 状态、淘汰/死亡统计、受击归因、硬直、无敌和重生计时的唯一写入者；MatchCore 不再持有或暴露可写 participant Map。
+- 同 tick 淘汰先完整校验参与者集合、tick、决胜状态、归因窗口和重生时长，再按稳定 participant ID 一次提交；同时最终掉落仍保留双方击杀归因，未知/重复/非 active participant 不会留下部分生命或统计变化。
+- 普通计时重生只允许在倒计时归零后提交；进入决胜或比赛结束时使用显式 `phase-transition` 原因提前恢复。两条路径均清除旧命中归因和硬直，重新应用统一无敌时长，MatchCore 继续负责选择合法地图出生点并协调 Rule/Movement/Physics 重置。
+- 超时排名统一由 Participant 系统按生命、淘汰数和稳定 ID 计算；MatchCore 只消费不可变 outcome。公开/内部快照每次获得冻结副本，调用方不能写回 participant authority。
+- 构造输入与 elimination/respawn options 均使用 descriptor 安全深复制，拒绝 getter、未知字段和非法范围；系统销毁幂等，销毁后全部读取/写入拒绝。架构门禁明确禁止 MatchCore 重新出现 `#participants` 或私有 participant 构造器。
+- strict 公共包测试增至 71 项，其中新增 participant 初始化/隔离、计时、命中归因、同时淘汰、批次原子拒绝、阶段重生和终态生命周期；94 项 MatchCore、Equipment、Movement、Replay、Session、内容池与架构定向回归通过，JavaScript 精确允许清单保持 449。
+- G3 下一批迁移比赛 phase、active tick 与 Result 唯一写入者，然后迁移完整 MatchCore 编排；本批未改变生命数、受击归因窗口、重生/无敌时长、超时排序、事件顺序、Replay schema 或黄金 hash。

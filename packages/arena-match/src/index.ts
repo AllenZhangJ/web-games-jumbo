@@ -22,3 +22,9 @@ export type {
   ArenaParticipantCharacterConfig,
   ArenaParticipantStatus,
 } from './match-config.js';
+export { MatchParticipantSystem } from './match-participant-system.js';
+export type {
+  MatchParticipantSnapshot,
+  ParticipantEliminationOutcome,
+  ParticipantTimeoutOutcome,
+} from './match-participant-system.js';

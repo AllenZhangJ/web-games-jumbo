@@ -1,6 +1,7 @@
 import {
   ARENA_MATCH_PHASE,
   ARENA_PARTICIPANT_STATUS,
+  MatchParticipantSystem,
   createArenaMatchConfig,
 } from '@number-strategy-jump/arena-match';
 import { normalizeInputFrames } from '@number-strategy-jump/arena-contracts';
@@ -34,22 +35,6 @@ function normalizeSeed(seed) {
   return seed;
 }
 
-function createParticipant(id, lives, spawnIndex) {
-  return {
-    id,
-    lives,
-    spawnIndex,
-    status: ARENA_PARTICIPANT_STATUS.ACTIVE,
-    eliminations: 0,
-    deaths: 0,
-    hitstunTicks: 0,
-    invulnerableTicks: 0,
-    respawnTicks: 0,
-    lastHitBy: null,
-    lastHitTick: -1,
-  };
-}
-
 function cloneResult(result) {
   return result ? { ...result } : null;
 }
@@ -61,12 +46,6 @@ function cloneSnapshotData(value) {
     key,
     cloneSnapshotData(child),
   ]));
-}
-
-function compareText(left, right) {
-  if (left < right) return -1;
-  if (left > right) return 1;
-  return 0;
 }
 
 /**
@@ -85,7 +64,7 @@ export class MatchCore {
   #movementPhysicsPort;
   #rules;
   #map;
-  #participants;
+  #participantSystem;
   #rngStreams;
   #events;
   #started;
@@ -99,6 +78,17 @@ export class MatchCore {
 
   #cleanupConstructionFailure(error) {
     const cleanupErrors = [];
+    try {
+      if (typeof this.#participantSystem?.destroy === 'function') {
+        this.#participantSystem.destroy();
+      }
+      this.#participantSystem = null;
+    } catch (cleanupError) {
+      cleanupErrors.push(normalizeThrownError(
+        cleanupError,
+        'MatchCore participant 构造清理失败',
+      ));
+    }
     try {
       if (typeof this.#movement?.destroy === 'function') this.#movement.destroy();
       this.#movement = null;
@@ -170,7 +160,10 @@ export class MatchCore {
         createRng(deriveSeed(this.matchSeed, name)),
       ]),
     );
-    this.#participants = new Map();
+    this.#participantSystem = new MatchParticipantSystem({
+      participantIds: this.config.participantIds,
+      livesPerParticipant: this.config.livesPerParticipant,
+    });
     this.#characterRuntimes = new Map();
     this.#physics = null;
     this.#movement = null;
@@ -234,8 +227,6 @@ export class MatchCore {
       this.#movementPhysicsPort = createMovementPhysicsPort(this.#physics);
       for (let index = 0; index < this.config.participantIds.length; index += 1) {
         const id = this.config.participantIds[index];
-        const participant = createParticipant(id, this.config.livesPerParticipant, index);
-        this.#participants.set(id, participant);
         const runtime = this.#characterRuntimes.get(id);
         const definition = this.#characterRegistry.require(runtime.definitionId);
         this.#physics.addCharacter({
@@ -261,7 +252,6 @@ export class MatchCore {
         });
       }
     } catch (error) {
-      this.#participants.clear();
       throw this.#cleanupConstructionFailure(error);
     }
   }
@@ -424,29 +414,18 @@ export class MatchCore {
   }
 
   #advanceParticipantTimers() {
-    for (const id of this.config.participantIds) {
-      const participant = this.#participants.get(id);
-      if (participant.status === ARENA_PARTICIPANT_STATUS.RESPAWNING) {
-        participant.respawnTicks -= 1;
-        if (participant.respawnTicks <= 0) this.#respawnParticipant(participant);
-        continue;
-      }
-      if (participant.status !== ARENA_PARTICIPANT_STATUS.ACTIVE) continue;
-      if (participant.hitstunTicks > 0) participant.hitstunTicks -= 1;
-      if (participant.invulnerableTicks > 0) participant.invulnerableTicks -= 1;
+    for (const participantId of this.#participantSystem.advanceTimers()) {
+      this.#respawnParticipant(participantId, 'timer');
     }
   }
 
   #createRuleActors() {
     return this.config.participantIds.map((id) => {
-      const participant = this.#participants.get(id);
       const physics = this.#physics.getCharacterState(id);
       return {
         id,
-        canAct: participant.status === ARENA_PARTICIPANT_STATUS.ACTIVE
-          && participant.hitstunTicks === 0,
-        targetable: participant.status === ARENA_PARTICIPANT_STATUS.ACTIVE
-          && participant.invulnerableTicks === 0,
+        canAct: this.#participantSystem.canAct(id),
+        targetable: this.#participantSystem.isTargetable(id),
         position: { ...physics.position },
         facing: { ...physics.facing },
       };
@@ -458,7 +437,6 @@ export class MatchCore {
     const inputs = [];
     const availability = [];
     for (const participantId of this.config.participantIds) {
-      const participant = this.#participants.get(participantId);
       const physics = this.#physics.getCharacterState(participantId);
       const frame = frameById.get(participantId);
       contacts.push({ participantId, grounded: physics.grounded });
@@ -472,8 +450,7 @@ export class MatchCore {
       });
       availability.push({
         participantId,
-        canMove: participant.status === ARENA_PARTICIPANT_STATUS.ACTIVE
-          && participant.hitstunTicks === 0,
+        canMove: this.#participantSystem.canAct(participantId),
       });
     }
     this.#movement.prepareTick({
@@ -559,12 +536,11 @@ export class MatchCore {
     const batch = this.#map.advance({
       activeTick: this.#activeTick,
       actors: this.config.participantIds.map((id) => {
-        const participant = this.#participants.get(id);
         const physics = this.#physics.getCharacterState(id);
         return {
           id,
           position: { ...physics.position },
-          eligible: participant.status === ARENA_PARTICIPANT_STATUS.ACTIVE,
+          eligible: this.#participantSystem.isActive(id),
         };
       }),
     });
@@ -605,10 +581,9 @@ export class MatchCore {
 
   #updateEquipmentState() {
     const participants = this.config.participantIds.map((id) => {
-      const participant = this.#participants.get(id);
       const physics = this.#physics.getCharacterState(id);
       if (
-        participant.status === ARENA_PARTICIPANT_STATUS.ACTIVE
+        this.#participantSystem.isActive(id)
         && physics.grounded
         && physics.supportSurfaceId
         && this.#rules.getHeldEquipment(id)
@@ -616,7 +591,7 @@ export class MatchCore {
       return {
         id,
         position: { ...physics.position },
-        eligible: participant.status === ARENA_PARTICIPANT_STATUS.ACTIVE,
+        eligible: this.#participantSystem.isActive(id),
       };
     });
     const pickups = this.#rules.resolveEquipmentPickups({
@@ -641,13 +616,10 @@ export class MatchCore {
   #commitRuleBatch(batch) {
     this.#rules.commit(batch, {
       recordHit: (attackerId, targetId) => {
-        const target = this.#participants.get(targetId);
-        target.lastHitBy = attackerId;
-        target.lastHitTick = this.#tick;
+        this.#participantSystem.recordHit(attackerId, targetId, this.#tick);
       },
       applyHitstun: (participantId, ticks) => {
-        const participant = this.#participants.get(participantId);
-        participant.hitstunTicks = Math.max(participant.hitstunTicks, ticks);
+        this.#participantSystem.applyHitstun(participantId, ticks);
       },
       applyImpulse: (participantId, impulse) => {
         this.#physics.applyImpulse(participantId, impulse);
@@ -661,12 +633,8 @@ export class MatchCore {
 
   #applyMovementIntents(frameById) {
     for (const id of this.config.participantIds) {
-      const participant = this.#participants.get(id);
       const frame = frameById.get(id);
-      if (
-        participant.status !== ARENA_PARTICIPANT_STATUS.ACTIVE
-        || participant.hitstunTicks > 0
-      ) {
+      if (!this.#participantSystem.canAct(id)) {
         this.#physics.setMovementIntent(id, 0, 0);
       } else {
         const intent = this.#movement.projectHorizontalIntent(id, frame.moveX, frame.moveZ);
@@ -676,42 +644,40 @@ export class MatchCore {
   }
 
   #resolveEliminations() {
-    const eliminated = [];
+    const eliminatedIds = [];
     for (const id of this.config.participantIds) {
-      const participant = this.#participants.get(id);
-      if (participant.status !== ARENA_PARTICIPANT_STATUS.ACTIVE) continue;
+      if (!this.#participantSystem.isActive(id)) continue;
       const state = this.#physics.getCharacterState(id);
-      if (state.position.y < this.config.arena.killY) eliminated.push(participant);
+      if (state.position.y < this.config.arena.killY) eliminatedIds.push(id);
     }
-    if (eliminated.length === 0) return;
+    if (eliminatedIds.length === 0) return;
 
-    for (const participant of eliminated) {
-      participant.lives = Math.max(0, participant.lives - 1);
-      participant.deaths += 1;
-      const creditedAttacker = participant.lastHitBy
-        && this.#tick - participant.lastHitTick <= this.config.lastHitCreditTicks
-        ? this.#participants.get(participant.lastHitBy)
-        : null;
-      if (creditedAttacker) creditedAttacker.eliminations += 1;
+    const outcomes = this.#participantSystem.eliminateBatch(eliminatedIds, {
+      tick: this.#tick,
+      suddenDeath: this.#phase === ARENA_MATCH_PHASE.SUDDEN_DEATH,
+      lastHitCreditTicks: this.config.lastHitCreditTicks,
+      respawnTicks: this.config.respawnTicks,
+    });
+    for (const outcome of outcomes) {
       this.#emit(EVENT.PLAYER_ELIMINATED, {
-        participantId: participant.id,
-        remainingLives: participant.lives,
-        creditedAttackerId: creditedAttacker?.id ?? null,
+        participantId: outcome.participantId,
+        remainingLives: outcome.remainingLives,
+        creditedAttackerId: outcome.creditedAttackerId,
       });
-      const dropped = this.#rules.dropEquipment(participant.id, {
+      const dropped = this.#rules.dropEquipment(outcome.participantId, {
         isPositionValid: (position) => this.#isEquipmentPositionValid(position),
       });
       if (dropped) {
         if (dropped.despawned) {
           this.#emit(EVENT.EQUIPMENT_DESPAWNED, {
-            participantId: participant.id,
+            participantId: outcome.participantId,
             equipmentInstanceId: dropped.equipment.instanceId,
             equipmentDefinitionId: dropped.equipment.definitionId,
             reason: 'no-valid-drop-position',
           });
         } else {
           this.#emit(EVENT.EQUIPMENT_DROPPED, {
-            participantId: participant.id,
+            participantId: outcome.participantId,
             equipmentInstanceId: dropped.equipment.instanceId,
             equipmentDefinitionId: dropped.equipment.definitionId,
             position: { ...dropped.equipment.position },
@@ -719,59 +685,53 @@ export class MatchCore {
         }
         if (dropped.fallbackUsed) {
           this.#emit(EVENT.EQUIPMENT_DROP_FALLBACK, {
-            participantId: participant.id,
+            participantId: outcome.participantId,
             equipmentInstanceId: dropped.equipment.instanceId,
             diagnosticCode: dropped.diagnosticCode,
           });
         }
       }
-      const terminal = this.#phase === ARENA_MATCH_PHASE.SUDDEN_DEATH || participant.lives === 0;
-      participant.status = terminal
-        ? ARENA_PARTICIPANT_STATUS.ELIMINATED
-        : ARENA_PARTICIPANT_STATUS.RESPAWNING;
-      participant.respawnTicks = terminal ? 0 : this.config.respawnTicks;
-      participant.hitstunTicks = 0;
-      participant.invulnerableTicks = 0;
-      this.#rules.resetParticipant(participant.id);
-      this.#movement.resetParticipant(participant.id);
-      this.#physics.resetCharacter(participant.id, {
-        position: this.#holdingPosition(participant),
+      this.#rules.resetParticipant(outcome.participantId);
+      this.#movement.resetParticipant(outcome.participantId);
+      this.#physics.resetCharacter(outcome.participantId, {
+        position: this.#holdingPosition(outcome.participantId),
         velocity: { x: 0, y: 0, z: 0 },
       });
     }
 
-    const terminalParticipants = this.config.participantIds
-      .map((id) => this.#participants.get(id))
-      .filter((participant) => participant.status === ARENA_PARTICIPANT_STATUS.ELIMINATED);
-    if (terminalParticipants.length === 2) {
+    const terminalParticipantIds = this.#participantSystem.listByStatus(
+      ARENA_PARTICIPANT_STATUS.ELIMINATED,
+    );
+    if (terminalParticipantIds.length === 2) {
       this.#endMatch({ winnerId: null, reason: 'simultaneous-elimination', isDraw: true });
-    } else if (terminalParticipants.length === 1) {
+    } else if (terminalParticipantIds.length === 1) {
       const winnerId = this.config.participantIds.find(
-        (id) => id !== terminalParticipants[0].id,
+        (id) => id !== terminalParticipantIds[0],
       );
       this.#endMatch({ winnerId, reason: 'last-participant-standing', isDraw: false });
     }
   }
 
-  #holdingPosition(participant) {
+  #holdingPosition(participantId) {
+    const spawnIndex = this.#participantSystem.getSpawnIndex(participantId);
     return {
-      x: participant.spawnIndex * 4,
-      y: this.config.arena.killY - 50 - participant.spawnIndex * 5,
+      x: spawnIndex * 4,
+      y: this.config.arena.killY - 50 - spawnIndex * 5,
       z: 0,
     };
   }
 
-  #chooseRespawn(participant) {
+  #chooseRespawn(participantId) {
     const validSpawns = this.config.arena.spawns.filter((spawn) => (
       this.#map.isPositionOnEnabledSurface(spawn)
     ));
     if (validSpawns.length === 0) throw new Error('当前地图没有合法重生点。');
-    const opponents = this.config.participantIds
-      .filter((id) => id !== participant.id)
-      .map((id) => this.#participants.get(id))
-      .filter((value) => value.status === ARENA_PARTICIPANT_STATUS.ACTIVE)
-      .map((value) => this.#physics.getCharacterState(value.id));
-    if (opponents.length === 0) return validSpawns[participant.spawnIndex % validSpawns.length];
+    const opponents = this.#participantSystem
+      .listByStatus(ARENA_PARTICIPANT_STATUS.ACTIVE)
+      .filter((id) => id !== participantId)
+      .map((id) => this.#physics.getCharacterState(id));
+    const spawnIndex = this.#participantSystem.getSpawnIndex(participantId);
+    if (opponents.length === 0) return validSpawns[spawnIndex % validSpawns.length];
     return validSpawns
       .map((spawn, index) => ({
         spawn,
@@ -786,23 +746,21 @@ export class MatchCore {
       ))[0].spawn;
   }
 
-  #respawnParticipant(participant) {
-    const spawn = this.#chooseRespawn(participant);
-    participant.status = ARENA_PARTICIPANT_STATUS.ACTIVE;
-    participant.respawnTicks = 0;
-    participant.hitstunTicks = 0;
-    participant.invulnerableTicks = this.config.invulnerableTicks;
-    participant.lastHitBy = null;
-    participant.lastHitTick = -1;
-    this.#rules.resetParticipant(participant.id);
-    this.#movement.resetParticipant(participant.id);
-    this.#physics.resetCharacter(participant.id, {
+  #respawnParticipant(participantId, reason = 'phase-transition') {
+    const spawn = this.#chooseRespawn(participantId);
+    const participant = this.#participantSystem.respawn(participantId, {
+      invulnerableTicks: this.config.invulnerableTicks,
+      reason,
+    });
+    this.#rules.resetParticipant(participantId);
+    this.#movement.resetParticipant(participantId);
+    this.#physics.resetCharacter(participantId, {
       position: spawn,
       velocity: { x: 0, y: 0, z: 0 },
       facing: { x: spawn.x <= 0 ? 1 : -1, z: 0 },
     });
     this.#emit(EVENT.PLAYER_RESPAWNED, {
-      participantId: participant.id,
+      participantId,
       position: { ...spawn },
       invulnerableTicks: participant.invulnerableTicks,
     });
@@ -811,11 +769,10 @@ export class MatchCore {
   #startSuddenDeath() {
     if (this.#phase !== ARENA_MATCH_PHASE.RUNNING) return;
     this.#phase = ARENA_MATCH_PHASE.SUDDEN_DEATH;
-    for (const id of this.config.participantIds) {
-      const participant = this.#participants.get(id);
-      if (participant.status === ARENA_PARTICIPANT_STATUS.RESPAWNING) {
-        this.#respawnParticipant(participant);
-      }
+    for (const participantId of this.#participantSystem.listByStatus(
+      ARENA_PARTICIPANT_STATUS.RESPAWNING,
+    )) {
+      this.#respawnParticipant(participantId);
     }
     this.#emit(EVENT.SUDDEN_DEATH_STARTED, {
       remainingTicks: Math.max(0, this.config.hardLimitTicks - this.#activeTick),
@@ -824,29 +781,15 @@ export class MatchCore {
 
   #resolveTimeout() {
     if (this.#phase === ARENA_MATCH_PHASE.ENDED) return;
-    const ranked = this.config.participantIds
-      .map((id) => this.#participants.get(id))
-      .sort((a, b) => (
-        b.lives - a.lives
-        || b.eliminations - a.eliminations
-        || compareText(a.id, b.id)
-      ));
-    const tied = ranked[0].lives === ranked[1].lives
-      && ranked[0].eliminations === ranked[1].eliminations;
-    this.#endMatch({
-      winnerId: tied ? null : ranked[0].id,
-      reason: tied ? 'timeout-draw' : 'timeout-score',
-      isDraw: tied,
-    });
+    this.#endMatch(this.#participantSystem.resolveTimeout());
   }
 
   #endMatch({ winnerId, reason, isDraw }) {
     if (this.#phase === ARENA_MATCH_PHASE.ENDED) return;
-    for (const id of this.config.participantIds) {
-      const participant = this.#participants.get(id);
-      if (participant.status === ARENA_PARTICIPANT_STATUS.RESPAWNING) {
-        this.#respawnParticipant(participant);
-      }
+    for (const participantId of this.#participantSystem.listByStatus(
+      ARENA_PARTICIPANT_STATUS.RESPAWNING,
+    )) {
+      this.#respawnParticipant(participantId);
     }
     this.#phase = ARENA_MATCH_PHASE.ENDED;
     this.#result = {
@@ -879,7 +822,7 @@ export class MatchCore {
       remainingTicks: Math.max(0, this.config.hardLimitTicks - this.#activeTick),
       eventSequence: this.#eventSequence,
       participants: this.config.participantIds.map((id) => {
-        const participant = this.#participants.get(id);
+        const participant = this.#participantSystem.getSnapshot(id);
         const physics = this.#physics.getCharacterState(id);
         return {
           id,
@@ -1019,6 +962,7 @@ export class MatchCore {
   destroy() {
     if (
       this.#destroyed
+      && !this.#participantSystem
       && !this.#movement
       && !this.#rules
       && !this.#map
@@ -1027,9 +971,16 @@ export class MatchCore {
     if (this.#stepping) throw new Error('step() 期间不能销毁 MatchCore。');
     this.#destroyed = true;
     this.#events.length = 0;
-    this.#participants.clear();
     this.#characterRuntimes.clear();
     const errors = [];
+    if (this.#participantSystem) {
+      try {
+        this.#participantSystem.destroy();
+        this.#participantSystem = null;
+      } catch (error) {
+        errors.push(normalizeThrownError(error, 'MatchCore participant 清理失败'));
+      }
+    }
     if (this.#movement) {
       try {
         this.#movement.destroy();

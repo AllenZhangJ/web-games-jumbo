@@ -719,4 +719,12 @@ test('Arena Rule/Core foundation preserves dependency direction and deterministi
     ],
     'arena-match 编排层只能依赖底层合同、Core、Definition 与 Physics。',
   );
+
+  const matchCoreSource = await readFile(path.resolve('src/arena/match-core.js'), 'utf8');
+  assert.match(matchCoreSource, /MatchParticipantSystem/);
+  assert.doesNotMatch(
+    matchCoreSource,
+    /#participants\b|function\s+createParticipant\b/,
+    'MatchCore 不得重新持有可写 participant Map 或私有 participant 构造器。',
+  );
 });
