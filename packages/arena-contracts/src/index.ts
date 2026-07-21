@@ -28,3 +28,9 @@ export type {
 } from './input-frame.js';
 export { ARENA_MATCH_EVENT } from './match-event-types.js';
 export type { ArenaMatchEventType } from './match-event-types.js';
+export { createSynchronousStoragePort } from './synchronous-storage-port.js';
+export type {
+  SynchronousStoragePort,
+  SynchronousStoragePortOptions,
+  SynchronousStorageReadResult,
+} from './synchronous-storage-port.js';

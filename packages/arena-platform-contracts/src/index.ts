@@ -1,22 +1,103 @@
+// Presentation/Platform boundary only; authority packages must not depend on this module.
 const WEBGL2_VERSION = 0x1f02;
 
-function safeNow(now) {
+type HostFrameId = unknown;
+type FrameCallback = (timestamp: number) => void;
+
+export interface PlatformCanvas {
+  getContext(...args: unknown[]): unknown;
+  addEventListener?: (...args: unknown[]) => unknown;
+  removeEventListener?: (...args: unknown[]) => unknown;
+  width?: unknown;
+  height?: unknown;
+}
+
+interface WebGL2ContextLike {
+  VERSION?: unknown;
+  getParameter?: (name: unknown) => unknown;
+  getContextAttributes?: () => unknown;
+  texStorage2D?: unknown;
+  createVertexArray?: unknown;
+}
+
+export interface FrameSchedulerOptions {
+  readonly request?: (callback: () => void) => HostFrameId;
+  readonly cancel?: (hostId: HostFrameId) => unknown;
+  readonly now?: () => unknown;
+}
+
+export interface FrameScheduler {
+  requestFrame(callback: FrameCallback): number;
+  cancelFrame(token: number): boolean;
+}
+
+export type PlatformStorageConcurrency = 'multi-runtime' | 'single-active-runtime';
+
+export interface PlatformViewport {
+  readonly width: number;
+  readonly height: number;
+  readonly pixelRatio: number;
+  readonly safeArea: unknown;
+}
+
+export interface ArenaPlatformContract {
+  readonly id: string;
+  readonly storageConcurrency: PlatformStorageConcurrency;
+  createCanvas(): unknown;
+  createOffscreenCanvas(width: unknown, height?: unknown): unknown;
+  getWebGLContext(canvas: unknown, attributes?: unknown): unknown;
+  createImage(): unknown;
+  readAssetBytes(sourceKey: string): Promise<ArrayBuffer>;
+  getViewport(): PlatformViewport;
+  requestFrame(callback: FrameCallback): number;
+  cancelFrame(token: number): boolean;
+  now(): number;
+  wallNow(): number;
+  bindInput(bindings?: unknown): () => void;
+  onResize(callback: () => void): () => void;
+  onShow(callback: () => void): () => void;
+  onHide(callback: () => void): () => void;
+  createAudio(): unknown;
+  vibrate(kind?: string): unknown;
+  storageGet(key: string): unknown;
+  storageSet(key: string, value: unknown): boolean;
+  storageRemove(key: string): boolean;
+  storageRead(key: string): unknown;
+  storageWrite(key: string, value: unknown): boolean;
+  storageDelete(key: string): boolean;
+  share(payload?: unknown): Promise<boolean>;
+}
+
+export type PlatformContractOverrides = Partial<ArenaPlatformContract> & Record<string, unknown>;
+
+interface ScheduledFrame {
+  active: boolean;
+  hostId: HostFrameId;
+  timerId: ReturnType<typeof setTimeout> | undefined;
+  usesHost: boolean;
+}
+
+function safeNow(now: (() => unknown) | undefined): number {
   try {
     const value = now?.();
-    if (Number.isFinite(value)) return value;
+    if (Number.isFinite(value)) return value as number;
   } catch {
     // Fall back to the wall clock when a host performance API is unavailable.
   }
   return Date.now();
 }
 
-function platformError(id, message, cause) {
-  const error = new Error(`[${id}] ${message}`);
+function platformError(id: unknown, message: string, cause?: unknown): Error {
+  const error = new Error(`[${String(id)}] ${message}`);
   if (cause) error.cause = cause;
   return error;
 }
 
-export function normalizeCanvasSize(width, height, id = 'unknown') {
+export function normalizeCanvasSize(
+  width: unknown,
+  height: unknown,
+  id: unknown = 'unknown',
+): Readonly<{ width: number; height: number }> {
   const normalizedWidth = Math.floor(Number(width));
   const normalizedHeight = Math.floor(Number(height));
   if (
@@ -25,13 +106,13 @@ export function normalizeCanvasSize(width, height, id = 'unknown') {
     || normalizedWidth < 1
     || normalizedHeight < 1
   ) {
-    throw platformError(id, `Canvas 尺寸必须是正整数，当前为 ${width}×${height}`);
+    throw platformError(id, `Canvas 尺寸必须是正整数，当前为 ${String(width)}×${String(height)}`);
   }
   return { width: normalizedWidth, height: normalizedHeight };
 }
 
-function installEventTargetFallback(canvas, id) {
-  for (const name of ['addEventListener', 'removeEventListener']) {
+function installEventTargetFallback(canvas: PlatformCanvas, id: unknown): void {
+  for (const name of ['addEventListener', 'removeEventListener'] as const) {
     if (typeof canvas[name] === 'function') continue;
     try {
       canvas[name] = () => {};
@@ -44,24 +125,34 @@ function installEventTargetFallback(canvas, id) {
   }
 }
 
-export function prepareCanvas(canvas, id = 'unknown') {
-  if (!canvas || typeof canvas.getContext !== 'function') {
+export function prepareCanvas(canvas: unknown, id: unknown = 'unknown'): PlatformCanvas {
+  if (
+    !canvas
+    || typeof canvas !== 'object'
+    || typeof (canvas as { getContext?: unknown }).getContext !== 'function'
+  ) {
     throw platformError(id, '平台未返回可用的 Canvas（缺少 getContext）');
   }
-  installEventTargetFallback(canvas, id);
-  return canvas;
+  const result = canvas as PlatformCanvas;
+  installEventTargetFallback(result, id);
+  return result;
 }
 
-export function sizeCanvas(canvas, width, height, id = 'unknown') {
+export function sizeCanvas(
+  canvas: unknown,
+  width: unknown,
+  height: unknown,
+  id: unknown = 'unknown',
+): PlatformCanvas {
   const size = normalizeCanvasSize(width, height, id);
-  prepareCanvas(canvas, id);
+  const result = prepareCanvas(canvas, id);
   try {
-    canvas.width = size.width;
-    canvas.height = size.height;
+    result.width = size.width;
+    result.height = size.height;
   } catch (cause) {
     throw platformError(id, `无法设置离屏 Canvas 尺寸 ${size.width}×${size.height}`, cause);
   }
-  return canvas;
+  return result;
 }
 
 /**
@@ -71,17 +162,19 @@ export function sizeCanvas(canvas, width, height, id = 'unknown') {
  * loop. The public token also lets us suppress a late callback when a host has
  * no matching cancel API.
  */
-export function createFrameScheduler({ request, cancel, now = () => Date.now() } = {}) {
+export function createFrameScheduler(
+  { request, cancel, now = () => Date.now() }: FrameSchedulerOptions = {},
+): FrameScheduler {
   let nextToken = 1;
-  const pending = new Map();
+  const pending = new Map<number, ScheduledFrame>();
 
-  const requestFrame = (callback) => {
+  const requestFrame = (callback: FrameCallback): number => {
     if (typeof callback !== 'function') {
       throw new TypeError('requestFrame(callback) 需要函数参数');
     }
     const token = nextToken;
     nextToken = nextToken >= Number.MAX_SAFE_INTEGER ? 1 : nextToken + 1;
-    const entry = {
+    const entry: ScheduledFrame = {
       active: true,
       hostId: undefined,
       timerId: undefined,
@@ -89,7 +182,7 @@ export function createFrameScheduler({ request, cancel, now = () => Date.now() }
     };
     pending.set(token, entry);
 
-    const invoke = () => {
+    const invoke = (): void => {
       const current = pending.get(token);
       if (!current?.active) return;
       pending.delete(token);
@@ -111,7 +204,7 @@ export function createFrameScheduler({ request, cancel, now = () => Date.now() }
     return token;
   };
 
-  const cancelFrame = (token) => {
+  const cancelFrame = (token: number): boolean => {
     const entry = pending.get(token);
     if (!entry) return false;
     pending.delete(token);
@@ -131,11 +224,14 @@ export function createFrameScheduler({ request, cancel, now = () => Date.now() }
   return { requestFrame, cancelFrame };
 }
 
-function reportsWebGL2(context) {
-  if (!context) return false;
+function reportsWebGL2(contextValue: unknown): boolean {
+  if (!contextValue || (typeof contextValue !== 'object' && typeof contextValue !== 'function')) {
+    return false;
+  }
+  const context = contextValue as WebGL2ContextLike;
   if (
     typeof globalThis.WebGL2RenderingContext === 'function'
-    && context instanceof globalThis.WebGL2RenderingContext
+    && contextValue instanceof globalThis.WebGL2RenderingContext
   ) {
     return true;
   }
@@ -149,11 +245,12 @@ function reportsWebGL2(context) {
     && typeof context.createVertexArray === 'function';
 }
 
-function validateWebGL2Context(context, id) {
-  if (!reportsWebGL2(context)) {
+function validateWebGL2Context(contextValue: unknown, id: unknown): WebGL2ContextLike {
+  if (!reportsWebGL2(contextValue)) {
     throw platformError(id, '宿主通过 WebGL2 请求返回了非 WebGL2 上下文');
   }
-  if (typeof context?.getContextAttributes !== 'function') {
+  const context = contextValue as WebGL2ContextLike;
+  if (typeof context.getContextAttributes !== 'function') {
     throw platformError(
       id,
       '宿主返回的 WebGL2 上下文不完整（缺少 getContextAttributes），Three.js 无法启动',
@@ -162,9 +259,13 @@ function validateWebGL2Context(context, id) {
   return context;
 }
 
-export function getRequiredWebGL2Context(canvas, attributes = {}, id = 'unknown') {
-  prepareCanvas(canvas, id);
-  let webgl2Error = null;
+export function getRequiredWebGL2Context(
+  canvasValue: unknown,
+  attributes: unknown = {},
+  id: unknown = 'unknown',
+): WebGL2ContextLike {
+  const canvas = prepareCanvas(canvasValue, id);
+  let webgl2Error: unknown = null;
   try {
     const context = canvas.getContext('webgl2', attributes);
     if (context) return validateWebGL2Context(context, id);
@@ -189,22 +290,27 @@ export function getRequiredWebGL2Context(canvas, attributes = {}, id = 'unknown'
   );
 }
 
-export function createPlatformContract(overrides = {}) {
+export function createPlatformContract(
+  overrides: PlatformContractOverrides = {},
+): ArenaPlatformContract & Record<string, unknown> {
   const id = overrides.id ?? 'unknown';
   const frameScheduler = createFrameScheduler();
   const storageConcurrency = overrides.storageConcurrency ?? 'multi-runtime';
-  if (!['multi-runtime', 'single-active-runtime'].includes(storageConcurrency)) {
+  if (!(['multi-runtime', 'single-active-runtime'] as readonly unknown[]).includes(storageConcurrency)) {
     throw platformError(id, `未知 storageConcurrency ${String(storageConcurrency)}`);
   }
+  const normalizedStorageConcurrency = storageConcurrency as PlatformStorageConcurrency;
   return {
     id,
     createCanvas: () => null,
     createOffscreenCanvas: () => {
       throw platformError(id, '当前平台未实现 createOffscreenCanvas(width, height)');
     },
-    getWebGLContext: (canvas, attributes) => getRequiredWebGL2Context(canvas, attributes, id),
+    getWebGLContext: (canvas: unknown, attributes: unknown) => (
+      getRequiredWebGL2Context(canvas, attributes, id)
+    ),
     createImage: () => null,
-    readAssetBytes: async (sourceKey) => {
+    readAssetBytes: async (sourceKey: unknown) => {
       throw platformError(id, `当前平台不能读取资产 ${String(sourceKey)}`);
     },
     getViewport: () => ({ width: 1280, height: 720, pixelRatio: 1, safeArea: null }),
@@ -226,6 +332,6 @@ export function createPlatformContract(overrides = {}) {
     storageDelete: () => false,
     share: () => Promise.resolve(false),
     ...overrides,
-    storageConcurrency,
-  };
+    storageConcurrency: normalizedStorageConcurrency,
+  } as ArenaPlatformContract & Record<string, unknown>;
 }

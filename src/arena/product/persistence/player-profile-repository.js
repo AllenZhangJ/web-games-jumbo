@@ -6,7 +6,7 @@ import {
   combineCleanupFailure,
   normalizeThrownError,
 } from '../../lifecycle-error.js';
-import { createSynchronousStoragePort } from '../../storage/synchronous-storage-port.js';
+import { createSynchronousStoragePort } from '@number-strategy-jump/arena-contracts';
 import { SynchronousStorageLease } from '../../storage/synchronous-storage-lease.js';
 import { createPlayerProfile } from '../profile/player-profile.js';
 import { createPlayerProfileDefinition } from '../profile/player-profile-definition.js';

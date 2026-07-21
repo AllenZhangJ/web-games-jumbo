@@ -5,7 +5,7 @@ import {
   normalizeCanvasSize,
   prepareCanvas,
   sizeCanvas,
-} from './platform-contract.js';
+} from '@number-strategy-jump/arena-platform-contracts';
 
 function finite(value, fallback = 0) {
   const number = Number(value);

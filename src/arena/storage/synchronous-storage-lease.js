@@ -4,7 +4,7 @@ import {
   assertNonEmptyString,
   cloneFrozenData,
 } from '@number-strategy-jump/arena-contracts';
-import { createSynchronousStoragePort } from './synchronous-storage-port.js';
+import { createSynchronousStoragePort } from '@number-strategy-jump/arena-contracts';
 
 const LEGACY_SYNCHRONOUS_STORAGE_LEASE_SCHEMA_VERSION = 1;
 export const SYNCHRONOUS_STORAGE_LEASE_SCHEMA_VERSION = 2;

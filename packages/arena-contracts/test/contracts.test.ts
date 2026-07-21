@@ -7,6 +7,7 @@ import {
   createDeterministicDataHash,
   createRng,
   createNeutralInputFrame,
+  createSynchronousStoragePort,
   deriveSeed,
   normalizeInputFrames,
 } from '../src/index.js';
@@ -32,6 +33,40 @@ describe('Arena deterministic contracts', () => {
     const event: ArenaMatchEventType = ARENA_MATCH_EVENT.HIT_RESOLVED;
     expect(event).toBe('HitResolved');
     expect(Object.isFrozen(ARENA_MATCH_EVENT)).toBe(true);
+  });
+
+  it('adapts one synchronous storage boundary and rejects ambiguous host results', () => {
+    const values = new Map<string, unknown>();
+    const host = {
+      storageRead(key: string) {
+        return values.has(key)
+          ? { ok: true, found: true, value: values.get(key) }
+          : { ok: true, found: false, value: undefined };
+      },
+      storageWrite(key: string, value: unknown) {
+        values.set(key, value);
+        return true;
+      },
+      storageDelete(key: string) {
+        return values.delete(key);
+      },
+    };
+    const port = createSynchronousStoragePort(host, { label: 'Contract Test Storage' });
+    expect(port.write('profile', { revision: 1 })).toBe(true);
+    expect(port.read('profile')).toEqual({ ok: true, found: true, value: { revision: 1 } });
+    expect(port.delete('profile')).toBe(true);
+    expect(port.read('profile')).toEqual({ ok: true, found: false, value: undefined });
+    expect(Object.isFrozen(port)).toBe(true);
+    expect(Object.isFrozen(port.read('profile'))).toBe(true);
+
+    expect(() => createSynchronousStoragePort({
+      ...host,
+      storageRead: () => ({ ok: false, found: true, value: null }),
+    }).read('profile')).toThrow(/found/);
+    expect(() => createSynchronousStoragePort({
+      ...host,
+      storageWrite: async () => true,
+    }).write('profile', null)).toThrow(/同步完成/);
   });
 
   it('deeply freezes canonical data without trusting accessors or insertion order', () => {

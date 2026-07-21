@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createArenaProductGame } from '../src/entry/create-arena-product-game.js';
 import { createRuntimeInstanceId } from '../src/entry/runtime-instance-id.js';
-import { createPlatformContract } from '../src/platform/platform-contract.js';
+import { createPlatformContract } from '@number-strategy-jump/arena-platform-contracts';
 
 test('runtime instance id prefers host crypto and validates its namespace', () => {
   assert.equal(createRuntimeInstanceId({

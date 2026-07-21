@@ -18,7 +18,7 @@ async function listJavaScript(directory) {
   for (const entry of entries) {
     const target = path.join(directory, entry.name);
     if (entry.isDirectory()) result.push(...await listJavaScript(target));
-    else if (entry.name.endsWith('.js')) result.push(target);
+    else if (entry.name.endsWith('.js') || entry.name.endsWith('.ts')) result.push(target);
   }
   return result;
 }

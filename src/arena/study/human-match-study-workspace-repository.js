@@ -6,7 +6,7 @@ import {
   combineCleanupFailure,
   normalizeThrownError,
 } from '../lifecycle-error.js';
-import { createSynchronousStoragePort } from '../storage/synchronous-storage-port.js';
+import { createSynchronousStoragePort } from '@number-strategy-jump/arena-contracts';
 import { SynchronousStorageLease } from '../storage/synchronous-storage-lease.js';
 import { createHumanMatchStudyDefinition } from './human-match-study-definition.js';
 import {

@@ -1,17 +1,39 @@
 import {
   assertKnownKeys,
   assertNonEmptyString,
-} from '@number-strategy-jump/arena-contracts';
+} from './definition-utils.js';
+
+export interface SynchronousStorageReadResult {
+  readonly ok: boolean;
+  readonly found: boolean;
+  readonly value: unknown;
+}
+
+export interface SynchronousStoragePort {
+  read(key: string): SynchronousStorageReadResult;
+  write(key: string, data: unknown): boolean;
+  delete(key: string): boolean;
+}
+
+export interface SynchronousStoragePortOptions {
+  readonly label?: string;
+}
+
+type UnknownFunction = (...args: unknown[]) => unknown;
 
 const READ_RESULT_KEYS = new Set(['ok', 'found', 'value']);
 
-function requiredFunction(value, name) {
+function requiredFunction(value: unknown, name: string): UnknownFunction {
   if (typeof value !== 'function') throw new TypeError(`${name} 必须是函数。`);
-  return value;
+  return value as UnknownFunction;
 }
 
-function rejectAsync(value, name) {
-  if (value && typeof value.then === 'function') {
+function rejectAsync<T>(value: T, name: string): T {
+  if (
+    value !== null
+    && (typeof value === 'object' || typeof value === 'function')
+    && typeof (value as { then?: unknown }).then === 'function'
+  ) {
     Promise.resolve(value).catch(() => {
       // The synchronous contract has already rejected this host call. Contain
       // a late rejection so it cannot escape into an App lifecycle callback.
@@ -23,19 +45,21 @@ function rejectAsync(value, name) {
 
 /**
  * Adapts the three platform storage functions into one strict, synchronous
- * port. Product and pilot persistence share this boundary without sharing
- * their aggregates, schemas or repositories.
+ * port. Product, pilot and study persistence share this boundary without
+ * sharing their aggregates, schemas or repositories.
  */
-export function createSynchronousStoragePort(value, {
-  label: labelValue = 'Synchronous Storage',
-} = {}) {
+export function createSynchronousStoragePort(
+  value: unknown,
+  { label: labelValue = 'Synchronous Storage' }: SynchronousStoragePortOptions = {},
+): Readonly<SynchronousStoragePort> {
   const label = assertNonEmptyString(labelValue, 'SynchronousStoragePort.label');
   if (!value || typeof value !== 'object') throw new TypeError(`${label} Port 无效。`);
-  const storageRead = requiredFunction(value.storageRead, `${label}.storageRead`);
-  const storageWrite = requiredFunction(value.storageWrite, `${label}.storageWrite`);
-  const storageDelete = requiredFunction(value.storageDelete, `${label}.storageDelete`);
+  const host = value as Record<string, unknown>;
+  const storageRead = requiredFunction(host.storageRead, `${label}.storageRead`);
+  const storageWrite = requiredFunction(host.storageWrite, `${label}.storageWrite`);
+  const storageDelete = requiredFunction(host.storageDelete, `${label}.storageDelete`);
   return Object.freeze({
-    read(keyValue) {
+    read(keyValue: string): SynchronousStorageReadResult {
       const key = assertNonEmptyString(keyValue, `${label} key`);
       const result = rejectAsync(storageRead.call(value, key), `${label}.storageRead`);
       assertKnownKeys(result, READ_RESULT_KEYS, `${label} read result`);
@@ -50,7 +74,7 @@ export function createSynchronousStoragePort(value, {
       }
       return Object.freeze({ ok: result.ok, found: result.found, value: result.value });
     },
-    write(keyValue, data) {
+    write(keyValue: string, data: unknown): boolean {
       const key = assertNonEmptyString(keyValue, `${label} key`);
       const result = rejectAsync(
         storageWrite.call(value, key, data),
@@ -61,7 +85,7 @@ export function createSynchronousStoragePort(value, {
       }
       return result;
     },
-    delete(keyValue) {
+    delete(keyValue: string): boolean {
       const key = assertNonEmptyString(keyValue, `${label} key`);
       const result = rejectAsync(storageDelete.call(value, key), `${label}.storageDelete`);
       if (typeof result !== 'boolean') {

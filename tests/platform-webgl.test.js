@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createMiniGamePlatform } from '../src/platform/mini-game.js';
-import { createFrameScheduler, createPlatformContract } from '../src/platform/platform-contract.js';
+import {
+  createFrameScheduler,
+  createPlatformContract,
+} from '@number-strategy-jump/arena-platform-contracts';
 import { createWebPlatform } from '../src/platform/web.js';
 
 function webGL2Context() {

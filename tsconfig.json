@@ -2,6 +2,7 @@
   "files": [],
   "references": [
     { "path": "./packages/arena-contracts" },
-    { "path": "./packages/arena-definitions" }
+    { "path": "./packages/arena-definitions" },
+    { "path": "./packages/arena-platform-contracts" }
   ]
 }
