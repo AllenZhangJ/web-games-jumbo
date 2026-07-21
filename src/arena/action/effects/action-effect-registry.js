@@ -3,7 +3,7 @@ import {
   assertNonEmptyString,
   cloneFrozenData,
 } from '@number-strategy-jump/arena-contracts';
-import { ACTION_EFFECT_TRIGGER } from '../action-definition.js';
+import { ACTION_EFFECT_TRIGGER } from '@number-strategy-jump/arena-definitions';
 
 const HANDLER_KEYS = new Set(['kind', 'triggers', 'validateParameters', 'resolve']);
 const EFFECT_TRIGGERS = new Set(Object.values(ACTION_EFFECT_TRIGGER));

@@ -1,4 +1,4 @@
-import { createCharacterDefinition } from '../character/character-definition.js';
+import { createCharacterDefinition } from '@number-strategy-jump/arena-definitions';
 
 export const MOVEMENT_GAIT = Object.freeze({
   IDLE: 'idle',

@@ -5,8 +5,8 @@ import {
   ACTION_INPUT_TRIGGER,
   ACTION_LANE,
   createActionDefinition,
-} from '../action/action-definition.js';
-import { ActionRegistry } from '../action/action-registry.js';
+} from '@number-strategy-jump/arena-definitions';
+import { ActionRegistry } from '@number-strategy-jump/arena-definitions';
 import {
   EQUIPMENT_DEFINITION_SCHEMA_VERSION,
   EQUIPMENT_DROP_FALLBACK,

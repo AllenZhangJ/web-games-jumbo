@@ -1,4 +1,4 @@
-import { assertCharacterRegistry } from './character-registry.js';
+import { assertCharacterRegistry } from '@number-strategy-jump/arena-definitions';
 import { assertNonEmptyString } from '@number-strategy-jump/arena-contracts';
 
 export function createCharacterRuntimeReference({

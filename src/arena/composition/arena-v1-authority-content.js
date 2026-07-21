@@ -1,6 +1,6 @@
 import { createArenaV1MapRegistry } from '../content/arena-v1-maps.js';
 import { createArenaV1CharacterRegistry } from '../content/arena-v1-characters.js';
-import { createCharacterRegistrySnapshot } from '../character/character-registry.js';
+import { createCharacterRegistrySnapshot } from '@number-strategy-jump/arena-definitions';
 import { createStage4ContentRegistries } from '../content/stage4-equipment.js';
 import { STAGE6_MOVEMENT_ACTION_DEFINITIONS } from '../content/stage6-movement-actions.js';
 import { assertKnownKeys } from '@number-strategy-jump/arena-contracts';

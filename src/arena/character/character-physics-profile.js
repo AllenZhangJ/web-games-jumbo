@@ -1,4 +1,4 @@
-import { createCharacterDefinition } from './character-definition.js';
+import { createCharacterDefinition } from '@number-strategy-jump/arena-definitions';
 
 export function createCharacterPhysicsProfile(definition) {
   const normalized = createCharacterDefinition(definition);

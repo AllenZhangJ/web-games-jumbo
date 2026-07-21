@@ -6,8 +6,8 @@ import {
   ACTION_INPUT_CHANNEL,
   ACTION_INPUT_TRIGGER,
   ACTION_LANE,
-} from '../../src/arena/action/action-definition.js';
-import { ActionRegistry } from '../../src/arena/action/action-registry.js';
+} from '@number-strategy-jump/arena-definitions';
+import { ActionRegistry } from '@number-strategy-jump/arena-definitions';
 import { ActionEffectRegistry } from '../../src/arena/action/effects/action-effect-registry.js';
 import {
   ACTION_RULE_COMMAND,

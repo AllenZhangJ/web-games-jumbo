@@ -1,4 +1,4 @@
-import { ACTION_INPUT_CHANNEL } from './action-definition.js';
+import { ACTION_INPUT_CHANNEL } from '@number-strategy-jump/arena-definitions';
 import { assertKnownKeys } from '@number-strategy-jump/arena-contracts';
 
 const PROJECT_KEYS = new Set([

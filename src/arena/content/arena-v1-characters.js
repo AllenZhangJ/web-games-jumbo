@@ -1,8 +1,8 @@
 import {
   CHARACTER_DEFINITION_SCHEMA_VERSION,
   createCharacterDefinition,
-} from '../character/character-definition.js';
-import { CharacterRegistry } from '../character/character-registry.js';
+} from '@number-strategy-jump/arena-definitions';
+import { CharacterRegistry } from '@number-strategy-jump/arena-definitions';
 import { ARENA_V1_CHARACTER_ID } from './arena-v1-character-ids.js';
 import {
   ARENA_GAMEPLAY_V2_TUNING,

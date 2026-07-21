@@ -3,12 +3,12 @@ import assert from 'node:assert/strict';
 import {
   CHARACTER_DEFINITION_SCHEMA_VERSION,
   createCharacterDefinition,
-} from '../../src/arena/character/character-definition.js';
+} from '@number-strategy-jump/arena-definitions';
 import { createCharacterPhysicsProfile } from '../../src/arena/character/character-physics-profile.js';
 import {
   CharacterRegistry,
   createCharacterRegistrySnapshot,
-} from '../../src/arena/character/character-registry.js';
+} from '@number-strategy-jump/arena-definitions';
 import { createCharacterRuntimeReference } from '../../src/arena/character/character-runtime.js';
 import { createArenaV1MatchCore } from '../../src/arena/arena-v1-match-core.js';
 import { PHYSICS_POC_ARENA } from '../../src/arena/config.js';

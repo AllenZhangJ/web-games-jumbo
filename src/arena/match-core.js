@@ -13,7 +13,7 @@ import { createRng, deriveSeed } from '@number-strategy-jump/arena-contracts';
 import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import { combineCleanupFailure, normalizeThrownError } from './lifecycle-error.js';
 import { createCharacterPhysicsProfile } from './character/character-physics-profile.js';
-import { assertCharacterRegistry } from './character/character-registry.js';
+import { assertCharacterRegistry } from '@number-strategy-jump/arena-definitions';
 import { createCharacterRuntimeReference } from './character/character-runtime.js';
 import { MovementSystem } from './movement/movement-system.js';
 import { createMovementPhysicsPort } from './movement/movement-physics-port.js';

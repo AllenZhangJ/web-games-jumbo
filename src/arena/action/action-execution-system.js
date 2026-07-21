@@ -1,7 +1,7 @@
 import {
   ACTION_INPUT_CHANNEL,
   ACTION_LANE,
-} from './action-definition.js';
+} from '@number-strategy-jump/arena-definitions';
 import { ACTION_RESOLUTION_KIND } from './action-resolver.js';
 import {
   ARENA_ACTION_PHASE,

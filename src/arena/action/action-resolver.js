@@ -2,7 +2,7 @@ import {
   ACTION_INPUT_CHANNEL,
   ACTION_INPUT_TRIGGER,
   ACTION_LANE,
-} from './action-definition.js';
+} from '@number-strategy-jump/arena-definitions';
 import {
   compareActionCandidates,
   createActionCandidate,

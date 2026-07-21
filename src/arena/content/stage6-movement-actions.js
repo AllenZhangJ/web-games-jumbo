@@ -5,7 +5,7 @@ import {
   ACTION_INPUT_TRIGGER,
   ACTION_LANE,
   createActionDefinition,
-} from '../action/action-definition.js';
+} from '@number-strategy-jump/arena-definitions';
 import { MOVEMENT_COMMAND_KIND } from '../movement/movement-command.js';
 
 export const STAGE6_MOVEMENT_ACTION_ID = Object.freeze({

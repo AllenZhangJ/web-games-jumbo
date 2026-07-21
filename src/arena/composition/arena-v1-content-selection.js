@@ -1,4 +1,4 @@
-import { CharacterRegistry } from '../character/character-registry.js';
+import { CharacterRegistry } from '@number-strategy-jump/arena-definitions';
 import { createMatchContentSelection } from '../content/match-content-selection.js';
 import { STAGE4_EQUIPMENT_DEFINITIONS } from '../content/stage4-equipment.js';
 import { createMapDefinition } from '../map/map-definition.js';

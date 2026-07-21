@@ -1,4 +1,4 @@
-import { createCharacterDefinition } from '../character/character-definition.js';
+import { createCharacterDefinition } from '@number-strategy-jump/arena-definitions';
 import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import {
   cloneMovementRuntimeState,

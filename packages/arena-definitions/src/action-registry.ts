@@ -1,16 +1,17 @@
 import { createActionDefinition } from './action-definition.js';
+import type { ActionDefinition } from './action-definition.js';
 
-function compareIds(left, right) {
+function compareIds(left: ActionDefinition, right: ActionDefinition): number {
   if (left.id < right.id) return -1;
   if (left.id > right.id) return 1;
   return 0;
 }
 
 export class ActionRegistry {
-  #definitionsById;
-  #definitions;
+  readonly #definitionsById: Map<string, ActionDefinition>;
+  readonly #definitions: readonly ActionDefinition[];
 
-  constructor(definitions = []) {
+  constructor(definitions: readonly unknown[] = []) {
     if (!Array.isArray(definitions)) throw new TypeError('ActionRegistry definitions 必须是数组。');
     const normalized = definitions.map(createActionDefinition).sort(compareIds);
     this.#definitionsById = new Map();
@@ -24,25 +25,15 @@ export class ActionRegistry {
     Object.freeze(this);
   }
 
-  get size() {
-    return this.#definitions.length;
-  }
+  get size(): number { return this.#definitions.length; }
+  has(id: string): boolean { return this.#definitionsById.has(id); }
+  get(id: string): ActionDefinition | undefined { return this.#definitionsById.get(id); }
 
-  has(id) {
-    return this.#definitionsById.has(id);
-  }
-
-  get(id) {
-    return this.#definitionsById.get(id);
-  }
-
-  require(id) {
+  require(id: string): ActionDefinition {
     const definition = this.get(id);
     if (!definition) throw new RangeError(`未知 ActionDefinition ${String(id)}。`);
     return definition;
   }
 
-  list() {
-    return this.#definitions;
-  }
+  list(): readonly ActionDefinition[] { return this.#definitions; }
 }

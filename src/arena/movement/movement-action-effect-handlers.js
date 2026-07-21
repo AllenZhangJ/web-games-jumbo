@@ -1,4 +1,4 @@
-import { ACTION_EFFECT_TRIGGER } from '../action/action-definition.js';
+import { ACTION_EFFECT_TRIGGER } from '@number-strategy-jump/arena-definitions';
 import { MOVEMENT_COMMAND_KIND } from './movement-command.js';
 import { assertKnownKeys } from '@number-strategy-jump/arena-contracts';
 

@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ActionRegistry } from '../../src/arena/action/action-registry.js';
+import { ActionRegistry } from '@number-strategy-jump/arena-definitions';
 import {
   ACTION_INPUT_CHANNEL,
   ACTION_LANE,
-} from '../../src/arena/action/action-definition.js';
+} from '@number-strategy-jump/arena-definitions';
 import {
   ACTION_PRIORITY,
   ACTION_RESOLUTION_KIND,

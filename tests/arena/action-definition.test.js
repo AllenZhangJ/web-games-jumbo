@@ -7,8 +7,8 @@ import {
   ACTION_INPUT_TRIGGER,
   ACTION_LANE,
   createActionDefinition,
-} from '../../src/arena/action/action-definition.js';
-import { ActionRegistry } from '../../src/arena/action/action-registry.js';
+} from '@number-strategy-jump/arena-definitions';
+import { ActionRegistry } from '@number-strategy-jump/arena-definitions';
 
 function rawAction(id = 'test-action') {
   return {

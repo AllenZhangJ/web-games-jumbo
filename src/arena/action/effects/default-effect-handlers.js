@@ -4,7 +4,7 @@ import {
   assertPositiveFinite,
 } from '@number-strategy-jump/arena-contracts';
 import { ActionEffectRegistry } from './action-effect-registry.js';
-import { ACTION_EFFECT_TRIGGER } from '../action-definition.js';
+import { ACTION_EFFECT_TRIGGER } from '@number-strategy-jump/arena-definitions';
 
 export const ACTION_RULE_COMMAND = Object.freeze({
   APPLY_HITSTUN: 'apply-hitstun',

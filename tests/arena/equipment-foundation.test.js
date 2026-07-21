@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ActionRegistry } from '../../src/arena/action/action-registry.js';
+import { ActionRegistry } from '@number-strategy-jump/arena-definitions';
 import {
   STAGE4_ACTION_DEFINITIONS,
   STAGE4_ACTION_ID,

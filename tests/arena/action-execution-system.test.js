@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ActionExecutionSystem } from '../../src/arena/action/action-execution-system.js';
-import { ActionRegistry } from '../../src/arena/action/action-registry.js';
+import { ActionRegistry } from '@number-strategy-jump/arena-definitions';
 import { ACTION_RESOLUTION_KIND } from '../../src/arena/action/action-resolver.js';
 import { ARENA_ACTION_PHASE } from '../../src/arena/action/action-state.js';
 import {
@@ -10,7 +10,7 @@ import {
   ACTION_INPUT_CHANNEL,
   ACTION_INPUT_TRIGGER,
   ACTION_LANE,
-} from '../../src/arena/action/action-definition.js';
+} from '@number-strategy-jump/arena-definitions';
 import {
   STAGE4_ACTION_DEFINITIONS,
   STAGE4_ACTION_ID,
