@@ -722,9 +722,10 @@ test('Arena Rule/Core foundation preserves dependency direction and deterministi
 
   const matchCoreSource = await readFile(path.resolve('src/arena/match-core.js'), 'utf8');
   assert.match(matchCoreSource, /MatchParticipantSystem/);
+  assert.match(matchCoreSource, /MatchTimelineSystem/);
   assert.doesNotMatch(
     matchCoreSource,
-    /#participants\b|function\s+createParticipant\b/,
-    'MatchCore 不得重新持有可写 participant Map 或私有 participant 构造器。',
+    /#participants\b|function\s+createParticipant\b|#(?:tick|activeTick|phase|result|started)\b/,
+    'MatchCore 不得重新持有 participant Map、私有 participant 构造器或 timeline 可写字段。',
   );
 });

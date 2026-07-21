@@ -30,7 +30,7 @@
 | G0 基线冻结 | 已完成 | 自动化、压力、资产和三端构建通过；ADR/计划/证据已落盘；tag `arena-product-baseline-51e2822` 指向基线提交 |
 | G1 治理外壳/唯一产品 | 已完成 | Arena 已成为唯一生产产品；旧产品实现/专属测试/资产/规范已退役；strict TS、ESLint、Vitest、CI、CODEOWNERS、JS 递减清单和唯一产物门禁已启用 |
 | G2 Definition/合同/配置 | 已完成 | strict TS `arena-contracts`、`arena-definitions`、`arena-profile-contracts` 与 `arena-platform-contracts` 已承接确定性、输入/事件、权威快照、同步存储、平台能力、玩家档案/存档协议，以及动作/角色/装备/地图 Definition、只读 Registry 和唯一 Gameplay V2 数值配置；受审计 JavaScript 已降至 500 个 |
-| G3 Rule/Core/Replay | 进行中 | strict TS `arena-core`、`arena-movement`、`arena-physics`、`arena-equipment`、`arena-map` 与 `arena-match` 已承接规则/移动/物理/装备、完整地图权威链、比赛配置及 Participant 唯一写入者；MatchCore、Replay 与阶段/结果/fixed tick 编排仍待迁移 |
+| G3 Rule/Core/Replay | 进行中 | strict TS `arena-core`、`arena-movement`、`arena-physics`、`arena-equipment`、`arena-map` 与 `arena-match` 已承接规则/移动/物理/装备、完整地图权威链、比赛配置、Participant 及 Timeline 唯一写入者；MatchCore 子系统编排、Replay 与 fixed-step Runtime 仍待迁移 |
 | G4 Bot/Product/Persistence | 未开始 | 当前功能与压力证据存在，尚未迁入 strict TS workspace |
 | G5 Presentation/资产/反馈 | 未开始 | 正式资产预算通过；审批字段与唯一正常路径仍待治理 |
 | G6 Platform/入口/构建 | 未开始 | 三端默认入口是 Product，但生产交付未与开发页面彻底隔离 |
@@ -293,3 +293,13 @@
 - 构造输入与 elimination/respawn options 均使用 descriptor 安全深复制，拒绝 getter、未知字段和非法范围；系统销毁幂等，销毁后全部读取/写入拒绝。架构门禁明确禁止 MatchCore 重新出现 `#participants` 或私有 participant 构造器。
 - strict 公共包测试增至 71 项，其中新增 participant 初始化/隔离、计时、命中归因、同时淘汰、批次原子拒绝、阶段重生和终态生命周期；94 项 MatchCore、Equipment、Movement、Replay、Session、内容池与架构定向回归通过，JavaScript 精确允许清单保持 449。
 - G3 下一批迁移比赛 phase、active tick 与 Result 唯一写入者，然后迁移完整 MatchCore 编排；本批未改变生命数、受击归因窗口、重生/无敌时长、超时排序、事件顺序、Replay schema 或黄金 hash。
+
+## G3.17 比赛 Timeline 与 Result 唯一写入者迁移证据
+
+- `MatchTimelineSystem` 已进入 `arena-match` strict TypeScript 公共 API，成为 `tick`、`activeTick`、preparing/running/sudden-death/ended phase、首次 MatchStarted claim 和终局 Result 的唯一写入者；MatchCore 不再持有这些可写字段。
+- 每个权威 step 必须经过 `beginStep → preparation/active transition → optional end → completeStep`，且 preparation/active 时间线在同一 step 至多推进一次；输入在 begin 前完整归一化，非法输入仍可恢复，begin 后任一未知错误由 MatchCore fail closed 销毁整局。重复 begin、重复推进、无活动 step complete、非法 phase transition 和 ended 后继续推进均明确拒绝。
+- preparing 切换 running、进入 sudden death、硬时限和 Result 的 `endedAtTick` 保持原事件 tick 顺序：事件在当前 tick 生成，只有所有权威协调完成后才提升总 tick；active tick 在淘汰已结束比赛时不再增加，和既有回放语义一致。
+- Result 在写入前完整拒绝 getter、未知字段、空 reason 及 winner/isDraw 矛盾；公开 getter 返回副本。Core 销毁前保留只读终态 timeline 快照，使失败后的 Replay Runner 仍能输出“未完成不可导出”诊断，但不能继续 step 或读取完整权威快照。
+- 架构门禁要求 MatchCore 必须组合 `MatchTimelineSystem`，并禁止重新出现 `#tick`、`#activeTick`、`#phase`、`#result` 或 `#started`。Timeline 构造和生命周期无 DOM、平台、墙钟、随机源或外部 callback。
+- strict 公共包测试增至 78 项，其中新增 preparation/start claim、active/sudden/timeout、结果 tick、错误恢复、step 重入/重复推进和销毁测试；88 项 MatchCore、Equipment、Movement、Replay、Session 与架构定向回归通过，JavaScript 精确允许清单保持 449。
+- G3 下一批迁移 MatchCore 组合编排和生命周期错误原语，再迁移 state hash、fixed-step Runtime 与 Replay；本批未改变阶段阈值、事件 ID/顺序、胜负原因、Replay schema 或黄金 hash。

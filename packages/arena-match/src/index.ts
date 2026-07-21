@@ -28,3 +28,9 @@ export type {
   ParticipantEliminationOutcome,
   ParticipantTimeoutOutcome,
 } from './match-participant-system.js';
+export { MatchTimelineSystem } from './match-timeline-system.js';
+export type {
+  MatchActiveTickTransition,
+  MatchTimelineResult,
+  MatchTimelineSnapshot,
+} from './match-timeline-system.js';

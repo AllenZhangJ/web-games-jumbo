@@ -2,6 +2,7 @@ import {
   ARENA_MATCH_PHASE,
   ARENA_PARTICIPANT_STATUS,
   MatchParticipantSystem,
+  MatchTimelineSystem,
   createArenaMatchConfig,
 } from '@number-strategy-jump/arena-match';
 import { normalizeInputFrames } from '@number-strategy-jump/arena-contracts';
@@ -35,10 +36,6 @@ function normalizeSeed(seed) {
   return seed;
 }
 
-function cloneResult(result) {
-  return result ? { ...result } : null;
-}
-
 function cloneSnapshotData(value) {
   if (value === null || typeof value !== 'object') return value;
   if (Array.isArray(value)) return value.map(cloneSnapshotData);
@@ -65,19 +62,25 @@ export class MatchCore {
   #rules;
   #map;
   #participantSystem;
+  #timeline;
+  #terminalTimelineSnapshot;
   #rngStreams;
   #events;
-  #started;
   #destroyed;
-  #tick;
-  #activeTick;
-  #phase;
-  #result;
   #eventSequence;
   #stepping;
 
   #cleanupConstructionFailure(error) {
     const cleanupErrors = [];
+    try {
+      if (typeof this.#timeline?.destroy === 'function') this.#timeline.destroy();
+      this.#timeline = null;
+    } catch (cleanupError) {
+      cleanupErrors.push(normalizeThrownError(
+        cleanupError,
+        'MatchCore timeline 构造清理失败',
+      ));
+    }
     try {
       if (typeof this.#participantSystem?.destroy === 'function') {
         this.#participantSystem.destroy();
@@ -143,16 +146,10 @@ export class MatchCore {
     this.#config = createArenaMatchConfig(config);
     this.#configHash = createArenaConfigHash(this.#config);
     this.#ruleContentHash = null;
-    this.#tick = 0;
-    this.#activeTick = 0;
-    this.#phase = this.config.preparingTicks > 0
-      ? ARENA_MATCH_PHASE.PREPARING
-      : ARENA_MATCH_PHASE.RUNNING;
-    this.#result = null;
     this.#eventSequence = 0;
     this.#events = [];
-    this.#started = false;
     this.#destroyed = false;
+    this.#terminalTimelineSnapshot = null;
     this.#stepping = false;
     this.#rngStreams = Object.fromEntries(
       ['spawn', 'map', 'equipment', 'bot', 'presentation'].map((name) => [
@@ -163,6 +160,11 @@ export class MatchCore {
     this.#participantSystem = new MatchParticipantSystem({
       participantIds: this.config.participantIds,
       livesPerParticipant: this.config.livesPerParticipant,
+    });
+    this.#timeline = new MatchTimelineSystem({
+      preparingTicks: this.config.preparingTicks,
+      suddenDeathStartTick: this.config.suddenDeathStartTick,
+      hardLimitTicks: this.config.hardLimitTicks,
     });
     this.#characterRuntimes = new Map();
     this.#physics = null;
@@ -257,7 +259,7 @@ export class MatchCore {
   }
 
   get tick() {
-    return this.#tick;
+    return this.#timeline?.tick ?? this.#terminalTimelineSnapshot?.tick ?? 0;
   }
 
   get matchSeed() {
@@ -277,15 +279,16 @@ export class MatchCore {
   }
 
   get activeTick() {
-    return this.#activeTick;
+    return this.#timeline?.activeTick ?? this.#terminalTimelineSnapshot?.activeTick ?? 0;
   }
 
   get phase() {
-    return this.#phase;
+    return this.#timeline?.phase ?? this.#terminalTimelineSnapshot?.phase ?? ARENA_MATCH_PHASE.ENDED;
   }
 
   get result() {
-    return cloneResult(this.#result);
+    const result = this.#timeline?.result ?? this.#terminalTimelineSnapshot?.result ?? null;
+    return result ? { ...result } : null;
   }
 
   getCharacterDefinition(participantId) {
@@ -301,9 +304,9 @@ export class MatchCore {
 
   #emit(type, payload = {}) {
     const event = {
-      id: `${this.matchSeed.toString(16)}:${this.#tick}:${this.#eventSequence}`,
+      id: `${this.matchSeed.toString(16)}:${this.tick}:${this.#eventSequence}`,
       sequence: this.#eventSequence,
-      tick: this.#tick,
+      tick: this.tick,
       type,
       ...payload,
     };
@@ -313,8 +316,7 @@ export class MatchCore {
   }
 
   #startRunningIfNeeded() {
-    if (this.#started || this.#phase !== ARENA_MATCH_PHASE.RUNNING) return;
-    this.#started = true;
+    if (!this.#timeline.claimMatchStart()) return;
     this.#emit(EVENT.MATCH_STARTED, { participantIds: [...this.config.participantIds] });
     for (const equipment of this.#rules.listEquipmentSnapshots()) {
       this.#emit(EVENT.EQUIPMENT_SPAWNED, {
@@ -328,12 +330,12 @@ export class MatchCore {
 
   step(inputFrames = []) {
     this.#assertUsable();
-    if (this.#phase === ARENA_MATCH_PHASE.ENDED) throw new Error('比赛已经结束，不能继续 step。');
+    if (this.phase === ARENA_MATCH_PHASE.ENDED) throw new Error('比赛已经结束，不能继续 step。');
     if (this.#stepping) throw new Error('MatchCore.step() 不可重入。');
     this.#stepping = true;
     try {
       const frames = normalizeInputFrames(inputFrames, {
-        tick: this.#tick,
+        tick: this.tick,
         participantIds: this.config.participantIds,
       });
       this.#events = [];
@@ -368,14 +370,12 @@ export class MatchCore {
   }
 
   #stepNormalized(frames) {
-    if (this.#phase === ARENA_MATCH_PHASE.PREPARING) {
+    this.#timeline.beginStep();
+    if (this.phase === ARENA_MATCH_PHASE.PREPARING) {
       for (const id of this.config.participantIds) this.#physics.setMovementIntent(id, 0, 0);
       this.#physics.step(this.config.fixedDeltaSeconds);
-      if (this.#tick + 1 >= this.config.preparingTicks) {
-        this.#phase = ARENA_MATCH_PHASE.RUNNING;
-        this.#startRunningIfNeeded();
-      }
-      this.#tick += 1;
+      if (this.#timeline.advancePreparation()) this.#startRunningIfNeeded();
+      this.#timeline.completeStep();
       return this.#events.map((event) => ({ ...event }));
     }
 
@@ -387,7 +387,7 @@ export class MatchCore {
     const frameById = new Map(frames.map((frame) => [frame.participantId, frame]));
     const movementPreparation = this.#prepareMovement(frameById);
     const startedActions = this.#rules.resolveActions({
-      tick: this.#tick,
+      tick: this.tick,
       actors: this.#createRuleActors(),
       inputFrames: movementPreparation.resolutionInputFrames ?? frames,
       additionalCandidates: movementPreparation.additionalCandidates,
@@ -401,15 +401,12 @@ export class MatchCore {
     this.#completeMovement();
     this.#resolveEliminations();
 
-    if (this.#phase !== ARENA_MATCH_PHASE.ENDED) {
-      this.#activeTick += 1;
-      if (
-        this.#phase === ARENA_MATCH_PHASE.RUNNING
-        && this.#activeTick >= this.config.suddenDeathStartTick
-      ) this.#startSuddenDeath();
-      if (this.#activeTick >= this.config.hardLimitTicks) this.#resolveTimeout();
+    if (this.phase !== ARENA_MATCH_PHASE.ENDED) {
+      const transition = this.#timeline.advanceActiveTick();
+      if (transition.suddenDeathStarted) this.#handleSuddenDeathStarted(transition);
+      if (transition.timeoutDue) this.#resolveTimeout();
     }
-    this.#tick += 1;
+    this.#timeline.completeStep();
     return this.#events.map((event) => ({ ...event }));
   }
 
@@ -441,7 +438,7 @@ export class MatchCore {
       const frame = frameById.get(participantId);
       contacts.push({ participantId, grounded: physics.grounded });
       inputs.push({
-        tick: this.#tick,
+        tick: this.tick,
         participantId,
         jumpPressed: frame.jumpPressed,
         jumpHeld: frame.jumpHeld,
@@ -454,7 +451,7 @@ export class MatchCore {
       });
     }
     this.#movement.prepareTick({
-      tick: this.#tick,
+      tick: this.tick,
       contacts,
       inputs,
       availability,
@@ -491,7 +488,7 @@ export class MatchCore {
 
   #completeMovement() {
     const transitions = this.#movement.completeTick({
-      tick: this.#tick,
+      tick: this.tick,
       contacts: this.config.participantIds.map((participantId) => ({
         participantId,
         grounded: this.#physics.getCharacterState(participantId).grounded,
@@ -534,7 +531,7 @@ export class MatchCore {
 
   #advanceMapState() {
     const batch = this.#map.advance({
-      activeTick: this.#activeTick,
+      activeTick: this.activeTick,
       actors: this.config.participantIds.map((id) => {
         const physics = this.#physics.getCharacterState(id);
         return {
@@ -596,7 +593,7 @@ export class MatchCore {
     });
     const pickups = this.#rules.resolveEquipmentPickups({
       participants,
-      contestSeed: deriveSeed(this.matchSeed, `equipment-pickup:${this.#tick}`),
+      contestSeed: deriveSeed(this.matchSeed, `equipment-pickup:${this.tick}`),
     });
     for (const pickup of pickups) {
       const equipment = this.#rules.getEquipmentSnapshot(pickup.equipmentInstanceId);
@@ -616,7 +613,7 @@ export class MatchCore {
   #commitRuleBatch(batch) {
     this.#rules.commit(batch, {
       recordHit: (attackerId, targetId) => {
-        this.#participantSystem.recordHit(attackerId, targetId, this.#tick);
+        this.#participantSystem.recordHit(attackerId, targetId, this.tick);
       },
       applyHitstun: (participantId, ticks) => {
         this.#participantSystem.applyHitstun(participantId, ticks);
@@ -653,8 +650,8 @@ export class MatchCore {
     if (eliminatedIds.length === 0) return;
 
     const outcomes = this.#participantSystem.eliminateBatch(eliminatedIds, {
-      tick: this.#tick,
-      suddenDeath: this.#phase === ARENA_MATCH_PHASE.SUDDEN_DEATH,
+      tick: this.tick,
+      suddenDeath: this.phase === ARENA_MATCH_PHASE.SUDDEN_DEATH,
       lastHitCreditTicks: this.config.lastHitCreditTicks,
       respawnTicks: this.config.respawnTicks,
     });
@@ -766,44 +763,44 @@ export class MatchCore {
     });
   }
 
-  #startSuddenDeath() {
-    if (this.#phase !== ARENA_MATCH_PHASE.RUNNING) return;
-    this.#phase = ARENA_MATCH_PHASE.SUDDEN_DEATH;
+  #handleSuddenDeathStarted(transition) {
+    if (this.phase !== ARENA_MATCH_PHASE.SUDDEN_DEATH) {
+      throw new Error('Sudden Death transition 与 timeline phase 不一致。');
+    }
     for (const participantId of this.#participantSystem.listByStatus(
       ARENA_PARTICIPANT_STATUS.RESPAWNING,
     )) {
       this.#respawnParticipant(participantId);
     }
     this.#emit(EVENT.SUDDEN_DEATH_STARTED, {
-      remainingTicks: Math.max(0, this.config.hardLimitTicks - this.#activeTick),
+      remainingTicks: transition.remainingTicks,
     });
   }
 
   #resolveTimeout() {
-    if (this.#phase === ARENA_MATCH_PHASE.ENDED) return;
+    if (this.phase === ARENA_MATCH_PHASE.ENDED) return;
     this.#endMatch(this.#participantSystem.resolveTimeout());
   }
 
   #endMatch({ winnerId, reason, isDraw }) {
-    if (this.#phase === ARENA_MATCH_PHASE.ENDED) return;
+    if (this.phase === ARENA_MATCH_PHASE.ENDED) return;
     for (const participantId of this.#participantSystem.listByStatus(
       ARENA_PARTICIPANT_STATUS.RESPAWNING,
     )) {
       this.#respawnParticipant(participantId);
     }
-    this.#phase = ARENA_MATCH_PHASE.ENDED;
-    this.#result = {
+    const result = this.#timeline.end({
       winnerId,
       reason,
       isDraw,
-      endedAtTick: this.#tick,
-    };
+    });
     for (const id of this.config.participantIds) this.#physics.setMovementIntent(id, 0, 0);
-    this.#emit(EVENT.MATCH_ENDED, { ...this.#result });
+    this.#emit(EVENT.MATCH_ENDED, { ...result });
   }
 
   #createSnapshot(includeInternal) {
     this.#assertUsable();
+    const timeline = this.#timeline.getSnapshot();
     // ActionAffordance is a public next-input projection, not authority state.
     // Internal hash snapshots omit it entirely instead of recomputing derived data.
     const ruleActors = includeInternal ? null : this.#createRuleActors();
@@ -816,10 +813,10 @@ export class MatchCore {
       configHash: this.configHash,
       ruleContentHash: this.ruleContentHash,
       matchSeed: this.matchSeed,
-      tick: this.#tick,
-      activeTick: this.#activeTick,
-      phase: this.#phase,
-      remainingTicks: Math.max(0, this.config.hardLimitTicks - this.#activeTick),
+      tick: timeline.tick,
+      activeTick: timeline.activeTick,
+      phase: timeline.phase,
+      remainingTicks: this.#timeline.remainingTicks,
       eventSequence: this.#eventSequence,
       participants: this.config.participantIds.map((id) => {
         const participant = this.#participantSystem.getSnapshot(id);
@@ -860,7 +857,7 @@ export class MatchCore {
                 canMove: actor.canAct,
               });
               return cloneSnapshotData(this.#rules.getActionAffordance({
-                tick: this.#tick,
+                tick: timeline.tick,
                 participantId: id,
                 actors: ruleActors,
                 additionalCandidates: this.#rules.getMovementActionCandidates(capabilities),
@@ -899,7 +896,7 @@ export class MatchCore {
       map: cloneSnapshotData(includeInternal
         ? this.#map.getStateSnapshot()
         : this.#map.getSnapshot()),
-      result: cloneResult(this.#result),
+      result: timeline.result,
     };
     if (includeInternal) {
       snapshot.rngStates = Object.fromEntries(
@@ -962,6 +959,7 @@ export class MatchCore {
   destroy() {
     if (
       this.#destroyed
+      && !this.#timeline
       && !this.#participantSystem
       && !this.#movement
       && !this.#rules
@@ -973,6 +971,15 @@ export class MatchCore {
     this.#events.length = 0;
     this.#characterRuntimes.clear();
     const errors = [];
+    if (this.#timeline) {
+      try {
+        this.#terminalTimelineSnapshot = this.#timeline.getSnapshot();
+        this.#timeline.destroy();
+        this.#timeline = null;
+      } catch (error) {
+        errors.push(normalizeThrownError(error, 'MatchCore timeline 清理失败'));
+      }
+    }
     if (this.#participantSystem) {
       try {
         this.#participantSystem.destroy();
