@@ -5,11 +5,14 @@ import {
   MAP_DOMAIN_EVENT,
   MAP_EVENT_KIND,
   MAP_RULE_COMMAND,
+  MapEventStrategyRegistry,
+  MapTimeline,
   createDefaultMapEventStrategyRegistry,
+  createDefaultMapCommandRegistry,
+  MAP_TIMELINE_TRANSITION,
   validateDefaultMapSafety,
-} from '../../src/arena/map/default-map-event-handlers.js';
-import { createDefaultMapCommandRegistry } from '../../src/arena/map/default-map-command-handlers.js';
-import { MapEventStrategyRegistry } from '../../src/arena/map/map-event-strategy-registry.js';
+  validateWalkableMapTopology,
+} from '@number-strategy-jump/arena-map';
 import {
   MAP_DEFINITION_SCHEMA_VERSION,
   createMapDefinition,
@@ -17,11 +20,6 @@ import {
 import { MapRegistry } from '@number-strategy-jump/arena-definitions';
 import { ARENA_MAP_EVENT, ArenaMapSystem } from '../../src/arena/map/map-system.js';
 import { serializeMapRuntimeSnapshot } from '../../src/arena/map/map-serializer.js';
-import {
-  MAP_TIMELINE_TRANSITION,
-  MapTimeline,
-  validateWalkableMapTopology,
-} from '@number-strategy-jump/arena-map';
 import { resolveArenaV1MapDefinition } from '../../src/arena/composition/arena-v1-map-system.js';
 
 const TEST_ARENA = Object.freeze({

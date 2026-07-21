@@ -4,6 +4,31 @@ export {
   MAP_RULE_COMMAND,
 } from './map-event-types.js';
 export {
+  createDefaultMapCommandRegistry,
+} from './default-map-command-handlers.js';
+export {
+  createDefaultMapEventStrategyRegistry,
+} from './default-map-event-handlers.js';
+export { MapCommandRegistry } from './map-command-registry.js';
+export type {
+  MapCommandExecutionContext,
+  MapCommandHandler,
+  MapCommandMetadata,
+  MapCommandPhase,
+  MapMutationPorts,
+  MapRuleCommand,
+} from './map-command-registry.js';
+export { MapEventStrategyRegistry } from './map-event-strategy-registry.js';
+export type {
+  EquipmentDefinitionCatalog,
+  MapActorSnapshot,
+  MapEventExecutionContext,
+  MapEventExecutionResult,
+  MapEventPlanResult,
+  MapEventStrategy,
+  MapEventValidationContext,
+} from './map-event-strategy-registry.js';
+export {
   MAP_TIMELINE_TRANSITION,
   MapTimeline,
 } from './map-timeline.js';

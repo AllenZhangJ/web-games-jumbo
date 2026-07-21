@@ -1,20 +1,18 @@
 import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import { ARENA_PHYSICS } from '../config.js';
 import { createArenaV1MapRegistry } from '../content/arena-v1-maps.js';
-import { createDefaultMapCommandRegistry } from '../map/default-map-command-handlers.js';
 import {
+  createDefaultMapCommandRegistry,
   createDefaultMapEventStrategyRegistry,
+  validateCharacterSpawnSafety,
   validateDefaultMapSafety,
-} from '../map/default-map-event-handlers.js';
+  validateWalkableMapTopology,
+} from '@number-strategy-jump/arena-map';
 import {
   STATIC_MAP_ID_PREFIX,
   createStaticMapDefinition,
 } from '@number-strategy-jump/arena-definitions';
 import { ArenaMapSystem } from '../map/map-system.js';
-import {
-  validateCharacterSpawnSafety,
-  validateWalkableMapTopology,
-} from '@number-strategy-jump/arena-map';
 import {
   assertArenaV1AuthorityContent,
   createArenaV1AuthorityContent,

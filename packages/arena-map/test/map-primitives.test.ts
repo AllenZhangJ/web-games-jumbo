@@ -6,13 +6,22 @@ import {
 } from '@number-strategy-jump/arena-definitions';
 
 import {
+  MAP_DOMAIN_EVENT,
   MAP_EVENT_KIND,
+  MAP_RULE_COMMAND,
   MAP_TIMELINE_TRANSITION,
+  MapEventStrategyRegistry,
   MapTimeline,
+  createDefaultMapCommandRegistry,
+  createDefaultMapEventStrategyRegistry,
   validateCharacterSpawnSafety,
   validateDefaultMapSafety,
   validateWalkableMapTopology,
 } from '../src/index.js';
+import type {
+  ArenaMapSnapshot,
+} from '@number-strategy-jump/arena-contracts';
+import type { MapEventExecutionContext, MapEventStrategy } from '../src/index.js';
 
 function createTestMap(collapseSurfaceIds: readonly string[] = ['wing']): MapDefinition {
   return new MapDefinition({
@@ -114,4 +123,254 @@ describe('arena-map primitives', () => {
       maximumStepHeight: 0.35,
     })).toThrow('不能没有可用 surface');
   });
+
+  it('validates and snapshots the complete command batch before any port mutation', () => {
+    const registry = createDefaultMapCommandRegistry();
+    const metadata = {
+      occurrenceId: 'wind:0',
+      mapEventId: 'wind',
+      mapEventKind: MAP_EVENT_KIND.WIND_ZONE,
+      phase: 'tick',
+    } as const;
+    let calls = 0;
+    const commands: Array<Record<string, unknown>> = [
+      {
+        ...metadata,
+        sequence: 0,
+        kind: MAP_RULE_COMMAND.APPLY_IMPULSE,
+        participantId: 'player-1',
+        impulse: { x: 1, y: 0, z: 0 },
+      },
+      {
+        ...metadata,
+        sequence: 1,
+        kind: MAP_RULE_COMMAND.SET_SURFACE_ENABLED,
+        surfaceId: 'wing',
+      },
+    ];
+    expect(() => registry.execute(commands, {
+      ports: {
+        applyImpulse() {
+          calls += 1;
+          commands[1]!.enabled = true;
+        },
+        setSurfaceEnabled() {},
+        spawnEquipment() {},
+      },
+    })).toThrow('enabled 必须是布尔值');
+    expect(calls).toBe(0);
+    let getterCalls = 0;
+    const accessorCommand = Object.defineProperty({}, 'kind', {
+      enumerable: true,
+      get() {
+        getterCalls += 1;
+        return MAP_RULE_COMMAND.APPLY_IMPULSE;
+      },
+    });
+    expect(() => registry.assertSupported([accessorCommand])).toThrow(
+      'kind 必须是可枚举数据字段',
+    );
+    expect(getterCalls).toBe(0);
+  });
+
+  it('keeps authoritative occurrence data ahead of caller context', () => {
+    let observedId = '';
+    const strategy: MapEventStrategy = {
+      kind: MAP_EVENT_KIND.WIND_ZONE,
+      validate() {},
+      plan({ occurrence }) {
+        observedId = occurrence.occurrenceId;
+        return { privatePlan: {}, publicPayload: {} };
+      },
+      start() { return { commands: [], events: [] }; },
+      tick() { return { commands: [], events: [] }; },
+      end() { return { commands: [], events: [] }; },
+    };
+    const map = createTestMap();
+    const occurrence = new MapTimeline(map).requireOccurrence('wind:0');
+    const registry = new MapEventStrategyRegistry([strategy]);
+    const context = createExecutionContext(map, {
+      occurrence: { ...occurrence, occurrenceId: 'spoofed:0' },
+    });
+    registry.plan(occurrence, context);
+    expect(observedId).toBe('wind:0');
+    let getterCalls = 0;
+    const accessorContext = Object.defineProperty({}, 'seed', {
+      enumerable: true,
+      get() {
+        getterCalls += 1;
+        return 7;
+      },
+    });
+    expect(() => registry.plan(
+      occurrence,
+      accessorContext as Omit<MapEventExecutionContext, 'occurrence'>
+        & Readonly<Record<string, unknown>>,
+    )).toThrow('seed 必须是可枚举数据字段');
+    expect(getterCalls).toBe(0);
+  });
+
+  it('plans equipment waves deterministically without exposing identity at warning time', () => {
+    const map = createStrategyMap();
+    const registry = createDefaultMapEventStrategyRegistry();
+    registry.validateMapDefinition(map, {
+      equipmentRegistry: { require: (id: string) => ({ id }) },
+    });
+    const occurrence = new MapTimeline(map).requireOccurrence('wave:0');
+    const first = registry.plan(occurrence, createExecutionContext(map, { seed: 1234 }));
+    const second = registry.plan(occurrence, createExecutionContext(map, { seed: 1234 }));
+    expect(first).toEqual(second);
+    expect(first.publicPayload).toEqual({
+      spawnPoints: [{
+        spawnPointId: expect.any(String),
+        surfaceId: 'base',
+        position: expect.any(Object),
+      }],
+    });
+    expect(JSON.stringify(first.publicPayload)).not.toContain('hammer');
+    expect(JSON.stringify(first.publicPayload)).not.toContain('shield');
+    const released = registry.start(occurrence, createExecutionContext(map, {
+      privatePlan: first.privatePlan,
+    }));
+    expect(released.commands[0]).toMatchObject({
+      kind: MAP_RULE_COMMAND.SPAWN_EQUIPMENT,
+      instanceId: 'map:wave:0:0',
+    });
+    expect(released.events[0]).toMatchObject({
+      type: MAP_DOMAIN_EVENT.EQUIPMENT_WAVE_RELEASED,
+    });
+  });
+
+  it('emits only declarative wind and collapse commands', () => {
+    const map = createStrategyMap();
+    const registry = createDefaultMapEventStrategyRegistry();
+    const timeline = new MapTimeline(map);
+    const wind = timeline.requireOccurrence('wind:0');
+    const windPlan = registry.plan(wind, createExecutionContext(map));
+    const windTick = registry.tick(wind, createExecutionContext(map, {
+      privatePlan: windPlan.privatePlan,
+      actors: [{ id: 'player-1', eligible: true, position: { x: 0, y: 1, z: 0 } }],
+    }));
+    expect(windTick).toEqual({
+      commands: [{
+        kind: MAP_RULE_COMMAND.APPLY_IMPULSE,
+        participantId: 'player-1',
+        impulse: { x: 0.1, y: 0, z: 0 },
+      }],
+      events: [],
+    });
+    const collapse = timeline.requireOccurrence('collapse:0');
+    const collapsePlan = registry.plan(collapse, createExecutionContext(map));
+    const collapseStart = registry.start(collapse, createExecutionContext(map, {
+      privatePlan: collapsePlan.privatePlan,
+    }));
+    expect(collapseStart).toEqual({
+      commands: [{
+        kind: MAP_RULE_COMMAND.SET_SURFACE_ENABLED,
+        surfaceId: 'wing',
+        enabled: false,
+      }],
+      events: [{ type: MAP_DOMAIN_EVENT.SURFACE_COLLAPSED, surfaceId: 'wing' }],
+    });
+  });
 });
+
+function createStrategyMap(): MapDefinition {
+  return new MapDefinition({
+    schemaVersion: MAP_DEFINITION_SCHEMA_VERSION,
+    id: 'strategy-map',
+    arena: {
+      killY: -5,
+      surfaces: [
+        {
+          id: 'base',
+          center: { x: 0, y: -0.5, z: 0 },
+          halfExtents: { x: 5, y: 0.5, z: 3 },
+        },
+        {
+          id: 'wing',
+          center: { x: 6, y: -0.5, z: 0 },
+          halfExtents: { x: 1, y: 0.5, z: 3 },
+        },
+      ],
+      spawns: [{ x: -2, y: 1, z: 0 }, { x: 2, y: 1, z: 0 }],
+    },
+    equipmentSpawnPoints: [
+      { id: 'drop-a', surfaceId: 'base', position: { x: -1, y: 1, z: 0 } },
+      { id: 'drop-b', surfaceId: 'base', position: { x: 1, y: 1, z: 0 } },
+    ],
+    events: [
+      {
+        id: 'wave',
+        kind: MAP_EVENT_KIND.EQUIPMENT_WAVE,
+        schedule: {
+          startTick: 2,
+          warningLeadTicks: 1,
+          durationTicks: 0,
+          repeatEveryTicks: 0,
+          repeatCount: 1,
+        },
+        parameters: {
+          spawnPointIds: ['drop-a', 'drop-b'],
+          equipmentDefinitionIds: ['hammer', 'shield'],
+          count: 1,
+        },
+      },
+      {
+        id: 'wind',
+        kind: MAP_EVENT_KIND.WIND_ZONE,
+        schedule: {
+          startTick: 3,
+          warningLeadTicks: 1,
+          durationTicks: 2,
+          repeatEveryTicks: 0,
+          repeatCount: 1,
+        },
+        parameters: {
+          region: {
+            center: { x: 0, y: 1, z: 0 },
+            halfExtents: { x: 2, y: 2, z: 2 },
+          },
+          impulsePerTick: { x: 0.1, y: 0, z: 0 },
+        },
+      },
+      {
+        id: 'collapse',
+        kind: MAP_EVENT_KIND.COLLAPSE_SURFACES,
+        schedule: {
+          startTick: 5,
+          warningLeadTicks: 1,
+          durationTicks: 0,
+          repeatEveryTicks: 0,
+          repeatCount: 1,
+        },
+        parameters: { surfaceIds: ['wing'] },
+      },
+    ],
+  });
+}
+
+function createExecutionContext(
+  mapDefinition: MapDefinition,
+  overrides: Readonly<Record<string, unknown>> = {},
+): Omit<MapEventExecutionContext, 'occurrence'> & Readonly<Record<string, unknown>> {
+  const mapSnapshot: ArenaMapSnapshot = Object.freeze({
+    schemaVersion: 1,
+    definitionId: mapDefinition.id,
+    nextActiveTick: 0,
+    revision: 0,
+    surfaces: Object.freeze(mapDefinition.arena.surfaces.map(({ id }) => Object.freeze({
+      id,
+      enabled: true,
+      revision: 0,
+    }))),
+    occurrences: Object.freeze([]),
+  });
+  return Object.freeze({
+    mapDefinition,
+    mapSnapshot,
+    actors: Object.freeze([]),
+    seed: 7,
+    ...overrides,
+  }) as Omit<MapEventExecutionContext, 'occurrence'> & Readonly<Record<string, unknown>>;
+}
