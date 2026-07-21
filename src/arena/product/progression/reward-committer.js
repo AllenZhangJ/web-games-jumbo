@@ -1,6 +1,6 @@
 import { assertNonEmptyString } from '@number-strategy-jump/arena-contracts';
 import { createPlayerProfileDefinition } from '@number-strategy-jump/arena-profile-contracts';
-import { createProgressionRegistry } from './progression-registry.js';
+import { createProgressionRegistry } from '@number-strategy-jump/arena-progression';
 import { resolveMatchReward } from './reward-resolver.js';
 
 function validateProfileService(value) {

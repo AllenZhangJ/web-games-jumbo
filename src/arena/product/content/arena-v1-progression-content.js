@@ -1,8 +1,8 @@
 import {
   MATCH_REWARD_DEFINITION_SCHEMA_VERSION,
   createMatchRewardDefinition,
-} from '../progression/match-reward-definition.js';
-import { createProgressionRegistry } from '../progression/progression-registry.js';
+  createProgressionRegistry,
+} from '@number-strategy-jump/arena-progression';
 
 export const ARENA_V1_MATCH_REWARD_ID = 'arena-v1-match-reward';
 

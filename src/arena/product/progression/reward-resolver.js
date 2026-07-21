@@ -4,9 +4,12 @@ import {
   createPlayerProfile,
   createPlayerProfileDefinition,
 } from '@number-strategy-jump/arena-profile-contracts';
-import { createProgressionRegistry } from './progression-registry.js';
-import { REWARD_GRANT_SCHEMA_VERSION, createRewardGrant } from './reward-grant.js';
-import { UNLOCK_PROFILE_KEY } from './unlock-definition.js';
+import {
+  REWARD_GRANT_SCHEMA_VERSION,
+  UNLOCK_PROFILE_KEY,
+  createProgressionRegistry,
+  createRewardGrant,
+} from '@number-strategy-jump/arena-progression';
 
 function validateResult(value) {
   return validateProductMatchResult(value);

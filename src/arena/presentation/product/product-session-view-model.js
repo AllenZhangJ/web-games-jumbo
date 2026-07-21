@@ -7,7 +7,7 @@ import {
   createProductPublicOpponent,
   validateProductMatchResult,
 } from '../../product/matchmaking/product-match-result.js';
-import { createRewardGrant } from '../../product/progression/reward-grant.js';
+import { createRewardGrant } from '@number-strategy-jump/arena-progression';
 import {
   assertIntegerAtLeast,
   assertNonEmptyString,

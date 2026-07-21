@@ -3,8 +3,11 @@ import assert from 'node:assert/strict';
 import { ARENA_V1_PLAYER_PROFILE_DEFINITION } from '../../../src/arena/product/content/arena-v1-player-profile-definition.js';
 import {
   MATCH_REWARD_DEFINITION_SCHEMA_VERSION,
+  ProgressionRegistry,
+  UNLOCK_DEFINITION_SCHEMA_VERSION,
+  UNLOCK_KIND,
   createMatchRewardDefinition,
-} from '../../../src/arena/product/progression/match-reward-definition.js';
+} from '@number-strategy-jump/arena-progression';
 import {
   ARENA_V1_MATCH_REWARD_DEFINITION,
   ARENA_V1_MATCH_REWARD_ID,
@@ -15,13 +18,8 @@ import {
   createPlayerProfile,
 } from '@number-strategy-jump/arena-profile-contracts';
 import { PlayerProfileService } from '../../../src/arena/product/profile/player-profile-service.js';
-import { ProgressionRegistry } from '../../../src/arena/product/progression/progression-registry.js';
 import { RewardCommitter } from '../../../src/arena/product/progression/reward-committer.js';
 import { resolveMatchReward } from '../../../src/arena/product/progression/reward-resolver.js';
-import {
-  UNLOCK_DEFINITION_SCHEMA_VERSION,
-  UNLOCK_KIND,
-} from '../../../src/arena/product/progression/unlock-definition.js';
 import { TEST_MATCH_CONTENT_PUBLIC_VIEW } from './stage8-test-content.js';
 
 function matchResult({ winnerId = 'player-1', seed = 7 } = {}) {

@@ -5,7 +5,7 @@ import { createArenaV1ProductSession } from '../../../src/arena/product/composit
 import { ARENA_V1_PLAYER_PROFILE_DEFINITION } from '../../../src/arena/product/content/arena-v1-player-profile-definition.js';
 import { createProductMatchResult } from '../../../src/arena/product/matchmaking/product-match-result.js';
 import { createPlayerProfile } from '@number-strategy-jump/arena-profile-contracts';
-import { REWARD_GRANT_SCHEMA_VERSION } from '../../../src/arena/product/progression/reward-grant.js';
+import { REWARD_GRANT_SCHEMA_VERSION } from '@number-strategy-jump/arena-progression';
 import {
   PRODUCT_SESSION_ERROR_CODE,
   PRODUCT_SESSION_STATE,
