@@ -1,28 +1,64 @@
-import { createRng, deriveSeed } from '@number-strategy-jump/arena-contracts';
 import {
   MATCH_CONTENT_SELECTION_SCHEMA_VERSION,
+  assertKnownKeys,
+  assertPlainRecord,
   createMatchContentSelection,
+  createRng,
+  deriveSeed,
 } from '@number-strategy-jump/arena-contracts';
 import {
   createPlayerProfile,
   createPlayerProfileDefinition,
+  type PlayerProfile,
+  type PlayerProfileDefinition,
+  type PlayerProfileUnlocks,
 } from '@number-strategy-jump/arena-profile-contracts';
-import { MATCH_CONTENT_KIND } from './content-replacement-definition.js';
-import { createContentReplacementRegistry } from './content-replacement-registry.js';
+import {
+  MATCH_CONTENT_KIND,
+  type MatchContentKind,
+} from './content-replacement-definition.js';
+import {
+  createContentReplacementRegistry,
+  type ContentReplacementRegistry,
+} from './content-replacement-registry.js';
 import {
   FROZEN_MATCH_CONTENT_POOL_SCHEMA_VERSION,
+  assertMatchSeed,
   createFrozenMatchContentPool,
+  type FrozenMatchContentPool,
 } from './frozen-match-content-pool.js';
-import { createMatchContentCatalog } from './match-content-catalog.js';
-import { createMatchContentPoolDefinition } from './match-content-pool-definition.js';
+import {
+  createMatchContentCatalog,
+  type MatchContentCatalog,
+} from './match-content-catalog.js';
+import {
+  createMatchContentPoolDefinition,
+  type MatchContentPoolDefinition,
+} from './match-content-pool-definition.js';
+import { readOwnDataField } from './ports.js';
 
-const PROFILE_KEY_BY_KIND = Object.freeze({
+type ProfileUnlockKey = 'characterIds' | 'equipmentIds' | 'mapIds';
+
+const PROFILE_KEY_BY_KIND: Readonly<Record<MatchContentKind, ProfileUnlockKey>> = Object.freeze({
   [MATCH_CONTENT_KIND.CHARACTER]: 'characterIds',
   [MATCH_CONTENT_KIND.EQUIPMENT]: 'equipmentIds',
   [MATCH_CONTENT_KIND.MAP]: 'mapIds',
 });
+const CONSTRUCTOR_KEYS = new Set([
+  'definition',
+  'catalog',
+  'replacementRegistry',
+  'profileDefinition',
+]);
+const RESOLVE_KEYS = new Set(['profile', 'matchSeed']);
 
-function resolveKnownId({ catalog, replacements, kind, id }) {
+function resolveKnownId(options: Readonly<{
+  catalog: MatchContentCatalog;
+  replacements: ContentReplacementRegistry;
+  kind: MatchContentKind;
+  id: string;
+}>): string {
+  const { catalog, replacements, kind, id } = options;
   if (catalog.has(kind, id)) return id;
   const replacementId = replacements.resolve(kind, id);
   if (replacementId === null) {
@@ -34,8 +70,14 @@ function resolveKnownId({ catalog, replacements, kind, id }) {
   return replacementId;
 }
 
-function resolveUnlockedIds({ profile, catalog, replacements, kind }) {
-  const profileKey = PROFILE_KEY_BY_KIND[kind];
+function resolveUnlockedIds(options: Readonly<{
+  profile: PlayerProfile;
+  catalog: MatchContentCatalog;
+  replacements: ContentReplacementRegistry;
+  kind: MatchContentKind;
+}>): readonly string[] {
+  const { profile, catalog, replacements, kind } = options;
+  const profileKey: keyof PlayerProfileUnlocks = PROFILE_KEY_BY_KIND[kind];
   const resolved = profile.unlocks[profileKey].map((id) => resolveKnownId({
     catalog,
     replacements,
@@ -45,28 +87,45 @@ function resolveUnlockedIds({ profile, catalog, replacements, kind }) {
   return Object.freeze([...new Set(resolved)].sort());
 }
 
-function requireAvailable(ids, requiredId, name) {
-  if (!ids.includes(requiredId)) throw new RangeError(`${name} ${requiredId} 未在当前 Profile 解锁。`);
-}
-
-function assertMatchSeed(value) {
-  if (!Number.isSafeInteger(value) || value < 0 || value > 0xffffffff) {
-    throw new RangeError('MatchContentPool matchSeed 必须是 uint32。');
+function requireAvailable(ids: readonly string[], requiredId: string, name: string): void {
+  if (!ids.includes(requiredId)) {
+    throw new RangeError(`${name} ${requiredId} 未在当前 Profile 解锁。`);
   }
-  return value;
 }
 
 export class MatchContentPoolResolver {
-  #definition;
-  #catalog;
-  #replacements;
-  #profileDefinition;
+  readonly #definition: MatchContentPoolDefinition;
+  readonly #catalog: MatchContentCatalog;
+  readonly #replacements: ContentReplacementRegistry;
+  readonly #profileDefinition: PlayerProfileDefinition;
 
-  constructor({ definition, catalog, replacementRegistry = [], profileDefinition }) {
-    this.#definition = createMatchContentPoolDefinition(definition);
-    this.#catalog = createMatchContentCatalog(catalog);
-    this.#replacements = createContentReplacementRegistry(replacementRegistry);
-    this.#profileDefinition = createPlayerProfileDefinition(profileDefinition);
+  constructor(value: unknown) {
+    assertKnownKeys(value, CONSTRUCTOR_KEYS, 'MatchContentPoolResolver options');
+    const options = assertPlainRecord(value, 'MatchContentPoolResolver options');
+    this.#definition = createMatchContentPoolDefinition(readOwnDataField(
+      options,
+      'definition',
+      'MatchContentPoolResolver options',
+    ));
+    this.#catalog = createMatchContentCatalog(readOwnDataField(
+      options,
+      'catalog',
+      'MatchContentPoolResolver options',
+    ));
+    const replacementRegistry = readOwnDataField(
+      options,
+      'replacementRegistry',
+      'MatchContentPoolResolver options',
+      true,
+    );
+    this.#replacements = createContentReplacementRegistry(
+      replacementRegistry === undefined ? [] : replacementRegistry,
+    );
+    this.#profileDefinition = createPlayerProfileDefinition(readOwnDataField(
+      options,
+      'profileDefinition',
+      'MatchContentPoolResolver options',
+    ));
     if (!this.#catalog.has(MATCH_CONTENT_KIND.CHARACTER, this.#definition.fallbackCharacterId)) {
       throw new RangeError('MatchContentPoolDefinition fallbackCharacterId 不在 Catalog。');
     }
@@ -88,18 +147,28 @@ export class MatchContentPoolResolver {
         replacement.kind,
         replacement.retiredId,
       );
-      if (!this.#catalog.has(replacement.kind, finalReplacementId)) {
+      if (finalReplacementId === null || !this.#catalog.has(replacement.kind, finalReplacementId)) {
         throw new RangeError(
-          `MatchContentPool 替代目标不存在：${replacement.kind} ${finalReplacementId}。`,
+          `MatchContentPool 替代目标不存在：${replacement.kind} ${String(finalReplacementId)}。`,
         );
       }
     }
     Object.freeze(this);
   }
 
-  resolve({ profile: profileValue, matchSeed }) {
-    const normalizedMatchSeed = assertMatchSeed(matchSeed);
-    const profile = createPlayerProfile(this.#profileDefinition, profileValue);
+  resolve(value: unknown): FrozenMatchContentPool {
+    assertKnownKeys(value, RESOLVE_KEYS, 'MatchContentPoolResolver resolve options');
+    const options = assertPlainRecord(value, 'MatchContentPoolResolver resolve options');
+    const normalizedMatchSeed = assertMatchSeed(readOwnDataField(
+      options,
+      'matchSeed',
+      'MatchContentPoolResolver resolve options',
+    ));
+    const profile = createPlayerProfile(this.#profileDefinition, readOwnDataField(
+      options,
+      'profile',
+      'MatchContentPoolResolver resolve options',
+    ));
     const characterDefinitionIds = resolveUnlockedIds({
       profile,
       catalog: this.#catalog,
@@ -123,7 +192,11 @@ export class MatchContentPoolResolver {
       this.#definition.fallbackCharacterId,
       'MatchContentPool fallback character',
     );
-    requireAvailable(mapDefinitionIds, this.#definition.fallbackMapId, 'MatchContentPool fallback map');
+    requireAvailable(
+      mapDefinitionIds,
+      this.#definition.fallbackMapId,
+      'MatchContentPool fallback map',
+    );
     for (const id of this.#definition.requiredEquipmentIds) {
       requireAvailable(equipmentDefinitionIds, id, 'MatchContentPool required equipment');
     }

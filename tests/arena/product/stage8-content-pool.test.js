@@ -29,14 +29,12 @@ import {
 import { ARENA_V1_PLAYER_PROFILE_DEFINITION } from '../../../src/arena/product/content/arena-v1-player-profile-definition.js';
 import {
   CONTENT_REPLACEMENT_DEFINITION_SCHEMA_VERSION,
-  MATCH_CONTENT_KIND,
-} from '../../../src/arena/product/content-pool/content-replacement-definition.js';
-import { ContentReplacementRegistry } from '../../../src/arena/product/content-pool/content-replacement-registry.js';
-import {
+  ContentReplacementRegistry,
   FROZEN_MATCH_CONTENT_POOL_SCHEMA_VERSION,
+  MATCH_CONTENT_KIND,
+  MatchContentPoolResolver,
   createFrozenMatchContentPool,
-} from '../../../src/arena/product/content-pool/frozen-match-content-pool.js';
-import { MatchContentPoolResolver } from '../../../src/arena/product/content-pool/match-content-pool-resolver.js';
+} from '@number-strategy-jump/arena-product-content';
 import {
   advancePlayerProfile,
   createPlayerProfile,

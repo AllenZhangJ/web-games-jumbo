@@ -406,6 +406,12 @@ test('Arena Stage 8 product orchestration remains host-free and outside match au
   const directories = [
     'src/arena/product',
     'src/arena/storage',
+    'packages/arena-product-content/src',
+    'packages/arena-product-contracts/src',
+    'packages/arena-product-match/src',
+    'packages/arena-product-progression/src',
+    'packages/arena-product-session/src',
+    'packages/arena-product-state/src',
   ].map((directory) => path.resolve(directory));
   const files = (await Promise.all(directories.map(listJavaScript))).flat();
   assert.ok(files.length >= 8);
@@ -454,7 +460,7 @@ test('Arena Stage 8 product sublayers preserve state/profile/match/composition d
   }
 
   const contentPoolFiles = await listJavaScript(
-    path.resolve('src/arena/product/content-pool'),
+    path.resolve('packages/arena-product-content/src'),
   );
   for (const file of contentPoolFiles) {
     const source = await readFile(file, 'utf8');
@@ -1004,6 +1010,19 @@ test('Arena Rule/Core foundation preserves dependency direction and deterministi
     Object.keys(productContractsPackage.dependencies).sort(),
     ['@number-strategy-jump/arena-contracts'],
     'arena-product-contracts 只能依赖底层确定性合同。',
+  );
+
+  const productContentPackage = JSON.parse(await readFile(
+    path.resolve('packages/arena-product-content/package.json'),
+    'utf8',
+  ));
+  assert.deepEqual(
+    Object.keys(productContentPackage.dependencies).sort(),
+    [
+      '@number-strategy-jump/arena-contracts',
+      '@number-strategy-jump/arena-profile-contracts',
+    ],
+    'arena-product-content 只能依赖底层确定性合同与 Profile 数据合同。',
   );
 
   const productProgressionPackage = JSON.parse(await readFile(

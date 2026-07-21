@@ -1,12 +1,21 @@
-import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
-import { createMatchContentSelection } from '@number-strategy-jump/arena-contracts';
 import {
   assertIntegerAtLeast,
   assertKnownKeys,
   cloneFrozenData,
+  createDeterministicDataHash,
+  createMatchContentSelection,
+  type MatchContentSelection,
 } from '@number-strategy-jump/arena-contracts';
 
-export const FROZEN_MATCH_CONTENT_POOL_SCHEMA_VERSION = 1;
+export const FROZEN_MATCH_CONTENT_POOL_SCHEMA_VERSION = 1 as const;
+
+export interface FrozenMatchContentPool {
+  readonly schemaVersion: typeof FROZEN_MATCH_CONTENT_POOL_SCHEMA_VERSION;
+  readonly matchSeed: number;
+  readonly sourceProfileRevision: number;
+  readonly selection: MatchContentSelection;
+  readonly poolHash: string;
+}
 
 const KEYS = new Set([
   'schemaVersion',
@@ -16,21 +25,21 @@ const KEYS = new Set([
   'poolHash',
 ]);
 
-function hash(value, name) {
+function hash(value: unknown, name: string): string {
   if (typeof value !== 'string' || !/^[0-9a-f]{8}$/.test(value)) {
     throw new TypeError(`${name} 必须是 8 位十六进制 hash。`);
   }
   return value;
 }
 
-function matchSeed(value) {
-  if (!Number.isSafeInteger(value) || value < 0 || value > 0xffffffff) {
-    throw new RangeError('FrozenMatchContentPool.matchSeed 必须是 uint32。');
+export function assertMatchSeed(value: unknown, name = 'MatchContentPool matchSeed'): number {
+  if (!Number.isSafeInteger(value) || (value as number) < 0 || (value as number) > 0xffffffff) {
+    throw new RangeError(`${name} 必须是 uint32。`);
   }
-  return value;
+  return value as number;
 }
 
-export function createFrozenMatchContentPool(value) {
+export function createFrozenMatchContentPool(value: unknown): FrozenMatchContentPool {
   const source = cloneFrozenData(value, 'FrozenMatchContentPool');
   assertKnownKeys(source, KEYS, 'FrozenMatchContentPool');
   if (source.schemaVersion !== FROZEN_MATCH_CONTENT_POOL_SCHEMA_VERSION) {
@@ -40,7 +49,7 @@ export function createFrozenMatchContentPool(value) {
   }
   const payload = Object.freeze({
     schemaVersion: FROZEN_MATCH_CONTENT_POOL_SCHEMA_VERSION,
-    matchSeed: matchSeed(source.matchSeed),
+    matchSeed: assertMatchSeed(source.matchSeed, 'FrozenMatchContentPool.matchSeed'),
     sourceProfileRevision: assertIntegerAtLeast(
       source.sourceProfileRevision,
       0,

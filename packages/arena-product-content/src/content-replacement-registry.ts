@@ -1,27 +1,23 @@
+import { assertNonEmptyString } from '@number-strategy-jump/arena-contracts';
 import {
   MATCH_CONTENT_KIND,
   createContentReplacementDefinition,
+  type ContentReplacementDefinition,
+  type MatchContentKind,
 } from './content-replacement-definition.js';
-import { assertNonEmptyString } from '@number-strategy-jump/arena-contracts';
 
-function normalizeDefinitions(values) {
+function normalizeDefinitions(values: unknown): ContentReplacementDefinition[] {
   if (!Array.isArray(values)) {
     throw new TypeError('ContentReplacementRegistry definitions 必须是数组。');
   }
   const keys = Reflect.ownKeys(values);
   const expectedKeys = new Set(['length']);
-  const definitions = [];
+  const definitions: ContentReplacementDefinition[] = [];
   for (let index = 0; index < values.length; index += 1) {
     expectedKeys.add(String(index));
     const descriptor = Object.getOwnPropertyDescriptor(values, String(index));
-    if (
-      !descriptor
-      || !descriptor.enumerable
-      || !Object.prototype.hasOwnProperty.call(descriptor, 'value')
-    ) {
-      throw new TypeError(
-        'ContentReplacementRegistry definitions 不能包含空槽或访问器。',
-      );
+    if (!descriptor || !descriptor.enumerable || !('value' in descriptor)) {
+      throw new TypeError('ContentReplacementRegistry definitions 不能包含空槽或访问器。');
     }
     definitions.push(createContentReplacementDefinition(descriptor.value));
   }
@@ -33,18 +29,20 @@ function normalizeDefinitions(values) {
   ));
 }
 
-function replacementKey(kind, contentId) {
+function replacementKey(kind: MatchContentKind, contentId: string): string {
   return `${kind}:${contentId}`;
 }
 
-export class ContentReplacementRegistry {
-  #definitions;
-  #bySource;
+const KINDS: ReadonlySet<unknown> = new Set(Object.values(MATCH_CONTENT_KIND));
 
-  constructor(definitions = []) {
+export class ContentReplacementRegistry {
+  readonly #definitions: readonly ContentReplacementDefinition[];
+  readonly #bySource: ReadonlyMap<string, ContentReplacementDefinition>;
+
+  constructor(definitions: unknown = []) {
     const normalized = normalizeDefinitions(definitions);
-    const ids = new Set();
-    const bySource = new Map();
+    const ids = new Set<string>();
+    const bySource = new Map<string, ContentReplacementDefinition>();
     for (const definition of normalized) {
       if (ids.has(definition.id)) {
         throw new RangeError(`ContentReplacementRegistry 重复 id ${definition.id}。`);
@@ -57,13 +55,15 @@ export class ContentReplacementRegistry {
       bySource.set(key, definition);
     }
     for (const definition of normalized) {
-      const visited = new Set();
+      const visited = new Set<string>();
       let currentId = definition.retiredId;
       while (bySource.has(replacementKey(definition.kind, currentId))) {
         const key = replacementKey(definition.kind, currentId);
         if (visited.has(key)) throw new RangeError('ContentReplacementRegistry 存在替换环。');
         visited.add(key);
-        currentId = bySource.get(key).replacementId;
+        const next = bySource.get(key);
+        if (!next) throw new Error('ContentReplacementRegistry 内部索引不一致。');
+        currentId = next.replacementId;
       }
     }
     this.#definitions = Object.freeze(normalized);
@@ -71,26 +71,30 @@ export class ContentReplacementRegistry {
     Object.freeze(this);
   }
 
-  resolve(kind, retiredId) {
-    if (!Object.values(MATCH_CONTENT_KIND).includes(kind)) {
+  resolve(kind: unknown, retiredId: unknown): string | null {
+    if (!KINDS.has(kind)) {
       throw new RangeError(`ContentReplacementRegistry 不支持 kind ${String(kind)}。`);
     }
-    let currentId = retiredId;
-    assertNonEmptyString(currentId, 'ContentReplacementRegistry retiredId');
+    let currentId = assertNonEmptyString(
+      retiredId,
+      'ContentReplacementRegistry retiredId',
+    );
     let replaced = false;
-    while (this.#bySource.has(replacementKey(kind, currentId))) {
+    for (;;) {
+      const next = this.#bySource.get(replacementKey(kind as MatchContentKind, currentId));
+      if (!next) break;
       replaced = true;
-      currentId = this.#bySource.get(replacementKey(kind, currentId)).replacementId;
+      currentId = next.replacementId;
     }
     return replaced ? currentId : null;
   }
 
-  list() {
+  list(): readonly ContentReplacementDefinition[] {
     return this.#definitions;
   }
 }
 
-export function createContentReplacementRegistry(value = []) {
+export function createContentReplacementRegistry(value: unknown = []): ContentReplacementRegistry {
   return value instanceof ContentReplacementRegistry
     ? value
     : new ContentReplacementRegistry(value);

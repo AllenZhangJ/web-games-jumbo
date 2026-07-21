@@ -5,13 +5,24 @@ import {
   cloneFrozenData,
 } from '@number-strategy-jump/arena-contracts';
 
-export const CONTENT_REPLACEMENT_DEFINITION_SCHEMA_VERSION = 1;
+export const CONTENT_REPLACEMENT_DEFINITION_SCHEMA_VERSION = 1 as const;
 
 export const MATCH_CONTENT_KIND = Object.freeze({
   CHARACTER: 'character',
   EQUIPMENT: 'equipment',
   MAP: 'map',
-});
+} as const);
+
+export type MatchContentKind = typeof MATCH_CONTENT_KIND[keyof typeof MATCH_CONTENT_KIND];
+
+export interface ContentReplacementDefinition {
+  readonly schemaVersion: typeof CONTENT_REPLACEMENT_DEFINITION_SCHEMA_VERSION;
+  readonly id: string;
+  readonly contentVersion: number;
+  readonly kind: MatchContentKind;
+  readonly retiredId: string;
+  readonly replacementId: string;
+}
 
 const KEYS = new Set([
   'schemaVersion',
@@ -21,8 +32,11 @@ const KEYS = new Set([
   'retiredId',
   'replacementId',
 ]);
+const KINDS: ReadonlySet<unknown> = new Set(Object.values(MATCH_CONTENT_KIND));
 
-export function createContentReplacementDefinition(value) {
+export function createContentReplacementDefinition(
+  value: unknown,
+): ContentReplacementDefinition {
   const source = cloneFrozenData(value, 'ContentReplacementDefinition');
   assertKnownKeys(source, KEYS, 'ContentReplacementDefinition');
   if (source.schemaVersion !== CONTENT_REPLACEMENT_DEFINITION_SCHEMA_VERSION) {
@@ -30,7 +44,7 @@ export function createContentReplacementDefinition(value) {
       `不支持 ContentReplacementDefinition schema ${String(source.schemaVersion)}。`,
     );
   }
-  if (!Object.values(MATCH_CONTENT_KIND).includes(source.kind)) {
+  if (!KINDS.has(source.kind)) {
     throw new RangeError('ContentReplacementDefinition.kind 不受支持。');
   }
   const retiredId = assertNonEmptyString(
@@ -52,7 +66,7 @@ export function createContentReplacementDefinition(value) {
       1,
       'ContentReplacementDefinition.contentVersion',
     ),
-    kind: source.kind,
+    kind: source.kind as MatchContentKind,
     retiredId,
     replacementId,
   });

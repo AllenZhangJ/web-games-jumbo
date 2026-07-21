@@ -15,8 +15,10 @@ import {
   ARENA_V1_MATCH_CONTENT_CATALOG,
   ARENA_V1_MATCH_CONTENT_POOL_DEFINITION,
 } from '../content/arena-v1-match-content.js';
-import { MatchContentPoolResolver } from '../content-pool/match-content-pool-resolver.js';
-import { ProfileContentPoolProvider } from '../content-pool/profile-content-pool-provider.js';
+import {
+  MatchContentPoolResolver,
+  ProfileContentPoolProvider,
+} from '@number-strategy-jump/arena-product-content';
 import {
   ARENA_V1_MATCH_REWARD_ID,
   ARENA_V1_PROGRESSION_REGISTRY,

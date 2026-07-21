@@ -8,14 +8,12 @@ import {
 import { STAGE5_MAP_ID } from '../../content/stage5-map.js';
 import {
   CONTENT_REPLACEMENT_DEFINITION_SCHEMA_VERSION,
+  ContentReplacementRegistry,
   MATCH_CONTENT_KIND,
-} from '../content-pool/content-replacement-definition.js';
-import { ContentReplacementRegistry } from '../content-pool/content-replacement-registry.js';
-import { MatchContentCatalog } from '../content-pool/match-content-catalog.js';
-import {
+  MatchContentCatalog,
   MATCH_CONTENT_POOL_DEFINITION_SCHEMA_VERSION,
   createMatchContentPoolDefinition,
-} from '../content-pool/match-content-pool-definition.js';
+} from '@number-strategy-jump/arena-product-content';
 
 export const ARENA_V1_MATCH_CONTENT_POOL_DEFINITION = createMatchContentPoolDefinition({
   schemaVersion: MATCH_CONTENT_POOL_DEFINITION_SCHEMA_VERSION,

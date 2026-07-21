@@ -6,7 +6,18 @@ import {
   cloneFrozenStringSet,
 } from '@number-strategy-jump/arena-contracts';
 
-export const MATCH_CONTENT_POOL_DEFINITION_SCHEMA_VERSION = 1;
+export const MATCH_CONTENT_POOL_DEFINITION_SCHEMA_VERSION = 1 as const;
+
+export interface MatchContentPoolDefinition {
+  readonly schemaVersion: typeof MATCH_CONTENT_POOL_DEFINITION_SCHEMA_VERSION;
+  readonly id: string;
+  readonly contentVersion: number;
+  readonly playerParticipantId: string;
+  readonly opponentParticipantId: string;
+  readonly fallbackCharacterId: string;
+  readonly fallbackMapId: string;
+  readonly requiredEquipmentIds: readonly string[];
+}
 
 const KEYS = new Set([
   'schemaVersion',
@@ -19,7 +30,7 @@ const KEYS = new Set([
   'requiredEquipmentIds',
 ]);
 
-export function createMatchContentPoolDefinition(value) {
+export function createMatchContentPoolDefinition(value: unknown): MatchContentPoolDefinition {
   const source = cloneFrozenData(value, 'MatchContentPoolDefinition');
   assertKnownKeys(source, KEYS, 'MatchContentPoolDefinition');
   if (source.schemaVersion !== MATCH_CONTENT_POOL_DEFINITION_SCHEMA_VERSION) {
@@ -57,7 +68,7 @@ export function createMatchContentPoolDefinition(value) {
       'MatchContentPoolDefinition.fallbackMapId',
     ),
     requiredEquipmentIds: cloneFrozenStringSet(
-      source.requiredEquipmentIds,
+      source.requiredEquipmentIds as readonly unknown[] | undefined,
       'MatchContentPoolDefinition.requiredEquipmentIds',
     ),
   });
