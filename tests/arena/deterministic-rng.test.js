@@ -1,14 +1,21 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createRng as createLegacyRng } from '../../src/core/rng.js';
 import { createRng, deriveSeed } from '../../src/shared/deterministic-rng.js';
 
-test('shared RNG preserves the legacy deterministic sequence', () => {
-  const legacy = createLegacyRng(12345);
-  const shared = createRng(12345);
+test('shared RNG preserves the frozen Arena deterministic sequence', () => {
+  const rng = createRng(12345);
   assert.deepEqual(
-    Array.from({ length: 32 }, () => legacy.next()),
-    Array.from({ length: 32 }, () => shared.next()),
+    Array.from({ length: 8 }, () => rng.next()),
+    [
+      0.9797282677609473,
+      0.3067522644996643,
+      0.484205421525985,
+      0.817934412509203,
+      0.5094283693470061,
+      0.34747186047025025,
+      0.07375754183158278,
+      0.7663964673411101,
+    ],
   );
 });
 

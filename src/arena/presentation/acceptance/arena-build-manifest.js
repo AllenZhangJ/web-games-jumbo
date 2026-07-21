@@ -77,7 +77,7 @@ function cloneArtifacts(values) {
 function assertRequiredArtifacts(target, defaultEntry, artifacts) {
   const byPath = new Map(artifacts.map((artifact) => [artifact.path, artifact]));
   const required = target === ARENA_DEVICE_ACCEPTANCE_PLATFORM.WEB
-    ? ['greybox.html', 'index.html', 'product.html']
+    ? ['index.html']
     : ['game.js', 'game.json', 'project.config.json'];
   for (const artifactPath of required) {
     if (!byPath.has(artifactPath)) {

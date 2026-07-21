@@ -18,10 +18,6 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dist = path.join(root, 'dist');
 const execFileAsync = promisify(execFile);
 const GIT_COMMIT_PATTERN = /^[0-9a-f]{40}$/;
-const miniEntryMode = process.env.ARENA_MINI_ENTRY_MODE ?? 'product';
-if (!['product', 'greybox'].includes(miniEntryMode)) {
-  throw new RangeError('ARENA_MINI_ENTRY_MODE 只支持 product 或 greybox。');
-}
 
 async function gitText(args) {
   const result = await execFileAsync('git', args, { cwd: root, encoding: 'utf8' });
@@ -56,7 +52,7 @@ async function resolveBuildIdentity() {
     // but it cannot be accepted as clean evidence without independent proof.
   }
   const buildId = process.env.ARENA_BUILD_ID
-    ?? `arena-${commit.slice(0, 12)}-${miniEntryMode}${sourceDirty ? '-dirty' : ''}`;
+    ?? `arena-${commit.slice(0, 12)}-product${sourceDirty ? '-dirty' : ''}`;
   if (!/^[A-Za-z0-9._-]{1,128}$/.test(buildId)) {
     throw new TypeError('ARENA_BUILD_ID 只能包含字母、数字、点、下划线和连字符。');
   }
@@ -93,10 +89,6 @@ async function buildWeb() {
       rollupOptions: {
         input: {
           game: path.join(root, 'index.html'),
-          pilot: path.join(root, 'pilot.html'),
-          study: path.join(root, 'study.html'),
-          product: path.join(root, 'product.html'),
-          greybox: path.join(root, 'greybox.html'),
         },
         output: {
           manualChunks(id) {
@@ -107,7 +99,7 @@ async function buildWeb() {
         },
       },
       // Three.js is intentionally one shared runtime chunk; the current
-      // production artifact is about 131 kB gzip, within the v3 budget.
+      // Three.js remains a shared production chunk and is enforced by the Arena budget.
       chunkSizeWarningLimit: 650,
     },
   });
@@ -140,11 +132,11 @@ async function bundleMiniGame(entryPoint, outfile) {
   });
 }
 
-async function buildMiniGame(target, productEntryPoint, greyboxEntryPoint, config, projectConfig) {
+async function buildMiniGame(target, productEntryPoint, config, projectConfig) {
   const outDir = path.join(dist, target);
   await mkdir(outDir, { recursive: true });
   await bundleMiniGame(
-    miniEntryMode === 'greybox' ? greyboxEntryPoint : productEntryPoint,
+    productEntryPoint,
     path.join(outDir, 'game.js'),
   );
   await cp(path.join(root, 'public/assets'), path.join(outDir, 'assets'), {
@@ -158,7 +150,7 @@ async function buildMiniGame(target, productEntryPoint, greyboxEntryPoint, confi
     outDir,
     ...buildIdentity,
     target,
-    defaultEntry: miniEntryMode,
+    defaultEntry: ARENA_BUILD_DEFAULT_ENTRY.PRODUCT,
   });
 }
 
@@ -168,7 +160,6 @@ await Promise.all([
   buildMiniGame(
     'douyin',
     'src/entry/douyin.js',
-    'src/entry/douyin-greybox.js',
     { deviceOrientation: 'portrait', showStatusBar: false },
     {
       appid: '',
@@ -179,7 +170,6 @@ await Promise.all([
   buildMiniGame(
     'wechat',
     'src/entry/wechat.js',
-    'src/entry/wechat-greybox.js',
     { deviceOrientation: 'portrait', showStatusBar: false },
     {
       appid: '',
@@ -192,6 +182,6 @@ await Promise.all([
 
 console.log(
   `构建完成: dist/web, dist/douyin, dist/wechat（buildId：${buildIdentity.buildId}，`
-  + `小游戏默认入口：${miniEntryMode}，sourceDirty：${buildIdentity.sourceDirty}，`
+  + `小游戏默认入口：product，sourceDirty：${buildIdentity.sourceDirty}，`
   + `formalAssetBudget：${formalAssetBudget.resultHash}）`,
 );

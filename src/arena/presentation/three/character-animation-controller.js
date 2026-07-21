@@ -207,7 +207,7 @@ export class CharacterAnimationController {
     this.#baseAction.setEffectiveTimeScale(timeScale);
   }
 
-  #stopOverlay(fadeSeconds = 0.1) {
+  #stopOverlay(_fadeSeconds = 0.1) {
     if (this.#overlayAction) {
       this.#overlayAction.setEffectiveWeight(0);
       this.#overlayAction.enabled = false;

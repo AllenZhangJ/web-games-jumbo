@@ -1,4 +1,3 @@
-import * as THREE from 'three';
 import { disposeThreeObject } from './dispose-three-resources.js';
 import { createProgrammaticEquipment } from './programmatic-equipment.js';
 

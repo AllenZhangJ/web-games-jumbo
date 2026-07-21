@@ -1,5 +1,4 @@
 import {
-  assertIntegerAtLeast,
   assertNonEmptyString,
   cloneFrozenData,
 } from '../rules/definition-utils.js';

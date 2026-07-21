@@ -2,7 +2,6 @@ import { ARENA_MATCH_PHASE } from '../config.js';
 import { createArenaV1MatchCore } from '../arena-v1-match-core.js';
 import { HeadlessMatchRunner } from '../replay.js';
 import {
-  ARENA_V1_SCRIPTED_PRESSURE_DEFAULT_PARAMETERS,
   createArenaV1ScriptedPressureInputStrategy,
   createArenaV1ScriptedPressureParameters,
 } from './arena-v1-scripted-pressure-strategy.js';

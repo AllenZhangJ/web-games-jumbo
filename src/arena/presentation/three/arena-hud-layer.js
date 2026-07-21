@@ -4,7 +4,7 @@ import {
   actionButtonRadius,
 } from '../input/control-layout.js';
 import { disposeThreeObject } from './dispose-three-resources.js';
-import { ARENA_GREYBOX_COLOR, ARENA_GREYBOX_DESIGN } from './greybox-style.js';
+import { ARENA_GREYBOX_DESIGN } from './greybox-style.js';
 
 function finite(value, fallback = 0) {
   return Number.isFinite(value) ? value : fallback;

@@ -68,7 +68,8 @@ class FakeElement {
 
   closest(selector) {
     if (selector !== '[data-product-intent]') return null;
-    let current = this;
+    if (this.dataset.productIntent !== undefined) return this;
+    let current = this.parentNode;
     while (current) {
       if (current.dataset.productIntent !== undefined) return current;
       current = current.parentNode;
