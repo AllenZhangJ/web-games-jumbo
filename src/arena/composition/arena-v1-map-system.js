@@ -4,6 +4,7 @@ import { createArenaV1MapRegistry } from '../content/arena-v1-maps.js';
 import {
   createDefaultMapCommandRegistry,
   createDefaultMapEventStrategyRegistry,
+  ArenaMapSystem,
   validateCharacterSpawnSafety,
   validateDefaultMapSafety,
   validateWalkableMapTopology,
@@ -12,7 +13,6 @@ import {
   STATIC_MAP_ID_PREFIX,
   createStaticMapDefinition,
 } from '@number-strategy-jump/arena-definitions';
-import { ArenaMapSystem } from '../map/map-system.js';
 import {
   assertArenaV1AuthorityContent,
   createArenaV1AuthorityContent,

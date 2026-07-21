@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { createStage4ContentRegistries } from '../../src/arena/content/stage4-equipment.js';
 import {
   MAP_DOMAIN_EVENT,
+  ARENA_MAP_EVENT,
+  ArenaMapSystem,
   MAP_EVENT_KIND,
   MAP_RULE_COMMAND,
   serializeMapRuntimeSnapshot,
@@ -19,7 +21,6 @@ import {
   createMapDefinition,
 } from '@number-strategy-jump/arena-definitions';
 import { MapRegistry } from '@number-strategy-jump/arena-definitions';
-import { ARENA_MAP_EVENT, ArenaMapSystem } from '../../src/arena/map/map-system.js';
 import { resolveArenaV1MapDefinition } from '../../src/arena/composition/arena-v1-map-system.js';
 
 const TEST_ARENA = Object.freeze({

@@ -6,12 +6,14 @@ import {
 } from '@number-strategy-jump/arena-definitions';
 
 import {
+  ARENA_MAP_EVENT,
   MAP_DOMAIN_EVENT,
   MAP_EVENT_KIND,
   MAP_RULE_COMMAND,
   MAP_RUNTIME_SCHEMA_VERSION,
   MAP_TIMELINE_TRANSITION,
   MAP_OCCURRENCE_PHASE,
+  ArenaMapSystem,
   MapEventStrategyRegistry,
   MapRuntime,
   MapTimeline,
@@ -21,6 +23,7 @@ import {
   validateDefaultMapSafety,
   validateWalkableMapTopology,
   serializeMapRuntimeSnapshot,
+  assertArenaMapSystem,
 } from '../src/index.js';
 import type {
   ArenaMapSnapshot,
@@ -369,6 +372,104 @@ describe('arena-map primitives', () => {
     );
     expect(getterCalls).toBe(0);
   });
+
+  it('runs map authority through an identity-bound two-phase batch', () => {
+    const system = createMapSystem();
+    const recorded: Array<Readonly<Record<string, unknown>>> = [];
+    const ports = {
+      applyImpulse(participantId: string) { recorded.push({ kind: 'impulse', participantId }); },
+      setSurfaceEnabled(surfaceId: string, enabled: boolean) {
+        recorded.push({ kind: 'surface', surfaceId, enabled });
+      },
+      spawnEquipment(spawn: Readonly<Record<string, unknown>>) {
+        recorded.push({ kind: 'spawn', ...spawn });
+      },
+    };
+    const zero = system.advance({ activeTick: 0, actors: strategyActors() });
+    expect(() => system.advance({ activeTick: 1, actors: strategyActors() })).toThrow(
+      '尚未 commit',
+    );
+    expect(() => system.commit({ ...zero }, ports)).toThrow('原始批次');
+    system.commit(zero, ports);
+    const one = system.advance({ activeTick: 1, actors: strategyActors() });
+    system.commit(one, ports);
+    const two = system.advance({ activeTick: 2, actors: strategyActors() });
+    expect(two.events.map(({ type }) => type)).toEqual([
+      ARENA_MAP_EVENT.EVENT_WARNED,
+      MAP_DOMAIN_EVENT.EQUIPMENT_WAVE_RELEASED,
+      ARENA_MAP_EVENT.EVENT_STARTED,
+    ]);
+    system.commit(two, ports);
+    expect(recorded).toContainEqual(expect.objectContaining({ kind: 'spawn' }));
+    expect(system.getSnapshot().nextActiveTick).toBe(3);
+    system.destroy();
+    expect(() => system.getSnapshot()).toThrow('已销毁');
+  });
+
+  it('allows commit validation retry but fails closed after a mutation port throws', () => {
+    const system = createMapSystem();
+    const zero = system.advance({ activeTick: 0, actors: strategyActors() });
+    expect(() => system.commit(zero, { applyImpulse() {} })).toThrow('缺少 setSurfaceEnabled');
+    system.commit(zero, emptyMapPorts());
+    for (let tick = 1; tick < 2; tick += 1) {
+      const batch = system.advance({ activeTick: tick, actors: strategyActors() });
+      system.commit(batch, emptyMapPorts());
+    }
+    const wave = system.advance({ activeTick: 2, actors: strategyActors() });
+    expect(() => system.commit(wave, {
+      ...emptyMapPorts(),
+      spawnEquipment() { throw new Error('spawn failed'); },
+    })).toThrow('spawn failed');
+    expect(() => system.getSnapshot()).toThrow('已失败');
+    expect(() => system.advance({ activeTick: 3, actors: strategyActors() })).toThrow('已失败');
+    system.destroy();
+  });
+
+  it('snapshots mutation ports, permits commit reads and rejects commit mutation reentry', () => {
+    const system = createMapSystem();
+    for (let tick = 0; tick < 3; tick += 1) {
+      const batch = system.advance({ activeTick: tick, actors: strategyActors() });
+      system.commit(batch, emptyMapPorts());
+    }
+    const wind = system.advance({ activeTick: 3, actors: strategyActors() });
+    let originalCalls = 0;
+    let replacedCalls = 0;
+    const ports = {
+      ...emptyMapPorts(),
+      applyImpulse() {
+        originalCalls += 1;
+        expect(system.getSnapshot().nextActiveTick).toBe(4);
+        expect(() => system.advance({ activeTick: 4, actors: strategyActors() })).toThrow(
+          '不可重入',
+        );
+        ports.applyImpulse = () => { replacedCalls += 1; };
+      },
+    };
+    system.commit(wind, ports);
+    expect(originalCalls).toBe(2);
+    expect(replacedCalls).toBe(0);
+    let positionGetterCalls = 0;
+    const position = Object.defineProperty({ z: 0 }, 'x', {
+      enumerable: true,
+      get() {
+        positionGetterCalls += 1;
+        return 0;
+      },
+    });
+    expect(system.isPositionOnEnabledSurface(position)).toBe(false);
+    expect(positionGetterCalls).toBe(0);
+    system.destroy();
+
+    let methodGetterCalls = 0;
+    const invalidSystem = Object.defineProperty({}, 'advance', {
+      get() {
+        methodGetterCalls += 1;
+        return () => {};
+      },
+    });
+    expect(() => assertArenaMapSystem(invalidSystem)).toThrow('数据方法');
+    expect(methodGetterCalls).toBe(0);
+  });
 });
 
 function createStrategyMap(): MapDefinition {
@@ -469,4 +570,33 @@ function createExecutionContext(
     seed: 7,
     ...overrides,
   }) as Omit<MapEventExecutionContext, 'occurrence'> & Readonly<Record<string, unknown>>;
+}
+
+function createMapSystem(): ArenaMapSystem {
+  const mapDefinition = createStrategyMap();
+  return new ArenaMapSystem({
+    mapDefinition,
+    strategyRegistry: createDefaultMapEventStrategyRegistry(),
+    commandRegistry: createDefaultMapCommandRegistry(),
+    matchSeed: 17,
+    rulesetVersion: 'arena-map-test-v1',
+    validationContext: {
+      equipmentRegistry: { require: (id: string) => ({ id }) },
+    },
+  });
+}
+
+function strategyActors() {
+  return [
+    { id: 'player-2', eligible: true, position: { x: 1, y: 1, z: 0 } },
+    { id: 'player-1', eligible: true, position: { x: -1, y: 1, z: 0 } },
+  ];
+}
+
+function emptyMapPorts() {
+  return {
+    applyImpulse() {},
+    setSurfaceEnabled() {},
+    spawnEquipment() {},
+  };
 }

@@ -9,7 +9,7 @@ import {
   assertPhysicsWorld,
   createMovementPhysicsPort,
 } from '@number-strategy-jump/arena-physics';
-import { assertArenaMapSystem } from './map/map-system.js';
+import { assertArenaMapSystem } from '@number-strategy-jump/arena-map';
 import { assertArenaRuleEngine } from '@number-strategy-jump/arena-core';
 import { createArenaConfigHash, createMatchStateHash } from './state-hash.js';
 import { createRng, deriveSeed } from '@number-strategy-jump/arena-contracts';

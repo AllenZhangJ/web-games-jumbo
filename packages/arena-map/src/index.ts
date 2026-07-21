@@ -4,6 +4,17 @@ export {
   MAP_RULE_COMMAND,
 } from './map-event-types.js';
 export {
+  ARENA_MAP_EVENT,
+  ArenaMapSystem,
+  assertArenaMapSystem,
+} from './arena-map-system.js';
+export type {
+  ArenaMapAdvanceBatch,
+  ArenaMapDomainEvent,
+  ArenaMapEventType,
+  ArenaMapSystemContract,
+} from './arena-map-system.js';
+export {
   createDefaultMapCommandRegistry,
 } from './default-map-command-handlers.js';
 export {
