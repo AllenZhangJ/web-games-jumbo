@@ -12,6 +12,7 @@
     { "path": "./packages/arena-movement" },
     { "path": "./packages/arena-physics" },
     { "path": "./packages/arena-product-contracts" },
+    { "path": "./packages/arena-product-match" },
     { "path": "./packages/arena-product-progression" },
     { "path": "./packages/arena-product-state" },
     { "path": "./packages/arena-progression" },

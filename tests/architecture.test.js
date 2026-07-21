@@ -777,6 +777,24 @@ test('Arena Rule/Core foundation preserves dependency direction and deterministi
     );
   }
 
+  const productMatchFiles = await listJavaScript(
+    path.resolve('packages/arena-product-match/src'),
+  );
+  assert.ok(productMatchFiles.length >= 4);
+  for (const file of productMatchFiles) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /(?:\/profile\/|\/progression\/|\/persistence\/|\/composition\/|\/presentation\/|\/platform\/|from\s+['"]three['"]|\b(?:window|document|navigator|localStorage|sessionStorage)\b|\b(?:tt|wx)\s*\.)/,
+      `${file} 越过了 Product Match 单局所有权边界。`,
+    );
+    assert.doesNotMatch(
+      source,
+      /(?:Date\.now|Math\.random|\bperformance\b|setTimeout|setInterval|requestAnimationFrame|localeCompare)/,
+      `${file} 使用了墙钟、非确定性随机或表现调度。`,
+    );
+  }
+
   const storageFiles = await listJavaScript(path.resolve('packages/arena-storage/src'));
   assert.ok(storageFiles.length >= 2);
   for (const file of storageFiles) {
@@ -983,6 +1001,19 @@ test('Arena Rule/Core foundation preserves dependency direction and deterministi
       '@number-strategy-jump/arena-progression',
     ],
     'arena-product-progression 只能组合纯结果、Profile 合同与成长合同。',
+  );
+
+  const productMatchPackage = JSON.parse(await readFile(
+    path.resolve('packages/arena-product-match/package.json'),
+    'utf8',
+  ));
+  assert.deepEqual(
+    Object.keys(productMatchPackage.dependencies).sort(),
+    [
+      '@number-strategy-jump/arena-contracts',
+      '@number-strategy-jump/arena-product-contracts',
+    ],
+    'arena-product-match 只能依赖底层数据合同与 Product 公开结果合同。',
   );
 
   const storagePackage = JSON.parse(await readFile(

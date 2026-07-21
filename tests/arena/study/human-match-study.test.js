@@ -18,7 +18,7 @@ import { createProductMatchResult } from '@number-strategy-jump/arena-product-co
 import {
   PRODUCT_MATCH_RUNTIME_STATE,
   ProductMatchRuntime,
-} from '../../../src/arena/product/matchmaking/product-match-runtime.js';
+} from '@number-strategy-jump/arena-product-match';
 import {
   ARENA_STAGE9_HUMAN_FAIRNESS_ARM_ID,
   createArenaStage9HumanFairnessV1Definition,

@@ -4,7 +4,7 @@ import { ARENA_V1_PLAYER_PROFILE_DEFINITION } from '../../../src/arena/product/c
 import {
   ProductMatchCoordinator,
   PRODUCT_MATCH_COORDINATOR_STATE,
-} from '../../../src/arena/product/matchmaking/product-match-coordinator.js';
+} from '@number-strategy-jump/arena-product-match';
 import { createProductMatchResult } from '@number-strategy-jump/arena-product-contracts';
 import {
   PlayerProfileIndeterminateWriteError,

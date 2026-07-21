@@ -21,8 +21,10 @@ import {
   ARENA_V1_MATCH_REWARD_ID,
   ARENA_V1_PROGRESSION_REGISTRY,
 } from '../content/arena-v1-progression-content.js';
-import { ProductMatchCoordinator } from '../matchmaking/product-match-coordinator.js';
-import { QuickMatchProductFactory } from '../matchmaking/quick-match-product-factory.js';
+import {
+  ProductMatchCoordinator,
+  QuickMatchProductFactory,
+} from '@number-strategy-jump/arena-product-match';
 import { PlayerProfileRepository } from '@number-strategy-jump/arena-profile-persistence';
 import { PlayerProfileService } from '@number-strategy-jump/arena-profile-service';
 import { RewardCommitter } from '@number-strategy-jump/arena-product-progression';
