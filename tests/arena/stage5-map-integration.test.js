@@ -6,7 +6,7 @@ import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
 import { MAP_DOMAIN_EVENT } from '../../src/arena/map/map-event-types.js';
 import { ARENA_MAP_EVENT } from '../../src/arena/map/map-system.js';
 import { ARENA_MATCH_EVENT } from '../../src/arena/match-core.js';
-import { EQUIPMENT_LOCATION_STATE } from '../../src/arena/equipment/equipment-runtime.js';
+import { EQUIPMENT_LOCATION_STATE } from '@number-strategy-jump/arena-equipment';
 import { HeadlessMatchRunner, replayMatch } from '../../src/arena/replay.js';
 
 function neutralFrames(core) {

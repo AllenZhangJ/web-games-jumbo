@@ -3,6 +3,7 @@ import {
   assertKnownKeys,
   assertNonEmptyString,
 } from '@number-strategy-jump/arena-contracts';
+import type { EquipmentDefinition } from '@number-strategy-jump/arena-definitions';
 
 export const EQUIPMENT_RUNTIME_SCHEMA_VERSION = 1;
 
@@ -11,7 +12,48 @@ export const EQUIPMENT_LOCATION_STATE = Object.freeze({
   HELD: 'held',
   DROPPED: 'dropped',
   DESPAWNED: 'despawned',
-});
+} as const);
+
+export type EquipmentLocationState =
+  typeof EQUIPMENT_LOCATION_STATE[keyof typeof EQUIPMENT_LOCATION_STATE];
+
+export interface EquipmentPosition {
+  x: number;
+  y: number;
+  z: number;
+}
+
+export interface EquipmentRegistryContract {
+  require(id: string): EquipmentDefinition;
+}
+
+export interface EquipmentRuntimeState {
+  readonly schemaVersion: typeof EQUIPMENT_RUNTIME_SCHEMA_VERSION;
+  readonly instanceId: string;
+  readonly definitionId: string;
+  readonly spawnId: string;
+  locationState: EquipmentLocationState;
+  ownerId: string | null;
+  readonly originPosition: Readonly<EquipmentPosition>;
+  position: EquipmentPosition | null;
+  lastSafePosition: EquipmentPosition | null;
+  cooldownRemainingTicks: number;
+  revision: number;
+}
+
+export interface EquipmentRuntimeSnapshot {
+  readonly schemaVersion: typeof EQUIPMENT_RUNTIME_SCHEMA_VERSION;
+  readonly instanceId: string;
+  readonly definitionId: string;
+  readonly spawnId: string;
+  readonly locationState: EquipmentLocationState;
+  readonly ownerId: string | null;
+  readonly originPosition: Readonly<EquipmentPosition>;
+  readonly position: Readonly<EquipmentPosition> | null;
+  readonly lastSafePosition: Readonly<EquipmentPosition> | null;
+  readonly cooldownRemainingTicks: number;
+  readonly revision: number;
+}
 
 const CREATE_KEYS = new Set([
   'instanceId',
@@ -34,32 +76,36 @@ const RUNTIME_KEYS = new Set([
   'revision',
 ]);
 const VECTOR_KEYS = new Set(['x', 'y', 'z']);
-const LOCATION_STATES = new Set(Object.values(EQUIPMENT_LOCATION_STATE));
+const LOCATION_STATES: ReadonlySet<string> = new Set(Object.values(EQUIPMENT_LOCATION_STATE));
 
-function clonePosition(value, name) {
+function clonePosition(value: unknown, name: string): EquipmentPosition {
   assertKnownKeys(value, VECTOR_KEYS, name);
-  const result = {};
-  for (const axis of VECTOR_KEYS) {
-    if (!Number.isFinite(value[axis])) throw new RangeError(`${name}.${axis} 必须是有限数。`);
-    result[axis] = value[axis];
+  const result: EquipmentPosition = { x: 0, y: 0, z: 0 };
+  for (const axis of ['x', 'y', 'z'] as const) {
+    const coordinate = value[axis];
+    if (!Number.isFinite(coordinate)) throw new RangeError(`${name}.${axis} 必须是有限数。`);
+    result[axis] = coordinate as number;
   }
   return result;
 }
 
-function freezePosition(value) {
+function freezePosition(
+  value: EquipmentPosition | null,
+): Readonly<EquipmentPosition> | null {
   return value ? Object.freeze({ x: value.x, y: value.y, z: value.z }) : null;
 }
 
-export function createEquipmentRuntimeState(options) {
+export function createEquipmentRuntimeState(options: unknown): EquipmentRuntimeState {
   assertKnownKeys(options, CREATE_KEYS, 'EquipmentRuntime options');
   const definitionId = assertNonEmptyString(
     options.definitionId,
     'EquipmentRuntime.definitionId',
   );
-  if (!options.equipmentRegistry || typeof options.equipmentRegistry.require !== 'function') {
+  const equipmentRegistry = options.equipmentRegistry as Partial<EquipmentRegistryContract> | null;
+  if (!equipmentRegistry || typeof equipmentRegistry.require !== 'function') {
     throw new TypeError('EquipmentRuntime 需要只读 EquipmentRegistry。');
   }
-  options.equipmentRegistry.require(definitionId);
+  equipmentRegistry.require(definitionId);
   const position = clonePosition(options.position, 'EquipmentRuntime.position');
   const state = {
     locationState: EQUIPMENT_LOCATION_STATE.SPAWNED,
@@ -69,7 +115,11 @@ export function createEquipmentRuntimeState(options) {
     lastSafePosition: { ...position },
     cooldownRemainingTicks: 0,
     revision: 0,
-  };
+  } as Omit<EquipmentRuntimeState, 'schemaVersion' | 'instanceId' | 'definitionId' | 'spawnId'>
+    & Partial<Pick<
+      EquipmentRuntimeState,
+      'schemaVersion' | 'instanceId' | 'definitionId' | 'spawnId'
+    >>;
   Object.defineProperties(state, {
     schemaVersion: {
       value: EQUIPMENT_RUNTIME_SCHEMA_VERSION,
@@ -88,17 +138,17 @@ export function createEquipmentRuntimeState(options) {
       enumerable: true,
     },
   });
-  return Object.seal(state);
+  return Object.seal(state) as EquipmentRuntimeState;
 }
 
-export function createEquipmentRuntimeSnapshot(state) {
+export function createEquipmentRuntimeSnapshot(state: unknown): EquipmentRuntimeSnapshot {
   assertKnownKeys(state, RUNTIME_KEYS, 'EquipmentRuntime state');
   if (state.schemaVersion !== EQUIPMENT_RUNTIME_SCHEMA_VERSION) {
     throw new RangeError(
       `EquipmentRuntime.schemaVersion 必须是 ${EQUIPMENT_RUNTIME_SCHEMA_VERSION}。`,
     );
   }
-  if (!LOCATION_STATES.has(state.locationState)) {
+  if (typeof state.locationState !== 'string' || !LOCATION_STATES.has(state.locationState)) {
     throw new RangeError(`EquipmentRuntime.locationState 不受支持：${String(state.locationState)}。`);
   }
   const ownerId = state.ownerId === null
@@ -125,9 +175,11 @@ export function createEquipmentRuntimeSnapshot(state) {
     instanceId: assertNonEmptyString(state.instanceId, 'EquipmentRuntime.instanceId'),
     definitionId: assertNonEmptyString(state.definitionId, 'EquipmentRuntime.definitionId'),
     spawnId: assertNonEmptyString(state.spawnId, 'EquipmentRuntime.spawnId'),
-    locationState: assertNonEmptyString(state.locationState, 'EquipmentRuntime.locationState'),
+    locationState: state.locationState as EquipmentLocationState,
     ownerId,
-    originPosition: freezePosition(clonePosition(state.originPosition, 'EquipmentRuntime.originPosition')),
+    originPosition: freezePosition(
+      clonePosition(state.originPosition, 'EquipmentRuntime.originPosition'),
+    ) as Readonly<EquipmentPosition>,
     position,
     lastSafePosition: state.lastSafePosition === null
       ? null

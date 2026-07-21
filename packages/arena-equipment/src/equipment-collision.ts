@@ -1,16 +1,21 @@
 import { assertPositiveFinite } from '@number-strategy-jump/arena-contracts';
+import type { EquipmentPosition } from './equipment-runtime.js';
 
-function assertPosition(value, name) {
+function assertPosition(value: unknown, name: string): Readonly<EquipmentPosition> {
+  const position = value as Partial<EquipmentPosition> | null;
   if (
-    !value
-    || !Number.isFinite(value.x)
-    || !Number.isFinite(value.y)
-    || !Number.isFinite(value.z)
+    !position
+    || !Number.isFinite(position.x)
+    || !Number.isFinite(position.y)
+    || !Number.isFinite(position.z)
   ) throw new TypeError(`${name} 必须是有限三维位置。`);
-  return value;
+  return position as EquipmentPosition;
 }
 
-export function equipmentPickupDistanceSquared(participantPosition, equipmentPosition) {
+export function equipmentPickupDistanceSquared(
+  participantPosition: unknown,
+  equipmentPosition: unknown,
+): number {
   const participant = assertPosition(participantPosition, 'participantPosition');
   const equipment = assertPosition(equipmentPosition, 'equipmentPosition');
   const dx = participant.x - equipment.x;
@@ -22,11 +27,11 @@ export function equipmentPickupDistanceSquared(participantPosition, equipmentPos
 }
 
 export function isWithinEquipmentPickupRadius(
-  participantPosition,
-  equipmentPosition,
-  pickupRadius,
-) {
-  assertPositiveFinite(pickupRadius, 'pickupRadius');
+  participantPosition: unknown,
+  equipmentPosition: unknown,
+  pickupRadius: unknown,
+): boolean {
+  const radius = assertPositiveFinite(pickupRadius, 'pickupRadius');
   return equipmentPickupDistanceSquared(participantPosition, equipmentPosition)
-    <= pickupRadius * pickupRadius;
+    <= radius * radius;
 }

@@ -1,13 +1,14 @@
 import { ACTION_PRIORITY } from '@number-strategy-jump/arena-core';
-import { advanceEquipmentCooldown, isEquipmentCooldownReady } from './equipment-cooldown.js';
-import { resolveEquipmentDrop } from './equipment-drop-resolver.js';
-import { EquipmentPickupResolver } from './equipment-pickup-resolver.js';
 import {
+  advanceEquipmentCooldown,
   EQUIPMENT_LOCATION_STATE,
+  EquipmentPickupResolver,
+  EquipmentSpawner,
   createEquipmentRuntimeSnapshot,
-} from './equipment-runtime.js';
-import { EquipmentSpawner } from './equipment-spawner.js';
-import { serializeEquipmentRuntimeStates } from './equipment-serializer.js';
+  isEquipmentCooldownReady,
+  resolveEquipmentDrop,
+  serializeEquipmentRuntimeStates,
+} from '@number-strategy-jump/arena-equipment';
 import { assertKnownKeys, assertNonEmptyString } from '@number-strategy-jump/arena-contracts';
 
 const PICKUP_OPTIONS_KEYS = new Set(['participants', 'contestSeed']);

@@ -15,7 +15,7 @@ import {
   EQUIPMENT_LOCATION_STATE,
   createEquipmentRuntimeSnapshot,
   createEquipmentRuntimeState,
-} from '../../src/arena/equipment/equipment-runtime.js';
+} from '@number-strategy-jump/arena-equipment';
 
 test('Stage4 catalog validates three equipment definitions and all action references', () => {
   const { actionRegistry, equipmentRegistry } = createStage4ContentRegistries();

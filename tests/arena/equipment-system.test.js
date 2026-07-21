@@ -5,11 +5,14 @@ import {
   STAGE4_EQUIPMENT_ID,
   createStage4ContentRegistries,
 } from '../../src/arena/content/stage4-equipment.js';
-import { EquipmentPickupResolver } from '../../src/arena/equipment/equipment-pickup-resolver.js';
-import { deserializeEquipmentRuntimeState, serializeEquipmentRuntimeStates } from '../../src/arena/equipment/equipment-serializer.js';
-import { EquipmentSpawner } from '../../src/arena/equipment/equipment-spawner.js';
 import { EquipmentSystem } from '../../src/arena/equipment/equipment-system.js';
-import { EQUIPMENT_LOCATION_STATE } from '../../src/arena/equipment/equipment-runtime.js';
+import {
+  EQUIPMENT_LOCATION_STATE,
+  EquipmentPickupResolver,
+  EquipmentSpawner,
+  deserializeEquipmentRuntimeState,
+  serializeEquipmentRuntimeStates,
+} from '@number-strategy-jump/arena-equipment';
 
 const PARTICIPANT_IDS = Object.freeze(['player-1', 'player-2']);
 
