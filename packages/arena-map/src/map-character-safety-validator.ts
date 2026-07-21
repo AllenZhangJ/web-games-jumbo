@@ -1,22 +1,39 @@
-function positiveFinite(value, name) {
-  if (!Number.isFinite(value) || value <= 0) {
+import type { MapDefinition } from '@number-strategy-jump/arena-definitions';
+
+function positiveFinite(value: unknown, name: string): number {
+  if (!Number.isFinite(value) || (value as number) <= 0) {
     throw new RangeError(`${name} 必须是有限正数。`);
   }
-  return value;
+  return value as number;
 }
 
-function nonEmptyString(value, name) {
+function nonEmptyString(value: unknown, name: string): string {
   if (typeof value !== 'string' || value.trim().length === 0) {
     throw new TypeError(`${name} 必须是非空字符串。`);
   }
   return value;
 }
 
-export function validateCharacterSpawnSafety(mapDefinition, {
+export interface CharacterSpawnSafetyInput {
+  readonly characterSpawns: readonly Readonly<{
+    characterId: string;
+    collision: Readonly<{ radius: number; halfHeight: number }>;
+  }>[];
+  readonly permanentSafeSurfaceIds: readonly string[];
+  readonly groundProbeTolerance: number;
+}
+
+export interface CharacterSpawnSafetyAssignment {
+  readonly characterId: string;
+  readonly spawnIndex: number;
+  readonly surfaceId: string;
+}
+
+export function validateCharacterSpawnSafety(mapDefinition: MapDefinition, {
   characterSpawns,
   permanentSafeSurfaceIds,
   groundProbeTolerance,
-}) {
+}: CharacterSpawnSafetyInput): readonly Readonly<CharacterSpawnSafetyAssignment>[] {
   if (!mapDefinition?.arena || !Array.isArray(mapDefinition.arena.spawns)) {
     throw new TypeError('character spawn safety 需要 MapDefinition arena。');
   }
@@ -41,6 +58,7 @@ export function validateCharacterSpawnSafety(mapDefinition, {
       `characterSpawns[${index}].halfHeight`,
     );
     const spawn = mapDefinition.arena.spawns[index];
+    if (!spawn) throw new Error(`MapDefinition ${mapDefinition.id} 缺少 spawn[${index}]。`);
     const surface = mapDefinition.arena.surfaces.find((candidate) => {
       if (!safeSurfaceIds.has(candidate.id)) return false;
       const availableX = candidate.halfExtents.x - radius;

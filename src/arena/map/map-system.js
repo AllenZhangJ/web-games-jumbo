@@ -6,9 +6,8 @@ import {
   assertNonEmptyString,
   cloneFrozenData,
 } from '@number-strategy-jump/arena-contracts';
-import { MAP_RULE_COMMAND } from './map-event-types.js';
+import { MAP_RULE_COMMAND, MAP_TIMELINE_TRANSITION, MapTimeline } from '@number-strategy-jump/arena-map';
 import { MapRuntime } from './map-runtime.js';
-import { MAP_TIMELINE_TRANSITION, MapTimeline } from './map-timeline.js';
 
 export const ARENA_MAP_EVENT = Object.freeze({
   EVENT_WARNED: 'MapEventWarned',

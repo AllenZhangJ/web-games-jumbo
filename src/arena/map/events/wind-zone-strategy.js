@@ -2,7 +2,7 @@ import {
   assertKnownKeys,
   assertPositiveFinite,
 } from '@number-strategy-jump/arena-contracts';
-import { MAP_EVENT_KIND, MAP_RULE_COMMAND } from '../map-event-types.js';
+import { MAP_EVENT_KIND, MAP_RULE_COMMAND } from '@number-strategy-jump/arena-map';
 
 const WIND_KEYS = new Set(['region', 'impulsePerTick']);
 const REGION_KEYS = new Set(['center', 'halfExtents']);

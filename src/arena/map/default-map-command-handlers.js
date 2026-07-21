@@ -1,4 +1,4 @@
-import { MAP_RULE_COMMAND } from './map-event-types.js';
+import { MAP_RULE_COMMAND } from '@number-strategy-jump/arena-map';
 import { MapCommandRegistry } from './map-command-registry.js';
 import {
   assertIntegerAtLeast,

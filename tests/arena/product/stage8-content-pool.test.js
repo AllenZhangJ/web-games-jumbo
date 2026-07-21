@@ -17,7 +17,7 @@ import {
 } from '../../../src/arena/content/stage4-equipment.js';
 import { STAGE5_MAP_ID } from '../../../src/arena/content/stage5-map.js';
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
-import { MAP_EVENT_KIND } from '../../../src/arena/map/map-event-types.js';
+import { MAP_EVENT_KIND } from '@number-strategy-jump/arena-map';
 import { QuickMatchService } from '../../../src/arena/matchmaking/quick-match-service.js';
 import { HeadlessMatchRunner, replayMatch } from '../../../src/arena/replay.js';
 import {

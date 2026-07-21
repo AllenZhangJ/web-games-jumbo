@@ -3,8 +3,12 @@ import { createCollapseSurfacesStrategy } from './events/collapse-surfaces-strat
 import { createEquipmentWaveStrategy } from './events/equipment-wave-strategy.js';
 import { createWindZoneStrategy } from './events/wind-zone-strategy.js';
 
-export { MAP_DOMAIN_EVENT, MAP_EVENT_KIND, MAP_RULE_COMMAND } from './map-event-types.js';
-export { validateDefaultMapSafety } from './map-safety-validator.js';
+export {
+  MAP_DOMAIN_EVENT,
+  MAP_EVENT_KIND,
+  MAP_RULE_COMMAND,
+  validateDefaultMapSafety,
+} from '@number-strategy-jump/arena-map';
 
 export function createDefaultMapEventStrategyRegistry() {
   return new MapEventStrategyRegistry([

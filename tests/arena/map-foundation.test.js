@@ -17,8 +17,11 @@ import {
 import { MapRegistry } from '@number-strategy-jump/arena-definitions';
 import { ARENA_MAP_EVENT, ArenaMapSystem } from '../../src/arena/map/map-system.js';
 import { serializeMapRuntimeSnapshot } from '../../src/arena/map/map-serializer.js';
-import { MAP_TIMELINE_TRANSITION, MapTimeline } from '../../src/arena/map/map-timeline.js';
-import { validateWalkableMapTopology } from '../../src/arena/map/map-topology-validator.js';
+import {
+  MAP_TIMELINE_TRANSITION,
+  MapTimeline,
+  validateWalkableMapTopology,
+} from '@number-strategy-jump/arena-map';
 import { resolveArenaV1MapDefinition } from '../../src/arena/composition/arena-v1-map-system.js';
 
 const TEST_ARENA = Object.freeze({

@@ -11,8 +11,10 @@ import {
   createStaticMapDefinition,
 } from '@number-strategy-jump/arena-definitions';
 import { ArenaMapSystem } from '../map/map-system.js';
-import { validateCharacterSpawnSafety } from '../map/map-character-safety-validator.js';
-import { validateWalkableMapTopology } from '../map/map-topology-validator.js';
+import {
+  validateCharacterSpawnSafety,
+  validateWalkableMapTopology,
+} from '@number-strategy-jump/arena-map';
 import {
   assertArenaV1AuthorityContent,
   createArenaV1AuthorityContent,

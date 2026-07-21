@@ -30,7 +30,7 @@
 | G0 基线冻结 | 已完成 | 自动化、压力、资产和三端构建通过；ADR/计划/证据已落盘；tag `arena-product-baseline-51e2822` 指向基线提交 |
 | G1 治理外壳/唯一产品 | 已完成 | Arena 已成为唯一生产产品；旧产品实现/专属测试/资产/规范已退役；strict TS、ESLint、Vitest、CI、CODEOWNERS、JS 递减清单和唯一产物门禁已启用 |
 | G2 Definition/合同/配置 | 已完成 | strict TS `arena-contracts`、`arena-definitions`、`arena-profile-contracts` 与 `arena-platform-contracts` 已承接确定性、输入/事件、权威快照、同步存储、平台能力、玩家档案/存档协议，以及动作/角色/装备/地图 Definition、只读 Registry 和唯一 Gameplay V2 数值配置；受审计 JavaScript 已降至 500 个 |
-| G3 Rule/Core/Replay | 进行中 | strict TS `arena-core` 已承接规则/动作，`arena-movement` 已承接移动事务，`arena-physics` 已承接确定性物理，`arena-equipment` 已承接装备原语与唯一写入系统；Map、MatchCore、Replay 仍待迁移 |
+| G3 Rule/Core/Replay | 进行中 | strict TS `arena-core`、`arena-movement`、`arena-physics`、`arena-equipment` 已承接规则/移动/物理/装备；`arena-map` 已承接事件类型、时间线、拓扑与出生安全，Map 策略/运行时/系统、MatchCore、Replay 仍待迁移 |
 | G4 Bot/Product/Persistence | 未开始 | 当前功能与压力证据存在，尚未迁入 strict TS workspace |
 | G5 Presentation/资产/反馈 | 未开始 | 正式资产预算通过；审批字段与唯一正常路径仍待治理 |
 | G6 Platform/入口/构建 | 未开始 | 三端默认入口是 Product，但生产交付未与开发页面彻底隔离 |
@@ -55,7 +55,7 @@
 
 ## 当前不可合并原因
 
-1. 当前 467 个受维护 JavaScript 文件仍在精确允许清单中，Rule/Core/Replay、Bot/Product/Persistence/Presentation/Platform 尚未完成 strict TypeScript workspace 迁移。
+1. 当前 462 个受维护 JavaScript 文件仍在精确允许清单中，Rule/Core/Replay、Bot/Product/Persistence/Presentation/Platform 尚未完成 strict TypeScript workspace 迁移。
 2. Vitest 当前保护底层合同包和治理门禁；Arena 其余测试尚待按 workspace 迁移并建立正式 coverage 阈值与零 JS 门禁。
 3. 正式资产最终审批与完整安全/依赖长期治理尚未闭环。
 4. 文档仍含迁移前阶段性叙述，尚未完成 G9 全量链接、状态与命令归真。
@@ -232,3 +232,13 @@
 - `arena-equipment` 仅新增对 `arena-core` ActionCandidate/priority 合同的单向依赖，继续只消费 Definition 和底层合同；架构门禁核对精确依赖集并扫描全部 strict 源码。
 - strict 公共包测试增至 48 项，其中新增系统完整主流程、掉落重入原子性和 reconcile 全量预验证；62 项 Equipment、MatchCore、Map、Replay 与架构定向回归通过，JavaScript 精确允许清单由 468 降至 467。
 - G3 下一批迁移 Map 时间线、surface mutation 与 equipment release/collapse 协调，再收敛 MatchCore 和 Replay；本批未改变武器动作、冷却、攻击距离/速度/击退、Gameplay V2 数值、Replay schema 或黄金 hash。
+
+## G3.11 Map 时间线、拓扑与出生安全迁移证据
+
+- 新增 strict TypeScript workspace：`@number-strategy-jump/arena-map`；Map event/command/domain 常量、整数 tick 时间线、永久安全面、角色碰撞体出生安全和 collapse 前后步行连通性五个 JavaScript 实现迁入包公共 API。
+- MapTimeline 为 occurrence、transition 和 transition kind 建立显式不可变类型；warning/end/start 在同 tick 按固定优先级与 occurrence ID 排序，内部 Map 缺项和非法 tick fail closed，不依赖 locale 或调用方数组顺序。
+- topology 使用具名 surface 接触容差，验证初始及每次按 tick/occurrence 排序后的 collapse 状态；没有 surface、不可连通、跨步高度超限或角色直径无法通过都会在组合阶段拒绝。
+- 默认安全验证确保最终至少一个永久 surface、装备 wave 每次释放时有足够未塌陷点位及两个不同安全重生点；角色安全进一步用角色 radius/halfHeight、地面探测容差和 surface footprint 验证每个实际出生分配。
+- `arena-map` 基础层只依赖 `arena-contracts` 与 `arena-definitions`，架构门禁扫描完整 strict 源码并核对精确依赖集；不依赖 MatchCore、Bot、Presentation、Three.js、DOM、平台、墙钟或随机源。
+- strict 公共包测试增至 52 项；65 项 Map、Equipment、MatchCore、Product content、Replay 与架构定向回归通过，JavaScript 精确允许清单由 467 降至 462。
+- G3 下一批迁移 Map command/event strategy registry 与三个默认策略，再迁移 MapRuntime/serializer 和 ArenaMapSystem 唯一写入者；本批未改变地图时间点、风力、坍塌、装备 wave、Gameplay V2 数值、Replay schema 或黄金 hash。

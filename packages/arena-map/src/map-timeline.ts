@@ -1,39 +1,63 @@
 import { assertIntegerAtLeast } from '@number-strategy-jump/arena-contracts';
+import type { MapDefinition, MapEventDefinition } from '@number-strategy-jump/arena-definitions';
 
 export const MAP_TIMELINE_TRANSITION = Object.freeze({
   WARNING: 'warning',
   END: 'end',
   START: 'start',
-});
+} as const);
 
-const TRANSITION_PRIORITY = Object.freeze({
+export type MapTimelineTransitionKind =
+  typeof MAP_TIMELINE_TRANSITION[keyof typeof MAP_TIMELINE_TRANSITION];
+
+export interface MapOccurrence {
+  readonly occurrenceId: string;
+  readonly occurrenceIndex: number;
+  readonly eventId: string;
+  readonly kind: string;
+  readonly warningTick: number;
+  readonly startTick: number;
+  readonly endTick: number | null;
+  readonly event: MapEventDefinition;
+}
+
+export interface MapTimelineTransition {
+  readonly tick: number;
+  readonly transition: MapTimelineTransitionKind;
+  readonly occurrenceId: string;
+}
+
+const TRANSITION_PRIORITY: Readonly<Record<MapTimelineTransitionKind, number>> = Object.freeze({
   [MAP_TIMELINE_TRANSITION.WARNING]: 0,
   [MAP_TIMELINE_TRANSITION.END]: 1,
   [MAP_TIMELINE_TRANSITION.START]: 2,
 });
 
-function compareText(left, right) {
+function compareText(left: string, right: string): number {
   if (left < right) return -1;
   if (left > right) return 1;
   return 0;
 }
 
-function compareTransitions(left, right) {
+function compareTransitions(
+  left: MapTimelineTransition,
+  right: MapTimelineTransition,
+): number {
   return left.tick - right.tick
     || TRANSITION_PRIORITY[left.transition] - TRANSITION_PRIORITY[right.transition]
     || compareText(left.occurrenceId, right.occurrenceId);
 }
 
 export class MapTimeline {
-  #occurrences;
-  #transitionsByTick;
+  readonly #occurrences: Map<string, MapOccurrence>;
+  readonly #transitionsByTick: Map<number, readonly MapTimelineTransition[]>;
 
-  constructor(mapDefinition) {
+  constructor(mapDefinition: MapDefinition) {
     if (!mapDefinition || !Array.isArray(mapDefinition.events)) {
       throw new TypeError('MapTimeline 需要 MapDefinition。');
     }
-    const occurrences = [];
-    const transitions = [];
+    const occurrences: MapOccurrence[] = [];
+    const transitions: MapTimelineTransition[] = [];
     for (const event of mapDefinition.events) {
       for (let index = 0; index < event.schedule.repeatCount; index += 1) {
         const startTick = event.schedule.startTick + event.schedule.repeatEveryTicks * index;
@@ -77,31 +101,33 @@ export class MapTimeline {
       occurrence.occurrenceId,
       occurrence,
     ]));
-    this.#transitionsByTick = new Map();
+    const transitionsByTick = new Map<number, MapTimelineTransition[]>();
     for (const transition of transitions) {
-      if (!this.#transitionsByTick.has(transition.tick)) {
-        this.#transitionsByTick.set(transition.tick, []);
-      }
-      this.#transitionsByTick.get(transition.tick).push(transition);
+      const values = transitionsByTick.get(transition.tick) ?? [];
+      values.push(transition);
+      transitionsByTick.set(transition.tick, values);
     }
-    for (const [tick, values] of this.#transitionsByTick) {
+    this.#transitionsByTick = new Map();
+    for (const [tick, values] of transitionsByTick) {
       this.#transitionsByTick.set(tick, Object.freeze([...values]));
     }
     Object.freeze(this);
   }
 
-  requireOccurrence(occurrenceId) {
-    const occurrence = this.#occurrences.get(occurrenceId);
+  requireOccurrence(occurrenceId: unknown): MapOccurrence {
+    const occurrence = typeof occurrenceId === 'string'
+      ? this.#occurrences.get(occurrenceId)
+      : undefined;
     if (!occurrence) throw new RangeError(`未知 map occurrence ${String(occurrenceId)}。`);
     return occurrence;
   }
 
-  transitionsAt(activeTick) {
-    assertIntegerAtLeast(activeTick, 0, 'MapTimeline activeTick');
-    return this.#transitionsByTick.get(activeTick) ?? Object.freeze([]);
+  transitionsAt(activeTick: unknown): readonly MapTimelineTransition[] {
+    const tick = assertIntegerAtLeast(activeTick, 0, 'MapTimeline activeTick');
+    return this.#transitionsByTick.get(tick) ?? Object.freeze([]);
   }
 
-  listOccurrences() {
+  listOccurrences(): readonly MapOccurrence[] {
     return Object.freeze([...this.#occurrences.values()]);
   }
 }

@@ -1,12 +1,32 @@
 import { MAP_EVENT_KIND } from './map-event-types.js';
+import type { MapDefinition, MapSurfaceDefinition } from '@number-strategy-jump/arena-definitions';
 
-function compareText(left, right) {
+const SURFACE_CONTACT_EPSILON = 1e-7;
+
+export interface MapTopologyValidationResult {
+  readonly initialSurfaceCount: number;
+  readonly permanentSurfaceCount: number;
+  readonly collapseCount: number;
+}
+
+interface CollapseOccurrence {
+  readonly occurrenceId: string;
+  readonly tick: number;
+  readonly surfaceIds: readonly string[];
+}
+
+function compareText(left: string, right: string): number {
   if (left < right) return -1;
   if (left > right) return 1;
   return 0;
 }
 
-function walkConnected(first, second, characterDiameter, maximumStepHeight) {
+function walkConnected(
+  first: MapSurfaceDefinition,
+  second: MapSurfaceDefinition,
+  characterDiameter: number,
+  maximumStepHeight: number,
+): boolean {
   const firstTop = first.center.y + first.halfExtents.y;
   const secondTop = second.center.y + second.halfExtents.y;
   if (Math.abs(firstTop - secondTop) > maximumStepHeight) return false;
@@ -16,16 +36,24 @@ function walkConnected(first, second, characterDiameter, maximumStepHeight) {
   const gapZ = Math.max(0, distanceZ - first.halfExtents.z - second.halfExtents.z);
   const overlapX = first.halfExtents.x + second.halfExtents.x - distanceX;
   const overlapZ = first.halfExtents.z + second.halfExtents.z - distanceZ;
-  return (gapX <= 1e-7 && overlapZ >= characterDiameter)
-    || (gapZ <= 1e-7 && overlapX >= characterDiameter);
+  return (gapX <= SURFACE_CONTACT_EPSILON && overlapZ >= characterDiameter)
+    || (gapZ <= SURFACE_CONTACT_EPSILON && overlapX >= characterDiameter);
 }
 
-function assertConnected(surfaces, characterDiameter, maximumStepHeight, name) {
+function assertConnected(
+  surfaces: readonly MapSurfaceDefinition[],
+  characterDiameter: number,
+  maximumStepHeight: number,
+  name: string,
+): void {
   if (surfaces.length === 0) throw new RangeError(`${name} 不能没有可用 surface。`);
-  const visited = new Set([surfaces[0].id]);
-  const queue = [surfaces[0]];
+  const firstSurface = surfaces[0];
+  if (!firstSurface) throw new Error(`${name} 缺少首个 surface。`);
+  const visited = new Set([firstSurface.id]);
+  const queue: MapSurfaceDefinition[] = [firstSurface];
   for (let index = 0; index < queue.length; index += 1) {
     const current = queue[index];
+    if (!current) throw new Error(`${name} topology queue 缺少索引 ${index}。`);
     const candidates = surfaces
       .filter((surface) => !visited.has(surface.id) && walkConnected(
         current,
@@ -48,10 +76,13 @@ function assertConnected(surfaces, characterDiameter, maximumStepHeight, name) {
   }
 }
 
-export function validateWalkableMapTopology(mapDefinition, {
+export function validateWalkableMapTopology(mapDefinition: MapDefinition, {
   characterRadius,
   maximumStepHeight,
-}) {
+}: {
+  readonly characterRadius: number;
+  readonly maximumStepHeight: number;
+}): Readonly<MapTopologyValidationResult> {
   if (!mapDefinition || !mapDefinition.arena) throw new TypeError('map topology 需要 MapDefinition。');
   if (!Number.isFinite(characterRadius) || characterRadius <= 0) {
     throw new RangeError('map topology characterRadius 必须大于 0。');
@@ -67,14 +98,23 @@ export function validateWalkableMapTopology(mapDefinition, {
     maximumStepHeight,
     `${mapDefinition.id} initial topology`,
   );
-  const collapses = [];
+  const collapses: CollapseOccurrence[] = [];
   for (const event of mapDefinition.events) {
     if (event.kind !== MAP_EVENT_KIND.COLLAPSE_SURFACES) continue;
     for (let index = 0; index < event.schedule.repeatCount; index += 1) {
+      const parameters = event.parameters as Readonly<{ surfaceIds?: unknown }>;
+      if (!Array.isArray(parameters.surfaceIds)) {
+        throw new TypeError(`${event.id}.surfaceIds 必须是数组。`);
+      }
       collapses.push({
         occurrenceId: `${event.id}:${index}`,
         tick: event.schedule.startTick + event.schedule.repeatEveryTicks * index,
-        surfaceIds: event.parameters.surfaceIds,
+        surfaceIds: parameters.surfaceIds.map((surfaceId) => {
+          if (typeof surfaceId !== 'string' || surfaceId.length === 0) {
+            throw new TypeError(`${event.id}.surfaceIds 必须只含非空字符串。`);
+          }
+          return surfaceId;
+        }),
       });
     }
   }

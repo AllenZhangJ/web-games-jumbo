@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createArenaV1MatchCore } from '../../src/arena/arena-v1-match-core.js';
 import { STAGE5_MAP_ID } from '../../src/arena/content/stage5-map.js';
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
-import { MAP_DOMAIN_EVENT } from '../../src/arena/map/map-event-types.js';
+import { MAP_DOMAIN_EVENT } from '@number-strategy-jump/arena-map';
 import { ARENA_MAP_EVENT } from '../../src/arena/map/map-system.js';
 import { ARENA_MATCH_EVENT } from '../../src/arena/match-core.js';
 import { EQUIPMENT_LOCATION_STATE } from '@number-strategy-jump/arena-equipment';

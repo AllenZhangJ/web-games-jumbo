@@ -1,4 +1,4 @@
-import { MAP_EVENT_KIND } from '../map/map-event-types.js';
+import { MAP_EVENT_KIND } from '@number-strategy-jump/arena-map';
 import { MAP_OCCURRENCE_PHASE } from '../map/map-runtime.js';
 
 export function distance2d(first, second) {

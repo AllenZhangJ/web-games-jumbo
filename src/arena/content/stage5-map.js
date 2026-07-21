@@ -3,7 +3,7 @@ import {
   MAP_DEFINITION_SCHEMA_VERSION,
   createMapDefinition,
 } from '@number-strategy-jump/arena-definitions';
-import { MAP_EVENT_KIND } from '../map/map-event-types.js';
+import { MAP_EVENT_KIND } from '@number-strategy-jump/arena-map';
 import { STAGE4_EQUIPMENT_ID } from './stage4-equipment.js';
 
 export const STAGE5_MAP_ID = 'abyss-grid-wind-v1';

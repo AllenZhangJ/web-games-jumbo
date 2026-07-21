@@ -60,6 +60,7 @@ export type {
   MapEquipmentSpawnPointDefinition,
   MapEventDefinition,
   MapScheduleDefinition,
+  MapSurfaceDefinition,
   Vector3Definition,
 } from './map-definition.js';
 export { MapRegistry } from './map-registry.js';

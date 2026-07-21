@@ -8,7 +8,7 @@ import {
   MAP_DOMAIN_EVENT,
   MAP_EVENT_KIND,
   MAP_RULE_COMMAND,
-} from '../map-event-types.js';
+} from '@number-strategy-jump/arena-map';
 
 const EQUIPMENT_WAVE_KEYS = new Set(['spawnPointIds', 'equipmentDefinitionIds', 'count']);
 
