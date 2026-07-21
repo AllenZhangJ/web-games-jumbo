@@ -304,7 +304,6 @@
     "src/arena/regression/golden-replay-verifier.js",
     "src/arena/regression/input-fuzz-regression-candidate.js",
     "src/arena/replay.js",
-    "src/arena/runtime/fixed-step-match-runtime.js",
     "src/arena/session/local-match-session.js",
     "src/arena/storage/synchronous-storage-lease.js",
     "src/arena/study/arena-stage9-human-fairness-v1.js",

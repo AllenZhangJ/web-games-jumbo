@@ -4,7 +4,7 @@ import { createArenaV1MatchCore } from '../../../src/arena/arena-v1-match-core.j
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
 import { createGestureInputMapperA } from '../../../src/arena/presentation/input/gesture-input-mapper-a.js';
 import { InputSampler } from '../../../src/arena/presentation/input/input-sampler.js';
-import { FixedStepMatchRuntime } from '../../../src/arena/runtime/fixed-step-match-runtime.js';
+import { FixedStepMatchRuntime } from '@number-strategy-jump/arena-match';
 
 const VIEWPORT = Object.freeze({ width: 400, height: 800 });
 const point = (pointerId, x, y) => ({ pointerId, x, y });

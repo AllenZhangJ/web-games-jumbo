@@ -48,3 +48,19 @@ export {
   ARENA_MATCH_EVENT,
   MatchCore,
 } from './match-core.js';
+export type {
+  ArenaAuthorityEvent,
+  MatchCoreFactoryContext,
+  MatchCoreMapFactoryContext,
+  MatchCoreOptions,
+} from './match-core.js';
+export {
+  FIXED_STEP_RUNTIME_DEFAULTS,
+  FixedStepMatchRuntime,
+} from './fixed-step-match-runtime.js';
+export type {
+  FixedStepAdvanceResult,
+  FixedStepDebugSnapshot,
+  FixedStepInputProvider,
+  FixedStepRuntimeOptions,
+} from './fixed-step-match-runtime.js';

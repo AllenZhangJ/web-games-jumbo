@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ARENA_MATCH_PHASE } from '@number-strategy-jump/arena-match';
+import {
+  ARENA_MATCH_PHASE,
+  FixedStepMatchRuntime,
+} from '@number-strategy-jump/arena-match';
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
 import { createArenaV1MatchCore } from '../../src/arena/arena-v1-match-core.js';
 import { createLightweightPhysicsWorld } from '@number-strategy-jump/arena-physics';
@@ -9,7 +12,6 @@ import {
   HeadlessMatchRunner,
   replayMatch,
 } from '../../src/arena/replay.js';
-import { FixedStepMatchRuntime } from '../../src/arena/runtime/fixed-step-match-runtime.js';
 
 function createReplayCore() {
   return createArenaV1MatchCore({
@@ -270,6 +272,45 @@ test('fixed-step runtime caps backlog instead of creating a catch-up spiral', ()
   assert.ok(overloaded.droppedSeconds > 0.9);
   assert.equal(runtime.advance(0).steps, 0);
   assert.equal(core.tick, 2);
+  runtime.destroy();
+  core.destroy();
+});
+
+test('fixed-step runtime validates inert options and rejects provider output before Core mutation', () => {
+  const core = createReplayCore();
+  let getterCalls = 0;
+  const accessorOptions = {};
+  Object.defineProperty(accessorOptions, 'inputProvider', {
+    enumerable: true,
+    get() {
+      getterCalls += 1;
+      return scriptedFrames;
+    },
+  });
+  assert.throws(
+    () => new FixedStepMatchRuntime(core, accessorOptions),
+    /必须是可枚举数据字段/,
+  );
+  assert.equal(getterCalls, 0);
+  assert.throws(
+    () => new FixedStepMatchRuntime(core, { unexpected: true }),
+    /不支持字段 unexpected/,
+  );
+
+  let invalidOutput = true;
+  const runtime = new FixedStepMatchRuntime(core, {
+    inputProvider(snapshot) {
+      if (invalidOutput) {
+        invalidOutput = false;
+        return { invalid: true };
+      }
+      return scriptedFrames(snapshot);
+    },
+  });
+  assert.throws(() => runtime.advance(1 / 60), /必须返回 InputFrame 数组/);
+  assert.equal(core.tick, 0);
+  assert.equal(runtime.advance(0).steps, 1);
+  assert.equal(core.tick, 1);
   runtime.destroy();
   core.destroy();
 });
