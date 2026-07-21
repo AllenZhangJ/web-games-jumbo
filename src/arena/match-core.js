@@ -15,7 +15,7 @@ import { combineCleanupFailure, normalizeThrownError } from './lifecycle-error.j
 import { createCharacterPhysicsProfile } from './character/character-physics-profile.js';
 import { assertCharacterRegistry } from '@number-strategy-jump/arena-definitions';
 import { createCharacterRuntimeReference } from './character/character-runtime.js';
-import { MovementSystem } from './movement/movement-system.js';
+import { MovementSystem } from '@number-strategy-jump/arena-movement';
 import { createMovementPhysicsPort } from './movement/movement-physics-port.js';
 import { ARENA_MATCH_EVENT as EVENT } from '@number-strategy-jump/arena-contracts';
 

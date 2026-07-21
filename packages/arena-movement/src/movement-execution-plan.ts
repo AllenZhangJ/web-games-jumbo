@@ -1,19 +1,64 @@
 import {
   MOVEMENT_COMMAND_KIND,
-  MOVEMENT_MODE,
-  MOVEMENT_MUTATION_KIND,
   createMovementCommand,
+  type MovementCommand,
+} from './movement-command.js';
+import {
+  MOVEMENT_MODE,
+  type MovementRuntimeState,
+} from './movement-runtime.js';
+import {
+  MOVEMENT_MUTATION_KIND,
   createMovementMutation,
-} from '@number-strategy-jump/arena-movement';
+  type MovementMutation,
+} from './movement-mutation.js';
+import type { MovementCapabilities } from './movement-capabilities.js';
 
-function compareText(left, right) {
+import type { CharacterDefinition } from '@number-strategy-jump/arena-definitions';
+import type { MovementTickInput } from './movement-tick-batch.js';
+
+export interface MovementExecutionContext {
+  readonly participantId: string;
+  readonly state: MovementRuntimeState;
+  readonly definition: CharacterDefinition;
+  readonly capabilities: MovementCapabilities;
+  readonly input?: Pick<MovementTickInput, 'moveX' | 'moveZ'> | null;
+  readonly airJumpHorizontalImpulse?: number;
+}
+
+export interface MovementExecutionOperation {
+  readonly command: MovementCommand;
+  readonly verticalImpulse?: number;
+  readonly impulse?: Readonly<{ x: number; y: number; z: number }>;
+  readonly verticalSpeed?: number;
+  readonly crouchChargeTicks?: number;
+}
+
+export interface MovementExecution {
+  readonly kind: MovementCommand['kind'];
+  readonly participantId: string;
+  readonly actionDefinitionId: string;
+  readonly verticalImpulse: number | null;
+  readonly verticalSpeed: number | null;
+  readonly crouchChargeTicks: number | null;
+}
+
+export interface MovementExecutionPlan {
+  readonly operations: readonly MovementExecutionOperation[];
+  readonly mutations: readonly MovementMutation[];
+  readonly executions: readonly MovementExecution[];
+}
+
+function compareText(left: string, right: string): number {
   if (left < right) return -1;
   if (left > right) return 1;
   return 0;
 }
 
-function createContextMap(contexts) {
-  const byId = new Map();
+function createContextMap(
+  contexts: readonly MovementExecutionContext[],
+): Map<string, MovementExecutionContext> {
+  const byId = new Map<string, MovementExecutionContext>();
   for (const context of contexts) {
     if (byId.has(context.participantId)) {
       throw new RangeError(`Movement execution context 重复 ${context.participantId}。`);
@@ -23,7 +68,10 @@ function createContextMap(contexts) {
   return byId;
 }
 
-function planCommand(command, context) {
+function planCommand(
+  command: MovementCommand,
+  context: MovementExecutionContext,
+): MovementExecutionOperation {
   const { definition, capabilities, state } = context;
   if (command.kind === MOVEMENT_COMMAND_KIND.REQUEST_GROUND_JUMP) {
     if (!capabilities.canGroundJump) throw new Error(`${command.participantId} 当前不能地面跳。`);
@@ -71,7 +119,10 @@ function planCommand(command, context) {
   return { command, verticalSpeed: -definition.jump.downSmashSpeed };
 }
 
-export function createMovementExecutionPlan(commands, contexts) {
+export function createMovementExecutionPlan(
+  commands: unknown,
+  contexts: readonly MovementExecutionContext[],
+): MovementExecutionPlan {
   if (!Array.isArray(commands)) throw new TypeError('MovementSystem commands 必须是数组。');
   if (!Array.isArray(contexts)) throw new TypeError('Movement execution contexts 必须是数组。');
   const contextById = createContextMap(contexts);
@@ -122,7 +173,10 @@ export function createMovementExecutionPlan(commands, contexts) {
   });
 }
 
-export function createDownSmashContinuationMutations(contexts, commandParticipantIds = []) {
+export function createDownSmashContinuationMutations(
+  contexts: readonly MovementExecutionContext[],
+  commandParticipantIds: readonly string[] = [],
+): readonly MovementMutation[] {
   if (!Array.isArray(contexts)) throw new TypeError('Movement execution contexts 必须是数组。');
   if (!Array.isArray(commandParticipantIds)) {
     throw new TypeError('commandParticipantIds 必须是数组。');

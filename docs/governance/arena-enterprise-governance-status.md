@@ -30,7 +30,7 @@
 | G0 基线冻结 | 已完成 | 自动化、压力、资产和三端构建通过；ADR/计划/证据已落盘；tag `arena-product-baseline-51e2822` 指向基线提交 |
 | G1 治理外壳/唯一产品 | 已完成 | Arena 已成为唯一生产产品；旧产品实现/专属测试/资产/规范已退役；strict TS、ESLint、Vitest、CI、CODEOWNERS、JS 递减清单和唯一产物门禁已启用 |
 | G2 Definition/合同/配置 | 已完成 | strict TS `arena-contracts`、`arena-definitions`、`arena-profile-contracts` 与 `arena-platform-contracts` 已承接确定性、输入/事件、权威快照、同步存储、平台能力、玩家档案/存档协议，以及动作/角色/装备/地图 Definition、只读 Registry 和唯一 Gameplay V2 数值配置；受审计 JavaScript 已降至 500 个 |
-| G3 Rule/Core/Replay | 进行中 | strict TS `arena-core` 已承接动作裁决/执行、通用策略及 ArenaRuleEngine；strict TS `arena-movement` 已承接移动运行时、命令、意图、mutation、能力与序列化原语；MovementSystem、Physics、Equipment、Map、MatchCore、Replay 仍待迁移 |
+| G3 Rule/Core/Replay | 进行中 | strict TS `arena-core` 已承接动作裁决/执行、通用策略及 ArenaRuleEngine；strict TS `arena-movement` 已承接移动原语、状态转换、tick 事务与唯一写入系统；Physics、Equipment、Map、MatchCore、Replay 仍待迁移 |
 | G4 Bot/Product/Persistence | 未开始 | 当前功能与压力证据存在，尚未迁入 strict TS workspace |
 | G5 Presentation/资产/反馈 | 未开始 | 正式资产预算通过；审批字段与唯一正常路径仍待治理 |
 | G6 Platform/入口/构建 | 未开始 | 三端默认入口是 Product，但生产交付未与开发页面彻底隔离 |
@@ -55,7 +55,7 @@
 
 ## 当前不可合并原因
 
-1. 当前 482 个受维护 JavaScript 文件仍在精确允许清单中，Rule/Core/Replay、Bot/Product/Persistence/Presentation/Platform 尚未完成 strict TypeScript workspace 迁移。
+1. 当前 478 个受维护 JavaScript 文件仍在精确允许清单中，Rule/Core/Replay、Bot/Product/Persistence/Presentation/Platform 尚未完成 strict TypeScript workspace 迁移。
 2. Vitest 当前保护底层合同包和治理门禁；Arena 其余测试尚待按 workspace 迁移并建立正式 coverage 阈值与零 JS 门禁。
 3. 正式资产最终审批与完整安全/依赖长期治理尚未闭环。
 4. 文档仍含迁移前阶段性叙述，尚未完成 G9 全量链接、状态与命令归真。
@@ -184,3 +184,12 @@
 - 命令与 mutation 继续在权威状态变更前完成未知字段、类型和范围校验；能力投影和意图投影均不写入状态，且未引入 Physics、MatchCore、Bot、Presentation、Three.js、DOM、平台、墙钟或随机依赖。
 - strict 公共包测试增至 32 项；42 项 Movement、ActionResolver、MatchCore 与输入集成定向回归通过，JavaScript 精确允许清单由 488 降至 482。
 - G3 下一批迁移 Movement 的状态转换、执行计划、tick batch 和唯一写入系统，再通过窄端口迁移 Physics；本批未改变 Gameplay V2 数值、权威 tick、攻击挥空、空中下劈、Replay schema 或黄金 hash。
+
+## G3.6 MovementSystem 唯一写入者迁移证据
+
+- Movement 状态转换、命令执行计划、prepare/complete tick 批次与 `MovementSystem` 已迁入 `arena-movement` strict TypeScript；原 4 个 JavaScript 实现删除，MatchCore 与测试只从包公共入口构造唯一写入系统。
+- `MovementSystem` 公共构造、prepare/execute/complete、能力投影、水平意图、reset/interrupt、快照和物理 mutation port 均有显式类型；执行计划和状态转换保留为包内部实现，不扩大公共 mutation API。
+- prepare 在提交前克隆并验证所有 participant 状态；execute 在调用物理 port 前完成全命令排序、重复 participant 拒绝、能力校验、mutation 生成及状态草稿快照校验；complete 必须匹配已准备且已执行的连续 tick。
+- mutation port 只允许同步单批提交；异步回执、异常或重入会让系统 fail closed。无效输入在进入 mutation 区前拒绝并保持系统可继续使用；destroy 幂等且清理全部 Map 和准备态引用。
+- strict 公共包测试增至 35 项，其中新增正常完整 tick、输入前置拒绝和物理 port 失败关闭三条写入者合同；54 项 Movement、MatchCore、输入集成和架构定向回归通过，JavaScript 精确允许清单由 482 降至 478。
+- G3 下一批迁移物理 mutation 窄端口与确定性 lightweight physics，再迁移 Equipment；本批未改变 Gameplay V2 数值、攻击可挥空、空中下劈、权威 tick、Replay schema 或黄金 hash。

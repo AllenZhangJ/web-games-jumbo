@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { MovementSystem } from '../../src/arena/movement/movement-system.js';
-import { MOVEMENT_COMMAND_KIND, MOVEMENT_MODE } from '@number-strategy-jump/arena-movement';
+import {
+  MOVEMENT_COMMAND_KIND,
+  MOVEMENT_MODE,
+  MovementSystem,
+} from '@number-strategy-jump/arena-movement';
 import { createCharacterDefinition } from '@number-strategy-jump/arena-definitions';
 import { createArenaV1CharacterRegistry } from '../../src/arena/content/arena-v1-characters.js';
 import { ARENA_V1_CHARACTER_ID } from '../../src/arena/content/arena-v1-character-ids.js';

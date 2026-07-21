@@ -1,6 +1,32 @@
-import { MOVEMENT_COMMAND_KIND, MOVEMENT_MODE } from '@number-strategy-jump/arena-movement';
+import type { CharacterDefinition } from '@number-strategy-jump/arena-definitions';
 
-function captureMutableFields(state) {
+import {
+  MOVEMENT_COMMAND_KIND,
+} from './movement-command.js';
+import {
+  MOVEMENT_MODE,
+  type MovementRuntimeState,
+} from './movement-runtime.js';
+import type { MovementExecutionOperation } from './movement-execution-plan.js';
+import type { MovementContactSnapshot, MovementTickInput } from './movement-tick-batch.js';
+
+interface MutableMovementFields {
+  readonly mode: MovementRuntimeState['mode'];
+  readonly coyoteTicksRemaining: number;
+  readonly jumpBufferTicksRemaining: number;
+  readonly airJumpsUsed: number;
+  readonly crouchChargeTicks: number;
+  readonly crouchActionId: string | null;
+  readonly downSmashActionId: string | null;
+}
+
+export interface MovementLandingTransition {
+  readonly kind: 'down-smash-landed';
+  readonly participantId: string;
+  readonly actionDefinitionId: string | null;
+}
+
+function captureMutableFields(state: MovementRuntimeState): MutableMovementFields {
   return {
     mode: state.mode,
     coyoteTicksRemaining: state.coyoteTicksRemaining,
@@ -12,7 +38,7 @@ function captureMutableFields(state) {
   };
 }
 
-function markChanged(state, before) {
+function markChanged(state: MovementRuntimeState, before: MutableMovementFields): void {
   if (
     state.mode !== before.mode
     || state.coyoteTicksRemaining !== before.coyoteTicksRemaining
@@ -24,7 +50,10 @@ function markChanged(state, before) {
   ) state.revision += 1;
 }
 
-export function resetTransientMovement(state, { resetAirJumps = false } = {}) {
+export function resetTransientMovement(
+  state: MovementRuntimeState,
+  { resetAirJumps = false }: { readonly resetAirJumps?: boolean } = {},
+): void {
   state.mode = MOVEMENT_MODE.STANDARD;
   state.coyoteTicksRemaining = 0;
   state.jumpBufferTicksRemaining = 0;
@@ -34,7 +63,19 @@ export function resetTransientMovement(state, { resetAirJumps = false } = {}) {
   state.downSmashActionId = null;
 }
 
-export function prepareMovementRuntimeState({ state, definition, contact, input, canMove }) {
+export function prepareMovementRuntimeState({
+  state,
+  definition,
+  contact,
+  input,
+  canMove,
+}: {
+  readonly state: MovementRuntimeState;
+  readonly definition: CharacterDefinition;
+  readonly contact: MovementContactSnapshot;
+  readonly input: MovementTickInput;
+  readonly canMove: boolean;
+}): void {
   const before = captureMutableFields(state);
   if (!canMove) {
     resetTransientMovement(state);
@@ -63,7 +104,10 @@ export function prepareMovementRuntimeState({ state, definition, contact, input,
   markChanged(state, before);
 }
 
-export function applyMovementExecutionState(state, operation) {
+export function applyMovementExecutionState(
+  state: MovementRuntimeState,
+  operation: MovementExecutionOperation,
+): void {
   const before = captureMutableFields(state);
   const { command } = operation;
   if (command.kind === MOVEMENT_COMMAND_KIND.REQUEST_GROUND_JUMP) {
@@ -100,7 +144,12 @@ export function completeMovementRuntimeState({
   definition,
   beforeContact,
   afterContact,
-}) {
+}: {
+  readonly state: MovementRuntimeState;
+  readonly definition: CharacterDefinition;
+  readonly beforeContact: MovementContactSnapshot;
+  readonly afterContact: MovementContactSnapshot;
+}): MovementLandingTransition | null {
   const before = captureMutableFields(state);
   const landed = !beforeContact.grounded && afterContact.grounded;
   let transition = null;
@@ -133,7 +182,7 @@ export function completeMovementRuntimeState({
   return transition;
 }
 
-export function interruptMovementRuntimeState(state) {
+export function interruptMovementRuntimeState(state: MovementRuntimeState): void {
   const before = captureMutableFields(state);
   resetTransientMovement(state);
   markChanged(state, before);

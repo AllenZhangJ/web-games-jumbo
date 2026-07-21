@@ -3,7 +3,39 @@ import {
   assertKnownKeys,
   assertNonEmptyString,
   cloneFrozenData,
+  type PlainRecord,
 } from '@number-strategy-jump/arena-contracts';
+
+export interface MovementContactSnapshot {
+  readonly participantId: string;
+  readonly grounded: boolean;
+}
+
+export interface MovementTickInput {
+  readonly tick: number;
+  readonly participantId: string;
+  readonly jumpPressed: boolean;
+  readonly jumpHeld: boolean;
+  readonly moveX: number;
+  readonly moveZ: number;
+}
+
+export interface MovementAvailability {
+  readonly participantId: string;
+  readonly canMove: boolean;
+}
+
+export interface MovementPrepareBatch {
+  readonly tick: number;
+  readonly contacts: Map<string, MovementContactSnapshot>;
+  readonly inputs: Map<string, MovementTickInput>;
+  readonly availability: Map<string, MovementAvailability>;
+}
+
+export interface MovementCompleteBatch {
+  readonly tick: number;
+  readonly contacts: Map<string, MovementContactSnapshot>;
+}
 
 const PREPARE_KEYS = new Set(['tick', 'contacts', 'inputs', 'availability']);
 const COMPLETE_KEYS = new Set(['tick', 'contacts']);
@@ -18,7 +50,13 @@ const INPUT_KEYS = new Set([
 ]);
 const AVAILABILITY_KEYS = new Set(['participantId', 'canMove']);
 
-function cloneParticipantBatch(values, participantIds, keys, name, cloneValue) {
+function cloneParticipantBatch<T>(
+  values: unknown,
+  participantIds: readonly string[],
+  keys: ReadonlySet<string>,
+  name: string,
+  cloneValue: (value: PlainRecord, index: number, participantId: string) => T,
+): Map<string, T> {
   if (!Array.isArray(values) || values.length !== participantIds.length) {
     throw new RangeError(`${name} 必须覆盖全部 participants。`);
   }
@@ -39,27 +77,39 @@ function cloneParticipantBatch(values, participantIds, keys, name, cloneValue) {
       throw new RangeError(`${name} 包含未知 participant ${participantId}。`);
     }
     if (byId.has(participantId)) throw new RangeError(`${name} 包含重复 ${participantId}。`);
-    byId.set(participantId, cloneValue(value, index));
+    byId.set(participantId, cloneValue(value, index, participantId));
   }
   return byId;
 }
 
-function createContactBatch(values, participantIds, name) {
-  return cloneParticipantBatch(values, participantIds, CONTACT_KEYS, name, (value, index) => {
+function createContactBatch(
+  values: unknown,
+  participantIds: readonly string[],
+  name: string,
+): Map<string, MovementContactSnapshot> {
+  return cloneParticipantBatch(values, participantIds, CONTACT_KEYS, name, (
+    value,
+    index,
+    participantId,
+  ) => {
     if (typeof value.grounded !== 'boolean') {
       throw new TypeError(`${name}[${index}].grounded 必须是布尔值。`);
     }
-    return Object.freeze({ participantId: value.participantId, grounded: value.grounded });
+    return Object.freeze({ participantId, grounded: value.grounded });
   });
 }
 
-function createInputBatch(values, participantIds, tick) {
+function createInputBatch(
+  values: unknown,
+  participantIds: readonly string[],
+  tick: number,
+): Map<string, MovementTickInput> {
   return cloneParticipantBatch(
     values,
     participantIds,
     INPUT_KEYS,
     'Movement inputs',
-    (value, index) => {
+    (value, index, participantId) => {
       if (value.tick !== tick) {
         throw new RangeError(`Movement inputs[${index}].tick 必须等于 ${tick}。`);
       }
@@ -68,12 +118,13 @@ function createInputBatch(values, participantIds, tick) {
       }
       const moveX = value.moveX ?? 0;
       const moveZ = value.moveZ ?? 0;
-      if (!Number.isFinite(moveX) || !Number.isFinite(moveZ)) {
+      if (typeof moveX !== 'number' || !Number.isFinite(moveX)
+        || typeof moveZ !== 'number' || !Number.isFinite(moveZ)) {
         throw new TypeError(`Movement inputs[${index}] moveX/moveZ 必须是有限数。`);
       }
       return Object.freeze({
         tick,
-        participantId: value.participantId,
+        participantId,
         jumpPressed: value.jumpPressed,
         jumpHeld: value.jumpHeld,
         moveX: Math.max(-1, Math.min(1, moveX)),
@@ -83,22 +134,28 @@ function createInputBatch(values, participantIds, tick) {
   );
 }
 
-function createAvailabilityBatch(values, participantIds) {
+function createAvailabilityBatch(
+  values: unknown,
+  participantIds: readonly string[],
+): Map<string, MovementAvailability> {
   return cloneParticipantBatch(
     values,
     participantIds,
     AVAILABILITY_KEYS,
     'Movement availability',
-    (value, index) => {
+    (value, index, participantId) => {
       if (typeof value.canMove !== 'boolean') {
         throw new TypeError(`Movement availability[${index}].canMove 必须是布尔值。`);
       }
-      return Object.freeze({ participantId: value.participantId, canMove: value.canMove });
+      return Object.freeze({ participantId, canMove: value.canMove });
     },
   );
 }
 
-export function createMovementPrepareBatch(options, participantIds) {
+export function createMovementPrepareBatch(
+  options: unknown,
+  participantIds: readonly string[],
+): MovementPrepareBatch {
   const source = cloneFrozenData(options, 'MovementSystem prepareTick options');
   assertKnownKeys(source, PREPARE_KEYS, 'MovementSystem prepareTick options');
   const tick = assertIntegerAtLeast(source.tick, 0, 'MovementSystem prepareTick tick');
@@ -110,7 +167,10 @@ export function createMovementPrepareBatch(options, participantIds) {
   });
 }
 
-export function createMovementCompleteBatch(options, participantIds) {
+export function createMovementCompleteBatch(
+  options: unknown,
+  participantIds: readonly string[],
+): MovementCompleteBatch {
   const source = cloneFrozenData(options, 'MovementSystem completeTick options');
   assertKnownKeys(source, COMPLETE_KEYS, 'MovementSystem completeTick options');
   return Object.freeze({

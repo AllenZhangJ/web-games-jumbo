@@ -53,3 +53,21 @@ export {
   serializeMovementRuntimeStates,
 } from './movement-serializer.js';
 export type { MovementDefinitionResolver } from './movement-serializer.js';
+export type {
+  MovementAvailability,
+  MovementContactSnapshot,
+  MovementTickInput,
+} from './movement-tick-batch.js';
+export type {
+  MovementExecution,
+} from './movement-execution-plan.js';
+export type { MovementLandingTransition } from './movement-state-transition.js';
+export { MovementSystem } from './movement-system.js';
+export type {
+  MovementCapabilityProjection,
+  MovementCompleteOptions,
+  MovementMutationPort,
+  MovementParticipantCharacter,
+  MovementPrepareOptions,
+  MovementSystemOptions,
+} from './movement-system.js';

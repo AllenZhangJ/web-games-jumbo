@@ -1,65 +1,121 @@
-import { createCharacterDefinition } from '@number-strategy-jump/arena-definitions';
-import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import {
-  cloneMovementRuntimeState,
-  createMovementRuntimeSnapshotFromValidatedDefinition,
-  createMovementRuntimeState,
-  resetMovementRuntimeState,
-} from '@number-strategy-jump/arena-movement';
+  createCharacterDefinition,
+  type CharacterDefinition,
+} from '@number-strategy-jump/arena-definitions';
 import {
+  createDeterministicDataHash,
   assertKnownKeys,
   assertNonEmptyString,
   cloneFrozenData,
 } from '@number-strategy-jump/arena-contracts';
 import {
+  cloneMovementRuntimeState,
+  createMovementRuntimeSnapshotFromValidatedDefinition,
+  createMovementRuntimeState,
+  resetMovementRuntimeState,
+  type MovementRuntimeSnapshot,
+  type MovementRuntimeState,
+} from './movement-runtime.js';
+import {
   createMovementCompleteBatch,
   createMovementPrepareBatch,
+  type MovementAvailability,
+  type MovementContactSnapshot,
+  type MovementTickInput,
 } from './movement-tick-batch.js';
-import { createMovementCapabilities } from '@number-strategy-jump/arena-movement';
+import {
+  createMovementCapabilities,
+  type MovementCapabilities,
+} from './movement-capabilities.js';
+import type { MovementCommand } from './movement-command.js';
+import type { MovementMutation } from './movement-mutation.js';
 import {
   createDownSmashContinuationMutations,
   createMovementExecutionPlan,
+  type MovementExecution,
+  type MovementExecutionContext,
 } from './movement-execution-plan.js';
-import { createCharacterMovementIntentProjector } from '@number-strategy-jump/arena-movement';
+import {
+  createCharacterMovementIntentProjector,
+  type CharacterMovementIntent,
+  type CharacterMovementIntentProjector,
+} from './movement-intent.js';
 import {
   applyMovementExecutionState,
   completeMovementRuntimeState,
   interruptMovementRuntimeState,
   prepareMovementRuntimeState,
+  type MovementLandingTransition,
 } from './movement-state-transition.js';
+
+export interface MovementParticipantCharacter {
+  readonly participantId: string;
+  readonly characterDefinition: CharacterDefinition;
+}
+
+export interface MovementSystemOptions {
+  readonly participantCharacters: readonly MovementParticipantCharacter[];
+  readonly airJumpHorizontalImpulse?: number;
+}
+
+export interface MovementCapabilityProjection {
+  readonly grounded: boolean;
+  readonly canMove: boolean;
+}
+
+export interface MovementMutationPort {
+  readonly applyBatch: (mutations: readonly MovementMutation[]) => unknown;
+}
+
+export interface MovementPrepareOptions {
+  readonly tick: number;
+  readonly contacts: readonly MovementContactSnapshot[];
+  readonly inputs: readonly MovementTickInput[];
+  readonly availability: readonly MovementAvailability[];
+}
+
+export interface MovementCompleteOptions {
+  readonly tick: number;
+  readonly contacts: readonly MovementContactSnapshot[];
+}
 
 const PORT_KEYS = new Set(['applyBatch']);
 const CHARACTER_ENTRY_KEYS = new Set(['participantId', 'characterDefinition']);
 const PROJECT_CAPABILITY_KEYS = new Set(['grounded', 'canMove']);
 
-function compareText(left, right) {
+function compareText(left: string, right: string): number {
   if (left < right) return -1;
   if (left > right) return 1;
   return 0;
 }
 
 export class MovementSystem {
-  #participantIds;
-  #definitionsByParticipant;
-  #definitionsById;
-  #intentProjectorsByParticipant;
-  #states;
-  #preparedTick;
-  #lastCompletedTick;
-  #preparedContacts;
-  #preparedAvailability;
-  #preparedInputs;
-  #airJumpHorizontalImpulse;
-  #executed;
-  #mutating;
-  #failed;
-  #destroyed;
+  #participantIds: readonly string[];
+  #definitionsByParticipant: Map<string, CharacterDefinition>;
+  #definitionsById: Map<string, CharacterDefinition>;
+  #intentProjectorsByParticipant: Map<string, CharacterMovementIntentProjector>;
+  #states: Map<string, MovementRuntimeState>;
+  #preparedTick: number | null;
+  #lastCompletedTick: number | null;
+  #preparedContacts: Map<string, MovementContactSnapshot> | null;
+  #preparedAvailability: Map<string, MovementAvailability> | null;
+  #preparedInputs: Map<string, MovementTickInput> | null;
+  #airJumpHorizontalImpulse: number;
+  #executed: boolean;
+  #mutating: boolean;
+  #failed: boolean;
+  #destroyed: boolean;
 
-  constructor({ participantCharacters, airJumpHorizontalImpulse = 0 }) {
+  constructor({
+    participantCharacters,
+    airJumpHorizontalImpulse = 0,
+  }: MovementSystemOptions) {
     if (!Array.isArray(participantCharacters) || participantCharacters.length === 0) {
       throw new RangeError('MovementSystem 需要非空 participantCharacters。');
     }
-    if (!Number.isFinite(airJumpHorizontalImpulse) || airJumpHorizontalImpulse < 0) {
+    if (typeof airJumpHorizontalImpulse !== 'number'
+      || !Number.isFinite(airJumpHorizontalImpulse)
+      || airJumpHorizontalImpulse < 0) {
       throw new RangeError('MovementSystem.airJumpHorizontalImpulse 必须是非负有限数。');
     }
     const entries = participantCharacters.map((entry, index) => {
@@ -119,24 +175,28 @@ export class MovementSystem {
     Object.freeze(this);
   }
 
-  #assertUsable() {
+  #assertUsable(): void {
     if (this.#destroyed) throw new Error('MovementSystem 已销毁。');
     if (this.#failed) throw new Error('MovementSystem 已失败，不能继续推进。');
     if (this.#mutating) throw new Error('MovementSystem 权威变更不可重入。');
   }
 
-  #requireParticipant(participantId) {
+  #requireParticipant(participantId: unknown): MovementRuntimeState {
     const id = assertNonEmptyString(participantId, 'movement participantId');
     const state = this.#states.get(id);
     if (!state) throw new RangeError(`未知 movement participant ${id}。`);
     return state;
   }
 
-  #definition(participantId) {
-    return this.#definitionsByParticipant.get(participantId);
+  #definition(participantId: string): CharacterDefinition {
+    const definition = this.#definitionsByParticipant.get(participantId);
+    if (!definition) throw new Error(`MovementSystem 缺少 ${participantId} 的 CharacterDefinition。`);
+    return definition;
   }
 
-  #serializeStates(states = this.#states) {
+  #serializeStates(
+    states: ReadonlyMap<string, MovementRuntimeState> = this.#states,
+  ): readonly MovementRuntimeSnapshot[] {
     return Object.freeze([...states.values()].map((state) => (
       createMovementRuntimeSnapshotFromValidatedDefinition(
         state,
@@ -145,15 +205,15 @@ export class MovementSystem {
     )).sort((left, right) => compareText(left.participantId, right.participantId)));
   }
 
-  #cloneStates() {
-    const drafts = new Map();
+  #cloneStates(): Map<string, MovementRuntimeState> {
+    const drafts = new Map<string, MovementRuntimeState>();
     for (const state of this.#states.values()) {
       drafts.set(state.participantId, cloneMovementRuntimeState(state));
     }
     return drafts;
   }
 
-  #assertIdleLifecycle(operationName) {
+  #assertIdleLifecycle(operationName: string): void {
     if (this.#preparedTick !== null) {
       throw new Error(
         `MovementSystem tick ${this.#preparedTick} 进行中，不能 ${operationName}。`,
@@ -161,7 +221,10 @@ export class MovementSystem {
     }
   }
 
-  #mutate(operation, { failClosed = false } = {}) {
+  #mutate<T>(
+    operation: () => T,
+    { failClosed = false }: { readonly failClosed?: boolean } = {},
+  ): T {
     this.#assertUsable();
     this.#mutating = true;
     try {
@@ -174,7 +237,7 @@ export class MovementSystem {
     }
   }
 
-  prepareTick(options) {
+  prepareTick(options: MovementPrepareOptions): readonly MovementRuntimeSnapshot[] {
     this.#assertUsable();
     const batch = createMovementPrepareBatch(options, this.#participantIds);
     const { tick, contacts, inputs, availability } = batch;
@@ -187,11 +250,11 @@ export class MovementSystem {
     const drafts = this.#cloneStates();
     for (const participantId of this.#participantIds) {
       prepareMovementRuntimeState({
-        state: drafts.get(participantId),
+        state: drafts.get(participantId)!,
         definition: this.#definition(participantId),
-        contact: contacts.get(participantId),
-        input: inputs.get(participantId),
-        canMove: availability.get(participantId).canMove,
+        contact: contacts.get(participantId)!,
+        input: inputs.get(participantId)!,
+        canMove: availability.get(participantId)!.canMove,
       });
     }
     const snapshots = this.#serializeStates(drafts);
@@ -206,7 +269,7 @@ export class MovementSystem {
     });
   }
 
-  getCapabilities(participantId) {
+  getCapabilities(participantId: string): MovementCapabilities {
     this.#assertUsable();
     if (this.#preparedTick === null) throw new Error('MovementSystem 需要先 prepareTick。');
     const state = this.#requireParticipant(participantId);
@@ -214,12 +277,15 @@ export class MovementSystem {
       participantId,
       state,
       definition: this.#definition(participantId),
-      contact: this.#preparedContacts.get(participantId),
-      canMove: this.#preparedAvailability.get(participantId).canMove,
+      contact: this.#preparedContacts!.get(participantId)!,
+      canMove: this.#preparedAvailability!.get(participantId)!.canMove,
     });
   }
 
-  projectCapabilities(participantId, options) {
+  projectCapabilities(
+    participantId: string,
+    options: MovementCapabilityProjection,
+  ): MovementCapabilities {
     this.#assertUsable();
     assertKnownKeys(options, PROJECT_CAPABILITY_KEYS, 'Movement capability projection');
     if (typeof options.grounded !== 'boolean' || typeof options.canMove !== 'boolean') {
@@ -235,13 +301,20 @@ export class MovementSystem {
     });
   }
 
-  projectHorizontalIntent(participantId, moveX, moveZ) {
+  projectHorizontalIntent(
+    participantId: string,
+    moveX: number,
+    moveZ: number,
+  ): CharacterMovementIntent {
     this.#assertUsable();
     this.#requireParticipant(participantId);
-    return this.#intentProjectorsByParticipant.get(participantId).project(moveX, moveZ);
+    return this.#intentProjectorsByParticipant.get(participantId)!.project(moveX, moveZ);
   }
 
-  execute(commands, ports) {
+  execute(
+    commands: readonly MovementCommand[],
+    ports: MovementMutationPort,
+  ): readonly MovementExecution[] {
     this.#assertUsable();
     if (this.#preparedTick === null) throw new Error('MovementSystem 需要先 prepareTick。');
     if (this.#executed) throw new Error(`MovementSystem tick ${this.#preparedTick} 已执行命令。`);
@@ -249,14 +322,15 @@ export class MovementSystem {
     if (typeof ports.applyBatch !== 'function') {
       throw new TypeError('Movement mutation port 缺少 applyBatch()。');
     }
+    const applyBatch = ports.applyBatch;
     const contexts = this.#participantIds.map((participantId) => Object.freeze({
       participantId,
-      state: this.#states.get(participantId),
+      state: this.#states.get(participantId)!,
       definition: this.#definition(participantId),
       capabilities: this.getCapabilities(participantId),
-      input: this.#preparedInputs.get(participantId),
+      input: this.#preparedInputs!.get(participantId)!,
       airJumpHorizontalImpulse: this.#airJumpHorizontalImpulse,
-    }));
+    })) satisfies readonly MovementExecutionContext[];
     const plan = createMovementExecutionPlan(commands, contexts);
     const continuationMutations = createDownSmashContinuationMutations(
       contexts,
@@ -266,14 +340,14 @@ export class MovementSystem {
     const drafts = this.#cloneStates();
     for (const operation of plan.operations) {
       applyMovementExecutionState(
-        drafts.get(operation.command.participantId),
+        drafts.get(operation.command.participantId)!,
         operation,
       );
     }
     this.#serializeStates(drafts);
     return this.#mutate(() => {
       if (mutations.length > 0) {
-        const result = ports.applyBatch(mutations);
+        const result = applyBatch(mutations);
         if (result !== undefined) {
           throw new TypeError('Movement mutation port applyBatch() 必须同步返回 undefined。');
         }
@@ -284,7 +358,7 @@ export class MovementSystem {
     }, { failClosed: true });
   }
 
-  completeTick(options) {
+  completeTick(options: MovementCompleteOptions): readonly MovementLandingTransition[] {
     this.#assertUsable();
     const batch = createMovementCompleteBatch(options, this.#participantIds);
     if (this.#preparedTick === null || batch.tick !== this.#preparedTick) {
@@ -294,13 +368,13 @@ export class MovementSystem {
     }
     if (!this.#executed) throw new Error(`MovementSystem tick ${this.#preparedTick} 尚未执行命令批次。`);
     const drafts = this.#cloneStates();
-    const transitions = [];
+    const transitions: MovementLandingTransition[] = [];
     for (const participantId of this.#participantIds) {
       const transition = completeMovementRuntimeState({
-        state: drafts.get(participantId),
+        state: drafts.get(participantId)!,
         definition: this.#definition(participantId),
-        beforeContact: this.#preparedContacts.get(participantId),
-        afterContact: batch.contacts.get(participantId),
+        beforeContact: this.#preparedContacts!.get(participantId)!,
+        afterContact: batch.contacts.get(participantId)!,
       });
       if (transition) transitions.push(transition);
     }
@@ -319,12 +393,12 @@ export class MovementSystem {
     });
   }
 
-  interruptParticipant(participantId) {
+  interruptParticipant(participantId: string): MovementRuntimeSnapshot {
     this.#assertUsable();
     this.#assertIdleLifecycle('中断 participant');
     const current = this.#requireParticipant(participantId);
     const drafts = this.#cloneStates();
-    const state = drafts.get(current.participantId);
+    const state = drafts.get(current.participantId)!;
     interruptMovementRuntimeState(state);
     const snapshot = createMovementRuntimeSnapshotFromValidatedDefinition(
       state,
@@ -336,12 +410,12 @@ export class MovementSystem {
     });
   }
 
-  resetParticipant(participantId) {
+  resetParticipant(participantId: string): MovementRuntimeSnapshot {
     this.#assertUsable();
     this.#assertIdleLifecycle('重置 participant');
     const current = this.#requireParticipant(participantId);
     const drafts = this.#cloneStates();
-    const state = drafts.get(current.participantId);
+    const state = drafts.get(current.participantId)!;
     resetMovementRuntimeState(state);
     const snapshot = createMovementRuntimeSnapshotFromValidatedDefinition(
       state,
@@ -353,7 +427,7 @@ export class MovementSystem {
     });
   }
 
-  getSnapshot(participantId) {
+  getSnapshot(participantId: string): MovementRuntimeSnapshot {
     this.#assertUsable();
     const state = this.#requireParticipant(participantId);
     return createMovementRuntimeSnapshotFromValidatedDefinition(
@@ -362,12 +436,12 @@ export class MovementSystem {
     );
   }
 
-  listSnapshots() {
+  listSnapshots(): readonly MovementRuntimeSnapshot[] {
     this.#assertUsable();
     return this.#serializeStates();
   }
 
-  destroy() {
+  destroy(): void {
     if (this.#destroyed) return;
     if (this.#mutating) throw new Error('MovementSystem 权威变更期间不能销毁。');
     this.#destroyed = true;

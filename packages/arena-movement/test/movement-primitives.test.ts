@@ -10,6 +10,7 @@ import {
   MOVEMENT_GAIT,
   MOVEMENT_MODE,
   MOVEMENT_MUTATION_KIND,
+  MovementSystem,
   cloneMovementRuntimeState,
   createMovementCapabilities,
   createMovementCommand,
@@ -154,5 +155,112 @@ describe('arena-movement primitives', () => {
     expect(() => serializeMovementRuntimeStates([first, first], resolver)).toThrow(
       '不能序列化重复 participantId',
     );
+  });
+
+  it('commits one complete movement tick through one synchronous mutation boundary', () => {
+    const system = new MovementSystem({
+      participantCharacters: [{ participantId: 'player-1', characterDefinition: definition }],
+      airJumpHorizontalImpulse: 2,
+    });
+    system.prepareTick({
+      tick: 0,
+      contacts: [{ participantId: 'player-1', grounded: true }],
+      inputs: [{
+        tick: 0,
+        participantId: 'player-1',
+        jumpPressed: true,
+        jumpHeld: true,
+        moveX: 0,
+        moveZ: 0,
+      }],
+      availability: [{ participantId: 'player-1', canMove: true }],
+    });
+    const batches: unknown[][] = [];
+    const executions = system.execute([{
+      kind: MOVEMENT_COMMAND_KIND.REQUEST_GROUND_JUMP,
+      participantId: 'player-1',
+      actionDefinitionId: 'action.ground-jump',
+    }], {
+      applyBatch(mutations: readonly unknown[]) {
+        batches.push([...mutations]);
+      },
+    });
+
+    expect(executions).toHaveLength(1);
+    expect(batches).toHaveLength(1);
+    expect(batches[0]).toHaveLength(1);
+    expect(system.completeTick({
+      tick: 0,
+      contacts: [{ participantId: 'player-1', grounded: false }],
+    })).toEqual([]);
+    expect(system.getSnapshot('player-1').jumpBufferTicksRemaining).toBe(0);
+    system.destroy();
+    system.destroy();
+    expect(() => system.getSnapshot('player-1')).toThrow('已销毁');
+  });
+
+  it('rejects a malformed command batch before state or port mutation', () => {
+    const system = new MovementSystem({
+      participantCharacters: [{ participantId: 'player-1', characterDefinition: definition }],
+    });
+    system.prepareTick({
+      tick: 0,
+      contacts: [{ participantId: 'player-1', grounded: true }],
+      inputs: [{
+        tick: 0,
+        participantId: 'player-1',
+        jumpPressed: true,
+        jumpHeld: true,
+        moveX: 0,
+        moveZ: 0,
+      }],
+      availability: [{ participantId: 'player-1', canMove: true }],
+    });
+    const before = system.getSnapshot('player-1');
+    let portCalls = 0;
+    expect(() => system.execute([{
+      kind: 'unknown-command' as typeof MOVEMENT_COMMAND_KIND.REQUEST_GROUND_JUMP,
+      participantId: 'player-1',
+      actionDefinitionId: 'action.invalid',
+    }], {
+      applyBatch() {
+        portCalls += 1;
+      },
+    })).toThrow('kind 不受支持');
+
+    expect(portCalls).toBe(0);
+    expect(system.getSnapshot('player-1')).toEqual(before);
+    system.destroy();
+  });
+
+  it('fails closed when the physical mutation port cannot commit', () => {
+    const system = new MovementSystem({
+      participantCharacters: [{ participantId: 'player-1', characterDefinition: definition }],
+    });
+    system.prepareTick({
+      tick: 0,
+      contacts: [{ participantId: 'player-1', grounded: true }],
+      inputs: [{
+        tick: 0,
+        participantId: 'player-1',
+        jumpPressed: true,
+        jumpHeld: true,
+        moveX: 0,
+        moveZ: 0,
+      }],
+      availability: [{ participantId: 'player-1', canMove: true }],
+    });
+    expect(() => system.execute([{
+      kind: MOVEMENT_COMMAND_KIND.REQUEST_GROUND_JUMP,
+      participantId: 'player-1',
+      actionDefinitionId: 'action.ground-jump',
+    }], {
+      applyBatch() {
+        throw new Error('physics commit failed');
+      },
+    })).toThrow('physics commit failed');
+
+    expect(() => system.getSnapshot('player-1')).toThrow('已失败');
+    system.destroy();
   });
 });
