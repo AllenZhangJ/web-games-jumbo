@@ -2,7 +2,7 @@ import { ARENA_TICK_RATE } from '../config.js';
 import {
   MAP_DEFINITION_SCHEMA_VERSION,
   createMapDefinition,
-} from '../map/map-definition.js';
+} from '@number-strategy-jump/arena-definitions';
 import { MAP_EVENT_KIND } from '../map/map-event-types.js';
 import { STAGE4_EQUIPMENT_ID } from './stage4-equipment.js';
 

@@ -1,4 +1,4 @@
-import { MapRegistry } from '../map/map-registry.js';
+import { MapRegistry } from '@number-strategy-jump/arena-definitions';
 import { ARENA_GAMEPLAY_V2_MAP_DEFINITION } from './arena-gameplay-v2-map.js';
 import { STAGE5_MAP_DEFINITION } from './stage5-map.js';
 

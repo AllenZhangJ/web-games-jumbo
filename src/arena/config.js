@@ -1,7 +1,7 @@
 import { ARENA_ACTION_PHASE } from './action/action-state.js';
 import { ARENA_V1_DEFAULT_CHARACTER_ID } from './content/arena-v1-character-ids.js';
 import { createMatchContentSelection } from './content/match-content-selection.js';
-import { createStaticMapDefinition } from './map/map-definition.js';
+import { createStaticMapDefinition } from '@number-strategy-jump/arena-definitions';
 import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 import { ARENA_GAMEPLAY_V2_TUNING } from '@number-strategy-jump/arena-definitions';
 

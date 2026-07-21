@@ -1,16 +1,27 @@
 import { createEquipmentDefinition } from './equipment-definition.js';
+import type { EquipmentDefinition } from './equipment-definition.js';
+import type { ActionDefinition } from './action-definition.js';
 
-function compareIds(left, right) {
+interface ActionRegistryContract {
+  require(id: string): ActionDefinition;
+}
+
+interface EquipmentRegistryOptions {
+  readonly definitions?: readonly unknown[];
+  readonly actionRegistry: ActionRegistryContract;
+}
+
+function compareIds(left: EquipmentDefinition, right: EquipmentDefinition): number {
   if (left.id < right.id) return -1;
   if (left.id > right.id) return 1;
   return 0;
 }
 
 export class EquipmentRegistry {
-  #definitionsById;
-  #definitions;
+  readonly #definitionsById: Map<string, EquipmentDefinition>;
+  readonly #definitions: readonly EquipmentDefinition[];
 
-  constructor({ definitions = [], actionRegistry }) {
+  constructor({ definitions = [], actionRegistry }: EquipmentRegistryOptions) {
     if (!Array.isArray(definitions)) {
       throw new TypeError('EquipmentRegistry definitions 必须是数组。');
     }
@@ -31,25 +42,25 @@ export class EquipmentRegistry {
     Object.freeze(this);
   }
 
-  get size() {
+  get size(): number {
     return this.#definitions.length;
   }
 
-  has(id) {
+  has(id: string): boolean {
     return this.#definitionsById.has(id);
   }
 
-  get(id) {
+  get(id: string): EquipmentDefinition | undefined {
     return this.#definitionsById.get(id);
   }
 
-  require(id) {
+  require(id: string): EquipmentDefinition {
     const definition = this.get(id);
     if (!definition) throw new RangeError(`未知 EquipmentDefinition ${String(id)}。`);
     return definition;
   }
 
-  list() {
+  list(): readonly EquipmentDefinition[] {
     return this.#definitions;
   }
 }

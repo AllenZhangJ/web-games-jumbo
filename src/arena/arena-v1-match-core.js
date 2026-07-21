@@ -10,7 +10,7 @@ import { STAGE5_MAP_ID } from './content/stage5-map.js';
 import {
   STATIC_MAP_ID_PREFIX,
   createStaticMapDefinition,
-} from './map/map-definition.js';
+} from '@number-strategy-jump/arena-definitions';
 import { MatchCore } from './match-core.js';
 import { createArenaMatchConfig } from './config.js';
 import {

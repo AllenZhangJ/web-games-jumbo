@@ -13,8 +13,8 @@ import { MapEventStrategyRegistry } from '../../src/arena/map/map-event-strategy
 import {
   MAP_DEFINITION_SCHEMA_VERSION,
   createMapDefinition,
-} from '../../src/arena/map/map-definition.js';
-import { MapRegistry } from '../../src/arena/map/map-registry.js';
+} from '@number-strategy-jump/arena-definitions';
+import { MapRegistry } from '@number-strategy-jump/arena-definitions';
 import { ARENA_MAP_EVENT, ArenaMapSystem } from '../../src/arena/map/map-system.js';
 import { serializeMapRuntimeSnapshot } from '../../src/arena/map/map-serializer.js';
 import { MAP_TIMELINE_TRANSITION, MapTimeline } from '../../src/arena/map/map-timeline.js';

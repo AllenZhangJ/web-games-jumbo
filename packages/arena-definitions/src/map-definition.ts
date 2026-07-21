@@ -5,6 +5,7 @@ import {
   cloneFrozenData,
 } from '@number-strategy-jump/arena-contracts';
 import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
+import type { DeepReadonly } from '@number-strategy-jump/arena-contracts';
 
 export const MAP_DEFINITION_SCHEMA_VERSION = 1;
 export const STATIC_MAP_ID_PREFIX = 'custom-static:';
@@ -30,19 +31,62 @@ const SCHEDULE_KEYS = new Set([
 const VECTOR_KEYS = new Set(['x', 'y', 'z']);
 const MAX_TIMELINE_OCCURRENCES = 10_000;
 
-function cloneVector(value, name, { positive = false } = {}) {
+export interface Vector3Definition {
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
+}
+
+export interface MapSurfaceDefinition {
+  readonly id: string;
+  readonly center: Vector3Definition;
+  readonly halfExtents: Vector3Definition;
+}
+
+export interface MapArenaDefinition {
+  readonly killY: number;
+  readonly surfaces: readonly MapSurfaceDefinition[];
+  readonly spawns: readonly Vector3Definition[];
+}
+
+export interface MapScheduleDefinition {
+  readonly startTick: number;
+  readonly warningLeadTicks: number;
+  readonly durationTicks: number;
+  readonly repeatEveryTicks: number;
+  readonly repeatCount: number;
+}
+
+export interface MapEquipmentSpawnPointDefinition {
+  readonly id: string;
+  readonly surfaceId: string;
+  readonly position: Vector3Definition;
+}
+
+export interface MapEventDefinition {
+  readonly id: string;
+  readonly kind: string;
+  readonly schedule: MapScheduleDefinition;
+  readonly parameters: DeepReadonly<unknown>;
+}
+
+function cloneVector(
+  value: unknown,
+  name: string,
+  { positive = false }: { readonly positive?: boolean } = {},
+): Vector3Definition {
   assertKnownKeys(value, VECTOR_KEYS, name);
-  const result = {};
+  const result: Record<string, number> = {};
   for (const axis of VECTOR_KEYS) {
     const component = value[axis];
     if (!Number.isFinite(component)) throw new TypeError(`${name}.${axis} 必须是有限数。`);
-    if (positive && component <= 0) throw new RangeError(`${name}.${axis} 必须大于 0。`);
-    result[axis] = component;
+    if (positive && (component as number) <= 0) throw new RangeError(`${name}.${axis} 必须大于 0。`);
+    result[axis] = component as number;
   }
-  return Object.freeze(result);
+  return Object.freeze(result) as unknown as Vector3Definition;
 }
 
-function cloneArena(value) {
+function cloneArena(value: unknown): MapArenaDefinition {
   assertKnownKeys(value, ARENA_KEYS, 'MapDefinition.arena');
   if (!Number.isFinite(value.killY)) throw new TypeError('MapDefinition.arena.killY 必须是有限数。');
   if (!Array.isArray(value.surfaces) || value.surfaces.length === 0) {
@@ -51,7 +95,7 @@ function cloneArena(value) {
   if (!Array.isArray(value.spawns) || value.spawns.length < 2) {
     throw new RangeError('MapDefinition.arena.spawns 至少需要两个出生点。');
   }
-  const surfaceIds = new Set();
+  const surfaceIds = new Set<string>();
   const surfaces = value.surfaces.map((surface, index) => {
     const name = `MapDefinition.arena.surfaces[${index}]`;
     assertKnownKeys(surface, SURFACE_KEYS, name);
@@ -77,13 +121,13 @@ function cloneArena(value) {
     return position;
   });
   return Object.freeze({
-    killY: value.killY,
+    killY: value.killY as number,
     surfaces: Object.freeze(surfaces),
     spawns: Object.freeze(spawns),
   });
 }
 
-function cloneSchedule(value, name) {
+function cloneSchedule(value: unknown, name: string): MapScheduleDefinition {
   assertKnownKeys(value, SCHEDULE_KEYS, name);
   const schedule = {
     startTick: assertIntegerAtLeast(value.startTick, 0, `${name}.startTick`),
@@ -120,7 +164,12 @@ function cloneSchedule(value, name) {
   return Object.freeze(schedule);
 }
 
-function validateSpawnPoint(point, index, arena, pointIds) {
+function validateSpawnPoint(
+  point: unknown,
+  index: number,
+  arena: MapArenaDefinition,
+  pointIds: Set<string>,
+): MapEquipmentSpawnPointDefinition {
   const name = `MapDefinition.equipmentSpawnPoints[${index}]`;
   assertKnownKeys(point, SPAWN_POINT_KEYS, name);
   const id = assertNonEmptyString(point.id, `${name}.id`);
@@ -138,7 +187,13 @@ function validateSpawnPoint(point, index, arena, pointIds) {
 }
 
 export class MapDefinition {
-  constructor(value) {
+  readonly schemaVersion!: typeof MAP_DEFINITION_SCHEMA_VERSION;
+  readonly id!: string;
+  readonly arena!: MapArenaDefinition;
+  readonly equipmentSpawnPoints!: readonly MapEquipmentSpawnPointDefinition[];
+  readonly events!: readonly MapEventDefinition[];
+
+  constructor(value: unknown) {
     const source = cloneFrozenData(value, 'MapDefinition');
     assertKnownKeys(source, DEFINITION_KEYS, 'MapDefinition');
     if (source.schemaVersion !== MAP_DEFINITION_SCHEMA_VERSION) {
@@ -149,12 +204,12 @@ export class MapDefinition {
     if (!Array.isArray(source.equipmentSpawnPoints)) {
       throw new TypeError('MapDefinition.equipmentSpawnPoints 必须是数组。');
     }
-    const pointIds = new Set();
+    const pointIds = new Set<string>();
     const equipmentSpawnPoints = source.equipmentSpawnPoints.map((point, index) => (
       validateSpawnPoint(point, index, arena, pointIds)
     ));
     if (!Array.isArray(source.events)) throw new TypeError('MapDefinition.events 必须是数组。');
-    const eventIds = new Set();
+    const eventIds = new Set<string>();
     let occurrenceCount = 0;
     const events = source.events.map((event, index) => {
       const name = `MapDefinition.events[${index}]`;
@@ -184,7 +239,13 @@ export class MapDefinition {
     Object.freeze(this);
   }
 
-  toJSON() {
+  toJSON(): Readonly<{
+    schemaVersion: typeof MAP_DEFINITION_SCHEMA_VERSION;
+    id: string;
+    arena: MapArenaDefinition;
+    equipmentSpawnPoints: readonly MapEquipmentSpawnPointDefinition[];
+    events: readonly MapEventDefinition[];
+  }> {
     return {
       schemaVersion: this.schemaVersion,
       id: this.id,
@@ -195,11 +256,11 @@ export class MapDefinition {
   }
 }
 
-export function createMapDefinition(value) {
+export function createMapDefinition(value: unknown): MapDefinition {
   return value instanceof MapDefinition ? value : new MapDefinition(value);
 }
 
-export function createStaticMapDefinition(arena) {
+export function createStaticMapDefinition(arena: unknown): MapDefinition {
   const hash = createDeterministicDataHash(arena, 'static arena');
   return createMapDefinition({
     schemaVersion: MAP_DEFINITION_SCHEMA_VERSION,

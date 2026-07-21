@@ -9,15 +9,31 @@ export const EQUIPMENT_DEFINITION_SCHEMA_VERSION = 2;
 
 export const EQUIPMENT_PICKUP_MODE = Object.freeze({
   AUTOMATIC: 'automatic',
-});
+} as const);
 
 export const EQUIPMENT_DROP_POLICY = Object.freeze({
   LAST_SAFE_POSITION: 'last-safe-position',
-});
+} as const);
 
 export const EQUIPMENT_DROP_FALLBACK = Object.freeze({
   ORIGIN_SPAWN: 'origin-spawn',
-});
+} as const);
+
+export interface EquipmentDefinition {
+  readonly schemaVersion: typeof EQUIPMENT_DEFINITION_SCHEMA_VERSION;
+  readonly id: string;
+  readonly category: string;
+  readonly slot: string;
+  readonly actionDefinitionId: string;
+  readonly aerialActionDefinitionId: string;
+  readonly pickup: Readonly<{ mode: 'automatic'; radius: number }>;
+  readonly drop: Readonly<{
+    onOwnerEliminated: 'last-safe-position';
+    invalidPositionFallback: 'origin-spawn';
+  }>;
+  readonly presentationSemantic: string;
+  readonly tags: readonly string[];
+}
 
 const DEFINITION_KEYS = new Set([
   'schemaVersion',
@@ -34,7 +50,7 @@ const DEFINITION_KEYS = new Set([
 const PICKUP_KEYS = new Set(['mode', 'radius']);
 const DROP_KEYS = new Set(['onOwnerEliminated', 'invalidPositionFallback']);
 
-export function createEquipmentDefinition(value) {
+export function createEquipmentDefinition(value: unknown): EquipmentDefinition {
   assertKnownKeys(value, DEFINITION_KEYS, 'EquipmentDefinition');
   if (value.schemaVersion !== EQUIPMENT_DEFINITION_SCHEMA_VERSION) {
     throw new RangeError(
@@ -79,6 +95,6 @@ export function createEquipmentDefinition(value) {
       value.presentationSemantic,
       'EquipmentDefinition.presentationSemantic',
     ),
-    tags: cloneFrozenStringSet(value.tags, 'EquipmentDefinition.tags'),
+    tags: cloneFrozenStringSet(value.tags as readonly unknown[] | undefined, 'EquipmentDefinition.tags'),
   });
 }

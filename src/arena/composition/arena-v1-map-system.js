@@ -9,7 +9,7 @@ import {
 import {
   STATIC_MAP_ID_PREFIX,
   createStaticMapDefinition,
-} from '../map/map-definition.js';
+} from '@number-strategy-jump/arena-definitions';
 import { ArenaMapSystem } from '../map/map-system.js';
 import { validateCharacterSpawnSafety } from '../map/map-character-safety-validator.js';
 import { validateWalkableMapTopology } from '../map/map-topology-validator.js';

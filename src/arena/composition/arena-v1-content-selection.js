@@ -1,9 +1,9 @@
 import { CharacterRegistry } from '@number-strategy-jump/arena-definitions';
 import { createMatchContentSelection } from '../content/match-content-selection.js';
 import { STAGE4_EQUIPMENT_DEFINITIONS } from '../content/stage4-equipment.js';
-import { createMapDefinition } from '../map/map-definition.js';
+import { createMapDefinition } from '@number-strategy-jump/arena-definitions';
 import { MAP_EVENT_KIND } from '../map/map-event-types.js';
-import { MapRegistry } from '../map/map-registry.js';
+import { MapRegistry } from '@number-strategy-jump/arena-definitions';
 import {
   assertNonEmptyString,
   cloneFrozenData,

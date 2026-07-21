@@ -1,15 +1,16 @@
 import { createMapDefinition } from './map-definition.js';
+import type { MapDefinition } from './map-definition.js';
 
-function compareText(left, right) {
+function compareText(left: string, right: string): number {
   if (left < right) return -1;
   if (left > right) return 1;
   return 0;
 }
 
 export class MapRegistry {
-  #definitions;
+  readonly #definitions: Map<string, MapDefinition>;
 
-  constructor(definitions = []) {
+  constructor(definitions: readonly unknown[] = []) {
     if (!Array.isArray(definitions)) throw new TypeError('MapRegistry definitions 必须是数组。');
     this.#definitions = new Map();
     for (const value of definitions) {
@@ -22,17 +23,17 @@ export class MapRegistry {
     Object.freeze(this);
   }
 
-  has(id) {
+  has(id: string): boolean {
     return this.#definitions.has(id);
   }
 
-  require(id) {
+  require(id: string): MapDefinition {
     const definition = this.#definitions.get(id);
     if (!definition) throw new RangeError(`未知 MapDefinition ${String(id)}。`);
     return definition;
   }
 
-  list() {
+  list(): readonly MapDefinition[] {
     return Object.freeze([...this.#definitions.values()].sort((left, right) => (
       compareText(left.id, right.id)
     )));

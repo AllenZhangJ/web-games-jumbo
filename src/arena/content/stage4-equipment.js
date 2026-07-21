@@ -13,8 +13,8 @@ import {
   EQUIPMENT_DROP_POLICY,
   EQUIPMENT_PICKUP_MODE,
   createEquipmentDefinition,
-} from '../equipment/equipment-definition.js';
-import { EquipmentRegistry } from '../equipment/equipment-registry.js';
+} from '@number-strategy-jump/arena-definitions';
+import { EquipmentRegistry } from '@number-strategy-jump/arena-definitions';
 import { cloneFrozenData, cloneFrozenStringSet } from '@number-strategy-jump/arena-contracts';
 import { ARENA_GAMEPLAY_V2_TUNING } from '@number-strategy-jump/arena-definitions';
 

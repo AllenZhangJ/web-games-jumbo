@@ -9,10 +9,24 @@ import {
   ActionRegistry,
   CHARACTER_DEFINITION_SCHEMA_VERSION,
   CharacterRegistry,
+  createEquipmentDefinition,
+  createMapDefinition,
   createActionDefinition,
   createCharacterDefinition,
+  EQUIPMENT_DEFINITION_SCHEMA_VERSION,
+  EQUIPMENT_DROP_FALLBACK,
+  EQUIPMENT_DROP_POLICY,
+  EQUIPMENT_PICKUP_MODE,
+  EquipmentRegistry,
+  MAP_DEFINITION_SCHEMA_VERSION,
+  MapRegistry,
 } from '../src/index.js';
-import type { ActionDefinition, CharacterDefinition } from '../src/index.js';
+import type {
+  ActionDefinition,
+  CharacterDefinition,
+  EquipmentDefinition,
+  MapDefinition,
+} from '../src/index.js';
 import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 
 function action(id: string): ActionDefinition {
@@ -95,5 +109,54 @@ describe('Arena Definition public contracts', () => {
       ...character('invalid'),
       movement: { ...character('invalid').movement, runSpeed: 2 },
     })).toThrow(/runSpeed/);
+  });
+
+  it('binds equipment actions at Registry construction without mutable publication', () => {
+    const actionRegistry = new ActionRegistry([action('ground'), action('air')]);
+    const equipment: EquipmentDefinition = createEquipmentDefinition({
+      schemaVersion: EQUIPMENT_DEFINITION_SCHEMA_VERSION,
+      id: 'hammer',
+      category: 'weapon',
+      slot: 'primary',
+      actionDefinitionId: 'ground',
+      aerialActionDefinitionId: 'air',
+      pickup: { mode: EQUIPMENT_PICKUP_MODE.AUTOMATIC, radius: 0.8 },
+      drop: {
+        onOwnerEliminated: EQUIPMENT_DROP_POLICY.LAST_SAFE_POSITION,
+        invalidPositionFallback: EQUIPMENT_DROP_FALLBACK.ORIGIN_SPAWN,
+      },
+      presentationSemantic: 'hammer',
+      tags: [],
+    });
+    expect(new EquipmentRegistry({ definitions: [equipment], actionRegistry }).require('hammer'))
+      .toStrictEqual(equipment);
+    expect(() => new EquipmentRegistry({
+      definitions: [{ ...equipment, actionDefinitionId: 'missing' }],
+      actionRegistry,
+    })).toThrow(/未知 ActionDefinition/);
+  });
+
+  it('publishes only validated, stable map geometry and timeline data', () => {
+    const map: MapDefinition = createMapDefinition({
+      schemaVersion: MAP_DEFINITION_SCHEMA_VERSION,
+      id: 'arena',
+      arena: {
+        killY: -10,
+        surfaces: [{
+          id: 'center',
+          center: { x: 0, y: 0, z: 0 },
+          halfExtents: { x: 4, y: 0.5, z: 4 },
+        }],
+        spawns: [{ x: -1, y: 0.5, z: 0 }, { x: 1, y: 0.5, z: 0 }],
+      },
+      equipmentSpawnPoints: [],
+      events: [],
+    });
+    expect(new MapRegistry([map]).require('arena')).toBe(map);
+    expect(Object.isFrozen(map.arena.surfaces)).toBe(true);
+    expect(() => createMapDefinition({
+      ...map.toJSON(),
+      arena: { ...map.arena, spawns: [{ x: 10, y: 1, z: 10 }, map.arena.spawns[1]] },
+    })).toThrow(/没有合法支撑 surface/);
   });
 });
