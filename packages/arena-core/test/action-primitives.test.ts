@@ -6,11 +6,13 @@ import {
   ACTION_INPUT_TRIGGER,
   ACTION_LANE,
   ActionRegistry,
+  EquipmentRegistry,
 } from '@number-strategy-jump/arena-definitions';
 import {
   ARENA_ACTION_PHASE,
   ACTION_RESOLUTION_KIND,
   ActionExecutionSystem,
+  ArenaRuleEngine,
   RuleCommandRegistry,
   compareActionCandidates,
   createActionCandidate,
@@ -159,5 +161,42 @@ describe('Arena action core primitives', () => {
       '未注册 RuleCommand unknown',
     );
     expect(executions).toBe(0);
+  });
+
+  it('cleans an invalid injected equipment system before rejecting construction', () => {
+    const actionRegistry = new ActionRegistry([{
+      schemaVersion: ACTION_DEFINITION_SCHEMA_VERSION,
+      id: 'attack',
+      kind: 'attack',
+      input: { channel: ACTION_INPUT_CHANNEL.PRIMARY, trigger: ACTION_INPUT_TRIGGER.PRESSED },
+      lane: ACTION_LANE.COMBAT,
+      conflictTags: [],
+      timing: { windupTicks: 1, activeTicks: 1, recoveryTicks: 1, cooldownTicks: 0 },
+      targeting: { kind: 'none', parameters: {} },
+      effects: [{
+        id: 'hitstun', kind: 'apply-hitstun', trigger: ACTION_EFFECT_TRIGGER.HIT_RESOLVED,
+        parameters: { ticks: 2 },
+      }],
+      tags: [],
+    }]);
+    const equipmentRegistry = new EquipmentRegistry({ definitions: [], actionRegistry });
+    let destroyed = false;
+    expect(() => new ArenaRuleEngine({
+      participantIds: ['p1'],
+      baseActionDefinitionId: 'attack',
+      baseAirActionDefinitionId: 'attack',
+      actionRegistry,
+      equipmentRegistry,
+      targetingRegistry: createDefaultTargetingRegistry(),
+      effectRegistry: createDefaultActionEffectRegistry(),
+      commandRegistry: new RuleCommandRegistry(),
+      movementCandidateProvider: { getCandidates: () => [] },
+      movementCommandAdapter: { isCommandKind: () => false, createCommand: (command) => command },
+      createEquipmentSystem: () => ({
+        destroy() { destroyed = true; },
+        // This fixture intentionally proves partial factory output is not leaked.
+      } as never),
+    })).toThrow('EquipmentSystem 缺少 getActionCandidate()');
+    expect(destroyed).toBe(true);
   });
 });

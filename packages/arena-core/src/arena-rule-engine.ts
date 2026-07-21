@@ -1,25 +1,200 @@
-import { ACTION_EFFECT_TRIGGER } from '@number-strategy-jump/arena-definitions';
-import { ActionExecutionSystem } from '@number-strategy-jump/arena-core';
+import {
+  ACTION_EFFECT_TRIGGER,
+  type ActionDefinition,
+  type EquipmentDefinition,
+} from '@number-strategy-jump/arena-definitions';
 import {
   ACTION_PRIORITY,
   ACTION_RESOLUTION_KIND,
-  ActionAffordanceProjector,
   ActionResolver,
-} from '@number-strategy-jump/arena-core';
-import { ARENA_ACTION_PHASE } from '@number-strategy-jump/arena-core';
-import { ACTION_RULE_COMMAND } from '@number-strategy-jump/arena-core';
-import { EquipmentSystem } from '../equipment/equipment-system.js';
-import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
+} from './action-resolver.js';
+import { ARENA_ACTION_PHASE } from './action-state.js';
+import { ActionExecutionSystem } from './action-execution-system.js';
+import { ActionAffordanceProjector } from './action-affordance.js';
+import { ACTION_RULE_COMMAND } from './default-effect-handlers.js';
 import {
   assertIntegerAtLeast,
   assertKnownKeys,
   assertNonEmptyString,
   cloneFrozenData,
+  createDeterministicDataHash,
+  type ArenaInputFrame,
+  type DeepReadonly,
 } from '@number-strategy-jump/arena-contracts';
-import {
-  createMovementCommand,
-  isMovementCommandKind,
-} from '../movement/movement-command.js';
+import type { ActionCandidate } from './action-candidate.js';
+import type {
+  ActionRegistryContract,
+  ActionResolution,
+} from './action-resolver.js';
+import type {
+  ActionStart,
+  ActionTransition,
+} from './action-execution-system.js';
+import type { ActionEffectRegistry, RuleCommand } from './action-effect-registry.js';
+import type { TargetingRegistry } from './targeting-registry.js';
+import type { RuleCommandRegistry } from './rule-command-registry.js';
+
+type UnknownRecord = Readonly<Record<string, unknown>>;
+
+export interface RuleActor {
+  readonly id: string;
+  readonly canAct: boolean;
+  readonly targetable: boolean;
+  readonly position: Readonly<{ x: number; y: number; z: number }>;
+  readonly facing: Readonly<{ x: number; z: number }>;
+}
+
+export interface EquipmentRegistryContract {
+  require(id: string): EquipmentDefinition;
+  list(): readonly EquipmentDefinition[];
+}
+
+export interface EquipmentSystemContract {
+  getActionCandidate(participantId: string): ActionCandidate | null;
+  getAerialActionCandidate(participantId: string): ActionCandidate | null;
+  assertActionCanStart(participantId: string, actionDefinitionId: string): unknown;
+  markActionStarted(participantId: string, actionDefinitionId: string): unknown;
+  advanceCooldowns(): readonly unknown[];
+  spawn(options: unknown): unknown;
+  resolvePickups(options: unknown): unknown;
+  updateLastSafePosition(participantId: string, position: unknown): unknown;
+  dropOwned(participantId: string, options: unknown): unknown;
+  despawnInvalidWorldEquipment(options: unknown): unknown;
+  getHeldEquipment(participantId: string): unknown;
+  getSnapshot(instanceId: string): unknown;
+  listSnapshots(): readonly unknown[];
+  destroy(): void;
+}
+
+export interface MovementCapabilities {
+  readonly participantId: string;
+  readonly canBeginDownSmash: boolean;
+  readonly [key: string]: unknown;
+}
+
+export interface MovementCandidateProviderContract {
+  getCandidates(capabilities: MovementCapabilities): readonly ActionCandidate[];
+}
+
+export interface MovementCommandAdapter {
+  isCommandKind(kind: unknown): boolean;
+  createCommand(command: RuleCommand): unknown;
+}
+
+export interface ArenaRuleEngineOptions {
+  readonly participantIds: readonly string[];
+  readonly baseActionDefinitionId: string;
+  readonly baseAirActionDefinitionId: string;
+  readonly actionRegistry: ActionRegistryContract & { list(): readonly ActionDefinition[] };
+  readonly equipmentRegistry: EquipmentRegistryContract;
+  readonly targetingRegistry: TargetingRegistry;
+  readonly effectRegistry: ActionEffectRegistry;
+  readonly commandRegistry: RuleCommandRegistry;
+  readonly movementCandidateProvider: MovementCandidateProviderContract;
+  readonly createEquipmentSystem: (options: {
+    readonly participantIds: readonly string[];
+    readonly actionRegistry: ActionRegistryContract & { list(): readonly ActionDefinition[] };
+    readonly equipmentRegistry: EquipmentRegistryContract;
+  }) => EquipmentSystemContract;
+  readonly movementCommandAdapter: MovementCommandAdapter;
+  readonly allowBaseAttackWhiff?: boolean;
+}
+
+export interface ArenaRuleEngineContract {
+  advanceTimers(): ArenaRuleTimerAdvance;
+  resolveActions(options: unknown): ArenaRuleBatch;
+  resolveActiveActions(options: unknown): ArenaRuleBatch;
+  commit(batch: unknown, ports: unknown): void;
+  resetParticipant(participantId: string): void;
+  getActionSnapshot(participantId: string): unknown;
+  getHeldEquipment(participantId: string): unknown;
+  getEquipmentSnapshot(instanceId: string): unknown;
+  listEquipmentSnapshots(): readonly unknown[];
+  spawnEquipment(options: unknown): unknown;
+  resolveEquipmentPickups(options: unknown): unknown;
+  updateEquipmentLastSafePosition(participantId: string, position: unknown): unknown;
+  dropEquipment(participantId: string, options: unknown): unknown;
+  despawnInvalidWorldEquipment(options: unknown): unknown;
+  requireEquipmentDefinition(definitionId: string): EquipmentDefinition;
+  getContentHash(): string;
+  getMovementActionCandidates(capabilities: MovementCapabilities): readonly ActionCandidate[];
+  getActionAffordance(options: unknown): unknown;
+  getParticipantActionRule(participantId: string): PublicActionRule;
+  destroy(): void;
+}
+
+interface EnrichedRuleCommand extends RuleCommand {
+  readonly sourceParticipantId?: string;
+  readonly targetParticipantId: string;
+  readonly effectKind?: string;
+  readonly impulse?: Readonly<{ x: number; y: number; z: number }>;
+  readonly hitSequence?: number;
+}
+
+interface GuardCommand extends EnrichedRuleCommand {
+  readonly participantId: string;
+  readonly minimumFacingDot: number;
+  readonly impulseMultiplier: number;
+  readonly cancelledEffectKinds: readonly string[];
+}
+
+export interface RuleHit {
+  readonly attackerId: string;
+  readonly targetId: string;
+  readonly actionDefinitionId: string;
+}
+
+export interface ArenaRuleBatch {
+  readonly resolutions: readonly ActionResolution[];
+  readonly starts: readonly ActionStart[];
+  readonly hits: readonly RuleHit[];
+  readonly commands: readonly DeepReadonly<EnrichedRuleCommand>[];
+  readonly movementCommands: readonly unknown[];
+  readonly events: readonly UnknownRecord[];
+}
+
+export interface ArenaRuleTimerAdvance {
+  readonly actionTransitions: readonly ActionTransition[];
+  readonly equipmentCooldowns: readonly unknown[];
+}
+
+export interface PublicActionRule {
+  readonly definitionId: string;
+  readonly targetingKind: string;
+  readonly range: number;
+  readonly minimumFacingDot: number;
+  readonly maximumVerticalDifference: number;
+  readonly windupTicks: number;
+  readonly activeTicks: number;
+  readonly recoveryTicks: number;
+}
+
+interface RuleMutationPorts {
+  readonly recordHit: (attackerId: string, targetId: string, actionDefinitionId: string) => unknown;
+  readonly applyHitstun: (participantId: string, ticks: number) => unknown;
+  readonly applyImpulse: (participantId: string, impulse: unknown) => unknown;
+}
+
+interface RuleCommitBatch {
+  readonly hits: readonly RuleHit[];
+  readonly commands: readonly RuleCommand[];
+}
+
+function requireMapValue<K, V>(map: ReadonlyMap<K, V>, key: K, message: string): V {
+  const value = map.get(key);
+  if (value === undefined) throw new Error(message);
+  return value;
+}
+
+function requireActorById(
+  actors: readonly RuleActor[],
+  participantId: string,
+  context: string,
+): RuleActor {
+  const actor = actors.find(({ id }) => id === participantId);
+  if (!actor) throw new Error(`${context} ${participantId} 缺少 RuleActor。`);
+  return actor;
+}
 
 export const ARENA_RULE_EVENT = Object.freeze({
   ACTION_STARTED: 'ActionStarted',
@@ -78,24 +253,52 @@ const REQUIRED_ENGINE_METHODS = Object.freeze([
   'getParticipantActionRule',
   'destroy',
 ]);
+const REQUIRED_EQUIPMENT_SYSTEM_METHODS = Object.freeze([
+  'getActionCandidate', 'getAerialActionCandidate', 'assertActionCanStart',
+  'markActionStarted', 'advanceCooldowns', 'spawn', 'resolvePickups',
+  'updateLastSafePosition', 'dropOwned', 'despawnInvalidWorldEquipment',
+  'getHeldEquipment', 'getSnapshot', 'listSnapshots', 'destroy',
+]);
 
-export function assertArenaRuleEngine(engine) {
+function assertEquipmentSystem(value: unknown): EquipmentSystemContract {
+  if (!value || typeof value !== 'object') {
+    throw new TypeError('createEquipmentSystem 必须返回对象。');
+  }
+  const candidate = value as UnknownRecord;
+  for (const method of REQUIRED_EQUIPMENT_SYSTEM_METHODS) {
+    if (typeof candidate[method] !== 'function') {
+      try {
+        if (typeof candidate.destroy === 'function') candidate.destroy();
+      } catch (cleanupError) {
+        throw new AggregateError(
+          [new TypeError(`EquipmentSystem 缺少 ${method}()。`), cleanupError],
+          'EquipmentSystem 合同校验与清理均失败。',
+        );
+      }
+      throw new TypeError(`EquipmentSystem 缺少 ${method}()。`);
+    }
+  }
+  return candidate as unknown as EquipmentSystemContract;
+}
+
+export function assertArenaRuleEngine(engine: unknown): ArenaRuleEngineContract {
   if (!engine || typeof engine !== 'object') throw new TypeError('ruleEngineFactory 必须返回对象。');
+  const contract = engine as UnknownRecord;
   for (const method of REQUIRED_ENGINE_METHODS) {
-    if (typeof engine[method] !== 'function') {
+    if (typeof contract[method] !== 'function') {
       throw new TypeError(`ruleEngineFactory 返回值缺少 ${method}()。`);
     }
   }
-  return engine;
+  return contract as unknown as ArenaRuleEngineContract;
 }
 
-function compareStrings(left, right) {
+function compareStrings(left: string, right: string): number {
   if (left < right) return -1;
   if (left > right) return 1;
   return 0;
 }
 
-function cloneActor(value, index) {
+function cloneActor(value: unknown, index: number): RuleActor {
   const name = `RuleActor[${index}]`;
   assertKnownKeys(value, ACTOR_KEYS, name);
   const id = assertNonEmptyString(value.id, `${name}.id`);
@@ -104,35 +307,40 @@ function cloneActor(value, index) {
   }
   assertKnownKeys(value.position, POSITION_KEYS, `${name}.position`);
   assertKnownKeys(value.facing, FACING_KEYS, `${name}.facing`);
-  const position = {};
+  const position: Record<string, number> = {};
   for (const axis of POSITION_KEYS) {
     if (!Number.isFinite(value.position[axis])) {
       throw new TypeError(`${name}.position.${axis} 必须是有限数。`);
     }
-    position[axis] = value.position[axis];
+    position[axis] = value.position[axis] as number;
   }
-  const facing = {};
+  const facing: Record<string, number> = {};
   for (const axis of FACING_KEYS) {
     if (!Number.isFinite(value.facing[axis])) {
       throw new TypeError(`${name}.facing.${axis} 必须是有限数。`);
     }
-    facing[axis] = value.facing[axis];
+    facing[axis] = value.facing[axis] as number;
   }
-  if (Math.hypot(facing.x, facing.z) < 1e-7) throw new RangeError(`${name}.facing 不能为零。`);
+  if (Math.hypot(facing.x ?? 0, facing.z ?? 0) < 1e-7) {
+    throw new RangeError(`${name}.facing 不能为零。`);
+  }
   return Object.freeze({
     id,
     canAct: value.canAct,
     targetable: value.targetable,
-    position: Object.freeze(position),
-    facing: Object.freeze(facing),
-  });
+    position: Object.freeze(position) as RuleActor['position'],
+    facing: Object.freeze(facing) as RuleActor['facing'],
+  }) as RuleActor;
 }
 
-function enrichCommand(command, metadata) {
-  return cloneFrozenData({ ...command, ...metadata }, 'RuleCommand');
+function enrichCommand<T extends UnknownRecord>(
+  command: RuleCommand,
+  metadata: T,
+): DeepReadonly<RuleCommand & T> {
+  return cloneFrozenData({ ...command, ...metadata }, 'RuleCommand') as DeepReadonly<RuleCommand & T>;
 }
 
-function createBaseCandidate(actionDefinitionId, available) {
+function createBaseCandidate(actionDefinitionId: string, available: boolean): ActionCandidate {
   return Object.freeze({
     id: `base:${actionDefinitionId}`,
     actionDefinitionId,
@@ -144,11 +352,20 @@ function createBaseCandidate(actionDefinitionId, available) {
   });
 }
 
-function cloneAdditionalCandidates(values, participantIds) {
-  if (values === undefined) return new Map(participantIds.map((id) => [id, Object.freeze([])]));
+function cloneAdditionalCandidates(
+  values: unknown,
+  participantIds: readonly string[],
+): ReadonlyMap<string, readonly unknown[]> {
+  if (values === undefined) {
+    return new Map<string, readonly unknown[]>(
+      participantIds.map((id) => [id, Object.freeze([])] as const),
+    );
+  }
   if (!Array.isArray(values)) throw new TypeError('additionalCandidates 必须是数组。');
-  const result = new Map(participantIds.map((id) => [id, Object.freeze([])]));
-  const seen = new Set();
+  const result = new Map<string, readonly unknown[]>(
+    participantIds.map((id) => [id, Object.freeze([])] as const),
+  );
+  const seen = new Set<string>();
   for (let index = 0; index < values.length; index += 1) {
     const entry = cloneFrozenData(values[index], `additionalCandidates[${index}]`);
     assertKnownKeys(
@@ -175,33 +392,48 @@ function cloneAdditionalCandidates(values, participantIds) {
   return result;
 }
 
-function createPublicActionRule(definition) {
-  const parameters = definition.targeting.parameters;
+function createPublicActionRule(definition: ActionDefinition): PublicActionRule {
+  const parameters = definition.targeting.parameters as UnknownRecord;
+  if (!Number.isFinite(parameters.range) || !Number.isFinite(parameters.maximumVerticalDifference)) {
+    throw new Error(`ActionDefinition ${definition.id} 缺少公共 targeting 数值。`);
+  }
   return Object.freeze({
     definitionId: definition.id,
     targetingKind: definition.targeting.kind,
-    range: parameters.range,
+    range: parameters.range as number,
     minimumFacingDot: Number.isFinite(parameters.minimumFacingDot)
-      ? parameters.minimumFacingDot
+      ? parameters.minimumFacingDot as number
       : -1,
-    maximumVerticalDifference: parameters.maximumVerticalDifference,
+    maximumVerticalDifference: parameters.maximumVerticalDifference as number,
     windupTicks: definition.timing.windupTicks,
     activeTicks: definition.timing.activeTicks,
     recoveryTicks: definition.timing.recoveryTicks,
   });
 }
 
-function applyFrontGuards(commands, guards, actorsById) {
+function applyFrontGuards(
+  commands: readonly EnrichedRuleCommand[],
+  guards: readonly GuardCommand[],
+  actorsById: ReadonlyMap<string, RuleActor>,
+): readonly DeepReadonly<EnrichedRuleCommand>[] {
   const guardByParticipant = new Map(guards.map((guard) => [guard.participantId, guard]));
-  const result = [];
+  const result: DeepReadonly<EnrichedRuleCommand>[] = [];
   for (const command of commands) {
     const guard = guardByParticipant.get(command.targetParticipantId);
     if (!guard || !command.sourceParticipantId) {
       result.push(command);
       continue;
     }
-    const target = actorsById.get(command.targetParticipantId);
-    const source = actorsById.get(command.sourceParticipantId);
+    const target = requireMapValue(
+      actorsById,
+      command.targetParticipantId,
+      `guard target ${command.targetParticipantId} 缺少 actor。`,
+    );
+    const source = requireMapValue(
+      actorsById,
+      command.sourceParticipantId,
+      `guard source ${command.sourceParticipantId} 缺少 actor。`,
+    );
     const dx = source.position.x - target.position.x;
     const dz = source.position.z - target.position.z;
     const distance = Math.hypot(dx, dz);
@@ -214,8 +446,12 @@ function applyFrontGuards(commands, guards, actorsById) {
       result.push(command);
       continue;
     }
-    if (guard.cancelledEffectKinds.includes(command.effectKind)) continue;
+    if (
+      command.effectKind !== undefined
+      && guard.cancelledEffectKinds.includes(command.effectKind)
+    ) continue;
     if (command.kind === ACTION_RULE_COMMAND.APPLY_IMPULSE) {
+      if (!command.impulse) throw new TypeError('apply-impulse RuleCommand 缺少 impulse。');
       result.push(cloneFrozenData({
         ...command,
         impulse: {
@@ -232,24 +468,25 @@ function applyFrontGuards(commands, guards, actorsById) {
 }
 
 export class ArenaRuleEngine {
-  #participantIds;
-  #baseActionDefinitionId;
-  #baseAirActionDefinitionId;
-  #actionRegistry;
-  #actionResolver;
-  #actionExecution;
-  #movementCandidateProvider;
-  #actionAffordanceProjector;
-  #targetingRegistry;
-  #effectRegistry;
-  #commandRegistry;
-  #equipmentRegistry;
-  #equipmentSystem;
-  #allowBaseAttackWhiff;
-  #contentHash;
-  #destroyed;
-  #committing;
-  #failed;
+  readonly #participantIds: readonly string[];
+  readonly #baseActionDefinitionId: string;
+  readonly #baseAirActionDefinitionId: string;
+  readonly #actionRegistry: ArenaRuleEngineOptions['actionRegistry'];
+  readonly #actionResolver: ActionResolver;
+  readonly #actionExecution: ActionExecutionSystem;
+  readonly #movementCandidateProvider: MovementCandidateProviderContract;
+  readonly #movementCommandAdapter: MovementCommandAdapter;
+  readonly #actionAffordanceProjector: ActionAffordanceProjector;
+  readonly #targetingRegistry: TargetingRegistry;
+  readonly #effectRegistry: ActionEffectRegistry;
+  readonly #commandRegistry: RuleCommandRegistry;
+  readonly #equipmentRegistry: EquipmentRegistryContract;
+  readonly #equipmentSystem: EquipmentSystemContract;
+  readonly #allowBaseAttackWhiff: boolean;
+  readonly #contentHash: string;
+  #destroyed: boolean;
+  #committing: boolean;
+  #failed: boolean;
 
   constructor({
     participantIds,
@@ -261,8 +498,10 @@ export class ArenaRuleEngine {
     effectRegistry,
     commandRegistry,
     movementCandidateProvider,
+    createEquipmentSystem,
+    movementCommandAdapter,
     allowBaseAttackWhiff = false,
-  }) {
+  }: ArenaRuleEngineOptions) {
     if (
       !Array.isArray(participantIds)
       || participantIds.length === 0
@@ -291,6 +530,15 @@ export class ArenaRuleEngine {
       throw new TypeError('ArenaRuleEngine 需要 movementCandidateProvider.getCandidates()。');
     }
     this.#movementCandidateProvider = movementCandidateProvider;
+    if (
+      !movementCommandAdapter
+      || typeof movementCommandAdapter.isCommandKind !== 'function'
+      || typeof movementCommandAdapter.createCommand !== 'function'
+    ) throw new TypeError('ArenaRuleEngine 需要 movementCommandAdapter。');
+    this.#movementCommandAdapter = Object.freeze({
+      isCommandKind: (kind: unknown) => movementCommandAdapter.isCommandKind(kind),
+      createCommand: (command: RuleCommand) => movementCommandAdapter.createCommand(command),
+    });
     if (typeof allowBaseAttackWhiff !== 'boolean') {
       throw new TypeError('ArenaRuleEngine.allowBaseAttackWhiff 必须是布尔值。');
     }
@@ -307,29 +555,32 @@ export class ArenaRuleEngine {
       equipment: equipmentRegistry.list(),
       ...(allowBaseAttackWhiff ? { allowBaseAttackWhiff: true } : {}),
     }, 'Arena rule content');
-    this.#equipmentSystem = new EquipmentSystem({
+    if (typeof createEquipmentSystem !== 'function') {
+      throw new TypeError('ArenaRuleEngine 需要 createEquipmentSystem()。');
+    }
+    this.#equipmentSystem = assertEquipmentSystem(createEquipmentSystem({
       participantIds,
       actionRegistry,
       equipmentRegistry,
-    });
+    }));
     this.#destroyed = false;
     this.#committing = false;
     this.#failed = false;
     Object.freeze(this);
   }
 
-  requireEquipmentDefinition(definitionId) {
+  requireEquipmentDefinition(definitionId: string): EquipmentDefinition {
     this.#assertUsable();
     return this.#equipmentRegistry.require(definitionId);
   }
 
-  #assertUsable() {
+  #assertUsable(): void {
     if (this.#destroyed) throw new Error('ArenaRuleEngine 已销毁。');
     if (this.#failed) throw new Error('ArenaRuleEngine 已失败，不能继续推进。');
     if (this.#committing) throw new Error('ArenaRuleEngine commit 期间不可重入。');
   }
 
-  #cloneActors(actors) {
+  #cloneActors(actors: unknown): readonly RuleActor[] {
     if (!Array.isArray(actors) || actors.length !== this.#participantIds.length) {
       throw new RangeError('ArenaRuleEngine actors 必须覆盖全部 participants。');
     }
@@ -341,8 +592,12 @@ export class ArenaRuleEngine {
     return Object.freeze(result);
   }
 
-  #createCandidates(participantId, actors, additionalCandidates) {
-    const actor = actors.find(({ id }) => id === participantId);
+  #createCandidates(
+    participantId: string,
+    actors: readonly RuleActor[],
+    additionalCandidates: readonly unknown[] = [],
+  ): readonly unknown[] {
+    const actor = requireActorById(actors, participantId, 'participant');
     const baseDefinition = this.#actionRegistry.require(this.#baseActionDefinitionId);
     const baseTargets = this.#targetingRegistry.resolve({
       definition: baseDefinition,
@@ -353,7 +608,7 @@ export class ArenaRuleEngine {
     // range/facing still resolve only on active ticks. The legacy contextual
     // primary mapper retains target-gated fallback so its one button can still
     // mean jump when combat has no target.
-    const candidates = [createBaseCandidate(
+    const candidates: unknown[] = [createBaseCandidate(
       this.#baseActionDefinitionId,
       this.#allowBaseAttackWhiff || baseTargets.length > 0,
     )];
@@ -363,7 +618,7 @@ export class ArenaRuleEngine {
     return Object.freeze(candidates);
   }
 
-  advanceTimers() {
+  advanceTimers(): ArenaRuleTimerAdvance {
     this.#assertUsable();
     return Object.freeze({
       actionTransitions: this.#actionExecution.advance(),
@@ -371,13 +626,13 @@ export class ArenaRuleEngine {
     });
   }
 
-  resolveActions(options) {
+  resolveActions(options: unknown): ArenaRuleBatch {
     this.#assertUsable();
     assertKnownKeys(options, RESOLVE_ACTION_KEYS, 'ArenaRuleEngine resolveActions options');
     const tick = assertIntegerAtLeast(options.tick, 0, 'ArenaRuleEngine tick');
     const actors = this.#cloneActors(options.actors);
     if (!Array.isArray(options.inputFrames)) throw new TypeError('inputFrames 必须是数组。');
-    const frameById = new Map();
+    const frameById = new Map<string, ArenaInputFrame>();
     for (const frame of options.inputFrames) {
       assertKnownKeys(frame, INPUT_FRAME_KEYS, 'ArenaRuleEngine InputFrame');
       if (frame.tick !== tick) throw new RangeError(`InputFrame.tick 必须等于 ${tick}。`);
@@ -395,7 +650,7 @@ export class ArenaRuleEngine {
       ].some((value) => typeof value !== 'boolean')) {
         throw new TypeError('InputFrame 动作字段必须是布尔值。');
       }
-      frameById.set(participantId, frame);
+      frameById.set(participantId, frame as unknown as ArenaInputFrame);
     }
     if (
       frameById.size !== this.#participantIds.length
@@ -407,23 +662,28 @@ export class ArenaRuleEngine {
     );
     const actorsById = new Map(actors.map((actor) => [actor.id, actor]));
     const resolutions = this.#participantIds.map((participantId) => {
-      const actor = actorsById.get(participantId);
+      const actor = requireMapValue(
+        actorsById,
+        participantId,
+        `participant ${participantId} 缺少 RuleActor。`,
+      );
       const candidates = this.#createCandidates(
         participantId,
         actors,
-        additionalCandidates.get(participantId),
+        additionalCandidates.get(participantId) ?? [],
       );
       const constraints = this.#actionExecution.getConstraints(participantId);
+      const frame = requireMapValue(frameById, participantId, '缺少 InputFrame。');
       return this.#actionResolver.resolve({
         tick,
         participantId,
         canAct: actor.canAct,
         input: {
-          primaryPressed: frameById.get(participantId).primaryPressed,
-          primaryHeld: frameById.get(participantId).primaryHeld,
-          jumpPressed: frameById.get(participantId).jumpPressed,
-          jumpHeld: frameById.get(participantId).jumpHeld,
-          slamPressed: frameById.get(participantId).slamPressed,
+          primaryPressed: frame.primaryPressed,
+          primaryHeld: frame.primaryHeld,
+          jumpPressed: frame.jumpPressed,
+          jumpHeld: frame.jumpHeld,
+          slamPressed: frame.slamPressed,
         },
         candidates,
         occupiedLanes: constraints.occupiedLanes,
@@ -436,7 +696,7 @@ export class ArenaRuleEngine {
       if (resolution.source === 'equipment-system') {
         this.#equipmentSystem.assertActionCanStart(
           resolution.participantId,
-          resolution.actionDefinitionId,
+          assertNonEmptyString(resolution.actionDefinitionId, 'equipment actionDefinitionId'),
         );
       }
     }
@@ -445,16 +705,19 @@ export class ArenaRuleEngine {
       if (resolution.source === 'equipment-system') {
         this.#equipmentSystem.markActionStarted(
           resolution.participantId,
-          resolution.actionDefinitionId,
+          assertNonEmptyString(resolution.actionDefinitionId, 'equipment actionDefinitionId'),
         );
       }
     }
-    const commands = [];
-    const events = [];
-    for (let index = 0; index < starts.length; index += 1) {
-      const start = starts[index];
+    const commands: EnrichedRuleCommand[] = [];
+    const events: UnknownRecord[] = [];
+    for (const [index, start] of starts.entries()) {
       const definition = this.#actionRegistry.require(start.actionDefinitionId);
-      const source = actorsById.get(start.participantId);
+      const source = requireMapValue(
+        actorsById,
+        start.participantId,
+        `action source ${start.participantId} 缺少 RuleActor。`,
+      );
       events.push(Object.freeze({
         type: ARENA_RULE_EVENT.ACTION_STARTED,
         participantId: start.participantId,
@@ -467,7 +730,9 @@ export class ArenaRuleEngine {
           source,
         });
         for (let commandIndex = 0; commandIndex < resolved.length; commandIndex += 1) {
-          commands.push(enrichCommand(resolved[commandIndex], {
+          const command = resolved[commandIndex];
+          if (!command) throw new Error('ActionEffect 返回稀疏命令数组。');
+          commands.push(enrichCommand(command, {
             sourceParticipantId: source.id,
             targetParticipantId: source.id,
             actionDefinitionId: definition.id,
@@ -477,11 +742,11 @@ export class ArenaRuleEngine {
         }
       }
     }
-    const movementCommands = [];
-    const ruleCommands = [];
+    const movementCommands: unknown[] = [];
+    const ruleCommands: EnrichedRuleCommand[] = [];
     for (const command of commands) {
-      if (isMovementCommandKind(command.kind)) {
-        movementCommands.push(createMovementCommand({
+      if (this.#movementCommandAdapter.isCommandKind(command.kind)) {
+        movementCommands.push(this.#movementCommandAdapter.createCommand({
           kind: command.kind,
           participantId: command.participantId,
           actionDefinitionId: command.actionDefinitionId,
@@ -500,7 +765,7 @@ export class ArenaRuleEngine {
     });
   }
 
-  resolveActiveActions(options) {
+  resolveActiveActions(options: unknown): ArenaRuleBatch {
     this.#assertUsable();
     assertKnownKeys(options, RESOLVE_ACTIVE_KEYS, 'ArenaRuleEngine resolveActive options');
     const actors = this.#cloneActors(options.actors);
@@ -508,10 +773,17 @@ export class ArenaRuleEngine {
     const active = this.#actionExecution.listAllSnapshots().filter(({ phase }) => (
       phase === ARENA_ACTION_PHASE.ACTIVE
     ));
-    const guards = [];
+    const guards: GuardCommand[] = [];
     for (const action of active) {
-      const definition = this.#actionRegistry.require(action.definitionId);
-      const source = actorsById.get(action.participantId);
+      const definition = this.#actionRegistry.require(assertNonEmptyString(
+        action.definitionId,
+        'active action definitionId',
+      ));
+      const source = requireMapValue(
+        actorsById,
+        action.participantId,
+        `active source ${action.participantId} 缺少 RuleActor。`,
+      );
       for (const effect of definition.effects) {
         if (effect.trigger !== ACTION_EFFECT_TRIGGER.ACTION_ACTIVE) continue;
         for (const command of this.#effectRegistry.resolve(effect, {
@@ -526,21 +798,32 @@ export class ArenaRuleEngine {
             targetParticipantId: source.id,
             actionDefinitionId: definition.id,
             effectId: effect.id,
-          }));
+          }) as unknown as GuardCommand);
         }
       }
     }
 
-    const hits = [];
-    const commands = [];
+    const hits: RuleHit[] = [];
+    const commands: EnrichedRuleCommand[] = [];
     for (const action of active) {
-      const definition = this.#actionRegistry.require(action.definitionId);
-      const source = actorsById.get(action.participantId);
+      const definition = this.#actionRegistry.require(assertNonEmptyString(
+        action.definitionId,
+        'active action definitionId',
+      ));
+      const source = requireMapValue(
+        actorsById,
+        action.participantId,
+        `active source ${action.participantId} 缺少 RuleActor。`,
+      );
       const candidates = actors.filter(({ id, targetable }) => id !== source.id && targetable);
       const targets = this.#targetingRegistry.resolve({ definition, source, candidates })
         .filter((targetId) => !action.hitTargetIds.includes(targetId));
       for (const targetId of targets) {
-        const target = actorsById.get(targetId);
+        const target = requireMapValue(
+          actorsById,
+          targetId,
+          `target ${targetId} 缺少 RuleActor。`,
+        );
         const hitSequence = hits.length;
         hits.push(Object.freeze({
           attackerId: source.id,
@@ -555,7 +838,9 @@ export class ArenaRuleEngine {
             target,
           });
           for (let commandIndex = 0; commandIndex < resolved.length; commandIndex += 1) {
-            commands.push(enrichCommand(resolved[commandIndex], {
+            const command = resolved[commandIndex];
+            if (!command) throw new Error('ActionEffect 返回稀疏命令数组。');
+            commands.push(enrichCommand(command, {
               sourceParticipantId: source.id,
               targetParticipantId: target.id,
               actionDefinitionId: definition.id,
@@ -568,9 +853,8 @@ export class ArenaRuleEngine {
       }
     }
     const guardedCommands = applyFrontGuards(commands, guards, actorsById);
-    const events = [];
-    for (let hitIndex = 0; hitIndex < hits.length; hitIndex += 1) {
-      const hit = hits[hitIndex];
+    const events: UnknownRecord[] = [];
+    for (const [hitIndex, hit] of hits.entries()) {
       events.push(Object.freeze({
         type: ARENA_RULE_EVENT.HIT_RESOLVED,
         attackerId: hit.attackerId,
@@ -599,24 +883,29 @@ export class ArenaRuleEngine {
     });
   }
 
-  commit(batch, ports) {
+  commit(batch: unknown, ports: unknown): void {
     this.#assertUsable();
-    if (!batch || !Array.isArray(batch.hits) || !Array.isArray(batch.commands)) {
+    const batchRecord = batch && typeof batch === 'object'
+      ? batch as UnknownRecord
+      : null;
+    if (!batchRecord || !Array.isArray(batchRecord.hits) || !Array.isArray(batchRecord.commands)) {
       throw new TypeError('ArenaRuleEngine commit batch 无效。');
     }
     assertKnownKeys(ports, COMMIT_KEYS, 'Rule mutation ports');
     for (const name of COMMIT_KEYS) {
       if (typeof ports[name] !== 'function') throw new TypeError(`Rule mutation port 缺少 ${name}()。`);
     }
-    this.#commandRegistry.assertSupported(batch.commands);
+    const validatedBatch = batch as RuleCommitBatch;
+    const validatedPorts = ports as unknown as RuleMutationPorts;
+    this.#commandRegistry.assertSupported(validatedBatch.commands);
     this.#committing = true;
     try {
-      this.#actionExecution.recordHits(batch.hits);
-      for (const hit of batch.hits) {
-        ports.recordHit(hit.attackerId, hit.targetId, hit.actionDefinitionId);
+      this.#actionExecution.recordHits(validatedBatch.hits);
+      for (const hit of validatedBatch.hits) {
+        validatedPorts.recordHit(hit.attackerId, hit.targetId, hit.actionDefinitionId);
       }
-      this.#commandRegistry.execute(batch.commands, {
-        ports,
+      this.#commandRegistry.execute(validatedBatch.commands, {
+        ports: validatedPorts,
         actionExecutionSystem: this.#actionExecution,
       });
     } catch (error) {
@@ -627,62 +916,62 @@ export class ArenaRuleEngine {
     }
   }
 
-  spawnEquipment(options) {
+  spawnEquipment(options: unknown): unknown {
     this.#assertUsable();
     return this.#equipmentSystem.spawn(options);
   }
 
-  resolveEquipmentPickups(options) {
+  resolveEquipmentPickups(options: unknown): unknown {
     this.#assertUsable();
     return this.#equipmentSystem.resolvePickups(options);
   }
 
-  updateEquipmentLastSafePosition(participantId, position) {
+  updateEquipmentLastSafePosition(participantId: string, position: unknown): unknown {
     this.#assertUsable();
     return this.#equipmentSystem.updateLastSafePosition(participantId, position);
   }
 
-  dropEquipment(participantId, options) {
+  dropEquipment(participantId: string, options: unknown): unknown {
     this.#assertUsable();
     return this.#equipmentSystem.dropOwned(participantId, options);
   }
 
-  despawnInvalidWorldEquipment(options) {
+  despawnInvalidWorldEquipment(options: unknown): unknown {
     this.#assertUsable();
     return this.#equipmentSystem.despawnInvalidWorldEquipment(options);
   }
 
-  resetParticipant(participantId) {
+  resetParticipant(participantId: string): void {
     this.#assertUsable();
     this.#actionExecution.reset(participantId);
   }
 
-  getActionSnapshot(participantId) {
+  getActionSnapshot(participantId: string) {
     this.#assertUsable();
     return this.#actionExecution.getSnapshot(participantId);
   }
 
-  getHeldEquipment(participantId) {
+  getHeldEquipment(participantId: string): unknown {
     this.#assertUsable();
     return this.#equipmentSystem.getHeldEquipment(participantId);
   }
 
-  getEquipmentSnapshot(instanceId) {
+  getEquipmentSnapshot(instanceId: string): unknown {
     this.#assertUsable();
     return this.#equipmentSystem.getSnapshot(instanceId);
   }
 
-  listEquipmentSnapshots() {
+  listEquipmentSnapshots(): readonly unknown[] {
     this.#assertUsable();
     return this.#equipmentSystem.listSnapshots();
   }
 
-  getContentHash() {
+  getContentHash(): string {
     this.#assertUsable();
     return this.#contentHash;
   }
 
-  getMovementActionCandidates(capabilities) {
+  getMovementActionCandidates(capabilities: MovementCapabilities): readonly ActionCandidate[] {
     this.#assertUsable();
     const movementCandidates = this.#movementCandidateProvider.getCandidates(capabilities);
     // Legacy contextual input reuses PRIMARY as mobility. Keep that mode's
@@ -705,7 +994,7 @@ export class ArenaRuleEngine {
     return Object.freeze([...movementCandidates, aerialCandidate]);
   }
 
-  getActionAffordance(options) {
+  getActionAffordance(options: unknown) {
     this.#assertUsable();
     assertKnownKeys(options, AFFORDANCE_KEYS, 'ArenaRuleEngine action affordance options');
     const tick = assertIntegerAtLeast(options.tick, 0, 'ArenaRuleEngine affordance tick');
@@ -717,7 +1006,7 @@ export class ArenaRuleEngine {
       throw new RangeError(`未知 affordance participant ${participantId}。`);
     }
     const actors = this.#cloneActors(options.actors);
-    const actor = actors.find(({ id }) => id === participantId);
+    const actor = requireActorById(actors, participantId, 'affordance participant');
     const additionalCandidates = cloneAdditionalCandidates(
       options.additionalCandidates === undefined
         ? undefined
@@ -729,13 +1018,13 @@ export class ArenaRuleEngine {
       tick,
       participantId,
       canAct: actor.canAct,
-      candidates: this.#createCandidates(participantId, actors, additionalCandidates),
+      candidates: this.#createCandidates(participantId, actors, additionalCandidates ?? []),
       occupiedLanes: constraints.occupiedLanes,
       activeConflictTags: constraints.activeConflictTags,
     });
   }
 
-  getParticipantActionRule(participantId) {
+  getParticipantActionRule(participantId: string): PublicActionRule {
     this.#assertUsable();
     const equipmentCandidate = this.#equipmentSystem.getActionCandidate(participantId);
     const definition = this.#actionRegistry.require(
@@ -744,7 +1033,7 @@ export class ArenaRuleEngine {
     return createPublicActionRule(definition);
   }
 
-  destroy() {
+  destroy(): void {
     if (this.#destroyed) return;
     if (this.#committing) throw new Error('commit 期间不能销毁 ArenaRuleEngine。');
     this.#equipmentSystem.destroy();

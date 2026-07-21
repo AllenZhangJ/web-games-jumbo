@@ -61,3 +61,22 @@ export type {
   RuleCommandHandler,
 } from './rule-command-registry.js';
 export { createDefaultRuleCommandRegistry } from './default-rule-command-handlers.js';
+export {
+  ARENA_RULE_EVENT,
+  ArenaRuleEngine,
+  assertArenaRuleEngine,
+} from './arena-rule-engine.js';
+export type {
+  ArenaRuleEngineContract,
+  ArenaRuleEngineOptions,
+  ArenaRuleBatch,
+  ArenaRuleTimerAdvance,
+  EquipmentRegistryContract,
+  EquipmentSystemContract,
+  MovementCandidateProviderContract,
+  MovementCapabilities,
+  MovementCommandAdapter,
+  PublicActionRule,
+  RuleActor,
+  RuleHit,
+} from './arena-rule-engine.js';

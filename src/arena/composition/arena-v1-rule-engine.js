@@ -2,16 +2,26 @@ import {
   createDefaultActionEffectRegistry,
   createDefaultRuleCommandRegistry,
   createDefaultTargetingRegistry,
+  ArenaRuleEngine,
 } from '@number-strategy-jump/arena-core';
 import {
   STAGE4_ACTION_ID,
   createStage4ContentRegistries,
 } from '../content/stage4-equipment.js';
-import { ArenaRuleEngine } from '../rules/arena-rule-engine.js';
 import { assertArenaV1AuthorityContent } from './arena-v1-authority-content.js';
 import { STAGE6_MOVEMENT_ACTION_DEFINITIONS } from '../content/stage6-movement-actions.js';
 import { createMovementActionEffectHandlers } from '../movement/movement-action-effect-handlers.js';
 import { MovementActionCandidateProvider } from '../movement/movement-action-candidate-provider.js';
+import { EquipmentSystem } from '../equipment/equipment-system.js';
+import {
+  createMovementCommand,
+  isMovementCommandKind,
+} from '../movement/movement-command.js';
+
+const MOVEMENT_COMMAND_ADAPTER = Object.freeze({
+  isCommandKind: isMovementCommandKind,
+  createCommand: createMovementCommand,
+});
 
 export function createArenaV1RuleEngine({ participantIds, config, authorityContent = null }) {
   if (!config || typeof config !== 'object') {
@@ -33,6 +43,8 @@ export function createArenaV1RuleEngine({ participantIds, config, authorityConte
     targetingRegistry: createDefaultTargetingRegistry(),
     effectRegistry: createDefaultActionEffectRegistry(createMovementActionEffectHandlers()),
     commandRegistry: createDefaultRuleCommandRegistry(),
+    createEquipmentSystem: (options) => new EquipmentSystem(options),
+    movementCommandAdapter: MOVEMENT_COMMAND_ADAPTER,
     movementCandidateProvider: new MovementActionCandidateProvider({
       actionRegistry,
       contextPrimaryEnabled: config.contextPrimaryMobilityEnabled ?? true,

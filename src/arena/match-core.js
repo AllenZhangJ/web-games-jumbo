@@ -7,7 +7,7 @@ import { normalizeInputFrames } from '@number-strategy-jump/arena-contracts';
 import { createLightweightPhysicsWorld } from './physics/lightweight-physics.js';
 import { assertPhysicsWorld } from './physics/physics-adapter.js';
 import { assertArenaMapSystem } from './map/map-system.js';
-import { assertArenaRuleEngine } from './rules/arena-rule-engine.js';
+import { assertArenaRuleEngine } from '@number-strategy-jump/arena-core';
 import { createArenaConfigHash, createMatchStateHash } from './state-hash.js';
 import { createRng, deriveSeed } from '@number-strategy-jump/arena-contracts';
 import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
