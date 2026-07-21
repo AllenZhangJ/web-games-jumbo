@@ -2,7 +2,7 @@
 
 - 状态：已接受（S8.4 已实施）
 - 日期：2026-07-18
-- 治理更新：2026-07-21，内容 Definition/Registry/Catalog/Resolver 与 Profile Provider 已迁入 strict `arena-product-content`；Arena V1 内容组合仍待治理
+- 治理更新：2026-07-21，内容 Definition/Registry/Catalog/Resolver 与 Profile Provider 已迁入 strict `arena-product-content`；Arena V1 Profile、内容池、替代与成长组合已迁入 strict `arena-product-v1-content`，顶层 Product Composition 仍待治理
 
 ## 背景
 
@@ -29,6 +29,8 @@ MatchContentSelection -> MatchCore/Replay
 ```
 
 治理迁移进一步把这条边界变成可执行合同：所有 options/input 只读取精确数据字段，Provider 在构造期快照 Profile/Resolver 方法并拒绝同步重入或 Promise 冒充；非法 seed 在任何外部调用前拒绝，返回池必须再次验证 hash、match seed 与 Profile revision。该加固不改变具名随机标签、选择顺序、内容 hash 或权威配置。
+
+Arena V1 的 Profile Definition、内容池 Definition/Catalog/Replacement 与 Reward/Progression Registry 进一步集中到 `arena-product-v1-content`；装备、退役地图和当前地图 ID 由 `arena-definitions` 提供单一不可变真值。内容组合因此不能再用私有字符串常量形成第二份 Profile、Catalog 或替代规则。
 
 `FrozenMatchContentPool` 保留 match seed、Profile revision 和产品来源 hash；这些 provenance 不进入 Rule/Core，也不出现在玩家公开快照。MatchCore 只接收数据型 `MatchContentSelection`，因此不依赖 ProfileService、Repository、产品状态机或宿主 API。
 
