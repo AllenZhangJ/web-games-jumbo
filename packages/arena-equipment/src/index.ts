@@ -31,3 +31,5 @@ export {
   serializeEquipmentRuntimeStates,
 } from './equipment-serializer.js';
 export { EquipmentSpawner } from './equipment-spawner.js';
+export { EquipmentSystem } from './equipment-system.js';
+export type { EquipmentDropResult } from './equipment-system.js';

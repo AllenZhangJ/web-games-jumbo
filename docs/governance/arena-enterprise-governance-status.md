@@ -30,7 +30,7 @@
 | G0 基线冻结 | 已完成 | 自动化、压力、资产和三端构建通过；ADR/计划/证据已落盘；tag `arena-product-baseline-51e2822` 指向基线提交 |
 | G1 治理外壳/唯一产品 | 已完成 | Arena 已成为唯一生产产品；旧产品实现/专属测试/资产/规范已退役；strict TS、ESLint、Vitest、CI、CODEOWNERS、JS 递减清单和唯一产物门禁已启用 |
 | G2 Definition/合同/配置 | 已完成 | strict TS `arena-contracts`、`arena-definitions`、`arena-profile-contracts` 与 `arena-platform-contracts` 已承接确定性、输入/事件、权威快照、同步存储、平台能力、玩家档案/存档协议，以及动作/角色/装备/地图 Definition、只读 Registry 和唯一 Gameplay V2 数值配置；受审计 JavaScript 已降至 500 个 |
-| G3 Rule/Core/Replay | 进行中 | strict TS `arena-core` 已承接规则/动作，`arena-movement` 已承接移动事务，`arena-physics` 已承接确定性物理，`arena-equipment` 已承接装备运行时、拾取/掉落裁决与序列化原语；EquipmentSystem、Map、MatchCore、Replay 仍待迁移 |
+| G3 Rule/Core/Replay | 进行中 | strict TS `arena-core` 已承接规则/动作，`arena-movement` 已承接移动事务，`arena-physics` 已承接确定性物理，`arena-equipment` 已承接装备原语与唯一写入系统；Map、MatchCore、Replay 仍待迁移 |
 | G4 Bot/Product/Persistence | 未开始 | 当前功能与压力证据存在，尚未迁入 strict TS workspace |
 | G5 Presentation/资产/反馈 | 未开始 | 正式资产预算通过；审批字段与唯一正常路径仍待治理 |
 | G6 Platform/入口/构建 | 未开始 | 三端默认入口是 Product，但生产交付未与开发页面彻底隔离 |
@@ -55,7 +55,7 @@
 
 ## 当前不可合并原因
 
-1. 当前 468 个受维护 JavaScript 文件仍在精确允许清单中，Rule/Core/Replay、Bot/Product/Persistence/Presentation/Platform 尚未完成 strict TypeScript workspace 迁移。
+1. 当前 467 个受维护 JavaScript 文件仍在精确允许清单中，Rule/Core/Replay、Bot/Product/Persistence/Presentation/Platform 尚未完成 strict TypeScript workspace 迁移。
 2. Vitest 当前保护底层合同包和治理门禁；Arena 其余测试尚待按 workspace 迁移并建立正式 coverage 阈值与零 JS 门禁。
 3. 正式资产最终审批与完整安全/依赖长期治理尚未闭环。
 4. 文档仍含迁移前阶段性叙述，尚未完成 G9 全量链接、状态与命令归真。
@@ -222,3 +222,13 @@
 - 掉落裁决同步验证 `isPositionValid` 返回值，依次尝试 last-safe 与 origin，二者无效时明确 despawn；序列化按 instance ID 稳定排序、拒绝重复并经 Registry 复原。
 - strict 公共包测试增至 45 项；62 项 Equipment、MatchCore、Map、Replay 与架构定向回归通过，JavaScript 精确允许清单由 475 降至 468。
 - G3 下一批迁移 `EquipmentSystem` 唯一写入者并收紧 spawn/pickup/cooldown/drop/reconcile 事务边界；本批未改变装备动作、攻击距离/速度/击退、拾取规则、Gameplay V2 数值、Replay schema 或黄金 hash。
+
+## G3.10 EquipmentSystem 唯一写入者迁移证据
+
+- `EquipmentSystem` 已迁入 `arena-equipment` strict TypeScript 并成为 spawn、pickup、cooldown、drop、reconcile 与 primary slot 的唯一写入者；RuleEngine 组合与测试只从包公开入口构造系统。
+- participant、ActionRegistry、EquipmentRegistry、runtime/owner Map、动作候选、掉落结果及所有公开返回值获得显式类型；排序使用稳定字符串比较，不依赖 locale、墙钟或随机源。
+- 所有权威写入口统一经过同步 `#runMutation` 重入锁；pickup 在变更前验证完整 participant 集并预建全部 pending，reconcile 在 despawn 前验证所有回调结果，非法/异步回调和重入不会留下部分提交。
+- held runtime 缺少 last-safe position、world runtime 缺少 position、participant Map 与稳定 participant 列表不一致等不可能状态均 fail closed；destroy 幂等，变更期间拒绝销毁，终止后拒绝全部读写。
+- `arena-equipment` 仅新增对 `arena-core` ActionCandidate/priority 合同的单向依赖，继续只消费 Definition 和底层合同；架构门禁核对精确依赖集并扫描全部 strict 源码。
+- strict 公共包测试增至 48 项，其中新增系统完整主流程、掉落重入原子性和 reconcile 全量预验证；62 项 Equipment、MatchCore、Map、Replay 与架构定向回归通过，JavaScript 精确允许清单由 468 降至 467。
+- G3 下一批迁移 Map 时间线、surface mutation 与 equipment release/collapse 协调，再收敛 MatchCore 和 Replay；本批未改变武器动作、冷却、攻击距离/速度/击退、Gameplay V2 数值、Replay schema 或黄金 hash。

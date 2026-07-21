@@ -670,9 +670,10 @@ test('Arena Rule/Core foundation preserves dependency direction and deterministi
     Object.keys(equipmentPackage.dependencies).sort(),
     [
       '@number-strategy-jump/arena-contracts',
+      '@number-strategy-jump/arena-core',
       '@number-strategy-jump/arena-definitions',
     ],
-    'arena-equipment 只能依赖底层合同与 Definition。',
+    'arena-equipment 只能依赖底层合同、Core action 候选合同与 Definition。',
   );
 
   const physicsPackage = JSON.parse(await readFile(

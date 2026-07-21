@@ -12,7 +12,7 @@ import { assertArenaV1AuthorityContent } from './arena-v1-authority-content.js';
 import { STAGE6_MOVEMENT_ACTION_DEFINITIONS } from '../content/stage6-movement-actions.js';
 import { createMovementActionEffectHandlers } from '../movement/movement-action-effect-handlers.js';
 import { MovementActionCandidateProvider } from '../movement/movement-action-candidate-provider.js';
-import { EquipmentSystem } from '../equipment/equipment-system.js';
+import { EquipmentSystem } from '@number-strategy-jump/arena-equipment';
 import {
   createMovementCommand,
   isMovementCommandKind,

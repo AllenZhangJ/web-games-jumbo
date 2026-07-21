@@ -5,11 +5,11 @@ import {
   STAGE4_EQUIPMENT_ID,
   createStage4ContentRegistries,
 } from '../../src/arena/content/stage4-equipment.js';
-import { EquipmentSystem } from '../../src/arena/equipment/equipment-system.js';
 import {
   EQUIPMENT_LOCATION_STATE,
   EquipmentPickupResolver,
   EquipmentSpawner,
+  EquipmentSystem,
   deserializeEquipmentRuntimeState,
   serializeEquipmentRuntimeStates,
 } from '@number-strategy-jump/arena-equipment';

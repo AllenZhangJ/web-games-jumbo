@@ -3,12 +3,15 @@ import { describe, expect, it } from 'vitest';
 import {
   EQUIPMENT_DEFINITION_SCHEMA_VERSION,
   type EquipmentDefinition,
+  type ActionDefinition,
 } from '@number-strategy-jump/arena-definitions';
+import type { ActionRegistryContract } from '@number-strategy-jump/arena-core';
 
 import {
   EQUIPMENT_LOCATION_STATE,
   EquipmentPickupResolver,
   EquipmentSpawner,
+  EquipmentSystem,
   advanceEquipmentCooldown,
   createEquipmentRuntimeSnapshot,
   deserializeEquipmentRuntimeState,
@@ -41,12 +44,32 @@ const EQUIPMENT_REGISTRY: EquipmentRegistryContract = Object.freeze({
   },
 });
 
+const ACTION_REGISTRY: ActionRegistryContract = Object.freeze({
+  require(id: string) {
+    if (id !== 'hammer-ground' && id !== 'hammer-air') {
+      throw new RangeError(`未知动作 ${id}`);
+    }
+    return {
+      id,
+      timing: { cooldownTicks: 3 },
+    } as ActionDefinition;
+  },
+});
+
 function preview(instanceId = 'equipment-1') {
   return new EquipmentSpawner({ equipmentRegistry: EQUIPMENT_REGISTRY }).preview({
     instanceId,
     definitionId: EQUIPMENT_DEFINITION.id,
     spawnId: 'center',
     position: { x: 0, y: 1, z: 0 },
+  });
+}
+
+function createSystem(): EquipmentSystem {
+  return new EquipmentSystem({
+    participantIds: ['player-1', 'player-2'],
+    actionRegistry: ACTION_REGISTRY,
+    equipmentRegistry: EQUIPMENT_REGISTRY,
   });
 }
 
@@ -123,5 +146,80 @@ describe('arena-equipment primitives', () => {
     runtime.locationState = EQUIPMENT_LOCATION_STATE.HELD;
     runtime.ownerId = 'player-1';
     expect(() => createEquipmentRuntimeSnapshot(runtime)).toThrow('不能有世界 position');
+  });
+
+  it('owns spawn, pickup and cooldown as one non-reentrant authority', () => {
+    const system = createSystem();
+    system.spawn({
+      instanceId: 'equipment-1',
+      definitionId: EQUIPMENT_DEFINITION.id,
+      spawnId: 'center',
+      position: { x: 0, y: 1, z: 0 },
+    });
+    const decisions = system.resolvePickups({
+      participants: [
+        { id: 'player-1', eligible: true, position: { x: 0, y: 1, z: 0 } },
+        { id: 'player-2', eligible: true, position: { x: 4, y: 1, z: 0 } },
+      ],
+      contestSeed: 1,
+    });
+    expect(decisions.map(({ participantId }) => participantId)).toEqual(['player-1']);
+    expect(system.getActionCandidate('player-1')?.available).toBe(true);
+    expect(system.markActionStarted('player-1', 'hammer-ground').cooldownRemainingTicks).toBe(3);
+    expect(system.getActionCandidate('player-1')?.available).toBe(false);
+    expect(system.advanceCooldowns()[0]?.cooldownRemainingTicks).toBe(2);
+    system.destroy();
+    system.destroy();
+    expect(() => system.listSnapshots()).toThrow('已销毁');
+  });
+
+  it('keeps ownership unchanged when a drop callback reenters authority', () => {
+    const system = createSystem();
+    system.spawn({
+      instanceId: 'equipment-1',
+      definitionId: EQUIPMENT_DEFINITION.id,
+      spawnId: 'center',
+      position: { x: 0, y: 1, z: 0 },
+    });
+    system.resolvePickups({
+      participants: [
+        { id: 'player-1', eligible: true, position: { x: 0, y: 1, z: 0 } },
+        { id: 'player-2', eligible: true, position: { x: 4, y: 1, z: 0 } },
+      ],
+      contestSeed: 1,
+    });
+
+    expect(() => system.dropOwned('player-1', {
+      isPositionValid() {
+        system.advanceCooldowns();
+        return true;
+      },
+    })).toThrow('不可重入');
+    expect(system.getHeldEquipment('player-1')?.instanceId).toBe('equipment-1');
+    system.destroy();
+  });
+
+  it('validates every reconcile callback before committing any despawn', () => {
+    const system = createSystem();
+    for (const [instanceId, x] of [['equipment-1', 0], ['equipment-2', 2]] as const) {
+      system.spawn({
+        instanceId,
+        definitionId: EQUIPMENT_DEFINITION.id,
+        spawnId: instanceId,
+        position: { x, y: 1, z: 0 },
+      });
+    }
+    let calls = 0;
+    expect(() => system.despawnInvalidWorldEquipment({
+      isPositionValid() {
+        calls += 1;
+        return calls === 1 ? false : Promise.resolve(false);
+      },
+    })).toThrow('必须返回布尔值');
+    expect(system.listSnapshots().map(({ locationState }) => locationState)).toEqual([
+      EQUIPMENT_LOCATION_STATE.SPAWNED,
+      EQUIPMENT_LOCATION_STATE.SPAWNED,
+    ]);
+    system.destroy();
   });
 });
