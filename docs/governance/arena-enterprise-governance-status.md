@@ -31,7 +31,7 @@
 | G1 治理外壳/唯一产品 | 已完成 | Arena 已成为唯一生产产品；旧产品实现/专属测试/资产/规范已退役；strict TS、ESLint、Vitest、CI、CODEOWNERS、JS 递减清单和唯一产物门禁已启用 |
 | G2 Definition/合同/配置 | 已完成 | strict TS `arena-contracts`、`arena-definitions`、`arena-profile-contracts` 与 `arena-platform-contracts` 已承接确定性、输入/事件、权威快照、同步存储、平台能力、玩家档案/存档协议，以及动作/角色/装备/地图 Definition、只读 Registry 和唯一 Gameplay V2 数值配置；受审计 JavaScript 已降至 500 个 |
 | G3 Rule/Core/Replay | 已完成 | strict TS `arena-core`、`arena-movement`、`arena-physics`、`arena-equipment`、`arena-map` 与 `arena-match` 已承接规则/移动/物理/装备、完整地图权威链、比赛配置、Participant/Timeline 唯一写入者、角色 Runtime/物理投影、状态 hash、完整 MatchCore 编排、fixed-step Runtime 与 Replay；黄金语料保持 `0dace228` |
-| G4 Bot/Product/Persistence | 进行中 | strict TS `arena-bot` 已承接难度配置、人格生成、纯效用裁决、受限观察与地图导航；Bot policy/scheduler/goals/controller、Quick Match、Product 与 Persistence 仍待分批迁移 |
+| G4 Bot/Product/Persistence | 进行中 | strict TS `arena-bot` 已承接难度配置、人格生成、效用裁决、受限观察、地图导航、目标策略与移动调度；Bot controller、Quick Match、Product 与 Persistence 仍待分批迁移 |
 | G5 Presentation/资产/反馈 | 未开始 | 正式资产预算通过；审批字段与唯一正常路径仍待治理 |
 | G6 Platform/入口/构建 | 未开始 | 三端默认入口是 Product，但生产交付未与开发页面彻底隔离 |
 | G7 零 JS/完整质量门 | 未开始 | ESLint、strict TypeScript、Vitest 和 JavaScript 精确递减门禁已作为迁移护栏运行；coverage 阈值、测试归包和零 JS 尚未完成 |
@@ -55,7 +55,7 @@
 
 ## 当前不可合并原因
 
-1. 当前 438 个受维护 JavaScript 文件仍在精确允许清单中，Bot policy/scheduler/goals/controller、Product/Persistence、Presentation/Platform 和应用组合适配尚未完成 strict TypeScript workspace 迁移。
+1. 当前 435 个受维护 JavaScript 文件仍在精确允许清单中，Bot controller、Product/Persistence、Presentation/Platform 和应用组合适配尚未完成 strict TypeScript workspace 迁移。
 2. Vitest 当前保护底层合同包和治理门禁；Arena 其余测试尚待按 workspace 迁移并建立正式 coverage 阈值与零 JS 门禁。
 3. 正式资产最终审批与完整安全/依赖长期治理尚未闭环。
 4. 文档仍含迁移前阶段性叙述，尚未完成 G9 全量链接、状态与命令归真。
@@ -360,3 +360,13 @@
 - 同一干净提交上的 Bot 专项压力完成 easy/normal/hard 各 300 场、共 900 场，耗时 `1543713.604708 ms`，结果 hash `12dcdc7e`，`sourceDirty=false`、`outcome=passed`、`freezeEligible=true`。三档 capability index 为 `7.62 / 18.34 / 19.453333333333333`，score rate 为 `0.44333333333333336 / 0.8566666666666667 / 0.89`，life pressure 为 `-0.4700000000000002 / 1.9433333333333334 / 2.3`；能力、得分率和生存压力均保持 easy < normal < hard。
 - 压力测试中每档均得到 300 个唯一 final hash 并完成 3 次 Replay 复验；难度分布 `0.3308 / 0.3396 / 0.3296`（easy/normal/hard），地面跳、二段跳、蹲下/释放、下砸、步行、跑动、地图 warning/start、未归因死亡上限和全部梯度 gate 均通过。JavaScript 精确允许清单由 440 降至 438。
 - G4 仍在进行中；下一批按依赖方向迁移 mobility policy、scheduler、goals 与 controller，随后治理 Quick Match/Session、Product 状态机和 Profile Repository/租约/迁移生命周期。本批未改变 Gameplay V2 数值、攻击挥空、移动/跳跃、武器动作、Bot 随机流、权威 tick、Replay schema 或黄金 hash。
+
+## G4.3a Bot 目标策略与移动调度迁移证据
+
+- 八类目标 evaluator、语义移动意图与 `BotMobilityScheduler` 已从 `src/arena/ai` 迁入 `@number-strategy-jump/arena-bot` strict TypeScript 公共 API；生产控制器与测试只从包入口消费，旧三个 JavaScript 实现删除。Goal context、plan、goal/intent ID、调度输入输出和 debug snapshot 均有显式只读类型，包依赖集未扩大。
+- 效用计划由浅层复制改为数据型深复制冻结：嵌套 target、Symbol、访问器、循环引用、非有限值和非普通对象在计划发布前拒绝，嵌套恶意 getter 调用次数为零；合法 evaluator 的分数、优先级和稳定 ID 裁决次序不变。
+- Scheduler 构造参数先复制校验再接管；同一待采样 tick 重复 schedule、未采样即跨 tick、采样错 tick、非连续 tick、非法 intent/布尔值和销毁后调用均在修改动作边沿前拒绝。内部热路径改为直接传递 tick/intent/布尔原语，去除每 tick `sample` options 临时对象；正常 crouch hold、jump/slam 单 tick edge、冷却与 cancel 语义保持不变。
+- 干净代码提交 `f2ba9d1ba7574354e86ca36475b6436adf3cc0f9` 的统一 `npm run check` 通过：642/642 Node、90/90 strict package/治理、94/94 生命周期、120 场 fuzz/6 次 Replay、Presentation/Product 各 100 场 soak、0 个生产依赖漏洞、正式资产与三端 clean build/预算/唯一生产产物均通过。build ID 为 `arena-f2ba9d1ba757-product`，Web/微信/抖音 delivery 为 `3588326 / 3616696 / 3616671 B`，`sourceDirty=false`。
+- 黄金 Replay manifest 及四组 replay/final hash 保持 `0dace228`、`17b60bcb/c9cd7e73`、`543a7a80/33a33688`、`2e092bc6/389b7142`、`b68c763e/ee341734`；正式资产结果保持 `82a8b378`。JavaScript 精确允许清单由 438 降至 435。
+- 同一干净提交上的 Bot 专项小样本完成 easy/normal/hard 各 10 场、共 30 场，耗时 `52845.201708 ms`，结果 hash `61765567`，`sourceDirty=false`、`outcome=passed`、`freezeEligible=true`。三档 capability index 为 `4.800000000000001 / 13.399999999999999 / 19.6`，score rate 为 `0.4 / 0.6 / 0.9`，life pressure 为 `-1 / 0.8999999999999999 / 2.2`；每档 10 个唯一 final hash、3 次 Replay 复验及全部移动/地图/梯度 gate 通过。G4.2 已另有 900 场正式证据，本节不把 30 场小样本夸大为替代。
+- G4 仍在进行中；下一批单独迁移有状态 `BotController`，收紧构造、逐 tick 原子更新、失败关闭和销毁生命周期，随后进入 Quick Match/Session、Product 与 Persistence。本批未改变 Bot 难度数值、目标评分、随机消费顺序、Gameplay V2 数值、攻击挥空、动作/移动/跳跃、权威 tick、Replay schema 或黄金 hash。
