@@ -21,6 +21,8 @@ S8.2 已能从本地 1v1 得到不可变 `ProductMatchResult`，但仍直接从 
 
 G4.5b2 strict 迁移后，`RewardCommitter` 在构造期按数据描述符快照 Profile 端口方法，并校验提交 outcome 的 grant、revision、experience 和 unlock。只有异常自身以数据字段明确声明 `recoverable=true` 才允许重试；无法确认写入结果、访问器端口、重入或畸形 outcome 均失败关闭。它仍是 ProfileService 的非拥有型调用方，不增加第二个 Profile 写入者。
 
+G4.5c1 strict 迁移后，`PlayerProfileService` 成为独立 `arena-profile-service` workspace。它在构造期按描述符快照 Repository 的五个同步方法，并在同一不可重入临界区完成写前续租、CAS、精确 outcome 校验和提交后读回。明确拒写且旧快照仍可确认时可以重试；写入后状态变化但调用抛错、畸形 outcome、读回漂移或租约确认丢失都会失败关闭。Repository 销毁失败时 Service 保留所有权以便精确重试，不发布半销毁状态。该迁移不把 Storage、A/B 槽或 lease 实现下沉到 Service，也不改变 grantId 与奖励数值。
+
 ### 2. 奖励由不可变 Definition、Registry 与纯 Resolver 决定
 
 Arena V1 当前规则为：

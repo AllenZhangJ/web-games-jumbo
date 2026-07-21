@@ -2,7 +2,7 @@
 
 ## 结论
 
-2026-07-18，S8.1 的无 UI 基础已落地并通过本机自动门禁。它只建立局外 Profile 与可靠存储，不实现产品页面、奖励发放、解锁节奏或比赛内容池，也不保存半场 MatchCore 状态。
+2026-07-18，S8.1 的无 UI 基础已落地并通过本机自动门禁。它只建立局外 Profile 与可靠存储，不保存半场 MatchCore 状态。后续 S8.2～S8.5 已在独立批次补齐产品页面、奖励、解锁与比赛内容池；本文件保留 S8.1 的持久化证据，并在末尾登记 2026-07-21 的 strict 治理进展。
 
 ## 已落地边界
 
@@ -32,8 +32,15 @@
 - `arena:profile:stress` 完成 500 次提交、17 次写后读失败回滚、29 次 head 失败、16 次非当前槽损坏和多次销毁/重开；最终 revision/经验/grant 数量均为 500，数据 key 保持 A/B/head 三个有界 key。
 - S8.5.3 Product Session soak 连续 100 局跨越默认 60 秒 lease，并覆盖 20 秒心跳、瞬时失败重试和后台过期恢复前失败关闭。
 
-## 明确未完成
+## S8.1 当时明确未完成
 
 - 当前 `v1` 是第一个真实 Profile schema，因此没有历史生产 fixture；第一次 schema 升级时必须新增并永久保留 `v1` fixture。
-- RewardCommitter、grant 业务语义、ProgressionDefinition、ContentPoolResolver 与 ProductSessionStateMachine 尚未落地。
+- RewardCommitter、grant 业务语义、ProgressionDefinition、ContentPoolResolver 与 ProductSessionStateMachine 在 S8.1 当时尚未落地；这些能力后来已由 S8.2～S8.4 完成，不能继续视为当前缺口。
 - Web、微信、抖音真实宿主容量、异常退出和 App 生命周期证据属于 S8.5，Node 压测不能替代。
+
+## 2026-07-21 strict 治理跟进
+
+- Profile Definition、不可变快照、存档信封、迁移 Registry 与持久化错误合同已经位于 strict `arena-profile-contracts`；角色选择和奖励的唯一写入者已经位于 strict `arena-profile-service`。
+- Service 构造期快照 Repository 同步方法，并以单一不可重入临界区执行写前续租、CAS、精确结果校验和提交后读回；歧义写、读回漂移与租约丢失失败关闭，销毁失败保留可重试所有权。
+- `PlayerProfileRepository`、共享 `SynchronousStorageLease` 与具体 A/B/CAS 编排仍在受治理 JavaScript 清单中，是 G4 下一迁移批次；本次没有把它们错误宣称为 strict 完成。
+- clean 提交 `36fbf26569e79783b7a3a734bfff3e023cc79e2b` 的统一门禁通过，build ID `arena-36fbf26569e7-product`，三端 `sourceDirty=false`；完整证据见 [企业治理状态台账](../governance/arena-enterprise-governance-status.md)。
