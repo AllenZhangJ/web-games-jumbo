@@ -1,5 +1,5 @@
 import { ACTION_EFFECT_TRIGGER } from '@number-strategy-jump/arena-definitions';
-import { ActionExecutionSystem } from '../action/action-execution-system.js';
+import { ActionExecutionSystem } from '@number-strategy-jump/arena-core';
 import {
   ACTION_PRIORITY,
   ACTION_RESOLUTION_KIND,

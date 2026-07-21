@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ActionExecutionSystem } from '../../src/arena/action/action-execution-system.js';
+import { ActionExecutionSystem } from '@number-strategy-jump/arena-core';
 import { ActionRegistry } from '@number-strategy-jump/arena-definitions';
 import { ACTION_RESOLUTION_KIND } from '@number-strategy-jump/arena-core';
 import { ARENA_ACTION_PHASE } from '@number-strategy-jump/arena-core';

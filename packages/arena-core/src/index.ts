@@ -27,3 +27,11 @@ export type {
   ActionAffordance,
   ActionAffordanceOutcome,
 } from './action-affordance.js';
+export { ActionExecutionSystem } from './action-execution-system.js';
+export type {
+  ActionConstraints,
+  ActionHit,
+  ActionStart,
+  ActionStateSnapshot,
+  ActionTransition,
+} from './action-execution-system.js';

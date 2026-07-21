@@ -62,7 +62,6 @@
     "src/arena-release/release-evidence-verification.js",
     "src/arena-release/release-readiness-definition.js",
     "src/arena-release/release-readiness-report.js",
-    "src/arena/action/action-execution-system.js",
     "src/arena/action/effects/action-effect-registry.js",
     "src/arena/action/effects/default-effect-handlers.js",
     "src/arena/action/targeting/default-targeting-handlers.js",
