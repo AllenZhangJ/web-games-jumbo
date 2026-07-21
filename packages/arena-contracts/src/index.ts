@@ -50,3 +50,12 @@ export type {
   ArenaVector2Snapshot,
   ArenaVector3Snapshot,
 } from './match-snapshot.js';
+export {
+  createMatchContentPublicView,
+  createMatchContentSelection,
+  MATCH_CONTENT_SELECTION_SCHEMA_VERSION,
+} from './match-content-selection.js';
+export type {
+  MatchContentSelection,
+  MatchParticipantCharacterSelection,
+} from './match-content-selection.js';

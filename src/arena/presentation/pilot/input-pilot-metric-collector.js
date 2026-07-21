@@ -1,4 +1,4 @@
-import { ARENA_MATCH_PHASE, ARENA_TICK_RATE } from '../../config.js';
+import { ARENA_MATCH_PHASE, ARENA_TICK_RATE } from '@number-strategy-jump/arena-match';
 import { normalizeInputFrame } from '@number-strategy-jump/arena-contracts';
 import { validateInputPilotAssignment } from './input-pilot-assignment.js';
 import { InputPilotActionMetrics } from './input-pilot-action-metrics.js';

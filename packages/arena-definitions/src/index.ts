@@ -64,3 +64,8 @@ export type {
   Vector3Definition,
 } from './map-definition.js';
 export { MapRegistry } from './map-registry.js';
+export {
+  ARENA_V1_CHARACTER_ID,
+  ARENA_V1_DEFAULT_CHARACTER_ID,
+} from './arena-v1-character-ids.js';
+export type { ArenaV1CharacterId } from './arena-v1-character-ids.js';

@@ -7,7 +7,7 @@ import {
 } from '@number-strategy-jump/arena-movement';
 import { createCharacterDefinition } from '@number-strategy-jump/arena-definitions';
 import { createArenaV1CharacterRegistry } from '../../src/arena/content/arena-v1-characters.js';
-import { ARENA_V1_CHARACTER_ID } from '../../src/arena/content/arena-v1-character-ids.js';
+import { ARENA_V1_CHARACTER_ID } from '@number-strategy-jump/arena-definitions';
 
 const baseDefinition = createArenaV1CharacterRegistry().require(
   ARENA_V1_CHARACTER_ID.PARKOUR_APPRENTICE,

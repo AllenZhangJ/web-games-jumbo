@@ -1,4 +1,4 @@
-import { ARENA_V1_CHARACTER_ID } from '../../content/arena-v1-character-ids.js';
+import { ARENA_V1_CHARACTER_ID } from '@number-strategy-jump/arena-definitions';
 import { QuickMatchService } from '../../matchmaking/quick-match-service.js';
 import { SequentialMatchSeedSource } from '../../matchmaking/seed-source.js';
 import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';

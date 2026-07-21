@@ -1,4 +1,4 @@
-import { ARENA_V1_DEFAULT_CHARACTER_ID } from '../../content/arena-v1-character-ids.js';
+import { ARENA_V1_DEFAULT_CHARACTER_ID } from '@number-strategy-jump/arena-definitions';
 import { ARENA_V1_CHARACTER_DEFINITIONS } from '../../content/arena-v1-characters.js';
 import { ARENA_GAMEPLAY_V2_MAP_ID } from '../../content/arena-gameplay-v2-map.js';
 import {

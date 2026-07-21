@@ -1,5 +1,5 @@
 import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
-import { ARENA_V1_CHARACTER_ID } from '../arena/content/arena-v1-character-ids.js';
+import { ARENA_V1_CHARACTER_ID } from '@number-strategy-jump/arena-definitions';
 import {
   ARENA_ANIMATION_SEMANTIC_IDS,
 } from '../arena/presentation/animation/animation-semantics.js';

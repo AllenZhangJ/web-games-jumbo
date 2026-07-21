@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createArenaV1RuleEngine } from '../../src/arena/composition/arena-v1-rule-engine.js';
-import { createArenaMatchConfig } from '../../src/arena/config.js';
+import { createArenaMatchConfig } from '@number-strategy-jump/arena-match';
 import {
   STAGE4_ACTION_ID,
   STAGE4_EQUIPMENT_ID,

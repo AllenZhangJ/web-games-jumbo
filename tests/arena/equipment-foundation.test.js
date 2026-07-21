@@ -10,7 +10,7 @@ import {
 } from '../../src/arena/content/stage4-equipment.js';
 import { ARENA_GAMEPLAY_V2_TUNING } from '@number-strategy-jump/arena-definitions';
 import { EquipmentRegistry } from '@number-strategy-jump/arena-definitions';
-import { createArenaMatchConfig } from '../../src/arena/config.js';
+import { createArenaMatchConfig } from '@number-strategy-jump/arena-match';
 import {
   EQUIPMENT_LOCATION_STATE,
   createEquipmentRuntimeSnapshot,

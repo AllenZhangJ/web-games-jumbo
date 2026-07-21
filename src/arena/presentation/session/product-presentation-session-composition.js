@@ -1,4 +1,4 @@
-import { ARENA_FIXED_DT } from '../../config.js';
+import { ARENA_FIXED_DT } from '@number-strategy-jump/arena-match';
 import { SequentialMatchSeedSource } from '../../matchmaking/seed-source.js';
 import { createArenaV1ProductSession } from '../../product/composition/arena-v1-product-composition.js';
 import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';

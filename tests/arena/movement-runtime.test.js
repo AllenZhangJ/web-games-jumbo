@@ -20,7 +20,7 @@ import {
   createMovementMutation,
 } from '@number-strategy-jump/arena-movement';
 import { createArenaV1CharacterRegistry } from '../../src/arena/content/arena-v1-characters.js';
-import { ARENA_V1_CHARACTER_ID } from '../../src/arena/content/arena-v1-character-ids.js';
+import { ARENA_V1_CHARACTER_ID } from '@number-strategy-jump/arena-definitions';
 
 const registry = createArenaV1CharacterRegistry();
 const definition = registry.require(ARENA_V1_CHARACTER_ID.PARKOUR_APPRENTICE);

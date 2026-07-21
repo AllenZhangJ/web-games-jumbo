@@ -11,7 +11,7 @@ import {
   assertNonEmptyString,
   cloneFrozenData,
 } from '@number-strategy-jump/arena-contracts';
-import { createMatchContentPublicView } from '../../content/match-content-selection.js';
+import { createMatchContentPublicView } from '@number-strategy-jump/arena-contracts';
 import { assertProductContentPresentationRegistry } from './product-content-presentation-registry.js';
 import { PRODUCT_CONTENT_KIND } from './product-content-presentation-definition.js';
 import { createProductMessageCatalog } from './product-message-catalog.js';

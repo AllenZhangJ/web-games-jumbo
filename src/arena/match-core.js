@@ -2,7 +2,7 @@ import {
   ARENA_MATCH_PHASE,
   ARENA_PARTICIPANT_STATUS,
   createArenaMatchConfig,
-} from './config.js';
+} from '@number-strategy-jump/arena-match';
 import { normalizeInputFrames } from '@number-strategy-jump/arena-contracts';
 import { createLightweightPhysicsWorld } from '@number-strategy-jump/arena-physics';
 import {

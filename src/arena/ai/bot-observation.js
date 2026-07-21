@@ -3,7 +3,7 @@ import {
   ARENA_MATCH_PHASE,
   ARENA_PARTICIPANT_STATUS,
   ARENA_PHYSICS,
-} from '../config.js';
+} from '@number-strategy-jump/arena-match';
 import { EQUIPMENT_LOCATION_STATE } from '@number-strategy-jump/arena-equipment';
 import { serializeMapRuntimeSnapshot } from '@number-strategy-jump/arena-map';
 import {

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { PHYSICS_POC_ARENA, PHYSICS_POC_CHARACTER } from '../../src/arena/config.js';
+import { PHYSICS_POC_ARENA, PHYSICS_POC_CHARACTER } from '@number-strategy-jump/arena-match';
 import {
   assertPhysicsWorld,
   normalizeMovementIntent,

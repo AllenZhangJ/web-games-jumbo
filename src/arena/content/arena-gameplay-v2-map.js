@@ -1,4 +1,4 @@
-import { ARENA_TICK_RATE } from '../config.js';
+import { ARENA_TICK_RATE } from '@number-strategy-jump/arena-match';
 import {
   MAP_DEFINITION_SCHEMA_VERSION,
   createMapDefinition,

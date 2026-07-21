@@ -1,4 +1,4 @@
-import { ARENA_PARTICIPANT_STATUS } from '../config.js';
+import { ARENA_PARTICIPANT_STATUS } from '@number-strategy-jump/arena-match';
 import { normalizeInputFrame } from '@number-strategy-jump/arena-contracts';
 import { createRng } from '@number-strategy-jump/arena-contracts';
 import { getBotDifficultyProfile } from './bot-difficulty.js';

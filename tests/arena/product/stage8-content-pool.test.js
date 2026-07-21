@@ -9,7 +9,7 @@ import {
 import {
   MATCH_CONTENT_SELECTION_SCHEMA_VERSION,
   createMatchContentSelection,
-} from '../../../src/arena/content/match-content-selection.js';
+} from '@number-strategy-jump/arena-contracts';
 import { ARENA_V1_CHARACTER_DEFINITIONS } from '../../../src/arena/content/arena-v1-characters.js';
 import {
   STAGE4_EQUIPMENT_DEFINITIONS,

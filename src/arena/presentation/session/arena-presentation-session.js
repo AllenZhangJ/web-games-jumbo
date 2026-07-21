@@ -1,4 +1,4 @@
-import { ARENA_FIXED_DT, ARENA_MATCH_PHASE } from '../../config.js';
+import { ARENA_FIXED_DT, ARENA_MATCH_PHASE } from '@number-strategy-jump/arena-match';
 import { normalizeThrownError } from '../../lifecycle-error.js';
 import { ARENA_INPUT_ROUTER_MODE } from '../input/arena-input-router.js';
 import { projectArenaPresentationFrame } from '../projection/arena-frame-projector.js';

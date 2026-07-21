@@ -5,7 +5,7 @@ import { createArenaV1MatchCore } from '../arena-v1-match-core.js';
 import {
   createMatchContentPublicView,
   createMatchContentSelection,
-} from '../content/match-content-selection.js';
+} from '@number-strategy-jump/arena-contracts';
 import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 import { LocalMatchSession } from '../session/local-match-session.js';
 import {

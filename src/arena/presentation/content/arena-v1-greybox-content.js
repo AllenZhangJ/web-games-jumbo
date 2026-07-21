@@ -1,4 +1,4 @@
-import { ARENA_V1_CHARACTER_ID } from '../../content/arena-v1-character-ids.js';
+import { ARENA_V1_CHARACTER_ID } from '@number-strategy-jump/arena-definitions';
 import {
   STAGE4_ACTION_ID,
   STAGE4_ACTION_DEFINITIONS,

@@ -1,5 +1,5 @@
 import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
-import { createMatchContentSelection } from '../../content/match-content-selection.js';
+import { createMatchContentSelection } from '@number-strategy-jump/arena-contracts';
 import {
   assertIntegerAtLeast,
   assertKnownKeys,

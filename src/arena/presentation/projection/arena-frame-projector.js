@@ -1,5 +1,5 @@
 import { ACTION_RESOLUTION_KIND } from '@number-strategy-jump/arena-core';
-import { ARENA_MATCH_PHASE, ARENA_TICK_RATE } from '../../config.js';
+import { ARENA_MATCH_PHASE, ARENA_TICK_RATE } from '@number-strategy-jump/arena-match';
 import { ARENA_V1_GREYBOX_CONTENT } from '../content/arena-v1-greybox-content.js';
 
 function cloneFrozen(value) {

@@ -2,7 +2,7 @@ import {
   MATCH_CONTENT_SELECTION_SCHEMA_VERSION,
   createMatchContentPublicView,
   createMatchContentSelection,
-} from '../../../src/arena/content/match-content-selection.js';
+} from '@number-strategy-jump/arena-contracts';
 import { ARENA_V1_CHARACTER_DEFINITIONS } from '../../../src/arena/content/arena-v1-characters.js';
 import { ARENA_V1_MAP_DEFINITIONS } from '../../../src/arena/content/arena-v1-maps.js';
 import { STAGE4_EQUIPMENT_DEFINITIONS } from '../../../src/arena/content/stage4-equipment.js';

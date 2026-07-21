@@ -1,5 +1,5 @@
 import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
-import { ARENA_TICK_RATE } from '../../config.js';
+import { ARENA_TICK_RATE } from '@number-strategy-jump/arena-match';
 import {
   assertIntegerAtLeast,
   assertKnownKeys,

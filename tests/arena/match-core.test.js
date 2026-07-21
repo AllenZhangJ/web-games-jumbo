@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   ARENA_MATCH_PHASE,
   ARENA_PARTICIPANT_STATUS,
-} from '../../src/arena/config.js';
+} from '@number-strategy-jump/arena-match';
 import {
   createArenaMatchSnapshotAudit,
   createNeutralInputFrame,

@@ -2,7 +2,7 @@ import { createRng, deriveSeed } from '@number-strategy-jump/arena-contracts';
 import {
   MATCH_CONTENT_SELECTION_SCHEMA_VERSION,
   createMatchContentSelection,
-} from '../../content/match-content-selection.js';
+} from '@number-strategy-jump/arena-contracts';
 import {
   createPlayerProfile,
   createPlayerProfileDefinition,

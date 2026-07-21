@@ -3,7 +3,7 @@ import {
   createCharacterDefinition,
 } from '@number-strategy-jump/arena-definitions';
 import { CharacterRegistry } from '@number-strategy-jump/arena-definitions';
-import { ARENA_V1_CHARACTER_ID } from './arena-v1-character-ids.js';
+import { ARENA_V1_CHARACTER_ID } from '@number-strategy-jump/arena-definitions';
 import {
   ARENA_GAMEPLAY_V2_TUNING,
   compileJumpImpulseFromHeight,

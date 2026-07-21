@@ -1,4 +1,4 @@
-import { ARENA_PARTICIPANT_STATUS } from '../config.js';
+import { ARENA_PARTICIPANT_STATUS } from '@number-strategy-jump/arena-match';
 import { MOVEMENT_MODE } from '@number-strategy-jump/arena-movement';
 import { BOT_GOAL_ID } from './bot-goals.js';
 

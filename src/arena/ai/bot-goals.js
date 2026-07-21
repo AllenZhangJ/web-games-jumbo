@@ -3,7 +3,7 @@ import {
   ARENA_MATCH_PHASE,
   ARENA_PARTICIPANT_STATUS,
   ARENA_TICK_RATE,
-} from '../config.js';
+} from '@number-strategy-jump/arena-match';
 import {
   activeWindThreat,
   clearanceFromMapEdge,

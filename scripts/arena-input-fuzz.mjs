@@ -1,6 +1,6 @@
 import { performance } from 'node:perf_hooks';
 import { createArenaV1MatchCore } from '../src/arena/arena-v1-match-core.js';
-import { ARENA_MATCH_PHASE } from '../src/arena/config.js';
+import { ARENA_MATCH_PHASE } from '@number-strategy-jump/arena-match';
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
 import { createContextInputMapperB } from '../src/arena/presentation/input/context-input-mapper-b.js';
 import { createExplicitCombatJumpMapper } from '../src/arena/presentation/input/explicit-combat-jump-mapper.js';

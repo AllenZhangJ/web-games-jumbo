@@ -11,12 +11,12 @@ import {
 } from '@number-strategy-jump/arena-definitions';
 import { createCharacterRuntimeReference } from '../../src/arena/character/character-runtime.js';
 import { createArenaV1MatchCore } from '../../src/arena/arena-v1-match-core.js';
-import { PHYSICS_POC_ARENA } from '../../src/arena/config.js';
+import { PHYSICS_POC_ARENA } from '@number-strategy-jump/arena-match';
 import {
   ARENA_V1_CHARACTER_DEFINITIONS,
   createArenaV1CharacterRegistry,
 } from '../../src/arena/content/arena-v1-characters.js';
-import { ARENA_V1_CHARACTER_ID } from '../../src/arena/content/arena-v1-character-ids.js';
+import { ARENA_V1_CHARACTER_ID } from '@number-strategy-jump/arena-definitions';
 import {
   ARENA_GAMEPLAY_V2_TUNING,
   compileHorizontalImpulseFromDistance,

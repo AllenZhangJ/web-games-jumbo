@@ -1,11 +1,11 @@
-import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import {
   assertIntegerAtLeast,
   assertKnownKeys,
   assertNonEmptyString,
   cloneFrozenData,
   cloneFrozenStringSet,
-} from '@number-strategy-jump/arena-contracts';
+} from './definition-utils.js';
+import { createDeterministicDataHash } from './deterministic-data-hash.js';
 
 export const MATCH_CONTENT_SELECTION_SCHEMA_VERSION = 1;
 
@@ -22,18 +22,41 @@ const SELECTION_KEYS = new Set([
 ]);
 const PARTICIPANT_CHARACTER_KEYS = new Set(['participantId', 'definitionId']);
 
-function compareParticipants(left, right) {
+export interface MatchParticipantCharacterSelection {
+  readonly participantId: string;
+  readonly definitionId: string;
+}
+
+export interface MatchContentSelection {
+  readonly schemaVersion: typeof MATCH_CONTENT_SELECTION_SCHEMA_VERSION;
+  readonly contentDefinitionId: string;
+  readonly contentVersion: number;
+  readonly characterDefinitionIds: readonly string[];
+  readonly equipmentDefinitionIds: readonly string[];
+  readonly mapDefinitionIds: readonly string[];
+  readonly selectedMapDefinitionId: string;
+  readonly participantCharacters: readonly MatchParticipantCharacterSelection[];
+  readonly contentHash: string;
+}
+
+function compareParticipants(
+  left: MatchParticipantCharacterSelection,
+  right: MatchParticipantCharacterSelection,
+): number {
   return left.participantId < right.participantId
     ? -1
     : left.participantId > right.participantId ? 1 : 0;
 }
 
-function cloneParticipantCharacters(values, characterDefinitionIds) {
+function cloneParticipantCharacters(
+  values: unknown,
+  characterDefinitionIds: readonly string[],
+): readonly MatchParticipantCharacterSelection[] {
   if (!Array.isArray(values) || values.length === 0) {
     throw new RangeError('MatchContentSelection.participantCharacters 必须是非空数组。');
   }
-  const participantIds = new Set();
-  return Object.freeze(values.map((value, index) => {
+  const participantIds = new Set<string>();
+  const result = values.map((value, index) => {
     const name = `MatchContentSelection.participantCharacters[${index}]`;
     assertKnownKeys(value, PARTICIPANT_CHARACTER_KEYS, name);
     const participantId = assertNonEmptyString(value.participantId, `${name}.participantId`);
@@ -46,32 +69,33 @@ function cloneParticipantCharacters(values, characterDefinitionIds) {
       throw new RangeError(`${name}.definitionId 不在角色内容池。`);
     }
     return Object.freeze({ participantId, definitionId });
-  }).sort(compareParticipants));
+  });
+  return Object.freeze(result.sort(compareParticipants));
 }
 
-function assertHash(value, name) {
+function assertHash(value: unknown, name: string): string {
   if (typeof value !== 'string' || !/^[0-9a-f]{8}$/.test(value)) {
     throw new TypeError(`${name} 必须是 8 位十六进制 hash。`);
   }
   return value;
 }
 
-export function createMatchContentSelection(value) {
+export function createMatchContentSelection(value: unknown): MatchContentSelection {
   const source = cloneFrozenData(value, 'MatchContentSelection');
   assertKnownKeys(source, SELECTION_KEYS, 'MatchContentSelection');
   if (source.schemaVersion !== MATCH_CONTENT_SELECTION_SCHEMA_VERSION) {
     throw new RangeError(`不支持 MatchContentSelection schema ${String(source.schemaVersion)}。`);
   }
   const characterDefinitionIds = cloneFrozenStringSet(
-    source.characterDefinitionIds,
+    source.characterDefinitionIds as readonly unknown[] | undefined,
     'MatchContentSelection.characterDefinitionIds',
   );
   const equipmentDefinitionIds = cloneFrozenStringSet(
-    source.equipmentDefinitionIds,
+    source.equipmentDefinitionIds as readonly unknown[] | undefined,
     'MatchContentSelection.equipmentDefinitionIds',
   );
   const mapDefinitionIds = cloneFrozenStringSet(
-    source.mapDefinitionIds,
+    source.mapDefinitionIds as readonly unknown[] | undefined,
     'MatchContentSelection.mapDefinitionIds',
   );
   if (characterDefinitionIds.length === 0 || mapDefinitionIds.length === 0) {
@@ -105,16 +129,16 @@ export function createMatchContentSelection(value) {
     ),
   });
   const contentHash = createDeterministicDataHash(payload, 'MatchContentSelection');
-  if (source.contentHash !== undefined && assertHash(
-    source.contentHash,
-    'MatchContentSelection.contentHash',
-  ) !== contentHash) {
+  if (
+    source.contentHash !== undefined
+    && assertHash(source.contentHash, 'MatchContentSelection.contentHash') !== contentHash
+  ) {
     throw new RangeError('MatchContentSelection contentHash 与内容不一致。');
   }
   return Object.freeze({ ...payload, contentHash });
 }
 
-export function createMatchContentPublicView(value) {
+export function createMatchContentPublicView(value: unknown): MatchContentSelection {
   const selection = createMatchContentSelection(value);
   return Object.freeze({
     schemaVersion: selection.schemaVersion,

@@ -19,7 +19,7 @@ import {
 import {
   ARENA_GAMEPLAY_V2_ASSET_ID,
 } from '../../../src/arena/presentation/content/arena-gameplay-v2-character-content.js';
-import { ARENA_V1_CHARACTER_ID } from '../../../src/arena/content/arena-v1-character-ids.js';
+import { ARENA_V1_CHARACTER_ID } from '@number-strategy-jump/arena-definitions';
 import {
   ARENA_PRESENTATION_ASSET_PROVIDER_ID,
 } from '../../../src/arena/presentation/assets/presentation-asset-provider-ids.js';

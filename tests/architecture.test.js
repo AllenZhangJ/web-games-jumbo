@@ -465,7 +465,7 @@ test('Arena Stage 8 product sublayers preserve state/profile/match/composition d
     );
   }
   const authoritySelection = await readFile(
-    path.resolve('src/arena/content/match-content-selection.js'),
+    path.resolve('packages/arena-contracts/src/match-content-selection.ts'),
     'utf8',
   );
   assert.doesNotMatch(
@@ -593,7 +593,7 @@ test('Arena bot layers preserve dependency direction and tick determinism', asyn
   }
 
   const authorityFiles = [
-    'src/arena/config.js',
+    'packages/arena-match/src/match-config.ts',
     'packages/arena-contracts/src/input-frame.ts',
     'src/arena/match-core.js',
     'src/arena/replay.js',
@@ -622,6 +622,7 @@ test('Arena Rule/Core foundation preserves dependency direction and deterministi
     path.resolve('packages/arena-core/src'),
     path.resolve('packages/arena-equipment/src'),
     path.resolve('packages/arena-map/src'),
+    path.resolve('packages/arena-match/src'),
     path.resolve('packages/arena-movement/src'),
     path.resolve('packages/arena-physics/src'),
   );
@@ -702,5 +703,20 @@ test('Arena Rule/Core foundation preserves dependency direction and deterministi
       '@number-strategy-jump/arena-definitions',
     ],
     'arena-map 基础层只能依赖底层合同与 Definition。',
+  );
+
+  const matchPackage = JSON.parse(await readFile(
+    path.resolve('packages/arena-match/package.json'),
+    'utf8',
+  ));
+  assert.deepEqual(
+    Object.keys(matchPackage.dependencies).sort(),
+    [
+      '@number-strategy-jump/arena-contracts',
+      '@number-strategy-jump/arena-core',
+      '@number-strategy-jump/arena-definitions',
+      '@number-strategy-jump/arena-physics',
+    ],
+    'arena-match 编排层只能依赖底层合同、Core、Definition 与 Physics。',
   );
 });
