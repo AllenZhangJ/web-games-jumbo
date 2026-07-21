@@ -1,15 +1,17 @@
 import { ARENA_PARTICIPANT_STATUS } from '@number-strategy-jump/arena-match';
 import { normalizeInputFrame } from '@number-strategy-jump/arena-contracts';
 import { createRng } from '@number-strategy-jump/arena-contracts';
-import { getBotDifficultyProfile } from './bot-difficulty.js';
+import {
+  createBotPersonality,
+  getBotDifficultyProfile,
+  selectHighestUtility,
+} from '@number-strategy-jump/arena-bot';
 import { getArenaBotEvaluators, BOT_GOAL_ID } from './bot-goals.js';
 import {
   cloneBotSourceSnapshot,
   createBotArenaView,
   createBotObservation,
 } from './bot-observation.js';
-import { createBotPersonality } from './bot-personality.js';
-import { selectHighestUtility } from './utility-arbitrator.js';
 import {
   BOT_MOBILITY_INTENT,
   selectBotMobilityIntent,

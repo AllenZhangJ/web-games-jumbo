@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { BotController } from '../../src/arena/ai/bot-controller.js';
-import { BOT_DIFFICULTY_PROFILES } from '../../src/arena/ai/bot-difficulty.js';
+import { BOT_DIFFICULTY_PROFILES } from '@number-strategy-jump/arena-bot';
 import { createArenaV1MatchCore } from '../../src/arena/arena-v1-match-core.js';
 import { BOT_GOAL_ID } from '../../src/arena/ai/bot-goals.js';
 

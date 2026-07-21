@@ -1,4 +1,4 @@
-import { BOT_DIFFICULTY_ID, BOT_DIFFICULTY_PROFILES } from '../ai/bot-difficulty.js';
+import { BOT_DIFFICULTY_ID, BOT_DIFFICULTY_PROFILES } from '@number-strategy-jump/arena-bot';
 import { ARENA_V1_BALANCE_DEFINITION } from '../content/arena-v1-balance.js';
 import { ARENA_REPLAY_SCHEMA_VERSION } from '@number-strategy-jump/arena-match';
 import {

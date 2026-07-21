@@ -1,6 +1,6 @@
 import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import { BotController } from '../ai/bot-controller.js';
-import { BOT_DIFFICULTY_PROFILES } from '../ai/bot-difficulty.js';
+import { BOT_DIFFICULTY_PROFILES } from '@number-strategy-jump/arena-bot';
 import { createArenaV1MatchCore } from '../arena-v1-match-core.js';
 import { ARENA_V1_BALANCE_DEFINITION } from '../content/arena-v1-balance.js';
 import { createMatchAssignment } from '../matchmaking/match-assignment.js';

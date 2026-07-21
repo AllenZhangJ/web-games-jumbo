@@ -1,6 +1,7 @@
 {
   "files": [],
   "references": [
+    { "path": "./packages/arena-bot" },
     { "path": "./packages/arena-contracts" },
     { "path": "./packages/arena-core" },
     { "path": "./packages/arena-definitions" },

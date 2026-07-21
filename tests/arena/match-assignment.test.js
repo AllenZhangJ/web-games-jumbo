@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { BOT_DIFFICULTY_IDS } from '../../src/arena/ai/bot-difficulty.js';
+import { BOT_DIFFICULTY_IDS } from '@number-strategy-jump/arena-bot';
 import { OPPONENT_PROFILES } from '../../src/arena/content/opponent-profiles.js';
 import { createMatchAssignment } from '../../src/arena/matchmaking/match-assignment.js';
 import { SequentialMatchSeedSource } from '../../src/arena/matchmaking/seed-source.js';

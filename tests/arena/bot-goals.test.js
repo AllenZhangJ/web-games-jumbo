@@ -1,13 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { getBotDifficultyProfile } from '../../src/arena/ai/bot-difficulty.js';
+import {
+  getBotDifficultyProfile,
+  selectHighestUtility,
+} from '@number-strategy-jump/arena-bot';
 import { BOT_GOAL_ID, getArenaBotEvaluators } from '../../src/arena/ai/bot-goals.js';
 import {
   cloneBotSourceSnapshot,
   createBotArenaView,
   createBotObservation,
 } from '../../src/arena/ai/bot-observation.js';
-import { selectHighestUtility } from '../../src/arena/ai/utility-arbitrator.js';
 import { createArenaV1MatchCore } from '../../src/arena/arena-v1-match-core.js';
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
 

@@ -1,5 +1,5 @@
 import { copyOpponentProfile, OPPONENT_PROFILES } from '../content/opponent-profiles.js';
-import { BOT_DIFFICULTY_IDS, getBotDifficultyProfile } from '../ai/bot-difficulty.js';
+import { BOT_DIFFICULTY_IDS, getBotDifficultyProfile } from '@number-strategy-jump/arena-bot';
 import { createRng, deriveSeed } from '@number-strategy-jump/arena-contracts';
 
 function matchSeed(value) {

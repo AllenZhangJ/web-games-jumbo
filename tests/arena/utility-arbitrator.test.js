@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { selectHighestUtility } from '../../src/arena/ai/utility-arbitrator.js';
+import { selectHighestUtility } from '@number-strategy-jump/arena-bot';
 
 function evaluator(id, score, priority = 0) {
   return { id, priority, score: () => score, createPlan: () => ({ marker: id }) };

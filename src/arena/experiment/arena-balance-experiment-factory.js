@@ -1,4 +1,4 @@
-import { BOT_DIFFICULTY_IDS } from '../ai/bot-difficulty.js';
+import { BOT_DIFFICULTY_IDS } from '@number-strategy-jump/arena-bot';
 import { createArenaV1MatchCore } from '../arena-v1-match-core.js';
 import { STAGE4_EQUIPMENT_DEFINITIONS } from '../content/stage4-equipment.js';
 import {
