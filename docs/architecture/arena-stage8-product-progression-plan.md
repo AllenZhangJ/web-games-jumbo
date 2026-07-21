@@ -2,7 +2,7 @@
 
 ## 文档状态
 
-执行中，最初制定于 2026-07-18，治理状态更新至 2026-07-21。S8.1 已落地不可变 PlayerProfile、严格同步 Storage Port、连续迁移 Registry、A/B 双槽 Repository、协作 lease、未来版本保护与故障压力门禁。S8.2 已落地无 UI 显式产品状态机、角色选择保存、单 Match 所有权、QuickMatch 集成、挂起恢复与异步竞态门禁。S8.3 已落地权威结果校验、奖励/解锁 Definition 与 Registry、纯 Resolver、唯一 Profile 写入者、幂等 grant 和 reward/unlock 状态；其中 Product State、Progression、ProductMatchResult、Reward 事务、PlayerProfileService 与共享同步 Storage Lease 已迁入 strict TypeScript workspace，PlayerProfileRepository 仍按治理计划单独迁移。S8.4 已落地双方共享冻结池、Authority Content 投影、Replay V5、快捷重赛与连续局隔离。S8.5.1～S8.5.5 已落地产品表现合同、统一 Session、正式组合 Renderer、Web 语义 DOM、小游戏单 Canvas UI Surface、三端默认产品入口、显式灰盒回退和真实导航 teardown；S8.5.6 已建立六目标设备证据 Definition 与三端构建 Manifest，本地准备层完成，但最终开发者工具/真机 Record 尚未采集。
+执行中，最初制定于 2026-07-18，治理状态更新至 2026-07-21。S8.1 已落地不可变 PlayerProfile、严格同步 Storage Port、连续迁移 Registry、A/B 双槽 Repository、协作 lease、未来版本保护与故障压力门禁。S8.2 已落地无 UI 显式产品状态机、角色选择保存、单 Match 所有权、QuickMatch 集成、挂起恢复与异步竞态门禁。S8.3 已落地权威结果校验、奖励/解锁 Definition 与 Registry、纯 Resolver、唯一 Profile 写入者、幂等 grant 和 reward/unlock 状态；Product State、Progression、ProductMatchResult、Reward 事务、PlayerProfileService、PlayerProfileRepository 与共享同步 Storage Lease 均已迁入 strict TypeScript workspace。S8.4 已落地双方共享冻结池、Authority Content 投影、Replay V5、快捷重赛与连续局隔离。S8.5.1～S8.5.5 已落地产品表现合同、统一 Session、正式组合 Renderer、Web 语义 DOM、小游戏单 Canvas UI Surface、三端默认产品入口、显式灰盒回退和真实导航 teardown；S8.5.6 已建立六目标设备证据 Definition 与三端构建 Manifest，本地准备层完成，但最终开发者工具/真机 Record 尚未采集。
 
 ## 已接受默认值
 
@@ -40,12 +40,12 @@ S8.4 当前实现支持 `results -> reward -> unlock? -> ready`，也支持 `rew
 packages/
 ├── arena-product-state/     # 产品状态与合法转换
 ├── arena-profile-contracts/ # PlayerProfile、Definition 与存档协议
+├── arena-profile-persistence/ # A/B 双槽、CAS、迁移与租约组合
 ├── arena-profile-service/   # 唯一 Profile 写入者与事务边界
 ├── arena-progression/       # 奖励/解锁 Definition 与纯 Registry
 ├── arena-product-contracts/ # ProductMatchResult 公开合同
 └── arena-product-progression/ # Reward Resolver/Committer
 src/arena/product/
-├── persistence/             # SaveRepository、序列化、双槽与迁移
 ├── content-pool/            # 已解锁内容解析与双方共享冻结池
 ├── opponent/                # 虚构昵称、头像、外观和准备状态
 ├── matchmaking/             # 连接现有 QuickMatchService
@@ -146,7 +146,7 @@ PlayerProfile + Content Definitions
 - 从 MatchResult 幂等提交单一进度。
 - 完成角色、外观、装备图鉴和地图内容解锁定义。
 
-状态：已完成无 UI 基础。当前完成奖励 100、胜利加成 25、平局加成 10；所有已实现内容保持解锁，生产 Registry 不编造尚不存在的 UnlockDefinition。Definition/Registry 已由 strict `arena-progression` 承接，ProductMatchResult 与纯 Resolver/RewardCommitter 已由 strict `arena-product-contracts`、`arena-product-progression` 承接；唯一写入者 `PlayerProfileService` 已由 strict `arena-profile-service` 承接并固定写前续租、CAS、读回和失败关闭边界，共享同步 Storage Lease 已由 strict `arena-storage` 承接，grant 去重和 reward/unlock 生命周期保持不变。`PlayerProfileRepository` 的 A/B/CAS 实现迁移属于后续治理批次，不改变本节已经交付的产品语义。详见 [ADR-016](../decisions/016-arena-local-match-reward-transaction.md)、[S8.3 结果记录](../research/arena-stage8-reward-progression-results.md) 与 [企业治理状态台账](../governance/arena-enterprise-governance-status.md)。
+状态：已完成无 UI 基础。当前完成奖励 100、胜利加成 25、平局加成 10；所有已实现内容保持解锁，生产 Registry 不编造尚不存在的 UnlockDefinition。Definition/Registry 已由 strict `arena-progression` 承接，ProductMatchResult 与纯 Resolver/RewardCommitter 已由 strict `arena-product-contracts`、`arena-product-progression` 承接；唯一写入者 `PlayerProfileService` 已由 strict `arena-profile-service` 承接并固定写前续租、CAS、读回和失败关闭边界，`PlayerProfileRepository` 已由 strict `arena-profile-persistence` 承接 A/B 双槽、迁移、CAS 与失败关闭，共享同步 Storage Lease 已由 strict `arena-storage` 承接。grant 去重、reward/unlock 生命周期、Profile schema 和存档 key 均保持不变。详见 [ADR-016](../decisions/016-arena-local-match-reward-transaction.md)、[S8.1 结果记录](../research/arena-stage8-profile-persistence-results.md)、[S8.3 结果记录](../research/arena-stage8-reward-progression-results.md) 与 [企业治理状态台账](../governance/arena-enterprise-governance-status.md)。
 
 ### S8.4 对称内容与再来一局
 

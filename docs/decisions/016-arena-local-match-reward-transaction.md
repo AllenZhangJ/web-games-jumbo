@@ -25,6 +25,8 @@ G4.5c1 strict 迁移后，`PlayerProfileService` 成为独立 `arena-profile-ser
 
 G4.5c2a strict 迁移后，共享同步租约位于独立 `arena-storage` workspace，Product Profile、Study 与 Pilot 只共享存储所有权协议，不共享聚合或 Repository。租约构造和持久化值拒绝访问器，宿主 Storage 方法在构造期快照，墙钟/读写/删除回调期间所有公共操作均不可重入；无法确认释放时保留所有权供重试。该包不成为第二个 Profile 写入者，也不改变 Service → Repository 的 CAS 事务方向。
 
+G4.5c2b strict 迁移后，`PlayerProfileRepository` 位于独立 `arena-profile-persistence` workspace，只组合 Profile 数据合同、同步 Storage Port 与共享 lease。Repository options 与 Storage 方法在构造期安全快照，所有公开操作共享不可重入临界区；CAS 在写槽前确认 lease 与旧 generation，新槽通过完整读回验证后才发布。未来 schema、同 generation 冲突、租约被取代、其他有效 generation 或无法确认回滚都会保护存储并失败关闭；销毁清理失败保留所有权供精确重试。ProfileService 仍是角色选择和奖励的唯一业务写入者，迁移未改变 grantId、奖励数值、Profile schema 或 A/B/head key。
+
 ### 2. 奖励由不可变 Definition、Registry 与纯 Resolver 决定
 
 Arena V1 当前规则为：
@@ -116,5 +118,6 @@ in-match -> results -> reward -> unlock? -> ready
 - 存储拒写保留 results/Runtime 并可重试；奖励成功后的清理失败不产生第二次 grant。
 - reward/unlock 在 suspended/resume 后保持公开数据与恢复目标。
 - 200 局无渲染压力跨 7 次重启校验累计经验、最近 grant、单 Match 所有权和隐藏难度不泄漏。
+- Profile Repository 的回调重入、租约接管、未来 schema、写后读回、歧义删除回执与销毁重试均有 strict 边界测试；500 次提交压力保持 A/B/head 有界并最终到达 revision 500。
 
 完整结果见 [S8.3 奖励与解锁结果](../research/arena-stage8-reward-progression-results.md)。

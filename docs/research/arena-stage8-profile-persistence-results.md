@@ -43,5 +43,6 @@
 - Profile Definition、不可变快照、存档信封、迁移 Registry 与持久化错误合同已经位于 strict `arena-profile-contracts`；角色选择和奖励的唯一写入者已经位于 strict `arena-profile-service`。
 - Service 构造期快照 Repository 同步方法，并以单一不可重入临界区执行写前续租、CAS、精确结果校验和提交后读回；歧义写、读回漂移与租约丢失失败关闭，销毁失败保留可重试所有权。
 - 共享 `SynchronousStorageLease` 已迁入 strict `arena-storage`，Product、Study、Pilot 只复用同一同步所有权协议；options/存储 getter 零执行，宿主方法在构造期快照，`assertHeld` 等全部外部回调路径拒绝重入，释放失败保留可重试所有权，v1/v2 与 same-owner takeover 语义保持不变。
-- `PlayerProfileRepository` 与具体 A/B/CAS 编排仍在受治理 JavaScript 清单中，是 G4 下一迁移批次；不能把通用租约完成误写为 Profile Repository 已经 strict 完成。
-- clean 提交 `616ef1f7ef4a5b838c3b0d1f7e3cdd6c85b72a4c` 的完整门禁通过，build ID `arena-616ef1f7ef4a-product`，三端 `sourceDirty=false`；完整证据见 [企业治理状态台账](../governance/arena-enterprise-governance-status.md)。
+- `PlayerProfileRepository` 已迁入 strict `arena-profile-persistence`。该包只组合 Profile 合同、同步 Storage Port 与 lease；构造期快照宿主方法，全部公共操作共享不可重入边界，CAS 在写入前校验 lease/旧 generation，并在写后读回确认后才发布新内存快照。
+- 运行期发现未来 schema、同 generation 冲突、租约被取代、其他有效 generation 或不可确认回滚会保护原数据并失败关闭；删除已生效但回执为 false 仍以读回为准，销毁清理失败保留所有权供精确重试。Profile Service 继续是业务唯一写入者，Repository 没有获得角色选择或奖励规则。
+- clean 提交 `1865dcf90bb884316bcc3e6a3686389abcd3a6e0` 的全部门禁项目通过，build ID `arena-1865dcf90bb8-product`，三端 `sourceDirty=false`；131 项 strict 测试、653 项 Node 测试、101 项生命周期测试、500 次 Profile 提交压力及 0 个生产依赖漏洞均通过。完整证据见 [企业治理状态台账](../governance/arena-enterprise-governance-status.md)。
