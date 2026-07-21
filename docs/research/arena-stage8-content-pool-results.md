@@ -6,6 +6,8 @@ S8.4 已完成无 UI 对称内容闭环：PlayerProfile 解锁经版本化 Defin
 
 本批没有接产品页面、正式资产或三端真机生命周期。它证明无宿主 Rule/Core/Product 合同和连续局隔离，不替代 S8.5 的 Web、微信、抖音运行证据。
 
+治理后续状态：2026-07-21，内容池七个实现已迁入 strict TypeScript workspace `@number-strategy-jump/arena-product-content`。迁移保持 S8.4 的具名随机流、内容选择、Replay V5 和压力结果，新增 getter 零执行、方法快照、同步不可重入、Promise 拒绝、seed 先验校验及返回 provenance/hash 复核；Arena V1 内容组合与顶层 Product Composition 仍是后续治理范围。干净提交 `c123c702afaaa77ada29822e5bfd788ef7d055b6` 的 653 项 Node、149 项 strict、101 项生命周期、200 局压力、三端 clean build/预算与 390×844 Chrome 交互复验均通过，JavaScript 精确清单由 411 降至 404。
+
 ## 落地边界
 
 ```text

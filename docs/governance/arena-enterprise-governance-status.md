@@ -31,7 +31,7 @@
 | G1 治理外壳/唯一产品 | 已完成 | Arena 已成为唯一生产产品；旧产品实现/专属测试/资产/规范已退役；strict TS、ESLint、Vitest、CI、CODEOWNERS、JS 递减清单和唯一产物门禁已启用 |
 | G2 Definition/合同/配置 | 已完成 | strict TS `arena-contracts`、`arena-definitions`、`arena-profile-contracts` 与 `arena-platform-contracts` 已承接确定性、输入/事件、权威快照、同步存储、平台能力、玩家档案/存档协议，以及动作/角色/装备/地图 Definition、只读 Registry 和唯一 Gameplay V2 数值配置；受审计 JavaScript 已降至 500 个 |
 | G3 Rule/Core/Replay | 已完成 | strict TS `arena-core`、`arena-movement`、`arena-physics`、`arena-equipment`、`arena-map` 与 `arena-match` 已承接规则/移动/物理/装备、完整地图权威链、比赛配置、Participant/Timeline 唯一写入者、角色 Runtime/物理投影、状态 hash、完整 MatchCore 编排、fixed-step Runtime 与 Replay；黄金语料保持 `0dace228` |
-| G4 Bot/Product/Persistence | 进行中 | strict TS Bot、Matchmaking、Quick Match、Local Match Session、Product State、Progression、ProductMatchResult、奖励事务、Profile Service/Repository、Storage Lease、Product Match 与 Product Session Controller 已闭环；Composition 与内容池外围仍待分批迁移 |
+| G4 Bot/Product/Persistence | 进行中 | strict TS Bot、Matchmaking、Quick Match、Local Match Session、Product State、Progression、ProductMatchResult、奖励事务、Profile Service/Repository、Storage Lease、Product Match、Product Session Controller 与对称内容池已闭环；Arena V1 Product Composition 和内容组合模块仍待迁移 |
 | G5 Presentation/资产/反馈 | 未开始 | 正式资产预算通过；审批字段与唯一正常路径仍待治理 |
 | G6 Platform/入口/构建 | 未开始 | 三端默认入口是 Product，但生产交付未与开发页面彻底隔离 |
 | G7 零 JS/完整质量门 | 未开始 | ESLint、strict TypeScript、Vitest 和 JavaScript 精确递减门禁已作为迁移护栏运行；coverage 阈值、测试归包和零 JS 尚未完成 |
@@ -55,7 +55,7 @@
 
 ## 当前不可合并原因
 
-1. 当前 411 个受维护 JavaScript 文件仍在精确允许清单中，Product Composition、内容池外围、Presentation/Platform 和 Arena V1 应用组合适配尚未完成 strict TypeScript workspace 迁移。
+1. 当前 404 个受维护 JavaScript 文件仍在精确允许清单中，Arena V1 Product Composition/内容组合、Presentation/Platform 和 Arena V1 应用组合适配尚未完成 strict TypeScript workspace 迁移。
 2. Vitest 当前保护底层合同包和治理门禁；Arena 其余测试尚待按 workspace 迁移并建立正式 coverage 阈值与零 JS 门禁。
 3. 正式资产最终审批与完整安全/依赖长期治理尚未闭环。
 4. 文档仍含迁移前阶段性叙述，尚未完成 G9 全量链接、状态与命令归真。
@@ -496,3 +496,14 @@
 - 干净代码提交 `2bed49ca4fdd75a15087a2f99573889fbe0aebed` 的全部门禁项目通过：653/653 Node、144/144 strict package/治理、101/101 生命周期、120 场 fuzz/6 次 Replay、0 个生产依赖漏洞、正式资产与三端 clean build/预算/唯一生产产物均通过。统一命令在沙箱中只因 npm 官方审计域名不可解析于审计步骤退出；同一锁文件联网审计为 0，其余被中止项目逐项补验通过。build ID 为 `arena-2bed49ca4fdd-product`，Web/微信/抖音 delivery 为 `3621147 / 3653891 / 3653866 B`，`sourceDirty=false`。
 - 同一 clean-source 门禁中的 Presentation Session soak 完成 100 场、耗时 `614.41375 ms`、堆增长 `2650992 B`；完整 Product Presentation Session soak 完成 100 场、100 个唯一 authority hash、耗时 `51793.440541 ms`、堆增长 `6573824 B`，帧、生命周期监听、Canvas 监听和输入绑定残留均为零。黄金 Replay manifest 与正式资产结果继续保持 `0dace228` 与 `82a8b378`。
 - Product Session Controller strict 链路已闭环，JavaScript 精确允许清单由 413 降至 411，但 G4 尚未完成；下一批治理 Arena V1 Product Composition 与内容池外围，再审计剩余 Product/Persistence 适配。本批未改变 Gameplay V2 配置、攻击/命中/击退、武器动作、移动/跳跃、奖励/解锁数值、Bot 难度、随机顺序、权威 tick、Replay/Profile/lease schema、黄金 hash 或正式资产。
+
+## G4.5d3 对称内容池迁移与同步端口加固证据
+
+- 新增 strict TypeScript workspace `@number-strategy-jump/arena-product-content`，承接内容替代 Definition/Registry、Catalog、内容池 Definition、冻结结果、Resolver 与 Profile Provider；七个旧 JavaScript 实现删除，Arena V1 内容、Composition 与测试统一从包公开入口消费。该包依赖精确限定为 `arena-contracts` 与 `arena-profile-contracts`，不依赖 Match、Session、Persistence、Composition、Presentation、Three.js、DOM、平台、墙钟或非确定性随机。
+- Definition、Catalog、替代数组、Resolver/Provider options 和 resolve input 只接受精确数据字段；访问器不会执行，稀疏/额外字段数组、重复来源、替代环、仍在线来源、缺失目标和未知内容均在比赛创建前拒绝。地图与对手角色继续使用原 `content-pool:map`、`content-pool:opponent-character` 具名随机流，同 Profile 与 match seed 的 `selection/contentHash/poolHash` 保持确定。
+- `ProfileContentPoolProvider` 在构造期沿原型链快照 `getSnapshot/resolve`，运行中替换方法不能改变已取得端口；整个同步解析边界不可重入，Promise/thenable 不能冒充同步 Profile 或内容池并会收容迟到 rejection。非法 seed 在调用 Profile 端口前拒绝，Resolver 返回的 seed、Profile revision 或 hash 不一致会失败关闭，不把错配内容交给 Quick Match。
+- 新增 5 项 strict 边界测试，覆盖确定性 hash、options getter 零执行、方法快照、回调重入、异步伪装、输入先验拒绝、结果 provenance 错配及替代歧义/环/访问器；既有 S8.4 内容池、地图投影、Replay V5 与 Quick Match 测试全部通过。JavaScript 精确允许清单由 411 降至 404。
+- 干净代码提交 `c123c702afaaa77ada29822e5bfd788ef7d055b6` 的发布级门禁通过：653/653 Node、149/149 strict package/治理、101/101 生命周期、120 场 fuzz/6 次 Replay、200 局 Product 压力、0 个生产依赖漏洞、正式资产与三端 clean build/预算/唯一生产产物均通过。build ID 为 `arena-c123c702afaa-product`，Web/微信/抖音 delivery 为 `3623573 / 3656346 / 3656321 B`，`sourceDirty=false`、三端 `freezeEligible=true`。
+- Presentation Session soak 完成 100 场、堆增长 `2441864 B`；完整 Product Presentation Session soak 完成 100 场、堆增长 `6561856 B`，两者均低于 8 MiB，帧、生命周期监听、Canvas 监听和输入绑定残留为零。Product 压力继续得到 200 个唯一 authority hash、2 个 content hash、96 次快捷重赛、7 次重建、最大 59 tick 与 22000 experience；黄金 Replay manifest 和正式资产结果保持 `0dace228` 与 `82a8b378`。
+- Web Chrome 在 `390×844` 的 iPhone 13 Pro CSS 视口完成首屏、对局和交互复验：页面标题/非空画面正常、无框架错误覆盖、控制台 0 warning/error；对手约 7m 时攻击键保持可用，点击后进入攻击恢复态。该证据是桌面 Chrome 的手机视口验证，不冒充 iPhone 真机；微信/抖音 iOS/Android 发布真机记录仍属于后续发布门禁。
+- 对称内容池 strict 链路已闭环，但 G4 尚未完成；下一批迁移 Arena V1 三个产品内容组合模块和顶层 Product Composition，审计 seed/Storage/诊断端口的构造、逆序清理、重入与失败重试所有权。本批未改变 Gameplay V2 配置、任意距离挥空、命中/击退、武器动作、移动/跳跃、奖励/解锁数值、Bot 难度与随机顺序、权威 tick、Replay/Profile/lease schema、黄金 hash 或正式资产。
