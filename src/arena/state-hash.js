@@ -1,7 +1,7 @@
 import {
   createDeterministicDataHash,
   createFnv1aHash,
-} from '../shared/deterministic-data-hash.js';
+} from '@number-strategy-jump/arena-contracts';
 
 function finiteInteger(value, scale = 1_000_000) {
   if (!Number.isFinite(value)) throw new TypeError('状态 hash 不能包含非有限数。');

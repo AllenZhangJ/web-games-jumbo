@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createDeterministicDataHash } from '../../../src/shared/deterministic-data-hash.js';
+import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import { createArenaInputPilotV1Definition } from '../../../src/arena/presentation/pilot/arena-input-pilot-v1.js';
 import {
   INPUT_PILOT_ASSIGNMENT_SCHEMA_VERSION,

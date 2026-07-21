@@ -1,7 +1,7 @@
 import {
   assertKnownKeys,
   cloneFrozenData,
-} from '../arena/rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import { assertEvidenceGitCommit } from '../arena/evidence/evidence-value-contract.js';
 import {
   ARENA_RELEASE_EVIDENCE_STATUS,

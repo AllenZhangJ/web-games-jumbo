@@ -1,9 +1,9 @@
-import { createDeterministicDataHash } from '../../../shared/deterministic-data-hash.js';
+import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import {
   assertIntegerAtLeast,
   assertKnownKeys,
   cloneFrozenData,
-} from '../../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import {
   assertPlayerProfileHasNoFutureSchema,
   createPlayerProfile,

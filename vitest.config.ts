@@ -3,6 +3,9 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     environment: 'node',
-    include: ['tests/governance/**/*.test.ts'],
+    include: [
+      'packages/**/test/**/*.test.ts',
+      'tests/governance/**/*.test.ts',
+    ],
   },
 });

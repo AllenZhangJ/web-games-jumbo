@@ -2,7 +2,7 @@ import {
   assertKnownKeys,
   assertNonEmptyString,
   cloneFrozenData,
-} from '../../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import { ACTION_EFFECT_TRIGGER } from '../action-definition.js';
 
 const HANDLER_KEYS = new Set(['kind', 'triggers', 'validateParameters', 'resolve']);

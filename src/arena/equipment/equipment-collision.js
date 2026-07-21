@@ -1,4 +1,4 @@
-import { assertPositiveFinite } from '../rules/definition-utils.js';
+import { assertPositiveFinite } from '@number-strategy-jump/arena-contracts';
 
 function assertPosition(value, name) {
   if (

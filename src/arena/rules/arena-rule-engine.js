@@ -8,13 +8,13 @@ import {
 import { ARENA_ACTION_PHASE } from '../action/action-state.js';
 import { ACTION_RULE_COMMAND } from '../action/effects/default-effect-handlers.js';
 import { EquipmentSystem } from '../equipment/equipment-system.js';
-import { createDeterministicDataHash } from '../../shared/deterministic-data-hash.js';
+import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import {
   assertIntegerAtLeast,
   assertKnownKeys,
   assertNonEmptyString,
   cloneFrozenData,
-} from './definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import {
   createMovementCommand,
   isMovementCommandKind,

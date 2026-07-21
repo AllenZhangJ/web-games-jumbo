@@ -3,7 +3,7 @@ import {
   assertKnownKeys,
   assertNonEmptyString,
   cloneFrozenData,
-} from '../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import { createSynchronousStoragePort } from './synchronous-storage-port.js';
 
 const LEGACY_SYNCHRONOUS_STORAGE_LEASE_SCHEMA_VERSION = 1;

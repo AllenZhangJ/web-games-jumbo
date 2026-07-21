@@ -1,5 +1,5 @@
-import { createDeterministicDataHash } from '../../shared/deterministic-data-hash.js';
-import { cloneFrozenData } from '../rules/definition-utils.js';
+import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
+import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 import { createHumanMatchStudyDefinition } from './human-match-study-definition.js';
 import {
   HUMAN_MATCH_STUDY_EXCLUSION_REASON,

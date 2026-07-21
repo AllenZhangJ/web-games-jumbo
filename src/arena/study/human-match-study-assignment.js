@@ -1,12 +1,12 @@
-import { createDeterministicDataHash } from '../../shared/deterministic-data-hash.js';
-import { createRng, deriveSeed } from '../../shared/deterministic-rng.js';
+import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
+import { createRng, deriveSeed } from '@number-strategy-jump/arena-contracts';
 import { createMatchAssignment } from '../matchmaking/match-assignment.js';
 import {
   assertIntegerAtLeast,
   assertKnownKeys,
   assertNonEmptyString,
   cloneFrozenData,
-} from '../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import { createHumanMatchStudyDefinition } from './human-match-study-definition.js';
 
 export const HUMAN_MATCH_STUDY_ASSIGNMENT_SCHEMA_VERSION = 1;

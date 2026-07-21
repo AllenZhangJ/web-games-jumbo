@@ -8,7 +8,7 @@ import {
 } from './equipment-runtime.js';
 import { EquipmentSpawner } from './equipment-spawner.js';
 import { serializeEquipmentRuntimeStates } from './equipment-serializer.js';
-import { assertKnownKeys, assertNonEmptyString } from '../rules/definition-utils.js';
+import { assertKnownKeys, assertNonEmptyString } from '@number-strategy-jump/arena-contracts';
 
 const PICKUP_OPTIONS_KEYS = new Set(['participants', 'contestSeed']);
 const DROP_OPTIONS_KEYS = new Set(['isPositionValid']);

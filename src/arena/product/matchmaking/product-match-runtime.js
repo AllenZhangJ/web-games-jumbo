@@ -1,4 +1,4 @@
-import { cloneFrozenData } from '../../rules/definition-utils.js';
+import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 import { createMatchContentPublicView } from '../../content/match-content-selection.js';
 import {
   assertProductMatchSeed,

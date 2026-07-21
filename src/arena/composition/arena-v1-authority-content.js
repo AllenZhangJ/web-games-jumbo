@@ -3,7 +3,7 @@ import { createArenaV1CharacterRegistry } from '../content/arena-v1-characters.j
 import { createCharacterRegistrySnapshot } from '../character/character-registry.js';
 import { createStage4ContentRegistries } from '../content/stage4-equipment.js';
 import { STAGE6_MOVEMENT_ACTION_DEFINITIONS } from '../content/stage6-movement-actions.js';
-import { assertKnownKeys } from '../rules/definition-utils.js';
+import { assertKnownKeys } from '@number-strategy-jump/arena-contracts';
 
 const REQUIRED_REGISTRY_METHODS = Object.freeze(['require', 'list']);
 const CONTENT_KEYS = new Set([

@@ -1,10 +1,10 @@
-import { createDeterministicDataHash } from '../../../shared/deterministic-data-hash.js';
+import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import {
   assertIntegerAtLeast,
   assertKnownKeys,
   assertNonEmptyString,
   cloneFrozenData,
-} from '../../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 
 export const FORMAL_ASSET_BUDGET_POLICY_SCHEMA_VERSION = 1;
 export const ARENA_STAGE7_FORMAL_ASSET_BUDGET_V1_ID = 'arena.stage7.formal-asset-budget.v1';

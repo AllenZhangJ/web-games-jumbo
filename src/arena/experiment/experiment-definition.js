@@ -1,11 +1,11 @@
-import { createDeterministicDataHash } from '../../shared/deterministic-data-hash.js';
+import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import {
   assertIntegerAtLeast,
   assertKnownKeys,
   assertNonEmptyString,
   assertPlainRecord,
   cloneFrozenData,
-} from '../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import { assertEvidenceGitCommit } from '../evidence/evidence-value-contract.js';
 
 export const ARENA_EXPERIMENT_DEFINITION_SCHEMA_VERSION = 2;

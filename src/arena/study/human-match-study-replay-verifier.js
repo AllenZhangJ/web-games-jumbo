@@ -1,4 +1,4 @@
-import { createDeterministicDataHash } from '../../shared/deterministic-data-hash.js';
+import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import { BotController } from '../ai/bot-controller.js';
 import { BOT_DIFFICULTY_PROFILES } from '../ai/bot-difficulty.js';
 import { createArenaV1MatchCore } from '../arena-v1-match-core.js';
@@ -8,7 +8,7 @@ import {
   createProductMatchResult,
 } from '../product/matchmaking/product-match-result.js';
 import { replayMatch } from '../replay.js';
-import { cloneFrozenData } from '../rules/definition-utils.js';
+import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 import { createHumanMatchStudyDefinition } from './human-match-study-definition.js';
 import { createHumanMatchStudyRecord } from './human-match-study-record.js';
 

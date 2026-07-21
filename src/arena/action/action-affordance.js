@@ -1,5 +1,5 @@
 import { ACTION_INPUT_CHANNEL } from './action-definition.js';
-import { assertKnownKeys } from '../rules/definition-utils.js';
+import { assertKnownKeys } from '@number-strategy-jump/arena-contracts';
 
 const PROJECT_KEYS = new Set([
   'tick',

@@ -1,5 +1,5 @@
 import { assertCharacterRegistry } from './character-registry.js';
-import { assertNonEmptyString } from '../rules/definition-utils.js';
+import { assertNonEmptyString } from '@number-strategy-jump/arena-contracts';
 
 export function createCharacterRuntimeReference({
   participantId,

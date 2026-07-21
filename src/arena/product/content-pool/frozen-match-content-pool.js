@@ -1,10 +1,10 @@
-import { createDeterministicDataHash } from '../../../shared/deterministic-data-hash.js';
+import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import { createMatchContentSelection } from '../../content/match-content-selection.js';
 import {
   assertIntegerAtLeast,
   assertKnownKeys,
   cloneFrozenData,
-} from '../../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 
 export const FROZEN_MATCH_CONTENT_POOL_SCHEMA_VERSION = 1;
 

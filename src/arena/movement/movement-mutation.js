@@ -2,7 +2,7 @@ import {
   assertKnownKeys,
   assertNonEmptyString,
   cloneFrozenData,
-} from '../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 
 export const MOVEMENT_MUTATION_KIND = Object.freeze({
   APPLY_IMPULSE: 'apply-impulse',

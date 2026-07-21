@@ -1,7 +1,7 @@
 import {
   assertIntegerAtLeast,
   assertKnownKeys,
-} from '../../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 
 const MEMORY_KEYS = new Set([
   'jsHeapBytes',

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createRng, deriveSeed } from '../../src/shared/deterministic-rng.js';
+import { createRng, deriveSeed } from '@number-strategy-jump/arena-contracts';
 
 test('shared RNG preserves the frozen Arena deterministic sequence', () => {
   const rng = createRng(12345);

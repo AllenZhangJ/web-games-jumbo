@@ -12,7 +12,7 @@ import {
   assertIntegerAtLeast,
   assertKnownKeys,
   assertNonEmptyString,
-} from '../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 
 const RESOLUTION_KEYS = new Set([
   'kind',

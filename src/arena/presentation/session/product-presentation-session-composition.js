@@ -1,7 +1,7 @@
 import { ARENA_FIXED_DT } from '../../config.js';
 import { SequentialMatchSeedSource } from '../../matchmaking/seed-source.js';
 import { createArenaV1ProductSession } from '../../product/composition/arena-v1-product-composition.js';
-import { cloneFrozenData } from '../../rules/definition-utils.js';
+import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 import { createArenaInputMapper } from '../input/create-arena-input-mapper.js';
 import { ARENA_INPUT_MAPPER_ID } from '../input/input-mapper-contract.js';
 import { InputSampler } from '../input/input-sampler.js';

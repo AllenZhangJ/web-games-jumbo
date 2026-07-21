@@ -1,7 +1,7 @@
 import { ACTION_PRIORITY } from '../action/action-resolver.js';
 import { MOVEMENT_MODE } from './movement-runtime.js';
 import { STAGE6_MOVEMENT_ACTION_ID } from '../content/stage6-movement-actions.js';
-import { assertKnownKeys, assertNonEmptyString } from '../rules/definition-utils.js';
+import { assertKnownKeys, assertNonEmptyString } from '@number-strategy-jump/arena-contracts';
 
 const CAPABILITY_KEYS = new Set([
   'participantId',

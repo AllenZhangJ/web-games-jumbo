@@ -2,7 +2,7 @@ import {
   assertKnownKeys,
   assertNonEmptyString,
   cloneFrozenData,
-} from '../../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 
 export const PRODUCT_UI_INTENT_ID = Object.freeze({
   BOOT: 'boot',

@@ -1,6 +1,6 @@
 import { ACTION_EFFECT_TRIGGER } from '../action/action-definition.js';
 import { MOVEMENT_COMMAND_KIND } from './movement-command.js';
-import { assertKnownKeys } from '../rules/definition-utils.js';
+import { assertKnownKeys } from '@number-strategy-jump/arena-contracts';
 
 const EMPTY_KEYS = new Set();
 

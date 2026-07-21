@@ -1,5 +1,5 @@
 import { createCharacterDefinition } from '../character/character-definition.js';
-import { createDeterministicDataHash } from '../../shared/deterministic-data-hash.js';
+import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import {
   cloneMovementRuntimeState,
   createMovementRuntimeSnapshotFromValidatedDefinition,
@@ -10,7 +10,7 @@ import {
   assertKnownKeys,
   assertNonEmptyString,
   cloneFrozenData,
-} from '../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import {
   createMovementCompleteBatch,
   createMovementPrepareBatch,

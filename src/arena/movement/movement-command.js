@@ -2,7 +2,7 @@ import {
   assertKnownKeys,
   assertNonEmptyString,
   cloneFrozenData,
-} from '../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 
 export const MOVEMENT_COMMAND_KIND = Object.freeze({
   REQUEST_GROUND_JUMP: 'request-ground-jump',

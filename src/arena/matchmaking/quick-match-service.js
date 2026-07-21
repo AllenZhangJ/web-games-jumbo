@@ -6,7 +6,7 @@ import {
   createMatchContentPublicView,
   createMatchContentSelection,
 } from '../content/match-content-selection.js';
-import { cloneFrozenData } from '../rules/definition-utils.js';
+import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 import { LocalMatchSession } from '../session/local-match-session.js';
 import {
   copyMatchAssignmentDiagnostics,

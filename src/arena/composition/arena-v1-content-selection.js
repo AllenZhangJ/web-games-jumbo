@@ -7,7 +7,7 @@ import { MapRegistry } from '../map/map-registry.js';
 import {
   assertNonEmptyString,
   cloneFrozenData,
-} from '../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 
 function requireRegistry(value, name) {
   if (!value || typeof value.require !== 'function' || typeof value.list !== 'function') {

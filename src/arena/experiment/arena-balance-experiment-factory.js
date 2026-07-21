@@ -4,7 +4,7 @@ import { STAGE4_EQUIPMENT_DEFINITIONS } from '../content/stage4-equipment.js';
 import {
   assertIntegerAtLeast,
   assertNonEmptyString,
-} from '../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import {
   ARENA_BALANCE_CANDIDATE_COLLECTOR_ID,
   ARENA_BALANCE_CANDIDATE_COLLECTOR_VERSION,

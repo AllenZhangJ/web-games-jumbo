@@ -1,3 +1,6 @@
 {
-  "extends": "./tsconfig.app.json"
+  "files": [],
+  "references": [
+    { "path": "./packages/arena-contracts" }
+  ]
 }

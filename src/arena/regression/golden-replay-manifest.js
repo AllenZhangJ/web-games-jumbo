@@ -3,7 +3,7 @@ import {
   assertKnownKeys,
   assertNonEmptyString,
   cloneFrozenData,
-} from '../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 
 export const ARENA_GOLDEN_REPLAY_MANIFEST_SCHEMA_VERSION = 1;
 export const ARENA_GOLDEN_REPLAY_MAXIMUM_ENTRIES = 256;

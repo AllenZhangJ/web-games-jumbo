@@ -1,5 +1,5 @@
-import { createDeterministicDataHash } from '../../../shared/deterministic-data-hash.js';
-import { cloneFrozenData } from '../../rules/definition-utils.js';
+import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
+import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 import {
   ARENA_DEVICE_ACCEPTANCE_CHECK_RESULT,
 } from '../acceptance/arena-device-acceptance-record.js';

@@ -1,6 +1,6 @@
 import { copyOpponentProfile, OPPONENT_PROFILES } from '../content/opponent-profiles.js';
 import { BOT_DIFFICULTY_IDS, getBotDifficultyProfile } from '../ai/bot-difficulty.js';
-import { createRng, deriveSeed } from '../../shared/deterministic-rng.js';
+import { createRng, deriveSeed } from '@number-strategy-jump/arena-contracts';
 
 function matchSeed(value) {
   if (!Number.isSafeInteger(value) || value < 0 || value > 0xffffffff) {

@@ -1,4 +1,4 @@
-import { createDeterministicDataHash } from '../../../shared/deterministic-data-hash.js';
+import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import { ARENA_TICK_RATE } from '../../config.js';
 import {
   assertIntegerAtLeast,
@@ -6,7 +6,7 @@ import {
   assertNonEmptyString,
   assertPositiveFinite,
   cloneFrozenData,
-} from '../../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 
 export const PRESENTATION_QUALITY_DEFINITION_SCHEMA_VERSION = 1;
 

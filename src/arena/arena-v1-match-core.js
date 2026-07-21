@@ -16,7 +16,7 @@ import { createArenaMatchConfig } from './config.js';
 import {
   assertKnownKeys,
   cloneFrozenData,
-} from './rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 
 const MATCH_CORE_OPTION_KEYS = new Set([
   'seed',

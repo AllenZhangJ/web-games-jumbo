@@ -1,4 +1,4 @@
-import { assertKnownKeys, assertNonEmptyString } from '../rules/definition-utils.js';
+import { assertKnownKeys, assertNonEmptyString } from '@number-strategy-jump/arena-contracts';
 
 const HANDLER_KEYS = new Set(['kind', 'validate', 'execute']);
 

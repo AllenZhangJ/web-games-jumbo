@@ -1,5 +1,5 @@
 import { createCharacterDefinition } from './character-definition.js';
-import { cloneFrozenData } from '../rules/definition-utils.js';
+import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 
 function compareIds(left, right) {
   if (left.id < right.id) return -1;

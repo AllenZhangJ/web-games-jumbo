@@ -3,8 +3,8 @@ import {
   assertKnownKeys,
   assertNonEmptyString,
   cloneFrozenData,
-} from '../rules/definition-utils.js';
-import { createDeterministicDataHash } from '../../shared/deterministic-data-hash.js';
+} from '@number-strategy-jump/arena-contracts';
+import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 
 export const MAP_DEFINITION_SCHEMA_VERSION = 1;
 export const STATIC_MAP_ID_PREFIX = 'custom-static:';

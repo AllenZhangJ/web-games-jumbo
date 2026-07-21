@@ -3,7 +3,7 @@ import {
   assertKnownKeys,
   cloneFrozenData,
   cloneFrozenStringSet,
-} from '../../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import {
   PLAYER_PROFILE_QUALITY,
   PLAYER_PROFILE_SCHEMA_VERSION,

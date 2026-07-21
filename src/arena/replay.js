@@ -6,8 +6,8 @@ import { combineCleanupFailure, normalizeThrownError } from './lifecycle-error.j
 import {
   assertKnownKeys,
   cloneFrozenData,
-} from './rules/definition-utils.js';
-import { createDeterministicDataHash } from '../shared/deterministic-data-hash.js';
+} from '@number-strategy-jump/arena-contracts';
+import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 
 export const ARENA_REPLAY_SCHEMA_VERSION = 5;
 

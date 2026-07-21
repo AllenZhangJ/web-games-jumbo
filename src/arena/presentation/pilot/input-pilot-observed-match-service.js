@@ -2,7 +2,7 @@ import {
   combineCleanupFailure,
   normalizeThrownError,
 } from '../../lifecycle-error.js';
-import { cloneFrozenData } from '../../rules/definition-utils.js';
+import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 import { InputPilotObservedSession } from './input-pilot-observed-session.js';
 
 function validateMatchService(value) {

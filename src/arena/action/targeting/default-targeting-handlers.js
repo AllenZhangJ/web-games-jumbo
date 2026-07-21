@@ -1,7 +1,7 @@
 import {
   assertKnownKeys,
   assertPositiveFinite,
-} from '../../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import { TargetingRegistry } from './targeting-registry.js';
 
 const CONE_KEYS = new Set(['range', 'minimumFacingDot', 'maximumVerticalDifference']);

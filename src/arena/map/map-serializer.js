@@ -3,7 +3,7 @@ import {
   assertKnownKeys,
   assertNonEmptyString,
   cloneFrozenData,
-} from '../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 
 export const MAP_RUNTIME_SCHEMA_VERSION = 1;
 

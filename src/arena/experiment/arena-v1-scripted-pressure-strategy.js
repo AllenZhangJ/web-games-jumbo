@@ -3,7 +3,7 @@ import {
   assertKnownKeys,
   assertPositiveFinite,
   cloneFrozenData,
-} from '../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import { createArenaV1PursuitInputStrategy } from './arena-v1-pursuit-input-strategy.js';
 
 export const ARENA_V1_SCRIPTED_PRESSURE_DEFAULT_PARAMETERS = Object.freeze({

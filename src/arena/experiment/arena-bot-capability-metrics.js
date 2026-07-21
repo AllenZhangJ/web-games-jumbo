@@ -6,7 +6,7 @@ import {
   assertIntegerAtLeast,
   assertKnownKeys,
   cloneFrozenData,
-} from '../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 
 export const ARENA_BOT_CAPABILITY_PARTICIPANT_ID = 'player-2';
 export const ARENA_BOT_CAPABILITY_WEIGHTS = Object.freeze({

@@ -2,7 +2,7 @@ import {
   assertIntegerAtLeast,
   assertNonEmptyString,
   cloneFrozenData,
-} from '../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import {
   MAP_RUNTIME_SCHEMA_VERSION,
   serializeMapRuntimeSnapshot,

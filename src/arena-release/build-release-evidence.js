@@ -1,7 +1,7 @@
-import { createDeterministicDataHash } from '../shared/deterministic-data-hash.js';
+import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import {
   cloneFrozenData,
-} from '../arena/rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import {
   ARENA_BUILD_DEFAULT_ENTRY,
   createArenaBuildManifest,

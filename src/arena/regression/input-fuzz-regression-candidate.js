@@ -3,7 +3,7 @@ import {
   assertKnownKeys,
   assertNonEmptyString,
   cloneFrozenData,
-} from '../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 
 export const ARENA_INPUT_FUZZ_REGRESSION_CANDIDATE_SCHEMA_VERSION = 1;
 export const ARENA_INPUT_FUZZ_RUNNER_ID = 'arena.input-fuzz';

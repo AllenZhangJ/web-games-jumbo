@@ -2,7 +2,7 @@ import {
   assertIntegerAtLeast,
   assertKnownKeys,
   assertNonEmptyString,
-} from '../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import { ARENA_GOLDEN_REPLAY_CATEGORY } from './golden-replay-manifest.js';
 
 const ENTRY_KEYS = new Set([

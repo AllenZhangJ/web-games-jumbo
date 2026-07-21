@@ -6,8 +6,8 @@ import {
   assertPositiveFinite,
   cloneFrozenData,
   cloneFrozenStringSet,
-} from '../rules/definition-utils.js';
-import { createRng, deriveSeed } from '../../shared/deterministic-rng.js';
+} from '@number-strategy-jump/arena-contracts';
+import { createRng, deriveSeed } from '@number-strategy-jump/arena-contracts';
 import { assertArenaExperimentUint32Seed } from './experiment-seed-utils.js';
 
 export const ARENA_V1_MOVEMENT_STRESS_STRATEGY_VERSION = 1;

@@ -2,7 +2,7 @@ import {
   assertKnownKeys,
   cloneFrozenData,
   cloneFrozenStringSet,
-} from '../../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import { MATCH_CONTENT_KIND } from './content-replacement-definition.js';
 
 const CATALOG_KEYS = new Set(['characterIds', 'equipmentIds', 'mapIds']);

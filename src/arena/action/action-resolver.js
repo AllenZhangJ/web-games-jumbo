@@ -12,7 +12,7 @@ import {
   assertKnownKeys,
   assertNonEmptyString,
   cloneFrozenStringSet,
-} from '../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 
 export const ACTION_RESOLUTION_KIND = Object.freeze({
   NONE: 'none',

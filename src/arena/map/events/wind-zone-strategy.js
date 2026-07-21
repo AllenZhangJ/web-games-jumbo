@@ -1,7 +1,7 @@
 import {
   assertKnownKeys,
   assertPositiveFinite,
-} from '../../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import { MAP_EVENT_KIND, MAP_RULE_COMMAND } from '../map-event-types.js';
 
 const WIND_KEYS = new Set(['region', 'impulsePerTick']);

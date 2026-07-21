@@ -1,8 +1,8 @@
-import { createDeterministicDataHash } from '../shared/deterministic-data-hash.js';
+import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import {
   assertKnownKeys,
   cloneFrozenData,
-} from '../arena/rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import { assertEvidenceGitCommit } from '../arena/evidence/evidence-value-contract.js';
 import { ARENA_REPLAY_SCHEMA_VERSION } from '../arena/replay.js';
 import {

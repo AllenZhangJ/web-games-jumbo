@@ -1,6 +1,6 @@
 import { BOT_DIFFICULTY_IDS } from '../ai/bot-difficulty.js';
 import { createArenaV1CharacterRegistry } from '../content/arena-v1-characters.js';
-import { assertNonEmptyString, cloneFrozenData } from '../rules/definition-utils.js';
+import { assertNonEmptyString, cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 import {
   assertArenaExperimentReplaySeedsPlanned,
   cloneArenaExperimentReplaySeeds,

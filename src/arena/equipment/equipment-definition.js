@@ -3,7 +3,7 @@ import {
   assertNonEmptyString,
   assertPositiveFinite,
   cloneFrozenStringSet,
-} from '../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 
 export const EQUIPMENT_DEFINITION_SCHEMA_VERSION = 2;
 

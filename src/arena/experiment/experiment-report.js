@@ -1,11 +1,11 @@
-import { createDeterministicDataHash } from '../../shared/deterministic-data-hash.js';
+import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import {
   assertIntegerAtLeast,
   assertKnownKeys,
   assertNonEmptyString,
   assertPlainRecord,
   cloneFrozenData,
-} from '../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import { assertEvidenceUtcInstant } from '../evidence/evidence-value-contract.js';
 import { createArenaExperimentDefinition } from './experiment-definition.js';
 import { readArenaMetricGate } from './metric-gate.js';

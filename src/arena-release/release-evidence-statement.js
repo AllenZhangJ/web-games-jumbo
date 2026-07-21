@@ -1,10 +1,10 @@
-import { createDeterministicDataHash } from '../shared/deterministic-data-hash.js';
+import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import {
   assertIntegerAtLeast,
   assertKnownKeys,
   assertNonEmptyString,
   cloneFrozenData,
-} from '../arena/rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import {
   assertEvidenceGitCommit,
   assertEvidenceRelativePath,

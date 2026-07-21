@@ -1,9 +1,9 @@
-import { createDeterministicDataHash } from '../../shared/deterministic-data-hash.js';
+import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import {
   assertIntegerAtLeast,
   assertKnownKeys,
   cloneFrozenData,
-} from '../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import { HUMAN_MATCH_STUDY_ASSIGNMENT_SCHEMA_VERSION } from './human-match-study-assignment.js';
 import { createHumanMatchStudyDefinition } from './human-match-study-definition.js';
 import {

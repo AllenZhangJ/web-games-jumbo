@@ -1,7 +1,7 @@
 import {
   assertKnownKeys,
   assertNonEmptyString,
-} from '../../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 
 const EMPTY_PARAMETERS = new Set();
 const MILESTONE_PARAMETERS = new Set(['startId', 'endId']);

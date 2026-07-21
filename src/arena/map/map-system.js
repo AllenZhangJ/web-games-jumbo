@@ -1,11 +1,11 @@
-import { createDeterministicDataHash } from '../../shared/deterministic-data-hash.js';
-import { deriveSeed } from '../../shared/deterministic-rng.js';
+import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
+import { deriveSeed } from '@number-strategy-jump/arena-contracts';
 import {
   assertIntegerAtLeast,
   assertKnownKeys,
   assertNonEmptyString,
   cloneFrozenData,
-} from '../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import { MAP_RULE_COMMAND } from './map-event-types.js';
 import { MapRuntime } from './map-runtime.js';
 import { MAP_TIMELINE_TRANSITION, MapTimeline } from './map-timeline.js';

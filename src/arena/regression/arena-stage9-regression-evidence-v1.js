@@ -1,5 +1,5 @@
-import { createDeterministicDataHash } from '../../shared/deterministic-data-hash.js';
-import { cloneFrozenData } from '../rules/definition-utils.js';
+import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
+import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 
 export const ARENA_REGRESSION_EVIDENCE_SCHEMA_VERSION = 1;
 export const ARENA_STAGE9_REGRESSION_EVIDENCE_V1_ID = 'arena.stage9.regression-evidence.v1';

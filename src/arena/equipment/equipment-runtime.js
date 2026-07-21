@@ -2,7 +2,7 @@ import {
   assertIntegerAtLeast,
   assertKnownKeys,
   assertNonEmptyString,
-} from '../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 
 export const EQUIPMENT_RUNTIME_SCHEMA_VERSION = 1;
 

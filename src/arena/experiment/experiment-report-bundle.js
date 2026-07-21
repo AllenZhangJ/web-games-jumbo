@@ -1,9 +1,9 @@
-import { createDeterministicDataHash } from '../../shared/deterministic-data-hash.js';
+import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import {
   assertKnownKeys,
   assertNonEmptyString,
   cloneFrozenData,
-} from '../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import { createArenaExperimentDefinition } from './experiment-definition.js';
 import { createArenaExperimentReport } from './experiment-report.js';
 

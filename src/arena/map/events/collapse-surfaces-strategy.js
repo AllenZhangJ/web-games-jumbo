@@ -1,7 +1,7 @@
 import {
   assertKnownKeys,
   cloneFrozenStringSet,
-} from '../../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import {
   MAP_DOMAIN_EVENT,
   MAP_EVENT_KIND,

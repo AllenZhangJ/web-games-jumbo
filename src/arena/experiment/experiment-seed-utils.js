@@ -1,4 +1,4 @@
-import { cloneFrozenData } from '../rules/definition-utils.js';
+import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 
 export const ARENA_EXPERIMENT_MAXIMUM_CASES = 100_000;
 export const ARENA_EXPERIMENT_MAXIMUM_REPLAY_SAMPLES = 1_000;

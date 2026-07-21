@@ -15,7 +15,7 @@ import {
   createEquipmentDefinition,
 } from '../equipment/equipment-definition.js';
 import { EquipmentRegistry } from '../equipment/equipment-registry.js';
-import { cloneFrozenData, cloneFrozenStringSet } from '../rules/definition-utils.js';
+import { cloneFrozenData, cloneFrozenStringSet } from '@number-strategy-jump/arena-contracts';
 import { ARENA_GAMEPLAY_V2_TUNING } from './arena-gameplay-v2-tuning.js';
 
 const ATTACK_TUNING = ARENA_GAMEPLAY_V2_TUNING.attacks;

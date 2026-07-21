@@ -1,11 +1,11 @@
-import { createDeterministicDataHash } from '../../../shared/deterministic-data-hash.js';
+import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import {
   assertIntegerAtLeast,
   assertKnownKeys,
   assertNonEmptyString,
   cloneFrozenData,
   cloneFrozenStringSet,
-} from '../../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import { ARENA_PRESENTATION_ASSET_PROVIDER_ID } from './presentation-asset-provider-ids.js';
 
 export const FORMAL_ASSET_INTAKE_POLICY_SCHEMA_VERSION = 1;

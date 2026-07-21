@@ -1,7 +1,7 @@
 import {
   assertIntegerAtLeast,
   assertKnownKeys,
-} from '../../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import {
   INPUT_PILOT_FORM_FACTOR,
   INPUT_PILOT_INPUT_MODE,

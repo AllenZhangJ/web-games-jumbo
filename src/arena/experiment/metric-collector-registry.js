@@ -4,7 +4,7 @@ import {
   assertNonEmptyString,
   assertPlainRecord,
   cloneFrozenData,
-} from '../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import { createArenaExperimentDefinition } from './experiment-definition.js';
 
 const ENTRY_KEYS = new Set(['id', 'version', 'validateParameters', 'create']);

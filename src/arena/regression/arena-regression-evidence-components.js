@@ -1,7 +1,7 @@
 import {
   assertIntegerAtLeast,
   assertKnownKeys,
-} from '../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import {
   ARENA_REGRESSION_COMPONENT_ID,
   createArenaStage9RegressionEvidenceV1Definition,

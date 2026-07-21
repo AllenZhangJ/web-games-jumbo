@@ -1,7 +1,7 @@
 import {
   assertIntegerAtLeast,
   assertNonEmptyString,
-} from '../../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import {
   combineCleanupFailure,
   normalizeThrownError,

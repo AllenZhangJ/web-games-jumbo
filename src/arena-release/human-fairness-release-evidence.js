@@ -1,5 +1,5 @@
-import { createDeterministicDataHash } from '../shared/deterministic-data-hash.js';
-import { cloneFrozenData } from '../arena/rules/definition-utils.js';
+import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
+import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 import {
   createArenaStage9HumanFairnessV1Definition,
 } from '../arena/study/arena-stage9-human-fairness-v1.js';

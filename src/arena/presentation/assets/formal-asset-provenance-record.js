@@ -2,7 +2,7 @@ import {
   assertIntegerAtLeast,
   assertKnownKeys,
   cloneFrozenData,
-} from '../../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import {
   assertEvidenceBoundedString,
   assertEvidenceRelativePath,

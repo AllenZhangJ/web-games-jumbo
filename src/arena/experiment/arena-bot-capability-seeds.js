@@ -2,7 +2,7 @@ import {
   assertArenaExperimentCaseCount,
   createSortedArenaExperimentSeeds,
 } from './experiment-seed-utils.js';
-import { assertIntegerAtLeast, assertKnownKeys } from '../rules/definition-utils.js';
+import { assertIntegerAtLeast, assertKnownKeys } from '@number-strategy-jump/arena-contracts';
 
 export const ARENA_STAGE9_BOT_SEED_BASE = 0x6d2b79f5;
 export const ARENA_STAGE9_BOT_SEED_STEP = 2_654_435_761;

@@ -1,4 +1,4 @@
-import { assertNonEmptyString, cloneFrozenData } from '../rules/definition-utils.js';
+import { assertNonEmptyString, cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 import {
   createSortedMetricCountRecord,
   incrementMetricCount,

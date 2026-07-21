@@ -2,7 +2,7 @@ import {
   assertIntegerAtLeast,
   assertKnownKeys,
   assertPositiveFinite,
-} from '../../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import { ActionEffectRegistry } from './action-effect-registry.js';
 import { ACTION_EFFECT_TRIGGER } from '../action-definition.js';
 

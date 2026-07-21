@@ -25,7 +25,7 @@ import {
 } from '../src/arena/regression/golden-replay-verifier.js';
 import { ARENA_REPLAY_SCHEMA_VERSION } from '../src/arena/replay.js';
 import { combineCleanupFailure, normalizeThrownError } from '../src/arena/lifecycle-error.js';
-import { createDeterministicDataHash } from '../src/shared/deterministic-data-hash.js';
+import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const corpusRoot = path.join(root, 'tests/arena/fixtures/replays');

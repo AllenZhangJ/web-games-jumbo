@@ -3,7 +3,7 @@ import {
   assertKnownKeys,
   assertNonEmptyString,
   cloneFrozenData,
-} from '../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 
 const ENTRY_KEYS = new Set(['id', 'version', 'validateParameters', 'createCase']);
 const REFERENCE_KEYS = new Set(['id', 'version', 'parameters']);

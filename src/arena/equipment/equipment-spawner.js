@@ -2,7 +2,7 @@ import {
   createEquipmentRuntimeSnapshot,
   createEquipmentRuntimeState,
 } from './equipment-runtime.js';
-import { assertKnownKeys } from '../rules/definition-utils.js';
+import { assertKnownKeys } from '@number-strategy-jump/arena-contracts';
 
 const SPAWN_KEYS = new Set(['instanceId', 'definitionId', 'spawnId', 'position']);
 

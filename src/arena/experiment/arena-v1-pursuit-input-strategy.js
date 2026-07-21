@@ -4,7 +4,7 @@ import {
   assertKnownKeys,
   assertPositiveFinite,
   cloneFrozenData,
-} from '../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 
 const TIMING_KEYS = new Set(['cadenceTicks', 'attackOffsetTicks']);
 

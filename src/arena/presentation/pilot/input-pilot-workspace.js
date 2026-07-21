@@ -2,7 +2,7 @@ import {
   assertIntegerAtLeast,
   assertKnownKeys,
   cloneFrozenData,
-} from '../../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import { INPUT_PILOT_ASSIGNMENT_SCHEMA_VERSION } from './input-pilot-assignment.js';
 import { createInputPilotDefinition } from './input-pilot-definition.js';
 import {

@@ -1,11 +1,11 @@
-import { createDeterministicDataHash } from '../../../shared/deterministic-data-hash.js';
+import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import { PRODUCT_SESSION_STATE } from '../../product/state/product-session-transition-definition.js';
 import {
   assertIntegerAtLeast,
   assertKnownKeys,
   assertNonEmptyString,
   cloneFrozenData,
-} from '../../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import { assertProductUiIntentId } from './product-ui-intent.js';
 
 export const PRODUCT_SCREEN_DEFINITION_SCHEMA_VERSION = 1;

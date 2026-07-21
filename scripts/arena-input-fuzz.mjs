@@ -12,7 +12,7 @@ import { InputSampler } from '../src/arena/presentation/input/input-sampler.js';
 import { HeadlessMatchRunner, replayMatch } from '../src/arena/replay.js';
 import { createArenaInputFuzzFailureCandidate } from '../src/arena/regression/input-fuzz-regression-candidate.js';
 import { combineCleanupFailure, normalizeThrownError } from '../src/arena/lifecycle-error.js';
-import { createRng, deriveSeed } from '../src/shared/deterministic-rng.js';
+import { createRng, deriveSeed } from '@number-strategy-jump/arena-contracts';
 
 function parseInteger(value, minimum, maximum, name) {
   const parsed = Number(value);

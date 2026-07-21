@@ -1,4 +1,4 @@
-import { createDeterministicDataHash } from '../../shared/deterministic-data-hash.js';
+import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import { ARENA_PHYSICS } from '../config.js';
 import { createArenaV1MapRegistry } from '../content/arena-v1-maps.js';
 import { createDefaultMapCommandRegistry } from '../map/default-map-command-handlers.js';

@@ -1,6 +1,6 @@
 import { ARENA_PARTICIPANT_STATUS } from '../config.js';
 import { normalizeInputFrame } from '../input-frame.js';
-import { createRng } from '../../shared/deterministic-rng.js';
+import { createRng } from '@number-strategy-jump/arena-contracts';
 import { getBotDifficultyProfile } from './bot-difficulty.js';
 import { getArenaBotEvaluators, BOT_GOAL_ID } from './bot-goals.js';
 import {

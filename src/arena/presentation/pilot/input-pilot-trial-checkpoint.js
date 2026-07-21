@@ -2,7 +2,7 @@ import {
   assertKnownKeys,
   assertNonEmptyString,
   cloneFrozenData,
-} from '../../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import { validateInputPilotAssignment } from './input-pilot-assignment.js';
 import { createInputPilotDefinition } from './input-pilot-definition.js';
 import {

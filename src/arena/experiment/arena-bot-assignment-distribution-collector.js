@@ -1,6 +1,6 @@
 import { BOT_DIFFICULTY_IDS } from '../ai/bot-difficulty.js';
 import { createMatchAssignment } from '../matchmaking/match-assignment.js';
-import { cloneFrozenData } from '../rules/definition-utils.js';
+import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 import { createArenaMetricGate } from './metric-gate.js';
 
 export const ARENA_BOT_ASSIGNMENT_DISTRIBUTION_COLLECTOR_ID =

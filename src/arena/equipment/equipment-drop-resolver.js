@@ -1,4 +1,4 @@
-import { assertKnownKeys } from '../rules/definition-utils.js';
+import { assertKnownKeys } from '@number-strategy-jump/arena-contracts';
 
 const DROP_KEYS = new Set(['lastSafePosition', 'originPosition', 'isPositionValid']);
 

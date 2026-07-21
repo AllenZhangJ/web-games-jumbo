@@ -1,4 +1,4 @@
-import { createRng, deriveSeed } from '../../../shared/deterministic-rng.js';
+import { createRng, deriveSeed } from '@number-strategy-jump/arena-contracts';
 import {
   MATCH_CONTENT_SELECTION_SCHEMA_VERSION,
   createMatchContentSelection,

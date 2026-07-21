@@ -1,4 +1,4 @@
-import { assertIntegerAtLeast } from '../rules/definition-utils.js';
+import { assertIntegerAtLeast } from '@number-strategy-jump/arena-contracts';
 
 export function isEquipmentCooldownReady(remainingTicks) {
   return assertIntegerAtLeast(remainingTicks, 0, 'equipment cooldown') === 0;

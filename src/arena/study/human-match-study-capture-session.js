@@ -1,10 +1,10 @@
-import { createDeterministicDataHash } from '../../shared/deterministic-data-hash.js';
+import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import { createMatchAssignment } from '../matchmaking/match-assignment.js';
 import {
   createProductMatchResult,
   validateProductMatchResult,
 } from '../product/matchmaking/product-match-result.js';
-import { cloneFrozenData } from '../rules/definition-utils.js';
+import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 import {
   validateHumanMatchStudyAssignment,
 } from './human-match-study-assignment.js';

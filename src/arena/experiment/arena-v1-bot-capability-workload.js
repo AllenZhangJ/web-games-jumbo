@@ -8,8 +8,8 @@ import {
   assertIntegerAtLeast,
   assertKnownKeys,
   cloneFrozenData,
-} from '../rules/definition-utils.js';
-import { createDeterministicDataHash } from '../../shared/deterministic-data-hash.js';
+} from '@number-strategy-jump/arena-contracts';
+import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import {
   ARENA_V1_BENCHMARK_PLAYER_DEFAULT_TUNING,
   createArenaV1BenchmarkPlayerStrategy,

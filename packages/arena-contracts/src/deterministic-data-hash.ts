@@ -1,10 +1,10 @@
-function compareText(left, right) {
+function compareText(left: string, right: string): number {
   if (left < right) return -1;
   if (left > right) return 1;
   return 0;
 }
 
-export function createFnv1aHash(text) {
+export function createFnv1aHash(text: string): string {
   if (typeof text !== 'string') throw new TypeError('FNV-1a 输入必须是字符串。');
   let hash = 0x811c9dc5;
   for (let index = 0; index < text.length; index += 1) {
@@ -14,7 +14,7 @@ export function createFnv1aHash(text) {
   return (hash >>> 0).toString(16).padStart(8, '0');
 }
 
-function canonicalize(value, name, active) {
+function canonicalize(value: unknown, name: string, active: WeakSet<object>): string {
   if (value === null) return 'null';
   if (typeof value === 'number') {
     if (!Number.isFinite(value)) throw new TypeError(`${name} 不能包含非有限数。`);
@@ -55,8 +55,9 @@ function canonicalize(value, name, active) {
     if (keys.some((key) => typeof key !== 'string')) {
       throw new TypeError(`${name} 不能包含 Symbol 字段。`);
     }
-    keys.sort(compareText);
-    return `{${keys.map((key) => {
+    const stringKeys = keys as string[];
+    stringKeys.sort(compareText);
+    return `{${stringKeys.map((key) => {
       const descriptor = Object.getOwnPropertyDescriptor(value, key);
       if (
         !descriptor
@@ -70,6 +71,6 @@ function canonicalize(value, name, active) {
   }
 }
 
-export function createDeterministicDataHash(value, name = 'data') {
+export function createDeterministicDataHash(value: unknown, name = 'data'): string {
   return createFnv1aHash(canonicalize(value, name, new WeakSet()));
 }

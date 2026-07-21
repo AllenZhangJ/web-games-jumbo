@@ -1,7 +1,7 @@
 import {
   assertKnownKeys,
   assertNonEmptyString,
-} from './definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 
 const HANDLER_KEYS = new Set(['kind', 'execute']);
 

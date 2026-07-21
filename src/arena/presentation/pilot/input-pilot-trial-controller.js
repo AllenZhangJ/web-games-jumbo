@@ -1,4 +1,4 @@
-import { createDeterministicDataHash } from '../../../shared/deterministic-data-hash.js';
+import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import {
   combineCleanupFailure,
   normalizeThrownError,

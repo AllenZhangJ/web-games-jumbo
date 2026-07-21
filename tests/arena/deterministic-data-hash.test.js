@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createDeterministicDataHash } from '../../src/shared/deterministic-data-hash.js';
+import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 
 test('deterministic data hash ignores object insertion order but preserves array order', () => {
   const first = createDeterministicDataHash({ b: 2, a: { y: 4, x: 3 } });

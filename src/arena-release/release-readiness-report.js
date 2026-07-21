@@ -1,5 +1,5 @@
-import { createDeterministicDataHash } from '../shared/deterministic-data-hash.js';
-import { assertKnownKeys, cloneFrozenData } from '../arena/rules/definition-utils.js';
+import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
+import { assertKnownKeys, cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 import {
   ARENA_RELEASE_EVIDENCE_STATUS,
 } from './release-evidence-statement.js';

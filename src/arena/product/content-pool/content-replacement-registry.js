@@ -2,7 +2,7 @@ import {
   MATCH_CONTENT_KIND,
   createContentReplacementDefinition,
 } from './content-replacement-definition.js';
-import { assertNonEmptyString } from '../../rules/definition-utils.js';
+import { assertNonEmptyString } from '@number-strategy-jump/arena-contracts';
 
 function normalizeDefinitions(values) {
   if (!Array.isArray(values)) {

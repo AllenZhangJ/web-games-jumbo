@@ -5,7 +5,7 @@ import {
   assertKnownKeys,
   assertPositiveFinite,
   cloneFrozenData,
-} from '../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 
 export const ARENA_V1_BENCHMARK_PLAYER_STRATEGY_VERSION = 1;
 

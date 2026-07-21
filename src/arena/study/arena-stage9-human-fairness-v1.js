@@ -5,7 +5,7 @@ import {
   HUMAN_MATCH_STUDY_DEFINITION_SCHEMA_VERSION,
   createHumanMatchStudyDefinition,
 } from './human-match-study-definition.js';
-import { createDeterministicDataHash } from '../../shared/deterministic-data-hash.js';
+import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 
 export const ARENA_STAGE9_HUMAN_FAIRNESS_V1_ID = 'arena.stage9.human-fairness.v1';
 

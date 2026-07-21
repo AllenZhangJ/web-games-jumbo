@@ -1,5 +1,5 @@
 import { ARENA_MATCH_PHASE } from '../config.js';
-import { assertIntegerAtLeast } from '../rules/definition-utils.js';
+import { assertIntegerAtLeast } from '@number-strategy-jump/arena-contracts';
 
 export function assertArenaMatchCoreSnapshotInvariants(snapshot, config) {
   const values = [

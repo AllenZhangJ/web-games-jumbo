@@ -1,4 +1,4 @@
-import { createRng } from '../../shared/deterministic-rng.js';
+import { createRng } from '@number-strategy-jump/arena-contracts';
 
 const ARCHETYPES = Object.freeze([
   Object.freeze({ id: 'hunter', aggression: 0.84, riskTolerance: 0.52, patience: 0.42 }),

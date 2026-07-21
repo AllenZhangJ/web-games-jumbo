@@ -1,4 +1,4 @@
-import { assertNonEmptyString } from '../../rules/definition-utils.js';
+import { assertNonEmptyString } from '@number-strategy-jump/arena-contracts';
 import {
   PRODUCT_SESSION_EVENT,
   PRODUCT_SESSION_STATE,

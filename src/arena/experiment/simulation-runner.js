@@ -3,7 +3,7 @@ import {
   assertKnownKeys,
   assertPlainRecord,
   cloneFrozenData,
-} from '../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import { normalizeThrownError } from '../lifecycle-error.js';
 import { createArenaExperimentDefinition } from './experiment-definition.js';
 import {

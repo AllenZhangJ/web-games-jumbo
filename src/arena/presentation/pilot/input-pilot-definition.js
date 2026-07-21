@@ -1,10 +1,10 @@
-import { createDeterministicDataHash } from '../../../shared/deterministic-data-hash.js';
+import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import {
   assertIntegerAtLeast,
   assertKnownKeys,
   assertNonEmptyString,
   cloneFrozenData,
-} from '../../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import { ARENA_INPUT_MAPPER_ID } from '../input/input-mapper-contract.js';
 
 export const INPUT_PILOT_DEFINITION_SCHEMA_VERSION = 2;

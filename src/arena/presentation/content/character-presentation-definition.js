@@ -1,11 +1,11 @@
-import { createDeterministicDataHash } from '../../../shared/deterministic-data-hash.js';
+import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import {
   assertIntegerAtLeast,
   assertKnownKeys,
   assertNonEmptyString,
   cloneFrozenData,
   cloneFrozenStringSet,
-} from '../../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import {
   ARENA_ANIMATION_SEMANTIC_IDS,
   ARENA_ANIMATION_SOURCE_KIND,

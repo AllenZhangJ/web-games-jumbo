@@ -1,5 +1,5 @@
 import { createArenaV1MatchCore } from '../arena-v1-match-core.js';
-import { cloneFrozenData } from '../rules/definition-utils.js';
+import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 import {
   ARENA_EXPERIMENT_DEFINITION_SCHEMA_VERSION,
   ARENA_EXPERIMENT_SEED_SET_KIND,

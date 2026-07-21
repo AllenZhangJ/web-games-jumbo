@@ -1,4 +1,4 @@
-import { createRng } from '../../shared/deterministic-rng.js';
+import { createRng } from '@number-strategy-jump/arena-contracts';
 
 export class SequentialMatchSeedSource {
   #rng;

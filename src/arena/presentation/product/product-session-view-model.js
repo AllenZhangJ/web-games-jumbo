@@ -10,7 +10,7 @@ import {
   assertIntegerAtLeast,
   assertNonEmptyString,
   cloneFrozenData,
-} from '../../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import { createMatchContentPublicView } from '../../content/match-content-selection.js';
 import { assertProductContentPresentationRegistry } from './product-content-presentation-registry.js';
 import { PRODUCT_CONTENT_KIND } from './product-content-presentation-definition.js';

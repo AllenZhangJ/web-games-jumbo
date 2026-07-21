@@ -1,4 +1,4 @@
-import { assertNonEmptyString } from '../../rules/definition-utils.js';
+import { assertNonEmptyString } from '@number-strategy-jump/arena-contracts';
 import { validateProductMatchResult } from '../matchmaking/product-match-result.js';
 import { createPlayerProfile } from '../profile/player-profile.js';
 import { createPlayerProfileDefinition } from '../profile/player-profile-definition.js';

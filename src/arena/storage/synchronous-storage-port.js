@@ -1,7 +1,7 @@
 import {
   assertKnownKeys,
   assertNonEmptyString,
-} from '../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 
 const READ_RESULT_KEYS = new Set(['ok', 'found', 'value']);
 

@@ -1,7 +1,7 @@
 import {
   assertIntegerAtLeast,
   cloneFrozenData,
-} from '../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 
 export function assertArenaRegressionSafeInteger(value, name) {
   if (!Number.isSafeInteger(value)) throw new TypeError(`${name} 必须是安全整数。`);

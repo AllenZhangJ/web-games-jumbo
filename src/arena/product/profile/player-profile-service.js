@@ -4,7 +4,7 @@ import {
   assertNonEmptyString,
   cloneFrozenData,
   cloneFrozenStringSet,
-} from '../../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import { advancePlayerProfile, createPlayerProfile } from './player-profile.js';
 import { createPlayerProfileDefinition } from './player-profile-definition.js';
 import {

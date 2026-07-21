@@ -1,10 +1,10 @@
-import { createDeterministicDataHash } from '../../shared/deterministic-data-hash.js';
+import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import {
   assertIntegerAtLeast,
   assertKnownKeys,
   assertNonEmptyString,
   cloneFrozenData,
-} from '../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import { ARENA_BALANCE_CANDIDATE_COLLECTOR_ID } from './arena-balance-candidate-collector.js';
 import { ARENA_BOT_CAPABILITY_COLLECTOR_ID } from './arena-bot-capability-collector.js';
 import { readArenaExperimentReportBundle } from './experiment-report-bundle.js';

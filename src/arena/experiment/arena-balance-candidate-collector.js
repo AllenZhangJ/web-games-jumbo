@@ -4,7 +4,7 @@ import {
   assertKnownKeys,
   assertNonEmptyString,
   cloneFrozenData,
-} from '../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import { createArenaBalancePolicy } from './arena-balance-policy.js';
 import {
   createSortedMetricCountRecord,

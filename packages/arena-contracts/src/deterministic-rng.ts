@@ -1,9 +1,9 @@
-function toUint32(seed) {
+function toUint32(seed: number): number {
   if (!Number.isFinite(seed)) throw new TypeError('RNG seed 必须是有限数。');
   return seed >>> 0;
 }
 
-export function deriveSeed(seed, namespace) {
+export function deriveSeed(seed: number, namespace: string): number {
   const root = toUint32(seed);
   if (typeof namespace !== 'string' || namespace.length === 0) {
     throw new TypeError('RNG namespace 必须是非空字符串。');
@@ -19,37 +19,49 @@ export function deriveSeed(seed, namespace) {
   return hash >>> 0;
 }
 
-export function createRng(seed = Date.now()) {
+export interface DeterministicRng {
+  next(): number;
+  int(minimum: number, maximum: number): number;
+  pick<T>(items: readonly T[]): T;
+  snapshot(): number;
+  restore(snapshot: number): void;
+}
+
+export function createRng(seed: number): DeterministicRng {
   let state = toUint32(seed);
 
   return {
-    next() {
+    next(): number {
       state = (state + 0x6d2b79f5) >>> 0;
       let value = state;
       value = Math.imul(value ^ (value >>> 15), value | 1);
       value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
       return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
     },
-    int(min, max) {
-      if (!Number.isSafeInteger(min) || !Number.isSafeInteger(max) || min > max) {
+    int(minimum: number, maximum: number): number {
+      if (
+        !Number.isSafeInteger(minimum)
+        || !Number.isSafeInteger(maximum)
+        || minimum > maximum
+      ) {
         throw new RangeError('rng.int(min, max) 需要 min <= max 的安全整数边界。');
       }
-      const span = max - min + 1;
+      const span = maximum - minimum + 1;
       if (!Number.isSafeInteger(span) || span > 0x100000000) {
         throw new RangeError('rng.int(min, max) 的范围不能超过 uint32。');
       }
-      return Math.floor(this.next() * span) + min;
+      return Math.floor(this.next() * span) + minimum;
     },
-    pick(items) {
+    pick<T>(items: readonly T[]): T {
       if (!Array.isArray(items) || items.length === 0) {
         throw new RangeError('rng.pick(items) 需要非空数组。');
       }
-      return items[Math.floor(this.next() * items.length)];
+      return items[Math.floor(this.next() * items.length)] as T;
     },
-    snapshot() {
+    snapshot(): number {
       return state;
     },
-    restore(snapshot) {
+    restore(snapshot: number): void {
       if (!Number.isInteger(snapshot) || snapshot < 0 || snapshot > 0xffffffff) {
         throw new RangeError('RNG 快照必须是 uint32 整数。');
       }

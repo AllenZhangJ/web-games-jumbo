@@ -1,11 +1,11 @@
-import { createDeterministicDataHash } from '../../../shared/deterministic-data-hash.js';
-import { createRng, deriveSeed } from '../../../shared/deterministic-rng.js';
+import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
+import { createRng, deriveSeed } from '@number-strategy-jump/arena-contracts';
 import {
   assertIntegerAtLeast,
   assertKnownKeys,
   assertNonEmptyString,
   cloneFrozenData,
-} from '../../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import { createInputPilotDefinition } from './input-pilot-definition.js';
 
 export const INPUT_PILOT_ASSIGNMENT_SCHEMA_VERSION = 2;

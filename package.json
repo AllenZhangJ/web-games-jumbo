@@ -8,6 +8,8 @@
   ],
   "description": "基于确定性 MatchCore 与 Three.js/WebGL 的 1v1 Arena 动作小游戏，支持 Web、抖音和微信。",
   "scripts": {
+    "prepare": "npm run build:packages",
+    "build:packages": "tsc -b packages/arena-contracts --pretty false",
     "arena:poc": "node scripts/arena-physics-poc.mjs",
     "arena:poc:build": "node scripts/build-arena-poc.mjs",
     "arena:poc:stress": "node scripts/arena-physics-poc.mjs --stress-ticks=100000",
@@ -53,15 +55,16 @@
     "dev:lan": "vite --host 0.0.0.0",
     "preview:lan": "vite preview --host 0.0.0.0 --port 4173 --strictPort --outDir dist/web",
     "lint": "eslint packages src scripts tests *.config.ts --max-warnings 0 --no-error-on-unmatched-pattern",
-    "typecheck": "tsc -p tsconfig.app.json --pretty false",
+    "typecheck": "npm run build:packages && tsc -p tsconfig.app.json --pretty false",
     "test:node": "node --test",
-    "test:governance": "vitest run tests/governance",
+    "test:governance": "vitest run",
     "test": "npm run test:node && npm run test:governance",
     "check:js-migration": "node --import tsx scripts/governance/check-js-migration.ts",
     "check:product-boundaries": "node --import tsx scripts/governance/check-product-boundaries.ts",
     "check:production-artifacts": "node --import tsx scripts/governance/check-production-artifacts.ts",
     "check:governance": "npm run check:js-migration && npm run check:product-boundaries && npm run lint && npm run typecheck && npm run test:governance",
     "audit:dependencies": "npm audit --omit=dev --audit-level=high",
+    "prebuild": "npm run build:packages",
     "build": "node scripts/build.mjs",
     "check": "npm run check:governance && npm run test:node && npm run arena:regression && npm run arena:assets:budget && npm run audit:dependencies && npm run build && npm run arena:build:verify -- --require-clean-source && npm run arena:build:budget && npm run check:production-artifacts"
   },
@@ -84,6 +87,7 @@
     "node": ">=20"
   },
   "dependencies": {
+    "@number-strategy-jump/arena-contracts": "0.1.0",
     "three": "0.185.1"
   }
 }

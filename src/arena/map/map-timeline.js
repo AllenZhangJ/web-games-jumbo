@@ -1,4 +1,4 @@
-import { assertIntegerAtLeast } from '../rules/definition-utils.js';
+import { assertIntegerAtLeast } from '@number-strategy-jump/arena-contracts';
 
 export const MAP_TIMELINE_TRANSITION = Object.freeze({
   WARNING: 'warning',

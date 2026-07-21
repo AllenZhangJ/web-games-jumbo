@@ -29,7 +29,7 @@
 | --- | --- | --- |
 | G0 基线冻结 | 已完成 | 自动化、压力、资产和三端构建通过；ADR/计划/证据已落盘；tag `arena-product-baseline-51e2822` 指向基线提交 |
 | G1 治理外壳/唯一产品 | 已完成 | Arena 已成为唯一生产产品；旧产品实现/专属测试/资产/规范已退役；strict TS、ESLint、Vitest、CI、CODEOWNERS、JS 递减清单和唯一产物门禁已启用 |
-| G2 Definition/合同/配置 | 进行中 | strict TS 外壳已存在；当前仍有 521 个受审计 JavaScript 文件，Definition/合同尚未迁入 workspace |
+| G2 Definition/合同/配置 | 进行中 | 已建立 strict TS `arena-contracts` workspace 并迁入冻结/校验、稳定哈希和具名随机合同；当前仍有 518 个受审计 JavaScript 文件，Definition/Registry/统一数值配置仍待迁移 |
 | G3 Rule/Core/Replay | 未开始 | 当前行为有 Replay/hash 证据，但尚未迁入 strict TS |
 | G4 Bot/Product/Persistence | 未开始 | 当前功能与压力证据存在，尚未迁入 strict TS workspace |
 | G5 Presentation/资产/反馈 | 未开始 | 正式资产预算通过；审批字段与唯一正常路径仍待治理 |
@@ -55,7 +55,7 @@
 
 ## 当前不可合并原因
 
-1. 当前 521 个受维护 JavaScript 文件仍在精确允许清单中，Definition/Core/Bot/Presentation/Platform 尚未完成 strict TypeScript workspace 迁移。
+1. 当前 518 个受维护 JavaScript 文件仍在精确允许清单中，Definition/Core/Bot/Presentation/Platform 尚未完成 strict TypeScript workspace 迁移。
 2. Vitest 当前只保护治理门禁；Arena 测试尚待按 workspace 迁移并建立正式 coverage 阈值与零 JS 门禁。
 3. 正式资产最终审批与完整安全/依赖长期治理尚未闭环。
 4. 文档仍含迁移前阶段性叙述，尚未完成 G9 全量链接、状态与命令归真。
@@ -74,3 +74,13 @@
 - Web 生产交付只含 `index.html`；Greybox/Study/Pilot/`product.html` 不再进入产物。
 - Web delivery 从 3773570 B 降至 3560653 B，JavaScript 从 1395707 B 降至 1217043 B；微信/抖音仍在既定预算内。
 - `.github/CODEOWNERS` 使用有效账号 `@AllenZhangJ`；CI 使用 Node 20、`npm ci` 和统一 `npm run check`。
+
+## G2.1 确定性合同包迁移证据
+
+- 新增 strict TypeScript workspace：`@number-strategy-jump/arena-contracts`，只承载最底层无宿主数据合同，不依赖 Core、Bot、Presentation、Three.js、DOM 或平台 API。
+- 安全数据克隆/冻结、Definition 参数校验、稳定 FNV-1a 数据哈希、seed 派生和确定性随机流已从 3 个散落 JavaScript 模块迁入该包。
+- 203 个上层消费文件改为通过包公开 API 引用合同；旧的相对路径实现已删除。
+- JavaScript 精确允许清单由 521 降至 518，未出现新增或未登记 JavaScript。
+- strict TypeScript 构建、ESLint、5 项 Vitest 包/治理测试和 638 项 Node 测试通过。
+- 黄金 Replay manifest 保持 `0dace228`；三个目标构建、唯一生产产物检查和预算门禁通过。
+- 本节仅证明 G2 首个迁移批次通过，不代表 G2 已完成；Definition、Registry、输入/事件/快照/平台/存档合同和统一数值配置仍是后续阻断项。

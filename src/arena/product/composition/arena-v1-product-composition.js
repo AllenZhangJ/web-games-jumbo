@@ -8,7 +8,7 @@ import {
 import {
   assertPlainRecord,
   cloneFrozenData,
-} from '../../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 import { ARENA_V1_PLAYER_PROFILE_DEFINITION } from '../content/arena-v1-player-profile-definition.js';
 import {
   ARENA_V1_CONTENT_REPLACEMENT_REGISTRY,

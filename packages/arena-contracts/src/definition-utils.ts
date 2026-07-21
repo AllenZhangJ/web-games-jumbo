@@ -1,12 +1,24 @@
-const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+const UNSAFE_KEYS: ReadonlySet<string> = new Set(['__proto__', 'constructor', 'prototype']);
 
-function ownDataKeys(value, name) {
+export type PlainRecord = Record<string, unknown>;
+
+export type DeepReadonly<T> =
+  T extends (...args: never[]) => unknown ? T
+    : T extends readonly (infer U)[] ? readonly DeepReadonly<U>[]
+      : T extends object ? { readonly [K in keyof T]: DeepReadonly<T[K]> }
+        : T;
+
+function ownDataKeys(value: object, name: string): string[] {
   const keys = Reflect.ownKeys(value);
-  const result = [];
+  const result: string[] = [];
   for (const key of keys) {
     if (typeof key !== 'string') throw new TypeError(`${name} 不能包含 Symbol 字段。`);
     const descriptor = Object.getOwnPropertyDescriptor(value, key);
-    if (!descriptor.enumerable || !Object.prototype.hasOwnProperty.call(descriptor, 'value')) {
+    if (
+      !descriptor
+      || !descriptor.enumerable
+      || !Object.prototype.hasOwnProperty.call(descriptor, 'value')
+    ) {
       throw new TypeError(`${name}.${key} 必须是可枚举数据字段。`);
     }
     result.push(key);
@@ -14,7 +26,7 @@ function ownDataKeys(value, name) {
   return result;
 }
 
-export function assertPlainRecord(value, name) {
+export function assertPlainRecord(value: unknown, name: string): PlainRecord {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new TypeError(`${name} 必须是普通对象。`);
   }
@@ -22,39 +34,43 @@ export function assertPlainRecord(value, name) {
   if (prototype !== Object.prototype && prototype !== null) {
     throw new TypeError(`${name} 必须是普通对象。`);
   }
-  return value;
+  return value as PlainRecord;
 }
 
-export function assertKnownKeys(value, allowedKeys, name) {
-  assertPlainRecord(value, name);
-  for (const key of ownDataKeys(value, name)) {
+export function assertKnownKeys(
+  value: unknown,
+  allowedKeys: ReadonlySet<string>,
+  name: string,
+): asserts value is PlainRecord {
+  const record = assertPlainRecord(value, name);
+  for (const key of ownDataKeys(record, name)) {
     if (UNSAFE_KEYS.has(key)) throw new RangeError(`${name} 包含不安全字段 ${key}。`);
     if (!allowedKeys.has(key)) throw new RangeError(`${name} 不支持字段 ${key}。`);
   }
 }
 
-export function assertNonEmptyString(value, name) {
+export function assertNonEmptyString(value: unknown, name: string): string {
   if (typeof value !== 'string' || value.trim().length === 0) {
     throw new TypeError(`${name} 必须是非空字符串。`);
   }
   return value;
 }
 
-export function assertIntegerAtLeast(value, minimum, name) {
-  if (!Number.isSafeInteger(value) || value < minimum) {
+export function assertIntegerAtLeast(value: unknown, minimum: number, name: string): number {
+  if (!Number.isSafeInteger(value) || (value as number) < minimum) {
     throw new RangeError(`${name} 必须是大于等于 ${minimum} 的安全整数。`);
   }
-  return value;
+  return value as number;
 }
 
-export function assertPositiveFinite(value, name) {
-  if (!Number.isFinite(value) || value <= 0) {
+export function assertPositiveFinite(value: unknown, name: string): number {
+  if (!Number.isFinite(value) || (value as number) <= 0) {
     throw new RangeError(`${name} 必须是有限正数。`);
   }
-  return value;
+  return value as number;
 }
 
-export function cloneFrozenData(value, name = 'data', active = new WeakSet()) {
+function cloneData(value: unknown, name: string, active: WeakSet<object>): unknown {
   if (value === null || typeof value === 'boolean' || typeof value === 'string') return value;
   if (typeof value === 'number') {
     if (!Number.isFinite(value)) throw new RangeError(`${name} 不能包含非有限数。`);
@@ -83,20 +99,27 @@ export function cloneFrozenData(value, name = 'data', active = new WeakSet()) {
       }
       const expectedKeys = new Set(['length']);
       for (let index = 0; index < value.length; index += 1) expectedKeys.add(String(index));
-      if (keys.some((key) => !expectedKeys.has(key))) {
+      if (keys.some((key) => typeof key !== 'string' || !expectedKeys.has(key))) {
         throw new TypeError(`${name} 数组不能包含额外字段。`);
       }
       return Object.freeze(Array.from({ length: value.length }, (_, index) => {
         const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
-        return cloneFrozenData(descriptor.value, `${name}[${index}]`, active);
+        if (!descriptor || !Object.prototype.hasOwnProperty.call(descriptor, 'value')) {
+          throw new TypeError(`${name}[${index}] 必须是数据字段。`);
+        }
+        return cloneData(descriptor.value, `${name}[${index}]`, active);
       }));
     }
-    assertPlainRecord(value, name);
-    const result = {};
-    const descriptors = Object.getOwnPropertyDescriptors(value);
-    for (const key of ownDataKeys(value, name).sort()) {
+    const record = assertPlainRecord(value, name);
+    const result: PlainRecord = {};
+    const descriptors = Object.getOwnPropertyDescriptors(record);
+    for (const key of ownDataKeys(record, name).sort()) {
       if (UNSAFE_KEYS.has(key)) throw new RangeError(`${name} 包含不安全字段 ${key}。`);
-      result[key] = cloneFrozenData(descriptors[key].value, `${name}.${key}`, active);
+      const descriptor = descriptors[key];
+      if (!descriptor || !Object.prototype.hasOwnProperty.call(descriptor, 'value')) {
+        throw new TypeError(`${name}.${key} 必须是数据字段。`);
+      }
+      result[key] = cloneData(descriptor.value, `${name}.${key}`, active);
     }
     return Object.freeze(result);
   } finally {
@@ -104,7 +127,18 @@ export function cloneFrozenData(value, name = 'data', active = new WeakSet()) {
   }
 }
 
-export function cloneFrozenStringSet(values = [], name = 'values') {
+export function cloneFrozenData<T>(
+  value: T,
+  name = 'data',
+  active: WeakSet<object> = new WeakSet(),
+): DeepReadonly<T> {
+  return cloneData(value, name, active) as DeepReadonly<T>;
+}
+
+export function cloneFrozenStringSet(
+  values: readonly unknown[] = [],
+  name = 'values',
+): readonly string[] {
   if (!Array.isArray(values)) throw new TypeError(`${name} 必须是数组。`);
   const result = values.map((value, index) => assertNonEmptyString(value, `${name}[${index}]`));
   if (new Set(result).size !== result.length) throw new RangeError(`${name} 不能包含重复项。`);

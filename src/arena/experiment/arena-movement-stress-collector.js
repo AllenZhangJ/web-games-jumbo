@@ -1,5 +1,5 @@
 import { STAGE6_MOVEMENT_ACTION_ID } from '../content/stage6-movement-actions.js';
-import { assertNonEmptyString, cloneFrozenData } from '../rules/definition-utils.js';
+import { assertNonEmptyString, cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 import {
   assertArenaExperimentReplaySeedsPlanned,
   cloneArenaExperimentReplaySeeds,

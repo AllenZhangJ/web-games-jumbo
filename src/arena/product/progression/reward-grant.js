@@ -4,7 +4,7 @@ import {
   assertNonEmptyString,
   cloneFrozenData,
   cloneFrozenStringSet,
-} from '../../rules/definition-utils.js';
+} from '@number-strategy-jump/arena-contracts';
 
 export const REWARD_GRANT_SCHEMA_VERSION = 1;
 
