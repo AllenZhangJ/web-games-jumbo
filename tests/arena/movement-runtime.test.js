@@ -136,7 +136,7 @@ test('MovementCommand is strict immutable data and rejects implementation payloa
   }), /kind 不受支持/);
 });
 
-test('MovementMutation exposes only validated vertical physics operations', () => {
+test('MovementMutation exposes validated jump, vertical-speed and downward acceleration operations', () => {
   const impulse = createMovementMutation({
     kind: MOVEMENT_MUTATION_KIND.APPLY_IMPULSE,
     participantId: 'player-1',
@@ -145,10 +145,15 @@ test('MovementMutation exposes only validated vertical physics operations', () =
   assert.ok(Object.isFrozen(impulse));
   assert.ok(Object.isFrozen(impulse.impulse));
   assert.deepEqual(impulse.impulse, { x: 0, y: 9, z: 0 });
+  const directional = createMovementMutation({
+    ...impulse,
+    impulse: { x: 1, y: 9, z: -2 },
+  });
+  assert.deepEqual(directional.impulse, { x: 1, y: 9, z: -2 });
   assert.throws(() => createMovementMutation({
     ...impulse,
-    impulse: { x: 1, y: 9, z: 0 },
-  }), /x\/z 为 0/);
+    impulse: { x: Number.NaN, y: 9, z: 0 },
+  }), /非有限数|有限向量/);
   assert.throws(() => createMovementMutation({
     kind: MOVEMENT_MUTATION_KIND.SET_VERTICAL_SPEED,
     participantId: 'player-1',
@@ -160,4 +165,15 @@ test('MovementMutation exposes only validated vertical physics operations', () =
     speed: -12,
     callback: 'not-allowed',
   }), /不支持字段 callback/);
+  assert.deepEqual(createMovementMutation({
+    kind: MOVEMENT_MUTATION_KIND.ACCELERATE_DOWNWARD,
+    participantId: 'player-1',
+    acceleration: 0.55,
+    maximumSpeed: 22,
+  }), {
+    kind: MOVEMENT_MUTATION_KIND.ACCELERATE_DOWNWARD,
+    participantId: 'player-1',
+    acceleration: 0.55,
+    maximumSpeed: 22,
+  });
 });

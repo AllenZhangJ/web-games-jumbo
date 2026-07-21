@@ -11,8 +11,9 @@ const baseDefinition = createArenaV1CharacterRegistry().require(
   ARENA_V1_CHARACTER_ID.PARKOUR_APPRENTICE,
 );
 
-function createSystem(definition = baseDefinition) {
+function createSystem(definition = baseDefinition, options = {}) {
   return new MovementSystem({
+    ...options,
     participantCharacters: [
       { participantId: 'player-1', characterDefinition: definition },
       { participantId: 'player-2', characterDefinition: definition },
@@ -27,10 +28,22 @@ function contacts(playerGrounded, opponentGrounded = true) {
   ];
 }
 
-function inputs(tick, { jumpPressed = false, jumpHeld = false } = {}) {
+function inputs(tick, {
+  jumpPressed = false,
+  jumpHeld = false,
+  moveX = 0,
+  moveZ = 0,
+} = {}) {
   return [
-    { participantId: 'player-1', tick, jumpPressed, jumpHeld },
-    { participantId: 'player-2', tick, jumpPressed: false, jumpHeld: false },
+    { participantId: 'player-1', tick, jumpPressed, jumpHeld, moveX, moveZ },
+    {
+      participantId: 'player-2',
+      tick,
+      jumpPressed: false,
+      jumpHeld: false,
+      moveX: 0,
+      moveZ: 0,
+    },
   ];
 }
 
@@ -70,11 +83,18 @@ function ports({ failImpulse = false } = {}) {
               participantId: operation.participantId,
               impulse: { ...operation.impulse },
             });
-          } else {
+          } else if (operation.kind === 'set-vertical-speed') {
             calls.push({
               kind: 'vertical-speed',
               participantId: operation.participantId,
               speed: operation.speed,
+            });
+          } else {
+            calls.push({
+              kind: 'downward-acceleration',
+              participantId: operation.participantId,
+              acceleration: operation.acceleration,
+              maximumSpeed: operation.maximumSpeed,
             });
           }
         }
@@ -155,6 +175,22 @@ test('air jump budget cannot be consumed twice before a real landing', () => {
   system.destroy();
 });
 
+test('product air jump converts the live stick direction into a bounded horizontal impulse', () => {
+  const system = createSystem(baseDefinition, { airJumpHorizontalImpulse: 3.6 });
+  prepare(system, 0, false, {
+    jumpPressed: true,
+    moveX: 1,
+    moveZ: 1,
+  });
+  const port = ports();
+  system.execute([command(MOVEMENT_COMMAND_KIND.REQUEST_AIR_JUMP)], port.value);
+  assert.ok(Math.abs(port.calls[0].impulse.x - 3.6 / Math.sqrt(2)) < 1e-12);
+  assert.equal(port.calls[0].impulse.y, baseDefinition.jump.airImpulse);
+  assert.ok(Math.abs(port.calls[0].impulse.z - 3.6 / Math.sqrt(2)) < 1e-12);
+  system.completeTick({ tick: 0, contacts: contacts(false) });
+  system.destroy();
+});
+
 test('crouch jump charge is bounded and release derives impulse from CharacterDefinition', () => {
   const system = createSystem();
   prepare(system, 0, true, { jumpHeld: true });
@@ -204,6 +240,28 @@ test('down smash sets bounded vertical speed and emits exactly one landing trans
   prepare(system, 1, true);
   system.execute([], port.value);
   assert.deepEqual(system.completeTick({ tick: 1, contacts: contacts(true) }), []);
+  system.destroy();
+});
+
+test('down smash continues with configured acceleration until its maximum speed', () => {
+  const system = createSystem();
+  prepare(system, 0, false);
+  const startPort = ports();
+  system.execute([
+    command(MOVEMENT_COMMAND_KIND.BEGIN_DOWN_SMASH, 'aerial-attack'),
+  ], startPort.value);
+  system.completeTick({ tick: 0, contacts: contacts(false) });
+
+  prepare(system, 1, false);
+  const continuationPort = ports();
+  system.execute([], continuationPort.value);
+  assert.deepEqual(continuationPort.calls, [{
+    kind: 'downward-acceleration',
+    participantId: 'player-1',
+    acceleration: baseDefinition.jump.downSmashAccelerationPerTick,
+    maximumSpeed: baseDefinition.jump.maximumDownSmashSpeed,
+  }]);
+  system.completeTick({ tick: 1, contacts: contacts(false) });
   system.destroy();
 });
 

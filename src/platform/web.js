@@ -209,6 +209,25 @@ export function createWebPlatform(environment = globalThis) {
       return false;
     }
   };
+  const readAssetBytes = async (sourceKey) => {
+    if (
+      typeof sourceKey !== 'string'
+      || !sourceKey.startsWith('./assets/')
+      || sourceKey.includes('..')
+      || sourceKey.includes('\\')
+    ) {
+      throw new RangeError('[web] 资产路径必须位于 ./assets/ 且不能包含路径逃逸。');
+    }
+    const fetchOwner = typeof env.root.fetch === 'function' ? env.root : env.windowObject;
+    if (typeof fetchOwner.fetch !== 'function') throw new Error('[web] 当前宿主缺少 fetch。');
+    const response = await fetchOwner.fetch.call(fetchOwner, sourceKey);
+    if (!response?.ok || typeof response.arrayBuffer !== 'function') {
+      throw new Error(`[web] 读取资产失败：${sourceKey}（${response?.status ?? 'unknown'}）`);
+    }
+    const bytes = await response.arrayBuffer();
+    if (!(bytes instanceof ArrayBuffer)) throw new TypeError('[web] 资产响应不是 ArrayBuffer。');
+    return bytes;
+  };
 
   return createPlatformContract({
     id: 'web',
@@ -229,6 +248,7 @@ export function createWebPlatform(environment = globalThis) {
       }
       return null;
     },
+    readAssetBytes,
     getViewport: () => {
       const documentElement = env.documentObject.documentElement;
       let canvasRect = null;

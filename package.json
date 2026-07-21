@@ -44,15 +44,19 @@
     "arena:defects:verify": "node scripts/arena-defects.mjs",
     "arena:input-pilot:evidence": "node scripts/arena-input-pilot-evidence.mjs",
     "arena:assets:intake:verify": "node scripts/arena-formal-asset-intake.mjs",
+    "arena:assets:budget": "node scripts/arena-formal-asset-budget.mjs",
+    "arena:assets:optimize-characters": "node scripts/arena-optimize-character-assets.mjs",
     "dev": "vite --host 127.0.0.1",
     "dev:lan": "vite --host 0.0.0.0",
     "preview:lan": "vite preview --host 0.0.0.0 --port 4173 --strictPort --outDir dist/web",
     "test": "node --test",
     "build": "node scripts/build.mjs",
     "build:greybox": "ARENA_MINI_ENTRY_MODE=greybox node scripts/build.mjs",
-    "check": "npm run test && npm run arena:replay:verify && npm run build && npm run arena:build:verify"
+    "check": "npm run test && npm run arena:replay:verify && npm run arena:assets:budget && npm run build && npm run arena:build:verify"
   },
   "devDependencies": {
+    "@gltf-transform/core": "4.4.1",
+    "@gltf-transform/functions": "4.4.1",
     "esbuild": "^0.25.6",
     "vite": "^7.0.4"
   },

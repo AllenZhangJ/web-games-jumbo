@@ -3,7 +3,7 @@
   "schemaVersion": 5,
   "physicsBackendVersion": "lightweight-v3",
   "configHash": "fc46b34a",
-  "ruleContentHash": "c8a2516f",
+  "ruleContentHash": "1cf565bf",
   "matchSeed": 1375600641,
   "config": {
     "participantIds": [
@@ -10743,39 +10743,39 @@
   "checkpoints": [
     {
       "tick": 0,
-      "hash": "c6f6b084"
+      "hash": "5d1aaee2"
     },
     {
       "tick": 60,
-      "hash": "03eb4b76"
+      "hash": "9da48c0c"
     },
     {
       "tick": 120,
-      "hash": "a5b4af1a"
+      "hash": "16022964"
     },
     {
       "tick": 180,
-      "hash": "f081e7c0"
+      "hash": "878ed91e"
     },
     {
       "tick": 240,
-      "hash": "fb908e1e"
+      "hash": "f82ffd78"
     },
     {
       "tick": 300,
-      "hash": "67b19b42"
+      "hash": "02ec5830"
     },
     {
       "tick": 360,
-      "hash": "4bdc0a48"
+      "hash": "a309edce"
     },
     {
       "tick": 420,
-      "hash": "9ec7d0ce"
+      "hash": "136403bc"
     },
     {
       "tick": 480,
-      "hash": "5c0b93fa"
+      "hash": "33a33688"
     }
   ],
   "events": [
@@ -10919,7 +10919,7 @@
       "endedAtTick": 479
     }
   ],
-  "finalHash": "5c0b93fa",
+  "finalHash": "33a33688",
   "result": {
     "winnerId": "player-2",
     "reason": "timeout-score",

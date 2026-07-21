@@ -62,16 +62,21 @@ function validateCapabilities(value) {
 export class MovementActionCandidateProvider {
   #actionRegistry;
   #candidateCache;
+  #contextPrimaryEnabled;
 
-  constructor({ actionRegistry }) {
+  constructor({ actionRegistry, contextPrimaryEnabled = true }) {
     if (!actionRegistry || typeof actionRegistry.require !== 'function') {
       throw new TypeError('MovementActionCandidateProvider 需要只读 ActionRegistry。');
     }
     for (const definitionId of Object.values(STAGE6_MOVEMENT_ACTION_ID)) {
       actionRegistry.require(definitionId);
     }
+    if (typeof contextPrimaryEnabled !== 'boolean') {
+      throw new TypeError('MovementActionCandidateProvider.contextPrimaryEnabled 必须是布尔值。');
+    }
     this.#actionRegistry = actionRegistry;
     this.#candidateCache = new Map();
+    this.#contextPrimaryEnabled = contextPrimaryEnabled;
     Object.freeze(this);
   }
 
@@ -109,25 +114,29 @@ export class MovementActionCandidateProvider {
         value.canBeginDownSmash,
         'down-smash-unavailable',
       ),
-      candidate(
-        STAGE6_MOVEMENT_ACTION_ID.CONTEXT_GROUND_JUMP,
-        ACTION_PRIORITY.BASE - 10,
-        value.canGroundJump,
-        'context-ground-jump-unavailable',
-      ),
-      candidate(
-        STAGE6_MOVEMENT_ACTION_ID.CONTEXT_CROUCH_BEGIN,
-        ACTION_PRIORITY.BASE - 30,
-        value.canBeginCrouchJump,
-        'context-crouch-jump-unavailable',
-      ),
-      candidate(
-        STAGE6_MOVEMENT_ACTION_ID.CONTEXT_AIR_JUMP,
-        ACTION_PRIORITY.BASE - 20,
-        value.canAirJump,
-        'context-air-jump-unavailable',
-      ),
     ];
+    if (this.#contextPrimaryEnabled) {
+      candidates.push(
+        candidate(
+          STAGE6_MOVEMENT_ACTION_ID.CONTEXT_GROUND_JUMP,
+          ACTION_PRIORITY.BASE - 10,
+          value.canGroundJump,
+          'context-ground-jump-unavailable',
+        ),
+        candidate(
+          STAGE6_MOVEMENT_ACTION_ID.CONTEXT_CROUCH_BEGIN,
+          ACTION_PRIORITY.BASE - 30,
+          value.canBeginCrouchJump,
+          'context-crouch-jump-unavailable',
+        ),
+        candidate(
+          STAGE6_MOVEMENT_ACTION_ID.CONTEXT_AIR_JUMP,
+          ACTION_PRIORITY.BASE - 20,
+          value.canAirJump,
+          'context-air-jump-unavailable',
+        ),
+      );
+    }
     if (value.canReleaseCrouchJump) {
       if (value.crouchActionDefinitionId === STAGE6_MOVEMENT_ACTION_ID.EXPLICIT_CROUCH_BEGIN) {
         candidates.push(candidate(
@@ -139,6 +148,9 @@ export class MovementActionCandidateProvider {
       } else if (
         value.crouchActionDefinitionId === STAGE6_MOVEMENT_ACTION_ID.CONTEXT_CROUCH_BEGIN
       ) {
+        if (!this.#contextPrimaryEnabled) {
+          throw new RangeError('显式输入模式不能保留 context crouch action。');
+        }
         candidates.push(candidate(
           STAGE6_MOVEMENT_ACTION_ID.CONTEXT_CROUCH_RELEASE,
           ACTION_PRIORITY.BASE,

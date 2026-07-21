@@ -53,7 +53,7 @@ test('committed Replay V5 corpus strictly replays and regenerates every register
   });
   assert.equal(report.mode, 'current-strict-replay-and-regeneration');
   assert.equal(report.manifestId, 'arena.stage9.golden-replays.v5');
-  assert.equal(report.manifestHash, '5f9df22c');
+  assert.equal(report.manifestHash, '0dace228');
   assert.equal(report.verifiedEntryCount, 4);
   assert.deepEqual(report.rejectedReplaySchemaVersions, [4]);
   assert.deepEqual(report.entries.map(({ id }) => id), [

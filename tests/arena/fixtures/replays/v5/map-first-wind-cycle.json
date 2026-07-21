@@ -3,7 +3,7 @@
   "schemaVersion": 5,
   "physicsBackendVersion": "lightweight-v3",
   "configHash": "4a5eb41f",
-  "ruleContentHash": "c8a2516f",
+  "ruleContentHash": "1cf565bf",
   "matchSeed": 1517158400,
   "config": {
     "participantIds": [
@@ -26611,47 +26611,47 @@
   "checkpoints": [
     {
       "tick": 0,
-      "hash": "0ad0167f"
+      "hash": "16a28f29"
     },
     {
       "tick": 120,
-      "hash": "582fcba7"
+      "hash": "57f104f5"
     },
     {
       "tick": 240,
-      "hash": "8ed4ec03"
+      "hash": "3fc0e699"
     },
     {
       "tick": 360,
-      "hash": "7791c960"
+      "hash": "741b278a"
     },
     {
       "tick": 480,
-      "hash": "10f40ed1"
+      "hash": "51c6471b"
     },
     {
       "tick": 600,
-      "hash": "bf2f84ce"
+      "hash": "b748758c"
     },
     {
       "tick": 720,
-      "hash": "bca7ac2d"
+      "hash": "39b50283"
     },
     {
       "tick": 840,
-      "hash": "15f19238"
+      "hash": "ee1c5d66"
     },
     {
       "tick": 960,
-      "hash": "71f5190b"
+      "hash": "e60ffb2d"
     },
     {
       "tick": 1080,
-      "hash": "076d734e"
+      "hash": "53d017a0"
     },
     {
       "tick": 1200,
-      "hash": "648fc274"
+      "hash": "389b7142"
     }
   ],
   "events": [
@@ -26792,7 +26792,7 @@
       "endedAtTick": 1199
     }
   ],
-  "finalHash": "648fc274",
+  "finalHash": "389b7142",
   "result": {
     "winnerId": null,
     "reason": "timeout-draw",

@@ -23,6 +23,7 @@ const RECORD_KEYS = new Set([
   'sourceLocator',
   'sourceRevision',
   'contentArtifact',
+  'dependencyArtifacts',
   'license',
   'proofArtifact',
   'acquiredAt',
@@ -30,6 +31,7 @@ const RECORD_KEYS = new Set([
   'approvedBy',
 ]);
 const ARTIFACT_KEYS = new Set(['path', 'sha256', 'byteLength']);
+const MAXIMUM_DEPENDENCY_ARTIFACTS = 64;
 const LICENSE_KEYS = new Set([
   'id',
   'name',
@@ -59,6 +61,24 @@ function cloneArtifact(value, name) {
 function boolean(value, name) {
   if (typeof value !== 'boolean') throw new TypeError(`${name} 必须是布尔值。`);
   return value;
+}
+
+function cloneDependencyArtifacts(values, contentArtifact) {
+  const name = 'FormalAssetProvenanceRecord.dependencyArtifacts';
+  if (values === undefined) return Object.freeze([]);
+  if (!Array.isArray(values)) throw new TypeError(`${name} 必须是数组。`);
+  if (values.length > MAXIMUM_DEPENDENCY_ARTIFACTS) {
+    throw new RangeError(`${name} 不能超过 ${MAXIMUM_DEPENDENCY_ARTIFACTS} 项。`);
+  }
+  const paths = new Set([contentArtifact.path]);
+  return Object.freeze(values.map((value, index) => {
+    const artifact = cloneArtifact(value, `${name}[${index}]`);
+    if (paths.has(artifact.path)) throw new RangeError(`${name} 包含重复路径 ${artifact.path}。`);
+    paths.add(artifact.path);
+    return artifact;
+  }).sort((left, right) => (
+    left.path < right.path ? -1 : left.path > right.path ? 1 : 0
+  )));
 }
 
 function cloneLicense(value, policy) {
@@ -135,6 +155,10 @@ export function createFormalAssetProvenanceRecord({
   if (approvedAt < acquiredAt) {
     throw new RangeError('FormalAssetProvenanceRecord.approvedAt 不能早于 acquiredAt。');
   }
+  const contentArtifact = cloneArtifact(
+    source.contentArtifact,
+    'FormalAssetProvenanceRecord.contentArtifact',
+  );
   return Object.freeze({
     schemaVersion: FORMAL_ASSET_PROVENANCE_RECORD_SCHEMA_VERSION,
     recordId: boundedString(source.recordId, 128, 'FormalAssetProvenanceRecord.recordId'),
@@ -151,10 +175,8 @@ export function createFormalAssetProvenanceRecord({
       256,
       'FormalAssetProvenanceRecord.sourceRevision',
     ),
-    contentArtifact: cloneArtifact(
-      source.contentArtifact,
-      'FormalAssetProvenanceRecord.contentArtifact',
-    ),
+    contentArtifact,
+    dependencyArtifacts: cloneDependencyArtifacts(source.dependencyArtifacts, contentArtifact),
     license: cloneLicense(source.license, policy),
     proofArtifact: cloneArtifact(
       source.proofArtifact,

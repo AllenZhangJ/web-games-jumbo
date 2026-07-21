@@ -28,6 +28,60 @@ function isMissingStorageError(error) {
   }
 }
 
+function assetPathCandidates(sourceKey, id) {
+  if (
+    typeof sourceKey !== 'string'
+    || !sourceKey.startsWith('./assets/')
+    || sourceKey.includes('..')
+    || sourceKey.includes('\\')
+  ) throw hostError(id, '资产路径必须位于 ./assets/ 且不能包含路径逃逸');
+  return [sourceKey, sourceKey.slice(2)];
+}
+
+function assetArrayBuffer(value, id, sourceKey) {
+  if (value instanceof ArrayBuffer) return value.slice(0);
+  if (ArrayBuffer.isView(value)) {
+    return value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength);
+  }
+  throw hostError(id, `资产 ${sourceKey} 未返回 ArrayBuffer`);
+}
+
+function createMiniGameAssetReader(api, id) {
+  let fileSystem = null;
+  try {
+    fileSystem = api.getFileSystemManager?.() ?? null;
+  } catch {
+    fileSystem = null;
+  }
+  return async (sourceKey) => {
+    const candidates = assetPathCandidates(sourceKey, id);
+    if (!fileSystem) throw hostError(id, '宿主缺少 getFileSystemManager，无法读取本地 GLB');
+    let lastError = null;
+    for (const filePath of candidates) {
+      try {
+        let data;
+        if (typeof fileSystem.readFile === 'function') {
+          data = await new Promise((resolve, reject) => {
+            fileSystem.readFile({
+              filePath,
+              success: (result) => resolve(result?.data),
+              fail: reject,
+            });
+          });
+        } else if (typeof fileSystem.readFileSync === 'function') {
+          data = fileSystem.readFileSync(filePath);
+        } else {
+          throw hostError(id, 'FileSystemManager 缺少 readFile/readFileSync');
+        }
+        return assetArrayBuffer(data, id, sourceKey);
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    throw hostError(id, `读取本地资产失败：${sourceKey}`, lastError);
+  };
+}
+
 function viewportFrom(api) {
   let info = null;
   for (const readInfo of [api.getWindowInfo, api.getSystemInfoSync]) {
@@ -264,6 +318,7 @@ export function createMiniGamePlatform(api, id) {
       return false;
     }
   };
+  const readAssetBytes = createMiniGameAssetReader(api, id);
 
   return createPlatformContract({
     id,
@@ -280,6 +335,7 @@ export function createMiniGamePlatform(api, id) {
         return null;
       }
     },
+    readAssetBytes,
     getViewport: () => viewportFrom(api),
     requestFrame: frames.requestFrame,
     cancelFrame: frames.cancelFrame,

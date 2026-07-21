@@ -4,6 +4,7 @@ import {
 } from '../../lifecycle-error.js';
 import { validateProductMatchResult } from '../../product/matchmaking/product-match-result.js';
 import { PRODUCT_SESSION_STATE } from '../../product/state/product-session-transition-definition.js';
+import { ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT } from '../content/arena-gameplay-v2-content.js';
 import { ARENA_V1_PRODUCT_PRESENTATION_CONTENT } from './arena-v1-product-presentation-content.js';
 import {
   ProductMatchPresentationRuntime,
@@ -110,6 +111,7 @@ export class ProductPresentationFlow {
   #presentationContent;
   #dispatcher;
   #matchRuntimeFactory;
+  #matchPresentationContent;
   #matchRuntime;
   #state;
   #pendingIntent;
@@ -125,12 +127,14 @@ export class ProductPresentationFlow {
     controller,
     inputSource,
     presentationContent = ARENA_V1_PRODUCT_PRESENTATION_CONTENT,
+    matchPresentationContent = ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT,
     intentDispatcherFactory = (options) => new ProductSessionIntentDispatcher(options),
     matchRuntimeFactory = (options) => new ProductMatchPresentationRuntime(options),
   }) {
     this.#controller = validateController(controller);
     this.#inputSource = validateInputSource(inputSource);
     this.#presentationContent = presentationContent;
+    this.#matchPresentationContent = matchPresentationContent;
     this.#matchRuntimeFactory = requiredFunction(
       matchRuntimeFactory,
       'ProductPresentationFlow.matchRuntimeFactory',
@@ -200,6 +204,7 @@ export class ProductPresentationFlow {
       candidate = this.#matchRuntimeFactory({
         controller: this.#controller,
         inputSource: this.#inputSource,
+        content: this.#matchPresentationContent,
       });
       validateMatchRuntime(candidate);
       const frame = candidate.start();

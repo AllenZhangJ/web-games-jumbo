@@ -93,6 +93,7 @@ test('performance probe records bounded immutable frame and resource evidence', 
   assert.equal(probe.start(100), false);
   assert.equal(probe.markMilestone('interactive', 120), true);
   assert.equal(probe.markMilestone('interactive', 121), false);
+  assert.equal(probe.shouldSampleResources(), true);
   const resources = {
     drawCalls: 4,
     triangles: 100,
@@ -113,6 +114,7 @@ test('performance probe records bounded immutable frame and resource evidence', 
     renderDurationMs: 2.25,
     resources,
   });
+  assert.equal(probe.shouldSampleResources(), true);
   probe.recordFrame({
     timestampMs: 146,
     deltaSeconds: 1 / 60,
@@ -122,6 +124,7 @@ test('performance probe records bounded immutable frame and resource evidence', 
     renderDurationMs: null,
     resources,
   });
+  assert.equal(probe.shouldSampleResources(), false);
   probe.recordFrame({
     timestampMs: 162,
     deltaSeconds: 1 / 60,

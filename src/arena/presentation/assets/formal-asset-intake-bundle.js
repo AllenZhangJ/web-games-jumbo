@@ -56,12 +56,15 @@ function assertSharedArtifactStable(records) {
   const paths = new Map();
   const contentPaths = new Set();
   for (const record of records) {
-    if (contentPaths.has(record.contentArtifact.path)) {
-      throw new RangeError(`多个正式资产不能共享内容路径 ${record.contentArtifact.path}。`);
+    const contentArtifacts = [record.contentArtifact, ...record.dependencyArtifacts];
+    for (const artifact of contentArtifacts) {
+      if (contentPaths.has(artifact.path)) {
+        throw new RangeError(`多个正式资产不能共享内容路径 ${artifact.path}。`);
+      }
+      contentPaths.add(artifact.path);
     }
-    contentPaths.add(record.contentArtifact.path);
     for (const [category, artifact] of [
-      ['content', record.contentArtifact],
+      ...contentArtifacts.map((entry) => ['content', entry]),
       ['rights-material', record.license.textArtifact],
       ['rights-material', record.proofArtifact],
     ]) {

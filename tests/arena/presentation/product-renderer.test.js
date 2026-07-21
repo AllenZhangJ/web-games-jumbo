@@ -101,12 +101,20 @@ test('ProductRenderer keeps product UI and gameplay frames on separate read-only
     inputViewport: { width: 800, height: 1600 },
   });
 
-  const viewModel = { screen: { sceneId: 'home' } };
+  const viewModel = {
+    screen: { sceneId: 'home' },
+    profile: { soundEnabled: false, reducedMotion: true },
+  };
   assert.equal(renderer.render({ viewModel, matchFrame: null }, { deltaSeconds: 0 }), true);
   assert.equal(surface.rendered.length, 1);
   assert.equal(gameplay.rendered.length, 1);
   assert.equal(gameplay.rendered[0].frame, null);
   assert.equal(gameplay.rendered[0].overlay, surface);
+  assert.deepEqual(gameplay.rendered[0].options, {
+    deltaSeconds: 0,
+    soundEnabled: false,
+    reducedMotion: true,
+  });
 
   const matchFrame = { source: { tick: 4 } };
   renderer.render({ viewModel: { screen: { sceneId: 'gameplay' } }, matchFrame }, {
@@ -116,6 +124,8 @@ test('ProductRenderer keeps product UI and gameplay frames on separate read-only
   assert.equal(surface.presented, 2);
   assert.equal(gameplay.rendered.length, 2);
   assert.equal(gameplay.rendered[1].frame, matchFrame);
+  assert.equal(gameplay.rendered[1].options.soundEnabled, true);
+  assert.equal(gameplay.rendered[1].options.reducedMotion, false);
   assert.deepEqual(renderer.getInputViewport(), { width: 800, height: 1600 });
 
   const handlers = { onIntent: () => {}, onRejected: () => {} };

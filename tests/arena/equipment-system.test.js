@@ -50,6 +50,9 @@ test('EquipmentSystem owns spawn, automatic pickup, slot and cooldown state', ()
   const ready = system.getActionCandidate('player-1');
   assert.equal(ready.actionDefinitionId, STAGE4_ACTION_ID.HAMMER_SMASH);
   assert.equal(ready.available, true);
+  const aerialReady = system.getAerialActionCandidate('player-1');
+  assert.equal(aerialReady.actionDefinitionId, STAGE4_ACTION_ID.HAMMER_AIR_SMASH);
+  assert.ok(aerialReady.priority > ready.priority);
   const used = system.markActionStarted('player-1', STAGE4_ACTION_ID.HAMMER_SMASH);
   assert.equal(used.cooldownRemainingTicks, 72);
   const blocked = system.getActionCandidate('player-1');

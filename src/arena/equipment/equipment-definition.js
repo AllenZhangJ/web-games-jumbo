@@ -5,7 +5,7 @@ import {
   cloneFrozenStringSet,
 } from '../rules/definition-utils.js';
 
-export const EQUIPMENT_DEFINITION_SCHEMA_VERSION = 1;
+export const EQUIPMENT_DEFINITION_SCHEMA_VERSION = 2;
 
 export const EQUIPMENT_PICKUP_MODE = Object.freeze({
   AUTOMATIC: 'automatic',
@@ -25,6 +25,7 @@ const DEFINITION_KEYS = new Set([
   'category',
   'slot',
   'actionDefinitionId',
+  'aerialActionDefinitionId',
   'pickup',
   'drop',
   'presentationSemantic',
@@ -61,6 +62,10 @@ export function createEquipmentDefinition(value) {
     actionDefinitionId: assertNonEmptyString(
       value.actionDefinitionId,
       'EquipmentDefinition.actionDefinitionId',
+    ),
+    aerialActionDefinitionId: assertNonEmptyString(
+      value.aerialActionDefinitionId,
+      'EquipmentDefinition.aerialActionDefinitionId',
     ),
     pickup: Object.freeze({
       mode: value.pickup.mode,

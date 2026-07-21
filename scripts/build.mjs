@@ -12,6 +12,7 @@ import {
   ARENA_DEVICE_ACCEPTANCE_PLATFORM,
 } from '../src/arena/presentation/acceptance/arena-device-acceptance-definition.js';
 import { writeArenaBuildManifest } from './lib/arena-build-manifest-files.mjs';
+import { verifyArenaFormalAssetBudget } from './lib/arena-formal-asset-budget-verifier.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dist = path.join(root, 'dist');
@@ -63,6 +64,12 @@ async function resolveBuildIdentity() {
 }
 
 const buildIdentity = await resolveBuildIdentity();
+const formalAssetBudget = await verifyArenaFormalAssetBudget({ repositoryRoot: root });
+if (formalAssetBudget.status !== 'passed') {
+  throw new Error(
+    `正式资产预算失败：${formalAssetBudget.failedGateIds.join(', ')}。`,
+  );
+}
 
 async function copyThirdPartyNotices(outDir) {
   await Promise.all([
@@ -105,6 +112,9 @@ async function buildWeb() {
     },
   });
   const outDir = path.join(dist, 'web');
+  // Research-only concept captures are not runtime assets and would consume
+  // more than a third of the production delivery budget.
+  await rm(path.join(outDir, 'assets', 'concept'), { recursive: true, force: true });
   await copyThirdPartyNotices(outDir);
   await writeArenaBuildManifest({
     outDir,
@@ -133,14 +143,8 @@ async function bundleMiniGame(entryPoint, outfile) {
 async function buildMiniGame(target, productEntryPoint, greyboxEntryPoint, config, projectConfig) {
   const outDir = path.join(dist, target);
   await mkdir(outDir, { recursive: true });
-  const productBundle = path.join(outDir, 'game-product.js');
-  const greyboxBundle = path.join(outDir, 'game-greybox.js');
-  await Promise.all([
-    bundleMiniGame(productEntryPoint, productBundle),
-    bundleMiniGame(greyboxEntryPoint, greyboxBundle),
-  ]);
-  await cp(
-    miniEntryMode === 'greybox' ? greyboxBundle : productBundle,
+  await bundleMiniGame(
+    miniEntryMode === 'greybox' ? greyboxEntryPoint : productEntryPoint,
     path.join(outDir, 'game.js'),
   );
   await cp(path.join(root, 'public/assets'), path.join(outDir, 'assets'), {
@@ -188,5 +192,6 @@ await Promise.all([
 
 console.log(
   `构建完成: dist/web, dist/douyin, dist/wechat（buildId：${buildIdentity.buildId}，`
-  + `小游戏默认入口：${miniEntryMode}，sourceDirty：${buildIdentity.sourceDirty}）`,
+  + `小游戏默认入口：${miniEntryMode}，sourceDirty：${buildIdentity.sourceDirty}，`
+  + `formalAssetBudget：${formalAssetBudget.resultHash}）`,
 );

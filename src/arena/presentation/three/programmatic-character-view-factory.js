@@ -7,9 +7,14 @@ import { ProgrammaticCharacterView } from './programmatic-character-view.js';
 
 export class ProgrammaticCharacterViewFactory {
   #assetRegistry;
+  #actionPresentations;
 
-  constructor({ assetRegistry }) {
+  constructor({ assetRegistry, actionPresentations }) {
     this.#assetRegistry = assertPresentationAssetRegistry(assetRegistry);
+    if (!actionPresentations || typeof actionPresentations !== 'object') {
+      throw new TypeError('ProgrammaticCharacterViewFactory 需要 action presentations。');
+    }
+    this.#actionPresentations = actionPresentations;
     Object.freeze(this);
   }
 
@@ -28,6 +33,7 @@ export class ProgrammaticCharacterViewFactory {
       participantId,
       presentationDefinition,
       assetDefinition: asset,
+      actionPresentations: this.#actionPresentations,
     });
   }
 }

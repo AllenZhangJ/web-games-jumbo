@@ -151,6 +151,13 @@ export class PresentationPerformanceProbe {
     return true;
   }
 
+  shouldSampleResources() {
+    this.#assertRunning();
+    const nextFrameSequence = this.#frameSequence + 1;
+    return this.#resources.length === 0
+      || nextFrameSequence % this.#resourceSampleIntervalFrames === 0;
+  }
+
   recordFrame(value) {
     this.#assertRunning();
     assertKnownKeys(value, FRAME_KEYS, 'PresentationPerformanceProbe.frame');

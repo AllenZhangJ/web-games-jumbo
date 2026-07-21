@@ -24,6 +24,7 @@ export class EquipmentRegistry {
         throw new RangeError(`EquipmentRegistry 包含重复 id ${definition.id}。`);
       }
       actionRegistry.require(definition.actionDefinitionId);
+      actionRegistry.require(definition.aerialActionDefinitionId);
       this.#definitionsById.set(definition.id, definition);
     }
     this.#definitions = Object.freeze(normalized);

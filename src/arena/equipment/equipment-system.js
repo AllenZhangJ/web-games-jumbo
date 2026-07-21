@@ -170,6 +170,25 @@ export class EquipmentSystem {
     });
   }
 
+  getAerialActionCandidate(participantId) {
+    this.#assertUsable();
+    const id = this.#requireParticipant(participantId);
+    const instanceId = this.#heldByParticipant.get(id);
+    if (!instanceId) return null;
+    const runtime = this.#requireRuntime(instanceId);
+    const equipment = this.#equipmentRegistry.require(runtime.definitionId);
+    const ready = isEquipmentCooldownReady(runtime.cooldownRemainingTicks);
+    return Object.freeze({
+      id: `equipment-aerial:${runtime.instanceId}`,
+      actionDefinitionId: equipment.aerialActionDefinitionId,
+      source: 'equipment-system',
+      priority: ACTION_PRIORITY.AIR_COMBAT,
+      available: ready,
+      blocksFallback: true,
+      unavailableReason: ready ? null : 'equipment-cooldown',
+    });
+  }
+
   assertActionCanStart(participantId, actionDefinitionId) {
     this.#assertUsable();
     const id = this.#requireParticipant(participantId);
@@ -177,7 +196,10 @@ export class EquipmentSystem {
     if (!instanceId) throw new Error(`participant ${id} 没有可使用装备。`);
     const runtime = this.#requireRuntime(instanceId);
     const equipment = this.#equipmentRegistry.require(runtime.definitionId);
-    if (equipment.actionDefinitionId !== actionDefinitionId) {
+    if (
+      equipment.actionDefinitionId !== actionDefinitionId
+      && equipment.aerialActionDefinitionId !== actionDefinitionId
+    ) {
       throw new Error(`participant ${id} 的装备动作不匹配。`);
     }
     if (!isEquipmentCooldownReady(runtime.cooldownRemainingTicks)) {

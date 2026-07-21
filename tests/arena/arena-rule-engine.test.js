@@ -79,6 +79,23 @@ test('ArenaRuleEngine migrates base push through resolver, state, targeting, eff
   engine.destroy();
 });
 
+test('base attack can start at any distance and only resolves a hit during active range', () => {
+  const engine = createEngine({ contextPrimaryMobilityEnabled: false });
+  const distantActors = actors(12);
+  const started = engine.resolveActions({
+    tick: 0,
+    actors: distantActors,
+    inputFrames: frames(0, ['player-1']),
+  });
+  assert.equal(started.starts[0].actionDefinitionId, STAGE4_ACTION_ID.BASE_PUSH);
+  assert.equal(started.events[0].type, 'ActionStarted');
+  for (let tick = 0; tick < 8; tick += 1) engine.advanceTimers();
+  const active = engine.resolveActiveActions({ actors: distantActors });
+  assert.deepEqual(active.hits, []);
+  assert.deepEqual(active.events, []);
+  engine.destroy();
+});
+
 test('base push overrides are adapted into one ActionDefinition truth', () => {
   const engine = createEngine({
     basePush: {

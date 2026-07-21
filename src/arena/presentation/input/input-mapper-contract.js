@@ -7,6 +7,7 @@ import {
 export const ARENA_INPUT_MAPPER_ID = Object.freeze({
   GESTURE_MOBILITY: 'gesture-mobility-a',
   CONTEXT_PRIMARY: 'context-primary-b',
+  EXPLICIT_COMBAT_JUMP: 'explicit-combat-jump-v1',
 });
 
 const MAPPED_KEYS = new Set([

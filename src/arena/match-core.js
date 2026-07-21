@@ -194,6 +194,7 @@ export class MatchCore {
         }
       }
       this.#movement = new MovementSystem({
+        airJumpHorizontalImpulse: this.config.airJumpHorizontalImpulse ?? 0,
         participantCharacters: this.config.participantIds.map((participantId) => {
           const runtime = this.#characterRuntimes.get(participantId);
           return {
@@ -464,6 +465,8 @@ export class MatchCore {
         participantId,
         jumpPressed: frame.jumpPressed,
         jumpHeld: frame.jumpHeld,
+        moveX: frame.moveX,
+        moveZ: frame.moveZ,
       });
       availability.push({
         participantId,

@@ -234,6 +234,7 @@ function applyFrontGuards(commands, guards, actorsById) {
 export class ArenaRuleEngine {
   #participantIds;
   #baseActionDefinitionId;
+  #baseAirActionDefinitionId;
   #actionRegistry;
   #actionResolver;
   #actionExecution;
@@ -244,6 +245,7 @@ export class ArenaRuleEngine {
   #commandRegistry;
   #equipmentRegistry;
   #equipmentSystem;
+  #allowBaseAttackWhiff;
   #contentHash;
   #destroyed;
   #committing;
@@ -252,12 +254,14 @@ export class ArenaRuleEngine {
   constructor({
     participantIds,
     baseActionDefinitionId,
+    baseAirActionDefinitionId,
     actionRegistry,
     equipmentRegistry,
     targetingRegistry,
     effectRegistry,
     commandRegistry,
     movementCandidateProvider,
+    allowBaseAttackWhiff = false,
   }) {
     if (
       !Array.isArray(participantIds)
@@ -271,6 +275,11 @@ export class ArenaRuleEngine {
     );
     this.#actionRegistry = actionRegistry;
     this.#actionRegistry.require(this.#baseActionDefinitionId);
+    this.#baseAirActionDefinitionId = assertNonEmptyString(
+      baseAirActionDefinitionId,
+      'baseAirActionDefinitionId',
+    );
+    this.#actionRegistry.require(this.#baseAirActionDefinitionId);
     targetingRegistry.validateActionRegistry(actionRegistry);
     effectRegistry.validateActionRegistry(actionRegistry);
     if (!commandRegistry || typeof commandRegistry.execute !== 'function') {
@@ -282,6 +291,10 @@ export class ArenaRuleEngine {
       throw new TypeError('ArenaRuleEngine 需要 movementCandidateProvider.getCandidates()。');
     }
     this.#movementCandidateProvider = movementCandidateProvider;
+    if (typeof allowBaseAttackWhiff !== 'boolean') {
+      throw new TypeError('ArenaRuleEngine.allowBaseAttackWhiff 必须是布尔值。');
+    }
+    this.#allowBaseAttackWhiff = allowBaseAttackWhiff;
     this.#actionAffordanceProjector = new ActionAffordanceProjector({
       resolver: this.#actionResolver,
     });
@@ -292,6 +305,7 @@ export class ArenaRuleEngine {
     this.#contentHash = createDeterministicDataHash({
       actions: actionRegistry.list(),
       equipment: equipmentRegistry.list(),
+      ...(allowBaseAttackWhiff ? { allowBaseAttackWhiff: true } : {}),
     }, 'Arena rule content');
     this.#equipmentSystem = new EquipmentSystem({
       participantIds,
@@ -335,9 +349,13 @@ export class ArenaRuleEngine {
       source: actor,
       candidates: actors.filter(({ id, targetable }) => id !== participantId && targetable),
     });
+    // The production explicit-control mode treats a whiff as a real attack;
+    // range/facing still resolve only on active ticks. The legacy contextual
+    // primary mapper retains target-gated fallback so its one button can still
+    // mean jump when combat has no target.
     const candidates = [createBaseCandidate(
       this.#baseActionDefinitionId,
-      baseTargets.length > 0,
+      this.#allowBaseAttackWhiff || baseTargets.length > 0,
     )];
     const equipmentCandidate = this.#equipmentSystem.getActionCandidate(participantId);
     if (equipmentCandidate) candidates.push(equipmentCandidate);
@@ -666,7 +684,25 @@ export class ArenaRuleEngine {
 
   getMovementActionCandidates(capabilities) {
     this.#assertUsable();
-    return this.#movementCandidateProvider.getCandidates(capabilities);
+    const movementCandidates = this.#movementCandidateProvider.getCandidates(capabilities);
+    // Legacy contextual input reuses PRIMARY as mobility. Keep that mode's
+    // established jump fallback; the product's explicit combat control owns
+    // the always-available aerial attack.
+    if (!this.#allowBaseAttackWhiff || !capabilities.canBeginDownSmash) {
+      return movementCandidates;
+    }
+    const aerialCandidate = this.#equipmentSystem.getAerialActionCandidate(
+      capabilities.participantId,
+    ) ?? Object.freeze({
+      id: `base-air:${this.#baseAirActionDefinitionId}`,
+      actionDefinitionId: this.#baseAirActionDefinitionId,
+      source: 'base-air-action-provider',
+      priority: ACTION_PRIORITY.AIR_COMBAT,
+      available: true,
+      blocksFallback: true,
+      unavailableReason: null,
+    });
+    return Object.freeze([...movementCandidates, aerialCandidate]);
   }
 
   getActionAffordance(options) {

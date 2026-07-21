@@ -1,4 +1,8 @@
 import * as THREE from 'three';
+import {
+  DEFAULT_ARENA_CONTROL_LAYOUT,
+  actionButtonRadius,
+} from '../input/control-layout.js';
 import { disposeThreeObject } from './dispose-three-resources.js';
 import { ARENA_GREYBOX_COLOR, ARENA_GREYBOX_DESIGN } from './greybox-style.js';
 
@@ -101,6 +105,10 @@ function drawControlRing(context, x, y, radius, { active = false } = {}) {
 }
 
 function presentationSignature(frame, state) {
+  const localId = frame?.hud?.local?.participantId;
+  const opponentId = frame?.hud?.opponent?.participantId;
+  const local = frame?.world?.participants?.find?.(({ id }) => id === localId);
+  const opponent = frame?.world?.participants?.find?.(({ id }) => id === opponentId);
   return JSON.stringify([
     frame?.source?.matchSeed,
     frame?.phase,
@@ -111,9 +119,55 @@ function presentationSignature(frame, state) {
     frame?.hud?.action?.definitionId,
     frame?.hud?.action?.available,
     frame?.hud?.result,
+    local ? [Math.round(local.position.x * 2), Math.round(local.position.z * 2)] : null,
+    opponent ? [Math.round(opponent.position.x * 2), Math.round(opponent.position.z * 2)] : null,
     state.mode,
     state.mapperLabel,
   ]);
+}
+
+function drawOffscreenOpponent(context, frame, safe, scale) {
+  const local = frame.world.participants.find(({ id }) => id === frame.hud.local.participantId);
+  const opponent = frame.world.participants.find(({ id }) => id === frame.hud.opponent.participantId);
+  if (!local || !opponent || opponent.status !== 'active') return;
+  const dx = opponent.position.x - local.position.x;
+  const dz = opponent.position.z - local.position.z;
+  const distance = Math.hypot(dx, dz);
+  const localWindowRadius = safe.width < safe.height ? 4.2 : 6;
+  if (distance <= localWindowRadius) return;
+  const nx = dx / distance;
+  const ny = -dz / distance;
+  const centerX = safe.left + safe.width / 2;
+  const centerY = safe.top + safe.height / 2;
+  const edgeX = Math.max(34 * scale, safe.width / 2 - 28 * scale);
+  const edgeY = Math.max(64 * scale, safe.height / 2 - 118 * scale);
+  const ratio = Math.min(
+    edgeX / Math.max(0.001, Math.abs(nx)),
+    edgeY / Math.max(0.001, Math.abs(ny)),
+  );
+  const x = centerX + nx * ratio;
+  const y = centerY + ny * ratio;
+  const tipX = x + nx * 13 * scale;
+  const tipY = y + ny * 13 * scale;
+  const baseX = x - nx * 9 * scale;
+  const baseY = y - ny * 9 * scale;
+  const px = -ny;
+  const py = nx;
+  context.beginPath();
+  context.moveTo(tipX, tipY);
+  context.lineTo(baseX + px * 9 * scale, baseY + py * 9 * scale);
+  context.lineTo(baseX - px * 9 * scale, baseY - py * 9 * scale);
+  context.closePath();
+  context.fillStyle = 'rgba(22,166,161,0.94)';
+  context.fill();
+  context.strokeStyle = 'rgba(255,255,255,0.9)';
+  context.lineWidth = Math.max(1.5, 2 * scale);
+  context.stroke();
+  context.textAlign = 'center';
+  context.textBaseline = ny > 0.45 ? 'top' : 'bottom';
+  context.fillStyle = '#263238';
+  context.font = font(11 * scale, 800);
+  context.fillText(`对手 ${Math.round(distance)}m`, x, y + (ny > 0.45 ? 18 : -17) * scale);
 }
 
 export class ArenaHudLayer {
@@ -251,15 +305,24 @@ export class ArenaHudLayer {
     const radius = Math.max(42, Math.min(72, Math.min(safe.width, safe.height) * 0.09));
     const bottom = safe.bottom - Math.max(24, 28 * scale) - radius;
     const moveX = safe.left + Math.max(radius + 18, safe.width * 0.2);
-    const actionX = safe.right - Math.max(radius + 18, safe.width * 0.2);
     drawControlRing(context, moveX, bottom, radius);
     context.beginPath();
     context.arc(moveX, bottom, radius * 0.34, 0, Math.PI * 2);
     context.fillStyle = 'rgba(38,50,56,0.22)';
     context.fill();
-    drawControlRing(context, actionX, bottom, radius, { active: frame.hud.action.available });
+    const actionRadius = actionButtonRadius({
+      width: this.#viewport.width,
+      height: this.#viewport.height,
+    });
+    const actionX = this.#viewport.width * DEFAULT_ARENA_CONTROL_LAYOUT.primaryCenterXFraction;
+    const actionY = this.#viewport.height * DEFAULT_ARENA_CONTROL_LAYOUT.primaryCenterYFraction;
+    const jumpX = this.#viewport.width * DEFAULT_ARENA_CONTROL_LAYOUT.jumpCenterXFraction;
+    const jumpY = this.#viewport.height * DEFAULT_ARENA_CONTROL_LAYOUT.jumpCenterYFraction;
+    drawControlRing(context, actionX, actionY, actionRadius, {
+      active: frame.hud.action.available,
+    });
     context.beginPath();
-    context.arc(actionX, bottom, radius * 0.75, 0, Math.PI * 2);
+    context.arc(actionX, actionY, actionRadius * 0.75, 0, Math.PI * 2);
     context.fillStyle = frame.hud.action.available
       ? 'rgba(229,57,53,0.88)'
       : 'rgba(112,121,128,0.52)';
@@ -267,8 +330,16 @@ export class ArenaHudLayer {
     context.textAlign = 'center';
     context.textBaseline = 'middle';
     context.fillStyle = '#FFFFFF';
-    context.font = font(Math.max(13, radius * 0.26), 800);
-    context.fillText(frame.hud.action.label, actionX, bottom);
+    context.font = font(Math.max(13, actionRadius * 0.24), 800);
+    context.fillText(frame.hud.action.label, actionX, actionY);
+    drawControlRing(context, jumpX, jumpY, actionRadius * 0.86, { active: true });
+    context.beginPath();
+    context.arc(jumpX, jumpY, actionRadius * 0.62, 0, Math.PI * 2);
+    context.fillStyle = 'rgba(22,166,161,0.88)';
+    context.fill();
+    context.fillStyle = '#FFFFFF';
+    context.font = font(Math.max(12, actionRadius * 0.22), 800);
+    context.fillText('跳跃', jumpX, jumpY);
     if (this.#state.mapperLabel) {
       context.fillStyle = 'rgba(38,50,56,0.5)';
       context.font = font(12 * scale, 600);
@@ -299,7 +370,7 @@ export class ArenaHudLayer {
       context.fillText('准备', centerX, centerY - 14 * scale);
       context.fillStyle = 'rgba(38,50,56,0.58)';
       context.font = font(16 * scale, 650);
-      context.fillText('移动 · 争夺装备 · 击飞对手', centerX, centerY + 30 * scale);
+      context.fillText('左摇杆移动 · 红键攻击 · 青键跳跃', centerX, centerY + 30 * scale);
       return;
     }
     if (frame.phase !== 'ended') return;
@@ -360,6 +431,7 @@ export class ArenaHudLayer {
     context.setTransform(this.#textureScale, 0, 0, this.#textureScale, 0, 0);
     context.clearRect(0, 0, this.#viewport.width, this.#viewport.height);
     this.#drawTop(context, this.#frame, scale);
+    drawOffscreenOpponent(context, this.#frame, this.#safeRect, scale);
     this.#drawControls(context, this.#frame, scale);
     this.#drawOverlay(context, this.#frame, scale);
     this.#texture.needsUpdate = true;

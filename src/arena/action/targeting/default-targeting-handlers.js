@@ -6,6 +6,12 @@ import { TargetingRegistry } from './targeting-registry.js';
 
 const CONE_KEYS = new Set(['range', 'minimumFacingDot', 'maximumVerticalDifference']);
 const CAPSULE_KEYS = new Set(['range', 'radius', 'maximumVerticalDifference']);
+const DOWNWARD_CYLINDER_KEYS = new Set([
+  'range',
+  'radius',
+  'minimumVerticalDrop',
+  'maximumVerticalDifference',
+]);
 const EMPTY_KEYS = new Set();
 
 function assertActor(value, name) {
@@ -105,6 +111,47 @@ function resolveCapsule({ parameters, source, candidates }) {
   }).map(({ id }) => id);
 }
 
+function validateDownwardCylinder(parameters, actionId) {
+  assertKnownKeys(
+    parameters,
+    DOWNWARD_CYLINDER_KEYS,
+    `${actionId}.targeting.parameters`,
+  );
+  assertPositiveFinite(parameters.range, `${actionId}.targeting.range`);
+  assertPositiveFinite(parameters.radius, `${actionId}.targeting.radius`);
+  assertPositiveFinite(
+    parameters.maximumVerticalDifference,
+    `${actionId}.targeting.maximumVerticalDifference`,
+  );
+  if (!Number.isFinite(parameters.minimumVerticalDrop) || parameters.minimumVerticalDrop < 0) {
+    throw new RangeError(`${actionId}.targeting.minimumVerticalDrop 必须是非负有限数。`);
+  }
+  if (parameters.maximumVerticalDifference > parameters.range) {
+    throw new RangeError(
+      `${actionId}.targeting.maximumVerticalDifference 不能大于 range。`,
+    );
+  }
+  if (parameters.radius > parameters.range) {
+    throw new RangeError(`${actionId}.targeting.radius 不能大于 range。`);
+  }
+}
+
+function resolveDownwardCylinder({ parameters, source, candidates }) {
+  validateCommonActorInputs(source, candidates);
+  return candidates.filter((candidate) => {
+    if (candidate.id === source.id) return false;
+    const verticalDrop = source.position.y - candidate.position.y;
+    if (
+      verticalDrop < parameters.minimumVerticalDrop
+      || verticalDrop > parameters.maximumVerticalDifference
+    ) return false;
+    return Math.hypot(
+      candidate.position.x - source.position.x,
+      candidate.position.z - source.position.z,
+    ) <= parameters.radius;
+  }).map(({ id }) => id);
+}
+
 export function createDefaultTargetingRegistry() {
   return new TargetingRegistry([
     {
@@ -123,6 +170,11 @@ export function createDefaultTargetingRegistry() {
       kind: 'facing-capsule',
       validateParameters: validateCapsule,
       resolveTargets: resolveCapsule,
+    },
+    {
+      kind: 'downward-cylinder',
+      validateParameters: validateDownwardCylinder,
+      resolveTargets: resolveDownwardCylinder,
     },
   ]);
 }

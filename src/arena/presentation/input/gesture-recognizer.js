@@ -16,7 +16,14 @@ const CONFIG_KEYS = new Set([
   'directionDominance',
   'holdActivationTicks',
 ]);
-const RAW_SNAPSHOT_KEYS = new Set(['revision', 'suspended', 'viewport', 'move', 'primary']);
+const RAW_SNAPSHOT_KEYS = new Set([
+  'revision',
+  'suspended',
+  'viewport',
+  'move',
+  'primary',
+  'jump',
+]);
 const RAW_CONTROL_KEYS = new Set([
   'active',
   'pointerId',
@@ -125,9 +132,14 @@ function cloneRawSnapshot(value) {
     suspended: source.suspended,
     move: cloneRawControl(source.move, 'RawControlSnapshot.move'),
     primary: cloneRawControl(source.primary, 'RawControlSnapshot.primary'),
+    jump: cloneRawControl(source.jump, 'RawControlSnapshot.jump'),
   };
   if (snapshot.suspended) {
-    for (const [name, control] of Object.entries({ move: snapshot.move, primary: snapshot.primary })) {
+    for (const [name, control] of Object.entries({
+      move: snapshot.move,
+      primary: snapshot.primary,
+      jump: snapshot.jump,
+    })) {
       if (control.active || Object.values(control.edges).some(Boolean)) {
         throw new RangeError(`RawControlSnapshot.${name} 在 suspended 时必须已清空。`);
       }
@@ -242,6 +254,7 @@ export class GestureRecognizer {
       tick,
       move: this.#sampleControl(nextSessions, 'move', source.move, tick),
       primary: this.#sampleControl(nextSessions, 'primary', source.primary, tick),
+      jump: this.#sampleControl(nextSessions, 'jump', source.jump, tick),
     });
     this.#sessions = nextSessions;
     this.#lastTick = tick;

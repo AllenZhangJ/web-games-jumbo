@@ -1,5 +1,6 @@
 import { QuickMatchService } from '../../matchmaking/quick-match-service.js';
 import { ARENA_V1_BALANCE_DEFINITION } from '../../content/arena-v1-balance.js';
+import { ARENA_GAMEPLAY_V2_TUNING } from '../../content/arena-gameplay-v2-tuning.js';
 import {
   combineCleanupFailure,
   normalizeThrownError,
@@ -50,7 +51,12 @@ function createProductMatchConfig(value) {
   assertPlainRecord(overrides, 'Arena V1 Product matchConfig');
   return cloneFrozenData({
     ...ARENA_V1_BALANCE_DEFINITION.matchConfig,
+    airJumpHorizontalImpulse: ARENA_GAMEPLAY_V2_TUNING.character.jump.airHorizontalImpulse,
     ...overrides,
+    // Product gameplay owns a dedicated attack button and a dedicated jump
+    // button. Never allow a caller override to restore the retired contextual
+    // primary behavior, because that behavior gates attacks on nearby targets.
+    contextPrimaryMobilityEnabled: false,
   }, 'Arena V1 Product resolved matchConfig');
 }
 

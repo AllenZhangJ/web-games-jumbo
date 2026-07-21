@@ -1,8 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createContextInputMapperB } from '../../../src/arena/presentation/input/context-input-mapper-b.js';
+import { createExplicitCombatJumpMapper } from '../../../src/arena/presentation/input/explicit-combat-jump-mapper.js';
 import { createGestureInputMapperA } from '../../../src/arena/presentation/input/gesture-input-mapper-a.js';
 import { InputSampler } from '../../../src/arena/presentation/input/input-sampler.js';
+import { GestureRecognizer } from '../../../src/arena/presentation/input/gesture-recognizer.js';
+import { RawControlState } from '../../../src/arena/presentation/input/raw-control-state.js';
 
 const viewport = Object.freeze({ width: 400, height: 800 });
 const point = (pointerId, x, y) => ({ pointerId, x, y });
@@ -145,6 +148,56 @@ test('Mapper A primary is immediate while Mapper B delays tap/hold and suppresse
     actionAffordance: actionAffordance(3, { primaryLane: 'combat' }),
   }).primaryPressed, false);
   actionHold.destroy();
+});
+
+test('explicit mapper keeps attack and jump visible, simultaneous and independent', () => {
+  const sampler = new InputSampler({
+    participantId: 'player-1',
+    viewport,
+    mapper: createExplicitCombatJumpMapper(),
+  });
+  sampler.pointerStart(point(20, 100, 640));
+  sampler.pointerMove(point(20, 150, 590));
+  sampler.pointerStart(point(21, 336, 608));
+  sampler.pointerStart(point(22, 272, 688));
+  const first = sampler.sample(0);
+  assert.ok(first.moveX > 0);
+  assert.ok(first.moveZ > 0);
+  assert.equal(first.primaryPressed, true);
+  assert.equal(first.primaryHeld, true);
+  assert.equal(first.jumpPressed, true);
+  assert.equal(first.jumpHeld, true);
+  assert.equal(first.slamPressed, false);
+
+  const held = sampler.sample(1);
+  assert.equal(held.primaryPressed, false);
+  assert.equal(held.primaryHeld, true);
+  assert.equal(held.jumpPressed, false);
+  assert.equal(held.jumpHeld, true);
+  sampler.pointerEnd(point(21, 336, 608));
+  sampler.pointerEnd(point(22, 272, 688));
+  const released = sampler.sample(2);
+  assert.equal(released.primaryHeld, false);
+  assert.equal(released.jumpHeld, false);
+  sampler.destroy();
+});
+
+test('explicit mapper reserves jump-button down drag for the optional down smash', () => {
+  const raw = new RawControlState({ viewport });
+  const recognizer = new GestureRecognizer();
+  const mapper = createExplicitCombatJumpMapper();
+  raw.pointerStart(point(7, 272, 688));
+  let snapshot = raw.consumeSnapshot();
+  let mapped = mapper.map({ raw: snapshot, gestures: recognizer.sample(0, snapshot) });
+  assert.equal(mapped.jumpPressed, true);
+  assert.equal(mapped.slamPressed, false);
+  raw.pointerMove(point(7, 272, 752));
+  snapshot = raw.consumeSnapshot();
+  mapped = mapper.map({ raw: snapshot, gestures: recognizer.sample(1, snapshot) });
+  assert.equal(mapped.jumpPressed, false);
+  assert.equal(mapped.slamPressed, true);
+  raw.destroy();
+  recognizer.destroy();
 });
 
 test('InputSampler handles catch-up edges, lifecycle clearing and terminal mapper failure', () => {

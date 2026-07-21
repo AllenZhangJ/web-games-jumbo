@@ -27,6 +27,7 @@ export async function verifyArenaFormalAssetIntake({
   for (const record of bundle.records) {
     for (const [kind, artifact] of [
       ['content', record.contentArtifact],
+      ...record.dependencyArtifacts.map((entry) => ['content-dependency', entry]),
       ['license-text', record.license.textArtifact],
       ['rights-proof', record.proofArtifact],
     ]) {
@@ -47,7 +48,7 @@ export async function verifyArenaFormalAssetIntake({
       relativePath: artifact.path,
       expectedByteLength: artifact.byteLength,
       expectedSha256: artifact.sha256,
-      maximumBytes: artifactKinds.includes('content')
+      maximumBytes: artifactKinds.some((kind) => kind.startsWith('content'))
         ? MAXIMUM_CONTENT_BYTES
         : MAXIMUM_DOCUMENT_BYTES,
       includeText: false,

@@ -7,6 +7,7 @@ export class CharacterViewRegistry {
   #viewFactory;
   #actionPresentations;
   #runtimes;
+  #seenParticipantIds;
   #disposed;
   #failedError;
 
@@ -25,6 +26,7 @@ export class CharacterViewRegistry {
     this.#viewFactory = viewFactory;
     this.#actionPresentations = actionPresentations;
     this.#runtimes = new Map();
+    this.#seenParticipantIds = new Set();
     this.#disposed = false;
     this.#failedError = null;
   }
@@ -78,30 +80,35 @@ export class CharacterViewRegistry {
     if (!Array.isArray(participants) || participants.length === 0) {
       throw new RangeError('CharacterViewRegistry frame participants 必须是非空数组。');
     }
-    const next = participants.map((participant) => {
+    this.#seenParticipantIds.clear();
+    for (const participant of participants) {
       if (typeof participant?.id !== 'string' || participant.id.length === 0) {
         throw new TypeError('CharacterViewRegistry participant.id 必须是非空字符串。');
       }
+      if (this.#seenParticipantIds.has(participant.id)) {
+        throw new RangeError('CharacterViewRegistry participant 重复。');
+      }
+      this.#seenParticipantIds.add(participant.id);
       const presentationId = participant.appearance?.presentationId;
       const definition = this.#presentationRegistry.require(presentationId);
       if (
         definition.characterDefinitionId !== participant.characterDefinitionId
         || definition.getContentHash() !== participant.appearance.definitionHash
       ) throw new RangeError(`participant ${participant.id} 的 presentation 引用不一致。`);
-      return { participant, definition };
-    });
-    const nextIds = new Set(next.map(({ participant }) => participant.id));
-    if (nextIds.size !== next.length) throw new RangeError('CharacterViewRegistry participant 重复。');
+    }
 
     for (const [participantId, record] of this.#runtimes) {
-      if (nextIds.has(participantId)) continue;
+      if (this.#seenParticipantIds.has(participantId)) continue;
       try {
         this.#deleteRecord(participantId, record);
       } catch (error) {
         this.#failClosed(error);
       }
     }
-    for (const { participant, definition } of next) {
+    for (const participant of participants) {
+      const definition = this.#presentationRegistry.require(
+        participant.appearance.presentationId,
+      );
       let record = this.#runtimes.get(participant.id);
       if (
         record
@@ -176,6 +183,7 @@ export class CharacterViewRegistry {
       errors.push(...this.#cleanupRecord(record));
     }
     this.#runtimes.clear();
+    this.#seenParticipantIds.clear();
     if (errors.length > 0) {
       const failure = new Error('CharacterViewRegistry 清理未完整完成。');
       failure.causes = errors;

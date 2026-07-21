@@ -4,29 +4,39 @@ import {
 } from '../character/character-definition.js';
 import { CharacterRegistry } from '../character/character-registry.js';
 import { ARENA_V1_CHARACTER_ID } from './arena-v1-character-ids.js';
+import {
+  ARENA_GAMEPLAY_V2_TUNING,
+  compileJumpImpulseFromHeight,
+} from './arena-gameplay-v2-tuning.js';
+
+const CHARACTER_TUNING = ARENA_GAMEPLAY_V2_TUNING.character;
 
 function character(value) {
   return createCharacterDefinition({
     schemaVersion: CHARACTER_DEFINITION_SCHEMA_VERSION,
-    collision: { radius: 0.45, halfHeight: 0.55, mass: 1 },
+    collision: {
+      ...CHARACTER_TUNING.collision,
+    },
     movement: {
-      walkSpeed: 3.2,
-      runSpeed: 6,
-      runInputThreshold: 0.65,
-      groundAcceleration: 42,
-      airAcceleration: 14,
-      maximumHorizontalSpeed: 18,
-      automaticStepHeight: 0.35,
+      ...CHARACTER_TUNING.movement,
     },
     jump: {
-      groundImpulse: 7.5,
-      crouchImpulse: 9.5,
-      airImpulse: 7,
-      downSmashSpeed: 16,
-      coyoteTicks: 6,
-      bufferTicks: 6,
-      maximumAirJumps: 1,
-      maximumCrouchChargeTicks: 24,
+      groundImpulse: compileJumpImpulseFromHeight(
+        CHARACTER_TUNING.jump.targetGroundHeight,
+      ),
+      crouchImpulse: compileJumpImpulseFromHeight(
+        CHARACTER_TUNING.jump.targetChargedHeight,
+      ),
+      airImpulse: compileJumpImpulseFromHeight(
+        CHARACTER_TUNING.jump.targetAirHeight,
+      ),
+      downSmashSpeed: CHARACTER_TUNING.jump.downAttackStartSpeed,
+      downSmashAccelerationPerTick: CHARACTER_TUNING.jump.downAttackAccelerationPerTick,
+      maximumDownSmashSpeed: CHARACTER_TUNING.jump.maximumDownAttackSpeed,
+      coyoteTicks: CHARACTER_TUNING.jump.coyoteTicks,
+      bufferTicks: CHARACTER_TUNING.jump.bufferTicks,
+      maximumAirJumps: CHARACTER_TUNING.jump.maximumAirJumps,
+      maximumCrouchChargeTicks: CHARACTER_TUNING.jump.maximumCrouchChargeTicks,
     },
     tags: ['arena-v1', 'balanced'],
     ...value,

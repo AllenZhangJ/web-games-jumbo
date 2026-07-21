@@ -100,3 +100,50 @@ export function createOrthographicArenaCamera({
     }),
   });
 }
+
+/**
+ * Large-map camera contract. It deliberately exposes the same immutable input
+ * basis as the full-map camera, but keeps a local readable play area whose
+ * target can be advanced by the presentation stage.
+ */
+export function createLocalFollowArenaCamera({
+  viewport,
+  worldBounds,
+  target = null,
+  portraitVerticalSpan = 14,
+  landscapeVerticalSpan = 12,
+} = {}) {
+  const size = cloneViewport(viewport);
+  const bounds = cloneBounds(worldBounds);
+  const aspect = size.width / size.height;
+  const verticalSpan = positive(
+    aspect < 0.82 ? portraitVerticalSpan : landscapeVerticalSpan,
+    'camera local verticalSpan',
+  );
+  const horizontalSpan = verticalSpan * aspect;
+  const center = target ?? {
+    x: (bounds.minX + bounds.maxX) / 2,
+    z: (bounds.minZ + bounds.maxZ) / 2,
+  };
+  const centerX = finite(center.x, 'camera local target.x');
+  const centerZ = finite(center.z, 'camera local target.z');
+  return Object.freeze({
+    projection: 'orthographic-follow',
+    position: Object.freeze({ x: centerX, y: 16, z: centerZ - 16 }),
+    target: Object.freeze({ x: centerX, y: 0, z: centerZ }),
+    near: 0.1,
+    far: 80,
+    frustum: Object.freeze({
+      left: -horizontalSpan / 2,
+      right: horizontalSpan / 2,
+      top: verticalSpan / 2,
+      bottom: -verticalSpan / 2,
+    }),
+    worldBounds: bounds,
+    visualTransform: Object.freeze({ mirrorWorldX: true }),
+    inputBasis: Object.freeze({
+      screenRight: Object.freeze({ x: 1, z: 0 }),
+      screenUp: Object.freeze({ x: 0, z: 1 }),
+    }),
+  });
+}

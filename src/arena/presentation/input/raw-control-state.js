@@ -192,6 +192,7 @@ export class RawControlState {
       viewport: this.#viewport,
       move: this.#controlSnapshot(ARENA_CONTROL_ID.MOVE),
       primary: this.#controlSnapshot(ARENA_CONTROL_ID.PRIMARY),
+      jump: this.#controlSnapshot(ARENA_CONTROL_ID.JUMP),
     });
   }
 

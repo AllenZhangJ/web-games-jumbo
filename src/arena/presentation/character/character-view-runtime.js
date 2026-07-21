@@ -183,6 +183,7 @@ export class CharacterViewRuntime {
         snap,
         animation: Object.freeze({ semantics, baseBinding, overlayBinding }),
         direction,
+        frame,
       });
       return semantics;
     } catch (error) {

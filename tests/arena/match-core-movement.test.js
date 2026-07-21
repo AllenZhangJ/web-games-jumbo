@@ -3,7 +3,10 @@ import assert from 'node:assert/strict';
 import { createArenaV1MatchCore } from '../../src/arena/arena-v1-match-core.js';
 import { createNeutralInputFrame } from '../../src/arena/input-frame.js';
 import { ARENA_MATCH_EVENT } from '../../src/arena/match-core.js';
-import { STAGE4_ACTION_ID } from '../../src/arena/content/stage4-equipment.js';
+import {
+  STAGE4_ACTION_ID,
+  STAGE4_EQUIPMENT_ID,
+} from '../../src/arena/content/stage4-equipment.js';
 import { STAGE6_MOVEMENT_ACTION_ID } from '../../src/arena/content/stage6-movement-actions.js';
 import { MOVEMENT_MODE } from '../../src/arena/movement/movement-runtime.js';
 
@@ -206,6 +209,58 @@ test('primary falls back to context jump only when base targeting has no legal t
   );
   assert.equal(close.getSnapshot().participants[0].velocity.y, 0);
   close.destroy();
+});
+
+test('explicit production controls can whiff a base attack without a nearby target', () => {
+  const core = createCore({ contextPrimaryMobilityEnabled: false });
+  const events = step(core, {
+    'player-1': { primaryPressed: true, primaryHeld: true },
+  });
+  assert.equal(
+    events.some(({ type, action }) => (
+      type === ARENA_MATCH_EVENT.ACTION_STARTED
+      && action === STAGE4_ACTION_ID.BASE_PUSH
+    )),
+    true,
+  );
+  assert.equal(events.some(({ type }) => type === ARENA_MATCH_EVENT.HIT_RESOLVED), false);
+  assert.equal(
+    core.getSnapshot().participants[0].actionAffordance.primaryActionDefinitionId,
+    STAGE4_ACTION_ID.BASE_PUSH,
+  );
+  core.destroy();
+});
+
+test('explicit airborne primary starts a weapon-specific downward attack and descent', () => {
+  const core = createCore({
+    contextPrimaryMobilityEnabled: false,
+    equipment: {
+      initialSpawns: [{
+        id: 'test-hammer',
+        definitionId: STAGE4_EQUIPMENT_ID.HAMMER,
+        position: { x: -3, y: 1, z: 0 },
+      }],
+    },
+  });
+  step(core);
+  assert.equal(
+    core.getSnapshot().participants[0].equipment.definitionId,
+    STAGE4_EQUIPMENT_ID.HAMMER,
+  );
+  step(core, { 'player-1': { jumpPressed: true } });
+  for (let tick = 0; tick < 5; tick += 1) step(core);
+  const events = step(core, { 'player-1': { primaryPressed: true } });
+  assert.equal(
+    events.some(({ type, action }) => (
+      type === ARENA_MATCH_EVENT.ACTION_STARTED
+      && action === STAGE4_ACTION_ID.HAMMER_AIR_SMASH
+    )),
+    true,
+  );
+  const player = core.getSnapshot().participants[0];
+  assert.equal(player.movement.mode, MOVEMENT_MODE.DOWN_SMASH);
+  assert.ok(player.velocity.y < -15);
+  core.destroy();
 });
 
 test('same tick explicit jump and primary attack occupy independent action lanes', () => {

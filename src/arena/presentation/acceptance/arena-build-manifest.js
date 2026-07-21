@@ -78,7 +78,7 @@ function assertRequiredArtifacts(target, defaultEntry, artifacts) {
   const byPath = new Map(artifacts.map((artifact) => [artifact.path, artifact]));
   const required = target === ARENA_DEVICE_ACCEPTANCE_PLATFORM.WEB
     ? ['greybox.html', 'index.html', 'product.html']
-    : ['game-greybox.js', 'game-product.js', 'game.js', 'game.json', 'project.config.json'];
+    : ['game.js', 'game.json', 'project.config.json'];
   for (const artifactPath of required) {
     if (!byPath.has(artifactPath)) {
       throw new RangeError(`ArenaBuildManifest ${target} 缺少 ${artifactPath}。`);
@@ -89,15 +89,6 @@ function assertRequiredArtifacts(target, defaultEntry, artifacts) {
       throw new RangeError('Web 默认入口必须为 product。');
     }
     return;
-  }
-  const selected = byPath.get(
-    defaultEntry === ARENA_BUILD_DEFAULT_ENTRY.PRODUCT
-      ? 'game-product.js'
-      : 'game-greybox.js',
-  );
-  const entry = byPath.get('game.js');
-  if (selected.sha256 !== entry.sha256 || selected.byteLength !== entry.byteLength) {
-    throw new RangeError(`game.js 与 ${defaultEntry} 默认入口产物不一致。`);
   }
 }
 

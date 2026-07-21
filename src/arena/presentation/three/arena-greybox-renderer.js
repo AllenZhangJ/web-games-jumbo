@@ -5,9 +5,24 @@ import {
 import {
   createPresentationQualityDefinition,
 } from '../quality/presentation-quality-definition.js';
+import { ArenaImpactAudio } from '../audio/arena-impact-audio.js';
 import { ArenaHudLayer } from './arena-hud-layer.js';
 import { ARENA_GREYBOX_COLOR, ARENA_GREYBOX_DESIGN } from './greybox-style.js';
 import { ArenaWorldStage } from './arena-world-stage.js';
+import { GltfPresentationAssetLoader } from './gltf-presentation-asset-loader.js';
+import { ARENA_V1_GREYBOX_CONTENT } from '../content/arena-v1-greybox-content.js';
+
+const EMPTY_EVENTS = Object.freeze([]);
+
+function feedbackEventsAfter(events, sequence) {
+  let result = null;
+  for (const event of events) {
+    if (!Number.isInteger(event.sequence) || event.sequence <= sequence) continue;
+    if (result === null) result = [];
+    result.push(event);
+  }
+  return result ?? EMPTY_EVENTS;
+}
 
 function requiredFunction(value, name) {
   if (typeof value !== 'function') throw new TypeError(`${name} 必须是函数。`);
@@ -42,6 +57,7 @@ function normalizeViewport(value, maximumPixelRatio) {
 
 export const ARENA_GREYBOX_RENDERER_STATE = Object.freeze({
   CREATED: 'created',
+  LOADING: 'loading',
   READY: 'ready',
   CONTEXT_LOST: 'context-lost',
   FAILED: 'failed',
@@ -58,11 +74,18 @@ export class ArenaGreyboxRenderer {
   #rendering;
   #lastError;
   #qualityDefinition;
+  #lastFeedbackMatchSeed;
+  #lastFeedbackTick;
+  #lastFeedbackSequence;
+  #impactAudio;
+  #loadPromise;
+  #resourcesLoaded;
 
   constructor({
     canvas,
     platform,
     qualityDefinition = ARENA_V1_DEFAULT_PRESENTATION_QUALITY,
+    content = ARENA_V1_GREYBOX_CONTENT,
     webglRendererFactory = (options) => new THREE.WebGLRenderer(options),
   }) {
     if (!canvas || typeof canvas.getContext !== 'function') {
@@ -78,6 +101,12 @@ export class ArenaGreyboxRenderer {
     this.#viewport = null;
     this.#rendering = false;
     this.#lastError = null;
+    this.#lastFeedbackMatchSeed = null;
+    this.#lastFeedbackTick = -1;
+    this.#lastFeedbackSequence = -1;
+    this.#impactAudio = null;
+    this.#loadPromise = null;
+    this.#resourcesLoaded = false;
     try {
       const contextAttributes = {
         alpha: false,
@@ -104,9 +133,23 @@ export class ArenaGreyboxRenderer {
       this.#renderer.setClearColor?.(ARENA_GREYBOX_COLOR.background, 1);
       this.#renderer.autoClear = false;
       this.#stage = new ArenaWorldStage({
+        content,
         maximumEffects: this.#qualityDefinition.maximumEffects,
+        presentationAssetLoader: typeof this.#platform.readAssetBytes === 'function'
+          ? new GltfPresentationAssetLoader({
+            readAssetBytes: this.#platform.readAssetBytes.bind(this.#platform),
+            createImage: typeof this.#platform.createImage === 'function'
+              ? this.#platform.createImage.bind(this.#platform)
+              : null,
+          })
+          : null,
       });
       this.#hud = new ArenaHudLayer(platform);
+      this.#impactAudio = new ArenaImpactAudio({
+        createAudio: typeof this.#platform.createAudio === 'function'
+          ? this.#platform.createAudio.bind(this.#platform)
+          : () => null,
+      });
     } catch (error) {
       this.#lastError = error;
       this.#state = ARENA_GREYBOX_RENDERER_STATE.FAILED;
@@ -121,27 +164,46 @@ export class ArenaGreyboxRenderer {
     return this.#state;
   }
 
-  async load() {
+  load() {
     if (this.#state === ARENA_GREYBOX_RENDERER_STATE.DISPOSED) {
-      throw new Error('ArenaGreyboxRenderer 已销毁。');
+      return Promise.reject(new Error('ArenaGreyboxRenderer 已销毁。'));
     }
     if (this.#state === ARENA_GREYBOX_RENDERER_STATE.FAILED) {
       const error = new Error('ArenaGreyboxRenderer 已失败。');
       error.cause = this.#lastError;
-      throw error;
+      return Promise.reject(error);
     }
-    if (this.#state === ARENA_GREYBOX_RENDERER_STATE.READY) return this;
-    try {
-      this.resize(this.#platform.getViewport());
-      this.#state = ARENA_GREYBOX_RENDERER_STATE.READY;
-      return this;
-    } catch (error) {
-      this.#lastError = error;
-      this.#state = ARENA_GREYBOX_RENDERER_STATE.FAILED;
-      const failure = new Error('竞技场灰盒 Renderer 加载失败。');
-      failure.cause = error;
-      throw failure;
-    }
+    if (this.#resourcesLoaded) return Promise.resolve(this);
+    if (this.#loadPromise) return this.#loadPromise;
+    this.#state = ARENA_GREYBOX_RENDERER_STATE.LOADING;
+    let operation;
+    operation = Promise.resolve()
+      .then(() => this.#stage.load?.())
+      .then(() => {
+        if (this.#state === ARENA_GREYBOX_RENDERER_STATE.DISPOSED) {
+          throw new Error('ArenaGreyboxRenderer 加载已取消。');
+        }
+        this.#impactAudio.load();
+        this.#resourcesLoaded = true;
+        this.resize(this.#platform.getViewport());
+        if (this.#state !== ARENA_GREYBOX_RENDERER_STATE.CONTEXT_LOST) {
+          this.#state = ARENA_GREYBOX_RENDERER_STATE.READY;
+        }
+        return this;
+      })
+      .catch((error) => {
+        if (this.#state === ARENA_GREYBOX_RENDERER_STATE.DISPOSED) throw error;
+        this.#lastError = error;
+        this.#state = ARENA_GREYBOX_RENDERER_STATE.FAILED;
+        const failure = new Error('竞技场灰盒 Renderer 加载失败。');
+        failure.cause = error;
+        throw failure;
+      })
+      .finally(() => {
+        if (this.#loadPromise === operation) this.#loadPromise = null;
+      });
+    this.#loadPromise = operation;
+    return operation;
   }
 
   resize(viewport = this.#platform.getViewport()) {
@@ -151,8 +213,10 @@ export class ArenaGreyboxRenderer {
     ) return false;
     const normalized = normalizeViewport(viewport, this.#qualityDefinition.maximumPixelRatio);
     this.#viewport = normalized;
-    this.#renderer.setPixelRatio(normalized.pixelRatio);
-    this.#renderer.setSize(normalized.width, normalized.height, false);
+    if (this.#state !== ARENA_GREYBOX_RENDERER_STATE.CONTEXT_LOST) {
+      this.#renderer.setPixelRatio(normalized.pixelRatio);
+      this.#renderer.setSize(normalized.width, normalized.height, false);
+    }
     if (this.canvas.style) {
       this.canvas.style.width = `${normalized.width}px`;
       this.canvas.style.height = `${normalized.height}px`;
@@ -162,25 +226,56 @@ export class ArenaGreyboxRenderer {
     return true;
   }
 
-  render(frame, { deltaSeconds = 0, mode = 'match', mapperLabel = '' } = {}) {
+  render(
+    frame,
+    {
+      deltaSeconds = 0,
+      mode = 'match',
+      mapperLabel = '',
+      soundEnabled = true,
+      reducedMotion = false,
+    } = {},
+  ) {
     if (frame === null || frame === undefined) {
       throw new TypeError('ArenaGreyboxRenderer.render() 需要比赛表现帧。');
     }
-    return this.#renderFrame(frame, null, { deltaSeconds, mode, mapperLabel });
+    return this.#renderFrame(frame, null, {
+      deltaSeconds,
+      mode,
+      mapperLabel,
+      soundEnabled,
+      reducedMotion,
+    });
   }
 
   renderComposite(
     frame,
     overlay,
-    { deltaSeconds = 0, mode = 'match', mapperLabel = '' } = {},
+    {
+      deltaSeconds = 0,
+      mode = 'match',
+      mapperLabel = '',
+      soundEnabled = true,
+      reducedMotion = false,
+    } = {},
   ) {
     if (!overlay || typeof overlay.present !== 'function') {
       throw new TypeError('ArenaGreyboxRenderer.renderComposite() 需要 overlay.present()。');
     }
-    return this.#renderFrame(frame, overlay, { deltaSeconds, mode, mapperLabel });
+    return this.#renderFrame(frame, overlay, {
+      deltaSeconds,
+      mode,
+      mapperLabel,
+      soundEnabled,
+      reducedMotion,
+    });
   }
 
-  #renderFrame(frame, overlay, { deltaSeconds, mode, mapperLabel }) {
+  #renderFrame(
+    frame,
+    overlay,
+    { deltaSeconds, mode, mapperLabel, soundEnabled, reducedMotion },
+  ) {
     if (this.#state === ARENA_GREYBOX_RENDERER_STATE.CONTEXT_LOST) return false;
     if (this.#state !== ARENA_GREYBOX_RENDERER_STATE.READY) {
       throw new Error(`ArenaGreyboxRenderer 无法在 ${this.#state} 状态 render。`);
@@ -190,7 +285,11 @@ export class ArenaGreyboxRenderer {
     try {
       this.#renderer.clear(true, true, true);
       if (frame !== null && frame !== undefined) {
-        this.#stage.sync(frame);
+        if (typeof soundEnabled !== 'boolean' || typeof reducedMotion !== 'boolean') {
+          throw new TypeError('ArenaGreyboxRenderer soundEnabled/reducedMotion 必须是布尔值。');
+        }
+        this.#emitEventFeedback(frame, { soundEnabled, reducedMotion });
+        this.#stage.sync(frame, { reducedMotion });
         this.#stage.update(deltaSeconds);
         this.#hud.sync(frame, { mode, mapperLabel });
         this.#renderer.render(this.#stage.scene, this.#stage.camera);
@@ -210,6 +309,26 @@ export class ArenaGreyboxRenderer {
     }
   }
 
+  #emitEventFeedback(frame, { soundEnabled, reducedMotion }) {
+    if (!frame?.source || !Array.isArray(frame.events)) return;
+    const matchChanged = this.#lastFeedbackMatchSeed !== frame.source.matchSeed
+      || frame.source.tick < this.#lastFeedbackTick;
+    if (matchChanged) this.#lastFeedbackSequence = -1;
+    const unseenEvents = feedbackEventsAfter(frame.events, this.#lastFeedbackSequence);
+    for (const event of unseenEvents) {
+      if (event.type === 'HitResolved') {
+        const heavy = event.action === 'hammer-smash' || event.action === 'shield-charge';
+        try {
+          this.#platform.vibrate?.(heavy && !reducedMotion ? 'heavy' : 'light');
+        } catch { /* optional feedback */ }
+        this.#impactAudio.play(event.action, { enabled: soundEnabled });
+      }
+      this.#lastFeedbackSequence = Math.max(this.#lastFeedbackSequence, event.sequence);
+    }
+    this.#lastFeedbackMatchSeed = frame.source.matchSeed;
+    this.#lastFeedbackTick = frame.source.tick;
+  }
+
   handleContextLost(event) {
     event?.preventDefault?.();
     if (
@@ -222,7 +341,14 @@ export class ArenaGreyboxRenderer {
 
   handleContextRestored() {
     if (this.#state !== ARENA_GREYBOX_RENDERER_STATE.CONTEXT_LOST) return false;
+    if (!this.#resourcesLoaded) {
+      this.#state = ARENA_GREYBOX_RENDERER_STATE.LOADING;
+      return true;
+    }
     this.#stage.resetTransient();
+    this.#lastFeedbackMatchSeed = null;
+    this.#lastFeedbackTick = -1;
+    this.#lastFeedbackSequence = -1;
     this.resize(this.#viewport ?? this.#platform.getViewport());
     this.#state = ARENA_GREYBOX_RENDERER_STATE.READY;
     return true;
@@ -235,6 +361,12 @@ export class ArenaGreyboxRenderer {
 
   getInputViewport() {
     if (!this.#viewport) throw new Error('ArenaGreyboxRenderer 尚未 resize。');
+    if (this.#state === ARENA_GREYBOX_RENDERER_STATE.CONTEXT_LOST) {
+      return Object.freeze({
+        width: Math.max(1, Math.round(this.#viewport.width * this.#viewport.pixelRatio)),
+        height: Math.max(1, Math.round(this.#viewport.height * this.#viewport.pixelRatio)),
+      });
+    }
     return Object.freeze({
       width: Math.max(1, Number(this.canvas.width) || this.#viewport.width),
       height: Math.max(1, Number(this.canvas.height) || this.#viewport.height),
@@ -254,6 +386,7 @@ export class ArenaGreyboxRenderer {
       lastError: this.#lastError,
       stage: this.#stage?.getDebugSnapshot() ?? null,
       hud: this.#hud?.getDebugSnapshot() ?? null,
+      audio: this.#impactAudio?.getDebugSnapshot() ?? null,
     });
   }
 
@@ -283,13 +416,15 @@ export class ArenaGreyboxRenderer {
     if (this.#state === ARENA_GREYBOX_RENDERER_STATE.DISPOSED) return;
     if (this.#rendering) throw new Error('render() 期间不能销毁 ArenaGreyboxRenderer。');
     const errors = [];
-    for (const value of [this.#hud, this.#stage, this.#renderer]) {
+    for (const value of [this.#impactAudio, this.#hud, this.#stage, this.#renderer]) {
       try { value?.dispose?.(); } catch (error) { errors.push(error); }
     }
     try { this.#renderer?.forceContextLoss?.(); } catch (error) { errors.push(error); }
     this.#hud = null;
     this.#stage = null;
+    this.#impactAudio = null;
     this.#renderer = null;
+    this.#resourcesLoaded = false;
     this.#state = ARENA_GREYBOX_RENDERER_STATE.DISPOSED;
     if (errors.length > 0) {
       const failure = new Error('ArenaGreyboxRenderer 清理未完整完成。');

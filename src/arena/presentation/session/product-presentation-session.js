@@ -485,24 +485,27 @@ export class ProductPresentationSession {
     }), { deltaSeconds });
     const renderEndedAtMs = this.#performanceNow();
     let resources = null;
-    try { resources = this.#renderer.getPerformanceSnapshot?.() ?? null; } catch (error) {
-      this.#performanceProbeErrorCount += 1;
-      this.#report('performance-probe-error', {
-        method: 'renderer.getPerformanceSnapshot',
-        message: error?.message ?? String(error),
-      });
-    }
-    try {
-      const memory = createPresentationMemorySnapshot(
-        this.#composition.performanceMemoryProvider(),
-      );
-      resources = mergePresentationMemorySnapshot(resources, memory);
-    } catch (error) {
-      this.#performanceProbeErrorCount += 1;
-      this.#report('performance-probe-error', {
-        method: 'performanceMemoryProvider',
-        message: error?.message ?? String(error),
-      });
+    const sampleResources = this.#performanceProbe?.shouldSampleResources?.() ?? true;
+    if (sampleResources) {
+      try { resources = this.#renderer.getPerformanceSnapshot?.() ?? null; } catch (error) {
+        this.#performanceProbeErrorCount += 1;
+        this.#report('performance-probe-error', {
+          method: 'renderer.getPerformanceSnapshot',
+          message: error?.message ?? String(error),
+        });
+      }
+      try {
+        const memory = createPresentationMemorySnapshot(
+          this.#composition.performanceMemoryProvider(),
+        );
+        resources = mergePresentationMemorySnapshot(resources, memory);
+      } catch (error) {
+        this.#performanceProbeErrorCount += 1;
+        this.#report('performance-probe-error', {
+          method: 'performanceMemoryProvider',
+          message: error?.message ?? String(error),
+        });
+      }
     }
     this.#lastPublishTelemetry = Object.freeze({
       rendered: rendered !== false,
@@ -907,9 +910,12 @@ export class ProductPresentationSession {
       productState: this.#lastSnapshot?.viewModel?.activeState ?? null,
       matchTick: this.#lastSnapshot?.matchFrame?.source?.tick ?? null,
       input: this.#inputRouter?.getDebugSnapshot?.() ?? null,
+      renderer: this.#renderer?.getDebugSnapshot?.() ?? null,
       frameLoop: this.#frameLoop?.getDebugSnapshot?.() ?? null,
       accumulator: this.#accumulator?.getDebugSnapshot?.() ?? null,
       renderPacer: this.#renderPacer?.getDebugSnapshot?.() ?? null,
+      lastErrorMessage: this.#lastError?.message ?? null,
+      lastErrorCauseMessage: this.#lastError?.cause?.message ?? null,
       performance: this.getPerformanceSnapshot(),
       nextProfileLeaseHeartbeatAtMs: this.#nextProfileLeaseHeartbeatAtMs,
     });

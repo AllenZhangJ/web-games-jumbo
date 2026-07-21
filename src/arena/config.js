@@ -3,24 +3,25 @@ import { ARENA_V1_DEFAULT_CHARACTER_ID } from './content/arena-v1-character-ids.
 import { createMatchContentSelection } from './content/match-content-selection.js';
 import { createStaticMapDefinition } from './map/map-definition.js';
 import { cloneFrozenData } from './rules/definition-utils.js';
+import { ARENA_GAMEPLAY_V2_TUNING } from './content/arena-gameplay-v2-tuning.js';
 
-export const ARENA_TICK_RATE = 60;
+export const ARENA_TICK_RATE = ARENA_GAMEPLAY_V2_TUNING.units.tickRateHz;
 export const ARENA_FIXED_DT = 1 / ARENA_TICK_RATE;
 
 export const ARENA_PHYSICS = Object.freeze({
-  gravity: -24,
-  characterRadius: 0.45,
-  characterHalfHeight: 0.55,
-  characterMass: 1,
-  moveSpeed: 6,
-  groundAcceleration: 42,
-  airAcceleration: 14,
-  maxHorizontalSpeed: 18,
-  maxVerticalSpeed: 22,
-  groundProbeTolerance: 0.035,
-  maxStepHeight: 0.35,
-  groundSnapDistance: 0.35,
-  substeps: 2,
+  gravity: -ARENA_GAMEPLAY_V2_TUNING.physics.gravityMagnitude,
+  characterRadius: ARENA_GAMEPLAY_V2_TUNING.character.collision.radius,
+  characterHalfHeight: ARENA_GAMEPLAY_V2_TUNING.character.collision.halfHeight,
+  characterMass: ARENA_GAMEPLAY_V2_TUNING.character.collision.mass,
+  moveSpeed: ARENA_GAMEPLAY_V2_TUNING.character.movement.runSpeed,
+  groundAcceleration: ARENA_GAMEPLAY_V2_TUNING.character.movement.groundAcceleration,
+  airAcceleration: ARENA_GAMEPLAY_V2_TUNING.character.movement.airAcceleration,
+  maxHorizontalSpeed: ARENA_GAMEPLAY_V2_TUNING.character.movement.maximumHorizontalSpeed,
+  maxVerticalSpeed: ARENA_GAMEPLAY_V2_TUNING.character.jump.maximumDownAttackSpeed,
+  groundProbeTolerance: ARENA_GAMEPLAY_V2_TUNING.physics.groundProbeTolerance,
+  maxStepHeight: ARENA_GAMEPLAY_V2_TUNING.character.movement.automaticStepHeight,
+  groundSnapDistance: ARENA_GAMEPLAY_V2_TUNING.physics.groundSnapDistance,
+  substeps: ARENA_GAMEPLAY_V2_TUNING.physics.substeps,
 });
 
 export const PHYSICS_POC_ARENA = Object.freeze({
@@ -67,16 +68,17 @@ export const ARENA_PARTICIPANT_STATUS = Object.freeze({
 
 export { ARENA_ACTION_PHASE };
 
+const BASE_PUSH_TUNING = ARENA_GAMEPLAY_V2_TUNING.attacks['base-push'];
 const DEFAULT_BASE_PUSH = Object.freeze({
-  range: 1.5,
-  minimumFacingDot: 0.35,
-  maximumVerticalDifference: 1.5,
-  windupTicks: 8,
-  activeTicks: 3,
-  recoveryTicks: 15,
-  hitstunTicks: 24,
-  horizontalImpulse: 8.5,
-  verticalImpulse: 4.8,
+  range: BASE_PUSH_TUNING.targeting.range,
+  minimumFacingDot: BASE_PUSH_TUNING.targeting.minimumFacingDot,
+  maximumVerticalDifference: BASE_PUSH_TUNING.targeting.maximumVerticalDifference,
+  windupTicks: BASE_PUSH_TUNING.timing.windupTicks,
+  activeTicks: BASE_PUSH_TUNING.timing.activeTicks,
+  recoveryTicks: BASE_PUSH_TUNING.timing.recoveryTicks,
+  hitstunTicks: BASE_PUSH_TUNING.hitstunTicks,
+  horizontalImpulse: BASE_PUSH_TUNING.knockback.horizontalImpulse,
+  verticalImpulse: BASE_PUSH_TUNING.knockback.verticalImpulse,
 });
 
 const MATCH_OVERRIDE_KEYS = Object.freeze(new Set([
@@ -94,6 +96,8 @@ const MATCH_OVERRIDE_KEYS = Object.freeze(new Set([
   'arena',
   'participantCharacters',
   'contentSelection',
+  'airJumpHorizontalImpulse',
+  'contextPrimaryMobilityEnabled',
 ]));
 const ARENA_KEYS = Object.freeze(new Set(['killY', 'surfaces', 'spawns']));
 const SURFACE_KEYS = Object.freeze(new Set(['id', 'center', 'halfExtents']));
@@ -330,6 +334,16 @@ export function createArenaMatchConfig(overrides = {}) {
     participantIds,
   );
   const equipment = cloneEquipment(overrides.equipment ?? ARENA_MATCH_DEFAULTS.equipment);
+  const airJumpHorizontalImpulse = overrides.airJumpHorizontalImpulse;
+  if (
+    airJumpHorizontalImpulse !== undefined
+    && (!Number.isFinite(airJumpHorizontalImpulse) || airJumpHorizontalImpulse < 0)
+  ) throw new RangeError('airJumpHorizontalImpulse 必须是非负有限数。');
+  const contextPrimaryMobilityEnabled = overrides.contextPrimaryMobilityEnabled;
+  if (
+    contextPrimaryMobilityEnabled !== undefined
+    && typeof contextPrimaryMobilityEnabled !== 'boolean'
+  ) throw new TypeError('contextPrimaryMobilityEnabled 必须是布尔值。');
   if (contentSelection !== null) {
     if (mapDefinitionId !== contentSelection.selectedMapDefinitionId) {
       throw new RangeError('match mapDefinitionId 与 MatchContentSelection 选择不一致。');
@@ -392,6 +406,10 @@ export function createArenaMatchConfig(overrides = {}) {
     participantCharacters,
     contentSelection,
     equipment,
+    ...(airJumpHorizontalImpulse === undefined ? {} : { airJumpHorizontalImpulse }),
+    ...(contextPrimaryMobilityEnabled === undefined
+      ? {}
+      : { contextPrimaryMobilityEnabled }),
     arena: cloneArena(overrides.arena ?? PHYSICS_POC_ARENA),
   });
 }

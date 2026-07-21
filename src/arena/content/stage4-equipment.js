@@ -16,12 +16,19 @@ import {
 } from '../equipment/equipment-definition.js';
 import { EquipmentRegistry } from '../equipment/equipment-registry.js';
 import { cloneFrozenData, cloneFrozenStringSet } from '../rules/definition-utils.js';
+import { ARENA_GAMEPLAY_V2_TUNING } from './arena-gameplay-v2-tuning.js';
+
+const ATTACK_TUNING = ARENA_GAMEPLAY_V2_TUNING.attacks;
 
 export const STAGE4_ACTION_ID = Object.freeze({
   BASE_PUSH: 'base-push',
+  BASE_AIR_STRIKE: 'base-air-strike',
   HAMMER_SMASH: 'hammer-smash',
+  HAMMER_AIR_SMASH: 'hammer-air-smash',
   CHAIN_PULL: 'chain-pull',
+  CHAIN_AIR_LASH: 'chain-air-lash',
   SHIELD_CHARGE: 'shield-charge',
+  SHIELD_AIR_DROP: 'shield-air-drop',
 });
 
 export const STAGE4_EQUIPMENT_ID = Object.freeze({
@@ -66,7 +73,10 @@ function equipment(value) {
   return createEquipmentDefinition({
     schemaVersion: EQUIPMENT_DEFINITION_SCHEMA_VERSION,
     slot: 'primary',
-    pickup: { mode: EQUIPMENT_PICKUP_MODE.AUTOMATIC, radius: 0.8 },
+    pickup: {
+      mode: EQUIPMENT_PICKUP_MODE.AUTOMATIC,
+      radius: ARENA_GAMEPLAY_V2_TUNING.equipment.automaticPickupRadius,
+    },
     drop: {
       onOwnerEliminated: EQUIPMENT_DROP_POLICY.LAST_SAFE_POSITION,
       invalidPositionFallback: EQUIPMENT_DROP_FALLBACK.ORIGIN_SPAWN,
@@ -76,15 +86,58 @@ function equipment(value) {
   });
 }
 
+function configuredTargeting(tuning) {
+  const { kind, ...parameters } = tuning.targeting;
+  return { kind, parameters };
+}
+
+function aerialAction({ id, tags }) {
+  const tuning = ATTACK_TUNING[id];
+  return action({
+    id,
+    kind: 'aerial-attack',
+    conflictTags: ['aerial-commitment'],
+    timing: tuning.timing,
+    targeting: configuredTargeting(tuning),
+    effects: [
+      {
+        id: `${id}-begin-descent`,
+        kind: 'begin-down-smash',
+        trigger: ACTION_EFFECT_TRIGGER.ACTION_STARTED,
+        parameters: {},
+      },
+      {
+        id: `${id}-interrupt`,
+        kind: 'interrupt-action',
+        trigger: ACTION_EFFECT_TRIGGER.HIT_RESOLVED,
+        parameters: {},
+      },
+      {
+        id: `${id}-hitstun`,
+        kind: 'apply-hitstun',
+        trigger: ACTION_EFFECT_TRIGGER.HIT_RESOLVED,
+        parameters: { ticks: tuning.hitstunTicks },
+      },
+      {
+        id: `${id}-impulse`,
+        kind: 'apply-directional-impulse',
+        trigger: ACTION_EFFECT_TRIGGER.HIT_RESOLVED,
+        parameters: {
+          horizontalImpulse: tuning.knockback.horizontalImpulse,
+          verticalImpulse: tuning.knockback.verticalImpulse,
+        },
+      },
+    ],
+    tags: ['aerial', ...tags],
+  });
+}
+
 export const STAGE4_ACTION_DEFINITIONS = Object.freeze([
   action({
     id: STAGE4_ACTION_ID.BASE_PUSH,
     kind: 'base-attack',
-    timing: { windupTicks: 8, activeTicks: 3, recoveryTicks: 15, cooldownTicks: 0 },
-    targeting: {
-      kind: 'facing-cone',
-      parameters: { range: 1.5, minimumFacingDot: 0.35, maximumVerticalDifference: 1.5 },
-    },
+    timing: ATTACK_TUNING[STAGE4_ACTION_ID.BASE_PUSH].timing,
+    targeting: configuredTargeting(ATTACK_TUNING[STAGE4_ACTION_ID.BASE_PUSH]),
     effects: [
       {
         id: 'base-push-interrupt',
@@ -96,13 +149,16 @@ export const STAGE4_ACTION_DEFINITIONS = Object.freeze([
         id: 'base-push-hitstun',
         kind: 'apply-hitstun',
         trigger: ACTION_EFFECT_TRIGGER.HIT_RESOLVED,
-        parameters: { ticks: 24 },
+        parameters: { ticks: ATTACK_TUNING[STAGE4_ACTION_ID.BASE_PUSH].hitstunTicks },
       },
       {
         id: 'base-push-impulse',
         kind: 'apply-directional-impulse',
         trigger: ACTION_EFFECT_TRIGGER.HIT_RESOLVED,
-        parameters: { horizontalImpulse: 8.5, verticalImpulse: 4.8 },
+        parameters: {
+          horizontalImpulse: ATTACK_TUNING[STAGE4_ACTION_ID.BASE_PUSH].knockback.horizontalImpulse,
+          verticalImpulse: ATTACK_TUNING[STAGE4_ACTION_ID.BASE_PUSH].knockback.verticalImpulse,
+        },
       },
     ],
     tags: ['core', 'fallback'],
@@ -110,11 +166,8 @@ export const STAGE4_ACTION_DEFINITIONS = Object.freeze([
   action({
     id: STAGE4_ACTION_ID.HAMMER_SMASH,
     kind: 'equipment-attack',
-    timing: { windupTicks: 18, activeTicks: 3, recoveryTicks: 24, cooldownTicks: 72 },
-    targeting: {
-      kind: 'facing-cone',
-      parameters: { range: 1.8, minimumFacingDot: 0.4, maximumVerticalDifference: 1.5 },
-    },
+    timing: ATTACK_TUNING[STAGE4_ACTION_ID.HAMMER_SMASH].timing,
+    targeting: configuredTargeting(ATTACK_TUNING[STAGE4_ACTION_ID.HAMMER_SMASH]),
     effects: [
       {
         id: 'hammer-interrupt',
@@ -126,13 +179,16 @@ export const STAGE4_ACTION_DEFINITIONS = Object.freeze([
         id: 'hammer-hitstun',
         kind: 'apply-hitstun',
         trigger: ACTION_EFFECT_TRIGGER.HIT_RESOLVED,
-        parameters: { ticks: 30 },
+        parameters: { ticks: ATTACK_TUNING[STAGE4_ACTION_ID.HAMMER_SMASH].hitstunTicks },
       },
       {
         id: 'hammer-impulse',
         kind: 'apply-directional-impulse',
         trigger: ACTION_EFFECT_TRIGGER.HIT_RESOLVED,
-        parameters: { horizontalImpulse: 15, verticalImpulse: 6.2 },
+        parameters: {
+          horizontalImpulse: ATTACK_TUNING[STAGE4_ACTION_ID.HAMMER_SMASH].knockback.horizontalImpulse,
+          verticalImpulse: ATTACK_TUNING[STAGE4_ACTION_ID.HAMMER_SMASH].knockback.verticalImpulse,
+        },
       },
     ],
     tags: ['equipment', 'knockback'],
@@ -140,11 +196,8 @@ export const STAGE4_ACTION_DEFINITIONS = Object.freeze([
   action({
     id: STAGE4_ACTION_ID.CHAIN_PULL,
     kind: 'equipment-attack',
-    timing: { windupTicks: 12, activeTicks: 4, recoveryTicks: 20, cooldownTicks: 90 },
-    targeting: {
-      kind: 'facing-cone',
-      parameters: { range: 5, minimumFacingDot: 0.55, maximumVerticalDifference: 2 },
-    },
+    timing: ATTACK_TUNING[STAGE4_ACTION_ID.CHAIN_PULL].timing,
+    targeting: configuredTargeting(ATTACK_TUNING[STAGE4_ACTION_ID.CHAIN_PULL]),
     effects: [
       {
         id: 'chain-interrupt',
@@ -156,13 +209,16 @@ export const STAGE4_ACTION_DEFINITIONS = Object.freeze([
         id: 'chain-hitstun',
         kind: 'apply-hitstun',
         trigger: ACTION_EFFECT_TRIGGER.HIT_RESOLVED,
-        parameters: { ticks: 20 },
+        parameters: { ticks: ATTACK_TUNING[STAGE4_ACTION_ID.CHAIN_PULL].hitstunTicks },
       },
       {
         id: 'chain-pull-target',
         kind: 'pull-to-source',
         trigger: ACTION_EFFECT_TRIGGER.HIT_RESOLVED,
-        parameters: { horizontalImpulse: 10, verticalImpulse: 2.5 },
+        parameters: {
+          horizontalImpulse: ATTACK_TUNING[STAGE4_ACTION_ID.CHAIN_PULL].knockback.horizontalImpulse,
+          verticalImpulse: ATTACK_TUNING[STAGE4_ACTION_ID.CHAIN_PULL].knockback.verticalImpulse,
+        },
       },
     ],
     tags: ['equipment', 'reposition'],
@@ -170,11 +226,8 @@ export const STAGE4_ACTION_DEFINITIONS = Object.freeze([
   action({
     id: STAGE4_ACTION_ID.SHIELD_CHARGE,
     kind: 'equipment-defense',
-    timing: { windupTicks: 5, activeTicks: 16, recoveryTicks: 18, cooldownTicks: 96 },
-    targeting: {
-      kind: 'facing-capsule',
-      parameters: { range: 1.6, radius: 0.65, maximumVerticalDifference: 1.5 },
-    },
+    timing: ATTACK_TUNING[STAGE4_ACTION_ID.SHIELD_CHARGE].timing,
+    targeting: configuredTargeting(ATTACK_TUNING[STAGE4_ACTION_ID.SHIELD_CHARGE]),
     effects: [
       {
         id: 'shield-interrupt',
@@ -187,8 +240,10 @@ export const STAGE4_ACTION_DEFINITIONS = Object.freeze([
         kind: 'front-guard',
         trigger: ACTION_EFFECT_TRIGGER.ACTION_ACTIVE,
         parameters: {
-          minimumFacingDot: 0.25,
-          impulseMultiplier: 0.2,
+          minimumFacingDot: ATTACK_TUNING[STAGE4_ACTION_ID.SHIELD_CHARGE]
+            .guard.minimumFacingDot,
+          impulseMultiplier: ATTACK_TUNING[STAGE4_ACTION_ID.SHIELD_CHARGE]
+            .guard.impulseMultiplier,
           cancelledEffectKinds: ['pull-to-source'],
         },
       },
@@ -196,16 +251,40 @@ export const STAGE4_ACTION_DEFINITIONS = Object.freeze([
         id: 'shield-self-charge',
         kind: 'apply-self-impulse',
         trigger: ACTION_EFFECT_TRIGGER.ACTION_STARTED,
-        parameters: { horizontalImpulse: 6.5 },
+        parameters: {
+          horizontalImpulse: ATTACK_TUNING[STAGE4_ACTION_ID.SHIELD_CHARGE]
+            .selfMovement.horizontalImpulse,
+        },
       },
       {
         id: 'shield-target-impulse',
         kind: 'apply-directional-impulse',
         trigger: ACTION_EFFECT_TRIGGER.HIT_RESOLVED,
-        parameters: { horizontalImpulse: 7.5, verticalImpulse: 2.8 },
+        parameters: {
+          horizontalImpulse: ATTACK_TUNING[STAGE4_ACTION_ID.SHIELD_CHARGE]
+            .knockback.horizontalImpulse,
+          verticalImpulse: ATTACK_TUNING[STAGE4_ACTION_ID.SHIELD_CHARGE]
+            .knockback.verticalImpulse,
+        },
       },
     ],
     tags: ['defense', 'equipment', 'reposition'],
+  }),
+  aerialAction({
+    id: STAGE4_ACTION_ID.BASE_AIR_STRIKE,
+    tags: ['core', 'fallback'],
+  }),
+  aerialAction({
+    id: STAGE4_ACTION_ID.HAMMER_AIR_SMASH,
+    tags: ['equipment', 'knockback'],
+  }),
+  aerialAction({
+    id: STAGE4_ACTION_ID.CHAIN_AIR_LASH,
+    tags: ['equipment', 'reposition'],
+  }),
+  aerialAction({
+    id: STAGE4_ACTION_ID.SHIELD_AIR_DROP,
+    tags: ['defense', 'equipment'],
   }),
 ]);
 
@@ -214,18 +293,21 @@ export const STAGE4_EQUIPMENT_DEFINITIONS = Object.freeze([
     id: STAGE4_EQUIPMENT_ID.HAMMER,
     category: 'knockback',
     actionDefinitionId: STAGE4_ACTION_ID.HAMMER_SMASH,
+    aerialActionDefinitionId: STAGE4_ACTION_ID.HAMMER_AIR_SMASH,
     presentationSemantic: 'heavy-smash',
   }),
   equipment({
     id: STAGE4_EQUIPMENT_ID.CHAIN,
     category: 'reposition',
     actionDefinitionId: STAGE4_ACTION_ID.CHAIN_PULL,
+    aerialActionDefinitionId: STAGE4_ACTION_ID.CHAIN_AIR_LASH,
     presentationSemantic: 'chain-pull',
   }),
   equipment({
     id: STAGE4_EQUIPMENT_ID.SHIELD,
     category: 'defense-charge',
     actionDefinitionId: STAGE4_ACTION_ID.SHIELD_CHARGE,
+    aerialActionDefinitionId: STAGE4_ACTION_ID.SHIELD_AIR_DROP,
     presentationSemantic: 'shield-charge',
   }),
 ]);
@@ -292,11 +374,14 @@ export function createStage4ContentRegistries({
   const equipmentDefinitions = STAGE4_EQUIPMENT_DEFINITIONS.filter(({ id }) => (
     selectedEquipmentIds.includes(id)
   ));
-  const selectedActionIds = new Set(equipmentDefinitions.map(({ actionDefinitionId }) => (
-    actionDefinitionId
-  )));
+  const selectedActionIds = new Set(equipmentDefinitions.flatMap(({
+    actionDefinitionId,
+    aerialActionDefinitionId,
+  }) => [actionDefinitionId, aerialActionDefinitionId]));
   const actionDefinitions = createConfiguredActionDefinitions(basePush).filter((definition) => (
-    definition.id === STAGE4_ACTION_ID.BASE_PUSH || selectedActionIds.has(definition.id)
+    definition.id === STAGE4_ACTION_ID.BASE_PUSH
+      || definition.id === STAGE4_ACTION_ID.BASE_AIR_STRIKE
+      || selectedActionIds.has(definition.id)
   ));
   const actionRegistry = new ActionRegistry([
     ...actionDefinitions,

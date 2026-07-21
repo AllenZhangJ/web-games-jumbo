@@ -61,6 +61,7 @@ function record({
   recordId,
   sourceKind,
   contentArtifact,
+  dependencyArtifacts = [],
   licenseArtifact,
   proofArtifact,
 }) {
@@ -74,6 +75,7 @@ function record({
     sourceLocator: `source-registry:${definition.id}`,
     sourceRevision: 'vendor-revision-1',
     contentArtifact,
+    dependencyArtifacts,
     license: {
       id: attributionRequired ? 'MIT' : 'arena-commercial-grant-v1',
       name: attributionRequired ? 'MIT License' : 'Arena commercial asset grant',
@@ -96,6 +98,7 @@ function fixture() {
   const policy = createArenaFormalAssetIntakeV1Policy();
   const bytes = {
     model: Buffer.from('formal-character-model'),
+    texture: Buffer.from('formal-character-texture'),
     wing: Buffer.from('formal-wing-attachment'),
     license: Buffer.from('fixture license text'),
     proof: Buffer.from('fixture rights proof'),
@@ -137,6 +140,7 @@ function fixture() {
         recordId: 'fixture-model-provenance',
         sourceKind: FORMAL_ASSET_SOURCE_KIND.PURCHASED,
         contentArtifact: artifact('content/character.glb', bytes.model),
+        dependencyArtifacts: [artifact('content/character.png', bytes.texture)],
         licenseArtifact: sharedLicense,
         proofArtifact: sharedProof,
       }),
@@ -151,6 +155,7 @@ async function writeFixtureFiles(root, bytes) {
   }
   await Promise.all([
     writeFile(path.join(root, 'content/character.glb'), bytes.model),
+    writeFile(path.join(root, 'content/character.png'), bytes.texture),
     writeFile(path.join(root, 'content/wing.glb'), bytes.wing),
     writeFile(path.join(root, 'licenses/license.txt'), bytes.license),
     writeFile(path.join(root, 'proof/rights.pdf'), bytes.proof),
@@ -280,7 +285,7 @@ test('Formal Asset Intake verifier binds every declared artifact and rejects lat
     const result = await verifyArenaFormalAssetIntake({ bundle: value, artifactsRoot: root });
     assert.equal(result.status, 'verified-intake-only');
     assert.equal(result.assetCount, 2);
-    assert.equal(result.artifactCount, 4);
+    assert.equal(result.artifactCount, 5);
     assert.deepEqual(
       result.verifiedArtifacts.find(({ path: artifactPath }) => (
         artifactPath === 'proof/rights.pdf'
@@ -291,6 +296,7 @@ test('Formal Asset Intake verifier binds every declared artifact and rejects lat
       result.verifiedArtifacts.map(({ path: artifactPath }) => artifactPath),
       [
         'content/character.glb',
+        'content/character.png',
         'content/wing.glb',
         'licenses/license.txt',
         'proof/rights.pdf',
@@ -298,8 +304,8 @@ test('Formal Asset Intake verifier binds every declared artifact and rejects lat
     );
 
     await writeFile(
-      path.join(root, 'content/character.glb'),
-      Buffer.alloc(bytes.model.byteLength, 0x78),
+      path.join(root, 'content/character.png'),
+      Buffer.alloc(bytes.texture.byteLength, 0x78),
     );
     await assert.rejects(
       verifyArenaFormalAssetIntake({ bundle: value, artifactsRoot: root }),

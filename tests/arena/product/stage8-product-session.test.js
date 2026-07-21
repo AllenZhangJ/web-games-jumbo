@@ -2,6 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createArenaV1ProductSession } from '../../../src/arena/product/composition/arena-v1-product-composition.js';
 import { ARENA_V1_BALANCE_DEFINITION } from '../../../src/arena/content/arena-v1-balance.js';
+import { STAGE4_ACTION_ID } from '../../../src/arena/content/stage4-equipment.js';
+import { createNeutralInputFrame } from '../../../src/arena/input-frame.js';
+import { ARENA_MATCH_EVENT } from '../../../src/arena/match-core.js';
 import { ProductSessionController } from '../../../src/arena/product/composition/product-session-controller.js';
 import { ARENA_V1_PLAYER_PROFILE_DEFINITION } from '../../../src/arena/product/content/arena-v1-player-profile-definition.js';
 import { ProductMatchCoordinator } from '../../../src/arena/product/matchmaking/product-match-coordinator.js';
@@ -607,6 +610,49 @@ test('Arena V1 product composition runs a complete headless 1v1 without leaking 
   assert.equal(controller.state, PRODUCT_SESSION_STATE.READY);
   controller.destroy();
   assert.equal(controller.getSnapshot().profile, null);
+});
+
+test('Arena V1 product always starts a whiff if an override requests legacy target gating', async () => {
+  const controller = createArenaV1ProductSession({
+    storage: storageHarness().port,
+    ownerId: 'product-whiff-regression-owner',
+    wallNow: () => 2_000,
+    seedSource: { nextSeed: () => 303 },
+    matchConfig: {
+      preparingTicks: 0,
+      suddenDeathStartTick: 600,
+      hardLimitTicks: 900,
+      contextPrimaryMobilityEnabled: true,
+      equipment: { initialSpawns: [] },
+    },
+    keyPrefix: 'test.product-whiff-regression',
+  });
+
+  await controller.boot();
+  controller.openCharacterSelect();
+  await controller.requestMatch();
+  controller.beginMatch();
+  const before = controller.getActiveMatchSnapshot();
+  const local = before.participants.find(({ id }) => id === 'player-1');
+  assert.equal(local.actionAffordance.channels.primary.kind, 'selected');
+  assert.equal(
+    local.actionAffordance.channels.primary.actionDefinitionId,
+    STAGE4_ACTION_ID.BASE_PUSH,
+  );
+
+  const outcome = controller.stepMatch({
+    ...createNeutralInputFrame(before.tick, 'player-1'),
+    primaryPressed: true,
+  });
+  assert.equal(outcome.matchStep.events.some(({ type, action }) => (
+    type === ARENA_MATCH_EVENT.ACTION_STARTED
+      && action === STAGE4_ACTION_ID.BASE_PUSH
+  )), true);
+  assert.equal(outcome.matchStep.events.some(({ type }) => (
+    type === ARENA_MATCH_EVENT.HIT_RESOLVED
+  )), false);
+
+  controller.destroy();
 });
 
 test('Arena V1 product balance defaults reject malformed match config before acquiring resources', () => {

@@ -3,6 +3,7 @@ import {
   createMovementMutation,
   MOVEMENT_MUTATION_KIND,
 } from './movement-mutation.js';
+import { MOVEMENT_MODE } from './movement-runtime.js';
 
 function compareText(left, right) {
   if (left < right) return -1;
@@ -29,7 +30,20 @@ function planCommand(command, context) {
   }
   if (command.kind === MOVEMENT_COMMAND_KIND.REQUEST_AIR_JUMP) {
     if (!capabilities.canAirJump) throw new Error(`${command.participantId} 当前不能二段跳。`);
-    return { command, verticalImpulse: definition.jump.airImpulse };
+    const moveX = context.input?.moveX ?? 0;
+    const moveZ = context.input?.moveZ ?? 0;
+    const magnitude = Math.hypot(moveX, moveZ);
+    const scale = magnitude > 1 ? 1 / magnitude : 1;
+    const horizontal = context.airJumpHorizontalImpulse ?? 0;
+    return {
+      command,
+      verticalImpulse: definition.jump.airImpulse,
+      impulse: {
+        x: moveX * scale * horizontal,
+        y: definition.jump.airImpulse,
+        z: moveZ * scale * horizontal,
+      },
+    };
   }
   if (command.kind === MOVEMENT_COMMAND_KIND.BEGIN_CROUCH_JUMP) {
     if (!capabilities.canBeginCrouchJump) {
@@ -80,7 +94,7 @@ export function createMovementExecutionPlan(commands, contexts) {
       return [createMovementMutation({
         kind: MOVEMENT_MUTATION_KIND.APPLY_IMPULSE,
         participantId: operation.command.participantId,
-        impulse: { x: 0, y: operation.verticalImpulse, z: 0 },
+        impulse: operation.impulse ?? { x: 0, y: operation.verticalImpulse, z: 0 },
       })];
     }
     if (operation.verticalSpeed !== undefined) {
@@ -105,4 +119,22 @@ export function createMovementExecutionPlan(commands, contexts) {
     mutations: Object.freeze(mutations),
     executions: Object.freeze(executions),
   });
+}
+
+export function createDownSmashContinuationMutations(contexts, commandParticipantIds = []) {
+  if (!Array.isArray(contexts)) throw new TypeError('Movement execution contexts 必须是数组。');
+  if (!Array.isArray(commandParticipantIds)) {
+    throw new TypeError('commandParticipantIds 必须是数组。');
+  }
+  const commanded = new Set(commandParticipantIds);
+  return Object.freeze(contexts
+    .filter(({ participantId, state }) => (
+      state.mode === MOVEMENT_MODE.DOWN_SMASH && !commanded.has(participantId)
+    ))
+    .map(({ participantId, definition }) => createMovementMutation({
+      kind: MOVEMENT_MUTATION_KIND.ACCELERATE_DOWNWARD,
+      participantId,
+      acceleration: definition.jump.downSmashAccelerationPerTick,
+      maximumSpeed: definition.jump.maximumDownSmashSpeed,
+    })));
 }

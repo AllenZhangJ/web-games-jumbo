@@ -205,10 +205,15 @@ export class ProductRenderer {
         (frame.matchFrame === null || frame.matchFrame === undefined)
         && this.#uiSurface.requiresCompositeFrame() === false
       ) return true;
+      const gameplayOptions = {
+        ...options,
+        soundEnabled: frame.viewModel.profile?.soundEnabled ?? true,
+        reducedMotion: frame.viewModel.profile?.reducedMotion ?? false,
+      };
       return this.#gameplayRenderer.renderComposite(
         frame.matchFrame ?? null,
         this.#uiSurface,
-        options,
+        gameplayOptions,
       ) !== false;
     } catch (error) {
       this.#lastError = normalizeThrownError(error, 'ProductRenderer 渲染失败');

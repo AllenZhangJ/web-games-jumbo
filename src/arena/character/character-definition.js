@@ -7,7 +7,7 @@ import {
   cloneFrozenStringSet,
 } from '../rules/definition-utils.js';
 
-export const CHARACTER_DEFINITION_SCHEMA_VERSION = 1;
+export const CHARACTER_DEFINITION_SCHEMA_VERSION = 2;
 
 const DEFINITION_KEYS = new Set([
   'schemaVersion',
@@ -32,6 +32,8 @@ const JUMP_KEYS = new Set([
   'crouchImpulse',
   'airImpulse',
   'downSmashSpeed',
+  'downSmashAccelerationPerTick',
+  'maximumDownSmashSpeed',
   'coyoteTicks',
   'bufferTicks',
   'maximumAirJumps',
@@ -117,6 +119,14 @@ function cloneJump(value) {
       value.downSmashSpeed,
       'CharacterDefinition.jump.downSmashSpeed',
     ),
+    downSmashAccelerationPerTick: assertPositiveFinite(
+      value.downSmashAccelerationPerTick,
+      'CharacterDefinition.jump.downSmashAccelerationPerTick',
+    ),
+    maximumDownSmashSpeed: assertPositiveFinite(
+      value.maximumDownSmashSpeed,
+      'CharacterDefinition.jump.maximumDownSmashSpeed',
+    ),
     coyoteTicks: assertIntegerAtLeast(
       value.coyoteTicks,
       0,
@@ -140,6 +150,11 @@ function cloneJump(value) {
   };
   if (jump.crouchImpulse < jump.groundImpulse) {
     throw new RangeError('CharacterDefinition.jump.crouchImpulse 不能小于 groundImpulse。');
+  }
+  if (jump.maximumDownSmashSpeed < jump.downSmashSpeed) {
+    throw new RangeError(
+      'CharacterDefinition.jump.maximumDownSmashSpeed 不能小于 downSmashSpeed。',
+    );
   }
   return Object.freeze(jump);
 }

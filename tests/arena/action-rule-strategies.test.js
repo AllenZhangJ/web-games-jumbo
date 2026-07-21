@@ -18,6 +18,7 @@ import {
   STAGE4_ACTION_ID,
   createStage4ContentRegistries,
 } from '../../src/arena/content/stage4-equipment.js';
+import { createMovementActionEffectHandlers } from '../../src/arena/movement/movement-action-effect-handlers.js';
 
 const SOURCE = Object.freeze({
   id: 'player-1',
@@ -33,7 +34,7 @@ const FRONT = Object.freeze({
 test('default targeting and effect strategies validate the complete Stage4 catalog', () => {
   const { actionRegistry } = createStage4ContentRegistries();
   const targeting = createDefaultTargetingRegistry();
-  const effects = createDefaultActionEffectRegistry();
+  const effects = createDefaultActionEffectRegistry(createMovementActionEffectHandlers());
   assert.equal(targeting.validateActionRegistry(actionRegistry), targeting);
   assert.equal(effects.validateActionRegistry(actionRegistry), effects);
 });
@@ -70,9 +71,25 @@ test('facing capsule rejects side and rear actors outside the charge path', () =
   assert.deepEqual(targets, ['player-2']);
 });
 
+test('downward cylinder only selects targets below the airborne attacker', () => {
+  const { actionRegistry } = createStage4ContentRegistries();
+  const targeting = createDefaultTargetingRegistry();
+  const targets = targeting.resolve({
+    definition: actionRegistry.require(STAGE4_ACTION_ID.HAMMER_AIR_SMASH),
+    source: { ...SOURCE, position: { x: 0, y: 3, z: 0 } },
+    candidates: [
+      { id: 'below', position: { x: 0.7, y: 1, z: 0.2 } },
+      { id: 'above', position: { x: 0.2, y: 3.4, z: 0 } },
+      { id: 'too-far-side', position: { x: 2, y: 1, z: 0 } },
+      { id: 'too-far-down', position: { x: 0, y: 0.2, z: 0 } },
+    ],
+  });
+  assert.deepEqual(targets, ['below']);
+});
+
 test('default effects convert data into frozen commands without mutating actors', () => {
   const { actionRegistry } = createStage4ContentRegistries();
-  const effects = createDefaultActionEffectRegistry();
+  const effects = createDefaultActionEffectRegistry(createMovementActionEffectHandlers());
   effects.validateActionRegistry(actionRegistry);
   const basePush = actionRegistry.require(STAGE4_ACTION_ID.BASE_PUSH);
   const directional = basePush.effects.find(({ kind }) => kind === 'apply-directional-impulse');
@@ -149,5 +166,23 @@ test('strategy registries reject unsupported kinds and invalid specialized param
       validateParameters() {},
     }]),
     /缺少函数合同/,
+  );
+
+  const invalidDownwardCylinder = new ActionRegistry([{
+    ...unsupportedAction,
+    id: 'invalid-downward-cylinder',
+    targeting: {
+      kind: 'downward-cylinder',
+      parameters: {
+        range: 1,
+        radius: 2,
+        minimumVerticalDrop: 0,
+        maximumVerticalDifference: 1,
+      },
+    },
+  }]);
+  assert.throws(
+    () => createDefaultTargetingRegistry().validateActionRegistry(invalidDownwardCylinder),
+    /radius 不能大于 range/,
   );
 });

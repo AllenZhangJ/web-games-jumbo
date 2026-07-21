@@ -7,6 +7,5 @@ export function toVisualFacing(facing) {
 }
 
 export function visualFacingYaw(facing) {
-  const visual = toVisualFacing(facing);
-  return Math.atan2(visual.x, visual.z);
+  return Math.atan2(-facing.x, facing.z);
 }

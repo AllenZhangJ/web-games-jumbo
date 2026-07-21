@@ -131,6 +131,20 @@ test('MovementActionCandidateProvider derives explicit and context choices only 
   assert.ok(candidates.every(Object.isFrozen));
 });
 
+test('explicit product input removes hidden primary-button mobility fallbacks', () => {
+  const provider = new MovementActionCandidateProvider({
+    actionRegistry,
+    contextPrimaryEnabled: false,
+  });
+  const candidates = provider.getCandidates(capabilities());
+  assert.equal(candidates.some(({ actionDefinitionId }) => (
+    actionDefinitionId.startsWith('movement.context-')
+  )), false);
+  assert.equal(candidates.some(({ actionDefinitionId }) => (
+    actionDefinitionId === STAGE6_MOVEMENT_ACTION_ID.EXPLICIT_GROUND_JUMP
+  )), true);
+});
+
 test('crouch release stays on the channel that began charging', () => {
   const provider = new MovementActionCandidateProvider({ actionRegistry });
   const explicitCandidates = provider.getCandidates(capabilities({

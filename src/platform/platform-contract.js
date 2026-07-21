@@ -204,6 +204,9 @@ export function createPlatformContract(overrides = {}) {
     },
     getWebGLContext: (canvas, attributes) => getRequiredWebGL2Context(canvas, attributes, id),
     createImage: () => null,
+    readAssetBytes: async (sourceKey) => {
+      throw platformError(id, `当前平台不能读取资产 ${String(sourceKey)}`);
+    },
     getViewport: () => ({ width: 1280, height: 720, pixelRatio: 1, safeArea: null }),
     requestFrame: frameScheduler.requestFrame,
     cancelFrame: frameScheduler.cancelFrame,

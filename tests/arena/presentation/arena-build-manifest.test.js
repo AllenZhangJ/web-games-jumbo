@@ -28,7 +28,6 @@ function artifact(pathValue, byteLength, hashCharacter) {
 }
 
 test('ArenaBuildManifest freezes required Web and mini-game artifacts and default entry identity', () => {
-  const product = artifact('game-product.js', 10, '1');
   const manifest = createArenaBuildManifest({
     schemaVersion: ARENA_BUILD_MANIFEST_SCHEMA_VERSION,
     buildId: 'build-001',
@@ -37,22 +36,15 @@ test('ArenaBuildManifest freezes required Web and mini-game artifacts and defaul
     target: 'wechat',
     defaultEntry: ARENA_BUILD_DEFAULT_ENTRY.PRODUCT,
     artifacts: [
-      artifact('game-greybox.js', 11, '2'),
-      product,
-      { ...product, path: 'game.js' },
+      artifact('game.js', 10, '1'),
       artifact('game.json', 12, '3'),
       artifact('project.config.json', 13, '4'),
     ],
   });
   assert.equal(Object.isFrozen(manifest.artifacts), true);
-  assert.equal(manifest.getArtifact('game.js').sha256, product.sha256);
+  assert.equal(manifest.defaultEntry, ARENA_BUILD_DEFAULT_ENTRY.PRODUCT);
+  assert.equal(manifest.getArtifact('game.js').sha256, '1'.repeat(64));
   assert.equal(manifest.getContentHash(), manifest.getContentHash());
-  assert.throws(() => createArenaBuildManifest({
-    ...manifest.toJSON(),
-    artifacts: manifest.artifacts.map((value) => (
-      value.path === 'game.js' ? { ...value, sha256: '9'.repeat(64) } : value
-    )),
-  }), /默认入口产物不一致/);
   assert.throws(() => createArenaBuildManifest({
     ...manifest.toJSON(),
     artifacts: manifest.artifacts.filter(({ path: artifactPath }) => artifactPath !== 'game.json'),
@@ -61,7 +53,6 @@ test('ArenaBuildManifest freezes required Web and mini-game artifacts and defaul
 
 test('Stage 9 build budget separates package failure from clean evidence eligibility', () => {
   const policy = createArenaStage9BuildBudgetV1Policy();
-  const product = artifact('game-product.js', 100, '1');
   const value = {
     schemaVersion: ARENA_BUILD_MANIFEST_SCHEMA_VERSION,
     buildId: 'budget-build',
@@ -70,9 +61,7 @@ test('Stage 9 build budget separates package failure from clean evidence eligibi
     target: 'wechat',
     defaultEntry: ARENA_BUILD_DEFAULT_ENTRY.PRODUCT,
     artifacts: [
-      artifact('game-greybox.js', 100, '2'),
-      product,
-      { ...product, path: 'game.js' },
+      artifact('game.js', 100, '1'),
       artifact('game.json', 10, '3'),
       artifact('project.config.json', 10, '4'),
     ],
@@ -102,8 +91,6 @@ test('build manifest file helper detects mutation and unexpected output files', 
   try {
     await mkdir(path.join(root, 'assets'), { recursive: true });
     const files = {
-      'game-greybox.js': 'greybox',
-      'game-product.js': 'product',
       'game.js': 'product',
       'game.json': '{}',
       'project.config.json': '{}',
@@ -152,8 +139,6 @@ test('clean-source verification rejects an otherwise valid dirty build manifest'
   const root = await mkdtemp(path.join(os.tmpdir(), 'arena-dirty-build-manifest-'));
   try {
     for (const [relativePath, content] of Object.entries({
-      'game-greybox.js': 'greybox',
-      'game-product.js': 'product',
       'game.js': 'product',
       'game.json': '{}',
       'project.config.json': '{}',

@@ -42,6 +42,13 @@ test('lightweight world implements the complete adapter and rejects invalid life
   }]);
   assert.equal(world.getCharacterState('player-1').velocity.y, -12);
   assert.equal(world.getCharacterState('player-1').grounded, false);
+  world.applyCharacterMutationBatch([{
+    kind: 'accelerate-downward',
+    participantId: 'player-1',
+    acceleration: 4,
+    maximumSpeed: 14,
+  }]);
+  assert.equal(world.getCharacterState('player-1').velocity.y, -14);
   assert.throws(() => world.step(1 / 30), /只接受固定步长/);
   world.resetCharacter('player-1', {
     position: PHYSICS_POC_ARENA.spawns[0],

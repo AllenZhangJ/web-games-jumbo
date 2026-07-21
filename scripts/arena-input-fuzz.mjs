@@ -3,6 +3,7 @@ import { createArenaV1MatchCore } from '../src/arena/arena-v1-match-core.js';
 import { ARENA_MATCH_PHASE } from '../src/arena/config.js';
 import { createNeutralInputFrame } from '../src/arena/input-frame.js';
 import { createContextInputMapperB } from '../src/arena/presentation/input/context-input-mapper-b.js';
+import { createExplicitCombatJumpMapper } from '../src/arena/presentation/input/explicit-combat-jump-mapper.js';
 import { createGestureInputMapperA } from '../src/arena/presentation/input/gesture-input-mapper-a.js';
 import {
   ARENA_INPUT_MAPPER_ID,
@@ -74,6 +75,10 @@ const MAPPERS = Object.freeze([
     id: ARENA_INPUT_MAPPER_ID.CONTEXT_PRIMARY,
     create: createContextInputMapperB,
   }),
+  Object.freeze({
+    id: ARENA_INPUT_MAPPER_ID.EXPLICIT_COMBAT_JUMP,
+    create: createExplicitCombatJumpMapper,
+  }),
 ]);
 
 function applyPrelude(sampler, mapperId, tick) {
@@ -94,6 +99,16 @@ function applyPrelude(sampler, mapperId, tick) {
       sampler.pointerStart(point(5, 320, 600));
       sampler.pointerEnd(point(5, 320, 600));
     }
+    return;
+  }
+  if (mapperId === ARENA_INPUT_MAPPER_ID.EXPLICIT_COMBAT_JUMP) {
+    if (tick === 0) sampler.pointerStart(point(21, 336, 608));
+    if (tick === 1) sampler.pointerEnd(point(21, 336, 608));
+    if (tick === 3) sampler.pointerStart(point(22, 272, 688));
+    if (tick === 4) sampler.pointerEnd(point(22, 272, 688));
+    if (tick === 6) sampler.pointerStart(point(23, 272, 688));
+    if (tick === 7) sampler.pointerMove(point(23, 272, 780));
+    if (tick === 8) sampler.pointerEnd(point(23, 272, 780));
     return;
   }
   if (tick === 0) {
@@ -371,6 +386,9 @@ function assertBatchCoverage(operations, frameCounts) {
   }
   if (!(frameCounts[`${ARENA_INPUT_MAPPER_ID.CONTEXT_PRIMARY}:primaryHeld`] > 0)) {
     throw new Error('Mapper B 未生成上下文蹲跳 held。');
+  }
+  if (!(frameCounts[`${ARENA_INPUT_MAPPER_ID.EXPLICIT_COMBAT_JUMP}:jumpPressed`] > 0)) {
+    throw new Error('显式操作 Mapper 未生成 jumpPressed。');
   }
 }
 

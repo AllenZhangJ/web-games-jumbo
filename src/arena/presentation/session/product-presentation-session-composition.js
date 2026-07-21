@@ -152,7 +152,7 @@ function nextOwnerId(platform) {
 export function createProductPresentationSessionComposition(platformValue, optionsInput) {
   const platform = validatePlatform(platformValue);
   const options = optionsValue(optionsInput);
-  const mapperId = options.mapperId ?? ARENA_INPUT_MAPPER_ID.GESTURE_MOBILITY;
+  const mapperId = options.mapperId ?? ARENA_INPUT_MAPPER_ID.EXPLICIT_COMBAT_JUMP;
   if (!Object.values(ARENA_INPUT_MAPPER_ID).includes(mapperId)) {
     throw new RangeError(`未知 Product Presentation mapperId ${String(mapperId)}。`);
   }

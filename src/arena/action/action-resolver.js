@@ -21,6 +21,7 @@ export const ACTION_RESOLUTION_KIND = Object.freeze({
 });
 
 export const ACTION_PRIORITY = Object.freeze({
+  AIR_COMBAT: 550,
   EQUIPMENT: 500,
   LOCOMOTION: 400,
   AIR: 400,

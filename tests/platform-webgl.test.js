@@ -190,6 +190,44 @@ test('mini-game storage recognizes the documented Douyin missing-key error', () 
   });
 });
 
+test('mini-game platform reads packaged GLB bytes through FileSystemManager with path fallback', async () => {
+  const fixture = miniGameApi({ id: 'wechat' });
+  const reads = [];
+  fixture.api.getFileSystemManager = () => ({
+    readFile({ filePath, success, fail }) {
+      reads.push(filePath);
+      if (filePath.startsWith('./')) fail(new Error('prefixed path unsupported'));
+      else success({ data: new Uint8Array([4, 8, 15, 16]) });
+    },
+  });
+  const platform = createMiniGamePlatform(fixture.api, fixture.id);
+  const bytes = await platform.readAssetBytes('./assets/arena/character.glb');
+  assert.deepEqual([...new Uint8Array(bytes)], [4, 8, 15, 16]);
+  assert.deepEqual(reads, [
+    './assets/arena/character.glb',
+    'assets/arena/character.glb',
+  ]);
+  await assert.rejects(
+    platform.readAssetBytes('./assets/../secret.glb'),
+    /路径逃逸/,
+  );
+});
+
+test('mini-game packaged asset reader supports synchronous host file systems', async () => {
+  const fixture = miniGameApi({ id: 'douyin' });
+  fixture.api.getFileSystemManager = () => ({
+    readFileSync(filePath) {
+      assert.equal(filePath, './assets/arena/character.glb');
+      return new Uint8Array([23, 42]).buffer;
+    },
+  });
+  const platform = createMiniGamePlatform(fixture.api, fixture.id);
+  assert.deepEqual(
+    [...new Uint8Array(await platform.readAssetBytes('./assets/arena/character.glb'))],
+    [23, 42],
+  );
+});
+
 test('offscreen Canvas rejects invalid dimensions before calling a host API', () => {
   const fixture = miniGameApi({ id: 'wechat' });
   const platform = createMiniGamePlatform(fixture.api, fixture.id);
@@ -283,6 +321,35 @@ test('Web platform creates native offscreen Canvas and keeps browser viewport be
   });
   assert.equal(platform.now(), 123);
   assert.equal(platform.getWebGLContext(mainCanvas), mainCanvas.getContext('webgl2'));
+});
+
+test('Web platform reads GLB assets as ArrayBuffer and rejects failed responses', async () => {
+  const mainCanvas = canvasWithContext();
+  mainCanvas.addEventListener = () => {};
+  mainCanvas.removeEventListener = () => {};
+  const paths = [];
+  const environment = {
+    document: {
+      querySelector: () => mainCanvas,
+      createElement: () => canvasWithContext(),
+    },
+    window: {},
+    async fetch(sourceKey) {
+      paths.push(sourceKey);
+      return sourceKey.endsWith('ok.glb')
+        ? { ok: true, arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer }
+        : { ok: false, status: 404, arrayBuffer: async () => new ArrayBuffer(0) };
+    },
+  };
+  const platform = createWebPlatform(environment);
+  assert.deepEqual(
+    [...new Uint8Array(await platform.readAssetBytes('./assets/ok.glb'))],
+    [1, 2, 3],
+  );
+  await assert.rejects(platform.readAssetBytes('./assets/missing.glb'), /404/);
+  await assert.rejects(platform.readAssetBytes('../escape.glb'), /\.\/assets/);
+  await assert.rejects(platform.readAssetBytes('./assets/../escape.glb'), /路径逃逸/);
+  assert.deepEqual(paths, ['./assets/ok.glb', './assets/missing.glb']);
 });
 
 test('Web platform fails clearly when initialized without a DOM or #game Canvas', () => {

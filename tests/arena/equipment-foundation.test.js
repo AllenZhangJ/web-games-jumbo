@@ -8,6 +8,7 @@ import {
   STAGE4_EQUIPMENT_ID,
   createStage4ContentRegistries,
 } from '../../src/arena/content/stage4-equipment.js';
+import { ARENA_GAMEPLAY_V2_TUNING } from '../../src/arena/content/arena-gameplay-v2-tuning.js';
 import { EquipmentRegistry } from '../../src/arena/equipment/equipment-registry.js';
 import { createArenaMatchConfig } from '../../src/arena/config.js';
 import {
@@ -18,7 +19,7 @@ import {
 
 test('Stage4 catalog validates three equipment definitions and all action references', () => {
   const { actionRegistry, equipmentRegistry } = createStage4ContentRegistries();
-  assert.equal(actionRegistry.size, 4);
+  assert.equal(actionRegistry.size, 8);
   assert.equal(equipmentRegistry.size, 3);
   assert.deepEqual(
     equipmentRegistry.list().map(({ id }) => id),
@@ -27,6 +28,10 @@ test('Stage4 catalog validates three equipment definitions and all action refere
   assert.equal(
     equipmentRegistry.require(STAGE4_EQUIPMENT_ID.HAMMER).actionDefinitionId,
     STAGE4_ACTION_ID.HAMMER_SMASH,
+  );
+  assert.equal(
+    equipmentRegistry.require(STAGE4_EQUIPMENT_ID.HAMMER).aerialActionDefinitionId,
+    STAGE4_ACTION_ID.HAMMER_AIR_SMASH,
   );
 });
 
@@ -47,6 +52,26 @@ test('base push compatibility definition cannot drift before MatchCore migration
     horizontalImpulse: impulse.parameters.horizontalImpulse,
     verticalImpulse: impulse.parameters.verticalImpulse,
   }, legacy);
+});
+
+test('all authoritative attack definitions consume the unified tuning table exactly', () => {
+  const definitionById = new Map(STAGE4_ACTION_DEFINITIONS.map((definition) => [
+    definition.id,
+    definition,
+  ]));
+  for (const [id, tuning] of Object.entries(ARENA_GAMEPLAY_V2_TUNING.attacks)) {
+    const { kind, ...targetingParameters } = tuning.targeting;
+    const definition = definitionById.get(id);
+    assert.ok(definition, `missing ActionDefinition ${id}`);
+    assert.deepEqual(definition.timing, tuning.timing);
+    assert.equal(definition.targeting.kind, kind);
+    assert.deepEqual(definition.targeting.parameters, targetingParameters);
+    const impulse = definition.effects.find(({ kind }) => (
+      kind === 'apply-directional-impulse' || kind === 'pull-to-source'
+    ));
+    assert.equal(impulse.parameters.horizontalImpulse, tuning.knockback.horizontalImpulse);
+    assert.equal(impulse.parameters.verticalImpulse, tuning.knockback.verticalImpulse);
+  }
 });
 
 test('EquipmentRegistry rejects duplicate ids and dangling ActionDefinition references', () => {

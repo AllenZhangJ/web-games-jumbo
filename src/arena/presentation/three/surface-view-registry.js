@@ -11,6 +11,7 @@ class SurfaceView {
   #enabled;
   #warning;
   #elapsed;
+  #appliedStyleKey;
 
   constructor(definition) {
     this.#definition = definition;
@@ -42,6 +43,7 @@ class SurfaceView {
     this.#enabled = true;
     this.#warning = false;
     this.#elapsed = 0;
+    this.#appliedStyleKey = null;
   }
 
   sync({ enabled, warning }, { snap = false } = {}) {
@@ -58,7 +60,14 @@ class SurfaceView {
     this.#elapsed += delta;
     const targetY = this.#baseY
       - (this.#enabled ? 0 : ARENA_GREYBOX_DESIGN.surfaceDropDistance);
-    this.root.position.y += (targetY - this.root.position.y) * (1 - Math.exp(-7 * delta));
+    const heightDelta = targetY - this.root.position.y;
+    if (Math.abs(heightDelta) > 0.0001) {
+      this.root.position.y += heightDelta * (1 - Math.exp(-7 * delta));
+    } else {
+      this.root.position.y = targetY;
+    }
+    const styleKey = `${this.#enabled}:${this.#warning}`;
+    if (!this.#warning && styleKey === this.#appliedStyleKey) return;
     const pulse = 0.5 + Math.sin(this.#elapsed * 8) * 0.5;
     this.#mesh.material.color.setHex(
       this.#warning
@@ -71,6 +80,7 @@ class SurfaceView {
     this.#mesh.material.emissiveIntensity = this.#warning ? 0.08 + pulse * 0.12 : 0;
     this.#mesh.material.opacity = this.#enabled ? 1 : 0.25;
     this.#edge.material.opacity = this.#warning ? 0.9 : this.#enabled ? 0.55 : 0.12;
+    this.#appliedStyleKey = styleKey;
   }
 
   getDebugSnapshot() {

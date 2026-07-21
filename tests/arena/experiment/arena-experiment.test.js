@@ -705,7 +705,7 @@ test('scripted-pressure v1 keeps its golden default seed after Strategy extracti
     generatedAt: '2026-07-18T00:00:00.000Z',
     environment: ENVIRONMENT,
   });
-  assert.equal(report.cases[0].finalHash, '4347a2ff');
+  assert.equal(report.cases[0].finalHash, '88f2cab1');
   assert.equal(report.cases[0].ticks, 878);
   runner.destroy();
 });
@@ -981,7 +981,7 @@ test('S9.3 balance definition pre-registers immutable fixed samples and feasible
     sourceCommit: 'cb1b3744c06e98412296f885a1fbaa57a069a5d0',
     sourceDirty: false,
   });
-  assert.equal(recordedBaseline.getContentHash(), 'edbd9f89');
+  assert.equal(recordedBaseline.getContentHash(), '7029ebd3');
 });
 
 test('S9.3b exploration uses immutable candidates and disjoint baseline/exploration/validation seeds', () => {

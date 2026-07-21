@@ -8,7 +8,14 @@ import {
 const PREPARE_KEYS = new Set(['tick', 'contacts', 'inputs', 'availability']);
 const COMPLETE_KEYS = new Set(['tick', 'contacts']);
 const CONTACT_KEYS = new Set(['participantId', 'grounded']);
-const INPUT_KEYS = new Set(['tick', 'participantId', 'jumpPressed', 'jumpHeld']);
+const INPUT_KEYS = new Set([
+  'tick',
+  'participantId',
+  'jumpPressed',
+  'jumpHeld',
+  'moveX',
+  'moveZ',
+]);
 const AVAILABILITY_KEYS = new Set(['participantId', 'canMove']);
 
 function cloneParticipantBatch(values, participantIds, keys, name, cloneValue) {
@@ -59,11 +66,18 @@ function createInputBatch(values, participantIds, tick) {
       if (typeof value.jumpPressed !== 'boolean' || typeof value.jumpHeld !== 'boolean') {
         throw new TypeError(`Movement inputs[${index}] 跳跃字段必须是布尔值。`);
       }
+      const moveX = value.moveX ?? 0;
+      const moveZ = value.moveZ ?? 0;
+      if (!Number.isFinite(moveX) || !Number.isFinite(moveZ)) {
+        throw new TypeError(`Movement inputs[${index}] moveX/moveZ 必须是有限数。`);
+      }
       return Object.freeze({
         tick,
         participantId: value.participantId,
         jumpPressed: value.jumpPressed,
         jumpHeld: value.jumpHeld,
+        moveX: Math.max(-1, Math.min(1, moveX)),
+        moveZ: Math.max(-1, Math.min(1, moveZ)),
       });
     },
   );

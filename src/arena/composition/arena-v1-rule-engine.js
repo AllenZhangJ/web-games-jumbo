@@ -25,11 +25,16 @@ export function createArenaV1RuleEngine({ participantIds, config, authorityConte
   return new ArenaRuleEngine({
     participantIds,
     baseActionDefinitionId: STAGE4_ACTION_ID.BASE_PUSH,
+    baseAirActionDefinitionId: STAGE4_ACTION_ID.BASE_AIR_STRIKE,
     actionRegistry,
     equipmentRegistry,
     targetingRegistry: createDefaultTargetingRegistry(),
     effectRegistry: createDefaultActionEffectRegistry(createMovementActionEffectHandlers()),
     commandRegistry: createDefaultRuleCommandRegistry(),
-    movementCandidateProvider: new MovementActionCandidateProvider({ actionRegistry }),
+    movementCandidateProvider: new MovementActionCandidateProvider({
+      actionRegistry,
+      contextPrimaryEnabled: config.contextPrimaryMobilityEnabled ?? true,
+    }),
+    allowBaseAttackWhiff: config.contextPrimaryMobilityEnabled === false,
   });
 }

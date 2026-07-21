@@ -119,7 +119,10 @@ test('Regression Evidence V1 固定组件身份、阈值与 Definition hash', ()
   assert.deepEqual(
     definition.components.find(({ id }) => id === ARENA_REGRESSION_COMPONENT_ID.INPUT_FUZZ)
       .mapperIds,
-    Object.values(ARENA_INPUT_MAPPER_ID).sort(),
+    [
+      ARENA_INPUT_MAPPER_ID.CONTEXT_PRIMARY,
+      ARENA_INPUT_MAPPER_ID.GESTURE_MOBILITY,
+    ].sort(),
   );
   assert.deepEqual(
     definition.components.find(({ id }) => id === ARENA_REGRESSION_COMPONENT_ID.LIFECYCLE_TESTS)

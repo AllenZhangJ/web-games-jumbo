@@ -150,6 +150,7 @@ function rendererHarness({
     frames: [],
     options: [],
     resizeCount: 0,
+    performanceReadCount: 0,
     disposeAttempts: 0,
     disposed: false,
     contextLost: false,
@@ -199,6 +200,7 @@ function rendererHarness({
       return true;
     },
     getPerformanceSnapshot() {
+      this.performanceReadCount += 1;
       return performanceSnapshot;
     },
     dispose() {
@@ -312,7 +314,7 @@ test('ProductPresentationSession closes UI tap → real match → reward → rem
 test('30 FPS presentation pacing preserves the same 60 Hz authority frames as high quality', async () => {
   async function run(qualityId) {
     const harness = platformHarness();
-    const renderer = rendererHarness();
+    const renderer = rendererHarness({ performanceSnapshot: {} });
     const session = new ProductPresentationSession(harness.platform, sessionOptions(renderer, {
       initialSeed: 77_001,
       qualityDefinition: ARENA_V1_PRESENTATION_QUALITY_REGISTRY.require(qualityId),
@@ -328,6 +330,7 @@ test('30 FPS presentation pacing preserves the same 60 Hz authority frames as hi
       session.getLastSnapshot()?.viewModel.activeState === PRODUCT_SESSION_STATE.IN_MATCH
     ));
     const rendersBeforeFrames = renderer.frames.length;
+    const performanceReadsBeforeFrames = renderer.performanceReadCount;
     for (let index = 1; index <= 8; index += 1) {
       harness.fireFrame(index * (1000 / 60));
     }
@@ -335,6 +338,7 @@ test('30 FPS presentation pacing preserves the same 60 Hz authority frames as hi
       frame: structuredClone(session.getLastSnapshot().matchFrame),
       runtimeRenderCount: renderer.frames.length - rendersBeforeFrames,
       performance: session.finishPerformanceCapture(),
+      performanceReadCount: renderer.performanceReadCount - performanceReadsBeforeFrames,
     };
     session.destroy();
     return result;
@@ -351,6 +355,8 @@ test('30 FPS presentation pacing preserves the same 60 Hz authority frames as hi
   assert.equal(low.performance.probe.state, 'stopped');
   assert.equal(low.performance.probe.observedFrameCount, 8);
   assert.equal(low.performance.probe.frames.filter(({ rendered }) => rendered).length, 3);
+  assert.ok(high.performanceReadCount < high.runtimeRenderCount);
+  assert.ok(low.performanceReadCount < low.runtimeRenderCount);
 });
 
 test('ProductPresentationSession records injected memory evidence without giving the observer lifecycle ownership', async () => {

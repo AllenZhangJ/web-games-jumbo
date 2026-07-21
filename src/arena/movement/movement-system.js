@@ -16,7 +16,10 @@ import {
   createMovementPrepareBatch,
 } from './movement-tick-batch.js';
 import { createMovementCapabilities } from './movement-capabilities.js';
-import { createMovementExecutionPlan } from './movement-execution-plan.js';
+import {
+  createDownSmashContinuationMutations,
+  createMovementExecutionPlan,
+} from './movement-execution-plan.js';
 import { createCharacterMovementIntentProjector } from './movement-intent.js';
 import {
   applyMovementExecutionState,
@@ -45,14 +48,19 @@ export class MovementSystem {
   #lastCompletedTick;
   #preparedContacts;
   #preparedAvailability;
+  #preparedInputs;
+  #airJumpHorizontalImpulse;
   #executed;
   #mutating;
   #failed;
   #destroyed;
 
-  constructor({ participantCharacters }) {
+  constructor({ participantCharacters, airJumpHorizontalImpulse = 0 }) {
     if (!Array.isArray(participantCharacters) || participantCharacters.length === 0) {
       throw new RangeError('MovementSystem 需要非空 participantCharacters。');
+    }
+    if (!Number.isFinite(airJumpHorizontalImpulse) || airJumpHorizontalImpulse < 0) {
+      throw new RangeError('MovementSystem.airJumpHorizontalImpulse 必须是非负有限数。');
     }
     const entries = participantCharacters.map((entry, index) => {
       const source = cloneFrozenData(entry, `participantCharacters[${index}]`);
@@ -102,6 +110,8 @@ export class MovementSystem {
     this.#lastCompletedTick = null;
     this.#preparedContacts = null;
     this.#preparedAvailability = null;
+    this.#preparedInputs = null;
+    this.#airJumpHorizontalImpulse = airJumpHorizontalImpulse;
     this.#executed = false;
     this.#mutating = false;
     this.#failed = false;
@@ -190,6 +200,7 @@ export class MovementSystem {
       this.#preparedTick = tick;
       this.#preparedContacts = contacts;
       this.#preparedAvailability = availability;
+      this.#preparedInputs = inputs;
       this.#executed = false;
       return snapshots;
     });
@@ -243,8 +254,15 @@ export class MovementSystem {
       state: this.#states.get(participantId),
       definition: this.#definition(participantId),
       capabilities: this.getCapabilities(participantId),
+      input: this.#preparedInputs.get(participantId),
+      airJumpHorizontalImpulse: this.#airJumpHorizontalImpulse,
     }));
     const plan = createMovementExecutionPlan(commands, contexts);
+    const continuationMutations = createDownSmashContinuationMutations(
+      contexts,
+      plan.operations.map(({ command }) => command.participantId),
+    );
+    const mutations = Object.freeze([...plan.mutations, ...continuationMutations]);
     const drafts = this.#cloneStates();
     for (const operation of plan.operations) {
       applyMovementExecutionState(
@@ -254,8 +272,8 @@ export class MovementSystem {
     }
     this.#serializeStates(drafts);
     return this.#mutate(() => {
-      if (plan.mutations.length > 0) {
-        const result = ports.applyBatch(plan.mutations);
+      if (mutations.length > 0) {
+        const result = ports.applyBatch(mutations);
         if (result !== undefined) {
           throw new TypeError('Movement mutation port applyBatch() 必须同步返回 undefined。');
         }
@@ -295,6 +313,7 @@ export class MovementSystem {
       this.#preparedTick = null;
       this.#preparedContacts = null;
       this.#preparedAvailability = null;
+      this.#preparedInputs = null;
       this.#executed = false;
       return frozenTransitions;
     });
@@ -358,7 +377,9 @@ export class MovementSystem {
     this.#intentProjectorsByParticipant.clear();
     this.#preparedContacts?.clear();
     this.#preparedAvailability?.clear();
+    this.#preparedInputs?.clear();
     this.#preparedContacts = null;
     this.#preparedAvailability = null;
+    this.#preparedInputs = null;
   }
 }

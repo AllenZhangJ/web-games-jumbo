@@ -15,6 +15,7 @@ const CONTACT_EPSILON = 1e-7;
 const PHYSICS_CHARACTER_MUTATION_KIND = Object.freeze({
   APPLY_IMPULSE: 'apply-impulse',
   SET_VERTICAL_SPEED: 'set-vertical-speed',
+  ACCELERATE_DOWNWARD: 'accelerate-downward',
 });
 
 function clamp(value, min, max) {
@@ -215,6 +216,21 @@ class LightweightPhysicsWorld {
           draft.grounded = false;
           draft.supportSurfaceId = null;
         }
+      } else if (mutation.kind === PHYSICS_CHARACTER_MUTATION_KIND.ACCELERATE_DOWNWARD) {
+        assertPositiveNumber(
+          mutation.acceleration,
+          `physics character mutations[${index}].acceleration`,
+        );
+        assertPositiveNumber(
+          mutation.maximumSpeed,
+          `physics character mutations[${index}].maximumSpeed`,
+        );
+        draft.vy = Math.max(
+          body.vy - mutation.acceleration,
+          -mutation.maximumSpeed,
+        );
+        draft.grounded = false;
+        draft.supportSurfaceId = null;
       } else {
         throw new RangeError(
           `未知 physics character mutation ${String(mutation.kind)}。`,

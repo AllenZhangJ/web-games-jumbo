@@ -1,6 +1,7 @@
 import { ARENA_V1_CHARACTER_ID } from '../../content/arena-v1-character-ids.js';
 import {
   STAGE4_ACTION_ID,
+  STAGE4_ACTION_DEFINITIONS,
   STAGE4_EQUIPMENT_DEFINITIONS,
 } from '../../content/stage4-equipment.js';
 import { STAGE5_MAP_DEFINITION } from '../../content/stage5-map.js';
@@ -28,12 +29,41 @@ function freezeVector3(value) {
   return Object.freeze({ x: value.x, y: value.y, z: value.z });
 }
 
-function freezeRecord(record) {
-  return Object.freeze(Object.fromEntries(Object.entries(record).map(([key, value]) => [
-    key,
-    Object.freeze({ ...value }),
-  ])));
+function deepFreezePresentation(value) {
+  if (!value || typeof value !== 'object' || Object.isFrozen(value)) return value;
+  for (const child of Object.values(value)) deepFreezePresentation(child);
+  return Object.freeze(value);
 }
+
+function freezeRecord(record) {
+  return deepFreezePresentation(record);
+}
+
+function combatPresentation({ semantic, label, animationCategory, actionId, clipName, phases, scale }) {
+  return {
+    semantic,
+    label,
+    animationCategory,
+    timing: stage4TimingById.get(actionId),
+    clipName,
+    overlayMask: 'upper-body',
+    visualPhases: {
+      anticipationEnd: phases.anticipationEnd,
+      followThroughEnd: phases.followThroughEnd,
+    },
+    weaponScale: {
+      idle: 1,
+      windupPeak: scale.windupPeak,
+      activePeak: scale.activePeak,
+      followThroughPeak: scale.followThroughPeak,
+    },
+  };
+}
+
+const stage4TimingById = new Map(STAGE4_ACTION_DEFINITIONS.map((definition) => [
+  definition.id,
+  definition.timing,
+]));
 
 const map = Object.freeze({
   id: STAGE5_MAP_DEFINITION.id,
@@ -46,18 +76,54 @@ const map = Object.freeze({
 });
 
 const actions = freezeRecord({
-  [STAGE4_ACTION_ID.BASE_PUSH]: {
+  [STAGE4_ACTION_ID.BASE_PUSH]: combatPresentation({
     semantic: 'push', label: '推击', animationCategory: ARENA_ANIMATION_ACTION_CATEGORY.ATTACK,
-  },
-  [STAGE4_ACTION_ID.HAMMER_SMASH]: {
+    actionId: STAGE4_ACTION_ID.BASE_PUSH, clipName: 'Unarmed_Melee_Attack_Punch_A',
+    phases: { anticipationEnd: 0.72, followThroughEnd: 0.38 },
+    scale: { windupPeak: 1, activePeak: 1, followThroughPeak: 1 },
+  }),
+  [STAGE4_ACTION_ID.HAMMER_SMASH]: combatPresentation({
     semantic: 'heavy-smash', label: '重锤', animationCategory: ARENA_ANIMATION_ACTION_CATEGORY.EQUIPMENT,
-  },
-  [STAGE4_ACTION_ID.CHAIN_PULL]: {
+    actionId: STAGE4_ACTION_ID.HAMMER_SMASH, clipName: '2H_Melee_Attack_Chop',
+    phases: { anticipationEnd: 0.8, followThroughEnd: 0.46 },
+    scale: { windupPeak: 1.08, activePeak: 1.28, followThroughPeak: 1.15 },
+  }),
+  [STAGE4_ACTION_ID.CHAIN_PULL]: combatPresentation({
     semantic: 'chain-pull', label: '锁链', animationCategory: ARENA_ANIMATION_ACTION_CATEGORY.EQUIPMENT,
-  },
-  [STAGE4_ACTION_ID.SHIELD_CHARGE]: {
+    actionId: STAGE4_ACTION_ID.CHAIN_PULL, clipName: 'Throw',
+    phases: { anticipationEnd: 0.68, followThroughEnd: 0.52 },
+    scale: { windupPeak: 1.06, activePeak: 1.2, followThroughPeak: 1.12 },
+  }),
+  [STAGE4_ACTION_ID.SHIELD_CHARGE]: combatPresentation({
     semantic: 'shield-charge', label: '冲撞', animationCategory: ARENA_ANIMATION_ACTION_CATEGORY.DEFEND,
-  },
+    actionId: STAGE4_ACTION_ID.SHIELD_CHARGE, clipName: 'Block_Attack',
+    phases: { anticipationEnd: 0.58, followThroughEnd: 0.62 },
+    scale: { windupPeak: 1.05, activePeak: 1.18, followThroughPeak: 1.1 },
+  }),
+  [STAGE4_ACTION_ID.BASE_AIR_STRIKE]: combatPresentation({
+    semantic: 'air-strike', label: '空中踢击', animationCategory: ARENA_ANIMATION_ACTION_CATEGORY.ATTACK,
+    actionId: STAGE4_ACTION_ID.BASE_AIR_STRIKE, clipName: 'Unarmed_Melee_Attack_Punch_A',
+    phases: { anticipationEnd: 0.62, followThroughEnd: 0.48 },
+    scale: { windupPeak: 1, activePeak: 1, followThroughPeak: 1 },
+  }),
+  [STAGE4_ACTION_ID.HAMMER_AIR_SMASH]: combatPresentation({
+    semantic: 'air-heavy-smash', label: '坠空重锤', animationCategory: ARENA_ANIMATION_ACTION_CATEGORY.EQUIPMENT,
+    actionId: STAGE4_ACTION_ID.HAMMER_AIR_SMASH, clipName: '2H_Melee_Attack_Chop',
+    phases: { anticipationEnd: 0.78, followThroughEnd: 0.56 },
+    scale: { windupPeak: 1.12, activePeak: 1.38, followThroughPeak: 1.2 },
+  }),
+  [STAGE4_ACTION_ID.CHAIN_AIR_LASH]: combatPresentation({
+    semantic: 'air-chain-lash', label: '坠空锁链', animationCategory: ARENA_ANIMATION_ACTION_CATEGORY.EQUIPMENT,
+    actionId: STAGE4_ACTION_ID.CHAIN_AIR_LASH, clipName: 'Throw',
+    phases: { anticipationEnd: 0.64, followThroughEnd: 0.58 },
+    scale: { windupPeak: 1.1, activePeak: 1.3, followThroughPeak: 1.16 },
+  }),
+  [STAGE4_ACTION_ID.SHIELD_AIR_DROP]: combatPresentation({
+    semantic: 'air-shield-drop', label: '坠空盾击', animationCategory: ARENA_ANIMATION_ACTION_CATEGORY.DEFEND,
+    actionId: STAGE4_ACTION_ID.SHIELD_AIR_DROP, clipName: 'Block_Attack',
+    phases: { anticipationEnd: 0.52, followThroughEnd: 0.68 },
+    scale: { windupPeak: 1.08, activePeak: 1.25, followThroughPeak: 1.14 },
+  }),
   [STAGE6_MOVEMENT_ACTION_ID.EXPLICIT_GROUND_JUMP]: {
     semantic: 'jump', label: '跳跃', animationCategory: ARENA_ANIMATION_ACTION_CATEGORY.MOVEMENT,
   },

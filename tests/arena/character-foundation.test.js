@@ -17,6 +17,11 @@ import {
   createArenaV1CharacterRegistry,
 } from '../../src/arena/content/arena-v1-characters.js';
 import { ARENA_V1_CHARACTER_ID } from '../../src/arena/content/arena-v1-character-ids.js';
+import {
+  ARENA_GAMEPLAY_V2_TUNING,
+  compileHorizontalImpulseFromDistance,
+  compileJumpImpulseFromHeight,
+} from '../../src/arena/content/arena-gameplay-v2-tuning.js';
 
 function definition(overrides = {}) {
   return {
@@ -37,6 +42,8 @@ function definition(overrides = {}) {
       crouchImpulse: 9.5,
       airImpulse: 7,
       downSmashSpeed: 16,
+      downSmashAccelerationPerTick: 0.55,
+      maximumDownSmashSpeed: 22,
       coyoteTicks: 6,
       bufferTicks: 6,
       maximumAirJumps: 1,
@@ -46,6 +53,42 @@ function definition(overrides = {}) {
     ...overrides,
   };
 }
+
+test('Gameplay V2 tuning compiles author-facing height and distance into authority values', () => {
+  const tuning = ARENA_GAMEPLAY_V2_TUNING;
+  assert.ok(Object.isFrozen(tuning));
+  assert.ok(Object.isFrozen(tuning.character.jump));
+  assert.equal(
+    compileJumpImpulseFromHeight(tuning.character.jump.targetGroundHeight),
+    7.5,
+  );
+  assert.ok(Math.abs(
+    compileHorizontalImpulseFromDistance(
+      tuning.attacks['hammer-smash'].knockback.targetGroundDistance,
+    ) - 15,
+  ) < 1e-12);
+  assert.equal(tuning.units.tickRateHz, 60);
+  assert.deepEqual(tuning.character.movement, {
+    walkSpeed: 3.2,
+    runSpeed: 6,
+    runInputThreshold: 0.65,
+    groundAcceleration: 42,
+    airAcceleration: 14,
+    maximumHorizontalSpeed: 18,
+    automaticStepHeight: 0.35,
+  });
+  assert.deepEqual({
+    ground: tuning.character.jump.targetGroundHeight,
+    charged: tuning.character.jump.targetChargedHeight,
+    air: tuning.character.jump.targetAirHeight,
+  }, {
+    ground: 1.171875,
+    charged: 1.8802083333333333,
+    air: 1.0208333333333333,
+  });
+  assert.throws(() => compileJumpImpulseFromHeight(0), /大于 0/);
+  assert.throws(() => compileHorizontalImpulseFromDistance(Number.NaN), /大于 0/);
+});
 
 test('CharacterDefinition clones, deeply freezes and excludes presentation data', () => {
   const source = definition();
