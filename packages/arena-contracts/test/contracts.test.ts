@@ -7,6 +7,7 @@ import {
   createDeterministicDataHash,
   createRng,
   createNeutralInputFrame,
+  createArenaMatchSnapshotAudit,
   createSynchronousStoragePort,
   deriveSeed,
   normalizeInputFrames,
@@ -14,6 +15,84 @@ import {
 import type { ArenaInputFrame, ArenaMatchEventType } from '../src/index.js';
 
 describe('Arena deterministic contracts', () => {
+  function snapshotFixture(includeInternal = false) {
+    const participant = {
+      id: 'p1',
+      characterDefinitionId: 'fighter',
+      status: 'active',
+      lives: 3,
+      eliminations: 0,
+      deaths: 0,
+      hitstunTicks: 0,
+      invulnerableTicks: 0,
+      respawnTicks: 0,
+      lastHitBy: null,
+      lastHitTick: -1,
+      action: { definitionId: null, phase: 'idle', ticksRemaining: 0 },
+      actionRule: { range: 2 },
+      movement: {
+        schemaVersion: 2,
+        participantId: 'p1',
+        characterDefinitionId: 'fighter',
+        mode: 'standard',
+        coyoteTicksRemaining: 0,
+        jumpBufferTicksRemaining: 0,
+        airJumpsUsed: 0,
+        crouchChargeTicks: 0,
+        crouchActionId: null,
+        downSmashActionId: null,
+        revision: 0,
+        grounded: true,
+      },
+      ...(includeInternal ? {} : { actionAffordance: { tick: 3 } }),
+      equipment: null,
+      position: { x: 0, y: 1, z: 0 },
+      velocity: { x: 0, y: 0, z: 0 },
+      facing: { x: 1, z: 0 },
+      grounded: true,
+      supportSurfaceId: 'main',
+    };
+    return {
+      schemaVersion: 5,
+      physicsBackendVersion: 'lightweight-v3',
+      configHash: 'config-hash',
+      ruleContentHash: 'rule-hash',
+      matchSeed: 7,
+      tick: 3,
+      activeTick: 3,
+      phase: 'running',
+      remainingTicks: 97,
+      eventSequence: 4,
+      participants: [participant],
+      equipment: [],
+      map: {
+        schemaVersion: 1,
+        definitionId: 'main-map',
+        nextActiveTick: 3,
+        revision: 0,
+        surfaces: [{ id: 'main', enabled: true, revision: 0 }],
+        occurrences: [],
+      },
+      result: null,
+      ...(includeInternal ? { rngStates: { combat: 123 } } : {}),
+    };
+  }
+
+  it('audits public and internal MatchCore snapshots outside the per-tick hot path', () => {
+    const publicSnapshot = createArenaMatchSnapshotAudit(snapshotFixture());
+    expect(Object.isFrozen(publicSnapshot)).toBe(true);
+    expect(Object.isFrozen(publicSnapshot.participants[0])).toBe(true);
+    expect(createArenaMatchSnapshotAudit(snapshotFixture(true), { includeInternal: true }).rngStates)
+      .toEqual({ combat: 123 });
+    expect(() => createArenaMatchSnapshotAudit({
+      ...snapshotFixture(),
+      unknown: true,
+    })).toThrow(/unknown/);
+    const accessor = snapshotFixture();
+    Object.defineProperty(accessor, 'tick', { enumerable: true, get: () => 3 });
+    expect(() => createArenaMatchSnapshotAudit(accessor)).toThrow(/数据字段/);
+  });
+
   it('normalizes complete InputFrame batches and fills missing participants deterministically', () => {
     const frame: ArenaInputFrame = createNeutralInputFrame(3, 'p1');
     expect(normalizeInputFrames([{ ...frame, moveX: 1, moveZ: 1 }], {

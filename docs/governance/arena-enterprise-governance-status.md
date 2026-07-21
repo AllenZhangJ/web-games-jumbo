@@ -29,7 +29,7 @@
 | --- | --- | --- |
 | G0 基线冻结 | 已完成 | 自动化、压力、资产和三端构建通过；ADR/计划/证据已落盘；tag `arena-product-baseline-51e2822` 指向基线提交 |
 | G1 治理外壳/唯一产品 | 已完成 | Arena 已成为唯一生产产品；旧产品实现/专属测试/资产/规范已退役；strict TS、ESLint、Vitest、CI、CODEOWNERS、JS 递减清单和唯一产物门禁已启用 |
-| G2 Definition/合同/配置 | 进行中 | 已建立 strict TS `arena-contracts`、`arena-definitions` 与 `arena-platform-contracts` workspace，并迁入确定性、输入/事件、同步存储和平台能力合同，以及动作/角色/装备/地图 Definition、只读 Registry 和唯一 Gameplay V2 数值配置；当前仍有 505 个受审计 JavaScript 文件，快照与存档 schema 仍待迁移 |
+| G2 Definition/合同/配置 | 进行中 | 已建立 strict TS `arena-contracts`、`arena-definitions` 与 `arena-platform-contracts` workspace，并迁入确定性、输入/事件、权威快照、同步存储和平台能力合同，以及动作/角色/装备/地图 Definition、只读 Registry 和唯一 Gameplay V2 数值配置；当前仍有 505 个受审计 JavaScript 文件，PlayerProfile 存档 schema 仍待迁移 |
 | G3 Rule/Core/Replay | 未开始 | 当前行为有 Replay/hash 证据，但尚未迁入 strict TS |
 | G4 Bot/Product/Persistence | 未开始 | 当前功能与压力证据存在，尚未迁入 strict TS workspace |
 | G5 Presentation/资产/反馈 | 未开始 | 正式资产预算通过；审批字段与唯一正常路径仍待治理 |
@@ -125,3 +125,10 @@
 - Web/微信/抖音适配仍在 `src/platform` 作为 G6 迁移对象；本批未改变宿主时钟、触控、安全区、离屏 Canvas 或存储语义。
 - strict 公共包测试 16 项、Profile/Pilot/Study 存储定向测试 52 项、平台/架构定向测试 56 项与三端构建前置验证通过。
 - JavaScript 精确允许清单由 507 降至 505；权威快照和 PlayerProfile 存档 schema 仍是 G2 阻断项。
+
+## G2.7 权威快照合同迁移证据
+
+- MatchCore 公开/内部快照、Participant、Movement、Equipment、Map、Result 与 RNG state 的 strict TypeScript 结构已进入 `arena-contracts`。
+- 显式审计器拒绝未知字段、访问器、非有限向量、重复 ID、引用错配、无效 tick 关系和非 uint32 随机状态。
+- 审计器仅供迁移、fixture、Replay 工具和边界测试显式调用；MatchCore 每 tick 快照路径未加入重复深拷贝/深校验，避免手机端额外发热。
+- strict 公共包测试增至 17 项，并由真实 MatchCore 公开快照完成集成验证；JavaScript 数保持 505，PlayerProfile 存档 schema 仍是 G2 最后阻断项。

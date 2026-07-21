@@ -34,3 +34,19 @@ export type {
   SynchronousStoragePortOptions,
   SynchronousStorageReadResult,
 } from './synchronous-storage-port.js';
+export { createArenaMatchSnapshotAudit } from './match-snapshot.js';
+export type {
+  ArenaActionSnapshot,
+  ArenaEquipmentSnapshot,
+  ArenaHeldEquipmentSnapshot,
+  ArenaMapOccurrenceSnapshot,
+  ArenaMapSnapshot,
+  ArenaMapSurfaceSnapshot,
+  ArenaMatchResultSnapshot,
+  ArenaMatchSnapshot,
+  ArenaMatchSnapshotAuditOptions,
+  ArenaMovementSnapshot,
+  ArenaParticipantSnapshot,
+  ArenaVector2Snapshot,
+  ArenaVector3Snapshot,
+} from './match-snapshot.js';

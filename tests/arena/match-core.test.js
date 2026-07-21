@@ -4,7 +4,10 @@ import {
   ARENA_MATCH_PHASE,
   ARENA_PARTICIPANT_STATUS,
 } from '../../src/arena/config.js';
-import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
+import {
+  createArenaMatchSnapshotAudit,
+  createNeutralInputFrame,
+} from '@number-strategy-jump/arena-contracts';
 import { ARENA_MATCH_EVENT } from '../../src/arena/match-core.js';
 import { createArenaV1MatchCore } from '../../src/arena/arena-v1-match-core.js';
 import { createLightweightPhysicsWorld } from '../../src/arena/physics/lightweight-physics.js';
@@ -111,6 +114,16 @@ test('MatchCore internals are not exposed and snapshots cannot mutate authority'
   const authority = core.getSnapshot();
   assert.equal(authority.participants[0].lives, 3);
   assert.notEqual(authority.participants[0].position.x, 999);
+  core.destroy();
+});
+
+test('MatchCore public snapshot satisfies the shared audit schema without entering the tick path', () => {
+  const core = createFastCore();
+  const audited = createArenaMatchSnapshotAudit(core.getSnapshot());
+  assert.equal(audited.participants.length, 2);
+  assert.equal(audited.map.surfaces.length, 1);
+  assert.ok(Object.isFrozen(audited));
+  assert.ok(Object.isFrozen(audited.participants[0]));
   core.destroy();
 });
 
