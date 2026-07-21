@@ -1,6 +1,6 @@
 import { ARENA_V1_PLAYER_PROFILE_DEFINITION } from '../src/arena/product/content/arena-v1-player-profile-definition.js';
 import { advancePlayerProfile } from '@number-strategy-jump/arena-profile-contracts';
-import { PlayerProfileRepository } from '../src/arena/product/persistence/player-profile-repository.js';
+import { PlayerProfileRepository } from '@number-strategy-jump/arena-profile-persistence';
 
 function parsePositiveInteger(argument, prefix, fallback) {
   const match = argument?.startsWith(prefix) ? argument.slice(prefix.length) : null;

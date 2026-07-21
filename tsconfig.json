@@ -19,6 +19,7 @@
     { "path": "./packages/arena-session" },
     { "path": "./packages/arena-storage" },
     { "path": "./packages/arena-profile-contracts" },
+    { "path": "./packages/arena-profile-persistence" },
     { "path": "./packages/arena-profile-service" },
     { "path": "./packages/arena-platform-contracts" }
   ]

@@ -17,7 +17,7 @@ import {
   createPlayerProfileSaveEnvelope,
   validatePlayerProfileSaveEnvelope,
 } from '@number-strategy-jump/arena-profile-contracts';
-import { PlayerProfileRepository } from '../../../src/arena/product/persistence/player-profile-repository.js';
+import { PlayerProfileRepository } from '@number-strategy-jump/arena-profile-persistence';
 import { SynchronousStorageLease } from '@number-strategy-jump/arena-storage';
 
 function clone(value) {

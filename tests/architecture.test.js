@@ -788,6 +788,19 @@ test('Arena Rule/Core foundation preserves dependency direction and deterministi
     );
   }
 
+  const profilePersistenceFiles = await listJavaScript(
+    path.resolve('packages/arena-profile-persistence/src'),
+  );
+  assert.ok(profilePersistenceFiles.length >= 2);
+  for (const file of profilePersistenceFiles) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /(?:from\s+['"](?:node:|three|[^'"]*(?:product-state|profile-service|match|study|pilot|presentation|platform|entry)[^'"]*)['"]|Date\.now|Math\.random|setTimeout|setInterval|requestAnimationFrame|\b(?:window|document|navigator|localStorage|sessionStorage)\b|\b(?:tt|wx)\s*\.)/,
+      `${file} 只能组合 Profile 数据合同、同步存储合同与租约。`,
+    );
+  }
+
   const resolverSource = await readFile(
     path.resolve('packages/arena-core/src/action-resolver.ts'),
     'utf8',
@@ -980,6 +993,20 @@ test('Arena Rule/Core foundation preserves dependency direction and deterministi
     Object.keys(storagePackage.dependencies).sort(),
     ['@number-strategy-jump/arena-contracts'],
     'arena-storage 只能依赖底层同步存储合同。',
+  );
+
+  const profilePersistencePackage = JSON.parse(await readFile(
+    path.resolve('packages/arena-profile-persistence/package.json'),
+    'utf8',
+  ));
+  assert.deepEqual(
+    Object.keys(profilePersistencePackage.dependencies).sort(),
+    [
+      '@number-strategy-jump/arena-contracts',
+      '@number-strategy-jump/arena-profile-contracts',
+      '@number-strategy-jump/arena-storage',
+    ],
+    'arena-profile-persistence 只能组合 Profile 数据合同与同步存储所有权。',
   );
 
   const matchCoreSource = await readFile(

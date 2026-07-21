@@ -23,7 +23,7 @@ import {
 } from '../content/arena-v1-progression-content.js';
 import { ProductMatchCoordinator } from '../matchmaking/product-match-coordinator.js';
 import { QuickMatchProductFactory } from '../matchmaking/quick-match-product-factory.js';
-import { PlayerProfileRepository } from '../persistence/player-profile-repository.js';
+import { PlayerProfileRepository } from '@number-strategy-jump/arena-profile-persistence';
 import { PlayerProfileService } from '@number-strategy-jump/arena-profile-service';
 import { RewardCommitter } from '@number-strategy-jump/arena-product-progression';
 import { ProductSessionStateMachine } from '@number-strategy-jump/arena-product-state';

@@ -269,7 +269,6 @@
     "src/arena/product/matchmaking/product-match-coordinator.js",
     "src/arena/product/matchmaking/product-match-runtime.js",
     "src/arena/product/matchmaking/quick-match-product-factory.js",
-    "src/arena/product/persistence/player-profile-repository.js",
     "src/arena/regression/arena-regression-evidence-components.js",
     "src/arena/regression/arena-regression-evidence-validation.js",
     "src/arena/regression/arena-regression-evidence.js",
