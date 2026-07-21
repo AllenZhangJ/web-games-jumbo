@@ -1,12 +1,13 @@
 import { ARENA_TICK_RATE } from '@number-strategy-jump/arena-match';
 import {
   MAP_DEFINITION_SCHEMA_VERSION,
+  STAGE5_MAP_ID,
   createMapDefinition,
 } from '@number-strategy-jump/arena-definitions';
 import { MAP_EVENT_KIND } from '@number-strategy-jump/arena-map';
 import { STAGE4_EQUIPMENT_ID } from './stage4-equipment.js';
 
-export const STAGE5_MAP_ID = 'abyss-grid-wind-v1';
+export { STAGE5_MAP_ID } from '@number-strategy-jump/arena-definitions';
 
 const TILE_HALF_EXTENTS = Object.freeze({ x: 2, y: 0.5, z: 2 });
 

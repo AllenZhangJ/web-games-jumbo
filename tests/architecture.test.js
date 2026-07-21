@@ -412,6 +412,7 @@ test('Arena Stage 8 product orchestration remains host-free and outside match au
     'packages/arena-product-progression/src',
     'packages/arena-product-session/src',
     'packages/arena-product-state/src',
+    'packages/arena-product-v1-content/src',
   ].map((directory) => path.resolve(directory));
   const files = (await Promise.all(directories.map(listJavaScript))).flat();
   assert.ok(files.length >= 8);
@@ -1023,6 +1024,21 @@ test('Arena Rule/Core foundation preserves dependency direction and deterministi
       '@number-strategy-jump/arena-profile-contracts',
     ],
     'arena-product-content 只能依赖底层确定性合同与 Profile 数据合同。',
+  );
+
+  const productV1ContentPackage = JSON.parse(await readFile(
+    path.resolve('packages/arena-product-v1-content/package.json'),
+    'utf8',
+  ));
+  assert.deepEqual(
+    Object.keys(productV1ContentPackage.dependencies).sort(),
+    [
+      '@number-strategy-jump/arena-definitions',
+      '@number-strategy-jump/arena-product-content',
+      '@number-strategy-jump/arena-profile-contracts',
+      '@number-strategy-jump/arena-progression',
+    ],
+    'arena-product-v1-content 只能组合稳定 ID、内容池、Profile 与成长 Definition。',
   );
 
   const productProgressionPackage = JSON.parse(await readFile(

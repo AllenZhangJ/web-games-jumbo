@@ -17,6 +17,9 @@ import {
 import { EquipmentRegistry } from '@number-strategy-jump/arena-definitions';
 import { cloneFrozenData, cloneFrozenStringSet } from '@number-strategy-jump/arena-contracts';
 import { ARENA_GAMEPLAY_V2_TUNING } from '@number-strategy-jump/arena-definitions';
+import { STAGE4_EQUIPMENT_ID } from '@number-strategy-jump/arena-definitions';
+
+export { STAGE4_EQUIPMENT_ID } from '@number-strategy-jump/arena-definitions';
 
 const ATTACK_TUNING = ARENA_GAMEPLAY_V2_TUNING.attacks;
 
@@ -29,12 +32,6 @@ export const STAGE4_ACTION_ID = Object.freeze({
   CHAIN_AIR_LASH: 'chain-air-lash',
   SHIELD_CHARGE: 'shield-charge',
   SHIELD_AIR_DROP: 'shield-air-drop',
-});
-
-export const STAGE4_EQUIPMENT_ID = Object.freeze({
-  HAMMER: 'hammer',
-  CHAIN: 'chain',
-  SHIELD: 'shield',
 });
 
 export const STAGE4_INITIAL_EQUIPMENT_SPAWNS = Object.freeze([

@@ -9,20 +9,18 @@ import {
   assertPlainRecord,
   cloneFrozenData,
 } from '@number-strategy-jump/arena-contracts';
-import { ARENA_V1_PLAYER_PROFILE_DEFINITION } from '../content/arena-v1-player-profile-definition.js';
 import {
   ARENA_V1_CONTENT_REPLACEMENT_REGISTRY,
   ARENA_V1_MATCH_CONTENT_CATALOG,
   ARENA_V1_MATCH_CONTENT_POOL_DEFINITION,
-} from '../content/arena-v1-match-content.js';
+  ARENA_V1_MATCH_REWARD_ID,
+  ARENA_V1_PLAYER_PROFILE_DEFINITION,
+  ARENA_V1_PROGRESSION_REGISTRY,
+} from '@number-strategy-jump/arena-product-v1-content';
 import {
   MatchContentPoolResolver,
   ProfileContentPoolProvider,
 } from '@number-strategy-jump/arena-product-content';
-import {
-  ARENA_V1_MATCH_REWARD_ID,
-  ARENA_V1_PROGRESSION_REGISTRY,
-} from '../content/arena-v1-progression-content.js';
 import {
   ProductMatchCoordinator,
   QuickMatchProductFactory,

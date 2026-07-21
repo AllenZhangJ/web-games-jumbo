@@ -1,4 +1,4 @@
-import { ARENA_V1_PLAYER_PROFILE_DEFINITION } from '../src/arena/product/content/arena-v1-player-profile-definition.js';
+import { ARENA_V1_PLAYER_PROFILE_DEFINITION } from '@number-strategy-jump/arena-product-v1-content';
 import { advancePlayerProfile } from '@number-strategy-jump/arena-profile-contracts';
 import { PlayerProfileRepository } from '@number-strategy-jump/arena-profile-persistence';
 

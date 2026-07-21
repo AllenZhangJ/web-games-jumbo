@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
-import { ARENA_V1_PLAYER_PROFILE_DEFINITION } from '../../../src/arena/product/content/arena-v1-player-profile-definition.js';
+import { ARENA_V1_PLAYER_PROFILE_DEFINITION } from '@number-strategy-jump/arena-product-v1-content';
 import {
   PLAYER_PROFILE_SAVE_ENVELOPE_SCHEMA_VERSION,
   PlayerProfileDefinition,

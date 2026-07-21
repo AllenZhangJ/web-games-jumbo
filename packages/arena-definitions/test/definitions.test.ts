@@ -1,6 +1,8 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import {
   ARENA_GAMEPLAY_V2_TUNING,
+  ARENA_GAMEPLAY_V2_MAP_ID,
+  ARENA_V1_CHARACTER_ID,
   ACTION_DEFINITION_SCHEMA_VERSION,
   ACTION_EFFECT_TRIGGER,
   ACTION_INPUT_CHANNEL,
@@ -20,6 +22,8 @@ import {
   EquipmentRegistry,
   MAP_DEFINITION_SCHEMA_VERSION,
   MapRegistry,
+  STAGE4_EQUIPMENT_ID,
+  STAGE5_MAP_ID,
 } from '../src/index.js';
 import type {
   ActionDefinition,
@@ -80,6 +84,14 @@ function character(id: string): CharacterDefinition {
 }
 
 describe('Arena Definition public contracts', () => {
+  it('publishes stable Arena V1 content IDs from one immutable API', () => {
+    expect(Object.isFrozen(STAGE4_EQUIPMENT_ID)).toBe(true);
+    expect(Object.values(STAGE4_EQUIPMENT_ID)).toEqual(['hammer', 'chain', 'shield']);
+    expect(Object.values(ARENA_V1_CHARACTER_ID)).toHaveLength(2);
+    expect(STAGE5_MAP_ID).toBe('abyss-grid-wind-v1');
+    expect(ARENA_GAMEPLAY_V2_MAP_ID).toBe('forge-crossroads-v2');
+  });
+
   it('freezes the one executable gameplay tuning table behind a reviewed hash', () => {
     expect(Object.isFrozen(ARENA_GAMEPLAY_V2_TUNING)).toBe(true);
     expect(createDeterministicDataHash(ARENA_GAMEPLAY_V2_TUNING)).toBe('8c322912');

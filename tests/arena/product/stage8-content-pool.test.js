@@ -25,8 +25,8 @@ import {
   ARENA_V1_CONTENT_REPLACEMENT_REGISTRY,
   ARENA_V1_MATCH_CONTENT_CATALOG,
   ARENA_V1_MATCH_CONTENT_POOL_DEFINITION,
-} from '../../../src/arena/product/content/arena-v1-match-content.js';
-import { ARENA_V1_PLAYER_PROFILE_DEFINITION } from '../../../src/arena/product/content/arena-v1-player-profile-definition.js';
+  ARENA_V1_PLAYER_PROFILE_DEFINITION,
+} from '@number-strategy-jump/arena-product-v1-content';
 import {
   CONTENT_REPLACEMENT_DEFINITION_SCHEMA_VERSION,
   ContentReplacementRegistry,

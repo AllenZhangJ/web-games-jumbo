@@ -6,7 +6,7 @@ import { STAGE4_ACTION_ID } from '../../../src/arena/content/stage4-equipment.js
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
 import { ARENA_MATCH_EVENT } from '@number-strategy-jump/arena-match';
 import { ProductSessionController } from '@number-strategy-jump/arena-product-session';
-import { ARENA_V1_PLAYER_PROFILE_DEFINITION } from '../../../src/arena/product/content/arena-v1-player-profile-definition.js';
+import { ARENA_V1_PLAYER_PROFILE_DEFINITION } from '@number-strategy-jump/arena-product-v1-content';
 import { ProductMatchCoordinator } from '@number-strategy-jump/arena-product-match';
 import { createPlayerProfile } from '@number-strategy-jump/arena-profile-contracts';
 import { PlayerProfilePersistenceError } from '@number-strategy-jump/arena-profile-service';

@@ -1,12 +1,13 @@
 import { ARENA_TICK_RATE } from '@number-strategy-jump/arena-match';
 import {
+  ARENA_GAMEPLAY_V2_MAP_ID,
   MAP_DEFINITION_SCHEMA_VERSION,
   createMapDefinition,
 } from '@number-strategy-jump/arena-definitions';
 import { MAP_EVENT_KIND } from '@number-strategy-jump/arena-map';
 import { STAGE4_EQUIPMENT_ID } from './stage4-equipment.js';
 
-export const ARENA_GAMEPLAY_V2_MAP_ID = 'forge-crossroads-v2';
+export { ARENA_GAMEPLAY_V2_MAP_ID } from '@number-strategy-jump/arena-definitions';
 
 function surface(id, x, z, halfX, halfZ, top = 0) {
   return Object.freeze({

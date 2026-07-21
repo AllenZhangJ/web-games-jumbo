@@ -1,17 +1,16 @@
-import { ARENA_V1_DEFAULT_CHARACTER_ID } from '@number-strategy-jump/arena-definitions';
-import { ARENA_V1_CHARACTER_DEFINITIONS } from '../../content/arena-v1-characters.js';
-import { ARENA_GAMEPLAY_V2_MAP_ID } from '../../content/arena-gameplay-v2-map.js';
 import {
-  STAGE4_EQUIPMENT_DEFINITIONS,
+  ARENA_GAMEPLAY_V2_MAP_ID,
+  ARENA_V1_CHARACTER_ID,
+  ARENA_V1_DEFAULT_CHARACTER_ID,
   STAGE4_EQUIPMENT_ID,
-} from '../../content/stage4-equipment.js';
-import { STAGE5_MAP_ID } from '../../content/stage5-map.js';
+  STAGE5_MAP_ID,
+} from '@number-strategy-jump/arena-definitions';
 import {
   CONTENT_REPLACEMENT_DEFINITION_SCHEMA_VERSION,
   ContentReplacementRegistry,
   MATCH_CONTENT_KIND,
-  MatchContentCatalog,
   MATCH_CONTENT_POOL_DEFINITION_SCHEMA_VERSION,
+  MatchContentCatalog,
   createMatchContentPoolDefinition,
 } from '@number-strategy-jump/arena-product-content';
 
@@ -27,13 +26,12 @@ export const ARENA_V1_MATCH_CONTENT_POOL_DEFINITION = createMatchContentPoolDefi
 });
 
 export const ARENA_V1_MATCH_CONTENT_CATALOG = new MatchContentCatalog({
-  characterIds: ARENA_V1_CHARACTER_DEFINITIONS.map(({ id }) => id),
-  equipmentIds: STAGE4_EQUIPMENT_DEFINITIONS.map(({ id }) => id),
+  characterIds: Object.values(ARENA_V1_CHARACTER_ID),
+  equipmentIds: Object.values(STAGE4_EQUIPMENT_ID),
   mapIds: [ARENA_GAMEPLAY_V2_MAP_ID],
 });
 
-// V1 remains in the authority registry for deterministic replay compatibility,
-// while the production pool migrates existing profiles to the larger V2 arena.
+// V1 remains a replay authority ID while current profiles resolve to the larger V2 arena.
 export const ARENA_V1_CONTENT_REPLACEMENT_REGISTRY = new ContentReplacementRegistry([
   {
     schemaVersion: CONTENT_REPLACEMENT_DEFINITION_SCHEMA_VERSION,

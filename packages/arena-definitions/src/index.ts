@@ -69,3 +69,9 @@ export {
   ARENA_V1_DEFAULT_CHARACTER_ID,
 } from './arena-v1-character-ids.js';
 export type { ArenaV1CharacterId } from './arena-v1-character-ids.js';
+export {
+  ARENA_GAMEPLAY_V2_MAP_ID,
+  STAGE4_EQUIPMENT_ID,
+  STAGE5_MAP_ID,
+} from './arena-v1-content-ids.js';
+export type { Stage4EquipmentId } from './arena-v1-content-ids.js';

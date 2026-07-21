@@ -16,8 +16,7 @@ export const ARENA_V1_MATCH_REWARD_DEFINITION = createMatchRewardDefinition({
   drawBonusExperience: 10,
 });
 
-// All Stage 8.3 content remains unlocked. New content can add UnlockDefinitions
-// without changing the reward resolver or persistence writer.
+// Stage 8.3 ships fully unlocked; future unlocks extend the Registry, not the writer.
 export const ARENA_V1_PROGRESSION_REGISTRY = createProgressionRegistry({
   rewards: [ARENA_V1_MATCH_REWARD_DEFINITION],
   unlocks: [],
