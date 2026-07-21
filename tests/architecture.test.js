@@ -745,6 +745,38 @@ test('Arena Rule/Core foundation preserves dependency direction and deterministi
     );
   }
 
+  const productContractFiles = await listJavaScript(path.resolve('packages/arena-product-contracts/src'));
+  for (const file of productContractFiles) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /(?:\/profile\/|\/progression\/|\/persistence\/|\/matchmaking\/|\/composition\/|\/presentation\/|\/platform\/|from\s+['"]three['"]|\b(?:window|document|navigator)\b)/,
+      `${file} 越过了 Product 结果纯合同边界。`,
+    );
+    assert.doesNotMatch(
+      source,
+      /(?:Date\.now|Math\.random|\bperformance\b|setTimeout|setInterval|requestAnimationFrame|localeCompare)/,
+      `${file} 使用了墙钟、非确定性随机或表现调度。`,
+    );
+  }
+
+  const productProgressionFiles = await listJavaScript(
+    path.resolve('packages/arena-product-progression/src'),
+  );
+  for (const file of productProgressionFiles) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /(?:\/composition\/|\/persistence\/|\/matchmaking\/|\/presentation\/|\/platform\/|from\s+['"]three['"]|\b(?:window|document|navigator)\b)/,
+      `${file} 越过了 Product Progression 事务编排边界。`,
+    );
+    assert.doesNotMatch(
+      source,
+      /(?:Date\.now|Math\.random|\bperformance\b|setTimeout|setInterval|requestAnimationFrame|localeCompare)/,
+      `${file} 使用了墙钟、非确定性随机或表现调度。`,
+    );
+  }
+
   const resolverSource = await readFile(
     path.resolve('packages/arena-core/src/action-resolver.ts'),
     'utf8',
@@ -902,6 +934,31 @@ test('Arena Rule/Core foundation preserves dependency direction and deterministi
     Object.keys(progressionPackage.dependencies).sort(),
     ['@number-strategy-jump/arena-contracts'],
     'arena-progression 只能依赖底层确定性合同。',
+  );
+
+  const productContractsPackage = JSON.parse(await readFile(
+    path.resolve('packages/arena-product-contracts/package.json'),
+    'utf8',
+  ));
+  assert.deepEqual(
+    Object.keys(productContractsPackage.dependencies).sort(),
+    ['@number-strategy-jump/arena-contracts'],
+    'arena-product-contracts 只能依赖底层确定性合同。',
+  );
+
+  const productProgressionPackage = JSON.parse(await readFile(
+    path.resolve('packages/arena-product-progression/package.json'),
+    'utf8',
+  ));
+  assert.deepEqual(
+    Object.keys(productProgressionPackage.dependencies).sort(),
+    [
+      '@number-strategy-jump/arena-contracts',
+      '@number-strategy-jump/arena-product-contracts',
+      '@number-strategy-jump/arena-profile-contracts',
+      '@number-strategy-jump/arena-progression',
+    ],
+    'arena-product-progression 只能组合纯结果、Profile 合同与成长合同。',
   );
 
   const matchCoreSource = await readFile(

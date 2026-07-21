@@ -108,6 +108,20 @@ describe('arena-progression foundation', () => {
     })).toThrow(/存在环/);
   });
 
+  it('exposes one immutable dependency order for linear reward resolution', () => {
+    const registry = new ProgressionRegistry({
+      rewards: [],
+      unlocks: [
+        unlock('c', 'hero-c', ['b']),
+        unlock('a', 'hero-a'),
+        unlock('b', 'hero-b', ['a']),
+      ],
+    });
+    expect(registry.getUnlocks().map(({ id }) => id)).toEqual(['a', 'b', 'c']);
+    expect(registry.getUnlocksInDependencyOrder().map(({ id }) => id)).toEqual(['a', 'b', 'c']);
+    expect(Object.isFrozen(registry.getUnlocksInDependencyOrder())).toBe(true);
+  });
+
   it('creates a deeply immutable reward grant and rejects ambiguous values', () => {
     const grant = createRewardGrant({
       schemaVersion: REWARD_GRANT_SCHEMA_VERSION,

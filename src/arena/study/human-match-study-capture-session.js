@@ -3,7 +3,7 @@ import { createMatchAssignment } from '@number-strategy-jump/arena-matchmaking';
 import {
   createProductMatchResult,
   validateProductMatchResult,
-} from '../product/matchmaking/product-match-result.js';
+} from '@number-strategy-jump/arena-product-contracts';
 import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 import {
   validateHumanMatchStudyAssignment,

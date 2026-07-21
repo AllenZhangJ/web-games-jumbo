@@ -12,14 +12,16 @@ import {
   ARENA_V1_MATCH_REWARD_DEFINITION,
   ARENA_V1_MATCH_REWARD_ID,
 } from '../../../src/arena/product/content/arena-v1-progression-content.js';
-import { createProductMatchResult } from '../../../src/arena/product/matchmaking/product-match-result.js';
+import { createProductMatchResult } from '@number-strategy-jump/arena-product-contracts';
 import {
   advancePlayerProfile,
   createPlayerProfile,
 } from '@number-strategy-jump/arena-profile-contracts';
 import { PlayerProfileService } from '../../../src/arena/product/profile/player-profile-service.js';
-import { RewardCommitter } from '../../../src/arena/product/progression/reward-committer.js';
-import { resolveMatchReward } from '../../../src/arena/product/progression/reward-resolver.js';
+import {
+  RewardCommitter,
+  resolveMatchReward,
+} from '@number-strategy-jump/arena-product-progression';
 import { TEST_MATCH_CONTENT_PUBLIC_VIEW } from './stage8-test-content.js';
 
 function matchResult({ winnerId = 'player-1', seed = 7 } = {}) {

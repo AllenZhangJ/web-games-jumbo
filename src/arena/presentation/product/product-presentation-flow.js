@@ -2,7 +2,7 @@ import {
   combineCleanupFailure,
   normalizeThrownError,
 } from '@number-strategy-jump/arena-contracts';
-import { validateProductMatchResult } from '../../product/matchmaking/product-match-result.js';
+import { validateProductMatchResult } from '@number-strategy-jump/arena-product-contracts';
 import { PRODUCT_SESSION_STATE } from '@number-strategy-jump/arena-product-state';
 import { ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT } from '../content/arena-gameplay-v2-content.js';
 import { ARENA_V1_PRODUCT_PRESENTATION_CONTENT } from './arena-v1-product-presentation-content.js';

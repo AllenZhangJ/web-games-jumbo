@@ -63,21 +63,21 @@ function normalizeDefinitions<T>(
   return definitions;
 }
 
-function assertNoUnlockCycles(
+function createUnlockDependencyOrder(
   definitions: readonly UnlockDefinition[],
   byId: ReadonlyMap<string, UnlockDefinition>,
-): void {
+): readonly UnlockDefinition[] {
   const incoming = new Map(definitions.map((definition) => [definition.id, definition.prerequisiteIds.length]));
   const dependents = new Map(definitions.map((definition) => [definition.id, [] as string[]]));
   for (const definition of definitions) {
     for (const prerequisiteId of definition.prerequisiteIds) dependents.get(prerequisiteId)?.push(definition.id);
   }
   const ready = definitions.filter((definition) => incoming.get(definition.id) === 0);
-  let visited = 0;
+  const ordered: UnlockDefinition[] = [];
   while (ready.length > 0) {
     const definition = ready.pop();
     if (!definition) continue;
-    visited += 1;
+    ordered.push(definition);
     for (const dependentId of dependents.get(definition.id) ?? []) {
       const remaining = (incoming.get(dependentId) ?? 0) - 1;
       incoming.set(dependentId, remaining);
@@ -85,7 +85,8 @@ function assertNoUnlockCycles(
       if (remaining === 0 && dependent) ready.push(dependent);
     }
   }
-  if (visited !== definitions.length) throw new RangeError('ProgressionRegistry 解锁依赖存在环。');
+  if (ordered.length !== definitions.length) throw new RangeError('ProgressionRegistry 解锁依赖存在环。');
+  return Object.freeze(ordered);
 }
 
 export class ProgressionRegistry {
@@ -93,6 +94,7 @@ export class ProgressionRegistry {
   readonly #unlocks: readonly UnlockDefinition[];
   readonly #rewardById: ReadonlyMap<string, MatchRewardDefinition>;
   readonly #unlockById: ReadonlyMap<string, UnlockDefinition>;
+  readonly #unlocksInDependencyOrder: readonly UnlockDefinition[];
 
   constructor(options: ProgressionRegistryOptions);
   constructor(options: unknown) {
@@ -120,11 +122,12 @@ export class ProgressionRegistry {
         }
       }
     }
-    assertNoUnlockCycles(unlocks, unlockById);
+    const unlocksInDependencyOrder = createUnlockDependencyOrder(unlocks, unlockById);
     this.#rewards = Object.freeze(rewards);
     this.#unlocks = Object.freeze(unlocks);
     this.#rewardById = rewardById;
     this.#unlockById = unlockById;
+    this.#unlocksInDependencyOrder = unlocksInDependencyOrder;
     Object.freeze(this);
   }
 
@@ -136,6 +139,9 @@ export class ProgressionRegistry {
   }
   getRewards(): readonly MatchRewardDefinition[] { return this.#rewards; }
   getUnlocks(): readonly UnlockDefinition[] { return this.#unlocks; }
+  getUnlocksInDependencyOrder(): readonly UnlockDefinition[] {
+    return this.#unlocksInDependencyOrder;
+  }
 }
 
 export function createProgressionRegistry(value: unknown): ProgressionRegistry {

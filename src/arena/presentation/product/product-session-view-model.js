@@ -6,7 +6,7 @@ import {
   assertProductMatchSeed,
   createProductPublicOpponent,
   validateProductMatchResult,
-} from '../../product/matchmaking/product-match-result.js';
+} from '@number-strategy-jump/arena-product-contracts';
 import { createRewardGrant } from '@number-strategy-jump/arena-progression';
 import {
   assertIntegerAtLeast,

@@ -25,7 +25,7 @@ import { ProductMatchCoordinator } from '../matchmaking/product-match-coordinato
 import { QuickMatchProductFactory } from '../matchmaking/quick-match-product-factory.js';
 import { PlayerProfileRepository } from '../persistence/player-profile-repository.js';
 import { PlayerProfileService } from '../profile/player-profile-service.js';
-import { RewardCommitter } from '../progression/reward-committer.js';
+import { RewardCommitter } from '@number-strategy-jump/arena-product-progression';
 import { ProductSessionStateMachine } from '@number-strategy-jump/arena-product-state';
 import { ProductSessionController } from './product-session-controller.js';
 

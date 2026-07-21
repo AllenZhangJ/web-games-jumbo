@@ -4,7 +4,7 @@ import {
   assertProductMatchSeed,
   createProductMatchResult,
   createProductPublicOpponent,
-} from './product-match-result.js';
+} from '@number-strategy-jump/arena-product-contracts';
 
 export const PRODUCT_MATCH_RUNTIME_STATE = Object.freeze({
   CREATED: 'created',

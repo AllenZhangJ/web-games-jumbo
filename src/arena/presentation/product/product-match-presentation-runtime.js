@@ -5,7 +5,7 @@ import {
 import {
   createProductPublicMatchInfo,
   validateProductMatchResult,
-} from '../../product/matchmaking/product-match-result.js';
+} from '@number-strategy-jump/arena-product-contracts';
 import { PRODUCT_SESSION_STATE } from '@number-strategy-jump/arena-product-state';
 import { ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT } from '../content/arena-gameplay-v2-content.js';
 import { PresentationEventWindow } from '../events/presentation-event-window.js';

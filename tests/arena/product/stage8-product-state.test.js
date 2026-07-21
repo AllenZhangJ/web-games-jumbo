@@ -5,7 +5,7 @@ import {
   ProductMatchCoordinator,
   PRODUCT_MATCH_COORDINATOR_STATE,
 } from '../../../src/arena/product/matchmaking/product-match-coordinator.js';
-import { createProductMatchResult } from '../../../src/arena/product/matchmaking/product-match-result.js';
+import { createProductMatchResult } from '@number-strategy-jump/arena-product-contracts';
 import {
   PlayerProfileIndeterminateWriteError,
   createPlayerProfile,

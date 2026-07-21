@@ -6,7 +6,7 @@ import { ARENA_V1_BALANCE_DEFINITION } from '../content/arena-v1-balance.js';
 import { createMatchAssignment } from '@number-strategy-jump/arena-matchmaking';
 import {
   createProductMatchResult,
-} from '../product/matchmaking/product-match-result.js';
+} from '@number-strategy-jump/arena-product-contracts';
 import { replayMatch } from '../replay.js';
 import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 import { createHumanMatchStudyDefinition } from './human-match-study-definition.js';

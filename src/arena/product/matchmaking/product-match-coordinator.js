@@ -2,7 +2,7 @@ import {
   combineCleanupFailure,
   normalizeThrownError,
 } from '@number-strategy-jump/arena-contracts';
-import { createProductPublicMatchInfo } from './product-match-result.js';
+import { createProductPublicMatchInfo } from '@number-strategy-jump/arena-product-contracts';
 import { validateProductMatchRuntime } from './product-match-runtime.js';
 
 export const PRODUCT_MATCH_COORDINATOR_STATE = Object.freeze({

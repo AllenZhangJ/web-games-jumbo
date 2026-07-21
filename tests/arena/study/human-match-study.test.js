@@ -14,7 +14,7 @@ import { spawnSync } from 'node:child_process';
 import { ARENA_V1_BALANCE_DEFINITION } from '../../../src/arena/content/arena-v1-balance.js';
 import { createMatchAssignment } from '@number-strategy-jump/arena-matchmaking';
 import { QuickMatchService } from '../../../src/arena/matchmaking/quick-match-service.js';
-import { createProductMatchResult } from '../../../src/arena/product/matchmaking/product-match-result.js';
+import { createProductMatchResult } from '@number-strategy-jump/arena-product-contracts';
 import {
   PRODUCT_MATCH_RUNTIME_STATE,
   ProductMatchRuntime,
