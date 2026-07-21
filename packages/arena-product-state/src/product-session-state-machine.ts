@@ -1,13 +1,46 @@
-import { assertNonEmptyString } from '@number-strategy-jump/arena-contracts';
+import {
+  assertKnownKeys,
+  assertNonEmptyString,
+  assertPlainRecord,
+} from '@number-strategy-jump/arena-contracts';
 import {
   PRODUCT_SESSION_EVENT,
   PRODUCT_SESSION_STATE,
+  type ProductSessionEvent,
+  type ProductSessionState,
 } from './product-session-transition-definition.js';
-import { createProductSessionTransitionRegistry } from './product-session-transition-registry.js';
+import {
+  ProductSessionTransitionRegistry,
+  createProductSessionTransitionRegistry,
+} from './product-session-transition-registry.js';
 
 export const PRODUCT_SESSION_STATE_SNAPSHOT_SCHEMA_VERSION = 2;
 
-const RECOVERY_STATES = new Set([
+export interface ProductSessionStateMachineOptions {
+  readonly transitionRegistry?: ProductSessionTransitionRegistry | null;
+}
+
+export interface ProductSessionTransitionSnapshot {
+  readonly revision: number;
+  readonly eventId: ProductSessionEvent;
+  readonly fromState: ProductSessionState;
+  readonly toState: ProductSessionState;
+  readonly activeFromState: ProductSessionState | null;
+  readonly activeToState: ProductSessionState | null;
+}
+
+export interface ProductSessionStateSnapshot {
+  readonly schemaVersion: 2;
+  readonly revision: number;
+  readonly state: ProductSessionState;
+  readonly activeState: ProductSessionState | null;
+  readonly resumeState: ProductSessionState | null;
+  readonly recoveryState: ProductSessionState | null;
+  readonly lastTransition: ProductSessionTransitionSnapshot | null;
+}
+
+const OPTION_KEYS = new Set(['transitionRegistry']);
+const RECOVERY_STATES: ReadonlySet<unknown> = new Set([
   PRODUCT_SESSION_STATE.BOOT,
   PRODUCT_SESSION_STATE.READY,
   PRODUCT_SESSION_STATE.CHARACTER_SELECT,
@@ -16,27 +49,47 @@ const RECOVERY_STATES = new Set([
   PRODUCT_SESSION_STATE.UNLOCK,
 ]);
 
-function copyTransition(value) {
+function readOptionalDataProperty(record: object, key: string, name: string): unknown {
+  const descriptor = Object.getOwnPropertyDescriptor(record, key);
+  if (descriptor === undefined) return undefined;
+  if (!descriptor.enumerable || !('value' in descriptor)) {
+    throw new TypeError(`${name}.${key} 必须是可枚举数据字段。`);
+  }
+  return descriptor.value;
+}
+
+function copyTransition(
+  value: ProductSessionTransitionSnapshot | null,
+): ProductSessionTransitionSnapshot | null {
   return value === null ? null : Object.freeze({ ...value });
 }
 
-function assertRecoveryState(value) {
+function assertRecoveryState(value: unknown): ProductSessionState {
   if (!RECOVERY_STATES.has(value)) {
     throw new RangeError('ProductSessionStateMachine recoveryState 不受支持。');
   }
-  return value;
+  return value as ProductSessionState;
 }
 
 export class ProductSessionStateMachine {
-  #registry;
-  #state;
-  #resumeState;
-  #recoveryState;
-  #revision;
-  #lastTransition;
-  #transitioning;
+  readonly #registry: ProductSessionTransitionRegistry;
+  #state: ProductSessionState;
+  #resumeState: ProductSessionState | null;
+  #recoveryState: ProductSessionState | null;
+  #revision: number;
+  #lastTransition: ProductSessionTransitionSnapshot | null;
+  #transitioning: boolean;
 
-  constructor({ transitionRegistry = null } = {}) {
+  constructor(options?: ProductSessionStateMachineOptions);
+  constructor(options?: unknown) {
+    const source = options === undefined ? {} : options;
+    assertKnownKeys(source, OPTION_KEYS, 'ProductSessionStateMachine options');
+    const record = assertPlainRecord(source, 'ProductSessionStateMachine options');
+    const transitionRegistry = readOptionalDataProperty(
+      record,
+      'transitionRegistry',
+      'ProductSessionStateMachine options',
+    ) ?? null;
     this.#registry = createProductSessionTransitionRegistry(transitionRegistry);
     this.#state = PRODUCT_SESSION_STATE.BOOT;
     this.#resumeState = null;
@@ -47,18 +100,18 @@ export class ProductSessionStateMachine {
     Object.freeze(this);
   }
 
-  get state() {
+  get state(): ProductSessionState {
     return this.#state;
   }
 
-  get activeState() {
+  get activeState(): ProductSessionState | null {
     if (this.#state === PRODUCT_SESSION_STATE.DESTROYED) return null;
     return this.#state === PRODUCT_SESSION_STATE.SUSPENDED
       ? this.#resumeState
       : this.#state;
   }
 
-  #assertMutable() {
+  #assertMutable(): void {
     if (this.#state === PRODUCT_SESSION_STATE.DESTROYED) {
       throw new Error('ProductSessionStateMachine 已销毁。');
     }
@@ -67,25 +120,28 @@ export class ProductSessionStateMachine {
     }
   }
 
-  #record(eventId, {
-    visibleFrom,
-    visibleTo,
-    activeFrom,
-    activeTo,
-  }) {
+  #record(
+    eventId: ProductSessionEvent,
+    values: Readonly<{
+      visibleFrom: ProductSessionState;
+      visibleTo: ProductSessionState;
+      activeFrom: ProductSessionState | null;
+      activeTo: ProductSessionState | null;
+    }>,
+  ): ProductSessionStateSnapshot {
     this.#revision += 1;
     this.#lastTransition = Object.freeze({
       revision: this.#revision,
       eventId,
-      fromState: visibleFrom,
-      toState: visibleTo,
-      activeFromState: activeFrom,
-      activeToState: activeTo,
+      fromState: values.visibleFrom,
+      toState: values.visibleTo,
+      activeFromState: values.activeFrom,
+      activeToState: values.activeTo,
     });
     return this.getSnapshot();
   }
 
-  #run(callback) {
+  #run(callback: () => ProductSessionStateSnapshot): ProductSessionStateSnapshot {
     this.#assertMutable();
     this.#transitioning = true;
     try {
@@ -95,20 +151,17 @@ export class ProductSessionStateMachine {
     }
   }
 
-  dispatch(eventIdValue) {
-    const eventId = assertNonEmptyString(eventIdValue, 'ProductSession eventId');
+  dispatch(eventIdValue: unknown): ProductSessionStateSnapshot {
+    const eventId = assertNonEmptyString(eventIdValue, 'ProductSession eventId') as ProductSessionEvent;
     return this.#run(() => {
       const visibleFrom = this.#state;
       const activeFrom = this.activeState;
       const definition = this.#registry.resolve(eventId, activeFrom);
       if (!definition) {
-        throw new Error(`ProductSession 无法在 ${activeFrom} 处理 ${eventId}。`);
+        throw new Error(`ProductSession 无法在 ${String(activeFrom)} 处理 ${eventId}。`);
       }
-      if (visibleFrom === PRODUCT_SESSION_STATE.SUSPENDED) {
-        this.#resumeState = definition.toState;
-      } else {
-        this.#state = definition.toState;
-      }
+      if (visibleFrom === PRODUCT_SESSION_STATE.SUSPENDED) this.#resumeState = definition.toState;
+      else this.#state = definition.toState;
       return this.#record(eventId, {
         visibleFrom,
         visibleTo: this.#state,
@@ -118,10 +171,12 @@ export class ProductSessionStateMachine {
     });
   }
 
-  suspend() {
-    if (this.#state === PRODUCT_SESSION_STATE.DESTROYED) return this.getSnapshot();
-    if (this.#state === PRODUCT_SESSION_STATE.SUSPENDED) return this.getSnapshot();
-    if (this.#state === PRODUCT_SESSION_STATE.FATAL_ERROR) return this.getSnapshot();
+  suspend(): ProductSessionStateSnapshot {
+    if (
+      this.#state === PRODUCT_SESSION_STATE.DESTROYED
+      || this.#state === PRODUCT_SESSION_STATE.SUSPENDED
+      || this.#state === PRODUCT_SESSION_STATE.FATAL_ERROR
+    ) return this.getSnapshot();
     return this.#run(() => {
       const visibleFrom = this.#state;
       this.#resumeState = this.#state;
@@ -135,11 +190,12 @@ export class ProductSessionStateMachine {
     });
   }
 
-  resume() {
+  resume(): ProductSessionStateSnapshot {
     if (this.#state === PRODUCT_SESSION_STATE.DESTROYED) return this.getSnapshot();
     if (this.#state !== PRODUCT_SESSION_STATE.SUSPENDED) return this.getSnapshot();
     return this.#run(() => {
       const activeTo = this.#resumeState;
+      if (activeTo === null) throw new Error('ProductSession 缺少 resumeState。');
       this.#state = activeTo;
       this.#resumeState = null;
       return this.#record(PRODUCT_SESSION_EVENT.RESUMED, {
@@ -151,7 +207,7 @@ export class ProductSessionStateMachine {
     });
   }
 
-  failRecoverable(recoveryStateValue) {
+  failRecoverable(recoveryStateValue: unknown): ProductSessionStateSnapshot {
     const recoveryState = assertRecoveryState(recoveryStateValue);
     return this.#run(() => {
       if (this.activeState === PRODUCT_SESSION_STATE.FATAL_ERROR) {
@@ -174,13 +230,14 @@ export class ProductSessionStateMachine {
     });
   }
 
-  retry() {
+  retry(): ProductSessionStateSnapshot {
     return this.#run(() => {
       if (this.activeState !== PRODUCT_SESSION_STATE.RECOVERABLE_ERROR) {
         throw new Error('只有 recoverable-error 可以重试。');
       }
       const visibleFrom = this.#state;
       const activeTo = this.#recoveryState;
+      if (activeTo === null) throw new Error('ProductSession 缺少 recoveryState。');
       if (visibleFrom === PRODUCT_SESSION_STATE.SUSPENDED) this.#resumeState = activeTo;
       else this.#state = activeTo;
       this.#recoveryState = null;
@@ -193,9 +250,11 @@ export class ProductSessionStateMachine {
     });
   }
 
-  failFatal() {
-    if (this.#state === PRODUCT_SESSION_STATE.DESTROYED) return this.getSnapshot();
-    if (this.#state === PRODUCT_SESSION_STATE.FATAL_ERROR) return this.getSnapshot();
+  failFatal(): ProductSessionStateSnapshot {
+    if (
+      this.#state === PRODUCT_SESSION_STATE.DESTROYED
+      || this.#state === PRODUCT_SESSION_STATE.FATAL_ERROR
+    ) return this.getSnapshot();
     return this.#run(() => {
       const visibleFrom = this.#state;
       const activeFrom = this.activeState;
@@ -211,7 +270,7 @@ export class ProductSessionStateMachine {
     });
   }
 
-  destroy() {
+  destroy(): ProductSessionStateSnapshot {
     if (this.#state === PRODUCT_SESSION_STATE.DESTROYED) return this.getSnapshot();
     return this.#run(() => {
       const visibleFrom = this.#state;
@@ -228,7 +287,7 @@ export class ProductSessionStateMachine {
     });
   }
 
-  getSnapshot() {
+  getSnapshot(): ProductSessionStateSnapshot {
     return Object.freeze({
       schemaVersion: PRODUCT_SESSION_STATE_SNAPSHOT_SCHEMA_VERSION,
       revision: this.#revision,

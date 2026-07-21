@@ -1,4 +1,4 @@
-import { PRODUCT_SESSION_STATE } from '../../product/state/product-session-transition-definition.js';
+import { PRODUCT_SESSION_STATE } from '@number-strategy-jump/arena-product-state';
 import {
   PRODUCT_UI_INTENT_ID,
   createProductUiIntent,

@@ -11,6 +11,7 @@
     { "path": "./packages/arena-matchmaking" },
     { "path": "./packages/arena-movement" },
     { "path": "./packages/arena-physics" },
+    { "path": "./packages/arena-product-state" },
     { "path": "./packages/arena-quick-match" },
     { "path": "./packages/arena-session" },
     { "path": "./packages/arena-profile-contracts" },

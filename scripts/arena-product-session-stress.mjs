@@ -1,5 +1,5 @@
 import { createArenaV1ProductSession } from '../src/arena/product/composition/arena-v1-product-composition.js';
-import { PRODUCT_SESSION_STATE } from '../src/arena/product/state/product-session-transition-definition.js';
+import { PRODUCT_SESSION_STATE } from '@number-strategy-jump/arena-product-state';
 
 function positiveIntegerFlag(name, fallback) {
   const prefix = `--${name}=`;

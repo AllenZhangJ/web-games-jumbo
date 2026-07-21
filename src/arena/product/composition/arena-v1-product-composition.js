@@ -26,7 +26,7 @@ import { QuickMatchProductFactory } from '../matchmaking/quick-match-product-fac
 import { PlayerProfileRepository } from '../persistence/player-profile-repository.js';
 import { PlayerProfileService } from '../profile/player-profile-service.js';
 import { RewardCommitter } from '../progression/reward-committer.js';
-import { ProductSessionStateMachine } from '../state/product-session-state-machine.js';
+import { ProductSessionStateMachine } from '@number-strategy-jump/arena-product-state';
 import { ProductSessionController } from './product-session-controller.js';
 
 function validateDiagnosticSink(value) {

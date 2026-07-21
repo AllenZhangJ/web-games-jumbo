@@ -1,5 +1,5 @@
 import { ARENA_V1_CHARACTER_ID } from '@number-strategy-jump/arena-definitions';
-import { PRODUCT_SESSION_STATE } from '../../product/state/product-session-transition-definition.js';
+import { PRODUCT_SESSION_STATE } from '@number-strategy-jump/arena-product-state';
 import { ARENA_V1_GREYBOX_CONTENT } from '../content/arena-v1-greybox-content.js';
 import {
   PRODUCT_CONTENT_KIND,

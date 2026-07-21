@@ -6,12 +6,10 @@ import { PlayerProfilePersistenceError } from '../profile/player-profile-service
 import {
   PRODUCT_SESSION_EVENT,
   PRODUCT_SESSION_STATE,
-} from '../state/product-session-transition-definition.js';
-import {
   PRODUCT_SESSION_ERROR_CODE,
   createProductSessionCleanupFailure,
   createProductSessionPublicError,
-} from '../state/product-session-error.js';
+} from '@number-strategy-jump/arena-product-state';
 import {
   validateProductDiagnosticSink,
   validateProductMatchCoordinator,

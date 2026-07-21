@@ -15,12 +15,12 @@ import {
   PlayerProfileService,
   PLAYER_PROFILE_SERVICE_STATE,
 } from '../../../src/arena/product/profile/player-profile-service.js';
-import { ProductSessionStateMachine } from '../../../src/arena/product/state/product-session-state-machine.js';
 import {
   PRODUCT_SESSION_EVENT,
   PRODUCT_SESSION_STATE,
-} from '../../../src/arena/product/state/product-session-transition-definition.js';
-import { ProductSessionTransitionRegistry } from '../../../src/arena/product/state/product-session-transition-registry.js';
+  ProductSessionStateMachine,
+  ProductSessionTransitionRegistry,
+} from '@number-strategy-jump/arena-product-state';
 import { TEST_MATCH_CONTENT_PUBLIC_VIEW } from './stage8-test-content.js';
 
 function deferred() {

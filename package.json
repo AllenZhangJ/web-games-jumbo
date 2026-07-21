@@ -9,7 +9,7 @@
   "description": "基于确定性 MatchCore 与 Three.js/WebGL 的 1v1 Arena 动作小游戏，支持 Web、抖音和微信。",
   "scripts": {
     "prepare": "npm run build:packages",
-    "build:packages": "tsc -b packages/arena-contracts packages/arena-definitions packages/arena-core packages/arena-equipment packages/arena-map packages/arena-movement packages/arena-physics packages/arena-match packages/arena-bot packages/arena-matchmaking packages/arena-session packages/arena-quick-match packages/arena-profile-contracts packages/arena-platform-contracts --pretty false",
+    "build:packages": "tsc -b packages/arena-contracts packages/arena-definitions packages/arena-core packages/arena-equipment packages/arena-map packages/arena-movement packages/arena-physics packages/arena-match packages/arena-bot packages/arena-matchmaking packages/arena-session packages/arena-quick-match packages/arena-product-state packages/arena-profile-contracts packages/arena-platform-contracts --pretty false",
     "arena:poc": "node scripts/arena-physics-poc.mjs",
     "arena:config:print": "node --import tsx scripts/arena-gameplay-config.ts",
     "arena:poc:build": "node scripts/build-arena-poc.mjs",
@@ -98,6 +98,7 @@
     "@number-strategy-jump/arena-matchmaking": "0.1.0",
     "@number-strategy-jump/arena-movement": "0.1.0",
     "@number-strategy-jump/arena-physics": "0.1.0",
+    "@number-strategy-jump/arena-product-state": "0.1.0",
     "@number-strategy-jump/arena-quick-match": "0.1.0",
     "@number-strategy-jump/arena-session": "0.1.0",
     "@number-strategy-jump/arena-profile-contracts": "0.1.0",

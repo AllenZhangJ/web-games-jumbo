@@ -3,7 +3,7 @@ import {
   ProductPresentationSession,
 } from '../src/arena/presentation/session/product-presentation-session.js';
 import { PRODUCT_UI_INTENT_ID } from '../src/arena/presentation/product/product-ui-intent.js';
-import { PRODUCT_SESSION_STATE } from '../src/arena/product/state/product-session-transition-definition.js';
+import { PRODUCT_SESSION_STATE } from '@number-strategy-jump/arena-product-state';
 
 function positiveIntegerArgument(name, fallback) {
   const prefix = `--${name}=`;

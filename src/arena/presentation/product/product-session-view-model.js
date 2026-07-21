@@ -1,5 +1,7 @@
-import { PRODUCT_SESSION_ERROR_CODE } from '../../product/state/product-session-error.js';
-import { PRODUCT_SESSION_STATE } from '../../product/state/product-session-transition-definition.js';
+import {
+  PRODUCT_SESSION_ERROR_CODE,
+  PRODUCT_SESSION_STATE,
+} from '@number-strategy-jump/arena-product-state';
 import {
   assertProductMatchSeed,
   createProductPublicOpponent,

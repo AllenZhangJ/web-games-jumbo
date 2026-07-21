@@ -10,8 +10,10 @@ import { ARENA_V1_PLAYER_PROFILE_DEFINITION } from '../../../src/arena/product/c
 import { ProductMatchCoordinator } from '../../../src/arena/product/matchmaking/product-match-coordinator.js';
 import { createPlayerProfile } from '@number-strategy-jump/arena-profile-contracts';
 import { PlayerProfilePersistenceError } from '../../../src/arena/product/profile/player-profile-service.js';
-import { ProductSessionStateMachine } from '../../../src/arena/product/state/product-session-state-machine.js';
-import { PRODUCT_SESSION_STATE } from '../../../src/arena/product/state/product-session-transition-definition.js';
+import {
+  PRODUCT_SESSION_STATE,
+  ProductSessionStateMachine,
+} from '@number-strategy-jump/arena-product-state';
 import { TEST_MATCH_CONTENT_PUBLIC_VIEW } from './stage8-test-content.js';
 
 function clone(value) {

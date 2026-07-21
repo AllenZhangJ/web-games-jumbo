@@ -6,8 +6,10 @@ import { ARENA_V1_PLAYER_PROFILE_DEFINITION } from '../../../src/arena/product/c
 import { createProductMatchResult } from '../../../src/arena/product/matchmaking/product-match-result.js';
 import { createPlayerProfile } from '@number-strategy-jump/arena-profile-contracts';
 import { REWARD_GRANT_SCHEMA_VERSION } from '../../../src/arena/product/progression/reward-grant.js';
-import { PRODUCT_SESSION_ERROR_CODE } from '../../../src/arena/product/state/product-session-error.js';
-import { PRODUCT_SESSION_STATE } from '../../../src/arena/product/state/product-session-transition-definition.js';
+import {
+  PRODUCT_SESSION_ERROR_CODE,
+  PRODUCT_SESSION_STATE,
+} from '@number-strategy-jump/arena-product-state';
 import {
   ARENA_V1_PRODUCT_PRESENTATION_CONTENT,
   ARENA_V1_PRODUCT_SCREEN_REGISTRY,

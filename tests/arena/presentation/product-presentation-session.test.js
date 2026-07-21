@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { PRODUCT_SESSION_STATE } from '../../../src/arena/product/state/product-session-transition-definition.js';
+import { PRODUCT_SESSION_STATE } from '@number-strategy-jump/arena-product-state';
 import { PRODUCT_INPUT_ROUTER_MODE } from '../../../src/arena/presentation/product/product-input-router.js';
 import { ProductPresentationFlow } from '../../../src/arena/presentation/product/product-presentation-flow.js';
 import {

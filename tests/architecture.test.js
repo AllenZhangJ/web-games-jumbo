@@ -715,6 +715,21 @@ test('Arena Rule/Core foundation preserves dependency direction and deterministi
     );
   }
 
+  const productStateFiles = await listJavaScript(path.resolve('packages/arena-product-state/src'));
+  for (const file of productStateFiles) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /(?:\/profile\/|\/persistence\/|\/matchmaking\/|\/composition\/|\/presentation\/|\/platform\/|from\s+['"]three['"]|\b(?:window|document|navigator)\b)/,
+      `${file} 越过了 Product State 纯状态边界。`,
+    );
+    assert.doesNotMatch(
+      source,
+      /(?:Date\.now|Math\.random|\bperformance\b|setTimeout|setInterval|requestAnimationFrame|localeCompare)/,
+      `${file} 使用了墙钟、非确定性随机或表现调度。`,
+    );
+  }
+
   const resolverSource = await readFile(
     path.resolve('packages/arena-core/src/action-resolver.ts'),
     'utf8',
@@ -852,6 +867,16 @@ test('Arena Rule/Core foundation preserves dependency direction and deterministi
       '@number-strategy-jump/arena-session',
     ],
     'arena-quick-match 只能组合 Bot、合同、Match、Matchmaking 与 Session。',
+  );
+
+  const productStatePackage = JSON.parse(await readFile(
+    path.resolve('packages/arena-product-state/package.json'),
+    'utf8',
+  ));
+  assert.deepEqual(
+    Object.keys(productStatePackage.dependencies).sort(),
+    ['@number-strategy-jump/arena-contracts'],
+    'arena-product-state 只能依赖底层确定性合同。',
   );
 
   const matchCoreSource = await readFile(
