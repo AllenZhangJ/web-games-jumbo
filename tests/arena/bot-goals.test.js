@@ -2,9 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   getBotDifficultyProfile,
+  BOT_GOAL_ID,
+  getArenaBotEvaluators,
   selectHighestUtility,
 } from '@number-strategy-jump/arena-bot';
-import { BOT_GOAL_ID, getArenaBotEvaluators } from '../../src/arena/ai/bot-goals.js';
 import {
   cloneBotSourceSnapshot,
   createBotArenaView,

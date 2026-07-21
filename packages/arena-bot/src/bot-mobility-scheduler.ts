@@ -1,19 +1,64 @@
+import {
+  assertKnownKeys,
+  assertPlainRecord,
+  cloneFrozenData,
+} from '@number-strategy-jump/arena-contracts';
 import { BOT_MOBILITY_INTENT } from './bot-mobility-policy.js';
 
-const INTENTS = new Set(Object.values(BOT_MOBILITY_INTENT));
+const INTENTS: ReadonlySet<string> = new Set(Object.values(BOT_MOBILITY_INTENT));
+const SCHEDULER_OPTION_KEYS = new Set(['minimumIntervalTicks', 'crouchHoldTicks']);
 
-function positiveInteger(value, name, minimum = 1) {
-  if (!Number.isSafeInteger(value) || value < minimum) {
-    throw new RangeError(`${name} 必须是大于等于 ${minimum} 的安全整数。`);
-  }
-  return value;
+export interface BotMobilitySchedulerOptions {
+  readonly minimumIntervalTicks: number;
+  readonly crouchHoldTicks: number;
 }
 
-function tickValue(value, name) {
-  if (!Number.isSafeInteger(value) || value < 0) {
+export interface BotMobilitySample {
+  readonly jumpPressed: boolean;
+  readonly jumpHeld: boolean;
+  readonly slamPressed: boolean;
+}
+
+export interface BotMobilityDebugSnapshot {
+  readonly nextMobilityTick: number;
+  readonly jumpHoldUntilTick: number;
+  readonly jumpPressedTick: number;
+  readonly slamPressedTick: number;
+  readonly lastSampleTick: number;
+}
+
+function positiveInteger(value: unknown, name: string, minimum = 1): number {
+  const numeric = value as number;
+  if (!Number.isSafeInteger(numeric) || numeric < minimum) {
+    throw new RangeError(`${name} 必须是大于等于 ${minimum} 的安全整数。`);
+  }
+  return numeric;
+}
+
+function tickValue(value: unknown, name: string): number {
+  const numeric = value as number;
+  if (!Number.isSafeInteger(numeric) || numeric < 0) {
     throw new RangeError(`${name} 必须是非负安全整数。`);
   }
-  return value;
+  return numeric;
+}
+
+function normalizeSchedulerOptions(options: unknown): BotMobilitySchedulerOptions {
+  const copied = cloneFrozenData(options, 'BotMobilityScheduler options');
+  assertKnownKeys(copied, SCHEDULER_OPTION_KEYS, 'BotMobilityScheduler options');
+  const record = assertPlainRecord(copied, 'BotMobilityScheduler options');
+  return Object.freeze({
+    minimumIntervalTicks: positiveInteger(
+      record.minimumIntervalTicks,
+      'BotMobilityScheduler.minimumIntervalTicks',
+      4,
+    ),
+    crouchHoldTicks: positiveInteger(
+      record.crouchHoldTicks,
+      'BotMobilityScheduler.crouchHoldTicks',
+      2,
+    ),
+  });
 }
 
 export class BotMobilityScheduler {
@@ -24,24 +69,20 @@ export class BotMobilityScheduler {
   #slamPressedTick;
   #jumpHoldUntilTick;
   #lastSampleTick;
+  #lastScheduledTick;
   #destroyed;
 
-  constructor({ minimumIntervalTicks, crouchHoldTicks }) {
-    this.#minimumIntervalTicks = positiveInteger(
-      minimumIntervalTicks,
-      'BotMobilityScheduler.minimumIntervalTicks',
-      4,
-    );
-    this.#crouchHoldTicks = positiveInteger(
-      crouchHoldTicks,
-      'BotMobilityScheduler.crouchHoldTicks',
-      2,
-    );
+  constructor(options: BotMobilitySchedulerOptions);
+  constructor(options: unknown) {
+    const normalized = normalizeSchedulerOptions(options);
+    this.#minimumIntervalTicks = normalized.minimumIntervalTicks;
+    this.#crouchHoldTicks = normalized.crouchHoldTicks;
     this.#nextMobilityTick = 0;
     this.#jumpPressedTick = -1;
     this.#slamPressedTick = -1;
     this.#jumpHoldUntilTick = -1;
     this.#lastSampleTick = -1;
+    this.#lastScheduledTick = -1;
     this.#destroyed = false;
   }
 
@@ -56,19 +97,36 @@ export class BotMobilityScheduler {
     this.#jumpHoldUntilTick = -1;
   }
 
-  schedule({ tick, intent, committed, canMove }) {
+  schedule(
+    tick: unknown,
+    intent: unknown,
+    committed: unknown,
+    canMove: unknown,
+  ): boolean {
     this.#assertUsable();
     const currentTick = tickValue(tick, 'BotMobilityScheduler.tick');
+    const hasPendingSchedule = this.#lastScheduledTick > this.#lastSampleTick;
+    if (hasPendingSchedule && currentTick === this.#lastScheduledTick) {
+      throw new RangeError(`BotMobilityScheduler tick ${currentTick} 已调度。`);
+    }
+    if (hasPendingSchedule) {
+      throw new RangeError(
+        `BotMobilityScheduler 上次调度 tick ${this.#lastScheduledTick} 尚未采样。`,
+      );
+    }
     if (this.#lastSampleTick >= 0 && currentTick !== this.#lastSampleTick + 1) {
       throw new RangeError(
         `BotMobilityScheduler schedule tick 必须是下一未采样 tick：`
         + `上次 ${this.#lastSampleTick}，本次 ${currentTick}。`,
       );
     }
-    if (!INTENTS.has(intent)) throw new RangeError(`未知 Bot mobility intent ${String(intent)}。`);
+    if (typeof intent !== 'string' || !INTENTS.has(intent)) {
+      throw new RangeError(`未知 Bot mobility intent ${String(intent)}。`);
+    }
     if (typeof committed !== 'boolean' || typeof canMove !== 'boolean') {
       throw new TypeError('BotMobilityScheduler committed/canMove 必须是布尔值。');
     }
+    this.#lastScheduledTick = currentTick;
     if (!canMove) {
       this.cancel();
       return false;
@@ -92,11 +150,19 @@ export class BotMobilityScheduler {
     return true;
   }
 
-  sample(tick, { canMove }) {
+  sample(tick: unknown, canMove: unknown): BotMobilitySample {
     this.#assertUsable();
     const currentTick = tickValue(tick, 'BotMobilityScheduler sample tick');
     if (typeof canMove !== 'boolean') {
       throw new TypeError('BotMobilityScheduler sample canMove 必须是布尔值。');
+    }
+    if (
+      this.#lastScheduledTick > this.#lastSampleTick
+      && currentTick !== this.#lastScheduledTick
+    ) {
+      throw new RangeError(
+        `BotMobilityScheduler sample tick 必须匹配已调度 tick ${this.#lastScheduledTick}。`,
+      );
     }
     if (this.#lastSampleTick >= 0 && currentTick !== this.#lastSampleTick + 1) {
       throw new RangeError(
@@ -115,7 +181,7 @@ export class BotMobilityScheduler {
     });
   }
 
-  getDebugSnapshot() {
+  getDebugSnapshot(): BotMobilityDebugSnapshot {
     this.#assertUsable();
     return Object.freeze({
       nextMobilityTick: this.#nextMobilityTick,
@@ -126,12 +192,13 @@ export class BotMobilityScheduler {
     });
   }
 
-  destroy() {
+  destroy(): void {
     if (this.#destroyed) return;
     this.#destroyed = true;
     this.#jumpPressedTick = -1;
     this.#slamPressedTick = -1;
     this.#jumpHoldUntilTick = -1;
     this.#lastSampleTick = -1;
+    this.#lastScheduledTick = -1;
   }
 }

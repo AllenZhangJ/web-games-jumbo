@@ -3,18 +3,17 @@ import { normalizeInputFrame } from '@number-strategy-jump/arena-contracts';
 import { createRng } from '@number-strategy-jump/arena-contracts';
 import {
   cloneBotSourceSnapshot,
+  BOT_GOAL_ID,
+  BOT_MOBILITY_INTENT,
+  BotMobilityScheduler,
   createBotArenaView,
   createBotObservation,
   createBotPersonality,
+  getArenaBotEvaluators,
   getBotDifficultyProfile,
+  selectBotMobilityIntent,
   selectHighestUtility,
 } from '@number-strategy-jump/arena-bot';
-import { getArenaBotEvaluators, BOT_GOAL_ID } from './bot-goals.js';
-import {
-  BOT_MOBILITY_INTENT,
-  selectBotMobilityIntent,
-} from './bot-mobility-policy.js';
-import { BotMobilityScheduler } from './bot-mobility-scheduler.js';
 
 function uint32(value, name) {
   if (!Number.isSafeInteger(value) || value < 0 || value > 0xffffffff) {
@@ -127,13 +126,13 @@ export class BotController {
     const canMove = observation.self.status === ARENA_PARTICIPANT_STATUS.ACTIVE
       && observation.self.hitstunTicks === 0;
     this.#lastMobilityIntent = selectBotMobilityIntent({ observation, decision });
-    this.#mobilityScheduler.schedule({
-      tick: observation.commandTick,
-      intent: this.#lastMobilityIntent,
-      committed: this.#lastMobilityIntent !== BOT_MOBILITY_INTENT.NONE
+    this.#mobilityScheduler.schedule(
+      observation.commandTick,
+      this.#lastMobilityIntent,
+      this.#lastMobilityIntent !== BOT_MOBILITY_INTENT.NONE
         && this.#rng.next() < this.#difficulty.actionCommitChance,
       canMove,
-    });
+    );
     if (
       decision.goalId !== BOT_GOAL_ID.RECOVER_EDGE
       && decision.goalId !== BOT_GOAL_ID.AVOID_MAP_HAZARD
@@ -177,7 +176,7 @@ export class BotController {
     const primaryPressed = observation.commandTick === this.#actionTick;
     const canMove = observation.self.status === ARENA_PARTICIPANT_STATUS.ACTIVE
       && observation.self.hitstunTicks === 0;
-    const mobility = this.#mobilityScheduler.sample(observation.commandTick, { canMove });
+    const mobility = this.#mobilityScheduler.sample(observation.commandTick, canMove);
     const frame = normalizeInputFrame({
       tick: observation.commandTick,
       participantId: this.#participantId,

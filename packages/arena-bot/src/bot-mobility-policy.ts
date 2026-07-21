@@ -1,19 +1,35 @@
 import { ARENA_PARTICIPANT_STATUS } from '@number-strategy-jump/arena-match';
 import { MOVEMENT_MODE } from '@number-strategy-jump/arena-movement';
 import { BOT_GOAL_ID } from './bot-goals.js';
+import type { BotGoalPlan } from './bot-goals.js';
+import type { BotObservation } from './bot-observation.js';
+import type { UtilityDecision } from './utility-arbitrator.js';
 
 export const BOT_MOBILITY_INTENT = Object.freeze({
   NONE: 'none',
   JUMP: 'jump',
   CROUCH_JUMP: 'crouch-jump',
   SLAM: 'slam',
-});
+} as const);
 
-function channelIsSelected(observation, channel) {
+export type BotMobilityIntent = typeof BOT_MOBILITY_INTENT[keyof typeof BOT_MOBILITY_INTENT];
+
+export interface BotMobilitySelection {
+  readonly observation: BotObservation;
+  readonly decision: UtilityDecision<BotGoalPlan>;
+}
+
+function channelIsSelected(
+  observation: BotObservation,
+  channel: 'jump' | 'slam',
+): boolean {
   return observation.self.actionAffordance.channels[channel].kind === 'selected';
 }
 
-function horizontalDistance(first, second) {
+function horizontalDistance(
+  first: Readonly<{ x: number; z: number }>,
+  second: Readonly<{ x: number; z: number }>,
+): number {
   return Math.hypot(second.x - first.x, second.z - first.z);
 }
 
@@ -21,7 +37,9 @@ function horizontalDistance(first, second) {
  * Selects only a semantic mobility intent. It never reads Physics, private
  * Movement counters, future contacts or difficulty-specific permissions.
  */
-export function selectBotMobilityIntent({ observation, decision }) {
+export function selectBotMobilityIntent(
+  { observation, decision }: BotMobilitySelection,
+): BotMobilityIntent {
   const { self, opponent, arena } = observation;
   if (
     self.status !== ARENA_PARTICIPANT_STATUS.ACTIVE

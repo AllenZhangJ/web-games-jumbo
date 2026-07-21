@@ -1,3 +1,5 @@
+import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
+
 export type UtilityPlan = Readonly<Record<PropertyKey, unknown>>;
 
 export interface UtilityEvaluator<TContext, TPlan extends object> {
@@ -63,19 +65,7 @@ function copyPlan<TPlan extends object>(plan: TPlan, evaluatorId: string): TPlan
   if (prototype !== Object.prototype && prototype !== null) {
     throw new TypeError(`utility evaluator ${evaluatorId} 必须创建普通计划对象。`);
   }
-  const descriptors = Object.getOwnPropertyDescriptors(plan);
-  const copied: Record<string, unknown> = {};
-  for (const key of Reflect.ownKeys(descriptors)) {
-    if (typeof key !== 'string') {
-      throw new TypeError(`utility evaluator ${evaluatorId} 计划不得包含 Symbol 字段。`);
-    }
-    const descriptor = descriptors[key];
-    if (descriptor === undefined || !('value' in descriptor)) {
-      throw new TypeError(`utility evaluator ${evaluatorId} 计划字段不得是访问器。`);
-    }
-    copied[key] = descriptor.value;
-  }
-  return copied as TPlan;
+  return cloneFrozenData(plan, `utility evaluator ${evaluatorId} 计划`) as TPlan;
 }
 
 /**

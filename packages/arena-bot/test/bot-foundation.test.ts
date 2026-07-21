@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   BOT_DIFFICULTY_IDS,
   BOT_DIFFICULTY_PROFILES,
+  BotMobilityScheduler,
   cloneBotSourceSnapshot,
   createBotArenaView,
   createBotObservation,
@@ -87,7 +88,45 @@ describe('arena-bot deterministic foundation', () => {
       id: 'plan-getter',
       score: () => 1,
       createPlan: () => plan,
-    }], {})).toThrow(/计划字段不得是访问器/);
+    }], {})).toThrow(/数据字段|访问器/);
+    expect(getterCalls).toBe(0);
+  });
+
+  it('deeply freezes utility plans and rejects nested accessors without execution', () => {
+    const decision = selectHighestUtility([{
+      id: 'nested-plan',
+      score: () => 1,
+      createPlan: () => ({ target: { x: 1, z: 2 } }),
+    }], {});
+    expect(Object.isFrozen(decision.plan)).toBe(true);
+    expect(Object.isFrozen(decision.plan.target)).toBe(true);
+
+    let getterCalls = 0;
+    const target = Object.defineProperty({}, 'x', {
+      enumerable: true,
+      get() {
+        getterCalls += 1;
+        return 1;
+      },
+    });
+    expect(() => selectHighestUtility([{
+      id: 'nested-getter',
+      score: () => 1,
+      createPlan: () => ({ target }),
+    }], {})).toThrow(/数据字段|访问器/);
+    expect(getterCalls).toBe(0);
+  });
+
+  it('rejects mobility scheduler option accessors without execution', () => {
+    let getterCalls = 0;
+    const options = Object.defineProperty({ crouchHoldTicks: 8 }, 'minimumIntervalTicks', {
+      enumerable: true,
+      get() {
+        getterCalls += 1;
+        return 24;
+      },
+    });
+    expect(() => new BotMobilityScheduler(options as never)).toThrow(/数据字段|访问器/);
     expect(getterCalls).toBe(0);
   });
 

@@ -16,7 +16,16 @@ import {
   safestHazardTarget,
   supportSurface,
   surfaceForPosition,
-} from '@number-strategy-jump/arena-bot';
+} from './bot-map-navigation.js';
+import type { BotDifficultyProfile } from './bot-difficulty.js';
+import type { BotPersonality } from './bot-personality.js';
+import type {
+  BotArenaSurface,
+  BotObservation,
+  BotVector3,
+  BotVisibleEquipment,
+} from './bot-observation.js';
+import type { UtilityEvaluator } from './utility-arbitrator.js';
 
 export const BOT_GOAL_ID = Object.freeze({
   INACTIVE: 'inactive',
@@ -27,9 +36,35 @@ export const BOT_GOAL_ID = Object.freeze({
   ATTACK: 'attack',
   REPOSITION: 'reposition',
   CONTROL_CENTER: 'control-center',
-});
+} as const);
 
-function predictedOpponent(context) {
+export type BotGoalId = typeof BOT_GOAL_ID[keyof typeof BOT_GOAL_ID];
+
+export interface BotGoalPlan {
+  readonly target: BotVector3;
+  readonly speedScale: number;
+  readonly actionCandidate: boolean;
+}
+
+export interface BotGoalContext {
+  readonly observation: BotObservation;
+  readonly profile: BotDifficultyProfile;
+  readonly personality: BotPersonality;
+}
+
+interface ReachableEquipment {
+  readonly equipment: BotVisibleEquipment;
+  readonly path: readonly BotArenaSurface[];
+  readonly distance: number;
+}
+
+function evaluator(
+  definition: UtilityEvaluator<BotGoalContext, BotGoalPlan>,
+): UtilityEvaluator<BotGoalContext, BotGoalPlan> {
+  return Object.freeze(definition);
+}
+
+function predictedOpponent(context: BotGoalContext): BotVector3 {
   const { opponent } = context.observation;
   const seconds = context.profile.targetPredictionTicks / ARENA_TICK_RATE;
   return {
@@ -39,7 +74,11 @@ function predictedOpponent(context) {
   };
 }
 
-function clampTargetToSurface(target, surface, margin) {
+function clampTargetToSurface(
+  target: BotVector3,
+  surface: BotArenaSurface | null,
+  margin: number,
+): BotVector3 {
   if (!surface) return { ...target };
   const marginX = Math.min(margin, surface.halfExtents.x);
   const marginZ = Math.min(margin, surface.halfExtents.z);
@@ -56,7 +95,12 @@ function clampTargetToSurface(target, surface, margin) {
   };
 }
 
-function attackGeometry(context) {
+function attackGeometry(context: BotGoalContext): Readonly<{
+  target: BotVector3;
+  distance: number;
+  verticalDifference: number;
+  facingDot: number;
+}> {
   const { observation } = context;
   const target = predictedOpponent(context);
   const dx = target.x - observation.self.position.x;
@@ -72,7 +116,7 @@ function attackGeometry(context) {
   };
 }
 
-function canAct(observation) {
+function canAct(observation: BotObservation): boolean {
   return observation.self.status === ARENA_PARTICIPANT_STATUS.ACTIVE
     && observation.self.hitstunTicks === 0
     && observation.self.action.phase === ARENA_ACTION_PHASE.IDLE
@@ -80,7 +124,7 @@ function canAct(observation) {
     && observation.opponent.invulnerableTicks === 0;
 }
 
-function nearestReachableEquipment(observation) {
+function nearestReachableEquipment(observation: BotObservation): ReachableEquipment | null {
   if (observation.self.equipment || observation.self.status !== ARENA_PARTICIPANT_STATUS.ACTIVE) {
     return null;
   }
@@ -99,7 +143,7 @@ function nearestReachableEquipment(observation) {
           : Number.POSITIVE_INFINITY,
       };
     })
-    .filter(({ path }) => path)
+    .filter((candidate): candidate is ReachableEquipment => candidate.path !== null)
     .sort((left, right) => (
       left.distance - right.distance
       || compareText(left.equipment.instanceId, right.equipment.instanceId)
@@ -107,7 +151,7 @@ function nearestReachableEquipment(observation) {
 }
 
 const EVALUATORS = Object.freeze([
-  Object.freeze({
+  evaluator({
     id: BOT_GOAL_ID.INACTIVE,
     priority: 100,
     score: ({ observation }) => (
@@ -120,7 +164,7 @@ const EVALUATORS = Object.freeze([
       actionCandidate: false,
     }),
   }),
-  Object.freeze({
+  evaluator({
     id: BOT_GOAL_ID.AVOID_MAP_HAZARD,
     priority: 95,
     score: ({ observation }) => {
@@ -133,7 +177,7 @@ const EVALUATORS = Object.freeze([
     },
     createPlan: ({ observation }) => {
       const target = safestHazardTarget(observation);
-      const waypoint = target?.path.length > 1 ? target.path[1] : target?.surface;
+      const waypoint = target && target.path.length > 1 ? target.path[1] : target?.surface;
       return {
         target: waypoint ? { ...waypoint.center } : { x: 0, y: 0, z: 0 },
         speedScale: 1,
@@ -141,7 +185,7 @@ const EVALUATORS = Object.freeze([
       };
     },
   }),
-  Object.freeze({
+  evaluator({
     id: BOT_GOAL_ID.RECOVER_EDGE,
     priority: 90,
     score: (context) => {
@@ -176,7 +220,7 @@ const EVALUATORS = Object.freeze([
       };
     },
   }),
-  Object.freeze({
+  evaluator({
     id: BOT_GOAL_ID.EVADE_THREAT,
     priority: 85,
     score: (context) => {
@@ -210,7 +254,7 @@ const EVALUATORS = Object.freeze([
       };
     },
   }),
-  Object.freeze({
+  evaluator({
     id: BOT_GOAL_ID.ACQUIRE_EQUIPMENT,
     priority: 82,
     score: ({ observation, personality }) => {
@@ -225,9 +269,11 @@ const EVALUATORS = Object.freeze([
       return {
         target: target
           ? (() => {
-            const waypointSurface = target.path.length > 1 ? target.path[1] : surface;
+            const waypointSurface = target.path.length > 1
+              ? (target.path[1] ?? null)
+              : surface;
             const waypoint = target.path.length > 1
-              ? waypointSurface.center
+              ? (waypointSurface?.center ?? target.equipment.position)
               : target.equipment.position;
             return clampTargetToSurface(
               waypoint,
@@ -241,7 +287,7 @@ const EVALUATORS = Object.freeze([
       };
     },
   }),
-  Object.freeze({
+  evaluator({
     id: BOT_GOAL_ID.ATTACK,
     priority: 80,
     score: (context) => {
@@ -279,7 +325,7 @@ const EVALUATORS = Object.freeze([
       };
     },
   }),
-  Object.freeze({
+  evaluator({
     id: BOT_GOAL_ID.REPOSITION,
     priority: 50,
     score: ({ observation, personality }) => (
@@ -311,7 +357,7 @@ const EVALUATORS = Object.freeze([
       };
     },
   }),
-  Object.freeze({
+  evaluator({
     id: BOT_GOAL_ID.CONTROL_CENTER,
     priority: 10,
     score: () => 0.25,
@@ -324,8 +370,8 @@ const EVALUATORS = Object.freeze([
       };
     },
   }),
-]);
+] satisfies readonly UtilityEvaluator<BotGoalContext, BotGoalPlan>[]);
 
-export function getArenaBotEvaluators() {
+export function getArenaBotEvaluators(): readonly UtilityEvaluator<BotGoalContext, BotGoalPlan>[] {
   return EVALUATORS;
 }

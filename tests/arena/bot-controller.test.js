@@ -1,9 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { BotController } from '../../src/arena/ai/bot-controller.js';
-import { BOT_DIFFICULTY_PROFILES } from '@number-strategy-jump/arena-bot';
+import {
+  BOT_DIFFICULTY_PROFILES,
+  BOT_GOAL_ID,
+} from '@number-strategy-jump/arena-bot';
 import { createArenaV1MatchCore } from '../../src/arena/arena-v1-match-core.js';
-import { BOT_GOAL_ID } from '../../src/arena/ai/bot-goals.js';
 
 function createController(core, difficultyId = 'hard') {
   const character = core.getCharacterDefinition('player-2');

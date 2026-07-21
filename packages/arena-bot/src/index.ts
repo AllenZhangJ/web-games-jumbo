@@ -38,6 +38,29 @@ export {
   surfaceForPosition,
 } from './bot-map-navigation.js';
 export type { BotHazardTarget } from './bot-map-navigation.js';
+export {
+  BOT_GOAL_ID,
+  getArenaBotEvaluators,
+} from './bot-goals.js';
+export type {
+  BotGoalContext,
+  BotGoalId,
+  BotGoalPlan,
+} from './bot-goals.js';
+export {
+  BOT_MOBILITY_INTENT,
+  selectBotMobilityIntent,
+} from './bot-mobility-policy.js';
+export type {
+  BotMobilityIntent,
+  BotMobilitySelection,
+} from './bot-mobility-policy.js';
+export { BotMobilityScheduler } from './bot-mobility-scheduler.js';
+export type {
+  BotMobilityDebugSnapshot,
+  BotMobilitySample,
+  BotMobilitySchedulerOptions,
+} from './bot-mobility-scheduler.js';
 export type {
   BotActionAffordance,
   BotActionAffordanceOutcome,

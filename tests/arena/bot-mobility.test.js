@@ -3,15 +3,13 @@ import assert from 'node:assert/strict';
 import { createArenaV1MatchCore } from '../../src/arena/arena-v1-match-core.js';
 import {
   cloneBotSourceSnapshot,
+  BOT_GOAL_ID,
+  BOT_MOBILITY_INTENT,
+  BotMobilityScheduler,
   createBotArenaView,
   createBotObservation,
-} from '@number-strategy-jump/arena-bot';
-import {
-  BOT_MOBILITY_INTENT,
   selectBotMobilityIntent,
-} from '../../src/arena/ai/bot-mobility-policy.js';
-import { BotMobilityScheduler } from '../../src/arena/ai/bot-mobility-scheduler.js';
-import { BOT_GOAL_ID } from '../../src/arena/ai/bot-goals.js';
+} from '@number-strategy-jump/arena-bot';
 
 function observationFromRaw(core, mutate = () => {}) {
   const raw = core.getSnapshot();
@@ -88,60 +86,47 @@ test('mobility scheduler emits one-tick edges, bounded hold/release and cancels 
     minimumIntervalTicks: 4,
     crouchHoldTicks: 2,
   });
-  assert.equal(scheduler.schedule({
-    tick: 0,
-    intent: BOT_MOBILITY_INTENT.CROUCH_JUMP,
-    committed: true,
-    canMove: true,
-  }), true);
-  assert.deepEqual(scheduler.sample(0, { canMove: true }), {
+  assert.equal(scheduler.schedule(0, BOT_MOBILITY_INTENT.CROUCH_JUMP, true, true), true);
+  assert.deepEqual(scheduler.sample(0, true), {
     jumpPressed: false,
     jumpHeld: true,
     slamPressed: false,
   });
-  assert.deepEqual(scheduler.sample(1, { canMove: true }), {
+  assert.deepEqual(scheduler.sample(1, true), {
     jumpPressed: false,
     jumpHeld: true,
     slamPressed: false,
   });
-  assert.equal(scheduler.schedule({
-    tick: 2,
-    intent: BOT_MOBILITY_INTENT.JUMP,
-    committed: true,
-    canMove: true,
-  }), false);
-  assert.deepEqual(scheduler.sample(2, { canMove: true }), {
+  assert.equal(scheduler.schedule(2, BOT_MOBILITY_INTENT.JUMP, true, true), false);
+  assert.deepEqual(scheduler.sample(2, true), {
     jumpPressed: false,
     jumpHeld: false,
     slamPressed: false,
   });
-  for (let tick = 3; tick < 6; tick += 1) scheduler.sample(tick, { canMove: true });
-  assert.equal(scheduler.schedule({
-    tick: 6,
-    intent: BOT_MOBILITY_INTENT.JUMP,
-    committed: true,
-    canMove: true,
-  }), true);
-  assert.equal(scheduler.sample(6, { canMove: true }).jumpPressed, true);
-  assert.throws(() => scheduler.schedule({
-    tick: 6,
-    intent: BOT_MOBILITY_INTENT.JUMP,
-    committed: true,
-    canMove: true,
-  }), /下一未采样 tick/);
-  assert.throws(() => scheduler.sample(6, { canMove: true }), /tick 必须连续/);
-  scheduler.schedule({
-    tick: 7,
-    intent: BOT_MOBILITY_INTENT.CROUCH_JUMP,
-    committed: true,
-    canMove: false,
-  });
-  assert.deepEqual(scheduler.sample(7, { canMove: false }), {
+  for (let tick = 3; tick < 6; tick += 1) scheduler.sample(tick, true);
+  assert.equal(scheduler.schedule(6, BOT_MOBILITY_INTENT.JUMP, true, true), true);
+  assert.throws(
+    () => scheduler.schedule(6, BOT_MOBILITY_INTENT.JUMP, true, true),
+    /已调度/,
+  );
+  assert.throws(
+    () => scheduler.schedule(7, BOT_MOBILITY_INTENT.JUMP, true, true),
+    /尚未采样/,
+  );
+  assert.throws(() => scheduler.sample(7, true), /匹配已调度 tick 6/);
+  assert.equal(scheduler.sample(6, true).jumpPressed, true);
+  assert.throws(
+    () => scheduler.schedule(6, BOT_MOBILITY_INTENT.JUMP, true, true),
+    /下一未采样 tick/,
+  );
+  assert.throws(() => scheduler.sample(6, true), /tick 必须连续/);
+  scheduler.schedule(7, BOT_MOBILITY_INTENT.CROUCH_JUMP, true, false);
+  assert.deepEqual(scheduler.sample(7, false), {
     jumpPressed: false,
     jumpHeld: false,
     slamPressed: false,
   });
   scheduler.destroy();
   scheduler.destroy();
-  assert.throws(() => scheduler.sample(8, { canMove: true }), /已销毁/);
+  assert.throws(() => scheduler.sample(8, true), /已销毁/);
 });
