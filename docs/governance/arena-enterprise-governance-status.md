@@ -30,7 +30,7 @@
 | G0 基线冻结 | 已完成 | 自动化、压力、资产和三端构建通过；ADR/计划/证据已落盘；tag `arena-product-baseline-51e2822` 指向基线提交 |
 | G1 治理外壳/唯一产品 | 已完成 | Arena 已成为唯一生产产品；旧产品实现/专属测试/资产/规范已退役；strict TS、ESLint、Vitest、CI、CODEOWNERS、JS 递减清单和唯一产物门禁已启用 |
 | G2 Definition/合同/配置 | 已完成 | strict TS `arena-contracts`、`arena-definitions`、`arena-profile-contracts` 与 `arena-platform-contracts` 已承接确定性、输入/事件、权威快照、同步存储、平台能力、玩家档案/存档协议，以及动作/角色/装备/地图 Definition、只读 Registry 和唯一 Gameplay V2 数值配置；受审计 JavaScript 已降至 500 个 |
-| G3 Rule/Core/Replay | 进行中 | strict TS `arena-core`、`arena-movement`、`arena-physics`、`arena-equipment` 已承接规则/移动/物理/装备；`arena-map` 已承接事件类型、时间线、拓扑、出生安全、命令注册与默认事件策略，Map 运行时/系统、MatchCore、Replay 仍待迁移 |
+| G3 Rule/Core/Replay | 进行中 | strict TS `arena-core`、`arena-movement`、`arena-physics`、`arena-equipment` 已承接规则/移动/物理/装备；`arena-map` 已承接事件类型、时间线、拓扑、出生安全、命令注册、默认事件策略、运行时与快照序列化，MapSystem、MatchCore、Replay 仍待迁移 |
 | G4 Bot/Product/Persistence | 未开始 | 当前功能与压力证据存在，尚未迁入 strict TS workspace |
 | G5 Presentation/资产/反馈 | 未开始 | 正式资产预算通过；审批字段与唯一正常路径仍待治理 |
 | G6 Platform/入口/构建 | 未开始 | 三端默认入口是 Product，但生产交付未与开发页面彻底隔离 |
@@ -55,7 +55,7 @@
 
 ## 当前不可合并原因
 
-1. 当前 455 个受维护 JavaScript 文件仍在精确允许清单中，Rule/Core/Replay、Bot/Product/Persistence/Presentation/Platform 尚未完成 strict TypeScript workspace 迁移。
+1. 当前 453 个受维护 JavaScript 文件仍在精确允许清单中，Rule/Core/Replay、Bot/Product/Persistence/Presentation/Platform 尚未完成 strict TypeScript workspace 迁移。
 2. Vitest 当前保护底层合同包和治理门禁；Arena 其余测试尚待按 workspace 迁移并建立正式 coverage 阈值与零 JS 门禁。
 3. 正式资产最终审批与完整安全/依赖长期治理尚未闭环。
 4. 文档仍含迁移前阶段性叙述，尚未完成 G9 全量链接、状态与命令归真。
@@ -252,3 +252,13 @@
 - `arena-map` 依赖仍精确限定为 `arena-contracts` 与 `arena-definitions`，未增加 MatchCore、Equipment runtime、Bot、Presentation、Three.js、DOM、平台、墙钟或未注入随机源依赖。
 - strict 公共包测试增至 56 项，其中新增完整命令批次预验证、权威 occurrence 防覆盖、装备波同 seed 确定性/信息边界、风场与坍塌声明式命令测试；77 项 Map、MatchCore、Replay 与架构定向回归通过，JavaScript 精确允许清单由 462 降至 455。
 - G3 下一批迁移 `MapRuntime` 与 serializer，随后迁移 `ArenaMapSystem` 唯一写入者；本批未改变地图时间点、风力、坍塌、装备 wave、攻击/移动/跳跃数值、Replay schema 或黄金 hash。
+
+## G3.13 MapRuntime 与快照序列化迁移证据
+
+- `MapRuntime`、occurrence/surface 状态类型、`MAP_OCCURRENCE_PHASE` 与 `serializeMapRuntimeSnapshot` 已迁入 `arena-map` strict TypeScript 公共 API；MapSystem、Bot navigation/observation 和既有测试不再引用 `src/arena/map` 运行时私有文件。
+- Runtime 是 surface enabled/revision、occurrence phase/private plan/public payload/revision、next active tick 与整体 revision 的唯一写入者；warning、active/completed、ended 转换显式拒绝非法前态，tick 必须无间隙单调推进，destroy 幂等且销毁后拒绝读写。
+- `warn()` 在改变任何状态前先完整验证并深复制 private/public 计划，再一次性提交 phase 与两级 revision；非法访问器、循环引用或后半份坏数据不会留下半写入。surface、occurrence、整体 revision 与 next tick 的安全整数上限也全部在写入前验证。
+- serializer 拒绝未知/访问器字段、重复 identity、非法 tick 顺序、phase/endTick 矛盾、子 revision 超过整体 revision、非有限或不可序列化 payload；结果按稳定 ID 排序并深冻结。公开模式拒绝任何 `privatePlan`，内部模式要求每个已公开 occurrence 都显式包含它。
+- Bot collapse-warning 测试中手工追加 occurrence 后未同步提升 `map.revision` 的旧夹具已归真；真实 Runtime 从未生成该矛盾状态，生产规则和 Bot 可见信息未改变。
+- strict 公共包测试增至 58 项，其中新增 warning 原子性、getter 零执行、私有计划隔离、surface/tick/destroy 生命周期，以及 phase/revision/privacy/options schema 漂移测试；93 项 Map、MatchCore、Replay、Bot 与架构定向回归通过，JavaScript 精确允许清单由 455 降至 453。
+- G3 下一批迁移 `ArenaMapSystem` 两阶段提交唯一写入者；本批未改变地图时间点、风力、坍塌、装备 wave、攻击/移动/跳跃数值、Replay schema 或黄金 hash。

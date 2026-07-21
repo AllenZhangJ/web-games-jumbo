@@ -1,5 +1,5 @@
 import { MAP_EVENT_KIND } from '@number-strategy-jump/arena-map';
-import { MAP_OCCURRENCE_PHASE } from '../map/map-runtime.js';
+import { MAP_OCCURRENCE_PHASE } from '@number-strategy-jump/arena-map';
 
 export function distance2d(first, second) {
   return Math.hypot(second.x - first.x, second.z - first.z);

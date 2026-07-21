@@ -5,6 +5,7 @@ import {
   MAP_DOMAIN_EVENT,
   MAP_EVENT_KIND,
   MAP_RULE_COMMAND,
+  serializeMapRuntimeSnapshot,
   MapEventStrategyRegistry,
   MapTimeline,
   createDefaultMapEventStrategyRegistry,
@@ -19,7 +20,6 @@ import {
 } from '@number-strategy-jump/arena-definitions';
 import { MapRegistry } from '@number-strategy-jump/arena-definitions';
 import { ARENA_MAP_EVENT, ArenaMapSystem } from '../../src/arena/map/map-system.js';
-import { serializeMapRuntimeSnapshot } from '../../src/arena/map/map-serializer.js';
 import { resolveArenaV1MapDefinition } from '../../src/arena/composition/arena-v1-map-system.js';
 
 const TEST_ARENA = Object.freeze({

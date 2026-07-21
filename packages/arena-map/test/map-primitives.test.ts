@@ -9,14 +9,18 @@ import {
   MAP_DOMAIN_EVENT,
   MAP_EVENT_KIND,
   MAP_RULE_COMMAND,
+  MAP_RUNTIME_SCHEMA_VERSION,
   MAP_TIMELINE_TRANSITION,
+  MAP_OCCURRENCE_PHASE,
   MapEventStrategyRegistry,
+  MapRuntime,
   MapTimeline,
   createDefaultMapCommandRegistry,
   createDefaultMapEventStrategyRegistry,
   validateCharacterSpawnSafety,
   validateDefaultMapSafety,
   validateWalkableMapTopology,
+  serializeMapRuntimeSnapshot,
 } from '../src/index.js';
 import type {
   ArenaMapSnapshot,
@@ -272,6 +276,98 @@ describe('arena-map primitives', () => {
       }],
       events: [{ type: MAP_DOMAIN_EVENT.SURFACE_COLLAPSED, surfaceId: 'wing' }],
     });
+  });
+
+  it('keeps warn atomic and owns explicit occurrence, surface, tick and destroy lifecycles', () => {
+    const map = createStrategyMap();
+    const runtime = new MapRuntime({
+      mapDefinition: map,
+      occurrences: new MapTimeline(map).listOccurrences(),
+    });
+    let getterCalls = 0;
+    const invalidPayload = Object.defineProperty({}, 'danger', {
+      enumerable: true,
+      get() {
+        getterCalls += 1;
+        return true;
+      },
+    });
+    expect(() => runtime.warn('wind:0', {
+      privatePlan: { region: 'validated-first' },
+      publicPayload: invalidPayload,
+    })).toThrow('必须是可枚举数据字段');
+    expect(getterCalls).toBe(0);
+    expect(() => runtime.getPrivatePlan('wind:0')).toThrow('尚未建立预告计划');
+    const sourcePlan = { region: { x: 1 } };
+    runtime.warn('wind:0', { privatePlan: sourcePlan, publicPayload: { direction: 'east' } });
+    sourcePlan.region.x = 99;
+    expect(runtime.getPrivatePlan('wind:0')).toEqual({ region: { x: 1 } });
+    expect(runtime.getSnapshot().occurrences[0]).not.toHaveProperty('privatePlan');
+    expect(runtime.getSnapshot({ includeInternal: true }).occurrences[0]).toHaveProperty(
+      'privatePlan',
+    );
+    runtime.start('wind:0');
+    expect(runtime.listActiveOccurrenceIds()).toEqual(['wind:0']);
+    runtime.end('wind:0');
+    expect(runtime.listActiveOccurrenceIds()).toEqual([]);
+    const changed = runtime.setSurfaceEnabled('wing', false);
+    const unchanged = runtime.setSurfaceEnabled('wing', false);
+    expect(unchanged.revision).toBe(changed.revision);
+    expect(runtime.isSurfaceEnabled('wing')).toBe(false);
+    expect(() => runtime.completeTick(1)).toThrow('期望 activeTick 0');
+    runtime.completeTick(0);
+    expect(runtime.getSnapshot().nextActiveTick).toBe(1);
+    runtime.destroy();
+    runtime.destroy();
+    expect(() => runtime.getSnapshot()).toThrow('已销毁');
+  });
+
+  it('normalizes runtime snapshots and rejects phase, revision, privacy and option drift', () => {
+    const snapshot = {
+      schemaVersion: MAP_RUNTIME_SCHEMA_VERSION,
+      definitionId: 'snapshot-map',
+      nextActiveTick: 2,
+      revision: 3,
+      surfaces: [{ id: 'z', enabled: true, revision: 1 }, { id: 'a', enabled: false, revision: 2 }],
+      occurrences: [{
+        occurrenceId: 'wind:0',
+        eventId: 'wind',
+        kind: MAP_EVENT_KIND.WIND_ZONE,
+        warningTick: 1,
+        startTick: 2,
+        endTick: 4,
+        phase: MAP_OCCURRENCE_PHASE.WARNING,
+        publicPayload: { direction: 'east' },
+        revision: 1,
+      }],
+    };
+    const normalized = serializeMapRuntimeSnapshot(snapshot);
+    expect(normalized.surfaces.map(({ id }) => id)).toEqual(['a', 'z']);
+    expect(Object.isFrozen(normalized.occurrences[0]!.publicPayload)).toBe(true);
+    expect(() => serializeMapRuntimeSnapshot({
+      ...snapshot,
+      occurrences: [{ ...snapshot.occurrences[0]!, phase: MAP_OCCURRENCE_PHASE.COMPLETED }],
+    })).toThrow('completed occurrence 不能包含 endTick');
+    expect(() => serializeMapRuntimeSnapshot({
+      ...snapshot,
+      surfaces: [{ id: 'a', enabled: true, revision: 4 }],
+    })).toThrow('不能超过 MapRuntime snapshot.revision');
+    expect(() => serializeMapRuntimeSnapshot({
+      ...snapshot,
+      occurrences: [{ ...snapshot.occurrences[0]!, privatePlan: {} }],
+    })).toThrow('不支持字段 privatePlan');
+    let getterCalls = 0;
+    const invalidOptions = Object.defineProperty({}, 'includeInternal', {
+      enumerable: true,
+      get() {
+        getterCalls += 1;
+        return true;
+      },
+    });
+    expect(() => serializeMapRuntimeSnapshot(snapshot, invalidOptions as never)).toThrow(
+      '必须是可枚举数据字段',
+    );
+    expect(getterCalls).toBe(0);
   });
 });
 

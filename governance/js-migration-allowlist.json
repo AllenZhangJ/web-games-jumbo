@@ -137,8 +137,6 @@
     "src/arena/experiment/simulation-runner.js",
     "src/arena/experiment/simulation-workload-registry.js",
     "src/arena/lifecycle-error.js",
-    "src/arena/map/map-runtime.js",
-    "src/arena/map/map-serializer.js",
     "src/arena/map/map-system.js",
     "src/arena/match-core.js",
     "src/arena/matchmaking/match-assignment.js",

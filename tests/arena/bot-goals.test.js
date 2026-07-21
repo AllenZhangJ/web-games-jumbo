@@ -60,6 +60,7 @@ test('bot reacts only to publicly observed collapse warnings and uses ordinary m
     publicPayload: { surfaceIds: ['tile-center'] },
     revision: 1,
   });
+  rawWarning.map.revision += 1;
   const withWarning = cloneBotSourceSnapshot(rawWarning);
   const common = {
     commandSnapshot: withWarning,

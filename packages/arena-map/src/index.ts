@@ -28,6 +28,20 @@ export type {
   MapEventStrategy,
   MapEventValidationContext,
 } from './map-event-strategy-registry.js';
+export { MapRuntime } from './map-runtime.js';
+export {
+  MAP_OCCURRENCE_PHASE,
+} from './map-runtime-types.js';
+export type {
+  MapOccurrencePhase,
+  MapRuntimeInternalOccurrenceSnapshot,
+  MapRuntimeInternalSnapshot,
+  SerializableMapOccurrencePhase,
+} from './map-runtime-types.js';
+export {
+  MAP_RUNTIME_SCHEMA_VERSION,
+  serializeMapRuntimeSnapshot,
+} from './map-serializer.js';
 export {
   MAP_TIMELINE_TRANSITION,
   MapTimeline,

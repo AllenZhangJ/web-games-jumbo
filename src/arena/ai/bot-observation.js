@@ -5,7 +5,7 @@ import {
   ARENA_PHYSICS,
 } from '../config.js';
 import { EQUIPMENT_LOCATION_STATE } from '@number-strategy-jump/arena-equipment';
-import { serializeMapRuntimeSnapshot } from '../map/map-serializer.js';
+import { serializeMapRuntimeSnapshot } from '@number-strategy-jump/arena-map';
 import {
   MOVEMENT_MODE,
   MOVEMENT_RUNTIME_SCHEMA_VERSION,
