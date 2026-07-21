@@ -7,7 +7,7 @@ import {
   ActionResolver,
 } from '@number-strategy-jump/arena-core';
 import { ARENA_ACTION_PHASE } from '@number-strategy-jump/arena-core';
-import { ACTION_RULE_COMMAND } from '../action/effects/default-effect-handlers.js';
+import { ACTION_RULE_COMMAND } from '@number-strategy-jump/arena-core';
 import { EquipmentSystem } from '../equipment/equipment-system.js';
 import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import {

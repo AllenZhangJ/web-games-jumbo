@@ -8,12 +8,12 @@ import {
   ACTION_LANE,
 } from '@number-strategy-jump/arena-definitions';
 import { ActionRegistry } from '@number-strategy-jump/arena-definitions';
-import { ActionEffectRegistry } from '../../src/arena/action/effects/action-effect-registry.js';
 import {
   ACTION_RULE_COMMAND,
+  ActionEffectRegistry,
   createDefaultActionEffectRegistry,
-} from '../../src/arena/action/effects/default-effect-handlers.js';
-import { createDefaultTargetingRegistry } from '../../src/arena/action/targeting/default-targeting-handlers.js';
+  createDefaultTargetingRegistry,
+} from '@number-strategy-jump/arena-core';
 import {
   STAGE4_ACTION_ID,
   createStage4ContentRegistries,

@@ -35,3 +35,29 @@ export type {
   ActionStateSnapshot,
   ActionTransition,
 } from './action-execution-system.js';
+export { TargetingRegistry } from './targeting-registry.js';
+export type {
+  TargetingActionRegistryContract,
+  TargetingActor,
+  TargetingHandler,
+  TargetingResolutionContext,
+} from './targeting-registry.js';
+export { createDefaultTargetingRegistry } from './default-targeting-handlers.js';
+export { ActionEffectRegistry } from './action-effect-registry.js';
+export type {
+  ActionEffectContext,
+  ActionEffectHandler,
+  ActionEffectResolutionContext,
+  EffectActionRegistryContract,
+  RuleCommand,
+} from './action-effect-registry.js';
+export {
+  ACTION_RULE_COMMAND,
+  createDefaultActionEffectRegistry,
+} from './default-effect-handlers.js';
+export { RuleCommandRegistry } from './rule-command-registry.js';
+export type {
+  RuleCommandExecutionContext,
+  RuleCommandHandler,
+} from './rule-command-registry.js';
+export { createDefaultRuleCommandRegistry } from './default-rule-command-handlers.js';

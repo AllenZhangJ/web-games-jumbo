@@ -30,7 +30,7 @@
 | G0 基线冻结 | 已完成 | 自动化、压力、资产和三端构建通过；ADR/计划/证据已落盘；tag `arena-product-baseline-51e2822` 指向基线提交 |
 | G1 治理外壳/唯一产品 | 已完成 | Arena 已成为唯一生产产品；旧产品实现/专属测试/资产/规范已退役；strict TS、ESLint、Vitest、CI、CODEOWNERS、JS 递减清单和唯一产物门禁已启用 |
 | G2 Definition/合同/配置 | 已完成 | strict TS `arena-contracts`、`arena-definitions`、`arena-profile-contracts` 与 `arena-platform-contracts` 已承接确定性、输入/事件、权威快照、同步存储、平台能力、玩家档案/存档协议，以及动作/角色/装备/地图 Definition、只读 Registry 和唯一 Gameplay V2 数值配置；受审计 JavaScript 已降至 500 个 |
-| G3 Rule/Core/Replay | 进行中 | 已建立 strict TS `arena-core` workspace，动作状态、候选、Resolver、Affordance 投影与 ActionExecution 唯一计时写入者已迁入；Rule、Movement、Physics、Equipment、Map、MatchCore、Replay 仍待迁移 |
+| G3 Rule/Core/Replay | 进行中 | 已建立 strict TS `arena-core` workspace，动作状态、候选、Resolver、Affordance 投影、ActionExecution 唯一计时写入者及通用 targeting/effect/command 策略已迁入；RuleEngine、Movement、Physics、Equipment、Map、MatchCore、Replay 仍待迁移 |
 | G4 Bot/Product/Persistence | 未开始 | 当前功能与压力证据存在，尚未迁入 strict TS workspace |
 | G5 Presentation/资产/反馈 | 未开始 | 正式资产预算通过；审批字段与唯一正常路径仍待治理 |
 | G6 Platform/入口/构建 | 未开始 | 三端默认入口是 Product，但生产交付未与开发页面彻底隔离 |
@@ -55,7 +55,7 @@
 
 ## 当前不可合并原因
 
-1. 当前 495 个受维护 JavaScript 文件仍在精确允许清单中，Rule/Core/Replay、Bot/Product/Persistence/Presentation/Platform 尚未完成 strict TypeScript workspace 迁移。
+1. 当前 489 个受维护 JavaScript 文件仍在精确允许清单中，Rule/Core/Replay、Bot/Product/Persistence/Presentation/Platform 尚未完成 strict TypeScript workspace 迁移。
 2. Vitest 当前保护底层合同包和治理门禁；Arena 其余测试尚待按 workspace 迁移并建立正式 coverage 阈值与零 JS 门禁。
 3. 正式资产最终审批与完整安全/依赖长期治理尚未闭环。
 4. 文档仍含迁移前阶段性叙述，尚未完成 G9 全量链接、状态与命令归真。
@@ -156,3 +156,12 @@
 - advance、recordHits、interrupt、reset、当前/下一 tick constraints 与只读快照均获得显式类型；内部 Map 缺项、非 idle 缺失 definitionId 等不可能状态 fail closed。
 - strict 公共包测试增至 23 项；51 项 ActionExecution/Resolver/Rule/Architecture 定向回归通过，JavaScript 精确允许清单由 496 降至 495。
 - G3 下一批迁移通用 targeting/effect/command Registry 与 RuleEngine；本批未改变权威 tick、ActionDefinition 数值或 Replay schema/hash。
+
+## G3.3 通用动作策略迁移证据
+
+- targeting、action effect 与 rule command 三类 Registry 及默认处理器已迁入 `arena-core` strict TypeScript 公共 API，旧六个 JavaScript 实现删除，所有生产与测试消费者改从包入口导入。
+- Targeting 只读取冻结 actor 快照并稳定排序唯一 target ID；Effect 只把不可变 Definition 与上下文解析为冻结 RuleCommand；Command Registry 在执行任何 mutation port 前先验证完整批次是否均有处理器。
+- 自定义 Movement effect handler 仍通过同一个通用接口扩展，核心策略不知道 Movement、Equipment 或具体角色；命令提交仍由 RuleEngine 掌控，Registry 未新增第二个权威状态写入者。
+- 参数在 Registry 边界每次只验证一次，默认处理器不做重复逐 tick 校验；未增加墙钟、随机、平台、DOM、Three.js 或通用事件总线依赖。
+- strict 公共包测试增至 26 项；45 项策略、RuleEngine、Movement 与架构定向回归通过，JavaScript 精确允许清单由 495 降至 489。
+- G3 下一批单独迁移 `ArenaRuleEngine`，保持审查面可控；本批未改变 Gameplay V2 数值、权威 tick、命中次序或 Replay schema/hash。

@@ -2,22 +2,55 @@ import {
   assertKnownKeys,
   assertNonEmptyString,
   cloneFrozenData,
+  type DeepReadonly,
 } from '@number-strategy-jump/arena-contracts';
-import { ACTION_EFFECT_TRIGGER } from '@number-strategy-jump/arena-definitions';
+import {
+  ACTION_EFFECT_TRIGGER,
+  type ActionDefinition,
+  type ActionEffect,
+  type ActionEffectTrigger,
+} from '@number-strategy-jump/arena-definitions';
+
+export interface RuleCommand {
+  readonly kind: string;
+  readonly [key: string]: unknown;
+}
+
+export type ActionEffectContext = Readonly<Record<string, unknown>>;
+
+export interface ActionEffectResolutionContext {
+  readonly effect: ActionEffect;
+  readonly context: DeepReadonly<ActionEffectContext>;
+}
+
+export interface ActionEffectHandler {
+  readonly kind: string;
+  readonly triggers: readonly ActionEffectTrigger[];
+  readonly validateParameters: (
+    parameters: unknown,
+    actionDefinitionId: string,
+    effectId?: string,
+  ) => void;
+  readonly resolve: (context: ActionEffectResolutionContext) => readonly RuleCommand[];
+}
+
+export interface EffectActionRegistryContract {
+  list(): readonly ActionDefinition[];
+}
 
 const HANDLER_KEYS = new Set(['kind', 'triggers', 'validateParameters', 'resolve']);
-const EFFECT_TRIGGERS = new Set(Object.values(ACTION_EFFECT_TRIGGER));
+const EFFECT_TRIGGERS: ReadonlySet<unknown> = new Set(Object.values(ACTION_EFFECT_TRIGGER));
 
 export class ActionEffectRegistry {
-  #handlers;
+  readonly #handlers: ReadonlyMap<string, ActionEffectHandler>;
 
-  constructor(handlers = []) {
+  constructor(handlers: readonly ActionEffectHandler[] = []) {
     if (!Array.isArray(handlers)) throw new TypeError('ActionEffect handlers 必须是数组。');
-    this.#handlers = new Map();
+    const registered = new Map<string, ActionEffectHandler>();
     for (const handler of handlers) {
       assertKnownKeys(handler, HANDLER_KEYS, 'ActionEffectHandler');
       const kind = assertNonEmptyString(handler.kind, 'ActionEffectHandler.kind');
-      if (this.#handlers.has(kind)) throw new RangeError(`重复 action effect kind ${kind}。`);
+      if (registered.has(kind)) throw new RangeError(`重复 action effect kind ${kind}。`);
       if (
         !Array.isArray(handler.triggers)
         || handler.triggers.length === 0
@@ -28,16 +61,18 @@ export class ActionEffectRegistry {
         typeof handler.validateParameters !== 'function'
         || typeof handler.resolve !== 'function'
       ) throw new TypeError(`ActionEffectHandler ${kind} 缺少函数合同。`);
-      this.#handlers.set(kind, Object.freeze({
-        ...handler,
+      registered.set(kind, Object.freeze({
         kind,
-        triggers: Object.freeze([...handler.triggers].sort()),
+        triggers: Object.freeze([...(handler.triggers as readonly ActionEffectTrigger[])].sort()),
+        validateParameters: handler.validateParameters as ActionEffectHandler['validateParameters'],
+        resolve: handler.resolve as ActionEffectHandler['resolve'],
       }));
     }
+    this.#handlers = registered;
     Object.freeze(this);
   }
 
-  validateActionRegistry(actionRegistry) {
+  validateActionRegistry(actionRegistry: EffectActionRegistryContract): this {
     if (!actionRegistry || typeof actionRegistry.list !== 'function') {
       throw new TypeError('ActionEffectRegistry 需要只读 ActionRegistry。');
     }
@@ -45,9 +80,7 @@ export class ActionEffectRegistry {
       for (const effect of definition.effects) {
         const handler = this.#handlers.get(effect.kind);
         if (!handler) {
-          throw new RangeError(
-            `ActionDefinition ${definition.id} 使用未注册 effect ${effect.kind}。`,
-          );
+          throw new RangeError(`ActionDefinition ${definition.id} 使用未注册 effect ${effect.kind}。`);
         }
         if (!handler.triggers.includes(effect.trigger)) {
           throw new RangeError(
@@ -60,14 +93,17 @@ export class ActionEffectRegistry {
     return this;
   }
 
-  resolve(effect, context) {
+  resolve(effect: ActionEffect, context: ActionEffectContext): readonly DeepReadonly<RuleCommand>[] {
     if (!effect || typeof effect !== 'object') throw new TypeError('Action effect 必须是对象。');
     const handler = this.#handlers.get(effect.kind);
     if (!handler) throw new RangeError(`未注册 action effect ${String(effect.kind)}。`);
     if (!handler.triggers.includes(effect.trigger)) {
       throw new RangeError(`Action effect ${effect.id} 不允许 trigger ${effect.trigger}。`);
     }
-    handler.validateParameters(effect.parameters, context?.actionDefinitionId ?? 'action', effect.id);
+    const actionDefinitionId = typeof context?.actionDefinitionId === 'string'
+      ? context.actionDefinitionId
+      : 'action';
+    handler.validateParameters(effect.parameters, actionDefinitionId, effect.id);
     const commands = handler.resolve({
       effect,
       context: cloneFrozenData(context, 'ActionEffect context'),

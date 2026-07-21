@@ -11,9 +11,12 @@ import {
   ARENA_ACTION_PHASE,
   ACTION_RESOLUTION_KIND,
   ActionExecutionSystem,
+  RuleCommandRegistry,
   compareActionCandidates,
   createActionCandidate,
   createActionRuntimeState,
+  createDefaultActionEffectRegistry,
+  createDefaultTargetingRegistry,
   resetActionRuntimeState,
 } from '../src/index.js';
 
@@ -84,5 +87,77 @@ describe('Arena action core primitives', () => {
     );
     expect(system.getSnapshot('p1').phase).toBe(ARENA_ACTION_PHASE.IDLE);
     expect(system.start([selected])[0]?.phase).toBe(ARENA_ACTION_PHASE.WINDUP);
+  });
+
+  it('resolves targeting from frozen snapshots in stable target id order', () => {
+    const definition = new ActionRegistry([{
+      schemaVersion: ACTION_DEFINITION_SCHEMA_VERSION,
+      id: 'attack',
+      kind: 'attack',
+      input: { channel: ACTION_INPUT_CHANNEL.PRIMARY, trigger: ACTION_INPUT_TRIGGER.PRESSED },
+      lane: ACTION_LANE.COMBAT,
+      conflictTags: [],
+      timing: { windupTicks: 1, activeTicks: 1, recoveryTicks: 1, cooldownTicks: 0 },
+      targeting: {
+        kind: 'facing-cone',
+        parameters: { range: 2, minimumFacingDot: 0, maximumVerticalDifference: 1 },
+      },
+      effects: [{
+        id: 'hitstun', kind: 'apply-hitstun', trigger: ACTION_EFFECT_TRIGGER.HIT_RESOLVED,
+        parameters: { ticks: 2 },
+      }],
+      tags: [],
+    }]).require('attack');
+    const targets = createDefaultTargetingRegistry().resolve({
+      definition,
+      source: { id: 'source', position: { x: 0, y: 0, z: 0 }, facing: { x: 1, z: 0 } },
+      candidates: [
+        { id: 'z', position: { x: 1, y: 0, z: 0 } },
+        { id: 'a', position: { x: 1.5, y: 0, z: 0 } },
+      ],
+    });
+    expect(targets).toEqual(['a', 'z']);
+    expect(Object.isFrozen(targets)).toBe(true);
+  });
+
+  it('turns immutable action effects into frozen commands without retaining actor ownership', () => {
+    const definition = new ActionRegistry([{
+      schemaVersion: ACTION_DEFINITION_SCHEMA_VERSION,
+      id: 'attack',
+      kind: 'attack',
+      input: { channel: ACTION_INPUT_CHANNEL.PRIMARY, trigger: ACTION_INPUT_TRIGGER.PRESSED },
+      lane: ACTION_LANE.COMBAT,
+      conflictTags: [],
+      timing: { windupTicks: 1, activeTicks: 1, recoveryTicks: 1, cooldownTicks: 0 },
+      targeting: { kind: 'none', parameters: {} },
+      effects: [{
+        id: 'hitstun', kind: 'apply-hitstun', trigger: ACTION_EFFECT_TRIGGER.HIT_RESOLVED,
+        parameters: { ticks: 2 },
+      }],
+      tags: [],
+    }]).require('attack');
+    const target = {
+      id: 'target', position: { x: 1, y: 0, z: 0 }, facing: { x: -1, z: 0 },
+    };
+    const commands = createDefaultActionEffectRegistry().resolve(definition.effects[0]!, {
+      actionDefinitionId: definition.id,
+      source: { id: 'source', position: { x: 0, y: 0, z: 0 }, facing: { x: 1, z: 0 } },
+      target,
+    });
+    target.position.x = 9;
+    expect(commands).toEqual([{ kind: 'apply-hitstun', participantId: 'target', ticks: 2 }]);
+    expect(Object.isFrozen(commands[0])).toBe(true);
+  });
+
+  it('validates the complete command batch before invoking any mutation handler', () => {
+    let executions = 0;
+    const registry = new RuleCommandRegistry([{
+      kind: 'known',
+      execute: () => { executions += 1; },
+    }]);
+    expect(() => registry.execute([{ kind: 'known' }, { kind: 'unknown' }], {})).toThrow(
+      '未注册 RuleCommand unknown',
+    );
+    expect(executions).toBe(0);
   });
 });

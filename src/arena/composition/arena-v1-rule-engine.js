@@ -1,11 +1,13 @@
-import { createDefaultActionEffectRegistry } from '../action/effects/default-effect-handlers.js';
-import { createDefaultTargetingRegistry } from '../action/targeting/default-targeting-handlers.js';
+import {
+  createDefaultActionEffectRegistry,
+  createDefaultRuleCommandRegistry,
+  createDefaultTargetingRegistry,
+} from '@number-strategy-jump/arena-core';
 import {
   STAGE4_ACTION_ID,
   createStage4ContentRegistries,
 } from '../content/stage4-equipment.js';
 import { ArenaRuleEngine } from '../rules/arena-rule-engine.js';
-import { createDefaultRuleCommandRegistry } from '../rules/default-rule-command-handlers.js';
 import { assertArenaV1AuthorityContent } from './arena-v1-authority-content.js';
 import { STAGE6_MOVEMENT_ACTION_DEFINITIONS } from '../content/stage6-movement-actions.js';
 import { createMovementActionEffectHandlers } from '../movement/movement-action-effect-handlers.js';
