@@ -44,7 +44,8 @@ packages/
 ├── arena-profile-service/   # 唯一 Profile 写入者与事务边界
 ├── arena-progression/       # 奖励/解锁 Definition 与纯 Registry
 ├── arena-product-contracts/ # ProductMatchResult 公开合同
-└── arena-product-progression/ # Reward Resolver/Committer
+├── arena-product-progression/ # Reward Resolver/Committer
+└── arena-product-match/     # 单局 Runtime、Quick Match 适配与唯一所有权 Coordinator
 src/arena/product/
 ├── content-pool/            # 已解锁内容解析与双方共享冻结池
 ├── opponent/                # 虚构昵称、头像、外观和准备状态
@@ -139,7 +140,7 @@ PlayerProfile + Content Definitions
 - 接入启动、选择、匹配、准备、比赛、结算和返回。
 - 验证重复事件、快速点击、前后台、启动失败和销毁。
 
-状态：已完成无 UI 基础。已建立不可变转换 Definition、Registry、StateMachine、Profile 选择服务、QuickMatch Product Runtime、单 Runtime Coordinator、Controller 与组合根；真实本地 1v1、异步迟到资源、清理重试和 200 局压力已通过。详见 [ADR-015](../decisions/015-arena-headless-product-session-lifecycle.md) 与 [S8.2 结果记录](../research/arena-stage8-product-session-results.md)。本批未接产品 UI、奖励、共享内容池或快捷再来一局。
+状态：已完成无 UI 基础。已建立不可变转换 Definition、Registry、StateMachine、Profile 选择服务、QuickMatch Product Runtime、单 Runtime Coordinator、Controller 与组合根；真实本地 1v1、异步迟到资源、清理重试和 200 局压力已通过。治理迁移中，Runtime、Factory 与 Coordinator 已由 strict `arena-product-match` 承接并补齐宿主数据/方法快照、不可重入、迟到资源和清理重试；Controller 与组合根尚待迁移，不能据此宣称 G4 完成。详见 [ADR-015](../decisions/015-arena-headless-product-session-lifecycle.md)、[S8.2 结果记录](../research/arena-stage8-product-session-results.md) 与 [企业治理状态台账](../governance/arena-enterprise-governance-status.md)。本批未接产品 UI、奖励、共享内容池或快捷再来一局。
 
 ### S8.3 奖励与解锁
 

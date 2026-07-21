@@ -2,6 +2,7 @@
 
 - 状态：已接受（S8.2 已实施）
 - 日期：2026-07-18
+- 治理更新：2026-07-21，匹配 Runtime/Factory/Coordinator 已迁入 strict `arena-product-match`；Controller/Composition 仍待治理
 
 ## 背景
 
@@ -36,6 +37,8 @@ character-select -> matching -> preparing -> in-match -> results -> ready
 - `LocalMatchSession` 继续独占 MatchCore、BotController 和 HeadlessMatchRunner；产品层不直接写入任何权威比赛状态。
 
 异步创建使用单调 generation。destroy 或取消后迟到的 Runtime 必须立即销毁；若清理失败，Coordinator 保留引用和 `cleanupIncomplete`，后续 `destroy()` 必须重试，不能把未知资源状态报告为成功。
+
+治理迁移进一步固定了三层的所有权边界：构造数据不执行访问器，端口方法在接管时快照，同步回调不能重入半次生命周期，Promise/thenable 不能冒充同步能力；无效或迟到候选清理失败时，Coordinator 保留精确重试所有权并阻断下一次创建。上述加固未改变公开状态、结果投影、权威 tick 或任意距离挥空行为。
 
 ### 3. Controller 只编排明确意图
 

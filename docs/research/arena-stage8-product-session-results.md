@@ -8,6 +8,8 @@ S8.2 已完成无 UI 产品闭环基础：Profile 启动与角色选择、本地
 
 后续状态：S8.3 已实现奖励、解锁解析和 reward/unlock 状态；见 [S8.3 结果记录](arena-stage8-reward-progression-results.md)。本文件保留 S8.2 当时的范围与证据。
 
+治理后续状态：2026-07-21，`ProductMatchRuntime`、`QuickMatchProductFactory` 与 `ProductMatchCoordinator` 已迁入 strict TypeScript workspace `@number-strategy-jump/arena-product-match`。迁移保持本节产品行为、公开结果与 200 局压力口径不变，并补齐 options 数据边界、接口方法快照、不可重入、异步迟到候选与清理失败重试；Controller 与 Composition 仍是后续治理范围。
+
 ## 落地边界
 
 ```text
@@ -28,6 +30,7 @@ ProfileRepository         ProductMatchRuntime
 - Profile 选择服务只处理已解锁选择和 CAS 提交，不知道匹配与 UI。
 - QuickMatch 产品 Factory 不暴露难度覆盖，Runtime 不创建第二份 MatchCore。
 - Coordinator 是 ProductMatchRuntime 的单一所有者；Controller 只通过窄合同编排。
+- Product Match 三层现在由独立 strict workspace 承接，只依赖底层确定性合同与公开 ProductMatchResult 合同。
 - 组合根注入 Storage、lease 墙钟和 seed source，无平台、DOM 或渲染依赖。
 
 ## 竞态与生命周期矩阵
