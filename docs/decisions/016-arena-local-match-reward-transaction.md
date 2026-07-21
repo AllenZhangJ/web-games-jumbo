@@ -23,6 +23,8 @@ G4.5b2 strict 迁移后，`RewardCommitter` 在构造期按数据描述符快照
 
 G4.5c1 strict 迁移后，`PlayerProfileService` 成为独立 `arena-profile-service` workspace。它在构造期按描述符快照 Repository 的五个同步方法，并在同一不可重入临界区完成写前续租、CAS、精确 outcome 校验和提交后读回。明确拒写且旧快照仍可确认时可以重试；写入后状态变化但调用抛错、畸形 outcome、读回漂移或租约确认丢失都会失败关闭。Repository 销毁失败时 Service 保留所有权以便精确重试，不发布半销毁状态。该迁移不把 Storage、A/B 槽或 lease 实现下沉到 Service，也不改变 grantId 与奖励数值。
 
+G4.5c2a strict 迁移后，共享同步租约位于独立 `arena-storage` workspace，Product Profile、Study 与 Pilot 只共享存储所有权协议，不共享聚合或 Repository。租约构造和持久化值拒绝访问器，宿主 Storage 方法在构造期快照，墙钟/读写/删除回调期间所有公共操作均不可重入；无法确认释放时保留所有权供重试。该包不成为第二个 Profile 写入者，也不改变 Service → Repository 的 CAS 事务方向。
+
 ### 2. 奖励由不可变 Definition、Registry 与纯 Resolver 决定
 
 Arena V1 当前规则为：

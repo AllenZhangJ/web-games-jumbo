@@ -42,5 +42,6 @@
 
 - Profile Definition、不可变快照、存档信封、迁移 Registry 与持久化错误合同已经位于 strict `arena-profile-contracts`；角色选择和奖励的唯一写入者已经位于 strict `arena-profile-service`。
 - Service 构造期快照 Repository 同步方法，并以单一不可重入临界区执行写前续租、CAS、精确结果校验和提交后读回；歧义写、读回漂移与租约丢失失败关闭，销毁失败保留可重试所有权。
-- `PlayerProfileRepository`、共享 `SynchronousStorageLease` 与具体 A/B/CAS 编排仍在受治理 JavaScript 清单中，是 G4 下一迁移批次；本次没有把它们错误宣称为 strict 完成。
-- clean 提交 `36fbf26569e79783b7a3a734bfff3e023cc79e2b` 的统一门禁通过，build ID `arena-36fbf26569e7-product`，三端 `sourceDirty=false`；完整证据见 [企业治理状态台账](../governance/arena-enterprise-governance-status.md)。
+- 共享 `SynchronousStorageLease` 已迁入 strict `arena-storage`，Product、Study、Pilot 只复用同一同步所有权协议；options/存储 getter 零执行，宿主方法在构造期快照，`assertHeld` 等全部外部回调路径拒绝重入，释放失败保留可重试所有权，v1/v2 与 same-owner takeover 语义保持不变。
+- `PlayerProfileRepository` 与具体 A/B/CAS 编排仍在受治理 JavaScript 清单中，是 G4 下一迁移批次；不能把通用租约完成误写为 Profile Repository 已经 strict 完成。
+- clean 提交 `616ef1f7ef4a5b838c3b0d1f7e3cdd6c85b72a4c` 的完整门禁通过，build ID `arena-616ef1f7ef4a-product`，三端 `sourceDirty=false`；完整证据见 [企业治理状态台账](../governance/arena-enterprise-governance-status.md)。
