@@ -254,8 +254,6 @@
     "src/arena/presentation/three/surface-view-registry.js",
     "src/arena/presentation/three/visual-coordinate.js",
     "src/arena/product/composition/arena-v1-product-composition.js",
-    "src/arena/product/composition/product-session-controller.js",
-    "src/arena/product/composition/product-session-ports.js",
     "src/arena/product/content-pool/content-replacement-definition.js",
     "src/arena/product/content-pool/content-replacement-registry.js",
     "src/arena/product/content-pool/frozen-match-content-pool.js",

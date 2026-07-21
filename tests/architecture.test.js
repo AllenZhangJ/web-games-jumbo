@@ -795,6 +795,24 @@ test('Arena Rule/Core foundation preserves dependency direction and deterministi
     );
   }
 
+  const productSessionFiles = await listJavaScript(
+    path.resolve('packages/arena-product-session/src'),
+  );
+  assert.ok(productSessionFiles.length >= 3);
+  for (const file of productSessionFiles) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /(?:from\s+['"](?:node:|three|[^'"]*(?:persistence|presentation|platform|entry|study|pilot)[^'"]*)['"]|\b(?:window|document|navigator|localStorage|sessionStorage)\b|\b(?:tt|wx)\s*\.)/,
+      `${file} 越过了 Product Session 编排边界。`,
+    );
+    assert.doesNotMatch(
+      source,
+      /(?:Date\.now|Math\.random|\bperformance\b|setTimeout|setInterval|requestAnimationFrame|localeCompare)/,
+      `${file} 使用了墙钟、非确定性随机或表现调度。`,
+    );
+  }
+
   const storageFiles = await listJavaScript(path.resolve('packages/arena-storage/src'));
   assert.ok(storageFiles.length >= 2);
   for (const file of storageFiles) {
@@ -1014,6 +1032,25 @@ test('Arena Rule/Core foundation preserves dependency direction and deterministi
       '@number-strategy-jump/arena-product-contracts',
     ],
     'arena-product-match 只能依赖底层数据合同与 Product 公开结果合同。',
+  );
+
+  const productSessionPackage = JSON.parse(await readFile(
+    path.resolve('packages/arena-product-session/package.json'),
+    'utf8',
+  ));
+  assert.deepEqual(
+    Object.keys(productSessionPackage.dependencies).sort(),
+    [
+      '@number-strategy-jump/arena-contracts',
+      '@number-strategy-jump/arena-product-contracts',
+      '@number-strategy-jump/arena-product-match',
+      '@number-strategy-jump/arena-product-progression',
+      '@number-strategy-jump/arena-product-state',
+      '@number-strategy-jump/arena-profile-contracts',
+      '@number-strategy-jump/arena-profile-service',
+      '@number-strategy-jump/arena-progression',
+    ],
+    'arena-product-session 只能编排 Product 状态、单局、Profile 与奖励公开合同。',
   );
 
   const storagePackage = JSON.parse(await readFile(

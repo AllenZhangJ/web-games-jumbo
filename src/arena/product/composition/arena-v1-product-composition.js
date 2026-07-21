@@ -28,8 +28,8 @@ import {
 import { PlayerProfileRepository } from '@number-strategy-jump/arena-profile-persistence';
 import { PlayerProfileService } from '@number-strategy-jump/arena-profile-service';
 import { RewardCommitter } from '@number-strategy-jump/arena-product-progression';
+import { ProductSessionController } from '@number-strategy-jump/arena-product-session';
 import { ProductSessionStateMachine } from '@number-strategy-jump/arena-product-state';
-import { ProductSessionController } from './product-session-controller.js';
 
 function validateDiagnosticSink(value) {
   if (value !== null && typeof value !== 'function') {

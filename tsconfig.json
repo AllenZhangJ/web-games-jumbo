@@ -14,6 +14,7 @@
     { "path": "./packages/arena-product-contracts" },
     { "path": "./packages/arena-product-match" },
     { "path": "./packages/arena-product-progression" },
+    { "path": "./packages/arena-product-session" },
     { "path": "./packages/arena-product-state" },
     { "path": "./packages/arena-progression" },
     { "path": "./packages/arena-quick-match" },
