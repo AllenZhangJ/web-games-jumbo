@@ -1,7 +1,9 @@
 import { assertNonEmptyString } from '@number-strategy-jump/arena-contracts';
 import { validateProductMatchResult } from '../matchmaking/product-match-result.js';
-import { createPlayerProfile } from '../profile/player-profile.js';
-import { createPlayerProfileDefinition } from '../profile/player-profile-definition.js';
+import {
+  createPlayerProfile,
+  createPlayerProfileDefinition,
+} from '@number-strategy-jump/arena-profile-contracts';
 import { createProgressionRegistry } from './progression-registry.js';
 import { REWARD_GRANT_SCHEMA_VERSION, createRewardGrant } from './reward-grant.js';
 import { UNLOCK_PROFILE_KEY } from './unlock-definition.js';

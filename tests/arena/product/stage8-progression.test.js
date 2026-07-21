@@ -10,7 +10,10 @@ import {
   ARENA_V1_MATCH_REWARD_ID,
 } from '../../../src/arena/product/content/arena-v1-progression-content.js';
 import { createProductMatchResult } from '../../../src/arena/product/matchmaking/product-match-result.js';
-import { advancePlayerProfile, createPlayerProfile } from '../../../src/arena/product/profile/player-profile.js';
+import {
+  advancePlayerProfile,
+  createPlayerProfile,
+} from '@number-strategy-jump/arena-profile-contracts';
 import { PlayerProfileService } from '../../../src/arena/product/profile/player-profile-service.js';
 import { ProgressionRegistry } from '../../../src/arena/product/progression/progression-registry.js';
 import { RewardCommitter } from '../../../src/arena/product/progression/reward-committer.js';

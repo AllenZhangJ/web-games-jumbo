@@ -8,7 +8,7 @@ import { ARENA_MATCH_EVENT } from '../../../src/arena/match-core.js';
 import { ProductSessionController } from '../../../src/arena/product/composition/product-session-controller.js';
 import { ARENA_V1_PLAYER_PROFILE_DEFINITION } from '../../../src/arena/product/content/arena-v1-player-profile-definition.js';
 import { ProductMatchCoordinator } from '../../../src/arena/product/matchmaking/product-match-coordinator.js';
-import { createPlayerProfile } from '../../../src/arena/product/profile/player-profile.js';
+import { createPlayerProfile } from '@number-strategy-jump/arena-profile-contracts';
 import { PlayerProfilePersistenceError } from '../../../src/arena/product/profile/player-profile-service.js';
 import { ProductSessionStateMachine } from '../../../src/arena/product/state/product-session-state-machine.js';
 import { PRODUCT_SESSION_STATE } from '../../../src/arena/product/state/product-session-transition-definition.js';

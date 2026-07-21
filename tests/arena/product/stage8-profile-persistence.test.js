@@ -3,27 +3,21 @@ import assert from 'node:assert/strict';
 import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import { ARENA_V1_PLAYER_PROFILE_DEFINITION } from '../../../src/arena/product/content/arena-v1-player-profile-definition.js';
 import {
-  PlayerProfileDefinition,
-  createPlayerProfileDefinition,
-} from '../../../src/arena/product/profile/player-profile-definition.js';
-import {
-  advancePlayerProfile,
-  createPlayerProfile,
-} from '../../../src/arena/product/profile/player-profile.js';
-import {
   PLAYER_PROFILE_SAVE_ENVELOPE_SCHEMA_VERSION,
-  assertPlayerProfileSaveEnvelopeHasNoFutureSchema,
-  createPlayerProfileSaveEnvelope,
-  validatePlayerProfileSaveEnvelope,
-} from '../../../src/arena/product/persistence/player-profile-save-envelope.js';
-import {
+  PlayerProfileDefinition,
   PlayerProfileFutureSchemaError,
   PlayerProfileIndeterminateWriteError,
   PlayerProfileRepositoryBusyError,
   PlayerProfileSaveConflictError,
-} from '../../../src/arena/product/persistence/profile-persistence-errors.js';
+  SaveMigrationRegistry,
+  advancePlayerProfile,
+  assertPlayerProfileSaveEnvelopeHasNoFutureSchema,
+  createPlayerProfile,
+  createPlayerProfileDefinition,
+  createPlayerProfileSaveEnvelope,
+  validatePlayerProfileSaveEnvelope,
+} from '@number-strategy-jump/arena-profile-contracts';
 import { PlayerProfileRepository } from '../../../src/arena/product/persistence/player-profile-repository.js';
-import { SaveMigrationRegistry } from '../../../src/arena/product/persistence/save-migration-registry.js';
 import { SynchronousStorageLease } from '../../../src/arena/storage/synchronous-storage-lease.js';
 
 function clone(value) {

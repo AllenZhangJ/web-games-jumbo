@@ -6,7 +6,7 @@ import {
   PLAYER_PROFILE_QUALITY,
   PLAYER_PROFILE_SCHEMA_VERSION,
   createPlayerProfileDefinition,
-} from '../profile/player-profile-definition.js';
+} from '@number-strategy-jump/arena-profile-contracts';
 
 export const ARENA_V1_PLAYER_PROFILE_DEFINITION = createPlayerProfileDefinition({
   schemaVersion: PLAYER_PROFILE_DEFINITION_SCHEMA_VERSION,

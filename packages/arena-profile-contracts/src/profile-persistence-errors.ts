@@ -1,5 +1,7 @@
 class PlayerProfilePersistenceError extends Error {
-  constructor(message, code) {
+  readonly code: string;
+
+  constructor(message: string, code: string) {
     super(message);
     this.name = new.target.name;
     this.code = code;

@@ -36,7 +36,10 @@ import {
   createFrozenMatchContentPool,
 } from '../../../src/arena/product/content-pool/frozen-match-content-pool.js';
 import { MatchContentPoolResolver } from '../../../src/arena/product/content-pool/match-content-pool-resolver.js';
-import { advancePlayerProfile, createPlayerProfile } from '../../../src/arena/product/profile/player-profile.js';
+import {
+  advancePlayerProfile,
+  createPlayerProfile,
+} from '@number-strategy-jump/arena-profile-contracts';
 
 const characterIds = ARENA_V1_CHARACTER_DEFINITIONS.map(({ id }) => id);
 const allEquipmentIds = STAGE4_EQUIPMENT_DEFINITIONS.map(({ id }) => id);

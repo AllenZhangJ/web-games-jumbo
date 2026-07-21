@@ -29,12 +29,12 @@
 | --- | --- | --- |
 | G0 基线冻结 | 已完成 | 自动化、压力、资产和三端构建通过；ADR/计划/证据已落盘；tag `arena-product-baseline-51e2822` 指向基线提交 |
 | G1 治理外壳/唯一产品 | 已完成 | Arena 已成为唯一生产产品；旧产品实现/专属测试/资产/规范已退役；strict TS、ESLint、Vitest、CI、CODEOWNERS、JS 递减清单和唯一产物门禁已启用 |
-| G2 Definition/合同/配置 | 进行中 | 已建立 strict TS `arena-contracts`、`arena-definitions` 与 `arena-platform-contracts` workspace，并迁入确定性、输入/事件、权威快照、同步存储和平台能力合同，以及动作/角色/装备/地图 Definition、只读 Registry 和唯一 Gameplay V2 数值配置；当前仍有 505 个受审计 JavaScript 文件，PlayerProfile 存档 schema 仍待迁移 |
+| G2 Definition/合同/配置 | 已完成 | strict TS `arena-contracts`、`arena-definitions`、`arena-profile-contracts` 与 `arena-platform-contracts` 已承接确定性、输入/事件、权威快照、同步存储、平台能力、玩家档案/存档协议，以及动作/角色/装备/地图 Definition、只读 Registry 和唯一 Gameplay V2 数值配置；受审计 JavaScript 已降至 500 个 |
 | G3 Rule/Core/Replay | 未开始 | 当前行为有 Replay/hash 证据，但尚未迁入 strict TS |
 | G4 Bot/Product/Persistence | 未开始 | 当前功能与压力证据存在，尚未迁入 strict TS workspace |
 | G5 Presentation/资产/反馈 | 未开始 | 正式资产预算通过；审批字段与唯一正常路径仍待治理 |
 | G6 Platform/入口/构建 | 未开始 | 三端默认入口是 Product，但生产交付未与开发页面彻底隔离 |
-| G7 零 JS/完整质量门 | 未开始 | 当前 `node --test`，无 ESLint/Vitest/coverage/零 JS 门禁 |
+| G7 零 JS/完整质量门 | 未开始 | ESLint、strict TypeScript、Vitest 和 JavaScript 精确递减门禁已作为迁移护栏运行；coverage 阈值、测试归包和零 JS 尚未完成 |
 | G8 资产/安全/所有权 | 未开始 | CODEOWNERS、CI 安全与正式资产最终批准待补齐 |
 | G9 文档归真 | 未开始 | README 首标题和大量章节仍以数值跳台 v3 为产品真值 |
 | G10 最新 main 审计 | 未开始 | 只能在 G0-G9 完成后执行；禁止实际合并 |
@@ -55,8 +55,8 @@
 
 ## 当前不可合并原因
 
-1. 当前 505 个受维护 JavaScript 文件仍在精确允许清单中，Definition/Core/Bot/Presentation/Platform 尚未完成 strict TypeScript workspace 迁移。
-2. Vitest 当前只保护治理门禁；Arena 测试尚待按 workspace 迁移并建立正式 coverage 阈值与零 JS 门禁。
+1. 当前 500 个受维护 JavaScript 文件仍在精确允许清单中，Core/Bot/Product/Persistence/Presentation/Platform 尚未完成 strict TypeScript workspace 迁移。
+2. Vitest 当前保护底层合同包和治理门禁；Arena 其余测试尚待按 workspace 迁移并建立正式 coverage 阈值与零 JS 门禁。
 3. 正式资产最终审批与完整安全/依赖长期治理尚未闭环。
 4. 文档仍含迁移前阶段性叙述，尚未完成 G9 全量链接、状态与命令归真。
 5. 尚未对治理完成后的候选提交与最新 `origin/main` 做独立虚拟合并审计。
@@ -132,3 +132,11 @@
 - 显式审计器拒绝未知字段、访问器、非有限向量、重复 ID、引用错配、无效 tick 关系和非 uint32 随机状态。
 - 审计器仅供迁移、fixture、Replay 工具和边界测试显式调用；MatchCore 每 tick 快照路径未加入重复深拷贝/深校验，避免手机端额外发热。
 - strict 公共包测试增至 17 项，并由真实 MatchCore 公开快照完成集成验证；JavaScript 数保持 505，PlayerProfile 存档 schema 仍是 G2 最后阻断项。
+
+## G2.8 玩家档案与存档协议迁移证据
+
+- 新增 strict TypeScript workspace：`@number-strategy-jump/arena-profile-contracts`；依赖仅指向底层 `arena-contracts`，不拥有 Storage、租约、CAS、平台 API 或产品生命周期。
+- `PlayerProfileDefinition`、不可变 Profile、revision 更新、存档信封、未来 schema 错误和连续迁移 Registry 已迁入公共包；所有生产、测试和压力脚本消费者改用包入口，旧 5 个 JavaScript 实现已删除。
+- 存档信封继续绑定 payload 稳定哈希与 generation；迁移函数仍对隔离输入执行两次并比较确定性哈希，未来 envelope、payload 与嵌套 Profile 均拒绝被旧客户端覆盖。
+- strict 公共包测试增至 20 项；65 项 Profile/Product 定向回归与 500 次 A/B 存档提交压力通过，JavaScript 精确允许清单由 505 降至 500。
+- G2 交付范围已关闭；Repository、租约、CAS、唯一 Profile 写入者和产品生命周期作为有状态能力留在 G4 迁移，不在协议批次混改并发语义。

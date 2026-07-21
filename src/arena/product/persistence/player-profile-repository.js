@@ -8,20 +8,18 @@ import {
 } from '../../lifecycle-error.js';
 import { createSynchronousStoragePort } from '@number-strategy-jump/arena-contracts';
 import { SynchronousStorageLease } from '../../storage/synchronous-storage-lease.js';
-import { createPlayerProfile } from '../profile/player-profile.js';
-import { createPlayerProfileDefinition } from '../profile/player-profile-definition.js';
-import {
-  assertPlayerProfileSaveEnvelopeHasNoFutureSchema,
-  createPlayerProfileSaveEnvelope,
-  validatePlayerProfileSaveEnvelope,
-} from './player-profile-save-envelope.js';
 import {
   PlayerProfileFutureSchemaError,
   PlayerProfileIndeterminateWriteError,
   PlayerProfileRepositoryBusyError,
   PlayerProfileSaveConflictError,
-} from './profile-persistence-errors.js';
-import { createSaveMigrationRegistry } from './save-migration-registry.js';
+  assertPlayerProfileSaveEnvelopeHasNoFutureSchema,
+  createPlayerProfile,
+  createPlayerProfileDefinition,
+  createPlayerProfileSaveEnvelope,
+  createSaveMigrationRegistry,
+  validatePlayerProfileSaveEnvelope,
+} from '@number-strategy-jump/arena-profile-contracts';
 
 const SLOT = Object.freeze({ A: 'a', B: 'b' });
 

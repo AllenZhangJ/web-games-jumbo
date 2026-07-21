@@ -1,5 +1,5 @@
 import { ARENA_V1_PLAYER_PROFILE_DEFINITION } from '../src/arena/product/content/arena-v1-player-profile-definition.js';
-import { advancePlayerProfile } from '../src/arena/product/profile/player-profile.js';
+import { advancePlayerProfile } from '@number-strategy-jump/arena-profile-contracts';
 import { PlayerProfileRepository } from '../src/arena/product/persistence/player-profile-repository.js';
 
 function parsePositiveInteger(argument, prefix, fallback) {

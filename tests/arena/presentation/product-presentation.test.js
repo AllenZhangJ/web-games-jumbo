@@ -4,7 +4,7 @@ import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
 import { createArenaV1ProductSession } from '../../../src/arena/product/composition/arena-v1-product-composition.js';
 import { ARENA_V1_PLAYER_PROFILE_DEFINITION } from '../../../src/arena/product/content/arena-v1-player-profile-definition.js';
 import { createProductMatchResult } from '../../../src/arena/product/matchmaking/product-match-result.js';
-import { createPlayerProfile } from '../../../src/arena/product/profile/player-profile.js';
+import { createPlayerProfile } from '@number-strategy-jump/arena-profile-contracts';
 import { REWARD_GRANT_SCHEMA_VERSION } from '../../../src/arena/product/progression/reward-grant.js';
 import { PRODUCT_SESSION_ERROR_CODE } from '../../../src/arena/product/state/product-session-error.js';
 import { PRODUCT_SESSION_STATE } from '../../../src/arena/product/state/product-session-transition-definition.js';

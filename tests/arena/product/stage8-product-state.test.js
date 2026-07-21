@@ -6,10 +6,10 @@ import {
   PRODUCT_MATCH_COORDINATOR_STATE,
 } from '../../../src/arena/product/matchmaking/product-match-coordinator.js';
 import { createProductMatchResult } from '../../../src/arena/product/matchmaking/product-match-result.js';
-import { createPlayerProfile } from '../../../src/arena/product/profile/player-profile.js';
 import {
   PlayerProfileIndeterminateWriteError,
-} from '../../../src/arena/product/persistence/profile-persistence-errors.js';
+  createPlayerProfile,
+} from '@number-strategy-jump/arena-profile-contracts';
 import {
   PlayerProfilePersistenceError,
   PlayerProfileService,

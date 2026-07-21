@@ -5,11 +5,12 @@ import {
   cloneFrozenData,
   cloneFrozenStringSet,
 } from '@number-strategy-jump/arena-contracts';
-import { advancePlayerProfile, createPlayerProfile } from './player-profile.js';
-import { createPlayerProfileDefinition } from './player-profile-definition.js';
 import {
   PlayerProfileIndeterminateWriteError,
-} from '../persistence/profile-persistence-errors.js';
+  advancePlayerProfile,
+  createPlayerProfile,
+  createPlayerProfileDefinition,
+} from '@number-strategy-jump/arena-profile-contracts';
 
 export const PLAYER_PROFILE_SERVICE_STATE = Object.freeze({
   CREATED: 'created',

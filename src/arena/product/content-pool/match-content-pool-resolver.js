@@ -3,8 +3,10 @@ import {
   MATCH_CONTENT_SELECTION_SCHEMA_VERSION,
   createMatchContentSelection,
 } from '../../content/match-content-selection.js';
-import { createPlayerProfile } from '../profile/player-profile.js';
-import { createPlayerProfileDefinition } from '../profile/player-profile-definition.js';
+import {
+  createPlayerProfile,
+  createPlayerProfileDefinition,
+} from '@number-strategy-jump/arena-profile-contracts';
 import { MATCH_CONTENT_KIND } from './content-replacement-definition.js';
 import { createContentReplacementRegistry } from './content-replacement-registry.js';
 import {

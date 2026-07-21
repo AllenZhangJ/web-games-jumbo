@@ -1,29 +1,47 @@
-import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import {
   assertIntegerAtLeast,
   assertKnownKeys,
   cloneFrozenData,
+  createDeterministicDataHash,
 } from '@number-strategy-jump/arena-contracts';
 import {
   assertPlayerProfileHasNoFutureSchema,
   createPlayerProfile,
-} from '../profile/player-profile.js';
-import { createPlayerProfileDefinition } from '../profile/player-profile-definition.js';
+  type PlayerProfile,
+} from './player-profile.js';
+import { createPlayerProfileDefinition } from './player-profile-definition.js';
 import { PlayerProfileFutureSchemaError } from './profile-persistence-errors.js';
-import { createSaveMigrationRegistry } from './save-migration-registry.js';
+import {
+  createSaveMigrationRegistry,
+  type SaveMigrationRegistry,
+} from './save-migration-registry.js';
 
-export const PLAYER_PROFILE_SAVE_ENVELOPE_SCHEMA_VERSION = 1;
+export const PLAYER_PROFILE_SAVE_ENVELOPE_SCHEMA_VERSION = 1 as const;
+
+export interface PlayerProfileSaveEnvelope {
+  readonly schemaVersion: typeof PLAYER_PROFILE_SAVE_ENVELOPE_SCHEMA_VERSION;
+  readonly profileDefinitionId: string;
+  readonly generation: number;
+  readonly payloadSchemaVersion: number;
+  readonly payloadHash: string;
+  readonly payload: PlayerProfile;
+}
+
+export interface ValidatedPlayerProfileSaveEnvelope {
+  readonly envelope: PlayerProfileSaveEnvelope;
+  readonly profile: PlayerProfile;
+  readonly migrated: boolean;
+}
 
 const ENVELOPE_KEYS = new Set([
-  'schemaVersion',
-  'profileDefinitionId',
-  'generation',
-  'payloadSchemaVersion',
-  'payloadHash',
-  'payload',
+  'schemaVersion', 'profileDefinitionId', 'generation',
+  'payloadSchemaVersion', 'payloadHash', 'payload',
 ]);
 
-export function createPlayerProfileSaveEnvelope(definitionValue, profileValue) {
+export function createPlayerProfileSaveEnvelope(
+  definitionValue: unknown,
+  profileValue: unknown,
+): PlayerProfileSaveEnvelope {
   const definition = createPlayerProfileDefinition(definitionValue);
   const profile = createPlayerProfile(definition, profileValue);
   return cloneFrozenData({
@@ -37,12 +55,12 @@ export function createPlayerProfileSaveEnvelope(definitionValue, profileValue) {
 }
 
 export function validatePlayerProfileSaveEnvelope(
-  definitionValue,
-  migrationRegistryValue,
-  value,
-) {
+  definitionValue: unknown,
+  migrationRegistryValue: unknown,
+  value: unknown,
+): ValidatedPlayerProfileSaveEnvelope {
   const definition = createPlayerProfileDefinition(definitionValue);
-  const migrationRegistry = createSaveMigrationRegistry(migrationRegistryValue);
+  const migrationRegistry: SaveMigrationRegistry = createSaveMigrationRegistry(migrationRegistryValue);
   if (migrationRegistry.getCurrentVersion() !== definition.currentProfileSchemaVersion) {
     throw new RangeError('MigrationRegistry 与 PlayerProfileDefinition 当前 schema 不一致。');
   }
@@ -78,25 +96,30 @@ export function validatePlayerProfileSaveEnvelope(
  * Malformed current/older data is recoverable. Future envelope or payload
  * schema is protected so an older client cannot silently replace it.
  */
-export function assertPlayerProfileSaveEnvelopeHasNoFutureSchema(definitionValue, value) {
+export function assertPlayerProfileSaveEnvelopeHasNoFutureSchema(
+  definitionValue: unknown,
+  value: unknown,
+): true {
   const definition = createPlayerProfileDefinition(definitionValue);
-  let source;
+  let source: unknown;
   try {
     source = cloneFrozenData(value, 'PlayerProfile save version probe');
   } catch {
     return true;
   }
+  if (!source || typeof source !== 'object' || Array.isArray(source)) return true;
+  const candidate = source as Readonly<Record<string, unknown>>;
   if (
-    Number.isSafeInteger(source?.schemaVersion)
-    && source.schemaVersion > PLAYER_PROFILE_SAVE_ENVELOPE_SCHEMA_VERSION
+    Number.isSafeInteger(candidate.schemaVersion)
+    && (candidate.schemaVersion as number) > PLAYER_PROFILE_SAVE_ENVELOPE_SCHEMA_VERSION
   ) throw new PlayerProfileFutureSchemaError('PlayerProfile envelope 来自未来 schema。');
   if (
-    Number.isSafeInteger(source?.payloadSchemaVersion)
-    && source.payloadSchemaVersion > definition.currentProfileSchemaVersion
+    Number.isSafeInteger(candidate.payloadSchemaVersion)
+    && (candidate.payloadSchemaVersion as number) > definition.currentProfileSchemaVersion
   ) throw new PlayerProfileFutureSchemaError('PlayerProfile payload 来自未来 schema。');
   try {
-    assertPlayerProfileHasNoFutureSchema(definition, source?.payload);
-  } catch (error) {
+    assertPlayerProfileHasNoFutureSchema(definition, candidate.payload);
+  } catch (error: unknown) {
     const failure = new PlayerProfileFutureSchemaError('PlayerProfile 嵌套 payload 来自未来 schema。');
     failure.cause = error;
     throw failure;
