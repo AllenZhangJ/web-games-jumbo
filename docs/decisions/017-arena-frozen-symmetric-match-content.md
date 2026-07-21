@@ -2,7 +2,7 @@
 
 - 状态：已接受（S8.4 已实施）
 - 日期：2026-07-18
-- 治理更新：2026-07-21，内容 Definition/Registry/Catalog/Resolver 与 Profile Provider 已迁入 strict `arena-product-content`；Arena V1 Profile、内容池、替代与成长组合已迁入 strict `arena-product-v1-content`，顶层 Product Composition 仍待治理
+- 治理更新：2026-07-21，内容 Definition/Registry/Catalog/Resolver 与 Profile Provider 已迁入 strict `arena-product-content`；Arena V1 Profile、内容池、替代与成长组合已迁入 strict `arena-product-v1-content`，顶层所有权组合已迁入 strict `arena-product-composition`
 
 ## 背景
 

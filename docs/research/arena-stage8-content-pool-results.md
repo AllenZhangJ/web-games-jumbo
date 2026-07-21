@@ -6,7 +6,7 @@ S8.4 已完成无 UI 对称内容闭环：PlayerProfile 解锁经版本化 Defin
 
 本批没有接产品页面、正式资产或三端真机生命周期。它证明无宿主 Rule/Core/Product 合同和连续局隔离，不替代 S8.5 的 Web、微信、抖音运行证据。
 
-治理后续状态：2026-07-21，内容池七个实现已迁入 strict TypeScript workspace `@number-strategy-jump/arena-product-content`。迁移保持 S8.4 的具名随机流、内容选择、Replay V5 和压力结果，新增 getter 零执行、方法快照、同步不可重入、Promise 拒绝、seed 先验校验及返回 provenance/hash 复核。随后 Arena V1 Profile、内容池/Catalog/Replacement 与 Reward/Progression 组合迁入 strict `@number-strategy-jump/arena-product-v1-content`，稳定装备/地图 ID 收口到 `arena-definitions`；当前只剩顶层 Product Composition 尚待治理。干净提交 `14e1f70dab6d232de104dc2d567a8fb22814f08c` 的 653 项 Node、152 项 strict、101 项生命周期、120 场 fuzz/6 次 Replay、三端 clean build/预算均通过，JavaScript 精确清单由 411 经内容池批次降至 404，再降至 401；最近一次 390×844 Chrome 交互复验仍来自前一内容池提交，不冒充本批新增真机证据。
+治理后续状态：2026-07-21，内容池七个实现已迁入 strict TypeScript workspace `@number-strategy-jump/arena-product-content`。迁移保持 S8.4 的具名随机流、内容选择、Replay V5 和压力结果，新增 getter 零执行、方法快照、同步不可重入、Promise 拒绝、seed 先验校验及返回 provenance/hash 复核。随后 Arena V1 Profile、内容池/Catalog/Replacement 与 Reward/Progression 组合迁入 strict `@number-strategy-jump/arena-product-v1-content`，稳定装备/地图 ID 收口到 `arena-definitions`；最终顶层所有权组合迁入 strict `@number-strategy-jump/arena-product-composition`，G4 据此关闭。干净提交 `a84e1d4c3f6c646164318376fa97136093d08733` 的 655 项 Node、155 项 strict、103 项生命周期、120 场 fuzz/6 次 Replay、200 局 Product、500 次 Profile 压力和三端 clean build/预算均通过，JavaScript 精确清单由 411 经内容池批次降至 404，再降至 401；本提交重新完成 390×844 Chrome 首屏、真实对局和攻击交互复验，仍不冒充 iPhone 真机证据。
 
 ## 落地边界
 

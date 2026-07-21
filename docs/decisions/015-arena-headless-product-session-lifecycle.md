@@ -2,7 +2,7 @@
 
 - 状态：已接受（S8.2 已实施）
 - 日期：2026-07-18
-- 治理更新：2026-07-21，匹配 Runtime/Factory/Coordinator 已迁入 strict `arena-product-match`，Controller 已迁入 strict `arena-product-session`；Composition 仍待治理
+- 治理更新：2026-07-21，匹配 Runtime/Factory/Coordinator 已迁入 strict `arena-product-match`，Controller 已迁入 strict `arena-product-session`，组合根已迁入 strict `arena-product-composition`
 
 ## 背景
 
@@ -52,6 +52,8 @@ character-select -> matching -> preparing -> in-match -> results -> ready
 - aggregate destroy 先发布 `destroyed`，再分别清理 Match 与 Profile；任一失败保留可重试所有权并向调用方抛出聚合错误。
 
 治理迁移将该规则扩展为可执行端口门禁：StateMachine、ProfileService、MatchCoordinator 与 RewardCommitter 方法在构造期快照，全部同步意图不可重入且不得返回 Promise；fatal/destroy 状态未成功发布时不调用外部资源清理，异步 Profile 在 destroy 后迟到成功会重新承担清理责任。Profile 与奖励只在低频事务边界复制冻结，逐帧 Match 快照不增加深拷贝。
+
+组合根治理进一步把 Profile、内容池、Quick Match、Match Coordinator、Reward 与 Controller 的创建和所有权转移集中到 `arena-product-composition`。外部配置、回调和 seed port 在任何 Repository 资源接管前预检；构造失败按 Controller → Match → Profile → Repository 逆序清理。具体 Arena 内容和 Quick Match 工厂仍由应用薄适配器注入，Product 包不反向依赖 MatchCore 或 Presentation。
 
 ### 4. 产品层保持无宿主、无渲染
 
