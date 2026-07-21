@@ -2,7 +2,7 @@
 
 一款以“左右选择数值运算 + 按住蓄力跳跃”为核心的竖屏小游戏。v3 保留现有数值策略、连续世界、真实落点、碰撞规则、测试和 Web/微信/抖音平台适配层，将原 Canvas 2D 表现层重构为 Three.js/WebGL2 三维场景。
 
-> **项目状态：** Web、微信、抖音默认入口已切换到 Arena V1 Product Session：独立轻量物理、1v1 MatchCore、隐藏本地机器人、三件装备、地图时间轴、语义移动/触控、程序化角色、HUD、角色选择、奖励和重赛已连成产品闭环。Web 使用语义 DOM，微信/抖音共享单 Canvas Product UI；Web `/greybox.html` 与小游戏 `game-greybox.js`/`build:greybox` 保留可执行回退。Stage 7 已在 S7.1 表现合同之外补充来源中立的正式资产 Intake Policy、Definition/内容/许可/证明绑定与文件复验，但没有真实正式资产。Stage 8 S8.1～S8.5.5 已落地；S8.5.6 六目标设备证据合同与三端构建 Manifest 已就绪，但微信/抖音开发者工具及两端 iOS/Android 真机 Record 尚未采集。Stage 9 S9.1～S9.3 已建立实验、Replay V5、fuzz、生命周期回归门与 11 条命 Product 默认；S9.4a 已建立 high/medium/low 质量 Definition、有界性能 Probe、六目标性能 Policy/证据和三端包体预算；S9.5a/b 已建立预注册真人研究、同 Product 采集端口、独立可恢复 Web 工作台、离线原子入库与逐 Tick Replay/Bot 复验；S9.6a 已固定 12 门 RC 交接，S9.6b1-b5b 已让构建、回放、平衡、回归、输入盲测、Stage 6/8 设备、性能、真人研究和缺陷账本共十一门支持语义复算，仅正式资产门仍保持未验证。正式双角色、真实 Intake Bundle、六个真实 target Record、输入 A/B 真人盲测与至少 90 名合格完成者仍未完成。数值跳台 v3 代码与资产继续保留，两条领域代码保持隔离。
+> **项目状态：** Web、微信、抖音默认入口已切换到 Arena V1 Product Session：独立轻量物理、1v1 MatchCore、隐藏本地机器人、三件装备、地图时间轴、语义移动/触控、正式 KayKit 双角色、HUD、角色选择、奖励和重赛已连成产品闭环。Web 使用语义 DOM，微信/抖音共享单 Canvas Product UI；Web `/greybox.html` 与小游戏 `build:greybox` 保留可执行回退。Stage 7 已接入来源、revision、许可和字节哈希固定的正式角色资产，并建立正式资产专用预算；项目方 `approvedBy/approvedAt`、Formal Asset Intake Bundle 与目标真机资产验收仍分别未完成。Stage 8 S8.1～S8.5.5 已落地；S8.5.6 六目标设备证据合同与三端构建 Manifest 已就绪，但尚无可计入合同的 clean-build 开发者工具或真机 Record。Stage 9 S9.1～S9.3 已建立实验、Replay V5、fuzz、生命周期回归门与 11 条命 Product 默认；S9.4a 已建立 high/medium/low 质量 Definition、有界性能 Probe、六目标性能 Policy/证据和三端包体预算；S9.5a/b 已建立预注册真人研究、同 Product 采集端口、独立可恢复 Web 工作台、离线原子入库与逐 Tick Replay/Bot 复验；S9.6a 已固定 12 门 RC 交接。正式资产最终批准、六个真实 target Record、输入 A/B 真人盲测与至少 90 名合格完成者仍未完成。数值跳台 v3 代码与资产继续保留，两条领域代码保持隔离。
 
 v3 的动作与构图参考开源项目 [`shenmaxg/web-jump`](https://github.com/shenmaxg/web-jump)，但不使用它的单路线玩法作为游戏规则，也不直接复用来源不明的品牌纹理。参考代码的 MIT 许可与归属见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
@@ -58,6 +58,7 @@ npm run arena:input:fuzz
 npm run arena:replay:verify
 npm run arena:regression
 npm run arena:regression:evidence -- --describe
+npm run arena:assets:budget
 npm run arena:build:budget
 npm run arena:performance:evidence -- --describe
 npm run arena:human-fairness:evidence -- --describe
@@ -108,7 +109,7 @@ npm run preview:lan
 4. 在开发者工具先检查 WebGL2 创建、首帧、触摸和前后台。
 5. 分别使用 iOS 与 Android 真机完成 [平台验收清单](docs/platform-checklist.md)。
 
-默认 `game.js` 是 Product Session。需要验证或紧急回退到旧灰盒入口时执行 `npm run build:greybox`；构建目录还会同时保留 `game-product.js` 与 `game-greybox.js` 供核对。Web 回退入口为 `/greybox.html`。
+默认 `game.js` 是 Product Session。需要验证或紧急回退到旧灰盒入口时执行 `npm run build:greybox`，该命令会生成独立的灰盒 `game.js` 发行包；正式包不再重复携带两个未启用入口。Web 回退入口为 `/greybox.html`。
 
 每次构建会在三端目录生成 `arena-build-manifest.json`。使用 `npm run arena:build:verify` 重算全部产物；正式设备证据还必须增加 `-- --require-clean-source`。Stage 8 Definition 与证据校验使用 `npm run arena:product:device:evidence -- --describe`，执行手册见 [Stage 8 产品设备验收](docs/acceptance/stage8/README.md)。
 

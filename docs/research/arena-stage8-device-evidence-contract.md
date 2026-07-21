@@ -2,7 +2,7 @@
 
 ## 结论
 
-S8.5.6 的本机“证据准备层”已经建立：Stage 8 产品验收 Definition、六目标 OS 约束、三端构建 Manifest、目录重算 verifier 与支持多 Definition 的证据 CLI 已可执行。当前仍没有微信/抖音开发者工具或真机 Record，因此 S8.5.6 和 Stage 8 保持未完成。
+S8.5.6 的本机“证据准备层”已经建立：Stage 8 产品验收 Definition、六目标 OS 约束、三端构建 Manifest、目录重算 verifier 与支持多 Definition 的证据 CLI 已可执行。抖音开发者工具当前已完成 dirty 构建预验收，但仍没有任何可计入合同的 clean-build 开发者工具或真机 Record，因此 S8.5.6 和 Stage 8 保持未完成。
 
 ## 本批落地
 
@@ -22,7 +22,7 @@ S8.5.6 的本机“证据准备层”已经建立：Stage 8 产品验收 Definit
 
 ## 外部环境审计
 
-- 本机检测到抖音开发者工具 `4.5.3`，启动后停在登录页；未代填账号、验证码或扫码登录，因此没有导入项目或生成通过 Record。
+- 2026-07-20 本机抖音开发者工具 `4.5.3` 已处于登录状态，并成功导入、编译和运行 `arena-e972bf830595-product-dirty`。iPhone 15 Pro/iOS 15 模拟器内 Product 主页、正式 GLTF 角色与手持装备、屏外地图、移动/攻击/跳跃、强制刷新和重新入局均通过预检，Console 未见项目错误。由于 `sourceDirty=true` 且没有合同附件 Bundle，该结果不生成通过 Record。
 - 本机只检测到普通微信客户端，没有微信开发者工具。
 - 未连接可用于微信/抖音验收的 iOS、Android 目标设备。
 

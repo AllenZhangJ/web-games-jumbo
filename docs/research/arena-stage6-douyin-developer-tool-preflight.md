@@ -6,6 +6,18 @@
 
 本次运行使用未提交的 `arena-19b0e55ae66e-product-dirty` 构建，只用于发现问题和回归修复。没有连续录屏、真实多点触控、触摸 cancel、前后台中断或正式附件 Bundle，因此不是 `douyin-developer-tool` E3 Record，也不改变 Stage 6 的执行中状态。
 
+## 2026-07-20 正式角色资产回归
+
+在已登录的同一抖音开发者工具 V4.5.3 中导入并运行 `dist/douyin` 当前 Product 构建 `arena-e972bf830595-product-dirty`（Build Manifest hash `083341bb`）。运行环境为 iPhone 15 Pro 模拟器、iOS 15、393×852、DPR 3、安全区 top 59 / bottom 818、JS SDK/Core `4.8.0.7`。
+
+- 本地“编译”完成并显示 `[Simulator]Compile End`，Product 主页正常显示。
+- 进入对局后，KayKit Rogue/Skeleton GLTF 角色、手持武器/盾牌、屏外延展地图、移动摇杆、攻击与跳跃按钮均正常显示。
+- 实际点击攻击、跳跃后对局继续运行；强制刷新会回到主页，重新进入对局成功，没有旧租约阻断。
+- 编译、刷新、重新入局后的 Console 只有开发者工具自身的 `[TMG] use engine: helium`，未见项目运行时错误。
+- 小游戏资源由宿主文件、图片和音频接口读取，Network 面板无请求不能用来推断 GLB/PNG/OGG 缺失；本次以模拟器画面和 Console 为预检依据。
+
+本轮仍是 dirty 构建上的开发者工具预验收，没有上传、预览、真机调试或正式证据 Bundle，不能替代 Stage 6 E3、Stage 7 正式资产批准或 Stage 8 真机 Record。
+
 ## 发现与修复
 
 ### 强制停止后的 Profile lease

@@ -177,7 +177,7 @@
 
 技术执行顺序与资产/生命周期边界见 [Stage 7 角色、动画与反馈执行计划](../architecture/arena-stage7-presentation-plan.md)，架构决策草案见 [ADR-010](../decisions/010-arena-semantic-presentation-and-assets.md)。在 Stage 6 输入语义冻结前不进入批量正式动画生产。
 
-状态：S7.1 合同与程序化占位实例已落地，并补充了不选择具体资产的 Formal Asset Intake Policy、provenance Bundle 和文件复验器；正式角色、真实授权 Bundle、骨骼动画、外观附件和音画反馈未开始。S7.2 仍受 Stage 6 E3/E4、Mapper 冻结以及项目方资产来源/授权/成本输入门禁阻断。
+状态：S7.2/S7.3 的双 KayKit 正式角色、骨骼、18 条运行时动作、左右手插槽与三种装备已接入；GLB/PNG 走三端宿主加载，来源 revision、CC0 文本和依赖文件完整性可复验。S7.4 已接入 Kenney CC0 四类命中音效、声音开关以及 reduced-motion 镜头/震动降级。S7.5 的 Formal Asset 专用格式、复杂度、纹理解码内存和音频预算已接入构建；真实授权 Bundle 的项目方批准和目标真机证据仍未完成。
 
 交付：
 

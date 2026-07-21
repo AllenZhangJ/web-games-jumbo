@@ -11,7 +11,7 @@
 | Gate | 覆盖阶段 | 已有能力 | 当前缺口 | 当前状态 |
 |---|---|---|---|---|
 | `stage6.input-pilot` | S6.6 | A/B Definition、区组分配、运行时观察、按 build 隔离的双槽工作区、Evidence Bundle、Audit/report/build/E3 release producer | 目标设备 E3、真实新手 E4、`candidate-winner` 与最终 Evidence Statement | incomplete（外部） |
-| `stage7.formal-assets` | S7.2～S7.5 | 角色/资产/动画语义 Registry、六方向、程序化占位、生命周期合同，以及拒绝灰盒的 Formal Asset Intake 来源/许可/文件复验合同 | 真实 Intake Bundle、两个正式角色、GLB/动作/附件/音画、实测预算 Policy、reduced-motion 和真机可读性 | incomplete（项目方输入与内容生产） |
+| `stage7.formal-assets` | S7.2～S7.5 | 双 KayKit 正式角色、18 动作语义、GLB/PNG 宿主加载、SkeletonUtils、左右手插槽、三种装备、Kenney CC0 命中音频、声音开关、reduced-motion 镜头/震动降级、来源/版本/CC0 文本、依赖文件完整性复验、Formal Asset 专用复杂度/内存预算和三端包体预算 | 项目方批准的真实 Intake Bundle，以及真机小屏/音频/reduced-motion/峰值内存可读性 | incomplete（批准与外部证据） |
 | `stage9.golden-replay` | S4～S9.2 | Replay V5 四类黄金场景、严格重放/再生成、历史拒绝及 release producer | 最终候选 clean commit 的 Evidence Statement | incomplete（候选材料） |
 | `stage9.regression` | S9.2 | 固定 Regression Definition、无 shell 受限编排、input fuzz、六文件 lifecycle、两条 100 局 soak、200 局 Product stress、原子 Report 及 release producer | 最终候选 clean commit 的 Evidence Report/Statement；开发中的 shell 聚合不可复用 | incomplete（候选材料） |
 | `stage9.balance-validation` | S9.3 | 900 局 11 条命 validation、可重建 Report Bundle、Product 默认及 release producer | 最终候选 clean commit 重跑 900 局并形成 Evidence Statement；旧 commit Report 不可复用 | incomplete（候选材料） |
@@ -29,7 +29,7 @@
 - Stage 6/8 设备记录回答触控与产品闭环，不由 Stage 9 性能 Trace 替代。
 - Stage 9 性能记录回答帧时间、内存和恢复，不由 Node soak 或桌面截图替代。
 - S9.3 Bot benchmark 回答确定性和相对能力，不由真人样本替代；S9.5 真人研究也不能由 Bot benchmark 替代。
-- 正式资产预算、许可和手机可读性不由程序化占位角色替代。
+- 正式资产许可和手机可读性不由桌面 Web 截图、程序化武器或构建预算替代。
 - 材料 SHA-256 只证明文件未变化，不证明报告结论正确；必须由具名 producer 重算。
 
 ## 下一工程批次
