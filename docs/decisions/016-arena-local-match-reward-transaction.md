@@ -19,6 +19,8 @@ S8.2 已能从本地 1v1 得到不可变 `ProductMatchResult`，但仍直接从 
 
 `RewardCommitter` 不持有 Repository，不管理 Profile 生命周期，只把候选 grant 交给 ProfileService。Repository 写入被明确拒绝且当前快照仍可读时留在 results 重试；写入结果不确定、Repository 失败关闭或读回不一致时产品失败关闭。
 
+G4.5b2 strict 迁移后，`RewardCommitter` 在构造期按数据描述符快照 Profile 端口方法，并校验提交 outcome 的 grant、revision、experience 和 unlock。只有异常自身以数据字段明确声明 `recoverable=true` 才允许重试；无法确认写入结果、访问器端口、重入或畸形 outcome 均失败关闭。它仍是 ProfileService 的非拥有型调用方，不增加第二个 Profile 写入者。
+
 ### 2. 奖励由不可变 Definition、Registry 与纯 Resolver 决定
 
 Arena V1 当前规则为：
@@ -46,6 +48,8 @@ Profile revision 在当前 results 重试期间保持不变，成功提交后恰
 - 同一未结算结果的失败重试得到同一 grantId；
 - 重复提交同一 grantId 不再次写入或增加经验；
 - 下一局即使 seed 与结果内容重复，也因 revision 不同而获得新事务身份。
+
+同一 RewardCommitter 持有的未结算事务按已经校验的 authority hash 缓存结果，因此调用方即使重建一个值相同但引用不同的不可变 ProductMatchResult，也不会绕过当前事务去重。进程重启不恢复半局或未结算结果；新 ProductSession 通过新的 Profile revision 建立后续事务，不能把 authority hash 单独当作永久幂等键。
 
 Profile V1 只保留最近一次已提交 grantId，不建立无界历史账本。这一做法依赖“单 ProductSession、单未结算结果、不持久化半局 Match”的明确产品生命周期，不是通用分布式幂等或反作弊协议。
 
@@ -104,6 +108,7 @@ in-match -> results -> reward -> unlock? -> ready
 
 - 奖励 Definition/Registry 边界、依赖环、固定点解锁和经验封顶有单测。
 - 相同结果对象提交 1000 次只产生一次 CAS；相同 grantId 再提交不增加经验。
+- 值相同但引用不同的结果对象仍只提交一次；可恢复拒写可精确重试，歧义写异常和畸形提交结果使 RewardCommitter 失败关闭。
 - 存储拒写保留 results/Runtime 并可重试；奖励成功后的清理失败不产生第二次 grant。
 - reward/unlock 在 suspended/resume 后保持公开数据与恢复目标。
 - 200 局无渲染压力跨 7 次重启校验累计经验、最近 grant、单 Match 所有权和隐藏难度不泄漏。

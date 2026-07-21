@@ -142,7 +142,7 @@ PlayerProfile + Content Definitions
 - 从 MatchResult 幂等提交单一进度。
 - 完成角色、外观、装备图鉴和地图内容解锁定义。
 
-状态：已完成无 UI 基础。当前完成奖励 100、胜利加成 25、平局加成 10；所有已实现内容保持解锁，生产 Registry 不编造尚不存在的 UnlockDefinition。Definition/Registry、纯 Resolver、RewardCommitter、唯一 `PlayerProfileService` 写入者、grant 去重和 reward/unlock 生命周期已经落地。详见 [ADR-016](../decisions/016-arena-local-match-reward-transaction.md) 与 [S8.3 结果记录](../research/arena-stage8-reward-progression-results.md)。
+状态：已完成无 UI 基础。当前完成奖励 100、胜利加成 25、平局加成 10；所有已实现内容保持解锁，生产 Registry 不编造尚不存在的 UnlockDefinition。Definition/Registry 已由 strict `arena-progression` 承接，ProductMatchResult 与纯 Resolver/RewardCommitter 已由 strict `arena-product-contracts`、`arena-product-progression` 承接；唯一 `PlayerProfileService` 写入者、grant 去重和 reward/unlock 生命周期保持不变。详见 [ADR-016](../decisions/016-arena-local-match-reward-transaction.md)、[S8.3 结果记录](../research/arena-stage8-reward-progression-results.md) 与 [企业治理状态台账](../governance/arena-enterprise-governance-status.md)。
 
 ### S8.4 对称内容与再来一局
 
