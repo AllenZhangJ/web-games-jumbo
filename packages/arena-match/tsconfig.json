@@ -12,6 +12,8 @@
     { "path": "../arena-contracts" },
     { "path": "../arena-core" },
     { "path": "../arena-definitions" },
+    { "path": "../arena-map" },
+    { "path": "../arena-movement" },
     { "path": "../arena-physics" }
   ],
   "include": ["src/**/*.ts"]

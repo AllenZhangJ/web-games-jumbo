@@ -4,7 +4,7 @@ import { createArenaV1ProductSession } from '../../../src/arena/product/composit
 import { ARENA_V1_BALANCE_DEFINITION } from '../../../src/arena/content/arena-v1-balance.js';
 import { STAGE4_ACTION_ID } from '../../../src/arena/content/stage4-equipment.js';
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
-import { ARENA_MATCH_EVENT } from '../../../src/arena/match-core.js';
+import { ARENA_MATCH_EVENT } from '@number-strategy-jump/arena-match';
 import { ProductSessionController } from '../../../src/arena/product/composition/product-session-controller.js';
 import { ARENA_V1_PLAYER_PROFILE_DEFINITION } from '../../../src/arena/product/content/arena-v1-player-profile-definition.js';
 import { ProductMatchCoordinator } from '../../../src/arena/product/matchmaking/product-match-coordinator.js';

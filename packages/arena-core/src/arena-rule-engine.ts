@@ -10,7 +10,11 @@ import {
 } from './action-resolver.js';
 import { ARENA_ACTION_PHASE } from './action-state.js';
 import { ActionExecutionSystem } from './action-execution-system.js';
-import { ActionAffordanceProjector } from './action-affordance.js';
+import type { ActionStateSnapshot } from './action-execution-system.js';
+import {
+  ActionAffordanceProjector,
+  type ActionAffordance,
+} from './action-affordance.js';
 import { ACTION_RULE_COMMAND } from './default-effect-handlers.js';
 import {
   assertIntegerAtLeast,
@@ -49,27 +53,62 @@ export interface EquipmentRegistryContract {
   list(): readonly EquipmentDefinition[];
 }
 
+export interface RuleEquipmentPosition {
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
+}
+
+export interface RuleEquipmentSnapshot {
+  readonly schemaVersion: number;
+  readonly instanceId: string;
+  readonly definitionId: string;
+  readonly spawnId: string;
+  readonly locationState: string;
+  readonly ownerId: string | null;
+  readonly position: RuleEquipmentPosition | null;
+  readonly originPosition: RuleEquipmentPosition;
+  readonly lastSafePosition: RuleEquipmentPosition | null;
+  readonly cooldownRemainingTicks: number;
+  readonly revision: number;
+}
+
+export interface RuleEquipmentPickupDecision {
+  readonly participantId: string;
+  readonly equipmentInstanceId: string;
+}
+
+export interface RuleEquipmentDropResult {
+  readonly participantId: string;
+  readonly equipment: RuleEquipmentSnapshot;
+  readonly fallbackUsed: boolean;
+  readonly despawned: boolean;
+  readonly diagnosticCode: string | null;
+}
+
 export interface EquipmentSystemContract {
   getActionCandidate(participantId: string): ActionCandidate | null;
   getAerialActionCandidate(participantId: string): ActionCandidate | null;
   assertActionCanStart(participantId: string, actionDefinitionId: string): unknown;
   markActionStarted(participantId: string, actionDefinitionId: string): unknown;
   advanceCooldowns(): readonly unknown[];
-  spawn(options: unknown): unknown;
-  resolvePickups(options: unknown): unknown;
-  updateLastSafePosition(participantId: string, position: unknown): unknown;
-  dropOwned(participantId: string, options: unknown): unknown;
-  despawnInvalidWorldEquipment(options: unknown): unknown;
-  getHeldEquipment(participantId: string): unknown;
-  getSnapshot(instanceId: string): unknown;
-  listSnapshots(): readonly unknown[];
+  spawn(options: unknown): RuleEquipmentSnapshot;
+  resolvePickups(options: unknown): readonly RuleEquipmentPickupDecision[];
+  updateLastSafePosition(
+    participantId: string,
+    position: unknown,
+  ): RuleEquipmentSnapshot | null;
+  dropOwned(participantId: string, options: unknown): RuleEquipmentDropResult | null;
+  despawnInvalidWorldEquipment(options: unknown): readonly RuleEquipmentSnapshot[];
+  getHeldEquipment(participantId: string): RuleEquipmentSnapshot | null;
+  getSnapshot(instanceId: string): RuleEquipmentSnapshot;
+  listSnapshots(): readonly RuleEquipmentSnapshot[];
   destroy(): void;
 }
 
 export interface MovementCapabilities {
   readonly participantId: string;
   readonly canBeginDownSmash: boolean;
-  readonly [key: string]: unknown;
 }
 
 export interface MovementCandidateProviderContract {
@@ -104,21 +143,24 @@ export interface ArenaRuleEngineContract {
   advanceTimers(): ArenaRuleTimerAdvance;
   resolveActions(options: unknown): ArenaRuleBatch;
   resolveActiveActions(options: unknown): ArenaRuleBatch;
-  commit(batch: unknown, ports: unknown): void;
+  commit(batch: ArenaRuleBatch, ports: RuleMutationPorts): void;
   resetParticipant(participantId: string): void;
-  getActionSnapshot(participantId: string): unknown;
-  getHeldEquipment(participantId: string): unknown;
-  getEquipmentSnapshot(instanceId: string): unknown;
-  listEquipmentSnapshots(): readonly unknown[];
-  spawnEquipment(options: unknown): unknown;
-  resolveEquipmentPickups(options: unknown): unknown;
-  updateEquipmentLastSafePosition(participantId: string, position: unknown): unknown;
-  dropEquipment(participantId: string, options: unknown): unknown;
-  despawnInvalidWorldEquipment(options: unknown): unknown;
+  getActionSnapshot(participantId: string): ActionStateSnapshot;
+  getHeldEquipment(participantId: string): RuleEquipmentSnapshot | null;
+  getEquipmentSnapshot(instanceId: string): RuleEquipmentSnapshot;
+  listEquipmentSnapshots(): readonly RuleEquipmentSnapshot[];
+  spawnEquipment(options: unknown): RuleEquipmentSnapshot;
+  resolveEquipmentPickups(options: unknown): readonly RuleEquipmentPickupDecision[];
+  updateEquipmentLastSafePosition(
+    participantId: string,
+    position: unknown,
+  ): RuleEquipmentSnapshot | null;
+  dropEquipment(participantId: string, options: unknown): RuleEquipmentDropResult | null;
+  despawnInvalidWorldEquipment(options: unknown): readonly RuleEquipmentSnapshot[];
   requireEquipmentDefinition(definitionId: string): EquipmentDefinition;
   getContentHash(): string;
   getMovementActionCandidates(capabilities: MovementCapabilities): readonly ActionCandidate[];
-  getActionAffordance(options: unknown): unknown;
+  getActionAffordance(options: unknown): ActionAffordance;
   getParticipantActionRule(participantId: string): PublicActionRule;
   destroy(): void;
 }
@@ -144,13 +186,17 @@ export interface RuleHit {
   readonly actionDefinitionId: string;
 }
 
+export interface ArenaRuleDomainEvent extends UnknownRecord {
+  readonly type: string;
+}
+
 export interface ArenaRuleBatch {
   readonly resolutions: readonly ActionResolution[];
   readonly starts: readonly ActionStart[];
   readonly hits: readonly RuleHit[];
   readonly commands: readonly DeepReadonly<EnrichedRuleCommand>[];
   readonly movementCommands: readonly unknown[];
-  readonly events: readonly UnknownRecord[];
+  readonly events: readonly ArenaRuleDomainEvent[];
 }
 
 export interface ArenaRuleTimerAdvance {
@@ -169,10 +215,16 @@ export interface PublicActionRule {
   readonly recoveryTicks: number;
 }
 
-interface RuleMutationPorts {
+export interface RuleImpulse {
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
+}
+
+export interface RuleMutationPorts {
   readonly recordHit: (attackerId: string, targetId: string, actionDefinitionId: string) => unknown;
   readonly applyHitstun: (participantId: string, ticks: number) => unknown;
-  readonly applyImpulse: (participantId: string, impulse: unknown) => unknown;
+  readonly applyImpulse: (participantId: string, impulse: RuleImpulse) => unknown;
 }
 
 interface RuleCommitBatch {
@@ -710,7 +762,7 @@ export class ArenaRuleEngine {
       }
     }
     const commands: EnrichedRuleCommand[] = [];
-    const events: UnknownRecord[] = [];
+    const events: ArenaRuleDomainEvent[] = [];
     for (const [index, start] of starts.entries()) {
       const definition = this.#actionRegistry.require(start.actionDefinitionId);
       const source = requireMapValue(
@@ -853,7 +905,7 @@ export class ArenaRuleEngine {
       }
     }
     const guardedCommands = applyFrontGuards(commands, guards, actorsById);
-    const events: UnknownRecord[] = [];
+    const events: ArenaRuleDomainEvent[] = [];
     for (const [hitIndex, hit] of hits.entries()) {
       events.push(Object.freeze({
         type: ARENA_RULE_EVENT.HIT_RESOLVED,
@@ -916,27 +968,30 @@ export class ArenaRuleEngine {
     }
   }
 
-  spawnEquipment(options: unknown): unknown {
+  spawnEquipment(options: unknown): RuleEquipmentSnapshot {
     this.#assertUsable();
     return this.#equipmentSystem.spawn(options);
   }
 
-  resolveEquipmentPickups(options: unknown): unknown {
+  resolveEquipmentPickups(options: unknown): readonly RuleEquipmentPickupDecision[] {
     this.#assertUsable();
     return this.#equipmentSystem.resolvePickups(options);
   }
 
-  updateEquipmentLastSafePosition(participantId: string, position: unknown): unknown {
+  updateEquipmentLastSafePosition(
+    participantId: string,
+    position: unknown,
+  ): RuleEquipmentSnapshot | null {
     this.#assertUsable();
     return this.#equipmentSystem.updateLastSafePosition(participantId, position);
   }
 
-  dropEquipment(participantId: string, options: unknown): unknown {
+  dropEquipment(participantId: string, options: unknown): RuleEquipmentDropResult | null {
     this.#assertUsable();
     return this.#equipmentSystem.dropOwned(participantId, options);
   }
 
-  despawnInvalidWorldEquipment(options: unknown): unknown {
+  despawnInvalidWorldEquipment(options: unknown): readonly RuleEquipmentSnapshot[] {
     this.#assertUsable();
     return this.#equipmentSystem.despawnInvalidWorldEquipment(options);
   }
@@ -946,22 +1001,22 @@ export class ArenaRuleEngine {
     this.#actionExecution.reset(participantId);
   }
 
-  getActionSnapshot(participantId: string) {
+  getActionSnapshot(participantId: string): ActionStateSnapshot {
     this.#assertUsable();
     return this.#actionExecution.getSnapshot(participantId);
   }
 
-  getHeldEquipment(participantId: string): unknown {
+  getHeldEquipment(participantId: string): RuleEquipmentSnapshot | null {
     this.#assertUsable();
     return this.#equipmentSystem.getHeldEquipment(participantId);
   }
 
-  getEquipmentSnapshot(instanceId: string): unknown {
+  getEquipmentSnapshot(instanceId: string): RuleEquipmentSnapshot {
     this.#assertUsable();
     return this.#equipmentSystem.getSnapshot(instanceId);
   }
 
-  listEquipmentSnapshots(): readonly unknown[] {
+  listEquipmentSnapshots(): readonly RuleEquipmentSnapshot[] {
     this.#assertUsable();
     return this.#equipmentSystem.listSnapshots();
   }
@@ -994,7 +1049,7 @@ export class ArenaRuleEngine {
     return Object.freeze([...movementCandidates, aerialCandidate]);
   }
 
-  getActionAffordance(options: unknown) {
+  getActionAffordance(options: unknown): ActionAffordance {
     this.#assertUsable();
     assertKnownKeys(options, AFFORDANCE_KEYS, 'ArenaRuleEngine action affordance options');
     const tick = assertIntegerAtLeast(options.tick, 0, 'ArenaRuleEngine affordance tick');

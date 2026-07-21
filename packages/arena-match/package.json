@@ -16,6 +16,8 @@
     "@number-strategy-jump/arena-contracts": "0.1.0",
     "@number-strategy-jump/arena-core": "0.1.0",
     "@number-strategy-jump/arena-definitions": "0.1.0",
+    "@number-strategy-jump/arena-map": "0.1.0",
+    "@number-strategy-jump/arena-movement": "0.1.0",
     "@number-strategy-jump/arena-physics": "0.1.0"
   }
 }

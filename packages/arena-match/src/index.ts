@@ -44,3 +44,7 @@ export {
   createMatchStateHash,
 } from './state-hash.js';
 export type { ArenaInternalMatchSnapshot } from './state-hash.js';
+export {
+  ARENA_MATCH_EVENT,
+  MatchCore,
+} from './match-core.js';

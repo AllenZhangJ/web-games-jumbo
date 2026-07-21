@@ -53,7 +53,7 @@ export interface ArenaMapAdvanceBatch {
 
 export interface ArenaMapSystemContract {
   advance(options: unknown): ArenaMapAdvanceBatch;
-  commit(batch: unknown, ports: unknown): void;
+  commit(batch: ArenaMapAdvanceBatch, ports: MapMutationPorts): void;
   getSnapshot(): ArenaMapSnapshot;
   getStateSnapshot(): MapRuntimeInternalSnapshot;
   getContentHash(): string;

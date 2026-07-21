@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createArenaV1MatchCore } from '../../src/arena/arena-v1-match-core.js';
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
-import { ARENA_MATCH_EVENT } from '../../src/arena/match-core.js';
+import { ARENA_MATCH_EVENT } from '@number-strategy-jump/arena-match';
 import {
   STAGE4_ACTION_ID,
   STAGE4_EQUIPMENT_ID,

@@ -1,5 +1,5 @@
 import { ARENA_MATCH_PHASE } from '@number-strategy-jump/arena-match';
-import { MatchCore } from '../match-core.js';
+import { MatchCore } from '@number-strategy-jump/arena-match';
 
 export class FixedStepMatchRuntime {
   #core;

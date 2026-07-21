@@ -595,7 +595,7 @@ test('Arena bot layers preserve dependency direction and tick determinism', asyn
   const authorityFiles = [
     'packages/arena-match/src/match-config.ts',
     'packages/arena-contracts/src/input-frame.ts',
-    'src/arena/match-core.js',
+    'packages/arena-match/src/match-core.ts',
     'src/arena/replay.js',
     'packages/arena-match/src/state-hash.ts',
     ...await listJavaScript(path.resolve('src/arena/physics')),
@@ -622,7 +622,6 @@ test('Arena Rule/Core foundation preserves dependency direction and deterministi
     path.resolve('packages/arena-core/src'),
     path.resolve('packages/arena-equipment/src'),
     path.resolve('packages/arena-map/src'),
-    path.resolve('packages/arena-match/src'),
     path.resolve('packages/arena-movement/src'),
     path.resolve('packages/arena-physics/src'),
   );
@@ -633,6 +632,21 @@ test('Arena Rule/Core foundation preserves dependency direction and deterministi
       source,
       /(?:\/ai\/|\/session\/|\/matchmaking\/|\/content\/|match-core|replay|render3d|\/platform\/|from\s+['"]three['"])/,
       `${file} 违反了 Rule/Core 单向依赖。`,
+    );
+    assert.doesNotMatch(
+      source,
+      /(?:Date\.now|Math\.random|\bperformance\b|setTimeout|setInterval|requestAnimationFrame|localeCompare)/,
+      `${file} 使用了墙钟、非确定性随机或表现调度。`,
+    );
+  }
+
+  const matchFiles = await listJavaScript(path.resolve('packages/arena-match/src'));
+  for (const file of matchFiles) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /(?:\/ai\/|\/session\/|\/matchmaking\/|\/presentation\/|\/platform\/|from\s+['"]three['"]|\b(?:window|document|navigator)\b)/,
+      `${file} 越过了 Match 权威编排边界。`,
     );
     assert.doesNotMatch(
       source,
@@ -715,22 +729,27 @@ test('Arena Rule/Core foundation preserves dependency direction and deterministi
       '@number-strategy-jump/arena-contracts',
       '@number-strategy-jump/arena-core',
       '@number-strategy-jump/arena-definitions',
+      '@number-strategy-jump/arena-map',
+      '@number-strategy-jump/arena-movement',
       '@number-strategy-jump/arena-physics',
     ],
-    'arena-match 编排层只能依赖底层合同、Core、Definition 与 Physics。',
+    'arena-match 编排层只能依赖底层合同、Core、Definition、Map、Movement 与 Physics。',
   );
 
-  const matchCoreSource = await readFile(path.resolve('src/arena/match-core.js'), 'utf8');
+  const matchCoreSource = await readFile(
+    path.resolve('packages/arena-match/src/match-core.ts'),
+    'utf8',
+  );
   assert.match(matchCoreSource, /MatchParticipantSystem/);
   assert.match(matchCoreSource, /MatchTimelineSystem/);
   assert.doesNotMatch(
     matchCoreSource,
-    /from\s+['"]\.\/(?:state-hash|lifecycle-error|character\/character-(?:runtime|physics-profile))\.js['"]/,
-    'MatchCore 不得重新依赖已迁出的本地权威原语。',
+    /from\s+['"][^'"]*src\/arena\//,
+    'strict MatchCore 不得反向依赖 src\/arena 私有权威原语。',
   );
   assert.doesNotMatch(
     matchCoreSource,
-    /#participants\b|function\s+createParticipant\b|#(?:tick|activeTick|phase|result|started)\b/,
+    /#participants\s*(?::|=|;)|function\s+createParticipant\b|#(?:tick|activeTick|phase|result|started)\s*(?::|=|;)/,
     'MatchCore 不得重新持有 participant Map、私有 participant 构造器或 timeline 可写字段。',
   );
 });

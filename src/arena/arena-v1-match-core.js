@@ -11,7 +11,7 @@ import {
   STATIC_MAP_ID_PREFIX,
   createStaticMapDefinition,
 } from '@number-strategy-jump/arena-definitions';
-import { MatchCore } from './match-core.js';
+import { MatchCore } from '@number-strategy-jump/arena-match';
 import { createArenaMatchConfig } from '@number-strategy-jump/arena-match';
 import {
   assertKnownKeys,

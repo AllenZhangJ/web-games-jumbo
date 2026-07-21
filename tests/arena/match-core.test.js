@@ -8,7 +8,7 @@ import {
   createArenaMatchSnapshotAudit,
   createNeutralInputFrame,
 } from '@number-strategy-jump/arena-contracts';
-import { ARENA_MATCH_EVENT } from '../../src/arena/match-core.js';
+import { ARENA_MATCH_EVENT } from '@number-strategy-jump/arena-match';
 import { createArenaV1MatchCore } from '../../src/arena/arena-v1-match-core.js';
 import { createLightweightPhysicsWorld } from '@number-strategy-jump/arena-physics';
 import { createArenaV1RuleEngine } from '../../src/arena/composition/arena-v1-rule-engine.js';
@@ -211,7 +211,18 @@ test('authority config rejects accessors and unknown wrapper fields before invok
   );
 });
 
-test('MatchCore cleans an incomplete or failed map authority during construction', () => {
+test('MatchCore cleans incomplete factory resources and failed map authority during construction', () => {
+  let incompleteRuleDestroyed = 0;
+  assert.throws(() => createArenaV1MatchCore({
+    config: { arena: TEST_ARENA },
+    ruleEngineFactory() {
+      return {
+        destroy() { incompleteRuleDestroyed += 1; },
+      };
+    },
+  }), /缺少 advanceTimers/);
+  assert.equal(incompleteRuleDestroyed, 1);
+
   let incompleteDestroyed = 0;
   assert.throws(() => createArenaV1MatchCore({
     config: { arena: TEST_ARENA },
@@ -222,6 +233,17 @@ test('MatchCore cleans an incomplete or failed map authority during construction
     },
   }), /缺少 advance/);
   assert.equal(incompleteDestroyed, 1);
+
+  let incompletePhysicsDestroyed = 0;
+  assert.throws(() => createArenaV1MatchCore({
+    config: { arena: TEST_ARENA },
+    physicsFactory() {
+      return {
+        destroy() { incompletePhysicsDestroyed += 1; },
+      };
+    },
+  }), /缺少 addCharacter/);
+  assert.equal(incompletePhysicsDestroyed, 1);
 
   let failedDestroyed = 0;
   assert.throws(() => createArenaV1MatchCore({

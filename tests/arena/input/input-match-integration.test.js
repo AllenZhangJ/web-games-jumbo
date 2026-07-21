@@ -4,7 +4,7 @@ import { createArenaV1MatchCore } from '../../../src/arena/arena-v1-match-core.j
 import { STAGE4_ACTION_ID } from '../../../src/arena/content/stage4-equipment.js';
 import { STAGE6_MOVEMENT_ACTION_ID } from '../../../src/arena/content/stage6-movement-actions.js';
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
-import { ARENA_MATCH_EVENT } from '../../../src/arena/match-core.js';
+import { ARENA_MATCH_EVENT } from '@number-strategy-jump/arena-match';
 import { MOVEMENT_MODE } from '@number-strategy-jump/arena-movement';
 import { createContextInputMapperB } from '../../../src/arena/presentation/input/context-input-mapper-b.js';
 import { createGestureInputMapperA } from '../../../src/arena/presentation/input/gesture-input-mapper-a.js';

@@ -131,7 +131,6 @@
     "src/arena/experiment/metric-gate.js",
     "src/arena/experiment/simulation-runner.js",
     "src/arena/experiment/simulation-workload-registry.js",
-    "src/arena/match-core.js",
     "src/arena/matchmaking/match-assignment.js",
     "src/arena/matchmaking/quick-match-service.js",
     "src/arena/matchmaking/seed-source.js",
