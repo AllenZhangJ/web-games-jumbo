@@ -7,7 +7,7 @@
 ## 本轮落地状态
 
 - A1 已完成代码侧改造：角色插值向量复用；命中特效改为固定容量预热池；正式角色攻击 `AnimationAction` 入局预热，命中时不再临时创建动作、几何体或材质。
-- A2 已完成权威入口：`arena-gameplay-v2-tuning.js` 统一配置移动速度、目标跳高、攻击三段时长、攻击范围和目标击退距离；高度/距离在组合阶段编译为确定性 impulse。
+- A2 已完成权威入口：`packages/arena-definitions/src/arena-gameplay-v2-tuning.ts` 统一配置移动速度、目标跳高、攻击三段时长、攻击范围和目标击退距离；高度/距离在组合阶段编译为确定性 impulse。
 - A3 已完成首版：正式 GLTF 使用上半身 track mask 叠加攻击，程序化与 GLTF 视图均实现 `raise → swing → follow-through → retract`，锤、链、盾具有不同肘/腕曲线和武器缩放峰值。
 - A4 已完成首版：赤手、锤、链、盾分别拥有空中攻击 Definition；Rule 只在显式战斗控制且 airborne 时生成高优先级候选；Core 执行向下初速、逐 tick 加速、最大速度和向下圆柱命中。
 - A5 已完成自动门禁与浏览器前置；iPhone 13 Pro / iOS 26 / Chrome 的 10 分钟温升和贴身连续 30 次攻击仍必须在真机记录，不能由 Node 或桌面浏览器替代。

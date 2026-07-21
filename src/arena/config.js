@@ -3,7 +3,7 @@ import { ARENA_V1_DEFAULT_CHARACTER_ID } from './content/arena-v1-character-ids.
 import { createMatchContentSelection } from './content/match-content-selection.js';
 import { createStaticMapDefinition } from './map/map-definition.js';
 import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
-import { ARENA_GAMEPLAY_V2_TUNING } from './content/arena-gameplay-v2-tuning.js';
+import { ARENA_GAMEPLAY_V2_TUNING } from '@number-strategy-jump/arena-definitions';
 
 export const ARENA_TICK_RATE = ARENA_GAMEPLAY_V2_TUNING.units.tickRateHz;
 export const ARENA_FIXED_DT = 1 / ARENA_TICK_RATE;

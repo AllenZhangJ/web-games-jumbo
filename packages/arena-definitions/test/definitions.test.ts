@@ -1,5 +1,6 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import {
+  ARENA_GAMEPLAY_V2_TUNING,
   ACTION_DEFINITION_SCHEMA_VERSION,
   ACTION_EFFECT_TRIGGER,
   ACTION_INPUT_CHANNEL,
@@ -12,6 +13,7 @@ import {
   createCharacterDefinition,
 } from '../src/index.js';
 import type { ActionDefinition, CharacterDefinition } from '../src/index.js';
+import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 
 function action(id: string): ActionDefinition {
   return createActionDefinition({
@@ -64,6 +66,11 @@ function character(id: string): CharacterDefinition {
 }
 
 describe('Arena Definition public contracts', () => {
+  it('freezes the one executable gameplay tuning table behind a reviewed hash', () => {
+    expect(Object.isFrozen(ARENA_GAMEPLAY_V2_TUNING)).toBe(true);
+    expect(createDeterministicDataHash(ARENA_GAMEPLAY_V2_TUNING)).toBe('8c322912');
+  });
+
   it('exposes immutable typed definitions from its public API', () => {
     const actionDefinition = action('z');
     const characterDefinition = character('player');

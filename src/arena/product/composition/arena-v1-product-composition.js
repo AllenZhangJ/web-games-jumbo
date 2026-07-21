@@ -1,6 +1,6 @@
 import { QuickMatchService } from '../../matchmaking/quick-match-service.js';
 import { ARENA_V1_BALANCE_DEFINITION } from '../../content/arena-v1-balance.js';
-import { ARENA_GAMEPLAY_V2_TUNING } from '../../content/arena-gameplay-v2-tuning.js';
+import { ARENA_GAMEPLAY_V2_TUNING } from '@number-strategy-jump/arena-definitions';
 import {
   combineCleanupFailure,
   normalizeThrownError,

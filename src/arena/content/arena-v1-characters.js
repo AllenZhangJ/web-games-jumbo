@@ -7,7 +7,7 @@ import { ARENA_V1_CHARACTER_ID } from './arena-v1-character-ids.js';
 import {
   ARENA_GAMEPLAY_V2_TUNING,
   compileJumpImpulseFromHeight,
-} from './arena-gameplay-v2-tuning.js';
+} from '@number-strategy-jump/arena-definitions';
 
 const CHARACTER_TUNING = ARENA_GAMEPLAY_V2_TUNING.character;
 

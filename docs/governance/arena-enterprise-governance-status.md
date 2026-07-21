@@ -29,7 +29,7 @@
 | --- | --- | --- |
 | G0 基线冻结 | 已完成 | 自动化、压力、资产和三端构建通过；ADR/计划/证据已落盘；tag `arena-product-baseline-51e2822` 指向基线提交 |
 | G1 治理外壳/唯一产品 | 已完成 | Arena 已成为唯一生产产品；旧产品实现/专属测试/资产/规范已退役；strict TS、ESLint、Vitest、CI、CODEOWNERS、JS 递减清单和唯一产物门禁已启用 |
-| G2 Definition/合同/配置 | 进行中 | 已建立 strict TS `arena-contracts` 与 `arena-definitions` workspace，并迁入确定性合同、动作/角色 Definition 和只读 Registry；当前仍有 514 个受审计 JavaScript 文件，其余 Definition/统一数值配置仍待迁移 |
+| G2 Definition/合同/配置 | 进行中 | 已建立 strict TS `arena-contracts` 与 `arena-definitions` workspace，并迁入确定性合同、动作/角色 Definition、只读 Registry 和唯一 Gameplay V2 数值配置；当前仍有 513 个受审计 JavaScript 文件，其余 Definition/合同仍待迁移 |
 | G3 Rule/Core/Replay | 未开始 | 当前行为有 Replay/hash 证据，但尚未迁入 strict TS |
 | G4 Bot/Product/Persistence | 未开始 | 当前功能与压力证据存在，尚未迁入 strict TS workspace |
 | G5 Presentation/资产/反馈 | 未开始 | 正式资产预算通过；审批字段与唯一正常路径仍待治理 |
@@ -55,7 +55,7 @@
 
 ## 当前不可合并原因
 
-1. 当前 514 个受维护 JavaScript 文件仍在精确允许清单中，Definition/Core/Bot/Presentation/Platform 尚未完成 strict TypeScript workspace 迁移。
+1. 当前 513 个受维护 JavaScript 文件仍在精确允许清单中，Definition/Core/Bot/Presentation/Platform 尚未完成 strict TypeScript workspace 迁移。
 2. Vitest 当前只保护治理门禁；Arena 测试尚待按 workspace 迁移并建立正式 coverage 阈值与零 JS 门禁。
 3. 正式资产最终审批与完整安全/依赖长期治理尚未闭环。
 4. 文档仍含迁移前阶段性叙述，尚未完成 G9 全量链接、状态与命令归真。
@@ -92,4 +92,12 @@
 - Registry 构造阶段执行完整归一化、稳定 ID 排序和重复 ID 拒绝，不向调用者暴露内部可变集合。
 - 所有生产与测试消费者改为通过 workspace 包导入，不再依赖原源码相对路径。
 - JavaScript 精确允许清单由 518 降至 514；8 项 Vitest 包/治理测试和 44 项动作/角色/移动定向回归通过。
-- 本批仍未迁移装备、地图、输入、事件、存档与平台合同，也未完成统一数值配置，因此 G2 保持进行中。
+- 本批提交时尚未迁移统一数值配置；该项已由下方 G2.3 承接。装备、地图、输入、事件、存档与平台合同仍是 G2 阻断项。
+
+## G2.3 唯一 Gameplay 数值配置迁移证据
+
+- 移动、跳跃、拾取、8 个地面/空中攻击及其范围、起手/生效/收手/冷却、击退和僵直已迁入 `arena-definitions` 的 strict TypeScript 配置真值。
+- 现有权威数值逐项保持不变，稳定配置 hash 为 `8c322912`；任何数值变更都必须显式更新受审查 hash 和 Replay 证据。
+- `npm run arena:config:print` 直接输出运行时消费的完整配置，不维护第二套手抄表；字段对应关系见 [Arena Gameplay V2 数值配置真值](arena-gameplay-config.md)。
+- 角色、装备、Product 和物理配置消费者全部改用 workspace 公共入口；16 项配置/角色/装备定向测试通过。
+- JavaScript 精确允许清单由 514 降至 513；装备、地图、输入、事件、存档和平台合同仍待迁移，G2 保持进行中。

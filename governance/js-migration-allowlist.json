@@ -89,7 +89,6 @@
     "src/arena/composition/arena-v1-rule-engine.js",
     "src/arena/config.js",
     "src/arena/content/arena-gameplay-v2-map.js",
-    "src/arena/content/arena-gameplay-v2-tuning.js",
     "src/arena/content/arena-v1-balance.js",
     "src/arena/content/arena-v1-character-ids.js",
     "src/arena/content/arena-v1-characters.js",

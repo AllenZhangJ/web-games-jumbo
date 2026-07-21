@@ -21,7 +21,7 @@ import {
   ARENA_GAMEPLAY_V2_TUNING,
   compileHorizontalImpulseFromDistance,
   compileJumpImpulseFromHeight,
-} from '../../src/arena/content/arena-gameplay-v2-tuning.js';
+} from '@number-strategy-jump/arena-definitions';
 
 function definition(overrides = {}) {
   return {

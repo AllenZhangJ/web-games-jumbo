@@ -2,45 +2,76 @@ const TICK_RATE_HZ = 60;
 const GRAVITY_MAGNITUDE = 24;
 const GROUND_DECELERATION = 42;
 
-function positiveFinite(value, name) {
-  if (!Number.isFinite(value) || value <= 0) throw new RangeError(`${name} 必须大于 0。`);
-  return value;
+function positiveFinite(value: unknown, name: string): number {
+  if (!Number.isFinite(value) || (value as number) <= 0) throw new RangeError(`${name} 必须大于 0。`);
+  return value as number;
 }
 
-function nonNegativeFinite(value, name) {
-  if (!Number.isFinite(value) || value < 0) throw new RangeError(`${name} 必须大于等于 0。`);
-  return value;
+function nonNegativeFinite(value: unknown, name: string): number {
+  if (!Number.isFinite(value) || (value as number) < 0) throw new RangeError(`${name} 必须大于等于 0。`);
+  return value as number;
 }
 
-function integerAtLeast(value, minimum, name) {
-  if (!Number.isSafeInteger(value) || value < minimum) {
+function integerAtLeast(value: unknown, minimum: number, name: string): number {
+  if (!Number.isSafeInteger(value) || (value as number) < minimum) {
     throw new RangeError(`${name} 必须是大于等于 ${minimum} 的安全整数。`);
   }
-  return value;
+  return value as number;
 }
 
-function deepFreeze(value) {
+function deepFreeze<T>(value: T): Readonly<T> {
   if (!value || typeof value !== 'object' || Object.isFrozen(value)) return value;
-  for (const child of Object.values(value)) deepFreeze(child);
+  for (const child of Object.values(value as Record<string, unknown>)) deepFreeze(child);
   return Object.freeze(value);
 }
 
-export function compileJumpImpulseFromHeight(targetHeight, {
+export function compileJumpImpulseFromHeight(targetHeight: number, {
   gravityMagnitude = GRAVITY_MAGNITUDE,
-} = {}) {
+}: { readonly gravityMagnitude?: number } = {}): number {
   const height = positiveFinite(targetHeight, 'targetJumpHeight');
   const gravity = positiveFinite(gravityMagnitude, 'gravityMagnitude');
   return Math.sqrt(2 * gravity * height);
 }
 
-export function compileHorizontalImpulseFromDistance(targetDistance, {
+export function compileHorizontalImpulseFromDistance(targetDistance: number, {
   deceleration = GROUND_DECELERATION,
   mass = 1,
-} = {}) {
+}: { readonly deceleration?: number; readonly mass?: number } = {}): number {
   const distance = positiveFinite(targetDistance, 'targetKnockbackDistance');
   const stoppingAcceleration = positiveFinite(deceleration, 'knockbackDeceleration');
   const characterMass = positiveFinite(mass, 'characterMass');
   return Math.sqrt(2 * stoppingAcceleration * distance) * characterMass;
+}
+
+interface AttackTargetingInput {
+  readonly kind: string;
+  readonly range: number;
+  readonly maximumVerticalDifference: number;
+  readonly minimumFacingDot?: number;
+  readonly radius?: number;
+  readonly minimumVerticalDrop?: number;
+}
+
+interface AttackInput {
+  readonly targeting: AttackTargetingInput;
+  readonly windupTicks: number;
+  readonly activeTicks: number;
+  readonly recoveryTicks: number;
+  readonly cooldownTicks: number;
+  readonly targetGroundKnockbackDistance: number;
+  readonly verticalImpulse: number;
+  readonly hitstunTicks: number;
+  readonly guard?: Readonly<{ minimumFacingDot: number; impulseMultiplier: number }> | null;
+  readonly selfMovement?: Readonly<{ horizontalImpulse: number }> | null;
+}
+
+interface NormalizedAttackTargeting {
+  kind: string;
+  range: number;
+  maximumVerticalDifference: number;
+  minimumFacingDot?: number;
+  radius?: number;
+  minimumVerticalDrop?: number;
 }
 
 function attack({
@@ -54,7 +85,7 @@ function attack({
   hitstunTicks,
   guard = null,
   selfMovement = null,
-}) {
+}: AttackInput) {
   const timing = {
     windupTicks: integerAtLeast(windupTicks, 0, 'attack.windupTicks'),
     activeTicks: integerAtLeast(activeTicks, 1, 'attack.activeTicks'),
@@ -63,7 +94,7 @@ function attack({
   };
   const actionDurationTicks = timing.windupTicks + timing.activeTicks + timing.recoveryTicks;
   const repeatIntervalTicks = Math.max(actionDurationTicks, timing.cooldownTicks);
-  const normalizedTargeting = {
+  const normalizedTargeting: NormalizedAttackTargeting = {
     kind: targeting.kind,
     range: positiveFinite(targeting.range, 'attack.targeting.range'),
     maximumVerticalDifference: positiveFinite(

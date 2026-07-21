@@ -34,3 +34,8 @@ export {
   createCharacterRegistrySnapshot,
 } from './character-registry.js';
 export type { CharacterRegistryContract } from './character-registry.js';
+export {
+  ARENA_GAMEPLAY_V2_TUNING,
+  compileHorizontalImpulseFromDistance,
+  compileJumpImpulseFromHeight,
+} from './arena-gameplay-v2-tuning.js';
