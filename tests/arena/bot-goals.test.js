@@ -9,7 +9,7 @@ import {
   cloneBotSourceSnapshot,
   createBotArenaView,
   createBotObservation,
-} from '../../src/arena/ai/bot-observation.js';
+} from '@number-strategy-jump/arena-bot';
 import { createArenaV1MatchCore } from '../../src/arena/arena-v1-match-core.js';
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
 

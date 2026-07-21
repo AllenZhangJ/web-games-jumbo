@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   BOT_DIFFICULTY_IDS,
   BOT_DIFFICULTY_PROFILES,
+  cloneBotSourceSnapshot,
+  createBotArenaView,
+  createBotObservation,
   createBotPersonality,
   getBotDifficultyProfile,
   selectHighestUtility,
@@ -85,6 +88,39 @@ describe('arena-bot deterministic foundation', () => {
       score: () => 1,
       createPlan: () => plan,
     }], {})).toThrow(/计划字段不得是访问器/);
+    expect(getterCalls).toBe(0);
+  });
+
+  it('rejects observation and arena accessors without executing caller code', () => {
+    let getterCalls = 0;
+    const arena = Object.defineProperty({}, 'surfaces', {
+      enumerable: true,
+      get() {
+        getterCalls += 1;
+        return [];
+      },
+    });
+    expect(() => createBotArenaView(arena, 0.4)).toThrow(/数据字段|访问器/);
+    expect(getterCalls).toBe(0);
+
+    const snapshot = Object.defineProperty({}, 'tick', {
+      enumerable: true,
+      get() {
+        getterCalls += 1;
+        return 0;
+      },
+    });
+    expect(() => cloneBotSourceSnapshot(snapshot)).toThrow(/数据字段|访问器/);
+    expect(getterCalls).toBe(0);
+
+    const options = Object.defineProperty({}, 'commandSnapshot', {
+      enumerable: true,
+      get() {
+        getterCalls += 1;
+        return null;
+      },
+    });
+    expect(() => createBotObservation(options)).toThrow(/数据字段|访问器/);
     expect(getterCalls).toBe(0);
   });
 });

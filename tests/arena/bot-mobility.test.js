@@ -5,7 +5,7 @@ import {
   cloneBotSourceSnapshot,
   createBotArenaView,
   createBotObservation,
-} from '../../src/arena/ai/bot-observation.js';
+} from '@number-strategy-jump/arena-bot';
 import {
   BOT_MOBILITY_INTENT,
   selectBotMobilityIntent,

@@ -5,7 +5,7 @@ import {
   cloneBotSourceSnapshot,
   createBotArenaView,
   createBotObservation,
-} from '../../src/arena/ai/bot-observation.js';
+} from '@number-strategy-jump/arena-bot';
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
 
 test('BotObservation exposes only public delayed opponent state and is deeply frozen', () => {

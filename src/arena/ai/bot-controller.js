@@ -2,16 +2,14 @@ import { ARENA_PARTICIPANT_STATUS } from '@number-strategy-jump/arena-match';
 import { normalizeInputFrame } from '@number-strategy-jump/arena-contracts';
 import { createRng } from '@number-strategy-jump/arena-contracts';
 import {
+  cloneBotSourceSnapshot,
+  createBotArenaView,
+  createBotObservation,
   createBotPersonality,
   getBotDifficultyProfile,
   selectHighestUtility,
 } from '@number-strategy-jump/arena-bot';
 import { getArenaBotEvaluators, BOT_GOAL_ID } from './bot-goals.js';
-import {
-  cloneBotSourceSnapshot,
-  createBotArenaView,
-  createBotObservation,
-} from './bot-observation.js';
 import {
   BOT_MOBILITY_INTENT,
   selectBotMobilityIntent,

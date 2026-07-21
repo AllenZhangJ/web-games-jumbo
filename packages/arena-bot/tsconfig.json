@@ -9,7 +9,11 @@
     "outDir": "dist"
   },
   "references": [
-    { "path": "../arena-contracts" }
+    { "path": "../arena-contracts" },
+    { "path": "../arena-equipment" },
+    { "path": "../arena-map" },
+    { "path": "../arena-match" },
+    { "path": "../arena-movement" }
   ],
   "include": ["src/**/*.ts"]
 }

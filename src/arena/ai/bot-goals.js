@@ -16,7 +16,7 @@ import {
   safestHazardTarget,
   supportSurface,
   surfaceForPosition,
-} from './bot-map-navigation.js';
+} from '@number-strategy-jump/arena-bot';
 
 export const BOT_GOAL_ID = Object.freeze({
   INACTIVE: 'inactive',

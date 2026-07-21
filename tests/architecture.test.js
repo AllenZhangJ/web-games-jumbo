@@ -757,8 +757,14 @@ test('Arena Rule/Core foundation preserves dependency direction and deterministi
   ));
   assert.deepEqual(
     Object.keys(botPackage.dependencies).sort(),
-    ['@number-strategy-jump/arena-contracts'],
-    'arena-bot 基础策略只能依赖底层合同。',
+    [
+      '@number-strategy-jump/arena-contracts',
+      '@number-strategy-jump/arena-equipment',
+      '@number-strategy-jump/arena-map',
+      '@number-strategy-jump/arena-match',
+      '@number-strategy-jump/arena-movement',
+    ],
+    'arena-bot 只能依赖公开合同、装备/地图公开状态、Match 枚举与 Movement 枚举。',
   );
 
   const matchCoreSource = await readFile(
