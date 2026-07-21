@@ -1,5 +1,5 @@
 import { ARENA_FIXED_DT, PHYSICS_POC_ARENA, PHYSICS_POC_CHARACTER } from '../config.js';
-import { assertPhysicsWorld } from './physics-adapter.js';
+import { assertPhysicsWorld } from '@number-strategy-jump/arena-physics';
 
 function finiteState(state) {
   return [

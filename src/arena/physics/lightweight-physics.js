@@ -9,7 +9,7 @@ import {
   normalizeMovementIntent,
   validateArenaDefinition,
   validateCharacterDefinition,
-} from './physics-adapter.js';
+} from '@number-strategy-jump/arena-physics';
 
 const CONTACT_EPSILON = 1e-7;
 const PHYSICS_CHARACTER_MUTATION_KIND = Object.freeze({

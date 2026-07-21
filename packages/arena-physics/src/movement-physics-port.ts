@@ -1,10 +1,15 @@
-import { assertPhysicsWorld } from '../physics/physics-adapter.js';
-import { createMovementMutation } from '@number-strategy-jump/arena-movement';
+import {
+  createMovementMutation,
+  type MovementMutation,
+  type MovementMutationPort,
+} from '@number-strategy-jump/arena-movement';
 
-export function createMovementPhysicsPort(physicsWorld) {
+import { assertPhysicsWorld } from './physics-adapter.js';
+
+export function createMovementPhysicsPort(physicsWorld: unknown): MovementMutationPort {
   const world = assertPhysicsWorld(physicsWorld);
   return Object.freeze({
-    applyBatch(operations) {
+    applyBatch(operations: readonly MovementMutation[]) {
       if (!Array.isArray(operations)) {
         throw new TypeError('Movement physics operations 必须是数组。');
       }

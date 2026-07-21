@@ -4,9 +4,9 @@ import { PHYSICS_POC_ARENA, PHYSICS_POC_CHARACTER } from '../../src/arena/config
 import {
   assertPhysicsWorld,
   normalizeMovementIntent,
-} from '../../src/arena/physics/physics-adapter.js';
+} from '@number-strategy-jump/arena-physics';
 import { createLightweightPhysicsWorld } from '../../src/arena/physics/lightweight-physics.js';
-import { createMovementPhysicsPort } from '../../src/arena/movement/movement-physics-port.js';
+import { createMovementPhysicsPort } from '@number-strategy-jump/arena-physics';
 
 test('movement intent clamps and normalizes without exceeding unit length', () => {
   assert.deepEqual(normalizeMovementIntent(0.5, -0.25), { x: 0.5, z: -0.25 });

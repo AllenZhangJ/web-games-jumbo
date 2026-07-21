@@ -621,6 +621,7 @@ test('Arena Rule/Core foundation preserves dependency direction and deterministi
   directories.push(
     path.resolve('packages/arena-core/src'),
     path.resolve('packages/arena-movement/src'),
+    path.resolve('packages/arena-physics/src'),
   );
   const files = (await Promise.all(directories.map(listJavaScript))).flat();
   for (const file of files) {
@@ -658,5 +659,18 @@ test('Arena Rule/Core foundation preserves dependency direction and deterministi
       '@number-strategy-jump/arena-definitions',
     ],
     'arena-movement 只能依赖底层合同与 Definition。',
+  );
+
+  const physicsPackage = JSON.parse(await readFile(
+    path.resolve('packages/arena-physics/package.json'),
+    'utf8',
+  ));
+  assert.deepEqual(
+    Object.keys(physicsPackage.dependencies).sort(),
+    [
+      '@number-strategy-jump/arena-contracts',
+      '@number-strategy-jump/arena-movement',
+    ],
+    'arena-physics 只能依赖底层合同与 Movement mutation 合同。',
   );
 });

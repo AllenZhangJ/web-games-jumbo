@@ -5,7 +5,10 @@ import {
 } from './config.js';
 import { normalizeInputFrames } from '@number-strategy-jump/arena-contracts';
 import { createLightweightPhysicsWorld } from './physics/lightweight-physics.js';
-import { assertPhysicsWorld } from './physics/physics-adapter.js';
+import {
+  assertPhysicsWorld,
+  createMovementPhysicsPort,
+} from '@number-strategy-jump/arena-physics';
 import { assertArenaMapSystem } from './map/map-system.js';
 import { assertArenaRuleEngine } from '@number-strategy-jump/arena-core';
 import { createArenaConfigHash, createMatchStateHash } from './state-hash.js';
@@ -16,7 +19,6 @@ import { createCharacterPhysicsProfile } from './character/character-physics-pro
 import { assertCharacterRegistry } from '@number-strategy-jump/arena-definitions';
 import { createCharacterRuntimeReference } from './character/character-runtime.js';
 import { MovementSystem } from '@number-strategy-jump/arena-movement';
-import { createMovementPhysicsPort } from './movement/movement-physics-port.js';
 import { ARENA_MATCH_EVENT as EVENT } from '@number-strategy-jump/arena-contracts';
 
 // Equipment positions share the character-body coordinate convention so a
