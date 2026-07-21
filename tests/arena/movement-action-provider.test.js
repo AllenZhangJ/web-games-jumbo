@@ -9,7 +9,7 @@ import {
   ACTION_PRIORITY,
   ACTION_RESOLUTION_KIND,
   ActionResolver,
-} from '../../src/arena/action/action-resolver.js';
+} from '@number-strategy-jump/arena-core';
 import { createDefaultTargetingRegistry } from '../../src/arena/action/targeting/default-targeting-handlers.js';
 import { createDefaultActionEffectRegistry } from '../../src/arena/action/effects/default-effect-handlers.js';
 import {

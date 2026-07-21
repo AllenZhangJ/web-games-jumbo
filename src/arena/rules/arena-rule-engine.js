@@ -3,9 +3,10 @@ import { ActionExecutionSystem } from '../action/action-execution-system.js';
 import {
   ACTION_PRIORITY,
   ACTION_RESOLUTION_KIND,
+  ActionAffordanceProjector,
   ActionResolver,
-} from '../action/action-resolver.js';
-import { ARENA_ACTION_PHASE } from '../action/action-state.js';
+} from '@number-strategy-jump/arena-core';
+import { ARENA_ACTION_PHASE } from '@number-strategy-jump/arena-core';
 import { ACTION_RULE_COMMAND } from '../action/effects/default-effect-handlers.js';
 import { EquipmentSystem } from '../equipment/equipment-system.js';
 import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
@@ -19,7 +20,6 @@ import {
   createMovementCommand,
   isMovementCommandKind,
 } from '../movement/movement-command.js';
-import { ActionAffordanceProjector } from '../action/action-affordance.js';
 
 export const ARENA_RULE_EVENT = Object.freeze({
   ACTION_STARTED: 'ActionStarted',

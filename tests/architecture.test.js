@@ -634,7 +634,7 @@ test('Arena Rule/Core foundation preserves dependency direction and deterministi
   }
 
   const resolverSource = await readFile(
-    path.resolve('src/arena/action/action-resolver.js'),
+    path.resolve('packages/arena-core/src/action-resolver.ts'),
     'utf8',
   );
   assert.doesNotMatch(

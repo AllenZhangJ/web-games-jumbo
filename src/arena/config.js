@@ -1,4 +1,4 @@
-import { ARENA_ACTION_PHASE } from './action/action-state.js';
+import { ARENA_ACTION_PHASE } from '@number-strategy-jump/arena-core';
 import { ARENA_V1_DEFAULT_CHARACTER_ID } from './content/arena-v1-character-ids.js';
 import { createMatchContentSelection } from './content/match-content-selection.js';
 import { createStaticMapDefinition } from '@number-strategy-jump/arena-definitions';

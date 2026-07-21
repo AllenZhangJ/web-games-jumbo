@@ -1,4 +1,4 @@
-import { ACTION_PRIORITY } from '../action/action-resolver.js';
+import { ACTION_PRIORITY } from '@number-strategy-jump/arena-core';
 import { advanceEquipmentCooldown, isEquipmentCooldownReady } from './equipment-cooldown.js';
 import { resolveEquipmentDrop } from './equipment-drop-resolver.js';
 import { EquipmentPickupResolver } from './equipment-pickup-resolver.js';

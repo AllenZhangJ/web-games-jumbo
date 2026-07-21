@@ -2,12 +2,12 @@ import {
   ACTION_INPUT_CHANNEL,
   ACTION_LANE,
 } from '@number-strategy-jump/arena-definitions';
-import { ACTION_RESOLUTION_KIND } from './action-resolver.js';
+import { ACTION_RESOLUTION_KIND } from '@number-strategy-jump/arena-core';
 import {
   ARENA_ACTION_PHASE,
   createActionRuntimeState,
   resetActionRuntimeState,
-} from './action-state.js';
+} from '@number-strategy-jump/arena-core';
 import {
   assertIntegerAtLeast,
   assertKnownKeys,

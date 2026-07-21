@@ -12,7 +12,7 @@ import {
   ACTION_PRIORITY,
   ACTION_RESOLUTION_KIND,
   ActionResolver,
-} from '../../src/arena/action/action-resolver.js';
+} from '@number-strategy-jump/arena-core';
 
 function action(
   id,
