@@ -4,12 +4,12 @@
 
 已接受整体边界；阶段 1～5 已分别落地轻量街机物理、无渲染 MatchCore、隐藏机器人、本地快速匹配、数据驱动装备 Rule/Core 和地图权威时间轴。Stage 6 的 Character/Input/Replay、Movement、Bot 同权移动、三端显式操作、HUD、Session、盲测工作台、五目标 E3 证据合同与 release producer 已建立，但真实新手 E4 和目标设备 E3 Record 未完成。Stage 7 已接入双 KayKit GLB、18 动作、外置纹理、手部附件、Kenney CC0 命中音效、声音开关、reduced-motion 镜头/震动降级和宿主加载，并固定来源/许可/字节身份；真实 Intake Bundle 和目标真机证据尚缺。Stage 8 S8.1～S8.5.5 已形成 Profile、产品状态机、奖励/解锁、对称内容池、Product Presentation 与三端默认产品入口，S8.5.6 六目标证据合同已建立但外部 Record 未采集。Stage 9 已建立实验、黄金回放、回归、构建预算、性能、真人研究和 RC 交接合同；正式资产批准与外部证据仍未关闭。核心决策见 ADR-005～ADR-028。
 
-本文同时记录已落地边界与后续目标；未明确标记为已落地的模块仍不是当前能力。Stage 6 E3/E4、Stage 7 S7.2～S7.5、Stage 8 S8.5.6、Stage 9 S9.4b/S9.5c 与 S9.6b 仍在执行。分别见 [Stage 6](arena-stage6-input-movement-plan.md)、[Stage 7](arena-stage7-presentation-plan.md)、[Stage 8](arena-stage8-product-progression-plan.md)、[Stage 9](arena-stage9-convergence-plan.md)、[Stage 4～9 证据矩阵](../quality/arena-stage4-9-evidence-matrix.md) 和 [Stage 4～9 项目方决策门](arena-stage4-9-decision-gates.md)。当前 v3 架构仍见 [`../architecture.md`](../architecture.md)。
+本文同时记录已落地边界与后续目标；未明确标记为已落地的模块仍不是当前能力。Stage 6 E3/E4、Stage 7 S7.2～S7.5、Stage 8 S8.5.6、Stage 9 S9.4b/S9.5c 与 S9.6b 仍在执行。分别见 [Stage 6](arena-stage6-input-movement-plan.md)、[Stage 7](arena-stage7-presentation-plan.md)、[Stage 8](arena-stage8-product-progression-plan.md)、[Stage 9](arena-stage9-convergence-plan.md)、[Stage 4～9 证据矩阵](../quality/arena-stage4-9-evidence-matrix.md) 和 [Stage 4～9 项目方决策门](arena-stage4-9-decision-gates.md)。旧数值跳台仅保留于 Git 历史，不是当前运行时或兼容边界。
 
 ## 目标
 
 - 复用现有 Web、微信、抖音 Platform Contract、单 WebGL2 Canvas 和 Three.js 表现层基础。
-- 将单人数字跳台 Core 替换或旁路为独立的 Arena MatchCore。
+- 以 Arena MatchCore 作为唯一生产游戏的权威内核。
 - 支持一名玩家和一名隐藏本地机器人，固定 1v1。
 - 保持固定步长、确定性 RNG、可回放输入和 Core → Renderer 单向数据流。
 - 第一版本不引入网络、服务器、账号或数据库依赖。
@@ -30,26 +30,28 @@ BotPolicy ──────┘                                      │
 
 ## 已落地模块边界
 
-Arena 使用独立的 `src/arena` 领域，没有改写当前 `src/core` 的数值跳台规则：
+Arena 是当前唯一生产游戏；权威能力正从 `src/arena` 逐批迁入 strict TypeScript workspace：
 
 ```text
+packages/
+├── arena-contracts/          # 输入/事件/快照、确定性原语与生命周期错误
+├── arena-definitions/        # 动作、角色、装备、地图 Definition 与 Registry
+├── arena-core/               # ActionResolver、RuleEngine 合同与动作执行
+├── arena-movement/           # coyote/buffer/跳跃预算、模式与 mutation
+├── arena-physics/            # 轻量物理、Physics Port 与角色物理投影
+├── arena-equipment/          # 装备 Runtime、唯一写入系统与序列化
+├── arena-map/                # 地图 Runtime、Timeline、策略与命令提交
+└── arena-match/              # 比赛配置、Participant/Timeline、角色引用与状态 hash
+
 src/arena/
-├── config.js                 # 版本化比赛、物理、角色和时间配置
-├── input-frame.js            # 玩家与机器人共用的输入合同
-├── match-core.js             # 权威比赛状态机、击飞、淘汰和重生
-├── replay.js                 # 输入录制、checkpoint 与严格回放
-├── state-hash.js             # 量化权威状态 hash
-├── physics/                  # PhysicsAdapter 与轻量物理实现
-├── character/                # 不可变 Definition、Registry 快照、Runtime 引用与物理投影
-├── action/ equipment/ rules/ # 多通道/lane 动作、装备与 RuleEngine 权威子系统
-├── movement/                 # coyote/buffer/跳跃预算/模式与 Physics Port
-├── map/ composition/ content/ # 地图 Definition、时间轴、策略与组合根
-├── runtime/                  # 外层帧率到固定 60Hz tick 的编排
-├── content/                  # 不含玩法权限的虚构对手资料
-├── matchmaking/              # seed、对手、隐藏难度和独立随机流分配
-├── ai/                       # 受限观察、效用目标与 InputFrame 生成
-├── session/                  # Core、Bot、Runner 与回放的生命周期所有者
-└── entry/                    # 无渲染三端 POC 入口
+├── match-core.js             # 待迁移的权威子系统组合根
+├── replay.js                 # 待迁移的输入录制、checkpoint 与严格回放
+├── runtime/                  # 待迁移的外层帧率到固定 60Hz tick 编排
+├── composition/ content/     # Arena V1 内容选择与组合注册
+├── matchmaking/ ai/ session/ # 匹配、受限 Bot 和生命周期所有者
+└── presentation/             # 只消费快照/事件的 Arena 表现层
+
+src/platform/                 # Web、微信与抖音宿主适配
 ```
 
 模块依赖只向权威内核收敛：`ai` 不导入 MatchCore、回放、会话、渲染或平台；MatchCore、物理与回放也不反向导入 `ai`、`matchmaking` 或 `session`。`session` 是组合根，负责把各层连接起来并在失败路径统一释放所有权。

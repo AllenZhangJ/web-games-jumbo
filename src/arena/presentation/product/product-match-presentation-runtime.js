@@ -1,7 +1,7 @@
 import {
   combineCleanupFailure,
   normalizeThrownError,
-} from '../../lifecycle-error.js';
+} from '@number-strategy-jump/arena-contracts';
 import {
   createProductPublicMatchInfo,
   validateProductMatchResult,

@@ -1,7 +1,7 @@
 import { BotController } from '../ai/bot-controller.js';
 import { BOT_DIFFICULTY_IDS, getBotDifficultyProfile } from '../ai/bot-difficulty.js';
 import { createArenaV1MatchCore } from '../arena-v1-match-core.js';
-import { combineCleanupFailure, normalizeThrownError } from '../lifecycle-error.js';
+import { combineCleanupFailure, normalizeThrownError } from '@number-strategy-jump/arena-contracts';
 import { QuickMatchService } from '../matchmaking/quick-match-service.js';
 import { replayMatch } from '../replay.js';
 import {

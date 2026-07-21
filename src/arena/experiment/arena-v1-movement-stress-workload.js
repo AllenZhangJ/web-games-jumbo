@@ -1,7 +1,7 @@
 import { ARENA_MATCH_PHASE } from '@number-strategy-jump/arena-match';
 import { createArenaV1MatchCore } from '../arena-v1-match-core.js';
 import { HeadlessMatchRunner, replayMatch } from '../replay.js';
-import { combineCleanupFailure, normalizeThrownError } from '../lifecycle-error.js';
+import { combineCleanupFailure, normalizeThrownError } from '@number-strategy-jump/arena-contracts';
 import {
   assertIntegerAtLeast,
   assertKnownKeys,

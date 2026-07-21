@@ -9,8 +9,10 @@ import {
   createNeutralInputFrame,
   createArenaMatchSnapshotAudit,
   createSynchronousStoragePort,
+  combineCleanupFailure,
   deriveSeed,
   normalizeInputFrames,
+  normalizeThrownError,
 } from '../src/index.js';
 import type { ArenaInputFrame, ArenaMatchEventType } from '../src/index.js';
 
@@ -179,5 +181,25 @@ describe('Arena deterministic contracts', () => {
     expect(deriveSeed(88, 'map')).toBe(deriveSeed(88, 'map'));
     expect(deriveSeed(88, 'map')).not.toBe(deriveSeed(88, 'bot'));
     expect(() => rng.int(0, 0x100000000)).toThrow(/不能超过 uint32/);
+  });
+
+  it('normalizes thrown values and preserves original plus cleanup failures', () => {
+    const original = normalizeThrownError('host failed', 'Lifecycle');
+    expect(original).toBeInstanceOf(Error);
+    expect(original.message).toBe('Lifecycle：host failed');
+    expect((original as Error & { originalError: unknown }).originalError).toBe('host failed');
+    expect(combineCleanupFailure(original, [], 'unused')).toBe(original);
+
+    const cleanup = new Error('cleanup failed');
+    const cleanupErrors = [cleanup];
+    const combined = combineCleanupFailure(original, cleanupErrors, 'aggregate failed') as Error & {
+      originalError: Error;
+      cleanupErrors: readonly Error[];
+    };
+    expect(combined.message).toBe('aggregate failed');
+    expect(combined.originalError).toBe(original);
+    expect(combined.cleanupErrors).toEqual([cleanup]);
+    expect(combined.cleanupErrors).not.toBe(cleanupErrors);
+    expect(Object.isFrozen(combined.cleanupErrors)).toBe(true);
   });
 });

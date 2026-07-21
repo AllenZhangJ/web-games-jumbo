@@ -1,7 +1,7 @@
 import {
   combineCleanupFailure,
   normalizeThrownError,
-} from '../../lifecycle-error.js';
+} from '@number-strategy-jump/arena-contracts';
 import { validateProductMatchResult } from '../../product/matchmaking/product-match-result.js';
 import { PRODUCT_SESSION_STATE } from '../../product/state/product-session-transition-definition.js';
 import { ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT } from '../content/arena-gameplay-v2-content.js';

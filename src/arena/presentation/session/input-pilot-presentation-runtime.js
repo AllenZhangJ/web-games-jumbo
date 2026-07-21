@@ -1,7 +1,7 @@
 import {
   combineCleanupFailure,
   normalizeThrownError,
-} from '../../lifecycle-error.js';
+} from '@number-strategy-jump/arena-contracts';
 import { QuickMatchService } from '../../matchmaking/quick-match-service.js';
 import { ArenaPresentationSession } from './arena-presentation-session.js';
 import { InputPilotAssignedMatchService } from '../pilot/input-pilot-assigned-match-service.js';

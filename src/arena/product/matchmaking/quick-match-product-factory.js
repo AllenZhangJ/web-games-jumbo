@@ -1,4 +1,4 @@
-import { combineCleanupFailure, normalizeThrownError } from '../../lifecycle-error.js';
+import { combineCleanupFailure, normalizeThrownError } from '@number-strategy-jump/arena-contracts';
 import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 import { ProductMatchRuntime } from './product-match-runtime.js';
 

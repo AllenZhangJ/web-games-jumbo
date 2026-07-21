@@ -1,4 +1,4 @@
-import { normalizeThrownError } from '../../lifecycle-error.js';
+import { normalizeThrownError } from '@number-strategy-jump/arena-contracts';
 import { PRODUCT_SESSION_STATE } from '../../product/state/product-session-transition-definition.js';
 import { PRODUCT_INPUT_ROUTER_MODE } from '../product/product-input-router.js';
 import { PRODUCT_UI_INTENT_ID } from '../product/product-ui-intent.js';

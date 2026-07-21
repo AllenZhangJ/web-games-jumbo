@@ -4,12 +4,12 @@ import {
   CHARACTER_DEFINITION_SCHEMA_VERSION,
   createCharacterDefinition,
 } from '@number-strategy-jump/arena-definitions';
-import { createCharacterPhysicsProfile } from '../../src/arena/character/character-physics-profile.js';
+import { createCharacterPhysicsProfile } from '@number-strategy-jump/arena-physics';
 import {
   CharacterRegistry,
   createCharacterRegistrySnapshot,
 } from '@number-strategy-jump/arena-definitions';
-import { createCharacterRuntimeReference } from '../../src/arena/character/character-runtime.js';
+import { createCharacterRuntimeReference } from '@number-strategy-jump/arena-match';
 import { createArenaV1MatchCore } from '../../src/arena/arena-v1-match-core.js';
 import { PHYSICS_POC_ARENA } from '@number-strategy-jump/arena-match';
 import {

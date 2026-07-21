@@ -34,3 +34,13 @@ export type {
   MatchTimelineResult,
   MatchTimelineSnapshot,
 } from './match-timeline-system.js';
+export { createCharacterRuntimeReference } from './character-runtime.js';
+export type {
+  CharacterRuntimeReference,
+  CharacterRuntimeReferenceOptions,
+} from './character-runtime.js';
+export {
+  createArenaConfigHash,
+  createMatchStateHash,
+} from './state-hash.js';
+export type { ArenaInternalMatchSnapshot } from './state-hash.js';

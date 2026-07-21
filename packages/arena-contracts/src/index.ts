@@ -59,3 +59,11 @@ export type {
   MatchContentSelection,
   MatchParticipantCharacterSelection,
 } from './match-content-selection.js';
+export {
+  combineCleanupFailure,
+  normalizeThrownError,
+} from './lifecycle-errors.js';
+export type {
+  CombinedLifecycleError,
+  NormalizedLifecycleError,
+} from './lifecycle-errors.js';

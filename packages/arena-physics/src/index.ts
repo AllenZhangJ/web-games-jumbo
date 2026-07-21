@@ -29,3 +29,5 @@ export {
 } from './physics-config.js';
 export type { ArenaPhysicsConfig } from './physics-config.js';
 export { createLightweightPhysicsWorld } from './lightweight-physics.js';
+export { createCharacterPhysicsProfile } from './character-physics-profile.js';
+export type { CharacterPhysicsProfile } from './character-physics-profile.js';

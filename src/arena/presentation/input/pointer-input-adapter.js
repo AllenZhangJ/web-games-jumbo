@@ -1,7 +1,7 @@
 import {
   combineCleanupFailure,
   normalizeThrownError,
-} from '../../lifecycle-error.js';
+} from '@number-strategy-jump/arena-contracts';
 
 function requiredFunction(value, name) {
   if (typeof value !== 'function') throw new TypeError(`${name} 必须是函数。`);

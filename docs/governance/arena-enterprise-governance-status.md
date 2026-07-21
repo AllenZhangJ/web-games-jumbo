@@ -30,7 +30,7 @@
 | G0 基线冻结 | 已完成 | 自动化、压力、资产和三端构建通过；ADR/计划/证据已落盘；tag `arena-product-baseline-51e2822` 指向基线提交 |
 | G1 治理外壳/唯一产品 | 已完成 | Arena 已成为唯一生产产品；旧产品实现/专属测试/资产/规范已退役；strict TS、ESLint、Vitest、CI、CODEOWNERS、JS 递减清单和唯一产物门禁已启用 |
 | G2 Definition/合同/配置 | 已完成 | strict TS `arena-contracts`、`arena-definitions`、`arena-profile-contracts` 与 `arena-platform-contracts` 已承接确定性、输入/事件、权威快照、同步存储、平台能力、玩家档案/存档协议，以及动作/角色/装备/地图 Definition、只读 Registry 和唯一 Gameplay V2 数值配置；受审计 JavaScript 已降至 500 个 |
-| G3 Rule/Core/Replay | 进行中 | strict TS `arena-core`、`arena-movement`、`arena-physics`、`arena-equipment`、`arena-map` 与 `arena-match` 已承接规则/移动/物理/装备、完整地图权威链、比赛配置、Participant 及 Timeline 唯一写入者；MatchCore 子系统编排、Replay 与 fixed-step Runtime 仍待迁移 |
+| G3 Rule/Core/Replay | 进行中 | strict TS `arena-core`、`arena-movement`、`arena-physics`、`arena-equipment`、`arena-map` 与 `arena-match` 已承接规则/移动/物理/装备、完整地图权威链、比赛配置、Participant/Timeline 唯一写入者、角色 Runtime/物理投影及状态 hash；MatchCore 子系统编排、Replay 与 fixed-step Runtime 仍待迁移 |
 | G4 Bot/Product/Persistence | 未开始 | 当前功能与压力证据存在，尚未迁入 strict TS workspace |
 | G5 Presentation/资产/反馈 | 未开始 | 正式资产预算通过；审批字段与唯一正常路径仍待治理 |
 | G6 Platform/入口/构建 | 未开始 | 三端默认入口是 Product，但生产交付未与开发页面彻底隔离 |
@@ -55,7 +55,7 @@
 
 ## 当前不可合并原因
 
-1. 当前 449 个受维护 JavaScript 文件仍在精确允许清单中，MatchCore/Replay、Bot/Product/Persistence/Presentation/Platform 尚未完成 strict TypeScript workspace 迁移。
+1. 当前 445 个受维护 JavaScript 文件仍在精确允许清单中，MatchCore/Replay、Bot/Product/Persistence/Presentation/Platform 尚未完成 strict TypeScript workspace 迁移。
 2. Vitest 当前保护底层合同包和治理门禁；Arena 其余测试尚待按 workspace 迁移并建立正式 coverage 阈值与零 JS 门禁。
 3. 正式资产最终审批与完整安全/依赖长期治理尚未闭环。
 4. 文档仍含迁移前阶段性叙述，尚未完成 G9 全量链接、状态与命令归真。
@@ -302,4 +302,13 @@
 - Result 在写入前完整拒绝 getter、未知字段、空 reason 及 winner/isDraw 矛盾；公开 getter 返回副本。Core 销毁前保留只读终态 timeline 快照，使失败后的 Replay Runner 仍能输出“未完成不可导出”诊断，但不能继续 step 或读取完整权威快照。
 - 架构门禁要求 MatchCore 必须组合 `MatchTimelineSystem`，并禁止重新出现 `#tick`、`#activeTick`、`#phase`、`#result` 或 `#started`。Timeline 构造和生命周期无 DOM、平台、墙钟、随机源或外部 callback。
 - strict 公共包测试增至 78 项，其中新增 preparation/start claim、active/sudden/timeout、结果 tick、错误恢复、step 重入/重复推进和销毁测试；88 项 MatchCore、Equipment、Movement、Replay、Session 与架构定向回归通过，JavaScript 精确允许清单保持 449。
-- G3 下一批迁移 MatchCore 组合编排和生命周期错误原语，再迁移 state hash、fixed-step Runtime 与 Replay；本批未改变阶段阈值、事件 ID/顺序、胜负原因、Replay schema 或黄金 hash。
+- G3.17 本批未改变阶段阈值、事件 ID/顺序、胜负原因、Replay schema 或黄金 hash；随后完成的权威基础原语迁移见 G3.18。
+
+## G3.18 权威基础原语迁移证据
+
+- 通用 `normalizeThrownError` 与 `combineCleanupFailure` 已迁入最底层 `arena-contracts`；所有 Core、Replay、Session、Product、Presentation、Study、实验与脚本消费者统一引用一个实现，组合错误保留原始失败及冻结的清理失败副本。
+- 角色 Runtime 身份引用和配置/状态 hash 已迁入 `arena-match`，CharacterDefinition 到物理参数的唯一纯投影已迁入 `arena-physics`；MatchCore 不再从本地 JavaScript 引入以上原语。
+- `createCharacterRuntimeReference` 在读取调用方字段前拒绝 getter、Symbol、未知字段和非普通包装对象，并通过只读 CharacterRegistry 固定 definition identity；不持有 Physics body、Renderer 或可写 Definition。
+- state hash 保持参与者权威顺序，并对装备、地图 surface/occurrence 与具名 RNG 流使用环境无关的稳定排序；位置/速度/朝向继续按一百万比例量化并拒绝非有限或不安全整数，未改变现有 hash。
+- strict 公共包测试增至 83 项，新增生命周期错误聚合、角色身份数据边界、角色物理投影、配置/状态 hash 排序和非法数值测试；JavaScript 精确允许清单由 449 降至 445。
+- G3 下一批将迁移完整 MatchCore 组合编排，再迁移 fixed-step Runtime 与 Replay；本批不改变 Gameplay V2 数值、命中/动作/阶段行为、Replay schema 或黄金 hash。

@@ -1,5 +1,5 @@
 import { BotController } from '../ai/bot-controller.js';
-import { combineCleanupFailure, normalizeThrownError } from '../lifecycle-error.js';
+import { combineCleanupFailure, normalizeThrownError } from '@number-strategy-jump/arena-contracts';
 import { MatchCore } from '../match-core.js';
 import { createArenaV1MatchCore } from '../arena-v1-match-core.js';
 import {

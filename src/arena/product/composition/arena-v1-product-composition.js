@@ -4,7 +4,7 @@ import { ARENA_GAMEPLAY_V2_TUNING } from '@number-strategy-jump/arena-definition
 import {
   combineCleanupFailure,
   normalizeThrownError,
-} from '../../lifecycle-error.js';
+} from '@number-strategy-jump/arena-contracts';
 import {
   assertPlainRecord,
   cloneFrozenData,

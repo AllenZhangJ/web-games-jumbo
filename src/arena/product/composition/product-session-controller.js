@@ -1,4 +1,4 @@
-import { normalizeThrownError } from '../../lifecycle-error.js';
+import { normalizeThrownError } from '@number-strategy-jump/arena-contracts';
 import {
   PRODUCT_MATCH_COORDINATOR_STATE,
 } from '../matchmaking/product-match-coordinator.js';

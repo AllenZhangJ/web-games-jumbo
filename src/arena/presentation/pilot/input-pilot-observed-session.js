@@ -2,7 +2,7 @@ import { ARENA_MATCH_PHASE } from '@number-strategy-jump/arena-match';
 import {
   combineCleanupFailure,
   normalizeThrownError,
-} from '../../lifecycle-error.js';
+} from '@number-strategy-jump/arena-contracts';
 
 function requiredMethod(value, method, name) {
   if (typeof value?.[method] !== 'function') {

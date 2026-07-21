@@ -2,7 +2,7 @@ import { createDeterministicDataHash } from '@number-strategy-jump/arena-contrac
 import {
   combineCleanupFailure,
   normalizeThrownError,
-} from '../../lifecycle-error.js';
+} from '@number-strategy-jump/arena-contracts';
 import { createInputPilotDefinition } from './input-pilot-definition.js';
 import {
   createInputPilotAggregateExport,

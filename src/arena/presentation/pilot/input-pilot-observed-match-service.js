@@ -1,7 +1,7 @@
 import {
   combineCleanupFailure,
   normalizeThrownError,
-} from '../../lifecycle-error.js';
+} from '@number-strategy-jump/arena-contracts';
 import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 import { InputPilotObservedSession } from './input-pilot-observed-session.js';
 

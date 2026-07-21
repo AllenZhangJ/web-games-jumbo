@@ -7,6 +7,7 @@ import {
   ARENA_FIXED_DT,
   ARENA_PHYSICS,
   assertPhysicsWorld,
+  createCharacterPhysicsProfile,
   createLightweightPhysicsWorld,
   createMovementPhysicsPort,
   validateArenaDefinition,
@@ -59,6 +60,45 @@ function createWorld(overrides: Partial<PhysicsWorld> = {}): PhysicsWorld {
 }
 
 describe('arena-physics contracts', () => {
+  it('projects a validated CharacterDefinition into one immutable physics profile', () => {
+    const profile = createCharacterPhysicsProfile({
+      schemaVersion: 2,
+      id: 'fighter',
+      collision: { radius: 0.45, halfHeight: 0.55, mass: 1 },
+      movement: {
+        walkSpeed: 3,
+        runSpeed: 6,
+        runInputThreshold: 0.75,
+        groundAcceleration: 42,
+        airAcceleration: 14,
+        maximumHorizontalSpeed: 8,
+        automaticStepHeight: 0.25,
+      },
+      jump: {
+        groundImpulse: 8,
+        crouchImpulse: 10,
+        airImpulse: 7,
+        downSmashSpeed: 8,
+        downSmashAccelerationPerTick: 1,
+        maximumDownSmashSpeed: 16,
+        coyoteTicks: 4,
+        bufferTicks: 5,
+        maximumAirJumps: 1,
+        maximumCrouchChargeTicks: 30,
+      },
+      tags: ['test'],
+    });
+    expect(profile).toEqual({
+      radius: 0.45,
+      halfHeight: 0.55,
+      mass: 1,
+      moveSpeed: 6,
+      groundAcceleration: 42,
+      airAcceleration: 14,
+    });
+    expect(Object.isFrozen(profile)).toBe(true);
+  });
+
   it('derives the fixed step and every solver default from Gameplay V2 Definition', () => {
     expect(ARENA_FIXED_DT).toBe(1 / ARENA_GAMEPLAY_V2_TUNING.units.tickRateHz);
     expect(ARENA_PHYSICS).toMatchObject({

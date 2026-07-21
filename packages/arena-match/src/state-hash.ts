@@ -1,9 +1,14 @@
 import {
   createDeterministicDataHash,
   createFnv1aHash,
+  type ArenaMatchSnapshot,
 } from '@number-strategy-jump/arena-contracts';
 
-function finiteInteger(value, scale = 1_000_000) {
+export type ArenaInternalMatchSnapshot = ArenaMatchSnapshot & Readonly<{
+  rngStates: Readonly<Record<string, number>>;
+}>;
+
+function finiteInteger(value: number, scale = 1_000_000): number {
   if (!Number.isFinite(value)) throw new TypeError('状态 hash 不能包含非有限数。');
   const quantized = Math.round(value * scale);
   if (!Number.isSafeInteger(quantized)) {
@@ -12,20 +17,20 @@ function finiteInteger(value, scale = 1_000_000) {
   return Object.is(quantized, -0) ? 0 : quantized;
 }
 
-function compareText(left, right) {
+function compareText(left: string, right: string): number {
   if (left < right) return -1;
   if (left > right) return 1;
   return 0;
 }
 
-export function createArenaConfigHash(config) {
+export function createArenaConfigHash(config: unknown): string {
   if (!config || typeof config !== 'object') throw new TypeError('config 必须是对象。');
   return createDeterministicDataHash(config, 'Arena config');
 }
 
-export function createMatchStateHash(snapshot) {
+export function createMatchStateHash(snapshot: ArenaInternalMatchSnapshot): string {
   if (!snapshot || typeof snapshot !== 'object') throw new TypeError('snapshot 必须是对象。');
-  const fields = [
+  const fields: Array<string | number> = [
     snapshot.schemaVersion,
     snapshot.physicsBackendVersion,
     snapshot.configHash,
@@ -78,11 +83,9 @@ export function createMatchStateHash(snapshot) {
       participant.supportSurfaceId ?? '',
     );
   }
-  for (const equipment of [...snapshot.equipment].sort((left, right) => {
-    if (left.instanceId < right.instanceId) return -1;
-    if (left.instanceId > right.instanceId) return 1;
-    return 0;
-  })) {
+  for (const equipment of [...snapshot.equipment].sort((left, right) => (
+    compareText(left.instanceId, right.instanceId)
+  ))) {
     fields.push(
       equipment.schemaVersion,
       equipment.instanceId,

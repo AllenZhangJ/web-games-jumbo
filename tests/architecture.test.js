@@ -597,7 +597,7 @@ test('Arena bot layers preserve dependency direction and tick determinism', asyn
     'packages/arena-contracts/src/input-frame.ts',
     'src/arena/match-core.js',
     'src/arena/replay.js',
-    'src/arena/state-hash.js',
+    'packages/arena-match/src/state-hash.ts',
     ...await listJavaScript(path.resolve('src/arena/physics')),
   ];
   for (const file of authorityFiles) {
@@ -723,6 +723,11 @@ test('Arena Rule/Core foundation preserves dependency direction and deterministi
   const matchCoreSource = await readFile(path.resolve('src/arena/match-core.js'), 'utf8');
   assert.match(matchCoreSource, /MatchParticipantSystem/);
   assert.match(matchCoreSource, /MatchTimelineSystem/);
+  assert.doesNotMatch(
+    matchCoreSource,
+    /from\s+['"]\.\/(?:state-hash|lifecycle-error|character\/character-(?:runtime|physics-profile))\.js['"]/,
+    'MatchCore 不得重新依赖已迁出的本地权威原语。',
+  );
   assert.doesNotMatch(
     matchCoreSource,
     /#participants\b|function\s+createParticipant\b|#(?:tick|activeTick|phase|result|started)\b/,

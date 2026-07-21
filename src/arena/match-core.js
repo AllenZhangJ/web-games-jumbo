@@ -3,25 +3,30 @@ import {
   ARENA_PARTICIPANT_STATUS,
   MatchParticipantSystem,
   MatchTimelineSystem,
+  createArenaConfigHash,
   createArenaMatchConfig,
+  createCharacterRuntimeReference,
+  createMatchStateHash,
 } from '@number-strategy-jump/arena-match';
-import { normalizeInputFrames } from '@number-strategy-jump/arena-contracts';
-import { createLightweightPhysicsWorld } from '@number-strategy-jump/arena-physics';
+import {
+  ARENA_MATCH_EVENT as EVENT,
+  combineCleanupFailure,
+  createDeterministicDataHash,
+  createRng,
+  deriveSeed,
+  normalizeInputFrames,
+  normalizeThrownError,
+} from '@number-strategy-jump/arena-contracts';
 import {
   assertPhysicsWorld,
+  createCharacterPhysicsProfile,
+  createLightweightPhysicsWorld,
   createMovementPhysicsPort,
 } from '@number-strategy-jump/arena-physics';
 import { assertArenaMapSystem } from '@number-strategy-jump/arena-map';
 import { assertArenaRuleEngine } from '@number-strategy-jump/arena-core';
-import { createArenaConfigHash, createMatchStateHash } from './state-hash.js';
-import { createRng, deriveSeed } from '@number-strategy-jump/arena-contracts';
-import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
-import { combineCleanupFailure, normalizeThrownError } from './lifecycle-error.js';
-import { createCharacterPhysicsProfile } from './character/character-physics-profile.js';
 import { assertCharacterRegistry } from '@number-strategy-jump/arena-definitions';
-import { createCharacterRuntimeReference } from './character/character-runtime.js';
 import { MovementSystem } from '@number-strategy-jump/arena-movement';
-import { ARENA_MATCH_EVENT as EVENT } from '@number-strategy-jump/arena-contracts';
 
 // Equipment positions share the character-body coordinate convention so a
 // dropped item and a configured spawn can use the same validation path. The

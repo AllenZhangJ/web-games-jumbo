@@ -5,7 +5,7 @@ import {
 import {
   combineCleanupFailure,
   normalizeThrownError,
-} from '../../lifecycle-error.js';
+} from '@number-strategy-jump/arena-contracts';
 import { createInputPilotDefinition } from './input-pilot-definition.js';
 import { InputPilotStorageLease } from './input-pilot-storage-lease.js';
 import { createInputPilotStoragePort } from './input-pilot-storage-port.js';

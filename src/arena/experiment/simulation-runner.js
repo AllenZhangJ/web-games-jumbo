@@ -4,7 +4,7 @@ import {
   assertPlainRecord,
   cloneFrozenData,
 } from '@number-strategy-jump/arena-contracts';
-import { normalizeThrownError } from '../lifecycle-error.js';
+import { normalizeThrownError } from '@number-strategy-jump/arena-contracts';
 import { createArenaExperimentDefinition } from './experiment-definition.js';
 import {
   ARENA_EXPERIMENT_CASE_STATUS,

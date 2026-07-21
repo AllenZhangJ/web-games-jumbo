@@ -1,4 +1,4 @@
-import { normalizeThrownError } from '../../lifecycle-error.js';
+import { normalizeThrownError } from '@number-strategy-jump/arena-contracts';
 import { ArenaGreyboxRenderer } from '../three/arena-greybox-renderer.js';
 
 export const PRODUCT_RENDERER_STATE = Object.freeze({
