@@ -9,7 +9,7 @@ import { serializeMapRuntimeSnapshot } from '../map/map-serializer.js';
 import {
   MOVEMENT_MODE,
   MOVEMENT_RUNTIME_SCHEMA_VERSION,
-} from '../movement/movement-runtime.js';
+} from '@number-strategy-jump/arena-movement';
 
 const MATCH_PHASES = new Set(Object.values(ARENA_MATCH_PHASE));
 const PARTICIPANT_STATUSES = new Set(Object.values(ARENA_PARTICIPANT_STATUS));

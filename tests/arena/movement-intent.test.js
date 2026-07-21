@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   MOVEMENT_GAIT,
   projectCharacterMovementIntent,
-} from '../../src/arena/movement/movement-intent.js';
+} from '@number-strategy-jump/arena-movement';
 import { createArenaV1CharacterRegistry } from '../../src/arena/content/arena-v1-characters.js';
 import { ARENA_V1_CHARACTER_ID } from '../../src/arena/content/arena-v1-character-ids.js';
 

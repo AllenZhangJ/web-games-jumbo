@@ -10,19 +10,28 @@ export const MOVEMENT_COMMAND_KIND = Object.freeze({
   BEGIN_CROUCH_JUMP: 'begin-crouch-jump',
   RELEASE_CROUCH_JUMP: 'release-crouch-jump',
   BEGIN_DOWN_SMASH: 'begin-down-smash',
-});
+} as const);
 
-const COMMAND_KINDS = new Set(Object.values(MOVEMENT_COMMAND_KIND));
+export type MovementCommandKind =
+  typeof MOVEMENT_COMMAND_KIND[keyof typeof MOVEMENT_COMMAND_KIND];
+
+export interface MovementCommand {
+  readonly kind: MovementCommandKind;
+  readonly participantId: string;
+  readonly actionDefinitionId: string;
+}
+
+const COMMAND_KINDS: ReadonlySet<unknown> = new Set(Object.values(MOVEMENT_COMMAND_KIND));
 const COMMAND_KEYS = new Set(['kind', 'participantId', 'actionDefinitionId']);
 
-export function createMovementCommand(value) {
+export function createMovementCommand(value: unknown): MovementCommand {
   const source = cloneFrozenData(value, 'MovementCommand');
   assertKnownKeys(source, COMMAND_KEYS, 'MovementCommand');
   if (!COMMAND_KINDS.has(source.kind)) {
     throw new RangeError(`MovementCommand.kind 不受支持：${String(source.kind)}。`);
   }
   return Object.freeze({
-    kind: source.kind,
+    kind: source.kind as MovementCommandKind,
     participantId: assertNonEmptyString(
       source.participantId,
       'MovementCommand.participantId',
@@ -34,6 +43,6 @@ export function createMovementCommand(value) {
   });
 }
 
-export function isMovementCommandKind(kind) {
+export function isMovementCommandKind(kind: unknown): kind is MovementCommandKind {
   return COMMAND_KINDS.has(kind);
 }

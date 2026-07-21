@@ -1,4 +1,4 @@
-import { MOVEMENT_MODE } from '../movement/movement-runtime.js';
+import { MOVEMENT_MODE } from '@number-strategy-jump/arena-movement';
 import { assertArenaMatchCoreSnapshotInvariants } from './arena-matchcore-invariants.js';
 
 export function assertArenaMovementSnapshotInvariants(

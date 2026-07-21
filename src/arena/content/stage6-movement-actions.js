@@ -6,7 +6,7 @@ import {
   ACTION_LANE,
   createActionDefinition,
 } from '@number-strategy-jump/arena-definitions';
-import { MOVEMENT_COMMAND_KIND } from '../movement/movement-command.js';
+import { MOVEMENT_COMMAND_KIND } from '@number-strategy-jump/arena-movement';
 
 export const STAGE6_MOVEMENT_ACTION_ID = Object.freeze({
   EXPLICIT_GROUND_JUMP: 'movement.explicit-ground-jump',

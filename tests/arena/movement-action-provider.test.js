@@ -22,8 +22,7 @@ import {
 } from '../../src/arena/content/stage6-movement-actions.js';
 import { MovementActionCandidateProvider } from '../../src/arena/movement/movement-action-candidate-provider.js';
 import { createMovementActionEffectHandlers } from '../../src/arena/movement/movement-action-effect-handlers.js';
-import { MOVEMENT_COMMAND_KIND } from '../../src/arena/movement/movement-command.js';
-import { MOVEMENT_MODE } from '../../src/arena/movement/movement-runtime.js';
+import { MOVEMENT_COMMAND_KIND, MOVEMENT_MODE } from '@number-strategy-jump/arena-movement';
 
 const actionRegistry = new ActionRegistry([
   ...STAGE4_ACTION_DEFINITIONS,

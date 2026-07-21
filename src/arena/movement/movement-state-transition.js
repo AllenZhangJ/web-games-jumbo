@@ -1,5 +1,4 @@
-import { MOVEMENT_COMMAND_KIND } from './movement-command.js';
-import { MOVEMENT_MODE } from './movement-runtime.js';
+import { MOVEMENT_COMMAND_KIND, MOVEMENT_MODE } from '@number-strategy-jump/arena-movement';
 
 function captureMutableFields(state) {
   return {

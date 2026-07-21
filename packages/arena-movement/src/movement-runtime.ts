@@ -1,19 +1,40 @@
-import { createCharacterDefinition } from '@number-strategy-jump/arena-definitions';
+import {
+  createCharacterDefinition,
+  type CharacterDefinition,
+} from '@number-strategy-jump/arena-definitions';
 import {
   assertIntegerAtLeast,
   assertKnownKeys,
   assertNonEmptyString,
 } from '@number-strategy-jump/arena-contracts';
 
-export const MOVEMENT_RUNTIME_SCHEMA_VERSION = 2;
+export const MOVEMENT_RUNTIME_SCHEMA_VERSION = 2 as const;
 
 export const MOVEMENT_MODE = Object.freeze({
   STANDARD: 'standard',
   CROUCH_CHARGING: 'crouch-charging',
   DOWN_SMASH: 'down-smash',
-});
+} as const);
 
-const MODES = new Set(Object.values(MOVEMENT_MODE));
+export type MovementMode = typeof MOVEMENT_MODE[keyof typeof MOVEMENT_MODE];
+
+export interface MovementRuntimeState {
+  readonly schemaVersion: typeof MOVEMENT_RUNTIME_SCHEMA_VERSION;
+  readonly participantId: string;
+  readonly characterDefinitionId: string;
+  mode: MovementMode;
+  coyoteTicksRemaining: number;
+  jumpBufferTicksRemaining: number;
+  airJumpsUsed: number;
+  crouchChargeTicks: number;
+  crouchActionId: string | null;
+  downSmashActionId: string | null;
+  revision: number;
+}
+
+export type MovementRuntimeSnapshot = Readonly<MovementRuntimeState>;
+
+const MODES: ReadonlySet<unknown> = new Set(Object.values(MOVEMENT_MODE));
 const CREATE_KEYS = new Set(['participantId', 'characterDefinition']);
 const RUNTIME_KEYS = new Set([
   'schemaVersion',
@@ -29,7 +50,11 @@ const RUNTIME_KEYS = new Set([
   'revision',
 ]);
 
-function integerWithin(value, maximum, name) {
+function isMovementMode(value: unknown): value is MovementMode {
+  return MODES.has(value);
+}
+
+function integerWithin(value: unknown, maximum: number, name: string): number {
   const normalized = assertIntegerAtLeast(value, 0, name);
   if (normalized > maximum) {
     throw new RangeError(`${name} 不能大于 ${maximum}。`);
@@ -37,7 +62,10 @@ function integerWithin(value, maximum, name) {
   return normalized;
 }
 
-function createRawMovementRuntimeState(participantId, characterDefinitionId) {
+function createRawMovementRuntimeState(
+  participantId: unknown,
+  characterDefinitionId: unknown,
+): MovementRuntimeState {
   const state = {
     mode: MOVEMENT_MODE.STANDARD,
     coyoteTicksRemaining: 0,
@@ -65,16 +93,16 @@ function createRawMovementRuntimeState(participantId, characterDefinitionId) {
       enumerable: true,
     },
   });
-  return Object.seal(state);
+  return Object.seal(state) as MovementRuntimeState;
 }
 
-export function createMovementRuntimeState(options) {
+export function createMovementRuntimeState(options: unknown): MovementRuntimeState {
   assertKnownKeys(options, CREATE_KEYS, 'MovementRuntime options');
   const definition = createCharacterDefinition(options.characterDefinition);
   return createRawMovementRuntimeState(options.participantId, definition.id);
 }
 
-export function cloneMovementRuntimeState(state) {
+export function cloneMovementRuntimeState(state: MovementRuntimeState): MovementRuntimeState {
   assertKnownKeys(state, RUNTIME_KEYS, 'MovementRuntime state');
   if (state.schemaVersion !== MOVEMENT_RUNTIME_SCHEMA_VERSION) {
     throw new RangeError(
@@ -96,7 +124,10 @@ export function cloneMovementRuntimeState(state) {
   return clone;
 }
 
-function createSnapshotWithDefinition(state, definition) {
+function createSnapshotWithDefinition(
+  state: unknown,
+  definition: CharacterDefinition,
+): MovementRuntimeSnapshot {
   assertKnownKeys(state, RUNTIME_KEYS, 'MovementRuntime state');
   if (state.schemaVersion !== MOVEMENT_RUNTIME_SCHEMA_VERSION) {
     throw new RangeError(
@@ -116,7 +147,7 @@ function createSnapshotWithDefinition(state, definition) {
       `MovementRuntime ${participantId} 的 CharacterDefinition 引用不一致。`,
     );
   }
-  if (!MODES.has(state.mode)) {
+  if (!isMovementMode(state.mode)) {
     throw new RangeError(`MovementRuntime.mode 不受支持：${String(state.mode)}。`);
   }
   const snapshot = {
@@ -182,18 +213,24 @@ function createSnapshotWithDefinition(state, definition) {
   return Object.freeze(snapshot);
 }
 
-export function createMovementRuntimeSnapshot(state, characterDefinition) {
+export function createMovementRuntimeSnapshot(
+  state: unknown,
+  characterDefinition: unknown,
+): MovementRuntimeSnapshot {
   return createSnapshotWithDefinition(state, createCharacterDefinition(characterDefinition));
 }
 
-export function createMovementRuntimeSnapshotFromValidatedDefinition(state, definition) {
+export function createMovementRuntimeSnapshotFromValidatedDefinition(
+  state: unknown,
+  definition: CharacterDefinition,
+): MovementRuntimeSnapshot {
   if (!Object.isFrozen(definition)) {
     throw new TypeError('MovementRuntime 内部快照需要已冻结 CharacterDefinition。');
   }
   return createSnapshotWithDefinition(state, definition);
 }
 
-export function resetMovementRuntimeState(state) {
+export function resetMovementRuntimeState(state: MovementRuntimeState): void {
   state.mode = MOVEMENT_MODE.STANDARD;
   state.coyoteTicksRemaining = 0;
   state.jumpBufferTicksRemaining = 0;

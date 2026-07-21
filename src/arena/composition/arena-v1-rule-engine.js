@@ -16,7 +16,7 @@ import { EquipmentSystem } from '../equipment/equipment-system.js';
 import {
   createMovementCommand,
   isMovementCommandKind,
-} from '../movement/movement-command.js';
+} from '@number-strategy-jump/arena-movement';
 
 const MOVEMENT_COMMAND_ADAPTER = Object.freeze({
   isCommandKind: isMovementCommandKind,

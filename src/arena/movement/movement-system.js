@@ -5,7 +5,7 @@ import {
   createMovementRuntimeSnapshotFromValidatedDefinition,
   createMovementRuntimeState,
   resetMovementRuntimeState,
-} from './movement-runtime.js';
+} from '@number-strategy-jump/arena-movement';
 import {
   assertKnownKeys,
   assertNonEmptyString,
@@ -15,12 +15,12 @@ import {
   createMovementCompleteBatch,
   createMovementPrepareBatch,
 } from './movement-tick-batch.js';
-import { createMovementCapabilities } from './movement-capabilities.js';
+import { createMovementCapabilities } from '@number-strategy-jump/arena-movement';
 import {
   createDownSmashContinuationMutations,
   createMovementExecutionPlan,
 } from './movement-execution-plan.js';
-import { createCharacterMovementIntentProjector } from './movement-intent.js';
+import { createCharacterMovementIntentProjector } from '@number-strategy-jump/arena-movement';
 import {
   applyMovementExecutionState,
   completeMovementRuntimeState,

@@ -1,12 +1,34 @@
-import { createCharacterDefinition } from '@number-strategy-jump/arena-definitions';
+import {
+  createCharacterDefinition,
+  type CharacterMovementDefinition,
+} from '@number-strategy-jump/arena-definitions';
 
 export const MOVEMENT_GAIT = Object.freeze({
   IDLE: 'idle',
   WALK: 'walk',
   RUN: 'run',
-});
+} as const);
 
-function finiteAxis(value, name) {
+export type MovementGait = typeof MOVEMENT_GAIT[keyof typeof MOVEMENT_GAIT];
+
+export interface CharacterMovementIntent {
+  readonly x: number;
+  readonly z: number;
+  readonly gait: MovementGait;
+  readonly targetSpeed: number;
+}
+
+export interface CharacterMovementIntentProjector {
+  readonly project: (moveX: number, moveZ: number) => CharacterMovementIntent;
+}
+
+export interface ProjectCharacterMovementIntentOptions {
+  readonly moveX: number;
+  readonly moveZ: number;
+  readonly characterDefinition: unknown;
+}
+
+function finiteAxis(value: number, name: string): number {
   if (!Number.isFinite(value)) throw new TypeError(`${name} 必须是有限数。`);
   return Math.max(-1, Math.min(1, value));
 }
@@ -16,7 +38,11 @@ function finiteAxis(value, name) {
  * physics adapter. CharacterDefinition remains the only source for walk/run
  * speeds; Physics still owns acceleration, velocity and transforms.
  */
-function project(moveX, moveZ, movement) {
+function project(
+  moveX: number,
+  moveZ: number,
+  movement: CharacterMovementDefinition,
+): CharacterMovementIntent {
   let x = finiteAxis(moveX, 'MovementIntent.moveX');
   let z = finiteAxis(moveZ, 'MovementIntent.moveZ');
   const rawMagnitude = Math.hypot(x, z);
@@ -29,8 +55,8 @@ function project(moveX, moveZ, movement) {
   }
   const inputMagnitude = Math.min(1, rawMagnitude);
   const { walkSpeed, runSpeed, runInputThreshold } = movement;
-  let targetSpeed;
-  let gait;
+  let targetSpeed: number;
+  let gait: MovementGait;
   if (inputMagnitude < runInputThreshold) {
     targetSpeed = walkSpeed * (inputMagnitude / runInputThreshold);
     gait = MOVEMENT_GAIT.WALK;
@@ -52,16 +78,22 @@ function project(moveX, moveZ, movement) {
   });
 }
 
-export function createCharacterMovementIntentProjector(characterDefinition) {
+export function createCharacterMovementIntentProjector(
+  characterDefinition: unknown,
+): CharacterMovementIntentProjector {
   const definition = createCharacterDefinition(characterDefinition);
   const movement = definition.movement;
   return Object.freeze({
-    project(moveX, moveZ) {
+    project(moveX: number, moveZ: number) {
       return project(moveX, moveZ, movement);
     },
   });
 }
 
-export function projectCharacterMovementIntent({ moveX, moveZ, characterDefinition }) {
+export function projectCharacterMovementIntent({
+  moveX,
+  moveZ,
+  characterDefinition,
+}: ProjectCharacterMovementIntentOptions): CharacterMovementIntent {
   return createCharacterMovementIntentProjector(characterDefinition).project(moveX, moveZ);
 }

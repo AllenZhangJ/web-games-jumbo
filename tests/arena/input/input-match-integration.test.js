@@ -5,7 +5,7 @@ import { STAGE4_ACTION_ID } from '../../../src/arena/content/stage4-equipment.js
 import { STAGE6_MOVEMENT_ACTION_ID } from '../../../src/arena/content/stage6-movement-actions.js';
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
 import { ARENA_MATCH_EVENT } from '../../../src/arena/match-core.js';
-import { MOVEMENT_MODE } from '../../../src/arena/movement/movement-runtime.js';
+import { MOVEMENT_MODE } from '@number-strategy-jump/arena-movement';
 import { createContextInputMapperB } from '../../../src/arena/presentation/input/context-input-mapper-b.js';
 import { createGestureInputMapperA } from '../../../src/arena/presentation/input/gesture-input-mapper-a.js';
 import { InputSampler } from '../../../src/arena/presentation/input/input-sampler.js';

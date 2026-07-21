@@ -8,7 +8,7 @@ import {
   STAGE4_EQUIPMENT_ID,
 } from '../../src/arena/content/stage4-equipment.js';
 import { STAGE6_MOVEMENT_ACTION_ID } from '../../src/arena/content/stage6-movement-actions.js';
-import { MOVEMENT_MODE } from '../../src/arena/movement/movement-runtime.js';
+import { MOVEMENT_MODE } from '@number-strategy-jump/arena-movement';
 
 const WIDE_ARENA = Object.freeze({
   killY: -8,

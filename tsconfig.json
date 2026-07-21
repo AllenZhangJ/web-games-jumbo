@@ -4,6 +4,7 @@
     { "path": "./packages/arena-contracts" },
     { "path": "./packages/arena-core" },
     { "path": "./packages/arena-definitions" },
+    { "path": "./packages/arena-movement" },
     { "path": "./packages/arena-profile-contracts" },
     { "path": "./packages/arena-platform-contracts" }
   ]

@@ -1,5 +1,5 @@
 import { assertPhysicsWorld } from '../physics/physics-adapter.js';
-import { createMovementMutation } from './movement-mutation.js';
+import { createMovementMutation } from '@number-strategy-jump/arena-movement';
 
 export function createMovementPhysicsPort(physicsWorld) {
   const world = assertPhysicsWorld(physicsWorld);

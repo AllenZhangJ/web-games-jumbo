@@ -1,9 +1,10 @@
-import { createMovementCommand, MOVEMENT_COMMAND_KIND } from './movement-command.js';
 import {
-  createMovementMutation,
+  MOVEMENT_COMMAND_KIND,
+  MOVEMENT_MODE,
   MOVEMENT_MUTATION_KIND,
-} from './movement-mutation.js';
-import { MOVEMENT_MODE } from './movement-runtime.js';
+  createMovementCommand,
+  createMovementMutation,
+} from '@number-strategy-jump/arena-movement';
 
 function compareText(left, right) {
   if (left < right) return -1;

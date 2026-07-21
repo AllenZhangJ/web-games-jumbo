@@ -618,6 +618,10 @@ test('Arena bot layers preserve dependency direction and tick determinism', asyn
 test('Arena Rule/Core foundation preserves dependency direction and deterministic APIs', async () => {
   const directories = ['rules', 'action', 'equipment', 'map']
     .map((directory) => path.resolve('src/arena', directory));
+  directories.push(
+    path.resolve('packages/arena-core/src'),
+    path.resolve('packages/arena-movement/src'),
+  );
   const files = (await Promise.all(directories.map(listJavaScript))).flat();
   for (const file of files) {
     const source = await readFile(file, 'utf8');
@@ -641,5 +645,18 @@ test('Arena Rule/Core foundation preserves dependency direction and deterministi
     resolverSource,
     /(?:hammer|chain|shield|EquipmentRuntime|EquipmentSystem)/i,
     'ActionResolver 不应知道具体装备或装备运行时实现。',
+  );
+
+  const movementPackage = JSON.parse(await readFile(
+    path.resolve('packages/arena-movement/package.json'),
+    'utf8',
+  ));
+  assert.deepEqual(
+    Object.keys(movementPackage.dependencies).sort(),
+    [
+      '@number-strategy-jump/arena-contracts',
+      '@number-strategy-jump/arena-definitions',
+    ],
+    'arena-movement 只能依赖底层合同与 Definition。',
   );
 });

@@ -6,19 +6,19 @@ import {
   createMovementRuntimeSnapshot,
   createMovementRuntimeSnapshotFromValidatedDefinition,
   createMovementRuntimeState,
-} from '../../src/arena/movement/movement-runtime.js';
+} from '@number-strategy-jump/arena-movement';
 import {
   deserializeMovementRuntimeState,
   serializeMovementRuntimeStates,
-} from '../../src/arena/movement/movement-serializer.js';
+} from '@number-strategy-jump/arena-movement';
 import {
   MOVEMENT_COMMAND_KIND,
   createMovementCommand,
-} from '../../src/arena/movement/movement-command.js';
+} from '@number-strategy-jump/arena-movement';
 import {
   MOVEMENT_MUTATION_KIND,
   createMovementMutation,
-} from '../../src/arena/movement/movement-mutation.js';
+} from '@number-strategy-jump/arena-movement';
 import { createArenaV1CharacterRegistry } from '../../src/arena/content/arena-v1-characters.js';
 import { ARENA_V1_CHARACTER_ID } from '../../src/arena/content/arena-v1-character-ids.js';
 

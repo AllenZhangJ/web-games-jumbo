@@ -1,15 +1,29 @@
 import {
   createMovementRuntimeSnapshot,
   createMovementRuntimeState,
+  type MovementRuntimeSnapshot,
+  type MovementRuntimeState,
 } from './movement-runtime.js';
 
-function compareParticipantIds(left, right) {
+import type { CharacterDefinition } from '@number-strategy-jump/arena-definitions';
+
+export interface MovementDefinitionResolver {
+  readonly characterDefinitionById: (characterDefinitionId: string) => CharacterDefinition;
+}
+
+function compareParticipantIds(
+  left: MovementRuntimeSnapshot,
+  right: MovementRuntimeSnapshot,
+): number {
   if (left.participantId < right.participantId) return -1;
   if (left.participantId > right.participantId) return 1;
   return 0;
 }
 
-export function serializeMovementRuntimeStates(states, { characterDefinitionById }) {
+export function serializeMovementRuntimeStates(
+  states: readonly MovementRuntimeState[],
+  { characterDefinitionById }: MovementDefinitionResolver,
+): readonly MovementRuntimeSnapshot[] {
   if (!Array.isArray(states)) throw new TypeError('MovementSerializer states 必须是数组。');
   if (typeof characterDefinitionById !== 'function') {
     throw new TypeError('MovementSerializer 需要 characterDefinitionById()。');
@@ -24,11 +38,17 @@ export function serializeMovementRuntimeStates(states, { characterDefinitionById
   return Object.freeze(snapshots);
 }
 
-export function deserializeMovementRuntimeState(snapshot, { characterDefinitionById }) {
+export function deserializeMovementRuntimeState(
+  snapshot: unknown,
+  { characterDefinitionById }: MovementDefinitionResolver,
+): MovementRuntimeState {
   if (typeof characterDefinitionById !== 'function') {
     throw new TypeError('MovementSerializer 需要 characterDefinitionById()。');
   }
-  const definition = characterDefinitionById(snapshot?.characterDefinitionId);
+  const characterDefinitionId = snapshot !== null && typeof snapshot === 'object'
+    ? Reflect.get(snapshot, 'characterDefinitionId')
+    : undefined;
+  const definition = characterDefinitionById(characterDefinitionId as string);
   const validated = createMovementRuntimeSnapshot(snapshot, definition);
   const state = createMovementRuntimeState({
     participantId: validated.participantId,

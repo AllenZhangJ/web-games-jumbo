@@ -1,5 +1,5 @@
 import { ARENA_PARTICIPANT_STATUS } from '../config.js';
-import { MOVEMENT_MODE } from '../movement/movement-runtime.js';
+import { MOVEMENT_MODE } from '@number-strategy-jump/arena-movement';
 import { BOT_GOAL_ID } from './bot-goals.js';
 
 export const BOT_MOBILITY_INTENT = Object.freeze({
