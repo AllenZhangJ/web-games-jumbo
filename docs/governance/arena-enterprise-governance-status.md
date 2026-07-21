@@ -31,7 +31,7 @@
 | G1 治理外壳/唯一产品 | 已完成 | Arena 已成为唯一生产产品；旧产品实现/专属测试/资产/规范已退役；strict TS、ESLint、Vitest、CI、CODEOWNERS、JS 递减清单和唯一产物门禁已启用 |
 | G2 Definition/合同/配置 | 已完成 | strict TS `arena-contracts`、`arena-definitions`、`arena-profile-contracts` 与 `arena-platform-contracts` 已承接确定性、输入/事件、权威快照、同步存储、平台能力、玩家档案/存档协议，以及动作/角色/装备/地图 Definition、只读 Registry 和唯一 Gameplay V2 数值配置；受审计 JavaScript 已降至 500 个 |
 | G3 Rule/Core/Replay | 已完成 | strict TS `arena-core`、`arena-movement`、`arena-physics`、`arena-equipment`、`arena-map` 与 `arena-match` 已承接规则/移动/物理/装备、完整地图权威链、比赛配置、Participant/Timeline 唯一写入者、角色 Runtime/物理投影、状态 hash、完整 MatchCore 编排、fixed-step Runtime 与 Replay；黄金语料保持 `0dace228` |
-| G4 Bot/Product/Persistence | 未开始 | 下一批；当前功能与压力证据存在，尚未迁入 strict TS workspace |
+| G4 Bot/Product/Persistence | 进行中 | strict TS `arena-bot` 已承接难度配置、人格生成与纯效用裁决；Bot observation/navigation/policy/controller、Quick Match、Product 与 Persistence 仍待分批迁移 |
 | G5 Presentation/资产/反馈 | 未开始 | 正式资产预算通过；审批字段与唯一正常路径仍待治理 |
 | G6 Platform/入口/构建 | 未开始 | 三端默认入口是 Product，但生产交付未与开发页面彻底隔离 |
 | G7 零 JS/完整质量门 | 未开始 | ESLint、strict TypeScript、Vitest 和 JavaScript 精确递减门禁已作为迁移护栏运行；coverage 阈值、测试归包和零 JS 尚未完成 |
@@ -55,7 +55,7 @@
 
 ## 当前不可合并原因
 
-1. 当前 443 个受维护 JavaScript 文件仍在精确允许清单中，Bot/Product/Persistence/Presentation/Platform 和应用组合适配尚未完成 strict TypeScript workspace 迁移。
+1. 当前 440 个受维护 JavaScript 文件仍在精确允许清单中，Bot 其余层、Product/Persistence、Presentation/Platform 和应用组合适配尚未完成 strict TypeScript workspace 迁移。
 2. Vitest 当前保护底层合同包和治理门禁；Arena 其余测试尚待按 workspace 迁移并建立正式 coverage 阈值与零 JS 门禁。
 3. 正式资产最终审批与完整安全/依赖长期治理尚未闭环。
 4. 文档仍含迁移前阶段性叙述，尚未完成 G9 全量链接、状态与命令归真。
@@ -339,3 +339,13 @@
 - MatchCore Replay metadata 补齐此前遗漏的 `airJumpHorizontalImpulse` 与 `contextPrimaryMobilityEnabled`；非默认产品移动配置现在可以完整导出并通过同一 config hash 重建，不再依赖默认值碰巧一致。
 - 642 项 Node 测试、83 项 strict package/治理测试通过；Replay 专项 17 项，生命周期专项 94 项。黄金 Replay manifest 及四个 entry replay/final hash 保持 `0dace228`、`17b60bcb/c9cd7e73`、`543a7a80/33a33688`、`2e092bc6/389b7142`、`b68c763e/ee341734`。
 - JavaScript 精确允许清单保持 443：本批将 344 行 Replay 权威逻辑迁入 strict 包，同时保留 14 行 Arena V1 组合适配；G3 的 Rule/Core/Replay 交付与门禁完成，下一批进入 G4 Bot/Product/Persistence。
+
+## G4.1 Bot 确定性基础迁移证据
+
+- 新增 strict TypeScript workspace `@number-strategy-jump/arena-bot`；第一批只承接 Bot 难度配置、seed 驱动人格生成和纯效用裁决，不拥有 MatchCore、Session、Matchmaking、Product、Presentation、Three.js、DOM、平台 API 或墙钟时间。
+- 三档难度的观察延迟、重规划、方向误差、动作承诺、暂停、输入幅度、边缘安全、预测、威胁感知、攻击范围和移动动作 tick 数值保持逐项不变；人格仍只由注入的 uint32 seed 派生，效用裁决仍按分数、显式优先级和稳定 ID 排序。
+- 公共 API 拒绝未知难度、非法 seed、空 evaluator、非法分数/优先级和非普通计划；evaluator 与计划字段访问器在执行前拒绝，恶意 getter 调用次数为零，返回的 profile、人格、决策和计划保持只读。
+- package 依赖精确限定为 `arena-contracts`，架构门禁扫描全部 Bot strict 源码并禁止 MatchCore 私有实现、Session、Matchmaking、Presentation、Platform、Three.js、宿主全局、墙钟和非确定性随机。
+- 干净提交 `da236490323a257d6f2fa9eb3cca513a308c69c3` 的统一 `npm run check` 通过：642/642 Node、87/87 strict package/治理、94/94 生命周期、120 场 fuzz/6 次 Replay、Presentation/Product 各 100 场 soak、0 个生产依赖漏洞、三端 clean build/预算和唯一生产产物检查均通过。
+- 黄金 Replay manifest 与四组 replay/final hash 保持 `0dace228`、`17b60bcb/c9cd7e73`、`543a7a80/33a33688`、`2e092bc6/389b7142`、`b68c763e/ee341734`；正式资产结果保持 `82a8b378`。JavaScript 精确允许清单由 443 降至 440。
+- G4 仍在进行中；下一批迁移 Bot observation 与地图导航公开合同，再迁 policy/scheduler/controller，之后才进入 Quick Match、Product 状态机和 Persistence 生命周期，不以本批基础能力冒充 G4 完成。
