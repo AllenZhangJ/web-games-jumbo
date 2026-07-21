@@ -31,7 +31,7 @@
 | G1 治理外壳/唯一产品 | 已完成 | Arena 已成为唯一生产产品；旧产品实现/专属测试/资产/规范已退役；strict TS、ESLint、Vitest、CI、CODEOWNERS、JS 递减清单和唯一产物门禁已启用 |
 | G2 Definition/合同/配置 | 已完成 | strict TS `arena-contracts`、`arena-definitions`、`arena-profile-contracts` 与 `arena-platform-contracts` 已承接确定性、输入/事件、权威快照、同步存储、平台能力、玩家档案/存档协议，以及动作/角色/装备/地图 Definition、只读 Registry 和唯一 Gameplay V2 数值配置；受审计 JavaScript 已降至 500 个 |
 | G3 Rule/Core/Replay | 已完成 | strict TS `arena-core`、`arena-movement`、`arena-physics`、`arena-equipment`、`arena-map` 与 `arena-match` 已承接规则/移动/物理/装备、完整地图权威链、比赛配置、Participant/Timeline 唯一写入者、角色 Runtime/物理投影、状态 hash、完整 MatchCore 编排、fixed-step Runtime 与 Replay；黄金语料保持 `0dace228` |
-| G4 Bot/Product/Persistence | 进行中 | strict TS `arena-bot` 已闭环；`arena-session` 已承接 Local Match Session；Quick Match、Product 与 Persistence 仍待分批迁移 |
+| G4 Bot/Product/Persistence | 进行中 | strict TS Bot、Matchmaking、Quick Match 与 Local Match Session 已闭环；Product 与 Persistence 仍待分批迁移 |
 | G5 Presentation/资产/反馈 | 未开始 | 正式资产预算通过；审批字段与唯一正常路径仍待治理 |
 | G6 Platform/入口/构建 | 未开始 | 三端默认入口是 Product，但生产交付未与开发页面彻底隔离 |
 | G7 零 JS/完整质量门 | 未开始 | ESLint、strict TypeScript、Vitest 和 JavaScript 精确递减门禁已作为迁移护栏运行；coverage 阈值、测试归包和零 JS 尚未完成 |
@@ -55,7 +55,7 @@
 
 ## 当前不可合并原因
 
-1. 当前 433 个受维护 JavaScript 文件仍在精确允许清单中，Quick Match、Product/Persistence、Presentation/Platform 和应用组合适配尚未完成 strict TypeScript workspace 迁移。
+1. 当前 430 个受维护 JavaScript 文件仍在精确允许清单中，Product/Persistence、Presentation/Platform 和 Arena V1 应用组合适配尚未完成 strict TypeScript workspace 迁移。
 2. Vitest 当前保护底层合同包和治理门禁；Arena 其余测试尚待按 workspace 迁移并建立正式 coverage 阈值与零 JS 门禁。
 3. 正式资产最终审批与完整安全/依赖长期治理尚未闭环。
 4. 文档仍含迁移前阶段性叙述，尚未完成 G9 全量链接、状态与命令归真。
@@ -393,3 +393,16 @@
 - 同一干净提交的 Product 压力完成 200 场，得到 200 个唯一 authority hash、2 个 content hash、334 次生命周期转换、96 次 rematch、最大 59 tick、7 次 restart、22000 experience，结果为 `ok=true`。独立 Presentation Session soak 完成 100 场、耗时 `526.986875 ms`、堆增长 `2861192 B`；完整 Product Presentation Session soak 完成 100 场、100 个唯一 authority hash、耗时 `46691.841417 ms`、堆增长 `6286992 B`，两者帧、生命周期监听、Canvas 监听和输入绑定残留均为零。
 - 黄金 Replay manifest 与四组 replay/final hash 保持 `0dace228`、`17b60bcb/c9cd7e73`、`543a7a80/33a33688`、`2e092bc6/389b7142`、`b68c763e/ee341734`；正式资产结果保持 `82a8b378`。JavaScript 精确允许清单由 434 降至 433。
 - G4 仍在进行中；下一批先迁移确定性匹配 Definition、seed、assignment 与 opponent profile，再治理 Quick Match 的工厂所有权、重入、失败回收和产品组合边界，之后才进入 Product 状态机与 Persistence。本批未改变 Gameplay V2 配置值、任意距离攻击挥空、命中/击退、武器动作、移动/跳跃、Bot 随机流、权威 tick、Replay schema 或正式资产。
+
+## G4.4b Matchmaking 与 Quick Match 迁移加固证据
+
+- 新增 strict TypeScript workspace `@number-strategy-jump/arena-matchmaking`，承接 12 个虚构对手档案、确定性 assignment 和顺序 match seed source；旧的 profile/assignment/seed 三个 JavaScript 实现删除，生产、实验、Human Study 与测试统一从包入口消费。该包只依赖 `arena-contracts` 与 `arena-bot` 的公开难度 Definition，不拥有 MatchCore、BotController、Session、Product、Presentation 或平台生命周期。
+- 对手选择、隐藏难度选择及 `bot-behavior:player-2`、`bot-personality:player-2`、`map`、`equipment` 四条具名随机流保持原 seed 标签和消费顺序；难度 override 只改变 effective difficulty，不改变自然难度、对手或其他 seed。连续 10000 个 seed 的 easy/normal/hard 分布继续通过既有 `0.313–0.353` 门禁，12 个对手均覆盖三档自然难度。
+- assignment 入口改为普通对象、已知可枚举数据字段与 uint32 seed 合同，访问器不会执行，未知字段/Symbol/非法 difficulty 在发布 assignment 前拒绝；assignment、opponent、seeds 与 diagnostics 均冻结，diagnostics 只接受本模块实际创建的 assignment，外部对象不能伪造隐藏匹配证据。
+- 新增无宿主组合 workspace `@number-strategy-jump/arena-quick-match`，只组合 Bot、合同、Match、Matchmaking 与 Session；Arena V1 私有 Core 工厂仍由 `src/arena/matchmaking/quick-match-service.js` 的薄适配器注入，strict 包不反向依赖 `src/arena`。该适配器仍计入后续 Product/G6/G7 的 JavaScript 清零范围。
+- `QuickMatchService` 构造与 create options、seed source、content provider、Core/Bot/Session factory 和 diagnostic sink 均在描述符边界复制或快照；getter 零执行，端口校验与调用之间不可替换。创建锁在 options/Proxy 反射及任何注入回调前建立，factory/provider/diagnostic/cleanup 回调重入 create/destroy 均不能交错第二条所有权链；diagnostic 仍是纯观察，失败不取消已成立比赛。
+- Core、BotController 与 LocalMatchSession 按创建顺序接管、按逆序回收；只接受原生 MatchCore 与 LocalMatchSession，调用内部能力时绕过实例自定义覆盖。创建失败和清理失败同时保留；清理失败的资源句柄不会丢失，而是在下一次 create 前或显式 `destroy()` 中精确重试，重试仍失败则阻断新比赛。成功返回后 Session 所有权一次性移交调用方，服务不再持有。
+- 干净代码提交 `3cb5239752eafa5ab18d4c55278968a3db518fe1` 的统一 `npm run check` 通过：653/653 Node、97/97 strict package/治理、101/101 生命周期、120 场 fuzz/6 次 Replay、Presentation/Product 各 100 场 soak、0 个生产依赖漏洞、正式资产与三端 clean build/预算/唯一生产产物均通过。build ID 为 `arena-3cb5239752ea-product`，Web/微信/抖音 delivery 为 `3598650 / 3627541 / 3627516 B`，`sourceDirty=false`。
+- 同一干净提交的 Product 压力完成 200 场，得到 200 个唯一 authority hash、2 个 content hash、334 次生命周期转换、96 次 rematch、最大 59 tick、7 次 restart、22000 experience，结果为 `ok=true`。Presentation Session soak 完成 100 场、耗时 `536.538917 ms`、堆增长 `2639304 B`；完整 Product Presentation Session soak 完成 100 场、100 个唯一 authority hash、耗时 `46800.714833000005 ms`、堆增长 `6368224 B`，两者资源残留均为零。
+- 黄金 Replay manifest 与四组 replay/final hash 保持 `0dace228`、`17b60bcb/c9cd7e73`、`543a7a80/33a33688`、`2e092bc6/389b7142`、`b68c763e/ee341734`；正式资产结果保持 `82a8b378`。JavaScript 精确允许清单由 433 降至 430。
+- Bot、Matchmaking、Quick Match 与 Local Match Session strict 链路已闭环，但 G4 尚未完成；下一批按 state → profile → match coordinator → composition 顺序治理 Product 状态机、完成事务与 Profile Repository/CAS/lease/migration 生命周期。本批未改变 Gameplay V2 配置值、任意距离攻击挥空、命中/击退、武器动作、移动/跳跃、Bot 难度与随机顺序、权威 tick、Replay schema 或正式资产。
