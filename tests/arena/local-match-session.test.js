@@ -7,7 +7,7 @@ import { QuickMatchService } from '../../src/arena/matchmaking/quick-match-servi
 import {
   LOCAL_MATCH_SESSION_STATE,
   LocalMatchSession,
-} from '../../src/arena/session/local-match-session.js';
+} from '@number-strategy-jump/arena-session';
 
 function neutral(snapshot) {
   return createNeutralInputFrame(snapshot.tick, 'player-1');
@@ -18,6 +18,8 @@ test('quick match public surface does not leak bot identity or hidden difficulty
   const match = new QuickMatchService({ diagnosticSink: (value) => diagnostics.push(value) })
     .create({ matchSeed: 11 });
   const publicInfo = match.session.getPublicMatchInfo();
+  assert.equal(Object.isFrozen(publicInfo), true);
+  assert.equal(Object.isFrozen(publicInfo.opponent), true);
   const serialized = JSON.stringify({
     matchSeed: match.matchSeed,
     opponent: match.opponent,
@@ -81,6 +83,7 @@ test('LocalMatchSession pause, complete replay and destruction have explicit lif
   session.setPaused(false);
   const replay = session.runUntilEnded(neutral);
   assert.equal(session.state, LOCAL_MATCH_SESSION_STATE.ENDED);
+  assert.deepEqual(session.runUntilEnded(neutral), replay);
   assert.deepEqual(replayMatch(replay).result, replay.result);
   session.destroy();
   session.destroy();
@@ -296,4 +299,114 @@ test('frozen internal errors and cleanup failures preserve both causes', () => {
       return true;
     },
   );
+});
+
+test('LocalMatchSession rejects controller method accessors without taking Core ownership', () => {
+  const core = createArenaV1MatchCore({ seed: 29 });
+  let getterCalls = 0;
+  const botController = Object.defineProperty({ destroy() {} }, 'createInput', {
+    enumerable: true,
+    get() {
+      getterCalls += 1;
+      return () => null;
+    },
+  });
+  assert.throws(() => new LocalMatchSession({
+    core,
+    botController,
+    publicMatchInfo: {
+      matchSeed: 29,
+      opponent: {
+        id: 'test-opponent',
+        displayName: '测试对手',
+        portraitKey: 'portrait-test',
+        appearanceKey: 'appearance-test',
+      },
+    },
+  }), /数据方法/);
+  assert.equal(getterCalls, 0);
+  assert.equal(core.getSnapshot().tick, 0);
+  core.destroy();
+});
+
+test('runUntilEnded validates data-only options before starting the session', () => {
+  const { session } = new QuickMatchService().create({ matchSeed: 30 });
+  let getterCalls = 0;
+  const options = Object.defineProperty({}, 'maxTicks', {
+    enumerable: true,
+    get() {
+      getterCalls += 1;
+      return 1;
+    },
+  });
+  assert.throws(() => session.runUntilEnded(neutral, options), /数据字段/);
+  assert.equal(getterCalls, 0);
+  assert.equal(session.state, LOCAL_MATCH_SESSION_STATE.CREATED);
+  assert.equal(session.getSnapshot().tick, 0);
+  session.destroy();
+});
+
+test('runUntilEnded blocks proxy reentry while validating options', () => {
+  const { session } = new QuickMatchService().create({ matchSeed: 33 });
+  let reentered = false;
+  const options = new Proxy({ maxTicks: 1 }, {
+    getOwnPropertyDescriptor(target, property) {
+      if (!reentered) {
+        reentered = true;
+        session.step();
+      }
+      return Reflect.getOwnPropertyDescriptor(target, property);
+    },
+  });
+  assert.throws(() => session.runUntilEnded(neutral, options), /运行期间不能调用 step/);
+  assert.equal(session.state, LOCAL_MATCH_SESSION_STATE.CREATED);
+  assert.equal(session.getSnapshot().tick, 0);
+  session.destroy();
+});
+
+test('runUntilEnded blocks provider reentry and leaves a boundary failure retryable', () => {
+  const { session } = new QuickMatchService().create({
+    matchSeed: 31,
+    config: { preparingTicks: 0 },
+  });
+  assert.throws(() => session.runUntilEnded(() => {
+    session.step();
+    return null;
+  }, { maxTicks: 2 }), /运行期间不能调用 step/);
+  assert.equal(session.state, LOCAL_MATCH_SESSION_STATE.RUNNING);
+  assert.equal(session.getSnapshot().tick, 0);
+  session.step(neutral(session.getSnapshot()));
+  assert.equal(session.getSnapshot().tick, 1);
+  session.destroy();
+});
+
+test('cleanup publishes terminal state before destroying owned callbacks and rejects reentry', () => {
+  const core = createArenaV1MatchCore({ seed: 32 });
+  let session;
+  let reentryRejected = false;
+  const botController = {
+    createInput() { return createNeutralInputFrame(0, 'player-2'); },
+    destroy() {
+      assert.throws(() => session.destroy(), /清理期间不允许重入/);
+      reentryRejected = true;
+    },
+  };
+  session = new LocalMatchSession({
+    core,
+    botController,
+    publicMatchInfo: {
+      matchSeed: 32,
+      opponent: {
+        id: 'test-opponent',
+        displayName: '测试对手',
+        portraitKey: 'portrait-test',
+        appearanceKey: 'appearance-test',
+      },
+    },
+  });
+  session.destroy();
+  assert.equal(reentryRejected, true);
+  assert.equal(session.state, LOCAL_MATCH_SESSION_STATE.DESTROYED);
+  assert.throws(() => core.getSnapshot(), /已销毁/);
+  session.destroy();
 });

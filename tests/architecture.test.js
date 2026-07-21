@@ -670,6 +670,21 @@ test('Arena Rule/Core foundation preserves dependency direction and deterministi
     );
   }
 
+  const sessionFiles = await listJavaScript(path.resolve('packages/arena-session/src'));
+  for (const file of sessionFiles) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /(?:\/matchmaking\/|\/product\/|\/presentation\/|\/platform\/|from\s+['"]three['"]|\b(?:window|document|navigator)\b)/,
+      `${file} 越过了 Session 生命周期编排边界。`,
+    );
+    assert.doesNotMatch(
+      source,
+      /(?:Date\.now|Math\.random|\bperformance\b|setTimeout|setInterval|requestAnimationFrame|localeCompare)/,
+      `${file} 使用了墙钟、非确定性随机或表现调度。`,
+    );
+  }
+
   const resolverSource = await readFile(
     path.resolve('packages/arena-core/src/action-resolver.ts'),
     'utf8',
@@ -765,6 +780,19 @@ test('Arena Rule/Core foundation preserves dependency direction and deterministi
       '@number-strategy-jump/arena-movement',
     ],
     'arena-bot 只能依赖公开合同、装备/地图公开状态、Match 枚举与 Movement 枚举。',
+  );
+
+  const sessionPackage = JSON.parse(await readFile(
+    path.resolve('packages/arena-session/package.json'),
+    'utf8',
+  ));
+  assert.deepEqual(
+    Object.keys(sessionPackage.dependencies).sort(),
+    [
+      '@number-strategy-jump/arena-contracts',
+      '@number-strategy-jump/arena-match',
+    ],
+    'arena-session 只能依赖公开合同与 Match，不得依赖具体 Bot、Product 或表现层。',
   );
 
   const matchCoreSource = await readFile(

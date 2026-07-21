@@ -7,7 +7,7 @@ import {
   createMatchContentSelection,
 } from '@number-strategy-jump/arena-contracts';
 import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
-import { LocalMatchSession } from '../session/local-match-session.js';
+import { LocalMatchSession } from '@number-strategy-jump/arena-session';
 import {
   copyMatchAssignmentDiagnostics,
   createMatchAssignment,
