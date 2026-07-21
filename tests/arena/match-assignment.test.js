@@ -1,9 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { BOT_DIFFICULTY_IDS } from '@number-strategy-jump/arena-bot';
-import { OPPONENT_PROFILES } from '../../src/arena/content/opponent-profiles.js';
-import { createMatchAssignment } from '../../src/arena/matchmaking/match-assignment.js';
-import { SequentialMatchSeedSource } from '../../src/arena/matchmaking/seed-source.js';
+import {
+  createMatchAssignment,
+  OPPONENT_PROFILES,
+  SequentialMatchSeedSource,
+} from '@number-strategy-jump/arena-matchmaking';
 
 test('quick-match assignment is deterministic and keeps named streams isolated', () => {
   const first = createMatchAssignment({ matchSeed: 0x12345678 });

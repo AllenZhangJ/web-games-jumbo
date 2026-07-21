@@ -1,6 +1,6 @@
 import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import { createRng, deriveSeed } from '@number-strategy-jump/arena-contracts';
-import { createMatchAssignment } from '../matchmaking/match-assignment.js';
+import { createMatchAssignment } from '@number-strategy-jump/arena-matchmaking';
 import {
   assertIntegerAtLeast,
   assertKnownKeys,

@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { BotController } from '@number-strategy-jump/arena-bot';
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
 import { createArenaV1MatchCore } from '../../src/arena/arena-v1-match-core.js';
 import { replayMatch } from '../../src/arena/replay.js';
@@ -215,6 +216,78 @@ test('QuickMatchService rejects an incomplete session contract before returning 
   });
   assert.throws(() => service.create({ matchSeed: 28 }), /缺少 setPaused/);
   assert.equal(fakeSessionDestroyed, true);
+});
+
+test('QuickMatchService rejects option accessors without execution or resource creation', () => {
+  let constructorGetterCalls = 0;
+  const constructorOptions = Object.defineProperty({}, 'seedSource', {
+    enumerable: true,
+    get() {
+      constructorGetterCalls += 1;
+      return null;
+    },
+  });
+  assert.throws(() => new QuickMatchService(constructorOptions), /数据字段/);
+  assert.equal(constructorGetterCalls, 0);
+
+  let service;
+  let reentered = false;
+  service = new QuickMatchService();
+  const createOptions = new Proxy({ matchSeed: 41 }, {
+    ownKeys(target) {
+      if (!reentered) {
+        reentered = true;
+        service.create({ matchSeed: 42 });
+      }
+      return Reflect.ownKeys(target);
+    },
+  });
+  assert.throws(() => service.create(createOptions), /create 期间不能调用 create/);
+  const match = service.create({ matchSeed: 43 });
+  match.session.destroy();
+  service.destroy();
+});
+
+test('QuickMatchService retains failed cleanup for an exact retry before the next match', () => {
+  let controllerCount = 0;
+  let firstControllerCleanupAttempts = 0;
+  let sessionFactoryAttempts = 0;
+  const service = new QuickMatchService({
+    botControllerFactory: (options) => {
+      const controller = new BotController(options);
+      controllerCount += 1;
+      const controllerIndex = controllerCount;
+      return {
+        createInput: (snapshot) => controller.createInput(snapshot),
+        destroy() {
+          if (controllerIndex === 1) {
+            firstControllerCleanupAttempts += 1;
+            if (firstControllerCleanupAttempts === 1) {
+              throw new Error('transient controller cleanup failure');
+            }
+          }
+          controller.destroy();
+        },
+      };
+    },
+    sessionFactory: (options) => {
+      sessionFactoryAttempts += 1;
+      if (sessionFactoryAttempts === 1) throw new Error('transient session factory failure');
+      return new LocalMatchSession(options);
+    },
+  });
+  assert.throws(
+    () => service.create({ matchSeed: 44 }),
+    (error) => {
+      assert.equal(error.cleanupErrors.length, 1);
+      assert.match(error.cleanupErrors[0].message, /controller cleanup failure/);
+      return true;
+    },
+  );
+  const match = service.create({ matchSeed: 45 });
+  assert.equal(firstControllerCleanupAttempts, 2);
+  match.session.destroy();
+  service.destroy();
 });
 
 test('bot or authoritative step failures destroy the entire local session', () => {

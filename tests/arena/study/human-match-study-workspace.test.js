@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createMatchAssignment } from '../../../src/arena/matchmaking/match-assignment.js';
+import { createMatchAssignment } from '@number-strategy-jump/arena-matchmaking';
 import { createProductMatchResult } from '../../../src/arena/product/matchmaking/product-match-result.js';
 import {
   createArenaStage9HumanFairnessV1Definition,

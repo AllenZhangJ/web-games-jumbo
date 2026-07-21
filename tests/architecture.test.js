@@ -685,6 +685,36 @@ test('Arena Rule/Core foundation preserves dependency direction and deterministi
     );
   }
 
+  const matchmakingFiles = await listJavaScript(path.resolve('packages/arena-matchmaking/src'));
+  for (const file of matchmakingFiles) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /(?:match-core|\/session\/|\/product\/|\/presentation\/|\/platform\/|from\s+['"]three['"]|\b(?:window|document|navigator)\b)/,
+      `${file} 越过了 Matchmaking 确定性数据边界。`,
+    );
+    assert.doesNotMatch(
+      source,
+      /(?:Date\.now|Math\.random|\bperformance\b|setTimeout|setInterval|requestAnimationFrame|localeCompare)/,
+      `${file} 使用了墙钟、非确定性随机或表现调度。`,
+    );
+  }
+
+  const quickMatchFiles = await listJavaScript(path.resolve('packages/arena-quick-match/src'));
+  for (const file of quickMatchFiles) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /(?:\/product\/|\/presentation\/|\/platform\/|from\s+['"]three['"]|\b(?:window|document|navigator)\b)/,
+      `${file} 越过了 Quick Match 无宿主组合边界。`,
+    );
+    assert.doesNotMatch(
+      source,
+      /(?:Date\.now|Math\.random|\bperformance\b|setTimeout|setInterval|requestAnimationFrame|localeCompare)/,
+      `${file} 使用了墙钟、非确定性随机或表现调度。`,
+    );
+  }
+
   const resolverSource = await readFile(
     path.resolve('packages/arena-core/src/action-resolver.ts'),
     'utf8',
@@ -793,6 +823,35 @@ test('Arena Rule/Core foundation preserves dependency direction and deterministi
       '@number-strategy-jump/arena-match',
     ],
     'arena-session 只能依赖公开合同与 Match，不得依赖具体 Bot、Product 或表现层。',
+  );
+
+  const matchmakingPackage = JSON.parse(await readFile(
+    path.resolve('packages/arena-matchmaking/package.json'),
+    'utf8',
+  ));
+  assert.deepEqual(
+    Object.keys(matchmakingPackage.dependencies).sort(),
+    [
+      '@number-strategy-jump/arena-bot',
+      '@number-strategy-jump/arena-contracts',
+    ],
+    'arena-matchmaking 只能依赖确定性合同与 Bot 公开难度 Definition。',
+  );
+
+  const quickMatchPackage = JSON.parse(await readFile(
+    path.resolve('packages/arena-quick-match/package.json'),
+    'utf8',
+  ));
+  assert.deepEqual(
+    Object.keys(quickMatchPackage.dependencies).sort(),
+    [
+      '@number-strategy-jump/arena-bot',
+      '@number-strategy-jump/arena-contracts',
+      '@number-strategy-jump/arena-match',
+      '@number-strategy-jump/arena-matchmaking',
+      '@number-strategy-jump/arena-session',
+    ],
+    'arena-quick-match 只能组合 Bot、合同、Match、Matchmaking 与 Session。',
   );
 
   const matchCoreSource = await readFile(

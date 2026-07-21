@@ -8,8 +8,10 @@
     { "path": "./packages/arena-equipment" },
     { "path": "./packages/arena-map" },
     { "path": "./packages/arena-match" },
+    { "path": "./packages/arena-matchmaking" },
     { "path": "./packages/arena-movement" },
     { "path": "./packages/arena-physics" },
+    { "path": "./packages/arena-quick-match" },
     { "path": "./packages/arena-session" },
     { "path": "./packages/arena-profile-contracts" },
     { "path": "./packages/arena-platform-contracts" }

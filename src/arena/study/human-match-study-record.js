@@ -1,6 +1,6 @@
 import {
   createMatchAssignment,
-} from '../matchmaking/match-assignment.js';
+} from '@number-strategy-jump/arena-matchmaking';
 import {
   validateProductMatchResult,
 } from '../product/matchmaking/product-match-result.js';

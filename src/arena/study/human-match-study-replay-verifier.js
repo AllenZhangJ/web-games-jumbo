@@ -3,7 +3,7 @@ import { BotController } from '@number-strategy-jump/arena-bot';
 import { BOT_DIFFICULTY_PROFILES } from '@number-strategy-jump/arena-bot';
 import { createArenaV1MatchCore } from '../arena-v1-match-core.js';
 import { ARENA_V1_BALANCE_DEFINITION } from '../content/arena-v1-balance.js';
-import { createMatchAssignment } from '../matchmaking/match-assignment.js';
+import { createMatchAssignment } from '@number-strategy-jump/arena-matchmaking';
 import {
   createProductMatchResult,
 } from '../product/matchmaking/product-match-result.js';

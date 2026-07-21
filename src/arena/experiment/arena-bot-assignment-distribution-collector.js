@@ -1,5 +1,5 @@
 import { BOT_DIFFICULTY_IDS } from '@number-strategy-jump/arena-bot';
-import { createMatchAssignment } from '../matchmaking/match-assignment.js';
+import { createMatchAssignment } from '@number-strategy-jump/arena-matchmaking';
 import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 import { createArenaMetricGate } from './metric-gate.js';
 
