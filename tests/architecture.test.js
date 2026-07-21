@@ -594,7 +594,7 @@ test('Arena bot layers preserve dependency direction and tick determinism', asyn
 
   const authorityFiles = [
     'src/arena/config.js',
-    'src/arena/input-frame.js',
+    'packages/arena-contracts/src/input-frame.ts',
     'src/arena/match-core.js',
     'src/arena/replay.js',
     'src/arena/state-hash.js',

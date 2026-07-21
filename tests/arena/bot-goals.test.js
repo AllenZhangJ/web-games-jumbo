@@ -9,7 +9,7 @@ import {
 } from '../../src/arena/ai/bot-observation.js';
 import { selectHighestUtility } from '../../src/arena/ai/utility-arbitrator.js';
 import { createArenaV1MatchCore } from '../../src/arena/arena-v1-match-core.js';
-import { createNeutralInputFrame } from '../../src/arena/input-frame.js';
+import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
 
 test('bot threat evaluation uses the delayed opponent equipment action range', () => {
   const core = createArenaV1MatchCore({

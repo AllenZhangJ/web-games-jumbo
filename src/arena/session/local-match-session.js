@@ -1,5 +1,5 @@
 import { ARENA_MATCH_PHASE } from '../config.js';
-import { createNeutralInputFrame, normalizeInputFrame } from '../input-frame.js';
+import { createNeutralInputFrame, normalizeInputFrame } from '@number-strategy-jump/arena-contracts';
 import { combineCleanupFailure, normalizeThrownError } from '../lifecycle-error.js';
 import { MatchCore } from '../match-core.js';
 import { HeadlessMatchRunner } from '../replay.js';

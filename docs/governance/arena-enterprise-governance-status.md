@@ -29,7 +29,7 @@
 | --- | --- | --- |
 | G0 基线冻结 | 已完成 | 自动化、压力、资产和三端构建通过；ADR/计划/证据已落盘；tag `arena-product-baseline-51e2822` 指向基线提交 |
 | G1 治理外壳/唯一产品 | 已完成 | Arena 已成为唯一生产产品；旧产品实现/专属测试/资产/规范已退役；strict TS、ESLint、Vitest、CI、CODEOWNERS、JS 递减清单和唯一产物门禁已启用 |
-| G2 Definition/合同/配置 | 进行中 | 已建立 strict TS `arena-contracts` 与 `arena-definitions` workspace，并迁入确定性合同、动作/角色/装备/地图 Definition、只读 Registry 和唯一 Gameplay V2 数值配置；当前仍有 509 个受审计 JavaScript 文件，其余公共合同仍待迁移 |
+| G2 Definition/合同/配置 | 进行中 | 已建立 strict TS `arena-contracts` 与 `arena-definitions` workspace，并迁入确定性合同、InputFrame/事件协议、动作/角色/装备/地图 Definition、只读 Registry 和唯一 Gameplay V2 数值配置；当前仍有 507 个受审计 JavaScript 文件，其余公共合同仍待迁移 |
 | G3 Rule/Core/Replay | 未开始 | 当前行为有 Replay/hash 证据，但尚未迁入 strict TS |
 | G4 Bot/Product/Persistence | 未开始 | 当前功能与压力证据存在，尚未迁入 strict TS workspace |
 | G5 Presentation/资产/反馈 | 未开始 | 正式资产预算通过；审批字段与唯一正常路径仍待治理 |
@@ -55,7 +55,7 @@
 
 ## 当前不可合并原因
 
-1. 当前 509 个受维护 JavaScript 文件仍在精确允许清单中，Definition/Core/Bot/Presentation/Platform 尚未完成 strict TypeScript workspace 迁移。
+1. 当前 507 个受维护 JavaScript 文件仍在精确允许清单中，Definition/Core/Bot/Presentation/Platform 尚未完成 strict TypeScript workspace 迁移。
 2. Vitest 当前只保护治理门禁；Arena 测试尚待按 workspace 迁移并建立正式 coverage 阈值与零 JS 门禁。
 3. 正式资产最终审批与完整安全/依赖长期治理尚未闭环。
 4. 文档仍含迁移前阶段性叙述，尚未完成 G9 全量链接、状态与命令归真。
@@ -108,4 +108,12 @@
 - 地图 Definition/Registry 已迁入 `arena-definitions`：构造期校验 surface、出生点支撑、装备点归属、事件 schedule 和 10000 次时间轴安全上限。
 - Registry 只发布重新归一化、冻结且按稳定 ID 排序的定义，不保留调用者可变对象引用。
 - 22 项装备、地图和地图权威集成测试通过；strict TypeScript、ESLint、公共包测试与架构门禁通过。
-- JavaScript 精确允许清单由 513 降至 509；输入、事件、快照、存档与平台合同仍待迁移，G2 保持进行中。
+- JavaScript 精确允许清单由 513 降至 509；当时待迁移的输入与事件协议已由下方 G2.5 承接，快照、存档与平台合同仍是 G2 阻断项。
+
+## G2.5 InputFrame 与权威事件协议迁移证据
+
+- `InputFrame V4`、批量缺帧补中立输入、移动向量归一化和 Arena 权威事件词表已迁入 `arena-contracts` strict TypeScript 公共 API。
+- Bot、Core、Replay、实验、输入适配和测试统一从同一包消费协议；物理层保留兼容导出但不再维护第二份移动归一化算法。
+- InputFrame 在权威状态变更前拒绝未知字段、访问器、非法 tick、重复 participant、非布尔边沿和越界移动；事件类型由字面量联合类型约束。
+- 31 项输入、物理与架构定向测试通过；黄金 Replay 后续仍作为全门禁验证。
+- JavaScript 精确允许清单由 509 降至 507；快照、存档和平台合同仍待迁移，G2 保持进行中。

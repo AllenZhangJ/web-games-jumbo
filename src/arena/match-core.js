@@ -3,7 +3,7 @@ import {
   ARENA_PARTICIPANT_STATUS,
   createArenaMatchConfig,
 } from './config.js';
-import { normalizeInputFrames } from './input-frame.js';
+import { normalizeInputFrames } from '@number-strategy-jump/arena-contracts';
 import { createLightweightPhysicsWorld } from './physics/lightweight-physics.js';
 import { assertPhysicsWorld } from './physics/physics-adapter.js';
 import { assertArenaMapSystem } from './map/map-system.js';
@@ -17,7 +17,7 @@ import { assertCharacterRegistry } from '@number-strategy-jump/arena-definitions
 import { createCharacterRuntimeReference } from './character/character-runtime.js';
 import { MovementSystem } from './movement/movement-system.js';
 import { createMovementPhysicsPort } from './movement/movement-physics-port.js';
-import { ARENA_MATCH_EVENT as EVENT } from './match-event-types.js';
+import { ARENA_MATCH_EVENT as EVENT } from '@number-strategy-jump/arena-contracts';
 
 // Equipment positions share the character-body coordinate convention so a
 // dropped item and a configured spawn can use the same validation path. The
@@ -1069,4 +1069,4 @@ export class MatchCore {
   }
 }
 
-export { ARENA_MATCH_EVENT } from './match-event-types.js';
+export { ARENA_MATCH_EVENT } from '@number-strategy-jump/arena-contracts';

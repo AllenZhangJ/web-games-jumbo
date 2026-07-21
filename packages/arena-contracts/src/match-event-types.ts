@@ -13,4 +13,6 @@ export const ARENA_MATCH_EVENT = Object.freeze({
   PLAYER_RESPAWNED: 'PlayerRespawned',
   SUDDEN_DEATH_STARTED: 'SuddenDeathStarted',
   MATCH_ENDED: 'MatchEnded',
-});
+} as const);
+
+export type ArenaMatchEventType = typeof ARENA_MATCH_EVENT[keyof typeof ARENA_MATCH_EVENT];

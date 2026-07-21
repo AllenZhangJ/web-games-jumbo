@@ -1,5 +1,5 @@
 import { STAGE6_MOVEMENT_ACTION_ID } from '../../content/stage6-movement-actions.js';
-import { ARENA_MATCH_EVENT } from '../../match-event-types.js';
+import { ARENA_MATCH_EVENT } from '@number-strategy-jump/arena-contracts';
 import { INPUT_PILOT_ACTION_OUTCOME } from './input-pilot-record.js';
 
 const GROUND_JUMP_ACTION_IDS = new Set([

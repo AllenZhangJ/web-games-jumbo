@@ -4,7 +4,7 @@ import {
   createNeutralInputFrame,
   normalizeInputFrame,
   normalizeInputFrames,
-} from '../../src/arena/input-frame.js';
+} from '@number-strategy-jump/arena-contracts';
 
 const participants = ['player-1', 'player-2'];
 

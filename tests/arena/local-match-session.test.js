@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createNeutralInputFrame } from '../../src/arena/input-frame.js';
+import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
 import { createArenaV1MatchCore } from '../../src/arena/arena-v1-match-core.js';
 import { replayMatch } from '../../src/arena/replay.js';
 import { QuickMatchService } from '../../src/arena/matchmaking/quick-match-service.js';

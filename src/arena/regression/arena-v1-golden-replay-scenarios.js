@@ -9,7 +9,7 @@ import {
   ARENA_V1_SCRIPTED_PRESSURE_DEFAULT_PARAMETERS,
   createArenaV1ScriptedPressureInputStrategy,
 } from '../experiment/arena-v1-scripted-pressure-strategy.js';
-import { createNeutralInputFrame } from '../input-frame.js';
+import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
 import { combineCleanupFailure, normalizeThrownError } from '../lifecycle-error.js';
 import { QuickMatchService } from '../matchmaking/quick-match-service.js';
 import { HeadlessMatchRunner } from '../replay.js';

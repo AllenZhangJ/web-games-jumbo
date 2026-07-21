@@ -6,7 +6,7 @@ import {
   createBotArenaView,
   createBotObservation,
 } from '../../src/arena/ai/bot-observation.js';
-import { createNeutralInputFrame } from '../../src/arena/input-frame.js';
+import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
 
 test('BotObservation exposes only public delayed opponent state and is deeply frozen', () => {
   const core = createArenaV1MatchCore({ seed: 9, config: { preparingTicks: 0 } });

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createArenaV1MatchCore } from '../../../src/arena/arena-v1-match-core.js';
 import { STAGE4_ACTION_ID } from '../../../src/arena/content/stage4-equipment.js';
 import { STAGE6_MOVEMENT_ACTION_ID } from '../../../src/arena/content/stage6-movement-actions.js';
-import { createNeutralInputFrame } from '../../../src/arena/input-frame.js';
+import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
 import { ARENA_MATCH_EVENT } from '../../../src/arena/match-core.js';
 import { MOVEMENT_MODE } from '../../../src/arena/movement/movement-runtime.js';
 import { createContextInputMapperB } from '../../../src/arena/presentation/input/context-input-mapper-b.js';

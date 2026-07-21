@@ -1,4 +1,4 @@
-import { normalizeInputFrame } from '../../input-frame.js';
+import { normalizeInputFrame } from '@number-strategy-jump/arena-contracts';
 import {
   cloneKnownRecord,
   integerAtLeast,

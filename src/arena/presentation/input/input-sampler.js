@@ -1,4 +1,4 @@
-import { normalizeInputFrame } from '../../input-frame.js';
+import { normalizeInputFrame } from '@number-strategy-jump/arena-contracts';
 import { GestureRecognizer } from './gesture-recognizer.js';
 import {
   copyMapperActionAffordance,

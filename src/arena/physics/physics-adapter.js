@@ -1,3 +1,5 @@
+export { normalizeMovementIntent } from '@number-strategy-jump/arena-contracts';
+
 const REQUIRED_WORLD_METHODS = Object.freeze([
   'addCharacter',
   'setMovementIntent',
@@ -27,16 +29,6 @@ export function assertVector3(value, name) {
   assertFiniteNumber(value.y, `${name}.y`);
   assertFiniteNumber(value.z, `${name}.z`);
   return value;
-}
-
-export function normalizeMovementIntent(moveX, moveZ) {
-  assertFiniteNumber(moveX, 'moveX');
-  assertFiniteNumber(moveZ, 'moveZ');
-  const clampedX = Math.max(-1, Math.min(1, moveX));
-  const clampedZ = Math.max(-1, Math.min(1, moveZ));
-  const length = Math.hypot(clampedX, clampedZ);
-  if (length <= 1) return { x: clampedX, z: clampedZ };
-  return { x: clampedX / length, z: clampedZ / length };
 }
 
 export function moveToward(current, target, maxDelta) {

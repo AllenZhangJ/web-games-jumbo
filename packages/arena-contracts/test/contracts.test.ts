@@ -1,14 +1,39 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ARENA_MATCH_EVENT,
   assertKnownKeys,
   cloneFrozenData,
   cloneFrozenStringSet,
   createDeterministicDataHash,
   createRng,
+  createNeutralInputFrame,
   deriveSeed,
+  normalizeInputFrames,
 } from '../src/index.js';
+import type { ArenaInputFrame, ArenaMatchEventType } from '../src/index.js';
 
 describe('Arena deterministic contracts', () => {
+  it('normalizes complete InputFrame batches and fills missing participants deterministically', () => {
+    const frame: ArenaInputFrame = createNeutralInputFrame(3, 'p1');
+    expect(normalizeInputFrames([{ ...frame, moveX: 1, moveZ: 1 }], {
+      tick: 3,
+      participantIds: ['p1', 'p2'],
+    })).toEqual([
+      { ...frame, moveX: 1 / Math.hypot(1, 1), moveZ: 1 / Math.hypot(1, 1) },
+      createNeutralInputFrame(3, 'p2'),
+    ]);
+    expect(() => normalizeInputFrames([frame, frame], {
+      tick: 3,
+      participantIds: ['p1'],
+    })).toThrow(/重复输入/);
+  });
+
+  it('publishes one typed authority event vocabulary', () => {
+    const event: ArenaMatchEventType = ARENA_MATCH_EVENT.HIT_RESOLVED;
+    expect(event).toBe('HitResolved');
+    expect(Object.isFrozen(ARENA_MATCH_EVENT)).toBe(true);
+  });
+
   it('deeply freezes canonical data without trusting accessors or insertion order', () => {
     const left = cloneFrozenData({ z: [3, 2, 1], a: { enabled: true } });
     const right = { a: { enabled: true }, z: [3, 2, 1] };

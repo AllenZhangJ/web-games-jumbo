@@ -1,6 +1,6 @@
 import { ARENA_MATCH_PHASE } from '../config.js';
 import { createArenaV1MatchCore } from '../arena-v1-match-core.js';
-import { createNeutralInputFrame } from '../input-frame.js';
+import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
 import { HeadlessMatchRunner, replayMatch } from '../replay.js';
 import {
   assertIntegerAtLeast,

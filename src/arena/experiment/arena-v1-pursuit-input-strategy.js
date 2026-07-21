@@ -1,5 +1,5 @@
 import { ARENA_PARTICIPANT_STATUS } from '../config.js';
-import { createNeutralInputFrame } from '../input-frame.js';
+import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
 import {
   assertKnownKeys,
   assertPositiveFinite,

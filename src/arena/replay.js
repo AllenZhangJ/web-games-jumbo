@@ -1,5 +1,5 @@
 import { ARENA_MATCH_PHASE } from './config.js';
-import { normalizeInputFrames } from './input-frame.js';
+import { normalizeInputFrames } from '@number-strategy-jump/arena-contracts';
 import { MatchCore } from './match-core.js';
 import { createArenaV1MatchCore } from './arena-v1-match-core.js';
 import { combineCleanupFailure, normalizeThrownError } from './lifecycle-error.js';

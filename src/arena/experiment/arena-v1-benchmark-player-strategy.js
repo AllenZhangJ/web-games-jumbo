@@ -1,5 +1,5 @@
 import { createArenaV1CharacterRegistry } from '../content/arena-v1-characters.js';
-import { createNeutralInputFrame, normalizeInputFrame } from '../input-frame.js';
+import { createNeutralInputFrame, normalizeInputFrame } from '@number-strategy-jump/arena-contracts';
 import {
   assertIntegerAtLeast,
   assertKnownKeys,
