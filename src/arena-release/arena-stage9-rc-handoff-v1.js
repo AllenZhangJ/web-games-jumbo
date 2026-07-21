@@ -32,7 +32,7 @@ import {
   ARENA_V1_GOLDEN_REPLAY_MANIFEST_ID,
   createArenaV1GoldenReplayScenarioRegistry,
 } from '../arena/regression/arena-v1-golden-replay-scenarios.js';
-import { ARENA_REPLAY_SCHEMA_VERSION } from '../arena/replay.js';
+import { ARENA_REPLAY_SCHEMA_VERSION } from '@number-strategy-jump/arena-match';
 import {
   createArenaStage9HumanFairnessV1Definition,
 } from '../arena/study/arena-stage9-human-fairness-v1.js';

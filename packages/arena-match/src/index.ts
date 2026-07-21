@@ -53,6 +53,7 @@ export type {
   MatchCoreFactoryContext,
   MatchCoreMapFactoryContext,
   MatchCoreOptions,
+  MatchReplayMetadata,
 } from './match-core.js';
 export {
   FIXED_STEP_RUNTIME_DEFAULTS,
@@ -64,3 +65,25 @@ export type {
   FixedStepInputProvider,
   FixedStepRuntimeOptions,
 } from './fixed-step-match-runtime.js';
+export {
+  ARENA_REPLAY_ERROR_CODE,
+  ARENA_REPLAY_SCHEMA_VERSION,
+  ArenaReplayCompatibilityError,
+  createReplayMatch,
+  HEADLESS_MATCH_RUNNER_DEFAULTS,
+  HeadlessMatchRunner,
+} from './replay.js';
+export type {
+  ArenaReplay,
+  ArenaReplayCheckpoint,
+  HeadlessInputProvider,
+  HeadlessMatchRunnerOptions,
+  HeadlessRunOptions,
+  ReplayBeforeStep,
+  ReplayBeforeStepContext,
+  ReplayCoreFactory,
+  ReplayCoreFactoryOptions,
+  ReplayMatch,
+  ReplayMatchOptions,
+  ReplayMatchResult,
+} from './replay.js';

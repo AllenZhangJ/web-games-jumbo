@@ -30,8 +30,8 @@
 | G0 基线冻结 | 已完成 | 自动化、压力、资产和三端构建通过；ADR/计划/证据已落盘；tag `arena-product-baseline-51e2822` 指向基线提交 |
 | G1 治理外壳/唯一产品 | 已完成 | Arena 已成为唯一生产产品；旧产品实现/专属测试/资产/规范已退役；strict TS、ESLint、Vitest、CI、CODEOWNERS、JS 递减清单和唯一产物门禁已启用 |
 | G2 Definition/合同/配置 | 已完成 | strict TS `arena-contracts`、`arena-definitions`、`arena-profile-contracts` 与 `arena-platform-contracts` 已承接确定性、输入/事件、权威快照、同步存储、平台能力、玩家档案/存档协议，以及动作/角色/装备/地图 Definition、只读 Registry 和唯一 Gameplay V2 数值配置；受审计 JavaScript 已降至 500 个 |
-| G3 Rule/Core/Replay | 进行中 | strict TS `arena-core`、`arena-movement`、`arena-physics`、`arena-equipment`、`arena-map` 与 `arena-match` 已承接规则/移动/物理/装备、完整地图权威链、比赛配置、Participant/Timeline 唯一写入者、角色 Runtime/物理投影、状态 hash、完整 MatchCore 编排及 fixed-step Runtime；Replay 仍待迁移 |
-| G4 Bot/Product/Persistence | 未开始 | 当前功能与压力证据存在，尚未迁入 strict TS workspace |
+| G3 Rule/Core/Replay | 已完成 | strict TS `arena-core`、`arena-movement`、`arena-physics`、`arena-equipment`、`arena-map` 与 `arena-match` 已承接规则/移动/物理/装备、完整地图权威链、比赛配置、Participant/Timeline 唯一写入者、角色 Runtime/物理投影、状态 hash、完整 MatchCore 编排、fixed-step Runtime 与 Replay；黄金语料保持 `0dace228` |
+| G4 Bot/Product/Persistence | 未开始 | 下一批；当前功能与压力证据存在，尚未迁入 strict TS workspace |
 | G5 Presentation/资产/反馈 | 未开始 | 正式资产预算通过；审批字段与唯一正常路径仍待治理 |
 | G6 Platform/入口/构建 | 未开始 | 三端默认入口是 Product，但生产交付未与开发页面彻底隔离 |
 | G7 零 JS/完整质量门 | 未开始 | ESLint、strict TypeScript、Vitest 和 JavaScript 精确递减门禁已作为迁移护栏运行；coverage 阈值、测试归包和零 JS 尚未完成 |
@@ -55,7 +55,7 @@
 
 ## 当前不可合并原因
 
-1. 当前 443 个受维护 JavaScript 文件仍在精确允许清单中，Replay、Bot/Product/Persistence/Presentation/Platform 尚未完成 strict TypeScript workspace 迁移。
+1. 当前 443 个受维护 JavaScript 文件仍在精确允许清单中，Bot/Product/Persistence/Presentation/Platform 和应用组合适配尚未完成 strict TypeScript workspace 迁移。
 2. Vitest 当前保护底层合同包和治理门禁；Arena 其余测试尚待按 workspace 迁移并建立正式 coverage 阈值与零 JS 门禁。
 3. 正式资产最终审批与完整安全/依赖长期治理尚未闭环。
 4. 文档仍含迁移前阶段性叙述，尚未完成 G9 全量链接、状态与命令归真。
@@ -330,3 +330,12 @@
 - `advance` 仍不可重入；失败后 `finally` 释放运行锁，暂停/销毁不得插入 advance 中途，destroy 幂等且不越权销毁由上层拥有的 MatchCore。Runtime 不写命中、移动、阶段或胜负权威状态。
 - strict package build、640 项 Node 测试、83 项 strict package/治理测试全部通过；JavaScript 精确允许清单由 444 降至 443。
 - 本批不改变 Gameplay V2 数值、攻击挥空、输入采样、命中/击退/动作阶段、事件 ID/顺序、Replay schema 或黄金 hash；G3 下一批迁移 Replay。
+
+## G3.21 Replay 迁移与 G3 完成证据
+
+- Replay V5 schema、兼容错误、Headless Runner、checkpoint/事件/结果验证、重放执行与 Core 工厂资源接管已进入 `arena-match` strict TypeScript；Runner、schema 与 error code 消费者直接引用包 API。`src/arena/replay.js` 只保留 `createArenaV1MatchCore` 的依赖注入组合，不承载 schema、校验、Runner 或重放算法，避免底层包反向依赖产品内容；该适配器仍计入 G6/G7 的 JavaScript 清零范围。
+- Headless Runner 构造与 run options、Replay match options、checkpoint 和 result 均拒绝 getter、Symbol、未知字段及非法范围；getter 不会执行。`beforeStep` 保持同步合同，Promise 会被拒绝并吸收迟到 rejection，恶意 `then` getter 不执行。
+- Core 工厂返回非法候选时只通过数据方法描述符执行安全回收；合同失败和回收失败同时保留。有效 Replay 无论通过或失败均释放验证 Core，验证失败与 destroy 失败也以组合错误同时保留，不掩盖原始原因。
+- MatchCore Replay metadata 补齐此前遗漏的 `airJumpHorizontalImpulse` 与 `contextPrimaryMobilityEnabled`；非默认产品移动配置现在可以完整导出并通过同一 config hash 重建，不再依赖默认值碰巧一致。
+- 642 项 Node 测试、83 项 strict package/治理测试通过；Replay 专项 17 项，生命周期专项 94 项。黄金 Replay manifest 及四个 entry replay/final hash 保持 `0dace228`、`17b60bcb/c9cd7e73`、`543a7a80/33a33688`、`2e092bc6/389b7142`、`b68c763e/ee341734`。
+- JavaScript 精确允许清单保持 443：本批将 344 行 Replay 权威逻辑迁入 strict 包，同时保留 14 行 Arena V1 组合适配；G3 的 Rule/Core/Replay 交付与门禁完成，下一批进入 G4 Bot/Product/Persistence。

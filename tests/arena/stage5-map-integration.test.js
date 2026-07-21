@@ -5,9 +5,12 @@ import { STAGE5_MAP_ID } from '../../src/arena/content/stage5-map.js';
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
 import { MAP_DOMAIN_EVENT } from '@number-strategy-jump/arena-map';
 import { ARENA_MAP_EVENT } from '@number-strategy-jump/arena-map';
-import { ARENA_MATCH_EVENT } from '@number-strategy-jump/arena-match';
+import {
+  ARENA_MATCH_EVENT,
+  HeadlessMatchRunner,
+} from '@number-strategy-jump/arena-match';
 import { EQUIPMENT_LOCATION_STATE } from '@number-strategy-jump/arena-equipment';
-import { HeadlessMatchRunner, replayMatch } from '../../src/arena/replay.js';
+import { replayMatch } from '../../src/arena/replay.js';
 
 function neutralFrames(core) {
   return core.config.participantIds.map((participantId) => (

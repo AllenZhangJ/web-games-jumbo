@@ -1,6 +1,8 @@
-import { ARENA_MATCH_PHASE } from '@number-strategy-jump/arena-match';
+import {
+  ARENA_MATCH_PHASE,
+  HeadlessMatchRunner,
+} from '@number-strategy-jump/arena-match';
 import { createArenaV1MatchCore } from '../arena-v1-match-core.js';
-import { HeadlessMatchRunner } from '../replay.js';
 import {
   createArenaV1ScriptedPressureInputStrategy,
   createArenaV1ScriptedPressureParameters,

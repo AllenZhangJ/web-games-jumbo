@@ -6,8 +6,8 @@ import { createArenaV1MatchCore } from '../../../src/arena/arena-v1-match-core.j
 import {
   ARENA_REPLAY_ERROR_CODE,
   ARENA_REPLAY_SCHEMA_VERSION,
-  replayMatch,
-} from '../../../src/arena/replay.js';
+} from '@number-strategy-jump/arena-match';
+import { replayMatch } from '../../../src/arena/replay.js';
 import {
   createArenaV1GoldenReplayScenarioRegistry,
 } from '../../../src/arena/regression/arena-v1-golden-replay-scenarios.js';

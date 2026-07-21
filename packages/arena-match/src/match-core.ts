@@ -2,6 +2,7 @@ import {
   ARENA_MATCH_PHASE,
   ARENA_PARTICIPANT_STATUS,
   type ArenaMatchConfig,
+  type ArenaMatchConfigOverrides,
   type ArenaMatchPhase,
   createArenaMatchConfig,
 } from './match-config.js';
@@ -102,6 +103,15 @@ export interface MatchCoreOptions {
   readonly ruleEngineFactory?: (context: MatchCoreFactoryContext) => unknown;
   readonly mapSystemFactory?: (context: MatchCoreMapFactoryContext) => unknown;
   readonly characterRegistry?: unknown;
+}
+
+export interface MatchReplayMetadata {
+  readonly schemaVersion: ArenaMatchConfig['schemaVersion'];
+  readonly physicsBackendVersion: ArenaMatchConfig['physicsBackendVersion'];
+  readonly configHash: string;
+  readonly ruleContentHash: string;
+  readonly matchSeed: number;
+  readonly config: ArenaMatchConfigOverrides;
 }
 
 interface MovementPreparation {
@@ -1174,7 +1184,7 @@ export class MatchCore {
     return createMatchStateHash(this.#createSnapshot(true));
   }
 
-  getReplayMetadata(): UnknownRecord {
+  getReplayMetadata(): MatchReplayMetadata {
     return {
       schemaVersion: this.config.schemaVersion,
       physicsBackendVersion: this.config.physicsBackendVersion,
@@ -1212,6 +1222,12 @@ export class MatchCore {
           })),
           spawns: this.config.arena.spawns.map((spawn) => ({ ...spawn })),
         },
+        ...(this.config.airJumpHorizontalImpulse === undefined
+          ? {}
+          : { airJumpHorizontalImpulse: this.config.airJumpHorizontalImpulse }),
+        ...(this.config.contextPrimaryMobilityEnabled === undefined
+          ? {}
+          : { contextPrimaryMobilityEnabled: this.config.contextPrimaryMobilityEnabled }),
       },
     };
   }

@@ -1,6 +1,6 @@
 import { BOT_DIFFICULTY_ID, BOT_DIFFICULTY_PROFILES } from '../ai/bot-difficulty.js';
 import { ARENA_V1_BALANCE_DEFINITION } from '../content/arena-v1-balance.js';
-import { ARENA_REPLAY_SCHEMA_VERSION } from '../replay.js';
+import { ARENA_REPLAY_SCHEMA_VERSION } from '@number-strategy-jump/arena-match';
 import {
   HUMAN_MATCH_STUDY_DEFINITION_SCHEMA_VERSION,
   createHumanMatchStudyDefinition,

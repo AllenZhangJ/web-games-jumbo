@@ -2,8 +2,8 @@ import { createDeterministicDataHash } from '@number-strategy-jump/arena-contrac
 import {
   ARENA_REPLAY_ERROR_CODE,
   ARENA_REPLAY_SCHEMA_VERSION,
-  replayMatch,
-} from '../replay.js';
+} from '@number-strategy-jump/arena-match';
+import { replayMatch } from '../replay.js';
 import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 import { createArenaGoldenReplayManifest } from './golden-replay-manifest.js';
 import { ArenaGoldenReplayScenarioRegistry } from './golden-replay-scenario-registry.js';

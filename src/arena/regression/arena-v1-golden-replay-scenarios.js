@@ -12,7 +12,7 @@ import {
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
 import { combineCleanupFailure, normalizeThrownError } from '@number-strategy-jump/arena-contracts';
 import { QuickMatchService } from '../matchmaking/quick-match-service.js';
-import { HeadlessMatchRunner } from '../replay.js';
+import { HeadlessMatchRunner } from '@number-strategy-jump/arena-match';
 import { ARENA_GOLDEN_REPLAY_CATEGORY } from './golden-replay-manifest.js';
 import { ArenaGoldenReplayScenarioRegistry } from './golden-replay-scenario-registry.js';
 

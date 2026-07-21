@@ -1,6 +1,9 @@
 import { performance } from 'node:perf_hooks';
 import { createArenaV1MatchCore } from '../src/arena/arena-v1-match-core.js';
-import { ARENA_MATCH_PHASE } from '@number-strategy-jump/arena-match';
+import {
+  ARENA_MATCH_PHASE,
+  HeadlessMatchRunner,
+} from '@number-strategy-jump/arena-match';
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
 import { createContextInputMapperB } from '../src/arena/presentation/input/context-input-mapper-b.js';
 import { createExplicitCombatJumpMapper } from '../src/arena/presentation/input/explicit-combat-jump-mapper.js';
@@ -9,7 +12,7 @@ import {
   ARENA_INPUT_MAPPER_ID,
 } from '../src/arena/presentation/input/input-mapper-contract.js';
 import { InputSampler } from '../src/arena/presentation/input/input-sampler.js';
-import { HeadlessMatchRunner, replayMatch } from '../src/arena/replay.js';
+import { replayMatch } from '../src/arena/replay.js';
 import { createArenaInputFuzzFailureCandidate } from '../src/arena/regression/input-fuzz-regression-candidate.js';
 import { combineCleanupFailure, normalizeThrownError } from '@number-strategy-jump/arena-contracts';
 import { createRng, deriveSeed } from '@number-strategy-jump/arena-contracts';

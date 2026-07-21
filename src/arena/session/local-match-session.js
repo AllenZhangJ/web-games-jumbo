@@ -1,8 +1,10 @@
-import { ARENA_MATCH_PHASE } from '@number-strategy-jump/arena-match';
+import {
+  ARENA_MATCH_PHASE,
+  HeadlessMatchRunner,
+  MatchCore,
+} from '@number-strategy-jump/arena-match';
 import { createNeutralInputFrame, normalizeInputFrame } from '@number-strategy-jump/arena-contracts';
 import { combineCleanupFailure, normalizeThrownError } from '@number-strategy-jump/arena-contracts';
-import { MatchCore } from '@number-strategy-jump/arena-match';
-import { HeadlessMatchRunner } from '../replay.js';
 
 export const LOCAL_MATCH_SESSION_STATE = Object.freeze({
   CREATED: 'created',

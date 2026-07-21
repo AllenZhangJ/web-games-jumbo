@@ -1,7 +1,10 @@
-import { ARENA_MATCH_PHASE } from '@number-strategy-jump/arena-match';
+import {
+  ARENA_MATCH_PHASE,
+  HeadlessMatchRunner,
+} from '@number-strategy-jump/arena-match';
 import { createArenaV1MatchCore } from '../arena-v1-match-core.js';
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
-import { HeadlessMatchRunner, replayMatch } from '../replay.js';
+import { replayMatch } from '../replay.js';
 import {
   assertIntegerAtLeast,
   assertKnownKeys,

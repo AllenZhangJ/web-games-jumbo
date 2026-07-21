@@ -19,7 +19,8 @@ import { STAGE5_MAP_ID } from '../../../src/arena/content/stage5-map.js';
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
 import { MAP_EVENT_KIND } from '@number-strategy-jump/arena-map';
 import { QuickMatchService } from '../../../src/arena/matchmaking/quick-match-service.js';
-import { HeadlessMatchRunner, replayMatch } from '../../../src/arena/replay.js';
+import { HeadlessMatchRunner } from '@number-strategy-jump/arena-match';
+import { replayMatch } from '../../../src/arena/replay.js';
 import {
   ARENA_V1_CONTENT_REPLACEMENT_REGISTRY,
   ARENA_V1_MATCH_CONTENT_CATALOG,

@@ -2,14 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ARENA_MATCH_PHASE,
+  ARENA_REPLAY_ERROR_CODE,
   FixedStepMatchRuntime,
+  HeadlessMatchRunner,
 } from '@number-strategy-jump/arena-match';
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
 import { createArenaV1MatchCore } from '../../src/arena/arena-v1-match-core.js';
 import { createLightweightPhysicsWorld } from '@number-strategy-jump/arena-physics';
 import {
-  ARENA_REPLAY_ERROR_CODE,
-  HeadlessMatchRunner,
   replayMatch,
 } from '../../src/arena/replay.js';
 
@@ -45,6 +45,25 @@ test('headless replay reproduces checkpoints, final hash, result and events', ()
   core.destroy();
 });
 
+test('replay metadata preserves product mobility overrides required to reconstruct the match', () => {
+  const core = createArenaV1MatchCore({
+    seed: 778,
+    config: {
+      preparingTicks: 0,
+      suddenDeathStartTick: 40,
+      hardLimitTicks: 60,
+      airJumpHorizontalImpulse: 0.43,
+      contextPrimaryMobilityEnabled: false,
+    },
+  });
+  const replay = new HeadlessMatchRunner(core, { checkpointInterval: 20 })
+    .runUntilEnded(scriptedFrames);
+  assert.equal(replay.config.airJumpHorizontalImpulse, 0.43);
+  assert.equal(replay.config.contextPrimaryMobilityEnabled, false);
+  assert.equal(replayMatch(replay).finalHash, replay.finalHash);
+  core.destroy();
+});
+
 test('replay beforeStep sees immutable copies and rejects asynchronous verification', () => {
   const core = createReplayCore();
   const runner = new HeadlessMatchRunner(core, { checkpointInterval: 20 });
@@ -64,7 +83,55 @@ test('replay beforeStep sees immutable copies and rejects asynchronous verificat
     () => replayMatch(replay, { beforeStep: async () => true }),
     /必须同步完成/,
   );
+  let thenGetterCalls = 0;
+  assert.throws(() => replayMatch(replay, {
+    beforeStep() {
+      const result = {};
+      Object.defineProperty(result, 'then', {
+        enumerable: true,
+        get() {
+          thenGetterCalls += 1;
+          return () => undefined;
+        },
+      });
+      return result;
+    },
+  }), /必须同步完成/);
+  assert.equal(thenGetterCalls, 0);
   runner.destroy();
+});
+
+test('runner and replay options reject accessors without executing them', () => {
+  const core = createReplayCore();
+  let runnerGetterCalls = 0;
+  const runnerOptions = {};
+  Object.defineProperty(runnerOptions, 'checkpointInterval', {
+    enumerable: true,
+    get() {
+      runnerGetterCalls += 1;
+      return 20;
+    },
+  });
+  assert.throws(
+    () => new HeadlessMatchRunner(core, runnerOptions),
+    /必须是可枚举数据字段/,
+  );
+  assert.equal(runnerGetterCalls, 0);
+
+  const replay = new HeadlessMatchRunner(core, { checkpointInterval: 20 })
+    .runUntilEnded(scriptedFrames);
+  let replayGetterCalls = 0;
+  const replayOptions = {};
+  Object.defineProperty(replayOptions, 'beforeStep', {
+    enumerable: true,
+    get() {
+      replayGetterCalls += 1;
+      return null;
+    },
+  });
+  assert.throws(() => replayMatch(replay, replayOptions), /必须是可枚举数据字段/);
+  assert.equal(replayGetterCalls, 0);
+  core.destroy();
 });
 
 test('runner records a tick only after the authoritative step succeeds', () => {
@@ -195,6 +262,9 @@ test('truncated, incomplete or duplicate-checkpoint replays fail and always dest
   const duplicateCheckpoint = structuredClone(replay);
   duplicateCheckpoint.checkpoints.splice(1, 0, { ...duplicateCheckpoint.checkpoints[0] });
   assert.throws(() => replayMatch(duplicateCheckpoint), /严格递增/);
+  const extendedCheckpoint = structuredClone(replay);
+  extendedCheckpoint.checkpoints[0].operatorNote = 'not part of Replay V5';
+  assert.throws(() => replayMatch(extendedCheckpoint), /不支持字段 operatorNote/);
   source.destroy();
 });
 
@@ -213,6 +283,25 @@ test('replay destroys an invalid factory result before rejecting the factory con
     },
   }), /coreFactory 必须返回 MatchCore/);
   assert.equal(destroyCalls, 1);
+
+  let combinedFailure;
+  try {
+    replayMatch(replay, {
+      coreFactory() {
+        return {
+          destroy() {
+            throw new Error('forced candidate cleanup failure');
+          },
+        };
+      },
+    });
+  } catch (error) {
+    combinedFailure = error;
+  }
+  assert.match(combinedFailure?.message ?? '', /清理未完整完成/);
+  assert.match(combinedFailure?.originalError?.message ?? '', /必须返回 MatchCore/);
+  assert.equal(combinedFailure?.cleanupErrors?.length, 1);
+  assert.match(combinedFailure.cleanupErrors[0].message, /forced candidate cleanup failure/);
   source.destroy();
 });
 
