@@ -13,6 +13,7 @@
     { "path": "./packages/arena-physics" },
     { "path": "./packages/arena-product-contracts" },
     { "path": "./packages/arena-product-content" },
+    { "path": "./packages/arena-product-composition" },
     { "path": "./packages/arena-product-match" },
     { "path": "./packages/arena-product-progression" },
     { "path": "./packages/arena-product-session" },

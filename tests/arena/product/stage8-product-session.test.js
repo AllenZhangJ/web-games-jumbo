@@ -669,6 +669,48 @@ test('Arena V1 product balance defaults reject malformed match config before acq
   }), /matchConfig.*普通对象/);
 });
 
+test('Arena V1 composition snapshots seed methods and contains diagnostic reentry', async () => {
+  const seedSource = { nextSeed: () => 707 };
+  let diagnosticReentryAttempts = 0;
+  let controller = null;
+  controller = createArenaV1ProductSession({
+    storage: storageHarness().port,
+    ownerId: 'product-composition-boundary-owner',
+    wallNow: () => 2_000,
+    seedSource,
+    matchConfig: {
+      preparingTicks: 0,
+      suddenDeathStartTick: 30,
+      hardLimitTicks: 60,
+    },
+    keyPrefix: 'test.product-composition-boundary',
+    diagnosticSink(value) {
+      if (value.type !== 'match-assignment') return;
+      diagnosticReentryAttempts += 1;
+      controller.selectCharacter('parkour-apprentice');
+    },
+  });
+  seedSource.nextSeed = () => 808;
+
+  await controller.boot();
+  controller.openCharacterSelect();
+  await controller.requestMatch();
+  assert.equal(diagnosticReentryAttempts, 1);
+  assert.equal(controller.getSnapshot().match.publicMatchInfo.matchSeed, 707);
+  controller.destroy();
+});
+
+test('Arena V1 composition rejects option accessors without executing them', () => {
+  let reads = 0;
+  assert.throws(() => createArenaV1ProductSession({
+    get storage() { reads += 1; return storageHarness().port; },
+    ownerId: 'product-composition-getter-owner',
+    wallNow: () => 2_000,
+    seedSource: { nextSeed: () => 1 },
+  }), /storage.*数据字段/);
+  assert.equal(reads, 0);
+});
+
 test('Arena V1 composition persists character selection across a clean product restart', async () => {
   const storage = storageHarness();
   let seed = 200;
