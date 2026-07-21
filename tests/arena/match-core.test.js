@@ -10,7 +10,7 @@ import {
 } from '@number-strategy-jump/arena-contracts';
 import { ARENA_MATCH_EVENT } from '../../src/arena/match-core.js';
 import { createArenaV1MatchCore } from '../../src/arena/arena-v1-match-core.js';
-import { createLightweightPhysicsWorld } from '../../src/arena/physics/lightweight-physics.js';
+import { createLightweightPhysicsWorld } from '@number-strategy-jump/arena-physics';
 import { createArenaV1RuleEngine } from '../../src/arena/composition/arena-v1-rule-engine.js';
 
 const TEST_ARENA = Object.freeze({

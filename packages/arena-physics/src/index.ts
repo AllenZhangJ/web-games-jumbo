@@ -22,3 +22,10 @@ export type {
   PhysicsWorld,
 } from './physics-adapter.js';
 export { createMovementPhysicsPort } from './movement-physics-port.js';
+export {
+  ARENA_FIXED_DT,
+  ARENA_PHYSICS,
+  ARENA_TICK_RATE,
+} from './physics-config.js';
+export type { ArenaPhysicsConfig } from './physics-config.js';
+export { createLightweightPhysicsWorld } from './lightweight-physics.js';

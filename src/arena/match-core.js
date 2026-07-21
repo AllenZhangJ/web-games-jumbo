@@ -4,7 +4,7 @@ import {
   createArenaMatchConfig,
 } from './config.js';
 import { normalizeInputFrames } from '@number-strategy-jump/arena-contracts';
-import { createLightweightPhysicsWorld } from './physics/lightweight-physics.js';
+import { createLightweightPhysicsWorld } from '@number-strategy-jump/arena-physics';
 import {
   assertPhysicsWorld,
   createMovementPhysicsPort,

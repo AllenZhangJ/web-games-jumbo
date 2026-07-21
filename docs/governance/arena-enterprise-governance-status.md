@@ -30,7 +30,7 @@
 | G0 基线冻结 | 已完成 | 自动化、压力、资产和三端构建通过；ADR/计划/证据已落盘；tag `arena-product-baseline-51e2822` 指向基线提交 |
 | G1 治理外壳/唯一产品 | 已完成 | Arena 已成为唯一生产产品；旧产品实现/专属测试/资产/规范已退役；strict TS、ESLint、Vitest、CI、CODEOWNERS、JS 递减清单和唯一产物门禁已启用 |
 | G2 Definition/合同/配置 | 已完成 | strict TS `arena-contracts`、`arena-definitions`、`arena-profile-contracts` 与 `arena-platform-contracts` 已承接确定性、输入/事件、权威快照、同步存储、平台能力、玩家档案/存档协议，以及动作/角色/装备/地图 Definition、只读 Registry 和唯一 Gameplay V2 数值配置；受审计 JavaScript 已降至 500 个 |
-| G3 Rule/Core/Replay | 进行中 | strict TS `arena-core` 已承接规则/动作，`arena-movement` 已承接移动事务，`arena-physics` 已承接物理合同与 Movement 单批端口；lightweight 求解器、Equipment、Map、MatchCore、Replay 仍待迁移 |
+| G3 Rule/Core/Replay | 进行中 | strict TS `arena-core` 已承接规则/动作，`arena-movement` 已承接移动事务，`arena-physics` 已承接物理合同、Movement 单批端口、Gameplay V2 物理配置与 lightweight 固定步长求解器；Equipment、Map、MatchCore、Replay 仍待迁移 |
 | G4 Bot/Product/Persistence | 未开始 | 当前功能与压力证据存在，尚未迁入 strict TS workspace |
 | G5 Presentation/资产/反馈 | 未开始 | 正式资产预算通过；审批字段与唯一正常路径仍待治理 |
 | G6 Platform/入口/构建 | 未开始 | 三端默认入口是 Product，但生产交付未与开发页面彻底隔离 |
@@ -55,7 +55,7 @@
 
 ## 当前不可合并原因
 
-1. 当前 476 个受维护 JavaScript 文件仍在精确允许清单中，Rule/Core/Replay、Bot/Product/Persistence/Presentation/Platform 尚未完成 strict TypeScript workspace 迁移。
+1. 当前 475 个受维护 JavaScript 文件仍在精确允许清单中，Rule/Core/Replay、Bot/Product/Persistence/Presentation/Platform 尚未完成 strict TypeScript workspace 迁移。
 2. Vitest 当前保护底层合同包和治理门禁；Arena 其余测试尚待按 workspace 迁移并建立正式 coverage 阈值与零 JS 门禁。
 3. 正式资产最终审批与完整安全/依赖长期治理尚未闭环。
 4. 文档仍含迁移前阶段性叙述，尚未完成 G9 全量链接、状态与命令归真。
@@ -199,6 +199,16 @@
 - 新增 strict TypeScript workspace：`@number-strategy-jump/arena-physics`；物理世界、Arena/角色输入、向量、角色状态/reset 和 Movement mutation port 均有显式合同。
 - `assertPhysicsWorld` 统一验证九项完整同步能力；Arena surface 和角色 Definition 在进入世界前验证有限数、正范围、唯一 ID 并复制向量，避免调用方后续修改写回物理运行时。
 - Movement→Physics port 会先归一化完整 mutation 批次，再对世界执行一次同步 `applyCharacterMutationBatch`；任何一项非法时世界调用次数保持为零，不出现部分物理提交。
-- `arena-physics` 只依赖 `arena-contracts` 与 `arena-movement`，架构门禁扫描其全部 strict 源码并核对依赖白名单；不依赖 MatchCore、Bot、Presentation、Three.js、DOM、平台、墙钟或随机源。
+- G3.7 提交时 `arena-physics` 只依赖 `arena-contracts` 与 `arena-movement`；G3.8 为直接消费唯一 Gameplay V2 Definition 增加 `arena-definitions` 依赖。架构门禁持续扫描全部 strict 源码并核对精确依赖白名单；不依赖 MatchCore、Bot、Presentation、Three.js、DOM、平台、墙钟或随机源。
 - strict 公共包测试增至 37 项；62 项 Physics、Movement、MatchCore、Replay 与架构定向回归通过，JavaScript 精确允许清单由 478 降至 476。
 - G3 下一批迁移 429 行 lightweight 固定步长求解器，并把默认物理配置直接绑定到 Gameplay V2 Definition；POC 的性能计时和报告继续留在开发/测试编排层。
+
+## G3.8 lightweight 固定步长求解器迁移证据
+
+- 429 行 lightweight 求解器已从 `src/arena` JavaScript 迁入 `arena-physics` strict TypeScript；MatchCore、Replay、物理合同测试和 POC 只从包公开入口构造物理世界，不再存在旧实现路径。
+- 默认 tick rate、fixed delta、重力、角色碰撞/质量/移动、水平与垂直速度上限、地面探测、自动跨步、地面吸附和 substep 全部直接由 `ARENA_GAMEPLAY_V2_TUNING` 派生；`src/arena/config.js` 仅转发同一只读对象，不再维护第二份物理数值。
+- 求解器内部角色、surface、配置、批量 mutation 草稿和稳定分离方向均有显式类型；角色排序索引或 Map 关系一旦破坏会 fail closed，固定 tick 之外的步长、销毁后调用、非法 surface/角色和非有限速度继续前置拒绝。
+- Movement mutation 使用 `arena-movement` 的唯一 kind 合同；完整批次先形成草稿再一次提交，后项失败不会写入前项。角色碰撞顺序按稳定 ID 排序，同 Arena、输入和 tick 得到相同角色状态。
+- POC 的 `performance.now()`、压力 tick 和报告仍只存在于开发/测试编排层，权威 `arena-physics` 包未引入墙钟、随机、Three.js、DOM 或平台 API。
+- strict 公共包测试增至 41 项；62 项 Physics、Movement、MatchCore、Replay 与架构定向回归通过，JavaScript 精确允许清单由 476 降至 475。
+- G3 下一批迁移 Equipment 规则与运行时，再按依赖方向收敛 Map、MatchCore 和 Replay；本批未改变 Gameplay V2 数值、权威 fixed tick、Replay schema 或黄金 hash。

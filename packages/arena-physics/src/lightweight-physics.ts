@@ -1,4 +1,9 @@
-import { ARENA_FIXED_DT, ARENA_PHYSICS } from '../config.js';
+import {
+  MOVEMENT_MUTATION_KIND,
+  type MovementMutation,
+} from '@number-strategy-jump/arena-movement';
+
+import { ARENA_FIXED_DT, ARENA_PHYSICS } from './physics-config.js';
 import {
   assertFiniteNumber,
   assertPhysicsWorld,
@@ -9,20 +14,80 @@ import {
   normalizeMovementIntent,
   validateArenaDefinition,
   validateCharacterDefinition,
-} from '@number-strategy-jump/arena-physics';
+  type PhysicsCharacterBody,
+  type PhysicsCharacterDefinition,
+  type PhysicsCharacterResetState,
+  type PhysicsRuntimeArena,
+  type PhysicsRuntimeSurface,
+  type PhysicsVector3,
+  type PhysicsWorld,
+} from './physics-adapter.js';
 
 const CONTACT_EPSILON = 1e-7;
-const PHYSICS_CHARACTER_MUTATION_KIND = Object.freeze({
-  APPLY_IMPULSE: 'apply-impulse',
-  SET_VERTICAL_SPEED: 'set-vertical-speed',
-  ACCELERATE_DOWNWARD: 'accelerate-downward',
-});
+const FIXED_STEP_EPSILON = 1e-12;
+interface PhysicsSolverConfig {
+  readonly gravity: number;
+  readonly maxHorizontalSpeed: number;
+  readonly maxVerticalSpeed: number;
+  readonly groundProbeTolerance: number;
+  readonly maxStepHeight: number;
+  readonly groundSnapDistance: number;
+  readonly substeps: number;
+}
 
-function clamp(value, min, max) {
+export interface LightweightPhysicsWorldOptions {
+  readonly arena?: unknown;
+  readonly config?: unknown;
+}
+
+interface CharacterMutationDraft {
+  readonly body: PhysicsCharacterBody;
+  vx: number;
+  vy: number;
+  vz: number;
+  grounded: boolean;
+  supportSurfaceId: string | null;
+}
+
+interface SeparationDirection {
+  readonly x: number;
+  readonly z: number;
+  readonly distance: number;
+}
+
+interface HorizontalVelocity {
+  readonly x: number;
+  readonly z: number;
+}
+
+function normalizeSolverConfig(value: unknown): PhysicsSolverConfig {
+  if (!value || typeof value !== 'object') throw new TypeError('physics config 必须是对象。');
+  const config = value as Readonly<Record<string, unknown>>;
+  return {
+    gravity: assertFiniteNumber(config.gravity, 'config.gravity'),
+    maxHorizontalSpeed: assertPositiveNumber(
+      config.maxHorizontalSpeed,
+      'config.maxHorizontalSpeed',
+    ),
+    maxVerticalSpeed: assertPositiveNumber(config.maxVerticalSpeed, 'config.maxVerticalSpeed'),
+    groundProbeTolerance: assertPositiveNumber(
+      config.groundProbeTolerance,
+      'config.groundProbeTolerance',
+    ),
+    maxStepHeight: assertPositiveNumber(config.maxStepHeight, 'config.maxStepHeight'),
+    groundSnapDistance: assertPositiveNumber(
+      config.groundSnapDistance,
+      'config.groundSnapDistance',
+    ),
+    substeps: Math.max(1, Math.floor(assertPositiveNumber(config.substeps, 'config.substeps'))),
+  };
+}
+
+function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-function limitHorizontalVelocity(vx, vz, limit) {
+function limitHorizontalVelocity(vx: number, vz: number, limit: number): HorizontalVelocity {
   if (!Number.isFinite(vx) || !Number.isFinite(vz)) {
     throw new RangeError('水平速度计算结果必须是有限数。');
   }
@@ -39,19 +104,22 @@ function limitHorizontalVelocity(vx, vz, limit) {
   };
 }
 
-function isOverSurface(body, surface) {
+function isOverSurface(body: PhysicsCharacterBody, surface: PhysicsRuntimeSurface): boolean {
   return surface.enabled
     && Math.abs(body.x - surface.center.x) <= surface.halfExtents.x + CONTACT_EPSILON
     && Math.abs(body.z - surface.center.z) <= surface.halfExtents.z + CONTACT_EPSILON;
 }
 
-function verticalOverlaps(bodyA, bodyB) {
+function verticalOverlaps(bodyA: PhysicsCharacterBody, bodyB: PhysicsCharacterBody): boolean {
   const extentA = bodyA.halfHeight + bodyA.radius;
   const extentB = bodyB.halfHeight + bodyB.radius;
   return Math.abs(bodyA.y - bodyB.y) < extentA + extentB;
 }
 
-function chooseStableSeparationDirection(bodyA, bodyB) {
+function chooseStableSeparationDirection(
+  bodyA: PhysicsCharacterBody,
+  bodyB: PhysicsCharacterBody,
+): SeparationDirection {
   const dx = bodyB.x - bodyA.x;
   const dz = bodyB.z - bodyA.z;
   const distance = Math.hypot(dx, dz);
@@ -61,47 +129,30 @@ function chooseStableSeparationDirection(bodyA, bodyB) {
     : { x: -1, z: 0, distance: 0 };
 }
 
-class LightweightPhysicsWorld {
-  #arena;
-  #config;
-  #characters;
-  #characterOrder;
-  #destroyed;
+class LightweightPhysicsWorld implements PhysicsWorld {
+  readonly #arena: PhysicsRuntimeArena;
+  readonly #config: PhysicsSolverConfig;
+  readonly #characters: Map<string, PhysicsCharacterBody>;
+  readonly #characterOrder: string[];
+  #destroyed: boolean;
 
-  constructor({ arena, config = ARENA_PHYSICS } = {}) {
+  constructor({ arena, config = ARENA_PHYSICS }: LightweightPhysicsWorldOptions = {}) {
     this.#arena = validateArenaDefinition(arena);
-    this.#config = {
-      gravity: assertFiniteNumber(config.gravity, 'config.gravity'),
-      maxHorizontalSpeed: assertPositiveNumber(
-        config.maxHorizontalSpeed,
-        'config.maxHorizontalSpeed',
-      ),
-      maxVerticalSpeed: assertPositiveNumber(config.maxVerticalSpeed, 'config.maxVerticalSpeed'),
-      groundProbeTolerance: assertPositiveNumber(
-        config.groundProbeTolerance,
-        'config.groundProbeTolerance',
-      ),
-      maxStepHeight: assertPositiveNumber(config.maxStepHeight, 'config.maxStepHeight'),
-      groundSnapDistance: assertPositiveNumber(
-        config.groundSnapDistance,
-        'config.groundSnapDistance',
-      ),
-      substeps: Math.max(1, Math.floor(assertPositiveNumber(config.substeps, 'config.substeps'))),
-    };
-    this.#characters = new Map();
+    this.#config = normalizeSolverConfig(config);
+    this.#characters = new Map<string, PhysicsCharacterBody>();
     this.#characterOrder = [];
     this.#destroyed = false;
   }
 
-  #assertUsable() {
+  #assertUsable(): void {
     if (this.#destroyed) throw new Error('physics world 已销毁。');
   }
 
-  addCharacter(definition) {
+  addCharacter(definition: PhysicsCharacterDefinition): string {
     this.#assertUsable();
     const value = validateCharacterDefinition(definition);
     if (this.#characters.has(value.id)) throw new RangeError(`角色 ${value.id} 已存在。`);
-    const body = {
+    const body: PhysicsCharacterBody = {
       ...value,
       x: value.position.x,
       y: value.position.y,
@@ -123,14 +174,22 @@ class LightweightPhysicsWorld {
     return value.id;
   }
 
-  #requireCharacter(id) {
+  #requireCharacter(id: string): PhysicsCharacterBody {
     this.#assertUsable();
     const body = this.#characters.get(id);
     if (!body) throw new RangeError(`未知角色 ${id}。`);
     return body;
   }
 
-  setMovementIntent(id, moveX, moveZ) {
+  #requireOrderedCharacter(index: number): PhysicsCharacterBody {
+    const id = this.#characterOrder[index];
+    if (id === undefined) throw new Error(`physics character order 缺少索引 ${index}。`);
+    const body = this.#characters.get(id);
+    if (!body) throw new Error(`physics character order 引用了未知角色 ${id}。`);
+    return body;
+  }
+
+  setMovementIntent(id: string, moveX: number, moveZ: number): void {
     const body = this.#requireCharacter(id);
     const intent = normalizeMovementIntent(moveX, moveZ);
     body.intentX = intent.x;
@@ -141,21 +200,21 @@ class LightweightPhysicsWorld {
     }
   }
 
-  applyImpulse(id, impulse) {
+  applyImpulse(id: string, impulse: PhysicsVector3): void {
     return this.applyCharacterMutationBatch([{
-      kind: PHYSICS_CHARACTER_MUTATION_KIND.APPLY_IMPULSE,
+      kind: MOVEMENT_MUTATION_KIND.APPLY_IMPULSE,
       participantId: id,
       impulse,
     }]);
   }
 
-  applyCharacterMutationBatch(mutations) {
+  applyCharacterMutationBatch(mutations: readonly MovementMutation[]): void {
     this.#assertUsable();
     if (!Array.isArray(mutations)) {
       throw new TypeError('physics character mutations 必须是数组。');
     }
-    const drafts = new Map();
-    const seenParticipants = new Set();
+    const drafts = new Map<string, CharacterMutationDraft>();
+    const seenParticipants = new Set<string>();
     for (let index = 0; index < mutations.length; index += 1) {
       const mutation = mutations[index];
       if (!mutation || typeof mutation !== 'object') {
@@ -178,7 +237,7 @@ class LightweightPhysicsWorld {
         grounded: body.grounded,
         supportSurfaceId: body.supportSurfaceId,
       };
-      if (mutation.kind === PHYSICS_CHARACTER_MUTATION_KIND.APPLY_IMPULSE) {
+      if (mutation.kind === MOVEMENT_MUTATION_KIND.APPLY_IMPULSE) {
         assertVector3(mutation.impulse, `physics character mutations[${index}].impulse`);
         const deltaX = mutation.impulse.x / body.mass;
         const deltaY = mutation.impulse.y / body.mass;
@@ -202,7 +261,7 @@ class LightweightPhysicsWorld {
           draft.grounded = false;
           draft.supportSurfaceId = null;
         }
-      } else if (mutation.kind === PHYSICS_CHARACTER_MUTATION_KIND.SET_VERTICAL_SPEED) {
+      } else if (mutation.kind === MOVEMENT_MUTATION_KIND.SET_VERTICAL_SPEED) {
         assertFiniteNumber(
           mutation.speed,
           `physics character mutations[${index}].speed`,
@@ -216,7 +275,7 @@ class LightweightPhysicsWorld {
           draft.grounded = false;
           draft.supportSurfaceId = null;
         }
-      } else if (mutation.kind === PHYSICS_CHARACTER_MUTATION_KIND.ACCELERATE_DOWNWARD) {
+      } else if (mutation.kind === MOVEMENT_MUTATION_KIND.ACCELERATE_DOWNWARD) {
         assertPositiveNumber(
           mutation.acceleration,
           `physics character mutations[${index}].acceleration`,
@@ -247,7 +306,7 @@ class LightweightPhysicsWorld {
     }
   }
 
-  setSurfaceEnabled(surfaceId, enabled) {
+  setSurfaceEnabled(surfaceId: string, enabled: boolean): boolean {
     this.#assertUsable();
     if (typeof surfaceId !== 'string' || surfaceId.length === 0) {
       throw new TypeError('surfaceId 必须是非空字符串。');
@@ -267,22 +326,22 @@ class LightweightPhysicsWorld {
     return true;
   }
 
-  step(deltaSeconds) {
+  step(deltaSeconds: number): void {
     this.#assertUsable();
     assertPositiveNumber(deltaSeconds, 'deltaSeconds');
-    if (Math.abs(deltaSeconds - ARENA_FIXED_DT) > 1e-12) {
+    if (Math.abs(deltaSeconds - ARENA_FIXED_DT) > FIXED_STEP_EPSILON) {
       throw new RangeError(`lightweight physics 只接受固定步长 ${ARENA_FIXED_DT}。`);
     }
     const substep = deltaSeconds / this.#config.substeps;
     for (let index = 0; index < this.#config.substeps; index += 1) {
       for (const id of this.#characterOrder) {
-        this.#integrateCharacter(this.#characters.get(id), substep);
+        this.#integrateCharacter(this.#requireCharacter(id), substep);
       }
       this.#resolveCharacterPairs();
     }
   }
 
-  #integrateCharacter(body, deltaSeconds) {
+  #integrateCharacter(body: PhysicsCharacterBody, deltaSeconds: number): void {
     const wasGrounded = body.grounded;
     const acceleration = body.grounded ? body.groundAcceleration : body.airAcceleration;
     const maxDelta = acceleration * deltaSeconds;
@@ -309,11 +368,16 @@ class LightweightPhysicsWorld {
     this.#resolveGroundContact(body, previousY, false, wasGrounded);
   }
 
-  #resolveGroundContact(body, previousY, allowProbe, allowStep = body.grounded) {
+  #resolveGroundContact(
+    body: PhysicsCharacterBody,
+    previousY: number,
+    allowProbe: boolean,
+    allowStep = body.grounded,
+  ): void {
     const lowerExtent = body.halfHeight + body.radius;
     const previousFoot = previousY - lowerExtent;
     const currentFoot = body.y - lowerExtent;
-    let support = null;
+    let support: PhysicsRuntimeSurface | null = null;
     for (const surface of this.#arena.surfaces) {
       if (!isOverSurface(body, surface)) continue;
       const crossedTop = body.vy <= 0
@@ -347,11 +411,11 @@ class LightweightPhysicsWorld {
     body.supportSurfaceId = null;
   }
 
-  #resolveCharacterPairs() {
+  #resolveCharacterPairs(): void {
     for (let first = 0; first < this.#characterOrder.length; first += 1) {
-      const bodyA = this.#characters.get(this.#characterOrder[first]);
+      const bodyA = this.#requireOrderedCharacter(first);
       for (let second = first + 1; second < this.#characterOrder.length; second += 1) {
-        const bodyB = this.#characters.get(this.#characterOrder[second]);
+        const bodyB = this.#requireOrderedCharacter(second);
         if (!verticalOverlaps(bodyA, bodyB)) continue;
         const direction = chooseStableSeparationDirection(bodyA, bodyB);
         const minimumDistance = bodyA.radius + bodyB.radius;
@@ -376,16 +440,16 @@ class LightweightPhysicsWorld {
       }
     }
     for (const id of this.#characterOrder) {
-      const body = this.#characters.get(id);
+      const body = this.#requireCharacter(id);
       if (body.grounded) this.#resolveGroundContact(body, body.y, true, true);
     }
   }
 
-  getCharacterState(id) {
+  getCharacterState(id: string) {
     return cloneCharacterState(this.#requireCharacter(id));
   }
 
-  resetCharacter(id, state) {
+  resetCharacter(id: string, state: PhysicsCharacterResetState): void {
     const body = this.#requireCharacter(id);
     if (!state || typeof state !== 'object') throw new TypeError('reset state 必须是对象。');
     assertVector3(state.position, 'reset state.position');
@@ -416,7 +480,7 @@ class LightweightPhysicsWorld {
     this.#resolveGroundContact(body, body.y, true);
   }
 
-  destroy() {
+  destroy(): void {
     if (this.#destroyed) return;
     this.#destroyed = true;
     this.#characters.clear();
@@ -424,6 +488,8 @@ class LightweightPhysicsWorld {
   }
 }
 
-export function createLightweightPhysicsWorld(options) {
+export function createLightweightPhysicsWorld(
+  options?: LightweightPhysicsWorldOptions,
+): PhysicsWorld {
   return assertPhysicsWorld(new LightweightPhysicsWorld(options));
 }

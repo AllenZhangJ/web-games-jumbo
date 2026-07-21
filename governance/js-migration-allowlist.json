@@ -166,7 +166,6 @@
     "src/arena/matchmaking/seed-source.js",
     "src/arena/movement/movement-action-candidate-provider.js",
     "src/arena/movement/movement-action-effect-handlers.js",
-    "src/arena/physics/lightweight-physics.js",
     "src/arena/physics/poc-scenarios.js",
     "src/arena/presentation/acceptance/arena-build-manifest.js",
     "src/arena/presentation/acceptance/arena-device-acceptance-bundle.js",

@@ -5,7 +5,7 @@ import {
   assertPhysicsWorld,
   normalizeMovementIntent,
 } from '@number-strategy-jump/arena-physics';
-import { createLightweightPhysicsWorld } from '../../src/arena/physics/lightweight-physics.js';
+import { createLightweightPhysicsWorld } from '@number-strategy-jump/arena-physics';
 import { createMovementPhysicsPort } from '@number-strategy-jump/arena-physics';
 
 test('movement intent clamps and normalizes without exceeding unit length', () => {

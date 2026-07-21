@@ -669,8 +669,9 @@ test('Arena Rule/Core foundation preserves dependency direction and deterministi
     Object.keys(physicsPackage.dependencies).sort(),
     [
       '@number-strategy-jump/arena-contracts',
+      '@number-strategy-jump/arena-definitions',
       '@number-strategy-jump/arena-movement',
     ],
-    'arena-physics 只能依赖底层合同与 Movement mutation 合同。',
+    'arena-physics 只能依赖底层合同、Definition 与 Movement mutation 合同。',
   );
 });

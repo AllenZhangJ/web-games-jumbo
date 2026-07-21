@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createLightweightPhysicsWorld } from '../../src/arena/physics/lightweight-physics.js';
+import { createLightweightPhysicsWorld } from '@number-strategy-jump/arena-physics';
 import { runPhysicsPoc } from '../../src/arena/physics/poc-scenarios.js';
 
 const candidates = [
-  ['lightweight-js', createLightweightPhysicsWorld],
+  ['lightweight-strict-ts', createLightweightPhysicsWorld],
 ];
 
 for (const [backend, createWorld] of candidates) {
@@ -28,12 +28,12 @@ for (const [backend, createWorld] of candidates) {
 
 test('lightweight physics produces the same final hash for the same workload', async () => {
   const first = await runPhysicsPoc({
-    backend: 'lightweight-js',
+    backend: 'lightweight-strict-ts',
     createWorld: createLightweightPhysicsWorld,
     stressTicks: 3_000,
   });
   const second = await runPhysicsPoc({
-    backend: 'lightweight-js',
+    backend: 'lightweight-strict-ts',
     createWorld: createLightweightPhysicsWorld,
     stressTicks: 3_000,
   });

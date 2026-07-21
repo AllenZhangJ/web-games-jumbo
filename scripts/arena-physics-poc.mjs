@@ -1,6 +1,6 @@
 import { build } from 'esbuild';
 import { gzipSync } from 'node:zlib';
-import { createLightweightPhysicsWorld } from '../src/arena/physics/lightweight-physics.js';
+import { createLightweightPhysicsWorld } from '@number-strategy-jump/arena-physics';
 import { runPhysicsPoc } from '../src/arena/physics/poc-scenarios.js';
 
 async function bundleMetrics(contents, sourcefile) {
@@ -32,9 +32,9 @@ function readStressTicks() {
 
 const candidates = [
   {
-    backend: 'lightweight-js',
+    backend: 'lightweight-strict-ts',
     createWorld: createLightweightPhysicsWorld,
-    bundle: "import { createLightweightPhysicsWorld } from './src/arena/physics/lightweight-physics.js'; globalThis.__arenaPhysics = createLightweightPhysicsWorld;",
+    bundle: "import { createLightweightPhysicsWorld } from '@number-strategy-jump/arena-physics'; globalThis.__arenaPhysics = createLightweightPhysicsWorld;",
   },
 ];
 
