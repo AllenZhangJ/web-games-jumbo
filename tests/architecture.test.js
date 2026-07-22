@@ -44,9 +44,9 @@ test('core and runtime layers never call tt.* or wx.* directly', async () => {
 
 test('mini-game platform and entries do not depend on browser DOM globals', async () => {
   const files = [
-    'src/platform/mini-game.js',
-    'src/platform/douyin.js',
-    'src/platform/wechat.js',
+    'packages/arena-platform-runtime/src/mini-game-platform.ts',
+    'packages/arena-platform-runtime/src/douyin-platform.ts',
+    'packages/arena-platform-runtime/src/wechat-platform.ts',
     'src/entry/douyin.js',
     'src/entry/wechat.js',
     'src/entry/douyin-greybox.js',

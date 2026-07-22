@@ -13,6 +13,18 @@
     "./web": {
       "types": "./dist/web-platform.d.ts",
       "import": "./dist/web-platform.js"
+    },
+    "./mini-game": {
+      "types": "./dist/mini-game-platform.d.ts",
+      "import": "./dist/mini-game-platform.js"
+    },
+    "./wechat": {
+      "types": "./dist/wechat-platform.d.ts",
+      "import": "./dist/wechat-platform.js"
+    },
+    "./douyin": {
+      "types": "./dist/douyin-platform.d.ts",
+      "import": "./dist/douyin-platform.js"
     }
   },
   "files": ["dist"],

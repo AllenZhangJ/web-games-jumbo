@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createMiniGamePlatform } from '../src/platform/mini-game.js';
+import { createMiniGamePlatform } from '@number-strategy-jump/arena-platform-runtime/mini-game';
 import {
   createFrameScheduler,
   createPlatformContract,
@@ -47,8 +47,11 @@ function miniGameApi({ id, withNativeOffscreen = true } = {}) {
     requestAnimationFrame: () => 1,
     cancelAnimationFrame() {},
     onTouchStart() {},
+    offTouchStart() {},
     onTouchMove() {},
+    offTouchMove() {},
     onTouchEnd() {},
+    offTouchEnd() {},
     getStorageSync(key) {
       return storageValues.get(key);
     },
@@ -163,12 +166,26 @@ test('mini-game storage distinguishes missing values, commits synchronously and 
   fixture.api.setStorageSync = () => { throw new Error('full'); };
   fixture.api.removeStorageSync = () => { throw new Error('blocked'); };
   assert.deepEqual(platform.storageRead('pilot'), {
+    ok: true,
+    found: true,
+    value: { revision: 1 },
+  });
+  assert.equal(platform.storageWrite('pilot', { revision: 2 }), true);
+  assert.equal(platform.storageDelete('pilot'), true);
+
+  const failedFixture = miniGameApi({ id: 'wechat' });
+  failedFixture.api.getStorageSync = () => { throw new Error('blocked'); };
+  failedFixture.api.setStorageSync = () => { throw new Error('full'); };
+  failedFixture.api.removeStorageSync = () => { throw new Error('blocked'); };
+  failedFixture.storageValues.set('pilot', { revision: 0 });
+  const failedPlatform = createMiniGamePlatform(failedFixture.api, 'wechat');
+  assert.deepEqual(failedPlatform.storageRead('pilot'), {
     ok: false,
     found: false,
     value: undefined,
   });
-  assert.equal(platform.storageWrite('pilot', { revision: 2 }), false);
-  assert.equal(platform.storageDelete('pilot'), false);
+  assert.equal(failedPlatform.storageWrite('pilot', { revision: 2 }), false);
+  assert.equal(failedPlatform.storageDelete('pilot'), false);
 });
 
 test('mini-game storage recognizes the documented Douyin missing-key error', () => {
@@ -187,6 +204,18 @@ test('mini-game storage recognizes the documented Douyin missing-key error', () 
     throw Object.assign(new Error('storage unavailable'), { errorCode: 100500 });
   };
   assert.deepEqual(platform.storageRead('pilot'), {
+    ok: true,
+    found: false,
+    value: undefined,
+  });
+
+  const failedFixture = miniGameApi({ id: 'douyin' });
+  delete failedFixture.api.getStorageInfoSync;
+  failedFixture.api.getStorageSync = () => {
+    throw Object.assign(new Error('storage unavailable'), { errorCode: 100500 });
+  };
+  const failedPlatform = createMiniGamePlatform(failedFixture.api, 'douyin');
+  assert.deepEqual(failedPlatform.storageRead('pilot'), {
     ok: false,
     found: false,
     value: undefined,

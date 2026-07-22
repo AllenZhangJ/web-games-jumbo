@@ -17,7 +17,7 @@ import {
 } from '../src/arena/presentation/session/product-presentation-session-composition.js';
 import { PRODUCT_SESSION_STATE } from '@number-strategy-jump/arena-product-state';
 import { createArenaProductRendererFactory } from '../src/entry/create-arena-product-renderer.js';
-import { createMiniGamePlatform } from '../src/platform/mini-game.js';
+import { createMiniGamePlatform } from '@number-strategy-jump/arena-platform-runtime/mini-game';
 
 function fake2dContext() {
   return Object.fromEntries([

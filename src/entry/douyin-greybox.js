@@ -1,4 +1,4 @@
-import { createDouyinPlatform } from '../platform/douyin.js';
+import { createDouyinPlatform } from '@number-strategy-jump/arena-platform-runtime/douyin';
 import { createArenaGame } from './create-arena-game.js';
 import {
   launchGame,

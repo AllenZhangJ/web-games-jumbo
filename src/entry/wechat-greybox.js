@@ -1,4 +1,4 @@
-import { createWeChatPlatform } from '../platform/wechat.js';
+import { createWeChatPlatform } from '@number-strategy-jump/arena-platform-runtime/wechat';
 import { createArenaGame } from './create-arena-game.js';
 import {
   launchGame,
