@@ -22,7 +22,7 @@ import {
 } from '../../../src/arena/study/human-match-study-workspace-controller.js';
 import {
   HumanMatchStudyWorkspaceRepository,
-} from '../../../src/arena/study/human-match-study-workspace-repository.js';
+} from '@number-strategy-jump/arena-human-match-study';
 import {
   TEST_MATCH_CONTENT_PUBLIC_VIEW,
 } from '../product/stage8-test-content.js';
@@ -36,9 +36,13 @@ function clone(value) {
 function storageHarness() {
   const values = new Map();
   const writeFailures = new Set();
+  let onWrite = null;
   return {
     values,
     writeFailures,
+    setOnWrite(callback) {
+      onWrite = callback;
+    },
     port: {
       storageRead(key) {
         return values.has(key)
@@ -48,6 +52,7 @@ function storageHarness() {
       storageWrite(key, value) {
         if (writeFailures.has(key)) return false;
         values.set(key, clone(value));
+        onWrite?.(key, value);
         return true;
       },
       storageDelete(key) {
@@ -128,6 +133,91 @@ function packageReceipt(capturePackage) {
     byteLength: 1024,
   };
 }
+
+test('workspace repository rejects open reentrancy before storage callbacks run', () => {
+  const definition = createArenaStage9HumanFairnessV1Definition();
+  const harness = storageHarness();
+  let repository;
+  let attempted = false;
+  const storage = {
+    ...harness.port,
+    storageRead(key) {
+      if (!attempted) {
+        attempted = true;
+        assert.throws(() => repository.open(), /打开不可重入/);
+      }
+      return harness.port.storageRead(key);
+    },
+  };
+  repository = new HumanMatchStudyWorkspaceRepository({
+    definition,
+    storage,
+    ownerId: 'reentrant-page',
+    wallNow: () => 1_000,
+  });
+  assert.equal(repository.open().revision, 0);
+  assert.equal(attempted, true);
+  repository.destroy();
+});
+
+test('workspace repository rejects every public operation reentered during a commit', () => {
+  const definition = createArenaStage9HumanFairnessV1Definition();
+  const harness = storageHarness();
+  const repository = new HumanMatchStudyWorkspaceRepository({
+    definition,
+    storage: harness.port,
+    ownerId: 'reentrant-commit-page',
+    wallNow: () => 1_000,
+  });
+  const controller = new HumanMatchStudyWorkspaceController({ definition, repository });
+  controller.open();
+  const errors = [];
+  let attempted = false;
+  harness.setOnWrite(() => {
+    if (attempted) return;
+    attempted = true;
+    const operations = [
+      () => repository.open(),
+      () => repository.getSnapshot(),
+      () => repository.getDiagnostics(),
+      () => repository.getStorageKeys(),
+      () => repository.renewLease(),
+      () => repository.compareAndSet({}, 0),
+      () => repository.destroy(),
+    ];
+    for (const operation of operations) {
+      try {
+        operation();
+      } catch (error) {
+        errors.push(error);
+      }
+    }
+  });
+  controller.enroll(enrolledValue(definition));
+  assert.equal(attempted, true);
+  assert.equal(errors.length, 7);
+  for (const error of errors) assert.match(error.message, /不可重入/);
+  assert.equal(repository.getSnapshot().revision, 1);
+  controller.destroy();
+});
+
+test('workspace repository fails closed after its lease is lost before commit', () => {
+  const definition = createArenaStage9HumanFairnessV1Definition();
+  const harness = storageHarness();
+  const repository = new HumanMatchStudyWorkspaceRepository({
+    definition,
+    storage: harness.port,
+    ownerId: 'lost-lease-page',
+    wallNow: () => 1_000,
+  });
+  const controller = new HumanMatchStudyWorkspaceController({ definition, repository });
+  controller.open();
+  controller.enroll(enrolledValue(definition));
+  harness.values.delete(repository.getStorageKeys().lease);
+  assert.throws(() => controller.start(), /失败关闭/);
+  assert.throws(() => repository.getSnapshot(), /失败关闭/);
+  controller.destroy();
+});
 
 test('raw CapturePackage binds submission, natural difficulty, results and Replay identity', () => {
   const definition = createArenaStage9HumanFairnessV1Definition();

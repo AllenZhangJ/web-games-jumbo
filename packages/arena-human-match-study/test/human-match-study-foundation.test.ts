@@ -3,6 +3,7 @@ import { BOT_DIFFICULTY_ID } from '@number-strategy-jump/arena-bot';
 import {
   ARENA_STAGE9_HUMAN_FAIRNESS_ARM_ID,
   HumanMatchStudyCaptureSession,
+  HumanMatchStudyWorkspaceRepository,
   advanceHumanMatchStudyWorkspace,
   assertHumanMatchStudyWorkspaceEnvelopeHasNoFutureSchema,
   createArenaStage9HumanFairnessV1Definition,
@@ -196,5 +197,18 @@ describe('Human Match Study strict foundation', () => {
       schemaVersion: 1,
       payload: { schemaVersion: 2 },
     })).toThrow(/未来 schema/);
+  });
+
+  it('rejects repository option accessors without evaluating them', () => {
+    let reads = 0;
+    const options = Object.defineProperty({}, 'definition', {
+      enumerable: true,
+      get() {
+        reads += 1;
+        return createArenaStage9HumanFairnessV1Definition();
+      },
+    });
+    expect(() => new HumanMatchStudyWorkspaceRepository(options)).toThrow(/数据字段/);
+    expect(reads).toBe(0);
   });
 });

@@ -16,7 +16,7 @@ import {
 } from '../arena/study/human-match-study-workspace-controller.js';
 import {
   HumanMatchStudyWorkspaceRepository,
-} from '../arena/study/human-match-study-workspace-repository.js';
+} from '@number-strategy-jump/arena-human-match-study';
 import { loadHumanMatchStudyBuildIdentity } from './human-match-study-build-identity.js';
 import {
   downloadHumanMatchStudyCapturePackage,

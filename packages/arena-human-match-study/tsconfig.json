@@ -17,6 +17,7 @@
     { "path": "../arena-match" },
     { "path": "../arena-matchmaking" },
     { "path": "../arena-product-contracts" },
+    { "path": "../arena-storage" },
     { "path": "../arena-v1-content" }
   ]
 }
