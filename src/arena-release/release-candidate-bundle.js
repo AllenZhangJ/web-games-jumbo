@@ -4,7 +4,7 @@ import {
   assertNonEmptyString,
   cloneFrozenData,
 } from '@number-strategy-jump/arena-contracts';
-import { assertEvidenceGitCommit } from '../arena/evidence/evidence-value-contract.js';
+import { assertEvidenceGitCommit } from '@number-strategy-jump/arena-evidence-contracts';
 import { createArenaReleaseEvidenceStatement } from './release-evidence-statement.js';
 import { createArenaReleaseReadinessDefinition } from './release-readiness-definition.js';
 

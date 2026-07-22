@@ -8,16 +8,16 @@ import path from 'node:path';
 import {
   ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND,
   createArenaDeviceAcceptanceDefinition,
-} from '../../../src/arena/presentation/acceptance/arena-device-acceptance-definition.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 import {
   ARENA_STAGE6_DEVICE_CHECK_ID,
   createArenaStage6DeviceAcceptanceV1Definition,
-} from '../../../src/arena/presentation/acceptance/arena-stage6-device-acceptance-v1.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 import {
   ARENA_STAGE8_PRODUCT_DEVICE_ACCEPTANCE_V1_ID,
   ARENA_STAGE8_PRODUCT_DEVICE_CHECK_ID,
   createArenaStage8ProductDeviceAcceptanceV1Definition,
-} from '../../../src/arena/presentation/acceptance/arena-stage8-product-device-acceptance-v1.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 import {
   createArenaStage9PerformanceDeviceAcceptanceV1Definition,
   ARENA_STAGE9_PERFORMANCE_DEVICE_CHECK_ID,
@@ -163,6 +163,23 @@ test('Stage 6 device acceptance definition fixes five targets without entering a
     ...definition.toJSON(),
     checks: [...definition.checks, { id: 'unused-check', title: '未使用检查' }],
   }), /check unused-check 未被任何 target 引用/);
+});
+
+test('device acceptance definition rejects accessors without executing them', () => {
+  const definition = createArenaStage6DeviceAcceptanceV1Definition();
+  let getterCalls = 0;
+  const value = {
+    ...definition.toJSON(),
+    get id() {
+      getterCalls += 1;
+      return definition.id;
+    },
+  };
+  assert.throws(
+    () => createArenaDeviceAcceptanceDefinition(value),
+    /访问器|数据字段/,
+  );
+  assert.equal(getterCalls, 0);
 });
 
 test('Stage 9 performance acceptance fixes six OS/class targets and requires trace evidence', () => {

@@ -228,7 +228,16 @@ test('Arena quality and performance contracts remain host-free and cannot own re
 });
 
 test('Arena Evidence Value Contract stays scalar-only and outside authority dependencies', async () => {
-  const evidenceRoot = path.resolve('src/arena/evidence');
+  const packageDefinition = JSON.parse(await readFile(
+    path.resolve('packages/arena-evidence-contracts/package.json'),
+    'utf8',
+  ));
+  assert.deepEqual(
+    Object.keys(packageDefinition.dependencies).sort(),
+    ['@number-strategy-jump/arena-contracts'],
+    'arena-evidence-contracts 只能依赖底层不可变数据合同。',
+  );
+  const evidenceRoot = path.resolve('packages/arena-evidence-contracts/src');
   const evidenceFiles = await listJavaScript(evidenceRoot);
   assert.ok(evidenceFiles.length >= 1);
   for (const file of evidenceFiles) {
@@ -290,6 +299,33 @@ test('Arena Evidence Value Contract stays scalar-only and outside authority depe
       source,
       /\b(?:UTC_)?ISO_INSTANT_PATTERN\b|Date\.parse\(/,
       `${file} 不得复制 UTC instant 解析，应使用 Evidence Value Contract。`,
+    );
+  }
+});
+
+test('Arena device acceptance definitions stay immutable and host-free', async () => {
+  const packageDefinition = JSON.parse(await readFile(
+    path.resolve('packages/arena-device-acceptance/package.json'),
+    'utf8',
+  ));
+  assert.deepEqual(
+    Object.keys(packageDefinition.dependencies).sort(),
+    ['@number-strategy-jump/arena-contracts'],
+    'arena-device-acceptance 只能依赖底层不可变数据合同。',
+  );
+  const files = await listJavaScript(path.resolve('packages/arena-device-acceptance/src'));
+  assert.equal(files.length, 4);
+  for (const file of files) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /from\s+['"](?:node:|three|@number-strategy-jump\/(?!arena-contracts['"]))[^'"]*['"]/,
+      `${file} 只能导入自身文件与 arena-contracts。`,
+    );
+    assert.doesNotMatch(
+      withoutStaticImports(source),
+      /(?:Date\.now|Math\.random|setTimeout|setInterval|requestAnimationFrame|\bperformance\s*(?:\.|\[)|\b(?:window|document|navigator)\b|\b(?:tt|wx)\s*\.)/,
+      `${file} 只能定义宿主无关的设备验收数据。`,
     );
   }
 });
@@ -381,7 +417,6 @@ test('Arena release handoff stays outside authority and only composes host-free 
 
 test('Arena Stage 7 contracts remain host-free behind an injected Three view factory', async () => {
   const directories = [
-    'src/arena/evidence',
     'src/arena/presentation/animation',
     'src/arena/presentation/assets',
     'src/arena/presentation/character',

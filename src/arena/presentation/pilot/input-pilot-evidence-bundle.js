@@ -3,7 +3,7 @@ import {
   assertNonEmptyString,
   cloneFrozenData,
 } from '@number-strategy-jump/arena-contracts';
-import { assertEvidenceGitCommit } from '../../evidence/evidence-value-contract.js';
+import { assertEvidenceGitCommit } from '@number-strategy-jump/arena-evidence-contracts';
 import { createInputPilotDefinition } from './input-pilot-definition.js';
 import { validateInputPilotAuditExport } from './input-pilot-export.js';
 

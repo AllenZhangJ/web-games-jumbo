@@ -6,7 +6,7 @@ import {
   assertPlainRecord,
   cloneFrozenData,
 } from '@number-strategy-jump/arena-contracts';
-import { assertEvidenceUtcInstant } from '../evidence/evidence-value-contract.js';
+import { assertEvidenceUtcInstant } from '@number-strategy-jump/arena-evidence-contracts';
 import { createArenaExperimentDefinition } from './experiment-definition.js';
 import { readArenaMetricGate } from './metric-gate.js';
 

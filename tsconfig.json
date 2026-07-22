@@ -3,6 +3,8 @@
   "references": [
     { "path": "./packages/arena-bot" },
     { "path": "./packages/arena-contracts" },
+    { "path": "./packages/arena-evidence-contracts" },
+    { "path": "./packages/arena-device-acceptance" },
     { "path": "./packages/arena-core" },
     { "path": "./packages/arena-definitions" },
     { "path": "./packages/arena-equipment" },

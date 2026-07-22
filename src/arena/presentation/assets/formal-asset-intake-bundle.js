@@ -7,7 +7,7 @@ import {
 } from '@number-strategy-jump/arena-contracts';
 import {
   assertEvidenceUtcInstant,
-} from '../../evidence/evidence-value-contract.js';
+} from '@number-strategy-jump/arena-evidence-contracts';
 import {
   createFormalAssetIntakePolicy,
 } from './formal-asset-intake-policy.js';

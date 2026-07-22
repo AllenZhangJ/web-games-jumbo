@@ -8,7 +8,7 @@ import {
   assertEvidenceBoundedString,
   assertEvidenceSha256,
   assertEvidenceUtcInstant,
-} from '../evidence/evidence-value-contract.js';
+} from '@number-strategy-jump/arena-evidence-contracts';
 import {
   createHumanMatchStudyAssignment,
   validateHumanMatchStudyAssignment,

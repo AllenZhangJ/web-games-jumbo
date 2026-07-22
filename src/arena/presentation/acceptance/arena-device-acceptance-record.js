@@ -10,12 +10,12 @@ import {
   assertEvidenceRelativePath,
   assertEvidenceSha256,
   assertEvidenceUtcInstant,
-} from '../../evidence/evidence-value-contract.js';
+} from '@number-strategy-jump/arena-evidence-contracts';
 import {
   ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND,
   ARENA_DEVICE_ACCEPTANCE_PLATFORM,
   createArenaDeviceAcceptanceDefinition,
-} from './arena-device-acceptance-definition.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 
 export const ARENA_DEVICE_ACCEPTANCE_RECORD_SCHEMA_VERSION = 1;
 

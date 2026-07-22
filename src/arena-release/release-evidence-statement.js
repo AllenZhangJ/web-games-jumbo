@@ -9,7 +9,7 @@ import {
   assertEvidenceGitCommit,
   assertEvidenceRelativePath,
   assertEvidenceSha256,
-} from '../arena/evidence/evidence-value-contract.js';
+} from '@number-strategy-jump/arena-evidence-contracts';
 import {
   ARENA_RELEASE_EVIDENCE_SUBJECT_SCOPE,
   createArenaReleaseReadinessDefinition,

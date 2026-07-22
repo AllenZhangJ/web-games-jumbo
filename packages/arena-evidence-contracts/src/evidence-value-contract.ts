@@ -8,13 +8,20 @@ const SHA256_PATTERN = /^[0-9a-f]{64}$/;
 const UTC_ISO_INSTANT_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 const CONTROL_CHARACTER_PATTERN = /[\u0000-\u001f\u007f]/;
 
-/**
- * Shared scalar validation for evidence contracts only. Domain-specific
- * Artifact, Record and Bundle invariants intentionally stay with their owner.
- */
-export function assertEvidenceBoundedString(value, maximumLength, name, {
-  rejectControlCharacters = false,
-} = {}) {
+export interface EvidenceBoundedStringOptions {
+  readonly rejectControlCharacters?: boolean;
+}
+
+export interface EvidenceRelativePathOptions {
+  readonly maximumLength?: number;
+}
+
+export function assertEvidenceBoundedString(
+  value: unknown,
+  maximumLength: number,
+  name: string,
+  { rejectControlCharacters = false }: EvidenceBoundedStringOptions = {},
+): string {
   assertIntegerAtLeast(maximumLength, 1, `${name} maximumLength`);
   if (typeof rejectControlCharacters !== 'boolean') {
     throw new TypeError(`${name} rejectControlCharacters 必须是布尔值。`);
@@ -29,21 +36,21 @@ export function assertEvidenceBoundedString(value, maximumLength, name, {
   return text;
 }
 
-export function assertEvidenceGitCommit(value, name) {
+export function assertEvidenceGitCommit(value: unknown, name: string): string {
   if (typeof value !== 'string' || !GIT_COMMIT_PATTERN.test(value)) {
     throw new TypeError(`${name} 必须是 40 位小写 Git commit。`);
   }
   return value;
 }
 
-export function assertEvidenceSha256(value, name) {
+export function assertEvidenceSha256(value: unknown, name: string): string {
   if (typeof value !== 'string' || !SHA256_PATTERN.test(value)) {
     throw new TypeError(`${name} 必须是 64 位小写十六进制 SHA-256。`);
   }
   return value;
 }
 
-export function assertEvidenceUtcInstant(value, name) {
+export function assertEvidenceUtcInstant(value: unknown, name: string): string {
   if (typeof value !== 'string' || !UTC_ISO_INSTANT_PATTERN.test(value)) {
     throw new TypeError(`${name} 必须是带毫秒的 UTC ISO-8601 时间。`);
   }
@@ -53,15 +60,17 @@ export function assertEvidenceUtcInstant(value, name) {
   return value;
 }
 
-export function isEvidenceUtcInstant(value) {
+export function isEvidenceUtcInstant(value: unknown): value is string {
   if (typeof value !== 'string' || !UTC_ISO_INSTANT_PATTERN.test(value)) return false;
   const milliseconds = Date.parse(value);
   return Number.isFinite(milliseconds) && new Date(milliseconds).toISOString() === value;
 }
 
-export function assertEvidenceRelativePath(value, name, {
-  maximumLength = 512,
-} = {}) {
+export function assertEvidenceRelativePath(
+  value: unknown,
+  name: string,
+  { maximumLength = 512 }: EvidenceRelativePathOptions = {},
+): string {
   const artifactPath = assertEvidenceBoundedString(value, maximumLength, name, {
     rejectControlCharacters: true,
   });

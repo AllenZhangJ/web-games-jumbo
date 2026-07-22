@@ -8,7 +8,7 @@ import {
 import {
   assertEvidenceGitCommit,
   assertEvidenceUtcInstant,
-} from '../../evidence/evidence-value-contract.js';
+} from '@number-strategy-jump/arena-evidence-contracts';
 import { createArenaPerformancePolicyDefinition } from './arena-performance-policy-definition.js';
 
 export const ARENA_PERFORMANCE_RECORD_SCHEMA_VERSION = 1;

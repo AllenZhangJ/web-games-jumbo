@@ -6,7 +6,7 @@ import {
   assertPlainRecord,
   cloneFrozenData,
 } from '@number-strategy-jump/arena-contracts';
-import { assertEvidenceGitCommit } from '../evidence/evidence-value-contract.js';
+import { assertEvidenceGitCommit } from '@number-strategy-jump/arena-evidence-contracts';
 
 export const ARENA_EXPERIMENT_DEFINITION_SCHEMA_VERSION = 2;
 export const ARENA_EXPERIMENT_DEFINITION_LEGACY_SCHEMA_VERSION = 1;

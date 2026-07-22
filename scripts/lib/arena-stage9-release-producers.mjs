@@ -36,13 +36,13 @@ import {
 } from '../../src/arena/presentation/acceptance/arena-build-manifest.js';
 import {
   ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND,
-} from '../../src/arena/presentation/acceptance/arena-device-acceptance-definition.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 import {
   createArenaStage6DeviceAcceptanceV1Definition,
-} from '../../src/arena/presentation/acceptance/arena-stage6-device-acceptance-v1.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 import {
   createArenaStage8ProductDeviceAcceptanceV1Definition,
-} from '../../src/arena/presentation/acceptance/arena-stage8-product-device-acceptance-v1.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 import {
   createArenaStage9PerformanceDeviceAcceptanceV1Definition,
 } from '../../src/arena/presentation/acceptance/arena-stage9-performance-device-acceptance-v1.js';

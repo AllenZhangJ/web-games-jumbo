@@ -12,7 +12,7 @@ import {
 } from '../../src/arena/presentation/pilot/input-pilot-evidence-bundle.js';
 import {
   createArenaStage6DeviceAcceptanceV1Definition,
-} from '../../src/arena/presentation/acceptance/arena-stage6-device-acceptance-v1.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 import {
   verifyArenaBuildManifestDirectory,
 } from './arena-build-manifest-files.mjs';

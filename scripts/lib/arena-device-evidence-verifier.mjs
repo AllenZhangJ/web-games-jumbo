@@ -1,7 +1,7 @@
 import {
   ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND,
   createArenaDeviceAcceptanceDefinition,
-} from '../../src/arena/presentation/acceptance/arena-device-acceptance-definition.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 import {
   createArenaDeviceAcceptanceBundle,
   createArenaDeviceAcceptanceReport,

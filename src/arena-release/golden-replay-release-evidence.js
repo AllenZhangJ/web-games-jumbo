@@ -3,7 +3,7 @@ import {
   assertKnownKeys,
   cloneFrozenData,
 } from '@number-strategy-jump/arena-contracts';
-import { assertEvidenceGitCommit } from '../arena/evidence/evidence-value-contract.js';
+import { assertEvidenceGitCommit } from '@number-strategy-jump/arena-evidence-contracts';
 import { ARENA_REPLAY_SCHEMA_VERSION } from '@number-strategy-jump/arena-match';
 import {
   ARENA_V1_GOLDEN_REPLAY_MANIFEST_ID,

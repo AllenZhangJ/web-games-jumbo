@@ -8,7 +8,7 @@ import {
 import {
   assertEvidenceGitCommit,
   assertEvidenceUtcInstant,
-} from '../arena/evidence/evidence-value-contract.js';
+} from '@number-strategy-jump/arena-evidence-contracts';
 
 export const ARENA_DEFECT_LEDGER_SCHEMA_VERSION = 1;
 export const ARENA_DEFECT_REPORT_SCHEMA_VERSION = 1;

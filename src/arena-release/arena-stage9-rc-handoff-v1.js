@@ -9,10 +9,10 @@ import {
 } from '../arena/presentation/pilot/arena-input-pilot-v1.js';
 import {
   createArenaStage6DeviceAcceptanceV1Definition,
-} from '../arena/presentation/acceptance/arena-stage6-device-acceptance-v1.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 import {
   createArenaStage8ProductDeviceAcceptanceV1Definition,
-} from '../arena/presentation/acceptance/arena-stage8-product-device-acceptance-v1.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 import {
   createArenaStage9PerformanceDeviceAcceptanceV1Definition,
 } from '../arena/presentation/acceptance/arena-stage9-performance-device-acceptance-v1.js';

@@ -15,7 +15,7 @@ import {
   assertEvidenceRelativePath,
   assertEvidenceSha256,
   assertEvidenceUtcInstant,
-} from '../evidence/evidence-value-contract.js';
+} from '@number-strategy-jump/arena-evidence-contracts';
 import {
   validateHumanMatchStudyAssignment,
 } from './human-match-study-assignment.js';

@@ -7,7 +7,7 @@ import {
 } from '../src/arena/presentation/pilot/arena-input-pilot-v1.js';
 import {
   createArenaStage6DeviceAcceptanceV1Definition,
-} from '../src/arena/presentation/acceptance/arena-stage6-device-acceptance-v1.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 import { readVerifiedTextFile } from './lib/evidence-file-verifier.mjs';
 import {
   verifyArenaInputPilotEvidence,

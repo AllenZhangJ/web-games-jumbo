@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ARENA_DEVICE_ACCEPTANCE_PLATFORM,
-} from '../../../src/arena/presentation/acceptance/arena-device-acceptance-definition.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 import {
   ARENA_DEVICE_ACCEPTANCE_BUNDLE_SCHEMA_VERSION,
 } from '../../../src/arena/presentation/acceptance/arena-device-acceptance-bundle.js';

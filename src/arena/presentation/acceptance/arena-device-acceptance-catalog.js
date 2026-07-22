@@ -1,11 +1,11 @@
 import {
   ARENA_STAGE6_DEVICE_ACCEPTANCE_V1_ID,
   createArenaStage6DeviceAcceptanceV1Definition,
-} from './arena-stage6-device-acceptance-v1.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 import {
   ARENA_STAGE8_PRODUCT_DEVICE_ACCEPTANCE_V1_ID,
   createArenaStage8ProductDeviceAcceptanceV1Definition,
-} from './arena-stage8-product-device-acceptance-v1.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 import {
   ARENA_STAGE9_PERFORMANCE_DEVICE_ACCEPTANCE_V1_ID,
   createArenaStage9PerformanceDeviceAcceptanceV1Definition,

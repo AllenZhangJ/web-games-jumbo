@@ -8,7 +8,7 @@ import {
 } from '@number-strategy-jump/arena-contracts';
 import {
   ARENA_DEVICE_ACCEPTANCE_PLATFORM,
-} from '../acceptance/arena-device-acceptance-definition.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 
 export const ARENA_BUILD_BUDGET_POLICY_SCHEMA_VERSION = 1;
 export const ARENA_STAGE9_BUILD_BUDGET_V1_ID = 'arena.stage9.build-budget.v1';

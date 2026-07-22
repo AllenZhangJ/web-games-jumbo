@@ -6,7 +6,7 @@ import {
 import {
   assertEvidenceGitCommit,
   assertEvidenceUtcInstant,
-} from '../evidence/evidence-value-contract.js';
+} from '@number-strategy-jump/arena-evidence-contracts';
 import { createHumanMatchStudyDefinition } from './human-match-study-definition.js';
 import { createHumanMatchStudyRecord } from './human-match-study-record.js';
 

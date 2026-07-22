@@ -3,7 +3,7 @@ import {
   ARENA_DEVICE_ACCEPTANCE_DEFINITION_SCHEMA_VERSION,
   ARENA_DEVICE_ACCEPTANCE_SURFACE,
   createArenaDeviceAcceptanceDefinition,
-} from './arena-device-acceptance-definition.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 import {
   ARENA_STAGE9_PERFORMANCE_TARGET_ID,
   createArenaStage9PerformanceV1Policy,

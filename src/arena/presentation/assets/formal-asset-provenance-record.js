@@ -8,7 +8,7 @@ import {
   assertEvidenceRelativePath,
   assertEvidenceSha256,
   assertEvidenceUtcInstant,
-} from '../../evidence/evidence-value-contract.js';
+} from '@number-strategy-jump/arena-evidence-contracts';
 import { createFormalAssetIntakePolicy } from './formal-asset-intake-policy.js';
 import { assertPresentationAssetRegistry } from '@number-strategy-jump/arena-presentation-contracts';
 

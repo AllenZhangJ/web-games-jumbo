@@ -9,10 +9,10 @@ import {
   assertEvidenceGitCommit,
   assertEvidenceRelativePath,
   assertEvidenceSha256,
-} from '../../evidence/evidence-value-contract.js';
+} from '@number-strategy-jump/arena-evidence-contracts';
 import {
   ARENA_DEVICE_ACCEPTANCE_PLATFORM,
-} from './arena-device-acceptance-definition.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 
 export const ARENA_BUILD_MANIFEST_SCHEMA_VERSION = 1;
 export const ARENA_BUILD_MANIFEST_FILENAME = 'arena-build-manifest.json';

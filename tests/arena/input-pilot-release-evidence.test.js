@@ -33,7 +33,7 @@ import {
 } from '../../src/arena/presentation/acceptance/arena-build-manifest.js';
 import {
   createArenaStage6DeviceAcceptanceV1Definition,
-} from '../../src/arena/presentation/acceptance/arena-stage6-device-acceptance-v1.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 import {
   ARENA_INPUT_PILOT_VARIANT_ID,
   createArenaInputPilotV1Definition,

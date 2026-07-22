@@ -1,6 +1,6 @@
 import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
-import { assertEvidenceGitCommit } from '../arena/evidence/evidence-value-contract.js';
+import { assertEvidenceGitCommit } from '@number-strategy-jump/arena-evidence-contracts';
 import {
   createArenaStage9BalanceValidationExperimentDefinition,
 } from '../arena/experiment/arena-balance-validation-composition.js';

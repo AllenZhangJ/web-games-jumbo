@@ -7,7 +7,7 @@ import {
   assertEvidenceSha256,
   assertEvidenceUtcInstant,
   isEvidenceUtcInstant,
-} from '../../src/arena/evidence/evidence-value-contract.js';
+} from '@number-strategy-jump/arena-evidence-contracts';
 
 test('Evidence Value Contract accepts canonical deterministic scalar values', () => {
   assert.equal(assertEvidenceBoundedString('operator-1', 32, 'operator'), 'operator-1');

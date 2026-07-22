@@ -1,6 +1,6 @@
 import {
   ARENA_DEVICE_ACCEPTANCE_PLATFORM,
-} from '../acceptance/arena-device-acceptance-definition.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 import {
   ARENA_V1_PRESENTATION_QUALITY_ID,
   ARENA_V1_PRESENTATION_QUALITY_REGISTRY,

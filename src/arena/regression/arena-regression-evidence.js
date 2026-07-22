@@ -6,7 +6,7 @@ import {
 import {
   assertEvidenceGitCommit,
   assertEvidenceUtcInstant,
-} from '../evidence/evidence-value-contract.js';
+} from '@number-strategy-jump/arena-evidence-contracts';
 import {
   cloneArenaRegressionEvidenceComponents,
 } from './arena-regression-evidence-components.js';

@@ -10,7 +10,7 @@ import {
 } from '../src/arena/presentation/acceptance/arena-build-manifest.js';
 import {
   ARENA_DEVICE_ACCEPTANCE_PLATFORM,
-} from '../src/arena/presentation/acceptance/arena-device-acceptance-definition.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 import { writeArenaBuildManifest } from './lib/arena-build-manifest-files.mjs';
 import { verifyArenaFormalAssetBudget } from './lib/arena-formal-asset-budget-verifier.mjs';
 
