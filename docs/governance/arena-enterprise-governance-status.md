@@ -55,7 +55,7 @@
 
 ## 当前不可合并原因
 
-1. 当前 338 个受维护 JavaScript 文件仍在精确允许清单中，上层具体内容/Canvas 绘制/性能证据、Platform 和 Arena V1 应用注入适配尚未完成 strict TypeScript workspace 迁移；旧 Stage 6 `ArenaInputRouter` 与仅测试使用的 `KeyboardInputAdapter` 待 G7 证明退役或归类，不属于当前 Product 生产链。
+1. 当前 337 个受维护 JavaScript 文件仍在精确允许清单中，上层具体内容/Canvas Painter 与 Surface 生命周期/性能证据、Platform 和 Arena V1 应用注入适配尚未完成 strict TypeScript workspace 迁移；旧 Stage 6 `ArenaInputRouter` 与仅测试使用的 `KeyboardInputAdapter` 待 G7 证明退役或归类，不属于当前 Product 生产链。
 2. Vitest 当前保护底层合同包和治理门禁；Arena 其余测试尚待按 workspace 迁移并建立正式 coverage 阈值与零 JS 门禁。
 3. 正式资产最终审批与完整安全/依赖长期治理尚未闭环。
 4. 文档仍含迁移前阶段性叙述，尚未完成 G9 全量链接、状态与命令归真。
@@ -845,3 +845,13 @@
 - 输入 fuzz 完成 120 场、120 个唯一 final hash 与 6 次 Replay 复验，操作计数和 frame 计数逐项保持一致，耗时 `31455.992167 ms`，无 reproduction case。Presentation Session soak 完成 100 场，耗时 `526.6838339999999 ms`、堆增长 `2643392 B`；Product Presentation Session soak 完成 100 场、100 个唯一 authority hash，耗时 `47367.064875000004 ms`、堆增长 `7029776 B`。两者均低于 8 MiB，帧、生命周期监听、Canvas 监听和输入绑定残留为零。相对 G5.21 的 Product soak 改善只作为同机脚本信号，不推断手机温度、电量或真实帧率。
 - clean build ID 为 `arena-85060cc024f7-product`，Web/微信/抖音 delivery 为 `3757367 / 3799333 / 3799308 B`，三端 `sourceDirty=false`、默认入口均为 Product、预算通过且 `freezeEligible=true`；生产产物边界检查通过。Web 主业务 chunk 为 `781.94 kB`（gzip `199.34 kB`），Three chunk 为 `631.82 kB`（gzip `161.92 kB`），继续进入 G6 拆包与目标设备 trace。
 - 本批没有新增浏览器或手机交互结论，不冒充 iPhone 13 Pro/iOS 26/Chrome 真机证据，也没有改变 Gameplay V2 配置 hash `8c322912`、任意距离挥空、攻击/命中/击退数值、动作/武器、移动/跳跃、画质、关节、Bot、权威 tick、Replay/Profile schema 或正式资产。下一批治理 Product Canvas layout/painter/surface 的平台能力、热路径分配、构造回滚与清理重试，再迁具体 Arena 内容投影；G5 仍未完成，当前不可合并。
+
+## G5.23 Product Canvas 布局与命中几何迁移证据
+
+- `createProductCanvasLayout` 与 `pointInProductCanvasRect` 已从上层 JavaScript 迁入 strict `@number-strategy-jump/arena-product-presentation`；Canvas Surface、小游戏组合和测试统一从包公开 API 消费，旧 JavaScript 真值删除，精确允许清单由 338 降至 337。布局只依赖可信不可变 SceneModel 与数据型 viewport，不依赖 Canvas context、Three.js、DOM、平台 API、Controller、Match、墙钟或网络。
+- SceneModel 通过模块私有 WeakSet 证明由 strict 场景投影生成；外部伪造模型先完整复制冻结并校验，无法用顶层冻结绕过数据边界。viewport 与 safeArea 拒绝访问器、Symbol、稀疏数组、循环引用和非有限数；标准手机安全区内的主/次动作与角色卡保持稳定布局，禁用动作不进入 hits，单独 secondary 仍保持 secondary 语义。
+- 命中几何对 point/rect 使用自有数据 descriptor 读取，访问器零执行；非有限坐标、缺字段和负尺寸直接返回 `false`。正常触控热路径不再创建闭包、临时 point/target 对象或 `Object.values` 数组，避免为边界加固反向引入每次 hit-test 分配。极窄安全区的按钮宽度至少为 1，不产生负矩形。
+- 新增 1 项 strict 边界测试，覆盖安全区、边界点、非有限点、viewport/point getter 零执行；Canvas/小游戏 4 项定向集成通过。代码提交 `9e652379e9fbbb74587a9928e59f4303debf4245` 的完整门禁通过：666/666 Node、229/229 strict package/治理、104/104 生命周期；生产依赖审计为 0 vulnerabilities。黄金 Replay manifest 保持 `0dace228`，正式资产预算结果保持 `82a8b378`。
+- 输入 fuzz 完成 120 场、120 个唯一 final hash 与 6 次 Replay 复验，操作计数和 frame 计数逐项保持一致，耗时 `31692.541333 ms`，无 reproduction case。Presentation Session soak 完成 100 场，耗时 `511.738667 ms`、堆增长 `2646008 B`；Product Presentation Session soak 完成 100 场、100 个唯一 authority hash，耗时 `47421.876917 ms`、堆增长 `6717032 B`。两者均低于 8 MiB，帧、生命周期监听、Canvas 监听和输入绑定残留为零；脚本耗时不外推为手机帧率或发热结论。
+- clean build ID 为 `arena-9e652379e9fb-product`，Web/微信/抖音 delivery 为 `3757426 / 3800257 / 3800232 B`，三端 `sourceDirty=false`、默认入口均为 Product、预算通过且 `freezeEligible=true`；生产产物边界检查通过。Web 主业务 chunk 为 `782.00 kB`（gzip `199.37 kB`），Three chunk 为 `631.82 kB`（gzip `161.92 kB`），继续进入 G6 拆包与目标设备 trace。
+- 本批没有新增浏览器或手机交互结论，不冒充 iPhone 13 Pro/iOS 26/Chrome 真机证据，也没有改变 Gameplay V2 配置 hash `8c322912`、任意距离挥空、攻击/命中/击退数值、动作/武器、移动/跳跃、画质、关节、Bot、权威 tick、Replay/Profile schema 或正式资产。下一批迁移 Canvas Painter 的宿主无关绘制命令与 Surface 的 Three/平台资源生命周期，二者仍需分层；G5 未完成，当前不可合并。
