@@ -9,10 +9,12 @@ import {
   ARENA_ANIMATION_SEMANTIC_IDS,
   ARENA_ANIMATION_SOURCE_KIND,
 } from '@number-strategy-jump/arena-presentation-contracts';
-import { CharacterAnimationController } from '@number-strategy-jump/arena-presentation-three';
+import {
+  CharacterAnimationController,
+  GltfPresentationAssetLoader,
+  PlatformTextureLoader,
+} from '@number-strategy-jump/arena-presentation-three';
 import { GltfCharacterViewFactory } from '../../../src/arena/presentation/three/gltf-character-view-factory.js';
-import { GltfPresentationAssetLoader } from '../../../src/arena/presentation/three/gltf-presentation-asset-loader.js';
-import { PlatformTextureLoader } from '../../../src/arena/presentation/three/host-texture-loader.js';
 import {
   ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT,
 } from '../../../src/arena/presentation/content/arena-gameplay-v2-content.js';

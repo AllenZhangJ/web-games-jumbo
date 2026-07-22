@@ -3,11 +3,98 @@ import * as THREE from 'three';
 import {
   EquipmentViewRegistry,
   CharacterAnimationController,
+  GltfPresentationAssetLoader,
+  PlatformTextureLoader,
   ThreeObjectDisposalLease,
   toVisualPosition,
 } from '../src/index.js';
+import { ARENA_PRESENTATION_ASSET_PROVIDER_ID } from '@number-strategy-jump/arena-presentation-runtime';
 
 describe('Arena Presentation Three lifecycle boundaries', () => {
+  it('rejects loader accessors, cleans invalid GLTF and retries only incomplete asset release', async () => {
+    let reads = 0;
+    const options = {};
+    Object.defineProperty(options, 'loader', {
+      enumerable: true,
+      get() { reads += 1; return {}; },
+    });
+    expect(() => new GltfPresentationAssetLoader(options)).toThrow(/loader.*数据字段/);
+    expect(reads).toBe(0);
+    const textureOptions = { manager: null };
+    Object.defineProperty(textureOptions, 'createImage', {
+      enumerable: true,
+      get() { reads += 1; return () => ({}); },
+    });
+    expect(() => new PlatformTextureLoader(textureOptions)).toThrow(/createImage.*数据字段/);
+    expect(reads).toBe(0);
+
+    const handlerEvents: string[] = [];
+    expect(() => new GltfPresentationAssetLoader({
+      createImage: () => ({}),
+      loader: {
+        manager: {
+          addHandler() { handlerEvents.push('add'); return Promise.resolve(); },
+          removeHandler() { handlerEvents.push('remove'); },
+          itemStart() {}, itemEnd() {}, itemError() {},
+        },
+        async loadAsync() { return {}; },
+        async parseAsync() { return {}; },
+      },
+    })).toThrow(/必须同步完成/);
+    expect(handlerEvents).toEqual(['add', 'remove']);
+
+    const definition = {
+      id: 'character', sourceKey: './assets/character.glb',
+      providerId: ARENA_PRESENTATION_ASSET_PROVIDER_ID.GLTF_CHARACTER_V1,
+    };
+    const invalidScene = new THREE.Group();
+    const invalidGeometry = new THREE.BoxGeometry();
+    let invalidGeometryDisposals = 0;
+    invalidGeometry.dispose = () => { invalidGeometryDisposals += 1; };
+    invalidScene.add(new THREE.Mesh(invalidGeometry, new THREE.MeshBasicMaterial()));
+    const invalidResult = { scene: invalidScene };
+    Object.defineProperty(invalidResult, 'animations', {
+      enumerable: true,
+      get() { reads += 1; return []; },
+    });
+    const invalidLoader = new GltfPresentationAssetLoader({
+      readAssetBytes: async () => new ArrayBuffer(1),
+      loader: {
+        async loadAsync() { throw new Error('unexpected load'); },
+        async parseAsync() { return invalidResult; },
+      },
+    });
+    await expect(invalidLoader.load(definition)).rejects.toThrow(/animations.*数据字段/);
+    expect(reads).toBe(0);
+    expect(invalidGeometryDisposals).toBe(1);
+
+    const scene = new THREE.Group();
+    const geometry = new THREE.BoxGeometry();
+    const material = new THREE.MeshBasicMaterial();
+    let geometryDisposals = 0;
+    let materialDisposals = 0;
+    geometry.dispose = () => { geometryDisposals += 1; };
+    material.dispose = () => {
+      materialDisposals += 1;
+      if (materialDisposals === 1) throw new Error('transient material release');
+    };
+    scene.add(new THREE.Mesh(geometry, material));
+    const loaderPort = {
+      async loadAsync() { throw new Error('unexpected load'); },
+      async parseAsync() { return { scene, animations: [new THREE.AnimationClip('Idle', 1, [])] }; },
+    };
+    const loader = new GltfPresentationAssetLoader({
+      readAssetBytes: async () => new ArrayBuffer(1), loader: loaderPort,
+    });
+    loaderPort.parseAsync = async () => { throw new Error('replacement must not run'); };
+    const lease = await loader.load(definition);
+    expect(() => lease.release()).toThrow(/清理未完整完成/);
+    expect({ geometryDisposals, materialDisposals }).toEqual({ geometryDisposals: 1, materialDisposals: 1 });
+    lease.release();
+    lease.release();
+    expect({ geometryDisposals, materialDisposals }).toEqual({ geometryDisposals: 1, materialDisposals: 2 });
+  });
+
   it('rejects animation accessors and retries only incomplete mixer cleanup', () => {
     const root = new THREE.Group();
     const clips = [new THREE.AnimationClip('Idle', 1, [])];
