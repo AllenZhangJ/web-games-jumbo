@@ -8,7 +8,7 @@ import {
 } from '@number-strategy-jump/arena-human-match-study';
 import {
   createHumanMatchStudyReport,
-} from '../../src/arena/study/human-match-study-report.js';
+} from '@number-strategy-jump/arena-human-match-study';
 import {
   verifyHumanMatchStudyReplay,
 } from '../../src/arena/study/human-match-study-replay-verifier.js';

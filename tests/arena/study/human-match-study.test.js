@@ -57,7 +57,7 @@ import {
 import {
   HUMAN_MATCH_STUDY_REPORT_STATUS,
   createHumanMatchStudyReport,
-} from '../../../src/arena/study/human-match-study-report.js';
+} from '@number-strategy-jump/arena-human-match-study';
 import {
   TEST_MATCH_CONTENT_PUBLIC_VIEW,
   TEST_MATCH_CONTENT_SELECTION,

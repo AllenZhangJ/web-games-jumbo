@@ -125,7 +125,6 @@
     "src/arena/regression/input-fuzz-regression-candidate.js",
     "src/arena/replay.js",
     "src/arena/study/human-match-study-replay-verifier.js",
-    "src/arena/study/human-match-study-report.js",
     "src/config.js",
     "src/entry/human-match-study-web-app.js",
     "src/entry/input-pilot-web-app.js",

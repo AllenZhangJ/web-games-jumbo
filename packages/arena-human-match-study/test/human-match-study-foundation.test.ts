@@ -14,6 +14,7 @@ import {
   createHumanMatchStudyDefinition,
   createEnrolledHumanMatchStudyCheckpoint,
   createHumanMatchStudyRecord,
+  createHumanMatchStudyReport,
 } from '../src/index.js';
 
 function definitionData(): Readonly<Record<string, unknown>> {
@@ -223,6 +224,22 @@ describe('Human Match Study strict foundation', () => {
       },
     });
     expect(() => new HumanMatchStudyWorkspaceController(options)).toThrow(/数据字段/);
+    expect(reads).toBe(0);
+  });
+
+  it('rejects report record accessors without evaluating them', () => {
+    let reads = 0;
+    const records: unknown[] = [];
+    Object.defineProperty(records, '0', {
+      enumerable: true,
+      get() {
+        reads += 1;
+        return {};
+      },
+    });
+    expect(() => createHumanMatchStudyReport(definitionData(), records)).toThrow(
+      /访问器|数据字段/,
+    );
     expect(reads).toBe(0);
   });
 });

@@ -9,7 +9,7 @@ import {
 import {
   HUMAN_MATCH_STUDY_REPORT_STATUS,
   createHumanMatchStudyReport,
-} from '../arena/study/human-match-study-report.js';
+} from '@number-strategy-jump/arena-human-match-study';
 import { ARENA_RELEASE_EVIDENCE_STATUS } from './release-evidence-statement.js';
 
 function releaseStatus(status) {

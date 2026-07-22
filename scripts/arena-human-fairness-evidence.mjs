@@ -4,7 +4,7 @@ import {
 } from '@number-strategy-jump/arena-human-match-study';
 import {
   HUMAN_MATCH_STUDY_REPORT_STATUS,
-} from '../src/arena/study/human-match-study-report.js';
+} from '@number-strategy-jump/arena-human-match-study';
 import {
   readVerifiedTextFile,
 } from './lib/evidence-file-verifier.mjs';
