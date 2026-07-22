@@ -27,7 +27,7 @@ import {
 import {
   INPUT_PILOT_ASSESSMENT_STATUS,
   createInputPilotReport,
-} from '../../../src/arena/presentation/pilot/input-pilot-report.js';
+} from '@number-strategy-jump/arena-input-pilot';
 
 function assignment(definition, enrollmentIndex, participantId = `pilot-${enrollmentIndex}`) {
   return createInputPilotAssignment({

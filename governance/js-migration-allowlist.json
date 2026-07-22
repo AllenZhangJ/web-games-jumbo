@@ -120,7 +120,6 @@
     "src/arena/presentation/pilot/input-pilot-metric-collector.js",
     "src/arena/presentation/pilot/input-pilot-observed-match-service.js",
     "src/arena/presentation/pilot/input-pilot-observed-session.js",
-    "src/arena/presentation/pilot/input-pilot-report.js",
     "src/arena/presentation/pilot/input-pilot-trial-controller.js",
     "src/arena/presentation/session/input-pilot-presentation-runtime.js",
     "src/arena/regression/arena-regression-evidence-components.js",

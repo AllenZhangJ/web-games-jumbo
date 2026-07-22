@@ -21,6 +21,7 @@ import {
   createInputPilotAssignment,
   createInputPilotDefinition,
   createInputPilotRecord,
+  createInputPilotReport,
   createInputPilotReviewDraft,
   createInputPilotTrialCheckpoint,
   createInputPilotWorkspace,
@@ -533,5 +534,22 @@ describe('Input Pilot strict workspace repository', () => {
     });
     expect(repository.getSnapshot().revision).toBe(1);
     repository.destroy();
+  });
+});
+
+describe('Input Pilot strict report', () => {
+  it('rejects record-array accessors without executing them', () => {
+    const definition = createArenaInputPilotV1Definition();
+    let reads = 0;
+    const records = [null];
+    Object.defineProperty(records, '0', {
+      enumerable: true,
+      get() {
+        reads += 1;
+        return null;
+      },
+    });
+    expect(() => createInputPilotReport(definition, records)).toThrow(/访问器/);
+    expect(reads).toBe(0);
   });
 });

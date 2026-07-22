@@ -5,7 +5,7 @@ import {
   cloneFrozenData,
 } from '@number-strategy-jump/arena-contracts';
 import { createInputPilotDefinition } from '@number-strategy-jump/arena-input-pilot';
-import { createInputPilotReport } from './input-pilot-report.js';
+import { createInputPilotReport } from '@number-strategy-jump/arena-input-pilot';
 import { createInputPilotWorkspace } from '@number-strategy-jump/arena-input-pilot';
 
 export const INPUT_PILOT_EXPORT_SCHEMA_VERSION = 1;
