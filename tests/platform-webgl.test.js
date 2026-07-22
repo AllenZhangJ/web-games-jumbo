@@ -5,7 +5,7 @@ import {
   createFrameScheduler,
   createPlatformContract,
 } from '@number-strategy-jump/arena-platform-contracts';
-import { createWebPlatform } from '../src/platform/web.js';
+import { createWebPlatform } from '@number-strategy-jump/arena-platform-runtime/web';
 
 function webGL2Context() {
   return {

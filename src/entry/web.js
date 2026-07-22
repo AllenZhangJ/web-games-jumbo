@@ -1,5 +1,4 @@
 import '../product-styles.css';
-import { createWebPlatform } from '../platform/web.js';
 import { createArenaProductGame } from './create-arena-product-game.js';
 import { createArenaProductRendererFactory } from './create-arena-product-renderer.js';
 import {
@@ -9,6 +8,7 @@ import {
   showWebStartupError,
   stopLaunchedGame,
 } from '@number-strategy-jump/arena-platform-runtime';
+import { createWebPlatform } from '@number-strategy-jump/arena-platform-runtime/web';
 import { WebProductUiSurface } from './web-product-ui-surface.js';
 import { resolveArenaPresentationQualityForLaunch } from './arena-presentation-quality-launch.js';
 import {

@@ -9,7 +9,14 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./web": {
+      "types": "./dist/web-platform.d.ts",
+      "import": "./dist/web-platform.js"
     }
   },
-  "files": ["dist"]
+  "files": ["dist"],
+  "dependencies": {
+    "@number-strategy-jump/arena-platform-contracts": "0.1.0"
+  }
 }

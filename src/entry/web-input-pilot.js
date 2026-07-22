@@ -1,11 +1,11 @@
 import '../input-pilot.css';
-import { createWebPlatform } from '../platform/web.js';
 import { InputPilotWebApp } from './input-pilot-web-app.js';
 import {
   clearWebStartupError,
   launchGame,
   showWebStartupError,
 } from '@number-strategy-jump/arena-platform-runtime';
+import { createWebPlatform } from '@number-strategy-jump/arena-platform-runtime/web';
 
 void launchGame(() => createWebPlatform(), {
   createGame: (platform) => new InputPilotWebApp({ platform }),

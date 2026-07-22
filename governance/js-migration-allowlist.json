@@ -209,7 +209,6 @@
     "src/entry/wechat.js",
     "src/platform/douyin.js",
     "src/platform/mini-game.js",
-    "src/platform/web.js",
     "src/platform/wechat.js",
     "tests/architecture.test.js",
     "tests/arena/action-definition.test.js",

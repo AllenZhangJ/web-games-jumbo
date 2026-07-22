@@ -64,7 +64,9 @@ describe('runtime instance identity', () => {
       new URL('../package.json', import.meta.url),
       'utf8',
     )) as { dependencies?: Record<string, string> };
-    expect(manifest.dependencies ?? {}).toEqual({});
+    expect(manifest.dependencies ?? {}).toEqual({
+      '@number-strategy-jump/arena-platform-contracts': '0.1.0',
+    });
     const source = await readFile(new URL('../src/runtime-instance-id.ts', import.meta.url), 'utf8');
     expect(source).not.toMatch(/@number-strategy-jump\/(?:arena-match|arena-core|arena-bot)/);
     expect(source).not.toMatch(/Math\.random/);

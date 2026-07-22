@@ -1,5 +1,4 @@
 import '../styles.css';
-import { createWebPlatform } from '../platform/web.js';
 import { createArenaGame } from './create-arena-game.js';
 import {
   bindWebGameTeardown,
@@ -8,6 +7,7 @@ import {
   showWebStartupError,
   stopLaunchedGame,
 } from '@number-strategy-jump/arena-platform-runtime';
+import { createWebPlatform } from '@number-strategy-jump/arena-platform-runtime/web';
 
 bindWebGameTeardown(globalThis, stopLaunchedGame);
 
