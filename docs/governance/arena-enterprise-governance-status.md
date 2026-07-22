@@ -1,6 +1,6 @@
 # Arena 企业治理状态台账
 
-- 更新时间：2026-07-22
+- 更新时间：2026-07-23
 - 当前分支：`feature/arena-enterprise-governance`
 - Arena 产品基线：`51e28220295c080261d30e33aaac7e43c5f91685`
 - 目标：达到与最新 `origin/main` 的合并前审计条件；不执行合并
@@ -33,8 +33,8 @@
 | G3 Rule/Core/Replay | 已完成 | strict TS `arena-core`、`arena-movement`、`arena-physics`、`arena-equipment`、`arena-map` 与 `arena-match` 已承接规则/移动/物理/装备、完整地图权威链、比赛配置、Participant/Timeline 唯一写入者、角色 Runtime/物理投影、状态 hash、完整 MatchCore 编排、fixed-step Runtime 与 Replay；strict `arena-v1-content` 集中发布具体动作、装备、角色、地图、移动动作与平衡 Definition；黄金语料保持 `0dace228` |
 | G4 Bot/Product/Persistence | 已完成 | strict TS Bot、Matchmaking、Quick Match、Local Match Session、Product State、Progression、ProductMatchResult、奖励事务、Profile Service/Repository、Storage Lease、Product Match、Product Session Controller、对称内容池、Arena V1 产品内容与通用 Product Composition 已闭环；Arena V1 应用组合根已在 G6.36 归入独立 strict 包 |
 | G5 Presentation/资产/反馈 | 已完成 | strict `arena-presentation-contracts`、`arena-presentation-runtime`、`arena-v1-presentation-content`、`arena-product-presentation`、`arena-presentation-three` 与 `arena-product-presentation-three` 已承接通用合同、输入/反馈/生命周期、具体 V1 表现、Product 表现所有权和 Three Surface；设备/性能证据合同已归入独立 strict 包；共享对局资源取得/回滚原语完成 strict 迁移。生产 Product Session 组合已在 G6.37 归包；旧 Greybox ArenaPresentationSession 是 G6 应用根，Pilot 是 G7 测试/研究链，不再伪装为 G5 通用表现缺口 |
-| G6 Platform/入口/构建 | 进行中 | 三端默认入口是 Product；运行实例 ID、启动协调、失败兜底、Web teardown、三端平台适配、Arena V1 应用组合根、生产 Session、顶层 Launch、Web Product UI、三端实际 Product Entry，以及 Greybox Session 组合、表现生命周期、应用根和三端 Greybox Entry 均已 strict 化。Web 研究环境、clean build 身份、JSON 下载所有权、Human Match Study Product Runtime 和 Study Workbench View 已 strict 化；Pilot Workbench、两个研究应用与入口待迁移，并继续证明生产交付和开发/研究入口彻底隔离 |
-| G7 零 JS/完整质量门 | 进行中 | 独立 strict `arena-human-match-study` 已承接真人研究 Definition、Assignment 和 Capture；ESLint、strict TypeScript、Vitest 和 JavaScript 精确递减门禁持续运行。其余 Study/Pilot/Release/测试链迁移、正式 coverage 阈值和零 JS 尚未完成 |
+| G6 Platform/入口/构建 | 进行中 | 三端默认入口是 Product；运行实例 ID、启动协调、失败兜底、Web teardown、三端平台适配、Arena V1 应用组合根、生产 Session、顶层 Launch、Web Product UI、三端实际 Product Entry，以及 Greybox Session 组合、表现生命周期、应用根和三端 Greybox Entry 均已 strict 化。Web 研究环境、clean build 身份、JSON 下载所有权、Human Match Study Product Runtime、Study Workbench View 和 Pilot Workbench View 已 strict 化；两个研究 Web App 与薄入口待迁移，并继续证明生产交付和开发/研究入口彻底隔离 |
+| G7 零 JS/完整质量门 | 进行中 | 独立 strict `arena-human-match-study` 已承接真人研究 Definition、Assignment 和 Capture；独立 strict `arena-input-pilot` 已承接 Input Pilot 共享线上词汇。ESLint、strict TypeScript、Vitest 和 JavaScript 精确递减门禁持续运行。其余 Study/Pilot/Release/测试链迁移、正式 coverage 阈值和零 JS 尚未完成 |
 | G8 资产/安全/所有权 | 未开始 | CODEOWNERS、CI 安全与正式资产最终批准待补齐 |
 | G9 文档归真 | 未开始 | README 首标题和大量章节仍以数值跳台 v3 为产品真值 |
 | G10 最新 main 审计 | 未开始 | 只能在 G0-G9 完成后执行；禁止实际合并 |
@@ -55,7 +55,7 @@
 
 ## 当前不可合并原因
 
-1. 当前 253 个受维护 JavaScript 文件仍在精确允许清单中；G6 尚需迁移 Pilot Workbench、两个研究应用与入口，G7 尚需迁移其余 Pilot/Study/Release/其他测试与验收链并建立零 JS 门禁。
+1. 当前 252 个受维护 JavaScript 文件仍在精确允许清单中；G6 尚需迁移两个研究 Web App 与薄入口，G7 尚需迁移其余 Pilot/Study/Release/其他测试与验收链并建立零 JS 门禁。
 2. Vitest 当前保护底层合同包和治理门禁；Arena 其余测试尚待按 workspace 迁移并建立正式 coverage 阈值与零 JS 门禁。
 3. 正式资产最终审批与完整安全/依赖长期治理尚未闭环。
 4. 文档仍含迁移前阶段性叙述，尚未完成 G9 全量链接、状态与命令归真。
@@ -1180,3 +1180,19 @@
 - 最终代码上的完整 Node 测试为 690/690，strict package/治理测试为 314/314，Study Web 支持为 9/9；ESLint、strict typecheck、JS 递减和生产边界门禁通过。新增纯 Node DOM 宿主回归覆盖 model/actions 访问器零执行、监听释放失败、销毁态阻断和二次清理归零。
 - 本批没有新增或升级依赖，`package-lock.json` 未改变。代码提交为 `ffa21ed04018f8c7b40725cb9d170dae3329138e`，clean build ID 为 `arena-ffa21ed04018-product`。Web/微信/抖音 delivery 为 `3807531 / 3835130 / 3835105 B`，JavaScript 为 `1463921 / 1507034 / 1507034 B`；三端 `sourceDirty=false`、默认入口均为 Product、预算通过且 `freezeEligible=true`。生产交付体积与 G6.45 完全一致，Study View 未进入默认 Product bundle。
 - Study Web App 与薄入口仍是 JavaScript，页面结构和交互本批没有改变，因此没有伪写真实浏览器或手机通过记录，也没有重跑 Gameplay Replay、fuzz、生命周期和 soak。Allen 的 iPhone 13 Pro、iOS 26、Chrome 以及微信/抖音真机记录仍是外部门禁。本批没有改变 Gameplay V2 配置 hash `8c322912`、攻击/动作/武器、移动/跳跃、画质、关节、Bot、权威 tick、Replay/Profile schema 或正式资产。G6 下一步先迁移 Pilot 领域依赖和 Workbench View；G7-G10 仍未完成，当前不可合并。
+
+## G7.2 Input Pilot 共享词汇 strict 基础证据
+
+- 新建 strict `@number-strategy-jump/arena-input-pilot` workspace，首批只承接 Action Outcome、Comprehension、Trial Status、Termination Reason、Exclusion Reason 和 Trial Controller State 六类稳定线上值；不把 DOM、Product Runtime、Workspace、下载或入口带入领域包。边界决策见 [ADR-040](../decisions/040-input-pilot-domain-and-workbench-boundary.md)。
+- 旧 Pilot Record/Controller 消费者已统一导入新包，并从原有公开路径重导出以保持已有消费合同；原文件中的重复常量真值已删除，没有 JavaScript 转发实现。
+- 新增 2 项 strict 包测试，证明每类词汇已冻结、类内线上值唯一，并锁定销毁、运行失败、作废和输入模式不匹配等关键值。strict package/治理测试由 314 增至 316，完整通过。
+- 本节只是 Input Pilot 依赖顺序的基础批次。Definition、Assignment、Record、Workspace、Repository、Report、Evidence/Release 与其余测试仍须按依赖方向继续迁移；不宣称 G7 或零 JavaScript 已完成。
+
+## G6.47 Input Pilot Workbench View strict 迁移证据
+
+- `input-pilot-workbench-view.js` 已直接迁为 strict TypeScript，精确允许清单由 253 降至 252。View 只拥有 Pilot 页面 DOM 投影、观察/复核表单、actions 监听、Canvas 宿主位置和忙碌状态；不参与分组、命中、移动、胜负、Replay 或证据生成。
+- options、actions、snapshot、environment、form snapshot 和 review draft 在使用前校验普通对象、唯一字段集与合法值，访问器零执行。render 仅复制当前页面所需的有界字段，不深拷贝整个 Workspace；研究人员可控的 task prompt、build ID、阻断原因、环境和参与者 ID 进入 `innerHTML` 前必须转义。
+- 两类监听逐项取得所有权，绑定中途失败逆序回滚。构造失败会归还原 Canvas；销毁只删除已成功的 cleanup，失败项保留供后续 `destroy()` 精确重试。销毁期间不再接受表单或 action，异步 action 结束后也不会复活页面；`saveDraft`/form restore/reset 按现有合同必须同步完成。
+- Input Pilot 定向测试 42/42、完整 Node 测试 691/691、strict package/治理测试 316/316 通过；ESLint、strict typecheck、JS 递减、产品依赖和 Three 边界门禁均通过。新增纯 Node 伪 DOM 回归覆盖 actions/snapshot 访问器零执行、动态 HTML 转义、监听释放首次失败、销毁态阻断和二次清理归零。
+- 本批没有新增或升级外部依赖；`package-lock.json` 只增加 `arena-input-pilot` 内部 workspace 链接。代码提交为 `dc531c9b983bfc1a063957886f35499a9962ea48`，clean build ID 为 `arena-dc531c9b983b-product`。Web/微信/抖音 delivery 为 `3807531 / 3835130 / 3835105 B`，JavaScript 为 `1463921 / 1507034 / 1507034 B`；三端 `sourceDirty=false`、默认入口均为 Product、预算通过且 `freezeEligible=true`。交付字节与 G6.46 完全一致，证明 Pilot 词汇包和 Workbench View 未进入默认 Product bundle。
+- Pilot Web App 与薄入口仍是 JavaScript，因此本批未将旧页面或手机结果伪写为新的浏览器/真机通过；本批也未单独重跑 Gameplay 黄金 Replay、输入 fuzz、专项生命周期或 soak。Allen 的 iPhone 13 Pro、iOS 26、Chrome 以及微信/抖音真机记录仍是外部门禁。本批没有改变 Gameplay V2 配置 hash `8c322912`、任意距离挥空、攻击/命中/击退、动作/武器、移动/跳跃、画质、关节、Bot、权威 tick、Replay/Profile schema 或正式资产。G6 尚余两个研究 Web App 与薄入口；G7-G10 仍未完成，当前不可合并。
