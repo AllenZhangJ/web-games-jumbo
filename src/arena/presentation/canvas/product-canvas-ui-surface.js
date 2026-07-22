@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { createProductUiSceneModel } from '../product/product-ui-scene-model.js';
+import { createProductUiSceneModel } from '@number-strategy-jump/arena-product-presentation';
 import { disposeThreeObject } from '@number-strategy-jump/arena-presentation-three';
 import {
   createProductCanvasLayout,

@@ -1,4 +1,4 @@
-import { createProductUiSceneModel } from '../arena/presentation/product/product-ui-scene-model.js';
+import { createProductUiSceneModel } from '@number-strategy-jump/arena-product-presentation';
 
 const ASSET_BASE = './assets/arena-product';
 

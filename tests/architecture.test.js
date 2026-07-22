@@ -559,8 +559,16 @@ test('Arena Stage 8 product sublayers preserve state/profile/match/composition d
 });
 
 test('Arena S8.5 product presentation contracts remain host-free and do not own Product composition', async () => {
-  const files = await listJavaScript(path.resolve('src/arena/presentation/product'));
-  assert.ok(files.length >= 2);
+  const files = [
+    ...await listJavaScript(path.resolve('packages/arena-product-presentation/src')),
+    ...await listJavaScript(path.resolve('src/arena/presentation/product')),
+  ];
+  assert.ok(files.includes(path.resolve(
+    'packages/arena-product-presentation/src/product-ui-scene-model.ts',
+  )));
+  assert.ok(files.includes(path.resolve(
+    'src/arena/presentation/product/arena-v1-product-presentation-content.js',
+  )));
   for (const file of files) {
     const source = await readFile(file, 'utf8');
     assert.doesNotMatch(

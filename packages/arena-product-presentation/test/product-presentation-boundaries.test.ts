@@ -27,7 +27,9 @@ import {
   assertProductScreenRegistry,
   createArenaV1ProductPresentationContent,
   createProductSessionViewModel,
+  createProductUiSceneModel,
 } from '../src/index.js';
+import { markTrustedProductSessionViewModel } from '../src/product-view-model-trust.js';
 
 function presentationSessionComposition(overrides: Record<string, unknown> = {}) {
   const platform = {
@@ -359,6 +361,57 @@ describe('Product presentation immutable data boundaries', () => {
       get() { getterCalls += 1; return null; },
     });
     expect(() => createProductSessionViewModel({}, options as never)).toThrow(/数据字段/);
+    expect(getterCalls).toBe(0);
+  });
+
+  it('projects and caches frozen Product UI scene models without executing accessors', () => {
+    const viewModel = markTrustedProductSessionViewModel(Object.freeze({
+      revision: 4,
+      locale: 'zh-CN',
+      busy: false,
+      suspended: false,
+      terminal: false,
+      inputEnabled: true,
+      screen: Object.freeze({
+        sceneId: 'home',
+        title: '竞技场',
+        body: '',
+        announcement: '竞技场',
+        primaryAction: Object.freeze({
+          label: '开始匹配', enabled: true, intent: Object.freeze({ id: 'start-match' }),
+        }),
+        secondaryAction: null,
+      }),
+      characterOptions: Object.freeze([Object.freeze({
+        characterDefinitionId: 'parkour-apprentice',
+        name: '跑酷学徒',
+        previewAssetId: 'asset:parkour',
+        selected: true,
+        selectIntent: Object.freeze({
+          id: 'select-character', characterDefinitionId: 'parkour-apprentice',
+        }),
+      })]),
+      match: null,
+      result: null,
+      reward: null,
+      unlocks: Object.freeze([]),
+      error: null,
+    }));
+    const first = createProductUiSceneModel(viewModel);
+    expect(createProductUiSceneModel(viewModel)).toBe(first);
+    expect(first).toMatchObject({
+      revision: 4,
+      scene: 'home',
+      selectedCharacter: { id: 'parkour-apprentice' },
+      body: '',
+    });
+
+    let getterCalls = 0;
+    const hostile = Object.defineProperty({ ...viewModel }, 'screen', {
+      enumerable: true,
+      get() { getterCalls += 1; return viewModel.screen; },
+    });
+    expect(() => createProductUiSceneModel(hostile)).toThrow(/数据字段/);
     expect(getterCalls).toBe(0);
   });
 });

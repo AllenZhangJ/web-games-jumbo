@@ -24,6 +24,7 @@ import {
 import { createRewardGrant } from '@number-strategy-jump/arena-progression';
 import { ARENA_V1_PRODUCT_PRESENTATION_CONTENT_SCHEMA_VERSION } from './arena-v1-product-presentation-content.js';
 import { ownOptions } from './capability-utils.js';
+import { markTrustedProductSessionViewModel } from './product-view-model-trust.js';
 import {
   PRODUCT_CONTENT_KIND,
   type ProductContentKind,
@@ -173,11 +174,11 @@ function actionView(
   enabled: boolean,
 ): ProductSessionViewModelAction | null {
   if (definition === null) return null;
-  return Object.freeze({
+  return markTrustedProductSessionViewModel(Object.freeze({
     label: messages.format(definition.labelMessageId),
     intent: createProductUiIntent({ id: definition.intentId }),
     enabled,
-  });
+  }));
 }
 
 function booleanValue(value: unknown, name: string): boolean {

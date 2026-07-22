@@ -9,7 +9,7 @@ import {
 } from '../../../src/arena/presentation/canvas/product-canvas-layout.js';
 import {
   createProductUiSceneModel,
-} from '../../../src/arena/presentation/product/product-ui-scene-model.js';
+} from '@number-strategy-jump/arena-product-presentation';
 
 function fake2dContext() {
   return Object.fromEntries([
