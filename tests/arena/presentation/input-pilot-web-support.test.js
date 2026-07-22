@@ -123,6 +123,38 @@ test('Input Pilot formal collection requires a clean Web build containing pilot.
   assert.equal(missing.reason, 'build-manifest-invalid');
 });
 
+test('Web build identity rejects capability accessors without executing them', async () => {
+  let fetchReads = 0;
+  const root = {};
+  Object.defineProperty(root, 'fetch', {
+    get() {
+      fetchReads += 1;
+      return async () => ({ ok: true, json: async () => buildManifest() });
+    },
+  });
+  const invalidFetch = await loadInputPilotBuildIdentity(root);
+  assert.equal(invalidFetch.collectable, false);
+  assert.equal(invalidFetch.reason, 'build-manifest-fetch-invalid');
+  assert.equal(fetchReads, 0);
+
+  let jsonReads = 0;
+  const invalidJson = await loadInputPilotBuildIdentity({
+    fetch: async () => {
+      const response = { ok: true };
+      Object.defineProperty(response, 'json', {
+        get() {
+          jsonReads += 1;
+          return async () => buildManifest();
+        },
+      });
+      return response;
+    },
+  });
+  assert.equal(invalidJson.collectable, false);
+  assert.equal(invalidJson.reason, 'build-manifest-invalid');
+  assert.equal(jsonReads, 0);
+});
+
 test('web pilot owner ids prefer crypto and JSON export revokes its temporary URL', () => {
   assert.equal(createInputPilotPageOwnerId({
     crypto: { randomUUID: () => 'stable-id' },
