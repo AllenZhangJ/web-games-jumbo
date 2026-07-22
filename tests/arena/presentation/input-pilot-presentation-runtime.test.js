@@ -10,7 +10,7 @@ import {
   createInputPilotTrialCheckpoint,
 } from '@number-strategy-jump/arena-input-pilot';
 import { INPUT_PILOT_RUNTIME_STATE } from '@number-strategy-jump/arena-input-pilot';
-import { InputPilotPresentationRuntime } from '../../../src/arena/presentation/session/input-pilot-presentation-runtime.js';
+import { InputPilotPresentationRuntime } from '@number-strategy-jump/arena-input-pilot-presentation';
 
 function checkpoint(definition) {
   return createInputPilotTrialCheckpoint(definition, {

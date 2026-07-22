@@ -5,8 +5,8 @@ import {
   createArenaInputPilotV1Definition,
   createInputPilotEvidenceBundle,
 } from '@number-strategy-jump/arena-input-pilot';
+import { InputPilotPresentationRuntime } from '@number-strategy-jump/arena-input-pilot-presentation';
 import { InputPilotTrialController } from '../arena/presentation/pilot/input-pilot-trial-controller.js';
-import { InputPilotPresentationRuntime } from '../arena/presentation/session/input-pilot-presentation-runtime.js';
 import { downloadInputPilotJson } from './input-pilot-json-download.js';
 import { loadInputPilotBuildIdentity } from './input-pilot-build-identity.js';
 import {

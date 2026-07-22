@@ -225,6 +225,27 @@ describe('Input Pilot strict runtime ports', () => {
     expect(service.create({ modeId: 'arena-v1' })).toBe(1);
     expect(createdOptions).toEqual([{ modeId: 'arena-v1', matchSeed: 19 }]);
   });
+
+  it('retains assigned match-service cleanup ownership until destroy succeeds', () => {
+    let shouldFail = true;
+    let destroyCount = 0;
+    const service = new InputPilotAssignedMatchService({
+      matchService: {
+        create: () => ({}),
+        destroy() {
+          destroyCount += 1;
+          if (shouldFail) throw new Error('cleanup failed');
+        },
+      },
+      matchSeed: 29,
+    });
+    expect(() => service.destroy()).toThrow(/cleanup failed/);
+    shouldFail = false;
+    expect(() => service.destroy()).not.toThrow();
+    service.destroy();
+    expect(destroyCount).toBe(2);
+    expect(() => service.create()).toThrow(/已销毁/);
+  });
 });
 
 describe('Input Pilot strict enrollment and checkpoint', () => {

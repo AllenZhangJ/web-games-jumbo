@@ -123,13 +123,10 @@ export class InputPilotAssignedMatchService {
 
   destroy(): void {
     if (this.#destroyed) return;
-    try {
-      this.#destroyMatchService?.();
-    } finally {
-      this.#createMatch = null;
-      this.#destroyMatchService = null;
-      this.#destroyed = true;
-    }
+    this.#destroyMatchService?.();
+    this.#createMatch = null;
+    this.#destroyMatchService = null;
+    this.#destroyed = true;
   }
 }
 
@@ -137,6 +134,9 @@ export const INPUT_PILOT_RUNTIME_STATE = Object.freeze({
   CREATED: 'created', STARTING: 'starting', RUNNING: 'running', RESULT: 'result',
   FAILED: 'failed', DESTROYED: 'destroyed',
 } as const);
+export type InputPilotRuntimeState = typeof INPUT_PILOT_RUNTIME_STATE[
+  keyof typeof INPUT_PILOT_RUNTIME_STATE
+];
 export type InputPilotRuntimeFactory = (...args: unknown[]) => unknown;
 export interface InputPilotRuntimePort {
   readonly start: UnknownMethod;
