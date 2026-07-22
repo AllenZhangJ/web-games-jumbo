@@ -32,7 +32,7 @@
 | G2 Definition/合同/配置 | 已完成 | strict TS `arena-contracts`、`arena-definitions`、`arena-profile-contracts` 与 `arena-platform-contracts` 已承接确定性、输入/事件、权威快照、同步存储、平台能力、玩家档案/存档协议，以及动作/角色/装备/地图 Definition、只读 Registry 和唯一 Gameplay V2 数值配置；受审计 JavaScript 已降至 500 个 |
 | G3 Rule/Core/Replay | 已完成 | strict TS `arena-core`、`arena-movement`、`arena-physics`、`arena-equipment`、`arena-map` 与 `arena-match` 已承接规则/移动/物理/装备、完整地图权威链、比赛配置、Participant/Timeline 唯一写入者、角色 Runtime/物理投影、状态 hash、完整 MatchCore 编排、fixed-step Runtime 与 Replay；黄金语料保持 `0dace228` |
 | G4 Bot/Product/Persistence | 已完成 | strict TS Bot、Matchmaking、Quick Match、Local Match Session、Product State、Progression、ProductMatchResult、奖励事务、Profile Service/Repository、Storage Lease、Product Match、Product Session Controller、对称内容池、Arena V1 产品内容与通用 Product Composition 已闭环；Arena V1 薄应用注入适配器留待 G6/G7 清零 |
-| G5 Presentation/资产/反馈 | 进行中 | strict `arena-presentation-contracts` 已承接资产/角色表现合同，strict `arena-presentation-runtime` 已承接事件窗口、帧循环、固定 tick 累加器和画质/节拍；Three、反馈、加载器和 Session 仍待分层迁移 |
+| G5 Presentation/资产/反馈 | 进行中 | strict `arena-presentation-contracts` 已承接资产/角色表现合同，strict `arena-presentation-runtime` 已承接事件/帧/画质、六方向与资产加载 lease；Three、反馈、Character View 和 Session 仍待分层迁移 |
 | G6 Platform/入口/构建 | 未开始 | 三端默认入口是 Product，但生产交付未与开发页面彻底隔离 |
 | G7 零 JS/完整质量门 | 未开始 | ESLint、strict TypeScript、Vitest 和 JavaScript 精确递减门禁已作为迁移护栏运行；coverage 阈值、测试归包和零 JS 尚未完成 |
 | G8 资产/安全/所有权 | 未开始 | CODEOWNERS、CI 安全与正式资产最终批准待补齐 |
@@ -55,7 +55,7 @@
 
 ## 当前不可合并原因
 
-1. 当前 387 个受维护 JavaScript 文件仍在精确允许清单中，Presentation/Three/Platform 和 Arena V1 应用注入适配尚未完成 strict TypeScript workspace 迁移。
+1. 当前 384 个受维护 JavaScript 文件仍在精确允许清单中，Presentation/Three/Platform 和 Arena V1 应用注入适配尚未完成 strict TypeScript workspace 迁移。
 2. Vitest 当前保护底层合同包和治理门禁；Arena 其余测试尚待按 workspace 迁移并建立正式 coverage 阈值与零 JS 门禁。
 3. 正式资产最终审批与完整安全/依赖长期治理尚未闭环。
 4. 文档仍含迁移前阶段性叙述，尚未完成 G9 全量链接、状态与命令归真。
@@ -550,3 +550,14 @@
 - build ID 为 `arena-66d1ebf0de53-product`，Web/微信/抖音 delivery 为 `3635086 / 3667706 / 3667681 B`，`sourceDirty=false`、三端 `freezeEligible=true`。Web 主业务 chunk 为 `659.67 kB`（gzip `172.53 kB`），仍是 G6 拆包审计项，不以降低分辨率、抗锯齿、动作或关节规避。
 - 390×844、DPR 3 的 Chrome 手机视口完成首屏、正式角色、真实对局和攻击点击复验；实战出现红色命中/攻击反馈，合成 WebGL context loss 被阻止且恢复后 Canvas 为 `780×1688`，运行事件为零。该记录不冒充 iPhone 13 Pro/iOS 26 真机；微信/抖音四目标真机记录仍是发布门禁。
 - 本批未改变 Gameplay V2 数值、任意距离攻击挥空、命中/击退、武器动作、移动/跳跃、Bot 难度与随机顺序、权威 tick、Replay/Profile/lease schema、黄金 hash 或正式资产字节。G5 继续按反馈语义/视觉效果 → 正式资产加载 → Three Runtime → Presentation Session 的依赖方向治理，并在收口前完成全部动作与不同武器的验收映射审计。
+
+## G5.3 正式资产加载 lease 与六方向运行时治理证据
+
+- `PresentationAssetLoadTask`、四类固定资产 Provider ID 和 `SixSectorDirectionResolver` 已迁入 strict `@number-strategy-jump/arena-presentation-runtime`；三个旧 JavaScript 真值文件删除，精确允许清单由 387 降至 384。表现合同包和运行时包同时补齐 TypeScript `composite`、声明文件和 source map 输出，运行时包只新增对底层表现合同包的单向依赖，不接触 Three.js、DOM 或平台全局。
+- 资产 Registry、asset ID、loader 和 lease 均在状态变更前经过普通对象/精确字段/数据方法边界；loader 方法在构造期快照，运行中替换不能改变已接管任务。lease 身份、值和同步 release 必须完整；无效 lease 若清理失败会保留所有权供 `destroy()` 精确重试，Promise/thenable release 被收容并失败关闭，不以“已清理”掩盖不确定状态。
+- 六方向构造与逐次 resolve 拒绝访问器、Symbol、未知字段、非布尔 reset、非有限/非正交向量；方向候选只在整次输入验证和结果构造完成后提交。带 `reset=true` 的坏 camera/facing 不再提前丢失上一 sector，边界迟滞与销毁终态保持原有行为。
+- 干净代码提交 `f8a9b909c5b62577546d4994f23a10b3006955fd` 的等价发布门禁通过：658/658 Node、164/164 strict package/治理、103/103 生命周期、120 场 fuzz/6 次 Replay、0 个生产依赖漏洞、正式资产预算和三端 clean build/预算/唯一生产产物均通过。黄金 Replay 与正式资产结果保持 `0dace228`、`82a8b378`。
+- Presentation Session soak 完成 100 场、耗时 `536.251833 ms`、堆增长 `2650640 B`；完整 Product Presentation Session soak 完成 100 场、100 个唯一 authority hash、耗时 `50140.293333 ms`、堆增长 `6582328 B`。两者均低于 8 MiB，帧、生命周期监听、Canvas 监听和输入绑定残留为零。
+- build ID 为 `arena-f8a9b909c5b6-product`，Web/微信/抖音 delivery 为 `3635863 / 3668473 / 3668448 B`，`sourceDirty=false`、三端 `freezeEligible=true`。Web 主业务 chunk 为 `660.45 kB`（gzip `172.69 kB`），继续归入 G6 拆包审计。
+- 390×844、DPR 3 Chrome 手机视口通过 CDP 捕获到两个正式角色 GLB（`922332 B`、`974548 B`）、盾牌 GLB（`13084 B`）及三张正式纹理成功响应；实战 Canvas 为 `780×1688`，对手 4m 外攻击键可用并完成挥空，合成 WebGL context loss 被阻止并恢复，页面 warning/error 为零。该记录不冒充 iPhone 13 Pro/iOS 26 真机。
+- 本批没有改变 Gameplay V2 数值、任意距离攻击、命中/击退、武器动作、移动/跳跃、画质、分辨率、抗锯齿、关节数量、Bot、权威 tick、Replay/Profile schema 或正式资产字节。G5 下一批迁移并加固 Character View Runtime，修复底层 view 释放失败后不可重试的生命周期缺口，再进入 Three 对象图和反馈所有权。
