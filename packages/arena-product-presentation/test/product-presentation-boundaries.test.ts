@@ -19,6 +19,8 @@ import {
   ProductSessionIntentDispatcher,
   assertProductContentPresentationRegistry,
   assertProductScreenRegistry,
+  createArenaV1ProductPresentationContent,
+  createProductSessionViewModel,
 } from '../src/index.js';
 
 function sampler(overrides: Record<string, unknown> = {}) {
@@ -239,6 +241,34 @@ describe('Product presentation immutable data boundaries', () => {
       locale: 'zh-CN',
       messages,
     })).toThrow(/数据字段/);
+    expect(getterCalls).toBe(0);
+  });
+
+  it('builds Arena V1 content from an exact immutable preview mapping', () => {
+    const content = createArenaV1ProductPresentationContent({
+      'parkour-apprentice': 'asset:parkour',
+      'wind-up-cube': 'asset:cube',
+    });
+    expect(Object.isFrozen(content)).toBe(true);
+    expect(content.contentRegistry.list()).toHaveLength(2);
+    expect(content.contentRegistry.requireContent(
+      PRODUCT_CONTENT_KIND.CHARACTER,
+      'parkour-apprentice',
+    ).previewAssetId).toBe('asset:parkour');
+    expect(() => createArenaV1ProductPresentationContent({
+      'parkour-apprentice': 'asset:parkour',
+      'wind-up-cube': 'asset:cube',
+      unknown: 'asset:unknown',
+    })).toThrow(/不支持字段 unknown/);
+  });
+
+  it('rejects ViewModel option accessors before reading them', () => {
+    let getterCalls = 0;
+    const options = Object.defineProperty({}, 'screenRegistry', {
+      enumerable: true,
+      get() { getterCalls += 1; return null; },
+    });
+    expect(() => createProductSessionViewModel({}, options as never)).toThrow(/数据字段/);
     expect(getterCalls).toBe(0);
   });
 });

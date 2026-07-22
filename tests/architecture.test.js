@@ -456,14 +456,17 @@ test('Arena Product Presentation remains host-free and cannot write match author
     Object.keys(packageDefinition.dependencies).sort(),
     [
       '@number-strategy-jump/arena-contracts',
+      '@number-strategy-jump/arena-definitions',
       '@number-strategy-jump/arena-presentation-contracts',
       '@number-strategy-jump/arena-presentation-runtime',
+      '@number-strategy-jump/arena-product-contracts',
       '@number-strategy-jump/arena-product-state',
+      '@number-strategy-jump/arena-progression',
     ],
-    'arena-product-presentation 只能依赖已治理的表现与产品公开状态合同。',
+    'arena-product-presentation 只能依赖已治理的底层定义、表现与产品公开合同。',
   );
   const files = await listJavaScript(path.resolve('packages/arena-product-presentation/src'));
-  assert.ok(files.length >= 8);
+  assert.ok(files.length >= 10);
   for (const file of files) {
     const source = await readFile(file, 'utf8');
     assert.doesNotMatch(
@@ -557,7 +560,7 @@ test('Arena Stage 8 product sublayers preserve state/profile/match/composition d
 
 test('Arena S8.5 product presentation contracts remain host-free and do not own Product composition', async () => {
   const files = await listJavaScript(path.resolve('src/arena/presentation/product'));
-  assert.ok(files.length >= 5);
+  assert.ok(files.length >= 4);
   for (const file of files) {
     const source = await readFile(file, 'utf8');
     assert.doesNotMatch(

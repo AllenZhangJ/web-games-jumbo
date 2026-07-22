@@ -27,6 +27,7 @@ import {
   ProductMessageCatalog,
   ProductScreenRegistry,
   ProductSessionIntentDispatcher,
+  createProductSessionViewModel,
 } from '@number-strategy-jump/arena-product-presentation';
 import {
   PRODUCT_MATCH_PRESENTATION_RUNTIME_STATE,
@@ -39,7 +40,6 @@ import {
   PRODUCT_PRESENTATION_FLOW_STATE,
   ProductPresentationFlow,
 } from '../../../src/arena/presentation/product/product-presentation-flow.js';
-import { createProductSessionViewModel } from '../../../src/arena/presentation/product/product-session-view-model.js';
 import { TEST_MATCH_CONTENT_PUBLIC_VIEW } from '../product/stage8-test-content.js';
 
 function deferred() {

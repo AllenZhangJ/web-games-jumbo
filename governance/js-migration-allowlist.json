@@ -194,7 +194,6 @@
     "src/arena/presentation/product/arena-v1-product-presentation-content.js",
     "src/arena/presentation/product/product-match-presentation-runtime.js",
     "src/arena/presentation/product/product-presentation-flow.js",
-    "src/arena/presentation/product/product-session-view-model.js",
     "src/arena/presentation/product/product-ui-scene-model.js",
     "src/arena/presentation/projection/arena-frame-projector.js",
     "src/arena/presentation/renderer/product-renderer.js",

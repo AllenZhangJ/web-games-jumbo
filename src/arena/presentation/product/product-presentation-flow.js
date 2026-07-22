@@ -16,7 +16,7 @@ import {
   ProductMatchPresentationRuntime,
 } from './product-match-presentation-runtime.js';
 import { ProductSessionIntentDispatcher } from '@number-strategy-jump/arena-product-presentation';
-import { createProductSessionViewModel } from './product-session-view-model.js';
+import { createProductSessionViewModel } from '@number-strategy-jump/arena-product-presentation';
 export { PRODUCT_PRESENTATION_FLOW_STATE } from '@number-strategy-jump/arena-presentation-contracts';
 
 function validateController(value) {
