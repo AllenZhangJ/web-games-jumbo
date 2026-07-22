@@ -441,7 +441,7 @@ test('Arena Presentation runtime owns only host-free pacing and event lifecycles
     const source = await readFile(file, 'utf8');
     assert.doesNotMatch(
       source,
-      /(?:from\s+['"](?:three|node:|[^'"]*(?:core|bot|product|session|renderer|platform|entry)[^'"]*)['"]|Date\.now|Math\.random|\bperformance\b|setTimeout|setInterval|requestAnimationFrame|(?<![-/])\b(?:window|document|navigator)\s*[.[]|\b(?:tt|wx)\s*\.)/,
+      /(?:from\s+['"](?:three|node:|[^'"]*(?:core|bot|product|session|renderer|platform|entry)[^'"]*)['"]|Date\.now|Math\.random|(?<![-/])\bperformance\s*[.[]|setTimeout|setInterval|requestAnimationFrame|(?<![-/])\b(?:window|document|navigator)\s*[.[]|\b(?:tt|wx)\s*\.)/,
       `${file} 只能拥有注入调度、事件窗口和表现节拍。`,
     );
   }

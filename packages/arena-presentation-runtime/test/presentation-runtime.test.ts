@@ -19,6 +19,7 @@ import {
   type PresentationFrame,
   PresentationFrameLoop,
   PresentationRenderPacer,
+  PresentationPerformanceProbe,
   PointerInputAdapter,
   RawControlState,
   SixSectorDirectionResolver,
@@ -34,6 +35,67 @@ import {
 } from '@number-strategy-jump/arena-presentation-contracts';
 
 describe('Arena Presentation runtime boundaries', () => {
+  it('keeps performance probe options and frame inputs data-only without executing accessors', () => {
+    let getterCalls = 0;
+    const options = Object.defineProperty({}, 'maximumFrameSamples', {
+      enumerable: true,
+      get() { getterCalls += 1; return 1; },
+    });
+    expect(() => new PresentationPerformanceProbe(options)).toThrow(/数据字段/);
+    expect(getterCalls).toBe(0);
+
+    const probe = new PresentationPerformanceProbe({ maximumFrameSamples: 1 });
+    probe.start(100);
+    const frame = Object.defineProperty({
+      timestampMs: 101,
+      deltaSeconds: 0,
+      coreSteps: 0,
+      droppedSeconds: 0,
+      rendered: false,
+      renderDurationMs: null,
+    }, 'resources', {
+      enumerable: true,
+      get() { getterCalls += 1; return null; },
+    });
+    expect(() => probe.recordFrame(frame)).toThrow(/数据字段/);
+    expect(getterCalls).toBe(0);
+    expect(probe.getSnapshot()).toMatchObject({ observedFrameCount: 0, recordedFrameCount: 0 });
+    probe.destroy();
+  });
+
+  it('validates a whole performance frame before advancing its observational clock', () => {
+    const probe = new PresentationPerformanceProbe({
+      maximumFrameSamples: 1,
+      maximumResourceSamples: 1,
+      resourceSampleIntervalFrames: 1,
+    });
+    probe.start(10);
+    expect(() => probe.recordFrame({
+      timestampMs: 20,
+      deltaSeconds: 0,
+      coreSteps: 0,
+      droppedSeconds: 0,
+      rendered: false,
+      renderDurationMs: 1,
+      resources: null,
+    })).toThrow(/未渲染帧/);
+    probe.recordFrame({
+      timestampMs: 15,
+      deltaSeconds: 0,
+      coreSteps: 0,
+      droppedSeconds: 0,
+      rendered: false,
+      renderDurationMs: null,
+      resources: null,
+    });
+    expect(probe.getSnapshot()).toMatchObject({
+      durationMs: 5,
+      observedFrameCount: 1,
+      recordedFrameCount: 1,
+    });
+    probe.destroy();
+  });
+
   it('normalizes observational memory without inventing unavailable counters', () => {
     expect(createPresentationMemorySnapshot(null)).toBeNull();
     expect(createPresentationMemorySnapshot({

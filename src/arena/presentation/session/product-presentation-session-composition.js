@@ -8,7 +8,7 @@ import {
   InputSampler,
   PointerInputAdapter,
 } from '@number-strategy-jump/arena-presentation-runtime';
-import { PresentationPerformanceProbe } from '../performance/presentation-performance-probe.js';
+import { PresentationPerformanceProbe } from '@number-strategy-jump/arena-presentation-runtime';
 import {
   ProductInputRouter,
   ProductPresentationFlow,

@@ -149,7 +149,6 @@
     "src/arena/presentation/performance/arena-performance-record.js",
     "src/arena/presentation/performance/arena-performance-report.js",
     "src/arena/presentation/performance/arena-stage9-performance-v1.js",
-    "src/arena/presentation/performance/presentation-performance-probe.js",
     "src/arena/presentation/pilot/arena-input-pilot-v1.js",
     "src/arena/presentation/pilot/input-pilot-action-metrics.js",
     "src/arena/presentation/pilot/input-pilot-assigned-match-service.js",

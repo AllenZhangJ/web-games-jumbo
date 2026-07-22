@@ -12,6 +12,7 @@ export * from './presentation-asset-load-task.js';
 export * from './presentation-asset-provider-ids.js';
 export * from './presentation-frame-loop.js';
 export * from './presentation-memory-snapshot.js';
+export * from './presentation-performance-probe.js';
 export * from './pointer-input-adapter.js';
 export * from './presentation-quality-definition.js';
 export * from './presentation-quality-registry.js';

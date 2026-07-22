@@ -10,10 +10,8 @@ import {
   createPresentationQualityDefinition,
   createPresentationQualityRegistry,
   mergePresentationMemorySnapshot,
-} from '@number-strategy-jump/arena-presentation-runtime';
-import {
   PresentationPerformanceProbe,
-} from '../../../src/arena/presentation/performance/presentation-performance-probe.js';
+} from '@number-strategy-jump/arena-presentation-runtime';
 
 function qualityValue(overrides = {}) {
   return {
