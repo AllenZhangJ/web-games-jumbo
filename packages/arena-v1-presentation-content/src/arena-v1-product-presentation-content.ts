@@ -4,9 +4,9 @@ import {
   ARENA_V1_ZH_CN_PRODUCT_MESSAGES,
   createArenaV1ProductPresentationContent,
 } from '@number-strategy-jump/arena-product-presentation';
-import { ARENA_V1_GREYBOX_CONTENT } from '../content/arena-gameplay-v2-content.js';
+import { ARENA_V1_GREYBOX_CONTENT } from './arena-gameplay-v2-content.js';
 
-function requirePreviewAssetId(characterDefinitionId) {
+function requirePreviewAssetId(characterDefinitionId: string): string {
   const presentation = ARENA_V1_GREYBOX_CONTENT.characters[characterDefinitionId];
   if (!presentation) {
     throw new RangeError(`Character ${characterDefinitionId} 缺少灰盒表现内容。`);

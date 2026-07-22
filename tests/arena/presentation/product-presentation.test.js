@@ -20,7 +20,9 @@ import {
   ARENA_V1_PRODUCT_PRESENTATION_CONTENT,
   ARENA_V1_PRODUCT_SCREEN_REGISTRY,
   ARENA_V1_ZH_CN_PRODUCT_MESSAGES,
-} from '../../../src/arena/presentation/product/arena-v1-product-presentation-content.js';
+  ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT,
+  projectArenaPresentationFrame,
+} from '@number-strategy-jump/arena-v1-presentation-content';
 import {
   PRODUCT_MESSAGE_CATALOG_SCHEMA_VERSION,
   PRODUCT_MATCH_PRESENTATION_RUNTIME_STATE,
@@ -32,8 +34,6 @@ import {
   ProductSessionIntentDispatcher,
   createProductSessionViewModel,
 } from '@number-strategy-jump/arena-product-presentation';
-import { ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT } from '../../../src/arena/presentation/content/arena-gameplay-v2-content.js';
-import { projectArenaPresentationFrame } from '@number-strategy-jump/arena-v1-presentation-content';
 import {
   PRODUCT_INPUT_ROUTER_MODE,
 } from '@number-strategy-jump/arena-presentation-contracts';

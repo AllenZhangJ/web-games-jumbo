@@ -598,16 +598,18 @@ test('Arena V1 presentation content only projects injected authority into readon
       '@number-strategy-jump/arena-match',
       '@number-strategy-jump/arena-presentation-contracts',
       '@number-strategy-jump/arena-presentation-runtime',
+      '@number-strategy-jump/arena-product-presentation',
+      '@number-strategy-jump/arena-v1-content',
     ],
     'arena-v1-presentation-content 只能依赖只读 Definition、快照与表现合同。',
   );
   const files = await listJavaScript(path.resolve('packages/arena-v1-presentation-content/src'));
-  assert.ok(files.length >= 4);
+  assert.equal(files.length, 6);
   for (const file of files) {
     const source = await readFile(file, 'utf8');
     assert.doesNotMatch(
       source,
-      /(?:from\s+['"](?:three|node:|[^'"]*(?:core|bot|product|session|renderer|platform|entry)[^'"]*)['"]|Date\.now|Math\.random|\bperformance\b|setTimeout|setInterval|requestAnimationFrame|\b(?:window|document|navigator)\b|\b(?:tt|wx)\s*\.)/,
+      /(?:from\s+['"](?!(?:@number-strategy-jump\/arena-product-presentation|\.\/arena-v1-product-presentation-content\.js)['"])(?:three|node:|[^'"]*(?:core|bot|product|session|renderer|platform|entry)[^'"]*)['"]|Date\.now|Math\.random|\bperformance\b|setTimeout|setInterval|requestAnimationFrame|\b(?:window|document|navigator)\b|\b(?:tt|wx)\s*\.)/,
       `${file} 只能创建只读表现内容或投影公开权威快照。`,
     );
   }
@@ -695,15 +697,9 @@ test('Arena Stage 8 product sublayers preserve state/profile/match/composition d
 });
 
 test('Arena S8.5 product presentation and compositor remain host-free and do not own Product composition', async () => {
-  const files = [
-    ...await listJavaScript(path.resolve('packages/arena-product-presentation/src')),
-    ...await listJavaScript(path.resolve('src/arena/presentation/product')),
-  ];
+  const files = await listJavaScript(path.resolve('packages/arena-product-presentation/src'));
   assert.ok(files.includes(path.resolve(
     'packages/arena-product-presentation/src/product-ui-scene-model.ts',
-  )));
-  assert.ok(files.includes(path.resolve(
-    'src/arena/presentation/product/arena-v1-product-presentation-content.js',
   )));
   for (const file of files) {
     const source = await readFile(file, 'utf8');

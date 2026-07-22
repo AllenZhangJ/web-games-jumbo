@@ -21,7 +21,7 @@ import {
 } from '@number-strategy-jump/arena-presentation-runtime';
 import {
   ARENA_V1_GREYBOX_CONTENT,
-} from '../../../src/arena/presentation/content/arena-gameplay-v2-content.js';
+} from '@number-strategy-jump/arena-v1-presentation-content';
 import { STAGE4_ACTION_ID } from '@number-strategy-jump/arena-v1-content';
 import { STAGE6_MOVEMENT_ACTION_ID } from '@number-strategy-jump/arena-v1-content';
 

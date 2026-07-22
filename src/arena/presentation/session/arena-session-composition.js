@@ -15,7 +15,7 @@ import {
   PresentationFrameLoop,
 } from '@number-strategy-jump/arena-presentation-runtime';
 import { ArenaGreyboxRenderer } from '@number-strategy-jump/arena-presentation-three';
-import { ARENA_V1_GREYBOX_CONTENT } from '../content/arena-gameplay-v2-content.js';
+import { ARENA_V1_GREYBOX_CONTENT } from '@number-strategy-jump/arena-v1-presentation-content';
 
 const OPTION_KEYS = new Set([
   'mapperId',

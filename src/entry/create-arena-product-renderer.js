@@ -1,5 +1,5 @@
 import { ProductRenderer } from '@number-strategy-jump/arena-product-presentation';
-import { ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT } from '../arena/presentation/content/arena-gameplay-v2-content.js';
+import { ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT } from '@number-strategy-jump/arena-v1-presentation-content';
 import { ArenaGreyboxRenderer } from '@number-strategy-jump/arena-presentation-three';
 
 function requiredFunction(value, name) {

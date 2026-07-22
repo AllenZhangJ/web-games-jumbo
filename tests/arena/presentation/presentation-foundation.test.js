@@ -7,13 +7,13 @@ import {
 } from '@number-strategy-jump/arena-v1-content';
 import { STAGE6_MOVEMENT_ACTION_ID } from '@number-strategy-jump/arena-v1-content';
 import { STAGE5_MAP_DEFINITION } from '@number-strategy-jump/arena-v1-content';
-import { ARENA_V1_GREYBOX_CONTENT } from '../../../src/arena/presentation/content/arena-gameplay-v2-content.js';
 import {
   createArenaWorldBounds,
   createOrthographicArenaCamera,
 } from '@number-strategy-jump/arena-presentation-three';
 import { PresentationEventWindow } from '@number-strategy-jump/arena-presentation-runtime';
 import {
+  ARENA_V1_GREYBOX_CONTENT,
   ARENA_V1_CHARACTER_PRESENTATION_TUNING,
   ARENA_V1_COMBAT_PRESENTATION_CONFIG,
   projectArenaPresentationFrame,

@@ -10,17 +10,17 @@ import {
   ARENA_V1_PRESENTATION_QUALITY_REGISTRY,
   PresentationEventWindow,
 } from '@number-strategy-jump/arena-presentation-runtime';
-import { projectArenaPresentationFrame } from '@number-strategy-jump/arena-v1-presentation-content';
+import {
+  ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT,
+  ARENA_V1_GREYBOX_CONTENT,
+  projectArenaPresentationFrame,
+} from '@number-strategy-jump/arena-v1-presentation-content';
 import {
   ArenaGreyboxRenderer,
   ARENA_GREYBOX_RENDERER_STATE,
   ArenaWorldStage,
   EquipmentViewRegistry,
 } from '@number-strategy-jump/arena-presentation-three';
-import {
-  ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT,
-  ARENA_V1_GREYBOX_CONTENT,
-} from '../../../src/arena/presentation/content/arena-gameplay-v2-content.js';
 import { STAGE4_ACTION_ID } from '@number-strategy-jump/arena-v1-content';
 
 const MATCH_SEED = 6_502;

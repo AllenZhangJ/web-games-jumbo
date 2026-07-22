@@ -16,10 +16,8 @@ import {
   PlatformTextureLoader,
 } from '@number-strategy-jump/arena-presentation-three';
 import {
-  ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT,
-} from '../../../src/arena/presentation/content/arena-gameplay-v2-content.js';
-import {
   ARENA_GAMEPLAY_V2_ASSET_ID,
+  ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT,
 } from '@number-strategy-jump/arena-v1-presentation-content';
 import { ARENA_V1_CHARACTER_ID } from '@number-strategy-jump/arena-definitions';
 import {
