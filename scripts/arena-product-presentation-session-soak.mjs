@@ -1,7 +1,9 @@
 import {
   PRODUCT_PRESENTATION_SESSION_STATE,
-  ProductPresentationSession,
-} from '../src/arena/presentation/session/product-presentation-session.js';
+} from '@number-strategy-jump/arena-product-presentation';
+import {
+  createProductPresentationSession,
+} from '../src/arena/presentation/session/product-presentation-session-composition.js';
 import { PRODUCT_UI_INTENT_ID } from '@number-strategy-jump/arena-presentation-contracts';
 import { PRODUCT_SESSION_STATE } from '@number-strategy-jump/arena-product-state';
 
@@ -151,7 +153,7 @@ async function main() {
   const harness = platformHarness();
   const renderer = rendererHarness();
   const diagnostics = [];
-  const session = new ProductPresentationSession(harness.platform, {
+  const session = createProductPresentationSession(harness.platform, {
     ownerId: 'product-presentation-soak-owner',
     keyPrefix: 'stress.product-presentation-session',
     initialSeed: 90_000,

@@ -14,8 +14,10 @@ import {
 } from '@number-strategy-jump/arena-presentation-runtime';
 import {
   PRODUCT_PRESENTATION_SESSION_STATE,
-  ProductPresentationSession,
-} from '../../../src/arena/presentation/session/product-presentation-session.js';
+} from '@number-strategy-jump/arena-product-presentation';
+import {
+  createProductPresentationSession,
+} from '../../../src/arena/presentation/session/product-presentation-session-composition.js';
 
 function platformHarness({
   failBinding = null,
@@ -256,7 +258,7 @@ function fireUntil(harness, predicate, limit = 40) {
 test('ProductPresentationSession closes UI tap → real match → reward → rematch with one host ownership graph', async () => {
   const harness = platformHarness();
   const renderer = rendererHarness();
-  const session = new ProductPresentationSession(
+  const session = createProductPresentationSession(
     harness.platform,
     sessionOptions(renderer),
   );
@@ -320,7 +322,7 @@ test('30 FPS presentation pacing preserves the same 60 Hz authority frames as hi
   async function run(qualityId) {
     const harness = platformHarness();
     const renderer = rendererHarness({ performanceSnapshot: {} });
-    const session = new ProductPresentationSession(harness.platform, sessionOptions(renderer, {
+    const session = createProductPresentationSession(harness.platform, sessionOptions(renderer, {
       initialSeed: 77_001,
       qualityDefinition: ARENA_V1_PRESENTATION_QUALITY_REGISTRY.require(qualityId),
       matchConfig: {
@@ -379,7 +381,7 @@ test('ProductPresentationSession records injected memory evidence without giving
       processMemoryBytes: null,
     },
   });
-  const session = new ProductPresentationSession(harness.platform, sessionOptions(renderer, {
+  const session = createProductPresentationSession(harness.platform, sessionOptions(renderer, {
     performanceMemoryProvider: () => ({
       jsHeapBytes: 12_345,
       processMemoryBytes: 67_890,
@@ -396,7 +398,7 @@ test('ProductPresentationSession records injected memory evidence without giving
   session.destroy();
 
   const failingHarness = platformHarness();
-  const failingSession = new ProductPresentationSession(
+  const failingSession = createProductPresentationSession(
     failingHarness.platform,
     sessionOptions(rendererHarness(), {
       performanceMemoryProvider: () => ({ unknownBytes: 1 }),
@@ -413,7 +415,7 @@ test('ProductPresentationSession records injected memory evidence without giving
 test('ProductPresentationSession pauses authority across hide/show and WebGL context loss without catch-up', async () => {
   const harness = platformHarness();
   const renderer = rendererHarness();
-  const session = new ProductPresentationSession(harness.platform, sessionOptions(renderer));
+  const session = createProductPresentationSession(harness.platform, sessionOptions(renderer));
   await session.start();
   harness.tap(100);
   await settleUntil(() => session.getLastSnapshot().viewModel.activeState === PRODUCT_SESSION_STATE.IN_MATCH);
@@ -452,7 +454,7 @@ test('ProductPresentationSession pauses authority across hide/show and WebGL con
 test('ProductPresentationSession checks lease before foreground resume and blocks an expired match', async () => {
   const harness = platformHarness();
   const renderer = rendererHarness();
-  const session = new ProductPresentationSession(harness.platform, sessionOptions(renderer));
+  const session = createProductPresentationSession(harness.platform, sessionOptions(renderer));
   await session.start();
   harness.tap(100);
   await settleUntil(() => session.getLastSnapshot().viewModel.activeState === PRODUCT_SESSION_STATE.IN_MATCH);
@@ -475,7 +477,7 @@ test('ProductPresentationSession checks lease before foreground resume and block
 test('ProductPresentationSession serializes a synchronous hide binding with async boot', async () => {
   const harness = platformHarness({ emitOnBind: 'hide' });
   const renderer = rendererHarness();
-  const session = new ProductPresentationSession(harness.platform, sessionOptions(renderer));
+  const session = createProductPresentationSession(harness.platform, sessionOptions(renderer));
   await session.start();
   assert.equal(session.state, PRODUCT_PRESENTATION_SESSION_STATE.PAUSED);
   assert.equal(session.getLastSnapshot().viewModel.activeState, PRODUCT_SESSION_STATE.READY);
@@ -493,7 +495,7 @@ test('ProductPresentationSession serializes a synchronous hide binding with asyn
   const loadingRenderer = rendererHarness({
     loadPromise: new Promise((resolve) => { resolveLoad = resolve; }),
   });
-  const loadingSession = new ProductPresentationSession(
+  const loadingSession = createProductPresentationSession(
     loadingHarness.platform,
     sessionOptions(loadingRenderer),
   );
@@ -514,7 +516,7 @@ test('ProductPresentationSession destroys a pending Renderer load and ignores la
   let resolveLoad;
   const loadPromise = new Promise((resolve) => { resolveLoad = resolve; });
   const renderer = rendererHarness({ loadPromise });
-  const session = new ProductPresentationSession(harness.platform, sessionOptions(renderer));
+  const session = createProductPresentationSession(harness.platform, sessionOptions(renderer));
   const starting = session.start();
   assert.equal(session.state, PRODUCT_PRESENTATION_SESSION_STATE.STARTING);
   session.destroy();
@@ -530,7 +532,7 @@ test('ProductPresentationSession destroys a pending Renderer load and ignores la
 test('ProductPresentationSession rolls back partial lifecycle binding and invalid owned candidates', async () => {
   const bindingHarness = platformHarness({ failBinding: 'show' });
   const bindingRenderer = rendererHarness();
-  const bindingSession = new ProductPresentationSession(
+  const bindingSession = createProductPresentationSession(
     bindingHarness.platform,
     sessionOptions(bindingRenderer),
   );
@@ -544,7 +546,7 @@ test('ProductPresentationSession rolls back partial lifecycle binding and invali
 
   const resizeHarness = platformHarness();
   const resizeRenderer = rendererHarness({ resizeFailures: 1 });
-  const resizeSession = new ProductPresentationSession(
+  const resizeSession = createProductPresentationSession(
     resizeHarness.platform,
     sessionOptions(resizeRenderer),
   );
@@ -557,7 +559,7 @@ test('ProductPresentationSession rolls back partial lifecycle binding and invali
   const candidateHarness = platformHarness();
   const candidateRenderer = rendererHarness();
   let candidateDestroyCalls = 0;
-  const candidateSession = new ProductPresentationSession(
+  const candidateSession = createProductPresentationSession(
     candidateHarness.platform,
     sessionOptions(candidateRenderer, {
       controllerFactory: () => ({
@@ -574,7 +576,7 @@ test('ProductPresentationSession rolls back partial lifecycle binding and invali
   const probeHarness = platformHarness();
   const probeRenderer = rendererHarness();
   let probeDestroyCalls = 0;
-  const probeSession = new ProductPresentationSession(
+  const probeSession = createProductPresentationSession(
     probeHarness.platform,
     sessionOptions(probeRenderer, {
       performanceProbeFactory: () => ({
@@ -591,7 +593,7 @@ test('ProductPresentationSession rolls back partial lifecycle binding and invali
   const retryHarness = platformHarness();
   const retryRenderer = rendererHarness();
   let retryDestroyCalls = 0;
-  const retrySession = new ProductPresentationSession(
+  const retrySession = createProductPresentationSession(
     retryHarness.platform,
     sessionOptions(retryRenderer, {
       controllerFactory: () => ({
@@ -614,7 +616,7 @@ test('ProductPresentationSession rolls back partial lifecycle binding and invali
 test('ProductPresentationSession fails closed on invalid host input and clears every resource', async () => {
   const harness = platformHarness();
   const renderer = rendererHarness();
-  const session = new ProductPresentationSession(harness.platform, sessionOptions(renderer));
+  const session = createProductPresentationSession(harness.platform, sessionOptions(renderer));
   await session.start();
   assert.equal(harness.input.onStart({ pointerId: 1, x: Number.NaN, y: 2 }), false);
   assert.equal(session.state, PRODUCT_PRESENTATION_SESSION_STATE.FAILED);
@@ -629,7 +631,7 @@ test('ProductPresentationSession fails closed on invalid host input and clears e
 test('ProductPresentationSession rejects invalid UI races but closes on Flow infrastructure failure', async () => {
   const harness = platformHarness();
   const renderer = rendererHarness();
-  const session = new ProductPresentationSession(harness.platform, sessionOptions(renderer));
+  const session = createProductPresentationSession(harness.platform, sessionOptions(renderer));
   await assert.rejects(session.dispatch({ id: 'boot' }), /尚未完成启动/);
   await session.start();
   await assert.rejects(session.dispatch({ id: 'continue-reward' }), /需要 reward/);
@@ -638,7 +640,7 @@ test('ProductPresentationSession rejects invalid UI races but closes on Flow inf
 
   const failedHarness = platformHarness();
   const failedRenderer = rendererHarness();
-  const failedSession = new ProductPresentationSession(
+  const failedSession = createProductPresentationSession(
     failedHarness.platform,
     sessionOptions(failedRenderer, {
       flowFactory: (args) => new ProductPresentationFlow({
@@ -665,7 +667,7 @@ test('ProductPresentationSession rejects invalid UI races but closes on Flow inf
 test('ProductPresentationSession retries input and Renderer cleanup failures without double ownership', async () => {
   const inputHarness = platformHarness({ failInputCleanupOnce: true });
   const inputRenderer = rendererHarness();
-  const inputSession = new ProductPresentationSession(
+  const inputSession = createProductPresentationSession(
     inputHarness.platform,
     sessionOptions(inputRenderer),
   );
@@ -683,7 +685,7 @@ test('ProductPresentationSession retries input and Renderer cleanup failures wit
 
   const rendererHarnessValue = platformHarness();
   const failingRenderer = rendererHarness({ disposeFailures: 1 });
-  const rendererSession = new ProductPresentationSession(
+  const rendererSession = createProductPresentationSession(
     rendererHarnessValue.platform,
     sessionOptions(failingRenderer),
   );
@@ -701,7 +703,7 @@ test('ProductPresentationSession retries input and Renderer cleanup failures wit
 test('ProductPresentationSession retains Canvas ownership until a failed listener cleanup succeeds', async () => {
   const harness = platformHarness({ failCanvasCleanupOnce: true });
   const renderer = rendererHarness();
-  const session = new ProductPresentationSession(harness.platform, sessionOptions(renderer));
+  const session = createProductPresentationSession(harness.platform, sessionOptions(renderer));
   await session.start();
   assert.throws(() => session.destroy(), /清理未完整完成/);
   assert.equal(renderer.disposed, true);
@@ -714,4 +716,26 @@ test('ProductPresentationSession retains Canvas ownership until a failed listene
   assert.equal(harness.activeCanvasCount(), 0);
   assert.equal(harness.canvasCleanupAttempts, 3);
   assert.equal(session.getDebugSnapshot().cleanupIncomplete, false);
+});
+
+test('ProductPresentationSession fails closed when Renderer swallows a frame reentry error', async () => {
+  const harness = platformHarness();
+  let hostile = false;
+  let session = null;
+  const renderer = rendererHarness({
+    onRender() {
+      if (!hostile) return;
+      try { session.getDebugSnapshot(); } catch { /* hostile Renderer swallows reentry */ }
+    },
+  });
+  session = createProductPresentationSession(harness.platform, sessionOptions(renderer));
+  await session.start();
+  hostile = true;
+  for (
+    let index = 0;
+    index < 4 && session.state !== PRODUCT_PRESENTATION_SESSION_STATE.FAILED;
+    index += 1
+  ) harness.fireFrame((index + 1) * (1000 / 60));
+  assert.equal(session.state, PRODUCT_PRESENTATION_SESSION_STATE.FAILED);
+  assert.equal(renderer.disposed, true);
 });

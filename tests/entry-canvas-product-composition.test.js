@@ -11,8 +11,10 @@ import {
 } from '../src/arena/presentation/product/product-ui-scene-model.js';
 import {
   PRODUCT_PRESENTATION_SESSION_STATE,
-  ProductPresentationSession,
-} from '../src/arena/presentation/session/product-presentation-session.js';
+} from '@number-strategy-jump/arena-product-presentation';
+import {
+  createProductPresentationSession,
+} from '../src/arena/presentation/session/product-presentation-session-composition.js';
 import { PRODUCT_SESSION_STATE } from '@number-strategy-jump/arena-product-state';
 import { createArenaProductRendererFactory } from '../src/entry/create-arena-product-renderer.js';
 import { createMiniGamePlatform } from '../src/platform/mini-game.js';
@@ -158,7 +160,7 @@ test('mini-game Product composition routes Canvas touch intent and owns host lif
     gameplayRendererFactory: (args) => fakeGameplayRenderer(args, resources),
     uiSurfaceFactory: (args) => new ProductCanvasUiSurface(args),
   });
-  const session = new ProductPresentationSession(platform, {
+  const session = createProductPresentationSession(platform, {
     initialSeed: 0x855_0001,
     ownerId: 'mini-host-smoke',
     rendererFactory,

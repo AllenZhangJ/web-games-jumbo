@@ -100,7 +100,7 @@ test('mini-game entries bundle without importing the web platform', async () => 
       'src/arena/presentation/canvas/product-canvas-ui-surface.js',
     )));
     assert.ok(inputs.some((input) => input.endsWith(
-      'src/arena/presentation/session/product-presentation-session.js',
+      'packages/arena-product-presentation/dist/product-presentation-session.js',
     )));
     assert.doesNotMatch(result.outputFiles[0].text, /^\s*(?:import|export)\b/m);
   }
@@ -466,7 +466,7 @@ test('Arena Product Presentation remains host-free and cannot write match author
     'arena-product-presentation 只能依赖已治理的底层定义、表现与产品公开合同。',
   );
   const files = await listJavaScript(path.resolve('packages/arena-product-presentation/src'));
-  assert.ok(files.length >= 12);
+  assert.ok(files.length >= 13);
   for (const file of files) {
     const source = await readFile(file, 'utf8');
     assert.doesNotMatch(
@@ -578,7 +578,7 @@ test('Arena S8.5 product presentation contracts remain host-free and do not own 
 
 test('Arena S8.5 Product Session is the injected host root and never reuses Stage 6 ownership', async () => {
   const files = [
-    path.resolve('src/arena/presentation/session/product-presentation-session.js'),
+    path.resolve('packages/arena-product-presentation/src/product-presentation-session.ts'),
     path.resolve('src/arena/presentation/session/product-presentation-session-composition.js'),
   ];
   for (const file of files) {

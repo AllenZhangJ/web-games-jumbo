@@ -10,6 +10,7 @@ import { PresentationPerformanceProbe } from '../performance/presentation-perfor
 import {
   ProductInputRouter,
   ProductPresentationFlow,
+  ProductPresentationSession,
 } from '@number-strategy-jump/arena-product-presentation';
 import { ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT } from '../content/arena-gameplay-v2-content.js';
 import { projectArenaPresentationFrame } from '../projection/arena-frame-projector.js';
@@ -267,4 +268,10 @@ export function createProductPresentationSessionComposition(platformValue, optio
     onDiagnostic,
     ...factories,
   });
+}
+
+export function createProductPresentationSession(platform, options = {}) {
+  return new ProductPresentationSession(
+    createProductPresentationSessionComposition(platform, options),
+  );
 }

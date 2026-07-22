@@ -200,7 +200,6 @@
     "src/arena/presentation/session/arena-session-composition.js",
     "src/arena/presentation/session/input-pilot-presentation-runtime.js",
     "src/arena/presentation/session/product-presentation-session-composition.js",
-    "src/arena/presentation/session/product-presentation-session.js",
     "src/arena/product/composition/arena-v1-product-composition.js",
     "src/arena/regression/arena-regression-evidence-components.js",
     "src/arena/regression/arena-regression-evidence-validation.js",

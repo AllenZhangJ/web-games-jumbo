@@ -1,4 +1,6 @@
-import { ProductPresentationSession } from '../arena/presentation/session/product-presentation-session.js';
+import {
+  createProductPresentationSession,
+} from '../arena/presentation/session/product-presentation-session-composition.js';
 import { createRuntimeInstanceId } from './runtime-instance-id.js';
 
 function readDataOptions(value) {
@@ -15,7 +17,7 @@ function readDataOptions(value) {
 
 export function createArenaProductGame(platform, options = {}) {
   const dataOptions = readDataOptions(options);
-  if (dataOptions === null) return new ProductPresentationSession(platform, options);
+  if (dataOptions === null) return createProductPresentationSession(platform, options);
   const singleActiveRuntime = platform?.storageConcurrency === 'single-active-runtime';
   const ownsDefaultIdentity = dataOptions.ownerId === undefined;
   const runtimeInstanceId = ownsDefaultIdentity
@@ -27,7 +29,7 @@ export function createArenaProductGame(platform, options = {}) {
   const ownerId = dataOptions.ownerId ?? (singleActiveRuntime
     ? `arena-product-${platform?.id ?? 'unknown'}-single-active-runtime`
     : runtimeInstanceId);
-  return new ProductPresentationSession(platform, {
+  return createProductPresentationSession(platform, {
     ...dataOptions,
     ownerId,
     profileLeaseHolderId: dataOptions.profileLeaseHolderId

@@ -19,6 +19,7 @@ import {
   ProductMatchPresentationRuntime,
   ProductMessageCatalog,
   ProductPresentationFlow,
+  ProductPresentationSession,
   ProductScreenDefinition,
   ProductScreenRegistry,
   ProductSessionIntentDispatcher,
@@ -27,6 +28,90 @@ import {
   createArenaV1ProductPresentationContent,
   createProductSessionViewModel,
 } from '../src/index.js';
+
+function presentationSessionComposition(overrides: Record<string, unknown> = {}) {
+  const platform = {
+    id: 'strict-test',
+    createCanvas() { return {}; },
+    getViewport() { return { width: 1, height: 1 }; },
+    requestFrame() { return 1; },
+    cancelFrame() {},
+    now() { return 0; },
+    wallNow() { return 0; },
+    onResize() { return () => {}; },
+    onShow() { return () => {}; },
+    onHide() { return () => {}; },
+  };
+  return {
+    platform,
+    mapperId: 'strict-test-mapper',
+    seedSource: { nextSeed() { return 1; } },
+    ownerId: 'strict-test-owner',
+    profileLeaseHolderId: 'strict-test-lease',
+    keyPrefix: 'strict.test',
+    matchConfig: Object.freeze({}),
+    matchCompletionSink: null,
+    qualityDefinition: {
+      id: 'strict-test-quality',
+      getContentHash() { return '00000000'; },
+    },
+    fixedDeltaSeconds: 1 / 60,
+    maximumCatchUpTicks: 8,
+    profileLeaseHeartbeatIntervalMs: 20_000,
+    profileLeaseRetryIntervalMs: 1_000,
+    profileLeaseTakeoverSameOwner: false,
+    performanceMemoryProvider() { return null; },
+    onDiagnostic() {},
+    rendererFactory() { return {}; },
+    controllerFactory() { return {}; },
+    flowFactory() { return {}; },
+    mapperFactory() { return {}; },
+    samplerFactory() { return {}; },
+    inputRouterFactory() { return {}; },
+    inputAdapterFactory() { return {}; },
+    frameLoopFactory() { return {}; },
+    accumulatorFactory() { return {}; },
+    renderPacerFactory() { return {}; },
+    performanceProbeFactory() { return {}; },
+    ...overrides,
+  };
+}
+
+describe('Product presentation session ownership boundaries', () => {
+  it('rejects composition and platform accessors without executing them', () => {
+    let getterCalls = 0;
+    const composition = Object.defineProperty(
+      presentationSessionComposition(),
+      'mapperId',
+      {
+        enumerable: true,
+        get() { getterCalls += 1; return 'unsafe'; },
+      },
+    );
+    expect(() => new ProductPresentationSession(composition as never)).toThrow(/数据字段/);
+    expect(getterCalls).toBe(0);
+
+    const platform = presentationSessionComposition().platform;
+    Object.defineProperty(platform, 'now', {
+      enumerable: true,
+      get() { getterCalls += 1; return () => 0; },
+    });
+    expect(() => new ProductPresentationSession(
+      presentationSessionComposition({ platform }) as never,
+    )).toThrow(/数据方法/);
+    expect(getterCalls).toBe(0);
+  });
+
+  it('enforces exact composition fields and supports idempotent pre-start destroy', () => {
+    expect(() => new ProductPresentationSession(
+      presentationSessionComposition({ unknownField: true }) as never,
+    )).toThrow(/不支持字段 unknownField/);
+    const session = new ProductPresentationSession(presentationSessionComposition() as never);
+    session.destroy();
+    session.destroy();
+    expect(session.state).toBe('destroyed');
+  });
+});
 
 function sampler(overrides: Record<string, unknown> = {}) {
   const calls: string[] = [];
