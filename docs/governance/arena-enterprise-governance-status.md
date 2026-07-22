@@ -33,7 +33,7 @@
 | G3 Rule/Core/Replay | 已完成 | strict TS `arena-core`、`arena-movement`、`arena-physics`、`arena-equipment`、`arena-map` 与 `arena-match` 已承接规则/移动/物理/装备、完整地图权威链、比赛配置、Participant/Timeline 唯一写入者、角色 Runtime/物理投影、状态 hash、完整 MatchCore 编排、fixed-step Runtime 与 Replay；strict `arena-v1-content` 集中发布具体动作、装备、角色、地图、移动动作与平衡 Definition；黄金语料保持 `0dace228` |
 | G4 Bot/Product/Persistence | 已完成 | strict TS Bot、Matchmaking、Quick Match、Local Match Session、Product State、Progression、ProductMatchResult、奖励事务、Profile Service/Repository、Storage Lease、Product Match、Product Session Controller、对称内容池、Arena V1 产品内容与通用 Product Composition 已闭环；Arena V1 应用组合根已在 G6.36 归入独立 strict 包 |
 | G5 Presentation/资产/反馈 | 已完成 | strict `arena-presentation-contracts`、`arena-presentation-runtime`、`arena-v1-presentation-content`、`arena-product-presentation`、`arena-presentation-three` 与 `arena-product-presentation-three` 已承接通用合同、输入/反馈/生命周期、具体 V1 表现、Product 表现所有权和 Three Surface；设备/性能证据合同已归入独立 strict 包；共享对局资源取得/回滚原语完成 strict 迁移。生产 Product Session 组合已在 G6.37 归包；旧 Greybox ArenaPresentationSession 是 G6 应用根，Pilot 是 G7 测试/研究链，不再伪装为 G5 通用表现缺口 |
-| G6 Platform/入口/构建 | 进行中 | 三端默认入口是 Product；运行实例 ID、启动协调、失败兜底、Web teardown、三端平台适配、Arena V1 应用组合根、生产 Session、顶层 Launch、Web Product UI、三端实际 Product Entry，以及 Greybox Session 组合、表现生命周期、应用根和三端 Greybox Entry 均已 strict 化。Web 研究环境、clean build 身份、JSON 下载所有权和 Human Match Study Product Runtime 已 strict 化；研究 Workbench、应用与入口待迁移，并继续证明生产交付和开发/研究入口彻底隔离 |
+| G6 Platform/入口/构建 | 进行中 | 三端默认入口是 Product；运行实例 ID、启动协调、失败兜底、Web teardown、三端平台适配、Arena V1 应用组合根、生产 Session、顶层 Launch、Web Product UI、三端实际 Product Entry，以及 Greybox Session 组合、表现生命周期、应用根和三端 Greybox Entry 均已 strict 化。Web 研究环境、clean build 身份、JSON 下载所有权、Human Match Study Product Runtime 和 Study Workbench View 已 strict 化；Pilot Workbench、两个研究应用与入口待迁移，并继续证明生产交付和开发/研究入口彻底隔离 |
 | G7 零 JS/完整质量门 | 进行中 | 独立 strict `arena-human-match-study` 已承接真人研究 Definition、Assignment 和 Capture；ESLint、strict TypeScript、Vitest 和 JavaScript 精确递减门禁持续运行。其余 Study/Pilot/Release/测试链迁移、正式 coverage 阈值和零 JS 尚未完成 |
 | G8 资产/安全/所有权 | 未开始 | CODEOWNERS、CI 安全与正式资产最终批准待补齐 |
 | G9 文档归真 | 未开始 | README 首标题和大量章节仍以数值跳台 v3 为产品真值 |
@@ -55,7 +55,7 @@
 
 ## 当前不可合并原因
 
-1. 当前 254 个受维护 JavaScript 文件仍在精确允许清单中；G6 尚需迁移研究 Workbench、应用与入口，G7 尚需迁移其余 Pilot/Study/Release/其他测试与验收链并建立零 JS 门禁。
+1. 当前 253 个受维护 JavaScript 文件仍在精确允许清单中；G6 尚需迁移 Pilot Workbench、两个研究应用与入口，G7 尚需迁移其余 Pilot/Study/Release/其他测试与验收链并建立零 JS 门禁。
 2. Vitest 当前保护底层合同包和治理门禁；Arena 其余测试尚待按 workspace 迁移并建立正式 coverage 阈值与零 JS 门禁。
 3. 正式资产最终审批与完整安全/依赖长期治理尚未闭环。
 4. 文档仍含迁移前阶段性叙述，尚未完成 G9 全量链接、状态与命令归真。
@@ -1171,3 +1171,12 @@
 - `package-lock.json` 只增加新的内部 workspace 链接及其既有内部依赖，外部版本未改变；`npm ls --omit=dev --all` 证明生产树完整。`npm install` 的自动全树审计报告 3 个 high severity，但没有输出具体 advisory，且该全树包含开发工具链；本批不把它写成生产漏洞结论，也不执行破坏性 `npm audit fix --force`，由 G8 对生产闭包与开发工具链分别归因和闭环。
 - 代码提交为 `00686d5e20523d597221c9ab57804eb2d1879ce4`，clean build ID 为 `arena-00686d5e2052-product`。Web/微信/抖音 delivery 为 `3807531 / 3835130 / 3835105 B`，JavaScript 为 `1463921 / 1507034 / 1507034 B`；三端 `sourceDirty=false`、默认入口均为 Product、预算通过且 `freezeEligible=true`。生产交付体积与 G6.44 完全一致，证明 Study 领域包和 Product Runtime 未进入默认 Product bundle。
 - Study Workbench、Web App 和薄入口尚未 strict 化，因此本批没有把旧页面冒烟或手机下载伪写成新通过。Allen 的 iPhone 13 Pro、iOS 26、Chrome 以及微信/抖音真机记录仍是外部门禁。本批也没有改变 Gameplay V2 配置 hash `8c322912`、任意距离挥空、攻击/命中/击退、动作/武器、移动/跳跃、画质、关节、Bot 参数、权威 tick、Replay/Profile schema 或正式资产。G6 下一步迁移 Study/Pilot Workbench View；G7-G10 仍未完成，当前不可合并。
+
+## G6.46 Human Match Study Workbench View strict 迁移证据
+
+- `human-match-study-workbench-view.js` 已直接迁为 strict TypeScript，精确允许清单由 254 降至 253。View 只拥有研究页面 DOM 投影、表单读取、actions 监听和忙碌状态；不依赖 MatchCore、Bot、Product Session、Workspace Repository、下载实现或研究分组逻辑。
+- render model 在写 DOM 前完整复制冻结并校验唯一字段集合、环境、计数、收据与布尔能力；actions 必须是完整普通对象的自有数据函数，访问器零执行。评分只接受 1～5 安全整数，对手判断只接受 `human/bot/unsure`，避免非法表单值越过 View 边界。
+- 8 个按钮监听逐项取得所有权；中途注册失败会逆序回滚。销毁只移除成功 cleanup，失败项保留供下一次 `destroy()` 精确重试，并在此期间阻止 action、渲染和重复绑定；异步 action 在 View 已销毁或正在销毁后不再回写页面。
+- 最终代码上的完整 Node 测试为 690/690，strict package/治理测试为 314/314，Study Web 支持为 9/9；ESLint、strict typecheck、JS 递减和生产边界门禁通过。新增纯 Node DOM 宿主回归覆盖 model/actions 访问器零执行、监听释放失败、销毁态阻断和二次清理归零。
+- 本批没有新增或升级依赖，`package-lock.json` 未改变。代码提交为 `ffa21ed04018f8c7b40725cb9d170dae3329138e`，clean build ID 为 `arena-ffa21ed04018-product`。Web/微信/抖音 delivery 为 `3807531 / 3835130 / 3835105 B`，JavaScript 为 `1463921 / 1507034 / 1507034 B`；三端 `sourceDirty=false`、默认入口均为 Product、预算通过且 `freezeEligible=true`。生产交付体积与 G6.45 完全一致，Study View 未进入默认 Product bundle。
+- Study Web App 与薄入口仍是 JavaScript，页面结构和交互本批没有改变，因此没有伪写真实浏览器或手机通过记录，也没有重跑 Gameplay Replay、fuzz、生命周期和 soak。Allen 的 iPhone 13 Pro、iOS 26、Chrome 以及微信/抖音真机记录仍是外部门禁。本批没有改变 Gameplay V2 配置 hash `8c322912`、攻击/动作/武器、移动/跳跃、画质、关节、Bot、权威 tick、Replay/Profile schema 或正式资产。G6 下一步先迁移 Pilot 领域依赖和 Workbench View；G7-G10 仍未完成，当前不可合并。
