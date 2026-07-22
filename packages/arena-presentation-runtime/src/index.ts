@@ -2,6 +2,7 @@ export * from './arena-v1-presentation-quality.js';
 export * from './arena-impact-audio.js';
 export * from './arena-input-mapper.js';
 export * from './arena-input-router.js';
+export * from './arena-match-resources.js';
 export * from './character-view-runtime.js';
 export * from './control-layout.js';
 export * from './fixed-tick-accumulator.js';

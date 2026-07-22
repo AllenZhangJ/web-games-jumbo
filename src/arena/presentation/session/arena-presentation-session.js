@@ -1,11 +1,11 @@
 import { ARENA_FIXED_DT, ARENA_MATCH_PHASE } from '@number-strategy-jump/arena-match';
 import { normalizeThrownError } from '@number-strategy-jump/arena-contracts';
 import { ARENA_INPUT_ROUTER_MODE } from '@number-strategy-jump/arena-presentation-runtime';
-import { projectArenaPresentationFrame } from '@number-strategy-jump/arena-v1-presentation-content';
 import {
   createArenaMatchResources,
   destroyArenaMatchCandidate,
-} from './arena-match-resources.js';
+} from '@number-strategy-jump/arena-presentation-runtime';
+import { projectArenaPresentationFrame } from '@number-strategy-jump/arena-v1-presentation-content';
 import { createArenaSessionComposition } from './arena-session-composition.js';
 
 export const ARENA_PRESENTATION_SESSION_STATE = Object.freeze({
