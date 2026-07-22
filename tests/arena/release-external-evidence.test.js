@@ -45,7 +45,7 @@ import {
 } from '@number-strategy-jump/arena-device-acceptance';
 import {
   createArenaStage9PerformanceDeviceAcceptanceV1Definition,
-} from '../../src/arena/presentation/acceptance/arena-stage9-performance-device-acceptance-v1.js';
+} from '@number-strategy-jump/arena-stage9-evidence-content';
 import {
   ARENA_BUILD_MANIFEST_FILENAME,
 } from '@number-strategy-jump/arena-device-acceptance';

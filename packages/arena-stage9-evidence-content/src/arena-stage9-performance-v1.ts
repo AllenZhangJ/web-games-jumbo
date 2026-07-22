@@ -11,6 +11,10 @@ import {
   ARENA_PERFORMANCE_POLICY_SCHEMA_VERSION,
   createArenaPerformancePolicyDefinition,
 } from '@number-strategy-jump/arena-performance-evidence';
+import type {
+  ArenaPerformanceGateDefinition,
+  ArenaPerformanceGateOperator,
+} from '@number-strategy-jump/arena-performance-evidence';
 
 export const ARENA_STAGE9_PERFORMANCE_V1_ID = 'arena.stage9.performance.v1';
 
@@ -23,7 +27,14 @@ export const ARENA_STAGE9_PERFORMANCE_TARGET_ID = Object.freeze({
   DOUYIN_MAINSTREAM: 'douyin-mainstream-device',
 });
 
-function gate(id, collectorId, operator, threshold, parameters = {}, required = true) {
+function gate(
+  id: string,
+  collectorId: string,
+  operator: ArenaPerformanceGateOperator,
+  threshold: number,
+  parameters: Readonly<Record<string, unknown>> = {},
+  required = true,
+): ArenaPerformanceGateDefinition {
   return { id, collectorId, operator, threshold, required, parameters };
 }
 
@@ -41,6 +52,16 @@ function commonGates({
   renderDurationP95Ms,
   catchUpShare,
   droppedCoreTimeMs,
+}: {
+  readonly renderedFrames: number;
+  readonly interactiveMs: number;
+  readonly firstMatchMs: number;
+  readonly frameIntervalP95Ms: number;
+  readonly longFrameThresholdMs: number;
+  readonly longFrameShare: number;
+  readonly renderDurationP95Ms: number;
+  readonly catchUpShare: number;
+  readonly droppedCoreTimeMs: number;
 }) {
   return [
     gate('capture.observer-errors', 'observer-error-count', EQUAL, 0),
@@ -105,7 +126,13 @@ function commonGates({
   ];
 }
 
-function target({ id, platform, deviceClass, osName, qualityId }) {
+function target({ id, platform, deviceClass, osName, qualityId }: {
+  readonly id: string;
+  readonly platform: 'web' | 'wechat' | 'douyin';
+  readonly deviceClass: 'low' | 'mainstream';
+  readonly osName: string;
+  readonly qualityId: string;
+}) {
   const quality = ARENA_V1_PRESENTATION_QUALITY_REGISTRY.require(qualityId);
   const low = deviceClass === ARENA_PERFORMANCE_DEVICE_CLASS.LOW;
   return {

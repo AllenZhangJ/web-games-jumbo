@@ -1,5 +1,5 @@
 import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
-import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
+import { assertKnownKeys, cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 import {
   ARENA_DEVICE_ACCEPTANCE_CHECK_RESULT,
 } from '@number-strategy-jump/arena-device-acceptance';
@@ -13,38 +13,52 @@ import {
 } from '@number-strategy-jump/arena-device-acceptance';
 import {
   ARENA_STAGE9_PERFORMANCE_DEVICE_CHECK_ID,
-} from '../acceptance/arena-stage9-performance-device-acceptance-v1.js';
+} from './arena-stage9-performance-device-acceptance-v1.js';
 import {
   createArenaPerformancePolicyDefinition,
   createArenaPerformanceRecord,
   createArenaPerformanceReport,
 } from '@number-strategy-jump/arena-performance-evidence';
+import type {
+  ArenaPerformanceRecord,
+} from '@number-strategy-jump/arena-performance-evidence';
 
 export const ARENA_PERFORMANCE_EVIDENCE_REPORT_SCHEMA_VERSION = 1;
 
-function compareText(left, right) {
+const EVIDENCE_REPORT_OPTION_KEYS = new Set([
+  'deviceDefinition',
+  'deviceBundle',
+  'performancePolicy',
+  'performanceRecords',
+]);
+
+function compareText(left: string, right: string): number {
   if (left < right) return -1;
   if (left > right) return 1;
   return 0;
 }
 
-export function createArenaPerformanceEvidenceReport({
-  deviceDefinition,
-  deviceBundle: deviceBundleValue,
-  performancePolicy: performancePolicyValue,
-  performanceRecords: performanceRecordValues,
-}) {
+export function createArenaPerformanceEvidenceReport(options: unknown) {
+  assertKnownKeys(options, EVIDENCE_REPORT_OPTION_KEYS, 'ArenaPerformanceEvidenceReport options');
+  const source = options;
+  const deviceDefinition = source.deviceDefinition;
+  const deviceBundleValue = source.deviceBundle;
+  const performancePolicyValue = source.performancePolicy;
+  if (!Array.isArray(source.performanceRecords)) {
+    throw new TypeError('Arena performanceRecords 必须是数组。');
+  }
+  const performanceRecordValues = cloneFrozenData(
+    source.performanceRecords,
+    'Arena performanceRecords',
+  );
   const definition = createArenaDeviceAcceptanceDefinition(deviceDefinition);
   const policy = createArenaPerformancePolicyDefinition(performancePolicyValue);
   const bundle = createArenaDeviceAcceptanceBundle(definition, deviceBundleValue);
   const deviceReport = createArenaDeviceAcceptanceReport(definition, bundle);
-  if (!Array.isArray(performanceRecordValues)) {
-    throw new TypeError('Arena performanceRecords 必须是数组。');
-  }
   if (performanceRecordValues.length !== bundle.records.length) {
     throw new RangeError('每个 Device Record 必须且只能绑定一份 Performance Record。');
   }
-  const byRunId = new Map();
+  const byRunId = new Map<string, ArenaPerformanceRecord>();
   const performanceReports = performanceRecordValues.map((value) => {
     const record = createArenaPerformanceRecord(policy, value);
     if (byRunId.has(record.runId)) {
@@ -66,6 +80,9 @@ export function createArenaPerformanceEvidenceReport({
       }
     }
     const policyTarget = policy.getTarget(record.targetId);
+    if (!policyTarget) {
+      throw new RangeError(`Performance Record ${record.runId} 引用未知 target ${record.targetId}。`);
+    }
     const deviceTarget = definition.getTarget(record.targetId);
     if (!deviceTarget || deviceTarget.platform !== policyTarget.platform) {
       throw new RangeError(`target ${record.targetId} 的 Device/Performance 平台不一致。`);

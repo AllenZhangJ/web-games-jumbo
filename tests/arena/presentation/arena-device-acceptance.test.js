@@ -21,14 +21,14 @@ import {
 import {
   createArenaStage9PerformanceDeviceAcceptanceV1Definition,
   ARENA_STAGE9_PERFORMANCE_DEVICE_CHECK_ID,
-} from '../../../src/arena/presentation/acceptance/arena-stage9-performance-device-acceptance-v1.js';
+} from '@number-strategy-jump/arena-stage9-evidence-content';
 import {
   ARENA_PERFORMANCE_RECORD_SCHEMA_VERSION,
 } from '@number-strategy-jump/arena-performance-evidence';
 import {
   ARENA_STAGE9_PERFORMANCE_TARGET_ID,
   createArenaStage9PerformanceV1Policy,
-} from '../../../src/arena/presentation/performance/arena-stage9-performance-v1.js';
+} from '@number-strategy-jump/arena-stage9-evidence-content';
 import {
   ARENA_V1_PRESENTATION_QUALITY_ID,
   ARENA_V1_PRESENTATION_QUALITY_REGISTRY,

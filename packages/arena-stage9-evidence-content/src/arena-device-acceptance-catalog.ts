@@ -2,6 +2,7 @@ import {
   ARENA_STAGE6_DEVICE_ACCEPTANCE_V1_ID,
   createArenaStage6DeviceAcceptanceV1Definition,
 } from '@number-strategy-jump/arena-device-acceptance';
+import { assertNonEmptyString } from '@number-strategy-jump/arena-contracts';
 import {
   ARENA_STAGE8_PRODUCT_DEVICE_ACCEPTANCE_V1_ID,
   createArenaStage8ProductDeviceAcceptanceV1Definition,
@@ -24,7 +25,8 @@ export function listArenaDeviceAcceptanceDefinitionIds() {
   return IDS;
 }
 
-export function createArenaDeviceAcceptanceDefinitionById(id) {
+export function createArenaDeviceAcceptanceDefinitionById(idValue: unknown) {
+  const id = assertNonEmptyString(idValue, 'Arena device acceptance definition id');
   if (id === ARENA_STAGE6_DEVICE_ACCEPTANCE_V1_ID) {
     return createArenaStage6DeviceAcceptanceV1Definition();
   }
@@ -34,5 +36,5 @@ export function createArenaDeviceAcceptanceDefinitionById(id) {
   if (id === ARENA_STAGE9_PERFORMANCE_DEVICE_ACCEPTANCE_V1_ID) {
     return createArenaStage9PerformanceDeviceAcceptanceV1Definition();
   }
-  throw new RangeError(`未知 Arena 设备验收 Definition：${String(id)}。`);
+  throw new RangeError(`未知 Arena 设备验收 Definition：${id}。`);
 }

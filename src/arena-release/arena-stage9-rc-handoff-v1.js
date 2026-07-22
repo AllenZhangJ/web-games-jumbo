@@ -15,13 +15,13 @@ import {
 } from '@number-strategy-jump/arena-device-acceptance';
 import {
   createArenaStage9PerformanceDeviceAcceptanceV1Definition,
-} from '../arena/presentation/acceptance/arena-stage9-performance-device-acceptance-v1.js';
+} from '@number-strategy-jump/arena-stage9-evidence-content';
 import {
   createArenaStage9BuildBudgetV1Policy,
 } from '@number-strategy-jump/arena-performance-evidence';
 import {
   createArenaStage9PerformanceV1Policy,
-} from '../arena/presentation/performance/arena-stage9-performance-v1.js';
+} from '@number-strategy-jump/arena-stage9-evidence-content';
 import {
   ARENA_STAGE9_BALANCE_VALIDATION_CANDIDATE_ID,
   ARENA_STAGE9_BALANCE_VALIDATION_EXPERIMENT_ID,

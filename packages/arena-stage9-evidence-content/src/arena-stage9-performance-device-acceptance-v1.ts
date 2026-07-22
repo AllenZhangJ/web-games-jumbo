@@ -7,7 +7,7 @@ import {
 import {
   ARENA_STAGE9_PERFORMANCE_TARGET_ID,
   createArenaStage9PerformanceV1Policy,
-} from '../performance/arena-stage9-performance-v1.js';
+} from './arena-stage9-performance-v1.js';
 
 export const ARENA_STAGE9_PERFORMANCE_DEVICE_ACCEPTANCE_V1_ID =
   'arena.stage9.performance-device-acceptance.v1';
@@ -32,7 +32,7 @@ const ARTIFACT_KINDS = Object.freeze([
   ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.VIDEO,
 ]);
 
-function executionSurface(platform) {
+function executionSurface(platform: 'web' | 'wechat' | 'douyin') {
   return platform === 'web'
     ? ARENA_DEVICE_ACCEPTANCE_SURFACE.MOBILE_BROWSER
     : ARENA_DEVICE_ACCEPTANCE_SURFACE.PHYSICAL_DEVICE;

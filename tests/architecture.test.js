@@ -191,40 +191,19 @@ test('Arena input pilot remains an optional headless presentation adapter', asyn
   }
 });
 
-test('Arena device acceptance remains pure evidence data behind a Node-only CLI', async () => {
+test('legacy Arena device acceptance composition has fully migrated', async () => {
   const acceptanceFiles = await listJavaScript(
     path.resolve('src/arena/presentation/acceptance'),
   );
-  assert.ok(acceptanceFiles.length > 0);
-  for (const file of acceptanceFiles) {
-    const source = await readFile(file, 'utf8');
-    assert.doesNotMatch(
-      source,
-      /(?:from\s+['"](?:node:|three|[^'"]*(?:renderer|session|platform|entry)[^'"]*)['"]|Date\.now|Math\.random|\bperformance\s*(?:\.|\[)|\b(?:window|document|navigator)\b|\b(?:tt|wx)\s*\.)/,
-      `${file} 应保持为无宿主、无渲染的设备证据数据层。`,
-    );
-  }
+  assert.equal(acceptanceFiles.length, 0);
 });
 
-test('remaining Arena performance composition stays host-free and cannot own rendering', async () => {
+test('legacy Arena presentation performance composition has fully migrated', async () => {
   const files = (await Promise.all([
     'src/arena/presentation/quality',
     'src/arena/presentation/performance',
   ].map((directory) => listJavaScript(path.resolve(directory))))).flat();
-  assert.equal(files.length, 2);
-  for (const file of files) {
-    const source = await readFile(file, 'utf8');
-    assert.doesNotMatch(
-      source,
-      /from\s+['"](?:node:|three|[^'"]*(?:\/platform\/|\/entry\/|\/session\/|\/renderer\/|\/three\/)[^'"]*)['"]/,
-      `${file} 不应拥有 Node、宿主、Session 或 Renderer。`,
-    );
-    assert.doesNotMatch(
-      withoutStaticImports(source),
-      /(?:Date\.now|Math\.random|setTimeout|setInterval|requestAnimationFrame|\b(?:window|document|navigator|localStorage|sessionStorage)\b|\b(?:tt|wx)\s*\.)/,
-      `${file} 不应直接读取墙钟、随机或宿主全局。`,
-    );
-  }
+  assert.equal(files.length, 0);
 });
 
 test('Arena Evidence Value Contract stays scalar-only and outside authority dependencies', async () => {
@@ -360,6 +339,38 @@ test('Arena performance evidence stays immutable, host-free, and outside runtime
       withoutStaticImports(source),
       /(?:Date\.now|Math\.random|setTimeout|setInterval|requestAnimationFrame|\bperformance\s*(?:\.|\[)|\b(?:window|document|navigator)\b|\b(?:tt|wx)\s*\.)/,
       `${file} 只能重算注入的性能证据，不得采集宿主指标。`,
+    );
+  }
+});
+
+test('Arena Stage 9 evidence content stays host-free and only composes approved contracts', async () => {
+  const packageDefinition = JSON.parse(await readFile(
+    path.resolve('packages/arena-stage9-evidence-content/package.json'),
+    'utf8',
+  ));
+  assert.deepEqual(
+    Object.keys(packageDefinition.dependencies).sort(),
+    [
+      '@number-strategy-jump/arena-contracts',
+      '@number-strategy-jump/arena-device-acceptance',
+      '@number-strategy-jump/arena-performance-evidence',
+      '@number-strategy-jump/arena-presentation-runtime',
+    ],
+    'arena-stage9-evidence-content 只能组合已审核的证据与质量 Definition。',
+  );
+  const files = await listJavaScript(path.resolve('packages/arena-stage9-evidence-content/src'));
+  assert.equal(files.length, 5);
+  for (const file of files) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /from\s+['"](?:node:|three|@number-strategy-jump\/(?!(?:arena-contracts|arena-device-acceptance|arena-performance-evidence|arena-presentation-runtime)['"]))[^'"]*['"]/,
+      `${file} 只能导入自身文件与已审核的上游包。`,
+    );
+    assert.doesNotMatch(
+      withoutStaticImports(source),
+      /(?:Date\.now|Math\.random|setTimeout|setInterval|requestAnimationFrame|\bperformance\s*\.\s*(?:now|memory)\b|\b(?:window|document|navigator|localStorage|sessionStorage)\b|\b(?:tt|wx)\s*\.)/,
+      `${file} 只能组合版本化内容，不得采集宿主指标或持有生命周期。`,
     );
   }
 });

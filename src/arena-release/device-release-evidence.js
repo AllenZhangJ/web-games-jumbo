@@ -13,13 +13,13 @@ import {
 } from '@number-strategy-jump/arena-device-acceptance';
 import {
   createArenaStage9PerformanceDeviceAcceptanceV1Definition,
-} from '../arena/presentation/acceptance/arena-stage9-performance-device-acceptance-v1.js';
+} from '@number-strategy-jump/arena-stage9-evidence-content';
 import {
   createArenaPerformanceEvidenceReport,
-} from '../arena/presentation/performance/arena-performance-evidence.js';
+} from '@number-strategy-jump/arena-stage9-evidence-content';
 import {
   createArenaStage9PerformanceV1Policy,
-} from '../arena/presentation/performance/arena-stage9-performance-v1.js';
+} from '@number-strategy-jump/arena-stage9-evidence-content';
 import { ARENA_RELEASE_EVIDENCE_STATUS } from './release-evidence-statement.js';
 
 function releaseStatus(status) {

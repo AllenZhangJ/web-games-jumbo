@@ -6,13 +6,13 @@ import {
   ARENA_DEFAULT_DEVICE_ACCEPTANCE_DEFINITION_ID,
   createArenaDeviceAcceptanceDefinitionById,
   listArenaDeviceAcceptanceDefinitionIds,
-} from '../src/arena/presentation/acceptance/arena-device-acceptance-catalog.js';
+} from '@number-strategy-jump/arena-stage9-evidence-content';
 import {
   ARENA_STAGE9_PERFORMANCE_DEVICE_ACCEPTANCE_V1_ID,
-} from '../src/arena/presentation/acceptance/arena-stage9-performance-device-acceptance-v1.js';
+} from '@number-strategy-jump/arena-stage9-evidence-content';
 import {
   createArenaStage9PerformanceV1Policy,
-} from '../src/arena/presentation/performance/arena-stage9-performance-v1.js';
+} from '@number-strategy-jump/arena-stage9-evidence-content';
 import {
   readVerifiedTextFile,
 } from './lib/evidence-file-verifier.mjs';
