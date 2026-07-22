@@ -218,7 +218,6 @@
     "src/arena/presentation/session/product-presentation-session.js",
     "src/arena/presentation/three/arena-greybox-renderer.js",
     "src/arena/presentation/three/arena-hud-layer.js",
-    "src/arena/presentation/three/arena-world-stage.js",
     "src/arena/product/composition/arena-v1-product-composition.js",
     "src/arena/regression/arena-regression-evidence-components.js",
     "src/arena/regression/arena-regression-evidence-validation.js",

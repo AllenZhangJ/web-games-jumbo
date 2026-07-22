@@ -15,11 +15,11 @@ import {
   ArenaGreyboxRenderer,
   ARENA_GREYBOX_RENDERER_STATE,
 } from '../../../src/arena/presentation/three/arena-greybox-renderer.js';
-import { ArenaWorldStage } from '../../../src/arena/presentation/three/arena-world-stage.js';
-import { EquipmentViewRegistry } from '@number-strategy-jump/arena-presentation-three';
+import { ArenaWorldStage, EquipmentViewRegistry } from '@number-strategy-jump/arena-presentation-three';
 import {
   ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT,
 } from '../../../src/arena/presentation/content/arena-gameplay-v2-content.js';
+import { ARENA_V1_GREYBOX_CONTENT } from '../../../src/arena/presentation/content/arena-v1-greybox-content.js';
 import { STAGE4_ACTION_ID } from '../../../src/arena/content/stage4-equipment.js';
 
 const MATCH_SEED = 6_502;
@@ -144,7 +144,7 @@ test('ArenaWorldStage syncs programmatic views without mutating authority-derive
   };
   const frame = frameFrom(snapshot, eventWindow.consume([hit]));
   const serialized = JSON.stringify(frame);
-  const stage = new ArenaWorldStage();
+  const stage = new ArenaWorldStage({ content: ARENA_V1_GREYBOX_CONTENT });
   const camera = stage.resize({ width: 390, height: 844 });
   stage.sync(frameFrom(snapshot));
   const prewarmedObjectCount = stage.getDebugSnapshot().objectCount;
@@ -470,7 +470,7 @@ test('ArenaGreyboxRenderer deduplicates hit vibration/audio and honors the sound
 test('reduced motion keeps a short hit stop but suppresses camera shake and zoom', () => {
   const core = createCore();
   const snapshot = core.getSnapshot();
-  const stage = new ArenaWorldStage();
+  const stage = new ArenaWorldStage({ content: ARENA_V1_GREYBOX_CONTENT });
   stage.resize({ width: 390, height: 844 });
   const frame = frameFrom(snapshot, [{
     id: `${MATCH_SEED.toString(16)}:0:reduced-motion`,
@@ -577,7 +577,7 @@ test('Arena HUD renders the authoritative life count instead of a fixed three-do
 
 test('Arena Three presentation sources do not call authority mutation APIs', async () => {
   const files = [
-    new URL('../../../src/arena/presentation/three/arena-world-stage.js', import.meta.url),
+    new URL('../../../packages/arena-presentation-three/src/arena-world-stage.ts', import.meta.url),
     new URL('../../../packages/arena-presentation-three/src/programmatic-character-view.ts', import.meta.url),
     new URL('../../../packages/arena-presentation-three/src/programmatic-character-view-factory.ts', import.meta.url),
     new URL('../../../packages/arena-presentation-three/src/character-view-registry.ts', import.meta.url),

@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import {
   ARENA_CAMERA_DEFAULTS,
+  ARENA_WORLD_STAGE_DEFAULTS,
+  ArenaWorldStage,
   EquipmentViewRegistry,
   CharacterAnimationController,
   GltfCharacterView,
@@ -21,6 +23,7 @@ import { ARENA_PRESENTATION_ASSET_PROVIDER_ID } from '@number-strategy-jump/aren
 import {
   ARENA_ANIMATION_SEMANTIC_IDS,
   ARENA_ANIMATION_SOURCE_KIND,
+  CharacterPresentationRegistry,
   CHARACTER_PRESENTATION_DEFINITION_SCHEMA_VERSION,
   CHARACTER_PRESENTATION_DIRECTION_STRATEGY,
   CHARACTER_PRESENTATION_FRONT_AXIS,
@@ -83,6 +86,64 @@ function gltfAssetRegistry(): PresentationAssetRegistry {
     contentVersion: 1,
     tags: ['test', 'humanoid'],
   }]);
+}
+
+function worldStageContent({ gltf = false }: Readonly<{ gltf?: boolean }> = {}): unknown {
+  const assetRegistry = gltf ? gltfAssetRegistry() : programmaticAssetRegistry();
+  const definition = {
+    ...(programmaticPresentationDefinition() as Record<string, unknown>),
+    modelAssetId: gltf ? 'asset.gltf.test' : 'asset.programmatic.test',
+  };
+  const characterPresentationRegistry = new CharacterPresentationRegistry({
+    assetRegistry,
+    definitions: [definition],
+  });
+  return {
+    schemaVersion: 1,
+    map: {
+      id: 'map.test',
+      killY: -20,
+      surfaces: [{
+        id: 'surface.test',
+        center: { x: 0, y: 0, z: 0 },
+        halfExtents: { x: 8, y: 0.5, z: 8 },
+      }],
+    },
+    characters: {},
+    actions: {},
+    equipment: {},
+    assetRegistry,
+    characterPresentationRegistry,
+  };
+}
+
+function worldStageFrame({
+  tick = 0,
+  events = [],
+  equipment = [],
+}: Readonly<{
+  tick?: number;
+  events?: readonly unknown[];
+  equipment?: readonly unknown[];
+}> = {}): Record<string, unknown> {
+  const participant = {
+    ...(programmaticParticipant() as Record<string, unknown>),
+    characterDefinitionId: 'character.test',
+  };
+  return {
+    source: { matchSeed: 17, tick },
+    phase: 'running',
+    events: [...events],
+    hud: { local: { participantId: 'player-1' } },
+    world: {
+      map: {
+        surfaces: [{ id: 'surface.test', enabled: true }],
+        occurrences: [],
+      },
+      participants: [participant],
+      equipment: [...equipment],
+    },
+  };
 }
 
 function programmaticParticipant(overrides: Readonly<Record<string, unknown>> = {}): unknown {
@@ -186,6 +247,141 @@ function gltfSyncOptions(events: readonly unknown[] = []): unknown {
 }
 
 describe('Arena Presentation Three lifecycle boundaries', () => {
+  it('keeps World Stage boundary failures retryable before presentation mutation', () => {
+    let reads = 0;
+    const accessorOptions = {};
+    Object.defineProperty(accessorOptions, 'content', {
+      enumerable: true,
+      get() { reads += 1; return worldStageContent(); },
+    });
+    expect(() => new ArenaWorldStage(accessorOptions)).toThrow(/content.*数据字段/);
+    expect(reads).toBe(0);
+
+    const stage = new ArenaWorldStage({ content: worldStageContent() });
+    stage.resize({ width: 390, height: 844 });
+    stage.sync(worldStageFrame());
+    const before = stage.getDebugSnapshot();
+    const invalid = worldStageFrame({ tick: 1 });
+    const source = invalid.source as object;
+    Object.defineProperty(source, 'tick', {
+      enumerable: true,
+      get() { reads += 1; return 1; },
+    });
+    expect(() => stage.sync(invalid)).toThrow(/source.tick.*数据字段/);
+    expect(reads).toBe(0);
+    expect(stage.getDebugSnapshot()).toEqual(before);
+    stage.sync(worldStageFrame({ tick: 1 }));
+    stage.dispose();
+  });
+
+  it('fails World Stage closed after a downstream registry rejects a partial sync', () => {
+    const stage = new ArenaWorldStage({ content: worldStageContent() });
+    stage.resize({ width: 390, height: 844 });
+    stage.sync(worldStageFrame());
+    expect(() => stage.sync(worldStageFrame({
+      tick: 1,
+      equipment: [{
+        instanceId: 'equipment.bad',
+        definitionId: 'hammer',
+        position: null,
+        locationState: 'spawned',
+      }],
+    }))).toThrow(/locationState.*position/);
+    expect(() => stage.getDebugSnapshot()).toThrow(/已销毁/);
+    stage.dispose();
+  });
+
+  it('deduplicates World Stage load and keeps destruction terminal across late completion', async () => {
+    let resolveLoad: (() => void) | null = null;
+    const pending = new Promise<void>((resolve) => { resolveLoad = resolve; });
+    const factory = {
+      create() { throw new Error('create must not run'); },
+      load() { return pending; },
+    };
+    const stage = new ArenaWorldStage({
+      content: worldStageContent(),
+      characterViewFactory: factory,
+    });
+    const loading = stage.load();
+    expect(stage.load()).toBe(loading);
+    stage.dispose();
+    resolveLoad!();
+    await expect(loading).rejects.toThrow(/加载已取消/);
+    await expect(stage.load()).rejects.toThrow(/已销毁/);
+  });
+
+  it('retains owned World Stage GLTF cleanup until a late lease is fully released', async () => {
+    let resolveLease: ((value: unknown) => void) | null = null;
+    let releaseAttempts = 0;
+    const loader = {
+      load() {
+        return new Promise((resolve) => { resolveLease = resolve; });
+      },
+    };
+    const stage = new ArenaWorldStage({
+      content: worldStageContent({ gltf: true }),
+      presentationAssetLoader: loader,
+    });
+    const loading = stage.load();
+    await Promise.resolve();
+    stage.dispose();
+    resolveLease!({
+      assetId: 'asset.gltf.test',
+      value: Object.freeze({ template: true }),
+      release() {
+        releaseAttempts += 1;
+        if (releaseAttempts < 3) throw new Error('transient late World Stage lease release');
+      },
+    });
+    await expect(loading).rejects.toThrow(/加载已取消/);
+    expect(releaseAttempts).toBe(3);
+    stage.dispose();
+  });
+
+  it('releases construction resources when owned GLTF factory validation fails', () => {
+    const originalDispose = THREE.Material.prototype.dispose;
+    let materialDisposals = 0;
+    let reads = 0;
+    THREE.Material.prototype.dispose = function patchedDispose(): void {
+      materialDisposals += 1;
+      originalDispose.call(this);
+    };
+    const loader = {};
+    Object.defineProperty(loader, 'load', {
+      enumerable: true,
+      get() { reads += 1; return () => Promise.resolve(null); },
+    });
+    try {
+      expect(() => new ArenaWorldStage({
+        content: worldStageContent({ gltf: true }),
+        presentationAssetLoader: loader,
+      })).toThrow(/loader.load.*数据方法/);
+    } finally {
+      THREE.Material.prototype.dispose = originalDispose;
+    }
+    expect(reads).toBe(0);
+    expect(materialDisposals).toBe(1);
+  });
+
+  it('retries only incomplete World Stage resource cleanup', () => {
+    const originalDispose = THREE.Material.prototype.dispose;
+    let materialDisposals = 0;
+    THREE.Material.prototype.dispose = function patchedDispose(): void {
+      materialDisposals += 1;
+      if (materialDisposals === 1) throw new Error('transient World Stage release');
+      originalDispose.call(this);
+    };
+    let stage: ArenaWorldStage;
+    try { stage = new ArenaWorldStage({ content: worldStageContent() }); }
+    finally { THREE.Material.prototype.dispose = originalDispose; }
+    expect(() => stage.dispose()).toThrow(/清理未完整完成/);
+    const firstPass = materialDisposals;
+    stage.dispose();
+    stage.dispose();
+    expect(materialDisposals).toBe(firstPass + 1);
+    expect(ARENA_WORLD_STAGE_DEFAULTS.largeMapSpanThreshold).toBe(22);
+  });
+
   it('snapshots camera geometry without invoking accessors or accepting unknown fields', () => {
     let reads = 0;
     const accessorViewport = { height: 844 };

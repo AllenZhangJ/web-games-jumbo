@@ -7,9 +7,9 @@ import { ArenaImpactAudio } from '../audio/arena-impact-audio.js';
 import { ArenaHudLayer } from './arena-hud-layer.js';
 import {
   ARENA_GREYBOX_COLOR,
+  ArenaWorldStage,
   GltfPresentationAssetLoader,
 } from '@number-strategy-jump/arena-presentation-three';
-import { ArenaWorldStage } from './arena-world-stage.js';
 import { ARENA_V1_GREYBOX_CONTENT } from '../content/arena-v1-greybox-content.js';
 
 const EMPTY_EVENTS = Object.freeze([]);
