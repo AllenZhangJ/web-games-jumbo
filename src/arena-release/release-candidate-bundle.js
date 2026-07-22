@@ -5,8 +5,10 @@ import {
   cloneFrozenData,
 } from '@number-strategy-jump/arena-contracts';
 import { assertEvidenceGitCommit } from '@number-strategy-jump/arena-evidence-contracts';
-import { createArenaReleaseEvidenceStatement } from './release-evidence-statement.js';
-import { createArenaReleaseReadinessDefinition } from './release-readiness-definition.js';
+import {
+  createArenaReleaseEvidenceStatement,
+  createArenaReleaseReadinessDefinition,
+} from '@number-strategy-jump/arena-release-contracts';
 
 export const ARENA_RELEASE_CANDIDATE_BUNDLE_SCHEMA_VERSION = 1;
 

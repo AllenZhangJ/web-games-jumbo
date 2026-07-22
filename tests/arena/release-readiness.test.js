@@ -14,12 +14,12 @@ import {
   ARENA_RELEASE_EVIDENCE_STATEMENT_SCHEMA_VERSION,
   ARENA_RELEASE_EVIDENCE_STATUS,
   createArenaReleaseEvidenceStatement,
-} from '../../src/arena-release/release-evidence-statement.js';
+} from '@number-strategy-jump/arena-release-contracts';
 import {
   ARENA_RELEASE_EVIDENCE_SUBJECT_SCOPE,
   ARENA_RELEASE_READINESS_DEFINITION_SCHEMA_VERSION,
   createArenaReleaseReadinessDefinition,
-} from '../../src/arena-release/release-readiness-definition.js';
+} from '@number-strategy-jump/arena-release-contracts';
 import {
   ARENA_RELEASE_READINESS_STATUS,
   createArenaReleaseReadinessReport,

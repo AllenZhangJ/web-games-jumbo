@@ -21,7 +21,17 @@ export const ARENA_RELEASE_EVIDENCE_STATUS = Object.freeze({
   READY: 'ready',
   FAILED: 'failed',
   INCOMPLETE: 'incomplete',
-});
+} as const);
+
+export type ArenaReleaseEvidenceStatus = typeof ARENA_RELEASE_EVIDENCE_STATUS[
+  keyof typeof ARENA_RELEASE_EVIDENCE_STATUS
+];
+
+export interface ArenaReleaseEvidenceMaterial {
+  readonly path: string;
+  readonly sha256: string;
+  readonly byteLength: number;
+}
 
 const STATEMENT_KEYS = new Set([
   'schemaVersion',
@@ -40,7 +50,7 @@ const CONTENT_HASH_PATTERN = /^[0-9a-f]{8}$/;
 const MAXIMUM_MATERIALS = 128;
 const MAXIMUM_MATERIAL_BYTES = 512 * 1024 * 1024;
 
-function boundedText(value, maximumLength, name) {
+function boundedText(value: unknown, maximumLength: number, name: string): string {
   const text = assertNonEmptyString(value, name);
   if (text.length > maximumLength) {
     throw new RangeError(`${name} 不能超过 ${maximumLength} 个字符。`);
@@ -48,7 +58,7 @@ function boundedText(value, maximumLength, name) {
   return text;
 }
 
-function cloneMaterials(values) {
+function cloneMaterials(values: unknown): readonly ArenaReleaseEvidenceMaterial[] {
   if (!Array.isArray(values) || values.length === 0) {
     throw new RangeError('ArenaReleaseEvidenceStatement.materials 不能为空。');
   }
@@ -57,7 +67,7 @@ function cloneMaterials(values) {
       `ArenaReleaseEvidenceStatement.materials 不能超过 ${MAXIMUM_MATERIALS} 项。`,
     );
   }
-  const paths = new Set();
+  const paths = new Set<string>();
   return Object.freeze(values.map((value, index) => {
     const name = `ArenaReleaseEvidenceStatement.materials[${index}]`;
     assertKnownKeys(value, MATERIAL_KEYS, name);
@@ -77,7 +87,17 @@ function cloneMaterials(values) {
 }
 
 export class ArenaReleaseEvidenceStatement {
-  constructor(definitionValue, value) {
+  declare readonly schemaVersion: 1;
+  declare readonly gateId: string;
+  declare readonly producerId: string;
+  declare readonly requirementHash: string;
+  declare readonly commit: string;
+  declare readonly buildId: string | null;
+  declare readonly status: ArenaReleaseEvidenceStatus;
+  declare readonly resultHash: string;
+  declare readonly materials: readonly ArenaReleaseEvidenceMaterial[];
+
+  constructor(definitionValue: unknown, value: unknown) {
     const definition = createArenaReleaseReadinessDefinition(definitionValue);
     const source = cloneFrozenData(value, 'ArenaReleaseEvidenceStatement');
     assertKnownKeys(source, STATEMENT_KEYS, 'ArenaReleaseEvidenceStatement');
@@ -110,7 +130,9 @@ export class ArenaReleaseEvidenceStatement {
       gate.subjectScope === ARENA_RELEASE_EVIDENCE_SUBJECT_SCOPE.BUILD
       && buildId === null
     ) throw new RangeError(`build scope 的 Release gate ${gate.id} 必须包含 buildId。`);
-    if (!Object.values(ARENA_RELEASE_EVIDENCE_STATUS).includes(source.status)) {
+    if (!Object.values(ARENA_RELEASE_EVIDENCE_STATUS).includes(
+      source.status as ArenaReleaseEvidenceStatus,
+    )) {
       throw new RangeError(
         `ArenaReleaseEvidenceStatement.status 不受支持：${String(source.status)}。`,
       );
@@ -130,14 +152,24 @@ export class ArenaReleaseEvidenceStatement {
       requirementHash: { value: gate.requirementHash, enumerable: true },
       commit: { value: commit, enumerable: true },
       buildId: { value: buildId, enumerable: true },
-      status: { value: source.status, enumerable: true },
+      status: { value: source.status as ArenaReleaseEvidenceStatus, enumerable: true },
       resultHash: { value: source.resultHash, enumerable: true },
       materials: { value: cloneMaterials(source.materials), enumerable: true },
     });
     Object.freeze(this);
   }
 
-  toJSON() {
+  toJSON(): Readonly<{
+    schemaVersion: 1;
+    gateId: string;
+    producerId: string;
+    requirementHash: string;
+    commit: string;
+    buildId: string | null;
+    status: ArenaReleaseEvidenceStatus;
+    resultHash: string;
+    materials: readonly ArenaReleaseEvidenceMaterial[];
+  }> {
     return {
       schemaVersion: this.schemaVersion,
       gateId: this.gateId,
@@ -151,7 +183,7 @@ export class ArenaReleaseEvidenceStatement {
     };
   }
 
-  getContentHash() {
+  getContentHash(): string {
     return createDeterministicDataHash(
       this.toJSON(),
       `ArenaReleaseEvidenceStatement ${this.gateId}`,
@@ -159,7 +191,10 @@ export class ArenaReleaseEvidenceStatement {
   }
 }
 
-export function createArenaReleaseEvidenceStatement(definition, value) {
+export function createArenaReleaseEvidenceStatement(
+  definition: unknown,
+  value: unknown,
+): ArenaReleaseEvidenceStatement {
   return value instanceof ArenaReleaseEvidenceStatement
     ? value
     : new ArenaReleaseEvidenceStatement(definition, value);

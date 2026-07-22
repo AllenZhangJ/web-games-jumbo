@@ -4,7 +4,7 @@ import { assertEvidenceGitCommit } from '@number-strategy-jump/arena-evidence-co
 import {
   readArenaRegressionEvidenceReport,
 } from '../arena/regression/arena-regression-evidence.js';
-import { ARENA_RELEASE_EVIDENCE_STATUS } from './release-evidence-statement.js';
+import { ARENA_RELEASE_EVIDENCE_STATUS } from '@number-strategy-jump/arena-release-contracts';
 
 export function createArenaRegressionReleaseResult({ commit, report: reportValue }) {
   assertEvidenceGitCommit(commit, 'Regression release result.commit');

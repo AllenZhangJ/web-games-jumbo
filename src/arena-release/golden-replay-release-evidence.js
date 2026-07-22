@@ -12,7 +12,7 @@ import {
 import {
   ARENA_GOLDEN_REPLAY_VERIFICATION_SCHEMA_VERSION,
 } from '../arena/regression/golden-replay-verifier.js';
-import { ARENA_RELEASE_EVIDENCE_STATUS } from './release-evidence-statement.js';
+import { ARENA_RELEASE_EVIDENCE_STATUS } from '@number-strategy-jump/arena-release-contracts';
 
 const VERIFICATION_KEYS = new Set([
   'schemaVersion',

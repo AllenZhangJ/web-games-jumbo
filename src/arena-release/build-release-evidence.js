@@ -12,7 +12,7 @@ import {
 import {
   createArenaBuildBudgetReport,
 } from '@number-strategy-jump/arena-performance-evidence';
-import { ARENA_RELEASE_EVIDENCE_STATUS } from './release-evidence-statement.js';
+import { ARENA_RELEASE_EVIDENCE_STATUS } from '@number-strategy-jump/arena-release-contracts';
 
 const REQUIRED_PLATFORMS = Object.freeze(['douyin', 'web', 'wechat']);
 

@@ -2,9 +2,9 @@ import { createDeterministicDataHash } from '@number-strategy-jump/arena-contrac
 import { assertKnownKeys, cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 import {
   ARENA_RELEASE_EVIDENCE_STATUS,
-} from './release-evidence-statement.js';
+} from '@number-strategy-jump/arena-release-contracts';
 import { createArenaReleaseCandidateBundle } from './release-candidate-bundle.js';
-import { createArenaReleaseReadinessDefinition } from './release-readiness-definition.js';
+import { createArenaReleaseReadinessDefinition } from '@number-strategy-jump/arena-release-contracts';
 
 export const ARENA_RELEASE_READINESS_REPORT_SCHEMA_VERSION = 1;
 

@@ -40,7 +40,7 @@ import {
   ARENA_RELEASE_EVIDENCE_SUBJECT_SCOPE,
   ARENA_RELEASE_READINESS_DEFINITION_SCHEMA_VERSION,
   createArenaReleaseReadinessDefinition,
-} from './release-readiness-definition.js';
+} from '@number-strategy-jump/arena-release-contracts';
 
 export const ARENA_STAGE9_RC_HANDOFF_V1_ID = 'arena.stage9.rc-handoff.v1';
 

@@ -10,7 +10,7 @@ import {
 import {
   readArenaExperimentReportBundle,
 } from '../arena/experiment/experiment-report-bundle.js';
-import { ARENA_RELEASE_EVIDENCE_STATUS } from './release-evidence-statement.js';
+import { ARENA_RELEASE_EVIDENCE_STATUS } from '@number-strategy-jump/arena-release-contracts';
 
 const BALANCE_VALIDATION_SUITE = 'balance-validation';
 

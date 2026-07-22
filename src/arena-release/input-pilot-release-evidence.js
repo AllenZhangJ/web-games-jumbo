@@ -8,7 +8,7 @@ import {
 import {
   createArenaBuildManifest,
 } from '@number-strategy-jump/arena-device-acceptance';
-import { ARENA_RELEASE_EVIDENCE_STATUS } from './release-evidence-statement.js';
+import { ARENA_RELEASE_EVIDENCE_STATUS } from '@number-strategy-jump/arena-release-contracts';
 
 const RESULT_HASH_PATTERN = /^(?:[0-9a-f]{8}|[0-9a-f]{64})$/;
 

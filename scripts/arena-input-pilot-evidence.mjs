@@ -1,7 +1,7 @@
 import path from 'node:path';
 import {
   ARENA_RELEASE_EVIDENCE_STATUS,
-} from '../src/arena-release/release-evidence-statement.js';
+} from '@number-strategy-jump/arena-release-contracts';
 import {
   createArenaInputPilotV1Definition,
 } from '@number-strategy-jump/arena-input-pilot';

@@ -20,7 +20,7 @@ import {
 import {
   createArenaStage9PerformanceV1Policy,
 } from '@number-strategy-jump/arena-stage9-evidence-content';
-import { ARENA_RELEASE_EVIDENCE_STATUS } from './release-evidence-statement.js';
+import { ARENA_RELEASE_EVIDENCE_STATUS } from '@number-strategy-jump/arena-release-contracts';
 
 function releaseStatus(status) {
   if (status === ARENA_DEVICE_ACCEPTANCE_REPORT_STATUS.READY) {

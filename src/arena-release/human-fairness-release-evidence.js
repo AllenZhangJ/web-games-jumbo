@@ -10,7 +10,7 @@ import {
   HUMAN_MATCH_STUDY_REPORT_STATUS,
   createHumanMatchStudyReport,
 } from '@number-strategy-jump/arena-human-match-study';
-import { ARENA_RELEASE_EVIDENCE_STATUS } from './release-evidence-statement.js';
+import { ARENA_RELEASE_EVIDENCE_STATUS } from '@number-strategy-jump/arena-release-contracts';
 
 function releaseStatus(status) {
   if (status === HUMAN_MATCH_STUDY_REPORT_STATUS.READY) {

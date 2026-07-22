@@ -6,9 +6,9 @@ import { assertEvidenceGitCommit } from '@number-strategy-jump/arena-evidence-co
 import {
   ARENA_RELEASE_EVIDENCE_STATUS,
   createArenaReleaseEvidenceStatement,
-} from './release-evidence-statement.js';
+} from '@number-strategy-jump/arena-release-contracts';
 import { createArenaReleaseCandidateBundle } from './release-candidate-bundle.js';
-import { createArenaReleaseReadinessDefinition } from './release-readiness-definition.js';
+import { createArenaReleaseReadinessDefinition } from '@number-strategy-jump/arena-release-contracts';
 
 const RESULT_KEYS = new Set(['commit', 'buildId', 'status', 'resultHash']);
 const RESULT_HASH_PATTERN = /^(?:[0-9a-f]{8}|[0-9a-f]{64})$/;

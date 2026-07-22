@@ -6,7 +6,7 @@ import {
   createArenaDefectLedger,
   createArenaDefectReport,
 } from './defect-ledger.js';
-import { ARENA_RELEASE_EVIDENCE_STATUS } from './release-evidence-statement.js';
+import { ARENA_RELEASE_EVIDENCE_STATUS } from '@number-strategy-jump/arena-release-contracts';
 
 function releaseStatus(status) {
   if (status === ARENA_DEFECT_REPORT_STATUS.READY) return ARENA_RELEASE_EVIDENCE_STATUS.READY;

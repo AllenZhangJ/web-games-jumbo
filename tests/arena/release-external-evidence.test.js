@@ -11,7 +11,7 @@ import {
 import {
   ARENA_RELEASE_EVIDENCE_STATEMENT_SCHEMA_VERSION,
   ARENA_RELEASE_EVIDENCE_STATUS,
-} from '../../src/arena-release/release-evidence-statement.js';
+} from '@number-strategy-jump/arena-release-contracts';
 import {
   ARENA_STAGE9_RC_HANDOFF_GATE_ID,
   createArenaStage9RcHandoffV1Definition,
