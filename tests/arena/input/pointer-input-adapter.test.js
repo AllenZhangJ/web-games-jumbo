@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import {
   createGestureInputMapperA,
   InputSampler,
+  PointerInputAdapter,
 } from '@number-strategy-jump/arena-presentation-runtime';
-import { PointerInputAdapter } from '../../../src/arena/presentation/input/pointer-input-adapter.js';
 
 const point = (pointerId, x, y) => ({ pointerId, x, y });
 

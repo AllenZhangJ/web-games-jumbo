@@ -6,8 +6,8 @@ import {
   ARENA_INPUT_MAPPER_ID,
   createArenaInputMapper,
   InputSampler,
+  PointerInputAdapter,
 } from '@number-strategy-jump/arena-presentation-runtime';
-import { PointerInputAdapter } from '../input/pointer-input-adapter.js';
 import { PresentationPerformanceProbe } from '../performance/presentation-performance-probe.js';
 import {
   ProductInputRouter,

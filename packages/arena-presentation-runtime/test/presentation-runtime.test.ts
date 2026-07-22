@@ -19,6 +19,7 @@ import {
   type PresentationFrame,
   PresentationFrameLoop,
   PresentationRenderPacer,
+  PointerInputAdapter,
   RawControlState,
   SixSectorDirectionResolver,
   normalizedControlDelta,
@@ -491,5 +492,97 @@ describe('Arena Presentation runtime boundaries', () => {
     });
     expect(() => new InputSampler(optionsAccessor)).toThrow(/viewport.*访问器/);
     expect(reads).toBe(0);
+  });
+
+  it('snapshots PointerInputAdapter platform methods and rejects option accessors', () => {
+    let originalBinds = 0;
+    let replacementBinds = 0;
+    const platform = {
+      bindInput() { originalBinds += 1; return () => {}; },
+      onResize() { return () => {}; },
+      onHide() { return () => {}; },
+      onShow() { return () => {}; },
+    };
+    const sampler = new InputSampler({
+      participantId: 'player-1',
+      viewport: { width: 400, height: 800 },
+      mapper: createExplicitCombatJumpMapper(),
+    });
+    const adapter = new PointerInputAdapter({
+      platform,
+      sampler,
+      viewportProvider: () => ({ width: 400, height: 800 }),
+      manageLifecycle: false,
+    });
+    platform.bindInput = () => { replacementBinds += 1; return () => {}; };
+    expect(adapter.start()).toBe(true);
+    expect([originalBinds, replacementBinds]).toEqual([1, 0]);
+    adapter.destroy();
+    sampler.destroy();
+
+    let reads = 0;
+    const accessorOptions = Object.defineProperty({ platform, sampler }, 'viewportProvider', {
+      enumerable: true,
+      get() { reads += 1; return () => ({ width: 400, height: 800 }); },
+    });
+    expect(() => new PointerInputAdapter(accessorOptions)).toThrow(/viewportProvider.*访问器/);
+    expect(reads).toBe(0);
+  });
+
+  it('rolls back when a platform swallows PointerInputAdapter start reentry', () => {
+    let cleanupCalls = 0;
+    const sampler = new InputSampler({
+      participantId: 'player-1',
+      viewport: { width: 400, height: 800 },
+      mapper: createExplicitCombatJumpMapper(),
+    });
+    const holder: { adapter?: PointerInputAdapter } = {};
+    const adapter = new PointerInputAdapter({
+      platform: {
+        bindInput() {
+          try { holder.adapter!.start(); } catch { /* hostile host swallows reentry */ }
+          return () => { cleanupCalls += 1; };
+        },
+        onResize() { return () => {}; },
+        onHide() { return () => {}; },
+        onShow() { return () => {}; },
+      },
+      sampler,
+      viewportProvider: () => ({ width: 400, height: 800 }),
+      manageLifecycle: false,
+    });
+    holder.adapter = adapter;
+    expect(() => adapter.start()).toThrow(/重入/);
+    expect(cleanupCalls).toBe(1);
+    expect(adapter.getDebugSnapshot()).toMatchObject({ state: 'idle', cleanupCount: 0 });
+    adapter.destroy();
+    sampler.destroy();
+  });
+
+  it('rejects asynchronous PointerInputAdapter ports without executing foreign thenables', () => {
+    let thenCalls = 0;
+    const sampler = new InputSampler({
+      participantId: 'player-1',
+      viewport: { width: 400, height: 800 },
+      mapper: createExplicitCombatJumpMapper(),
+    });
+    const adapter = new PointerInputAdapter({
+      platform: {
+        bindInput() {
+          return { then() { thenCalls += 1; } };
+        },
+        onResize() { return () => {}; },
+        onHide() { return () => {}; },
+        onShow() { return () => {}; },
+      },
+      sampler,
+      viewportProvider: () => ({ width: 400, height: 800 }),
+      manageLifecycle: false,
+    });
+    expect(() => adapter.start()).toThrow(/必须同步完成/);
+    expect(thenCalls).toBe(0);
+    expect(adapter.getDebugSnapshot()).toMatchObject({ state: 'idle', cleanupCount: 0 });
+    adapter.destroy();
+    sampler.destroy();
   });
 });

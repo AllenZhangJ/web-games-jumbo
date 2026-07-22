@@ -146,7 +146,6 @@
     "src/arena/presentation/content/arena-v1-greybox-content.js",
     "src/arena/presentation/input/arena-input-router.js",
     "src/arena/presentation/input/keyboard-input-adapter.js",
-    "src/arena/presentation/input/pointer-input-adapter.js",
     "src/arena/presentation/performance/arena-build-budget-policy.js",
     "src/arena/presentation/performance/arena-build-budget-report.js",
     "src/arena/presentation/performance/arena-performance-evidence.js",
