@@ -8,7 +8,7 @@ import {
 import {
   materializeHumanMatchStudyCapturePackage,
   validateHumanMatchStudyCapturePackage,
-} from '../../../src/arena/study/human-match-study-capture-package.js';
+} from '@number-strategy-jump/arena-human-match-study';
 import {
   HUMAN_MATCH_STUDY_STATUS,
   HUMAN_MATCH_STUDY_TERMINATION_REASON,
@@ -92,7 +92,7 @@ function fakeReplay(matchSeed, winnerId = 'player-1') {
     matchSeed,
     config: { contentSelection: TEST_MATCH_CONTENT_PUBLIC_VIEW },
     inputFrames: [],
-    checkpoints: [],
+    checkpoints: [{ tick: 0, hash: '00000000' }],
     events: [],
     result: {
       winnerId,

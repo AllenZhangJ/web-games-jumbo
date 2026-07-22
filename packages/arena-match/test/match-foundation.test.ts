@@ -4,6 +4,7 @@ import {
   createArenaConfigHash,
   createCharacterRuntimeReference,
   createMatchStateHash,
+  validateArenaReplay,
   type ArenaInternalMatchSnapshot,
 } from '../src/index.js';
 
@@ -124,6 +125,19 @@ function snapshotFixture(): ArenaInternalMatchSnapshot {
 }
 
 describe('arena-match authority foundation', () => {
+  it('rejects Replay accessors without evaluating untrusted code', () => {
+    let reads = 0;
+    const replay = Object.defineProperty({}, 'matchSeed', {
+      enumerable: true,
+      get() {
+        reads += 1;
+        return 1;
+      },
+    });
+    expect(() => validateArenaReplay(replay)).toThrow(/访问器|数据字段/);
+    expect(reads).toBe(0);
+  });
+
   it('keeps character runtime as immutable validated identity only', () => {
     const registry = new CharacterRegistry([character()]);
     const runtime = createCharacterRuntimeReference({

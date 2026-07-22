@@ -70,6 +70,7 @@ export {
   ARENA_REPLAY_SCHEMA_VERSION,
   ArenaReplayCompatibilityError,
   createReplayMatch,
+  validateArenaReplay,
   HEADLESS_MATCH_RUNNER_DEFAULTS,
   HeadlessMatchRunner,
 } from './replay.js';

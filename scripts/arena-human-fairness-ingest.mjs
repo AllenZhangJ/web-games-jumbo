@@ -18,7 +18,7 @@ import {
 import {
   materializeHumanMatchStudyCapturePackage,
   validateHumanMatchStudyCapturePackage,
-} from '../src/arena/study/human-match-study-capture-package.js';
+} from '@number-strategy-jump/arena-human-match-study';
 import {
   verifyHumanMatchStudyReplay,
 } from '../src/arena/study/human-match-study-replay-verifier.js';

@@ -1,23 +1,46 @@
-import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
+import {
+  assertIntegerAtLeast,
+  assertKnownKeys,
+  assertPlainRecord,
+  cloneFrozenData,
+  createDeterministicDataHash,
+} from '@number-strategy-jump/arena-contracts';
+import {
+  validateArenaReplay,
+  type ArenaReplay,
+} from '@number-strategy-jump/arena-match';
 import { createMatchAssignment } from '@number-strategy-jump/arena-matchmaking';
 import {
   createProductMatchResult,
   validateProductMatchResult,
+  type ProductMatchResult,
 } from '@number-strategy-jump/arena-product-contracts';
 import {
-  assertIntegerAtLeast,
-  assertKnownKeys,
-  cloneFrozenData,
-} from '@number-strategy-jump/arena-contracts';
-import { createHumanMatchStudyDefinition } from '@number-strategy-jump/arena-human-match-study';
+  createHumanMatchStudyDefinition,
+  type HumanMatchStudyDefinition,
+} from './human-match-study-definition.js';
 import {
   HUMAN_MATCH_STUDY_RECORD_SCHEMA_VERSION,
   HUMAN_MATCH_STUDY_STATUS,
   createHumanMatchStudyRecord,
   createHumanMatchStudySubmission,
-} from '@number-strategy-jump/arena-human-match-study';
+  type HumanMatchStudyRecord,
+  type HumanMatchStudySubmission,
+} from './human-match-study-record.js';
 
 export const HUMAN_MATCH_STUDY_CAPTURE_PACKAGE_SCHEMA_VERSION = 1;
+
+export interface HumanMatchStudyCaptureMatch {
+  readonly matchIndex: number;
+  readonly result: ProductMatchResult;
+  readonly replay: ArenaReplay;
+}
+
+export interface HumanMatchStudyCapturePackage extends HumanMatchStudySubmission {
+  readonly schemaVersion: 1;
+  readonly packageId: string;
+  readonly matches: readonly HumanMatchStudyCaptureMatch[];
+}
 
 const PACKAGE_KEYS = new Set([
   'schemaVersion',
@@ -40,7 +63,7 @@ const PACKAGE_KEYS = new Set([
 const DRAFT_KEYS = new Set([...PACKAGE_KEYS].filter(
   (key) => key !== 'schemaVersion' && key !== 'packageId',
 ));
-const SUBMISSION_KEYS = [
+const SUBMISSION_KEYS = Object.freeze([
   'recordId',
   'definitionId',
   'definitionHash',
@@ -54,15 +77,20 @@ const SUBMISSION_KEYS = [
   'environment',
   'eligibility',
   'selfReport',
-];
+] as const satisfies readonly (keyof HumanMatchStudySubmission)[]);
 const RAW_MATCH_KEYS = new Set(['matchIndex', 'result', 'replay']);
 
-function sameDeterministicData(left, right, label) {
+function sameDeterministicData(left: unknown, right: unknown, label: string): boolean {
   return createDeterministicDataHash(left, `${label} left`)
     === createDeterministicDataHash(right, `${label} right`);
 }
 
-function cloneRawMatch(definition, submission, value, index) {
+function cloneRawMatch(
+  definition: HumanMatchStudyDefinition,
+  submission: HumanMatchStudySubmission,
+  value: unknown,
+  index: number,
+): HumanMatchStudyCaptureMatch {
   const name = `HumanMatchStudyCapturePackage.matches[${index}]`;
   assertKnownKeys(value, RAW_MATCH_KEYS, name);
   const matchIndex = assertIntegerAtLeast(value.matchIndex, 0, `${name}.matchIndex`);
@@ -70,7 +98,7 @@ function cloneRawMatch(definition, submission, value, index) {
     throw new RangeError(`${name}.matchIndex 必须从 0 连续且属于当前 Study。`);
   }
   const result = validateProductMatchResult(value.result);
-  const replay = cloneFrozenData(value.replay, `${name}.replay`);
+  const replay = validateArenaReplay(value.replay);
   const expectedSeed = submission.assignment.matchSeeds[matchIndex];
   if (result.matchSeed !== expectedSeed || replay.matchSeed !== expectedSeed) {
     throw new RangeError(`${name} 没有使用预注册 match seed。`);
@@ -78,11 +106,6 @@ function cloneRawMatch(definition, submission, value, index) {
   if (replay.replaySchemaVersion !== definition.candidate.replaySchemaVersion) {
     throw new RangeError(`${name} 使用了错误 Replay schema。`);
   }
-  if (
-    !Array.isArray(replay.inputFrames)
-    || !Array.isArray(replay.checkpoints)
-    || !Array.isArray(replay.events)
-  ) throw new TypeError(`${name} 缺少完整 Replay 序列。`);
   const productionAssignment = createMatchAssignment({ matchSeed: expectedSeed });
   if (
     productionAssignment.selectedDifficultyId !== submission.assignment.difficultyId
@@ -91,7 +114,7 @@ function cloneRawMatch(definition, submission, value, index) {
   const reconstructed = createProductMatchResult({
     matchSeed: expectedSeed,
     opponent: productionAssignment.opponent,
-    content: replay.config?.contentSelection,
+    content: replay.config.contentSelection,
     replay,
   });
   if (!sameDeterministicData(result, reconstructed, `${name} result`)) {
@@ -100,7 +123,15 @@ function cloneRawMatch(definition, submission, value, index) {
   return Object.freeze({ matchIndex, result, replay });
 }
 
-function packageIdentity(submission, matches) {
+function submissionValue(source: unknown): Record<string, unknown> {
+  const record = assertPlainRecord(source, 'HumanMatchStudy submission source');
+  return Object.fromEntries(SUBMISSION_KEYS.map((key) => [key, record[key]]));
+}
+
+function packageIdentity(
+  submission: HumanMatchStudySubmission,
+  matches: readonly HumanMatchStudyCaptureMatch[],
+): unknown {
   return {
     ...submission,
     assignment: {
@@ -121,16 +152,20 @@ function packageIdentity(submission, matches) {
   };
 }
 
-function expectedPackageId(submission, matches) {
-  return `human-study-package-${
-    createDeterministicDataHash(
-      packageIdentity(submission, matches),
-      'HumanMatchStudyCapturePackage identity',
-    )
-  }`;
+function expectedPackageId(
+  submission: HumanMatchStudySubmission,
+  matches: readonly HumanMatchStudyCaptureMatch[],
+): string {
+  return `human-study-package-${createDeterministicDataHash(
+    packageIdentity(submission, matches),
+    'HumanMatchStudyCapturePackage identity',
+  )}`;
 }
 
-export function validateHumanMatchStudyCapturePackage(definitionValue, value) {
+export function validateHumanMatchStudyCapturePackage(
+  definitionValue: unknown,
+  value: unknown,
+): HumanMatchStudyCapturePackage {
   const definition = createHumanMatchStudyDefinition(definitionValue);
   const source = cloneFrozenData(value, 'HumanMatchStudyCapturePackage');
   assertKnownKeys(source, PACKAGE_KEYS, 'HumanMatchStudyCapturePackage');
@@ -139,9 +174,7 @@ export function validateHumanMatchStudyCapturePackage(definitionValue, value) {
       `不支持 HumanMatchStudyCapturePackage schema ${String(source.schemaVersion)}。`,
     );
   }
-  const submission = createHumanMatchStudySubmission(definition, Object.fromEntries(
-    SUBMISSION_KEYS.map((key) => [key, source[key]]),
-  ));
+  const submission = createHumanMatchStudySubmission(definition, submissionValue(source));
   if (!Array.isArray(source.matches)) {
     throw new TypeError('HumanMatchStudyCapturePackage.matches 必须是数组。');
   }
@@ -167,13 +200,14 @@ export function validateHumanMatchStudyCapturePackage(definitionValue, value) {
   });
 }
 
-export function createHumanMatchStudyCapturePackage(definitionValue, value) {
+export function createHumanMatchStudyCapturePackage(
+  definitionValue: unknown,
+  value: unknown,
+): HumanMatchStudyCapturePackage {
   const definition = createHumanMatchStudyDefinition(definitionValue);
   const source = cloneFrozenData(value, 'HumanMatchStudyCapturePackage draft');
   assertKnownKeys(source, DRAFT_KEYS, 'HumanMatchStudyCapturePackage draft');
-  const submission = createHumanMatchStudySubmission(definition, Object.fromEntries(
-    SUBMISSION_KEYS.map((key) => [key, source[key]]),
-  ));
+  const submission = createHumanMatchStudySubmission(definition, submissionValue(source));
   if (!Array.isArray(source.matches)) {
     throw new TypeError('HumanMatchStudyCapturePackage.matches 必须是数组。');
   }
@@ -189,23 +223,26 @@ export function createHumanMatchStudyCapturePackage(definitionValue, value) {
 }
 
 export function materializeHumanMatchStudyCapturePackage(
-  definitionValue,
-  packageValue,
-  replayArtifactsValue,
-) {
+  definitionValue: unknown,
+  packageValue: unknown,
+  replayArtifactsValue: unknown,
+): HumanMatchStudyRecord {
   const definition = createHumanMatchStudyDefinition(definitionValue);
   const capturePackage = validateHumanMatchStudyCapturePackage(definition, packageValue);
-  if (
-    !Array.isArray(replayArtifactsValue)
-    || replayArtifactsValue.length !== capturePackage.matches.length
-  ) throw new RangeError('CapturePackage replay artifacts 必须与 matches 一一对应。');
+  const replayArtifacts = cloneFrozenData(
+    replayArtifactsValue,
+    'CapturePackage replay artifacts',
+  );
+  if (!Array.isArray(replayArtifacts) || replayArtifacts.length !== capturePackage.matches.length) {
+    throw new RangeError('CapturePackage replay artifacts 必须与 matches 一一对应。');
+  }
   return createHumanMatchStudyRecord(definition, {
     schemaVersion: HUMAN_MATCH_STUDY_RECORD_SCHEMA_VERSION,
-    ...Object.fromEntries(SUBMISSION_KEYS.map((key) => [key, capturePackage[key]])),
+    ...submissionValue(capturePackage),
     matches: capturePackage.matches.map(({ matchIndex, result }, index) => ({
       matchIndex,
       result,
-      replayArtifact: replayArtifactsValue[index],
+      replayArtifact: replayArtifacts[index],
     })),
   });
 }

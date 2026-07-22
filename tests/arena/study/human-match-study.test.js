@@ -38,7 +38,7 @@ import {
 } from '@number-strategy-jump/arena-human-match-study';
 import {
   createHumanMatchStudyCapturePackage,
-} from '../../../src/arena/study/human-match-study-capture-package.js';
+} from '@number-strategy-jump/arena-human-match-study';
 import {
   HUMAN_MATCH_STUDY_DEFINITION_SCHEMA_VERSION,
   createHumanMatchStudyDefinition,

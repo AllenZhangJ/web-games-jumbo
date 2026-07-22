@@ -1,7 +1,7 @@
 import {
   createHumanMatchStudyCapturePackage,
   validateHumanMatchStudyCapturePackage,
-} from './human-match-study-capture-package.js';
+} from '@number-strategy-jump/arena-human-match-study';
 import { createHumanMatchStudyDefinition } from '@number-strategy-jump/arena-human-match-study';
 import {
   HUMAN_MATCH_STUDY_STATUS,

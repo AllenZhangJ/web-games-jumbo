@@ -322,7 +322,7 @@ export class HeadlessMatchRunner {
   }
 }
 
-function validateReplay(replay: unknown): ArenaReplay {
+export function validateArenaReplay(replay: unknown): ArenaReplay {
   const source = cloneFrozenData(replay, 'replay');
   assertKnownKeys(source, REPLAY_KEYS, 'replay');
   if (source.replaySchemaVersion !== ARENA_REPLAY_SCHEMA_VERSION) {
@@ -535,7 +535,7 @@ function executeReplay(
   replayValue: unknown,
   { coreFactory, beforeStep }: ParsedReplayMatchOptions,
 ): ReplayMatchResult {
-  const replay = validateReplay(replayValue);
+  const replay = validateArenaReplay(replayValue);
   const core = adoptReplayCore(coreFactory({ seed: replay.matchSeed, config: replay.config }));
   let result: ReplayMatchResult | null = null;
   let failure: Error | null = null;

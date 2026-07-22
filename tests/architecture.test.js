@@ -408,7 +408,11 @@ test('Arena Stage 9 regression corpus stays headless and keeps Node IO in script
 test('Arena Stage 9 human study stays headless, host-free and outside authority ownership', async () => {
   const arenaRoot = path.resolve('src/arena');
   const studyRoot = path.join(arenaRoot, 'study');
-  const studyFiles = await listJavaScript(studyRoot);
+  const strictStudyRoot = path.resolve('packages/arena-human-match-study/src');
+  const studyFiles = [
+    ...await listJavaScript(studyRoot),
+    ...await listJavaScript(strictStudyRoot),
+  ];
   assert.ok(studyFiles.length >= 7);
   for (const file of studyFiles) {
     const source = await readFile(file, 'utf8');
