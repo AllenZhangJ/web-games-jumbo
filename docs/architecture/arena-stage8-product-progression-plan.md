@@ -141,7 +141,7 @@ PlayerProfile + Content Definitions
 - 接入启动、选择、匹配、准备、比赛、结算和返回。
 - 验证重复事件、快速点击、前后台、启动失败和销毁。
 
-状态：已完成无 UI 基础，并于 2026-07-21 完成 G4 strict 治理。不可变转换 Definition/Registry/StateMachine、Profile 选择与持久化、Quick Match Product Runtime、单 Runtime Coordinator、Controller、内容池和组合根均由 strict workspace 承接；宿主数据/方法快照、统一不可重入、终态先发布、迟到资源、逆序清理和清理重试已有自动化与压力证据。Arena V1 仅保留应用注入薄适配，归入 G6/G7 清零范围。详见 [ADR-015](../decisions/015-arena-headless-product-session-lifecycle.md)、[S8.2 结果记录](../research/arena-stage8-product-session-results.md) 与 [企业治理状态台账](../governance/arena-enterprise-governance-status.md)。本节关于“未接产品 UI、奖励、共享内容池或快捷再来一局”是 S8.2 当时范围，后续 S8.3～S8.5 已分别补齐。
+状态：已完成无 UI 基础，并于 2026-07-21 完成 G4 strict 治理；Arena V1 应用注入组合于 2026-07-22 在 G6.36 归入独立 strict `arena-v1-composition`。不可变转换 Definition/Registry/StateMachine、Profile 选择与持久化、Quick Match Product Runtime、单 Runtime Coordinator、Controller、内容池、通用 Product Composition 和具体 V1 应用组合根均由 strict workspace 承接；宿主数据/方法快照、统一不可重入、终态先发布、迟到资源、逆序清理和清理重试已有自动化与压力证据。详见 [ADR-015](../decisions/015-arena-headless-product-session-lifecycle.md)、[ADR-034](../decisions/034-arena-v1-application-composition-boundary.md)、[S8.2 结果记录](../research/arena-stage8-product-session-results.md) 与 [企业治理状态台账](../governance/arena-enterprise-governance-status.md)。本节关于“未接产品 UI、奖励、共享内容池或快捷再来一局”是 S8.2 当时范围，后续 S8.3～S8.5 已分别补齐。
 
 ### S8.3 奖励与解锁
 
