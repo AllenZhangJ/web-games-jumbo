@@ -50,7 +50,7 @@ import {
   HUMAN_MATCH_STUDY_TERMINATION_REASON,
   createHumanMatchStudyRecord,
   getHumanMatchStudyProtocolExclusionReasons,
-} from '../../../src/arena/study/human-match-study-record.js';
+} from '@number-strategy-jump/arena-human-match-study';
 import {
   verifyHumanMatchStudyReplay,
 } from '../../../src/arena/study/human-match-study-replay-verifier.js';

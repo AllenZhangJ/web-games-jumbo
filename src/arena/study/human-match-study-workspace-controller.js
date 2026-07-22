@@ -6,7 +6,7 @@ import { createHumanMatchStudyDefinition } from '@number-strategy-jump/arena-hum
 import {
   HUMAN_MATCH_STUDY_STATUS,
   HUMAN_MATCH_STUDY_TERMINATION_REASON,
-} from './human-match-study-record.js';
+} from '@number-strategy-jump/arena-human-match-study';
 import {
   HUMAN_MATCH_STUDY_CHECKPOINT_PHASE,
   advanceHumanMatchStudyWorkspace,

@@ -10,7 +10,7 @@ import {
 import { replayMatch } from '../replay.js';
 import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 import { createHumanMatchStudyDefinition } from '@number-strategy-jump/arena-human-match-study';
-import { createHumanMatchStudyRecord } from './human-match-study-record.js';
+import { createHumanMatchStudyRecord } from '@number-strategy-jump/arena-human-match-study';
 
 function assertCandidateIdentity(definition) {
   const balanceHash = createDeterministicDataHash(

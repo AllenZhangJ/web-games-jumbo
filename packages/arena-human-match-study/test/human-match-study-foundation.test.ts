@@ -6,6 +6,7 @@ import {
   createArenaStage9HumanFairnessV1Definition,
   createHumanMatchStudyAssignment,
   createHumanMatchStudyDefinition,
+  createHumanMatchStudyRecord,
 } from '../src/index.js';
 
 function definitionData(): Readonly<Record<string, unknown>> {
@@ -65,6 +66,22 @@ describe('Human Match Study strict foundation', () => {
     ]);
     expect(definition.matchesPerParticipant).toBe(3);
     expect(Object.isFrozen(ARENA_STAGE9_HUMAN_FAIRNESS_ARM_ID)).toBe(true);
+  });
+
+  it('rejects record accessors without evaluating untrusted code', () => {
+    let reads = 0;
+    const record = Object.defineProperty({}, 'recordId', {
+      enumerable: true,
+      get() {
+        reads += 1;
+        return 'record-accessor';
+      },
+    });
+    expect(() => createHumanMatchStudyRecord(
+      createArenaStage9HumanFairnessV1Definition(),
+      record,
+    )).toThrow(/访问器|数据字段/);
+    expect(reads).toBe(0);
   });
 
   it('publishes one immutable definition with a stable content hash', () => {

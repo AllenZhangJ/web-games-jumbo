@@ -12,7 +12,7 @@ import {
 import {
   HUMAN_MATCH_STUDY_STATUS,
   HUMAN_MATCH_STUDY_TERMINATION_REASON,
-} from '../../../src/arena/study/human-match-study-record.js';
+} from '@number-strategy-jump/arena-human-match-study';
 import {
   HUMAN_MATCH_STUDY_CHECKPOINT_PHASE,
   HUMAN_MATCH_STUDY_CHECKPOINT_SCHEMA_VERSION,

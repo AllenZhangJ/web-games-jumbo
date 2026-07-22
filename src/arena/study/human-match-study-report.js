@@ -7,7 +7,7 @@ import {
   HUMAN_MATCH_STUDY_STATUS,
   createHumanMatchStudyRecord,
   getHumanMatchStudyProtocolExclusionReasons,
-} from './human-match-study-record.js';
+} from '@number-strategy-jump/arena-human-match-study';
 
 export const HUMAN_MATCH_STUDY_REPORT_SCHEMA_VERSION = 1;
 

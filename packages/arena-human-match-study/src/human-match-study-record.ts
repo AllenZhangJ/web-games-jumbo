@@ -1,10 +1,4 @@
 import {
-  createMatchAssignment,
-} from '@number-strategy-jump/arena-matchmaking';
-import {
-  validateProductMatchResult,
-} from '@number-strategy-jump/arena-product-contracts';
-import {
   assertIntegerAtLeast,
   assertKnownKeys,
   assertNonEmptyString,
@@ -16,12 +10,19 @@ import {
   assertEvidenceSha256,
   assertEvidenceUtcInstant,
 } from '@number-strategy-jump/arena-evidence-contracts';
+import { createMatchAssignment } from '@number-strategy-jump/arena-matchmaking';
 import {
-  validateHumanMatchStudyAssignment,
-} from '@number-strategy-jump/arena-human-match-study';
+  validateProductMatchResult,
+  type ProductMatchResult,
+} from '@number-strategy-jump/arena-product-contracts';
 import {
   createHumanMatchStudyDefinition,
-} from '@number-strategy-jump/arena-human-match-study';
+  type HumanMatchStudyDefinition,
+} from './human-match-study-definition.js';
+import {
+  validateHumanMatchStudyAssignment,
+  type HumanMatchStudyAssignment,
+} from './human-match-study-assignment.js';
 
 export const HUMAN_MATCH_STUDY_RECORD_SCHEMA_VERSION = 1;
 
@@ -29,7 +30,7 @@ export const HUMAN_MATCH_STUDY_STATUS = Object.freeze({
   COMPLETED: 'completed',
   ABANDONED: 'abandoned',
   INVALIDATED: 'invalidated',
-});
+} as const);
 
 export const HUMAN_MATCH_STUDY_TERMINATION_REASON = Object.freeze({
   STUDY_COMPLETED: 'study-completed',
@@ -37,13 +38,13 @@ export const HUMAN_MATCH_STUDY_TERMINATION_REASON = Object.freeze({
   RUNTIME_FAILED: 'runtime-failed',
   PROTOCOL_DEVIATION: 'protocol-deviation',
   RUNNING_RECOVERED: 'running-recovered',
-});
+} as const);
 
 export const HUMAN_MATCH_STUDY_OPPONENT_GUESS = Object.freeze({
   HUMAN: 'human',
   BOT: 'bot',
   UNSURE: 'unsure',
-});
+} as const);
 
 export const HUMAN_MATCH_STUDY_EXCLUSION_REASON = Object.freeze({
   INVALIDATED: 'invalidated',
@@ -56,9 +57,80 @@ export const HUMAN_MATCH_STUDY_EXCLUSION_REASON = Object.freeze({
   FORM_FACTOR_MISMATCH: 'form-factor-mismatch',
   ORIENTATION_MISMATCH: 'orientation-mismatch',
   INPUT_MODE_MISMATCH: 'input-mode-mismatch',
-});
+} as const);
 
-const TERMINATION_REASONS_BY_STATUS = Object.freeze({
+export type HumanMatchStudyStatus = typeof HUMAN_MATCH_STUDY_STATUS[
+  keyof typeof HUMAN_MATCH_STUDY_STATUS
+];
+export type HumanMatchStudyTerminationReason = typeof HUMAN_MATCH_STUDY_TERMINATION_REASON[
+  keyof typeof HUMAN_MATCH_STUDY_TERMINATION_REASON
+];
+export type HumanMatchStudyOpponentGuess = typeof HUMAN_MATCH_STUDY_OPPONENT_GUESS[
+  keyof typeof HUMAN_MATCH_STUDY_OPPONENT_GUESS
+];
+export type HumanMatchStudyExclusionReason = typeof HUMAN_MATCH_STUDY_EXCLUSION_REASON[
+  keyof typeof HUMAN_MATCH_STUDY_EXCLUSION_REASON
+];
+
+export interface HumanMatchStudyEligibility {
+  readonly consentConfirmed: boolean;
+  readonly priorArenaExperience: boolean;
+  readonly priorStudyExposure: boolean;
+  readonly briefingDeviation: boolean;
+  readonly operatorAssistance: boolean;
+}
+
+export interface HumanMatchStudyObservedEnvironment {
+  readonly platform: string;
+  readonly formFactor: string;
+  readonly orientation: string;
+  readonly inputMode: string;
+}
+
+export interface HumanMatchStudyReplayArtifact {
+  readonly id: string;
+  readonly path: string;
+  readonly sha256: string;
+  readonly byteLength: number;
+}
+
+export interface HumanMatchStudySelfReport {
+  readonly opponentTypeGuess: HumanMatchStudyOpponentGuess;
+  readonly fairnessRating: number;
+  readonly naturalnessRating: number;
+  readonly wouldRematch: boolean;
+}
+
+export interface HumanMatchStudyMatch {
+  readonly matchIndex: number;
+  readonly result: ProductMatchResult;
+  readonly replayArtifact: HumanMatchStudyReplayArtifact;
+}
+
+export interface HumanMatchStudySubmission {
+  readonly recordId: string;
+  readonly definitionId: string;
+  readonly definitionHash: string;
+  readonly commit: string;
+  readonly buildId: string;
+  readonly performedAt: string;
+  readonly operatorId: string;
+  readonly assignment: HumanMatchStudyAssignment;
+  readonly status: HumanMatchStudyStatus;
+  readonly terminationReason: HumanMatchStudyTerminationReason;
+  readonly environment: HumanMatchStudyObservedEnvironment;
+  readonly eligibility: HumanMatchStudyEligibility;
+  readonly selfReport: HumanMatchStudySelfReport | null;
+}
+
+export interface HumanMatchStudyRecord extends HumanMatchStudySubmission {
+  readonly schemaVersion: 1;
+  readonly matches: readonly HumanMatchStudyMatch[];
+}
+
+const TERMINATION_REASONS_BY_STATUS: Readonly<
+  Record<HumanMatchStudyStatus, ReadonlySet<HumanMatchStudyTerminationReason>>
+> = Object.freeze({
   [HUMAN_MATCH_STUDY_STATUS.COMPLETED]: new Set([
     HUMAN_MATCH_STUDY_TERMINATION_REASON.STUDY_COMPLETED,
   ]),
@@ -121,7 +193,7 @@ const SELF_REPORT_KEYS = new Set([
   'wouldRematch',
 ]);
 
-function boundedString(value, maximumLength, name) {
+function boundedString(value: unknown, maximumLength: number, name: string): string {
   const result = assertNonEmptyString(value, name);
   if (result.length > maximumLength) {
     throw new RangeError(`${name} 不能超过 ${maximumLength} 字符。`);
@@ -129,42 +201,86 @@ function boundedString(value, maximumLength, name) {
   return result;
 }
 
-function enumValue(value, values, name) {
-  if (!Object.values(values).includes(value)) {
+function enumValue<T extends string>(
+  value: unknown,
+  values: Readonly<Record<string, T>>,
+  name: string,
+): T {
+  const knownValues = Object.values(values) as readonly T[];
+  if (typeof value !== 'string' || !knownValues.includes(value as T)) {
     throw new RangeError(`${name} 不受支持：${String(value)}。`);
   }
-  return value;
+  return value as T;
 }
 
-function booleanValue(value, name) {
+function booleanValue(value: unknown, name: string): boolean {
   if (typeof value !== 'boolean') throw new TypeError(`${name} 必须是布尔值。`);
   return value;
 }
 
-function sameOpponent(left, right) {
-  return ['id', 'displayName', 'portraitKey', 'appearanceKey'].every(
-    (field) => left[field] === right[field],
-  );
+function sameOpponent(
+  left: ProductMatchResult['opponent'],
+  right: ProductMatchResult['opponent'],
+): boolean {
+  return left.id === right.id
+    && left.displayName === right.displayName
+    && left.portraitKey === right.portraitKey
+    && left.appearanceKey === right.appearanceKey;
 }
 
-function cloneEnvironment(value) {
+function cloneEnvironment(value: unknown): HumanMatchStudyObservedEnvironment {
   assertKnownKeys(value, ENVIRONMENT_KEYS, 'HumanMatchStudyRecord.environment');
-  const result = {};
-  for (const key of ENVIRONMENT_KEYS) {
-    result[key] = boundedString(value[key], 64, `HumanMatchStudyRecord.environment.${key}`);
-  }
-  return Object.freeze(result);
+  return Object.freeze({
+    platform: boundedString(
+      value.platform,
+      64,
+      'HumanMatchStudyRecord.environment.platform',
+    ),
+    formFactor: boundedString(
+      value.formFactor,
+      64,
+      'HumanMatchStudyRecord.environment.formFactor',
+    ),
+    orientation: boundedString(
+      value.orientation,
+      64,
+      'HumanMatchStudyRecord.environment.orientation',
+    ),
+    inputMode: boundedString(
+      value.inputMode,
+      64,
+      'HumanMatchStudyRecord.environment.inputMode',
+    ),
+  });
 }
 
-function cloneEligibility(value) {
+function cloneEligibility(value: unknown): HumanMatchStudyEligibility {
   assertKnownKeys(value, ELIGIBILITY_KEYS, 'HumanMatchStudyRecord.eligibility');
-  return Object.freeze(Object.fromEntries([...ELIGIBILITY_KEYS].map((key) => [
-    key,
-    booleanValue(value[key], `HumanMatchStudyRecord.eligibility.${key}`),
-  ])));
+  return Object.freeze({
+    consentConfirmed: booleanValue(
+      value.consentConfirmed,
+      'HumanMatchStudyRecord.eligibility.consentConfirmed',
+    ),
+    priorArenaExperience: booleanValue(
+      value.priorArenaExperience,
+      'HumanMatchStudyRecord.eligibility.priorArenaExperience',
+    ),
+    priorStudyExposure: booleanValue(
+      value.priorStudyExposure,
+      'HumanMatchStudyRecord.eligibility.priorStudyExposure',
+    ),
+    briefingDeviation: booleanValue(
+      value.briefingDeviation,
+      'HumanMatchStudyRecord.eligibility.briefingDeviation',
+    ),
+    operatorAssistance: booleanValue(
+      value.operatorAssistance,
+      'HumanMatchStudyRecord.eligibility.operatorAssistance',
+    ),
+  });
 }
 
-function cloneArtifact(value, name) {
+function cloneArtifact(value: unknown, name: string): HumanMatchStudyReplayArtifact {
   assertKnownKeys(value, ARTIFACT_KEYS, name);
   return Object.freeze({
     id: boundedString(value.id, 128, `${name}.id`),
@@ -174,7 +290,12 @@ function cloneArtifact(value, name) {
   });
 }
 
-function cloneMatch(definition, assignment, value, index) {
+function cloneMatch(
+  definition: HumanMatchStudyDefinition,
+  assignment: HumanMatchStudyAssignment,
+  value: unknown,
+  index: number,
+): HumanMatchStudyMatch {
   const name = `HumanMatchStudyRecord.matches[${index}]`;
   assertKnownKeys(value, MATCH_KEYS, name);
   const matchIndex = assertIntegerAtLeast(value.matchIndex, 0, `${name}.matchIndex`);
@@ -208,10 +329,10 @@ function cloneMatch(definition, assignment, value, index) {
   });
 }
 
-function cloneSelfReport(value) {
+function cloneSelfReport(value: unknown): HumanMatchStudySelfReport | null {
   if (value === null) return null;
   assertKnownKeys(value, SELF_REPORT_KEYS, 'HumanMatchStudyRecord.selfReport');
-  const rating = (field) => {
+  const rating = (field: 'fairnessRating' | 'naturalnessRating'): number => {
     const result = assertIntegerAtLeast(
       value[field],
       1,
@@ -238,12 +359,13 @@ function cloneSelfReport(value) {
 }
 
 /**
- * Validates the participant-level metadata shared by a raw capture package
- * and its later materialized evidence Record. Keeping this contract separate
- * prevents browser capture code and the offline evidence ingester from
- * developing subtly different privacy, status or candidate rules.
+ * Validates participant metadata shared by a raw capture package and its
+ * materialized evidence record, so capture and ingestion use one contract.
  */
-export function createHumanMatchStudySubmission(definitionValue, value) {
+export function createHumanMatchStudySubmission(
+  definitionValue: unknown,
+  value: unknown,
+): HumanMatchStudySubmission {
   const definition = createHumanMatchStudyDefinition(definitionValue);
   const source = cloneFrozenData(value, 'HumanMatchStudySubmission');
   assertKnownKeys(source, SUBMISSION_KEYS, 'HumanMatchStudySubmission');
@@ -293,16 +415,20 @@ export function createHumanMatchStudySubmission(definitionValue, value) {
   });
 }
 
-export function createHumanMatchStudyRecord(definitionValue, value) {
+export function createHumanMatchStudyRecord(
+  definitionValue: unknown,
+  value: unknown,
+): HumanMatchStudyRecord {
   const definition = createHumanMatchStudyDefinition(definitionValue);
   const source = cloneFrozenData(value, 'HumanMatchStudyRecord');
   assertKnownKeys(source, RECORD_KEYS, 'HumanMatchStudyRecord');
   if (source.schemaVersion !== HUMAN_MATCH_STUDY_RECORD_SCHEMA_VERSION) {
     throw new RangeError(`不支持 HumanMatchStudyRecord schema ${String(source.schemaVersion)}。`);
   }
-  const submission = createHumanMatchStudySubmission(definition, Object.fromEntries(
+  const submissionValue = Object.fromEntries(
     [...SUBMISSION_KEYS].map((key) => [key, source[key]]),
-  ));
+  );
+  const submission = createHumanMatchStudySubmission(definition, submissionValue);
   if (!Array.isArray(source.matches)) {
     throw new TypeError('HumanMatchStudyRecord.matches 必须是数组。');
   }
@@ -323,10 +449,13 @@ export function createHumanMatchStudyRecord(definitionValue, value) {
   });
 }
 
-export function getHumanMatchStudyProtocolExclusionReasons(definitionValue, recordValue) {
+export function getHumanMatchStudyProtocolExclusionReasons(
+  definitionValue: unknown,
+  recordValue: unknown,
+): readonly HumanMatchStudyExclusionReason[] {
   const definition = createHumanMatchStudyDefinition(definitionValue);
   const record = createHumanMatchStudyRecord(definition, recordValue);
-  const reasons = [];
+  const reasons: HumanMatchStudyExclusionReason[] = [];
   if (!record.eligibility.consentConfirmed) {
     reasons.push(HUMAN_MATCH_STUDY_EXCLUSION_REASON.CONSENT_MISSING);
   }
@@ -342,18 +471,25 @@ export function getHumanMatchStudyProtocolExclusionReasons(definitionValue, reco
   if (record.eligibility.operatorAssistance) {
     reasons.push(HUMAN_MATCH_STUDY_EXCLUSION_REASON.OPERATOR_ASSISTANCE);
   }
-  for (const [field, reason] of [
+  const environmentChecks: readonly [
+    keyof HumanMatchStudyObservedEnvironment,
+    HumanMatchStudyExclusionReason,
+  ][] = [
     ['platform', HUMAN_MATCH_STUDY_EXCLUSION_REASON.PLATFORM_MISMATCH],
     ['formFactor', HUMAN_MATCH_STUDY_EXCLUSION_REASON.FORM_FACTOR_MISMATCH],
     ['orientation', HUMAN_MATCH_STUDY_EXCLUSION_REASON.ORIENTATION_MISMATCH],
     ['inputMode', HUMAN_MATCH_STUDY_EXCLUSION_REASON.INPUT_MODE_MISMATCH],
-  ]) {
+  ];
+  for (const [field, reason] of environmentChecks) {
     if (record.environment[field] !== definition.environment[field]) reasons.push(reason);
   }
   return Object.freeze(reasons);
 }
 
-export function getHumanMatchStudyExclusionReasons(definitionValue, recordValue) {
+export function getHumanMatchStudyExclusionReasons(
+  definitionValue: unknown,
+  recordValue: unknown,
+): readonly HumanMatchStudyExclusionReason[] {
   const definition = createHumanMatchStudyDefinition(definitionValue);
   const record = createHumanMatchStudyRecord(definition, recordValue);
   const reasons = [...getHumanMatchStudyProtocolExclusionReasons(definition, record)];

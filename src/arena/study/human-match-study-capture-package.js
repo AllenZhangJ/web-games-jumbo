@@ -15,7 +15,7 @@ import {
   HUMAN_MATCH_STUDY_STATUS,
   createHumanMatchStudyRecord,
   createHumanMatchStudySubmission,
-} from './human-match-study-record.js';
+} from '@number-strategy-jump/arena-human-match-study';
 
 export const HUMAN_MATCH_STUDY_CAPTURE_PACKAGE_SCHEMA_VERSION = 1;
 

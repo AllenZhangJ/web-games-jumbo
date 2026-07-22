@@ -13,6 +13,7 @@
   "references": [
     { "path": "../arena-bot" },
     { "path": "../arena-contracts" },
+    { "path": "../arena-evidence-contracts" },
     { "path": "../arena-match" },
     { "path": "../arena-matchmaking" },
     { "path": "../arena-product-contracts" },
