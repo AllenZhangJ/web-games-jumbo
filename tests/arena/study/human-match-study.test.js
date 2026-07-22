@@ -22,7 +22,7 @@ import {
 import {
   ARENA_STAGE9_HUMAN_FAIRNESS_ARM_ID,
   createArenaStage9HumanFairnessV1Definition,
-} from '../../../src/arena/study/arena-stage9-human-fairness-v1.js';
+} from '@number-strategy-jump/arena-human-match-study';
 import {
   createHumanMatchStudyAssignment,
   createHumanMatchStudyParticipantView,

@@ -35,7 +35,7 @@ import {
 import { ARENA_REPLAY_SCHEMA_VERSION } from '@number-strategy-jump/arena-match';
 import {
   createArenaStage9HumanFairnessV1Definition,
-} from '../arena/study/arena-stage9-human-fairness-v1.js';
+} from '@number-strategy-jump/arena-human-match-study';
 import {
   ARENA_RELEASE_EVIDENCE_SUBJECT_SCOPE,
   ARENA_RELEASE_READINESS_DEFINITION_SCHEMA_VERSION,

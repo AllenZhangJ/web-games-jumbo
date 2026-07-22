@@ -1,11 +1,11 @@
 import { BOT_DIFFICULTY_ID, BOT_DIFFICULTY_PROFILES } from '@number-strategy-jump/arena-bot';
-import { ARENA_V1_BALANCE_DEFINITION } from '@number-strategy-jump/arena-v1-content';
+import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import { ARENA_REPLAY_SCHEMA_VERSION } from '@number-strategy-jump/arena-match';
+import { ARENA_V1_BALANCE_DEFINITION } from '@number-strategy-jump/arena-v1-content';
 import {
   HUMAN_MATCH_STUDY_DEFINITION_SCHEMA_VERSION,
   createHumanMatchStudyDefinition,
-} from '@number-strategy-jump/arena-human-match-study';
-import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
+} from './human-match-study-definition.js';
 
 export const ARENA_STAGE9_HUMAN_FAIRNESS_V1_ID = 'arena.stage9.human-fairness.v1';
 
@@ -13,7 +13,7 @@ export const ARENA_STAGE9_HUMAN_FAIRNESS_ARM_ID = Object.freeze({
   EASY: 'hidden-difficulty-easy',
   NORMAL: 'hidden-difficulty-normal',
   HARD: 'hidden-difficulty-hard',
-});
+} as const);
 
 export function createArenaStage9HumanFairnessV1Definition() {
   return createHumanMatchStudyDefinition({

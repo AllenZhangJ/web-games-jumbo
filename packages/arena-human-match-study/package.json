@@ -15,7 +15,9 @@
   "dependencies": {
     "@number-strategy-jump/arena-bot": "0.1.0",
     "@number-strategy-jump/arena-contracts": "0.1.0",
+    "@number-strategy-jump/arena-match": "0.1.0",
     "@number-strategy-jump/arena-matchmaking": "0.1.0",
-    "@number-strategy-jump/arena-product-contracts": "0.1.0"
+    "@number-strategy-jump/arena-product-contracts": "0.1.0",
+    "@number-strategy-jump/arena-v1-content": "0.1.0"
   }
 }

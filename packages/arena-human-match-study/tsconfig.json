@@ -9,5 +9,13 @@
     "outDir": "dist",
     "tsBuildInfoFile": "dist/.tsbuildinfo"
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts"],
+  "references": [
+    { "path": "../arena-bot" },
+    { "path": "../arena-contracts" },
+    { "path": "../arena-match" },
+    { "path": "../arena-matchmaking" },
+    { "path": "../arena-product-contracts" },
+    { "path": "../arena-v1-content" }
+  ]
 }

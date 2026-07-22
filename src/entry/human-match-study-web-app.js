@@ -3,7 +3,7 @@ import {
 } from '@number-strategy-jump/arena-human-match-study';
 import {
   createArenaStage9HumanFairnessV1Definition,
-} from '../arena/study/arena-stage9-human-fairness-v1.js';
+} from '@number-strategy-jump/arena-human-match-study';
 import {
   HUMAN_MATCH_STUDY_STATUS,
   HUMAN_MATCH_STUDY_TERMINATION_REASON,

@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import {
   createArenaStage9HumanFairnessV1Definition,
-} from '../../src/arena/study/arena-stage9-human-fairness-v1.js';
+} from '@number-strategy-jump/arena-human-match-study';
 import {
   createHumanMatchStudyBundle,
 } from '../../src/arena/study/human-match-study-bundle.js';

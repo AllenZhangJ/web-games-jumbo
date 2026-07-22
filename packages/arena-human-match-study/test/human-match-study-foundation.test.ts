@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { BOT_DIFFICULTY_ID } from '@number-strategy-jump/arena-bot';
 import {
+  ARENA_STAGE9_HUMAN_FAIRNESS_ARM_ID,
   HumanMatchStudyCaptureSession,
+  createArenaStage9HumanFairnessV1Definition,
   createHumanMatchStudyAssignment,
   createHumanMatchStudyDefinition,
 } from '../src/index.js';
@@ -53,6 +55,18 @@ function definitionData(): Readonly<Record<string, unknown>> {
 }
 
 describe('Human Match Study strict foundation', () => {
+  it('publishes the frozen Stage 9 study content without changing its accepted hash', () => {
+    const definition = createArenaStage9HumanFairnessV1Definition();
+    expect(definition.getContentHash()).toBe('484492a6');
+    expect(definition.arms.map(({ id }) => id)).toEqual([
+      ARENA_STAGE9_HUMAN_FAIRNESS_ARM_ID.EASY,
+      ARENA_STAGE9_HUMAN_FAIRNESS_ARM_ID.NORMAL,
+      ARENA_STAGE9_HUMAN_FAIRNESS_ARM_ID.HARD,
+    ]);
+    expect(definition.matchesPerParticipant).toBe(3);
+    expect(Object.isFrozen(ARENA_STAGE9_HUMAN_FAIRNESS_ARM_ID)).toBe(true);
+  });
+
   it('publishes one immutable definition with a stable content hash', () => {
     const first = createHumanMatchStudyDefinition(definitionData());
     const second = createHumanMatchStudyDefinition(definitionData());
