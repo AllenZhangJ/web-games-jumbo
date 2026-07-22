@@ -260,6 +260,10 @@ export class ProductMatchPresentationRuntime {
     return this.#state;
   }
 
+  getState(): ProductMatchPresentationRuntimeState {
+    return this.#state;
+  }
+
   #assertUsable(): void {
     if (this.#state === PRODUCT_MATCH_PRESENTATION_RUNTIME_STATE.DESTROYED) {
       throw new Error('ProductMatchPresentationRuntime 已销毁。');

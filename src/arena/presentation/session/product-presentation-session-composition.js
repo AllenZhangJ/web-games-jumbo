@@ -7,8 +7,13 @@ import { ARENA_INPUT_MAPPER_ID } from '../input/input-mapper-contract.js';
 import { InputSampler } from '../input/input-sampler.js';
 import { PointerInputAdapter } from '../input/pointer-input-adapter.js';
 import { PresentationPerformanceProbe } from '../performance/presentation-performance-probe.js';
-import { ProductInputRouter } from '@number-strategy-jump/arena-product-presentation';
-import { ProductPresentationFlow } from '../product/product-presentation-flow.js';
+import {
+  ProductInputRouter,
+  ProductPresentationFlow,
+} from '@number-strategy-jump/arena-product-presentation';
+import { ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT } from '../content/arena-gameplay-v2-content.js';
+import { projectArenaPresentationFrame } from '../projection/arena-frame-projector.js';
+import { ARENA_V1_PRODUCT_PRESENTATION_CONTENT } from '../product/arena-v1-product-presentation-content.js';
 import {
   ARENA_V1_DEFAULT_PRESENTATION_QUALITY,
   FixedTickAccumulator,
@@ -207,7 +212,12 @@ export function createProductPresentationSessionComposition(platformValue, optio
   const factories = {
     rendererFactory: options.rendererFactory,
     controllerFactory: options.controllerFactory ?? createArenaV1ProductSession,
-    flowFactory: options.flowFactory ?? ((args) => new ProductPresentationFlow(args)),
+    flowFactory: options.flowFactory ?? ((args) => new ProductPresentationFlow({
+      ...args,
+      presentationContent: ARENA_V1_PRODUCT_PRESENTATION_CONTENT,
+      matchPresentationContent: ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT,
+      frameProjector: projectArenaPresentationFrame,
+    })),
     mapperFactory: options.mapperFactory ?? createArenaInputMapper,
     samplerFactory: options.samplerFactory ?? ((args) => new InputSampler(args)),
     inputRouterFactory: options.inputRouterFactory ?? ((args) => new ProductInputRouter(args)),

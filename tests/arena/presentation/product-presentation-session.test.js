@@ -1,8 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { PRODUCT_SESSION_STATE } from '@number-strategy-jump/arena-product-state';
-import { PRODUCT_INPUT_ROUTER_MODE } from '@number-strategy-jump/arena-product-presentation';
-import { ProductPresentationFlow } from '../../../src/arena/presentation/product/product-presentation-flow.js';
+import {
+  PRODUCT_INPUT_ROUTER_MODE,
+  ProductPresentationFlow,
+} from '@number-strategy-jump/arena-product-presentation';
+import { ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT } from '../../../src/arena/presentation/content/arena-gameplay-v2-content.js';
+import { projectArenaPresentationFrame } from '../../../src/arena/presentation/projection/arena-frame-projector.js';
+import { ARENA_V1_PRODUCT_PRESENTATION_CONTENT } from '../../../src/arena/presentation/product/arena-v1-product-presentation-content.js';
 import {
   ARENA_V1_PRESENTATION_QUALITY_ID,
   ARENA_V1_PRESENTATION_QUALITY_REGISTRY,
@@ -638,6 +643,9 @@ test('ProductPresentationSession rejects invalid UI races but closes on Flow inf
     sessionOptions(failedRenderer, {
       flowFactory: (args) => new ProductPresentationFlow({
         ...args,
+        presentationContent: ARENA_V1_PRODUCT_PRESENTATION_CONTENT,
+        matchPresentationContent: ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT,
+        frameProjector: projectArenaPresentationFrame,
         matchRuntimeFactory: () => ({ destroy() {} }),
       }),
     }),

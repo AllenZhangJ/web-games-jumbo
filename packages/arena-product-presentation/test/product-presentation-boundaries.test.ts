@@ -10,6 +10,7 @@ import {
   PRODUCT_CONTENT_PRESENTATION_DEFINITION_SCHEMA_VERSION,
   PRODUCT_MESSAGE_CATALOG_SCHEMA_VERSION,
   PRODUCT_MATCH_PRESENTATION_RUNTIME_STATE,
+  PRODUCT_PRESENTATION_FLOW_STATE,
   PRODUCT_SCREEN_DEFINITION_SCHEMA_VERSION,
   PRODUCT_SCREEN_KIND,
   ProductContentPresentationDefinition,
@@ -17,6 +18,7 @@ import {
   ProductInputRouter,
   ProductMatchPresentationRuntime,
   ProductMessageCatalog,
+  ProductPresentationFlow,
   ProductScreenDefinition,
   ProductScreenRegistry,
   ProductSessionIntentDispatcher,
@@ -358,5 +360,166 @@ describe('Product match presentation runtime boundaries', () => {
     expect(runtime.state).toBe(PRODUCT_MATCH_PRESENTATION_RUNTIME_STATE.FAILED);
     runtime.destroy();
     expect(runtime.state).toBe(PRODUCT_MATCH_PRESENTATION_RUNTIME_STATE.DESTROYED);
+  });
+});
+
+function flowPresentationContent() {
+  return createArenaV1ProductPresentationContent({
+    'parkour-apprentice': 'asset:parkour',
+    'wind-up-cube': 'asset:cube',
+  });
+}
+
+function destroyedProductSnapshot() {
+  return {
+    state: {
+      state: PRODUCT_SESSION_STATE.DESTROYED,
+      activeState: null,
+      recoveryState: null,
+      revision: 0,
+    },
+    profile: null,
+    match: { publicMatchInfo: null, result: null },
+    reward: null,
+    lastError: null,
+  };
+}
+
+function flowController(getSnapshot: () => unknown) {
+  return {
+    boot() {},
+    openCharacterSelect() {},
+    closeCharacterSelect() {},
+    selectCharacter() {},
+    requestMatch() {},
+    requestRematch() {},
+    continueReward() {},
+    dismissUnlocks() {},
+    retry() {},
+    beginMatch() {},
+    stepMatch() {},
+    getActiveMatchSnapshot() { return null; },
+    getSnapshot,
+    commitReward() {},
+    hide() {},
+    renewProfileLease() { return { renewed: true }; },
+    show() {},
+  };
+}
+
+function flowOptions(controllerValue: ReturnType<typeof flowController>) {
+  return {
+    controller: controllerValue,
+    inputSource: { sample() { return {}; } },
+    presentationContent: flowPresentationContent(),
+    frameProjector: () => ({}),
+  };
+}
+
+describe('Product presentation flow boundaries', () => {
+  it('rejects option and controller accessors without execution', () => {
+    let getterCalls = 0;
+    const options = Object.defineProperty({}, 'controller', {
+      enumerable: true,
+      get() { getterCalls += 1; return {}; },
+    });
+    expect(() => new ProductPresentationFlow(options as never)).toThrow(/数据字段/);
+    expect(getterCalls).toBe(0);
+    const controllerValue = flowController(() => destroyedProductSnapshot());
+    Object.defineProperty(controllerValue, 'boot', {
+      enumerable: true,
+      get() { getterCalls += 1; return () => {}; },
+    });
+    expect(() => new ProductPresentationFlow(flowOptions(controllerValue) as never))
+      .toThrow(/数据方法/);
+    expect(getterCalls).toBe(0);
+  });
+
+  it('cleans an invalid owned dispatcher without executing method accessors', () => {
+    let getterCalls = 0;
+    let destroyCalls = 0;
+    const controllerValue = flowController(() => destroyedProductSnapshot());
+    expect(() => new ProductPresentationFlow({
+      ...flowOptions(controllerValue),
+      intentDispatcherFactory: () => {
+        const candidate = {
+          getSnapshot() { return {}; },
+          destroy() { destroyCalls += 1; },
+        };
+        Object.defineProperty(candidate, 'dispatch', {
+          enumerable: true,
+          get() { getterCalls += 1; return () => Promise.resolve(); },
+        });
+        return candidate;
+      },
+    })).toThrow(/intentDispatcher 不符合合同/);
+    expect(getterCalls).toBe(0);
+    expect(destroyCalls).toBe(1);
+  });
+
+  it('cleans an invalid match runtime without executing method accessors', () => {
+    let getterCalls = 0;
+    let destroyCalls = 0;
+    const preparingSnapshot = {
+      state: {
+        state: PRODUCT_SESSION_STATE.PREPARING,
+        activeState: PRODUCT_SESSION_STATE.PREPARING,
+        recoveryState: null,
+        revision: 0,
+      },
+    };
+    const controllerValue = flowController(() => preparingSnapshot);
+    const flow = new ProductPresentationFlow({
+      ...flowOptions(controllerValue),
+      matchRuntimeFactory: () => {
+        const candidate = {
+          step() {},
+          getLastMatchResult() { return null; },
+          getState() { return PRODUCT_MATCH_PRESENTATION_RUNTIME_STATE.PREPARED; },
+          destroy() { destroyCalls += 1; },
+        };
+        Object.defineProperty(candidate, 'start', {
+          enumerable: true,
+          get() { getterCalls += 1; return () => ({}); },
+        });
+        return candidate;
+      },
+    });
+    expect(() => flow.synchronize()).toThrow(/matchRuntime 不符合合同/);
+    expect(getterCalls).toBe(0);
+    expect(destroyCalls).toBe(1);
+    expect(flow.state).toBe(PRODUCT_PRESENTATION_FLOW_STATE.FAILED);
+    flow.destroy();
+  });
+
+  it('fails closed when a borrowed controller swallows flow reentry', () => {
+    const flowBox: { current: ProductPresentationFlow | null } = { current: null };
+    const controllerValue = flowController(() => {
+      try { flowBox.current?.synchronize(); } catch { /* hostile port swallows reentry */ }
+      return destroyedProductSnapshot();
+    });
+    const flow = new ProductPresentationFlow(flowOptions(controllerValue));
+    flowBox.current = flow;
+    expect(() => flow.synchronize()).toThrow(/同步失败/);
+    expect(flow.state).toBe(PRODUCT_PRESENTATION_FLOW_STATE.FAILED);
+    flow.destroy();
+    expect(flow.state).toBe(PRODUCT_PRESENTATION_FLOW_STATE.DESTROYED);
+  });
+
+  it('keeps snapshotted controller methods and fails closed on an asynchronous lease port', () => {
+    const controllerValue = flowController(() => destroyedProductSnapshot());
+    const flow = new ProductPresentationFlow(flowOptions(controllerValue));
+    controllerValue.getSnapshot = () => { throw new Error('replacement must not run'); };
+    expect(flow.synchronize().viewModel?.activeState).toBe(PRODUCT_SESSION_STATE.DESTROYED);
+    flow.destroy();
+
+    const asyncController = flowController(() => destroyedProductSnapshot());
+    (asyncController as unknown as { renewProfileLease: () => unknown }).renewProfileLease = (
+      () => Promise.resolve({ renewed: true })
+    );
+    const failedFlow = new ProductPresentationFlow(flowOptions(asyncController));
+    expect(() => failedFlow.heartbeat()).toThrow(/同步失败/);
+    expect(failedFlow.state).toBe(PRODUCT_PRESENTATION_FLOW_STATE.FAILED);
+    failedFlow.destroy();
   });
 });

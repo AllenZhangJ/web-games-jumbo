@@ -27,6 +27,7 @@ import {
   ProductInputRouter,
   ProductMatchPresentationRuntime,
   ProductMessageCatalog,
+  ProductPresentationFlow,
   ProductScreenRegistry,
   ProductSessionIntentDispatcher,
   createProductSessionViewModel,
@@ -36,10 +37,7 @@ import { projectArenaPresentationFrame } from '../../../src/arena/presentation/p
 import {
   PRODUCT_INPUT_ROUTER_MODE,
 } from '@number-strategy-jump/arena-presentation-contracts';
-import {
-  PRODUCT_PRESENTATION_FLOW_STATE,
-  ProductPresentationFlow,
-} from '../../../src/arena/presentation/product/product-presentation-flow.js';
+import { PRODUCT_PRESENTATION_FLOW_STATE } from '@number-strategy-jump/arena-presentation-contracts';
 import { TEST_MATCH_CONTENT_PUBLIC_VIEW } from '../product/stage8-test-content.js';
 
 function deferred() {
@@ -590,8 +588,17 @@ function productFlowHarness({ storage = memoryStorage(), seed = 9901 } = {}) {
   };
   return {
     controller,
-    flow: new ProductPresentationFlow({ controller, inputSource }),
+    flow: createProductPresentationFlow({ controller, inputSource }),
   };
+}
+
+function createProductPresentationFlow(options) {
+  return new ProductPresentationFlow({
+    presentationContent: ARENA_V1_PRODUCT_PRESENTATION_CONTENT,
+    matchPresentationContent: ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT,
+    frameProjector: projectArenaPresentationFrame,
+    ...options,
+  });
 }
 
 test('ProductPresentationFlow completes boot, one owned match, automatic reward and return home', async () => {
@@ -702,7 +709,7 @@ test('ProductPresentationFlow heartbeat releases match presentation after a conf
       hardLimitTicks: 6,
     },
   });
-  const flow = new ProductPresentationFlow({
+  const flow = createProductPresentationFlow({
     controller,
     inputSource: { sample: (tick) => createNeutralInputFrame(tick, 'player-1') },
   });
@@ -732,7 +739,7 @@ test('ProductPresentationFlow cleans an invalid match runtime candidate before f
   controller.openCharacterSelect();
   await controller.requestMatch();
   let destroyCalls = 0;
-  const flow = new ProductPresentationFlow({
+  const flow = createProductPresentationFlow({
     controller,
     inputSource: { sample: (tick) => createNeutralInputFrame(tick, 'player-1') },
     matchRuntimeFactory: () => ({
@@ -758,13 +765,13 @@ test('ProductPresentationFlow retries owned runtime cleanup and leaves controlle
     keyPrefix: 'test.product-flow.cleanup-retry',
   });
   let destroyCalls = 0;
-  const flow = new ProductPresentationFlow({
+  const flow = createProductPresentationFlow({
     controller,
     inputSource: { sample: (tick) => createNeutralInputFrame(tick, 'player-1') },
     matchRuntimeFactory: (options) => {
       const runtime = new ProductMatchPresentationRuntime(options);
       return {
-        get state() { return runtime.state; },
+        getState: () => runtime.getState(),
         start: () => runtime.start(),
         step: () => runtime.step(),
         getLastMatchResult: () => runtime.getLastMatchResult(),

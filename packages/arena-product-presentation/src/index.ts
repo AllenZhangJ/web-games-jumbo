@@ -8,3 +8,4 @@ export * from './product-screen-registry.js';
 export * from './arena-v1-product-presentation-content.js';
 export * from './product-session-view-model.js';
 export * from './product-match-presentation-runtime.js';
+export * from './product-presentation-flow.js';
