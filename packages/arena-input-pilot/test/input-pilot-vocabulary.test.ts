@@ -20,11 +20,13 @@ import {
   createEnrolledInputPilotTrial,
   createInputPilotAssignment,
   createInputPilotDefinition,
+  createInputPilotEvidenceBundle,
   createInputPilotRecord,
   createInputPilotReport,
   createInputPilotReviewDraft,
   createInputPilotTrialCheckpoint,
   createInputPilotWorkspace,
+  validateInputPilotAuditExport,
   reviewInputPilotTrial,
   startInputPilotTrial,
   submitInputPilotTrialReview,
@@ -550,6 +552,38 @@ describe('Input Pilot strict report', () => {
       },
     });
     expect(() => createInputPilotReport(definition, records)).toThrow(/访问器/);
+    expect(reads).toBe(0);
+  });
+});
+
+describe('Input Pilot strict export and evidence', () => {
+  it('rejects audit export accessors without executing them', () => {
+    const definition = createArenaInputPilotV1Definition();
+    let reads = 0;
+    const value = {};
+    Object.defineProperty(value, 'schemaVersion', {
+      enumerable: true,
+      get() {
+        reads += 1;
+        return 1;
+      },
+    });
+    expect(() => validateInputPilotAuditExport(definition, value)).toThrow(/数据字段/);
+    expect(reads).toBe(0);
+  });
+
+  it('rejects evidence bundle accessors without executing them', () => {
+    const definition = createArenaInputPilotV1Definition();
+    let reads = 0;
+    const value = {};
+    Object.defineProperty(value, 'audit', {
+      enumerable: true,
+      get() {
+        reads += 1;
+        return null;
+      },
+    });
+    expect(() => createInputPilotEvidenceBundle(definition, value)).toThrow(/数据字段/);
     expect(reads).toBe(0);
   });
 });

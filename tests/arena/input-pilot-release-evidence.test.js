@@ -36,20 +36,14 @@ import {
 } from '@number-strategy-jump/arena-device-acceptance';
 import {
   ARENA_INPUT_PILOT_VARIANT_ID,
-  createArenaInputPilotV1Definition,
-} from '@number-strategy-jump/arena-input-pilot';
-import {
-  createInputPilotAssignment,
-} from '@number-strategy-jump/arena-input-pilot';
-import {
   INPUT_PILOT_EVIDENCE_BUNDLE_SCHEMA_VERSION,
-  createInputPilotEvidenceBundle,
-} from '../../src/arena/presentation/pilot/input-pilot-evidence-bundle.js';
-import {
   INPUT_PILOT_EXPORT_PRIVACY_CLASS,
   INPUT_PILOT_EXPORT_SCHEMA_VERSION,
+  createArenaInputPilotV1Definition,
+  createInputPilotAssignment,
+  createInputPilotEvidenceBundle,
   validateInputPilotAuditExport,
-} from '../../src/arena/presentation/pilot/input-pilot-export.js';
+} from '@number-strategy-jump/arena-input-pilot';
 import {
   INPUT_PILOT_ACTION_OUTCOME,
   INPUT_PILOT_COMPREHENSION,

@@ -2,6 +2,8 @@ export * from './arena-input-pilot-v1.js';
 export * from './input-pilot-assignment.js';
 export * from './input-pilot-definition.js';
 export * from './input-pilot-enrollment-ledger.js';
+export * from './input-pilot-evidence-bundle.js';
+export * from './input-pilot-export.js';
 export * from './input-pilot-form-model.js';
 export * from './input-pilot-record.js';
 export * from './input-pilot-report.js';

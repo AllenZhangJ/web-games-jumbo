@@ -1,11 +1,11 @@
-import { createArenaInputPilotV1Definition } from '@number-strategy-jump/arena-input-pilot';
 import {
   INPUT_PILOT_EVIDENCE_BUNDLE_SCHEMA_VERSION,
+  InputPilotFormModel,
+  InputPilotWorkspaceRepository,
+  createArenaInputPilotV1Definition,
   createInputPilotEvidenceBundle,
-} from '../arena/presentation/pilot/input-pilot-evidence-bundle.js';
-import { InputPilotFormModel } from '@number-strategy-jump/arena-input-pilot';
+} from '@number-strategy-jump/arena-input-pilot';
 import { InputPilotTrialController } from '../arena/presentation/pilot/input-pilot-trial-controller.js';
-import { InputPilotWorkspaceRepository } from '@number-strategy-jump/arena-input-pilot';
 import { InputPilotPresentationRuntime } from '../arena/presentation/session/input-pilot-presentation-runtime.js';
 import { downloadInputPilotJson } from './input-pilot-json-download.js';
 import { loadInputPilotBuildIdentity } from './input-pilot-build-identity.js';

@@ -4,10 +4,21 @@ import {
   cloneFrozenData,
 } from '@number-strategy-jump/arena-contracts';
 import { assertEvidenceGitCommit } from '@number-strategy-jump/arena-evidence-contracts';
-import { createInputPilotDefinition } from '@number-strategy-jump/arena-input-pilot';
-import { validateInputPilotAuditExport } from './input-pilot-export.js';
+import { createInputPilotDefinition } from './input-pilot-definition.js';
+import {
+  validateInputPilotAuditExport,
+  type InputPilotAuditExport,
+} from './input-pilot-export.js';
 
 export const INPUT_PILOT_EVIDENCE_BUNDLE_SCHEMA_VERSION = 1;
+
+export interface InputPilotEvidenceBundle {
+  readonly schemaVersion: typeof INPUT_PILOT_EVIDENCE_BUNDLE_SCHEMA_VERSION;
+  readonly commit: string;
+  readonly buildId: string;
+  readonly buildManifestHash: string;
+  readonly audit: InputPilotAuditExport;
+}
 
 const BUNDLE_KEYS = new Set([
   'schemaVersion',
@@ -19,7 +30,10 @@ const BUNDLE_KEYS = new Set([
 const CONTENT_HASH_PATTERN = /^[0-9a-f]{8}$/;
 const BUILD_ID_PATTERN = /^[A-Za-z0-9._-]{1,128}$/;
 
-export function createInputPilotEvidenceBundle(definitionValue, value) {
+export function createInputPilotEvidenceBundle(
+  definitionValue: unknown,
+  value: unknown,
+): InputPilotEvidenceBundle {
   const definition = createInputPilotDefinition(definitionValue);
   const source = cloneFrozenData(value, 'InputPilotEvidenceBundle');
   assertKnownKeys(source, BUNDLE_KEYS, 'InputPilotEvidenceBundle');
@@ -43,5 +57,5 @@ export function createInputPilotEvidenceBundle(definitionValue, value) {
     buildId,
     buildManifestHash: source.buildManifestHash,
     audit: validateInputPilotAuditExport(definition, source.audit),
-  }, 'validated InputPilotEvidenceBundle');
+  }, 'validated InputPilotEvidenceBundle') as InputPilotEvidenceBundle;
 }

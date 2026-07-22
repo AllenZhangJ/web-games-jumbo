@@ -1,19 +1,45 @@
-import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import {
   assertIntegerAtLeast,
   assertKnownKeys,
   cloneFrozenData,
+  createDeterministicDataHash,
 } from '@number-strategy-jump/arena-contracts';
-import { createInputPilotDefinition } from '@number-strategy-jump/arena-input-pilot';
-import { createInputPilotReport } from '@number-strategy-jump/arena-input-pilot';
-import { createInputPilotWorkspace } from '@number-strategy-jump/arena-input-pilot';
+import {
+  createInputPilotDefinition,
+  type InputPilotDefinition,
+  type InputPilotDefinitionData,
+} from './input-pilot-definition.js';
+import type { InputPilotRecord } from './input-pilot-record.js';
+import { createInputPilotReport, type InputPilotReport } from './input-pilot-report.js';
+import { createInputPilotWorkspace } from './input-pilot-workspace.js';
 
 export const INPUT_PILOT_EXPORT_SCHEMA_VERSION = 1;
 
 export const INPUT_PILOT_EXPORT_PRIVACY_CLASS = Object.freeze({
   PSEUDONYMOUS_RESEARCH_DATA: 'pseudonymous-research-data',
   IDENTITY_FREE_AGGREGATE: 'identity-free-aggregate',
-});
+} as const);
+
+export interface InputPilotAuditExport {
+  readonly schemaVersion: typeof INPUT_PILOT_EXPORT_SCHEMA_VERSION;
+  readonly privacyClass: typeof INPUT_PILOT_EXPORT_PRIVACY_CLASS.PSEUDONYMOUS_RESEARCH_DATA;
+  readonly definition: InputPilotDefinitionData;
+  readonly definitionHash: string;
+  readonly workspaceRevision: number;
+  readonly recordCount: number;
+  readonly sourceDataHash: string;
+  readonly records: readonly InputPilotRecord[];
+  readonly report: InputPilotReport;
+}
+
+export interface InputPilotAggregateExport {
+  readonly schemaVersion: typeof INPUT_PILOT_EXPORT_SCHEMA_VERSION;
+  readonly privacyClass: typeof INPUT_PILOT_EXPORT_PRIVACY_CLASS.IDENTITY_FREE_AGGREGATE;
+  readonly definitionId: string;
+  readonly definitionHash: string;
+  readonly workspaceRevision: number;
+  readonly report: InputPilotReport;
+}
 
 const AUDIT_EXPORT_KEYS = new Set([
   'schemaVersion',
@@ -29,12 +55,22 @@ const AUDIT_EXPORT_KEYS = new Set([
 const CONTENT_HASH_PATTERN = /^[0-9a-f]{8}$/;
 const MAXIMUM_AUDIT_RECORDS = 10_000;
 
-function sameDeterministicData(left, right, label) {
+function sameDeterministicData(left: unknown, right: unknown, label: string): boolean {
   return createDeterministicDataHash(left, `${label} actual`)
     === createDeterministicDataHash(right, `${label} expected`);
 }
 
-export function validateInputPilotAuditExport(definitionValue, value) {
+function cloneValidatedRecords(records: readonly unknown[]): readonly InputPilotRecord[] {
+  return Object.freeze(records.map((record) => cloneFrozenData(
+    record,
+    'InputPilotAuditExport record',
+  ) as InputPilotRecord));
+}
+
+export function validateInputPilotAuditExport(
+  definitionValue: unknown,
+  value: unknown,
+): InputPilotAuditExport {
   const definition = createInputPilotDefinition(definitionValue);
   const source = cloneFrozenData(value, 'InputPilotAuditExport');
   assertKnownKeys(source, AUDIT_EXPORT_KEYS, 'InputPilotAuditExport');
@@ -66,15 +102,14 @@ export function validateInputPilotAuditExport(definitionValue, value) {
     );
   }
   const report = createInputPilotReport(definition, source.records);
-  const records = Object.freeze(source.records.map((record) => cloneFrozenData(
-    record,
-    'InputPilotAuditExport record',
-  )));
+  const records = cloneValidatedRecords(source.records);
   for (let index = 1; index < records.length; index += 1) {
-    if (
-      records[index - 1].assignment.enrollmentIndex
-      >= records[index].assignment.enrollmentIndex
-    ) throw new RangeError('InputPilotAuditExport.records 必须按 enrollmentIndex 严格递增。');
+    const previous = records[index - 1];
+    const current = records[index];
+    if (!previous || !current) throw new Error('InputPilotAuditExport.records 索引不连续。');
+    if (previous.assignment.enrollmentIndex >= current.assignment.enrollmentIndex) {
+      throw new RangeError('InputPilotAuditExport.records 必须按 enrollmentIndex 严格递增。');
+    }
   }
   if (source.recordCount !== records.length) {
     throw new RangeError('InputPilotAuditExport.recordCount 与 records 不一致。');
@@ -99,10 +134,13 @@ export function validateInputPilotAuditExport(definitionValue, value) {
     sourceDataHash,
     records,
     report,
-  }, 'validated InputPilotAuditExport');
+  }, 'validated InputPilotAuditExport') as InputPilotAuditExport;
 }
 
-export function createInputPilotAuditExport(definitionValue, workspaceValue) {
+export function createInputPilotAuditExport(
+  definitionValue: unknown,
+  workspaceValue: unknown,
+): InputPilotAuditExport {
   const definition = createInputPilotDefinition(definitionValue);
   const workspace = createInputPilotWorkspace(definition, workspaceValue);
   if (workspace.activeTrial !== null) {
@@ -122,8 +160,11 @@ export function createInputPilotAuditExport(definitionValue, workspaceValue) {
   });
 }
 
-export function createInputPilotAggregateExport(definitionValue, workspaceValue) {
-  const definition = createInputPilotDefinition(definitionValue);
+export function createInputPilotAggregateExport(
+  definitionValue: unknown,
+  workspaceValue: unknown,
+): InputPilotAggregateExport {
+  const definition: InputPilotDefinition = createInputPilotDefinition(definitionValue);
   const workspace = createInputPilotWorkspace(definition, workspaceValue);
   return cloneFrozenData({
     schemaVersion: INPUT_PILOT_EXPORT_SCHEMA_VERSION,
@@ -132,5 +173,5 @@ export function createInputPilotAggregateExport(definitionValue, workspaceValue)
     definitionHash: definition.getContentHash(),
     workspaceRevision: workspace.revision,
     report: createInputPilotReport(definition, workspace.records),
-  }, 'InputPilotAggregateExport');
+  }, 'InputPilotAggregateExport') as InputPilotAggregateExport;
 }

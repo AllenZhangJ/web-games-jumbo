@@ -3,10 +3,8 @@ import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 import {
   INPUT_PILOT_ASSESSMENT_STATUS,
   createArenaInputPilotV1Definition,
-} from '@number-strategy-jump/arena-input-pilot';
-import {
   createInputPilotEvidenceBundle,
-} from '../arena/presentation/pilot/input-pilot-evidence-bundle.js';
+} from '@number-strategy-jump/arena-input-pilot';
 import {
   createArenaBuildManifest,
 } from '@number-strategy-jump/arena-device-acceptance';
