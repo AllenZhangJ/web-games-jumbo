@@ -32,7 +32,7 @@
 | G2 Definition/合同/配置 | 已完成 | strict TS `arena-contracts`、`arena-definitions`、`arena-profile-contracts` 与 `arena-platform-contracts` 已承接确定性、输入/事件、权威快照、同步存储、平台能力、玩家档案/存档协议，以及动作/角色/装备/地图 Definition、只读 Registry 和唯一 Gameplay V2 数值配置；受审计 JavaScript 已降至 500 个 |
 | G3 Rule/Core/Replay | 已完成 | strict TS `arena-core`、`arena-movement`、`arena-physics`、`arena-equipment`、`arena-map` 与 `arena-match` 已承接规则/移动/物理/装备、完整地图权威链、比赛配置、Participant/Timeline 唯一写入者、角色 Runtime/物理投影、状态 hash、完整 MatchCore 编排、fixed-step Runtime 与 Replay；黄金语料保持 `0dace228` |
 | G4 Bot/Product/Persistence | 已完成 | strict TS Bot、Matchmaking、Quick Match、Local Match Session、Product State、Progression、ProductMatchResult、奖励事务、Profile Service/Repository、Storage Lease、Product Match、Product Session Controller、对称内容池、Arena V1 产品内容与通用 Product Composition 已闭环；Arena V1 薄应用注入适配器留待 G6/G7 清零 |
-| G5 Presentation/资产/反馈 | 进行中 | strict `arena-presentation-contracts` 已承接资产/角色表现合同，strict `arena-presentation-runtime` 已承接宿主无关运行时，strict `arena-presentation-three` 已承接坐标/样式、程序化装备、Three 资源 lease、平台/装备/角色 Registry、正式角色动画 Controller、GLTF/宿主纹理 Loader、程序化角色 View/Factory、GLTF 角色 View/Factory；反馈、Renderer 与 Session 仍待分层迁移 |
+| G5 Presentation/资产/反馈 | 进行中 | strict `arena-presentation-contracts` 已承接资产/角色表现合同，strict `arena-presentation-runtime` 已承接宿主无关运行时，strict `arena-presentation-three` 已承接坐标/样式、程序化装备、Three 资源 lease、平台/装备/角色 Registry、正式角色动画 Controller、GLTF/宿主纹理 Loader、程序化角色 View/Factory、GLTF 角色 View/Factory 与命中特效对象池；World/HUD/Renderer/Audio 与 Session 仍待分层迁移 |
 | G6 Platform/入口/构建 | 未开始 | 三端默认入口是 Product，但生产交付未与开发页面彻底隔离 |
 | G7 零 JS/完整质量门 | 未开始 | ESLint、strict TypeScript、Vitest 和 JavaScript 精确递减门禁已作为迁移护栏运行；coverage 阈值、测试归包和零 JS 尚未完成 |
 | G8 资产/安全/所有权 | 未开始 | CODEOWNERS、CI 安全与正式资产最终批准待补齐 |
@@ -55,7 +55,7 @@
 
 ## 当前不可合并原因
 
-1. 当前 369 个受维护 JavaScript 文件仍在精确允许清单中，Presentation 的其余反馈/Renderer/Session、Platform 和 Arena V1 应用注入适配尚未完成 strict TypeScript workspace 迁移。
+1. 当前 368 个受维护 JavaScript 文件仍在精确允许清单中，Presentation 的 World/HUD/Renderer/Audio/Session、Platform 和 Arena V1 应用注入适配尚未完成 strict TypeScript workspace 迁移。
 2. Vitest 当前保护底层合同包和治理门禁；Arena 其余测试尚待按 workspace 迁移并建立正式 coverage 阈值与零 JS 门禁。
 3. 正式资产最终审批与完整安全/依赖长期治理尚未闭环。
 4. 文档仍含迁移前阶段性叙述，尚未完成 G9 全量链接、状态与命令归真。
@@ -656,3 +656,14 @@
 - clean build ID 为 `arena-705972b39ab9-product`，Web/微信/抖音 delivery 为 `3683459 / 3718502 / 3718477 B`，三端 `sourceDirty=false`、预算通过且 `freezeEligible=true`；Web 主业务 chunk 为 `708.03 kB`（gzip `182.26 kB`），继续列入 G6 拆包与运行成本审计，不以降低分辨率、抗锯齿、动作或关节规避。
 - Codex 内置 Chromium 的单标签隔离环境完成 Product 首屏、正式角色对局与攻击点击复验：正式角色和装备正常显示，攻击后角色手臂进入挥击姿态，持续只有一个对局 Canvas 且没有可见 alert。两个并行标签访问同一 origin 时第二个标签被 Profile lease 正确拒绝，改用单标签隔离 origin 后正常启动；该记录不冒充 390×844 设备模拟，更不冒充 iPhone 13 Pro/iOS 26 Chrome 真机证据。
 - 本批没有改变 Gameplay V2 配置 hash `8c322912`、任意距离起手与仅有效范围命中、攻击/击退、动作与武器差异、移动/跳跃、画质、分辨率、抗锯齿、角色关节、Bot、权威 tick、Replay/Profile schema 或正式资产字节。下一批进入命中特效、World/HUD/Renderer 与 Presentation Session 的分层迁移，并在会话层复核标签关闭、租约释放和清理失败重试的完整所有权链。
+
+## G5.12 命中特效对象池迁移与可重试 Three 资源释放证据
+
+- `GreyboxEventEffects` 已迁入 strict `@number-strategy-jump/arena-presentation-three` 并由包公开入口提供，World Stage 不再引用上层 JavaScript 实现；旧 JavaScript 真值删除，精确允许清单由 369 降至 368，Three 包治理源文件由 16 增至 17。Hit、Knockback、DownSmash、淘汰、重生与拾取仍复用同一个有界对象池，锤/盾/链/空手的颜色、尺寸、条纹和持续时间保持原值。
+- options、事件数组、事件 type/id/action/目标字段与位置回调结果在任何池状态或 Three 对象变化前完整规范化；稀疏数组、访问器、非法位置、异步伪装和无效 ID 会在提交前拒绝，getter 不执行。一次 consume 内按 participant ID 缓存不可变位置，避免同批事件重复调用位置解析器；外部回调即使捕获并吞掉重入异常，外层操作仍检测并拒绝，且不留下半个激活特效。
+- 激活/更新/清空的内部 Three mutation 异常会终止整个对象池并尝试回收，不继续发布半更新视觉。每个预热 effect 持有独立 `ThreeObjectDisposalLease`；首次材质释放失败后池保留原 effect 所有权，后续 `dispose()` 只重试未完成资源，成功资源不重复释放，终态重复销毁幂等。构造中途失败也会回收此前已预热的 effect 并同时保留原错误与清理原因。
+- 干净代码提交 `aae3db59dc6e371fbe91c8fbb46276f1aea4d1a5` 的门禁通过：660/660 Node、178/178 strict package/治理、103/103 生命周期；黄金 Replay manifest 保持 `0dace228`。输入 fuzz 按三套 mapper 各 40 场，共 120 场、120 个唯一 final hash、6 次 Replay 复验，未产生 reproduction case；生产依赖审计为 0 vulnerabilities，正式资产结果保持 `82a8b378`。
+- Presentation Session soak 完成 100 场、耗时 `619.28875 ms`、堆增长 `2670088 B`；完整 Product Presentation Session soak 完成 100 场、100 个唯一 authority hash、耗时 `55472.673791 ms`、堆增长 `6562344 B`。两者均低于 8 MiB，帧、生命周期监听、Canvas 监听和输入绑定残留为零。
+- clean build ID 为 `arena-aae3db59dc6e-product`，Web/微信/抖音 delivery 为 `3686809 / 3722883 / 3722858 B`，三端 `sourceDirty=false`、预算通过且 `freezeEligible=true`；Web 主业务 chunk 为 `711.38 kB`（gzip `182.98 kB`），继续列入 G6 拆包与运行成本审计。
+- Codex 内置 Chromium 单标签环境完成 Product 首屏、正式角色对局与连续攻击 smoke，持续只有一个对局 Canvas 且没有可见 alert。0.22～0.34 秒特效没有被非确定截图稳定捕获，因此本批不声称浏览器截图证明每个爆闪分支；对象池激活、锤击分支、生命周期和释放重试由 deterministic Three 集成测试精确证明。该记录不是手机设备模拟或 iPhone 13 Pro/iOS 26 Chrome 真机证据。
+- 本批没有改变 Gameplay V2 配置 hash `8c322912`、攻击起手/命中/击退、动作与武器差异、摄像机 hit-stop、移动/跳跃、画质、分辨率、抗锯齿、角色关节、Bot、权威 tick、Replay/Profile schema 或正式资产字节。下一批治理 `ArenaWorldStage` 的输入快照、Camera/Registry/Effect 组合、加载与销毁重试所有权，再进入 HUD、Renderer、Audio 与 Session。
