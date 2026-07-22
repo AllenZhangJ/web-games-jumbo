@@ -25,7 +25,7 @@ import {
 } from '@number-strategy-jump/arena-presentation-contracts';
 import {
   ARENA_PRESENTATION_ASSET_PROVIDER_ID,
-} from '../../../src/arena/presentation/assets/presentation-asset-provider-ids.js';
+} from '@number-strategy-jump/arena-presentation-runtime';
 import {
   verifyArenaFormalAssetIntake,
 } from '../../../scripts/lib/arena-formal-asset-intake-verifier.mjs';

@@ -1,6 +1,6 @@
-import { PresentationAssetLoadTask } from '../assets/presentation-asset-load-task.js';
+import { PresentationAssetLoadTask } from '@number-strategy-jump/arena-presentation-runtime';
 import { assertPresentationAssetRegistry } from '@number-strategy-jump/arena-presentation-contracts';
-import { ARENA_PRESENTATION_ASSET_PROVIDER_ID } from '../assets/presentation-asset-provider-ids.js';
+import { ARENA_PRESENTATION_ASSET_PROVIDER_ID } from '@number-strategy-jump/arena-presentation-runtime';
 import { GltfCharacterView } from './gltf-character-view.js';
 import { GltfPresentationAssetLoader } from './gltf-presentation-asset-loader.js';
 import { ProgrammaticCharacterView } from './programmatic-character-view.js';

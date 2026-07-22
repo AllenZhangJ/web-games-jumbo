@@ -5,7 +5,7 @@ import {
   createOrthographicArenaCamera,
 } from '../camera/orthographic-arena-camera.js';
 import { ARENA_V1_GREYBOX_CONTENT } from '../content/arena-v1-greybox-content.js';
-import { ARENA_PRESENTATION_ASSET_PROVIDER_ID } from '../assets/presentation-asset-provider-ids.js';
+import { ARENA_PRESENTATION_ASSET_PROVIDER_ID } from '@number-strategy-jump/arena-presentation-runtime';
 import { CharacterViewRegistry } from './character-view-registry.js';
 import { disposeThreeObject } from './dispose-three-resources.js';
 import { EquipmentViewRegistry } from './equipment-view-registry.js';

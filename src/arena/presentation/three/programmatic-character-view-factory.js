@@ -2,7 +2,7 @@ import {
   PRESENTATION_ASSET_KIND,
   assertPresentationAssetRegistry,
 } from '@number-strategy-jump/arena-presentation-contracts';
-import { ARENA_PRESENTATION_ASSET_PROVIDER_ID } from '../assets/presentation-asset-provider-ids.js';
+import { ARENA_PRESENTATION_ASSET_PROVIDER_ID } from '@number-strategy-jump/arena-presentation-runtime';
 import { ProgrammaticCharacterView } from './programmatic-character-view.js';
 
 export class ProgrammaticCharacterViewFactory {

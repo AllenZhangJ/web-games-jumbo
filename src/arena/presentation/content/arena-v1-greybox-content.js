@@ -19,7 +19,7 @@ import {
   PRESENTATION_ASSET_KIND,
   PresentationAssetRegistry,
 } from '@number-strategy-jump/arena-presentation-contracts';
-import { ARENA_PRESENTATION_ASSET_PROVIDER_ID } from '../assets/presentation-asset-provider-ids.js';
+import { ARENA_PRESENTATION_ASSET_PROVIDER_ID } from '@number-strategy-jump/arena-presentation-runtime';
 
 function freezeVector3(value) {
   return Object.freeze({ x: value.x, y: value.y, z: value.z });

@@ -9,7 +9,7 @@ import {
   PresentationAssetRegistry,
   createCharacterPresentationDefinition,
 } from '@number-strategy-jump/arena-presentation-contracts';
-import { ARENA_PRESENTATION_ASSET_PROVIDER_ID } from '../assets/presentation-asset-provider-ids.js';
+import { ARENA_PRESENTATION_ASSET_PROVIDER_ID } from '@number-strategy-jump/arena-presentation-runtime';
 
 export const ARENA_GAMEPLAY_V2_ASSET_ID = Object.freeze({
   PARKOUR_APPRENTICE: 'arena.asset.character.parkour-apprentice.kaykit-rogue.v1',

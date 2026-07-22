@@ -431,6 +431,7 @@ test('Arena Presentation runtime owns only host-free pacing and event lifecycles
     [
       '@number-strategy-jump/arena-contracts',
       '@number-strategy-jump/arena-match',
+      '@number-strategy-jump/arena-presentation-contracts',
     ],
     'arena-presentation-runtime 只能依赖底层数据合同与公开 tick 配置。',
   );

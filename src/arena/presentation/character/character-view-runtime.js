@@ -2,7 +2,7 @@ import {
   AnimationSemanticResolver,
   resolveAnimationBinding,
 } from '@number-strategy-jump/arena-presentation-contracts';
-import { SixSectorDirectionResolver } from '../direction/six-sector-direction-resolver.js';
+import { SixSectorDirectionResolver } from '@number-strategy-jump/arena-presentation-runtime';
 
 export const CHARACTER_VIEW_RUNTIME_STATE = Object.freeze({
   ACTIVE: 'active',

@@ -6,7 +6,7 @@ import {
   cloneFrozenData,
   cloneFrozenStringSet,
 } from '@number-strategy-jump/arena-contracts';
-import { ARENA_PRESENTATION_ASSET_PROVIDER_ID } from './presentation-asset-provider-ids.js';
+import { ARENA_PRESENTATION_ASSET_PROVIDER_ID } from '@number-strategy-jump/arena-presentation-runtime';
 
 export const FORMAL_ASSET_INTAKE_POLICY_SCHEMA_VERSION = 1;
 export const ARENA_FORMAL_ASSET_INTAKE_V1_POLICY_ID = 'arena.stage7.formal-asset-intake.v1';

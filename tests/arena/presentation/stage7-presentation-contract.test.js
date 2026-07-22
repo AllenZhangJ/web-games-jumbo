@@ -12,17 +12,15 @@ import {
 import {
   PRESENTATION_ASSET_LOAD_STATE,
   PresentationAssetLoadTask,
-} from '../../../src/arena/presentation/assets/presentation-asset-load-task.js';
+  SIX_SECTOR_DIRECTION_ID,
+  SixSectorDirectionResolver,
+} from '@number-strategy-jump/arena-presentation-runtime';
 import {
   ARENA_V1_GREYBOX_CONTENT,
 } from '../../../src/arena/presentation/content/arena-v1-greybox-content.js';
 import {
   CharacterViewRuntime,
 } from '../../../src/arena/presentation/character/character-view-runtime.js';
-import {
-  SIX_SECTOR_DIRECTION_ID,
-  SixSectorDirectionResolver,
-} from '../../../src/arena/presentation/direction/six-sector-direction-resolver.js';
 import {
   CharacterViewRegistry,
 } from '../../../src/arena/presentation/three/character-view-registry.js';

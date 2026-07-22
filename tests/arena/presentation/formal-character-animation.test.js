@@ -22,7 +22,7 @@ import {
 import { ARENA_V1_CHARACTER_ID } from '@number-strategy-jump/arena-definitions';
 import {
   ARENA_PRESENTATION_ASSET_PROVIDER_ID,
-} from '../../../src/arena/presentation/assets/presentation-asset-provider-ids.js';
+} from '@number-strategy-jump/arena-presentation-runtime';
 
 const CLIP_NAMES = Object.freeze([
   'Idle',

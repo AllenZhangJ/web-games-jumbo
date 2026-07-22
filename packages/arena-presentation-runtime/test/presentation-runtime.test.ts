@@ -3,11 +3,20 @@ import {
   ARENA_V1_PRESENTATION_QUALITY_REGISTRY,
   ARENA_V1_PRESENTATION_QUALITY_ID,
   FixedTickAccumulator,
+  PresentationAssetLoadTask,
   PresentationEventWindow,
   type PresentationFrame,
   PresentationFrameLoop,
   PresentationRenderPacer,
+  SixSectorDirectionResolver,
 } from '../src/index.js';
+import {
+  CHARACTER_PRESENTATION_DIRECTION_STRATEGY,
+  CHARACTER_PRESENTATION_FRONT_AXIS,
+  PresentationAssetRegistry,
+  PRESENTATION_ASSET_DEFINITION_SCHEMA_VERSION,
+  PRESENTATION_ASSET_KIND,
+} from '@number-strategy-jump/arena-presentation-contracts';
 
 describe('Arena Presentation runtime boundaries', () => {
   it('rejects option and event accessors without executing them', () => {
@@ -89,5 +98,61 @@ describe('Arena Presentation runtime boundaries', () => {
       ),
     });
     expect([pacer.shouldRender(1 / 60), pacer.shouldRender(1 / 60)]).toEqual([false, true]);
+  });
+
+  it('keeps direction state atomic when reset input validation fails', () => {
+    const resolver = new SixSectorDirectionResolver({
+      strategy: CHARACTER_PRESENTATION_DIRECTION_STRATEGY.SIX_SECTOR_CAMERA_RELATIVE,
+      defaultFrontAxis: CHARACTER_PRESENTATION_FRONT_AXIS.POSITIVE_Z,
+      hysteresisDegrees: 6,
+    });
+    const cameraBasis = { screenRight: { x: 1, z: 0 }, screenUp: { x: 0, z: 1 } };
+    expect(resolver.resolve({ facing: { x: 0.6, z: 0.8 }, cameraBasis }).id).toBe('front-right');
+    const before = resolver.getDebugSnapshot();
+    expect(() => resolver.resolve({
+      facing: { x: 0, z: 1 },
+      cameraBasis: { ...cameraBasis, get extra() { throw new Error('must not execute'); } },
+      reset: true,
+    })).toThrow(/extra.*数据字段|不支持字段 extra/);
+    expect(resolver.getDebugSnapshot()).toEqual(before);
+  });
+
+  it('snapshots the asset loader method and retains synchronous cleanup ownership', async () => {
+    const assetId = 'arena.asset.test.v1';
+    const registry = new PresentationAssetRegistry([{
+      schemaVersion: PRESENTATION_ASSET_DEFINITION_SCHEMA_VERSION,
+      id: assetId,
+      kind: PRESENTATION_ASSET_KIND.CHARACTER_MODEL,
+      providerId: 'arena.provider.test.v1',
+      sourceKey: 'test.glb',
+      contentVersion: 1,
+      tags: ['test'],
+    }]);
+    let originalLoads = 0;
+    let replacementLoads = 0;
+    let releases = 0;
+    const loader = {
+      load() {
+        originalLoads += 1;
+        return { assetId, value: Object.freeze({ scene: true }), release() { releases += 1; } };
+      },
+    };
+    const task = new PresentationAssetLoadTask({ assetRegistry: registry, assetId, loader });
+    loader.load = () => {
+      replacementLoads += 1;
+      throw new Error('replacement must not run');
+    };
+    await expect(task.load()).resolves.toEqual({ scene: true });
+    expect([originalLoads, replacementLoads]).toEqual([1, 0]);
+    task.destroy();
+    expect(releases).toBe(1);
+
+    let optionReads = 0;
+    expect(() => new PresentationAssetLoadTask({
+      assetRegistry: registry,
+      assetId,
+      get loader() { optionReads += 1; return loader; },
+    })).toThrow(/loader.*数据字段/);
+    expect(optionReads).toBe(0);
   });
 });
