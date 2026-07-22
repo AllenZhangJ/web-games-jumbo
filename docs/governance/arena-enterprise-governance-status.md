@@ -55,7 +55,7 @@
 
 ## 当前不可合并原因
 
-1. 当前 339 个受维护 JavaScript 文件仍在精确允许清单中，上层内容/Canvas/性能证据、Platform 和 Arena V1 应用注入适配尚未完成 strict TypeScript workspace 迁移；旧 Stage 6 `ArenaInputRouter` 与仅测试使用的 `KeyboardInputAdapter` 待 G7 证明退役或归类，不属于当前 Product 生产链。
+1. 当前 338 个受维护 JavaScript 文件仍在精确允许清单中，上层具体内容/Canvas 绘制/性能证据、Platform 和 Arena V1 应用注入适配尚未完成 strict TypeScript workspace 迁移；旧 Stage 6 `ArenaInputRouter` 与仅测试使用的 `KeyboardInputAdapter` 待 G7 证明退役或归类，不属于当前 Product 生产链。
 2. Vitest 当前保护底层合同包和治理门禁；Arena 其余测试尚待按 workspace 迁移并建立正式 coverage 阈值与零 JS 门禁。
 3. 正式资产最终审批与完整安全/依赖长期治理尚未闭环。
 4. 文档仍含迁移前阶段性叙述，尚未完成 G9 全量链接、状态与命令归真。
@@ -835,3 +835,13 @@
 - 输入 fuzz 完成 120 场、120 个唯一 final hash 与 6 次 Replay 复验，操作计数和 frame 计数与前批逐项一致，耗时 `32671.907833 ms`，无 reproduction case。Presentation Session soak 完成 100 场，耗时 `530.679333 ms`、堆增长 `2633072 B`；Product Presentation Session soak 完成 100 场、100 个唯一 authority hash，耗时 `54119.842875 ms`、堆增长 `7117784 B`。两者均低于 8 MiB，帧、生命周期监听、Canvas 监听和输入绑定残留为零。
 - clean build ID 为 `arena-99fdc9087789-product`，Web/微信/抖音 delivery 为 `3754862 / 3796821 / 3796796 B`，三端 `sourceDirty=false`、默认入口均为 Product、预算通过且 `freezeEligible=true`；生产产物边界检查通过。Web 主业务 chunk 为 `779.44 kB`（gzip `198.77 kB`），Three chunk 为 `631.82 kB`（gzip `161.92 kB`），继续进入 G6 拆包与目标设备 trace。
 - 本批没有新增浏览器或手机交互结论，不冒充 iPhone 13 Pro/iOS 26/Chrome 真机证据，也没有改变 Gameplay V2 配置 hash `8c322912`、任意距离挥空、攻击/命中/击退数值、动作/武器、移动/跳跃、画质、关节、Bot、权威 tick、Replay/Profile schema 或正式资产。旧 Stage 6 `ArenaInputRouter` 不在 Product 生产组合中，`KeyboardInputAdapter` 只被测试使用，二者留到 G7 退役审计；G5 下一批治理具体内容投影、Canvas 绘制与本地性能观测边界，当前仍不可合并。
+
+## G5.22 Product UI 场景投影迁移与冻结快照缓存证据
+
+- `createProductUiSceneModel` 已从上层 JavaScript 迁入 strict `@number-strategy-jump/arena-product-presentation`；Canvas UI、Web UI 场景映射、小游戏组合与测试统一从包公开 API 消费，旧 JavaScript 真值删除，精确允许清单由 339 降至 338。原架构门禁同步改为检查 strict package 与仅存应用薄适配，不再用旧 `src/arena/presentation/product` 文件数量冒充产品表现合同覆盖。
+- 投影入口先复制并冻结完整公开 ViewModel 数据，拒绝访问器、Symbol、稀疏数组、循环引用、函数、非有限数、非法标量、重复角色和多选状态；输出的 SceneModel、动作、角色卡、选中角色与首个解锁视图均不可变。该层只做公开 UI 数据投影，不持有 Controller、Match、Profile、Renderer、Three.js、DOM、平台、墙钟或网络。
+- 新增模块私有可信 ViewModel 标记：只有包内 `createProductSessionViewModel` 完整构造并冻结的对象可进入 WeakMap 缓存；外部对象即使只冻结顶层也不能伪造信任，避免其嵌套字段后续变化造成陈旧 UI。相同可信 ViewModel 的 Canvas render/hit-test 复用同一 SceneModel，不再重复深复制和卡片数组分配；缓存键为弱引用，不延长 ViewModel 生命周期。
+- 新增 1 项 strict 边界测试，覆盖冻结 SceneModel、可信对象缓存和恶意 getter 零执行；Canvas/小游戏/Web 场景 6 项定向集成通过。代码提交 `85060cc024f72e1f527eff9533bcb4300f770881` 的完整门禁通过：666/666 Node、228/228 strict package/治理、104/104 生命周期；生产依赖审计为 0 vulnerabilities。黄金 Replay manifest 保持 `0dace228`，正式资产预算结果保持 `82a8b378`。
+- 输入 fuzz 完成 120 场、120 个唯一 final hash 与 6 次 Replay 复验，操作计数和 frame 计数逐项保持一致，耗时 `31455.992167 ms`，无 reproduction case。Presentation Session soak 完成 100 场，耗时 `526.6838339999999 ms`、堆增长 `2643392 B`；Product Presentation Session soak 完成 100 场、100 个唯一 authority hash，耗时 `47367.064875000004 ms`、堆增长 `7029776 B`。两者均低于 8 MiB，帧、生命周期监听、Canvas 监听和输入绑定残留为零。相对 G5.21 的 Product soak 改善只作为同机脚本信号，不推断手机温度、电量或真实帧率。
+- clean build ID 为 `arena-85060cc024f7-product`，Web/微信/抖音 delivery 为 `3757367 / 3799333 / 3799308 B`，三端 `sourceDirty=false`、默认入口均为 Product、预算通过且 `freezeEligible=true`；生产产物边界检查通过。Web 主业务 chunk 为 `781.94 kB`（gzip `199.34 kB`），Three chunk 为 `631.82 kB`（gzip `161.92 kB`），继续进入 G6 拆包与目标设备 trace。
+- 本批没有新增浏览器或手机交互结论，不冒充 iPhone 13 Pro/iOS 26/Chrome 真机证据，也没有改变 Gameplay V2 配置 hash `8c322912`、任意距离挥空、攻击/命中/击退数值、动作/武器、移动/跳跃、画质、关节、Bot、权威 tick、Replay/Profile schema 或正式资产。下一批治理 Product Canvas layout/painter/surface 的平台能力、热路径分配、构造回滚与清理重试，再迁具体 Arena 内容投影；G5 仍未完成，当前不可合并。
