@@ -38,17 +38,17 @@ import {
   ARENA_DEVICE_ACCEPTANCE_REPORT_STATUS,
   createArenaDeviceAcceptanceBundle,
   createArenaDeviceAcceptanceReport,
-} from '../../../src/arena/presentation/acceptance/arena-device-acceptance-bundle.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 import {
   ARENA_DEVICE_ACCEPTANCE_CHECK_RESULT,
   ARENA_DEVICE_ACCEPTANCE_RECORD_SCHEMA_VERSION,
   createArenaDeviceAcceptanceRecord,
-} from '../../../src/arena/presentation/acceptance/arena-device-acceptance-record.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 import {
   ARENA_BUILD_DEFAULT_ENTRY,
   ARENA_BUILD_MANIFEST_SCHEMA_VERSION,
   createArenaBuildManifest,
-} from '../../../src/arena/presentation/acceptance/arena-build-manifest.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 
 const COMMIT = 'a'.repeat(40);
 const BUILD_ID = 'stage6-device-build-001';

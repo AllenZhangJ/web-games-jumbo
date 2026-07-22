@@ -2,7 +2,7 @@ import { createDeterministicDataHash } from '@number-strategy-jump/arena-contrac
 import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 import {
   ARENA_DEVICE_ACCEPTANCE_CHECK_RESULT,
-} from '../acceptance/arena-device-acceptance-record.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 import {
   createArenaDeviceAcceptanceDefinition,
 } from '@number-strategy-jump/arena-device-acceptance';
@@ -10,7 +10,7 @@ import {
   ARENA_DEVICE_ACCEPTANCE_REPORT_STATUS,
   createArenaDeviceAcceptanceBundle,
   createArenaDeviceAcceptanceReport,
-} from '../acceptance/arena-device-acceptance-bundle.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 import {
   ARENA_STAGE9_PERFORMANCE_DEVICE_CHECK_ID,
 } from '../acceptance/arena-stage9-performance-device-acceptance-v1.js';

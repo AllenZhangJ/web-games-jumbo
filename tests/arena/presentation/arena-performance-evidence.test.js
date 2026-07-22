@@ -5,11 +5,11 @@ import {
 } from '@number-strategy-jump/arena-device-acceptance';
 import {
   ARENA_DEVICE_ACCEPTANCE_BUNDLE_SCHEMA_VERSION,
-} from '../../../src/arena/presentation/acceptance/arena-device-acceptance-bundle.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 import {
   ARENA_DEVICE_ACCEPTANCE_CHECK_RESULT,
   ARENA_DEVICE_ACCEPTANCE_RECORD_SCHEMA_VERSION,
-} from '../../../src/arena/presentation/acceptance/arena-device-acceptance-record.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 import {
   ARENA_STAGE9_PERFORMANCE_DEVICE_CHECK_ID,
   createArenaStage9PerformanceDeviceAcceptanceV1Definition,

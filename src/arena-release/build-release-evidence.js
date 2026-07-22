@@ -5,7 +5,7 @@ import {
 import {
   ARENA_BUILD_DEFAULT_ENTRY,
   createArenaBuildManifest,
-} from '../arena/presentation/acceptance/arena-build-manifest.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 import {
   createArenaStage9BuildBudgetV1Policy,
 } from '../arena/presentation/performance/arena-build-budget-policy.js';

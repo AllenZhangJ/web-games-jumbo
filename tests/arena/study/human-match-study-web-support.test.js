@@ -4,7 +4,7 @@ import { createHash, webcrypto } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import {
   ARENA_BUILD_MANIFEST_SCHEMA_VERSION,
-} from '../../../src/arena/presentation/acceptance/arena-build-manifest.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 import {
   createArenaStage9HumanFairnessV1Definition,
 } from '../../../src/arena/study/arena-stage9-human-fairness-v1.js';

@@ -3,7 +3,7 @@ import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 import {
   ARENA_BUILD_DEFAULT_ENTRY,
   createArenaBuildManifest,
-} from '../acceptance/arena-build-manifest.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 import { createArenaBuildBudgetPolicy } from './arena-build-budget-policy.js';
 
 export const ARENA_BUILD_BUDGET_REPORT_SCHEMA_VERSION = 1;

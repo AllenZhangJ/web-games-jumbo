@@ -29,14 +29,14 @@ import {
 } from '../../src/arena-release/human-fairness-release-evidence.js';
 import {
   ARENA_DEVICE_ACCEPTANCE_BUNDLE_SCHEMA_VERSION,
-} from '../../src/arena/presentation/acceptance/arena-device-acceptance-bundle.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 import {
   ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND,
 } from '@number-strategy-jump/arena-device-acceptance';
 import {
   ARENA_DEVICE_ACCEPTANCE_CHECK_RESULT,
   ARENA_DEVICE_ACCEPTANCE_RECORD_SCHEMA_VERSION,
-} from '../../src/arena/presentation/acceptance/arena-device-acceptance-record.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 import {
   createArenaStage6DeviceAcceptanceV1Definition,
 } from '@number-strategy-jump/arena-device-acceptance';
@@ -48,7 +48,7 @@ import {
 } from '../../src/arena/presentation/acceptance/arena-stage9-performance-device-acceptance-v1.js';
 import {
   ARENA_BUILD_MANIFEST_FILENAME,
-} from '../../src/arena/presentation/acceptance/arena-build-manifest.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 import {
   createArenaStage9HumanFairnessV1Definition,
 } from '../../src/arena/study/arena-stage9-human-fairness-v1.js';

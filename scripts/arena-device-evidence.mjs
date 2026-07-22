@@ -1,7 +1,7 @@
 import path from 'node:path';
 import {
   ARENA_DEVICE_ACCEPTANCE_REPORT_STATUS,
-} from '../src/arena/presentation/acceptance/arena-device-acceptance-bundle.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 import {
   ARENA_DEFAULT_DEVICE_ACCEPTANCE_DEFINITION_ID,
   createArenaDeviceAcceptanceDefinitionById,

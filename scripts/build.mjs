@@ -7,7 +7,7 @@ import { build as esbuild } from 'esbuild';
 import { build as viteBuild } from 'vite';
 import {
   ARENA_BUILD_DEFAULT_ENTRY,
-} from '../src/arena/presentation/acceptance/arena-build-manifest.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 import {
   ARENA_DEVICE_ACCEPTANCE_PLATFORM,
 } from '@number-strategy-jump/arena-device-acceptance';

@@ -5,14 +5,14 @@ import {
 import {
   createArenaDeviceAcceptanceBundle,
   createArenaDeviceAcceptanceReport,
-} from '../../src/arena/presentation/acceptance/arena-device-acceptance-bundle.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 import {
   ARENA_STAGE9_PERFORMANCE_DEVICE_ACCEPTANCE_V1_ID,
 } from '../../src/arena/presentation/acceptance/arena-stage9-performance-device-acceptance-v1.js';
 import {
   ARENA_BUILD_DEFAULT_ENTRY,
   createArenaBuildManifest,
-} from '../../src/arena/presentation/acceptance/arena-build-manifest.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 import {
   createArenaPerformanceEvidenceReport,
 } from '../../src/arena/presentation/performance/arena-performance-evidence.js';

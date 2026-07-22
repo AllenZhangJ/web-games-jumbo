@@ -1,7 +1,7 @@
 import {
   ARENA_BUILD_MANIFEST_FILENAME,
   createArenaBuildManifest,
-} from '../arena/presentation/acceptance/arena-build-manifest.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 
 export async function loadCleanWebBuildIdentity(root = globalThis, {
   requiredArtifact,

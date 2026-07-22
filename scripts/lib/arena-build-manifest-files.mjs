@@ -5,7 +5,7 @@ import {
   ARENA_BUILD_MANIFEST_FILENAME,
   ARENA_BUILD_MANIFEST_SCHEMA_VERSION,
   createArenaBuildManifest,
-} from '../../src/arena/presentation/acceptance/arena-build-manifest.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 
 function compareText(left, right) {
   if (left < right) return -1;

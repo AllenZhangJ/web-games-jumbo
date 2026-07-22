@@ -4,7 +4,7 @@ import {
   ARENA_DEVICE_ACCEPTANCE_REPORT_STATUS,
   createArenaDeviceAcceptanceBundle,
   createArenaDeviceAcceptanceReport,
-} from '../arena/presentation/acceptance/arena-device-acceptance-bundle.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 import {
   createArenaStage6DeviceAcceptanceV1Definition,
 } from '@number-strategy-jump/arena-device-acceptance';

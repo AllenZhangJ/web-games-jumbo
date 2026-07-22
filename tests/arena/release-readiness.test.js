@@ -47,7 +47,7 @@ import {
 import {
   ARENA_BUILD_MANIFEST_FILENAME,
   createArenaBuildManifest,
-} from '../../src/arena/presentation/acceptance/arena-build-manifest.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 import {
   writeArenaBuildManifest,
 } from '../../scripts/lib/arena-build-manifest-files.mjs';

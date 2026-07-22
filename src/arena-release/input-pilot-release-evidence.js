@@ -11,7 +11,7 @@ import {
 } from '../arena/presentation/pilot/input-pilot-evidence-bundle.js';
 import {
   createArenaBuildManifest,
-} from '../arena/presentation/acceptance/arena-build-manifest.js';
+} from '@number-strategy-jump/arena-device-acceptance';
 import { ARENA_RELEASE_EVIDENCE_STATUS } from './release-evidence-statement.js';
 
 const RESULT_HASH_PATTERN = /^(?:[0-9a-f]{8}|[0-9a-f]{64})$/;

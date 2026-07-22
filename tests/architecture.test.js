@@ -310,17 +310,20 @@ test('Arena device acceptance definitions stay immutable and host-free', async (
   ));
   assert.deepEqual(
     Object.keys(packageDefinition.dependencies).sort(),
-    ['@number-strategy-jump/arena-contracts'],
-    'arena-device-acceptance 只能依赖底层不可变数据合同。',
+    [
+      '@number-strategy-jump/arena-contracts',
+      '@number-strategy-jump/arena-evidence-contracts',
+    ],
+    'arena-device-acceptance 只能依赖底层不可变数据和证据标量合同。',
   );
   const files = await listJavaScript(path.resolve('packages/arena-device-acceptance/src'));
-  assert.equal(files.length, 4);
+  assert.equal(files.length, 7);
   for (const file of files) {
     const source = await readFile(file, 'utf8');
     assert.doesNotMatch(
       source,
-      /from\s+['"](?:node:|three|@number-strategy-jump\/(?!arena-contracts['"]))[^'"]*['"]/,
-      `${file} 只能导入自身文件与 arena-contracts。`,
+      /from\s+['"](?:node:|three|@number-strategy-jump\/(?!(?:arena-contracts|arena-evidence-contracts)['"]))[^'"]*['"]/,
+      `${file} 只能导入自身文件、arena-contracts 与 arena-evidence-contracts。`,
     );
     assert.doesNotMatch(
       withoutStaticImports(source),
