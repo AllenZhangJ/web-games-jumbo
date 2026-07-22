@@ -6,7 +6,7 @@ import {
   destroyArenaMatchCandidate,
 } from '@number-strategy-jump/arena-presentation-runtime';
 import { projectArenaPresentationFrame } from '@number-strategy-jump/arena-v1-presentation-content';
-import { createArenaSessionComposition } from './arena-session-composition.js';
+import { createArenaGreyboxSessionComposition } from '@number-strategy-jump/arena-v1-greybox-session';
 
 export const ARENA_PRESENTATION_SESSION_STATE = Object.freeze({
   CREATED: 'created',
@@ -72,7 +72,7 @@ export class ArenaPresentationSession {
   #bindings;
 
   constructor(platform, options = {}) {
-    this.#composition = createArenaSessionComposition(platform, options);
+    this.#composition = createArenaGreyboxSessionComposition(platform, options);
     this.#state = ARENA_PRESENTATION_SESSION_STATE.CREATED;
     this.#mode = MODE.MATCHING;
     this.#startPromise = null;

@@ -16,6 +16,7 @@
     { "path": "./packages/arena-v1-composition" },
     { "path": "./packages/arena-v1-application-session" },
     { "path": "./packages/arena-v1-application-launch" },
+    { "path": "./packages/arena-v1-greybox-session" },
     { "path": "./packages/arena-matchmaking" },
     { "path": "./packages/arena-movement" },
     { "path": "./packages/arena-physics" },

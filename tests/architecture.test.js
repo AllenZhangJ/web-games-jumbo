@@ -713,6 +713,36 @@ test('Arena V1 application launch is the bounded top-level product composition',
   }
 });
 
+test('Arena V1 greybox session is an isolated rollback application boundary', async () => {
+  const packageDefinition = JSON.parse(await readFile(
+    path.resolve('packages/arena-v1-greybox-session/package.json'),
+    'utf8',
+  ));
+  assert.deepEqual(
+    Object.keys(packageDefinition.dependencies).sort(),
+    [
+      '@number-strategy-jump/arena-contracts',
+      '@number-strategy-jump/arena-definitions',
+      '@number-strategy-jump/arena-matchmaking',
+      '@number-strategy-jump/arena-presentation-runtime',
+      '@number-strategy-jump/arena-presentation-three',
+      '@number-strategy-jump/arena-v1-composition',
+      '@number-strategy-jump/arena-v1-presentation-content',
+    ],
+    'arena-v1-greybox-session 只能组合灰盒回退所需的已治理边界。',
+  );
+  const files = await listJavaScript(path.resolve('packages/arena-v1-greybox-session/src'));
+  assert.equal(files.length, 2);
+  for (const file of files) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /(?:from\s+['"](?:node:|[^'"]*(?:entry|experiment|study|regression|release)[^'"]*)['"]|Date\.now|Math\.random|setTimeout|setInterval|requestAnimationFrame|\b(?:window|document|navigator|localStorage|sessionStorage)\b|\b(?:tt|wx)\s*\.)/,
+      `${file} 只能建立独立 Greybox Session，不能持有页面、研究或发布工具。`,
+    );
+  }
+});
+
 test('Arena Stage 8 product orchestration remains host-free and outside match authority', async () => {
   const directories = [
     'src/arena/product',
