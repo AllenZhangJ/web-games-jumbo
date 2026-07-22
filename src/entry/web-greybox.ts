@@ -14,7 +14,7 @@ bindWebGameTeardown(globalThis, stopLaunchedGame);
 void launchGame(() => createWebPlatform(), {
   createGame: createArenaGame,
   onSuccess: () => clearWebStartupError(),
-  onError: (error) => {
+  onError: (error: unknown) => {
     console.error('竞技场灰盒回退入口启动失败', error);
     showWebStartupError(error);
   },

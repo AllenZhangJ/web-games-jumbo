@@ -49,8 +49,8 @@ test('mini-game platform and entries do not depend on browser DOM globals', asyn
     'packages/arena-platform-runtime/src/wechat-platform.ts',
     'src/entry/douyin.ts',
     'src/entry/wechat.ts',
-    'src/entry/douyin-greybox.js',
-    'src/entry/wechat-greybox.js',
+    'src/entry/douyin-greybox.ts',
+    'src/entry/wechat-greybox.ts',
   ];
   for (const file of files) {
     const source = await readFile(file, 'utf8');
@@ -110,8 +110,8 @@ test('mini-game entries bundle without importing the web platform', async () => 
 
 test('mini-game greybox rollback entries remain independently executable', async () => {
   for (const entryPoint of [
-    'src/entry/douyin-greybox.js',
-    'src/entry/wechat-greybox.js',
+    'src/entry/douyin-greybox.ts',
+    'src/entry/wechat-greybox.ts',
   ]) {
     const result = await esbuild({
       entryPoints: [path.resolve(entryPoint)],

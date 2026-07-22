@@ -7,8 +7,8 @@ import {
 
 void launchGame(() => createDouyinPlatform(), {
   createGame: createArenaGame,
-  onError: (error) => {
+  onError: (error: unknown) => {
     console.error('抖音小游戏灰盒回退入口启动失败', error);
-    showMiniGameStartupError(globalThis.tt, '游戏启动失败');
+    showMiniGameStartupError((globalThis as { tt?: unknown }).tt, '游戏启动失败');
   },
 });
