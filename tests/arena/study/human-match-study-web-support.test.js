@@ -22,12 +22,98 @@ import {
   HumanMatchStudyProductRuntime,
 } from '../../../src/entry/human-match-study-product-runtime.js';
 import {
+  HumanMatchStudyWorkbenchView,
+} from '../../../src/entry/human-match-study-workbench-view.js';
+import {
   createWebResearchPageOwnerId,
   detectWebResearchEnvironment,
 } from '../../../src/entry/web-research-environment.js';
 
 const SHA = 'a'.repeat(64);
 const COMMIT = 'b'.repeat(40);
+
+const STUDY_VIEW_SELECTORS = [
+  '#study-operator-shell', '#study-participant-shell', '#study-running-bar',
+  '#study-phase', '#study-status', '#study-build', '#study-environment',
+  '#study-progress', '#study-record-count', '#study-participant-id', '#study-error',
+  '#study-enrollment', '#study-enrolled', '#study-review', '#study-export-pending',
+  '#study-operator-id', '#study-consent', '#study-prior-arena', '#study-prior-study',
+  '#study-briefing-deviation', '#study-operator-assistance', '#study-export-workspace',
+  '#study-enroll', '#study-start', '#study-invalidate-enrolled', '#study-abandon',
+  '#study-export', '#study-confirm', '#study-file-lost', '#study-review-questions',
+  '#study-fairness', '#study-naturalness', '#study-would-rematch',
+  '#study-package-name', '#study-package-hash',
+];
+
+function createStudyViewHost() {
+  const nodes = new Map();
+  for (const selector of STUDY_VIEW_SELECTORS) {
+    const listeners = new Map();
+    nodes.set(selector, {
+      hidden: false,
+      disabled: false,
+      checked: false,
+      value: selector === '#study-fairness' || selector === '#study-naturalness' ? '3' : '',
+      textContent: '',
+      dataset: {},
+      failRemoveOnce: false,
+      addEventListener(name, callback) { listeners.set(name, callback); },
+      removeEventListener(name, callback) {
+        if (this.failRemoveOnce) {
+          this.failRemoveOnce = false;
+          throw new Error('remove failed once');
+        }
+        if (listeners.get(name) === callback) listeners.delete(name);
+      },
+      listenerCount() { return listeners.size; },
+    });
+  }
+  return {
+    root: {
+      dataset: {},
+      querySelector(selector) { return nodes.get(selector) ?? null; },
+      querySelectorAll() { return []; },
+    },
+    nodes,
+  };
+}
+
+function studyViewActions() {
+  return {
+    enroll() {},
+    start() {},
+    invalidateEnrolled() {},
+    abandon() {},
+    exportPackage() {},
+    confirmExport() {},
+    fileLost() {},
+    exportWorkspace() {},
+  };
+}
+
+function studyViewModel() {
+  return {
+    phase: 'idle',
+    terminalStatus: null,
+    statusText: '等待入组',
+    participantId: null,
+    completedMatchCount: 0,
+    totalMatchCount: 3,
+    receiptCount: 0,
+    packageReceipt: null,
+    environment: {
+      platform: 'web',
+      formFactor: 'phone',
+      orientation: 'portrait',
+      inputMode: 'touch',
+    },
+    buildId: 'arena-study-clean',
+    collectable: true,
+    canEnroll: true,
+    canStart: false,
+    error: null,
+  };
+}
 
 function buildManifest({ sourceDirty = false } = {}) {
   return {
@@ -359,6 +445,51 @@ test('study Product runtime rejects capability accessors, releases invalid candi
   await assert.rejects(pendingStart, /启动已取消/);
   assert.equal(raceDestroyCount, 1);
   assert.equal(race.state, HUMAN_MATCH_STUDY_PRODUCT_RUNTIME_STATE.DESTROYED);
+});
+
+test('study Workbench rejects accessors and retains failed listener cleanup for exact retry', () => {
+  const accessorHost = createStudyViewHost();
+  const accessorView = new HumanMatchStudyWorkbenchView({ root: accessorHost.root });
+  let actionReads = 0;
+  const accessorActions = studyViewActions();
+  Object.defineProperty(accessorActions, 'enroll', {
+    enumerable: true,
+    get() {
+      actionReads += 1;
+      return () => {};
+    },
+  });
+  assert.throws(() => accessorView.bind(accessorActions), /数据字段/);
+  assert.equal(actionReads, 0);
+  const accessorModel = studyViewModel();
+  let modelReads = 0;
+  Object.defineProperty(accessorModel, 'environment', {
+    enumerable: true,
+    get() {
+      modelReads += 1;
+      return {};
+    },
+  });
+  assert.throws(() => accessorView.render(accessorModel), /数据字段/);
+  assert.equal(modelReads, 0);
+  accessorView.destroy();
+
+  const host = createStudyViewHost();
+  const view = new HumanMatchStudyWorkbenchView({ root: host.root });
+  view.bind(studyViewActions());
+  view.render(studyViewModel());
+  assert.equal(host.nodes.get('#study-phase').textContent, 'IDLE');
+  assert.equal(host.nodes.get('#study-enroll').disabled, false);
+  host.nodes.get('#study-enroll').failRemoveOnce = true;
+  assert.throws(() => view.destroy(), /清理未完整完成/);
+  assert.throws(() => view.render(studyViewModel()), /正在销毁/);
+  assert.equal(host.nodes.get('#study-enroll').listenerCount(), 1);
+  view.destroy();
+  assert.equal(
+    [...host.nodes.values()].reduce((count, node) => count + node.listenerCount(), 0),
+    0,
+  );
+  view.destroy();
 });
 
 test('study page includes separate operator and participant surfaces without hidden-arm labels', async () => {
