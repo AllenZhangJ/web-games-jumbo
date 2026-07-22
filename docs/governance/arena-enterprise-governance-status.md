@@ -32,7 +32,7 @@
 | G2 Definition/合同/配置 | 已完成 | strict TS `arena-contracts`、`arena-definitions`、`arena-profile-contracts` 与 `arena-platform-contracts` 已承接确定性、输入/事件、权威快照、同步存储、平台能力、玩家档案/存档协议，以及动作/角色/装备/地图 Definition、只读 Registry 和唯一 Gameplay V2 数值配置；受审计 JavaScript 已降至 500 个 |
 | G3 Rule/Core/Replay | 已完成 | strict TS `arena-core`、`arena-movement`、`arena-physics`、`arena-equipment`、`arena-map` 与 `arena-match` 已承接规则/移动/物理/装备、完整地图权威链、比赛配置、Participant/Timeline 唯一写入者、角色 Runtime/物理投影、状态 hash、完整 MatchCore 编排、fixed-step Runtime 与 Replay；黄金语料保持 `0dace228` |
 | G4 Bot/Product/Persistence | 已完成 | strict TS Bot、Matchmaking、Quick Match、Local Match Session、Product State、Progression、ProductMatchResult、奖励事务、Profile Service/Repository、Storage Lease、Product Match、Product Session Controller、对称内容池、Arena V1 产品内容与通用 Product Composition 已闭环；Arena V1 薄应用注入适配器留待 G6/G7 清零 |
-| G5 Presentation/资产/反馈 | 进行中 | strict `arena-presentation-contracts` 已承接资产/角色表现合同及产品 UI/表现生命周期协议，strict `arena-presentation-runtime` 已承接宿主无关运行时、输入边界、唯一触控布局、原始触控至固定 tick 采样链、Pointer 宿主适配、打击音频池、观测型内存快照与注入式本地性能观察器，strict `arena-v1-presentation-content` 已承接具体地图/动作/装备/角色表现内容与权威快照投影，strict `arena-product-presentation` 已承接 Product InputRouter、UI 意图串行化、内容/屏幕 Definition、只读 Registry、消息目录、Arena V1 静态内容工厂、只读 ViewModel、宿主无关 Canvas 布局/命中/绘制规则、Product Match 表现桥、Product Presentation Flow 与注入式 Session 所有权根，strict `arena-presentation-three` 已承接通用 Three 能力，strict `arena-product-presentation-three` 已承接 Product Canvas/Three Surface；上层验收/性能证据及旧 Stage 6 表现适配仍待迁移或退役分类 |
+| G5 Presentation/资产/反馈 | 进行中 | strict `arena-presentation-contracts` 已承接资产/角色表现合同及产品 UI/表现生命周期协议，strict `arena-presentation-runtime` 已承接宿主无关运行时、输入边界、唯一触控布局、原始触控至固定 tick 采样链、Pointer 宿主适配、打击音频池、观测型内存快照与注入式本地性能观察器，strict `arena-v1-presentation-content` 已承接具体地图/动作/装备/角色表现内容与权威快照投影，strict `arena-product-presentation` 已承接 Product InputRouter、UI 意图串行化、内容/屏幕 Definition、只读 Registry、消息目录、Arena V1 静态内容工厂、只读 ViewModel、宿主无关 Canvas 布局/命中/绘制规则、Product Match 表现桥、Product Presentation Flow 与注入式 Session 所有权根，strict `arena-presentation-three` 已承接通用 Three 能力，strict `arena-product-presentation-three` 已承接 Product Canvas/Three Surface；跨 Gate 标量已进入 strict `arena-evidence-contracts`，Stage 6/8 设备 Definition 已进入 strict `arena-device-acceptance`；上层 Record/Bundle、Stage 9 性能组合及旧 Stage 6 表现适配仍待迁移或退役分类 |
 | G6 Platform/入口/构建 | 未开始 | 三端默认入口是 Product，但生产交付未与开发页面彻底隔离 |
 | G7 零 JS/完整质量门 | 未开始 | ESLint、strict TypeScript、Vitest 和 JavaScript 精确递减门禁已作为迁移护栏运行；coverage 阈值、测试归包和零 JS 尚未完成 |
 | G8 资产/安全/所有权 | 未开始 | CODEOWNERS、CI 安全与正式资产最终批准待补齐 |
@@ -55,7 +55,7 @@
 
 ## 当前不可合并原因
 
-1. 当前 331 个受维护 JavaScript 文件仍在精确允许清单中，上层验收/性能证据、Platform 和 Arena V1 应用注入适配尚未完成 strict TypeScript workspace 迁移；旧 Stage 6 `ArenaInputRouter` 与仅测试使用的 `KeyboardInputAdapter` 待 G7 证明退役或归类，不属于当前 Product 生产链。
+1. 当前 327 个受维护 JavaScript 文件仍在精确允许清单中，上层设备 Record/Bundle、Stage 9 验收/性能组合、Platform 和 Arena V1 应用注入适配尚未完成 strict TypeScript workspace 迁移；旧 Stage 6 `ArenaInputRouter` 与仅测试使用的 `KeyboardInputAdapter` 待 G7 证明退役或归类，不属于当前 Product 生产链。
 2. Vitest 当前保护底层合同包和治理门禁；Arena 其余测试尚待按 workspace 迁移并建立正式 coverage 阈值与零 JS 门禁。
 3. 正式资产最终审批与完整安全/依赖长期治理尚未闭环。
 4. 文档仍含迁移前阶段性叙述，尚未完成 G9 全量链接、状态与命令归真。
@@ -896,3 +896,13 @@
 - 输入 fuzz 完成 120 场、120 个唯一 final hash 与 6 次 Replay 复验，耗时 `38173.805291 ms`，无 reproduction case。Presentation Session soak 完成 100 场，耗时 `519.344584 ms`、堆增长 `2296680 B`；Product Presentation Session soak 完成 100 场、100 个唯一 authority hash，耗时 `63255.992458 ms`、堆增长 `6986280 B`。两者均低于 8 MiB且无帧、生命周期监听、Canvas 监听或输入绑定残留；这些同机脚本数据不推断手机帧率、功耗或温度。
 - clean build ID 为 `arena-b2dc16930e2c-product`。Web/微信/抖音 delivery 为 `3761253 / 3810903 / 3810878 B`，三端 `sourceDirty=false`、默认入口均为 Product、预算通过且 `freezeEligible=true`，生产产物边界检查通过。Web JavaScript 为 `1417643 B`；微信/抖音 JavaScript 均为 `1482807 B`。
 - 本批没有改变 Gameplay V2 配置 hash `8c322912`、任意距离挥空、攻击/命中/击退、动作/武器、移动/跳跃、画质、关节、Bot、权威 tick、Replay/Profile schema 或正式资产，也没有新增浏览器视觉或 iPhone 13 Pro/iOS 26/Chrome、微信、抖音真机证据。下一批迁移上层性能与验收证据的数据合同及报告边界，再继续审计具体 Three 表现适配；G5 未完成，当前不可合并。
+
+## G5.28a 证据标量与设备验收 Definition 分层证据
+
+- 跨 Gate 标量合同已从 `src/arena/evidence` 迁入 strict `@number-strategy-jump/arena-evidence-contracts`；设备平台/执行表面/附件词汇、不可变 Definition 及 Stage 6/8 固定目录迁入 strict `@number-strategy-jump/arena-device-acceptance`。所有 CLI、Release、Experiment、Regression、Study、Asset、Acceptance、Performance 和测试消费者改为通过包公开 API 引用，4 个旧 JavaScript 真值删除，精确允许清单由 331 降至 327。
+- `arena-evidence-contracts` 与 `arena-device-acceptance` 的依赖均被架构门锁定为仅 `arena-contracts`，不得读取 Node、Three.js、Presentation、Performance、Product、Release、平台、墙钟、随机或网络。Stage 9 Device Definition 仍由上层 Performance Policy 目标派生，下一批按“设备基础合同 → 性能合同 → Stage 9 组合”迁移，避免低层设备包反向依赖性能实现。完整决策见更新后的 [ADR-028](../decisions/028-arena-shared-evidence-value-contract.md) 与 [ADR-032](../decisions/032-arena-device-acceptance-package-boundary.md)。
+- Definition 在发布前复制、校验并冻结全部数据；访问器零执行，Symbol、循环引用、非有限数、重复 target/check、悬空 check、空附件集合与非法枚举失败关闭。Stage 6 的 5 个 target/9 个 check、Stage 8 的 6 个 target/14 个 check、系统约束和 content hash 继续由既有 Node 测试与新增 strict 包测试双重保护。
+- 代码提交 `c523d7a00e78a0342e1f2bbe1ef65e12fbb8888d` 的完整门禁通过：671/671 Node、241/241 strict package/治理、104/104 生命周期；黄金 Replay manifest 保持 `0dace228`，正式资产预算结果保持 `82a8b378`，生产依赖审计为 0 vulnerabilities。
+- 输入 fuzz 完成 120 场、120 个唯一 final hash 与 6 次 Replay 复验，耗时 `45960.932541999995 ms`，无 reproduction case。Presentation Session soak 完成 100 场，耗时 `935.5872499999999 ms`、堆增长 `2633832 B`；Product Presentation Session soak 完成 100 场、100 个唯一 authority hash，耗时 `69247.25654199999 ms`、堆增长 `7026784 B`。两者均低于 8 MiB且无帧、生命周期监听、Canvas 监听或输入绑定残留；这些同机脚本数据不推断手机帧率、功耗或温度。
+- clean build ID 为 `arena-c523d7a00e78-product`。Web/微信/抖音 delivery 为 `3761253 / 3810903 / 3810878 B`，JavaScript 为 `1417643 / 1482807 / 1482807 B`，与 G5.27 完全一致；三端 `sourceDirty=false`、默认入口均为 Product、预算通过且 `freezeEligible=true`，生产产物边界检查通过。这证明证据合同未进入生产游戏 bundle。
+- 本批没有改变 Gameplay V2 配置 hash `8c322912`、任意距离挥空、攻击/命中/击退、动作/武器、移动/跳跃、画质、关节、Bot、权威 tick、Replay/Profile schema 或正式资产，也没有新增浏览器视觉或 iPhone 13 Pro/iOS 26/Chrome、微信、抖音真机证据。下一批迁移设备 Record/Bundle/Build Manifest 与性能数据合同，再在无环上层组合 Stage 9；G5 未完成，当前不可合并。
