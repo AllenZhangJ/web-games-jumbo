@@ -7,7 +7,7 @@ import {
   INPUT_PILOT_INPUT_MODE,
   INPUT_PILOT_ORIENTATION,
   INPUT_PILOT_PLATFORM,
-} from './input-pilot-definition.js';
+} from '@number-strategy-jump/arena-input-pilot';
 import {
   INPUT_PILOT_ACTION_OUTCOME,
   INPUT_PILOT_COMPREHENSION,

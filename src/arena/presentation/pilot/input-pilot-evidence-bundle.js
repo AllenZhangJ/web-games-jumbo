@@ -4,7 +4,7 @@ import {
   cloneFrozenData,
 } from '@number-strategy-jump/arena-contracts';
 import { assertEvidenceGitCommit } from '@number-strategy-jump/arena-evidence-contracts';
-import { createInputPilotDefinition } from './input-pilot-definition.js';
+import { createInputPilotDefinition } from '@number-strategy-jump/arena-input-pilot';
 import { validateInputPilotAuditExport } from './input-pilot-export.js';
 
 export const INPUT_PILOT_EVIDENCE_BUNDLE_SCHEMA_VERSION = 1;

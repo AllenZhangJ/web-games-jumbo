@@ -9,7 +9,7 @@ export const ARENA_INPUT_PILOT_V1_ID = 'arena.input-mapper-pilot.v1';
 export const ARENA_INPUT_PILOT_VARIANT_ID = Object.freeze({
   GESTURE_MOBILITY: 'variant-a',
   CONTEXT_PRIMARY: 'variant-b',
-});
+} as const);
 
 export function createArenaInputPilotV1Definition() {
   return createInputPilotDefinition({

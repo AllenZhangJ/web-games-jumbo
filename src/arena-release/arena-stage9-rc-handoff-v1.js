@@ -6,7 +6,7 @@ import {
 import {
   ARENA_INPUT_PILOT_V1_ID,
   createArenaInputPilotV1Definition,
-} from '../arena/presentation/pilot/arena-input-pilot-v1.js';
+} from '@number-strategy-jump/arena-input-pilot';
 import {
   createArenaStage6DeviceAcceptanceV1Definition,
 } from '@number-strategy-jump/arena-device-acceptance';

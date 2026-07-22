@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createArenaInputPilotV1Definition } from '../../../src/arena/presentation/pilot/arena-input-pilot-v1.js';
+import { createArenaInputPilotV1Definition } from '@number-strategy-jump/arena-input-pilot';
 import { InputPilotAssignedMatchService } from '../../../src/arena/presentation/pilot/input-pilot-assigned-match-service.js';
-import { createInputPilotAssignment } from '../../../src/arena/presentation/pilot/input-pilot-assignment.js';
+import { createInputPilotAssignment } from '@number-strategy-jump/arena-input-pilot';
 import { INPUT_PILOT_ACTION_OUTCOME } from '../../../src/arena/presentation/pilot/input-pilot-record.js';
 import {
   INPUT_PILOT_TRIAL_CHECKPOINT_SCHEMA_VERSION,

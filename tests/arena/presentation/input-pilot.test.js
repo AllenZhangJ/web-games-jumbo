@@ -3,17 +3,17 @@ import assert from 'node:assert/strict';
 import {
   ARENA_INPUT_PILOT_VARIANT_ID,
   createArenaInputPilotV1Definition,
-} from '../../../src/arena/presentation/pilot/arena-input-pilot-v1.js';
+} from '@number-strategy-jump/arena-input-pilot';
 import {
   INPUT_PILOT_ASSIGNMENT_SCHEMA_VERSION,
   createInputPilotAssignment,
   validateInputPilotAssignment,
-} from '../../../src/arena/presentation/pilot/input-pilot-assignment.js';
+} from '@number-strategy-jump/arena-input-pilot';
 import {
   INPUT_PILOT_DEFINITION_SCHEMA_VERSION,
   createInputPilotDefinition,
-} from '../../../src/arena/presentation/pilot/input-pilot-definition.js';
-import { InputPilotRegistry } from '../../../src/arena/presentation/pilot/input-pilot-registry.js';
+} from '@number-strategy-jump/arena-input-pilot';
+import { InputPilotRegistry } from '@number-strategy-jump/arena-input-pilot';
 import {
   INPUT_PILOT_ACTION_OUTCOME,
   INPUT_PILOT_COMPREHENSION,

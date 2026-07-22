@@ -1,9 +1,9 @@
-import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import {
   assertIntegerAtLeast,
   assertKnownKeys,
   assertNonEmptyString,
   cloneFrozenData,
+  createDeterministicDataHash,
 } from '@number-strategy-jump/arena-contracts';
 import { ARENA_INPUT_MAPPER_ID } from '@number-strategy-jump/arena-presentation-runtime';
 
@@ -13,23 +13,65 @@ export const INPUT_PILOT_PLATFORM = Object.freeze({
   WEB: 'web',
   WECHAT: 'wechat',
   DOUYIN: 'douyin',
-});
+} as const);
 
 export const INPUT_PILOT_FORM_FACTOR = Object.freeze({
   PHONE: 'phone',
   TABLET: 'tablet',
   DESKTOP: 'desktop',
-});
+} as const);
 
 export const INPUT_PILOT_ORIENTATION = Object.freeze({
   PORTRAIT: 'portrait',
   LANDSCAPE: 'landscape',
-});
+} as const);
 
 export const INPUT_PILOT_INPUT_MODE = Object.freeze({
   TOUCH: 'touch',
   MOUSE: 'mouse',
-});
+} as const);
+
+export type InputPilotPlatform = typeof INPUT_PILOT_PLATFORM[keyof typeof INPUT_PILOT_PLATFORM];
+export type InputPilotFormFactor = typeof INPUT_PILOT_FORM_FACTOR[
+  keyof typeof INPUT_PILOT_FORM_FACTOR
+];
+export type InputPilotOrientation = typeof INPUT_PILOT_ORIENTATION[
+  keyof typeof INPUT_PILOT_ORIENTATION
+];
+export type InputPilotInputMode = typeof INPUT_PILOT_INPUT_MODE[
+  keyof typeof INPUT_PILOT_INPUT_MODE
+];
+
+export interface InputPilotVariant {
+  readonly id: string;
+  readonly mapperId: string;
+}
+
+export interface InputPilotEnvironment {
+  readonly platform: InputPilotPlatform;
+  readonly formFactor: InputPilotFormFactor;
+  readonly orientation: InputPilotOrientation;
+  readonly inputMode: InputPilotInputMode;
+}
+
+export interface InputPilotThresholds {
+  readonly minimumEligibleSamplesPerVariant: number;
+  readonly successWindowMs: number;
+  readonly maximumTrialDurationMs: number;
+  readonly effectiveMovementDistance: number;
+  readonly targetSuccessRate: number;
+  readonly winnerMarginRate: number;
+}
+
+export interface InputPilotDefinitionData {
+  readonly schemaVersion: number;
+  readonly id: string;
+  readonly taskPrompt: string;
+  readonly assignmentSeed: number;
+  readonly variants: readonly InputPilotVariant[];
+  readonly environment: InputPilotEnvironment;
+  readonly thresholds: InputPilotThresholds;
+}
 
 const DEFINITION_KEYS = new Set([
   'schemaVersion',
@@ -51,51 +93,52 @@ const THRESHOLD_KEYS = new Set([
   'winnerMarginRate',
 ]);
 
-function enumValue(value, values, name) {
-  if (!Object.values(values).includes(value)) {
+function enumValue<T extends string>(
+  value: unknown,
+  values: Readonly<Record<string, T>>,
+  name: string,
+): T {
+  const knownValues = new Set<string>(Object.values(values));
+  if (typeof value !== 'string' || !knownValues.has(value)) {
     throw new RangeError(`${name} 不受支持：${String(value)}。`);
   }
-  return value;
+  return value as T;
 }
 
-function rate(value, name) {
-  if (!Number.isFinite(value) || value < 0 || value > 1) {
+function rate(value: unknown, name: string): number {
+  if (!Number.isFinite(value) || (value as number) < 0 || (value as number) > 1) {
     throw new RangeError(`${name} 必须位于 [0, 1]。`);
   }
-  return value;
+  return value as number;
 }
 
-function positiveFinite(value, name) {
-  if (!Number.isFinite(value) || value <= 0) {
+function positiveFinite(value: unknown, name: string): number {
+  if (!Number.isFinite(value) || (value as number) <= 0) {
     throw new RangeError(`${name} 必须是有限正数。`);
   }
-  return value;
+  return value as number;
 }
 
-function uint32(value, name) {
-  if (!Number.isSafeInteger(value) || value < 0 || value > 0xffffffff) {
+function uint32(value: unknown, name: string): number {
+  if (!Number.isSafeInteger(value) || (value as number) < 0 || (value as number) > 0xffffffff) {
     throw new RangeError(`${name} 必须是 uint32。`);
   }
-  return value;
+  return value as number;
 }
 
-function cloneVariants(values) {
+function cloneVariants(values: unknown): readonly InputPilotVariant[] {
   if (!Array.isArray(values) || values.length !== 2) {
     throw new RangeError('InputPilotDefinition.variants 必须恰好包含两个方案。');
   }
-  const ids = new Set();
-  const mapperIds = new Set();
+  const ids = new Set<string>();
+  const mapperIds = new Set<string>();
   const variants = values.map((value, index) => {
     const name = `InputPilotDefinition.variants[${index}]`;
     assertKnownKeys(value, VARIANT_KEYS, name);
     const id = assertNonEmptyString(value.id, `${name}.id`);
     if (ids.has(id)) throw new RangeError(`InputPilotDefinition 包含重复 variant ${id}。`);
     ids.add(id);
-    const mapperId = enumValue(
-      value.mapperId,
-      ARENA_INPUT_MAPPER_ID,
-      `${name}.mapperId`,
-    );
+    const mapperId = enumValue(value.mapperId, ARENA_INPUT_MAPPER_ID, `${name}.mapperId`);
     if (mapperIds.has(mapperId)) {
       throw new RangeError(`InputPilotDefinition 重复使用 mapper ${mapperId}。`);
     }
@@ -105,7 +148,7 @@ function cloneVariants(values) {
   return Object.freeze(variants);
 }
 
-function cloneEnvironment(value) {
+function cloneEnvironment(value: unknown): InputPilotEnvironment {
   assertKnownKeys(value, ENVIRONMENT_KEYS, 'InputPilotDefinition.environment');
   return Object.freeze({
     platform: enumValue(
@@ -131,7 +174,7 @@ function cloneEnvironment(value) {
   });
 }
 
-function cloneThresholds(value) {
+function cloneThresholds(value: unknown): InputPilotThresholds {
   assertKnownKeys(value, THRESHOLD_KEYS, 'InputPilotDefinition.thresholds');
   const thresholds = {
     minimumEligibleSamplesPerVariant: assertIntegerAtLeast(
@@ -173,46 +216,31 @@ function cloneThresholds(value) {
   return Object.freeze(thresholds);
 }
 
-export class InputPilotDefinition {
-  constructor(value) {
+export class InputPilotDefinition implements InputPilotDefinitionData {
+  readonly schemaVersion = INPUT_PILOT_DEFINITION_SCHEMA_VERSION;
+  readonly id: string;
+  readonly taskPrompt: string;
+  readonly assignmentSeed: number;
+  readonly variants: readonly InputPilotVariant[];
+  readonly environment: InputPilotEnvironment;
+  readonly thresholds: InputPilotThresholds;
+
+  constructor(value: unknown) {
     const source = cloneFrozenData(value, 'InputPilotDefinition');
     assertKnownKeys(source, DEFINITION_KEYS, 'InputPilotDefinition');
     if (source.schemaVersion !== INPUT_PILOT_DEFINITION_SCHEMA_VERSION) {
-      throw new RangeError(
-        `不支持 InputPilotDefinition schema ${String(source.schemaVersion)}。`,
-      );
+      throw new RangeError(`不支持 InputPilotDefinition schema ${String(source.schemaVersion)}。`);
     }
-    Object.defineProperties(this, {
-      schemaVersion: {
-        value: INPUT_PILOT_DEFINITION_SCHEMA_VERSION,
-        enumerable: true,
-      },
-      id: {
-        value: assertNonEmptyString(source.id, 'InputPilotDefinition.id'),
-        enumerable: true,
-      },
-      taskPrompt: {
-        value: assertNonEmptyString(source.taskPrompt, 'InputPilotDefinition.taskPrompt'),
-        enumerable: true,
-      },
-      assignmentSeed: {
-        value: uint32(source.assignmentSeed, 'InputPilotDefinition.assignmentSeed'),
-        enumerable: true,
-      },
-      variants: { value: cloneVariants(source.variants), enumerable: true },
-      environment: {
-        value: cloneEnvironment(source.environment),
-        enumerable: true,
-      },
-      thresholds: {
-        value: cloneThresholds(source.thresholds),
-        enumerable: true,
-      },
-    });
+    this.id = assertNonEmptyString(source.id, 'InputPilotDefinition.id');
+    this.taskPrompt = assertNonEmptyString(source.taskPrompt, 'InputPilotDefinition.taskPrompt');
+    this.assignmentSeed = uint32(source.assignmentSeed, 'InputPilotDefinition.assignmentSeed');
+    this.variants = cloneVariants(source.variants);
+    this.environment = cloneEnvironment(source.environment);
+    this.thresholds = cloneThresholds(source.thresholds);
     Object.freeze(this);
   }
 
-  toJSON() {
+  toJSON(): InputPilotDefinitionData {
     return {
       schemaVersion: this.schemaVersion,
       id: this.id,
@@ -224,11 +252,11 @@ export class InputPilotDefinition {
     };
   }
 
-  getContentHash() {
+  getContentHash(): string {
     return createDeterministicDataHash(this.toJSON(), `InputPilotDefinition ${this.id}`);
   }
 }
 
-export function createInputPilotDefinition(value) {
+export function createInputPilotDefinition(value: unknown): InputPilotDefinition {
   return value instanceof InputPilotDefinition ? value : new InputPilotDefinition(value);
 }

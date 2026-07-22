@@ -7,8 +7,8 @@ import {
 import {
   createInputPilotAssignment,
   validateInputPilotAssignment,
-} from './input-pilot-assignment.js';
-import { createInputPilotDefinition } from './input-pilot-definition.js';
+} from '@number-strategy-jump/arena-input-pilot';
+import { createInputPilotDefinition } from '@number-strategy-jump/arena-input-pilot';
 
 export const INPUT_PILOT_ENROLLMENT_LEDGER_SCHEMA_VERSION = 1;
 

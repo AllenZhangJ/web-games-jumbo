@@ -6,7 +6,7 @@ import {
 } from '../../src/arena-release/device-release-evidence.js';
 import {
   createArenaInputPilotV1Definition,
-} from '../../src/arena/presentation/pilot/arena-input-pilot-v1.js';
+} from '@number-strategy-jump/arena-input-pilot';
 import {
   createInputPilotEvidenceBundle,
 } from '../../src/arena/presentation/pilot/input-pilot-evidence-bundle.js';

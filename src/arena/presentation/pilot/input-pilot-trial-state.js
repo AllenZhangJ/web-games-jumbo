@@ -1,6 +1,6 @@
 import { assertNonEmptyString } from '@number-strategy-jump/arena-contracts';
-import { validateInputPilotAssignment } from './input-pilot-assignment.js';
-import { createInputPilotDefinition } from './input-pilot-definition.js';
+import { validateInputPilotAssignment } from '@number-strategy-jump/arena-input-pilot';
+import { createInputPilotDefinition } from '@number-strategy-jump/arena-input-pilot';
 import {
   INPUT_PILOT_TERMINATION_REASON,
   INPUT_PILOT_RECORD_SCHEMA_VERSION,

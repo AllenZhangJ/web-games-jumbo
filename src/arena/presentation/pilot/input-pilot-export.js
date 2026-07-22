@@ -4,7 +4,7 @@ import {
   assertKnownKeys,
   cloneFrozenData,
 } from '@number-strategy-jump/arena-contracts';
-import { createInputPilotDefinition } from './input-pilot-definition.js';
+import { createInputPilotDefinition } from '@number-strategy-jump/arena-input-pilot';
 import { createInputPilotReport } from './input-pilot-report.js';
 import { createInputPilotWorkspace } from './input-pilot-workspace.js';
 

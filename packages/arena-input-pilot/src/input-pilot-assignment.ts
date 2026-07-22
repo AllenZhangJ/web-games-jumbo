@@ -1,16 +1,34 @@
-import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
-import { createRng, deriveSeed } from '@number-strategy-jump/arena-contracts';
 import {
   assertIntegerAtLeast,
   assertKnownKeys,
   assertNonEmptyString,
   cloneFrozenData,
+  createDeterministicDataHash,
+  createRng,
+  deriveSeed,
 } from '@number-strategy-jump/arena-contracts';
-import { createInputPilotDefinition } from './input-pilot-definition.js';
+import {
+  createInputPilotDefinition,
+  type InputPilotDefinition,
+} from './input-pilot-definition.js';
 
 export const INPUT_PILOT_ASSIGNMENT_SCHEMA_VERSION = 2;
 
-const ASSIGNMENT_KEYS = new Set([
+export interface InputPilotAssignment {
+  readonly schemaVersion: number;
+  readonly definitionId: string;
+  readonly definitionHash: string;
+  readonly assignmentId: string;
+  readonly assignmentSeed: number;
+  readonly matchSeed: number;
+  readonly participantId: string;
+  readonly enrollmentIndex: number;
+  readonly variantId: string;
+  readonly mapperId: string;
+}
+
+const ASSIGNMENT_OPTION_KEYS = new Set(['definition', 'participantId', 'enrollmentIndex']);
+const ASSIGNMENT_KEYS = new Set<keyof InputPilotAssignment>([
   'schemaVersion',
   'definitionId',
   'definitionHash',
@@ -23,7 +41,11 @@ const ASSIGNMENT_KEYS = new Set([
   'mapperId',
 ]);
 
-function shuffledVariants(definition, assignmentSeed, blockIndex) {
+function shuffledVariants(
+  definition: InputPilotDefinition,
+  assignmentSeed: number,
+  blockIndex: number,
+) {
   const variants = [...definition.variants];
   const rng = createRng(deriveSeed(
     assignmentSeed,
@@ -32,35 +54,33 @@ function shuffledVariants(definition, assignmentSeed, blockIndex) {
   for (let index = variants.length - 1; index > 0; index -= 1) {
     const swapIndex = rng.int(0, index);
     const temporary = variants[index];
-    variants[index] = variants[swapIndex];
+    const swapValue = variants[swapIndex];
+    if (!temporary || !swapValue) throw new Error('Input Pilot variant block 不完整。');
+    variants[index] = swapValue;
     variants[swapIndex] = temporary;
   }
   return variants;
 }
 
-export function createInputPilotAssignment({
-  definition: definitionValue,
-  participantId: participantIdValue,
-  enrollmentIndex: enrollmentIndexValue,
-}) {
-  const definition = createInputPilotDefinition(definitionValue);
+export function createInputPilotAssignment(optionsValue: unknown): InputPilotAssignment {
+  const options = optionsValue;
+  assertKnownKeys(options, ASSIGNMENT_OPTION_KEYS, 'InputPilotAssignment options');
+  const definition = createInputPilotDefinition(options.definition);
   const assignmentSeed = definition.assignmentSeed;
   const participantId = assertNonEmptyString(
-    participantIdValue,
+    options.participantId,
     'InputPilotAssignment.participantId',
   );
   const enrollmentIndex = assertIntegerAtLeast(
-    enrollmentIndexValue,
+    options.enrollmentIndex,
     0,
     'InputPilotAssignment.enrollmentIndex',
   );
   const blockIndex = Math.floor(enrollmentIndex / definition.variants.length);
   const positionInBlock = enrollmentIndex % definition.variants.length;
   const variant = shuffledVariants(definition, assignmentSeed, blockIndex)[positionInBlock];
-  const matchSeed = deriveSeed(
-    assignmentSeed,
-    `${definition.id}:match-seed-block:${blockIndex}`,
-  );
+  if (!variant) throw new Error('Input Pilot assignment 未选中 variant。');
+  const matchSeed = deriveSeed(assignmentSeed, `${definition.id}:match-seed-block:${blockIndex}`);
   const definitionHash = definition.getContentHash();
   const assignmentHash = createDeterministicDataHash({
     definitionHash,
@@ -83,14 +103,15 @@ export function createInputPilotAssignment({
   });
 }
 
-export function validateInputPilotAssignment(definitionValue, value) {
+export function validateInputPilotAssignment(
+  definitionValue: unknown,
+  value: unknown,
+): InputPilotAssignment {
   const definition = createInputPilotDefinition(definitionValue);
   const source = cloneFrozenData(value, 'InputPilotAssignment');
   assertKnownKeys(source, ASSIGNMENT_KEYS, 'InputPilotAssignment');
   if (source.schemaVersion !== INPUT_PILOT_ASSIGNMENT_SCHEMA_VERSION) {
-    throw new RangeError(
-      `不支持 InputPilotAssignment schema ${String(source.schemaVersion)}。`,
-    );
+    throw new RangeError(`不支持 InputPilotAssignment schema ${String(source.schemaVersion)}。`);
   }
   const expected = createInputPilotAssignment({
     definition,

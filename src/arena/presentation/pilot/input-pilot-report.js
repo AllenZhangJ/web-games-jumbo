@@ -1,6 +1,6 @@
 import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
-import { createInputPilotDefinition } from './input-pilot-definition.js';
+import { createInputPilotDefinition } from '@number-strategy-jump/arena-input-pilot';
 import {
   INPUT_PILOT_ACTION_OUTCOME,
   INPUT_PILOT_COMPREHENSION,

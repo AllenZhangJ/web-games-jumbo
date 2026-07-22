@@ -4,7 +4,7 @@ import {
 } from '../src/arena-release/release-evidence-statement.js';
 import {
   createArenaInputPilotV1Definition,
-} from '../src/arena/presentation/pilot/arena-input-pilot-v1.js';
+} from '@number-strategy-jump/arena-input-pilot';
 import {
   createArenaStage6DeviceAcceptanceV1Definition,
 } from '@number-strategy-jump/arena-device-acceptance';

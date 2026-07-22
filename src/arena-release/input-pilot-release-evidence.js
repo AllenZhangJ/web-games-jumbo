@@ -2,7 +2,7 @@ import { createDeterministicDataHash } from '@number-strategy-jump/arena-contrac
 import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 import {
   createArenaInputPilotV1Definition,
-} from '../arena/presentation/pilot/arena-input-pilot-v1.js';
+} from '@number-strategy-jump/arena-input-pilot';
 import {
   INPUT_PILOT_ASSESSMENT_STATUS,
 } from '../arena/presentation/pilot/input-pilot-report.js';

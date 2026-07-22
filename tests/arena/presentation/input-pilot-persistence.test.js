@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
-import { createArenaInputPilotV1Definition } from '../../../src/arena/presentation/pilot/arena-input-pilot-v1.js';
+import { createArenaInputPilotV1Definition } from '@number-strategy-jump/arena-input-pilot';
 import {
   INPUT_PILOT_ASSIGNMENT_SCHEMA_VERSION,
   createInputPilotAssignment,
-} from '../../../src/arena/presentation/pilot/input-pilot-assignment.js';
+} from '@number-strategy-jump/arena-input-pilot';
 import {
   INPUT_PILOT_ENROLLMENT_LEDGER_SCHEMA_VERSION,
   createInputPilotEnrollmentSnapshot,

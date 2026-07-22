@@ -3,7 +3,7 @@ import {
   combineCleanupFailure,
   normalizeThrownError,
 } from '@number-strategy-jump/arena-contracts';
-import { createInputPilotDefinition } from './input-pilot-definition.js';
+import { createInputPilotDefinition } from '@number-strategy-jump/arena-input-pilot';
 import {
   createInputPilotAggregateExport,
   createInputPilotAuditExport,

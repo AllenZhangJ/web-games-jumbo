@@ -1,8 +1,8 @@
 import { ARENA_MATCH_PHASE, ARENA_TICK_RATE } from '@number-strategy-jump/arena-match';
 import { normalizeInputFrame } from '@number-strategy-jump/arena-contracts';
-import { validateInputPilotAssignment } from './input-pilot-assignment.js';
+import { validateInputPilotAssignment } from '@number-strategy-jump/arena-input-pilot';
 import { InputPilotActionMetrics } from './input-pilot-action-metrics.js';
-import { createInputPilotDefinition } from './input-pilot-definition.js';
+import { createInputPilotDefinition } from '@number-strategy-jump/arena-input-pilot';
 
 function requiredParticipant(snapshot, participantId, name) {
   if (!snapshot || typeof snapshot !== 'object' || !Array.isArray(snapshot.participants)) {

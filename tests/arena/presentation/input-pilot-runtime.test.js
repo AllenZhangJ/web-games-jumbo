@@ -5,14 +5,14 @@ import { STAGE6_MOVEMENT_ACTION_ID } from '@number-strategy-jump/arena-v1-conten
 import { ARENA_MATCH_EVENT } from '@number-strategy-jump/arena-contracts';
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
 import { QuickMatchService } from '@number-strategy-jump/arena-v1-composition';
-import { createArenaInputPilotV1Definition } from '../../../src/arena/presentation/pilot/arena-input-pilot-v1.js';
-import { createInputPilotAssignment } from '../../../src/arena/presentation/pilot/input-pilot-assignment.js';
+import { createArenaInputPilotV1Definition } from '@number-strategy-jump/arena-input-pilot';
+import { createInputPilotAssignment } from '@number-strategy-jump/arena-input-pilot';
 import {
   INPUT_PILOT_ENROLLMENT_LEDGER_SCHEMA_VERSION,
   InputPilotEnrollmentLedger,
 } from '../../../src/arena/presentation/pilot/input-pilot-enrollment-ledger.js';
 import { InputPilotMetricCollector } from '../../../src/arena/presentation/pilot/input-pilot-metric-collector.js';
-import { createInputPilotDefinition } from '../../../src/arena/presentation/pilot/input-pilot-definition.js';
+import { createInputPilotDefinition } from '@number-strategy-jump/arena-input-pilot';
 import { InputPilotObservedMatchService } from '../../../src/arena/presentation/pilot/input-pilot-observed-match-service.js';
 import { InputPilotObservedSession } from '../../../src/arena/presentation/pilot/input-pilot-observed-session.js';
 import { INPUT_PILOT_ACTION_OUTCOME } from '../../../src/arena/presentation/pilot/input-pilot-record.js';

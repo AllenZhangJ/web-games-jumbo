@@ -1,4 +1,4 @@
-import { createArenaInputPilotV1Definition } from '../arena/presentation/pilot/arena-input-pilot-v1.js';
+import { createArenaInputPilotV1Definition } from '@number-strategy-jump/arena-input-pilot';
 import {
   INPUT_PILOT_EVIDENCE_BUNDLE_SCHEMA_VERSION,
   createInputPilotEvidenceBundle,

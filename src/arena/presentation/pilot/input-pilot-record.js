@@ -3,8 +3,8 @@ import {
   assertNonEmptyString,
   cloneFrozenData,
 } from '@number-strategy-jump/arena-contracts';
-import { createInputPilotDefinition } from './input-pilot-definition.js';
-import { validateInputPilotAssignment } from './input-pilot-assignment.js';
+import { createInputPilotDefinition } from '@number-strategy-jump/arena-input-pilot';
+import { validateInputPilotAssignment } from '@number-strategy-jump/arena-input-pilot';
 import {
   createInputPilotAutomatedMetrics,
   createInputPilotDevice,
