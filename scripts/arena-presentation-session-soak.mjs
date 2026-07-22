@@ -2,7 +2,7 @@ import { performance } from 'node:perf_hooks';
 import {
   ARENA_PRESENTATION_SESSION_STATE,
   ArenaPresentationSession,
-} from '../src/arena/presentation/session/arena-presentation-session.js';
+} from '@number-strategy-jump/arena-v1-greybox-session';
 
 function readPositiveInteger(name, fallback) {
   const prefix = `--${name}=`;

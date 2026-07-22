@@ -125,7 +125,7 @@ test('mini-game greybox rollback entries remain independently executable', async
     });
     const inputs = Object.keys(result.metafile.inputs);
     assert.ok(inputs.some((input) => input.endsWith(
-      'src/arena/presentation/session/arena-presentation-session.js',
+      'packages/arena-v1-greybox-session/dist/greybox-presentation-session.js',
     )));
     assert.ok(!inputs.some((input) => input.endsWith(
       'packages/arena-product-presentation-three/dist/product-canvas-ui-surface.js',
@@ -723,6 +723,7 @@ test('Arena V1 greybox session is an isolated rollback application boundary', as
     [
       '@number-strategy-jump/arena-contracts',
       '@number-strategy-jump/arena-definitions',
+      '@number-strategy-jump/arena-match',
       '@number-strategy-jump/arena-matchmaking',
       '@number-strategy-jump/arena-presentation-runtime',
       '@number-strategy-jump/arena-presentation-three',
@@ -732,7 +733,7 @@ test('Arena V1 greybox session is an isolated rollback application boundary', as
     'arena-v1-greybox-session 只能组合灰盒回退所需的已治理边界。',
   );
   const files = await listJavaScript(path.resolve('packages/arena-v1-greybox-session/src'));
-  assert.equal(files.length, 2);
+  assert.equal(files.length, 3);
   for (const file of files) {
     const source = await readFile(file, 'utf8');
     assert.doesNotMatch(

@@ -1,5 +1,5 @@
 import { createDouyinPlatform } from '@number-strategy-jump/arena-platform-runtime/douyin';
-import { createArenaGame } from './create-arena-game.js';
+import { createArenaGame } from '@number-strategy-jump/arena-v1-greybox-session';
 import {
   launchGame,
   showMiniGameStartupError,

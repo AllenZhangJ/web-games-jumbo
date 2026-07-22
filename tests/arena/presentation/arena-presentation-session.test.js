@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   ARENA_PRESENTATION_SESSION_STATE,
   ArenaPresentationSession,
-} from '../../../src/arena/presentation/session/arena-presentation-session.js';
+} from '@number-strategy-jump/arena-v1-greybox-session';
 
 function platformHarness({ failBinding = null, failCanvasCleanupOnce = false } = {}) {
   let nextFrameToken = 1;
@@ -389,4 +389,88 @@ test('ArenaPresentationSession retries a lifecycle cleanup that failed once', as
   assert.equal(session.getDebugSnapshot().cleanupIncomplete, false);
   assert.equal(session.getDebugSnapshot().bindingCount, 0);
   assert.equal(harness.activeLifecycleCount(), 0);
+});
+
+test('ArenaPresentationSession rejects renderer method accessors without execution and disposes ownership', async () => {
+  const harness = platformHarness();
+  const renderer = rendererHarness();
+  let reads = 0;
+  Object.defineProperty(renderer, 'render', {
+    configurable: true,
+    get() {
+      reads += 1;
+      return () => true;
+    },
+  });
+  const session = new ArenaPresentationSession(harness.platform, sessionOptions(renderer));
+
+  await assert.rejects(session.start(), /render 必须是数据方法/);
+  assert.equal(reads, 0);
+  assert.equal(renderer.disposed, true);
+  assert.equal(session.state, ARENA_PRESENTATION_SESSION_STATE.FAILED);
+  assert.equal(harness.frames.size, 0);
+  assert.equal(harness.activeLifecycleCount(), 0);
+  assert.equal(harness.activeCanvasCount(), 0);
+  session.destroy();
+});
+
+test('ArenaPresentationSession rolls back a Canvas listener that throws after registration', async () => {
+  const harness = platformHarness();
+  const renderer = rendererHarness();
+  const addEventListener = harness.canvas.addEventListener;
+  harness.canvas.addEventListener = function addThenThrow(type, callback) {
+    addEventListener.call(this, type, callback);
+    throw new Error('canvas add failed after mutation');
+  };
+  const session = new ArenaPresentationSession(harness.platform, sessionOptions(renderer));
+
+  await assert.rejects(session.start(), /canvas add failed after mutation/);
+  assert.equal(session.state, ARENA_PRESENTATION_SESSION_STATE.FAILED);
+  assert.equal(renderer.disposed, true);
+  assert.equal(harness.frames.size, 0);
+  assert.equal(harness.activeLifecycleCount(), 0);
+  assert.equal(harness.activeCanvasCount(), 0);
+  assert.equal(harness.input, null);
+  session.destroy();
+});
+
+test('ArenaPresentationSession rejects an async non-load lifecycle before publishing success', async () => {
+  const harness = platformHarness();
+  const renderer = rendererHarness();
+  let destroyCount = 0;
+  const session = new ArenaPresentationSession(harness.platform, sessionOptions(renderer, {
+    inputAdapterFactory: () => ({
+      async start() {},
+      destroy() { destroyCount += 1; },
+    }),
+  }));
+
+  await assert.rejects(session.start(), /inputAdapter\.start 必须同步完成/);
+  assert.equal(session.state, ARENA_PRESENTATION_SESSION_STATE.FAILED);
+  assert.equal(destroyCount, 1);
+  assert.equal(renderer.disposed, true);
+  assert.equal(harness.frames.size, 0);
+  assert.equal(harness.activeLifecycleCount(), 0);
+  assert.equal(harness.activeCanvasCount(), 0);
+  session.destroy();
+});
+
+test('ArenaPresentationSession fails closed when context restoration becomes asynchronous', async () => {
+  const harness = platformHarness();
+  const renderer = rendererHarness();
+  renderer.handleContextRestored = async () => true;
+  const session = new ArenaPresentationSession(harness.platform, sessionOptions(renderer));
+  await session.start();
+
+  harness.emitCanvas('webglcontextlost');
+  assert.equal(session.state, ARENA_PRESENTATION_SESSION_STATE.PAUSED);
+  harness.emitCanvas('webglcontextrestored');
+
+  assert.equal(session.state, ARENA_PRESENTATION_SESSION_STATE.FAILED);
+  assert.equal(renderer.disposed, true);
+  assert.equal(harness.frames.size, 0);
+  assert.equal(harness.activeLifecycleCount(), 0);
+  assert.equal(harness.activeCanvasCount(), 0);
+  assert.equal(harness.input, null);
+  session.destroy();
 });

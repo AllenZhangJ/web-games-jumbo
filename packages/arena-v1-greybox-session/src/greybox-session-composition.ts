@@ -17,6 +17,19 @@ import { ARENA_V1_GREYBOX_CONTENT } from '@number-strategy-jump/arena-v1-present
 
 type UnknownFunction = (...args: unknown[]) => unknown;
 
+export interface ArenaGreyboxPlatformPort extends Readonly<Record<string, unknown>> {
+  readonly id?: string;
+  readonly createCanvas: UnknownFunction;
+  readonly getViewport: UnknownFunction;
+  readonly requestFrame: UnknownFunction;
+  readonly cancelFrame: UnknownFunction;
+  readonly now: UnknownFunction;
+  readonly bindInput: UnknownFunction;
+  readonly onResize: UnknownFunction;
+  readonly onShow: UnknownFunction;
+  readonly onHide: UnknownFunction;
+}
+
 const OPTION_KEYS = new Set([
   'mapperId',
   'matchService',
@@ -74,7 +87,7 @@ export const DEFAULT_ARENA_PRESENTATION_MATCH_CONFIG = Object.freeze({
 });
 
 export interface ArenaGreyboxSessionComposition {
-  readonly platform: Readonly<Record<string, unknown>>;
+  readonly platform: ArenaGreyboxPlatformPort;
   readonly mapperId: string;
   readonly matchService: Readonly<{ create: UnknownFunction }>;
   readonly matchingDurationSeconds: number;
@@ -162,7 +175,7 @@ function optionalDataField(value: object, key: string, name: string): unknown {
   return descriptor.value;
 }
 
-function snapshotPlatform(value: unknown): Readonly<Record<string, unknown>> {
+function snapshotPlatform(value: unknown): ArenaGreyboxPlatformPort {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new TypeError('Arena Session platform 无效。');
   }
@@ -178,7 +191,7 @@ function snapshotPlatform(value: unknown): Readonly<Record<string, unknown>> {
   if (id !== undefined && (typeof id !== 'string' || id.trim().length === 0)) {
     throw new TypeError('Arena Session platform.id 必须是非空字符串。');
   }
-  return Object.freeze({ id, ...methods });
+  return Object.freeze({ id, ...methods }) as ArenaGreyboxPlatformPort;
 }
 
 function requiredFunction(value: unknown, name: string): UnknownFunction {
@@ -209,7 +222,7 @@ function viewportDimension(value: unknown, key: 'width' | 'height'): number {
   return Math.floor(descriptor.value as number) >>> 0;
 }
 
-function defaultInitialSeed(platform: Readonly<Record<string, unknown>>): number {
+function defaultInitialSeed(platform: ArenaGreyboxPlatformPort): number {
   const nowMethod = platform.now as UnknownFunction;
   const viewportMethod = platform.getViewport as UnknownFunction;
   let now: unknown = 0;

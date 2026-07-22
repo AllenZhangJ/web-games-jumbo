@@ -1,5 +1,5 @@
 import '../styles.css';
-import { createArenaGame } from './create-arena-game.js';
+import { createArenaGame } from '@number-strategy-jump/arena-v1-greybox-session';
 import {
   bindWebGameTeardown,
   clearWebStartupError,

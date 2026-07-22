@@ -3,7 +3,7 @@ import {
   normalizeThrownError,
 } from '@number-strategy-jump/arena-contracts';
 import { QuickMatchService } from '@number-strategy-jump/arena-v1-composition';
-import { ArenaPresentationSession } from './arena-presentation-session.js';
+import { ArenaPresentationSession } from '@number-strategy-jump/arena-v1-greybox-session';
 import { InputPilotAssignedMatchService } from '../pilot/input-pilot-assigned-match-service.js';
 import { createInputPilotDefinition } from '../pilot/input-pilot-definition.js';
 import { InputPilotMetricCollector } from '../pilot/input-pilot-metric-collector.js';
