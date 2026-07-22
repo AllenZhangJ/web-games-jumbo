@@ -33,7 +33,7 @@
 | G3 Rule/Core/Replay | 已完成 | strict TS `arena-core`、`arena-movement`、`arena-physics`、`arena-equipment`、`arena-map` 与 `arena-match` 已承接规则/移动/物理/装备、完整地图权威链、比赛配置、Participant/Timeline 唯一写入者、角色 Runtime/物理投影、状态 hash、完整 MatchCore 编排、fixed-step Runtime 与 Replay；strict `arena-v1-content` 集中发布具体动作、装备、角色、地图、移动动作与平衡 Definition；黄金语料保持 `0dace228` |
 | G4 Bot/Product/Persistence | 已完成 | strict TS Bot、Matchmaking、Quick Match、Local Match Session、Product State、Progression、ProductMatchResult、奖励事务、Profile Service/Repository、Storage Lease、Product Match、Product Session Controller、对称内容池、Arena V1 产品内容与通用 Product Composition 已闭环；Arena V1 应用组合根已在 G6.36 归入独立 strict 包 |
 | G5 Presentation/资产/反馈 | 已完成 | strict `arena-presentation-contracts`、`arena-presentation-runtime`、`arena-v1-presentation-content`、`arena-product-presentation`、`arena-presentation-three` 与 `arena-product-presentation-three` 已承接通用合同、输入/反馈/生命周期、具体 V1 表现、Product 表现所有权和 Three Surface；设备/性能证据合同已归入独立 strict 包；共享对局资源取得/回滚原语完成 strict 迁移。生产 Product Session 组合已在 G6.37 归包；旧 Greybox ArenaPresentationSession 是 G6 应用根，Pilot 是 G7 测试/研究链，不再伪装为 G5 通用表现缺口 |
-| G6 Platform/入口/构建 | 进行中 | 三端默认入口是 Product；运行实例 ID、启动协调、失败兜底、Web teardown、三端平台适配、Arena V1 应用组合根、生产 Session、顶层 Launch、Web Product UI 与三端实际 Product Entry 均已 strict 化。旧 Greybox ArenaPresentationSession、Greybox Entry 与研究入口待迁移，并继续证明生产交付和开发/研究入口彻底隔离 |
+| G6 Platform/入口/构建 | 进行中 | 三端默认入口是 Product；运行实例 ID、启动协调、失败兜底、Web teardown、三端平台适配、Arena V1 应用组合根、生产 Session、顶层 Launch、Web Product UI、三端实际 Product Entry 与 Greybox Session 组合均已 strict 化。旧 Greybox ArenaPresentationSession 类、Greybox Entry 与研究入口待迁移，并继续证明生产交付和开发/研究入口彻底隔离 |
 | G7 零 JS/完整质量门 | 未开始 | ESLint、strict TypeScript、Vitest 和 JavaScript 精确递减门禁已作为迁移护栏运行；coverage 阈值、测试归包和零 JS 尚未完成 |
 | G8 资产/安全/所有权 | 未开始 | CODEOWNERS、CI 安全与正式资产最终批准待补齐 |
 | G9 文档归真 | 未开始 | README 首标题和大量章节仍以数值跳台 v3 为产品真值 |
@@ -55,7 +55,7 @@
 
 ## 当前不可合并原因
 
-1. 当前 271 个受维护 JavaScript 文件仍在精确允许清单中；G6 尚需迁移 Greybox Entry、旧 Greybox ArenaPresentationSession 与研究入口，G7 尚需迁移 Pilot/Study/Release/其他测试与验收链并建立零 JS 门禁。
+1. 当前 270 个受维护 JavaScript 文件仍在精确允许清单中；G6 尚需迁移 Greybox Entry、旧 Greybox ArenaPresentationSession 类与研究入口，G7 尚需迁移 Pilot/Study/Release/其他测试与验收链并建立零 JS 门禁。
 2. Vitest 当前保护底层合同包和治理门禁；Arena 其余测试尚待按 workspace 迁移并建立正式 coverage 阈值与零 JS 门禁。
 3. 正式资产最终审批与完整安全/依赖长期治理尚未闭环。
 4. 文档仍含迁移前阶段性叙述，尚未完成 G9 全量链接、状态与命令归真。
@@ -1104,3 +1104,15 @@
 - 本批没有新增或升级依赖，`package-lock.json` 未改变；tsx 是既有开发依赖，只用于迁移期 Node 测试加载 strict 源码。代码提交为 `0e2ad413cd9663c907e3f16ab826f9b027efb5e9`，clean build ID 为 `arena-0e2ad413cd96-product`。Web/微信/抖音 delivery 为 `3807531 / 3835130 / 3835105 B`，JavaScript 为 `1463921 / 1507034 / 1507034 B`；三端 `sourceDirty=false`、默认入口均为 Product、预算通过且 `freezeEligible=true`。小游戏字节与 G6.38 完全一致；Web 增加 `2016 B` 来自 UI 数据边界和类型迁移后的 bundle 形态，不通过降低画质、动作或关节规避。
 - G6.38 已对同一 Product Launch、Web 页面结构和业务主流程完成 Chrome DevTools 冒烟。本批尝试启动新的隔离 Chrome 复验时，本机既有 Chrome 单例未开放调试端口；未关闭用户浏览器，也未把失败的 harness 启动写成应用通过。当前新增 UI 行为由 DOM 交互、三端 bundle、完整 Session/入口测试覆盖；仍需 Allen 在 iPhone 13 Pro、iOS 26、Chrome 进行人工验收，且没有新增微信/抖音真机证据。
 - 本批没有改变 Gameplay V2 配置 hash `8c322912`、任意距离挥空、攻击/命中/击退、动作/武器、移动/跳跃、画质、关节、Bot、权威 tick、Replay/Profile schema 或正式资产字节。实际 Product Entry strict 债已关闭；G6 下一步治理旧 Greybox ArenaPresentationSession、Greybox Entry 与研究入口，G7-G10 尚未完成，当前不可合并。
+
+## G6.40 Greybox Session 组合 strict 迁移与回退边界隔离证据
+
+- 新建 strict `@number-strategy-jump/arena-v1-greybox-session`，先承接 Greybox/Input Pilot 共用 Session 的 options、平台能力、seed、Quick Match、输入/帧/事件工厂、灰盒 Renderer 与 V1 表现内容组合；旧 `arena-session-composition.js` 删除，现存 `ArenaPresentationSession` 改从包公开 API 取得组合，精确允许清单由 271 降至 270。该包明确是开发回退应用边界，不属于生产 Product Session，也不得进入默认生产交付。
+- 新包当前 2 个源文件和 7 条内部依赖由架构门精确锁定；允许 Greybox 应用根使用已治理的 Contracts、Definitions、Matchmaking、Presentation Runtime/Three、V1 Composition 与 Presentation Content，禁止 Entry、Experiment、Study、Regression、Release、Node、DOM/BOM、Storage 全局、宿主定时器、直接 `tt.*`/`wx.*` 和未注入随机源。
+- options 只接受普通对象、自有数据字段和精确白名单；访问器、Symbol 与未知字段零执行拒绝。平台必需/可选能力、平台 ID、外部 MatchService `create()` 与 SeedSource `nextSeed()` 均沿有限原型链取得数据描述符并绑定快照，调用方随后替换方法不会改变已发布组合。默认 seed 容忍 `now/getViewport` 宿主故障，并且不执行 viewport 访问器；match config 在发布前深克隆冻结。
+- 新增 3 项 strict 恶意边界测试，覆盖 options/平台 getter 零执行、平台与 MatchService 方法替换隔离、viewport getter 零执行；新增 1 项 Node 架构门并保留微信/抖音 Greybox 回退入口独立打包测试。完整门禁通过：682 项 Node、312 项 strict package/治理、104 项生命周期；黄金 Replay manifest 保持 `0dace228`。
+- 输入 fuzz 完成 3 个 Mapper 各 120 场，共 360 场、360 个唯一 final hash 与 6 次 Replay 复验，耗时 `101138.96 ms`，无 reproduction case。Presentation Session soak 完成 100 场，耗时 `1041.7850409999999 ms`、堆增长 `2704840 B`；Product Presentation Session soak 完成 100 场、100 个唯一 authority hash，耗时 `54158.708042000006 ms`、堆增长 `6923640 B`。两者均低于 8 MiB，帧、生命周期监听、Canvas 监听和输入绑定残留为零；正式资产预算结果保持 `82a8b378`。
+- `package-lock.json` 只新增当前内部 workspace 链接和 7 条既有内部包依赖，没有新增或升级外部依赖；`npm ls --omit=dev --all` 证明生产树完整。联网 `npm audit` 因安全策略不允许在缺少明确授权时向 npm 服务发送依赖元数据而未执行；G6.36 对相同外部生产依赖闭包的结果为 0 vulnerabilities，但本批不把旧结果伪写为新审计。
+- 代码提交为 `c7baf3e8e931410762f1d1a8ad9973d72f5334a8`，clean build ID 为 `arena-c7baf3e8e931-product`。Web/微信/抖音 delivery 为 `3807531 / 3835130 / 3835105 B`，JavaScript 为 `1463921 / 1507034 / 1507034 B`；三端 `sourceDirty=false`、默认入口均为 Product、预算通过且 `freezeEligible=true`，生产产物边界检查通过。所有生产字节与 G6.39 完全一致，证明 Greybox 组合未进入默认 Product bundle。
+- 本批未改变生产 Product 入口、页面、Renderer 或交互，且 clean 生产 bundle 与 G6.39 字节完全一致，因此没有伪造新的浏览器主流程通过记录；G6.38 的相同 Product 主流程 Chrome 证据仍有效，但仍需 Allen 在 iPhone 13 Pro、iOS 26、Chrome 进行人工验收，也没有新增微信/抖音真机证据。
+- 本批没有改变 Gameplay V2 配置 hash `8c322912`、任意距离挥空、攻击/命中/击退、动作/武器、移动/跳跃、画质、关节、Bot、权威 tick、Replay/Profile schema 或正式资产字节。Greybox 组合层 strict 债已关闭；G6 下一步迁移旧 Greybox `ArenaPresentationSession` 类与 `createArenaGame` 应用根，再治理 Greybox Entry 与研究入口。G7-G10 尚未完成，当前不可合并。
