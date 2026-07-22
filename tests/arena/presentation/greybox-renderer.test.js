@@ -577,7 +577,7 @@ test('Arena HUD renders the authoritative life count instead of a fixed three-do
 test('Arena Three presentation sources do not call authority mutation APIs', async () => {
   const files = [
     new URL('../../../src/arena/presentation/three/arena-world-stage.js', import.meta.url),
-    new URL('../../../src/arena/presentation/three/programmatic-character-view.js', import.meta.url),
+    new URL('../../../packages/arena-presentation-three/src/programmatic-character-view.ts', import.meta.url),
     new URL('../../../packages/arena-presentation-three/src/programmatic-character-view-factory.ts', import.meta.url),
     new URL('../../../packages/arena-presentation-three/src/character-view-registry.ts', import.meta.url),
     new URL('../../../packages/arena-presentation-three/src/equipment-view-registry.ts', import.meta.url),

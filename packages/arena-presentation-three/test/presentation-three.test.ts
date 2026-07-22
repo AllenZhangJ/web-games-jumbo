@@ -5,6 +5,7 @@ import {
   CharacterAnimationController,
   GltfPresentationAssetLoader,
   PlatformTextureLoader,
+  ProgrammaticCharacterView,
   ProgrammaticCharacterViewFactory,
   ThreeObjectDisposalLease,
   toVisualPosition,
@@ -20,6 +21,7 @@ import {
   PRESENTATION_ASSET_DEFINITION_SCHEMA_VERSION,
   PRESENTATION_ASSET_KIND,
   PresentationAssetRegistry,
+  createCharacterPresentationDefinition,
 } from '@number-strategy-jump/arena-presentation-contracts';
 
 function programmaticPresentationDefinition(): unknown {
@@ -64,7 +66,115 @@ function programmaticAssetRegistry(): PresentationAssetRegistry {
   }]);
 }
 
+function programmaticParticipant(overrides: Readonly<Record<string, unknown>> = {}): unknown {
+  return {
+    id: 'player-1',
+    appearance: {
+      presentationId: 'presentation.programmatic.test',
+      definitionHash: createCharacterPresentationDefinition(
+        programmaticPresentationDefinition(),
+      ).getContentHash(),
+    },
+    position: { x: 0, y: 1, z: 0 },
+    facing: { x: 0, z: 1 },
+    velocity: { x: 0, y: 0, z: 0 },
+    equipment: null,
+    action: { definitionId: null, phase: 'idle', ticksRemaining: 0 },
+    grounded: true,
+    hitstunTicks: 0,
+    invulnerableTicks: 0,
+    status: 'active',
+    ...overrides,
+  };
+}
+
+function programmaticSyncOptions(events: readonly unknown[] = []): unknown {
+  return {
+    snap: true,
+    animation: {
+      semantics: { tick: 1, baseEnteredAtTick: 0, baseSemantic: 'idle', overlaySemantic: null },
+      baseBinding: { sourceKey: 'idle' },
+      overlayBinding: null,
+    },
+    direction: {
+      id: 'front', worldFacing: { x: 0, z: 1 }, modelFrontYawRadians: 0,
+    },
+    frame: {
+      events,
+      world: {
+        participants: [
+          { id: 'player-1', position: { x: 0, y: 1, z: 0 } },
+          { id: 'player-2', position: { x: 0, y: 1, z: 1 } },
+        ],
+      },
+    },
+  };
+}
+
+function createProgrammaticView(actionPresentations: unknown = {}): ProgrammaticCharacterView {
+  return new ProgrammaticCharacterView({
+    participantId: 'player-1',
+    presentationDefinition: programmaticPresentationDefinition(),
+    assetDefinition: { sourceKey: 'chibi-runner' },
+    actionPresentations,
+  });
+}
+
 describe('Arena Presentation Three lifecycle boundaries', () => {
+  it('keeps programmatic view validation atomic and deduplicates incoming event sequences', () => {
+    let reads = 0;
+    const accessorOptions = {
+      presentationDefinition: programmaticPresentationDefinition(),
+      assetDefinition: { sourceKey: 'chibi-runner' },
+      actionPresentations: {},
+    };
+    Object.defineProperty(accessorOptions, 'participantId', {
+      enumerable: true,
+      get() { reads += 1; return 'player-1'; },
+    });
+    expect(() => new ProgrammaticCharacterView(accessorOptions)).toThrow(/participantId.*数据字段/);
+    expect(reads).toBe(0);
+
+    const view = createProgrammaticView();
+    const invalid = programmaticParticipant() as { position: object };
+    Object.defineProperty(invalid.position, 'x', {
+      enumerable: true,
+      get() { reads += 1; return 0; },
+    });
+    expect(() => view.sync(invalid, programmaticSyncOptions())).toThrow(/position.x.*数据字段/);
+    expect(reads).toBe(0);
+
+    const hit = Object.freeze({
+      type: 'HitResolved', sequence: 7, attackerId: 'player-2', targetId: 'player-1',
+    });
+    view.sync(programmaticParticipant({ hitstunTicks: 0 }), programmaticSyncOptions([hit]));
+    view.update(0.1);
+    expect(view.getDebugSnapshot().poseState).toBe('hit-front');
+    view.sync(programmaticParticipant({ hitstunTicks: 0 }), programmaticSyncOptions([hit]));
+    view.update(0.1);
+    view.update(0.03);
+    expect(view.getDebugSnapshot()).toMatchObject({ poseState: 'idle', lastHitSequence: 7 });
+    view.dispose();
+  });
+
+  it('retries only incomplete programmatic view resource cleanup', () => {
+    const originalDispose = THREE.Material.prototype.dispose;
+    let materialDisposals = 0;
+    THREE.Material.prototype.dispose = function patchedDispose(): void {
+      materialDisposals += 1;
+      if (materialDisposals === 1) throw new Error('transient programmatic material release');
+      originalDispose.call(this);
+    };
+    let view: ProgrammaticCharacterView;
+    try { view = createProgrammaticView(); } finally { THREE.Material.prototype.dispose = originalDispose; }
+    expect(() => view.dispose()).toThrow(/清理未完整完成/);
+    const firstPassDisposals = materialDisposals;
+    view.dispose();
+    expect(materialDisposals).toBe(firstPassDisposals + 1);
+    view.dispose();
+    expect(materialDisposals).toBe(firstPassDisposals + 1);
+  });
+
   it('snapshots the programmatic view factory boundary and rejects callback reentry', () => {
     let reads = 0;
     const accessorOptions = {

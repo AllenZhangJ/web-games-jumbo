@@ -6,6 +6,7 @@ export * from './gltf-presentation-asset-loader.js';
 export * from './greybox-style.js';
 export * from './platform-texture-loader.js';
 export * from './programmatic-character-view-factory.js';
+export * from './programmatic-character-view.js';
 export * from './programmatic-equipment.js';
 export * from './surface-view-registry.js';
 export * from './visual-coordinate.js';

@@ -1,9 +1,11 @@
 import { PresentationAssetLoadTask } from '@number-strategy-jump/arena-presentation-runtime';
 import { assertPresentationAssetRegistry } from '@number-strategy-jump/arena-presentation-contracts';
 import { ARENA_PRESENTATION_ASSET_PROVIDER_ID } from '@number-strategy-jump/arena-presentation-runtime';
-import { GltfPresentationAssetLoader } from '@number-strategy-jump/arena-presentation-three';
+import {
+  GltfPresentationAssetLoader,
+  ProgrammaticCharacterView,
+} from '@number-strategy-jump/arena-presentation-three';
 import { GltfCharacterView } from './gltf-character-view.js';
-import { ProgrammaticCharacterView } from './programmatic-character-view.js';
 
 const LOADABLE_PROVIDERS = new Set([
   ARENA_PRESENTATION_ASSET_PROVIDER_ID.GLTF_ATTACHMENT_V1,

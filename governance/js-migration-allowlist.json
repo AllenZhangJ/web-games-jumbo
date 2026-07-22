@@ -223,7 +223,6 @@
     "src/arena/presentation/three/gltf-character-view-factory.js",
     "src/arena/presentation/three/gltf-character-view.js",
     "src/arena/presentation/three/greybox-event-effects.js",
-    "src/arena/presentation/three/programmatic-character-view.js",
     "src/arena/product/composition/arena-v1-product-composition.js",
     "src/arena/regression/arena-regression-evidence-components.js",
     "src/arena/regression/arena-regression-evidence-validation.js",
