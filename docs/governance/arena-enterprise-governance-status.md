@@ -32,7 +32,7 @@
 | G2 Definition/合同/配置 | 已完成 | strict TS `arena-contracts`、`arena-definitions`、`arena-profile-contracts` 与 `arena-platform-contracts` 已承接确定性、输入/事件、权威快照、同步存储、平台能力、玩家档案/存档协议，以及动作/角色/装备/地图 Definition、只读 Registry 和唯一 Gameplay V2 数值配置；受审计 JavaScript 已降至 500 个 |
 | G3 Rule/Core/Replay | 已完成 | strict TS `arena-core`、`arena-movement`、`arena-physics`、`arena-equipment`、`arena-map` 与 `arena-match` 已承接规则/移动/物理/装备、完整地图权威链、比赛配置、Participant/Timeline 唯一写入者、角色 Runtime/物理投影、状态 hash、完整 MatchCore 编排、fixed-step Runtime 与 Replay；黄金语料保持 `0dace228` |
 | G4 Bot/Product/Persistence | 已完成 | strict TS Bot、Matchmaking、Quick Match、Local Match Session、Product State、Progression、ProductMatchResult、奖励事务、Profile Service/Repository、Storage Lease、Product Match、Product Session Controller、对称内容池、Arena V1 产品内容与通用 Product Composition 已闭环；Arena V1 薄应用注入适配器留待 G6/G7 清零 |
-| G5 Presentation/资产/反馈 | 进行中 | strict `arena-presentation-contracts` 已承接资产/角色表现 Definition、Registry 与动画语义；Three、反馈、加载器和 Session 仍待分层迁移 |
+| G5 Presentation/资产/反馈 | 进行中 | strict `arena-presentation-contracts` 已承接资产/角色表现合同，strict `arena-presentation-runtime` 已承接事件窗口、帧循环、固定 tick 累加器和画质/节拍；Three、反馈、加载器和 Session 仍待分层迁移 |
 | G6 Platform/入口/构建 | 未开始 | 三端默认入口是 Product，但生产交付未与开发页面彻底隔离 |
 | G7 零 JS/完整质量门 | 未开始 | ESLint、strict TypeScript、Vitest 和 JavaScript 精确递减门禁已作为迁移护栏运行；coverage 阈值、测试归包和零 JS 尚未完成 |
 | G8 资产/安全/所有权 | 未开始 | CODEOWNERS、CI 安全与正式资产最终批准待补齐 |
@@ -55,7 +55,7 @@
 
 ## 当前不可合并原因
 
-1. 当前 394 个受维护 JavaScript 文件仍在精确允许清单中，Presentation/Three/Platform 和 Arena V1 应用注入适配尚未完成 strict TypeScript workspace 迁移。
+1. 当前 387 个受维护 JavaScript 文件仍在精确允许清单中，Presentation/Three/Platform 和 Arena V1 应用注入适配尚未完成 strict TypeScript workspace 迁移。
 2. Vitest 当前保护底层合同包和治理门禁；Arena 其余测试尚待按 workspace 迁移并建立正式 coverage 阈值与零 JS 门禁。
 3. 正式资产最终审批与完整安全/依赖长期治理尚未闭环。
 4. 文档仍含迁移前阶段性叙述，尚未完成 G9 全量链接、状态与命令归真。
@@ -539,3 +539,14 @@
 - build ID 为 `arena-5327654829f5-product`，Web/微信/抖音 delivery 为 `3633435 / 3666023 / 3665998 B`，`sourceDirty=false`、三端 `freezeEligible=true`。Web 主业务 chunk 为 `658.02 kB`（gzip `171.95 kB`），仍触发 650 kB 信息警告，归入 G6 拆包审计。
 - 390×844、DPR 3 的 Chrome 手机视口完成首屏、正式角色、真实对局和攻击点击复验；攻击键可用并出现红色命中反馈。合成 `webglcontextlost` 的默认行为被阻止，恢复后 Canvas 保持 `780×1688`，运行事件为零。该记录不冒充 iPhone 13 Pro/iOS 26 真机；微信/抖音四目标真机记录仍是发布门禁。
 - 本批未改变 Gameplay V2 数值、任意距离攻击挥空、命中/击退、武器动作、移动/跳跃、Bot 难度与随机顺序、权威 tick、Replay/Profile/lease schema、黄金 hash 或正式资产字节。G5 仍在进行；下一批按纯反馈/Frame/Quality → 资产加载 → Three Runtime → Presentation Session 的依赖方向迁移并完成动作/武器验收映射审计。
+
+## G5.2 表现运行时原语迁移与调度失败关闭证据
+
+- 新增 strict TypeScript workspace `@number-strategy-jump/arena-presentation-runtime`，承接 `PresentationEventWindow`、`PresentationFrameLoop`、`FixedTickAccumulator`、画质 Definition/Registry 和渲染节拍。依赖精确限定为只读 `arena-contracts` 与公开 tick 配置所在的 `arena-match`，不依赖 MatchCore 实例、Bot、Product/Session、Renderer、Three.js、DOM、平台全局、墙钟实现、定时器或随机源。
+- 七个旧 JavaScript 真值文件已删除，Session、Renderer、入口、性能证据和测试统一从包公开 API 消费；JavaScript 精确允许清单由 394 降至 387。高画质仍保持最大 DPR 2、抗锯齿开启和 60 FPS；低画质 30 FPS 的表现节拍不改变 60 Hz 权威 tick。
+- FrameLoop 用独立 pending 所有权位处理宿主返回 `null`/`undefined` 帧令牌，停止时仍精确取消并用 generation 抑制迟到回调；同步 requestFrame 回调、回调重入、Promise/thenable 回调、调度异常和诊断异常均被收容并失败关闭。EventWindow、质量参数与构造 options 拒绝访问器而不执行 getter；FixedTickAccumulator 在有限数溢出或步数非法时保持提交前状态，可安全判定失败而不留下半步累积。
+- 干净代码提交 `66d1ebf0de53bcfda2ca352d39a312299edc3370` 的等价发布门禁全部通过：658/658 Node、162/162 strict package/治理、103/103 生命周期、120 场 fuzz/6 次 Replay、0 个生产依赖漏洞、正式资产和三端 clean build/预算/唯一生产产物均通过。黄金 Replay 与正式资产结果保持 `0dace228`、`82a8b378`。
+- Presentation Session soak 完成 100 场、耗时 `556.313833 ms`、堆增长 `2642688 B`；完整 Product Presentation Session soak 完成 100 场、100 个唯一 authority hash、耗时 `52941.087542 ms`、堆增长 `6632048 B`。两者均低于 8 MiB，帧、生命周期监听、Canvas 监听和输入绑定残留为零。
+- build ID 为 `arena-66d1ebf0de53-product`，Web/微信/抖音 delivery 为 `3635086 / 3667706 / 3667681 B`，`sourceDirty=false`、三端 `freezeEligible=true`。Web 主业务 chunk 为 `659.67 kB`（gzip `172.53 kB`），仍是 G6 拆包审计项，不以降低分辨率、抗锯齿、动作或关节规避。
+- 390×844、DPR 3 的 Chrome 手机视口完成首屏、正式角色、真实对局和攻击点击复验；实战出现红色命中/攻击反馈，合成 WebGL context loss 被阻止且恢复后 Canvas 为 `780×1688`，运行事件为零。该记录不冒充 iPhone 13 Pro/iOS 26 真机；微信/抖音四目标真机记录仍是发布门禁。
+- 本批未改变 Gameplay V2 数值、任意距离攻击挥空、命中/击退、武器动作、移动/跳跃、Bot 难度与随机顺序、权威 tick、Replay/Profile/lease schema、黄金 hash 或正式资产字节。G5 继续按反馈语义/视觉效果 → 正式资产加载 → Three Runtime → Presentation Session 的依赖方向治理，并在收口前完成全部动作与不同武器的验收映射审计。
