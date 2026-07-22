@@ -18,10 +18,10 @@ import {
 } from '@number-strategy-jump/arena-evidence-contracts';
 import {
   validateHumanMatchStudyAssignment,
-} from './human-match-study-assignment.js';
+} from '@number-strategy-jump/arena-human-match-study';
 import {
   createHumanMatchStudyDefinition,
-} from './human-match-study-definition.js';
+} from '@number-strategy-jump/arena-human-match-study';
 
 export const HUMAN_MATCH_STUDY_RECORD_SCHEMA_VERSION = 1;
 

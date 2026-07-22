@@ -7,7 +7,7 @@ import {
   assertEvidenceGitCommit,
   assertEvidenceUtcInstant,
 } from '@number-strategy-jump/arena-evidence-contracts';
-import { createHumanMatchStudyDefinition } from './human-match-study-definition.js';
+import { createHumanMatchStudyDefinition } from '@number-strategy-jump/arena-human-match-study';
 import { createHumanMatchStudyRecord } from './human-match-study-record.js';
 
 export const HUMAN_MATCH_STUDY_BUNDLE_SCHEMA_VERSION = 1;

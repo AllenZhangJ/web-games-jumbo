@@ -9,7 +9,7 @@ import {
 } from '@number-strategy-jump/arena-product-contracts';
 import { replayMatch } from '../replay.js';
 import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
-import { createHumanMatchStudyDefinition } from './human-match-study-definition.js';
+import { createHumanMatchStudyDefinition } from '@number-strategy-jump/arena-human-match-study';
 import { createHumanMatchStudyRecord } from './human-match-study-record.js';
 
 function assertCandidateIdentity(definition) {

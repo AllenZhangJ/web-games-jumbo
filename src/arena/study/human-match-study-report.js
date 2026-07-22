@@ -1,6 +1,6 @@
 import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
-import { createHumanMatchStudyDefinition } from './human-match-study-definition.js';
+import { createHumanMatchStudyDefinition } from '@number-strategy-jump/arena-human-match-study';
 import {
   HUMAN_MATCH_STUDY_EXCLUSION_REASON,
   HUMAN_MATCH_STUDY_OPPONENT_GUESS,

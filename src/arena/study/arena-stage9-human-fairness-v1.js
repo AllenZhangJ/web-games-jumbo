@@ -4,7 +4,7 @@ import { ARENA_REPLAY_SCHEMA_VERSION } from '@number-strategy-jump/arena-match';
 import {
   HUMAN_MATCH_STUDY_DEFINITION_SCHEMA_VERSION,
   createHumanMatchStudyDefinition,
-} from './human-match-study-definition.js';
+} from '@number-strategy-jump/arena-human-match-study';
 import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 
 export const ARENA_STAGE9_HUMAN_FAIRNESS_V1_ID = 'arena.stage9.human-fairness.v1';

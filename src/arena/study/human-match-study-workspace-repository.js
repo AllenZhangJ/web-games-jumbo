@@ -8,7 +8,7 @@ import {
 } from '@number-strategy-jump/arena-contracts';
 import { createSynchronousStoragePort } from '@number-strategy-jump/arena-contracts';
 import { SynchronousStorageLease } from '@number-strategy-jump/arena-storage';
-import { createHumanMatchStudyDefinition } from './human-match-study-definition.js';
+import { createHumanMatchStudyDefinition } from '@number-strategy-jump/arena-human-match-study';
 import {
   assertHumanMatchStudyWorkspaceEnvelopeHasNoFutureSchema,
   createHumanMatchStudyWorkspaceEnvelope,

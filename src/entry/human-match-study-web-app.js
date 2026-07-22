@@ -1,6 +1,6 @@
 import {
   HUMAN_MATCH_STUDY_CAPTURE_STATE,
-} from '../arena/study/human-match-study-capture-session.js';
+} from '@number-strategy-jump/arena-human-match-study';
 import {
   createArenaStage9HumanFairnessV1Definition,
 } from '../arena/study/arena-stage9-human-fairness-v1.js';

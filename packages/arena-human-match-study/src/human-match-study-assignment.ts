@@ -1,17 +1,34 @@
 import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import { createRng, deriveSeed } from '@number-strategy-jump/arena-contracts';
 import { createMatchAssignment } from '@number-strategy-jump/arena-matchmaking';
+import type { BotDifficultyId } from '@number-strategy-jump/arena-bot';
 import {
   assertIntegerAtLeast,
   assertKnownKeys,
   assertNonEmptyString,
+  assertPlainRecord,
   cloneFrozenData,
 } from '@number-strategy-jump/arena-contracts';
-import { createHumanMatchStudyDefinition } from './human-match-study-definition.js';
+import {
+  createHumanMatchStudyDefinition,
+  type HumanMatchStudyDefinition,
+} from './human-match-study-definition.js';
 
 export const HUMAN_MATCH_STUDY_ASSIGNMENT_SCHEMA_VERSION = 1;
 
-const ASSIGNMENT_KEYS = new Set([
+export interface HumanMatchStudyAssignment {
+  readonly schemaVersion: number;
+  readonly definitionId: string;
+  readonly definitionHash: string;
+  readonly assignmentId: string;
+  readonly participantId: string;
+  readonly enrollmentIndex: number;
+  readonly armId: string;
+  readonly difficultyId: BotDifficultyId;
+  readonly matchSeeds: readonly number[];
+}
+
+const ASSIGNMENT_KEYS = new Set<keyof HumanMatchStudyAssignment>([
   'schemaVersion',
   'definitionId',
   'definitionHash',
@@ -22,9 +39,14 @@ const ASSIGNMENT_KEYS = new Set([
   'difficultyId',
   'matchSeeds',
 ]);
+const CREATE_ASSIGNMENT_KEYS = new Set([
+  'definition',
+  'participantId',
+  'enrollmentIndex',
+]);
 const MAXIMUM_SEED_SEARCH_ATTEMPTS = 1_024;
 
-function boundedString(value, maximumLength, name) {
+function boundedString(value: unknown, maximumLength: number, name: string): string {
   const result = assertNonEmptyString(value, name);
   if (result.length > maximumLength) {
     throw new RangeError(`${name} 不能超过 ${maximumLength} 字符。`);
@@ -32,7 +54,10 @@ function boundedString(value, maximumLength, name) {
   return result;
 }
 
-function shuffledArms(definition, blockIndex) {
+function shuffledArms(
+  definition: HumanMatchStudyDefinition,
+  blockIndex: number,
+) {
   const arms = [...definition.arms];
   const rng = createRng(deriveSeed(
     definition.assignmentSeed,
@@ -40,12 +65,21 @@ function shuffledArms(definition, blockIndex) {
   ));
   for (let index = arms.length - 1; index > 0; index -= 1) {
     const swapIndex = rng.int(0, index);
-    [arms[index], arms[swapIndex]] = [arms[swapIndex], arms[index]];
+    const current = arms[index];
+    const replacement = arms[swapIndex];
+    if (!current || !replacement) throw new Error('Human Match Study arm 洗牌越界。');
+    arms[index] = replacement;
+    arms[swapIndex] = current;
   }
   return arms;
 }
 
-function findNaturalDifficultySeed(definition, enrollmentIndex, matchIndex, difficultyId) {
+function findNaturalDifficultySeed(
+  definition: HumanMatchStudyDefinition,
+  enrollmentIndex: number,
+  matchIndex: number,
+  difficultyId: BotDifficultyId,
+): number {
   for (let attempt = 0; attempt < MAXIMUM_SEED_SEARCH_ATTEMPTS; attempt += 1) {
     const seed = deriveSeed(
       definition.assignmentSeed,
@@ -61,11 +95,14 @@ function findNaturalDifficultySeed(definition, enrollmentIndex, matchIndex, diff
   );
 }
 
-export function createHumanMatchStudyAssignment({
-  definition: definitionValue,
-  participantId: participantIdValue,
-  enrollmentIndex: enrollmentIndexValue,
-}) {
+export function createHumanMatchStudyAssignment(
+  optionsValue: unknown,
+): HumanMatchStudyAssignment {
+  const options = assertPlainRecord(optionsValue, 'HumanMatchStudyAssignment options');
+  assertKnownKeys(options, CREATE_ASSIGNMENT_KEYS, 'HumanMatchStudyAssignment options');
+  const definitionValue = options.definition;
+  const participantIdValue = options.participantId;
+  const enrollmentIndexValue = options.enrollmentIndex;
   const definition = createHumanMatchStudyDefinition(definitionValue);
   const participantId = boundedString(
     participantIdValue,
@@ -80,6 +117,7 @@ export function createHumanMatchStudyAssignment({
   const blockIndex = Math.floor(enrollmentIndex / definition.arms.length);
   const positionInBlock = enrollmentIndex % definition.arms.length;
   const arm = shuffledArms(definition, blockIndex)[positionInBlock];
+  if (!arm) throw new Error('Human Match Study 未能选择预注册 arm。');
   const matchSeeds = Object.freeze(Array.from(
     { length: definition.matchesPerParticipant },
     (_, matchIndex) => findNaturalDifficultySeed(
@@ -114,7 +152,10 @@ export function createHumanMatchStudyAssignment({
   });
 }
 
-export function validateHumanMatchStudyAssignment(definitionValue, value) {
+export function validateHumanMatchStudyAssignment(
+  definitionValue: unknown,
+  value: unknown,
+): HumanMatchStudyAssignment {
   const definition = createHumanMatchStudyDefinition(definitionValue);
   const source = cloneFrozenData(value, 'HumanMatchStudyAssignment');
   assertKnownKeys(source, ASSIGNMENT_KEYS, 'HumanMatchStudyAssignment');
@@ -141,7 +182,10 @@ export function validateHumanMatchStudyAssignment(definitionValue, value) {
   return expected;
 }
 
-export function createHumanMatchStudyParticipantView(definitionValue, assignmentValue) {
+export function createHumanMatchStudyParticipantView(
+  definitionValue: unknown,
+  assignmentValue: unknown,
+) {
   const assignment = validateHumanMatchStudyAssignment(definitionValue, assignmentValue);
   return Object.freeze({
     definitionId: assignment.definitionId,

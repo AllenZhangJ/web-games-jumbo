@@ -10,7 +10,7 @@ import {
 } from '../../../src/arena/study/arena-stage9-human-fairness-v1.js';
 import {
   createHumanMatchStudyAssignment,
-} from '../../../src/arena/study/human-match-study-assignment.js';
+} from '@number-strategy-jump/arena-human-match-study';
 import {
   loadHumanMatchStudyBuildIdentity,
 } from '../../../src/entry/human-match-study-build-identity.js';
@@ -278,6 +278,87 @@ test('study Product runtime retains failed cleanup ownership for one exact retry
   runtime.destroy();
   assert.equal(destroyCount, 2);
   assert.equal(runtime.state, HUMAN_MATCH_STUDY_PRODUCT_RUNTIME_STATE.DESTROYED);
+});
+
+test('study Product runtime rejects capability accessors, releases invalid candidates and closes start-destroy races', async () => {
+  const definition = createArenaStage9HumanFairnessV1Definition();
+  const assignment = createHumanMatchStudyAssignment({
+    definition,
+    participantId: 'participant-runtime-boundary',
+    enrollmentIndex: 3,
+  });
+  let accessorReads = 0;
+  const accessorPlatform = { id: 'web' };
+  Object.defineProperty(accessorPlatform, 'createCanvas', {
+    get() {
+      accessorReads += 1;
+      return () => {};
+    },
+  });
+  assert.throws(() => new HumanMatchStudyProductRuntime({
+    definition,
+    assignment,
+    platform: accessorPlatform,
+    root: { document: { querySelector() { return {}; } } },
+    trialId: 'trial-runtime-accessor',
+    onProgress() {},
+    onFailure() {},
+  }), /createCanvas.*数据方法/);
+  assert.equal(accessorReads, 0);
+
+  let invalidDestroyCount = 0;
+  const invalid = new HumanMatchStudyProductRuntime({
+    definition,
+    assignment,
+    platform: { id: 'web', createCanvas() {} },
+    root: { document: { querySelector() { return {}; } } },
+    trialId: 'trial-runtime-invalid',
+    onProgress() {},
+    onFailure() {},
+    gameFactory() {
+      return {
+        destroy() {
+          invalidDestroyCount += 1;
+          if (invalidDestroyCount === 1) throw new Error('invalid cleanup failed once');
+        },
+      };
+    },
+  });
+  await assert.rejects(invalid.start(), (error) => {
+    assert.equal(error instanceof AggregateError, true);
+    assert.match(error.errors[0].message, /Product Runtime\.start 缺失/);
+    assert.match(error.errors[1].message, /invalid cleanup failed once/);
+    return true;
+  });
+  assert.equal(invalidDestroyCount, 1);
+  assert.equal(invalid.state, HUMAN_MATCH_STUDY_PRODUCT_RUNTIME_STATE.FAILED);
+  invalid.destroy();
+  assert.equal(invalidDestroyCount, 2);
+
+  let resolveStart;
+  let raceDestroyCount = 0;
+  const race = new HumanMatchStudyProductRuntime({
+    definition,
+    assignment,
+    platform: { id: 'web', createCanvas() {} },
+    root: { document: { querySelector() { return {}; } } },
+    trialId: 'trial-runtime-race',
+    onProgress() {},
+    onFailure() {},
+    gameFactory() {
+      return {
+        start() { return new Promise((resolve) => { resolveStart = resolve; }); },
+        destroy() { raceDestroyCount += 1; },
+      };
+    },
+  });
+  const pendingStart = race.start();
+  await Promise.resolve();
+  race.destroy();
+  resolveStart();
+  await assert.rejects(pendingStart, /启动已取消/);
+  assert.equal(raceDestroyCount, 1);
+  assert.equal(race.state, HUMAN_MATCH_STUDY_PRODUCT_RUNTIME_STATE.DESTROYED);
 });
 
 test('study page includes separate operator and participant surfaces without hidden-arm labels', async () => {

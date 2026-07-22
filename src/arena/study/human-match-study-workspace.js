@@ -12,8 +12,8 @@ import {
 import {
   createHumanMatchStudyAssignment,
   validateHumanMatchStudyAssignment,
-} from './human-match-study-assignment.js';
-import { createHumanMatchStudyDefinition } from './human-match-study-definition.js';
+} from '@number-strategy-jump/arena-human-match-study';
+import { createHumanMatchStudyDefinition } from '@number-strategy-jump/arena-human-match-study';
 import {
   HUMAN_MATCH_STUDY_STATUS,
   HUMAN_MATCH_STUDY_TERMINATION_REASON,

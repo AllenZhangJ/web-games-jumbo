@@ -4,8 +4,8 @@ import {
   assertKnownKeys,
   cloneFrozenData,
 } from '@number-strategy-jump/arena-contracts';
-import { HUMAN_MATCH_STUDY_ASSIGNMENT_SCHEMA_VERSION } from './human-match-study-assignment.js';
-import { createHumanMatchStudyDefinition } from './human-match-study-definition.js';
+import { HUMAN_MATCH_STUDY_ASSIGNMENT_SCHEMA_VERSION } from '@number-strategy-jump/arena-human-match-study';
+import { createHumanMatchStudyDefinition } from '@number-strategy-jump/arena-human-match-study';
 import {
   HUMAN_MATCH_STUDY_CHECKPOINT_SCHEMA_VERSION,
   HUMAN_MATCH_STUDY_RECEIPT_SCHEMA_VERSION,

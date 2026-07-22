@@ -27,7 +27,7 @@ import {
   createHumanMatchStudyAssignment,
   createHumanMatchStudyParticipantView,
   validateHumanMatchStudyAssignment,
-} from '../../../src/arena/study/human-match-study-assignment.js';
+} from '@number-strategy-jump/arena-human-match-study';
 import {
   HUMAN_MATCH_STUDY_BUNDLE_SCHEMA_VERSION,
   createHumanMatchStudyBundle,
@@ -35,14 +35,14 @@ import {
 import {
   HUMAN_MATCH_STUDY_CAPTURE_STATE,
   HumanMatchStudyCaptureSession,
-} from '../../../src/arena/study/human-match-study-capture-session.js';
+} from '@number-strategy-jump/arena-human-match-study';
 import {
   createHumanMatchStudyCapturePackage,
 } from '../../../src/arena/study/human-match-study-capture-package.js';
 import {
   HUMAN_MATCH_STUDY_DEFINITION_SCHEMA_VERSION,
   createHumanMatchStudyDefinition,
-} from '../../../src/arena/study/human-match-study-definition.js';
+} from '@number-strategy-jump/arena-human-match-study';
 import {
   HUMAN_MATCH_STUDY_EXCLUSION_REASON,
   HUMAN_MATCH_STUDY_RECORD_SCHEMA_VERSION,
