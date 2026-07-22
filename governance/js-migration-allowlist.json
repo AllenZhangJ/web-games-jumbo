@@ -124,7 +124,6 @@
     "src/arena/regression/golden-replay-verifier.js",
     "src/arena/regression/input-fuzz-regression-candidate.js",
     "src/arena/replay.js",
-    "src/arena/study/human-match-study-bundle.js",
     "src/arena/study/human-match-study-capture-package.js",
     "src/arena/study/human-match-study-replay-verifier.js",
     "src/arena/study/human-match-study-report.js",

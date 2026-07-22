@@ -3,3 +3,4 @@ export * from './human-match-study-definition.js';
 export * from './human-match-study-assignment.js';
 export * from './human-match-study-capture-session.js';
 export * from './human-match-study-record.js';
+export * from './human-match-study-bundle.js';

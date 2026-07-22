@@ -54,7 +54,7 @@ import {
 } from '@number-strategy-jump/arena-human-match-study';
 import {
   HUMAN_MATCH_STUDY_BUNDLE_SCHEMA_VERSION,
-} from '../../src/arena/study/human-match-study-bundle.js';
+} from '@number-strategy-jump/arena-human-match-study';
 import {
   writeArenaBuildManifest,
 } from '../../scripts/lib/arena-build-manifest-files.mjs';

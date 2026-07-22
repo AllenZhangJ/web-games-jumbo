@@ -5,7 +5,7 @@ import {
 } from '@number-strategy-jump/arena-human-match-study';
 import {
   createHumanMatchStudyBundle,
-} from '../arena/study/human-match-study-bundle.js';
+} from '@number-strategy-jump/arena-human-match-study';
 import {
   HUMAN_MATCH_STUDY_REPORT_STATUS,
   createHumanMatchStudyReport,

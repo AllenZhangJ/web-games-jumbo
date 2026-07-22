@@ -5,6 +5,7 @@ import {
   HumanMatchStudyCaptureSession,
   createArenaStage9HumanFairnessV1Definition,
   createHumanMatchStudyAssignment,
+  createHumanMatchStudyBundle,
   createHumanMatchStudyDefinition,
   createHumanMatchStudyRecord,
 } from '../src/index.js';
@@ -80,6 +81,22 @@ describe('Human Match Study strict foundation', () => {
     expect(() => createHumanMatchStudyRecord(
       createArenaStage9HumanFairnessV1Definition(),
       record,
+    )).toThrow(/访问器|数据字段/);
+    expect(reads).toBe(0);
+  });
+
+  it('rejects bundle accessors without evaluating untrusted code', () => {
+    let reads = 0;
+    const bundle = Object.defineProperty({}, 'records', {
+      enumerable: true,
+      get() {
+        reads += 1;
+        return [];
+      },
+    });
+    expect(() => createHumanMatchStudyBundle(
+      createArenaStage9HumanFairnessV1Definition(),
+      bundle,
     )).toThrow(/访问器|数据字段/);
     expect(reads).toBe(0);
   });

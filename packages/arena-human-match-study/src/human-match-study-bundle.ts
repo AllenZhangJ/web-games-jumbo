@@ -7,10 +7,25 @@ import {
   assertEvidenceGitCommit,
   assertEvidenceUtcInstant,
 } from '@number-strategy-jump/arena-evidence-contracts';
-import { createHumanMatchStudyDefinition } from '@number-strategy-jump/arena-human-match-study';
-import { createHumanMatchStudyRecord } from '@number-strategy-jump/arena-human-match-study';
+import {
+  createHumanMatchStudyDefinition,
+} from './human-match-study-definition.js';
+import {
+  createHumanMatchStudyRecord,
+  type HumanMatchStudyRecord,
+} from './human-match-study-record.js';
 
 export const HUMAN_MATCH_STUDY_BUNDLE_SCHEMA_VERSION = 1;
+
+export interface HumanMatchStudyBundle {
+  readonly schemaVersion: 1;
+  readonly definitionId: string;
+  readonly definitionHash: string;
+  readonly commit: string;
+  readonly buildId: string;
+  readonly createdAt: string;
+  readonly records: readonly HumanMatchStudyRecord[];
+}
 
 const BUNDLE_KEYS = new Set([
   'schemaVersion',
@@ -23,7 +38,7 @@ const BUNDLE_KEYS = new Set([
 ]);
 const MAXIMUM_RECORDS = 10_000;
 
-function boundedString(value, maximumLength, name) {
+function boundedString(value: unknown, maximumLength: number, name: string): string {
   const result = assertNonEmptyString(value, name);
   if (result.length > maximumLength) {
     throw new RangeError(`${name} 不能超过 ${maximumLength} 字符。`);
@@ -31,7 +46,7 @@ function boundedString(value, maximumLength, name) {
   return result;
 }
 
-function compareRecords(left, right) {
+function compareRecords(left: HumanMatchStudyRecord, right: HumanMatchStudyRecord): number {
   if (left.assignment.enrollmentIndex !== right.assignment.enrollmentIndex) {
     return left.assignment.enrollmentIndex - right.assignment.enrollmentIndex;
   }
@@ -40,7 +55,17 @@ function compareRecords(left, right) {
   return 0;
 }
 
-export function createHumanMatchStudyBundle(definitionValue, value) {
+function assertUnique<T>(set: Set<T>, value: T, label: string): void {
+  if (set.has(value)) {
+    throw new RangeError(`HumanMatchStudyBundle 重复 ${label} ${String(value)}。`);
+  }
+  set.add(value);
+}
+
+export function createHumanMatchStudyBundle(
+  definitionValue: unknown,
+  value: unknown,
+): HumanMatchStudyBundle {
   const definition = createHumanMatchStudyDefinition(definitionValue);
   const source = cloneFrozenData(value, 'HumanMatchStudyBundle');
   assertKnownKeys(source, BUNDLE_KEYS, 'HumanMatchStudyBundle');
@@ -65,21 +90,13 @@ export function createHumanMatchStudyBundle(definitionValue, value) {
   if (source.records.length > MAXIMUM_RECORDS) {
     throw new RangeError(`HumanMatchStudyBundle.records 不能超过 ${MAXIMUM_RECORDS} 条。`);
   }
-  const identities = {
-    recordIds: new Set(),
-    participantIds: new Set(),
-    assignmentIds: new Set(),
-    enrollmentIndexes: new Set(),
-    matchSeeds: new Set(),
-    artifactIds: new Set(),
-    artifactPaths: new Set(),
-  };
-  const assertUnique = (setName, value, label) => {
-    if (identities[setName].has(value)) {
-      throw new RangeError(`HumanMatchStudyBundle 重复 ${label} ${value}。`);
-    }
-    identities[setName].add(value);
-  };
+  const recordIds = new Set<string>();
+  const participantIds = new Set<string>();
+  const assignmentIds = new Set<string>();
+  const enrollmentIndexes = new Set<number>();
+  const matchSeeds = new Set<number>();
+  const artifactIds = new Set<string>();
+  const artifactPaths = new Set<string>();
   const records = source.records.map((recordValue, index) => {
     const record = createHumanMatchStudyRecord(definition, recordValue);
     if (record.commit !== commit) {
@@ -91,24 +108,24 @@ export function createHumanMatchStudyBundle(definitionValue, value) {
     if (record.performedAt > createdAt) {
       throw new RangeError('HumanMatchStudyBundle.createdAt 不能早于 Study 记录。');
     }
-    assertUnique('recordIds', record.recordId, 'recordId');
-    assertUnique('participantIds', record.assignment.participantId, 'participantId');
-    assertUnique('assignmentIds', record.assignment.assignmentId, 'assignmentId');
+    assertUnique(recordIds, record.recordId, 'recordId');
+    assertUnique(participantIds, record.assignment.participantId, 'participantId');
+    assertUnique(assignmentIds, record.assignment.assignmentId, 'assignmentId');
     assertUnique(
-      'enrollmentIndexes',
+      enrollmentIndexes,
       record.assignment.enrollmentIndex,
       'enrollmentIndex',
     );
     for (const match of record.matches) {
-      assertUnique('matchSeeds', match.result.matchSeed, 'matchSeed');
-      assertUnique('artifactIds', match.replayArtifact.id, 'replay artifact id');
-      assertUnique('artifactPaths', match.replayArtifact.path, 'replay artifact path');
+      assertUnique(matchSeeds, match.result.matchSeed, 'matchSeed');
+      assertUnique(artifactIds, match.replayArtifact.id, 'replay artifact id');
+      assertUnique(artifactPaths, match.replayArtifact.path, 'replay artifact path');
     }
     return record;
   });
-  const enrollmentIndexes = [...identities.enrollmentIndexes].sort((left, right) => left - right);
-  enrollmentIndexes.forEach((value, index) => {
-    if (value !== index) {
+  const sortedEnrollmentIndexes = [...enrollmentIndexes].sort((left, right) => left - right);
+  sortedEnrollmentIndexes.forEach((enrollmentIndex, index) => {
+    if (enrollmentIndex !== index) {
       throw new RangeError(
         `HumanMatchStudyBundle enrollmentIndex 必须从 0 连续；缺少 ${index}。`,
       );
