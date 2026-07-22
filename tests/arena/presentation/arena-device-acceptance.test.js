@@ -24,7 +24,7 @@ import {
 } from '../../../src/arena/presentation/acceptance/arena-stage9-performance-device-acceptance-v1.js';
 import {
   ARENA_PERFORMANCE_RECORD_SCHEMA_VERSION,
-} from '../../../src/arena/presentation/performance/arena-performance-record.js';
+} from '@number-strategy-jump/arena-performance-evidence';
 import {
   ARENA_STAGE9_PERFORMANCE_TARGET_ID,
   createArenaStage9PerformanceV1Policy,

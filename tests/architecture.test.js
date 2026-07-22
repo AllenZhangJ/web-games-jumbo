@@ -206,12 +206,12 @@ test('Arena device acceptance remains pure evidence data behind a Node-only CLI'
   }
 });
 
-test('Arena quality and performance contracts remain host-free and cannot own rendering', async () => {
+test('remaining Arena performance composition stays host-free and cannot own rendering', async () => {
   const files = (await Promise.all([
     'src/arena/presentation/quality',
     'src/arena/presentation/performance',
   ].map((directory) => listJavaScript(path.resolve(directory))))).flat();
-  assert.ok(files.length >= 6);
+  assert.equal(files.length, 4);
   for (const file of files) {
     const source = await readFile(file, 'utf8');
     assert.doesNotMatch(
@@ -343,17 +343,18 @@ test('Arena performance evidence stays immutable, host-free, and outside runtime
     [
       '@number-strategy-jump/arena-contracts',
       '@number-strategy-jump/arena-device-acceptance',
+      '@number-strategy-jump/arena-evidence-contracts',
     ],
-    'arena-performance-evidence 只能依赖底层不可变数据和设备验收合同。',
+    'arena-performance-evidence 只能依赖底层不可变数据、证据标量和设备验收合同。',
   );
   const files = await listJavaScript(path.resolve('packages/arena-performance-evidence/src'));
-  assert.equal(files.length, 3);
+  assert.equal(files.length, 5);
   for (const file of files) {
     const source = await readFile(file, 'utf8');
     assert.doesNotMatch(
       source,
-      /from\s+['"](?:node:|three|@number-strategy-jump\/(?!(?:arena-contracts|arena-device-acceptance)['"]))[^'"]*['"]/,
-      `${file} 只能导入自身文件、arena-contracts 与 arena-device-acceptance。`,
+      /from\s+['"](?:node:|three|@number-strategy-jump\/(?!(?:arena-contracts|arena-device-acceptance|arena-evidence-contracts)['"]))[^'"]*['"]/,
+      `${file} 只能导入自身文件、arena-contracts、arena-evidence-contracts 与 arena-device-acceptance。`,
     );
     assert.doesNotMatch(
       withoutStaticImports(source),

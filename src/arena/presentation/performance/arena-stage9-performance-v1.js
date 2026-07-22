@@ -10,7 +10,7 @@ import {
   ARENA_PERFORMANCE_GATE_OPERATOR,
   ARENA_PERFORMANCE_POLICY_SCHEMA_VERSION,
   createArenaPerformancePolicyDefinition,
-} from './arena-performance-policy-definition.js';
+} from '@number-strategy-jump/arena-performance-evidence';
 
 export const ARENA_STAGE9_PERFORMANCE_V1_ID = 'arena.stage9.performance.v1';
 

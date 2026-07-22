@@ -3,11 +3,11 @@ import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 import {
   ARENA_PERFORMANCE_GATE_OPERATOR,
   createArenaPerformancePolicyDefinition,
-} from './arena-performance-policy-definition.js';
+} from '@number-strategy-jump/arena-performance-evidence';
 import {
   createArenaPerformanceRecord,
   getArenaPerformanceRecordHash,
-} from './arena-performance-record.js';
+} from '@number-strategy-jump/arena-performance-evidence';
 import {
   ARENA_DEFAULT_PERFORMANCE_METRIC_REGISTRY,
 } from './arena-performance-metric-registry.js';

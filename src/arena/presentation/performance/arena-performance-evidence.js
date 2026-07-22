@@ -14,8 +14,10 @@ import {
 import {
   ARENA_STAGE9_PERFORMANCE_DEVICE_CHECK_ID,
 } from '../acceptance/arena-stage9-performance-device-acceptance-v1.js';
-import { createArenaPerformancePolicyDefinition } from './arena-performance-policy-definition.js';
-import { createArenaPerformanceRecord } from './arena-performance-record.js';
+import {
+  createArenaPerformancePolicyDefinition,
+  createArenaPerformanceRecord,
+} from '@number-strategy-jump/arena-performance-evidence';
 import { createArenaPerformanceReport } from './arena-performance-report.js';
 
 export const ARENA_PERFORMANCE_EVIDENCE_REPORT_SCHEMA_VERSION = 1;

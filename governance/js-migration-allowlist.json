@@ -136,8 +136,6 @@
     "src/arena/presentation/input/keyboard-input-adapter.js",
     "src/arena/presentation/performance/arena-performance-evidence.js",
     "src/arena/presentation/performance/arena-performance-metric-registry.js",
-    "src/arena/presentation/performance/arena-performance-policy-definition.js",
-    "src/arena/presentation/performance/arena-performance-record.js",
     "src/arena/presentation/performance/arena-performance-report.js",
     "src/arena/presentation/performance/arena-stage9-performance-v1.js",
     "src/arena/presentation/pilot/arena-input-pilot-v1.js",

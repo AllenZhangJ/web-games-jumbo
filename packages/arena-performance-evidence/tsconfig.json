@@ -11,6 +11,7 @@
   "include": ["src/**/*.ts"],
   "references": [
     { "path": "../arena-contracts" },
-    { "path": "../arena-device-acceptance" }
+    { "path": "../arena-device-acceptance" },
+    { "path": "../arena-evidence-contracts" }
   ]
 }

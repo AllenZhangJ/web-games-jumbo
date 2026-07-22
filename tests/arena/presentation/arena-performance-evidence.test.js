@@ -19,11 +19,11 @@ import {
   ARENA_PERFORMANCE_GATE_OPERATOR,
   ARENA_PERFORMANCE_POLICY_SCHEMA_VERSION,
   createArenaPerformancePolicyDefinition,
-} from '../../../src/arena/presentation/performance/arena-performance-policy-definition.js';
+} from '@number-strategy-jump/arena-performance-evidence';
 import {
   ARENA_PERFORMANCE_RECORD_SCHEMA_VERSION,
   createArenaPerformanceRecord,
-} from '../../../src/arena/presentation/performance/arena-performance-record.js';
+} from '@number-strategy-jump/arena-performance-evidence';
 import {
   createArenaPerformanceReport,
 } from '../../../src/arena/presentation/performance/arena-performance-report.js';

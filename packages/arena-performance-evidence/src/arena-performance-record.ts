@@ -10,8 +10,83 @@ import {
   assertEvidenceUtcInstant,
 } from '@number-strategy-jump/arena-evidence-contracts';
 import { createArenaPerformancePolicyDefinition } from './arena-performance-policy-definition.js';
+import type { ArenaPerformanceTargetDefinition } from './arena-performance-policy-definition.js';
 
 export const ARENA_PERFORMANCE_RECORD_SCHEMA_VERSION = 1;
+
+export interface ArenaPerformanceLifecycleCapture {
+  readonly hideCount: number;
+  readonly showCount: number;
+  readonly contextLostCount: number;
+  readonly contextRestoredCount: number;
+}
+
+export interface ArenaPerformanceMilestone {
+  readonly id: string;
+  readonly elapsedMs: number;
+}
+
+export interface ArenaPerformanceFrameSample {
+  readonly sequence: number;
+  readonly elapsedMs: number;
+  readonly deltaMicroseconds: number;
+  readonly coreSteps: number;
+  readonly droppedMicroseconds: number;
+  readonly rendered: boolean;
+  readonly renderDurationMicroseconds: number | null;
+}
+
+export interface ArenaPerformanceResourceSample {
+  readonly frameSequence: number;
+  readonly elapsedMs: number;
+  readonly drawCalls: number | null;
+  readonly triangles: number | null;
+  readonly points: number | null;
+  readonly lines: number | null;
+  readonly programs: number | null;
+  readonly geometries: number | null;
+  readonly textures: number | null;
+  readonly jsHeapBytes: number | null;
+  readonly processMemoryBytes: number | null;
+}
+
+export interface ArenaPerformanceProbeCapture {
+  readonly schemaVersion: 1;
+  readonly state: 'stopped';
+  readonly durationMs: number;
+  readonly maximumFrameSamples: number;
+  readonly maximumResourceSamples: number;
+  readonly resourceSampleIntervalFrames: number;
+  readonly observedFrameCount: number;
+  readonly recordedFrameCount: number;
+  readonly droppedFrameSampleCount: number;
+  readonly droppedResourceSampleCount: number;
+  readonly milestones: readonly ArenaPerformanceMilestone[];
+  readonly frames: readonly ArenaPerformanceFrameSample[];
+  readonly resources: readonly ArenaPerformanceResourceSample[];
+}
+
+export interface ArenaPerformanceCapture {
+  readonly qualityDefinitionId: string;
+  readonly qualityDefinitionHash: string;
+  readonly observerErrorCount: number;
+  readonly observedMatchCount: number;
+  readonly lifecycle: ArenaPerformanceLifecycleCapture;
+  readonly probe: ArenaPerformanceProbeCapture;
+}
+
+export interface ArenaPerformanceRecord {
+  readonly schemaVersion: typeof ARENA_PERFORMANCE_RECORD_SCHEMA_VERSION;
+  readonly recordId: string;
+  readonly policyId: string;
+  readonly policyHash: string;
+  readonly commit: string;
+  readonly buildId: string;
+  readonly targetId: string;
+  readonly runId: string;
+  readonly performedAt: string;
+  readonly capture: ArenaPerformanceCapture;
+}
 
 const RECORD_KEYS = new Set([
   'schemaVersion',
@@ -82,45 +157,55 @@ const MAXIMUM_FRAMES = 1_000_000;
 const MAXIMUM_RESOURCES = 100_000;
 const MAXIMUM_MILESTONES = 128;
 
-function boundedString(value, maximumLength, name) {
+function boundedString(value: unknown, maximumLength: number, name: string): string {
   const text = assertNonEmptyString(value, name);
   if (text.length > maximumLength) throw new RangeError(`${name} 不能超过 ${maximumLength} 字符。`);
   return text;
 }
 
-function hashValue(value, name) {
+function hashValue(value: unknown, name: string): string {
   if (typeof value !== 'string' || !HASH_PATTERN.test(value)) {
     throw new TypeError(`${name} 必须是 8 位小写十六进制 hash。`);
   }
   return value;
 }
 
-function finiteAtLeast(value, minimum, name) {
-  if (!Number.isFinite(value) || value < minimum) {
+function finiteAtLeast(value: unknown, minimum: number, name: string): number {
+  if (!Number.isFinite(value) || (value as number) < minimum) {
     throw new RangeError(`${name} 必须大于等于 ${minimum}。`);
   }
-  return value;
+  return value as number;
 }
 
-function nullableInteger(value, name) {
+function nullableInteger(value: unknown, name: string): number | null {
   return value === null ? null : assertIntegerAtLeast(value, 0, name);
 }
 
-function cloneLifecycle(value) {
+function cloneLifecycle(value: unknown): ArenaPerformanceLifecycleCapture {
   assertKnownKeys(value, LIFECYCLE_KEYS, 'ArenaPerformanceRecord.capture.lifecycle');
-  return Object.freeze(Object.fromEntries([...LIFECYCLE_KEYS].map((key) => [
-    key,
-    assertIntegerAtLeast(value[key], 0, `ArenaPerformanceRecord.capture.lifecycle.${key}`),
-  ])));
+  return Object.freeze({
+    hideCount: assertIntegerAtLeast(value.hideCount, 0, 'ArenaPerformanceRecord.capture.lifecycle.hideCount'),
+    showCount: assertIntegerAtLeast(value.showCount, 0, 'ArenaPerformanceRecord.capture.lifecycle.showCount'),
+    contextLostCount: assertIntegerAtLeast(
+      value.contextLostCount,
+      0,
+      'ArenaPerformanceRecord.capture.lifecycle.contextLostCount',
+    ),
+    contextRestoredCount: assertIntegerAtLeast(
+      value.contextRestoredCount,
+      0,
+      'ArenaPerformanceRecord.capture.lifecycle.contextRestoredCount',
+    ),
+  });
 }
 
-function cloneMilestones(values, durationMs) {
+function cloneMilestones(values: unknown, durationMs: number): readonly ArenaPerformanceMilestone[] {
   if (!Array.isArray(values)) throw new TypeError('performance milestones 必须是数组。');
   if (values.length > MAXIMUM_MILESTONES) {
     throw new RangeError(`performance milestones 不能超过 ${MAXIMUM_MILESTONES} 项。`);
   }
-  const ids = new Set();
-  return Object.freeze(values.map((value, index) => {
+  const ids = new Set<string>();
+  return Object.freeze(values.map((value: unknown, index): ArenaPerformanceMilestone => {
     const name = `performance milestones[${index}]`;
     assertKnownKeys(value, MILESTONE_KEYS, name);
     const id = boundedString(value.id, 128, `${name}.id`);
@@ -132,13 +217,17 @@ function cloneMilestones(values, durationMs) {
   }).sort((left, right) => (left.id < right.id ? -1 : left.id > right.id ? 1 : 0)));
 }
 
-function cloneFrames(values, durationMs, recordedFrameCount) {
+function cloneFrames(
+  values: unknown,
+  durationMs: number,
+  recordedFrameCount: number,
+): readonly ArenaPerformanceFrameSample[] {
   if (!Array.isArray(values) || values.length !== recordedFrameCount) {
     throw new RangeError('performance frames 数量与 recordedFrameCount 不一致。');
   }
   if (values.length > MAXIMUM_FRAMES) throw new RangeError('performance frames 过多。');
   let previousElapsed = -1;
-  return Object.freeze(values.map((value, index) => {
+  return Object.freeze(values.map((value: unknown, index): ArenaPerformanceFrameSample => {
     const name = `performance frames[${index}]`;
     assertKnownKeys(value, FRAME_KEYS, name);
     const sequence = assertIntegerAtLeast(value.sequence, 1, `${name}.sequence`);
@@ -176,12 +265,16 @@ function cloneFrames(values, durationMs, recordedFrameCount) {
   }));
 }
 
-function cloneResources(values, durationMs, observedFrameCount) {
+function cloneResources(
+  values: unknown,
+  durationMs: number,
+  observedFrameCount: number,
+): readonly ArenaPerformanceResourceSample[] {
   if (!Array.isArray(values)) throw new TypeError('performance resources 必须是数组。');
   if (values.length > MAXIMUM_RESOURCES) throw new RangeError('performance resources 过多。');
   let previousSequence = 0;
   let previousElapsed = -1;
-  return Object.freeze(values.map((value, index) => {
+  return Object.freeze(values.map((value: unknown, index): ArenaPerformanceResourceSample => {
     const name = `performance resources[${index}]`;
     assertKnownKeys(value, RESOURCE_KEYS, name);
     const frameSequence = assertIntegerAtLeast(value.frameSequence, 1, `${name}.frameSequence`);
@@ -194,16 +287,26 @@ function cloneResources(values, durationMs, observedFrameCount) {
       throw new RangeError(`${name}.elapsedMs 必须单调且不超过 duration。`);
     }
     previousElapsed = elapsedMs;
-    const result = { frameSequence, elapsedMs };
-    for (const key of RESOURCE_KEYS) {
-      if (key === 'frameSequence' || key === 'elapsedMs') continue;
-      result[key] = nullableInteger(value[key], `${name}.${key}`);
-    }
-    return Object.freeze(result);
+    return Object.freeze({
+      frameSequence,
+      elapsedMs,
+      drawCalls: nullableInteger(value.drawCalls, `${name}.drawCalls`),
+      triangles: nullableInteger(value.triangles, `${name}.triangles`),
+      points: nullableInteger(value.points, `${name}.points`),
+      lines: nullableInteger(value.lines, `${name}.lines`),
+      programs: nullableInteger(value.programs, `${name}.programs`),
+      geometries: nullableInteger(value.geometries, `${name}.geometries`),
+      textures: nullableInteger(value.textures, `${name}.textures`),
+      jsHeapBytes: nullableInteger(value.jsHeapBytes, `${name}.jsHeapBytes`),
+      processMemoryBytes: nullableInteger(
+        value.processMemoryBytes,
+        `${name}.processMemoryBytes`,
+      ),
+    });
   }));
 }
 
-function cloneProbe(value) {
+function cloneProbe(value: unknown): ArenaPerformanceProbeCapture {
   assertKnownKeys(value, PROBE_KEYS, 'ArenaPerformanceRecord.capture.probe');
   if (value.schemaVersion !== 1) throw new RangeError('只接受 performance probe schema 1。');
   if (value.state !== 'stopped') throw new RangeError('performance capture 必须先停止。');
@@ -278,7 +381,7 @@ function cloneProbe(value) {
   });
 }
 
-function cloneCapture(value, target) {
+function cloneCapture(value: unknown, target: ArenaPerformanceTargetDefinition): ArenaPerformanceCapture {
   assertKnownKeys(value, CAPTURE_KEYS, 'ArenaPerformanceRecord.capture');
   const qualityDefinitionId = boundedString(
     value.qualityDefinitionId,
@@ -311,7 +414,10 @@ function cloneCapture(value, target) {
   });
 }
 
-export function createArenaPerformanceRecord(policyValue, value) {
+export function createArenaPerformanceRecord(
+  policyValue: unknown,
+  value: unknown,
+): ArenaPerformanceRecord {
   const policy = createArenaPerformancePolicyDefinition(policyValue);
   const source = cloneFrozenData(value, 'ArenaPerformanceRecord');
   assertKnownKeys(source, RECORD_KEYS, 'ArenaPerformanceRecord');
@@ -342,7 +448,7 @@ export function createArenaPerformanceRecord(policyValue, value) {
   });
 }
 
-export function getArenaPerformanceRecordHash(policyValue, value) {
+export function getArenaPerformanceRecordHash(policyValue: unknown, value: unknown): string {
   return createDeterministicDataHash(
     createArenaPerformanceRecord(policyValue, value),
     'ArenaPerformanceRecord',
