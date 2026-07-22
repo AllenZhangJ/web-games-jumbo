@@ -6,8 +6,11 @@ import {
   INPUT_PILOT_EXCLUSION_REASON,
   INPUT_PILOT_TERMINATION_REASON,
   INPUT_PILOT_TRIAL_CONTROLLER_STATE,
+  INPUT_PILOT_TRIAL_CHECKPOINT_SCHEMA_VERSION,
+  INPUT_PILOT_TRIAL_PHASE,
   INPUT_PILOT_TRIAL_STATUS,
   InputPilotAssignedMatchService,
+  InputPilotEnrollmentLedger,
   InputPilotRegistry,
   InputPilotFormModel,
   createArenaInputPilotV1Definition,
@@ -15,6 +18,7 @@ import {
   createInputPilotDefinition,
   createInputPilotRecord,
   createInputPilotReviewDraft,
+  createInputPilotTrialCheckpoint,
   validateInputPilotRuntime,
   validateInputPilotRuntimeStatus,
 } from '../src/index.js';
@@ -204,5 +208,78 @@ describe('Input Pilot strict runtime ports', () => {
     expect(reads).toBe(0);
     expect(service.create({ modeId: 'arena-v1' })).toBe(1);
     expect(createdOptions).toEqual([{ modeId: 'arena-v1', matchSeed: 19 }]);
+  });
+});
+
+describe('Input Pilot strict enrollment and checkpoint', () => {
+  it('rejects ledger option and enrollment accessors without executing them', () => {
+    const definition = createArenaInputPilotV1Definition();
+    let reads = 0;
+    const invalidOptions = { definition, persist: () => true };
+    Object.defineProperty(invalidOptions, 'initialState', {
+      enumerable: true,
+      get() {
+        reads += 1;
+        return null;
+      },
+    });
+    expect(() => new InputPilotEnrollmentLedger(invalidOptions)).toThrow(/数据字段/);
+
+    const ledger = new InputPilotEnrollmentLedger({ definition, persist: () => true });
+    const invalidEnrollment = { enrollmentIndex: 0 };
+    Object.defineProperty(invalidEnrollment, 'participantId', {
+      enumerable: true,
+      get() {
+        reads += 1;
+        return 'participant';
+      },
+    });
+    expect(() => ledger.enroll(invalidEnrollment)).toThrow(/数据字段/);
+    expect(ledger.getSnapshot().revision).toBe(0);
+    expect(reads).toBe(0);
+    ledger.destroy();
+  });
+
+  it('rejects foreign then accessors atomically and permits an exact retry', () => {
+    const definition = createArenaInputPilotV1Definition();
+    let asyncResult = true;
+    let reads = 0;
+    const invalidResult = {};
+    Object.defineProperty(invalidResult, 'then', {
+      get() {
+        reads += 1;
+        return () => {};
+      },
+    });
+    const ledger = new InputPilotEnrollmentLedger({
+      definition,
+      persist: () => asyncResult ? invalidResult : true,
+    });
+    expect(() => ledger.enroll({ participantId: 'participant', enrollmentIndex: 0 }))
+      .toThrow(/访问器 thenable/);
+    expect(ledger.getSnapshot().revision).toBe(0);
+    expect(reads).toBe(0);
+    asyncResult = false;
+    expect(ledger.enroll({ participantId: 'participant', enrollmentIndex: 0 }).enrollmentIndex)
+      .toBe(0);
+    ledger.destroy();
+  });
+
+  it('rejects checkpoint accessors before reading nested evidence', () => {
+    const definition = createArenaInputPilotV1Definition();
+    let reads = 0;
+    const checkpoint = {
+      schemaVersion: INPUT_PILOT_TRIAL_CHECKPOINT_SCHEMA_VERSION,
+      phase: INPUT_PILOT_TRIAL_PHASE.ENROLLED,
+    };
+    Object.defineProperty(checkpoint, 'trialId', {
+      enumerable: true,
+      get() {
+        reads += 1;
+        return 'trial';
+      },
+    });
+    expect(() => createInputPilotTrialCheckpoint(definition, checkpoint)).toThrow(/数据字段/);
+    expect(reads).toBe(0);
   });
 });

@@ -8,7 +8,7 @@ import {
   INPUT_PILOT_TRIAL_CHECKPOINT_SCHEMA_VERSION,
   INPUT_PILOT_TRIAL_PHASE,
   createInputPilotTrialCheckpoint,
-} from '../../../src/arena/presentation/pilot/input-pilot-trial-checkpoint.js';
+} from '@number-strategy-jump/arena-input-pilot';
 import { INPUT_PILOT_RUNTIME_STATE } from '@number-strategy-jump/arena-input-pilot';
 import { InputPilotPresentationRuntime } from '../../../src/arena/presentation/session/input-pilot-presentation-runtime.js';
 

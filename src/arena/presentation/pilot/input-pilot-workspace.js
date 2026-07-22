@@ -8,7 +8,7 @@ import { createInputPilotDefinition } from '@number-strategy-jump/arena-input-pi
 import {
   INPUT_PILOT_ENROLLMENT_LEDGER_SCHEMA_VERSION,
   createInputPilotEnrollmentSnapshot,
-} from './input-pilot-enrollment-ledger.js';
+} from '@number-strategy-jump/arena-input-pilot';
 import {
   INPUT_PILOT_RECORD_SCHEMA_VERSION,
   createInputPilotRecord,
@@ -16,7 +16,7 @@ import {
 import {
   INPUT_PILOT_TRIAL_CHECKPOINT_SCHEMA_VERSION,
   createInputPilotTrialCheckpoint,
-} from './input-pilot-trial-checkpoint.js';
+} from '@number-strategy-jump/arena-input-pilot';
 
 export const INPUT_PILOT_WORKSPACE_SCHEMA_VERSION = 1;
 

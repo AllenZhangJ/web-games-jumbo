@@ -8,7 +8,7 @@ import { InputPilotAssignedMatchService } from '@number-strategy-jump/arena-inpu
 import { createInputPilotDefinition } from '@number-strategy-jump/arena-input-pilot';
 import { InputPilotMetricCollector } from '../pilot/input-pilot-metric-collector.js';
 import { InputPilotObservedMatchService } from '../pilot/input-pilot-observed-match-service.js';
-import { createInputPilotTrialCheckpoint } from '../pilot/input-pilot-trial-checkpoint.js';
+import { createInputPilotTrialCheckpoint } from '@number-strategy-jump/arena-input-pilot';
 import { INPUT_PILOT_RUNTIME_STATE } from '@number-strategy-jump/arena-input-pilot';
 
 function requiredFunction(value, name) {

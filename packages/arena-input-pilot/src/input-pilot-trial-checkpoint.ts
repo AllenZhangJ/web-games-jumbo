@@ -3,15 +3,27 @@ import {
   assertNonEmptyString,
   cloneFrozenData,
 } from '@number-strategy-jump/arena-contracts';
-import { validateInputPilotAssignment } from '@number-strategy-jump/arena-input-pilot';
-import { createInputPilotDefinition } from '@number-strategy-jump/arena-input-pilot';
 import {
   createInputPilotAutomatedMetrics,
   createInputPilotDevice,
   createInputPilotEligibility,
-} from '@number-strategy-jump/arena-input-pilot';
-import { INPUT_PILOT_TERMINATION_REASON } from '@number-strategy-jump/arena-input-pilot';
-import { createInputPilotReviewDraft } from '@number-strategy-jump/arena-input-pilot';
+  type InputPilotAutomatedMetrics,
+  type InputPilotEligibility,
+} from './input-pilot-record-fields.js';
+import {
+  createInputPilotDefinition,
+  type InputPilotDefinition,
+  type InputPilotEnvironment,
+} from './input-pilot-definition.js';
+import {
+  validateInputPilotAssignment,
+  type InputPilotAssignment,
+} from './input-pilot-assignment.js';
+import {
+  createInputPilotReviewDraft,
+  type InputPilotReviewDraft,
+} from './input-pilot-review-draft.js';
+import { INPUT_PILOT_TERMINATION_REASON } from './input-pilot-vocabulary.js';
 
 export const INPUT_PILOT_TRIAL_CHECKPOINT_SCHEMA_VERSION = 3;
 
@@ -19,7 +31,26 @@ export const INPUT_PILOT_TRIAL_PHASE = Object.freeze({
   ENROLLED: 'enrolled',
   RUNNING: 'running',
   REVIEWING: 'reviewing',
-});
+} as const);
+
+export type InputPilotTrialPhase = typeof INPUT_PILOT_TRIAL_PHASE[
+  keyof typeof INPUT_PILOT_TRIAL_PHASE
+];
+export type InputPilotTerminationReason = typeof INPUT_PILOT_TERMINATION_REASON[
+  keyof typeof INPUT_PILOT_TERMINATION_REASON
+];
+
+export interface InputPilotTrialCheckpoint {
+  readonly schemaVersion: typeof INPUT_PILOT_TRIAL_CHECKPOINT_SCHEMA_VERSION;
+  readonly trialId: string;
+  readonly assignment: InputPilotAssignment;
+  readonly phase: InputPilotTrialPhase;
+  readonly terminationReason: InputPilotTerminationReason | null;
+  readonly device: InputPilotEnvironment;
+  readonly eligibility: InputPilotEligibility;
+  readonly automated: InputPilotAutomatedMetrics | null;
+  readonly reviewDraft: InputPilotReviewDraft | null;
+}
 
 const CHECKPOINT_KEYS = new Set([
   'schemaVersion',
@@ -32,22 +63,25 @@ const CHECKPOINT_KEYS = new Set([
   'automated',
   'reviewDraft',
 ]);
-
-function phase(value) {
-  if (!Object.values(INPUT_PILOT_TRIAL_PHASE).includes(value)) {
-    throw new RangeError(`InputPilotTrialCheckpoint.phase 不受支持：${String(value)}。`);
-  }
-  return value;
-}
-
-const REVIEWING_TERMINATION_REASONS = new Set([
+const TRIAL_PHASE_VALUES = new Set<string>(Object.values(INPUT_PILOT_TRIAL_PHASE));
+const REVIEWING_TERMINATION_REASONS = new Set<unknown>([
   INPUT_PILOT_TERMINATION_REASON.MATCH_ENDED,
   INPUT_PILOT_TERMINATION_REASON.MAXIMUM_DURATION_REACHED,
   INPUT_PILOT_TERMINATION_REASON.PARTICIPANT_ABANDONED,
 ]);
 
-export function createInputPilotTrialCheckpoint(definitionValue, value) {
-  const definition = createInputPilotDefinition(definitionValue);
+function trialPhase(value: unknown): InputPilotTrialPhase {
+  if (typeof value !== 'string' || !TRIAL_PHASE_VALUES.has(value)) {
+    throw new RangeError(`InputPilotTrialCheckpoint.phase 不受支持：${String(value)}。`);
+  }
+  return value as InputPilotTrialPhase;
+}
+
+export function createInputPilotTrialCheckpoint(
+  definitionValue: unknown,
+  value: unknown,
+): InputPilotTrialCheckpoint {
+  const definition: InputPilotDefinition = createInputPilotDefinition(definitionValue);
   const source = cloneFrozenData(value, 'InputPilotTrialCheckpoint');
   assertKnownKeys(source, CHECKPOINT_KEYS, 'InputPilotTrialCheckpoint');
   if (source.schemaVersion !== INPUT_PILOT_TRIAL_CHECKPOINT_SCHEMA_VERSION) {
@@ -55,13 +89,11 @@ export function createInputPilotTrialCheckpoint(definitionValue, value) {
       `不支持 InputPilotTrialCheckpoint schema ${String(source.schemaVersion)}。`,
     );
   }
-  const trialPhase = phase(source.phase);
-  if (
-    (trialPhase === INPUT_PILOT_TRIAL_PHASE.REVIEWING) !== (source.automated !== null)
-  ) {
+  const phase = trialPhase(source.phase);
+  if ((phase === INPUT_PILOT_TRIAL_PHASE.REVIEWING) !== (source.automated !== null)) {
     throw new RangeError('只有 reviewing checkpoint 必须且只能包含 automated 指标。');
   }
-  if (trialPhase === INPUT_PILOT_TRIAL_PHASE.REVIEWING) {
+  if (phase === INPUT_PILOT_TRIAL_PHASE.REVIEWING) {
     if (!REVIEWING_TERMINATION_REASONS.has(source.terminationReason)) {
       throw new RangeError('reviewing checkpoint 必须包含可提交表单的终止原因。');
     }
@@ -80,8 +112,8 @@ export function createInputPilotTrialCheckpoint(definitionValue, value) {
     schemaVersion: INPUT_PILOT_TRIAL_CHECKPOINT_SCHEMA_VERSION,
     trialId: assertNonEmptyString(source.trialId, 'InputPilotTrialCheckpoint.trialId'),
     assignment: validateInputPilotAssignment(definition, source.assignment),
-    phase: trialPhase,
-    terminationReason: source.terminationReason,
+    phase,
+    terminationReason: source.terminationReason as InputPilotTerminationReason | null,
     device: createInputPilotDevice(source.device, 'InputPilotTrialCheckpoint.device'),
     eligibility: createInputPilotEligibility(
       source.eligibility,
@@ -94,7 +126,7 @@ export function createInputPilotTrialCheckpoint(definitionValue, value) {
         definition.thresholds.maximumTrialDurationMs,
         'InputPilotTrialCheckpoint.automated',
       ),
-    reviewDraft: trialPhase === INPUT_PILOT_TRIAL_PHASE.REVIEWING
+    reviewDraft: phase === INPUT_PILOT_TRIAL_PHASE.REVIEWING
       ? createInputPilotReviewDraft(source.reviewDraft)
       : null,
   });

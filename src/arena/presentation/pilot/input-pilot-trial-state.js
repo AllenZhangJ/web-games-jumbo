@@ -11,7 +11,7 @@ import {
   INPUT_PILOT_TRIAL_CHECKPOINT_SCHEMA_VERSION,
   INPUT_PILOT_TRIAL_PHASE,
   createInputPilotTrialCheckpoint,
-} from './input-pilot-trial-checkpoint.js';
+} from '@number-strategy-jump/arena-input-pilot';
 import { createInputPilotReviewDraft } from '@number-strategy-jump/arena-input-pilot';
 
 function trialIdFor(assignment) {

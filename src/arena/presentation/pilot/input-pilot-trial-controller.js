@@ -15,7 +15,7 @@ import {
 export { INPUT_PILOT_TRIAL_CONTROLLER_STATE } from '@number-strategy-jump/arena-input-pilot';
 import {
   INPUT_PILOT_TRIAL_PHASE,
-} from './input-pilot-trial-checkpoint.js';
+} from '@number-strategy-jump/arena-input-pilot';
 import {
   invalidateInputPilotTrial,
   reviewInputPilotTrial,

@@ -10,7 +10,7 @@ import { createInputPilotAssignment } from '@number-strategy-jump/arena-input-pi
 import {
   INPUT_PILOT_ENROLLMENT_LEDGER_SCHEMA_VERSION,
   InputPilotEnrollmentLedger,
-} from '../../../src/arena/presentation/pilot/input-pilot-enrollment-ledger.js';
+} from '@number-strategy-jump/arena-input-pilot';
 import { InputPilotMetricCollector } from '../../../src/arena/presentation/pilot/input-pilot-metric-collector.js';
 import { createInputPilotDefinition } from '@number-strategy-jump/arena-input-pilot';
 import { InputPilotObservedMatchService } from '../../../src/arena/presentation/pilot/input-pilot-observed-match-service.js';

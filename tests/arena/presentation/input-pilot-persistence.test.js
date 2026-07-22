@@ -9,7 +9,7 @@ import {
 import {
   INPUT_PILOT_ENROLLMENT_LEDGER_SCHEMA_VERSION,
   createInputPilotEnrollmentSnapshot,
-} from '../../../src/arena/presentation/pilot/input-pilot-enrollment-ledger.js';
+} from '@number-strategy-jump/arena-input-pilot';
 import {
   INPUT_PILOT_ACTION_OUTCOME,
   INPUT_PILOT_COMPREHENSION,
@@ -26,7 +26,7 @@ import {
   INPUT_PILOT_TRIAL_CHECKPOINT_SCHEMA_VERSION,
   INPUT_PILOT_TRIAL_PHASE,
   createInputPilotTrialCheckpoint,
-} from '../../../src/arena/presentation/pilot/input-pilot-trial-checkpoint.js';
+} from '@number-strategy-jump/arena-input-pilot';
 import {
   advanceInputPilotWorkspace,
   createInputPilotWorkspace,
