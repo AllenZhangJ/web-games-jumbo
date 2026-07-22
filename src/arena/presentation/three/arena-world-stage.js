@@ -12,12 +12,12 @@ import {
   CharacterViewRegistry,
   EquipmentViewRegistry,
   GltfCharacterViewFactory,
+  GreyboxEventEffects,
   ProgrammaticCharacterView,
   ProgrammaticCharacterViewFactory,
   SurfaceViewRegistry,
   disposeThreeObject,
 } from '@number-strategy-jump/arena-presentation-three';
-import { GreyboxEventEffects } from './greybox-event-effects.js';
 
 const EMPTY_EVENTS = Object.freeze([]);
 

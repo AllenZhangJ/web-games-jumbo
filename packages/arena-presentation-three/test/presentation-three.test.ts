@@ -6,6 +6,7 @@ import {
   GltfCharacterView,
   GltfCharacterViewFactory,
   GltfPresentationAssetLoader,
+  GreyboxEventEffects,
   PlatformTextureLoader,
   ProgrammaticCharacterView,
   ProgrammaticCharacterViewFactory,
@@ -181,6 +182,67 @@ function gltfSyncOptions(events: readonly unknown[] = []): unknown {
 }
 
 describe('Arena Presentation Three lifecycle boundaries', () => {
+  it('keeps event-effect consumption atomic across getters and callback reentry', () => {
+    let reads = 0;
+    const accessorOptions = {};
+    Object.defineProperty(accessorOptions, 'maximumEffects', {
+      enumerable: true,
+      get() { reads += 1; return 1; },
+    });
+    expect(() => new GreyboxEventEffects(new THREE.Group(), accessorOptions)).toThrow(/maximumEffects.*数据字段/);
+    expect(reads).toBe(0);
+
+    const effects = new GreyboxEventEffects(new THREE.Group(), { maximumEffects: 1 });
+    const hit = Object.freeze({
+      id: 'hit:1', type: 'HitResolved', action: 'hammer-smash',
+      attackerId: 'player-2', targetId: 'player-1',
+    });
+    const badPosition = { y: 1, z: 0 };
+    Object.defineProperty(badPosition, 'x', {
+      enumerable: true,
+      get() { reads += 1; return 0; },
+    });
+    expect(() => effects.consume([hit], () => badPosition)).toThrow(/position.*x.*数据字段/);
+    expect(reads).toBe(0);
+    expect(effects.getDebugSnapshot()).toMatchObject({ effectCount: 0, availableEffects: 1 });
+
+    expect(() => effects.consume([hit], () => {
+      try { effects.clear(); } catch { /* expected callback reentry rejection */ }
+      return { x: 0, y: 1, z: 0 };
+    })).toThrow(/回调发生重入/);
+    expect(effects.getDebugSnapshot()).toMatchObject({ effectCount: 0, availableEffects: 1 });
+
+    effects.consume([hit], (participantId: string) => (
+      participantId === 'player-1' ? { x: 1, y: 1, z: 0 } : { x: 0, y: 1, z: 0 }
+    ));
+    expect(effects.getDebugSnapshot()).toMatchObject({ effectCount: 1, availableEffects: 0 });
+    for (let index = 0; index < 4; index += 1) effects.update(0.1);
+    expect(effects.getDebugSnapshot()).toMatchObject({ effectCount: 0, availableEffects: 1 });
+    effects.dispose();
+  });
+
+  it('retains only incomplete event-effect resources for cleanup retry', () => {
+    const originalDispose = THREE.Material.prototype.dispose;
+    let materialDisposals = 0;
+    THREE.Material.prototype.dispose = function patchedDispose(): void {
+      materialDisposals += 1;
+      if (materialDisposals === 1) throw new Error('transient event material release');
+      originalDispose.call(this);
+    };
+    let effects: GreyboxEventEffects;
+    try {
+      effects = new GreyboxEventEffects(new THREE.Group(), { maximumEffects: 1 });
+    } finally {
+      THREE.Material.prototype.dispose = originalDispose;
+    }
+    expect(() => effects.dispose()).toThrow(/清理未完整完成/);
+    const firstPassDisposals = materialDisposals;
+    effects.dispose();
+    effects.dispose();
+    expect(materialDisposals).toBe(firstPassDisposals + 1);
+    expect(() => effects.getDebugSnapshot()).toThrow(/已销毁/);
+  });
+
   it('snapshots GLTF factory callbacks and retains late cleanup for an exact retry', async () => {
     let reads = 0;
     const accessorOptions = {
