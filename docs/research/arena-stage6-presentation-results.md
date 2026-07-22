@@ -66,6 +66,7 @@ git diff --check
 ## 生命周期与竞态修复
 
 - `ArenaInputRouter` 只在 sampler 暂停/恢复成功后提交 mode，避免半提交状态。
+- 2026-07-22 企业治理迁移后，Router 与 Keyboard 开发适配统一由 strict `arena-presentation-runtime` 维护；sampler/EventTarget 方法在接管时快照，同对象替换不会自毁，异步伪同步能力失败关闭，监听解绑失败保留精确 cleanup 供重试。
 - Session 在渲染帧内收到宿主输入错误时延迟到帧尾清理，避免销毁 Renderer 的 render 重入。
 - Session 清理不可重入；清理回调错误进入统一原因链。
 - 一次性生命周期解绑失败会保留 cleanup，并允许第二次 `destroy()` 重试。
