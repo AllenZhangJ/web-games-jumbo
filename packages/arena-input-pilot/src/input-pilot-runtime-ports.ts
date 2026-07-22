@@ -1,7 +1,9 @@
 import {
   assertKnownKeys,
   assertPlainRecord,
+  combineCleanupFailure,
   createSynchronousStoragePort,
+  normalizeThrownError,
 } from '@number-strategy-jump/arena-contracts';
 import {
   SYNCHRONOUS_STORAGE_LEASE_SCHEMA_VERSION,
@@ -151,13 +153,28 @@ export function validateInputPilotRuntimeFactory(value: unknown): InputPilotRunt
   return value as InputPilotRuntimeFactory;
 }
 export function validateInputPilotRuntime(value: unknown): InputPilotRuntimePort {
-  return Object.freeze({
-    start: dataMethod(value, 'start', 'pilot runtime'),
-    setPaused: dataMethod(value, 'setPaused', 'pilot runtime'),
-    getStatus: dataMethod(value, 'getStatus', 'pilot runtime'),
-    finalizeMetrics: dataMethod(value, 'finalizeMetrics', 'pilot runtime'),
-    destroy: dataMethod(value, 'destroy', 'pilot runtime'),
-  });
+  const destroy = dataMethod(value, 'destroy', 'pilot runtime');
+  try {
+    return Object.freeze({
+      start: dataMethod(value, 'start', 'pilot runtime'),
+      setPaused: dataMethod(value, 'setPaused', 'pilot runtime'),
+      getStatus: dataMethod(value, 'getStatus', 'pilot runtime'),
+      finalizeMetrics: dataMethod(value, 'finalizeMetrics', 'pilot runtime'),
+      destroy,
+    });
+  } catch (error) {
+    const cleanupErrors: Error[] = [];
+    try {
+      destroy();
+    } catch (cleanupError) {
+      cleanupErrors.push(normalizeThrownError(cleanupError, '无效 pilot runtime 清理失败'));
+    }
+    throw combineCleanupFailure(
+      normalizeThrownError(error, 'pilot runtime 合同无效'),
+      cleanupErrors,
+      'pilot runtime 合同无效且清理失败。',
+    );
+  }
 }
 export function validateInputPilotRuntimeStatus(value: unknown) {
   const status = assertPlainRecord(value, 'pilot runtime status');

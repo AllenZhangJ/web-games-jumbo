@@ -15,6 +15,7 @@ export * from './input-pilot-registry.js';
 export * from './input-pilot-review-draft.js';
 export * from './input-pilot-runtime-ports.js';
 export * from './input-pilot-trial-checkpoint.js';
+export * from './input-pilot-trial-controller.js';
 export * from './input-pilot-trial-state.js';
 export * from './input-pilot-vocabulary.js';
 export * from './input-pilot-workspace.js';

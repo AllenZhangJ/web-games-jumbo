@@ -114,7 +114,6 @@
     "src/arena/presentation/assets/formal-asset-intake-bundle.js",
     "src/arena/presentation/assets/formal-asset-intake-policy.js",
     "src/arena/presentation/assets/formal-asset-provenance-record.js",
-    "src/arena/presentation/pilot/input-pilot-trial-controller.js",
     "src/arena/regression/arena-regression-evidence-components.js",
     "src/arena/regression/arena-regression-evidence-validation.js",
     "src/arena/regression/arena-regression-evidence.js",

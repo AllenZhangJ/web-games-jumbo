@@ -177,8 +177,8 @@ test('Arena presentation keeps host APIs injected and cannot be imported by auth
   }
 });
 
-test('Arena input pilot remains an optional headless presentation adapter', async () => {
-  const pilotFiles = await listJavaScript(path.resolve('src/arena/presentation/pilot'));
+test('Arena input pilot domain remains optional and host-free', async () => {
+  const pilotFiles = await listJavaScript(path.resolve('packages/arena-input-pilot/src'));
   assert.ok(pilotFiles.length > 0);
   for (const file of pilotFiles) {
     const source = await readFile(file, 'utf8');

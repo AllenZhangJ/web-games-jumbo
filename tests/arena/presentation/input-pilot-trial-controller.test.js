@@ -9,11 +9,9 @@ import {
 } from '@number-strategy-jump/arena-input-pilot';
 import {
   INPUT_PILOT_RUNTIME_STATE,
-} from '@number-strategy-jump/arena-input-pilot';
-import {
   INPUT_PILOT_TRIAL_CONTROLLER_STATE,
   InputPilotTrialController,
-} from '../../../src/arena/presentation/pilot/input-pilot-trial-controller.js';
+} from '@number-strategy-jump/arena-input-pilot';
 import { InputPilotWorkspaceRepository } from '@number-strategy-jump/arena-input-pilot';
 
 function clone(value) {

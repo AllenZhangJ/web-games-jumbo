@@ -182,6 +182,19 @@ describe('Input Pilot strict runtime ports', () => {
     expect(reads).toBe(0);
   });
 
+  it('cleans a factory runtime when its required data-method contract is incomplete', () => {
+    let destroyCount = 0;
+    expect(() => validateInputPilotRuntime({
+      start() {},
+      setPaused() {},
+      finalizeMetrics() {},
+      destroy() {
+        destroyCount += 1;
+      },
+    })).toThrow(/getStatus/);
+    expect(destroyCount).toBe(1);
+  });
+
   it('distinguishes an absent optional destroy method from an invalid accessor', () => {
     const withoutDestroy = new InputPilotAssignedMatchService({
       matchService: { create: (options: unknown) => options },

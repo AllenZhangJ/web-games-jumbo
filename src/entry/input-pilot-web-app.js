@@ -1,12 +1,12 @@
 import {
   INPUT_PILOT_EVIDENCE_BUNDLE_SCHEMA_VERSION,
   InputPilotFormModel,
+  InputPilotTrialController,
   InputPilotWorkspaceRepository,
   createArenaInputPilotV1Definition,
   createInputPilotEvidenceBundle,
 } from '@number-strategy-jump/arena-input-pilot';
 import { InputPilotPresentationRuntime } from '@number-strategy-jump/arena-input-pilot-presentation';
-import { InputPilotTrialController } from '../arena/presentation/pilot/input-pilot-trial-controller.js';
 import { downloadInputPilotJson } from './input-pilot-json-download.js';
 import { loadInputPilotBuildIdentity } from './input-pilot-build-identity.js';
 import {
