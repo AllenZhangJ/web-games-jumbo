@@ -13,6 +13,7 @@
     { "path": "./packages/arena-physics" },
     { "path": "./packages/arena-presentation-contracts" },
     { "path": "./packages/arena-presentation-runtime" },
+    { "path": "./packages/arena-presentation-three" },
     { "path": "./packages/arena-product-contracts" },
     { "path": "./packages/arena-product-content" },
     { "path": "./packages/arena-product-composition" },

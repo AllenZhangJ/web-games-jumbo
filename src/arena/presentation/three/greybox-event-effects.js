@@ -1,6 +1,9 @@
 import * as THREE from 'three';
-import { disposeThreeObject } from './dispose-three-resources.js';
-import { ARENA_GREYBOX_COLOR, ARENA_GREYBOX_DESIGN } from './greybox-style.js';
+import {
+  ARENA_GREYBOX_COLOR,
+  ARENA_GREYBOX_DESIGN,
+  disposeThreeObject,
+} from '@number-strategy-jump/arena-presentation-three';
 
 const EFFECT_TARGET_FIELDS = Object.freeze([
   'targetId',

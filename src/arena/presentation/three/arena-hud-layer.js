@@ -3,8 +3,7 @@ import {
   DEFAULT_ARENA_CONTROL_LAYOUT,
   actionButtonRadius,
 } from '../input/control-layout.js';
-import { disposeThreeObject } from './dispose-three-resources.js';
-import { ARENA_GREYBOX_DESIGN } from './greybox-style.js';
+import { ARENA_GREYBOX_DESIGN, disposeThreeObject } from '@number-strategy-jump/arena-presentation-three';
 
 function finite(value, fallback = 0) {
   return Number.isFinite(value) ? value : fallback;

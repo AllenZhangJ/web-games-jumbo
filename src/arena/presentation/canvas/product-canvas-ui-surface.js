@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { createProductUiSceneModel } from '../product/product-ui-scene-model.js';
-import { disposeThreeObject } from '../three/dispose-three-resources.js';
+import { disposeThreeObject } from '@number-strategy-jump/arena-presentation-three';
 import {
   createProductCanvasLayout,
   pointInProductCanvasRect,

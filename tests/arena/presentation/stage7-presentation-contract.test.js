@@ -10,6 +10,9 @@ import {
   resolveAnimationBinding,
 } from '@number-strategy-jump/arena-presentation-contracts';
 import {
+  CharacterViewRegistry,
+} from '@number-strategy-jump/arena-presentation-three';
+import {
   PRESENTATION_ASSET_LOAD_STATE,
   CharacterViewRuntime,
   PresentationAssetLoadTask,
@@ -19,9 +22,6 @@ import {
 import {
   ARENA_V1_GREYBOX_CONTENT,
 } from '../../../src/arena/presentation/content/arena-v1-greybox-content.js';
-import {
-  CharacterViewRegistry,
-} from '../../../src/arena/presentation/three/character-view-registry.js';
 import { STAGE4_ACTION_ID } from '../../../src/arena/content/stage4-equipment.js';
 import { STAGE6_MOVEMENT_ACTION_ID } from '../../../src/arena/content/stage6-movement-actions.js';
 
@@ -468,6 +468,64 @@ test('CharacterViewRegistry detaches removed roots and closes every runtime afte
   registry.dispose();
   registry.dispose();
   assert.equal(disposeCalls.get('player-1'), 1);
+});
+
+test('CharacterViewRegistry retains failed root and runtime cleanup for an exact dispose retry', () => {
+  const roots = [];
+  const removeAttempts = new Map();
+  const disposeAttempts = new Map();
+  const root = {
+    add: (value) => { roots.push(value); },
+    remove: (value) => {
+      const attempts = (removeAttempts.get(value.participantId) ?? 0) + 1;
+      removeAttempts.set(value.participantId, attempts);
+      if (value.participantId === 'player-2' && attempts <= 2) {
+        throw new Error('transient character detach');
+      }
+      const index = roots.indexOf(value);
+      if (index >= 0) roots.splice(index, 1);
+    },
+  };
+  const registry = new CharacterViewRegistry(root, {
+    presentationRegistry: ARENA_V1_GREYBOX_CONTENT.characterPresentationRegistry,
+    actionPresentations: ARENA_V1_GREYBOX_CONTENT.actions,
+    viewFactory: {
+      create: ({ participantId }) => ({
+        root: { participantId, position: { x: 0, y: 0, z: 0 } },
+        getAnimationCapabilities: () => ({
+          proceduralKeys: ARENA_ANIMATION_SEMANTIC_IDS,
+          clipKeys: [],
+        }),
+        sync: () => {},
+        update: () => {},
+        getDebugSnapshot: () => Object.freeze({ participantId }),
+        dispose: () => {
+          const attempts = (disposeAttempts.get(participantId) ?? 0) + 1;
+          disposeAttempts.set(participantId, attempts);
+          if (participantId === 'player-2' && attempts <= 2) {
+            throw new Error('transient character dispose');
+          }
+        },
+      }),
+    },
+  });
+  const playerOne = participant();
+  const playerTwo = participant({ id: 'player-2' });
+  registry.sync({
+    ...frame(0, playerOne),
+    world: { participants: [playerOne, playerTwo] },
+  }, { cameraModel: CAMERA_MODEL });
+  assert.throws(
+    () => registry.sync(frame(1, playerOne), { cameraModel: CAMERA_MODEL }),
+    /失败关闭时清理未完整完成/,
+  );
+  assert.throws(() => registry.update(0), /已失败/);
+  assert.equal(roots.length, 1);
+  registry.dispose();
+  registry.dispose();
+  assert.equal(roots.length, 0);
+  assert.equal(removeAttempts.get('player-2'), 3);
+  assert.equal(disposeAttempts.get('player-2'), 3);
 });
 
 function deferred() {

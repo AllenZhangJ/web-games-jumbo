@@ -6,12 +6,15 @@ import {
 } from '../camera/orthographic-arena-camera.js';
 import { ARENA_V1_GREYBOX_CONTENT } from '../content/arena-v1-greybox-content.js';
 import { ARENA_PRESENTATION_ASSET_PROVIDER_ID } from '@number-strategy-jump/arena-presentation-runtime';
-import { CharacterViewRegistry } from './character-view-registry.js';
-import { disposeThreeObject } from './dispose-three-resources.js';
-import { EquipmentViewRegistry } from './equipment-view-registry.js';
+import {
+  ARENA_GREYBOX_COLOR,
+  ARENA_GREYBOX_DESIGN,
+  CharacterViewRegistry,
+  EquipmentViewRegistry,
+  SurfaceViewRegistry,
+  disposeThreeObject,
+} from '@number-strategy-jump/arena-presentation-three';
 import { GreyboxEventEffects } from './greybox-event-effects.js';
-import { ARENA_GREYBOX_COLOR, ARENA_GREYBOX_DESIGN } from './greybox-style.js';
-import { SurfaceViewRegistry } from './surface-view-registry.js';
 import { ProgrammaticCharacterViewFactory } from './programmatic-character-view-factory.js';
 import { GltfCharacterViewFactory } from './gltf-character-view-factory.js';
 

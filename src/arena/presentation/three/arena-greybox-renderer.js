@@ -5,7 +5,7 @@ import {
 } from '@number-strategy-jump/arena-presentation-runtime';
 import { ArenaImpactAudio } from '../audio/arena-impact-audio.js';
 import { ArenaHudLayer } from './arena-hud-layer.js';
-import { ARENA_GREYBOX_COLOR } from './greybox-style.js';
+import { ARENA_GREYBOX_COLOR } from '@number-strategy-jump/arena-presentation-three';
 import { ArenaWorldStage } from './arena-world-stage.js';
 import { GltfPresentationAssetLoader } from './gltf-presentation-asset-loader.js';
 import { ARENA_V1_GREYBOX_CONTENT } from '../content/arena-v1-greybox-content.js';

@@ -16,7 +16,7 @@ import {
   ARENA_GREYBOX_RENDERER_STATE,
 } from '../../../src/arena/presentation/three/arena-greybox-renderer.js';
 import { ArenaWorldStage } from '../../../src/arena/presentation/three/arena-world-stage.js';
-import { EquipmentViewRegistry } from '../../../src/arena/presentation/three/equipment-view-registry.js';
+import { EquipmentViewRegistry } from '@number-strategy-jump/arena-presentation-three';
 import {
   ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT,
 } from '../../../src/arena/presentation/content/arena-gameplay-v2-content.js';
@@ -576,17 +576,14 @@ test('Arena HUD renders the authoritative life count instead of a fixed three-do
 
 test('Arena Three presentation sources do not call authority mutation APIs', async () => {
   const files = [
-    'arena-world-stage.js',
-    'character-view-registry.js',
-    'equipment-view-registry.js',
-    'programmatic-character-view.js',
-    'programmatic-character-view-factory.js',
-    'surface-view-registry.js',
+    new URL('../../../src/arena/presentation/three/arena-world-stage.js', import.meta.url),
+    new URL('../../../src/arena/presentation/three/programmatic-character-view.js', import.meta.url),
+    new URL('../../../src/arena/presentation/three/programmatic-character-view-factory.js', import.meta.url),
+    new URL('../../../packages/arena-presentation-three/src/character-view-registry.ts', import.meta.url),
+    new URL('../../../packages/arena-presentation-three/src/equipment-view-registry.ts', import.meta.url),
+    new URL('../../../packages/arena-presentation-three/src/surface-view-registry.ts', import.meta.url),
   ];
-  const source = (await Promise.all(files.map((file) => readFile(
-    new URL(`../../../src/arena/presentation/three/${file}`, import.meta.url),
-    'utf8',
-  )))).join('\n');
+  const source = (await Promise.all(files.map((file) => readFile(file, 'utf8')))).join('\n');
   for (const forbidden of [
     'MatchCore',
     'ArenaRuleEngine',

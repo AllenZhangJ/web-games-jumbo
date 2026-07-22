@@ -3,10 +3,13 @@ import {
   ARENA_ANIMATION_SEMANTIC,
   ARENA_ANIMATION_SEMANTIC_IDS,
 } from '@number-strategy-jump/arena-presentation-contracts';
-import { disposeThreeObject } from './dispose-three-resources.js';
-import { ARENA_GREYBOX_COLOR } from './greybox-style.js';
-import { createProgrammaticEquipment } from './programmatic-equipment.js';
-import { toVisualPosition, visualFacingYaw } from './visual-coordinate.js';
+import {
+  ARENA_GREYBOX_COLOR,
+  createProgrammaticEquipment,
+  disposeThreeObject,
+  toVisualPosition,
+  visualFacingYaw,
+} from '@number-strategy-jump/arena-presentation-three';
 
 const ACTION_STYLE = Object.freeze({
   'base-push': 'push',

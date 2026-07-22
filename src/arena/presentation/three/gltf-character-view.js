@@ -1,9 +1,11 @@
 import * as THREE from 'three';
 import { clone as cloneSkeleton } from 'three/addons/utils/SkeletonUtils.js';
 import { CharacterAnimationController } from './character-animation-controller.js';
-import { disposeThreeObject } from './dispose-three-resources.js';
-import { createProgrammaticEquipment } from './programmatic-equipment.js';
-import { visualFacingYaw } from './visual-coordinate.js';
+import {
+  createProgrammaticEquipment,
+  disposeThreeObject,
+  visualFacingYaw,
+} from '@number-strategy-jump/arena-presentation-three';
 
 const EMBEDDED_EQUIPMENT_NODES = Object.freeze([
   '1H_Crossbow',

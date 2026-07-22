@@ -1,6 +1,6 @@
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { ARENA_PRESENTATION_ASSET_PROVIDER_ID } from '@number-strategy-jump/arena-presentation-runtime';
-import { disposeThreeObject } from './dispose-three-resources.js';
+import { disposeThreeObject } from '@number-strategy-jump/arena-presentation-three';
 import { PlatformTextureLoader } from './host-texture-loader.js';
 
 const GLTF_PROVIDERS = new Set([
