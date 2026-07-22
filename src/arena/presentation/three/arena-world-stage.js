@@ -1,9 +1,4 @@
 import * as THREE from 'three';
-import {
-  createArenaWorldBounds,
-  createLocalFollowArenaCamera,
-  createOrthographicArenaCamera,
-} from '../camera/orthographic-arena-camera.js';
 import { ARENA_V1_GREYBOX_CONTENT } from '../content/arena-v1-greybox-content.js';
 import { ARENA_PRESENTATION_ASSET_PROVIDER_ID } from '@number-strategy-jump/arena-presentation-runtime';
 import {
@@ -16,6 +11,9 @@ import {
   ProgrammaticCharacterView,
   ProgrammaticCharacterViewFactory,
   SurfaceViewRegistry,
+  createArenaWorldBounds,
+  createLocalFollowArenaCamera,
+  createOrthographicArenaCamera,
   disposeThreeObject,
 } from '@number-strategy-jump/arena-presentation-three';
 

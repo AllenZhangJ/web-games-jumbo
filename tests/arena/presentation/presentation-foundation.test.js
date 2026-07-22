@@ -6,7 +6,7 @@ import { ARENA_V1_GREYBOX_CONTENT } from '../../../src/arena/presentation/conten
 import {
   createArenaWorldBounds,
   createOrthographicArenaCamera,
-} from '../../../src/arena/presentation/camera/orthographic-arena-camera.js';
+} from '@number-strategy-jump/arena-presentation-three';
 import { PresentationEventWindow } from '@number-strategy-jump/arena-presentation-runtime';
 import { projectArenaPresentationFrame } from '../../../src/arena/presentation/projection/arena-frame-projector.js';
 

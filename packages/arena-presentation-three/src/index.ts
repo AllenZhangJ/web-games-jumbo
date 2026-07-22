@@ -1,3 +1,4 @@
+export * from './arena-camera.js';
 export * from './character-view-registry.js';
 export * from './character-animation-controller.js';
 export * from './dispose-three-resources.js';

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import {
+  ARENA_CAMERA_DEFAULTS,
   EquipmentViewRegistry,
   CharacterAnimationController,
   GltfCharacterView,
@@ -11,6 +12,9 @@ import {
   ProgrammaticCharacterView,
   ProgrammaticCharacterViewFactory,
   ThreeObjectDisposalLease,
+  createArenaWorldBounds,
+  createLocalFollowArenaCamera,
+  createOrthographicArenaCamera,
   toVisualPosition,
 } from '../src/index.js';
 import { ARENA_PRESENTATION_ASSET_PROVIDER_ID } from '@number-strategy-jump/arena-presentation-runtime';
@@ -182,6 +186,78 @@ function gltfSyncOptions(events: readonly unknown[] = []): unknown {
 }
 
 describe('Arena Presentation Three lifecycle boundaries', () => {
+  it('snapshots camera geometry without invoking accessors or accepting unknown fields', () => {
+    let reads = 0;
+    const accessorViewport = { height: 844 };
+    Object.defineProperty(accessorViewport, 'width', {
+      enumerable: true,
+      get() { reads += 1; return 390; },
+    });
+    expect(() => createOrthographicArenaCamera({
+      viewport: accessorViewport,
+      worldBounds: { minX: -4, maxX: 4, minZ: -4, maxZ: 4 },
+    })).toThrow(/viewport.width.*数据字段/);
+    expect(reads).toBe(0);
+
+    const surface = {
+      center: { x: 0, y: 0, z: 0 },
+      halfExtents: { x: 4, y: 1, z: 6 },
+    };
+    Object.defineProperty(surface.center, 'x', {
+      enumerable: true,
+      get() { reads += 1; return 0; },
+    });
+    expect(() => createArenaWorldBounds([surface])).toThrow(/center.x.*数据字段/);
+    expect(reads).toBe(0);
+
+    expect(() => createOrthographicArenaCamera({
+      viewport: { width: 390, height: 844 },
+      worldBounds: { minX: -4, maxX: 4, minZ: -4, maxZ: 4 },
+      futureFlag: true,
+    })).toThrow(/未知字段 futureFlag/);
+  });
+
+  it('keeps full-map and follow camera defaults explicit, immutable and deterministic', () => {
+    const surfaces = [
+      { center: { x: -3, z: 2 }, halfExtents: { x: 2, z: 4 } },
+      { center: { x: 8, z: -1 }, halfExtents: { x: 1, z: 2 } },
+    ];
+    const bounds = createArenaWorldBounds(surfaces);
+    expect(bounds).toEqual({ minX: -5, maxX: 9, minZ: -3, maxZ: 6 });
+    expect(Object.isFrozen(bounds)).toBe(true);
+
+    const full = createOrthographicArenaCamera({
+      viewport: { width: 390, height: 844 },
+      worldBounds: bounds,
+    });
+    const repeated = createOrthographicArenaCamera({
+      viewport: { width: 390, height: 844 },
+      worldBounds: bounds,
+    });
+    expect(full).toEqual(repeated);
+    expect(full.near).toBe(ARENA_CAMERA_DEFAULTS.near);
+    expect(full.far).toBe(ARENA_CAMERA_DEFAULTS.far);
+    expect(full.position.y).toBe(ARENA_CAMERA_DEFAULTS.positionHeight);
+    expect(full.frustum.right - full.frustum.left).toBeGreaterThanOrEqual(
+      bounds.maxX - bounds.minX + ARENA_CAMERA_DEFAULTS.worldPadding * 2,
+    );
+    expect(Object.isFrozen(full.frustum)).toBe(true);
+    expect(Object.isFrozen(full.inputBasis.screenRight)).toBe(true);
+
+    const portrait = createLocalFollowArenaCamera({
+      viewport: { width: 390, height: 844 },
+      worldBounds: bounds,
+      target: { x: 7, z: 4 },
+    });
+    expect(portrait.projection).toBe('orthographic-follow');
+    expect(portrait.target).toEqual({ x: 7, y: 0, z: 4 });
+    expect(portrait.frustum.top - portrait.frustum.bottom).toBe(
+      ARENA_CAMERA_DEFAULTS.followPortraitVerticalSpan,
+    );
+    expect(portrait.worldBounds).toEqual(bounds);
+    expect(Object.isFrozen(portrait.worldBounds)).toBe(true);
+  });
+
   it('keeps event-effect consumption atomic across getters and callback reentry', () => {
     let reads = 0;
     const accessorOptions = {};
