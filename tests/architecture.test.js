@@ -442,7 +442,11 @@ test('Arena Stage 9 human study stays headless, host-free and outside authority 
 
 test('Arena release handoff stays outside authority and only composes host-free evidence contracts', async () => {
   const releaseRoot = path.resolve('src/arena-release');
-  const releaseFiles = await listJavaScript(releaseRoot);
+  const strictReleaseRoot = path.resolve('packages/arena-release/src');
+  const releaseFiles = [
+    ...await listJavaScript(releaseRoot),
+    ...await listJavaScript(strictReleaseRoot),
+  ];
   assert.ok(releaseFiles.length >= 5);
   for (const file of releaseFiles) {
     const source = await readFile(file, 'utf8');

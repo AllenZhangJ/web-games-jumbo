@@ -12,7 +12,12 @@
   "include": ["src/**/*.ts"],
   "references": [
     { "path": "../arena-contracts" },
+    { "path": "../arena-device-acceptance" },
     { "path": "../arena-evidence-contracts" },
-    { "path": "../arena-release-contracts" }
+    { "path": "../arena-human-match-study" },
+    { "path": "../arena-input-pilot" },
+    { "path": "../arena-performance-evidence" },
+    { "path": "../arena-release-contracts" },
+    { "path": "../arena-stage9-evidence-content" }
   ]
 }

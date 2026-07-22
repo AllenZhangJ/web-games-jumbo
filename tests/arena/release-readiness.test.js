@@ -34,7 +34,7 @@ import {
 import {
   createArenaBuildBudgetReleaseResult,
   createArenaBuildIntegrityReleaseResult,
-} from '../../src/arena-release/build-release-evidence.js';
+} from '@number-strategy-jump/arena-release';
 import {
   createArenaGoldenReplayReleaseResult,
 } from '../../src/arena-release/golden-replay-release-evidence.js';

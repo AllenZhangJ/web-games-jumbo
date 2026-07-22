@@ -1,9 +1,9 @@
 import {
   createArenaInputPilotReleaseResult,
-} from '../../src/arena-release/input-pilot-release-evidence.js';
+} from '@number-strategy-jump/arena-release';
 import {
   createArenaStage6DeviceReleaseResult,
-} from '../../src/arena-release/device-release-evidence.js';
+} from '@number-strategy-jump/arena-release';
 import {
   createArenaInputPilotV1Definition,
   createInputPilotEvidenceBundle,

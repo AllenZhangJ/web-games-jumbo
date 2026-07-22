@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   ARENA_DEFECT_LEDGER_SCHEMA_VERSION,
+  createArenaBuildIntegrityReleaseResult,
   createArenaDefectLedger,
   createArenaDefectReleaseResult,
+  createArenaHumanFairnessReleaseResult,
+  createArenaInputPilotReleaseResult,
+  createArenaStage6DeviceReleaseResult,
   verifyArenaReleaseEvidenceProducerResult,
 } from '../src/index.js';
 
@@ -62,6 +66,31 @@ describe('Arena release core boundaries', () => {
       },
     });
     expect(() => createArenaDefectReleaseResult(releaseOptions)).toThrow(/数据字段/);
+    expect(reads).toBe(0);
+  });
+
+  it('rejects release producer accessors without executing them', () => {
+    let reads = 0;
+    const options = Object.defineProperty({}, 'bundle', {
+      enumerable: true,
+      get() {
+        reads += 1;
+        return null;
+      },
+    });
+    expect(() => createArenaStage6DeviceReleaseResult(options)).toThrow(/数据字段/);
+    expect(() => createArenaHumanFairnessReleaseResult(options)).toThrow(/数据字段/);
+    expect(() => createArenaInputPilotReleaseResult(options)).toThrow(/数据字段/);
+
+    const manifests = [null, null, null];
+    Object.defineProperty(manifests, '0', {
+      enumerable: true,
+      get() {
+        reads += 1;
+        return null;
+      },
+    });
+    expect(() => createArenaBuildIntegrityReleaseResult(manifests)).toThrow(/数据字段/);
     expect(reads).toBe(0);
   });
 });

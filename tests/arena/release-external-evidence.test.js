@@ -18,15 +18,15 @@ import {
 } from '../../src/arena-release/arena-stage9-rc-handoff-v1.js';
 import {
   createArenaBuildIntegrityReleaseResult,
-} from '../../src/arena-release/build-release-evidence.js';
+} from '@number-strategy-jump/arena-release';
 import {
   createArenaPerformanceDeviceReleaseResult,
   createArenaStage6DeviceReleaseResult,
   createArenaStage8ProductDeviceReleaseResult,
-} from '../../src/arena-release/device-release-evidence.js';
+} from '@number-strategy-jump/arena-release';
 import {
   createArenaHumanFairnessReleaseResult,
-} from '../../src/arena-release/human-fairness-release-evidence.js';
+} from '@number-strategy-jump/arena-release';
 import {
   ARENA_DEVICE_ACCEPTANCE_BUNDLE_SCHEMA_VERSION,
 } from '@number-strategy-jump/arena-device-acceptance';

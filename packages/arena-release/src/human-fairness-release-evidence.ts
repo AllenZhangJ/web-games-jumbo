@@ -1,34 +1,34 @@
-import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
-import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 import {
-  createArenaStage9HumanFairnessV1Definition,
-} from '@number-strategy-jump/arena-human-match-study';
-import {
-  createHumanMatchStudyBundle,
-} from '@number-strategy-jump/arena-human-match-study';
+  assertKnownKeys,
+  cloneFrozenData,
+  createDeterministicDataHash,
+} from '@number-strategy-jump/arena-contracts';
 import {
   HUMAN_MATCH_STUDY_REPORT_STATUS,
+  createArenaStage9HumanFairnessV1Definition,
+  createHumanMatchStudyBundle,
   createHumanMatchStudyReport,
+  type HumanMatchStudyReportStatus,
 } from '@number-strategy-jump/arena-human-match-study';
 import { ARENA_RELEASE_EVIDENCE_STATUS } from '@number-strategy-jump/arena-release-contracts';
 
-function releaseStatus(status) {
+const OPTION_KEYS = new Set(['bundle']);
+
+function releaseStatus(status: HumanMatchStudyReportStatus) {
   if (status === HUMAN_MATCH_STUDY_REPORT_STATUS.READY) {
     return ARENA_RELEASE_EVIDENCE_STATUS.READY;
   }
   if (status === HUMAN_MATCH_STUDY_REPORT_STATUS.FAILED) {
     return ARENA_RELEASE_EVIDENCE_STATUS.FAILED;
   }
-  if (status === HUMAN_MATCH_STUDY_REPORT_STATUS.INCOMPLETE) {
-    return ARENA_RELEASE_EVIDENCE_STATUS.INCOMPLETE;
-  }
-  throw new RangeError(`不支持的 Human fairness status ${String(status)}。`);
+  return ARENA_RELEASE_EVIDENCE_STATUS.INCOMPLETE;
 }
 
-export function createArenaHumanFairnessReleaseResult({ bundle: bundleValue }) {
+export function createArenaHumanFairnessReleaseResult(optionsValue: unknown) {
+  assertKnownKeys(optionsValue, OPTION_KEYS, 'Human fairness release options');
   const producerId = 'arena:human-fairness:evidence';
   const definition = createArenaStage9HumanFairnessV1Definition();
-  const bundle = createHumanMatchStudyBundle(definition, bundleValue);
+  const bundle = createHumanMatchStudyBundle(definition, optionsValue.bundle);
   const report = createHumanMatchStudyReport(definition, bundle.records);
   const summary = cloneFrozenData({
     producerId,

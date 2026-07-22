@@ -1,41 +1,42 @@
-import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
-import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
+import {
+  assertKnownKeys,
+  cloneFrozenData,
+  createDeterministicDataHash,
+} from '@number-strategy-jump/arena-contracts';
 import {
   ARENA_DEVICE_ACCEPTANCE_REPORT_STATUS,
   createArenaDeviceAcceptanceBundle,
   createArenaDeviceAcceptanceReport,
-} from '@number-strategy-jump/arena-device-acceptance';
-import {
   createArenaStage6DeviceAcceptanceV1Definition,
-} from '@number-strategy-jump/arena-device-acceptance';
-import {
   createArenaStage8ProductDeviceAcceptanceV1Definition,
+  type ArenaDeviceAcceptanceDefinition,
+  type ArenaDeviceAcceptanceReportStatus,
 } from '@number-strategy-jump/arena-device-acceptance';
-import {
-  createArenaStage9PerformanceDeviceAcceptanceV1Definition,
-} from '@number-strategy-jump/arena-stage9-evidence-content';
 import {
   createArenaPerformanceEvidenceReport,
-} from '@number-strategy-jump/arena-stage9-evidence-content';
-import {
+  createArenaStage9PerformanceDeviceAcceptanceV1Definition,
   createArenaStage9PerformanceV1Policy,
 } from '@number-strategy-jump/arena-stage9-evidence-content';
 import { ARENA_RELEASE_EVIDENCE_STATUS } from '@number-strategy-jump/arena-release-contracts';
 
-function releaseStatus(status) {
+const BUNDLE_OPTION_KEYS = new Set(['bundle']);
+const PERFORMANCE_OPTION_KEYS = new Set(['bundle', 'performanceRecords']);
+
+function releaseStatus(status: ArenaDeviceAcceptanceReportStatus) {
   if (status === ARENA_DEVICE_ACCEPTANCE_REPORT_STATUS.READY) {
     return ARENA_RELEASE_EVIDENCE_STATUS.READY;
   }
   if (status === ARENA_DEVICE_ACCEPTANCE_REPORT_STATUS.FAILED) {
     return ARENA_RELEASE_EVIDENCE_STATUS.FAILED;
   }
-  if (status === ARENA_DEVICE_ACCEPTANCE_REPORT_STATUS.INCOMPLETE) {
-    return ARENA_RELEASE_EVIDENCE_STATUS.INCOMPLETE;
-  }
-  throw new RangeError(`不支持的 Device acceptance status ${String(status)}。`);
+  return ARENA_RELEASE_EVIDENCE_STATUS.INCOMPLETE;
 }
 
-function createDeviceResult({ producerId, definition, bundleValue }) {
+function createDeviceResult(
+  producerId: string,
+  definition: ArenaDeviceAcceptanceDefinition,
+  bundleValue: unknown,
+) {
   const bundle = createArenaDeviceAcceptanceBundle(definition, bundleValue);
   const report = createArenaDeviceAcceptanceReport(definition, bundle);
   const summary = cloneFrozenData({
@@ -58,32 +59,35 @@ function createDeviceResult({ producerId, definition, bundleValue }) {
   }, `Release producer ${producerId} result`);
 }
 
-export function createArenaStage6DeviceReleaseResult({ bundle }) {
-  return createDeviceResult({
-    producerId: 'arena:device:evidence',
-    definition: createArenaStage6DeviceAcceptanceV1Definition(),
-    bundleValue: bundle,
-  });
+export function createArenaStage6DeviceReleaseResult(optionsValue: unknown) {
+  assertKnownKeys(optionsValue, BUNDLE_OPTION_KEYS, 'Stage 6 device release options');
+  return createDeviceResult(
+    'arena:device:evidence',
+    createArenaStage6DeviceAcceptanceV1Definition(),
+    optionsValue.bundle,
+  );
 }
 
-export function createArenaStage8ProductDeviceReleaseResult({ bundle }) {
-  return createDeviceResult({
-    producerId: 'arena:product:device:evidence',
-    definition: createArenaStage8ProductDeviceAcceptanceV1Definition(),
-    bundleValue: bundle,
-  });
+export function createArenaStage8ProductDeviceReleaseResult(optionsValue: unknown) {
+  assertKnownKeys(optionsValue, BUNDLE_OPTION_KEYS, 'Stage 8 device release options');
+  return createDeviceResult(
+    'arena:product:device:evidence',
+    createArenaStage8ProductDeviceAcceptanceV1Definition(),
+    optionsValue.bundle,
+  );
 }
 
-export function createArenaPerformanceDeviceReleaseResult({ bundle: bundleValue, performanceRecords }) {
+export function createArenaPerformanceDeviceReleaseResult(optionsValue: unknown) {
+  assertKnownKeys(optionsValue, PERFORMANCE_OPTION_KEYS, 'Performance device release options');
   const producerId = 'arena:performance:evidence';
   const definition = createArenaStage9PerformanceDeviceAcceptanceV1Definition();
-  const bundle = createArenaDeviceAcceptanceBundle(definition, bundleValue);
+  const bundle = createArenaDeviceAcceptanceBundle(definition, optionsValue.bundle);
   const policy = createArenaStage9PerformanceV1Policy();
   const report = createArenaPerformanceEvidenceReport({
     deviceDefinition: definition,
     deviceBundle: bundle,
     performancePolicy: policy,
-    performanceRecords,
+    performanceRecords: optionsValue.performanceRecords,
   });
   const summary = cloneFrozenData({
     producerId,

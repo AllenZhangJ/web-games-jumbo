@@ -8,7 +8,7 @@ import test from 'node:test';
 import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import {
   createArenaInputPilotReleaseResult,
-} from '../../src/arena-release/input-pilot-release-evidence.js';
+} from '@number-strategy-jump/arena-release';
 import {
   ARENA_RELEASE_CANDIDATE_BUNDLE_SCHEMA_VERSION,
   createArenaReleaseCandidateBundle,
@@ -23,7 +23,7 @@ import {
 } from '../../src/arena-release/arena-stage9-rc-handoff-v1.js';
 import {
   createArenaStage6DeviceReleaseResult,
-} from '../../src/arena-release/device-release-evidence.js';
+} from '@number-strategy-jump/arena-release';
 import {
   ARENA_DEVICE_ACCEPTANCE_BUNDLE_SCHEMA_VERSION,
 } from '@number-strategy-jump/arena-device-acceptance';
