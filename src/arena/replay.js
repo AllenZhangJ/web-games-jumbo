@@ -1,7 +1,7 @@
 import {
   createReplayMatch,
 } from '@number-strategy-jump/arena-match';
-import { createArenaV1MatchCore } from './arena-v1-match-core.js';
+import { createArenaV1MatchCore } from '@number-strategy-jump/arena-v1-composition';
 
 export {
   ARENA_REPLAY_ERROR_CODE,

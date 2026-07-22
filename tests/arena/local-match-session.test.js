@@ -2,9 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { BotController } from '@number-strategy-jump/arena-bot';
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
-import { createArenaV1MatchCore } from '../../src/arena/arena-v1-match-core.js';
+import { createArenaV1MatchCore } from '@number-strategy-jump/arena-v1-composition';
 import { replayMatch } from '../../src/arena/replay.js';
-import { QuickMatchService } from '../../src/arena/matchmaking/quick-match-service.js';
+import { QuickMatchService } from '@number-strategy-jump/arena-v1-composition';
 import {
   LOCAL_MATCH_SESSION_STATE,
   LocalMatchSession,

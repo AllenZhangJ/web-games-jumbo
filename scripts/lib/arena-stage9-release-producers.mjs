@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { createArenaV1MatchCore } from '../../src/arena/arena-v1-match-core.js';
+import { createArenaV1MatchCore } from '@number-strategy-jump/arena-v1-composition';
 import {
   ARENA_STAGE9_RC_HANDOFF_GATE_ID,
 } from '../../src/arena-release/arena-stage9-rc-handoff-v1.js';

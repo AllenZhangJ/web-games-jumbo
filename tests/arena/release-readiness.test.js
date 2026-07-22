@@ -5,7 +5,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { createArenaV1MatchCore } from '../../src/arena/arena-v1-match-core.js';
+import { createArenaV1MatchCore } from '@number-strategy-jump/arena-v1-composition';
 import {
   ARENA_RELEASE_CANDIDATE_BUNDLE_SCHEMA_VERSION,
   createArenaReleaseCandidateBundle,

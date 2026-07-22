@@ -18,7 +18,7 @@ import {
   STAGE4_ACTION_ID,
   createStage4ContentRegistries,
 } from '@number-strategy-jump/arena-v1-content';
-import { createMovementActionEffectHandlers } from '../../src/arena/movement/movement-action-effect-handlers.js';
+import { createMovementActionEffectHandlers } from '@number-strategy-jump/arena-v1-composition';
 
 const SOURCE = Object.freeze({
   id: 'player-1',

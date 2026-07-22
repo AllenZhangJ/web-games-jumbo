@@ -1,6 +1,6 @@
 import { ARENA_FIXED_DT } from '@number-strategy-jump/arena-match';
 import { SequentialMatchSeedSource } from '@number-strategy-jump/arena-matchmaking';
-import { createArenaV1ProductSession } from '../../product/composition/arena-v1-product-composition.js';
+import { createArenaV1ProductSession } from '@number-strategy-jump/arena-v1-composition';
 import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 import {
   ARENA_INPUT_MAPPER_ID,

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createArenaV1ProductSession } from '../../../src/arena/product/composition/arena-v1-product-composition.js';
+import { createArenaV1ProductSession } from '@number-strategy-jump/arena-v1-composition';
 import { ARENA_V1_BALANCE_DEFINITION } from '@number-strategy-jump/arena-v1-content';
 import { STAGE4_ACTION_ID } from '@number-strategy-jump/arena-v1-content';
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';

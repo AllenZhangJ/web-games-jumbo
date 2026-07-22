@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { createArenaV1MatchCore } from '../../../src/arena/arena-v1-match-core.js';
+import { createArenaV1MatchCore } from '@number-strategy-jump/arena-v1-composition';
 import {
   ARENA_REPLAY_ERROR_CODE,
   ARENA_REPLAY_SCHEMA_VERSION,

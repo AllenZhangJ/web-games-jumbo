@@ -1,5 +1,12 @@
-import { ACTION_PRIORITY } from '@number-strategy-jump/arena-core';
-import { MOVEMENT_MODE } from '@number-strategy-jump/arena-movement';
+import {
+  ACTION_PRIORITY,
+  type ActionCandidate,
+  type ActionRegistryContract,
+} from '@number-strategy-jump/arena-core';
+import {
+  MOVEMENT_MODE,
+  type MovementCapabilities,
+} from '@number-strategy-jump/arena-movement';
 import { STAGE6_MOVEMENT_ACTION_ID } from '@number-strategy-jump/arena-v1-content';
 import { assertKnownKeys, assertNonEmptyString } from '@number-strategy-jump/arena-contracts';
 
@@ -25,10 +32,15 @@ const BOOLEAN_KEYS = Object.freeze([
   'canBeginCrouchJump',
   'canReleaseCrouchJump',
   'canBeginDownSmash',
-]);
-const MODES = new Set(Object.values(MOVEMENT_MODE));
+] as const);
+const MODES: ReadonlySet<unknown> = new Set(Object.values(MOVEMENT_MODE));
 
-function candidate(actionDefinitionId, priority, available, unavailableReason) {
+function candidate(
+  actionDefinitionId: string,
+  priority: number,
+  available: boolean,
+  unavailableReason: string | null,
+): ActionCandidate {
   return Object.freeze({
     id: `movement:${actionDefinitionId}`,
     actionDefinitionId,
@@ -40,7 +52,7 @@ function candidate(actionDefinitionId, priority, available, unavailableReason) {
   });
 }
 
-function validateCapabilities(value) {
+function validateCapabilities(value: unknown): MovementCapabilities {
   assertKnownKeys(value, CAPABILITY_KEYS, 'MovementCapabilities');
   assertNonEmptyString(value.participantId, 'MovementCapabilities.participantId');
   for (const key of BOOLEAN_KEYS) {
@@ -56,15 +68,21 @@ function validateCapabilities(value) {
     && (typeof value.crouchActionDefinitionId !== 'string'
       || value.crouchActionDefinitionId.length === 0)
   ) throw new TypeError('MovementCapabilities.crouchActionDefinitionId 必须是 null 或非空字符串。');
-  return value;
+  return value as unknown as MovementCapabilities;
 }
 
 export class MovementActionCandidateProvider {
-  #actionRegistry;
-  #candidateCache;
-  #contextPrimaryEnabled;
+  readonly #actionRegistry: ActionRegistryContract;
+  readonly #candidateCache: Map<string, readonly ActionCandidate[]>;
+  readonly #contextPrimaryEnabled: boolean;
 
-  constructor({ actionRegistry, contextPrimaryEnabled = true }) {
+  constructor({
+    actionRegistry,
+    contextPrimaryEnabled = true,
+  }: Readonly<{
+    actionRegistry: ActionRegistryContract;
+    contextPrimaryEnabled?: boolean;
+  }>) {
     if (!actionRegistry || typeof actionRegistry.require !== 'function') {
       throw new TypeError('MovementActionCandidateProvider 需要只读 ActionRegistry。');
     }
@@ -80,11 +98,12 @@ export class MovementActionCandidateProvider {
     Object.freeze(this);
   }
 
-  getCandidates(capabilities) {
+  getCandidates(capabilities: unknown): readonly ActionCandidate[] {
     const value = validateCapabilities(capabilities);
     let booleanMask = 0;
     for (let index = 0; index < BOOLEAN_KEYS.length; index += 1) {
-      if (value[BOOLEAN_KEYS[index]]) booleanMask |= 1 << index;
+      const key = BOOLEAN_KEYS[index];
+      if (key !== undefined && value[key]) booleanMask |= 1 << index;
     }
     const cacheKey = `${value.mode}\u0000${value.crouchActionDefinitionId ?? ''}\u0000${booleanMask}`;
     const cached = this.#candidateCache.get(cacheKey);

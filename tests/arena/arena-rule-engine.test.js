@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createArenaV1RuleEngine } from '../../src/arena/composition/arena-v1-rule-engine.js';
+import { createArenaV1RuleEngine } from '@number-strategy-jump/arena-v1-composition';
 import { createArenaMatchConfig } from '@number-strategy-jump/arena-match';
 import {
   STAGE4_ACTION_ID,

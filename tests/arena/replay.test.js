@@ -7,7 +7,7 @@ import {
   HeadlessMatchRunner,
 } from '@number-strategy-jump/arena-match';
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
-import { createArenaV1MatchCore } from '../../src/arena/arena-v1-match-core.js';
+import { createArenaV1MatchCore } from '@number-strategy-jump/arena-v1-composition';
 import { createLightweightPhysicsWorld } from '@number-strategy-jump/arena-physics';
 import {
   replayMatch,

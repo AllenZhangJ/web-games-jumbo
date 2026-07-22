@@ -5,7 +5,7 @@ import {
   BOT_GOAL_ID,
   BotController,
 } from '@number-strategy-jump/arena-bot';
-import { createArenaV1MatchCore } from '../../src/arena/arena-v1-match-core.js';
+import { createArenaV1MatchCore } from '@number-strategy-jump/arena-v1-composition';
 
 function createController(core, difficultyId = 'hard') {
   const character = core.getCharacterDefinition('player-2');

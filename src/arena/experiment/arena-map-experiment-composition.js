@@ -1,4 +1,4 @@
-import { createArenaV1MatchCore } from '../arena-v1-match-core.js';
+import { createArenaV1MatchCore } from '@number-strategy-jump/arena-v1-composition';
 import {
   ARENA_EXPERIMENT_DEFINITION_SCHEMA_VERSION,
   ARENA_EXPERIMENT_SEED_SET_KIND,

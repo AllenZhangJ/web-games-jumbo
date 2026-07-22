@@ -1,5 +1,5 @@
 import { performance } from 'node:perf_hooks';
-import { createArenaV1MatchCore } from '../src/arena/arena-v1-match-core.js';
+import { createArenaV1MatchCore } from '@number-strategy-jump/arena-v1-composition';
 import {
   ARENA_MATCH_PHASE,
   HeadlessMatchRunner,

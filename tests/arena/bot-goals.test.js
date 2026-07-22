@@ -11,7 +11,7 @@ import {
   createBotArenaView,
   createBotObservation,
 } from '@number-strategy-jump/arena-bot';
-import { createArenaV1MatchCore } from '../../src/arena/arena-v1-match-core.js';
+import { createArenaV1MatchCore } from '@number-strategy-jump/arena-v1-composition';
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
 
 test('bot threat evaluation uses the delayed opponent equipment action range', () => {

@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createArenaV1MatchCore } from '../../../src/arena/arena-v1-match-core.js';
+import { createArenaV1MatchCore } from '@number-strategy-jump/arena-v1-composition';
 import { createArenaV1CharacterRegistry } from '@number-strategy-jump/arena-v1-content';
 import { createArenaV1MapRegistry } from '@number-strategy-jump/arena-v1-content';
 import {
   createArenaV1SelectedAuthorityRegistries,
-} from '../../../src/arena/composition/arena-v1-content-selection.js';
+} from '@number-strategy-jump/arena-v1-composition';
 import {
   MATCH_CONTENT_SELECTION_SCHEMA_VERSION,
   createMatchContentSelection,
@@ -18,7 +18,7 @@ import {
 import { STAGE5_MAP_ID } from '@number-strategy-jump/arena-v1-content';
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
 import { MAP_EVENT_KIND } from '@number-strategy-jump/arena-map';
-import { QuickMatchService } from '../../../src/arena/matchmaking/quick-match-service.js';
+import { QuickMatchService } from '@number-strategy-jump/arena-v1-composition';
 import { HeadlessMatchRunner } from '@number-strategy-jump/arena-match';
 import { replayMatch } from '../../../src/arena/replay.js';
 import {

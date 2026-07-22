@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createArenaV1MatchCore } from '../../../src/arena/arena-v1-match-core.js';
+import { createArenaV1MatchCore } from '@number-strategy-jump/arena-v1-composition';
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
 import {
   createGestureInputMapperA,

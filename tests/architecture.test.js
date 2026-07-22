@@ -619,6 +619,40 @@ test('Arena V1 presentation content only projects injected authority into readon
   }
 });
 
+test('Arena V1 application composition only wires governed authority and product packages', async () => {
+  const packageDefinition = JSON.parse(await readFile(
+    path.resolve('packages/arena-v1-composition/package.json'),
+    'utf8',
+  ));
+  assert.deepEqual(
+    Object.keys(packageDefinition.dependencies).sort(),
+    [
+      '@number-strategy-jump/arena-contracts',
+      '@number-strategy-jump/arena-core',
+      '@number-strategy-jump/arena-definitions',
+      '@number-strategy-jump/arena-equipment',
+      '@number-strategy-jump/arena-map',
+      '@number-strategy-jump/arena-match',
+      '@number-strategy-jump/arena-movement',
+      '@number-strategy-jump/arena-product-composition',
+      '@number-strategy-jump/arena-product-v1-content',
+      '@number-strategy-jump/arena-quick-match',
+      '@number-strategy-jump/arena-v1-content',
+    ],
+    'arena-v1-composition 只能组合已治理的规则、内容、比赛与产品边界。',
+  );
+  const files = await listJavaScript(path.resolve('packages/arena-v1-composition/src'));
+  assert.equal(files.length, 10);
+  for (const file of files) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /(?:from\s+['"](?:three|node:|[^'"]*(?:presentation|renderer|platform|entry|experiment|study|regression|release)[^'"]*)['"]|Date\.now|Math\.random|\bperformance\b|setTimeout|setInterval|requestAnimationFrame|\b(?:window|document|navigator|localStorage|sessionStorage)\b|\b(?:tt|wx)\s*\.)/,
+      `${file} 只能执行无宿主的 Arena V1 应用组合。`,
+    );
+  }
+});
+
 test('Arena Stage 8 product orchestration remains host-free and outside match authority', async () => {
   const directories = [
     'src/arena/product',
@@ -769,7 +803,7 @@ test('Arena local quick match bundles and executes without a browser or renderer
   const result = await esbuild({
     stdin: {
       contents: `
-        import { QuickMatchService } from './src/arena/matchmaking/quick-match-service.js';
+        import { QuickMatchService } from '@number-strategy-jump/arena-v1-composition';
         const match = new QuickMatchService().create({ matchSeed: 20260717 });
         match.session.start();
         match.session.step();

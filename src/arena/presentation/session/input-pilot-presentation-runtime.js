@@ -2,7 +2,7 @@ import {
   combineCleanupFailure,
   normalizeThrownError,
 } from '@number-strategy-jump/arena-contracts';
-import { QuickMatchService } from '../../matchmaking/quick-match-service.js';
+import { QuickMatchService } from '@number-strategy-jump/arena-v1-composition';
 import { ArenaPresentationSession } from './arena-presentation-session.js';
 import { InputPilotAssignedMatchService } from '../pilot/input-pilot-assigned-match-service.js';
 import { createInputPilotDefinition } from '../pilot/input-pilot-definition.js';

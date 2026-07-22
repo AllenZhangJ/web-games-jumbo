@@ -1,7 +1,7 @@
-import { createArenaV1RuleEngine } from './composition/arena-v1-rule-engine.js';
-import { createArenaV1MapSystem } from './composition/arena-v1-map-system.js';
-import { createArenaV1AuthorityContent } from './composition/arena-v1-authority-content.js';
-import { createArenaV1SelectedAuthorityRegistries } from './composition/arena-v1-content-selection.js';
+import { createArenaV1RuleEngine } from './arena-v1-rule-engine.js';
+import { createArenaV1MapSystem } from './arena-v1-map-system.js';
+import { createArenaV1AuthorityContent } from './arena-v1-authority-content.js';
+import { createArenaV1SelectedAuthorityRegistries } from './arena-v1-content-selection.js';
 import { createMatchContentSelection } from '@number-strategy-jump/arena-contracts';
 import { STAGE4_INITIAL_EQUIPMENT_SPAWNS } from '@number-strategy-jump/arena-v1-content';
 import { createArenaV1CharacterRegistry } from '@number-strategy-jump/arena-v1-content';
@@ -9,12 +9,20 @@ import { createArenaV1MapRegistry } from '@number-strategy-jump/arena-v1-content
 import { STAGE5_MAP_ID } from '@number-strategy-jump/arena-v1-content';
 import {
   STATIC_MAP_ID_PREFIX,
+  assertCharacterRegistry,
   createStaticMapDefinition,
+  type MapDefinition,
 } from '@number-strategy-jump/arena-definitions';
-import { MatchCore } from '@number-strategy-jump/arena-match';
-import { createArenaMatchConfig } from '@number-strategy-jump/arena-match';
+import {
+  MatchCore,
+  createArenaMatchConfig,
+  type ArenaMatchConfig,
+  type ArenaMatchConfigOverrides,
+  type MatchCoreOptions,
+} from '@number-strategy-jump/arena-match';
 import {
   assertKnownKeys,
+  assertPlainRecord,
   cloneFrozenData,
 } from '@number-strategy-jump/arena-contracts';
 
@@ -27,14 +35,33 @@ const MATCH_CORE_OPTION_KEYS = new Set([
   'characterRegistry',
 ]);
 
-function resolveArenaV1Config(configValue = {}, mapRegistry = createArenaV1MapRegistry()) {
-  const config = cloneFrozenData(configValue, 'Arena V1 config');
+interface MapRegistryContract {
+  require(id: string): MapDefinition;
+}
+
+function dataField(record: object, key: string): unknown {
+  const descriptor = Object.getOwnPropertyDescriptor(record, key);
+  return descriptor && Object.hasOwn(descriptor, 'value') ? descriptor.value : undefined;
+}
+
+function resolveArenaV1Config(
+  configValue: unknown = {},
+  mapRegistry: MapRegistryContract = createArenaV1MapRegistry(),
+): ArenaMatchConfigOverrides {
+  const config = assertPlainRecord(
+    cloneFrozenData(configValue, 'Arena V1 config'),
+    'Arena V1 config',
+  );
   const contentSelection = config.contentSelection === undefined
     || config.contentSelection === null
     ? null
     : createMatchContentSelection(config.contentSelection);
   const hasCustomArena = Object.prototype.hasOwnProperty.call(config, 'arena');
-  const requestedMapDefinitionId = config.mapDefinitionId
+  const rawMapDefinitionId = config.mapDefinitionId;
+  if (rawMapDefinitionId !== undefined && typeof rawMapDefinitionId !== 'string') {
+    throw new TypeError('mapDefinitionId 必须是字符串。');
+  }
+  const requestedMapDefinitionId = rawMapDefinitionId
     ?? contentSelection?.selectedMapDefinitionId;
   if (
     contentSelection !== null
@@ -74,21 +101,24 @@ function resolveArenaV1Config(configValue = {}, mapRegistry = createArenaV1MapRe
       participantCharacters: config.participantCharacters
         ?? contentSelection.participantCharacters,
     }),
-  };
+  } as ArenaMatchConfigOverrides;
 }
 
-export function createArenaV1MatchConfig(config = {}) {
+export function createArenaV1MatchConfig(config: unknown = {}): ArenaMatchConfig {
   return createArenaMatchConfig(resolveArenaV1Config(config));
 }
 
-export function createArenaV1MatchCore(options = {}) {
+export function createArenaV1MatchCore(options: unknown = {}): MatchCore {
   assertKnownKeys(options, MATCH_CORE_OPTION_KEYS, 'createArenaV1MatchCore options');
-  const descriptors = Object.getOwnPropertyDescriptors(options);
   const fullMapRegistry = createArenaV1MapRegistry();
-  const fullCharacterRegistry = descriptors.characterRegistry?.value
-    ?? createArenaV1CharacterRegistry();
-  const configValue = descriptors.config?.value ?? {};
-  const rawConfig = cloneFrozenData(configValue, 'Arena V1 config');
+  const fullCharacterRegistry = assertCharacterRegistry(
+    dataField(options, 'characterRegistry') ?? createArenaV1CharacterRegistry(),
+  );
+  const configValue = dataField(options, 'config') ?? {};
+  const rawConfig = assertPlainRecord(
+    cloneFrozenData(configValue, 'Arena V1 config'),
+    'Arena V1 config',
+  );
   const selected = rawConfig.contentSelection === undefined
     || rawConfig.contentSelection === null
     ? null
@@ -107,18 +137,23 @@ export function createArenaV1MatchCore(options = {}) {
     createArenaMatchConfig(configOverrides),
     { mapRegistry, characterRegistry },
   );
-  const ruleEngineFactory = descriptors.ruleEngineFactory?.value ?? ((context) => (
+  const ruleEngineFactory = dataField(options, 'ruleEngineFactory')
+    ?? ((context: Parameters<NonNullable<MatchCoreOptions['ruleEngineFactory']>>[0]) => (
     createArenaV1RuleEngine({ ...context, authorityContent })
   ));
-  const mapSystemFactory = descriptors.mapSystemFactory?.value ?? ((context) => (
+  const mapSystemFactory = dataField(options, 'mapSystemFactory')
+    ?? ((context: Parameters<NonNullable<MatchCoreOptions['mapSystemFactory']>>[0]) => (
     createArenaV1MapSystem({ ...context, authorityContent })
   ));
+  const physicsFactory = dataField(options, 'physicsFactory');
   return new MatchCore({
-    seed: descriptors.seed?.value,
-    physicsFactory: descriptors.physicsFactory?.value,
+    seed: dataField(options, 'seed'),
+    ...(physicsFactory === undefined ? {} : {
+      physicsFactory: physicsFactory as NonNullable<MatchCoreOptions['physicsFactory']>,
+    }),
     config: configOverrides,
-    ruleEngineFactory,
-    mapSystemFactory,
+    ruleEngineFactory: ruleEngineFactory as NonNullable<MatchCoreOptions['ruleEngineFactory']>,
+    mapSystemFactory: mapSystemFactory as NonNullable<MatchCoreOptions['mapSystemFactory']>,
     characterRegistry: authorityContent.characterRegistry,
   });
 }

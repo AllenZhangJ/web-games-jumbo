@@ -8,19 +8,42 @@ import {
   validateCharacterSpawnSafety,
   validateDefaultMapSafety,
   validateWalkableMapTopology,
+  type EquipmentDefinitionCatalog,
 } from '@number-strategy-jump/arena-map';
 import {
   STATIC_MAP_ID_PREFIX,
   createStaticMapDefinition,
+  type MapDefinition,
 } from '@number-strategy-jump/arena-definitions';
 import {
   assertArenaV1AuthorityContent,
   createArenaV1AuthorityContent,
+  type ArenaV1AuthorityContent,
 } from './arena-v1-authority-content.js';
+import type { ArenaMatchConfig } from '@number-strategy-jump/arena-match';
 
 export const ARENA_V1_MAP_RULESET_VERSION = 'arena-v1-map-ruleset-v1';
 
-export function resolveArenaV1MapDefinition(config, mapRegistry = createArenaV1MapRegistry()) {
+interface MapRegistryContract {
+  require(id: string): MapDefinition;
+}
+
+interface CharacterDefinitionCatalog {
+  require(id: string): import('@number-strategy-jump/arena-definitions').CharacterDefinition;
+}
+
+export interface CreateArenaV1MapSystemOptions {
+  readonly config: ArenaMatchConfig;
+  readonly matchSeed: number;
+  readonly equipmentDefinitionCatalog?: EquipmentDefinitionCatalog | null;
+  readonly characterDefinitionCatalog?: CharacterDefinitionCatalog | null;
+  readonly authorityContent?: ArenaV1AuthorityContent | null;
+}
+
+export function resolveArenaV1MapDefinition(
+  config: ArenaMatchConfig,
+  mapRegistry: MapRegistryContract = createArenaV1MapRegistry(),
+): MapDefinition {
   if (!config || typeof config !== 'object') throw new TypeError('resolveArenaV1MapDefinition 需要 config。');
   if (config.mapDefinitionId.startsWith(STATIC_MAP_ID_PREFIX)) {
     const definition = createStaticMapDefinition(config.arena);
@@ -46,7 +69,7 @@ export function createArenaV1MapSystem({
   equipmentDefinitionCatalog = null,
   characterDefinitionCatalog = null,
   authorityContent = null,
-}) {
+}: CreateArenaV1MapSystemOptions): ArenaMapSystem {
   const content = authorityContent
     ? assertArenaV1AuthorityContent(authorityContent)
     : createArenaV1AuthorityContent(config);

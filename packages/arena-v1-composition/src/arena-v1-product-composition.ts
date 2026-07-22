@@ -1,4 +1,8 @@
-import { createProductSessionComposition } from '@number-strategy-jump/arena-product-composition';
+import {
+  createProductSessionComposition,
+  type ProductSessionCompositionDefaults,
+  type ProductSessionCompositionOptions,
+} from '@number-strategy-jump/arena-product-composition';
 import { ARENA_GAMEPLAY_V2_TUNING } from '@number-strategy-jump/arena-definitions';
 import {
   ARENA_V1_CONTENT_REPLACEMENT_REGISTRY,
@@ -8,11 +12,13 @@ import {
   ARENA_V1_PLAYER_PROFILE_DEFINITION,
   ARENA_V1_PROGRESSION_REGISTRY,
 } from '@number-strategy-jump/arena-product-v1-content';
-import { QuickMatchService } from '../../matchmaking/quick-match-service.js';
+import { ArenaV1QuickMatchService } from './quick-match-service.js';
 import { ARENA_V1_BALANCE_DEFINITION } from '@number-strategy-jump/arena-v1-content';
 
-const ARENA_V1_PRODUCT_COMPOSITION_DEFAULTS = Object.freeze({
-  quickMatchServiceFactory: (options) => new QuickMatchService(options),
+const ARENA_V1_PRODUCT_COMPOSITION_DEFAULTS: ProductSessionCompositionDefaults = Object.freeze({
+  quickMatchServiceFactory: (options: Readonly<Record<string, unknown>>) => (
+    new ArenaV1QuickMatchService(options)
+  ),
   profileDefinition: ARENA_V1_PLAYER_PROFILE_DEFINITION,
   contentPoolDefinition: ARENA_V1_MATCH_CONTENT_POOL_DEFINITION,
   contentCatalog: ARENA_V1_MATCH_CONTENT_CATALOG,
@@ -27,6 +33,6 @@ const ARENA_V1_PRODUCT_COMPOSITION_DEFAULTS = Object.freeze({
   }),
 });
 
-export function createArenaV1ProductSession(options) {
+export function createArenaV1ProductSession(options: ProductSessionCompositionOptions) {
   return createProductSessionComposition(options, ARENA_V1_PRODUCT_COMPOSITION_DEFAULTS);
 }

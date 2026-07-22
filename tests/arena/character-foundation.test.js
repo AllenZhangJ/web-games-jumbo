@@ -10,7 +10,7 @@ import {
   createCharacterRegistrySnapshot,
 } from '@number-strategy-jump/arena-definitions';
 import { createCharacterRuntimeReference } from '@number-strategy-jump/arena-match';
-import { createArenaV1MatchCore } from '../../src/arena/arena-v1-match-core.js';
+import { createArenaV1MatchCore } from '@number-strategy-jump/arena-v1-composition';
 import { PHYSICS_POC_ARENA } from '@number-strategy-jump/arena-match';
 import {
   ARENA_V1_CHARACTER_DEFINITIONS,

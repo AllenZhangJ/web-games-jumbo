@@ -1,5 +1,5 @@
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
-import { createArenaV1MatchCore } from '../arena-v1-match-core.js';
+import { createArenaV1MatchCore } from '@number-strategy-jump/arena-v1-composition';
 
 let core = null;
 try {

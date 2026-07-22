@@ -13,6 +13,7 @@
     { "path": "./packages/arena-map" },
     { "path": "./packages/arena-match" },
     { "path": "./packages/arena-v1-content" },
+    { "path": "./packages/arena-v1-composition" },
     { "path": "./packages/arena-matchmaking" },
     { "path": "./packages/arena-movement" },
     { "path": "./packages/arena-physics" },

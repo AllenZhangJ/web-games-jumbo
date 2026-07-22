@@ -9,9 +9,9 @@ import {
   createNeutralInputFrame,
 } from '@number-strategy-jump/arena-contracts';
 import { ARENA_MATCH_EVENT } from '@number-strategy-jump/arena-match';
-import { createArenaV1MatchCore } from '../../src/arena/arena-v1-match-core.js';
+import { createArenaV1MatchCore } from '@number-strategy-jump/arena-v1-composition';
 import { createLightweightPhysicsWorld } from '@number-strategy-jump/arena-physics';
-import { createArenaV1RuleEngine } from '../../src/arena/composition/arena-v1-rule-engine.js';
+import { createArenaV1RuleEngine } from '@number-strategy-jump/arena-v1-composition';
 
 const TEST_ARENA = Object.freeze({
   killY: -3,

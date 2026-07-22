@@ -1,8 +1,8 @@
 import { BotController } from '@number-strategy-jump/arena-bot';
 import { BOT_DIFFICULTY_IDS, getBotDifficultyProfile } from '@number-strategy-jump/arena-bot';
-import { createArenaV1MatchCore } from '../arena-v1-match-core.js';
+import { createArenaV1MatchCore } from '@number-strategy-jump/arena-v1-composition';
 import { combineCleanupFailure, normalizeThrownError } from '@number-strategy-jump/arena-contracts';
-import { QuickMatchService } from '../matchmaking/quick-match-service.js';
+import { QuickMatchService } from '@number-strategy-jump/arena-v1-composition';
 import { replayMatch } from '../replay.js';
 import {
   assertIntegerAtLeast,

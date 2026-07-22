@@ -1,4 +1,4 @@
-import { createArenaV1MatchCore } from '../arena-v1-match-core.js';
+import { createArenaV1MatchCore } from '@number-strategy-jump/arena-v1-composition';
 import { STAGE4_ACTION_ID } from '@number-strategy-jump/arena-v1-content';
 import { STAGE6_MOVEMENT_ACTION_ID } from '@number-strategy-jump/arena-v1-content';
 import {
@@ -11,7 +11,7 @@ import {
 } from '../experiment/arena-v1-scripted-pressure-strategy.js';
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
 import { combineCleanupFailure, normalizeThrownError } from '@number-strategy-jump/arena-contracts';
-import { QuickMatchService } from '../matchmaking/quick-match-service.js';
+import { QuickMatchService } from '@number-strategy-jump/arena-v1-composition';
 import { HeadlessMatchRunner } from '@number-strategy-jump/arena-match';
 import { ARENA_GOLDEN_REPLAY_CATEGORY } from './golden-replay-manifest.js';
 import { ArenaGoldenReplayScenarioRegistry } from './golden-replay-scenario-registry.js';

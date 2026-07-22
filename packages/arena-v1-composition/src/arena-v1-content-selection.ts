@@ -1,5 +1,13 @@
-import { CharacterRegistry } from '@number-strategy-jump/arena-definitions';
-import { createMatchContentSelection } from '@number-strategy-jump/arena-contracts';
+import {
+  CharacterRegistry,
+  type CharacterRegistryContract,
+  type MapDefinition,
+  type MapEventDefinition,
+} from '@number-strategy-jump/arena-definitions';
+import {
+  createMatchContentSelection,
+  type MatchContentSelection,
+} from '@number-strategy-jump/arena-contracts';
 import { STAGE4_EQUIPMENT_DEFINITIONS } from '@number-strategy-jump/arena-v1-content';
 import { createMapDefinition } from '@number-strategy-jump/arena-definitions';
 import { MAP_EVENT_KIND } from '@number-strategy-jump/arena-map';
@@ -9,18 +17,39 @@ import {
   cloneFrozenData,
 } from '@number-strategy-jump/arena-contracts';
 
-function requireRegistry(value, name) {
-  if (!value || typeof value.require !== 'function' || typeof value.list !== 'function') {
-    throw new TypeError(`${name} 必须实现 require() 和 list()。`);
-  }
-  return value;
+interface MapRegistryContract {
+  require(id: string): MapDefinition;
+  list(): readonly MapDefinition[];
 }
 
-function projectEquipmentWave(event, equipmentDefinitionIds, mapId) {
+export interface ArenaV1SelectedAuthorityRegistries {
+  readonly selection: MatchContentSelection;
+  readonly mapRegistry: MapRegistry;
+  readonly characterRegistry: CharacterRegistry;
+}
+
+function requireRegistry<T>(value: unknown, name: string): T {
+  if (!value || typeof value !== 'object') {
+    throw new TypeError(`${name} 必须实现 require() 和 list()。`);
+  }
+  const record = value as Record<string, unknown>;
+  if (typeof record.require !== 'function' || typeof record.list !== 'function') {
+    throw new TypeError(`${name} 必须实现 require() 和 list()。`);
+  }
+  return value as T;
+}
+
+function projectEquipmentWave(
+  event: MapEventDefinition,
+  equipmentDefinitionIds: readonly string[],
+  mapId: string,
+): MapEventDefinition {
   if (event.kind !== MAP_EVENT_KIND.EQUIPMENT_WAVE) return event;
   const allowed = new Set(equipmentDefinitionIds);
   const waveEquipmentDefinitionIds = cloneFrozenData(
-    event.parameters?.equipmentDefinitionIds,
+    event.parameters && typeof event.parameters === 'object'
+      ? (event.parameters as Readonly<Record<string, unknown>>).equipmentDefinitionIds
+      : undefined,
     `MapDefinition ${mapId} event ${event.id} equipmentDefinitionIds`,
   );
   if (!Array.isArray(waveEquipmentDefinitionIds)) {
@@ -28,16 +57,18 @@ function projectEquipmentWave(event, equipmentDefinitionIds, mapId) {
       `MapDefinition ${mapId} event ${event.id} equipmentDefinitionIds 必须是数组。`,
     );
   }
-  waveEquipmentDefinitionIds.forEach((definitionId, index) => assertNonEmptyString(
-    definitionId,
-    `MapDefinition ${mapId} event ${event.id} equipmentDefinitionIds[${index}]`,
+  const normalizedWaveIds = waveEquipmentDefinitionIds.map((definitionId, index) => (
+    assertNonEmptyString(
+      definitionId,
+      `MapDefinition ${mapId} event ${event.id} equipmentDefinitionIds[${index}]`,
+    )
   ));
-  if (new Set(waveEquipmentDefinitionIds).size !== waveEquipmentDefinitionIds.length) {
+  if (new Set(normalizedWaveIds).size !== normalizedWaveIds.length) {
     throw new RangeError(
       `MapDefinition ${mapId} event ${event.id} equipmentDefinitionIds 不能包含重复项。`,
     );
   }
-  const projectedIds = waveEquipmentDefinitionIds.filter((id) => allowed.has(id));
+  const projectedIds = normalizedWaveIds.filter((id) => allowed.has(id));
   if (projectedIds.length === 0) {
     throw new RangeError(
       `MapDefinition ${mapId} 的装备波 ${event.id} 与本局装备池没有交集。`,
@@ -46,16 +77,16 @@ function projectEquipmentWave(event, equipmentDefinitionIds, mapId) {
   return {
     ...event,
     parameters: {
-      ...event.parameters,
+      ...(event.parameters as Readonly<Record<string, unknown>>),
       equipmentDefinitionIds: projectedIds,
     },
   };
 }
 
 function projectMapDefinitionForEquipmentPool(
-  definitionValue,
-  equipmentDefinitionIds,
-) {
+  definitionValue: unknown,
+  equipmentDefinitionIds: readonly string[],
+): MapDefinition {
   const definition = createMapDefinition(definitionValue);
   return createMapDefinition({
     ...definition.toJSON(),
@@ -69,10 +100,17 @@ export function createArenaV1SelectedAuthorityRegistries({
   selection: selectionValue,
   mapRegistry: mapRegistryValue,
   characterRegistry: characterRegistryValue,
-}) {
+}: Readonly<{
+  selection: unknown;
+  mapRegistry: unknown;
+  characterRegistry: unknown;
+}>): ArenaV1SelectedAuthorityRegistries {
   const selection = createMatchContentSelection(selectionValue);
-  const mapRegistry = requireRegistry(mapRegistryValue, 'Arena V1 full mapRegistry');
-  const characterRegistry = requireRegistry(
+  const mapRegistry = requireRegistry<MapRegistryContract>(
+    mapRegistryValue,
+    'Arena V1 full mapRegistry',
+  );
+  const characterRegistry = requireRegistry<CharacterRegistryContract>(
     characterRegistryValue,
     'Arena V1 full characterRegistry',
   );

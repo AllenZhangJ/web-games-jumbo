@@ -21,7 +21,7 @@ import {
   createMapDefinition,
 } from '@number-strategy-jump/arena-definitions';
 import { MapRegistry } from '@number-strategy-jump/arena-definitions';
-import { resolveArenaV1MapDefinition } from '../../src/arena/composition/arena-v1-map-system.js';
+import { resolveArenaV1MapDefinition } from '@number-strategy-jump/arena-v1-composition';
 
 const TEST_ARENA = Object.freeze({
   killY: -4,

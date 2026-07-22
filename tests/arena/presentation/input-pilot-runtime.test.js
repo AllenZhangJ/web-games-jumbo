@@ -4,7 +4,7 @@ import { ARENA_MATCH_PHASE } from '@number-strategy-jump/arena-match';
 import { STAGE6_MOVEMENT_ACTION_ID } from '@number-strategy-jump/arena-v1-content';
 import { ARENA_MATCH_EVENT } from '@number-strategy-jump/arena-contracts';
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
-import { QuickMatchService } from '../../../src/arena/matchmaking/quick-match-service.js';
+import { QuickMatchService } from '@number-strategy-jump/arena-v1-composition';
 import { createArenaInputPilotV1Definition } from '../../../src/arena/presentation/pilot/arena-input-pilot-v1.js';
 import { createInputPilotAssignment } from '../../../src/arena/presentation/pilot/input-pilot-assignment.js';
 import {

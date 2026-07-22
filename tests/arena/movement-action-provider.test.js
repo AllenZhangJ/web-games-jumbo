@@ -20,8 +20,8 @@ import {
   STAGE6_MOVEMENT_ACTION_DEFINITIONS,
   STAGE6_MOVEMENT_ACTION_ID,
 } from '@number-strategy-jump/arena-v1-content';
-import { MovementActionCandidateProvider } from '../../src/arena/movement/movement-action-candidate-provider.js';
-import { createMovementActionEffectHandlers } from '../../src/arena/movement/movement-action-effect-handlers.js';
+import { MovementActionCandidateProvider } from '@number-strategy-jump/arena-v1-composition';
+import { createMovementActionEffectHandlers } from '@number-strategy-jump/arena-v1-composition';
 import { MOVEMENT_COMMAND_KIND, MOVEMENT_MODE } from '@number-strategy-jump/arena-movement';
 
 const actionRegistry = new ActionRegistry([

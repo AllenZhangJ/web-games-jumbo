@@ -2,7 +2,7 @@ import {
   ARENA_MATCH_PHASE,
   HeadlessMatchRunner,
 } from '@number-strategy-jump/arena-match';
-import { createArenaV1MatchCore } from '../arena-v1-match-core.js';
+import { createArenaV1MatchCore } from '@number-strategy-jump/arena-v1-composition';
 import { replayMatch } from '../replay.js';
 import {
   assertIntegerAtLeast,
