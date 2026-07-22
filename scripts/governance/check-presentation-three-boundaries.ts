@@ -3,6 +3,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const EXPECTED_DEPENDENCIES = Object.freeze({
+  '@number-strategy-jump/arena-contracts': '0.1.0',
   '@number-strategy-jump/arena-presentation-contracts': '0.1.0',
   '@number-strategy-jump/arena-presentation-runtime': '0.1.0',
   three: '0.185.1',

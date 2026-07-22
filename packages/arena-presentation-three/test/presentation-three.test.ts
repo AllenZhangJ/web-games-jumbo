@@ -5,12 +5,116 @@ import {
   CharacterAnimationController,
   GltfPresentationAssetLoader,
   PlatformTextureLoader,
+  ProgrammaticCharacterViewFactory,
   ThreeObjectDisposalLease,
   toVisualPosition,
 } from '../src/index.js';
 import { ARENA_PRESENTATION_ASSET_PROVIDER_ID } from '@number-strategy-jump/arena-presentation-runtime';
+import {
+  ARENA_ANIMATION_SEMANTIC_IDS,
+  ARENA_ANIMATION_SOURCE_KIND,
+  CHARACTER_PRESENTATION_DEFINITION_SCHEMA_VERSION,
+  CHARACTER_PRESENTATION_DIRECTION_STRATEGY,
+  CHARACTER_PRESENTATION_FRONT_AXIS,
+  CHARACTER_PRESENTATION_SLOT_ID,
+  PRESENTATION_ASSET_DEFINITION_SCHEMA_VERSION,
+  PRESENTATION_ASSET_KIND,
+  PresentationAssetRegistry,
+} from '@number-strategy-jump/arena-presentation-contracts';
+
+function programmaticPresentationDefinition(): unknown {
+  return {
+    schemaVersion: CHARACTER_PRESENTATION_DEFINITION_SCHEMA_VERSION,
+    id: 'presentation.programmatic.test',
+    characterDefinitionId: 'character.test',
+    defaultForCharacter: true,
+    contentVersion: 1,
+    modelAssetId: 'asset.programmatic.test',
+    rigProfileId: 'rig.test',
+    materialProfileId: 'material.test',
+    outlineProfileId: 'outline.test',
+    direction: {
+      strategy: CHARACTER_PRESENTATION_DIRECTION_STRATEGY.SIX_SECTOR_CAMERA_RELATIVE,
+      defaultFrontAxis: CHARACTER_PRESENTATION_FRONT_AXIS.POSITIVE_Z,
+      hysteresisDegrees: 6,
+    },
+    locomotion: { walkSpeedThreshold: 0.5, runSpeedThreshold: 4, knockbackSpeedThreshold: 7 },
+    animationMap: Object.fromEntries(ARENA_ANIMATION_SEMANTIC_IDS.map((semantic) => [semantic, {
+      sourceKind: ARENA_ANIMATION_SOURCE_KIND.PROCEDURAL,
+      sourceKey: semantic,
+      loop: semantic === 'idle',
+      fallbackSemantics: [],
+    }])),
+    attachmentSlots: Object.values(CHARACTER_PRESENTATION_SLOT_ID).map((id) => ({
+      id, nodeName: `slot:${id}`, allowedAssetIds: [], defaultAssetId: null,
+    })),
+    tags: ['test'],
+  };
+}
+
+function programmaticAssetRegistry(): PresentationAssetRegistry {
+  return new PresentationAssetRegistry([{
+    schemaVersion: PRESENTATION_ASSET_DEFINITION_SCHEMA_VERSION,
+    id: 'asset.programmatic.test',
+    kind: PRESENTATION_ASSET_KIND.CHARACTER_MODEL,
+    providerId: ARENA_PRESENTATION_ASSET_PROVIDER_ID.PROGRAMMATIC_CHARACTER_V1,
+    sourceKey: 'chibi-runner',
+    contentVersion: 1,
+    tags: ['test'],
+  }]);
+}
 
 describe('Arena Presentation Three lifecycle boundaries', () => {
+  it('snapshots the programmatic view factory boundary and rejects callback reentry', () => {
+    let reads = 0;
+    const accessorOptions = {
+      assetRegistry: programmaticAssetRegistry(), actionPresentations: {},
+    };
+    Object.defineProperty(accessorOptions, 'createView', {
+      enumerable: true,
+      get() { reads += 1; return () => ({}); },
+    });
+    expect(() => new ProgrammaticCharacterViewFactory(accessorOptions)).toThrow(/createView.*数据字段/);
+    expect(reads).toBe(0);
+
+    const mutablePresentations = { attack: { timing: { activeTicks: 3 } } };
+    const snapshotted: unknown[] = [];
+    const snapshotFactory = new ProgrammaticCharacterViewFactory({
+      assetRegistry: programmaticAssetRegistry(),
+      actionPresentations: mutablePresentations,
+      createView: (options: unknown) => { snapshotted.push(options); return {}; },
+    });
+    mutablePresentations.attack.timing.activeTicks = 99;
+    snapshotFactory.create({
+      participantId: 'snapshot-player', presentationDefinition: programmaticPresentationDefinition(),
+    });
+    expect(snapshotted).toHaveLength(1);
+    expect(snapshotted[0]).toMatchObject({ actionPresentations: { attack: { timing: { activeTicks: 3 } } } });
+
+    const factory = new ProgrammaticCharacterViewFactory({
+      assetRegistry: programmaticAssetRegistry(),
+      actionPresentations: {},
+      createView: () => factory.create({
+        participantId: 'nested', presentationDefinition: programmaticPresentationDefinition(),
+      }),
+    });
+    expect(() => factory.create({
+      participantId: 'player-1', presentationDefinition: programmaticPresentationDefinition(),
+    })).toThrow(/不允许 create 回调重入/);
+
+    const created: unknown[] = [];
+    const stableFactory = new ProgrammaticCharacterViewFactory({
+      assetRegistry: programmaticAssetRegistry(), actionPresentations: {},
+      createView: (options: unknown) => { created.push(options); return { id: 'view' }; },
+    });
+    const result = stableFactory.create({
+      participantId: 'player-1', presentationDefinition: programmaticPresentationDefinition(),
+    });
+    expect(result).toEqual({ id: 'view' });
+    expect(created).toHaveLength(1);
+    expect(Object.isFrozen(created[0])).toBe(true);
+  });
+
   it('rejects loader accessors, cleans invalid GLTF and retries only incomplete asset release', async () => {
     let reads = 0;
     const options = {};

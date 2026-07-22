@@ -11,11 +11,12 @@ import {
   ARENA_GREYBOX_DESIGN,
   CharacterViewRegistry,
   EquipmentViewRegistry,
+  ProgrammaticCharacterViewFactory,
   SurfaceViewRegistry,
   disposeThreeObject,
 } from '@number-strategy-jump/arena-presentation-three';
 import { GreyboxEventEffects } from './greybox-event-effects.js';
-import { ProgrammaticCharacterViewFactory } from './programmatic-character-view-factory.js';
+import { ProgrammaticCharacterView } from './programmatic-character-view.js';
 import { GltfCharacterViewFactory } from './gltf-character-view-factory.js';
 
 const EMPTY_EVENTS = Object.freeze([]);
@@ -152,6 +153,7 @@ export class ArenaWorldStage {
           : new ProgrammaticCharacterViewFactory({
             assetRegistry: content.assetRegistry,
             actionPresentations: content.actions,
+            createView: (options) => new ProgrammaticCharacterView(options),
           })
       );
       this.#surfaces = new SurfaceViewRegistry(this.surfaceRoot, content.map.surfaces);
