@@ -33,7 +33,7 @@ import {
   createProductSessionViewModel,
 } from '@number-strategy-jump/arena-product-presentation';
 import { ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT } from '../../../src/arena/presentation/content/arena-gameplay-v2-content.js';
-import { projectArenaPresentationFrame } from '../../../src/arena/presentation/projection/arena-frame-projector.js';
+import { projectArenaPresentationFrame } from '@number-strategy-jump/arena-v1-presentation-content';
 import {
   PRODUCT_INPUT_ROUTER_MODE,
 } from '@number-strategy-jump/arena-presentation-contracts';

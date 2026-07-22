@@ -15,7 +15,7 @@ import {
   PresentationFrameLoop,
 } from '@number-strategy-jump/arena-presentation-runtime';
 import { ArenaGreyboxRenderer } from '@number-strategy-jump/arena-presentation-three';
-import { ARENA_V1_GREYBOX_CONTENT } from '../content/arena-v1-greybox-content.js';
+import { ARENA_V1_GREYBOX_CONTENT } from '../content/arena-gameplay-v2-content.js';
 
 const OPTION_KEYS = new Set([
   'mapperId',
@@ -202,6 +202,7 @@ export function createArenaSessionComposition(platformValue, optionsValue) {
     matchingDurationSeconds,
     maximumCatchUpTicks,
     matchConfig: createMatchConfig(options.matchConfig),
+    presentationContent: ARENA_V1_GREYBOX_CONTENT,
     experimentLabel: options.experimentLabel ?? '',
     onDiagnostic,
     onMatchProgress,

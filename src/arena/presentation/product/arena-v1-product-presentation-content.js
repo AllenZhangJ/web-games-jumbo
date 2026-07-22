@@ -4,7 +4,7 @@ import {
   ARENA_V1_ZH_CN_PRODUCT_MESSAGES,
   createArenaV1ProductPresentationContent,
 } from '@number-strategy-jump/arena-product-presentation';
-import { ARENA_V1_GREYBOX_CONTENT } from '../content/arena-v1-greybox-content.js';
+import { ARENA_V1_GREYBOX_CONTENT } from '../content/arena-gameplay-v2-content.js';
 
 function requirePreviewAssetId(characterDefinitionId) {
   const presentation = ARENA_V1_GREYBOX_CONTENT.characters[characterDefinitionId];

@@ -477,6 +477,34 @@ test('Arena Product Presentation remains host-free and cannot write match author
   }
 });
 
+test('Arena V1 presentation content only projects injected authority into readonly frames', async () => {
+  const packageDefinition = JSON.parse(await readFile(
+    path.resolve('packages/arena-v1-presentation-content/package.json'),
+    'utf8',
+  ));
+  assert.deepEqual(
+    Object.keys(packageDefinition.dependencies).sort(),
+    [
+      '@number-strategy-jump/arena-contracts',
+      '@number-strategy-jump/arena-definitions',
+      '@number-strategy-jump/arena-match',
+      '@number-strategy-jump/arena-presentation-contracts',
+      '@number-strategy-jump/arena-presentation-runtime',
+    ],
+    'arena-v1-presentation-content 只能依赖只读 Definition、快照与表现合同。',
+  );
+  const files = await listJavaScript(path.resolve('packages/arena-v1-presentation-content/src'));
+  assert.ok(files.length >= 4);
+  for (const file of files) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /(?:from\s+['"](?:three|node:|[^'"]*(?:core|bot|product|session|renderer|platform|entry)[^'"]*)['"]|Date\.now|Math\.random|\bperformance\b|setTimeout|setInterval|requestAnimationFrame|\b(?:window|document|navigator)\b|\b(?:tt|wx)\s*\.)/,
+      `${file} 只能创建只读表现内容或投影公开权威快照。`,
+    );
+  }
+});
+
 test('Arena Stage 8 product orchestration remains host-free and outside match authority', async () => {
   const directories = [
     'src/arena/product',

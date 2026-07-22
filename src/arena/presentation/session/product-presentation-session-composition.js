@@ -15,7 +15,7 @@ import {
   ProductPresentationSession,
 } from '@number-strategy-jump/arena-product-presentation';
 import { ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT } from '../content/arena-gameplay-v2-content.js';
-import { projectArenaPresentationFrame } from '../projection/arena-frame-projector.js';
+import { projectArenaPresentationFrame } from '@number-strategy-jump/arena-v1-presentation-content';
 import { ARENA_V1_PRODUCT_PRESENTATION_CONTENT } from '../product/arena-v1-product-presentation-content.js';
 import {
   ARENA_V1_DEFAULT_PRESENTATION_QUALITY,

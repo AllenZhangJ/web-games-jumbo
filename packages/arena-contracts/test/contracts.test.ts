@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ACTION_RESOLUTION_KIND,
   ARENA_MATCH_EVENT,
   assertKnownKeys,
   cloneFrozenData,
@@ -17,6 +18,15 @@ import {
 import type { ArenaInputFrame, ArenaMatchEventType } from '../src/index.js';
 
 describe('Arena deterministic contracts', () => {
+  it('publishes the immutable action resolution vocabulary for downstream readers', () => {
+    expect(ACTION_RESOLUTION_KIND).toEqual({
+      NONE: 'none',
+      IGNORED: 'ignored',
+      SELECTED: 'selected',
+    });
+    expect(Object.isFrozen(ACTION_RESOLUTION_KIND)).toBe(true);
+  });
+
   function snapshotFixture(includeInternal = false) {
     const participant = {
       id: 'p1',

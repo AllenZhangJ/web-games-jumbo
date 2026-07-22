@@ -7,10 +7,12 @@ import {
   type ActionLane,
 } from '@number-strategy-jump/arena-definitions';
 import {
+  ACTION_RESOLUTION_KIND,
   assertIntegerAtLeast,
   assertKnownKeys,
   assertNonEmptyString,
   cloneFrozenStringSet,
+  type ActionResolutionKind,
 } from '@number-strategy-jump/arena-contracts';
 import {
   compareActionCandidates,
@@ -18,14 +20,7 @@ import {
   type ActionCandidate,
 } from './action-candidate.js';
 
-export const ACTION_RESOLUTION_KIND = Object.freeze({
-  NONE: 'none',
-  IGNORED: 'ignored',
-  SELECTED: 'selected',
-} as const);
-
-export type ActionResolutionKind =
-  typeof ACTION_RESOLUTION_KIND[keyof typeof ACTION_RESOLUTION_KIND];
+export { ACTION_RESOLUTION_KIND } from '@number-strategy-jump/arena-contracts';
 
 export const ACTION_PRIORITY = Object.freeze({
   AIR_COMBAT: 550,

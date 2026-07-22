@@ -10,7 +10,7 @@ import {
   ARENA_V1_PRESENTATION_QUALITY_REGISTRY,
   PresentationEventWindow,
 } from '@number-strategy-jump/arena-presentation-runtime';
-import { projectArenaPresentationFrame } from '../../../src/arena/presentation/projection/arena-frame-projector.js';
+import { projectArenaPresentationFrame } from '@number-strategy-jump/arena-v1-presentation-content';
 import {
   ArenaGreyboxRenderer,
   ARENA_GREYBOX_RENDERER_STATE,
@@ -19,8 +19,8 @@ import {
 } from '@number-strategy-jump/arena-presentation-three';
 import {
   ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT,
+  ARENA_V1_GREYBOX_CONTENT,
 } from '../../../src/arena/presentation/content/arena-gameplay-v2-content.js';
-import { ARENA_V1_GREYBOX_CONTENT } from '../../../src/arena/presentation/content/arena-v1-greybox-content.js';
 import { STAGE4_ACTION_ID } from '../../../src/arena/content/stage4-equipment.js';
 
 const MATCH_SEED = 6_502;
@@ -57,6 +57,7 @@ function frameFrom(snapshot, events = []) {
     snapshot,
     events,
     publicMatchInfo: PUBLIC_INFO,
+    content: ARENA_V1_GREYBOX_CONTENT,
   });
 }
 

@@ -50,6 +50,8 @@ export type {
   ArenaVector2Snapshot,
   ArenaVector3Snapshot,
 } from './match-snapshot.js';
+export { ACTION_RESOLUTION_KIND } from './action-resolution.js';
+export type { ActionResolutionKind } from './action-resolution.js';
 export {
   createMatchContentPublicView,
   createMatchContentSelection,

@@ -6,7 +6,7 @@ import {
   ProductPresentationFlow,
 } from '@number-strategy-jump/arena-product-presentation';
 import { ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT } from '../../../src/arena/presentation/content/arena-gameplay-v2-content.js';
-import { projectArenaPresentationFrame } from '../../../src/arena/presentation/projection/arena-frame-projector.js';
+import { projectArenaPresentationFrame } from '@number-strategy-jump/arena-v1-presentation-content';
 import { ARENA_V1_PRODUCT_PRESENTATION_CONTENT } from '../../../src/arena/presentation/product/arena-v1-product-presentation-content.js';
 import {
   ARENA_V1_PRESENTATION_QUALITY_ID,

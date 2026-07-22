@@ -8,8 +8,14 @@ import {
   PRESENTATION_ASSET_KIND,
   PresentationAssetRegistry,
   createCharacterPresentationDefinition,
+  type ArenaAnimationSemantic,
+  type CharacterAnimationBinding,
+  type CharacterPresentationDefinition,
+  type CharacterPresentationDefinitionJson,
+  type PresentationAssetDefinitionJson,
 } from '@number-strategy-jump/arena-presentation-contracts';
 import { ARENA_PRESENTATION_ASSET_PROVIDER_ID } from '@number-strategy-jump/arena-presentation-runtime';
+import type { ArenaV1PresentationContent } from './arena-v1-presentation-content.js';
 
 export const ARENA_GAMEPLAY_V2_ASSET_ID = Object.freeze({
   PARKOUR_APPRENTICE: 'arena.asset.character.parkour-apprentice.kaykit-rogue.v1',
@@ -17,39 +23,39 @@ export const ARENA_GAMEPLAY_V2_ASSET_ID = Object.freeze({
   HEAVY_HAMMER: 'arena.asset.attachment.heavy-hammer.project-authored.v2',
   SHIELD: 'arena.asset.attachment.shield.kaykit-round.v1',
   CHAIN: 'arena.asset.attachment.chain.programmatic.v2',
-});
+} as const);
 
 const ASSET_SOURCE = Object.freeze({
-  PARKOUR_APPRENTICE:
-    './assets/arena/characters/kaykit-adventurers/parkour-apprentice-rogue.glb',
-  CLOCKWORK_WARRIOR:
-    './assets/arena/characters/kaykit-skeletons/clockwork-warrior.glb',
+  PARKOUR_APPRENTICE: './assets/arena/characters/kaykit-adventurers/parkour-apprentice-rogue.glb',
+  CLOCKWORK_WARRIOR: './assets/arena/characters/kaykit-skeletons/clockwork-warrior.glb',
   SHIELD: './assets/arena/equipment/kaykit-adventurers/shield-round.glb',
 });
 
-function asset({ id, kind, providerId, sourceKey, tags }) {
+function asset(options: Omit<PresentationAssetDefinitionJson, 'schemaVersion' | 'contentVersion'>): PresentationAssetDefinitionJson {
   return {
     schemaVersion: PRESENTATION_ASSET_DEFINITION_SCHEMA_VERSION,
-    id,
-    kind,
-    providerId,
-    sourceKey,
     contentVersion: 1,
-    tags,
+    ...options,
   };
 }
 
-function clip(sourceKey, { loop = false, fallbackSemantics = ['idle'] } = {}) {
+function clip(
+  sourceKey: string,
+  options: Readonly<{
+    loop?: boolean;
+    fallbackSemantics?: readonly ArenaAnimationSemantic[];
+  }> = {},
+): CharacterAnimationBinding {
   return Object.freeze({
     sourceKind: ARENA_ANIMATION_SOURCE_KIND.CLIP,
     sourceKey,
-    loop,
-    fallbackSemantics,
+    loop: options.loop ?? false,
+    fallbackSemantics: Object.freeze([...(options.fallbackSemantics ?? ['idle'])]),
   });
 }
 
-function kayKitAnimationMap() {
-  const values = {
+function kayKitAnimationMap(): Readonly<Record<ArenaAnimationSemantic, CharacterAnimationBinding>> {
+  const values: Record<ArenaAnimationSemantic, CharacterAnimationBinding> = {
     'attack-active': clip('Unarmed_Melee_Attack_Punch_A'),
     'attack-windup': clip('Unarmed_Melee_Attack_Punch_A'),
     'crouch-charge': clip('Unarmed_Pose', { loop: true }),
@@ -73,42 +79,52 @@ function kayKitAnimationMap() {
   if (Object.keys(values).length !== ARENA_ANIMATION_SEMANTIC_IDS.length) {
     throw new Error('KayKit animation map 未覆盖全部 Arena animation semantic。');
   }
-  return values;
+  return Object.freeze(values);
 }
 
-function formalKayKitPresentation({
-  baseDefinition,
-  id,
-  modelAssetId,
-  rigProfileId,
-  materialProfileId,
-  tags,
-}) {
-  const value = baseDefinition.toJSON();
-  value.id = id;
-  value.contentVersion = 1;
-  value.modelAssetId = modelAssetId;
-  value.rigProfileId = rigProfileId;
-  value.materialProfileId = materialProfileId;
-  value.animationMap = kayKitAnimationMap();
-  value.attachmentSlots = value.attachmentSlots.map((slot) => {
-    if (slot.id !== CHARACTER_PRESENTATION_SLOT_ID.EQUIPMENT) return slot;
-    return {
-      ...slot,
-      nodeName: 'handslot.r',
-      allowedAssetIds: [
-        ARENA_GAMEPLAY_V2_ASSET_ID.CHAIN,
-        ARENA_GAMEPLAY_V2_ASSET_ID.HEAVY_HAMMER,
-        ARENA_GAMEPLAY_V2_ASSET_ID.SHIELD,
-      ],
-      defaultAssetId: null,
-    };
-  });
-  value.tags = tags;
-  return createCharacterPresentationDefinition(value);
+function formalKayKitPresentation(options: Readonly<{
+  baseDefinition: CharacterPresentationDefinition;
+  id: string;
+  modelAssetId: string;
+  rigProfileId: string;
+  materialProfileId: string;
+  tags: readonly string[];
+}>): CharacterPresentationDefinition {
+  const base = options.baseDefinition.toJSON();
+  const attachmentSlots = base.attachmentSlots.map((slot) => (
+    slot.id === CHARACTER_PRESENTATION_SLOT_ID.EQUIPMENT
+      ? {
+        ...slot,
+        nodeName: 'handslot.r',
+        allowedAssetIds: [
+          ARENA_GAMEPLAY_V2_ASSET_ID.CHAIN,
+          ARENA_GAMEPLAY_V2_ASSET_ID.HEAVY_HAMMER,
+          ARENA_GAMEPLAY_V2_ASSET_ID.SHIELD,
+        ],
+        defaultAssetId: null,
+      }
+      : slot
+  ));
+  const definition: CharacterPresentationDefinitionJson = {
+    ...base,
+    id: options.id,
+    contentVersion: 1,
+    modelAssetId: options.modelAssetId,
+    rigProfileId: options.rigProfileId,
+    materialProfileId: options.materialProfileId,
+    animationMap: kayKitAnimationMap(),
+    attachmentSlots,
+    tags: options.tags,
+  };
+  return createCharacterPresentationDefinition(definition);
 }
 
-export function createArenaGameplayV2CharacterContent(greyboxContent) {
+export function createArenaGameplayV2CharacterContent(
+  greyboxContent: ArenaV1PresentationContent,
+): Readonly<Pick<
+  ArenaV1PresentationContent,
+  'assetRegistry' | 'characterPresentationRegistry' | 'characters'
+>> {
   const assets = [
     ...greyboxContent.assetRegistry.list(),
     asset({

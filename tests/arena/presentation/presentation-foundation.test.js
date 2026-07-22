@@ -1,14 +1,23 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createArenaV1MatchCore } from '../../../src/arena/arena-v1-match-core.js';
+import {
+  STAGE4_ACTION_DEFINITIONS,
+  STAGE4_ACTION_ID,
+} from '../../../src/arena/content/stage4-equipment.js';
+import { STAGE6_MOVEMENT_ACTION_ID } from '../../../src/arena/content/stage6-movement-actions.js';
 import { STAGE5_MAP_DEFINITION } from '../../../src/arena/content/stage5-map.js';
-import { ARENA_V1_GREYBOX_CONTENT } from '../../../src/arena/presentation/content/arena-v1-greybox-content.js';
+import { ARENA_V1_GREYBOX_CONTENT } from '../../../src/arena/presentation/content/arena-gameplay-v2-content.js';
 import {
   createArenaWorldBounds,
   createOrthographicArenaCamera,
 } from '@number-strategy-jump/arena-presentation-three';
 import { PresentationEventWindow } from '@number-strategy-jump/arena-presentation-runtime';
-import { projectArenaPresentationFrame } from '../../../src/arena/presentation/projection/arena-frame-projector.js';
+import {
+  ARENA_V1_CHARACTER_PRESENTATION_TUNING,
+  ARENA_V1_COMBAT_PRESENTATION_CONFIG,
+  projectArenaPresentationFrame,
+} from '@number-strategy-jump/arena-v1-presentation-content';
 
 const PUBLIC_INFO = Object.freeze({
   matchSeed: 65,
@@ -44,6 +53,42 @@ test('Arena greybox content copies frozen authority geometry and presentation se
   }, TypeError);
 });
 
+test('Arena action, weapon and character presentation values come from one exported configuration', () => {
+  const authorityTimingById = new Map(STAGE4_ACTION_DEFINITIONS.map((definition) => [
+    definition.id,
+    definition.timing,
+  ]));
+  for (const actionId of Object.values(STAGE4_ACTION_ID)) {
+    assert.deepEqual(
+      ARENA_V1_GREYBOX_CONTENT.actions[actionId].timing,
+      authorityTimingById.get(actionId),
+      `${actionId} 必须直接投影权威 timing。`,
+    );
+  }
+  assert.deepEqual(
+    ARENA_V1_GREYBOX_CONTENT.actions[STAGE4_ACTION_ID.HAMMER_SMASH].weaponScale,
+    { idle: 1, ...ARENA_V1_COMBAT_PRESENTATION_CONFIG.hammerSmash.scale },
+  );
+  assert.notDeepEqual(
+    ARENA_V1_GREYBOX_CONTENT.actions[STAGE4_ACTION_ID.HAMMER_SMASH].weaponScale,
+    ARENA_V1_GREYBOX_CONTENT.actions[STAGE4_ACTION_ID.CHAIN_PULL].weaponScale,
+  );
+  assert.equal(
+    ARENA_V1_GREYBOX_CONTENT.actions[STAGE4_ACTION_ID.HAMMER_AIR_SMASH].semantic,
+    'air-heavy-smash',
+  );
+  for (const actionId of Object.values(STAGE6_MOVEMENT_ACTION_ID)) {
+    assert.ok(ARENA_V1_GREYBOX_CONTENT.actions[actionId], `${actionId} 必须有动作表现。`);
+  }
+  const character = ARENA_V1_GREYBOX_CONTENT.characterPresentationRegistry.list()[0];
+  assert.deepEqual(character.locomotion, {
+    walkSpeedThreshold: ARENA_V1_CHARACTER_PRESENTATION_TUNING.walkSpeedThreshold,
+    runSpeedThreshold: ARENA_V1_CHARACTER_PRESENTATION_TUNING.runSpeedThreshold,
+    knockbackSpeedThreshold: ARENA_V1_CHARACTER_PRESENTATION_TUNING.knockbackSpeedThreshold,
+  });
+  assert.ok(Object.isFrozen(ARENA_V1_COMBAT_PRESENTATION_CONFIG.hammerSmash.scale));
+});
+
 test('Arena frame projector reads ActionAffordance and exposes no hidden bot difficulty', () => {
   const core = createCore();
   const source = core.getSnapshot();
@@ -51,6 +96,7 @@ test('Arena frame projector reads ActionAffordance and exposes no hidden bot dif
   const frame = projectArenaPresentationFrame({
     snapshot: source,
     publicMatchInfo: PUBLIC_INFO,
+    content: ARENA_V1_GREYBOX_CONTENT,
   });
 
   assert.equal(frame.hud.action.definitionId, expectedActionId);
@@ -83,6 +129,7 @@ test('Arena frame projector fails closed on missing presentation content', () =>
   assert.throws(() => projectArenaPresentationFrame({
     snapshot,
     publicMatchInfo: PUBLIC_INFO,
+    content: ARENA_V1_GREYBOX_CONTENT,
   }), /missing-character/);
   core.destroy();
 });
@@ -93,12 +140,45 @@ test('Arena frame projector rejects cross-match HUD data and stale affordance', 
   assert.throws(() => projectArenaPresentationFrame({
     snapshot,
     publicMatchInfo: { ...PUBLIC_INFO, matchSeed: PUBLIC_INFO.matchSeed + 1 },
+    content: ARENA_V1_GREYBOX_CONTENT,
   }), /matchSeed.*不一致/);
   snapshot.participants[0].actionAffordance.tick += 1;
   assert.throws(() => projectArenaPresentationFrame({
     snapshot,
     publicMatchInfo: PUBLIC_INFO,
+    content: ARENA_V1_GREYBOX_CONTENT,
   }), /actionAffordance 身份无效/i);
+  core.destroy();
+});
+
+test('Arena frame projector requires explicit content and rejects malformed snapshots atomically', () => {
+  const core = createCore();
+  const snapshot = core.getSnapshot();
+  assert.throws(() => projectArenaPresentationFrame({
+    snapshot,
+    publicMatchInfo: PUBLIC_INFO,
+  }), /content 不存在/);
+
+  snapshot.participants[0].grounded = 1;
+  assert.throws(() => projectArenaPresentationFrame({
+    snapshot,
+    publicMatchInfo: PUBLIC_INFO,
+    content: ARENA_V1_GREYBOX_CONTENT,
+  }), /grounded.*布尔值/);
+
+  snapshot.participants[0].grounded = true;
+  let getterCalls = 0;
+  const hostileEvent = Object.defineProperty({}, 'sequence', {
+    enumerable: true,
+    get() { getterCalls += 1; return 1; },
+  });
+  assert.throws(() => projectArenaPresentationFrame({
+    snapshot,
+    events: [hostileEvent],
+    publicMatchInfo: PUBLIC_INFO,
+    content: ARENA_V1_GREYBOX_CONTENT,
+  }), /数据字段/);
+  assert.equal(getterCalls, 0);
   core.destroy();
 });
 

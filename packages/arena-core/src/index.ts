@@ -11,17 +11,17 @@ export {
 export type { ActionCandidate } from './action-candidate.js';
 export {
   ACTION_PRIORITY,
-  ACTION_RESOLUTION_KIND,
   ActionResolver,
 } from './action-resolver.js';
+export { ACTION_RESOLUTION_KIND } from '@number-strategy-jump/arena-contracts';
 export type {
   ActionIntentInput,
   ActionRegistryContract,
   ActionResolution,
   ActionResolutionContext,
-  ActionResolutionKind,
   ActionResolutionResult,
 } from './action-resolver.js';
+export type { ActionResolutionKind } from '@number-strategy-jump/arena-contracts';
 export { ActionAffordanceProjector } from './action-affordance.js';
 export type {
   ActionAffordance,
