@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ARENA_CONTROL_ID,
   ARENA_V1_PRESENTATION_QUALITY_REGISTRY,
   ARENA_V1_PRESENTATION_QUALITY_ID,
+  controlAtPoint,
+  createArenaControlLayout,
   FixedTickAccumulator,
   PresentationAssetLoadTask,
   PresentationEventWindow,
@@ -9,6 +12,7 @@ import {
   PresentationFrameLoop,
   PresentationRenderPacer,
   SixSectorDirectionResolver,
+  normalizedControlDelta,
 } from '../src/index.js';
 import {
   CHARACTER_PRESENTATION_DIRECTION_STRATEGY,
@@ -19,6 +23,30 @@ import {
 } from '@number-strategy-jump/arena-presentation-contracts';
 
 describe('Arena Presentation runtime boundaries', () => {
+  it('keeps one strict immutable control layout for hit testing and HUD placement', () => {
+    let reads = 0;
+    const accessor = {};
+    Object.defineProperty(accessor, 'moveZoneFraction', {
+      enumerable: true,
+      get() { reads += 1; return 0.5; },
+    });
+    expect(() => createArenaControlLayout(accessor)).toThrow(/moveZoneFraction.*访问器/);
+    expect(reads).toBe(0);
+
+    const layout = createArenaControlLayout({ moveZoneFraction: 0.6 });
+    expect(Object.isFrozen(layout)).toBe(true);
+    expect(controlAtPoint(
+      { pointerId: 1, x: 336, y: 608 },
+      { width: 400, height: 800 },
+      layout,
+    )).toBe(ARENA_CONTROL_ID.PRIMARY);
+    expect(() => normalizedControlDelta(
+      { pointerId: 1, x: 0, y: 0 },
+      { pointerId: 2, x: 1, y: 1 },
+      48,
+    )).toThrow(/pointerId.*一致/);
+  });
+
   it('rejects option and event accessors without executing them', () => {
     let optionReads = 0;
     expect(() => new PresentationFrameLoop({

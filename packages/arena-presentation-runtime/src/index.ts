@@ -1,5 +1,6 @@
 export * from './arena-v1-presentation-quality.js';
 export * from './character-view-runtime.js';
+export * from './control-layout.js';
 export * from './fixed-tick-accumulator.js';
 export * from './presentation-event-window.js';
 export * from './presentation-asset-load-task.js';

@@ -5,7 +5,7 @@ import {
   controlAtPoint,
   createArenaControlLayout,
   joystickRadius,
-} from '../../../src/arena/presentation/input/control-layout.js';
+} from '@number-strategy-jump/arena-presentation-runtime';
 import { RawControlState } from '../../../src/arena/presentation/input/raw-control-state.js';
 
 const viewport = Object.freeze({ width: 400, height: 800 });

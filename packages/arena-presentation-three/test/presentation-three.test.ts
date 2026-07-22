@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import {
   ARENA_CAMERA_DEFAULTS,
   ARENA_WORLD_STAGE_DEFAULTS,
+  ArenaHudLayer,
   ArenaWorldStage,
   EquipmentViewRegistry,
   CharacterAnimationController,
@@ -225,6 +226,43 @@ function createGltfView(characterTemplate = createGltfTemplate()): GltfCharacter
   });
 }
 
+function hudFrame(phase = 'running'): unknown {
+  return {
+    source: { matchSeed: 17 },
+    phase,
+    hud: {
+      remainingSeconds: 120,
+      phaseLabel: phase === 'ended' ? '结束' : '对决',
+      local: { participantId: 'player-1', lives: 3 },
+      opponent: { participantId: 'player-2', lives: 2, displayName: '芽芽' },
+      action: { definitionId: null, available: true, label: '推击' },
+      result: phase === 'ended' ? { winnerId: 'player-1', isDraw: false } : null,
+    },
+    world: {
+      participants: [
+        { id: 'player-1', status: 'active', position: { x: 0, z: 0 } },
+        { id: 'player-2', status: 'active', position: { x: 12, z: 0 } },
+      ],
+    },
+  };
+}
+
+function hudPlatform(fillText: (value: string) => void = () => {}): unknown {
+  const context = Object.fromEntries([
+    'setTransform', 'clearRect', 'beginPath', 'moveTo', 'lineTo', 'quadraticCurveTo',
+    'closePath', 'fill', 'stroke', 'arc', 'fillRect',
+  ].map((name) => [name, () => {}]));
+  return {
+    createOffscreenCanvas(width: unknown, height: unknown) {
+      return {
+        width: typeof width === 'object' ? 2 : width,
+        height: typeof width === 'object' ? 2 : height,
+        getContext() { return { ...context, fillText }; },
+      };
+    },
+  };
+}
+
 function gltfSyncOptions(events: readonly unknown[] = []): unknown {
   return {
     snap: true,
@@ -247,6 +285,70 @@ function gltfSyncOptions(events: readonly unknown[] = []): unknown {
 }
 
 describe('Arena Presentation Three lifecycle boundaries', () => {
+  it('keeps HUD boundary rejection atomic and maps rematch through the shared control viewport', () => {
+    const hud = new ArenaHudLayer(hudPlatform());
+    let reads = 0;
+    const accessorViewport = { height: 844 };
+    Object.defineProperty(accessorViewport, 'width', {
+      enumerable: true,
+      get() { reads += 1; return 390; },
+    });
+    expect(() => hud.resize(accessorViewport)).toThrow(/width.*数据字段/);
+    expect(reads).toBe(0);
+
+    hud.resize({ width: 390, height: 844, pixelRatio: 2, safeArea: null });
+    hud.sync(hudFrame('ended'));
+    expect(hud.getDebugSnapshot()).toMatchObject({
+      textureWidth: 710,
+      textureHeight: 1536,
+      hasFrame: true,
+      hasRematchControl: true,
+    });
+    expect(hud.hitTestRematch({ pointerId: 1, x: 390, y: 940 }, { width: 780, height: 1688 })).toBe(true);
+    hud.dispose();
+  });
+
+  it('fails HUD closed when a host drawing callback throws', () => {
+    const hud = new ArenaHudLayer(hudPlatform(() => { throw new Error('host draw failure'); }));
+    hud.resize({ width: 390, height: 844 });
+    expect(() => hud.sync(hudFrame())).toThrow(/host draw failure/);
+    expect(() => hud.getDebugSnapshot()).toThrow(/已销毁/);
+    hud.dispose();
+  });
+
+  it('fails HUD closed when a host drawing callback catches its own reentry error', () => {
+    let attempted = false;
+    const platform = hudPlatform(() => {
+      if (attempted) return;
+      attempted = true;
+      try { hud.getDebugSnapshot(); } catch { /* hostile host swallows reentry */ }
+    });
+    const hud = new ArenaHudLayer(platform);
+    hud.resize({ width: 390, height: 844 });
+    expect(() => hud.sync(hudFrame())).toThrow(/回调发生重入/);
+    expect(attempted).toBe(true);
+    expect(() => hud.getDebugSnapshot()).toThrow(/已销毁/);
+    hud.dispose();
+  });
+
+  it('retries only the incomplete HUD Three resource release', () => {
+    const originalDispose = THREE.Material.prototype.dispose;
+    let materialDisposals = 0;
+    THREE.Material.prototype.dispose = function patchedDispose(): void {
+      materialDisposals += 1;
+      if (materialDisposals === 1) throw new Error('transient HUD material release');
+      originalDispose.call(this);
+    };
+    let hud: ArenaHudLayer;
+    try { hud = new ArenaHudLayer(hudPlatform()); }
+    finally { THREE.Material.prototype.dispose = originalDispose; }
+    expect(() => hud.dispose()).toThrow(/清理未完整完成/);
+    const firstPass = materialDisposals;
+    hud.dispose();
+    hud.dispose();
+    expect(materialDisposals).toBe(firstPass + 1);
+  });
+
   it('keeps World Stage boundary failures retryable before presentation mutation', () => {
     let reads = 0;
     const accessorOptions = {};

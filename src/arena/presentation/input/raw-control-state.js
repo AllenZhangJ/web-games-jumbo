@@ -4,7 +4,7 @@ import {
   createArenaControlLayout,
   joystickRadius,
   normalizedControlDelta,
-} from './control-layout.js';
+} from '@number-strategy-jump/arena-presentation-runtime';
 import {
   clonePoint,
   cloneViewport,

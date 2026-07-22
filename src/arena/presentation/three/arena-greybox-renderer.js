@@ -4,9 +4,9 @@ import {
   createPresentationQualityDefinition,
 } from '@number-strategy-jump/arena-presentation-runtime';
 import { ArenaImpactAudio } from '../audio/arena-impact-audio.js';
-import { ArenaHudLayer } from './arena-hud-layer.js';
 import {
   ARENA_GREYBOX_COLOR,
+  ArenaHudLayer,
   ArenaWorldStage,
   GltfPresentationAssetLoader,
 } from '@number-strategy-jump/arena-presentation-three';
