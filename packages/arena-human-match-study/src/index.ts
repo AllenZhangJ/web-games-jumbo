@@ -6,3 +6,4 @@ export * from './human-match-study-record.js';
 export * from './human-match-study-bundle.js';
 export * from './human-match-study-capture-package.js';
 export * from './human-match-study-workspace.js';
+export * from './human-match-study-workspace-envelope.js';

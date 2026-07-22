@@ -127,7 +127,6 @@
     "src/arena/study/human-match-study-replay-verifier.js",
     "src/arena/study/human-match-study-report.js",
     "src/arena/study/human-match-study-workspace-controller.js",
-    "src/arena/study/human-match-study-workspace-envelope.js",
     "src/arena/study/human-match-study-workspace-repository.js",
     "src/config.js",
     "src/entry/human-match-study-web-app.js",

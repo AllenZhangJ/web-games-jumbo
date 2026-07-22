@@ -4,6 +4,7 @@ import {
   ARENA_STAGE9_HUMAN_FAIRNESS_ARM_ID,
   HumanMatchStudyCaptureSession,
   advanceHumanMatchStudyWorkspace,
+  assertHumanMatchStudyWorkspaceEnvelopeHasNoFutureSchema,
   createArenaStage9HumanFairnessV1Definition,
   createHumanMatchStudyAssignment,
   createHumanMatchStudyBundle,
@@ -178,5 +179,22 @@ describe('Human Match Study strict foundation', () => {
       /访问器|数据字段/,
     );
     expect(reads).toBe(0);
+  });
+
+  it('probes workspace envelope versions without evaluating accessors', () => {
+    let reads = 0;
+    const envelope = Object.defineProperty({}, 'payload', {
+      enumerable: true,
+      get() {
+        reads += 1;
+        return {};
+      },
+    });
+    expect(assertHumanMatchStudyWorkspaceEnvelopeHasNoFutureSchema(envelope)).toBe(true);
+    expect(reads).toBe(0);
+    expect(() => assertHumanMatchStudyWorkspaceEnvelopeHasNoFutureSchema({
+      schemaVersion: 1,
+      payload: { schemaVersion: 2 },
+    })).toThrow(/未来 schema/);
   });
 });

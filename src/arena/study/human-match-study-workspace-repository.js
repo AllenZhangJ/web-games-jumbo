@@ -13,7 +13,7 @@ import {
   assertHumanMatchStudyWorkspaceEnvelopeHasNoFutureSchema,
   createHumanMatchStudyWorkspaceEnvelope,
   validateHumanMatchStudyWorkspaceEnvelope,
-} from './human-match-study-workspace-envelope.js';
+} from '@number-strategy-jump/arena-human-match-study';
 import { createHumanMatchStudyWorkspace } from '@number-strategy-jump/arena-human-match-study';
 
 const SLOT = Object.freeze({ A: 'a', B: 'b' });
