@@ -21,7 +21,7 @@ import {
 import {
   INPUT_PILOT_STORAGE_LEASE_SCHEMA_VERSION,
   InputPilotStorageLease,
-} from '../../../src/arena/presentation/pilot/input-pilot-storage-lease.js';
+} from '@number-strategy-jump/arena-input-pilot';
 import {
   INPUT_PILOT_TRIAL_CHECKPOINT_SCHEMA_VERSION,
   INPUT_PILOT_TRIAL_PHASE,

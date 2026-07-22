@@ -9,7 +9,7 @@ import {
 } from '@number-strategy-jump/arena-input-pilot';
 import {
   INPUT_PILOT_RUNTIME_STATE,
-} from '../../../src/arena/presentation/pilot/input-pilot-trial-runtime-port.js';
+} from '@number-strategy-jump/arena-input-pilot';
 import {
   INPUT_PILOT_TRIAL_CONTROLLER_STATE,
   InputPilotTrialController,

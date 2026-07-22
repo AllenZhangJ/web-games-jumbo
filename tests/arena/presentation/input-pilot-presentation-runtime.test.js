@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createArenaInputPilotV1Definition } from '@number-strategy-jump/arena-input-pilot';
-import { InputPilotAssignedMatchService } from '../../../src/arena/presentation/pilot/input-pilot-assigned-match-service.js';
+import { InputPilotAssignedMatchService } from '@number-strategy-jump/arena-input-pilot';
 import { createInputPilotAssignment } from '@number-strategy-jump/arena-input-pilot';
 import { INPUT_PILOT_ACTION_OUTCOME } from '@number-strategy-jump/arena-input-pilot';
 import {
@@ -9,7 +9,7 @@ import {
   INPUT_PILOT_TRIAL_PHASE,
   createInputPilotTrialCheckpoint,
 } from '../../../src/arena/presentation/pilot/input-pilot-trial-checkpoint.js';
-import { INPUT_PILOT_RUNTIME_STATE } from '../../../src/arena/presentation/pilot/input-pilot-trial-runtime-port.js';
+import { INPUT_PILOT_RUNTIME_STATE } from '@number-strategy-jump/arena-input-pilot';
 import { InputPilotPresentationRuntime } from '../../../src/arena/presentation/session/input-pilot-presentation-runtime.js';
 
 function checkpoint(definition) {

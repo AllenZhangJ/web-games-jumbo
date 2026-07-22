@@ -5,4 +5,5 @@ export * from './input-pilot-form-model.js';
 export * from './input-pilot-record.js';
 export * from './input-pilot-registry.js';
 export * from './input-pilot-review-draft.js';
+export * from './input-pilot-runtime-ports.js';
 export * from './input-pilot-vocabulary.js';

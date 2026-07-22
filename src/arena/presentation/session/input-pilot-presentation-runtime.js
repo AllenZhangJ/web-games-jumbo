@@ -4,12 +4,12 @@ import {
 } from '@number-strategy-jump/arena-contracts';
 import { QuickMatchService } from '@number-strategy-jump/arena-v1-composition';
 import { ArenaPresentationSession } from '@number-strategy-jump/arena-v1-greybox-session';
-import { InputPilotAssignedMatchService } from '../pilot/input-pilot-assigned-match-service.js';
+import { InputPilotAssignedMatchService } from '@number-strategy-jump/arena-input-pilot';
 import { createInputPilotDefinition } from '@number-strategy-jump/arena-input-pilot';
 import { InputPilotMetricCollector } from '../pilot/input-pilot-metric-collector.js';
 import { InputPilotObservedMatchService } from '../pilot/input-pilot-observed-match-service.js';
 import { createInputPilotTrialCheckpoint } from '../pilot/input-pilot-trial-checkpoint.js';
-import { INPUT_PILOT_RUNTIME_STATE } from '../pilot/input-pilot-trial-runtime-port.js';
+import { INPUT_PILOT_RUNTIME_STATE } from '@number-strategy-jump/arena-input-pilot';
 
 function requiredFunction(value, name) {
   if (typeof value !== 'function') throw new TypeError(`${name} 必须是函数。`);

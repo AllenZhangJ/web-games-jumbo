@@ -7,6 +7,7 @@ import {
   INPUT_PILOT_TERMINATION_REASON,
   INPUT_PILOT_TRIAL_CONTROLLER_STATE,
   INPUT_PILOT_TRIAL_STATUS,
+  InputPilotAssignedMatchService,
   InputPilotRegistry,
   InputPilotFormModel,
   createArenaInputPilotV1Definition,
@@ -14,6 +15,8 @@ import {
   createInputPilotDefinition,
   createInputPilotRecord,
   createInputPilotReviewDraft,
+  validateInputPilotRuntime,
+  validateInputPilotRuntimeStatus,
 } from '../src/index.js';
 
 const VOCABULARIES = [
@@ -127,5 +130,79 @@ describe('Input Pilot strict definition and assignment', () => {
     });
     expect(() => createInputPilotAssignment(assignmentOptions)).toThrow(/数据字段/);
     expect(reads).toBe(0);
+  });
+});
+
+describe('Input Pilot strict runtime ports', () => {
+  it('rejects runtime and status accessors without executing them', () => {
+    let reads = 0;
+    const runtime = {
+      setPaused() {},
+      getStatus() {},
+      finalizeMetrics() {},
+      destroy() {},
+    };
+    Object.defineProperty(runtime, 'start', {
+      get() {
+        reads += 1;
+        return () => {};
+      },
+    });
+    expect(() => validateInputPilotRuntime(runtime)).toThrow(/数据方法/);
+
+    const status = { timedOut: false };
+    Object.defineProperty(status, 'state', {
+      enumerable: true,
+      get() {
+        reads += 1;
+        return 'running';
+      },
+    });
+    expect(() => validateInputPilotRuntimeStatus(status)).toThrow(/数据字段/);
+    expect(reads).toBe(0);
+  });
+
+  it('distinguishes an absent optional destroy method from an invalid accessor', () => {
+    const withoutDestroy = new InputPilotAssignedMatchService({
+      matchService: { create: (options: unknown) => options },
+      matchSeed: 7,
+    });
+    expect(withoutDestroy.create({})).toEqual({ matchSeed: 7 });
+    expect(() => withoutDestroy.destroy()).not.toThrow();
+
+    let reads = 0;
+    const invalidService = { create: () => ({}) };
+    Object.defineProperty(invalidService, 'destroy', {
+      get() {
+        reads += 1;
+        return () => {};
+      },
+    });
+    expect(() => new InputPilotAssignedMatchService({
+      matchService: invalidService,
+      matchSeed: 7,
+    })).toThrow(/数据方法/);
+    expect(reads).toBe(0);
+  });
+
+  it('rejects match option accessors atomically and remains retryable', () => {
+    const createdOptions: unknown[] = [];
+    const service = new InputPilotAssignedMatchService({
+      matchService: { create: (options: unknown) => createdOptions.push(options) },
+      matchSeed: 19,
+    });
+    let reads = 0;
+    const invalidOptions = {};
+    Object.defineProperty(invalidOptions, 'modeId', {
+      enumerable: true,
+      get() {
+        reads += 1;
+        return 'arena-v1';
+      },
+    });
+    expect(() => service.create(invalidOptions)).toThrow(/数据字段/);
+    expect(reads).toBe(0);
+    expect(service.create({ modeId: 'arena-v1' })).toBe(1);
+    expect(createdOptions).toEqual([{ modeId: 'arena-v1', matchSeed: 19 }]);
   });
 });

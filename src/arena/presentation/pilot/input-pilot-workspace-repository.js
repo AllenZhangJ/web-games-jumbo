@@ -7,8 +7,8 @@ import {
   normalizeThrownError,
 } from '@number-strategy-jump/arena-contracts';
 import { createInputPilotDefinition } from '@number-strategy-jump/arena-input-pilot';
-import { InputPilotStorageLease } from './input-pilot-storage-lease.js';
-import { createInputPilotStoragePort } from './input-pilot-storage-port.js';
+import { InputPilotStorageLease } from '@number-strategy-jump/arena-input-pilot';
+import { createInputPilotStoragePort } from '@number-strategy-jump/arena-input-pilot';
 import {
   INPUT_PILOT_WORKSPACE_ENVELOPE_SCHEMA_VERSION,
   assertInputPilotWorkspaceEnvelopeHasNoFutureSchema,

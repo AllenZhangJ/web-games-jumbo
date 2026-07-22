@@ -28,7 +28,7 @@ import {
   validateInputPilotRuntime,
   validateInputPilotRuntimeFactory,
   validateInputPilotRuntimeStatus,
-} from './input-pilot-trial-runtime-port.js';
+} from '@number-strategy-jump/arena-input-pilot';
 import { InputPilotWorkspaceCoordinator } from './input-pilot-workspace-coordinator.js';
 
 function submissionHash({ observer, selfReport, invalidate }) {
