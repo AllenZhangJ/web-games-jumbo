@@ -683,6 +683,36 @@ test('Arena V1 application session only composes governed product and presentati
   }
 });
 
+test('Arena V1 application launch is the bounded top-level product composition', async () => {
+  const packageDefinition = JSON.parse(await readFile(
+    path.resolve('packages/arena-v1-application-launch/package.json'),
+    'utf8',
+  ));
+  assert.deepEqual(
+    Object.keys(packageDefinition.dependencies).sort(),
+    [
+      '@number-strategy-jump/arena-platform-runtime',
+      '@number-strategy-jump/arena-presentation-runtime',
+      '@number-strategy-jump/arena-presentation-three',
+      '@number-strategy-jump/arena-product-presentation',
+      '@number-strategy-jump/arena-product-presentation-three',
+      '@number-strategy-jump/arena-v1-application-session',
+      '@number-strategy-jump/arena-v1-presentation-content',
+    ],
+    'arena-v1-application-launch 只能组合已治理的平台、表现和应用 Session。',
+  );
+  const files = await listJavaScript(path.resolve('packages/arena-v1-application-launch/src'));
+  assert.equal(files.length, 6);
+  for (const file of files) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /(?:from\s+['"](?:node:|[^'"]*(?:entry|experiment|study|regression|release)[^'"]*)['"]|Date\.now|Math\.random|setTimeout|setInterval|requestAnimationFrame|\b(?:document|navigator|localStorage|sessionStorage)\b|\b(?:tt|wx)\s*\.)/,
+      `${file} 只能建立顶层 Product Launch，不能持有页面、研究或发布工具。`,
+    );
+  }
+});
+
 test('Arena Stage 8 product orchestration remains host-free and outside match authority', async () => {
   const directories = [
     'src/arena/product',

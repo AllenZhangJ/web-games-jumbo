@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createArenaProductGame } from '../src/entry/create-arena-product-game.js';
+import { createArenaProductGame } from '@number-strategy-jump/arena-v1-application-launch';
 import { createRuntimeInstanceId } from '@number-strategy-jump/arena-platform-runtime';
 import { createPlatformContract } from '@number-strategy-jump/arena-platform-contracts';
 

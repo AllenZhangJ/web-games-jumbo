@@ -1,5 +1,5 @@
 import { createDouyinPlatform } from '@number-strategy-jump/arena-platform-runtime/douyin';
-import { createCanvasArenaProductGame } from './create-canvas-arena-product-game.js';
+import { createCanvasArenaProductGame } from '@number-strategy-jump/arena-v1-application-launch';
 import {
   launchGame,
   showMiniGameStartupError,

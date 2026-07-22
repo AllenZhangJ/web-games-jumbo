@@ -2,14 +2,13 @@ import {
   HUMAN_MATCH_STUDY_CAPTURE_STATE,
   HumanMatchStudyCaptureSession,
 } from '../arena/study/human-match-study-capture-session.js';
-import { createArenaProductGame } from './create-arena-product-game.js';
-import { createArenaProductRendererFactory } from './create-arena-product-renderer.js';
+import { createArenaProductGame, createArenaProductRendererFactory } from '@number-strategy-jump/arena-v1-application-launch';
 import {
   createArenaPresentationMemoryProviderForLaunch,
-} from './arena-presentation-memory-launch.js';
+} from '@number-strategy-jump/arena-v1-application-launch';
 import {
   resolveArenaPresentationQualityForLaunch,
-} from './arena-presentation-quality-launch.js';
+} from '@number-strategy-jump/arena-v1-application-launch';
 import { WebProductUiSurface } from './web-product-ui-surface.js';
 import {
   createWebResearchPageOwnerId,

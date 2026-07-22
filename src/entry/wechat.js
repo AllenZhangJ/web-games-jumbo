@@ -1,5 +1,5 @@
 import { createWeChatPlatform } from '@number-strategy-jump/arena-platform-runtime/wechat';
-import { createCanvasArenaProductGame } from './create-canvas-arena-product-game.js';
+import { createCanvasArenaProductGame } from '@number-strategy-jump/arena-v1-application-launch';
 import {
   launchGame,
   showMiniGameStartupError,

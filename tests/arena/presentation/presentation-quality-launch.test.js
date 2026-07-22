@@ -5,10 +5,10 @@ import {
 } from '@number-strategy-jump/arena-presentation-runtime';
 import {
   resolveArenaPresentationQualityForLaunch,
-} from '../../../src/entry/arena-presentation-quality-launch.js';
+} from '@number-strategy-jump/arena-v1-application-launch';
 import {
   createArenaPresentationMemoryProviderForLaunch,
-} from '../../../src/entry/arena-presentation-memory-launch.js';
+} from '@number-strategy-jump/arena-v1-application-launch';
 
 test('launch quality selection is explicit, host-neutral and falls back safely', () => {
   assert.equal(resolveArenaPresentationQualityForLaunch({
