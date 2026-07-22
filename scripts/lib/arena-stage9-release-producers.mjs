@@ -12,7 +12,7 @@ import {
 } from '../../src/arena-release/build-release-evidence.js';
 import {
   createArenaDefectReleaseResult,
-} from '../../src/arena-release/defect-release-evidence.js';
+} from '@number-strategy-jump/arena-release';
 import {
   createArenaPerformanceDeviceReleaseResult,
   createArenaStage6DeviceReleaseResult,

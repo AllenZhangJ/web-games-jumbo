@@ -12,10 +12,8 @@ import {
   ARENA_DEFECT_STATUS,
   createArenaDefectLedger,
   createArenaDefectReport,
-} from '../../src/arena-release/defect-ledger.js';
-import {
   createArenaDefectReleaseResult,
-} from '../../src/arena-release/defect-release-evidence.js';
+} from '@number-strategy-jump/arena-release';
 import {
   ARENA_RELEASE_CANDIDATE_BUNDLE_SCHEMA_VERSION,
   createArenaReleaseCandidateBundle,

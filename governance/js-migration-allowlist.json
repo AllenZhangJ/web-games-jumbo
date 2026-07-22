@@ -50,8 +50,6 @@
     "src/arena-release/arena-stage9-rc-handoff-v1.js",
     "src/arena-release/balance-validation-release-evidence.js",
     "src/arena-release/build-release-evidence.js",
-    "src/arena-release/defect-ledger.js",
-    "src/arena-release/defect-release-evidence.js",
     "src/arena-release/device-release-evidence.js",
     "src/arena-release/golden-replay-release-evidence.js",
     "src/arena-release/human-fairness-release-evidence.js",
