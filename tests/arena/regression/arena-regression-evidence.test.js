@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { ARENA_INPUT_MAPPER_ID } from '../../../src/arena/presentation/input/input-mapper-contract.js';
+import { ARENA_INPUT_MAPPER_ID } from '@number-strategy-jump/arena-presentation-runtime';
 import {
   ARENA_REGRESSION_COMPONENT_ID,
   createArenaRegressionEvidenceReport,

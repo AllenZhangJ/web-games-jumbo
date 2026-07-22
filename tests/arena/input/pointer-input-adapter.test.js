@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createGestureInputMapperA } from '../../../src/arena/presentation/input/gesture-input-mapper-a.js';
+import { createGestureInputMapperA } from '@number-strategy-jump/arena-presentation-runtime';
 import { InputSampler } from '../../../src/arena/presentation/input/input-sampler.js';
 import { PointerInputAdapter } from '../../../src/arena/presentation/input/pointer-input-adapter.js';
 

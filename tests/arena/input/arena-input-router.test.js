@@ -4,7 +4,7 @@ import {
   ARENA_INPUT_ROUTER_MODE,
   ArenaInputRouter,
 } from '../../../src/arena/presentation/input/arena-input-router.js';
-import { createGestureInputMapperA } from '../../../src/arena/presentation/input/gesture-input-mapper-a.js';
+import { createGestureInputMapperA } from '@number-strategy-jump/arena-presentation-runtime';
 import { InputSampler } from '../../../src/arena/presentation/input/input-sampler.js';
 
 const VIEWPORT = Object.freeze({ width: 400, height: 800 });

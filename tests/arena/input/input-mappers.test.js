@@ -1,8 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createContextInputMapperB } from '../../../src/arena/presentation/input/context-input-mapper-b.js';
-import { createExplicitCombatJumpMapper } from '../../../src/arena/presentation/input/explicit-combat-jump-mapper.js';
-import { createGestureInputMapperA } from '../../../src/arena/presentation/input/gesture-input-mapper-a.js';
+import {
+  createContextInputMapperB,
+  createExplicitCombatJumpMapper,
+  createGestureInputMapperA,
+} from '@number-strategy-jump/arena-presentation-runtime';
 import { InputSampler } from '../../../src/arena/presentation/input/input-sampler.js';
 import { GestureRecognizer } from '../../../src/arena/presentation/input/gesture-recognizer.js';
 import { RawControlState } from '../../../src/arena/presentation/input/raw-control-state.js';

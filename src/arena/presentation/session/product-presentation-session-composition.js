@@ -2,8 +2,10 @@ import { ARENA_FIXED_DT } from '@number-strategy-jump/arena-match';
 import { SequentialMatchSeedSource } from '@number-strategy-jump/arena-matchmaking';
 import { createArenaV1ProductSession } from '../../product/composition/arena-v1-product-composition.js';
 import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
-import { createArenaInputMapper } from '../input/create-arena-input-mapper.js';
-import { ARENA_INPUT_MAPPER_ID } from '../input/input-mapper-contract.js';
+import {
+  ARENA_INPUT_MAPPER_ID,
+  createArenaInputMapper,
+} from '@number-strategy-jump/arena-presentation-runtime';
 import { InputSampler } from '../input/input-sampler.js';
 import { PointerInputAdapter } from '../input/pointer-input-adapter.js';
 import { PresentationPerformanceProbe } from '../performance/presentation-performance-probe.js';

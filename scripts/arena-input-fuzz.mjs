@@ -5,12 +5,16 @@ import {
   HeadlessMatchRunner,
 } from '@number-strategy-jump/arena-match';
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
-import { createContextInputMapperB } from '../src/arena/presentation/input/context-input-mapper-b.js';
-import { createExplicitCombatJumpMapper } from '../src/arena/presentation/input/explicit-combat-jump-mapper.js';
-import { createGestureInputMapperA } from '../src/arena/presentation/input/gesture-input-mapper-a.js';
 import {
   ARENA_INPUT_MAPPER_ID,
-} from '../src/arena/presentation/input/input-mapper-contract.js';
+  createContextInputMapperB,
+  createExplicitCombatJumpMapper,
+  createGestureInputMapperA,
+} from '@number-strategy-jump/arena-presentation-runtime';
+/*
+ * Keep fuzzing every production mapper ID from the strict runtime package;
+ * the sampler remains the current upper-layer lifecycle owner.
+ */
 import { InputSampler } from '../src/arena/presentation/input/input-sampler.js';
 import { replayMatch } from '../src/arena/replay.js';
 import { createArenaInputFuzzFailureCandidate } from '../src/arena/regression/input-fuzz-regression-candidate.js';

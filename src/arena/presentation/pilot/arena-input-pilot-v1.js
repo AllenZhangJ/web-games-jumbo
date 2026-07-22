@@ -1,4 +1,4 @@
-import { ARENA_INPUT_MAPPER_ID } from '../input/input-mapper-contract.js';
+import { ARENA_INPUT_MAPPER_ID } from '@number-strategy-jump/arena-presentation-runtime';
 import {
   INPUT_PILOT_DEFINITION_SCHEMA_VERSION,
   createInputPilotDefinition,

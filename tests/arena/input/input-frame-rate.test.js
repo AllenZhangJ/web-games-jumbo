@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createArenaV1MatchCore } from '../../../src/arena/arena-v1-match-core.js';
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
-import { createGestureInputMapperA } from '../../../src/arena/presentation/input/gesture-input-mapper-a.js';
+import { createGestureInputMapperA } from '@number-strategy-jump/arena-presentation-runtime';
 import { InputSampler } from '../../../src/arena/presentation/input/input-sampler.js';
 import { FixedStepMatchRuntime } from '@number-strategy-jump/arena-match';
 

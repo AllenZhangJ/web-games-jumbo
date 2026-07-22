@@ -3,8 +3,8 @@ import { GestureRecognizer } from './gesture-recognizer.js';
 import {
   copyMapperActionAffordance,
   createMappedSemanticInput,
-} from './input-mapper-contract.js';
-import { integerAtLeast } from '@number-strategy-jump/arena-presentation-runtime';
+  integerAtLeast,
+} from '@number-strategy-jump/arena-presentation-runtime';
 import { RawControlState } from './raw-control-state.js';
 
 function participantIdValue(value) {

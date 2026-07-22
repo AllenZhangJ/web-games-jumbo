@@ -1,15 +1,11 @@
 import {
   cloneKnownRecord,
   finiteNumber,
+  GESTURE_DIRECTION,
   integerAtLeast,
 } from '@number-strategy-jump/arena-presentation-runtime';
 
-export const GESTURE_DIRECTION = Object.freeze({
-  UP: 'up',
-  DOWN: 'down',
-  LEFT: 'left',
-  RIGHT: 'right',
-});
+export { GESTURE_DIRECTION } from '@number-strategy-jump/arena-presentation-runtime';
 
 const CONFIG_KEYS = new Set([
   'swipeThreshold',

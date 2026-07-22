@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
   ARENA_CONTROL_ID,
+  ARENA_INPUT_MAPPER_ID,
   ArenaImpactAudio,
   ARENA_V1_PRESENTATION_QUALITY_REGISTRY,
   ARENA_V1_PRESENTATION_QUALITY_ID,
   controlAtPoint,
+  copyMapperActionAffordance,
+  createExplicitCombatJumpMapper,
+  createInputMapper,
+  createMappedSemanticInput,
   createArenaControlLayout,
   createPresentationMemorySnapshot,
   FixedTickAccumulator,
@@ -328,5 +333,88 @@ describe('Arena Presentation runtime boundaries', () => {
       get loader() { optionReads += 1; return loader; },
     })).toThrow(/loader.*数据字段/);
     expect(optionReads).toBe(0);
+  });
+
+  it('keeps explicit attack independent from enemy distance and jump input', () => {
+    const mapper = createExplicitCombatJumpMapper();
+    const idleGesture = Object.freeze({
+      contactHeld: false,
+      contactHoldStarted: false,
+      tapReleased: false,
+      direction: null,
+      directionPressed: null,
+      directionHeld: null,
+      directionReleased: null,
+      wasDirectionHeld: false,
+    });
+    const idleControl = Object.freeze({
+      active: false,
+      vector: Object.freeze({ x: 0, z: 0 }),
+      edges: Object.freeze({ started: false, ended: false, cancelled: false }),
+    });
+    const attackControl = Object.freeze({
+      ...idleControl,
+      active: true,
+      edges: Object.freeze({ started: true, ended: false, cancelled: false }),
+    });
+    expect(mapper.map({
+      raw: Object.freeze({ move: idleControl, primary: attackControl, jump: idleControl }),
+      gestures: Object.freeze({
+        move: idleGesture,
+        primary: idleGesture,
+        jump: idleGesture,
+      }),
+    })).toMatchObject({
+      primaryPressed: true,
+      primaryHeld: true,
+      jumpPressed: false,
+      jumpHeld: false,
+    });
+  });
+
+  it('rejects mapper and affordance accessors without executing them', () => {
+    let reads = 0;
+    const mapper = createInputMapper(ARENA_INPUT_MAPPER_ID.GESTURE_MOBILITY, () => ({
+      moveX: 0,
+      moveZ: 0,
+      primaryPressed: false,
+      primaryHeld: false,
+      jumpPressed: false,
+      jumpHeld: false,
+      slamPressed: false,
+    }));
+    const context = Object.defineProperty({ gestures: {} }, 'raw', {
+      enumerable: true,
+      get() { reads += 1; return {}; },
+    });
+    expect(() => mapper.map(context as never)).toThrow(/raw.*访问器/);
+    expect(reads).toBe(0);
+    expect(() => mapper.map({ raw: {}, gestures: {}, future: true } as never))
+      .toThrow(/不支持字段 future/);
+
+    const options = Object.defineProperty({ participantId: 'player-1' }, 'tick', {
+      enumerable: true,
+      get() { reads += 1; return 0; },
+    });
+    expect(() => copyMapperActionAffordance(null, options as never)).toThrow(/tick.*访问器/);
+    expect(reads).toBe(0);
+  });
+
+  it('keeps mapped semantic values exact, immutable and unit bounded', () => {
+    const mapped = createMappedSemanticInput({
+      moveX: 0.6,
+      moveZ: 0.8,
+      primaryPressed: true,
+      primaryHeld: false,
+      jumpPressed: false,
+      jumpHeld: true,
+      slamPressed: false,
+    });
+    expect(Object.isFrozen(mapped)).toBe(true);
+    expect(mapped).toMatchObject({ moveX: 0.6, moveZ: 0.8, primaryPressed: true });
+    expect(() => createMappedSemanticInput({ ...mapped, moveX: 1, moveZ: 1 }))
+      .toThrow(/单位长度/);
+    expect(() => createMappedSemanticInput({ ...mapped, extra: true } as never))
+      .toThrow(/不支持字段 extra/);
   });
 });

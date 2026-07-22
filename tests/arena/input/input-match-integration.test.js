@@ -6,8 +6,10 @@ import { STAGE6_MOVEMENT_ACTION_ID } from '../../../src/arena/content/stage6-mov
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
 import { ARENA_MATCH_EVENT } from '@number-strategy-jump/arena-match';
 import { MOVEMENT_MODE } from '@number-strategy-jump/arena-movement';
-import { createContextInputMapperB } from '../../../src/arena/presentation/input/context-input-mapper-b.js';
-import { createGestureInputMapperA } from '../../../src/arena/presentation/input/gesture-input-mapper-a.js';
+import {
+  createContextInputMapperB,
+  createGestureInputMapperA,
+} from '@number-strategy-jump/arena-presentation-runtime';
 import { InputSampler } from '../../../src/arena/presentation/input/input-sampler.js';
 
 const VIEWPORT = Object.freeze({ width: 400, height: 800 });

@@ -3,8 +3,10 @@ import { QuickMatchService } from '../../matchmaking/quick-match-service.js';
 import { SequentialMatchSeedSource } from '@number-strategy-jump/arena-matchmaking';
 import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 import { ArenaInputRouter } from '../input/arena-input-router.js';
-import { createArenaInputMapper } from '../input/create-arena-input-mapper.js';
-import { ARENA_INPUT_MAPPER_ID } from '../input/input-mapper-contract.js';
+import {
+  ARENA_INPUT_MAPPER_ID,
+  createArenaInputMapper,
+} from '@number-strategy-jump/arena-presentation-runtime';
 import { InputSampler } from '../input/input-sampler.js';
 import { PointerInputAdapter } from '../input/pointer-input-adapter.js';
 import {

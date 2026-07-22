@@ -5,7 +5,7 @@ import {
   assertNonEmptyString,
   cloneFrozenData,
 } from '@number-strategy-jump/arena-contracts';
-import { ARENA_INPUT_MAPPER_ID } from '../input/input-mapper-contract.js';
+import { ARENA_INPUT_MAPPER_ID } from '@number-strategy-jump/arena-presentation-runtime';
 
 export const INPUT_PILOT_DEFINITION_SCHEMA_VERSION = 2;
 
