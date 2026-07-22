@@ -551,7 +551,7 @@ test('Arena Product Presentation remains host-free and cannot write match author
     const source = await readFile(file, 'utf8');
     assert.doesNotMatch(
       source,
-      /(?:from\s+['"](?:three|node:|[^'"]*(?:core|bot|match-core|renderer|platform|entry)[^'"]*)['"]|Date\.now|Math\.random|\bperformance\b|setTimeout|setInterval|requestAnimationFrame|\b(?:window|document|navigator)\b|\b(?:tt|wx)\s*\.)/,
+      /(?:from\s+['"](?!\.\/product-renderer\.js['"])(?:three|node:|[^'"]*(?:core|bot|match-core|renderer|platform|entry)[^'"]*)['"]|Date\.now|Math\.random|\bperformance\b|setTimeout|setInterval|requestAnimationFrame|\b(?:window|document|navigator)\b|\b(?:tt|wx)\s*\.)/,
       `${file} 只能编排只读产品表现、输入路由和公开 Product 状态。`,
     );
   }
@@ -666,7 +666,7 @@ test('Arena Stage 8 product sublayers preserve state/profile/match/composition d
   );
 });
 
-test('Arena S8.5 product presentation contracts remain host-free and do not own Product composition', async () => {
+test('Arena S8.5 product presentation and compositor remain host-free and do not own Product composition', async () => {
   const files = [
     ...await listJavaScript(path.resolve('packages/arena-product-presentation/src')),
     ...await listJavaScript(path.resolve('src/arena/presentation/product')),
@@ -681,8 +681,8 @@ test('Arena S8.5 product presentation contracts remain host-free and do not own 
     const source = await readFile(file, 'utf8');
     assert.doesNotMatch(
       source,
-      /from\s+['"](?:three|node:|[^'"]*(?:\/composition\/|renderer|\/session\/|platform|entry|quick-match-service|match-core)[^'"]*)['"]/,
-      `${file} 应保持为无宿主、无 Renderer、无产品组合根的 S8.5 表现合同。`,
+      /from\s+['"](?!\.\/product-renderer\.js['"])(?:three|node:|[^'"]*(?:\/composition\/|renderer|\/session\/|platform|entry|quick-match-service|match-core)[^'"]*)['"]/,
+      `${file} 应保持为无宿主、无 Three、无产品组合根的 S8.5 表现层。`,
     );
     assert.doesNotMatch(
       withoutStaticImports(source),

@@ -1,4 +1,4 @@
-import { ProductRenderer } from '../arena/presentation/renderer/product-renderer.js';
+import { ProductRenderer } from '@number-strategy-jump/arena-product-presentation';
 import { ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT } from '../arena/presentation/content/arena-gameplay-v2-content.js';
 import { ArenaGreyboxRenderer } from '@number-strategy-jump/arena-presentation-three';
 

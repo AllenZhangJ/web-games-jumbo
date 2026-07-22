@@ -13,3 +13,4 @@ export * from './product-canvas-painter.js';
 export * from './product-match-presentation-runtime.js';
 export * from './product-presentation-flow.js';
 export * from './product-presentation-session.js';
+export * from './product-renderer.js';

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   PRODUCT_RENDERER_STATE,
   ProductRenderer,
-} from '../../../src/arena/presentation/renderer/product-renderer.js';
+} from '@number-strategy-jump/arena-product-presentation';
 
 function childHarness({ disposeFailures = 0 } = {}) {
   let remainingDisposeFailures = disposeFailures;
@@ -109,7 +109,8 @@ test('ProductRenderer keeps product UI and gameplay frames on separate read-only
   assert.equal(surface.rendered.length, 1);
   assert.equal(gameplay.rendered.length, 1);
   assert.equal(gameplay.rendered[0].frame, null);
-  assert.equal(gameplay.rendered[0].overlay, surface);
+  assert.notEqual(gameplay.rendered[0].overlay, surface);
+  assert.equal(typeof gameplay.rendered[0].overlay.present, 'function');
   assert.deepEqual(gameplay.rendered[0].options, {
     deltaSeconds: 0,
     soundEnabled: false,
@@ -243,4 +244,65 @@ test('ProductRenderer rejects incomplete child contracts and clears owned candid
   );
   assert.equal(gameplay.disposed, true);
   assert.equal(invalidSurfaceDisposed, true);
+});
+
+test('ProductRenderer rejects option accessors without execution or child creation', () => {
+  let getterCalls = 0;
+  let factoryCalls = 0;
+  const options = {
+    canvas: { getContext: () => ({}) },
+    platform: {},
+    get gameplayRendererFactory() {
+      getterCalls += 1;
+      return () => childHarness();
+    },
+    uiSurfaceFactory: () => {
+      factoryCalls += 1;
+      return surfaceHarness();
+    },
+  };
+  assert.throws(() => new ProductRenderer(options), /数据字段/);
+  assert.equal(getterCalls, 0);
+  assert.equal(factoryCalls, 0);
+});
+
+test('ProductRenderer snapshots child methods and rejects asynchronous render ports', async () => {
+  const gameplay = childHarness();
+  const surface = surfaceHarness();
+  const { renderer } = rendererHarness({ gameplay, surface });
+  await renderer.load();
+  surface.render = () => { throw new Error('mutated surface method'); };
+  gameplay.renderComposite = () => { throw new Error('mutated gameplay method'); };
+  assert.equal(renderer.render({ viewModel: {}, matchFrame: null }), true);
+  renderer.dispose();
+
+  const asynchronousSurface = surfaceHarness();
+  asynchronousSurface.render = async () => true;
+  const asynchronous = rendererHarness({ surface: asynchronousSurface }).renderer;
+  await asynchronous.load();
+  assert.throws(
+    () => asynchronous.render({ viewModel: {}, matchFrame: null }),
+    /同步|thenable/,
+  );
+  asynchronous.dispose();
+});
+
+test('ProductRenderer rejects asynchronous synchronous ports and retains failed cleanup ownership', async () => {
+  const asynchronousViewport = childHarness();
+  asynchronousViewport.getInputViewport = async () => ({ width: 1, height: 1 });
+  const viewportRenderer = rendererHarness({ gameplay: asynchronousViewport }).renderer;
+  await viewportRenderer.load();
+  assert.throws(() => viewportRenderer.getInputViewport(), /同步/);
+  viewportRenderer.dispose();
+
+  const asynchronousDispose = childHarness();
+  let disposeCalls = 0;
+  asynchronousDispose.dispose = async () => { disposeCalls += 1; };
+  const disposeRenderer = rendererHarness({ gameplay: asynchronousDispose }).renderer;
+  await disposeRenderer.load();
+  assert.throws(() => disposeRenderer.dispose(), /清理未完整完成/);
+  assert.equal(disposeRenderer.state, PRODUCT_RENDERER_STATE.DISPOSE_INCOMPLETE);
+  assert.equal(disposeCalls, 1);
+  assert.throws(() => disposeRenderer.dispose(), /清理未完整完成/);
+  assert.equal(disposeCalls, 2);
 });
