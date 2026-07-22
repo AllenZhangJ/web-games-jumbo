@@ -14,7 +14,7 @@ import {
 } from '@number-strategy-jump/arena-product-presentation';
 import {
   createProductPresentationSession,
-} from '../src/arena/presentation/session/product-presentation-session-composition.js';
+} from '@number-strategy-jump/arena-v1-application-session';
 import { PRODUCT_SESSION_STATE } from '@number-strategy-jump/arena-product-state';
 import { createArenaProductRendererFactory } from '../src/entry/create-arena-product-renderer.js';
 import { createMiniGamePlatform } from '@number-strategy-jump/arena-platform-runtime/mini-game';

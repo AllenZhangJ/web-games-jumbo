@@ -3,7 +3,7 @@ import {
 } from '@number-strategy-jump/arena-product-presentation';
 import {
   createProductPresentationSession,
-} from '../src/arena/presentation/session/product-presentation-session-composition.js';
+} from '@number-strategy-jump/arena-v1-application-session';
 import { PRODUCT_UI_INTENT_ID } from '@number-strategy-jump/arena-presentation-contracts';
 import { PRODUCT_SESSION_STATE } from '@number-strategy-jump/arena-product-state';
 

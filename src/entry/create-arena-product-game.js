@@ -1,6 +1,6 @@
 import {
   createProductPresentationSession,
-} from '../arena/presentation/session/product-presentation-session-composition.js';
+} from '@number-strategy-jump/arena-v1-application-session';
 import { createRuntimeInstanceId } from '@number-strategy-jump/arena-platform-runtime';
 
 function readDataOptions(value) {

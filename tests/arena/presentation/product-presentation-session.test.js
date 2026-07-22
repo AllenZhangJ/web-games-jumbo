@@ -19,7 +19,7 @@ import {
 } from '@number-strategy-jump/arena-product-presentation';
 import {
   createProductPresentationSession,
-} from '../../../src/arena/presentation/session/product-presentation-session-composition.js';
+} from '@number-strategy-jump/arena-v1-application-session';
 
 function platformHarness({
   failBinding = null,

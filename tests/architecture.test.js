@@ -653,6 +653,36 @@ test('Arena V1 application composition only wires governed authority and product
   }
 });
 
+test('Arena V1 application session only composes governed product and presentation ports', async () => {
+  const packageDefinition = JSON.parse(await readFile(
+    path.resolve('packages/arena-v1-application-session/package.json'),
+    'utf8',
+  ));
+  assert.deepEqual(
+    Object.keys(packageDefinition.dependencies).sort(),
+    [
+      '@number-strategy-jump/arena-contracts',
+      '@number-strategy-jump/arena-match',
+      '@number-strategy-jump/arena-matchmaking',
+      '@number-strategy-jump/arena-presentation-runtime',
+      '@number-strategy-jump/arena-product-presentation',
+      '@number-strategy-jump/arena-v1-composition',
+      '@number-strategy-jump/arena-v1-presentation-content',
+    ],
+    'arena-v1-application-session 只能组合已治理的应用、产品与表现端口。',
+  );
+  const files = await listJavaScript(path.resolve('packages/arena-v1-application-session/src'));
+  assert.equal(files.length, 2);
+  for (const file of files) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /(?:from\s+['"](?:three|node:|[^'"]*(?:presentation-three|platform-runtime|entry|experiment|study|regression|release)[^'"]*)['"]|Date\.now|Math\.random|\bperformance\s*(?:\.|\[)|setTimeout|setInterval|requestAnimationFrame|\b(?:window|document|navigator|localStorage|sessionStorage)\b|\b(?:tt|wx)\s*\.)/,
+      `${file} 只能通过注入端口建立 Arena V1 应用 Session。`,
+    );
+  }
+});
+
 test('Arena Stage 8 product orchestration remains host-free and outside match authority', async () => {
   const directories = [
     'src/arena/product',
@@ -757,7 +787,7 @@ test('Arena S8.5 product presentation and compositor remain host-free and do not
 test('Arena S8.5 Product Session is the injected host root and never reuses Stage 6 ownership', async () => {
   const files = [
     path.resolve('packages/arena-product-presentation/src/product-presentation-session.ts'),
-    path.resolve('src/arena/presentation/session/product-presentation-session-composition.js'),
+    path.resolve('packages/arena-v1-application-session/src/product-presentation-session-composition.ts'),
   ];
   for (const file of files) {
     const source = await readFile(file, 'utf8');
