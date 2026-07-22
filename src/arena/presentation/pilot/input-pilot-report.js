@@ -7,7 +7,7 @@ import {
   INPUT_PILOT_EXCLUSION_REASON,
   createInputPilotRecord,
   getInputPilotRecordExclusionReasons,
-} from './input-pilot-record.js';
+} from '@number-strategy-jump/arena-input-pilot';
 
 export const INPUT_PILOT_REPORT_SCHEMA_VERSION = 1;
 

@@ -12,7 +12,7 @@ import {
 import {
   INPUT_PILOT_RECORD_SCHEMA_VERSION,
   createInputPilotRecord,
-} from './input-pilot-record.js';
+} from '@number-strategy-jump/arena-input-pilot';
 import {
   INPUT_PILOT_TRIAL_CHECKPOINT_SCHEMA_VERSION,
   createInputPilotTrialCheckpoint,

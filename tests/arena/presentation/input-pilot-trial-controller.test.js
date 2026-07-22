@@ -6,7 +6,7 @@ import {
   INPUT_PILOT_COMPREHENSION,
   INPUT_PILOT_TERMINATION_REASON,
   INPUT_PILOT_TRIAL_STATUS,
-} from '../../../src/arena/presentation/pilot/input-pilot-record.js';
+} from '@number-strategy-jump/arena-input-pilot';
 import {
   INPUT_PILOT_RUNTIME_STATE,
 } from '../../../src/arena/presentation/pilot/input-pilot-trial-runtime-port.js';

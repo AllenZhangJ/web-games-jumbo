@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createArenaInputPilotV1Definition } from '@number-strategy-jump/arena-input-pilot';
 import { InputPilotAssignedMatchService } from '../../../src/arena/presentation/pilot/input-pilot-assigned-match-service.js';
 import { createInputPilotAssignment } from '@number-strategy-jump/arena-input-pilot';
-import { INPUT_PILOT_ACTION_OUTCOME } from '../../../src/arena/presentation/pilot/input-pilot-record.js';
+import { INPUT_PILOT_ACTION_OUTCOME } from '@number-strategy-jump/arena-input-pilot';
 import {
   INPUT_PILOT_TRIAL_CHECKPOINT_SCHEMA_VERSION,
   INPUT_PILOT_TRIAL_PHASE,

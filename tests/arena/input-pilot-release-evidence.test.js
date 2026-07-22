@@ -56,7 +56,7 @@ import {
   INPUT_PILOT_RECORD_SCHEMA_VERSION,
   INPUT_PILOT_TERMINATION_REASON,
   INPUT_PILOT_TRIAL_STATUS,
-} from '../../src/arena/presentation/pilot/input-pilot-record.js';
+} from '@number-strategy-jump/arena-input-pilot';
 import {
   INPUT_PILOT_ASSESSMENT_STATUS,
   createInputPilotReport,

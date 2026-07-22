@@ -23,7 +23,7 @@ import {
   INPUT_PILOT_TRIAL_STATUS,
   createInputPilotRecord,
   getInputPilotRecordExclusionReasons,
-} from '../../../src/arena/presentation/pilot/input-pilot-record.js';
+} from '@number-strategy-jump/arena-input-pilot';
 import {
   INPUT_PILOT_ASSESSMENT_STATUS,
   createInputPilotReport,

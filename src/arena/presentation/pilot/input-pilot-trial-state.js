@@ -6,13 +6,13 @@ import {
   INPUT_PILOT_RECORD_SCHEMA_VERSION,
   INPUT_PILOT_TRIAL_STATUS,
   createInputPilotRecord,
-} from './input-pilot-record.js';
+} from '@number-strategy-jump/arena-input-pilot';
 import {
   INPUT_PILOT_TRIAL_CHECKPOINT_SCHEMA_VERSION,
   INPUT_PILOT_TRIAL_PHASE,
   createInputPilotTrialCheckpoint,
 } from './input-pilot-trial-checkpoint.js';
-import { createInputPilotReviewDraft } from './input-pilot-review-draft.js';
+import { createInputPilotReviewDraft } from '@number-strategy-jump/arena-input-pilot';
 
 function trialIdFor(assignment) {
   return `pilot-trial-${assignment.assignmentId.replace(/^pilot-assignment-/, '')}`;

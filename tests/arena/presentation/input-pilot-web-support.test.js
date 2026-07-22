@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { InputPilotFormModel } from '../../../src/arena/presentation/pilot/input-pilot-form-model.js';
+import { InputPilotFormModel } from '@number-strategy-jump/arena-input-pilot';
 import {
   ARENA_BUILD_MANIFEST_SCHEMA_VERSION,
 } from '@number-strategy-jump/arena-device-acceptance';
-import { INPUT_PILOT_COMPREHENSION } from '../../../src/arena/presentation/pilot/input-pilot-record.js';
+import { INPUT_PILOT_COMPREHENSION } from '@number-strategy-jump/arena-input-pilot';
 import { downloadInputPilotJson } from '../../../src/entry/input-pilot-json-download.js';
 import {
   loadInputPilotBuildIdentity,

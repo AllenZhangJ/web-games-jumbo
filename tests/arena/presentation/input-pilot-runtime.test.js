@@ -15,7 +15,7 @@ import { InputPilotMetricCollector } from '../../../src/arena/presentation/pilot
 import { createInputPilotDefinition } from '@number-strategy-jump/arena-input-pilot';
 import { InputPilotObservedMatchService } from '../../../src/arena/presentation/pilot/input-pilot-observed-match-service.js';
 import { InputPilotObservedSession } from '../../../src/arena/presentation/pilot/input-pilot-observed-session.js';
-import { INPUT_PILOT_ACTION_OUTCOME } from '../../../src/arena/presentation/pilot/input-pilot-record.js';
+import { INPUT_PILOT_ACTION_OUTCOME } from '@number-strategy-jump/arena-input-pilot';
 
 const MATCH_SEED = 0x99110001;
 

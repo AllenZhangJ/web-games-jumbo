@@ -1,19 +1,25 @@
+import { assertKnownKeys } from '@number-strategy-jump/arena-contracts';
 import {
+  INPUT_PILOT_COMPREHENSION,
   createInputPilotObserverReport,
   createInputPilotSelfReport,
+  type InputPilotObserverReport,
+  type InputPilotSelfReport,
 } from './input-pilot-record-fields.js';
-import { INPUT_PILOT_COMPREHENSION } from './input-pilot-record.js';
 
-export function createEmptyInputPilotReviewDraft() {
+export interface InputPilotReviewDraft {
+  readonly observer: InputPilotObserverReport;
+  readonly selfReport: InputPilotSelfReport;
+  readonly invalidate: boolean;
+}
+const REVIEW_KEYS = new Set(['observer', 'selfReport', 'invalidate']);
+
+export function createEmptyInputPilotReviewDraft(): InputPilotReviewDraft {
   return Object.freeze({
     observer: createInputPilotObserverReport({
-      intentMismatchCount: 0,
-      accidentalInputCount: 0,
-      repeatedInputCount: 0,
-      abandonedInputCount: 0,
-      correctionCount: 0,
-      oneHandCompleted: false,
-      objectiveCompleted: false,
+      intentMismatchCount: 0, accidentalInputCount: 0, repeatedInputCount: 0,
+      abandonedInputCount: 0, correctionCount: 0,
+      oneHandCompleted: false, objectiveCompleted: false,
     }),
     selfReport: createInputPilotSelfReport({
       groundAction: INPUT_PILOT_COMPREHENSION.NOT_ANSWERED,
@@ -24,15 +30,9 @@ export function createEmptyInputPilotReviewDraft() {
   });
 }
 
-export function createInputPilotReviewDraft(value = null) {
+export function createInputPilotReviewDraft(value: unknown = null): InputPilotReviewDraft {
   if (value === null || value === undefined) return createEmptyInputPilotReviewDraft();
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new TypeError('InputPilotReviewDraft 必须是对象。');
-  }
-  const keys = Object.keys(value).sort();
-  if (keys.join(',') !== 'invalidate,observer,selfReport') {
-    throw new RangeError('InputPilotReviewDraft 只允许 observer/selfReport/invalidate。');
-  }
+  assertKnownKeys(value, REVIEW_KEYS, 'InputPilotReviewDraft');
   if (typeof value.invalidate !== 'boolean') {
     throw new TypeError('InputPilotReviewDraft.invalidate 必须是布尔值。');
   }

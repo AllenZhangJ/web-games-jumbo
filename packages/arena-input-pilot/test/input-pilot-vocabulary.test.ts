@@ -8,9 +8,12 @@ import {
   INPUT_PILOT_TRIAL_CONTROLLER_STATE,
   INPUT_PILOT_TRIAL_STATUS,
   InputPilotRegistry,
+  InputPilotFormModel,
   createArenaInputPilotV1Definition,
   createInputPilotAssignment,
   createInputPilotDefinition,
+  createInputPilotRecord,
+  createInputPilotReviewDraft,
 } from '../src/index.js';
 
 const VOCABULARIES = [
@@ -36,6 +39,47 @@ describe('Input Pilot strict vocabulary', () => {
     expect(INPUT_PILOT_TERMINATION_REASON.RUNTIME_FAILED).toBe('runtime-failed');
     expect(INPUT_PILOT_TRIAL_STATUS.INVALIDATED).toBe('invalidated');
     expect(INPUT_PILOT_EXCLUSION_REASON.INPUT_MODE_MISMATCH).toBe('input-mode-mismatch');
+  });
+});
+
+describe('Input Pilot strict record and review form', () => {
+  it('restores form drafts atomically and keeps bounded counters', () => {
+    const model = new InputPilotFormModel();
+    model.adjustCounter('correctionCount', 4);
+    const before = model.getSnapshot();
+    expect(() => model.restore({
+      observer: { ...before.observer, correctionCount: 1000 },
+      selfReport: before.selfReport,
+    })).toThrow(/0～999/);
+    expect(model.getSnapshot()).toEqual(before);
+    expect(createInputPilotReviewDraft({
+      observer: before.observer,
+      selfReport: before.selfReport,
+      invalidate: false,
+    }).observer.correctionCount).toBe(4);
+  });
+
+  it('rejects record and review accessors without executing them', () => {
+    let reads = 0;
+    const record = {};
+    Object.defineProperty(record, 'schemaVersion', {
+      enumerable: true,
+      get() {
+        reads += 1;
+        return 2;
+      },
+    });
+    expect(() => createInputPilotRecord(createArenaInputPilotV1Definition(), record)).toThrow(/数据字段/);
+    const review = { observer: {}, selfReport: {} };
+    Object.defineProperty(review, 'invalidate', {
+      enumerable: true,
+      get() {
+        reads += 1;
+        return false;
+      },
+    });
+    expect(() => createInputPilotReviewDraft(review)).toThrow(/数据字段/);
+    expect(reads).toBe(0);
   });
 });
 

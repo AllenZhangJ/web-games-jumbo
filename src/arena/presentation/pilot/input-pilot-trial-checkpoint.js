@@ -9,9 +9,9 @@ import {
   createInputPilotAutomatedMetrics,
   createInputPilotDevice,
   createInputPilotEligibility,
-} from './input-pilot-record-fields.js';
-import { INPUT_PILOT_TERMINATION_REASON } from './input-pilot-record.js';
-import { createInputPilotReviewDraft } from './input-pilot-review-draft.js';
+} from '@number-strategy-jump/arena-input-pilot';
+import { INPUT_PILOT_TERMINATION_REASON } from '@number-strategy-jump/arena-input-pilot';
+import { createInputPilotReviewDraft } from '@number-strategy-jump/arena-input-pilot';
 
 export const INPUT_PILOT_TRIAL_CHECKPOINT_SCHEMA_VERSION = 3;
 

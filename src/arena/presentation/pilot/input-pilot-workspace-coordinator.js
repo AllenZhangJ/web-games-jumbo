@@ -1,6 +1,6 @@
 import { createInputPilotDefinition } from '@number-strategy-jump/arena-input-pilot';
 import { InputPilotEnrollmentLedger } from './input-pilot-enrollment-ledger.js';
-import { createInputPilotRecord } from './input-pilot-record.js';
+import { createInputPilotRecord } from '@number-strategy-jump/arena-input-pilot';
 import { createInputPilotTrialCheckpoint } from './input-pilot-trial-checkpoint.js';
 import { createEnrolledInputPilotTrial } from './input-pilot-trial-state.js';
 import {
