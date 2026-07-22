@@ -23,18 +23,18 @@ import {
 } from '../../../src/arena/presentation/product/arena-v1-product-presentation-content.js';
 import {
   PRODUCT_MESSAGE_CATALOG_SCHEMA_VERSION,
+  ProductInputRouter,
   ProductMessageCatalog,
-} from '../../../src/arena/presentation/product/product-message-catalog.js';
-import { ProductScreenRegistry } from '../../../src/arena/presentation/product/product-screen-registry.js';
-import { ProductSessionIntentDispatcher } from '@number-strategy-jump/arena-product-presentation';
+  ProductScreenRegistry,
+  ProductSessionIntentDispatcher,
+} from '@number-strategy-jump/arena-product-presentation';
 import {
   PRODUCT_MATCH_PRESENTATION_RUNTIME_STATE,
   ProductMatchPresentationRuntime,
 } from '../../../src/arena/presentation/product/product-match-presentation-runtime.js';
 import {
   PRODUCT_INPUT_ROUTER_MODE,
-  ProductInputRouter,
-} from '@number-strategy-jump/arena-product-presentation';
+} from '@number-strategy-jump/arena-presentation-contracts';
 import {
   PRODUCT_PRESENTATION_FLOW_STATE,
   ProductPresentationFlow,

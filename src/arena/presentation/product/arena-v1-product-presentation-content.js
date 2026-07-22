@@ -4,17 +4,13 @@ import { ARENA_V1_GREYBOX_CONTENT } from '../content/arena-v1-greybox-content.js
 import {
   PRODUCT_CONTENT_KIND,
   PRODUCT_CONTENT_PRESENTATION_DEFINITION_SCHEMA_VERSION,
-} from './product-content-presentation-definition.js';
-import { ProductContentPresentationRegistry } from './product-content-presentation-registry.js';
-import {
   PRODUCT_MESSAGE_CATALOG_SCHEMA_VERSION,
-  ProductMessageCatalog,
-} from './product-message-catalog.js';
-import {
   PRODUCT_SCREEN_DEFINITION_SCHEMA_VERSION,
   PRODUCT_SCREEN_KIND,
-} from './product-screen-definition.js';
-import { ProductScreenRegistry } from './product-screen-registry.js';
+  ProductContentPresentationRegistry,
+  ProductMessageCatalog,
+  ProductScreenRegistry,
+} from '@number-strategy-jump/arena-product-presentation';
 import { PRODUCT_UI_INTENT_ID } from '@number-strategy-jump/arena-presentation-contracts';
 
 function action(intentId, labelMessageId) {

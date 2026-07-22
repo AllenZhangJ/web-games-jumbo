@@ -14,10 +14,12 @@ import {
   cloneFrozenData,
 } from '@number-strategy-jump/arena-contracts';
 import { createMatchContentPublicView } from '@number-strategy-jump/arena-contracts';
-import { assertProductContentPresentationRegistry } from './product-content-presentation-registry.js';
-import { PRODUCT_CONTENT_KIND } from './product-content-presentation-definition.js';
-import { createProductMessageCatalog } from './product-message-catalog.js';
-import { assertProductScreenRegistry } from './product-screen-registry.js';
+import {
+  PRODUCT_CONTENT_KIND,
+  assertProductContentPresentationRegistry,
+  assertProductScreenRegistry,
+  createProductMessageCatalog,
+} from '@number-strategy-jump/arena-product-presentation';
 import { createProductUiIntent } from '@number-strategy-jump/arena-presentation-contracts';
 
 export const PRODUCT_SESSION_VIEW_MODEL_SCHEMA_VERSION = 1;
