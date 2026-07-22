@@ -8,10 +8,10 @@ import {
 } from '@number-strategy-jump/arena-device-acceptance';
 import {
   createArenaStage9BuildBudgetV1Policy,
-} from '../arena/presentation/performance/arena-build-budget-policy.js';
+} from '@number-strategy-jump/arena-performance-evidence';
 import {
   createArenaBuildBudgetReport,
-} from '../arena/presentation/performance/arena-build-budget-report.js';
+} from '@number-strategy-jump/arena-performance-evidence';
 import { ARENA_RELEASE_EVIDENCE_STATUS } from './release-evidence-statement.js';
 
 const REQUIRED_PLATFORMS = Object.freeze(['douyin', 'web', 'wechat']);

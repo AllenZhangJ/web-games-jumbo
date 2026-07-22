@@ -211,7 +211,7 @@ test('Arena quality and performance contracts remain host-free and cannot own re
     'src/arena/presentation/quality',
     'src/arena/presentation/performance',
   ].map((directory) => listJavaScript(path.resolve(directory))))).flat();
-  assert.ok(files.length >= 8);
+  assert.ok(files.length >= 6);
   for (const file of files) {
     const source = await readFile(file, 'utf8');
     assert.doesNotMatch(
@@ -329,6 +329,36 @@ test('Arena device acceptance definitions stay immutable and host-free', async (
       withoutStaticImports(source),
       /(?:Date\.now|Math\.random|setTimeout|setInterval|requestAnimationFrame|\bperformance\s*(?:\.|\[)|\b(?:window|document|navigator)\b|\b(?:tt|wx)\s*\.)/,
       `${file} 只能定义宿主无关的设备验收数据。`,
+    );
+  }
+});
+
+test('Arena performance evidence stays immutable, host-free, and outside runtime collection', async () => {
+  const packageDefinition = JSON.parse(await readFile(
+    path.resolve('packages/arena-performance-evidence/package.json'),
+    'utf8',
+  ));
+  assert.deepEqual(
+    Object.keys(packageDefinition.dependencies).sort(),
+    [
+      '@number-strategy-jump/arena-contracts',
+      '@number-strategy-jump/arena-device-acceptance',
+    ],
+    'arena-performance-evidence 只能依赖底层不可变数据和设备验收合同。',
+  );
+  const files = await listJavaScript(path.resolve('packages/arena-performance-evidence/src'));
+  assert.equal(files.length, 3);
+  for (const file of files) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /from\s+['"](?:node:|three|@number-strategy-jump\/(?!(?:arena-contracts|arena-device-acceptance)['"]))[^'"]*['"]/,
+      `${file} 只能导入自身文件、arena-contracts 与 arena-device-acceptance。`,
+    );
+    assert.doesNotMatch(
+      withoutStaticImports(source),
+      /(?:Date\.now|Math\.random|setTimeout|setInterval|requestAnimationFrame|\bperformance\s*(?:\.|\[)|\b(?:window|document|navigator)\b|\b(?:tt|wx)\s*\.)/,
+      `${file} 只能重算注入的性能证据，不得采集宿主指标。`,
     );
   }
 });

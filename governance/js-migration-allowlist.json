@@ -134,8 +134,6 @@
     "src/arena/presentation/content/arena-gameplay-v2-content.js",
     "src/arena/presentation/input/arena-input-router.js",
     "src/arena/presentation/input/keyboard-input-adapter.js",
-    "src/arena/presentation/performance/arena-build-budget-policy.js",
-    "src/arena/presentation/performance/arena-build-budget-report.js",
     "src/arena/presentation/performance/arena-performance-evidence.js",
     "src/arena/presentation/performance/arena-performance-metric-registry.js",
     "src/arena/presentation/performance/arena-performance-policy-definition.js",

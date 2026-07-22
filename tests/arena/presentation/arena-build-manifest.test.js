@@ -16,10 +16,10 @@ import {
 } from '../../../scripts/lib/arena-build-manifest-files.mjs';
 import {
   createArenaStage9BuildBudgetV1Policy,
-} from '../../../src/arena/presentation/performance/arena-build-budget-policy.js';
+} from '@number-strategy-jump/arena-performance-evidence';
 import {
   createArenaBuildBudgetReport,
-} from '../../../src/arena/presentation/performance/arena-build-budget-report.js';
+} from '@number-strategy-jump/arena-performance-evidence';
 
 const COMMIT = 'b'.repeat(40);
 

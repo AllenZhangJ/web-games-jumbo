@@ -18,7 +18,7 @@ import {
 } from '../arena/presentation/acceptance/arena-stage9-performance-device-acceptance-v1.js';
 import {
   createArenaStage9BuildBudgetV1Policy,
-} from '../arena/presentation/performance/arena-build-budget-policy.js';
+} from '@number-strategy-jump/arena-performance-evidence';
 import {
   createArenaStage9PerformanceV1Policy,
 } from '../arena/presentation/performance/arena-stage9-performance-v1.js';

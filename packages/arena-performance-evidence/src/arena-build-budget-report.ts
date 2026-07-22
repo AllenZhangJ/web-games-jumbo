@@ -1,14 +1,24 @@
-import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
-import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
+import {
+  cloneFrozenData,
+  createDeterministicDataHash,
+} from '@number-strategy-jump/arena-contracts';
 import {
   ARENA_BUILD_DEFAULT_ENTRY,
   createArenaBuildManifest,
 } from '@number-strategy-jump/arena-device-acceptance';
+import type { ArenaBuildArtifact } from '@number-strategy-jump/arena-device-acceptance';
 import { createArenaBuildBudgetPolicy } from './arena-build-budget-policy.js';
 
 export const ARENA_BUILD_BUDGET_REPORT_SCHEMA_VERSION = 1;
 
-function sumArtifactBytes(values, name) {
+interface ArenaBuildBudgetGate {
+  readonly id: string;
+  readonly value: number | string;
+  readonly threshold: number | string;
+  readonly passed: boolean;
+}
+
+function sumArtifactBytes(values: readonly ArenaBuildArtifact[], name: string): number {
   let result = 0;
   for (const { byteLength } of values) {
     result += byteLength;
@@ -17,7 +27,7 @@ function sumArtifactBytes(values, name) {
   return result;
 }
 
-export function createArenaBuildBudgetReport(policyValue, manifestValue) {
+export function createArenaBuildBudgetReport(policyValue: unknown, manifestValue: unknown) {
   const policy = createArenaBuildBudgetPolicy(policyValue);
   const manifest = createArenaBuildManifest(manifestValue);
   const target = policy.getTarget(manifest.target);
@@ -30,13 +40,13 @@ export function createArenaBuildBudgetReport(policyValue, manifestValue) {
     deliveryArtifacts.filter(({ path }) => path.endsWith('.js')),
     'Build JavaScript',
   );
-  const largestDeliveryArtifact = deliveryArtifacts.reduce(
+  const largestDeliveryArtifact = deliveryArtifacts.reduce<ArenaBuildArtifact | null>(
     (largest, artifact) => (
       largest === null || artifact.byteLength > largest.byteLength ? artifact : largest
     ),
     null,
   );
-  const gates = Object.freeze([
+  const gates: readonly ArenaBuildBudgetGate[] = Object.freeze([
     {
       id: 'artifact-count',
       value: manifest.artifacts.length,
@@ -59,8 +69,7 @@ export function createArenaBuildBudgetReport(policyValue, manifestValue) {
       id: 'largest-delivery-artifact-bytes',
       value: largestDeliveryArtifact?.byteLength ?? 0,
       threshold: target.maximumLargestDeliveryArtifactBytes,
-      passed: (largestDeliveryArtifact?.byteLength ?? 0)
-        <= target.maximumLargestDeliveryArtifactBytes,
+      passed: (largestDeliveryArtifact?.byteLength ?? 0) <= target.maximumLargestDeliveryArtifactBytes,
     },
     {
       id: 'product-default-entry',
@@ -68,7 +77,7 @@ export function createArenaBuildBudgetReport(policyValue, manifestValue) {
       threshold: ARENA_BUILD_DEFAULT_ENTRY.PRODUCT,
       passed: manifest.defaultEntry === ARENA_BUILD_DEFAULT_ENTRY.PRODUCT,
     },
-  ].map(Object.freeze));
+  ].map((gate) => Object.freeze(gate)));
   const failedGateIds = gates.filter(({ passed }) => !passed).map(({ id }) => id);
   const result = cloneFrozenData({
     schemaVersion: ARENA_BUILD_BUDGET_REPORT_SCHEMA_VERSION,
