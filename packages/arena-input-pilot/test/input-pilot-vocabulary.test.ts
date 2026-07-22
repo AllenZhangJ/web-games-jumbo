@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
+import { ARENA_MATCH_PHASE } from '@number-strategy-jump/arena-match';
 import {
   ARENA_INPUT_PILOT_VARIANT_ID,
   INPUT_PILOT_ACTION_OUTCOME,
@@ -11,6 +13,7 @@ import {
   INPUT_PILOT_TRIAL_STATUS,
   InputPilotAssignedMatchService,
   InputPilotEnrollmentLedger,
+  InputPilotMetricCollector,
   InputPilotWorkspaceCoordinator,
   InputPilotWorkspaceRepository,
   InputPilotRegistry,
@@ -585,5 +588,61 @@ describe('Input Pilot strict export and evidence', () => {
     });
     expect(() => createInputPilotEvidenceBundle(definition, value)).toThrow(/数据字段/);
     expect(reads).toBe(0);
+  });
+});
+
+describe('Input Pilot strict metric collector', () => {
+  it('binds assignment seed and rejects event accessors without partial commit', () => {
+    const definition = createArenaInputPilotV1Definition();
+    const assignment = createInputPilotAssignment({
+      definition,
+      participantId: 'metric-participant',
+      enrollmentIndex: 0,
+    });
+    const snapshot = (tick: number, activeTick: number, matchSeed = assignment.matchSeed) => ({
+      tick,
+      activeTick,
+      matchSeed,
+      phase: ARENA_MATCH_PHASE.RUNNING,
+      participants: [{
+        id: 'player-1',
+        grounded: true,
+        position: { x: 0, z: 0 },
+      }],
+    });
+
+    const seedCollector = new InputPilotMetricCollector({ definition, assignment });
+    expect(() => seedCollector.observeStep({
+      beforeSnapshot: snapshot(0, 0, assignment.matchSeed + 1),
+      input: createNeutralInputFrame(0, 'player-1'),
+      result: { snapshot: snapshot(1, 1, assignment.matchSeed + 1), events: [] },
+    })).toThrow(/matchSeed 与当前 Assignment 不一致/);
+    expect(seedCollector.getStatus().lastObservedTick).toBe(-1);
+    expect(seedCollector.observeStep({
+      beforeSnapshot: snapshot(0, 0),
+      input: createNeutralInputFrame(0, 'player-1'),
+      result: { snapshot: snapshot(1, 1), events: [] },
+    })).toBe(true);
+    seedCollector.destroy();
+
+    let reads = 0;
+    const event = { participantId: 'player-1' };
+    Object.defineProperty(event, 'type', {
+      enumerable: true,
+      get() {
+        reads += 1;
+        return 'action-started';
+      },
+    });
+    const atomicCollector = new InputPilotMetricCollector({ definition, assignment });
+    expect(() => atomicCollector.observeStep({
+      beforeSnapshot: snapshot(0, 0),
+      input: { ...createNeutralInputFrame(0, 'player-1'), jumpPressed: true },
+      result: { snapshot: snapshot(1, 1), events: [event] },
+    })).toThrow(/events\[0\]\.type 必须是可枚举数据字段/);
+    expect(reads).toBe(0);
+    expect(atomicCollector.getStatus().lastObservedTick).toBe(-1);
+    expect(atomicCollector.finalize().groundJump).toBe(INPUT_PILOT_ACTION_OUTCOME.NOT_ATTEMPTED);
+    atomicCollector.destroy();
   });
 });

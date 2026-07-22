@@ -11,13 +11,13 @@ import {
   INPUT_PILOT_ENROLLMENT_LEDGER_SCHEMA_VERSION,
   InputPilotEnrollmentLedger,
 } from '@number-strategy-jump/arena-input-pilot';
-import { InputPilotMetricCollector } from '../../../src/arena/presentation/pilot/input-pilot-metric-collector.js';
+import { InputPilotMetricCollector } from '@number-strategy-jump/arena-input-pilot';
 import { createInputPilotDefinition } from '@number-strategy-jump/arena-input-pilot';
 import { InputPilotObservedMatchService } from '../../../src/arena/presentation/pilot/input-pilot-observed-match-service.js';
 import { InputPilotObservedSession } from '../../../src/arena/presentation/pilot/input-pilot-observed-session.js';
 import { INPUT_PILOT_ACTION_OUTCOME } from '@number-strategy-jump/arena-input-pilot';
 
-const MATCH_SEED = 0x99110001;
+const MATCH_SEED = assignment(createArenaInputPilotV1Definition()).matchSeed;
 
 function assignment(definition, enrollmentIndex = 0, participantId = `pilot-${enrollmentIndex}`) {
   return createInputPilotAssignment({ definition, enrollmentIndex, participantId });
@@ -44,12 +44,12 @@ function participant({ x = 0, z = 0, grounded = true, primary = null, primaryHol
   });
 }
 
-function snapshot({ tick, activeTick, phase, local = participant() }) {
+function snapshot({ tick, activeTick, phase, local = participant(), matchSeed = MATCH_SEED }) {
   return Object.freeze({
     tick,
     activeTick,
     phase,
-    matchSeed: MATCH_SEED,
+    matchSeed,
     participants: Object.freeze([local]),
   });
 }
@@ -331,15 +331,26 @@ test('metric collector keeps failed attempts and rejects forged timeline progres
   });
   failed.destroy();
 
+  const forgedAssignment = assignment(definition, 2);
   const forged = new InputPilotMetricCollector({
     definition,
-    assignment: assignment(definition, 2),
+    assignment: forgedAssignment,
   });
   assert.throws(() => observedStep(
     forged,
-    snapshot({ tick: 0, activeTick: 0, phase: ARENA_MATCH_PHASE.RUNNING }),
+    snapshot({
+      tick: 0,
+      activeTick: 0,
+      phase: ARENA_MATCH_PHASE.RUNNING,
+      matchSeed: forgedAssignment.matchSeed,
+    }),
     input(0),
-    snapshot({ tick: 1, activeTick: 2, phase: ARENA_MATCH_PHASE.RUNNING }),
+    snapshot({
+      tick: 1,
+      activeTick: 2,
+      phase: ARENA_MATCH_PHASE.RUNNING,
+      matchSeed: forgedAssignment.matchSeed,
+    }),
   ), /activeTick 与比赛阶段推进不一致/);
   assert.equal(forged.getStatus().lastObservedTick, -1);
   forged.destroy();
@@ -347,9 +358,10 @@ test('metric collector keeps failed attempts and rejects forged timeline progres
 
 test('metric collector does not treat an airborne carried hold as an air-jump attempt', () => {
   const definition = createArenaInputPilotV1Definition();
+  const pilotAssignment = assignment(definition, 8);
   const collector = new InputPilotMetricCollector({
     definition,
-    assignment: assignment(definition, 8),
+    assignment: pilotAssignment,
   });
   observedStep(
     collector,
@@ -357,6 +369,7 @@ test('metric collector does not treat an airborne carried hold as an air-jump at
       tick: 0,
       activeTick: 0,
       phase: ARENA_MATCH_PHASE.RUNNING,
+      matchSeed: pilotAssignment.matchSeed,
       local: participant({ grounded: false }),
     }),
     input(0, { jumpHeld: true }),
@@ -364,6 +377,7 @@ test('metric collector does not treat an airborne carried hold as an air-jump at
       tick: 1,
       activeTick: 1,
       phase: ARENA_MATCH_PHASE.RUNNING,
+      matchSeed: pilotAssignment.matchSeed,
       local: participant({ grounded: false }),
     }),
   );
@@ -385,30 +399,62 @@ test('metric collector times out on active simulation time without counting prep
       maximumTrialDurationMs: 17,
     },
   });
+  const pilotAssignment = assignment(definition);
   const collector = new InputPilotMetricCollector({
     definition,
-    assignment: assignment(definition),
+    assignment: pilotAssignment,
   });
+  const pilotMatchSeed = pilotAssignment.matchSeed;
   observedStep(
     collector,
-    snapshot({ tick: 0, activeTick: 0, phase: ARENA_MATCH_PHASE.PREPARING }),
+    snapshot({
+      tick: 0,
+      activeTick: 0,
+      phase: ARENA_MATCH_PHASE.PREPARING,
+      matchSeed: pilotMatchSeed,
+    }),
     input(0),
-    snapshot({ tick: 1, activeTick: 0, phase: ARENA_MATCH_PHASE.RUNNING }),
+    snapshot({
+      tick: 1,
+      activeTick: 0,
+      phase: ARENA_MATCH_PHASE.RUNNING,
+      matchSeed: pilotMatchSeed,
+    }),
   );
   assert.equal(collector.getStatus().trialDurationMs, 0);
   observedStep(
     collector,
-    snapshot({ tick: 1, activeTick: 0, phase: ARENA_MATCH_PHASE.RUNNING }),
+    snapshot({
+      tick: 1,
+      activeTick: 0,
+      phase: ARENA_MATCH_PHASE.RUNNING,
+      matchSeed: pilotMatchSeed,
+    }),
     input(1),
-    snapshot({ tick: 2, activeTick: 1, phase: ARENA_MATCH_PHASE.RUNNING }),
+    snapshot({
+      tick: 2,
+      activeTick: 1,
+      phase: ARENA_MATCH_PHASE.RUNNING,
+      matchSeed: pilotMatchSeed,
+    }),
   );
   assert.equal(collector.getStatus().timedOut, true);
   assert.equal(collector.getStatus().trialDurationMs, 17);
   assert.equal(observedStep(
     collector,
-    snapshot({ tick: 99, activeTick: 99, phase: ARENA_MATCH_PHASE.RUNNING }),
+    snapshot({
+      tick: 99,
+      activeTick: 99,
+      phase: ARENA_MATCH_PHASE.RUNNING,
+      matchSeed: pilotMatchSeed,
+    }),
     input(99),
-    snapshot({ tick: 100, activeTick: 100, phase: ARENA_MATCH_PHASE.RUNNING }),
+    snapshot({
+      tick: 100,
+      activeTick: 100,
+      phase: ARENA_MATCH_PHASE.RUNNING,
+      matchSeed: pilotMatchSeed,
+    }),
   ), false);
   assert.equal(collector.finalize().trialDurationMs, 17);
   collector.destroy();
@@ -416,16 +462,17 @@ test('metric collector times out on active simulation time without counting prep
 
 test('observed match service receives the normalized InputFrame consumed by a real local match', () => {
   const definition = createArenaInputPilotV1Definition();
+  const pilotAssignment = assignment(definition, 3);
   const collector = new InputPilotMetricCollector({
     definition,
-    assignment: assignment(definition, 3),
+    assignment: pilotAssignment,
   });
   const service = new InputPilotObservedMatchService({
     matchService: new QuickMatchService(),
     collector,
   });
   const match = service.create({
-    matchSeed: MATCH_SEED,
+    matchSeed: pilotAssignment.matchSeed,
     config: { preparingTicks: 0 },
   });
   match.session.start();

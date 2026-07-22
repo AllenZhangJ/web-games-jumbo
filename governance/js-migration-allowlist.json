@@ -114,8 +114,6 @@
     "src/arena/presentation/assets/formal-asset-intake-bundle.js",
     "src/arena/presentation/assets/formal-asset-intake-policy.js",
     "src/arena/presentation/assets/formal-asset-provenance-record.js",
-    "src/arena/presentation/pilot/input-pilot-action-metrics.js",
-    "src/arena/presentation/pilot/input-pilot-metric-collector.js",
     "src/arena/presentation/pilot/input-pilot-observed-match-service.js",
     "src/arena/presentation/pilot/input-pilot-observed-session.js",
     "src/arena/presentation/pilot/input-pilot-trial-controller.js",
