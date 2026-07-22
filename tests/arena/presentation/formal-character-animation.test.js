@@ -11,10 +11,10 @@ import {
 } from '@number-strategy-jump/arena-presentation-contracts';
 import {
   CharacterAnimationController,
+  GltfCharacterViewFactory,
   GltfPresentationAssetLoader,
   PlatformTextureLoader,
 } from '@number-strategy-jump/arena-presentation-three';
-import { GltfCharacterViewFactory } from '../../../src/arena/presentation/three/gltf-character-view-factory.js';
 import {
   ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT,
 } from '../../../src/arena/presentation/content/arena-gameplay-v2-content.js';

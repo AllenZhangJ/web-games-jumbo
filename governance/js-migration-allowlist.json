@@ -220,7 +220,6 @@
     "src/arena/presentation/three/arena-greybox-renderer.js",
     "src/arena/presentation/three/arena-hud-layer.js",
     "src/arena/presentation/three/arena-world-stage.js",
-    "src/arena/presentation/three/gltf-character-view-factory.js",
     "src/arena/presentation/three/greybox-event-effects.js",
     "src/arena/product/composition/arena-v1-product-composition.js",
     "src/arena/regression/arena-regression-evidence-components.js",

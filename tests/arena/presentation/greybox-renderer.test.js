@@ -217,7 +217,7 @@ test('ArenaWorldStage syncs programmatic views without mutating authority-derive
   core.destroy();
 });
 
-test('Gameplay V2 renders a world larger than the phone frustum with a local follow camera', () => {
+test('Gameplay V2 renders a world larger than the phone frustum with a local follow camera', async () => {
   const core = createArenaV1MatchCore({
     seed: MATCH_SEED,
     config: {
@@ -235,6 +235,7 @@ test('Gameplay V2 renders a world larger than the phone frustum with a local fol
     },
   });
   const stage = new ArenaWorldStage({ content: ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT });
+  await stage.load();
   const camera = stage.resize({ width: 390, height: 844 });
   const frame = projectArenaPresentationFrame({
     snapshot: core.getSnapshot(),

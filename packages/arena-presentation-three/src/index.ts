@@ -4,6 +4,7 @@ export * from './dispose-three-resources.js';
 export * from './equipment-view-registry.js';
 export * from './gltf-presentation-asset-loader.js';
 export * from './gltf-character-view.js';
+export * from './gltf-character-view-factory.js';
 export * from './greybox-style.js';
 export * from './platform-texture-loader.js';
 export * from './programmatic-character-view-factory.js';

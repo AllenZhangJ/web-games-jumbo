@@ -4,6 +4,7 @@ import {
   EquipmentViewRegistry,
   CharacterAnimationController,
   GltfCharacterView,
+  GltfCharacterViewFactory,
   GltfPresentationAssetLoader,
   PlatformTextureLoader,
   ProgrammaticCharacterView,
@@ -64,6 +65,18 @@ function programmaticAssetRegistry(): PresentationAssetRegistry {
     sourceKey: 'chibi-runner',
     contentVersion: 1,
     tags: ['test'],
+  }]);
+}
+
+function gltfAssetRegistry(): PresentationAssetRegistry {
+  return new PresentationAssetRegistry([{
+    schemaVersion: PRESENTATION_ASSET_DEFINITION_SCHEMA_VERSION,
+    id: 'asset.gltf.test',
+    kind: PRESENTATION_ASSET_KIND.CHARACTER_MODEL,
+    providerId: ARENA_PRESENTATION_ASSET_PROVIDER_ID.GLTF_CHARACTER_V1,
+    sourceKey: './assets/character.glb',
+    contentVersion: 1,
+    tags: ['test', 'humanoid'],
   }]);
 }
 
@@ -168,6 +181,52 @@ function gltfSyncOptions(events: readonly unknown[] = []): unknown {
 }
 
 describe('Arena Presentation Three lifecycle boundaries', () => {
+  it('snapshots GLTF factory callbacks and retains late cleanup for an exact retry', async () => {
+    let reads = 0;
+    const accessorOptions = {
+      assetRegistry: gltfAssetRegistry(), actionPresentations: {},
+    };
+    Object.defineProperty(accessorOptions, 'loader', {
+      enumerable: true,
+      get() { reads += 1; return { load() {} }; },
+    });
+    expect(() => new GltfCharacterViewFactory(accessorOptions)).toThrow(/loader.*数据字段/);
+    expect(reads).toBe(0);
+
+    let resolveLease: ((value: unknown) => void) | null = null;
+    let loadCalls = 0;
+    let releaseAttempts = 0;
+    const loader = {
+      load() {
+        loadCalls += 1;
+        return new Promise((resolve) => { resolveLease = resolve; });
+      },
+    };
+    const factory = new GltfCharacterViewFactory({
+      assetRegistry: gltfAssetRegistry(), actionPresentations: {}, loader,
+    });
+    loader.load = () => Promise.reject(new Error('replacement loader must not run'));
+    expect(() => factory.create({})).toThrow(/必须先完成 load/);
+    const loading = factory.load();
+    await Promise.resolve();
+    expect(loadCalls).toBe(1);
+    expect(resolveLease).not.toBeNull();
+    factory.dispose();
+    resolveLease!({
+      assetId: 'asset.gltf.test', value: Object.freeze({ template: true }),
+      release() {
+        releaseAttempts += 1;
+        if (releaseAttempts < 3) throw new Error('transient late GLTF release');
+      },
+    });
+    await loading;
+    expect(releaseAttempts).toBe(2);
+    factory.dispose();
+    factory.dispose();
+    expect(releaseAttempts).toBe(3);
+    expect(() => factory.create({})).toThrow(/已销毁/);
+  });
+
   it('keeps GLTF view boundaries getter-safe and deduplicates incoming hits', () => {
     let reads = 0;
     const options = {
