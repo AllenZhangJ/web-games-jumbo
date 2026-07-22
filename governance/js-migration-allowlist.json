@@ -220,7 +220,6 @@
     "src/arena/presentation/three/arena-greybox-renderer.js",
     "src/arena/presentation/three/arena-hud-layer.js",
     "src/arena/presentation/three/arena-world-stage.js",
-    "src/arena/presentation/three/character-animation-controller.js",
     "src/arena/presentation/three/gltf-character-view-factory.js",
     "src/arena/presentation/three/gltf-character-view.js",
     "src/arena/presentation/three/gltf-presentation-asset-loader.js",

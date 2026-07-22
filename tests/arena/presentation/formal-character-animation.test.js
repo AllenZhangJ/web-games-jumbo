@@ -9,7 +9,7 @@ import {
   ARENA_ANIMATION_SEMANTIC_IDS,
   ARENA_ANIMATION_SOURCE_KIND,
 } from '@number-strategy-jump/arena-presentation-contracts';
-import { CharacterAnimationController } from '../../../src/arena/presentation/three/character-animation-controller.js';
+import { CharacterAnimationController } from '@number-strategy-jump/arena-presentation-three';
 import { GltfCharacterViewFactory } from '../../../src/arena/presentation/three/gltf-character-view-factory.js';
 import { GltfPresentationAssetLoader } from '../../../src/arena/presentation/three/gltf-presentation-asset-loader.js';
 import { PlatformTextureLoader } from '../../../src/arena/presentation/three/host-texture-loader.js';

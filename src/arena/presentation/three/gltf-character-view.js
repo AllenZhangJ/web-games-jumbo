@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { clone as cloneSkeleton } from 'three/addons/utils/SkeletonUtils.js';
-import { CharacterAnimationController } from './character-animation-controller.js';
 import {
+  CharacterAnimationController,
   createProgrammaticEquipment,
   disposeThreeObject,
   visualFacingYaw,

@@ -1,4 +1,5 @@
 export * from './character-view-registry.js';
+export * from './character-animation-controller.js';
 export * from './dispose-three-resources.js';
 export * from './equipment-view-registry.js';
 export * from './greybox-style.js';
