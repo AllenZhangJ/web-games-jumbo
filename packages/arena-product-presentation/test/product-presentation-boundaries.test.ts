@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { createMatchContentPublicView } from '@number-strategy-jump/arena-contracts';
 import {
   PRODUCT_INPUT_ROUTER_MODE,
   PRODUCT_UI_INTENT_ID,
@@ -8,11 +9,13 @@ import {
   PRODUCT_CONTENT_KIND,
   PRODUCT_CONTENT_PRESENTATION_DEFINITION_SCHEMA_VERSION,
   PRODUCT_MESSAGE_CATALOG_SCHEMA_VERSION,
+  PRODUCT_MATCH_PRESENTATION_RUNTIME_STATE,
   PRODUCT_SCREEN_DEFINITION_SCHEMA_VERSION,
   PRODUCT_SCREEN_KIND,
   ProductContentPresentationDefinition,
   ProductContentPresentationRegistry,
   ProductInputRouter,
+  ProductMatchPresentationRuntime,
   ProductMessageCatalog,
   ProductScreenDefinition,
   ProductScreenRegistry,
@@ -270,5 +273,90 @@ describe('Product presentation immutable data boundaries', () => {
     });
     expect(() => createProductSessionViewModel({}, options as never)).toThrow(/数据字段/);
     expect(getterCalls).toBe(0);
+  });
+});
+
+function publicMatchContent() {
+  return createMatchContentPublicView({
+    schemaVersion: 1,
+    contentDefinitionId: 'runtime-test-content',
+    contentVersion: 1,
+    characterDefinitionIds: ['hero-a', 'hero-b'],
+    equipmentDefinitionIds: [],
+    mapDefinitionIds: ['map-a'],
+    selectedMapDefinitionId: 'map-a',
+    participantCharacters: [
+      { participantId: 'player-1', definitionId: 'hero-a' },
+      { participantId: 'player-2', definitionId: 'hero-b' },
+    ],
+  });
+}
+
+describe('Product match presentation runtime boundaries', () => {
+  it('rejects option and controller method accessors without execution', () => {
+    let getterCalls = 0;
+    const options = Object.defineProperty({}, 'controller', {
+      enumerable: true,
+      get() { getterCalls += 1; return {}; },
+    });
+    expect(() => new ProductMatchPresentationRuntime(options as never)).toThrow(/数据字段/);
+    expect(getterCalls).toBe(0);
+    const controllerValue = Object.defineProperty({}, 'beginMatch', {
+      enumerable: true,
+      get() { getterCalls += 1; return () => {}; },
+    });
+    expect(() => new ProductMatchPresentationRuntime({
+      controller: controllerValue as never,
+      inputSource: { sample() { return {}; } },
+      frameProjector: () => ({}),
+    })).toThrow(/数据方法/);
+    expect(getterCalls).toBe(0);
+  });
+
+  it('fails closed when a borrowed controller swallows runtime reentry', () => {
+    const content = publicMatchContent();
+    const runtimeBox: { current: ProductMatchPresentationRuntime | null } = { current: null };
+    const authoritySnapshot = {
+      tick: 0,
+      participants: [
+        { id: 'player-1', actionAffordance: {} },
+        { id: 'player-2', actionAffordance: {} },
+      ],
+    };
+    const controllerValue = {
+      beginMatch() {
+        return {
+          state: { state: PRODUCT_SESSION_STATE.IN_MATCH },
+          match: {
+            publicMatchInfo: {
+              matchSeed: 1,
+              opponent: {
+                id: 'opponent',
+                displayName: '对手',
+                portraitKey: 'portrait',
+                appearanceKey: 'appearance',
+              },
+              content,
+            },
+          },
+        };
+      },
+      getActiveMatchSnapshot() {
+        try { runtimeBox.current?.start(); } catch { /* hostile port swallows reentry */ }
+        return authoritySnapshot;
+      },
+      getSnapshot() { return {}; },
+      stepMatch() { return {}; },
+    };
+    const runtime = new ProductMatchPresentationRuntime({
+      controller: controllerValue,
+      inputSource: { sample() { return {}; } },
+      frameProjector: () => Object.freeze({ source: Object.freeze({ tick: 0 }) }),
+    });
+    runtimeBox.current = runtime;
+    expect(() => runtime.start()).toThrow(/吞掉的重入异常/);
+    expect(runtime.state).toBe(PRODUCT_MATCH_PRESENTATION_RUNTIME_STATE.FAILED);
+    runtime.destroy();
+    expect(runtime.state).toBe(PRODUCT_MATCH_PRESENTATION_RUNTIME_STATE.DESTROYED);
   });
 });

@@ -11,12 +11,13 @@ import {
 import { validateProductMatchResult } from '@number-strategy-jump/arena-product-contracts';
 import { PRODUCT_SESSION_STATE } from '@number-strategy-jump/arena-product-state';
 import { ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT } from '../content/arena-gameplay-v2-content.js';
+import { projectArenaPresentationFrame } from '../projection/arena-frame-projector.js';
 import { ARENA_V1_PRODUCT_PRESENTATION_CONTENT } from './arena-v1-product-presentation-content.js';
 import {
   ProductMatchPresentationRuntime,
-} from './product-match-presentation-runtime.js';
-import { ProductSessionIntentDispatcher } from '@number-strategy-jump/arena-product-presentation';
-import { createProductSessionViewModel } from '@number-strategy-jump/arena-product-presentation';
+  ProductSessionIntentDispatcher,
+  createProductSessionViewModel,
+} from '@number-strategy-jump/arena-product-presentation';
 export { PRODUCT_PRESENTATION_FLOW_STATE } from '@number-strategy-jump/arena-presentation-contracts';
 
 function validateController(value) {
@@ -107,6 +108,7 @@ export class ProductPresentationFlow {
   #presentationContent;
   #dispatcher;
   #matchRuntimeFactory;
+  #frameProjector;
   #matchPresentationContent;
   #matchRuntime;
   #state;
@@ -126,11 +128,16 @@ export class ProductPresentationFlow {
     matchPresentationContent = ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT,
     intentDispatcherFactory = (options) => new ProductSessionIntentDispatcher(options),
     matchRuntimeFactory = (options) => new ProductMatchPresentationRuntime(options),
+    frameProjector = projectArenaPresentationFrame,
   }) {
     this.#controller = validateController(controller);
     this.#inputSource = validateInputSource(inputSource);
     this.#presentationContent = presentationContent;
     this.#matchPresentationContent = matchPresentationContent;
+    this.#frameProjector = requiredFunction(
+      frameProjector,
+      'ProductPresentationFlow.frameProjector',
+    );
     this.#matchRuntimeFactory = requiredFunction(
       matchRuntimeFactory,
       'ProductPresentationFlow.matchRuntimeFactory',
@@ -201,6 +208,7 @@ export class ProductPresentationFlow {
         controller: this.#controller,
         inputSource: this.#inputSource,
         content: this.#matchPresentationContent,
+        frameProjector: this.#frameProjector,
       });
       validateMatchRuntime(candidate);
       const frame = candidate.start();

@@ -23,16 +23,16 @@ import {
 } from '../../../src/arena/presentation/product/arena-v1-product-presentation-content.js';
 import {
   PRODUCT_MESSAGE_CATALOG_SCHEMA_VERSION,
+  PRODUCT_MATCH_PRESENTATION_RUNTIME_STATE,
   ProductInputRouter,
+  ProductMatchPresentationRuntime,
   ProductMessageCatalog,
   ProductScreenRegistry,
   ProductSessionIntentDispatcher,
   createProductSessionViewModel,
 } from '@number-strategy-jump/arena-product-presentation';
-import {
-  PRODUCT_MATCH_PRESENTATION_RUNTIME_STATE,
-  ProductMatchPresentationRuntime,
-} from '../../../src/arena/presentation/product/product-match-presentation-runtime.js';
+import { ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT } from '../../../src/arena/presentation/content/arena-gameplay-v2-content.js';
+import { projectArenaPresentationFrame } from '../../../src/arena/presentation/projection/arena-frame-projector.js';
 import {
   PRODUCT_INPUT_ROUTER_MODE,
 } from '@number-strategy-jump/arena-presentation-contracts';
@@ -425,7 +425,12 @@ test('Product match presentation runtime bridges the one owned Product match int
       return createNeutralInputFrame(tick, 'player-1');
     },
   };
-  const runtime = new ProductMatchPresentationRuntime({ controller, inputSource });
+  const runtime = new ProductMatchPresentationRuntime({
+    controller,
+    inputSource,
+    content: ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT,
+    frameProjector: projectArenaPresentationFrame,
+  });
   const initial = runtime.start();
   assert.equal(controller.state, PRODUCT_SESSION_STATE.IN_MATCH);
   assert.equal(initial.source.matchSeed, 8801);
@@ -558,6 +563,7 @@ test('Product match presentation runtime cleans an invalid constructed event win
   assert.throws(() => new ProductMatchPresentationRuntime({
     controller: harness.controller,
     inputSource: { sample: (tick) => ({ tick }) },
+    frameProjector: contractFrameProjector,
     eventWindowFactory: () => ({
       destroy() { destroyCalls += 1; },
     }),
