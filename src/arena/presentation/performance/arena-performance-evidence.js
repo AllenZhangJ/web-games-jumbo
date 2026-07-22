@@ -17,8 +17,8 @@ import {
 import {
   createArenaPerformancePolicyDefinition,
   createArenaPerformanceRecord,
+  createArenaPerformanceReport,
 } from '@number-strategy-jump/arena-performance-evidence';
-import { createArenaPerformanceReport } from './arena-performance-report.js';
 
 export const ARENA_PERFORMANCE_EVIDENCE_REPORT_SCHEMA_VERSION = 1;
 

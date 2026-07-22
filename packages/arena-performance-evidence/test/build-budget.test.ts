@@ -4,12 +4,15 @@ import {
   ARENA_BUILD_MANIFEST_SCHEMA_VERSION,
 } from '@number-strategy-jump/arena-device-acceptance';
 import {
+  ArenaPerformanceMetricCollectorRegistry,
   createArenaBuildBudgetReport,
   createArenaPerformancePolicyDefinition,
   createArenaPerformanceRecord,
+  createArenaPerformanceReport,
   createArenaStage9BuildBudgetV1Policy,
   getArenaPerformanceRecordHash,
 } from '../src/index.js';
+import type { ArenaPerformanceMetricCollector } from '../src/index.js';
 
 function createPerformancePolicy() {
   return createArenaPerformancePolicyDefinition({
@@ -106,6 +109,7 @@ describe('build budget evidence', () => {
     expect(Object.isFrozen(policy.targets[0]?.gates)).toBe(true);
     expect(Object.isFrozen(record.capture.probe)).toBe(true);
     expect(getArenaPerformanceRecordHash(policy, record)).toMatch(/^[0-9a-f]{8}$/);
+    expect(createArenaPerformanceReport(policy, record).status).toBe('passed');
   });
 
   it('rejects accessor-backed performance evidence without executing it', () => {
@@ -120,6 +124,65 @@ describe('build budget evidence', () => {
       },
     });
     expect(() => createArenaPerformanceRecord(policy, value)).toThrow(/runId/);
+    expect(getterCalls).toBe(0);
+  });
+
+  it('snapshots metric collectors and rejects accessor-backed plugins', () => {
+    const registry = new ArenaPerformanceMetricCollectorRegistry();
+    const collector: { id: string; collect: ArenaPerformanceMetricCollector['collect'] } = {
+      id: 'test.metric',
+      collect: () => Object.freeze({
+        available: true as const,
+        value: 1,
+        unit: 'count',
+        numerator: null,
+        denominator: null,
+        reason: null,
+      }),
+    };
+    registry.register(collector);
+    collector.collect = () => Object.freeze({
+      available: true as const,
+      value: 2,
+      unit: 'count',
+      numerator: null,
+      denominator: null,
+      reason: null,
+    });
+    const policy = createPerformancePolicy();
+    const record = createArenaPerformanceRecord(
+      policy,
+      createPerformanceRecordValue(policy.getContentHash()),
+    );
+    expect(registry.require('test.metric').collect(record, {}).value).toBe(1);
+
+    let getterCalls = 0;
+    const accessorCollector = Object.defineProperty({ collect: collector.collect }, 'id', {
+      enumerable: true,
+      get() {
+        getterCalls += 1;
+        return 'forged.metric';
+      },
+    });
+    expect(() => registry.register(accessorCollector)).toThrow(/id/);
+    expect(getterCalls).toBe(0);
+  });
+
+  it('rejects accessor-backed report options without executing them', () => {
+    const policy = createPerformancePolicy();
+    const record = createArenaPerformanceRecord(
+      policy,
+      createPerformanceRecordValue(policy.getContentHash()),
+    );
+    let getterCalls = 0;
+    const options = Object.defineProperty({}, 'metricRegistry', {
+      enumerable: true,
+      get() {
+        getterCalls += 1;
+        return undefined;
+      },
+    });
+    expect(() => createArenaPerformanceReport(policy, record, options)).toThrow(/metricRegistry/);
     expect(getterCalls).toBe(0);
   });
 });

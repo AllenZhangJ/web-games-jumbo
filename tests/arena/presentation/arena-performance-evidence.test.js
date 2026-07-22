@@ -26,7 +26,7 @@ import {
 } from '@number-strategy-jump/arena-performance-evidence';
 import {
   createArenaPerformanceReport,
-} from '../../../src/arena/presentation/performance/arena-performance-report.js';
+} from '@number-strategy-jump/arena-performance-evidence';
 import {
   createArenaPerformanceEvidenceReport,
 } from '../../../src/arena/presentation/performance/arena-performance-evidence.js';

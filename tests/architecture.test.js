@@ -211,7 +211,7 @@ test('remaining Arena performance composition stays host-free and cannot own ren
     'src/arena/presentation/quality',
     'src/arena/presentation/performance',
   ].map((directory) => listJavaScript(path.resolve(directory))))).flat();
-  assert.equal(files.length, 4);
+  assert.equal(files.length, 2);
   for (const file of files) {
     const source = await readFile(file, 'utf8');
     assert.doesNotMatch(
@@ -348,7 +348,7 @@ test('Arena performance evidence stays immutable, host-free, and outside runtime
     'arena-performance-evidence 只能依赖底层不可变数据、证据标量和设备验收合同。',
   );
   const files = await listJavaScript(path.resolve('packages/arena-performance-evidence/src'));
-  assert.equal(files.length, 5);
+  assert.equal(files.length, 7);
   for (const file of files) {
     const source = await readFile(file, 'utf8');
     assert.doesNotMatch(

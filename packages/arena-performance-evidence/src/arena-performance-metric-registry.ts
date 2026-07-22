@@ -2,8 +2,44 @@ import {
   assertKnownKeys,
   assertNonEmptyString,
 } from '@number-strategy-jump/arena-contracts';
+import type {
+  ArenaPerformanceLifecycleCapture,
+  ArenaPerformanceRecord,
+  ArenaPerformanceResourceSample,
+} from './arena-performance-record.js';
 
-const EMPTY_PARAMETERS = new Set();
+export type ArenaPerformanceMetric = Readonly<{
+  available: true;
+  value: number;
+  unit: string;
+  numerator: number | null;
+  denominator: number | null;
+  reason: null;
+}> | Readonly<{
+  available: false;
+  value: null;
+  unit: null;
+  numerator: null;
+  denominator: null;
+  reason: string;
+}>;
+
+export interface ArenaPerformanceMetricCollector {
+  readonly id: string;
+  readonly collect: (
+    record: ArenaPerformanceRecord,
+    parameters: unknown,
+  ) => ArenaPerformanceMetric;
+}
+
+type ArenaPerformanceResourceField = Exclude<
+  keyof ArenaPerformanceResourceSample,
+  'frameSequence' | 'elapsedMs'
+>;
+type ArenaPerformanceMemoryField = 'jsHeapBytes' | 'processMemoryBytes';
+type ArenaPerformanceLifecycleField = keyof ArenaPerformanceLifecycleCapture;
+
+const EMPTY_PARAMETERS: ReadonlySet<string> = new Set();
 const MILESTONE_PARAMETERS = new Set(['startId', 'endId']);
 const LONG_FRAME_PARAMETERS = new Set(['thresholdMs']);
 const RESOURCE_PARAMETERS = new Set(['field']);
@@ -27,11 +63,18 @@ const LIFECYCLE_FIELDS = new Set([
   'contextRestoredCount',
 ]);
 
-function available(value, unit, { numerator = null, denominator = null } = {}) {
+function available(
+  value: number,
+  unit: string,
+  { numerator = null, denominator = null }: {
+    readonly numerator?: number | null;
+    readonly denominator?: number | null;
+  } = {},
+): ArenaPerformanceMetric {
   return Object.freeze({ available: true, value, unit, numerator, denominator, reason: null });
 }
 
-function unavailable(reason) {
+function unavailable(reason: string): ArenaPerformanceMetric {
   return Object.freeze({
     available: false,
     value: null,
@@ -42,18 +85,20 @@ function unavailable(reason) {
   });
 }
 
-function finitePositive(value, name) {
-  if (!Number.isFinite(value) || value <= 0) throw new RangeError(`${name} 必须是有限正数。`);
-  return value;
+function finitePositive(value: unknown, name: string): number {
+  if (!Number.isFinite(value) || (value as number) <= 0) {
+    throw new RangeError(`${name} 必须是有限正数。`);
+  }
+  return value as number;
 }
 
-function quantile(values, probability) {
+function quantile(values: readonly number[], probability: number): number | null {
   if (values.length === 0) return null;
   const sorted = [...values].sort((left, right) => left - right);
-  return sorted[Math.max(0, Math.ceil(probability * sorted.length) - 1)];
+  return sorted[Math.max(0, Math.ceil(probability * sorted.length) - 1)] ?? null;
 }
 
-function maximum(values) {
+function maximum(values: readonly number[]): number {
   let result = -Infinity;
   for (const value of values) {
     if (value > result) result = value;
@@ -61,7 +106,7 @@ function maximum(values) {
   return result;
 }
 
-function safeIntegerSum(values, name) {
+function safeIntegerSum(values: readonly number[], name: string): number {
   let result = 0;
   for (const value of values) {
     result += value;
@@ -70,64 +115,81 @@ function safeIntegerSum(values, name) {
   return result;
 }
 
-function noParameters(parameters, name) {
+function noParameters(parameters: unknown, name: string): void {
   assertKnownKeys(parameters, EMPTY_PARAMETERS, name);
 }
 
-function milestoneMap(record) {
+function milestoneMap(record: ArenaPerformanceRecord): Map<string, number> {
   return new Map(record.capture.probe.milestones.map(({ id, elapsedMs }) => [id, elapsedMs]));
 }
 
-function renderedIntervals(record) {
+function renderedIntervals(record: ArenaPerformanceRecord): number[] {
   const rendered = record.capture.probe.frames.filter(({ rendered: value }) => value);
   const intervals = [];
   for (let index = 1; index < rendered.length; index += 1) {
-    intervals.push(rendered[index].elapsedMs - rendered[index - 1].elapsedMs);
+    intervals.push(rendered[index]!.elapsedMs - rendered[index - 1]!.elapsedMs);
   }
   return intervals;
 }
 
-function resourceValues(record, parameters, name) {
+function resourceValues(
+  record: ArenaPerformanceRecord,
+  parameters: unknown,
+  name: string,
+): Readonly<{ field: ArenaPerformanceResourceField; values: number[] }> {
   assertKnownKeys(parameters, RESOURCE_PARAMETERS, name);
   const field = assertNonEmptyString(parameters.field, `${name}.field`);
   if (!RESOURCE_FIELDS.has(field)) throw new RangeError(`${name}.field 不受支持：${field}。`);
-  return record.capture.probe.resources
-    .map((sample) => sample[field])
-    .filter((value) => value !== null);
+  const resourceField = field as ArenaPerformanceResourceField;
+  const values = record.capture.probe.resources
+    .map((sample) => sample[resourceField])
+    .filter((value): value is number => value !== null);
+  return Object.freeze({ field: resourceField, values });
 }
 
 export class ArenaPerformanceMetricCollectorRegistry {
-  #collectors;
+  readonly #collectors: Map<string, ArenaPerformanceMetricCollector>;
 
-  constructor(values = []) {
+  constructor(values: unknown = []) {
     if (!Array.isArray(values)) throw new TypeError('性能 Metric collectors 必须是数组。');
     this.#collectors = new Map();
     for (const value of values) this.register(value);
   }
 
-  register(value) {
+  register(value: unknown): this {
     if (!value || typeof value !== 'object') throw new TypeError('性能 Metric collector 无效。');
-    const id = assertNonEmptyString(value.id, 'ArenaPerformanceMetricCollector.id');
-    if (typeof value.collect !== 'function') {
+    const idDescriptor = Object.getOwnPropertyDescriptor(value, 'id');
+    const collectDescriptor = Object.getOwnPropertyDescriptor(value, 'collect');
+    if (!idDescriptor || !Object.prototype.hasOwnProperty.call(idDescriptor, 'value')) {
+      throw new TypeError('ArenaPerformanceMetricCollector.id 必须是自有数据字段。');
+    }
+    if (!collectDescriptor || !Object.prototype.hasOwnProperty.call(collectDescriptor, 'value')) {
+      throw new TypeError('ArenaPerformanceMetricCollector.collect 必须是自有数据字段。');
+    }
+    const id = assertNonEmptyString(idDescriptor.value, 'ArenaPerformanceMetricCollector.id');
+    if (typeof collectDescriptor.value !== 'function') {
       throw new TypeError(`ArenaPerformanceMetricCollector ${id} 缺少 collect()。`);
     }
     if (this.#collectors.has(id)) throw new RangeError(`重复性能 Metric collector ${id}。`);
-    this.#collectors.set(id, Object.freeze({ id, collect: value.collect }));
+    this.#collectors.set(id, Object.freeze({
+      id,
+      collect: collectDescriptor.value as ArenaPerformanceMetricCollector['collect'],
+    }));
     return this;
   }
 
-  require(id) {
+  require(id: string): ArenaPerformanceMetricCollector {
     const collector = this.#collectors.get(id);
     if (!collector) throw new RangeError(`未知性能 Metric collector ${String(id)}。`);
     return collector;
   }
 
-  listIds() {
+  listIds(): readonly string[] {
     return Object.freeze([...this.#collectors.keys()].sort());
   }
 }
 
-const BUILTIN_COLLECTORS = [
+const BUILTIN_COLLECTORS: readonly ArenaPerformanceMetricCollector[] = [
   {
     id: 'observer-error-count',
     collect(record, parameters) {
@@ -278,24 +340,28 @@ const BUILTIN_COLLECTORS = [
   {
     id: 'resource-peak',
     collect(record, parameters) {
-      const values = resourceValues(record, parameters, 'resource-peak parameters');
+      const { field, values } = resourceValues(record, parameters, 'resource-peak parameters');
       return values.length === 0
-        ? unavailable(`资源字段 ${parameters.field} 不可用。`)
-        : available(maximum(values), parameters.field.endsWith('Bytes') ? 'bytes' : 'count');
+        ? unavailable(`资源字段 ${field} 不可用。`)
+        : available(maximum(values), field.endsWith('Bytes') ? 'bytes' : 'count');
     },
   },
   {
     id: 'resource-tail-growth',
     collect(record, parameters) {
-      const values = resourceValues(record, parameters, 'resource-tail-growth parameters');
-      if (values.length < 4) return unavailable(`资源字段 ${parameters.field} 样本不足。`);
+      const { field, values } = resourceValues(
+        record,
+        parameters,
+        'resource-tail-growth parameters',
+      );
+      if (values.length < 4) return unavailable(`资源字段 ${field} 样本不足。`);
       const baselineEnd = Math.max(1, Math.floor(values.length / 2));
       const tailStart = Math.max(baselineEnd, Math.floor(values.length * 0.8));
       const baselinePeak = maximum(values.slice(0, baselineEnd));
       const tailPeak = maximum(values.slice(tailStart));
       return available(
         Math.max(0, tailPeak - baselinePeak),
-        parameters.field.endsWith('Bytes') ? 'bytes' : 'count',
+        field.endsWith('Bytes') ? 'bytes' : 'count',
       );
     },
   },
@@ -311,7 +377,7 @@ const BUILTIN_COLLECTORS = [
         parameters.maximumProcessMemoryBytes,
         'memory-budget-ratio.maximumProcessMemoryBytes',
       );
-      const ratios = [];
+      const ratios: number[] = [];
       for (const sample of record.capture.probe.resources) {
         if (sample.jsHeapBytes !== null) ratios.push(sample.jsHeapBytes / maximumJsHeapBytes);
         if (sample.processMemoryBytes !== null) {
@@ -331,7 +397,7 @@ const BUILTIN_COLLECTORS = [
         MEMORY_BUDGET_PARAMETERS,
         'memory-tail-growth-budget-ratio parameters',
       );
-      const budgets = [
+      const budgets: readonly (readonly [ArenaPerformanceMemoryField, number])[] = [
         ['jsHeapBytes', finitePositive(
           parameters.maximumJsHeapBytes,
           'memory-tail-growth-budget-ratio.maximumJsHeapBytes',
@@ -341,7 +407,7 @@ const BUILTIN_COLLECTORS = [
           'memory-tail-growth-budget-ratio.maximumProcessMemoryBytes',
         )],
       ];
-      const ratios = [];
+      const ratios: number[] = [];
       for (const [field, budget] of budgets) {
         const values = record.capture.probe.resources
           .map((sample) => sample[field])
@@ -366,7 +432,7 @@ const BUILTIN_COLLECTORS = [
       if (!LIFECYCLE_FIELDS.has(field)) {
         throw new RangeError(`lifecycle-counter.field 不受支持：${field}。`);
       }
-      return available(record.capture.lifecycle[field], 'count');
+      return available(record.capture.lifecycle[field as ArenaPerformanceLifecycleField], 'count');
     },
   },
 ];

@@ -41,3 +41,19 @@ export type {
   ArenaPerformanceRecord,
   ArenaPerformanceResourceSample,
 } from './arena-performance-record.js';
+export {
+  ARENA_DEFAULT_PERFORMANCE_METRIC_REGISTRY,
+  ArenaPerformanceMetricCollectorRegistry,
+} from './arena-performance-metric-registry.js';
+export type {
+  ArenaPerformanceMetric,
+  ArenaPerformanceMetricCollector,
+} from './arena-performance-metric-registry.js';
+export {
+  ARENA_PERFORMANCE_REPORT_SCHEMA_VERSION,
+  createArenaPerformanceReport,
+} from './arena-performance-report.js';
+export type {
+  ArenaPerformanceGateReport,
+  ArenaPerformanceReport,
+} from './arena-performance-report.js';
