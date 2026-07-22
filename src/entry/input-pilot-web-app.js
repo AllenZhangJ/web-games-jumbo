@@ -5,7 +5,7 @@ import {
 } from '../arena/presentation/pilot/input-pilot-evidence-bundle.js';
 import { InputPilotFormModel } from '@number-strategy-jump/arena-input-pilot';
 import { InputPilotTrialController } from '../arena/presentation/pilot/input-pilot-trial-controller.js';
-import { InputPilotWorkspaceRepository } from '../arena/presentation/pilot/input-pilot-workspace-repository.js';
+import { InputPilotWorkspaceRepository } from '@number-strategy-jump/arena-input-pilot';
 import { InputPilotPresentationRuntime } from '../arena/presentation/session/input-pilot-presentation-runtime.js';
 import { downloadInputPilotJson } from './input-pilot-json-download.js';
 import { loadInputPilotBuildIdentity } from './input-pilot-build-identity.js';

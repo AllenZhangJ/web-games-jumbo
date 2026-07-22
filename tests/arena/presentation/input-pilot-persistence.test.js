@@ -35,7 +35,7 @@ import {
 import {
   INPUT_PILOT_WORKSPACE_ENVELOPE_SCHEMA_VERSION,
   InputPilotWorkspaceRepository,
-} from '../../../src/arena/presentation/pilot/input-pilot-workspace-repository.js';
+} from '@number-strategy-jump/arena-input-pilot';
 
 function clone(value) {
   return value === undefined ? undefined : JSON.parse(JSON.stringify(value));

@@ -13,3 +13,4 @@ export * from './input-pilot-vocabulary.js';
 export * from './input-pilot-workspace.js';
 export * from './input-pilot-workspace-coordinator.js';
 export * from './input-pilot-workspace-envelope.js';
+export * from './input-pilot-workspace-repository.js';

@@ -14,7 +14,7 @@ import {
   INPUT_PILOT_TRIAL_CONTROLLER_STATE,
   InputPilotTrialController,
 } from '../../../src/arena/presentation/pilot/input-pilot-trial-controller.js';
-import { InputPilotWorkspaceRepository } from '../../../src/arena/presentation/pilot/input-pilot-workspace-repository.js';
+import { InputPilotWorkspaceRepository } from '@number-strategy-jump/arena-input-pilot';
 
 function clone(value) {
   return value === undefined ? undefined : JSON.parse(JSON.stringify(value));

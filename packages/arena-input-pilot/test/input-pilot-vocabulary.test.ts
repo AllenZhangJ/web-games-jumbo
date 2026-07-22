@@ -12,6 +12,7 @@ import {
   InputPilotAssignedMatchService,
   InputPilotEnrollmentLedger,
   InputPilotWorkspaceCoordinator,
+  InputPilotWorkspaceRepository,
   InputPilotRegistry,
   InputPilotFormModel,
   createArenaInputPilotV1Definition,
@@ -464,5 +465,73 @@ describe('Input Pilot strict workspace coordination', () => {
     expect(() => coordinator.destroy()).not.toThrow();
     expect(destroys).toBe(2);
     expect(() => coordinator.getSnapshot()).toThrow(/已销毁/);
+  });
+});
+
+describe('Input Pilot strict workspace repository', () => {
+  it('rejects repository option accessors before acquiring a lease', () => {
+    const definition = createArenaInputPilotV1Definition();
+    let reads = 0;
+    const options = {
+      definition,
+      storage: {},
+      ownerId: 'owner',
+      wallNow: () => 1,
+    };
+    Object.defineProperty(options, 'keyPrefix', {
+      enumerable: true,
+      get() {
+        reads += 1;
+        return 'pilot';
+      },
+    });
+    expect(() => new InputPilotWorkspaceRepository(options)).toThrow(/数据字段/);
+    expect(reads).toBe(0);
+  });
+
+  it('accepts a read-back confirmed slot when slot and head writes throw after mutation', () => {
+    const definition = createArenaInputPilotV1Definition();
+    const values = new Map<string, unknown>();
+    let throwSlot = true;
+    let throwHead = true;
+    const storage = {
+      storageRead(key: string) {
+        return values.has(key)
+          ? { ok: true, found: true, value: values.get(key) }
+          : { ok: true, found: false, value: undefined };
+      },
+      storageWrite(key: string, value: unknown) {
+        values.set(key, value);
+        if (throwSlot && key.endsWith('.slot-a')) {
+          throwSlot = false;
+          throw new Error('slot acknowledgement lost');
+        }
+        if (throwHead && key.endsWith('.head')) {
+          throwHead = false;
+          throw new Error('head acknowledgement lost');
+        }
+        return true;
+      },
+      storageDelete(key: string) {
+        values.delete(key);
+        return true;
+      },
+    };
+    const repository = new InputPilotWorkspaceRepository({
+      definition,
+      storage,
+      ownerId: 'owner',
+      wallNow: () => 1,
+      keyPrefix: 'pilot.readback',
+    });
+    const current = repository.open();
+    const next = advanceInputPilotWorkspace(definition, current, {});
+    expect(repository.compareAndSet(next, 0)).toEqual({
+      committed: true,
+      reason: null,
+      headUpdated: false,
+    });
+    expect(repository.getSnapshot().revision).toBe(1);
+    repository.destroy();
   });
 });
