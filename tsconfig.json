@@ -7,6 +7,7 @@
     { "path": "./packages/arena-device-acceptance" },
     { "path": "./packages/arena-performance-evidence" },
     { "path": "./packages/arena-stage9-evidence-content" },
+    { "path": "./packages/arena-human-match-study-verification" },
     { "path": "./packages/arena-core" },
     { "path": "./packages/arena-definitions" },
     { "path": "./packages/arena-equipment" },
