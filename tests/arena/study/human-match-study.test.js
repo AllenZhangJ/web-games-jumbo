@@ -11,7 +11,7 @@ import {
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { ARENA_V1_BALANCE_DEFINITION } from '../../../src/arena/content/arena-v1-balance.js';
+import { ARENA_V1_BALANCE_DEFINITION } from '@number-strategy-jump/arena-v1-content';
 import { createMatchAssignment } from '@number-strategy-jump/arena-matchmaking';
 import { QuickMatchService } from '../../../src/arena/matchmaking/quick-match-service.js';
 import { createProductMatchResult } from '@number-strategy-jump/arena-product-contracts';

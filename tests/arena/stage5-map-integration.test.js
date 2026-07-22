@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createArenaV1MatchCore } from '../../src/arena/arena-v1-match-core.js';
-import { STAGE5_MAP_ID } from '../../src/arena/content/stage5-map.js';
+import { STAGE5_MAP_ID } from '@number-strategy-jump/arena-v1-content';
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
 import { MAP_DOMAIN_EVENT } from '@number-strategy-jump/arena-map';
 import { ARENA_MAP_EVENT } from '@number-strategy-jump/arena-map';

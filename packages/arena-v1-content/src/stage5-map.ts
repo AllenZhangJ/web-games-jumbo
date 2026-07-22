@@ -11,7 +11,7 @@ export { STAGE5_MAP_ID } from '@number-strategy-jump/arena-definitions';
 
 const TILE_HALF_EXTENTS = Object.freeze({ x: 2, y: 0.5, z: 2 });
 
-function tile(id, x, z) {
+function tile(id: string, x: number, z: number) {
   return Object.freeze({
     id,
     center: Object.freeze({ x, y: -0.5, z }),
@@ -29,7 +29,7 @@ const SURFACE = Object.freeze({
   SOUTH_WEST: 'tile-south-west',
   SOUTH: 'tile-south',
   SOUTH_EAST: 'tile-south-east',
-});
+} as const);
 
 export const STAGE5_ABYSS_ARENA = Object.freeze({
   killY: -5,
@@ -87,7 +87,13 @@ function schedule({
   durationSeconds = 0,
   repeatSeconds = 0,
   repeatCount = 1,
-}) {
+}: Readonly<{
+  startSeconds: number;
+  warningSeconds: number;
+  durationSeconds?: number;
+  repeatSeconds?: number;
+  repeatCount?: number;
+}>) {
   return Object.freeze({
     startTick: startSeconds * ARENA_TICK_RATE,
     warningLeadTicks: warningSeconds * ARENA_TICK_RATE,
@@ -97,7 +103,7 @@ function schedule({
   });
 }
 
-function windEvent(id, startSeconds, impulseX) {
+function windEvent(id: string, startSeconds: number, impulseX: number) {
   return Object.freeze({
     id,
     kind: MAP_EVENT_KIND.WIND_ZONE,
@@ -118,7 +124,7 @@ function windEvent(id, startSeconds, impulseX) {
   });
 }
 
-function collapseEvent(id, startSeconds, surfaceIds) {
+function collapseEvent(id: string, startSeconds: number, surfaceIds: readonly string[]) {
   return Object.freeze({
     id,
     kind: MAP_EVENT_KIND.COLLAPSE_SURFACES,

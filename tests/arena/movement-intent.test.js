@@ -4,7 +4,7 @@ import {
   MOVEMENT_GAIT,
   projectCharacterMovementIntent,
 } from '@number-strategy-jump/arena-movement';
-import { createArenaV1CharacterRegistry } from '../../src/arena/content/arena-v1-characters.js';
+import { createArenaV1CharacterRegistry } from '@number-strategy-jump/arena-v1-content';
 import { ARENA_V1_CHARACTER_ID } from '@number-strategy-jump/arena-definitions';
 
 const definition = createArenaV1CharacterRegistry().require(

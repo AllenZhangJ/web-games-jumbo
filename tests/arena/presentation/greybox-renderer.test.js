@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import * as THREE from 'three';
 import { createArenaV1MatchCore } from '../../../src/arena/arena-v1-match-core.js';
 import { ARENA_V1_CHARACTER_ID } from '@number-strategy-jump/arena-definitions';
-import { ARENA_GAMEPLAY_V2_MAP_ID } from '../../../src/arena/content/arena-gameplay-v2-map.js';
+import { ARENA_GAMEPLAY_V2_MAP_ID } from '@number-strategy-jump/arena-v1-content';
 import {
   ARENA_V1_PRESENTATION_QUALITY_ID,
   ARENA_V1_PRESENTATION_QUALITY_REGISTRY,
@@ -21,7 +21,7 @@ import {
   ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT,
   ARENA_V1_GREYBOX_CONTENT,
 } from '../../../src/arena/presentation/content/arena-gameplay-v2-content.js';
-import { STAGE4_ACTION_ID } from '../../../src/arena/content/stage4-equipment.js';
+import { STAGE4_ACTION_ID } from '@number-strategy-jump/arena-v1-content';
 
 const MATCH_SEED = 6_502;
 const PUBLIC_INFO = Object.freeze({

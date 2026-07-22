@@ -1,4 +1,4 @@
-import { STAGE6_MOVEMENT_ACTION_ID } from '../content/stage6-movement-actions.js';
+import { STAGE6_MOVEMENT_ACTION_ID } from '@number-strategy-jump/arena-v1-content';
 import { assertNonEmptyString, cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 import {
   assertArenaExperimentReplaySeedsPlanned,

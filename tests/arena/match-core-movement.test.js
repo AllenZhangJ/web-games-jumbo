@@ -6,8 +6,8 @@ import { ARENA_MATCH_EVENT } from '@number-strategy-jump/arena-match';
 import {
   STAGE4_ACTION_ID,
   STAGE4_EQUIPMENT_ID,
-} from '../../src/arena/content/stage4-equipment.js';
-import { STAGE6_MOVEMENT_ACTION_ID } from '../../src/arena/content/stage6-movement-actions.js';
+} from '@number-strategy-jump/arena-v1-content';
+import { STAGE6_MOVEMENT_ACTION_ID } from '@number-strategy-jump/arena-v1-content';
 import { MOVEMENT_MODE } from '@number-strategy-jump/arena-movement';
 
 const WIDE_ARENA = Object.freeze({

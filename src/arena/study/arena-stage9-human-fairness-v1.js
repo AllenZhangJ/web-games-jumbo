@@ -1,5 +1,5 @@
 import { BOT_DIFFICULTY_ID, BOT_DIFFICULTY_PROFILES } from '@number-strategy-jump/arena-bot';
-import { ARENA_V1_BALANCE_DEFINITION } from '../content/arena-v1-balance.js';
+import { ARENA_V1_BALANCE_DEFINITION } from '@number-strategy-jump/arena-v1-content';
 import { ARENA_REPLAY_SCHEMA_VERSION } from '@number-strategy-jump/arena-match';
 import {
   HUMAN_MATCH_STUDY_DEFINITION_SCHEMA_VERSION,

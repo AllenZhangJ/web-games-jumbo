@@ -3,9 +3,9 @@ import {
   createMatchContentPublicView,
   createMatchContentSelection,
 } from '@number-strategy-jump/arena-contracts';
-import { ARENA_V1_CHARACTER_DEFINITIONS } from '../../../src/arena/content/arena-v1-characters.js';
-import { ARENA_V1_MAP_DEFINITIONS } from '../../../src/arena/content/arena-v1-maps.js';
-import { STAGE4_EQUIPMENT_DEFINITIONS } from '../../../src/arena/content/stage4-equipment.js';
+import { ARENA_V1_CHARACTER_DEFINITIONS } from '@number-strategy-jump/arena-v1-content';
+import { ARENA_V1_MAP_DEFINITIONS } from '@number-strategy-jump/arena-v1-content';
+import { STAGE4_EQUIPMENT_DEFINITIONS } from '@number-strategy-jump/arena-v1-content';
 
 const characterDefinitionIds = ARENA_V1_CHARACTER_DEFINITIONS.map(({ id }) => id);
 const mapDefinitionIds = ARENA_V1_MAP_DEFINITIONS.map(({ id }) => id);

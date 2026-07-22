@@ -1,6 +1,6 @@
 import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import { ARENA_PHYSICS } from '@number-strategy-jump/arena-match';
-import { createArenaV1MapRegistry } from '../content/arena-v1-maps.js';
+import { createArenaV1MapRegistry } from '@number-strategy-jump/arena-v1-content';
 import {
   createDefaultMapCommandRegistry,
   createDefaultMapEventStrategyRegistry,

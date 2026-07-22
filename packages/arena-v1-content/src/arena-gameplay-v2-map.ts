@@ -9,7 +9,14 @@ import { STAGE4_EQUIPMENT_ID } from './stage4-equipment.js';
 
 export { ARENA_GAMEPLAY_V2_MAP_ID } from '@number-strategy-jump/arena-definitions';
 
-function surface(id, x, z, halfX, halfZ, top = 0) {
+function surface(
+  id: string,
+  x: number,
+  z: number,
+  halfX: number,
+  halfZ: number,
+  top = 0,
+) {
   return Object.freeze({
     id,
     center: Object.freeze({ x, y: top - 0.5, z }),
@@ -31,7 +38,7 @@ const SURFACE = Object.freeze({
   SOUTH_BRIDGE: 'forge-south-bridge',
   SOUTH_YARD: 'forge-south-yard',
   SOUTH_LEDGE: 'forge-south-ledge',
-});
+} as const);
 
 export const ARENA_GAMEPLAY_V2_ARENA = Object.freeze({
   killY: -6,
@@ -84,7 +91,19 @@ const EQUIPMENT_SPAWN_POINTS = Object.freeze([
   }),
 ]);
 
-function schedule({ start, warning, duration = 0, repeat = 0, count = 1 }) {
+function schedule({
+  start,
+  warning,
+  duration = 0,
+  repeat = 0,
+  count = 1,
+}: Readonly<{
+  start: number;
+  warning: number;
+  duration?: number;
+  repeat?: number;
+  count?: number;
+}>) {
   return Object.freeze({
     startTick: start * ARENA_TICK_RATE,
     warningLeadTicks: warning * ARENA_TICK_RATE,

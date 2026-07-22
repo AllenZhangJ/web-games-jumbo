@@ -7,10 +7,10 @@ import {
   STAGE4_ACTION_DEFINITIONS,
   STAGE4_ACTION_ID,
   STAGE4_EQUIPMENT_DEFINITIONS,
-} from '../../content/stage4-equipment.js';
-import { STAGE5_MAP_DEFINITION } from '../../content/stage5-map.js';
-import { ARENA_GAMEPLAY_V2_MAP_DEFINITION } from '../../content/arena-gameplay-v2-map.js';
-import { STAGE6_MOVEMENT_ACTION_ID } from '../../content/stage6-movement-actions.js';
+} from '@number-strategy-jump/arena-v1-content';
+import { STAGE5_MAP_DEFINITION } from '@number-strategy-jump/arena-v1-content';
+import { ARENA_GAMEPLAY_V2_MAP_DEFINITION } from '@number-strategy-jump/arena-v1-content';
+import { STAGE6_MOVEMENT_ACTION_ID } from '@number-strategy-jump/arena-v1-content';
 
 export const ARENA_V1_GREYBOX_CONTENT = createArenaV1PresentationContent({
   mapDefinition: STAGE5_MAP_DEFINITION,

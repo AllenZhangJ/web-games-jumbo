@@ -4,7 +4,7 @@ import { createArenaV1MatchCore } from '../../src/arena/arena-v1-match-core.js';
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
 import { ARENA_MATCH_EVENT } from '@number-strategy-jump/arena-match';
 import { EQUIPMENT_LOCATION_STATE } from '@number-strategy-jump/arena-equipment';
-import { STAGE4_ACTION_ID, STAGE4_EQUIPMENT_ID } from '../../src/arena/content/stage4-equipment.js';
+import { STAGE4_ACTION_ID, STAGE4_EQUIPMENT_ID } from '@number-strategy-jump/arena-v1-content';
 
 const EQUIPMENT_ARENA = Object.freeze({
   killY: -3,

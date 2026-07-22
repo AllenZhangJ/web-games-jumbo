@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ARENA_V1_BALANCE_DEFINITION } from '../../../src/arena/content/arena-v1-balance.js';
+import { ARENA_V1_BALANCE_DEFINITION } from '@number-strategy-jump/arena-v1-content';
 import {
   ARENA_EXPERIMENT_DEFINITION_LEGACY_SCHEMA_VERSION,
   ARENA_EXPERIMENT_DEFINITION_SCHEMA_VERSION,

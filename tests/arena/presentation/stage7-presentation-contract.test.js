@@ -22,8 +22,8 @@ import {
 import {
   ARENA_V1_GREYBOX_CONTENT,
 } from '../../../src/arena/presentation/content/arena-gameplay-v2-content.js';
-import { STAGE4_ACTION_ID } from '../../../src/arena/content/stage4-equipment.js';
-import { STAGE6_MOVEMENT_ACTION_ID } from '../../../src/arena/content/stage6-movement-actions.js';
+import { STAGE4_ACTION_ID } from '@number-strategy-jump/arena-v1-content';
+import { STAGE6_MOVEMENT_ACTION_ID } from '@number-strategy-jump/arena-v1-content';
 
 const CAMERA_MODEL = Object.freeze({
   inputBasis: Object.freeze({

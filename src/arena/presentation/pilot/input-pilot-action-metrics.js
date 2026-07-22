@@ -1,4 +1,4 @@
-import { STAGE6_MOVEMENT_ACTION_ID } from '../../content/stage6-movement-actions.js';
+import { STAGE6_MOVEMENT_ACTION_ID } from '@number-strategy-jump/arena-v1-content';
 import { ARENA_MATCH_EVENT } from '@number-strategy-jump/arena-contracts';
 import { INPUT_PILOT_ACTION_OUTCOME } from './input-pilot-record.js';
 

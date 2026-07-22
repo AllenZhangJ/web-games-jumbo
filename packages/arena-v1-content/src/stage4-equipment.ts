@@ -5,6 +5,7 @@ import {
   ACTION_INPUT_TRIGGER,
   ACTION_LANE,
   createActionDefinition,
+  type ActionDefinition,
 } from '@number-strategy-jump/arena-definitions';
 import { ActionRegistry } from '@number-strategy-jump/arena-definitions';
 import {
@@ -15,9 +16,14 @@ import {
   createEquipmentDefinition,
 } from '@number-strategy-jump/arena-definitions';
 import { EquipmentRegistry } from '@number-strategy-jump/arena-definitions';
-import { cloneFrozenData, cloneFrozenStringSet } from '@number-strategy-jump/arena-contracts';
+import {
+  assertKnownKeys,
+  cloneFrozenData,
+  cloneFrozenStringSet,
+} from '@number-strategy-jump/arena-contracts';
 import { ARENA_GAMEPLAY_V2_TUNING } from '@number-strategy-jump/arena-definitions';
 import { STAGE4_EQUIPMENT_ID } from '@number-strategy-jump/arena-definitions';
+import type { ArenaBasePushConfig } from '@number-strategy-jump/arena-match';
 
 export { STAGE4_EQUIPMENT_ID } from '@number-strategy-jump/arena-definitions';
 
@@ -32,7 +38,7 @@ export const STAGE4_ACTION_ID = Object.freeze({
   CHAIN_AIR_LASH: 'chain-air-lash',
   SHIELD_CHARGE: 'shield-charge',
   SHIELD_AIR_DROP: 'shield-air-drop',
-});
+} as const);
 
 export const STAGE4_INITIAL_EQUIPMENT_SPAWNS = Object.freeze([
   Object.freeze({
@@ -52,7 +58,7 @@ export const STAGE4_INITIAL_EQUIPMENT_SPAWNS = Object.freeze([
   }),
 ]);
 
-function action(value) {
+function action(value: Readonly<Record<string, unknown>>) {
   return createActionDefinition({
     schemaVersion: ACTION_DEFINITION_SCHEMA_VERSION,
     input: {
@@ -66,7 +72,7 @@ function action(value) {
   });
 }
 
-function equipment(value) {
+function equipment(value: Readonly<Record<string, unknown>>) {
   return createEquipmentDefinition({
     schemaVersion: EQUIPMENT_DEFINITION_SCHEMA_VERSION,
     slot: 'primary',
@@ -83,12 +89,17 @@ function equipment(value) {
   });
 }
 
-function configuredTargeting(tuning) {
+type AttackTuning = typeof ATTACK_TUNING[keyof typeof ATTACK_TUNING];
+
+function configuredTargeting(tuning: AttackTuning) {
   const { kind, ...parameters } = tuning.targeting;
   return { kind, parameters };
 }
 
-function aerialAction({ id, tags }) {
+function aerialAction({ id, tags }: Readonly<{
+  id: keyof typeof ATTACK_TUNING;
+  tags: readonly string[];
+}>) {
   const tuning = ATTACK_TUNING[id];
   return action({
     id,
@@ -127,6 +138,13 @@ function aerialAction({ id, tags }) {
     ],
     tags: ['aerial', ...tags],
   });
+}
+
+const SHIELD_TUNING = ATTACK_TUNING[STAGE4_ACTION_ID.SHIELD_CHARGE];
+const SHIELD_GUARD = SHIELD_TUNING.guard;
+const SHIELD_SELF_MOVEMENT = SHIELD_TUNING.selfMovement;
+if (SHIELD_GUARD === null || SHIELD_SELF_MOVEMENT === null) {
+  throw new Error('Shield Charge tuning 必须包含 guard 与 selfMovement。');
 }
 
 export const STAGE4_ACTION_DEFINITIONS = Object.freeze([
@@ -237,10 +255,8 @@ export const STAGE4_ACTION_DEFINITIONS = Object.freeze([
         kind: 'front-guard',
         trigger: ACTION_EFFECT_TRIGGER.ACTION_ACTIVE,
         parameters: {
-          minimumFacingDot: ATTACK_TUNING[STAGE4_ACTION_ID.SHIELD_CHARGE]
-            .guard.minimumFacingDot,
-          impulseMultiplier: ATTACK_TUNING[STAGE4_ACTION_ID.SHIELD_CHARGE]
-            .guard.impulseMultiplier,
+          minimumFacingDot: SHIELD_GUARD.minimumFacingDot,
+          impulseMultiplier: SHIELD_GUARD.impulseMultiplier,
           cancelledEffectKinds: ['pull-to-source'],
         },
       },
@@ -249,8 +265,7 @@ export const STAGE4_ACTION_DEFINITIONS = Object.freeze([
         kind: 'apply-self-impulse',
         trigger: ACTION_EFFECT_TRIGGER.ACTION_STARTED,
         parameters: {
-          horizontalImpulse: ATTACK_TUNING[STAGE4_ACTION_ID.SHIELD_CHARGE]
-            .selfMovement.horizontalImpulse,
+          horizontalImpulse: SHIELD_SELF_MOVEMENT.horizontalImpulse,
         },
       },
       {
@@ -309,7 +324,7 @@ export const STAGE4_EQUIPMENT_DEFINITIONS = Object.freeze([
   }),
 ]);
 
-function createConfiguredActionDefinitions(basePush) {
+function createConfiguredActionDefinitions(basePush: ArenaBasePushConfig | null) {
   if (basePush === null || basePush === undefined) return STAGE4_ACTION_DEFINITIONS;
   return Object.freeze(STAGE4_ACTION_DEFINITIONS.map((definition) => {
     if (definition.id !== STAGE4_ACTION_ID.BASE_PUSH) return definition;
@@ -348,11 +363,27 @@ function createConfiguredActionDefinitions(basePush) {
   }));
 }
 
-export function createStage4ContentRegistries({
-  basePush = null,
-  additionalActionDefinitions = [],
-  equipmentDefinitionIds = null,
-} = {}) {
+interface Stage4ContentRegistryOptions {
+  basePush?: ArenaBasePushConfig | null;
+  additionalActionDefinitions?: readonly ActionDefinition[];
+  equipmentDefinitionIds?: readonly unknown[] | null;
+}
+
+const REGISTRY_OPTION_KEYS = new Set([
+  'basePush',
+  'additionalActionDefinitions',
+  'equipmentDefinitionIds',
+]);
+
+export function createStage4ContentRegistries(value: unknown = {}) {
+  assertKnownKeys(value, REGISTRY_OPTION_KEYS, 'Stage4ContentRegistry options');
+  const options = cloneFrozenData(
+    value as Stage4ContentRegistryOptions,
+    'Stage4ContentRegistry options',
+  );
+  const basePush = options.basePush ?? null;
+  const additionalActionDefinitions = options.additionalActionDefinitions ?? [];
+  const equipmentDefinitionIds = options.equipmentDefinitionIds ?? null;
   if (!Array.isArray(additionalActionDefinitions)) {
     throw new TypeError('additionalActionDefinitions 必须是数组。');
   }

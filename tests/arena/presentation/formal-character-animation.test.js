@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import * as THREE from 'three';
-import { STAGE4_ACTION_ID } from '../../../src/arena/content/stage4-equipment.js';
+import { STAGE4_ACTION_ID } from '@number-strategy-jump/arena-v1-content';
 import {
   ARENA_ANIMATION_SEMANTIC,
   ARENA_ANIMATION_SEMANTIC_IDS,

@@ -7,7 +7,7 @@ import {
   STAGE4_EQUIPMENT_DEFINITIONS,
   STAGE4_EQUIPMENT_ID,
   createStage4ContentRegistries,
-} from '../../src/arena/content/stage4-equipment.js';
+} from '@number-strategy-jump/arena-v1-content';
 import { ARENA_GAMEPLAY_V2_TUNING } from '@number-strategy-jump/arena-definitions';
 import { EquipmentRegistry } from '@number-strategy-jump/arena-definitions';
 import { createArenaMatchConfig } from '@number-strategy-jump/arena-match';

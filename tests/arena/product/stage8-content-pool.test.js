@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createArenaV1MatchCore } from '../../../src/arena/arena-v1-match-core.js';
-import { createArenaV1CharacterRegistry } from '../../../src/arena/content/arena-v1-characters.js';
-import { createArenaV1MapRegistry } from '../../../src/arena/content/arena-v1-maps.js';
+import { createArenaV1CharacterRegistry } from '@number-strategy-jump/arena-v1-content';
+import { createArenaV1MapRegistry } from '@number-strategy-jump/arena-v1-content';
 import {
   createArenaV1SelectedAuthorityRegistries,
 } from '../../../src/arena/composition/arena-v1-content-selection.js';
@@ -10,12 +10,12 @@ import {
   MATCH_CONTENT_SELECTION_SCHEMA_VERSION,
   createMatchContentSelection,
 } from '@number-strategy-jump/arena-contracts';
-import { ARENA_V1_CHARACTER_DEFINITIONS } from '../../../src/arena/content/arena-v1-characters.js';
+import { ARENA_V1_CHARACTER_DEFINITIONS } from '@number-strategy-jump/arena-v1-content';
 import {
   STAGE4_EQUIPMENT_DEFINITIONS,
   STAGE4_EQUIPMENT_ID,
-} from '../../../src/arena/content/stage4-equipment.js';
-import { STAGE5_MAP_ID } from '../../../src/arena/content/stage5-map.js';
+} from '@number-strategy-jump/arena-v1-content';
+import { STAGE5_MAP_ID } from '@number-strategy-jump/arena-v1-content';
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
 import { MAP_EVENT_KIND } from '@number-strategy-jump/arena-map';
 import { QuickMatchService } from '../../../src/arena/matchmaking/quick-match-service.js';

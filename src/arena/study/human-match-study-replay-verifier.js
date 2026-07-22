@@ -2,7 +2,7 @@ import { createDeterministicDataHash } from '@number-strategy-jump/arena-contrac
 import { BotController } from '@number-strategy-jump/arena-bot';
 import { BOT_DIFFICULTY_PROFILES } from '@number-strategy-jump/arena-bot';
 import { createArenaV1MatchCore } from '../arena-v1-match-core.js';
-import { ARENA_V1_BALANCE_DEFINITION } from '../content/arena-v1-balance.js';
+import { ARENA_V1_BALANCE_DEFINITION } from '@number-strategy-jump/arena-v1-content';
 import { createMatchAssignment } from '@number-strategy-jump/arena-matchmaking';
 import {
   createProductMatchResult,

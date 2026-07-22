@@ -7,9 +7,9 @@ import {
 import {
   STAGE4_ACTION_ID,
   createStage4ContentRegistries,
-} from '../content/stage4-equipment.js';
+} from '@number-strategy-jump/arena-v1-content';
 import { assertArenaV1AuthorityContent } from './arena-v1-authority-content.js';
-import { STAGE6_MOVEMENT_ACTION_DEFINITIONS } from '../content/stage6-movement-actions.js';
+import { STAGE6_MOVEMENT_ACTION_DEFINITIONS } from '@number-strategy-jump/arena-v1-content';
 import { createMovementActionEffectHandlers } from '../movement/movement-action-effect-handlers.js';
 import { MovementActionCandidateProvider } from '../movement/movement-action-candidate-provider.js';
 import { EquipmentSystem } from '@number-strategy-jump/arena-equipment';

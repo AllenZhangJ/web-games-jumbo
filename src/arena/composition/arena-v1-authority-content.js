@@ -1,8 +1,8 @@
-import { createArenaV1MapRegistry } from '../content/arena-v1-maps.js';
-import { createArenaV1CharacterRegistry } from '../content/arena-v1-characters.js';
+import { createArenaV1MapRegistry } from '@number-strategy-jump/arena-v1-content';
+import { createArenaV1CharacterRegistry } from '@number-strategy-jump/arena-v1-content';
 import { createCharacterRegistrySnapshot } from '@number-strategy-jump/arena-definitions';
-import { createStage4ContentRegistries } from '../content/stage4-equipment.js';
-import { STAGE6_MOVEMENT_ACTION_DEFINITIONS } from '../content/stage6-movement-actions.js';
+import { createStage4ContentRegistries } from '@number-strategy-jump/arena-v1-content';
+import { STAGE6_MOVEMENT_ACTION_DEFINITIONS } from '@number-strategy-jump/arena-v1-content';
 import { assertKnownKeys } from '@number-strategy-jump/arena-contracts';
 
 const REQUIRED_REGISTRY_METHODS = Object.freeze(['require', 'list']);

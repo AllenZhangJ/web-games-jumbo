@@ -14,7 +14,7 @@ import {
 import {
   STAGE4_ACTION_DEFINITIONS,
   STAGE4_ACTION_ID,
-} from '../../src/arena/content/stage4-equipment.js';
+} from '@number-strategy-jump/arena-v1-content';
 
 const PARTICIPANTS = Object.freeze(['player-1', 'player-2']);
 

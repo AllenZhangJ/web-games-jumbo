@@ -4,9 +4,9 @@ import { createArenaV1MatchCore } from '../../../src/arena/arena-v1-match-core.j
 import {
   STAGE4_ACTION_DEFINITIONS,
   STAGE4_ACTION_ID,
-} from '../../../src/arena/content/stage4-equipment.js';
-import { STAGE6_MOVEMENT_ACTION_ID } from '../../../src/arena/content/stage6-movement-actions.js';
-import { STAGE5_MAP_DEFINITION } from '../../../src/arena/content/stage5-map.js';
+} from '@number-strategy-jump/arena-v1-content';
+import { STAGE6_MOVEMENT_ACTION_ID } from '@number-strategy-jump/arena-v1-content';
+import { STAGE5_MAP_DEFINITION } from '@number-strategy-jump/arena-v1-content';
 import { ARENA_V1_GREYBOX_CONTENT } from '../../../src/arena/presentation/content/arena-gameplay-v2-content.js';
 import {
   createArenaWorldBounds,

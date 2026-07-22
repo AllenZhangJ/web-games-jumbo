@@ -6,7 +6,7 @@ import {
   MovementSystem,
 } from '@number-strategy-jump/arena-movement';
 import { createCharacterDefinition } from '@number-strategy-jump/arena-definitions';
-import { createArenaV1CharacterRegistry } from '../../src/arena/content/arena-v1-characters.js';
+import { createArenaV1CharacterRegistry } from '@number-strategy-jump/arena-v1-content';
 import { ARENA_V1_CHARACTER_ID } from '@number-strategy-jump/arena-definitions';
 
 const baseDefinition = createArenaV1CharacterRegistry().require(

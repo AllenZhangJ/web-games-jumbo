@@ -3,10 +3,10 @@ import { createArenaV1MapSystem } from './composition/arena-v1-map-system.js';
 import { createArenaV1AuthorityContent } from './composition/arena-v1-authority-content.js';
 import { createArenaV1SelectedAuthorityRegistries } from './composition/arena-v1-content-selection.js';
 import { createMatchContentSelection } from '@number-strategy-jump/arena-contracts';
-import { STAGE4_INITIAL_EQUIPMENT_SPAWNS } from './content/stage4-equipment.js';
-import { createArenaV1CharacterRegistry } from './content/arena-v1-characters.js';
-import { createArenaV1MapRegistry } from './content/arena-v1-maps.js';
-import { STAGE5_MAP_ID } from './content/stage5-map.js';
+import { STAGE4_INITIAL_EQUIPMENT_SPAWNS } from '@number-strategy-jump/arena-v1-content';
+import { createArenaV1CharacterRegistry } from '@number-strategy-jump/arena-v1-content';
+import { createArenaV1MapRegistry } from '@number-strategy-jump/arena-v1-content';
+import { STAGE5_MAP_ID } from '@number-strategy-jump/arena-v1-content';
 import {
   STATIC_MAP_ID_PREFIX,
   createStaticMapDefinition,

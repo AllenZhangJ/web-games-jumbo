@@ -19,7 +19,7 @@ import {
   MOVEMENT_MUTATION_KIND,
   createMovementMutation,
 } from '@number-strategy-jump/arena-movement';
-import { createArenaV1CharacterRegistry } from '../../src/arena/content/arena-v1-characters.js';
+import { createArenaV1CharacterRegistry } from '@number-strategy-jump/arena-v1-content';
 import { ARENA_V1_CHARACTER_ID } from '@number-strategy-jump/arena-definitions';
 
 const registry = createArenaV1CharacterRegistry();

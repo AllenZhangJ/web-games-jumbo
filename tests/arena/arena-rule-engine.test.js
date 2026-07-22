@@ -5,7 +5,7 @@ import { createArenaMatchConfig } from '@number-strategy-jump/arena-match';
 import {
   STAGE4_ACTION_ID,
   STAGE4_EQUIPMENT_ID,
-} from '../../src/arena/content/stage4-equipment.js';
+} from '@number-strategy-jump/arena-v1-content';
 
 function createEngine(configOverrides = {}) {
   const config = createArenaMatchConfig({ preparingTicks: 0, ...configOverrides });

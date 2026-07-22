@@ -1,6 +1,6 @@
 import { createArenaV1MatchCore } from '../arena-v1-match-core.js';
-import { STAGE4_ACTION_ID } from '../content/stage4-equipment.js';
-import { STAGE6_MOVEMENT_ACTION_ID } from '../content/stage6-movement-actions.js';
+import { STAGE4_ACTION_ID } from '@number-strategy-jump/arena-v1-content';
+import { STAGE6_MOVEMENT_ACTION_ID } from '@number-strategy-jump/arena-v1-content';
 import {
   ARENA_V1_MOVEMENT_STRESS_DEFAULT_TUNING,
   createArenaV1MovementStressStrategy,

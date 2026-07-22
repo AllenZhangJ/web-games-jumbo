@@ -1,6 +1,6 @@
 import { CharacterRegistry } from '@number-strategy-jump/arena-definitions';
 import { createMatchContentSelection } from '@number-strategy-jump/arena-contracts';
-import { STAGE4_EQUIPMENT_DEFINITIONS } from '../content/stage4-equipment.js';
+import { STAGE4_EQUIPMENT_DEFINITIONS } from '@number-strategy-jump/arena-v1-content';
 import { createMapDefinition } from '@number-strategy-jump/arena-definitions';
 import { MAP_EVENT_KIND } from '@number-strategy-jump/arena-map';
 import { MapRegistry } from '@number-strategy-jump/arena-definitions';

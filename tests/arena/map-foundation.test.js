@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createStage4ContentRegistries } from '../../src/arena/content/stage4-equipment.js';
+import { createStage4ContentRegistries } from '@number-strategy-jump/arena-v1-content';
 import {
   MAP_DOMAIN_EVENT,
   ARENA_MAP_EVENT,

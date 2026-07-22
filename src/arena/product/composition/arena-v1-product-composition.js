@@ -9,7 +9,7 @@ import {
   ARENA_V1_PROGRESSION_REGISTRY,
 } from '@number-strategy-jump/arena-product-v1-content';
 import { QuickMatchService } from '../../matchmaking/quick-match-service.js';
-import { ARENA_V1_BALANCE_DEFINITION } from '../../content/arena-v1-balance.js';
+import { ARENA_V1_BALANCE_DEFINITION } from '@number-strategy-jump/arena-v1-content';
 
 const ARENA_V1_PRODUCT_COMPOSITION_DEFAULTS = Object.freeze({
   quickMatchServiceFactory: (options) => new QuickMatchService(options),

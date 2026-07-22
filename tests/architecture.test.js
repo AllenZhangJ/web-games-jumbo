@@ -557,6 +557,34 @@ test('Arena Product Presentation remains host-free and cannot write match author
   }
 });
 
+test('Arena V1 authority content stays immutable and outside runtime ownership', async () => {
+  const packageDefinition = JSON.parse(await readFile(
+    path.resolve('packages/arena-v1-content/package.json'),
+    'utf8',
+  ));
+  assert.deepEqual(
+    Object.keys(packageDefinition.dependencies).sort(),
+    [
+      '@number-strategy-jump/arena-contracts',
+      '@number-strategy-jump/arena-definitions',
+      '@number-strategy-jump/arena-map',
+      '@number-strategy-jump/arena-match',
+      '@number-strategy-jump/arena-movement',
+    ],
+    'arena-v1-content 只能依赖底层数据、规则常量和 Definition/Registry。',
+  );
+  const files = await listJavaScript(path.resolve('packages/arena-v1-content/src'));
+  assert.equal(files.length, 8);
+  for (const file of files) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /(?:from\s+['"](?:three|node:|[^'"]*(?:core|bot|product|presentation|session|renderer|platform|entry|experiment|study|regression|release|match-core)[^'"]*)['"]|Date\.now|Math\.random|\bperformance\b|setTimeout|setInterval|requestAnimationFrame|\b(?:window|document|navigator)\b|\b(?:tt|wx)\s*\.)/,
+      `${file} 只能发布不可变 Arena V1 权威内容。`,
+    );
+  }
+});
+
 test('Arena V1 presentation content only projects injected authority into readonly frames', async () => {
   const packageDefinition = JSON.parse(await readFile(
     path.resolve('packages/arena-v1-presentation-content/package.json'),

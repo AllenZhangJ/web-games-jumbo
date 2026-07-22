@@ -5,8 +5,13 @@ import {
   ACTION_INPUT_TRIGGER,
   ACTION_LANE,
   createActionDefinition,
+  type ActionInputChannel,
+  type ActionInputTrigger,
 } from '@number-strategy-jump/arena-definitions';
-import { MOVEMENT_COMMAND_KIND } from '@number-strategy-jump/arena-movement';
+import {
+  MOVEMENT_COMMAND_KIND,
+  type MovementCommandKind,
+} from '@number-strategy-jump/arena-movement';
 
 export const STAGE6_MOVEMENT_ACTION_ID = Object.freeze({
   EXPLICIT_GROUND_JUMP: 'movement.explicit-ground-jump',
@@ -18,9 +23,14 @@ export const STAGE6_MOVEMENT_ACTION_ID = Object.freeze({
   CONTEXT_CROUCH_BEGIN: 'movement.context-crouch-begin',
   CONTEXT_CROUCH_RELEASE: 'movement.context-crouch-release',
   DOWN_SMASH: 'movement.down-smash',
-});
+} as const);
 
-function movementAction({ id, channel, trigger, commandKind }) {
+function movementAction({ id, channel, trigger, commandKind }: Readonly<{
+  id: string;
+  channel: ActionInputChannel;
+  trigger: ActionInputTrigger;
+  commandKind: MovementCommandKind;
+}>) {
   return createActionDefinition({
     schemaVersion: ACTION_DEFINITION_SCHEMA_VERSION,
     id,

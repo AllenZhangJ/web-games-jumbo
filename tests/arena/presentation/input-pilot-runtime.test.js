@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ARENA_MATCH_PHASE } from '@number-strategy-jump/arena-match';
-import { STAGE6_MOVEMENT_ACTION_ID } from '../../../src/arena/content/stage6-movement-actions.js';
+import { STAGE6_MOVEMENT_ACTION_ID } from '@number-strategy-jump/arena-v1-content';
 import { ARENA_MATCH_EVENT } from '@number-strategy-jump/arena-contracts';
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
 import { QuickMatchService } from '../../../src/arena/matchmaking/quick-match-service.js';

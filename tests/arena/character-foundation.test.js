@@ -15,7 +15,7 @@ import { PHYSICS_POC_ARENA } from '@number-strategy-jump/arena-match';
 import {
   ARENA_V1_CHARACTER_DEFINITIONS,
   createArenaV1CharacterRegistry,
-} from '../../src/arena/content/arena-v1-characters.js';
+} from '@number-strategy-jump/arena-v1-content';
 import { ARENA_V1_CHARACTER_ID } from '@number-strategy-jump/arena-definitions';
 import {
   ARENA_GAMEPLAY_V2_TUNING,

@@ -1,7 +1,7 @@
 import {
   STAGE4_ACTION_ID,
   STAGE4_EQUIPMENT_ID,
-} from '../content/stage4-equipment.js';
+} from '@number-strategy-jump/arena-v1-content';
 import { assertIntegerAtLeast } from '@number-strategy-jump/arena-contracts';
 import {
   createArenaBotCapabilityGatePolicyDefinition,

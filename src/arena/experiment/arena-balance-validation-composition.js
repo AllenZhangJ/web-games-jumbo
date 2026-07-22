@@ -1,5 +1,5 @@
 import { assertKnownKeys } from '@number-strategy-jump/arena-contracts';
-import { ARENA_V1_BALANCE_DEFINITION } from '../content/arena-v1-balance.js';
+import { ARENA_V1_BALANCE_DEFINITION } from '@number-strategy-jump/arena-v1-content';
 import {
   createArenaBalanceCandidateExperimentDefinition,
   createArenaBalanceCandidateExperimentRegistries,

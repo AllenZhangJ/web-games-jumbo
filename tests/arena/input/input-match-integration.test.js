@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createArenaV1MatchCore } from '../../../src/arena/arena-v1-match-core.js';
-import { STAGE4_ACTION_ID } from '../../../src/arena/content/stage4-equipment.js';
-import { STAGE6_MOVEMENT_ACTION_ID } from '../../../src/arena/content/stage6-movement-actions.js';
+import { STAGE4_ACTION_ID } from '@number-strategy-jump/arena-v1-content';
+import { STAGE6_MOVEMENT_ACTION_ID } from '@number-strategy-jump/arena-v1-content';
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
 import { ARENA_MATCH_EVENT } from '@number-strategy-jump/arena-match';
 import { MOVEMENT_MODE } from '@number-strategy-jump/arena-movement';

@@ -1,5 +1,5 @@
 import { BOT_DIFFICULTY_IDS } from '@number-strategy-jump/arena-bot';
-import { createArenaV1CharacterRegistry } from '../content/arena-v1-characters.js';
+import { createArenaV1CharacterRegistry } from '@number-strategy-jump/arena-v1-content';
 import { assertNonEmptyString, cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 import {
   assertArenaExperimentReplaySeedsPlanned,

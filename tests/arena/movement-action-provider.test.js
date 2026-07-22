@@ -15,11 +15,11 @@ import {
 import {
   STAGE4_ACTION_DEFINITIONS,
   STAGE4_ACTION_ID,
-} from '../../src/arena/content/stage4-equipment.js';
+} from '@number-strategy-jump/arena-v1-content';
 import {
   STAGE6_MOVEMENT_ACTION_DEFINITIONS,
   STAGE6_MOVEMENT_ACTION_ID,
-} from '../../src/arena/content/stage6-movement-actions.js';
+} from '@number-strategy-jump/arena-v1-content';
 import { MovementActionCandidateProvider } from '../../src/arena/movement/movement-action-candidate-provider.js';
 import { createMovementActionEffectHandlers } from '../../src/arena/movement/movement-action-effect-handlers.js';
 import { MOVEMENT_COMMAND_KIND, MOVEMENT_MODE } from '@number-strategy-jump/arena-movement';

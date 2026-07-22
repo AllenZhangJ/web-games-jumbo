@@ -4,7 +4,7 @@ import {
   STAGE4_ACTION_ID,
   STAGE4_EQUIPMENT_ID,
   createStage4ContentRegistries,
-} from '../../src/arena/content/stage4-equipment.js';
+} from '@number-strategy-jump/arena-v1-content';
 import {
   EQUIPMENT_LOCATION_STATE,
   EquipmentPickupResolver,

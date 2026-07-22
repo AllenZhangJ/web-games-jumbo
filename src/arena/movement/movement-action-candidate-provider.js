@@ -1,6 +1,6 @@
 import { ACTION_PRIORITY } from '@number-strategy-jump/arena-core';
 import { MOVEMENT_MODE } from '@number-strategy-jump/arena-movement';
-import { STAGE6_MOVEMENT_ACTION_ID } from '../content/stage6-movement-actions.js';
+import { STAGE6_MOVEMENT_ACTION_ID } from '@number-strategy-jump/arena-v1-content';
 import { assertKnownKeys, assertNonEmptyString } from '@number-strategy-jump/arena-contracts';
 
 const CAPABILITY_KEYS = new Set([

@@ -11,7 +11,7 @@ import {
 
 const CHARACTER_TUNING = ARENA_GAMEPLAY_V2_TUNING.character;
 
-function character(value) {
+function character(value: Readonly<{ id: string }>) {
   return createCharacterDefinition({
     schemaVersion: CHARACTER_DEFINITION_SCHEMA_VERSION,
     collision: {
