@@ -55,7 +55,7 @@
 
 ## 当前不可合并原因
 
-1. 当前 348 个受维护 JavaScript 文件仍在精确允许清单中，上层输入/内容/Canvas/性能证据、Platform 和 Arena V1 应用注入适配尚未完成 strict TypeScript workspace 迁移或退役分类。
+1. 当前 343 个受维护 JavaScript 文件仍在精确允许清单中，上层输入采样/手势/原始控制、内容/Canvas/性能证据、Platform 和 Arena V1 应用注入适配尚未完成 strict TypeScript workspace 迁移或退役分类。
 2. Vitest 当前保护底层合同包和治理门禁；Arena 其余测试尚待按 workspace 迁移并建立正式 coverage 阈值与零 JS 门禁。
 3. 正式资产最终审批与完整安全/依赖长期治理尚未闭环。
 4. 文档仍含迁移前阶段性叙述，尚未完成 G9 全量链接、状态与命令归真。
@@ -804,3 +804,13 @@
 - 黄金 Replay manifest 保持 `0dace228`。输入 fuzz 共 120 场、120 个唯一 final hash、6 次 Replay 复验，耗时 `38987.166667 ms`，未产生 reproduction case；正式资产预算结果保持 `82a8b378`。Presentation Session soak 完成 100 场、耗时 `882.5181670000001 ms`、堆增长 `2914000 B`；完整 Product Presentation Session soak 完成 100 场、100 个唯一 authority hash、耗时 `70443.453042 ms`、堆增长 `6929096 B`。两者均低于 8 MiB，帧、生命周期监听、Canvas 监听和输入绑定残留为零。
 - clean build ID 为 `arena-a116aa9f516e-product`，Web/微信/抖音 delivery 为 `3747176 / 3788791 / 3788766 B`，三端 `sourceDirty=false`、默认入口均为 Product、预算通过且 `freezeEligible=true`；生产产物边界检查通过。Web 主业务 chunk 为 `771.75 kB`（gzip `196.47 kB`），Three chunk 为 `631.82 kB`（gzip `161.92 kB`），继续列入 G6 拆包与目标设备 trace，不能通过降低分辨率、抗锯齿、动作或关节规避。
 - 本批没有新增浏览器或手机交互结论，不冒充 iPhone 13 Pro/iOS 26/Chrome 真机证据，也没有改变 Gameplay V2 配置 hash `8c322912`、任意距离攻击挥空、攻击/击退/动作/武器/移动/跳跃/画质/关节、Bot、权威 tick、Replay/Profile schema 或正式资产。G5 的核心 Product 表现所有权根已迁移，但上层仍有输入、Canvas、具体内容投影、性能/验收证据和旧 Stage 6 表现文件需要逐项迁移或证明退役；因此 G5 仍未完成，当前不可合并。
+
+## G5.19 生产输入语义映射迁移与挥空攻击不变量证据
+
+- 三套生产 `InputMapper`、统一 mapper contract、工厂和手势方向枚举已迁入 strict `@number-strategy-jump/arena-presentation-runtime`；生产组合、Pilot、fuzz 与测试统一从包公开 API 消费。五个旧 JavaScript 真值删除，精确允许清单由 348 降至 343；上层 `GestureRecognizer` 只复用包内方向真值，不再维护重复枚举。
+- mapper ID、方向、原始控制、手势、动作可用性与语义输出均有显式只读类型。context、raw control、vector、edge、gesture 和 affordance 只读取自有数据字段，拒绝 Symbol、未知字段、访问器、非法方向、非有限/超单位向量、矛盾结束边沿和 tick/participantId 漂移；回调只取得冻结快照，映射输出再次精确校验并冻结。
+- `explicit-combat-jump-v1` 的攻击意图只取决于独立攻击按钮边沿与按住状态，不读取敌人、距离或命中可用性；因此空场和任意距离都能起手挥空，攻击与跳跃可同 tick 独立成立。命中目标、范围、击退和伤害仍由权威 Rule/Core 在 active window 裁决，表现层没有取得写权限。
+- 新增 3 项 strict 边界测试，覆盖空场攻击、context/affordance getter 零执行、未知字段、不可变语义结果和单位向量上限；输入定向 19 项及 30/60/120Hz 外层调度确定性通过。代码提交 `a5c00567267a6f6cbfba255e39f32a7125fc8bda` 的完整门禁通过：666/666 Node、221/221 strict package/治理、104/104 生命周期；生产依赖审计为 0 vulnerabilities。
+- 黄金 Replay manifest 保持 `0dace228`。输入 fuzz 共 120 场、120 个唯一 final hash、6 次 Replay 复验，耗时 `41896.052792 ms`，未产生 reproduction case；正式资产预算结果保持 `82a8b378`。Presentation Session soak 完成 100 场、耗时 `692.025292 ms`、堆增长 `2479112 B`；完整 Product Presentation Session soak 完成 100 场、100 个唯一 authority hash、耗时 `53157.837417 ms`、堆增长 `6981000 B`。两者均低于 8 MiB，帧、生命周期监听、Canvas 监听和输入绑定残留为零。
+- clean build ID 为 `arena-a5c00567267a-product`，Web/微信/抖音 delivery 为 `3750606 / 3792237 / 3792212 B`，三端 `sourceDirty=false`、默认入口均为 Product、预算通过且 `freezeEligible=true`；生产产物边界检查通过。Web 主业务 chunk 为 `775.18 kB`（gzip `197.82 kB`），Three chunk 为 `631.82 kB`（gzip `161.92 kB`），继续列入 G6 拆包和目标设备 trace，不通过降低画质、分辨率、动作或关节规避。
+- 本批没有新增浏览器或手机交互结论，不冒充 iPhone 13 Pro/iOS 26/Chrome 真机证据，也没有改变 Gameplay V2 配置 hash `8c322912`、攻击/命中/击退数值、动作与武器差异、hit-stop、移动/跳跃、画质、关节、Bot、权威 tick、Replay/Profile schema 或正式资产。下一批按热路径所有权迁移 `RawControlState`、`GestureRecognizer` 与 `InputSampler`，统一校验和快照责任并审计每 tick 分配，再迁移 Pointer/Canvas 适配；G5 仍未完成，当前不可合并。
