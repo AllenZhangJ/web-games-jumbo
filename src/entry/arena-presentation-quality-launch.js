@@ -2,7 +2,7 @@ import {
   ARENA_V1_DEFAULT_PRESENTATION_QUALITY,
   ARENA_V1_PRESENTATION_QUALITY_ID,
   resolveArenaV1PresentationQuality,
-} from '../arena/presentation/quality/arena-v1-presentation-quality.js';
+} from '@number-strategy-jump/arena-presentation-runtime';
 
 const TOKEN_TO_ID = Object.freeze({
   high: ARENA_V1_PRESENTATION_QUALITY_ID.HIGH,

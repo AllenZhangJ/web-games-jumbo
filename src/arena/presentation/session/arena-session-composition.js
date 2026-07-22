@@ -7,10 +7,12 @@ import { createArenaInputMapper } from '../input/create-arena-input-mapper.js';
 import { ARENA_INPUT_MAPPER_ID } from '../input/input-mapper-contract.js';
 import { InputSampler } from '../input/input-sampler.js';
 import { PointerInputAdapter } from '../input/pointer-input-adapter.js';
-import { PresentationEventWindow } from '../events/presentation-event-window.js';
+import {
+  FixedTickAccumulator,
+  PresentationEventWindow,
+  PresentationFrameLoop,
+} from '@number-strategy-jump/arena-presentation-runtime';
 import { ArenaGreyboxRenderer } from '../three/arena-greybox-renderer.js';
-import { FixedTickAccumulator } from './fixed-tick-accumulator.js';
-import { PresentationFrameLoop } from './presentation-frame-loop.js';
 
 const OPTION_KEYS = new Set([
   'mapperId',

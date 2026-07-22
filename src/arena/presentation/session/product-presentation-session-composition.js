@@ -11,13 +11,11 @@ import { ProductInputRouter } from '../product/product-input-router.js';
 import { ProductPresentationFlow } from '../product/product-presentation-flow.js';
 import {
   ARENA_V1_DEFAULT_PRESENTATION_QUALITY,
-} from '../quality/arena-v1-presentation-quality.js';
-import {
+  FixedTickAccumulator,
+  PresentationFrameLoop,
+  PresentationRenderPacer,
   createPresentationQualityDefinition,
-} from '../quality/presentation-quality-definition.js';
-import { PresentationRenderPacer } from '../quality/presentation-render-pacer.js';
-import { FixedTickAccumulator } from './fixed-tick-accumulator.js';
-import { PresentationFrameLoop } from './presentation-frame-loop.js';
+} from '@number-strategy-jump/arena-presentation-runtime';
 
 const OPTION_KEYS = new Set([
   'mapperId',

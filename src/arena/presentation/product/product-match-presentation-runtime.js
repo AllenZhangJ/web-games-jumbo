@@ -8,7 +8,7 @@ import {
 } from '@number-strategy-jump/arena-product-contracts';
 import { PRODUCT_SESSION_STATE } from '@number-strategy-jump/arena-product-state';
 import { ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT } from '../content/arena-gameplay-v2-content.js';
-import { PresentationEventWindow } from '../events/presentation-event-window.js';
+import { PresentationEventWindow } from '@number-strategy-jump/arena-presentation-runtime';
 import { projectArenaPresentationFrame } from '../projection/arena-frame-projector.js';
 
 export const PRODUCT_MATCH_PRESENTATION_RUNTIME_STATE = Object.freeze({

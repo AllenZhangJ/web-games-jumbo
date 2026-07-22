@@ -7,7 +7,7 @@ import {
   createArenaWorldBounds,
   createOrthographicArenaCamera,
 } from '../../../src/arena/presentation/camera/orthographic-arena-camera.js';
-import { PresentationEventWindow } from '../../../src/arena/presentation/events/presentation-event-window.js';
+import { PresentationEventWindow } from '@number-strategy-jump/arena-presentation-runtime';
 import { projectArenaPresentationFrame } from '../../../src/arena/presentation/projection/arena-frame-projector.js';
 
 const PUBLIC_INFO = Object.freeze({

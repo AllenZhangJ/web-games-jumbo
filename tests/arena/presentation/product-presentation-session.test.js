@@ -6,7 +6,7 @@ import { ProductPresentationFlow } from '../../../src/arena/presentation/product
 import {
   ARENA_V1_PRESENTATION_QUALITY_ID,
   ARENA_V1_PRESENTATION_QUALITY_REGISTRY,
-} from '../../../src/arena/presentation/quality/arena-v1-presentation-quality.js';
+} from '@number-strategy-jump/arena-presentation-runtime';
 import {
   PRODUCT_PRESENTATION_SESSION_STATE,
   ProductPresentationSession,

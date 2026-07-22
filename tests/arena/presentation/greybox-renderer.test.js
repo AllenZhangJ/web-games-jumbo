@@ -5,11 +5,11 @@ import * as THREE from 'three';
 import { createArenaV1MatchCore } from '../../../src/arena/arena-v1-match-core.js';
 import { ARENA_V1_CHARACTER_ID } from '@number-strategy-jump/arena-definitions';
 import { ARENA_GAMEPLAY_V2_MAP_ID } from '../../../src/arena/content/arena-gameplay-v2-map.js';
-import { PresentationEventWindow } from '../../../src/arena/presentation/events/presentation-event-window.js';
 import {
   ARENA_V1_PRESENTATION_QUALITY_ID,
   ARENA_V1_PRESENTATION_QUALITY_REGISTRY,
-} from '../../../src/arena/presentation/quality/arena-v1-presentation-quality.js';
+  PresentationEventWindow,
+} from '@number-strategy-jump/arena-presentation-runtime';
 import { projectArenaPresentationFrame } from '../../../src/arena/presentation/projection/arena-frame-projector.js';
 import {
   ArenaGreyboxRenderer,

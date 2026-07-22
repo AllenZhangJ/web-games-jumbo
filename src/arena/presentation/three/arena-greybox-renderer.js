@@ -1,10 +1,8 @@
 import * as THREE from 'three';
 import {
   ARENA_V1_DEFAULT_PRESENTATION_QUALITY,
-} from '../quality/arena-v1-presentation-quality.js';
-import {
   createPresentationQualityDefinition,
-} from '../quality/presentation-quality-definition.js';
+} from '@number-strategy-jump/arena-presentation-runtime';
 import { ArenaImpactAudio } from '../audio/arena-impact-audio.js';
 import { ArenaHudLayer } from './arena-hud-layer.js';
 import { ARENA_GREYBOX_COLOR } from './greybox-style.js';

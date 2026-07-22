@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ARENA_V1_PRESENTATION_QUALITY_ID,
-} from '../../../src/arena/presentation/quality/arena-v1-presentation-quality.js';
+} from '@number-strategy-jump/arena-presentation-runtime';
 import {
   resolveArenaPresentationQualityForLaunch,
 } from '../../../src/entry/arena-presentation-quality-launch.js';

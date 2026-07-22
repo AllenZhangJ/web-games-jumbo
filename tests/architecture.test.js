@@ -421,6 +421,31 @@ test('Arena Presentation contracts have one host-free dependency and no authorit
   }
 });
 
+test('Arena Presentation runtime owns only host-free pacing and event lifecycles', async () => {
+  const runtimePackage = JSON.parse(await readFile(
+    path.resolve('packages/arena-presentation-runtime/package.json'),
+    'utf8',
+  ));
+  assert.deepEqual(
+    Object.keys(runtimePackage.dependencies).sort(),
+    [
+      '@number-strategy-jump/arena-contracts',
+      '@number-strategy-jump/arena-match',
+    ],
+    'arena-presentation-runtime 只能依赖底层数据合同与公开 tick 配置。',
+  );
+  const files = await listJavaScript(path.resolve('packages/arena-presentation-runtime/src'));
+  assert.ok(files.length >= 7);
+  for (const file of files) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /(?:from\s+['"](?:three|node:|[^'"]*(?:core|bot|product|session|renderer|platform|entry)[^'"]*)['"]|Date\.now|Math\.random|\bperformance\b|setTimeout|setInterval|requestAnimationFrame|(?<![-/])\b(?:window|document|navigator)\s*[.[]|\b(?:tt|wx)\s*\.)/,
+      `${file} 只能拥有注入调度、事件窗口和表现节拍。`,
+    );
+  }
+});
+
 test('Arena Stage 8 product orchestration remains host-free and outside match authority', async () => {
   const directories = [
     'src/arena/product',

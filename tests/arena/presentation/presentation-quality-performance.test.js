@@ -4,17 +4,11 @@ import {
   ARENA_V1_DEFAULT_PRESENTATION_QUALITY,
   ARENA_V1_PRESENTATION_QUALITY_ID,
   ARENA_V1_PRESENTATION_QUALITY_REGISTRY,
-} from '../../../src/arena/presentation/quality/arena-v1-presentation-quality.js';
-import {
   PRESENTATION_QUALITY_DEFINITION_SCHEMA_VERSION,
-  createPresentationQualityDefinition,
-} from '../../../src/arena/presentation/quality/presentation-quality-definition.js';
-import {
-  createPresentationQualityRegistry,
-} from '../../../src/arena/presentation/quality/presentation-quality-registry.js';
-import {
   PresentationRenderPacer,
-} from '../../../src/arena/presentation/quality/presentation-render-pacer.js';
+  createPresentationQualityDefinition,
+  createPresentationQualityRegistry,
+} from '@number-strategy-jump/arena-presentation-runtime';
 import {
   PresentationPerformanceProbe,
 } from '../../../src/arena/presentation/performance/presentation-performance-probe.js';

@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { FixedTickAccumulator } from '../../../src/arena/presentation/session/fixed-tick-accumulator.js';
-import { PresentationFrameLoop } from '../../../src/arena/presentation/session/presentation-frame-loop.js';
+import {
+  FixedTickAccumulator,
+  PresentationFrameLoop,
+} from '@number-strategy-jump/arena-presentation-runtime';
 
 function schedulerHarness() {
   let nextToken = 1;
