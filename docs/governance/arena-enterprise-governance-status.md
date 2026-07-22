@@ -33,7 +33,7 @@
 | G3 Rule/Core/Replay | 已完成 | strict TS `arena-core`、`arena-movement`、`arena-physics`、`arena-equipment`、`arena-map` 与 `arena-match` 已承接规则/移动/物理/装备、完整地图权威链、比赛配置、Participant/Timeline 唯一写入者、角色 Runtime/物理投影、状态 hash、完整 MatchCore 编排、fixed-step Runtime 与 Replay；strict `arena-v1-content` 集中发布具体动作、装备、角色、地图、移动动作与平衡 Definition；黄金语料保持 `0dace228` |
 | G4 Bot/Product/Persistence | 已完成 | strict TS Bot、Matchmaking、Quick Match、Local Match Session、Product State、Progression、ProductMatchResult、奖励事务、Profile Service/Repository、Storage Lease、Product Match、Product Session Controller、对称内容池、Arena V1 产品内容与通用 Product Composition 已闭环；Arena V1 薄应用注入适配器留待 G6/G7 清零 |
 | G5 Presentation/资产/反馈 | 已完成 | strict `arena-presentation-contracts`、`arena-presentation-runtime`、`arena-v1-presentation-content`、`arena-product-presentation`、`arena-presentation-three` 与 `arena-product-presentation-three` 已承接通用合同、输入/反馈/生命周期、具体 V1 表现、Product 表现所有权和 Three Surface；设备/性能证据合同已归入独立 strict 包；共享对局资源取得/回滚原语完成 strict 迁移。剩余 Stage 6/Product Session 组合是 G6 应用/宿主根，Pilot 是 G7 测试/研究链，不再伪装为 G5 通用表现缺口 |
-| G6 Platform/入口/构建 | 进行中 | 三端默认入口是 Product；宿主运行实例 ID 已进入零依赖 strict 平台运行时包，Stage 6/Product Session、Arena V1 应用注入、其余 Platform 与 Entry 宿主根待迁移，并继续证明生产交付和开发/研究入口彻底隔离 |
+| G6 Platform/入口/构建 | 进行中 | 三端默认入口是 Product；宿主运行实例 ID、启动失败兜底与 Web teardown 已进入零依赖 strict 平台运行时包，Stage 6/Product Session、Arena V1 应用注入、其余 Platform 与 Entry 宿主根待迁移，并继续证明生产交付和开发/研究入口彻底隔离 |
 | G7 零 JS/完整质量门 | 未开始 | ESLint、strict TypeScript、Vitest 和 JavaScript 精确递减门禁已作为迁移护栏运行；coverage 阈值、测试归包和零 JS 尚未完成 |
 | G8 资产/安全/所有权 | 未开始 | CODEOWNERS、CI 安全与正式资产最终批准待补齐 |
 | G9 文档归真 | 未开始 | README 首标题和大量章节仍以数值跳台 v3 为产品真值 |
@@ -55,7 +55,7 @@
 
 ## 当前不可合并原因
 
-1. 当前 300 个受维护 JavaScript 文件仍在精确允许清单中；G6 尚需迁移其余 Platform、Entry、Stage 6/Product Session 和 Arena V1 应用注入宿主根，G7 尚需迁移 Pilot/Study/Release/其他测试与验收链并建立零 JS 门禁。
+1. 当前 297 个受维护 JavaScript 文件仍在精确允许清单中；G6 尚需迁移其余 Platform、Entry、Stage 6/Product Session 和 Arena V1 应用注入宿主根，G7 尚需迁移 Pilot/Study/Release/其他测试与验收链并建立零 JS 门禁。
 2. Vitest 当前保护底层合同包和治理门禁；Arena 其余测试尚待按 workspace 迁移并建立正式 coverage 阈值与零 JS 门禁。
 3. 正式资产最终审批与完整安全/依赖长期治理尚未闭环。
 4. 文档仍含迁移前阶段性叙述，尚未完成 G9 全量链接、状态与命令归真。
@@ -1014,3 +1014,14 @@
 - 代码提交为 `e5836763639744d3eba6c28378bb0bf53742eb62`，clean build ID 为 `arena-e58367636397-product`。Web/微信/抖音 delivery 为 `3766704 / 3816561 / 3816536 B`，JavaScript 为 `1423094 / 1488465 / 1488465 B`；三端 `sourceDirty=false`、默认入口均为 Product、预算通过且 `freezeEligible=true`，生产产物边界检查通过。相对 G5.30e 的增加来自新 strict 平台边界及其同步失败关闭逻辑，没有降低画质、分辨率、抗锯齿、动作或关节。
 - 本地真实浏览器已走通首页、选择“发条方块”、确认选择、开始匹配和唯一 1v1 Canvas；Canvas buffer 为 `1084×1440`、CSS 为 `542×720`，控制台仅有 Vite 连接 debug、无 warning/error。该证据只证明桌面 Web 组合可用，不新增或冒充 Allen 的 iPhone 13 Pro、iOS 26、Chrome 真机验收，也不新增微信/抖音设备证据。
 - 本批没有改变 Gameplay V2 配置 hash `8c322912`、任意距离挥空、攻击/命中/击退、动作/武器、移动/跳跃、Bot、权威 tick、Replay/Profile schema 或正式资产字节。G6 仍需治理 Stage 6/Product Session、Arena V1 应用注入、Platform 与 Entry 的其余宿主根；G7-G10 亦未完成，当前不可合并。
+
+## G6.32 宿主启动兜底与 Web teardown strict 迁移证据
+
+- 小游戏启动失败提示、Web 可访问错误面板和 `pagehide`/HMR teardown 已从三个 Entry 私有 JavaScript 真值迁入零依赖 strict `@number-strategy-jump/arena-platform-runtime`；Web、微信、抖音的 Product/灰盒入口及 Pilot/Study 入口统一消费包 API，旧文件删除，精确允许清单由 300 降至 297。Web teardown 现在显式注入 `stopLaunchedGame`，平台包不反向依赖 Entry 或具体游戏组合。
+- 所有宿主方法按描述符快照，访问器方法、Proxy 异常和异步 thenable 不得伪装为同步能力；真实 Promise 拒绝会被消费，不产生未处理拒绝。小游戏 modal 不可用或异步时安全降级 toast；Web 错误面板只保留一个 `role=alert` 实例，以 `textContent` 写入错误详情并在恢复时同时移除面板与 Canvas `aria-hidden`，不使用 HTML 注入。
+- Web teardown 在绑定前验证完整 add/remove 能力，HMR 替换先完成旧 listener 清理；绑定后无法持有状态会回滚 listener。remove 失败不丢失 listener/状态所有权，可由同一 cleanup 精确重试；状态槽访问器不执行、外部替换会失败关闭，bfcache `persisted=true` 不终止游戏，宿主生命周期回调中的 stop 异常或异步回执不会逃逸为浏览器未处理错误。
+- 新增 7 项 strict 回归，覆盖异步 modal 降级、单一 Web 错误面板、bfcache/HMR、清理失败重试、状态持有回滚、访问器零执行与架构依赖；原 8 项 Entry 集成回归继续通过。完整门禁为 677/677 Node、276/276 strict package/治理、104/104 生命周期；黄金 Replay manifest 保持 `0dace228`，生产依赖审计为 0 vulnerabilities，正式资产预算结果保持 `82a8b378`。
+- 输入 fuzz 完成 120 场、120 个唯一 final hash 与 6 次 Replay 复验，耗时 `33073.705333 ms`，无 reproduction case。Presentation Session soak 完成 100 场，耗时 `553.573375 ms`、堆增长 `2649224 B`；Product Presentation Session soak 完成 100 场、100 个唯一 authority hash，耗时 `50208.384917 ms`、堆增长 `6989504 B`。两者均低于 8 MiB，帧、生命周期监听、Canvas 监听和输入绑定残留为零；这些本机脚本结果不外推为手机帧率、功耗或温度。
+- 代码提交为 `1bd7be320852268a178f1212beec4ab55f9af547`，clean build ID 为 `arena-1bd7be320852-product`。Web/微信/抖音 delivery 为 `3768864 / 3816937 / 3816912 B`，JavaScript 为 `1425254 / 1488841 / 1488841 B`；三端 `sourceDirty=false`、默认入口均为 Product、预算通过且 `freezeEligible=true`，生产产物边界检查通过。增加的字节是同步宿主能力验证、失败回滚和清理所有权状态，不涉及画质降级。
+- 本地真实浏览器已走通首页、“开始匹配”和唯一 1v1 Canvas；Canvas buffer 为 `1084×1440`、CSS 为 `542×720`，启动错误面板数量为 0，控制台仅有 Vite 连接 debug、无 warning/error。该证据只证明桌面 Web 组合可用，不新增或冒充 Allen 的 iPhone 13 Pro、iOS 26、Chrome 真机验收，也不新增微信/抖音设备证据。
+- 本批没有改变 Gameplay V2 配置 hash `8c322912`、任意距离挥空、攻击/命中/击退、动作/武器、移动/跳跃、分辨率、抗锯齿、关节、Bot、权威 tick、Replay/Profile schema 或正式资产字节。`launchGame` 的启动协调和销毁所有权仍是下一 Entry 治理批次；G6-G10 尚未完成，当前不可合并。
