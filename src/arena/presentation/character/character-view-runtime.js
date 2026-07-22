@@ -1,5 +1,7 @@
-import { resolveAnimationBinding } from '../animation/animation-binding-resolver.js';
-import { AnimationSemanticResolver } from '../animation/animation-semantic-resolver.js';
+import {
+  AnimationSemanticResolver,
+  resolveAnimationBinding,
+} from '@number-strategy-jump/arena-presentation-contracts';
 import { SixSectorDirectionResolver } from '../direction/six-sector-direction-resolver.js';
 
 export const CHARACTER_VIEW_RUNTIME_STATE = Object.freeze({

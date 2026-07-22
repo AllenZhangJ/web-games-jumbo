@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ARENA_ANIMATION_SEMANTIC } from '../animation/animation-semantics.js';
+import { ARENA_ANIMATION_SEMANTIC } from '@number-strategy-jump/arena-presentation-contracts';
 
 const BASE_FADE_SECONDS = Object.freeze({
   [ARENA_ANIMATION_SEMANTIC.HITSTUN]: 0.035,

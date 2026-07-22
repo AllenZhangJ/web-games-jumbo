@@ -1,4 +1,4 @@
-import { assertPresentationAssetRegistry } from './presentation-asset-registry.js';
+import { assertPresentationAssetRegistry } from '@number-strategy-jump/arena-presentation-contracts';
 
 export const PRESENTATION_ASSET_LOAD_STATE = Object.freeze({
   CREATED: 'created',

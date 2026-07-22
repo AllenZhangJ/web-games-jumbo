@@ -7,23 +7,19 @@ import {
 import { STAGE5_MAP_DEFINITION } from '../../content/stage5-map.js';
 import { STAGE6_MOVEMENT_ACTION_ID } from '../../content/stage6-movement-actions.js';
 import {
-  ARENA_ANIMATION_ACTION_CATEGORY,
-  ARENA_ANIMATION_SEMANTIC_IDS,
-  ARENA_ANIMATION_SOURCE_KIND,
-} from '../animation/animation-semantics.js';
-import {
-  PRESENTATION_ASSET_DEFINITION_SCHEMA_VERSION,
-  PRESENTATION_ASSET_KIND,
-} from '../assets/presentation-asset-definition.js';
-import { ARENA_PRESENTATION_ASSET_PROVIDER_ID } from '../assets/presentation-asset-provider-ids.js';
-import { PresentationAssetRegistry } from '../assets/presentation-asset-registry.js';
-import {
   CHARACTER_PRESENTATION_DEFINITION_SCHEMA_VERSION,
   CHARACTER_PRESENTATION_DIRECTION_STRATEGY,
   CHARACTER_PRESENTATION_FRONT_AXIS,
   CHARACTER_PRESENTATION_SLOT_ID,
-} from './character-presentation-definition.js';
-import { CharacterPresentationRegistry } from './character-presentation-registry.js';
+  ARENA_ANIMATION_ACTION_CATEGORY,
+  ARENA_ANIMATION_SEMANTIC_IDS,
+  ARENA_ANIMATION_SOURCE_KIND,
+  CharacterPresentationRegistry,
+  PRESENTATION_ASSET_DEFINITION_SCHEMA_VERSION,
+  PRESENTATION_ASSET_KIND,
+  PresentationAssetRegistry,
+} from '@number-strategy-jump/arena-presentation-contracts';
+import { ARENA_PRESENTATION_ASSET_PROVIDER_ID } from '../assets/presentation-asset-provider-ids.js';
 
 function freezeVector3(value) {
   return Object.freeze({ x: value.x, y: value.y, z: value.z });

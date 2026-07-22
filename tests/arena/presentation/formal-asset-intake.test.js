@@ -21,13 +21,11 @@ import {
 import {
   PRESENTATION_ASSET_DEFINITION_SCHEMA_VERSION,
   PRESENTATION_ASSET_KIND,
-} from '../../../src/arena/presentation/assets/presentation-asset-definition.js';
+  PresentationAssetRegistry,
+} from '@number-strategy-jump/arena-presentation-contracts';
 import {
   ARENA_PRESENTATION_ASSET_PROVIDER_ID,
 } from '../../../src/arena/presentation/assets/presentation-asset-provider-ids.js';
-import {
-  PresentationAssetRegistry,
-} from '../../../src/arena/presentation/assets/presentation-asset-registry.js';
 import {
   verifyArenaFormalAssetIntake,
 } from '../../../scripts/lib/arena-formal-asset-intake-verifier.mjs';

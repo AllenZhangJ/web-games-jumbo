@@ -1,7 +1,7 @@
 import {
   CHARACTER_PRESENTATION_DIRECTION_STRATEGY,
   CHARACTER_PRESENTATION_FRONT_AXIS,
-} from '../content/character-presentation-definition.js';
+} from '@number-strategy-jump/arena-presentation-contracts';
 
 export const SIX_SECTOR_DIRECTION_ID = Object.freeze({
   BACK: 'back',

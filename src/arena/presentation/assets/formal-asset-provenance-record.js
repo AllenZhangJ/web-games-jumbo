@@ -10,7 +10,7 @@ import {
   assertEvidenceUtcInstant,
 } from '../../evidence/evidence-value-contract.js';
 import { createFormalAssetIntakePolicy } from './formal-asset-intake-policy.js';
-import { assertPresentationAssetRegistry } from './presentation-asset-registry.js';
+import { assertPresentationAssetRegistry } from '@number-strategy-jump/arena-presentation-contracts';
 
 export const FORMAL_ASSET_PROVENANCE_RECORD_SCHEMA_VERSION = 1;
 

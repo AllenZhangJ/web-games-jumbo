@@ -1,5 +1,5 @@
 import { CharacterViewRuntime } from '../character/character-view-runtime.js';
-import { assertCharacterPresentationRegistry } from '../content/character-presentation-registry.js';
+import { assertCharacterPresentationRegistry } from '@number-strategy-jump/arena-presentation-contracts';
 
 export class CharacterViewRegistry {
   #root;

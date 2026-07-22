@@ -14,7 +14,7 @@ import {
 import {
   createFormalAssetProvenanceRecord,
 } from './formal-asset-provenance-record.js';
-import { PresentationAssetRegistry } from './presentation-asset-registry.js';
+import { PresentationAssetRegistry } from '@number-strategy-jump/arena-presentation-contracts';
 
 export const FORMAL_ASSET_INTAKE_BUNDLE_SCHEMA_VERSION = 1;
 

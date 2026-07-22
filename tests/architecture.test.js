@@ -385,12 +385,9 @@ test('Arena Stage 7 contracts remain host-free behind an injected Three view fac
     'src/arena/presentation/animation',
     'src/arena/presentation/assets',
     'src/arena/presentation/character',
+    'packages/arena-presentation-contracts/src',
   ].map((directory) => path.resolve(directory));
   const files = (await Promise.all(directories.map(listJavaScript))).flat();
-  files.push(
-    path.resolve('src/arena/presentation/content/character-presentation-definition.js'),
-    path.resolve('src/arena/presentation/content/character-presentation-registry.js'),
-  );
   assert.ok(files.length > 5);
   for (const file of files) {
     const source = await readFile(file, 'utf8');
@@ -398,6 +395,28 @@ test('Arena Stage 7 contracts remain host-free behind an injected Three view fac
       source,
       /(?:from\s+['"](?:three|node:|[^'"]*(?:renderer|session|platform|entry|match-core)[^'"]*)['"]|Date\.now|Math\.random|\bperformance\b|requestAnimationFrame|\b(?:window|document|navigator)\b|\b(?:tt|wx)\s*\.)/,
       `${file} 应保持为可无渲染测试的 Stage 7 合同层。`,
+    );
+  }
+});
+
+test('Arena Presentation contracts have one host-free dependency and no authority imports', async () => {
+  const presentationPackage = JSON.parse(await readFile(
+    path.resolve('packages/arena-presentation-contracts/package.json'),
+    'utf8',
+  ));
+  assert.deepEqual(
+    Object.keys(presentationPackage.dependencies).sort(),
+    ['@number-strategy-jump/arena-contracts'],
+    'arena-presentation-contracts 只能依赖底层不可变数据合同。',
+  );
+  const files = await listJavaScript(path.resolve('packages/arena-presentation-contracts/src'));
+  assert.ok(files.length >= 7);
+  for (const file of files) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /(?:from\s+['"](?:three|node:|[^'"]*(?:core|match|bot|session|renderer|platform|entry)[^'"]*)['"]|Date\.now|Math\.random|\bperformance\b|setTimeout|setInterval|requestAnimationFrame|\b(?:window|document|navigator)\b|\b(?:tt|wx)\s*\.)/,
+      `${file} 只能描述只读表现数据和确定性语义。`,
     );
   }
 });

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import {
   ARENA_ANIMATION_SEMANTIC,
   ARENA_ANIMATION_SEMANTIC_IDS,
-} from '../animation/animation-semantics.js';
+} from '@number-strategy-jump/arena-presentation-contracts';
 import { disposeThreeObject } from './dispose-three-resources.js';
 import { ARENA_GREYBOX_COLOR } from './greybox-style.js';
 import { createProgrammaticEquipment } from './programmatic-equipment.js';

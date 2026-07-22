@@ -172,15 +172,18 @@ export class ArenaPresentationSession {
 
   #bindCanvasEvent(type, callback) {
     const canvas = this.#assertStartedResource(this.#canvas, 'canvas');
-    if (typeof canvas.addEventListener !== 'function') {
-      throw new TypeError(`Arena Canvas 缺少 ${type} 事件能力。`);
+    if (
+      typeof canvas.addEventListener !== 'function'
+      || typeof canvas.removeEventListener !== 'function'
+    ) {
+      throw new TypeError(`Arena Canvas 缺少完整的 ${type} 事件绑定/清理能力。`);
     }
     canvas.addEventListener(type, callback, false);
     let active = true;
     return () => {
       if (!active) return;
+      canvas.removeEventListener(type, callback, false);
       active = false;
-      canvas.removeEventListener?.(type, callback, false);
     };
   }
 

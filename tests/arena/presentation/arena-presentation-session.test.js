@@ -5,7 +5,7 @@ import {
   ArenaPresentationSession,
 } from '../../../src/arena/presentation/session/arena-presentation-session.js';
 
-function platformHarness({ failBinding = null } = {}) {
+function platformHarness({ failBinding = null, failCanvasCleanupOnce = false } = {}) {
   let nextFrameToken = 1;
   const frames = new Map();
   const lifecycle = {
@@ -14,6 +14,7 @@ function platformHarness({ failBinding = null } = {}) {
     show: new Set(),
   };
   const canvasListeners = new Map();
+  let canvasCleanupAttempts = 0;
   let input = null;
   let now = 0;
   const canvas = {
@@ -30,6 +31,10 @@ function platformHarness({ failBinding = null } = {}) {
       listeners.add(callback);
     },
     removeEventListener(type, callback) {
+      canvasCleanupAttempts += 1;
+      if (failCanvasCleanupOnce && canvasCleanupAttempts === 1) {
+        throw new Error('canvas cleanup failed once');
+      }
       canvasListeners.get(type)?.delete(callback);
     },
   };
@@ -84,6 +89,7 @@ function platformHarness({ failBinding = null } = {}) {
     activeCanvasCount() {
       return [...canvasListeners.values()].reduce((sum, values) => sum + values.size, 0);
     },
+    get canvasCleanupAttempts() { return canvasCleanupAttempts; },
   };
 }
 
@@ -289,6 +295,25 @@ test('ArenaPresentationSession rolls back partial lifecycle binding failure', as
   assert.equal(renderer.disposed, true);
   session.destroy();
   assert.equal(session.state, ARENA_PRESENTATION_SESSION_STATE.DESTROYED);
+});
+
+test('ArenaPresentationSession retains Canvas cleanup ownership until retry succeeds', async () => {
+  const harness = platformHarness({ failCanvasCleanupOnce: true });
+  const renderer = rendererHarness();
+  const session = new ArenaPresentationSession(harness.platform, sessionOptions(renderer));
+  await session.start();
+  assert.throws(() => session.destroy(), /清理未完整完成/);
+  assert.equal(session.state, ARENA_PRESENTATION_SESSION_STATE.DESTROYED);
+  assert.equal(session.getDebugSnapshot().cleanupIncomplete, true);
+  assert.equal(session.getDebugSnapshot().bindingCount, 1);
+  assert.equal(harness.activeCanvasCount(), 1);
+  assert.equal(harness.canvasCleanupAttempts, 2);
+
+  session.destroy();
+  assert.equal(session.getDebugSnapshot().cleanupIncomplete, false);
+  assert.equal(session.getDebugSnapshot().bindingCount, 0);
+  assert.equal(harness.activeCanvasCount(), 0);
+  assert.equal(harness.canvasCleanupAttempts, 3);
 });
 
 test('ArenaPresentationSession defers destroy requested from inside Renderer.render', async () => {

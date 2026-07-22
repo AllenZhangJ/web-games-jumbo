@@ -315,8 +315,11 @@ export class ProductPresentationSession {
   }
 
   #bindCanvasEvent(type, callback) {
-    if (typeof this.#canvas?.addEventListener !== 'function') {
-      throw new TypeError(`Product Canvas 缺少 ${type} 事件能力。`);
+    if (
+      typeof this.#canvas?.addEventListener !== 'function'
+      || typeof this.#canvas?.removeEventListener !== 'function'
+    ) {
+      throw new TypeError(`Product Canvas 缺少完整的 ${type} 事件绑定/清理能力。`);
     }
     this.#canvas.addEventListener(type, callback, false);
     let active = true;
@@ -325,7 +328,7 @@ export class ProductPresentationSession {
       if (this.#canvas === null) {
         throw new Error(`Product Canvas ${type} 清理时 Canvas 已丢失。`);
       }
-      this.#canvas.removeEventListener?.(type, callback, false);
+      this.#canvas.removeEventListener(type, callback, false);
       active = false;
     };
   }

@@ -2,18 +2,14 @@ import { ARENA_V1_CHARACTER_ID } from '@number-strategy-jump/arena-definitions';
 import {
   ARENA_ANIMATION_SEMANTIC_IDS,
   ARENA_ANIMATION_SOURCE_KIND,
-} from '../animation/animation-semantics.js';
-import {
+  CHARACTER_PRESENTATION_SLOT_ID,
+  CharacterPresentationRegistry,
   PRESENTATION_ASSET_DEFINITION_SCHEMA_VERSION,
   PRESENTATION_ASSET_KIND,
-} from '../assets/presentation-asset-definition.js';
-import { ARENA_PRESENTATION_ASSET_PROVIDER_ID } from '../assets/presentation-asset-provider-ids.js';
-import { PresentationAssetRegistry } from '../assets/presentation-asset-registry.js';
-import {
-  CHARACTER_PRESENTATION_SLOT_ID,
+  PresentationAssetRegistry,
   createCharacterPresentationDefinition,
-} from './character-presentation-definition.js';
-import { CharacterPresentationRegistry } from './character-presentation-registry.js';
+} from '@number-strategy-jump/arena-presentation-contracts';
+import { ARENA_PRESENTATION_ASSET_PROVIDER_ID } from '../assets/presentation-asset-provider-ids.js';
 
 export const ARENA_GAMEPLAY_V2_ASSET_ID = Object.freeze({
   PARKOUR_APPRENTICE: 'arena.asset.character.parkour-apprentice.kaykit-rogue.v1',

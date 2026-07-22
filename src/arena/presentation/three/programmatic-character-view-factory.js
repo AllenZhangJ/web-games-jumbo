@@ -1,7 +1,7 @@
 import {
   PRESENTATION_ASSET_KIND,
-} from '../assets/presentation-asset-definition.js';
-import { assertPresentationAssetRegistry } from '../assets/presentation-asset-registry.js';
+  assertPresentationAssetRegistry,
+} from '@number-strategy-jump/arena-presentation-contracts';
 import { ARENA_PRESENTATION_ASSET_PROVIDER_ID } from '../assets/presentation-asset-provider-ids.js';
 import { ProgrammaticCharacterView } from './programmatic-character-view.js';
 

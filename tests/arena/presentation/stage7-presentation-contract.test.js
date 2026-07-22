@@ -4,19 +4,15 @@ import {
   ARENA_ANIMATION_ACTION_CATEGORY,
   ARENA_ANIMATION_SEMANTIC,
   ARENA_ANIMATION_SEMANTIC_IDS,
-} from '../../../src/arena/presentation/animation/animation-semantics.js';
-import { resolveAnimationBinding } from '../../../src/arena/presentation/animation/animation-binding-resolver.js';
-import { AnimationSemanticResolver } from '../../../src/arena/presentation/animation/animation-semantic-resolver.js';
+  AnimationSemanticResolver,
+  CharacterPresentationRegistry,
+  createCharacterPresentationDefinition,
+  resolveAnimationBinding,
+} from '@number-strategy-jump/arena-presentation-contracts';
 import {
   PRESENTATION_ASSET_LOAD_STATE,
   PresentationAssetLoadTask,
 } from '../../../src/arena/presentation/assets/presentation-asset-load-task.js';
-import {
-  createCharacterPresentationDefinition,
-} from '../../../src/arena/presentation/content/character-presentation-definition.js';
-import {
-  CharacterPresentationRegistry,
-} from '../../../src/arena/presentation/content/character-presentation-registry.js';
 import {
   ARENA_V1_GREYBOX_CONTENT,
 } from '../../../src/arena/presentation/content/arena-v1-greybox-content.js';

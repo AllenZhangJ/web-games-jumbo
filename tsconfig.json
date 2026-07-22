@@ -11,6 +11,7 @@
     { "path": "./packages/arena-matchmaking" },
     { "path": "./packages/arena-movement" },
     { "path": "./packages/arena-physics" },
+    { "path": "./packages/arena-presentation-contracts" },
     { "path": "./packages/arena-product-contracts" },
     { "path": "./packages/arena-product-content" },
     { "path": "./packages/arena-product-composition" },

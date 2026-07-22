@@ -1,5 +1,5 @@
 import { PresentationAssetLoadTask } from '../assets/presentation-asset-load-task.js';
-import { assertPresentationAssetRegistry } from '../assets/presentation-asset-registry.js';
+import { assertPresentationAssetRegistry } from '@number-strategy-jump/arena-presentation-contracts';
 import { ARENA_PRESENTATION_ASSET_PROVIDER_ID } from '../assets/presentation-asset-provider-ids.js';
 import { GltfCharacterView } from './gltf-character-view.js';
 import { GltfPresentationAssetLoader } from './gltf-presentation-asset-loader.js';

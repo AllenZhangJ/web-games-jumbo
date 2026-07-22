@@ -2,7 +2,7 @@ import { createDeterministicDataHash } from '@number-strategy-jump/arena-contrac
 import { ARENA_V1_CHARACTER_ID } from '@number-strategy-jump/arena-definitions';
 import {
   ARENA_ANIMATION_SEMANTIC_IDS,
-} from '../arena/presentation/animation/animation-semantics.js';
+} from '@number-strategy-jump/arena-presentation-contracts';
 import {
   ARENA_INPUT_PILOT_V1_ID,
   createArenaInputPilotV1Definition,
