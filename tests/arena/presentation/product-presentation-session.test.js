@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { PRODUCT_SESSION_STATE } from '@number-strategy-jump/arena-product-state';
-import { PRODUCT_INPUT_ROUTER_MODE } from '../../../src/arena/presentation/product/product-input-router.js';
+import { PRODUCT_INPUT_ROUTER_MODE } from '@number-strategy-jump/arena-product-presentation';
 import { ProductPresentationFlow } from '../../../src/arena/presentation/product/product-presentation-flow.js';
 import {
   ARENA_V1_PRESENTATION_QUALITY_ID,

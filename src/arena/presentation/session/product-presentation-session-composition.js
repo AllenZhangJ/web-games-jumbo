@@ -7,7 +7,7 @@ import { ARENA_INPUT_MAPPER_ID } from '../input/input-mapper-contract.js';
 import { InputSampler } from '../input/input-sampler.js';
 import { PointerInputAdapter } from '../input/pointer-input-adapter.js';
 import { PresentationPerformanceProbe } from '../performance/presentation-performance-probe.js';
-import { ProductInputRouter } from '../product/product-input-router.js';
+import { ProductInputRouter } from '@number-strategy-jump/arena-product-presentation';
 import { ProductPresentationFlow } from '../product/product-presentation-flow.js';
 import {
   ARENA_V1_DEFAULT_PRESENTATION_QUALITY,

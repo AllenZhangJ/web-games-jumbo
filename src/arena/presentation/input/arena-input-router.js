@@ -1,4 +1,4 @@
-import { clonePoint, cloneViewport } from './input-validation.js';
+import { clonePoint, cloneViewport } from '@number-strategy-jump/arena-presentation-runtime';
 
 export const ARENA_INPUT_ROUTER_MODE = Object.freeze({
   INACTIVE: 'inactive',

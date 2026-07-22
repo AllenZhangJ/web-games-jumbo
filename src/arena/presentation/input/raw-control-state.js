@@ -9,7 +9,7 @@ import {
   clonePoint,
   cloneViewport,
   nextRevision,
-} from './input-validation.js';
+} from '@number-strategy-jump/arena-presentation-runtime';
 
 const CONTROL_IDS = Object.freeze(Object.values(ARENA_CONTROL_ID));
 

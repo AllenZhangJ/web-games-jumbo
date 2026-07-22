@@ -2,7 +2,7 @@ import {
   cloneKnownRecord,
   finiteNumber,
   integerAtLeast,
-} from './input-validation.js';
+} from '@number-strategy-jump/arena-presentation-runtime';
 
 export const ARENA_INPUT_MAPPER_ID = Object.freeze({
   GESTURE_MOBILITY: 'gesture-mobility-a',

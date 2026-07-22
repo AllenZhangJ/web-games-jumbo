@@ -2,7 +2,7 @@ import { normalizeInputFrame } from '@number-strategy-jump/arena-contracts';
 import {
   cloneKnownRecord,
   integerAtLeast,
-} from './input-validation.js';
+} from '@number-strategy-jump/arena-presentation-runtime';
 
 const KEY_CONFIG_KEYS = new Set([
   'moveLeft',

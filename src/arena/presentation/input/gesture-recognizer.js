@@ -2,7 +2,7 @@ import {
   cloneKnownRecord,
   finiteNumber,
   integerAtLeast,
-} from './input-validation.js';
+} from '@number-strategy-jump/arena-presentation-runtime';
 
 export const GESTURE_DIRECTION = Object.freeze({
   UP: 'up',

@@ -447,6 +447,33 @@ test('Arena Presentation runtime owns only host-free pacing and event lifecycles
   }
 });
 
+test('Arena Product Presentation remains host-free and cannot write match authority', async () => {
+  const packageDefinition = JSON.parse(await readFile(
+    path.resolve('packages/arena-product-presentation/package.json'),
+    'utf8',
+  ));
+  assert.deepEqual(
+    Object.keys(packageDefinition.dependencies).sort(),
+    [
+      '@number-strategy-jump/arena-contracts',
+      '@number-strategy-jump/arena-presentation-contracts',
+      '@number-strategy-jump/arena-presentation-runtime',
+      '@number-strategy-jump/arena-product-state',
+    ],
+    'arena-product-presentation 只能依赖已治理的表现与产品公开状态合同。',
+  );
+  const files = await listJavaScript(path.resolve('packages/arena-product-presentation/src'));
+  assert.ok(files.length >= 3);
+  for (const file of files) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /(?:from\s+['"](?:three|node:|[^'"]*(?:core|bot|match-core|renderer|platform|entry)[^'"]*)['"]|Date\.now|Math\.random|\bperformance\b|setTimeout|setInterval|requestAnimationFrame|\b(?:window|document|navigator)\b|\b(?:tt|wx)\s*\.)/,
+      `${file} 只能编排只读产品表现、输入路由和公开 Product 状态。`,
+    );
+  }
+});
+
 test('Arena Stage 8 product orchestration remains host-free and outside match authority', async () => {
   const directories = [
     'src/arena/product',

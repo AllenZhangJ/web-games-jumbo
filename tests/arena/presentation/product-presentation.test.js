@@ -26,7 +26,7 @@ import {
   ProductMessageCatalog,
 } from '../../../src/arena/presentation/product/product-message-catalog.js';
 import { ProductScreenRegistry } from '../../../src/arena/presentation/product/product-screen-registry.js';
-import { ProductSessionIntentDispatcher } from '../../../src/arena/presentation/product/product-session-intent-dispatcher.js';
+import { ProductSessionIntentDispatcher } from '@number-strategy-jump/arena-product-presentation';
 import {
   PRODUCT_MATCH_PRESENTATION_RUNTIME_STATE,
   ProductMatchPresentationRuntime,
@@ -34,7 +34,7 @@ import {
 import {
   PRODUCT_INPUT_ROUTER_MODE,
   ProductInputRouter,
-} from '../../../src/arena/presentation/product/product-input-router.js';
+} from '@number-strategy-jump/arena-product-presentation';
 import {
   PRODUCT_PRESENTATION_FLOW_STATE,
   ProductPresentationFlow,

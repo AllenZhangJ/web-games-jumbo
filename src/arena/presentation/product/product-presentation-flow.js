@@ -15,7 +15,7 @@ import { ARENA_V1_PRODUCT_PRESENTATION_CONTENT } from './arena-v1-product-presen
 import {
   ProductMatchPresentationRuntime,
 } from './product-match-presentation-runtime.js';
-import { ProductSessionIntentDispatcher } from './product-session-intent-dispatcher.js';
+import { ProductSessionIntentDispatcher } from '@number-strategy-jump/arena-product-presentation';
 import { createProductSessionViewModel } from './product-session-view-model.js';
 export { PRODUCT_PRESENTATION_FLOW_STATE } from '@number-strategy-jump/arena-presentation-contracts';
 

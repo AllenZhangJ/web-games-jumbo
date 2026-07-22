@@ -1,0 +1,21 @@
+{
+  "name": "@number-strategy-jump/arena-product-presentation",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "dependencies": {
+    "@number-strategy-jump/arena-contracts": "0.1.0",
+    "@number-strategy-jump/arena-presentation-contracts": "0.1.0",
+    "@number-strategy-jump/arena-presentation-runtime": "0.1.0",
+    "@number-strategy-jump/arena-product-state": "0.1.0"
+  }
+}
