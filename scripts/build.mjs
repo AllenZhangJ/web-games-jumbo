@@ -159,7 +159,7 @@ await buildWeb();
 await Promise.all([
   buildMiniGame(
     'douyin',
-    'src/entry/douyin.js',
+    'src/entry/douyin.ts',
     { deviceOrientation: 'portrait', showStatusBar: false },
     {
       appid: '',
@@ -169,7 +169,7 @@ await Promise.all([
   ),
   buildMiniGame(
     'wechat',
-    'src/entry/wechat.js',
+    'src/entry/wechat.ts',
     { deviceOrientation: 'portrait', showStatusBar: false },
     {
       appid: '',

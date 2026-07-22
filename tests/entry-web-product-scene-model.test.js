@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   WEB_PRODUCT_ASSET,
   createWebProductSceneModel,
-} from '../src/entry/web-product-scene-model.js';
+} from '../src/entry/web-product-scene-model.ts';
 
 function viewModel(overrides = {}) {
   return {

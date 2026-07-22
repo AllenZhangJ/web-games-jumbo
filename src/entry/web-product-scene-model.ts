@@ -1,4 +1,9 @@
-import { createProductUiSceneModel } from '@number-strategy-jump/arena-product-presentation';
+import {
+  createProductUiSceneModel,
+  type ProductSessionViewModel,
+  type ProductUiSceneCharacterCard,
+  type ProductUiSceneModel,
+} from '@number-strategy-jump/arena-product-presentation';
 
 const ASSET_BASE = './assets/arena-product';
 
@@ -8,23 +13,39 @@ export const WEB_PRODUCT_ASSET = Object.freeze({
   WIND_UP_CUBE: `${ASSET_BASE}/windup-cube-v1.webp`,
 });
 
-const CHARACTER_ASSET_BY_ID = Object.freeze({
+const CHARACTER_ASSET_BY_ID: Readonly<Record<string, string>> = Object.freeze({
   'parkour-apprentice': WEB_PRODUCT_ASSET.PARKOUR_APPRENTICE,
   'wind-up-cube': WEB_PRODUCT_ASSET.WIND_UP_CUBE,
 });
 
-function characterAsset(characterDefinitionId) {
+export interface WebProductCharacterCard extends ProductUiSceneCharacterCard {
+  readonly asset: string;
+}
+
+export interface WebProductSceneModel extends Omit<ProductUiSceneModel, 'characterCards'> {
+  readonly selectedCharacterName: string;
+  readonly selectedCharacterAsset: string;
+  readonly opponentPortraitAsset: string;
+  readonly lobbyAsset: string;
+  readonly characterCards: readonly WebProductCharacterCard[];
+  readonly unlockName: string;
+  readonly unlockAsset: string;
+}
+
+function characterAsset(characterDefinitionId: string): string {
   return CHARACTER_ASSET_BY_ID[characterDefinitionId] ?? WEB_PRODUCT_ASSET.PARKOUR_APPRENTICE;
 }
 
-function characterCards(model) {
+function characterCards(model: ProductUiSceneModel): readonly WebProductCharacterCard[] {
   return Object.freeze(model.characterCards.map((card) => Object.freeze({
     ...card,
     asset: characterAsset(card.id),
   })));
 }
 
-export function createWebProductSceneModel(viewModel) {
+export function createWebProductSceneModel(
+  viewModel: ProductSessionViewModel,
+): WebProductSceneModel {
   const model = createProductUiSceneModel(viewModel);
   const unlockAsset = model.unlock?.id
     ? characterAsset(model.unlock.id)
@@ -40,5 +61,5 @@ export function createWebProductSceneModel(viewModel) {
     characterCards: characterCards(model),
     unlockName: model.unlock?.name ?? '',
     unlockAsset,
-  });
+  }) as WebProductSceneModel;
 }

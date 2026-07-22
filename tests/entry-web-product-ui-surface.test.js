@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   WEB_PRODUCT_UI_SURFACE_STATE,
   WebProductUiSurface,
-} from '../src/entry/web-product-ui-surface.js';
+} from '../src/entry/web-product-ui-surface.ts';
 
 class FakeElement {
   constructor(tagName, id = '') {
@@ -272,4 +272,31 @@ test('WebProductUiSurface rejects an incomplete host before taking event ownersh
   const surface = new WebProductUiSurface({ root, canvas });
   await assert.rejects(() => surface.load(), /缺少 #product-title/);
   assert.equal(root.listeners.size, 0);
+});
+
+test('WebProductUiSurface rejects option and intent accessors without execution or ownership', async () => {
+  const { root, canvas } = domHarness();
+  let reads = 0;
+  const constructorOptions = Object.defineProperty({ root }, 'canvas', {
+    enumerable: true,
+    get() {
+      reads += 1;
+      return canvas;
+    },
+  });
+  assert.throws(() => new WebProductUiSurface(constructorOptions), /访问器/);
+
+  const surface = new WebProductUiSurface({ root, canvas });
+  await surface.load();
+  const bindingOptions = Object.defineProperty({}, 'onIntent', {
+    enumerable: true,
+    get() {
+      reads += 1;
+      return () => {};
+    },
+  });
+  assert.throws(() => surface.bindIntent(bindingOptions), /访问器/);
+  assert.equal(reads, 0);
+  assert.equal(root.listeners.size, 0);
+  surface.dispose();
 });

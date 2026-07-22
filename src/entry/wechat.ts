@@ -7,8 +7,8 @@ import {
 
 void launchGame(() => createWeChatPlatform(), {
   createGame: createCanvasArenaProductGame,
-  onError: (error) => {
+  onError: (error: unknown) => {
     console.error('微信小游戏产品流程启动失败', error);
-    showMiniGameStartupError(globalThis.wx, '游戏启动失败');
+    showMiniGameStartupError((globalThis as { wx?: unknown }).wx, '游戏启动失败');
   },
 });

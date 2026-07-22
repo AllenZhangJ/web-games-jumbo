@@ -9,7 +9,7 @@ import {
 import {
   resolveArenaPresentationQualityForLaunch,
 } from '@number-strategy-jump/arena-v1-application-launch';
-import { WebProductUiSurface } from './web-product-ui-surface.js';
+import { WebProductUiSurface } from './web-product-ui-surface.ts';
 import {
   createWebResearchPageOwnerId,
 } from './web-research-environment.js';

@@ -47,8 +47,8 @@ test('mini-game platform and entries do not depend on browser DOM globals', asyn
     'packages/arena-platform-runtime/src/mini-game-platform.ts',
     'packages/arena-platform-runtime/src/douyin-platform.ts',
     'packages/arena-platform-runtime/src/wechat-platform.ts',
-    'src/entry/douyin.js',
-    'src/entry/wechat.js',
+    'src/entry/douyin.ts',
+    'src/entry/wechat.ts',
     'src/entry/douyin-greybox.js',
     'src/entry/wechat-greybox.js',
   ];
@@ -83,7 +83,7 @@ test('Three.js can be bundled as a mini-game IIFE', async () => {
 });
 
 test('mini-game entries bundle without importing the web platform', async () => {
-  for (const entryPoint of ['src/entry/douyin.js', 'src/entry/wechat.js']) {
+  for (const entryPoint of ['src/entry/douyin.ts', 'src/entry/wechat.ts']) {
     const result = await esbuild({
       entryPoints: [path.resolve(entryPoint)],
       bundle: true,
