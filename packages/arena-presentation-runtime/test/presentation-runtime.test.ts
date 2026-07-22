@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   ARENA_CONTROL_ID,
+  ArenaImpactAudio,
   ARENA_V1_PRESENTATION_QUALITY_REGISTRY,
   ARENA_V1_PRESENTATION_QUALITY_ID,
   controlAtPoint,
@@ -23,6 +24,109 @@ import {
 } from '@number-strategy-jump/arena-presentation-contracts';
 
 describe('Arena Presentation runtime boundaries', () => {
+  it('snapshots optional audio callbacks and rejects option accessors without executing them', () => {
+    let reads = 0;
+    const accessorOptions = {};
+    Object.defineProperty(accessorOptions, 'createAudio', {
+      enumerable: true,
+      get() { reads += 1; return () => null; },
+    });
+    expect(() => new ArenaImpactAudio(accessorOptions)).toThrow(/createAudio.*数据字段/);
+    expect(reads).toBe(0);
+
+    let originalPlays = 0;
+    let replacementPlays = 0;
+    const voice = {
+      src: '', volume: 0, currentTime: 1,
+      play() { originalPlays += 1; return Promise.resolve(); },
+      pause() {},
+      destroy() {},
+    };
+    const audio = new ArenaImpactAudio({
+      createAudio: () => voice,
+      sourceByAction: { test: './assets/test.ogg' },
+      voicesPerAction: 1,
+    });
+    audio.load();
+    voice.play = () => { replacementPlays += 1; return Promise.resolve(); };
+    expect(audio.play('test')).toBe(true);
+    expect([originalPlays, replacementPlays]).toEqual([1, 0]);
+    audio.dispose();
+  });
+
+  it('retains an incompletely initialized audio voice for cleanup retry', () => {
+    let destroyAttempts = 0;
+    const voice = {
+      src: '',
+      set volume(_value: number) { throw new Error('volume rejected'); },
+      pause() {},
+      destroy() {
+        destroyAttempts += 1;
+        if (destroyAttempts === 1) throw new Error('transient rejected voice cleanup');
+      },
+    };
+    const audio = new ArenaImpactAudio({
+      createAudio: () => voice,
+      sourceByAction: { test: './assets/test.ogg' },
+      voicesPerAction: 1,
+    });
+    audio.load();
+    expect(audio.getDebugSnapshot()).toMatchObject({ pendingCleanupCount: 1 });
+    audio.dispose();
+    expect(destroyAttempts).toBe(2);
+  });
+
+  it('retries only the incomplete audio cleanup step', () => {
+    let pauses = 0;
+    let sourceRemovals = 0;
+    let destroys = 0;
+    const audio = new ArenaImpactAudio({
+      createAudio: () => ({
+        src: '', volume: 0,
+        pause() { pauses += 1; },
+        removeAttribute() { sourceRemovals += 1; },
+        destroy() {
+          destroys += 1;
+          if (destroys === 1) throw new Error('transient audio destroy');
+        },
+      }),
+      sourceByAction: { test: './assets/test.ogg' },
+      voicesPerAction: 1,
+    });
+    audio.load();
+    expect(() => audio.dispose()).toThrow(/清理未完整完成/);
+    expect([pauses, sourceRemovals, destroys]).toEqual([1, 1, 1]);
+    audio.dispose();
+    audio.dispose();
+    expect([pauses, sourceRemovals, destroys]).toEqual([1, 1, 2]);
+  });
+
+  it('disables only optional audio when a host callback swallows reentry', () => {
+    let attempted = false;
+    const voice = {
+      src: '', volume: 0,
+      pause() {},
+      play() {
+        if (!attempted) {
+          attempted = true;
+          try { audio.play('test'); } catch { /* hostile host swallows reentry */ }
+        }
+        return Promise.resolve();
+      },
+      destroy() {},
+    };
+    const audio = new ArenaImpactAudio({
+      createAudio: () => voice,
+      sourceByAction: { test: './assets/test.ogg' },
+      voicesPerAction: 1,
+    });
+    audio.load();
+    expect(audio.play('test')).toBe(false);
+    expect(audio.getDebugSnapshot()).toMatchObject({ disabled: true });
+    expect(audio.play('test')).toBe(false);
+    audio.dispose();
+  });
+
   it('keeps one strict immutable control layout for hit testing and HUD placement', () => {
     let reads = 0;
     const accessor = {};

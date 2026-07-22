@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 import {
+  ArenaImpactAudio,
   ARENA_V1_DEFAULT_PRESENTATION_QUALITY,
   createPresentationQualityDefinition,
 } from '@number-strategy-jump/arena-presentation-runtime';
-import { ArenaImpactAudio } from '../audio/arena-impact-audio.js';
 import {
   ARENA_GREYBOX_COLOR,
   ArenaHudLayer,

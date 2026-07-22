@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises';
 import {
   ARENA_IMPACT_AUDIO_SOURCE_BY_ACTION,
   ArenaImpactAudio,
-} from '../../../src/arena/presentation/audio/arena-impact-audio.js';
+} from '@number-strategy-jump/arena-presentation-runtime';
 
 function voiceHarness() {
   return {
