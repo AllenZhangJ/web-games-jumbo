@@ -16,7 +16,7 @@ import {
 import {
   HUMAN_MATCH_STUDY_CHECKPOINT_PHASE,
   HUMAN_MATCH_STUDY_CHECKPOINT_SCHEMA_VERSION,
-} from '../../../src/arena/study/human-match-study-workspace.js';
+} from '@number-strategy-jump/arena-human-match-study';
 import {
   HumanMatchStudyWorkspaceController,
 } from '../../../src/arena/study/human-match-study-workspace-controller.js';

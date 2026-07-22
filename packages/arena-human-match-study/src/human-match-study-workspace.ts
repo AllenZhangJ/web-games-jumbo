@@ -3,6 +3,7 @@ import {
   assertKnownKeys,
   assertNonEmptyString,
   cloneFrozenData,
+  type PlainRecord,
 } from '@number-strategy-jump/arena-contracts';
 import {
   assertEvidenceBoundedString,
@@ -12,13 +13,21 @@ import {
 import {
   createHumanMatchStudyAssignment,
   validateHumanMatchStudyAssignment,
-} from '@number-strategy-jump/arena-human-match-study';
-import { createHumanMatchStudyDefinition } from '@number-strategy-jump/arena-human-match-study';
+  type HumanMatchStudyAssignment,
+} from './human-match-study-assignment.js';
+import {
+  createHumanMatchStudyDefinition,
+  type HumanMatchStudyDefinition,
+} from './human-match-study-definition.js';
 import {
   HUMAN_MATCH_STUDY_STATUS,
   HUMAN_MATCH_STUDY_TERMINATION_REASON,
   createHumanMatchStudySubmission,
-} from '@number-strategy-jump/arena-human-match-study';
+  type HumanMatchStudyEligibility,
+  type HumanMatchStudyObservedEnvironment,
+  type HumanMatchStudyStatus,
+  type HumanMatchStudyTerminationReason,
+} from './human-match-study-record.js';
 
 export const HUMAN_MATCH_STUDY_WORKSPACE_SCHEMA_VERSION = 1;
 export const HUMAN_MATCH_STUDY_CHECKPOINT_SCHEMA_VERSION = 1;
@@ -30,62 +39,96 @@ export const HUMAN_MATCH_STUDY_CHECKPOINT_PHASE = Object.freeze({
   REVIEWING: 'reviewing',
   RECOVERY_REQUIRED: 'recovery-required',
   EXPORT_PENDING: 'export-pending',
-});
+} as const);
+
+export type HumanMatchStudyCheckpointPhase = typeof HUMAN_MATCH_STUDY_CHECKPOINT_PHASE[
+  keyof typeof HUMAN_MATCH_STUDY_CHECKPOINT_PHASE
+];
+
+export interface HumanMatchStudyPackageReceipt {
+  readonly packageId: string;
+  readonly fileName: string;
+  readonly sha256: string;
+  readonly byteLength: number;
+}
+
+export interface HumanMatchStudyCheckpoint {
+  readonly schemaVersion: 1;
+  readonly trialId: string;
+  readonly assignment: HumanMatchStudyAssignment;
+  readonly commit: string;
+  readonly buildId: string;
+  readonly performedAt: string;
+  readonly operatorId: string;
+  readonly environment: HumanMatchStudyObservedEnvironment;
+  readonly eligibility: HumanMatchStudyEligibility;
+  readonly phase: HumanMatchStudyCheckpointPhase;
+  readonly completedMatchCount: number;
+  readonly terminalStatus: HumanMatchStudyStatus | null;
+  readonly terminationReason: HumanMatchStudyTerminationReason | null;
+  readonly packageReceipt: HumanMatchStudyPackageReceipt | null;
+}
+
+export interface HumanMatchStudyReceipt {
+  readonly schemaVersion: 1;
+  readonly trialId: string;
+  readonly assignment: HumanMatchStudyAssignment;
+  readonly status: HumanMatchStudyStatus;
+  readonly terminationReason: HumanMatchStudyTerminationReason;
+  readonly packageReceipt: HumanMatchStudyPackageReceipt;
+  readonly confirmedAt: string;
+}
+
+export interface HumanMatchStudyWorkspace {
+  readonly schemaVersion: 1;
+  readonly definitionId: string;
+  readonly definitionHash: string;
+  readonly revision: number;
+  readonly activeTrial: HumanMatchStudyCheckpoint | null;
+  readonly receipts: readonly HumanMatchStudyReceipt[];
+}
 
 const WORKSPACE_KEYS = new Set([
-  'schemaVersion',
-  'definitionId',
-  'definitionHash',
-  'revision',
-  'activeTrial',
-  'receipts',
+  'schemaVersion', 'definitionId', 'definitionHash', 'revision', 'activeTrial', 'receipts',
 ]);
 const CHECKPOINT_KEYS = new Set([
-  'schemaVersion',
-  'trialId',
-  'assignment',
-  'commit',
-  'buildId',
-  'performedAt',
-  'operatorId',
-  'environment',
-  'eligibility',
-  'phase',
-  'completedMatchCount',
-  'terminalStatus',
-  'terminationReason',
-  'packageReceipt',
+  'schemaVersion', 'trialId', 'assignment', 'commit', 'buildId', 'performedAt',
+  'operatorId', 'environment', 'eligibility', 'phase', 'completedMatchCount',
+  'terminalStatus', 'terminationReason', 'packageReceipt',
 ]);
 const RECEIPT_KEYS = new Set([
-  'schemaVersion',
-  'trialId',
-  'assignment',
-  'status',
-  'terminationReason',
-  'packageReceipt',
-  'confirmedAt',
+  'schemaVersion', 'trialId', 'assignment', 'status', 'terminationReason',
+  'packageReceipt', 'confirmedAt',
 ]);
-const PACKAGE_RECEIPT_KEYS = new Set([
-  'packageId',
-  'fileName',
-  'sha256',
-  'byteLength',
+const PACKAGE_RECEIPT_KEYS = new Set(['packageId', 'fileName', 'sha256', 'byteLength']);
+const ENROLLMENT_KEYS = new Set([
+  'participantId', 'trialId', 'commit', 'buildId', 'performedAt', 'operatorId',
+  'environment', 'eligibility', 'enrollmentIndex',
 ]);
+const ADVANCE_KEYS = new Set(['activeTrial', 'receipts']);
 
-function boundedString(value, maximumLength, name) {
+function boundedString(value: unknown, maximumLength: number, name: string): string {
   const text = assertNonEmptyString(value, name);
   if (text.length > maximumLength) throw new RangeError(`${name} 过长。`);
   return text;
 }
 
-function enumValue(value, values, name) {
-  if (!Object.values(values).includes(value)) {
+function enumValue<T extends string>(
+  value: unknown,
+  values: Readonly<Record<string, T>>,
+  name: string,
+): T {
+  const knownValues = Object.values(values) as readonly T[];
+  if (typeof value !== 'string' || !knownValues.includes(value as T)) {
     throw new RangeError(`${name} 不受支持：${String(value)}。`);
   }
-  return value;
+  return value as T;
 }
 
-function validatePackageReceipt(value, name) {
+function validatePackageReceipt(
+  value: unknown,
+  name: string,
+): HumanMatchStudyPackageReceipt | null {
   if (value === null) return null;
   assertKnownKeys(value, PACKAGE_RECEIPT_KEYS, name);
   const fileName = assertEvidenceBoundedString(value.fileName, 192, `${name}.fileName`, {
@@ -105,10 +148,17 @@ function validatePackageReceipt(value, name) {
   });
 }
 
-function checkpointSubmission(definition, source, {
-  status = HUMAN_MATCH_STUDY_STATUS.INVALIDATED,
-  terminationReason = HUMAN_MATCH_STUDY_TERMINATION_REASON.RUNTIME_FAILED,
-} = {}) {
+function checkpointSubmission(
+  definition: HumanMatchStudyDefinition,
+  source: PlainRecord,
+  options: Readonly<{
+    status: HumanMatchStudyStatus;
+    terminationReason: HumanMatchStudyTerminationReason;
+  }> = {
+    status: HUMAN_MATCH_STUDY_STATUS.INVALIDATED,
+    terminationReason: HUMAN_MATCH_STUDY_TERMINATION_REASON.RUNTIME_FAILED,
+  },
+) {
   return createHumanMatchStudySubmission(definition, {
     recordId: source.trialId,
     definitionId: definition.id,
@@ -118,11 +168,11 @@ function checkpointSubmission(definition, source, {
     performedAt: source.performedAt,
     operatorId: source.operatorId,
     assignment: source.assignment,
-    status,
-    terminationReason,
+    status: options.status,
+    terminationReason: options.terminationReason,
     environment: source.environment,
     eligibility: source.eligibility,
-    selfReport: status === HUMAN_MATCH_STUDY_STATUS.COMPLETED
+    selfReport: options.status === HUMAN_MATCH_STUDY_STATUS.COMPLETED
       ? {
           opponentTypeGuess: 'unsure',
           fairnessRating: 3,
@@ -133,14 +183,15 @@ function checkpointSubmission(definition, source, {
   });
 }
 
-export function createHumanMatchStudyCheckpoint(definitionValue, value) {
+export function createHumanMatchStudyCheckpoint(
+  definitionValue: unknown,
+  value: unknown,
+): HumanMatchStudyCheckpoint {
   const definition = createHumanMatchStudyDefinition(definitionValue);
   const source = cloneFrozenData(value, 'HumanMatchStudyCheckpoint');
   assertKnownKeys(source, CHECKPOINT_KEYS, 'HumanMatchStudyCheckpoint');
   if (source.schemaVersion !== HUMAN_MATCH_STUDY_CHECKPOINT_SCHEMA_VERSION) {
-    throw new RangeError(
-      `不支持 HumanMatchStudyCheckpoint schema ${String(source.schemaVersion)}。`,
-    );
+    throw new RangeError(`不支持 HumanMatchStudyCheckpoint schema ${String(source.schemaVersion)}。`);
   }
   const phase = enumValue(
     source.phase,
@@ -159,12 +210,22 @@ export function createHumanMatchStudyCheckpoint(definitionValue, value) {
   if ((source.terminalStatus === null) !== (source.terminationReason === null)) {
     throw new RangeError('HumanMatchStudyCheckpoint terminal status/reason 必须同时存在。');
   }
-  let terminalStatus = null;
-  let terminationReason = null;
+  let terminalStatus: HumanMatchStudyStatus | null = null;
+  let terminationReason: HumanMatchStudyTerminationReason | null = null;
   if (hasTerminal) {
+    const status = enumValue(
+      source.terminalStatus,
+      HUMAN_MATCH_STUDY_STATUS,
+      'HumanMatchStudyCheckpoint.terminalStatus',
+    );
+    const reason = enumValue(
+      source.terminationReason,
+      HUMAN_MATCH_STUDY_TERMINATION_REASON,
+      'HumanMatchStudyCheckpoint.terminationReason',
+    );
     const submission = checkpointSubmission(definition, source, {
-      status: source.terminalStatus,
-      terminationReason: source.terminationReason,
+      status,
+      terminationReason: reason,
     });
     terminalStatus = submission.status;
     terminationReason = submission.terminationReason;
@@ -173,10 +234,9 @@ export function createHumanMatchStudyCheckpoint(definitionValue, value) {
     source.packageReceipt,
     'HumanMatchStudyCheckpoint.packageReceipt',
   );
-  if (
-    phase === HUMAN_MATCH_STUDY_CHECKPOINT_PHASE.ENROLLED
-    && completedMatchCount !== 0
-  ) throw new RangeError('enrolled checkpoint 不能已有完成比赛。');
+  if (phase === HUMAN_MATCH_STUDY_CHECKPOINT_PHASE.ENROLLED && completedMatchCount !== 0) {
+    throw new RangeError('enrolled checkpoint 不能已有完成比赛。');
+  }
   if (
     phase === HUMAN_MATCH_STUDY_CHECKPOINT_PHASE.RECOVERY_REQUIRED
     && (
@@ -189,14 +249,12 @@ export function createHumanMatchStudyCheckpoint(definitionValue, value) {
     phase === HUMAN_MATCH_STUDY_CHECKPOINT_PHASE.EXPORT_PENDING
     && (!hasTerminal || packageReceipt === null)
   ) throw new RangeError('export-pending checkpoint 必须包含终态与 package receipt。');
-  if (
-    phase === HUMAN_MATCH_STUDY_CHECKPOINT_PHASE.REVIEWING
-    && !hasTerminal
-  ) throw new RangeError('reviewing checkpoint 必须包含预期终态。');
-  if (
-    phase !== HUMAN_MATCH_STUDY_CHECKPOINT_PHASE.EXPORT_PENDING
-    && packageReceipt !== null
-  ) throw new RangeError(`${phase} checkpoint 不能包含 package receipt。`);
+  if (phase === HUMAN_MATCH_STUDY_CHECKPOINT_PHASE.REVIEWING && !hasTerminal) {
+    throw new RangeError('reviewing checkpoint 必须包含预期终态。');
+  }
+  if (phase !== HUMAN_MATCH_STUDY_CHECKPOINT_PHASE.EXPORT_PENDING && packageReceipt !== null) {
+    throw new RangeError(`${phase} checkpoint 不能包含 package receipt。`);
+  }
   if (
     (phase === HUMAN_MATCH_STUDY_CHECKPOINT_PHASE.ENROLLED
       || phase === HUMAN_MATCH_STUDY_CHECKPOINT_PHASE.RUNNING)
@@ -225,13 +283,18 @@ export function createHumanMatchStudyCheckpoint(definitionValue, value) {
   });
 }
 
-export function createHumanMatchStudyReceipt(definitionValue, checkpointValue, confirmedAtValue) {
+export function createHumanMatchStudyReceipt(
+  definitionValue: unknown,
+  checkpointValue: unknown,
+  confirmedAtValue: unknown,
+): HumanMatchStudyReceipt {
   const definition = createHumanMatchStudyDefinition(definitionValue);
   const checkpoint = createHumanMatchStudyCheckpoint(definition, checkpointValue);
   if (
     checkpoint.phase !== HUMAN_MATCH_STUDY_CHECKPOINT_PHASE.EXPORT_PENDING
     || checkpoint.packageReceipt === null
     || checkpoint.terminalStatus === null
+    || checkpoint.terminationReason === null
   ) throw new RangeError('只有 export-pending checkpoint 可以确认归档。');
   const confirmedAt = assertEvidenceUtcInstant(
     confirmedAtValue,
@@ -251,21 +314,18 @@ export function createHumanMatchStudyReceipt(definitionValue, checkpointValue, c
   });
 }
 
-export function validateHumanMatchStudyReceipt(definitionValue, value) {
+export function validateHumanMatchStudyReceipt(
+  definitionValue: unknown,
+  value: unknown,
+): HumanMatchStudyReceipt {
   const definition = createHumanMatchStudyDefinition(definitionValue);
   const source = cloneFrozenData(value, 'HumanMatchStudyReceipt');
   assertKnownKeys(source, RECEIPT_KEYS, 'HumanMatchStudyReceipt');
   if (source.schemaVersion !== HUMAN_MATCH_STUDY_RECEIPT_SCHEMA_VERSION) {
-    throw new RangeError(
-      `不支持 HumanMatchStudyReceipt schema ${String(source.schemaVersion)}。`,
-    );
+    throw new RangeError(`不支持 HumanMatchStudyReceipt schema ${String(source.schemaVersion)}。`);
   }
   const assignment = validateHumanMatchStudyAssignment(definition, source.assignment);
-  const status = enumValue(
-    source.status,
-    HUMAN_MATCH_STUDY_STATUS,
-    'HumanMatchStudyReceipt.status',
-  );
+  const status = enumValue(source.status, HUMAN_MATCH_STUDY_STATUS, 'HumanMatchStudyReceipt.status');
   const terminationReason = enumValue(
     source.terminationReason,
     HUMAN_MATCH_STUDY_TERMINATION_REASON,
@@ -301,27 +361,26 @@ export function validateHumanMatchStudyReceipt(definitionValue, value) {
     status,
     terminationReason,
     packageReceipt,
-    confirmedAt: assertEvidenceUtcInstant(
-      source.confirmedAt,
-      'HumanMatchStudyReceipt.confirmedAt',
-    ),
+    confirmedAt: assertEvidenceUtcInstant(source.confirmedAt, 'HumanMatchStudyReceipt.confirmedAt'),
   });
 }
 
-function validateCoverage(activeTrial, receipts) {
+function validateCoverage(
+  activeTrial: HumanMatchStudyCheckpoint | null,
+  receipts: readonly HumanMatchStudyReceipt[],
+): void {
   receipts.forEach((receipt, enrollmentIndex) => {
     if (receipt.assignment.enrollmentIndex !== enrollmentIndex) {
       throw new RangeError(`HumanMatchStudyWorkspace 缺少 enrollment ${enrollmentIndex}。`);
     }
   });
-  if (
-    activeTrial !== null
-    && activeTrial.assignment.enrollmentIndex !== receipts.length
-  ) throw new RangeError('HumanMatchStudyWorkspace activeTrial enrollment 不连续。');
-  const participantIds = new Set();
-  const trialIds = new Set();
-  const packageIds = new Set();
-  const packageHashes = new Set();
+  if (activeTrial !== null && activeTrial.assignment.enrollmentIndex !== receipts.length) {
+    throw new RangeError('HumanMatchStudyWorkspace activeTrial enrollment 不连续。');
+  }
+  const participantIds = new Set<string>();
+  const trialIds = new Set<string>();
+  const packageIds = new Set<string>();
+  const packageHashes = new Set<string>();
   const entries = [
     ...receipts.map((receipt) => ({
       assignment: receipt.assignment,
@@ -339,9 +398,7 @@ function validateCoverage(activeTrial, receipts) {
       throw new RangeError(`重复 Study participantId ${assignment.participantId}。`);
     }
     participantIds.add(assignment.participantId);
-    if (trialIds.has(trialId)) {
-      throw new RangeError(`重复 Study trialId ${trialId}。`);
-    }
+    if (trialIds.has(trialId)) throw new RangeError(`重复 Study trialId ${trialId}。`);
     trialIds.add(trialId);
     if (packageReceipt === null) continue;
     if (packageIds.has(packageReceipt.packageId)) {
@@ -355,7 +412,10 @@ function validateCoverage(activeTrial, receipts) {
   }
 }
 
-export function createHumanMatchStudyWorkspace(definitionValue, value = null) {
+export function createHumanMatchStudyWorkspace(
+  definitionValue: unknown,
+  value: unknown = null,
+): HumanMatchStudyWorkspace {
   const definition = createHumanMatchStudyDefinition(definitionValue);
   if (value === null || value === undefined) {
     return Object.freeze({
@@ -370,9 +430,7 @@ export function createHumanMatchStudyWorkspace(definitionValue, value = null) {
   const source = cloneFrozenData(value, 'HumanMatchStudyWorkspace');
   assertKnownKeys(source, WORKSPACE_KEYS, 'HumanMatchStudyWorkspace');
   if (source.schemaVersion !== HUMAN_MATCH_STUDY_WORKSPACE_SCHEMA_VERSION) {
-    throw new RangeError(
-      `不支持 HumanMatchStudyWorkspace schema ${String(source.schemaVersion)}。`,
-    );
+    throw new RangeError(`不支持 HumanMatchStudyWorkspace schema ${String(source.schemaVersion)}。`);
   }
   if (
     source.definitionId !== definition.id
@@ -388,11 +446,7 @@ export function createHumanMatchStudyWorkspace(definitionValue, value = null) {
     validateHumanMatchStudyReceipt(definition, receipt)
   )));
   validateCoverage(activeTrial, receipts);
-  const revision = assertIntegerAtLeast(
-    source.revision,
-    0,
-    'HumanMatchStudyWorkspace.revision',
-  );
+  const revision = assertIntegerAtLeast(source.revision, 0, 'HumanMatchStudyWorkspace.revision');
   const minimumRevision = receipts.length + (activeTrial === null ? 0 : 1);
   if (revision < minimumRevision) {
     throw new RangeError('HumanMatchStudyWorkspace.revision 小于已覆盖 enrollment 数。');
@@ -407,32 +461,27 @@ export function createHumanMatchStudyWorkspace(definitionValue, value = null) {
   });
 }
 
-export function createEnrolledHumanMatchStudyCheckpoint(definitionValue, {
-  participantId,
-  trialId,
-  commit,
-  buildId,
-  performedAt,
-  operatorId,
-  environment,
-  eligibility,
-  enrollmentIndex,
-}) {
+export function createEnrolledHumanMatchStudyCheckpoint(
+  definitionValue: unknown,
+  optionsValue: unknown,
+): HumanMatchStudyCheckpoint {
   const definition = createHumanMatchStudyDefinition(definitionValue);
+  const options = cloneFrozenData(optionsValue, 'HumanMatchStudy enrollment options');
+  assertKnownKeys(options, ENROLLMENT_KEYS, 'HumanMatchStudy enrollment options');
   return createHumanMatchStudyCheckpoint(definition, {
     schemaVersion: HUMAN_MATCH_STUDY_CHECKPOINT_SCHEMA_VERSION,
-    trialId,
+    trialId: options.trialId,
     assignment: createHumanMatchStudyAssignment({
       definition,
-      participantId,
-      enrollmentIndex,
+      participantId: options.participantId,
+      enrollmentIndex: options.enrollmentIndex,
     }),
-    commit,
-    buildId,
-    performedAt,
-    operatorId,
-    environment,
-    eligibility,
+    commit: options.commit,
+    buildId: options.buildId,
+    performedAt: options.performedAt,
+    operatorId: options.operatorId,
+    environment: options.environment,
+    eligibility: options.eligibility,
     phase: HUMAN_MATCH_STUDY_CHECKPOINT_PHASE.ENROLLED,
     completedMatchCount: 0,
     terminalStatus: null,
@@ -441,16 +490,19 @@ export function createEnrolledHumanMatchStudyCheckpoint(definitionValue, {
   });
 }
 
-export function advanceHumanMatchStudyWorkspace(definitionValue, currentValue, {
-  activeTrial,
-  receipts,
-}) {
+export function advanceHumanMatchStudyWorkspace(
+  definitionValue: unknown,
+  currentValue: unknown,
+  optionsValue: unknown,
+): HumanMatchStudyWorkspace {
   const definition = createHumanMatchStudyDefinition(definitionValue);
   const current = createHumanMatchStudyWorkspace(definition, currentValue);
+  const options = cloneFrozenData(optionsValue, 'HumanMatchStudy workspace advance options');
+  assertKnownKeys(options, ADVANCE_KEYS, 'HumanMatchStudy workspace advance options');
   return createHumanMatchStudyWorkspace(definition, {
     ...current,
     revision: current.revision + 1,
-    activeTrial,
-    receipts,
+    activeTrial: options.activeTrial,
+    receipts: options.receipts,
   });
 }

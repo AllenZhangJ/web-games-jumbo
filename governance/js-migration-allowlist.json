@@ -129,7 +129,6 @@
     "src/arena/study/human-match-study-workspace-controller.js",
     "src/arena/study/human-match-study-workspace-envelope.js",
     "src/arena/study/human-match-study-workspace-repository.js",
-    "src/arena/study/human-match-study-workspace.js",
     "src/config.js",
     "src/entry/human-match-study-web-app.js",
     "src/entry/input-pilot-web-app.js",

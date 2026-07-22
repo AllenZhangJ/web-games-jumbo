@@ -14,7 +14,7 @@ import {
   createHumanMatchStudyWorkspaceEnvelope,
   validateHumanMatchStudyWorkspaceEnvelope,
 } from './human-match-study-workspace-envelope.js';
-import { createHumanMatchStudyWorkspace } from './human-match-study-workspace.js';
+import { createHumanMatchStudyWorkspace } from '@number-strategy-jump/arena-human-match-study';
 
 const SLOT = Object.freeze({ A: 'a', B: 'b' });
 

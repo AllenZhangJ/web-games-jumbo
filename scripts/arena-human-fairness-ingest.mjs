@@ -24,7 +24,7 @@ import {
 } from '../src/arena/study/human-match-study-replay-verifier.js';
 import {
   createHumanMatchStudyWorkspace,
-} from '../src/arena/study/human-match-study-workspace.js';
+} from '@number-strategy-jump/arena-human-match-study';
 import {
   readVerifiedTextFile,
 } from './lib/evidence-file-verifier.mjs';

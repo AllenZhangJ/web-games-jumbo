@@ -10,7 +10,7 @@ import {
 } from '@number-strategy-jump/arena-human-match-study';
 import {
   HUMAN_MATCH_STUDY_CHECKPOINT_PHASE,
-} from '../arena/study/human-match-study-workspace.js';
+} from '@number-strategy-jump/arena-human-match-study';
 import {
   HumanMatchStudyWorkspaceController,
 } from '../arena/study/human-match-study-workspace-controller.js';

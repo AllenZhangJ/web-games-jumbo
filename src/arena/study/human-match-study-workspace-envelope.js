@@ -11,7 +11,7 @@ import {
   HUMAN_MATCH_STUDY_RECEIPT_SCHEMA_VERSION,
   HUMAN_MATCH_STUDY_WORKSPACE_SCHEMA_VERSION,
   createHumanMatchStudyWorkspace,
-} from './human-match-study-workspace.js';
+} from '@number-strategy-jump/arena-human-match-study';
 
 export const HUMAN_MATCH_STUDY_WORKSPACE_ENVELOPE_SCHEMA_VERSION = 1;
 

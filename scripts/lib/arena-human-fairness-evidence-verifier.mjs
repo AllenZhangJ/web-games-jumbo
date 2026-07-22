@@ -18,7 +18,7 @@ import {
 } from '@number-strategy-jump/arena-human-match-study';
 import {
   createHumanMatchStudyWorkspace,
-} from '../../src/arena/study/human-match-study-workspace.js';
+} from '@number-strategy-jump/arena-human-match-study';
 import {
   readVerifiedEvidenceArtifact,
   resolveEvidenceRoot,

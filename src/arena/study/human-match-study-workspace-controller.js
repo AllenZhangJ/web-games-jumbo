@@ -14,7 +14,7 @@ import {
   createHumanMatchStudyCheckpoint,
   createHumanMatchStudyReceipt,
   createHumanMatchStudyWorkspace,
-} from './human-match-study-workspace.js';
+} from '@number-strategy-jump/arena-human-match-study';
 
 function validateRepository(value) {
   if (!value || typeof value !== 'object') {

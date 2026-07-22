@@ -3,11 +3,13 @@ import { BOT_DIFFICULTY_ID } from '@number-strategy-jump/arena-bot';
 import {
   ARENA_STAGE9_HUMAN_FAIRNESS_ARM_ID,
   HumanMatchStudyCaptureSession,
+  advanceHumanMatchStudyWorkspace,
   createArenaStage9HumanFairnessV1Definition,
   createHumanMatchStudyAssignment,
   createHumanMatchStudyBundle,
   createHumanMatchStudyCapturePackage,
   createHumanMatchStudyDefinition,
+  createEnrolledHumanMatchStudyCheckpoint,
   createHumanMatchStudyRecord,
 } from '../src/index.js';
 
@@ -148,6 +150,33 @@ describe('Human Match Study strict foundation', () => {
       },
     });
     expect(() => new HumanMatchStudyCaptureSession(captureOptions)).toThrow(/数据字段/);
+    expect(reads).toBe(0);
+  });
+
+  it('rejects enrollment and workspace transition accessors without executing them', () => {
+    const definition = createArenaStage9HumanFairnessV1Definition();
+    let reads = 0;
+    const enrollment = Object.defineProperty({}, 'participantId', {
+      enumerable: true,
+      get() {
+        reads += 1;
+        return 'participant';
+      },
+    });
+    expect(() => createEnrolledHumanMatchStudyCheckpoint(definition, enrollment)).toThrow(
+      /访问器|数据字段/,
+    );
+
+    const transition = Object.defineProperty({}, 'receipts', {
+      enumerable: true,
+      get() {
+        reads += 1;
+        return [];
+      },
+    });
+    expect(() => advanceHumanMatchStudyWorkspace(definition, null, transition)).toThrow(
+      /访问器|数据字段/,
+    );
     expect(reads).toBe(0);
   });
 });
