@@ -12,7 +12,8 @@ import {
   PresentationEventWindow,
   PresentationFrameLoop,
 } from '@number-strategy-jump/arena-presentation-runtime';
-import { ArenaGreyboxRenderer } from '../three/arena-greybox-renderer.js';
+import { ArenaGreyboxRenderer } from '@number-strategy-jump/arena-presentation-three';
+import { ARENA_V1_GREYBOX_CONTENT } from '../content/arena-v1-greybox-content.js';
 
 const OPTION_KEYS = new Set([
   'mapperId',
@@ -178,7 +179,10 @@ export function createArenaSessionComposition(platformValue, optionsValue) {
 
   const factories = {
     mapperFactory: options.mapperFactory ?? createArenaInputMapper,
-    rendererFactory: options.rendererFactory ?? ((args) => new ArenaGreyboxRenderer(args)),
+    rendererFactory: options.rendererFactory ?? ((args) => new ArenaGreyboxRenderer({
+      ...args,
+      content: ARENA_V1_GREYBOX_CONTENT,
+    })),
     samplerFactory: options.samplerFactory ?? ((args) => new InputSampler(args)),
     inputRouterFactory: options.inputRouterFactory ?? ((args) => new ArenaInputRouter(args)),
     inputAdapterFactory: options.inputAdapterFactory ?? ((args) => new PointerInputAdapter(args)),

@@ -1,5 +1,4 @@
 import { normalizeThrownError } from '@number-strategy-jump/arena-contracts';
-import { ArenaGreyboxRenderer } from '../three/arena-greybox-renderer.js';
 
 export const PRODUCT_RENDERER_STATE = Object.freeze({
   CREATED: 'created',
@@ -86,7 +85,7 @@ export class ProductRenderer {
     canvas,
     platform,
     qualityDefinition,
-    gameplayRendererFactory = (args) => new ArenaGreyboxRenderer(args),
+    gameplayRendererFactory,
     uiSurfaceFactory,
   }) {
     if (!canvas || typeof canvas.getContext !== 'function') {

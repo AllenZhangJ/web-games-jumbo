@@ -14,8 +14,9 @@ import { projectArenaPresentationFrame } from '../../../src/arena/presentation/p
 import {
   ArenaGreyboxRenderer,
   ARENA_GREYBOX_RENDERER_STATE,
-} from '../../../src/arena/presentation/three/arena-greybox-renderer.js';
-import { ArenaWorldStage, EquipmentViewRegistry } from '@number-strategy-jump/arena-presentation-three';
+  ArenaWorldStage,
+  EquipmentViewRegistry,
+} from '@number-strategy-jump/arena-presentation-three';
 import {
   ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT,
 } from '../../../src/arena/presentation/content/arena-gameplay-v2-content.js';
@@ -283,6 +284,7 @@ test('ArenaGreyboxRenderer draws world and HUD, pauses on context loss and relea
   const renderer = new ArenaGreyboxRenderer({
     canvas,
     platform: fakePlatform(),
+    content: ARENA_V1_GREYBOX_CONTENT,
     webglRendererFactory: () => webgl,
   });
   await renderer.load();
@@ -417,6 +419,7 @@ test('ArenaGreyboxRenderer deduplicates hit vibration/audio and honors the sound
   const renderer = new ArenaGreyboxRenderer({
     canvas,
     platform,
+    content: ARENA_V1_GREYBOX_CONTENT,
     webglRendererFactory: () => fakeWebGLRenderer(canvas),
   });
   await renderer.load();
@@ -497,10 +500,117 @@ test('ArenaGreyboxRenderer cleans partial WebGL/Scene ownership when HUD capabil
   assert.throws(() => new ArenaGreyboxRenderer({
     canvas,
     platform,
+    content: ARENA_V1_GREYBOX_CONTENT,
     webglRendererFactory: () => webgl,
   }), /Renderer 初始化失败/);
   assert.equal(webgl.disposed, true);
   assert.equal(webgl.contextForced, true);
+});
+
+test('ArenaGreyboxRenderer rejects implicit content and option accessors before creating WebGL resources', () => {
+  const canvas = { width: 1, height: 1, getContext: () => ({}) };
+  let accessorReads = 0;
+  let rendererCreates = 0;
+  const options = {
+    canvas,
+    platform: fakePlatform(),
+    get content() {
+      accessorReads += 1;
+      return ARENA_V1_GREYBOX_CONTENT;
+    },
+    webglRendererFactory: () => {
+      rendererCreates += 1;
+      return fakeWebGLRenderer(canvas);
+    },
+  };
+  assert.throws(() => new ArenaGreyboxRenderer(options), /content 必须是数据字段/);
+  assert.equal(accessorReads, 0);
+  assert.equal(rendererCreates, 0);
+  assert.throws(() => new ArenaGreyboxRenderer({
+    canvas,
+    platform: fakePlatform(),
+    webglRendererFactory: () => fakeWebGLRenderer(canvas),
+  }), /content 缺失/);
+});
+
+test('ArenaGreyboxRenderer fails closed on render errors and releases all owned resources', async () => {
+  const core = createCore();
+  const canvas = { width: 1, height: 1, style: {}, getContext: () => ({}) };
+  const webgl = fakeWebGLRenderer(canvas);
+  webgl.render = () => { throw new Error('GPU submit failed'); };
+  const renderer = new ArenaGreyboxRenderer({
+    canvas,
+    platform: fakePlatform(),
+    content: ARENA_V1_GREYBOX_CONTENT,
+    webglRendererFactory: () => webgl,
+  });
+  await renderer.load();
+  assert.throws(() => renderer.render(frameFrom(core.getSnapshot())), /render 失败/);
+  assert.equal(renderer.state, ARENA_GREYBOX_RENDERER_STATE.DISPOSED);
+  assert.equal(webgl.disposed, true);
+  assert.equal(webgl.contextForced, true);
+  assert.throws(() => renderer.render(frameFrom(core.getSnapshot())), /已销毁/);
+  core.destroy();
+});
+
+test('ArenaGreyboxRenderer retains only failed cleanup ownership for an exact retry', async () => {
+  const canvas = { width: 1, height: 1, style: {}, getContext: () => ({}) };
+  const webgl = fakeWebGLRenderer(canvas);
+  let disposeCalls = 0;
+  let contextCalls = 0;
+  webgl.dispose = () => {
+    disposeCalls += 1;
+    if (disposeCalls === 1) throw new Error('temporary renderer cleanup failure');
+    webgl.disposed = true;
+  };
+  webgl.forceContextLoss = () => {
+    contextCalls += 1;
+    webgl.contextForced = true;
+  };
+  const renderer = new ArenaGreyboxRenderer({
+    canvas,
+    platform: fakePlatform(),
+    content: ARENA_V1_GREYBOX_CONTENT,
+    webglRendererFactory: () => webgl,
+  });
+  await renderer.load();
+  assert.throws(() => renderer.dispose(), /清理未完整完成/);
+  assert.equal(renderer.state, ARENA_GREYBOX_RENDERER_STATE.DISPOSE_INCOMPLETE);
+  assert.equal(disposeCalls, 1);
+  assert.equal(contextCalls, 1);
+  renderer.dispose();
+  assert.equal(renderer.state, ARENA_GREYBOX_RENDERER_STATE.DISPOSED);
+  assert.equal(disposeCalls, 2);
+  assert.equal(contextCalls, 1);
+});
+
+test('ArenaGreyboxRenderer detects swallowed host callback reentry and fails closed', async () => {
+  const core = createCore();
+  const canvas = { width: 1, height: 1, style: {}, getContext: () => ({}) };
+  let renderer;
+  const platform = fakePlatform();
+  platform.vibrate = () => {
+    try { renderer.resize(); } catch { /* hostile host swallows the nested failure */ }
+  };
+  renderer = new ArenaGreyboxRenderer({
+    canvas,
+    platform,
+    content: ARENA_V1_GREYBOX_CONTENT,
+    webglRendererFactory: () => fakeWebGLRenderer(canvas),
+  });
+  await renderer.load();
+  const frame = frameFrom(core.getSnapshot(), [{
+    id: `${MATCH_SEED.toString(16)}:0:reentry`,
+    type: 'HitResolved',
+    tick: 0,
+    sequence: 0,
+    attackerId: 'player-1',
+    targetId: 'player-2',
+    action: 'base-push',
+  }]);
+  assert.throws(() => renderer.render(frame), /render 失败/);
+  assert.equal(renderer.state, ARENA_GREYBOX_RENDERER_STATE.DISPOSED);
+  core.destroy();
 });
 
 test('low presentation quality lowers only renderer cost and exposes machine-readable counters', async () => {
@@ -510,6 +620,7 @@ test('low presentation quality lowers only renderer cost and exposes machine-rea
   const renderer = new ArenaGreyboxRenderer({
     canvas,
     platform: fakePlatform(),
+    content: ARENA_V1_GREYBOX_CONTENT,
     qualityDefinition: ARENA_V1_PRESENTATION_QUALITY_REGISTRY.require(
       ARENA_V1_PRESENTATION_QUALITY_ID.LOW,
     ),
@@ -544,6 +655,7 @@ test('default presentation quality keeps MSAA and a high-DPI render target for c
   const renderer = new ArenaGreyboxRenderer({
     canvas,
     platform: fakePlatform(),
+    content: ARENA_V1_GREYBOX_CONTENT,
     webglRendererFactory: (options) => {
       contextOptions = options;
       return webgl;
@@ -566,6 +678,7 @@ test('Arena HUD renders the authoritative life count instead of a fixed three-do
   const renderer = new ArenaGreyboxRenderer({
     canvas,
     platform: fakePlatform(renderedText),
+    content: ARENA_V1_GREYBOX_CONTENT,
     webglRendererFactory: () => fakeWebGLRenderer(canvas),
   });
   await renderer.load();

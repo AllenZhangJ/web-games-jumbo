@@ -1,6 +1,6 @@
 import { ProductRenderer } from '../arena/presentation/renderer/product-renderer.js';
 import { ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT } from '../arena/presentation/content/arena-gameplay-v2-content.js';
-import { ArenaGreyboxRenderer } from '../arena/presentation/three/arena-greybox-renderer.js';
+import { ArenaGreyboxRenderer } from '@number-strategy-jump/arena-presentation-three';
 
 function requiredFunction(value, name) {
   if (typeof value !== 'function') throw new TypeError(`${name} 必须是函数。`);

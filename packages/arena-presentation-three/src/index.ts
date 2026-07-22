@@ -1,4 +1,5 @@
 export * from './arena-camera.js';
+export * from './arena-greybox-renderer.js';
 export * from './arena-hud-layer.js';
 export * from './arena-world-stage.js';
 export * from './character-view-registry.js';
