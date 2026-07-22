@@ -201,3 +201,93 @@ test('web pilot owner ids prefer crypto and JSON export revokes its temporary UR
     ['revoke', 'blob:pilot'],
   ]);
 });
+
+test('Pilot JSON download rejects unsafe data and rolls back failed DOM ownership', () => {
+  let nestedReads = 0;
+  const nested = {};
+  Object.defineProperty(nested, 'secret', {
+    get() {
+      nestedReads += 1;
+      return 'unsafe';
+    },
+  });
+  assert.throws(() => downloadInputPilotJson({}, {
+    kind: 'aggregate',
+    revision: 1,
+    value: { nested },
+  }), /数据字段|访问器/);
+  assert.equal(nestedReads, 0);
+
+  const actions = [];
+  class FakeBlob {}
+  const anchor = {
+    click() {
+      actions.push('click');
+      throw new Error('click failed');
+    },
+    remove() { actions.push('remove'); },
+  };
+  assert.throws(() => downloadInputPilotJson({
+    Blob: FakeBlob,
+    URL: {
+      createObjectURL() { return 'blob:rollback'; },
+      revokeObjectURL(value) { actions.push(`revoke:${value}`); },
+    },
+    document: {
+      body: { appendChild() { actions.push('append'); } },
+      createElement() { return anchor; },
+    },
+  }, {
+    kind: 'audit',
+    revision: 2,
+    value: { ok: true },
+  }), /click failed/);
+  assert.deepEqual(actions, ['append', 'click', 'remove', 'revoke:blob:rollback']);
+
+  const rollback = [];
+  assert.throws(() => downloadInputPilotJson({
+    Blob: FakeBlob,
+    URL: {
+      createObjectURL() { return 'blob:async'; },
+      revokeObjectURL(value) { rollback.push(`revoke:${value}`); },
+    },
+    document: {
+      body: { async appendChild() {} },
+      createElement() {
+        return {
+          click() {},
+          remove() { rollback.push('remove'); },
+        };
+      },
+    },
+  }, {
+    kind: 'evidence',
+    revision: 3,
+    value: { ok: true },
+  }), /appendChild 必须同步完成/);
+  assert.deepEqual(rollback, ['remove', 'revoke:blob:async']);
+
+  const legacyCleanup = [];
+  const legacyAnchor = {
+    click() { throw new Error('click failed'); },
+  };
+  assert.throws(() => downloadInputPilotJson({
+    Blob: FakeBlob,
+    URL: {
+      createObjectURL() { return 'blob:legacy'; },
+      revokeObjectURL(value) { legacyCleanup.push(`revoke:${value}`); },
+    },
+    document: {
+      body: {
+        appendChild() {},
+        removeChild(value) { legacyCleanup.push(value === legacyAnchor ? 'removeChild' : 'wrong'); },
+      },
+      createElement() { return legacyAnchor; },
+    },
+  }, {
+    kind: 'aggregate',
+    revision: 4,
+    value: { ok: true },
+  }), /click failed/);
+  assert.deepEqual(legacyCleanup, ['removeChild', 'revoke:blob:legacy']);
+});
