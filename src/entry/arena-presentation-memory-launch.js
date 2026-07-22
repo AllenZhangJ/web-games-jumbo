@@ -1,6 +1,6 @@
 import {
   createPresentationMemorySnapshot,
-} from '../arena/presentation/performance/presentation-memory-snapshot.js';
+} from '@number-strategy-jump/arena-presentation-runtime';
 
 const EXTERNAL_PROVIDER_KEY = '__ARENA_PERFORMANCE_MEMORY_PROVIDER__';
 

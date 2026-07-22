@@ -7,6 +7,7 @@ export * from './presentation-event-window.js';
 export * from './presentation-asset-load-task.js';
 export * from './presentation-asset-provider-ids.js';
 export * from './presentation-frame-loop.js';
+export * from './presentation-memory-snapshot.js';
 export * from './presentation-quality-definition.js';
 export * from './presentation-quality-registry.js';
 export * from './presentation-render-pacer.js';

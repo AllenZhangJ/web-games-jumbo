@@ -18,7 +18,7 @@ import { assertProductContentPresentationRegistry } from './product-content-pres
 import { PRODUCT_CONTENT_KIND } from './product-content-presentation-definition.js';
 import { createProductMessageCatalog } from './product-message-catalog.js';
 import { assertProductScreenRegistry } from './product-screen-registry.js';
-import { createProductUiIntent } from './product-ui-intent.js';
+import { createProductUiIntent } from '@number-strategy-jump/arena-presentation-contracts';
 
 export const PRODUCT_SESSION_VIEW_MODEL_SCHEMA_VERSION = 1;
 

@@ -8,7 +8,13 @@ import {
   CHARACTER_PRESENTATION_DIRECTION_STRATEGY,
   CHARACTER_PRESENTATION_FRONT_AXIS,
   CHARACTER_PRESENTATION_SLOT_ID,
+  PRODUCT_INPUT_ROUTER_MODE,
+  PRODUCT_PRESENTATION_FLOW_STATE,
+  PRODUCT_PRESENTATION_SESSION_STATE,
+  PRODUCT_UI_INTENT_ID,
   createCharacterPresentationDefinition,
+  createProductUiIntent,
+  createProductUiIntentKey,
   resolveAnimationBinding,
 } from '../src/index.js';
 
@@ -78,6 +84,43 @@ function frame(tick: number, events: readonly unknown[] = []): unknown {
 }
 
 describe('Arena Presentation contracts', () => {
+  it('owns immutable Product UI intent and presentation lifecycle literals', () => {
+    expect(Object.isFrozen(PRODUCT_UI_INTENT_ID)).toBe(true);
+    expect(Object.isFrozen(PRODUCT_INPUT_ROUTER_MODE)).toBe(true);
+    expect(Object.isFrozen(PRODUCT_PRESENTATION_FLOW_STATE)).toBe(true);
+    expect(Object.isFrozen(PRODUCT_PRESENTATION_SESSION_STATE)).toBe(true);
+    const intent = createProductUiIntent({
+      id: PRODUCT_UI_INTENT_ID.SELECT_CHARACTER,
+      characterDefinitionId: 'character.hero',
+    });
+    expect(intent).toEqual({
+      id: PRODUCT_UI_INTENT_ID.SELECT_CHARACTER,
+      characterDefinitionId: 'character.hero',
+    });
+    expect(Object.isFrozen(intent)).toBe(true);
+    expect(createProductUiIntentKey(intent)).toBe('select-character:character.hero');
+  });
+
+  it('rejects Product UI intent schema drift without evaluating accessors', () => {
+    let getterCalls = 0;
+    const accessor = Object.defineProperty({}, 'id', {
+      enumerable: true,
+      get() { getterCalls += 1; return PRODUCT_UI_INTENT_ID.START_MATCH; },
+    });
+    expect(() => createProductUiIntent(accessor)).toThrow(/数据字段/);
+    expect(getterCalls).toBe(0);
+    expect(() => createProductUiIntent({ id: PRODUCT_UI_INTENT_ID.SELECT_CHARACTER }))
+      .toThrow(/characterDefinitionId/);
+    expect(() => createProductUiIntent({
+      id: PRODUCT_UI_INTENT_ID.START_MATCH,
+      characterDefinitionId: 'character.hero',
+    })).toThrow(/不能包含/);
+    expect(() => createProductUiIntent({
+      id: PRODUCT_UI_INTENT_ID.START_MATCH,
+      future: true,
+    })).toThrow(/不支持字段/);
+  });
+
   it('rejects constructor and capability accessors without executing them', () => {
     let optionReads = 0;
     expect(() => new AnimationSemanticResolver({

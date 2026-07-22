@@ -6,6 +6,7 @@ import {
   ARENA_V1_PRESENTATION_QUALITY_ID,
   controlAtPoint,
   createArenaControlLayout,
+  createPresentationMemorySnapshot,
   FixedTickAccumulator,
   PresentationAssetLoadTask,
   PresentationEventWindow,
@@ -14,6 +15,7 @@ import {
   PresentationRenderPacer,
   SixSectorDirectionResolver,
   normalizedControlDelta,
+  mergePresentationMemorySnapshot,
 } from '../src/index.js';
 import {
   CHARACTER_PRESENTATION_DIRECTION_STRATEGY,
@@ -24,6 +26,46 @@ import {
 } from '@number-strategy-jump/arena-presentation-contracts';
 
 describe('Arena Presentation runtime boundaries', () => {
+  it('normalizes observational memory without inventing unavailable counters', () => {
+    expect(createPresentationMemorySnapshot(null)).toBeNull();
+    expect(createPresentationMemorySnapshot({
+      jsHeapBytes: null,
+      processMemoryBytes: null,
+    })).toBeNull();
+    const memory = createPresentationMemorySnapshot({
+      jsHeapBytes: 1024,
+      processMemoryBytes: null,
+    });
+    expect(memory).toEqual({ jsHeapBytes: 1024, processMemoryBytes: null });
+    expect(Object.isFrozen(memory)).toBe(true);
+    expect(mergePresentationMemorySnapshot({ drawCalls: 7 }, memory)).toEqual({
+      drawCalls: 7,
+      jsHeapBytes: 1024,
+      processMemoryBytes: null,
+    });
+  });
+
+  it('rejects memory accessors and unknown fields without executing them', () => {
+    let getterCalls = 0;
+    const accessor = Object.defineProperty({}, 'jsHeapBytes', {
+      enumerable: true,
+      get() { getterCalls += 1; return 1024; },
+    });
+    expect(() => createPresentationMemorySnapshot(accessor)).toThrow(/数据字段|访问器/);
+    expect(getterCalls).toBe(0);
+    expect(() => createPresentationMemorySnapshot({ jsHeapBytes: 1, future: 2 }))
+      .toThrow(/不支持字段/);
+    expect(() => createPresentationMemorySnapshot({ processMemoryBytes: -1 }))
+      .toThrow(/大于等于 0/);
+    const memory = createPresentationMemorySnapshot({ jsHeapBytes: 1 });
+    const resourceAccessor = Object.defineProperty({}, 'drawCalls', {
+      enumerable: true,
+      get() { getterCalls += 1; return 7; },
+    });
+    expect(() => mergePresentationMemorySnapshot(resourceAccessor, memory)).toThrow(/数据字段/);
+    expect(getterCalls).toBe(0);
+  });
+
   it('snapshots optional audio callbacks and rejects option accessors without executing them', () => {
     let reads = 0;
     const accessorOptions = {};

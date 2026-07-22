@@ -3,7 +3,13 @@ import assert from 'node:assert/strict';
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
 import { createArenaV1ProductSession } from '../../../src/arena/product/composition/arena-v1-product-composition.js';
 import { ARENA_V1_PLAYER_PROFILE_DEFINITION } from '@number-strategy-jump/arena-product-v1-content';
-import { createProductMatchResult } from '@number-strategy-jump/arena-product-contracts';
+import {
+  createProductMatchResult,
+} from '@number-strategy-jump/arena-product-contracts';
+import {
+  PRODUCT_UI_INTENT_ID,
+  createProductUiIntent,
+} from '@number-strategy-jump/arena-presentation-contracts';
 import { createPlayerProfile } from '@number-strategy-jump/arena-profile-contracts';
 import { REWARD_GRANT_SCHEMA_VERSION } from '@number-strategy-jump/arena-progression';
 import {
@@ -34,10 +40,6 @@ import {
   ProductPresentationFlow,
 } from '../../../src/arena/presentation/product/product-presentation-flow.js';
 import { createProductSessionViewModel } from '../../../src/arena/presentation/product/product-session-view-model.js';
-import {
-  PRODUCT_UI_INTENT_ID,
-  createProductUiIntent,
-} from '../../../src/arena/presentation/product/product-ui-intent.js';
 import { TEST_MATCH_CONTENT_PUBLIC_VIEW } from '../product/stage8-test-content.js';
 
 function deferred() {

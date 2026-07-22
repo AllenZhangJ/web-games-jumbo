@@ -15,7 +15,7 @@ import {
   PRODUCT_SCREEN_KIND,
 } from './product-screen-definition.js';
 import { ProductScreenRegistry } from './product-screen-registry.js';
-import { PRODUCT_UI_INTENT_ID } from './product-ui-intent.js';
+import { PRODUCT_UI_INTENT_ID } from '@number-strategy-jump/arena-presentation-contracts';
 
 function action(intentId, labelMessageId) {
   return { intentId, labelMessageId };

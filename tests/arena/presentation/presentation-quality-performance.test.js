@@ -6,16 +6,14 @@ import {
   ARENA_V1_PRESENTATION_QUALITY_REGISTRY,
   PRESENTATION_QUALITY_DEFINITION_SCHEMA_VERSION,
   PresentationRenderPacer,
+  createPresentationMemorySnapshot,
   createPresentationQualityDefinition,
   createPresentationQualityRegistry,
+  mergePresentationMemorySnapshot,
 } from '@number-strategy-jump/arena-presentation-runtime';
 import {
   PresentationPerformanceProbe,
 } from '../../../src/arena/presentation/performance/presentation-performance-probe.js';
-import {
-  createPresentationMemorySnapshot,
-  mergePresentationMemorySnapshot,
-} from '../../../src/arena/presentation/performance/presentation-memory-snapshot.js';
 
 function qualityValue(overrides = {}) {
   return {

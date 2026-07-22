@@ -3,7 +3,7 @@ import {
   PRODUCT_UI_INTENT_ID,
   createProductUiIntent,
   createProductUiIntentKey,
-} from './product-ui-intent.js';
+} from '@number-strategy-jump/arena-presentation-contracts';
 
 function validateController(value) {
   if (!value || typeof value !== 'object') {

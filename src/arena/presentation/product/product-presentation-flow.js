@@ -2,6 +2,12 @@ import {
   combineCleanupFailure,
   normalizeThrownError,
 } from '@number-strategy-jump/arena-contracts';
+import {
+  PRODUCT_PRESENTATION_FLOW_STATE,
+  PRODUCT_UI_INTENT_ID,
+  createProductUiIntent,
+  createProductUiIntentKey,
+} from '@number-strategy-jump/arena-presentation-contracts';
 import { validateProductMatchResult } from '@number-strategy-jump/arena-product-contracts';
 import { PRODUCT_SESSION_STATE } from '@number-strategy-jump/arena-product-state';
 import { ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT } from '../content/arena-gameplay-v2-content.js';
@@ -11,17 +17,7 @@ import {
 } from './product-match-presentation-runtime.js';
 import { ProductSessionIntentDispatcher } from './product-session-intent-dispatcher.js';
 import { createProductSessionViewModel } from './product-session-view-model.js';
-import {
-  PRODUCT_UI_INTENT_ID,
-  createProductUiIntent,
-  createProductUiIntentKey,
-} from './product-ui-intent.js';
-
-export const PRODUCT_PRESENTATION_FLOW_STATE = Object.freeze({
-  ACTIVE: 'active',
-  FAILED: 'failed',
-  DESTROYED: 'destroyed',
-});
+export { PRODUCT_PRESENTATION_FLOW_STATE } from '@number-strategy-jump/arena-presentation-contracts';
 
 function validateController(value) {
   if (!value || typeof value !== 'object') {

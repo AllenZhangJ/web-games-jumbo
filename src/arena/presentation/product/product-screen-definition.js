@@ -6,7 +6,7 @@ import {
   assertNonEmptyString,
   cloneFrozenData,
 } from '@number-strategy-jump/arena-contracts';
-import { assertProductUiIntentId } from './product-ui-intent.js';
+import { assertProductUiIntentId } from '@number-strategy-jump/arena-presentation-contracts';
 
 export const PRODUCT_SCREEN_DEFINITION_SCHEMA_VERSION = 1;
 

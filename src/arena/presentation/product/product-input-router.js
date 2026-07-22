@@ -1,15 +1,11 @@
 import { normalizeThrownError } from '@number-strategy-jump/arena-contracts';
-import { clonePoint, cloneViewport } from '../input/input-validation.js';
 import {
+  PRODUCT_INPUT_ROUTER_MODE,
   createProductUiIntent,
   createProductUiIntentKey,
-} from './product-ui-intent.js';
-
-export const PRODUCT_INPUT_ROUTER_MODE = Object.freeze({
-  INACTIVE: 'inactive',
-  UI: 'ui',
-  GAMEPLAY: 'gameplay',
-});
+} from '@number-strategy-jump/arena-presentation-contracts';
+import { clonePoint, cloneViewport } from '../input/input-validation.js';
+export { PRODUCT_INPUT_ROUTER_MODE } from '@number-strategy-jump/arena-presentation-contracts';
 
 const MODES = new Set(Object.values(PRODUCT_INPUT_ROUTER_MODE));
 

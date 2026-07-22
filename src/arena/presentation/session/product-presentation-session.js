@@ -1,24 +1,18 @@
 import { normalizeThrownError } from '@number-strategy-jump/arena-contracts';
-import { PRODUCT_SESSION_STATE } from '@number-strategy-jump/arena-product-state';
-import { PRODUCT_INPUT_ROUTER_MODE } from '../product/product-input-router.js';
-import { PRODUCT_UI_INTENT_ID } from '../product/product-ui-intent.js';
 import {
+  PRODUCT_INPUT_ROUTER_MODE,
   PRODUCT_PRESENTATION_FLOW_STATE,
-} from '../product/product-presentation-flow.js';
+  PRODUCT_PRESENTATION_SESSION_STATE,
+  PRODUCT_UI_INTENT_ID,
+} from '@number-strategy-jump/arena-presentation-contracts';
+import { PRODUCT_SESSION_STATE } from '@number-strategy-jump/arena-product-state';
 import {
   createPresentationMemorySnapshot,
   mergePresentationMemorySnapshot,
-} from '../performance/presentation-memory-snapshot.js';
+} from '@number-strategy-jump/arena-presentation-runtime';
 import { createProductPresentationSessionComposition } from './product-presentation-session-composition.js';
 
-export const PRODUCT_PRESENTATION_SESSION_STATE = Object.freeze({
-  CREATED: 'created',
-  STARTING: 'starting',
-  RUNNING: 'running',
-  PAUSED: 'paused',
-  FAILED: 'failed',
-  DESTROYED: 'destroyed',
-});
+export { PRODUCT_PRESENTATION_SESSION_STATE } from '@number-strategy-jump/arena-presentation-contracts';
 
 function validateCanvas(value) {
   if (!value || typeof value.getContext !== 'function') {
