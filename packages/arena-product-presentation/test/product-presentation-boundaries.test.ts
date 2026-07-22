@@ -26,8 +26,10 @@ import {
   assertProductContentPresentationRegistry,
   assertProductScreenRegistry,
   createArenaV1ProductPresentationContent,
+  createProductCanvasLayout,
   createProductSessionViewModel,
   createProductUiSceneModel,
+  pointInProductCanvasRect,
 } from '../src/index.js';
 import { markTrustedProductSessionViewModel } from '../src/product-view-model-trust.js';
 
@@ -412,6 +414,55 @@ describe('Product presentation immutable data boundaries', () => {
       get() { getterCalls += 1; return viewModel.screen; },
     });
     expect(() => createProductUiSceneModel(hostile)).toThrow(/数据字段/);
+    expect(getterCalls).toBe(0);
+  });
+
+  it('keeps Product Canvas layout inside safe area and rejects viewport accessors', () => {
+    const sceneModel = createProductUiSceneModel({
+      revision: 1,
+      locale: 'zh-CN',
+      busy: false,
+      suspended: false,
+      terminal: false,
+      inputEnabled: true,
+      screen: {
+        sceneId: 'home', title: '竞技场', body: '', announcement: '竞技场',
+        primaryAction: { label: '开始', enabled: true, intent: { id: 'start-match' } },
+        secondaryAction: null,
+      },
+      characterOptions: [],
+      match: null,
+      result: null,
+      reward: null,
+      unlocks: [],
+      error: null,
+    });
+    const layout = createProductCanvasLayout(sceneModel, {
+      width: 390,
+      height: 844,
+      safeArea: { left: 12, top: 47, right: 378, bottom: 801 },
+    });
+    expect(layout.actions).toHaveLength(1);
+    const actionRect = layout.actions[0]!.rect;
+    expect(pointInProductCanvasRect({ x: actionRect.x, y: actionRect.y }, actionRect)).toBe(true);
+    expect(pointInProductCanvasRect({ x: Number.NaN, y: actionRect.y }, actionRect)).toBe(false);
+    expect(actionRect.x).toBeGreaterThanOrEqual(layout.safe.x);
+    expect(actionRect.x + actionRect.width).toBeLessThanOrEqual(
+      layout.safe.x + layout.safe.width,
+    );
+
+    let getterCalls = 0;
+    const hostileViewport = Object.defineProperty({}, 'width', {
+      enumerable: true,
+      get() { getterCalls += 1; return 390; },
+    });
+    expect(() => createProductCanvasLayout(sceneModel, hostileViewport)).toThrow(/数据字段/);
+    expect(getterCalls).toBe(0);
+    const hostilePoint = Object.defineProperty({ y: actionRect.y }, 'x', {
+      enumerable: true,
+      get() { getterCalls += 1; return actionRect.x; },
+    });
+    expect(pointInProductCanvasRect(hostilePoint, actionRect)).toBe(false);
     expect(getterCalls).toBe(0);
   });
 });

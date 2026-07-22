@@ -6,6 +6,7 @@ import {
   type PlainRecord,
 } from '@number-strategy-jump/arena-contracts';
 import { isTrustedProductSessionViewModel } from './product-view-model-trust.js';
+import { markTrustedProductUiSceneModel } from './product-ui-scene-model-trust.js';
 
 export interface ProductUiSceneAction {
   readonly label: string;
@@ -192,7 +193,7 @@ export function createProductUiSceneModel(viewModelValue: unknown): ProductUiSce
       0,
       'Product UI ViewModel.reward.experienceDelta',
     );
-  const model: ProductUiSceneModel = Object.freeze({
+  const model: ProductUiSceneModel = markTrustedProductUiSceneModel(Object.freeze({
     revision: assertIntegerAtLeast(source.revision, 0, 'Product UI ViewModel.revision'),
     locale: assertNonEmptyString(source.locale, 'Product UI ViewModel.locale'),
     scene,
@@ -228,7 +229,7 @@ export function createProductUiSceneModel(viewModelValue: unknown): ProductUiSce
     errorMessage: error === null
       ? ''
       : optionalText(error.message, 'Product UI ViewModel.error.message') ?? '',
-  });
+  }));
   if (isTrustedProductSessionViewModel(viewModelValue)) {
     frozenViewModelCache.set(viewModelValue, model);
   }

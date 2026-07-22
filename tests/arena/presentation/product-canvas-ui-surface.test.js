@@ -6,7 +6,7 @@ import {
 } from '../../../src/arena/presentation/canvas/product-canvas-ui-surface.js';
 import {
   createProductCanvasLayout,
-} from '../../../src/arena/presentation/canvas/product-canvas-layout.js';
+} from '@number-strategy-jump/arena-product-presentation';
 import {
   createProductUiSceneModel,
 } from '@number-strategy-jump/arena-product-presentation';

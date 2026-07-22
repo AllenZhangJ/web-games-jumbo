@@ -4,7 +4,7 @@ import { disposeThreeObject } from '@number-strategy-jump/arena-presentation-thr
 import {
   createProductCanvasLayout,
   pointInProductCanvasRect,
-} from './product-canvas-layout.js';
+} from '@number-strategy-jump/arena-product-presentation';
 import { paintProductCanvasScene } from './product-canvas-painter.js';
 
 export const PRODUCT_CANVAS_UI_SURFACE_STATE = Object.freeze({
