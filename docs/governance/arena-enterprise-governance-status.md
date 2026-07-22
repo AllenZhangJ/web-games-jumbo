@@ -34,7 +34,7 @@
 | G4 Bot/Product/Persistence | 已完成 | strict TS Bot、Matchmaking、Quick Match、Local Match Session、Product State、Progression、ProductMatchResult、奖励事务、Profile Service/Repository、Storage Lease、Product Match、Product Session Controller、对称内容池、Arena V1 产品内容与通用 Product Composition 已闭环；Arena V1 应用组合根已在 G6.36 归入独立 strict 包 |
 | G5 Presentation/资产/反馈 | 已完成 | strict `arena-presentation-contracts`、`arena-presentation-runtime`、`arena-v1-presentation-content`、`arena-product-presentation`、`arena-presentation-three` 与 `arena-product-presentation-three` 已承接通用合同、输入/反馈/生命周期、具体 V1 表现、Product 表现所有权和 Three Surface；设备/性能证据合同已归入独立 strict 包；共享对局资源取得/回滚原语完成 strict 迁移。生产 Product Session 组合已在 G6.37 归包；旧 Greybox ArenaPresentationSession 是 G6 应用根，Pilot 是 G7 测试/研究链，不再伪装为 G5 通用表现缺口 |
 | G6 Platform/入口/构建 | 进行中 | 三端默认入口是 Product；运行实例 ID、启动协调、失败兜底、Web teardown、三端平台适配、Arena V1 应用组合根、生产 Session、顶层 Launch、Web Product UI、三端实际 Product Entry，以及 Greybox Session 组合、表现生命周期、应用根和三端 Greybox Entry 均已 strict 化。Web 研究环境、clean build 身份、JSON 下载所有权、Human Match Study Product Runtime、Study Workbench View 和 Pilot Workbench View 已 strict 化；两个研究 Web App 与薄入口待迁移，并继续证明生产交付和开发/研究入口彻底隔离 |
-| G7 零 JS/完整质量门 | 进行中 | 独立 strict `arena-human-match-study` 已承接真人研究 Definition、Assignment 和 Capture；独立 strict `arena-input-pilot` 已承接 Input Pilot 共享词汇、Definition/Registry/Assignment/V1、Record Fields/Record、Review Draft、Form Model、同步存储 Port/Lease、Assignment Match Service、Trial Runtime Port、Trial Checkpoint/State、Enrollment Ledger、Workspace/Envelope/Repository 与 Coordinator。ESLint、strict TypeScript、Vitest 和 JavaScript 精确递减门禁持续运行。其余 Study/Pilot/Release/测试链迁移、正式 coverage 阈值和零 JS 尚未完成 |
+| G7 零 JS/完整质量门 | 进行中 | 独立 strict `arena-human-match-study` 已承接真人研究 Definition、Assignment 和 Capture；独立 strict `arena-input-pilot` 已承接 Input Pilot 共享词汇、Definition/Registry/Assignment/V1、Record Fields/Record、Review Draft、Form Model、同步存储 Port/Lease、Assignment Match Service、Trial Runtime Port、Trial Checkpoint/State、Enrollment Ledger、Workspace/Envelope/Repository、Coordinator 与评估 Report。ESLint、strict TypeScript、Vitest 和 JavaScript 精确递减门禁持续运行。其余 Study/Pilot/Release/测试链迁移、正式 coverage 阈值和零 JS 尚未完成 |
 | G8 资产/安全/所有权 | 未开始 | CODEOWNERS、CI 安全与正式资产最终批准待补齐 |
 | G9 文档归真 | 未开始 | README 首标题和大量章节仍以数值跳台 v3 为产品真值 |
 | G10 最新 main 审计 | 未开始 | 只能在 G0-G9 完成后执行；禁止实际合并 |
@@ -55,7 +55,7 @@
 
 ## 当前不可合并原因
 
-1. 当前 233 个受维护 JavaScript 文件仍在精确允许清单中；G6 尚需迁移两个研究 Web App 与薄入口，G7 尚需迁移其余 Pilot/Study/Release/其他测试与验收链并建立零 JS 门禁。
+1. 当前 232 个受维护 JavaScript 文件仍在精确允许清单中；G6 尚需迁移两个研究 Web App 与薄入口，G7 尚需迁移其余 Pilot/Study/Release/其他测试与验收链并建立零 JS 门禁。
 2. Vitest 当前保护底层合同包和治理门禁；Arena 其余测试尚待按 workspace 迁移并建立正式 coverage 阈值与零 JS 门禁。
 3. 正式资产最终审批与完整安全/依赖长期治理尚未闭环。
 4. 文档仍含迁移前阶段性叙述，尚未完成 G9 全量链接、状态与命令归真。
@@ -1259,3 +1259,12 @@
 - Input Pilot Repository/Controller/Web 支持定向 Node 回归 33/33、完整 Node 测试 691/691、strict package/治理测试 334/334 通过；ESLint、strict typecheck、JS 递减、产品依赖、Three 边界与 `git diff --check` 均通过。新增 2 项 strict 回归覆盖构造 options 访问器零执行，以及 slot/head 先写后抛仍以读回结果完成一致提交。
 - 代码提交为 `d515a5a3dfb440e836cfe53225d38f6e48b3d6d0`，clean build ID 为 `arena-d515a5a3dfb4-product`；Web/微信/抖音 delivery 为 `3807531 / 3835130 / 3835105 B`，JavaScript 为 `1463921 / 1507034 / 1507034 B`。三端 `sourceDirty=false`、默认入口均为 Product、Manifest 校验和预算通过且 `freezeEligible=true`；交付字节与 G7.8 完全一致，本研究持久化批次未进入默认 Product bundle。
 - 本批没有改变 Pilot 页面结构、Product bundle 或游戏玩法，因此未新增浏览器/手机通过记录，也未重跑与本批路径无关的 Gameplay 黄金 Replay、输入 fuzz、专项生命周期或 soak。Report/Evidence、Study 其余领域和两个研究 Web App/薄入口仍待 strict 迁移；G7-G10 尚未完成，当前不可合并。
+
+## G7.10 Input Pilot 评估 Report strict 迁移证据
+
+- Input Pilot 评估报告的 JavaScript 真值已迁入 `@number-strategy-jump/arena-input-pilot`，精确允许清单由 233 降至 232。Report 的页面导出、Release Evidence 和对应测试统一从包公开 API 消费；旧实现已删除，没有 JavaScript 转发层。
+- Report 继续按 enrollment index 和 trial ID 的确定性顺序生成 source hash，逐 variant 汇总入组、排除原因、首次有效操作、动作成功率、观察项、单手完成率、目标完成率和理解正确率，并只在主指标差距与次指标一致时给出候选。迁移保持原有逐字符 trial ID 排序，未引入依赖区域设置的 `localeCompare`；足量样本下所需指标仍必须存在，异常数据 fail closed。
+- 修复了旧实现直接 `recordValues.map(...)` 会执行数组索引访问器的问题：报告现在先用确定性数据合同深拷贝并冻结整个输入数组，稀疏数组、访问器、循环引用和非确定性值都在任何 getter 执行前拒绝。新增 strict 回归证明数组索引访问器读取次数为零。
+- Input Pilot Report/Release Evidence 定向 Node 回归 9/9、完整 Node 测试 691/691、strict package/治理测试 335/335 通过；ESLint、strict typecheck、JS 递减、产品依赖、Three 边界、`git diff --check` 和生产构建均通过。
+- 代码提交为 `edb9cbfdd2373e07957bea5a50d9d909fdeafd7f`，clean build ID 为 `arena-edb9cbfdd237-product`；Web/微信/抖音 delivery 为 `3807531 / 3835130 / 3835105 B`，JavaScript 为 `1463921 / 1507034 / 1507034 B`。三端 `sourceDirty=false`、默认入口均为 Product、Manifest 校验、预算和生产产物边界通过且 `freezeEligible=true`；交付字节与 G7.9 完全一致，本离线研究评估批次未进入默认 Product bundle。
+- 本批没有改变 Pilot 页面结构、Product bundle 或游戏玩法，因此未新增浏览器/手机通过记录，也未重跑与本批路径无关的 Gameplay 黄金 Replay、输入 fuzz、专项生命周期或 soak。Evidence/Export、Study 其余领域和两个研究 Web App/薄入口仍待 strict 迁移；G7-G10 尚未完成，当前不可合并。
