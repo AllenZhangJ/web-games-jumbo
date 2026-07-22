@@ -13,7 +13,7 @@ import {
 } from '@number-strategy-jump/arena-human-match-study';
 import {
   HumanMatchStudyWorkspaceController,
-} from '../arena/study/human-match-study-workspace-controller.js';
+} from '@number-strategy-jump/arena-human-match-study';
 import {
   HumanMatchStudyWorkspaceRepository,
 } from '@number-strategy-jump/arena-human-match-study';

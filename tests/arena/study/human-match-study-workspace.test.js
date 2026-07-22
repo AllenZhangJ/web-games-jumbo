@@ -16,10 +16,11 @@ import {
 import {
   HUMAN_MATCH_STUDY_CHECKPOINT_PHASE,
   HUMAN_MATCH_STUDY_CHECKPOINT_SCHEMA_VERSION,
+  createHumanMatchStudyWorkspace,
 } from '@number-strategy-jump/arena-human-match-study';
 import {
   HumanMatchStudyWorkspaceController,
-} from '../../../src/arena/study/human-match-study-workspace-controller.js';
+} from '@number-strategy-jump/arena-human-match-study';
 import {
   HumanMatchStudyWorkspaceRepository,
 } from '@number-strategy-jump/arena-human-match-study';
@@ -217,6 +218,91 @@ test('workspace repository fails closed after its lease is lost before commit', 
   assert.throws(() => controller.start(), /失败关闭/);
   assert.throws(() => repository.getSnapshot(), /失败关闭/);
   controller.destroy();
+});
+
+test('workspace controller rejects open reentrancy before repository callbacks return', () => {
+  const definition = createArenaStage9HumanFairnessV1Definition();
+  const harness = storageHarness();
+  let controller;
+  let attempted = false;
+  const repository = new HumanMatchStudyWorkspaceRepository({
+    definition,
+    storage: {
+      ...harness.port,
+      storageRead(key) {
+        if (!attempted) {
+          attempted = true;
+          assert.throws(() => controller.open(), /打开不可重入/);
+        }
+        return harness.port.storageRead(key);
+      },
+    },
+    ownerId: 'controller-reentrant-page',
+    wallNow: () => 1_000,
+  });
+  controller = new HumanMatchStudyWorkspaceController({ definition, repository });
+  assert.equal(controller.open().revision, 0);
+  assert.equal(attempted, true);
+  controller.destroy();
+});
+
+test('workspace controller rejects enrollment accessors without executing them', () => {
+  const definition = createArenaStage9HumanFairnessV1Definition();
+  const harness = storageHarness();
+  const controller = new HumanMatchStudyWorkspaceController({
+    definition,
+    repository: new HumanMatchStudyWorkspaceRepository({
+      definition,
+      storage: harness.port,
+      ownerId: 'controller-accessor-page',
+      wallNow: () => 1_000,
+    }),
+  });
+  controller.open();
+  let reads = 0;
+  const enrollment = Object.defineProperty({}, 'participantId', {
+    enumerable: true,
+    get() {
+      reads += 1;
+      return 'participant';
+    },
+  });
+  assert.throws(() => controller.enroll(enrollment), /访问器|数据字段/);
+  assert.equal(reads, 0);
+  assert.equal(controller.getOperatorSnapshot().revision, 0);
+  controller.destroy();
+});
+
+test('workspace controller fails closed on CAS conflict and retries failed destroy', () => {
+  const definition = createArenaStage9HumanFairnessV1Definition();
+  const snapshot = createHumanMatchStudyWorkspace(definition);
+  let destroyAttempts = 0;
+  const repository = {
+    open: () => snapshot,
+    getSnapshot: () => snapshot,
+    compareAndSet: () => Object.freeze({
+      committed: false,
+      reason: 'storage-revision-mismatch',
+      headUpdated: false,
+    }),
+    renewLease: () => true,
+    destroy() {
+      destroyAttempts += 1;
+      if (destroyAttempts === 1) throw new Error('temporary cleanup failure');
+    },
+  };
+  const controller = new HumanMatchStudyWorkspaceController({ definition, repository });
+  controller.open();
+  assert.throws(
+    () => controller.enroll(enrolledValue(definition)),
+    /CAS 未提交.*storage-revision-mismatch/,
+  );
+  assert.throws(() => controller.getOperatorSnapshot(), /失败关闭/);
+  assert.throws(() => controller.destroy(), /temporary cleanup failure/);
+  assert.equal(destroyAttempts, 1);
+  controller.destroy();
+  controller.destroy();
+  assert.equal(destroyAttempts, 2);
 });
 
 test('raw CapturePackage binds submission, natural difficulty, results and Replay identity', () => {

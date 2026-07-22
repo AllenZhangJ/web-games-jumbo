@@ -8,3 +8,4 @@ export * from './human-match-study-capture-package.js';
 export * from './human-match-study-workspace.js';
 export * from './human-match-study-workspace-envelope.js';
 export * from './human-match-study-workspace-repository.js';
+export * from './human-match-study-workspace-controller.js';
