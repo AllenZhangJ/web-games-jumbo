@@ -1,7 +1,7 @@
 import {
   createProductPresentationSession,
 } from '../arena/presentation/session/product-presentation-session-composition.js';
-import { createRuntimeInstanceId } from './runtime-instance-id.js';
+import { createRuntimeInstanceId } from '@number-strategy-jump/arena-platform-runtime';
 
 function readDataOptions(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;

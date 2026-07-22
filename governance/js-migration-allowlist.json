@@ -198,7 +198,6 @@
     "src/entry/input-pilot-workbench-view.js",
     "src/entry/launch-game.js",
     "src/entry/mini-game-startup-fallback.js",
-    "src/entry/runtime-instance-id.js",
     "src/entry/web-build-identity.js",
     "src/entry/web-game-teardown.js",
     "src/entry/web-greybox.js",

@@ -1,4 +1,4 @@
-import { createRuntimeInstanceId } from './runtime-instance-id.js';
+import { createRuntimeInstanceId } from '@number-strategy-jump/arena-platform-runtime';
 
 function finitePositive(value, fallback) {
   const number = Number(value);
