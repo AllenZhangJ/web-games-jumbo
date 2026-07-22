@@ -11,3 +11,5 @@ export * from './input-pilot-trial-checkpoint.js';
 export * from './input-pilot-trial-state.js';
 export * from './input-pilot-vocabulary.js';
 export * from './input-pilot-workspace.js';
+export * from './input-pilot-workspace-coordinator.js';
+export * from './input-pilot-workspace-envelope.js';

@@ -29,7 +29,7 @@ import {
   validateInputPilotRuntimeFactory,
   validateInputPilotRuntimeStatus,
 } from '@number-strategy-jump/arena-input-pilot';
-import { InputPilotWorkspaceCoordinator } from './input-pilot-workspace-coordinator.js';
+import { InputPilotWorkspaceCoordinator } from '@number-strategy-jump/arena-input-pilot';
 
 function submissionHash({ observer, selfReport, invalidate }) {
   return createDeterministicDataHash(

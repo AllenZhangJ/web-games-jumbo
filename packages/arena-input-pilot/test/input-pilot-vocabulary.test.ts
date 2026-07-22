@@ -11,6 +11,7 @@ import {
   INPUT_PILOT_TRIAL_STATUS,
   InputPilotAssignedMatchService,
   InputPilotEnrollmentLedger,
+  InputPilotWorkspaceCoordinator,
   InputPilotRegistry,
   InputPilotFormModel,
   createArenaInputPilotV1Definition,
@@ -372,5 +373,96 @@ describe('Input Pilot strict trial state and workspace', () => {
     expect(() => advanceInputPilotWorkspace(definition, current, update)).toThrow(/数据字段/);
     expect(current.revision).toBe(0);
     expect(reads).toBe(0);
+  });
+});
+
+describe('Input Pilot strict workspace coordination', () => {
+  it('rejects repository method accessors without executing them', () => {
+    const definition = createArenaInputPilotV1Definition();
+    let reads = 0;
+    const repository = {
+      getSnapshot() {},
+      compareAndSet() {},
+      renewLease() {},
+      destroy() {},
+    };
+    Object.defineProperty(repository, 'open', {
+      get() {
+        reads += 1;
+        return () => createInputPilotWorkspace(definition);
+      },
+    });
+    expect(() => new InputPilotWorkspaceCoordinator({ definition, repository }))
+      .toThrow(/数据方法/);
+    expect(reads).toBe(0);
+  });
+
+  it('rejects CAS result accessors atomically and releases the commit guard for retry', () => {
+    const definition = createArenaInputPilotV1Definition();
+    let workspace = createInputPilotWorkspace(definition);
+    let invalidResult = true;
+    let reads = 0;
+    const accessorResult = { reason: null, headUpdated: false };
+    Object.defineProperty(accessorResult, 'committed', {
+      enumerable: true,
+      get() {
+        reads += 1;
+        return true;
+      },
+    });
+    const repository = {
+      open: () => workspace,
+      getSnapshot: () => workspace,
+      compareAndSet(next: unknown) {
+        if (invalidResult) return accessorResult;
+        workspace = createInputPilotWorkspace(definition, next);
+        return { committed: true, reason: null, headUpdated: true };
+      },
+      renewLease: () => true,
+      destroy() {},
+    };
+    const coordinator = new InputPilotWorkspaceCoordinator({ definition, repository });
+    coordinator.open();
+    const enrollment = {
+      participantId: 'participant',
+      device: definition.environment,
+      eligibility: {
+        priorArenaExperience: false,
+        priorOtherVariantExposure: false,
+      },
+    };
+    expect(() => coordinator.enroll(enrollment)).toThrow(/数据字段/);
+    expect(workspace.revision).toBe(0);
+    expect(reads).toBe(0);
+    invalidResult = false;
+    expect(coordinator.enroll(enrollment).assignment.participantId).toBe('participant');
+    coordinator.destroy();
+  });
+
+  it('retains repository ownership when destroy fails and retries the same cleanup', () => {
+    const definition = createArenaInputPilotV1Definition();
+    const workspace = createInputPilotWorkspace(definition);
+    let failDestroy = true;
+    let destroys = 0;
+    const coordinator = new InputPilotWorkspaceCoordinator({
+      definition,
+      repository: {
+        open: () => workspace,
+        getSnapshot: () => workspace,
+        compareAndSet: () => ({ committed: false, reason: 'unused', headUpdated: false }),
+        renewLease: () => true,
+        destroy() {
+          destroys += 1;
+          if (failDestroy) throw new Error('cleanup failed');
+        },
+      },
+    });
+    coordinator.open();
+    expect(() => coordinator.destroy()).toThrow(/cleanup failed/);
+    expect(coordinator.getSnapshot()).toEqual(workspace);
+    failDestroy = false;
+    expect(() => coordinator.destroy()).not.toThrow();
+    expect(destroys).toBe(2);
+    expect(() => coordinator.getSnapshot()).toThrow(/已销毁/);
   });
 });

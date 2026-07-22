@@ -1,16 +1,31 @@
-import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import {
   assertIntegerAtLeast,
   assertKnownKeys,
   cloneFrozenData,
+  createDeterministicDataHash,
 } from '@number-strategy-jump/arena-contracts';
+import { createInputPilotDefinition } from './input-pilot-definition.js';
 import {
   assertInputPilotWorkspaceHasNoFutureSchema,
   createInputPilotWorkspace,
-} from '@number-strategy-jump/arena-input-pilot';
-import { createInputPilotDefinition } from '@number-strategy-jump/arena-input-pilot';
+  type InputPilotWorkspace,
+} from './input-pilot-workspace.js';
 
 export const INPUT_PILOT_WORKSPACE_ENVELOPE_SCHEMA_VERSION = 1;
+
+export interface InputPilotWorkspaceEnvelope {
+  readonly schemaVersion: typeof INPUT_PILOT_WORKSPACE_ENVELOPE_SCHEMA_VERSION;
+  readonly definitionId: string;
+  readonly definitionHash: string;
+  readonly generation: number;
+  readonly payloadHash: string;
+  readonly payload: InputPilotWorkspace;
+}
+
+export interface ValidatedInputPilotWorkspaceEnvelope {
+  readonly envelope: InputPilotWorkspaceEnvelope;
+  readonly workspace: InputPilotWorkspace;
+}
 
 const ENVELOPE_KEYS = new Set([
   'schemaVersion',
@@ -21,7 +36,10 @@ const ENVELOPE_KEYS = new Set([
   'payload',
 ]);
 
-export function createInputPilotWorkspaceEnvelope(definitionValue, workspaceValue) {
+export function createInputPilotWorkspaceEnvelope(
+  definitionValue: unknown,
+  workspaceValue: unknown,
+): InputPilotWorkspaceEnvelope {
   const definition = createInputPilotDefinition(definitionValue);
   const workspace = createInputPilotWorkspace(definition, workspaceValue);
   return cloneFrozenData({
@@ -31,10 +49,13 @@ export function createInputPilotWorkspaceEnvelope(definitionValue, workspaceValu
     generation: workspace.revision,
     payloadHash: createDeterministicDataHash(workspace, 'InputPilotWorkspace payload'),
     payload: workspace,
-  }, 'InputPilotWorkspace envelope');
+  }, 'InputPilotWorkspace envelope') as InputPilotWorkspaceEnvelope;
 }
 
-export function validateInputPilotWorkspaceEnvelope(definitionValue, value) {
+export function validateInputPilotWorkspaceEnvelope(
+  definitionValue: unknown,
+  value: unknown,
+): ValidatedInputPilotWorkspaceEnvelope {
   const definition = createInputPilotDefinition(definitionValue);
   const source = cloneFrozenData(value, 'InputPilotWorkspace envelope');
   assertKnownKeys(source, ENVELOPE_KEYS, 'InputPilotWorkspace envelope');
@@ -71,16 +92,19 @@ export function validateInputPilotWorkspaceEnvelope(definitionValue, value) {
  * an envelope or any nested workspace value is from a future schema, allowing
  * the repository to distinguish protected future data from recoverable damage.
  */
-export function assertInputPilotWorkspaceEnvelopeHasNoFutureSchema(value) {
-  let source;
+export function assertInputPilotWorkspaceEnvelopeHasNoFutureSchema(value: unknown): true {
+  let source: Record<string, unknown> | null = null;
   try {
-    source = cloneFrozenData(value, 'InputPilotWorkspace envelope version probe');
+    const cloned = cloneFrozenData(value, 'InputPilotWorkspace envelope version probe');
+    if (cloned && typeof cloned === 'object' && !Array.isArray(cloned)) {
+      source = cloned as Record<string, unknown>;
+    }
   } catch {
     return true;
   }
   if (
     Number.isSafeInteger(source?.schemaVersion)
-    && source.schemaVersion > INPUT_PILOT_WORKSPACE_ENVELOPE_SCHEMA_VERSION
+    && (source?.schemaVersion as number) > INPUT_PILOT_WORKSPACE_ENVELOPE_SCHEMA_VERSION
   ) throw new RangeError('InputPilotWorkspace envelope 来自未来 schema。');
   if (source?.schemaVersion === INPUT_PILOT_WORKSPACE_ENVELOPE_SCHEMA_VERSION) {
     assertInputPilotWorkspaceHasNoFutureSchema(source.payload);

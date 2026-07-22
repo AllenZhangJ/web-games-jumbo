@@ -14,7 +14,7 @@ import {
   assertInputPilotWorkspaceEnvelopeHasNoFutureSchema,
   createInputPilotWorkspaceEnvelope,
   validateInputPilotWorkspaceEnvelope,
-} from './input-pilot-workspace-envelope.js';
+} from '@number-strategy-jump/arena-input-pilot';
 import {
   createInputPilotWorkspace,
 } from '@number-strategy-jump/arena-input-pilot';
