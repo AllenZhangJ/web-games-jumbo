@@ -38,6 +38,7 @@
     { "path": "./packages/arena-progression" },
     { "path": "./packages/arena-quick-match" },
     { "path": "./packages/arena-release-contracts" },
+    { "path": "./packages/arena-release" },
     { "path": "./packages/arena-session" },
     { "path": "./packages/arena-storage" },
     { "path": "./packages/arena-profile-contracts" },

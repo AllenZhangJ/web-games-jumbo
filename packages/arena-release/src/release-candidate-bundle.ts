@@ -1,13 +1,14 @@
-import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import {
   assertKnownKeys,
   assertNonEmptyString,
   cloneFrozenData,
+  createDeterministicDataHash,
 } from '@number-strategy-jump/arena-contracts';
 import { assertEvidenceGitCommit } from '@number-strategy-jump/arena-evidence-contracts';
 import {
   createArenaReleaseEvidenceStatement,
   createArenaReleaseReadinessDefinition,
+  type ArenaReleaseEvidenceStatement,
 } from '@number-strategy-jump/arena-release-contracts';
 
 export const ARENA_RELEASE_CANDIDATE_BUNDLE_SCHEMA_VERSION = 1;
@@ -23,7 +24,7 @@ const BUNDLE_KEYS = new Set([
 ]);
 const HASH_PATTERN = /^[0-9a-f]{8}$/;
 
-function boundedText(value, maximumLength, name) {
+function boundedText(value: unknown, maximumLength: number, name: string): string {
   const text = assertNonEmptyString(value, name);
   if (text.length > maximumLength) {
     throw new RangeError(`${name} 不能超过 ${maximumLength} 个字符。`);
@@ -32,7 +33,15 @@ function boundedText(value, maximumLength, name) {
 }
 
 export class ArenaReleaseCandidateBundle {
-  constructor(definitionValue, value) {
+  declare readonly schemaVersion: 1;
+  declare readonly definitionId: string;
+  declare readonly definitionHash: string;
+  declare readonly commit: string;
+  declare readonly buildId: string;
+  declare readonly sourceDirty: boolean;
+  declare readonly evidence: readonly ArenaReleaseEvidenceStatement[];
+
+  constructor(definitionValue: unknown, value: unknown) {
     const definition = createArenaReleaseReadinessDefinition(definitionValue);
     const source = cloneFrozenData(value, 'ArenaReleaseCandidateBundle');
     assertKnownKeys(source, BUNDLE_KEYS, 'ArenaReleaseCandidateBundle');
@@ -68,8 +77,8 @@ export class ArenaReleaseCandidateBundle {
       throw new RangeError('ArenaReleaseCandidateBundle.evidence 超过 Definition gate 数量。');
     }
     const gateOrder = new Map(definition.gates.map((gate, index) => [gate.id, index]));
-    const gateIds = new Set();
-    const materialDescriptors = new Map();
+    const gateIds = new Set<string>();
+    const materialDescriptors = new Map<string, ArenaReleaseEvidenceStatement['materials'][number]>();
     const evidence = source.evidence.map((value) => {
       const statement = createArenaReleaseEvidenceStatement(definition, value);
       if (gateIds.has(statement.gateId)) {
@@ -98,7 +107,14 @@ export class ArenaReleaseCandidateBundle {
         materialDescriptors.set(material.path, material);
       }
       return statement;
-    }).sort((left, right) => gateOrder.get(left.gateId) - gateOrder.get(right.gateId));
+    }).sort((left, right) => {
+      const leftOrder = gateOrder.get(left.gateId);
+      const rightOrder = gateOrder.get(right.gateId);
+      if (leftOrder === undefined || rightOrder === undefined) {
+        throw new Error('Release evidence gate 顺序缺失。');
+      }
+      return leftOrder - rightOrder;
+    });
     Object.defineProperties(this, {
       schemaVersion: {
         value: ARENA_RELEASE_CANDIDATE_BUNDLE_SCHEMA_VERSION,
@@ -114,7 +130,7 @@ export class ArenaReleaseCandidateBundle {
     Object.freeze(this);
   }
 
-  toJSON() {
+  toJSON(): unknown {
     return {
       schemaVersion: this.schemaVersion,
       definitionId: this.definitionId,
@@ -126,7 +142,7 @@ export class ArenaReleaseCandidateBundle {
     };
   }
 
-  getContentHash() {
+  getContentHash(): string {
     return createDeterministicDataHash(
       this.toJSON(),
       `ArenaReleaseCandidateBundle ${this.definitionId}`,
@@ -134,7 +150,10 @@ export class ArenaReleaseCandidateBundle {
   }
 }
 
-export function createArenaReleaseCandidateBundle(definition, value) {
+export function createArenaReleaseCandidateBundle(
+  definition: unknown,
+  value: unknown,
+): ArenaReleaseCandidateBundle {
   return value instanceof ArenaReleaseCandidateBundle
     ? value
     : new ArenaReleaseCandidateBundle(definition, value);

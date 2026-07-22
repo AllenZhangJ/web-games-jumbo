@@ -29,7 +29,7 @@ import {
 } from '../../src/arena-release/regression-release-evidence.js';
 import {
   verifyArenaReleaseEvidenceProducerResult,
-} from '../../src/arena-release/release-evidence-verification.js';
+} from '@number-strategy-jump/arena-release';
 import {
   ARENA_BUILD_MANIFEST_FILENAME,
   createArenaBuildManifest,

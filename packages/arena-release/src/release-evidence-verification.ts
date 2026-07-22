@@ -6,19 +6,26 @@ import { assertEvidenceGitCommit } from '@number-strategy-jump/arena-evidence-co
 import {
   ARENA_RELEASE_EVIDENCE_STATUS,
   createArenaReleaseEvidenceStatement,
+  type ArenaReleaseEvidenceStatus,
 } from '@number-strategy-jump/arena-release-contracts';
 import { createArenaReleaseCandidateBundle } from './release-candidate-bundle.js';
 import { createArenaReleaseReadinessDefinition } from '@number-strategy-jump/arena-release-contracts';
 
 const RESULT_KEYS = new Set(['commit', 'buildId', 'status', 'resultHash']);
 const RESULT_HASH_PATTERN = /^(?:[0-9a-f]{8}|[0-9a-f]{64})$/;
+const OPTION_KEYS = new Set(['definition', 'bundle', 'statement', 'result']);
 
-export function verifyArenaReleaseEvidenceProducerResult({
-  definition: definitionValue,
-  bundle: bundleValue,
-  statement: statementValue,
-  result: resultValue,
-}) {
+export function verifyArenaReleaseEvidenceProducerResult(optionsValue: unknown) {
+  assertKnownKeys(
+    optionsValue,
+    OPTION_KEYS,
+    'verifyArenaReleaseEvidenceProducerResult options',
+  );
+  const options = optionsValue;
+  const definitionValue = options.definition;
+  const bundleValue = options.bundle;
+  const statementValue = options.statement;
+  const resultValue = options.result;
   const definition = createArenaReleaseReadinessDefinition(definitionValue);
   const bundle = createArenaReleaseCandidateBundle(definition, bundleValue);
   const statement = createArenaReleaseEvidenceStatement(definition, statementValue);
@@ -32,7 +39,9 @@ export function verifyArenaReleaseEvidenceProducerResult({
   if (result.buildId !== null && (typeof result.buildId !== 'string' || result.buildId.length === 0)) {
     throw new TypeError(`Release producer ${statement.gateId}.buildId 必须是 null 或非空字符串。`);
   }
-  if (!Object.values(ARENA_RELEASE_EVIDENCE_STATUS).includes(result.status)) {
+  if (!Object.values(ARENA_RELEASE_EVIDENCE_STATUS).includes(
+    result.status as ArenaReleaseEvidenceStatus,
+  )) {
     throw new RangeError(`Release producer ${statement.gateId}.status 不受支持。`);
   }
   if (typeof result.resultHash !== 'string' || !RESULT_HASH_PATTERN.test(result.resultHash)) {

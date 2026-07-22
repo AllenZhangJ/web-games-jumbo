@@ -3,7 +3,10 @@ import { assertKnownKeys, cloneFrozenData } from '@number-strategy-jump/arena-co
 import {
   ARENA_RELEASE_EVIDENCE_STATUS,
 } from '@number-strategy-jump/arena-release-contracts';
-import { createArenaReleaseCandidateBundle } from './release-candidate-bundle.js';
+import {
+  createArenaReleaseCandidateBundle,
+  type ArenaReleaseCandidateBundle,
+} from './release-candidate-bundle.js';
 import { createArenaReleaseReadinessDefinition } from '@number-strategy-jump/arena-release-contracts';
 
 export const ARENA_RELEASE_READINESS_REPORT_SCHEMA_VERSION = 1;
@@ -12,20 +15,26 @@ export const ARENA_RELEASE_READINESS_STATUS = Object.freeze({
   READY: 'ready',
   FAILED: 'failed',
   INCOMPLETE: 'incomplete',
-});
+} as const);
 
 const VERIFIED_EVIDENCE_KEYS = new Set(['gateId', 'evidenceHash']);
+const OPTION_KEYS = new Set(['verifiedEvidence']);
 
-function verifiedEvidenceGateSet(values, bundle) {
+function verifiedEvidenceGateSet(
+  values: unknown,
+  bundle: ArenaReleaseCandidateBundle,
+): Set<string> {
   if (!Array.isArray(values)) {
     throw new TypeError('ArenaReleaseReadinessReport verifiedEvidence 必须是数组。');
   }
   const known = new Map(bundle.evidence.map((statement) => [statement.gateId, statement]));
-  const result = new Set();
+  const result = new Set<string>();
   for (const [index, value] of values.entries()) {
     const name = `verifiedEvidence[${index}]`;
     assertKnownKeys(value, VERIFIED_EVIDENCE_KEYS, name);
-    const statement = known.get(value.gateId);
+    if (typeof value.gateId !== 'string') throw new TypeError(`${name}.gateId 必须是字符串。`);
+    const gateId = value.gateId;
+    const statement = known.get(gateId);
     if (!statement) throw new RangeError(`${name}.gateId 不属于当前候选。`);
     if (typeof value.evidenceHash !== 'string' || !/^[0-9a-f]{8}$/.test(value.evidenceHash)) {
       throw new TypeError(`${name}.evidenceHash 必须是 8 位小写十六进制 hash。`);
@@ -33,17 +42,20 @@ function verifiedEvidenceGateSet(values, bundle) {
     if (statement.getContentHash() !== value.evidenceHash) {
       throw new RangeError(`${name}.evidenceHash 与当前候选不一致。`);
     }
-    if (result.has(value.gateId)) throw new RangeError(`重复 verified evidence gate ${value.gateId}。`);
-    result.add(value.gateId);
+    if (result.has(gateId)) throw new RangeError(`重复 verified evidence gate ${gateId}。`);
+    result.add(gateId);
   }
   return result;
 }
 
 export function createArenaReleaseReadinessReport(
-  definitionValue,
-  bundleValue,
-  { verifiedEvidence = [] } = {},
+  definitionValue: unknown,
+  bundleValue: unknown,
+  optionsValue: unknown = {},
 ) {
+  const options = cloneFrozenData(optionsValue, 'ArenaReleaseReadinessReport options');
+  assertKnownKeys(options, OPTION_KEYS, 'ArenaReleaseReadinessReport options');
+  const verifiedEvidence = options.verifiedEvidence ?? [];
   const definition = createArenaReleaseReadinessDefinition(definitionValue);
   const bundle = createArenaReleaseCandidateBundle(definition, bundleValue);
   const verifiedGateIds = verifiedEvidenceGateSet(verifiedEvidence, bundle);

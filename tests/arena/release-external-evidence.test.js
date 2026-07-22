@@ -7,7 +7,7 @@ import test from 'node:test';
 import {
   ARENA_RELEASE_CANDIDATE_BUNDLE_SCHEMA_VERSION,
   createArenaReleaseCandidateBundle,
-} from '../../src/arena-release/release-candidate-bundle.js';
+} from '@number-strategy-jump/arena-release';
 import {
   ARENA_RELEASE_EVIDENCE_STATEMENT_SCHEMA_VERSION,
   ARENA_RELEASE_EVIDENCE_STATUS,

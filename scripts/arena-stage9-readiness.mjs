@@ -3,10 +3,10 @@ import { fileURLToPath } from 'node:url';
 import {
   ARENA_RELEASE_READINESS_STATUS,
   createArenaReleaseReadinessReport,
-} from '../src/arena-release/release-readiness-report.js';
+} from '@number-strategy-jump/arena-release';
 import {
   createArenaReleaseCandidateBundle,
-} from '../src/arena-release/release-candidate-bundle.js';
+} from '@number-strategy-jump/arena-release';
 import {
   createArenaStage9RcHandoffV1Definition,
 } from '../src/arena-release/arena-stage9-rc-handoff-v1.js';

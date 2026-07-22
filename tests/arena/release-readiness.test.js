@@ -9,7 +9,7 @@ import { createArenaV1MatchCore } from '@number-strategy-jump/arena-v1-compositi
 import {
   ARENA_RELEASE_CANDIDATE_BUNDLE_SCHEMA_VERSION,
   createArenaReleaseCandidateBundle,
-} from '../../src/arena-release/release-candidate-bundle.js';
+} from '@number-strategy-jump/arena-release';
 import {
   ARENA_RELEASE_EVIDENCE_STATEMENT_SCHEMA_VERSION,
   ARENA_RELEASE_EVIDENCE_STATUS,
@@ -23,7 +23,7 @@ import {
 import {
   ARENA_RELEASE_READINESS_STATUS,
   createArenaReleaseReadinessReport,
-} from '../../src/arena-release/release-readiness-report.js';
+} from '@number-strategy-jump/arena-release';
 import {
   ARENA_STAGE9_RC_HANDOFF_GATE_ID,
   createArenaStage9RcHandoffV1Definition,
@@ -43,7 +43,7 @@ import {
 } from '../../src/arena-release/regression-release-evidence.js';
 import {
   verifyArenaReleaseEvidenceProducerResult,
-} from '../../src/arena-release/release-evidence-verification.js';
+} from '@number-strategy-jump/arena-release';
 import {
   ARENA_BUILD_MANIFEST_FILENAME,
   createArenaBuildManifest,
