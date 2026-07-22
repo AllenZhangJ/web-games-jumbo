@@ -196,7 +196,6 @@
     "src/entry/input-pilot-web-app.js",
     "src/entry/input-pilot-web-environment.js",
     "src/entry/input-pilot-workbench-view.js",
-    "src/entry/launch-game.js",
     "src/entry/web-build-identity.js",
     "src/entry/web-greybox.js",
     "src/entry/web-human-match-study.js",

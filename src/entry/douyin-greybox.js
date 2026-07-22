@@ -1,7 +1,9 @@
 import { createDouyinPlatform } from '../platform/douyin.js';
 import { createArenaGame } from './create-arena-game.js';
-import { launchGame } from './launch-game.js';
-import { showMiniGameStartupError } from '@number-strategy-jump/arena-platform-runtime';
+import {
+  launchGame,
+  showMiniGameStartupError,
+} from '@number-strategy-jump/arena-platform-runtime';
 
 void launchGame(() => createDouyinPlatform(), {
   createGame: createArenaGame,

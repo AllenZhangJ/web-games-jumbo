@@ -4,9 +4,10 @@ import { createArenaGame } from './create-arena-game.js';
 import {
   bindWebGameTeardown,
   clearWebStartupError,
+  launchGame,
   showWebStartupError,
+  stopLaunchedGame,
 } from '@number-strategy-jump/arena-platform-runtime';
-import { launchGame, stopLaunchedGame } from './launch-game.js';
 
 bindWebGameTeardown(globalThis, stopLaunchedGame);
 

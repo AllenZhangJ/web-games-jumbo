@@ -1,10 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { launchGame, stopLaunchedGame } from '../src/entry/launch-game.js';
 import {
   clearWebStartupError,
+  launchGame,
   showMiniGameStartupError,
   showWebStartupError,
+  stopLaunchedGame,
 } from '@number-strategy-jump/arena-platform-runtime';
 
 function deferred() {

@@ -5,9 +5,10 @@ import { createArenaProductRendererFactory } from './create-arena-product-render
 import {
   bindWebGameTeardown,
   clearWebStartupError,
+  launchGame,
   showWebStartupError,
+  stopLaunchedGame,
 } from '@number-strategy-jump/arena-platform-runtime';
-import { launchGame, stopLaunchedGame } from './launch-game.js';
 import { WebProductUiSurface } from './web-product-ui-surface.js';
 import { resolveArenaPresentationQualityForLaunch } from './arena-presentation-quality-launch.js';
 import {
