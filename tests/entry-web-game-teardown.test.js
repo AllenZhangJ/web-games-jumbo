@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { bindWebGameTeardown } from '../src/entry/web-game-teardown.js';
+import { bindWebGameTeardown } from '@number-strategy-jump/arena-platform-runtime';
 
 function environmentHarness() {
   const listeners = new Map();

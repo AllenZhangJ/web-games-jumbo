@@ -1,11 +1,14 @@
 import '../styles.css';
 import { createWebPlatform } from '../platform/web.js';
 import { createArenaGame } from './create-arena-game.js';
-import { bindWebGameTeardown } from './web-game-teardown.js';
-import { launchGame } from './launch-game.js';
-import { clearWebStartupError, showWebStartupError } from './web-startup-fallback.js';
+import {
+  bindWebGameTeardown,
+  clearWebStartupError,
+  showWebStartupError,
+} from '@number-strategy-jump/arena-platform-runtime';
+import { launchGame, stopLaunchedGame } from './launch-game.js';
 
-bindWebGameTeardown(globalThis);
+bindWebGameTeardown(globalThis, stopLaunchedGame);
 
 void launchGame(() => createWebPlatform(), {
   createGame: createArenaGame,

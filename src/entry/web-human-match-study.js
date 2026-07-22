@@ -3,7 +3,10 @@ import '../human-match-study.css';
 import { createWebPlatform } from '../platform/web.js';
 import { HumanMatchStudyWebApp } from './human-match-study-web-app.js';
 import { launchGame } from './launch-game.js';
-import { clearWebStartupError, showWebStartupError } from './web-startup-fallback.js';
+import {
+  clearWebStartupError,
+  showWebStartupError,
+} from '@number-strategy-jump/arena-platform-runtime';
 
 void launchGame(() => createWebPlatform(), {
   createGame: (platform) => new HumanMatchStudyWebApp({ platform }),

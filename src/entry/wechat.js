@@ -1,7 +1,7 @@
 import { createWeChatPlatform } from '../platform/wechat.js';
 import { createCanvasArenaProductGame } from './create-canvas-arena-product-game.js';
 import { launchGame } from './launch-game.js';
-import { showMiniGameStartupError } from './mini-game-startup-fallback.js';
+import { showMiniGameStartupError } from '@number-strategy-jump/arena-platform-runtime';
 
 void launchGame(() => createWeChatPlatform(), {
   createGame: createCanvasArenaProductGame,
