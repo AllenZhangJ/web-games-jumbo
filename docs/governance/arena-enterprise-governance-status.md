@@ -33,7 +33,7 @@
 | G3 Rule/Core/Replay | 已完成 | strict TS `arena-core`、`arena-movement`、`arena-physics`、`arena-equipment`、`arena-map` 与 `arena-match` 已承接规则/移动/物理/装备、完整地图权威链、比赛配置、Participant/Timeline 唯一写入者、角色 Runtime/物理投影、状态 hash、完整 MatchCore 编排、fixed-step Runtime 与 Replay；strict `arena-v1-content` 集中发布具体动作、装备、角色、地图、移动动作与平衡 Definition；黄金语料保持 `0dace228` |
 | G4 Bot/Product/Persistence | 已完成 | strict TS Bot、Matchmaking、Quick Match、Local Match Session、Product State、Progression、ProductMatchResult、奖励事务、Profile Service/Repository、Storage Lease、Product Match、Product Session Controller、对称内容池、Arena V1 产品内容与通用 Product Composition 已闭环；Arena V1 应用组合根已在 G6.36 归入独立 strict 包 |
 | G5 Presentation/资产/反馈 | 已完成 | strict `arena-presentation-contracts`、`arena-presentation-runtime`、`arena-v1-presentation-content`、`arena-product-presentation`、`arena-presentation-three` 与 `arena-product-presentation-three` 已承接通用合同、输入/反馈/生命周期、具体 V1 表现、Product 表现所有权和 Three Surface；设备/性能证据合同已归入独立 strict 包；共享对局资源取得/回滚原语完成 strict 迁移。生产 Product Session 组合已在 G6.37 归包；旧 Greybox ArenaPresentationSession 是 G6 应用根，Pilot 是 G7 测试/研究链，不再伪装为 G5 通用表现缺口 |
-| G6 Platform/入口/构建 | 进行中 | 三端默认入口是 Product；运行实例 ID、启动协调、失败兜底、Web teardown、三端平台适配、Arena V1 应用组合根、生产 Session、顶层 Launch、Web Product UI、三端实际 Product Entry，以及 Greybox Session 组合、表现生命周期、应用根和三端 Greybox Entry 均已 strict 化。Web 研究环境识别与 clean build 身份已 strict 化；研究下载、Workbench、应用与入口待迁移，并继续证明生产交付和开发/研究入口彻底隔离 |
+| G6 Platform/入口/构建 | 进行中 | 三端默认入口是 Product；运行实例 ID、启动协调、失败兜底、Web teardown、三端平台适配、Arena V1 应用组合根、生产 Session、顶层 Launch、Web Product UI、三端实际 Product Entry，以及 Greybox Session 组合、表现生命周期、应用根和三端 Greybox Entry 均已 strict 化。Web 研究环境、clean build 身份和 JSON 下载所有权已 strict 化；研究 Workbench、应用与入口待迁移，并继续证明生产交付和开发/研究入口彻底隔离 |
 | G7 零 JS/完整质量门 | 未开始 | ESLint、strict TypeScript、Vitest 和 JavaScript 精确递减门禁已作为迁移护栏运行；coverage 阈值、测试归包和零 JS 尚未完成 |
 | G8 资产/安全/所有权 | 未开始 | CODEOWNERS、CI 安全与正式资产最终批准待补齐 |
 | G9 文档归真 | 未开始 | README 首标题和大量章节仍以数值跳台 v3 为产品真值 |
@@ -55,7 +55,7 @@
 
 ## 当前不可合并原因
 
-1. 当前 260 个受维护 JavaScript 文件仍在精确允许清单中；G6 尚需迁移研究下载、Workbench、应用与入口，G7 尚需迁移 Pilot/Study/Release/其他测试与验收链并建立零 JS 门禁。
+1. 当前 258 个受维护 JavaScript 文件仍在精确允许清单中；G6 尚需迁移研究 Workbench、应用与入口，G7 尚需迁移 Pilot/Study/Release/其他测试与验收链并建立零 JS 门禁。
 2. Vitest 当前保护底层合同包和治理门禁；Arena 其余测试尚待按 workspace 迁移并建立正式 coverage 阈值与零 JS 门禁。
 3. 正式资产最终审批与完整安全/依赖长期治理尚未闭环。
 4. 文档仍含迁移前阶段性叙述，尚未完成 G9 全量链接、状态与命令归真。
@@ -1146,3 +1146,12 @@
 - 新增回归证明 fetch/json 访问器均零执行并返回不可采集状态；完整 Node 测试增至 687/687，strict package/治理测试保持 312/312，ESLint、strict typecheck 和生产产物隔离门禁通过。本批只改变研究宿主辅助路径，没有重跑 G6.42 已通过且代码路径未变的 Replay、fuzz、生命周期和 Session soak；也不把旧结果伪写为本批新执行。
 - 本批没有新增或升级依赖，`package-lock.json` 未改变。代码提交为 `499fe710df4ebaebdc6e7e72cc9f114c16daa16a`，clean build ID 为 `arena-499fe710df4e-product`。Web/微信/抖音 delivery 为 `3807531 / 3835130 / 3835105 B`，JavaScript 为 `1463921 / 1507034 / 1507034 B`；三端 `sourceDirty=false`、默认入口均为 Product、预算通过且 `freezeEligible=true`。生产交付体积与 G6.42 完全一致，研究辅助层未进入默认 Product bundle。
 - 本批不改变 Product/Greybox 页面或交互，因此未新增浏览器或真机通过记录。Allen 的 iPhone 13 Pro、iOS 26、Chrome 以及微信/抖音真机验收仍是外部门禁。本批也没有改变 Gameplay V2 配置 hash `8c322912`、攻击/动作/武器、移动/跳跃、画质、关节、Bot、权威 tick、Replay/Profile schema 或正式资产。G6 下一步单独治理 Pilot/Study JSON 下载所有权和 Blob URL 清理；G7-G10 尚未完成，当前不可合并。
+
+## G6.44 Pilot/Study JSON 下载所有权 strict 迁移证据
+
+- Pilot 与 Human Match Study 两个 JSON 下载模块从 JavaScript 直接迁为 strict TypeScript，并新增共用的 Web JSON Download Lease；旧实现删除且没有 JavaScript 转发层，精确允许清单由 260 降至 258。共用层只管理 UTF-8/Blob payload、一次性点击、临时 DOM 节点和 Blob URL，不参与研究数据生成、比赛状态或 Product 运行时。
+- Pilot options 只接受普通对象的 `kind/revision/value` 自有数据字段，嵌套数据在序列化前安全复制冻结，访问器零执行。Study CapturePackage/Workspace 同样先复制冻结，SHA-256 对实际下载的 UTF-8 bytes 计算并校验为 32 bytes；文件名、revision、payload 类型和同步 DOM/URL 方法均有显式边界。
+- Download Lease 在构造、append、click、延迟分发与 release 各失败点 fail closed；临时链接优先用 `remove()`，并用 `parent.removeChild()` 兼容回退，Blob URL 必须 revoke。清理失败保留原错误与清理错误，租约不把未释放资源伪装为成功；异步返回的同步 DOM/URL 方法被拒绝，原生拒绝 Promise 被收容，不形成未处理 rejection。
+- 最终代码提交上的完整 Node 测试为 688/688 通过，Pilot/Study 定向测试为 13/13 通过；strict package/治理测试保持 312/312，ESLint、strict typecheck、JS 递减和生产边界门禁均通过。新增回归覆盖嵌套访问器零执行、click 失败回滚、异步 append 拒绝，以及无 `anchor.remove()` 时的 `removeChild()` 清理。该研究辅助批次未改变权威、Replay、Session 或渲染路径，因此没有重跑 Replay、fuzz、生命周期和 soak，也不把 G6.42 的结果伪写为本批新执行。
+- 本批没有新增或升级依赖，`package-lock.json` 未改变。代码提交为 `0080fb919473f2b848de49f6ca415f3ebfbcf2b5`，clean build ID 为 `arena-0080fb919473-product`。Web/微信/抖音 delivery 为 `3807531 / 3835130 / 3835105 B`，JavaScript 为 `1463921 / 1507034 / 1507034 B`；三端 `sourceDirty=false`、默认入口均为 Product、预算通过且 `freezeEligible=true`。生产交付体积与 G6.43 完全一致，证明研究下载层未进入默认 Product bundle。
+- 本批没有改变 Product/Greybox 页面或交互，未新增浏览器或真机通过记录。Allen 的 iPhone 13 Pro、iOS 26、Chrome 以及微信/抖音真机验收仍是外部门禁；Pilot/Study 页面将在其 Workbench、应用和薄入口完成 strict 迁移后统一做真实浏览器下载验证。本批也没有改变 Gameplay V2 配置 hash `8c322912`、任意距离挥空、攻击/命中/击退、动作/武器、移动/跳跃、画质、关节、Bot、权威 tick、Replay/Profile schema 或正式资产。G6 下一步迁移 Human Match Study Product Runtime；G7-G10 尚未完成，当前不可合并。
