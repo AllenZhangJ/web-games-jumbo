@@ -55,7 +55,7 @@
 
 ## 当前不可合并原因
 
-1. 当前 343 个受维护 JavaScript 文件仍在精确允许清单中，上层输入采样/手势/原始控制、内容/Canvas/性能证据、Platform 和 Arena V1 应用注入适配尚未完成 strict TypeScript workspace 迁移或退役分类。
+1. 当前 340 个受维护 JavaScript 文件仍在精确允许清单中，上层输入 Router/Pointer/Keyboard 适配、内容/Canvas/性能证据、Platform 和 Arena V1 应用注入适配尚未完成 strict TypeScript workspace 迁移或退役分类。
 2. Vitest 当前保护底层合同包和治理门禁；Arena 其余测试尚待按 workspace 迁移并建立正式 coverage 阈值与零 JS 门禁。
 3. 正式资产最终审批与完整安全/依赖长期治理尚未闭环。
 4. 文档仍含迁移前阶段性叙述，尚未完成 G9 全量链接、状态与命令归真。
@@ -814,3 +814,14 @@
 - 黄金 Replay manifest 保持 `0dace228`。输入 fuzz 共 120 场、120 个唯一 final hash、6 次 Replay 复验，耗时 `41896.052792 ms`，未产生 reproduction case；正式资产预算结果保持 `82a8b378`。Presentation Session soak 完成 100 场、耗时 `692.025292 ms`、堆增长 `2479112 B`；完整 Product Presentation Session soak 完成 100 场、100 个唯一 authority hash、耗时 `53157.837417 ms`、堆增长 `6981000 B`。两者均低于 8 MiB，帧、生命周期监听、Canvas 监听和输入绑定残留为零。
 - clean build ID 为 `arena-a5c00567267a-product`，Web/微信/抖音 delivery 为 `3750606 / 3792237 / 3792212 B`，三端 `sourceDirty=false`、默认入口均为 Product、预算通过且 `freezeEligible=true`；生产产物边界检查通过。Web 主业务 chunk 为 `775.18 kB`（gzip `197.82 kB`），Three chunk 为 `631.82 kB`（gzip `161.92 kB`），继续列入 G6 拆包和目标设备 trace，不通过降低画质、分辨率、动作或关节规避。
 - 本批没有新增浏览器或手机交互结论，不冒充 iPhone 13 Pro/iOS 26/Chrome 真机证据，也没有改变 Gameplay V2 配置 hash `8c322912`、攻击/命中/击退数值、动作与武器差异、hit-stop、移动/跳跃、画质、关节、Bot、权威 tick、Replay/Profile schema 或正式资产。下一批按热路径所有权迁移 `RawControlState`、`GestureRecognizer` 与 `InputSampler`，统一校验和快照责任并审计每 tick 分配，再迁移 Pointer/Canvas 适配；G5 仍未完成，当前不可合并。
+
+## G5.20 原始触控、手势与固定 tick 采样热路径迁移证据
+
+- `RawControlState`、`GestureRecognizer` 与 `InputSampler` 已迁入 strict `@number-strategy-jump/arena-presentation-runtime`，生产 Session 组合、fuzz 和全部输入测试统一从包公开 API 消费。三个旧 JavaScript 真值删除，精确允许清单由 343 降至 340；Raw → Gesture → Mapper → Sampler 现在属于同一宿主无关包，不依赖 Renderer、Three.js、DOM、平台、墙钟、Bot 或 MatchCore。
+- Raw options、viewport、layout 与 pointer 均在取得所有权前按数据字段复验；每个 pointer/control 只允许一个 owner，同帧 start/end 边沿继续保留到唯一一次 consume。resize、suspend、resume 会原子清除旧 pointer 所有权。摇杆半径从旧实现每个快照对三个 control 重复计算三次，收敛为构造/resize 时计算一次并缓存，所有布局参数与数值保持原值。
+- Gesture 继续用临时 session map 完整计算三个 control，只有全部输入有效才提交 tick/session；坏访问器、非法 pointer、矛盾边沿、暂停态活跃输入、重复 start 和 tick 间隙均在提交前拒绝。Sampler 在构造时快照 mapper id/map，options 与 sample options 拒绝访问器/未知字段；构造后期失败会回滚已建 Raw owner，采样内部失败进入终止态。
+- 包内 Raw、Gesture、Affordance 与 mapped semantic 快照使用模块私有 WeakSet 标识真实冻结对象；正常生产链复用已验证对象，不重复深复制/字段遍历，外部构造或伪造对象无法获得标识，仍走完整严格校验。Mapper 回调尝试重入 sample、pointer、resize、生命周期或调试读取时，即使自行捕获并吞掉异常，外层 Sampler 仍检测并失败关闭，不能在采样中途改写触控状态。
+- 新增 3 项 strict 边界测试，覆盖 Raw options getter/未知字段、Sampler options/mapper getter 零执行与吞异常重入失败关闭；完整门禁通过：666/666 Node、224/224 strict package/治理、104/104 生命周期，生产依赖审计为 0 vulnerabilities。黄金 Replay manifest 保持 `0dace228`，正式资产预算结果保持 `82a8b378`。
+- 相同 fuzz workload 的操作计数与 frame 计数逐项保持一致，120 场仍产生 120 个唯一 final hash、6 次 Replay 复验且无 reproduction case；耗时由 G5.19 的 `41896.052792 ms` 降为 `30449.535958999997 ms`，约减少 27.3%。这是同机脚本热路径证据，不推断 iPhone 温度或电量。Presentation Session soak 100 场耗时 `519.052042 ms`、堆增长 `2647432 B`；Product Presentation Session soak 100 场、100 个唯一 authority hash，耗时 `46029.242542 ms`、堆增长 `6895504 B`，均低于 8 MiB且无帧/监听/输入残留。
+- clean build ID 为 `arena-dc9534e3c7fe-product`，Web/微信/抖音 delivery 为 `3752902 / 3794781 / 3794756 B`，三端 `sourceDirty=false`、默认入口均为 Product、预算通过且 `freezeEligible=true`；生产产物边界检查通过。Web 主业务 chunk 为 `777.48 kB`（gzip `198.45 kB`），Three chunk 为 `631.82 kB`（gzip `161.92 kB`），仍进入 G6 拆包与目标设备 trace。
+- 本批没有新增浏览器或手机交互结论，不冒充 iPhone 13 Pro/iOS 26/Chrome 真机证据，也没有改变 Gameplay V2 配置 hash `8c322912`、任意距离挥空、攻击/命中/击退数值、动作/武器、移动/跳跃、画质、关节、Bot、权威 tick、Replay/Profile schema 或正式资产。下一批迁移 Pointer Adapter 与 Input Router，再治理 Canvas 输入/绘制边界；G5 仍未完成，当前不可合并。
