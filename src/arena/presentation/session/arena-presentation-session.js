@@ -1,6 +1,6 @@
 import { ARENA_FIXED_DT, ARENA_MATCH_PHASE } from '@number-strategy-jump/arena-match';
 import { normalizeThrownError } from '@number-strategy-jump/arena-contracts';
-import { ARENA_INPUT_ROUTER_MODE } from '../input/arena-input-router.js';
+import { ARENA_INPUT_ROUTER_MODE } from '@number-strategy-jump/arena-presentation-runtime';
 import { projectArenaPresentationFrame } from '@number-strategy-jump/arena-v1-presentation-content';
 import {
   createArenaMatchResources,

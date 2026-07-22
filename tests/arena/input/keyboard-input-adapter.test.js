@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   DEFAULT_ARENA_KEY_BINDINGS,
   KeyboardInputAdapter,
-} from '../../../src/arena/presentation/input/keyboard-input-adapter.js';
+} from '@number-strategy-jump/arena-presentation-runtime';
 
 function eventTargetHarness({ failAt = null } = {}) {
   const listeners = new Map();

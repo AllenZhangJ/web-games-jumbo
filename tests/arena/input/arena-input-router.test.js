@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   ARENA_INPUT_ROUTER_MODE,
   ArenaInputRouter,
-} from '../../../src/arena/presentation/input/arena-input-router.js';
+} from '@number-strategy-jump/arena-presentation-runtime';
 import {
   createGestureInputMapperA,
   InputSampler,
