@@ -3,9 +3,9 @@ import { assertPresentationAssetRegistry } from '@number-strategy-jump/arena-pre
 import { ARENA_PRESENTATION_ASSET_PROVIDER_ID } from '@number-strategy-jump/arena-presentation-runtime';
 import {
   GltfPresentationAssetLoader,
+  GltfCharacterView,
   ProgrammaticCharacterView,
 } from '@number-strategy-jump/arena-presentation-three';
-import { GltfCharacterView } from './gltf-character-view.js';
 
 const LOADABLE_PROVIDERS = new Set([
   ARENA_PRESENTATION_ASSET_PROVIDER_ID.GLTF_ATTACHMENT_V1,

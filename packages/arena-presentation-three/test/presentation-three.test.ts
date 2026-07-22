@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import {
   EquipmentViewRegistry,
   CharacterAnimationController,
+  GltfCharacterView,
   GltfPresentationAssetLoader,
   PlatformTextureLoader,
   ProgrammaticCharacterView,
@@ -120,7 +121,120 @@ function createProgrammaticView(actionPresentations: unknown = {}): Programmatic
   });
 }
 
+function createGltfTemplate(): { scene: THREE.Group; animations: readonly THREE.AnimationClip[] } {
+  const scene = new THREE.Group();
+  scene.name = 'test-character';
+  for (const name of [
+    'handslot.r', 'handslot.l', 'spine', 'head', 'hips',
+    'upperleg.l', 'upperleg.r', 'lowerleg.l', 'lowerleg.r',
+    'upperarm.l', 'upperarm.r', 'lowerarm.l', 'lowerarm.r', 'hand.l', 'hand.r',
+  ]) {
+    const joint = new THREE.Group();
+    joint.name = name;
+    scene.add(joint);
+  }
+  return { scene, animations: Object.freeze([new THREE.AnimationClip('Idle', 1, [])]) };
+}
+
+function createGltfView(characterTemplate = createGltfTemplate()): GltfCharacterView {
+  return new GltfCharacterView({
+    participantId: 'player-1',
+    presentationDefinition: programmaticPresentationDefinition(),
+    characterTemplate,
+    equipmentTemplates: new Map(),
+    actionPresentations: {},
+  });
+}
+
+function gltfSyncOptions(events: readonly unknown[] = []): unknown {
+  return {
+    snap: true,
+    animation: {
+      semantics: { tick: 1, baseEnteredAtTick: 0, baseSemantic: 'idle' },
+      baseBinding: { sourceKey: 'Idle', loop: true },
+      overlayBinding: null,
+    },
+    direction: { worldFacing: { x: 0, z: 1 }, modelFrontYawRadians: 0 },
+    frame: {
+      events,
+      world: {
+        participants: [
+          { id: 'player-1', position: { x: 0, y: 1, z: 0 } },
+          { id: 'player-2', position: { x: 0, y: 1, z: 1 } },
+        ],
+      },
+    },
+  };
+}
+
 describe('Arena Presentation Three lifecycle boundaries', () => {
+  it('keeps GLTF view boundaries getter-safe and deduplicates incoming hits', () => {
+    let reads = 0;
+    const options = {
+      presentationDefinition: programmaticPresentationDefinition(),
+      characterTemplate: createGltfTemplate(),
+      equipmentTemplates: new Map(),
+      actionPresentations: {},
+    };
+    Object.defineProperty(options, 'participantId', {
+      enumerable: true,
+      get() { reads += 1; return 'player-1'; },
+    });
+    expect(() => new GltfCharacterView(options)).toThrow(/participantId.*数据字段/);
+    expect(reads).toBe(0);
+
+    const view = createGltfView();
+    const invalid = programmaticParticipant() as { position: object };
+    Object.defineProperty(invalid.position, 'x', {
+      enumerable: true,
+      get() { reads += 1; return 0; },
+    });
+    expect(() => view.sync(invalid, gltfSyncOptions())).toThrow(/position.x.*数据字段/);
+    expect(reads).toBe(0);
+    expect(view.getAnimationCapabilities().clipKeys).toEqual(['Idle']);
+
+    const hit = Object.freeze({
+      type: 'HitResolved', sequence: 7, attackerId: 'player-2', targetId: 'player-1',
+    });
+    view.sync(programmaticParticipant(), gltfSyncOptions([hit]));
+    view.sync(programmaticParticipant(), gltfSyncOptions([hit]));
+    expect(view.getDebugSnapshot()).toMatchObject({ hitDirection: 'front', lastHitSequence: 7, failed: false });
+    view.dispose();
+  });
+
+  it('retries only incomplete GLTF equipment cleanup and preserves shared template resources', () => {
+    const template = createGltfTemplate();
+    const sharedGeometry = new THREE.BoxGeometry();
+    const sharedMaterial = new THREE.MeshBasicMaterial();
+    let sharedGeometryDisposals = 0;
+    let sharedMaterialDisposals = 0;
+    sharedGeometry.dispose = () => { sharedGeometryDisposals += 1; };
+    sharedMaterial.dispose = () => { sharedMaterialDisposals += 1; };
+    template.scene.add(new THREE.Mesh(sharedGeometry, sharedMaterial));
+    const view = createGltfView(template);
+
+    const originalDispose = THREE.Material.prototype.dispose;
+    let equipmentMaterialDisposals = 0;
+    THREE.Material.prototype.dispose = function patchedDispose(): void {
+      equipmentMaterialDisposals += 1;
+      if (equipmentMaterialDisposals === 1) throw new Error('transient GLTF equipment material release');
+      originalDispose.call(this);
+    };
+    try {
+      view.sync(programmaticParticipant({ equipment: { definitionId: 'hammer' } }), gltfSyncOptions());
+    } finally {
+      THREE.Material.prototype.dispose = originalDispose;
+    }
+    expect(() => view.dispose()).toThrow(/清理未完整完成/);
+    const firstPassDisposals = equipmentMaterialDisposals;
+    view.dispose();
+    view.dispose();
+    expect(equipmentMaterialDisposals).toBe(firstPassDisposals + 1);
+    expect({ sharedGeometryDisposals, sharedMaterialDisposals }).toEqual({
+      sharedGeometryDisposals: 0, sharedMaterialDisposals: 0,
+    });
+  });
+
   it('keeps programmatic view validation atomic and deduplicates incoming event sequences', () => {
     let reads = 0;
     const accessorOptions = {
