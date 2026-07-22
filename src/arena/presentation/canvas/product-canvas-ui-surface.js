@@ -3,9 +3,9 @@ import { createProductUiSceneModel } from '@number-strategy-jump/arena-product-p
 import { disposeThreeObject } from '@number-strategy-jump/arena-presentation-three';
 import {
   createProductCanvasLayout,
+  paintProductCanvasScene,
   pointInProductCanvasRect,
 } from '@number-strategy-jump/arena-product-presentation';
-import { paintProductCanvasScene } from './product-canvas-painter.js';
 
 export const PRODUCT_CANVAS_UI_SURFACE_STATE = Object.freeze({
   CREATED: 'created',

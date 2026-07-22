@@ -138,7 +138,6 @@
     "src/arena/presentation/assets/formal-asset-intake-bundle.js",
     "src/arena/presentation/assets/formal-asset-intake-policy.js",
     "src/arena/presentation/assets/formal-asset-provenance-record.js",
-    "src/arena/presentation/canvas/product-canvas-painter.js",
     "src/arena/presentation/canvas/product-canvas-ui-surface.js",
     "src/arena/presentation/content/arena-gameplay-v2-character-content.js",
     "src/arena/presentation/content/arena-gameplay-v2-content.js",

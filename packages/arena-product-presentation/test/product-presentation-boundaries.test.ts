@@ -29,6 +29,7 @@ import {
   createProductCanvasLayout,
   createProductSessionViewModel,
   createProductUiSceneModel,
+  paintProductCanvasScene,
   pointInProductCanvasRect,
 } from '../src/index.js';
 import { markTrustedProductSessionViewModel } from '../src/product-view-model-trust.js';
@@ -464,6 +465,77 @@ describe('Product presentation immutable data boundaries', () => {
     });
     expect(pointInProductCanvasRect(hostilePoint, actionRect)).toBe(false);
     expect(getterCalls).toBe(0);
+  });
+
+  it('paints a deterministic command stream without mutating scene or layout inputs', () => {
+    const sceneModel = createProductUiSceneModel({
+      revision: 2,
+      locale: 'zh-CN',
+      busy: false,
+      suspended: false,
+      terminal: false,
+      inputEnabled: true,
+      screen: {
+        sceneId: 'home', title: '竞技场', body: '准备战斗', announcement: '竞技场',
+        primaryAction: { label: '开始', enabled: true, intent: { id: 'start-match' } },
+        secondaryAction: null,
+      },
+      characterOptions: [],
+      match: null,
+      result: null,
+      reward: null,
+      unlocks: [],
+      error: null,
+    });
+    const viewport = Object.freeze({ width: 390, height: 844 });
+    const layout = createProductCanvasLayout(sceneModel, viewport);
+    const sceneBefore = JSON.stringify(sceneModel);
+    const layoutBefore = JSON.stringify(layout);
+
+    function recordingContext() {
+      const commands: unknown[][] = [];
+      return {
+        commands,
+        fillStyle: '',
+        strokeStyle: '',
+        lineWidth: 0,
+        textAlign: '',
+        textBaseline: '',
+        font: '',
+        beginPath() { commands.push(['beginPath']); },
+        moveTo(x: number, y: number) { commands.push(['moveTo', x, y]); },
+        lineTo(x: number, y: number) { commands.push(['lineTo', x, y]); },
+        quadraticCurveTo(cpx: number, cpy: number, x: number, y: number) {
+          commands.push(['quadraticCurveTo', cpx, cpy, x, y]);
+        },
+        closePath() { commands.push(['closePath']); },
+        fill() { commands.push(['fill']); },
+        stroke() { commands.push(['stroke']); },
+        arc(x: number, y: number, radius: number, start: number, end: number) {
+          commands.push(['arc', x, y, radius, start, end]);
+        },
+        fillRect(x: number, y: number, width: number, height: number) {
+          commands.push(['fillRect', x, y, width, height]);
+        },
+        fillText(text: string, x: number, y: number) {
+          commands.push(['fillText', text, x, y]);
+        },
+      };
+    }
+
+    const first = recordingContext();
+    const second = recordingContext();
+    paintProductCanvasScene(first, sceneModel, layout, viewport);
+    paintProductCanvasScene(second, sceneModel, layout, viewport);
+
+    expect(first.commands).toEqual(second.commands);
+    expect(first.commands.length).toBeGreaterThan(40);
+    expect(first.commands).toContainEqual(['fillText', '竞技场', layout.header.x, layout.header.y + 24 * layout.scale]);
+    expect(first.commands.some(([command, text]) => command === 'fillText' && text === '开始')).toBe(true);
+    expect(JSON.stringify(sceneModel)).toBe(sceneBefore);
+    expect(JSON.stringify(layout)).toBe(layoutBefore);
+    expect(Object.isFrozen(sceneModel)).toBe(true);
+    expect(Object.isFrozen(layout)).toBe(true);
   });
 });
 

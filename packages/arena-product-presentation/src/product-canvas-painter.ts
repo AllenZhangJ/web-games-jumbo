@@ -1,3 +1,33 @@
+import type {
+  ProductCanvasLayout,
+  ProductCanvasRect,
+} from './product-canvas-layout.js';
+import type { ProductUiSceneModel } from './product-ui-scene-model.js';
+
+export interface ProductCanvasPaintContext {
+  fillStyle: unknown;
+  strokeStyle: unknown;
+  lineWidth: number;
+  textAlign: string;
+  textBaseline: string;
+  font: string;
+  beginPath(): void;
+  moveTo(x: number, y: number): void;
+  lineTo(x: number, y: number): void;
+  quadraticCurveTo(cpx: number, cpy: number, x: number, y: number): void;
+  closePath(): void;
+  fill(): void;
+  stroke(): void;
+  arc(x: number, y: number, radius: number, startAngle: number, endAngle: number): void;
+  fillRect(x: number, y: number, width: number, height: number): void;
+  fillText(text: string, x: number, y: number): void;
+}
+
+export interface ProductCanvasPaintViewport {
+  readonly width: number;
+  readonly height: number;
+}
+
 const COLOR = Object.freeze({
   paper: '#F2EEE5',
   ink: '#253238',
@@ -11,7 +41,11 @@ const COLOR = Object.freeze({
   line: 'rgba(37,50,56,0.16)',
 });
 
-function roundedRect(context, target, radius) {
+function roundedRect(
+  context: ProductCanvasPaintContext,
+  target: ProductCanvasRect,
+  radius: number,
+): void {
   const r = Math.min(Math.max(0, radius), target.width / 2, target.height / 2);
   context.beginPath();
   context.moveTo(target.x + r, target.y);
@@ -41,11 +75,19 @@ function roundedRect(context, target, radius) {
   context.closePath();
 }
 
-function font(size, weight = 700) {
+function font(size: number, weight = 700): string {
   return `${weight} ${Math.max(10, size)}px "PingFang SC", "Microsoft YaHei", sans-serif`;
 }
 
-function drawLine(context, startX, startY, endX, endY, color, width) {
+function drawLine(
+  context: ProductCanvasPaintContext,
+  startX: number,
+  startY: number,
+  endX: number,
+  endY: number,
+  color: string,
+  width: number,
+): void {
   context.beginPath();
   context.moveTo(startX, startY);
   context.lineTo(endX, endY);
@@ -54,7 +96,14 @@ function drawLine(context, startX, startY, endX, endY, color, width) {
   context.stroke();
 }
 
-function drawCharacter(context, characterId, centerX, bottomY, scale = 1, facing = 1) {
+function drawCharacter(
+  context: ProductCanvasPaintContext,
+  characterId: string,
+  centerX: number,
+  bottomY: number,
+  scale = 1,
+  facing = 1,
+): void {
   const isCube = characterId === 'wind-up-cube';
   if (isCube) {
     const size = 84 * scale;
@@ -155,7 +204,11 @@ function drawCharacter(context, characterId, centerX, bottomY, scale = 1, facing
   );
 }
 
-function drawPaper(context, viewport, layout) {
+function drawPaper(
+  context: ProductCanvasPaintContext,
+  viewport: ProductCanvasPaintViewport,
+  layout: ProductCanvasLayout,
+): void {
   context.fillStyle = COLOR.paper;
   context.fillRect(0, 0, viewport.width, viewport.height);
   const railX = layout.safe.x + 13 * layout.scale;
@@ -174,7 +227,11 @@ function drawPaper(context, viewport, layout) {
   }
 }
 
-function drawHeader(context, model, layout) {
+function drawHeader(
+  context: ProductCanvasPaintContext,
+  model: ProductUiSceneModel,
+  layout: ProductCanvasLayout,
+): void {
   const { header, scale } = layout;
   context.textAlign = 'left';
   context.textBaseline = 'top';
@@ -200,7 +257,7 @@ function drawHeader(context, model, layout) {
   }
 }
 
-function drawHome(context, layout) {
+function drawHome(context: ProductCanvasPaintContext, layout: ProductCanvasLayout): void {
   const { visual, scale } = layout;
   const floorY = visual.y + visual.height * 0.82;
   const center = visual.x + visual.width / 2;
@@ -221,7 +278,10 @@ function drawHome(context, layout) {
   context.fillText('1V1  ·  装备  ·  地图  ·  击飞', center, visual.y + visual.height - 22 * scale);
 }
 
-function drawCharacterCards(context, layout) {
+function drawCharacterCards(
+  context: ProductCanvasPaintContext,
+  layout: ProductCanvasLayout,
+): void {
   for (const card of layout.cards) {
     roundedRect(context, card.rect, 20 * layout.scale);
     context.fillStyle = card.selected ? 'rgba(22,166,161,0.16)' : 'rgba(255,255,255,0.72)';
@@ -248,7 +308,11 @@ function drawCharacterCards(context, layout) {
   }
 }
 
-function drawMatching(context, model, layout) {
+function drawMatching(
+  context: ProductCanvasPaintContext,
+  model: ProductUiSceneModel,
+  layout: ProductCanvasLayout,
+): void {
   const { visual, scale } = layout;
   const centerX = visual.x + visual.width / 2;
   const floorY = visual.y + visual.height * 0.72;
@@ -272,7 +336,11 @@ function drawMatching(context, model, layout) {
   context.fillText(model.opponentName, centerX + 78 * scale, floorY + 26 * scale);
 }
 
-function drawResult(context, model, layout) {
+function drawResult(
+  context: ProductCanvasPaintContext,
+  model: ProductUiSceneModel,
+  layout: ProductCanvasLayout,
+): void {
   const { visual, scale } = layout;
   const centerX = visual.x + visual.width / 2;
   const centerY = visual.y + visual.height / 2;
@@ -296,7 +364,11 @@ function drawResult(context, model, layout) {
   }
 }
 
-function drawUnlock(context, model, layout) {
+function drawUnlock(
+  context: ProductCanvasPaintContext,
+  model: ProductUiSceneModel,
+  layout: ProductCanvasLayout,
+): void {
   const { visual, scale } = layout;
   const centerX = visual.x + visual.width / 2;
   const centerY = visual.y + visual.height / 2;
@@ -317,7 +389,11 @@ function drawUnlock(context, model, layout) {
   context.fillText(model.unlock?.name ?? '新内容', centerX, centerY + 92 * scale);
 }
 
-function drawStatus(context, model, layout) {
+function drawStatus(
+  context: ProductCanvasPaintContext,
+  model: ProductUiSceneModel,
+  layout: ProductCanvasLayout,
+): void {
   const { visual, scale } = layout;
   const centerX = visual.x + visual.width / 2;
   const centerY = visual.y + visual.height / 2;
@@ -340,7 +416,11 @@ function drawStatus(context, model, layout) {
   );
 }
 
-function drawVisual(context, model, layout) {
+function drawVisual(
+  context: ProductCanvasPaintContext,
+  model: ProductUiSceneModel,
+  layout: ProductCanvasLayout,
+): void {
   if (model.scene === 'home') drawHome(context, layout);
   else if (model.scene === 'character-select') drawCharacterCards(context, layout);
   else if (model.scene === 'matching') drawMatching(context, model, layout);
@@ -349,7 +429,7 @@ function drawVisual(context, model, layout) {
   else drawStatus(context, model, layout);
 }
 
-function drawActions(context, layout) {
+function drawActions(context: ProductCanvasPaintContext, layout: ProductCanvasLayout): void {
   for (const action of layout.actions) {
     roundedRect(context, action.rect, action.rect.height / 2);
     if (!action.enabled) context.fillStyle = 'rgba(110,119,120,0.34)';
@@ -370,7 +450,12 @@ function drawActions(context, layout) {
   }
 }
 
-export function paintProductCanvasScene(context, model, layout, viewport) {
+export function paintProductCanvasScene(
+  context: ProductCanvasPaintContext,
+  model: ProductUiSceneModel,
+  layout: ProductCanvasLayout,
+  viewport: ProductCanvasPaintViewport,
+): void {
   if (!context || !model || !layout || !viewport) {
     throw new TypeError('paintProductCanvasScene 需要 context、model、layout 与 viewport。');
   }
