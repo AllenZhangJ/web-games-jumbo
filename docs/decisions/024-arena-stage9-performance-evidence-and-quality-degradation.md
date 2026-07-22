@@ -64,6 +64,8 @@ Stage 9 新建独立 Device Definition，不改写 Stage 6/8 历史合同。
 
 正面：质量差异可审计，采集不拥有生命周期，性能结论可重算，设备证据与最终构建强绑定，Stage 6/8 历史不被改写。
 
+2026-07-22 的治理实现把构建预算 Policy/Report 迁入 strict `@number-strategy-jump/arena-performance-evidence`。该包只依赖不可变数据与设备验收合同，只重算调用方注入的 Manifest；架构门禁止它读取宿主计时、DOM、Three.js、平台 API、随机源或网络。运行时采集继续由 `arena-presentation-runtime` 的注入式观察器负责，证据包不持有其生命周期。其余性能 Policy/Record/Metric/Report 仍待按同一边界迁移，因此这次实现更新不等于 S9.4 已关闭。
+
 代价：六个 target 均需十分钟连续录制、生命周期/context 恢复和内存工具支持；低档 Android、主流 iOS 的具体机型仍须写入真实 Record。一个物理设备可以执行同系统的多个平台 target，但每个 run 的 Trace 与附件必须独立。Probe 会增加少量观察开销，因此正式报告应保留相同工具链和采样频率。
 
 ## 完成条件
