@@ -8,7 +8,11 @@ import {
   createInputPilotAggregateExport,
   createInputPilotAuditExport,
 } from './input-pilot-export.js';
-import { INPUT_PILOT_TERMINATION_REASON } from './input-pilot-record.js';
+import {
+  INPUT_PILOT_TERMINATION_REASON,
+  INPUT_PILOT_TRIAL_CONTROLLER_STATE,
+} from '@number-strategy-jump/arena-input-pilot';
+export { INPUT_PILOT_TRIAL_CONTROLLER_STATE } from '@number-strategy-jump/arena-input-pilot';
 import {
   INPUT_PILOT_TRIAL_PHASE,
 } from './input-pilot-trial-checkpoint.js';
@@ -26,18 +30,6 @@ import {
   validateInputPilotRuntimeStatus,
 } from './input-pilot-trial-runtime-port.js';
 import { InputPilotWorkspaceCoordinator } from './input-pilot-workspace-coordinator.js';
-
-export const INPUT_PILOT_TRIAL_CONTROLLER_STATE = Object.freeze({
-  CREATED: 'created',
-  IDLE: 'idle',
-  ENROLLED: 'enrolled',
-  STARTING: 'starting',
-  RUNNING: 'running',
-  REVIEWING: 'reviewing',
-  TERMINAL: 'terminal',
-  FAILED: 'failed',
-  DESTROYED: 'destroyed',
-});
 
 function submissionHash({ observer, selfReport, invalidate }) {
   return createDeterministicDataHash(

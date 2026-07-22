@@ -8,19 +8,15 @@ import {
   INPUT_PILOT_ORIENTATION,
   INPUT_PILOT_PLATFORM,
 } from './input-pilot-definition.js';
+import {
+  INPUT_PILOT_ACTION_OUTCOME,
+  INPUT_PILOT_COMPREHENSION,
+} from '@number-strategy-jump/arena-input-pilot';
 
-export const INPUT_PILOT_ACTION_OUTCOME = Object.freeze({
-  NOT_ATTEMPTED: 'not-attempted',
-  SUCCEEDED: 'succeeded',
-  FAILED: 'failed',
-});
-
-export const INPUT_PILOT_COMPREHENSION = Object.freeze({
-  CORRECT: 'correct',
-  PARTIAL: 'partial',
-  INCORRECT: 'incorrect',
-  NOT_ANSWERED: 'not-answered',
-});
+export {
+  INPUT_PILOT_ACTION_OUTCOME,
+  INPUT_PILOT_COMPREHENSION,
+} from '@number-strategy-jump/arena-input-pilot';
 
 const DEVICE_KEYS = new Set(['platform', 'formFactor', 'orientation', 'inputMode']);
 const ELIGIBILITY_KEYS = new Set(['priorArenaExperience', 'priorOtherVariantExposure']);

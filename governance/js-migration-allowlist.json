@@ -165,7 +165,6 @@
     "src/config.js",
     "src/entry/human-match-study-web-app.js",
     "src/entry/input-pilot-web-app.js",
-    "src/entry/input-pilot-workbench-view.js",
     "src/entry/web-human-match-study.js",
     "src/entry/web-input-pilot.js",
     "tests/architecture.test.js",

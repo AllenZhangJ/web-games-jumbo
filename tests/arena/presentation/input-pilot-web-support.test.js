@@ -13,9 +13,99 @@ import {
   createInputPilotPageOwnerId,
   detectInputPilotWebEnvironment,
 } from '../../../src/entry/input-pilot-web-environment.js';
+import { InputPilotWorkbenchView } from '../../../src/entry/input-pilot-workbench-view.js';
 
 const COMMIT = 'a'.repeat(40);
 const SHA256 = 'b'.repeat(64);
+
+const PILOT_VIEW_SELECTORS = [
+  '[data-pilot-meta]', '[data-pilot-status]', '[data-pilot-progress]', '[data-pilot-panel]',
+  '[data-pilot-export]', '[data-pilot-overlay]', '[data-pilot-toast]',
+];
+
+function createPilotViewHost() {
+  const listeners = new Map();
+  const nodes = new Map(PILOT_VIEW_SELECTORS.map((selector) => [selector, {
+    textContent: '',
+    innerHTML: '',
+    hidden: false,
+    dataset: {},
+  }]));
+  const canvas = {
+    attributes: new Map(),
+    setAttribute(name, value) { this.attributes.set(name, value); },
+  };
+  const slot = {
+    replaceWith(value) {
+      if (value !== canvas) throw new Error('unexpected canvas');
+    },
+  };
+  const root = {
+    markup: '',
+    failRemoveOnce: false,
+    appended: [],
+    get innerHTML() { return this.markup; },
+    set innerHTML(value) { this.markup = value; },
+    querySelector(selector) {
+      if (selector === '#game') return canvas;
+      if (selector === '[data-pilot-canvas-slot]') return slot;
+      return nodes.get(selector) ?? null;
+    },
+    appendChild(value) { this.appended.push(value); },
+    addEventListener(name, callback) { listeners.set(name, callback); },
+    removeEventListener(name, callback) {
+      if (this.failRemoveOnce) {
+        this.failRemoveOnce = false;
+        throw new Error('remove failed once');
+      }
+      if (listeners.get(name) === callback) listeners.delete(name);
+    },
+  };
+  return { root, nodes, canvas, listenerCount: () => listeners.size };
+}
+
+function pilotViewDefinition(taskPrompt = '完成本局目标') {
+  return {
+    taskPrompt,
+    environment: {
+      platform: 'web',
+      formFactor: 'phone',
+      orientation: 'portrait',
+      inputMode: 'touch',
+    },
+  };
+}
+
+function pilotViewSnapshot(overrides = {}) {
+  return {
+    state: 'idle',
+    workspace: { enrollment: { revision: 0 }, activeTrial: null },
+    lastRecord: null,
+    lastError: null,
+    evidence: {
+      collectable: true,
+      reason: null,
+      commit: COMMIT,
+      buildId: 'arena-pilot-clean',
+      buildManifestHash: SHA256,
+    },
+    ...overrides,
+  };
+}
+
+function pilotViewActions(snapshot = pilotViewSnapshot()) {
+  return {
+    getSnapshot: () => snapshot,
+    enroll() {},
+    start() {},
+    abandon() {},
+    saveDraft() {},
+    submit() {},
+    exportAggregate() {},
+    exportAudit() {},
+    exportEvidence() {},
+  };
+}
 
 function buildManifest({ sourceDirty = false, includePilot = true } = {}) {
   return {
@@ -71,6 +161,77 @@ test('pilot form model bounds counters and restores a persisted review draft', (
   }), /不受支持/);
   assert.deepEqual(model.getSnapshot(), beforeInvalidRestore);
   assert.throws(() => { restored.observer.correctionCount = 99; }, /read only|Cannot assign/i);
+});
+
+test('Pilot Workbench rejects accessors, escapes operator data, and retries listener cleanup', () => {
+  const accessorHost = createPilotViewHost();
+  const accessorView = new InputPilotWorkbenchView({
+    root: accessorHost.root,
+    formModel: new InputPilotFormModel(),
+    definition: pilotViewDefinition(),
+    environment: pilotViewDefinition().environment,
+  });
+  let actionReads = 0;
+  const accessorActions = pilotViewActions();
+  Object.defineProperty(accessorActions, 'enroll', {
+    enumerable: true,
+    get() {
+      actionReads += 1;
+      return () => {};
+    },
+  });
+  assert.throws(() => accessorView.bind(accessorActions), /数据字段/);
+  assert.equal(actionReads, 0);
+  let evidenceReads = 0;
+  const accessorSnapshot = pilotViewSnapshot();
+  Object.defineProperty(accessorSnapshot, 'evidence', {
+    enumerable: true,
+    get() {
+      evidenceReads += 1;
+      return {};
+    },
+  });
+  assert.throws(() => accessorView.render(accessorSnapshot), /数据字段/);
+  assert.equal(evidenceReads, 0);
+  accessorView.destroy();
+
+  const host = createPilotViewHost();
+  const view = new InputPilotWorkbenchView({
+    root: host.root,
+    formModel: new InputPilotFormModel(),
+    definition: pilotViewDefinition('<img src=x onerror=alert(1)>'),
+    environment: {
+      platform: '<script>bad()</script>',
+      formFactor: 'phone',
+      orientation: 'portrait',
+      inputMode: 'touch',
+    },
+  });
+  view.bind(pilotViewActions());
+  view.render(pilotViewSnapshot({
+    evidence: {
+      collectable: false,
+      reason: '<img src=x onerror=reason()>',
+      commit: COMMIT,
+      buildId: '<svg onload=build()>',
+      buildManifestHash: SHA256,
+    },
+  }));
+  const panelMarkup = host.nodes.get('[data-pilot-panel]').innerHTML;
+  assert.doesNotMatch(panelMarkup, /<img src=x|<svg onload|<script>bad/);
+  assert.match(panelMarkup, /&lt;img src=x onerror=alert\(1\)&gt;/);
+  assert.match(panelMarkup, /&lt;svg onload=build\(\)&gt;/);
+  assert.match(panelMarkup, /&lt;script&gt;bad\(\)&lt;\/script&gt;/);
+  assert.equal(host.listenerCount(), 2);
+
+  host.root.failRemoveOnce = true;
+  assert.throws(() => view.destroy(), /清理未完成/);
+  assert.throws(() => view.render(pilotViewSnapshot()), /正在销毁/);
+  assert.equal(host.listenerCount(), 1);
+  view.destroy();
+  assert.equal(host.listenerCount(), 0);
+  assert.equal(host.root.appended.at(-1), host.canvas);
+  view.destroy();
 });
 
 test('web pilot environment distinguishes coarse phone touch from desktop mouse', () => {

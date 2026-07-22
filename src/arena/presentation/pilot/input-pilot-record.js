@@ -12,6 +12,11 @@ import {
   createInputPilotObserverReport,
   createInputPilotSelfReport,
 } from './input-pilot-record-fields.js';
+import {
+  INPUT_PILOT_EXCLUSION_REASON,
+  INPUT_PILOT_TERMINATION_REASON,
+  INPUT_PILOT_TRIAL_STATUS,
+} from '@number-strategy-jump/arena-input-pilot';
 
 export {
   INPUT_PILOT_ACTION_OUTCOME,
@@ -20,20 +25,11 @@ export {
 
 export const INPUT_PILOT_RECORD_SCHEMA_VERSION = 2;
 
-export const INPUT_PILOT_TRIAL_STATUS = Object.freeze({
-  COMPLETED: 'completed',
-  ABANDONED: 'abandoned',
-  INVALIDATED: 'invalidated',
-});
-
-export const INPUT_PILOT_TERMINATION_REASON = Object.freeze({
-  MATCH_ENDED: 'match-ended',
-  MAXIMUM_DURATION_REACHED: 'maximum-duration-reached',
-  PARTICIPANT_ABANDONED: 'participant-abandoned',
-  RUNNING_RECOVERED: 'running-recovered',
-  RUNTIME_FAILED: 'runtime-failed',
-  PROTOCOL_DEVIATION: 'protocol-deviation',
-});
+export {
+  INPUT_PILOT_EXCLUSION_REASON,
+  INPUT_PILOT_TERMINATION_REASON,
+  INPUT_PILOT_TRIAL_STATUS,
+} from '@number-strategy-jump/arena-input-pilot';
 
 const TERMINATION_REASONS_BY_STATUS = Object.freeze({
   [INPUT_PILOT_TRIAL_STATUS.COMPLETED]: new Set([
@@ -48,16 +44,6 @@ const TERMINATION_REASONS_BY_STATUS = Object.freeze({
     INPUT_PILOT_TERMINATION_REASON.RUNTIME_FAILED,
     INPUT_PILOT_TERMINATION_REASON.PROTOCOL_DEVIATION,
   ]),
-});
-
-export const INPUT_PILOT_EXCLUSION_REASON = Object.freeze({
-  INVALIDATED: 'invalidated',
-  PRIOR_ARENA_EXPERIENCE: 'prior-arena-experience',
-  PRIOR_OTHER_VARIANT_EXPOSURE: 'prior-other-variant-exposure',
-  PLATFORM_MISMATCH: 'platform-mismatch',
-  FORM_FACTOR_MISMATCH: 'form-factor-mismatch',
-  ORIENTATION_MISMATCH: 'orientation-mismatch',
-  INPUT_MODE_MISMATCH: 'input-mode-mismatch',
 });
 
 const RECORD_KEYS = new Set([
