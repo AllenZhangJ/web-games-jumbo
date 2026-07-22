@@ -13,11 +13,13 @@ import {
   createArenaControlLayout,
   createPresentationMemorySnapshot,
   FixedTickAccumulator,
+  InputSampler,
   PresentationAssetLoadTask,
   PresentationEventWindow,
   type PresentationFrame,
   PresentationFrameLoop,
   PresentationRenderPacer,
+  RawControlState,
   SixSectorDirectionResolver,
   normalizedControlDelta,
   mergePresentationMemorySnapshot,
@@ -416,5 +418,78 @@ describe('Arena Presentation runtime boundaries', () => {
       .toThrow(/单位长度/);
     expect(() => createMappedSemanticInput({ ...mapped, extra: true } as never))
       .toThrow(/不支持字段 extra/);
+  });
+
+  it('validates RawControlState options before taking pointer ownership', () => {
+    let reads = 0;
+    const accessorOptions = Object.defineProperty({}, 'viewport', {
+      enumerable: true,
+      get() { reads += 1; return { width: 400, height: 800 }; },
+    });
+    expect(() => new RawControlState(accessorOptions)).toThrow(/viewport.*访问器/);
+    expect(reads).toBe(0);
+    expect(() => new RawControlState({
+      viewport: { width: 400, height: 800 },
+      future: true,
+    })).toThrow(/不支持字段 future/);
+
+    const state = new RawControlState({ viewport: { width: 400, height: 800 } });
+    expect(state.resize({ width: 400, height: 800 })).toBe(false);
+    expect(state.pointerStart({ pointerId: 1, x: 80, y: 600 })).toBe(true);
+    expect(state.getDebugSnapshot().move.active).toBe(true);
+    state.destroy();
+  });
+
+  it('fails InputSampler closed when a mapper swallows lifecycle reentry', () => {
+    const holder: { sampler?: InputSampler } = {};
+    const sampler = new InputSampler({
+      participantId: 'player-1',
+      viewport: { width: 400, height: 800 },
+      mapper: Object.freeze({
+        id: 'test-reentry-mapper',
+        map() {
+          try {
+            holder.sampler!.pointerStart({ pointerId: 1, x: 80, y: 600 });
+          } catch { /* hostile mapper swallows the reentry rejection */ }
+          return {
+            moveX: 0,
+            moveZ: 0,
+            primaryPressed: false,
+            primaryHeld: false,
+            jumpPressed: false,
+            jumpHeld: false,
+            slamPressed: false,
+          };
+        },
+      }),
+    });
+    holder.sampler = sampler;
+    expect(() => sampler.sample(0)).toThrow(/尝试重入/);
+    expect(() => sampler.sample(0)).toThrow(/失败关闭/);
+    sampler.destroy();
+  });
+
+  it('snapshots InputSampler mapper methods and rejects option accessors', () => {
+    let reads = 0;
+    const mapperAccessor = Object.defineProperty({ id: 'hostile' }, 'map', {
+      enumerable: true,
+      get() { reads += 1; return () => null; },
+    });
+    expect(() => new InputSampler({
+      participantId: 'player-1',
+      viewport: { width: 400, height: 800 },
+      mapper: mapperAccessor,
+    })).toThrow(/map.*访问器/);
+    expect(reads).toBe(0);
+
+    const optionsAccessor = Object.defineProperty({
+      participantId: 'player-1',
+      mapper: createExplicitCombatJumpMapper(),
+    }, 'viewport', {
+      enumerable: true,
+      get() { reads += 1; return { width: 400, height: 800 }; },
+    });
+    expect(() => new InputSampler(optionsAccessor)).toThrow(/viewport.*访问器/);
+    expect(reads).toBe(0);
   });
 });

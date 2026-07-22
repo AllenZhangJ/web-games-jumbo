@@ -4,10 +4,10 @@ import {
   createContextInputMapperB,
   createExplicitCombatJumpMapper,
   createGestureInputMapperA,
+  GestureRecognizer,
+  InputSampler,
+  RawControlState,
 } from '@number-strategy-jump/arena-presentation-runtime';
-import { InputSampler } from '../../../src/arena/presentation/input/input-sampler.js';
-import { GestureRecognizer } from '../../../src/arena/presentation/input/gesture-recognizer.js';
-import { RawControlState } from '../../../src/arena/presentation/input/raw-control-state.js';
 
 const viewport = Object.freeze({ width: 400, height: 800 });
 const point = (pointerId, x, y) => ({ pointerId, x, y });

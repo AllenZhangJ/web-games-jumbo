@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { GestureRecognizer } from '../../../src/arena/presentation/input/gesture-recognizer.js';
-import { RawControlState } from '../../../src/arena/presentation/input/raw-control-state.js';
+import {
+  GestureRecognizer,
+  RawControlState,
+} from '@number-strategy-jump/arena-presentation-runtime';
 
 const viewport = Object.freeze({ width: 400, height: 800 });
 const point = (pointerId, x, y) => ({ pointerId, x, y });

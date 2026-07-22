@@ -3,6 +3,14 @@ import {
   finiteNumber,
   integerAtLeast,
 } from './input-validation.js';
+import {
+  isTrustedGestureSnapshot,
+  isTrustedMappedSemanticInput,
+  isTrustedMapperAffordance,
+  isTrustedRawControlSnapshot,
+  trustMapperAffordance,
+  trustMappedSemanticInput,
+} from './input-snapshot-trust.js';
 
 export const ARENA_INPUT_MAPPER_ID = Object.freeze({
   GESTURE_MOBILITY: 'gesture-mobility-a',
@@ -248,6 +256,7 @@ function copyRawMapperControl(value: unknown, name: string): RawMapperControl {
 }
 
 function copyRawMapperSnapshot(value: unknown): RawMapperSnapshot {
+  if (isTrustedRawControlSnapshot(value)) return value as RawMapperSnapshot;
   const source = cloneKnownRecord(value, RAW_SNAPSHOT_KEYS, 'InputMapper context.raw');
   return Object.freeze({
     move: copyRawMapperControl(source.move, 'InputMapper context.raw.move'),
@@ -271,6 +280,7 @@ function copyMapperControlGesture(value: unknown, name: string): MapperControlGe
 }
 
 function copyMapperGestureSnapshot(value: unknown): MapperGestureSnapshot {
+  if (isTrustedGestureSnapshot(value)) return value as MapperGestureSnapshot;
   const source = cloneKnownRecord(value, GESTURE_SNAPSHOT_KEYS, 'InputMapper context.gestures');
   return Object.freeze({
     move: copyMapperControlGesture(source.move, 'InputMapper context.gestures.move'),
@@ -294,6 +304,18 @@ export function copyMapperActionAffordance(
     'MapperActionAffordanceCopyOptions.participantId',
   );
   if (value === null || value === undefined) return null;
+  if (isTrustedMapperAffordance(value)) {
+    const trusted = value as MapperActionAffordance;
+    if (trusted.tick !== tick) {
+      throw new RangeError(
+        `MapperActionAffordance.tick ${trusted.tick} 与当前 tick ${tick} 不一致。`,
+      );
+    }
+    if (trusted.participantId !== participantId) {
+      throw new RangeError('MapperActionAffordance.participantId 与玩家不一致。');
+    }
+    return trusted;
+  }
   const source = cloneKnownRecord(value, AFFORDANCE_KEYS, 'MapperActionAffordance');
   const sourceTick = integerAtLeast(source.tick, 0, 'MapperActionAffordance.tick');
   if (sourceTick !== tick) {
@@ -311,7 +333,7 @@ export function copyMapperActionAffordance(
     AFFORDANCE_CHANNEL_KEYS,
     'MapperActionAffordance.channels',
   );
-  return Object.freeze({
+  return trustMapperAffordance(Object.freeze({
     tick: sourceTick,
     participantId: sourceParticipantId,
     primaryActionDefinitionId: nullableString(
@@ -330,13 +352,14 @@ export function copyMapperActionAffordance(
       jump: copyAffordanceOutcome(channels.jump, 'MapperActionAffordance.channels.jump'),
       slam: copyAffordanceOutcome(channels.slam, 'MapperActionAffordance.channels.slam'),
     }),
-  });
+  }));
 }
 
 export function createMappedSemanticInput(
   value: unknown,
   name = 'MappedSemanticInput',
 ): MappedSemanticInput {
+  if (isTrustedMappedSemanticInput(value)) return value as MappedSemanticInput;
   const source = cloneKnownRecord(value, MAPPED_KEYS, name);
   const moveX = finiteNumber(source.moveX, `${name}.moveX`);
   const moveZ = finiteNumber(source.moveZ, `${name}.moveZ`);
@@ -356,7 +379,7 @@ export function createMappedSemanticInput(
     }
     booleans[key] = source[key];
   }
-  return Object.freeze({ moveX, moveZ, ...booleans });
+  return trustMappedSemanticInput(Object.freeze({ moveX, moveZ, ...booleans }));
 }
 
 function copyMapperContext(value: unknown): ArenaInputMapperContext {

@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createGestureInputMapperA } from '@number-strategy-jump/arena-presentation-runtime';
-import { InputSampler } from '../../../src/arena/presentation/input/input-sampler.js';
+import {
+  createGestureInputMapperA,
+  InputSampler,
+} from '@number-strategy-jump/arena-presentation-runtime';
 import { PointerInputAdapter } from '../../../src/arena/presentation/input/pointer-input-adapter.js';
 
 const point = (pointerId, x, y) => ({ pointerId, x, y });

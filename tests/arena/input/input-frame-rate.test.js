@@ -2,8 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createArenaV1MatchCore } from '../../../src/arena/arena-v1-match-core.js';
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
-import { createGestureInputMapperA } from '@number-strategy-jump/arena-presentation-runtime';
-import { InputSampler } from '../../../src/arena/presentation/input/input-sampler.js';
+import {
+  createGestureInputMapperA,
+  InputSampler,
+} from '@number-strategy-jump/arena-presentation-runtime';
 import { FixedStepMatchRuntime } from '@number-strategy-jump/arena-match';
 
 const VIEWPORT = Object.freeze({ width: 400, height: 800 });

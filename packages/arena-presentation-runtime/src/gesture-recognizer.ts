@@ -1,11 +1,100 @@
 import {
+  GESTURE_DIRECTION,
+  type GestureDirection,
+} from './arena-input-mapper.js';
+import { type ArenaControlId } from './control-layout.js';
+import {
   cloneKnownRecord,
   finiteNumber,
-  GESTURE_DIRECTION,
   integerAtLeast,
-} from '@number-strategy-jump/arena-presentation-runtime';
+} from './input-validation.js';
+import {
+  isTrustedRawControlSnapshot,
+  trustGestureSnapshot,
+} from './input-snapshot-trust.js';
+import {
+  type RawControlSnapshot,
+} from './raw-control-state.js';
 
-export { GESTURE_DIRECTION } from '@number-strategy-jump/arena-presentation-runtime';
+export interface GestureConfig {
+  readonly swipeThreshold: number;
+  readonly directionDominance: number;
+  readonly holdActivationTicks: number;
+}
+
+export interface ControlGestureSnapshot {
+  readonly pointerId: number | null;
+  readonly contactPressed: boolean;
+  readonly contactHeld: boolean;
+  readonly contactHoldStarted: boolean;
+  readonly contactReleased: boolean;
+  readonly tapReleased: boolean;
+  readonly direction: GestureDirection | null;
+  readonly directionPressed: GestureDirection | null;
+  readonly directionHeld: GestureDirection | null;
+  readonly directionHoldStarted: GestureDirection | null;
+  readonly directionReleased: GestureDirection | null;
+  readonly wasDirectionHeld: boolean;
+  readonly cancelled: boolean;
+  readonly heldTicks: number;
+}
+
+export interface GestureSnapshot {
+  readonly tick: number;
+  readonly move: ControlGestureSnapshot;
+  readonly primary: ControlGestureSnapshot;
+  readonly jump: ControlGestureSnapshot;
+}
+
+interface MutableControlGestureSnapshot {
+  pointerId: number | null;
+  contactPressed: boolean;
+  contactHeld: boolean;
+  contactHoldStarted: boolean;
+  contactReleased: boolean;
+  tapReleased: boolean;
+  direction: GestureDirection | null;
+  directionPressed: GestureDirection | null;
+  directionHeld: GestureDirection | null;
+  directionHoldStarted: GestureDirection | null;
+  directionReleased: GestureDirection | null;
+  wasDirectionHeld: boolean;
+  cancelled: boolean;
+  heldTicks: number;
+}
+
+interface GestureSession {
+  readonly pointerId: number;
+  readonly startTick: number;
+  direction: GestureDirection | null;
+  contactHoldActivated: boolean;
+  directionHoldActivated: boolean;
+}
+
+interface RecognizerRawControl {
+  readonly active: boolean;
+  readonly pointerId: number | null;
+  readonly delta: Readonly<{
+    x: number;
+    y: number;
+    rawX: number;
+    rawY: number;
+    magnitude: number;
+    rawMagnitude: number;
+  }>;
+  readonly edges: Readonly<{
+    started: boolean;
+    ended: boolean;
+    cancelled: boolean;
+  }>;
+}
+
+interface RecognizerRawSnapshot {
+  readonly suspended: boolean;
+  readonly move: RecognizerRawControl;
+  readonly primary: RecognizerRawControl;
+  readonly jump: RecognizerRawControl;
+}
 
 const CONFIG_KEYS = new Set([
   'swipeThreshold',
@@ -32,15 +121,15 @@ const RAW_CONTROL_KEYS = new Set([
 const RAW_DELTA_KEYS = new Set(['x', 'y', 'rawX', 'rawY', 'magnitude', 'rawMagnitude']);
 const RAW_EDGE_KEYS = new Set(['started', 'ended', 'cancelled']);
 
-export const DEFAULT_GESTURE_CONFIG = Object.freeze({
+export const DEFAULT_GESTURE_CONFIG: Readonly<GestureConfig> = Object.freeze({
   swipeThreshold: 0.65,
   directionDominance: 1.25,
   holdActivationTicks: 5,
 });
 
-function createGestureConfig(overrides = {}) {
+function createGestureConfig(overrides: unknown = {}): Readonly<GestureConfig> {
   const source = cloneKnownRecord(overrides, CONFIG_KEYS, 'GestureConfig');
-  const config = { ...DEFAULT_GESTURE_CONFIG, ...source };
+  const config = { ...DEFAULT_GESTURE_CONFIG, ...source } as unknown as GestureConfig;
   finiteNumber(config.swipeThreshold, 'GestureConfig.swipeThreshold');
   if (config.swipeThreshold <= 0 || config.swipeThreshold > 2) {
     throw new RangeError('GestureConfig.swipeThreshold 必须位于 (0, 2]。');
@@ -53,7 +142,10 @@ function createGestureConfig(overrides = {}) {
   return Object.freeze(config);
 }
 
-function detectDirection(control, config) {
+function detectDirection(
+  control: RecognizerRawControl,
+  config: Readonly<GestureConfig>,
+): GestureDirection | null {
   const x = control.delta.rawX;
   const y = control.delta.rawY;
   const absoluteX = Math.abs(x);
@@ -68,7 +160,7 @@ function detectDirection(control, config) {
   return null;
 }
 
-function emptyControlGesture() {
+function emptyControlGesture(): MutableControlGestureSnapshot {
   return {
     pointerId: null,
     contactPressed: false,
@@ -87,49 +179,70 @@ function emptyControlGesture() {
   };
 }
 
-function freezeGesture(value) {
+function freezeGesture(value: MutableControlGestureSnapshot): ControlGestureSnapshot {
   return Object.freeze(value);
 }
 
-function cloneRawControl(value, name) {
+function cloneRawControl(value: unknown, name: string): RecognizerRawControl {
   const source = cloneKnownRecord(value, RAW_CONTROL_KEYS, name);
   if (typeof source.active !== 'boolean') throw new TypeError(`${name}.active 必须是布尔值。`);
   if (
     source.pointerId !== null
-    && (!Number.isSafeInteger(source.pointerId) || source.pointerId < 0)
+    && (!Number.isSafeInteger(source.pointerId) || (source.pointerId as number) < 0)
   ) throw new RangeError(`${name}.pointerId 无效。`);
   const delta = cloneKnownRecord(source.delta, RAW_DELTA_KEYS, `${name}.delta`);
-  for (const key of RAW_DELTA_KEYS) finiteNumber(delta[key], `${name}.delta.${key}`);
+  const normalizedDelta: Record<string, number> = {};
+  for (const key of RAW_DELTA_KEYS) {
+    normalizedDelta[key] = finiteNumber(delta[key], `${name}.delta.${key}`);
+  }
   const edges = cloneKnownRecord(source.edges, RAW_EDGE_KEYS, `${name}.edges`);
+  const normalizedEdges: Record<string, boolean> = {};
   for (const key of RAW_EDGE_KEYS) {
-    if (typeof edges[key] !== 'boolean') throw new TypeError(`${name}.edges.${key} 必须是布尔值。`);
+    if (typeof edges[key] !== 'boolean') {
+      throw new TypeError(`${name}.edges.${key} 必须是布尔值。`);
+    }
+    normalizedEdges[key] = edges[key];
   }
   if (
-    (source.active || edges.started || edges.ended || edges.cancelled)
+    (source.active || normalizedEdges.started || normalizedEdges.ended || normalizedEdges.cancelled)
     && source.pointerId === null
   ) throw new RangeError(`${name} 活跃或包含边沿时必须有 pointerId。`);
-  if (edges.ended && edges.cancelled) {
+  if (normalizedEdges.ended && normalizedEdges.cancelled) {
     throw new RangeError(`${name} 不能同时 ended 与 cancelled。`);
   }
-  return {
+  return Object.freeze({
     active: source.active,
-    pointerId: source.pointerId,
-    delta,
-    edges,
-  };
+    pointerId: source.pointerId as number | null,
+    delta: Object.freeze({
+      x: normalizedDelta.x!,
+      y: normalizedDelta.y!,
+      rawX: normalizedDelta.rawX!,
+      rawY: normalizedDelta.rawY!,
+      magnitude: normalizedDelta.magnitude!,
+      rawMagnitude: normalizedDelta.rawMagnitude!,
+    }),
+    edges: Object.freeze({
+      started: normalizedEdges.started!,
+      ended: normalizedEdges.ended!,
+      cancelled: normalizedEdges.cancelled!,
+    }),
+  });
 }
 
-function cloneRawSnapshot(value) {
+function cloneRawSnapshot(value: unknown): RecognizerRawSnapshot {
+  if (isTrustedRawControlSnapshot(value)) {
+    return value as RawControlSnapshot;
+  }
   const source = cloneKnownRecord(value, RAW_SNAPSHOT_KEYS, 'RawControlSnapshot');
   if (typeof source.suspended !== 'boolean') {
     throw new TypeError('RawControlSnapshot.suspended 必须是布尔值。');
   }
-  const snapshot = {
+  const snapshot: RecognizerRawSnapshot = Object.freeze({
     suspended: source.suspended,
     move: cloneRawControl(source.move, 'RawControlSnapshot.move'),
     primary: cloneRawControl(source.primary, 'RawControlSnapshot.primary'),
     jump: cloneRawControl(source.jump, 'RawControlSnapshot.jump'),
-  };
+  });
   if (snapshot.suspended) {
     for (const [name, control] of Object.entries({
       move: snapshot.move,
@@ -144,17 +257,19 @@ function cloneRawSnapshot(value) {
   return snapshot;
 }
 
-function cloneSessions(sessions) {
+function cloneSessions(
+  sessions: ReadonlyMap<ArenaControlId, GestureSession>,
+): Map<ArenaControlId, GestureSession> {
   return new Map([...sessions].map(([key, session]) => [key, { ...session }]));
 }
 
 export class GestureRecognizer {
-  #config;
-  #sessions;
-  #lastTick;
-  #destroyed;
+  readonly #config: Readonly<GestureConfig>;
+  #sessions: Map<ArenaControlId, GestureSession>;
+  #lastTick: number;
+  #destroyed: boolean;
 
-  constructor(config = {}) {
+  constructor(config: unknown = {}) {
     this.#config = createGestureConfig(config);
     this.#sessions = new Map();
     this.#lastTick = -1;
@@ -162,18 +277,23 @@ export class GestureRecognizer {
     Object.freeze(this);
   }
 
-  #assertUsable() {
+  #assertUsable(): void {
     if (this.#destroyed) throw new Error('GestureRecognizer 已销毁。');
   }
 
-  #sampleControl(sessions, controlId, control, tick) {
+  #sampleControl(
+    sessions: Map<ArenaControlId, GestureSession>,
+    controlId: ArenaControlId,
+    control: RecognizerRawControl,
+    tick: number,
+  ): ControlGestureSnapshot {
     const output = emptyControlGesture();
     if (control.edges.started) {
       if (sessions.has(controlId)) {
         throw new Error(`GestureRecognizer ${controlId} 收到重复 pointer start。`);
       }
       sessions.set(controlId, {
-        pointerId: control.pointerId,
+        pointerId: control.pointerId!,
         startTick: tick,
         direction: null,
         contactHoldActivated: false,
@@ -235,9 +355,9 @@ export class GestureRecognizer {
     return freezeGesture(output);
   }
 
-  sample(tick, rawSnapshot) {
+  sample(tickValue: unknown, rawSnapshot: unknown): GestureSnapshot {
     this.#assertUsable();
-    integerAtLeast(tick, 0, 'GestureRecognizer.tick');
+    const tick = integerAtLeast(tickValue, 0, 'GestureRecognizer.tick');
     if (this.#lastTick >= 0 && tick !== this.#lastTick + 1) {
       throw new RangeError(
         `GestureRecognizer tick 必须连续：上次 ${this.#lastTick}，本次 ${tick}。`,
@@ -246,23 +366,23 @@ export class GestureRecognizer {
     const source = cloneRawSnapshot(rawSnapshot);
     const nextSessions = cloneSessions(this.#sessions);
     if (source.suspended) nextSessions.clear();
-    const result = Object.freeze({
+    const result = trustGestureSnapshot(Object.freeze({
       tick,
       move: this.#sampleControl(nextSessions, 'move', source.move, tick),
       primary: this.#sampleControl(nextSessions, 'primary', source.primary, tick),
       jump: this.#sampleControl(nextSessions, 'jump', source.jump, tick),
-    });
+    }));
     this.#sessions = nextSessions;
     this.#lastTick = tick;
     return result;
   }
 
-  reset() {
+  reset(): void {
     this.#assertUsable();
     this.#sessions.clear();
   }
 
-  getDebugSnapshot() {
+  getDebugSnapshot(): Readonly<{ lastTick: number; activeControls: readonly ArenaControlId[] }> {
     this.#assertUsable();
     return Object.freeze({
       lastTick: this.#lastTick,
@@ -270,7 +390,7 @@ export class GestureRecognizer {
     });
   }
 
-  destroy() {
+  destroy(): void {
     if (this.#destroyed) return;
     this.#destroyed = true;
     this.#sessions.clear();

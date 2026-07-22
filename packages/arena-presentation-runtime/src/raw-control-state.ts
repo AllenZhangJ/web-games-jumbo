@@ -1,40 +1,102 @@
 import {
   ARENA_CONTROL_ID,
+  type ArenaControlDelta,
+  type ArenaControlId,
+  type ArenaControlLayout,
+  type ArenaControlPoint,
   controlAtPoint,
   createArenaControlLayout,
   joystickRadius,
   normalizedControlDelta,
-} from '@number-strategy-jump/arena-presentation-runtime';
+} from './control-layout.js';
 import {
+  cloneKnownRecord,
   clonePoint,
   cloneViewport,
   nextRevision,
-} from '@number-strategy-jump/arena-presentation-runtime';
+  type PresentationInputViewport,
+} from './input-validation.js';
+import { trustRawControlSnapshot } from './input-snapshot-trust.js';
 
-const CONTROL_IDS = Object.freeze(Object.values(ARENA_CONTROL_ID));
+export interface RawControlEdges {
+  readonly started: boolean;
+  readonly ended: boolean;
+  readonly cancelled: boolean;
+}
 
-function emptyEdges() {
+interface MutableRawControlEdges {
+  started: boolean;
+  ended: boolean;
+  cancelled: boolean;
+}
+
+export interface RawControlVector {
+  readonly x: number;
+  readonly z: number;
+}
+
+export interface RawControlSnapshotEntry {
+  readonly active: boolean;
+  readonly pointerId: number | null;
+  readonly origin: Readonly<ArenaControlPoint> | null;
+  readonly current: Readonly<ArenaControlPoint> | null;
+  readonly delta: Readonly<ArenaControlDelta>;
+  readonly vector: Readonly<RawControlVector>;
+  readonly edges: Readonly<RawControlEdges>;
+}
+
+export interface RawControlSnapshot {
+  readonly revision: number;
+  readonly suspended: boolean;
+  readonly viewport: Readonly<PresentationInputViewport>;
+  readonly move: RawControlSnapshotEntry;
+  readonly primary: RawControlSnapshotEntry;
+  readonly jump: RawControlSnapshotEntry;
+}
+
+interface PointerRecord {
+  readonly pointerId: number;
+  readonly controlId: ArenaControlId;
+  readonly origin: ArenaControlPoint;
+  current: ArenaControlPoint;
+}
+
+const OPTION_KEYS = new Set(['viewport', 'layout']);
+const CONTROL_IDS: readonly ArenaControlId[] = Object.freeze(Object.values(ARENA_CONTROL_ID));
+
+function emptyEdges(): MutableRawControlEdges {
   return { started: false, ended: false, cancelled: false };
 }
 
-function frozenPoint(point) {
-  return point ? Object.freeze({ x: point.x, y: point.y, pointerId: point.pointerId }) : null;
+function frozenPoint(point: ArenaControlPoint | null): Readonly<ArenaControlPoint> | null {
+  return point
+    ? Object.freeze({ x: point.x, y: point.y, pointerId: point.pointerId })
+    : null;
+}
+
+function requireMapValue<K, V>(map: ReadonlyMap<K, V>, key: K, name: string): V {
+  const value = map.get(key);
+  if (value === undefined) throw new Error(`RawControlState 缺少 ${name}。`);
+  return value;
 }
 
 export class RawControlState {
-  #layout;
-  #viewport;
-  #pointers;
-  #ownerByControl;
-  #lastByControl;
-  #edgesByControl;
-  #revision;
-  #suspended;
-  #destroyed;
+  readonly #layout: Readonly<ArenaControlLayout>;
+  #viewport: Readonly<PresentationInputViewport>;
+  #joystickRadius: number;
+  readonly #pointers: Map<number, PointerRecord>;
+  readonly #ownerByControl: Map<ArenaControlId, number>;
+  readonly #lastByControl: Map<ArenaControlId, PointerRecord | null>;
+  readonly #edgesByControl: Map<ArenaControlId, MutableRawControlEdges>;
+  #revision: number;
+  #suspended: boolean;
+  #destroyed: boolean;
 
-  constructor({ viewport, layout = {} }) {
-    this.#layout = createArenaControlLayout(layout);
-    this.#viewport = cloneViewport(viewport, 'RawControlState.viewport');
+  constructor(options: unknown) {
+    const source = cloneKnownRecord(options, OPTION_KEYS, 'RawControlState options');
+    this.#layout = createArenaControlLayout(source.layout ?? {});
+    this.#viewport = cloneViewport(source.viewport, 'RawControlState.viewport');
+    this.#joystickRadius = joystickRadius(this.#viewport, this.#layout);
     this.#pointers = new Map();
     this.#ownerByControl = new Map();
     this.#lastByControl = new Map(CONTROL_IDS.map((id) => [id, null]));
@@ -45,15 +107,15 @@ export class RawControlState {
     Object.freeze(this);
   }
 
-  #assertUsable() {
+  #assertUsable(): void {
     if (this.#destroyed) throw new Error('RawControlState 已销毁。');
   }
 
-  #touchRevision() {
+  #touchRevision(): void {
     this.#revision = nextRevision(this.#revision);
   }
 
-  #clearInternal() {
+  #clearInternal(): void {
     this.#pointers.clear();
     this.#ownerByControl.clear();
     for (const controlId of CONTROL_IDS) {
@@ -62,19 +124,21 @@ export class RawControlState {
     }
   }
 
-  resize(viewport) {
+  resize(viewport: unknown): boolean {
     this.#assertUsable();
     const next = cloneViewport(viewport, 'RawControlState.viewport');
     if (next.width === this.#viewport.width && next.height === this.#viewport.height) {
       return false;
     }
+    const nextJoystickRadius = joystickRadius(next, this.#layout);
     this.#viewport = next;
+    this.#joystickRadius = nextJoystickRadius;
     this.#clearInternal();
     this.#touchRevision();
     return true;
   }
 
-  pointerStart(point) {
+  pointerStart(point: unknown): boolean {
     this.#assertUsable();
     const value = clonePoint(point, 'pointerStart');
     if (this.#suspended || this.#pointers.has(value.pointerId)) return false;
@@ -82,9 +146,13 @@ export class RawControlState {
     if (
       controlId === null
       || this.#ownerByControl.has(controlId)
-      || Object.values(this.#edgesByControl.get(controlId)).some(Boolean)
+      || Object.values(requireMapValue(
+        this.#edgesByControl,
+        controlId,
+        `${controlId} edges`,
+      )).some(Boolean)
     ) return false;
-    const record = {
+    const record: PointerRecord = {
       pointerId: value.pointerId,
       controlId,
       origin: { ...value },
@@ -93,12 +161,12 @@ export class RawControlState {
     this.#pointers.set(value.pointerId, record);
     this.#ownerByControl.set(controlId, value.pointerId);
     this.#lastByControl.set(controlId, record);
-    this.#edgesByControl.get(controlId).started = true;
+    requireMapValue(this.#edgesByControl, controlId, `${controlId} edges`).started = true;
     this.#touchRevision();
     return true;
   }
 
-  pointerMove(point) {
+  pointerMove(point: unknown): boolean {
     this.#assertUsable();
     const value = clonePoint(point, 'pointerMove');
     if (this.#suspended) return false;
@@ -111,7 +179,7 @@ export class RawControlState {
     return true;
   }
 
-  #release(point, cancelled) {
+  #release(point: unknown, cancelled: boolean): boolean {
     const value = clonePoint(point, cancelled ? 'pointerCancel' : 'pointerEnd');
     const record = this.#pointers.get(value.pointerId);
     if (!record) return false;
@@ -119,26 +187,30 @@ export class RawControlState {
     this.#pointers.delete(value.pointerId);
     this.#ownerByControl.delete(record.controlId);
     this.#lastByControl.set(record.controlId, record);
-    const edges = this.#edgesByControl.get(record.controlId);
+    const edges = requireMapValue(
+      this.#edgesByControl,
+      record.controlId,
+      `${record.controlId} edges`,
+    );
     if (cancelled) edges.cancelled = true;
     else edges.ended = true;
     this.#touchRevision();
     return true;
   }
 
-  pointerEnd(point) {
+  pointerEnd(point: unknown): boolean {
     this.#assertUsable();
     if (this.#suspended) return false;
     return this.#release(point, false);
   }
 
-  pointerCancel(point) {
+  pointerCancel(point: unknown): boolean {
     this.#assertUsable();
     if (this.#suspended) return false;
     return this.#release(point, true);
   }
 
-  suspend() {
+  suspend(): boolean {
     this.#assertUsable();
     if (this.#suspended) return false;
     this.#suspended = true;
@@ -147,7 +219,7 @@ export class RawControlState {
     return true;
   }
 
-  resume() {
+  resume(): boolean {
     this.#assertUsable();
     if (!this.#suspended) return false;
     this.#suspended = false;
@@ -156,13 +228,16 @@ export class RawControlState {
     return true;
   }
 
-  #controlSnapshot(controlId) {
+  #controlSnapshot(controlId: ArenaControlId): RawControlSnapshotEntry {
     const ownerId = this.#ownerByControl.get(controlId);
-    const activeRecord = ownerId === undefined ? null : this.#pointers.get(ownerId);
-    const record = activeRecord ?? this.#lastByControl.get(controlId);
-    const radius = joystickRadius(this.#viewport, this.#layout);
+    const activeRecord = ownerId === undefined ? null : (this.#pointers.get(ownerId) ?? null);
+    const record = activeRecord ?? requireMapValue(
+      this.#lastByControl,
+      controlId,
+      `${controlId} last record`,
+    );
     const delta = record
-      ? normalizedControlDelta(record.origin, record.current, radius)
+      ? normalizedControlDelta(record.origin, record.current, this.#joystickRadius)
       : Object.freeze({
         x: 0,
         y: 0,
@@ -171,7 +246,7 @@ export class RawControlState {
         magnitude: 0,
         rawMagnitude: 0,
       });
-    const edges = this.#edgesByControl.get(controlId);
+    const edges = requireMapValue(this.#edgesByControl, controlId, `${controlId} edges`);
     return Object.freeze({
       active: activeRecord !== null,
       pointerId: record?.pointerId ?? null,
@@ -185,18 +260,18 @@ export class RawControlState {
     });
   }
 
-  #snapshot() {
-    return Object.freeze({
+  #snapshot(): RawControlSnapshot {
+    return trustRawControlSnapshot(Object.freeze({
       revision: this.#revision,
       suspended: this.#suspended,
       viewport: this.#viewport,
       move: this.#controlSnapshot(ARENA_CONTROL_ID.MOVE),
       primary: this.#controlSnapshot(ARENA_CONTROL_ID.PRIMARY),
       jump: this.#controlSnapshot(ARENA_CONTROL_ID.JUMP),
-    });
+    }));
   }
 
-  consumeSnapshot() {
+  consumeSnapshot(): RawControlSnapshot {
     this.#assertUsable();
     const snapshot = this.#snapshot();
     for (const controlId of CONTROL_IDS) {
@@ -205,12 +280,12 @@ export class RawControlState {
     return snapshot;
   }
 
-  getDebugSnapshot() {
+  getDebugSnapshot(): RawControlSnapshot {
     this.#assertUsable();
     return this.#snapshot();
   }
 
-  destroy() {
+  destroy(): void {
     if (this.#destroyed) return;
     this.#destroyed = true;
     this.#suspended = true;

@@ -9,8 +9,8 @@ import { MOVEMENT_MODE } from '@number-strategy-jump/arena-movement';
 import {
   createContextInputMapperB,
   createGestureInputMapperA,
+  InputSampler,
 } from '@number-strategy-jump/arena-presentation-runtime';
-import { InputSampler } from '../../../src/arena/presentation/input/input-sampler.js';
 
 const VIEWPORT = Object.freeze({ width: 400, height: 800 });
 const WIDE_ARENA = Object.freeze({

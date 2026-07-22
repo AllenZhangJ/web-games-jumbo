@@ -10,12 +10,12 @@ import {
   createContextInputMapperB,
   createExplicitCombatJumpMapper,
   createGestureInputMapperA,
+  InputSampler,
 } from '@number-strategy-jump/arena-presentation-runtime';
 /*
  * Keep fuzzing every production mapper ID from the strict runtime package;
  * the sampler remains the current upper-layer lifecycle owner.
  */
-import { InputSampler } from '../src/arena/presentation/input/input-sampler.js';
 import { replayMatch } from '../src/arena/replay.js';
 import { createArenaInputFuzzFailureCandidate } from '../src/arena/regression/input-fuzz-regression-candidate.js';
 import { combineCleanupFailure, normalizeThrownError } from '@number-strategy-jump/arena-contracts';

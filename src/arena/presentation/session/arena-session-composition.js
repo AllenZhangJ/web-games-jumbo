@@ -6,8 +6,8 @@ import { ArenaInputRouter } from '../input/arena-input-router.js';
 import {
   ARENA_INPUT_MAPPER_ID,
   createArenaInputMapper,
+  InputSampler,
 } from '@number-strategy-jump/arena-presentation-runtime';
-import { InputSampler } from '../input/input-sampler.js';
 import { PointerInputAdapter } from '../input/pointer-input-adapter.js';
 import {
   FixedTickAccumulator,

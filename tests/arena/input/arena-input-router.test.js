@@ -4,8 +4,10 @@ import {
   ARENA_INPUT_ROUTER_MODE,
   ArenaInputRouter,
 } from '../../../src/arena/presentation/input/arena-input-router.js';
-import { createGestureInputMapperA } from '@number-strategy-jump/arena-presentation-runtime';
-import { InputSampler } from '../../../src/arena/presentation/input/input-sampler.js';
+import {
+  createGestureInputMapperA,
+  InputSampler,
+} from '@number-strategy-jump/arena-presentation-runtime';
 
 const VIEWPORT = Object.freeze({ width: 400, height: 800 });
 const point = (pointerId, x, y) => ({ pointerId, x, y });
