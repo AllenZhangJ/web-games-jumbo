@@ -32,7 +32,7 @@
 | G2 Definition/合同/配置 | 已完成 | strict TS `arena-contracts`、`arena-definitions`、`arena-profile-contracts` 与 `arena-platform-contracts` 已承接确定性、输入/事件、权威快照、同步存储、平台能力、玩家档案/存档协议，以及动作/角色/装备/地图 Definition、只读 Registry 和唯一 Gameplay V2 数值配置；受审计 JavaScript 已降至 500 个 |
 | G3 Rule/Core/Replay | 已完成 | strict TS `arena-core`、`arena-movement`、`arena-physics`、`arena-equipment`、`arena-map` 与 `arena-match` 已承接规则/移动/物理/装备、完整地图权威链、比赛配置、Participant/Timeline 唯一写入者、角色 Runtime/物理投影、状态 hash、完整 MatchCore 编排、fixed-step Runtime 与 Replay；黄金语料保持 `0dace228` |
 | G4 Bot/Product/Persistence | 已完成 | strict TS Bot、Matchmaking、Quick Match、Local Match Session、Product State、Progression、ProductMatchResult、奖励事务、Profile Service/Repository、Storage Lease、Product Match、Product Session Controller、对称内容池、Arena V1 产品内容与通用 Product Composition 已闭环；Arena V1 薄应用注入适配器留待 G6/G7 清零 |
-| G5 Presentation/资产/反馈 | 进行中 | strict `arena-presentation-contracts` 已承接资产/角色表现合同，strict `arena-presentation-runtime` 已承接宿主无关运行时，strict `arena-presentation-three` 已承接坐标/样式、程序化装备、Three 资源 lease、平台/装备/角色 Registry、正式角色动画 Controller 与 GLTF/宿主纹理 Loader；GLTF/程序化角色 View、反馈、Renderer 与 Session 仍待分层迁移 |
+| G5 Presentation/资产/反馈 | 进行中 | strict `arena-presentation-contracts` 已承接资产/角色表现合同，strict `arena-presentation-runtime` 已承接宿主无关运行时，strict `arena-presentation-three` 已承接坐标/样式、程序化装备、Three 资源 lease、平台/装备/角色 Registry、正式角色动画 Controller、GLTF/宿主纹理 Loader 与程序化角色 Factory；GLTF/程序化角色 View、反馈、Renderer 与 Session 仍待分层迁移 |
 | G6 Platform/入口/构建 | 未开始 | 三端默认入口是 Product，但生产交付未与开发页面彻底隔离 |
 | G7 零 JS/完整质量门 | 未开始 | ESLint、strict TypeScript、Vitest 和 JavaScript 精确递减门禁已作为迁移护栏运行；coverage 阈值、测试归包和零 JS 尚未完成 |
 | G8 资产/安全/所有权 | 未开始 | CODEOWNERS、CI 安全与正式资产最终批准待补齐 |
@@ -55,7 +55,7 @@
 
 ## 当前不可合并原因
 
-1. 当前 373 个受维护 JavaScript 文件仍在精确允许清单中，Presentation 其余 Three View/反馈/Renderer/Session、Platform 和 Arena V1 应用注入适配尚未完成 strict TypeScript workspace 迁移。
+1. 当前 372 个受维护 JavaScript 文件仍在精确允许清单中，Presentation 其余 Three View/反馈/Renderer/Session、Platform 和 Arena V1 应用注入适配尚未完成 strict TypeScript workspace 迁移。
 2. Vitest 当前保护底层合同包和治理门禁；Arena 其余测试尚待按 workspace 迁移并建立正式 coverage 阈值与零 JS 门禁。
 3. 正式资产最终审批与完整安全/依赖长期治理尚未闭环。
 4. 文档仍含迁移前阶段性叙述，尚未完成 G9 全量链接、状态与命令归真。
@@ -609,3 +609,14 @@
 - clean build ID 为 `arena-8a6ac4ce1cb5-product`，Web/微信/抖音 delivery 为 `3660670 / 3694569 / 3694544 B`，三端 `sourceDirty=false`、预算通过且 `freezeEligible=true`；正式资产预算保持 `82a8b378`，生产依赖审计为 0 vulnerabilities。Web 主业务 chunk 为 `685.24 kB`（gzip `178.01 kB`），仍是 G6 拆包审计项。
 - 390×844、DPR 3 的桌面 Chrome 手机视口中，盾牌与两份正式角色模板全部 ready、`loadErrorAssetIds=[]`；两名角色均为正式 `gltf-character`，分别有 56/54 个对象且各有 18 个动作片段，跑酷学徒与发条角色模型和纹理可见。Canvas 为 `780×1688`，无 dropped seconds、context loss 或页面 warning/error。该记录不是 iPhone 13 Pro/iOS 26 真机证据。
 - 本批仍没有外部正式授权 Intake Bundle 与独立证据目录，因而没有 `verified-intake-only` 结论；这与已通过的字节/节点/关节/纹理预算是两类证据，继续保留为 G8/发布阻断。未改变 Gameplay V2 配置、任意距离起手、命中/击退、动作/武器差异、移动/跳跃、画质、分辨率、抗锯齿、关节、Bot、权威 tick、Replay/Profile schema 或正式资产字节。下一批治理 GLTF/程序化 Character View 与 Factory 的异步任务、fallback 和对象释放所有权。
+
+## G5.8 程序化角色 Factory 严格边界与重入保护证据
+
+- `ProgrammaticCharacterViewFactory` 已迁入 strict `@number-strategy-jump/arena-presentation-three`，旧 JavaScript 真值删除，精确允许清单由 373 降至 372，Three 包治理源文件由 12 增至 13。World Stage 只在组合点注入现有 `ProgrammaticCharacterView` 构造函数，程序化角色仍仅是正式 GLTF 资产路径不可用时的既定兜底，没有取代当前生产模型。
+- Factory 构造与 `create()` 仅接受精确字段集合；asset Registry、participant、角色表现 Definition、动作表现和注入构造函数在调用前完成数据字段校验与快照。动作表现深复制冻结，调用方后续修改 timing、weapon scale 或嵌套值不会改变已接管工厂；options 访问器不会执行。
+- 角色表现 Definition 由公共合同重新规范化并与资产 Registry 交叉校验，只允许 `character-model` 与 `programmatic-character-v1` provider。Factory 回调收到冻结 options；同步回调重入被明确拒绝，`finally` 恢复创建门，异常不会把工厂永久卡在 creating 状态。View 对象合同、thenable 收容和失败候选清理由下游 `CharacterViewRuntime` 继续唯一负责，未形成第二套生命周期所有者。
+- 干净代码提交 `d51923d9ec97ea95cbf67832607c4c84149afadc` 的门禁通过：660/660 Node、171/171 strict package/治理、103/103 生命周期；黄金 Replay manifest 保持 `0dace228`。输入 fuzz 按三套 mapper 各 40 场，共 120 场、120 个唯一 final hash、6 次 Replay 复验，未产生 reproduction case。
+- Presentation Session soak 完成 100 场、耗时 `586.421833 ms`、堆增长 `2660280 B`；完整 Product Presentation Session soak 完成 100 场、100 个唯一 authority hash、耗时 `53585.256916 ms`、堆增长 `6613392 B`。两者均低于 8 MiB，帧、生命周期监听、Canvas 监听和输入绑定残留为零。
+- clean build ID 为 `arena-d51923d9ec97-product`，Web/微信/抖音 delivery 为 `3662369 / 3696349 / 3696324 B`，三端 `sourceDirty=false`、预算通过且 `freezeEligible=true`；正式资产预算保持 `82a8b378`，生产依赖审计为 0 vulnerabilities。Web 主业务 chunk 为 `686.94 kB`（gzip `178.32 kB`），继续保留为 G6 拆包和运行成本审计项。
+- 390×844、DPR 3 的桌面 Chrome 手机视口完成 Product 首屏和正式 GLTF 对局；渲染策略保持 DPR 2 上限，Canvas 为 `780×1688`。两名正式角色和盾牌共 3 个模板 ready，`loadErrorAssetIds=[]`，运行状态为 `running/ready`，authority backlog `droppedSeconds=0`，无 context loss 或应用错误。当前生产组合实际使用 GLTF，因此本次浏览器证据证明主流程未回退；程序化 Factory 路径由 Node Three 集成测试覆盖。该记录不是 iPhone 13 Pro/iOS 26 真机证据。
+- 本批没有改变 Gameplay V2 配置、任意距离起手、命中/击退、动作/武器差异、移动/跳跃、画质、分辨率、抗锯齿、关节、Bot、权威 tick、Replay/Profile schema 或正式资产字节。下一批迁移并加固完整 `ProgrammaticCharacterView`，重点关闭 sync 中途失败的原子性、装备替换回滚、动画状态输入和 Three 对象释放重试，再治理 GLTF Character View/Factory。
