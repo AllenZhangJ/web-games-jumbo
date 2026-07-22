@@ -32,7 +32,7 @@
 | G2 Definition/合同/配置 | 已完成 | strict TS `arena-contracts`、`arena-definitions`、`arena-profile-contracts` 与 `arena-platform-contracts` 已承接确定性、输入/事件、权威快照、同步存储、平台能力、玩家档案/存档协议，以及动作/角色/装备/地图 Definition、只读 Registry 和唯一 Gameplay V2 数值配置；受审计 JavaScript 已降至 500 个 |
 | G3 Rule/Core/Replay | 已完成 | strict TS `arena-core`、`arena-movement`、`arena-physics`、`arena-equipment`、`arena-map` 与 `arena-match` 已承接规则/移动/物理/装备、完整地图权威链、比赛配置、Participant/Timeline 唯一写入者、角色 Runtime/物理投影、状态 hash、完整 MatchCore 编排、fixed-step Runtime 与 Replay；黄金语料保持 `0dace228` |
 | G4 Bot/Product/Persistence | 已完成 | strict TS Bot、Matchmaking、Quick Match、Local Match Session、Product State、Progression、ProductMatchResult、奖励事务、Profile Service/Repository、Storage Lease、Product Match、Product Session Controller、对称内容池、Arena V1 产品内容与通用 Product Composition 已闭环；Arena V1 薄应用注入适配器留待 G6/G7 清零 |
-| G5 Presentation/资产/反馈 | 进行中 | strict `arena-presentation-contracts` 已承接资产/角色表现合同，strict `arena-presentation-runtime` 已承接宿主无关运行时，strict `arena-presentation-three` 已承接坐标/样式、程序化装备、Three 资源 lease 和平台/装备/角色 Registry；GLTF/程序化角色 View、动画、反馈、Renderer 与 Session 仍待分层迁移 |
+| G5 Presentation/资产/反馈 | 进行中 | strict `arena-presentation-contracts` 已承接资产/角色表现合同，strict `arena-presentation-runtime` 已承接宿主无关运行时，strict `arena-presentation-three` 已承接坐标/样式、程序化装备、Three 资源 lease、平台/装备/角色 Registry 与正式角色动画 Controller；GLTF/程序化角色 View、反馈、Renderer 与 Session 仍待分层迁移 |
 | G6 Platform/入口/构建 | 未开始 | 三端默认入口是 Product，但生产交付未与开发页面彻底隔离 |
 | G7 零 JS/完整质量门 | 未开始 | ESLint、strict TypeScript、Vitest 和 JavaScript 精确递减门禁已作为迁移护栏运行；coverage 阈值、测试归包和零 JS 尚未完成 |
 | G8 资产/安全/所有权 | 未开始 | CODEOWNERS、CI 安全与正式资产最终批准待补齐 |
@@ -55,7 +55,7 @@
 
 ## 当前不可合并原因
 
-1. 当前 376 个受维护 JavaScript 文件仍在精确允许清单中，Presentation 其余 Three View/反馈/Renderer/Session、Platform 和 Arena V1 应用注入适配尚未完成 strict TypeScript workspace 迁移。
+1. 当前 375 个受维护 JavaScript 文件仍在精确允许清单中，Presentation 其余 Three View/反馈/Renderer/Session、Platform 和 Arena V1 应用注入适配尚未完成 strict TypeScript workspace 迁移。
 2. Vitest 当前保护底层合同包和治理门禁；Arena 其余测试尚待按 workspace 迁移并建立正式 coverage 阈值与零 JS 门禁。
 3. 正式资产最终审批与完整安全/依赖长期治理尚未闭环。
 4. 文档仍含迁移前阶段性叙述，尚未完成 G9 全量链接、状态与命令归真。
@@ -584,3 +584,16 @@
 - clean build ID 为 `arena-5e700a340a13-product`，Web/微信/抖音 delivery 为 `3650028 / 3683535 / 3683510 B`，三端 `sourceDirty=false`、预算通过且 `freezeEligible=true`；正式资产预算仍为 `82a8b378`，生产依赖审计为 0 vulnerabilities。Web 主业务 chunk 为 `674.61 kB`（gzip `176.06 kB`），仍触发 650 kB 信息警告并保留为 G6 拆包审计项。
 - 390×844、DPR 3 的桌面 Chrome 手机视口完成 Product 首屏、正式角色、大于视口的世界、盾/锁链和实战攻击点击复验；Canvas 为 `780×1688`，两份正式角色 GLB 与盾牌 GLB 均返回 HTTP 200，页面自身 0 warning/error。对手约 7m 时攻击点击进入既有恢复期，自动化仍证明任意距离可起手、仅有效范围命中。该记录不是 iPhone 13 Pro/iOS 26 真机证据，微信/抖音四目标真机记录仍是发布门禁。
 - 本批未改变 Gameplay V2 数值、攻击/命中/击退、动作与武器差异、移动/跳跃、画质、分辨率、抗锯齿、关节、Bot、权威 tick、Replay/Profile schema 或正式资产字节。G5 下一批治理 GLTF/程序化角色 View、动画 Controller、资产 loader、命中特效、World/HUD/Renderer 与 Presentation Session，继续关闭 Three 资源与监听器所有权后再做完整动作/武器验收映射审计。
+
+## G5.6 正式角色动画 Controller 迁移与失败关闭证据
+
+- `CharacterAnimationController` 已迁入 strict `@number-strategy-jump/arena-presentation-three` 并从包公开入口提供，旧 JavaScript 真值删除，精确允许清单由 376 降至 375，Three 包治理源文件由 9 增至 10。GLTF Character View 与正式动画测试不再通过源码相对路径引用控制器。
+- Controller 在建立或修改 Three AnimationMixer 状态前完整归一化 clips、action presentations、velocity、equipment、action、animation semantics 与 base binding，并以数据字段读取 hit direction；稀疏数组、重复 clip、Symbol/访问器、未知 option、无效动作阶段、idle/非 idle 身份与剩余 tick 矛盾、`baseEnteredAtTick > tick` 均在提交前拒绝。`equipment.definitionId` getter 不会执行，边界拒绝后同一 Controller 仍可继续使用。
+- 正式角色仍保留原有跑/走速度匹配、起跳准备/空中、二段跳启动/空中、正面/背面受击、基础动作淡入，以及按统一动作 timing 驱动的 windup/active/recovery 上半身 overlay；锤、盾、链条和空手继续映射各自 clip。同步或 mixer 更新的内部异常会失败关闭，不继续发布半动画状态。
+- AnimationMixer 的 stop 与 root uncache 分别记账；首次 `dispose()` 瞬时失败后只重试未完成步骤，不重复执行已经成功的清理，终态重复释放幂等。故障注入同时覆盖 presentation getter、equipment getter、坏动作组合、坏 tick 关系与 stop 首次失败。
+- 干净代码提交 `a8559290383eca6c4f5256b2ba2898b02a421552` 的门禁通过：660/660 Node、169/169 strict package/治理、103/103 生命周期；黄金 Replay manifest 保持 `0dace228`。输入 fuzz 按三套 mapper 各 40 场，共 120 场、120 个唯一 final hash、6 次 Replay 复验，未产生 reproduction case。
+- Presentation Session soak 完成 100 场、耗时 `659.278958 ms`、堆增长 `2676032 B`；完整 Product Presentation Session soak 完成 100 场、100 个唯一 authority hash、耗时 `50482.302084 ms`、堆增长 `6616064 B`。两者均低于 8 MiB，帧、生命周期监听、Canvas 监听和输入绑定残留为零。
+- clean build ID 为 `arena-a8559290383e-product`，Web/微信/抖音 delivery 为 `3655651 / 3689419 / 3689394 B`，三端 `sourceDirty=false`、预算通过且 `freezeEligible=true`；正式资产预算保持 `82a8b378`，生产依赖审计为 0 vulnerabilities。Web 主业务 chunk 为 `680.23 kB`（gzip `177.15 kB`），仍触发 650 kB 信息警告并保留为 G6 拆包审计项。
+- 390×844、DPR 3 的桌面 Chrome 手机视口复验正式 GLTF 角色与攻击输入；Canvas 为 `780×1688`。攻击采样进入 `base-push active`，上半身片段为 `Unarmed_Melee_Attack_Punch_A`、overlay track 为 9，释放后输入归零；1656 个渲染样本 P95 为 `2100 μs`，无 dropped seconds、context loss 或应用错误。该记录不是 iPhone 13 Pro/iOS 26 真机证据。
+- 正式资产字节与结构预算已重算通过，但仓库不存在外部正式授权 Intake Bundle 与独立证据目录，因此没有运行并通过 `verified-intake-only`，不得把资产预算冒充最终来源审批；该项继续保留在 G8/发布门禁。无参数执行 intake CLI 只会因缺少必需的 `--bundle` 与 `--artifacts-root` 被正确拒绝。
+- 本批未改变 Gameplay V2 配置 hash `8c322912`、任意距离起手与仅有效范围命中、攻击/击退、动作与武器差异、移动/跳跃、画质、分辨率、抗锯齿、关节、Bot、权威 tick、Replay/Profile schema 或正式资产字节。G5 下一批治理 GLTF/程序化 Character View 与 Factory、平台纹理/GLTF loader，再进入命中特效、World/HUD/Renderer 与 Presentation Session。
