@@ -32,7 +32,7 @@
 | G2 Definition/合同/配置 | 已完成 | strict TS `arena-contracts`、`arena-definitions`、`arena-profile-contracts` 与 `arena-platform-contracts` 已承接确定性、输入/事件、权威快照、同步存储、平台能力、玩家档案/存档协议，以及动作/角色/装备/地图 Definition、只读 Registry 和唯一 Gameplay V2 数值配置；受审计 JavaScript 已降至 500 个 |
 | G3 Rule/Core/Replay | 已完成 | strict TS `arena-core`、`arena-movement`、`arena-physics`、`arena-equipment`、`arena-map` 与 `arena-match` 已承接规则/移动/物理/装备、完整地图权威链、比赛配置、Participant/Timeline 唯一写入者、角色 Runtime/物理投影、状态 hash、完整 MatchCore 编排、fixed-step Runtime 与 Replay；strict `arena-v1-content` 集中发布具体动作、装备、角色、地图、移动动作与平衡 Definition；黄金语料保持 `0dace228` |
 | G4 Bot/Product/Persistence | 已完成 | strict TS Bot、Matchmaking、Quick Match、Local Match Session、Product State、Progression、ProductMatchResult、奖励事务、Profile Service/Repository、Storage Lease、Product Match、Product Session Controller、对称内容池、Arena V1 产品内容与通用 Product Composition 已闭环；Arena V1 薄应用注入适配器留待 G6/G7 清零 |
-| G5 Presentation/资产/反馈 | 进行中 | strict `arena-presentation-contracts` 已承接资产/角色表现合同及产品 UI/表现生命周期协议，strict `arena-presentation-runtime` 已承接宿主无关运行时、输入边界、唯一触控布局、原始触控至固定 tick 采样链、Pointer 宿主适配、打击音频池、观测型内存快照与注入式本地性能观察器，strict `arena-v1-presentation-content` 已承接具体地图/动作/装备/角色表现内容与权威快照投影，strict `arena-product-presentation` 已承接 Product InputRouter、UI 意图串行化、内容/屏幕 Definition、只读 Registry、消息目录、Arena V1 静态内容工厂、只读 ViewModel、宿主无关 Canvas 布局/命中/绘制规则、Product Match 表现桥、Product Presentation Flow、注入式 Session 所有权根与宿主无关 ProductRenderer 组合器，strict `arena-presentation-three` 已承接通用 Three 能力，strict `arena-product-presentation-three` 已承接 Product Canvas/Three Surface；跨 Gate 标量已进入 strict `arena-evidence-contracts`，Stage 6/8 Definition、设备 Record/Bundle/Report 与 Build Manifest 已进入 strict `arena-device-acceptance`，构建预算及性能 Policy/Record/Metric/Report 已进入 strict `arena-performance-evidence`，Stage 9 版本化设备/性能内容与组合已进入 strict `arena-stage9-evidence-content`；旧 Stage 6 表现适配仍待迁移或退役分类 |
+| G5 Presentation/资产/反馈 | 进行中 | strict `arena-presentation-contracts` 已承接资产/角色表现合同及产品 UI/表现生命周期协议，strict `arena-presentation-runtime` 已承接宿主无关运行时、输入边界、唯一触控布局、原始触控至固定 tick 采样链、Pointer 宿主适配、打击音频池、观测型内存快照与注入式本地性能观察器，strict `arena-v1-presentation-content` 已承接具体地图/动作/装备/角色表现内容、Gameplay V2/Greybox 组合、Product 角色预览与权威快照投影，strict `arena-product-presentation` 已承接 Product InputRouter、UI 意图串行化、内容/屏幕 Definition、只读 Registry、消息目录、Arena V1 静态内容工厂、只读 ViewModel、宿主无关 Canvas 布局/命中/绘制规则、Product Match 表现桥、Product Presentation Flow、注入式 Session 所有权根与宿主无关 ProductRenderer 组合器，strict `arena-presentation-three` 已承接通用 Three 能力，strict `arena-product-presentation-three` 已承接 Product Canvas/Three Surface；跨 Gate 标量已进入 strict `arena-evidence-contracts`，Stage 6/8 Definition、设备 Record/Bundle/Report 与 Build Manifest 已进入 strict `arena-device-acceptance`，构建预算及性能 Policy/Record/Metric/Report 已进入 strict `arena-performance-evidence`，Stage 9 版本化设备/性能内容与组合已进入 strict `arena-stage9-evidence-content`；旧 Stage 6 表现适配仍待迁移或退役分类 |
 | G6 Platform/入口/构建 | 未开始 | 三端默认入口是 Product，但生产交付未与开发页面彻底隔离 |
 | G7 零 JS/完整质量门 | 未开始 | ESLint、strict TypeScript、Vitest 和 JavaScript 精确递减门禁已作为迁移护栏运行；coverage 阈值、测试归包和零 JS 尚未完成 |
 | G8 资产/安全/所有权 | 未开始 | CODEOWNERS、CI 安全与正式资产最终批准待补齐 |
@@ -55,7 +55,7 @@
 
 ## 当前不可合并原因
 
-1. 当前 306 个受维护 JavaScript 文件仍在精确允许清单中，Platform、Release/其他验收组合和 Arena V1 应用注入适配尚未完成 strict TypeScript workspace 迁移；旧 Stage 6 `ArenaInputRouter` 与仅测试使用的 `KeyboardInputAdapter` 待 G7 证明退役或归类，不属于当前 Product 生产链。
+1. 当前 304 个受维护 JavaScript 文件仍在精确允许清单中，Platform、Release/其他验收组合和 Arena V1 应用注入适配尚未完成 strict TypeScript workspace 迁移；旧 Stage 6 `ArenaInputRouter` 与仅测试使用的 `KeyboardInputAdapter` 待 G7 证明退役或归类，不属于当前 Product 生产链。
 2. Vitest 当前保护底层合同包和治理门禁；Arena 其余测试尚待按 workspace 迁移并建立正式 coverage 阈值与零 JS 门禁。
 3. 正式资产最终审批与完整安全/依赖长期治理尚未闭环。
 4. 文档仍含迁移前阶段性叙述，尚未完成 G9 全量链接、状态与命令归真。
@@ -975,3 +975,13 @@
 - 代码提交为 `bf4653ebcee1301c102b2d398433fd8b1ea3d88a`，生产依赖审计为 0 vulnerabilities，正式资产预算结果保持 `82a8b378`。clean build ID 为 `arena-bf4653ebcee1-product`；Web/微信/抖音 delivery 为 `3765291 / 3815002 / 3814977 B`，JavaScript 为 `1421681 / 1486906 / 1486906 B`，三端 `sourceDirty=false`、默认入口均为 Product、预算通过且 `freezeEligible=true`，生产产物边界检查通过。
 - 本地真实浏览器复验 `/` 首页、“开始匹配”到唯一 1v1 Canvas；Canvas buffer 为 `1084×1440`、CSS 为 `542×720`，页面无异常滚动，控制台仅有 Vite 连接 debug、无 warning/error。该证据只证明本地桌面 Web 组合，不新增或冒充 iPhone 13 Pro/iOS 26/Chrome、微信、抖音真机证据。
 - 本批改变的是内容所有权和输入边界，没有改变 Gameplay V2 配置 hash、任意距离挥空、攻击/命中/击退、动作/武器、移动/跳跃、画质、关节、Bot 规则、权威 tick、Replay/Profile schema 或正式资产。900 场 Bot 门禁耗时约 28.8 分钟且运行期间无进度心跳，后续应改善长压脚本可观测性，但该运维债务不影响本批正确性结论；G5 仍未完成，当前不可合并。
+
+## G5.30c Arena V1 具体表现内容归包证据
+
+- Gameplay V2/Greybox 具体组合与 Product 角色预览组合已从两个上层 JavaScript 薄桥迁入 strict `@number-strategy-jump/arena-v1-presentation-content`，Session、Entry 与测试统一消费包公开 API；旧 `src/arena/presentation/content` 和 `product` 真值删除，精确允许清单由 306 降至 304。ADR-031 已同步归真，不再保留“迁移期薄 JavaScript Definition 注入桥”的失效结论。
+- `arena-v1-presentation-content` 现在显式依赖 `arena-v1-content` 的不可变权威 Definition 和通用 `arena-product-presentation` 的只读 Product 表现合同；通用 Product 表现包不反向依赖具体 V1 内容。架构门精确锁定 6 个源文件和完整依赖集合，只为获准的通用 Product 表现包及包内具体内容导出开放窄例外，Core、Bot、Session、Renderer、Three、Platform、Entry、DOM、墙钟与随机源仍被禁止。
+- 新增 2 项 strict 公开 API 测试，证明 Greybox 与 Gameplay V2 地图由对应权威 Map Definition 组合、Product 两个角色预览与同一角色表现 Catalog 的模型资产 ID 一致。完整门禁通过：677/677 Node、255/255 strict package/治理、104/104 生命周期；黄金 Replay manifest 保持 `0dace228`。
+- 输入 fuzz 完成 120 场、120 个唯一 final hash 与 6 次 Replay 复验，耗时 `33191.0985 ms`，无 reproduction case。Presentation Session soak 完成 100 场，耗时 `624.077625 ms`、堆增长 `2624712 B`；Product Presentation Session soak 完成 100 场、100 个唯一 authority hash，耗时 `51088.193374999995 ms`、堆增长 `7067464 B`。两者均低于 8 MiB，帧、生命周期监听、Canvas 监听和输入绑定残留为零；同机脚本数据不外推为手机帧率、功耗或温度。
+- 代码提交为 `ee9f0ecfabb6b093e3045717598663f349bdbce2`，生产依赖审计为 0 vulnerabilities，正式资产预算结果保持 `82a8b378`。clean build ID 为 `arena-ee9f0ecfabb6-product`；Web/微信/抖音 delivery 为 `3765291 / 3815002 / 3814977 B`，JavaScript 为 `1421681 / 1486906 / 1486906 B`，与 G5.30b 完全一致；三端 `sourceDirty=false`、默认入口均为 Product、预算通过且 `freezeEligible=true`，生产产物边界检查通过。
+- 本地真实浏览器验证首页进入“选择角色”，同时展示“跑酷学徒/发条方块”；切换为“发条方块”并确认后可从“开始匹配”进入唯一 1v1 Canvas。Canvas buffer 为 `1084×1440`、CSS 为 `542×720`，页面无异常滚动，控制台 0 warning / 0 error。该结果只证明本地桌面 Web 组合，不新增或冒充 iPhone 13 Pro/iOS 26/Chrome、微信、抖音真机证据。
+- 本批只收口具体表现所有权，没有改变权威数值、任意距离挥空、命中/击退、动作/武器、移动/跳跃、分辨率、抗锯齿、关节、Bot、Replay/Profile schema 或正式资产字节；G5 仍需治理旧 Stage 6 输入/Session/Pilot 表现适配并完成保留或退役分类，当前不可合并。
