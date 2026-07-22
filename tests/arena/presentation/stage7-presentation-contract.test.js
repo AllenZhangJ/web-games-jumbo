@@ -11,6 +11,7 @@ import {
 } from '@number-strategy-jump/arena-presentation-contracts';
 import {
   PRESENTATION_ASSET_LOAD_STATE,
+  CharacterViewRuntime,
   PresentationAssetLoadTask,
   SIX_SECTOR_DIRECTION_ID,
   SixSectorDirectionResolver,
@@ -18,9 +19,6 @@ import {
 import {
   ARENA_V1_GREYBOX_CONTENT,
 } from '../../../src/arena/presentation/content/arena-v1-greybox-content.js';
-import {
-  CharacterViewRuntime,
-} from '../../../src/arena/presentation/character/character-view-runtime.js';
 import {
   CharacterViewRegistry,
 } from '../../../src/arena/presentation/three/character-view-registry.js';
@@ -342,6 +340,76 @@ test('CharacterViewRuntime owns one resolver/view and fails closed on view error
   assert.throws(() => failed.update(0), /已失败/);
   failed.dispose();
   assert.equal(failedDisposed, 1, '失败关闭后不能重复释放底层 view');
+});
+
+test('CharacterViewRuntime snapshots view methods, rejects accessors and retries failed cleanup', () => {
+  const actor = participant();
+  const calls = [];
+  let disposeAttempts = 0;
+  const mutableView = {
+    root: { position: { x: 0, y: 0, z: 0 } },
+    getAnimationCapabilities: () => ({
+      proceduralKeys: ARENA_ANIMATION_SEMANTIC_IDS,
+      clipKeys: [],
+    }),
+    sync: () => { calls.push('original-sync'); },
+    update: () => {},
+    getDebugSnapshot: () => ({ kind: 'mutable-fake' }),
+    dispose: () => {
+      disposeAttempts += 1;
+      if (disposeAttempts === 1) throw new Error('transient view cleanup');
+    },
+  };
+  const runtime = new CharacterViewRuntime({
+    participantId: 'player-1',
+    presentationDefinition: definition(),
+    actionPresentations: ARENA_V1_GREYBOX_CONTENT.actions,
+    viewFactory: { create: () => mutableView },
+  });
+  mutableView.sync = () => { throw new Error('replacement sync must not run'); };
+  runtime.sync(frame(0, actor), actor, { cameraModel: CAMERA_MODEL });
+  assert.deepEqual(calls, ['original-sync']);
+  assert.throws(() => runtime.dispose(), /清理未完整完成/);
+  runtime.dispose();
+  runtime.dispose();
+  assert.equal(disposeAttempts, 2);
+
+  let optionReads = 0;
+  assert.throws(() => new CharacterViewRuntime({
+    participantId: 'player-1',
+    presentationDefinition: definition(),
+    actionPresentations: ARENA_V1_GREYBOX_CONTENT.actions,
+    get viewFactory() {
+      optionReads += 1;
+      return { create: () => mutableView };
+    },
+  }), /viewFactory.*数据字段/);
+  assert.equal(optionReads, 0);
+
+  let methodReads = 0;
+  let invalidDisposed = 0;
+  const invalidView = {
+    root: { position: { x: 0, y: 0, z: 0 } },
+    getAnimationCapabilities: () => ({
+      proceduralKeys: ARENA_ANIMATION_SEMANTIC_IDS,
+      clipKeys: [],
+    }),
+    get sync() {
+      methodReads += 1;
+      return () => {};
+    },
+    update: () => {},
+    getDebugSnapshot: () => ({}),
+    dispose: () => { invalidDisposed += 1; },
+  };
+  assert.throws(() => new CharacterViewRuntime({
+    participantId: 'player-1',
+    presentationDefinition: definition(),
+    actionPresentations: ARENA_V1_GREYBOX_CONTENT.actions,
+    viewFactory: { create: () => invalidView },
+  }), /sync 必须是数据方法/);
+  assert.equal(methodReads, 0);
+  assert.equal(invalidDisposed, 1);
 });
 
 test('CharacterViewRegistry detaches removed roots and closes every runtime after sync failure', () => {

@@ -143,7 +143,6 @@
     "src/arena/presentation/canvas/product-canvas-layout.js",
     "src/arena/presentation/canvas/product-canvas-painter.js",
     "src/arena/presentation/canvas/product-canvas-ui-surface.js",
-    "src/arena/presentation/character/character-view-runtime.js",
     "src/arena/presentation/content/arena-gameplay-v2-character-content.js",
     "src/arena/presentation/content/arena-gameplay-v2-content.js",
     "src/arena/presentation/content/arena-v1-greybox-content.js",
