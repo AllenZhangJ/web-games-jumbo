@@ -13,8 +13,8 @@ import {
 } from '@number-strategy-jump/arena-input-pilot';
 import { InputPilotMetricCollector } from '@number-strategy-jump/arena-input-pilot';
 import { createInputPilotDefinition } from '@number-strategy-jump/arena-input-pilot';
-import { InputPilotObservedMatchService } from '../../../src/arena/presentation/pilot/input-pilot-observed-match-service.js';
-import { InputPilotObservedSession } from '../../../src/arena/presentation/pilot/input-pilot-observed-session.js';
+import { InputPilotObservedMatchService } from '@number-strategy-jump/arena-input-pilot';
+import { InputPilotObservedSession } from '@number-strategy-jump/arena-input-pilot';
 import { INPUT_PILOT_ACTION_OUTCOME } from '@number-strategy-jump/arena-input-pilot';
 
 const MATCH_SEED = assignment(createArenaInputPilotV1Definition()).matchSeed;
@@ -595,9 +595,11 @@ test('observed session preserves frozen primary failures and reports cleanup fai
   const delegate = new FakeSession();
   const collectorFailure = Object.freeze(new Error('frozen collector failure'));
   const cleanupFailure = new Error('delegate cleanup failure');
+  let cleanupShouldFail = true;
   delegate.destroy = () => {
     delegate.destroyCount += 1;
-    throw cleanupFailure;
+    if (cleanupShouldFail) throw cleanupFailure;
+    delegate.state = 'destroyed';
   };
   const session = new InputPilotObservedSession({
     session: delegate,
@@ -611,6 +613,10 @@ test('observed session preserves frozen primary failures and reports cleanup fai
   assert.deepEqual(failure.cleanupErrors, [cleanupFailure]);
   assert.equal(delegate.destroyCount, 1);
   assert.throws(() => session.getSnapshot(), /已销毁/);
+  cleanupShouldFail = false;
+  session.destroy();
+  session.destroy();
+  assert.equal(delegate.destroyCount, 2);
 });
 
 test('observed session fails closed on delegate start or pause lifecycle failures', () => {
@@ -627,6 +633,7 @@ test('observed session fails closed on delegate start or pause lifecycle failure
 
   const pauseDelegate = new FakeSession();
   const pauseFailure = Object.freeze(new Error('delegate pause failure'));
+  pauseDelegate.setPaused = () => { throw pauseFailure; };
   const pauseSession = new InputPilotObservedSession({
     session: pauseDelegate,
     collector: { observeStep: () => {} },
@@ -634,7 +641,6 @@ test('observed session fails closed on delegate start or pause lifecycle failure
   pauseSession.start();
   assert.throws(() => pauseSession.setPaused('yes'), /布尔值/);
   assert.equal(pauseDelegate.destroyCount, 0);
-  pauseDelegate.setPaused = () => { throw pauseFailure; };
   assert.equal(captureThrown(() => pauseSession.setPaused(true)), pauseFailure);
   assert.equal(pauseDelegate.destroyCount, 1);
   assert.throws(() => pauseSession.getSnapshot(), /已销毁/);
@@ -642,8 +648,13 @@ test('observed session fails closed on delegate start or pause lifecycle failure
 
 test('observed match service combines invalid-session and rollback cleanup failures', () => {
   const cleanupFailure = new Error('invalid session cleanup failure');
+  let cleanupShouldFail = true;
+  let destroyCount = 0;
   const invalidSession = {
-    destroy() { throw cleanupFailure; },
+    destroy() {
+      destroyCount += 1;
+      if (cleanupShouldFail) throw cleanupFailure;
+    },
   };
   const service = new InputPilotObservedMatchService({
     matchService: {
@@ -663,21 +674,32 @@ test('observed match service combines invalid-session and rollback cleanup failu
     creating: false,
     created: false,
     destroyed: false,
+    hasSession: true,
+  });
+  cleanupShouldFail = false;
+  service.destroy();
+  assert.equal(destroyCount, 2);
+  assert.deepEqual(service.getDebugSnapshot(), {
+    creating: false,
+    created: false,
+    destroyed: true,
     hasSession: false,
   });
-  service.destroy();
 });
 
 test('observed match service rolls back a wrapped session when public metadata fails', () => {
   const delegate = new FakeSession();
-  const metadataFailure = Object.freeze(new Error('opponent metadata failure'));
+  let metadataReads = 0;
   const returnedMatch = {
     matchSeed: MATCH_SEED,
     session: delegate,
   };
   Object.defineProperty(returnedMatch, 'opponent', {
     enumerable: true,
-    get() { throw metadataFailure; },
+    get() {
+      metadataReads += 1;
+      return { id: 'opponent' };
+    },
   });
   const service = new InputPilotObservedMatchService({
     matchService: { create: () => returnedMatch },
@@ -685,7 +707,8 @@ test('observed match service rolls back a wrapped session when public metadata f
   });
 
   const failure = captureThrown(() => service.create({}));
-  assert.equal(failure, metadataFailure);
+  assert.match(failure.message, /opponent 必须是自有数据字段/);
+  assert.equal(metadataReads, 0);
   assert.equal(delegate.destroyCount, 1);
   assert.equal(service.getDebugSnapshot().created, false);
   assert.equal(service.getDebugSnapshot().hasSession, false);

@@ -7,7 +7,7 @@ import { ArenaPresentationSession } from '@number-strategy-jump/arena-v1-greybox
 import { InputPilotAssignedMatchService } from '@number-strategy-jump/arena-input-pilot';
 import { createInputPilotDefinition } from '@number-strategy-jump/arena-input-pilot';
 import { InputPilotMetricCollector } from '@number-strategy-jump/arena-input-pilot';
-import { InputPilotObservedMatchService } from '../pilot/input-pilot-observed-match-service.js';
+import { InputPilotObservedMatchService } from '@number-strategy-jump/arena-input-pilot';
 import { createInputPilotTrialCheckpoint } from '@number-strategy-jump/arena-input-pilot';
 import { INPUT_PILOT_RUNTIME_STATE } from '@number-strategy-jump/arena-input-pilot';
 

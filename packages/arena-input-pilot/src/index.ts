@@ -7,6 +7,8 @@ export * from './input-pilot-evidence-bundle.js';
 export * from './input-pilot-export.js';
 export * from './input-pilot-form-model.js';
 export * from './input-pilot-metric-collector.js';
+export * from './input-pilot-observed-match-service.js';
+export * from './input-pilot-observed-session.js';
 export * from './input-pilot-record.js';
 export * from './input-pilot-report.js';
 export * from './input-pilot-registry.js';

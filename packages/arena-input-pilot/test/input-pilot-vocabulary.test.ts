@@ -14,6 +14,8 @@ import {
   InputPilotAssignedMatchService,
   InputPilotEnrollmentLedger,
   InputPilotMetricCollector,
+  InputPilotObservedMatchService,
+  InputPilotObservedSession,
   InputPilotWorkspaceCoordinator,
   InputPilotWorkspaceRepository,
   InputPilotRegistry,
@@ -644,5 +646,64 @@ describe('Input Pilot strict metric collector', () => {
     expect(atomicCollector.getStatus().lastObservedTick).toBe(-1);
     expect(atomicCollector.finalize().groundJump).toBe(INPUT_PILOT_ACTION_OUTCOME.NOT_ATTEMPTED);
     atomicCollector.destroy();
+  });
+});
+
+describe('Input Pilot strict observed adapters', () => {
+  it('rejects method accessors without executing them', () => {
+    let sessionReads = 0;
+    const session = {};
+    Object.defineProperty(session, 'start', {
+      enumerable: true,
+      get() {
+        sessionReads += 1;
+        return () => undefined;
+      },
+    });
+    expect(() => new InputPilotObservedSession({
+      session,
+      collector: { observeStep() {} },
+    })).toThrow(/start 必须是数据方法/);
+    expect(sessionReads).toBe(0);
+
+    let serviceReads = 0;
+    const matchService = {};
+    Object.defineProperty(matchService, 'create', {
+      enumerable: true,
+      get() {
+        serviceReads += 1;
+        return () => null;
+      },
+    });
+    expect(() => new InputPilotObservedMatchService({
+      matchService,
+      collector: { observeStep() {} },
+    })).toThrow(/create 必须是数据方法/);
+    expect(serviceReads).toBe(0);
+  });
+
+  it('binds delegate methods once so later replacement cannot hijack ownership', () => {
+    let paused = false;
+    let destroyCount = 0;
+    const delegate = {
+      state: 'created',
+      start() {},
+      setPaused(value: unknown) { paused = value === true; },
+      step() { return null; },
+      getSnapshot() { return null; },
+      getPublicMatchInfo() { return null; },
+      exportReplay() { return null; },
+      destroy() { destroyCount += 1; },
+    };
+    const session = new InputPilotObservedSession({
+      session: delegate,
+      collector: { observeStep() {} },
+    });
+    delegate.setPaused = () => { throw new Error('late hijack'); };
+    delegate.destroy = () => { throw new Error('late destroy hijack'); };
+    expect(() => session.setPaused(true)).not.toThrow();
+    expect(paused).toBe(true);
+    session.destroy();
+    expect(destroyCount).toBe(1);
   });
 });
