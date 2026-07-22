@@ -497,5 +497,7 @@ test('study page includes separate operator and participant surfaces without hid
   assert.match(html, /id="study-operator-shell"/);
   assert.match(html, /id="study-participant-shell"/);
   assert.match(html, /id="arena-product-ui"/);
+  assert.match(html, /src="\/src\/entry\/web-human-match-study\.ts"/);
+  assert.doesNotMatch(html, /web-human-match-study\.js/);
   assert.doesNotMatch(html, /hidden-difficulty|difficultyId|机器人难度/);
 });

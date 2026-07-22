@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { InputPilotFormModel } from '@number-strategy-jump/arena-input-pilot';
 import {
   ARENA_BUILD_MANIFEST_SCHEMA_VERSION,
@@ -282,6 +283,12 @@ test('Input Pilot formal collection requires a clean Web build containing pilot.
   });
   assert.equal(missing.collectable, false);
   assert.equal(missing.reason, 'build-manifest-invalid');
+});
+
+test('pilot page loads the strict TypeScript research entry', async () => {
+  const html = await readFile('pilot.html', 'utf8');
+  assert.match(html, /src="\/src\/entry\/web-input-pilot\.ts"/);
+  assert.doesNotMatch(html, /web-input-pilot\.js/);
 });
 
 test('Web build identity rejects capability accessors without executing them', async () => {
