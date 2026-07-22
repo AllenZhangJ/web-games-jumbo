@@ -32,7 +32,7 @@
 | G2 Definition/合同/配置 | 已完成 | strict TS `arena-contracts`、`arena-definitions`、`arena-profile-contracts` 与 `arena-platform-contracts` 已承接确定性、输入/事件、权威快照、同步存储、平台能力、玩家档案/存档协议，以及动作/角色/装备/地图 Definition、只读 Registry 和唯一 Gameplay V2 数值配置；受审计 JavaScript 已降至 500 个 |
 | G3 Rule/Core/Replay | 已完成 | strict TS `arena-core`、`arena-movement`、`arena-physics`、`arena-equipment`、`arena-map` 与 `arena-match` 已承接规则/移动/物理/装备、完整地图权威链、比赛配置、Participant/Timeline 唯一写入者、角色 Runtime/物理投影、状态 hash、完整 MatchCore 编排、fixed-step Runtime 与 Replay；黄金语料保持 `0dace228` |
 | G4 Bot/Product/Persistence | 已完成 | strict TS Bot、Matchmaking、Quick Match、Local Match Session、Product State、Progression、ProductMatchResult、奖励事务、Profile Service/Repository、Storage Lease、Product Match、Product Session Controller、对称内容池、Arena V1 产品内容与通用 Product Composition 已闭环；Arena V1 薄应用注入适配器留待 G6/G7 清零 |
-| G5 Presentation/资产/反馈 | 未开始 | 正式资产预算通过；审批字段与唯一正常路径仍待治理 |
+| G5 Presentation/资产/反馈 | 进行中 | strict `arena-presentation-contracts` 已承接资产/角色表现 Definition、Registry 与动画语义；Three、反馈、加载器和 Session 仍待分层迁移 |
 | G6 Platform/入口/构建 | 未开始 | 三端默认入口是 Product，但生产交付未与开发页面彻底隔离 |
 | G7 零 JS/完整质量门 | 未开始 | ESLint、strict TypeScript、Vitest 和 JavaScript 精确递减门禁已作为迁移护栏运行；coverage 阈值、测试归包和零 JS 尚未完成 |
 | G8 资产/安全/所有权 | 未开始 | CODEOWNERS、CI 安全与正式资产最终批准待补齐 |
@@ -55,7 +55,7 @@
 
 ## 当前不可合并原因
 
-1. 当前 401 个受维护 JavaScript 文件仍在精确允许清单中，Presentation/Platform 和 Arena V1 应用注入适配尚未完成 strict TypeScript workspace 迁移。
+1. 当前 394 个受维护 JavaScript 文件仍在精确允许清单中，Presentation/Three/Platform 和 Arena V1 应用注入适配尚未完成 strict TypeScript workspace 迁移。
 2. Vitest 当前保护底层合同包和治理门禁；Arena 其余测试尚待按 workspace 迁移并建立正式 coverage 阈值与零 JS 门禁。
 3. 正式资产最终审批与完整安全/依赖长期治理尚未闭环。
 4. 文档仍含迁移前阶段性叙述，尚未完成 G9 全量链接、状态与命令归真。
@@ -527,3 +527,15 @@
 - Presentation Session soak 完成 100 场、耗时 `526.167625 ms`、堆增长 `2666136 B`；完整 Product Presentation Session soak 完成 100 场、100 个唯一 authority hash、耗时 `47049.00675 ms`、堆增长 `6604952 B`。两者均低于 8 MiB，帧、生命周期监听、Canvas 监听和输入绑定残留为零；黄金 Replay 与正式资产结果保持 `0dace228`、`82a8b378`。
 - 390×844 Chrome 手机视口重新完成首屏、真实对局和攻击点击复验：画面正常，攻击产生明确命中圈与击退，页面自身 0 warning/error。该证据不冒充 iPhone 13 Pro/iOS 26 真机记录。Web 主业务 chunk 为 `653.27 kB`（gzip `171.05 kB`），触发 Vite 的 650 kB 信息警告但仍低于项目 JavaScript/交付预算；G6 构建治理需评估拆包，不以降低分辨率、抗锯齿、动作或关节规避。
 - G4 的 Bot/Product/Persistence 治理已关闭；下一批进入 G5 Presentation、Three、反馈与正式资产加载所有权。G4 未改变 Gameplay V2 数值、命中/击退、武器动作、移动/跳跃、奖励数值、Bot 难度与随机顺序、权威 tick、Replay/Profile/lease schema、黄金 hash 或正式资产。
+
+## G5.1 表现基础合同迁移与生命周期清理加固证据
+
+- 新增 strict TypeScript workspace `@number-strategy-jump/arena-presentation-contracts`，承接 19 个动画语义、动画源/动作类别、资产 Definition/Registry、角色表现 Definition/Registry、显式 fallback 绑定解析与逐帧动画语义解析。包依赖精确限定为 `arena-contracts`，不依赖 MatchCore、Bot、Session、Three.js、DOM、平台、墙钟或随机源；Renderer/UI/Audio 只能消费其不可变数据与解析结果。
+- 七个旧 JavaScript 真值文件已删除，生产内容、正式资产、角色 Runtime、Three View、Release 交接与测试统一从包公开 API 消费；JavaScript 精确允许清单由 401 降至 394。Definition 深复制并冻结调用方数据，Registry 在发布前验证重复 ID、默认角色、模型/附件种类和完整动画/插槽引用。
+- 动画解析构造参数、capability 数组、事件与逐帧必要字段拒绝访问器而不执行 getter；动作 presentation 在构造时快照。坏帧在 overlay 校验失败前不再提前改写空中动作记忆，重试不会继承半完成的二段跳状态；同 tick 结果幂等，match seed/tick 回退重置和 `destroy()` 终态保持明确。
+- Arena/Product Presentation Session 的 Canvas context 事件现在要求成对绑定/解绑能力；解绑失败时 cleanup 不再被提前标记完成，Session 保留 Canvas 所有权并允许下一次 `destroy()` 精确重试。新增故障注入回归验证第一次清理失败后仍有 1 个待清监听，第二次清理后监听、binding 与 cleanupIncomplete 全部归零。
+- 干净代码提交 `5327654829f50af7329e0e3ee9394cd42acfeb39` 的等价发布门禁全部通过：657/657 Node、158/158 strict package/治理、103/103 生命周期、120 场 fuzz/6 次 Replay、0 个生产依赖漏洞、正式资产和三端 clean build/预算/唯一生产产物均通过。黄金 Replay 与正式资产结果保持 `0dace228`、`82a8b378`。
+- Presentation Session soak 完成 100 场、耗时 `626.389542 ms`、堆增长 `2640920 B`；完整 Product Presentation Session soak 完成 100 场、100 个唯一 authority hash、耗时 `60921.637958 ms`、堆增长 `6578144 B`。两者均低于 8 MiB，帧、生命周期监听、Canvas 监听和输入绑定残留为零；后续批次需继续观察完整 Product soak 的耗时波动，不能用降低分辨率、抗锯齿、动作或关节规避。
+- build ID 为 `arena-5327654829f5-product`，Web/微信/抖音 delivery 为 `3633435 / 3666023 / 3665998 B`，`sourceDirty=false`、三端 `freezeEligible=true`。Web 主业务 chunk 为 `658.02 kB`（gzip `171.95 kB`），仍触发 650 kB 信息警告，归入 G6 拆包审计。
+- 390×844、DPR 3 的 Chrome 手机视口完成首屏、正式角色、真实对局和攻击点击复验；攻击键可用并出现红色命中反馈。合成 `webglcontextlost` 的默认行为被阻止，恢复后 Canvas 保持 `780×1688`，运行事件为零。该记录不冒充 iPhone 13 Pro/iOS 26 真机；微信/抖音四目标真机记录仍是发布门禁。
+- 本批未改变 Gameplay V2 数值、任意距离攻击挥空、命中/击退、武器动作、移动/跳跃、Bot 难度与随机顺序、权威 tick、Replay/Profile/lease schema、黄金 hash 或正式资产字节。G5 仍在进行；下一批按纯反馈/Frame/Quality → 资产加载 → Three Runtime → Presentation Session 的依赖方向迁移并完成动作/武器验收映射审计。
