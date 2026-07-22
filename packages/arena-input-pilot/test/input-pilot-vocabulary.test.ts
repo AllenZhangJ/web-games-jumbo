@@ -14,11 +14,17 @@ import {
   InputPilotRegistry,
   InputPilotFormModel,
   createArenaInputPilotV1Definition,
+  advanceInputPilotWorkspace,
+  createEnrolledInputPilotTrial,
   createInputPilotAssignment,
   createInputPilotDefinition,
   createInputPilotRecord,
   createInputPilotReviewDraft,
   createInputPilotTrialCheckpoint,
+  createInputPilotWorkspace,
+  reviewInputPilotTrial,
+  startInputPilotTrial,
+  submitInputPilotTrialReview,
   validateInputPilotRuntime,
   validateInputPilotRuntimeStatus,
 } from '../src/index.js';
@@ -280,6 +286,91 @@ describe('Input Pilot strict enrollment and checkpoint', () => {
       },
     });
     expect(() => createInputPilotTrialCheckpoint(definition, checkpoint)).toThrow(/数据字段/);
+    expect(reads).toBe(0);
+  });
+});
+
+describe('Input Pilot strict trial state and workspace', () => {
+  it('rejects trial transition option accessors without executing them', () => {
+    const definition = createArenaInputPilotV1Definition();
+    const assignment = createInputPilotAssignment({
+      definition,
+      participantId: 'participant',
+      enrollmentIndex: 0,
+    });
+    let reads = 0;
+    const options = {
+      device: definition.environment,
+      eligibility: {
+        priorArenaExperience: false,
+        priorOtherVariantExposure: false,
+      },
+    };
+    Object.defineProperty(options, 'assignment', {
+      enumerable: true,
+      get() {
+        reads += 1;
+        return assignment;
+      },
+    });
+    expect(() => createEnrolledInputPilotTrial(definition, options)).toThrow(/数据字段/);
+    expect(reads).toBe(0);
+  });
+
+  it('does not coerce a non-boolean review invalidation flag', () => {
+    const definition = createArenaInputPilotV1Definition();
+    const assignment = createInputPilotAssignment({
+      definition,
+      participantId: 'participant',
+      enrollmentIndex: 0,
+    });
+    const enrolled = createEnrolledInputPilotTrial(definition, {
+      assignment,
+      device: definition.environment,
+      eligibility: {
+        priorArenaExperience: false,
+        priorOtherVariantExposure: false,
+      },
+    });
+    const reviewing = reviewInputPilotTrial(
+      definition,
+      startInputPilotTrial(definition, enrolled),
+      {
+        automated: {
+          trialDurationMs: 100,
+          firstEffectiveMovementMs: 20,
+          firstCorrectContextActionMs: 40,
+          groundJump: INPUT_PILOT_ACTION_OUTCOME.SUCCEEDED,
+          airJump: INPUT_PILOT_ACTION_OUTCOME.NOT_ATTEMPTED,
+          downSmash: INPUT_PILOT_ACTION_OUTCOME.NOT_ATTEMPTED,
+        },
+        terminationReason: INPUT_PILOT_TERMINATION_REASON.MATCH_ENDED,
+      },
+    );
+    expect(() => submitInputPilotTrialReview(definition, reviewing, {
+      observer: reviewing.reviewDraft?.observer,
+      selfReport: reviewing.reviewDraft?.selfReport,
+      invalidate: 1,
+    })).toThrow(/布尔值/);
+    expect(submitInputPilotTrialReview(definition, reviewing).trialStatus).toBe(
+      INPUT_PILOT_TRIAL_STATUS.COMPLETED,
+    );
+  });
+
+  it('rejects workspace update accessors without changing the current value', () => {
+    const definition = createArenaInputPilotV1Definition();
+    const current = createInputPilotWorkspace(definition);
+    let reads = 0;
+    const update = {};
+    Object.defineProperty(update, 'records', {
+      enumerable: true,
+      get() {
+        reads += 1;
+        return [];
+      },
+    });
+    expect(() => advanceInputPilotWorkspace(definition, current, update)).toThrow(/数据字段/);
+    expect(current.revision).toBe(0);
     expect(reads).toBe(0);
   });
 });

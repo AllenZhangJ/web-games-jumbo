@@ -31,7 +31,7 @@ import {
   advanceInputPilotWorkspace,
   createInputPilotWorkspace,
   INPUT_PILOT_WORKSPACE_SCHEMA_VERSION,
-} from '../../../src/arena/presentation/pilot/input-pilot-workspace.js';
+} from '@number-strategy-jump/arena-input-pilot';
 import {
   INPUT_PILOT_WORKSPACE_ENVELOPE_SCHEMA_VERSION,
   InputPilotWorkspaceRepository,

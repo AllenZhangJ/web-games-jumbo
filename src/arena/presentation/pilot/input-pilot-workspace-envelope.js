@@ -7,7 +7,7 @@ import {
 import {
   assertInputPilotWorkspaceHasNoFutureSchema,
   createInputPilotWorkspace,
-} from './input-pilot-workspace.js';
+} from '@number-strategy-jump/arena-input-pilot';
 import { createInputPilotDefinition } from '@number-strategy-jump/arena-input-pilot';
 
 export const INPUT_PILOT_WORKSPACE_ENVELOPE_SCHEMA_VERSION = 1;

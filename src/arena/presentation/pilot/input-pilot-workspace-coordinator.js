@@ -2,11 +2,11 @@ import { createInputPilotDefinition } from '@number-strategy-jump/arena-input-pi
 import { InputPilotEnrollmentLedger } from '@number-strategy-jump/arena-input-pilot';
 import { createInputPilotRecord } from '@number-strategy-jump/arena-input-pilot';
 import { createInputPilotTrialCheckpoint } from '@number-strategy-jump/arena-input-pilot';
-import { createEnrolledInputPilotTrial } from './input-pilot-trial-state.js';
+import { createEnrolledInputPilotTrial } from '@number-strategy-jump/arena-input-pilot';
 import {
   advanceInputPilotWorkspace,
   createInputPilotWorkspace,
-} from './input-pilot-workspace.js';
+} from '@number-strategy-jump/arena-input-pilot';
 
 function validateRepository(value) {
   if (!value || typeof value !== 'object') {

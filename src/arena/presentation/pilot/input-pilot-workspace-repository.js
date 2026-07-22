@@ -17,7 +17,7 @@ import {
 } from './input-pilot-workspace-envelope.js';
 import {
   createInputPilotWorkspace,
-} from './input-pilot-workspace.js';
+} from '@number-strategy-jump/arena-input-pilot';
 
 export { INPUT_PILOT_WORKSPACE_ENVELOPE_SCHEMA_VERSION };
 

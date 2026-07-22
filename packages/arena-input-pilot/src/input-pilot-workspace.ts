@@ -3,22 +3,38 @@ import {
   assertKnownKeys,
   cloneFrozenData,
 } from '@number-strategy-jump/arena-contracts';
-import { INPUT_PILOT_ASSIGNMENT_SCHEMA_VERSION } from '@number-strategy-jump/arena-input-pilot';
-import { createInputPilotDefinition } from '@number-strategy-jump/arena-input-pilot';
+import {
+  INPUT_PILOT_ASSIGNMENT_SCHEMA_VERSION,
+  type InputPilotAssignment,
+} from './input-pilot-assignment.js';
 import {
   INPUT_PILOT_ENROLLMENT_LEDGER_SCHEMA_VERSION,
   createInputPilotEnrollmentSnapshot,
-} from '@number-strategy-jump/arena-input-pilot';
+  type InputPilotEnrollmentSnapshot,
+} from './input-pilot-enrollment-ledger.js';
+import { createInputPilotDefinition } from './input-pilot-definition.js';
 import {
   INPUT_PILOT_RECORD_SCHEMA_VERSION,
   createInputPilotRecord,
-} from '@number-strategy-jump/arena-input-pilot';
+  type InputPilotRecord,
+} from './input-pilot-record.js';
 import {
   INPUT_PILOT_TRIAL_CHECKPOINT_SCHEMA_VERSION,
   createInputPilotTrialCheckpoint,
-} from '@number-strategy-jump/arena-input-pilot';
+  type InputPilotTrialCheckpoint,
+} from './input-pilot-trial-checkpoint.js';
 
 export const INPUT_PILOT_WORKSPACE_SCHEMA_VERSION = 1;
+
+export interface InputPilotWorkspace {
+  readonly schemaVersion: typeof INPUT_PILOT_WORKSPACE_SCHEMA_VERSION;
+  readonly definitionId: string;
+  readonly definitionHash: string;
+  readonly revision: number;
+  readonly enrollment: InputPilotEnrollmentSnapshot;
+  readonly activeTrial: InputPilotTrialCheckpoint | null;
+  readonly records: readonly InputPilotRecord[];
+}
 
 const WORKSPACE_KEYS = new Set([
   'schemaVersion',
@@ -31,21 +47,23 @@ const WORKSPACE_KEYS = new Set([
 ]);
 const UPDATE_KEYS = new Set(['enrollment', 'activeTrial', 'records']);
 
-function compareRecords(left, right) {
+function compareRecords(left: InputPilotRecord, right: InputPilotRecord): number {
   return left.assignment.enrollmentIndex - right.assignment.enrollmentIndex;
 }
 
-function validateCoverage(enrollment, activeTrial, records) {
-  const byAssignment = new Map(enrollment.assignments.map((assignment) => [
+function validateCoverage(
+  enrollment: InputPilotEnrollmentSnapshot,
+  activeTrial: InputPilotTrialCheckpoint | null,
+  records: readonly InputPilotRecord[],
+): void {
+  const byAssignment = new Map<string, InputPilotAssignment>(enrollment.assignments.map((assignment) => [
     assignment.assignmentId,
     assignment,
   ]));
-  const covered = new Set();
+  const covered = new Set<string>();
   for (const record of records) {
     const assignment = byAssignment.get(record.assignment.assignmentId);
-    if (!assignment) {
-      throw new RangeError(`record ${record.trialId} 不属于 enrollment ledger。`);
-    }
+    if (!assignment) throw new RangeError(`record ${record.trialId} 不属于 enrollment ledger。`);
     if (covered.has(assignment.assignmentId)) {
       throw new RangeError(`assignment ${assignment.assignmentId} 存在重复 trial。`);
     }
@@ -64,14 +82,20 @@ function validateCoverage(enrollment, activeTrial, records) {
   }
 }
 
-function assertNotFutureSchema(value, current, name) {
-  if (Number.isSafeInteger(value) && value > current) {
+function recordValue(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function assertNotFutureSchema(value: unknown, current: number, name: string): void {
+  if (Number.isSafeInteger(value) && (value as number) > current) {
     throw new RangeError(`${name} 来自未来 schema。`);
   }
 }
 
-function assertAssignmentNotFuture(value, name) {
-  assertNotFutureSchema(value?.schemaVersion, INPUT_PILOT_ASSIGNMENT_SCHEMA_VERSION, name);
+function assertAssignmentNotFuture(value: unknown, name: string): void {
+  assertNotFutureSchema(recordValue(value)?.schemaVersion, INPUT_PILOT_ASSIGNMENT_SCHEMA_VERSION, name);
 }
 
 /**
@@ -79,39 +103,35 @@ function assertAssignmentNotFuture(value, name) {
  * recoverable corruption. An older client must not erase a nested schema that
  * is newer than the workspace shell containing it.
  */
-export function assertInputPilotWorkspaceHasNoFutureSchema(value) {
-  const source = cloneFrozenData(value, 'InputPilotWorkspace version probe');
+export function assertInputPilotWorkspaceHasNoFutureSchema(value: unknown): true {
+  const source = recordValue(cloneFrozenData(value, 'InputPilotWorkspace version probe'));
+  assertNotFutureSchema(source?.schemaVersion, INPUT_PILOT_WORKSPACE_SCHEMA_VERSION, 'InputPilotWorkspace');
+  const enrollment = recordValue(source?.enrollment);
   assertNotFutureSchema(
-    source?.schemaVersion,
-    INPUT_PILOT_WORKSPACE_SCHEMA_VERSION,
-    'InputPilotWorkspace',
-  );
-  assertNotFutureSchema(
-    source?.enrollment?.schemaVersion,
+    enrollment?.schemaVersion,
     INPUT_PILOT_ENROLLMENT_LEDGER_SCHEMA_VERSION,
     'InputPilotWorkspace.enrollment',
   );
-  if (Array.isArray(source?.enrollment?.assignments)) {
-    source.enrollment.assignments.forEach((assignment, index) => {
-      assertAssignmentNotFuture(
-        assignment,
-        `InputPilotWorkspace.enrollment.assignments[${index}]`,
-      );
+  if (Array.isArray(enrollment?.assignments)) {
+    enrollment.assignments.forEach((assignment, index) => {
+      assertAssignmentNotFuture(assignment, `InputPilotWorkspace.enrollment.assignments[${index}]`);
     });
   }
-  if (source?.activeTrial && typeof source.activeTrial === 'object') {
+  const activeTrial = recordValue(source?.activeTrial);
+  if (activeTrial) {
     assertNotFutureSchema(
-      source.activeTrial.schemaVersion,
+      activeTrial.schemaVersion,
       INPUT_PILOT_TRIAL_CHECKPOINT_SCHEMA_VERSION,
       'InputPilotWorkspace.activeTrial',
     );
     assertAssignmentNotFuture(
-      source.activeTrial.assignment,
+      activeTrial.assignment,
       'InputPilotWorkspace.activeTrial.assignment',
     );
   }
   if (Array.isArray(source?.records)) {
-    source.records.forEach((record, index) => {
+    source.records.forEach((recordValueItem, index) => {
+      const record = recordValue(recordValueItem);
       assertNotFutureSchema(
         record?.schemaVersion,
         INPUT_PILOT_RECORD_SCHEMA_VERSION,
@@ -126,7 +146,10 @@ export function assertInputPilotWorkspaceHasNoFutureSchema(value) {
   return true;
 }
 
-export function createInputPilotWorkspace(definitionValue, value = null) {
+export function createInputPilotWorkspace(
+  definitionValue: unknown,
+  value: unknown = null,
+): InputPilotWorkspace {
   const definition = createInputPilotDefinition(definitionValue);
   if (value === null || value === undefined) {
     return Object.freeze({
@@ -158,7 +181,7 @@ export function createInputPilotWorkspace(definitionValue, value = null) {
     : createInputPilotTrialCheckpoint(definition, source.activeTrial);
   if (!Array.isArray(source.records)) throw new TypeError('InputPilotWorkspace.records 必须是数组。');
   const records = source.records.map((record) => createInputPilotRecord(definition, record));
-  const trialIds = new Set();
+  const trialIds = new Set<string>();
   for (const record of records) {
     if (trialIds.has(record.trialId)) throw new RangeError(`重复 pilot trial ${record.trialId}。`);
     trialIds.add(record.trialId);
@@ -178,7 +201,11 @@ export function createInputPilotWorkspace(definitionValue, value = null) {
   });
 }
 
-export function advanceInputPilotWorkspace(definitionValue, currentValue, updateValue) {
+export function advanceInputPilotWorkspace(
+  definitionValue: unknown,
+  currentValue: unknown,
+  updateValue: unknown,
+): InputPilotWorkspace {
   const definition = createInputPilotDefinition(definitionValue);
   const current = createInputPilotWorkspace(definition, currentValue);
   const update = cloneFrozenData(updateValue, 'InputPilotWorkspace update');

@@ -1,47 +1,65 @@
-import { assertNonEmptyString } from '@number-strategy-jump/arena-contracts';
-import { validateInputPilotAssignment } from '@number-strategy-jump/arena-input-pilot';
-import { createInputPilotDefinition } from '@number-strategy-jump/arena-input-pilot';
 import {
-  INPUT_PILOT_TERMINATION_REASON,
+  assertKnownKeys,
+  assertNonEmptyString,
+} from '@number-strategy-jump/arena-contracts';
+import {
+  validateInputPilotAssignment,
+  type InputPilotAssignment,
+} from './input-pilot-assignment.js';
+import { createInputPilotDefinition } from './input-pilot-definition.js';
+import {
   INPUT_PILOT_RECORD_SCHEMA_VERSION,
-  INPUT_PILOT_TRIAL_STATUS,
   createInputPilotRecord,
-} from '@number-strategy-jump/arena-input-pilot';
+  type InputPilotRecord,
+} from './input-pilot-record.js';
+import { createInputPilotReviewDraft } from './input-pilot-review-draft.js';
 import {
   INPUT_PILOT_TRIAL_CHECKPOINT_SCHEMA_VERSION,
   INPUT_PILOT_TRIAL_PHASE,
   createInputPilotTrialCheckpoint,
-} from '@number-strategy-jump/arena-input-pilot';
-import { createInputPilotReviewDraft } from '@number-strategy-jump/arena-input-pilot';
+  type InputPilotTerminationReason,
+  type InputPilotTrialCheckpoint,
+} from './input-pilot-trial-checkpoint.js';
+import {
+  INPUT_PILOT_TERMINATION_REASON,
+  INPUT_PILOT_TRIAL_STATUS,
+} from './input-pilot-vocabulary.js';
 
-function trialIdFor(assignment) {
+const ENROLL_KEYS = new Set(['assignment', 'device', 'eligibility', 'trialId']);
+const REVIEW_KEYS = new Set(['automated', 'terminationReason', 'reviewDraft']);
+const SUBMISSION_KEYS = new Set(['observer', 'selfReport', 'invalidate']);
+const INVALIDATION_KEYS = new Set(['terminationReason', 'automated']);
+
+function trialIdFor(assignment: InputPilotAssignment): string {
   return `pilot-trial-${assignment.assignmentId.replace(/^pilot-assignment-/, '')}`;
 }
 
-export function createEnrolledInputPilotTrial(definitionValue, {
-  assignment: assignmentValue,
-  device,
-  eligibility,
-  trialId: trialIdValue,
-}) {
+export function createEnrolledInputPilotTrial(
+  definitionValue: unknown,
+  optionsValue: unknown,
+): InputPilotTrialCheckpoint {
+  assertKnownKeys(optionsValue, ENROLL_KEYS, 'createEnrolledInputPilotTrial options');
   const definition = createInputPilotDefinition(definitionValue);
-  const assignment = validateInputPilotAssignment(definition, assignmentValue);
+  const assignment = validateInputPilotAssignment(definition, optionsValue.assignment);
   return createInputPilotTrialCheckpoint(definition, {
     schemaVersion: INPUT_PILOT_TRIAL_CHECKPOINT_SCHEMA_VERSION,
-    trialId: trialIdValue === undefined
+    trialId: optionsValue.trialId === undefined
       ? trialIdFor(assignment)
-      : assertNonEmptyString(trialIdValue, 'InputPilotTrial.trialId'),
+      : assertNonEmptyString(optionsValue.trialId, 'InputPilotTrial.trialId'),
     assignment,
     phase: INPUT_PILOT_TRIAL_PHASE.ENROLLED,
     terminationReason: null,
-    device,
-    eligibility,
+    device: optionsValue.device,
+    eligibility: optionsValue.eligibility,
     automated: null,
     reviewDraft: null,
   });
 }
 
-export function startInputPilotTrial(definitionValue, checkpointValue) {
+export function startInputPilotTrial(
+  definitionValue: unknown,
+  checkpointValue: unknown,
+): InputPilotTrialCheckpoint {
   const definition = createInputPilotDefinition(definitionValue);
   const checkpoint = createInputPilotTrialCheckpoint(definition, checkpointValue);
   if (checkpoint.phase !== INPUT_PILOT_TRIAL_PHASE.ENROLLED) {
@@ -53,11 +71,12 @@ export function startInputPilotTrial(definitionValue, checkpointValue) {
   });
 }
 
-export function reviewInputPilotTrial(definitionValue, checkpointValue, {
-  automated,
-  terminationReason,
-  reviewDraft = null,
-}) {
+export function reviewInputPilotTrial(
+  definitionValue: unknown,
+  checkpointValue: unknown,
+  optionsValue: unknown,
+): InputPilotTrialCheckpoint {
+  assertKnownKeys(optionsValue, REVIEW_KEYS, 'reviewInputPilotTrial options');
   const definition = createInputPilotDefinition(definitionValue);
   const checkpoint = createInputPilotTrialCheckpoint(definition, checkpointValue);
   if (checkpoint.phase !== INPUT_PILOT_TRIAL_PHASE.RUNNING) {
@@ -66,13 +85,17 @@ export function reviewInputPilotTrial(definitionValue, checkpointValue, {
   return createInputPilotTrialCheckpoint(definition, {
     ...checkpoint,
     phase: INPUT_PILOT_TRIAL_PHASE.REVIEWING,
-    terminationReason,
-    automated,
-    reviewDraft: createInputPilotReviewDraft(reviewDraft),
+    terminationReason: optionsValue.terminationReason,
+    automated: optionsValue.automated,
+    reviewDraft: createInputPilotReviewDraft(optionsValue.reviewDraft),
   });
 }
 
-export function updateInputPilotReviewDraft(definitionValue, checkpointValue, reviewDraftValue) {
+export function updateInputPilotReviewDraft(
+  definitionValue: unknown,
+  checkpointValue: unknown,
+  reviewDraftValue: unknown,
+): InputPilotTrialCheckpoint {
   const definition = createInputPilotDefinition(definitionValue);
   const checkpoint = createInputPilotTrialCheckpoint(definition, checkpointValue);
   if (checkpoint.phase !== INPUT_PILOT_TRIAL_PHASE.REVIEWING) {
@@ -84,7 +107,7 @@ export function updateInputPilotReviewDraft(definitionValue, checkpointValue, re
   });
 }
 
-function statusForReviewReason(reason) {
+function statusForReviewReason(reason: InputPilotTerminationReason | null) {
   if (reason === INPUT_PILOT_TERMINATION_REASON.MATCH_ENDED) {
     return INPUT_PILOT_TRIAL_STATUS.COMPLETED;
   }
@@ -95,20 +118,27 @@ function statusForReviewReason(reason) {
   throw new RangeError(`reviewing terminationReason ${String(reason)} 不能形成正常终态。`);
 }
 
-export function submitInputPilotTrialReview(definitionValue, checkpointValue, {
-  observer,
-  selfReport,
-  invalidate,
-} = {}) {
+export function submitInputPilotTrialReview(
+  definitionValue: unknown,
+  checkpointValue: unknown,
+  submissionValue: unknown = {},
+): InputPilotRecord {
+  assertKnownKeys(submissionValue, SUBMISSION_KEYS, 'submitInputPilotTrialReview submission');
   const definition = createInputPilotDefinition(definitionValue);
   const checkpoint = createInputPilotTrialCheckpoint(definition, checkpointValue);
   if (checkpoint.phase !== INPUT_PILOT_TRIAL_PHASE.REVIEWING) {
     throw new RangeError('只有 reviewing pilot trial 可以提交表单。');
   }
   const draft = createInputPilotReviewDraft(
-    observer === undefined && selfReport === undefined && invalidate === undefined
+    submissionValue.observer === undefined
+      && submissionValue.selfReport === undefined
+      && submissionValue.invalidate === undefined
       ? checkpoint.reviewDraft
-      : { observer, selfReport, invalidate: Boolean(invalidate) },
+      : {
+        observer: submissionValue.observer,
+        selfReport: submissionValue.selfReport,
+        invalidate: submissionValue.invalidate,
+      },
   );
   return createInputPilotRecord(definition, {
     schemaVersion: INPUT_PILOT_RECORD_SCHEMA_VERSION,
@@ -128,12 +158,15 @@ export function submitInputPilotTrialReview(definitionValue, checkpointValue, {
   });
 }
 
-export function invalidateInputPilotTrial(definitionValue, checkpointValue, {
-  terminationReason,
-  automated = null,
-}) {
+export function invalidateInputPilotTrial(
+  definitionValue: unknown,
+  checkpointValue: unknown,
+  optionsValue: unknown,
+): InputPilotRecord {
+  assertKnownKeys(optionsValue, INVALIDATION_KEYS, 'invalidateInputPilotTrial options');
   const definition = createInputPilotDefinition(definitionValue);
   const checkpoint = createInputPilotTrialCheckpoint(definition, checkpointValue);
+  const terminationReason = optionsValue.terminationReason;
   if (
     terminationReason !== INPUT_PILOT_TERMINATION_REASON.RUNNING_RECOVERED
     && terminationReason !== INPUT_PILOT_TERMINATION_REASON.RUNTIME_FAILED
@@ -147,7 +180,7 @@ export function invalidateInputPilotTrial(definitionValue, checkpointValue, {
     terminationReason,
     device: checkpoint.device,
     eligibility: checkpoint.eligibility,
-    automated,
+    automated: optionsValue.automated ?? null,
     observer: null,
     selfReport: null,
   });

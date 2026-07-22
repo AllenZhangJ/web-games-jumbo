@@ -22,7 +22,7 @@ import {
   startInputPilotTrial,
   submitInputPilotTrialReview,
   updateInputPilotReviewDraft,
-} from './input-pilot-trial-state.js';
+} from '@number-strategy-jump/arena-input-pilot';
 import {
   INPUT_PILOT_RUNTIME_STATE,
   validateInputPilotRuntime,
