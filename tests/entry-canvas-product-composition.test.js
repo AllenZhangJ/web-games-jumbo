@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ProductCanvasUiSurface,
-} from '../src/arena/presentation/canvas/product-canvas-ui-surface.js';
+} from '@number-strategy-jump/arena-product-presentation-three';
 import {
   createProductCanvasLayout,
 } from '@number-strategy-jump/arena-product-presentation';

@@ -14,6 +14,9 @@ describe('enterprise governance gates', () => {
   });
 
   it('keeps Three presentation dependencies and authority boundaries exact', async () => {
-    await expect(verifyPresentationThreeBoundaries()).resolves.toEqual({ sourceFileCount: 21 });
+    await expect(verifyPresentationThreeBoundaries()).resolves.toEqual({
+      sourceFileCount: 21,
+      productSourceFileCount: 2,
+    });
   });
 });

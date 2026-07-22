@@ -97,7 +97,7 @@ test('mini-game entries bundle without importing the web platform', async () => 
     const inputs = Object.keys(result.metafile.inputs);
     assert.ok(!inputs.some((input) => input.endsWith('src/platform/web.js')));
     assert.ok(inputs.some((input) => input.endsWith(
-      'src/arena/presentation/canvas/product-canvas-ui-surface.js',
+      'packages/arena-product-presentation-three/dist/product-canvas-ui-surface.js',
     )));
     assert.ok(inputs.some((input) => input.endsWith(
       'packages/arena-product-presentation/dist/product-presentation-session.js',
@@ -126,7 +126,7 @@ test('mini-game greybox rollback entries remain independently executable', async
       'src/arena/presentation/session/arena-presentation-session.js',
     )));
     assert.ok(!inputs.some((input) => input.endsWith(
-      'src/arena/presentation/canvas/product-canvas-ui-surface.js',
+      'packages/arena-product-presentation-three/dist/product-canvas-ui-surface.js',
     )));
     assert.ok(!inputs.some((input) => input.endsWith('src/platform/web.js')));
     assert.doesNotMatch(result.outputFiles[0].text, /^\s*(?:import|export)\b/m);

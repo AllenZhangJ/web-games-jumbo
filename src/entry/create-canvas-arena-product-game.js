@@ -1,6 +1,6 @@
 import {
   ProductCanvasUiSurface,
-} from '../arena/presentation/canvas/product-canvas-ui-surface.js';
+} from '@number-strategy-jump/arena-product-presentation-three';
 import { createArenaProductGame } from './create-arena-product-game.js';
 import { createArenaProductRendererFactory } from './create-arena-product-renderer.js';
 import { resolveArenaPresentationQualityForLaunch } from './arena-presentation-quality-launch.js';

@@ -19,6 +19,7 @@
     { "path": "./packages/arena-product-composition" },
     { "path": "./packages/arena-product-match" },
     { "path": "./packages/arena-product-progression" },
+    { "path": "./packages/arena-product-presentation-three" },
     { "path": "./packages/arena-product-session" },
     { "path": "./packages/arena-product-state" },
     { "path": "./packages/arena-product-v1-content" },
