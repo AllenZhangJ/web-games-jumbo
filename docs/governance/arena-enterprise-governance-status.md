@@ -32,7 +32,7 @@
 | G2 Definition/合同/配置 | 已完成 | strict TS `arena-contracts`、`arena-definitions`、`arena-profile-contracts` 与 `arena-platform-contracts` 已承接确定性、输入/事件、权威快照、同步存储、平台能力、玩家档案/存档协议，以及动作/角色/装备/地图 Definition、只读 Registry 和唯一 Gameplay V2 数值配置；受审计 JavaScript 已降至 500 个 |
 | G3 Rule/Core/Replay | 已完成 | strict TS `arena-core`、`arena-movement`、`arena-physics`、`arena-equipment`、`arena-map` 与 `arena-match` 已承接规则/移动/物理/装备、完整地图权威链、比赛配置、Participant/Timeline 唯一写入者、角色 Runtime/物理投影、状态 hash、完整 MatchCore 编排、fixed-step Runtime 与 Replay；黄金语料保持 `0dace228` |
 | G4 Bot/Product/Persistence | 已完成 | strict TS Bot、Matchmaking、Quick Match、Local Match Session、Product State、Progression、ProductMatchResult、奖励事务、Profile Service/Repository、Storage Lease、Product Match、Product Session Controller、对称内容池、Arena V1 产品内容与通用 Product Composition 已闭环；Arena V1 薄应用注入适配器留待 G6/G7 清零 |
-| G5 Presentation/资产/反馈 | 进行中 | strict `arena-presentation-contracts` 已承接资产/角色表现合同及产品 UI/表现生命周期协议，strict `arena-presentation-runtime` 已承接宿主无关运行时、输入边界、唯一触控布局、原始触控至固定 tick 采样链、Pointer 宿主适配、打击音频池与观测型内存快照，strict `arena-product-presentation` 已承接 Product InputRouter、UI 意图串行化、内容/屏幕 Definition、只读 Registry、消息目录、Arena V1 静态内容工厂、只读 ViewModel、Product Match 表现桥、Product Presentation Flow 与注入式 Session 所有权根，strict `arena-presentation-three` 已承接坐标/样式、统一 Camera 模型、程序化装备、Three 资源 lease、平台/装备/角色 Registry、正式角色动画 Controller、GLTF/宿主纹理 Loader、程序化角色 View/Factory、GLTF 角色 View/Factory、命中特效对象池、World Stage、HUD 与 Renderer；上层内容/Canvas/性能证据及旧 Stage 6 表现适配仍待迁移或退役分类 |
+| G5 Presentation/资产/反馈 | 进行中 | strict `arena-presentation-contracts` 已承接资产/角色表现合同及产品 UI/表现生命周期协议，strict `arena-presentation-runtime` 已承接宿主无关运行时、输入边界、唯一触控布局、原始触控至固定 tick 采样链、Pointer 宿主适配、打击音频池与观测型内存快照，strict `arena-product-presentation` 已承接 Product InputRouter、UI 意图串行化、内容/屏幕 Definition、只读 Registry、消息目录、Arena V1 静态内容工厂、只读 ViewModel、宿主无关 Canvas 布局/命中/绘制规则、Product Match 表现桥、Product Presentation Flow 与注入式 Session 所有权根，strict `arena-presentation-three` 已承接坐标/样式、统一 Camera 模型、程序化装备、Three 资源 lease、平台/装备/角色 Registry、正式角色动画 Controller、GLTF/宿主纹理 Loader、程序化角色 View/Factory、GLTF 角色 View/Factory、命中特效对象池、World Stage、HUD 与 Renderer；上层具体内容、Canvas Surface、性能证据及旧 Stage 6 表现适配仍待迁移或退役分类 |
 | G6 Platform/入口/构建 | 未开始 | 三端默认入口是 Product，但生产交付未与开发页面彻底隔离 |
 | G7 零 JS/完整质量门 | 未开始 | ESLint、strict TypeScript、Vitest 和 JavaScript 精确递减门禁已作为迁移护栏运行；coverage 阈值、测试归包和零 JS 尚未完成 |
 | G8 资产/安全/所有权 | 未开始 | CODEOWNERS、CI 安全与正式资产最终批准待补齐 |
@@ -55,7 +55,7 @@
 
 ## 当前不可合并原因
 
-1. 当前 337 个受维护 JavaScript 文件仍在精确允许清单中，上层具体内容/Canvas Painter 与 Surface 生命周期/性能证据、Platform 和 Arena V1 应用注入适配尚未完成 strict TypeScript workspace 迁移；旧 Stage 6 `ArenaInputRouter` 与仅测试使用的 `KeyboardInputAdapter` 待 G7 证明退役或归类，不属于当前 Product 生产链。
+1. 当前 336 个受维护 JavaScript 文件仍在精确允许清单中，上层具体内容/Canvas Surface 生命周期/性能证据、Platform 和 Arena V1 应用注入适配尚未完成 strict TypeScript workspace 迁移；旧 Stage 6 `ArenaInputRouter` 与仅测试使用的 `KeyboardInputAdapter` 待 G7 证明退役或归类，不属于当前 Product 生产链。
 2. Vitest 当前保护底层合同包和治理门禁；Arena 其余测试尚待按 workspace 迁移并建立正式 coverage 阈值与零 JS 门禁。
 3. 正式资产最终审批与完整安全/依赖长期治理尚未闭环。
 4. 文档仍含迁移前阶段性叙述，尚未完成 G9 全量链接、状态与命令归真。
@@ -855,3 +855,12 @@
 - 输入 fuzz 完成 120 场、120 个唯一 final hash 与 6 次 Replay 复验，操作计数和 frame 计数逐项保持一致，耗时 `31692.541333 ms`，无 reproduction case。Presentation Session soak 完成 100 场，耗时 `511.738667 ms`、堆增长 `2646008 B`；Product Presentation Session soak 完成 100 场、100 个唯一 authority hash，耗时 `47421.876917 ms`、堆增长 `6717032 B`。两者均低于 8 MiB，帧、生命周期监听、Canvas 监听和输入绑定残留为零；脚本耗时不外推为手机帧率或发热结论。
 - clean build ID 为 `arena-9e652379e9fb-product`，Web/微信/抖音 delivery 为 `3757426 / 3800257 / 3800232 B`，三端 `sourceDirty=false`、默认入口均为 Product、预算通过且 `freezeEligible=true`；生产产物边界检查通过。Web 主业务 chunk 为 `782.00 kB`（gzip `199.37 kB`），Three chunk 为 `631.82 kB`（gzip `161.92 kB`），继续进入 G6 拆包与目标设备 trace。
 - 本批没有新增浏览器或手机交互结论，不冒充 iPhone 13 Pro/iOS 26/Chrome 真机证据，也没有改变 Gameplay V2 配置 hash `8c322912`、任意距离挥空、攻击/命中/击退数值、动作/武器、移动/跳跃、画质、关节、Bot、权威 tick、Replay/Profile schema 或正式资产。下一批迁移 Canvas Painter 的宿主无关绘制命令与 Surface 的 Three/平台资源生命周期，二者仍需分层；G5 未完成，当前不可合并。
+
+## G5.24 Product Canvas 绘制规则迁移与确定性证据
+
+- `paintProductCanvasScene` 已从上层 JavaScript 迁入 strict `@number-strategy-jump/arena-product-presentation`，旧 JavaScript 真值删除，精确允许清单由 337 降至 336。Painter 只消费 `ProductUiSceneModel`、`ProductCanvasLayout`、viewport 与结构化 2D 绘制端口，不依赖 Three.js、DOM、平台 API、Controller、Match、墙钟、网络，也不拥有 Canvas、Texture 或 Scene 生命周期。
+- 绘制颜色、字体、人物轮廓、场景分支、按钮样式、位置和缩放数值原样迁移；Canvas Surface 统一从 strict 包公开入口消费。能力探测与方法快照没有塞入每次绘制调用：Painter 的调用方必须提供已验证端口，下一批由拥有真实宿主资源的 Surface 在构造期完成验证、回滚和清理，这避免热路径重复反射宿主对象。
+- 新增 1 项 strict 边界测试，以同一冻结 SceneModel/Layout 连续绘制两次并比较完整命令序列，同时验证标题、动作文本、输入 JSON 与冻结状态不变。Canvas/小游戏 4 项定向集成通过。代码提交 `56978d5febd362f4e83e227c8a684853bfd54bf9` 的完整门禁通过：666/666 Node、230/230 strict package/治理、104/104 生命周期；生产依赖审计为 0 vulnerabilities。
+- 输入 fuzz 完成 120 场、120 个唯一 final hash 与 6 次 Replay 复验，耗时 `32207.200333 ms`，无 reproduction case。Presentation Session soak 完成 100 场，耗时 `524.191667 ms`、堆增长 `2651432 B`；Product Presentation Session soak 完成 100 场、100 个唯一 authority hash，耗时 `48434.779124999994 ms`、堆增长 `6888696 B`。两者均低于 8 MiB，帧、生命周期监听、Canvas 监听和输入绑定残留为零；这些脚本指标不外推为手机帧率、功耗或发热结论。
+- clean build ID 为 `arena-56978d5febd3-product`，Web/微信/抖音 delivery 为 `3757426 / 3800257 / 3800232 B`，与 G5.23 完全一致；三端 `sourceDirty=false`、默认入口均为 Product、预算通过且 `freezeEligible=true`，生产产物边界检查通过。Web 主业务 chunk 为 `782.00 kB`（gzip `199.37 kB`），Three chunk 为 `631.82 kB`（gzip `161.92 kB`），继续进入 G6 拆包与目标设备 trace。
+- 本批没有新增浏览器或手机交互结论，不冒充 iPhone 13 Pro/iOS 26/Chrome 真机证据，也没有改变 Gameplay V2 配置 hash `8c322912`、任意距离挥空、攻击/命中/击退数值、动作/武器、移动/跳跃、画质、关节、Bot、权威 tick、Replay/Profile schema 或正式资产。下一批迁移并加固 Canvas Surface 的平台能力快照、Three/Canvas 资源回滚、显式生命周期、命中映射和清理重试；G5 未完成，当前不可合并。

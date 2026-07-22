@@ -1,6 +1,6 @@
 # Arena Product Presentation
 
-该 strict TypeScript workspace 承接 Product 的宿主无关表现编排。当前公开能力包括 UI/Gameplay 输入路由、UI 意图串行化、内容/屏幕 Definition、只读 Registry、本地消息目录、Arena V1 静态内容工厂、只读 ViewModel、宿主无关 UI SceneModel 投影与 Canvas 安全区/命中布局、单局表现桥、Product Presentation Flow 与注入式 Session 所有权根；上层只保留具体 Arena 内容、Canvas 绘制/Three Surface、Renderer、Probe、平台和产品 Controller 的应用组合。
+该 strict TypeScript workspace 承接 Product 的宿主无关表现编排。当前公开能力包括 UI/Gameplay 输入路由、UI 意图串行化、内容/屏幕 Definition、只读 Registry、本地消息目录、Arena V1 静态内容工厂、只读 ViewModel、宿主无关 UI SceneModel 投影与 Canvas 安全区/命中/绘制规则、单局表现桥、Product Presentation Flow 与注入式 Session 所有权根；上层只保留具体 Arena 内容、Canvas/Three Surface、Renderer、Probe、平台和产品 Controller 的应用组合。
 
 边界约束：
 
@@ -11,6 +11,7 @@
 - Definition 与消息目录只接受可序列化数据并冻结；Registry 只接受完整数组并拒绝空槽、访问器、重复身份与可变伪实现。
 - ViewModel 只消费公开 Product/Match/Reward 数据并投影冻结 UI 状态，不拥有或修改 Controller、Match 或 Profile；只有包内完整构造的可信冻结 ViewModel 能复用弱引用 SceneModel 缓存，外部伪造对象始终重新复验。
 - Canvas layout 只消费可信 SceneModel 和数据型 viewport；安全区几何不可变，禁用项不进入命中表，point/rect 访问器不会执行，非有限或负尺寸边界不能命中。
+- Canvas painter 只消费冻结 SceneModel/Layout 与调用方预验证的结构化 2D 绘制端口；它不探测宿主、不拥有 Canvas/Texture/Scene，也不在绘制调用中创建资源或改变游戏权威。
 - 单局表现桥借用 Controller/InputSource，只拥有有界事件窗；frame projector 与具体表现内容必须由组合点注入，失败或销毁后释放全部借用能力和大对象引用。
 - Flow 只拥有 IntentDispatcher 与当前 MatchPresentationRuntime，统一串行化 intent、自动奖励、保存重试、租约心跳和 Match 表现清理；Arena V1 内容与 frame projector 仍由应用组合点显式注入。
 - Session 统一拥有 Canvas 事件、Renderer、InputRouter/Adapter、Flow、FrameLoop、Probe 与 Controller 的生命周期；平台、内容和工厂只通过构造组合注入。构造候选失败、异步启动取消、宿主吞掉帧重入、部分清理失败和迟到完成均失败关闭或保留精确重试所有权。
