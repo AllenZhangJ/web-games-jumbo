@@ -102,3 +102,10 @@ export type {
   ArenaBotCapabilityGateOptions,
   ArenaBotDifficultyMetricState,
 } from './arena-bot-capability-metrics.js';
+export {
+  ARENA_V1_BOT_CAPABILITY_DEFAULT_PARAMETERS,
+  ARENA_V1_BOT_CAPABILITY_WORKLOAD_ID,
+  ARENA_V1_BOT_CAPABILITY_WORKLOAD_VERSION,
+  createArenaV1BotCapabilityParameters,
+  createArenaV1BotCapabilityWorkloadEntry,
+} from './arena-v1-bot-capability-workload.js';

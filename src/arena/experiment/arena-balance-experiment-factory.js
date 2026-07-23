@@ -2,7 +2,7 @@ import { MetricCollectorRegistry, SimulationWorkloadRegistry } from '@number-str
 import { createArenaBalanceCandidateCollectorEntry } from './arena-balance-candidate-collector.js';
 import { createArenaBotAssignmentDistributionCollectorEntry } from '@number-strategy-jump/arena-v1-experiment';
 import { createArenaBotCapabilityCollectorEntry } from './arena-bot-capability-collector.js';
-import { createArenaV1BotCapabilityWorkloadEntry } from './arena-v1-bot-capability-workload.js';
+import { createArenaV1BotCapabilityWorkloadEntry } from '@number-strategy-jump/arena-v1-experiment';
 
 export { createArenaBalanceCandidateExperimentDefinition } from '@number-strategy-jump/arena-balance';
 

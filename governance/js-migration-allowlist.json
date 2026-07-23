@@ -57,7 +57,6 @@
     "src/arena/experiment/arena-balance-validation-composition.js",
     "src/arena/experiment/arena-bot-capability-collector.js",
     "src/arena/experiment/arena-bot-experiment-composition.js",
-    "src/arena/experiment/arena-v1-bot-capability-workload.js",
     "src/arena/physics/poc-scenarios.js",
     "src/arena/presentation/assets/formal-asset-budget-policy.js",
     "src/arena/presentation/assets/formal-asset-budget-report.js",

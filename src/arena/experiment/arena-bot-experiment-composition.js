@@ -30,7 +30,7 @@ import {
   ARENA_V1_BOT_CAPABILITY_WORKLOAD_ID,
   ARENA_V1_BOT_CAPABILITY_WORKLOAD_VERSION,
   createArenaV1BotCapabilityWorkloadEntry,
-} from './arena-v1-bot-capability-workload.js';
+} from '@number-strategy-jump/arena-v1-experiment';
 
 export const ARENA_STAGE9_BOT_EXPERIMENT_ID = 'arena.stage9.s9.1.bot-capability.v1';
 export { ARENA_STAGE9_BOT_SEED_BASE, ARENA_STAGE9_BOT_SEED_STEP };

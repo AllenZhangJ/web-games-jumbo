@@ -1,24 +1,42 @@
 import { BotController } from '@number-strategy-jump/arena-bot';
 import { BOT_DIFFICULTY_IDS, getBotDifficultyProfile } from '@number-strategy-jump/arena-bot';
+import type { BotDifficultyId } from '@number-strategy-jump/arena-bot';
 import { createArenaV1MatchCore } from '@number-strategy-jump/arena-v1-composition';
 import { combineCleanupFailure, normalizeThrownError } from '@number-strategy-jump/arena-contracts';
 import { QuickMatchService } from '@number-strategy-jump/arena-v1-composition';
-import { replayMatch } from '../replay.js';
+import { createArenaMatchConfig, createReplayMatch } from '@number-strategy-jump/arena-match';
+import type { MatchReplayMetadata } from '@number-strategy-jump/arena-match';
 import {
   assertIntegerAtLeast,
   assertKnownKeys,
+  assertPlainRecord,
   cloneFrozenData,
+} from '@number-strategy-jump/arena-contracts';
+import type {
+  ArenaInputFrame,
+  ArenaMatchResultSnapshot,
+  ArenaMatchSnapshot,
+  PlainRecord,
 } from '@number-strategy-jump/arena-contracts';
 import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import {
   createArenaV1BenchmarkPlayerStrategy,
   createArenaV1BenchmarkPlayerTuning,
-} from '@number-strategy-jump/arena-v1-experiment';
+} from './arena-v1-benchmark-player-strategy.js';
+import type {
+  ArenaV1BenchmarkPlayerStrategy,
+} from './arena-v1-benchmark-player-strategy.js';
 import { cloneArenaExperimentReplaySeeds } from '@number-strategy-jump/arena-experiment';
+import type {
+  ArenaExperimentCandidate,
+  ArenaSimulationCaseFactoryOptions,
+} from '@number-strategy-jump/arena-experiment';
 import {
   ARENA_V1_BOT_CAPABILITY_WORKLOAD_ID,
   ARENA_V1_BOT_CAPABILITY_WORKLOAD_VERSION,
 } from '@number-strategy-jump/arena-balance';
+
+const replayMatch = createReplayMatch(createArenaV1MatchCore);
 
 export {
   ARENA_V1_BOT_CAPABILITY_DEFAULT_PARAMETERS,
@@ -33,7 +51,7 @@ const PARAMETER_KEYS = new Set([
   'maximumEventsPerCase',
 ]);
 
-function cloneDifficultyIds(value) {
+function cloneDifficultyIds(value: unknown): readonly BotDifficultyId[] {
   const source = cloneFrozenData(value, 'bot capability difficultyIds');
   if (!Array.isArray(source) || source.length === 0) {
     throw new RangeError('bot capability difficultyIds 必须是非空数组。');
@@ -51,8 +69,11 @@ function cloneDifficultyIds(value) {
   return Object.freeze(result);
 }
 
-export function createArenaV1BotCapabilityParameters(value) {
-  const source = cloneFrozenData(value, 'bot capability parameters');
+export function createArenaV1BotCapabilityParameters(value: unknown) {
+  const source = assertPlainRecord(
+    cloneFrozenData(value, 'bot capability parameters'),
+    'bot capability parameters',
+  );
   assertKnownKeys(source, PARAMETER_KEYS, 'bot capability parameters');
   return Object.freeze({
     difficultyIds: cloneDifficultyIds(source.difficultyIds),
@@ -69,7 +90,24 @@ export function createArenaV1BotCapabilityParameters(value) {
   });
 }
 
-function createExperimentSnapshot(tick, difficultyId, snapshot) {
+interface ArenaBotExperimentSnapshot extends PlainRecord {
+  readonly tick: number;
+  readonly difficultyId: string;
+  readonly matchTick: number;
+}
+interface ArenaBotDifficultyResult {
+  readonly difficultyId: string;
+  readonly ticks: number;
+  readonly outcome: Readonly<ArenaMatchResultSnapshot>;
+  readonly finalHash: string;
+  readonly replayVerified: boolean;
+}
+
+function createExperimentSnapshot(
+  tick: number,
+  difficultyId: string,
+  snapshot: ArenaMatchSnapshot,
+): Readonly<ArenaBotExperimentSnapshot> {
   return Object.freeze({
     tick,
     difficultyId,
@@ -78,21 +116,21 @@ function createExperimentSnapshot(tick, difficultyId, snapshot) {
 }
 
 class ArenaV1BotCapabilityCase {
-  #seed;
-  #candidate;
-  #parameters;
-  #difficultyIndex;
-  #session;
-  #playerStrategy;
-  #lastBotFrame;
-  #metadata;
-  #lastSnapshot;
-  #experimentTick;
-  #eventCount;
-  #results;
-  #destroyed;
+  #seed: number;
+  #candidate: Readonly<ArenaExperimentCandidate> | null;
+  #parameters: ReturnType<typeof createArenaV1BotCapabilityParameters> | null;
+  #difficultyIndex: number;
+  #session: ReturnType<QuickMatchService['create']>['session'] | null;
+  #playerStrategy: Readonly<ArenaV1BenchmarkPlayerStrategy> | null;
+  #lastBotFrame: ArenaInputFrame | null;
+  #metadata: MatchReplayMetadata | null;
+  #lastSnapshot: Readonly<ArenaBotExperimentSnapshot> | null;
+  #experimentTick: number;
+  #eventCount: number;
+  #results: Readonly<ArenaBotDifficultyResult>[];
+  #destroyed: boolean;
 
-  constructor({ seed, candidate, parameters }) {
+  constructor({ seed, candidate, parameters }: ArenaSimulationCaseFactoryOptions) {
     this.#seed = seed;
     this.#candidate = candidate;
     this.#parameters = createArenaV1BotCapabilityParameters(parameters);
@@ -122,8 +160,26 @@ class ArenaV1BotCapabilityCase {
     if (this.#destroyed) throw new Error('ArenaV1BotCapabilityCase 已销毁。');
   }
 
-  #verifyCoreMetadata(metadata) {
-    const expected = this.#candidate.authority;
+  #requireCandidate() {
+    this.#assertUsable();
+    if (!this.#candidate) throw new Error('ArenaV1BotCapabilityCase 缺少候选。');
+    return this.#candidate;
+  }
+
+  #requireParameters() {
+    this.#assertUsable();
+    if (!this.#parameters) throw new Error('ArenaV1BotCapabilityCase 缺少参数。');
+    return this.#parameters;
+  }
+
+  #requireMetadata() {
+    this.#assertUsable();
+    if (!this.#metadata) throw new Error('ArenaV1BotCapabilityCase 缺少元数据。');
+    return this.#metadata;
+  }
+
+  #verifyCoreMetadata(metadata: MatchReplayMetadata) {
+    const expected = this.#requireCandidate().authority;
     for (const field of [
       'matchSchemaVersion',
       'physicsBackendVersion',
@@ -133,7 +189,7 @@ class ArenaV1BotCapabilityCase {
       const actualField = field === 'matchSchemaVersion'
         ? 'schemaVersion'
         : field;
-      if (metadata[actualField] !== expected[field]) {
+      if (metadata[actualField as keyof MatchReplayMetadata] !== expected[field as keyof typeof expected]) {
         throw new Error(`Bot capability ${field} 与候选不一致。`);
       }
     }
@@ -143,23 +199,25 @@ class ArenaV1BotCapabilityCase {
   }
 
   #startDifficulty() {
-    const difficultyId = this.#parameters.difficultyIds[this.#difficultyIndex];
+    const parameters = this.#requireParameters();
+    const candidate = this.#requireCandidate();
+    const difficultyId = parameters.difficultyIds[this.#difficultyIndex];
     if (!difficultyId) throw new Error('Bot capability 没有待启动难度。');
-    let createdMetadata = null;
+    let createdMetadata: MatchReplayMetadata | null = null;
     const service = new QuickMatchService({
       allowDifficultyOverride: true,
-      coreFactory: (options) => {
+      coreFactory: (options: unknown) => {
         const core = createArenaV1MatchCore(options);
         try {
           createdMetadata = core.getReplayMetadata();
           this.#verifyCoreMetadata(createdMetadata);
           return core;
         } catch (error) {
-          const cleanupErrors = [];
+          const cleanupErrors: Error[] = [];
           try {
             core.destroy();
           } catch (cleanupError) {
-            cleanupErrors.push(cleanupError);
+            cleanupErrors.push(normalizeThrownError(cleanupError, 'Bot capability Core 清理失败'));
           }
           throw combineCleanupFailure(
             normalizeThrownError(error, 'Bot capability Core metadata 校验失败'),
@@ -168,10 +226,10 @@ class ArenaV1BotCapabilityCase {
           );
         }
       },
-      botControllerFactory: (options) => {
+      botControllerFactory: (options: ConstructorParameters<typeof BotController>[0]) => {
         const controller = new BotController(options);
         return {
-          createInput: (snapshot) => {
+          createInput: (snapshot: ArenaMatchSnapshot) => {
             const frame = controller.createInput(snapshot);
             this.#lastBotFrame = frame;
             return frame;
@@ -180,17 +238,17 @@ class ArenaV1BotCapabilityCase {
         };
       },
     });
-    let match = null;
-    let playerStrategy = null;
+    let match: ReturnType<QuickMatchService['create']> | null = null;
+    let playerStrategy: Readonly<ArenaV1BenchmarkPlayerStrategy> | null = null;
     try {
       match = service.create({
         matchSeed: this.#seed,
         difficultyOverride: difficultyId,
-        config: this.#candidate.matchConfig,
+        config: candidate.matchConfig,
       });
       playerStrategy = createArenaV1BenchmarkPlayerStrategy({
-        config: this.#candidate.matchConfig,
-        tuning: this.#parameters.benchmarkPlayer,
+        config: createArenaMatchConfig(candidate.matchConfig),
+        tuning: parameters.benchmarkPlayer,
       });
       match.session.start();
       const snapshot = match.session.getSnapshot();
@@ -203,16 +261,16 @@ class ArenaV1BotCapabilityCase {
         snapshot,
       );
     } catch (error) {
-      const cleanupErrors = [];
+      const cleanupErrors: Error[] = [];
       try {
         playerStrategy?.destroy();
       } catch (cleanupError) {
-        cleanupErrors.push(cleanupError);
+        cleanupErrors.push(normalizeThrownError(cleanupError, 'Bot capability player strategy 清理失败'));
       }
       try {
         match?.session.destroy();
       } catch (cleanupError) {
-        cleanupErrors.push(cleanupError);
+        cleanupErrors.push(normalizeThrownError(cleanupError, 'Bot capability session 清理失败'));
       }
       throw combineCleanupFailure(
         normalizeThrownError(error, `Bot capability ${difficultyId} 启动失败`),
@@ -222,14 +280,14 @@ class ArenaV1BotCapabilityCase {
     }
   }
 
-  #cleanupCurrent() {
-    const errors = [];
+  #cleanupCurrent(): Error[] {
+    const errors: Error[] = [];
     if (this.#playerStrategy) {
       try {
         this.#playerStrategy.destroy();
         this.#playerStrategy = null;
       } catch (error) {
-        errors.push(error);
+        errors.push(normalizeThrownError(error, 'Bot capability player strategy 清理失败'));
       }
     }
     if (this.#session) {
@@ -237,7 +295,7 @@ class ArenaV1BotCapabilityCase {
         this.#session.destroy();
         this.#session = null;
       } catch (error) {
-        errors.push(error);
+        errors.push(normalizeThrownError(error, 'Bot capability session 清理失败'));
       }
     }
     this.#lastBotFrame = null;
@@ -245,13 +303,16 @@ class ArenaV1BotCapabilityCase {
   }
 
   #finishDifficulty() {
-    const difficultyId = this.#parameters.difficultyIds[this.#difficultyIndex];
-    let result = null;
-    let failure = null;
+    const parameters = this.#requireParameters();
+    const difficultyId = parameters.difficultyIds[this.#difficultyIndex];
+    if (!difficultyId) throw new Error('Bot capability 没有待完成难度。');
+    let result: Readonly<ArenaBotDifficultyResult> | null = null;
+    let failure: Error | null = null;
     try {
+      if (!this.#session) throw new Error('Bot capability 缺少活动 session。');
       const replay = this.#session.exportReplay();
       let replayVerified = false;
-      if (this.#parameters.replaySeeds.includes(this.#seed)) {
+      if (parameters.replaySeeds.includes(this.#seed)) {
         const replayed = replayMatch(replay);
         if (replayed.finalHash !== replay.finalHash) {
           throw new Error(`Bot capability ${difficultyId} seed ${this.#seed} 回放分叉。`);
@@ -276,18 +337,20 @@ class ArenaV1BotCapabilityCase {
         `Bot capability ${difficultyId} 导出且清理未完整完成。`,
       );
     }
+    if (!result) throw new Error(`Bot capability ${difficultyId} 未生成结果。`);
     this.#results.push(result);
     this.#difficultyIndex += 1;
   }
 
   getMetadata() {
     this.#assertUsable();
+    const metadata = this.#requireMetadata();
     return Object.freeze({
-      matchSeed: this.#metadata.matchSeed,
-      matchSchemaVersion: this.#metadata.schemaVersion,
-      physicsBackendVersion: this.#metadata.physicsBackendVersion,
-      configHash: this.#metadata.configHash,
-      ruleContentHash: this.#metadata.ruleContentHash,
+      matchSeed: metadata.matchSeed,
+      matchSchemaVersion: metadata.schemaVersion,
+      physicsBackendVersion: metadata.physicsBackendVersion,
+      configHash: metadata.configHash,
+      ruleContentHash: metadata.ruleContentHash,
     });
   }
 
@@ -298,14 +361,17 @@ class ArenaV1BotCapabilityCase {
 
   isComplete() {
     this.#assertUsable();
-    return this.#results.length === this.#parameters.difficultyIds.length;
+    return this.#results.length === this.#requireParameters().difficultyIds.length;
   }
 
   step() {
     this.#assertUsable();
     if (this.isComplete()) throw new Error('已完成的 Bot capability case 不能继续 step。');
     if (!this.#session) this.#startDifficulty();
-    const difficultyId = this.#parameters.difficultyIds[this.#difficultyIndex];
+    const parameters = this.#requireParameters();
+    const difficultyId = parameters.difficultyIds[this.#difficultyIndex];
+    if (!difficultyId) throw new Error('Bot capability 没有活动难度。');
+    if (!this.#session || !this.#playerStrategy) throw new Error('Bot capability 缺少活动运行时。');
     const snapshot = this.#session.getSnapshot();
     const playerFrame = this.#playerStrategy.createInput(snapshot);
     this.#lastBotFrame = null;
@@ -314,10 +380,10 @@ class ArenaV1BotCapabilityCase {
     if (!botFrame) throw new Error(`Bot capability ${difficultyId} 未产生 Bot InputFrame。`);
     this.#experimentTick += 1;
     this.#eventCount += stepped.events.length;
-    if (this.#eventCount > this.#parameters.maximumEventsPerCase) {
+    if (this.#eventCount > parameters.maximumEventsPerCase) {
       throw new Error(
         `Bot capability case ${this.#seed} 事件数超过`
-        + ` ${this.#parameters.maximumEventsPerCase}。`,
+        + ` ${parameters.maximumEventsPerCase}。`,
       );
     }
     this.#lastSnapshot = createExperimentSnapshot(
@@ -356,9 +422,9 @@ class ArenaV1BotCapabilityCase {
     this.#lastSnapshot = null;
     this.#results = [];
     if (errors.length > 0) {
-      const error = new Error('ArenaV1BotCapabilityCase 清理未完整完成。');
-      error.causes = errors;
-      throw error;
+      throw Object.assign(new Error('ArenaV1BotCapabilityCase 清理未完整完成。'), {
+        causes: Object.freeze(errors),
+      });
     }
   }
 }
@@ -368,6 +434,6 @@ export function createArenaV1BotCapabilityWorkloadEntry() {
     id: ARENA_V1_BOT_CAPABILITY_WORKLOAD_ID,
     version: ARENA_V1_BOT_CAPABILITY_WORKLOAD_VERSION,
     validateParameters: createArenaV1BotCapabilityParameters,
-    createCase: (options) => new ArenaV1BotCapabilityCase(options),
+    createCase: (options: ArenaSimulationCaseFactoryOptions) => new ArenaV1BotCapabilityCase(options),
   });
 }
