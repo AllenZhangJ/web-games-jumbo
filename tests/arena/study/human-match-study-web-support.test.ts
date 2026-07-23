@@ -31,9 +31,34 @@ import {
   createWebResearchPageOwnerId,
   detectWebResearchEnvironment,
 } from '../../../src/entry/web-research-environment.js';
+import type { ArenaPlatformContract } from '@number-strategy-jump/arena-platform-contracts';
 
 const SHA = 'a'.repeat(64);
 const COMMIT = 'b'.repeat(40);
+type Listener = (event?: unknown) => unknown;
+
+interface StudyNode {
+  hidden: boolean;
+  disabled: boolean;
+  checked: boolean;
+  value: string;
+  textContent: string;
+  dataset: Record<string, string>;
+  failRemoveOnce: boolean;
+  addEventListener: (name: string, callback: Listener) => void;
+  removeEventListener: (name: string, callback: Listener) => void;
+  listenerCount: () => number;
+}
+
+function required<T>(value: T, name: string): NonNullable<T> {
+  assert.ok(value != null, `${name} 不存在。`);
+  return value as NonNullable<T>;
+}
+
+function record(value: unknown, name: string): Record<string, unknown> {
+  assert.ok(value !== null && typeof value === 'object' && !Array.isArray(value), `${name} 必须是对象。`);
+  return value as Record<string, unknown>;
+}
 
 const STUDY_VIEW_SELECTORS = [
   '#study-operator-shell', '#study-participant-shell', '#study-running-bar',
@@ -49,9 +74,9 @@ const STUDY_VIEW_SELECTORS = [
 ];
 
 function createStudyViewHost() {
-  const nodes = new Map();
+  const nodes = new Map<string, StudyNode>();
   for (const selector of STUDY_VIEW_SELECTORS) {
-    const listeners = new Map();
+    const listeners = new Map<string, Listener>();
     nodes.set(selector, {
       hidden: false,
       disabled: false,
@@ -60,8 +85,8 @@ function createStudyViewHost() {
       textContent: '',
       dataset: {},
       failRemoveOnce: false,
-      addEventListener(name, callback) { listeners.set(name, callback); },
-      removeEventListener(name, callback) {
+      addEventListener(name: string, callback: Listener) { listeners.set(name, callback); },
+      removeEventListener(name: string, callback: Listener) {
         if (this.failRemoveOnce) {
           this.failRemoveOnce = false;
           throw new Error('remove failed once');
@@ -74,14 +99,14 @@ function createStudyViewHost() {
   return {
     root: {
       dataset: {},
-      querySelector(selector) { return nodes.get(selector) ?? null; },
+      querySelector(selector: string) { return nodes.get(selector) ?? null; },
       querySelectorAll() { return []; },
     },
     nodes,
   };
 }
 
-function createStudyAppHost(fetchManifest) {
+function createStudyAppHost(fetchManifest: (input: unknown) => Promise<unknown>) {
   const { root: mount } = createStudyViewHost();
   const listeners = new Map();
   return {
@@ -94,11 +119,11 @@ function createStudyAppHost(fetchManifest) {
     matchMedia: () => ({ matches: true }),
     document: {
       hidden: false,
-      querySelector: (selector) => selector === '#human-study-app' ? mount : null,
+      querySelector: (selector: string) => selector === '#human-study-app' ? mount : null,
     },
     fetch: fetchManifest,
-    addEventListener(name, callback) { listeners.set(name, callback); },
-    removeEventListener(name, callback) {
+    addEventListener(name: string, callback: Listener) { listeners.set(name, callback); },
+    removeEventListener(name: string, callback: Listener) {
       if (listeners.get(name) === callback) listeners.delete(name);
     },
     setInterval() { return 1; },
@@ -107,18 +132,18 @@ function createStudyAppHost(fetchManifest) {
 }
 
 function createStudyAppPlatform() {
-  const storage = new Map();
+  const storage = new Map<string, unknown>();
   return {
     wallNow: () => 1_000,
     onResize: () => () => {},
-    storageRead(key) {
+    storageRead(key: string) {
       return storage.has(key)
         ? { ok: true, found: true, value: storage.get(key) }
         : { ok: true, found: false, value: undefined };
     },
-    storageWrite(key, value) { storage.set(key, value); return true; },
-    storageDelete(key) { storage.delete(key); return true; },
-  };
+    storageWrite(key: string, value: unknown) { storage.set(key, value); return true; },
+    storageDelete(key: string) { storage.delete(key); return true; },
+  } as unknown as ArenaPlatformContract;
 }
 
 function studyViewActions() {
@@ -218,8 +243,8 @@ test('study build identity accepts only a clean Web manifest that covers study.h
 });
 
 test('Human Match Study Web app shares startup and cannot complete after destroy', async () => {
-  let resolveFetch;
-  const root = createStudyAppHost(() => new Promise((resolve) => { resolveFetch = resolve; }));
+  let resolveFetch!: (value: unknown) => void;
+  const root = createStudyAppHost(() => new Promise<unknown>((resolve) => { resolveFetch = resolve; }));
   const app = new HumanMatchStudyWebApp({ platform: createStudyAppPlatform(), root });
   const first = app.start();
   const second = app.start();
@@ -231,19 +256,24 @@ test('Human Match Study Web app shares startup and cannot complete after destroy
 });
 
 test('study capture download hashes the exact UTF-8 bytes before returning a receipt', async () => {
-  const actions = [];
+  const actions: [string, string][] = [];
   const capturePackage = {
     packageId: 'human-study-package-1234abcd',
     value: '采集',
   };
   class FakeBlob {
-    constructor(parts, options) {
+    readonly parts: readonly unknown[];
+    readonly options: unknown;
+
+    constructor(parts: readonly unknown[], options: unknown) {
       this.parts = parts;
       this.options = options;
     }
   }
   const anchor = {
     hidden: false,
+    download: '',
+    href: '',
     click() { actions.push(['click', this.download]); },
     remove() { actions.push(['remove', this.download]); },
   };
@@ -252,13 +282,13 @@ test('study capture download hashes the exact UTF-8 bytes before returning a rec
     TextEncoder,
     Blob: FakeBlob,
     URL: {
-      createObjectURL(blob) {
+      createObjectURL(blob: FakeBlob) {
         assert.ok(blob.parts[0] instanceof Uint8Array);
         return 'blob:study';
       },
-      revokeObjectURL(value) { actions.push(['revoke', value]); },
+      revokeObjectURL(value: string) { actions.push(['revoke', value]); },
     },
-    setTimeout(callback) { callback(); },
+    setTimeout(callback: () => void) { callback(); },
     document: {
       body: { appendChild() { actions.push(['append', anchor.download]); } },
       createElement: () => anchor,
@@ -284,8 +314,10 @@ test('study Product runtime owns one idempotent launch and fail-closed teardown'
   });
   let startCount = 0;
   let destroyCount = 0;
-  let createdPlatform = null;
-  let createdOptions = null;
+  const created: {
+    platform: Record<string, unknown> | null;
+    options: Record<string, unknown> | null;
+  } = { platform: null, options: null };
   const runtime = new HumanMatchStudyProductRuntime({
     definition,
     assignment,
@@ -312,9 +344,9 @@ test('study Product runtime owns one idempotent launch and fail-closed teardown'
     trialId: 'trial-runtime',
     onProgress() {},
     onFailure() {},
-    gameFactory(platform, options) {
-      createdPlatform = platform;
-      createdOptions = options;
+    gameFactory(platform: unknown, options: unknown) {
+      created.platform = record(platform, 'Product Runtime 平台');
+      created.options = record(options, 'Product Runtime 选项');
       return {
         async start() { startCount += 1; },
         getDebugSnapshot() { return { state: 'running' }; },
@@ -328,10 +360,16 @@ test('study Product runtime owns one idempotent launch and fail-closed teardown'
   await first;
   assert.equal(runtime.state, HUMAN_MATCH_STUDY_PRODUCT_RUNTIME_STATE.RUNNING);
   assert.equal(startCount, 1);
-  assert.equal(typeof createdOptions.seedSource.nextSeed, 'function');
-  assert.equal(typeof createdOptions.matchCompletionSink, 'function');
-  assert.equal(createdPlatform.storageWrite('ephemeral', { value: 1 }), true);
-  assert.deepEqual(createdPlatform.storageRead('ephemeral'), {
+  const options = required(created.options, '已创建的 Product Runtime 选项');
+  const platform = required(created.platform, '已创建的 Product Runtime 平台');
+  assert.equal(typeof record(options.seedSource, 'seedSource').nextSeed, 'function');
+  assert.equal(typeof options.matchCompletionSink, 'function');
+  const storageWrite = platform.storageWrite;
+  const storageRead = platform.storageRead;
+  if (typeof storageWrite !== 'function') throw new TypeError('storageWrite 必须是函数。');
+  if (typeof storageRead !== 'function') throw new TypeError('storageRead 必须是函数。');
+  assert.equal(storageWrite('ephemeral', { value: 1 }), true);
+  assert.deepEqual(storageRead('ephemeral'), {
     ok: true,
     found: true,
     value: { value: 1 },
@@ -466,10 +504,14 @@ test('study Product runtime rejects capability accessors, releases invalid candi
       };
     },
   });
-  await assert.rejects(invalid.start(), (error) => {
-    assert.equal(error instanceof AggregateError, true);
-    assert.match(error.errors[0].message, /Product Runtime\.start 缺失/);
-    assert.match(error.errors[1].message, /invalid cleanup failed once/);
+  await assert.rejects(invalid.start(), (error: unknown) => {
+    assert.ok(error instanceof AggregateError);
+    const firstError = required(error.errors[0], '首个聚合错误');
+    const secondError = required(error.errors[1], '第二个聚合错误');
+    assert.ok(firstError instanceof Error);
+    assert.ok(secondError instanceof Error);
+    assert.match(firstError.message, /Product Runtime\.start 缺失/);
+    assert.match(secondError.message, /invalid cleanup failed once/);
     return true;
   });
   assert.equal(invalidDestroyCount, 1);
@@ -477,7 +519,7 @@ test('study Product runtime rejects capability accessors, releases invalid candi
   invalid.destroy();
   assert.equal(invalidDestroyCount, 2);
 
-  let resolveStart;
+  let resolveStart!: () => void;
   let raceDestroyCount = 0;
   const race = new HumanMatchStudyProductRuntime({
     definition,
@@ -489,7 +531,7 @@ test('study Product runtime rejects capability accessors, releases invalid candi
     onFailure() {},
     gameFactory() {
       return {
-        start() { return new Promise((resolve) => { resolveStart = resolve; }); },
+        start() { return new Promise<void>((resolve) => { resolveStart = resolve; }); },
         destroy() { raceDestroyCount += 1; },
       };
     },
@@ -534,12 +576,14 @@ test('study Workbench rejects accessors and retains failed listener cleanup for 
   const view = new HumanMatchStudyWorkbenchView({ root: host.root });
   view.bind(studyViewActions());
   view.render(studyViewModel());
-  assert.equal(host.nodes.get('#study-phase').textContent, 'IDLE');
-  assert.equal(host.nodes.get('#study-enroll').disabled, false);
-  host.nodes.get('#study-enroll').failRemoveOnce = true;
+  const phaseNode = required(host.nodes.get('#study-phase'), '阶段节点');
+  const enrollNode = required(host.nodes.get('#study-enroll'), '入组节点');
+  assert.equal(phaseNode.textContent, 'IDLE');
+  assert.equal(enrollNode.disabled, false);
+  enrollNode.failRemoveOnce = true;
   assert.throws(() => view.destroy(), /清理未完整完成/);
   assert.throws(() => view.render(studyViewModel()), /正在销毁/);
-  assert.equal(host.nodes.get('#study-enroll').listenerCount(), 1);
+  assert.equal(enrollNode.listenerCount(), 1);
   view.destroy();
   assert.equal(
     [...host.nodes.values()].reduce((count, node) => count + node.listenerCount(), 0),
