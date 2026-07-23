@@ -11,31 +11,83 @@ import {
   INPUT_PILOT_RUNTIME_STATE,
   INPUT_PILOT_TRIAL_CONTROLLER_STATE,
   InputPilotTrialController,
+  type InputPilotRuntimeFactory,
+  type InputPilotRuntimeState,
 } from '@number-strategy-jump/arena-input-pilot';
 import { InputPilotWorkspaceRepository } from '@number-strategy-jump/arena-input-pilot';
 
-function clone(value) {
-  return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
+type PilotDefinition = ReturnType<typeof createArenaInputPilotV1Definition>;
+
+interface StorageHarness {
+  readonly values: Map<string, unknown>;
+  readonly writeFailures: Set<string>;
+  readonly port: {
+    storageRead(key: string): unknown;
+    storageWrite(key: string, value: unknown): boolean;
+    storageDelete(key: string): boolean;
+  };
 }
 
-function storageHarness() {
-  const values = new Map();
-  const writeFailures = new Set();
+interface RuntimeSignals {
+  readonly matchSeed: number;
+  readonly mapperId: string;
+  readonly onProgress: (reviewDraft: unknown) => unknown;
+  readonly onFailure: (error: unknown) => unknown;
+}
+
+interface DeferredPromise {
+  readonly promise: Promise<void>;
+  readonly resolve: () => void;
+  readonly reject: (reason?: unknown) => void;
+}
+
+interface RuntimeHarness {
+  readonly signals: RuntimeSignals;
+  start(): Promise<void> | undefined;
+  setPaused(): void;
+  getStatus(): Readonly<{ state: InputPilotRuntimeState; timedOut: boolean }>;
+  finalizeMetrics(): ReturnType<typeof automated>;
+  destroy(): void;
+  finish(reviewDraft?: unknown): unknown;
+  timeout(reviewDraft?: unknown): unknown;
+  fail(error?: Error): unknown;
+  readonly destroyCount: number;
+  readonly destroyed: boolean;
+}
+
+function required<T>(value: T | null | undefined, name: string): T {
+  assert.ok(value != null, `${name} 不存在。`);
+  return value;
+}
+
+function record(value: unknown, name: string): Readonly<Record<string, unknown>> {
+  assert.ok(value !== null && typeof value === 'object' && !Array.isArray(value), `${name} 必须是对象。`);
+  return value as Readonly<Record<string, unknown>>;
+}
+
+function clone<T>(value: T): T {
+  if (value === undefined) return value;
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function storageHarness(): StorageHarness {
+  const values = new Map<string, unknown>();
+  const writeFailures = new Set<string>();
   return {
     values,
     writeFailures,
     port: {
-      storageRead(key) {
+      storageRead(key: string) {
         return values.has(key)
           ? { ok: true, found: true, value: clone(values.get(key)) }
           : { ok: true, found: false, value: undefined };
       },
-      storageWrite(key, value) {
+      storageWrite(key: string, value: unknown) {
         if (writeFailures.has(key)) return false;
         values.set(key, clone(value));
         return true;
       },
-      storageDelete(key) {
+      storageDelete(key: string) {
         values.delete(key);
         return true;
       },
@@ -81,7 +133,11 @@ function eligibility() {
   });
 }
 
-function createRepository(definition, harness, ownerId) {
+function createRepository(
+  definition: PilotDefinition,
+  harness: StorageHarness,
+  ownerId: string,
+) {
   return new InputPilotWorkspaceRepository({
     definition,
     storage: harness.port,
@@ -90,14 +146,23 @@ function createRepository(definition, harness, ownerId) {
   });
 }
 
-function runtimeFactoryHarness({ startError = null, finalizeError = null, deferred = null } = {}) {
-  const instances = [];
-  const factory = (signals) => {
-    let state = INPUT_PILOT_RUNTIME_STATE.CREATED;
+function runtimeFactoryHarness({
+  startError = null,
+  finalizeError = null,
+  deferred = null,
+}: Readonly<{
+  startError?: Error | null;
+  finalizeError?: Error | null;
+  deferred?: DeferredPromise | null;
+}> = {}) {
+  const instances: RuntimeHarness[] = [];
+  const factory: InputPilotRuntimeFactory = (signalsValue: unknown) => {
+    const signals = signalsValue as RuntimeSignals;
+    let state: InputPilotRuntimeState = INPUT_PILOT_RUNTIME_STATE.CREATED;
     let timedOut = false;
     let destroyed = false;
     let destroyCount = 0;
-    const runtime = {
+    const runtime: RuntimeHarness = {
       signals,
       start() {
         state = INPUT_PILOT_RUNTIME_STATE.STARTING;
@@ -123,11 +188,11 @@ function runtimeFactoryHarness({ startError = null, finalizeError = null, deferr
         destroyed = true;
         state = INPUT_PILOT_RUNTIME_STATE.DESTROYED;
       },
-      finish(reviewDraft = null) {
+      finish(reviewDraft: unknown = null) {
         state = INPUT_PILOT_RUNTIME_STATE.RESULT;
         return signals.onProgress(reviewDraft);
       },
-      timeout(reviewDraft = null) {
+      timeout(reviewDraft: unknown = null) {
         timedOut = true;
         return signals.onProgress(reviewDraft);
       },
@@ -144,17 +209,27 @@ function runtimeFactoryHarness({ startError = null, finalizeError = null, deferr
   return { factory, instances };
 }
 
-function deferredPromise() {
-  let resolve;
-  let reject;
-  const promise = new Promise((resolveValue, rejectValue) => {
+function deferredPromise(): DeferredPromise {
+  let resolve!: () => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<void>((resolveValue, rejectValue) => {
     resolve = resolveValue;
     reject = rejectValue;
   });
   return { promise, resolve, reject };
 }
 
-function createController({ definition, harness, ownerId, runtimeFactory }) {
+function createController({
+  definition,
+  harness,
+  ownerId,
+  runtimeFactory,
+}: Readonly<{
+  definition: PilotDefinition;
+  harness: StorageHarness;
+  ownerId: string;
+  runtimeFactory: InputPilotRuntimeFactory;
+}>) {
   return new InputPilotTrialController({
     definition,
     repository: createRepository(definition, harness, ownerId),
@@ -180,24 +255,25 @@ test('trial controller atomically enrolls, runs, reviews and commits one termina
     eligibility: eligibility(),
   });
   assert.equal(enrolled.assignment.enrollmentIndex, 0);
-  assert.equal(controller.getSnapshot().workspace.revision, 1);
+  assert.equal(required(controller.getSnapshot().workspace, 'workspace').revision, 1);
   await controller.startTrial();
   assert.equal(controller.state, INPUT_PILOT_TRIAL_CONTROLLER_STATE.RUNNING);
-  assert.equal(runtimes.instances[0].signals.matchSeed, enrolled.assignment.matchSeed);
-  assert.equal(runtimes.instances[0].signals.mapperId, enrolled.assignment.mapperId);
-  assert.equal(controller.getSnapshot().workspace.revision, 2);
+  const runtime = required(runtimes.instances[0], 'pilot runtime');
+  assert.equal(runtime.signals.matchSeed, enrolled.assignment.matchSeed);
+  assert.equal(runtime.signals.mapperId, enrolled.assignment.mapperId);
+  assert.equal(required(controller.getSnapshot().workspace, 'workspace').revision, 2);
 
-  assert.equal(runtimes.instances[0].finish(), true);
+  assert.equal(runtime.finish(), true);
   assert.equal(controller.state, INPUT_PILOT_TRIAL_CONTROLLER_STATE.REVIEWING);
-  assert.equal(runtimes.instances[0].destroyCount, 1);
-  assert.equal(controller.getSnapshot().workspace.revision, 3);
+  assert.equal(runtime.destroyCount, 1);
+  assert.equal(required(controller.getSnapshot().workspace, 'workspace').revision, 3);
 
   const form = { observer: observer(), selfReport: selfReport() };
-  const record = controller.submitReview(form);
-  assert.equal(record.trialStatus, INPUT_PILOT_TRIAL_STATUS.COMPLETED);
-  assert.equal(record.terminationReason, INPUT_PILOT_TERMINATION_REASON.MATCH_ENDED);
-  assert.equal(controller.getSnapshot().workspace.revision, 4);
-  assert.equal(controller.submitReview(form), record);
+  const submittedRecord = controller.submitReview(form);
+  assert.equal(submittedRecord.trialStatus, INPUT_PILOT_TRIAL_STATUS.COMPLETED);
+  assert.equal(submittedRecord.terminationReason, INPUT_PILOT_TERMINATION_REASON.MATCH_ENDED);
+  assert.equal(required(controller.getSnapshot().workspace, 'workspace').revision, 4);
+  assert.equal(controller.submitReview(form), submittedRecord);
   assert.throws(() => controller.submitReview({
     observer: { ...observer(), correctionCount: 2 },
     selfReport: selfReport(),
@@ -205,8 +281,14 @@ test('trial controller atomically enrolls, runs, reviews and commits one termina
 
   const aggregate = controller.exportAggregateBundle();
   assert.doesNotMatch(JSON.stringify(aggregate), /pilot-0001/);
-  const audit = controller.exportAuditBundle();
-  assert.equal(audit.records[0].assignment.participantId, 'pilot-0001');
+  const audit = record(controller.exportAuditBundle(), 'audit bundle');
+  const auditRecords = audit.records;
+  assert.ok(Array.isArray(auditRecords));
+  const firstAuditRecord = record(auditRecords[0], 'first audit record');
+  assert.equal(
+    record(firstAuditRecord.assignment, 'audit assignment').participantId,
+    'pilot-0001',
+  );
   assert.equal(audit.recordCount, 1);
 
   const next = controller.enroll({
@@ -244,16 +326,17 @@ test('running recovery creates an auditable invalidation without fabricated evid
     runtimeFactory: runtimeFactoryHarness().factory,
   });
   const recovered = second.open();
+  const recoveredRecord = required(recovered.lastRecord, 'recovered record');
   assert.equal(recovered.state, INPUT_PILOT_TRIAL_CONTROLLER_STATE.TERMINAL);
-  assert.equal(recovered.lastRecord.trialStatus, INPUT_PILOT_TRIAL_STATUS.INVALIDATED);
+  assert.equal(recoveredRecord.trialStatus, INPUT_PILOT_TRIAL_STATUS.INVALIDATED);
   assert.equal(
-    recovered.lastRecord.terminationReason,
+    recoveredRecord.terminationReason,
     INPUT_PILOT_TERMINATION_REASON.RUNNING_RECOVERED,
   );
-  assert.equal(recovered.lastRecord.automated, null);
-  assert.equal(recovered.lastRecord.observer, null);
-  assert.equal(recovered.lastRecord.selfReport, null);
-  assert.equal(recovered.workspace.activeTrial, null);
+  assert.equal(recoveredRecord.automated, null);
+  assert.equal(recoveredRecord.observer, null);
+  assert.equal(recoveredRecord.selfReport, null);
+  assert.equal(required(recovered.workspace, 'recovered workspace').activeTrial, null);
   second.destroy();
 });
 
@@ -279,7 +362,7 @@ test('reviewing checkpoint survives reload and can be submitted once', async () 
     selfReport: selfReport(),
     invalidate: false,
   };
-  runtimes.instances[0].timeout(preservedDraft);
+  required(runtimes.instances[0], 'pilot runtime').timeout(preservedDraft);
   assert.equal(first.state, INPUT_PILOT_TRIAL_CONTROLLER_STATE.REVIEWING);
   first.saveReviewDraft({
     ...preservedDraft,
@@ -294,12 +377,16 @@ test('reviewing checkpoint survives reload and can be submitted once', async () 
     runtimeFactory: runtimeFactoryHarness().factory,
   });
   assert.equal(second.open().state, INPUT_PILOT_TRIAL_CONTROLLER_STATE.REVIEWING);
+  const reviewWorkspace = required(second.getSnapshot().workspace, 'review workspace');
+  const activeTrial = required(reviewWorkspace.activeTrial, 'active trial');
+  const reviewDraft = required(activeTrial.reviewDraft, 'review draft');
+  const reviewObserver = required(reviewDraft.observer, 'review observer');
   assert.equal(
-    second.getSnapshot().workspace.activeTrial.reviewDraft.observer.correctionCount,
+    reviewObserver.correctionCount,
     3,
   );
   assert.equal(
-    second.getSnapshot().workspace.activeTrial.reviewDraft.observer.repeatedInputCount,
+    reviewObserver.repeatedInputCount,
     2,
   );
   const record = second.submitReview();
@@ -308,7 +395,7 @@ test('reviewing checkpoint survives reload and can be submitted once', async () 
     record.terminationReason,
     INPUT_PILOT_TERMINATION_REASON.MAXIMUM_DURATION_REACHED,
   );
-  assert.equal(record.observer.repeatedInputCount, 2);
+  assert.equal(required(record.observer, 'record observer').repeatedInputCount, 2);
   second.destroy();
 });
 
@@ -333,13 +420,13 @@ test('runtime startup failure becomes a single invalidated terminal record', asy
   });
   await assert.rejects(controller.startTrial(), /asset load failed/);
   assert.equal(controller.state, INPUT_PILOT_TRIAL_CONTROLLER_STATE.TERMINAL);
-  assert.equal(controller.getSnapshot().workspace.records.length, 1);
+  assert.equal(required(controller.getSnapshot().workspace, 'workspace').records.length, 1);
   assert.equal(
-    controller.getSnapshot().lastRecord.terminationReason,
+    required(controller.getSnapshot().lastRecord, 'last record').terminationReason,
     INPUT_PILOT_TERMINATION_REASON.RUNTIME_FAILED,
   );
-  assert.equal(controller.getSnapshot().lastRecord.automated, null);
-  assert.equal(runtimes.instances[0].destroyCount, 1);
+  assert.equal(required(controller.getSnapshot().lastRecord, 'last record').automated, null);
+  assert.equal(required(runtimes.instances[0], 'pilot runtime').destroyCount, 1);
   controller.destroy();
 });
 
@@ -362,9 +449,10 @@ test('failed review CAS closes the runtime and leaves a recoverable running chec
   await controller.startTrial();
   const keys = createRepository(definition, harness, 'key-reader').getStorageKeys();
   harness.writeFailures.add(keys.slotA);
-  assert.equal(runtimes.instances[0].finish(), false);
+  const runtime = required(runtimes.instances[0], 'pilot runtime');
+  assert.equal(runtime.finish(), false);
   assert.equal(controller.state, INPUT_PILOT_TRIAL_CONTROLLER_STATE.FAILED);
-  assert.equal(runtimes.instances[0].destroyed, true);
+  assert.equal(runtime.destroyed, true);
 
   harness.writeFailures.clear();
   const recovered = createController({
@@ -375,7 +463,7 @@ test('failed review CAS closes the runtime and leaves a recoverable running chec
   });
   assert.equal(recovered.open().state, INPUT_PILOT_TRIAL_CONTROLLER_STATE.TERMINAL);
   assert.equal(
-    recovered.getSnapshot().lastRecord.terminationReason,
+    required(recovered.getSnapshot().lastRecord, 'last record').terminationReason,
     INPUT_PILOT_TERMINATION_REASON.RUNNING_RECOVERED,
   );
   recovered.destroy();
@@ -404,5 +492,5 @@ test('destroy during async startup prevents late completion from reviving the co
   pending.resolve();
   await assert.rejects(starting, /启动已取消/);
   assert.equal(controller.state, INPUT_PILOT_TRIAL_CONTROLLER_STATE.DESTROYED);
-  assert.equal(runtimes.instances[0].destroyCount, 1);
+  assert.equal(required(runtimes.instances[0], 'pilot runtime').destroyCount, 1);
 });

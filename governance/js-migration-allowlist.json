@@ -11,7 +11,6 @@
     "tests/arena/presentation/greybox-renderer.test.js",
     "tests/arena/presentation/input-pilot-persistence.test.js",
     "tests/arena/presentation/input-pilot-runtime.test.js",
-    "tests/arena/presentation/input-pilot-trial-controller.test.js",
     "tests/arena/presentation/input-pilot-web-support.test.js",
     "tests/arena/presentation/product-presentation.test.js",
     "tests/arena/presentation/stage7-presentation-contract.test.js",
