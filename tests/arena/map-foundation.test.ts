@@ -15,13 +15,19 @@ import {
   MAP_TIMELINE_TRANSITION,
   validateDefaultMapSafety,
   validateWalkableMapTopology,
+  type MapMutationPorts,
+  type MapOccurrence,
 } from '@number-strategy-jump/arena-map';
 import {
   MAP_DEFINITION_SCHEMA_VERSION,
   createMapDefinition,
+  type MapScheduleDefinition,
 } from '@number-strategy-jump/arena-definitions';
 import { MapRegistry } from '@number-strategy-jump/arena-definitions';
-import { resolveArenaV1MapDefinition } from '@number-strategy-jump/arena-v1-composition';
+import {
+  createArenaV1MatchConfig,
+  resolveArenaV1MapDefinition,
+} from '@number-strategy-jump/arena-v1-composition';
 
 const TEST_ARENA = Object.freeze({
   killY: -4,
@@ -43,11 +49,25 @@ const TEST_ARENA = Object.freeze({
   ]),
 });
 
-function event(id, kind, schedule, parameters) {
+function required<T>(value: T | null | undefined, name: string): T {
+  assert.ok(value != null, `${name} 不存在。`);
+  return value;
+}
+
+function record(value: unknown, name: string): Readonly<Record<string, unknown>> {
+  assert.ok(value !== null && typeof value === 'object' && !Array.isArray(value), `${name} 必须是对象。`);
+  return value as Readonly<Record<string, unknown>>;
+}
+
+function event(id: string, kind: string, schedule: MapScheduleDefinition, parameters: unknown) {
   return { id, kind, schedule, parameters };
 }
 
-function oneShot(startTick, warningLeadTicks, durationTicks = 0) {
+function oneShot(
+  startTick: number,
+  warningLeadTicks: number,
+  durationTicks = 0,
+): MapScheduleDefinition {
   return { startTick, warningLeadTicks, durationTicks, repeatEveryTicks: 0, repeatCount: 1 };
 }
 
@@ -109,14 +129,15 @@ test('MapDefinition and MapRegistry deeply freeze data and reject schema drift',
   const registry = new MapRegistry([definition]);
   assert.equal(registry.require('map-test'), definition);
   assert.ok(Object.isFrozen(definition));
-  assert.ok(Object.isFrozen(definition.events[0].parameters));
-  assert.throws(() => { definition.events[0].parameters.count = 9; }, TypeError);
+  const firstEvent = required(definition.events[0], 'first event');
+  assert.ok(Object.isFrozen(firstEvent.parameters));
+  assert.throws(() => { Object.assign(firstEvent.parameters as object, { count: 9 }); }, TypeError);
   assert.throws(() => new MapRegistry([definition, definition]), /重复 MapDefinition/);
   assert.throws(() => createMapDefinition({
     ...definition.toJSON(),
     events: [{
-      ...definition.events[0],
-      schedule: { ...definition.events[0].schedule, repeatCount: 2 },
+      ...firstEvent,
+      schedule: { ...firstEvent.schedule, repeatCount: 2 },
     }],
   }), /repeatEveryTicks\/repeatCount/);
   assert.throws(() => createMapDefinition({
@@ -132,17 +153,17 @@ test('MapDefinition and MapRegistry deeply freeze data and reject schema drift',
 test('Arena V1 map composition resolves registered definitions without hard-coded map IDs', () => {
   const definition = createTestDefinition();
   const registry = new MapRegistry([definition]);
-  assert.equal(resolveArenaV1MapDefinition({
+  assert.equal(resolveArenaV1MapDefinition(createArenaV1MatchConfig({
     mapDefinitionId: definition.id,
     arena: definition.arena,
-  }, registry), definition);
-  assert.throws(() => resolveArenaV1MapDefinition({
+  }), registry), definition);
+  assert.throws(() => resolveArenaV1MapDefinition(createArenaV1MatchConfig({
     mapDefinitionId: definition.id,
     arena: {
       ...definition.arena,
       killY: definition.arena.killY - 1,
     },
-  }, registry), /与 config\.arena 不一致/);
+  }), registry), /与 config\.arena 不一致/);
 });
 
 test('MapTimeline orders warning, end and start deterministically', () => {
@@ -165,11 +186,15 @@ test('MapTimeline orders warning, end and start deterministically', () => {
 
 test('ArenaMapSystem advances warning, wind, equipment and collapse through explicit ports', () => {
   const system = createSystem();
-  const recorded = { impulses: [], surfaces: [], equipment: [] };
-  const ports = {
-    applyImpulse: (...args) => recorded.impulses.push(args),
-    setSurfaceEnabled: (...args) => recorded.surfaces.push(args),
-    spawnEquipment: (spawn) => recorded.equipment.push(spawn),
+  const recorded: {
+    impulses: Parameters<MapMutationPorts['applyImpulse']>[];
+    surfaces: Parameters<MapMutationPorts['setSurfaceEnabled']>[];
+    equipment: Parameters<MapMutationPorts['spawnEquipment']>[0][];
+  } = { impulses: [], surfaces: [], equipment: [] };
+  const ports: MapMutationPorts = {
+    applyImpulse: (...args) => { recorded.impulses.push(args); },
+    setSurfaceEnabled: (...args) => { recorded.surfaces.push(args); },
+    spawnEquipment: (spawn) => { recorded.equipment.push(spawn); },
   };
 
   const zero = system.advance({ activeTick: 0, actors: actors() });
@@ -184,17 +209,17 @@ test('ArenaMapSystem advances warning, wind, equipment and collapse through expl
     ARENA_MAP_EVENT.EVENT_STARTED,
   ]);
   assert.equal(recorded.equipment.length, 1);
-  assert.equal(recorded.equipment[0].definitionId, 'hammer');
+  assert.equal(required(recorded.equipment[0], 'spawned equipment').definitionId, 'hammer');
 
   const two = system.advance({ activeTick: 2, actors: actors() });
   system.commit(two, ports);
   assert.equal(recorded.impulses.length, 2);
-  assert.equal(two.events[0].type, ARENA_MAP_EVENT.EVENT_STARTED);
+  assert.equal(required(two.events[0], 'tick 2 event').type, ARENA_MAP_EVENT.EVENT_STARTED);
 
   const three = system.advance({ activeTick: 3, actors: actors() });
   system.commit(three, ports);
   assert.equal(recorded.impulses.length, 4);
-  assert.equal(three.events[0].type, ARENA_MAP_EVENT.EVENT_WARNED);
+  assert.equal(required(three.events[0], 'tick 3 event').type, ARENA_MAP_EVENT.EVENT_WARNED);
 
   const four = system.advance({ activeTick: 4, actors: actors() });
   system.commit(four, ports);
@@ -303,16 +328,18 @@ test('end-phase surface commands update Runtime and mutation ports consistently'
     kind: 'temporary-surface',
     validate() {},
     plan({ occurrence }) {
+      const parameters = record(occurrence.event.parameters, 'temporary surface parameters');
       return {
-        privatePlan: { surfaceId: occurrence.event.parameters.surfaceId },
-        publicPayload: { surfaceId: occurrence.event.parameters.surfaceId },
+        privatePlan: { surfaceId: parameters.surfaceId },
+        publicPayload: { surfaceId: parameters.surfaceId },
       };
     },
     start({ privatePlan }) {
+      const plan = record(privatePlan, 'temporary surface private plan');
       return {
         commands: [{
           kind: MAP_RULE_COMMAND.SET_SURFACE_ENABLED,
-          surfaceId: privatePlan.surfaceId,
+          surfaceId: plan.surfaceId,
           enabled: false,
         }],
         events: [],
@@ -320,10 +347,11 @@ test('end-phase surface commands update Runtime and mutation ports consistently'
     },
     tick() { return { commands: [], events: [] }; },
     end({ privatePlan }) {
+      const plan = record(privatePlan, 'temporary surface private plan');
       return {
         commands: [{
           kind: MAP_RULE_COMMAND.SET_SURFACE_ENABLED,
-          surfaceId: privatePlan.surfaceId,
+          surfaceId: plan.surfaceId,
           enabled: true,
         }],
         events: [],
@@ -337,10 +365,10 @@ test('end-phase surface commands update Runtime and mutation ports consistently'
     matchSeed: 8,
     rulesetVersion: 'test-map-ruleset-v1',
   });
-  const surfaceMutations = [];
-  const ports = {
+  const surfaceMutations: Parameters<MapMutationPorts['setSurfaceEnabled']>[] = [];
+  const ports: MapMutationPorts = {
     ...EMPTY_PORTS,
-    setSurfaceEnabled: (...args) => surfaceMutations.push(args),
+    setSurfaceEnabled: (...args) => { surfaceMutations.push(args); },
   };
   const zero = system.advance({ activeTick: 0, actors: actors() });
   system.commit(zero, ports);
@@ -355,7 +383,7 @@ test('end-phase surface commands update Runtime and mutation ports consistently'
 });
 
 test('MapEventStrategyRegistry does not allow context to replace authoritative occurrence data', () => {
-  let observedOccurrence = null;
+  let observedOccurrence: MapOccurrence | null = null;
   const registry = new MapEventStrategyRegistry([{
     kind: 'context-test',
     validate() {},
@@ -367,7 +395,17 @@ test('MapEventStrategyRegistry does not allow context to replace authoritative o
     tick() { return { commands: [], events: [] }; },
     end() { return { commands: [], events: [] }; },
   }]);
-  const occurrence = Object.freeze({ kind: 'context-test', occurrenceId: 'real:0' });
+  const eventDefinition = required(createTestDefinition().events[0], 'first event');
+  const occurrence: MapOccurrence = Object.freeze({
+    kind: 'context-test',
+    occurrenceId: 'real:0',
+    occurrenceIndex: 0,
+    eventId: eventDefinition.id,
+    warningTick: 0,
+    startTick: 1,
+    endTick: null,
+    event: eventDefinition,
+  });
   registry.plan(occurrence, {
     occurrence: Object.freeze({ kind: 'context-test', occurrenceId: 'spoofed:0' }),
   });
@@ -442,7 +480,9 @@ test('MapRuntime serializer freezes schema data and prevents private plans leaki
     serializeMapRuntimeSnapshot(internalSnapshot, { includeInternal: true }),
     internalSnapshot,
   );
-  assert.equal(Object.isFrozen(publicSnapshot.occurrences[0].publicPayload), true);
+  assert.equal(Object.isFrozen(
+    required(publicSnapshot.occurrences[0], 'first occurrence').publicPayload,
+  ), true);
   assert.throws(() => serializeMapRuntimeSnapshot(internalSnapshot), /privatePlan/);
   assert.throws(() => serializeMapRuntimeSnapshot({
     ...publicSnapshot,
@@ -450,6 +490,6 @@ test('MapRuntime serializer freezes schema data and prevents private plans leaki
   }), /重复 map runtime surface/);
   assert.throws(() => serializeMapRuntimeSnapshot(publicSnapshot, {
     includeInternal: 'yes',
-  }), /includeInternal 必须是布尔值/);
+  } as unknown as { readonly includeInternal: boolean }), /includeInternal 必须是布尔值/);
   system.destroy();
 });
