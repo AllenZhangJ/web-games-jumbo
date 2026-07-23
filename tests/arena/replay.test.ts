@@ -5,13 +5,40 @@ import {
   ARENA_REPLAY_ERROR_CODE,
   FixedStepMatchRuntime,
   HeadlessMatchRunner,
+  type FixedStepRuntimeOptions,
+  type ReplayCoreFactoryOptions,
 } from '@number-strategy-jump/arena-match';
-import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
+import {
+  createNeutralInputFrame,
+  type ArenaMatchSnapshot,
+} from '@number-strategy-jump/arena-contracts';
 import { createArenaV1MatchCore } from '@number-strategy-jump/arena-v1-composition';
 import { createLightweightPhysicsWorld } from '@number-strategy-jump/arena-physics';
 import {
   replayMatch,
-} from '../../src/arena/replay.ts';
+} from '../../src/arena/replay.js';
+
+type DeepMutable<Value> = Value extends readonly (infer Item)[]
+  ? DeepMutable<Item>[]
+  : Value extends object
+    ? { -readonly [Key in keyof Value]: DeepMutable<Value[Key]> }
+    : Value;
+
+interface CleanupFailure extends Error {
+  readonly originalError?: unknown;
+  readonly cleanupErrors: readonly Error[];
+}
+
+function mutableClone<Value>(value: Value): DeepMutable<Value> {
+  return JSON.parse(JSON.stringify(value)) as DeepMutable<Value>;
+}
+
+function requireCleanupFailure(error: unknown): CleanupFailure {
+  assert.ok(error instanceof Error);
+  const cleanupErrors = Reflect.get(error, 'cleanupErrors');
+  assert.ok(Array.isArray(cleanupErrors));
+  return error as CleanupFailure;
+}
 
 function createReplayCore() {
   return createArenaV1MatchCore({
@@ -24,8 +51,8 @@ function createReplayCore() {
   });
 }
 
-function scriptedFrames(snapshot) {
-  return snapshot.participants.map((participant, index) => ({
+function scriptedFrames(snapshot: ArenaMatchSnapshot) {
+  return snapshot.participants.map((participant, index: number) => ({
     ...createNeutralInputFrame(snapshot.tick, participant.id),
     moveX: index === 0 ? 0.7 : -0.6,
     moveZ: snapshot.tick % 100 < 50 ? 0.2 : -0.2,
@@ -75,7 +102,12 @@ test('replay beforeStep sees immutable copies and rejects asynchronous verificat
       assert.ok(Object.isFrozen(snapshot));
       assert.ok(Object.isFrozen(frames));
       assert.ok(Object.isFrozen(frames[0]));
-      assert.throws(() => { frames[0].moveX = 0; }, TypeError);
+      const [firstFrame] = frames;
+      assert.ok(firstFrame);
+      assert.throws(
+        () => Object.defineProperty(firstFrame, 'moveX', { value: 0 }),
+        TypeError,
+      );
     },
   });
   assert.equal(observedSteps, replay.inputFrames.length / 2);
@@ -137,7 +169,7 @@ test('runner and replay options reject accessors without executing them', () => 
 test('runner records a tick only after the authoritative step succeeds', () => {
   const core = createArenaV1MatchCore({
     config: { preparingTicks: 0 },
-    physicsFactory(options) {
+    physicsFactory(options: Parameters<typeof createLightweightPhysicsWorld>[0]) {
       const world = createLightweightPhysicsWorld(options);
       return new Proxy(world, {
         get(target, property) {
@@ -164,7 +196,7 @@ test('runner refuses to export an unfinished match', () => {
   const exposedInputs = runner.inputFrames;
   exposedInputs.length = 0;
   assert.equal(runner.inputFrames.length, 2);
-  assert.throws(() => { runner.core = null; }, TypeError);
+  assert.equal(Reflect.set(runner, 'core', null), false);
   assert.throws(() => runner.exportReplay(), /只能导出/);
   runner.destroy();
   runner.destroy();
@@ -176,8 +208,10 @@ test('tampered replay is rejected at a deterministic checkpoint', () => {
   const core = createReplayCore();
   const runner = new HeadlessMatchRunner(core, { checkpointInterval: 10 });
   const replay = runner.runUntilEnded(scriptedFrames);
-  const tampered = JSON.parse(JSON.stringify(replay));
-  tampered.inputFrames[0].primaryPressed = !tampered.inputFrames[0].primaryPressed;
+  const tampered = mutableClone(replay);
+  const [firstInput] = tampered.inputFrames;
+  assert.ok(firstInput);
+  firstInput.primaryPressed = !firstInput.primaryPressed;
   assert.throws(() => replayMatch(tampered), /分叉|最终 hash/);
   core.destroy();
 });
@@ -186,16 +220,19 @@ test('tampered replay config or recorded result is rejected even without changin
   const core = createReplayCore();
   const runner = new HeadlessMatchRunner(core, { checkpointInterval: 20 });
   const replay = runner.runUntilEnded(scriptedFrames);
-  const changedConfig = structuredClone(replay);
-  changedConfig.config.basePush.horizontalImpulse += 1;
+  const changedConfig = mutableClone(replay);
+  assert.ok(changedConfig.config.basePush);
+  changedConfig.config.basePush.horizontalImpulse = (
+    changedConfig.config.basePush.horizontalImpulse ?? 0
+  ) + 1;
   assert.throws(() => replayMatch(changedConfig), /配置签名/);
-  const changedContentHash = structuredClone(replay);
+  const changedContentHash = mutableClone(replay);
   changedContentHash.ruleContentHash = '00000000';
   assert.throws(() => replayMatch(changedContentHash), /规则内容签名/);
-  const oldRuleSchema = structuredClone(replay);
+  const oldRuleSchema = mutableClone(replay);
   oldRuleSchema.schemaVersion -= 1;
   assert.throws(() => replayMatch(oldRuleSchema), /回放规则版本/);
-  const changedResult = structuredClone(replay);
+  const changedResult = mutableClone(replay);
   changedResult.result.reason = 'tampered';
   assert.throws(() => replayMatch(changedResult), /结算结果不一致/);
   core.destroy();
@@ -205,7 +242,7 @@ test('Replay V5 rejects undeclared top-level evidence fields', () => {
   const core = createReplayCore();
   const replay = new HeadlessMatchRunner(core, { checkpointInterval: 20 })
     .runUntilEnded(scriptedFrames);
-  replay.operatorNotes = 'must not enter authority replay';
+  Reflect.set(replay, 'operatorNotes', 'must not enter authority replay');
   assert.throws(() => replayMatch(replay), /不支持字段 operatorNotes/);
   core.destroy();
 });
@@ -214,10 +251,10 @@ test('Replay V5 rejects V4 and legacy action fields instead of silently adapting
   const core = createReplayCore();
   const replay = new HeadlessMatchRunner(core, { checkpointInterval: 20 })
     .runUntilEnded(scriptedFrames);
-  const oldSchema = structuredClone(replay);
-  oldSchema.replaySchemaVersion = 4;
+  const oldSchema = mutableClone(replay);
+  Reflect.set(oldSchema, 'replaySchemaVersion', 4);
   let factoryCalls = 0;
-  let failure;
+  let failure: unknown;
   try {
     replayMatch(oldSchema, {
       coreFactory() {
@@ -228,13 +265,19 @@ test('Replay V5 rejects V4 and legacy action fields instead of silently adapting
   } catch (error) {
     failure = error;
   }
-  assert.match(failure?.message ?? '', /不支持 replay schema 4/);
-  assert.equal(failure.code, ARENA_REPLAY_ERROR_CODE.UNSUPPORTED_SCHEMA);
+  assert.ok(failure instanceof Error);
+  assert.match(failure.message, /不支持 replay schema 4/);
+  assert.equal(
+    Reflect.get(failure, 'code'),
+    ARENA_REPLAY_ERROR_CODE.UNSUPPORTED_SCHEMA,
+  );
   assert.equal(factoryCalls, 0);
 
-  const legacyInput = structuredClone(replay);
-  legacyInput.inputFrames[0].actionPressed = legacyInput.inputFrames[0].primaryPressed;
-  delete legacyInput.inputFrames[0].primaryPressed;
+  const legacyInput = mutableClone(replay);
+  const [legacyFirstInput] = legacyInput.inputFrames;
+  assert.ok(legacyFirstInput);
+  Reflect.set(legacyFirstInput, 'actionPressed', legacyFirstInput.primaryPressed);
+  Reflect.deleteProperty(legacyFirstInput, 'primaryPressed');
   assert.throws(() => replayMatch(legacyInput), /actionPressed|primaryPressed/);
   core.destroy();
 });
@@ -244,26 +287,34 @@ test('truncated, incomplete or duplicate-checkpoint replays fail and always dest
   const replay = new HeadlessMatchRunner(source, { checkpointInterval: 20 })
     .runUntilEnded(scriptedFrames);
 
-  const truncated = structuredClone(replay);
+  const truncated = mutableClone(replay);
   truncated.inputFrames.splice(-2);
-  let replayCore;
+  const replayCoreHolder: {
+    current: ReturnType<typeof createArenaV1MatchCore> | null;
+  } = { current: null };
   assert.throws(() => replayMatch(truncated, {
-    coreFactory(options) {
-      replayCore = createArenaV1MatchCore(options);
-      return replayCore;
+    coreFactory(options: ReplayCoreFactoryOptions) {
+      replayCoreHolder.current = createArenaV1MatchCore(options);
+      return replayCoreHolder.current;
     },
   }), /尚未结算/);
+  const replayCore = replayCoreHolder.current;
+  assert.ok(replayCore);
   assert.throws(() => replayCore.getSnapshot(), /已销毁/);
 
-  const missingParticipant = structuredClone(replay);
+  const missingParticipant = mutableClone(replay);
   missingParticipant.inputFrames.splice(10, 1);
   assert.throws(() => replayMatch(missingParticipant), /不完整或不连续/);
 
-  const duplicateCheckpoint = structuredClone(replay);
-  duplicateCheckpoint.checkpoints.splice(1, 0, { ...duplicateCheckpoint.checkpoints[0] });
+  const duplicateCheckpoint = mutableClone(replay);
+  const [checkpointToDuplicate] = duplicateCheckpoint.checkpoints;
+  assert.ok(checkpointToDuplicate);
+  duplicateCheckpoint.checkpoints.splice(1, 0, { ...checkpointToDuplicate });
   assert.throws(() => replayMatch(duplicateCheckpoint), /严格递增/);
-  const extendedCheckpoint = structuredClone(replay);
-  extendedCheckpoint.checkpoints[0].operatorNote = 'not part of Replay V5';
+  const extendedCheckpoint = mutableClone(replay);
+  const [firstCheckpoint] = extendedCheckpoint.checkpoints;
+  assert.ok(firstCheckpoint);
+  Reflect.set(firstCheckpoint, 'operatorNote', 'not part of Replay V5');
   assert.throws(() => replayMatch(extendedCheckpoint), /不支持字段 operatorNote/);
   source.destroy();
 });
@@ -284,7 +335,7 @@ test('replay destroys an invalid factory result before rejecting the factory con
   }), /coreFactory 必须返回 MatchCore/);
   assert.equal(destroyCalls, 1);
 
-  let combinedFailure;
+  let combinedFailure: unknown;
   try {
     replayMatch(replay, {
       coreFactory() {
@@ -298,14 +349,19 @@ test('replay destroys an invalid factory result before rejecting the factory con
   } catch (error) {
     combinedFailure = error;
   }
-  assert.match(combinedFailure?.message ?? '', /清理未完整完成/);
-  assert.match(combinedFailure?.originalError?.message ?? '', /必须返回 MatchCore/);
-  assert.equal(combinedFailure?.cleanupErrors?.length, 1);
-  assert.match(combinedFailure.cleanupErrors[0].message, /forced candidate cleanup failure/);
+  const failure = requireCleanupFailure(combinedFailure);
+  assert.match(failure.message, /清理未完整完成/);
+  assert.ok(failure.originalError instanceof Error);
+  assert.match(failure.originalError.message, /必须返回 MatchCore/);
+  assert.equal(failure.cleanupErrors.length, 1);
+  assert.match(
+    failure.cleanupErrors[0]?.message ?? '',
+    /forced candidate cleanup failure/,
+  );
   source.destroy();
 });
 
-function runAtRenderRate(renderRate) {
+function runAtRenderRate(renderRate: number) {
   const core = createArenaV1MatchCore({
     seed: 99,
     config: {
@@ -382,20 +438,26 @@ test('fixed-step runtime validates inert options and rejects provider output bef
   );
   assert.equal(getterCalls, 0);
   assert.throws(
-    () => new FixedStepMatchRuntime(core, { unexpected: true }),
+    () => new FixedStepMatchRuntime(
+      core,
+      { unexpected: true } as unknown as FixedStepRuntimeOptions,
+    ),
     /不支持字段 unexpected/,
   );
 
   let invalidOutput = true;
-  const runtime = new FixedStepMatchRuntime(core, {
-    inputProvider(snapshot) {
-      if (invalidOutput) {
-        invalidOutput = false;
-        return { invalid: true };
-      }
-      return scriptedFrames(snapshot);
-    },
-  });
+  const runtime = new FixedStepMatchRuntime(
+    core,
+    {
+      inputProvider(snapshot: ArenaMatchSnapshot) {
+        if (invalidOutput) {
+          invalidOutput = false;
+          return { invalid: true };
+        }
+        return scriptedFrames(snapshot);
+      },
+    } as unknown as FixedStepRuntimeOptions,
+  );
   assert.throws(() => runtime.advance(1 / 60), /必须返回 InputFrame 数组/);
   assert.equal(core.tick, 0);
   assert.equal(runtime.advance(0).steps, 1);
@@ -406,9 +468,8 @@ test('fixed-step runtime validates inert options and rejects provider output bef
 
 test('fixed-step runtime rejects reentrancy and has an idempotent terminal lifecycle', () => {
   const core = createReplayCore();
-  let runtime;
   let attemptedReentry = false;
-  runtime = new FixedStepMatchRuntime(core, {
+  const runtime = new FixedStepMatchRuntime(core, {
     inputProvider(snapshot) {
       if (!attemptedReentry) {
         attemptedReentry = true;
@@ -421,7 +482,7 @@ test('fixed-step runtime rejects reentrancy and has an idempotent terminal lifec
   assert.equal(core.tick, 0);
   assert.equal(runtime.advance(0).steps, 1);
   assert.equal(core.tick, 1);
-  assert.throws(() => { runtime.core = null; }, TypeError);
+  assert.equal(Reflect.set(runtime, 'core', null), false);
   runtime.destroy();
   runtime.destroy();
   assert.equal(runtime.getDebugSnapshot().destroyed, true);
