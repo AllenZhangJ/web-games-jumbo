@@ -5,24 +5,63 @@ import {
   ArenaPresentationSession,
 } from '@number-strategy-jump/arena-v1-greybox-session';
 
-function platformHarness({ failBinding = null, failCanvasCleanupOnce = false } = {}) {
+type FrameCallback = (timestamp: number) => void;
+type LifecycleName = 'resize' | 'hide' | 'show';
+type LifecycleCallback = () => void;
+type CanvasEvent = Readonly<{ preventDefault?: () => void }>;
+type CanvasCallback = (event: CanvasEvent) => unknown;
+type PointerEvent = Readonly<{ pointerId: number; x: number; y: number }>;
+
+interface InputCallbacks {
+  readonly onStart: (event: PointerEvent) => boolean;
+  readonly onEnd: (event: PointerEvent) => boolean;
+}
+
+interface PlatformHarnessOptions {
+  readonly failBinding?: LifecycleName | 'input' | null;
+  readonly failCanvasCleanupOnce?: boolean;
+}
+
+interface TestCanvas {
+  width: number;
+  height: number;
+  style: Record<string, unknown>;
+  getContext: () => object;
+  addEventListener: (type: string, callback: CanvasCallback) => void;
+  removeEventListener: (type: string, callback: CanvasCallback) => void;
+}
+
+function required<T>(value: T | null | undefined, name: string): T {
+  assert.ok(value != null, `${name} 不存在。`);
+  return value;
+}
+
+function record(value: unknown, name: string): Readonly<Record<string, unknown>> {
+  assert.ok(value !== null && typeof value === 'object' && !Array.isArray(value), `${name} 必须是对象。`);
+  return value as Readonly<Record<string, unknown>>;
+}
+
+function platformHarness({
+  failBinding = null,
+  failCanvasCleanupOnce = false,
+}: PlatformHarnessOptions = {}) {
   let nextFrameToken = 1;
-  const frames = new Map();
+  const frames = new Map<number, FrameCallback>();
   const lifecycle = {
-    resize: new Set(),
-    hide: new Set(),
-    show: new Set(),
+    resize: new Set<LifecycleCallback>(),
+    hide: new Set<LifecycleCallback>(),
+    show: new Set<LifecycleCallback>(),
   };
-  const canvasListeners = new Map();
+  const canvasListeners = new Map<string, Set<CanvasCallback>>();
   let canvasCleanupAttempts = 0;
-  let input = null;
+  let input: InputCallbacks | null = null;
   let now = 0;
-  const canvas = {
+  const canvas: TestCanvas = {
     width: 400,
     height: 800,
     style: {},
     getContext: () => ({}),
-    addEventListener(type, callback) {
+    addEventListener(type: string, callback: CanvasCallback) {
       let listeners = canvasListeners.get(type);
       if (!listeners) {
         listeners = new Set();
@@ -30,7 +69,7 @@ function platformHarness({ failBinding = null, failCanvasCleanupOnce = false } =
       }
       listeners.add(callback);
     },
-    removeEventListener(type, callback) {
+    removeEventListener(type: string, callback: CanvasCallback) {
       canvasCleanupAttempts += 1;
       if (failCanvasCleanupOnce && canvasCleanupAttempts === 1) {
         throw new Error('canvas cleanup failed once');
@@ -38,10 +77,10 @@ function platformHarness({ failBinding = null, failCanvasCleanupOnce = false } =
       canvasListeners.get(type)?.delete(callback);
     },
   };
-  const bindLifecycle = (name, callback) => {
+  const bindLifecycle = (name: LifecycleName, callback: LifecycleCallback) => {
     if (failBinding === name) throw new Error(`${name} binding failed`);
     lifecycle[name].add(callback);
-    return () => lifecycle[name].delete(callback);
+    return () => { lifecycle[name].delete(callback); };
   };
   return {
     canvas,
@@ -53,34 +92,35 @@ function platformHarness({ failBinding = null, failCanvasCleanupOnce = false } =
       id: 'test',
       createCanvas: () => canvas,
       getViewport: () => ({ width: 400, height: 800, pixelRatio: 1, safeArea: null }),
-      requestFrame(callback) {
+      requestFrame(callback: FrameCallback) {
         const token = nextFrameToken;
         nextFrameToken += 1;
         frames.set(token, callback);
         return token;
       },
-      cancelFrame(token) { frames.delete(token); },
+      cancelFrame(token: number) { frames.delete(token); },
       now: () => now,
-      bindInput(callbacks) {
+      bindInput(callbacks: InputCallbacks) {
         if (failBinding === 'input') throw new Error('input binding failed');
         input = callbacks;
         return () => { if (input === callbacks) input = null; };
       },
-      onResize: (callback) => bindLifecycle('resize', callback),
-      onHide: (callback) => bindLifecycle('hide', callback),
-      onShow: (callback) => bindLifecycle('show', callback),
+      onResize: (callback: LifecycleCallback) => bindLifecycle('resize', callback),
+      onHide: (callback: LifecycleCallback) => bindLifecycle('hide', callback),
+      onShow: (callback: LifecycleCallback) => bindLifecycle('show', callback),
     },
     fireFrame(timestamp = now + 1000 / 60) {
-      const [token, callback] = frames.entries().next().value ?? [];
-      if (!callback) throw new Error('没有待执行帧。');
+      const entry = frames.entries().next().value;
+      if (!entry) throw new Error('没有待执行帧。');
+      const [token, callback] = entry;
       frames.delete(token);
       now = timestamp;
       callback(timestamp);
     },
-    emitLifecycle(name) {
+    emitLifecycle(name: LifecycleName) {
       for (const callback of [...lifecycle[name]]) callback();
     },
-    emitCanvas(type, event = {}) {
+    emitCanvas(type: string, event: CanvasEvent = {}) {
       for (const callback of [...(canvasListeners.get(type) ?? [])]) callback(event);
     },
     activeLifecycleCount() {
@@ -93,8 +133,32 @@ function platformHarness({ failBinding = null, failCanvasCleanupOnce = false } =
   };
 }
 
-function rendererHarness({ loadPromise = null, onRender = null } = {}) {
-  const renderer = {
+type RenderObserver = (frame: unknown, options: unknown) => void;
+
+interface RendererHarnessOptions {
+  readonly loadPromise?: Promise<unknown> | null;
+  readonly onRender?: RenderObserver | null;
+}
+
+interface RendererHarness {
+  frames: unknown[];
+  renderOptions: unknown[];
+  resizeCount: number;
+  disposed: boolean;
+  contextLost: boolean;
+  load: () => Promise<RendererHarness>;
+  resize: () => boolean;
+  render: (frame: unknown, options: unknown) => unknown;
+  getInputViewport: () => Readonly<{ width: number; height: number }>;
+  hitTestRematch: (point: Readonly<{ x: number; y: number }>) => boolean;
+  handleContextLost: (event?: CanvasEvent) => unknown;
+  handleContextRestored: () => unknown;
+  getDebugSnapshot: () => Readonly<{ disposed: boolean; frameCount: number }>;
+  dispose: () => void;
+}
+
+function rendererHarness({ loadPromise = null, onRender = null }: RendererHarnessOptions = {}) {
+  const renderer: RendererHarness = {
     frames: [],
     renderOptions: [],
     resizeCount: 0,
@@ -105,15 +169,17 @@ function rendererHarness({ loadPromise = null, onRender = null } = {}) {
       return this;
     },
     resize() { this.resizeCount += 1; return true; },
-    render(frame, options) {
+    render(frame: unknown, options: unknown) {
       this.frames.push(frame);
       this.renderOptions.push(options);
       onRender?.(frame, options);
       return !this.contextLost;
     },
     getInputViewport: () => ({ width: 400, height: 800 }),
-    hitTestRematch: ({ x, y }) => x >= 120 && x <= 280 && y >= 350 && y <= 500,
-    handleContextLost(event) {
+    hitTestRematch: ({ x, y }: Readonly<{ x: number; y: number }>) => (
+      x >= 120 && x <= 280 && y >= 350 && y <= 500
+    ),
+    handleContextLost(event?: CanvasEvent) {
       event?.preventDefault?.();
       this.contextLost = true;
       return true;
@@ -131,7 +197,10 @@ function rendererHarness({ loadPromise = null, onRender = null } = {}) {
   return renderer;
 }
 
-function sessionOptions(renderer, overrides = {}) {
+function sessionOptions(
+  renderer: RendererHarness,
+  overrides: Readonly<Record<string, unknown>> = {},
+): Readonly<Record<string, unknown>> {
   return {
     initialSeed: 6_503,
     matchingDurationSeconds: 0,
@@ -145,7 +214,11 @@ function sessionOptions(renderer, overrides = {}) {
   };
 }
 
-function fireUntil(harness, predicate, limit = 30) {
+function fireUntil(
+  harness: ReturnType<typeof platformHarness>,
+  predicate: () => boolean,
+  limit = 30,
+) {
   for (let index = 0; index < limit; index += 1) {
     if (predicate()) return index;
     harness.fireFrame((index + 1) * (1000 / 60));
@@ -165,42 +238,48 @@ test('ArenaPresentationSession closes match → result → rematch without rebin
   assert.equal(harness.frames.size, 1);
   assert.equal(harness.activeLifecycleCount(), 3);
   assert.equal(harness.activeCanvasCount(), 2);
-  assert.ok(harness.input);
+  const initialInput = required(harness.input, '已绑定输入');
+  const firstFrame = record(required(renderer.frames[0], '首个渲染帧'), '首个渲染帧');
+  const world = record(firstFrame.world, '首个渲染帧.world');
+  assert.ok(Array.isArray(world.participants), '首个渲染帧.participants 必须是数组。');
+  const opponent = record(required(world.participants[1], '对手表现'), '对手表现');
+  const appearance = record(opponent.appearance, '对手表现.appearance');
   assert.match(
-    renderer.frames[0].world.participants[1].appearance.modelAssetId,
+    String(appearance.modelAssetId),
     /wind-up-cube\.programmatic\.v1$/,
   );
 
   fireUntil(harness, () => session.state === ARENA_PRESENTATION_SESSION_STATE.RESULT);
-  const resultFrame = session.getLastPresentationFrame();
+  const resultFrame = required(session.getLastPresentationFrame(), '结果表现帧');
   assert.equal(resultFrame.phase, 'ended');
   assert.equal(JSON.stringify(resultFrame).includes('difficulty'), false);
   assert.doesNotMatch(JSON.stringify(resultFrame), /"(?:bot|botProfile|difficultyId)"/i);
-  const firstSeed = session.getDebugSnapshot().snapshot.matchSeed;
+  const firstSnapshot = record(session.getDebugSnapshot().snapshot, '首局调试快照');
+  const firstSeed = firstSnapshot.matchSeed;
   const bindingsBefore = {
     lifecycle: harness.activeLifecycleCount(),
     canvas: harness.activeCanvasCount(),
   };
 
-  harness.input.onStart({ pointerId: 1, x: 200, y: 420 });
-  harness.input.onEnd({ pointerId: 1, x: 200, y: 420 });
+  initialInput.onStart({ pointerId: 1, x: 200, y: 420 });
+  initialInput.onEnd({ pointerId: 1, x: 200, y: 420 });
   assert.equal(session.getDebugSnapshot().pendingRematch, true);
   harness.fireFrame();
   assert.equal(session.getDebugSnapshot().matchCount, 2);
-  assert.notEqual(session.getDebugSnapshot().snapshot.matchSeed, firstSeed);
+  assert.notEqual(record(session.getDebugSnapshot().snapshot, '次局调试快照').matchSeed, firstSeed);
   assert.deepEqual({
     lifecycle: harness.activeLifecycleCount(),
     canvas: harness.activeCanvasCount(),
   }, bindingsBefore);
   assert.equal(session.state, ARENA_PRESENTATION_SESSION_STATE.RUNNING);
 
-  const tickBeforeHide = session.getDebugSnapshot().snapshot.tick;
-  const staleFrame = harness.frames.values().next().value;
+  const tickBeforeHide = record(session.getDebugSnapshot().snapshot, '隐藏前调试快照').tick;
+  const staleFrame = required(harness.frames.values().next().value, '隐藏前待执行帧');
   harness.emitLifecycle('hide');
   assert.equal(session.state, ARENA_PRESENTATION_SESSION_STATE.PAUSED);
   assert.equal(harness.frames.size, 0);
   staleFrame(500);
-  assert.equal(session.getDebugSnapshot().snapshot.tick, tickBeforeHide);
+  assert.equal(record(session.getDebugSnapshot().snapshot, '隐藏后调试快照').tick, tickBeforeHide);
   harness.emitLifecycle('show');
   assert.equal(session.state, ARENA_PRESENTATION_SESSION_STATE.RUNNING);
   assert.equal(harness.frames.size, 1);
@@ -217,7 +296,7 @@ test('ArenaPresentationSession closes match → result → rematch without rebin
   const resizeBefore = renderer.resizeCount;
   harness.emitLifecycle('resize');
   assert.equal(renderer.resizeCount, resizeBefore + 1);
-  const staleInput = harness.input;
+  const staleInput = required(harness.input, '销毁前输入');
   session.destroy();
   session.destroy();
   assert.equal(session.state, ARENA_PRESENTATION_SESSION_STATE.DESTROYED);
@@ -232,12 +311,12 @@ test('ArenaPresentationSession closes match → result → rematch without rebin
 test('ArenaPresentationSession exposes a read-only progress signal and explicit pause ownership', async () => {
   const harness = platformHarness();
   const renderer = rendererHarness();
-  const progress = [];
+  const progress: Readonly<Record<string, unknown>>[] = [];
   const session = new ArenaPresentationSession(
     harness.platform,
     sessionOptions(renderer, {
-      onMatchProgress(value) {
-        progress.push(value);
+      onMatchProgress(value: unknown) {
+        progress.push(record(value, '对局进度'));
       },
     }),
   );
@@ -253,15 +332,18 @@ test('ArenaPresentationSession exposes a read-only progress signal and explicit 
 
   fireUntil(harness, () => session.state === ARENA_PRESENTATION_SESSION_STATE.RESULT);
   assert.ok(progress.length > 0);
-  assert.equal(progress.at(-1).phase, 'ended');
-  assert.throws(() => { progress[0].tick = 999; }, /read only|Cannot assign/i);
+  assert.equal(required(progress.at(-1), '最终对局进度').phase, 'ended');
+  assert.throws(
+    () => Object.assign(required(progress[0], '首个对局进度'), { tick: 999 }),
+    /read only|Cannot assign/i,
+  );
   session.destroy();
 });
 
 test('ArenaPresentationSession destroys a pending async start and ignores late completion', async () => {
   const harness = platformHarness();
-  let resolveLoad;
-  const loadPromise = new Promise((resolve) => { resolveLoad = resolve; });
+  let resolveLoad!: () => void;
+  const loadPromise = new Promise<void>((resolve) => { resolveLoad = resolve; });
   const renderer = rendererHarness({ loadPromise });
   const session = new ArenaPresentationSession(
     harness.platform,
@@ -318,16 +400,17 @@ test('ArenaPresentationSession retains Canvas cleanup ownership until retry succ
 
 test('ArenaPresentationSession defers destroy requested from inside Renderer.render', async () => {
   const harness = platformHarness();
-  let session;
+  const sessionOwner: { value?: ArenaPresentationSession } = {};
   let destroyOnNextRender = false;
   const renderer = rendererHarness({
     onRender: () => {
       if (!destroyOnNextRender) return;
       destroyOnNextRender = false;
-      session.destroy();
+      required(sessionOwner.value, '渲染期会话').destroy();
     },
   });
-  session = new ArenaPresentationSession(harness.platform, sessionOptions(renderer));
+  const session = new ArenaPresentationSession(harness.platform, sessionOptions(renderer));
+  sessionOwner.value = session;
   await session.start();
   destroyOnNextRender = true;
   harness.fireFrame(16);
@@ -344,7 +427,7 @@ test('ArenaPresentationSession defers host input failure raised during Renderer.
     onRender: () => {
       if (!injectBrokenInput) return;
       injectBrokenInput = false;
-      harness.input.onStart({ pointerId: Number.NaN, x: 10, y: 10 });
+      required(harness.input, '渲染期输入').onStart({ pointerId: Number.NaN, x: 10, y: 10 });
     },
   });
   const session = new ArenaPresentationSession(harness.platform, sessionOptions(renderer));
@@ -366,7 +449,7 @@ test('ArenaPresentationSession retries a lifecycle cleanup that failed once', as
   const harness = platformHarness();
   const bindShow = harness.platform.onShow;
   let showCleanupAttempts = 0;
-  harness.platform.onShow = (callback) => {
+  harness.platform.onShow = (callback: LifecycleCallback) => {
     const cleanup = bindShow(callback);
     return () => {
       showCleanupAttempts += 1;

@@ -7,7 +7,6 @@
     "tests/architecture.test.js",
     "tests/arena/experiment/arena-experiment.test.js",
     "tests/arena/presentation/arena-device-acceptance.test.js",
-    "tests/arena/presentation/arena-presentation-session.test.js",
     "tests/arena/presentation/greybox-renderer.test.js",
     "tests/arena/presentation/input-pilot-persistence.test.js",
     "tests/arena/presentation/input-pilot-runtime.test.js",
