@@ -4,7 +4,6 @@
   "baselineFileCount": 549,
   "policy": "exact-decreasing-allowlist",
   "files": [
-    "tests/architecture.test.js",
-    "tests/arena/experiment/arena-experiment.test.js"
+    "tests/architecture.test.js"
   ]
 }
