@@ -1,5 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import type { ArenaInputFrame } from '@number-strategy-jump/arena-contracts';
+import type {
+  ArenaRuleEngineContract,
+  RuleActor,
+  RuleImpulse,
+  RuleMutationPorts,
+} from '@number-strategy-jump/arena-core';
 import { createArenaV1RuleEngine } from '@number-strategy-jump/arena-v1-composition';
 import { createArenaMatchConfig } from '@number-strategy-jump/arena-match';
 import {
@@ -7,12 +14,22 @@ import {
   STAGE4_EQUIPMENT_ID,
 } from '@number-strategy-jump/arena-v1-content';
 
-function createEngine(configOverrides = {}) {
+function required<T>(value: T | null | undefined, name: string): T {
+  if (value === null || value === undefined) throw new Error(`测试缺少 ${name}。`);
+  return value;
+}
+
+function createEngine(configOverrides: Record<string, unknown> = {}): ArenaRuleEngineContract {
   const config = createArenaMatchConfig({ preparingTicks: 0, ...configOverrides });
   return createArenaV1RuleEngine({ participantIds: config.participantIds, config });
 }
 
-function actor(id, x, facingX, overrides = {}) {
+function actor(
+  id: string,
+  x: number,
+  facingX: number,
+  overrides: Partial<RuleActor> = {},
+): RuleActor {
   return {
     id,
     canAct: true,
@@ -23,11 +40,11 @@ function actor(id, x, facingX, overrides = {}) {
   };
 }
 
-function actors(distance = 1) {
+function actors(distance = 1): RuleActor[] {
   return [actor('player-1', 0, 1), actor('player-2', distance, -1)];
 }
 
-function frames(tick, pressedIds = []) {
+function frames(tick: number, pressedIds: readonly string[] = []): ArenaInputFrame[] {
   return ['player-1', 'player-2'].map((participantId) => ({
     tick,
     participantId,
@@ -42,21 +59,26 @@ function frames(tick, pressedIds = []) {
 }
 
 function createPorts() {
-  const recorded = { hits: [], hitstuns: [], impulses: [] };
+  const recorded: {
+    hits: Array<[string, string, string]>;
+    hitstuns: Array<[string, number]>;
+    impulses: Array<[string, RuleImpulse]>;
+  } = { hits: [], hitstuns: [], impulses: [] };
+  const ports: RuleMutationPorts = {
+    recordHit: (...values) => recorded.hits.push(values),
+    applyHitstun: (...values) => recorded.hitstuns.push(values),
+    applyImpulse: (...values) => recorded.impulses.push(values),
+  };
   return {
     recorded,
-    ports: {
-      recordHit: (...values) => recorded.hits.push(values),
-      applyHitstun: (...values) => recorded.hitstuns.push(values),
-      applyImpulse: (...values) => recorded.impulses.push(values),
-    },
+    ports,
   };
 }
 
 test('ArenaRuleEngine migrates base push through resolver, state, targeting, effects and commands', () => {
   const engine = createEngine();
   const started = engine.resolveActions({ tick: 0, actors: actors(), inputFrames: frames(0, ['player-1']) });
-  assert.equal(started.starts[0].actionDefinitionId, STAGE4_ACTION_ID.BASE_PUSH);
+  assert.equal(required(started.starts[0], '启动动作').actionDefinitionId, STAGE4_ACTION_ID.BASE_PUSH);
   assert.deepEqual(started.events.map(({ type }) => type), ['ActionStarted']);
   const startPorts = createPorts();
   engine.commit(started, startPorts.ports);
@@ -87,8 +109,8 @@ test('base attack can start at any distance and only resolves a hit during activ
     actors: distantActors,
     inputFrames: frames(0, ['player-1']),
   });
-  assert.equal(started.starts[0].actionDefinitionId, STAGE4_ACTION_ID.BASE_PUSH);
-  assert.equal(started.events[0].type, 'ActionStarted');
+  assert.equal(required(started.starts[0], '远距离启动动作').actionDefinitionId, STAGE4_ACTION_ID.BASE_PUSH);
+  assert.equal(required(started.events[0], '远距离启动事件').type, 'ActionStarted');
   for (let tick = 0; tick < 8; tick += 1) engine.advanceTimers();
   const active = engine.resolveActiveActions({ actors: distantActors });
   assert.deepEqual(active.hits, []);
@@ -151,17 +173,17 @@ test('ActionAffordance is a frozen next-tick projection of the same resolver can
     actors: currentActors,
   });
   assert.equal(affordance.primaryActionDefinitionId, STAGE4_ACTION_ID.BASE_PUSH);
-  assert.equal(affordance.channels.primary.kind, 'selected');
+  assert.equal(required(affordance.channels.primary, '主动作可用性').kind, 'selected');
   assert.ok(Object.isFrozen(affordance));
   assert.ok(Object.isFrozen(affordance.channels));
-  assert.ok(Object.isFrozen(affordance.channels.primary));
+  assert.ok(Object.isFrozen(required(affordance.channels.primary, '冻结的主动作可用性')));
 
   const resolved = engine.resolveActions({
     tick: 0,
     actors: currentActors,
     inputFrames: frames(0, ['player-1']),
   });
-  assert.equal(resolved.starts[0].actionDefinitionId, affordance.primaryActionDefinitionId);
+  assert.equal(required(resolved.starts[0], '投影后的启动动作').actionDefinitionId, affordance.primaryActionDefinitionId);
   assert.throws(() => engine.getActionAffordance({
     tick: 1,
     participantId: 'unknown',
@@ -243,7 +265,7 @@ test('front shield guard cancels chain pull only from the guarded direction', ()
     spawnId: 'right',
     position: { x: 3, y: 1, z: 0 },
   });
-  const rearFacing = [combatants[0], actor('player-2', 3, 1)];
+  const rearFacing = [required(combatants[0], '背向测试攻击者'), actor('player-2', 3, 1)];
   rearEngine.resolveEquipmentPickups({
     participants: rearFacing.map(({ id, position }) => ({ id, position, eligible: true })),
     contestSeed: 4,
@@ -267,7 +289,7 @@ test('ArenaRuleEngine rejects malformed batches before mutation and has terminal
   assert.throws(() => engine.commit(batch, {
     recordHit() {},
     applyHitstun() {},
-  }), /缺少 applyImpulse/);
+  } as unknown as RuleMutationPorts), /缺少 applyImpulse/);
   assert.equal(engine.getActionSnapshot('player-1').definitionId, null);
   engine.destroy();
   engine.destroy();
@@ -285,19 +307,19 @@ test('ArenaRuleEngine blocks commit reentrancy and fails closed after a mutation
   });
   engine.advanceTimers();
   const batch = engine.resolveActiveActions({ actors: actors() });
-  let reentryError = null;
+  const reentryErrors: Error[] = [];
   assert.throws(() => engine.commit(batch, {
     recordHit() {
       try {
         engine.advanceTimers();
       } catch (error) {
-        reentryError = error;
+        reentryErrors.push(error instanceof Error ? error : new Error(String(error)));
       }
     },
     applyHitstun() {},
     applyImpulse() { throw new Error('physics port failed'); },
   }), /physics port failed/);
-  assert.match(reentryError?.message, /commit 期间不可重入/);
+  assert.match(required(reentryErrors[0], '重入错误').message, /commit 期间不可重入/);
   assert.throws(() => engine.advanceTimers(), /已失败/);
   engine.destroy();
 });
