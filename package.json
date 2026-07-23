@@ -48,7 +48,7 @@
     "arena:build:verify": "node --import tsx scripts/arena-build-manifest.ts",
     "arena:build:budget": "node --import tsx scripts/arena-build-budget.ts",
     "arena:stage9:readiness": "node --import tsx scripts/arena-stage9-readiness.mjs",
-    "arena:defects:verify": "node --import tsx scripts/arena-defects.mjs",
+    "arena:defects:verify": "node --import tsx scripts/arena-defects.ts",
     "arena:input-pilot:evidence": "node --import tsx scripts/arena-input-pilot-evidence.mjs",
     "arena:assets:intake:verify": "node --import tsx scripts/arena-formal-asset-intake.ts",
     "arena:assets:budget": "node --import tsx scripts/arena-formal-asset-budget.ts",

@@ -5,7 +5,6 @@
   "policy": "exact-decreasing-allowlist",
   "files": [
     "scripts/arena-balance-exploration.mjs",
-    "scripts/arena-defects.mjs",
     "scripts/arena-device-evidence.mjs",
     "scripts/arena-experiment.mjs",
     "scripts/arena-golden-replay.mjs",

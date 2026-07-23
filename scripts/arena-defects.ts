@@ -6,11 +6,17 @@ import {
   createArenaDefectLedger,
   createArenaDefectReport,
 } from '@number-strategy-jump/arena-release';
-import { readVerifiedTextFile } from './lib/evidence-file-verifier.ts';
+import { readVerifiedTextFile } from './lib/evidence-file-verifier.js';
 
 const MAXIMUM_LEDGER_BYTES = 5 * 1024 * 1024;
 
-function usage() {
+interface DefectCliOptions {
+  describe: boolean;
+  ledger: string | null;
+  help: boolean;
+}
+
+function usage(): string {
   return [
     'Usage:',
     '  npm run arena:defects:verify -- --describe',
@@ -20,11 +26,12 @@ function usage() {
   ].join('\n');
 }
 
-function parseArgs(values) {
-  const result = { describe: false, ledger: null, help: false };
-  const seen = new Set();
+function parseArgs(values: readonly string[]): DefectCliOptions {
+  const result: DefectCliOptions = { describe: false, ledger: null, help: false };
+  const seen = new Set<string>();
   for (let index = 0; index < values.length; index += 1) {
     const argument = values[index];
+    if (!argument) throw new Error(`参数索引 ${index} 缺失。`);
     if (argument === '--help' || argument === '-h') {
       result.help = true;
       continue;
@@ -50,7 +57,7 @@ function parseArgs(values) {
   return result;
 }
 
-async function main() {
+async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
   if (options.help) {
     console.log(usage());
@@ -71,7 +78,9 @@ async function main() {
     }, null, 2));
     return;
   }
-  const source = JSON.parse((await readVerifiedTextFile(options.ledger, {
+  const ledgerPath = options.ledger;
+  if (!ledgerPath) throw new Error('缺少 --ledger。');
+  const source: unknown = JSON.parse((await readVerifiedTextFile(ledgerPath, {
     label: 'Arena defect ledger',
     maximumBytes: MAXIMUM_LEDGER_BYTES,
   })).text);
@@ -81,7 +90,7 @@ async function main() {
   if (report.status !== ARENA_DEFECT_REPORT_STATUS.READY) process.exitCode = 2;
 }
 
-main().catch((error) => {
+void main().catch((error: unknown) => {
   console.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;
 });
