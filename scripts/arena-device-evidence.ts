@@ -15,12 +15,20 @@ import {
 } from '@number-strategy-jump/arena-stage9-evidence-content';
 import {
   readVerifiedTextFile,
-} from './lib/evidence-file-verifier.ts';
-import { verifyArenaDeviceEvidence } from './lib/arena-device-evidence-verifier.ts';
+} from './lib/evidence-file-verifier.js';
+import { verifyArenaDeviceEvidence } from './lib/arena-device-evidence-verifier.js';
 
 const MAXIMUM_BUNDLE_BYTES = 5 * 1024 * 1024;
 
-function usage() {
+interface DeviceEvidenceCliOptions {
+  bundle: string | null;
+  artifactsRoot: string | null;
+  definitionId: string;
+  describe: boolean;
+  help: boolean;
+}
+
+function usage(): string {
   return [
     'Usage:',
     '  npm run arena:device:evidence -- --describe [--definition <id>]',
@@ -32,17 +40,18 @@ function usage() {
   ].join('\n');
 }
 
-function parseArgs(values) {
-  const result = {
+function parseArgs(values: readonly string[]): DeviceEvidenceCliOptions {
+  const result: DeviceEvidenceCliOptions = {
     bundle: null,
     artifactsRoot: null,
     definitionId: ARENA_DEFAULT_DEVICE_ACCEPTANCE_DEFINITION_ID,
     describe: false,
     help: false,
   };
-  const seen = new Set();
+  const seen = new Set<string>();
   for (let index = 0; index < values.length; index += 1) {
     const argument = values[index];
+    if (!argument) throw new Error(`参数索引 ${index} 缺失。`);
     if (argument === '--help' || argument === '-h') {
       result.help = true;
       continue;
@@ -56,6 +65,7 @@ function parseArgs(values) {
     const match = argument.match(/^--(bundle|artifacts-root|definition)(?:=(.*))?$/);
     if (!match) throw new Error(`未知参数 ${argument}。\n${usage()}`);
     const key = match[1];
+    if (!key) throw new Error(`参数 ${argument} 缺少名称。`);
     if (seen.has(key)) throw new Error(`参数 --${key} 不能重复。`);
     seen.add(key);
     const inlineValue = match[2];
@@ -73,14 +83,14 @@ function parseArgs(values) {
   return result;
 }
 
-async function readBundleSource(bundlePath) {
+async function readBundleSource(bundlePath: string): Promise<string> {
   return (await readVerifiedTextFile(bundlePath, {
     label: 'device evidence bundle',
     maximumBytes: MAXIMUM_BUNDLE_BYTES,
   })).text;
 }
 
-async function main() {
+async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
   if (options.help) {
     console.log(usage());
@@ -88,7 +98,7 @@ async function main() {
   }
   const definition = createArenaDeviceAcceptanceDefinitionById(options.definitionId);
   if (options.describe) {
-    const description = {
+    const description: Record<string, unknown> = {
       definition: definition.toJSON(),
       definitionHash: definition.getContentHash(),
     };
@@ -100,9 +110,10 @@ async function main() {
     console.log(JSON.stringify(description, null, 2));
     return;
   }
+  if (!options.bundle) throw new Error('缺少 --bundle。');
   const bundlePath = path.resolve(options.bundle);
   const artifactRoot = path.resolve(options.artifactsRoot ?? path.dirname(bundlePath));
-  const source = JSON.parse(await readBundleSource(bundlePath));
+  const source: unknown = JSON.parse(await readBundleSource(bundlePath));
   const verified = await verifyArenaDeviceEvidence({
     definition,
     bundleValue: source,
@@ -124,7 +135,7 @@ async function main() {
   ) process.exitCode = 2;
 }
 
-main().catch((error) => {
+void main().catch((error: unknown) => {
   console.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;
 });

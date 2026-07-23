@@ -560,7 +560,7 @@ test('device evidence CLI verifies artifact containment, size and SHA-256', asyn
     await writeFile(bundlePath, `${JSON.stringify(bundle, null, 2)}\n`);
     const command = spawnSync(process.execPath, [
       '--import', 'tsx',
-      'scripts/arena-device-evidence.mjs',
+      'scripts/arena-device-evidence.ts',
       '--bundle',
       bundlePath,
       '--artifacts-root',
@@ -589,7 +589,7 @@ test('device evidence CLI verifies artifact containment, size and SHA-256', asyn
     );
     const reused = spawnSync(process.execPath, [
       '--import', 'tsx',
-      'scripts/arena-device-evidence.mjs',
+      'scripts/arena-device-evidence.ts',
       '--bundle',
       reusedBundlePath,
       '--artifacts-root',
@@ -605,7 +605,7 @@ test('device evidence CLI verifies artifact containment, size and SHA-256', asyn
     await writeFile(firstArtifact, tampered);
     const rejected = spawnSync(process.execPath, [
       '--import', 'tsx',
-      'scripts/arena-device-evidence.mjs',
+      'scripts/arena-device-evidence.ts',
       `--bundle=${bundlePath}`,
       `--artifacts-root=${root}`,
     ], { cwd: path.resolve('.'), encoding: 'utf8' });
@@ -618,7 +618,7 @@ test('device evidence CLI verifies artifact containment, size and SHA-256', asyn
     await symlink(externalFile, firstArtifact);
     const escaped = spawnSync(process.execPath, [
       '--import', 'tsx',
-      'scripts/arena-device-evidence.mjs',
+      'scripts/arena-device-evidence.ts',
       '--bundle',
       bundlePath,
       '--artifacts-root',
@@ -636,7 +636,7 @@ test('device evidence CLI describes the fixed contract and reports incomplete bu
   const definition = createArenaStage6DeviceAcceptanceV1Definition();
   const described = spawnSync(process.execPath, [
     '--import', 'tsx',
-    'scripts/arena-device-evidence.mjs',
+    'scripts/arena-device-evidence.ts',
     '--describe',
   ], { cwd: path.resolve('.'), encoding: 'utf8' });
   assert.equal(described.status, 0, described.stderr);
@@ -654,7 +654,7 @@ test('device evidence CLI describes the fixed contract and reports incomplete bu
     );
     const incomplete = spawnSync(process.execPath, [
       '--import', 'tsx',
-      'scripts/arena-device-evidence.mjs',
+      'scripts/arena-device-evidence.ts',
       '--bundle',
       bundlePath,
     ], { cwd: path.resolve('.'), encoding: 'utf8' });
@@ -672,7 +672,7 @@ test('device evidence CLI selects the Stage 8 product contract explicitly', () =
   const definition = createArenaStage8ProductDeviceAcceptanceV1Definition();
   const described = spawnSync(process.execPath, [
     '--import', 'tsx',
-    'scripts/arena-device-evidence.mjs',
+    'scripts/arena-device-evidence.ts',
     '--definition',
     ARENA_STAGE8_PRODUCT_DEVICE_ACCEPTANCE_V1_ID,
     '--describe',
@@ -696,7 +696,7 @@ test('Stage 8 evidence CLI validates clean shared build manifests for all six ta
     );
     const command = spawnSync(process.execPath, [
       '--import', 'tsx',
-      'scripts/arena-device-evidence.mjs',
+      'scripts/arena-device-evidence.ts',
       '--definition',
       definition.id,
       '--bundle',
@@ -753,7 +753,7 @@ test('Stage 9 evidence CLI parses the trace artifact and recomputes a bound perf
     }]), null, 2)}\n`);
     const command = spawnSync(process.execPath, [
       '--import', 'tsx',
-      'scripts/arena-device-evidence.mjs',
+      'scripts/arena-device-evidence.ts',
       '--definition',
       definition.id,
       '--bundle',
