@@ -1,12 +1,35 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import type { ProductSessionViewModel } from '@number-strategy-jump/arena-product-presentation';
 import {
   WEB_PRODUCT_UI_SURFACE_STATE,
   WebProductUiSurface,
-} from '../src/entry/web-product-ui-surface.ts';
+} from '../src/entry/web-product-ui-surface.js';
+
+type FakeEvent = Readonly<{ target?: FakeElement | null }>;
+type FakeListener = (event: FakeEvent) => unknown;
 
 class FakeElement {
-  constructor(tagName, id = '') {
+  readonly tagName: string;
+  id: string;
+  ownerDocument: FakeDocument | null;
+  parentNode: FakeElement | null;
+  children: FakeElement[];
+  readonly dataset: Record<string, string>;
+  readonly attributes: Map<string, string>;
+  readonly listeners: Map<string, Set<FakeListener>>;
+  hidden: boolean;
+  disabled: boolean;
+  textContent: string;
+  className: string;
+  tabIndex: number;
+  readonly style: Readonly<{
+    values: Map<string, string>;
+    setProperty: (key: string, value: string) => void;
+  }>;
+  readonly classList: Readonly<{ add: (value: string) => void }>;
+
+  constructor(tagName: string, id = '') {
     this.tagName = tagName;
     this.id = id;
     this.ownerDocument = null;
@@ -20,22 +43,26 @@ class FakeElement {
     this.textContent = '';
     this.className = '';
     this.tabIndex = 0;
-    this.style = { values: new Map(), setProperty: (key, value) => this.style.values.set(key, value) };
+    const styleValues = new Map<string, string>();
+    this.style = {
+      values: styleValues,
+      setProperty: (key, value) => { styleValues.set(key, value); },
+    };
     this.classList = { add: (value) => { this.className = `${this.className} ${value}`.trim(); } };
   }
 
-  setAttribute(name, value) { this.attributes.set(name, String(value)); }
-  getAttribute(name) { return this.attributes.get(name) ?? null; }
-  removeAttribute(name) { this.attributes.delete(name); }
+  setAttribute(name: string, value: unknown) { this.attributes.set(name, String(value)); }
+  getAttribute(name: string) { return this.attributes.get(name) ?? null; }
+  removeAttribute(name: string) { this.attributes.delete(name); }
 
-  append(...values) {
+  append(...values: FakeElement[]) {
     for (const value of values) {
       value.parentNode = this;
       this.children.push(value);
     }
   }
 
-  replaceChildren(...values) {
+  replaceChildren(...values: FakeElement[]) {
     this.children = [];
     for (const value of values) {
       if (value.tagName === '#fragment') this.append(...value.children);
@@ -43,18 +70,18 @@ class FakeElement {
     }
   }
 
-  #walk() {
+  #walk(): FakeElement[] {
     return [this, ...this.children.flatMap((child) => child.#walk())];
   }
 
-  querySelector(selector) {
+  querySelector(selector: string): FakeElement | null {
     if (selector.startsWith('#')) {
       return this.#walk().find(({ id }) => id === selector.slice(1)) ?? null;
     }
     return this.querySelectorAll(selector)[0] ?? null;
   }
 
-  querySelectorAll(selector) {
+  querySelectorAll(selector: string): FakeElement[] {
     if (selector === '[data-product-visual]') {
       return this.#walk().filter(({ dataset }) => dataset.productVisual !== undefined);
     }
@@ -64,9 +91,9 @@ class FakeElement {
     return [];
   }
 
-  contains(value) { return this.#walk().includes(value); }
+  contains(value: FakeElement) { return this.#walk().includes(value); }
 
-  closest(selector) {
+  closest(selector: string): FakeElement | null {
     if (selector !== '[data-product-intent]') return null;
     if (this.dataset.productIntent !== undefined) return this;
     let current = this.parentNode;
@@ -77,7 +104,7 @@ class FakeElement {
     return null;
   }
 
-  addEventListener(type, callback) {
+  addEventListener(type: string, callback: FakeListener) {
     let listeners = this.listeners.get(type);
     if (!listeners) {
       listeners = new Set();
@@ -86,12 +113,14 @@ class FakeElement {
     listeners.add(callback);
   }
 
-  removeEventListener(type, callback) { this.listeners.get(type)?.delete(callback); }
-  emit(type, event) { for (const callback of [...(this.listeners.get(type) ?? [])]) callback(event); }
+  removeEventListener(type: string, callback: FakeListener) { this.listeners.get(type)?.delete(callback); }
+  emit(type: string, event: FakeEvent) {
+    for (const callback of [...(this.listeners.get(type) ?? [])]) callback(event);
+  }
 }
 
 class FakeDocument {
-  createElement(tagName) {
+  createElement(tagName: string) {
     const element = new FakeElement(tagName);
     element.ownerDocument = this;
     return element;
@@ -128,6 +157,11 @@ const REQUIRED_IDS = [
   'product-error-message',
 ];
 
+function required<T>(value: T | null | undefined, name: string): T {
+  assert.ok(value != null, `${name} 不存在。`);
+  return value;
+}
+
 function domHarness() {
   const documentObject = new FakeDocument();
   const root = documentObject.createElement('section');
@@ -154,40 +188,66 @@ function domHarness() {
   return { root, canvas };
 }
 
-function viewModel(scene = 'home', overrides = {}) {
+function viewModel(
+  scene = 'home',
+  overrides: Partial<ProductSessionViewModel> = {},
+): ProductSessionViewModel {
+  const activeState = (scene === 'home' ? 'ready' : scene) as ProductSessionViewModel['activeState'];
   return {
+    schemaVersion: 1,
     revision: 1,
     locale: 'zh-CN',
-    activeState: scene === 'home' ? 'ready' : scene,
-    visibleState: scene === 'home' ? 'ready' : scene,
+    activeState,
+    visibleState: activeState,
     busy: false,
     suspended: false,
     terminal: false,
     inputEnabled: true,
     screen: {
+      definitionId: `test-${scene}-screen`,
+      definitionHash: '12345678',
+      kind: (scene === 'home' ? 'menu' : 'selection') as ProductSessionViewModel['screen']['kind'],
       sceneId: scene,
       title: scene === 'home' ? '竞技场' : '选择角色',
       body: '争夺装备，把对手击出平台',
       announcement: scene === 'home' ? '竞技场' : '选择角色',
       primaryAction: scene === 'home'
-        ? { label: '开始匹配', enabled: true, intent: { id: 'start-match' } }
-        : { label: '确认选择', enabled: true, intent: { id: 'close-character-select' } },
+        ? {
+          label: '开始匹配',
+          enabled: true,
+          intent: { id: 'start-match', characterDefinitionId: null },
+        }
+        : {
+          label: '确认选择',
+          enabled: true,
+          intent: { id: 'close-character-select', characterDefinitionId: null },
+        },
       secondaryAction: null,
     },
     characterOptions: [
       {
         characterDefinitionId: 'parkour-apprentice',
         name: '跑酷学徒',
+        previewAssetId: 'parkour-apprentice-preview',
         selected: true,
         selectIntent: { id: 'select-character', characterDefinitionId: 'parkour-apprentice' },
       },
       {
         characterDefinitionId: 'wind-up-cube',
         name: '发条方块',
+        previewAssetId: 'wind-up-cube-preview',
         selected: false,
         selectIntent: { id: 'select-character', characterDefinitionId: 'wind-up-cube' },
       },
     ],
+    profile: {
+      revision: 1,
+      experience: 0,
+      selectedCharacterId: 'parkour-apprentice',
+      soundEnabled: true,
+      reducedMotion: false,
+      qualityProfile: 'high',
+    },
     match: null,
     result: null,
     reward: null,
@@ -199,7 +259,10 @@ function viewModel(scene = 'home', overrides = {}) {
 
 test('WebProductUiSurface renders stable semantic controls and serializes DOM intents', async () => {
   const { root, canvas } = domHarness();
-  const surface = new WebProductUiSurface({ root, canvas });
+  const surface = new WebProductUiSurface({
+    root: root as unknown as HTMLElement,
+    canvas: canvas as unknown as HTMLCanvasElement,
+  });
   await surface.load();
   assert.equal(surface.resize(
     { width: 400, height: 800 },
@@ -208,68 +271,81 @@ test('WebProductUiSurface renders stable semantic controls and serializes DOM in
   assert.deepEqual(surface.getInputViewport(), { width: 800, height: 1600 });
   surface.render(viewModel());
   assert.equal(surface.requiresCompositeFrame(), false);
-  assert.equal(root.querySelector('#product-title').textContent, '竞技场');
-  const primary = root.querySelector('#product-primary-action');
+  assert.equal(required(root.querySelector('#product-title'), 'product title').textContent, '竞技场');
+  const primary = required(root.querySelector('#product-primary-action'), 'primary action');
   assert.equal(primary.textContent, '开始匹配');
   assert.equal(primary.disabled, false);
 
-  const intents = [];
-  let resolveIntent;
+  const intents: Readonly<Record<string, unknown>>[] = [];
+  let resolveIntent: (() => void) | undefined;
   const cleanup = surface.bindIntent({
-    onIntent: (intent) => new Promise((resolve) => {
+    onIntent: (intent: Readonly<Record<string, unknown>>) => new Promise<void>((resolve) => {
       intents.push(intent);
-      resolveIntent = resolve;
+      resolveIntent = () => { resolve(); };
     }),
   });
   root.emit('click', { target: primary });
   root.emit('click', { target: primary });
   await Promise.resolve();
-  assert.deepEqual(intents, [{ id: 'start-match' }]);
+  assert.deepEqual(intents, [{ id: 'start-match', characterDefinitionId: null }]);
   assert.equal(primary.disabled, true);
-  resolveIntent();
+  required(resolveIntent, 'intent resolver')();
   await Promise.resolve();
   await Promise.resolve();
 
   surface.render(viewModel('character-select', { revision: 2 }));
-  const cards = root.querySelector('#product-character-list').querySelectorAll('button');
+  const cards = required(
+    root.querySelector('#product-character-list'),
+    'character list',
+  ).querySelectorAll('button');
   assert.equal(cards.length, 2);
-  assert.equal(cards[0].getAttribute('aria-checked'), 'true');
-  assert.equal(cards[0].getAttribute('aria-label'), '跑酷学徒');
+  const firstCard = required(cards[0], 'first character card');
+  const secondCard = required(cards[1], 'second character card');
+  assert.equal(firstCard.getAttribute('aria-checked'), 'true');
+  assert.equal(firstCard.getAttribute('aria-label'), '跑酷学徒');
   surface.render(viewModel('character-select', {
     revision: 3,
     characterOptions: [
       {
         characterDefinitionId: 'parkour-apprentice',
         name: '跑酷学徒',
+        previewAssetId: 'parkour-apprentice-preview',
         selected: false,
         selectIntent: { id: 'select-character', characterDefinitionId: 'parkour-apprentice' },
       },
       {
         characterDefinitionId: 'wind-up-cube',
         name: '发条方块',
+        previewAssetId: 'wind-up-cube-preview',
         selected: true,
         selectIntent: { id: 'select-character', characterDefinitionId: 'wind-up-cube' },
       },
     ],
   }));
-  const updatedCards = root.querySelector('#product-character-list').querySelectorAll('button');
-  assert.equal(updatedCards[0], cards[0]);
-  assert.equal(updatedCards[1], cards[1]);
-  assert.equal(updatedCards[1].getAttribute('aria-checked'), 'true');
-  assert.equal(updatedCards[1].getAttribute('aria-label'), '发条方块');
+  const updatedCards = required(
+    root.querySelector('#product-character-list'),
+    'character list',
+  ).querySelectorAll('button');
+  assert.equal(required(updatedCards[0], 'updated first card'), firstCard);
+  assert.equal(required(updatedCards[1], 'updated second card'), secondCard);
+  assert.equal(required(updatedCards[1], 'updated second card').getAttribute('aria-checked'), 'true');
+  assert.equal(required(updatedCards[1], 'updated second card').getAttribute('aria-label'), '发条方块');
   cleanup();
   surface.dispose();
   surface.dispose();
   assert.equal(surface.state, WEB_PRODUCT_UI_SURFACE_STATE.DISPOSED);
-  assert.equal(root.listeners.get('click').size, 0);
+  assert.equal(root.listeners.get('click')?.size ?? 0, 0);
   assert.equal(root.hidden, true);
   assert.equal(canvas.getAttribute('aria-hidden'), null);
 });
 
 test('WebProductUiSurface rejects an incomplete host before taking event ownership', async () => {
   const { root, canvas } = domHarness();
-  root.querySelector('#product-title').id = 'missing-title';
-  const surface = new WebProductUiSurface({ root, canvas });
+  required(root.querySelector('#product-title'), 'product title').id = 'missing-title';
+  const surface = new WebProductUiSurface({
+    root: root as unknown as HTMLElement,
+    canvas: canvas as unknown as HTMLCanvasElement,
+  });
   await assert.rejects(() => surface.load(), /缺少 #product-title/);
   assert.equal(root.listeners.size, 0);
 });
@@ -284,9 +360,14 @@ test('WebProductUiSurface rejects option and intent accessors without execution 
       return canvas;
     },
   });
-  assert.throws(() => new WebProductUiSurface(constructorOptions), /访问器/);
+  assert.throws(() => new WebProductUiSurface(
+    constructorOptions as unknown as { root: HTMLElement; canvas: HTMLCanvasElement },
+  ), /访问器/);
 
-  const surface = new WebProductUiSurface({ root, canvas });
+  const surface = new WebProductUiSurface({
+    root: root as unknown as HTMLElement,
+    canvas: canvas as unknown as HTMLCanvasElement,
+  });
   await surface.load();
   const bindingOptions = Object.defineProperty({}, 'onIntent', {
     enumerable: true,
@@ -295,7 +376,9 @@ test('WebProductUiSurface rejects option and intent accessors without execution 
       return () => {};
     },
   });
-  assert.throws(() => surface.bindIntent(bindingOptions), /访问器/);
+  assert.throws(() => surface.bindIntent(
+    bindingOptions as unknown as { onIntent: (intent: Readonly<Record<string, unknown>>) => unknown },
+  ), /访问器/);
   assert.equal(reads, 0);
   assert.equal(root.listeners.size, 0);
   surface.dispose();
