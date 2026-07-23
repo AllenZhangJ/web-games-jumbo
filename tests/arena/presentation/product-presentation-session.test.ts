@@ -4,11 +4,13 @@ import { PRODUCT_SESSION_STATE } from '@number-strategy-jump/arena-product-state
 import {
   PRODUCT_INPUT_ROUTER_MODE,
   ProductPresentationFlow,
+  type ProductPresentationFlowOptions,
 } from '@number-strategy-jump/arena-product-presentation';
 import {
   ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT,
   ARENA_V1_PRODUCT_PRESENTATION_CONTENT,
   projectArenaPresentationFrame,
+  type ProjectArenaPresentationFrameOptions,
 } from '@number-strategy-jump/arena-v1-presentation-content';
 import {
   ARENA_V1_PRESENTATION_QUALITY_ID,
@@ -21,32 +23,88 @@ import {
   createProductPresentationSession,
 } from '@number-strategy-jump/arena-v1-application-session';
 
+type LifecycleName = 'resize' | 'hide' | 'show';
+type FrameCallback = (timestamp: number) => unknown;
+type LifecycleCallback = () => unknown;
+type CanvasCallback = (event?: unknown) => unknown;
+
+interface PointerPoint {
+  readonly pointerId: number;
+  readonly x: number;
+  readonly y: number;
+}
+
+interface InputBindings {
+  readonly onStart: (point: PointerPoint) => boolean;
+  readonly onEnd: (point: PointerPoint) => boolean;
+}
+
+interface UiAction {
+  readonly enabled: boolean;
+  readonly intent: unknown;
+}
+
+interface UiViewModel {
+  readonly inputEnabled: boolean;
+  readonly screen: {
+    readonly primaryAction: UiAction | null;
+    readonly secondaryAction: UiAction | null;
+  };
+}
+
+function required<Value>(value: Value | null | undefined): Value {
+  assert.ok(value);
+  return value;
+}
+
+function record(value: unknown): Readonly<Record<string, unknown>> {
+  assert.ok(typeof value === 'object' && value !== null && !Array.isArray(value));
+  return value as Readonly<Record<string, unknown>>;
+}
+
+function nested(value: unknown, ...keys: readonly string[]): unknown {
+  let current = value;
+  for (const key of keys) current = Reflect.get(record(current), key);
+  return current;
+}
+
+function nestedNumber(value: unknown, ...keys: readonly string[]): number {
+  const result = nested(value, ...keys);
+  assert.equal(typeof result, 'number');
+  return result as number;
+}
+
 function platformHarness({
   failBinding = null,
   emitOnBind = null,
   failInputCleanupOnce = false,
   failCanvasCleanupOnce = false,
+}: {
+  readonly failBinding?: LifecycleName | 'input' | null;
+  readonly emitOnBind?: LifecycleName | null;
+  readonly failInputCleanupOnce?: boolean;
+  readonly failCanvasCleanupOnce?: boolean;
 } = {}) {
   let nextFrameToken = 1;
   let now = 0;
   let wallNow = 10_000;
-  let input = null;
+  let input: InputBindings | null = null;
   let inputCleanupAttempts = 0;
   let canvasCleanupAttempts = 0;
-  const frames = new Map();
-  const storage = new Map();
+  const frames = new Map<number, FrameCallback>();
+  const storage = new Map<string, unknown>();
   const lifecycle = {
-    resize: new Set(),
-    hide: new Set(),
-    show: new Set(),
+    resize: new Set<LifecycleCallback>(),
+    hide: new Set<LifecycleCallback>(),
+    show: new Set<LifecycleCallback>(),
   };
-  const canvasListeners = new Map();
+  const canvasListeners = new Map<string, Set<CanvasCallback>>();
   const canvas = {
     width: 400,
     height: 800,
     style: {},
     getContext: () => ({}),
-    addEventListener(type, callback) {
+    addEventListener(type: string, callback: CanvasCallback) {
       let listeners = canvasListeners.get(type);
       if (!listeners) {
         listeners = new Set();
@@ -54,7 +112,7 @@ function platformHarness({
       }
       listeners.add(callback);
     },
-    removeEventListener(type, callback) {
+    removeEventListener(type: string, callback: CanvasCallback) {
       canvasCleanupAttempts += 1;
       if (failCanvasCleanupOnce && canvasCleanupAttempts === 1) {
         throw new Error('canvas cleanup failed once');
@@ -62,7 +120,7 @@ function platformHarness({
       canvasListeners.get(type)?.delete(callback);
     },
   };
-  const bindLifecycle = (name, callback) => {
+  const bindLifecycle = (name: LifecycleName, callback: LifecycleCallback) => {
     if (failBinding === name) throw new Error(`${name} binding failed`);
     lifecycle[name].add(callback);
     if (emitOnBind === name) callback();
@@ -72,16 +130,16 @@ function platformHarness({
     id: 'product-session-test',
     createCanvas: () => canvas,
     getViewport: () => ({ width: 400, height: 800, pixelRatio: 1, safeArea: null }),
-    requestFrame(callback) {
+    requestFrame(callback: FrameCallback) {
       const token = nextFrameToken;
       nextFrameToken += 1;
       frames.set(token, callback);
       return token;
     },
-    cancelFrame(token) { frames.delete(token); },
+    cancelFrame(token: number) { frames.delete(token); },
     now: () => now,
     wallNow: () => wallNow,
-    bindInput(callbacks) {
+    bindInput(callbacks: InputBindings) {
       if (failBinding === 'input') throw new Error('input binding failed');
       input = callbacks;
       return () => {
@@ -92,19 +150,19 @@ function platformHarness({
         if (input === callbacks) input = null;
       };
     },
-    onResize: (callback) => bindLifecycle('resize', callback),
-    onHide: (callback) => bindLifecycle('hide', callback),
-    onShow: (callback) => bindLifecycle('show', callback),
-    storageRead(key) {
+    onResize: (callback: LifecycleCallback) => bindLifecycle('resize', callback),
+    onHide: (callback: LifecycleCallback) => bindLifecycle('hide', callback),
+    onShow: (callback: LifecycleCallback) => bindLifecycle('show', callback),
+    storageRead(key: string) {
       return storage.has(key)
         ? { ok: true, found: true, value: structuredClone(storage.get(key)) }
         : { ok: true, found: false, value: undefined };
     },
-    storageWrite(key, value) {
+    storageWrite(key: string, value: unknown) {
       storage.set(key, structuredClone(value));
       return true;
     },
-    storageDelete(key) {
+    storageDelete(key: string) {
       storage.delete(key);
       return true;
     },
@@ -121,22 +179,23 @@ function platformHarness({
     fireFrame(timestamp = now + 1000 / 60) {
       const [token, callback] = frames.entries().next().value ?? [];
       if (!callback) throw new Error('没有待执行 Product 帧。');
+      if (typeof token !== 'number') throw new Error('Product 帧 token 无效。');
       frames.delete(token);
       now = timestamp;
       callback(timestamp);
     },
-    emitLifecycle(name) {
+    emitLifecycle(name: LifecycleName) {
       for (const callback of [...lifecycle[name]]) callback();
     },
-    emitCanvas(type, event = {}) {
+    emitCanvas(type: string, event: unknown = {}) {
       for (const callback of [...(canvasListeners.get(type) ?? [])]) callback(event);
     },
-    tap(x, y = 650, pointerId = 1) {
+    tap(x: number, y = 650, pointerId = 1) {
       if (!input) throw new Error('Product input 尚未绑定。');
       input.onStart({ x, y, pointerId });
       input.onEnd({ x, y, pointerId });
     },
-    advanceWall(milliseconds) { wallNow += milliseconds; },
+    advanceWall(milliseconds: number) { wallNow += milliseconds; },
     activeLifecycleCount() {
       return Object.values(lifecycle).reduce((sum, values) => sum + values.size, 0);
     },
@@ -152,22 +211,29 @@ function rendererHarness({
   resizeFailures = 0,
   onRender = null,
   performanceSnapshot = null,
+}: {
+  readonly loadPromise?: PromiseLike<unknown> | null;
+  readonly disposeFailures?: number;
+  readonly resizeFailures?: number;
+  readonly onRender?: ((frame: unknown, options: unknown) => void) | null;
+  readonly performanceSnapshot?: unknown;
 } = {}) {
   let remainingDisposeFailures = disposeFailures;
   let remainingResizeFailures = resizeFailures;
   return {
-    frames: [],
-    options: [],
+    frames: [] as unknown[],
+    options: [] as unknown[],
     resizeCount: 0,
     performanceReadCount: 0,
     disposeAttempts: 0,
     disposed: false,
     contextLost: false,
+    uiIntentHandlers: null as unknown,
     async load() {
       if (loadPromise) await loadPromise;
       return this;
     },
-    render(frame, options) {
+    render(frame: unknown, options: unknown) {
       this.frames.push(frame);
       this.options.push(options);
       onRender?.(frame, options);
@@ -182,14 +248,18 @@ function rendererHarness({
       return true;
     },
     getInputViewport: () => ({ width: 400, height: 800 }),
-    hitTestUi(point, viewport, viewModel) {
+    hitTestUi(
+      point: { readonly x: number },
+      viewport: { readonly width: number },
+      viewModel: UiViewModel,
+    ) {
       if (!viewModel?.inputEnabled) return null;
       const action = point.x < viewport.width / 2
         ? viewModel.screen.primaryAction
         : viewModel.screen.secondaryAction;
       return action?.enabled ? action.intent : null;
     },
-    bindUiIntent(handlers) {
+    bindUiIntent(handlers: unknown) {
       this.uiIntentHandlers = handlers;
       let active = true;
       return () => {
@@ -198,7 +268,7 @@ function rendererHarness({
         if (this.uiIntentHandlers === handlers) this.uiIntentHandlers = null;
       };
     },
-    handleContextLost(event) {
+    handleContextLost(event?: { preventDefault?: () => void } | null) {
       event?.preventDefault?.();
       this.contextLost = true;
       return true;
@@ -225,7 +295,10 @@ function rendererHarness({
 
 let sessionSequence = 0;
 
-function sessionOptions(renderer, overrides = {}) {
+function sessionOptions(
+  renderer: unknown,
+  overrides: Readonly<Record<string, unknown>> = {},
+) {
   sessionSequence += 1;
   return {
     ownerId: `product-presentation-session-${sessionSequence}`,
@@ -241,7 +314,7 @@ function sessionOptions(renderer, overrides = {}) {
   };
 }
 
-async function settleUntil(predicate, limit = 80) {
+async function settleUntil(predicate: () => boolean, limit = 80) {
   for (let index = 0; index < limit; index += 1) {
     if (predicate()) return index;
     await Promise.resolve();
@@ -249,7 +322,11 @@ async function settleUntil(predicate, limit = 80) {
   throw new Error('异步 Product 状态未在限制内到达。');
 }
 
-function fireUntil(harness, predicate, limit = 40) {
+function fireUntil(
+  harness: ReturnType<typeof platformHarness>,
+  predicate: () => boolean,
+  limit = 40,
+) {
   for (let index = 0; index < limit; index += 1) {
     if (predicate()) return index;
     harness.fireFrame((index + 1) * (1000 / 60));
@@ -266,26 +343,28 @@ test('ProductPresentationSession closes UI tap → real match → reward → rem
   );
   await session.start();
   assert.equal(session.state, PRODUCT_PRESENTATION_SESSION_STATE.RUNNING);
-  assert.equal(session.getLastSnapshot().viewModel.activeState, PRODUCT_SESSION_STATE.READY);
-  assert.equal(session.getDebugSnapshot().input.mode, PRODUCT_INPUT_ROUTER_MODE.UI);
+  const readyViewModel = required(required(session.getLastSnapshot()).viewModel);
+  assert.equal(readyViewModel.activeState, PRODUCT_SESSION_STATE.READY);
+  assert.equal(nested(session.getDebugSnapshot(), 'input', 'mode'), PRODUCT_INPUT_ROUTER_MODE.UI);
   assert.equal(harness.frames.size, 1);
   assert.equal(harness.activeLifecycleCount(), 3);
   assert.equal(harness.activeCanvasCount(), 2);
 
   harness.tap(100);
   await settleUntil(() => (
-    session.getLastSnapshot()?.viewModel.activeState === PRODUCT_SESSION_STATE.IN_MATCH
+    session.getLastSnapshot()?.viewModel?.activeState === PRODUCT_SESSION_STATE.IN_MATCH
   ));
-  assert.equal(session.getDebugSnapshot().input.mode, PRODUCT_INPUT_ROUTER_MODE.GAMEPLAY);
-  const firstSeed = session.getLastSnapshot().matchFrame.source.matchSeed;
+  assert.equal(nested(session.getDebugSnapshot(), 'input', 'mode'), PRODUCT_INPUT_ROUTER_MODE.GAMEPLAY);
+  const firstSeed = nestedNumber(required(session.getLastSnapshot()).matchFrame, 'source', 'matchSeed');
   fireUntil(harness, () => (
-    session.getLastSnapshot().viewModel.activeState === PRODUCT_SESSION_STATE.REWARD
+    session.getLastSnapshot()?.viewModel?.activeState === PRODUCT_SESSION_STATE.REWARD
   ));
-  const reward = session.getLastSnapshot();
-  assert.equal(reward.viewModel.reward.committed, true);
-  assert.equal(reward.viewModel.result !== null, true);
-  assert.equal(reward.matchFrame.hud.result !== null, true);
-  assert.equal(session.getDebugSnapshot().input.mode, PRODUCT_INPUT_ROUTER_MODE.UI);
+  const reward = required(session.getLastSnapshot());
+  const rewardViewModel = required(reward.viewModel);
+  assert.equal(required(rewardViewModel.reward).committed, true);
+  assert.equal(rewardViewModel.result !== null, true);
+  assert.equal(nested(reward.matchFrame, 'hud', 'result') !== null, true);
+  assert.equal(nested(session.getDebugSnapshot(), 'input', 'mode'), PRODUCT_INPUT_ROUTER_MODE.UI);
   assert.doesNotMatch(JSON.stringify(reward), /difficulty|difficultyId|机器人|简单|普通|困难/i);
 
   const bindingCounts = {
@@ -294,19 +373,25 @@ test('ProductPresentationSession closes UI tap → real match → reward → rem
   };
   harness.tap(100, 650, 2);
   await settleUntil(() => (
-    session.getLastSnapshot()?.viewModel.activeState === PRODUCT_SESSION_STATE.IN_MATCH
+    session.getLastSnapshot()?.viewModel?.activeState === PRODUCT_SESSION_STATE.IN_MATCH
   ));
-  assert.notEqual(session.getLastSnapshot().matchFrame.source.matchSeed, firstSeed);
+  assert.notEqual(
+    nestedNumber(required(session.getLastSnapshot()).matchFrame, 'source', 'matchSeed'),
+    firstSeed,
+  );
   fireUntil(harness, () => (
-    session.getLastSnapshot()?.viewModel.activeState === PRODUCT_SESSION_STATE.REWARD
+    session.getLastSnapshot()?.viewModel?.activeState === PRODUCT_SESSION_STATE.REWARD
   ));
   assert.equal(session.state, PRODUCT_PRESENTATION_SESSION_STATE.RUNNING);
-  assert.equal(session.getLastSnapshot().viewModel.reward.committed, true);
+  assert.equal(
+    required(required(required(session.getLastSnapshot()).viewModel).reward).committed,
+    true,
+  );
   assert.deepEqual({
     lifecycle: harness.activeLifecycleCount(),
     canvas: harness.activeCanvasCount(),
   }, bindingCounts);
-  assert.equal(session.getPerformanceSnapshot().observedMatchCount, 2);
+  assert.equal(nested(session.getPerformanceSnapshot(), 'observedMatchCount'), 2);
 
   const staleInput = harness.input;
   session.destroy();
@@ -317,11 +402,11 @@ test('ProductPresentationSession closes UI tap → real match → reward → rem
   assert.equal(harness.activeCanvasCount(), 0);
   assert.equal(harness.input, null);
   assert.equal(renderer.disposed, true);
-  assert.equal(staleInput.onStart({ pointerId: 8, x: 1, y: 1 }), false);
+  assert.equal(required(staleInput).onStart({ pointerId: 8, x: 1, y: 1 }), false);
 });
 
 test('30 FPS presentation pacing preserves the same 60 Hz authority frames as high quality', async () => {
-  async function run(qualityId) {
+  async function run(qualityId: string) {
     const harness = platformHarness();
     const renderer = rendererHarness({ performanceSnapshot: {} });
     const session = createProductPresentationSession(harness.platform, sessionOptions(renderer, {
@@ -336,7 +421,7 @@ test('30 FPS presentation pacing preserves the same 60 Hz authority frames as hi
     await session.start();
     harness.tap(100);
     await settleUntil(() => (
-      session.getLastSnapshot()?.viewModel.activeState === PRODUCT_SESSION_STATE.IN_MATCH
+      session.getLastSnapshot()?.viewModel?.activeState === PRODUCT_SESSION_STATE.IN_MATCH
     ));
     const rendersBeforeFrames = renderer.frames.length;
     const performanceReadsBeforeFrames = renderer.performanceReadCount;
@@ -344,7 +429,7 @@ test('30 FPS presentation pacing preserves the same 60 Hz authority frames as hi
       harness.fireFrame(index * (1000 / 60));
     }
     const result = {
-      frame: structuredClone(session.getLastSnapshot().matchFrame),
+      frame: structuredClone(required(session.getLastSnapshot()).matchFrame),
       runtimeRenderCount: renderer.frames.length - rendersBeforeFrames,
       performance: session.finishPerformanceCapture(),
       performanceReadCount: renderer.performanceReadCount - performanceReadsBeforeFrames,
@@ -356,14 +441,16 @@ test('30 FPS presentation pacing preserves the same 60 Hz authority frames as hi
   const high = await run(ARENA_V1_PRESENTATION_QUALITY_ID.HIGH);
   const low = await run(ARENA_V1_PRESENTATION_QUALITY_ID.LOW);
   assert.deepEqual(low.frame, high.frame);
-  assert.equal(high.frame.source.tick, 7);
+  assert.equal(nested(high.frame, 'source', 'tick'), 7);
   assert.equal(high.runtimeRenderCount, 7);
   assert.equal(low.runtimeRenderCount, 3);
-  assert.equal(high.performance.observerErrorCount, 0);
-  assert.equal(low.performance.observerErrorCount, 0);
-  assert.equal(low.performance.probe.state, 'stopped');
-  assert.equal(low.performance.probe.observedFrameCount, 8);
-  assert.equal(low.performance.probe.frames.filter(({ rendered }) => rendered).length, 3);
+  assert.equal(nested(high.performance, 'observerErrorCount'), 0);
+  assert.equal(nested(low.performance, 'observerErrorCount'), 0);
+  assert.equal(nested(low.performance, 'probe', 'state'), 'stopped');
+  assert.equal(nested(low.performance, 'probe', 'observedFrameCount'), 8);
+  const performanceFrames = nested(low.performance, 'probe', 'frames');
+  assert.ok(Array.isArray(performanceFrames));
+  assert.equal(performanceFrames.filter((frame) => nested(frame, 'rendered') === true).length, 3);
   assert.ok(high.performanceReadCount < high.runtimeRenderCount);
   assert.ok(low.performanceReadCount < low.runtimeRenderCount);
 });
@@ -393,10 +480,13 @@ test('ProductPresentationSession records injected memory evidence without giving
   harness.fireFrame();
   harness.fireFrame();
   const capture = session.finishPerformanceCapture();
-  assert.equal(capture.observerErrorCount, 0);
-  assert.equal(capture.probe.resources[0].drawCalls, 4);
-  assert.equal(capture.probe.resources[0].jsHeapBytes, 12_345);
-  assert.equal(capture.probe.resources[0].processMemoryBytes, 67_890);
+  assert.equal(nested(capture, 'observerErrorCount'), 0);
+  const resources = nested(capture, 'probe', 'resources');
+  assert.ok(Array.isArray(resources));
+  const firstResource = required(resources[0]);
+  assert.equal(nested(firstResource, 'drawCalls'), 4);
+  assert.equal(nested(firstResource, 'jsHeapBytes'), 12_345);
+  assert.equal(nested(firstResource, 'processMemoryBytes'), 67_890);
   session.destroy();
 
   const failingHarness = platformHarness();
@@ -410,7 +500,7 @@ test('ProductPresentationSession records injected memory evidence without giving
   failingHarness.fireFrame();
   failingHarness.fireFrame();
   assert.equal(failingSession.state, PRODUCT_PRESENTATION_SESSION_STATE.RUNNING);
-  assert.ok(failingSession.getPerformanceSnapshot().observerErrorCount > 0);
+  assert.ok(nestedNumber(failingSession.getPerformanceSnapshot(), 'observerErrorCount') > 0);
   failingSession.destroy();
 });
 
@@ -420,25 +510,25 @@ test('ProductPresentationSession pauses authority across hide/show and WebGL con
   const session = createProductPresentationSession(harness.platform, sessionOptions(renderer));
   await session.start();
   harness.tap(100);
-  await settleUntil(() => session.getLastSnapshot().viewModel.activeState === PRODUCT_SESSION_STATE.IN_MATCH);
+  await settleUntil(() => session.getLastSnapshot()?.viewModel?.activeState === PRODUCT_SESSION_STATE.IN_MATCH);
   harness.fireFrame(1000 / 60);
   harness.fireFrame(2000 / 60);
-  const tickBeforeHide = session.getDebugSnapshot().matchTick;
+  const tickBeforeHide = nestedNumber(session.getDebugSnapshot(), 'matchTick');
   const staleFrame = harness.frames.values().next().value;
   harness.emitLifecycle('hide');
   assert.equal(session.state, PRODUCT_PRESENTATION_SESSION_STATE.PAUSED);
-  assert.equal(session.getLastSnapshot().viewModel.suspended, true);
+  assert.equal(required(required(session.getLastSnapshot()).viewModel).suspended, true);
   assert.equal(harness.frames.size, 0);
-  staleFrame(10_000);
-  assert.equal(session.getDebugSnapshot().matchTick, tickBeforeHide);
+  required(staleFrame)(10_000);
+  assert.equal(nested(session.getDebugSnapshot(), 'matchTick'), tickBeforeHide);
 
   harness.emitLifecycle('show');
   assert.equal(session.state, PRODUCT_PRESENTATION_SESSION_STATE.RUNNING);
-  assert.equal(session.getLastSnapshot().viewModel.suspended, false);
+  assert.equal(required(required(session.getLastSnapshot()).viewModel).suspended, false);
   harness.fireFrame(10_000);
-  assert.equal(session.getDebugSnapshot().matchTick, tickBeforeHide);
+  assert.equal(nested(session.getDebugSnapshot(), 'matchTick'), tickBeforeHide);
   harness.fireFrame(10_020);
-  assert.equal(session.getDebugSnapshot().matchTick, tickBeforeHide + 1);
+  assert.equal(nested(session.getDebugSnapshot(), 'matchTick'), tickBeforeHide + 1);
 
   let prevented = false;
   harness.emitCanvas('webglcontextlost', { preventDefault: () => { prevented = true; } });
@@ -459,19 +549,20 @@ test('ProductPresentationSession checks lease before foreground resume and block
   const session = createProductPresentationSession(harness.platform, sessionOptions(renderer));
   await session.start();
   harness.tap(100);
-  await settleUntil(() => session.getLastSnapshot().viewModel.activeState === PRODUCT_SESSION_STATE.IN_MATCH);
-  const tickBeforeHide = session.getDebugSnapshot().matchTick;
+  await settleUntil(() => session.getLastSnapshot()?.viewModel?.activeState === PRODUCT_SESSION_STATE.IN_MATCH);
+  const tickBeforeHide = nestedNumber(session.getDebugSnapshot(), 'matchTick');
   harness.emitLifecycle('hide');
   harness.advanceWall(60_001);
   harness.emitLifecycle('show');
 
-  const snapshot = session.getLastSnapshot();
+  const snapshot = required(session.getLastSnapshot());
+  const snapshotViewModel = required(snapshot.viewModel);
   assert.equal(session.state, PRODUCT_PRESENTATION_SESSION_STATE.RUNNING);
-  assert.equal(snapshot.viewModel.activeState, PRODUCT_SESSION_STATE.FATAL_ERROR);
-  assert.equal(snapshot.viewModel.terminal, true);
-  assert.equal(snapshot.viewModel.error.code, 'profile-save-failed');
-  assert.equal(session.getDebugSnapshot().matchTick, tickBeforeHide);
-  assert.equal(session.getDebugSnapshot().input.mode, PRODUCT_INPUT_ROUTER_MODE.INACTIVE);
+  assert.equal(snapshotViewModel.activeState, PRODUCT_SESSION_STATE.FATAL_ERROR);
+  assert.equal(snapshotViewModel.terminal, true);
+  assert.equal(required(snapshotViewModel.error).code, 'profile-save-failed');
+  assert.equal(nested(session.getDebugSnapshot(), 'matchTick'), tickBeforeHide);
+  assert.equal(nested(session.getDebugSnapshot(), 'input', 'mode'), PRODUCT_INPUT_ROUTER_MODE.INACTIVE);
   assert.equal(harness.frames.size, 0);
   session.destroy();
 });
@@ -482,18 +573,18 @@ test('ProductPresentationSession serializes a synchronous hide binding with asyn
   const session = createProductPresentationSession(harness.platform, sessionOptions(renderer));
   await session.start();
   assert.equal(session.state, PRODUCT_PRESENTATION_SESSION_STATE.PAUSED);
-  assert.equal(session.getLastSnapshot().viewModel.activeState, PRODUCT_SESSION_STATE.READY);
-  assert.equal(session.getLastSnapshot().viewModel.suspended, true);
+  assert.equal(required(required(session.getLastSnapshot()).viewModel).activeState, PRODUCT_SESSION_STATE.READY);
+  assert.equal(required(required(session.getLastSnapshot()).viewModel).suspended, true);
   assert.equal(harness.frames.size, 0);
 
   harness.emitLifecycle('show');
   assert.equal(session.state, PRODUCT_PRESENTATION_SESSION_STATE.RUNNING);
-  assert.equal(session.getLastSnapshot().viewModel.suspended, false);
+  assert.equal(required(required(session.getLastSnapshot()).viewModel).suspended, false);
   assert.equal(harness.frames.size, 1);
   session.destroy();
 
   const loadingHarness = platformHarness();
-  let resolveLoad;
+  let resolveLoad!: (value?: unknown) => void;
   const loadingRenderer = rendererHarness({
     loadPromise: new Promise((resolve) => { resolveLoad = resolve; }),
   });
@@ -508,15 +599,15 @@ test('ProductPresentationSession serializes a synchronous hide binding with asyn
   resolveLoad();
   await starting;
   assert.equal(loadingSession.state, PRODUCT_PRESENTATION_SESSION_STATE.PAUSED);
-  assert.equal(loadingSession.getLastSnapshot().viewModel.suspended, true);
+  assert.equal(required(required(loadingSession.getLastSnapshot()).viewModel).suspended, true);
   assert.equal(loadingHarness.frames.size, 0);
   loadingSession.destroy();
 });
 
 test('ProductPresentationSession destroys a pending Renderer load and ignores late completion', async () => {
   const harness = platformHarness();
-  let resolveLoad;
-  const loadPromise = new Promise((resolve) => { resolveLoad = resolve; });
+  let resolveLoad!: (value?: unknown) => void;
+  const loadPromise = new Promise<unknown>((resolve) => { resolveLoad = resolve; });
   const renderer = rendererHarness({ loadPromise });
   const session = createProductPresentationSession(harness.platform, sessionOptions(renderer));
   const starting = session.start();
@@ -620,7 +711,7 @@ test('ProductPresentationSession fails closed on invalid host input and clears e
   const renderer = rendererHarness();
   const session = createProductPresentationSession(harness.platform, sessionOptions(renderer));
   await session.start();
-  assert.equal(harness.input.onStart({ pointerId: 1, x: Number.NaN, y: 2 }), false);
+  assert.equal(required(harness.input).onStart({ pointerId: 1, x: Number.NaN, y: 2 }), false);
   assert.equal(session.state, PRODUCT_PRESENTATION_SESSION_STATE.FAILED);
   assert.equal(harness.frames.size, 0);
   assert.equal(harness.activeLifecycleCount(), 0);
@@ -634,9 +725,15 @@ test('ProductPresentationSession rejects invalid UI races but closes on Flow inf
   const harness = platformHarness();
   const renderer = rendererHarness();
   const session = createProductPresentationSession(harness.platform, sessionOptions(renderer));
-  await assert.rejects(session.dispatch({ id: 'boot' }), /尚未完成启动/);
+  await assert.rejects(
+    session.dispatch({ id: 'boot', characterDefinitionId: null }),
+    /尚未完成启动/,
+  );
   await session.start();
-  await assert.rejects(session.dispatch({ id: 'continue-reward' }), /需要 reward/);
+  await assert.rejects(
+    session.dispatch({ id: 'continue-reward', characterDefinitionId: null }),
+    /需要 reward/,
+  );
   assert.equal(session.state, PRODUCT_PRESENTATION_SESSION_STATE.RUNNING);
   session.destroy();
 
@@ -645,18 +742,20 @@ test('ProductPresentationSession rejects invalid UI races but closes on Flow inf
   const failedSession = createProductPresentationSession(
     failedHarness.platform,
     sessionOptions(failedRenderer, {
-      flowFactory: (args) => new ProductPresentationFlow({
-        ...args,
+      flowFactory: (args: unknown) => new ProductPresentationFlow({
+        ...record(args),
         presentationContent: ARENA_V1_PRODUCT_PRESENTATION_CONTENT,
         matchPresentationContent: ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT,
-        frameProjector: projectArenaPresentationFrame,
+        frameProjector: (options: unknown) => projectArenaPresentationFrame(
+          options as ProjectArenaPresentationFrameOptions,
+        ),
         matchRuntimeFactory: () => ({ destroy() {} }),
-      }),
+      } as unknown as ProductPresentationFlowOptions),
     }),
   );
   await failedSession.start();
   await assert.rejects(
-    failedSession.dispatch({ id: 'start-match' }),
+    failedSession.dispatch({ id: 'start-match', characterDefinitionId: null }),
     /matchRuntime 不符合合同/,
   );
   assert.equal(failedSession.state, PRODUCT_PRESENTATION_SESSION_STATE.FAILED);
@@ -679,7 +778,7 @@ test('ProductPresentationSession retries input and Renderer cleanup failures wit
   assert.equal(inputSession.state, PRODUCT_PRESENTATION_SESSION_STATE.DESTROYED);
   assert.equal(inputSession.getDebugSnapshot().cleanupIncomplete, true);
   assert.equal(inputHarness.inputCleanupAttempts, 1);
-  assert.equal(staleInput.onStart({ pointerId: 9, x: 1, y: 1 }), false);
+  assert.equal(required(staleInput).onStart({ pointerId: 9, x: 1, y: 1 }), false);
   inputSession.destroy();
   assert.equal(inputHarness.inputCleanupAttempts, 2);
   assert.equal(inputHarness.input, null);
@@ -723,11 +822,11 @@ test('ProductPresentationSession retains Canvas ownership until a failed listene
 test('ProductPresentationSession fails closed when Renderer swallows a frame reentry error', async () => {
   const harness = platformHarness();
   let hostile = false;
-  let session = null;
+  let session: ReturnType<typeof createProductPresentationSession> | null = null;
   const renderer = rendererHarness({
     onRender() {
       if (!hostile) return;
-      try { session.getDebugSnapshot(); } catch { /* hostile Renderer swallows reentry */ }
+      try { required(session).getDebugSnapshot(); } catch { /* hostile Renderer swallows reentry */ }
     },
   });
   session = createProductPresentationSession(harness.platform, sessionOptions(renderer));
