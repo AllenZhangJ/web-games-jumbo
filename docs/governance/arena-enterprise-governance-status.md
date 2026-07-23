@@ -4,7 +4,7 @@
 - 当前分支：`feature/arena-enterprise-governance`
 - Arena 产品基线：`51e28220295c080261d30e33aaac7e43c5f91685`
 - 目标：达到与最新 `origin/main` 的合并前审计条件；不执行合并
-- 总体状态：G7、G9 已完成，G8 只剩联网漏洞审计授权；G10 已执行且结论为不可直接合并，不可宣称正式发布
+- 总体状态：G7、G9 已完成，G8 只剩显式联网漏洞审计授权；G10 的本地候选审计已执行，远端 CI/保护、目标手机与冲突处置未闭环，结论为不可直接合并
 
 > 口径：下方 G0–G7.29 是按提交追加的历史证据，其中“当前”只指该批次当时。文档顶部批次表、“当前不可合并原因”和文末最新批次才是现行结论。
 
@@ -36,10 +36,10 @@
 | G4 Bot/Product/Persistence | 已完成 | strict TS Bot、Matchmaking、Quick Match、Local Match Session、Product State、Progression、ProductMatchResult、奖励事务、Profile Service/Repository、Storage Lease、Product Match、Product Session Controller、对称内容池、Arena V1 产品内容与通用 Product Composition 已闭环；Arena V1 应用组合根已在 G6.36 归入独立 strict 包 |
 | G5 Presentation/资产/反馈 | 已完成 | strict `arena-presentation-contracts`、`arena-presentation-runtime`、`arena-v1-presentation-content`、`arena-product-presentation`、`arena-presentation-three` 与 `arena-product-presentation-three` 已承接通用合同、输入/反馈/生命周期、具体 V1 表现、Product 表现所有权和 Three Surface；设备/性能证据合同已归入独立 strict 包；共享对局资源取得/回滚原语完成 strict 迁移。生产 Product Session 组合已在 G6.37 归包；旧 Greybox ArenaPresentationSession 是 G6 应用根，Pilot 是 G7 测试/研究链，不再伪装为 G5 通用表现缺口 |
 | G6 Platform/入口/构建 | 已完成 | 三端默认入口是 Product；运行实例 ID、启动协调、失败兜底、Web teardown、三端平台适配、Arena V1 应用组合根、生产 Session、顶层 Launch、Web Product UI、三端实际 Product Entry，以及隔离 Greybox/Study/Pilot 入口、应用根、研究环境、clean build 身份、JSON 下载、Product Runtime、Workbench View 和两个研究 Web App 均已 strict 化。生产交付继续由产物门禁排除开发/研究入口；两个研究页面已在 390×844 浏览器视口完成加载与交互复验，真机证据边界见 G6.49 |
-| G7 零 JS/完整质量门 | 已完成 | 生产源码、测试和治理脚本全部 strict TypeScript，受维护 JavaScript 为 0，许可清单已删除；当前 61 个 Vitest 文件、383 项测试通过，分层 coverage 与零 JS 负向门禁已接入 `check:governance` |
+| G7 零 JS/完整质量门 | 已完成 | 生产源码、测试和治理脚本全部 strict TypeScript，受维护 JavaScript 为 0，许可清单已删除；当前 61 个 Vitest 文件、385 项测试通过，分层 coverage 与零 JS 负向门禁已接入 `check:governance` |
 | G8 资产/安全/所有权 | 进行中（外部授权） | Allen 已批准 3 个来源、10 个运行时资产和 3 个 GLTF Definition；Bundle `e03ff2b4`、精确依赖、lock integrity、完整 Action SHA、CODEOWNERS、Dependabot、secret/遥测和本地诊断策略门禁已通过。只剩 `npm audit --omit=dev --audit-level=high` 因会向 npm 披露依赖元数据，尚待 Allen 明确授权 |
-| G9 文档归真 | 已完成 | 109 个 Markdown、215 个本地链接、49 个去重 npm 命令与关键现行状态通过自动复验；历史批次与当前结论已分层，仓库运营策略已落盘 |
-| G10 最新 main 审计 | 已执行（不可直接合并） | 最新 `main` 为 `4c340f1`，相对共同祖先有 12 个旧产品治理提交；虚拟合并发现 23 个产品/治理冲突。能力已由 Arena 超集承接，但 npm 联网审计、目标手机验收和独立冲突处置授权未关闭 |
+| G9 文档归真 | 已完成 | 110 个 Markdown、218 个本地链接、49 个去重 npm 命令与关键现行状态通过自动复验；历史批次与当前结论已分层，仓库运营策略已落盘 |
+| G10 最新 main 审计 | 已执行（不可直接合并） | 最新 `main` 为 `4c340f1`，相对共同祖先有 12 个旧产品治理提交；虚拟合并发现 23 个产品/治理冲突。能力已由 Arena 超集承接，但 npm 显式联网审计、精确候选远端 CI 绿灯、`main` 保护复验、目标手机验收和独立冲突处置授权未关闭 |
 
 ## G0 已取得证据
 
@@ -58,8 +58,9 @@
 ## 当前不可合并原因
 
 1. 联网生产依赖漏洞审计尚未获得对“向 npm 披露依赖元数据”的明确授权；不以旧安装提示推导当前结果。
-2. 最新 `main` 与治理分支有 23 个产品/治理冲突；本批禁止实际合并，必须另行批准一次显式保留 Arena、拒绝旧产品回流的集成批次。
-3. 桌面 Chrome 390×844 预检已通过，但 Allen 的 iPhone 13 Pro、iOS 26、Google Chrome 真机验收尚未完成；微信/抖音 iOS 与 Android 真机材料继续属于发布阻断，不与代码合并判断混淆。
+2. 修复候选尚未推送，没有精确 commit 的 GitHub Actions 绿灯；`main` 的 classic protection 也因 owner 凭证失效尚未复验。
+3. 最新 `main` 与治理分支有 23 个产品/治理冲突；本批禁止实际合并，必须另行批准一次显式保留 Arena、拒绝旧产品回流的集成批次。
+4. 桌面 Chrome 390×844 预检已通过，但 Allen 的 iPhone 13 Pro、iOS 26、Google Chrome 真机验收尚未完成；微信/抖音 iOS 与 Android 真机材料继续属于发布阻断，不与代码合并判断混淆。
 
 以上是迁移入口，不是已接受的永久例外。
 
@@ -1468,7 +1469,7 @@
 ## G8.1 资产批准、供应链与仓库安全证据
 
 - `governance/repository-policy.json` 以 Allen / `@AllenZhangJ` 作为唯一 owner，固定精确依赖、完整 GitHub Action commit SHA、禁用运行时网络遥测、原始日志不入库和本地 7 天保留策略。`CODEOWNERS` 保持全局及关键路径 owner，Dependabot 按月为 npm 和 GitHub Actions 开启受审查更新。
-- 根及 52 个子 workspace 共 53 份 package manifest、277 个依赖声明均为精确 semver；package-lock V3 中 366 个外部包均来自 npm 官方 HTTPS registry 并带 SHA-512 integrity。CI 的 checkout/setup-node 均固定到已核对的完整 v4.4.0 SHA，安装使用 `npm ci --ignore-scripts`。
+- 根及 52 个子 workspace 共 53 份 package manifest、277 个依赖声明均为精确 semver；package-lock V3 中 366 个外部包均来自 npm 官方 HTTPS registry 并带 SHA-512 integrity。CI 的 checkout/setup-node 均固定到已核对的完整 v4.4.0 SHA；项目 `.npmrc` 与 CI `npm ci --ignore-scripts --no-audit` 禁止安装阶段隐式审计，只允许统一门禁中的唯一显式审计步骤联网。
 - Allen 于 2026-07-23 批准 KayKit Adventurers、KayKit Skeletons 和 Kenney Impact Sounds 三个来源。第三方基线精确覆盖 Formal Asset Budget 的 10 个运行时产物；真实 Intake Bundle 精确覆盖 3 个正式 GLTF Definition，与当前 Registry 和字节复验后 hash 为 `e03ff2b4`。资产批准只关闭来源/授权/字节风险，不替代真机体验和性能证据。
 - 高置信度 secret、密钥/环境文件、运行时遥测 API/SDK 和本地日志策略已进入自动门禁；新增负向测试证明非精确依赖、`.env` 和非 owner 批准会失败。统一治理门在提交 `882e6da` 上通过。
 - 唯一未闭环项是联网 `npm audit --omit=dev --audit-level=high`：该命令会向 npm 服务披露项目依赖元数据，当前未获得 Allen 对该外发的明确授权，因此未执行，也不使用旧的 3-high 安装提示伪造当前结论。
@@ -1494,4 +1495,12 @@
 - `check:governance` 现显式以 `build:packages` 开始，供应链门禁会阻止该顺序回退。新的 workspace 构建器从 52 个子包 manifest 推导内部依赖图，拒绝缺包、重名与环，并按 11 个拓扑波次构建；不再依赖根 `package.json` 中手工排列的超长路径列表。
 - 干净克隆随后暴露架构测试依赖本机未跟踪空目录：已迁移的旧 `src/arena/**` 路径在 Git 克隆中正确不存在，扫描器却将 `ENOENT` 当作测试失败。现在只有明确标记的迁移兼容路径把 `ENOENT` 视为空集，活跃包和正式资产路径仍必须存在，其他 I/O 错误继续失败关闭。
 - 修复候选 `3b81f238efecbed9fe69917abd9f3876c9dfde35` 已在第二个无历史产物克隆中完成 `npm ci --ignore-scripts`。`check:governance` 为 61 文件/385 项，`test:node` 为 88 文件/704 项；黄金 Replay `0dace228`、120 场 fuzz/6 次复验、104 项生命周期、Presentation/Product 各 100 场 soak、正式资产和三端 clean build/预算/生产产物边界全部通过。build ID 为 `arena-3b81f238efec-product`，Web/微信/抖音 Manifest 为 `05091eb7 / d5172814 / 423e9fc6`，delivery 为 `3807531 / 3835130 / 3835105 B`，三端 `sourceDirty=false`。
-- 本批未执行未授权的 `npm audit`，也尚未推送修复候选；因此 GitHub Actions 真实绿灯、联网生产依赖审计、目标 iPhone 验收和与 main 的独立冲突处置仍是合并阻断，当前仍不可合并。
+- 本批没有主动执行 `npm audit` 子命令，但后续复核发现当时项目没有 `.npmrc` 且 npm 的 `audit=true`，因此两次隔离 `npm ci --ignore-scripts` 存在隐式提交依赖元数据的可能。该运行没有产生可用的审计报告，无法事后证明是否实际请求审计端点，也不以此推导漏洞结论。该过程缺口已转入 G10.3 失败关闭。
+
+## G10.3 安装阶段隐式审计外发边界修复
+
+- 项目新增 `.npmrc` 固定 `audit=false`，README 和 CI 统一使用 `npm ci --ignore-scripts --no-audit`。`npm audit` 子命令在 npm 10.8.2 实现中会显式将 Arborist `audit` 覆盖为 `true`，因此受授权的独立审计仍可执行；改动只取消安装副作用。
+- 供应链门禁现同时要求 `.npmrc`、CI 干净安装精确命令、统一 `npm run check`、精确 `audit:dependencies` 命令，以及完整门禁只调用一次显式审计。任一项回退都会失败关闭，不会出现“安装隐式审计 + 门禁显式审计”的重复外发。
+- 精确代码候选 `9e1460b77366a88c3b286fdf5c212027591d7d84` 在新的隔离克隆中确认 `npm config get audit=false`，并以 `npm ci --ignore-scripts --no-audit` 安装。`check:governance` 61 文件/385 项、`test:node` 88 文件/704 项、黄金 Replay `0dace228`、120 场 fuzz/6 次复验、104 项生命周期、Presentation/Product 各 100 场 soak、正式资产和三端 clean build/预算/生产产物边界全部通过。
+- clean build ID 为 `arena-9e1460b77366-product`，Web/微信/抖音 Manifest 为 `b2ca5c78 / 712f4a29 / de9f06a7`，delivery 为 `3807531 / 3835130 / 3835105 B`，三端 `sourceDirty=false`。本批没有改变 Gameplay V2、权威 tick、动作、武器、角色、地图、Bot、Replay/Profile schema 或生产字节。
+- 显式联网审计仍未获授权，修复候选也尚未推送；因此不宣称漏洞闭环或 GitHub Actions 绿灯，当前仍不可合并。

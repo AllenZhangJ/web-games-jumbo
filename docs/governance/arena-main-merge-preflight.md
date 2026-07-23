@@ -2,7 +2,7 @@
 
 ## 结论
 
-当前结论是 **不可直接合并**。这不表示 Arena 治理路线失败，而是说明最新 `main` 与审计候选已经形成两个互斥产品方向：`main` 的 12 个新增提交继续治理已退役的数值跳台，当前治理分支的 439 个新增提交把 Arena 建成唯一生产产品并记录本审计。普通自动合并会在入口、构建、配置、测试和治理真值上重新引入旧实现。
+当前结论是 **不可直接合并**。这不表示 Arena 治理路线失败，而是说明最新 `main` 与审计候选已经形成两个互斥产品方向：`main` 的 12 个新增提交继续治理已退役的数值跳台，当前治理分支的 441 个新增提交把 Arena 建成唯一生产产品并记录本审计。普通自动合并会在入口、构建、配置、测试和治理真值上重新引入旧实现。
 
 本审计没有执行 merge、rebase、修改 `main` 或 force push。后续只有在所有阻断关闭后，才能单独批准一次“保留 Arena 产品树、显式处置 23 个冲突”的集成提交；不能用无审计的整树 `ours`、`theirs` 或逐文件猜测解决。
 
@@ -13,12 +13,12 @@
 | 审计日期 | 2026-07-23 |
 | 最新远端 main | `4c340f1c5bc00dcae712c2261462661d842339da` |
 | 共同祖先 | `d53e7349ff718b3fa0638af197e8f7c43d190b38` |
-| 治理代码候选 | `3b81f238efecbed9fe69917abd9f3876c9dfde35` |
+| 治理代码候选 | `9e1460b77366a88c3b286fdf5c212027591d7d84` |
 | main 独有非 merge 提交 | 12 |
-| 治理分支独有提交（含本审计文档提交） | 439 |
+| 治理分支独有提交（含本审计文档提交） | 441 |
 | 文本虚拟合并冲突 | 23 个文件 |
 
-候选 `3b81f23` 只修复 clean checkout 下 workspace 构建顺序和已迁移空目录测试语义；Arena 生产字节相对前一候选未变化。其 clean build ID 为 `arena-3b81f238efec-product`，Web/微信/抖音 Manifest hash 分别为 `05091eb7`、`d5172814`、`423e9fc6`。
+候选 `9e1460b` 包含 clean checkout workspace 构建/空目录测试修复，并将 npm 联网审计收敛为唯一显式步骤；Arena 生产字节相对前一候选未变化。其 clean build ID 为 `arena-9e1460b77366-product`，Web/微信/抖音 Manifest hash 分别为 `b2ca5c78`、`712f4a29`、`de9f06a7`。
 
 ## main 新增能力承接
 
@@ -69,7 +69,7 @@ vitest.config.ts
 
 ## 候选验证
 
-- 在第二个无历史 `dist`/`.tsbuildinfo` 的隔离克隆中，`npm ci --ignore-scripts` 后的 `check:governance` 全量通过：52 个 workspace 包按 11 个依赖波次构建，61 个 Vitest 文件、385 项测试通过；语句/行 `59.99%`、分支 `64.18%`、函数 `64.29%`。
+- 在新的无历史 `dist`/`.tsbuildinfo` 隔离克隆中，项目 `audit=false`，`npm ci --ignore-scripts --no-audit` 后的 `check:governance` 全量通过：52 个 workspace 包按 11 个依赖波次构建，61 个 Vitest 文件、385 项测试通过；语句/行 `59.98%`、分支 `64.18%`、函数 `64.28%`。
 - 全量 Node TypeScript 测试：88 个文件、704/704 通过。审计先后修复了旧入口空跑 0 项、干净安装时内部包 `dist` 缺失，以及 Git 不保存已迁移空目录导致的 12 项架构假失败；门禁现拒绝空测试集、依赖图环和构建顺序回退。
 - 黄金 Replay：manifest `0dace228`，4 个场景通过。
 - 输入 fuzz：120 场、120 个唯一 final hash、6 次 Replay 复验。
@@ -77,11 +77,12 @@ vitest.config.ts
 - 正式资产：Bundle `e03ff2b4`；预算 `82a8b378`；3 个来源、10 个运行时产物和 3 个正式 GLTF Definition 已由 Allen 批准。
 - 三端 clean build：默认入口均为 Product，`sourceDirty=false`，产物边界和预算通过；Web/微信/抖音 delivery 为 `3807531 / 3835130 / 3835105 B`。
 - Chrome 390×844 移动视口：首页、开始匹配、攻击和跳跃均可操作；攻击帧出现武器动作/命中特效，跳起后切换为空中攻击；无横向溢出、alert、warning 或 error。本记录是桌面 Chrome 移动视口，不冒充 iPhone 13 Pro/iOS 26/Chrome 真机结果。
+- 较早的两个隔离克隆曾使用未带 `--no-audit` 的 `npm ci --ignore-scripts`，而当时 npm 配置为 `audit=true`。没有留下可证明审计端点实际请求的报告，但也不能证明未发生隐式元数据提交。当前候选已以 `.npmrc` + CI 精确命令 + 供应链门禁失败关闭；未以该历史运行代替显式漏洞审计。
 
 ## GitHub 服务端状态
 
 - 当前分支没有 Pull Request，仓库 rulesets API 返回空集；classic `main` branch protection 由于本机 `gh` 凭证失效而无法认证复验，不得假定已开启。
-- 截至审计时，最新已推送候选 `3fd4be5` 的 GitHub Actions 运行 [30002587702](https://github.com/AllenZhangJ/web-games-jumbo/actions/runs/30002587702) 失败。本地已在隔离克隆中复现并修复 clean-install 根因，但修复候选 `3b81f23` 尚未推送，因此不得将本地通过写成远端 CI 通过。
+- 截至审计时，最新已推送候选 `3fd4be5` 的 GitHub Actions 运行 [30002587702](https://github.com/AllenZhangJ/web-games-jumbo/actions/runs/30002587702) 失败。本地已在隔离克隆中复现并修复 clean-install 根因，但修复候选 `9e1460b` 尚未推送，因此不得将本地通过写成远端 CI 通过。
 
 ## 当前阻断与关闭条件
 
