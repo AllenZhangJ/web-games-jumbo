@@ -6,9 +6,9 @@ import {
 } from '@number-strategy-jump/arena-presentation-runtime';
 
 const viewport = Object.freeze({ width: 400, height: 800 });
-const point = (pointerId, x, y) => ({ pointerId, x, y });
+const point = (pointerId: number, x: number, y: number) => ({ pointerId, x, y });
 
-function sample(recognizer, raw, tick) {
+function sample(recognizer: GestureRecognizer, raw: RawControlState, tick: number) {
   return recognizer.sample(tick, raw.consumeSnapshot());
 }
 

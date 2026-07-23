@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createArenaV1MatchCore } from '@number-strategy-jump/arena-v1-composition';
-import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
+import {
+  createNeutralInputFrame,
+  type ArenaInputFrame,
+} from '@number-strategy-jump/arena-contracts';
 import {
   createGestureInputMapperA,
   InputSampler,
@@ -9,9 +12,12 @@ import {
 import { FixedStepMatchRuntime } from '@number-strategy-jump/arena-match';
 
 const VIEWPORT = Object.freeze({ width: 400, height: 800 });
-const point = (pointerId, x, y) => ({ pointerId, x, y });
+interface PointerPoint { readonly pointerId: number; readonly x: number; readonly y: number }
+type InputEventKind = 'start' | 'move' | 'end' | 'cancel';
+type InputEvent = readonly [InputEventKind, PointerPoint];
+const point = (pointerId: number, x: number, y: number): PointerPoint => ({ pointerId, x, y });
 
-const INPUT_EVENTS = new Map([
+const INPUT_EVENTS: ReadonlyMap<number, readonly InputEvent[]> = new Map([
   [0, [['start', point(1, 100, 600)]]],
   [1, [['move', point(1, 150, 600)]]],
   [10, [['start', point(2, 320, 600)]]],
@@ -31,7 +37,7 @@ const INPUT_EVENTS = new Map([
   [130, [['cancel', point(6, 40, 600)]]],
 ]);
 
-function applyInputEvents(sampler, tick) {
+function applyInputEvents(sampler: InputSampler, tick: number): void {
   for (const [kind, inputPoint] of INPUT_EVENTS.get(tick) ?? []) {
     if (kind === 'start') sampler.pointerStart(inputPoint);
     else if (kind === 'move') sampler.pointerMove(inputPoint);
@@ -40,7 +46,7 @@ function applyInputEvents(sampler, tick) {
   }
 }
 
-function runAtOuterRate(hz) {
+function runAtOuterRate(hz: number) {
   const core = createArenaV1MatchCore({
     seed: 64_007,
     config: {
@@ -56,11 +62,12 @@ function runAtOuterRate(hz) {
     mapper: createGestureInputMapperA(),
     gesture: { holdActivationTicks: 3 },
   });
-  const frames = [];
+  const frames: ArenaInputFrame[] = [];
   const runtime = new FixedStepMatchRuntime(core, {
     inputProvider(snapshot) {
       applyInputEvents(sampler, snapshot.tick);
       const player = snapshot.participants.find(({ id }) => id === 'player-1');
+      assert.ok(player);
       const input = sampler.sample(snapshot.tick, {
         actionAffordance: player.actionAffordance,
       });

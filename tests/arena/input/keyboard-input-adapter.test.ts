@@ -5,20 +5,31 @@ import {
   KeyboardInputAdapter,
 } from '@number-strategy-jump/arena-presentation-runtime';
 
-function eventTargetHarness({ failAt = null } = {}) {
-  const listeners = new Map();
+type KeyboardListener = (event?: Readonly<Record<string, unknown>>) => void;
+
+function eventTargetHarness({ failAt = null }: Readonly<{ failAt?: string | null }> = {}) {
+  const listeners = new Map<string, KeyboardListener>();
   return {
     listeners,
     target: {
-      addEventListener(type, callback) {
+      addEventListener(type: string, callback: KeyboardListener): void {
         if (type === failAt) throw new Error(`${type} failed`);
         listeners.set(type, callback);
       },
-      removeEventListener(type, callback) {
+      removeEventListener(type: string, callback: KeyboardListener): void {
         if (listeners.get(type) === callback) listeners.delete(type);
       },
     },
   };
+}
+
+function requireListener(
+  listeners: ReadonlyMap<string, KeyboardListener>,
+  type: string,
+): KeyboardListener {
+  const listener = listeners.get(type);
+  assert.ok(listener);
+  return listener;
 }
 
 test('KeyboardInputAdapter emits normalized V4 edges once and keeps held controls', () => {
@@ -58,20 +69,20 @@ test('KeyboardInputAdapter blur/focus clears keys, requires new keydown and roll
   assert.equal(keyboard.bind(harness.target), true);
   assert.equal(keyboard.bind(harness.target), false);
   let prevented = 0;
-  harness.listeners.get('keydown')({
+  requireListener(harness.listeners, 'keydown')({
     code: DEFAULT_ARENA_KEY_BINDINGS.primary,
     repeat: false,
     preventDefault: () => { prevented += 1; },
   });
-  harness.listeners.get('blur')();
+  requireListener(harness.listeners, 'blur')();
   assert.throws(() => keyboard.sample(10), /暂停/);
-  harness.listeners.get('keyup')({ code: DEFAULT_ARENA_KEY_BINDINGS.primary });
-  harness.listeners.get('focus')();
+  requireListener(harness.listeners, 'keyup')({ code: DEFAULT_ARENA_KEY_BINDINGS.primary });
+  requireListener(harness.listeners, 'focus')();
   assert.equal(keyboard.sample(10).primaryHeld, false);
   assert.equal(prevented, 1);
-  assert.doesNotThrow(() => harness.listeners.get('keydown')({}));
-  const staleKeydown = harness.listeners.get('keydown');
-  const staleFocus = harness.listeners.get('focus');
+  assert.doesNotThrow(() => requireListener(harness.listeners, 'keydown')({}));
+  const staleKeydown = requireListener(harness.listeners, 'keydown');
+  const staleFocus = requireListener(harness.listeners, 'focus');
   assert.equal(keyboard.unbind(), true);
   assert.equal(keyboard.unbind(), false);
   assert.equal(harness.listeners.size, 0);
