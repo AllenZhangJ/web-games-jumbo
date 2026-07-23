@@ -18,19 +18,48 @@ import { InputPilotObservedSession } from '@number-strategy-jump/arena-input-pil
 import { INPUT_PILOT_ACTION_OUTCOME } from '@number-strategy-jump/arena-input-pilot';
 
 const MATCH_SEED = assignment(createArenaInputPilotV1Definition()).matchSeed;
+type PilotDefinition = ReturnType<typeof createArenaInputPilotV1Definition>;
 
-function assignment(definition, enrollmentIndex = 0, participantId = `pilot-${enrollmentIndex}`) {
+function required<T>(value: T, name: string): NonNullable<T> {
+  assert.ok(value != null, `${name} 不存在。`);
+  return value as NonNullable<T>;
+}
+
+function record(value: unknown, name: string): Record<string, unknown> {
+  assert.ok(value !== null && typeof value === 'object' && !Array.isArray(value), `${name} 必须是对象。`);
+  return value as Record<string, unknown>;
+}
+
+function assignment(
+  definition: PilotDefinition,
+  enrollmentIndex = 0,
+  participantId = `pilot-${enrollmentIndex}`,
+) {
   return createInputPilotAssignment({ definition, enrollmentIndex, participantId });
 }
 
-function outcome(actionDefinitionId = null) {
+function outcome(actionDefinitionId: string | null = null) {
   return Object.freeze({
     kind: actionDefinitionId === null ? 'none' : 'selected',
     actionDefinitionId,
   });
 }
 
-function participant({ x = 0, z = 0, grounded = true, primary = null, primaryHold = null } = {}) {
+interface ParticipantOptions {
+  readonly x?: number;
+  readonly z?: number;
+  readonly grounded?: boolean;
+  readonly primary?: string | null;
+  readonly primaryHold?: string | null;
+}
+
+function participant({
+  x = 0,
+  z = 0,
+  grounded = true,
+  primary = null,
+  primaryHold = null,
+}: ParticipantOptions = {}) {
   return Object.freeze({
     id: 'player-1',
     grounded,
@@ -44,7 +73,15 @@ function participant({ x = 0, z = 0, grounded = true, primary = null, primaryHol
   });
 }
 
-function snapshot({ tick, activeTick, phase, local = participant(), matchSeed = MATCH_SEED }) {
+interface SnapshotOptions {
+  readonly tick: number;
+  readonly activeTick: number;
+  readonly phase: string;
+  readonly local?: ReturnType<typeof participant>;
+  readonly matchSeed?: number;
+}
+
+function snapshot({ tick, activeTick, phase, local = participant(), matchSeed = MATCH_SEED }: SnapshotOptions) {
   return Object.freeze({
     tick,
     activeTick,
@@ -54,14 +91,20 @@ function snapshot({ tick, activeTick, phase, local = participant(), matchSeed = 
   });
 }
 
-function input(tick, overrides = {}) {
+function input(tick: number, overrides: Readonly<Record<string, unknown>> = {}) {
   return Object.freeze({
     ...createNeutralInputFrame(tick, 'player-1'),
     ...overrides,
   });
 }
 
-function observedStep(collector, beforeSnapshot, playerInput, afterSnapshot, events = []) {
+function observedStep(
+  collector: InputPilotMetricCollector,
+  beforeSnapshot: ReturnType<typeof snapshot>,
+  playerInput: ReturnType<typeof input>,
+  afterSnapshot: ReturnType<typeof snapshot>,
+  events: readonly unknown[] = [],
+) {
   return collector.observeStep({
     beforeSnapshot,
     input: playerInput,
@@ -73,21 +116,30 @@ function observedStep(collector, beforeSnapshot, playerInput, afterSnapshot, eve
   });
 }
 
-function captureThrown(callback) {
+interface CapturedFailure extends Error {
+  readonly originalError?: unknown;
+  readonly cleanupErrors?: readonly unknown[];
+}
+
+function captureThrown(callback: () => unknown): CapturedFailure {
   try {
     callback();
   } catch (error) {
-    return error;
+    assert.ok(error instanceof Error);
+    return error as CapturedFailure;
   }
   throw new assert.AssertionError({ message: '预期 callback 抛出异常。' });
 }
 
 test('enrollment ledger persists before commit and restores deterministic assignments', () => {
   const definition = createArenaInputPilotV1Definition();
-  const persisted = [];
+  const persisted: Array<{
+    readonly next: Readonly<{ revision: number }>;
+    readonly expectedRevision: number;
+  }> = [];
   const ledger = new InputPilotEnrollmentLedger({
     definition,
-    persist(next, expectedRevision) {
+    persist(next: Readonly<{ revision: number }>, expectedRevision: number) {
       persisted.push({ next, expectedRevision });
       return true;
     },
@@ -97,8 +149,8 @@ test('enrollment ledger persists before commit and restores deterministic assign
 
   const first = ledger.enroll({ participantId: 'pilot-one', enrollmentIndex: 0 });
   assert.equal(persisted.length, 1);
-  assert.equal(persisted[0].expectedRevision, 0);
-  assert.equal(persisted[0].next.revision, 1);
+  assert.equal(required(persisted[0], '首次持久化').expectedRevision, 0);
+  assert.equal(required(persisted[0], '首次持久化').next.revision, 1);
   assert.equal(ledger.getSnapshot().assignments[0], first);
   assert.equal(
     ledger.enroll({ participantId: 'pilot-one', enrollmentIndex: 0 }),
@@ -124,8 +176,14 @@ test('enrollment ledger persists before commit and restores deterministic assign
     persist: () => true,
   });
   assert.deepEqual(restored.getSnapshot(), ledger.getSnapshot());
-  assert.equal(restored.findByParticipantId('pilot-two').assignmentId, second.assignmentId);
-  assert.throws(() => { restored.getSnapshot().revision = 99; }, /read only|Cannot assign/i);
+  assert.equal(required(
+    restored.findByParticipantId('pilot-two'),
+    'pilot-two 分配',
+  ).assignmentId, second.assignmentId);
+  assert.throws(
+    () => Object.assign(restored.getSnapshot(), { revision: 99 }),
+    /read only|Cannot assign/i,
+  );
   restored.destroy();
   ledger.destroy();
 });
@@ -153,18 +211,22 @@ test('enrollment ledger rolls back persistence failure and blocks reentrant or a
   );
   assert.equal(asyncWriter.getSnapshot().revision, 0);
 
-  let reentrant;
-  reentrant = new InputPilotEnrollmentLedger({
+  const reentrantOwner: { value?: InputPilotEnrollmentLedger } = {};
+  const reentrant = new InputPilotEnrollmentLedger({
     definition,
     persist() {
       assert.throws(
-        () => reentrant.enroll({ participantId: 'pilot-inner', enrollmentIndex: 1 }),
+        () => required(reentrantOwner.value, '重入账本').enroll({
+          participantId: 'pilot-inner',
+          enrollmentIndex: 1,
+        }),
         /写入不可重入/,
       );
-      assert.throws(() => reentrant.destroy(), /写入期间不能销毁/);
+      assert.throws(() => required(reentrantOwner.value, '重入账本').destroy(), /写入期间不能销毁/);
       return true;
     },
   });
+  reentrantOwner.value = reentrant;
   reentrant.enroll({ participantId: 'pilot-outer', enrollmentIndex: 0 });
   assert.equal(reentrant.getSnapshot().revision, 1);
 
@@ -477,7 +539,8 @@ test('observed match service receives the normalized InputFrame consumed by a re
   });
   match.session.start();
   for (let index = 0; index < 12; index += 1) {
-    const current = match.session.getSnapshot();
+    const current = record(match.session.getSnapshot(), '真实本地对局快照');
+    if (typeof current.tick !== 'number') throw new TypeError('真实本地对局 tick 必须是数字。');
     match.session.step(input(current.tick, {
       moveX: 1,
       jumpPressed: index === 0,
@@ -493,6 +556,11 @@ test('observed match service receives the normalized InputFrame consumed by a re
 });
 
 class FakeSession {
+  state: string;
+  current: ReturnType<typeof snapshot>;
+  paused: boolean;
+  destroyCount: number;
+
   constructor() {
     this.state = 'created';
     this.current = snapshot({ tick: 0, activeTick: 0, phase: ARENA_MATCH_PHASE.RUNNING });
@@ -502,9 +570,9 @@ class FakeSession {
 
   start() { this.state = this.paused ? 'paused' : 'running'; }
 
-  setPaused(paused) { this.paused = paused; this.state = paused ? 'paused' : 'running'; }
+  setPaused(paused: boolean) { this.paused = paused; this.state = paused ? 'paused' : 'running'; }
 
-  step(value) {
+  step(value: unknown) {
     if (this.paused) return { events: [], snapshot: this.current, input: null };
     const next = snapshot({
       tick: this.current.tick + 1,
@@ -526,32 +594,43 @@ class FakeSession {
 
 test('observed session records only committed inputs and preserves paused no-op steps', () => {
   const delegate = new FakeSession();
-  const observations = [];
+  const observations: Record<string, unknown>[] = [];
   const session = new InputPilotObservedSession({
     session: delegate,
-    collector: { observeStep: (value) => observations.push(value) },
+    collector: {
+      observeStep: (value: unknown) => { observations.push(record(value, '观察步骤')); },
+    },
   });
   session.start();
   const firstInput = input(0, { moveX: 1 });
   const result = session.step(firstInput);
   assert.equal(observations.length, 1);
-  assert.equal(observations[0].input, result.input);
-  assert.equal(observations[0].beforeSnapshot.tick, 0);
-  assert.equal(observations[0].result.snapshot.tick, 1);
-  assert.ok(Object.isFrozen(observations[0].beforeSnapshot));
-  assert.ok(Object.isFrozen(observations[0].beforeSnapshot.participants[0].position));
-  assert.ok(Object.isFrozen(observations[0].result));
-  assert.ok(Object.isFrozen(observations[0].result.events));
+  const observation = required(observations[0], '首个观察步骤');
+  const beforeSnapshot = record(observation.beforeSnapshot, '观察前快照');
+  const observedResult = record(observation.result, '观察结果');
+  const resultSnapshot = record(observedResult.snapshot, '观察结果快照');
+  assert.equal(observation.input, record(result, '提交结果').input);
+  assert.equal(beforeSnapshot.tick, 0);
+  assert.equal(resultSnapshot.tick, 1);
+  assert.ok(Object.isFrozen(beforeSnapshot));
+  assert.ok(Array.isArray(beforeSnapshot.participants));
+  const observedParticipant = record(
+    required(beforeSnapshot.participants[0], '观察前参与者'),
+    '观察前参与者',
+  );
+  assert.ok(Object.isFrozen(record(observedParticipant.position, '观察前参与者位置')));
+  assert.ok(Object.isFrozen(observedResult));
+  assert.ok(Object.isFrozen(observedResult.events));
   assert.ok(Object.isFrozen(session.getSnapshot()));
-  const publicMatchInfo = session.getPublicMatchInfo();
+  const publicMatchInfo = record(session.getPublicMatchInfo(), '公开对局信息');
   assert.ok(Object.isFrozen(publicMatchInfo));
   assert.ok(Object.isFrozen(publicMatchInfo.opponent));
   assert.throws(() => {
-    observations[0].result.snapshot.tick = 99;
+    Object.assign(resultSnapshot, { tick: 99 });
   }, /read only|Cannot assign/i);
 
   session.setPaused(true);
-  const paused = session.step(input(1));
+  const paused = record(session.step(input(1)), '暂停步骤结果');
   assert.equal(paused.input, null);
   assert.ok(Object.isFrozen(paused));
   assert.equal(observations.length, 1);
@@ -668,6 +747,7 @@ test('observed match service combines invalid-session and rollback cleanup failu
 
   const failure = captureThrown(() => service.create({}));
   assert.match(failure.message, /清理未完整完成/);
+  assert.ok(failure.originalError instanceof Error);
   assert.match(failure.originalError.message, /缺少 start/);
   assert.deepEqual(failure.cleanupErrors, [cleanupFailure]);
   assert.deepEqual(service.getDebugSnapshot(), {

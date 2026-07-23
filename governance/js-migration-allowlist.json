@@ -9,7 +9,6 @@
     "tests/arena/presentation/arena-device-acceptance.test.js",
     "tests/arena/presentation/greybox-renderer.test.js",
     "tests/arena/presentation/input-pilot-persistence.test.js",
-    "tests/arena/presentation/input-pilot-runtime.test.js",
     "tests/arena/presentation/product-presentation.test.js",
     "tests/arena/release-readiness.test.js",
     "tests/platform-webgl.test.js"
