@@ -4,11 +4,12 @@ import { createArenaV1MatchCore } from '@number-strategy-jump/arena-v1-compositi
 import { STAGE4_ACTION_ID } from '@number-strategy-jump/arena-v1-content';
 import { STAGE6_MOVEMENT_ACTION_ID } from '@number-strategy-jump/arena-v1-content';
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
-import { ARENA_MATCH_EVENT } from '@number-strategy-jump/arena-match';
+import { ARENA_MATCH_EVENT, type MatchCore } from '@number-strategy-jump/arena-match';
 import { MOVEMENT_MODE } from '@number-strategy-jump/arena-movement';
 import {
   createContextInputMapperB,
   createGestureInputMapperA,
+  type ArenaInputMapper,
   InputSampler,
 } from '@number-strategy-jump/arena-presentation-runtime';
 
@@ -26,9 +27,14 @@ const WIDE_ARENA = Object.freeze({
   ]),
 });
 
-const point = (pointerId, x, y) => ({ pointerId, x, y });
+const point = (pointerId: number, x: number, y: number) => ({ pointerId, x, y });
 
-function createCore(config = {}) {
+function required<T>(value: T | null | undefined, name: string): T {
+  if (value === null || value === undefined) throw new Error(`测试缺少 ${name}。`);
+  return value;
+}
+
+function createCore(config: Record<string, unknown> = {}): MatchCore {
   return createArenaV1MatchCore({
     seed: 6_404,
     config: {
@@ -42,7 +48,7 @@ function createCore(config = {}) {
   });
 }
 
-function createSampler(mapper) {
+function createSampler(mapper: ArenaInputMapper): InputSampler {
   return new InputSampler({
     participantId: 'player-1',
     viewport: VIEWPORT,
@@ -51,9 +57,12 @@ function createSampler(mapper) {
   });
 }
 
-function step(core, sampler) {
+function step(core: MatchCore, sampler: InputSampler): ReturnType<MatchCore['step']> {
   const snapshot = core.getSnapshot();
-  const player = snapshot.participants.find(({ id }) => id === 'player-1');
+  const player = required(
+    snapshot.participants.find(({ id }) => id === 'player-1'),
+    'player-1 快照',
+  );
   const input = sampler.sample(snapshot.tick, {
     actionAffordance: player.actionAffordance,
   });
@@ -63,7 +72,7 @@ function step(core, sampler) {
   ]);
 }
 
-function started(events, action) {
+function started(events: ReturnType<MatchCore['step']>, action: string): boolean {
   return events.some((event) => (
     event.type === ARENA_MATCH_EVENT.ACTION_STARTED
     && event.action === action
@@ -119,7 +128,7 @@ test('Mapper A long upward hold begins and releases an explicit crouch jump', ()
     STAGE6_MOVEMENT_ACTION_ID.EXPLICIT_CROUCH_BEGIN,
   ), true);
   assert.equal(
-    core.getSnapshot().participants[0].movement.mode,
+    required(core.getSnapshot().participants[0], 'player-1 移动状态').movement.mode,
     MOVEMENT_MODE.CROUCH_CHARGING,
   );
   sampler.pointerEnd(point(10, 100, 530));
@@ -164,7 +173,7 @@ test('Mapper B uses Rule affordance for contextual jump, crouch hold and down sm
     STAGE6_MOVEMENT_ACTION_ID.CONTEXT_CROUCH_BEGIN,
   ), true);
   assert.equal(
-    crouchCore.getSnapshot().participants[0].movement.mode,
+    required(crouchCore.getSnapshot().participants[0], 'player-1 蓄力状态').movement.mode,
     MOVEMENT_MODE.CROUCH_CHARGING,
   );
   crouchSampler.pointerEnd(point(22, 320, 600));
@@ -195,7 +204,7 @@ test('Mapper B long hold keeps a legal combat primary above contextual crouch', 
     STAGE6_MOVEMENT_ACTION_ID.CONTEXT_CROUCH_BEGIN,
   ), false);
   assert.equal(
-    core.getSnapshot().participants[0].movement.mode,
+    required(core.getSnapshot().participants[0], 'player-1 标准状态').movement.mode,
     MOVEMENT_MODE.STANDARD,
   );
 
