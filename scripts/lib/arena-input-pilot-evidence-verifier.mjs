@@ -14,7 +14,7 @@ import {
 import {
   verifyArenaBuildManifestDirectory,
 } from './arena-build-manifest-files.ts';
-import { verifyArenaDeviceEvidence } from './arena-device-evidence-verifier.mjs';
+import { verifyArenaDeviceEvidence } from './arena-device-evidence-verifier.ts';
 
 export async function verifyArenaInputPilotEvidence({
   evidenceBundleValue,

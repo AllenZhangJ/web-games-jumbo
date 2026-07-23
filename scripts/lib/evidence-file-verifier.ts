@@ -183,7 +183,7 @@ export async function readVerifiedEvidenceArtifact({
   relativePath: string;
   expectedByteLength: number;
   expectedSha256: string;
-  maximumBytes: number;
+  maximumBytes: number | null;
   includeText?: boolean;
   label?: string;
 }>): Promise<VerifiedEvidenceFile> {

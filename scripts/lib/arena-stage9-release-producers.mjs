@@ -60,7 +60,7 @@ import {
 } from './arena-build-manifest-files.ts';
 import {
   verifyArenaDeviceEvidence,
-} from './arena-device-evidence-verifier.mjs';
+} from './arena-device-evidence-verifier.ts';
 import {
   verifyArenaHumanFairnessEvidence,
 } from './arena-human-fairness-evidence-verifier.mjs';

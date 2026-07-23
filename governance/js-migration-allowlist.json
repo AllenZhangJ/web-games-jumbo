@@ -21,7 +21,6 @@
     "scripts/arena-regression-evidence.mjs",
     "scripts/arena-stage9-readiness.mjs",
     "scripts/build.mjs",
-    "scripts/lib/arena-device-evidence-verifier.mjs",
     "scripts/lib/arena-human-fairness-evidence-verifier.mjs",
     "scripts/lib/arena-input-pilot-evidence-verifier.mjs",
     "scripts/lib/arena-regression-evidence-producer.mjs",
