@@ -7,7 +7,9 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const outputRoot = path.join(root, 'dist', 'arena-poc');
 const entryPoint = path.join(root, 'src/arena/entry/match-core-poc.ts');
 
-async function bundle(target) {
+type ArenaPocTarget = 'web' | 'wechat' | 'douyin';
+
+async function bundle(target: ArenaPocTarget): Promise<void> {
   const outputDirectory = path.join(outputRoot, target);
   await mkdir(outputDirectory, { recursive: true });
   await build({
@@ -45,5 +47,5 @@ async function bundle(target) {
 }
 
 await rm(outputRoot, { recursive: true, force: true });
-await Promise.all(['web', 'wechat', 'douyin'].map(bundle));
+await Promise.all((['web', 'wechat', 'douyin'] as const).map(bundle));
 console.log('竞技场 MatchCore POC 构建完成: dist/arena-poc/{web,wechat,douyin}');

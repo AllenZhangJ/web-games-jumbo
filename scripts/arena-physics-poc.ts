@@ -1,9 +1,17 @@
 import { build } from 'esbuild';
 import { gzipSync } from 'node:zlib';
 import { createLightweightPhysicsWorld } from '@number-strategy-jump/arena-physics';
-import { runPhysicsPoc } from '../src/arena/physics/poc-scenarios.ts';
+import {
+  runPhysicsPoc,
+  type PhysicsPocMetrics,
+} from '../src/arena/physics/poc-scenarios.js';
 
-async function bundleMetrics(contents, sourcefile) {
+interface PhysicsBundleMetrics {
+  readonly bundleBytes: number;
+  readonly gzipBytes: number;
+}
+
+async function bundleMetrics(contents: string, sourcefile: string): Promise<PhysicsBundleMetrics> {
   const result = await build({
     stdin: { contents, resolveDir: process.cwd(), sourcefile },
     bundle: true,
@@ -19,7 +27,7 @@ async function bundleMetrics(contents, sourcefile) {
   return { bundleBytes: bytes, gzipBytes: gzipSync(combined).byteLength };
 }
 
-function readStressTicks() {
+function readStressTicks(): number {
   const prefix = '--stress-ticks=';
   const option = process.argv.find((argument) => argument.startsWith(prefix));
   if (!option) return 20_000;
@@ -38,7 +46,7 @@ const candidates = [
   },
 ];
 
-const reports = [];
+const reports: (PhysicsPocMetrics & PhysicsBundleMetrics)[] = [];
 for (const candidate of candidates) {
   const [runtime, bundle] = await Promise.all([
     runPhysicsPoc({ ...candidate, stressTicks: readStressTicks() }),
