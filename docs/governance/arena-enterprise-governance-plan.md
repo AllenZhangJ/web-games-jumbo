@@ -91,6 +91,8 @@
 
 ### G10：最新 main 合并前独立审计
 
+状态：已执行，结论为不可直接合并。最新 `main` 与 Arena 治理分支有 23 个产品/治理冲突；全量 TypeScript 测试发现缺口已修复，但联网依赖审计、iPhone 13 Pro/Chrome 真机验收和独立冲突处置授权尚未关闭。详见 [合并前独立审计](arena-main-merge-preflight.md)。
+
 交付：fetch 最新 `origin/main`；建立主干新增提交/能力承接表；在临时 worktree 或无写入虚拟合并中检查文本和语义冲突；对候选提交执行完整门禁和 Web 手机验收；形成审计报告。
 
 结论只能是：
