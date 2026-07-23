@@ -42,6 +42,7 @@ import {
 import {
   HUMAN_MATCH_STUDY_DEFINITION_SCHEMA_VERSION,
   createHumanMatchStudyDefinition,
+  type HumanMatchStudyDefinition,
 } from '@number-strategy-jump/arena-human-match-study';
 import {
   HUMAN_MATCH_STUDY_EXCLUSION_REASON,
@@ -64,11 +65,21 @@ import {
 } from '../product/stage8-test-content.js';
 import {
   writeArenaBuildManifest,
-} from '../../../scripts/lib/arena-build-manifest-files.ts';
+} from '../../../scripts/lib/arena-build-manifest-files.js';
 
 const COMMIT = '1'.repeat(40);
 
-async function createTestStudyBuild(root) {
+function required<T>(value: T, name: string): NonNullable<T> {
+  assert.ok(value != null, `${name} 不存在。`);
+  return value as NonNullable<T>;
+}
+
+function record(value: unknown, name: string): Record<string, unknown> {
+  assert.ok(value !== null && typeof value === 'object' && !Array.isArray(value), `${name} 必须是对象。`);
+  return value as Record<string, unknown>;
+}
+
+async function createTestStudyBuild(root: string) {
   const buildRoot = path.join(root, 'clean-web-build');
   await mkdir(buildRoot, { recursive: true });
   for (const fileName of ['greybox.html', 'index.html', 'product.html', 'study.html']) {
@@ -87,28 +98,35 @@ async function createTestStudyBuild(root) {
 
 function definitionValue() {
   const value = structuredClone(createArenaStage9HumanFairnessV1Definition().toJSON());
-  value.id = 'human-match-study.test.v1';
+  Reflect.set(value, 'id', 'human-match-study.test.v1');
   return value;
 }
 
 test('HumanMatchStudyDefinition freezes candidate, arms, environment and preregistered gates', () => {
   const source = definitionValue();
   const definition = createHumanMatchStudyDefinition(source);
-  source.arms[0].maximumSessionWinRate = 1;
-  assert.equal(definition.arms[0].maximumSessionWinRate, 0.8);
+  Reflect.set(required(source.arms[0], '首个研究臂'), 'maximumSessionWinRate', 1);
+  assert.equal(required(definition.arms[0], '冻结后的首个研究臂').maximumSessionWinRate, 0.8);
   assert.equal(definition.getContentHash().length, 8);
   assert.ok(Object.isFrozen(definition.thresholds));
-  assert.equal(definition.getArm(ARENA_STAGE9_HUMAN_FAIRNESS_ARM_ID.HARD).difficultyId, 'hard');
+  assert.equal(required(
+    definition.getArm(ARENA_STAGE9_HUMAN_FAIRNESS_ARM_ID.HARD),
+    '高强度研究臂',
+  ).difficultyId, 'hard');
 
   assert.throws(() => createHumanMatchStudyDefinition({
     ...definition.toJSON(),
     schemaVersion: HUMAN_MATCH_STUDY_DEFINITION_SCHEMA_VERSION + 1,
   }), /不支持/);
   const duplicateRank = structuredClone(definition.toJSON());
-  duplicateRank.arms[1].botStrengthRank = duplicateRank.arms[0].botStrengthRank;
+  Reflect.set(
+    required(duplicateRank.arms[1], '第二个研究臂'),
+    'botStrengthRank',
+    required(duplicateRank.arms[0], '第一个研究臂').botStrengthRank,
+  );
   assert.throws(() => createHumanMatchStudyDefinition(duplicateRank), /重复 botStrengthRank/);
   const invalidRange = structuredClone(definition.toJSON());
-  invalidRange.arms[0].minimumSessionWinRate = 0.9;
+  Reflect.set(required(invalidRange.arms[0], '无效范围研究臂'), 'minimumSessionWinRate', 0.9);
   assert.throws(() => createHumanMatchStudyDefinition(invalidRange), /下限不能大于上限/);
 });
 
@@ -156,7 +174,11 @@ test('Human Match Study assignment rejects tampering and participant view hides 
     enrollmentIndex: 4,
   });
   const tampered = structuredClone(assignment);
-  tampered.matchSeeds[0] = (tampered.matchSeeds[0] + 1) >>> 0;
+  Reflect.set(
+    tampered.matchSeeds,
+    0,
+    (required(tampered.matchSeeds[0], '首局种子') + 1) >>> 0,
+  );
   assert.throws(
     () => validateHumanMatchStudyAssignment(definition, tampered),
     /无法由入组合同复现/,
@@ -182,19 +204,22 @@ test('Arena Stage 9 human fairness V1 fixes three hidden arms and sufficient rea
 
 function testStudyDefinition() {
   const value = structuredClone(createArenaStage9HumanFairnessV1Definition().toJSON());
-  value.id = 'arena.stage9.human-fairness.test.v1';
-  value.thresholds.minimumEligibleParticipantsPerArm = 2;
-  value.thresholds.minimumAggregateSessionWinRate = 0.3;
-  value.thresholds.maximumAggregateSessionWinRate = 0.8;
-  value.thresholds.maximumAggregateWilsonIntervalWidth = 0.9;
-  value.arms.find(({ difficultyId }) => difficultyId === 'easy').maximumSessionWinRate = 1;
-  value.arms.find(({ difficultyId }) => difficultyId === 'normal').minimumSessionWinRate = 0;
-  value.arms.find(({ difficultyId }) => difficultyId === 'normal').maximumSessionWinRate = 1;
-  value.arms.find(({ difficultyId }) => difficultyId === 'hard').minimumSessionWinRate = 0;
+  Reflect.set(value, 'id', 'arena.stage9.human-fairness.test.v1');
+  Reflect.set(value.thresholds, 'minimumEligibleParticipantsPerArm', 2);
+  Reflect.set(value.thresholds, 'minimumAggregateSessionWinRate', 0.3);
+  Reflect.set(value.thresholds, 'maximumAggregateSessionWinRate', 0.8);
+  Reflect.set(value.thresholds, 'maximumAggregateWilsonIntervalWidth', 0.9);
+  const easy = required(value.arms.find(({ difficultyId }) => difficultyId === 'easy'), '简单研究臂');
+  const normal = required(value.arms.find(({ difficultyId }) => difficultyId === 'normal'), '普通研究臂');
+  const hard = required(value.arms.find(({ difficultyId }) => difficultyId === 'hard'), '困难研究臂');
+  Reflect.set(easy, 'maximumSessionWinRate', 1);
+  Reflect.set(normal, 'minimumSessionWinRate', 0);
+  Reflect.set(normal, 'maximumSessionWinRate', 1);
+  Reflect.set(hard, 'minimumSessionWinRate', 0);
   return createHumanMatchStudyDefinition(value);
 }
 
-function productReplay(matchSeed, winnerId, endedAtTick = 8_000) {
+function productReplay(matchSeed: number, winnerId: string | null, endedAtTick = 8_000) {
   return {
     replaySchemaVersion: 5,
     schemaVersion: 5,
@@ -216,7 +241,7 @@ function productReplay(matchSeed, winnerId, endedAtTick = 8_000) {
   };
 }
 
-function productResult(matchSeed, winnerId, endedAtTick = 8_000) {
+function productResult(matchSeed: number, winnerId: string | null, endedAtTick = 8_000) {
   const assignment = createMatchAssignment({ matchSeed });
   const replay = productReplay(matchSeed, winnerId, endedAtTick);
   return createProductMatchResult({
@@ -227,11 +252,17 @@ function productResult(matchSeed, winnerId, endedAtTick = 8_000) {
   });
 }
 
-function completedRecord(definition, enrollmentIndex, {
+interface CompletedRecordOptions {
+  readonly sessionWin?: boolean;
+  readonly botGuess?: boolean;
+  readonly environment?: unknown;
+}
+
+function completedRecord(definition: HumanMatchStudyDefinition, enrollmentIndex: number, {
   sessionWin = true,
   botGuess = false,
   environment = definition.environment,
-} = {}) {
+}: CompletedRecordOptions = {}) {
   const assignment = createHumanMatchStudyAssignment({
     definition,
     participantId: `study-participant-${enrollmentIndex}`,
@@ -262,7 +293,7 @@ function completedRecord(definition, enrollmentIndex, {
     },
     matches: assignment.matchSeeds.map((matchSeed, matchIndex) => ({
       matchIndex,
-      result: productResult(matchSeed, winners[matchIndex]),
+      result: productResult(matchSeed, required(winners[matchIndex], `第 ${matchIndex} 局胜者`)),
       replayArtifact: {
         id: `replay-${enrollmentIndex}-${matchIndex}`,
         path: `participant-${enrollmentIndex}/match-${matchIndex}.json`,
@@ -284,11 +315,15 @@ test('HumanMatchStudyRecord binds production opponent, natural difficulty, repla
   const source = completedRecord(definition, 0);
   const record = createHumanMatchStudyRecord(definition, source);
   assert.equal(record.matches.length, 3);
-  assert.ok(Object.isFrozen(record.matches[0].result));
+  assert.ok(Object.isFrozen(required(record.matches[0], '首局研究记录').result));
   assert.deepEqual(getHumanMatchStudyProtocolExclusionReasons(definition, record), []);
 
   const wrongSeed = structuredClone(source);
-  wrongSeed.matches[0].result.matchSeed = wrongSeed.matches[1].result.matchSeed;
+  Reflect.set(
+    required(wrongSeed.matches[0], '错误种子首局').result,
+    'matchSeed',
+    required(wrongSeed.matches[1], '错误种子次局').result.matchSeed,
+  );
   assert.throws(() => createHumanMatchStudyRecord(definition, wrongSeed), /authorityHash|matchSeed/);
   const incomplete = structuredClone(source);
   incomplete.matches.pop();
@@ -300,7 +335,11 @@ test('HumanMatchStudyRecord binds production opponent, natural difficulty, repla
     'participant-0/replay\u0000.json',
   ]) {
     const invalidArtifact = structuredClone(source);
-    invalidArtifact.matches[0].replayArtifact.path = invalidPath;
+    Reflect.set(
+      required(invalidArtifact.matches[0], '无效产物首局').replayArtifact,
+      'path',
+      invalidPath,
+    );
     assert.throws(
       () => createHumanMatchStudyRecord(definition, invalidArtifact),
       /相对路径|空段|控制字符/,
@@ -343,7 +382,10 @@ test('HumanMatchStudyReport distinguishes incomplete, failed and ready evidence 
   assert.equal(ready.aggregate.completedParticipants, 6);
   assert.equal(ready.aggregate.completedMatches, 18);
   assert.equal(ready.aggregate.sessionWinRate, 4 / 6);
-  assert.ok(ready.aggregate.sessionWinWilsonInterval.width < 0.9);
+  assert.ok(required(
+    ready.aggregate.sessionWinWilsonInterval,
+    '总体胜率 Wilson 区间',
+  ).width < 0.9);
   assert.equal(ready.failedGateIds.length, 0);
   assert.equal(ready.resultHash.length, 8);
 
@@ -373,10 +415,13 @@ test('HumanMatchStudyReport distinguishes incomplete, failed and ready evidence 
     'win-rate.adjacent-inversion.',
   )));
 
-  const duplicate = [...records, structuredClone(records[0])];
+  const duplicate = [...records, structuredClone(required(records[0], '首个研究记录'))];
   assert.throws(() => createHumanMatchStudyReport(definition, duplicate), /重复 recordId/);
   assert.throws(
-    () => createHumanMatchStudyReport(definition, [records[0], records[2]]),
+    () => createHumanMatchStudyReport(definition, [
+      required(records[0], '首个研究记录'),
+      required(records[2], '第三个研究记录'),
+    ]),
     /enrollmentIndex 必须从 0 连续/,
   );
 });
@@ -398,7 +443,7 @@ test('HumanMatchStudyBundle binds one immutable build and cannot predate records
   assert.ok(Object.isFrozen(bundle.records));
 
   const mixedBuild = structuredClone(source);
-  mixedBuild.records[1].buildId = 'another-build';
+  Reflect.set(required(mixedBuild.records[1], '第二条混合构建记录'), 'buildId', 'another-build');
   assert.throws(() => createHumanMatchStudyBundle(definition, mixedBuild), /buildId/);
   const predatesRecord = structuredClone(source);
   predatesRecord.createdAt = '2026-07-17T23:59:59.000Z';
@@ -411,7 +456,7 @@ test('HumanMatchStudyBundle binds one immutable build and cannot predate records
   );
 });
 
-function completedFakeLocalMatch(matchSeed, winnerId = 'player-1') {
+function completedFakeLocalMatch(matchSeed: number, winnerId: string | null = 'player-1') {
   const assignment = createMatchAssignment({ matchSeed });
   const replay = productReplay(matchSeed, winnerId);
   let state = 'created';
@@ -461,10 +506,12 @@ test('HumanMatchStudyCaptureSession drives the unchanged Product runtime and hid
   assert.equal('armId' in participant, false);
   assert.equal('difficultyId' in participant, false);
   assert.equal('matchSeeds' in participant, false);
-  const operator = capture.exportOperatorCapture();
+  const operator = record(capture.exportOperatorCapture(), '操作员捕获');
+  assert.ok(Array.isArray(operator.matches), '操作员捕获 matches 必须是数组。');
+  const operatorAssignment = record(operator.assignment, '操作员捕获 assignment');
   assert.equal(operator.matches.length, 3);
-  assert.equal(operator.assignment.difficultyId, assignment.difficultyId);
-  assert.ok(Object.isFrozen(operator.matches[0].replay));
+  assert.equal(operatorAssignment.difficultyId, assignment.difficultyId);
+  assert.ok(Object.isFrozen(record(required(operator.matches[0], '操作员首局'), '操作员首局').replay));
   capture.destroy();
   assert.equal(capture.state, HUMAN_MATCH_STUDY_CAPTURE_STATE.DESTROYED);
 });
@@ -484,7 +531,7 @@ test('study capture and Product completion ports fail closed on missing replay o
   capture.destroy();
 
   const runtime = new ProductMatchRuntime(
-    completedFakeLocalMatch(assignment.matchSeeds[0]),
+    completedFakeLocalMatch(required(assignment.matchSeeds[0], '首局种子')),
     { completionSink: async () => {} },
   );
   runtime.start();
@@ -564,7 +611,7 @@ test('Human Match Study CLI reproduces authority and every hidden Bot input', as
   const definition = createArenaStage9HumanFairnessV1Definition();
   const source = completedRecord(definition, 0);
   const assignment = source.assignment;
-  const matchSeed = assignment.matchSeeds[0];
+  const matchSeed = required(assignment.matchSeeds[0], '首局权威种子');
   const service = new QuickMatchService();
   const localMatch = service.create({
     matchSeed,
@@ -573,15 +620,19 @@ test('Human Match Study CLI reproduces authority and every hidden Bot input', as
       contentSelection: TEST_MATCH_CONTENT_SELECTION,
     },
   });
-  let replay;
+  let replay!: ReturnType<typeof localMatch.session.runUntilEnded>;
   try {
     replay = localMatch.session.runUntilEnded(() => null);
   } finally {
     localMatch.session.destroy();
   }
-  source.status = HUMAN_MATCH_STUDY_STATUS.ABANDONED;
-  source.terminationReason = HUMAN_MATCH_STUDY_TERMINATION_REASON.PARTICIPANT_ABANDONED;
-  source.matches = [{
+  Reflect.set(source, 'status', HUMAN_MATCH_STUDY_STATUS.ABANDONED);
+  Reflect.set(
+    source,
+    'terminationReason',
+    HUMAN_MATCH_STUDY_TERMINATION_REASON.PARTICIPANT_ABANDONED,
+  );
+  Reflect.set(source, 'matches', [{
     matchIndex: 0,
     result: createProductMatchResult({
       matchSeed,
@@ -589,9 +640,9 @@ test('Human Match Study CLI reproduces authority and every hidden Bot input', as
       content: replay.config.contentSelection,
       replay,
     }),
-    replayArtifact: source.matches[0].replayArtifact,
-  }];
-  source.selfReport = null;
+    replayArtifact: required(source.matches[0], '首局研究来源').replayArtifact,
+  }]);
+  Reflect.set(source, 'selfReport', null);
   const root = await mkdtemp(path.join(os.tmpdir(), 'arena-human-replay-'));
   try {
     const buildRoot = await createTestStudyBuild(root);
@@ -604,7 +655,7 @@ test('Human Match Study CLI reproduces authority and every hidden Bot input', as
       ...captureSubmission,
       matches: [{
         matchIndex: 0,
-        result: source.matches[0].result,
+        result: required(source.matches[0], '捕获包首局来源').result,
         replay,
       }],
     });
@@ -658,7 +709,11 @@ test('Human Match Study CLI reproduces authority and every hidden Bot input', as
     assert.equal(ingestSummary.recordCount, 1);
     assert.equal(ingestSummary.replayCount, 1);
     const mismatchedWorkspace = structuredClone(workspaceSource);
-    mismatchedWorkspace.receipts[0].packageReceipt.sha256 = 'f'.repeat(64);
+    Reflect.set(
+      required(mismatchedWorkspace.receipts[0], '首个工作区回执').packageReceipt,
+      'sha256',
+      'f'.repeat(64),
+    );
     const mismatchedWorkspacePath = path.join(root, 'workspace-mismatched.json');
     await writeFile(
       mismatchedWorkspacePath,
@@ -733,8 +788,11 @@ test('Human Match Study CLI reproduces authority and every hidden Bot input', as
   }
 
   const tampered = structuredClone(replay);
-  const botFrame = tampered.inputFrames.find(({ participantId }) => participantId === 'player-2');
-  botFrame.moveX = botFrame.moveX === 0 ? 0.1 : 0;
+  const botFrame = required(
+    tampered.inputFrames.find(({ participantId }) => participantId === 'player-2'),
+    'Bot 输入帧',
+  );
+  Reflect.set(botFrame, 'moveX', botFrame.moveX === 0 ? 0.1 : 0);
   assert.throws(() => verifyHumanMatchStudyReplay({
     definition,
     record: source,
