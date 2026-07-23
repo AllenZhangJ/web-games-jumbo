@@ -18,12 +18,21 @@ import { createArenaExperimentReportBundle } from '@number-strategy-jump/arena-e
 import {
   assertArenaGitSourceIdentityStable,
   readArenaGitSourceIdentity,
-} from './arena-git-source-identity.ts';
-import { runArenaNodeExperiment } from './arena-node-experiment-runner.ts';
+} from './arena-git-source-identity.js';
+import { runArenaNodeExperiment } from './arena-node-experiment-runner.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-function usage() {
+interface BalanceExplorationCliOptions {
+  describe: boolean;
+  output: string | null;
+  verify: string | null;
+  help: boolean;
+}
+
+type BalanceExplorationBundle = ReturnType<typeof readArenaBalanceExplorationBundle>;
+
+function usage(): string {
   return [
     'Usage:',
     '  npm run arena:experiment:balance:explore -- --describe',
@@ -32,9 +41,14 @@ function usage() {
   ].join('\n');
 }
 
-function parseArgs(values) {
-  const result = { describe: false, output: null, verify: null, help: false };
-  const seen = new Set();
+function parseArgs(values: readonly string[]): BalanceExplorationCliOptions {
+  const result: BalanceExplorationCliOptions = {
+    describe: false,
+    output: null,
+    verify: null,
+    help: false,
+  };
+  const seen = new Set<string>();
   for (const argument of values) {
     if (argument === '--help' || argument === '-h') {
       result.help = true;
@@ -48,9 +62,12 @@ function parseArgs(values) {
     }
     const match = argument.match(/^--(output|verify)=(.+)$/);
     if (!match) throw new Error(`未知参数 ${argument}。\n${usage()}`);
-    if (seen.has(match[1])) throw new Error(`--${match[1]} 不能重复。`);
-    seen.add(match[1]);
-    result[match[1]] = match[2];
+    const key = match[1];
+    const value = match[2];
+    if ((key !== 'output' && key !== 'verify') || !value) throw new Error(`参数 ${argument} 无效。`);
+    if (seen.has(key)) throw new Error(`--${key} 不能重复。`);
+    seen.add(key);
+    result[key] = value;
   }
   const modes = Number(result.describe) + Number(result.output !== null) + Number(result.verify !== null);
   if (!result.help && modes !== 1) {
@@ -59,13 +76,13 @@ function parseArgs(values) {
   return result;
 }
 
-function resolveJsonPath(value, name) {
+function resolveJsonPath(value: string, name: string): string {
   const file = path.resolve(root, value);
   if (path.extname(file) !== '.json') throw new RangeError(`${name} 必须是 .json 文件。`);
   return file;
 }
 
-async function writeExclusive(file, value) {
+async function writeExclusive(file: string, value: unknown): Promise<void> {
   await mkdir(path.dirname(file), { recursive: true });
   await writeFile(file, `${JSON.stringify(value, null, 2)}\n`, {
     encoding: 'utf8',
@@ -73,7 +90,7 @@ async function writeExclusive(file, value) {
   });
 }
 
-function summary(bundle, file = null) {
+function summary(bundle: BalanceExplorationBundle, file: string | null = null) {
   return Object.freeze({
     id: bundle.id,
     bundleHash: bundle.bundleHash,
@@ -92,18 +109,19 @@ function summary(bundle, file = null) {
   });
 }
 
-async function verify(fileValue) {
+async function verify(fileValue: string): Promise<void> {
   const file = resolveJsonPath(fileValue, '--verify');
-  let parsed;
+  let parsed: unknown;
   try {
     parsed = JSON.parse(await readFile(file, 'utf8'));
-  } catch (error) {
-    throw new Error(`无法读取 Balance exploration ${file}：${error.message}`);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`无法读取 Balance exploration ${file}：${message}`);
   }
   console.log(JSON.stringify(summary(readArenaBalanceExplorationBundle(parsed), file), null, 2));
 }
 
-async function main() {
+async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
   if (options.help) {
     console.log(usage());
@@ -129,7 +147,7 @@ async function main() {
   if (source.sourceDirty) {
     throw new Error('Balance exploration 只能在干净 source commit 上运行。');
   }
-  const reportBundles = [];
+  const reportBundles: ReturnType<typeof createArenaExperimentReportBundle>[] = [];
   for (const definition of definitions) {
     const report = await runArenaNodeExperiment({
       root,
@@ -149,13 +167,14 @@ async function main() {
     reportBundles,
   });
   assertArenaGitSourceIdentityStable(source, await readArenaGitSourceIdentity(root));
+  if (options.output === null) throw new Error('缺少 --output。');
   const output = resolveJsonPath(options.output, '--output');
   await writeExclusive(output, bundle);
   console.log(JSON.stringify(summary(bundle, output), null, 2));
   if (bundle.selection.selectedCandidateId === null) process.exitCode = 2;
 }
 
-main().catch((error) => {
+void main().catch((error: unknown) => {
   console.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;
 });

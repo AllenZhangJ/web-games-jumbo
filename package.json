@@ -36,7 +36,7 @@
     "arena:experiment:movement": "node --import tsx scripts/arena-experiment.mjs --suite=movement-stress --cases=100 --replay-samples=3 --summary",
     "arena:experiment:bot": "node --import tsx scripts/arena-experiment.mjs --suite=bot-capability --cases=300 --replay-samples=3 --summary",
     "arena:experiment:balance": "node --import tsx scripts/arena-experiment.mjs --suite=balance-candidate --summary",
-    "arena:experiment:balance:explore": "node --import tsx scripts/arena-balance-exploration.mjs",
+    "arena:experiment:balance:explore": "node --import tsx scripts/arena-balance-exploration.ts",
     "arena:experiment:balance:validate": "node --import tsx scripts/arena-experiment.mjs --suite=balance-validation --summary",
     "arena:experiment:balance:validate:describe": "node --import tsx scripts/arena-experiment.mjs --suite=balance-validation --describe",
     "arena:experiment:report:verify": "node --import tsx scripts/arena-experiment-report.ts",
