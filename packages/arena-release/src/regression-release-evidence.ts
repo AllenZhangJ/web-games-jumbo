@@ -1,14 +1,16 @@
-import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
-import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
-import { assertEvidenceGitCommit } from '@number-strategy-jump/arena-evidence-contracts';
 import {
-  readArenaRegressionEvidenceReport,
-} from '@number-strategy-jump/arena-regression';
+  assertKnownKeys,
+  cloneFrozenData,
+  createDeterministicDataHash,
+} from '@number-strategy-jump/arena-contracts';
+import { assertEvidenceGitCommit } from '@number-strategy-jump/arena-evidence-contracts';
+import { readArenaRegressionEvidenceReport } from '@number-strategy-jump/arena-regression';
 import { ARENA_RELEASE_EVIDENCE_STATUS } from '@number-strategy-jump/arena-release-contracts';
 
-export function createArenaRegressionReleaseResult({ commit, report: reportValue }) {
-  assertEvidenceGitCommit(commit, 'Regression release result.commit');
-  const report = readArenaRegressionEvidenceReport(reportValue);
+export function createArenaRegressionReleaseResult(options: unknown) {
+  assertKnownKeys(options, new Set(['commit', 'report']), 'Regression release result options');
+  const commit = assertEvidenceGitCommit(options.commit, 'Regression release result.commit');
+  const report = readArenaRegressionEvidenceReport(options.report);
   if (report.sourceCommit !== commit || report.sourceDirty) {
     throw new Error('Regression release evidence 与 clean candidate commit 不一致。');
   }
@@ -25,9 +27,6 @@ export function createArenaRegressionReleaseResult({ commit, report: reportValue
     commit,
     buildId: null,
     status: ARENA_RELEASE_EVIDENCE_STATUS.READY,
-    resultHash: createDeterministicDataHash(
-      summary,
-      'Release producer arena:regression:evidence',
-    ),
+    resultHash: createDeterministicDataHash(summary, 'Release producer arena:regression:evidence'),
   }, 'Regression release result');
 }

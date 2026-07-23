@@ -37,10 +37,10 @@ import {
 } from '@number-strategy-jump/arena-release';
 import {
   createArenaGoldenReplayReleaseResult,
-} from '../../src/arena-release/golden-replay-release-evidence.js';
+} from '@number-strategy-jump/arena-release';
 import {
   createArenaRegressionReleaseResult,
-} from '../../src/arena-release/regression-release-evidence.js';
+} from '@number-strategy-jump/arena-release';
 import {
   verifyArenaReleaseEvidenceProducerResult,
 } from '@number-strategy-jump/arena-release';

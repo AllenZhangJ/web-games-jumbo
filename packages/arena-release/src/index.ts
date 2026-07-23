@@ -4,6 +4,8 @@ export * from './defect-release-evidence.js';
 export * from './device-release-evidence.js';
 export * from './human-fairness-release-evidence.js';
 export * from './input-pilot-release-evidence.js';
+export * from './golden-replay-release-evidence.js';
+export * from './regression-release-evidence.js';
 export * from './release-candidate-bundle.js';
 export * from './release-evidence-verification.js';
 export * from './release-readiness-report.js';
