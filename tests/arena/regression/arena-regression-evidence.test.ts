@@ -157,7 +157,7 @@ test('Regression Evidence V1 固定组件身份、阈值与 Definition hash', ()
   const definition = createArenaStage9RegressionEvidenceV1Definition();
   assert.equal(definition.id, 'arena.stage9.regression-evidence.v1');
   assert.equal(definition.components.length, 5);
-  assert.equal(createArenaStage9RegressionEvidenceV1DefinitionHash(), '053703df');
+  assert.equal(createArenaStage9RegressionEvidenceV1DefinitionHash(), '3767074b');
   assert.ok(Object.isFrozen(definition));
   assert.ok(Object.isFrozen(definition.components));
   assert.deepEqual(
@@ -192,7 +192,7 @@ test('Regression Evidence 归一化顺序并严格往返验证', () => {
   reversedFuzz.operations = { suspendResume: 4, startAccepted: 20 };
   const report = createArenaRegressionEvidenceReport(input);
   assert.equal(report.status, 'passed');
-  assert.equal(report.definitionHash, '053703df');
+  assert.equal(report.definitionHash, '3767074b');
   assert.deepEqual(report.components.map(({ id }) => id), [
     ARENA_REGRESSION_COMPONENT_ID.INPUT_FUZZ,
     ARENA_REGRESSION_COMPONENT_ID.LIFECYCLE_TESTS,
