@@ -34,8 +34,16 @@ export type {
 export { MetricCollectorRegistry } from './metric-collector-registry.js';
 export type {
   ArenaMetricCollector,
+  ArenaMetricCollectorBeginContext,
+  ArenaMetricCollectorCompleteContext,
   ArenaMetricCollectorEntry,
+  ArenaMetricCollectorFactoryOptions,
+  ArenaMetricCollectorFailureContext,
   ArenaMetricCollectorHandle,
+  ArenaMetricCollectorStepContext,
+  ArenaSimulationCaseFactoryOptions,
+  ArenaSimulationMetadata,
+  ArenaSimulationSnapshot,
 } from './metric-collector-registry.js';
 export {
   SimulationWorkloadRegistry,
@@ -113,6 +121,16 @@ export {
   createArenaV1MatchCoreStressInputStrategy,
 } from './arena-v1-matchcore-stress-strategy.js';
 export type { ArenaV1MatchCoreStressInputParameters } from './arena-v1-matchcore-stress-strategy.js';
+export {
+  ARENA_MATCH_SUMMARY_COLLECTOR_ID,
+  ARENA_MATCH_SUMMARY_COLLECTOR_VERSION,
+  createArenaMatchSummaryCollectorEntry,
+} from './arena-match-summary-collector.js';
+export {
+  ARENA_MATCHCORE_INVARIANT_COLLECTOR_ID,
+  ARENA_MATCHCORE_INVARIANT_COLLECTOR_VERSION,
+  createArenaMatchCoreInvariantCollectorEntry,
+} from './arena-matchcore-invariant-collector.js';
 export type {
   ArenaSimulationCase,
   ArenaSimulationWorkloadEntry,

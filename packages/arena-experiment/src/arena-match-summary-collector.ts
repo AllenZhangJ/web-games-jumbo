@@ -1,20 +1,50 @@
 import { assertNonEmptyString, cloneFrozenData } from '@number-strategy-jump/arena-contracts';
+import type { PlainRecord } from '@number-strategy-jump/arena-contracts';
+import type { ArenaExperimentDefinition } from './experiment-definition.js';
+import type {
+  ArenaMetricCollectorBeginContext,
+  ArenaMetricCollectorCompleteContext,
+  ArenaMetricCollectorFactoryOptions,
+  ArenaMetricCollectorFailureContext,
+  ArenaMetricCollectorStepContext,
+  ArenaSimulationSnapshot,
+} from './metric-collector-registry.js';
 import {
   createSortedMetricCountRecord,
   incrementMetricCount,
   metricRatioOrNull,
-} from '@number-strategy-jump/arena-experiment';
+} from './experiment-metric-utils.js';
 
 export const ARENA_MATCH_SUMMARY_COLLECTOR_ID = 'arena.stage9.match-summary';
 export const ARENA_MATCH_SUMMARY_COLLECTOR_VERSION = 1;
 
+interface MatchSummaryInputFrame {
+  readonly primaryPressed?: boolean;
+  readonly jumpPressed?: boolean;
+  readonly slamPressed?: boolean;
+}
+interface MatchSummaryEvent { readonly type: unknown }
+interface MatchSummaryResult extends PlainRecord {
+  readonly reason: unknown;
+  readonly winnerId: unknown;
+}
+interface MatchSummaryActiveCase {
+  readonly seed: number;
+  readonly events: Map<string, number>;
+  eventCount: number;
+  inputFrames: number;
+  primaryPresses: number;
+  jumpPresses: number;
+  slamPresses: number;
+}
+
 class ArenaMatchSummaryCollector {
   #plannedCases;
-  #active;
+  #active: MatchSummaryActiveCase | null;
   #completedCases;
   #failedCases;
   #totalTicks;
-  #minimumTicks;
+  #minimumTicks: number | null;
   #maximumTicks;
   #totalEvents;
   #totalInputFrames;
@@ -28,7 +58,7 @@ class ArenaMatchSummaryCollector {
   #finalHashes;
   #destroyed;
 
-  constructor(definition) {
+  constructor(definition: ArenaExperimentDefinition) {
     this.#plannedCases = definition.getSeeds().length;
     this.#active = null;
     this.#completedCases = 0;
@@ -53,7 +83,7 @@ class ArenaMatchSummaryCollector {
     if (this.#destroyed) throw new Error('ArenaMatchSummaryCollector 已销毁。');
   }
 
-  beginCase(context) {
+  beginCase(context: Readonly<ArenaMetricCollectorBeginContext>) {
     this.#assertUsable();
     if (this.#active !== null) throw new Error('ArenaMatchSummaryCollector 已有活动 case。');
     this.#active = {
@@ -67,7 +97,11 @@ class ArenaMatchSummaryCollector {
     };
   }
 
-  observeStep(observation) {
+  observeStep(observation: Readonly<ArenaMetricCollectorStepContext<
+    ArenaSimulationSnapshot,
+    MatchSummaryInputFrame,
+    MatchSummaryEvent
+  >>) {
     this.#assertUsable();
     if (this.#active === null || this.#active.seed !== observation.seed) {
       throw new Error('ArenaMatchSummaryCollector observation 没有对应活动 case。');
@@ -85,7 +119,10 @@ class ArenaMatchSummaryCollector {
     }
   }
 
-  completeCase(context) {
+  completeCase(context: Readonly<ArenaMetricCollectorCompleteContext<
+    ArenaSimulationSnapshot,
+    MatchSummaryResult
+  >>) {
     this.#assertUsable();
     if (this.#active === null || this.#active.seed !== context.seed) {
       throw new Error('ArenaMatchSummaryCollector completion 没有对应活动 case。');
@@ -115,7 +152,7 @@ class ArenaMatchSummaryCollector {
     this.#active = null;
   }
 
-  failCase(context) {
+  failCase(context: Readonly<ArenaMetricCollectorFailureContext>) {
     this.#assertUsable();
     if (this.#active !== null && this.#active.seed !== context.seed) {
       throw new Error('ArenaMatchSummaryCollector failure 与活动 case 不一致。');
@@ -189,6 +226,8 @@ export function createArenaMatchSummaryCollectorEntry() {
   return Object.freeze({
     id: ARENA_MATCH_SUMMARY_COLLECTOR_ID,
     version: ARENA_MATCH_SUMMARY_COLLECTOR_VERSION,
-    create: ({ definition }) => new ArenaMatchSummaryCollector(definition),
+    create: ({ definition }: ArenaMetricCollectorFactoryOptions) => (
+      new ArenaMatchSummaryCollector(definition)
+    ),
   });
 }

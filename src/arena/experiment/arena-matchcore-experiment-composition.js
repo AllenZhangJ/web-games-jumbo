@@ -11,7 +11,7 @@ import {
   ARENA_MATCHCORE_INVARIANT_COLLECTOR_ID,
   ARENA_MATCHCORE_INVARIANT_COLLECTOR_VERSION,
   createArenaMatchCoreInvariantCollectorEntry,
-} from './arena-matchcore-invariant-collector.js';
+} from '@number-strategy-jump/arena-experiment';
 import {
   ARENA_V1_MATCHCORE_INVARIANT_DEFAULT_PARAMETERS,
   ARENA_V1_MATCHCORE_INVARIANT_WORKLOAD_ID,

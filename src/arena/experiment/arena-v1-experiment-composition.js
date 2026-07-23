@@ -10,7 +10,7 @@ import {
   ARENA_MATCH_SUMMARY_COLLECTOR_ID,
   ARENA_MATCH_SUMMARY_COLLECTOR_VERSION,
   createArenaMatchSummaryCollectorEntry,
-} from './arena-match-summary-collector.js';
+} from '@number-strategy-jump/arena-experiment';
 import {
   ARENA_V1_SCRIPTED_PRESSURE_DEFAULT_PARAMETERS,
   ARENA_V1_SCRIPTED_PRESSURE_WORKLOAD_ID,

@@ -1,25 +1,50 @@
 import { assertNonEmptyString, cloneFrozenData } from '@number-strategy-jump/arena-contracts';
-import { createArenaMetricGate } from '@number-strategy-jump/arena-experiment';
-import { assertArenaExperimentReplaySeedsPlanned } from '@number-strategy-jump/arena-experiment';
+import type { PlainRecord } from '@number-strategy-jump/arena-contracts';
+import type { ArenaExperimentDefinition } from './experiment-definition.js';
+import type {
+  ArenaMetricCollectorBeginContext,
+  ArenaMetricCollectorCompleteContext,
+  ArenaMetricCollectorFactoryOptions,
+  ArenaMetricCollectorFailureContext,
+  ArenaMetricCollectorStepContext,
+  ArenaSimulationSnapshot,
+} from './metric-collector-registry.js';
+import { createArenaMetricGate } from './metric-gate.js';
+import { assertArenaExperimentReplaySeedsPlanned } from './experiment-seed-utils.js';
 import {
   createSortedMetricCountRecord,
   incrementMetricCount,
   metricRatioOrNull,
-} from '@number-strategy-jump/arena-experiment';
+} from './experiment-metric-utils.js';
 
 export const ARENA_MATCHCORE_INVARIANT_COLLECTOR_ID =
   'arena.stage9.matchcore-invariants';
 export const ARENA_MATCHCORE_INVARIANT_COLLECTOR_VERSION = 1;
 
+interface MatchCoreInvariantEvent { readonly type: unknown }
+interface MatchCoreInvariantResult extends PlainRecord {
+  readonly replayVerified: unknown;
+  readonly reason: unknown;
+  readonly winnerId: unknown;
+}
+interface MatchCoreInvariantActiveCase {
+  readonly seed: number;
+  readonly initialTick: number;
+  lastTick: number;
+  steps: number;
+  eventCount: number;
+  readonly events: Map<string, number>;
+}
+
 class ArenaMatchCoreInvariantCollector {
   #plannedCases;
   #plannedReplaySeeds;
-  #active;
+  #active: MatchCoreInvariantActiveCase | null;
   #completedCases;
   #failedCases;
   #verifiedReplays;
   #totalTicks;
-  #minimumTicks;
+  #minimumTicks: number | null;
   #maximumTicks;
   #totalEvents;
   #eventCounts;
@@ -29,7 +54,7 @@ class ArenaMatchCoreInvariantCollector {
   #finalHashes;
   #destroyed;
 
-  constructor(definition) {
+  constructor(definition: ArenaExperimentDefinition) {
     const plannedSeeds = definition.getSeeds();
     const replaySeeds = definition.workload.parameters.replaySeeds;
     if (!Array.isArray(replaySeeds)) {
@@ -62,7 +87,7 @@ class ArenaMatchCoreInvariantCollector {
     if (this.#destroyed) throw new Error('ArenaMatchCoreInvariantCollector 已销毁。');
   }
 
-  beginCase(context) {
+  beginCase(context: Readonly<ArenaMetricCollectorBeginContext>) {
     this.#assertUsable();
     if (this.#active !== null) throw new Error('MatchCore invariant collector 已有活动 case。');
     this.#active = {
@@ -75,7 +100,11 @@ class ArenaMatchCoreInvariantCollector {
     };
   }
 
-  observeStep(observation) {
+  observeStep(observation: Readonly<ArenaMetricCollectorStepContext<
+    ArenaSimulationSnapshot,
+    unknown,
+    MatchCoreInvariantEvent
+  >>) {
     this.#assertUsable();
     if (this.#active === null || this.#active.seed !== observation.seed) {
       throw new Error('MatchCore invariant observation 没有对应活动 case。');
@@ -89,7 +118,10 @@ class ArenaMatchCoreInvariantCollector {
     }
   }
 
-  completeCase(context) {
+  completeCase(context: Readonly<ArenaMetricCollectorCompleteContext<
+    ArenaSimulationSnapshot,
+    MatchCoreInvariantResult
+  >>) {
     this.#assertUsable();
     if (this.#active === null || this.#active.seed !== context.seed) {
       throw new Error('MatchCore invariant completion 没有对应活动 case。');
@@ -131,7 +163,7 @@ class ArenaMatchCoreInvariantCollector {
     this.#active = null;
   }
 
-  failCase(context) {
+  failCase(context: Readonly<ArenaMetricCollectorFailureContext>) {
     this.#assertUsable();
     if (this.#active !== null && this.#active.seed !== context.seed) {
       throw new Error('MatchCore invariant failure 与活动 case 不一致。');
@@ -218,6 +250,8 @@ export function createArenaMatchCoreInvariantCollectorEntry() {
   return Object.freeze({
     id: ARENA_MATCHCORE_INVARIANT_COLLECTOR_ID,
     version: ARENA_MATCHCORE_INVARIANT_COLLECTOR_VERSION,
-    create: ({ definition }) => new ArenaMatchCoreInvariantCollector(definition),
+    create: ({ definition }: ArenaMetricCollectorFactoryOptions) => (
+      new ArenaMatchCoreInvariantCollector(definition)
+    ),
   });
 }

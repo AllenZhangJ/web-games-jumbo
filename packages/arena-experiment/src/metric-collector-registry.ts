@@ -9,6 +9,7 @@ import type { PlainRecord } from '@number-strategy-jump/arena-contracts';
 import { readBoundMethod, snapshotDataArray } from './callable-boundary.js';
 import {
   createArenaExperimentDefinition,
+  type ArenaExperimentCandidate,
   type ArenaExperimentDefinition,
 } from './experiment-definition.js';
 
@@ -17,11 +18,64 @@ const COLLECTOR_METHODS = Object.freeze([
   'beginCase', 'observeStep', 'completeCase', 'failCase', 'getResult', 'destroy',
 ] as const);
 
-export interface ArenaMetricCollector {
-  readonly beginCase: (value: unknown) => void;
-  readonly observeStep: (value: unknown) => void;
-  readonly completeCase: (value: unknown) => void;
-  readonly failCase: (value: unknown) => void;
+export interface ArenaSimulationMetadata extends PlainRecord {
+  readonly matchSeed: number;
+  readonly matchSchemaVersion: number;
+  readonly physicsBackendVersion: string;
+  readonly configHash: string;
+  readonly ruleContentHash: string;
+}
+export interface ArenaSimulationSnapshot extends PlainRecord { readonly tick: number }
+export interface ArenaMetricCollectorBeginContext<
+  TSnapshot extends ArenaSimulationSnapshot = ArenaSimulationSnapshot,
+> {
+  readonly seed: number;
+  readonly metadata: Readonly<ArenaSimulationMetadata>;
+  readonly initialSnapshot: Readonly<TSnapshot>;
+}
+export interface ArenaMetricCollectorStepContext<
+  TSnapshot extends ArenaSimulationSnapshot = ArenaSimulationSnapshot,
+  TInputFrame = unknown,
+  TEvent = unknown,
+> {
+  readonly seed: number;
+  readonly metadata: Readonly<ArenaSimulationMetadata>;
+  readonly inputFrames: readonly Readonly<TInputFrame>[];
+  readonly events: readonly Readonly<TEvent>[];
+  readonly snapshot: Readonly<TSnapshot>;
+}
+export interface ArenaMetricCollectorCompleteContext<
+  TSnapshot extends ArenaSimulationSnapshot = ArenaSimulationSnapshot,
+  TResult extends PlainRecord = PlainRecord,
+> {
+  readonly seed: number;
+  readonly metadata: Readonly<ArenaSimulationMetadata>;
+  readonly finalSnapshot: Readonly<TSnapshot>;
+  readonly ticks: number;
+  readonly eventCount: number;
+  readonly finalHash: string;
+  readonly result: Readonly<TResult>;
+}
+export interface ArenaMetricCollectorFailureContext<
+  TSnapshot extends ArenaSimulationSnapshot = ArenaSimulationSnapshot,
+> {
+  readonly seed: number;
+  readonly metadata: Readonly<ArenaSimulationMetadata> | null;
+  readonly lastSnapshot: Readonly<TSnapshot> | null;
+  readonly ticks: number;
+  readonly eventCount: number;
+  readonly failure: Readonly<{ name: string; message: string }>;
+}
+export interface ArenaMetricCollector<
+  TSnapshot extends ArenaSimulationSnapshot = ArenaSimulationSnapshot,
+  TInputFrame = unknown,
+  TEvent = unknown,
+  TResult extends PlainRecord = PlainRecord,
+> {
+  readonly beginCase: (value: Readonly<ArenaMetricCollectorBeginContext<TSnapshot>>) => void;
+  readonly observeStep: (value: Readonly<ArenaMetricCollectorStepContext<TSnapshot, TInputFrame, TEvent>>) => void;
+  readonly completeCase: (value: Readonly<ArenaMetricCollectorCompleteContext<TSnapshot, TResult>>) => void;
+  readonly failCase: (value: Readonly<ArenaMetricCollectorFailureContext<TSnapshot>>) => void;
   readonly getResult: () => unknown;
   readonly destroy: () => void;
 }
@@ -33,6 +87,15 @@ export interface ArenaMetricCollectorEntry {
     readonly definition: ArenaExperimentDefinition;
     readonly parameters: Readonly<PlainRecord>;
   }) => unknown;
+}
+export interface ArenaMetricCollectorFactoryOptions {
+  readonly definition: ArenaExperimentDefinition;
+  readonly parameters: Readonly<PlainRecord>;
+}
+export interface ArenaSimulationCaseFactoryOptions {
+  readonly seed: number;
+  readonly candidate: Readonly<ArenaExperimentCandidate>;
+  readonly parameters: Readonly<PlainRecord>;
 }
 interface NormalizedCollectorEntry extends ArenaMetricCollectorEntry {
   readonly validateParameters: (parameters: unknown) => unknown;

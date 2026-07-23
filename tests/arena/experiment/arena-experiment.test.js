@@ -24,7 +24,7 @@ import { SimulationWorkloadRegistry } from '@number-strategy-jump/arena-experime
 import { createArenaMetricGate } from '@number-strategy-jump/arena-experiment';
 import {
   ARENA_MATCH_SUMMARY_COLLECTOR_ID,
-} from '../../../src/arena/experiment/arena-match-summary-collector.js';
+} from '@number-strategy-jump/arena-experiment';
 import {
   createArenaStage9S91ExperimentDefinition,
   createArenaStage9S91ExperimentRegistries,
