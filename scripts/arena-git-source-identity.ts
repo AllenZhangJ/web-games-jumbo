@@ -3,18 +3,26 @@ import { promisify } from 'node:util';
 
 const execFileAsync = promisify(execFile);
 
-async function gitText(cwd, args) {
-  const result = await execFileAsync('git', args, { cwd, encoding: 'utf8' });
+export interface ArenaGitSourceIdentity {
+  readonly sourceCommit: string;
+  readonly sourceDirty: boolean;
+}
+
+async function gitText(cwd: string, args: readonly string[]): Promise<string> {
+  const result = await execFileAsync('git', [...args], { cwd, encoding: 'utf8' });
   return result.stdout.trim();
 }
 
-export async function readArenaGitSourceIdentity(cwd) {
+export async function readArenaGitSourceIdentity(cwd: string): Promise<ArenaGitSourceIdentity> {
   const sourceCommit = await gitText(cwd, ['rev-parse', 'HEAD']);
   const sourceDirty = (await gitText(cwd, ['status', '--porcelain'])) !== '';
   return Object.freeze({ sourceCommit, sourceDirty });
 }
 
-export function assertArenaGitSourceIdentityStable(before, after) {
+export function assertArenaGitSourceIdentityStable(
+  before: Partial<ArenaGitSourceIdentity> | null | undefined,
+  after: Partial<ArenaGitSourceIdentity> | null | undefined,
+): void {
   if (
     before?.sourceCommit !== after?.sourceCommit
     || before?.sourceDirty !== after?.sourceDirty

@@ -2,7 +2,7 @@ import { SimulationExperimentRunner } from '@number-strategy-jump/arena-experime
 import {
   assertArenaGitSourceIdentityStable,
   readArenaGitSourceIdentity,
-} from './arena-git-source-identity.mjs';
+} from './arena-git-source-identity.ts';
 
 export async function runArenaNodeExperiment({
   root,

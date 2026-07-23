@@ -86,7 +86,7 @@ import {
   createArenaBalanceCandidateCollectorParameters,
 } from '@number-strategy-jump/arena-v1-experiment';
 import { createArenaBalancePolicy } from '@number-strategy-jump/arena-experiment';
-import { parseArenaStressIntegerOptions } from '../../../scripts/arena-stress-cli.mjs';
+import { parseArenaStressIntegerOptions } from '../../../scripts/arena-stress-cli.ts';
 
 const COMMIT = 'c'.repeat(40);
 const AUTHORITY = Object.freeze({

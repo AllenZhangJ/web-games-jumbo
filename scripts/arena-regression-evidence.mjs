@@ -14,7 +14,7 @@ import { writeArenaEvidenceFileExclusive } from './lib/arena-atomic-evidence-fil
 import {
   assertArenaGitSourceIdentityStable,
   readArenaGitSourceIdentity,
-} from './arena-git-source-identity.mjs';
+} from './arena-git-source-identity.ts';
 import {
   describeArenaRegressionEvidenceProcesses,
   produceArenaRegressionEvidenceReport,

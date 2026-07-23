@@ -23,7 +23,7 @@ import {
 import {
   assertArenaGitSourceIdentityStable,
   readArenaGitSourceIdentity,
-} from './arena-git-source-identity.mjs';
+} from './arena-git-source-identity.ts';
 
 const MAXIMUM_BUNDLE_BYTES = 5 * 1024 * 1024;
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');

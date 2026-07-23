@@ -1,13 +1,34 @@
-function finiteAtLeast(value, minimum, name) {
-  if (!Number.isFinite(value) || value < minimum) {
-    throw new RangeError(`${name} 必须是大于等于 ${minimum} 的有限数。`);
-  }
-  return value;
+export interface ArenaStressTiming {
+  readonly performanceClock: 'process.cpuUsage';
+  readonly elapsedMs: number;
+  readonly cpuTimeMs: number;
+  readonly averageCpuTickMs: number;
+  readonly averageWallTickMs: number;
+  readonly wallToCpuRatio: number | null;
 }
 
-export function createArenaStressTiming({ elapsedMs, cpuUsage, totalTicks }) {
+function finiteAtLeast(value: unknown, minimum: number, name: string): number {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < minimum) {
+    throw new RangeError(`${name} 必须是大于等于 ${minimum} 的有限数。`);
+  }
+  return value as number;
+}
+
+export function createArenaStressTiming({
+  elapsedMs,
+  cpuUsage,
+  totalTicks,
+}: Readonly<{
+  elapsedMs: unknown;
+  cpuUsage: Readonly<{ user?: unknown; system?: unknown }> | null | undefined;
+  totalTicks: unknown;
+}>): ArenaStressTiming {
   const wallTimeMs = finiteAtLeast(elapsedMs, 0, 'elapsedMs');
-  if (!Number.isSafeInteger(totalTicks) || totalTicks < 1) {
+  if (
+    typeof totalTicks !== 'number'
+    || !Number.isSafeInteger(totalTicks)
+    || totalTicks < 1
+  ) {
     throw new RangeError('totalTicks 必须是正安全整数。');
   }
   const userCpuMicros = finiteAtLeast(cpuUsage?.user, 0, 'cpuUsage.user');
@@ -25,7 +46,10 @@ export function createArenaStressTiming({ elapsedMs, cpuUsage, totalTicks }) {
   });
 }
 
-export function assertArenaStressCpuBudget(timing, averageTickBudgetMs) {
+export function assertArenaStressCpuBudget(
+  timing: Partial<ArenaStressTiming> | null | undefined,
+  averageTickBudgetMs: unknown,
+): void {
   const budget = finiteAtLeast(averageTickBudgetMs, Number.EPSILON, 'averageTickBudgetMs');
   const average = finiteAtLeast(
     timing?.averageCpuTickMs,

@@ -9,11 +9,11 @@ import { assertSimulationCase } from '../src/arena/experiment/simulation-workloa
 import {
   assertArenaGitSourceIdentityStable,
   readArenaGitSourceIdentity,
-} from './arena-git-source-identity.mjs';
+} from './arena-git-source-identity.ts';
 import {
   assertArenaStressCpuBudget,
   createArenaStressTiming,
-} from './arena-stress-timing.mjs';
+} from './arena-stress-timing.ts';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OPTION_NAMES = new Set([

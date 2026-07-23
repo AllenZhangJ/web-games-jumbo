@@ -18,7 +18,7 @@ import { createArenaExperimentReportBundle } from '@number-strategy-jump/arena-e
 import {
   assertArenaGitSourceIdentityStable,
   readArenaGitSourceIdentity,
-} from './arena-git-source-identity.mjs';
+} from './arena-git-source-identity.ts';
 import { runArenaNodeExperiment } from './arena-node-experiment-runner.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
