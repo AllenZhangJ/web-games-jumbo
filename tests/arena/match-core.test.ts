@@ -3,10 +3,15 @@ import assert from 'node:assert/strict';
 import {
   ARENA_MATCH_PHASE,
   ARENA_PARTICIPANT_STATUS,
+  type ArenaAuthorityEvent,
+  type MatchCore,
+  type MatchCoreOptions,
 } from '@number-strategy-jump/arena-match';
 import {
   createArenaMatchSnapshotAudit,
   createNeutralInputFrame,
+  type ArenaInputFrame,
+  type ArenaMatchSnapshot,
 } from '@number-strategy-jump/arena-contracts';
 import { ARENA_MATCH_EVENT } from '@number-strategy-jump/arena-match';
 import { createArenaV1MatchCore } from '@number-strategy-jump/arena-v1-composition';
@@ -26,7 +31,24 @@ const TEST_ARENA = Object.freeze({
   ]),
 });
 
-function createFastCore(overrides = {}) {
+type ParticipantSnapshot = ArenaMatchSnapshot['participants'][number];
+type InputOverrides = Readonly<Record<string, Partial<ArenaInputFrame>>>;
+
+function required<T>(value: T | null | undefined, name: string): T {
+  assert.ok(value != null, `${name} 不存在。`);
+  return value;
+}
+
+function record(value: unknown, name: string): Readonly<Record<string, unknown>> {
+  assert.ok(value !== null && typeof value === 'object' && !Array.isArray(value), `${name} 必须是对象。`);
+  return value as Readonly<Record<string, unknown>>;
+}
+
+function participant(snapshot: ArenaMatchSnapshot, index: number): ParticipantSnapshot {
+  return required(snapshot.participants[index], `participant ${index}`);
+}
+
+function createFastCore(overrides: Readonly<Record<string, unknown>> = {}) {
   return createArenaV1MatchCore({
     seed: 42,
     config: {
@@ -50,7 +72,7 @@ function createFastCore(overrides = {}) {
   });
 }
 
-function inputs(core, overrides = {}) {
+function inputs(core: MatchCore, overrides: InputOverrides = {}): ArenaInputFrame[] {
   return ['player-1', 'player-2'].map((participantId) => ({
     ...createNeutralInputFrame(core.tick, participantId),
     ...(overrides[participantId] ?? {}),
@@ -59,12 +81,16 @@ function inputs(core, overrides = {}) {
   }));
 }
 
-function step(core, overrides) {
+function step(core: MatchCore, overrides: InputOverrides = {}) {
   return core.step(inputs(core, overrides));
 }
 
-function runUntil(core, predicate, maxTicks = 240) {
-  const events = [];
+function runUntil(
+  core: MatchCore,
+  predicate: (value: MatchCore, events: readonly ArenaAuthorityEvent[]) => boolean,
+  maxTicks = 240,
+) {
+  const events: ArenaAuthorityEvent[] = [];
   for (let index = 0; index < maxTicks; index += 1) {
     events.push(...step(core));
     if (predicate(core, events)) return events;
@@ -72,7 +98,7 @@ function runUntil(core, predicate, maxTicks = 240) {
   throw new Error(`runUntil 在 ${maxTicks} tick 内未满足条件。`);
 }
 
-function attackAndWaitForElimination(core) {
+function attackAndWaitForElimination(core: MatchCore) {
   const events = [...step(core, { 'player-1': { primaryPressed: true, primaryHeld: true } })];
   for (let index = 0; index < 240; index += 1) {
     if (events.some((event) => event.type === ARENA_MATCH_EVENT.PLAYER_ELIMINATED)) return events;
@@ -87,33 +113,34 @@ test('preparing phase ignores movement and emits one MatchStarted transition', (
   assert.equal(core.phase, ARENA_MATCH_PHASE.PREPARING);
   const firstEvents = step(core, { 'player-1': { moveX: 1 } });
   assert.equal(firstEvents.length, 0);
-  assert.equal(core.getSnapshot().participants[0].position.x, initial.participants[0].position.x);
+  assert.equal(participant(core.getSnapshot(), 0).position.x, participant(initial, 0).position.x);
   const secondEvents = step(core, { 'player-1': { moveX: 1 } });
   assert.deepEqual(secondEvents.map((event) => event.type), [ARENA_MATCH_EVENT.MATCH_STARTED]);
   assert.equal(core.phase, ARENA_MATCH_PHASE.RUNNING);
   step(core, { 'player-1': { moveX: 1 } });
-  assert.ok(core.getSnapshot().participants[0].position.x > initial.participants[0].position.x);
+  assert.ok(participant(core.getSnapshot(), 0).position.x > participant(initial, 0).position.x);
   core.destroy();
 });
 
 test('MatchCore internals are not exposed and snapshots cannot mutate authority', () => {
   const core = createFastCore();
-  assert.equal(core.physics, undefined);
-  assert.equal(core.participants, undefined);
-  assert.equal(core.emit, undefined);
-  assert.equal(core.endMatch, undefined);
-  assert.equal(core.respawnParticipant, undefined);
+  const publicCore = record(core, 'MatchCore');
+  assert.equal(publicCore.physics, undefined);
+  assert.equal(publicCore.participants, undefined);
+  assert.equal(publicCore.emit, undefined);
+  assert.equal(publicCore.endMatch, undefined);
+  assert.equal(publicCore.respawnParticipant, undefined);
   assert.ok(Object.isFrozen(core.config));
-  assert.throws(() => { core.matchSeed = 999; }, TypeError);
-  assert.throws(() => { core.configHash = 'tampered'; }, TypeError);
-  assert.throws(() => { core.config = {}; }, TypeError);
+  assert.throws(() => { Object.assign(core, { matchSeed: 999 }); }, TypeError);
+  assert.throws(() => { Object.assign(core, { configHash: 'tampered' }); }, TypeError);
+  assert.throws(() => { Object.assign(core, { config: {} }); }, TypeError);
   const snapshot = core.getSnapshot();
   assert.equal(snapshot.rngStates, undefined);
-  snapshot.participants[0].lives = 0;
-  snapshot.participants[0].position.x = 999;
+  assert.equal(Reflect.set(participant(snapshot, 0), 'lives', 0), true);
+  assert.equal(Reflect.set(participant(snapshot, 0).position, 'x', 999), true);
   const authority = core.getSnapshot();
-  assert.equal(authority.participants[0].lives, 3);
-  assert.notEqual(authority.participants[0].position.x, 999);
+  assert.equal(participant(authority, 0).lives, 3);
+  assert.notEqual(participant(authority, 0).position.x, 999);
   core.destroy();
 });
 
@@ -264,9 +291,16 @@ test('MatchCore cleans incomplete factory resources and failed map authority dur
       };
     },
   }), (error) => {
-    assert.match(error.originalError?.message, /map content failed/);
-    assert.equal(error.cleanupErrors?.length, 1);
-    assert.match(error.cleanupErrors[0].message, /map cleanup failed/);
+    const failure = record(error, 'construction failure');
+    const original = record(failure.originalError, 'original construction failure');
+    const cleanupErrors = failure.cleanupErrors;
+    assert.ok(Array.isArray(cleanupErrors));
+    assert.match(required(original.message, 'original error message') as string, /map content failed/);
+    assert.equal(cleanupErrors.length, 1);
+    assert.match(
+      required(record(cleanupErrors[0], 'cleanup failure').message, 'cleanup error message') as string,
+      /map cleanup failed/,
+    );
     return true;
   });
   assert.equal(failedDestroyed, 1);
@@ -274,30 +308,31 @@ test('MatchCore cleans incomplete factory resources and failed map authority dur
 
 test('registered map equipment is validated against the actual injected RuleEngine catalog', () => {
   let destroyCalls = 0;
+  const ruleEngineFactory: NonNullable<MatchCoreOptions['ruleEngineFactory']> = (context) => {
+    const engine = createArenaV1RuleEngine(context);
+    return new Proxy(engine, {
+      get(target, property) {
+        if (property === 'requireEquipmentDefinition') {
+          return (definitionId: string) => {
+            if (definitionId === 'hammer') {
+              throw new RangeError('injected rules do not support hammer');
+            }
+            return target.requireEquipmentDefinition(definitionId);
+          };
+        }
+        if (property === 'destroy') {
+          return () => {
+            destroyCalls += 1;
+            target.destroy();
+          };
+        }
+        const value = Reflect.get(target, property, target);
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+    });
+  };
   assert.throws(() => createArenaV1MatchCore({
-    ruleEngineFactory(context) {
-      const engine = createArenaV1RuleEngine(context);
-      return new Proxy(engine, {
-        get(target, property) {
-          if (property === 'requireEquipmentDefinition') {
-            return (definitionId) => {
-              if (definitionId === 'hammer') {
-                throw new RangeError('injected rules do not support hammer');
-              }
-              return target.requireEquipmentDefinition(definitionId);
-            };
-          }
-          if (property === 'destroy') {
-            return () => {
-              destroyCalls += 1;
-              target.destroy();
-            };
-          }
-          const value = Reflect.get(target, property, target);
-          return typeof value === 'function' ? value.bind(target) : value;
-        },
-      });
-    },
+    ruleEngineFactory,
   }), /do not support hammer/);
   assert.equal(destroyCalls, 1);
 });
@@ -305,7 +340,7 @@ test('registered map equipment is validated against the actual injected RuleEngi
 test('MatchCore tick failure preserves cleanup causes and retries unfinished resources', () => {
   let destroyAttempts = 0;
   let rawWorld = null;
-  const physicsFactory = ({ arena }) => {
+  const physicsFactory: NonNullable<MatchCoreOptions['physicsFactory']> = ({ arena }) => {
     rawWorld = createLightweightPhysicsWorld({ arena });
     return new Proxy(rawWorld, {
       get(target, property) {
@@ -329,9 +364,16 @@ test('MatchCore tick failure preserves cleanup causes and retries unfinished res
   assert.throws(
     () => core.step(inputs(core)),
     (error) => {
-      assert.match(error.originalError?.message, /physics step failed/);
-      assert.equal(error.cleanupErrors?.length, 1);
-      assert.match(error.cleanupErrors[0].message, /physics cleanup failed/);
+      const failure = record(error, 'tick failure');
+      const original = record(failure.originalError, 'original tick failure');
+      const cleanupErrors = failure.cleanupErrors;
+      assert.ok(Array.isArray(cleanupErrors));
+      assert.match(required(original.message, 'original error message') as string, /physics step failed/);
+      assert.equal(cleanupErrors.length, 1);
+      assert.match(
+        required(record(cleanupErrors[0], 'cleanup failure').message, 'cleanup error message') as string,
+        /physics cleanup failed/,
+      );
       return true;
     },
   );
@@ -382,12 +424,12 @@ test('base push has windup, hits once, applies hitstun and produces authoritativ
   assert.equal(events.filter((event) => event.type === ARENA_MATCH_EVENT.HIT_RESOLVED).length, 1);
   assert.equal(events.filter((event) => event.type === ARENA_MATCH_EVENT.KNOCKBACK_APPLIED).length, 1);
   const elimination = events.find((event) => event.type === ARENA_MATCH_EVENT.PLAYER_ELIMINATED);
-  assert.equal(elimination.participantId, 'player-2');
-  assert.equal(elimination.creditedAttackerId, 'player-1');
+  assert.equal(required(elimination, 'elimination event').participantId, 'player-2');
+  assert.equal(required(elimination, 'elimination event').creditedAttackerId, 'player-1');
   const snapshot = core.getSnapshot();
-  assert.equal(snapshot.participants[0].eliminations, 1);
-  assert.equal(snapshot.participants[1].lives, 2);
-  assert.equal(snapshot.participants[1].status, ARENA_PARTICIPANT_STATUS.RESPAWNING);
+  assert.equal(participant(snapshot, 0).eliminations, 1);
+  assert.equal(participant(snapshot, 1).lives, 2);
+  assert.equal(participant(snapshot, 1).status, ARENA_PARTICIPANT_STATUS.RESPAWNING);
   core.destroy();
 });
 
@@ -404,10 +446,10 @@ test('same-tick symmetric attacks trade without participant-order advantage', ()
     [['player-1', 'player-2'], ['player-2', 'player-1']],
   );
   const snapshot = core.getSnapshot();
-  assert.equal(snapshot.participants[0].hitstunTicks, core.config.basePush.hitstunTicks);
-  assert.equal(snapshot.participants[1].hitstunTicks, core.config.basePush.hitstunTicks);
-  assert.ok(snapshot.participants[0].velocity.x < 0);
-  assert.ok(snapshot.participants[1].velocity.x > 0);
+  assert.equal(participant(snapshot, 0).hitstunTicks, core.config.basePush.hitstunTicks);
+  assert.equal(participant(snapshot, 1).hitstunTicks, core.config.basePush.hitstunTicks);
+  assert.ok(participant(snapshot, 0).velocity.x < 0);
+  assert.ok(participant(snapshot, 1).velocity.x > 0);
   core.destroy();
 });
 
@@ -416,7 +458,7 @@ test('three eliminations respawn twice with invulnerability and then end the mat
   for (let life = 2; life >= 0; life -= 1) {
     const eliminationEvents = attackAndWaitForElimination(core);
     assert.ok(eliminationEvents.some((event) => event.type === ARENA_MATCH_EVENT.PLAYER_ELIMINATED));
-    const target = core.getSnapshot().participants[1];
+    const target = participant(core.getSnapshot(), 1);
     assert.equal(target.lives, life);
     if (life > 0) {
       const respawnEvents = runUntil(
@@ -425,13 +467,13 @@ test('three eliminations respawn twice with invulnerability and then end the mat
         10,
       );
       assert.ok(respawnEvents.some((event) => event.type === ARENA_MATCH_EVENT.PLAYER_RESPAWNED));
-      assert.equal(core.getSnapshot().participants[1].invulnerableTicks, 3);
+      assert.equal(participant(core.getSnapshot(), 1).invulnerableTicks, 3);
       for (let wait = 0; wait < 4; wait += 1) step(core);
     }
   }
   assert.equal(core.phase, ARENA_MATCH_PHASE.ENDED);
-  assert.equal(core.result.winnerId, 'player-1');
-  assert.equal(core.result.reason, 'last-participant-standing');
+  assert.equal(required(core.result, 'match result').winnerId, 'player-1');
+  assert.equal(required(core.result, 'match result').reason, 'last-participant-standing');
   assert.throws(() => step(core), /已经结束/);
   core.destroy();
 });
@@ -449,8 +491,8 @@ test('simultaneous final falls produce a deterministic draw', () => {
     hardLimitTicks: 120,
   });
   runUntil(core, (value) => value.phase === ARENA_MATCH_PHASE.ENDED, 120);
-  assert.equal(core.result.isDraw, true);
-  assert.equal(core.result.reason, 'simultaneous-elimination');
+  assert.equal(required(core.result, 'match result').isDraw, true);
+  assert.equal(required(core.result, 'match result').reason, 'simultaneous-elimination');
   core.destroy();
 });
 
@@ -465,9 +507,9 @@ test('a surviving winner is returned to a safe active state after a simultaneous
     );
     for (let wait = 0; wait < 4; wait += 1) step(core);
   }
-  assert.equal(core.getSnapshot().participants[1].lives, 1);
+  assert.equal(participant(core.getSnapshot(), 1).lives, 1);
 
-  let terminalEvents = [];
+  let terminalEvents: readonly ArenaAuthorityEvent[] = [];
   for (let tick = 0; tick < 240 && core.phase !== ARENA_MATCH_PHASE.ENDED; tick += 1) {
     terminalEvents = step(core, {
       'player-1': { moveX: -1 },
@@ -478,8 +520,8 @@ test('a surviving winner is returned to a safe active state after a simultaneous
     terminalEvents.filter((event) => event.type === ARENA_MATCH_EVENT.PLAYER_ELIMINATED).length,
     2,
   );
-  assert.equal(core.result.winnerId, 'player-1');
-  const winner = core.getSnapshot().participants[0];
+  assert.equal(required(core.result, 'match result').winnerId, 'player-1');
+  const winner = participant(core.getSnapshot(), 0);
   assert.equal(winner.status, ARENA_PARTICIPANT_STATUS.ACTIVE);
   assert.ok(winner.position.y > core.config.arena.killY);
   core.destroy();
@@ -490,8 +532,8 @@ test('120+30 style timing enters sudden death and resolves a tied timeout as dra
   const events = [];
   while (core.phase !== ARENA_MATCH_PHASE.ENDED) events.push(...step(core));
   assert.equal(events.filter((event) => event.type === ARENA_MATCH_EVENT.SUDDEN_DEATH_STARTED).length, 1);
-  assert.equal(core.result.isDraw, true);
-  assert.equal(core.result.reason, 'timeout-draw');
+  assert.equal(required(core.result, 'match result').isDraw, true);
+  assert.equal(required(core.result, 'match result').reason, 'timeout-draw');
   core.destroy();
 });
 
