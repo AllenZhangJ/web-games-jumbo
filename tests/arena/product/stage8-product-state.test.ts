@@ -9,6 +9,7 @@ import { createProductMatchResult } from '@number-strategy-jump/arena-product-co
 import {
   PlayerProfileIndeterminateWriteError,
   createPlayerProfile,
+  type PlayerProfile,
 } from '@number-strategy-jump/arena-profile-contracts';
 import {
   PlayerProfilePersistenceError,
@@ -23,10 +24,15 @@ import {
 } from '@number-strategy-jump/arena-product-state';
 import { TEST_MATCH_CONTENT_PUBLIC_VIEW } from './stage8-test-content.js';
 
-function deferred() {
-  let resolve;
-  let reject;
-  const promise = new Promise((resolveValue, rejectValue) => {
+function required<T>(value: T | null | undefined, name: string): T {
+  assert.ok(value != null, `${name} 不存在。`);
+  return value;
+}
+
+function deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolveValue, rejectValue) => {
     resolve = resolveValue;
     reject = rejectValue;
   });
@@ -40,16 +46,16 @@ function profileRepositoryHarness() {
   let rejectSnapshot = false;
   let destroyFailures = 0;
   let renewResult = true;
-  let renewError = null;
+  let renewError: Error | null = null;
   let renewals = 0;
   return {
     get commits() { return commits; },
     get renewals() { return renewals; },
-    set rejectCommit(value) { rejectCommit = value; },
-    set rejectSnapshot(value) { rejectSnapshot = value; },
-    set destroyFailures(value) { destroyFailures = value; },
-    set renewResult(value) { renewResult = value; },
-    set renewError(value) { renewError = value; },
+    set rejectCommit(value: boolean) { rejectCommit = value; },
+    set rejectSnapshot(value: boolean) { rejectSnapshot = value; },
+    set destroyFailures(value: number) { destroyFailures = value; },
+    set renewResult(value: boolean) { renewResult = value; },
+    set renewError(value: Error | null) { renewError = value; },
     open() { return profile; },
     getSnapshot() {
       if (rejectSnapshot) throw new Error('repository snapshot failed');
@@ -60,7 +66,7 @@ function profileRepositoryHarness() {
       if (renewError) throw renewError;
       return renewResult;
     },
-    compareAndSet(next, expectedRevision) {
+    compareAndSet(next: PlayerProfile, expectedRevision: number) {
       commits += 1;
       if (rejectCommit) {
         return { committed: false, reason: 'storage-revision-mismatch', headUpdated: false };
@@ -78,18 +84,21 @@ function profileRepositoryHarness() {
   };
 }
 
-function runtimeHarness({ endAfterSteps = 1, destroyFailures = 0 } = {}) {
+function runtimeHarness({
+  endAfterSteps = 1,
+  destroyFailures = 0,
+}: Readonly<{ endAfterSteps?: number; destroyFailures?: number }> = {}) {
   let state = 'created';
   let paused = false;
   let steps = 0;
   let destroys = 0;
-  let result = null;
+  let result: Readonly<{ authorityHash: string }> | null = null;
   return {
     get state() { return state; },
     get destroys() { return destroys; },
     get paused() { return paused; },
     start() { state = paused ? 'paused' : 'running'; },
-    setPaused(value) {
+    setPaused(value: boolean) {
       paused = value;
       if (state === 'running' || state === 'paused') state = value ? 'paused' : 'running';
     },
@@ -133,26 +142,35 @@ test('ProductSession transition registry is immutable and rejects ambiguous defi
   assert.ok(definitions.length >= 9);
   assert.equal(Object.isFrozen(definitions), true);
   assert.equal(
-    registry.resolve(PRODUCT_SESSION_EVENT.MATCH_REQUESTED, PRODUCT_SESSION_STATE.CHARACTER_SELECT)
-      .toState,
+    required(
+      registry.resolve(
+        PRODUCT_SESSION_EVENT.MATCH_REQUESTED,
+        PRODUCT_SESSION_STATE.CHARACTER_SELECT,
+      ),
+      'match requested transition',
+    ).toState,
     PRODUCT_SESSION_STATE.MATCHING,
   );
   assert.equal(
-    registry.resolve(PRODUCT_SESSION_EVENT.REMATCH_REQUESTED, PRODUCT_SESSION_STATE.REWARD)
-      .toState,
+    required(
+      registry.resolve(PRODUCT_SESSION_EVENT.REMATCH_REQUESTED, PRODUCT_SESSION_STATE.REWARD),
+      'reward rematch transition',
+    ).toState,
     PRODUCT_SESSION_STATE.MATCHING,
   );
   assert.equal(
-    registry.resolve(PRODUCT_SESSION_EVENT.REMATCH_REQUESTED, PRODUCT_SESSION_STATE.UNLOCK)
-      .toState,
+    required(
+      registry.resolve(PRODUCT_SESSION_EVENT.REMATCH_REQUESTED, PRODUCT_SESSION_STATE.UNLOCK),
+      'unlock rematch transition',
+    ).toState,
     PRODUCT_SESSION_STATE.MATCHING,
   );
   assert.throws(() => new ProductSessionTransitionRegistry([
-    definitions[0],
-    definitions[0],
+    required(definitions[0], 'first transition'),
+    required(definitions[0], 'duplicate first transition'),
   ]), /重复转换/);
   assert.throws(() => new ProductSessionTransitionRegistry([{
-    ...definitions[0],
+    ...required(definitions[0], 'first transition'),
     toState: 'unknown',
   }]), /不受支持/);
 });
@@ -188,7 +206,7 @@ test('ProductMatchResult binds replay seed and strips non-public opponent fields
   });
   assert.equal(Object.isFrozen(result), true);
   assert.equal(Object.isFrozen(result.authorityIdentity), true);
-  assert.equal(result.opponent.difficultyId, undefined);
+  assert.equal('difficultyId' in result.opponent, false);
   assert.doesNotMatch(JSON.stringify(result), /difficulty|hard/);
   assert.throws(
     () => createProductMatchResult({
@@ -367,7 +385,7 @@ test('PlayerProfileService fails closed when a committed profile cannot be read 
 });
 
 test('ProductMatchCoordinator deduplicates prepare and applies pause before a late runtime starts', async () => {
-  const pending = deferred();
+  const pending = deferred<ReturnType<typeof runtimeHarness>>();
   let createCalls = 0;
   const runtime = runtimeHarness({ endAfterSteps: 2 });
   const coordinator = new ProductMatchCoordinator({
@@ -393,7 +411,7 @@ test('ProductMatchCoordinator deduplicates prepare and applies pause before a la
   coordinator.setPaused(false);
   coordinator.step();
   const ended = coordinator.step();
-  assert.equal(ended.result.authorityHash, '12345678');
+  assert.equal(required(ended.result, 'ended result').authorityHash, '12345678');
   assert.equal(coordinator.state, PRODUCT_MATCH_COORDINATOR_STATE.RESULT);
   coordinator.release();
   assert.equal(coordinator.state, PRODUCT_MATCH_COORDINATOR_STATE.IDLE);
@@ -402,7 +420,7 @@ test('ProductMatchCoordinator deduplicates prepare and applies pause before a la
 });
 
 test('ProductMatchCoordinator destroys late candidates and retains failed cleanup for retry', async () => {
-  const pending = deferred();
+  const pending = deferred<ReturnType<typeof runtimeHarness>>();
   const runtime = runtimeHarness({ destroyFailures: 1 });
   const coordinator = new ProductMatchCoordinator({
     matchFactory: { create: () => pending.promise },
