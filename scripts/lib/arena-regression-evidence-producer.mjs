@@ -3,7 +3,7 @@ import {
   createArenaRegressionEvidenceReport,
   createArenaStage9RegressionEvidenceV1Definition,
 } from '@number-strategy-jump/arena-regression';
-import { runArenaChildProcess } from './arena-child-process.mjs';
+import { runArenaChildProcess } from './arena-child-process.ts';
 
 const PROCESS_TIMEOUT_MS = 10 * 60 * 1000;
 const MAXIMUM_STDOUT_BYTES = 16 * 1024 * 1024;

@@ -11,8 +11,8 @@ import path from 'node:path';
 import test from 'node:test';
 import {
   writeArenaEvidenceFileExclusive,
-} from '../../../scripts/lib/arena-atomic-evidence-file.mjs';
-import { runArenaChildProcess } from '../../../scripts/lib/arena-child-process.mjs';
+} from '../../../scripts/lib/arena-atomic-evidence-file.ts';
+import { runArenaChildProcess } from '../../../scripts/lib/arena-child-process.ts';
 import {
   describeArenaRegressionEvidenceProcesses,
   produceArenaRegressionEvidenceReport,

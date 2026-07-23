@@ -10,7 +10,7 @@ import {
   createArenaStage9RegressionEvidenceV1Definition,
   createArenaStage9RegressionEvidenceV1DefinitionHash,
 } from '@number-strategy-jump/arena-regression';
-import { writeArenaEvidenceFileExclusive } from './lib/arena-atomic-evidence-file.mjs';
+import { writeArenaEvidenceFileExclusive } from './lib/arena-atomic-evidence-file.ts';
 import {
   assertArenaGitSourceIdentityStable,
   readArenaGitSourceIdentity,

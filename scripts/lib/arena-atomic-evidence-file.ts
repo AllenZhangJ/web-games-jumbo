@@ -1,8 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { link, open, unlink } from 'node:fs/promises';
+import type { FileHandle } from 'node:fs/promises';
 import path from 'node:path';
 
-export async function writeArenaEvidenceFileExclusive(filePath, contents, options = {}) {
+export async function writeArenaEvidenceFileExclusive(
+  filePath: string,
+  contents: string | Buffer,
+  options: Readonly<{ beforePublish?: () => unknown | Promise<unknown> }> = {},
+): Promise<string> {
   if (typeof filePath !== 'string' || !path.isAbsolute(filePath)) {
     throw new TypeError('Arena evidence output 必须是绝对路径。');
   }
@@ -21,10 +26,10 @@ export async function writeArenaEvidenceFileExclusive(filePath, contents, option
     directory,
     `.${path.basename(filePath)}.${process.pid}.${randomUUID()}.tmp`,
   );
-  let handle = null;
+  let handle: FileHandle | null = null;
   let temporaryExists = false;
   let published = false;
-  let primaryError = null;
+  let primaryError: unknown = null;
   try {
     handle = await open(temporaryPath, 'wx', 0o600);
     temporaryExists = true;
@@ -38,7 +43,7 @@ export async function writeArenaEvidenceFileExclusive(filePath, contents, option
   } catch (error) {
     primaryError = error;
   }
-  const cleanupErrors = [];
+  const cleanupErrors: unknown[] = [];
   if (handle) {
     try {
       await handle.close();

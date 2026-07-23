@@ -1,17 +1,28 @@
 import { spawn } from 'node:child_process';
 
-function positiveSafeInteger(value, name) {
-  if (!Number.isSafeInteger(value) || value < 1) {
+function positiveSafeInteger(value: unknown, name: string): number {
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 1) {
     throw new RangeError(`${name} 必须是正安全整数。`);
   }
-  return value;
+  return value as number;
 }
 
-function nonEmptyText(value, name) {
+function nonEmptyText(value: unknown, name: string): string {
   if (typeof value !== 'string' || value.length === 0) {
     throw new TypeError(`${name} 必须是非空字符串。`);
   }
   return value;
+}
+
+export interface ArenaChildProcessResult {
+  readonly command: string;
+  readonly args: readonly string[];
+  readonly exitCode: number | null;
+  readonly signal: NodeJS.Signals | null;
+  readonly stdout: string;
+  readonly stderr: string;
+  readonly stdoutBytes: number;
+  readonly stderrBytes: number;
 }
 
 export async function runArenaChildProcess({
@@ -21,7 +32,14 @@ export async function runArenaChildProcess({
   timeoutMs = 300_000,
   maximumStdoutBytes = 16 * 1024 * 1024,
   maximumStderrBytes = 4 * 1024 * 1024,
-}) {
+}: Readonly<{
+  command: string;
+  args?: readonly string[];
+  cwd: string;
+  timeoutMs?: number;
+  maximumStdoutBytes?: number;
+  maximumStderrBytes?: number;
+}>): Promise<ArenaChildProcessResult> {
   nonEmptyText(command, 'Arena child process command');
   nonEmptyText(cwd, 'Arena child process cwd');
   if (!Array.isArray(args) || args.some((argument) => typeof argument !== 'string')) {
@@ -31,16 +49,16 @@ export async function runArenaChildProcess({
   positiveSafeInteger(maximumStdoutBytes, 'Arena child process maximumStdoutBytes');
   positiveSafeInteger(maximumStderrBytes, 'Arena child process maximumStderrBytes');
 
-  return new Promise((resolve, reject) => {
-    let child;
+  return new Promise<ArenaChildProcessResult>((resolve, reject) => {
+    let child: ReturnType<typeof spawn> | null = null;
     let finished = false;
-    let terminalFailure = null;
-    let timeoutToken = null;
-    let forceKillToken = null;
+    let terminalFailure: unknown = null;
+    let timeoutToken: NodeJS.Timeout | null = null;
+    let forceKillToken: NodeJS.Timeout | null = null;
     let stdoutBytes = 0;
     let stderrBytes = 0;
-    const stdoutChunks = [];
-    const stderrChunks = [];
+    const stdoutChunks: Buffer[] = [];
+    const stderrChunks: Buffer[] = [];
 
     const clearTimers = () => {
       if (timeoutToken !== null) clearTimeout(timeoutToken);
@@ -48,8 +66,8 @@ export async function runArenaChildProcess({
       timeoutToken = null;
       forceKillToken = null;
     };
-    const fail = (error) => {
-      if (terminalFailure || finished) return;
+    const fail = (error: unknown): void => {
+      if (terminalFailure !== null || finished) return;
       terminalFailure = error;
       child?.kill('SIGTERM');
       forceKillToken = setTimeout(() => {
@@ -57,7 +75,7 @@ export async function runArenaChildProcess({
       }, 1_000);
       forceKillToken.unref?.();
     };
-    const collect = (streamName, chunk) => {
+    const collect = (streamName: 'stdout' | 'stderr', chunk: string | Buffer): void => {
       const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
       if (streamName === 'stdout') {
         stdoutBytes += buffer.byteLength;
@@ -87,14 +105,14 @@ export async function runArenaChildProcess({
       reject(error);
       return;
     }
-    child.stdout.on('data', (chunk) => collect('stdout', chunk));
-    child.stderr.on('data', (chunk) => collect('stderr', chunk));
+    child.stdout?.on('data', (chunk: Buffer) => collect('stdout', chunk));
+    child.stderr?.on('data', (chunk: Buffer) => collect('stderr', chunk));
     child.once('error', (error) => fail(error));
     child.once('close', (exitCode, signal) => {
       if (finished) return;
       finished = true;
       clearTimers();
-      if (terminalFailure) {
+      if (terminalFailure !== null) {
         reject(terminalFailure);
         return;
       }
