@@ -16,7 +16,7 @@ import {
   ARENA_V1_SCRIPTED_PRESSURE_WORKLOAD_ID,
   ARENA_V1_SCRIPTED_PRESSURE_WORKLOAD_VERSION,
   createArenaV1ScriptedPressureWorkloadEntry,
-} from './arena-v1-scripted-pressure-workload.js';
+} from '@number-strategy-jump/arena-v1-experiment';
 
 export const ARENA_STAGE9_S9_1_EXPERIMENT_ID =
   'arena.stage9.s9.1.scripted-pressure.v1';

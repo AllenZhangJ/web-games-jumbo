@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import {
   createArenaStage9MatchCoreExperimentDefinition,
 } from '../src/arena/experiment/arena-matchcore-experiment-composition.js';
-import { createArenaV1MatchCoreInvariantWorkloadEntry } from '../src/arena/experiment/arena-v1-matchcore-invariant-workload.js';
+import { createArenaV1MatchCoreInvariantWorkloadEntry } from '@number-strategy-jump/arena-v1-experiment';
 import { assertSimulationCase } from '../src/arena/experiment/simulation-workload-registry.js';
 import {
   assertArenaGitSourceIdentityStable,
