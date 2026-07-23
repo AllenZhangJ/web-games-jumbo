@@ -15,7 +15,6 @@
     "scripts/arena-presentation-session-soak.mjs",
     "scripts/arena-product-presentation-session-soak.mjs",
     "scripts/arena-product-session-stress.mjs",
-    "scripts/arena-profile-persistence-stress.mjs",
     "scripts/arena-regression-evidence.mjs",
     "scripts/arena-stage9-readiness.mjs",
     "scripts/build.mjs",

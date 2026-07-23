@@ -2,7 +2,11 @@ import { ARENA_V1_PLAYER_PROFILE_DEFINITION } from '@number-strategy-jump/arena-
 import { advancePlayerProfile } from '@number-strategy-jump/arena-profile-contracts';
 import { PlayerProfileRepository } from '@number-strategy-jump/arena-profile-persistence';
 
-function parsePositiveInteger(argument, prefix, fallback) {
+function parsePositiveInteger(
+  argument: string | undefined,
+  prefix: string,
+  fallback: number,
+): number {
   const match = argument?.startsWith(prefix) ? argument.slice(prefix.length) : null;
   if (match === null) return fallback;
   const value = Number(match);
@@ -16,22 +20,24 @@ if (commits > ARENA_V1_PLAYER_PROFILE_DEFINITION.limits.maxCommittedGrantIds) {
   throw new RangeError('压力次数不能超过 Profile committedGrantIds 上限。');
 }
 
-function clone(value) {
-  return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
+function clone<T>(value: T): T {
+  return value === undefined
+    ? value
+    : JSON.parse(JSON.stringify(value)) as T;
 }
 
-const values = new Map();
-const failNextRead = new Set();
+const values = new Map<string, unknown>();
+const failNextRead = new Set<string>();
 let failHeadOnce = false;
-let armReadbackKey = null;
+let armReadbackKey: string | null = null;
 const port = {
-  storageRead(key) {
+  storageRead(key: string) {
     if (failNextRead.delete(key)) return { ok: false, found: false, value: undefined };
     return values.has(key)
       ? { ok: true, found: true, value: clone(values.get(key)) }
       : { ok: true, found: false, value: undefined };
   },
-  storageWrite(key, value) {
+  storageWrite(key: string, value: unknown): boolean {
     if (failHeadOnce && key.endsWith('.head')) {
       failHeadOnce = false;
       return false;
@@ -43,7 +49,7 @@ const port = {
     }
     return true;
   },
-  storageDelete(key) {
+  storageDelete(key: string): boolean {
     values.delete(key);
     return true;
   },
@@ -51,7 +57,7 @@ const port = {
 
 let now = 1000;
 let ownerSequence = 0;
-function createRepository() {
+function createRepository(): PlayerProfileRepository {
   ownerSequence += 1;
   return new PlayerProfileRepository({
     definition: ARENA_V1_PLAYER_PROFILE_DEFINITION,
