@@ -8,6 +8,7 @@ import path from 'node:path';
 import {
   ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND,
   createArenaDeviceAcceptanceDefinition,
+  type ArenaDeviceAcceptanceDefinition,
 } from '@number-strategy-jump/arena-device-acceptance';
 import {
   ARENA_STAGE6_DEVICE_CHECK_ID,
@@ -53,8 +54,16 @@ import {
 const COMMIT = 'a'.repeat(40);
 const BUILD_ID = 'stage6-device-build-001';
 const PERFORMED_AT = '2026-07-18T12:30:45.000Z';
+type CheckResult = typeof ARENA_DEVICE_ACCEPTANCE_CHECK_RESULT[
+  keyof typeof ARENA_DEVICE_ACCEPTANCE_CHECK_RESULT
+];
 
-function fakeArtifact(runId, id, kind) {
+function required<T>(value: T, name: string): NonNullable<T> {
+  assert.ok(value != null, `${name} 不存在。`);
+  return value as NonNullable<T>;
+}
+
+function fakeArtifact(runId: string, id: string, kind: string) {
   const extension = kind === ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.SCREENSHOT
     ? 'png'
     : kind === ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.VIDEO
@@ -72,22 +81,29 @@ function fakeArtifact(runId, id, kind) {
   };
 }
 
-function recordValue(definition, targetId, {
+interface RecordValueOptions {
+  readonly runId?: string;
+  readonly result?: CheckResult;
+  readonly commit?: string;
+  readonly buildId?: string;
+}
+
+function recordValue(definition: ArenaDeviceAcceptanceDefinition, targetId: string, {
   runId = `run-${targetId}`,
   result = ARENA_DEVICE_ACCEPTANCE_CHECK_RESULT.PASSED,
   commit = COMMIT,
   buildId = BUILD_ID,
-} = {}) {
-  const target = definition.getTarget(targetId);
-  const artifactIdByKind = {
+}: RecordValueOptions = {}) {
+  const target = required(definition.getTarget(targetId), `设备目标 ${targetId}`);
+  const artifactIdByKind: Readonly<Record<string, string>> = {
     [ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.BUILD_MANIFEST]: 'manifest',
     [ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.LOG]: 'log',
     [ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.PERFORMANCE_TRACE]: 'performance',
     [ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.SCREENSHOT]: 'screen',
     [ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.VIDEO]: 'video',
   };
-  const artifacts = target.requiredArtifactKinds.map((kind) => (
-    fakeArtifact(runId, artifactIdByKind[kind], kind)
+  const artifacts = target.requiredArtifactKinds.map((kind: string) => (
+    fakeArtifact(runId, required(artifactIdByKind[kind], `${kind} 产物 ID`), kind)
   ));
   return {
     schemaVersion: ARENA_DEVICE_ACCEPTANCE_RECORD_SCHEMA_VERSION,
@@ -114,7 +130,7 @@ function recordValue(definition, targetId, {
     },
     orientation: 'portrait',
     inputMode: 'touch',
-    checks: target.requiredCheckIds.map((id, index) => ({
+    checks: target.requiredCheckIds.map((id: string, index: number) => ({
       id,
       result: index === 0 ? result : ARENA_DEVICE_ACCEPTANCE_CHECK_RESULT.PASSED,
       notes: `${id} 已按脚本观察。`,
@@ -124,7 +140,11 @@ function recordValue(definition, targetId, {
   };
 }
 
-function bundleValue(definition, records, overrides = {}) {
+function bundleValue(
+  definition: ArenaDeviceAcceptanceDefinition,
+  records: readonly unknown[],
+  overrides: Readonly<Record<string, unknown>> = {},
+) {
   return {
     schemaVersion: ARENA_DEVICE_ACCEPTANCE_BUNDLE_SCHEMA_VERSION,
     definitionId: definition.id,
@@ -141,19 +161,24 @@ test('Stage 6 device acceptance definition fixes five targets without entering a
   const definition = createArenaStage6DeviceAcceptanceV1Definition();
   assert.equal(definition.targets.length, 5);
   assert.equal(definition.checks.length, 9);
-  assert.equal(definition.getTarget('web-phone').platform, 'web');
+  const webPhone = required(definition.getTarget('web-phone'), 'Web 手机目标');
+  const wechatTool = required(
+    definition.getTarget('wechat-developer-tool'),
+    '微信开发者工具目标',
+  );
+  assert.equal(webPhone.platform, 'web');
   assert.ok(
-    definition.getTarget('web-phone').requiredCheckIds.includes(
+    webPhone.requiredCheckIds.includes(
       ARENA_STAGE6_DEVICE_CHECK_ID.WEBGL_CONTEXT_RECOVERY,
     ),
   );
   assert.ok(
-    !definition.getTarget('wechat-developer-tool').requiredCheckIds.includes(
+    !wechatTool.requiredCheckIds.includes(
       ARENA_STAGE6_DEVICE_CHECK_ID.WEBGL_CONTEXT_RECOVERY,
     ),
   );
   assert.throws(() => {
-    definition.targets[0].minimumPassingRuns = 99;
+    Object.assign(required(definition.targets[0], '首个设备目标'), { minimumPassingRuns: 99 });
   }, /read only|Cannot assign/i);
   assert.equal(
     createArenaStage6DeviceAcceptanceV1Definition().getContentHash(),
@@ -186,8 +211,14 @@ test('Stage 9 performance acceptance fixes six OS/class targets and requires tra
   const definition = createArenaStage9PerformanceDeviceAcceptanceV1Definition();
   assert.equal(definition.targets.length, 6);
   assert.equal(definition.checks.length, 8);
-  assert.deepEqual(definition.getTarget('web-low-device').requiredOsNames, ['Android']);
-  assert.deepEqual(definition.getTarget('web-mainstream-device').requiredOsNames, ['iOS']);
+  assert.deepEqual(
+    required(definition.getTarget('web-low-device'), '低端 Web 目标').requiredOsNames,
+    ['Android'],
+  );
+  assert.deepEqual(
+    required(definition.getTarget('web-mainstream-device'), '主流 Web 目标').requiredOsNames,
+    ['iOS'],
+  );
   assert.ok(definition.targets.every(({ requiredArtifactKinds }) => (
     requiredArtifactKinds.includes(ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.PERFORMANCE_TRACE)
   )));
@@ -205,7 +236,10 @@ test('Stage 8 product acceptance separates developer-tool faults from iOS/Androi
   assert.equal(definition.id, ARENA_STAGE8_PRODUCT_DEVICE_ACCEPTANCE_V1_ID);
   assert.equal(definition.targets.length, 6);
   assert.equal(definition.checks.length, 14);
-  const developerTool = definition.getTarget('douyin-developer-tool');
+  const developerTool = required(
+    definition.getTarget('douyin-developer-tool'),
+    '抖音开发者工具目标',
+  );
   assert.deepEqual(developerTool.requiredOsNames, ['macOS']);
   assert.ok(developerTool.requiredCheckIds.includes(
     ARENA_STAGE8_PRODUCT_DEVICE_CHECK_ID.CORRUPT_STORAGE_RECOVERY,
@@ -213,7 +247,7 @@ test('Stage 8 product acceptance separates developer-tool faults from iOS/Androi
   assert.ok(!developerTool.requiredCheckIds.includes(
     ARENA_STAGE8_PRODUCT_DEVICE_CHECK_ID.PERFORMANCE_SAMPLE,
   ));
-  const ios = definition.getTarget('wechat-ios-phone');
+  const ios = required(definition.getTarget('wechat-ios-phone'), '微信 iOS 目标');
   assert.deepEqual(ios.requiredOsNames, ['iOS']);
   assert.ok(ios.requiredCheckIds.includes(
     ARENA_STAGE8_PRODUCT_DEVICE_CHECK_ID.PERFORMANCE_SAMPLE,
@@ -328,7 +362,10 @@ test('bundle rejects mixed builds, duplicate runs and artifact reuse across targ
     { ...recordValue(definition, 'wechat-phone'), runId: first.runId },
   ])), /重复的设备证据 runId/);
   const second = recordValue(definition, 'wechat-phone');
-  second.artifacts[0] = { ...second.artifacts[0], path: first.artifacts[0].path };
+  second.artifacts[0] = {
+    ...required(second.artifacts[0], '第二目标首个产物'),
+    path: required(first.artifacts[0], '第一目标首个产物').path,
+  };
   assert.throws(() => createArenaDeviceAcceptanceBundle(definition, bundleValue(definition, [
     first,
     second,
@@ -346,8 +383,8 @@ test('Stage 8 records may share only the immutable platform build manifest', () 
     kind === ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.BUILD_MANIFEST
   ));
   phone.artifacts[phoneManifestIndex] = {
-    ...phone.artifacts[phoneManifestIndex],
-    path: developerManifest.path,
+    ...required(phone.artifacts[phoneManifestIndex], '手机构建 Manifest'),
+    path: required(developerManifest, '开发者工具构建 Manifest').path,
   };
   assert.doesNotThrow(() => createArenaDeviceAcceptanceBundle(
     definition,
@@ -358,7 +395,7 @@ test('Stage 8 records may share only the immutable platform build manifest', () 
     kind === ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.BUILD_MANIFEST
   ));
   differentPhone.artifacts[differentManifestIndex] = {
-    ...differentPhone.artifacts[differentManifestIndex],
+    ...required(differentPhone.artifacts[differentManifestIndex], '不同手机构建 Manifest'),
     sha256: '1'.repeat(64),
   };
   assert.throws(() => createArenaDeviceAcceptanceBundle(
@@ -372,8 +409,8 @@ test('Stage 8 records may share only the immutable platform build manifest', () 
     kind === ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.LOG
   ));
   phone.artifacts[phoneLogIndex] = {
-    ...phone.artifacts[phoneLogIndex],
-    path: developerLog.path,
+    ...required(phone.artifacts[phoneLogIndex], '手机日志'),
+    path: required(developerLog, '开发者工具日志').path,
   };
   assert.throws(() => createArenaDeviceAcceptanceBundle(
     definition,
@@ -381,9 +418,13 @@ test('Stage 8 records may share only the immutable platform build manifest', () 
   ), /重复使用/);
 });
 
-async function writeArtifactRecord(root, definition, targetId) {
+async function writeArtifactRecord(
+  root: string,
+  definition: ArenaDeviceAcceptanceDefinition,
+  targetId: string,
+) {
   const value = recordValue(definition, targetId);
-  const artifacts = [];
+  const artifacts: typeof value.artifacts = [];
   for (const artifact of value.artifacts) {
     const content = Buffer.from(`artifact:${value.runId}:${artifact.kind}`, 'utf8');
     const file = path.join(root, artifact.path);
@@ -398,7 +439,7 @@ async function writeArtifactRecord(root, definition, targetId) {
   return { ...value, artifacts };
 }
 
-function miniBuildManifest(platform) {
+function miniBuildManifest(platform: 'wechat' | 'douyin') {
   const product = {
     path: 'game-product.js',
     sha256: '1'.repeat(64),
@@ -437,7 +478,11 @@ function webBuildManifest() {
   });
 }
 
-function shortPerformanceRecord(policy, targetId, runId) {
+function shortPerformanceRecord(
+  policy: ReturnType<typeof createArenaStage9PerformanceV1Policy>,
+  targetId: string,
+  runId: string,
+) {
   const quality = ARENA_V1_PRESENTATION_QUALITY_REGISTRY.require(
     ARENA_V1_PRESENTATION_QUALITY_ID.LOW,
   );
@@ -502,9 +547,12 @@ function shortPerformanceRecord(policy, targetId, runId) {
   };
 }
 
-async function writeStage8ArtifactRecords(root, definition) {
-  const manifests = new Map();
-  for (const platform of ['douyin', 'wechat']) {
+async function writeStage8ArtifactRecords(
+  root: string,
+  definition: ArenaDeviceAcceptanceDefinition,
+) {
+  const manifests = new Map<string, Readonly<{ path: string; byteLength: number; sha256: string }>>();
+  for (const platform of ['douyin', 'wechat'] as const) {
     const content = Buffer.from(`${JSON.stringify(miniBuildManifest(platform), null, 2)}\n`);
     const artifactPath = `build/${platform}/arena-build-manifest.json`;
     await mkdir(path.dirname(path.join(root, artifactPath)), { recursive: true });
@@ -515,13 +563,16 @@ async function writeStage8ArtifactRecords(root, definition) {
       sha256: createHash('sha256').update(content).digest('hex'),
     });
   }
-  const records = [];
+  const records: ReturnType<typeof recordValue>[] = [];
   for (const target of definition.targets) {
     const value = recordValue(definition, target.id);
-    const artifacts = [];
+    const artifacts: typeof value.artifacts = [];
     for (const artifact of value.artifacts) {
       if (artifact.kind === ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.BUILD_MANIFEST) {
-        artifacts.push({ ...artifact, ...manifests.get(target.platform) });
+        artifacts.push({
+          ...artifact,
+          ...required(manifests.get(target.platform), `${target.platform} 构建 Manifest`),
+        });
         continue;
       }
       const content = Buffer.from(`artifact:${value.runId}:${artifact.kind}`, 'utf8');
@@ -544,13 +595,14 @@ test('device evidence CLI verifies artifact containment, size and SHA-256', asyn
   const externalRoot = await mkdtemp(path.join(os.tmpdir(), 'arena-device-evidence-external-'));
   try {
     const definition = createArenaStage6DeviceAcceptanceV1Definition();
-    const records = [];
+    const records: Awaited<ReturnType<typeof writeArtifactRecord>>[] = [];
     for (const target of definition.targets) {
       records.push(await writeArtifactRecord(root, definition, target.id));
     }
-    const largeVideo = records[0].artifacts.find(({ kind }) => (
+    const firstRecord = required(records[0], '首条设备记录');
+    const largeVideo = required(firstRecord.artifacts.find(({ kind }) => (
       kind === ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.VIDEO
-    ));
+    )), '大视频产物');
     const largeVideoBytes = Buffer.alloc(5 * 1024 * 1024 + 1, 0x5a);
     await writeFile(path.join(root, largeVideo.path), largeVideoBytes);
     largeVideo.byteLength = largeVideoBytes.length;
@@ -572,11 +624,13 @@ test('device evidence CLI verifies artifact containment, size and SHA-256', asyn
     assert.equal(output.report.status, ARENA_DEVICE_ACCEPTANCE_REPORT_STATUS.READY);
 
     const reusedRecords = structuredClone(records);
-    const reusedSource = reusedRecords[0].artifacts[0];
-    const reusedTarget = reusedRecords[1].artifacts[0];
-    const reusedPath = `${reusedRecords[1].runId}/reused-log.txt`;
+    const reusedFirstRecord = required(reusedRecords[0], '复用来源记录');
+    const reusedSecondRecord = required(reusedRecords[1], '复用目标记录');
+    const reusedSource = required(reusedFirstRecord.artifacts[0], '复用来源产物');
+    const reusedTarget = required(reusedSecondRecord.artifacts[0], '复用目标产物');
+    const reusedPath = `${reusedSecondRecord.runId}/reused-log.txt`;
     await writeFile(path.join(root, reusedPath), await readFile(path.join(root, reusedSource.path)));
-    reusedRecords[1].artifacts[0] = {
+    reusedSecondRecord.artifacts[0] = {
       ...reusedTarget,
       path: reusedPath,
       sha256: reusedSource.sha256,
@@ -598,10 +652,10 @@ test('device evidence CLI verifies artifact containment, size and SHA-256', asyn
     assert.equal(reused.status, 1);
     assert.match(reused.stderr, /内容重复/);
 
-    const firstArtifact = path.join(root, records[0].artifacts[0].path);
+    const firstArtifact = path.join(root, required(firstRecord.artifacts[0], '首个设备产物').path);
     const original = await readFile(firstArtifact);
     const tampered = Buffer.from(original);
-    tampered[0] ^= 1;
+    tampered[0] = required(tampered[0], '首个产物字节') ^ 1;
     await writeFile(firstArtifact, tampered);
     const rejected = spawnSync(process.execPath, [
       '--import', 'tsx',
