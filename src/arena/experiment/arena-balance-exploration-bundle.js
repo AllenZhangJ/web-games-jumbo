@@ -7,7 +7,7 @@ import {
 import {
   createArenaBalanceExplorationSelection,
 } from './arena-balance-exploration-selection.js';
-import { readArenaExperimentReportBundle } from './experiment-report-bundle.js';
+import { readArenaExperimentReportBundle } from '@number-strategy-jump/arena-experiment';
 
 export const ARENA_BALANCE_EXPLORATION_BUNDLE_SCHEMA_VERSION = 1;
 

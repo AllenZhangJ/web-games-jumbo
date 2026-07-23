@@ -41,6 +41,29 @@ export {
   SimulationWorkloadRegistry,
   assertSimulationCase,
 } from './simulation-workload-registry.js';
+export {
+  ARENA_EXPERIMENT_CASE_STATUS,
+  ARENA_EXPERIMENT_OUTCOME,
+  ARENA_EXPERIMENT_REPORT_SCHEMA_VERSION,
+  createArenaExperimentReport,
+} from './experiment-report.js';
+export type {
+  ArenaExperimentCaseResult,
+  ArenaExperimentMetricResult,
+  ArenaExperimentReport,
+  ArenaExperimentReportEnvironment,
+} from './experiment-report.js';
+export {
+  ARENA_EXPERIMENT_REPORT_BUNDLE_SCHEMA_VERSION,
+  createArenaExperimentReportBundle,
+  readArenaExperimentReportBundle,
+} from './experiment-report-bundle.js';
+export type { ArenaExperimentReportBundle } from './experiment-report-bundle.js';
+export {
+  SIMULATION_EXPERIMENT_RUNNER_STATE,
+  SimulationExperimentRunner,
+} from './simulation-runner.js';
+export type { SimulationExperimentRunnerState } from './simulation-runner.js';
 export type {
   ArenaSimulationCase,
   ArenaSimulationWorkloadEntry,

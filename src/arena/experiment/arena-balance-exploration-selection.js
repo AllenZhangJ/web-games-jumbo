@@ -7,7 +7,7 @@ import {
 } from '@number-strategy-jump/arena-contracts';
 import { ARENA_BALANCE_CANDIDATE_COLLECTOR_ID } from './arena-balance-candidate-collector.js';
 import { ARENA_BOT_CAPABILITY_COLLECTOR_ID } from './arena-bot-capability-collector.js';
-import { readArenaExperimentReportBundle } from './experiment-report-bundle.js';
+import { readArenaExperimentReportBundle } from '@number-strategy-jump/arena-experiment';
 import { readArenaMetricGate } from '@number-strategy-jump/arena-experiment';
 
 export const ARENA_BALANCE_EXPLORATION_SELECTION_SCHEMA_VERSION = 1;

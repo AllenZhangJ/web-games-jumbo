@@ -14,6 +14,7 @@ import {
   readArenaMetricGate,
   assertSimulationCase,
   SimulationWorkloadRegistry,
+  SimulationExperimentRunner,
 } from '../src/index.js';
 
 function createDefinition() {
@@ -191,5 +192,61 @@ describe('Arena experiment primitives', () => {
     const stableCase = assertSimulationCase(simulationCase);
     simulationCase.step = () => 'mutated';
     expect(stableCase.step()).toBe('stable');
+  });
+
+  it('fails a case closed and safely destroys an invalid accessor-backed factory result', () => {
+    let stepReads = 0;
+    let destroys = 0;
+    const invalidCase = {
+      getMetadata() { return {}; },
+      getSnapshot() { return {}; },
+      isComplete() { return false; },
+      exportResult() { return {}; },
+      destroy() { destroys += 1; },
+    };
+    Object.defineProperty(invalidCase, 'step', {
+      enumerable: true,
+      get() {
+        stepReads += 1;
+        return () => ({});
+      },
+    });
+    const workloadRegistry = new SimulationWorkloadRegistry([{
+      id: 'workload.test',
+      version: 1,
+      validateParameters: () => ({}),
+      createCase: () => invalidCase,
+    }]);
+    const collectorRegistry = new MetricCollectorRegistry([{
+      id: 'collector.test',
+      version: 1,
+      validateParameters: () => ({}),
+      create: () => ({
+        beginCase() {},
+        observeStep() {},
+        completeCase() {},
+        failCase() {},
+        getResult() { return {}; },
+        destroy() {},
+      }),
+    }]);
+    const runner = new SimulationExperimentRunner({
+      definition: createDefinition(),
+      workloadRegistry,
+      collectorRegistry,
+    });
+    const report = runner.run({
+      generatedAt: '2026-07-23T00:00:00.000Z',
+      environment: {
+        runtimeName: 'node',
+        runtimeVersion: 'test',
+        platform: 'test',
+        architecture: 'test',
+      },
+    });
+
+    expect(report.failedCaseCount).toBe(1);
+    expect(stepReads).toBe(0);
+    expect(destroys).toBe(1);
   });
 });

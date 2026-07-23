@@ -31,10 +31,10 @@ import {
 } from '../src/arena/experiment/arena-balance-validation-composition.js';
 import {
   ARENA_EXPERIMENT_OUTCOME,
-} from '../src/arena/experiment/experiment-report.js';
+} from '@number-strategy-jump/arena-experiment';
 import {
   createArenaExperimentReportBundle,
-} from '../src/arena/experiment/experiment-report-bundle.js';
+} from '@number-strategy-jump/arena-experiment';
 import {
   assertArenaGitSourceIdentityStable,
   readArenaGitSourceIdentity,

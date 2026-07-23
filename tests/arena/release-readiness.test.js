@@ -57,10 +57,10 @@ import {
 import {
   createArenaStage9BalanceValidationExperimentDefinition,
 } from '../../src/arena/experiment/arena-balance-validation-composition.js';
-import { createArenaExperimentReport } from '../../src/arena/experiment/experiment-report.js';
+import { createArenaExperimentReport } from '@number-strategy-jump/arena-experiment';
 import {
   createArenaExperimentReportBundle,
-} from '../../src/arena/experiment/experiment-report-bundle.js';
+} from '@number-strategy-jump/arena-experiment';
 import {
   createArenaV1GoldenReplayScenarioRegistry,
 } from '../../src/arena/regression/arena-v1-golden-replay-scenarios.js';

@@ -14,7 +14,7 @@ import {
 import {
   ARENA_BALANCE_EXPLORATION_SELECTION_POLICY,
 } from '../src/arena/experiment/arena-balance-exploration-selection.js';
-import { createArenaExperimentReportBundle } from '../src/arena/experiment/experiment-report-bundle.js';
+import { createArenaExperimentReportBundle } from '@number-strategy-jump/arena-experiment';
 import {
   assertArenaGitSourceIdentityStable,
   readArenaGitSourceIdentity,

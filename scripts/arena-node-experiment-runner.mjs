@@ -1,4 +1,4 @@
-import { SimulationExperimentRunner } from '../src/arena/experiment/simulation-runner.js';
+import { SimulationExperimentRunner } from '@number-strategy-jump/arena-experiment';
 import {
   assertArenaGitSourceIdentityStable,
   readArenaGitSourceIdentity,

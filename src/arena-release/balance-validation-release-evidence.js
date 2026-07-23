@@ -6,10 +6,10 @@ import {
 } from '../arena/experiment/arena-balance-validation-composition.js';
 import {
   ARENA_EXPERIMENT_OUTCOME,
-} from '../arena/experiment/experiment-report.js';
+} from '@number-strategy-jump/arena-experiment';
 import {
   readArenaExperimentReportBundle,
-} from '../arena/experiment/experiment-report-bundle.js';
+} from '@number-strategy-jump/arena-experiment';
 import { ARENA_RELEASE_EVIDENCE_STATUS } from '@number-strategy-jump/arena-release-contracts';
 
 const BALANCE_VALIDATION_SUITE = 'balance-validation';

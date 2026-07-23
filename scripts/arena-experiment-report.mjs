@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { readArenaExperimentReportBundle } from '../src/arena/experiment/experiment-report-bundle.js';
+import { readArenaExperimentReportBundle } from '@number-strategy-jump/arena-experiment';
 
 async function main() {
   const values = process.argv.slice(2);

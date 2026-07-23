@@ -10,16 +10,16 @@ import {
 import {
   ARENA_EXPERIMENT_OUTCOME,
   createArenaExperimentReport,
-} from '../../../src/arena/experiment/experiment-report.js';
+} from '@number-strategy-jump/arena-experiment';
 import {
   createArenaExperimentReportBundle,
   readArenaExperimentReportBundle,
-} from '../../../src/arena/experiment/experiment-report-bundle.js';
+} from '@number-strategy-jump/arena-experiment';
 import { MetricCollectorRegistry } from '@number-strategy-jump/arena-experiment';
 import {
   SIMULATION_EXPERIMENT_RUNNER_STATE,
   SimulationExperimentRunner,
-} from '../../../src/arena/experiment/simulation-runner.js';
+} from '@number-strategy-jump/arena-experiment';
 import { SimulationWorkloadRegistry } from '@number-strategy-jump/arena-experiment';
 import { createArenaMetricGate } from '@number-strategy-jump/arena-experiment';
 import {

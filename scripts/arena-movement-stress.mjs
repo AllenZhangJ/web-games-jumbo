@@ -5,7 +5,7 @@ import {
   createArenaStage9MovementExperimentDefinition,
   createArenaStage9MovementExperimentRegistries,
 } from '../src/arena/experiment/arena-movement-experiment-composition.js';
-import { ARENA_EXPERIMENT_OUTCOME } from '../src/arena/experiment/experiment-report.js';
+import { ARENA_EXPERIMENT_OUTCOME } from '@number-strategy-jump/arena-experiment';
 import { ARENA_MOVEMENT_STRESS_COLLECTOR_ID } from '../src/arena/experiment/arena-movement-stress-collector.js';
 import { readArenaGitSourceIdentity } from './arena-git-source-identity.mjs';
 import { runArenaNodeExperiment } from './arena-node-experiment-runner.mjs';
