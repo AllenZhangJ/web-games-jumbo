@@ -11,6 +11,8 @@ import {
 import {
   ARENA_RELEASE_EVIDENCE_STATEMENT_SCHEMA_VERSION,
   ARENA_RELEASE_EVIDENCE_STATUS,
+  type ArenaReleaseEvidenceMaterial,
+  type ArenaReleaseReadinessDefinition,
 } from '@number-strategy-jump/arena-release-contracts';
 import {
   ARENA_STAGE9_RC_HANDOFF_GATE_ID,
@@ -29,6 +31,8 @@ import {
 } from '@number-strategy-jump/arena-release';
 import {
   ARENA_DEVICE_ACCEPTANCE_BUNDLE_SCHEMA_VERSION,
+  type ArenaDeviceAcceptanceDefinition,
+  type ArenaDeviceAcceptanceRecord,
 } from '@number-strategy-jump/arena-device-acceptance';
 import {
   ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND,
@@ -57,16 +61,37 @@ import {
 } from '@number-strategy-jump/arena-human-match-study';
 import {
   writeArenaBuildManifest,
-} from '../../scripts/lib/arena-build-manifest-files.ts';
+} from '../../scripts/lib/arena-build-manifest-files.js';
 import {
   verifyArenaStage9ReleaseProducerEvidence,
-} from '../../scripts/lib/arena-stage9-release-producers.ts';
+} from '../../scripts/lib/arena-stage9-release-producers.js';
 
 const COMMIT = 'a'.repeat(40);
 const BUILD_ID = 'arena-external-evidence-test';
 const CREATED_AT = '2026-07-18T00:00:00.000Z';
+type HumanDefinition = ReturnType<typeof createArenaStage9HumanFairnessV1Definition>;
+type ReleaseResult = Readonly<{
+  status: string;
+  resultHash: string;
+}>;
+interface VerifiedMaterial extends ArenaReleaseEvidenceMaterial {
+  readonly resolvedPath: string;
+  readonly fileIdentity: string;
+}
+interface WrittenMaterial {
+  readonly material: ArenaReleaseEvidenceMaterial;
+  readonly verified: VerifiedMaterial;
+}
 
-function deviceBundle(definition, overrides = {}) {
+function required<T>(value: T, name: string): NonNullable<T> {
+  assert.ok(value != null, `${name} 不存在。`);
+  return value as NonNullable<T>;
+}
+
+function deviceBundle(
+  definition: ArenaDeviceAcceptanceDefinition,
+  overrides: Readonly<Record<string, unknown>> = {},
+) {
   return {
     schemaVersion: ARENA_DEVICE_ACCEPTANCE_BUNDLE_SCHEMA_VERSION,
     definitionId: definition.id,
@@ -79,7 +104,10 @@ function deviceBundle(definition, overrides = {}) {
   };
 }
 
-function humanBundle(definition, overrides = {}) {
+function humanBundle(
+  definition: HumanDefinition,
+  overrides: Readonly<Record<string, unknown>> = {},
+) {
   return {
     schemaVersion: HUMAN_MATCH_STUDY_BUNDLE_SCHEMA_VERSION,
     definitionId: definition.id,
@@ -92,7 +120,11 @@ function humanBundle(definition, overrides = {}) {
   };
 }
 
-async function writeMaterial(root, relativePath, value) {
+async function writeMaterial(
+  root: string,
+  relativePath: string,
+  value: unknown,
+): Promise<WrittenMaterial> {
   const bytes = Buffer.isBuffer(value)
     ? value
     : Buffer.from(typeof value === 'string' ? value : `${JSON.stringify(value, null, 2)}\n`);
@@ -112,7 +144,12 @@ async function writeMaterial(root, relativePath, value) {
   });
 }
 
-function statement(definition, gateId, result, materials) {
+function statement(
+  definition: ArenaReleaseReadinessDefinition,
+  gateId: string,
+  result: ReleaseResult,
+  materials: readonly ArenaReleaseEvidenceMaterial[],
+) {
   const gate = definition.requireGate(gateId);
   return {
     schemaVersion: ARENA_RELEASE_EVIDENCE_STATEMENT_SCHEMA_VERSION,
@@ -127,7 +164,10 @@ function statement(definition, gateId, result, materials) {
   };
 }
 
-function candidate(definition, evidence) {
+function candidate(
+  definition: ArenaReleaseReadinessDefinition,
+  evidence: readonly unknown[],
+) {
   return createArenaReleaseCandidateBundle(definition, {
     schemaVersion: ARENA_RELEASE_CANDIDATE_BUNDLE_SCHEMA_VERSION,
     definitionId: definition.id,
@@ -139,7 +179,7 @@ function candidate(definition, evidence) {
   });
 }
 
-async function createStudyBuild(root) {
+async function createStudyBuild(root: string) {
   const buildRoot = path.join(root, 'web-build');
   await mkdir(buildRoot, { recursive: true });
   for (const fileName of ['greybox.html', 'index.html', 'product.html', 'study.html']) {
@@ -156,16 +196,19 @@ async function createStudyBuild(root) {
   return Object.freeze({ buildRoot, manifest });
 }
 
-async function createMiniGameBuild(root, target) {
+async function createMiniGameBuild(root: string, target: 'wechat' | 'douyin') {
   const buildRoot = path.join(root, `${target}-build`);
   await mkdir(buildRoot, { recursive: true });
-  for (const [fileName, content] of [
+  const files: readonly (readonly [string, string])[] = [
     ['game-greybox.js', 'greybox'],
     ['game-product.js', 'product'],
     ['game.js', 'product'],
     ['game.json', '{}'],
     ['project.config.json', '{}'],
-  ]) await writeFile(path.join(buildRoot, fileName), content);
+  ];
+  for (const [fileName, content] of files) {
+    await writeFile(path.join(buildRoot, fileName), content);
+  }
   const manifest = await writeArenaBuildManifest({
     outDir: buildRoot,
     buildId: BUILD_ID,
@@ -177,6 +220,15 @@ async function createMiniGameBuild(root, target) {
   return Object.freeze({ buildRoot, manifest });
 }
 
+interface CreateDeviceRecordOptions {
+  readonly root: string;
+  readonly definition: ArenaDeviceAcceptanceDefinition;
+  readonly targetId: string;
+  readonly runId: string;
+  readonly sharedLogBytes: Buffer;
+  readonly buildManifestBytes?: Buffer | null;
+}
+
 async function createDeviceRecord({
   root,
   definition,
@@ -184,21 +236,21 @@ async function createDeviceRecord({
   runId,
   sharedLogBytes,
   buildManifestBytes = null,
-}) {
-  const target = definition.getTarget(targetId);
-  const artifactIdByKind = {
+}: CreateDeviceRecordOptions): Promise<ArenaDeviceAcceptanceRecord> {
+  const target = required(definition.getTarget(targetId), `设备验收目标 ${targetId}`);
+  const artifactIdByKind: Readonly<Record<string, string>> = {
     [ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.BUILD_MANIFEST]: 'manifest',
     [ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.LOG]: 'log',
     [ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.SCREENSHOT]: 'screen',
     [ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.VIDEO]: 'video',
   };
-  const artifacts = [];
+  const artifacts: ArenaDeviceAcceptanceRecord['artifacts'][number][] = [];
   for (const kind of target.requiredArtifactKinds) {
-    const id = artifactIdByKind[kind];
+    const id = required(artifactIdByKind[kind], `${kind} 产物 ID`);
     const bytes = kind === ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.LOG
       ? sharedLogBytes
       : kind === ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.BUILD_MANIFEST
-        ? buildManifestBytes
+        ? required(buildManifestBytes, `${runId} 构建 Manifest`)
         : Buffer.from(`${runId}:${kind}`);
     const relativePath = `${runId}/${id}.${kind === 'build-manifest' ? 'json' : 'bin'}`;
     await mkdir(path.join(root, runId), { recursive: true });
@@ -283,31 +335,36 @@ test('Stage 6, Stage 8 and performance release gates reuse device verifier and s
   const root = await mkdtemp(path.join(os.tmpdir(), 'arena-release-device-evidence-'));
   try {
     const releaseDefinition = createArenaStage9RcHandoffV1Definition();
-    const cases = [
+    const cases: ReadonlyArray<{
+      readonly gateId: string;
+      readonly definition: ArenaDeviceAcceptanceDefinition;
+      readonly result: (bundle: unknown) => ReleaseResult;
+      readonly directory: string;
+    }> = [
       {
         gateId: ARENA_STAGE9_RC_HANDOFF_GATE_ID.STAGE6_DEVICE,
         definition: createArenaStage6DeviceAcceptanceV1Definition(),
-        result: (bundle) => createArenaStage6DeviceReleaseResult({ bundle }),
+        result: (bundle: unknown) => createArenaStage6DeviceReleaseResult({ bundle }),
         directory: 'stage6',
       },
       {
         gateId: ARENA_STAGE9_RC_HANDOFF_GATE_ID.STAGE8_PRODUCT_DEVICE,
         definition: createArenaStage8ProductDeviceAcceptanceV1Definition(),
-        result: (bundle) => createArenaStage8ProductDeviceReleaseResult({ bundle }),
+        result: (bundle: unknown) => createArenaStage8ProductDeviceReleaseResult({ bundle }),
         directory: 'stage8',
       },
       {
         gateId: ARENA_STAGE9_RC_HANDOFF_GATE_ID.PERFORMANCE_DEVICE,
         definition: createArenaStage9PerformanceDeviceAcceptanceV1Definition(),
-        result: (bundle) => createArenaPerformanceDeviceReleaseResult({
+        result: (bundle: unknown) => createArenaPerformanceDeviceReleaseResult({
           bundle,
           performanceRecords: [],
         }),
         directory: 'performance',
       },
     ];
-    const evidence = [];
-    const verifiedByPath = new Map();
+    const evidence: ReturnType<typeof statement>[] = [];
+    const verifiedByPath = new Map<string, VerifiedMaterial>();
     for (const value of cases) {
       const bundle = deviceBundle(value.definition);
       const written = await writeMaterial(
@@ -328,7 +385,11 @@ test('Stage 6, Stage 8 and performance release gates reuse device verifier and s
     assert.deepEqual(verified.map(({ gateId }) => gateId), cases.map(({ gateId }) => gateId));
 
     const falseReadyEvidence = structuredClone(evidence);
-    falseReadyEvidence[0].status = ARENA_RELEASE_EVIDENCE_STATUS.READY;
+    Reflect.set(
+      required(falseReadyEvidence[0], '首个外部证据声明'),
+      'status',
+      ARENA_RELEASE_EVIDENCE_STATUS.READY,
+    );
     const falseReadyBundle = candidate(releaseDefinition, falseReadyEvidence);
     await assert.rejects(
       verifyArenaStage9ReleaseProducerEvidence({
@@ -338,7 +399,10 @@ test('Stage 6, Stage 8 and performance release gates reuse device verifier and s
       }),
       /status 与 producer 复算结果不一致/,
     );
-    const tamperedPath = verifiedByPath.get('stage8/device-evidence.json').resolvedPath;
+    const tamperedPath = required(
+      verifiedByPath.get('stage8/device-evidence.json'),
+      'Stage 8 已验证材料',
+    ).resolvedPath;
     await writeFile(tamperedPath, '{}\n');
     await assert.rejects(
       verifyArenaStage9ReleaseProducerEvidence({
@@ -369,11 +433,14 @@ test('device release gates reject cross-gate reuse of non-build artifact content
     const stage6Record = await createDeviceRecord({
       root: stage6Root,
       definition: stage6Definition,
-      targetId: stage6Definition.targets[0].id,
+      targetId: required(stage6Definition.targets[0], 'Stage 6 首个目标').id,
       runId: 'stage6-run',
       sharedLogBytes,
     });
-    const stage8Target = stage8Definition.targets.find(({ platform }) => platform === 'wechat');
+    const stage8Target = required(
+      stage8Definition.targets.find(({ platform }) => platform === 'wechat'),
+      'Stage 8 微信目标',
+    );
     const stage8Record = await createDeviceRecord({
       root: stage8Root,
       definition: stage8Definition,
@@ -492,7 +559,10 @@ test('human fairness release gate verifies three indices and all transitive evid
       verifiedMaterialsByPath: verifiedByPath,
     });
     assert.equal(verified.length, 1);
-    assert.equal(verified[0].gateId, ARENA_STAGE9_RC_HANDOFF_GATE_ID.HUMAN_FAIRNESS);
+    assert.equal(
+      required(verified[0], '人类公平性复验结果').gateId,
+      ARENA_STAGE9_RC_HANDOFF_GATE_ID.HUMAN_FAIRNESS,
+    );
 
     const wechatBuild = await createMiniGameBuild(root, 'wechat');
     const douyinBuild = await createMiniGameBuild(root, 'douyin');
@@ -550,11 +620,15 @@ test('human fairness release gate verifies three indices and all transitive evid
       await readFile(path.join(alternateRoot, ARENA_BUILD_MANIFEST_FILENAME)),
     );
     const mismatchedHumanStatement = structuredClone(releaseStatement);
-    mismatchedHumanStatement.materials = mismatchedHumanStatement.materials.map((material) => (
-      path.posix.basename(material.path) === ARENA_BUILD_MANIFEST_FILENAME
-        ? alternateBuild.material
-        : material
-    ));
+    Reflect.set(
+      mismatchedHumanStatement,
+      'materials',
+      mismatchedHumanStatement.materials.map((material: ArenaReleaseEvidenceMaterial) => (
+        path.posix.basename(material.path) === ARENA_BUILD_MANIFEST_FILENAME
+          ? alternateBuild.material
+          : material
+      )),
+    );
     const mismatchedBuildBundle = candidate(
       releaseDefinition,
       [buildStatement, mismatchedHumanStatement],
@@ -579,7 +653,7 @@ test('human fairness release gate verifies three indices and all transitive evid
       /大小不一致|SHA-256 不一致/,
     );
     const missingIndexStatement = structuredClone(releaseStatement);
-    missingIndexStatement.materials.pop();
+    Reflect.set(missingIndexStatement, 'materials', missingIndexStatement.materials.slice(0, -1));
     const missingIndexBundle = candidate(releaseDefinition, [missingIndexStatement]);
     await assert.rejects(
       verifyArenaStage9ReleaseProducerEvidence({
