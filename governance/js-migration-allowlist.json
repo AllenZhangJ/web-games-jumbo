@@ -48,7 +48,6 @@
     "tests/arena/study/human-match-study-workspace.test.js",
     "tests/arena/study/human-match-study.test.js",
     "tests/entry-canvas-product-composition.test.js",
-    "tests/entry-lifecycle.test.js",
     "tests/entry-web-product-ui-surface.test.js",
     "tests/platform-webgl.test.js"
   ]
