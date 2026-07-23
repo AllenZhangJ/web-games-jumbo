@@ -11,16 +11,19 @@ import path from 'node:path';
 import test from 'node:test';
 import {
   writeArenaEvidenceFileExclusive,
-} from '../../../scripts/lib/arena-atomic-evidence-file.ts';
-import { runArenaChildProcess } from '../../../scripts/lib/arena-child-process.ts';
+} from '../../../scripts/lib/arena-atomic-evidence-file.js';
+import {
+  runArenaChildProcess,
+  type ArenaChildProcessResult,
+} from '../../../scripts/lib/arena-child-process.js';
 import {
   describeArenaRegressionEvidenceProcesses,
   produceArenaRegressionEvidenceReport,
-} from '../../../scripts/lib/arena-regression-evidence-producer.ts';
+} from '../../../scripts/lib/arena-regression-evidence-producer.js';
 
 const COMMIT = 'a'.repeat(40);
 
-function successfulProcessResults() {
+function successfulProcessResults(): unknown[] {
   return [
     {
       mode: 'batch-fuzz',
@@ -77,12 +80,20 @@ function successfulProcessResults() {
   ];
 }
 
-function processResult(value, overrides = {}) {
+function processResult(
+  value: unknown,
+  overrides: Partial<ArenaChildProcessResult> = {},
+): ArenaChildProcessResult {
+  const stdout = typeof value === 'string' ? value : JSON.stringify(value);
   return {
+    command: process.execPath,
+    args: [],
     exitCode: 0,
     signal: null,
-    stdout: typeof value === 'string' ? value : JSON.stringify(value),
+    stdout,
     stderr: '',
+    stdoutBytes: Buffer.byteLength(stdout),
+    stderrBytes: 0,
     ...overrides,
   };
 }
@@ -157,13 +168,13 @@ test('Regression evidence 原子发布不覆盖已有输出且不残留临时文
 
 test('Regression producer 用固定五个无 shell 进程生成单一原子报告', async () => {
   const values = successfulProcessResults();
-  const calls = [];
+  const calls: Array<Parameters<typeof runArenaChildProcess>[0]> = [];
   const report = await produceArenaRegressionEvidenceReport({
     root: process.cwd(),
     sourceIdentity: { sourceCommit: COMMIT, sourceDirty: false },
     generatedAt: '2026-07-18T01:02:03.004Z',
     runtime: { name: 'node', version: 'v22', platform: 'darwin', architecture: 'arm64' },
-    runChildProcess: async (options) => {
+    runChildProcess: async (options: Parameters<typeof runArenaChildProcess>[0]) => {
       calls.push(options);
       return processResult(values[calls.length - 1]);
     },
@@ -175,13 +186,13 @@ test('Regression producer 用固定五个无 shell 进程生成单一原子报�
     describeArenaRegressionEvidenceProcesses().map(({ args }) => args),
   );
   assert.ok(calls.every(({ command, cwd }) => command === process.execPath && cwd === process.cwd()));
-  assert.equal(calls[0].args.includes('--matches=40'), true);
-  assert.equal(calls[1].args.filter((value) => value.endsWith('.test.js')).length, 6);
-  assert.equal(calls[4].args.includes('--matches=200'), true);
+  assert.equal(calls[0]?.args?.includes('--matches=40'), true);
+  assert.equal(calls[1]?.args?.filter((value: string) => value.endsWith('.test.js')).length, 6);
+  assert.equal(calls[4]?.args?.includes('--matches=200'), true);
 });
 
 test('Regression producer 在非零退出、stderr、部分 TAP 和非 JSON 时 fail closed', async () => {
-  const failures = [
+  const failures: Array<[number, ArenaChildProcessResult, RegExp]> = [
     [0, processResult('', { exitCode: 1, stderr: 'failed' }), /input-fuzz 失败/],
     [0, processResult(successfulProcessResults()[0], { stderr: 'warning' }), /input-fuzz 产生 stderr/],
     [0, processResult('not-json'), /input-fuzz 未输出唯一有效 JSON/],
