@@ -31,39 +31,51 @@ import {
   advanceInputPilotWorkspace,
   createInputPilotWorkspace,
   INPUT_PILOT_WORKSPACE_SCHEMA_VERSION,
+  type InputPilotWorkspace,
 } from '@number-strategy-jump/arena-input-pilot';
 import {
   INPUT_PILOT_WORKSPACE_ENVELOPE_SCHEMA_VERSION,
   InputPilotWorkspaceRepository,
 } from '@number-strategy-jump/arena-input-pilot';
+import type { InputPilotDefinition } from '@number-strategy-jump/arena-input-pilot';
 
-function clone(value) {
-  return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
+function required<T>(value: T, name: string): NonNullable<T> {
+  assert.ok(value != null, `${name} 不存在。`);
+  return value as NonNullable<T>;
+}
+
+function record(value: unknown, name: string): Record<string, unknown> {
+  assert.ok(value !== null && typeof value === 'object' && !Array.isArray(value), `${name} 必须是对象。`);
+  return value as Record<string, unknown>;
+}
+
+function clone<T>(value: T): T {
+  return value === undefined ? value : JSON.parse(JSON.stringify(value)) as T;
 }
 
 function storageHarness() {
-  const values = new Map();
-  const readFailures = new Set();
-  const writeFailures = new Set();
-  const deleteFailures = new Set();
+  const values = new Map<string, unknown>();
+  const readFailures = new Set<string>();
+  const writeFailures = new Set<string>();
+  const deleteFailures = new Set<string>();
   return {
     values,
     readFailures,
     writeFailures,
     deleteFailures,
     port: {
-      storageRead(key) {
+      storageRead(key: string) {
         if (readFailures.has(key)) return { ok: false, found: false, value: undefined };
         return values.has(key)
           ? { ok: true, found: true, value: clone(values.get(key)) }
           : { ok: true, found: false, value: undefined };
       },
-      storageWrite(key, value) {
+      storageWrite(key: string, value: unknown) {
         if (writeFailures.has(key)) return false;
         values.set(key, clone(value));
         return true;
       },
-      storageDelete(key) {
+      storageDelete(key: string) {
         if (deleteFailures.has(key)) return false;
         values.delete(key);
         return true;
@@ -72,7 +84,7 @@ function storageHarness() {
   };
 }
 
-function device(definition) {
+function device(definition: InputPilotDefinition) {
   return definition.environment;
 }
 
@@ -118,7 +130,7 @@ function reviewDraft() {
   return Object.freeze({ observer: observer(), selfReport: selfReport(), invalidate: false });
 }
 
-function workspaceSequence(definition, participantId = 'pilot-0001') {
+function workspaceSequence(definition: InputPilotDefinition, participantId = 'pilot-0001') {
   const suffix = participantId.replace(/[^a-zA-Z0-9_-]/g, '-');
   const initial = createInputPilotWorkspace(definition);
   const assignment = createInputPilotAssignment({
@@ -178,7 +190,11 @@ function workspaceSequence(definition, participantId = 'pilot-0001') {
   return { initial, first, second, third, assignment, enrolled, record };
 }
 
-function appendCompletedTrial(definition, current, index) {
+function appendCompletedTrial(
+  definition: InputPilotDefinition,
+  current: InputPilotWorkspace,
+  index: number,
+) {
   const participantId = `pilot-${String(index).padStart(4, '0')}`;
   const assignment = createInputPilotAssignment({
     definition,
@@ -238,9 +254,15 @@ test('pilot workspace requires every enrollment to be active or terminal exactly
   const definition = createArenaInputPilotV1Definition();
   const sequence = workspaceSequence(definition);
   assert.equal(sequence.first.revision, 1);
-  assert.equal(sequence.second.activeTrial.phase, INPUT_PILOT_TRIAL_PHASE.REVIEWING);
+  assert.equal(
+    required(sequence.second.activeTrial, '复核中试点').phase,
+    INPUT_PILOT_TRIAL_PHASE.REVIEWING,
+  );
   assert.equal(sequence.third.activeTrial, null);
-  assert.equal(sequence.third.records[0].trialId, 'pilot-trial-pilot-0001');
+  assert.equal(
+    required(sequence.third.records[0], '首条终态记录').trialId,
+    'pilot-trial-pilot-0001',
+  );
   assert.throws(() => createInputPilotWorkspace(definition, {
     ...sequence.first,
     activeTrial: null,
@@ -378,7 +400,7 @@ test('pilot storage lease repairs malformed ephemeral data but protects future s
     wallNow: () => 1000,
   });
   assert.equal(repaired.acquire(), true);
-  assert.equal(harness.values.get('pilot.lease').ownerId, 'page-a');
+  assert.equal(record(harness.values.get('pilot.lease'), '修复后的租约').ownerId, 'page-a');
   repaired.destroy();
 
   harness.values.set('pilot.lease', {
@@ -393,7 +415,7 @@ test('pilot storage lease repairs malformed ephemeral data but protects future s
   assert.throws(() => future.acquire(), /来自未来 schema/);
   future.destroy();
   assert.equal(
-    harness.values.get('pilot.lease').schemaVersion,
+    record(harness.values.get('pilot.lease'), '未来租约').schemaVersion,
     INPUT_PILOT_STORAGE_LEASE_SCHEMA_VERSION + 1,
   );
 });
@@ -415,7 +437,9 @@ test('pilot storage lease rejects a backwards wall clock and failed write confir
   const unconfirmedStorage = storageHarness();
   const originalWrite = unconfirmedStorage.port.storageWrite;
   unconfirmedStorage.port.storageWrite = (key, value) => {
-    originalWrite(key, { ...value, revision: value.revision + 1 });
+    const leaseValue = record(value, '待确认租约');
+    assert.equal(typeof leaseValue.revision, 'number');
+    originalWrite(key, { ...leaseValue, revision: Number(leaseValue.revision) + 1 });
     return true;
   };
   const unconfirmed = new InputPilotStorageLease({
@@ -660,7 +684,7 @@ test('workspace repository falls back from a corrupt newest slot without exposin
   repository.compareAndSet(sequence.second, 1);
   const keys = repository.getStorageKeys();
   repository.destroy();
-  harness.values.get(keys.slotB).payloadHash = 'corrupt';
+  record(harness.values.get(keys.slotB), 'B 槽信封').payloadHash = 'corrupt';
 
   const restored = new InputPilotWorkspaceRepository({
     definition,
@@ -724,7 +748,11 @@ test('workspace repository rejects divergent valid slots at the same generation'
     wallNow: () => 1000,
   });
   const keys = repository.getStorageKeys();
-  for (const [key, workspace] of [[keys.slotA, first], [keys.slotB, second]]) {
+  const divergentSlots: readonly (readonly [string, InputPilotWorkspace])[] = [
+    [keys.slotA, first],
+    [keys.slotB, second],
+  ];
+  for (const [key, workspace] of divergentSlots) {
     harness.values.set(key, {
       schemaVersion: INPUT_PILOT_WORKSPACE_ENVELOPE_SCHEMA_VERSION,
       definitionId: definition.id,
@@ -770,7 +798,7 @@ test('workspace repository rejects stale CAS and future envelopes before overwri
   });
   assert.throws(() => future.open(), /未来 schema/);
   future.destroy();
-  assert.equal(harness.values.get(keys.slotA).schemaVersion, 2);
+  assert.equal(record(harness.values.get(keys.slotA), '未来信封').schemaVersion, 2);
 });
 
 test('workspace repository refuses a future workspace payload before overwrite', () => {
@@ -807,7 +835,10 @@ test('workspace repository refuses a future workspace payload before overwrite',
   });
   assert.throws(() => future.open(), /InputPilotWorkspace 来自未来 schema/);
   future.destroy();
-  assert.equal(harness.values.get(keys.slotA).payload.schemaVersion, 2);
+  assert.equal(
+    record(record(harness.values.get(keys.slotA), '未来工作区信封').payload, '未来工作区').schemaVersion,
+    2,
+  );
 });
 
 test('workspace repository protects future nested assignment schemas', () => {
@@ -825,8 +856,10 @@ test('workspace repository protects future nested assignment schemas', () => {
   repository.destroy();
 
   const futurePayload = clone(sequence.first);
-  futurePayload.enrollment.assignments[0].schemaVersion = (
-    INPUT_PILOT_ASSIGNMENT_SCHEMA_VERSION + 1
+  Reflect.set(
+    required(futurePayload.enrollment.assignments[0], '未来 assignment'),
+    'schemaVersion',
+    INPUT_PILOT_ASSIGNMENT_SCHEMA_VERSION + 1,
   );
   harness.values.set(keys.slotA, {
     schemaVersion: INPUT_PILOT_WORKSPACE_ENVELOPE_SCHEMA_VERSION,
@@ -844,8 +877,13 @@ test('workspace repository protects future nested assignment schemas', () => {
   });
   assert.throws(() => future.open(), /assignments\[0\] 来自未来 schema/);
   future.destroy();
+  const storedFutureEnvelope = record(harness.values.get(keys.slotA), '未来嵌套信封');
+  const storedFuturePayload = record(storedFutureEnvelope.payload, '未来嵌套工作区');
+  const storedEnrollment = record(storedFuturePayload.enrollment, '未来嵌套 enrollment');
+  assert.ok(Array.isArray(storedEnrollment.assignments), '未来嵌套 assignments 必须是数组。');
   assert.equal(
-    harness.values.get(keys.slotA).payload.enrollment.assignments[0].schemaVersion,
+    record(required(storedEnrollment.assignments[0], '未来嵌套 assignment'), '未来嵌套 assignment')
+      .schemaVersion,
     INPUT_PILOT_ASSIGNMENT_SCHEMA_VERSION + 1,
   );
 });
