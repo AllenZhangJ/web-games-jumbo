@@ -7,14 +7,22 @@ import {
 } from '@number-strategy-jump/arena-human-match-study';
 import {
   readVerifiedTextFile,
-} from './lib/evidence-file-verifier.ts';
+} from './lib/evidence-file-verifier.js';
 import {
   verifyArenaHumanFairnessEvidence,
-} from './lib/arena-human-fairness-evidence-verifier.ts';
+} from './lib/arena-human-fairness-evidence-verifier.js';
 
 const MAXIMUM_BUNDLE_BYTES = 5 * 1024 * 1024;
 
-function usage() {
+interface HumanFairnessCliOptions {
+  bundle: string | null;
+  buildRoot: string | null;
+  artifactsRoot: string | null;
+  describe: boolean;
+  help: boolean;
+}
+
+function usage(): string {
   return [
     'Usage:',
     '  npm run arena:human-fairness:evidence -- --describe',
@@ -24,17 +32,18 @@ function usage() {
   ].join('\n');
 }
 
-function parseArgs(values) {
-  const result = {
+function parseArgs(values: readonly string[]): HumanFairnessCliOptions {
+  const result: HumanFairnessCliOptions = {
     bundle: null,
     buildRoot: null,
     artifactsRoot: null,
     describe: false,
     help: false,
   };
-  const seen = new Set();
+  const seen = new Set<string>();
   for (let index = 0; index < values.length; index += 1) {
     const argument = values[index];
+    if (!argument) throw new Error(`参数索引 ${index} 缺失。`);
     if (argument === '--help' || argument === '-h') {
       result.help = true;
       continue;
@@ -48,6 +57,7 @@ function parseArgs(values) {
     const match = argument.match(/^--(bundle|build-root|artifacts-root)(?:=(.*))?$/);
     if (!match) throw new Error(`未知参数 ${argument}。\n${usage()}`);
     const key = match[1];
+    if (!key) throw new Error(`参数 ${argument} 缺少名称。`);
     if (seen.has(key)) throw new Error(`参数 --${key} 不能重复。`);
     seen.add(key);
     const inlineValue = match[2];
@@ -66,14 +76,14 @@ function parseArgs(values) {
   return result;
 }
 
-async function readBundleSource(bundlePath) {
+async function readBundleSource(bundlePath: string): Promise<unknown> {
   return JSON.parse((await readVerifiedTextFile(bundlePath, {
     label: 'human fairness evidence bundle',
     maximumBytes: MAXIMUM_BUNDLE_BYTES,
   })).text);
 }
 
-async function main() {
+async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
   if (options.help) {
     console.log(usage());
@@ -96,6 +106,7 @@ async function main() {
     }, null, 2));
     return;
   }
+  if (!options.bundle || !options.buildRoot) throw new Error('真人公平性必需路径缺失。');
   const bundlePath = path.resolve(options.bundle);
   const verified = await verifyArenaHumanFairnessEvidence({
     bundleValue: await readBundleSource(bundlePath),
@@ -116,7 +127,7 @@ async function main() {
   if (verified.report.status !== HUMAN_MATCH_STUDY_REPORT_STATUS.READY) process.exitCode = 2;
 }
 
-main().catch((error) => {
+void main().catch((error: unknown) => {
   console.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;
 });

@@ -7,7 +7,6 @@
     "scripts/arena-balance-exploration.mjs",
     "scripts/arena-experiment.mjs",
     "scripts/arena-golden-replay.mjs",
-    "scripts/arena-human-fairness-evidence.mjs",
     "scripts/arena-human-fairness-ingest.mjs",
     "scripts/arena-input-fuzz.mjs",
     "scripts/arena-match-stress.mjs",

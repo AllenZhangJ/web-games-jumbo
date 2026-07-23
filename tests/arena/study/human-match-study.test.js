@@ -497,7 +497,7 @@ test('human fairness evidence CLI describes V1 and reports an empty bundle as in
   const definition = createArenaStage9HumanFairnessV1Definition();
   const described = spawnSync(process.execPath, [
     '--import', 'tsx',
-    'scripts/arena-human-fairness-evidence.mjs',
+    'scripts/arena-human-fairness-evidence.ts',
     '--describe',
   ], { cwd: path.resolve('.'), encoding: 'utf8' });
   assert.equal(described.status, 0, described.stderr);
@@ -545,7 +545,7 @@ test('human fairness evidence CLI describes V1 and reports an empty bundle as in
     }, null, 2)}\n`);
     const incomplete = spawnSync(process.execPath, [
       '--import', 'tsx',
-      'scripts/arena-human-fairness-evidence.mjs',
+      'scripts/arena-human-fairness-evidence.ts',
       '--bundle',
       bundlePath,
       '--build-root',
@@ -689,7 +689,7 @@ test('Human Match Study CLI reproduces authority and every hidden Bot input', as
     assert.equal(ingestedBundle.records[0].matches.length, 1);
     const command = spawnSync(process.execPath, [
       '--import', 'tsx',
-      'scripts/arena-human-fairness-evidence.mjs',
+      'scripts/arena-human-fairness-evidence.ts',
       '--bundle',
       bundlePath,
       '--build-root',
@@ -714,7 +714,7 @@ test('Human Match Study CLI reproduces authority and every hidden Bot input', as
     await writeFile(ingestManifestPath, `${JSON.stringify(tamperedManifest, null, 2)}\n`);
     const rejectedEvidence = spawnSync(process.execPath, [
       '--import', 'tsx',
-      'scripts/arena-human-fairness-evidence.mjs',
+      'scripts/arena-human-fairness-evidence.ts',
       '--bundle',
       bundlePath,
       '--build-root',
