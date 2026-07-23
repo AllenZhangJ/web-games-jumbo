@@ -19,4 +19,4 @@
 
 上游圆盾由 `shield_round_color.gltf`、二进制和纹理组成；项目使用 glTF-Transform 转为 GLB，并把 PNG 作为同目录、受哈希固定的发行资产。GLB 由文件系统端口读取，PNG 由宿主 `createImage()` 解码。上游 GLTF SHA-256 为 `fe705e62a3edaae07928ce90f9b305593f868e9c40bd23e73b550e14438108bd`。
 
-模型、附件、纹理已进入三端运行时，并通过 `arena.stage7.formal-asset-budget.v1` 和 4 MiB 构建预算。进入正式资产冻结前仍需项目方 Formal Asset Intake 批准、clean-build 最终包和目标真机可读性/峰值内存记录。本记录固定公开来源和当前字节身份，不替代批准记录。
+模型、附件、纹理已进入三端运行时，并通过 `arena.stage7.formal-asset-budget.v1` 和 4 MiB 构建预算。2026-07-23，Allen 已完成 Formal Asset Intake 批准；当前仍需候选 clean build 和目标真机可读性/峰值内存记录。本记录固定公开来源和当前字节身份，批准真值位于正式 Bundle 与项目来源批准记录。

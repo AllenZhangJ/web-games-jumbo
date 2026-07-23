@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { verifyJavaScriptMigration } from '../../scripts/governance/check-js-migration.js';
+import { verifyDocumentation } from '../../scripts/governance/check-documentation.js';
 import { verifyRetiredProductBoundaries } from '../../scripts/governance/check-product-boundaries.js';
 import { verifyPresentationThreeBoundaries } from '../../scripts/governance/check-presentation-three-boundaries.js';
 import { verifyRepositorySecurity } from '../../scripts/governance/check-repository-security.js';
@@ -77,5 +78,43 @@ describe('enterprise governance gates', () => {
       assetCount: 3,
       artifactCount: 10,
     });
+  });
+
+  it('rejects broken local documentation links', async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), 'arena-documentation-gate-'));
+    try {
+      await writeFile(path.join(directory, 'package.json'), JSON.stringify({
+        name: 'fixture',
+        version: '1.0.0',
+        scripts: {},
+      }));
+      await writeFile(path.join(directory, 'README.md'), '[missing](./missing.md)\n');
+      await expect(verifyDocumentation({
+        repositoryRoot: directory,
+        markdownPaths: ['README.md'],
+        enforceCurrentTruth: false,
+      })).rejects.toThrow(/README\.md 包含断链：\.\/missing\.md/);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects documentation commands that are absent from package scripts', async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), 'arena-documentation-command-gate-'));
+    try {
+      await writeFile(path.join(directory, 'package.json'), JSON.stringify({
+        name: 'fixture',
+        version: '1.0.0',
+        scripts: {},
+      }));
+      await writeFile(path.join(directory, 'README.md'), 'Run `npm run removed-command`.\n');
+      await expect(verifyDocumentation({
+        repositoryRoot: directory,
+        markdownPaths: ['README.md'],
+        enforceCurrentTruth: false,
+      })).rejects.toThrow(/README\.md 引用不存在的 npm 命令：removed-command/);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
   });
 });

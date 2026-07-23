@@ -2,7 +2,7 @@
 
 ## 文档状态
 
-执行中，2026-07-21。S7.1 合同基础上已接入 KayKit Rogue 与 Skeleton Warrior、18 条动作、左右手插槽、三种装备、Kenney CC0 四类命中音效、声音开关、reduced-motion 镜头/震动降级以及 Web/微信/抖音宿主资源加载；模型/音频来源、commit 或版本、CC0 文本、内容哈希、正式资产专用预算和三端构建预算已固定。项目方最终视觉签字、Formal Bundle 和目标真机证据仍未完成，不能据此声明 Stage 7 冻结。
+执行中，更新于 2026-07-23。S7.1 合同基础上已接入 KayKit Rogue 与 Skeleton Warrior、18 条动作、左右手插槽、三种装备、Kenney CC0 四类命中音效、声音开关、reduced-motion 镜头/震动降级以及 Web/微信/抖音宿主资源加载；模型/音频来源、固定版本、CC0 文本、内容哈希、正式资产专用预算和三端构建预算已固定。Allen 已完成来源/造型批准与真实 Formal Bundle；目标真机证据与 Stage 9 正式资产 producer 仍未完成，不能据此声明 Stage 7 冻结。
 
 ## 目标与非目标
 
@@ -177,4 +177,4 @@ S7.1 的治理补充已落地 `FormalAssetIntakePolicy → FormalAssetIntakeBund
 - 未实现服装、翅膀、挂件和拖尾实例；当前正式纵切只使用手部插槽和装备附件。
 - 没有可计入合同的微信、抖音或目标真机表现验收；正式资产预算已冻结为 V1，目标设备性能仍未冻结。
 - 没有解除 Stage 6 E3 设备证据、E4 真实新手盲测及 Mapper 胜者冻结门禁。
-- 没有项目方批准的真实 Intake Bundle；当前来源、许可和内容哈希记录不能替代 `approvedBy/approvedAt` 与最终造型签字。
+- 真实 Intake Bundle 与 `approvedBy/approvedAt` 已完成；尚未把它与目标真机的小屏可读性、reduced-motion、音频、加载和峰值内存证据组合为 Stage 9 正式 producer 材料。

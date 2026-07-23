@@ -18,7 +18,7 @@
 ## 自动化证据
 
 ```text
-node --test tests/arena/presentation/arena-device-acceptance.test.js tests/architecture.test.js
+npm run test:governance -- tests/arena/presentation/arena-device-acceptance.test.ts tests/architecture.test.ts
 npm test
 npm run arena:poc:build
 npm run arena:stress

@@ -22,4 +22,4 @@
 
 上游 Skeleton Warrior GLB 原始 SHA-256 为 `178b6fda810b814c250d8a2010c24dfd9b458b9006dd323353e620b7ff118bbe`。项目通过 `npm run arena:assets:optimize-characters` 仅保留 18 条运行时动作并清理未引用数据；模型、骨架、材质和手部挂点语义保持不变。PNG 从 GLB 内嵌 image 数据无损拆出，交给三端宿主图片对象解码。
 
-模型已进入三端运行时，并通过 `arena.stage7.formal-asset-budget.v1` 和 4 MiB 构建预算。进入正式资产冻结前仍需 Formal Asset Intake 批准、三端真机加载/动作可读性和峰值内存记录。本记录固定公开来源和当前字节身份，不替代批准记录。
+模型已进入三端运行时，并通过 `arena.stage7.formal-asset-budget.v1` 和 4 MiB 构建预算。2026-07-23，Allen 已完成 Formal Asset Intake 批准；当前仍需三端真机加载/动作可读性和峰值内存记录。本记录固定公开来源和当前字节身份，批准真值位于正式 Bundle 与项目来源批准记录。

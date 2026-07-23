@@ -30,7 +30,7 @@
 | 9 | 平衡、可靠性与性能收敛 | 批量模拟、长稳、三端预算通过 |
 | 10 | 发布候选与冻结 | RC 验收、回滚证据、发行清单完成 |
 
-当前进度：阶段 0～5 已完成工程基础；Stage 6 S6.1～S6.6.4 已完成本机合同、Trial Controller、终态表单/导出、独立盲测入口、E3 设备证据合同和 release producer，目标设备 E3、真实新手 E4 与 Mapper 冻结仍未完成。Stage 7 完成 S7.1 程序化占位、表现合同和拒绝灰盒的 Formal Asset Intake 来源/许可/文件复验合同，真实 Intake Bundle 与正式双角色资产仍未生产。Stage 8 S8.1～S8.5.5 已形成三端默认产品入口，最终设备 Record 待采集。Stage 9 S9.1～S9.5b 已形成实验、回归、11 条命候选、性能/真人证据合同与采集工作台；S9.6a 已增加 12 门 RC 交接，S9.6b1-b5b 已接入十一个 producer。六目标真机、输入盲测、正式资产、至少 90 名真人样本及正式资产 producer 仍未关闭，因此当前不是发行冻结；Web 或 Node 证据不能替代真机与真人证据。
+当前进度：阶段 0～5 已完成工程基础；Stage 6 S6.1～S6.6.4 已完成本机合同、Trial Controller、终态表单/导出、独立盲测入口、E3 设备证据合同和 release producer，目标设备 E3、真实新手 E4 与 Mapper 冻结仍未完成。Stage 7 已接入正式双角色、动作、武器与音效，且真实 Intake Bundle、来源/许可/字节复验和 Allen 批准已闭环；目标真机证据尚缺。Stage 8 S8.1～S8.5.5 已形成三端默认产品入口，最终设备 Record 待采集。Stage 9 S9.1～S9.5b 已形成实验、回归、11 条命候选、性能/真人证据合同与采集工作台；S9.6a 已增加 12 门 RC 交接，S9.6b1-b5b 已接入十一个 producer。六目标真机、输入盲测、至少 90 名真人样本及正式资产 producer 仍未关闭，因此当前不是发行冻结；Web 或 Node 证据不能替代真机与真人证据。
 
 ## 阶段 0：文档、概念图与决策基线
 
@@ -177,7 +177,7 @@
 
 技术执行顺序与资产/生命周期边界见 [Stage 7 角色、动画与反馈执行计划](../architecture/arena-stage7-presentation-plan.md)，架构决策草案见 [ADR-010](../decisions/010-arena-semantic-presentation-and-assets.md)。在 Stage 6 输入语义冻结前不进入批量正式动画生产。
 
-状态：S7.2/S7.3 的双 KayKit 正式角色、骨骼、18 条运行时动作、左右手插槽与三种装备已接入；GLB/PNG 走三端宿主加载，来源 revision、CC0 文本和依赖文件完整性可复验。S7.4 已接入 Kenney CC0 四类命中音效、声音开关以及 reduced-motion 镜头/震动降级。S7.5 的 Formal Asset 专用格式、复杂度、纹理解码内存和音频预算已接入构建；真实授权 Bundle 的项目方批准和目标真机证据仍未完成。
+状态：S7.2/S7.3 的双 KayKit 正式角色、骨骼、18 条运行时动作、左右手插槽与三种装备已接入；GLB/PNG 走三端宿主加载，来源 revision、CC0 文本和依赖文件完整性可复验。S7.4 已接入 Kenney CC0 四类命中音效、声音开关以及 reduced-motion 镜头/震动降级。S7.5 的 Formal Asset 专用格式、复杂度、纹理解码内存和音频预算已接入构建；真实授权 Bundle 与 Allen 批准已完成，目标真机证据和 Stage 9 producer 仍未完成。
 
 交付：
 
@@ -219,7 +219,7 @@
 
 可复现实验、黄金回放、输入模糊、长稳和表现降级见 [Stage 9 平衡、可靠性与性能收敛计划](../architecture/arena-stage9-convergence-plan.md)，决策草案见 [ADR-012](../decisions/012-arena-reproducible-convergence.md)。
 
-状态：S9.1～S9.3 自动收敛基础和 11 条命 validation 已完成；S9.4a/S9.5a-b 的性能、设备、真人研究与采集合同已完成，但真实 target 和真人样本尚未采集。S9.6a 已建立不可变 RC 交接候选、12 个必选门和材料完整性预检；S9.6b1-b5b 已完成十一个 producer，仅正式资产语义适配等待真实 S7 合同，详见 [Stage 4～9 证据矩阵](../quality/arena-stage4-9-evidence-matrix.md)。
+状态：S9.1～S9.3 自动收敛基础和 11 条命 validation 已完成；S9.4a/S9.5a-b 的性能、设备、真人研究与采集合同已完成，但真实 target 和真人样本尚未采集。S9.6a 已建立不可变 RC 交接候选、12 个必选门和材料完整性预检；S9.6b1-b5b 已完成十一个 producer，正式资产真实 S7 合同已就绪，其 producer 尚待实现，详见 [Stage 4～9 证据矩阵](../quality/arena-stage4-9-evidence-matrix.md)。
 
 交付：
 

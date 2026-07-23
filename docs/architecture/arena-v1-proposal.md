@@ -2,7 +2,7 @@
 
 ## 文档状态
 
-已接受整体边界；阶段 1～5 已分别落地轻量街机物理、无渲染 MatchCore、隐藏机器人、本地快速匹配、数据驱动装备 Rule/Core 和地图权威时间轴。Stage 6 的 Character/Input/Replay、Movement、Bot 同权移动、三端显式操作、HUD、Session、盲测工作台、五目标 E3 证据合同与 release producer 已建立，但真实新手 E4 和目标设备 E3 Record 未完成。Stage 7 已接入双 KayKit GLB、18 动作、外置纹理、手部附件、Kenney CC0 命中音效、声音开关、reduced-motion 镜头/震动降级和宿主加载，并固定来源/许可/字节身份；真实 Intake Bundle 和目标真机证据尚缺。Stage 8 S8.1～S8.5.5 已形成 Profile、产品状态机、奖励/解锁、对称内容池、Product Presentation 与三端默认产品入口，S8.5.6 六目标证据合同已建立但外部 Record 未采集。Stage 9 已建立实验、黄金回放、回归、构建预算、性能、真人研究和 RC 交接合同；正式资产批准与外部证据仍未关闭。核心决策见 ADR-005～ADR-028。
+已接受整体边界；阶段 1～5 已分别落地轻量街机物理、无渲染 MatchCore、隐藏机器人、本地快速匹配、数据驱动装备 Rule/Core 和地图权威时间轴。Stage 6 的 Character/Input/Replay、Movement、Bot 同权移动、三端显式操作、HUD、Session、盲测工作台、五目标 E3 证据合同与 release producer 已建立，但真实新手 E4 和目标设备 E3 Record 未完成。Stage 7 已接入双 KayKit GLB、18 动作、外置纹理、手部附件、Kenney CC0 命中音效、声音开关、reduced-motion 镜头/震动降级和宿主加载，并固定来源/许可/字节身份；真实 Intake Bundle 和 Allen 批准已闭环，目标真机证据尚缺。Stage 8 S8.1～S8.5.5 已形成 Profile、产品状态机、奖励/解锁、对称内容池、Product Presentation 与三端默认产品入口，S8.5.6 六目标证据合同已建立但外部 Record 未采集。Stage 9 已建立实验、黄金回放、回归、构建预算、性能、真人研究和 RC 交接合同；正式资产 producer 与外部证据仍未关闭。核心决策见 ADR-005～ADR-028。
 
 本文同时记录已落地边界与后续目标；未明确标记为已落地的模块仍不是当前能力。Stage 6 E3/E4、Stage 7 S7.2～S7.5、Stage 8 S8.5.6、Stage 9 S9.4b/S9.5c 与 S9.6b 仍在执行。分别见 [Stage 6](arena-stage6-input-movement-plan.md)、[Stage 7](arena-stage7-presentation-plan.md)、[Stage 8](arena-stage8-product-progression-plan.md)、[Stage 9](arena-stage9-convergence-plan.md)、[Stage 4～9 证据矩阵](../quality/arena-stage4-9-evidence-matrix.md) 和 [Stage 4～9 项目方决策门](arena-stage4-9-decision-gates.md)。旧数值跳台仅保留于 Git 历史，不是当前运行时或兼容边界。
 
@@ -30,33 +30,33 @@ BotPolicy ──────┘                                      │
 
 ## 已落地模块边界
 
-Arena 是当前唯一生产游戏；权威能力正从 `src/arena` 逐批迁入 strict TypeScript workspace：
+Arena 是当前唯一生产游戏；产品源码、测试与治理脚本已全部进入 strict TypeScript workspace，受维护 JavaScript 为零。当前主要分层是：
 
 ```text
 packages/
-├── arena-contracts/          # 输入/事件/快照、确定性原语与生命周期错误
-├── arena-definitions/        # 动作、角色、装备、地图 Definition 与 Registry
-├── arena-core/               # ActionResolver、RuleEngine 合同与动作执行
-├── arena-movement/           # coyote/buffer/跳跃预算、模式与 mutation
-├── arena-physics/            # 轻量物理、Physics Port 与角色物理投影
-├── arena-equipment/          # 装备 Runtime、唯一写入系统与序列化
-├── arena-map/                # 地图 Runtime、Timeline、策略与命令提交
-└── arena-match/              # 比赛配置、Participant/Timeline、角色引用与状态 hash
+├── arena-contracts/ + arena-definitions/
+│                              # 底层数据、确定性、输入/事件/快照与 Definition/Registry
+├── arena-core/ + arena-movement/ + arena-physics/ + arena-equipment/ + arena-map/ + arena-match/
+│                              # Rule/Core 权威链、固定 tick、Replay 与 state hash
+├── arena-bot/ + arena-matchmaking/ + arena-session/
+│                              # 受限观察、InputFrame、匹配与对局生命周期
+├── arena-product-*/ + arena-profile-*/ + arena-progression/
+│                              # 产品状态、奖励、存档、组合与会话
+├── arena-presentation-*/ + arena-v1-presentation-content/
+│                              # 只读表现合同、Three/Canvas、角色、武器、音频与 HUD
+├── arena-platform-*/ + arena-v1-application-*/
+│                              # Web/微信/抖音宿主适配、入口和组合根
+└── arena-experiment/ + arena-regression/ + arena-release*/ + evidence/study packages
+                               # 离线实验、回归、设备/真人证据与 RC 交接
 
-src/arena/
-├── match-core.js             # 待迁移的权威子系统组合根
-├── replay.js                 # 待迁移的输入录制、checkpoint 与严格回放
-├── runtime/                  # 待迁移的外层帧率到固定 60Hz tick 编排
-├── composition/ content/     # Arena V1 内容选择与组合注册
-├── matchmaking/ ai/ session/ # 匹配、受限 Bot 和生命周期所有者
-└── presentation/             # 只消费快照/事件的 Arena 表现层
-
-src/platform/                 # Web、微信与抖音宿主适配
+src/entry/                     # 仅保留 strict 宿主启动与 Web 表面
+src/arena/presentation/assets/ # Formal Asset Intake/Budget 治理合同
+scripts/                       # 构建、实验、证据和仓库治理 CLI
 ```
 
 模块依赖只向权威内核收敛：`ai` 不导入 MatchCore、回放、会话、渲染或平台；MatchCore、物理与回放也不反向导入 `ai`、`matchmaking` 或 `session`。`session` 是组合根，负责把各层连接起来并在失败路径统一释放所有权。
 
-跨 Experiment、Presentation、Study 和构建证据的 S9.6 交接位于独立 `src/arena-release/`，不属于 `src/arena` 权威域。它只组合不可变证据合同；Arena Rule/Core/Bot/Product/Presentation 均不得反向导入该目录，Node 文件校验继续留在 `scripts/`。
+跨 Experiment、Presentation、Study 和构建证据的 S9.6 交接位于独立 `arena-release-contracts` 与 `arena-release` workspace，不属于权威域。它只组合不可变证据合同；Arena Rule/Core/Bot/Product/Presentation 均不得反向导入发布层，Node 文件校验继续留在 `scripts/`。
 
 ## MatchCore 权威状态
 

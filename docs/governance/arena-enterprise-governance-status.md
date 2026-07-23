@@ -4,7 +4,9 @@
 - 当前分支：`feature/arena-enterprise-governance`
 - Arena 产品基线：`51e28220295c080261d30e33aaac7e43c5f91685`
 - 目标：达到与最新 `origin/main` 的合并前审计条件；不执行合并
-- 总体状态：迁移中，不可合并，不可宣称正式发布
+- 总体状态：G7、G9 已完成，G8 只剩联网漏洞审计授权；未进入 G10，不可合并，不可宣称正式发布
+
+> 口径：下方 G0–G7.29 是按提交追加的历史证据，其中“当前”只指该批次当时。文档顶部批次表、“当前不可合并原因”和文末最新批次才是现行结论。
 
 ## 决策登记
 
@@ -34,9 +36,9 @@
 | G4 Bot/Product/Persistence | 已完成 | strict TS Bot、Matchmaking、Quick Match、Local Match Session、Product State、Progression、ProductMatchResult、奖励事务、Profile Service/Repository、Storage Lease、Product Match、Product Session Controller、对称内容池、Arena V1 产品内容与通用 Product Composition 已闭环；Arena V1 应用组合根已在 G6.36 归入独立 strict 包 |
 | G5 Presentation/资产/反馈 | 已完成 | strict `arena-presentation-contracts`、`arena-presentation-runtime`、`arena-v1-presentation-content`、`arena-product-presentation`、`arena-presentation-three` 与 `arena-product-presentation-three` 已承接通用合同、输入/反馈/生命周期、具体 V1 表现、Product 表现所有权和 Three Surface；设备/性能证据合同已归入独立 strict 包；共享对局资源取得/回滚原语完成 strict 迁移。生产 Product Session 组合已在 G6.37 归包；旧 Greybox ArenaPresentationSession 是 G6 应用根，Pilot 是 G7 测试/研究链，不再伪装为 G5 通用表现缺口 |
 | G6 Platform/入口/构建 | 已完成 | 三端默认入口是 Product；运行实例 ID、启动协调、失败兜底、Web teardown、三端平台适配、Arena V1 应用组合根、生产 Session、顶层 Launch、Web Product UI、三端实际 Product Entry，以及隔离 Greybox/Study/Pilot 入口、应用根、研究环境、clean build 身份、JSON 下载、Product Runtime、Workbench View 和两个研究 Web App 均已 strict 化。生产交付继续由产物门禁排除开发/研究入口；两个研究页面已在 390×844 浏览器视口完成加载与交互复验，真机证据边界见 G6.49 |
-| G7 零 JS/完整质量门 | 进行中 | Input Pilot、真人研究、Regression/Golden Replay 和 Release 链已进入独立 strict workspace；`src/arena/regression` 与 `src/arena-release` 已清零。新增 strict `arena-balance` 分离冻结 Definition 与运行时 Registry，`arena-experiment` 已承接实验合同、报告、种子、策略与基础不变量。ESLint、strict TypeScript、Vitest 和 JavaScript 精确递减门禁持续运行，受维护 JavaScript 已由 549 降至 167。其余实验运行时、资产合同、脚本、测试、正式 coverage 阈值和零 JS 门禁尚未完成 |
-| G8 资产/安全/所有权 | 未开始 | CODEOWNERS、CI 安全与正式资产最终批准待补齐；G7.25 安装新 workspace 链接时 npm 自动提示 3 个 high 依赖风险，尚待 G8 受控审计与处置 |
-| G9 文档归真 | 未开始 | README 首标题和大量章节仍以数值跳台 v3 为产品真值 |
+| G7 零 JS/完整质量门 | 已完成 | 生产源码、测试和治理脚本全部 strict TypeScript，受维护 JavaScript 为 0，许可清单已删除；当前 61 个 Vitest 文件、383 项测试通过，分层 coverage 与零 JS 负向门禁已接入 `check:governance` |
+| G8 资产/安全/所有权 | 进行中（外部授权） | Allen 已批准 3 个来源、10 个运行时资产和 3 个 GLTF Definition；Bundle `e03ff2b4`、精确依赖、lock integrity、完整 Action SHA、CODEOWNERS、Dependabot、secret/遥测和本地诊断策略门禁已通过。只剩 `npm audit --omit=dev --audit-level=high` 因会向 npm 披露依赖元数据，尚待 Allen 明确授权 |
+| G9 文档归真 | 已完成 | 109 个 Markdown、215 个本地链接、49 个去重 npm 命令与关键现行状态通过自动复验；历史批次与当前结论已分层，仓库运营策略已落盘 |
 | G10 最新 main 审计 | 未开始 | 只能在 G0-G9 完成后执行；禁止实际合并 |
 
 ## G0 已取得证据
@@ -55,11 +57,9 @@
 
 ## 当前不可合并原因
 
-1. 当前 167 个受维护 JavaScript 文件仍在精确允许清单中；G7 尚需迁移其余实验运行时、资产合同、脚本、测试与验收链并建立零 JS 门禁。
-2. Vitest 当前保护底层合同包和治理门禁；Arena 其余测试尚待按 workspace 迁移并建立正式 coverage 阈值与零 JS 门禁。
-3. 正式资产最终审批与完整安全/依赖长期治理尚未闭环；最近一次 workspace 安装自动提示 3 个 high 依赖风险，尚未完成 G8 根因、可达性和升级兼容审计。
-4. 文档仍含迁移前阶段性叙述，尚未完成 G9 全量链接、状态与命令归真。
-5. 尚未对治理完成后的候选提交与最新 `origin/main` 做独立虚拟合并审计。
+1. 联网生产依赖漏洞审计尚未获得对“向 npm 披露依赖元数据”的明确授权；不以旧安装提示推导当前结果。
+2. 尚未对治理完成后的候选提交与最新 `origin/main` 做独立虚拟合并审计。
+3. G10 尚未对候选生产包执行 Web 手机验收；微信/抖音 iOS 与 Android 真机材料继续属于发布阻断，不与代码合并判断混淆。
 
 以上是迁移入口，不是已接受的永久例外。
 
@@ -1458,3 +1458,24 @@
 - 390×844、DPR 3 的 Chromium 明确视口分别加载 `pilot.html` 与 `study.html`：URL/标题和首个工作台区域可见，文档、Body 与主容器均无横向溢出；Pilot 的“受测者同意”复选框可切换，Study 的去标识操作员编号可输入，两页 warning/error 均为 0。开发构建因 `build-manifest-invalid` 正确阻断正式证据采集，这不是页面启动失败。本证据是桌面 Chromium 设备指标模拟，不是 iPhone 13 Pro、iOS 26、Chrome 真机验收，也不证明正式采集流程已在真机完成。
 - 代码提交为 `3e9d1d2bb25495d115c33ed81c7a26df40a91d43`，clean build ID 为 `arena-3e9d1d2bb254-product`；Web/微信/抖音 Manifest hash 为 `8a604df0 / 45cd41ad / 08e09c4b`，delivery 为 `3807531 / 3835130 / 3835105 B`，JavaScript 为 `1463921 / 1507034 / 1507034 B`。三端 `sourceDirty=false`、默认入口均为 Product、预算和生产产物边界通过且 `freezeEligible=true`；交付字节与 G7.29 完全一致，证明本批研究入口治理未进入默认 Product bundle。
 - 本批没有新增或升级外部依赖，也未执行未经授权的 `npm audit` 或强制修复；G7.25 已登记的 3 个 high 风险继续作为 G8 阻断。本批不改变 Gameplay V2 配置 hash `8c322912`、任意距离挥空、攻击/命中/击退、动作/武器、移动/跳跃、画质、关节、Bot、权威 tick、Replay/Profile schema 或正式资产。G6 至此闭环；G7-G10 尚未完成，当前仍不可合并。
+
+## G7.30 全仓 strict TypeScript、零 JS 与分层质量门完成证据
+
+- 实验、回放、发布、产品表现、灰盒、输入试验、真人研究、资产、脚本和全部测试已迁入 strict TypeScript；受维护 `.cjs/.js/.jsx/.mjs` 为 0，递减允许清单已删除。负向治理测试会对任何新 JavaScript 文件失败，不存在豁免通道。
+- `check:governance` 统一执行零 JS、Product/Three 依赖边界、ESLint、全 workspace typecheck/build 和 Vitest coverage。最新已验证结果为 61 个测试文件、381 项测试全通过；语句/行 `57.68%`、分支 `64.24%`、函数 `64.28%`。全局下限和核心包更高分层阈值均在 `vitest.config.ts` 中受版本控制。
+- 该批没有修改 Gameplay V2 数值、权威状态机、Replay/Profile schema、正式资产字节、角色动作、武器差异、画质或触控映射。G7 于提交 `4276f16` 后闭环。
+
+## G8.1 资产批准、供应链与仓库安全证据
+
+- `governance/repository-policy.json` 以 Allen / `@AllenZhangJ` 作为唯一 owner，固定精确依赖、完整 GitHub Action commit SHA、禁用运行时网络遥测、原始日志不入库和本地 7 天保留策略。`CODEOWNERS` 保持全局及关键路径 owner，Dependabot 按月为 npm 和 GitHub Actions 开启受审查更新。
+- 根及 52 个子 workspace 共 53 份 package manifest、277 个依赖声明均为精确 semver；package-lock V3 中 366 个外部包均来自 npm 官方 HTTPS registry 并带 SHA-512 integrity。CI 的 checkout/setup-node 均固定到已核对的完整 v4.4.0 SHA，安装使用 `npm ci --ignore-scripts`。
+- Allen 于 2026-07-23 批准 KayKit Adventurers、KayKit Skeletons 和 Kenney Impact Sounds 三个来源。第三方基线精确覆盖 Formal Asset Budget 的 10 个运行时产物；真实 Intake Bundle 精确覆盖 3 个正式 GLTF Definition，与当前 Registry 和字节复验后 hash 为 `e03ff2b4`。资产批准只关闭来源/授权/字节风险，不替代真机体验和性能证据。
+- 高置信度 secret、密钥/环境文件、运行时遥测 API/SDK 和本地日志策略已进入自动门禁；新增负向测试证明非精确依赖、`.env` 和非 owner 批准会失败。统一治理门在提交 `882e6da` 上通过。
+- 唯一未闭环项是联网 `npm audit --omit=dev --audit-level=high`：该命令会向 npm 服务披露项目依赖元数据，当前未获得 Allen 对该外发的明确授权，因此未执行，也不使用旧的 3-high 安装提示伪造当前结论。
+
+## G9.1 文档归真与持续校验证据
+
+- README、Stage 7 正式资产手册、Stage 4～9 架构/质量/路线图、正式资产调研、仓库运营策略和关键 ADR 已统一到当前实现。正式 Bundle `e03ff2b4` 与 Allen 批准已明确关闭，真实设备、正式 producer 与联网漏洞审计仍按各自边界保持未完成。
+- 历史追加台账继续保留当时的 JavaScript 数量、构建字节和阶段判断，但文档顶部明确其时间口径，不能覆盖现行批次表和当前阻断。旧 `build:greybox`、Node `.js` 测试路径和“日志保留期限未确认”等已退役口径均已改为历史说明或现行 TypeScript 命令。
+- 新增 `check:documentation`，遍历 109 个 Markdown，复验 215 个本地链接、49 个去重 npm 命令、owner、零 JS、G7 状态和正式资产 hash。负向测试证明断链与不存在的 npm 命令会失败关闭。
+- `check:governance` 完整通过：61 个 Vitest 文件、383 项测试；语句/行 `57.66%`、分支 `64.12%`、函数 `64.24%`。本批只修改治理脚本、测试和文档，不改变 Gameplay V2 数值、权威规则、输入、动作、资产字节或生产表现。

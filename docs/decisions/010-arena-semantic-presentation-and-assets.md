@@ -3,7 +3,7 @@
 - 状态：已接受 S7.1 合同边界；正式资产路径仍待 Stage 6 E3/E4 与 Mapper 冻结
 - 日期：2026-07-18
 
-实施进度：S7.1 合同已落地，并在其后接入双 KayKit GLB、骨骼动画、AnimationMixer、SkeletonUtils、左右手插槽、三种装备、Kenney CC0 命中音效、声音开关、reduced-motion 镜头/震动降级与三端宿主加载。程序化角色仍作为加载失败回退，重锤和锁链为项目自制附件。来源/许可/证明治理由 [ADR-027](027-arena-formal-asset-intake-provenance.md) 补充；Formal Bundle 和目标真机资产验收尚未关闭。
+实施进度：S7.1 合同已落地，并在其后接入双 KayKit GLB、骨骼动画、AnimationMixer、SkeletonUtils、左右手插槽、三种装备、Kenney CC0 命中音效、声音开关、reduced-motion 镜头/震动降级与三端宿主加载。程序化角色仍作为加载失败回退，重锤和锁链为项目自制附件。来源/许可/证明治理由 [ADR-027](027-arena-formal-asset-intake-provenance.md) 补充；Formal Bundle 与 Allen 批准已闭环，目标真机资产验收尚未关闭。
 
 ## 背景
 

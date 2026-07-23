@@ -4,7 +4,7 @@
 
 2026-07-20，来源中立的正式资产入库治理合同、文件复验器和负向门禁已落地。它证明项目可以在不依赖 Three.js、DOM 或平台 API 的情况下，把未来正式资产 Definition 精确绑定到内容字节、来源 revision、许可文本、权利证明和批准记录。
 
-当前已有真实 KayKit GLB/PNG、固定 revision 和 CC0 许可，但尚未由项目方填写 `approvedBy/approvedAt` 并形成真实 Bundle。因此仍不表示 `stage7.formal-assets` 或发行冻结完成。
+当前已有真实 KayKit GLB/PNG、固定 revision 和 CC0 许可。2026-07-23，项目唯一负责人 Allen 已填写 `approvedBy/approvedAt` 并形成真实 Bundle；复验 hash 为 `e03ff2b4`。这只表示来源、授权和字节身份已闭环，仍不表示 `stage7.formal-assets` 或发行冻结完成。
 
 ## 已落地边界
 
@@ -40,8 +40,8 @@
 
 ## 未完成项
 
-- 已选择并固定两套 KayKit CC0 开源来源，但项目方尚未做最终造型和成本策略签字。
-- 许可文本、GLB、PNG 和来源研究记录已进入仓库；正式 Bundle 与批准身份尚缺。
+- 两套 KayKit 与 Kenney CC0 来源已固定，Allen 已完成当前造型/成本策略和来源批准。
+- 许可文本、GLB、PNG、OGG、来源证明和正式 Bundle 已进入仓库，Definition/文件摘要漂移会使门禁失败。
 - GLB Provider、宿主文件/图片加载、AnimationMixer、SkeletonUtils、手部插槽和三种装备运行时已接通。
 - 三端构建包体与 Formal Asset 专用的格式、骨骼、动作、材质、绘制 primitive、纹理解码内存及音频 Policy 均已通过；目标真机峰值内存与加载时延仍需设备证据。
 - 已有 reduced-motion 镜头/震动降级与 Kenney CC0 命中音频运行时；仍没有人工 reduced-motion、小屏可读性、三端生命周期和目标真机证据。

@@ -2,7 +2,7 @@
 
 ## 文档状态
 
-执行中，2026-07-21。S9.1～S9.3 的实验、Replay V5、三 Mapper input fuzz、生命周期回归、平衡验证和 11 条命 Product 默认已落地。S9.4 的质量/性能/设备合同与三端构建预算已建立，本次正式角色与音频构建在 Web/微信/抖音均通过 4 MiB 交付门；六个真实 target Record 尚未采集。S9.5 的预注册真人研究、工作台和逐 Tick Replay/Bot 复验已建立但真实样本为空。S9.6 已接入十一门 producer；Formal Assets 已有真实 GLB/PNG/OGG、来源、许可、正式资产专用预算、声音开关和 reduced-motion 运行时，但因项目方批准、Formal Bundle 与目标真机材料未齐，仍不可进入冻结。
+执行中，更新于 2026-07-23。S9.1～S9.3 的实验、Replay V5、三 Mapper input fuzz、生命周期回归、平衡验证和 11 条命 Product 默认已落地。S9.4 的质量/性能/设备合同与三端构建预算已建立；六个真实 target Record 尚未采集。S9.5 的预注册真人研究、工作台和逐 Tick Replay/Bot 复验已建立但真实样本为空。S9.6 已接入十一门 producer；Formal Assets 的 GLB/PNG/OGG、来源、许可、Allen 批准、真实 Bundle、专用预算、声音开关和 reduced-motion 运行时已就绪，但正式资产 producer 与目标真机材料未齐，仍不可进入冻结。
 
 ## 收敛原则
 

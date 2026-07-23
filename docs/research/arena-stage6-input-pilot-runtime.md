@@ -69,7 +69,7 @@ QuickMatchService / LocalMatchSession
 当前定向命令：
 
 ```bash
-node --test tests/arena/presentation/input-pilot-runtime.test.js tests/arena/presentation/input-pilot.test.js tests/arena/local-match-session.test.js tests/architecture.test.js
+npm run test:governance -- tests/arena/presentation/input-pilot-runtime.test.ts tests/arena/presentation/input-pilot.test.ts tests/arena/local-match-session.test.ts tests/architecture.test.ts
 ```
 
 本批次最终本机证据：

@@ -67,17 +67,23 @@
 
 ### G7：收紧到零 JavaScript 和完整质量门
 
+状态：已完成。受维护 JavaScript 为零，许可清单已删除，分层 coverage 和负向零 JS 门已接入统一治理检查。
+
 交付：删除 JS 允许清单；Vitest 单元/集成/架构/coverage、Replay、fuzz、stress、soak、零 JS、依赖/资产/构建检查汇总为单一 `npm run check`；CI 使用锁文件干净安装。
 
 门禁：全门禁从 clean checkout 可复现；coverage 阈值基于 Arena 包分别设定，不用删除测试抬高比例；没有 skipped/focused 测试和未审计例外。
 
 ### G8：资产、安全与长期所有权
 
+状态：本地可复验交付已完成；联网生产依赖漏洞审计因会向 npm 披露依赖元数据，尚待 Allen 明确授权。
+
 交付：资产批准记录、第三方声明、固定 revision/hash、CODEOWNERS `@AllenZhangJ`、分支保护建议、依赖更新和漏洞处置规则、敏感信息扫描、本地诊断保留策略。
 
 门禁：资产 Intake/预算通过且审批完整；仓库无 secret、远程遥测或未经固定的第三方代码；关键路径具有 owner。
 
 ### G9：文档归真
+
+状态：已完成。当前产品真值、历史批次证据、正式资产批准、Stage 7/9 阻断口径和仓库运营策略已归真；链接、npm 命令与关键现行状态已进入自动门禁。
 
 交付：README、架构、配置表、产品/验收/发布文档、ADR 索引和状态台账以当前实现重写；旧产品文档删除或在 ADR 中留下历史定位。
 

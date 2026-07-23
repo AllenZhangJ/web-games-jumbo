@@ -2,18 +2,17 @@
 
 ## 当前结论
 
-两套 KayKit 正式角色、圆盾、独立 PNG、固定上游 revision、CC0 许可和三端运行时已进入项目；Kenney CC0 命中音效、声音开关、reduced-motion 镜头/震动降级、正式资产专用预算和三端 4 MiB 构建预算也已落地。当前仍缺项目方 `approvedBy/approvedAt`、完整 Formal Asset Intake Bundle、reduced-motion 人工验收和目标真机可读性记录，因此 `stage7.formal-assets` 仍不是 ready。
+两套 KayKit 正式角色、圆盾、独立 PNG、固定上游 revision、CC0 许可和三端运行时已进入项目；Kenney CC0 命中音效、声音开关、reduced-motion 镜头/震动降级、正式资产专用预算和三端 4 MiB 构建预算也已落地。2026-07-23，项目唯一负责人 Allen 已完成来源与入库批准；真实 Bundle `arena.stage7.formal-assets.v1` 复验结果为 `verified-intake-only`，bundle hash 为 `e03ff2b4`。当前仍缺 reduced-motion 人工验收、目标真机可读性/性能记录和 Stage 9 正式资产 producer，因此 `stage7.formal-assets` 仍不是 ready。
 
 Intake 通过的含义严格限定为：声明的 Presentation Asset Definition、内容字节、来源 revision、许可文本、授权证明和批准记录可以重新建立同一身份。它不代表 S7.2～S7.5 或 Stage 9 RC Gate 已通过。
 
-## 项目方先决输入
+## 已确认的项目方输入
 
-进入 Stage 7 冻结前仍需确认：
+当前已由 Allen 确认：
 
-- 对当前 KayKit Rogue / Skeleton Warrior 造型与项目自制重锤完成最终视觉签字。
-- 确认 CC0 开源来源符合项目成本与发行策略；来源 commit 已固定在研究记录中。
-- 明确授权主体，确认商业使用、修改、随 Web/微信/抖音最终构建分发的权利。
-- 提供可留存的许可证文本，以及合同、发票、订单或权利声明等证明。
+- 当前 KayKit Rogue / Skeleton Warrior、圆盾与项目自制武器继续作为正式纵切外观。
+- CC0 开源来源符合当前成本与发行策略，KayKit commit 和 Kenney 版本/ZIP SHA-256 均已固定。
+- 商业使用、修改和随 Web/微信/抖音构建分发的权利由 CC0-1.0 文本和项目来源批准记录共同留存。
 
 显式攻击/跳跃 Mapper 已进入 Product，动作语义已接到 18 条正式动画；真实新手盲测仍决定最终操作冻结和后续动画精修优先级。
 
@@ -48,12 +47,19 @@ npm run arena:assets:budget
 npm run arena:assets:intake:verify -- --describe
 ```
 
-复验真实 Bundle：
+复验当前真实 Bundle：
 
 ```bash
 npm run arena:assets:intake:verify -- \
-  --bundle /absolute/path/formal-asset-intake.json \
-  --artifacts-root /absolute/path/formal-asset-evidence
+  --bundle governance/formal-assets/arena-stage7-formal-assets-v1.json \
+  --artifacts-root .
+```
+
+与当前运行时 Definition、完整第三方产物基线一起复验：
+
+```bash
+npm run check:formal-assets
+npm run check:third-party-assets
 ```
 
 成功状态是 `verified-intake-only`。任何未知字段、Definition hash 漂移、缺失记录、权利不足、路径逃逸、文件替换、大小或 SHA-256 不一致都会失败。
@@ -62,9 +68,8 @@ npm run arena:assets:intake:verify -- \
 
 Intake 之后仍按 Stage 7 顺序推进：
 
-1. 补齐两套 KayKit 资产的正式 Bundle、批准人和批准时间，并复验 GLB + PNG + 许可/来源证明。
-2. 在目标设备复验链条、盾牌和重锤的持握/起手/收手，以及 reduced-motion 与音频降级。
-3. 采集三端最终包、目标真机小屏可读性、前后台/上下文恢复、内存与加载数据。
-4. 将已经通过的专用资产预算、构建预算与后续目标设备记录汇总为 `arena:assets:evidence` 可重算材料。
+1. 在目标设备复验链条、盾牌和重锤的持握/起手/收手，以及 reduced-motion 与音频降级。
+2. 采集三端最终包、目标真机小屏可读性、前后台/上下文恢复、内存与加载数据。
+3. 实现 `stage7.formal-assets` release producer，将已通过的 Intake、专用资产预算、构建预算与目标设备记录汇总为可重算材料。
 
 因此当前仍不能生成 `stage7.formal-assets = ready`。

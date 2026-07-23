@@ -17,4 +17,4 @@
 
 运行时使用固定两声道小池播放，只消费已去重的 `HitResolved` 表现事件。声音开关来自只读 Product Profile；音效失败不会进入权威逻辑，也不会中断渲染循环。
 
-四个 OGG 当前合计 `32593` bytes，并已通过 `arena.stage7.formal-asset-budget.v1`。许可文本 `kenney-impact-sounds-CC0-LICENSE.txt` 为 `448` bytes，SHA-256 为 `d66be41e71d4f284733729d7edb2cbbb65811b8b9603c8640b0ca0f687ba0c7c`；项目方最终批准和目标真机音频验收仍需单独完成。
+四个 OGG 当前合计 `32593` bytes，并已通过 `arena.stage7.formal-asset-budget.v1`。许可文本 `kenney-impact-sounds-CC0-LICENSE.txt` 为 `448` bytes，SHA-256 为 `d66be41e71d4f284733729d7edb2cbbb65811b8b9603c8640b0ca0f687ba0c7c`。2026-07-23，Allen 已完成来源批准；目标真机音频验收仍需单独完成。
