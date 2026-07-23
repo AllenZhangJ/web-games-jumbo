@@ -41,16 +41,21 @@ test('base push compatibility definition cannot drift before MatchCore migration
   const legacy = createArenaMatchConfig().basePush;
   const hitstun = definition.effects.find(({ kind }) => kind === 'apply-hitstun');
   const impulse = definition.effects.find(({ kind }) => kind === 'apply-directional-impulse');
+  assert.ok(hitstun);
+  assert.ok(impulse);
+  const targeting = definition.targeting.parameters as Record<string, unknown>;
+  const hitstunParameters = hitstun.parameters as Record<string, unknown>;
+  const impulseParameters = impulse.parameters as Record<string, unknown>;
   assert.deepEqual({
-    range: definition.targeting.parameters.range,
-    minimumFacingDot: definition.targeting.parameters.minimumFacingDot,
-    maximumVerticalDifference: definition.targeting.parameters.maximumVerticalDifference,
+    range: targeting.range,
+    minimumFacingDot: targeting.minimumFacingDot,
+    maximumVerticalDifference: targeting.maximumVerticalDifference,
     windupTicks: definition.timing.windupTicks,
     activeTicks: definition.timing.activeTicks,
     recoveryTicks: definition.timing.recoveryTicks,
-    hitstunTicks: hitstun.parameters.ticks,
-    horizontalImpulse: impulse.parameters.horizontalImpulse,
-    verticalImpulse: impulse.parameters.verticalImpulse,
+    hitstunTicks: hitstunParameters.ticks,
+    horizontalImpulse: impulseParameters.horizontalImpulse,
+    verticalImpulse: impulseParameters.verticalImpulse,
   }, legacy);
 });
 
@@ -69,8 +74,10 @@ test('all authoritative attack definitions consume the unified tuning table exac
     const impulse = definition.effects.find(({ kind }) => (
       kind === 'apply-directional-impulse' || kind === 'pull-to-source'
     ));
-    assert.equal(impulse.parameters.horizontalImpulse, tuning.knockback.horizontalImpulse);
-    assert.equal(impulse.parameters.verticalImpulse, tuning.knockback.verticalImpulse);
+    assert.ok(impulse);
+    const parameters = impulse.parameters as Record<string, unknown>;
+    assert.equal(parameters.horizontalImpulse, tuning.knockback.horizontalImpulse);
+    assert.equal(parameters.verticalImpulse, tuning.knockback.verticalImpulse);
   }
 });
 
@@ -100,16 +107,22 @@ test('EquipmentRuntime keeps stable identity separate from mutable state and exp
     equipmentRegistry,
   });
   assert.equal(runtime.locationState, EQUIPMENT_LOCATION_STATE.SPAWNED);
-  assert.throws(() => { runtime.instanceId = 'tampered'; }, TypeError);
+  assert.throws(() => {
+    (runtime as unknown as { instanceId: string }).instanceId = 'tampered';
+  }, TypeError);
   runtime.cooldownRemainingTicks = 10;
   runtime.revision += 1;
   const snapshot = createEquipmentRuntimeSnapshot(runtime);
+  assert.ok(runtime.position);
+  assert.ok(snapshot.position);
   runtime.position.x = 999;
   assert.equal(snapshot.position.x, 1);
   assert.equal(snapshot.cooldownRemainingTicks, 10);
   assert.ok(Object.isFrozen(snapshot));
   assert.ok(Object.isFrozen(snapshot.position));
-  assert.throws(() => { snapshot.position.x = 100; }, TypeError);
+  assert.throws(() => {
+    (snapshot.position as { x: number }).x = 100;
+  }, TypeError);
 });
 
 test('EquipmentRuntime rejects invalid registry references, positions and snapshot state', () => {
@@ -136,7 +149,7 @@ test('EquipmentRuntime rejects invalid registry references, positions and snapsh
     position: { x: 0, y: 0, z: 0 },
     equipmentRegistry,
   });
-  runtime.locationState = 'teleported-by-renderer';
+  (runtime as unknown as { locationState: string }).locationState = 'teleported-by-renderer';
   assert.throws(() => createEquipmentRuntimeSnapshot(runtime), /locationState 不受支持/);
 });
 

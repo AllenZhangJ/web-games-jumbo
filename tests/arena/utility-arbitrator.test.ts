@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { selectHighestUtility } from '@number-strategy-jump/arena-bot';
 
-function evaluator(id, score, priority = 0) {
+function evaluator(id: string, score: number, priority: number = 0) {
   return { id, priority, score: () => score, createPlan: () => ({ marker: id }) };
 }
 
@@ -26,6 +26,6 @@ test('utility arbitration fails on invalid scores and plans', () => {
   assert.throws(() => selectHighestUtility([{
     id: 'broken-plan',
     score: () => 1,
-    createPlan: () => null,
+    createPlan: () => null as never,
   }], {}), /计划对象/);
 });

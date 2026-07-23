@@ -10,7 +10,7 @@ import {
 } from '@number-strategy-jump/arena-definitions';
 import { ActionRegistry } from '@number-strategy-jump/arena-definitions';
 
-function rawAction(id = 'test-action') {
+function rawAction(id: string = 'test-action') {
   return {
     schemaVersion: ACTION_DEFINITION_SCHEMA_VERSION,
     id,
@@ -37,14 +37,20 @@ test('ActionDefinition clones and deeply freezes serializable rule data', () => 
   const source = rawAction();
   const definition = createActionDefinition(source);
   source.targeting.parameters.radius = 999;
-  source.effects[0].parameters.labels.push('mutated');
-  assert.equal(definition.targeting.parameters.radius, 1);
-  assert.deepEqual(definition.effects[0].parameters.labels, ['a']);
+  const sourceEffect = source.effects[0];
+  const definitionEffect = definition.effects[0];
+  assert.ok(sourceEffect);
+  assert.ok(definitionEffect);
+  sourceEffect.parameters.labels.push('mutated');
+  assert.equal(Reflect.get(definition.targeting.parameters as object, 'radius'), 1);
+  assert.deepEqual(Reflect.get(definitionEffect.parameters as object, 'labels'), ['a']);
   assert.ok(Object.isFrozen(definition));
   assert.ok(Object.isFrozen(definition.timing));
-  assert.ok(Object.isFrozen(definition.effects[0].parameters.labels));
+  assert.ok(Object.isFrozen(Reflect.get(definitionEffect.parameters as object, 'labels')));
   assert.ok(Object.isFrozen(definition.conflictTags));
-  assert.throws(() => { definition.timing.activeTicks = 99; }, TypeError);
+  assert.throws(() => {
+    (definition.timing as { activeTicks: number }).activeTicks = 99;
+  }, TypeError);
 });
 
 test('ActionDefinition rejects schema drift and non-deterministic payloads', () => {
@@ -82,7 +88,7 @@ test('ActionDefinition rejects schema drift and non-deterministic payloads', () 
     }),
     /可序列化数据/,
   );
-  const circular = {};
+  const circular: { self?: unknown } = {};
   circular.self = circular;
   assert.throws(
     () => createActionDefinition({
@@ -91,7 +97,7 @@ test('ActionDefinition rejects schema drift and non-deterministic payloads', () 
     }),
     /循环引用/,
   );
-  const sparse = [];
+  const sparse: unknown[] = [];
   sparse.length = 1;
   assert.throws(
     () => createActionDefinition({
@@ -124,7 +130,7 @@ test('ActionRegistry is read-only, rejects duplicate ids and lists in stable id 
   assert.equal(registry.size, 2);
   assert.deepEqual(registry.list().map(({ id }) => id), ['a-action', 'z-action']);
   assert.ok(Object.isFrozen(registry.list()));
-  assert.equal(registry.register, undefined);
+  assert.equal(Reflect.get(registry, 'register'), undefined);
   assert.equal(registry.require('a-action').id, 'a-action');
   assert.throws(() => registry.require('missing'), /未知 ActionDefinition missing/);
   assert.throws(

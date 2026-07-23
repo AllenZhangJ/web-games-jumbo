@@ -11,7 +11,7 @@ const definition = createArenaV1CharacterRegistry().require(
   ARENA_V1_CHARACTER_ID.PARKOUR_APPRENTICE,
 );
 
-function project(moveX, moveZ) {
+function project(moveX: number, moveZ: number) {
   return projectCharacterMovementIntent({ moveX, moveZ, characterDefinition: definition });
 }
 
