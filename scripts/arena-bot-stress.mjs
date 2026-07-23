@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import {
   createArenaStage9BotExperimentDefinition,
   createArenaStage9BotExperimentRegistries,
-} from '../src/arena/experiment/arena-bot-experiment-composition.js';
+} from '@number-strategy-jump/arena-v1-experiment';
 import { ARENA_BOT_ASSIGNMENT_DISTRIBUTION_COLLECTOR_ID } from '@number-strategy-jump/arena-v1-experiment';
 import { ARENA_BOT_CAPABILITY_COLLECTOR_ID } from '@number-strategy-jump/arena-v1-experiment';
 import { ARENA_EXPERIMENT_OUTCOME } from '@number-strategy-jump/arena-experiment';

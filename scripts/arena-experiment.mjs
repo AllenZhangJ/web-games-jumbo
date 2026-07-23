@@ -20,7 +20,7 @@ import {
 import {
   createArenaStage9BotExperimentDefinition,
   createArenaStage9BotExperimentRegistries,
-} from '../src/arena/experiment/arena-bot-experiment-composition.js';
+} from '@number-strategy-jump/arena-v1-experiment';
 import {
   createArenaStage9BalanceExperimentDefinition,
   createArenaStage9BalanceExperimentRegistries,

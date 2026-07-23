@@ -116,3 +116,12 @@ export {
   createArenaBotCapabilityCollectorEntry,
   createArenaBotCapabilityCollectorParameters,
 } from './arena-bot-capability-collector.js';
+export {
+  ARENA_STAGE9_BOT_DEFAULT_CONFIG,
+  ARENA_STAGE9_BOT_EXPERIMENT_ID,
+  ARENA_STAGE9_BOT_SEED_BASE,
+  ARENA_STAGE9_BOT_SEED_STEP,
+  createArenaStage9BotExperimentDefinition,
+  createArenaStage9BotExperimentRegistries,
+} from './arena-bot-experiment-composition.js';
+export type { ArenaStage9BotExperimentOptions } from './arena-bot-experiment-composition.js';
