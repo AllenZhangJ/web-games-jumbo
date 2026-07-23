@@ -1,7 +1,7 @@
 import { readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { NodeIO } from '@gltf-transform/core';
+import { NodeIO, type Document } from '@gltf-transform/core';
 import { prune, resample } from '@gltf-transform/functions';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -25,6 +25,35 @@ const REQUIRED_CLIPS = new Set([
   'Unarmed_Pose',
   'Walking_A',
 ]);
+interface CharacterAssetOptimizationInput {
+  readonly path: string;
+  readonly textureFileName: string;
+  readonly optimizeAnimations: boolean;
+}
+
+interface CharacterAssetOptimizationResult {
+  readonly path: string;
+  readonly animationCount: number;
+  readonly byteLength: number;
+  readonly texturePath: string;
+  readonly textureByteLength: number;
+}
+
+interface MutableGlbRecord extends Record<string, unknown> {
+  bufferView?: unknown;
+  buffer?: unknown;
+  byteOffset?: unknown;
+  byteLength?: unknown;
+  mimeType?: unknown;
+  uri?: unknown;
+}
+
+interface MutableGlbJson extends Record<string, unknown> {
+  images: MutableGlbRecord[];
+  bufferViews: MutableGlbRecord[];
+  buffers: MutableGlbRecord[];
+}
+
 const ASSETS = Object.freeze([
   Object.freeze({
     path: 'public/assets/arena/characters/kaykit-adventurers/parkour-apprentice-rogue.glb',
@@ -41,18 +70,22 @@ const ASSETS = Object.freeze([
     textureFileName: 'shield_texture.png',
     optimizeAnimations: false,
   }),
-]);
+]) satisfies readonly CharacterAssetOptimizationInput[];
 
 const GLB_MAGIC = 0x46546c67;
 const GLB_VERSION = 2;
 const GLB_JSON_CHUNK = 0x4e4f534a;
 const GLB_BIN_CHUNK = 0x004e4942;
 
-function paddedLength(length) {
+function paddedLength(length: number): number {
   return Math.ceil(length / 4) * 4;
 }
 
-function remapBufferViewReferences(value, removedIndex, location = 'root') {
+function remapBufferViewReferences(
+  value: unknown,
+  removedIndex: number,
+  location = 'root',
+): void {
   if (Array.isArray(value)) {
     value.forEach((entry, index) => (
       remapBufferViewReferences(entry, removedIndex, `${location}[${index}]`)
@@ -60,19 +93,31 @@ function remapBufferViewReferences(value, removedIndex, location = 'root') {
     return;
   }
   if (!value || typeof value !== 'object') return;
-  for (const [key, entry] of Object.entries(value)) {
+  const record = value as Record<string, unknown>;
+  for (const [key, entry] of Object.entries(record)) {
     if (key === 'bufferView' && Number.isInteger(entry)) {
       if (entry === removedIndex) {
         throw new Error(`${location}.bufferView 仍引用即将移除的纹理 bufferView。`);
       }
-      if (entry > removedIndex) value[key] = entry - 1;
+      if ((entry as number) > removedIndex) record[key] = (entry as number) - 1;
       continue;
     }
     remapBufferViewReferences(entry, removedIndex, `${location}.${key}`);
   }
 }
 
-function externalizeSingleTexture(bytes, textureFileName, relativePath) {
+function requiredInteger(value: unknown, name: string): number {
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) {
+    throw new RangeError(`${name} 必须是非负安全整数。`);
+  }
+  return value;
+}
+
+function externalizeSingleTexture(
+  bytes: Uint8Array,
+  textureFileName: string,
+  relativePath: string,
+): Readonly<{ modelBytes: Buffer; textureBytes: Buffer }> {
   const source = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   if (
     source.readUInt32LE(0) !== GLB_MAGIC
@@ -84,7 +129,11 @@ function externalizeSingleTexture(bytes, textureFileName, relativePath) {
   if (source.readUInt32LE(16) !== GLB_JSON_CHUNK) {
     throw new Error(`${relativePath} 缺少首个 JSON chunk。`);
   }
-  const json = JSON.parse(source.subarray(20, 20 + jsonLength).toString('utf8'));
+  const parsed: unknown = JSON.parse(source.subarray(20, 20 + jsonLength).toString('utf8'));
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error(`${relativePath} 的 GLB JSON 根不是对象。`);
+  }
+  const json = parsed as MutableGlbJson;
   const binChunkOffset = 20 + jsonLength;
   const binLength = source.readUInt32LE(binChunkOffset);
   if (source.readUInt32LE(binChunkOffset + 4) !== GLB_BIN_CHUNK) {
@@ -99,16 +148,23 @@ function externalizeSingleTexture(bytes, textureFileName, relativePath) {
   }
 
   const image = json.images[0];
-  const removedIndex = image.bufferView;
+  if (!image) throw new Error(`${relativePath} 缺少纹理记录。`);
+  const removedIndex = requiredInteger(image.bufferView, `${relativePath}.image.bufferView`);
   const imageView = json.bufferViews?.[removedIndex];
-  if (!Number.isInteger(removedIndex) || !imageView || imageView.buffer !== 0) {
+  if (!imageView || imageView.buffer !== 0) {
     throw new Error(`${relativePath} 的纹理不是内嵌于主 buffer。`);
   }
   if (image.mimeType !== 'image/png') {
     throw new Error(`${relativePath} 的纹理必须是 PNG，当前为 ${String(image.mimeType)}。`);
   }
-  const imageOffset = imageView.byteOffset ?? 0;
-  const imageEnd = imageOffset + imageView.byteLength;
+  const imageOffset = imageView.byteOffset === undefined
+    ? 0
+    : requiredInteger(imageView.byteOffset, `${relativePath}.image.byteOffset`);
+  const imageByteLength = requiredInteger(
+    imageView.byteLength,
+    `${relativePath}.image.byteLength`,
+  );
+  const imageEnd = imageOffset + imageByteLength;
   const trailingBytes = imageEnd <= binLength
     ? source.subarray(binStart + imageEnd, binStart + binLength)
     : null;
@@ -121,7 +177,13 @@ function externalizeSingleTexture(bytes, textureFileName, relativePath) {
   }
   for (const [index, view] of json.bufferViews.entries()) {
     if (index === removedIndex) continue;
-    const end = (view.byteOffset ?? 0) + view.byteLength;
+    const viewOffset = view.byteOffset === undefined
+      ? 0
+      : requiredInteger(view.byteOffset, `${relativePath}.bufferViews[${index}].byteOffset`);
+    const end = viewOffset + requiredInteger(
+      view.byteLength,
+      `${relativePath}.bufferViews[${index}].byteLength`,
+    );
     if (end > imageOffset) {
       throw new Error(`${relativePath} 的 bufferView ${index} 与纹理尾部重叠。`);
     }
@@ -132,12 +194,15 @@ function externalizeSingleTexture(bytes, textureFileName, relativePath) {
     binStart + imageEnd,
   ));
   const binaryBytes = Buffer.from(source.subarray(binStart, binStart + imageOffset));
-  json.images[0] = { ...image, uri: textureFileName };
-  delete json.images[0].bufferView;
-  delete json.images[0].mimeType;
+  const externalImage: MutableGlbRecord = { ...image, uri: textureFileName };
+  delete externalImage.bufferView;
+  delete externalImage.mimeType;
+  json.images[0] = externalImage;
   json.bufferViews.splice(removedIndex, 1);
   remapBufferViewReferences(json, removedIndex);
-  json.buffers[0].byteLength = binaryBytes.byteLength;
+  const primaryBuffer = json.buffers[0];
+  if (!primaryBuffer) throw new Error(`${relativePath} 缺少主 buffer。`);
+  primaryBuffer.byteLength = binaryBytes.byteLength;
 
   const encodedJson = Buffer.from(JSON.stringify(json));
   const jsonChunkLength = paddedLength(encodedJson.byteLength);
@@ -157,7 +222,7 @@ function externalizeSingleTexture(bytes, textureFileName, relativePath) {
   return { modelBytes: output, textureBytes };
 }
 
-function requireRuntimeContract(document, relativePath) {
+function requireRuntimeContract(document: Document, relativePath: string): void {
   const rootValue = document.getRoot();
   const clips = new Set(rootValue.listAnimations().map((animation) => animation.getName()));
   const nodes = new Set(rootValue.listNodes().map((node) => node.getName()));
@@ -169,7 +234,11 @@ function requireRuntimeContract(document, relativePath) {
   }
 }
 
-async function optimize({ path: relativePath, textureFileName, optimizeAnimations }) {
+async function optimize({
+  path: relativePath,
+  textureFileName,
+  optimizeAnimations,
+}: CharacterAssetOptimizationInput): Promise<CharacterAssetOptimizationResult> {
   const absolutePath = path.join(root, relativePath);
   const io = new NodeIO();
   const document = await io.read(absolutePath);
@@ -201,6 +270,6 @@ async function optimize({ path: relativePath, textureFileName, optimizeAnimation
   };
 }
 
-const results = [];
+const results: CharacterAssetOptimizationResult[] = [];
 for (const asset of ASSETS) results.push(await optimize(asset));
 console.log(JSON.stringify({ status: 'optimized', results }, null, 2));

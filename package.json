@@ -52,7 +52,7 @@
     "arena:input-pilot:evidence": "node --import tsx scripts/arena-input-pilot-evidence.ts",
     "arena:assets:intake:verify": "node --import tsx scripts/arena-formal-asset-intake.ts",
     "arena:assets:budget": "node --import tsx scripts/arena-formal-asset-budget.ts",
-    "arena:assets:optimize-characters": "node --import tsx scripts/arena-optimize-character-assets.mjs",
+    "arena:assets:optimize-characters": "node --import tsx scripts/arena-optimize-character-assets.ts",
     "dev": "vite --host 127.0.0.1",
     "dev:lan": "vite --host 0.0.0.0",
     "preview:lan": "vite preview --host 0.0.0.0 --port 4173 --strictPort --outDir dist/web",
