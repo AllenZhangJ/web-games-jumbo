@@ -21,6 +21,7 @@ import {
 import {
   ARENA_RELEASE_EVIDENCE_STATEMENT_SCHEMA_VERSION,
   ARENA_RELEASE_EVIDENCE_STATUS,
+  type ArenaReleaseEvidenceMaterial,
 } from '@number-strategy-jump/arena-release-contracts';
 import {
   ARENA_STAGE9_RC_HANDOFF_GATE_ID,
@@ -29,7 +30,8 @@ import {
 import {
   arenaStage9ReleaseRequiresSourceIdentity,
   verifyArenaStage9ReleaseProducerEvidence,
-} from '../../scripts/lib/arena-stage9-release-producers.ts';
+} from '../../scripts/lib/arena-stage9-release-producers.js';
+import type { ArenaDefectSeverity } from '@number-strategy-jump/arena-release';
 
 const COMMIT = 'a'.repeat(40);
 const BUILD_ID = 'arena-defect-ledger-test';
@@ -47,7 +49,9 @@ function ledgerValue(overrides = {}) {
   };
 }
 
-function openDefect(severity = ARENA_DEFECT_SEVERITY.MEDIUM) {
+function openDefect(
+  severity: ArenaDefectSeverity = ARENA_DEFECT_SEVERITY.MEDIUM,
+) {
   return {
     id: 'arena-101',
     title: '恢复后第一次表现帧可能短暂降级',
@@ -84,7 +88,11 @@ function resolvedDefect() {
   };
 }
 
-function releaseStatement(definition, result, material) {
+function releaseStatement(
+  definition: ReturnType<typeof createArenaStage9RcHandoffV1Definition>,
+  result: ReturnType<typeof createArenaDefectReleaseResult>,
+  material: ArenaReleaseEvidenceMaterial,
+) {
   const gate = definition.requireGate(ARENA_STAGE9_RC_HANDOFF_GATE_ID.DEFECTS);
   return {
     schemaVersion: ARENA_RELEASE_EVIDENCE_STATEMENT_SCHEMA_VERSION,
@@ -122,7 +130,10 @@ test('Defect Ledger derives ready, incomplete and failed without accepting a man
   }));
   assert.equal(high.status, ARENA_DEFECT_REPORT_STATUS.FAILED);
   assert.equal(high.counts.high.open, 1);
-  assert.throws(() => { high.counts.high.open = 0; }, /read only|Cannot assign/i);
+  assert.throws(
+    () => Object.defineProperty(high.counts.high, 'open', { value: 0 }),
+    /read only|Cannot redefine property/i,
+  );
 });
 
 test('Defect Ledger requires traceable resolutions and owned residual risk for every open issue', () => {
@@ -236,7 +247,9 @@ test('defect CLI and Stage 9 producer recompute ledger and reject material mutat
       sourceIdentity: { sourceCommit: COMMIT, sourceDirty: false },
     });
     assert.equal(verified.length, 1);
-    assert.equal(verified[0].gateId, ARENA_STAGE9_RC_HANDOFF_GATE_ID.DEFECTS);
+    const [verifiedDefect] = verified;
+    assert.ok(verifiedDefect);
+    assert.equal(verifiedDefect.gateId, ARENA_STAGE9_RC_HANDOFF_GATE_ID.DEFECTS);
 
     await writeFile(ledgerPath, '{}\n');
     await assert.rejects(
