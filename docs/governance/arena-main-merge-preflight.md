@@ -2,7 +2,7 @@
 
 ## 结论
 
-当前结论是 **不可直接合并**。这不表示 Arena 治理路线失败，而是说明最新 `main` 与审计候选已经形成两个互斥产品方向：`main` 的 12 个新增提交继续治理已退役的数值跳台，候选的 436 个新增提交把 Arena 建成唯一生产产品。普通自动合并会在入口、构建、配置、测试和治理真值上重新引入旧实现。
+当前结论是 **不可直接合并**。这不表示 Arena 治理路线失败，而是说明最新 `main` 与审计候选已经形成两个互斥产品方向：`main` 的 12 个新增提交继续治理已退役的数值跳台，当前治理分支的 439 个新增提交把 Arena 建成唯一生产产品并记录本审计。普通自动合并会在入口、构建、配置、测试和治理真值上重新引入旧实现。
 
 本审计没有执行 merge、rebase、修改 `main` 或 force push。后续只有在所有阻断关闭后，才能单独批准一次“保留 Arena 产品树、显式处置 23 个冲突”的集成提交；不能用无审计的整树 `ours`、`theirs` 或逐文件猜测解决。
 
@@ -13,12 +13,12 @@
 | 审计日期 | 2026-07-23 |
 | 最新远端 main | `4c340f1c5bc00dcae712c2261462661d842339da` |
 | 共同祖先 | `d53e7349ff718b3fa0638af197e8f7c43d190b38` |
-| 治理候选 | `d41b3b4f432f46fd708821f51bc16d7795679bdb` |
+| 治理代码候选 | `3b81f238efecbed9fe69917abd9f3876c9dfde35` |
 | main 独有非 merge 提交 | 12 |
-| 治理分支独有提交 | 436 |
+| 治理分支独有提交（含本审计文档提交） | 439 |
 | 文本虚拟合并冲突 | 23 个文件 |
 
-候选 `d41b3b4` 只修复全量 TypeScript 测试发现；Arena 生产字节相对前一候选未变化。其 clean build ID 为 `arena-d41b3b4f432f-product`，Web/微信/抖音 Manifest hash 分别为 `19732d71`、`4a49b74a`、`5b15f144`。
+候选 `3b81f23` 只修复 clean checkout 下 workspace 构建顺序和已迁移空目录测试语义；Arena 生产字节相对前一候选未变化。其 clean build ID 为 `arena-3b81f238efec-product`，Web/微信/抖音 Manifest hash 分别为 `05091eb7`、`d5172814`、`423e9fc6`。
 
 ## main 新增能力承接
 
@@ -69,8 +69,8 @@ vitest.config.ts
 
 ## 候选验证
 
-- `check:governance`：61 个 Vitest 文件、383 项测试通过；语句/行 `57.62%`、分支 `64.11%`、函数 `64.23%`。
-- 全量 Node TypeScript 测试：88 个文件、703/703 通过。审计首次发现旧入口空跑 0 项，现已由 `scripts/run-node-tests.ts` 修复并拒绝空测试集；同时修复 3 个此前被隐藏的迁移断言。
+- 在第二个无历史 `dist`/`.tsbuildinfo` 的隔离克隆中，`npm ci --ignore-scripts` 后的 `check:governance` 全量通过：52 个 workspace 包按 11 个依赖波次构建，61 个 Vitest 文件、385 项测试通过；语句/行 `59.99%`、分支 `64.18%`、函数 `64.29%`。
+- 全量 Node TypeScript 测试：88 个文件、704/704 通过。审计先后修复了旧入口空跑 0 项、干净安装时内部包 `dist` 缺失，以及 Git 不保存已迁移空目录导致的 12 项架构假失败；门禁现拒绝空测试集、依赖图环和构建顺序回退。
 - 黄金 Replay：manifest `0dace228`，4 个场景通过。
 - 输入 fuzz：120 场、120 个唯一 final hash、6 次 Replay 复验。
 - 生命周期专项：104/104；Presentation/Product soak 各 100 场，无帧、监听、Canvas 或输入所有权残留，堆增长低于 8 MiB。
@@ -78,11 +78,17 @@ vitest.config.ts
 - 三端 clean build：默认入口均为 Product，`sourceDirty=false`，产物边界和预算通过；Web/微信/抖音 delivery 为 `3807531 / 3835130 / 3835105 B`。
 - Chrome 390×844 移动视口：首页、开始匹配、攻击和跳跃均可操作；攻击帧出现武器动作/命中特效，跳起后切换为空中攻击；无横向溢出、alert、warning 或 error。本记录是桌面 Chrome 移动视口，不冒充 iPhone 13 Pro/iOS 26/Chrome 真机结果。
 
+## GitHub 服务端状态
+
+- 当前分支没有 Pull Request，仓库 rulesets API 返回空集；classic `main` branch protection 由于本机 `gh` 凭证失效而无法认证复验，不得假定已开启。
+- 截至审计时，最新已推送候选 `3fd4be5` 的 GitHub Actions 运行 [30002587702](https://github.com/AllenZhangJ/web-games-jumbo/actions/runs/30002587702) 失败。本地已在隔离克隆中复现并修复 clean-install 根因，但修复候选 `3b81f23` 尚未推送，因此不得将本地通过写成远端 CI 通过。
+
 ## 当前阻断与关闭条件
 
 1. **联网依赖审计**：`npm audit --omit=dev --audit-level=high` 会向 npm 服务发送依赖元数据，尚未得到 Allen 对该外发的明确授权；不能沿用旧结果或跳过后宣称全门通过。
-2. **目标手机验收**：仍需 Allen 在 iPhone 13 Pro、iOS 26、Google Chrome 上验收最终候选。桌面 390×844 只能作为预检。
-3. **冲突处置授权**：23 个冲突必须通过一次独立集成批次显式保留 Arena、拒绝旧产品回流，并在解决后重新执行完整门禁；本审计批次明确禁止实际合并。
-4. **发布而非代码合并的外部门禁**：微信/抖音 iOS 与 Android 真机材料仍未完成，所以即使未来代码可合并，也不能宣称可正式发布。
+2. **GitHub CI 与分支保护**：必须推送修复候选并获得该精确 commit 的 GitHub Actions 绿灯；同时用有效 owner 认证确认 `main` 所需检查与保护规则。
+3. **目标手机验收**：仍需 Allen 在 iPhone 13 Pro、iOS 26、Google Chrome 上验收最终候选。桌面 390×844 只能作为预检。
+4. **冲突处置授权**：23 个冲突必须通过一次独立集成批次显式保留 Arena、拒绝旧产品回流，并在解决后重新执行完整门禁；本审计批次明确禁止实际合并。
+5. **发布而非代码合并的外部门禁**：微信/抖音 iOS 与 Android 真机材料仍未完成，所以即使未来代码可合并，也不能宣称可正式发布。
 
-关闭 1～3 后才可重新给出“可合并”结论；关闭 4 后才可给出“可发布”结论。
+关闭 1～4 后才可重新给出“可合并”结论；关闭 5 后才可给出“可发布”结论。

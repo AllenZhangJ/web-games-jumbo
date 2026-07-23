@@ -1487,3 +1487,11 @@
 - 审计发现 `test:node` 在零 JS 后默认发现 0 项测试。新增确定性递归发现器后，88 个 TypeScript 文件的 703 项测试被实际执行；首次运行暴露 3 个旧 `.test.js`/Definition hash 迁移断言，修复后 703/703 通过，空测试集会失败关闭。
 - 候选 `d41b3b4` 的 61 个 Vitest 文件、383 项测试与 coverage 通过；黄金 Replay、120 场 fuzz/6 次复验、104 项生命周期、两组 100 场 soak、正式资产和三端 clean build/预算均通过。桌面 Chrome 390×844 的首页、开局、攻击与跳跃预检通过且无 warning/error，但不冒充目标 iPhone 真机。
 - 当前结论为不可直接合并：联网漏洞审计授权、iPhone 13 Pro/Chrome 真机验收和独立冲突处置授权仍是代码合并阻断；微信/抖音四个真机目标继续作为发布阻断。
+
+## G10.2 干净安装与 GitHub CI 可复现性修复
+
+- GitHub 上 `9f772bb`、`d41b3b4`、`3fd4be5` 等连续 push 的 CI 均在 `npm ci --ignore-scripts` 后执行 `npm run check` 时失败。隔离克隆精确复现为 `check:third-party-assets` 导入了尚未生成的 `@number-strategy-jump/arena-contracts/dist/index.js`；开发机历史 `dist` 使之前的本地检查产生了假阳性。
+- `check:governance` 现显式以 `build:packages` 开始，供应链门禁会阻止该顺序回退。新的 workspace 构建器从 52 个子包 manifest 推导内部依赖图，拒绝缺包、重名与环，并按 11 个拓扑波次构建；不再依赖根 `package.json` 中手工排列的超长路径列表。
+- 干净克隆随后暴露架构测试依赖本机未跟踪空目录：已迁移的旧 `src/arena/**` 路径在 Git 克隆中正确不存在，扫描器却将 `ENOENT` 当作测试失败。现在只有明确标记的迁移兼容路径把 `ENOENT` 视为空集，活跃包和正式资产路径仍必须存在，其他 I/O 错误继续失败关闭。
+- 修复候选 `3b81f238efecbed9fe69917abd9f3876c9dfde35` 已在第二个无历史产物克隆中完成 `npm ci --ignore-scripts`。`check:governance` 为 61 文件/385 项，`test:node` 为 88 文件/704 项；黄金 Replay `0dace228`、120 场 fuzz/6 次复验、104 项生命周期、Presentation/Product 各 100 场 soak、正式资产和三端 clean build/预算/生产产物边界全部通过。build ID 为 `arena-3b81f238efec-product`，Web/微信/抖音 Manifest 为 `05091eb7 / d5172814 / 423e9fc6`，delivery 为 `3807531 / 3835130 / 3835105 B`，三端 `sourceDirty=false`。
+- 本批未执行未授权的 `npm audit`，也尚未推送修复候选；因此 GitHub Actions 真实绿灯、联网生产依赖审计、目标 iPhone 验收和与 main 的独立冲突处置仍是合并阻断，当前仍不可合并。
