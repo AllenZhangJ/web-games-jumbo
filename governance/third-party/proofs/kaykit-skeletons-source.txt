@@ -1,0 +1,9 @@
+Arena third-party source approval record
+
+Source: https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Skeletons-1.0
+Revision: 15b62b9bad122f72926c10fb14d622c73819fa54
+License: CC0-1.0
+Rights holder: KayKit Game Assets / Kay Lousberg
+Approved use: modified character asset distributed with Arena builds
+Approved by: Allen
+Approved at: 2026-07-23T10:27:27.000Z
