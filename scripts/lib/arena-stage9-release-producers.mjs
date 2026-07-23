@@ -63,7 +63,7 @@ import {
 } from './arena-device-evidence-verifier.ts';
 import {
   verifyArenaHumanFairnessEvidence,
-} from './arena-human-fairness-evidence-verifier.mjs';
+} from './arena-human-fairness-evidence-verifier.ts';
 import {
   verifyArenaInputPilotEvidence,
 } from './arena-input-pilot-evidence-verifier.ts';

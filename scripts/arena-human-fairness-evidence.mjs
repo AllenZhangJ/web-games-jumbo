@@ -10,7 +10,7 @@ import {
 } from './lib/evidence-file-verifier.ts';
 import {
   verifyArenaHumanFairnessEvidence,
-} from './lib/arena-human-fairness-evidence-verifier.mjs';
+} from './lib/arena-human-fairness-evidence-verifier.ts';
 
 const MAXIMUM_BUNDLE_BYTES = 5 * 1024 * 1024;
 

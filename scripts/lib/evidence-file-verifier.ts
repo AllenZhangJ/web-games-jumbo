@@ -181,8 +181,8 @@ export async function readVerifiedEvidenceArtifact({
 }: Readonly<{
   root: string;
   relativePath: string;
-  expectedByteLength: number;
-  expectedSha256: string;
+  expectedByteLength: number | null;
+  expectedSha256: string | null;
   maximumBytes: number | null;
   includeText?: boolean;
   label?: string;

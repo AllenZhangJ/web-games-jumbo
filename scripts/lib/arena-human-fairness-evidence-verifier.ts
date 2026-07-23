@@ -22,10 +22,11 @@ import {
 import {
   readVerifiedEvidenceArtifact,
   resolveEvidenceRoot,
-} from './evidence-file-verifier.ts';
+  type VerifiedEvidenceFile,
+} from './evidence-file-verifier.js';
 import {
   verifyArenaBuildManifestDirectory,
-} from './arena-build-manifest-files.ts';
+} from './arena-build-manifest-files.js';
 
 const MAXIMUM_REPLAY_BYTES = 64 * 1024 * 1024;
 const MAXIMUM_WORKSPACE_BYTES = 5 * 1024 * 1024;
@@ -57,7 +58,41 @@ const INGEST_PACKAGE_KEYS = new Set([
   'archivedPath',
 ]);
 
-function assertExactKeys(value, keys, label) {
+type HumanFairnessDefinition = ReturnType<typeof createArenaStage9HumanFairnessV1Definition>;
+type HumanFairnessBundle = ReturnType<typeof createHumanMatchStudyBundle>;
+
+interface IngestWorkspaceEntry {
+  readonly sourceSha256: string;
+  readonly sourceByteLength: number;
+  readonly revision: number;
+  readonly receiptCount: number;
+  readonly archivedPath: string;
+}
+
+interface IngestPackageEntry {
+  readonly packageId: string;
+  readonly enrollmentIndex: number;
+  readonly sourceFileName: string;
+  readonly sourceSha256: string;
+  readonly sourceByteLength: number;
+  readonly archivedPath: string;
+}
+
+interface IngestManifest {
+  readonly schemaVersion: number;
+  readonly definitionId: string;
+  readonly definitionHash: string;
+  readonly commit: string;
+  readonly buildId: string;
+  readonly workspace: IngestWorkspaceEntry;
+  readonly packages: readonly IngestPackageEntry[];
+}
+
+function assertExactKeys(
+  value: unknown,
+  keys: ReadonlySet<string>,
+  label: string,
+): asserts value is Record<string, unknown> {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) {
     throw new TypeError(`${label} 必须是对象。`);
   }
@@ -69,21 +104,30 @@ function assertExactKeys(value, keys, label) {
   }
 }
 
-function canonicalJsonBytes(value) {
+function canonicalJsonBytes(value: unknown): Buffer {
   return Buffer.from(`${JSON.stringify(value, null, 2)}\n`);
 }
 
-function sameDeterministicData(left, right, label) {
+function sameDeterministicData(left: unknown, right: unknown, label: string): boolean {
   return createDeterministicDataHash(left, `${label} left`)
     === createDeterministicDataHash(right, `${label} right`);
 }
 
-async function verifyReplays(definition, bundle, rootValue) {
+function requiredVerifiedText(file: VerifiedEvidenceFile, label: string): string {
+  if (file.text === null) throw new Error(`${label} 缺少文本内容。`);
+  return file.text;
+}
+
+async function verifyReplays(
+  definition: HumanFairnessDefinition,
+  bundle: HumanFairnessBundle,
+  rootValue: string,
+) {
   const root = await resolveEvidenceRoot(rootValue);
-  const paths = new Set();
-  const files = new Set();
-  const hashes = new Set();
-  const verifiedMatches = [];
+  const paths = new Set<string>();
+  const files = new Set<string>();
+  const hashes = new Set<string>();
+  const verifiedMatches: ReturnType<typeof verifyHumanMatchStudyReplay>[] = [];
   for (const record of bundle.records) {
     for (const match of record.matches) {
       const artifact = match.replayArtifact;
@@ -111,14 +155,18 @@ async function verifyReplays(definition, bundle, rootValue) {
         definition,
         record,
         matchIndex: match.matchIndex,
-        replay: JSON.parse(verifiedFile.text),
+        replay: JSON.parse(requiredVerifiedText(verifiedFile, artifact.path)) as unknown,
       }));
     }
   }
   return Object.freeze(verifiedMatches);
 }
 
-async function verifyIngestAudit(definition, bundle, artifactsRootValue) {
+async function verifyIngestAudit(
+  definition: HumanFairnessDefinition,
+  bundle: HumanFairnessBundle,
+  artifactsRootValue: string,
+) {
   const artifactsRoot = await resolveEvidenceRoot(artifactsRootValue);
   const manifestSource = await readVerifiedEvidenceArtifact({
     root: artifactsRoot,
@@ -128,8 +176,11 @@ async function verifyIngestAudit(definition, bundle, artifactsRootValue) {
     maximumBytes: MAXIMUM_INGEST_MANIFEST_BYTES,
     label: 'human fairness ingest manifest',
   });
-  const manifest = JSON.parse(manifestSource.text);
-  assertExactKeys(manifest, INGEST_MANIFEST_KEYS, 'Human Match Study ingest manifest');
+  const manifestValue: unknown = JSON.parse(
+    requiredVerifiedText(manifestSource, 'human fairness ingest manifest'),
+  );
+  assertExactKeys(manifestValue, INGEST_MANIFEST_KEYS, 'Human Match Study ingest manifest');
+  const manifest = manifestValue as unknown as IngestManifest;
   if (
     manifest.schemaVersion !== 1
     || manifest.definitionId !== definition.id
@@ -137,43 +188,52 @@ async function verifyIngestAudit(definition, bundle, artifactsRootValue) {
     || manifest.commit !== bundle.commit
     || manifest.buildId !== bundle.buildId
   ) throw new Error('Human Match Study ingest manifest 与 Bundle 身份不一致。');
+  const workspaceValue = manifest.workspace;
   assertExactKeys(
-    manifest.workspace,
+    workspaceValue,
     INGEST_WORKSPACE_KEYS,
     'Human Match Study ingest manifest.workspace',
   );
-  if (manifest.workspace.archivedPath !== 'workspace-audit.json') {
+  const manifestWorkspace = workspaceValue as unknown as IngestWorkspaceEntry;
+  if (manifestWorkspace.archivedPath !== 'workspace-audit.json') {
     throw new Error('Human Match Study workspace audit 必须使用固定归档路径。');
   }
   const source = await readVerifiedEvidenceArtifact({
     root: artifactsRoot,
-    relativePath: manifest.workspace.archivedPath,
-    expectedByteLength: manifest.workspace.sourceByteLength,
-    expectedSha256: manifest.workspace.sourceSha256,
+    relativePath: manifestWorkspace.archivedPath,
+    expectedByteLength: manifestWorkspace.sourceByteLength,
+    expectedSha256: manifestWorkspace.sourceSha256,
     maximumBytes: MAXIMUM_WORKSPACE_BYTES,
     label: 'human fairness workspace audit',
   });
-  const workspace = createHumanMatchStudyWorkspace(definition, JSON.parse(source.text));
+  const workspace = createHumanMatchStudyWorkspace(
+    definition,
+    JSON.parse(requiredVerifiedText(source, 'human fairness workspace audit')) as unknown,
+  );
   if (workspace.activeTrial !== null) {
     throw new Error('Human Match Study workspace audit 仍有 active trial。');
   }
   if (
-    workspace.revision !== manifest.workspace.revision
-    || workspace.receipts.length !== manifest.workspace.receiptCount
+    workspace.revision !== manifestWorkspace.revision
+    || workspace.receipts.length !== manifestWorkspace.receiptCount
     || workspace.receipts.length !== bundle.records.length
   ) throw new Error('Human Match Study workspace receipts 与 Bundle records 数量不一致。');
   if (!Array.isArray(manifest.packages) || manifest.packages.length !== bundle.records.length) {
     throw new Error('Human Match Study ingest manifest packages 数量不一致。');
   }
-  const paths = new Set();
+  const paths = new Set<string>();
   for (const [index, receipt] of workspace.receipts.entries()) {
     const record = bundle.records[index];
-    const packageEntry = manifest.packages[index];
+    const packageEntryValue = manifest.packages[index];
+    if (!record || packageEntryValue === undefined) {
+      throw new Error(`Human Match Study ingest 索引 ${index} 缺失。`);
+    }
     assertExactKeys(
-      packageEntry,
+      packageEntryValue,
       INGEST_PACKAGE_KEYS,
       `Human Match Study ingest manifest.packages[${index}]`,
     );
+    const packageEntry = packageEntryValue as unknown as IngestPackageEntry;
     if (
       receipt.trialId !== record.recordId
       || receipt.assignment.assignmentId !== record.assignment.assignmentId
@@ -198,7 +258,7 @@ async function verifyIngestAudit(definition, bundle, artifactsRootValue) {
     });
     const capturePackage = validateHumanMatchStudyCapturePackage(
       definition,
-      JSON.parse(rawSource.text),
+      JSON.parse(requiredVerifiedText(rawSource, `human fairness raw capture package ${index}`)) as unknown,
     );
     if (
       capturePackage.packageId !== packageEntry.packageId
@@ -218,7 +278,9 @@ async function verifyIngestAudit(definition, bundle, artifactsRootValue) {
     )) throw new Error(`raw capture package ${index} 无法重建 Bundle record。`);
     for (const [matchIndex, match] of capturePackage.matches.entries()) {
       const bytes = canonicalJsonBytes(match.replay);
-      const artifact = record.matches[matchIndex].replayArtifact;
+      const recordMatch = record.matches[matchIndex];
+      if (!recordMatch) throw new Error(`Bundle record ${index} 缺少 match ${matchIndex}。`);
+      const artifact = recordMatch.replayArtifact;
       if (
         bytes.byteLength !== artifact.byteLength
         || createHash('sha256').update(bytes).digest('hex') !== artifact.sha256
@@ -238,7 +300,11 @@ export async function verifyArenaHumanFairnessEvidence({
   bundleValue,
   artifactsRoot,
   buildRoot,
-}) {
+}: Readonly<{
+  bundleValue: unknown;
+  artifactsRoot: string;
+  buildRoot: string;
+}>) {
   const definition = createArenaStage9HumanFairnessV1Definition();
   const buildManifest = await verifyArenaBuildManifestDirectory(
     buildRoot,
