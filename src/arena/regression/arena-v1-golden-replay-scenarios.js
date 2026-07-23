@@ -13,7 +13,7 @@ import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
 import { combineCleanupFailure, normalizeThrownError } from '@number-strategy-jump/arena-contracts';
 import { QuickMatchService } from '@number-strategy-jump/arena-v1-composition';
 import { HeadlessMatchRunner } from '@number-strategy-jump/arena-match';
-import { ARENA_GOLDEN_REPLAY_CATEGORY } from './golden-replay-manifest.js';
+import { ARENA_GOLDEN_REPLAY_CATEGORY } from '@number-strategy-jump/arena-regression';
 import { ArenaGoldenReplayScenarioRegistry } from './golden-replay-scenario-registry.js';
 
 export const ARENA_V1_GOLDEN_REPLAY_MANIFEST_ID = 'arena.stage9.golden-replays.v5';

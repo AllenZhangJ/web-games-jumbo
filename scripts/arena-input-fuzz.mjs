@@ -17,7 +17,7 @@ import {
  * the sampler remains the current upper-layer lifecycle owner.
  */
 import { replayMatch } from '../src/arena/replay.js';
-import { createArenaInputFuzzFailureCandidate } from '../src/arena/regression/input-fuzz-regression-candidate.js';
+import { createArenaInputFuzzFailureCandidate } from '@number-strategy-jump/arena-regression';
 import { combineCleanupFailure, normalizeThrownError } from '@number-strategy-jump/arena-contracts';
 import { createRng, deriveSeed } from '@number-strategy-jump/arena-contracts';
 

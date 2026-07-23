@@ -51,7 +51,7 @@ import {
 } from '../../src/arena/regression/arena-v1-golden-replay-scenarios.js';
 import {
   createArenaGoldenReplayManifest,
-} from '../../src/arena/regression/golden-replay-manifest.js';
+} from '@number-strategy-jump/arena-regression';
 import {
   verifyArenaGoldenReplayCorpus,
 } from '../../src/arena/regression/golden-replay-verifier.js';

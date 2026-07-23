@@ -3,7 +3,7 @@ import {
   assertKnownKeys,
   assertNonEmptyString,
 } from '@number-strategy-jump/arena-contracts';
-import { ARENA_GOLDEN_REPLAY_CATEGORY } from './golden-replay-manifest.js';
+import { ARENA_GOLDEN_REPLAY_CATEGORY } from '@number-strategy-jump/arena-regression';
 
 const ENTRY_KEYS = new Set([
   'id',

@@ -18,7 +18,7 @@ import {
 import {
   ARENA_GOLDEN_REPLAY_MANIFEST_SCHEMA_VERSION,
   createArenaGoldenReplayManifest,
-} from '../src/arena/regression/golden-replay-manifest.js';
+} from '@number-strategy-jump/arena-regression';
 import {
   createArenaGoldenReplayManifestEntry,
   verifyArenaGoldenReplayCorpus,

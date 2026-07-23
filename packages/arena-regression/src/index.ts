@@ -20,3 +20,21 @@ export {
   readArenaRegressionEvidenceReport,
 } from './arena-regression-evidence.js';
 export type { ArenaRegressionEvidenceReport } from './arena-regression-evidence.js';
+export {
+  ARENA_INPUT_FUZZ_REGRESSION_CANDIDATE_SCHEMA_VERSION,
+  ARENA_INPUT_FUZZ_RUNNER_ID,
+  ARENA_INPUT_FUZZ_RUNNER_VERSION,
+  createArenaInputFuzzFailureCandidate,
+  createArenaInputFuzzRegressionCandidate,
+} from './input-fuzz-regression-candidate.js';
+export type { ArenaInputFuzzRegressionCandidate } from './input-fuzz-regression-candidate.js';
+export {
+  ARENA_GOLDEN_REPLAY_CATEGORY,
+  ARENA_GOLDEN_REPLAY_MANIFEST_SCHEMA_VERSION,
+  ARENA_GOLDEN_REPLAY_MAXIMUM_ENTRIES,
+  createArenaGoldenReplayManifest,
+} from './golden-replay-manifest.js';
+export type {
+  ArenaGoldenReplayManifest,
+  ArenaGoldenReplayManifestEntry,
+} from './golden-replay-manifest.js';

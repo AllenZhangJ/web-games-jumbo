@@ -13,7 +13,7 @@ import {
 } from '../../../src/arena/regression/arena-v1-golden-replay-scenarios.js';
 import {
   createArenaGoldenReplayManifest,
-} from '../../../src/arena/regression/golden-replay-manifest.js';
+} from '@number-strategy-jump/arena-regression';
 import {
   ArenaGoldenReplayScenarioRegistry,
 } from '../../../src/arena/regression/golden-replay-scenario-registry.js';
@@ -25,7 +25,7 @@ import {
   ARENA_INPUT_FUZZ_RUNNER_VERSION,
   createArenaInputFuzzFailureCandidate,
   createArenaInputFuzzRegressionCandidate,
-} from '../../../src/arena/regression/input-fuzz-regression-candidate.js';
+} from '@number-strategy-jump/arena-regression';
 
 const fixtureDirectory = path.resolve(
   `tests/arena/fixtures/replays/v${ARENA_REPLAY_SCHEMA_VERSION}`,
