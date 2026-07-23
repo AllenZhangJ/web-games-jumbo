@@ -8,16 +8,16 @@ import test from 'node:test';
 import {
   FORMAL_ASSET_INTAKE_BUNDLE_SCHEMA_VERSION,
   createFormalAssetIntakeBundle,
-} from '../../../src/arena/presentation/assets/formal-asset-intake-bundle.js';
+} from '../../../src/arena/presentation/assets/formal-asset-intake-bundle.ts';
 import {
   FORMAL_ASSET_INTAKE_POLICY_SCHEMA_VERSION,
   FORMAL_ASSET_SOURCE_KIND,
   createArenaFormalAssetIntakeV1Policy,
   createFormalAssetIntakePolicy,
-} from '../../../src/arena/presentation/assets/formal-asset-intake-policy.js';
+} from '../../../src/arena/presentation/assets/formal-asset-intake-policy.ts';
 import {
   FORMAL_ASSET_PROVENANCE_RECORD_SCHEMA_VERSION,
-} from '../../../src/arena/presentation/assets/formal-asset-provenance-record.js';
+} from '../../../src/arena/presentation/assets/formal-asset-provenance-record.ts';
 import {
   PRESENTATION_ASSET_DEFINITION_SCHEMA_VERSION,
   PRESENTATION_ASSET_KIND,
@@ -316,6 +316,7 @@ test('Formal Asset Intake verifier binds every declared artifact and rejects lat
 
 test('Formal Asset Intake CLI describes its non-release scope and verifies a complete fixture', async () => {
   const described = spawnSync(process.execPath, [
+    '--import', 'tsx',
     'scripts/arena-formal-asset-intake.mjs',
     '--describe',
   ], { cwd: process.cwd(), encoding: 'utf8' });
@@ -329,6 +330,7 @@ test('Formal Asset Intake CLI describes its non-release scope and verifies a com
     const bundlePath = path.join(root, 'intake-bundle.json');
     await writeFile(bundlePath, `${JSON.stringify(value, null, 2)}\n`);
     const verified = spawnSync(process.execPath, [
+      '--import', 'tsx',
       'scripts/arena-formal-asset-intake.mjs',
       '--bundle', bundlePath,
       '--artifacts-root', root,

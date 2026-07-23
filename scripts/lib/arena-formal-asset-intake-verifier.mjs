@@ -1,9 +1,9 @@
 import {
   createFormalAssetIntakeBundle,
-} from '../../src/arena/presentation/assets/formal-asset-intake-bundle.js';
+} from '../../src/arena/presentation/assets/formal-asset-intake-bundle.ts';
 import {
   createArenaFormalAssetIntakeV1Policy,
-} from '../../src/arena/presentation/assets/formal-asset-intake-policy.js';
+} from '../../src/arena/presentation/assets/formal-asset-intake-policy.ts';
 import {
   readVerifiedEvidenceArtifact,
   resolveEvidenceRoot,

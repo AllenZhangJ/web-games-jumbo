@@ -50,7 +50,7 @@
     "arena:stage9:readiness": "node scripts/arena-stage9-readiness.mjs",
     "arena:defects:verify": "node scripts/arena-defects.mjs",
     "arena:input-pilot:evidence": "node scripts/arena-input-pilot-evidence.mjs",
-    "arena:assets:intake:verify": "node scripts/arena-formal-asset-intake.mjs",
+    "arena:assets:intake:verify": "node --import tsx scripts/arena-formal-asset-intake.mjs",
     "arena:assets:budget": "node scripts/arena-formal-asset-budget.mjs",
     "arena:assets:optimize-characters": "node scripts/arena-optimize-character-assets.mjs",
     "dev": "vite --host 127.0.0.1",

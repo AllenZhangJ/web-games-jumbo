@@ -16,7 +16,27 @@ export const FORMAL_ASSET_SOURCE_KIND = Object.freeze({
   OPEN_SOURCE: 'open-source',
   ORIGINAL: 'original',
   PURCHASED: 'purchased',
-});
+} as const);
+
+export type FormalAssetSourceKind =
+  typeof FORMAL_ASSET_SOURCE_KIND[keyof typeof FORMAL_ASSET_SOURCE_KIND];
+
+export interface FormalAssetRequiredRights {
+  readonly commercialUse: boolean;
+  readonly modification: boolean;
+  readonly redistributionInBuild: boolean;
+}
+
+export interface FormalAssetIntakePolicyJson {
+  readonly schemaVersion: typeof FORMAL_ASSET_INTAKE_POLICY_SCHEMA_VERSION;
+  readonly id: string;
+  readonly contentVersion: number;
+  readonly allowedSourceKinds: readonly FormalAssetSourceKind[];
+  readonly requiredAssetTags: readonly string[];
+  readonly forbiddenAssetTags: readonly string[];
+  readonly forbiddenProviderIds: readonly string[];
+  readonly requiredRights: FormalAssetRequiredRights;
+}
 
 const POLICY_KEYS = new Set([
   'schemaVersion',
@@ -33,22 +53,34 @@ const RIGHTS_KEYS = new Set([
   'modification',
   'redistributionInBuild',
 ]);
+const FORMAL_ASSET_SOURCE_KINDS: ReadonlySet<string> = new Set(
+  Object.values(FORMAL_ASSET_SOURCE_KIND),
+);
 
-function cloneRequiredRights(value) {
+function cloneRequiredRights(value: unknown): FormalAssetRequiredRights {
   const name = 'FormalAssetIntakePolicy.requiredRights';
   assertKnownKeys(value, RIGHTS_KEYS, name);
-  const result = {};
+  const result: Record<string, boolean> = {};
   for (const key of RIGHTS_KEYS) {
     if (typeof value[key] !== 'boolean') {
       throw new TypeError(`${name}.${key} 必须是布尔值。`);
     }
     result[key] = value[key];
   }
-  return Object.freeze(result);
+  return Object.freeze(result) as unknown as FormalAssetRequiredRights;
 }
 
-export class FormalAssetIntakePolicy {
-  constructor(value) {
+export class FormalAssetIntakePolicy implements FormalAssetIntakePolicyJson {
+  readonly schemaVersion = FORMAL_ASSET_INTAKE_POLICY_SCHEMA_VERSION;
+  readonly id: string;
+  readonly contentVersion: number;
+  readonly allowedSourceKinds: readonly FormalAssetSourceKind[];
+  readonly requiredAssetTags: readonly string[];
+  readonly forbiddenAssetTags: readonly string[];
+  readonly forbiddenProviderIds: readonly string[];
+  readonly requiredRights: FormalAssetRequiredRights;
+
+  constructor(value: unknown) {
     const source = cloneFrozenData(value, 'FormalAssetIntakePolicy');
     assertKnownKeys(source, POLICY_KEYS, 'FormalAssetIntakePolicy');
     if (source.schemaVersion !== FORMAL_ASSET_INTAKE_POLICY_SCHEMA_VERSION) {
@@ -57,62 +89,47 @@ export class FormalAssetIntakePolicy {
       );
     }
     const allowedSourceKinds = cloneFrozenStringSet(
-      source.allowedSourceKinds,
+      source.allowedSourceKinds as readonly unknown[],
       'FormalAssetIntakePolicy.allowedSourceKinds',
     );
     if (allowedSourceKinds.length === 0) {
       throw new RangeError('FormalAssetIntakePolicy.allowedSourceKinds 不能为空。');
     }
     for (const kind of allowedSourceKinds) {
-      if (!Object.values(FORMAL_ASSET_SOURCE_KIND).includes(kind)) {
+      if (!FORMAL_ASSET_SOURCE_KINDS.has(kind)) {
         throw new RangeError(`FormalAssetIntakePolicy 不支持 source kind ${kind}。`);
       }
     }
     const requiredAssetTags = cloneFrozenStringSet(
-      source.requiredAssetTags,
+      source.requiredAssetTags as readonly unknown[],
       'FormalAssetIntakePolicy.requiredAssetTags',
     );
     const forbiddenAssetTags = cloneFrozenStringSet(
-      source.forbiddenAssetTags,
+      source.forbiddenAssetTags as readonly unknown[],
       'FormalAssetIntakePolicy.forbiddenAssetTags',
     );
     const conflictingTag = requiredAssetTags.find((tag) => forbiddenAssetTags.includes(tag));
     if (conflictingTag) {
       throw new RangeError(`FormalAssetIntakePolicy 同时要求并禁止 tag ${conflictingTag}。`);
     }
-    Object.defineProperties(this, {
-      schemaVersion: {
-        value: FORMAL_ASSET_INTAKE_POLICY_SCHEMA_VERSION,
-        enumerable: true,
-      },
-      id: {
-        value: assertNonEmptyString(source.id, 'FormalAssetIntakePolicy.id'),
-        enumerable: true,
-      },
-      contentVersion: {
-        value: assertIntegerAtLeast(
-          source.contentVersion,
-          1,
-          'FormalAssetIntakePolicy.contentVersion',
-        ),
-        enumerable: true,
-      },
-      allowedSourceKinds: { value: allowedSourceKinds, enumerable: true },
-      requiredAssetTags: { value: requiredAssetTags, enumerable: true },
-      forbiddenAssetTags: { value: forbiddenAssetTags, enumerable: true },
-      forbiddenProviderIds: {
-        value: cloneFrozenStringSet(
-          source.forbiddenProviderIds,
-          'FormalAssetIntakePolicy.forbiddenProviderIds',
-        ),
-        enumerable: true,
-      },
-      requiredRights: { value: cloneRequiredRights(source.requiredRights), enumerable: true },
-    });
+    this.id = assertNonEmptyString(source.id, 'FormalAssetIntakePolicy.id');
+    this.contentVersion = assertIntegerAtLeast(
+      source.contentVersion,
+      1,
+      'FormalAssetIntakePolicy.contentVersion',
+    );
+    this.allowedSourceKinds = allowedSourceKinds as readonly FormalAssetSourceKind[];
+    this.requiredAssetTags = requiredAssetTags;
+    this.forbiddenAssetTags = forbiddenAssetTags;
+    this.forbiddenProviderIds = cloneFrozenStringSet(
+      source.forbiddenProviderIds as readonly unknown[],
+      'FormalAssetIntakePolicy.forbiddenProviderIds',
+    );
+    this.requiredRights = cloneRequiredRights(source.requiredRights);
     Object.freeze(this);
   }
 
-  toJSON() {
+  toJSON(): FormalAssetIntakePolicyJson {
     return {
       schemaVersion: this.schemaVersion,
       id: this.id,
@@ -125,18 +142,18 @@ export class FormalAssetIntakePolicy {
     };
   }
 
-  getContentHash() {
+  getContentHash(): string {
     return createDeterministicDataHash(this.toJSON(), `FormalAssetIntakePolicy ${this.id}`);
   }
 }
 
-export function createFormalAssetIntakePolicy(value) {
+export function createFormalAssetIntakePolicy(value: unknown): FormalAssetIntakePolicy {
   return value instanceof FormalAssetIntakePolicy
     ? value
     : new FormalAssetIntakePolicy(value);
 }
 
-export function createArenaFormalAssetIntakeV1Policy() {
+export function createArenaFormalAssetIntakeV1Policy(): FormalAssetIntakePolicy {
   return createFormalAssetIntakePolicy({
     schemaVersion: FORMAL_ASSET_INTAKE_POLICY_SCHEMA_VERSION,
     id: ARENA_FORMAL_ASSET_INTAKE_V1_POLICY_ID,

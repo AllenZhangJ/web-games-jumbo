@@ -9,8 +9,14 @@ import {
   assertEvidenceSha256,
   assertEvidenceUtcInstant,
 } from '@number-strategy-jump/arena-evidence-contracts';
-import { createFormalAssetIntakePolicy } from './formal-asset-intake-policy.js';
-import { assertPresentationAssetRegistry } from '@number-strategy-jump/arena-presentation-contracts';
+import {
+  createFormalAssetIntakePolicy,
+  type FormalAssetIntakePolicy,
+  type FormalAssetSourceKind,
+} from './formal-asset-intake-policy.js';
+import {
+  assertPresentationAssetRegistry,
+} from '@number-strategy-jump/arena-presentation-contracts';
 
 export const FORMAL_ASSET_PROVENANCE_RECORD_SCHEMA_VERSION = 1;
 
@@ -43,13 +49,54 @@ const LICENSE_KEYS = new Set([
   'attributionRequired',
   'attributionText',
 ]);
-function boundedString(value, maximumLength, name) {
+const RIGHTS_BINDINGS = [
+  ['commercialUse', 'commercialUseAllowed'],
+  ['modification', 'modificationAllowed'],
+  ['redistributionInBuild', 'redistributionInBuildAllowed'],
+] as const;
+
+export interface FormalAssetArtifactEvidence {
+  readonly path: string;
+  readonly sha256: string;
+  readonly byteLength: number;
+}
+
+export interface FormalAssetLicenseEvidence {
+  readonly id: string;
+  readonly name: string;
+  readonly rightsHolder: string;
+  readonly textArtifact: FormalAssetArtifactEvidence;
+  readonly commercialUseAllowed: boolean;
+  readonly modificationAllowed: boolean;
+  readonly redistributionInBuildAllowed: boolean;
+  readonly attributionRequired: boolean;
+  readonly attributionText: string | null;
+}
+
+export interface FormalAssetProvenanceRecord {
+  readonly schemaVersion: typeof FORMAL_ASSET_PROVENANCE_RECORD_SCHEMA_VERSION;
+  readonly recordId: string;
+  readonly assetId: string;
+  readonly assetDefinitionHash: string;
+  readonly sourceKind: FormalAssetSourceKind;
+  readonly sourceLocator: string;
+  readonly sourceRevision: string;
+  readonly contentArtifact: FormalAssetArtifactEvidence;
+  readonly dependencyArtifacts: readonly FormalAssetArtifactEvidence[];
+  readonly license: FormalAssetLicenseEvidence;
+  readonly proofArtifact: FormalAssetArtifactEvidence;
+  readonly acquiredAt: string;
+  readonly approvedAt: string;
+  readonly approvedBy: string;
+}
+
+function boundedString(value: unknown, maximumLength: number, name: string): string {
   return assertEvidenceBoundedString(value, maximumLength, name, {
     rejectControlCharacters: true,
   });
 }
 
-function cloneArtifact(value, name) {
+function cloneArtifact(value: unknown, name: string): FormalAssetArtifactEvidence {
   assertKnownKeys(value, ARTIFACT_KEYS, name);
   return Object.freeze({
     path: assertEvidenceRelativePath(value.path, `${name}.path`),
@@ -58,12 +105,15 @@ function cloneArtifact(value, name) {
   });
 }
 
-function boolean(value, name) {
+function boolean(value: unknown, name: string): boolean {
   if (typeof value !== 'boolean') throw new TypeError(`${name} 必须是布尔值。`);
   return value;
 }
 
-function cloneDependencyArtifacts(values, contentArtifact) {
+function cloneDependencyArtifacts(
+  values: unknown,
+  contentArtifact: FormalAssetArtifactEvidence,
+): readonly FormalAssetArtifactEvidence[] {
   const name = 'FormalAssetProvenanceRecord.dependencyArtifacts';
   if (values === undefined) return Object.freeze([]);
   if (!Array.isArray(values)) throw new TypeError(`${name} 必须是数组。`);
@@ -81,7 +131,7 @@ function cloneDependencyArtifacts(values, contentArtifact) {
   )));
 }
 
-function cloneLicense(value, policy) {
+function cloneLicense(value: unknown, policy: FormalAssetIntakePolicy): FormalAssetLicenseEvidence {
   const name = 'FormalAssetProvenanceRecord.license';
   assertKnownKeys(value, LICENSE_KEYS, name);
   const result = {
@@ -106,11 +156,7 @@ function cloneLicense(value, policy) {
   if (!result.attributionRequired && result.attributionText !== null) {
     throw new RangeError(`${name}.attributionText 在无需署名时必须为 null。`);
   }
-  for (const [policyKey, licenseKey] of [
-    ['commercialUse', 'commercialUseAllowed'],
-    ['modification', 'modificationAllowed'],
-    ['redistributionInBuild', 'redistributionInBuildAllowed'],
-  ]) {
+  for (const [policyKey, licenseKey] of RIGHTS_BINDINGS) {
     if (policy.requiredRights[policyKey] && !result[licenseKey]) {
       throw new RangeError(`${name}.${licenseKey} 不满足 Policy。`);
     }
@@ -118,10 +164,14 @@ function cloneLicense(value, policy) {
   return Object.freeze(result);
 }
 
-export function createFormalAssetProvenanceRecord({
-  assetRegistry: assetRegistryValue,
-  policy: policyValue,
-}, value) {
+export function createFormalAssetProvenanceRecord(
+  dependencies: Readonly<{ assetRegistry: unknown; policy: unknown }>,
+  value: unknown,
+): FormalAssetProvenanceRecord {
+  const {
+    assetRegistry: assetRegistryValue,
+    policy: policyValue,
+  } = dependencies;
   const assetRegistry = assertPresentationAssetRegistry(assetRegistryValue);
   const policy = createFormalAssetIntakePolicy(policyValue);
   const source = cloneFrozenData(value, 'FormalAssetProvenanceRecord');
@@ -140,7 +190,7 @@ export function createFormalAssetProvenanceRecord({
     source.sourceKind,
     64,
     'FormalAssetProvenanceRecord.sourceKind',
-  );
+  ) as FormalAssetSourceKind;
   if (!policy.allowedSourceKinds.includes(sourceKind)) {
     throw new RangeError(`FormalAssetProvenanceRecord.sourceKind 不受 Policy 允许：${sourceKind}。`);
   }

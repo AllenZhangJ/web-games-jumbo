@@ -1,7 +1,7 @@
 import { parseArgs } from 'node:util';
 import {
   createArenaFormalAssetIntakeV1Policy,
-} from '../src/arena/presentation/assets/formal-asset-intake-policy.js';
+} from '../src/arena/presentation/assets/formal-asset-intake-policy.ts';
 import {
   readVerifiedTextFile,
 } from './lib/evidence-file-verifier.mjs';
