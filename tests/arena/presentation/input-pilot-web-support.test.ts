@@ -20,9 +20,16 @@ import {
 } from '../../../src/entry/input-pilot-web-environment.js';
 import { InputPilotWorkbenchView } from '../../../src/entry/input-pilot-workbench-view.js';
 import { InputPilotWebApp } from '../../../src/entry/input-pilot-web-app.js';
+import type { ArenaPlatformContract } from '@number-strategy-jump/arena-platform-contracts';
 
 const COMMIT = 'a'.repeat(40);
 const SHA256 = 'b'.repeat(64);
+type Listener = (event?: unknown) => unknown;
+
+function required<T>(value: T, name: string): NonNullable<T> {
+  assert.ok(value != null, `${name} 不存在。`);
+  return value as NonNullable<T>;
+}
 
 const PILOT_VIEW_SELECTORS = [
   '[data-pilot-meta]', '[data-pilot-status]', '[data-pilot-progress]', '[data-pilot-panel]',
@@ -30,7 +37,7 @@ const PILOT_VIEW_SELECTORS = [
 ];
 
 function createPilotViewHost() {
-  const listeners = new Map();
+  const listeners = new Map<string, Listener>();
   const nodes = new Map(PILOT_VIEW_SELECTORS.map((selector) => [selector, {
     textContent: '',
     innerHTML: '',
@@ -38,28 +45,28 @@ function createPilotViewHost() {
     dataset: {},
   }]));
   const canvas = {
-    attributes: new Map(),
-    setAttribute(name, value) { this.attributes.set(name, value); },
+    attributes: new Map<string, unknown>(),
+    setAttribute(name: string, value: unknown) { this.attributes.set(name, value); },
   };
   const slot = {
-    replaceWith(value) {
+    replaceWith(value: unknown) {
       if (value !== canvas) throw new Error('unexpected canvas');
     },
   };
   const root = {
     markup: '',
     failRemoveOnce: false,
-    appended: [],
+    appended: [] as unknown[],
     get innerHTML() { return this.markup; },
-    set innerHTML(value) { this.markup = value; },
-    querySelector(selector) {
+    set innerHTML(value: string) { this.markup = value; },
+    querySelector(selector: string) {
       if (selector === '#game') return canvas;
       if (selector === '[data-pilot-canvas-slot]') return slot;
       return nodes.get(selector) ?? null;
     },
-    appendChild(value) { this.appended.push(value); },
-    addEventListener(name, callback) { listeners.set(name, callback); },
-    removeEventListener(name, callback) {
+    appendChild(value: unknown) { this.appended.push(value); },
+    addEventListener(name: string, callback: Listener) { listeners.set(name, callback); },
+    removeEventListener(name: string, callback: Listener) {
       if (this.failRemoveOnce) {
         this.failRemoveOnce = false;
         throw new Error('remove failed once');
@@ -70,7 +77,7 @@ function createPilotViewHost() {
   return { root, nodes, canvas, listenerCount: () => listeners.size };
 }
 
-function createPilotAppHost(fetchManifest) {
+function createPilotAppHost(fetchManifest: (input: unknown) => Promise<unknown>) {
   const { root: mount } = createPilotViewHost();
   const listeners = new Map();
   return {
@@ -83,11 +90,11 @@ function createPilotAppHost(fetchManifest) {
     matchMedia: () => ({ matches: true }),
     document: {
       hidden: false,
-      querySelector: (selector) => selector === '#pilot-app' ? mount : null,
+      querySelector: (selector: string) => selector === '#pilot-app' ? mount : null,
     },
     fetch: fetchManifest,
-    addEventListener(name, callback) { listeners.set(name, callback); },
-    removeEventListener(name, callback) {
+    addEventListener(name: string, callback: Listener) { listeners.set(name, callback); },
+    removeEventListener(name: string, callback: Listener) {
       if (listeners.get(name) === callback) listeners.delete(name);
     },
     setInterval() { return 1; },
@@ -95,8 +102,8 @@ function createPilotAppHost(fetchManifest) {
   };
 }
 
-function createPilotAppPlatform({ failHideCleanupOnce = false } = {}) {
-  const storage = new Map();
+function createPilotAppPlatform({ failHideCleanupOnce = false }: { failHideCleanupOnce?: boolean } = {}) {
+  const storage = new Map<string, unknown>();
   let hideCleanupCount = 0;
   return {
     wallNow: () => 1_000,
@@ -109,13 +116,13 @@ function createPilotAppPlatform({ failHideCleanupOnce = false } = {}) {
       };
     },
     onShow: () => () => {},
-    storageRead(key) {
+    storageRead(key: string) {
       return storage.has(key)
         ? { ok: true, found: true, value: storage.get(key) }
         : { ok: true, found: false, value: undefined };
     },
-    storageWrite(key, value) { storage.set(key, value); return true; },
-    storageDelete(key) { storage.delete(key); return true; },
+    storageWrite(key: string, value: unknown) { storage.set(key, value); return true; },
+    storageDelete(key: string) { storage.delete(key); return true; },
     hideCleanupCount: () => hideCleanupCount,
   };
 }
@@ -132,7 +139,7 @@ function pilotViewDefinition(taskPrompt = '完成本局目标') {
   };
 }
 
-function pilotViewSnapshot(overrides = {}) {
+function pilotViewSnapshot(overrides: Readonly<Record<string, unknown>> = {}) {
   return {
     state: 'idle',
     workspace: { enrollment: { revision: 0 }, activeTrial: null },
@@ -216,7 +223,10 @@ test('pilot form model bounds counters and restores a persisted review draft', (
     selfReport: { ...beforeInvalidRestore.selfReport, airAction: 'unknown' },
   }), /不受支持/);
   assert.deepEqual(model.getSnapshot(), beforeInvalidRestore);
-  assert.throws(() => { restored.observer.correctionCount = 99; }, /read only|Cannot assign/i);
+  assert.throws(
+    () => Object.assign(restored.observer, { correctionCount: 99 }),
+    /read only|Cannot assign/i,
+  );
 });
 
 test('Pilot Workbench rejects accessors, escapes operator data, and retries listener cleanup', () => {
@@ -276,7 +286,7 @@ test('Pilot Workbench rejects accessors, escapes operator data, and retries list
       buildManifestHash: SHA256,
     },
   }));
-  const panelMarkup = host.nodes.get('[data-pilot-panel]').innerHTML;
+  const panelMarkup = required(host.nodes.get('[data-pilot-panel]'), '试点面板').innerHTML;
   assert.doesNotMatch(panelMarkup, /<img src=x|<svg onload|<script>bad/);
   assert.match(panelMarkup, /&lt;img src=x onerror=alert\(1\)&gt;/);
   assert.match(panelMarkup, /&lt;svg onload=build\(\)&gt;/);
@@ -294,9 +304,12 @@ test('Pilot Workbench rejects accessors, escapes operator data, and retries list
 });
 
 test('Input Pilot Web app shares one startup and rejects completion after destroy', async () => {
-  let resolveFetch;
-  const root = createPilotAppHost(() => new Promise((resolve) => { resolveFetch = resolve; }));
-  const app = new InputPilotWebApp({ platform: createPilotAppPlatform(), root });
+  let resolveFetch!: (value: unknown) => void;
+  const root = createPilotAppHost(() => new Promise<unknown>((resolve) => { resolveFetch = resolve; }));
+  const app = new InputPilotWebApp({
+    platform: createPilotAppPlatform() as unknown as ArenaPlatformContract,
+    root,
+  });
   const first = app.start();
   const second = app.start();
   assert.equal(first, second);
@@ -312,7 +325,10 @@ test('Input Pilot Web app retains failed lifecycle cleanup for one exact retry',
     ok: true,
     json: async () => buildManifest({ sourceDirty: true }),
   }));
-  const app = new InputPilotWebApp({ platform, root });
+  const app = new InputPilotWebApp({
+    platform: platform as unknown as ArenaPlatformContract,
+    root,
+  });
   await app.start();
   assert.throws(() => app.destroy(), /清理未完整完成/);
   assert.equal(platform.hideCleanupCount(), 1);
@@ -413,17 +429,22 @@ test('web pilot owner ids prefer crypto and JSON export revokes its temporary UR
   assert.equal(createInputPilotPageOwnerId({
     crypto: { randomUUID: () => 'stable-id' },
   }), 'pilot-page-stable-id');
-  const actions = [];
+  const actions: [string, string][] = [];
   const parent = {
-    appendChild(value) { actions.push(['append', value.download]); },
+    appendChild(value: Readonly<{ download: string }>) { actions.push(['append', value.download]); },
   };
   const anchor = {
     hidden: false,
+    download: '',
+    href: '',
     click() { actions.push(['click', this.download]); },
     remove() { actions.push(['remove', this.download]); },
   };
   class FakeBlob {
-    constructor(parts, options) {
+    readonly parts: readonly unknown[];
+    readonly options: unknown;
+
+    constructor(parts: readonly unknown[], options: unknown) {
       this.parts = parts;
       this.options = options;
     }
@@ -431,11 +452,11 @@ test('web pilot owner ids prefer crypto and JSON export revokes its temporary UR
   const filename = downloadInputPilotJson({
     Blob: FakeBlob,
     URL: {
-      createObjectURL(blob) {
-        assert.match(blob.parts[0], /"revision": 7/);
+      createObjectURL(blob: FakeBlob) {
+        assert.match(String(required(blob.parts[0], 'Blob 首段')), /"revision": 7/);
         return 'blob:pilot';
       },
-      revokeObjectURL(value) { actions.push(['revoke', value]); },
+      revokeObjectURL(value: string) { actions.push(['revoke', value]); },
     },
     document: {
       body: parent,
@@ -472,7 +493,7 @@ test('Pilot JSON download rejects unsafe data and rolls back failed DOM ownershi
   }), /数据字段|访问器/);
   assert.equal(nestedReads, 0);
 
-  const actions = [];
+  const actions: string[] = [];
   class FakeBlob {}
   const anchor = {
     click() {
@@ -485,7 +506,7 @@ test('Pilot JSON download rejects unsafe data and rolls back failed DOM ownershi
     Blob: FakeBlob,
     URL: {
       createObjectURL() { return 'blob:rollback'; },
-      revokeObjectURL(value) { actions.push(`revoke:${value}`); },
+      revokeObjectURL(value: string) { actions.push(`revoke:${value}`); },
     },
     document: {
       body: { appendChild() { actions.push('append'); } },
@@ -498,12 +519,12 @@ test('Pilot JSON download rejects unsafe data and rolls back failed DOM ownershi
   }), /click failed/);
   assert.deepEqual(actions, ['append', 'click', 'remove', 'revoke:blob:rollback']);
 
-  const rollback = [];
+  const rollback: string[] = [];
   assert.throws(() => downloadInputPilotJson({
     Blob: FakeBlob,
     URL: {
       createObjectURL() { return 'blob:async'; },
-      revokeObjectURL(value) { rollback.push(`revoke:${value}`); },
+      revokeObjectURL(value: string) { rollback.push(`revoke:${value}`); },
     },
     document: {
       body: { async appendChild() {} },
@@ -521,7 +542,7 @@ test('Pilot JSON download rejects unsafe data and rolls back failed DOM ownershi
   }), /appendChild 必须同步完成/);
   assert.deepEqual(rollback, ['remove', 'revoke:blob:async']);
 
-  const legacyCleanup = [];
+  const legacyCleanup: string[] = [];
   const legacyAnchor = {
     click() { throw new Error('click failed'); },
   };
@@ -529,12 +550,14 @@ test('Pilot JSON download rejects unsafe data and rolls back failed DOM ownershi
     Blob: FakeBlob,
     URL: {
       createObjectURL() { return 'blob:legacy'; },
-      revokeObjectURL(value) { legacyCleanup.push(`revoke:${value}`); },
+      revokeObjectURL(value: string) { legacyCleanup.push(`revoke:${value}`); },
     },
     document: {
       body: {
         appendChild() {},
-        removeChild(value) { legacyCleanup.push(value === legacyAnchor ? 'removeChild' : 'wrong'); },
+        removeChild(value: unknown) {
+          legacyCleanup.push(value === legacyAnchor ? 'removeChild' : 'wrong');
+        },
       },
       createElement() { return legacyAnchor; },
     },
