@@ -24,10 +24,10 @@ test('deterministic data hash rejects accessors, cycles, sparse arrays and non-f
   });
   assert.throws(() => createDeterministicDataHash(accessor), /可枚举数据字段/);
   assert.equal(getterCalls, 0);
-  const cyclic = {};
+  const cyclic: { self?: unknown } = {};
   cyclic.self = cyclic;
   assert.throws(() => createDeterministicDataHash(cyclic), /循环引用/);
-  const sparse = [];
+  const sparse: unknown[] = [];
   sparse.length = 1;
   assert.throws(() => createDeterministicDataHash(sparse), /数据字段/);
   assert.throws(() => createDeterministicDataHash({ value: Number.NaN }), /非有限数/);

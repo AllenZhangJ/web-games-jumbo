@@ -63,11 +63,13 @@ test('missing frames become neutral while duplicates are rejected', () => {
   const onlyFirst = createNeutralInputFrame(7, 'player-1');
   const result = normalizeInputFrames([onlyFirst], { tick: 7, participantIds: participants });
   assert.equal(result.length, 2);
-  assert.equal(result[1].participantId, 'player-2');
-  assert.equal(result[1].moveX, 0);
-  assert.equal(result[1].jumpPressed, false);
+  const second = result[1];
+  assert.ok(second);
+  assert.equal(second.participantId, 'player-2');
+  assert.equal(second.moveX, 0);
+  assert.equal(second.jumpPressed, false);
   assert.ok(Object.isFrozen(result));
-  assert.ok(Object.isFrozen(result[1]));
+  assert.ok(Object.isFrozen(second));
   assert.throws(() => normalizeInputFrames([onlyFirst, onlyFirst], {
     tick: 7,
     participantIds: participants,

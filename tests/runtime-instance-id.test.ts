@@ -25,7 +25,7 @@ test('runtime instance id fallback cannot collide inside one VM and carries rest
 test('runtime instance id supports getRandomValues-only mini-game hosts', () => {
   const root = {
     crypto: {
-      getRandomValues(values) {
+      getRandomValues(values: Uint32Array): Uint32Array {
         values.set([1, 2, 3, 4]);
         return values;
       },

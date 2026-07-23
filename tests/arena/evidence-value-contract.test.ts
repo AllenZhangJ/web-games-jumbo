@@ -46,7 +46,7 @@ test('Evidence Value Contract rejects ambiguous identities and non-canonical tim
   assert.throws(
     () => assertEvidenceBoundedString('value', 8, 'operator', {
       rejectControlCharacters: 'yes',
-    }),
+    } as never),
     /必须是布尔值/,
   );
 });

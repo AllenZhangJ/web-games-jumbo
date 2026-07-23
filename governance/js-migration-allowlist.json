@@ -16,13 +16,9 @@
     "tests/arena/bot-observation.test.js",
     "tests/arena/character-foundation.test.js",
     "tests/arena/defect-ledger.test.js",
-    "tests/arena/deterministic-data-hash.test.js",
-    "tests/arena/deterministic-rng.test.js",
     "tests/arena/equipment-foundation.test.js",
     "tests/arena/equipment-system.test.js",
-    "tests/arena/evidence-value-contract.test.js",
     "tests/arena/experiment/arena-experiment.test.js",
-    "tests/arena/input-frame.test.js",
     "tests/arena/input-pilot-release-evidence.test.js",
     "tests/arena/input/arena-input-router.test.js",
     "tests/arena/input/gesture-recognizer.test.js",
@@ -34,7 +30,6 @@
     "tests/arena/input/raw-control-state.test.js",
     "tests/arena/local-match-session.test.js",
     "tests/arena/map-foundation.test.js",
-    "tests/arena/match-assignment.test.js",
     "tests/arena/match-core-equipment.test.js",
     "tests/arena/match-core-movement.test.js",
     "tests/arena/match-core.test.js",
@@ -42,7 +37,6 @@
     "tests/arena/movement-intent.test.js",
     "tests/arena/movement-runtime.test.js",
     "tests/arena/movement-system.test.js",
-    "tests/arena/physics-contract.test.js",
     "tests/arena/physics-poc.test.js",
     "tests/arena/presentation/arena-build-manifest.test.js",
     "tests/arena/presentation/arena-device-acceptance.test.js",
@@ -91,7 +85,6 @@
     "tests/entry-web-game-teardown.test.js",
     "tests/entry-web-product-scene-model.test.js",
     "tests/entry-web-product-ui-surface.test.js",
-    "tests/platform-webgl.test.js",
-    "tests/runtime-instance-id.test.js"
+    "tests/platform-webgl.test.js"
   ]
 }

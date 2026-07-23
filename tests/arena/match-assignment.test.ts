@@ -25,15 +25,25 @@ test('quick-match assignment is deterministic and keeps named streams isolated',
 });
 
 test('10,000 consecutive seeds keep hidden difficulty within the 1:1:1 gate', () => {
-  const counts = Object.fromEntries(BOT_DIFFICULTY_IDS.map((id) => [id, 0]));
-  const profileDifficulties = new Map(OPPONENT_PROFILES.map((profile) => [profile.id, new Set()]));
+  const counts: Map<(typeof BOT_DIFFICULTY_IDS)[number], number> = new Map(
+    BOT_DIFFICULTY_IDS.map((id) => [id, 0] as const),
+  );
+  const profileDifficulties = new Map(OPPONENT_PROFILES.map((profile) => [
+    profile.id,
+    new Set<(typeof BOT_DIFFICULTY_IDS)[number]>(),
+  ] as const));
   for (let seed = 0; seed < 10_000; seed += 1) {
     const assignment = createMatchAssignment({ matchSeed: seed });
-    counts[assignment.selectedDifficultyId] += 1;
-    profileDifficulties.get(assignment.opponent.id).add(assignment.selectedDifficultyId);
+    counts.set(
+      assignment.selectedDifficultyId,
+      (counts.get(assignment.selectedDifficultyId) ?? 0) + 1,
+    );
+    const difficulties = profileDifficulties.get(assignment.opponent.id);
+    assert.ok(difficulties);
+    difficulties.add(assignment.selectedDifficultyId);
   }
   for (const id of BOT_DIFFICULTY_IDS) {
-    const share = counts[id] / 10_000;
+    const share = (counts.get(id) ?? 0) / 10_000;
     assert.ok(share >= 0.313 && share <= 0.353, `${id} 分布为 ${share}`);
   }
   for (const [profileId, difficulties] of profileDifficulties) {

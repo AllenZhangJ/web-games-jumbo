@@ -17,13 +17,17 @@ test('movement intent clamps and normalizes without exceeding unit length', () =
 
 test('lightweight world implements the complete adapter and rejects invalid lifecycle use', () => {
   const world = assertPhysicsWorld(createLightweightPhysicsWorld({ arena: PHYSICS_POC_ARENA }));
-  assert.equal(world.characters, undefined);
-  assert.equal(world.config, undefined);
-  assert.equal(world.integrateCharacter, undefined);
-  assert.equal(world.resolveCharacterPairs, undefined);
+  assert.equal(Reflect.get(world, 'characters'), undefined);
+  assert.equal(Reflect.get(world, 'config'), undefined);
+  assert.equal(Reflect.get(world, 'integrateCharacter'), undefined);
+  assert.equal(Reflect.get(world, 'resolveCharacterPairs'), undefined);
+  const firstSpawn = PHYSICS_POC_ARENA.spawns[0];
+  const secondSpawn = PHYSICS_POC_ARENA.spawns[1];
+  assert.ok(firstSpawn);
+  assert.ok(secondSpawn);
   world.addCharacter({
     id: 'player-1',
-    position: PHYSICS_POC_ARENA.spawns[0],
+    position: firstSpawn,
     ...PHYSICS_POC_CHARACTER,
   });
   assert.equal(world.getCharacterState('player-1').grounded, true);
@@ -31,7 +35,7 @@ test('lightweight world implements the complete adapter and rejects invalid life
   assert.equal(world.getCharacterState('player-1').grounded, false);
   assert.equal(world.setSurfaceEnabled('main-platform', false), false);
   assert.equal(world.setSurfaceEnabled('main-platform', true), true);
-  world.resetCharacter('player-1', { position: PHYSICS_POC_ARENA.spawns[0] });
+  world.resetCharacter('player-1', { position: firstSpawn });
   assert.equal(world.getCharacterState('player-1').grounded, true);
   world.applyImpulse('player-1', { x: 1, y: 0, z: 0 });
   assert.equal(world.getCharacterState('player-1').grounded, true);
@@ -51,7 +55,7 @@ test('lightweight world implements the complete adapter and rejects invalid life
   assert.equal(world.getCharacterState('player-1').velocity.y, -14);
   assert.throws(() => world.step(1 / 30), /只接受固定步长/);
   world.resetCharacter('player-1', {
-    position: PHYSICS_POC_ARENA.spawns[0],
+    position: firstSpawn,
     velocity: { x: Number.MAX_VALUE, y: Number.MAX_VALUE, z: Number.MAX_VALUE },
   });
   const limited = world.getCharacterState('player-1').velocity;
@@ -59,7 +63,7 @@ test('lightweight world implements the complete adapter and rejects invalid life
   assert.equal(limited.y, 22);
   world.addCharacter({
     id: 'tiny-mass',
-    position: PHYSICS_POC_ARENA.spawns[1],
+    position: secondSpawn,
     ...PHYSICS_POC_CHARACTER,
     mass: Number.MIN_VALUE,
   });
@@ -69,7 +73,7 @@ test('lightweight world implements the complete adapter and rejects invalid life
   );
   assert.throws(() => world.addCharacter({
     id: 'player-1',
-    position: PHYSICS_POC_ARENA.spawns[0],
+    position: firstSpawn,
     ...PHYSICS_POC_CHARACTER,
   }), /已存在/);
   world.destroy();
@@ -88,9 +92,11 @@ test('pair separation refreshes ground support at a platform edge in the same ti
   };
   const world = createLightweightPhysicsWorld({ arena });
   for (let index = 0; index < 2; index += 1) {
+    const spawn = arena.spawns[index];
+    assert.ok(spawn);
     world.addCharacter({
       id: `player-${index + 1}`,
-      position: arena.spawns[index],
+      position: spawn,
       ...PHYSICS_POC_CHARACTER,
     });
   }
@@ -102,14 +108,18 @@ test('pair separation refreshes ground support at a platform edge in the same ti
 
 test('physics and movement mutation batches validate fully before their single commit boundary', () => {
   const world = createLightweightPhysicsWorld({ arena: PHYSICS_POC_ARENA });
+  const firstSpawn = PHYSICS_POC_ARENA.spawns[0];
+  const secondSpawn = PHYSICS_POC_ARENA.spawns[1];
+  assert.ok(firstSpawn);
+  assert.ok(secondSpawn);
   world.addCharacter({
     id: 'normal',
-    position: PHYSICS_POC_ARENA.spawns[0],
+    position: firstSpawn,
     ...PHYSICS_POC_CHARACTER,
   });
   world.addCharacter({
     id: 'tiny',
-    position: PHYSICS_POC_ARENA.spawns[1],
+    position: secondSpawn,
     ...PHYSICS_POC_CHARACTER,
     mass: Number.MIN_VALUE,
   });
@@ -136,10 +146,10 @@ test('physics and movement mutation batches validate fully before their single c
       participantId: 'normal',
       impulse: { x: 0, y: 2, z: 0 },
     },
-    {
+    ({
       kind: 'unknown-mutation',
       participantId: 'tiny',
-    },
+    } as never),
   ]), /kind 不受支持/);
   assert.deepEqual(world.getCharacterState('normal'), beforeMovementBatch);
   world.destroy();
