@@ -29,7 +29,7 @@ import {
 import {
   arenaStage9ReleaseRequiresSourceIdentity,
   verifyArenaStage9ReleaseProducerEvidence,
-} from '../../scripts/lib/arena-stage9-release-producers.mjs';
+} from '../../scripts/lib/arena-stage9-release-producers.ts';
 
 const COMMIT = 'a'.repeat(40);
 const BUILD_ID = 'arena-defect-ledger-test';

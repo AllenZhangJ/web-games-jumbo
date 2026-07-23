@@ -6,6 +6,7 @@ import {
 } from '@number-strategy-jump/arena-release';
 import {
   createArenaReleaseCandidateBundle,
+  type ArenaReleaseCandidateBundle,
 } from '@number-strategy-jump/arena-release';
 import {
   createArenaStage9RcHandoffV1Definition,
@@ -14,21 +15,45 @@ import {
   readVerifiedEvidenceArtifact,
   readVerifiedTextFile,
   resolveEvidenceRoot,
-} from './lib/evidence-file-verifier.ts';
+} from './lib/evidence-file-verifier.js';
 import {
   ARENA_STAGE9_SUPPORTED_RELEASE_PRODUCER_IDS,
   arenaStage9ReleaseRequiresSourceIdentity,
   verifyArenaStage9ReleaseProducerEvidence,
-} from './lib/arena-stage9-release-producers.mjs';
+} from './lib/arena-stage9-release-producers.js';
 import {
   assertArenaGitSourceIdentityStable,
   readArenaGitSourceIdentity,
-} from './arena-git-source-identity.ts';
+} from './arena-git-source-identity.js';
 
 const MAXIMUM_BUNDLE_BYTES = 5 * 1024 * 1024;
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-function usage() {
+type Stage9ReadinessCliOptions =
+  | Readonly<{ help: true; describe: false }>
+  | Readonly<{ help: false; describe: true }>
+  | Readonly<{
+    help: false;
+    describe: false;
+    bundle: string;
+    artifactsRoot: string | null;
+  }>;
+interface VerifiedReleaseMaterial {
+  readonly path: string;
+  readonly sha256: string;
+  readonly byteLength: number;
+  readonly resolvedPath: string;
+  readonly fileIdentity: string;
+}
+interface VerifiedReleaseMaterials {
+  readonly publicMaterials: readonly Readonly<Pick<
+    VerifiedReleaseMaterial,
+    'path' | 'sha256' | 'byteLength'
+  >>[];
+  readonly byPath: ReadonlyMap<string, Readonly<VerifiedReleaseMaterial>>;
+}
+
+function usage(): string {
   return [
     'Usage:',
     '  npm run arena:stage9:readiness -- --describe',
@@ -39,9 +64,14 @@ function usage() {
   ].join('\n');
 }
 
-function parseArgs(values) {
-  const result = { describe: false, bundle: null, artifactsRoot: null, help: false };
-  const seen = new Set();
+function parseArgs(values: readonly string[]): Stage9ReadinessCliOptions {
+  const result: {
+    describe: boolean;
+    bundle: string | null;
+    artifactsRoot: string | null;
+    help: boolean;
+  } = { describe: false, bundle: null, artifactsRoot: null, help: false };
+  const seen = new Set<string>();
   for (let index = 0; index < values.length; index += 1) {
     const argument = values[index];
     if (argument === '--help' || argument === '-h') {
@@ -54,9 +84,11 @@ function parseArgs(values) {
       result.describe = true;
       continue;
     }
+    if (!argument) throw new Error('参数不能为空。');
     const match = argument.match(/^--(bundle|artifacts-root)(?:=(.*))?$/);
     if (!match) throw new Error(`未知参数 ${argument}。\n${usage()}`);
     const key = match[1];
+    if (!key) throw new Error(`参数 ${argument} 无效。`);
     if (seen.has(key)) throw new Error(`参数 --${key} 不能重复。`);
     seen.add(key);
     const inlineValue = match[2];
@@ -65,20 +97,42 @@ function parseArgs(values) {
     if (key === 'bundle') result.bundle = value;
     else result.artifactsRoot = value;
   }
-  if (result.help) return result;
+  if (result.help) return Object.freeze({ help: true, describe: false });
   if (result.describe && (result.bundle || result.artifactsRoot)) {
     throw new Error('--describe 不能与 --bundle 或 --artifacts-root 同时使用。');
   }
   if (!result.describe && !result.bundle) throw new Error(`缺少 --bundle。\n${usage()}`);
-  return result;
+  if (result.describe) return Object.freeze({ help: false, describe: true });
+  return Object.freeze({
+    help: false,
+    describe: false,
+    bundle: result.bundle as string,
+    artifactsRoot: result.artifactsRoot,
+  });
 }
 
-async function verifyMaterials(bundle, rootValue) {
+function registerUniqueDeclaration(
+  index: Map<string, string>,
+  key: string,
+  materialPath: string,
+  label: string,
+): void {
+  const previous = index.get(key);
+  if (previous && previous !== materialPath) {
+    throw new Error(`release material ${materialPath} 与 ${previous} 复用了${label}。`);
+  }
+  index.set(key, materialPath);
+}
+
+async function verifyMaterials(
+  bundle: ArenaReleaseCandidateBundle,
+  rootValue: string,
+): Promise<Readonly<VerifiedReleaseMaterials>> {
   const root = await resolveEvidenceRoot(rootValue);
-  const verifiedByPath = new Map();
-  const declarationByResolvedPath = new Map();
-  const declarationByFileIdentity = new Map();
-  const declarationBySha256 = new Map();
+  const verifiedByPath = new Map<string, Readonly<VerifiedReleaseMaterial>>();
+  const declarationByResolvedPath = new Map<string, string>();
+  const declarationByFileIdentity = new Map<string, string>();
+  const declarationBySha256 = new Map<string, string>();
   for (const statement of bundle.evidence) {
     for (const material of statement.materials) {
       const previous = verifiedByPath.get(material.path);
@@ -92,17 +146,24 @@ async function verifyMaterials(bundle, rootValue) {
         includeText: false,
         label: `release material ${material.path}`,
       });
-      for (const [index, key, label] of [
-        [declarationByResolvedPath, verified.resolvedPath, '同一路径'],
-        [declarationByFileIdentity, verified.fileIdentity, '同一文件'],
-        [declarationBySha256, verified.sha256, '相同内容'],
-      ]) {
-        const previous = index.get(key);
-        if (previous && previous !== material.path) {
-          throw new Error(`release material ${material.path} 与 ${previous} 复用了${label}。`);
-        }
-        index.set(key, material.path);
-      }
+      registerUniqueDeclaration(
+        declarationByResolvedPath,
+        verified.resolvedPath,
+        material.path,
+        '同一路径',
+      );
+      registerUniqueDeclaration(
+        declarationByFileIdentity,
+        verified.fileIdentity,
+        material.path,
+        '同一文件',
+      );
+      registerUniqueDeclaration(
+        declarationBySha256,
+        verified.sha256,
+        material.path,
+        '相同内容',
+      );
       verifiedByPath.set(material.path, Object.freeze({
         path: material.path,
         sha256: verified.sha256,
@@ -123,7 +184,7 @@ async function verifyMaterials(bundle, rootValue) {
   });
 }
 
-async function main() {
+async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
   if (options.help) {
     console.log(usage());
@@ -141,10 +202,12 @@ async function main() {
     return;
   }
   const bundlePath = path.resolve(options.bundle);
-  const source = JSON.parse((await readVerifiedTextFile(bundlePath, {
+  const verifiedBundle = await readVerifiedTextFile(bundlePath, {
     label: 'Arena Stage 9 release candidate bundle',
     maximumBytes: MAXIMUM_BUNDLE_BYTES,
-  })).text);
+  });
+  if (verifiedBundle.text === null) throw new Error('Arena Stage 9 release candidate bundle 未读取文本。');
+  const source: unknown = JSON.parse(verifiedBundle.text);
   const bundle = createArenaReleaseCandidateBundle(definition, source);
   const verifiedMaterials = await verifyMaterials(
     bundle,
@@ -185,7 +248,7 @@ async function main() {
   if (report.status !== ARENA_RELEASE_READINESS_STATUS.READY) process.exitCode = 2;
 }
 
-main().catch((error) => {
+void main().catch((error: unknown) => {
   console.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;
 });

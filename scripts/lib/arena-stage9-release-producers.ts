@@ -2,6 +2,7 @@ import path from 'node:path';
 import { createArenaV1MatchCore } from '@number-strategy-jump/arena-v1-composition';
 import {
   ARENA_STAGE9_RC_HANDOFF_GATE_ID,
+  type ArenaReleaseCandidateBundle,
 } from '@number-strategy-jump/arena-release';
 import {
   createArenaBalanceValidationReleaseResult,
@@ -30,9 +31,15 @@ import {
 import {
   verifyArenaReleaseEvidenceProducerResult,
 } from '@number-strategy-jump/arena-release';
+import type {
+  ArenaReleaseEvidenceStatement,
+  ArenaReleaseReadinessDefinition,
+} from '@number-strategy-jump/arena-release-contracts';
 import {
   ARENA_BUILD_MANIFEST_FILENAME,
   createArenaBuildManifest,
+  type ArenaBuildManifest,
+  type ArenaDeviceAcceptanceDefinition,
 } from '@number-strategy-jump/arena-device-acceptance';
 import {
   ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND,
@@ -57,17 +64,19 @@ import {
 } from '@number-strategy-jump/arena-regression';
 import {
   verifyArenaBuildManifestDirectory,
-} from './arena-build-manifest-files.ts';
+} from './arena-build-manifest-files.js';
 import {
   verifyArenaDeviceEvidence,
-} from './arena-device-evidence-verifier.ts';
+  type ArenaDeviceEvidenceVerification,
+} from './arena-device-evidence-verifier.js';
 import {
   verifyArenaHumanFairnessEvidence,
-} from './arena-human-fairness-evidence-verifier.ts';
+} from './arena-human-fairness-evidence-verifier.js';
 import {
   verifyArenaInputPilotEvidence,
-} from './arena-input-pilot-evidence-verifier.ts';
-import { readVerifiedTextFile } from './evidence-file-verifier.ts';
+} from './arena-input-pilot-evidence-verifier.js';
+import { readVerifiedTextFile } from './evidence-file-verifier.js';
+import type { ArenaGitSourceIdentity } from '../arena-git-source-identity.js';
 
 const MAXIMUM_BUILD_MANIFEST_BYTES = 5 * 1024 * 1024;
 const MAXIMUM_GOLDEN_REPLAY_BYTES = 32 * 1024 * 1024;
@@ -78,6 +87,23 @@ const MAXIMUM_HUMAN_BUNDLE_BYTES = 5 * 1024 * 1024;
 const MAXIMUM_HUMAN_INGEST_MANIFEST_BYTES = 5 * 1024 * 1024;
 const MAXIMUM_DEFECT_LEDGER_BYTES = 5 * 1024 * 1024;
 const MAXIMUM_INPUT_PILOT_BUNDLE_BYTES = 32 * 1024 * 1024;
+
+interface VerifiedReleaseMaterial {
+  readonly path: string;
+  readonly sha256: string;
+  readonly byteLength: number;
+  readonly resolvedPath: string;
+  readonly fileIdentity: string;
+}
+type VerifiedReleaseMaterialsByPath = ReadonlyMap<string, Readonly<VerifiedReleaseMaterial>>;
+type BuildManifestCache = Map<string, ArenaBuildManifest>;
+type CanonicalBuildHashes = ReadonlyMap<string, string> | null;
+interface DeviceArtifactOwner {
+  readonly gateId: string;
+  readonly path: string;
+}
+type DeviceArtifactHashes = Map<string, Readonly<DeviceArtifactOwner>>;
+type ReleaseProducerVerification = ReturnType<typeof verifyArenaReleaseEvidenceProducerResult>;
 
 export const ARENA_STAGE9_SUPPORTED_RELEASE_PRODUCER_IDS = Object.freeze([
   'arena:build:budget',
@@ -93,17 +119,17 @@ export const ARENA_STAGE9_SUPPORTED_RELEASE_PRODUCER_IDS = Object.freeze([
   'arena:replay:verify',
 ]);
 
-const SUPPORTED_BUILD_GATES = new Set([
+const SUPPORTED_BUILD_GATES = new Set<string>([
   ARENA_STAGE9_RC_HANDOFF_GATE_ID.BUILD_INTEGRITY,
   ARENA_STAGE9_RC_HANDOFF_GATE_ID.BUILD_BUDGET,
 ]);
-const SUPPORTED_SOURCE_GATES = new Set([
+const SUPPORTED_SOURCE_GATES = new Set<string>([
   ARENA_STAGE9_RC_HANDOFF_GATE_ID.GOLDEN_REPLAY,
   ARENA_STAGE9_RC_HANDOFF_GATE_ID.REGRESSION,
   ARENA_STAGE9_RC_HANDOFF_GATE_ID.BALANCE_VALIDATION,
   ARENA_STAGE9_RC_HANDOFF_GATE_ID.DEFECTS,
 ]);
-const SUPPORTED_EXTERNAL_BUILD_GATES = new Set([
+const SUPPORTED_EXTERNAL_BUILD_GATES = new Set<string>([
   ARENA_STAGE9_RC_HANDOFF_GATE_ID.STAGE6_DEVICE,
   ARENA_STAGE9_RC_HANDOFF_GATE_ID.STAGE8_PRODUCT_DEVICE,
   ARENA_STAGE9_RC_HANDOFF_GATE_ID.PERFORMANCE_DEVICE,
@@ -111,47 +137,55 @@ const SUPPORTED_EXTERNAL_BUILD_GATES = new Set([
 ]);
 
 async function readVerifiedJsonMaterial(
-  material,
-  verifiedMaterialsByPath,
-  label,
-  maximumBytes,
-) {
+  material: ArenaReleaseEvidenceStatement['materials'][number],
+  verifiedMaterialsByPath: VerifiedReleaseMaterialsByPath,
+  label: string,
+  maximumBytes: number,
+): Promise<Readonly<{ value: unknown; verified: Readonly<VerifiedReleaseMaterial> }>> {
   const verified = verifiedMaterialsByPath.get(material.path);
   if (!verified) throw new Error(`Release material ${material.path} 尚未完成完整性验证。`);
   const current = await readVerifiedTextFile(verified.resolvedPath, { label, maximumBytes });
   if (current.byteLength !== verified.byteLength || current.sha256 !== verified.sha256) {
     throw new Error(`Release material ${material.path} 在 producer 复验前发生变化。`);
   }
-  let value;
+  if (current.text === null) throw new Error(`${label} 未读取文本。`);
+  let value: unknown;
   try {
     value = JSON.parse(current.text);
-  } catch (error) {
-    throw new Error(`${label} 不是有效 JSON：${error.message}`);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`${label} 不是有效 JSON：${message}`);
   }
   return Object.freeze({ value, verified });
 }
 
-function materialSignature(statement) {
+function materialSignature(statement: ArenaReleaseEvidenceStatement): string {
   return statement.materials.map(({ path: materialPath, sha256, byteLength }) => (
     `${materialPath}\u0000${sha256}\u0000${byteLength}`
   )).join('\u0001');
 }
 
-function assertSharedBuildMaterials(bundle) {
+function assertSharedBuildMaterials(bundle: ArenaReleaseCandidateBundle): void {
   const statements = bundle.evidence.filter(({ gateId }) => SUPPORTED_BUILD_GATES.has(gateId));
   if (statements.length < 2) return;
-  const expected = materialSignature(statements[0]);
+  const first = statements[0];
+  if (!first) return;
+  const expected = materialSignature(first);
   if (statements.some((statement) => materialSignature(statement) !== expected)) {
     throw new Error('build-integrity 与 build-budget 必须复用同一组三端 Manifest。');
   }
 }
 
-async function readBuildManifests(statement, verifiedMaterialsByPath, cache) {
+async function readBuildManifests(
+  statement: ArenaReleaseEvidenceStatement,
+  verifiedMaterialsByPath: VerifiedReleaseMaterialsByPath,
+  cache: BuildManifestCache,
+): Promise<readonly ArenaBuildManifest[]> {
   if (statement.materials.length !== 3) {
     throw new RangeError(`Release gate ${statement.gateId} 必须引用三个构建 Manifest。`);
   }
-  const directories = new Set();
-  const manifests = [];
+  const directories = new Set<string>();
+  const manifests: ArenaBuildManifest[] = [];
   for (const material of statement.materials) {
     if (path.posix.basename(material.path) !== ARENA_BUILD_MANIFEST_FILENAME) {
       throw new RangeError(`Release gate ${statement.gateId} 只能引用构建 Manifest。`);
@@ -181,7 +215,11 @@ async function readBuildManifests(statement, verifiedMaterialsByPath, cache) {
   return Object.freeze(manifests);
 }
 
-async function verifyGoldenReplay(statement, verifiedMaterialsByPath, commit) {
+async function verifyGoldenReplay(
+  statement: ArenaReleaseEvidenceStatement,
+  verifiedMaterialsByPath: VerifiedReleaseMaterialsByPath,
+  commit: string,
+): Promise<unknown> {
   const manifests = statement.materials.filter(({ path: materialPath }) => (
     path.posix.basename(materialPath) === 'manifest.json'
   ));
@@ -189,6 +227,7 @@ async function verifyGoldenReplay(statement, verifiedMaterialsByPath, commit) {
     throw new RangeError('Golden replay release evidence 必须且只能包含一个 manifest.json。');
   }
   const manifestMaterial = manifests[0];
+  if (!manifestMaterial) throw new Error('Golden replay manifest 缺失。');
   const manifestRead = await readVerifiedJsonMaterial(
     manifestMaterial,
     verifiedMaterialsByPath,
@@ -202,7 +241,7 @@ async function verifyGoldenReplay(statement, verifiedMaterialsByPath, commit) {
   const materialDirectory = path.posix.dirname(manifestMaterial.path);
   const resolvedDirectory = path.dirname(manifestRead.verified.resolvedPath);
   const byPath = new Map(statement.materials.map((material) => [material.path, material]));
-  const fixtures = [];
+  const fixtures: Array<Readonly<{ file: string; replay: unknown }>> = [];
   for (const entry of manifest.entries) {
     const expectedPath = materialDirectory === '.'
       ? entry.file
@@ -229,11 +268,16 @@ async function verifyGoldenReplay(statement, verifiedMaterialsByPath, commit) {
   return createArenaGoldenReplayReleaseResult({ commit, verification });
 }
 
-async function verifyBalanceValidation(statement, verifiedMaterialsByPath, bundle) {
+async function verifyBalanceValidation(
+  statement: ArenaReleaseEvidenceStatement,
+  verifiedMaterialsByPath: VerifiedReleaseMaterialsByPath,
+  bundle: ArenaReleaseCandidateBundle,
+): Promise<unknown> {
   if (statement.materials.length !== 1) {
     throw new RangeError('Balance validation release evidence 必须只引用一个 Report Bundle。');
   }
   const material = statement.materials[0];
+  if (!material) throw new Error('Balance validation Report Bundle 缺失。');
   const reportRead = await readVerifiedJsonMaterial(
     material,
     verifiedMaterialsByPath,
@@ -247,11 +291,16 @@ async function verifyBalanceValidation(statement, verifiedMaterialsByPath, bundl
   });
 }
 
-async function verifyRegression(statement, verifiedMaterialsByPath, commit) {
+async function verifyRegression(
+  statement: ArenaReleaseEvidenceStatement,
+  verifiedMaterialsByPath: VerifiedReleaseMaterialsByPath,
+  commit: string,
+): Promise<unknown> {
   if (statement.materials.length !== 1) {
     throw new RangeError('Regression release evidence 必须只引用一个原子 Report。');
   }
   const material = statement.materials[0];
+  if (!material) throw new Error('Regression Report 缺失。');
   const reportRead = await readVerifiedJsonMaterial(
     material,
     verifiedMaterialsByPath,
@@ -261,7 +310,11 @@ async function verifyRegression(statement, verifiedMaterialsByPath, commit) {
   return createArenaRegressionReleaseResult({ commit, report: reportRead.value });
 }
 
-async function verifyDefects(statement, verifiedMaterialsByPath, bundle) {
+async function verifyDefects(
+  statement: ArenaReleaseEvidenceStatement,
+  verifiedMaterialsByPath: VerifiedReleaseMaterialsByPath,
+  bundle: ArenaReleaseCandidateBundle,
+): Promise<unknown> {
   const material = requireSingleNamedMaterial(
     statement,
     'defect-ledger.json',
@@ -280,22 +333,36 @@ async function verifyDefects(statement, verifiedMaterialsByPath, bundle) {
   });
 }
 
-function requireSingleNamedMaterial(statement, fileName, label) {
+function requireSingleNamedMaterial(
+  statement: ArenaReleaseEvidenceStatement,
+  fileName: string,
+  label: string,
+): ArenaReleaseEvidenceStatement['materials'][number] {
+  const material = statement.materials[0];
   if (
     statement.materials.length !== 1
-    || path.posix.basename(statement.materials[0].path) !== fileName
+    || !material
+    || path.posix.basename(material.path) !== fileName
   ) throw new RangeError(`${label} 必须只引用一个 ${fileName}。`);
-  return statement.materials[0];
+  return material;
 }
 
-function assertCanonicalBuildManifest(buildManifest, canonicalBuildHashes, label) {
+function assertCanonicalBuildManifest(
+  buildManifest: Readonly<{ platform: string; sha256: string }>,
+  canonicalBuildHashes: CanonicalBuildHashes,
+  label: string,
+): void {
   const expected = canonicalBuildHashes?.get(buildManifest.platform);
   if (expected && expected !== buildManifest.sha256) {
     throw new Error(`${label} 的 ${buildManifest.platform} Manifest 与最终构建门不一致。`);
   }
 }
 
-function registerDeviceArtifacts(statement, verification, artifactHashes) {
+function registerDeviceArtifacts(
+  statement: ArenaReleaseEvidenceStatement,
+  verification: Readonly<ArenaDeviceEvidenceVerification>,
+  artifactHashes: DeviceArtifactHashes,
+): void {
   for (const artifact of verification.artifactIdentities) {
     if (artifact.kind === ARENA_DEVICE_ACCEPTANCE_ARTIFACT_KIND.BUILD_MANIFEST) continue;
     const previous = artifactHashes.get(artifact.sha256);
@@ -312,11 +379,11 @@ function registerDeviceArtifacts(statement, verification, artifactHashes) {
 }
 
 async function verifyDeviceEvidence(
-  statement,
-  verifiedMaterialsByPath,
-  canonicalBuildHashes,
-  artifactHashes,
-) {
+  statement: ArenaReleaseEvidenceStatement,
+  verifiedMaterialsByPath: VerifiedReleaseMaterialsByPath,
+  canonicalBuildHashes: CanonicalBuildHashes,
+  artifactHashes: DeviceArtifactHashes,
+): Promise<unknown> {
   const material = requireSingleNamedMaterial(
     statement,
     'device-evidence.json',
@@ -328,17 +395,13 @@ async function verifyDeviceEvidence(
     `device evidence bundle ${material.path}`,
     MAXIMUM_DEVICE_BUNDLE_BYTES,
   );
-  let definition;
-  let resultFactory;
+  let definition: ArenaDeviceAcceptanceDefinition;
   if (statement.gateId === ARENA_STAGE9_RC_HANDOFF_GATE_ID.STAGE6_DEVICE) {
     definition = createArenaStage6DeviceAcceptanceV1Definition();
-    resultFactory = createArenaStage6DeviceReleaseResult;
   } else if (statement.gateId === ARENA_STAGE9_RC_HANDOFF_GATE_ID.STAGE8_PRODUCT_DEVICE) {
     definition = createArenaStage8ProductDeviceAcceptanceV1Definition();
-    resultFactory = createArenaStage8ProductDeviceReleaseResult;
   } else {
     definition = createArenaStage9PerformanceDeviceAcceptanceV1Definition();
-    resultFactory = createArenaPerformanceDeviceReleaseResult;
   }
   const verification = await verifyArenaDeviceEvidence({
     definition,
@@ -353,27 +416,36 @@ async function verifyDeviceEvidence(
     );
   }
   registerDeviceArtifacts(statement, verification, artifactHashes);
-  return statement.gateId === ARENA_STAGE9_RC_HANDOFF_GATE_ID.PERFORMANCE_DEVICE
-    ? resultFactory({
+  if (statement.gateId === ARENA_STAGE9_RC_HANDOFF_GATE_ID.PERFORMANCE_DEVICE) {
+    return createArenaPerformanceDeviceReleaseResult({
       bundle: verification.bundle,
       performanceRecords: verification.performanceRecords.map(({ source }) => source),
-    })
-    : resultFactory({ bundle: verification.bundle });
+    });
+  }
+  return statement.gateId === ARENA_STAGE9_RC_HANDOFF_GATE_ID.STAGE6_DEVICE
+    ? createArenaStage6DeviceReleaseResult({ bundle: verification.bundle })
+    : createArenaStage8ProductDeviceReleaseResult({ bundle: verification.bundle });
 }
 
-function requireNamedMaterial(statement, fileName, label) {
+function requireNamedMaterial(
+  statement: ArenaReleaseEvidenceStatement,
+  fileName: string,
+  label: string,
+): ArenaReleaseEvidenceStatement['materials'][number] {
   const matches = statement.materials.filter(({ path: materialPath }) => (
     path.posix.basename(materialPath) === fileName
   ));
   if (matches.length !== 1) throw new RangeError(`${label} 必须且只能引用一个 ${fileName}。`);
-  return matches[0];
+  const material = matches[0];
+  if (!material) throw new Error(`${label} 缺少 ${fileName}。`);
+  return material;
 }
 
 async function verifyHumanFairnessEvidence(
-  statement,
-  verifiedMaterialsByPath,
-  canonicalBuildHashes,
-) {
+  statement: ArenaReleaseEvidenceStatement,
+  verifiedMaterialsByPath: VerifiedReleaseMaterialsByPath,
+  canonicalBuildHashes: CanonicalBuildHashes,
+): Promise<unknown> {
   if (statement.materials.length !== 3) {
     throw new RangeError('Human fairness release evidence 必须引用 Bundle、采集 Manifest 与 Web Build Manifest。');
   }
@@ -437,11 +509,11 @@ async function verifyHumanFairnessEvidence(
 }
 
 async function verifyInputPilotEvidence(
-  statement,
-  bundle,
-  verifiedMaterialsByPath,
-  canonicalBuildHashes,
-) {
+  statement: ArenaReleaseEvidenceStatement,
+  bundle: ArenaReleaseCandidateBundle,
+  verifiedMaterialsByPath: VerifiedReleaseMaterialsByPath,
+  canonicalBuildHashes: CanonicalBuildHashes,
+): Promise<unknown> {
   if (statement.materials.length !== 2) {
     throw new RangeError('Input Pilot release evidence 必须引用 Evidence Bundle 与 Web Build Manifest。');
   }
@@ -504,7 +576,11 @@ async function verifyInputPilotEvidence(
   return verification.result;
 }
 
-async function readCanonicalBuildHashes(bundle, verifiedMaterialsByPath, cache) {
+async function readCanonicalBuildHashes(
+  bundle: ArenaReleaseCandidateBundle,
+  verifiedMaterialsByPath: VerifiedReleaseMaterialsByPath,
+  cache: BuildManifestCache,
+): Promise<CanonicalBuildHashes> {
   const statement = bundle.evidence.find(({ gateId }) => (
     gateId === ARENA_STAGE9_RC_HANDOFF_GATE_ID.BUILD_INTEGRITY
   )) ?? bundle.evidence.find(({ gateId }) => (
@@ -512,13 +588,18 @@ async function readCanonicalBuildHashes(bundle, verifiedMaterialsByPath, cache) 
   ));
   if (!statement) return null;
   const manifests = await readBuildManifests(statement, verifiedMaterialsByPath, cache);
-  return new Map(manifests.map((manifest, index) => [
-    manifest.target,
-    statement.materials[index].sha256,
-  ]));
+  return new Map(manifests.map((manifest, index) => {
+    const material = statement.materials[index];
+    if (!material) throw new Error(`构建 ${manifest.target} 缺少 Manifest material。`);
+    return [manifest.target, material.sha256] as const;
+  }));
 }
 
-async function assertCanonicalBuildStable(bundle, verifiedMaterialsByPath, expected) {
+async function assertCanonicalBuildStable(
+  bundle: ArenaReleaseCandidateBundle,
+  verifiedMaterialsByPath: VerifiedReleaseMaterialsByPath,
+  expected: CanonicalBuildHashes,
+): Promise<void> {
   if (expected === null) return;
   const current = await readCanonicalBuildHashes(bundle, verifiedMaterialsByPath, new Map());
   if (
@@ -528,8 +609,11 @@ async function assertCanonicalBuildStable(bundle, verifiedMaterialsByPath, expec
   ) throw new Error('最终构建材料在 release producer 复验期间发生变化。');
 }
 
-function assertSourceIdentity(bundle, sourceIdentity) {
-  if (!sourceIdentity || typeof sourceIdentity !== 'object') {
+function assertSourceIdentity(
+  bundle: ArenaReleaseCandidateBundle,
+  sourceIdentity: Readonly<ArenaGitSourceIdentity> | null,
+): void {
+  if (!sourceIdentity) {
     throw new TypeError('Source release producer 需要当前 Git source identity。');
   }
   if (
@@ -541,7 +625,9 @@ function assertSourceIdentity(bundle, sourceIdentity) {
   }
 }
 
-export function arenaStage9ReleaseRequiresSourceIdentity(bundle) {
+export function arenaStage9ReleaseRequiresSourceIdentity(
+  bundle: ArenaReleaseCandidateBundle,
+): boolean {
   return bundle.evidence.some(({ gateId }) => SUPPORTED_SOURCE_GATES.has(gateId));
 }
 
@@ -550,19 +636,24 @@ export async function verifyArenaStage9ReleaseProducerEvidence({
   bundle,
   verifiedMaterialsByPath,
   sourceIdentity = null,
-}) {
+}: Readonly<{
+  definition: ArenaReleaseReadinessDefinition;
+  bundle: ArenaReleaseCandidateBundle;
+  verifiedMaterialsByPath: VerifiedReleaseMaterialsByPath;
+  sourceIdentity?: Readonly<ArenaGitSourceIdentity> | null;
+}>): Promise<readonly ReleaseProducerVerification[]> {
   assertSharedBuildMaterials(bundle);
   if (arenaStage9ReleaseRequiresSourceIdentity(bundle)) assertSourceIdentity(bundle, sourceIdentity);
-  const verifiedEvidence = [];
-  const buildManifestCache = new Map();
+  const verifiedEvidence: ReleaseProducerVerification[] = [];
+  const buildManifestCache: BuildManifestCache = new Map();
   const canonicalBuildHashes = await readCanonicalBuildHashes(
     bundle,
     verifiedMaterialsByPath,
     buildManifestCache,
   );
-  const deviceArtifactHashes = new Map();
+  const deviceArtifactHashes: DeviceArtifactHashes = new Map();
   for (const statement of bundle.evidence) {
-    let result;
+    let result: unknown;
     if (SUPPORTED_BUILD_GATES.has(statement.gateId)) {
       const manifests = await readBuildManifests(
         statement,

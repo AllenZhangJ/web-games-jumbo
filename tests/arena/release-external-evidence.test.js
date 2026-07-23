@@ -60,7 +60,7 @@ import {
 } from '../../scripts/lib/arena-build-manifest-files.ts';
 import {
   verifyArenaStage9ReleaseProducerEvidence,
-} from '../../scripts/lib/arena-stage9-release-producers.mjs';
+} from '../../scripts/lib/arena-stage9-release-producers.ts';
 
 const COMMIT = 'a'.repeat(40);
 const BUILD_ID = 'arena-external-evidence-test';

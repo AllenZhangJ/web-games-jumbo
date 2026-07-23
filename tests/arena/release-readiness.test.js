@@ -53,7 +53,7 @@ import {
 } from '../../scripts/lib/arena-build-manifest-files.ts';
 import {
   verifyArenaStage9ReleaseProducerEvidence,
-} from '../../scripts/lib/arena-stage9-release-producers.mjs';
+} from '../../scripts/lib/arena-stage9-release-producers.ts';
 import {
   createArenaStage9BalanceValidationExperimentDefinition,
 } from '@number-strategy-jump/arena-v1-experiment';
@@ -898,7 +898,7 @@ test('Stage 9 readiness CLI semantically verifies build integrity and budget fro
     await writeFile(bundlePath, `${JSON.stringify(candidate, null, 2)}\n`);
     const command = spawnSync(process.execPath, [
       '--import', 'tsx',
-      'scripts/arena-stage9-readiness.mjs',
+      'scripts/arena-stage9-readiness.ts',
       '--bundle',
       bundlePath,
       '--artifacts-root',
@@ -919,7 +919,7 @@ test('Stage 9 readiness CLI semantically verifies build integrity and budget fro
     await writeFile(path.join(directory, 'web', 'index.html'), 'tampered');
     const rejected = spawnSync(process.execPath, [
       '--import', 'tsx',
-      'scripts/arena-stage9-readiness.mjs',
+      'scripts/arena-stage9-readiness.ts',
       '--bundle',
       bundlePath,
       '--artifacts-root',
@@ -967,7 +967,7 @@ test('Stage 9 readiness CLI 校验未接入材料完整性但不会把声明当 
     await writeFile(bundlePath, `${JSON.stringify(candidate, null, 2)}\n`);
     const command = spawnSync(process.execPath, [
       '--import', 'tsx',
-      'scripts/arena-stage9-readiness.mjs',
+      'scripts/arena-stage9-readiness.ts',
       '--bundle',
       bundlePath,
     ], { cwd: process.cwd(), encoding: 'utf8' });
@@ -1012,7 +1012,7 @@ test('Stage 9 readiness CLI 校验未接入材料完整性但不会把声明当 
     await writeFile(duplicateBundlePath, `${JSON.stringify(duplicateCandidate, null, 2)}\n`);
     const duplicate = spawnSync(process.execPath, [
       '--import', 'tsx',
-      'scripts/arena-stage9-readiness.mjs',
+      'scripts/arena-stage9-readiness.ts',
       '--bundle',
       duplicateBundlePath,
     ], { cwd: process.cwd(), encoding: 'utf8' });
@@ -1021,7 +1021,7 @@ test('Stage 9 readiness CLI 校验未接入材料完整性但不会把声明当 
     await writeFile(path.join(directory, material.path), 'tampered\n');
     const rejected = spawnSync(process.execPath, [
       '--import', 'tsx',
-      'scripts/arena-stage9-readiness.mjs',
+      'scripts/arena-stage9-readiness.ts',
       '--bundle',
       bundlePath,
     ], { cwd: process.cwd(), encoding: 'utf8' });

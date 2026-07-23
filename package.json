@@ -47,7 +47,7 @@
     "arena:human-fairness:ingest": "node --import tsx scripts/arena-human-fairness-ingest.ts",
     "arena:build:verify": "node --import tsx scripts/arena-build-manifest.ts",
     "arena:build:budget": "node --import tsx scripts/arena-build-budget.ts",
-    "arena:stage9:readiness": "node --import tsx scripts/arena-stage9-readiness.mjs",
+    "arena:stage9:readiness": "node --import tsx scripts/arena-stage9-readiness.ts",
     "arena:defects:verify": "node --import tsx scripts/arena-defects.ts",
     "arena:input-pilot:evidence": "node --import tsx scripts/arena-input-pilot-evidence.ts",
     "arena:assets:intake:verify": "node --import tsx scripts/arena-formal-asset-intake.ts",
