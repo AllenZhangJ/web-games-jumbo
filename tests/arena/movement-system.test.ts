@@ -4,8 +4,17 @@ import {
   MOVEMENT_COMMAND_KIND,
   MOVEMENT_MODE,
   MovementSystem,
+  type MovementCommand,
+  type MovementContactSnapshot,
+  type MovementMutation,
+  type MovementMutationPort,
+  type MovementSystemOptions,
+  type MovementTickInput,
 } from '@number-strategy-jump/arena-movement';
-import { createCharacterDefinition } from '@number-strategy-jump/arena-definitions';
+import {
+  createCharacterDefinition,
+  type CharacterDefinition,
+} from '@number-strategy-jump/arena-definitions';
 import { createArenaV1CharacterRegistry } from '@number-strategy-jump/arena-v1-content';
 import { ARENA_V1_CHARACTER_ID } from '@number-strategy-jump/arena-definitions';
 
@@ -13,7 +22,26 @@ const baseDefinition = createArenaV1CharacterRegistry().require(
   ARENA_V1_CHARACTER_ID.PARKOUR_APPRENTICE,
 );
 
-function createSystem(definition = baseDefinition, options = {}) {
+type MovementOptions = Omit<MovementSystemOptions, 'participantCharacters'>;
+
+interface RecordedMutation {
+  readonly kind: string;
+  readonly participantId: string;
+  readonly impulse?: Readonly<{ x: number; y: number; z: number }>;
+  readonly speed?: number;
+  readonly acceleration?: number;
+  readonly maximumSpeed?: number;
+}
+
+function required<T>(value: T | null | undefined, name: string): T {
+  assert.ok(value != null, `${name} 不存在。`);
+  return value;
+}
+
+function createSystem(
+  definition: CharacterDefinition = baseDefinition,
+  options: MovementOptions = {},
+) {
   return new MovementSystem({
     ...options,
     participantCharacters: [
@@ -23,19 +51,22 @@ function createSystem(definition = baseDefinition, options = {}) {
   });
 }
 
-function contacts(playerGrounded, opponentGrounded = true) {
+function contacts(
+  playerGrounded: boolean,
+  opponentGrounded = true,
+): MovementContactSnapshot[] {
   return [
     { participantId: 'player-1', grounded: playerGrounded },
     { participantId: 'player-2', grounded: opponentGrounded },
   ];
 }
 
-function inputs(tick, {
+function inputs(tick: number, {
   jumpPressed = false,
   jumpHeld = false,
   moveX = 0,
   moveZ = 0,
-} = {}) {
+}: Readonly<Partial<Pick<MovementTickInput, 'jumpPressed' | 'jumpHeld' | 'moveX' | 'moveZ'>>> = {}): MovementTickInput[] {
   return [
     { participantId: 'player-1', tick, jumpPressed, jumpHeld, moveX, moveZ },
     {
@@ -56,7 +87,13 @@ function availability(playerCanMove = true, opponentCanMove = true) {
   ];
 }
 
-function prepare(system, tick, grounded, input = {}, canMove = true) {
+function prepare(
+  system: MovementSystem,
+  tick: number,
+  grounded: boolean,
+  input: Readonly<Partial<Pick<MovementTickInput, 'jumpPressed' | 'jumpHeld' | 'moveX' | 'moveZ'>>> = {},
+  canMove = true,
+) {
   return system.prepareTick({
     tick,
     contacts: contacts(grounded),
@@ -65,16 +102,20 @@ function prepare(system, tick, grounded, input = {}, canMove = true) {
   });
 }
 
-function command(kind, actionDefinitionId = kind, participantId = 'player-1') {
+function command(
+  kind: MovementCommand['kind'],
+  actionDefinitionId: string = kind,
+  participantId = 'player-1',
+): MovementCommand {
   return { kind, participantId, actionDefinitionId };
 }
 
 function ports({ failImpulse = false } = {}) {
-  const calls = [];
+  const calls: RecordedMutation[] = [];
   return {
     calls,
-    value: {
-      applyBatch(operations) {
+    value: <MovementMutationPort>{
+      applyBatch(operations: readonly MovementMutation[]) {
         if (failImpulse && operations.some(({ kind }) => kind === 'apply-impulse')) {
           throw new Error('forced impulse failure');
         }
@@ -105,7 +146,7 @@ function ports({ failImpulse = false } = {}) {
   };
 }
 
-function complete(system, tick, grounded) {
+function complete(system: MovementSystem, tick: number, grounded: boolean) {
   const port = ports();
   system.execute([], port.value);
   return system.completeTick({ tick, contacts: contacts(grounded) });
@@ -116,7 +157,7 @@ test('coyote time has an exact number of legal airborne ticks without storing gr
   prepare(system, 0, true);
   assert.equal(system.getCapabilities('player-1').canGroundJump, true);
   complete(system, 0, false);
-  assert.equal(system.getSnapshot('player-1').grounded, undefined);
+  assert.equal('grounded' in system.getSnapshot('player-1'), false);
 
   for (let tick = 1; tick <= baseDefinition.jump.coyoteTicks; tick += 1) {
     prepare(system, tick, false);
@@ -149,8 +190,14 @@ test('jump buffer survives a landing transition and is consumed once by ground j
   const executed = system.execute([
     command(MOVEMENT_COMMAND_KIND.REQUEST_GROUND_JUMP),
   ], port.value);
-  assert.equal(executed[0].verticalImpulse, noAirJump.jump.groundImpulse);
-  assert.deepEqual(port.calls[0].impulse, { x: 0, y: noAirJump.jump.groundImpulse, z: 0 });
+  assert.equal(
+    required(executed[0], 'ground jump execution').verticalImpulse,
+    noAirJump.jump.groundImpulse,
+  );
+  assert.deepEqual(
+    required(port.calls[0], 'ground jump mutation').impulse,
+    { x: 0, y: noAirJump.jump.groundImpulse, z: 0 },
+  );
   system.completeTick({ tick: 1, contacts: contacts(false) });
   assert.equal(system.getSnapshot('player-1').jumpBufferTicksRemaining, 0);
   assert.equal(system.getSnapshot('player-1').coyoteTicksRemaining, 0);
@@ -186,9 +233,13 @@ test('product air jump converts the live stick direction into a bounded horizont
   });
   const port = ports();
   system.execute([command(MOVEMENT_COMMAND_KIND.REQUEST_AIR_JUMP)], port.value);
-  assert.ok(Math.abs(port.calls[0].impulse.x - 3.6 / Math.sqrt(2)) < 1e-12);
-  assert.equal(port.calls[0].impulse.y, baseDefinition.jump.airImpulse);
-  assert.ok(Math.abs(port.calls[0].impulse.z - 3.6 / Math.sqrt(2)) < 1e-12);
+  const impulse = required(
+    required(port.calls[0], 'air jump mutation').impulse,
+    'air jump impulse',
+  );
+  assert.ok(Math.abs(impulse.x - 3.6 / Math.sqrt(2)) < 1e-12);
+  assert.equal(impulse.y, baseDefinition.jump.airImpulse);
+  assert.ok(Math.abs(impulse.z - 3.6 / Math.sqrt(2)) < 1e-12);
   system.completeTick({ tick: 0, contacts: contacts(false) });
   system.destroy();
 });
@@ -212,7 +263,10 @@ test('crouch jump charge is bounded and release derives impulse from CharacterDe
   const expected = baseDefinition.jump.groundImpulse
     + (baseDefinition.jump.crouchImpulse - baseDefinition.jump.groundImpulse)
       * (2 / baseDefinition.jump.maximumCrouchChargeTicks);
-  assert.ok(Math.abs(execution.verticalImpulse - expected) < 1e-12);
+  assert.ok(Math.abs(
+    required(required(execution, 'crouch jump execution').verticalImpulse, 'vertical impulse')
+      - expected,
+  ) < 1e-12);
   system.completeTick({ tick: 2, contacts: contacts(false) });
   assert.equal(system.getSnapshot('player-1').mode, MOVEMENT_MODE.STANDARD);
   assert.equal(system.getSnapshot('player-1').crouchChargeTicks, 0);
@@ -312,7 +366,10 @@ test('invalid prepare and complete batches leave the current lifecycle recoverab
   assert.throws(() => system.prepareTick({
     tick: 0,
     contacts: contacts(true),
-    inputs: [inputs(0)[0], inputs(0)[0]],
+    inputs: [
+      required(inputs(0)[0], 'first input'),
+      required(inputs(0)[0], 'duplicate first input'),
+    ],
     availability: availability(),
   }), /重复 player-1/);
   assert.deepEqual(system.listSnapshots(), initial);
@@ -322,7 +379,10 @@ test('invalid prepare and complete batches leave the current lifecycle recoverab
   system.execute([], port.value);
   assert.throws(() => system.completeTick({
     tick: 0,
-    contacts: [contacts(true)[0], contacts(true)[0]],
+    contacts: [
+      required(contacts(true)[0], 'first contact'),
+      required(contacts(true)[0], 'duplicate first contact'),
+    ],
   }), /重复 player-1/);
   system.completeTick({ tick: 0, contacts: contacts(true) });
   system.destroy();
@@ -331,7 +391,7 @@ test('invalid prepare and complete batches leave the current lifecycle recoverab
 test('a two-participant command batch has stable order and one physical commit boundary', () => {
   const system = createSystem();
   prepare(system, 0, true);
-  const batches = [];
+  const batches: (readonly MovementMutation[])[] = [];
   const executions = system.execute([
     command(MOVEMENT_COMMAND_KIND.REQUEST_GROUND_JUMP, 'jump-2', 'player-2'),
     command(MOVEMENT_COMMAND_KIND.REQUEST_GROUND_JUMP, 'jump-1', 'player-1'),
@@ -342,15 +402,15 @@ test('a two-participant command batch has stable order and one physical commit b
   });
   assert.equal(batches.length, 1);
   assert.deepEqual(
-    batches[0].map(({ participantId }) => participantId),
+    required(batches[0], 'movement mutation batch').map(({ participantId }) => participantId),
     ['player-1', 'player-2'],
   );
   assert.deepEqual(
     executions.map(({ participantId }) => participantId),
     ['player-1', 'player-2'],
   );
-  assert.ok(Object.isFrozen(batches[0]));
-  assert.ok(batches[0].every(Object.isFrozen));
+  assert.ok(Object.isFrozen(required(batches[0], 'movement mutation batch')));
+  assert.ok(required(batches[0], 'movement mutation batch').every(Object.isFrozen));
   assert.equal(system.getSnapshot('player-1').coyoteTicksRemaining, 0);
   assert.equal(system.getSnapshot('player-2').coyoteTicksRemaining, 0);
   system.completeTick({ tick: 0, contacts: contacts(false, false) });

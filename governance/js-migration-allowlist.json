@@ -9,7 +9,6 @@
     "tests/arena/input-pilot-release-evidence.test.js",
     "tests/arena/match-core-movement.test.js",
     "tests/arena/match-core.test.js",
-    "tests/arena/movement-system.test.js",
     "tests/arena/presentation/arena-device-acceptance.test.js",
     "tests/arena/presentation/arena-performance-evidence.test.js",
     "tests/arena/presentation/arena-presentation-session.test.js",
