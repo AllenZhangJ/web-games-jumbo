@@ -47,8 +47,6 @@
     "scripts/lib/arena-regression-evidence-producer.mjs",
     "scripts/lib/arena-stage9-release-producers.mjs",
     "scripts/lib/evidence-file-verifier.mjs",
-    "src/arena/presentation/assets/formal-asset-budget-policy.js",
-    "src/arena/presentation/assets/formal-asset-budget-report.js",
     "tests/architecture.test.js",
     "tests/arena/action-definition.test.js",
     "tests/arena/action-execution-system.test.js",

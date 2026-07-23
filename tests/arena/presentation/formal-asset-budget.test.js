@@ -9,10 +9,10 @@ import {
   FORMAL_ASSET_BUDGET_POLICY_SCHEMA_VERSION,
   createArenaStage7FormalAssetBudgetV1Policy,
   createFormalAssetBudgetPolicy,
-} from '../../../src/arena/presentation/assets/formal-asset-budget-policy.js';
+} from '../../../src/arena/presentation/assets/formal-asset-budget-policy.ts';
 import {
   createFormalAssetBudgetReport,
-} from '../../../src/arena/presentation/assets/formal-asset-budget-report.js';
+} from '../../../src/arena/presentation/assets/formal-asset-budget-report.ts';
 import {
   verifyArenaFormalAssetBudget,
 } from '../../../scripts/lib/arena-formal-asset-budget-verifier.mjs';

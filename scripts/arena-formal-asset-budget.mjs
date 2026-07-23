@@ -2,7 +2,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   createArenaStage7FormalAssetBudgetV1Policy,
-} from '../src/arena/presentation/assets/formal-asset-budget-policy.js';
+} from '../src/arena/presentation/assets/formal-asset-budget-policy.ts';
 import {
   verifyArenaFormalAssetBudget,
 } from './lib/arena-formal-asset-budget-verifier.mjs';

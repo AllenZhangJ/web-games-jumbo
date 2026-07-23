@@ -14,7 +14,38 @@ export const FORMAL_ASSET_BUDGET_ARTIFACT_KIND = Object.freeze({
   CHARACTER_MODEL: 'character-model',
   MODEL_ATTACHMENT: 'model-attachment',
   TEXTURE: 'texture',
-});
+} as const);
+
+export type FormalAssetBudgetArtifactKind =
+  typeof FORMAL_ASSET_BUDGET_ARTIFACT_KIND[keyof typeof FORMAL_ASSET_BUDGET_ARTIFACT_KIND];
+
+export interface FormalAssetBudgetArtifactDefinition {
+  readonly id: string;
+  readonly path: string;
+  readonly kind: FormalAssetBudgetArtifactKind;
+  readonly maximumEncodedBytes: number;
+}
+
+export interface FormalAssetBudgetPolicyJson {
+  readonly schemaVersion: typeof FORMAL_ASSET_BUDGET_POLICY_SCHEMA_VERSION;
+  readonly id: string;
+  readonly contentVersion: number;
+  readonly maximumTotalEncodedBytes: number;
+  readonly maximumTotalAudioBytes: number;
+  readonly maximumTotalDecodedTextureBytes: number;
+  readonly maximumDecodedTextureBytesPerArtifact: number;
+  readonly maximumTextureDimension: number;
+  readonly maximumCharacterNodes: number;
+  readonly maximumCharacterJoints: number;
+  readonly requiredCharacterAnimationCount: number;
+  readonly maximumCharacterAnimationCount: number;
+  readonly maximumCharacterPrimitives: number;
+  readonly maximumCharacterMaterials: number;
+  readonly maximumAttachmentNodes: number;
+  readonly maximumAttachmentPrimitives: number;
+  readonly maximumAttachmentMaterials: number;
+  readonly artifacts: readonly FormalAssetBudgetArtifactDefinition[];
+}
 
 const POLICY_KEYS = new Set([
   'schemaVersion',
@@ -38,20 +69,24 @@ const POLICY_KEYS = new Set([
 ]);
 const ARTIFACT_KEYS = new Set(['id', 'path', 'kind', 'maximumEncodedBytes']);
 
-function compareText(left, right) {
+function compareText(left: string, right: string): number {
   if (left < right) return -1;
   if (left > right) return 1;
   return 0;
 }
 
-function enumValue(value, values, name) {
-  if (!Object.values(values).includes(value)) {
+function enumValue<T extends string>(
+  value: unknown,
+  values: Readonly<Record<string, T>>,
+  name: string,
+): T {
+  if (typeof value !== 'string' || !Object.values(values).includes(value as T)) {
     throw new RangeError(`${name} 不受支持：${String(value)}。`);
   }
-  return value;
+  return value as T;
 }
 
-function relativeArtifactPath(value, name) {
+function relativeArtifactPath(value: unknown, name: string): string {
   const result = assertNonEmptyString(value, name);
   const segments = result.split('/');
   if (
@@ -62,12 +97,12 @@ function relativeArtifactPath(value, name) {
   return result;
 }
 
-function cloneArtifacts(values) {
+function cloneArtifacts(values: unknown): readonly FormalAssetBudgetArtifactDefinition[] {
   if (!Array.isArray(values) || values.length === 0) {
     throw new RangeError('FormalAssetBudgetPolicy.artifacts 不能为空。');
   }
-  const ids = new Set();
-  const paths = new Set();
+  const ids = new Set<string>();
+  const paths = new Set<string>();
   const artifacts = values.map((value, index) => {
     const name = `FormalAssetBudgetPolicy.artifacts[${index}]`;
     assertKnownKeys(value, ARTIFACT_KEYS, name);
@@ -101,8 +136,27 @@ function cloneArtifacts(values) {
   return Object.freeze(artifacts.sort((left, right) => compareText(left.id, right.id)));
 }
 
-export class FormalAssetBudgetPolicy {
-  constructor(value) {
+export class FormalAssetBudgetPolicy implements FormalAssetBudgetPolicyJson {
+  declare readonly schemaVersion: typeof FORMAL_ASSET_BUDGET_POLICY_SCHEMA_VERSION;
+  declare readonly id: string;
+  declare readonly contentVersion: number;
+  declare readonly maximumTotalEncodedBytes: number;
+  declare readonly maximumTotalAudioBytes: number;
+  declare readonly maximumTotalDecodedTextureBytes: number;
+  declare readonly maximumDecodedTextureBytesPerArtifact: number;
+  declare readonly maximumTextureDimension: number;
+  declare readonly maximumCharacterNodes: number;
+  declare readonly maximumCharacterJoints: number;
+  declare readonly requiredCharacterAnimationCount: number;
+  declare readonly maximumCharacterAnimationCount: number;
+  declare readonly maximumCharacterPrimitives: number;
+  declare readonly maximumCharacterMaterials: number;
+  declare readonly maximumAttachmentNodes: number;
+  declare readonly maximumAttachmentPrimitives: number;
+  declare readonly maximumAttachmentMaterials: number;
+  declare readonly artifacts: readonly FormalAssetBudgetArtifactDefinition[];
+
+  constructor(value: unknown) {
     const source = cloneFrozenData(value, 'FormalAssetBudgetPolicy');
     assertKnownKeys(source, POLICY_KEYS, 'FormalAssetBudgetPolicy');
     if (source.schemaVersion !== FORMAL_ASSET_BUDGET_POLICY_SCHEMA_VERSION) {
@@ -110,7 +164,7 @@ export class FormalAssetBudgetPolicy {
         `不支持 FormalAssetBudgetPolicy schema ${String(source.schemaVersion)}。`,
       );
     }
-    const integer = (key, minimum = 1) => assertIntegerAtLeast(
+    const integer = (key: string, minimum = 1): number => assertIntegerAtLeast(
       source[key],
       minimum,
       `FormalAssetBudgetPolicy.${key}`,
@@ -149,7 +203,7 @@ export class FormalAssetBudgetPolicy {
     Object.freeze(this);
   }
 
-  toJSON() {
+  toJSON(): FormalAssetBudgetPolicyJson {
     return {
       schemaVersion: this.schemaVersion,
       id: this.id,
@@ -172,16 +226,16 @@ export class FormalAssetBudgetPolicy {
     };
   }
 
-  getContentHash() {
+  getContentHash(): string {
     return createDeterministicDataHash(this.toJSON(), `FormalAssetBudgetPolicy ${this.id}`);
   }
 }
 
-export function createFormalAssetBudgetPolicy(value) {
+export function createFormalAssetBudgetPolicy(value: unknown): FormalAssetBudgetPolicy {
   return value instanceof FormalAssetBudgetPolicy ? value : new FormalAssetBudgetPolicy(value);
 }
 
-export function createArenaStage7FormalAssetBudgetV1Policy() {
+export function createArenaStage7FormalAssetBudgetV1Policy(): FormalAssetBudgetPolicy {
   const characterModelMaximum = 1024 * 1024;
   const textureMaximum = 64 * 1024;
   const audioMaximum = 16 * 1024;
@@ -222,22 +276,22 @@ export function createArenaStage7FormalAssetBudgetV1Policy() {
         kind: FORMAL_ASSET_BUDGET_ARTIFACT_KIND.MODEL_ATTACHMENT,
         maximumEncodedBytes: 64 * 1024,
       },
-      ...[
+      ...([
         ['arena.texture.character.rogue.v1', 'public/assets/arena/characters/kaykit-adventurers/rogue_texture.png'],
         ['arena.texture.character.skeleton.v1', 'public/assets/arena/characters/kaykit-skeletons/skeleton_texture.png'],
         ['arena.texture.attachment.shield.v1', 'public/assets/arena/equipment/kaykit-adventurers/shield_texture.png'],
-      ].map(([id, artifactPath]) => ({
+      ] as const).map(([id, artifactPath]) => ({
         id,
         path: artifactPath,
         kind: FORMAL_ASSET_BUDGET_ARTIFACT_KIND.TEXTURE,
         maximumEncodedBytes: textureMaximum,
       })),
-      ...[
+      ...([
         ['arena.audio.impact.base-push.v1', 'base-push.ogg'],
         ['arena.audio.impact.chain-pull.v1', 'chain-pull.ogg'],
         ['arena.audio.impact.hammer-smash.v1', 'hammer-smash.ogg'],
         ['arena.audio.impact.shield-charge.v1', 'shield-charge.ogg'],
-      ].map(([id, filename]) => ({
+      ] as const).map(([id, filename]) => ({
         id,
         path: `public/assets/arena/audio/kenney-impact-sounds/${filename}`,
         kind: FORMAL_ASSET_BUDGET_ARTIFACT_KIND.AUDIO,

@@ -5,10 +5,10 @@ import path from 'node:path';
 import {
   FORMAL_ASSET_BUDGET_ARTIFACT_KIND,
   createArenaStage7FormalAssetBudgetV1Policy,
-} from '../../src/arena/presentation/assets/formal-asset-budget-policy.js';
+} from '../../src/arena/presentation/assets/formal-asset-budget-policy.ts';
 import {
   createFormalAssetBudgetReport,
-} from '../../src/arena/presentation/assets/formal-asset-budget-report.js';
+} from '../../src/arena/presentation/assets/formal-asset-budget-report.ts';
 
 const GLB_MAGIC = 'glTF';
 const GLB_JSON_CHUNK_TYPE = 0x4e4f534a;
