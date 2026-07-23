@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   createArenaStage9MatchCoreExperimentDefinition,
-} from '../src/arena/experiment/arena-matchcore-experiment-composition.js';
+} from '@number-strategy-jump/arena-v1-experiment';
 import { createArenaV1MatchCoreInvariantWorkloadEntry } from '@number-strategy-jump/arena-v1-experiment';
 import { assertSimulationCase } from '../src/arena/experiment/simulation-workload-registry.js';
 import {

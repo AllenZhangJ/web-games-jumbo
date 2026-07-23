@@ -1,4 +1,5 @@
 import { createArenaV1MatchCore } from '@number-strategy-jump/arena-v1-composition';
+import { assertIntegerAtLeast } from '@number-strategy-jump/arena-contracts';
 import {
   ARENA_EXPERIMENT_DEFINITION_SCHEMA_VERSION,
   ARENA_EXPERIMENT_SEED_SET_KIND,
@@ -16,18 +17,28 @@ import {
   ARENA_V1_SCRIPTED_PRESSURE_WORKLOAD_ID,
   ARENA_V1_SCRIPTED_PRESSURE_WORKLOAD_VERSION,
   createArenaV1ScriptedPressureWorkloadEntry,
-} from '@number-strategy-jump/arena-v1-experiment';
+} from './arena-v1-scripted-pressure-workload.js';
 
 export const ARENA_STAGE9_S9_1_EXPERIMENT_ID =
   'arena.stage9.s9.1.scripted-pressure.v1';
 
-function readProbeMetadata({ seed, config }) {
+function readProbeMetadata({ seed, config }: { readonly seed: number; readonly config: unknown }) {
   const core = createArenaV1MatchCore({ seed, config });
   try {
     return core.getReplayMetadata();
   } finally {
     core.destroy();
   }
+}
+
+export interface ArenaStage9S91ExperimentOptions {
+  readonly sourceCommit?: unknown;
+  readonly sourceDirty?: unknown;
+  readonly firstSeed?: number;
+  readonly caseCount?: number;
+  readonly config?: unknown;
+  readonly workloadParameters?: unknown;
+  readonly maximumFailedCases?: number;
 }
 
 export function createArenaStage9S91ExperimentDefinition({
@@ -38,7 +49,7 @@ export function createArenaStage9S91ExperimentDefinition({
   config = {},
   workloadParameters = ARENA_V1_SCRIPTED_PRESSURE_DEFAULT_PARAMETERS,
   maximumFailedCases = 0,
-} = {}) {
+}: ArenaStage9S91ExperimentOptions = {}) {
   if (!Number.isSafeInteger(caseCount) || caseCount < 1) {
     throw new RangeError('caseCount 必须是正安全整数。');
   }
@@ -47,6 +58,16 @@ export function createArenaStage9S91ExperimentDefinition({
     throw new RangeError('firstSeed + caseCount 超出 uint32。');
   }
   const metadata = readProbeMetadata({ seed: firstSeed, config });
+  const preparingTicks = assertIntegerAtLeast(
+    metadata.config.preparingTicks,
+    0,
+    'S9.1 experiment replay metadata preparingTicks',
+  );
+  const hardLimitTicks = assertIntegerAtLeast(
+    metadata.config.hardLimitTicks,
+    1,
+    'S9.1 experiment replay metadata hardLimitTicks',
+  );
   return createArenaExperimentDefinition({
     schemaVersion: ARENA_EXPERIMENT_DEFINITION_SCHEMA_VERSION,
     id: ARENA_STAGE9_S9_1_EXPERIMENT_ID,
@@ -79,7 +100,7 @@ export function createArenaStage9S91ExperimentDefinition({
       version: ARENA_MATCH_SUMMARY_COLLECTOR_VERSION,
     }],
     limits: {
-      maximumTicksPerCase: metadata.config.preparingTicks + metadata.config.hardLimitTicks + 1,
+      maximumTicksPerCase: preparingTicks + hardLimitTicks + 1,
       maximumFailedCases,
     },
   });

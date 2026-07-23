@@ -58,3 +58,17 @@ export {
 export type {
   ArenaStage9MovementExperimentOptions,
 } from './arena-movement-experiment-composition.js';
+export {
+  ARENA_STAGE9_MATCHCORE_EXPERIMENT_ID,
+  createArenaStage9MatchCoreExperimentDefinition,
+  createArenaStage9MatchCoreExperimentRegistries,
+} from './arena-matchcore-experiment-composition.js';
+export type {
+  ArenaStage9MatchCoreExperimentOptions,
+} from './arena-matchcore-experiment-composition.js';
+export {
+  ARENA_STAGE9_S9_1_EXPERIMENT_ID,
+  createArenaStage9S91ExperimentDefinition,
+  createArenaStage9S91ExperimentRegistries,
+} from './arena-v1-experiment-composition.js';
+export type { ArenaStage9S91ExperimentOptions } from './arena-v1-experiment-composition.js';

@@ -4,11 +4,11 @@ import { fileURLToPath } from 'node:url';
 import {
   createArenaStage9S91ExperimentDefinition,
   createArenaStage9S91ExperimentRegistries,
-} from '../src/arena/experiment/arena-v1-experiment-composition.js';
+} from '@number-strategy-jump/arena-v1-experiment';
 import {
   createArenaStage9MatchCoreExperimentDefinition,
   createArenaStage9MatchCoreExperimentRegistries,
-} from '../src/arena/experiment/arena-matchcore-experiment-composition.js';
+} from '@number-strategy-jump/arena-v1-experiment';
 import {
   createArenaStage9MapExperimentDefinition,
   createArenaStage9MapExperimentRegistries,
