@@ -19,7 +19,7 @@ import {
   createArenaBotCapabilityGatePolicyDefinition,
   createArenaBotDifficultyMetricState,
   finishArenaBotDifficultyMetricState,
-} from './arena-bot-capability-metrics.js';
+} from '@number-strategy-jump/arena-v1-experiment';
 import {
   ARENA_BOT_CAPABILITY_COLLECTOR_ID,
   ARENA_BOT_CAPABILITY_COLLECTOR_VERSION,

@@ -87,3 +87,18 @@ export {
   ARENA_BOT_ASSIGNMENT_DISTRIBUTION_COLLECTOR_VERSION,
   createArenaBotAssignmentDistributionCollectorEntry,
 } from './arena-bot-assignment-distribution-collector.js';
+export {
+  ARENA_BOT_CAPABILITY_DEFAULT_GATE_POLICY,
+  ARENA_BOT_CAPABILITY_MAP_EVENT_TYPES,
+  ARENA_BOT_CAPABILITY_PARTICIPANT_ID,
+  ARENA_BOT_CAPABILITY_REQUIRED_MOVEMENT_ACTIONS,
+  ARENA_BOT_CAPABILITY_WEIGHTS,
+  createArenaBotCapabilityGatePolicy,
+  createArenaBotCapabilityGatePolicyDefinition,
+  createArenaBotDifficultyMetricState,
+  finishArenaBotDifficultyMetricState,
+} from './arena-bot-capability-metrics.js';
+export type {
+  ArenaBotCapabilityGateOptions,
+  ArenaBotDifficultyMetricState,
+} from './arena-bot-capability-metrics.js';

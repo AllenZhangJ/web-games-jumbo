@@ -2,6 +2,7 @@ import {
   createSortedMetricCountRecord,
   metricRatioOrNull,
 } from '@number-strategy-jump/arena-experiment';
+import { assertNonEmptyString } from '@number-strategy-jump/arena-contracts';
 import {
   ARENA_BOT_CAPABILITY_DEFAULT_GATE_POLICY,
   createArenaBotCapabilityGatePolicyDefinition,
@@ -33,7 +34,40 @@ export const ARENA_BOT_CAPABILITY_MAP_EVENT_TYPES = Object.freeze([
   'MapEquipmentWaveReleased',
 ]);
 
-export function createArenaBotDifficultyMetricState(difficultyId) {
+export interface ArenaBotDifficultyMetricState {
+  readonly difficultyId: string;
+  matches: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  ticks: number;
+  actions: number;
+  equipmentActions: number;
+  equipmentPickups: number;
+  hits: number;
+  eliminations: number;
+  botDeaths: number;
+  botUncreditedDeaths: number;
+  playerDeaths: number;
+  readonly movementInputs: {
+    jumpPressed: number;
+    crouchHoldStarted: number;
+    slamPressed: number;
+    walkTicks: number;
+    runTicks: number;
+  };
+  readonly movementActions: Map<string, number>;
+  downSmashLandings: number;
+  readonly mapEvents: Map<string, number>;
+  replayChecks: number;
+  readonly hashes: Set<string>;
+  previousJumpHeld: boolean;
+}
+
+export function createArenaBotDifficultyMetricState(
+  difficultyIdValue: unknown,
+): ArenaBotDifficultyMetricState {
+  const difficultyId = assertNonEmptyString(difficultyIdValue, 'Bot difficulty metric difficultyId');
   return {
     difficultyId,
     matches: 0,
@@ -65,7 +99,7 @@ export function createArenaBotDifficultyMetricState(difficultyId) {
   };
 }
 
-export function finishArenaBotDifficultyMetricState(stats) {
+export function finishArenaBotDifficultyMetricState(stats: ArenaBotDifficultyMetricState) {
   const score = stats.wins + stats.draws * 0.5;
   const averageEliminations = metricRatioOrNull(stats.eliminations, stats.matches);
   const averageBotDeaths = metricRatioOrNull(stats.botDeaths, stats.matches);
@@ -129,14 +163,21 @@ export function finishArenaBotDifficultyMetricState(stats) {
   });
 }
 
+export interface ArenaBotCapabilityGateOptions {
+  readonly difficulties: readonly ReturnType<typeof finishArenaBotDifficultyMetricState>[];
+  readonly completedCases: number;
+  readonly replaySeedCount: number;
+  readonly gatePolicy?: unknown;
+}
+
 export function createArenaBotCapabilityGatePolicy({
   difficulties,
   completedCases,
   replaySeedCount,
   gatePolicy: gatePolicyValue = ARENA_BOT_CAPABILITY_DEFAULT_GATE_POLICY,
-}) {
+}: ArenaBotCapabilityGateOptions) {
   const gatePolicy = createArenaBotCapabilityGatePolicyDefinition(gatePolicyValue);
-  const checks = [
+  const checks: Array<{ id: string; passed: boolean }> = [
     {
       id: 'sample.completed-paired-cases',
       passed: completedCases >= gatePolicy.minimumCompletedPairedCases,
@@ -192,6 +233,7 @@ export function createArenaBotCapabilityGatePolicy({
   for (let index = 1; index < difficulties.length; index += 1) {
     const previous = difficulties[index - 1];
     const current = difficulties[index];
+    if (!previous || !current) throw new Error('Bot capability difficulty 顺序不完整。');
     checks.push(
       {
         id: `ordering.${previous.difficultyId}-${current.difficultyId}.capability`,
