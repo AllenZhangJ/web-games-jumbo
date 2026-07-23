@@ -22,7 +22,6 @@
     "tests/arena/presentation/formal-character-animation.test.js",
     "tests/arena/presentation/greybox-renderer.test.js",
     "tests/arena/presentation/input-pilot-persistence.test.js",
-    "tests/arena/presentation/input-pilot-presentation-runtime.test.js",
     "tests/arena/presentation/input-pilot-runtime.test.js",
     "tests/arena/presentation/input-pilot-trial-controller.test.js",
     "tests/arena/presentation/input-pilot-web-support.test.js",

@@ -12,7 +12,29 @@ import {
 import { INPUT_PILOT_RUNTIME_STATE } from '@number-strategy-jump/arena-input-pilot';
 import { InputPilotPresentationRuntime } from '@number-strategy-jump/arena-input-pilot-presentation';
 
-function checkpoint(definition) {
+type PilotDefinition = ReturnType<typeof createArenaInputPilotV1Definition>;
+
+interface TestPresentationOptions {
+  readonly mapperId: string;
+  readonly experimentLabel: string;
+  readonly matchService: { create(options?: unknown): unknown };
+  readonly onMatchProgress: () => unknown;
+  readonly onDiagnostic: (value: unknown) => unknown;
+}
+
+interface TestPresentation {
+  state: string;
+  start(): Promise<TestPresentation>;
+  setPaused(paused: boolean): boolean;
+  destroy(): void;
+}
+
+function required<T>(value: T | null | undefined, name: string): T {
+  if (value === null || value === undefined) throw new Error(`测试缺少 ${name}。`);
+  return value;
+}
+
+function checkpoint(definition: PilotDefinition) {
   return createInputPilotTrialCheckpoint(definition, {
     schemaVersion: INPUT_PILOT_TRIAL_CHECKPOINT_SCHEMA_VERSION,
     trialId: 'pilot-runtime-trial',
@@ -45,11 +67,11 @@ function metrics() {
 }
 
 test('assigned match service fixes the experiment seed and permits only one created match', () => {
-  const calls = [];
+  const calls: Record<string, unknown>[] = [];
   const service = new InputPilotAssignedMatchService({
     matchSeed: 123,
     matchService: {
-      create(options) {
+      create(options: Record<string, unknown>) {
         calls.push(options);
         return { matchSeed: options.matchSeed };
       },
@@ -71,13 +93,13 @@ test('assigned match service fixes the experiment seed and permits only one crea
 test('presentation runtime adapts the assigned match, collector and lifecycle without leaking them', async () => {
   const definition = createArenaInputPilotV1Definition();
   const active = checkpoint(definition);
-  const baseCalls = [];
-  const lifecycle = [];
+  const baseCalls: Record<string, unknown>[] = [];
+  const lifecycle: string[] = [];
   let timedOut = false;
-  let presentation;
-  let presentationOptions;
-  const failures = [];
-  const diagnostics = [];
+  let presentation: TestPresentation | undefined;
+  let presentationOptions: TestPresentationOptions | undefined;
+  const failures: unknown[] = [];
+  const diagnostics: unknown[] = [];
   let progressCount = 0;
 
   const runtime = new InputPilotPresentationRuntime({
@@ -85,7 +107,7 @@ test('presentation runtime adapts the assigned match, collector and lifecycle wi
     definition,
     checkpoint: active,
     matchService: {
-      create(options) {
+      create(options: Record<string, unknown>) {
         baseCalls.push(options);
         return { matchSeed: options.matchSeed, session: {} };
       },
@@ -94,11 +116,11 @@ test('presentation runtime adapts the assigned match, collector and lifecycle wi
       progressCount += 1;
       return true;
     },
-    onFailure(error) {
+    onFailure(error: unknown) {
       failures.push(error);
       return true;
     },
-    onDiagnostic(value) {
+    onDiagnostic(value: unknown) {
       diagnostics.push(value);
     },
     collectorFactory() {
@@ -108,13 +130,20 @@ test('presentation runtime adapts the assigned match, collector and lifecycle wi
         destroy: () => lifecycle.push('collector'),
       };
     },
-    observedMatchServiceFactory({ matchService }) {
+    observedMatchServiceFactory({
+      matchService,
+    }: {
+      matchService: { create(options?: unknown): unknown };
+    }) {
       return {
-        create: (options) => matchService.create(options),
+        create: (options?: unknown) => matchService.create(options),
         destroy: () => lifecycle.push('observed'),
       };
     },
-    presentationSessionFactory(platform, options) {
+    presentationSessionFactory(
+      platform: { id: string },
+      options: TestPresentationOptions,
+    ) {
       assert.equal(platform.id, 'fake-platform');
       presentationOptions = options;
       presentation = {
@@ -124,7 +153,7 @@ test('presentation runtime adapts the assigned match, collector and lifecycle wi
           this.state = 'running';
           return this;
         },
-        setPaused(paused) {
+        setPaused(paused: boolean) {
           this.state = paused ? 'paused' : 'running';
           return true;
         },
@@ -138,29 +167,31 @@ test('presentation runtime adapts the assigned match, collector and lifecycle wi
   });
 
   await runtime.start();
-  assert.equal(baseCalls[0].matchSeed, active.assignment.matchSeed);
-  assert.equal(presentationOptions.mapperId, active.assignment.mapperId);
-  assert.equal(presentationOptions.experimentLabel, '');
+  assert.equal(required(baseCalls[0], '基础匹配调用').matchSeed, active.assignment.matchSeed);
+  const options = required(presentationOptions, '表现会话 options');
+  assert.equal(options.mapperId, active.assignment.mapperId);
+  assert.equal(options.experimentLabel, '');
   assert.deepEqual(runtime.getStatus(), {
     state: INPUT_PILOT_RUNTIME_STATE.RUNNING,
     timedOut: false,
   });
-  presentationOptions.onMatchProgress();
+  options.onMatchProgress();
   assert.equal(progressCount, 1);
   timedOut = true;
   assert.deepEqual(runtime.getStatus(), {
     state: INPUT_PILOT_RUNTIME_STATE.RUNNING,
     timedOut: true,
   });
-  presentation.state = 'result';
+  required(presentation, '表现会话').state = 'result';
   assert.equal(runtime.getStatus().state, INPUT_PILOT_RUNTIME_STATE.RESULT);
   assert.equal(runtime.finalizeMetrics(), runtime.finalizeMetrics());
-  presentationOptions.onDiagnostic({ type: 'render-note' });
-  presentationOptions.onDiagnostic({ type: 'session-failed', message: 'frame failed' });
-  presentationOptions.onDiagnostic({ type: 'session-failed', message: 'duplicate' });
+  options.onDiagnostic({ type: 'render-note' });
+  options.onDiagnostic({ type: 'session-failed', message: 'frame failed' });
+  options.onDiagnostic({ type: 'session-failed', message: 'duplicate' });
   assert.equal(diagnostics.length, 3);
   assert.equal(failures.length, 1);
-  assert.match(failures[0].message, /frame failed/);
+  const failure = required(failures[0], '表现失败');
+  assert.match(failure instanceof Error ? failure.message : String(failure), /frame failed/);
 
   runtime.destroy();
   runtime.destroy();
