@@ -8,33 +8,52 @@ import test from 'node:test';
 import {
   FORMAL_ASSET_INTAKE_BUNDLE_SCHEMA_VERSION,
   createFormalAssetIntakeBundle,
-} from '../../../src/arena/presentation/assets/formal-asset-intake-bundle.ts';
+} from '../../../src/arena/presentation/assets/formal-asset-intake-bundle.js';
 import {
   FORMAL_ASSET_INTAKE_POLICY_SCHEMA_VERSION,
   FORMAL_ASSET_SOURCE_KIND,
   createArenaFormalAssetIntakeV1Policy,
   createFormalAssetIntakePolicy,
-} from '../../../src/arena/presentation/assets/formal-asset-intake-policy.ts';
+  type FormalAssetSourceKind,
+} from '../../../src/arena/presentation/assets/formal-asset-intake-policy.js';
 import {
   FORMAL_ASSET_PROVENANCE_RECORD_SCHEMA_VERSION,
-} from '../../../src/arena/presentation/assets/formal-asset-provenance-record.ts';
+  type FormalAssetArtifactEvidence,
+  type FormalAssetProvenanceRecord,
+} from '../../../src/arena/presentation/assets/formal-asset-provenance-record.js';
 import {
   PRESENTATION_ASSET_DEFINITION_SCHEMA_VERSION,
   PRESENTATION_ASSET_KIND,
   PresentationAssetRegistry,
+  type PresentationAssetDefinition,
+  type PresentationAssetDefinitionJson,
+  type PresentationAssetKind,
 } from '@number-strategy-jump/arena-presentation-contracts';
 import {
   ARENA_PRESENTATION_ASSET_PROVIDER_ID,
 } from '@number-strategy-jump/arena-presentation-runtime';
 import {
   verifyArenaFormalAssetIntake,
-} from '../../../scripts/lib/arena-formal-asset-intake-verifier.ts';
+} from '../../../scripts/lib/arena-formal-asset-intake-verifier.js';
 
 const CREATED_AT = '2026-07-18T03:00:00.000Z';
 const ACQUIRED_AT = '2026-07-18T01:00:00.000Z';
 const APPROVED_AT = '2026-07-18T02:00:00.000Z';
 
-function artifact(relativePath, bytes) {
+interface FixtureBytes {
+  readonly model: Buffer;
+  readonly texture: Buffer;
+  readonly wing: Buffer;
+  readonly license: Buffer;
+  readonly proof: Buffer;
+}
+
+function required<T>(value: T | null | undefined, name: string): T {
+  assert.ok(value != null, `${name} 不存在。`);
+  return value;
+}
+
+function artifact(relativePath: string, bytes: Uint8Array): FormalAssetArtifactEvidence {
   return {
     path: relativePath,
     sha256: createHash('sha256').update(bytes).digest('hex'),
@@ -42,7 +61,11 @@ function artifact(relativePath, bytes) {
   };
 }
 
-function asset(id, kind, sourceKey) {
+function asset(
+  id: string,
+  kind: PresentationAssetKind,
+  sourceKey: string,
+): PresentationAssetDefinitionJson {
   return {
     schemaVersion: PRESENTATION_ASSET_DEFINITION_SCHEMA_VERSION,
     id,
@@ -62,7 +85,15 @@ function record({
   dependencyArtifacts = [],
   licenseArtifact,
   proofArtifact,
-}) {
+}: Readonly<{
+  definition: PresentationAssetDefinition;
+  recordId: string;
+  sourceKind: FormalAssetSourceKind;
+  contentArtifact: FormalAssetArtifactEvidence;
+  dependencyArtifacts?: readonly FormalAssetArtifactEvidence[];
+  licenseArtifact: FormalAssetArtifactEvidence;
+  proofArtifact: FormalAssetArtifactEvidence;
+}>): FormalAssetProvenanceRecord {
   const attributionRequired = sourceKind === FORMAL_ASSET_SOURCE_KIND.OPEN_SOURCE;
   return {
     schemaVersion: FORMAL_ASSET_PROVENANCE_RECORD_SCHEMA_VERSION,
@@ -94,7 +125,7 @@ function record({
 
 function fixture() {
   const policy = createArenaFormalAssetIntakeV1Policy();
-  const bytes = {
+  const bytes: FixtureBytes = {
     model: Buffer.from('formal-character-model'),
     texture: Buffer.from('formal-character-texture'),
     wing: Buffer.from('formal-wing-attachment'),
@@ -147,7 +178,7 @@ function fixture() {
   return { policy, value, bytes };
 }
 
-async function writeFixtureFiles(root, bytes) {
+async function writeFixtureFiles(root: string, bytes: FixtureBytes) {
   for (const directory of ['content', 'licenses', 'proof']) {
     await mkdir(path.join(root, directory), { recursive: true });
   }
@@ -176,9 +207,11 @@ test('Formal Asset Intake policy and bundle are immutable, sorted and exact-cove
     bundle.records.map(({ assetId }) => assetId),
     [...bundle.records.map(({ assetId }) => assetId)].sort(),
   );
-  assert.equal(bundle.getAssetRegistry().require(bundle.assets[0].id), bundle.assets[0]);
+  const firstAsset = required(bundle.assets[0], 'first asset');
+  const firstRecord = required(bundle.records[0], 'first provenance record');
+  assert.equal(bundle.getAssetRegistry().require(firstAsset.id), firstAsset);
   assert.throws(() => {
-    bundle.records[0].approvedBy = 'tampered';
+    Object.assign(firstRecord, { approvedBy: 'tampered' });
   }, /read only|Cannot assign/i);
   assert.equal(
     createFormalAssetIntakeBundle(policy, structuredClone(bundle.toJSON())).getContentHash(),
@@ -190,13 +223,14 @@ test('Formal Asset Intake rejects greybox providers, incomplete rights and ambig
   const { policy, value } = fixture();
 
   const greybox = structuredClone(value);
-  greybox.assets[0].tags.push('greybox');
+  const greyboxAsset = required(greybox.assets[0], 'first asset');
+  Reflect.set(greyboxAsset, 'tags', [...greyboxAsset.tags, 'greybox']);
   assert.throws(() => createFormalAssetIntakeBundle(policy, greybox), /禁止的 tag greybox/);
 
   const programmatic = structuredClone(value);
-  programmatic.assets[0].providerId = (
+  Reflect.set(required(programmatic.assets[0], 'first asset'), 'providerId', (
     ARENA_PRESENTATION_ASSET_PROVIDER_ID.PROGRAMMATIC_CHARACTER_V1
-  );
+  ));
   assert.throws(() => createFormalAssetIntakeBundle(policy, programmatic), /禁止的 Provider/);
 
   const missingRecord = structuredClone(value);
@@ -204,49 +238,69 @@ test('Formal Asset Intake rejects greybox providers, incomplete rights and ambig
   assert.throws(() => createFormalAssetIntakeBundle(policy, missingRecord), /一一对应/);
 
   const deniedCommercialUse = structuredClone(value);
-  deniedCommercialUse.records[0].license.commercialUseAllowed = false;
+  Reflect.set(
+    required(deniedCommercialUse.records[0], 'first record').license,
+    'commercialUseAllowed',
+    false,
+  );
   assert.throws(
     () => createFormalAssetIntakeBundle(policy, deniedCommercialUse),
     /commercialUseAllowed 不满足 Policy/,
   );
 
   const missingAttribution = structuredClone(value);
-  missingAttribution.records[0].license.attributionText = null;
+  Reflect.set(
+    required(missingAttribution.records[0], 'first record').license,
+    'attributionText',
+    null,
+  );
   assert.throws(
     () => createFormalAssetIntakeBundle(policy, missingAttribution),
     /需要署名时不能为空/,
   );
 
   const duplicateContent = structuredClone(value);
-  duplicateContent.records[1].contentArtifact = duplicateContent.records[0].contentArtifact;
+  Reflect.set(
+    required(duplicateContent.records[1], 'second record'),
+    'contentArtifact',
+    required(duplicateContent.records[0], 'first record').contentArtifact,
+  );
   assert.throws(
     () => createFormalAssetIntakeBundle(policy, duplicateContent),
     /不能共享内容路径/,
   );
 
   const mixedArtifactRole = structuredClone(value);
-  mixedArtifactRole.records[1].license.textArtifact = mixedArtifactRole.records[0].contentArtifact;
+  Reflect.set(
+    required(mixedArtifactRole.records[1], 'second record').license,
+    'textArtifact',
+    required(mixedArtifactRole.records[0], 'first record').contentArtifact,
+  );
   assert.throws(
     () => createFormalAssetIntakeBundle(policy, mixedArtifactRole),
     /不能同时作为内容和授权文档/,
   );
 
   const tamperedDefinition = structuredClone(value);
-  tamperedDefinition.records[0].assetDefinitionHash = '00000000';
+  Reflect.set(required(tamperedDefinition.records[0], 'first record'), 'assetDefinitionHash', '00000000');
   assert.throws(
     () => createFormalAssetIntakeBundle(policy, tamperedDefinition),
     /assetDefinitionHash 与资产定义不一致/,
   );
 
   const traversal = structuredClone(value);
-  traversal.records[0].proofArtifact.path = '../outside.pdf';
+  Reflect.set(
+    required(traversal.records[0], 'first record').proofArtifact,
+    'path',
+    '../outside.pdf',
+  );
   assert.throws(
     () => createFormalAssetIntakeBundle(policy, traversal),
     /不能包含空段、\. 或 \.\./,
   );
 
   const unknownSource = structuredClone(value);
-  unknownSource.records[0].sourceKind = 'unknown-source';
+  Reflect.set(required(unknownSource.records[0], 'first record'), 'sourceKind', 'unknown-source');
   assert.throws(
     () => createFormalAssetIntakeBundle(policy, unknownSource),
     /sourceKind 不受 Policy 允许/,
@@ -285,9 +339,12 @@ test('Formal Asset Intake verifier binds every declared artifact and rejects lat
     assert.equal(result.assetCount, 2);
     assert.equal(result.artifactCount, 5);
     assert.deepEqual(
-      result.verifiedArtifacts.find(({ path: artifactPath }) => (
-        artifactPath === 'proof/rights.pdf'
-      )).kinds,
+      required(
+        result.verifiedArtifacts.find(({ path: artifactPath }) => (
+          artifactPath === 'proof/rights.pdf'
+        )),
+        'verified rights proof',
+      ).kinds,
       ['rights-proof'],
     );
     assert.deepEqual(
