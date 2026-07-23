@@ -1,8 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createArenaV1MatchCore } from '@number-strategy-jump/arena-v1-composition';
-import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
-import { ARENA_MATCH_EVENT } from '@number-strategy-jump/arena-match';
+import {
+  createNeutralInputFrame,
+  type ArenaInputFrame,
+  type ArenaParticipantSnapshot,
+} from '@number-strategy-jump/arena-contracts';
+import {
+  ARENA_MATCH_EVENT,
+  type ArenaAuthorityEvent,
+} from '@number-strategy-jump/arena-match';
 import { EQUIPMENT_LOCATION_STATE } from '@number-strategy-jump/arena-equipment';
 import { STAGE4_ACTION_ID, STAGE4_EQUIPMENT_ID } from '@number-strategy-jump/arena-v1-content';
 
@@ -39,7 +46,48 @@ function createEquipmentCore(overrides = {}) {
   });
 }
 
-function frames(core, values = {}) {
+type EquipmentCore = ReturnType<typeof createEquipmentCore>;
+type InputOverrides = Readonly<Record<string, Partial<ArenaInputFrame>>>;
+
+function required<Value>(value: Value | null | undefined): Value {
+  assert.ok(value);
+  return value;
+}
+
+function eventValue(event: ArenaAuthorityEvent | undefined, key: string): unknown {
+  return event === undefined ? undefined : Reflect.get(event, key);
+}
+
+function eventVectorX(event: ArenaAuthorityEvent | undefined, key: string): number {
+  const vector = eventValue(event, key);
+  assert.ok(typeof vector === 'object' && vector !== null);
+  const x = Reflect.get(vector, 'x');
+  assert.equal(typeof x, 'number');
+  return x as number;
+}
+
+function participant(core: EquipmentCore, index = 0): ArenaParticipantSnapshot {
+  return required(core.getSnapshot().participants[index]);
+}
+
+function affordance(core: EquipmentCore): Readonly<Record<string, unknown>> {
+  const value = participant(core).actionAffordance;
+  assert.ok(typeof value === 'object' && value !== null);
+  return value as Readonly<Record<string, unknown>>;
+}
+
+function affordanceChannel(
+  value: Readonly<Record<string, unknown>>,
+  channelId: string,
+): Readonly<Record<string, unknown>> {
+  const channels = Reflect.get(value, 'channels');
+  assert.ok(typeof channels === 'object' && channels !== null);
+  const channel = Reflect.get(channels, channelId);
+  assert.ok(typeof channel === 'object' && channel !== null);
+  return channel as Readonly<Record<string, unknown>>;
+}
+
+function frames(core: EquipmentCore, values: InputOverrides = {}) {
   return core.config.participantIds.map((participantId) => ({
     ...createNeutralInputFrame(core.tick, participantId),
     ...(values[participantId] ?? {}),
@@ -48,7 +96,7 @@ function frames(core, values = {}) {
   }));
 }
 
-function step(core, values) {
+function step(core: EquipmentCore, values: InputOverrides = {}) {
   return core.step(frames(core, values));
 }
 
@@ -63,37 +111,38 @@ test('MatchCore automatically picks up equipment and resolves its action on the 
     ARENA_MATCH_EVENT.EQUIPMENT_PICKED_UP,
     ARENA_MATCH_EVENT.ACTION_STARTED,
   ]);
-  assert.equal(first.at(-1).action, STAGE4_ACTION_ID.HAMMER_SMASH);
+  assert.equal(eventValue(first.at(-1), 'action'), STAGE4_ACTION_ID.HAMMER_SMASH);
   const initialSnapshot = core.getSnapshot();
-  assert.equal(initialSnapshot.participants[0].equipment.definitionId, STAGE4_EQUIPMENT_ID.HAMMER);
-  assert.equal(initialSnapshot.participants[0].equipment.cooldownRemainingTicks, 72);
-  assert.equal(initialSnapshot.equipment[0].locationState, EQUIPMENT_LOCATION_STATE.HELD);
+  const initialParticipant = required(initialSnapshot.participants[0]);
+  assert.equal(required(initialParticipant.equipment).definitionId, STAGE4_EQUIPMENT_ID.HAMMER);
+  assert.equal(required(initialParticipant.equipment).cooldownRemainingTicks, 72);
+  assert.equal(required(initialSnapshot.equipment[0]).locationState, EQUIPMENT_LOCATION_STATE.HELD);
 
-  const events = [];
+  const events: ArenaAuthorityEvent[] = [];
   for (let tick = 0; tick < 18; tick += 1) events.push(...step(core));
   const hit = events.find(({ type }) => type === ARENA_MATCH_EVENT.HIT_RESOLVED);
   const knockback = events.find(({ type }) => type === ARENA_MATCH_EVENT.KNOCKBACK_APPLIED);
-  assert.equal(hit.action, STAGE4_ACTION_ID.HAMMER_SMASH);
-  assert.ok(knockback.impulse.x > core.config.basePush.horizontalImpulse);
+  assert.equal(eventValue(hit, 'action'), STAGE4_ACTION_ID.HAMMER_SMASH);
+  assert.ok(eventVectorX(knockback, 'impulse') > core.config.basePush.horizontalImpulse);
   core.destroy();
 });
 
 test('equipment cooldown consumes action input instead of falling back to base push', () => {
   const core = createEquipmentCore();
   step(core, { 'player-1': { primaryPressed: true, primaryHeld: true } });
-  let affordance = core.getSnapshot().participants[0].actionAffordance;
-  assert.equal(affordance.primaryActionDefinitionId, STAGE4_ACTION_ID.HAMMER_SMASH);
-  assert.equal(affordance.channels.primary.reason, 'action-lane-occupied');
+  let actionAffordance = affordance(core);
+  assert.equal(Reflect.get(actionAffordance, 'primaryActionDefinitionId'), STAGE4_ACTION_ID.HAMMER_SMASH);
+  assert.equal(Reflect.get(affordanceChannel(actionAffordance, 'primary'), 'reason'), 'action-lane-occupied');
   for (let tick = 0; tick < 46; tick += 1) step(core);
-  assert.equal(core.getSnapshot().participants[0].action.phase, 'idle');
-  assert.ok(core.getSnapshot().participants[0].equipment.cooldownRemainingTicks > 0);
-  affordance = core.getSnapshot().participants[0].actionAffordance;
-  assert.equal(affordance.primaryActionDefinitionId, STAGE4_ACTION_ID.HAMMER_SMASH);
-  assert.equal(affordance.channels.primary.kind, 'ignored');
-  assert.equal(affordance.channels.primary.reason, 'equipment-cooldown');
+  assert.equal(participant(core).action.phase, 'idle');
+  assert.ok(required(participant(core).equipment).cooldownRemainingTicks > 0);
+  actionAffordance = affordance(core);
+  assert.equal(Reflect.get(actionAffordance, 'primaryActionDefinitionId'), STAGE4_ACTION_ID.HAMMER_SMASH);
+  assert.equal(Reflect.get(affordanceChannel(actionAffordance, 'primary'), 'kind'), 'ignored');
+  assert.equal(Reflect.get(affordanceChannel(actionAffordance, 'primary'), 'reason'), 'equipment-cooldown');
   const blocked = step(core, { 'player-1': { primaryPressed: true, primaryHeld: true } });
   assert.equal(blocked.some(({ type }) => type === ARENA_MATCH_EVENT.ACTION_STARTED), false);
-  assert.equal(core.getSnapshot().participants[0].action.phase, 'idle');
+  assert.equal(participant(core).action.phase, 'idle');
   core.destroy();
 });
 
@@ -111,17 +160,23 @@ test('chain pull and shield charge execute through the same MatchCore action pat
     'player-1': { primaryPressed: true, primaryHeld: true },
   });
   assert.equal(
-    chainStarted.find(({ type }) => type === ARENA_MATCH_EVENT.ACTION_STARTED).action,
+    eventValue(
+      chainStarted.find(({ type }) => type === ARENA_MATCH_EVENT.ACTION_STARTED),
+      'action',
+    ),
     STAGE4_ACTION_ID.CHAIN_PULL,
   );
-  const chainEvents = [];
+  const chainEvents: ArenaAuthorityEvent[] = [];
   for (let tick = 0; tick < 12; tick += 1) chainEvents.push(...step(chain));
   const pull = chainEvents.find(({ type }) => type === ARENA_MATCH_EVENT.KNOCKBACK_APPLIED);
   assert.equal(
-    chainEvents.find(({ type }) => type === ARENA_MATCH_EVENT.HIT_RESOLVED).action,
+    eventValue(
+      chainEvents.find(({ type }) => type === ARENA_MATCH_EVENT.HIT_RESOLVED),
+      'action',
+    ),
     STAGE4_ACTION_ID.CHAIN_PULL,
   );
-  assert.ok(pull.impulse.x < 0);
+  assert.ok(eventVectorX(pull, 'impulse') < 0);
   chain.destroy();
 
   const shield = createEquipmentCore({
@@ -133,19 +188,25 @@ test('chain pull and shield charge execute through the same MatchCore action pat
       }],
     },
   });
-  const beforeX = shield.getSnapshot().participants[0].position.x;
+  const beforeX = participant(shield).position.x;
   const shieldStarted = step(shield, {
     'player-1': { primaryPressed: true, primaryHeld: true },
   });
   assert.equal(
-    shieldStarted.find(({ type }) => type === ARENA_MATCH_EVENT.ACTION_STARTED).action,
+    eventValue(
+      shieldStarted.find(({ type }) => type === ARENA_MATCH_EVENT.ACTION_STARTED),
+      'action',
+    ),
     STAGE4_ACTION_ID.SHIELD_CHARGE,
   );
-  assert.ok(shield.getSnapshot().participants[0].position.x > beforeX);
-  const shieldEvents = [];
+  assert.ok(participant(shield).position.x > beforeX);
+  const shieldEvents: ArenaAuthorityEvent[] = [];
   for (let tick = 0; tick < 5; tick += 1) shieldEvents.push(...step(shield));
   assert.equal(
-    shieldEvents.find(({ type }) => type === ARENA_MATCH_EVENT.HIT_RESOLVED).action,
+    eventValue(
+      shieldEvents.find(({ type }) => type === ARENA_MATCH_EVENT.HIT_RESOLVED),
+      'action',
+    ),
     STAGE4_ACTION_ID.SHIELD_CHARGE,
   );
   shield.destroy();
@@ -156,20 +217,20 @@ test('equipment snapshot mutations cannot write back into authority or state has
   step(core);
   const beforeHash = core.getStateHash();
   const exposed = core.getSnapshot();
-  exposed.equipment[0].position = { x: 999, y: 999, z: 999 };
-  exposed.participants[0].equipment.cooldownRemainingTicks = 999;
+  Reflect.set(required(exposed.equipment[0]), 'position', { x: 999, y: 999, z: 999 });
+  Reflect.set(required(required(exposed.participants[0]).equipment), 'cooldownRemainingTicks', 999);
   assert.equal(core.getStateHash(), beforeHash);
   const authority = core.getSnapshot();
-  assert.notEqual(authority.equipment[0].position?.x, 999);
-  assert.notEqual(authority.participants[0].equipment.cooldownRemainingTicks, 999);
+  assert.notEqual(required(authority.equipment[0]).position?.x, 999);
+  assert.notEqual(required(required(authority.participants[0]).equipment).cooldownRemainingTicks, 999);
   core.destroy();
 });
 
 test('owner elimination drops equipment at the last valid grounded position', () => {
   const core = createEquipmentCore();
   step(core);
-  assert.equal(core.getSnapshot().participants[0].equipment.definitionId, STAGE4_EQUIPMENT_ID.HAMMER);
-  const events = [];
+  assert.equal(required(participant(core).equipment).definitionId, STAGE4_EQUIPMENT_ID.HAMMER);
+  const events: ArenaAuthorityEvent[] = [];
   for (let tick = 0; tick < 180; tick += 1) {
     events.push(...step(core, { 'player-1': { moveX: -1 } }));
     if (events.some((event) => (
@@ -189,10 +250,14 @@ test('owner elimination drops equipment at the last valid grounded position', ()
     false,
   );
   const snapshot = core.getSnapshot();
-  assert.equal(snapshot.participants[0].equipment, null);
-  assert.equal(snapshot.equipment[0].locationState, EQUIPMENT_LOCATION_STATE.DROPPED);
-  assert.equal(snapshot.equipment[0].ownerId, null);
-  assert.ok(Math.abs(snapshot.equipment[0].position.x) <= EQUIPMENT_ARENA.surfaces[0].halfExtents.x);
+  assert.equal(required(snapshot.participants[0]).equipment, null);
+  const droppedEquipment = required(snapshot.equipment[0]);
+  assert.equal(droppedEquipment.locationState, EQUIPMENT_LOCATION_STATE.DROPPED);
+  assert.equal(droppedEquipment.ownerId, null);
+  assert.ok(
+    Math.abs(required(droppedEquipment.position).x)
+      <= required(EQUIPMENT_ARENA.surfaces[0]).halfExtents.x,
+  );
   core.destroy();
 });
 

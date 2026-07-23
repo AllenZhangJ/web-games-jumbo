@@ -8,7 +8,6 @@
     "tests/arena/experiment/arena-experiment.test.js",
     "tests/arena/input-pilot-release-evidence.test.js",
     "tests/arena/map-foundation.test.js",
-    "tests/arena/match-core-equipment.test.js",
     "tests/arena/match-core-movement.test.js",
     "tests/arena/match-core.test.js",
     "tests/arena/movement-system.test.js",
