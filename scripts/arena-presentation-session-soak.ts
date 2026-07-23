@@ -4,7 +4,12 @@ import {
   ArenaPresentationSession,
 } from '@number-strategy-jump/arena-v1-greybox-session';
 
-function readPositiveInteger(name, fallback) {
+type FrameCallback = (timestamp: number) => void;
+type LifecycleCallback = () => void;
+type CanvasCallback = (event: unknown) => void;
+type LifecycleName = 'resize' | 'hide' | 'show';
+
+function readPositiveInteger(name: string, fallback: number): number {
   const prefix = `--${name}=`;
   const raw = process.argv.find((argument) => argument.startsWith(prefix))?.slice(prefix.length);
   if (raw === undefined) return fallback;
@@ -18,20 +23,20 @@ function readPositiveInteger(name, fallback) {
 function createPlatformHarness() {
   let nextFrameToken = 1;
   let now = 0;
-  let input = null;
-  const frames = new Map();
+  let input: unknown = null;
+  const frames = new Map<number, FrameCallback>();
   const lifecycle = {
-    resize: new Set(),
-    hide: new Set(),
-    show: new Set(),
+    resize: new Set<LifecycleCallback>(),
+    hide: new Set<LifecycleCallback>(),
+    show: new Set<LifecycleCallback>(),
   };
-  const canvasListeners = new Map();
+  const canvasListeners = new Map<string, Set<CanvasCallback>>();
   const canvas = {
     width: 400,
     height: 800,
     style: {},
     getContext: () => ({}),
-    addEventListener(type, callback) {
+    addEventListener(type: string, callback: CanvasCallback): void {
       let listeners = canvasListeners.get(type);
       if (!listeners) {
         listeners = new Set();
@@ -39,11 +44,11 @@ function createPlatformHarness() {
       }
       listeners.add(callback);
     },
-    removeEventListener(type, callback) {
+    removeEventListener(type: string, callback: CanvasCallback): void {
       canvasListeners.get(type)?.delete(callback);
     },
   };
-  const bindLifecycle = (name, callback) => {
+  const bindLifecycle = (name: LifecycleName, callback: LifecycleCallback): (() => boolean) => {
     lifecycle[name].add(callback);
     return () => lifecycle[name].delete(callback);
   };
@@ -55,21 +60,21 @@ function createPlatformHarness() {
       id: 'session-soak',
       createCanvas: () => canvas,
       getViewport: () => ({ width: 400, height: 800, pixelRatio: 1, safeArea: null }),
-      requestFrame(callback) {
+      requestFrame(callback: FrameCallback): number {
         const token = nextFrameToken;
         nextFrameToken += 1;
         frames.set(token, callback);
         return token;
       },
-      cancelFrame(token) { frames.delete(token); },
+      cancelFrame(token: number): void { frames.delete(token); },
       now: () => now,
-      bindInput(callbacks) {
+      bindInput(callbacks: unknown): () => void {
         input = callbacks;
         return () => { if (input === callbacks) input = null; };
       },
-      onResize: (callback) => bindLifecycle('resize', callback),
-      onHide: (callback) => bindLifecycle('hide', callback),
-      onShow: (callback) => bindLifecycle('show', callback),
+      onResize: (callback: LifecycleCallback) => bindLifecycle('resize', callback),
+      onHide: (callback: LifecycleCallback) => bindLifecycle('hide', callback),
+      onShow: (callback: LifecycleCallback) => bindLifecycle('show', callback),
     },
     fireFrame() {
       const entry = frames.entries().next().value;
@@ -79,10 +84,10 @@ function createPlatformHarness() {
       now += 1000 / 60;
       callback(now);
     },
-    emitLifecycle(name) {
+    emitLifecycle(name: LifecycleName): void {
       for (const callback of [...lifecycle[name]]) callback();
     },
-    emitCanvas(type, event = {}) {
+    emitCanvas(type: string, event: unknown = {}): void {
       for (const callback of [...(canvasListeners.get(type) ?? [])]) callback(event);
     },
     activeLifecycleCount() {
@@ -108,8 +113,13 @@ function createRendererHarness() {
     },
     getInputViewport: () => ({ width: 400, height: 800 }),
     hitTestRematch: () => true,
-    handleContextLost(event) {
-      event?.preventDefault?.();
+    handleContextLost(event: unknown): boolean {
+      if (
+        event !== null
+        && typeof event === 'object'
+        && 'preventDefault' in event
+        && typeof event.preventDefault === 'function'
+      ) event.preventDefault();
       this.contextLost = true;
       return true;
     },
@@ -125,7 +135,10 @@ function createRendererHarness() {
   };
 }
 
-function assertStableOwnership(session, harness) {
+function assertStableOwnership(
+  session: ArenaPresentationSession,
+  harness: ReturnType<typeof createPlatformHarness>,
+): void {
   const debug = session.getDebugSnapshot();
   if (harness.frames.size !== 1) throw new Error(`RAF 数量失控：${harness.frames.size}。`);
   if (harness.activeLifecycleCount() !== 3) {
@@ -139,12 +152,28 @@ function assertStableOwnership(session, harness) {
   if (debug.cleanupIncomplete) throw new Error('Session 报告未完成清理。');
 }
 
-function runUntilResult(session, harness, limit = 30) {
+function runUntilResult(
+  session: ArenaPresentationSession,
+  harness: ReturnType<typeof createPlatformHarness>,
+  limit: number = 30,
+): number {
   for (let index = 0; index < limit; index += 1) {
     if (session.state === ARENA_PRESENTATION_SESSION_STATE.RESULT) return index;
     harness.fireFrame();
   }
   throw new Error(`Session 未在 ${limit} 帧内进入结果态。`);
+}
+
+function readSnapshotIdentity(value: unknown): Readonly<{ tick: number; matchSeed: number }> {
+  if (
+    value === null
+    || typeof value !== 'object'
+    || !('tick' in value)
+    || !Number.isSafeInteger(value.tick)
+    || !('matchSeed' in value)
+    || !Number.isSafeInteger(value.matchSeed)
+  ) throw new Error('Session soak debug snapshot 缺少有效 tick/matchSeed。');
+  return { tick: value.tick as number, matchSeed: value.matchSeed as number };
 }
 
 if (typeof globalThis.gc !== 'function') {
@@ -155,19 +184,19 @@ const matches = readPositiveInteger('matches', 100);
 const heapGrowthBudgetBytes = 8 * 1024 * 1024;
 const harness = createPlatformHarness();
 const renderer = createRendererHarness();
-const diagnostics = [];
+const diagnostics: unknown[] = [];
 const session = new ArenaPresentationSession(harness.platform, {
   initialSeed: 0x65050000,
   matchingDurationSeconds: 0,
   rendererFactory: () => renderer,
-  onDiagnostic: (event) => diagnostics.push(event),
+  onDiagnostic: (event: unknown) => diagnostics.push(event),
   matchConfig: {
     preparingTicks: 0,
     suddenDeathStartTick: 2,
     hardLimitTicks: 3,
   },
 });
-const matchSeeds = new Set();
+const matchSeeds = new Set<number>();
 let pauseResumeCycles = 0;
 let contextRestoreCycles = 0;
 let resizeCycles = 0;
@@ -180,14 +209,15 @@ const startMemory = process.memoryUsage();
 try {
   for (let index = 0; index < matches; index += 1) {
     if (index > 0 && index % 10 === 0) {
-      const tickBefore = session.getDebugSnapshot().snapshot.tick;
+      const tickBefore = readSnapshotIdentity(session.getDebugSnapshot().snapshot).tick;
       const staleFrame = harness.frames.values().next().value;
+      if (!staleFrame) throw new Error('Session soak 缺少待取消的 RAF。');
       harness.emitLifecycle('hide');
       if (session.state !== ARENA_PRESENTATION_SESSION_STATE.PAUSED) {
         throw new Error('hide 后 Session 未暂停。');
       }
       staleFrame(performance.now());
-      if (session.getDebugSnapshot().snapshot.tick !== tickBefore) {
+      if (readSnapshotIdentity(session.getDebugSnapshot().snapshot).tick !== tickBefore) {
         throw new Error('取消后的迟到 RAF 推进了 tick。');
       }
       harness.emitLifecycle('show');
@@ -209,14 +239,15 @@ try {
 
     runUntilResult(session, harness);
     const debug = session.getDebugSnapshot();
+    const snapshotIdentity = readSnapshotIdentity(debug.snapshot);
     const serializedFrame = JSON.stringify(session.getLastPresentationFrame());
     if (/"(?:bot|botProfile|difficulty|difficultyId)"/i.test(serializedFrame)) {
       throw new Error(`第 ${index + 1} 局表现帧泄漏 Bot 或难度。`);
     }
-    if (matchSeeds.has(debug.snapshot.matchSeed)) {
-      throw new Error(`第 ${index + 1} 局复用了 matchSeed ${debug.snapshot.matchSeed}。`);
+    if (matchSeeds.has(snapshotIdentity.matchSeed)) {
+      throw new Error(`第 ${index + 1} 局复用了 matchSeed ${snapshotIdentity.matchSeed}。`);
     }
-    matchSeeds.add(debug.snapshot.matchSeed);
+    matchSeeds.add(snapshotIdentity.matchSeed);
     assertStableOwnership(session, harness);
 
     if (index === matches - 1) break;
@@ -247,7 +278,12 @@ if (
 ) throw new Error('Session soak 结束后仍有宿主资源残留。');
 if (!renderer.disposed) throw new Error('Session soak 结束后 Renderer 未销毁。');
 if (matchSeeds.size !== matches) throw new Error(`只完成 ${matchSeeds.size}/${matches} 个唯一比赛。`);
-if (diagnostics.some(({ type }) => type === 'session-failed')) {
+if (diagnostics.some((value) => (
+  value !== null
+  && typeof value === 'object'
+  && 'type' in value
+  && value.type === 'session-failed'
+))) {
   throw new Error('Session soak 期间出现 session-failed 诊断。');
 }
 if (heapGrowthBytes > heapGrowthBudgetBytes) {
