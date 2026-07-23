@@ -131,11 +131,20 @@ test('performance probe records bounded immutable frame and resource evidence', 
   assert.equal(snapshot.observedFrameCount, 3);
   assert.equal(snapshot.recordedFrameCount, 2);
   assert.equal(snapshot.droppedFrameSampleCount, 1);
-  assert.equal(snapshot.frames[0].renderDurationMicroseconds, 2250);
-  assert.equal(snapshot.resources.length, 1);
+  const frames = snapshot.frames;
+  const resourceSamples = snapshot.resources;
+  assert.ok(Array.isArray(frames));
+  assert.ok(Array.isArray(resourceSamples));
+  const [firstFrame] = frames;
+  assert.ok(typeof firstFrame === 'object' && firstFrame !== null);
+  assert.equal(Reflect.get(firstFrame, 'renderDurationMicroseconds'), 2250);
+  assert.equal(resourceSamples.length, 1);
   assert.equal(snapshot.droppedResourceSampleCount, 1);
-  assert.ok(Object.isFrozen(snapshot.frames));
-  assert.throws(() => { snapshot.frames[0].coreSteps = 9; }, TypeError);
+  assert.ok(Object.isFrozen(frames));
+  assert.throws(
+    () => Object.defineProperty(firstFrame, 'coreSteps', { value: 9 }),
+    TypeError,
+  );
   probe.destroy();
   assert.deepEqual({
     state: probe.getSnapshot().state,
