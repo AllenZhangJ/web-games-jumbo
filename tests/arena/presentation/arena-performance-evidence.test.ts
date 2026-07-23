@@ -19,6 +19,9 @@ import {
   ARENA_PERFORMANCE_GATE_OPERATOR,
   ARENA_PERFORMANCE_POLICY_SCHEMA_VERSION,
   createArenaPerformancePolicyDefinition,
+  type ArenaPerformanceGateDefinition,
+  type ArenaPerformanceGateOperator,
+  type ArenaPerformancePolicyDefinition,
 } from '@number-strategy-jump/arena-performance-evidence';
 import {
   ARENA_PERFORMANCE_RECORD_SCHEMA_VERSION,
@@ -41,8 +44,20 @@ import {
 
 const COMMIT = '1'.repeat(40);
 
-function gate(id, collectorId, operator, threshold, parameters = {}, required = true) {
-  return { id, collectorId, operator, threshold, parameters, required };
+function required<T>(value: T | null | undefined, name: string): T {
+  assert.ok(value != null, `${name} 不存在。`);
+  return value;
+}
+
+function gate(
+  id: string,
+  collectorId: string,
+  operator: ArenaPerformanceGateOperator,
+  threshold: number,
+  parameters: Readonly<Record<string, unknown>> = {},
+  isRequired = true,
+): ArenaPerformanceGateDefinition {
+  return { id, collectorId, operator, threshold, parameters, required: isRequired };
 }
 
 function testPolicy() {
@@ -85,7 +100,9 @@ function testPolicy() {
   });
 }
 
-function captureValue(quality) {
+function captureValue(
+  quality: ReturnType<typeof ARENA_V1_PRESENTATION_QUALITY_REGISTRY.require>,
+) {
   const frames = [0, 33, 66, 99].map((elapsedMs, index) => ({
     sequence: index + 1,
     elapsedMs,
@@ -121,7 +138,7 @@ function captureValue(quality) {
       frames,
       resources: [1, 2, 3, 4].map((frameSequence) => ({
         frameSequence,
-        elapsedMs: frames[frameSequence - 1].elapsedMs,
+        elapsedMs: required(frames[frameSequence - 1], 'frame sample').elapsedMs,
         drawCalls: 8,
         triangles: 1_000,
         points: 0,
@@ -136,8 +153,11 @@ function captureValue(quality) {
   };
 }
 
-function recordValue(policy, overrides = {}) {
-  const target = policy.getTarget('web-low-test');
+function recordValue(
+  policy: ArenaPerformancePolicyDefinition,
+  overrides: Readonly<Record<string, unknown>> = {},
+) {
+  const target = required(policy.getTarget('web-low-test'), 'web low target');
   const quality = ARENA_V1_PRESENTATION_QUALITY_REGISTRY.require(target.qualityDefinitionId);
   return {
     schemaVersion: ARENA_PERFORMANCE_RECORD_SCHEMA_VERSION,
@@ -158,14 +178,14 @@ test('Stage 9 performance policy fixes six low/mainstream target classes and qua
   const policy = createArenaStage9PerformanceV1Policy();
   assert.equal(policy.targets.length, 6);
   assert.equal(new Set(policy.targets.map(({ platform }) => platform)).size, 3);
-  assert.equal(policy.getTarget(
+  assert.equal(required(policy.getTarget(
     ARENA_STAGE9_PERFORMANCE_TARGET_ID.WEB_LOW,
-  ).qualityDefinitionId, ARENA_V1_PRESENTATION_QUALITY_ID.LOW);
-  assert.equal(policy.getTarget(
+  ), 'web low target').qualityDefinitionId, ARENA_V1_PRESENTATION_QUALITY_ID.LOW);
+  assert.equal(required(policy.getTarget(
     ARENA_STAGE9_PERFORMANCE_TARGET_ID.WEB_MAINSTREAM,
-  ).qualityDefinitionId, ARENA_V1_PRESENTATION_QUALITY_ID.HIGH);
+  ), 'web mainstream target').qualityDefinitionId, ARENA_V1_PRESENTATION_QUALITY_ID.HIGH);
   assert.equal(policy.getContentHash().length, 8);
-  assert.ok(Object.isFrozen(policy.targets[0].gates));
+  assert.ok(Object.isFrozen(required(policy.targets[0], 'first target').gates));
   assert.equal(policy.targets.every(({ gates }) => (
     gates.find(({ id }) => id === 'memory.available-budget')?.required === true
   )), true);
@@ -201,16 +221,22 @@ test('performance Report recomputes metrics, treats optional unknown as pass and
   const report = createArenaPerformanceReport(policy, recordValue(policy));
   assert.equal(report.status, 'passed');
   assert.equal(report.failedGateIds.length, 0);
-  assert.equal(report.gates.find(({ id }) => id === 'frame-p95').metric.value, 33);
-  const optional = report.gates.find(({ id }) => id === 'optional-memory');
+  assert.equal(
+    required(report.gates.find(({ id }) => id === 'frame-p95'), 'frame p95 gate').metric.value,
+    33,
+  );
+  const optional = required(
+    report.gates.find(({ id }) => id === 'optional-memory'),
+    'optional memory gate',
+  );
   assert.equal(optional.metric.available, false);
   assert.equal(optional.passed, true);
   assert.equal(report.resultHash.length, 8);
 
   const slow = recordValue(policy);
-  slow.capture.probe.frames[3].elapsedMs = 150;
-  slow.capture.probe.durationMs = 160;
-  slow.capture.probe.resources[3].elapsedMs = 150;
+  Reflect.set(required(slow.capture.probe.frames[3], 'fourth frame'), 'elapsedMs', 150);
+  Reflect.set(slow.capture.probe, 'durationMs', 160);
+  Reflect.set(required(slow.capture.probe.resources[3], 'fourth resource'), 'elapsedMs', 150);
   const failed = createArenaPerformanceReport(policy, slow);
   assert.equal(failed.status, 'failed');
   assert.deepEqual(failed.failedGateIds, ['frame-p95', 'long-share']);
@@ -218,30 +244,40 @@ test('performance Report recomputes metrics, treats optional unknown as pass and
 
 test('performance Report rejects unsafe aggregate arithmetic instead of rounding evidence', () => {
   const source = structuredClone(testPolicy().toJSON());
-  source.targets[0].gates.push(gate(
+  const firstTarget = required(source.targets[0], 'first target');
+  Reflect.set(firstTarget, 'gates', [...firstTarget.gates, gate(
     'dropped-time',
     'dropped-core-time-ms',
     ARENA_PERFORMANCE_GATE_OPERATOR.LESS_THAN_OR_EQUAL,
     1,
-  ));
+  )]);
   const policy = createArenaPerformancePolicyDefinition(source);
   const record = recordValue(policy);
-  record.capture.probe.frames[0].droppedMicroseconds = Number.MAX_SAFE_INTEGER;
-  record.capture.probe.frames[1].droppedMicroseconds = 1;
+  Reflect.set(
+    required(record.capture.probe.frames[0], 'first frame'),
+    'droppedMicroseconds',
+    Number.MAX_SAFE_INTEGER,
+  );
+  Reflect.set(required(record.capture.probe.frames[1], 'second frame'), 'droppedMicroseconds', 1);
   assert.throws(() => createArenaPerformanceReport(policy, record), /求和溢出/);
 });
 
 test('performance policies reject duplicate platform/class ownership and unknown collector use', () => {
   const policy = testPolicy();
   const duplicate = structuredClone(policy.toJSON());
-  duplicate.targets = [
-    structuredClone(duplicate.targets[0]),
-    { ...structuredClone(duplicate.targets[0]), id: 'duplicate-target' },
-  ];
+  const duplicateTarget = required(duplicate.targets[0], 'first target');
+  Reflect.set(duplicate, 'targets', [
+    structuredClone(duplicateTarget),
+    { ...structuredClone(duplicateTarget), id: 'duplicate-target' },
+  ]);
   assert.throws(() => createArenaPerformancePolicyDefinition(duplicate), /重复定义/);
 
   const unknown = structuredClone(policy.toJSON());
-  unknown.targets[0].gates[0].collectorId = 'missing-collector';
+  Reflect.set(
+    required(required(unknown.targets[0], 'first target').gates[0], 'first gate'),
+    'collectorId',
+    'missing-collector',
+  );
   const unknownPolicy = createArenaPerformancePolicyDefinition(unknown);
   assert.throws(
     () => createArenaPerformanceReport(unknownPolicy, recordValue(unknownPolicy)),
@@ -253,7 +289,7 @@ test('combined evidence binds one trace to the exact device run and rejects oper
   const definition = createArenaStage9PerformanceDeviceAcceptanceV1Definition();
   const policy = createArenaStage9PerformanceV1Policy();
   const targetId = ARENA_STAGE9_PERFORMANCE_TARGET_ID.WEB_LOW;
-  const target = definition.getTarget(targetId);
+  const target = required(definition.getTarget(targetId), 'device target');
   const runId = 'web-low-run-1';
   const performedAt = '2026-07-18T00:00:00.000Z';
   const artifacts = target.requiredArtifactKinds.map((kind, index) => ({
@@ -325,12 +361,15 @@ test('combined evidence binds one trace to the exact device run and rejects oper
   });
   assert.equal(report.status, 'failed');
   assert.deepEqual(report.failedTargetIds, [targetId]);
-  assert.equal(report.performanceReports[0].report.status, 'failed');
+  assert.equal(required(report.performanceReports[0], 'performance report').report.status, 'failed');
 
   const contradiction = structuredClone(deviceBundle);
-  contradiction.records[0].checks.find(({ id }) => (
-    id === ARENA_STAGE9_PERFORMANCE_DEVICE_CHECK_ID.PERFORMANCE_BUDGET
-  )).result = ARENA_DEVICE_ACCEPTANCE_CHECK_RESULT.PASSED;
+  Reflect.set(required(
+    required(contradiction.records[0], 'first device record').checks.find(({ id }) => (
+      id === ARENA_STAGE9_PERFORMANCE_DEVICE_CHECK_ID.PERFORMANCE_BUDGET
+    )),
+    'performance budget check',
+  ), 'result', ARENA_DEVICE_ACCEPTANCE_CHECK_RESULT.PASSED);
   assert.throws(() => createArenaPerformanceEvidenceReport({
     deviceDefinition: definition,
     deviceBundle: contradiction,
