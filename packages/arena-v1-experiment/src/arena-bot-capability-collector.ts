@@ -1,9 +1,27 @@
 import { BOT_DIFFICULTY_IDS } from '@number-strategy-jump/arena-bot';
+import type { BotDifficultyId } from '@number-strategy-jump/arena-bot';
 import { createArenaV1CharacterRegistry } from '@number-strategy-jump/arena-v1-content';
-import { assertNonEmptyString, cloneFrozenData } from '@number-strategy-jump/arena-contracts';
+import {
+  assertKnownKeys,
+  assertNonEmptyString,
+  assertPlainRecord,
+  cloneFrozenData,
+} from '@number-strategy-jump/arena-contracts';
+import type { ArenaInputFrame, PlainRecord } from '@number-strategy-jump/arena-contracts';
+import { createArenaMatchConfig } from '@number-strategy-jump/arena-match';
+import type { ArenaAuthorityEvent } from '@number-strategy-jump/arena-match';
 import {
   assertArenaExperimentReplaySeedsPlanned,
   cloneArenaExperimentReplaySeeds,
+} from '@number-strategy-jump/arena-experiment';
+import type {
+  ArenaExperimentDefinition,
+  ArenaMetricCollectorBeginContext,
+  ArenaMetricCollectorCompleteContext,
+  ArenaMetricCollectorFactoryOptions,
+  ArenaMetricCollectorFailureContext,
+  ArenaMetricCollectorStepContext,
+  ArenaSimulationSnapshot,
 } from '@number-strategy-jump/arena-experiment';
 import { createArenaMetricGate } from '@number-strategy-jump/arena-experiment';
 import {
@@ -19,7 +37,8 @@ import {
   createArenaBotCapabilityGatePolicyDefinition,
   createArenaBotDifficultyMetricState,
   finishArenaBotDifficultyMetricState,
-} from '@number-strategy-jump/arena-v1-experiment';
+} from './arena-bot-capability-metrics.js';
+import type { ArenaBotDifficultyMetricState } from './arena-bot-capability-metrics.js';
 import {
   ARENA_BOT_CAPABILITY_COLLECTOR_ID,
   ARENA_BOT_CAPABILITY_COLLECTOR_VERSION,
@@ -35,32 +54,57 @@ export const ARENA_BOT_CAPABILITY_COLLECTOR_DEFAULT_PARAMETERS = Object.freeze({
 
 const PARAMETER_KEYS = new Set(['gatePolicy']);
 
-export function createArenaBotCapabilityCollectorParameters(value = {}) {
-  const source = cloneFrozenData(value, 'ArenaBotCapabilityCollector parameters');
-  for (const key of Object.keys(source)) {
-    if (!PARAMETER_KEYS.has(key)) {
-      throw new RangeError(`ArenaBotCapabilityCollector parameters 不支持字段 ${key}。`);
-    }
-  }
+export function createArenaBotCapabilityCollectorParameters(value: unknown = {}) {
+  const source = assertPlainRecord(
+    cloneFrozenData(value, 'ArenaBotCapabilityCollector parameters'),
+    'ArenaBotCapabilityCollector parameters',
+  );
+  assertKnownKeys(source, PARAMETER_KEYS, 'ArenaBotCapabilityCollector parameters');
   return Object.freeze({
     gatePolicy: createArenaBotCapabilityGatePolicyDefinition(source.gatePolicy ?? {}),
   });
 }
 
-class ArenaBotCapabilityCollector {
-  #plannedCases;
-  #replaySeeds;
-  #botRunInputThreshold;
-  #gatePolicy;
-  #active;
-  #stats;
-  #completedCases;
-  #failedCases;
-  #totalEvents;
-  #failureNames;
-  #destroyed;
+interface ArenaBotCapabilitySnapshot extends ArenaSimulationSnapshot {
+  readonly difficultyId: BotDifficultyId;
+  readonly matchTick: number;
+}
+interface ArenaBotCapabilityDifficultyResult {
+  readonly difficultyId: BotDifficultyId;
+  readonly ticks: number;
+  readonly outcome: Readonly<{ readonly winnerId: string | null; readonly isDraw: boolean }>;
+  readonly finalHash: string;
+  readonly replayVerified: boolean;
+}
+type ArenaBotCapabilityCaseResult = PlainRecord & {
+  readonly difficulties: readonly Readonly<ArenaBotCapabilityDifficultyResult>[];
+};
+interface ArenaBotCapabilityActiveCase {
+  readonly seed: number;
+  eventCount: number;
+  readonly stats: Map<BotDifficultyId, ArenaBotDifficultyMetricState>;
+}
+const NUMERIC_STAT_FIELDS = Object.freeze([
+  'matches', 'wins', 'draws', 'losses', 'ticks', 'actions', 'equipmentActions',
+  'equipmentPickups', 'hits', 'eliminations', 'botDeaths', 'botUncreditedDeaths',
+  'playerDeaths', 'downSmashLandings', 'replayChecks',
+] as const);
+type MovementInputField = keyof ArenaBotDifficultyMetricState['movementInputs'];
 
-  constructor(definition, parameters) {
+class ArenaBotCapabilityCollector {
+  #plannedCases: number;
+  #replaySeeds: Set<number>;
+  #botRunInputThreshold: number;
+  #gatePolicy: ReturnType<typeof createArenaBotCapabilityGatePolicyDefinition> | null;
+  #active: ArenaBotCapabilityActiveCase | null;
+  #stats: Map<BotDifficultyId, ArenaBotDifficultyMetricState>;
+  #completedCases: number;
+  #failedCases: number;
+  #totalEvents: number;
+  #failureNames: Map<string, number>;
+  #destroyed: boolean;
+
+  constructor(definition: ArenaExperimentDefinition, parameters: unknown) {
     const plannedSeeds = definition.getSeeds();
     const replaySeeds = cloneArenaExperimentReplaySeeds(
       definition.workload.parameters.replaySeeds,
@@ -71,9 +115,11 @@ class ArenaBotCapabilityCollector {
       plannedSeeds,
       'Bot capability replay',
     );
-    const botCharacterId = definition.candidate.matchConfig.participantCharacters.find(
+    const matchConfig = createArenaMatchConfig(definition.candidate.matchConfig);
+    const botCharacterId = matchConfig.participantCharacters.find(
       ({ participantId }) => participantId === ARENA_BOT_CAPABILITY_PARTICIPANT_ID,
     )?.definitionId;
+    if (!botCharacterId) throw new Error('Bot capability collector 缺少 Bot 角色定义。');
     this.#botRunInputThreshold = createArenaV1CharacterRegistry()
       .require(botCharacterId).movement.runInputThreshold;
     this.#gatePolicy = createArenaBotCapabilityCollectorParameters(parameters).gatePolicy;
@@ -95,7 +141,13 @@ class ArenaBotCapabilityCollector {
     if (this.#destroyed) throw new Error('ArenaBotCapabilityCollector 已销毁。');
   }
 
-  beginCase(context) {
+  #requireGatePolicy() {
+    this.#assertUsable();
+    if (!this.#gatePolicy) throw new Error('ArenaBotCapabilityCollector 缺少 gate policy。');
+    return this.#gatePolicy;
+  }
+
+  beginCase(context: Readonly<ArenaMetricCollectorBeginContext>) {
     this.#assertUsable();
     if (this.#active !== null) throw new Error('Bot capability collector 已有活动 case。');
     this.#active = {
@@ -108,7 +160,11 @@ class ArenaBotCapabilityCollector {
     };
   }
 
-  observeStep(observation) {
+  observeStep(observation: Readonly<ArenaMetricCollectorStepContext<
+    ArenaBotCapabilitySnapshot,
+    ArenaInputFrame,
+    ArenaAuthorityEvent
+  >>) {
     this.#assertUsable();
     if (this.#active === null || this.#active.seed !== observation.seed) {
       throw new Error('Bot capability observation 没有对应活动 case。');
@@ -138,9 +194,10 @@ class ArenaBotCapabilityCollector {
         && event.participantId === ARENA_BOT_CAPABILITY_PARTICIPANT_ID
       ) {
         stats.actions += 1;
-        if (event.action.startsWith('movement.')) {
-          incrementMetricCount(stats.movementActions, event.action);
-        } else if (event.action !== 'base-push') stats.equipmentActions += 1;
+        const action = assertNonEmptyString(event.action, 'Bot capability ActionStarted.action');
+        if (action.startsWith('movement.')) {
+          incrementMetricCount(stats.movementActions, action);
+        } else if (action !== 'base-push') stats.equipmentActions += 1;
       } else if (
         type === 'EquipmentPickedUp'
         && event.participantId === ARENA_BOT_CAPABILITY_PARTICIPANT_ID
@@ -161,7 +218,7 @@ class ArenaBotCapabilityCollector {
       ) {
         stats.downSmashLandings += 1;
       }
-      if (ARENA_BOT_CAPABILITY_MAP_EVENT_TYPES.includes(type)) {
+      if ((ARENA_BOT_CAPABILITY_MAP_EVENT_TYPES as readonly string[]).includes(type)) {
         incrementMetricCount(stats.mapEvents, type);
       }
       if (
@@ -176,7 +233,10 @@ class ArenaBotCapabilityCollector {
     }
   }
 
-  completeCase(context) {
+  completeCase(context: Readonly<ArenaMetricCollectorCompleteContext<
+    ArenaBotCapabilitySnapshot,
+    ArenaBotCapabilityCaseResult
+  >>) {
     this.#assertUsable();
     if (this.#active === null || this.#active.seed !== context.seed) {
       throw new Error('Bot capability completion 没有对应活动 case。');
@@ -192,6 +252,7 @@ class ArenaBotCapabilityCollector {
     for (let index = 0; index < BOT_DIFFICULTY_IDS.length; index += 1) {
       const difficultyId = BOT_DIFFICULTY_IDS[index];
       const result = context.result.difficulties[index];
+      if (!difficultyId || !result) throw new Error('Bot capability result 难度项缺失。');
       if (result.difficultyId !== difficultyId) {
         throw new Error(`Bot capability result 难度顺序错误：${result.difficultyId}。`);
       }
@@ -200,6 +261,7 @@ class ArenaBotCapabilityCollector {
       }
       const source = this.#active.stats.get(difficultyId);
       const target = this.#stats.get(difficultyId);
+      if (!source || !target) throw new Error(`Bot capability 缺少 ${difficultyId} 指标状态。`);
       source.matches = 1;
       source.ticks = result.ticks;
       source.replayChecks = result.replayVerified ? 1 : 0;
@@ -209,24 +271,11 @@ class ArenaBotCapabilityCollector {
         result.outcome.winnerId === ARENA_BOT_CAPABILITY_PARTICIPANT_ID
       ) source.wins = 1;
       else source.losses = 1;
-      for (const field of [
-        'matches',
-        'wins',
-        'draws',
-        'losses',
-        'ticks',
-        'actions',
-        'equipmentActions',
-        'equipmentPickups',
-        'hits',
-        'eliminations',
-        'botDeaths',
-        'botUncreditedDeaths',
-        'playerDeaths',
-        'downSmashLandings',
-        'replayChecks',
-      ]) target[field] += source[field];
-      for (const [key, count] of Object.entries(source.movementInputs)) {
+      for (const field of NUMERIC_STAT_FIELDS) target[field] += source[field];
+      for (const [key, count] of Object.entries(source.movementInputs) as Array<[
+        MovementInputField,
+        number,
+      ]>) {
         target.movementInputs[key] += count;
       }
       for (const [key, count] of source.movementActions) {
@@ -242,7 +291,7 @@ class ArenaBotCapabilityCollector {
     this.#active = null;
   }
 
-  failCase(context) {
+  failCase(context: Readonly<ArenaMetricCollectorFailureContext<ArenaBotCapabilitySnapshot>>) {
     this.#assertUsable();
     if (this.#active !== null && this.#active.seed !== context.seed) {
       throw new Error('Bot capability failure 与活动 case 不一致。');
@@ -259,13 +308,15 @@ class ArenaBotCapabilityCollector {
     this.#assertUsable();
     if (this.#active !== null) throw new Error('活动 case 完成前不能导出 Bot capability 指标。');
     const difficulties = BOT_DIFFICULTY_IDS.map((id) => (
-      finishArenaBotDifficultyMetricState(this.#stats.get(id))
+      finishArenaBotDifficultyMetricState(this.#stats.get(id) ?? (() => {
+        throw new Error(`Bot capability 缺少 ${id} 汇总指标。`);
+      })())
     ));
     const policy = createArenaBotCapabilityGatePolicy({
       difficulties,
       completedCases: this.#completedCases,
       replaySeedCount: this.#replaySeeds.size,
-      gatePolicy: this.#gatePolicy,
+      gatePolicy: this.#requireGatePolicy(),
     });
     return cloneFrozenData({
       gate: createArenaMetricGate(policy.checks),
@@ -315,7 +366,7 @@ export function createArenaBotCapabilityCollectorEntry() {
     id: ARENA_BOT_CAPABILITY_COLLECTOR_ID,
     version: ARENA_BOT_CAPABILITY_COLLECTOR_VERSION,
     validateParameters: createArenaBotCapabilityCollectorParameters,
-    create: ({ definition, parameters }) => (
+    create: ({ definition, parameters }: ArenaMetricCollectorFactoryOptions) => (
       new ArenaBotCapabilityCollector(definition, parameters)
     ),
   });

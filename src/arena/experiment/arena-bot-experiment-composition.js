@@ -24,7 +24,7 @@ import {
   ARENA_BOT_CAPABILITY_COLLECTOR_ID,
   ARENA_BOT_CAPABILITY_COLLECTOR_VERSION,
   createArenaBotCapabilityCollectorEntry,
-} from './arena-bot-capability-collector.js';
+} from '@number-strategy-jump/arena-v1-experiment';
 import {
   ARENA_V1_BOT_CAPABILITY_DEFAULT_PARAMETERS,
   ARENA_V1_BOT_CAPABILITY_WORKLOAD_ID,

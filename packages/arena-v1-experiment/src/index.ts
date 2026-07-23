@@ -109,3 +109,10 @@ export {
   createArenaV1BotCapabilityParameters,
   createArenaV1BotCapabilityWorkloadEntry,
 } from './arena-v1-bot-capability-workload.js';
+export {
+  ARENA_BOT_CAPABILITY_COLLECTOR_DEFAULT_PARAMETERS,
+  ARENA_BOT_CAPABILITY_COLLECTOR_ID,
+  ARENA_BOT_CAPABILITY_COLLECTOR_VERSION,
+  createArenaBotCapabilityCollectorEntry,
+  createArenaBotCapabilityCollectorParameters,
+} from './arena-bot-capability-collector.js';
