@@ -54,7 +54,7 @@ import {
 } from '@number-strategy-jump/arena-regression';
 import {
   verifyArenaGoldenReplayCorpus,
-} from '../../src/arena/regression/golden-replay-verifier.js';
+} from '@number-strategy-jump/arena-regression';
 import {
   verifyArenaBuildManifestDirectory,
 } from './arena-build-manifest-files.mjs';

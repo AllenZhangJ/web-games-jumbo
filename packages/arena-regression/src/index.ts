@@ -39,6 +39,11 @@ export type {
   ArenaGoldenReplayScenarioEntry,
   ArenaGoldenReplayScenarioReference,
 } from './golden-replay-scenario-registry.js';
+export {
+  ARENA_GOLDEN_REPLAY_VERIFICATION_SCHEMA_VERSION,
+  createArenaGoldenReplayManifestEntry,
+  verifyArenaGoldenReplayCorpus,
+} from './golden-replay-verifier.js';
 export type {
   ArenaGoldenReplayManifest,
   ArenaGoldenReplayManifestEntry,

@@ -19,7 +19,7 @@ import {
 } from '@number-strategy-jump/arena-regression';
 import {
   verifyArenaGoldenReplayCorpus,
-} from '../../../src/arena/regression/golden-replay-verifier.js';
+} from '@number-strategy-jump/arena-regression';
 import {
   ARENA_INPUT_FUZZ_RUNNER_ID,
   ARENA_INPUT_FUZZ_RUNNER_VERSION,

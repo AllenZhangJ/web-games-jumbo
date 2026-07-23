@@ -22,7 +22,7 @@ import {
 import {
   createArenaGoldenReplayManifestEntry,
   verifyArenaGoldenReplayCorpus,
-} from '../src/arena/regression/golden-replay-verifier.js';
+} from '@number-strategy-jump/arena-regression';
 import { ARENA_REPLAY_SCHEMA_VERSION } from '@number-strategy-jump/arena-match';
 import { combineCleanupFailure, normalizeThrownError } from '@number-strategy-jump/arena-contracts';
 import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
