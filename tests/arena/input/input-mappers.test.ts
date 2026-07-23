@@ -1,5 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import type {
+  ActionAffordance,
+  ActionAffordanceOutcome,
+} from '@number-strategy-jump/arena-core';
+import type { ActionLane } from '@number-strategy-jump/arena-definitions';
 import {
   createContextInputMapperB,
   createExplicitCombatJumpMapper,
@@ -10,9 +15,13 @@ import {
 } from '@number-strategy-jump/arena-presentation-runtime';
 
 const viewport = Object.freeze({ width: 400, height: 800 });
-const point = (pointerId, x, y) => ({ pointerId, x, y });
+const point = (pointerId: number, x: number, y: number) => ({ pointerId, x, y });
 
-function outcome(kind, lane, actionDefinitionId) {
+function outcome(
+  kind: ActionAffordanceOutcome['kind'],
+  lane: ActionLane | null,
+  actionDefinitionId: string | null,
+): ActionAffordanceOutcome {
   return {
     kind,
     actionDefinitionId,
@@ -22,10 +31,13 @@ function outcome(kind, lane, actionDefinitionId) {
   };
 }
 
-function actionAffordance(tick, {
+function actionAffordance(tick: number, {
   primaryLane = 'locomotion',
   primaryHoldLane = 'locomotion',
-} = {}) {
+}: {
+  readonly primaryLane?: ActionLane;
+  readonly primaryHoldLane?: ActionLane;
+} = {}): ActionAffordance {
   return {
     tick,
     participantId: 'player-1',
