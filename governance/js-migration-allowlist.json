@@ -47,7 +47,6 @@
     "scripts/lib/arena-regression-evidence-producer.mjs",
     "scripts/lib/arena-stage9-release-producers.mjs",
     "scripts/lib/evidence-file-verifier.mjs",
-    "src/arena/physics/poc-scenarios.js",
     "src/arena/presentation/assets/formal-asset-budget-policy.js",
     "src/arena/presentation/assets/formal-asset-budget-report.js",
     "src/arena/presentation/assets/formal-asset-intake-bundle.js",

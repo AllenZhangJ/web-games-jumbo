@@ -1,7 +1,7 @@
 import { build } from 'esbuild';
 import { gzipSync } from 'node:zlib';
 import { createLightweightPhysicsWorld } from '@number-strategy-jump/arena-physics';
-import { runPhysicsPoc } from '../src/arena/physics/poc-scenarios.js';
+import { runPhysicsPoc } from '../src/arena/physics/poc-scenarios.ts';
 
 async function bundleMetrics(contents, sourcefile) {
   const result = await build({

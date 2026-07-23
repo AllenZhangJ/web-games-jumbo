@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createLightweightPhysicsWorld } from '@number-strategy-jump/arena-physics';
-import { runPhysicsPoc } from '../../src/arena/physics/poc-scenarios.js';
+import { runPhysicsPoc } from '../../src/arena/physics/poc-scenarios.ts';
 
 const candidates = [
   ['lightweight-strict-ts', createLightweightPhysicsWorld],

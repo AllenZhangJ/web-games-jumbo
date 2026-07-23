@@ -1,7 +1,50 @@
 import { ARENA_FIXED_DT, PHYSICS_POC_ARENA, PHYSICS_POC_CHARACTER } from '@number-strategy-jump/arena-match';
-import { assertPhysicsWorld } from '@number-strategy-jump/arena-physics';
+import {
+  assertPhysicsWorld,
+  type PhysicsArenaDefinition,
+  type PhysicsCharacterState,
+  type PhysicsVector3,
+  type PhysicsWorld,
+} from '@number-strategy-jump/arena-physics';
 
-function finiteState(state) {
+export interface PhysicsPocMetrics {
+  readonly backend: string;
+  readonly initializationMs: number;
+  steps: number;
+  maxStepMs: number;
+  nonFiniteStates: number;
+  idleGroundError: number | null;
+  accelerationDistance: number | null;
+  stoppingDistance: number | null;
+  stepPeakGroundY: number;
+  stepGroundedTicks: number;
+  impulsePeakY: number | null;
+  impulseLandingTick: number | null;
+  pairMinimumDistance: number;
+  edgeFallTick: number | null;
+  resetVelocityError: number | null;
+  finalStateHash: string | null;
+  averageStepMs: number;
+}
+
+interface MutablePhysicsPocMetrics extends Omit<PhysicsPocMetrics, 'averageStepMs'> {
+  totalStepMs: number;
+  averageStepMs?: number;
+}
+
+export interface PhysicsPocOptions {
+  readonly backend: string;
+  readonly createWorld: (options: Readonly<{ arena: PhysicsArenaDefinition }>) => PhysicsWorld | Promise<PhysicsWorld>;
+  readonly stressTicks?: number;
+}
+
+function getSpawn(index: number): PhysicsVector3 {
+  const spawn = PHYSICS_POC_ARENA.spawns[index];
+  if (!spawn) throw new RangeError(`physics POC 缺少出生点 ${index}。`);
+  return spawn;
+}
+
+function finiteState(state: PhysicsCharacterState): boolean {
   return [
     state.position.x,
     state.position.y,
@@ -14,8 +57,8 @@ function finiteState(state) {
   ].every(Number.isFinite);
 }
 
-function roundedState(state) {
-  const round = (value) => Math.round(value * 1e6) / 1e6;
+function roundedState(state: PhysicsCharacterState): string {
+  const round = (value: number): number => Math.round(value * 1e6) / 1e6;
   return [
     state.id,
     round(state.position.x),
@@ -29,7 +72,7 @@ function roundedState(state) {
   ].join(':');
 }
 
-function hashText(text) {
+function hashText(text: string): string {
   let hash = 0x811c9dc5;
   for (let index = 0; index < text.length; index += 1) {
     hash ^= text.charCodeAt(index);
@@ -38,17 +81,22 @@ function hashText(text) {
   return (hash >>> 0).toString(16).padStart(8, '0');
 }
 
-function addDefaultCharacters(world) {
+function addDefaultCharacters(world: PhysicsWorld): void {
   for (let index = 0; index < 2; index += 1) {
     world.addCharacter({
       id: `player-${index + 1}`,
-      position: PHYSICS_POC_ARENA.spawns[index],
+      position: getSpawn(index),
       ...PHYSICS_POC_CHARACTER,
     });
   }
 }
 
-function stepMany(world, ticks, onTick, metrics) {
+function stepMany(
+  world: PhysicsWorld,
+  ticks: number,
+  onTick: ((tick: number, world: PhysicsWorld) => void) | null,
+  metrics: MutablePhysicsPocMetrics,
+): void {
   for (let tick = 0; tick < ticks; tick += 1) {
     onTick?.(tick, world);
     const startedAt = performance.now();
@@ -64,10 +112,10 @@ function stepMany(world, ticks, onTick, metrics) {
   }
 }
 
-function resetPair(world) {
+function resetPair(world: PhysicsWorld): void {
   for (let index = 0; index < 2; index += 1) {
     world.resetCharacter(`player-${index + 1}`, {
-      position: PHYSICS_POC_ARENA.spawns[index],
+      position: getSpawn(index),
       velocity: { x: 0, y: 0, z: 0 },
       facing: { x: index === 0 ? 1 : -1, z: 0 },
     });
@@ -78,7 +126,11 @@ function resetPair(world) {
  * Runs the same deterministic movement, collision, impulse, edge, reset and
  * long-running workloads against every physics adapter candidate.
  */
-export async function runPhysicsPoc({ backend, createWorld, stressTicks = 20_000 } = {}) {
+export async function runPhysicsPoc({
+  backend,
+  createWorld,
+  stressTicks = 20_000,
+}: PhysicsPocOptions): Promise<PhysicsPocMetrics> {
   if (typeof backend !== 'string' || backend.length === 0) throw new TypeError('backend 必须是名称。');
   if (typeof createWorld !== 'function') throw new TypeError('createWorld 必须是函数。');
   if (!Number.isSafeInteger(stressTicks) || stressTicks < 1) {
@@ -87,7 +139,7 @@ export async function runPhysicsPoc({ backend, createWorld, stressTicks = 20_000
   const initStartedAt = performance.now();
   const world = assertPhysicsWorld(await createWorld({ arena: PHYSICS_POC_ARENA }));
   const initializationMs = performance.now() - initStartedAt;
-  const metrics = {
+  const metrics: MutablePhysicsPocMetrics = {
     backend,
     initializationMs,
     steps: 0,
@@ -112,7 +164,7 @@ export async function runPhysicsPoc({ backend, createWorld, stressTicks = 20_000
 
     stepMany(world, 180, null, metrics);
     const idle = world.getCharacterState('player-1');
-    metrics.idleGroundError = Math.abs(idle.position.y - PHYSICS_POC_ARENA.spawns[0].y);
+    metrics.idleGroundError = Math.abs(idle.position.y - getSpawn(0).y);
 
     resetPair(world);
     const accelerationStart = world.getCharacterState('player-1').position.x;
@@ -126,11 +178,11 @@ export async function runPhysicsPoc({ backend, createWorld, stressTicks = 20_000
 
     resetPair(world);
     world.resetCharacter('player-1', {
-      position: { x: 1.8, y: PHYSICS_POC_ARENA.spawns[0].y, z: 0 },
+      position: { x: 1.8, y: getSpawn(0).y, z: 0 },
       velocity: { x: 0, y: 0, z: 0 },
     });
     world.resetCharacter('player-2', {
-      position: { x: -4.5, y: PHYSICS_POC_ARENA.spawns[1].y, z: 4.5 },
+      position: { x: -4.5, y: getSpawn(1).y, z: 4.5 },
       velocity: { x: 0, y: 0, z: 0 },
     });
     world.setMovementIntent('player-1', 1, 0);
@@ -158,11 +210,11 @@ export async function runPhysicsPoc({ backend, createWorld, stressTicks = 20_000
 
     resetPair(world);
     world.resetCharacter('player-1', {
-      position: { x: -0.55, y: PHYSICS_POC_ARENA.spawns[0].y, z: 0 },
+      position: { x: -0.55, y: getSpawn(0).y, z: 0 },
       velocity: { x: 0, y: 0, z: 0 },
     });
     world.resetCharacter('player-2', {
-      position: { x: 0.55, y: PHYSICS_POC_ARENA.spawns[1].y, z: 0 },
+      position: { x: 0.55, y: getSpawn(1).y, z: 0 },
       velocity: { x: 0, y: 0, z: 0 },
     });
     world.setMovementIntent('player-1', 1, 0);
@@ -178,7 +230,7 @@ export async function runPhysicsPoc({ backend, createWorld, stressTicks = 20_000
 
     resetPair(world);
     world.resetCharacter('player-1', {
-      position: { x: 5.55, y: PHYSICS_POC_ARENA.spawns[0].y, z: 0 },
+      position: { x: 5.55, y: getSpawn(0).y, z: 0 },
       velocity: { x: 0, y: 0, z: 0 },
     });
     world.setMovementIntent('player-1', 1, 0);
@@ -195,7 +247,7 @@ export async function runPhysicsPoc({ backend, createWorld, stressTicks = 20_000
     world.applyImpulse('player-1', { x: 8, y: 5, z: 3 });
     stepMany(world, 10, null, metrics);
     world.resetCharacter('player-1', {
-      position: PHYSICS_POC_ARENA.spawns[0],
+      position: getSpawn(0),
       velocity: { x: 0, y: 0, z: 0 },
     });
     const resetState = world.getCharacterState('player-1');
@@ -218,9 +270,11 @@ export async function runPhysicsPoc({ backend, createWorld, stressTicks = 20_000
 
     const finalStates = ['player-1', 'player-2'].map((id) => world.getCharacterState(id));
     metrics.finalStateHash = hashText(finalStates.map(roundedState).join('|'));
-    metrics.averageStepMs = metrics.totalStepMs / metrics.steps;
-    delete metrics.totalStepMs;
-    return metrics;
+    const { totalStepMs, ...completedMetrics } = metrics;
+    return {
+      ...completedMetrics,
+      averageStepMs: totalStepMs / metrics.steps,
+    };
   } finally {
     world.destroy();
   }
