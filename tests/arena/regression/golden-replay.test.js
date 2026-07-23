@@ -7,7 +7,7 @@ import {
   ARENA_REPLAY_ERROR_CODE,
   ARENA_REPLAY_SCHEMA_VERSION,
 } from '@number-strategy-jump/arena-match';
-import { replayMatch } from '../../../src/arena/replay.js';
+import { replayMatch } from '../../../src/arena/replay.ts';
 import {
   createArenaV1GoldenReplayScenarioRegistry,
 } from '@number-strategy-jump/arena-regression';

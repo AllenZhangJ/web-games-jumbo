@@ -969,7 +969,7 @@ test('Arena S8.5 Product Session is the injected host root and never reuses Stag
 
 test('Arena MatchCore POC bundles and executes as a standalone mini-game IIFE', async () => {
   const result = await esbuild({
-    entryPoints: [path.resolve('src/arena/entry/match-core-poc.js')],
+    entryPoints: [path.resolve('src/arena/entry/match-core-poc.ts')],
     bundle: true,
     write: false,
     format: 'iife',
@@ -1050,7 +1050,7 @@ test('Arena bot layers preserve dependency direction and tick determinism', asyn
     'packages/arena-match/src/match-config.ts',
     'packages/arena-contracts/src/input-frame.ts',
     'packages/arena-match/src/match-core.ts',
-    'src/arena/replay.js',
+    'src/arena/replay.ts',
     'packages/arena-match/src/state-hash.ts',
     ...await listJavaScript(path.resolve('src/arena/physics')),
   ];

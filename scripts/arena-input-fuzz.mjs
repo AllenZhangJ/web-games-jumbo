@@ -16,7 +16,7 @@ import {
  * Keep fuzzing every production mapper ID from the strict runtime package;
  * the sampler remains the current upper-layer lifecycle owner.
  */
-import { replayMatch } from '../src/arena/replay.js';
+import { replayMatch } from '../src/arena/replay.ts';
 import { createArenaInputFuzzFailureCandidate } from '@number-strategy-jump/arena-regression';
 import { combineCleanupFailure, normalizeThrownError } from '@number-strategy-jump/arena-contracts';
 import { createRng, deriveSeed } from '@number-strategy-jump/arena-contracts';

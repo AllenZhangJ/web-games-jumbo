@@ -10,7 +10,7 @@ import {
   HeadlessMatchRunner,
 } from '@number-strategy-jump/arena-match';
 import { EQUIPMENT_LOCATION_STATE } from '@number-strategy-jump/arena-equipment';
-import { replayMatch } from '../../src/arena/replay.js';
+import { replayMatch } from '../../src/arena/replay.ts';
 
 function neutralFrames(core) {
   return core.config.participantIds.map((participantId) => (

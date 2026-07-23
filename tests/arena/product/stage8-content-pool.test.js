@@ -20,7 +20,7 @@ import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
 import { MAP_EVENT_KIND } from '@number-strategy-jump/arena-map';
 import { QuickMatchService } from '@number-strategy-jump/arena-v1-composition';
 import { HeadlessMatchRunner } from '@number-strategy-jump/arena-match';
-import { replayMatch } from '../../../src/arena/replay.js';
+import { replayMatch } from '../../../src/arena/replay.ts';
 import {
   ARENA_V1_CONTENT_REPLACEMENT_REGISTRY,
   ARENA_V1_MATCH_CONTENT_CATALOG,

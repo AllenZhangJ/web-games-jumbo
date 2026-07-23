@@ -5,7 +5,7 @@ import { build } from 'esbuild';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const outputRoot = path.join(root, 'dist', 'arena-poc');
-const entryPoint = path.join(root, 'src/arena/entry/match-core-poc.js');
+const entryPoint = path.join(root, 'src/arena/entry/match-core-poc.ts');
 
 async function bundle(target) {
   const outputDirectory = path.join(outputRoot, target);

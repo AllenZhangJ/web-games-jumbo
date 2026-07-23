@@ -11,7 +11,7 @@ import { createArenaV1MatchCore } from '@number-strategy-jump/arena-v1-compositi
 import { createLightweightPhysicsWorld } from '@number-strategy-jump/arena-physics';
 import {
   replayMatch,
-} from '../../src/arena/replay.js';
+} from '../../src/arena/replay.ts';
 
 function createReplayCore() {
   return createArenaV1MatchCore({
