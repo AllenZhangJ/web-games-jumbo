@@ -1,10 +1,18 @@
 import { MOVEMENT_MODE } from '@number-strategy-jump/arena-movement';
 import { assertArenaMatchCoreSnapshotInvariants } from '@number-strategy-jump/arena-experiment';
+import type { ArenaMatchSnapshot } from '@number-strategy-jump/arena-contracts';
+
+interface ArenaMovementCharacterDefinition {
+  readonly jump: Readonly<{
+    maximumAirJumps: number;
+    maximumCrouchChargeTicks: number;
+  }>;
+}
 
 export function assertArenaMovementSnapshotInvariants(
-  snapshot,
-  config,
-  resolveCharacterDefinition,
+  snapshot: ArenaMatchSnapshot,
+  config: Parameters<typeof assertArenaMatchCoreSnapshotInvariants>[1],
+  resolveCharacterDefinition: (participantId: string) => ArenaMovementCharacterDefinition,
 ) {
   assertArenaMatchCoreSnapshotInvariants(snapshot, config);
   const finite = [];
@@ -30,9 +38,13 @@ export function assertArenaMovementSnapshotInvariants(
     )) {
       throw new Error(`tick ${snapshot.tick} ${participant.id} standard 模式残留临时状态。`);
     }
+    const actionAffordance = participant.actionAffordance as Readonly<{
+      tick?: unknown;
+      participantId?: unknown;
+    }> | undefined;
     if (
-      participant.actionAffordance.tick !== snapshot.tick
-      || participant.actionAffordance.participantId !== participant.id
+      actionAffordance?.tick !== snapshot.tick
+      || actionAffordance.participantId !== participant.id
     ) {
       throw new Error(`tick ${snapshot.tick} ${participant.id} ActionAffordance 身份失配。`);
     }
@@ -41,7 +53,7 @@ export function assertArenaMovementSnapshotInvariants(
   return snapshot;
 }
 
-export function createArenaMovementExperimentSnapshot(snapshot) {
+export function createArenaMovementExperimentSnapshot(snapshot: ArenaMatchSnapshot) {
   return Object.freeze({
     tick: snapshot.tick,
     activeParticipantIds: Object.freeze(snapshot.participants

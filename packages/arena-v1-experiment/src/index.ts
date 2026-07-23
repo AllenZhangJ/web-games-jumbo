@@ -11,3 +11,22 @@ export {
   ARENA_V1_SCRIPTED_PRESSURE_WORKLOAD_VERSION,
   createArenaV1ScriptedPressureWorkloadEntry,
 } from './arena-v1-scripted-pressure-workload.js';
+export {
+  ARENA_V1_MAP_TIMELINE_DEFAULT_PARAMETERS,
+  ARENA_V1_MAP_TIMELINE_EXPECTED_EVENT_COUNTS,
+  ARENA_V1_MAP_TIMELINE_WORKLOAD_ID,
+  ARENA_V1_MAP_TIMELINE_WORKLOAD_VERSION,
+  createArenaV1MapTimelineParameters,
+  createArenaV1MapTimelineWorkloadEntry,
+} from './arena-v1-map-timeline-workload.js';
+export {
+  assertArenaMovementSnapshotInvariants,
+  createArenaMovementExperimentSnapshot,
+} from './arena-movement-invariants.js';
+export {
+  ARENA_V1_MOVEMENT_STRESS_DEFAULT_PARAMETERS,
+  ARENA_V1_MOVEMENT_STRESS_WORKLOAD_ID,
+  ARENA_V1_MOVEMENT_STRESS_WORKLOAD_VERSION,
+  createArenaV1MovementStressParameters,
+  createArenaV1MovementStressWorkloadEntry,
+} from './arena-v1-movement-stress-workload.js';

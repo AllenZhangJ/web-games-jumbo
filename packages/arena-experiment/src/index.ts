@@ -84,6 +84,7 @@ export {
   createArenaV1MovementStressStrategy,
   createArenaV1MovementStressTuning,
 } from './arena-v1-movement-stress-strategy.js';
+export type { ArenaV1MovementStressTuning } from './arena-v1-movement-stress-strategy.js';
 export {
   ARENA_STAGE9_BOT_SEED_BASE,
   ARENA_STAGE9_BOT_SEED_STEP,

@@ -21,7 +21,7 @@ import {
   ARENA_V1_MOVEMENT_STRESS_WORKLOAD_ID,
   ARENA_V1_MOVEMENT_STRESS_WORKLOAD_VERSION,
   createArenaV1MovementStressWorkloadEntry,
-} from './arena-v1-movement-stress-workload.js';
+} from '@number-strategy-jump/arena-v1-experiment';
 
 export const ARENA_STAGE9_MOVEMENT_EXPERIMENT_ID = 'arena.stage9.s9.1.movement-stress.v1';
 export const ARENA_STAGE9_MOVEMENT_SEED_BASE = 0x6d560000;

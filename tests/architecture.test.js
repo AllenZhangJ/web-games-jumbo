@@ -447,6 +447,7 @@ test('Arena V1 experiment runtime stays headless behind strict V1 composition', 
       '@number-strategy-jump/arena-contracts',
       '@number-strategy-jump/arena-experiment',
       '@number-strategy-jump/arena-match',
+      '@number-strategy-jump/arena-movement',
       '@number-strategy-jump/arena-v1-composition',
     ],
   );

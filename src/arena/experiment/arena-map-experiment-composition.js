@@ -20,7 +20,7 @@ import {
   ARENA_V1_MAP_TIMELINE_WORKLOAD_ID,
   ARENA_V1_MAP_TIMELINE_WORKLOAD_VERSION,
   createArenaV1MapTimelineWorkloadEntry,
-} from './arena-v1-map-timeline-workload.js';
+} from '@number-strategy-jump/arena-v1-experiment';
 
 export const ARENA_STAGE9_MAP_EXPERIMENT_ID = 'arena.stage9.s9.1.map-timeline.v1';
 
