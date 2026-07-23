@@ -12,7 +12,7 @@ import {
   ARENA_STAGE9_BOT_SEED_BASE,
   ARENA_STAGE9_BOT_SEED_STEP,
   createArenaStage9BotSeeds,
-} from './arena-bot-capability-seeds.js';
+} from '@number-strategy-jump/arena-experiment';
 import { MetricCollectorRegistry } from '@number-strategy-jump/arena-experiment';
 import { SimulationWorkloadRegistry } from '@number-strategy-jump/arena-experiment';
 import {

@@ -2,7 +2,7 @@ import {
   createArenaBalanceCandidateExperimentDefinition,
   createArenaBalanceCandidateExperimentRegistries,
 } from './arena-balance-experiment-factory.js';
-import { createArenaStage9BotSeeds } from './arena-bot-capability-seeds.js';
+import { createArenaStage9BotSeeds } from '@number-strategy-jump/arena-experiment';
 import {
   ARENA_STAGE9_BALANCE_BASELINE_CASE_COUNT,
   ARENA_STAGE9_BALANCE_BOT_GATE_POLICY_V1,

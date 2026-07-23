@@ -5,11 +5,9 @@ import {
 import { assertIntegerAtLeast } from '@number-strategy-jump/arena-contracts';
 import {
   createArenaBotCapabilityGatePolicyDefinition,
-} from './arena-bot-capability-metrics.js';
-import {
   ARENA_BALANCE_POLICY_SCHEMA_VERSION,
   createArenaBalancePolicy,
-} from './arena-balance-policy.js';
+} from '@number-strategy-jump/arena-experiment';
 
 export const ARENA_STAGE9_BALANCE_BASELINE_CASE_COUNT = 300;
 

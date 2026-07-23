@@ -7,7 +7,7 @@ import {
 import {
   ARENA_STAGE9_BALANCE_VALIDATION_CASE_COUNT,
   createArenaStage9BalanceValidationSeeds,
-} from './arena-stage9-balance-cohorts.js';
+} from '@number-strategy-jump/arena-experiment';
 import {
   createArenaStage9BalanceBotGatePolicy,
   createArenaStage9BalancePolicy,

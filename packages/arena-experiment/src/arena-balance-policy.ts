@@ -7,14 +7,14 @@ import {
 
 export const ARENA_BALANCE_POLICY_SCHEMA_VERSION = 1;
 
-const POLICY_KEYS = new Set([
+const POLICY_KEYS: ReadonlySet<string> = new Set([
   'schemaVersion',
   'minimumCompletedPairedCases',
   'duration',
   'equipment',
   'elimination',
 ]);
-const DURATION_KEYS = new Set([
+const DURATION_KEYS: ReadonlySet<string> = new Set([
   'targetMinimumTicks',
   'targetMaximumTicks',
   'minimumTargetShare',
@@ -22,7 +22,7 @@ const DURATION_KEYS = new Set([
   'maximumUltraShortShare',
   'maximumTimeoutShare',
 ]);
-const EQUIPMENT_KEYS = new Set([
+const EQUIPMENT_KEYS: ReadonlySet<string> = new Set([
   'actionBindings',
   'minimumPickupsPerDefinition',
   'minimumActionsPerDefinition',
@@ -34,36 +34,81 @@ const EQUIPMENT_KEYS = new Set([
   'minimumHitSharePerDefinition',
   'maximumHitSharePerDefinition',
 ]);
-const ACTION_BINDING_KEYS = new Set(['equipmentDefinitionId', 'actionDefinitionId']);
-const ELIMINATION_KEYS = new Set([
+const ACTION_BINDING_KEYS: ReadonlySet<string> = new Set([
+  'equipmentDefinitionId',
+  'actionDefinitionId',
+]);
+const ELIMINATION_KEYS: ReadonlySet<string> = new Set([
   'minimumCreditedShare',
   'minimumEquipmentAttributedShare',
   'maximumEquipmentAttributedShare',
   'minimumEnvironmentShare',
 ]);
 
-function ratio(value, name) {
-  if (!Number.isFinite(value) || value < 0 || value > 1) {
-    throw new RangeError(`${name} 必须位于 [0, 1]。`);
-  }
-  return value;
+export interface ArenaBalanceActionBinding {
+  readonly equipmentDefinitionId: string;
+  readonly actionDefinitionId: string;
 }
 
-function cloneActionBindings(values) {
-  if (!Array.isArray(values) || values.length === 0) {
+export interface ArenaBalanceDurationPolicy {
+  readonly targetMinimumTicks: number;
+  readonly targetMaximumTicks: number;
+  readonly minimumTargetShare: number;
+  readonly ultraShortMaximumTicks: number;
+  readonly maximumUltraShortShare: number;
+  readonly maximumTimeoutShare: number;
+}
+
+export interface ArenaBalanceEquipmentPolicy {
+  readonly actionBindings: readonly Readonly<ArenaBalanceActionBinding>[];
+  readonly minimumPickupsPerDefinition: number;
+  readonly minimumActionsPerDefinition: number;
+  readonly minimumHitsPerDefinition: number;
+  readonly minimumPickupSharePerDefinition: number;
+  readonly maximumPickupSharePerDefinition: number;
+  readonly minimumActionSharePerDefinition: number;
+  readonly maximumActionSharePerDefinition: number;
+  readonly minimumHitSharePerDefinition: number;
+  readonly maximumHitSharePerDefinition: number;
+}
+
+export interface ArenaBalanceEliminationPolicy {
+  readonly minimumCreditedShare: number;
+  readonly minimumEquipmentAttributedShare: number;
+  readonly maximumEquipmentAttributedShare: number;
+  readonly minimumEnvironmentShare: number;
+}
+
+export interface ArenaBalancePolicy {
+  readonly schemaVersion: typeof ARENA_BALANCE_POLICY_SCHEMA_VERSION;
+  readonly minimumCompletedPairedCases: number;
+  readonly duration: Readonly<ArenaBalanceDurationPolicy>;
+  readonly equipment: Readonly<ArenaBalanceEquipmentPolicy>;
+  readonly elimination: Readonly<ArenaBalanceEliminationPolicy>;
+}
+
+function ratio(value: unknown, name: string): number {
+  if (!Number.isFinite(value) || (value as number) < 0 || (value as number) > 1) {
+    throw new RangeError(`${name} 必须位于 [0, 1]。`);
+  }
+  return value as number;
+}
+
+function cloneActionBindings(value: unknown): readonly Readonly<ArenaBalanceActionBinding>[] {
+  if (!Array.isArray(value) || value.length === 0) {
     throw new RangeError('ArenaBalancePolicy.equipment.actionBindings 必须是非空数组。');
   }
-  const equipmentIds = new Set();
-  const actionIds = new Set();
-  const result = values.map((value, index) => {
+  const equipmentIds = new Set<string>();
+  const actionIds = new Set<string>();
+  const result = value.map((entry: unknown, index: number) => {
     const name = `ArenaBalancePolicy.equipment.actionBindings[${index}]`;
-    assertKnownKeys(value, ACTION_BINDING_KEYS, name);
+    assertKnownKeys(entry, ACTION_BINDING_KEYS, name);
     const equipmentDefinitionId = assertNonEmptyString(
-      value.equipmentDefinitionId,
+      entry.equipmentDefinitionId,
       `${name}.equipmentDefinitionId`,
     );
     const actionDefinitionId = assertNonEmptyString(
-      value.actionDefinitionId,
+      entry.actionDefinitionId,
       `${name}.actionDefinitionId`,
     );
     if (equipmentIds.has(equipmentDefinitionId)) {
@@ -75,19 +120,15 @@ function cloneActionBindings(values) {
     equipmentIds.add(equipmentDefinitionId);
     actionIds.add(actionDefinitionId);
     return Object.freeze({ equipmentDefinitionId, actionDefinitionId });
-  }).sort((left, right) => (
-    left.equipmentDefinitionId < right.equipmentDefinitionId
-      ? -1
-      : left.equipmentDefinitionId > right.equipmentDefinitionId ? 1 : 0
-  ));
+  }).sort((left, right) => left.equipmentDefinitionId.localeCompare(right.equipmentDefinitionId));
   return Object.freeze(result);
 }
 
-function assertShareRange(minimum, maximum, name) {
+function assertShareRange(minimum: number, maximum: number, name: string): void {
   if (minimum > maximum) throw new RangeError(`${name} 最小占比不能大于最大占比。`);
 }
 
-export function createArenaBalancePolicy(value) {
+export function createArenaBalancePolicy(value: unknown): Readonly<ArenaBalancePolicy> {
   const source = cloneFrozenData(value, 'ArenaBalancePolicy');
   assertKnownKeys(source, POLICY_KEYS, 'ArenaBalancePolicy');
   if (source.schemaVersion !== ARENA_BALANCE_POLICY_SCHEMA_VERSION) {
@@ -96,6 +137,7 @@ export function createArenaBalancePolicy(value) {
   assertKnownKeys(source.duration, DURATION_KEYS, 'ArenaBalancePolicy.duration');
   assertKnownKeys(source.equipment, EQUIPMENT_KEYS, 'ArenaBalancePolicy.equipment');
   assertKnownKeys(source.elimination, ELIMINATION_KEYS, 'ArenaBalancePolicy.elimination');
+
   const targetMinimumTicks = assertIntegerAtLeast(
     source.duration.targetMinimumTicks,
     1,
@@ -114,6 +156,7 @@ export function createArenaBalancePolicy(value) {
   if (ultraShortMaximumTicks >= targetMinimumTicks) {
     throw new RangeError('ultraShortMaximumTicks 必须小于 targetMinimumTicks。');
   }
+
   const minimumPickupSharePerDefinition = ratio(
     source.equipment.minimumPickupSharePerDefinition,
     'ArenaBalancePolicy.equipment.minimumPickupSharePerDefinition',
@@ -138,27 +181,17 @@ export function createArenaBalancePolicy(value) {
     source.equipment.maximumHitSharePerDefinition,
     'ArenaBalancePolicy.equipment.maximumHitSharePerDefinition',
   );
-  assertShareRange(
-    minimumPickupSharePerDefinition,
-    maximumPickupSharePerDefinition,
-    'ArenaBalancePolicy.equipment pickup share',
-  );
-  assertShareRange(
-    minimumActionSharePerDefinition,
-    maximumActionSharePerDefinition,
-    'ArenaBalancePolicy.equipment action share',
-  );
-  assertShareRange(
-    minimumHitSharePerDefinition,
-    maximumHitSharePerDefinition,
-    'ArenaBalancePolicy.equipment hit share',
-  );
+  assertShareRange(minimumPickupSharePerDefinition, maximumPickupSharePerDefinition, 'ArenaBalancePolicy.equipment pickup share');
+  assertShareRange(minimumActionSharePerDefinition, maximumActionSharePerDefinition, 'ArenaBalancePolicy.equipment action share');
+  assertShareRange(minimumHitSharePerDefinition, maximumHitSharePerDefinition, 'ArenaBalancePolicy.equipment hit share');
+
   const actionBindings = cloneActionBindings(source.equipment.actionBindings);
-  for (const [minimum, maximum, name] of [
+  const shareRanges: readonly [number, number, string][] = [
     [minimumPickupSharePerDefinition, maximumPickupSharePerDefinition, 'pickup'],
     [minimumActionSharePerDefinition, maximumActionSharePerDefinition, 'action'],
     [minimumHitSharePerDefinition, maximumHitSharePerDefinition, 'hit'],
-  ]) {
+  ];
+  for (const [minimum, maximum, name] of shareRanges) {
     if (minimum * actionBindings.length > 1 + 1e-12) {
       throw new RangeError(`ArenaBalancePolicy.equipment ${name} 最小占比总和不可实现。`);
     }
@@ -166,6 +199,7 @@ export function createArenaBalancePolicy(value) {
       throw new RangeError(`ArenaBalancePolicy.equipment ${name} 最大占比总和不可实现。`);
     }
   }
+
   const minimumEquipmentAttributedShare = ratio(
     source.elimination.minimumEquipmentAttributedShare,
     'ArenaBalancePolicy.elimination.minimumEquipmentAttributedShare',
@@ -179,6 +213,7 @@ export function createArenaBalancePolicy(value) {
     maximumEquipmentAttributedShare,
     'ArenaBalancePolicy.elimination equipment share',
   );
+
   return Object.freeze({
     schemaVersion: ARENA_BALANCE_POLICY_SCHEMA_VERSION,
     minimumCompletedPairedCases: assertIntegerAtLeast(
@@ -189,37 +224,16 @@ export function createArenaBalancePolicy(value) {
     duration: Object.freeze({
       targetMinimumTicks,
       targetMaximumTicks,
-      minimumTargetShare: ratio(
-        source.duration.minimumTargetShare,
-        'ArenaBalancePolicy.duration.minimumTargetShare',
-      ),
+      minimumTargetShare: ratio(source.duration.minimumTargetShare, 'ArenaBalancePolicy.duration.minimumTargetShare'),
       ultraShortMaximumTicks,
-      maximumUltraShortShare: ratio(
-        source.duration.maximumUltraShortShare,
-        'ArenaBalancePolicy.duration.maximumUltraShortShare',
-      ),
-      maximumTimeoutShare: ratio(
-        source.duration.maximumTimeoutShare,
-        'ArenaBalancePolicy.duration.maximumTimeoutShare',
-      ),
+      maximumUltraShortShare: ratio(source.duration.maximumUltraShortShare, 'ArenaBalancePolicy.duration.maximumUltraShortShare'),
+      maximumTimeoutShare: ratio(source.duration.maximumTimeoutShare, 'ArenaBalancePolicy.duration.maximumTimeoutShare'),
     }),
     equipment: Object.freeze({
       actionBindings,
-      minimumPickupsPerDefinition: assertIntegerAtLeast(
-        source.equipment.minimumPickupsPerDefinition,
-        1,
-        'ArenaBalancePolicy.equipment.minimumPickupsPerDefinition',
-      ),
-      minimumActionsPerDefinition: assertIntegerAtLeast(
-        source.equipment.minimumActionsPerDefinition,
-        1,
-        'ArenaBalancePolicy.equipment.minimumActionsPerDefinition',
-      ),
-      minimumHitsPerDefinition: assertIntegerAtLeast(
-        source.equipment.minimumHitsPerDefinition,
-        1,
-        'ArenaBalancePolicy.equipment.minimumHitsPerDefinition',
-      ),
+      minimumPickupsPerDefinition: assertIntegerAtLeast(source.equipment.minimumPickupsPerDefinition, 1, 'ArenaBalancePolicy.equipment.minimumPickupsPerDefinition'),
+      minimumActionsPerDefinition: assertIntegerAtLeast(source.equipment.minimumActionsPerDefinition, 1, 'ArenaBalancePolicy.equipment.minimumActionsPerDefinition'),
+      minimumHitsPerDefinition: assertIntegerAtLeast(source.equipment.minimumHitsPerDefinition, 1, 'ArenaBalancePolicy.equipment.minimumHitsPerDefinition'),
       minimumPickupSharePerDefinition,
       maximumPickupSharePerDefinition,
       minimumActionSharePerDefinition,
@@ -228,16 +242,10 @@ export function createArenaBalancePolicy(value) {
       maximumHitSharePerDefinition,
     }),
     elimination: Object.freeze({
-      minimumCreditedShare: ratio(
-        source.elimination.minimumCreditedShare,
-        'ArenaBalancePolicy.elimination.minimumCreditedShare',
-      ),
+      minimumCreditedShare: ratio(source.elimination.minimumCreditedShare, 'ArenaBalancePolicy.elimination.minimumCreditedShare'),
       minimumEquipmentAttributedShare,
       maximumEquipmentAttributedShare,
-      minimumEnvironmentShare: ratio(
-        source.elimination.minimumEnvironmentShare,
-        'ArenaBalancePolicy.elimination.minimumEnvironmentShare',
-      ),
+      minimumEnvironmentShare: ratio(source.elimination.minimumEnvironmentShare, 'ArenaBalancePolicy.elimination.minimumEnvironmentShare'),
     }),
   });
 }

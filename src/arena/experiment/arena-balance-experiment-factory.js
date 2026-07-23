@@ -10,7 +10,7 @@ import {
   ARENA_BALANCE_CANDIDATE_COLLECTOR_VERSION,
   createArenaBalanceCandidateCollectorEntry,
 } from './arena-balance-candidate-collector.js';
-import { createArenaBalancePolicy } from './arena-balance-policy.js';
+import { createArenaBalancePolicy } from '@number-strategy-jump/arena-experiment';
 import {
   ARENA_BOT_ASSIGNMENT_DISTRIBUTION_COLLECTOR_ID,
   ARENA_BOT_ASSIGNMENT_DISTRIBUTION_COLLECTOR_VERSION,

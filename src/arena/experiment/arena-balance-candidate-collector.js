@@ -5,7 +5,7 @@ import {
   assertNonEmptyString,
   cloneFrozenData,
 } from '@number-strategy-jump/arena-contracts';
-import { createArenaBalancePolicy } from './arena-balance-policy.js';
+import { createArenaBalancePolicy } from '@number-strategy-jump/arena-experiment';
 import {
   createSortedMetricCountRecord,
   incrementMetricCount,

@@ -78,14 +78,14 @@ import {
 } from '../../../src/arena/experiment/arena-balance-validation-composition.js';
 import {
   createArenaStage9BotSeeds,
-} from '../../../src/arena/experiment/arena-bot-capability-seeds.js';
+} from '@number-strategy-jump/arena-experiment';
 import {
   ARENA_BALANCE_CANDIDATE_COLLECTOR_ID,
   ARENA_BALANCE_CANDIDATE_COLLECTOR_VERSION,
   createArenaBalanceCandidateCollectorEntry,
   createArenaBalanceCandidateCollectorParameters,
 } from '../../../src/arena/experiment/arena-balance-candidate-collector.js';
-import { createArenaBalancePolicy } from '../../../src/arena/experiment/arena-balance-policy.js';
+import { createArenaBalancePolicy } from '@number-strategy-jump/arena-experiment';
 import { parseArenaStressIntegerOptions } from '../../../scripts/arena-stress-cli.mjs';
 
 const COMMIT = 'c'.repeat(40);
