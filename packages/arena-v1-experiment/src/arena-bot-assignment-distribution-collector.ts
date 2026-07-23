@@ -33,18 +33,21 @@ class ArenaBotAssignmentDistributionCollector {
 
   getResult() {
     this.#assertUsable();
-    const counts = Object.fromEntries(BOT_DIFFICULTY_IDS.map((id) => [id, 0]));
+    const counts: Record<string, number> = Object.fromEntries(
+      BOT_DIFFICULTY_IDS.map((id) => [id, 0]),
+    );
     for (let seed = 0; seed < SAMPLE_COUNT; seed += 1) {
-      counts[createMatchAssignment({ matchSeed: seed }).selectedDifficultyId] += 1;
+      const id = createMatchAssignment({ matchSeed: seed }).selectedDifficultyId;
+      counts[id] = (counts[id] ?? 0) + 1;
     }
     const shares = Object.fromEntries(BOT_DIFFICULTY_IDS.map((id) => [
       id,
-      counts[id] / SAMPLE_COUNT,
+      (counts[id] ?? 0) / SAMPLE_COUNT,
     ]));
     return cloneFrozenData({
       gate: createArenaMetricGate(BOT_DIFFICULTY_IDS.map((id) => ({
         id: `difficulty.${id}.share-bounded`,
-        passed: shares[id] >= MINIMUM_SHARE && shares[id] <= MAXIMUM_SHARE,
+        passed: (shares[id] ?? 0) >= MINIMUM_SHARE && (shares[id] ?? 0) <= MAXIMUM_SHARE,
       }))),
       denominators: { assignmentSamples: SAMPLE_COUNT },
       raw: { counts },

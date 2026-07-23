@@ -444,9 +444,12 @@ test('Arena V1 experiment runtime stays headless behind strict V1 composition', 
   assert.deepEqual(
     Object.keys(packageDefinition.dependencies).sort(),
     [
+      '@number-strategy-jump/arena-balance',
+      '@number-strategy-jump/arena-bot',
       '@number-strategy-jump/arena-contracts',
       '@number-strategy-jump/arena-experiment',
       '@number-strategy-jump/arena-match',
+      '@number-strategy-jump/arena-matchmaking',
       '@number-strategy-jump/arena-movement',
       '@number-strategy-jump/arena-v1-composition',
       '@number-strategy-jump/arena-v1-content',

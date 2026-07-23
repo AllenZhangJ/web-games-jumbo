@@ -72,3 +72,18 @@ export {
   createArenaStage9S91ExperimentRegistries,
 } from './arena-v1-experiment-composition.js';
 export type { ArenaStage9S91ExperimentOptions } from './arena-v1-experiment-composition.js';
+export {
+  ARENA_V1_BENCHMARK_PLAYER_DEFAULT_TUNING,
+  ARENA_V1_BENCHMARK_PLAYER_STRATEGY_VERSION,
+  createArenaV1BenchmarkPlayerStrategy,
+  createArenaV1BenchmarkPlayerTuning,
+} from './arena-v1-benchmark-player-strategy.js';
+export type {
+  ArenaV1BenchmarkPlayerStrategy,
+  ArenaV1BenchmarkPlayerStrategyOptions,
+} from './arena-v1-benchmark-player-strategy.js';
+export {
+  ARENA_BOT_ASSIGNMENT_DISTRIBUTION_COLLECTOR_ID,
+  ARENA_BOT_ASSIGNMENT_DISTRIBUTION_COLLECTOR_VERSION,
+  createArenaBotAssignmentDistributionCollectorEntry,
+} from './arena-bot-assignment-distribution-collector.js';

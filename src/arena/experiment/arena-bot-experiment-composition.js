@@ -19,7 +19,7 @@ import {
   ARENA_BOT_ASSIGNMENT_DISTRIBUTION_COLLECTOR_ID,
   ARENA_BOT_ASSIGNMENT_DISTRIBUTION_COLLECTOR_VERSION,
   createArenaBotAssignmentDistributionCollectorEntry,
-} from './arena-bot-assignment-distribution-collector.js';
+} from '@number-strategy-jump/arena-v1-experiment';
 import {
   ARENA_BOT_CAPABILITY_COLLECTOR_ID,
   ARENA_BOT_CAPABILITY_COLLECTOR_VERSION,

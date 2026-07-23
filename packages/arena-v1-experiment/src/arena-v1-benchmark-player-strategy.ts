@@ -1,5 +1,7 @@
 import { createArenaV1CharacterRegistry } from '@number-strategy-jump/arena-v1-content';
 import { createNeutralInputFrame, normalizeInputFrame } from '@number-strategy-jump/arena-contracts';
+import type { ArenaInputFrame, ArenaMatchSnapshot } from '@number-strategy-jump/arena-contracts';
+import type { ArenaMatchConfig } from '@number-strategy-jump/arena-match';
 import {
   ARENA_V1_BENCHMARK_PLAYER_STRATEGY_VERSION,
   createArenaV1BenchmarkPlayerTuning,
@@ -11,26 +13,39 @@ export {
   createArenaV1BenchmarkPlayerTuning,
 } from '@number-strategy-jump/arena-balance';
 
+export interface ArenaV1BenchmarkPlayerStrategy {
+  readonly version: number;
+  readonly createInput: (snapshot: ArenaMatchSnapshot) => ArenaInputFrame;
+  readonly destroy: () => void;
+}
+export interface ArenaV1BenchmarkPlayerStrategyOptions {
+  readonly config: ArenaMatchConfig;
+  readonly tuning: unknown;
+  readonly participantId?: string;
+  readonly opponentId?: string;
+}
+
 export function createArenaV1BenchmarkPlayerStrategy({
   config,
   tuning,
   participantId = 'player-1',
   opponentId = 'player-2',
-}) {
+}: ArenaV1BenchmarkPlayerStrategyOptions): Readonly<ArenaV1BenchmarkPlayerStrategy> {
   const resolved = createArenaV1BenchmarkPlayerTuning(tuning);
   const characterRegistry = createArenaV1CharacterRegistry();
   const characterId = config.participantCharacters.find(
     (value) => value.participantId === participantId,
   )?.definitionId;
+  if (!characterId) throw new Error(`benchmark player 缺少 ${participantId} 的角色定义。`);
   const characterRadius = characterRegistry.require(characterId).collision.radius;
-  const history = [];
+  const history: ArenaMatchSnapshot[] = [];
   let nextDecisionTick = 0;
   let moveX = 0;
   let moveZ = 0;
   let destroyed = false;
   return Object.freeze({
     version: ARENA_V1_BENCHMARK_PLAYER_STRATEGY_VERSION,
-    createInput(snapshot) {
+    createInput(snapshot: ArenaMatchSnapshot) {
       if (destroyed) throw new Error('ArenaV1BenchmarkPlayerStrategy 已销毁。');
       history.push(snapshot);
       if (history.length > resolved.observationHistoryTicks) history.shift();
@@ -41,11 +56,13 @@ export function createArenaV1BenchmarkPlayerStrategy({
       if (snapshot.tick >= nextDecisionTick) {
         nextDecisionTick = snapshot.tick + resolved.decisionIntervalTicks;
         const delayed = history[0];
+        if (!delayed) throw new Error('benchmark player 缺少观察历史。');
         const opponent = delayed.participants.find(({ id }) => id === opponentId);
         if (!opponent) throw new Error(`benchmark player 缺少对手 ${opponentId}。`);
         const surface = config.arena.surfaces.find(
           ({ id }) => id === self.supportSurfaceId,
         ) ?? config.arena.surfaces[0];
+        if (!surface) throw new Error('benchmark player 缺少可用地图表面。');
         const clearance = Math.min(
           surface.halfExtents.x - Math.abs(self.position.x - surface.center.x),
           surface.halfExtents.z - Math.abs(self.position.z - surface.center.z),

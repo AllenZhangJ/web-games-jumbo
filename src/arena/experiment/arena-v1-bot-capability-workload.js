@@ -13,7 +13,7 @@ import { createDeterministicDataHash } from '@number-strategy-jump/arena-contrac
 import {
   createArenaV1BenchmarkPlayerStrategy,
   createArenaV1BenchmarkPlayerTuning,
-} from './arena-v1-benchmark-player-strategy.js';
+} from '@number-strategy-jump/arena-v1-experiment';
 import { cloneArenaExperimentReplaySeeds } from '@number-strategy-jump/arena-experiment';
 import {
   ARENA_V1_BOT_CAPABILITY_WORKLOAD_ID,
