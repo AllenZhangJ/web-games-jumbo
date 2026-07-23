@@ -44,7 +44,7 @@
     "arena:product:device:evidence": "node --import tsx scripts/arena-device-evidence.ts --definition arena.stage8.product-device-acceptance.v1",
     "arena:performance:evidence": "node --import tsx scripts/arena-device-evidence.ts --definition arena.stage9.performance-device-acceptance.v1",
     "arena:human-fairness:evidence": "node --import tsx scripts/arena-human-fairness-evidence.ts",
-    "arena:human-fairness:ingest": "node --import tsx scripts/arena-human-fairness-ingest.mjs",
+    "arena:human-fairness:ingest": "node --import tsx scripts/arena-human-fairness-ingest.ts",
     "arena:build:verify": "node --import tsx scripts/arena-build-manifest.ts",
     "arena:build:budget": "node --import tsx scripts/arena-build-budget.ts",
     "arena:stage9:readiness": "node --import tsx scripts/arena-stage9-readiness.mjs",

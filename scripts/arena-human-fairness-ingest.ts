@@ -18,6 +18,11 @@ import {
 import {
   materializeHumanMatchStudyCapturePackage,
   validateHumanMatchStudyCapturePackage,
+  type HumanMatchStudyBundle,
+  type HumanMatchStudyCapturePackage,
+  type HumanMatchStudyDefinition,
+  type HumanMatchStudyReplayArtifact,
+  type HumanMatchStudyWorkspace,
 } from '@number-strategy-jump/arena-human-match-study';
 import {
   verifyHumanMatchStudyReplay,
@@ -27,15 +32,34 @@ import {
 } from '@number-strategy-jump/arena-human-match-study';
 import {
   readVerifiedTextFile,
-} from './lib/evidence-file-verifier.ts';
+  type VerifiedEvidenceFile,
+} from './lib/evidence-file-verifier.js';
 import {
   verifyArenaBuildManifestDirectory,
-} from './lib/arena-build-manifest-files.ts';
+} from './lib/arena-build-manifest-files.js';
 
 const MAXIMUM_CAPTURE_PACKAGE_BYTES = 256 * 1024 * 1024;
 const MAXIMUM_WORKSPACE_BYTES = 5 * 1024 * 1024;
 
-function usage() {
+type HumanFairnessIngestOptions =
+  | Readonly<{ help: true }>
+  | Readonly<{
+    help: false;
+    packages: readonly string[];
+    workspace: string;
+    buildRoot: string;
+    output: string;
+  }>;
+interface CapturePackageInput {
+  readonly capturePackage: HumanMatchStudyCapturePackage;
+  readonly verified: VerifiedEvidenceFile & Readonly<{ text: string }>;
+}
+interface WorkspaceAudit {
+  readonly workspace: HumanMatchStudyWorkspace;
+  readonly verified: VerifiedEvidenceFile & Readonly<{ text: string }>;
+}
+
+function usage(): string {
   return [
     'Usage:',
     '  npm run arena:human-fairness:ingest -- --package <capture.json> [--package <capture.json> ...] --workspace <workspace.json> --build-root <clean-web-build> --output <new-directory>',
@@ -44,8 +68,14 @@ function usage() {
   ].join('\n');
 }
 
-function parseArgs(values) {
-  const result = {
+function parseArgs(values: readonly string[]): HumanFairnessIngestOptions {
+  const result: {
+    packages: string[];
+    workspace: string | null;
+    buildRoot: string | null;
+    output: string | null;
+    help: boolean;
+  } = {
     packages: [],
     workspace: null,
     buildRoot: null,
@@ -58,19 +88,22 @@ function parseArgs(values) {
       result.help = true;
       continue;
     }
+    if (!argument) throw new Error('参数不能为空。');
     const match = argument.match(/^--(package|workspace|build-root|output)(?:=(.*))?$/);
     if (!match) throw new Error(`未知参数 ${argument}。\n${usage()}`);
+    const key = match[1];
+    if (!key) throw new Error(`参数 ${argument} 无效。`);
     const inline = match[2];
     const value = inline === undefined ? values[++index] : inline;
     if (!value || value.startsWith('--')) {
-      throw new Error(`参数 --${match[1]} 缺少值。`);
+      throw new Error(`参数 --${key} 缺少值。`);
     }
-    if (match[1] === 'package') result.packages.push(value);
-    else if (match[1] === 'workspace') {
+    if (key === 'package') result.packages.push(value);
+    else if (key === 'workspace') {
       if (result.workspace !== null) throw new Error('参数 --workspace 不能重复。');
       result.workspace = value;
     }
-    else if (match[1] === 'build-root') {
+    else if (key === 'build-root') {
       if (result.buildRoot !== null) throw new Error('参数 --build-root 不能重复。');
       result.buildRoot = value;
     } else {
@@ -78,19 +111,29 @@ function parseArgs(values) {
       result.output = value;
     }
   }
-  if (result.help) return result;
+  if (result.help) return Object.freeze({ help: true });
   if (result.packages.length === 0) throw new Error(`至少需要一个 --package。\n${usage()}`);
   if (result.workspace === null) throw new Error(`缺少 --workspace。\n${usage()}`);
   if (result.buildRoot === null) throw new Error(`缺少 --build-root。\n${usage()}`);
   if (result.output === null) throw new Error(`缺少 --output。\n${usage()}`);
-  return result;
+  return Object.freeze({
+    help: false,
+    packages: Object.freeze([...result.packages]),
+    workspace: result.workspace,
+    buildRoot: result.buildRoot,
+    output: result.output,
+  } as const);
 }
 
-function canonicalJsonBytes(value) {
+function canonicalJsonBytes(value: unknown): Buffer {
   return Buffer.from(`${JSON.stringify(value, null, 2)}\n`);
 }
 
-function artifactFor(replayBytes, enrollmentIndex, matchIndex) {
+function artifactFor(
+  replayBytes: Buffer,
+  enrollmentIndex: number,
+  matchIndex: number,
+): Readonly<HumanMatchStudyReplayArtifact> {
   const suffix = `${String(enrollmentIndex).padStart(4, '0')}/${String(matchIndex).padStart(2, '0')}`;
   return Object.freeze({
     id: `human-study-replay-${suffix.replace('/', '-')}`,
@@ -100,11 +143,14 @@ function artifactFor(replayBytes, enrollmentIndex, matchIndex) {
   });
 }
 
-async function readPackages(definition, packagePaths) {
-  const files = new Set();
-  const hashes = new Set();
-  const packageIds = new Set();
-  const inputs = [];
+async function readPackages(
+  definition: HumanMatchStudyDefinition,
+  packagePaths: readonly string[],
+): Promise<readonly Readonly<CapturePackageInput>[]> {
+  const files = new Set<string>();
+  const hashes = new Set<string>();
+  const packageIds = new Set<string>();
+  const inputs: Readonly<CapturePackageInput>[] = [];
   for (const [index, packagePath] of packagePaths.entries()) {
     const verified = await readVerifiedTextFile(packagePath, {
       label: `Human Match Study capture package ${index}`,
@@ -126,7 +172,8 @@ async function readPackages(definition, packagePaths) {
       throw new Error(`重复 capture packageId ${capturePackage.packageId}。`);
     }
     packageIds.add(capturePackage.packageId);
-    inputs.push(Object.freeze({ capturePackage, verified }));
+    if (verified.text === null) throw new Error(`capture package ${index} 未读取文本。`);
+    inputs.push(Object.freeze({ capturePackage, verified: { ...verified, text: verified.text } }));
   }
   return Object.freeze(inputs.sort((left, right) => (
     left.capturePackage.assignment.enrollmentIndex
@@ -134,11 +181,16 @@ async function readPackages(definition, packagePaths) {
   )));
 }
 
-async function readAndVerifyWorkspace(definition, workspacePath, inputs) {
+async function readAndVerifyWorkspace(
+  definition: HumanMatchStudyDefinition,
+  workspacePath: string,
+  inputs: readonly Readonly<CapturePackageInput>[],
+): Promise<Readonly<WorkspaceAudit>> {
   const verified = await readVerifiedTextFile(workspacePath, {
     label: 'Human Match Study workspace audit',
     maximumBytes: MAXIMUM_WORKSPACE_BYTES,
   });
+  if (verified.text === null) throw new Error('Human Match Study workspace audit 未读取文本。');
   const workspace = createHumanMatchStudyWorkspace(
     definition,
     JSON.parse(verified.text),
@@ -152,6 +204,7 @@ async function readAndVerifyWorkspace(definition, workspacePath, inputs) {
   for (const [index, input] of inputs.entries()) {
     const receipt = workspace.receipts[index];
     const capturePackage = input.capturePackage;
+    if (!receipt) throw new Error(`workspace 缺少 receipt ${index}。`);
     if (
       receipt.assignment.assignmentId !== capturePackage.assignment.assignmentId
       || receipt.assignment.enrollmentIndex !== capturePackage.assignment.enrollmentIndex
@@ -164,22 +217,22 @@ async function readAndVerifyWorkspace(definition, workspacePath, inputs) {
       || receipt.packageReceipt.fileName !== path.basename(input.verified.resolvedPath)
     ) throw new Error(`workspace receipt ${index} 与 capture package 不一致。`);
   }
-  return Object.freeze({ workspace, verified });
+  return Object.freeze({ workspace, verified: { ...verified, text: verified.text } });
 }
 
 async function materializeIntoTemporaryDirectory(
-  definition,
-  inputs,
-  workspaceAudit,
-  temporaryRoot,
-) {
-  const records = [];
-  const packageManifest = [];
+  definition: HumanMatchStudyDefinition,
+  inputs: readonly Readonly<CapturePackageInput>[],
+  workspaceAudit: Readonly<WorkspaceAudit>,
+  temporaryRoot: string,
+): Promise<HumanMatchStudyBundle> {
+  const records: ReturnType<typeof materializeHumanMatchStudyCapturePackage>[] = [];
+  const packageManifest: Array<Readonly<Record<string, string | number>>> = [];
   await mkdir(path.join(temporaryRoot, 'raw-capture-packages'), { recursive: true });
   for (const { capturePackage, verified } of inputs) {
     const enrollmentIndex = capturePackage.assignment.enrollmentIndex;
-    const replayArtifacts = [];
-    const replayBytes = [];
+    const replayArtifacts: Readonly<HumanMatchStudyReplayArtifact>[] = [];
+    const replayBytes: Buffer[] = [];
     for (const match of capturePackage.matches) {
       const bytes = canonicalJsonBytes(match.replay);
       replayBytes.push(bytes);
@@ -200,8 +253,10 @@ async function materializeIntoTemporaryDirectory(
     }
     for (const [index, artifact] of replayArtifacts.entries()) {
       const outputPath = path.join(temporaryRoot, ...artifact.path.split('/'));
+      const bytes = replayBytes[index];
+      if (!bytes) throw new Error(`缺少 replay artifact ${artifact.id} 字节。`);
       await mkdir(path.dirname(outputPath), { recursive: true });
-      await writeFile(outputPath, replayBytes[index], { flag: 'wx' });
+      await writeFile(outputPath, bytes, { flag: 'wx' });
     }
     const rawFileName = (
       `enrollment-${String(enrollmentIndex).padStart(4, '0')}-${capturePackage.packageId}.json`
@@ -221,7 +276,9 @@ async function materializeIntoTemporaryDirectory(
     }));
     records.push(record);
   }
-  const first = inputs[0].capturePackage;
+  const firstInput = inputs[0];
+  if (!firstInput) throw new Error('Human Match Study ingest 没有 capture package。');
+  const first = firstInput.capturePackage;
   const createdAt = inputs.reduce(
     (latest, { capturePackage }) => (
       capturePackage.performedAt > latest ? capturePackage.performedAt : latest
@@ -269,7 +326,7 @@ async function materializeIntoTemporaryDirectory(
   return bundle;
 }
 
-async function main() {
+async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
   if (options.help) {
     console.log(usage());
@@ -337,7 +394,7 @@ async function main() {
   }
 }
 
-main().catch((error) => {
+void main().catch((error: unknown) => {
   console.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;
 });

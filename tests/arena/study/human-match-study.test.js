@@ -639,7 +639,7 @@ test('Human Match Study CLI reproduces authority and every hidden Bot input', as
     const ingestRoot = path.join(root, 'ingested');
     const ingested = spawnSync(process.execPath, [
       '--import', 'tsx',
-      'scripts/arena-human-fairness-ingest.mjs',
+      'scripts/arena-human-fairness-ingest.ts',
       '--package',
       packagePath,
       '--workspace',
@@ -666,7 +666,7 @@ test('Human Match Study CLI reproduces authority and every hidden Bot input', as
     );
     const rejectedIngest = spawnSync(process.execPath, [
       '--import', 'tsx',
-      'scripts/arena-human-fairness-ingest.mjs',
+      'scripts/arena-human-fairness-ingest.ts',
       '--package',
       packagePath,
       '--workspace',

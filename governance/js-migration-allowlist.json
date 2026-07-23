@@ -4,7 +4,6 @@
   "baselineFileCount": 549,
   "policy": "exact-decreasing-allowlist",
   "files": [
-    "scripts/arena-human-fairness-ingest.mjs",
     "scripts/arena-stage9-readiness.mjs",
     "scripts/lib/arena-stage9-release-producers.mjs",
     "tests/architecture.test.js",
