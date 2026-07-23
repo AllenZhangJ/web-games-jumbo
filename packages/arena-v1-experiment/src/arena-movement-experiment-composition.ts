@@ -1,4 +1,5 @@
 import { createArenaV1MatchCore } from '@number-strategy-jump/arena-v1-composition';
+import { assertIntegerAtLeast } from '@number-strategy-jump/arena-contracts';
 import {
   ARENA_EXPERIMENT_DEFINITION_SCHEMA_VERSION,
   ARENA_EXPERIMENT_SEED_SET_KIND,
@@ -15,13 +16,13 @@ import {
   ARENA_MOVEMENT_STRESS_COLLECTOR_ID,
   ARENA_MOVEMENT_STRESS_COLLECTOR_VERSION,
   createArenaMovementStressCollectorEntry,
-} from '@number-strategy-jump/arena-v1-experiment';
+} from './arena-movement-stress-collector.js';
 import {
   ARENA_V1_MOVEMENT_STRESS_DEFAULT_PARAMETERS,
   ARENA_V1_MOVEMENT_STRESS_WORKLOAD_ID,
   ARENA_V1_MOVEMENT_STRESS_WORKLOAD_VERSION,
   createArenaV1MovementStressWorkloadEntry,
-} from '@number-strategy-jump/arena-v1-experiment';
+} from './arena-v1-movement-stress-workload.js';
 
 export const ARENA_STAGE9_MOVEMENT_EXPERIMENT_ID = 'arena.stage9.s9.1.movement-stress.v1';
 export const ARENA_STAGE9_MOVEMENT_SEED_BASE = 0x6d560000;
@@ -35,7 +36,7 @@ export const ARENA_STAGE9_MOVEMENT_DEFAULT_CONFIG = Object.freeze({
   equipment: Object.freeze({ initialSpawns: Object.freeze([]) }),
 });
 
-function createMovementSeeds(caseCountValue) {
+function createMovementSeeds(caseCountValue: unknown) {
   const caseCount = assertArenaExperimentCaseCount(caseCountValue);
   return createSortedArenaExperimentSeeds(Array.from(
     { length: caseCount },
@@ -44,13 +45,25 @@ function createMovementSeeds(caseCountValue) {
   ), 'movement experiment seeds');
 }
 
-function readProbeMetadata({ seed, config }) {
+function readProbeMetadata({ seed, config }: { readonly seed: number; readonly config: unknown }) {
   const core = createArenaV1MatchCore({ seed, config });
   try {
     return core.getReplayMetadata();
   } finally {
     core.destroy();
   }
+}
+
+export interface ArenaStage9MovementExperimentOptions {
+  readonly sourceCommit?: unknown;
+  readonly sourceDirty?: unknown;
+  readonly caseCount?: number;
+  readonly replaySampleCount?: number;
+  readonly config?: unknown;
+  readonly input?: unknown;
+  readonly replayCheckpointInterval?: number;
+  readonly maximumEventsPerCase?: number;
+  readonly maximumFailedCases?: number;
 }
 
 export function createArenaStage9MovementExperimentDefinition({
@@ -64,10 +77,22 @@ export function createArenaStage9MovementExperimentDefinition({
     ARENA_V1_MOVEMENT_STRESS_DEFAULT_PARAMETERS.replayCheckpointInterval,
   maximumEventsPerCase = ARENA_V1_MOVEMENT_STRESS_DEFAULT_PARAMETERS.maximumEventsPerCase,
   maximumFailedCases = 0,
-} = {}) {
+}: ArenaStage9MovementExperimentOptions = {}) {
   const seeds = createMovementSeeds(caseCount);
   const replaySeeds = createArenaExperimentReplaySeeds(seeds, replaySampleCount);
-  const metadata = readProbeMetadata({ seed: seeds[0], config });
+  const firstSeed = seeds[0];
+  if (firstSeed === undefined) throw new Error('Movement experiment seeds 不能为空。');
+  const metadata = readProbeMetadata({ seed: firstSeed, config });
+  const preparingTicks = assertIntegerAtLeast(
+    metadata.config.preparingTicks,
+    0,
+    'Movement experiment replay metadata preparingTicks',
+  );
+  const hardLimitTicks = assertIntegerAtLeast(
+    metadata.config.hardLimitTicks,
+    1,
+    'Movement experiment replay metadata hardLimitTicks',
+  );
   return createArenaExperimentDefinition({
     schemaVersion: ARENA_EXPERIMENT_DEFINITION_SCHEMA_VERSION,
     id: ARENA_STAGE9_MOVEMENT_EXPERIMENT_ID,
@@ -101,7 +126,7 @@ export function createArenaStage9MovementExperimentDefinition({
       version: ARENA_MOVEMENT_STRESS_COLLECTOR_VERSION,
     }],
     limits: {
-      maximumTicksPerCase: metadata.config.preparingTicks + metadata.config.hardLimitTicks + 1,
+      maximumTicksPerCase: preparingTicks + hardLimitTicks + 1,
       maximumFailedCases,
     },
   });

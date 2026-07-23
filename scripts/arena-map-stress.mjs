@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import {
   createArenaStage9MapExperimentDefinition,
   createArenaStage9MapExperimentRegistries,
-} from '../src/arena/experiment/arena-map-experiment-composition.js';
+} from '@number-strategy-jump/arena-v1-experiment';
 import { ARENA_EXPERIMENT_OUTCOME } from '@number-strategy-jump/arena-experiment';
 import { ARENA_MAP_TIMELINE_COLLECTOR_ID } from '@number-strategy-jump/arena-v1-experiment';
 import { readArenaGitSourceIdentity } from './arena-git-source-identity.mjs';

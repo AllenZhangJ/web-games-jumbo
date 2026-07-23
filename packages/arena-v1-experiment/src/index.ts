@@ -40,3 +40,21 @@ export {
   ARENA_MOVEMENT_STRESS_COLLECTOR_VERSION,
   createArenaMovementStressCollectorEntry,
 } from './arena-movement-stress-collector.js';
+export {
+  ARENA_STAGE9_MAP_DEFAULT_CONFIG,
+  ARENA_STAGE9_MAP_EXPERIMENT_ID,
+  createArenaStage9MapExperimentDefinition,
+  createArenaStage9MapExperimentRegistries,
+} from './arena-map-experiment-composition.js';
+export type { ArenaStage9MapExperimentOptions } from './arena-map-experiment-composition.js';
+export {
+  ARENA_STAGE9_MOVEMENT_DEFAULT_CONFIG,
+  ARENA_STAGE9_MOVEMENT_EXPERIMENT_ID,
+  ARENA_STAGE9_MOVEMENT_SEED_BASE,
+  ARENA_STAGE9_MOVEMENT_SEED_STEP,
+  createArenaStage9MovementExperimentDefinition,
+  createArenaStage9MovementExperimentRegistries,
+} from './arena-movement-experiment-composition.js';
+export type {
+  ArenaStage9MovementExperimentOptions,
+} from './arena-movement-experiment-composition.js';

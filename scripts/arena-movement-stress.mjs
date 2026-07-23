@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import {
   createArenaStage9MovementExperimentDefinition,
   createArenaStage9MovementExperimentRegistries,
-} from '../src/arena/experiment/arena-movement-experiment-composition.js';
+} from '@number-strategy-jump/arena-v1-experiment';
 import { ARENA_EXPERIMENT_OUTCOME } from '@number-strategy-jump/arena-experiment';
 import { ARENA_MOVEMENT_STRESS_COLLECTOR_ID } from '@number-strategy-jump/arena-v1-experiment';
 import { readArenaGitSourceIdentity } from './arena-git-source-identity.mjs';

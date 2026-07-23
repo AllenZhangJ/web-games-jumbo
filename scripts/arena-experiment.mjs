@@ -12,11 +12,11 @@ import {
 import {
   createArenaStage9MapExperimentDefinition,
   createArenaStage9MapExperimentRegistries,
-} from '../src/arena/experiment/arena-map-experiment-composition.js';
+} from '@number-strategy-jump/arena-v1-experiment';
 import {
   createArenaStage9MovementExperimentDefinition,
   createArenaStage9MovementExperimentRegistries,
-} from '../src/arena/experiment/arena-movement-experiment-composition.js';
+} from '@number-strategy-jump/arena-v1-experiment';
 import {
   createArenaStage9BotExperimentDefinition,
   createArenaStage9BotExperimentRegistries,

@@ -1,4 +1,5 @@
 import { createArenaV1MatchCore } from '@number-strategy-jump/arena-v1-composition';
+import { assertIntegerAtLeast } from '@number-strategy-jump/arena-contracts';
 import {
   ARENA_EXPERIMENT_DEFINITION_SCHEMA_VERSION,
   ARENA_EXPERIMENT_SEED_SET_KIND,
@@ -14,13 +15,13 @@ import {
   ARENA_MAP_TIMELINE_COLLECTOR_ID,
   ARENA_MAP_TIMELINE_COLLECTOR_VERSION,
   createArenaMapTimelineCollectorEntry,
-} from '@number-strategy-jump/arena-v1-experiment';
+} from './arena-map-timeline-collector.js';
 import {
   ARENA_V1_MAP_TIMELINE_DEFAULT_PARAMETERS,
   ARENA_V1_MAP_TIMELINE_WORKLOAD_ID,
   ARENA_V1_MAP_TIMELINE_WORKLOAD_VERSION,
   createArenaV1MapTimelineWorkloadEntry,
-} from '@number-strategy-jump/arena-v1-experiment';
+} from './arena-v1-map-timeline-workload.js';
 
 export const ARENA_STAGE9_MAP_EXPERIMENT_ID = 'arena.stage9.s9.1.map-timeline.v1';
 
@@ -31,13 +32,25 @@ export const ARENA_STAGE9_MAP_DEFAULT_CONFIG = Object.freeze({
   hardLimitTicks: 7_201,
 });
 
-function readProbeMetadata({ seed, config }) {
+function readProbeMetadata({ seed, config }: { readonly seed: number; readonly config: unknown }) {
   const core = createArenaV1MatchCore({ seed, config });
   try {
     return core.getReplayMetadata();
   } finally {
     core.destroy();
   }
+}
+
+export interface ArenaStage9MapExperimentOptions {
+  readonly sourceCommit?: unknown;
+  readonly sourceDirty?: unknown;
+  readonly firstSeed?: number;
+  readonly caseCount?: number;
+  readonly replaySampleCount?: number;
+  readonly config?: unknown;
+  readonly replayCheckpointInterval?: number;
+  readonly maximumEventsPerCase?: number;
+  readonly maximumFailedCases?: number;
 }
 
 export function createArenaStage9MapExperimentDefinition({
@@ -50,7 +63,7 @@ export function createArenaStage9MapExperimentDefinition({
   replayCheckpointInterval = ARENA_V1_MAP_TIMELINE_DEFAULT_PARAMETERS.replayCheckpointInterval,
   maximumEventsPerCase = ARENA_V1_MAP_TIMELINE_DEFAULT_PARAMETERS.maximumEventsPerCase,
   maximumFailedCases = 0,
-} = {}) {
+}: ArenaStage9MapExperimentOptions = {}) {
   const range = createContiguousArenaExperimentSeedRange(firstSeed, caseCount);
   const plannedSeeds = Array.from(
     { length: range.caseCount },
@@ -58,6 +71,16 @@ export function createArenaStage9MapExperimentDefinition({
   );
   const replaySeeds = createArenaExperimentReplaySeeds(plannedSeeds, replaySampleCount);
   const metadata = readProbeMetadata({ seed: range.firstSeed, config });
+  const preparingTicks = assertIntegerAtLeast(
+    metadata.config.preparingTicks,
+    0,
+    'Map experiment replay metadata preparingTicks',
+  );
+  const hardLimitTicks = assertIntegerAtLeast(
+    metadata.config.hardLimitTicks,
+    1,
+    'Map experiment replay metadata hardLimitTicks',
+  );
   return createArenaExperimentDefinition({
     schemaVersion: ARENA_EXPERIMENT_DEFINITION_SCHEMA_VERSION,
     id: ARENA_STAGE9_MAP_EXPERIMENT_ID,
@@ -95,7 +118,7 @@ export function createArenaStage9MapExperimentDefinition({
       version: ARENA_MAP_TIMELINE_COLLECTOR_VERSION,
     }],
     limits: {
-      maximumTicksPerCase: metadata.config.preparingTicks + metadata.config.hardLimitTicks + 1,
+      maximumTicksPerCase: preparingTicks + hardLimitTicks + 1,
       maximumFailedCases,
     },
   });
