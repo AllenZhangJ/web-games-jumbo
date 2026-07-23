@@ -9,6 +9,7 @@ export const RETIRED_PRODUCT_PATHS = Object.freeze([
   'docs/product/number-strategy-jump-v3.md',
   'product.html',
   'public/assets/concept/web-jump-three-v3.png',
+  'src/config.ts',
   'src/core',
   'src/render3d',
   'src/runtime',
@@ -29,8 +30,9 @@ async function hasContent(target: string): Promise<boolean> {
       if (await hasContent(path.join(target, child))) return true;
     }
     return false;
-  } catch {
-    return false;
+  } catch (error: unknown) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
+    throw error;
   }
 }
 

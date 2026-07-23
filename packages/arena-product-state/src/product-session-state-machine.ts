@@ -10,8 +10,8 @@ import {
   type ProductSessionState,
 } from './product-session-transition-definition.js';
 import {
-  ProductSessionTransitionRegistry,
   createProductSessionTransitionRegistry,
+  type ProductSessionTransitionRegistry,
 } from './product-session-transition-registry.js';
 
 export const PRODUCT_SESSION_STATE_SNAPSHOT_SCHEMA_VERSION = 2;

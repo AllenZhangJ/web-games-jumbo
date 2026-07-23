@@ -60,6 +60,10 @@ describe('enterprise governance gates', () => {
     const manifest = JSON.parse(
       await readFile(path.resolve('package.json'), 'utf8'),
     ) as { scripts?: Record<string, string> };
+    expect(manifest.scripts?.predev).toBe('npm run build:packages');
+    expect(manifest.scripts?.['predev:lan']).toBe('npm run build:packages');
+    expect(manifest.scripts?.pretest).toBe('npm run build:packages');
+    expect(manifest.scripts?.['prepreview:lan']).toBe('npm run build');
     expect(manifest.scripts?.['check:governance']).toMatch(/^npm run build:packages && /);
     expect(manifest.scripts?.typecheck).toBe('npm run build:packages && npm run typecheck:app');
     expect(manifest.scripts?.['audit:dependencies']).toBe(

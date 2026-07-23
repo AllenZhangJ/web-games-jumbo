@@ -13,6 +13,7 @@ import {
 import {
   STATIC_MAP_ID_PREFIX,
   createStaticMapDefinition,
+  type CharacterDefinition,
   type MapDefinition,
 } from '@number-strategy-jump/arena-definitions';
 import {
@@ -29,7 +30,7 @@ interface MapRegistryContract {
 }
 
 interface CharacterDefinitionCatalog {
-  require(id: string): import('@number-strategy-jump/arena-definitions').CharacterDefinition;
+  require(id: string): CharacterDefinition;
 }
 
 export interface CreateArenaV1MapSystemOptions {

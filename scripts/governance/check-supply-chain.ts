@@ -19,6 +19,17 @@ interface PackageManifest {
 
 function verifyCleanInstallCheckOrder(rootManifest: PackageManifest): void {
   const scripts = record(rootManifest.scripts, 'package.json.scripts');
+  const packageBuildLifecycleScripts = ['predev', 'predev:lan', 'pretest'] as const;
+  for (const scriptName of packageBuildLifecycleScripts) {
+    if (scripts[scriptName] !== 'npm run build:packages') {
+      throw new RangeError(
+        `${scriptName} 必须先执行 npm run build:packages，确保干净安装后的公开命令可独立运行。`,
+      );
+    }
+  }
+  if (scripts['prepreview:lan'] !== 'npm run build') {
+    throw new RangeError('prepreview:lan 必须先执行 npm run build，禁止预览陈旧或缺失产物。');
+  }
   const governanceCheck = scripts['check:governance'];
   if (
     typeof governanceCheck !== 'string'

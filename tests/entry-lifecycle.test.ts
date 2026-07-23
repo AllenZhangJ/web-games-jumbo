@@ -60,6 +60,25 @@ test('entry startup handles synchronous platform failure without an unhandled re
   assert.equal(root.__NUMBER_STRATEGY_GAME__, null);
 });
 
+test('entry startup contains invalid factories and optional callback failures', async () => {
+  const root: TestLaunchRoot = {};
+  assert.equal(await launchGame(null, {
+    root,
+    createGame: () => fakeGame(),
+    onError: () => { throw new Error('presentation failed'); },
+  }), null);
+
+  assert.equal(await launchGame(() => ({ id: 'test' }), { root }), null);
+
+  const game = fakeGame();
+  assert.equal(await launchGame(() => ({ id: 'test' }), {
+    root,
+    createGame: () => game,
+    onSuccess: () => { throw new Error('optional callback failed'); },
+  }), game);
+  stopLaunchedGame(root);
+});
+
 test('entry startup destroys a partially started game when start rejects', async () => {
   const root: TestLaunchRoot = {};
   const game = fakeGame(async () => { throw new Error('load failed'); });
@@ -212,4 +231,22 @@ test('mini-game startup fallback prefers a non-cancellable modal and falls back 
     showToast: (payload: { icon?: string }) => toastCalls.push(payload),
   }), true);
   assert.equal(required(toastCalls[0], 'Toast 调用').icon, 'none');
+});
+
+test('startup fallbacks remain inert when host presentation APIs are missing or broken', () => {
+  assert.equal(showMiniGameStartupError(null), false);
+  assert.equal(showMiniGameStartupError({}), false);
+  assert.equal(showMiniGameStartupError({
+    showToast: () => { throw new Error('toast failed'); },
+  }), false);
+
+  assert.equal(showWebStartupError(new Error('missing document'), {}), false);
+  assert.equal(showWebStartupError(new Error('broken document'), {
+    document: {
+      createElement: () => { throw new Error('blocked'); },
+    },
+  }), false);
+  assert.doesNotThrow(() => clearWebStartupError({
+    get document(): never { throw new Error('detached'); },
+  }));
 });

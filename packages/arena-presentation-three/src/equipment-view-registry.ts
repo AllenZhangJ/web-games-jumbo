@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import type * as THREE from 'three';
 import { createThreeObjectDisposalLease, type ThreeObjectDisposalLease } from './dispose-three-resources.js';
 import { createProgrammaticEquipment } from './programmatic-equipment.js';
 import { readDataArray } from './strict-data-array.js';
