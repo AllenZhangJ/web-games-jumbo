@@ -34,7 +34,7 @@
 | G4 Bot/Product/Persistence | 已完成 | strict TS Bot、Matchmaking、Quick Match、Local Match Session、Product State、Progression、ProductMatchResult、奖励事务、Profile Service/Repository、Storage Lease、Product Match、Product Session Controller、对称内容池、Arena V1 产品内容与通用 Product Composition 已闭环；Arena V1 应用组合根已在 G6.36 归入独立 strict 包 |
 | G5 Presentation/资产/反馈 | 已完成 | strict `arena-presentation-contracts`、`arena-presentation-runtime`、`arena-v1-presentation-content`、`arena-product-presentation`、`arena-presentation-three` 与 `arena-product-presentation-three` 已承接通用合同、输入/反馈/生命周期、具体 V1 表现、Product 表现所有权和 Three Surface；设备/性能证据合同已归入独立 strict 包；共享对局资源取得/回滚原语完成 strict 迁移。生产 Product Session 组合已在 G6.37 归包；旧 Greybox ArenaPresentationSession 是 G6 应用根，Pilot 是 G7 测试/研究链，不再伪装为 G5 通用表现缺口 |
 | G6 Platform/入口/构建 | 已完成 | 三端默认入口是 Product；运行实例 ID、启动协调、失败兜底、Web teardown、三端平台适配、Arena V1 应用组合根、生产 Session、顶层 Launch、Web Product UI、三端实际 Product Entry，以及隔离 Greybox/Study/Pilot 入口、应用根、研究环境、clean build 身份、JSON 下载、Product Runtime、Workbench View 和两个研究 Web App 均已 strict 化。生产交付继续由产物门禁排除开发/研究入口；两个研究页面已在 390×844 浏览器视口完成加载与交互复验，真机证据边界见 G6.49 |
-| G7 零 JS/完整质量门 | 进行中 | 独立 strict `arena-human-match-study` 已承接真人研究通用 Definition、Assignment、Capture Session、Submission/Record、Bundle、Capture Package、Checkpoint/Receipt/Workspace/Envelope/Repository/Controller、评估 Report，以及 Arena Stage 9 真人公平性 V1 内容定义；独立 strict `arena-human-match-study-verification` 承接与 Arena V1 Product/Bot 组合绑定的 Replay 复验；独立 strict `arena-release-contracts` 承接发布就绪 Definition 与 Evidence Statement，独立上层 strict `arena-release` 承接候选 Bundle、producer 结果复验、就绪 Report、缺陷账本/报告，以及构建、设备、真人公平性、Input Pilot 和缺陷发布证据；独立 strict `arena-input-pilot` 已承接 Input Pilot 共享词汇、Definition/Registry/Assignment/V1、Record Fields/Record、Review Draft、Form Model、同步存储 Port/Lease、Assignment Match Service、Trial Runtime Port、Trial Checkpoint/State、Enrollment Ledger、Workspace/Envelope/Repository、Coordinator、评估 Report、Audit/Aggregate Export、Evidence Bundle、Action Metrics、Metric Collector、Observed Session/Match Service 与 Trial Controller；独立上层 strict `arena-input-pilot-presentation` 已承接 Pilot 表现运行时。ESLint、strict TypeScript、Vitest 和 JavaScript 精确递减门禁持续运行。其余 Release/实验/回归/测试链迁移、正式 coverage 阈值和零 JS 尚未完成 |
+| G7 零 JS/完整质量门 | 进行中 | Input Pilot、真人研究、Regression/Golden Replay 和 Release 链已进入独立 strict workspace；`src/arena/regression` 与 `src/arena-release` 已清零。新增 strict `arena-balance` 分离冻结 Definition 与运行时 Registry，`arena-experiment` 已承接实验合同、报告、种子、策略与基础不变量。ESLint、strict TypeScript、Vitest 和 JavaScript 精确递减门禁持续运行，受维护 JavaScript 已由 549 降至 167。其余实验运行时、资产合同、脚本、测试、正式 coverage 阈值和零 JS 门禁尚未完成 |
 | G8 资产/安全/所有权 | 未开始 | CODEOWNERS、CI 安全与正式资产最终批准待补齐；G7.25 安装新 workspace 链接时 npm 自动提示 3 个 high 依赖风险，尚待 G8 受控审计与处置 |
 | G9 文档归真 | 未开始 | README 首标题和大量章节仍以数值跳台 v3 为产品真值 |
 | G10 最新 main 审计 | 未开始 | 只能在 G0-G9 完成后执行；禁止实际合并 |
@@ -55,7 +55,7 @@
 
 ## 当前不可合并原因
 
-1. 当前 199 个受维护 JavaScript 文件仍在精确允许清单中；G7 尚需迁移其余 Release/实验/回归/测试与验收链并建立零 JS 门禁。
+1. 当前 167 个受维护 JavaScript 文件仍在精确允许清单中；G7 尚需迁移其余实验运行时、资产合同、脚本、测试与验收链并建立零 JS 门禁。
 2. Vitest 当前保护底层合同包和治理门禁；Arena 其余测试尚待按 workspace 迁移并建立正式 coverage 阈值与零 JS 门禁。
 3. 正式资产最终审批与完整安全/依赖长期治理尚未闭环；最近一次 workspace 安装自动提示 3 个 high 依赖风险，尚未完成 G8 根因、可达性和升级兼容审计。
 4. 文档仍含迁移前阶段性叙述，尚未完成 G9 全量链接、状态与命令归真。
