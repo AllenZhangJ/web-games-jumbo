@@ -1,22 +1,48 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { BotController } from '@number-strategy-jump/arena-bot';
-import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
+import {
+  BotController,
+  type BotControllerOptions,
+} from '@number-strategy-jump/arena-bot';
+import {
+  createNeutralInputFrame,
+  type ArenaMatchSnapshot,
+} from '@number-strategy-jump/arena-contracts';
 import { createArenaV1MatchCore } from '@number-strategy-jump/arena-v1-composition';
-import { replayMatch } from '../../src/arena/replay.ts';
+import { replayMatch } from '../../src/arena/replay.js';
 import { QuickMatchService } from '@number-strategy-jump/arena-v1-composition';
+import type {
+  QuickMatchCoreFactory,
+} from '@number-strategy-jump/arena-quick-match';
 import {
   LOCAL_MATCH_SESSION_STATE,
   LocalMatchSession,
+  type BotInputController,
+  type LocalMatchSessionOptions,
 } from '@number-strategy-jump/arena-session';
+import type { MatchAssignmentDiagnostics } from '@number-strategy-jump/arena-matchmaking';
 
-function neutral(snapshot) {
+interface CleanupFailure extends Error {
+  readonly originalError?: unknown;
+  readonly cleanupErrors: readonly Error[];
+}
+
+function requireCleanupFailure(error: unknown): CleanupFailure {
+  assert.ok(error instanceof Error);
+  const cleanupErrors = Reflect.get(error, 'cleanupErrors');
+  assert.ok(Array.isArray(cleanupErrors));
+  return error as CleanupFailure;
+}
+
+function neutral(snapshot: ArenaMatchSnapshot) {
   return createNeutralInputFrame(snapshot.tick, 'player-1');
 }
 
 test('quick match public surface does not leak bot identity or hidden difficulty', () => {
-  const diagnostics = [];
-  const match = new QuickMatchService({ diagnosticSink: (value) => diagnostics.push(value) })
+  const diagnostics: MatchAssignmentDiagnostics[] = [];
+  const match = new QuickMatchService({
+    diagnosticSink: (value: MatchAssignmentDiagnostics) => diagnostics.push(value),
+  })
     .create({ matchSeed: 11 });
   const publicInfo = match.session.getPublicMatchInfo();
   assert.equal(Object.isFrozen(publicInfo), true);
@@ -27,9 +53,11 @@ test('quick match public surface does not leak bot identity or hidden difficulty
     publicInfo,
   });
   assert.equal(diagnostics.length, 1);
-  assert.match(diagnostics[0].effectiveDifficultyId, /^(easy|normal|hard)$/);
+  const [diagnostic] = diagnostics;
+  assert.ok(diagnostic);
+  assert.match(diagnostic.effectiveDifficultyId, /^(easy|normal|hard)$/);
   assert.doesNotMatch(serialized, /difficulty|\bbot\b|机器人|简单|普通|困难/i);
-  assert.equal(match.session.getDebugSnapshot, undefined);
+  assert.equal(Reflect.get(match.session, 'getDebugSnapshot'), undefined);
   match.session.destroy();
 });
 
@@ -159,11 +187,17 @@ test('caller-owned InputFrame accessors are rejected without execution and sessi
 
 test('failed LocalMatchSession construction does not take ownership of the core', () => {
   const core = createArenaV1MatchCore({ seed: 16 });
-  assert.throws(() => new LocalMatchSession({
+  const invalidOptions = {
     core,
-    botController: { createInput() {}, destroy() {} },
+    botController: {
+      createInput(snapshot: ArenaMatchSnapshot) {
+        return createNeutralInputFrame(snapshot.tick, 'player-2');
+      },
+      destroy() {},
+    },
     publicMatchInfo: { matchSeed: 16, opponent: null },
-  }), /opponent 不存在/);
+  } as unknown as LocalMatchSessionOptions;
+  assert.throws(() => new LocalMatchSession(invalidOptions), /opponent 不存在/);
   assert.equal(core.getSnapshot().tick, 0);
   core.destroy();
 });
@@ -187,22 +221,28 @@ test('same quick-match seed and player inputs reproduce final replay hash', () =
 });
 
 test('QuickMatchService cleans partial ownership when a later factory fails', () => {
-  let core;
+  const coreHolder: {
+    current: ReturnType<typeof createArenaV1MatchCore> | null;
+  } = { current: null };
   let controllerDestroyed = false;
   const service = new QuickMatchService({
-    coreFactory: (options) => {
-      core = createArenaV1MatchCore(options);
-      return core;
+    coreFactory: (options: Parameters<QuickMatchCoreFactory>[0]) => {
+      coreHolder.current = createArenaV1MatchCore(options);
+      return coreHolder.current;
     },
     botControllerFactory: () => ({
-      createInput() {},
+      createInput(snapshot: ArenaMatchSnapshot) {
+        return createNeutralInputFrame(snapshot.tick, 'player-2');
+      },
       destroy() { controllerDestroyed = true; },
     }),
     sessionFactory: () => { throw new Error('session factory failed'); },
   });
   assert.throws(() => service.create({ matchSeed: 18 }), /session factory failed/);
   assert.equal(controllerDestroyed, true);
-  assert.throws(() => core.getSnapshot(), /已销毁/);
+  const ownedCore = coreHolder.current;
+  assert.ok(ownedCore);
+  assert.throws(() => ownedCore.getSnapshot(), /已销毁/);
 });
 
 test('QuickMatchService rejects an incomplete session contract before returning it', () => {
@@ -230,9 +270,8 @@ test('QuickMatchService rejects option accessors without execution or resource c
   assert.throws(() => new QuickMatchService(constructorOptions), /数据字段/);
   assert.equal(constructorGetterCalls, 0);
 
-  let service;
   let reentered = false;
-  service = new QuickMatchService();
+  const service = new QuickMatchService();
   const createOptions = new Proxy({ matchSeed: 41 }, {
     ownKeys(target) {
       if (!reentered) {
@@ -253,12 +292,12 @@ test('QuickMatchService retains failed cleanup for an exact retry before the nex
   let firstControllerCleanupAttempts = 0;
   let sessionFactoryAttempts = 0;
   const service = new QuickMatchService({
-    botControllerFactory: (options) => {
+    botControllerFactory: (options: BotControllerOptions) => {
       const controller = new BotController(options);
       controllerCount += 1;
       const controllerIndex = controllerCount;
       return {
-        createInput: (snapshot) => controller.createInput(snapshot),
+        createInput: (snapshot: ArenaMatchSnapshot) => controller.createInput(snapshot),
         destroy() {
           if (controllerIndex === 1) {
             firstControllerCleanupAttempts += 1;
@@ -270,7 +309,7 @@ test('QuickMatchService retains failed cleanup for an exact retry before the nex
         },
       };
     },
-    sessionFactory: (options) => {
+    sessionFactory: (options: LocalMatchSessionOptions) => {
       sessionFactoryAttempts += 1;
       if (sessionFactoryAttempts === 1) throw new Error('transient session factory failure');
       return new LocalMatchSession(options);
@@ -279,8 +318,9 @@ test('QuickMatchService retains failed cleanup for an exact retry before the nex
   assert.throws(
     () => service.create({ matchSeed: 44 }),
     (error) => {
-      assert.equal(error.cleanupErrors.length, 1);
-      assert.match(error.cleanupErrors[0].message, /controller cleanup failure/);
+      const failure = requireCleanupFailure(error);
+      assert.equal(failure.cleanupErrors.length, 1);
+      assert.match(failure.cleanupErrors[0]?.message ?? '', /controller cleanup failure/);
       return true;
     },
   );
@@ -343,9 +383,10 @@ test('frozen internal errors and cleanup failures preserve both causes', () => {
   assert.throws(
     () => session.step(neutral(session.getSnapshot())),
     (error) => {
-      assert.equal(error.originalError, original);
-      assert.equal(error.cleanupErrors.length, 1);
-      assert.match(error.cleanupErrors[0].message, /cleanup failed/);
+      const failure = requireCleanupFailure(error);
+      assert.equal(failure.originalError, original);
+      assert.equal(failure.cleanupErrors.length, 1);
+      assert.match(failure.cleanupErrors[0]?.message ?? '', /cleanup failed/);
       return true;
     },
   );
@@ -358,7 +399,9 @@ test('frozen internal errors and cleanup failures preserve both causes', () => {
   const factoryFailure = Object.freeze(new Error('frozen factory failure'));
   const service = new QuickMatchService({
     botControllerFactory: () => ({
-      createInput() {},
+      createInput(snapshot: ArenaMatchSnapshot) {
+        return createNeutralInputFrame(snapshot.tick, 'player-2');
+      },
       destroy() { throw new Error('partial cleanup failed'); },
     }),
     sessionFactory: () => { throw factoryFailure; },
@@ -366,9 +409,10 @@ test('frozen internal errors and cleanup failures preserve both causes', () => {
   assert.throws(
     () => service.create({ matchSeed: 27 }),
     (error) => {
-      assert.equal(error.originalError, factoryFailure);
-      assert.equal(error.cleanupErrors.length, 1);
-      assert.match(error.cleanupErrors[0].message, /partial cleanup failed/);
+      const failure = requireCleanupFailure(error);
+      assert.equal(failure.originalError, factoryFailure);
+      assert.equal(failure.cleanupErrors.length, 1);
+      assert.match(failure.cleanupErrors[0]?.message ?? '', /partial cleanup failed/);
       return true;
     },
   );
@@ -383,7 +427,7 @@ test('LocalMatchSession rejects controller method accessors without taking Core 
       getterCalls += 1;
       return () => null;
     },
-  });
+  }) as unknown as BotInputController;
   assert.throws(() => new LocalMatchSession({
     core,
     botController,
@@ -455,7 +499,6 @@ test('runUntilEnded blocks provider reentry and leaves a boundary failure retrya
 
 test('cleanup publishes terminal state before destroying owned callbacks and rejects reentry', () => {
   const core = createArenaV1MatchCore({ seed: 32 });
-  let session;
   let reentryRejected = false;
   const botController = {
     createInput() { return createNeutralInputFrame(0, 'player-2'); },
@@ -464,7 +507,7 @@ test('cleanup publishes terminal state before destroying owned callbacks and rej
       reentryRejected = true;
     },
   };
-  session = new LocalMatchSession({
+  const session = new LocalMatchSession({
     core,
     botController,
     publicMatchInfo: {

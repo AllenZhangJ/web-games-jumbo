@@ -39,7 +39,7 @@ const DEFINITION: Readonly<ArenaRegressionEvidenceDefinition> = Object.freeze({
       id: ARENA_REGRESSION_COMPONENT_ID.LIFECYCLE_TESTS,
       testFiles: Object.freeze([
         'tests/arena/input/pointer-input-adapter.test.ts',
-        'tests/arena/local-match-session.test.js',
+        'tests/arena/local-match-session.test.ts',
         'tests/arena/presentation/product-presentation-session.test.js',
         'tests/arena/product/stage8-product-session.test.js',
         'tests/arena/product/stage8-profile-persistence.test.js',
