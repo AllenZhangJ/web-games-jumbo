@@ -29,7 +29,35 @@ import {
   createInputPilotReport,
 } from '@number-strategy-jump/arena-input-pilot';
 
-function assignment(definition, enrollmentIndex, participantId = `pilot-${enrollmentIndex}`) {
+type PilotDefinition = ReturnType<typeof createArenaInputPilotV1Definition>;
+
+interface RecordOptions {
+  readonly participantId?: string;
+  readonly success?: boolean;
+  readonly trialStatus?: string;
+  readonly terminationReason?: string;
+  readonly platform?: string;
+  readonly formFactor?: string;
+  readonly orientation?: string;
+  readonly inputMode?: string;
+  readonly priorArenaExperience?: boolean;
+  readonly priorOtherVariantExposure?: boolean;
+  readonly intentMismatchCount?: number;
+  readonly accidentalInputCount?: number;
+  readonly oneHandCompleted?: boolean;
+  readonly objectiveCompleted?: boolean;
+}
+
+function required<T>(value: T | null | undefined, name: string): T {
+  assert.ok(value != null, `${name} 不存在。`);
+  return value;
+}
+
+function assignment(
+  definition: PilotDefinition,
+  enrollmentIndex: number,
+  participantId = `pilot-${enrollmentIndex}`,
+) {
   return createInputPilotAssignment({
     definition,
     participantId,
@@ -37,7 +65,7 @@ function assignment(definition, enrollmentIndex, participantId = `pilot-${enroll
   });
 }
 
-function record(definition, enrollmentIndex, {
+function record(definition: PilotDefinition, enrollmentIndex: number, {
   participantId = `pilot-${enrollmentIndex}`,
   success = true,
   trialStatus = INPUT_PILOT_TRIAL_STATUS.COMPLETED,
@@ -56,7 +84,7 @@ function record(definition, enrollmentIndex, {
   accidentalInputCount = success ? 0 : 1,
   oneHandCompleted = true,
   objectiveCompleted = success,
-} = {}) {
+}: RecordOptions = {}) {
   return {
     schemaVersion: INPUT_PILOT_RECORD_SCHEMA_VERSION,
     trialId: `trial-${enrollmentIndex}`,
@@ -94,16 +122,19 @@ function record(definition, enrollmentIndex, {
   };
 }
 
-function recordsByVariant(definition, profiles) {
+function recordsByVariant(
+  definition: PilotDefinition,
+  profiles: Readonly<Record<string, (ordinal: number) => RecordOptions>>,
+) {
   const ordinals = new Map(definition.variants.map(({ id }) => [id, 0]));
   return Array.from({ length: 10 }, (_, enrollmentIndex) => {
     const selected = assignment(definition, enrollmentIndex);
-    const ordinal = ordinals.get(selected.variantId);
+    const ordinal = required(ordinals.get(selected.variantId), 'variant ordinal');
     ordinals.set(selected.variantId, ordinal + 1);
     return record(
       definition,
       enrollmentIndex,
-      profiles[selected.variantId](ordinal),
+      required(profiles[selected.variantId], `profile ${selected.variantId}`)(ordinal),
     );
   });
 }
@@ -119,7 +150,9 @@ test('InputPilotDefinition and Registry keep the A/B experiment immutable and ve
   assert.equal(definition.thresholds.maximumTrialDurationMs, 180_000);
   assert.equal(definition.thresholds.effectiveMovementDistance, 0.05);
   assert.equal(definition.getContentHash(), createArenaInputPilotV1Definition().getContentHash());
-  assert.throws(() => { definition.variants[0].id = 'changed'; }, /read only|只读|Cannot assign/i);
+  assert.throws(() => {
+    Object.assign(required(definition.variants[0], 'first variant'), { id: 'changed' });
+  }, /read only|只读|Cannot assign/i);
 
   const later = createInputPilotDefinition({
     ...definition.toJSON(),
@@ -132,13 +165,13 @@ test('InputPilotDefinition and Registry keep the A/B experiment immutable and ve
   assert.throws(() => new InputPilotRegistry([definition, definition]), /重复 id/);
   assert.throws(() => createInputPilotDefinition({
     ...definition.toJSON(),
-    variants: [definition.variants[0]],
+    variants: [required(definition.variants[0], 'first variant')],
   }), /恰好包含两个/);
   assert.throws(() => createInputPilotDefinition({
     ...definition.toJSON(),
-    variants: [definition.variants[0], {
+    variants: [required(definition.variants[0], 'first variant'), {
       id: 'duplicate-mapper',
-      mapperId: definition.variants[0].mapperId,
+      mapperId: required(definition.variants[0], 'first variant').mapperId,
     }],
   }), /重复使用 mapper/);
   assert.throws(() => createInputPilotDefinition({
@@ -167,47 +200,59 @@ test('block assignment is reproducible, append-stable and balanced in every comp
   const assignments = Array.from({ length: 20 }, (_, index) => assignment(definition, index));
   for (let index = 0; index < assignments.length; index += 2) {
     assert.equal(new Set(assignments.slice(index, index + 2).map(({ variantId }) => variantId)).size, 2);
-    assert.equal(assignments[index].matchSeed, assignments[index + 1].matchSeed);
-    if (index > 0) assert.notEqual(assignments[index].matchSeed, assignments[index - 1].matchSeed);
+    assert.equal(
+      required(assignments[index], 'first block assignment').matchSeed,
+      required(assignments[index + 1], 'second block assignment').matchSeed,
+    );
+    if (index > 0) assert.notEqual(
+      required(assignments[index], 'current assignment').matchSeed,
+      required(assignments[index - 1], 'previous assignment').matchSeed,
+    );
   }
   assert.deepEqual(assignment(definition, 7), assignments[7]);
   assert.equal(
     assignment(definition, 7, 'different-pseudonym').variantId,
-    assignments[7].variantId,
+    required(assignments[7], 'eighth assignment').variantId,
   );
   assert.notEqual(
     assignment(definition, 7, 'different-pseudonym').assignmentId,
-    assignments[7].assignmentId,
+    required(assignments[7], 'eighth assignment').assignmentId,
   );
   assert.deepEqual(
     Array.from({ length: 20 }, (_, index) => assignment(definition, index)),
     assignments,
   );
 
-  const tampered = { ...assignments[0], mapperId: assignments[1].mapperId };
+  const tampered = {
+    ...required(assignments[0], 'first assignment'),
+    mapperId: required(assignments[1], 'second assignment').mapperId,
+  };
   assert.throws(() => validateInputPilotAssignment(definition, tampered), /无法由分组合同复现/);
   assert.throws(() => validateInputPilotAssignment(definition, {
-    ...assignments[0],
+    ...required(assignments[0], 'first assignment'),
     assignmentSeed: 0x66060002,
   }), /无法由分组合同复现/);
   assert.throws(() => validateInputPilotAssignment(definition, {
-    ...assignments[0],
-    matchSeed: assignments[0].matchSeed + 1,
+    ...required(assignments[0], 'first assignment'),
+    matchSeed: required(assignments[0], 'first assignment').matchSeed + 1,
   }), /无法由分组合同复现/);
   assert.throws(() => validateInputPilotAssignment(definition, {
-    ...assignments[0],
+    ...required(assignments[0], 'first assignment'),
     schemaVersion: 1,
   }), /不支持 InputPilotAssignment schema 1/);
-  assert.equal(assignments[0].schemaVersion, INPUT_PILOT_ASSIGNMENT_SCHEMA_VERSION);
+  assert.equal(
+    required(assignments[0], 'first assignment').schemaVersion,
+    INPUT_PILOT_ASSIGNMENT_SCHEMA_VERSION,
+  );
 });
 
 test('InputPilotRecord separates automated, observer and self-report evidence', () => {
   const definition = createArenaInputPilotV1Definition();
   const value = record(definition, 0);
   const normalized = createInputPilotRecord(definition, value);
-  assert.equal(normalized.automated.firstEffectiveMovementMs, 1_500);
-  assert.equal(normalized.observer.intentMismatchCount, 0);
-  assert.equal(normalized.selfReport.groundAction, INPUT_PILOT_COMPREHENSION.CORRECT);
+  assert.equal(required(normalized.automated, 'automated evidence').firstEffectiveMovementMs, 1_500);
+  assert.equal(required(normalized.observer, 'observer evidence').intentMismatchCount, 0);
+  assert.equal(required(normalized.selfReport, 'self report').groundAction, INPUT_PILOT_COMPREHENSION.CORRECT);
   assert.deepEqual(getInputPilotRecordExclusionReasons(definition, normalized), []);
 
   assert.throws(() => createInputPilotRecord(definition, {
@@ -277,7 +322,7 @@ test('pilot report recommends only an evidence-aligned candidate and hides parti
       intentMismatchCount: 0,
       accidentalInputCount: 0,
     }),
-    [ARENA_INPUT_PILOT_VARIANT_ID.CONTEXT_PRIMARY]: (ordinal) => ({
+    [ARENA_INPUT_PILOT_VARIANT_ID.CONTEXT_PRIMARY]: (ordinal: number) => ({
       success: ordinal < 4,
       intentMismatchCount: 1,
       accidentalInputCount: 1,
@@ -296,13 +341,17 @@ test('pilot report recommends only an evidence-aligned candidate and hides parti
   const context = report.variants.find(({ variantId }) => (
     variantId === ARENA_INPUT_PILOT_VARIANT_ID.CONTEXT_PRIMARY
   ));
-  assert.equal(gesture.onboardingSuccessRate, 1);
-  assert.equal(context.onboardingSuccessRate, 0.8);
-  assert.equal(gesture.actions.airJump.attempted, 5);
-  assert.equal(gesture.actions.airJump.successRate, 1);
+  const gestureSummary = required(gesture, 'gesture summary');
+  const contextSummary = required(context, 'context summary');
+  assert.equal(gestureSummary.onboardingSuccessRate, 1);
+  assert.equal(contextSummary.onboardingSuccessRate, 0.8);
+  assert.equal(gestureSummary.actions.airJump.attempted, 5);
+  assert.equal(gestureSummary.actions.airJump.successRate, 1);
   assert.doesNotMatch(JSON.stringify(report), /pilot-[0-9]+/);
   assert.deepEqual(createInputPilotReport(definition, [...values].reverse()), report);
-  assert.throws(() => { report.assessment.status = 'winner'; }, /read only|只读|Cannot assign/i);
+  assert.throws(() => {
+    Object.assign(report.assessment, { status: 'winner' });
+  }, /read only|只读|Cannot assign/i);
 });
 
 test('pilot report excludes invalid evidence without erasing genuine abandonment failures', () => {
@@ -341,9 +390,10 @@ test('pilot report excludes invalid evidence without erasing genuine abandonment
   const abandonedVariant = abandonedReport.variants.find(({ variantId }) => (
     variantId === abandonedVariantId
   ));
-  assert.equal(abandonedVariant.eligibleSampleSize, 5);
-  assert.equal(abandonedVariant.excludedRecords, 0);
-  assert.equal(abandonedVariant.onboardingSuccessRate, 0.8);
+  const abandonedSummary = required(abandonedVariant, 'abandoned variant summary');
+  assert.equal(abandonedSummary.eligibleSampleSize, 5);
+  assert.equal(abandonedSummary.excludedRecords, 0);
+  assert.equal(abandonedSummary.onboardingSuccessRate, 0.8);
 });
 
 test('pilot report refuses premature, weak or conflicting winner claims', () => {
@@ -364,10 +414,10 @@ test('pilot report refuses premature, weak or conflicting winner claims', () => 
   );
 
   const belowThreshold = recordsByVariant(definition, {
-    [ARENA_INPUT_PILOT_VARIANT_ID.GESTURE_MOBILITY]: (ordinal) => ({
+    [ARENA_INPUT_PILOT_VARIANT_ID.GESTURE_MOBILITY]: (ordinal: number) => ({
       success: ordinal < 4,
     }),
-    [ARENA_INPUT_PILOT_VARIANT_ID.CONTEXT_PRIMARY]: (ordinal) => ({
+    [ARENA_INPUT_PILOT_VARIANT_ID.CONTEXT_PRIMARY]: (ordinal: number) => ({
       success: ordinal < 3,
     }),
   });
@@ -382,7 +432,7 @@ test('pilot report refuses premature, weak or conflicting winner claims', () => 
       intentMismatchCount: 2,
       accidentalInputCount: 0,
     }),
-    [ARENA_INPUT_PILOT_VARIANT_ID.CONTEXT_PRIMARY]: (ordinal) => ({
+    [ARENA_INPUT_PILOT_VARIANT_ID.CONTEXT_PRIMARY]: (ordinal: number) => ({
       success: ordinal < 4,
       intentMismatchCount: 0,
       accidentalInputCount: 0,
@@ -398,7 +448,10 @@ test('pilot report refuses premature, weak or conflicting winner claims', () => 
     'intent-mismatch-favors-other-variant',
   ]);
 
-  const duplicate = [...noClearWinner, { ...noClearWinner[0], trialId: 'different-trial' }];
+  const duplicate = [
+    ...noClearWinner,
+    { ...required(noClearWinner[0], 'first record'), trialId: 'different-trial' },
+  ];
   assert.throws(() => createInputPilotReport(definition, duplicate), /participant .*重复入组/);
 
   const duplicateEnrollment = [...noClearWinner, {
@@ -412,7 +465,7 @@ test('pilot report refuses premature, weak or conflicting winner claims', () => 
 
   const duplicateTrial = [...noClearWinner, {
     ...record(definition, 10, { participantId: 'different-trial-participant' }),
-    trialId: noClearWinner[0].trialId,
+    trialId: required(noClearWinner[0], 'first record').trialId,
   }];
   assert.throws(() => createInputPilotReport(definition, duplicateTrial), /重复 pilot trial/);
 });
