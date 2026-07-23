@@ -3,7 +3,7 @@ import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 import { assertEvidenceGitCommit } from '@number-strategy-jump/arena-evidence-contracts';
 import {
   readArenaRegressionEvidenceReport,
-} from '../arena/regression/arena-regression-evidence.js';
+} from '@number-strategy-jump/arena-regression';
 import { ARENA_RELEASE_EVIDENCE_STATUS } from '@number-strategy-jump/arena-release-contracts';
 
 export function createArenaRegressionReleaseResult({ commit, report: reportValue }) {

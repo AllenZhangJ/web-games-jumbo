@@ -1,55 +1,51 @@
-import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import {
   assertKnownKeys,
   cloneFrozenData,
+  createDeterministicDataHash,
 } from '@number-strategy-jump/arena-contracts';
+import type { PlainRecord } from '@number-strategy-jump/arena-contracts';
 import {
   assertEvidenceGitCommit,
   assertEvidenceUtcInstant,
 } from '@number-strategy-jump/arena-evidence-contracts';
-import {
-  cloneArenaRegressionEvidenceComponents,
-} from './arena-regression-evidence-components.js';
+import { cloneArenaRegressionEvidenceComponents } from './arena-regression-evidence-components.js';
 import { assertArenaRegressionText } from './arena-regression-evidence-validation.js';
 import {
-  ARENA_REGRESSION_COMPONENT_ID,
   ARENA_REGRESSION_EVIDENCE_SCHEMA_VERSION,
   ARENA_STAGE9_REGRESSION_EVIDENCE_V1_ID,
-  createArenaStage9RegressionEvidenceV1Definition,
   createArenaStage9RegressionEvidenceV1DefinitionHash,
 } from './arena-stage9-regression-evidence-v1.js';
 
-export {
-  ARENA_REGRESSION_COMPONENT_ID,
-  ARENA_REGRESSION_EVIDENCE_SCHEMA_VERSION,
-  ARENA_STAGE9_REGRESSION_EVIDENCE_V1_ID,
-  createArenaStage9RegressionEvidenceV1Definition,
-  createArenaStage9RegressionEvidenceV1DefinitionHash,
-};
-
-const REPORT_KEYS = new Set([
-  'schemaVersion',
-  'definitionId',
-  'definitionHash',
-  'sourceCommit',
-  'sourceDirty',
-  'generatedAt',
-  'runtime',
-  'components',
-  'status',
-  'resultHash',
+const REPORT_KEYS: ReadonlySet<string> = new Set([
+  'schemaVersion', 'definitionId', 'definitionHash', 'sourceCommit', 'sourceDirty',
+  'generatedAt', 'runtime', 'components', 'status', 'resultHash',
 ]);
-const REPORT_INPUT_KEYS = new Set([
-  'sourceCommit',
-  'sourceDirty',
-  'generatedAt',
-  'runtime',
-  'components',
+const REPORT_INPUT_KEYS: ReadonlySet<string> = new Set([
+  'sourceCommit', 'sourceDirty', 'generatedAt', 'runtime', 'components',
 ]);
-const RUNTIME_KEYS = new Set(['name', 'version', 'platform', 'architecture']);
+const RUNTIME_KEYS: ReadonlySet<string> = new Set(['name', 'version', 'platform', 'architecture']);
 const HASH_PATTERN = /^[0-9a-f]{8}$/;
 
-function cloneRuntime(value) {
+export interface ArenaRegressionEvidenceRuntime {
+  readonly name: string;
+  readonly version: string;
+  readonly platform: string;
+  readonly architecture: string;
+}
+export interface ArenaRegressionEvidenceReport {
+  readonly schemaVersion: 1;
+  readonly definitionId: string;
+  readonly definitionHash: string;
+  readonly sourceCommit: string;
+  readonly sourceDirty: false;
+  readonly generatedAt: string;
+  readonly runtime: Readonly<ArenaRegressionEvidenceRuntime>;
+  readonly components: readonly Readonly<PlainRecord>[];
+  readonly status: 'passed';
+  readonly resultHash: string;
+}
+
+function cloneRuntime(value: unknown): Readonly<ArenaRegressionEvidenceRuntime> {
   const name = 'ArenaRegressionEvidence.runtime';
   assertKnownKeys(value, RUNTIME_KEYS, name);
   return Object.freeze({
@@ -59,34 +55,24 @@ function cloneRuntime(value) {
     architecture: assertArenaRegressionText(value.architecture, `${name}.architecture`),
   });
 }
-
-function normalizeCore(value) {
+function normalizeCore(value: unknown) {
   assertKnownKeys(value, REPORT_INPUT_KEYS, 'ArenaRegressionEvidence input');
-  const sourceCommit = assertEvidenceGitCommit(
-    value.sourceCommit,
-    'ArenaRegressionEvidence.sourceCommit',
-  );
-  if (value.sourceDirty !== false) {
-    throw new Error('ArenaRegressionEvidence 只能来自 clean source。');
-  }
-  const generatedAt = assertEvidenceUtcInstant(
-    value.generatedAt,
-    'ArenaRegressionEvidence.generatedAt',
-  );
+  const sourceCommit = assertEvidenceGitCommit(value.sourceCommit, 'ArenaRegressionEvidence.sourceCommit');
+  if (value.sourceDirty !== false) throw new Error('ArenaRegressionEvidence 只能来自 clean source。');
   return cloneFrozenData({
-    schemaVersion: ARENA_REGRESSION_EVIDENCE_SCHEMA_VERSION,
+    schemaVersion: ARENA_REGRESSION_EVIDENCE_SCHEMA_VERSION as 1,
     definitionId: ARENA_STAGE9_REGRESSION_EVIDENCE_V1_ID,
     definitionHash: createArenaStage9RegressionEvidenceV1DefinitionHash(),
     sourceCommit,
-    sourceDirty: false,
-    generatedAt,
+    sourceDirty: false as const,
+    generatedAt: assertEvidenceUtcInstant(value.generatedAt, 'ArenaRegressionEvidence.generatedAt'),
     runtime: cloneRuntime(value.runtime),
     components: cloneArenaRegressionEvidenceComponents(value.components),
-    status: 'passed',
+    status: 'passed' as const,
   }, 'ArenaRegressionEvidence core');
 }
 
-export function createArenaRegressionEvidenceReport(value) {
+export function createArenaRegressionEvidenceReport(value: unknown): Readonly<ArenaRegressionEvidenceReport> {
   const core = normalizeCore(value);
   const deterministicResult = Object.freeze({
     definitionHash: core.definitionHash,
@@ -96,14 +82,10 @@ export function createArenaRegressionEvidenceReport(value) {
   });
   return cloneFrozenData({
     ...core,
-    resultHash: createDeterministicDataHash(
-      deterministicResult,
-      'Arena Stage 9 Regression Evidence result',
-    ),
+    resultHash: createDeterministicDataHash(deterministicResult, 'Arena Stage 9 Regression Evidence result'),
   }, 'ArenaRegressionEvidence report');
 }
-
-export function readArenaRegressionEvidenceReport(value) {
+export function readArenaRegressionEvidenceReport(value: unknown): Readonly<ArenaRegressionEvidenceReport> {
   const source = cloneFrozenData(value, 'ArenaRegressionEvidence supplied report');
   assertKnownKeys(source, REPORT_KEYS, 'ArenaRegressionEvidence supplied report');
   if (source.schemaVersion !== ARENA_REGRESSION_EVIDENCE_SCHEMA_VERSION) {

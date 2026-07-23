@@ -73,7 +73,7 @@ import {
 import {
   ARENA_REGRESSION_COMPONENT_ID,
   createArenaRegressionEvidenceReport,
-} from '../../src/arena/regression/arena-regression-evidence.js';
+} from '@number-strategy-jump/arena-regression';
 
 const COMMIT = 'a'.repeat(40);
 const BUILD_ID = 'arena-release-test';

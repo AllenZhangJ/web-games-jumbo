@@ -408,7 +408,22 @@ test('Arena Stage 9 experiment orchestration stays headless and outside presenta
 });
 
 test('Arena Stage 9 regression corpus stays headless and keeps Node IO in scripts', async () => {
-  const regressionFiles = await listJavaScript(path.resolve('src/arena/regression'));
+  const packageDefinition = JSON.parse(await readFile(
+    path.resolve('packages/arena-regression/package.json'),
+    'utf8',
+  ));
+  assert.deepEqual(
+    Object.keys(packageDefinition.dependencies).sort(),
+    [
+      '@number-strategy-jump/arena-contracts',
+      '@number-strategy-jump/arena-evidence-contracts',
+    ],
+    'arena-regression 证据包只能依赖基础契约和证据值契约。',
+  );
+  const regressionFiles = [
+    ...await listJavaScript(path.resolve('src/arena/regression')),
+    ...await listJavaScript(path.resolve('packages/arena-regression/src')),
+  ];
   assert.ok(regressionFiles.length >= 5);
   for (const file of regressionFiles) {
     const source = await readFile(file, 'utf8');

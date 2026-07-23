@@ -7,7 +7,7 @@ import {
   createArenaStage9RegressionEvidenceV1Definition,
   createArenaStage9RegressionEvidenceV1DefinitionHash,
   readArenaRegressionEvidenceReport,
-} from '../../../src/arena/regression/arena-regression-evidence.js';
+} from '@number-strategy-jump/arena-regression';
 
 const COMMIT = 'a'.repeat(40);
 

@@ -2,7 +2,7 @@ import {
   ARENA_REGRESSION_COMPONENT_ID,
   createArenaRegressionEvidenceReport,
   createArenaStage9RegressionEvidenceV1Definition,
-} from '../../src/arena/regression/arena-regression-evidence.js';
+} from '@number-strategy-jump/arena-regression';
 import { runArenaChildProcess } from './arena-child-process.mjs';
 
 const PROCESS_TIMEOUT_MS = 10 * 60 * 1000;
