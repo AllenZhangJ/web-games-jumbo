@@ -3,12 +3,19 @@ import {
   assertIntegerAtLeast,
   assertKnownKeys,
   assertNonEmptyString,
+  assertPlainRecord,
   cloneFrozenData,
 } from '@number-strategy-jump/arena-contracts';
-import { ARENA_BALANCE_CANDIDATE_COLLECTOR_ID } from '@number-strategy-jump/arena-v1-experiment';
-import { ARENA_BOT_CAPABILITY_COLLECTOR_ID } from '@number-strategy-jump/arena-v1-experiment';
+import type { PlainRecord } from '@number-strategy-jump/arena-contracts';
+import { ARENA_BALANCE_CANDIDATE_COLLECTOR_ID } from './arena-balance-candidate-collector.js';
+import { ARENA_BOT_CAPABILITY_COLLECTOR_ID } from './arena-bot-capability-collector.js';
 import { readArenaExperimentReportBundle } from '@number-strategy-jump/arena-experiment';
 import { readArenaMetricGate } from '@number-strategy-jump/arena-experiment';
+import { createArenaBalancePolicy } from '@number-strategy-jump/arena-experiment';
+import type {
+  ArenaExperimentReportBundle,
+  ArenaMetricGate,
+} from '@number-strategy-jump/arena-experiment';
 
 export const ARENA_BALANCE_EXPLORATION_SELECTION_SCHEMA_VERSION = 1;
 
@@ -47,14 +54,20 @@ const EXPECTED_CANDIDATE_KEYS = new Set([
   'livesPerParticipant',
 ]);
 
-function cloneExpectedCandidates(values) {
+interface ExpectedBalanceCandidate {
+  readonly candidateId: string;
+  readonly experimentId: string;
+  readonly livesPerParticipant: number;
+}
+
+function cloneExpectedCandidates(values: unknown): readonly Readonly<ExpectedBalanceCandidate>[] {
   const source = cloneFrozenData(values, 'Balance exploration expectedCandidates');
   if (!Array.isArray(source) || source.length === 0) {
     throw new RangeError('Balance exploration expectedCandidates 必须是非空数组。');
   }
-  const candidateIds = new Set();
-  const experimentIds = new Set();
-  const lives = new Set();
+  const candidateIds = new Set<string>();
+  const experimentIds = new Set<string>();
+  const lives = new Set<number>();
   const result = source.map((value, index) => {
     const name = `Balance exploration expectedCandidates[${index}]`;
     assertKnownKeys(value, EXPECTED_CANDIDATE_KEYS, name);
@@ -80,58 +93,61 @@ function cloneExpectedCandidates(values) {
   return Object.freeze(result);
 }
 
-function finite(value, name) {
+function finite(value: unknown, name: string): number {
   if (!Number.isFinite(value)) throw new TypeError(`${name} 必须是有限数。`);
-  return value;
+  return value as number;
 }
 
-function ratio(value, name) {
+function ratio(value: unknown, name: string): number {
   const result = finite(value, name);
   if (result < 0 || result > 1) throw new RangeError(`${name} 必须位于 [0, 1]。`);
   return result;
 }
 
-function optionalFinite(value, name) {
+function optionalFinite(value: unknown, name: string): number | null {
   return value === null ? null : finite(value, name);
 }
 
-function optionalRatio(value, name) {
+function optionalRatio(value: unknown, name: string): number | null {
   return value === null ? null : ratio(value, name);
 }
 
-function metricData(report, collectorId) {
+function metricData(
+  report: ArenaExperimentReportBundle['report'],
+  collectorId: string,
+): Readonly<PlainRecord> {
   const metric = report.metrics.find(({ id }) => id === collectorId);
   if (!metric) throw new Error(`Balance exploration report 缺少 ${collectorId}。`);
-  return metric.data;
+  return assertPlainRecord(metric.data, `Balance exploration metric ${collectorId}`);
 }
 
-function checkMap(gate) {
+function checkMap(gate: ArenaMetricGate): Map<string, boolean> {
   return new Map(gate.checks.map(({ id, passed }) => [id, passed]));
 }
 
-function normalizedShortfall(value, minimum) {
+function normalizedShortfall(value: number, minimum: number): number {
   if (value >= minimum) return 0;
   return (minimum - value) / Math.max(minimum, 1e-12);
 }
 
-function normalizedExcess(value, maximum) {
+function normalizedExcess(value: number, maximum: number): number {
   if (value <= maximum) return 0;
   return (value - maximum) / Math.max(1 - maximum, 1e-12);
 }
 
-function normalizedRangeDistance(value, minimum, maximum) {
+function normalizedRangeDistance(value: number, minimum: number, maximum: number): number {
   if (value < minimum) return normalizedShortfall(value, minimum);
   if (value > maximum) return normalizedExcess(value, maximum);
   return 0;
 }
 
-function medianDistanceToRange(medianTicks, minimum, maximum) {
+function medianDistanceToRange(medianTicks: number, minimum: number, maximum: number): number {
   if (medianTicks < minimum) return (minimum - medianTicks) / minimum;
   if (medianTicks > maximum) return (medianTicks - maximum) / maximum;
   return 0;
 }
 
-function createRanking(bundle) {
+function createRanking(bundle: ArenaExperimentReportBundle) {
   const report = bundle.report;
   const balance = metricData(report, ARENA_BALANCE_CANDIDATE_COLLECTOR_ID);
   const bot = metricData(report, ARENA_BOT_CAPABILITY_COLLECTOR_ID);
@@ -140,11 +156,9 @@ function createRanking(bundle) {
   if (balanceGate === null || botGate === null) {
     throw new Error('Balance exploration collectors 必须输出 Metric Gate。');
   }
-  const policy = balance.policy;
-  const overall = balance.derived?.overall;
-  if (!overall || typeof overall !== 'object') {
-    throw new TypeError('Balance exploration 缺少 derived.overall。');
-  }
+  const policy = createArenaBalancePolicy(balance.policy);
+  const derived = assertPlainRecord(balance.derived, 'Balance exploration derived');
+  const overall = assertPlainRecord(derived.overall, 'Balance exploration derived.overall');
   const checks = checkMap(balanceGate);
   const requiredSampleChecks = balanceGate.checks.filter(({ id }) => (
     id === 'sample.completed-paired-cases'
@@ -269,7 +283,10 @@ function createRanking(bundle) {
   }, `Balance exploration ranking ${bundle.definition.candidate.id}`);
 }
 
-function compareRankings(left, right) {
+function compareRankings(
+  left: ReturnType<typeof createRanking>,
+  right: ReturnType<typeof createRanking>,
+): number {
   if (left.eligible !== right.eligible) return left.eligible ? -1 : 1;
   if (left.penalty !== right.penalty) return left.penalty - right.penalty;
   if (left.targetDurationShare === null || right.targetDurationShare === null) {
@@ -292,8 +309,14 @@ function compareRankings(left, right) {
   return left.candidateId < right.candidateId ? -1 : left.candidateId > right.candidateId ? 1 : 0;
 }
 
-export function createArenaBalanceExplorationSelection(reportBundlesValue, optionsValue) {
-  const options = cloneFrozenData(optionsValue, 'Balance exploration selection options');
+export function createArenaBalanceExplorationSelection(
+  reportBundlesValue: unknown,
+  optionsValue: unknown,
+) {
+  const options = assertPlainRecord(
+    cloneFrozenData(optionsValue, 'Balance exploration selection options'),
+    'Balance exploration selection options',
+  );
   assertKnownKeys(options, OPTIONS_KEYS, 'Balance exploration selection options');
   const expectedCandidates = cloneExpectedCandidates(options.expectedCandidates);
   const source = cloneFrozenData(reportBundlesValue, 'Balance exploration report bundles');
@@ -308,7 +331,7 @@ export function createArenaBalanceExplorationSelection(reportBundlesValue, optio
   const actualCandidateIds = bundles
     .map(({ definition }) => definition.candidate.id)
     .sort();
-  if (actualCandidateIds.some((id, index) => id !== expectedCandidates[index].candidateId)) {
+  if (actualCandidateIds.some((id, index) => id !== expectedCandidates[index]?.candidateId)) {
     throw new Error('Balance exploration report bundles 未恰好覆盖预注册候选矩阵。');
   }
   for (const bundle of bundles) {
@@ -322,7 +345,9 @@ export function createArenaBalanceExplorationSelection(reportBundlesValue, optio
       !== candidate.livesPerParticipant
     ) throw new Error(`Balance exploration ${candidate.candidateId} lives 配置漂移。`);
   }
-  const sourceCommit = bundles[0].definition.candidate.sourceCommit;
+  const firstBundle = bundles[0];
+  if (!firstBundle) throw new Error('Balance exploration report bundles 不能为空。');
+  const sourceCommit = firstBundle.definition.candidate.sourceCommit;
   const policyHashes = new Set();
   const seedSetHashes = new Set();
   const workloadHashes = new Set();
@@ -371,16 +396,18 @@ export function createArenaBalanceExplorationSelection(reportBundlesValue, optio
     [collectorHashes, 'collector 参数'],
     [comparableConfigHashes, '除 lives 外的 Match config'],
     [authorityContentHashes, 'Authority 内容'],
-  ]) {
+  ] as const) {
     if (values.size !== 1) throw new Error(`Balance exploration 候选 ${name} 必须完全相同。`);
   }
   const rankings = bundles.map(createRanking).sort(compareRankings);
   const selected = rankings.find(({ eligible }) => eligible) ?? null;
+  const policyHash = [...policyHashes][0];
+  if (!policyHash) throw new Error('Balance exploration 缺少 policy hash。');
   return cloneFrozenData({
     schemaVersion: ARENA_BALANCE_EXPLORATION_SELECTION_SCHEMA_VERSION,
     policy: ARENA_BALANCE_EXPLORATION_SELECTION_POLICY,
     sourceCommit,
-    policyHash: [...policyHashes][0],
+    policyHash,
     selectedCandidateId: selected?.candidateId ?? null,
     rankings,
   }, 'ArenaBalanceExplorationSelection');

@@ -2,6 +2,7 @@ import { createDeterministicDataHash } from '@number-strategy-jump/arena-contrac
 import {
   assertKnownKeys,
   assertNonEmptyString,
+  assertPlainRecord,
   cloneFrozenData,
 } from '@number-strategy-jump/arena-contracts';
 import {
@@ -22,7 +23,7 @@ const BUNDLE_KEYS = new Set([
 const HASH_PATTERN = /^[0-9a-f]{8}$/;
 const ID_PATTERN = /^[a-z0-9][a-z0-9._-]{0,127}$/;
 
-function identifier(value) {
+function identifier(value: unknown): string {
   const id = assertNonEmptyString(value, 'ArenaBalanceExplorationBundle.id');
   if (!ID_PATTERN.test(id)) {
     throw new TypeError('ArenaBalanceExplorationBundle.id 格式无效。');
@@ -30,7 +31,17 @@ function identifier(value) {
   return id;
 }
 
-function createCore({ id, expectedCandidates: expectedValues, reportBundles: reportValues }) {
+interface ArenaBalanceExplorationBundleInput {
+  readonly id: unknown;
+  readonly expectedCandidates: unknown;
+  readonly reportBundles: unknown;
+}
+
+function createCore({
+  id,
+  expectedCandidates: expectedValues,
+  reportBundles: reportValues,
+}: ArenaBalanceExplorationBundleInput) {
   const expectedSource = cloneFrozenData(
     expectedValues,
     'ArenaBalanceExplorationBundle.expectedCandidates',
@@ -38,9 +49,11 @@ function createCore({ id, expectedCandidates: expectedValues, reportBundles: rep
   if (!Array.isArray(expectedSource) || expectedSource.length === 0) {
     throw new RangeError('ArenaBalanceExplorationBundle.expectedCandidates 必须是非空数组。');
   }
-  const expectedCandidates = Object.freeze([...expectedSource].sort((left, right) => {
-    const leftId = String(left?.candidateId ?? '');
-    const rightId = String(right?.candidateId ?? '');
+  const expectedCandidates = Object.freeze(expectedSource.map((value, index) => (
+    assertPlainRecord(value, `ArenaBalanceExplorationBundle.expectedCandidates[${index}]`)
+  )).sort((left, right) => {
+    const leftId = String(left.candidateId ?? '');
+    const rightId = String(right.candidateId ?? '');
     return leftId < rightId ? -1 : leftId > rightId ? 1 : 0;
   }));
   const source = cloneFrozenData(
@@ -67,16 +80,24 @@ function createCore({ id, expectedCandidates: expectedValues, reportBundles: rep
   }, 'ArenaBalanceExplorationBundle core');
 }
 
-export function createArenaBalanceExplorationBundle(value) {
-  const core = createCore(value);
+export function createArenaBalanceExplorationBundle(value: unknown) {
+  const input = assertPlainRecord(value, 'ArenaBalanceExplorationBundle input');
+  const core = createCore({
+    id: input.id,
+    expectedCandidates: input.expectedCandidates,
+    reportBundles: input.reportBundles,
+  });
   return cloneFrozenData({
     ...core,
     bundleHash: createDeterministicDataHash(core, `Balance exploration ${core.id}`),
   }, 'ArenaBalanceExplorationBundle');
 }
 
-export function readArenaBalanceExplorationBundle(value) {
-  const source = cloneFrozenData(value, 'ArenaBalanceExplorationBundle');
+export function readArenaBalanceExplorationBundle(value: unknown) {
+  const source = assertPlainRecord(
+    cloneFrozenData(value, 'ArenaBalanceExplorationBundle'),
+    'ArenaBalanceExplorationBundle',
+  );
   assertKnownKeys(source, BUNDLE_KEYS, 'ArenaBalanceExplorationBundle');
   if (source.schemaVersion !== ARENA_BALANCE_EXPLORATION_BUNDLE_SCHEMA_VERSION) {
     throw new RangeError(

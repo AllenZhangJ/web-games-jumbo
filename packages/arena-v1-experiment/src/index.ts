@@ -173,3 +173,13 @@ export {
   createArenaStage9BalanceValidationExperimentDefinition,
   createArenaStage9BalanceValidationExperimentRegistries,
 } from './arena-balance-validation-composition.js';
+export {
+  ARENA_BALANCE_EXPLORATION_SELECTION_POLICY,
+  ARENA_BALANCE_EXPLORATION_SELECTION_SCHEMA_VERSION,
+  createArenaBalanceExplorationSelection,
+} from './arena-balance-exploration-selection.js';
+export {
+  ARENA_BALANCE_EXPLORATION_BUNDLE_SCHEMA_VERSION,
+  createArenaBalanceExplorationBundle,
+  readArenaBalanceExplorationBundle,
+} from './arena-balance-exploration-bundle.js';

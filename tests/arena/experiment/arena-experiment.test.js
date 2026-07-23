@@ -65,10 +65,10 @@ import {
 import {
   createArenaBalanceExplorationBundle,
   readArenaBalanceExplorationBundle,
-} from '../../../src/arena/experiment/arena-balance-exploration-bundle.js';
+} from '@number-strategy-jump/arena-v1-experiment';
 import {
   createArenaBalanceExplorationSelection,
-} from '../../../src/arena/experiment/arena-balance-exploration-selection.js';
+} from '@number-strategy-jump/arena-v1-experiment';
 import {
   ARENA_STAGE9_BALANCE_VALIDATION_CANDIDATE_ID,
   ARENA_STAGE9_BALANCE_VALIDATION_EXPERIMENT_ID,

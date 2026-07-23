@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import {
   createArenaBalanceExplorationBundle,
   readArenaBalanceExplorationBundle,
-} from '../src/arena/experiment/arena-balance-exploration-bundle.js';
+} from '@number-strategy-jump/arena-v1-experiment';
 import {
   ARENA_STAGE9_BALANCE_EXPLORATION_CANDIDATES,
   ARENA_STAGE9_BALANCE_EXPLORATION_ID,
@@ -13,7 +13,7 @@ import {
 } from '@number-strategy-jump/arena-v1-experiment';
 import {
   ARENA_BALANCE_EXPLORATION_SELECTION_POLICY,
-} from '../src/arena/experiment/arena-balance-exploration-selection.js';
+} from '@number-strategy-jump/arena-v1-experiment';
 import { createArenaExperimentReportBundle } from '@number-strategy-jump/arena-experiment';
 import {
   assertArenaGitSourceIdentityStable,
