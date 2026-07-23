@@ -11,8 +11,10 @@
   },
   "include": ["src/**/*.ts"],
   "references": [
+    { "path": "../arena-bot" },
     { "path": "../arena-contracts" },
     { "path": "../arena-experiment" },
+    { "path": "../arena-v1-composition" },
     { "path": "../arena-v1-content" }
   ]
 }

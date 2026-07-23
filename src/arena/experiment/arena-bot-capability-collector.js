@@ -20,9 +20,15 @@ import {
   createArenaBotDifficultyMetricState,
   finishArenaBotDifficultyMetricState,
 } from './arena-bot-capability-metrics.js';
+import {
+  ARENA_BOT_CAPABILITY_COLLECTOR_ID,
+  ARENA_BOT_CAPABILITY_COLLECTOR_VERSION,
+} from '@number-strategy-jump/arena-balance';
 
-export const ARENA_BOT_CAPABILITY_COLLECTOR_ID = 'arena.stage9.bot-capability';
-export const ARENA_BOT_CAPABILITY_COLLECTOR_VERSION = 1;
+export {
+  ARENA_BOT_CAPABILITY_COLLECTOR_ID,
+  ARENA_BOT_CAPABILITY_COLLECTOR_VERSION,
+} from '@number-strategy-jump/arena-balance';
 export const ARENA_BOT_CAPABILITY_COLLECTOR_DEFAULT_PARAMETERS = Object.freeze({
   gatePolicy: ARENA_BOT_CAPABILITY_DEFAULT_GATE_POLICY,
 });

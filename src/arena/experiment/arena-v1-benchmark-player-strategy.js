@@ -1,58 +1,15 @@
 import { createArenaV1CharacterRegistry } from '@number-strategy-jump/arena-v1-content';
 import { createNeutralInputFrame, normalizeInputFrame } from '@number-strategy-jump/arena-contracts';
 import {
-  assertIntegerAtLeast,
-  assertKnownKeys,
-  assertPositiveFinite,
-  cloneFrozenData,
-} from '@number-strategy-jump/arena-contracts';
+  ARENA_V1_BENCHMARK_PLAYER_STRATEGY_VERSION,
+  createArenaV1BenchmarkPlayerTuning,
+} from '@number-strategy-jump/arena-balance';
 
-export const ARENA_V1_BENCHMARK_PLAYER_STRATEGY_VERSION = 1;
-
-export const ARENA_V1_BENCHMARK_PLAYER_DEFAULT_TUNING = Object.freeze({
-  observationHistoryTicks: 11,
-  decisionIntervalTicks: 8,
-  movementMagnitude: 0.92,
-  edgeRecoveryClearance: 1.25,
-  attackRangeScale: 0.92,
-});
-
-const TUNING_KEYS = new Set(Object.keys(ARENA_V1_BENCHMARK_PLAYER_DEFAULT_TUNING));
-
-function unitInterval(value, name) {
-  const result = assertPositiveFinite(value, name);
-  if (result > 1) throw new RangeError(`${name} 不能超过 1。`);
-  return result;
-}
-
-export function createArenaV1BenchmarkPlayerTuning(value) {
-  const source = cloneFrozenData(value, 'benchmark player tuning');
-  assertKnownKeys(source, TUNING_KEYS, 'benchmark player tuning');
-  return Object.freeze({
-    observationHistoryTicks: assertIntegerAtLeast(
-      source.observationHistoryTicks,
-      1,
-      'benchmark player observationHistoryTicks',
-    ),
-    decisionIntervalTicks: assertIntegerAtLeast(
-      source.decisionIntervalTicks,
-      1,
-      'benchmark player decisionIntervalTicks',
-    ),
-    movementMagnitude: unitInterval(
-      source.movementMagnitude,
-      'benchmark player movementMagnitude',
-    ),
-    edgeRecoveryClearance: assertPositiveFinite(
-      source.edgeRecoveryClearance,
-      'benchmark player edgeRecoveryClearance',
-    ),
-    attackRangeScale: unitInterval(
-      source.attackRangeScale,
-      'benchmark player attackRangeScale',
-    ),
-  });
-}
+export {
+  ARENA_V1_BENCHMARK_PLAYER_DEFAULT_TUNING,
+  ARENA_V1_BENCHMARK_PLAYER_STRATEGY_VERSION,
+  createArenaV1BenchmarkPlayerTuning,
+} from '@number-strategy-jump/arena-balance';
 
 export function createArenaV1BenchmarkPlayerStrategy({
   config,

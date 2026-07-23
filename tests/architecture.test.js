@@ -416,11 +416,13 @@ test('Arena balance composition stays headless and depends only on strict conten
   assert.deepEqual(
     Object.keys(packageDefinition.dependencies).sort(),
     [
+      '@number-strategy-jump/arena-bot',
       '@number-strategy-jump/arena-contracts',
       '@number-strategy-jump/arena-experiment',
+      '@number-strategy-jump/arena-v1-composition',
       '@number-strategy-jump/arena-v1-content',
     ],
-    'arena-balance 只能依赖严格契约、实验基础与 V1 内容。',
+    'arena-balance 只能依赖严格 Bot、契约、实验基础与 V1 组合内容。',
   );
   const files = await listJavaScript(path.resolve('packages/arena-balance/src'));
   assert.ok(files.length >= 2);

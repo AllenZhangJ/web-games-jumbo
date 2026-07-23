@@ -15,7 +15,7 @@ import {
 import {
   ARENA_STAGE9_RC_HANDOFF_GATE_ID,
   createArenaStage9RcHandoffV1Definition,
-} from '../../src/arena-release/arena-stage9-rc-handoff-v1.js';
+} from '@number-strategy-jump/arena-release';
 import {
   createArenaBuildIntegrityReleaseResult,
 } from '@number-strategy-jump/arena-release';

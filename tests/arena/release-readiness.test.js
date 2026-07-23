@@ -27,10 +27,10 @@ import {
 import {
   ARENA_STAGE9_RC_HANDOFF_GATE_ID,
   createArenaStage9RcHandoffV1Definition,
-} from '../../src/arena-release/arena-stage9-rc-handoff-v1.js';
+} from '@number-strategy-jump/arena-release';
 import {
   createArenaBalanceValidationReleaseResult,
-} from '../../src/arena-release/balance-validation-release-evidence.js';
+} from '@number-strategy-jump/arena-release';
 import {
   createArenaBuildBudgetReleaseResult,
   createArenaBuildIntegrityReleaseResult,

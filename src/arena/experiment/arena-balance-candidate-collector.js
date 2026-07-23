@@ -12,9 +12,15 @@ import {
   metricRatioOrNull,
 } from '@number-strategy-jump/arena-experiment';
 import { createArenaMetricGate } from '@number-strategy-jump/arena-experiment';
+import {
+  ARENA_BALANCE_CANDIDATE_COLLECTOR_ID,
+  ARENA_BALANCE_CANDIDATE_COLLECTOR_VERSION,
+} from '@number-strategy-jump/arena-balance';
 
-export const ARENA_BALANCE_CANDIDATE_COLLECTOR_ID = 'arena.stage9.balance-candidate';
-export const ARENA_BALANCE_CANDIDATE_COLLECTOR_VERSION = 1;
+export {
+  ARENA_BALANCE_CANDIDATE_COLLECTOR_ID,
+  ARENA_BALANCE_CANDIDATE_COLLECTOR_VERSION,
+} from '@number-strategy-jump/arena-balance';
 
 const PARAMETER_KEYS = new Set(['policy']);
 

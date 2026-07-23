@@ -27,7 +27,7 @@ import {
   ARENA_STAGE9_BALANCE_VALIDATION_EXPERIMENT_ID,
   ARENA_STAGE9_BALANCE_SELECTION_BUNDLE_HASH,
   createArenaStage9BalanceValidationExperimentDefinition,
-} from '../arena/experiment/arena-balance-validation-composition.js';
+} from '@number-strategy-jump/arena-balance';
 import {
   ARENA_V1_GOLDEN_REPLAY_MANIFEST_ID,
   createArenaV1GoldenReplayScenarioRegistry,
@@ -59,11 +59,11 @@ export const ARENA_STAGE9_RC_HANDOFF_GATE_ID = Object.freeze({
   DEFECTS: 'stage9.defects',
 });
 
-function requirementHash(value, name) {
+function requirementHash(value: unknown, name: string): string {
   return createDeterministicDataHash(value, `Arena Stage 9 RC requirement ${name}`);
 }
 
-function definitionIdentity(definition) {
+function definitionIdentity(definition: { readonly id: string; getContentHash(): string }) {
   return Object.freeze({ id: definition.id, hash: definition.getContentHash() });
 }
 
@@ -90,6 +90,13 @@ function createGate({
   producerId,
   subjectScope,
   requirement,
+}: {
+  readonly id: string;
+  readonly stage: string;
+  readonly title: string;
+  readonly producerId: string;
+  readonly subjectScope: string;
+  readonly requirement: unknown;
 }) {
   return Object.freeze({
     id,

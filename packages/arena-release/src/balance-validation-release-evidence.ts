@@ -3,7 +3,7 @@ import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 import { assertEvidenceGitCommit } from '@number-strategy-jump/arena-evidence-contracts';
 import {
   createArenaStage9BalanceValidationExperimentDefinition,
-} from '../arena/experiment/arena-balance-validation-composition.js';
+} from '@number-strategy-jump/arena-balance';
 import {
   ARENA_EXPERIMENT_OUTCOME,
 } from '@number-strategy-jump/arena-experiment';
@@ -18,6 +18,10 @@ export function createArenaBalanceValidationReleaseResult({
   commit,
   sourceDirty,
   reportBundle: bundleValue,
+}: {
+  readonly commit: unknown;
+  readonly sourceDirty: unknown;
+  readonly reportBundle: unknown;
 }) {
   assertEvidenceGitCommit(commit, 'Balance validation release result.commit');
   if (typeof sourceDirty !== 'boolean') {

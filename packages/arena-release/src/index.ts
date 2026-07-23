@@ -1,4 +1,6 @@
 export * from './build-release-evidence.js';
+export * from './arena-stage9-rc-handoff-v1.js';
+export * from './balance-validation-release-evidence.js';
 export * from './defect-ledger.js';
 export * from './defect-release-evidence.js';
 export * from './device-release-evidence.js';

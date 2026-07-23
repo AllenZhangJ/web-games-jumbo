@@ -47,8 +47,6 @@
     "scripts/lib/arena-regression-evidence-producer.mjs",
     "scripts/lib/arena-stage9-release-producers.mjs",
     "scripts/lib/evidence-file-verifier.mjs",
-    "src/arena-release/arena-stage9-rc-handoff-v1.js",
-    "src/arena-release/balance-validation-release-evidence.js",
     "src/arena/entry/match-core-poc.js",
     "src/arena/experiment/arena-balance-candidate-collector.js",
     "src/arena/experiment/arena-balance-experiment-composition.js",

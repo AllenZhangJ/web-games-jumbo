@@ -11,21 +11,20 @@ import {
 } from '@number-strategy-jump/arena-contracts';
 import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 import {
-  ARENA_V1_BENCHMARK_PLAYER_DEFAULT_TUNING,
   createArenaV1BenchmarkPlayerStrategy,
   createArenaV1BenchmarkPlayerTuning,
 } from './arena-v1-benchmark-player-strategy.js';
 import { cloneArenaExperimentReplaySeeds } from '@number-strategy-jump/arena-experiment';
+import {
+  ARENA_V1_BOT_CAPABILITY_WORKLOAD_ID,
+  ARENA_V1_BOT_CAPABILITY_WORKLOAD_VERSION,
+} from '@number-strategy-jump/arena-balance';
 
-export const ARENA_V1_BOT_CAPABILITY_WORKLOAD_ID = 'arena.stage9.bot-capability';
-export const ARENA_V1_BOT_CAPABILITY_WORKLOAD_VERSION = 1;
-
-export const ARENA_V1_BOT_CAPABILITY_DEFAULT_PARAMETERS = Object.freeze({
-  difficultyIds: BOT_DIFFICULTY_IDS,
-  benchmarkPlayer: ARENA_V1_BENCHMARK_PLAYER_DEFAULT_TUNING,
-  replaySeeds: Object.freeze([]),
-  maximumEventsPerCase: 20_000,
-});
+export {
+  ARENA_V1_BOT_CAPABILITY_DEFAULT_PARAMETERS,
+  ARENA_V1_BOT_CAPABILITY_WORKLOAD_ID,
+  ARENA_V1_BOT_CAPABILITY_WORKLOAD_VERSION,
+} from '@number-strategy-jump/arena-balance';
 
 const PARAMETER_KEYS = new Set([
   'difficultyIds',

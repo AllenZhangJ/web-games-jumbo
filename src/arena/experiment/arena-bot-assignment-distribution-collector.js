@@ -2,10 +2,15 @@ import { BOT_DIFFICULTY_IDS } from '@number-strategy-jump/arena-bot';
 import { createMatchAssignment } from '@number-strategy-jump/arena-matchmaking';
 import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 import { createArenaMetricGate } from '@number-strategy-jump/arena-experiment';
+import {
+  ARENA_BOT_ASSIGNMENT_DISTRIBUTION_COLLECTOR_ID,
+  ARENA_BOT_ASSIGNMENT_DISTRIBUTION_COLLECTOR_VERSION,
+} from '@number-strategy-jump/arena-balance';
 
-export const ARENA_BOT_ASSIGNMENT_DISTRIBUTION_COLLECTOR_ID =
-  'arena.stage9.bot-assignment-distribution';
-export const ARENA_BOT_ASSIGNMENT_DISTRIBUTION_COLLECTOR_VERSION = 1;
+export {
+  ARENA_BOT_ASSIGNMENT_DISTRIBUTION_COLLECTOR_ID,
+  ARENA_BOT_ASSIGNMENT_DISTRIBUTION_COLLECTOR_VERSION,
+} from '@number-strategy-jump/arena-balance';
 
 const SAMPLE_COUNT = 10_000;
 const MINIMUM_SHARE = 0.313;
