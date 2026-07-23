@@ -33,8 +33,8 @@
 | G3 Rule/Core/Replay | 已完成 | strict TS `arena-core`、`arena-movement`、`arena-physics`、`arena-equipment`、`arena-map` 与 `arena-match` 已承接规则/移动/物理/装备、完整地图权威链、比赛配置、Participant/Timeline 唯一写入者、角色 Runtime/物理投影、状态 hash、完整 MatchCore 编排、fixed-step Runtime 与 Replay；strict `arena-v1-content` 集中发布具体动作、装备、角色、地图、移动动作与平衡 Definition；黄金语料保持 `0dace228` |
 | G4 Bot/Product/Persistence | 已完成 | strict TS Bot、Matchmaking、Quick Match、Local Match Session、Product State、Progression、ProductMatchResult、奖励事务、Profile Service/Repository、Storage Lease、Product Match、Product Session Controller、对称内容池、Arena V1 产品内容与通用 Product Composition 已闭环；Arena V1 应用组合根已在 G6.36 归入独立 strict 包 |
 | G5 Presentation/资产/反馈 | 已完成 | strict `arena-presentation-contracts`、`arena-presentation-runtime`、`arena-v1-presentation-content`、`arena-product-presentation`、`arena-presentation-three` 与 `arena-product-presentation-three` 已承接通用合同、输入/反馈/生命周期、具体 V1 表现、Product 表现所有权和 Three Surface；设备/性能证据合同已归入独立 strict 包；共享对局资源取得/回滚原语完成 strict 迁移。生产 Product Session 组合已在 G6.37 归包；旧 Greybox ArenaPresentationSession 是 G6 应用根，Pilot 是 G7 测试/研究链，不再伪装为 G5 通用表现缺口 |
-| G6 Platform/入口/构建 | 进行中 | 三端默认入口是 Product；运行实例 ID、启动协调、失败兜底、Web teardown、三端平台适配、Arena V1 应用组合根、生产 Session、顶层 Launch、Web Product UI、三端实际 Product Entry，以及 Greybox Session 组合、表现生命周期、应用根和三端 Greybox Entry 均已 strict 化。Web 研究环境、clean build 身份、JSON 下载所有权、Human Match Study Product Runtime、Study/Pilot Workbench View 及两个研究薄启动入口已 strict 化；两个研究 Web App 待迁移，并继续证明生产交付和开发/研究入口彻底隔离 |
-| G7 零 JS/完整质量门 | 进行中 | 独立 strict `arena-human-match-study` 已承接真人研究通用 Definition、Assignment、Capture Session、Submission/Record、Bundle、Capture Package、Checkpoint/Receipt/Workspace/Envelope/Repository/Controller、评估 Report，以及 Arena Stage 9 真人公平性 V1 内容定义；独立 strict `arena-human-match-study-verification` 承接与 Arena V1 Product/Bot 组合绑定的 Replay 复验；独立 strict `arena-release-contracts` 承接发布就绪 Definition 与 Evidence Statement，独立上层 strict `arena-release` 承接候选 Bundle、producer 结果复验、就绪 Report、缺陷账本/报告，以及构建、设备、真人公平性、Input Pilot 和缺陷发布证据；独立 strict `arena-input-pilot` 已承接 Input Pilot 共享词汇、Definition/Registry/Assignment/V1、Record Fields/Record、Review Draft、Form Model、同步存储 Port/Lease、Assignment Match Service、Trial Runtime Port、Trial Checkpoint/State、Enrollment Ledger、Workspace/Envelope/Repository、Coordinator、评估 Report、Audit/Aggregate Export、Evidence Bundle、Action Metrics、Metric Collector、Observed Session/Match Service 与 Trial Controller；独立上层 strict `arena-input-pilot-presentation` 已承接 Pilot 表现运行时。ESLint、strict TypeScript、Vitest 和 JavaScript 精确递减门禁持续运行。其余 Study/Pilot/Release/测试链迁移、正式 coverage 阈值和零 JS 尚未完成 |
+| G6 Platform/入口/构建 | 已完成 | 三端默认入口是 Product；运行实例 ID、启动协调、失败兜底、Web teardown、三端平台适配、Arena V1 应用组合根、生产 Session、顶层 Launch、Web Product UI、三端实际 Product Entry，以及隔离 Greybox/Study/Pilot 入口、应用根、研究环境、clean build 身份、JSON 下载、Product Runtime、Workbench View 和两个研究 Web App 均已 strict 化。生产交付继续由产物门禁排除开发/研究入口；两个研究页面已在 390×844 浏览器视口完成加载与交互复验，真机证据边界见 G6.49 |
+| G7 零 JS/完整质量门 | 进行中 | 独立 strict `arena-human-match-study` 已承接真人研究通用 Definition、Assignment、Capture Session、Submission/Record、Bundle、Capture Package、Checkpoint/Receipt/Workspace/Envelope/Repository/Controller、评估 Report，以及 Arena Stage 9 真人公平性 V1 内容定义；独立 strict `arena-human-match-study-verification` 承接与 Arena V1 Product/Bot 组合绑定的 Replay 复验；独立 strict `arena-release-contracts` 承接发布就绪 Definition 与 Evidence Statement，独立上层 strict `arena-release` 承接候选 Bundle、producer 结果复验、就绪 Report、缺陷账本/报告，以及构建、设备、真人公平性、Input Pilot 和缺陷发布证据；独立 strict `arena-input-pilot` 已承接 Input Pilot 共享词汇、Definition/Registry/Assignment/V1、Record Fields/Record、Review Draft、Form Model、同步存储 Port/Lease、Assignment Match Service、Trial Runtime Port、Trial Checkpoint/State、Enrollment Ledger、Workspace/Envelope/Repository、Coordinator、评估 Report、Audit/Aggregate Export、Evidence Bundle、Action Metrics、Metric Collector、Observed Session/Match Service 与 Trial Controller；独立上层 strict `arena-input-pilot-presentation` 已承接 Pilot 表现运行时。ESLint、strict TypeScript、Vitest 和 JavaScript 精确递减门禁持续运行。其余 Release/实验/回归/测试链迁移、正式 coverage 阈值和零 JS 尚未完成 |
 | G8 资产/安全/所有权 | 未开始 | CODEOWNERS、CI 安全与正式资产最终批准待补齐；G7.25 安装新 workspace 链接时 npm 自动提示 3 个 high 依赖风险，尚待 G8 受控审计与处置 |
 | G9 文档归真 | 未开始 | README 首标题和大量章节仍以数值跳台 v3 为产品真值 |
 | G10 最新 main 审计 | 未开始 | 只能在 G0-G9 完成后执行；禁止实际合并 |
@@ -51,11 +51,11 @@
 - 移动压力：100 场、417355 tick、100 个唯一 final hash、3 个 Replay 样本，门禁通过。
 - Product 压力：200 场；Profile 压力：500 次提交，门禁通过。
 - 正式资产预算：结果 `82a8b378`，策略 `532faaa2`，通过。
-- 三端 clean build 与预算：通过；当前 Web/微信/抖音 delivery 分别为 3773570 / 3587013 / 3586988 bytes。
+- 三端 clean build 与预算：通过；当前 Web/微信/抖音 delivery 分别为 3807531 / 3835130 / 3835105 bytes。
 
 ## 当前不可合并原因
 
-1. 当前 201 个受维护 JavaScript 文件仍在精确允许清单中；G6 尚需迁移两个研究 Web App，G7 尚需迁移其余 Pilot/Study/Release/其他测试与验收链并建立零 JS 门禁。
+1. 当前 199 个受维护 JavaScript 文件仍在精确允许清单中；G7 尚需迁移其余 Release/实验/回归/测试与验收链并建立零 JS 门禁。
 2. Vitest 当前保护底层合同包和治理门禁；Arena 其余测试尚待按 workspace 迁移并建立正式 coverage 阈值与零 JS 门禁。
 3. 正式资产最终审批与完整安全/依赖长期治理尚未闭环；最近一次 workspace 安装自动提示 3 个 high 依赖风险，尚未完成 G8 根因、可达性和升级兼容审计。
 4. 文档仍含迁移前阶段性叙述，尚未完成 G9 全量链接、状态与命令归真。
@@ -1448,3 +1448,13 @@
 - ESLint、strict typecheck、JS 递减、产品依赖、Three 边界、本地生产依赖树、`git diff --check`、生产构建、Manifest、预算和生产产物边界均通过。包只增加仓内既有 device acceptance、performance evidence、stage9 evidence content、human study 与 input pilot 依赖，没有新增或升级外部依赖；G7.25 已登记的 3 个 high 依赖风险继续作为 G8 阻断。
 - 代码提交为 `7c22527e9e5ebe9e6dd40522edbda0f548f6018c`，clean build ID 为 `arena-7c22527e9e5e-product`；Web/微信/抖音 delivery 为 `3807531 / 3835130 / 3835105 B`，JavaScript 为 `1463921 / 1507034 / 1507034 B`。三端 `sourceDirty=false`、默认入口均为 Product、Manifest 校验、预算和生产产物边界通过且 `freezeEligible=true`；交付字节与 G7.28 完全一致，离线发布 producer 未进入默认 Product bundle。
 - 本批没有改变任一证据 Definition/Policy/阈值、研究数据、页面、游戏玩法、Bot、Replay/Profile schema 或权威运行结果，不改变 Gameplay V2 配置 hash `8c322912`、任意距离挥空、攻击/命中/击退、动作/武器、移动/跳跃、画质、关节或正式资产，因此未新增浏览器/手机通过记录，也未重跑无关的黄金 Replay、输入 fuzz、专项生命周期或 soak。仍依赖旧实验/回归模块的 Balance/Golden Replay/Regression producer、最终 handoff、两个研究 Web App 与其余 G7 链待迁移；G7-G10 尚未完成，当前不可合并。
+
+## G6.49 研究 Web App strict 迁移与生命周期闭环证据
+
+- Input Pilot 与 Human Match Study 两个研究 Web App 已迁为 strict TypeScript；G6.48 为临时迁移边界保留的两份 `.d.ts` 已随旧 JavaScript 真值一并删除，没有兼容转发层。精确 JavaScript 允许清单由 201 降至 199，两个 `.html` 仍只经已治理的薄启动入口装配对应 App，研究入口没有进入默认 Product 交付。
+- 两个 App 对平台、Root、Definition、环境、构建身份、Controller、View、Runtime 和定时器所有权建立显式可空类型与释放检查；导出 revision、UTC 时间、匿名 ID、错误和宿主能力均在边界收窄。真人研究的并发启动现在只共享一个 Promise，构建身份加载期间销毁会拒绝迟到完成，不会在已销毁实例上继续写状态；Input Pilot 销毁失败会保留未释放的监听、Controller 或 View，下一次销毁只重试未完成所有权。
+- 首轮真实页面验证发现 Pilot Workbench 的严格投影只接受缩减字段，错误拒绝 Controller 返回的合法完整 Workspace，页面因此进入启动失败。本批把 Workspace、Enrollment、Checkpoint 和 Assignment 的完整已知字段纳入投影白名单，同时仍拒绝未知字段和访问器；新增真实 `createInputPilotWorkspace()` 回归，避免只靠简化 fixture 再次漏检。
+- 新增 3 项 Web App 生命周期回归，覆盖 Input Pilot 并发启动/启动中销毁、清理失败精确重试，以及 Human Match Study 并发启动/启动中销毁。完整 Node 为 701/701，strict package/治理为 366/366（59 个测试文件）；ESLint、strict typecheck、JS 递减、产品依赖、Three 边界、本地生产依赖树、`git diff --check`、生产构建、Manifest、预算和生产产物边界均通过。
+- 390×844、DPR 3 的 Chromium 明确视口分别加载 `pilot.html` 与 `study.html`：URL/标题和首个工作台区域可见，文档、Body 与主容器均无横向溢出；Pilot 的“受测者同意”复选框可切换，Study 的去标识操作员编号可输入，两页 warning/error 均为 0。开发构建因 `build-manifest-invalid` 正确阻断正式证据采集，这不是页面启动失败。本证据是桌面 Chromium 设备指标模拟，不是 iPhone 13 Pro、iOS 26、Chrome 真机验收，也不证明正式采集流程已在真机完成。
+- 代码提交为 `3e9d1d2bb25495d115c33ed81c7a26df40a91d43`，clean build ID 为 `arena-3e9d1d2bb254-product`；Web/微信/抖音 Manifest hash 为 `8a604df0 / 45cd41ad / 08e09c4b`，delivery 为 `3807531 / 3835130 / 3835105 B`，JavaScript 为 `1463921 / 1507034 / 1507034 B`。三端 `sourceDirty=false`、默认入口均为 Product、预算和生产产物边界通过且 `freezeEligible=true`；交付字节与 G7.29 完全一致，证明本批研究入口治理未进入默认 Product bundle。
+- 本批没有新增或升级外部依赖，也未执行未经授权的 `npm audit` 或强制修复；G7.25 已登记的 3 个 high 风险继续作为 G8 阻断。本批不改变 Gameplay V2 配置 hash `8c322912`、任意距离挥空、攻击/命中/击退、动作/武器、移动/跳跃、画质、关节、Bot、权威 tick、Replay/Profile schema 或正式资产。G6 至此闭环；G7-G10 尚未完成，当前仍不可合并。
