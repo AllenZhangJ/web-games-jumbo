@@ -25,8 +25,19 @@ function verifyCleanInstallCheckOrder(rootManifest: PackageManifest): void {
     || !governanceCheck.startsWith('npm run build:packages && ')
   ) {
     throw new RangeError(
-      'check:governance 必须先执行 npm run build:packages，确保 npm ci --ignore-scripts 后可在干净环境运行。',
+      'check:governance 必须先执行 npm run build:packages，确保干净安装后可运行。',
     );
+  }
+  const check = scripts.check;
+  const auditCommand = scripts['audit:dependencies'];
+  if (auditCommand !== 'npm audit --omit=dev --audit-level=high') {
+    throw new RangeError('audit:dependencies 必须保持唯一的生产依赖联网审计命令。');
+  }
+  if (
+    typeof check !== 'string'
+    || (check.match(/npm run audit:dependencies/g) ?? []).length !== 1
+  ) {
+    throw new RangeError('check 必须且只能调用一次 audit:dependencies。');
   }
 }
 
@@ -147,6 +158,15 @@ function verifyWorkflowActions(workflow: string): number {
   return uses.length;
 }
 
+function verifyWorkflowQualityContract(workflow: string): void {
+  if (!/^\s*-\s+run:\s+npm ci --ignore-scripts --no-audit\s*$/m.test(workflow)) {
+    throw new RangeError('CI 必须使用 npm ci --ignore-scripts --no-audit 禁止安装阶段隐式审计。');
+  }
+  if (!/^\s*-\s+run:\s+npm run check\s*$/m.test(workflow)) {
+    throw new RangeError('CI 必须执行统一 npm run check 门禁。');
+  }
+}
+
 export async function verifySupplyChain(repositoryRoot = process.cwd()): Promise<Readonly<{
   packageManifestCount: number;
   declaredDependencyCount: number;
@@ -169,6 +189,11 @@ export async function verifySupplyChain(repositoryRoot = process.cwd()): Promise
   const lockedExternalPackageCount = verifyLockfile(lock, rootManifest);
   const workflow = await readFile(path.join(root, '.github/workflows/ci.yml'), 'utf8');
   const pinnedActionCount = verifyWorkflowActions(workflow);
+  verifyWorkflowQualityContract(workflow);
+  const npmConfiguration = await readFile(path.join(root, '.npmrc'), 'utf8');
+  if (npmConfiguration.trim() !== 'audit=false') {
+    throw new RangeError('.npmrc 必须禁止安装阶段隐式 audit。');
+  }
   const policy = await loadRepositoryPolicy(root);
   const codeowners = await readFile(path.join(root, '.github/CODEOWNERS'), 'utf8');
   const globalOwner = new RegExp(`^\\*\\s+@${policy.owner.githubLogin}\\s*$`, 'm');

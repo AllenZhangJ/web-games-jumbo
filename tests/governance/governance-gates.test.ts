@@ -62,6 +62,10 @@ describe('enterprise governance gates', () => {
     ) as { scripts?: Record<string, string> };
     expect(manifest.scripts?.['check:governance']).toMatch(/^npm run build:packages && /);
     expect(manifest.scripts?.typecheck).toBe('npm run build:packages && npm run typecheck:app');
+    expect(manifest.scripts?.['audit:dependencies']).toBe(
+      'npm audit --omit=dev --audit-level=high',
+    );
+    expect(manifest.scripts?.check?.match(/npm run audit:dependencies/g)).toHaveLength(1);
   });
 
   it('derives an acyclic workspace build order from declared internal dependencies', async () => {

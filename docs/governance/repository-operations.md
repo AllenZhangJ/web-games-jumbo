@@ -17,9 +17,9 @@
 
 ## 依赖更新与漏洞
 
-- 所有 manifest 使用精确 semver，`package-lock.json` 使用 lockfile V3。CI 使用 `npm ci --ignore-scripts`，GitHub Actions 固定到 40 位 commit SHA。
+- 所有 manifest 使用精确 semver，`package-lock.json` 使用 lockfile V3。项目 `.npmrc` 禁用安装阶段的隐式 audit，CI 使用 `npm ci --ignore-scripts --no-audit`，GitHub Actions 固定到 40 位 commit SHA。
 - Dependabot 每月分别检查 npm 和 GitHub Actions。更新 PR 必须通过统一治理、回放、压力、构建和预算门，不直接合并浮动版本。
-- `npm audit --omit=dev --audit-level=high` 是完整门禁的联网步骤。它会向 npm 服务发送依赖元数据，必须由 Allen 明确授权；未授权时不执行、不绕过、不宣称“0 漏洞”。
+- `npm audit --omit=dev --audit-level=high` 是完整门禁中唯一的联网漏洞审计步骤。它会向 npm 服务发送依赖元数据，必须由 Allen 明确授权；未授权时不执行、不绕过、不宣称“0 漏洞”。不使用 npm 安装命令自动产生的审计副作用代替该显式步骤。
 - 发现 high/critical 时先固定 advisory、可达路径和影响范围，再做最小兼容升级。不使用 `audit fix --force`，不以删测试、降画质或跳过门禁关闭风险。
 
 ## 敏感信息、遥测与诊断

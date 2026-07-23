@@ -22,5 +22,5 @@ jobs:
         with:
           node-version: 20
           cache: npm
-      - run: npm ci --ignore-scripts
+      - run: npm ci --ignore-scripts --no-audit
       - run: npm run check
