@@ -23,40 +23,56 @@ import {
 } from '@number-strategy-jump/arena-human-match-study';
 import {
   HumanMatchStudyWorkspaceRepository,
+  type HumanMatchStudyAssignment,
+  type HumanMatchStudyCapturePackage,
 } from '@number-strategy-jump/arena-human-match-study';
 import {
   TEST_MATCH_CONTENT_PUBLIC_VIEW,
 } from '../product/stage8-test-content.js';
 
 const COMMIT = '2'.repeat(40);
+type StudyDefinition = ReturnType<typeof createArenaStage9HumanFairnessV1Definition>;
+type WriteObserver = (key: string, value: unknown) => void;
 
-function clone(value) {
-  return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
+function required<T>(value: T | null | undefined, name: string): T {
+  assert.ok(value != null, `${name} 不存在。`);
+  return value;
+}
+
+function mutableRecord(value: unknown, name: string): Record<string, unknown> {
+  assert.ok(value !== null && typeof value === 'object' && !Array.isArray(value), `${name} 必须是对象。`);
+  return value as Record<string, unknown>;
+}
+
+function clone<T>(value: T): T {
+  return value === undefined
+    ? value
+    : JSON.parse(JSON.stringify(value)) as T;
 }
 
 function storageHarness() {
-  const values = new Map();
-  const writeFailures = new Set();
-  let onWrite = null;
+  const values = new Map<string, unknown>();
+  const writeFailures = new Set<string>();
+  let onWrite: WriteObserver | null = null;
   return {
     values,
     writeFailures,
-    setOnWrite(callback) {
+    setOnWrite(callback: WriteObserver | null) {
       onWrite = callback;
     },
     port: {
-      storageRead(key) {
+      storageRead(key: string) {
         return values.has(key)
           ? { ok: true, found: true, value: clone(values.get(key)) }
           : { ok: true, found: false, value: undefined };
       },
-      storageWrite(key, value) {
+      storageWrite(key: string, value: unknown) {
         if (writeFailures.has(key)) return false;
         values.set(key, clone(value));
         onWrite?.(key, value);
         return true;
       },
-      storageDelete(key) {
+      storageDelete(key: string) {
         values.delete(key);
         return true;
       },
@@ -74,7 +90,7 @@ function eligibility() {
   };
 }
 
-function enrolledValue(definition, enrollmentIndex = 0) {
+function enrolledValue(definition: StudyDefinition, enrollmentIndex = 0) {
   return {
     participantId: `human-study-${String(enrollmentIndex + 1).padStart(4, '0')}`,
     trialId: `human-study-trial-${String(enrollmentIndex + 1).padStart(4, '0')}`,
@@ -87,7 +103,7 @@ function enrolledValue(definition, enrollmentIndex = 0) {
   };
 }
 
-function fakeReplay(matchSeed, winnerId = 'player-1') {
+function fakeReplay(matchSeed: number, winnerId = 'player-1') {
   return {
     replaySchemaVersion: 5,
     schemaVersion: 5,
@@ -109,9 +125,13 @@ function fakeReplay(matchSeed, winnerId = 'player-1') {
   };
 }
 
-function fakeCapture(definition, assignment, count) {
+function fakeCapture(
+  _definition: StudyDefinition,
+  assignment: HumanMatchStudyAssignment,
+  count: number,
+) {
   return Array.from({ length: count }, (_, matchIndex) => {
-    const matchSeed = assignment.matchSeeds[matchIndex];
+    const matchSeed = required(assignment.matchSeeds[matchIndex], `第 ${matchIndex} 局种子`);
     const replay = fakeReplay(matchSeed, matchIndex === 2 ? 'player-2' : 'player-1');
     return {
       matchIndex,
@@ -126,7 +146,7 @@ function fakeCapture(definition, assignment, count) {
   });
 }
 
-function packageReceipt(capturePackage) {
+function packageReceipt(capturePackage: HumanMatchStudyCapturePackage) {
   return {
     packageId: capturePackage.packageId,
     fileName: `${capturePackage.packageId}.json`,
@@ -138,24 +158,25 @@ function packageReceipt(capturePackage) {
 test('workspace repository rejects open reentrancy before storage callbacks run', () => {
   const definition = createArenaStage9HumanFairnessV1Definition();
   const harness = storageHarness();
-  let repository;
+  const repositoryOwner: { value?: HumanMatchStudyWorkspaceRepository } = {};
   let attempted = false;
   const storage = {
     ...harness.port,
-    storageRead(key) {
+    storageRead(key: string) {
       if (!attempted) {
         attempted = true;
-        assert.throws(() => repository.open(), /打开不可重入/);
+        assert.throws(() => required(repositoryOwner.value, '工作区仓储').open(), /打开不可重入/);
       }
       return harness.port.storageRead(key);
     },
   };
-  repository = new HumanMatchStudyWorkspaceRepository({
+  const repository = new HumanMatchStudyWorkspaceRepository({
     definition,
     storage,
     ownerId: 'reentrant-page',
     wallNow: () => 1_000,
   });
+  repositoryOwner.value = repository;
   assert.equal(repository.open().revision, 0);
   assert.equal(attempted, true);
   repository.destroy();
@@ -172,7 +193,7 @@ test('workspace repository rejects every public operation reentered during a com
   });
   const controller = new HumanMatchStudyWorkspaceController({ definition, repository });
   controller.open();
-  const errors = [];
+  const errors: unknown[] = [];
   let attempted = false;
   harness.setOnWrite(() => {
     if (attempted) return;
@@ -197,7 +218,10 @@ test('workspace repository rejects every public operation reentered during a com
   controller.enroll(enrolledValue(definition));
   assert.equal(attempted, true);
   assert.equal(errors.length, 7);
-  for (const error of errors) assert.match(error.message, /不可重入/);
+  for (const error of errors) {
+    assert.ok(error instanceof Error);
+    assert.match(error.message, /不可重入/);
+  }
   assert.equal(repository.getSnapshot().revision, 1);
   controller.destroy();
 });
@@ -223,16 +247,16 @@ test('workspace repository fails closed after its lease is lost before commit', 
 test('workspace controller rejects open reentrancy before repository callbacks return', () => {
   const definition = createArenaStage9HumanFairnessV1Definition();
   const harness = storageHarness();
-  let controller;
+  const controllerOwner: { value?: HumanMatchStudyWorkspaceController } = {};
   let attempted = false;
   const repository = new HumanMatchStudyWorkspaceRepository({
     definition,
     storage: {
       ...harness.port,
-      storageRead(key) {
+      storageRead(key: string) {
         if (!attempted) {
           attempted = true;
-          assert.throws(() => controller.open(), /打开不可重入/);
+          assert.throws(() => required(controllerOwner.value, '工作区控制器').open(), /打开不可重入/);
         }
         return harness.port.storageRead(key);
       },
@@ -240,7 +264,8 @@ test('workspace controller rejects open reentrancy before repository callbacks r
     ownerId: 'controller-reentrant-page',
     wallNow: () => 1_000,
   });
-  controller = new HumanMatchStudyWorkspaceController({ definition, repository });
+  const controller = new HumanMatchStudyWorkspaceController({ definition, repository });
+  controllerOwner.value = controller;
   assert.equal(controller.open().revision, 0);
   assert.equal(attempted, true);
   controller.destroy();
@@ -336,7 +361,7 @@ test('raw CapturePackage binds submission, natural difficulty, results and Repla
   });
   assert.equal(capturePackage.matches.length, 3);
   assert.match(capturePackage.packageId, /^human-study-package-[0-9a-f]{8}$/);
-  assert.ok(Object.isFrozen(capturePackage.matches[0].replay));
+  assert.ok(Object.isFrozen(required(capturePackage.matches[0], '首局捕获').replay));
 
   const artifacts = captures.map((_, index) => ({
     id: `replay-${index}`,
@@ -353,7 +378,14 @@ test('raw CapturePackage binds submission, natural difficulty, results and Repla
   assert.equal(record.matches.length, 3);
 
   const tampered = clone(capturePackage);
-  tampered.matches[0].replay.matchSeed = tampered.matches[1].replay.matchSeed;
+  assert.equal(
+    Reflect.set(
+      required(tampered.matches[0], '被篡改首局').replay,
+      'matchSeed',
+      required(tampered.matches[1], '被篡改次局').replay.matchSeed,
+    ),
+    true,
+  );
   assert.throws(
     () => validateHumanMatchStudyCapturePackage(definition, tampered),
     /预注册 match seed/,
@@ -395,10 +427,11 @@ test('workspace reload invalidates a running trial without preserving partial Re
     }),
   });
   const opened = recovered.open();
-  assert.equal(opened.activeTrial.phase, HUMAN_MATCH_STUDY_CHECKPOINT_PHASE.RECOVERY_REQUIRED);
-  assert.equal(opened.activeTrial.completedMatchCount, 0);
-  assert.equal(opened.activeTrial.terminationReason, 'running-recovered');
-  assert.equal(opened.activeTrial.assignment.assignmentId, checkpoint.assignment.assignmentId);
+  const recoveredTrial = required(opened.activeTrial, '恢复后的试验');
+  assert.equal(recoveredTrial.phase, HUMAN_MATCH_STUDY_CHECKPOINT_PHASE.RECOVERY_REQUIRED);
+  assert.equal(recoveredTrial.completedMatchCount, 0);
+  assert.equal(recoveredTrial.terminationReason, 'running-recovered');
+  assert.equal(recoveredTrial.assignment.assignmentId, checkpoint.assignment.assignmentId);
 
   const capturePackage = recovered.createCapturePackage({
     matches: [],
@@ -417,8 +450,9 @@ test('workspace reload invalidates a running trial without preserving partial Re
       wallNow: () => now,
     }),
   });
+  const confirmerTrial = required(confirmer.open().activeTrial, '待确认导出的试验');
   assert.equal(
-    confirmer.open().activeTrial.phase,
+    confirmerTrial.phase,
     HUMAN_MATCH_STUDY_CHECKPOINT_PHASE.EXPORT_PENDING,
   );
   const receipt = confirmer.confirmExport('2026-07-18T00:01:00.000Z');
@@ -460,14 +494,17 @@ test('workspace repository alternates slots, survives a bad head and protects fu
     ownerId: 'page-b',
     wallNow: () => now,
   });
+  const restoredTrial = required(restored.open().activeTrial, '恢复的运行中试验');
   assert.equal(
-    restored.open().activeTrial.phase,
+    restoredTrial.phase,
     HUMAN_MATCH_STUDY_CHECKPOINT_PHASE.RUNNING,
   );
   restored.destroy();
 
-  const future = clone(harness.values.get(keys.slotB));
-  future.payload.activeTrial.schemaVersion = HUMAN_MATCH_STUDY_CHECKPOINT_SCHEMA_VERSION + 1;
+  const future = mutableRecord(clone(required(harness.values.get(keys.slotB), 'B 槽工作区')), 'B 槽工作区');
+  const futurePayload = mutableRecord(future.payload, 'B 槽工作区.payload');
+  const futureTrial = mutableRecord(futurePayload.activeTrial, 'B 槽工作区.activeTrial');
+  futureTrial.schemaVersion = HUMAN_MATCH_STUDY_CHECKPOINT_SCHEMA_VERSION + 1;
   harness.values.set(keys.slotA, future);
   harness.values.set(keys.slotB, future);
   now += 1;
