@@ -57,16 +57,29 @@ import {
 } from '@number-strategy-jump/arena-input-pilot';
 import {
   writeArenaBuildManifest,
-} from '../../scripts/lib/arena-build-manifest-files.ts';
+} from '../../scripts/lib/arena-build-manifest-files.js';
 import {
   verifyArenaStage9ReleaseProducerEvidence,
-} from '../../scripts/lib/arena-stage9-release-producers.ts';
+} from '../../scripts/lib/arena-stage9-release-producers.js';
 
 const COMMIT = 'a'.repeat(40);
 const BUILD_ID = 'arena-input-pilot-release-test';
 const CREATED_AT = '2026-07-18T00:00:00.000Z';
 
-function inputRecord(definition, enrollmentIndex, success) {
+type PilotDefinition = ReturnType<typeof createArenaInputPilotV1Definition>;
+type DeviceDefinition = ReturnType<typeof createArenaStage6DeviceAcceptanceV1Definition>;
+type ReleaseDefinition = ReturnType<typeof createArenaStage9RcHandoffV1Definition>;
+
+function required<T>(value: T | null | undefined, name: string): T {
+  assert.ok(value != null, `${name} 不存在。`);
+  return value;
+}
+
+function inputRecord(
+  definition: PilotDefinition,
+  enrollmentIndex: number,
+  success: boolean,
+) {
   return {
     schemaVersion: INPUT_PILOT_RECORD_SCHEMA_VERSION,
     trialId: `trial-${enrollmentIndex}`,
@@ -108,7 +121,10 @@ function inputRecord(definition, enrollmentIndex, success) {
   };
 }
 
-function auditValue(definition, { winner = false } = {}) {
+function auditValue(
+  definition: PilotDefinition,
+  { winner = false }: Readonly<{ winner?: boolean }> = {},
+) {
   const variantOrdinals = new Map(definition.variants.map(({ id }) => [id, 0]));
   const records = winner
     ? Array.from({ length: 10 }, (_, enrollmentIndex) => {
@@ -117,7 +133,10 @@ function auditValue(definition, { winner = false } = {}) {
         participantId: `probe-${enrollmentIndex}`,
         enrollmentIndex,
       });
-      const ordinal = variantOrdinals.get(assignment.variantId);
+      const ordinal = required(
+        variantOrdinals.get(assignment.variantId),
+        `variant ordinal ${assignment.variantId}`,
+      );
       variantOrdinals.set(assignment.variantId, ordinal + 1);
       const success = assignment.variantId === ARENA_INPUT_PILOT_VARIANT_ID.GESTURE_MOBILITY
         || ordinal < 4;
@@ -138,7 +157,7 @@ function auditValue(definition, { winner = false } = {}) {
   };
 }
 
-function deviceBundle(definition) {
+function deviceBundle(definition: DeviceDefinition) {
   return {
     schemaVersion: ARENA_DEVICE_ACCEPTANCE_BUNDLE_SCHEMA_VERSION,
     definitionId: definition.id,
@@ -150,7 +169,10 @@ function deviceBundle(definition) {
   };
 }
 
-async function createWebBuild(root, { dirty = false } = {}) {
+async function createWebBuild(
+  root: string,
+  { dirty = false }: Readonly<{ dirty?: boolean }> = {},
+) {
   const buildRoot = path.join(root, dirty ? 'dirty-web' : 'web');
   await mkdir(buildRoot, { recursive: true });
   for (const fileName of ['greybox.html', 'index.html', 'product.html', 'pilot.html']) {
@@ -167,7 +189,7 @@ async function createWebBuild(root, { dirty = false } = {}) {
   return Object.freeze({ buildRoot, manifest });
 }
 
-async function materialFor(relativePath, resolvedPath) {
+async function materialFor(relativePath: string, resolvedPath: string) {
   const bytes = await readFile(resolvedPath);
   const sha256 = createHash('sha256').update(bytes).digest('hex');
   return Object.freeze({
@@ -182,7 +204,12 @@ async function materialFor(relativePath, resolvedPath) {
   });
 }
 
-function statement(definition, gateId, result, materials) {
+function statement(
+  definition: ReleaseDefinition,
+  gateId: string,
+  result: Readonly<{ status: string; resultHash: string }>,
+  materials: readonly unknown[],
+) {
   const gate = definition.requireGate(gateId);
   return {
     schemaVersion: ARENA_RELEASE_EVIDENCE_STATEMENT_SCHEMA_VERSION,
@@ -197,7 +224,7 @@ function statement(definition, gateId, result, materials) {
   };
 }
 
-function candidate(definition, evidence) {
+function candidate(definition: ReleaseDefinition, evidence: readonly unknown[]) {
   return createArenaReleaseCandidateBundle(definition, {
     schemaVersion: ARENA_RELEASE_CANDIDATE_BUNDLE_SCHEMA_VERSION,
     definitionId: definition.id,
@@ -238,7 +265,11 @@ test('Input Pilot audit and release result are recomputed and require build plus
     });
     assert.equal(result.status, ARENA_RELEASE_EVIDENCE_STATUS.READY);
     const tampered = structuredClone(audit);
-    tampered.report.assessment.status = INPUT_PILOT_ASSESSMENT_STATUS.CANDIDATE_WINNER;
+    Reflect.set(
+      tampered.report.assessment,
+      'status',
+      INPUT_PILOT_ASSESSMENT_STATUS.CANDIDATE_WINNER,
+    );
     assert.throws(
       () => validateInputPilotAuditExport(definition, {
         ...tampered,
@@ -333,7 +364,7 @@ test('Input Pilot producer requires the same candidate Stage 6 gate and reopens 
       /缺少同候选 Stage 6 Device Gate/,
     );
     const falseReady = structuredClone(pilotStatement);
-    falseReady.status = ARENA_RELEASE_EVIDENCE_STATUS.READY;
+    Reflect.set(falseReady, 'status', ARENA_RELEASE_EVIDENCE_STATUS.READY);
     await assert.rejects(
       verifyArenaStage9ReleaseProducerEvidence({
         definition: releaseDefinition,

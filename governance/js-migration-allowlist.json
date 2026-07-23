@@ -6,7 +6,6 @@
   "files": [
     "tests/architecture.test.js",
     "tests/arena/experiment/arena-experiment.test.js",
-    "tests/arena/input-pilot-release-evidence.test.js",
     "tests/arena/presentation/arena-device-acceptance.test.js",
     "tests/arena/presentation/arena-presentation-session.test.js",
     "tests/arena/presentation/greybox-renderer.test.js",
