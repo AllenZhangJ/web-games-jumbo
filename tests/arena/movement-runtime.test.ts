@@ -18,13 +18,34 @@ import {
 import {
   MOVEMENT_MUTATION_KIND,
   createMovementMutation,
+  type MovementImpulseMutation,
+  type MovementMutation,
 } from '@number-strategy-jump/arena-movement';
 import { createArenaV1CharacterRegistry } from '@number-strategy-jump/arena-v1-content';
 import { ARENA_V1_CHARACTER_ID } from '@number-strategy-jump/arena-definitions';
 
 const registry = createArenaV1CharacterRegistry();
 const definition = registry.require(ARENA_V1_CHARACTER_ID.PARKOUR_APPRENTICE);
-const definitionById = (id) => registry.require(id);
+const definitionById = (id: string) => registry.require(id);
+
+function required<T>(value: T | null | undefined, name: string): T {
+  if (value === null || value === undefined) throw new Error(`测试缺少 ${name}。`);
+  return value;
+}
+
+function record(value: unknown, name: string): Record<string, unknown> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new TypeError(`${name} 必须是对象。`);
+  }
+  return value as Record<string, unknown>;
+}
+
+function impulseMutation(value: MovementMutation): MovementImpulseMutation {
+  if (value.kind !== MOVEMENT_MUTATION_KIND.APPLY_IMPULSE) {
+    throw new Error('测试期望跳跃冲量 mutation。');
+  }
+  return value;
+}
 
 test('MovementRuntime contains only serializable rule state and deep-freezes snapshots', () => {
   const state = createMovementRuntimeState({
@@ -46,9 +67,10 @@ test('MovementRuntime contains only serializable rule state and deep-freezes sna
     revision: 0,
   });
   assert.ok(Object.isFrozen(snapshot));
-  assert.equal(snapshot.grounded, undefined);
-  assert.equal(snapshot.physicsBody, undefined);
-  assert.equal(snapshot.renderer, undefined);
+  const publicSnapshot = record(snapshot, 'movement snapshot');
+  assert.equal(publicSnapshot.grounded, undefined);
+  assert.equal(publicSnapshot.physicsBody, undefined);
+  assert.equal(publicSnapshot.renderer, undefined);
   assert.throws(() => { snapshot.airJumpsUsed = 99; }, TypeError);
 });
 
@@ -105,15 +127,16 @@ test('MovementSerializer round trips without retaining Registry or Definition re
   const serialized = serializeMovementRuntimeStates([state], {
     characterDefinitionById: definitionById,
   });
-  const restored = deserializeMovementRuntimeState(serialized[0], {
+  const restored = deserializeMovementRuntimeState(required(serialized[0], '序列化移动状态'), {
     characterDefinitionById: definitionById,
   });
   assert.deepEqual(
     createMovementRuntimeSnapshot(restored, definition),
     serialized[0],
   );
-  assert.equal(restored.characterRegistry, undefined);
-  assert.equal(restored.characterDefinition, undefined);
+  const publicRestored = record(restored, 'restored movement state');
+  assert.equal(publicRestored.characterRegistry, undefined);
+  assert.equal(publicRestored.characterDefinition, undefined);
   assert.throws(() => serializeMovementRuntimeStates([state, state], {
     characterDefinitionById: definitionById,
   }), /重复 participantId/);
@@ -137,18 +160,18 @@ test('MovementCommand is strict immutable data and rejects implementation payloa
 });
 
 test('MovementMutation exposes validated jump, vertical-speed and downward acceleration operations', () => {
-  const impulse = createMovementMutation({
+  const impulse = impulseMutation(createMovementMutation({
     kind: MOVEMENT_MUTATION_KIND.APPLY_IMPULSE,
     participantId: 'player-1',
     impulse: { x: 0, y: 9, z: 0 },
-  });
+  }));
   assert.ok(Object.isFrozen(impulse));
   assert.ok(Object.isFrozen(impulse.impulse));
   assert.deepEqual(impulse.impulse, { x: 0, y: 9, z: 0 });
-  const directional = createMovementMutation({
+  const directional = impulseMutation(createMovementMutation({
     ...impulse,
     impulse: { x: 1, y: 9, z: -2 },
-  });
+  }));
   assert.deepEqual(directional.impulse, { x: 1, y: 9, z: -2 });
   assert.throws(() => createMovementMutation({
     ...impulse,

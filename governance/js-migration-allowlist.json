@@ -16,7 +16,6 @@
     "tests/arena/match-core-movement.test.js",
     "tests/arena/match-core.test.js",
     "tests/arena/movement-action-provider.test.js",
-    "tests/arena/movement-runtime.test.js",
     "tests/arena/movement-system.test.js",
     "tests/arena/presentation/arena-build-manifest.test.js",
     "tests/arena/presentation/arena-device-acceptance.test.js",
