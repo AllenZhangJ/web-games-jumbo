@@ -10,11 +10,17 @@ import {
   EquipmentPickupResolver,
   EquipmentSpawner,
   EquipmentSystem,
+  type EquipmentPosition,
   deserializeEquipmentRuntimeState,
   serializeEquipmentRuntimeStates,
 } from '@number-strategy-jump/arena-equipment';
 
 const PARTICIPANT_IDS = Object.freeze(['player-1', 'player-2']);
+
+function required<T>(value: T | null | undefined, name: string): T {
+  if (value === null || value === undefined) throw new Error(`测试缺少 ${name}。`);
+  return value;
+}
 
 function createSystem() {
   const registries = createStage4ContentRegistries();
@@ -31,7 +37,7 @@ function participants(player1X = 0, player2X = 4) {
   ];
 }
 
-function spawnHammer(system, overrides = {}) {
+function spawnHammer(system: EquipmentSystem, overrides: Record<string, unknown> = {}) {
   return system.spawn({
     instanceId: 'equipment-1',
     definitionId: STAGE4_EQUIPMENT_ID.HAMMER,
@@ -47,23 +53,23 @@ test('EquipmentSystem owns spawn, automatic pickup, slot and cooldown state', ()
   assert.equal(spawned.locationState, EQUIPMENT_LOCATION_STATE.SPAWNED);
   const picked = system.resolvePickups({ participants: participants(), contestSeed: 7 });
   assert.deepEqual(picked.map(({ participantId }) => participantId), ['player-1']);
-  assert.equal(system.getHeldEquipment('player-1').instanceId, 'equipment-1');
+  assert.equal(required(system.getHeldEquipment('player-1'), 'player-1 装备').instanceId, 'equipment-1');
   assert.equal(system.getHeldEquipment('player-2'), null);
 
-  const ready = system.getActionCandidate('player-1');
+  const ready = required(system.getActionCandidate('player-1'), '地面动作候选');
   assert.equal(ready.actionDefinitionId, STAGE4_ACTION_ID.HAMMER_SMASH);
   assert.equal(ready.available, true);
-  const aerialReady = system.getAerialActionCandidate('player-1');
+  const aerialReady = required(system.getAerialActionCandidate('player-1'), '空中动作候选');
   assert.equal(aerialReady.actionDefinitionId, STAGE4_ACTION_ID.HAMMER_AIR_SMASH);
   assert.ok(aerialReady.priority > ready.priority);
   const used = system.markActionStarted('player-1', STAGE4_ACTION_ID.HAMMER_SMASH);
   assert.equal(used.cooldownRemainingTicks, 72);
-  const blocked = system.getActionCandidate('player-1');
+  const blocked = required(system.getActionCandidate('player-1'), '冷却动作候选');
   assert.equal(blocked.available, false);
   assert.equal(blocked.blocksFallback, true);
   assert.equal(blocked.unavailableReason, 'equipment-cooldown');
   for (let tick = 0; tick < 72; tick += 1) system.advanceCooldowns();
-  assert.equal(system.getActionCandidate('player-1').available, true);
+  assert.equal(required(system.getActionCandidate('player-1'), '冷却完成动作候选').available, true);
   system.destroy();
 });
 
@@ -102,7 +108,7 @@ test('pickup contests are independent of input array order and seeded ties do no
     const forward = resolver.resolve({ participants: actors, equipment, contestSeed: seed });
     const reversed = resolver.resolve({ participants: [...actors].reverse(), equipment, contestSeed: seed });
     assert.deepEqual(forward, reversed);
-    winners.add(forward[0].participantId);
+    winners.add(required(forward[0], '拾取胜者').participantId);
   }
   assert.deepEqual([...winners].sort(), PARTICIPANT_IDS);
 });
@@ -112,17 +118,17 @@ test('death drop uses last safe position and reports deterministic origin fallba
   spawnHammer(system);
   system.resolvePickups({ participants: participants(), contestSeed: 1 });
   system.updateLastSafePosition('player-1', { x: 2, y: 1, z: 0 });
-  const normal = system.dropOwned('player-1', {
+  const normal = required(system.dropOwned('player-1', {
     isPositionValid: () => true,
-  });
+  }), '正常掉落结果');
   assert.equal(normal.fallbackUsed, false);
   assert.deepEqual(normal.equipment.position, { x: 2, y: 1, z: 0 });
 
   system.resolvePickups({ participants: participants(2, 4), contestSeed: 1 });
   system.updateLastSafePosition('player-1', { x: 99, y: -20, z: 0 });
-  const fallback = system.dropOwned('player-1', {
-    isPositionValid: (position) => position.y >= 0,
-  });
+  const fallback = required(system.dropOwned('player-1', {
+    isPositionValid: (position: EquipmentPosition) => position.y >= 0,
+  }), '回退掉落结果');
   assert.equal(fallback.fallbackUsed, true);
   assert.equal(fallback.diagnosticCode, 'equipment-drop-fallback-origin-spawn');
   assert.deepEqual(fallback.equipment.position, { x: 0, y: 1, z: 0 });
@@ -139,11 +145,11 @@ test('failed or reentrant drop leaves ownership unchanged', () => {
       return true;
     },
   }), /不可重入/);
-  assert.equal(system.getHeldEquipment('player-1').instanceId, 'equipment-1');
+  assert.equal(required(system.getHeldEquipment('player-1'), '重入失败后的装备').instanceId, 'equipment-1');
 
-  const emergency = system.dropOwned('player-1', {
+  const emergency = required(system.dropOwned('player-1', {
     isPositionValid: () => false,
-  });
+  }), '紧急掉落结果');
   assert.equal(emergency.fallbackUsed, true);
   assert.equal(emergency.despawned, true);
   assert.equal(emergency.diagnosticCode, 'equipment-drop-no-valid-position');
@@ -172,11 +178,11 @@ test('invalid world equipment is despawned atomically while held equipment remai
   assert.equal(system.getSnapshot('equipment-2').locationState, EQUIPMENT_LOCATION_STATE.SPAWNED);
 
   const despawned = system.despawnInvalidWorldEquipment({
-    isPositionValid: (position) => position.x < 1,
+    isPositionValid: (position: EquipmentPosition) => position.x < 1,
   });
   assert.deepEqual(despawned.map(({ instanceId }) => instanceId), ['equipment-2']);
-  assert.equal(despawned[0].locationState, EQUIPMENT_LOCATION_STATE.DESPAWNED);
-  assert.equal(system.getHeldEquipment('player-1').instanceId, 'equipment-1');
+  assert.equal(required(despawned[0], '失效装备').locationState, EQUIPMENT_LOCATION_STATE.DESPAWNED);
+  assert.equal(required(system.getHeldEquipment('player-1'), '仍持有的装备').instanceId, 'equipment-1');
   system.destroy();
 });
 
@@ -192,7 +198,7 @@ test('EquipmentSerializer round trips schema state without Registry or runtime r
   runtime.cooldownRemainingTicks = 9;
   runtime.revision = 4;
   const serialized = serializeEquipmentRuntimeStates([runtime]);
-  const restored = deserializeEquipmentRuntimeState(serialized[0], { equipmentRegistry });
+  const restored = deserializeEquipmentRuntimeState(required(serialized[0], '序列化装备'), { equipmentRegistry });
   assert.deepEqual(serializeEquipmentRuntimeStates([restored]), serialized);
   assert.equal(JSON.stringify(serialized).includes('equipmentRegistry'), false);
 });
@@ -221,7 +227,7 @@ test('EquipmentSystem rejects partial, accessor or invalid mutations and has ter
     contestSeed: 0,
   }), /必须是可枚举数据字段/);
   assert.equal(getterCalled, false);
-  assert.equal(system.listSnapshots()[0].locationState, EQUIPMENT_LOCATION_STATE.SPAWNED);
+  assert.equal(required(system.listSnapshots()[0], '场上装备').locationState, EQUIPMENT_LOCATION_STATE.SPAWNED);
 
   system.destroy();
   system.destroy();

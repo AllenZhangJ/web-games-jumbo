@@ -8,7 +8,6 @@
     "tests/arena/arena-rule-engine.test.js",
     "tests/arena/character-foundation.test.js",
     "tests/arena/defect-ledger.test.js",
-    "tests/arena/equipment-system.test.js",
     "tests/arena/experiment/arena-experiment.test.js",
     "tests/arena/input-pilot-release-evidence.test.js",
     "tests/arena/input/input-match-integration.test.js",
