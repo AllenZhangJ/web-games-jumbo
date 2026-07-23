@@ -44,6 +44,10 @@ export {
   createArenaGoldenReplayManifestEntry,
   verifyArenaGoldenReplayCorpus,
 } from './golden-replay-verifier.js';
+export {
+  ARENA_V1_GOLDEN_REPLAY_MANIFEST_ID,
+  createArenaV1GoldenReplayScenarioRegistry,
+} from './arena-v1-golden-replay-scenarios.js';
 export type {
   ArenaGoldenReplayManifest,
   ArenaGoldenReplayManifestEntry,

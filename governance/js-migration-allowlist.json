@@ -91,7 +91,6 @@
     "src/arena/presentation/assets/formal-asset-intake-bundle.js",
     "src/arena/presentation/assets/formal-asset-intake-policy.js",
     "src/arena/presentation/assets/formal-asset-provenance-record.js",
-    "src/arena/regression/arena-v1-golden-replay-scenarios.js",
     "src/arena/replay.js",
     "src/config.js",
     "tests/architecture.test.js",

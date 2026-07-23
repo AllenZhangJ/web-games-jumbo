@@ -8,10 +8,10 @@ import { ARENA_REPLAY_SCHEMA_VERSION } from '@number-strategy-jump/arena-match';
 import {
   ARENA_V1_GOLDEN_REPLAY_MANIFEST_ID,
   createArenaV1GoldenReplayScenarioRegistry,
-} from '../arena/regression/arena-v1-golden-replay-scenarios.js';
+} from '@number-strategy-jump/arena-regression';
 import {
   ARENA_GOLDEN_REPLAY_VERIFICATION_SCHEMA_VERSION,
-} from '../arena/regression/golden-replay-verifier.js';
+} from '@number-strategy-jump/arena-regression';
 import { ARENA_RELEASE_EVIDENCE_STATUS } from '@number-strategy-jump/arena-release-contracts';
 
 const VERIFICATION_KEYS = new Set([

@@ -14,7 +14,7 @@ import { createArenaV1MatchCore } from '@number-strategy-jump/arena-v1-compositi
 import {
   ARENA_V1_GOLDEN_REPLAY_MANIFEST_ID,
   createArenaV1GoldenReplayScenarioRegistry,
-} from '../src/arena/regression/arena-v1-golden-replay-scenarios.js';
+} from '@number-strategy-jump/arena-regression';
 import {
   ARENA_GOLDEN_REPLAY_MANIFEST_SCHEMA_VERSION,
   createArenaGoldenReplayManifest,

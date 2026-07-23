@@ -13,6 +13,9 @@
   "references": [
     { "path": "../arena-contracts" },
     { "path": "../arena-evidence-contracts" },
-    { "path": "../arena-match" }
+    { "path": "../arena-match" },
+    { "path": "../arena-experiment" },
+    { "path": "../arena-v1-composition" },
+    { "path": "../arena-v1-content" }
   ]
 }

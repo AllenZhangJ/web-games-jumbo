@@ -48,7 +48,7 @@ import {
 } from '@number-strategy-jump/arena-stage9-evidence-content';
 import {
   createArenaV1GoldenReplayScenarioRegistry,
-} from '../../src/arena/regression/arena-v1-golden-replay-scenarios.js';
+} from '@number-strategy-jump/arena-regression';
 import {
   createArenaGoldenReplayManifest,
 } from '@number-strategy-jump/arena-regression';

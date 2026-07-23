@@ -418,9 +418,12 @@ test('Arena Stage 9 regression corpus stays headless and keeps Node IO in script
     [
       '@number-strategy-jump/arena-contracts',
       '@number-strategy-jump/arena-evidence-contracts',
+      '@number-strategy-jump/arena-experiment',
       '@number-strategy-jump/arena-match',
+      '@number-strategy-jump/arena-v1-composition',
+      '@number-strategy-jump/arena-v1-content',
     ],
-    'arena-regression 包只能依赖基础契约、证据值契约和严格 Match/Replay。',
+    'arena-regression 包只能依赖已审核的实验、Match/Replay 与 V1 组合内容。',
   );
   const regressionFiles = [
     ...await listJavaScript(path.resolve('src/arena/regression')),
