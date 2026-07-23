@@ -6,7 +6,6 @@
   "files": [
     "tests/architecture.test.js",
     "tests/arena/experiment/arena-experiment.test.js",
-    "tests/arena/presentation/product-presentation.test.js",
     "tests/arena/release-readiness.test.js"
   ]
 }

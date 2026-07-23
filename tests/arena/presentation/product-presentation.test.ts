@@ -5,12 +5,16 @@ import { createArenaV1ProductSession } from '@number-strategy-jump/arena-v1-comp
 import { ARENA_V1_PLAYER_PROFILE_DEFINITION } from '@number-strategy-jump/arena-product-v1-content';
 import {
   createProductMatchResult,
+  type ProductMatchResult,
+  type ProductPublicMatchInfo,
 } from '@number-strategy-jump/arena-product-contracts';
 import {
   PRODUCT_UI_INTENT_ID,
   createProductUiIntent,
 } from '@number-strategy-jump/arena-presentation-contracts';
-import { createPlayerProfile } from '@number-strategy-jump/arena-profile-contracts';
+import {
+  createPlayerProfile,
+} from '@number-strategy-jump/arena-profile-contracts';
 import { REWARD_GRANT_SCHEMA_VERSION } from '@number-strategy-jump/arena-progression';
 import {
   PRODUCT_SESSION_ERROR_CODE,
@@ -33,25 +37,77 @@ import {
   ProductScreenRegistry,
   ProductSessionIntentDispatcher,
   createProductSessionViewModel,
+  type ProductInputSamplerPort,
+  type ProductMatchPresentationProjectorOptions,
+  type ProductPresentationFlowOptions,
+  type ProductPresentationFlowSnapshot,
+  type ProductSessionViewModel,
 } from '@number-strategy-jump/arena-product-presentation';
 import {
   PRODUCT_INPUT_ROUTER_MODE,
+  type ProductUiIntent,
 } from '@number-strategy-jump/arena-presentation-contracts';
 import { PRODUCT_PRESENTATION_FLOW_STATE } from '@number-strategy-jump/arena-presentation-contracts';
+import {
+  type ProductSessionState,
+  type ProductSessionStateSnapshot,
+} from '@number-strategy-jump/arena-product-state';
+import type {
+  PresentationInputViewport,
+} from '@number-strategy-jump/arena-presentation-runtime';
 import { TEST_MATCH_CONTENT_PUBLIC_VIEW } from '../product/stage8-test-content.js';
 
-function deferred() {
-  let resolve;
-  let reject;
-  const promise = new Promise((resolveValue, rejectValue) => {
+const arenaFrameProjector = projectArenaPresentationFrame as unknown as (
+  options: ProductMatchPresentationProjectorOptions,
+) => unknown;
+
+interface Deferred<T> {
+  readonly promise: Promise<T>;
+  readonly resolve: (value: T | PromiseLike<T>) => void;
+  readonly reject: (reason?: unknown) => void;
+}
+
+interface MemoryStorage {
+  storageRead(key: string): Readonly<{
+    ok: true;
+    found: boolean;
+    value: unknown;
+  }>;
+  storageWrite(key: string, value: unknown): boolean;
+  storageDelete(key: string): boolean;
+}
+
+function required<T>(value: T | null | undefined, name: string): T {
+  assert.ok(value !== null && value !== undefined, `${name} 不存在。`);
+  return value;
+}
+
+function record(value: unknown, name: string): Record<string, unknown> {
+  assert.ok(value !== null && typeof value === 'object' && !Array.isArray(value), `${name} 必须是对象。`);
+  return value as Record<string, unknown>;
+}
+
+function array(value: unknown, name: string): readonly unknown[] {
+  assert.ok(Array.isArray(value), `${name} 必须是数组。`);
+  return value;
+}
+
+function errorMessage(value: unknown): string {
+  return value instanceof Error ? value.message : String(value);
+}
+
+function deferred<T>(): Deferred<T> {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolveValue, rejectValue) => {
     resolve = resolveValue;
     reject = rejectValue;
   });
   return { promise, resolve, reject };
 }
 
-function memoryStorage() {
-  const values = new Map();
+function memoryStorage(): MemoryStorage {
+  const values = new Map<string, unknown>();
   return {
     storageRead(key) {
       return values.has(key)
@@ -69,7 +125,10 @@ function memoryStorage() {
   };
 }
 
-function matchResult({ winnerId = 'player-1', seed = 77 } = {}) {
+function matchResult({
+  winnerId = 'player-1',
+  seed = 77,
+}: Readonly<{ winnerId?: string | null; seed?: number }> = {}): ProductMatchResult {
   return createProductMatchResult({
     matchSeed: seed,
     opponent: {
@@ -98,13 +157,17 @@ function matchResult({ winnerId = 'player-1', seed = 77 } = {}) {
   });
 }
 
-function stateSnapshot(state, {
+function stateSnapshot(state: ProductSessionState, {
   activeState = state === PRODUCT_SESSION_STATE.SUSPENDED
     ? PRODUCT_SESSION_STATE.READY
     : state,
   recoveryState = null,
   revision = 1,
-} = {}) {
+}: Readonly<{
+  activeState?: ProductSessionState | undefined;
+  recoveryState?: ProductSessionState | null;
+  revision?: number;
+}> = {}): ProductSessionStateSnapshot {
   return {
     schemaVersion: 2,
     revision,
@@ -116,7 +179,7 @@ function stateSnapshot(state, {
   };
 }
 
-function productSnapshot(state, {
+function productSnapshot(state: ProductSessionState, {
   activeState,
   profile = createPlayerProfile(ARENA_V1_PLAYER_PROFILE_DEFINITION),
   publicMatchInfo = null,
@@ -124,7 +187,15 @@ function productSnapshot(state, {
   reward = null,
   lastError = null,
   recoveryState = null,
-} = {}) {
+}: Readonly<{
+  activeState?: ProductSessionState;
+  profile?: unknown;
+  publicMatchInfo?: unknown;
+  result?: unknown;
+  reward?: unknown;
+  lastError?: unknown;
+  recoveryState?: ProductSessionState | null;
+}> = {}): unknown {
   return {
     schemaVersion: 2,
     state: stateSnapshot(state, { activeState, recoveryState }),
@@ -144,14 +215,17 @@ function productSnapshot(state, {
   };
 }
 
-function viewModel(snapshot, options = {}) {
+function viewModel(
+  snapshot: unknown,
+  options: Readonly<Record<string, unknown>> = {},
+): ProductSessionViewModel {
   return createProductSessionViewModel(snapshot, {
     ...ARENA_V1_PRODUCT_PRESENTATION_CONTENT,
     ...options,
   });
 }
 
-function publicMatchInfo(seed = 77) {
+function publicMatchInfo(seed = 77): ProductPublicMatchInfo {
   return {
     matchSeed: seed,
     opponent: {
@@ -164,7 +238,7 @@ function publicMatchInfo(seed = 77) {
   };
 }
 
-function rewardSnapshot(result, experienceDelta = 125) {
+function rewardSnapshot(result: ProductMatchResult, experienceDelta = 125): unknown {
   return {
     grant: {
       schemaVersion: REWARD_GRANT_SCHEMA_VERSION,
@@ -212,9 +286,12 @@ test('Arena V1 product presentation content covers every active product state wi
   }
   const duplicated = ARENA_V1_PRODUCT_SCREEN_REGISTRY.list()[0];
   assert.throws(() => new ProductScreenRegistry([duplicated, duplicated]), /重复 id/);
-  const sparse = [];
+  const sparse: unknown[] = [];
   sparse.length = 1;
-  assert.throws(() => new ProductScreenRegistry(sparse), /空槽或访问器/);
+  assert.throws(
+    () => new ProductScreenRegistry(sparse as never[]),
+    /空槽或访问器/,
+  );
 });
 
 test('ProductMessageCatalog formats only declared finite parameters and rejects malformed templates', () => {
@@ -242,7 +319,10 @@ test('ProductMessageCatalog formats only declared finite parameters and rejects 
 test('ProductSession ViewModel projects home, matching, suspension and reward without hidden bot data', () => {
   const ready = viewModel(productSnapshot(PRODUCT_SESSION_STATE.READY));
   assert.equal(ready.screen.title, '竞技场');
-  assert.equal(ready.screen.primaryAction.intent.id, PRODUCT_UI_INTENT_ID.START_MATCH);
+  assert.equal(
+    required(ready.screen.primaryAction, 'ready.primaryAction').intent.id,
+    PRODUCT_UI_INTENT_ID.START_MATCH,
+  );
   assert.equal(ready.characterOptions.length, 2);
   assert.equal(ready.characterOptions.filter(({ selected }) => selected).length, 1);
 
@@ -251,7 +331,7 @@ test('ProductSession ViewModel projects home, matching, suspension and reward wi
   }), { lastMatchResult: matchResult() });
   assert.equal(matching.busy, true);
   assert.equal(matching.inputEnabled, false);
-  assert.equal(matching.match.opponent.displayName, '挑战者77');
+  assert.equal(required(matching.match, 'matching.match').opponent.displayName, '挑战者77');
   assert.equal(matching.result, null);
   assert.doesNotMatch(
     JSON.stringify(matching),
@@ -263,7 +343,7 @@ test('ProductSession ViewModel projects home, matching, suspension and reward wi
   }));
   assert.equal(suspended.screen.sceneId, 'home');
   assert.equal(suspended.suspended, true);
-  assert.equal(suspended.screen.primaryAction.enabled, false);
+  assert.equal(required(suspended.screen.primaryAction, 'suspended.primaryAction').enabled, false);
 
   const result = matchResult({ winnerId: 'player-1' });
   const reward = viewModel(productSnapshot(PRODUCT_SESSION_STATE.REWARD, {
@@ -272,8 +352,11 @@ test('ProductSession ViewModel projects home, matching, suspension and reward wi
   assert.equal(reward.screen.title, '胜利');
   assert.equal(reward.screen.body, '经验 +125');
   assert.equal(reward.screen.announcement, '胜利');
-  assert.equal(reward.reward.experienceDelta, 125);
-  assert.equal(reward.screen.primaryAction.intent.id, PRODUCT_UI_INTENT_ID.REQUEST_REMATCH);
+  assert.equal(required(reward.reward, 'reward.reward').experienceDelta, 125);
+  assert.equal(
+    required(reward.screen.primaryAction, 'reward.primaryAction').intent.id,
+    PRODUCT_UI_INTENT_ID.REQUEST_REMATCH,
+  );
 });
 
 test('ProductSession ViewModel fails closed on missing reward, unknown content and public errors', () => {
@@ -317,14 +400,26 @@ test('ProductSession ViewModel fails closed on missing reward, unknown content a
     recoveryState: PRODUCT_SESSION_STATE.READY,
     lastError: { code: PRODUCT_SESSION_ERROR_CODE.MATCH_PREPARE_FAILED },
   }));
-  assert.equal(recoverable.error.code, PRODUCT_SESSION_ERROR_CODE.MATCH_PREPARE_FAILED);
+  assert.equal(
+    required(recoverable.error, 'recoverable.error').code,
+    PRODUCT_SESSION_ERROR_CODE.MATCH_PREPARE_FAILED,
+  );
   assert.equal(recoverable.screen.body, '暂时无法开始，进度已保留');
-  assert.equal(recoverable.screen.primaryAction.intent.id, PRODUCT_UI_INTENT_ID.RETRY);
+  assert.equal(
+    required(recoverable.screen.primaryAction, 'recoverable.primaryAction').intent.id,
+    PRODUCT_UI_INTENT_ID.RETRY,
+  );
 });
 
-function controllerHarness({ requestMatch = null, boot = null } = {}) {
-  let state = PRODUCT_SESSION_STATE.READY;
-  const calls = [];
+function controllerHarness({
+  requestMatch = null,
+  boot = null,
+}: Readonly<{
+  requestMatch?: Deferred<unknown> | null;
+  boot?: Deferred<unknown> | null;
+}> = {}) {
+  let state: ProductSessionState = PRODUCT_SESSION_STATE.READY;
+  const calls: string[] = [];
   const snapshot = () => ({ state: stateSnapshot(state) });
   return {
     calls,
@@ -340,7 +435,7 @@ function controllerHarness({ requestMatch = null, boot = null } = {}) {
         state = PRODUCT_SESSION_STATE.READY;
         return snapshot();
       },
-      selectCharacter(id) { calls.push(`select-character:${id}`); return snapshot(); },
+      selectCharacter(id: string) { calls.push(`select-character:${id}`); return snapshot(); },
       requestMatch() {
         calls.push('request-match');
         state = PRODUCT_SESSION_STATE.MATCHING;
@@ -356,7 +451,7 @@ function controllerHarness({ requestMatch = null, boot = null } = {}) {
 }
 
 test('ProductSessionIntentDispatcher serializes intents, deduplicates rapid taps and is non-owning', async () => {
-  const pendingMatch = deferred();
+  const pendingMatch = deferred<unknown>();
   const harness = controllerHarness({ requestMatch: pendingMatch });
   const dispatcher = new ProductSessionIntentDispatcher({ controller: harness.controller });
   const first = dispatcher.dispatch({ id: PRODUCT_UI_INTENT_ID.START_MATCH });
@@ -385,7 +480,7 @@ test('ProductSessionIntentDispatcher serializes intents, deduplicates rapid taps
 });
 
 test('ProductSessionIntentDispatcher contains late completion after adapter destruction', async () => {
-  const boot = deferred();
+  const boot = deferred<unknown>();
   const harness = controllerHarness({ boot });
   const dispatcher = new ProductSessionIntentDispatcher({ controller: harness.controller });
   const pending = dispatcher.dispatch({ id: PRODUCT_UI_INTENT_ID.BOOT });
@@ -416,9 +511,9 @@ test('Product match presentation runtime bridges the one owned Product match int
   await controller.boot();
   controller.openCharacterSelect();
   await controller.requestMatch();
-  const sampled = [];
+  const sampled: Array<Readonly<{ tick: number; actionAffordance: unknown }>> = [];
   const inputSource = {
-    sample(tick, { actionAffordance }) {
+    sample(tick: number, { actionAffordance }: Readonly<{ actionAffordance: unknown }>) {
       sampled.push({ tick, actionAffordance });
       return createNeutralInputFrame(tick, 'player-1');
     },
@@ -427,35 +522,45 @@ test('Product match presentation runtime bridges the one owned Product match int
     controller,
     inputSource,
     content: ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT,
-    frameProjector: projectArenaPresentationFrame,
+    frameProjector: arenaFrameProjector,
   });
-  const initial = runtime.start();
+  const initial = record(runtime.start(), 'initial presentation frame');
+  const initialSource = record(initial.source, 'initial.source');
+  const initialHud = record(initial.hud, 'initial.hud');
+  const initialOpponent = record(initialHud.opponent, 'initial.hud.opponent');
   assert.equal(controller.state, PRODUCT_SESSION_STATE.IN_MATCH);
-  assert.equal(initial.source.matchSeed, 8801);
-  assert.equal(initial.hud.opponent.displayName.length > 0, true);
-  assert.equal(controller.getActiveMatchSnapshot().tick, initial.source.tick);
+  assert.equal(initialSource.matchSeed, 8801);
+  assert.equal(String(initialOpponent.displayName).length > 0, true);
+  assert.equal(
+    required(controller.getActiveMatchSnapshot(), 'active match snapshot').tick,
+    initialSource.tick,
+  );
 
-  let frame = initial;
+  let frame: Record<string, unknown> = initial;
   for (let index = 0; index < 12 && runtime.state === PRODUCT_MATCH_PRESENTATION_RUNTIME_STATE.RUNNING; index += 1) {
-    frame = runtime.step();
+    frame = record(runtime.step(), 'presentation frame');
   }
   assert.equal(runtime.state, PRODUCT_MATCH_PRESENTATION_RUNTIME_STATE.RESULT);
   assert.equal(controller.state, PRODUCT_SESSION_STATE.RESULTS);
-  assert.equal(frame.hud.result !== null, true);
+  assert.equal(record(frame.hud, 'frame.hud').result !== null, true);
   assert.equal(sampled.length > 0, true);
-  assert.equal(sampled[0].actionAffordance.tick, sampled[0].tick);
-  assert.match(runtime.getLastMatchResult().authorityHash, /^[0-9a-f]{8}$/);
+  const firstSample = required(sampled[0], 'first input sample');
+  assert.equal(record(firstSample.actionAffordance, 'actionAffordance').tick, firstSample.tick);
+  assert.match(
+    required(runtime.getLastMatchResult(), 'last match result').authorityHash,
+    /^[0-9a-f]{8}$/,
+  );
 
   runtime.destroy();
   assert.equal(controller.state, PRODUCT_SESSION_STATE.RESULTS);
   controller.destroy();
 });
 
-function runtimeControllerHarness({ failStep = false } = {}) {
+function runtimeControllerHarness({ failStep = false }: Readonly<{ failStep?: boolean }> = {}) {
   let tick = 0;
   let destroyed = 0;
   const info = publicMatchInfo(91);
-  const productState = (state) => productSnapshot(state, { publicMatchInfo: info });
+  const productState = (state: ProductSessionState) => productSnapshot(state, { publicMatchInfo: info });
   const authoritySnapshot = () => ({
     tick,
     participants: [
@@ -496,9 +601,13 @@ function runtimeControllerHarness({ failStep = false } = {}) {
   };
 }
 
-function contractFrameProjector({ snapshot, events }) {
+function contractFrameProjector({
+  snapshot,
+  events,
+}: ProductMatchPresentationProjectorOptions): unknown {
+  const source = record(snapshot, 'contract projector snapshot');
   return Object.freeze({
-    source: Object.freeze({ tick: snapshot.tick }),
+    source: Object.freeze({ tick: source.tick }),
     events: Object.freeze([...events]),
   });
 }
@@ -507,19 +616,23 @@ test('Product match presentation runtime deduplicates events and fails closed on
   const healthy = runtimeControllerHarness();
   const runtime = new ProductMatchPresentationRuntime({
     controller: healthy.controller,
-    inputSource: { sample: (tick) => ({ tick }) },
+    inputSource: { sample: (tick: number) => ({ tick }) },
     frameProjector: contractFrameProjector,
   });
   runtime.start();
-  assert.equal(runtime.step().events.length, 1);
-  assert.equal(runtime.step().events.length, 0);
+  assert.equal(array(record(runtime.step(), 'first frame').events, 'first events').length, 1);
+  assert.equal(
+    array(record(runtime.getLastPresentationFrame(), 'first frame').events, 'first events').length,
+    1,
+  );
+  assert.equal(array(record(runtime.step(), 'second frame').events, 'second events').length, 0);
   runtime.destroy();
   assert.equal(healthy.destroyCalls, 0);
 
   const failing = runtimeControllerHarness({ failStep: true });
   const failedRuntime = new ProductMatchPresentationRuntime({
     controller: failing.controller,
-    inputSource: { sample: (tick) => ({ tick }) },
+    inputSource: { sample: (tick: number) => ({ tick }) },
     frameProjector: contractFrameProjector,
   });
   const initial = failedRuntime.start();
@@ -536,10 +649,10 @@ test('Product match presentation runtime retries owned event-window cleanup with
   let destroyCalls = 0;
   const runtime = new ProductMatchPresentationRuntime({
     controller: harness.controller,
-    inputSource: { sample: (tick) => ({ tick }) },
+    inputSource: { sample: (tick: number) => ({ tick }) },
     frameProjector: contractFrameProjector,
     eventWindowFactory: () => ({
-      consume: (events) => events,
+      consume: (events: readonly unknown[]) => events,
       destroy() {
         destroyCalls += 1;
         if (destroyCalls === 1) throw new Error('event window cleanup failed');
@@ -560,17 +673,20 @@ test('Product match presentation runtime cleans an invalid constructed event win
   let destroyCalls = 0;
   assert.throws(() => new ProductMatchPresentationRuntime({
     controller: harness.controller,
-    inputSource: { sample: (tick) => ({ tick }) },
+    inputSource: { sample: (tick: number) => ({ tick }) },
     frameProjector: contractFrameProjector,
     eventWindowFactory: () => ({
       destroy() { destroyCalls += 1; },
-    }),
+    }) as never,
   }), /eventWindow 不符合合同/);
   assert.equal(destroyCalls, 1);
   assert.equal(harness.destroyCalls, 0);
 });
 
-function productFlowHarness({ storage = memoryStorage(), seed = 9901 } = {}) {
+function productFlowHarness({
+  storage = memoryStorage(),
+  seed = 9901,
+}: Readonly<{ storage?: MemoryStorage; seed?: number }> = {}) {
   const controller = createArenaV1ProductSession({
     storage,
     ownerId: `product-flow-${seed}`,
@@ -584,7 +700,7 @@ function productFlowHarness({ storage = memoryStorage(), seed = 9901 } = {}) {
     },
   });
   const inputSource = {
-    sample: (tick) => createNeutralInputFrame(tick, 'player-1'),
+    sample: (tick: number) => createNeutralInputFrame(tick, 'player-1'),
   };
   return {
     controller,
@@ -592,41 +708,53 @@ function productFlowHarness({ storage = memoryStorage(), seed = 9901 } = {}) {
   };
 }
 
-function createProductPresentationFlow(options) {
+function createProductPresentationFlow(
+  options: Omit<
+    ProductPresentationFlowOptions,
+    'presentationContent' | 'matchPresentationContent' | 'frameProjector'
+  >,
+): ProductPresentationFlow {
   return new ProductPresentationFlow({
     presentationContent: ARENA_V1_PRODUCT_PRESENTATION_CONTENT,
     matchPresentationContent: ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT,
-    frameProjector: projectArenaPresentationFrame,
+    frameProjector: arenaFrameProjector,
     ...options,
   });
 }
 
 test('ProductPresentationFlow completes boot, one owned match, automatic reward and return home', async () => {
   const { controller, flow } = productFlowHarness();
-  const ready = await flow.start();
-  assert.equal(ready.viewModel.activeState, PRODUCT_SESSION_STATE.READY);
+  const ready = required(await flow.start(), 'ready flow snapshot');
+  assert.equal(required(ready.viewModel, 'ready view model').activeState, PRODUCT_SESSION_STATE.READY);
   const first = flow.dispatch({ id: PRODUCT_UI_INTENT_ID.START_MATCH });
   const duplicate = flow.dispatch({ id: PRODUCT_UI_INTENT_ID.START_MATCH });
   assert.equal(first, duplicate);
-  const started = await first;
-  assert.equal(started.viewModel.activeState, PRODUCT_SESSION_STATE.IN_MATCH);
+  const started = required(await first, 'started flow snapshot') as ProductPresentationFlowSnapshot;
+  assert.equal(required(started.viewModel, 'started view model').activeState, PRODUCT_SESSION_STATE.IN_MATCH);
   assert.equal(started.hasMatchRuntime, true);
   assert.equal(controller.getSnapshot().match.hasRuntime, true);
 
-  let snapshot = started;
-  for (let index = 0; index < 12 && snapshot.viewModel.activeState === PRODUCT_SESSION_STATE.IN_MATCH; index += 1) {
+  let snapshot: ProductPresentationFlowSnapshot = started;
+  for (let index = 0; index < 12 && required(snapshot.viewModel, 'running view model').activeState === PRODUCT_SESSION_STATE.IN_MATCH; index += 1) {
     snapshot = flow.stepMatch();
   }
-  assert.equal(snapshot.viewModel.activeState, PRODUCT_SESSION_STATE.REWARD);
-  assert.equal(snapshot.viewModel.result !== null, true);
-  assert.equal(snapshot.viewModel.reward.committed, true);
+  const rewardedView = required(snapshot.viewModel, 'rewarded view model');
+  assert.equal(rewardedView.activeState, PRODUCT_SESSION_STATE.REWARD);
+  assert.equal(rewardedView.result !== null, true);
+  assert.equal(required(rewardedView.reward, 'rewarded reward').committed, true);
   assert.equal(snapshot.hasMatchRuntime, false);
   assert.equal(controller.getSnapshot().match.hasRuntime, false);
-  assert.equal(snapshot.matchFrame.hud.result !== null, true);
+  assert.equal(
+    record(record(snapshot.matchFrame, 'rewarded match frame').hud, 'rewarded hud').result !== null,
+    true,
+  );
 
-  const home = await flow.dispatch({ id: PRODUCT_UI_INTENT_ID.CONTINUE_REWARD });
-  assert.equal(home.viewModel.activeState, PRODUCT_SESSION_STATE.READY);
-  assert.equal(home.viewModel.result, null);
+  const home = required(
+    await flow.dispatch({ id: PRODUCT_UI_INTENT_ID.CONTINUE_REWARD }),
+    'home flow snapshot',
+  ) as ProductPresentationFlowSnapshot;
+  assert.equal(required(home.viewModel, 'home view model').activeState, PRODUCT_SESSION_STATE.READY);
+  assert.equal(required(home.viewModel, 'home view model').result, null);
   assert.equal(home.matchFrame, null);
   flow.destroy();
   assert.equal(flow.state, PRODUCT_PRESENTATION_FLOW_STATE.DESTROYED);
@@ -639,7 +767,7 @@ test('ProductPresentationFlow preserves result and Match runtime across reward-s
   let failWrites = 0;
   const storage = {
     ...base,
-    storageWrite(key, value) {
+    storageWrite(key: string, value: unknown) {
       if (failWrites > 0) {
         failWrites -= 1;
         return false;
@@ -652,23 +780,33 @@ test('ProductPresentationFlow preserves result and Match runtime across reward-s
   await flow.dispatch({ id: PRODUCT_UI_INTENT_ID.START_MATCH });
   failWrites = 1;
   let snapshot = flow.getSnapshot();
-  for (let index = 0; index < 12 && snapshot.viewModel.activeState === PRODUCT_SESSION_STATE.IN_MATCH; index += 1) {
+  for (let index = 0; index < 12 && required(snapshot.viewModel, 'running view model').activeState === PRODUCT_SESSION_STATE.IN_MATCH; index += 1) {
     snapshot = flow.stepMatch();
   }
-  assert.equal(snapshot.viewModel.activeState, PRODUCT_SESSION_STATE.RECOVERABLE_ERROR);
+  assert.equal(
+    required(snapshot.viewModel, 'recoverable view model').activeState,
+    PRODUCT_SESSION_STATE.RECOVERABLE_ERROR,
+  );
   assert.equal(
     controller.getSnapshot().state.recoveryState,
     PRODUCT_SESSION_STATE.RESULTS,
   );
   assert.equal(snapshot.hasMatchRuntime, true);
   assert.equal(snapshot.matchRuntimeState, PRODUCT_MATCH_PRESENTATION_RUNTIME_STATE.RESULT);
-  assert.equal(snapshot.matchFrame.hud.result !== null, true);
+  assert.equal(
+    record(record(snapshot.matchFrame, 'retry match frame').hud, 'retry hud').result !== null,
+    true,
+  );
 
-  const rewarded = await flow.dispatch({ id: PRODUCT_UI_INTENT_ID.RETRY });
-  assert.equal(rewarded.viewModel.activeState, PRODUCT_SESSION_STATE.REWARD);
-  assert.equal(rewarded.viewModel.result !== null, true);
+  const rewarded = required(
+    await flow.dispatch({ id: PRODUCT_UI_INTENT_ID.RETRY }),
+    'retried reward snapshot',
+  ) as ProductPresentationFlowSnapshot;
+  const retriedRewardView = required(rewarded.viewModel, 'retried reward view model');
+  assert.equal(retriedRewardView.activeState, PRODUCT_SESSION_STATE.REWARD);
+  assert.equal(retriedRewardView.result !== null, true);
   assert.equal(rewarded.hasMatchRuntime, false);
-  assert.equal(rewarded.viewModel.reward.committed, true);
+  assert.equal(required(retriedRewardView.reward, 'retried reward').committed, true);
   assert.doesNotMatch(
     JSON.stringify(rewarded),
     /difficulty|\bbot\b|机器人|简单|普通|困难|opponent-9902/i,
@@ -681,15 +819,19 @@ test('ProductPresentationFlow lifecycle pauses authority and never owns the cont
   const { controller, flow } = productFlowHarness({ seed: 9903 });
   await flow.start();
   await flow.dispatch({ id: PRODUCT_UI_INTENT_ID.START_MATCH });
-  const before = controller.getActiveMatchSnapshot().tick;
+  const before = required(controller.getActiveMatchSnapshot(), 'active match snapshot').tick;
+  assert.equal(typeof before, 'number');
   const hidden = flow.hide();
-  assert.equal(hidden.viewModel.suspended, true);
+  assert.equal(required(hidden.viewModel, 'hidden view model').suspended, true);
   assert.throws(() => flow.stepMatch(), /挂起/);
-  assert.equal(controller.getActiveMatchSnapshot().tick, before);
+  assert.equal(required(controller.getActiveMatchSnapshot(), 'hidden match snapshot').tick, before);
   const shown = flow.show();
-  assert.equal(shown.viewModel.activeState, PRODUCT_SESSION_STATE.IN_MATCH);
+  assert.equal(required(shown.viewModel, 'shown view model').activeState, PRODUCT_SESSION_STATE.IN_MATCH);
   flow.stepMatch();
-  assert.equal(controller.getActiveMatchSnapshot().tick, before + 1);
+  assert.equal(
+    required(controller.getActiveMatchSnapshot(), 'resumed match snapshot').tick,
+    (before as number) + 1,
+  );
   flow.destroy();
   assert.notEqual(controller.state, PRODUCT_SESSION_STATE.DESTROYED);
   controller.destroy();
@@ -711,7 +853,7 @@ test('ProductPresentationFlow heartbeat releases match presentation after a conf
   });
   const flow = createProductPresentationFlow({
     controller,
-    inputSource: { sample: (tick) => createNeutralInputFrame(tick, 'player-1') },
+    inputSource: { sample: (tick: number) => createNeutralInputFrame(tick, 'player-1') },
   });
   await flow.start();
   await flow.dispatch({ id: PRODUCT_UI_INTENT_ID.START_MATCH });
@@ -720,8 +862,9 @@ test('ProductPresentationFlow heartbeat releases match presentation after a conf
   wallNow = 62_000;
   const heartbeat = flow.heartbeat();
   assert.equal(heartbeat.renewed, false);
-  assert.equal(heartbeat.snapshot.viewModel.activeState, PRODUCT_SESSION_STATE.FATAL_ERROR);
-  assert.equal(heartbeat.snapshot.viewModel.error.code, 'profile-save-failed');
+  const heartbeatView = required(heartbeat.snapshot.viewModel, 'heartbeat view model');
+  assert.equal(heartbeatView.activeState, PRODUCT_SESSION_STATE.FATAL_ERROR);
+  assert.equal(required(heartbeatView.error, 'heartbeat error').code, 'profile-save-failed');
   assert.equal(heartbeat.snapshot.hasMatchRuntime, false);
   flow.destroy();
   controller.destroy();
@@ -741,7 +884,7 @@ test('ProductPresentationFlow cleans an invalid match runtime candidate before f
   let destroyCalls = 0;
   const flow = createProductPresentationFlow({
     controller,
-    inputSource: { sample: (tick) => createNeutralInputFrame(tick, 'player-1') },
+    inputSource: { sample: (tick: number) => createNeutralInputFrame(tick, 'player-1') },
     matchRuntimeFactory: () => ({
       start() {},
       destroy() { destroyCalls += 1; },
@@ -767,7 +910,7 @@ test('ProductPresentationFlow retries owned runtime cleanup and leaves controlle
   let destroyCalls = 0;
   const flow = createProductPresentationFlow({
     controller,
-    inputSource: { sample: (tick) => createNeutralInputFrame(tick, 'player-1') },
+    inputSource: { sample: (tick: number) => createNeutralInputFrame(tick, 'player-1') },
     matchRuntimeFactory: (options) => {
       const runtime = new ProductMatchPresentationRuntime(options);
       return {
@@ -795,39 +938,42 @@ test('ProductPresentationFlow retries owned runtime cleanup and leaves controlle
   controller.destroy();
 });
 
-function inputSamplerHarness({ failResume = false } = {}) {
-  const calls = [];
+function inputSamplerHarness({
+  failResume = false,
+}: Readonly<{ failResume?: boolean }> = {}) {
+  const calls: unknown[][] = [];
   let suspended = false;
+  const sampler: ProductInputSamplerPort = {
+    pointerStart(point: unknown) { calls.push(['start', point]); return true; },
+    pointerMove(point: unknown) { calls.push(['move', point]); return true; },
+    pointerEnd(point: unknown) { calls.push(['end', point]); return true; },
+    pointerCancel(point: unknown) { calls.push(['cancel', point]); return true; },
+    resize(viewport: PresentationInputViewport) { calls.push(['resize', viewport]); return true; },
+    suspend() { suspended = true; calls.push(['suspend']); return true; },
+    resume() {
+      calls.push(['resume']);
+      if (failResume) throw new Error('sampler resume failed');
+      suspended = false;
+      return true;
+    },
+    sample(tick: number, options?: unknown) {
+      calls.push(['sample', tick, options]);
+      if (suspended) throw new Error('sampled while suspended');
+      return { tick, options };
+    },
+    destroy() { calls.push(['destroy']); },
+    getDebugSnapshot() { return { suspended }; },
+  };
   return {
     calls,
-    sampler: {
-      pointerStart(point) { calls.push(['start', point]); return true; },
-      pointerMove(point) { calls.push(['move', point]); return true; },
-      pointerEnd(point) { calls.push(['end', point]); return true; },
-      pointerCancel(point) { calls.push(['cancel', point]); return true; },
-      resize(viewport) { calls.push(['resize', viewport]); return true; },
-      suspend() { suspended = true; calls.push(['suspend']); return true; },
-      resume() {
-        calls.push(['resume']);
-        if (failResume) throw new Error('sampler resume failed');
-        suspended = false;
-        return true;
-      },
-      sample(tick, options) {
-        calls.push(['sample', tick, options]);
-        if (suspended) throw new Error('sampled while suspended');
-        return { tick, options };
-      },
-      destroy() { calls.push(['destroy']); },
-      getDebugSnapshot() { return { suspended }; },
-    },
+    sampler,
   };
 }
 
 test('ProductInputRouter commits only a same-intent UI tap and contains async rejection', async () => {
   const harness = inputSamplerHarness();
-  const intents = [];
-  const rejections = [];
+  const intents: ProductUiIntent[] = [];
+  const rejections: Array<readonly [string, ProductUiIntent['id']]> = [];
   const router = new ProductInputRouter({
     sampler: harness.sampler,
     viewport: { width: 200, height: 100 },
@@ -843,12 +989,12 @@ test('ProductInputRouter commits only a same-intent UI tap and contains async re
       }
       return Promise.resolve();
     },
-    onIntentRejected: (error, intent) => rejections.push([error.message, intent.id]),
+    onIntentRejected: (error, intent) => rejections.push([errorMessage(error), intent.id]),
   });
   router.setMode(PRODUCT_INPUT_ROUTER_MODE.UI);
   assert.equal(router.pointerStart({ x: 20, y: 20, pointerId: 1 }), true);
   assert.equal(router.pointerEnd({ x: 20, y: 20, pointerId: 1 }), true);
-  assert.equal(intents[0].id, PRODUCT_UI_INTENT_ID.START_MATCH);
+  assert.equal(required(intents[0], 'first intent').id, PRODUCT_UI_INTENT_ID.START_MATCH);
 
   assert.equal(router.pointerStart({ x: 20, y: 20, pointerId: 2 }), true);
   assert.equal(router.pointerEnd({ x: 180, y: 20, pointerId: 2 }), false);
@@ -884,7 +1030,7 @@ test('ProductInputRouter isolates gameplay sampling, lifecycle and transactional
   assert.throws(() => router.sample(2), /仅能在活跃 gameplay/);
   const replacement = inputSamplerHarness();
   assert.equal(router.replaceSampler(replacement.sampler), true);
-  assert.equal(harness.calls.at(-1)[0], 'destroy');
+  assert.equal(required(harness.calls.at(-1), 'last sampler call')[0], 'destroy');
   assert.deepEqual(
     replacement.calls.slice(0, 2).map(([name]) => name),
     ['resize', 'suspend'],
@@ -892,7 +1038,7 @@ test('ProductInputRouter isolates gameplay sampling, lifecycle and transactional
   router.setMode(PRODUCT_INPUT_ROUTER_MODE.GAMEPLAY);
   assert.deepEqual(router.sample(0), { tick: 0, options: undefined });
   router.destroy();
-  assert.equal(replacement.calls.at(-1)[0], 'destroy');
+  assert.equal(required(replacement.calls.at(-1), 'last replacement call')[0], 'destroy');
 
   const failingHarness = inputSamplerHarness({ failResume: true });
   const failing = new ProductInputRouter({
