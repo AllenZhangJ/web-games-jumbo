@@ -32,7 +32,17 @@ const corpusRoot = path.join(root, 'tests/arena/fixtures/replays');
 const currentDirectory = path.join(corpusRoot, `v${ARENA_REPLAY_SCHEMA_VERSION}`);
 const promotionLock = path.join(corpusRoot, '.promotion.lock');
 
-function usage() {
+type GoldenReplayAction = 'verify' | 'candidate' | 'promote';
+type GoldenReplayCliOptions =
+  | Readonly<{ action: 'verify' }>
+  | Readonly<{ action: 'candidate'; output: string }>
+  | Readonly<{ action: 'promote'; candidate: string; approval: string }>;
+type GoldenReplayScenarioRegistry = ReturnType<typeof createArenaV1GoldenReplayScenarioRegistry>;
+type GoldenReplayScenario = ReturnType<GoldenReplayScenarioRegistry['require']>;
+type GoldenReplay = ReturnType<GoldenReplayScenario['createReplay']>;
+type GoldenReplayVerificationReport = ReturnType<typeof verifyArenaGoldenReplayCorpus>;
+
+function usage(): string {
   return [
     'Usage:',
     '  npm run arena:replay:verify',
@@ -44,9 +54,14 @@ function usage() {
   ].join('\n');
 }
 
-function parseArgs(values) {
-  const result = { action: 'verify', output: null, candidate: null, approval: null };
-  const seen = new Set();
+function parseArgs(values: readonly string[]): GoldenReplayCliOptions {
+  const result: {
+    action: GoldenReplayAction;
+    output: string | null;
+    candidate: string | null;
+    approval: string | null;
+  } = { action: 'verify', output: null, candidate: null, approval: null };
+  const seen = new Set<string>();
   for (const argument of values) {
     if (argument === '--verify') {
       if (seen.has('action')) throw new Error('黄金回放 action 不能重复。');
@@ -56,19 +71,22 @@ function parseArgs(values) {
     }
     const match = argument.match(/^--(output|candidate|approve)=(.+)$/);
     if (!match) throw new Error(`未知参数 ${argument}。\n${usage()}`);
-    if (seen.has(match[1])) throw new Error(`参数 --${match[1]} 不能重复。`);
-    seen.add(match[1]);
-    if (match[1] === 'output') {
+    const key = match[1];
+    const value = match[2];
+    if (!key || !value) throw new Error(`参数 ${argument} 无效。`);
+    if (seen.has(key)) throw new Error(`参数 --${key} 不能重复。`);
+    seen.add(key);
+    if (key === 'output') {
       if (seen.has('action')) throw new Error('黄金回放 action 不能重复。');
       seen.add('action');
       result.action = 'candidate';
-      result.output = match[2];
-    } else if (match[1] === 'candidate') {
+      result.output = value;
+    } else if (key === 'candidate') {
       if (seen.has('action')) throw new Error('黄金回放 action 不能重复。');
       seen.add('action');
       result.action = 'promote';
-      result.candidate = match[2];
-    } else result.approval = match[2];
+      result.candidate = value;
+    } else result.approval = value;
   }
   if (result.action === 'candidate' && result.output === null) {
     throw new Error('candidate action 缺少 --output。');
@@ -79,37 +97,56 @@ function parseArgs(values) {
   if (result.action !== 'promote' && result.approval !== null) {
     throw new Error('--approve 只允许用于 promote action。');
   }
-  return Object.freeze(result);
+  if (result.action === 'candidate') {
+    return Object.freeze({ action: result.action, output: result.output as string });
+  }
+  if (result.action === 'promote') {
+    return Object.freeze({
+      action: result.action,
+      candidate: result.candidate as string,
+      approval: result.approval as string,
+    });
+  }
+  return Object.freeze({ action: result.action });
 }
 
-async function exists(target) {
+function hasErrorCode(error: unknown, code: string): boolean {
+  return error instanceof Error && 'code' in error && error.code === code;
+}
+
+async function exists(target: string): Promise<boolean> {
   try {
     await stat(target);
     return true;
-  } catch (error) {
-    if (error?.code === 'ENOENT') return false;
+  } catch (error: unknown) {
+    if (hasErrorCode(error, 'ENOENT')) return false;
     throw error;
   }
 }
 
-function assertExternalCandidateDirectory(directory) {
+function assertExternalCandidateDirectory(directory: string): void {
   const relative = path.relative(root, directory);
-  if (relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative))) {
+  const outside = relative === '..' || relative.startsWith(`..${path.sep}`);
+  if (!outside || path.isAbsolute(relative)) {
     throw new Error('候选目录必须位于 repository 之外。');
   }
 }
 
-async function readJson(file) {
-  let parsed;
+async function readJson(file: string): Promise<unknown> {
+  let parsed: unknown;
   try {
     parsed = JSON.parse(await readFile(file, 'utf8'));
-  } catch (error) {
-    throw new Error(`无法读取黄金回放 JSON ${file}：${error.message}`);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`无法读取黄金回放 JSON ${file}：${message}`);
   }
   return parsed;
 }
 
-async function verifyDirectory(directory, { enforceDirectoryName = true } = {}) {
+async function verifyDirectory(
+  directory: string,
+  { enforceDirectoryName = true }: Readonly<{ enforceDirectoryName?: boolean }> = {},
+): Promise<GoldenReplayVerificationReport> {
   const manifestPath = path.join(directory, 'manifest.json');
   const manifest = createArenaGoldenReplayManifest(await readJson(manifestPath));
   if (enforceDirectoryName && path.basename(directory) !== `v${manifest.replaySchemaVersion}`) {
@@ -139,17 +176,20 @@ async function verifyDirectory(directory, { enforceDirectoryName = true } = {}) 
   });
 }
 
-async function writeJson(file, value) {
+async function writeJson(file: string, value: unknown): Promise<void> {
   await writeFile(file, `${JSON.stringify(value, null, 2)}\n`, { encoding: 'utf8', flag: 'wx' });
 }
 
-async function generateCandidate(directoryValue) {
+async function generateCandidate(directoryValue: string): Promise<Readonly<{
+  directory: string;
+  report: GoldenReplayVerificationReport;
+}>> {
   const directory = path.resolve(root, directoryValue);
   assertExternalCandidateDirectory(directory);
   if (await exists(directory)) throw new Error(`候选目录已存在：${directory}。`);
   await mkdir(directory, { recursive: true });
   const registry = createArenaV1GoldenReplayScenarioRegistry();
-  const generated = [];
+  const generated: Array<Readonly<{ scenario: GoldenReplayScenario; replay: GoldenReplay }>> = [];
   try {
     for (const reference of registry.list()) {
       const scenario = registry.require(reference);
@@ -172,13 +212,13 @@ async function generateCandidate(directoryValue) {
     await writeJson(path.join(directory, 'manifest.json'), manifest);
     const report = await verifyDirectory(directory, { enforceDirectoryName: false });
     return Object.freeze({ directory, report });
-  } catch (error) {
+  } catch (error: unknown) {
     await rm(directory, { recursive: true, force: true });
     throw error;
   }
 }
 
-async function copyDirectory(source, destination) {
+async function copyDirectory(source: string, destination: string): Promise<void> {
   await mkdir(destination, { recursive: false });
   for (const entry of await readdir(source, { withFileTypes: true })) {
     if (!entry.isFile() || entry.name.startsWith('.')) continue;
@@ -186,32 +226,36 @@ async function copyDirectory(source, destination) {
   }
 }
 
-async function removeForCleanup(target, options, cleanupErrors) {
+async function removeForCleanup(
+  target: string,
+  options: Parameters<typeof rm>[1],
+  cleanupErrors: Error[],
+): Promise<void> {
   try {
     await rm(target, options);
-  } catch (error) {
-    cleanupErrors.push(error);
+  } catch (error: unknown) {
+    cleanupErrors.push(normalizeThrownError(error, `黄金回放清理 ${target} 失败`));
   }
 }
 
-async function withPromotionLock(operation) {
+async function withPromotionLock<T>(operation: () => Promise<T>): Promise<T> {
   await mkdir(corpusRoot, { recursive: true });
   try {
     await writeFile(promotionLock, `${process.pid}\n`, { encoding: 'utf8', flag: 'wx' });
-  } catch (error) {
-    if (error?.code === 'EEXIST') {
+  } catch (error: unknown) {
+    if (hasErrorCode(error, 'EEXIST')) {
       throw new Error('另一个黄金回放提升正在执行；拒绝并发提升。');
     }
     throw error;
   }
-  let result = null;
-  let failure = null;
+  let result: T | undefined;
+  let failure: Error | null = null;
   try {
     result = await operation();
-  } catch (error) {
+  } catch (error: unknown) {
     failure = normalizeThrownError(error, '黄金回放提升失败');
   }
-  const cleanupErrors = [];
+  const cleanupErrors: Error[] = [];
   await removeForCleanup(promotionLock, { force: true }, cleanupErrors);
   if (cleanupErrors.length > 0) {
     throw combineCleanupFailure(
@@ -221,10 +265,14 @@ async function withPromotionLock(operation) {
     );
   }
   if (failure) throw failure;
+  if (result === undefined) throw new Error('黄金回放提升未返回结果。');
   return result;
 }
 
-async function promoteCandidate(candidateValue, approval) {
+async function promoteCandidate(candidateValue: string, approval: string): Promise<Readonly<{
+  directory: string;
+  report: GoldenReplayVerificationReport;
+}>> {
   const candidate = path.resolve(root, candidateValue);
   assertExternalCandidateDirectory(candidate);
   const candidateReport = await verifyDirectory(candidate, { enforceDirectoryName: false });
@@ -254,8 +302,8 @@ async function promoteCandidate(candidateValue, approval) {
   try {
     await copyDirectory(candidate, temporary);
     await verifyDirectory(temporary, { enforceDirectoryName: false });
-  } catch (error) {
-    const cleanupErrors = [];
+  } catch (error: unknown) {
+    const cleanupErrors: Error[] = [];
     await removeForCleanup(temporary, { recursive: true, force: true }, cleanupErrors);
     throw combineCleanupFailure(
       normalizeThrownError(error, '黄金回放 staging 失败'),
@@ -275,8 +323,8 @@ async function promoteCandidate(candidateValue, approval) {
     const report = await verifyDirectory(currentDirectory);
     await rm(previous, { recursive: true, force: true });
     return Object.freeze({ directory: currentDirectory, report });
-  } catch (error) {
-    const rollbackErrors = [];
+  } catch (error: unknown) {
+    const rollbackErrors: Error[] = [];
     if (movedCurrent && await exists(currentDirectory)) {
       await removeForCleanup(
         currentDirectory,
@@ -287,8 +335,8 @@ async function promoteCandidate(candidateValue, approval) {
     if (movedPrevious && await exists(previous)) {
       try {
         await rename(previous, currentDirectory);
-      } catch (rollbackError) {
-        rollbackErrors.push(rollbackError);
+      } catch (rollbackError: unknown) {
+        rollbackErrors.push(normalizeThrownError(rollbackError, '黄金回放旧版本回滚失败'));
       }
     }
     await removeForCleanup(temporary, { recursive: true, force: true }, rollbackErrors);
@@ -300,7 +348,10 @@ async function promoteCandidate(candidateValue, approval) {
   }
 }
 
-async function verifyAll() {
+async function verifyAll(): Promise<Readonly<{
+  corpusRoot: string;
+  reports: readonly GoldenReplayVerificationReport[];
+}>> {
   if (!(await exists(corpusRoot))) throw new Error('黄金回放目录尚未建立。');
   if (await exists(promotionLock)) throw new Error('黄金回放提升正在执行，暂不验证语料。');
   const directories = (await readdir(corpusRoot, { withFileTypes: true }))
@@ -308,12 +359,12 @@ async function verifyAll() {
     .map((entry) => path.join(corpusRoot, entry.name))
     .sort();
   if (directories.length === 0) throw new Error('黄金回放目录没有版本化语料。');
-  const reports = [];
+  const reports: GoldenReplayVerificationReport[] = [];
   for (const directory of directories) reports.push(await verifyDirectory(directory));
   return Object.freeze({ corpusRoot, reports: Object.freeze(reports) });
 }
 
-async function main() {
+async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
   const result = options.action === 'candidate'
     ? await generateCandidate(options.output)
@@ -323,7 +374,7 @@ async function main() {
   console.log(JSON.stringify(result, null, 2));
 }
 
-main().catch((error) => {
+void main().catch((error: unknown) => {
   console.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;
 });
