@@ -17,7 +17,6 @@
     "tests/arena/presentation/input-pilot-web-support.test.js",
     "tests/arena/presentation/input-pilot.test.js",
     "tests/arena/presentation/product-presentation.test.js",
-    "tests/arena/presentation/product-renderer.test.js",
     "tests/arena/presentation/stage7-presentation-contract.test.js",
     "tests/arena/release-external-evidence.test.js",
     "tests/arena/release-readiness.test.js",
