@@ -11,7 +11,49 @@ import {
 
 const COMMIT = 'a'.repeat(40);
 
-function validComponents() {
+interface MutableMapper extends Record<string, unknown> {
+  id: string;
+  matches: number;
+  uniqueFinalHashes: number;
+  replayChecks: number;
+}
+
+interface MutableComponent extends Record<string, unknown> {
+  id: string;
+  mappers?: MutableMapper[];
+  operations?: Record<string, number>;
+  matchesPerMapper?: number;
+  totalMatches?: number;
+  verifiedReplays?: number;
+  uniqueFinalHashes?: number;
+  passCount?: number;
+  failCount?: number;
+  remainingLifecycleListeners?: number;
+  inputBound?: boolean;
+  heapGrowthBytes?: number;
+  heapGrowthBudgetBytes?: number;
+  matches?: number;
+  authorityHashCount?: number;
+}
+
+interface MutableRegressionInput extends Record<string, unknown> {
+  sourceCommit: string;
+  sourceDirty: boolean;
+  generatedAt: string;
+  runtime: Record<string, string>;
+  components: MutableComponent[];
+}
+
+function required<T>(value: T | null | undefined, name: string): T {
+  if (value === null || value === undefined) throw new Error(`测试缺少 ${name}。`);
+  return value;
+}
+
+function requiredMappers(component: MutableComponent): MutableMapper[] {
+  return required(component.mappers, `${component.id}.mappers`);
+}
+
+function validComponents(): MutableComponent[] {
   return [
     {
       id: ARENA_REGRESSION_COMPONENT_ID.INPUT_FUZZ,
@@ -89,7 +131,9 @@ function validComponents() {
   ];
 }
 
-function validInput(overrides = {}) {
+function validInput(
+  overrides: Partial<MutableRegressionInput> = {},
+): MutableRegressionInput {
   return {
     sourceCommit: COMMIT,
     sourceDirty: false,
@@ -105,8 +149,8 @@ function validInput(overrides = {}) {
   };
 }
 
-function copy(value) {
-  return JSON.parse(JSON.stringify(value));
+function copy<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
 }
 
 test('Regression Evidence V1 固定组件身份、阈值与 Definition hash', () => {
@@ -117,27 +161,35 @@ test('Regression Evidence V1 固定组件身份、阈值与 Definition hash', ()
   assert.ok(Object.isFrozen(definition));
   assert.ok(Object.isFrozen(definition.components));
   assert.deepEqual(
-    definition.components.find(({ id }) => id === ARENA_REGRESSION_COMPONENT_ID.INPUT_FUZZ)
-      .mapperIds,
+    required(
+      definition.components.find(({ id }) => id === ARENA_REGRESSION_COMPONENT_ID.INPUT_FUZZ),
+      'input fuzz definition',
+    ).mapperIds,
     [
       ARENA_INPUT_MAPPER_ID.CONTEXT_PRIMARY,
       ARENA_INPUT_MAPPER_ID.GESTURE_MOBILITY,
     ].sort(),
   );
   assert.deepEqual(
-    definition.components.find(({ id }) => id === ARENA_REGRESSION_COMPONENT_ID.LIFECYCLE_TESTS)
-      .testFiles,
-    [...definition.components.find(({ id }) => (
-      id === ARENA_REGRESSION_COMPONENT_ID.LIFECYCLE_TESTS
-    )).testFiles].sort(),
+    required(
+      definition.components.find(({ id }) => id === ARENA_REGRESSION_COMPONENT_ID.LIFECYCLE_TESTS),
+      'lifecycle definition',
+    ).testFiles,
+    [...required(required(
+      definition.components.find(({ id }) => (
+        id === ARENA_REGRESSION_COMPONENT_ID.LIFECYCLE_TESTS
+      )),
+      'lifecycle definition',
+    ).testFiles, 'lifecycle test files')].sort(),
   );
 });
 
 test('Regression Evidence 归一化顺序并严格往返验证', () => {
   const input = validInput();
   input.components.reverse();
-  input.components[4].mappers.reverse();
-  input.components[4].operations = { suspendResume: 4, startAccepted: 20 };
+  const reversedFuzz = required(input.components[4], '反转后的 input fuzz component');
+  requiredMappers(reversedFuzz).reverse();
+  reversedFuzz.operations = { suspendResume: 4, startAccepted: 20 };
   const report = createArenaRegressionEvidenceReport(input);
   assert.equal(report.status, 'passed');
   assert.equal(report.definitionHash, '053703df');
@@ -156,7 +208,9 @@ test('Regression Evidence 归一化顺序并严格往返验证', () => {
     })).resultHash,
     report.resultHash,
   );
-  assert.ok(Object.isFrozen(report.components[0].mappers[0]));
+  const reportFuzz = required(report.components[0], 'input fuzz report component');
+  if (!Array.isArray(reportFuzz.mappers)) throw new Error('input fuzz report 缺少 mappers。');
+  assert.ok(Object.isFrozen(required(reportFuzz.mappers[0], 'input fuzz mapper report')));
 });
 
 test('Regression Evidence 拒绝未知、重复、缺失组件与非数组 mapper', () => {
@@ -165,7 +219,7 @@ test('Regression Evidence 拒绝未知、重复、缺失组件与非数组 mappe
     /不支持字段 unexpected/,
   );
   const duplicated = validInput();
-  duplicated.components[4] = copy(duplicated.components[0]);
+  duplicated.components[4] = copy(required(duplicated.components[0], 'input fuzz component'));
   assert.throws(() => createArenaRegressionEvidenceReport(duplicated), /重复 Regression component/);
   assert.throws(
     () => createArenaRegressionEvidenceReport({
@@ -175,36 +229,41 @@ test('Regression Evidence 拒绝未知、重复、缺失组件与非数组 mappe
     /必须精确覆盖/,
   );
   const invalidMapper = validInput();
-  invalidMapper.components[0].mappers = {};
+  required(invalidMapper.components[0], 'input fuzz component').mappers = (
+    {} as unknown as MutableMapper[]
+  );
   assert.throws(() => createArenaRegressionEvidenceReport(invalidMapper), /mappers 必须是数组/);
 });
 
 test('Regression Evidence 拒绝 fuzz 数量注水、部分回放与非唯一 hash', () => {
-  for (const mutate of [
+  const mutations: Array<(component: MutableComponent) => void> = [
     (component) => { component.matchesPerMapper = 41; },
     (component) => { component.totalMatches = 79; },
     (component) => { component.verifiedReplays = 3; },
     (component) => { component.uniqueFinalHashes = 79; },
-    (component) => { component.mappers[0].replayChecks = 1; },
-  ]) {
+    (component) => { required(requiredMappers(component)[0], 'mapper').replayChecks = 1; },
+  ];
+  for (const mutate of mutations) {
     const input = validInput();
-    mutate(input.components[0]);
+    mutate(required(input.components[0], 'input fuzz component'));
     assert.throws(() => createArenaRegressionEvidenceReport(input), /Input fuzz evidence/);
   }
 });
 
 test('Regression Evidence 拒绝部分 lifecycle、资源残留、超预算和 stress 注水', () => {
-  const cases = [
+  const cases: Array<[number, (component: MutableComponent) => void, RegExp]> = [
     [1, (component) => { component.passCount = 87; component.failCount = 1; }, /Lifecycle/],
     [2, (component) => { component.remainingLifecycleListeners = 1; }, /session-soak/],
     [2, (component) => { component.inputBound = true; }, /session-soak/],
-    [3, (component) => { component.heapGrowthBytes = component.heapGrowthBudgetBytes + 1; }, /soak/],
+    [3, (component) => {
+      component.heapGrowthBytes = required(component.heapGrowthBudgetBytes, 'heap budget') + 1;
+    }, /soak/],
     [4, (component) => { component.matches = 201; component.authorityHashCount = 201; }, /stress/],
     [4, (component) => { component.authorityHashCount = 199; }, /stress/],
   ];
   for (const [index, mutate, pattern] of cases) {
     const input = validInput();
-    mutate(input.components[index]);
+    mutate(required(input.components[index], `component ${index}`));
     assert.throws(() => createArenaRegressionEvidenceReport(input), pattern);
   }
 });
@@ -228,13 +287,20 @@ test('Regression Evidence reader 拒绝 dirty、非法时间、未知字段与�
     }),
     /有效 UTC 时间/,
   );
-  const report = copy(createArenaRegressionEvidenceReport(validInput()));
+  const report = copy(createArenaRegressionEvidenceReport(validInput())) as unknown as {
+    unknown?: boolean;
+    components: Array<{ operations: Record<string, number> }>;
+    resultHash: string;
+  };
   report.unknown = true;
   assert.throws(() => readArenaRegressionEvidenceReport(report), /不支持字段 unknown/);
   delete report.unknown;
-  report.components[0].operations = {};
+  required(report.components[0], 'input fuzz report component').operations = {};
   assert.throws(() => readArenaRegressionEvidenceReport(report), /不能为空/);
-  report.components[0].operations = { startAccepted: 20, suspendResume: 4 };
+  required(report.components[0], 'input fuzz report component').operations = {
+    startAccepted: 20,
+    suspendResume: 4,
+  };
   report.resultHash = 'ffffffff';
   assert.throws(() => readArenaRegressionEvidenceReport(report), /resultHash 校验失败/);
 });
