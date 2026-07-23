@@ -7,7 +7,7 @@ import {
   cloneFrozenData,
 } from '@number-strategy-jump/arena-contracts';
 import { assertEvidenceUtcInstant } from '@number-strategy-jump/arena-evidence-contracts';
-import { createArenaExperimentDefinition } from './experiment-definition.js';
+import { createArenaExperimentDefinition } from '@number-strategy-jump/arena-experiment';
 import { readArenaMetricGate } from '@number-strategy-jump/arena-experiment';
 
 export const ARENA_EXPERIMENT_REPORT_SCHEMA_VERSION = 2;

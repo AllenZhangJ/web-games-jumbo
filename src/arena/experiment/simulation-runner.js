@@ -5,7 +5,7 @@ import {
   cloneFrozenData,
 } from '@number-strategy-jump/arena-contracts';
 import { normalizeThrownError } from '@number-strategy-jump/arena-contracts';
-import { createArenaExperimentDefinition } from './experiment-definition.js';
+import { createArenaExperimentDefinition } from '@number-strategy-jump/arena-experiment';
 import {
   ARENA_EXPERIMENT_CASE_STATUS,
   createArenaExperimentReport,

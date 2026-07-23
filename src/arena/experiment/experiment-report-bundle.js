@@ -4,7 +4,7 @@ import {
   assertNonEmptyString,
   cloneFrozenData,
 } from '@number-strategy-jump/arena-contracts';
-import { createArenaExperimentDefinition } from './experiment-definition.js';
+import { createArenaExperimentDefinition } from '@number-strategy-jump/arena-experiment';
 import { createArenaExperimentReport } from './experiment-report.js';
 
 export const ARENA_EXPERIMENT_REPORT_BUNDLE_SCHEMA_VERSION = 1;

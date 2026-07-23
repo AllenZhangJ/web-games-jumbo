@@ -386,8 +386,11 @@ test('Arena Stage 9 experiment orchestration stays headless and outside presenta
   ));
   assert.deepEqual(
     Object.keys(packageDefinition.dependencies).sort(),
-    ['@number-strategy-jump/arena-contracts'],
-    'arena-experiment 基础包只能依赖权威基础契约。',
+    [
+      '@number-strategy-jump/arena-contracts',
+      '@number-strategy-jump/arena-evidence-contracts',
+    ],
+    'arena-experiment 基础包只能依赖权威基础契约和证据值契约。',
   );
   const experimentFiles = [
     ...await listJavaScript(path.resolve('src/arena/experiment')),

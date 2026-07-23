@@ -3,7 +3,7 @@ import {
   ARENA_EXPERIMENT_DEFINITION_SCHEMA_VERSION,
   ARENA_EXPERIMENT_SEED_SET_KIND,
   createArenaExperimentDefinition,
-} from './experiment-definition.js';
+} from '@number-strategy-jump/arena-experiment';
 import {
   createArenaExperimentReplaySeeds,
   createContiguousArenaExperimentSeedRange,

@@ -5,7 +5,7 @@ import {
   assertPlainRecord,
   cloneFrozenData,
 } from '@number-strategy-jump/arena-contracts';
-import { createArenaExperimentDefinition } from './experiment-definition.js';
+import { createArenaExperimentDefinition } from '@number-strategy-jump/arena-experiment';
 
 const ENTRY_KEYS = new Set(['id', 'version', 'validateParameters', 'create']);
 const COLLECTOR_METHODS = Object.freeze([
