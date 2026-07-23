@@ -22,7 +22,7 @@ import {
 import {
   readVerifiedEvidenceArtifact,
   resolveEvidenceRoot,
-} from './evidence-file-verifier.mjs';
+} from './evidence-file-verifier.ts';
 import {
   verifyArenaBuildManifestDirectory,
 } from './arena-build-manifest-files.mjs';

@@ -1,17 +1,17 @@
 import { parseArgs } from 'node:util';
 import {
   createArenaFormalAssetIntakeV1Policy,
-} from '../src/arena/presentation/assets/formal-asset-intake-policy.ts';
+} from '../src/arena/presentation/assets/formal-asset-intake-policy.js';
 import {
   readVerifiedTextFile,
-} from './lib/evidence-file-verifier.mjs';
+} from './lib/evidence-file-verifier.js';
 import {
   verifyArenaFormalAssetIntake,
-} from './lib/arena-formal-asset-intake-verifier.mjs';
+} from './lib/arena-formal-asset-intake-verifier.js';
 
 const MAXIMUM_BUNDLE_BYTES = 5 * 1024 * 1024;
 
-function describe() {
+function describe(): Readonly<Record<string, unknown>> {
   const policy = createArenaFormalAssetIntakeV1Policy();
   return {
     status: 'contract-only',
@@ -22,7 +22,7 @@ function describe() {
   };
 }
 
-async function main() {
+async function main(): Promise<void> {
   const { values } = parseArgs({
     options: {
       describe: { type: 'boolean', default: false },
@@ -42,11 +42,12 @@ async function main() {
     label: 'formal asset intake bundle',
     maximumBytes: MAXIMUM_BUNDLE_BYTES,
   });
-  let bundle;
+  let bundle: unknown;
   try {
     bundle = JSON.parse(read.text);
-  } catch (error) {
-    throw new Error(`formal asset intake bundle 不是有效 JSON：${error.message}`);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`formal asset intake bundle 不是有效 JSON：${message}`);
   }
   const result = await verifyArenaFormalAssetIntake({
     bundle,
@@ -55,7 +56,8 @@ async function main() {
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
 }
 
-main().catch((error) => {
-  process.stderr.write(`${error.stack ?? error.message}\n`);
+void main().catch((error: unknown) => {
+  const message = error instanceof Error ? error.stack ?? error.message : String(error);
+  process.stderr.write(`${message}\n`);
   process.exitCode = 1;
 });

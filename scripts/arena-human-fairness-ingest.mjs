@@ -27,7 +27,7 @@ import {
 } from '@number-strategy-jump/arena-human-match-study';
 import {
   readVerifiedTextFile,
-} from './lib/evidence-file-verifier.mjs';
+} from './lib/evidence-file-verifier.ts';
 import {
   verifyArenaBuildManifestDirectory,
 } from './lib/arena-build-manifest-files.mjs';

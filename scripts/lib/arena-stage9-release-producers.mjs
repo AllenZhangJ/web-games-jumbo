@@ -67,7 +67,7 @@ import {
 import {
   verifyArenaInputPilotEvidence,
 } from './arena-input-pilot-evidence-verifier.mjs';
-import { readVerifiedTextFile } from './evidence-file-verifier.mjs';
+import { readVerifiedTextFile } from './evidence-file-verifier.ts';
 
 const MAXIMUM_BUILD_MANIFEST_BYTES = 5 * 1024 * 1024;
 const MAXIMUM_GOLDEN_REPLAY_BYTES = 32 * 1024 * 1024;

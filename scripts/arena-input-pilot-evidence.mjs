@@ -8,7 +8,7 @@ import {
 import {
   createArenaStage6DeviceAcceptanceV1Definition,
 } from '@number-strategy-jump/arena-device-acceptance';
-import { readVerifiedTextFile } from './lib/evidence-file-verifier.mjs';
+import { readVerifiedTextFile } from './lib/evidence-file-verifier.ts';
 import {
   verifyArenaInputPilotEvidence,
 } from './lib/arena-input-pilot-evidence-verifier.mjs';

@@ -22,7 +22,7 @@ import {
 import {
   readVerifiedEvidenceArtifact,
   resolveEvidenceRoot,
-} from './evidence-file-verifier.mjs';
+} from './evidence-file-verifier.ts';
 
 const MAXIMUM_BUILD_MANIFEST_BYTES = 5 * 1024 * 1024;
 const MAXIMUM_PERFORMANCE_TRACE_BYTES = 64 * 1024 * 1024;

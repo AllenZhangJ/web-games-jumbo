@@ -7,7 +7,7 @@ import {
 } from '@number-strategy-jump/arena-human-match-study';
 import {
   readVerifiedTextFile,
-} from './lib/evidence-file-verifier.mjs';
+} from './lib/evidence-file-verifier.ts';
 import {
   verifyArenaHumanFairnessEvidence,
 } from './lib/arena-human-fairness-evidence-verifier.mjs';

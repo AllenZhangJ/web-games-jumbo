@@ -15,7 +15,7 @@ import {
 } from '@number-strategy-jump/arena-stage9-evidence-content';
 import {
   readVerifiedTextFile,
-} from './lib/evidence-file-verifier.mjs';
+} from './lib/evidence-file-verifier.ts';
 import { verifyArenaDeviceEvidence } from './lib/arena-device-evidence-verifier.mjs';
 
 const MAXIMUM_BUNDLE_BYTES = 5 * 1024 * 1024;

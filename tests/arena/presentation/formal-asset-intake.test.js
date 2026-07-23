@@ -28,7 +28,7 @@ import {
 } from '@number-strategy-jump/arena-presentation-runtime';
 import {
   verifyArenaFormalAssetIntake,
-} from '../../../scripts/lib/arena-formal-asset-intake-verifier.mjs';
+} from '../../../scripts/lib/arena-formal-asset-intake-verifier.ts';
 
 const CREATED_AT = '2026-07-18T03:00:00.000Z';
 const ACQUIRED_AT = '2026-07-18T01:00:00.000Z';
@@ -317,7 +317,7 @@ test('Formal Asset Intake verifier binds every declared artifact and rejects lat
 test('Formal Asset Intake CLI describes its non-release scope and verifies a complete fixture', async () => {
   const described = spawnSync(process.execPath, [
     '--import', 'tsx',
-    'scripts/arena-formal-asset-intake.mjs',
+    'scripts/arena-formal-asset-intake.ts',
     '--describe',
   ], { cwd: process.cwd(), encoding: 'utf8' });
   assert.equal(described.status, 0, described.stderr);
@@ -331,7 +331,7 @@ test('Formal Asset Intake CLI describes its non-release scope and verifies a com
     await writeFile(bundlePath, `${JSON.stringify(value, null, 2)}\n`);
     const verified = spawnSync(process.execPath, [
       '--import', 'tsx',
-      'scripts/arena-formal-asset-intake.mjs',
+      'scripts/arena-formal-asset-intake.ts',
       '--bundle', bundlePath,
       '--artifacts-root', root,
     ], { cwd: process.cwd(), encoding: 'utf8' });

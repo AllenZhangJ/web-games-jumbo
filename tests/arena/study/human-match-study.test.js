@@ -496,6 +496,7 @@ test('study capture and Product completion ports fail closed on missing replay o
 test('human fairness evidence CLI describes V1 and reports an empty bundle as incomplete', async () => {
   const definition = createArenaStage9HumanFairnessV1Definition();
   const described = spawnSync(process.execPath, [
+    '--import', 'tsx',
     'scripts/arena-human-fairness-evidence.mjs',
     '--describe',
   ], { cwd: path.resolve('.'), encoding: 'utf8' });
@@ -543,6 +544,7 @@ test('human fairness evidence CLI describes V1 and reports an empty bundle as in
       records: [],
     }, null, 2)}\n`);
     const incomplete = spawnSync(process.execPath, [
+      '--import', 'tsx',
       'scripts/arena-human-fairness-evidence.mjs',
       '--bundle',
       bundlePath,
@@ -636,6 +638,7 @@ test('Human Match Study CLI reproduces authority and every hidden Bot input', as
     await writeFile(workspacePath, `${JSON.stringify(workspaceSource, null, 2)}\n`);
     const ingestRoot = path.join(root, 'ingested');
     const ingested = spawnSync(process.execPath, [
+      '--import', 'tsx',
       'scripts/arena-human-fairness-ingest.mjs',
       '--package',
       packagePath,
@@ -662,6 +665,7 @@ test('Human Match Study CLI reproduces authority and every hidden Bot input', as
       `${JSON.stringify(mismatchedWorkspace, null, 2)}\n`,
     );
     const rejectedIngest = spawnSync(process.execPath, [
+      '--import', 'tsx',
       'scripts/arena-human-fairness-ingest.mjs',
       '--package',
       packagePath,
@@ -684,6 +688,7 @@ test('Human Match Study CLI reproduces authority and every hidden Bot input', as
     assert.equal(ingestedBundle.records[0].recordId, source.recordId);
     assert.equal(ingestedBundle.records[0].matches.length, 1);
     const command = spawnSync(process.execPath, [
+      '--import', 'tsx',
       'scripts/arena-human-fairness-evidence.mjs',
       '--bundle',
       bundlePath,
@@ -708,6 +713,7 @@ test('Human Match Study CLI reproduces authority and every hidden Bot input', as
     tamperedManifest.packages[0].sourceFileName = 'unrelated-package.json';
     await writeFile(ingestManifestPath, `${JSON.stringify(tamperedManifest, null, 2)}\n`);
     const rejectedEvidence = spawnSync(process.execPath, [
+      '--import', 'tsx',
       'scripts/arena-human-fairness-evidence.mjs',
       '--bundle',
       bundlePath,

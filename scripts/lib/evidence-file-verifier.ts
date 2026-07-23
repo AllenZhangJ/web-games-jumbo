@@ -1,13 +1,43 @@
 import { createHash } from 'node:crypto';
 import { constants } from 'node:fs';
+import type { BigIntStats } from 'node:fs';
 import {
   open,
   realpath,
   stat,
 } from 'node:fs/promises';
+import type { FileHandle } from 'node:fs/promises';
 import path from 'node:path';
 
-function sameFileState(left, right) {
+export interface VerifiedEvidenceFile {
+  readonly byteLength: number;
+  readonly fileIdentity: string;
+  readonly sha256: string;
+  readonly text: string | null;
+  readonly resolvedPath: string;
+}
+
+interface FileState {
+  readonly dev: bigint;
+  readonly ino: bigint;
+  readonly size: bigint;
+  readonly mtimeNs: bigint;
+  readonly ctimeNs: bigint;
+}
+
+interface OpenVerifiedFile extends Omit<VerifiedEvidenceFile, 'resolvedPath'> {
+  readonly fileState: FileState;
+}
+
+interface OpenVerifiedFileOptions {
+  readonly label: string;
+  readonly maximumBytes?: number | null;
+  readonly expectedByteLength?: number | null;
+  readonly expectedSha256?: string | null;
+  readonly includeText?: boolean;
+}
+
+function sameFileState(left: FileState | BigIntStats, right: FileState | BigIntStats): boolean {
   return left.dev === right.dev
     && left.ino === right.ino
     && left.size === right.size
@@ -15,14 +45,19 @@ function sameFileState(left, right) {
     && left.ctimeNs === right.ctimeNs;
 }
 
-function positiveMaximum(value, name) {
-  if (!Number.isSafeInteger(value) || value < 1) {
+function positiveMaximum(value: unknown, name: string): number {
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 1) {
     throw new RangeError(`${name} 必须是正安全整数。`);
   }
-  return value;
+  return value as number;
 }
 
-async function readOpenFile(fileHandle, size, label, maximumBytes) {
+async function readOpenFile(
+  fileHandle: FileHandle,
+  size: bigint,
+  label: string,
+  maximumBytes: number,
+): Promise<Buffer> {
   if (size > BigInt(maximumBytes)) {
     throw new Error(`${label} 不能超过 ${maximumBytes} bytes。`);
   }
@@ -33,7 +68,7 @@ async function readOpenFile(fileHandle, size, label, maximumBytes) {
   return buffer;
 }
 
-async function hashOpenFile(fileHandle) {
+async function hashOpenFile(fileHandle: FileHandle): Promise<string> {
   const hash = createHash('sha256');
   for await (const chunk of fileHandle.createReadStream({ autoClose: false })) {
     hash.update(chunk);
@@ -41,20 +76,24 @@ async function hashOpenFile(fileHandle) {
   return hash.digest('hex');
 }
 
-async function assertPathUnchanged(filePath, metadata, label) {
+async function assertPathUnchanged(
+  filePath: string,
+  metadata: FileState | BigIntStats,
+  label: string,
+): Promise<void> {
   const pathMetadata = await stat(filePath, { bigint: true });
   if (!sameFileState(metadata, pathMetadata)) {
     throw new Error(`${label} 在校验期间被替换。`);
   }
 }
 
-async function readOpenVerifiedFile(filePath, {
+async function readOpenVerifiedFile(filePath: string, {
   label,
   maximumBytes = null,
   expectedByteLength = null,
   expectedSha256 = null,
   includeText = false,
-}) {
+}: OpenVerifiedFileOptions): Promise<OpenVerifiedFile> {
   if (includeText && maximumBytes === null) {
     throw new TypeError(`${label} 文本读取必须设置 maximumBytes。`);
   }
@@ -78,7 +117,7 @@ async function readOpenVerifiedFile(filePath, {
       throw new Error(`${label} 不能超过 ${maximumBytes} bytes。`);
     }
     const buffer = includeText
-      ? await readOpenFile(fileHandle, metadata.size, label, maximumBytes)
+      ? await readOpenFile(fileHandle, metadata.size, label, maximumBytes as number)
       : null;
     const sha256 = buffer === null
       ? await hashOpenFile(fileHandle)
@@ -109,10 +148,12 @@ async function readOpenVerifiedFile(filePath, {
   }
 }
 
-export async function readVerifiedTextFile(filePath, {
+export async function readVerifiedTextFile(filePath: string, {
   label = 'evidence file',
   maximumBytes,
-}) {
+}: Readonly<{ label?: string; maximumBytes: number }>): Promise<VerifiedEvidenceFile & {
+  readonly text: string;
+}> {
   const resolvedPath = path.resolve(filePath);
   const verified = await readOpenVerifiedFile(resolvedPath, {
     label,
@@ -121,10 +162,11 @@ export async function readVerifiedTextFile(filePath, {
   });
   await assertPathUnchanged(resolvedPath, verified.fileState, label);
   const { fileState, ...result } = verified;
-  return Object.freeze({ ...result, resolvedPath });
+  if (result.text === null) throw new Error(`${label} 文本读取未返回内容。`);
+  return Object.freeze({ ...result, text: result.text, resolvedPath });
 }
 
-export async function resolveEvidenceRoot(rootValue) {
+export async function resolveEvidenceRoot(rootValue: string): Promise<string> {
   return realpath(path.resolve(rootValue));
 }
 
@@ -136,7 +178,15 @@ export async function readVerifiedEvidenceArtifact({
   maximumBytes,
   includeText = true,
   label = `artifact ${relativePath}`,
-}) {
+}: Readonly<{
+  root: string;
+  relativePath: string;
+  expectedByteLength: number;
+  expectedSha256: string;
+  maximumBytes: number;
+  includeText?: boolean;
+  label?: string;
+}>): Promise<VerifiedEvidenceFile> {
   if (
     typeof relativePath !== 'string'
     || relativePath.length === 0

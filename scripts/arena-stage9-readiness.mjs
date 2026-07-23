@@ -14,7 +14,7 @@ import {
   readVerifiedEvidenceArtifact,
   readVerifiedTextFile,
   resolveEvidenceRoot,
-} from './lib/evidence-file-verifier.mjs';
+} from './lib/evidence-file-verifier.ts';
 import {
   ARENA_STAGE9_SUPPORTED_RELEASE_PRODUCER_IDS,
   arenaStage9ReleaseRequiresSourceIdentity,

@@ -193,6 +193,7 @@ test('defect CLI and Stage 9 producer recompute ledger and reject material mutat
     const ledgerPath = path.join(root, 'defect-ledger.json');
     await writeFile(ledgerPath, bytes);
     const cli = spawnSync(process.execPath, [
+      '--import', 'tsx',
       'scripts/arena-defects.mjs',
       '--ledger',
       ledgerPath,

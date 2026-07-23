@@ -6,7 +6,7 @@ import {
   createArenaDefectLedger,
   createArenaDefectReport,
 } from '@number-strategy-jump/arena-release';
-import { readVerifiedTextFile } from './lib/evidence-file-verifier.mjs';
+import { readVerifiedTextFile } from './lib/evidence-file-verifier.ts';
 
 const MAXIMUM_LEDGER_BYTES = 5 * 1024 * 1024;
 
