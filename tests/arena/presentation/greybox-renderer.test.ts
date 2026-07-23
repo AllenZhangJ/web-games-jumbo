@@ -9,6 +9,7 @@ import {
   ARENA_V1_PRESENTATION_QUALITY_ID,
   ARENA_V1_PRESENTATION_QUALITY_REGISTRY,
   PresentationEventWindow,
+  type PresentationEvent,
 } from '@number-strategy-jump/arena-presentation-runtime';
 import {
   ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT,
@@ -22,6 +23,7 @@ import {
   EquipmentViewRegistry,
 } from '@number-strategy-jump/arena-presentation-three';
 import { STAGE4_ACTION_ID } from '@number-strategy-jump/arena-v1-content';
+import type { ArenaMatchSnapshot } from '@number-strategy-jump/arena-contracts';
 
 const MATCH_SEED = 6_502;
 const PUBLIC_INFO = Object.freeze({
@@ -33,6 +35,16 @@ const PUBLIC_INFO = Object.freeze({
     appearanceKey: 'wind-up-cube-cream',
   }),
 });
+
+function required<T>(value: T, name: string): NonNullable<T> {
+  assert.ok(value != null, `${name} 不存在。`);
+  return value as NonNullable<T>;
+}
+
+function record(value: unknown, name: string): Record<string, unknown> {
+  assert.ok(value !== null && typeof value === 'object' && !Array.isArray(value), `${name} 必须是对象。`);
+  return value as Record<string, unknown>;
+}
 
 function createCore() {
   return createArenaV1MatchCore({
@@ -52,7 +64,7 @@ function createCore() {
   });
 }
 
-function frameFrom(snapshot, events = []) {
+function frameFrom(snapshot: ArenaMatchSnapshot, events: readonly PresentationEvent[] = []) {
   return projectArenaPresentationFrame({
     snapshot,
     events,
@@ -61,8 +73,8 @@ function frameFrom(snapshot, events = []) {
   });
 }
 
-function fake2dContext(renderedText = null) {
-  const context = Object.fromEntries([
+function fake2dContext(renderedText: string[] | null = null) {
+  const context: Record<string, (...args: unknown[]) => void> = Object.fromEntries([
     'setTransform',
     'clearRect',
     'beginPath',
@@ -77,26 +89,30 @@ function fake2dContext(renderedText = null) {
     'fillText',
   ].map((name) => [name, () => {}]));
   if (renderedText !== null) {
-    context.fillText = (value) => renderedText.push(String(value));
+    context.fillText = (value: unknown) => { renderedText.push(String(value)); };
   }
   return context;
 }
 
-function fakePlatform(renderedText = null) {
+function fakePlatform(renderedText: string[] | null = null): Record<string, unknown> {
   return {
     getWebGLContext: () => ({}),
     getViewport: () => ({ width: 390, height: 844, pixelRatio: 2, safeArea: null }),
-    createOffscreenCanvas: (width, height) => ({
-      width: typeof width === 'object' ? width.width : width,
-      height: typeof width === 'object' ? width.height : height,
-      getContext: (kind) => kind === '2d' ? fake2dContext(renderedText) : null,
+    createOffscreenCanvas: (width: unknown, height?: number) => ({
+      width: typeof width === 'object' && width !== null
+        ? record(width, '离屏 Canvas 尺寸').width
+        : width,
+      height: typeof width === 'object' && width !== null
+        ? record(width, '离屏 Canvas 尺寸').height
+        : height,
+      getContext: (kind: string) => kind === '2d' ? fake2dContext(renderedText) : null,
     }),
   };
 }
 
-function fakeWebGLRenderer(canvas) {
+function fakeWebGLRenderer(canvas: { width: number; height: number }) {
   return {
-    shadowMap: {},
+    shadowMap: {} as Record<string, unknown>,
     info: {
       render: { calls: 5, triangles: 2_400, points: 0, lines: 12 },
       memory: { geometries: 14, textures: 4 },
@@ -108,8 +124,8 @@ function fakeWebGLRenderer(canvas) {
     contextForced: false,
     pixelRatio: 1,
     setClearColor() {},
-    setPixelRatio(value) { this.pixelRatio = value; },
-    setSize(width, height) {
+    setPixelRatio(value: number) { this.pixelRatio = value; },
+    setSize(width: number, height: number) {
       canvas.width = Math.round(width * this.pixelRatio);
       canvas.height = Math.round(height * this.pixelRatio);
     },
@@ -121,10 +137,10 @@ function fakeWebGLRenderer(canvas) {
   };
 }
 
-function deferred() {
-  let resolve;
-  let reject;
-  const promise = new Promise((resolveValue, rejectValue) => {
+function deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolveValue, rejectValue) => {
     resolve = resolveValue;
     reject = rejectValue;
   });
@@ -159,14 +175,21 @@ test('ArenaWorldStage syncs programmatic views without mutating authority-derive
   assert.equal(debug.equipmentCount, 3);
   assert.equal(debug.effectCount, 1);
   assert.equal(debug.pooledEffects, debug.maximumEffects);
-  assert.equal(debug.availableEffects, debug.maximumEffects - 1);
+  assert.equal(debug.availableEffects, Number(debug.maximumEffects) - 1);
   assert.equal(debug.objectCount, prewarmedObjectCount);
+  assert.ok(Array.isArray(debug.characters), '角色调试快照必须是数组。');
   assert.deepEqual(
-    debug.characters.map(({ view }) => view.geometry),
+    debug.characters.map((character: unknown) => (
+      record(record(character, '角色调试项').view, '角色 View 调试项').geometry
+    )),
     ['chibi-runner', 'wind-up-robot'],
   );
-  assert.equal(debug.characters[1].view.jointCount, 13);
-  assert.equal(debug.characters[1].view.poseState, 'hit-front');
+  const secondCharacterView = record(
+    record(required(debug.characters[1], '第二个角色调试项'), '第二个角色调试项').view,
+    '第二个角色 View 调试项',
+  );
+  assert.equal(secondCharacterView.jointCount, 13);
+  assert.equal(secondCharacterView.poseState, 'hit-front');
   assert.deepEqual(camera.inputBasis.screenUp, { x: 0, z: 1 });
   assert.equal(JSON.stringify(frame), serialized);
   assert.equal(core.getStateHash(), authorityHash);
@@ -179,23 +202,28 @@ test('ArenaWorldStage syncs programmatic views without mutating authority-derive
   assert.equal(stage.getDebugSnapshot().effectCount, 1);
 
   const aerialSnapshot = core.getSnapshot();
-  const aerialPlayer = aerialSnapshot.participants[0];
-  aerialPlayer.grounded = false;
-  aerialPlayer.velocity.y = -16;
-  aerialPlayer.equipment = { definitionId: 'hammer' };
-  aerialPlayer.action = {
+  const aerialPlayer = required(aerialSnapshot.participants[0], '空中玩家');
+  Reflect.set(aerialPlayer, 'grounded', false);
+  Reflect.set(aerialPlayer.velocity, 'y', -16);
+  Reflect.set(aerialPlayer, 'equipment', { definitionId: 'hammer' });
+  Reflect.set(aerialPlayer, 'action', {
     definitionId: STAGE4_ACTION_ID.HAMMER_AIR_SMASH,
     phase: 'active',
     ticksRemaining: 2,
-  };
+  });
   stage.sync(frameFrom(aerialSnapshot));
   stage.update(1 / 60);
-  const aerialDebug = stage.getDebugSnapshot().characters[0].view;
+  const aerialCharacters = stage.getDebugSnapshot().characters;
+  assert.ok(Array.isArray(aerialCharacters), '空中角色调试快照必须是数组。');
+  const aerialDebug = record(
+    record(required(aerialCharacters[0], '空中角色调试项'), '空中角色调试项').view,
+    '空中角色 View 调试项',
+  );
   assert.equal(aerialDebug.actionVisualStage, 'swing');
-  assert.match(aerialDebug.poseState, /attack-air-hammer-swing/);
-  assert.ok(aerialDebug.heldEquipmentScale > 1.02);
+  assert.match(String(aerialDebug.poseState), /attack-air-hammer-swing/);
+  assert.ok(Number(aerialDebug.heldEquipmentScale) > 1.02);
 
-  snapshot.map.occurrences = [{
+  Reflect.set(snapshot.map, 'occurrences', [{
     occurrenceId: 'collapse-test:0',
     eventId: 'collapse-test',
     kind: 'collapse-surfaces',
@@ -205,8 +233,12 @@ test('ArenaWorldStage syncs programmatic views without mutating authority-derive
     phase: 'warning',
     publicPayload: { surfaceIds: ['tile-north-west'] },
     revision: 1,
-  }];
-  snapshot.map.surfaces.find(({ id }) => id === 'tile-south-east').enabled = false;
+  }]);
+  Reflect.set(
+    required(snapshot.map.surfaces.find(({ id }) => id === 'tile-south-east'), '东南地块'),
+    'enabled',
+    false,
+  );
   stage.sync(frameFrom(snapshot));
   const changed = stage.getDebugSnapshot();
   assert.equal(changed.warningSurfaceCount, 1);
@@ -296,13 +328,16 @@ test('ArenaGreyboxRenderer draws world and HUD, pauses on context loss and relea
   assert.equal(renderer.render(frame, { deltaSeconds: 1 / 60, mapperLabel: '方案 A' }), true);
   assert.equal(webgl.renderCount, 2);
   assert.equal(JSON.stringify(frame), before);
-  const objectCount = renderer.getDebugSnapshot().stage.objectCount;
+  const objectCount = record(renderer.getDebugSnapshot().stage, 'Renderer Stage 调试快照').objectCount;
   renderer.render(frame, { deltaSeconds: 1 / 60, mapperLabel: '方案 A' });
-  assert.equal(renderer.getDebugSnapshot().stage.objectCount, objectCount);
+  assert.equal(
+    record(renderer.getDebugSnapshot().stage, 'Renderer Stage 调试快照').objectCount,
+    objectCount,
+  );
 
   const overlay = {
     presented: 0,
-    present(target) {
+    present(target: Readonly<{ render: (scene: unknown, camera: unknown) => void }>) {
       this.presented += 1;
       target.render({}, {});
       return true;
@@ -321,17 +356,21 @@ test('ArenaGreyboxRenderer draws world and HUD, pauses on context loss and relea
   assert.equal(renderer.state, ARENA_GREYBOX_RENDERER_STATE.READY);
 
   const ended = structuredClone(frame);
-  ended.phase = 'ended';
-  ended.hud.phase = 'ended';
-  ended.hud.phaseLabel = '结束';
-  ended.hud.result = {
+  Reflect.set(ended, 'phase', 'ended');
+  const endedHud = record(ended.hud, '结束 HUD');
+  Reflect.set(endedHud, 'phase', 'ended');
+  Reflect.set(endedHud, 'phaseLabel', '结束');
+  Reflect.set(endedHud, 'result', {
     winnerId: 'player-1',
     reason: 'test',
     isDraw: false,
-    endedAtTick: ended.source.tick,
-  };
+    endedAtTick: record(ended.source, '结束帧来源').tick,
+  });
   renderer.render(ended);
-  assert.equal(renderer.getDebugSnapshot().hud.hasRematchControl, true);
+  assert.equal(
+    record(renderer.getDebugSnapshot().hud, 'Renderer HUD 调试快照').hasRematchControl,
+    true,
+  );
   assert.equal(renderer.hitTestRematch({ x: 390, y: 940 }), true);
 
   renderer.dispose();
@@ -343,7 +382,7 @@ test('ArenaGreyboxRenderer draws world and HUD, pauses on context loss and relea
 });
 
 test('ArenaGreyboxRenderer keeps dispose terminal while an asset load completes late', async () => {
-  const pendingBytes = deferred();
+  const pendingBytes = deferred<ArrayBuffer>();
   let readStarted = false;
   const canvas = { width: 1, height: 1, style: {}, getContext: () => ({}) };
   const platform = {
@@ -375,7 +414,7 @@ test('ArenaGreyboxRenderer keeps dispose terminal while an asset load completes 
 });
 
 test('ArenaGreyboxRenderer preserves context loss across an in-flight asset load', async () => {
-  const pendingBytes = deferred();
+  const pendingBytes = deferred<ArrayBuffer>();
   const canvas = { width: 1, height: 1, style: {}, getContext: () => ({}) };
   const platform = {
     ...fakePlatform(),
@@ -405,10 +444,10 @@ test('ArenaGreyboxRenderer deduplicates hit vibration/audio and honors the sound
   const core = createCore();
   const snapshot = core.getSnapshot();
   const canvas = { width: 1, height: 1, style: {}, getContext: () => ({}) };
-  const feedback = [];
-  const audioPlays = [];
+  const feedback: string[] = [];
+  const audioPlays: string[] = [];
   const platform = fakePlatform();
-  platform.vibrate = (kind) => { feedback.push(kind); return true; };
+  platform.vibrate = (kind: string) => { feedback.push(kind); return true; };
   platform.createAudio = () => ({
     src: '',
     volume: 1,
@@ -588,17 +627,20 @@ test('ArenaGreyboxRenderer retains only failed cleanup ownership for an exact re
 test('ArenaGreyboxRenderer detects swallowed host callback reentry and fails closed', async () => {
   const core = createCore();
   const canvas = { width: 1, height: 1, style: {}, getContext: () => ({}) };
-  let renderer;
+  const rendererOwner: { value?: ArenaGreyboxRenderer } = {};
   const platform = fakePlatform();
   platform.vibrate = () => {
-    try { renderer.resize(); } catch { /* hostile host swallows the nested failure */ }
+    try {
+      required(rendererOwner.value, '重入 Renderer').resize();
+    } catch { /* hostile host swallows the nested failure */ }
   };
-  renderer = new ArenaGreyboxRenderer({
+  const renderer = new ArenaGreyboxRenderer({
     canvas,
     platform,
     content: ARENA_V1_GREYBOX_CONTENT,
     webglRendererFactory: () => fakeWebGLRenderer(canvas),
   });
+  rendererOwner.value = renderer;
   await renderer.load();
   const frame = frameFrom(core.getSnapshot(), [{
     id: `${MATCH_SEED.toString(16)}:0:reentry`,
@@ -617,7 +659,7 @@ test('ArenaGreyboxRenderer detects swallowed host callback reentry and fails clo
 test('low presentation quality lowers only renderer cost and exposes machine-readable counters', async () => {
   const canvas = { width: 1, height: 1, style: {}, getContext: () => ({}) };
   const webgl = fakeWebGLRenderer(canvas);
-  let contextOptions = null;
+  const contextOwner: { value: Record<string, unknown> | null } = { value: null };
   const renderer = new ArenaGreyboxRenderer({
     canvas,
     platform: fakePlatform(),
@@ -625,16 +667,16 @@ test('low presentation quality lowers only renderer cost and exposes machine-rea
     qualityDefinition: ARENA_V1_PRESENTATION_QUALITY_REGISTRY.require(
       ARENA_V1_PRESENTATION_QUALITY_ID.LOW,
     ),
-    webglRendererFactory: (options) => {
-      contextOptions = options;
+    webglRendererFactory: (options: unknown) => {
+      contextOwner.value = record(options, '低质量 WebGL 选项');
       return webgl;
     },
   });
   await renderer.load();
-  assert.equal(contextOptions.antialias, false);
+  assert.equal(required(contextOwner.value, '低质量 WebGL 选项').antialias, false);
   assert.equal(webgl.shadowMap.enabled, false);
   assert.equal(webgl.pixelRatio, 1);
-  assert.equal(renderer.getDebugSnapshot().stage.maximumEffects, 8);
+  assert.equal(record(renderer.getDebugSnapshot().stage, '低质量 Stage 调试快照').maximumEffects, 8);
   assert.deepEqual(renderer.getPerformanceSnapshot(), {
     drawCalls: 5,
     triangles: 2_400,
@@ -652,18 +694,18 @@ test('low presentation quality lowers only renderer cost and exposes machine-rea
 test('default presentation quality keeps MSAA and a high-DPI render target for clear characters', async () => {
   const canvas = { width: 1, height: 1, style: {}, getContext: () => ({}) };
   const webgl = fakeWebGLRenderer(canvas);
-  let contextOptions = null;
+  const contextOwner: { value: Record<string, unknown> | null } = { value: null };
   const renderer = new ArenaGreyboxRenderer({
     canvas,
     platform: fakePlatform(),
     content: ARENA_V1_GREYBOX_CONTENT,
-    webglRendererFactory: (options) => {
-      contextOptions = options;
+    webglRendererFactory: (options: unknown) => {
+      contextOwner.value = record(options, '默认 WebGL 选项');
       return webgl;
     },
   });
   await renderer.load();
-  assert.equal(contextOptions.antialias, true);
+  assert.equal(required(contextOwner.value, '默认 WebGL 选项').antialias, true);
   assert.equal(webgl.pixelRatio, 2);
   assert.equal(canvas.width, 780);
   assert.equal(canvas.height, 1688);
@@ -673,8 +715,8 @@ test('default presentation quality keeps MSAA and a high-DPI render target for c
 test('Arena HUD renders the authoritative life count instead of a fixed three-dot placeholder', async () => {
   const core = createCore();
   const snapshot = core.getSnapshot();
-  for (const participant of snapshot.participants) participant.lives = 11;
-  const renderedText = [];
+  for (const participant of snapshot.participants) Reflect.set(participant, 'lives', 11);
+  const renderedText: string[] = [];
   const canvas = { width: 1, height: 1, style: {}, getContext: () => ({}) };
   const renderer = new ArenaGreyboxRenderer({
     canvas,
