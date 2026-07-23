@@ -13,7 +13,7 @@ import {
 } from '@number-strategy-jump/arena-device-acceptance';
 import {
   verifyArenaBuildManifestDirectory,
-} from './arena-build-manifest-files.mjs';
+} from './arena-build-manifest-files.ts';
 import { verifyArenaDeviceEvidence } from './arena-device-evidence-verifier.mjs';
 
 export async function verifyArenaInputPilotEvidence({

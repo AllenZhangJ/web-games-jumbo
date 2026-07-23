@@ -11,7 +11,7 @@ import {
 import {
   ARENA_DEVICE_ACCEPTANCE_PLATFORM,
 } from '@number-strategy-jump/arena-device-acceptance';
-import { writeArenaBuildManifest } from './lib/arena-build-manifest-files.mjs';
+import { writeArenaBuildManifest } from './lib/arena-build-manifest-files.ts';
 import { verifyArenaFormalAssetBudget } from './lib/arena-formal-asset-budget-verifier.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');

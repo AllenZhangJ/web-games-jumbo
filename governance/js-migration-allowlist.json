@@ -6,8 +6,6 @@
   "files": [
     "scripts/arena-balance-exploration.mjs",
     "scripts/arena-bot-stress.mjs",
-    "scripts/arena-build-budget.mjs",
-    "scripts/arena-build-manifest.mjs",
     "scripts/arena-defects.mjs",
     "scripts/arena-device-evidence.mjs",
     "scripts/arena-experiment.mjs",
@@ -30,7 +28,6 @@
     "scripts/build-arena-poc.mjs",
     "scripts/build.mjs",
     "scripts/lib/arena-atomic-evidence-file.mjs",
-    "scripts/lib/arena-build-manifest-files.mjs",
     "scripts/lib/arena-child-process.mjs",
     "scripts/lib/arena-device-evidence-verifier.mjs",
     "scripts/lib/arena-human-fairness-evidence-verifier.mjs",

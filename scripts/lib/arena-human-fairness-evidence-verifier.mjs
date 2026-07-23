@@ -25,7 +25,7 @@ import {
 } from './evidence-file-verifier.ts';
 import {
   verifyArenaBuildManifestDirectory,
-} from './arena-build-manifest-files.mjs';
+} from './arena-build-manifest-files.ts';
 
 const MAXIMUM_REPLAY_BYTES = 64 * 1024 * 1024;
 const MAXIMUM_WORKSPACE_BYTES = 5 * 1024 * 1024;

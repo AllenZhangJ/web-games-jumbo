@@ -57,7 +57,7 @@ import {
 } from '@number-strategy-jump/arena-regression';
 import {
   verifyArenaBuildManifestDirectory,
-} from './arena-build-manifest-files.mjs';
+} from './arena-build-manifest-files.ts';
 import {
   verifyArenaDeviceEvidence,
 } from './arena-device-evidence-verifier.mjs';

@@ -5,15 +5,22 @@ import {
   ARENA_BUILD_MANIFEST_FILENAME,
   ARENA_BUILD_MANIFEST_SCHEMA_VERSION,
   createArenaBuildManifest,
+  type ArenaBuildArtifact,
+  type ArenaBuildDefaultEntry,
+  type ArenaBuildManifest,
 } from '@number-strategy-jump/arena-device-acceptance';
 
-function compareText(left, right) {
+function compareText(left: string, right: string): number {
   if (left < right) return -1;
   if (left > right) return 1;
   return 0;
 }
 
-async function collectDirectory(root, relativeDirectory, output) {
+async function collectDirectory(
+  root: string,
+  relativeDirectory: string,
+  output: ArenaBuildArtifact[],
+): Promise<void> {
   const directory = path.join(root, ...relativeDirectory.split('/').filter(Boolean));
   const entries = await readdir(directory, { withFileTypes: true });
   entries.sort((left, right) => compareText(left.name, right.name));
@@ -37,8 +44,10 @@ async function collectDirectory(root, relativeDirectory, output) {
   }
 }
 
-export async function collectArenaBuildArtifacts(outDir) {
-  const artifacts = [];
+export async function collectArenaBuildArtifacts(
+  outDir: string,
+): Promise<readonly ArenaBuildArtifact[]> {
+  const artifacts: ArenaBuildArtifact[] = [];
   await collectDirectory(path.resolve(outDir), '', artifacts);
   return Object.freeze(artifacts.sort((left, right) => compareText(left.path, right.path)));
 }
@@ -50,7 +59,14 @@ export async function writeArenaBuildManifest({
   sourceDirty,
   target,
   defaultEntry,
-}) {
+}: Readonly<{
+  outDir: string;
+  buildId: string;
+  commit: string;
+  sourceDirty: boolean;
+  target: string;
+  defaultEntry: ArenaBuildDefaultEntry;
+}>): Promise<ArenaBuildManifest> {
   const directory = path.resolve(outDir);
   const manifest = createArenaBuildManifest({
     schemaVersion: ARENA_BUILD_MANIFEST_SCHEMA_VERSION,
@@ -68,16 +84,16 @@ export async function writeArenaBuildManifest({
   return manifest;
 }
 
-export async function verifyArenaBuildManifestDirectory(outDir, {
+export async function verifyArenaBuildManifestDirectory(outDir: string, {
   requireCleanSource = false,
-} = {}) {
+}: Readonly<{ requireCleanSource?: boolean }> = {}): Promise<ArenaBuildManifest> {
   const directory = path.resolve(outDir);
   const manifestPath = path.join(directory, ARENA_BUILD_MANIFEST_FILENAME);
   const manifestMetadata = await lstat(manifestPath);
   if (!manifestMetadata.isFile() || manifestMetadata.isSymbolicLink()) {
     throw new Error(`构建 Manifest 不是普通文件：${manifestPath}。`);
   }
-  const source = JSON.parse(await readFile(manifestPath, 'utf8'));
+  const source: unknown = JSON.parse(await readFile(manifestPath, 'utf8'));
   const manifest = createArenaBuildManifest(source);
   if (requireCleanSource && manifest.sourceDirty) {
     throw new Error(`构建 ${manifest.buildId}/${manifest.target} 来自非干净工作区。`);
@@ -91,6 +107,7 @@ export async function verifyArenaBuildManifestDirectory(outDir, {
   for (let index = 0; index < actual.length; index += 1) {
     const expected = manifest.artifacts[index];
     const found = actual[index];
+    if (!expected || !found) throw new Error(`构建产物索引 ${index} 缺失。`);
     if (
       found.path !== expected.path
       || found.sha256 !== expected.sha256

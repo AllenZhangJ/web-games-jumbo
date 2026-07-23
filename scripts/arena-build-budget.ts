@@ -8,11 +8,11 @@ import {
 } from '@number-strategy-jump/arena-performance-evidence';
 import {
   verifyArenaBuildManifestDirectory,
-} from './lib/arena-build-manifest-files.mjs';
+} from './lib/arena-build-manifest-files.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const policy = createArenaStage9BuildBudgetV1Policy();
-const reports = [];
+const reports: ReturnType<typeof createArenaBuildBudgetReport>[] = [];
 for (const platform of ['web', 'wechat', 'douyin']) {
   const manifest = await verifyArenaBuildManifestDirectory(path.join(root, 'dist', platform));
   reports.push(createArenaBuildBudgetReport(policy, manifest));

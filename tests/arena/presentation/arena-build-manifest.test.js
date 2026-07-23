@@ -13,7 +13,7 @@ import {
   collectArenaBuildArtifacts,
   verifyArenaBuildManifestDirectory,
   writeArenaBuildManifest,
-} from '../../../scripts/lib/arena-build-manifest-files.mjs';
+} from '../../../scripts/lib/arena-build-manifest-files.ts';
 import {
   createArenaStage9BuildBudgetV1Policy,
 } from '@number-strategy-jump/arena-performance-evidence';

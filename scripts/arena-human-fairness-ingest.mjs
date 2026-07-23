@@ -30,7 +30,7 @@ import {
 } from './lib/evidence-file-verifier.ts';
 import {
   verifyArenaBuildManifestDirectory,
-} from './lib/arena-build-manifest-files.mjs';
+} from './lib/arena-build-manifest-files.ts';
 
 const MAXIMUM_CAPTURE_PACKAGE_BYTES = 256 * 1024 * 1024;
 const MAXIMUM_WORKSPACE_BYTES = 5 * 1024 * 1024;

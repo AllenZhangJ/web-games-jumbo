@@ -64,7 +64,7 @@ import {
 } from '../product/stage8-test-content.js';
 import {
   writeArenaBuildManifest,
-} from '../../../scripts/lib/arena-build-manifest-files.mjs';
+} from '../../../scripts/lib/arena-build-manifest-files.ts';
 
 const COMMIT = '1'.repeat(40);
 
