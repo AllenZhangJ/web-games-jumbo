@@ -17,6 +17,7 @@ import {
   ARENA_V1_CHARACTER_PRESENTATION_TUNING,
   ARENA_V1_COMBAT_PRESENTATION_CONFIG,
   projectArenaPresentationFrame,
+  type ProjectArenaPresentationFrameOptions,
 } from '@number-strategy-jump/arena-v1-presentation-content';
 
 const PUBLIC_INFO = Object.freeze({
@@ -36,6 +37,21 @@ function createCore() {
   });
 }
 
+function required<T>(value: T | null | undefined, name: string): T {
+  assert.ok(value != null, `${name} 不存在。`);
+  return value;
+}
+
+function record(value: unknown, name: string): Readonly<Record<string, unknown>> {
+  assert.ok(value !== null && typeof value === 'object' && !Array.isArray(value), `${name} 必须是对象。`);
+  return value as Readonly<Record<string, unknown>>;
+}
+
+function array(value: unknown, name: string): readonly unknown[] {
+  assert.ok(Array.isArray(value), `${name} 必须是数组。`);
+  return value;
+}
+
 test('Arena greybox content copies frozen authority geometry and presentation semantics', () => {
   assert.equal(ARENA_V1_GREYBOX_CONTENT.schemaVersion, 2);
   assert.equal(ARENA_V1_GREYBOX_CONTENT.map.id, STAGE5_MAP_DEFINITION.id);
@@ -43,13 +59,17 @@ test('Arena greybox content copies frozen authority geometry and presentation se
     ARENA_V1_GREYBOX_CONTENT.map.surfaces,
     STAGE5_MAP_DEFINITION.arena.surfaces,
   );
-  assert.equal(ARENA_V1_GREYBOX_CONTENT.actions['base-push'].label, '推击');
-  assert.equal(ARENA_V1_GREYBOX_CONTENT.equipment.hammer.semantic, 'heavy-smash');
+  assert.equal(required(ARENA_V1_GREYBOX_CONTENT.actions['base-push'], 'base-push').label, '推击');
+  assert.equal(
+    required(ARENA_V1_GREYBOX_CONTENT.equipment.hammer, 'hammer').semantic,
+    'heavy-smash',
+  );
   assert.equal(ARENA_V1_GREYBOX_CONTENT.assetRegistry.size, 2);
   assert.equal(ARENA_V1_GREYBOX_CONTENT.characterPresentationRegistry.size, 2);
-  assert.ok(Object.isFrozen(ARENA_V1_GREYBOX_CONTENT.map.surfaces[0].center));
+  const firstSurface = required(ARENA_V1_GREYBOX_CONTENT.map.surfaces[0], 'first surface');
+  assert.ok(Object.isFrozen(firstSurface.center));
   assert.throws(() => {
-    ARENA_V1_GREYBOX_CONTENT.map.surfaces[0].center.x = 99;
+    Object.assign(firstSurface.center, { x: 99 });
   }, TypeError);
 });
 
@@ -60,27 +80,42 @@ test('Arena action, weapon and character presentation values come from one expor
   ]));
   for (const actionId of Object.values(STAGE4_ACTION_ID)) {
     assert.deepEqual(
-      ARENA_V1_GREYBOX_CONTENT.actions[actionId].timing,
+      required(ARENA_V1_GREYBOX_CONTENT.actions[actionId], actionId).timing,
       authorityTimingById.get(actionId),
       `${actionId} 必须直接投影权威 timing。`,
     );
   }
   assert.deepEqual(
-    ARENA_V1_GREYBOX_CONTENT.actions[STAGE4_ACTION_ID.HAMMER_SMASH].weaponScale,
+    required(
+      ARENA_V1_GREYBOX_CONTENT.actions[STAGE4_ACTION_ID.HAMMER_SMASH],
+      STAGE4_ACTION_ID.HAMMER_SMASH,
+    ).weaponScale,
     { idle: 1, ...ARENA_V1_COMBAT_PRESENTATION_CONFIG.hammerSmash.scale },
   );
   assert.notDeepEqual(
-    ARENA_V1_GREYBOX_CONTENT.actions[STAGE4_ACTION_ID.HAMMER_SMASH].weaponScale,
-    ARENA_V1_GREYBOX_CONTENT.actions[STAGE4_ACTION_ID.CHAIN_PULL].weaponScale,
+    required(
+      ARENA_V1_GREYBOX_CONTENT.actions[STAGE4_ACTION_ID.HAMMER_SMASH],
+      STAGE4_ACTION_ID.HAMMER_SMASH,
+    ).weaponScale,
+    required(
+      ARENA_V1_GREYBOX_CONTENT.actions[STAGE4_ACTION_ID.CHAIN_PULL],
+      STAGE4_ACTION_ID.CHAIN_PULL,
+    ).weaponScale,
   );
   assert.equal(
-    ARENA_V1_GREYBOX_CONTENT.actions[STAGE4_ACTION_ID.HAMMER_AIR_SMASH].semantic,
+    required(
+      ARENA_V1_GREYBOX_CONTENT.actions[STAGE4_ACTION_ID.HAMMER_AIR_SMASH],
+      STAGE4_ACTION_ID.HAMMER_AIR_SMASH,
+    ).semantic,
     'air-heavy-smash',
   );
   for (const actionId of Object.values(STAGE6_MOVEMENT_ACTION_ID)) {
     assert.ok(ARENA_V1_GREYBOX_CONTENT.actions[actionId], `${actionId} 必须有动作表现。`);
   }
-  const character = ARENA_V1_GREYBOX_CONTENT.characterPresentationRegistry.list()[0];
+  const character = required(
+    ARENA_V1_GREYBOX_CONTENT.characterPresentationRegistry.list()[0],
+    'first character presentation',
+  );
   assert.deepEqual(character.locomotion, {
     walkSpeedThreshold: ARENA_V1_CHARACTER_PRESENTATION_TUNING.walkSpeedThreshold,
     runSpeedThreshold: ARENA_V1_CHARACTER_PRESENTATION_TUNING.runSpeedThreshold,
@@ -92,32 +127,57 @@ test('Arena action, weapon and character presentation values come from one expor
 test('Arena frame projector reads ActionAffordance and exposes no hidden bot difficulty', () => {
   const core = createCore();
   const source = core.getSnapshot();
-  const expectedActionId = source.participants[0].actionAffordance.primaryActionDefinitionId;
+  const sourceParticipant = required(source.participants[0], 'source participant');
+  const sourceAffordance = record(
+    sourceParticipant.actionAffordance,
+    'source participant actionAffordance',
+  );
+  const expectedActionId = required(
+    sourceAffordance.primaryActionDefinitionId,
+    'primaryActionDefinitionId',
+  ) as string;
   const frame = projectArenaPresentationFrame({
     snapshot: source,
     publicMatchInfo: PUBLIC_INFO,
     content: ARENA_V1_GREYBOX_CONTENT,
   });
 
-  assert.equal(frame.hud.action.definitionId, expectedActionId);
+  const hud = record(frame.hud, 'frame.hud');
+  const action = record(hud.action, 'frame.hud.action');
+  const opponent = record(hud.opponent, 'frame.hud.opponent');
+  const world = record(frame.world, 'frame.world');
+  const participants = array(world.participants, 'frame.world.participants');
+  const firstParticipant = record(participants[0], 'first projected participant');
+  const appearance = record(firstParticipant.appearance, 'first projected participant appearance');
+  const map = record(world.map, 'frame.world.map');
+  const projectedSurfaces = array(map.surfaces, 'frame.world.map.surfaces');
+
+  assert.equal(action.definitionId, expectedActionId);
   assert.equal(
-    frame.hud.action.label,
-    ARENA_V1_GREYBOX_CONTENT.actions[expectedActionId].label,
+    action.label,
+    required(ARENA_V1_GREYBOX_CONTENT.actions[expectedActionId], expectedActionId).label,
   );
-  assert.equal(frame.hud.opponent.displayName, '发条新秀');
+  assert.equal(opponent.displayName, '发条新秀');
   assert.equal(JSON.stringify(frame).includes('difficulty'), false);
   assert.equal(JSON.stringify(frame).includes('bot'), false);
-  assert.equal('geometry' in frame.world.participants[0].appearance, false);
-  assert.match(frame.world.participants[0].appearance.definitionHash, /^[0-9a-f]{8}$/);
+  assert.equal('geometry' in appearance, false);
+  assert.match(
+    required(appearance.definitionHash, 'appearance.definitionHash') as string,
+    /^[0-9a-f]{8}$/,
+  );
   const enabledById = Object.fromEntries(source.map.surfaces.map(({ id, enabled }) => [id, enabled]));
   assert.deepEqual(
-    frame.world.map.surfaces.map(({ id, enabled }) => ({ id, enabled })),
+    projectedSurfaces.map((surface) => {
+      const item = record(surface, 'projected surface');
+      return { id: item.id, enabled: item.enabled };
+    }),
     ARENA_V1_GREYBOX_CONTENT.map.surfaces.map(({ id }) => ({ id, enabled: enabledById[id] })),
   );
+  const position = record(firstParticipant.position, 'first projected participant position');
   assert.throws(() => {
-    frame.world.participants[0].position.x = 900;
+    Object.assign(position, { x: 900 });
   }, TypeError);
-  assert.notEqual(source.participants[0].position.x, 900);
+  assert.notEqual(sourceParticipant.position.x, 900);
 
   core.destroy();
 });
@@ -125,7 +185,11 @@ test('Arena frame projector reads ActionAffordance and exposes no hidden bot dif
 test('Arena frame projector fails closed on missing presentation content', () => {
   const core = createCore();
   const snapshot = core.getSnapshot();
-  snapshot.participants[0].characterDefinitionId = 'missing-character';
+  assert.equal(Reflect.set(
+    required(snapshot.participants[0], 'first participant'),
+    'characterDefinitionId',
+    'missing-character',
+  ), true);
   assert.throws(() => projectArenaPresentationFrame({
     snapshot,
     publicMatchInfo: PUBLIC_INFO,
@@ -142,7 +206,14 @@ test('Arena frame projector rejects cross-match HUD data and stale affordance', 
     publicMatchInfo: { ...PUBLIC_INFO, matchSeed: PUBLIC_INFO.matchSeed + 1 },
     content: ARENA_V1_GREYBOX_CONTENT,
   }), /matchSeed.*不一致/);
-  snapshot.participants[0].actionAffordance.tick += 1;
+  const affordance = record(
+    required(snapshot.participants[0], 'first participant').actionAffordance,
+    'first participant actionAffordance',
+  );
+  assert.equal(
+    Reflect.set(affordance, 'tick', (affordance.tick as number) + 1),
+    true,
+  );
   assert.throws(() => projectArenaPresentationFrame({
     snapshot,
     publicMatchInfo: PUBLIC_INFO,
@@ -157,16 +228,17 @@ test('Arena frame projector requires explicit content and rejects malformed snap
   assert.throws(() => projectArenaPresentationFrame({
     snapshot,
     publicMatchInfo: PUBLIC_INFO,
-  }), /content 不存在/);
+  } as unknown as ProjectArenaPresentationFrameOptions), /content 不存在/);
 
-  snapshot.participants[0].grounded = 1;
+  const participant = required(snapshot.participants[0], 'first participant');
+  assert.equal(Reflect.set(participant, 'grounded', 1), true);
   assert.throws(() => projectArenaPresentationFrame({
     snapshot,
     publicMatchInfo: PUBLIC_INFO,
     content: ARENA_V1_GREYBOX_CONTENT,
   }), /grounded.*布尔值/);
 
-  snapshot.participants[0].grounded = true;
+  assert.equal(Reflect.set(participant, 'grounded', true), true);
   let getterCalls = 0;
   const hostileEvent = Object.defineProperty({}, 'sequence', {
     enumerable: true,

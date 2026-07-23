@@ -22,7 +22,6 @@
     "tests/arena/presentation/input-pilot-trial-controller.test.js",
     "tests/arena/presentation/input-pilot-web-support.test.js",
     "tests/arena/presentation/input-pilot.test.js",
-    "tests/arena/presentation/presentation-foundation.test.js",
     "tests/arena/presentation/product-presentation.test.js",
     "tests/arena/presentation/product-renderer.test.js",
     "tests/arena/presentation/stage7-presentation-contract.test.js",
