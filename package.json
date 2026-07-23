@@ -23,7 +23,7 @@
     "arena:replay:verify": "node --import tsx scripts/arena-golden-replay.ts --verify",
     "arena:replay:candidate": "node --import tsx scripts/arena-golden-replay.ts",
     "arena:replay:promote": "node --import tsx scripts/arena-golden-replay.ts",
-    "arena:regression:lifecycle": "node --import tsx --test tests/arena/local-match-session.test.ts tests/arena/replay.test.ts tests/arena/input/pointer-input-adapter.test.ts tests/arena/product/stage8-product-session.test.js tests/arena/product/stage8-profile-persistence.test.js tests/arena/presentation/product-presentation-session.test.js",
+    "arena:regression:lifecycle": "node --import tsx --test tests/arena/local-match-session.test.ts tests/arena/replay.test.ts tests/arena/input/pointer-input-adapter.test.ts tests/arena/product/stage8-product-session.test.ts tests/arena/product/stage8-profile-persistence.test.js tests/arena/presentation/product-presentation-session.test.js",
     "arena:regression": "npm run arena:replay:verify && npm run arena:input:fuzz && npm run arena:regression:lifecycle && npm run arena:session:soak && npm run arena:product:session:soak",
     "arena:regression:evidence": "node --import tsx scripts/arena-regression-evidence.ts",
     "arena:session:soak": "node --expose-gc --import tsx scripts/arena-presentation-session-soak.ts --matches=100",

@@ -3,12 +3,24 @@ import assert from 'node:assert/strict';
 import { createArenaV1ProductSession } from '@number-strategy-jump/arena-v1-composition';
 import { ARENA_V1_BALANCE_DEFINITION } from '@number-strategy-jump/arena-v1-content';
 import { STAGE4_ACTION_ID } from '@number-strategy-jump/arena-v1-content';
-import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
+import {
+  createNeutralInputFrame,
+  type ArenaMatchSnapshot,
+} from '@number-strategy-jump/arena-contracts';
 import { ARENA_MATCH_EVENT } from '@number-strategy-jump/arena-match';
-import { ProductSessionController } from '@number-strategy-jump/arena-product-session';
+import {
+  ProductSessionController,
+} from '@number-strategy-jump/arena-product-session';
 import { ARENA_V1_PLAYER_PROFILE_DEFINITION } from '@number-strategy-jump/arena-product-v1-content';
-import { ProductMatchCoordinator } from '@number-strategy-jump/arena-product-match';
-import { createPlayerProfile } from '@number-strategy-jump/arena-profile-contracts';
+import {
+  ProductMatchCoordinator,
+  type ProductMatchCompletion,
+} from '@number-strategy-jump/arena-product-match';
+import type { ProductMatchResult } from '@number-strategy-jump/arena-product-contracts';
+import {
+  createPlayerProfile,
+  type PlayerProfile,
+} from '@number-strategy-jump/arena-profile-contracts';
 import { PlayerProfilePersistenceError } from '@number-strategy-jump/arena-profile-service';
 import {
   PRODUCT_SESSION_STATE,
@@ -16,30 +28,36 @@ import {
 } from '@number-strategy-jump/arena-product-state';
 import { TEST_MATCH_CONTENT_PUBLIC_VIEW } from './stage8-test-content.js';
 
-function clone(value) {
-  return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
+function clone<Value>(value: Value): Value {
+  return value === undefined ? value : JSON.parse(JSON.stringify(value)) as Value;
 }
 
-function deferred() {
-  let resolve;
-  let reject;
-  const promise = new Promise((resolveValue, rejectValue) => {
+function deferred<Value>() {
+  let resolve!: (value: Value | PromiseLike<Value>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<Value>((resolveValue, rejectValue) => {
     resolve = resolveValue;
     reject = rejectValue;
   });
   return { promise, resolve, reject };
 }
 
-function fakeRuntime({ endAfterSteps = 1, destroyFailures = 0 } = {}) {
+function fakeRuntime({
+  endAfterSteps = 1,
+  destroyFailures = 0,
+}: {
+  readonly endAfterSteps?: number;
+  readonly destroyFailures?: number;
+} = {}) {
   let paused = false;
   let steps = 0;
-  let result = null;
+  let result: Readonly<{ authorityHash: string }> | null = null;
   let destroys = 0;
   return {
     get paused() { return paused; },
     get destroys() { return destroys; },
     start() {},
-    setPaused(value) { paused = value; },
+    setPaused(value: boolean) { paused = value; },
     step() {
       steps += 1;
       if (steps >= endAfterSteps) result = Object.freeze({ authorityHash: '12345678' });
@@ -70,7 +88,15 @@ function fakeRuntime({ endAfterSteps = 1, destroyFailures = 0 } = {}) {
   };
 }
 
-function profileServiceHarness({ openPromise = null, failOpenCount = 0 } = {}) {
+type FakeRuntime = ReturnType<typeof fakeRuntime>;
+
+function profileServiceHarness({
+  openPromise = null,
+  failOpenCount = 0,
+}: {
+  readonly openPromise?: PromiseLike<PlayerProfile> | null;
+  readonly failOpenCount?: number;
+} = {}) {
   let profile = createPlayerProfile(ARENA_V1_PLAYER_PROFILE_DEFINITION);
   let openCalls = 0;
   let destroyed = false;
@@ -84,7 +110,7 @@ function profileServiceHarness({ openPromise = null, failOpenCount = 0 } = {}) {
     },
     getSnapshot() { return profile; },
     renewLease() { return true; },
-    selectCharacter(characterId) {
+    selectCharacter(characterId: string) {
       profile = Object.freeze({
         ...profile,
         revision: profile.revision + 1,
@@ -99,7 +125,18 @@ function profileServiceHarness({ openPromise = null, failOpenCount = 0 } = {}) {
   };
 }
 
-function rewardOutcome(profileService, result, unlocks = {}) {
+interface UnlockAdditions {
+  readonly characterIds?: readonly string[];
+  readonly appearanceIds?: readonly string[];
+  readonly equipmentIds?: readonly string[];
+  readonly mapIds?: readonly string[];
+}
+
+function rewardOutcome(
+  profileService: ReturnType<typeof profileServiceHarness>,
+  result: ProductMatchResult,
+  unlocks: UnlockAdditions = {},
+) {
   return Object.freeze({
     grant: Object.freeze({
       resultAuthorityHash: result.authorityHash,
@@ -117,34 +154,44 @@ function rewardOutcome(profileService, result, unlocks = {}) {
   });
 }
 
-function controllerHarness({ profileService, matchFactory, rewardCommitter = null }) {
+function controllerHarness({
+  profileService,
+  matchFactory,
+  rewardCommitter = null,
+}: {
+  readonly profileService: ReturnType<typeof profileServiceHarness>;
+  readonly matchFactory: unknown;
+  readonly rewardCommitter?: Readonly<{
+    commit(result: ProductMatchResult): unknown;
+  }> | null;
+}) {
   const coordinator = new ProductMatchCoordinator({ matchFactory });
   const controller = new ProductSessionController({
     stateMachine: new ProductSessionStateMachine(),
     profileService,
     matchCoordinator: coordinator,
     rewardCommitter: rewardCommitter ?? {
-      commit: (result) => rewardOutcome(profileService, result),
+      commit: (result: ProductMatchResult) => rewardOutcome(profileService, result),
     },
   });
   return { controller, coordinator };
 }
 
 function storageHarness() {
-  const values = new Map();
+  const values = new Map<string, unknown>();
   return {
     values,
     port: {
-      storageRead(key) {
+      storageRead(key: string) {
         return values.has(key)
           ? { ok: true, found: true, value: clone(values.get(key)) }
           : { ok: true, found: false, value: undefined };
       },
-      storageWrite(key, value) {
+      storageWrite(key: string, value: unknown) {
         values.set(key, clone(value));
         return true;
       },
-      storageDelete(key) {
+      storageDelete(key: string) {
         values.delete(key);
         return true;
       },
@@ -152,8 +199,13 @@ function storageHarness() {
   };
 }
 
+function required<Value>(value: Value | null | undefined): Value {
+  assert.ok(value);
+  return value;
+}
+
 test('ProductSessionController deduplicates boot and advances hidden completion to the resume target', async () => {
-  const loading = deferred();
+  const loading = deferred<PlayerProfile>();
   const profileService = profileServiceHarness({ openPromise: loading.promise });
   const { controller } = controllerHarness({
     profileService,
@@ -175,7 +227,7 @@ test('ProductSessionController deduplicates boot and advances hidden completion 
 });
 
 test('destroy during asynchronous profile load prevents a late ready publication', async () => {
-  const loading = deferred();
+  const loading = deferred<PlayerProfile>();
   const profileService = profileServiceHarness({ openPromise: loading.promise });
   const { controller } = controllerHarness({
     profileService,
@@ -192,7 +244,7 @@ test('destroy during asynchronous profile load prevents a late ready publication
 });
 
 test('ProductSessionController owns one match across rapid clicks, background prepare and result return', async () => {
-  const pendingRuntime = deferred();
+  const pendingRuntime = deferred<FakeRuntime>();
   const runtime = fakeRuntime();
   let creates = 0;
   const { controller } = controllerHarness({
@@ -223,7 +275,7 @@ test('ProductSessionController owns one match across rapid clicks, background pr
   controller.beginMatch();
   assert.equal(controller.state, PRODUCT_SESSION_STATE.IN_MATCH);
   const ended = controller.stepMatch();
-  assert.equal(ended.matchStep.result.authorityHash, '12345678');
+  assert.equal(required(required(ended.matchStep).result).authorityHash, '12345678');
   assert.equal(controller.state, PRODUCT_SESSION_STATE.RESULTS);
   controller.hide();
   controller.hide();
@@ -319,7 +371,10 @@ test('reward and unlock states survive background lifecycle without losing prese
   controller.commitReward();
   controller.hide();
   assert.equal(controller.getSnapshot().state.activeState, PRODUCT_SESSION_STATE.REWARD);
-  assert.deepEqual(controller.getSnapshot().reward.grant.unlocks.appearanceIds, ['paper-cape']);
+  assert.deepEqual(
+    required(controller.getSnapshot().reward).grant.unlocks.appearanceIds,
+    ['paper-cape'],
+  );
   controller.show();
   controller.continueReward();
   assert.equal(controller.state, PRODUCT_SESSION_STATE.UNLOCK);
@@ -335,7 +390,7 @@ test('reward rematch deduplicates rapid clicks, preserves reward on failure and 
   const profileService = profileServiceHarness();
   const firstRuntime = fakeRuntime();
   const secondRuntime = fakeRuntime();
-  const pendingSecond = deferred();
+  const pendingSecond = deferred<FakeRuntime>();
   let createCalls = 0;
   const { controller } = controllerHarness({
     profileService,
@@ -443,7 +498,7 @@ test('cleanup failure after a persisted reward fails closed without a second gra
   controller.stepMatch();
   const failed = controller.commitReward();
   assert.equal(failed.state.state, PRODUCT_SESSION_STATE.FATAL_ERROR);
-  assert.equal(failed.lastError.code, 'reward-processing-failed');
+  assert.equal(required(failed.lastError).code, 'reward-processing-failed');
   assert.equal(grants, 1);
   assert.equal(runtime.destroys, 2);
   controller.destroy();
@@ -451,7 +506,7 @@ test('cleanup failure after a persisted reward fails closed without a second gra
 });
 
 test('destroy during asynchronous match creation rejects late ownership and remains idempotent', async () => {
-  const pendingRuntime = deferred();
+  const pendingRuntime = deferred<FakeRuntime>();
   const runtime = fakeRuntime();
   const profileService = profileServiceHarness();
   const { controller } = controllerHarness({
@@ -525,7 +580,7 @@ test('ProductSessionController keeps transient lease renewal invisible and fails
   const lost = controller.renewProfileLease();
   assert.equal(lost.renewed, false);
   assert.equal(lost.productSnapshot.state.state, PRODUCT_SESSION_STATE.FATAL_ERROR);
-  assert.equal(lost.productSnapshot.lastError.code, 'profile-save-failed');
+  assert.equal(required(lost.productSnapshot.lastError).code, 'profile-save-failed');
   assert.equal(runtime.destroys, 1);
   controller.destroy();
 });
@@ -544,7 +599,7 @@ test('ProductSessionController retries incomplete aggregate cleanup after enteri
   await controller.boot();
   assert.throws(() => controller.destroy(), /清理未完整完成/);
   assert.equal(controller.state, PRODUCT_SESSION_STATE.DESTROYED);
-  assert.equal(controller.getSnapshot().lastError.code, 'cleanup-failed');
+  assert.equal(required(controller.getSnapshot().lastError).code, 'cleanup-failed');
   controller.destroy();
   assert.equal(destroyCalls, 2);
   assert.equal(controller.getSnapshot().lastError, null);
@@ -552,8 +607,8 @@ test('ProductSessionController retries incomplete aggregate cleanup after enteri
 
 test('Arena V1 product composition runs a complete headless 1v1 without leaking hidden difficulty', async () => {
   const storage = storageHarness();
-  const diagnostics = [];
-  const completions = [];
+  const diagnostics: unknown[] = [];
+  const completions: ProductMatchCompletion[] = [];
   let seed = 100;
   const controller = createArenaV1ProductSession({
     storage: storage.port,
@@ -566,8 +621,8 @@ test('Arena V1 product composition runs a complete headless 1v1 without leaking 
       hardLimitTicks: 60,
     },
     keyPrefix: 'test.product-session',
-    diagnosticSink: (value) => diagnostics.push(value),
-    matchCompletionSink: (value) => {
+    diagnosticSink: (value: unknown) => diagnostics.push(value),
+    matchCompletionSink: (value: ProductMatchCompletion) => {
       assert.ok(Object.isFrozen(value));
       assert.ok(Object.isFrozen(value.replay));
       completions.push(value);
@@ -583,11 +638,13 @@ test('Arena V1 product composition runs a complete headless 1v1 without leaking 
   assert.equal(ARENA_V1_BALANCE_DEFINITION.matchConfig.livesPerParticipant, 11);
   assert.equal(Object.isFrozen(ARENA_V1_BALANCE_DEFINITION), true);
   assert.equal(Object.isFrozen(ARENA_V1_BALANCE_DEFINITION.matchConfig), true);
+  const firstStep = required(first.matchStep);
+  const firstSnapshot = firstStep.snapshot as unknown as ArenaMatchSnapshot;
   assert.deepEqual(
-    first.matchStep.snapshot.participants.map(({ lives }) => lives),
+    firstSnapshot.participants.map(({ lives }) => lives),
     [11, 11],
   );
-  const tick = first.matchStep.snapshot.tick;
+  const tick = firstSnapshot.tick;
   controller.hide();
   assert.throws(() => controller.stepMatch(), /挂起/);
   controller.show();
@@ -597,17 +654,24 @@ test('Arena V1 product composition runs a complete headless 1v1 without leaking 
     last = controller.stepMatch();
   }
   assert.equal(controller.state, PRODUCT_SESSION_STATE.RESULTS);
-  assert.ok(last.matchStep.snapshot.tick > tick);
-  assert.match(last.matchStep.result.authorityHash, /^[0-9a-f]{8}$/);
-  assert.equal(last.matchStep.result.matchSeed, 101);
+  const lastStep = required(last.matchStep);
+  const lastSnapshot = lastStep.snapshot as unknown as ArenaMatchSnapshot;
+  const lastResult = required(lastStep.result);
+  assert.ok(lastSnapshot.tick > tick);
+  assert.match(lastResult.authorityHash, /^[0-9a-f]{8}$/);
+  assert.equal(lastResult.matchSeed, 101);
   assert.equal(completions.length, 1);
-  assert.deepEqual(completions[0].result, last.matchStep.result);
+  assert.deepEqual(required(completions[0]).result, lastResult);
   const visible = JSON.stringify(controller.getSnapshot());
   assert.doesNotMatch(visible, /difficulty|\bbot\b|机器人|简单|普通|困难/i);
-  assert.equal(diagnostics.some(({ type }) => type === 'match-assignment'), true);
+  assert.equal(diagnostics.some((value) => (
+    typeof value === 'object'
+    && value !== null
+    && Reflect.get(value, 'type') === 'match-assignment'
+  )), true);
   const rewarded = controller.commitReward();
-  assert.equal(rewarded.reward.grant.experienceDelta >= 100, true);
-  assert.equal(rewarded.profile.progression.experience >= 100, true);
+  assert.equal(required(rewarded.reward).grant.experienceDelta >= 100, true);
+  assert.equal(required(rewarded.profile).progression.experience >= 100, true);
   controller.continueReward();
   assert.equal(controller.state, PRODUCT_SESSION_STATE.READY);
   controller.destroy();
@@ -634,24 +698,37 @@ test('Arena V1 product always starts a whiff if an override requests legacy targ
   controller.openCharacterSelect();
   await controller.requestMatch();
   controller.beginMatch();
-  const before = controller.getActiveMatchSnapshot();
-  const local = before.participants.find(({ id }) => id === 'player-1');
-  assert.equal(local.actionAffordance.channels.primary.kind, 'selected');
+  const before = controller.getActiveMatchSnapshot() as unknown as ArenaMatchSnapshot | null;
+  const matchSnapshot = required(before);
+  const local = required(matchSnapshot.participants.find(({ id }) => id === 'player-1'));
+  const actionAffordance = local.actionAffordance as {
+    readonly channels: Readonly<Record<string, Readonly<{
+      kind: string;
+      actionDefinitionId: string;
+    }>>>;
+  };
+  const primaryAffordance = required(actionAffordance.channels.primary);
+  assert.equal(primaryAffordance.kind, 'selected');
   assert.equal(
-    local.actionAffordance.channels.primary.actionDefinitionId,
+    primaryAffordance.actionDefinitionId,
     STAGE4_ACTION_ID.BASE_PUSH,
   );
 
   const outcome = controller.stepMatch({
-    ...createNeutralInputFrame(before.tick, 'player-1'),
+    ...createNeutralInputFrame(matchSnapshot.tick, 'player-1'),
     primaryPressed: true,
   });
-  assert.equal(outcome.matchStep.events.some(({ type, action }) => (
-    type === ARENA_MATCH_EVENT.ACTION_STARTED
-      && action === STAGE4_ACTION_ID.BASE_PUSH
+  const outcomeStep = required(outcome.matchStep);
+  assert.equal(outcomeStep.events.some((event) => (
+    typeof event === 'object'
+      && event !== null
+      && Reflect.get(event, 'type') === ARENA_MATCH_EVENT.ACTION_STARTED
+      && Reflect.get(event, 'action') === STAGE4_ACTION_ID.BASE_PUSH
   )), true);
-  assert.equal(outcome.matchStep.events.some(({ type }) => (
-    type === ARENA_MATCH_EVENT.HIT_RESOLVED
+  assert.equal(outcomeStep.events.some((event) => (
+    typeof event === 'object'
+      && event !== null
+      && Reflect.get(event, 'type') === ARENA_MATCH_EVENT.HIT_RESOLVED
   )), false);
 
   controller.destroy();
@@ -662,17 +739,17 @@ test('Arena V1 product balance defaults reject malformed match config before acq
   assert.throws(() => createArenaV1ProductSession({
     seedSource,
     matchConfig: null,
-  }), /matchConfig.*普通对象/);
+  } as unknown as Parameters<typeof createArenaV1ProductSession>[0]), /matchConfig.*普通对象/);
   assert.throws(() => createArenaV1ProductSession({
     seedSource,
     matchConfig: [],
-  }), /matchConfig.*普通对象/);
+  } as unknown as Parameters<typeof createArenaV1ProductSession>[0]), /matchConfig.*普通对象/);
 });
 
 test('Arena V1 composition snapshots seed methods and contains diagnostic reentry', async () => {
   const seedSource = { nextSeed: () => 707 };
   let diagnosticReentryAttempts = 0;
-  let controller = null;
+  let controller: ProductSessionController | null = null;
   controller = createArenaV1ProductSession({
     storage: storageHarness().port,
     ownerId: 'product-composition-boundary-owner',
@@ -684,20 +761,22 @@ test('Arena V1 composition snapshots seed methods and contains diagnostic reentr
       hardLimitTicks: 60,
     },
     keyPrefix: 'test.product-composition-boundary',
-    diagnosticSink(value) {
-      if (value.type !== 'match-assignment') return;
+    diagnosticSink(value: unknown) {
+      if (typeof value !== 'object' || value === null) return;
+      if (Reflect.get(value, 'type') !== 'match-assignment') return;
       diagnosticReentryAttempts += 1;
-      controller.selectCharacter('parkour-apprentice');
+      required(controller).selectCharacter('parkour-apprentice');
     },
   });
   seedSource.nextSeed = () => 808;
 
-  await controller.boot();
-  controller.openCharacterSelect();
-  await controller.requestMatch();
+  const activeController = required(controller);
+  await activeController.boot();
+  activeController.openCharacterSelect();
+  await activeController.requestMatch();
   assert.equal(diagnosticReentryAttempts, 1);
-  assert.equal(controller.getSnapshot().match.publicMatchInfo.matchSeed, 707);
-  controller.destroy();
+  assert.equal(required(activeController.getSnapshot().match.publicMatchInfo).matchSeed, 707);
+  activeController.destroy();
 });
 
 test('Arena V1 composition rejects option accessors without executing them', () => {
@@ -728,7 +807,8 @@ test('Arena V1 composition persists character selection across a clean product r
 
   const second = createArenaV1ProductSession({ ...options, ownerId: 'owner-b' });
   const loaded = await second.boot();
-  assert.equal(loaded.profile.selection.characterId, 'wind-up-cube');
-  assert.equal(loaded.profile.revision, 1);
+  const loadedProfile = required(loaded.profile);
+  assert.equal(loadedProfile.selection.characterId, 'wind-up-cube');
+  assert.equal(loadedProfile.revision, 1);
   second.destroy();
 });
