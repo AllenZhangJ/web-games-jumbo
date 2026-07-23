@@ -39,7 +39,7 @@ import {
   assertArenaGitSourceIdentityStable,
   readArenaGitSourceIdentity,
 } from './arena-git-source-identity.ts';
-import { runArenaNodeExperiment } from './arena-node-experiment-runner.mjs';
+import { runArenaNodeExperiment } from './arena-node-experiment-runner.ts';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SUITE = Object.freeze({

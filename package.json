@@ -39,7 +39,7 @@
     "arena:experiment:balance:explore": "node --import tsx scripts/arena-balance-exploration.mjs",
     "arena:experiment:balance:validate": "node --import tsx scripts/arena-experiment.mjs --suite=balance-validation --summary",
     "arena:experiment:balance:validate:describe": "node --import tsx scripts/arena-experiment.mjs --suite=balance-validation --describe",
-    "arena:experiment:report:verify": "node --import tsx scripts/arena-experiment-report.mjs",
+    "arena:experiment:report:verify": "node --import tsx scripts/arena-experiment-report.ts",
     "arena:device:evidence": "node --import tsx scripts/arena-device-evidence.mjs",
     "arena:product:device:evidence": "node --import tsx scripts/arena-device-evidence.mjs --definition arena.stage8.product-device-acceptance.v1",
     "arena:performance:evidence": "node --import tsx scripts/arena-device-evidence.mjs --definition arena.stage9.performance-device-acceptance.v1",

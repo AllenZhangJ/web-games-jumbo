@@ -8,7 +8,7 @@ import {
 import { ARENA_EXPERIMENT_OUTCOME } from '@number-strategy-jump/arena-experiment';
 import { ARENA_MOVEMENT_STRESS_COLLECTOR_ID } from '@number-strategy-jump/arena-v1-experiment';
 import { readArenaGitSourceIdentity } from './arena-git-source-identity.ts';
-import { runArenaNodeExperiment } from './arena-node-experiment-runner.mjs';
+import { runArenaNodeExperiment } from './arena-node-experiment-runner.ts';
 import { parseArenaStressIntegerOptions } from './arena-stress-cli.ts';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');

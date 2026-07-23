@@ -1,8 +1,14 @@
-import { SimulationExperimentRunner } from '@number-strategy-jump/arena-experiment';
+import {
+  SimulationExperimentRunner,
+  type ArenaExperimentReport,
+  type MetricCollectorRegistry,
+  type SimulationWorkloadRegistry,
+} from '@number-strategy-jump/arena-experiment';
 import {
   assertArenaGitSourceIdentityStable,
   readArenaGitSourceIdentity,
-} from './arena-git-source-identity.ts';
+  type ArenaGitSourceIdentity,
+} from './arena-git-source-identity.js';
 
 export async function runArenaNodeExperiment({
   root,
@@ -10,7 +16,16 @@ export async function runArenaNodeExperiment({
   definition,
   registries,
   generatedAt = new Date().toISOString(),
-}) {
+}: Readonly<{
+  root: string;
+  source: ArenaGitSourceIdentity;
+  definition: unknown;
+  registries: Readonly<{
+    workloadRegistry: SimulationWorkloadRegistry;
+    collectorRegistry: MetricCollectorRegistry;
+  }>;
+  generatedAt?: string;
+}>): Promise<Readonly<ArenaExperimentReport>> {
   const runner = new SimulationExperimentRunner({ definition, ...registries });
   try {
     const report = runner.run({
