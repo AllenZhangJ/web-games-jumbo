@@ -1,7 +1,8 @@
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { createWorkspaceBuildPlan } from '../../scripts/build-workspace-packages.js';
 import { verifyJavaScriptMigration } from '../../scripts/governance/check-js-migration.js';
 import { verifyDocumentation } from '../../scripts/governance/check-documentation.js';
 import { verifyRetiredProductBoundaries } from '../../scripts/governance/check-product-boundaries.js';
@@ -53,6 +54,30 @@ describe('enterprise governance gates', () => {
     } finally {
       await rm(directory, { recursive: true, force: true });
     }
+  });
+
+  it('builds internal workspace packages before clean-install governance checks', async () => {
+    const manifest = JSON.parse(
+      await readFile(path.resolve('package.json'), 'utf8'),
+    ) as { scripts?: Record<string, string> };
+    expect(manifest.scripts?.['check:governance']).toMatch(/^npm run build:packages && /);
+    expect(manifest.scripts?.typecheck).toBe('npm run build:packages && npm run typecheck:app');
+  });
+
+  it('derives an acyclic workspace build order from declared internal dependencies', async () => {
+    const plan = await createWorkspaceBuildPlan();
+    const waveByPackage = new Map(
+      plan.waves.flatMap((wave, waveIndex) => (
+        wave.map((workspacePackage) => [workspacePackage.name, waveIndex] as const)
+      )),
+    );
+    expect(plan.packageCount).toBe(52);
+    expect(waveByPackage.get('@number-strategy-jump/arena-presentation-runtime')).toBeLessThan(
+      waveByPackage.get('@number-strategy-jump/arena-product-presentation') ?? -1,
+    );
+    expect(waveByPackage.get('@number-strategy-jump/arena-release-contracts')).toBeLessThan(
+      waveByPackage.get('@number-strategy-jump/arena-release') ?? -1,
+    );
   });
 
   it('rejects secret-bearing environment files', async () => {

@@ -10,10 +10,24 @@ const REGISTRY_PREFIX = 'https://registry.npmjs.org/';
 interface PackageManifest {
   readonly name?: unknown;
   readonly version?: unknown;
+  readonly scripts?: unknown;
   readonly dependencies?: unknown;
   readonly devDependencies?: unknown;
   readonly optionalDependencies?: unknown;
   readonly peerDependencies?: unknown;
+}
+
+function verifyCleanInstallCheckOrder(rootManifest: PackageManifest): void {
+  const scripts = record(rootManifest.scripts, 'package.json.scripts');
+  const governanceCheck = scripts['check:governance'];
+  if (
+    typeof governanceCheck !== 'string'
+    || !governanceCheck.startsWith('npm run build:packages && ')
+  ) {
+    throw new RangeError(
+      'check:governance 必须先执行 npm run build:packages，确保 npm ci --ignore-scripts 后可在干净环境运行。',
+    );
+  }
 }
 
 interface LockPackage {
@@ -150,6 +164,7 @@ export async function verifySupplyChain(repositoryRoot = process.cwd()): Promise
     if (manifestPath === path.join(root, 'package.json')) rootManifest = manifest;
   }
   if (!rootManifest) throw new Error('缺少根 package.json。');
+  verifyCleanInstallCheckOrder(rootManifest);
   const lock = await json<PackageLock>(path.join(root, 'package-lock.json'));
   const lockedExternalPackageCount = verifyLockfile(lock, rootManifest);
   const workflow = await readFile(path.join(root, '.github/workflows/ci.yml'), 'utf8');

@@ -17,8 +17,9 @@ function required<T>(value: T | null | undefined, name: string): T {
 async function directoryExists(directory: string): Promise<boolean> {
   try {
     return (await stat(directory)).isDirectory();
-  } catch {
-    return false;
+  } catch (error: unknown) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
+    throw error;
   }
 }
 
@@ -33,9 +34,25 @@ async function listJavaScript(directory: string): Promise<string[]> {
   return result;
 }
 
+async function listJavaScriptIfPresent(directory: string): Promise<string[]> {
+  try {
+    return await listJavaScript(directory);
+  } catch (error: unknown) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
+    throw error;
+  }
+}
+
 function withoutStaticImports(source: string): string {
   return source.replace(/^\s*import[\s\S]*?;\s*$/gm, '');
 }
+
+test('optional migration scans treat an absent retired directory as empty', async () => {
+  assert.deepEqual(
+    await listJavaScriptIfPresent(path.resolve('src/arena/__missing_migration_fixture__')),
+    [],
+  );
+});
 
 test('core and runtime layers never call tt.* or wx.* directly', async () => {
   const root = path.resolve('src');
@@ -213,7 +230,7 @@ test('Arena input pilot domain remains optional and host-free', async () => {
 });
 
 test('legacy Arena device acceptance composition has fully migrated', async () => {
-  const acceptanceFiles = await listJavaScript(
+  const acceptanceFiles = await listJavaScriptIfPresent(
     path.resolve('src/arena/presentation/acceptance'),
   );
   assert.equal(acceptanceFiles.length, 0);
@@ -223,7 +240,7 @@ test('legacy Arena presentation performance composition has fully migrated', asy
   const files = (await Promise.all([
     'src/arena/presentation/quality',
     'src/arena/presentation/performance',
-  ].map((directory) => listJavaScript(path.resolve(directory))))).flat();
+  ].map((directory) => listJavaScriptIfPresent(path.resolve(directory))))).flat();
   assert.equal(files.length, 0);
 });
 
@@ -264,7 +281,7 @@ test('Arena Evidence Value Contract stays scalar-only and outside authority depe
     'src/arena/session',
   ];
   const authorityFiles = (await Promise.all(authorityDirectories.map((directory) => (
-    listJavaScript(path.resolve(directory))
+    listJavaScriptIfPresent(path.resolve(directory))
   )))).flat();
   for (const file of authorityFiles) {
     const source = await readFile(file, 'utf8');
@@ -286,7 +303,7 @@ test('Arena Evidence Value Contract stays scalar-only and outside authority depe
     'src/arena/study',
   ];
   const evidenceConsumerFiles = (await Promise.all(
-    evidenceConsumerDirectories.map((directory) => listJavaScript(path.resolve(directory))),
+    evidenceConsumerDirectories.map((directory) => listJavaScriptIfPresent(path.resolve(directory))),
   )).flat();
   for (const file of evidenceConsumerFiles) {
     const source = await readFile(file, 'utf8');
@@ -411,7 +428,7 @@ test('Arena Stage 9 experiment orchestration stays headless and outside presenta
     'arena-experiment 基础包只能依赖权威基础契约、证据值契约和严格 Match。',
   );
   const experimentFiles = [
-    ...await listJavaScript(path.resolve('src/arena/experiment')),
+    ...await listJavaScriptIfPresent(path.resolve('src/arena/experiment')),
     ...await listJavaScript(path.resolve('packages/arena-experiment/src')),
   ];
   assert.ok(experimentFiles.length >= 7);
@@ -502,7 +519,7 @@ test('Arena Stage 9 regression corpus stays headless and keeps Node IO in script
     'arena-regression 包只能依赖已审核的实验、Match/Replay 与 V1 组合内容。',
   );
   const regressionFiles = [
-    ...await listJavaScript(path.resolve('src/arena/regression')),
+    ...await listJavaScriptIfPresent(path.resolve('src/arena/regression')),
     ...await listJavaScript(path.resolve('packages/arena-regression/src')),
   ];
   assert.ok(regressionFiles.length >= 5);
@@ -521,7 +538,7 @@ test('Arena Stage 9 human study stays headless, host-free and outside authority 
   const studyRoot = path.join(arenaRoot, 'study');
   const strictStudyRoot = path.resolve('packages/arena-human-match-study/src');
   const studyFiles = [
-    ...await listJavaScript(studyRoot),
+    ...await listJavaScriptIfPresent(studyRoot),
     ...await listJavaScript(strictStudyRoot),
   ];
   assert.ok(studyFiles.length >= 7);
@@ -555,7 +572,7 @@ test('Arena release handoff stays outside authority and only composes host-free 
   const releaseRoot = path.resolve('src/arena-release');
   const strictReleaseRoot = path.resolve('packages/arena-release/src');
   const releaseFiles = [
-    ...await listJavaScript(releaseRoot),
+    ...await listJavaScriptIfPresent(releaseRoot),
     ...await listJavaScript(strictReleaseRoot),
   ];
   assert.ok(releaseFiles.length >= 5);
@@ -584,13 +601,15 @@ test('Arena release handoff stays outside authority and only composes host-free 
 });
 
 test('Arena Stage 7 contracts remain host-free behind an injected Three view factory', async () => {
-  const directories = [
+  const retiredDirectories = [
     'src/arena/presentation/animation',
-    'src/arena/presentation/assets',
     'src/arena/presentation/character',
-    'packages/arena-presentation-contracts/src',
   ].map((directory) => path.resolve(directory));
-  const files = (await Promise.all(directories.map(listJavaScript))).flat();
+  const files = [
+    ...(await Promise.all(retiredDirectories.map(listJavaScriptIfPresent))).flat(),
+    ...await listJavaScript(path.resolve('src/arena/presentation/assets')),
+    ...await listJavaScript(path.resolve('packages/arena-presentation-contracts/src')),
+  ];
   assert.ok(files.length > 5);
   for (const file of files) {
     const source = await readFile(file, 'utf8');
@@ -864,9 +883,11 @@ test('Arena V1 greybox session is an isolated rollback application boundary', as
 });
 
 test('Arena Stage 8 product orchestration remains host-free and outside match authority', async () => {
-  const directories = [
+  const retiredDirectories = [
     'src/arena/product',
     'src/arena/storage',
+  ].map((directory) => path.resolve(directory));
+  const packageDirectories = [
     'packages/arena-product-content/src',
     'packages/arena-product-composition/src',
     'packages/arena-product-contracts/src',
@@ -876,7 +897,10 @@ test('Arena Stage 8 product orchestration remains host-free and outside match au
     'packages/arena-product-state/src',
     'packages/arena-product-v1-content/src',
   ].map((directory) => path.resolve(directory));
-  const files = (await Promise.all(directories.map(listJavaScript))).flat();
+  const files = [
+    ...(await Promise.all(retiredDirectories.map(listJavaScriptIfPresent))).flat(),
+    ...(await Promise.all(packageDirectories.map(listJavaScript))).flat(),
+  ];
   assert.ok(files.length >= 8);
   for (const file of files) {
     const source = await readFile(file, 'utf8');
@@ -894,7 +918,7 @@ test('Arena Stage 8 product sublayers preserve state/profile/match/composition d
     'src/arena/product/profile',
     'src/arena/product/persistence',
   ].map((directory) => path.resolve(directory));
-  const files = (await Promise.all(restrictedDirectories.map(listJavaScript))).flat();
+  const files = (await Promise.all(restrictedDirectories.map(listJavaScriptIfPresent))).flat();
   for (const file of files) {
     const source = await readFile(file, 'utf8');
     assert.doesNotMatch(
@@ -903,7 +927,7 @@ test('Arena Stage 8 product sublayers preserve state/profile/match/composition d
       `${file} 不应反向依赖产品组合根或匹配运行时。`,
     );
   }
-  const matchmakingFiles = await listJavaScript(path.resolve('src/arena/product/matchmaking'));
+  const matchmakingFiles = await listJavaScriptIfPresent(path.resolve('src/arena/product/matchmaking'));
   for (const file of matchmakingFiles) {
     const source = await readFile(file, 'utf8');
     assert.doesNotMatch(
@@ -912,7 +936,7 @@ test('Arena Stage 8 product sublayers preserve state/profile/match/composition d
       `${file} 不应反向持有产品组合根或 Profile 聚合。`,
     );
   }
-  const progressionFiles = await listJavaScript(path.resolve('src/arena/product/progression'));
+  const progressionFiles = await listJavaScriptIfPresent(path.resolve('src/arena/product/progression'));
   for (const file of progressionFiles) {
     const source = await readFile(file, 'utf8');
     assert.doesNotMatch(
@@ -1053,7 +1077,7 @@ test('Arena local quick match bundles and executes without a browser or renderer
 });
 
 test('Arena bot layers preserve dependency direction and tick determinism', async () => {
-  const aiFiles = await listJavaScript(path.resolve('src/arena/ai'));
+  const aiFiles = await listJavaScriptIfPresent(path.resolve('src/arena/ai'));
   for (const file of aiFiles) {
     const source = await readFile(file, 'utf8');
     assert.doesNotMatch(
@@ -1092,16 +1116,19 @@ test('Arena bot layers preserve dependency direction and tick determinism', asyn
 });
 
 test('Arena Rule/Core foundation preserves dependency direction and deterministic APIs', async () => {
-  const directories = ['rules', 'action', 'equipment', 'map']
+  const retiredDirectories = ['rules', 'action', 'equipment', 'map']
     .map((directory) => path.resolve('src/arena', directory));
-  directories.push(
+  const packageDirectories = [
     path.resolve('packages/arena-core/src'),
     path.resolve('packages/arena-equipment/src'),
     path.resolve('packages/arena-map/src'),
     path.resolve('packages/arena-movement/src'),
     path.resolve('packages/arena-physics/src'),
-  );
-  const files = (await Promise.all(directories.map(listJavaScript))).flat();
+  ];
+  const files = [
+    ...(await Promise.all(retiredDirectories.map(listJavaScriptIfPresent))).flat(),
+    ...(await Promise.all(packageDirectories.map(listJavaScript))).flat(),
+  ];
   for (const file of files) {
     const source = await readFile(file, 'utf8');
     assert.doesNotMatch(
