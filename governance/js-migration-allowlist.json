@@ -5,7 +5,6 @@
   "policy": "exact-decreasing-allowlist",
   "files": [
     "tests/architecture.test.js",
-    "tests/arena/character-foundation.test.js",
     "tests/arena/defect-ledger.test.js",
     "tests/arena/experiment/arena-experiment.test.js",
     "tests/arena/input-pilot-release-evidence.test.js",

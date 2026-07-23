@@ -23,7 +23,19 @@ import {
   compileJumpImpulseFromHeight,
 } from '@number-strategy-jump/arena-definitions';
 
-function definition(overrides = {}) {
+function required<T>(value: T | null | undefined, name: string): T {
+  if (value === null || value === undefined) throw new Error(`测试缺少 ${name}。`);
+  return value;
+}
+
+function record(value: unknown, name: string): Record<string, unknown> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new TypeError(`${name} 必须是对象。`);
+  }
+  return value as Record<string, unknown>;
+}
+
+function definition(overrides: Record<string, unknown> = {}) {
   return {
     schemaVersion: CHARACTER_DEFINITION_SCHEMA_VERSION,
     id: 'test-character',
@@ -101,7 +113,9 @@ test('CharacterDefinition clones, deeply freezes and excludes presentation data'
   assert.ok(Object.isFrozen(character.collision));
   assert.ok(Object.isFrozen(character.movement));
   assert.ok(Object.isFrozen(character.jump));
-  assert.throws(() => { character.movement.runSpeed = 999; }, TypeError);
+  assert.throws(() => {
+    (character.movement as { runSpeed: number }).runSpeed = 999;
+  }, TypeError);
   assert.throws(
     () => createCharacterDefinition({ ...definition(), modelAssetId: 'forbidden.glb' }),
     /不支持字段 modelAssetId/,
@@ -151,19 +165,19 @@ test('CharacterRegistry snapshots injected catalogs before authority use', () =>
     list() {
       return externalDefinitions;
     },
-    require(id) {
+    require(id: string) {
       return externalDefinitions.find((value) => value.id === id);
     },
   };
   const snapshot = createCharacterRegistrySnapshot(externalRegistry);
-  externalDefinitions[0].collision.radius = 9;
+  required(externalDefinitions[0], '外部角色定义').collision.radius = 9;
   externalDefinitions.push(definition({ id: 'late-character' }));
   assert.equal(snapshot.size, 1);
   assert.equal(snapshot.require('external-character').collision.radius, 0.45);
   assert.throws(() => snapshot.require('late-character'), /未知 CharacterDefinition/);
 
   let getterCalls = 0;
-  const hostileArray = [];
+  const hostileArray: unknown[] = [];
   Object.defineProperty(hostileArray, '0', {
     enumerable: true,
     get() {
@@ -202,8 +216,9 @@ test('Character runtime keeps only immutable identity and projects an ordinary p
     definitionId: ARENA_V1_CHARACTER_ID.PARKOUR_APPRENTICE,
   });
   assert.ok(Object.isFrozen(runtime));
-  assert.equal(runtime.physicsBody, undefined);
-  assert.equal(runtime.renderer, undefined);
+  const publicRuntime = record(runtime, 'character runtime');
+  assert.equal(publicRuntime.physicsBody, undefined);
+  assert.equal(publicRuntime.renderer, undefined);
   const profile = createCharacterPhysicsProfile(registry.require(runtime.definitionId));
   assert.deepEqual(profile, {
     radius: 0.45,
@@ -284,13 +299,13 @@ test('MatchCore rejects incomplete assignments, unknown definitions and unsafe s
   }), /不可步行连通/);
 
   const unsafeSpawnArena = structuredClone(PHYSICS_POC_ARENA);
-  unsafeSpawnArena.spawns[0].x = 5.8;
+  (required(unsafeSpawnArena.spawns[0], '不安全出生点') as { x: number }).x = 5.8;
   assert.throws(() => createArenaV1MatchCore({
     config: { arena: unsafeSpawnArena },
   }), /spawn\[0\].*不安全/);
 
   const floatingSpawnArena = structuredClone(PHYSICS_POC_ARENA);
-  floatingSpawnArena.spawns[0].y = 1.2;
+  (required(floatingSpawnArena.spawns[0], '悬空出生点') as { y: number }).y = 1.2;
   assert.throws(() => createArenaV1MatchCore({
     config: { arena: floatingSpawnArena },
   }), /spawn\[0\].*不安全/);
