@@ -13,8 +13,8 @@ import {
   ARENA_STAGE9_BOT_SEED_STEP,
   createArenaStage9BotSeeds,
 } from './arena-bot-capability-seeds.js';
-import { MetricCollectorRegistry } from './metric-collector-registry.js';
-import { SimulationWorkloadRegistry } from './simulation-workload-registry.js';
+import { MetricCollectorRegistry } from '@number-strategy-jump/arena-experiment';
+import { SimulationWorkloadRegistry } from '@number-strategy-jump/arena-experiment';
 import {
   ARENA_BOT_ASSIGNMENT_DISTRIBUTION_COLLECTOR_ID,
   ARENA_BOT_ASSIGNMENT_DISTRIBUTION_COLLECTOR_VERSION,

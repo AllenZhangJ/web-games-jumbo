@@ -10,11 +10,11 @@ import {
   ARENA_EXPERIMENT_CASE_STATUS,
   createArenaExperimentReport,
 } from './experiment-report.js';
-import { MetricCollectorRegistry } from './metric-collector-registry.js';
+import { MetricCollectorRegistry } from '@number-strategy-jump/arena-experiment';
 import {
   SimulationWorkloadRegistry,
   assertSimulationCase,
-} from './simulation-workload-registry.js';
+} from '@number-strategy-jump/arena-experiment';
 
 export const SIMULATION_EXPERIMENT_RUNNER_STATE = Object.freeze({
   READY: 'ready',

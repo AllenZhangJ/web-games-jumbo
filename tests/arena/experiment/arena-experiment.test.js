@@ -15,12 +15,12 @@ import {
   createArenaExperimentReportBundle,
   readArenaExperimentReportBundle,
 } from '../../../src/arena/experiment/experiment-report-bundle.js';
-import { MetricCollectorRegistry } from '../../../src/arena/experiment/metric-collector-registry.js';
+import { MetricCollectorRegistry } from '@number-strategy-jump/arena-experiment';
 import {
   SIMULATION_EXPERIMENT_RUNNER_STATE,
   SimulationExperimentRunner,
 } from '../../../src/arena/experiment/simulation-runner.js';
-import { SimulationWorkloadRegistry } from '../../../src/arena/experiment/simulation-workload-registry.js';
+import { SimulationWorkloadRegistry } from '@number-strategy-jump/arena-experiment';
 import { createArenaMetricGate } from '@number-strategy-jump/arena-experiment';
 import {
   ARENA_MATCH_SUMMARY_COLLECTOR_ID,

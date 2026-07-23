@@ -5,8 +5,8 @@ import {
   ARENA_EXPERIMENT_SEED_SET_KIND,
   createArenaExperimentDefinition,
 } from '@number-strategy-jump/arena-experiment';
-import { MetricCollectorRegistry } from './metric-collector-registry.js';
-import { SimulationWorkloadRegistry } from './simulation-workload-registry.js';
+import { MetricCollectorRegistry } from '@number-strategy-jump/arena-experiment';
+import { SimulationWorkloadRegistry } from '@number-strategy-jump/arena-experiment';
 import {
   ARENA_MATCHCORE_INVARIANT_COLLECTOR_ID,
   ARENA_MATCHCORE_INVARIANT_COLLECTOR_VERSION,

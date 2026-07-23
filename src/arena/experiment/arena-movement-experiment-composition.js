@@ -9,8 +9,8 @@ import {
   createArenaExperimentReplaySeeds,
   createSortedArenaExperimentSeeds,
 } from '@number-strategy-jump/arena-experiment';
-import { MetricCollectorRegistry } from './metric-collector-registry.js';
-import { SimulationWorkloadRegistry } from './simulation-workload-registry.js';
+import { MetricCollectorRegistry } from '@number-strategy-jump/arena-experiment';
+import { SimulationWorkloadRegistry } from '@number-strategy-jump/arena-experiment';
 import {
   ARENA_MOVEMENT_STRESS_COLLECTOR_ID,
   ARENA_MOVEMENT_STRESS_COLLECTOR_VERSION,

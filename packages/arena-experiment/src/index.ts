@@ -31,6 +31,20 @@ export type {
   ArenaExperimentSeedSet,
   ArenaExperimentWorkloadReference,
 } from './experiment-definition.js';
+export { MetricCollectorRegistry } from './metric-collector-registry.js';
+export type {
+  ArenaMetricCollector,
+  ArenaMetricCollectorEntry,
+  ArenaMetricCollectorHandle,
+} from './metric-collector-registry.js';
+export {
+  SimulationWorkloadRegistry,
+  assertSimulationCase,
+} from './simulation-workload-registry.js';
+export type {
+  ArenaSimulationCase,
+  ArenaSimulationWorkloadEntry,
+} from './simulation-workload-registry.js';
 export {
   ARENA_METRIC_GATE_SCHEMA_VERSION,
   createArenaMetricGate,

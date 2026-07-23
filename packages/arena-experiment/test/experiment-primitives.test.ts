@@ -2,15 +2,44 @@ import { describe, expect, it } from 'vitest';
 import {
   assertArenaExperimentReplaySeedsPlanned,
   cloneArenaExperimentReplaySeeds,
+  createArenaExperimentDefinition,
   createArenaExperimentReplaySeeds,
   createArenaMetricGate,
   createContiguousArenaExperimentSeedRange,
   createSortedArenaExperimentSeeds,
   createSortedMetricCountRecord,
   incrementMetricCount,
+  MetricCollectorRegistry,
   metricRatioOrNull,
   readArenaMetricGate,
+  assertSimulationCase,
+  SimulationWorkloadRegistry,
 } from '../src/index.js';
+
+function createDefinition() {
+  return createArenaExperimentDefinition({
+    schemaVersion: 2,
+    id: 'experiment.test',
+    description: 'Experiment package boundary test',
+    metricSchemaVersion: 1,
+    candidate: {
+      id: 'candidate.test',
+      sourceCommit: '0123456789abcdef0123456789abcdef01234567',
+      sourceDirty: false,
+      matchConfig: {},
+      authority: {
+        matchSchemaVersion: 1,
+        physicsBackendVersion: 'physics.test',
+        configHash: '12345678',
+        ruleContentHash: '90abcdef',
+      },
+    },
+    seedSet: { kind: 'explicit', values: [1] },
+    workload: { id: 'workload.test', version: 1, parameters: {} },
+    collectors: [{ id: 'collector.test', version: 1, parameters: {} }],
+    limits: { maximumTicksPerCase: 10, maximumFailedCases: 0 },
+  });
+}
 
 describe('Arena experiment primitives', () => {
   it('creates stable metric counts and ratios without hiding an empty denominator', () => {
@@ -89,5 +118,78 @@ describe('Arena experiment primitives', () => {
 
     expect(() => readArenaMetricGate(metricData)).toThrow(/数据字段/);
     expect(reads).toBe(0);
+  });
+
+  it('snapshots registry arrays and callable instances without executing accessors', () => {
+    let entryReads = 0;
+    const entries = [undefined];
+    Object.defineProperty(entries, '0', {
+      enumerable: true,
+      get() {
+        entryReads += 1;
+        return {};
+      },
+    });
+    expect(() => new MetricCollectorRegistry(entries)).toThrow(/数据字段/);
+    expect(() => new SimulationWorkloadRegistry(entries)).toThrow(/数据字段/);
+    expect(entryReads).toBe(0);
+
+    let unsafeReads = 0;
+    const unsafeCollector = {
+      beginCase() {},
+      observeStep() {},
+      completeCase() {},
+      failCase() {},
+      getResult() { return {}; },
+      destroy() {},
+    };
+    Object.defineProperty(unsafeCollector, 'observeStep', {
+      enumerable: true,
+      get() {
+        unsafeReads += 1;
+        return () => {};
+      },
+    });
+    const unsafeRegistry = new MetricCollectorRegistry([{
+      id: 'collector.test',
+      version: 1,
+      validateParameters: () => ({}),
+      create: () => unsafeCollector,
+    }]);
+    expect(() => unsafeRegistry.createCollectors(createDefinition())).toThrow(/数据方法/);
+    expect(unsafeReads).toBe(0);
+  });
+
+  it('keeps validated collector and simulation methods stable after plugin mutation', () => {
+    const collector = {
+      beginCase() {},
+      observeStep() {},
+      completeCase() {},
+      failCase() {},
+      getResult() { return { stable: true }; },
+      destroy() {},
+    };
+    const registry = new MetricCollectorRegistry([{
+      id: 'collector.test',
+      version: 1,
+      validateParameters: () => ({}),
+      create: () => collector,
+    }]);
+    const [handle] = registry.createCollectors(createDefinition());
+    expect(handle).toBeDefined();
+    collector.getResult = () => ({ stable: false });
+    expect(handle?.instance.getResult()).toEqual({ stable: true });
+
+    const simulationCase = {
+      getMetadata() { return {}; },
+      getSnapshot() { return {}; },
+      isComplete() { return false; },
+      step() { return 'stable'; },
+      exportResult() { return {}; },
+      destroy() {},
+    };
+    const stableCase = assertSimulationCase(simulationCase);
+    simulationCase.step = () => 'mutated';
+    expect(stableCase.step()).toBe('stable');
   });
 });
