@@ -34,6 +34,11 @@ export {
   ARENA_GOLDEN_REPLAY_MAXIMUM_ENTRIES,
   createArenaGoldenReplayManifest,
 } from './golden-replay-manifest.js';
+export { ArenaGoldenReplayScenarioRegistry } from './golden-replay-scenario-registry.js';
+export type {
+  ArenaGoldenReplayScenarioEntry,
+  ArenaGoldenReplayScenarioReference,
+} from './golden-replay-scenario-registry.js';
 export type {
   ArenaGoldenReplayManifest,
   ArenaGoldenReplayManifestEntry,

@@ -6,7 +6,7 @@ import {
 import { replayMatch } from '../replay.js';
 import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 import { createArenaGoldenReplayManifest } from '@number-strategy-jump/arena-regression';
-import { ArenaGoldenReplayScenarioRegistry } from './golden-replay-scenario-registry.js';
+import { ArenaGoldenReplayScenarioRegistry } from '@number-strategy-jump/arena-regression';
 
 export const ARENA_GOLDEN_REPLAY_VERIFICATION_SCHEMA_VERSION = 1;
 
