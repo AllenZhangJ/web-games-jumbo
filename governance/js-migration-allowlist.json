@@ -25,7 +25,6 @@
     "tests/arena/presentation/input-pilot.test.js",
     "tests/arena/presentation/presentation-foundation.test.js",
     "tests/arena/presentation/presentation-quality-performance.test.js",
-    "tests/arena/presentation/product-canvas-ui-surface.test.js",
     "tests/arena/presentation/product-presentation-session.test.js",
     "tests/arena/presentation/product-presentation.test.js",
     "tests/arena/presentation/product-renderer.test.js",

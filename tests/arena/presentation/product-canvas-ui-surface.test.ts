@@ -28,16 +28,27 @@ function fake2dContext() {
   ].map((name) => [name, () => {}]));
 }
 
+interface FakeCanvas {
+  width: number;
+  height: number;
+  getContext(kind: string): ReturnType<typeof fake2dContext> | null;
+}
+
+interface CanvasSize {
+  readonly width: number;
+  readonly height: number;
+}
+
 function platformHarness() {
-  const canvases = [];
+  const canvases: FakeCanvas[] = [];
   return {
     canvases,
-    createOffscreenCanvas(width, height) {
+    createOffscreenCanvas(width: number | CanvasSize, height?: number) {
       const canvas = {
         width: typeof width === 'object' ? width.width : width,
-        height: typeof width === 'object' ? width.height : height,
-        getContext: (kind) => kind === '2d' ? fake2dContext() : null,
-      };
+        height: typeof width === 'object' ? width.height : height ?? 0,
+        getContext: (kind: string) => kind === '2d' ? fake2dContext() : null,
+      } satisfies FakeCanvas;
       canvases.push(canvas);
       return canvas;
     },
@@ -102,7 +113,9 @@ test('ProductCanvasUiSurface draws and hit-tests public UI in input-buffer coord
   assert.equal(surface.requiresCompositeFrame(), true);
   assert.deepEqual(surface.getInputViewport(), inputViewport);
   const layout = createProductCanvasLayout(createProductUiSceneModel(model), viewport);
-  const primary = layout.actions[0].rect;
+  const [primaryAction] = layout.actions;
+  assert.ok(primaryAction);
+  const primary = primaryAction.rect;
   assert.deepEqual(surface.hitTestUi({
     x: (primary.x + primary.width / 2) * 2,
     y: (primary.y + primary.height / 2) * 2,
@@ -173,6 +186,8 @@ test('Product Canvas layout preserves a lone secondary action semantic', () => {
   }));
   const layout = createProductCanvasLayout(model, { width: 390, height: 844 });
   assert.equal(layout.actions.length, 1);
-  assert.equal(layout.actions[0].kind, 'secondary');
-  assert.deepEqual(layout.actions[0].intent, { id: 'go-back' });
+  const [secondaryAction] = layout.actions;
+  assert.ok(secondaryAction);
+  assert.equal(secondaryAction.kind, 'secondary');
+  assert.deepEqual(secondaryAction.intent, { id: 'go-back' });
 });
