@@ -16,7 +16,7 @@ import { runArenaChildProcess } from '../../../scripts/lib/arena-child-process.t
 import {
   describeArenaRegressionEvidenceProcesses,
   produceArenaRegressionEvidenceReport,
-} from '../../../scripts/lib/arena-regression-evidence-producer.mjs';
+} from '../../../scripts/lib/arena-regression-evidence-producer.ts';
 
 const COMMIT = 'a'.repeat(40);
 

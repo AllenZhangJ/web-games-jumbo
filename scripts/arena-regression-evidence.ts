@@ -10,27 +10,33 @@ import {
   createArenaStage9RegressionEvidenceV1Definition,
   createArenaStage9RegressionEvidenceV1DefinitionHash,
 } from '@number-strategy-jump/arena-regression';
-import { writeArenaEvidenceFileExclusive } from './lib/arena-atomic-evidence-file.ts';
+import { writeArenaEvidenceFileExclusive } from './lib/arena-atomic-evidence-file.js';
 import {
   assertArenaGitSourceIdentityStable,
   readArenaGitSourceIdentity,
-} from './arena-git-source-identity.ts';
+} from './arena-git-source-identity.js';
 import {
   describeArenaRegressionEvidenceProcesses,
   produceArenaRegressionEvidenceReport,
-} from './lib/arena-regression-evidence-producer.mjs';
+} from './lib/arena-regression-evidence-producer.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-function parseArgs(values) {
+type RegressionEvidenceCliOptions =
+  | Readonly<{ describe: true }>
+  | Readonly<{ describe: false; output: string }>;
+
+function parseArgs(values: readonly string[]): RegressionEvidenceCliOptions {
   if (values.length === 1 && values[0] === '--describe') return Object.freeze({ describe: true });
   if (values.length === 2 && values[0] === '--output') {
-    return Object.freeze({ describe: false, output: path.resolve(values[1]) });
+    const output = values[1];
+    if (!output) throw new Error('--output 必须提供路径。');
+    return Object.freeze({ describe: false, output: path.resolve(output) });
   }
-  throw new Error('用法：node scripts/arena-regression-evidence.mjs --describe | --output <repo 外的 .json>');
+  throw new Error('用法：npm run arena:regression:evidence -- --describe | --output <repo 外的 .json>');
 }
 
-function assertExternalJsonOutput(output, repositoryRoot = root) {
+function assertExternalJsonOutput(output: string, repositoryRoot: string = root): void {
   if (path.extname(output).toLowerCase() !== '.json') {
     throw new RangeError('Regression evidence output 必须是 .json 文件。');
   }
@@ -40,17 +46,21 @@ function assertExternalJsonOutput(output, repositoryRoot = root) {
   }
 }
 
-async function assertOutputAbsent(output) {
+async function assertOutputAbsent(output: string): Promise<void> {
   try {
     await lstat(output);
-  } catch (error) {
-    if (error?.code === 'ENOENT') return;
+  } catch (error: unknown) {
+    if (
+      error instanceof Error
+      && 'code' in error
+      && error.code === 'ENOENT'
+    ) return;
     throw error;
   }
   throw new Error(`Regression evidence output 已存在：${output}`);
 }
 
-async function main() {
+async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
   if (options.describe) {
     console.log(JSON.stringify({
@@ -96,7 +106,7 @@ async function main() {
   try {
     const afterPublish = await readArenaGitSourceIdentity(root);
     assertArenaGitSourceIdentityStable(initialIdentity, afterPublish);
-  } catch (error) {
+  } catch (error: unknown) {
     await unlink(canonicalOutput).catch(() => {});
     throw error;
   }
@@ -111,7 +121,7 @@ async function main() {
   }, null, 2));
 }
 
-main().catch((error) => {
+void main().catch((error: unknown) => {
   console.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;
 });
