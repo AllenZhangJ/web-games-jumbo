@@ -408,6 +408,32 @@ test('Arena Stage 9 experiment orchestration stays headless and outside presenta
   }
 });
 
+test('Arena balance composition stays headless and depends only on strict content and experiment contracts', async () => {
+  const packageDefinition = JSON.parse(await readFile(
+    path.resolve('packages/arena-balance/package.json'),
+    'utf8',
+  ));
+  assert.deepEqual(
+    Object.keys(packageDefinition.dependencies).sort(),
+    [
+      '@number-strategy-jump/arena-contracts',
+      '@number-strategy-jump/arena-experiment',
+      '@number-strategy-jump/arena-v1-content',
+    ],
+    'arena-balance 只能依赖严格契约、实验基础与 V1 内容。',
+  );
+  const files = await listJavaScript(path.resolve('packages/arena-balance/src'));
+  assert.ok(files.length >= 2);
+  for (const file of files) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /(?:from\s+['"](?:node:|three|[^'"]*(?:presentation|renderer|platform|entry)[^'"]*)['"]|Date\.now|Math\.random|\bperformance\s*(?:\.|\[)|setTimeout|setInterval|requestAnimationFrame|\b(?:window|document|navigator)\b|\b(?:tt|wx)\s*\.)/,
+      `${file} 应保持为无宿主、无渲染、无墙钟的平衡实验组合层。`,
+    );
+  }
+});
+
 test('Arena Stage 9 regression corpus stays headless and keeps Node IO in scripts', async () => {
   const packageDefinition = JSON.parse(await readFile(
     path.resolve('packages/arena-regression/package.json'),

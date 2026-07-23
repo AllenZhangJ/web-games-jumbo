@@ -71,7 +71,6 @@
     "src/arena/experiment/arena-movement-experiment-composition.js",
     "src/arena/experiment/arena-movement-invariants.js",
     "src/arena/experiment/arena-movement-stress-collector.js",
-    "src/arena/experiment/arena-stage9-balance-policies.js",
     "src/arena/experiment/arena-v1-benchmark-player-strategy.js",
     "src/arena/experiment/arena-v1-bot-capability-workload.js",
     "src/arena/experiment/arena-v1-experiment-composition.js",

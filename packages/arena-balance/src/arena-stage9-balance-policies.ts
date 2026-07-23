@@ -1,13 +1,14 @@
+import { assertIntegerAtLeast } from '@number-strategy-jump/arena-contracts';
+import {
+  ARENA_BALANCE_POLICY_SCHEMA_VERSION,
+  createArenaBalancePolicy,
+  createArenaBotCapabilityGatePolicyDefinition,
+} from '@number-strategy-jump/arena-experiment';
+import type { ArenaBalancePolicy } from '@number-strategy-jump/arena-experiment';
 import {
   STAGE4_ACTION_ID,
   STAGE4_EQUIPMENT_ID,
 } from '@number-strategy-jump/arena-v1-content';
-import { assertIntegerAtLeast } from '@number-strategy-jump/arena-contracts';
-import {
-  createArenaBotCapabilityGatePolicyDefinition,
-  ARENA_BALANCE_POLICY_SCHEMA_VERSION,
-  createArenaBalancePolicy,
-} from '@number-strategy-jump/arena-experiment';
 
 export const ARENA_STAGE9_BALANCE_BASELINE_CASE_COUNT = 300;
 
@@ -61,7 +62,7 @@ const BOT_GATE_TEMPLATE = Object.freeze({
   scoreRateToleranceScale: 0.5,
 });
 
-function scaledMinimum(baselineValue, completedPairedCases) {
+function scaledMinimum(baselineValue: number, completedPairedCases: number): number {
   return Math.max(
     1,
     Math.ceil(
@@ -70,7 +71,9 @@ function scaledMinimum(baselineValue, completedPairedCases) {
   );
 }
 
-export function createArenaStage9BalancePolicy(completedPairedCasesValue) {
+export function createArenaStage9BalancePolicy(
+  completedPairedCasesValue: unknown,
+): Readonly<ArenaBalancePolicy> {
   const completedPairedCases = assertIntegerAtLeast(
     completedPairedCasesValue,
     1,
@@ -88,7 +91,7 @@ export function createArenaStage9BalancePolicy(completedPairedCasesValue) {
   });
 }
 
-export function createArenaStage9BalanceBotGatePolicy(completedPairedCasesValue) {
+export function createArenaStage9BalanceBotGatePolicy(completedPairedCasesValue: unknown) {
   const completedPairedCases = assertIntegerAtLeast(
     completedPairedCasesValue,
     1,

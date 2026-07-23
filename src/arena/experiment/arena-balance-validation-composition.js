@@ -11,7 +11,7 @@ import {
 import {
   createArenaStage9BalanceBotGatePolicy,
   createArenaStage9BalancePolicy,
-} from './arena-stage9-balance-policies.js';
+} from '@number-strategy-jump/arena-balance';
 
 export const ARENA_STAGE9_BALANCE_VALIDATION_EXPERIMENT_ID =
   'arena.stage9.s9.3b.balance-lives-11-validation.v1';
