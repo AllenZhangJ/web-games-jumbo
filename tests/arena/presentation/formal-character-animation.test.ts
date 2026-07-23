@@ -8,6 +8,8 @@ import {
   ARENA_ANIMATION_SEMANTIC,
   ARENA_ANIMATION_SEMANTIC_IDS,
   ARENA_ANIMATION_SOURCE_KIND,
+  type ArenaAnimationSemantic,
+  type PresentationAssetDefinition,
 } from '@number-strategy-jump/arena-presentation-contracts';
 import {
   CharacterAnimationController,
@@ -44,13 +46,35 @@ function clips() {
   return CLIP_NAMES.map((name) => new THREE.AnimationClip(name, 2, []));
 }
 
-function glbJson(bytes) {
-  assert.equal(bytes.subarray(0, 4).toString('utf8'), 'glTF');
-  const jsonLength = bytes.readUInt32LE(12);
-  return JSON.parse(bytes.subarray(20, 20 + jsonLength).toString('utf8'));
+interface GlbJson {
+  readonly nodes: readonly Readonly<{ name?: string }>[];
+  readonly animations: readonly Readonly<{ name?: string }>[];
+  readonly images: readonly Readonly<{ uri?: string; bufferView?: number }>[];
 }
 
-function snapshot(overrides = {}) {
+interface FakeImage {
+  onerror?: (error: Error) => void;
+  onload?: () => void;
+  src?: string;
+}
+
+function required<T>(value: T | null | undefined, name: string): T {
+  assert.ok(value != null, `${name} 不存在。`);
+  return value;
+}
+
+function record(value: unknown, name: string): Readonly<Record<string, unknown>> {
+  assert.ok(value !== null && typeof value === 'object' && !Array.isArray(value), `${name} 必须是对象。`);
+  return value as Readonly<Record<string, unknown>>;
+}
+
+function glbJson(bytes: Buffer): GlbJson {
+  assert.equal(bytes.subarray(0, 4).toString('utf8'), 'glTF');
+  const jsonLength = bytes.readUInt32LE(12);
+  return JSON.parse(bytes.subarray(20, 20 + jsonLength).toString('utf8')) as GlbJson;
+}
+
+function snapshot(overrides: Readonly<Record<string, unknown>> = {}) {
   return {
     velocity: { x: 0, y: 0, z: 0 },
     equipment: null,
@@ -63,7 +87,11 @@ function snapshot(overrides = {}) {
   };
 }
 
-function animation(baseSemantic, sourceKey, overrides = {}) {
+function animation(
+  baseSemantic: ArenaAnimationSemantic,
+  sourceKey: string,
+  overrides: Readonly<Record<string, unknown>> = {},
+) {
   return {
     semantics: {
       baseSemantic,
@@ -106,7 +134,10 @@ test('Gameplay V2 formal human uses pinned GLTF assets and complete clip semanti
     true,
   );
 
-  const equipmentSlot = human.attachmentSlots.find(({ id }) => id === 'equipment');
+  const equipmentSlot = required(
+    human.attachmentSlots.find(({ id }) => id === 'equipment'),
+    'equipment attachment slot',
+  );
   assert.equal(equipmentSlot.nodeName, 'handslot.r');
   assert.deepEqual(equipmentSlot.allowedAssetIds, [
     ARENA_GAMEPLAY_V2_ASSET_ID.CHAIN,
@@ -143,8 +174,9 @@ test('formal GLB bytes stay pinned and retain required bones and clips', async (
     const nodeNames = new Set(json.nodes.map(({ name }) => name).filter(Boolean));
     const animationNames = new Set(json.animations.map(({ name }) => name));
     assert.equal(json.images.length, 1);
-    assert.equal(json.images[0].uri, entry.textureUri);
-    assert.equal(Object.hasOwn(json.images[0], 'bufferView'), false);
+    const image = required(json.images[0], 'GLB image');
+    assert.equal(image.uri, entry.textureUri);
+    assert.equal(Object.hasOwn(image, 'bufferView'), false);
     assert.equal(nodeNames.has('handslot.r'), true);
     assert.equal(nodeNames.has('handslot.l'), true);
     for (const clipName of CLIP_NAMES) assert.equal(animationNames.has(clipName), true, clipName);
@@ -181,34 +213,38 @@ test('formal external textures and shield GLB stay pinned for host-native decodi
     'a61bcd83ccac9bc8596bf09894867ca491487d7a4b0662bb64dca2d1b19e790d',
   );
   const shieldJson = glbJson(shieldBytes);
-  assert.equal(shieldJson.images[0].uri, 'shield_texture.png');
-  assert.equal(Object.hasOwn(shieldJson.images[0], 'bufferView'), false);
+  const shieldImage = required(shieldJson.images[0], 'shield GLB image');
+  assert.equal(shieldImage.uri, 'shield_texture.png');
+  assert.equal(Object.hasOwn(shieldImage, 'bufferView'), false);
 });
 
 test('platform texture loader decodes through host images and retries mini-game asset paths', async () => {
-  const paths = [];
-  const managerEvents = [];
+  const paths: string[] = [];
+  const managerEvents: [string, string][] = [];
   const textureLoader = new PlatformTextureLoader({
     createImage: () => {
-      const image = {};
+      const image: FakeImage = {};
       Object.defineProperty(image, 'src', {
-        set(value) {
+        set(value: string) {
           paths.push(value);
           queueMicrotask(() => {
-            if (value.startsWith('./')) image.onerror(new Error('prefixed path unsupported'));
-            else image.onload();
+            if (value.startsWith('./')) {
+              required(image.onerror, 'image error handler')(
+                new Error('prefixed path unsupported'),
+              );
+            } else required(image.onload, 'image load handler')();
           });
         },
       });
-      return image;
+      return image as unknown as HTMLImageElement;
     },
     manager: {
-      itemStart: (url) => managerEvents.push(['start', url]),
-      itemEnd: (url) => managerEvents.push(['end', url]),
-      itemError: (url) => managerEvents.push(['error', url]),
+      itemStart: (url: string) => { managerEvents.push(['start', url]); },
+      itemEnd: (url: string) => { managerEvents.push(['end', url]); },
+      itemError: (url: string) => { managerEvents.push(['error', url]); },
     },
   });
-  const texture = await new Promise((resolve, reject) => {
+  const texture = await new Promise<THREE.Texture>((resolve, reject) => {
     textureLoader.load('./assets/arena/rogue_texture.png', resolve, undefined, reject);
   });
   assert.equal(texture.isTexture, true);
@@ -228,16 +264,16 @@ test('platform texture loader decodes through host images and retries mini-game 
 });
 
 test('GLTF loader parses injected platform bytes instead of requiring fetch', async () => {
-  const observed = [];
+  const observed: unknown[][] = [];
   const scene = new THREE.Group();
   const loader = new GltfPresentationAssetLoader({
-    readAssetBytes: async (sourceKey) => {
+    readAssetBytes: async (sourceKey: string) => {
       observed.push(['read', sourceKey]);
       return new Uint8Array([1, 2, 3, 4]).buffer;
     },
     loader: {
       async loadAsync() { throw new Error('fetch path must not be used'); },
-      async parseAsync(bytes, basePath) {
+      async parseAsync(bytes: ArrayBuffer, basePath: string) {
         observed.push(['parse', bytes.byteLength, basePath]);
         return { scene, animations: [] };
       },
@@ -317,7 +353,13 @@ test('formal character controller resolves locomotion, jump phases, hit directio
   assert.equal(controller.getDebugSnapshot().baseClipName, 'Hit_B');
   assert.equal(controller.getDebugSnapshot().baseMotionPhase, 'hit-back');
 
-  const timing = ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT.actions[STAGE4_ACTION_ID.HAMMER_SMASH].timing;
+  const timing = record(
+    required(
+      ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT.actions[STAGE4_ACTION_ID.HAMMER_SMASH],
+      STAGE4_ACTION_ID.HAMMER_SMASH,
+    ).timing,
+    'hammer timing',
+  );
   controller.sync({
     snapshot: snapshot({
       equipment: { definitionId: 'hammer' },
@@ -337,7 +379,7 @@ test('formal character controller resolves locomotion, jump phases, hit directio
   assert.equal(typeof actionStart.overlayTrackCount, 'number');
   assert.equal(
     actionStart.overlayTimeSeconds,
-    actionStart.overlayDurationSeconds * 0.38,
+    (actionStart.overlayDurationSeconds as number) * 0.38,
   );
 
   controller.dispose();
@@ -346,13 +388,13 @@ test('formal character controller resolves locomotion, jump phases, hit directio
 });
 
 test('GLTF character factory deduplicates loads, creates independent views and releases leases', async () => {
-  const releaseCounts = new Map();
-  const loadCounts = new Map();
+  const releaseCounts = new Map<string, number>();
+  const loadCounts = new Map<string, number>();
   const loader = {
-    async load(definition) {
+    async load(definition: PresentationAssetDefinition) {
       loadCounts.set(definition.id, (loadCounts.get(definition.id) ?? 0) + 1);
       const scene = new THREE.Group();
-      const animations = [];
+      const animations: THREE.AnimationClip[] = [];
       if (
         definition.id === ARENA_GAMEPLAY_V2_ASSET_ID.PARKOUR_APPRENTICE
         || definition.id === ARENA_GAMEPLAY_V2_ASSET_ID.CLOCKWORK_WARRIOR
@@ -435,7 +477,7 @@ test('GLTF character factory deduplicates loads, creates independent views and r
 
 test('GLTF character factory fails soft to the articulated programmatic character', async () => {
   const loader = {
-    async load(definition) {
+    async load(definition: PresentationAssetDefinition) {
       if (definition.id === ARENA_GAMEPLAY_V2_ASSET_ID.PARKOUR_APPRENTICE) {
         throw new Error('synthetic model outage');
       }
