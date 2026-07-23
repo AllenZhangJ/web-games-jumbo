@@ -6,16 +6,21 @@ import {
   UNLOCK_DEFINITION_SCHEMA_VERSION,
   UNLOCK_KIND,
   createMatchRewardDefinition,
+  type UnlockDefinitionValue,
 } from '@number-strategy-jump/arena-progression';
 import {
   ARENA_V1_MATCH_REWARD_DEFINITION,
   ARENA_V1_MATCH_REWARD_ID,
   ARENA_V1_PLAYER_PROFILE_DEFINITION,
 } from '@number-strategy-jump/arena-product-v1-content';
-import { createProductMatchResult } from '@number-strategy-jump/arena-product-contracts';
+import {
+  createProductMatchResult,
+  type ProductMatchResult,
+} from '@number-strategy-jump/arena-product-contracts';
 import {
   advancePlayerProfile,
   createPlayerProfile,
+  type PlayerProfile,
 } from '@number-strategy-jump/arena-profile-contracts';
 import { PlayerProfileService } from '@number-strategy-jump/arena-profile-service';
 import {
@@ -24,7 +29,15 @@ import {
 } from '@number-strategy-jump/arena-product-progression';
 import { TEST_MATCH_CONTENT_PUBLIC_VIEW } from './stage8-test-content.js';
 
-function matchResult({ winnerId = 'player-1', seed = 7 } = {}) {
+interface MatchResultOptions {
+  readonly winnerId?: string | null;
+  readonly seed?: number;
+}
+
+function matchResult({
+  winnerId = 'player-1',
+  seed = 7,
+}: MatchResultOptions = {}): ProductMatchResult {
   return createProductMatchResult({
     matchSeed: seed,
     opponent: {
@@ -53,7 +66,18 @@ function matchResult({ winnerId = 'player-1', seed = 7 } = {}) {
   });
 }
 
-function unlock({ id, kind, contentId, requiredExperience, prerequisiteIds = [] }) {
+function unlock({
+  id,
+  kind,
+  contentId,
+  requiredExperience,
+  prerequisiteIds = [],
+}: Omit<
+  UnlockDefinitionValue,
+  'schemaVersion' | 'contentVersion' | 'prerequisiteIds'
+> & {
+  readonly prerequisiteIds?: readonly string[];
+}): UnlockDefinitionValue {
   return {
     schemaVersion: UNLOCK_DEFINITION_SCHEMA_VERSION,
     id,
@@ -65,7 +89,9 @@ function unlock({ id, kind, contentId, requiredExperience, prerequisiteIds = [] 
   };
 }
 
-function progressionRegistry(unlocks = []) {
+function progressionRegistry(
+  unlocks: readonly UnlockDefinitionValue[] = [],
+): ProgressionRegistry {
   return new ProgressionRegistry({
     rewards: [ARENA_V1_MATCH_REWARD_DEFINITION],
     unlocks,
@@ -80,10 +106,10 @@ function repositoryHarness() {
     open() { return profile; },
     getSnapshot() { return profile; },
     renewLease() { return true; },
-    compareAndSet(next, expectedRevision) {
+    compareAndSet(next: unknown, expectedRevision: unknown) {
       assert.equal(expectedRevision, profile.revision);
       commits += 1;
-      profile = next;
+      profile = createPlayerProfile(ARENA_V1_PLAYER_PROFILE_DEFINITION, next);
       return { committed: true, reason: null, headUpdated: true };
     },
     destroy() {},
@@ -99,8 +125,12 @@ test('Stage 8 reward definitions and registries reject ambiguous or cyclic conte
   });
   const registry = progressionRegistry([base]);
   assert.equal(Object.isFrozen(registry.getRewards()), true);
-  assert.equal(registry.getReward(ARENA_V1_MATCH_REWARD_ID).completionExperience, 100);
-  assert.equal(registry.getUnlock('base').contentId, 'paper-cape');
+  const reward = registry.getReward(ARENA_V1_MATCH_REWARD_ID);
+  const baseUnlock = registry.getUnlock('base');
+  assert.ok(reward);
+  assert.ok(baseUnlock);
+  assert.equal(reward.completionExperience, 100);
+  assert.equal(baseUnlock.contentId, 'paper-cape');
   assert.throws(() => createMatchRewardDefinition({
     ...ARENA_V1_MATCH_REWARD_DEFINITION,
     schemaVersion: MATCH_REWARD_DEFINITION_SCHEMA_VERSION,
@@ -126,7 +156,10 @@ test('Stage 8 reward definitions and registries reject ambiguous or cyclic conte
 test('RewardResolver applies completion, winner, draw and cap rules deterministically', () => {
   const registry = progressionRegistry();
   const initial = createPlayerProfile(ARENA_V1_PLAYER_PROFILE_DEFINITION);
-  const resolve = (result, profile = initial) => resolveMatchReward({
+  const resolve = (
+    result: ProductMatchResult,
+    profile: PlayerProfile = initial,
+  ) => resolveMatchReward({
     registry,
     rewardDefinitionId: ARENA_V1_MATCH_REWARD_ID,
     profileDefinition: ARENA_V1_PLAYER_PROFILE_DEFINITION,

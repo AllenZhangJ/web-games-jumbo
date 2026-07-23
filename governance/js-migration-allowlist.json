@@ -37,7 +37,6 @@
     "tests/arena/product/stage8-product-session.test.js",
     "tests/arena/product/stage8-product-state.test.js",
     "tests/arena/product/stage8-profile-persistence.test.js",
-    "tests/arena/product/stage8-progression.test.js",
     "tests/arena/release-external-evidence.test.js",
     "tests/arena/release-readiness.test.js",
     "tests/arena/replay.test.js",
