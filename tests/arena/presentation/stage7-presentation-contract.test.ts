@@ -32,16 +32,29 @@ const CAMERA_MODEL = Object.freeze({
   }),
 });
 
-function facingAtDegrees(degrees) {
+function required<T>(value: T, name: string): NonNullable<T> {
+  assert.ok(value != null, `${name} 不存在。`);
+  return value as NonNullable<T>;
+}
+
+function record(value: unknown, name: string): Record<string, unknown> {
+  assert.ok(value !== null && typeof value === 'object' && !Array.isArray(value), `${name} 必须是对象。`);
+  return value as Record<string, unknown>;
+}
+
+function facingAtDegrees(degrees: number) {
   const radians = degrees * Math.PI / 180;
   return { x: Math.sin(radians), z: Math.cos(radians) };
 }
 
 function definition() {
-  return ARENA_V1_GREYBOX_CONTENT.characterPresentationRegistry.list()[0];
+  return required(
+    ARENA_V1_GREYBOX_CONTENT.characterPresentationRegistry.list()[0],
+    '默认角色表现定义',
+  );
 }
 
-function participant(overrides = {}) {
+function participant(overrides: Readonly<Record<string, unknown>> = {}) {
   const presentation = definition();
   return {
     id: 'player-1',
@@ -71,12 +84,19 @@ function participant(overrides = {}) {
   };
 }
 
-function frame(tick, participantValue, {
+interface FrameOptions {
+  readonly events?: readonly unknown[];
+  readonly phase?: string;
+  readonly result?: unknown;
+  readonly matchSeed?: number;
+}
+
+function frame(tick: number, participantValue: unknown, {
   events = [],
   phase = 'running',
   result = null,
   matchSeed = 77,
-} = {}) {
+}: FrameOptions = {}) {
   return {
     source: { matchSeed, tick },
     phase,
@@ -108,32 +128,32 @@ test('Stage 7 character and asset definitions are immutable, complete and refere
     'fallback 优先级必须保留声明顺序',
   );
   assert.throws(() => {
-    definition().attachmentSlots[0].nodeName = 'tampered';
+    Object.assign(required(definition().attachmentSlots[0], '首个挂点'), { nodeName: 'tampered' });
   }, /read only|Cannot assign/i);
 
   const cyclic = structuredClone(definition().toJSON());
-  cyclic.id = 'arena.character-presentation.cyclic';
-  cyclic.animationMap.idle.fallbackSemantics = ['walk'];
+  Reflect.set(cyclic, 'id', 'arena.character-presentation.cyclic');
+  Reflect.set(cyclic.animationMap.idle, 'fallbackSemantics', ['walk']);
   assert.throws(() => createCharacterPresentationDefinition(cyclic), /fallback 不能形成循环/);
 
   const incomplete = structuredClone(definition().toJSON());
-  incomplete.id = 'arena.character-presentation.incomplete';
-  delete incomplete.animationMap.draw;
+  Reflect.set(incomplete, 'id', 'arena.character-presentation.incomplete');
+  Reflect.deleteProperty(incomplete.animationMap, 'draw');
   assert.throws(
     () => createCharacterPresentationDefinition(incomplete),
     /完整定义全部 AnimationSemantic/,
   );
 
   const duplicateDefault = structuredClone(definition().toJSON());
-  duplicateDefault.id = 'arena.character-presentation.duplicate-default';
+  Reflect.set(duplicateDefault, 'id', 'arena.character-presentation.duplicate-default');
   assert.throws(() => new CharacterPresentationRegistry({
     assetRegistry,
     definitions: [definition(), duplicateDefault],
   }), /存在多个默认表现/);
 
   const dangling = structuredClone(definition().toJSON());
-  dangling.id = 'arena.character-presentation.dangling';
-  dangling.modelAssetId = 'missing-model';
+  Reflect.set(dangling, 'id', 'arena.character-presentation.dangling');
+  Reflect.set(dangling, 'modelAssetId', 'missing-model');
   assert.throws(() => new CharacterPresentationRegistry({
     assetRegistry,
     definitions: [dangling],
@@ -243,7 +263,7 @@ test('animation semantic resolver keeps locomotion, airborne memory, overlays an
 
 test('six-sector direction resolution is camera-relative, stable at boundaries and lifecycle-safe', () => {
   const resolver = new SixSectorDirectionResolver(definition().direction);
-  const resolve = (degrees, options = {}) => resolver.resolve({
+  const resolve = (degrees: number, options: Readonly<Record<string, unknown>> = {}) => resolver.resolve({
     facing: facingAtDegrees(degrees),
     cameraBasis: CAMERA_MODEL.inputBasis,
     ...options,
@@ -275,7 +295,7 @@ test('six-sector direction resolution is camera-relative, stable at boundaries a
 });
 
 test('CharacterViewRuntime owns one resolver/view and fails closed on view errors', () => {
-  const calls = [];
+  const calls: Record<string, unknown>[] = [];
   let disposed = 0;
   const view = {
     root: { position: { x: 0, y: 0, z: 0 } },
@@ -283,8 +303,8 @@ test('CharacterViewRuntime owns one resolver/view and fails closed on view error
       proceduralKeys: ARENA_ANIMATION_SEMANTIC_IDS,
       clipKeys: [],
     }),
-    sync: (actor, options) => calls.push({ actor, options }),
-    update: (delta) => calls.push({ delta }),
+    sync: (actor: unknown, options: unknown) => { calls.push({ actor, options }); },
+    update: (delta: unknown) => { calls.push({ delta }); },
     getDebugSnapshot: () => Object.freeze({ kind: 'fake' }),
     dispose: () => { disposed += 1; },
   };
@@ -297,9 +317,13 @@ test('CharacterViewRuntime owns one resolver/view and fails closed on view error
   const actor = participant();
   runtime.sync(frame(0, actor), actor, { snap: true, cameraModel: CAMERA_MODEL });
   runtime.update(1 / 60);
-  assert.equal(calls[0].options.animation.baseBinding.sourceKey, 'idle');
-  assert.equal(calls[0].options.snap, true);
-  assert.equal(runtime.getDebugSnapshot().view.kind, 'fake');
+  const firstCall = required(calls[0], '首个 View 调用');
+  const firstOptions = record(firstCall.options, '首个 View 调用选项');
+  const animation = record(firstOptions.animation, '首个 View 动画选项');
+  const baseBinding = record(animation.baseBinding, '基础动画绑定');
+  assert.equal(baseBinding.sourceKey, 'idle');
+  assert.equal(firstOptions.snap, true);
+  assert.equal(record(runtime.getDebugSnapshot().view, 'View 调试快照').kind, 'fake');
   runtime.dispose();
   runtime.dispose();
   assert.equal(disposed, 1);
@@ -344,7 +368,7 @@ test('CharacterViewRuntime owns one resolver/view and fails closed on view error
 
 test('CharacterViewRuntime snapshots view methods, rejects accessors and retries failed cleanup', () => {
   const actor = participant();
-  const calls = [];
+  const calls: string[] = [];
   let disposeAttempts = 0;
   const mutableView = {
     root: { position: { x: 0, y: 0, z: 0 } },
@@ -413,21 +437,21 @@ test('CharacterViewRuntime snapshots view methods, rejects accessors and retries
 });
 
 test('CharacterViewRegistry detaches removed roots and closes every runtime after sync failure', () => {
-  const roots = [];
+  const roots: unknown[] = [];
   const root = {
-    add: (value) => { roots.push(value); },
-    remove: (value) => {
+    add: (value: unknown) => { roots.push(value); },
+    remove: (value: unknown) => {
       const index = roots.indexOf(value);
       if (index >= 0) roots.splice(index, 1);
     },
   };
-  const disposeCalls = new Map();
+  const disposeCalls = new Map<string, number>();
   let throwOnSync = false;
   const registry = new CharacterViewRegistry(root, {
     presentationRegistry: ARENA_V1_GREYBOX_CONTENT.characterPresentationRegistry,
     actionPresentations: ARENA_V1_GREYBOX_CONTENT.actions,
     viewFactory: {
-      create: ({ participantId }) => ({
+      create: ({ participantId }: Readonly<{ participantId: string }>) => ({
         root: { position: { x: 0, y: 0, z: 0 } },
         getAnimationCapabilities: () => ({
           proceduralKeys: ARENA_ANIMATION_SEMANTIC_IDS,
@@ -471,12 +495,13 @@ test('CharacterViewRegistry detaches removed roots and closes every runtime afte
 });
 
 test('CharacterViewRegistry retains failed root and runtime cleanup for an exact dispose retry', () => {
-  const roots = [];
-  const removeAttempts = new Map();
-  const disposeAttempts = new Map();
+  interface TestRoot { readonly participantId: string; readonly position: Readonly<{ x: number; y: number; z: number }> }
+  const roots: TestRoot[] = [];
+  const removeAttempts = new Map<string, number>();
+  const disposeAttempts = new Map<string, number>();
   const root = {
-    add: (value) => { roots.push(value); },
-    remove: (value) => {
+    add: (value: TestRoot) => { roots.push(value); },
+    remove: (value: TestRoot) => {
       const attempts = (removeAttempts.get(value.participantId) ?? 0) + 1;
       removeAttempts.set(value.participantId, attempts);
       if (value.participantId === 'player-2' && attempts <= 2) {
@@ -490,7 +515,7 @@ test('CharacterViewRegistry retains failed root and runtime cleanup for an exact
     presentationRegistry: ARENA_V1_GREYBOX_CONTENT.characterPresentationRegistry,
     actionPresentations: ARENA_V1_GREYBOX_CONTENT.actions,
     viewFactory: {
-      create: ({ participantId }) => ({
+      create: ({ participantId }: Readonly<{ participantId: string }>) => ({
         root: { participantId, position: { x: 0, y: 0, z: 0 } },
         getAnimationCapabilities: () => ({
           proceduralKeys: ARENA_ANIMATION_SEMANTIC_IDS,
@@ -528,10 +553,10 @@ test('CharacterViewRegistry retains failed root and runtime cleanup for an exact
   assert.equal(disposeAttempts.get('player-2'), 3);
 });
 
-function deferred() {
-  let resolve;
-  let reject;
-  const promise = new Promise((resolveValue, rejectValue) => {
+function deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolveValue, rejectValue) => {
     resolve = resolveValue;
     reject = rejectValue;
   });
@@ -539,15 +564,15 @@ function deferred() {
 }
 
 test('PresentationAssetLoadTask deduplicates load and releases ready or late assets exactly once', async () => {
-  const assetId = ARENA_V1_GREYBOX_CONTENT.assetRegistry.list()[0].id;
-  const first = deferred();
+  const assetId = required(ARENA_V1_GREYBOX_CONTENT.assetRegistry.list()[0], '首个表现资产').id;
+  const first = deferred<unknown>();
   let loadCalls = 0;
   let releases = 0;
   const task = new PresentationAssetLoadTask({
     assetRegistry: ARENA_V1_GREYBOX_CONTENT.assetRegistry,
     assetId,
     loader: {
-      load: (asset) => {
+      load: (asset: Readonly<{ id: string }>) => {
         loadCalls += 1;
         assert.equal(asset.id, assetId);
         return first.promise;
@@ -568,7 +593,7 @@ test('PresentationAssetLoadTask deduplicates load and releases ready or late ass
   task.destroy();
   assert.equal(releases, 1);
 
-  const late = deferred();
+  const late = deferred<unknown>();
   let lateReleases = 0;
   const lateTask = new PresentationAssetLoadTask({
     assetRegistry: ARENA_V1_GREYBOX_CONTENT.assetRegistry,
@@ -585,7 +610,7 @@ test('PresentationAssetLoadTask deduplicates load and releases ready or late ass
 });
 
 test('PresentationAssetLoadTask rejects invalid leases without invoking accessors', async () => {
-  const assetId = ARENA_V1_GREYBOX_CONTENT.assetRegistry.list()[0].id;
+  const assetId = required(ARENA_V1_GREYBOX_CONTENT.assetRegistry.list()[0], '首个表现资产').id;
   let released = 0;
   const wrongIdentity = new PresentationAssetLoadTask({
     assetRegistry: ARENA_V1_GREYBOX_CONTENT.assetRegistry,
@@ -621,7 +646,7 @@ test('PresentationAssetLoadTask rejects invalid leases without invoking accessor
 });
 
 test('PresentationAssetLoadTask retains a failed cleanup lease so destroy can retry', async () => {
-  const assetId = ARENA_V1_GREYBOX_CONTENT.assetRegistry.list()[0].id;
+  const assetId = required(ARENA_V1_GREYBOX_CONTENT.assetRegistry.list()[0], '首个表现资产').id;
   let attempts = 0;
   const task = new PresentationAssetLoadTask({
     assetRegistry: ARENA_V1_GREYBOX_CONTENT.assetRegistry,
