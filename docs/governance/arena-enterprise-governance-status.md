@@ -1504,3 +1504,13 @@
 - 精确代码候选 `9e1460b77366a88c3b286fdf5c212027591d7d84` 在新的隔离克隆中确认 `npm config get audit=false`，并以 `npm ci --ignore-scripts --no-audit` 安装。`check:governance` 61 文件/385 项、`test:node` 88 文件/704 项、黄金 Replay `0dace228`、120 场 fuzz/6 次复验、104 项生命周期、Presentation/Product 各 100 场 soak、正式资产和三端 clean build/预算/生产产物边界全部通过。
 - clean build ID 为 `arena-9e1460b77366-product`，Web/微信/抖音 Manifest 为 `b2ca5c78 / 712f4a29 / de9f06a7`，delivery 为 `3807531 / 3835130 / 3835105 B`，三端 `sourceDirty=false`。本批没有改变 Gameplay V2、权威 tick、动作、武器、角色、地图、Bot、Replay/Profile schema 或生产字节。
 - 显式联网审计仍未获授权，修复候选也尚未推送；因此不宣称漏洞闭环或 GitHub Actions 绿灯，当前仍不可合并。
+
+## G10.4 main 冲突逐文件治理审计
+
+- 对 23 个虚拟合并冲突完成逐文件语义审计并形成[冲突处置矩阵](arena-main-conflict-disposition.md)。矩阵明确区分保留 Arena、吸收治理意图、保持删除和重新生成，禁止未来集成使用整树 `ours`/`theirs`。旧 `docs/architecture.md`、`docs/gameplay-rules.md` 与 `src/config.ts` 必须保持删除，入口、构建和产品测试必须保持 Arena 唯一产品。
+- 审计没有只把 `main` 判为“旧实现”后忽略其有效能力。Arena 包现统一启用 `consistent-type-imports` 与 `no-explicit-any`；3 个存量类型导入已修正。`dev`、`dev:lan`、`test` 和 `preview:lan` 的干净环境前置构建已恢复，并由供应链门禁失败关闭。
+- `main` 中缺失于 Arena 顶层集成测试的“无效工厂/可选回调失败”和“宿主错误展示 API 缺失或损坏”两组边界已用当前启动协调器重新表达。`tests/entry-lifecycle.test.ts` 当前 8/8 通过；没有恢复旧产品入口或实现。
+- 零引用的旧 `src/config.ts` 已删除，其旧屏幕尺寸、数值规则、颜色和跳跃魔法数不得与 Arena 版本化 tuning/Definition 并存。产品边界门禁现保护 16 个退役路径，并只把 `ENOENT` 识别为正常缺失，其他 I/O 错误继续抛出。
+- 代码候选为 `2f28df1bc7082d5ca1759f4c14547e6277ce4d68`。在无历史 `dist`/`.tsbuildinfo` 的隔离克隆中确认 `audit=false`，`npm ci --ignore-scripts --no-audit` 后公开 `npm test` 可自行构建 52 包；88 文件/706 项 Node 测试、61 文件/385 项 Vitest 和 governance coverage 均通过，clean coverage 为语句/行 `59.99%`、分支 `64.18%`、函数 `64.29%`。
+- 黄金 Replay `0dace228`、120 场 fuzz/6 次复验、104 项生命周期、Presentation/Product 各 100 场 soak、正式资产预算和三端 clean build/Manifest/预算/产物边界全部通过。build ID 为 `arena-2f28df1bc708-product`，Web/微信/抖音 Manifest 为 `ccc95c17 / bd96d30c / 403604d6`，delivery 为 `3807531 / 3835130 / 3835105 B`，三端 `sourceDirty=false`。
+- 本批未执行 merge/rebase、未修改 `main`、未运行显式 npm audit、未推送。联网漏洞审计授权、GitHub Actions 与保护规则、目标 iPhone 真机验收和未来实际集成授权仍是合并结论阻断。
