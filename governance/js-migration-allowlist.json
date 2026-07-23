@@ -1,9 +1,0 @@
-{
-  "schemaVersion": 1,
-  "baselineTag": "arena-product-baseline-51e2822",
-  "baselineFileCount": 549,
-  "policy": "exact-decreasing-allowlist",
-  "files": [
-    "tests/architecture.test.js"
-  ]
-}

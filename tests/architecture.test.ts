@@ -4,7 +4,17 @@ import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { build as esbuild } from 'esbuild';
 
-async function directoryExists(directory) {
+declare global {
+  var __arenaMatchPoc: Readonly<{ ok?: boolean; backend?: string }> | undefined;
+  var __arenaLocalMatchPoc: Readonly<{ ok?: boolean; opponentId?: string }> | undefined;
+}
+
+function required<T>(value: T | null | undefined, name: string): T {
+  assert.ok(value !== null && value !== undefined, `${name} 不存在。`);
+  return value;
+}
+
+async function directoryExists(directory: string): Promise<boolean> {
   try {
     return (await stat(directory)).isDirectory();
   } catch {
@@ -12,9 +22,9 @@ async function directoryExists(directory) {
   }
 }
 
-async function listJavaScript(directory) {
+async function listJavaScript(directory: string): Promise<string[]> {
   const entries = await readdir(directory, { withFileTypes: true });
-  const result = [];
+  const result: string[] = [];
   for (const entry of entries) {
     const target = path.join(directory, entry.name);
     if (entry.isDirectory()) result.push(...await listJavaScript(target));
@@ -23,7 +33,7 @@ async function listJavaScript(directory) {
   return result;
 }
 
-function withoutStaticImports(source) {
+function withoutStaticImports(source: string): string {
   return source.replace(/^\s*import[\s\S]*?;\s*$/gm, '');
 }
 
@@ -78,8 +88,9 @@ test('Three.js can be bundled as a mini-game IIFE', async () => {
     logLevel: 'silent',
   });
   assert.equal(result.outputFiles.length, 1);
-  assert.match(result.outputFiles[0].text, /WebGLRenderer/);
-  assert.doesNotMatch(result.outputFiles[0].text, /^\s*(?:import|export)\b/m);
+  const output = required(result.outputFiles[0], 'Three.js smoke output');
+  assert.match(output.text, /WebGLRenderer/);
+  assert.doesNotMatch(output.text, /^\s*(?:import|export)\b/m);
 });
 
 test('mini-game entries bundle without importing the web platform', async () => {
@@ -94,7 +105,7 @@ test('mini-game entries bundle without importing the web platform', async () => 
       metafile: true,
       logLevel: 'silent',
     });
-    const inputs = Object.keys(result.metafile.inputs);
+    const inputs = Object.keys(required(result.metafile, 'mini-game metafile').inputs);
     assert.ok(!inputs.some((input) => input.endsWith(
       'packages/arena-platform-runtime/dist/web-platform.js',
     )));
@@ -104,7 +115,10 @@ test('mini-game entries bundle without importing the web platform', async () => 
     assert.ok(inputs.some((input) => input.endsWith(
       'packages/arena-product-presentation/dist/product-presentation-session.js',
     )));
-    assert.doesNotMatch(result.outputFiles[0].text, /^\s*(?:import|export)\b/m);
+    assert.doesNotMatch(
+      required(result.outputFiles[0], 'mini-game output').text,
+      /^\s*(?:import|export)\b/m,
+    );
   }
 });
 
@@ -123,7 +137,7 @@ test('mini-game greybox rollback entries remain independently executable', async
       metafile: true,
       logLevel: 'silent',
     });
-    const inputs = Object.keys(result.metafile.inputs);
+    const inputs = Object.keys(required(result.metafile, 'greybox metafile').inputs);
     assert.ok(inputs.some((input) => input.endsWith(
       'packages/arena-v1-greybox-session/dist/greybox-presentation-session.js',
     )));
@@ -133,7 +147,10 @@ test('mini-game greybox rollback entries remain independently executable', async
     assert.ok(!inputs.some((input) => input.endsWith(
       'packages/arena-platform-runtime/dist/web-platform.js',
     )));
-    assert.doesNotMatch(result.outputFiles[0].text, /^\s*(?:import|export)\b/m);
+    assert.doesNotMatch(
+      required(result.outputFiles[0], 'greybox output').text,
+      /^\s*(?:import|export)\b/m,
+    );
   }
 });
 
@@ -980,14 +997,15 @@ test('Arena MatchCore POC bundles and executes as a standalone mini-game IIFE', 
     logLevel: 'silent',
   });
   assert.equal(result.outputFiles.length, 1);
-  assert.doesNotMatch(result.outputFiles[0].text, /^\s*(?:import|export)\b/m);
+  const output = required(result.outputFiles[0], 'MatchCore POC output');
+  assert.doesNotMatch(output.text, /^\s*(?:import|export)\b/m);
   const previous = globalThis.__arenaMatchPoc;
   try {
-    Function(result.outputFiles[0].text)();
+    Function(output.text)();
     assert.equal(globalThis.__arenaMatchPoc?.ok, true);
     assert.equal(globalThis.__arenaMatchPoc?.backend, 'lightweight-v3');
   } finally {
-    if (previous === undefined) delete globalThis.__arenaMatchPoc;
+    if (previous === undefined) Reflect.deleteProperty(globalThis, '__arenaMatchPoc');
     else globalThis.__arenaMatchPoc = previous;
   }
 });
@@ -1019,13 +1037,17 @@ test('Arena local quick match bundles and executes without a browser or renderer
     logLevel: 'silent',
   });
   assert.equal(result.outputFiles.length, 1);
+  const output = required(result.outputFiles[0], 'local match POC output');
   const previous = globalThis.__arenaLocalMatchPoc;
   try {
-    Function(result.outputFiles[0].text)();
+    Function(output.text)();
     assert.equal(globalThis.__arenaLocalMatchPoc?.ok, true);
-    assert.match(globalThis.__arenaLocalMatchPoc?.opponentId, /^opponent-/);
+    assert.match(
+      required(globalThis.__arenaLocalMatchPoc?.opponentId, 'local opponent id'),
+      /^opponent-/,
+    );
   } finally {
-    if (previous === undefined) delete globalThis.__arenaLocalMatchPoc;
+    if (previous === undefined) Reflect.deleteProperty(globalThis, '__arenaLocalMatchPoc');
     else globalThis.__arenaLocalMatchPoc = previous;
   }
 });
