@@ -1,13 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  type BotDifficultyId,
   BOT_DIFFICULTY_PROFILES,
   BOT_GOAL_ID,
   BotController,
 } from '@number-strategy-jump/arena-bot';
+import type { MatchCore } from '@number-strategy-jump/arena-match';
 import { createArenaV1MatchCore } from '@number-strategy-jump/arena-v1-composition';
 
-function createController(core, difficultyId = 'hard') {
+function createController(core: MatchCore, difficultyId: BotDifficultyId = 'hard') {
   const character = core.getCharacterDefinition('player-2');
   return new BotController({
     participantId: 'player-2',
@@ -80,8 +82,12 @@ test('invalid snapshot identity does not consume history or RNG and the same tic
   const recovering = createController(core, 'hard');
   const fresh = createController(core, 'hard');
   const snapshot = core.getSnapshot();
-  const invalid = structuredClone(snapshot);
-  invalid.participants[1].id = 'intruder';
+  const invalid = structuredClone(snapshot) as unknown as {
+    participants: Array<{ id: string }>;
+  };
+  const botParticipant = invalid.participants[1];
+  if (!botParticipant) throw new Error('测试快照缺少 player-2。');
+  botParticipant.id = 'intruder';
   assert.throws(() => recovering.createInput(invalid), /participant 身份不一致|参赛者身份不一致/);
   assert.deepEqual(recovering.getDebugSnapshot(), fresh.getDebugSnapshot());
   assert.deepEqual(recovering.createInput(snapshot), fresh.createInput(snapshot));
@@ -98,7 +104,9 @@ test('debug snapshot is deeply frozen and cannot mutate controller state', () =>
   assert.equal(Object.isFrozen(debug), true);
   assert.equal(Object.isFrozen(debug.personality), true);
   assert.equal(Object.isFrozen(debug.mobility), true);
-  assert.throws(() => { debug.mobility.nextMobilityTick = 999; }, TypeError);
+  assert.throws(() => {
+    (debug.mobility as { nextMobilityTick: number }).nextMobilityTick = 999;
+  }, TypeError);
   assert.notEqual(controller.getDebugSnapshot().mobility.nextMobilityTick, 999);
   controller.destroy();
   core.destroy();

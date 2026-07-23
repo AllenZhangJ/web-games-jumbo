@@ -6,9 +6,6 @@
   "files": [
     "tests/architecture.test.js",
     "tests/arena/arena-rule-engine.test.js",
-    "tests/arena/bot-controller.test.js",
-    "tests/arena/bot-mobility.test.js",
-    "tests/arena/bot-observation.test.js",
     "tests/arena/character-foundation.test.js",
     "tests/arena/defect-ledger.test.js",
     "tests/arena/equipment-system.test.js",

@@ -1,7 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import type { MatchCore } from '@number-strategy-jump/arena-match';
 import { createArenaV1MatchCore } from '@number-strategy-jump/arena-v1-composition';
 import {
+  type BotGoalId,
+  type BotGoalPlan,
+  type BotSourceSnapshot,
+  type BotVector3,
+  type UtilityDecision,
   cloneBotSourceSnapshot,
   BOT_GOAL_ID,
   BOT_MOBILITY_INTENT,
@@ -11,8 +17,21 @@ import {
   selectBotMobilityIntent,
 } from '@number-strategy-jump/arena-bot';
 
-function observationFromRaw(core, mutate = () => {}) {
-  const raw = core.getSnapshot();
+type Mutable<T> = {
+  -readonly [Key in keyof T]: T[Key] extends readonly (infer Item)[]
+    ? Mutable<Item>[]
+    : T[Key] extends object
+      ? Mutable<T[Key]>
+      : T[Key];
+};
+
+function observationFromRaw(
+  core: MatchCore,
+  mutate: (raw: Mutable<BotSourceSnapshot>) => void = () => {},
+) {
+  const raw = structuredClone(
+    cloneBotSourceSnapshot(core.getSnapshot()),
+  ) as Mutable<BotSourceSnapshot>;
   mutate(raw);
   const source = cloneBotSourceSnapshot(raw);
   return createBotObservation({
@@ -26,8 +45,15 @@ function observationFromRaw(core, mutate = () => {}) {
   });
 }
 
-function decision(goalId, target) {
-  return { goalId, plan: { target, speedScale: 1, actionCandidate: false } };
+function decision(
+  goalId: BotGoalId,
+  target: BotVector3,
+): UtilityDecision<BotGoalPlan> {
+  return {
+    goalId,
+    score: 1,
+    plan: { goalId, target, speedScale: 1, actionCandidate: false },
+  };
 }
 
 test('mobility policy uses only current public affordance for crouch, air jump and slam', () => {
@@ -45,6 +71,7 @@ test('mobility policy uses only current public affordance for crouch, air jump a
   const airborne = observationFromRaw(core, (raw) => {
     const self = raw.participants.find(({ id }) => id === 'player-2');
     const opponent = raw.participants.find(({ id }) => id === 'player-1');
+    if (!self || !opponent) throw new Error('测试快照缺少参赛者。');
     self.position.y = 2.5;
     self.velocity.y = 0.5;
     self.grounded = false;
@@ -65,6 +92,7 @@ test('mobility policy uses only current public affordance for crouch, air jump a
   const aboveOpponent = observationFromRaw(core, (raw) => {
     const self = raw.participants.find(({ id }) => id === 'player-2');
     const opponent = raw.participants.find(({ id }) => id === 'player-1');
+    if (!self || !opponent) throw new Error('测试快照缺少参赛者。');
     self.position = { x: 0, y: 3, z: 0 };
     self.velocity.y = -1;
     self.grounded = false;
