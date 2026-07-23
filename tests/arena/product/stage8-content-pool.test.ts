@@ -9,6 +9,8 @@ import {
 import {
   MATCH_CONTENT_SELECTION_SCHEMA_VERSION,
   createMatchContentSelection,
+  type ArenaMatchSnapshot,
+  type MatchContentSelection,
 } from '@number-strategy-jump/arena-contracts';
 import { ARENA_V1_CHARACTER_DEFINITIONS } from '@number-strategy-jump/arena-v1-content';
 import {
@@ -20,7 +22,11 @@ import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
 import { MAP_EVENT_KIND } from '@number-strategy-jump/arena-map';
 import { QuickMatchService } from '@number-strategy-jump/arena-v1-composition';
 import { HeadlessMatchRunner } from '@number-strategy-jump/arena-match';
-import { replayMatch } from '../../../src/arena/replay.ts';
+import { replayMatch } from '../../../src/arena/replay.js';
+import type {
+  QuickMatchCoreFactory,
+  QuickMatchServiceOptions,
+} from '@number-strategy-jump/arena-quick-match';
 import {
   ARENA_V1_CONTENT_REPLACEMENT_REGISTRY,
   ARENA_V1_MATCH_CONTENT_CATALOG,
@@ -34,6 +40,7 @@ import {
   MATCH_CONTENT_KIND,
   MatchContentPoolResolver,
   createFrozenMatchContentPool,
+  type ContentReplacementDefinition,
 } from '@number-strategy-jump/arena-product-content';
 import {
   advancePlayerProfile,
@@ -43,7 +50,19 @@ import {
 const characterIds = ARENA_V1_CHARACTER_DEFINITIONS.map(({ id }) => id);
 const allEquipmentIds = STAGE4_EQUIPMENT_DEFINITIONS.map(({ id }) => id);
 
-function selection({ equipmentDefinitionIds = allEquipmentIds } = {}) {
+function required<T>(value: T | null | undefined, name: string): T {
+  assert.ok(value != null, `${name} 不存在。`);
+  return value;
+}
+
+function record(value: unknown, name: string): Readonly<Record<string, unknown>> {
+  assert.ok(value !== null && typeof value === 'object' && !Array.isArray(value), `${name} 必须是对象。`);
+  return value as Readonly<Record<string, unknown>>;
+}
+
+function selection({
+  equipmentDefinitionIds = allEquipmentIds,
+}: Readonly<{ equipmentDefinitionIds?: readonly string[] }> = {}) {
   return createMatchContentSelection({
     schemaVersion: MATCH_CONTENT_SELECTION_SCHEMA_VERSION,
     contentDefinitionId: 'test-frozen-content',
@@ -53,13 +72,17 @@ function selection({ equipmentDefinitionIds = allEquipmentIds } = {}) {
     mapDefinitionIds: [STAGE5_MAP_ID],
     selectedMapDefinitionId: STAGE5_MAP_ID,
     participantCharacters: [
-      { participantId: 'player-1', definitionId: characterIds[0] },
-      { participantId: 'player-2', definitionId: characterIds[1] },
+      { participantId: 'player-1', definitionId: required(characterIds[0], 'player character') },
+      { participantId: 'player-2', definitionId: required(characterIds[1], 'opponent character') },
     ],
   });
 }
 
-function replacement({ id, retiredId, replacementId }) {
+function replacement({
+  id,
+  retiredId,
+  replacementId,
+}: Pick<ContentReplacementDefinition, 'id' | 'retiredId' | 'replacementId'>): ContentReplacementDefinition {
   return {
     schemaVersion: CONTENT_REPLACEMENT_DEFINITION_SCHEMA_VERSION,
     id,
@@ -79,7 +102,7 @@ function resolver(replacementRegistry = ARENA_V1_CONTENT_REPLACEMENT_REGISTRY) {
   });
 }
 
-function neutralFrames(snapshot) {
+function neutralFrames(snapshot: ArenaMatchSnapshot) {
   return snapshot.participants.map(({ id }) => createNeutralInputFrame(snapshot.tick, id));
 }
 
@@ -122,10 +145,10 @@ test('ContentReplacementRegistry resolves explicit chains and rejects ambiguity,
     replacement({ id: 'a', retiredId: 'old', replacementId: 'next' }),
     replacement({ id: 'b', retiredId: 'next', replacementId: 'old' }),
   ]), /替换环/);
-  const sparse = [];
+  const sparse: unknown[] = [];
   sparse.length = 1;
   assert.throws(() => new ContentReplacementRegistry(sparse), /空槽或访问器/);
-  const accessor = [];
+  const accessor: unknown[] = [];
   Object.defineProperty(accessor, '0', { enumerable: true, get: () => replacement({
     id: 'unsafe', retiredId: 'old', replacementId: 'hammer',
   }) });
@@ -146,7 +169,7 @@ test('MatchContentPoolResolver shares one deterministic pool and requires explic
   assert.deepEqual(first.selection.equipmentDefinitionIds, profile.unlocks.equipmentIds);
   assert.deepEqual(first.selection.mapDefinitionIds, profile.unlocks.mapIds);
   assert.ok(first.selection.characterDefinitionIds.includes(
-    first.selection.participantCharacters[1].definitionId,
+    required(first.selection.participantCharacters[1], 'opponent selection').definitionId,
   ));
   const changedSelection = advancePlayerProfile(ARENA_V1_PLAYER_PROFILE_DEFINITION, profile, {
     selection: {
@@ -156,8 +179,8 @@ test('MatchContentPoolResolver shares one deterministic pool and requires explic
   });
   const changed = resolver().resolve({ profile: changedSelection, matchSeed: 12345 });
   assert.equal(
-    changed.selection.participantCharacters[1].definitionId,
-    first.selection.participantCharacters[1].definitionId,
+    required(changed.selection.participantCharacters[1], 'changed opponent selection').definitionId,
+    required(first.selection.participantCharacters[1], 'original opponent selection').definitionId,
   );
   assert.equal(changed.selection.selectedMapDefinitionId, first.selection.selectedMapDefinitionId);
 
@@ -231,7 +254,10 @@ test('frozen authority content filters registries and map waves, and Replay V5 r
     .map(({ equipmentDefinitionId }) => equipmentDefinitionId);
   assert.ok(spawnedDefinitionIds.length >= 2);
   assert.deepEqual([...new Set(spawnedDefinitionIds)], [STAGE4_EQUIPMENT_ID.HAMMER]);
-  assert.equal(replay.config.contentSelection.contentHash, contentSelection.contentHash);
+  assert.equal(
+    required(replay.config.contentSelection, 'replay content selection').contentHash,
+    contentSelection.contentHash,
+  );
   assert.equal(replayMatch(replay).finalHash, replay.finalHash);
   runner.destroy();
   core.destroy();
@@ -253,7 +279,7 @@ test('authority map projection validates equipment pools without reordering map-
   const mapRegistry = createArenaV1MapRegistry();
   const originalWaves = mapRegistry.require(STAGE5_MAP_ID).events
     .filter(({ kind }) => kind === MAP_EVENT_KIND.EQUIPMENT_WAVE)
-    .map(({ parameters }) => parameters.equipmentDefinitionIds);
+    .map(({ parameters }) => record(parameters, 'original wave parameters').equipmentDefinitionIds);
   const projected = createArenaV1SelectedAuthorityRegistries({
     selection: selection(),
     mapRegistry,
@@ -261,36 +287,45 @@ test('authority map projection validates equipment pools without reordering map-
   });
   const projectedWaves = projected.mapRegistry.require(STAGE5_MAP_ID).events
     .filter(({ kind }) => kind === MAP_EVENT_KIND.EQUIPMENT_WAVE)
-    .map(({ parameters }) => parameters.equipmentDefinitionIds);
+    .map(({ parameters }) => record(parameters, 'projected wave parameters').equipmentDefinitionIds);
   assert.deepEqual(projectedWaves, originalWaves);
 });
 
 test('QuickMatchService injects one frozen selection without exposing Profile provenance or difficulty', () => {
   let profile = createPlayerProfile(ARENA_V1_PLAYER_PROFILE_DEFINITION);
   const contentResolver = resolver();
-  let capturedConfig = null;
-  const service = new QuickMatchService({
+  let capturedConfig: Readonly<Record<string, unknown>> | null = null;
+  const coreFactory: QuickMatchCoreFactory = (options) => {
+    capturedConfig = options.config;
+    return createArenaV1MatchCore(options);
+  };
+  const serviceOptions: QuickMatchServiceOptions = {
     contentPoolProvider: {
       resolve: ({ matchSeed }) => contentResolver.resolve({ profile, matchSeed }),
     },
-    coreFactory(options) {
-      capturedConfig = options.config;
-      return createArenaV1MatchCore(options);
-    },
-  });
+    coreFactory,
+  };
+  const service = new QuickMatchService(serviceOptions);
   const match = service.create({ matchSeed: 456 });
-  assert.equal(
-    capturedConfig.contentSelection.contentHash,
-    match.content.contentHash,
+  const content = required(match.content, 'quick match content');
+  const configuredSelection = required(
+    record(capturedConfig, 'captured config').contentSelection as MatchContentSelection | null,
+    'configured content selection',
   );
-  assert.equal(match.content.participantCharacters.length, 2);
+  assert.equal(
+    configuredSelection.contentHash,
+    content.contentHash,
+  );
+  assert.equal(content.participantCharacters.length, 2);
   assert.doesNotMatch(
     JSON.stringify(match),
     /sourceProfileRevision|poolHash|difficulty|简单|普通|困难/i,
   );
-  const frozenMatchContent = match.content;
-  const frozenPlayerCharacterId = match.content.participantCharacters
-    .find(({ participantId }) => participantId === 'player-1').definitionId;
+  const frozenMatchContent = content;
+  const frozenPlayerCharacterId = required(
+    content.participantCharacters.find(({ participantId }) => participantId === 'player-1'),
+    'player character selection',
+  ).definitionId;
   profile = advancePlayerProfile(ARENA_V1_PLAYER_PROFILE_DEFINITION, profile, {
     selection: {
       ...profile.selection,
@@ -300,8 +335,11 @@ test('QuickMatchService injects one frozen selection without exposing Profile pr
   assert.strictEqual(match.content, frozenMatchContent);
   assert.notEqual(profile.selection.characterId, frozenPlayerCharacterId);
   assert.equal(
-    match.content.participantCharacters.find(({ participantId }) => participantId === 'player-1')
-      .definitionId,
+    required(
+      required(match.content, 'quick match content').participantCharacters
+        .find(({ participantId }) => participantId === 'player-1'),
+      'player character selection',
+    ).definitionId,
     frozenPlayerCharacterId,
   );
   match.session.destroy();
@@ -310,12 +348,16 @@ test('QuickMatchService injects one frozen selection without exposing Profile pr
     matchSeed: 457,
     config: { contentSelection: selection() },
   }), /不能由调用者覆盖 contentSelection/);
-  assert.throws(() => new QuickMatchService({
+  const mismatchedPoolOptions: QuickMatchServiceOptions = {
     contentPoolProvider: {
       resolve: ({ matchSeed }) => ({
         ...contentResolver.resolve({ profile, matchSeed }),
         matchSeed: matchSeed + 1,
       }),
     },
-  }).create({ matchSeed: 1 }), /matchSeed 与匹配分配不一致/);
+  };
+  assert.throws(
+    () => new QuickMatchService(mismatchedPoolOptions).create({ matchSeed: 1 }),
+    /matchSeed 与匹配分配不一致/,
+  );
 });
