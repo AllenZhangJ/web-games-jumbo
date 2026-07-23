@@ -31,6 +31,10 @@ import {
 } from '@number-strategy-jump/arena-v1-experiment';
 import {
   ARENA_EXPERIMENT_OUTCOME,
+  type ArenaExperimentDefinition,
+  type ArenaExperimentReport,
+  type MetricCollectorRegistry,
+  type SimulationWorkloadRegistry,
 } from '@number-strategy-jump/arena-experiment';
 import {
   createArenaExperimentReportBundle,
@@ -38,8 +42,9 @@ import {
 import {
   assertArenaGitSourceIdentityStable,
   readArenaGitSourceIdentity,
-} from './arena-git-source-identity.ts';
-import { runArenaNodeExperiment } from './arena-node-experiment-runner.ts';
+  type ArenaGitSourceIdentity,
+} from './arena-git-source-identity.js';
+import { runArenaNodeExperiment } from './arena-node-experiment-runner.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SUITE = Object.freeze({
@@ -50,9 +55,29 @@ const SUITE = Object.freeze({
   BOT_CAPABILITY: 'bot-capability',
   BALANCE_CANDIDATE: 'balance-candidate',
   BALANCE_VALIDATION: 'balance-validation',
-});
+} as const);
 
-function usage() {
+type ArenaExperimentSuite = typeof SUITE[keyof typeof SUITE];
+interface ArenaExperimentCliOptions {
+  readonly suite: ArenaExperimentSuite;
+  readonly cases: number | null;
+  readonly firstSeed: number | null;
+  readonly replaySamples: number | null;
+  readonly describe: boolean;
+  readonly summary: boolean;
+  readonly allowDirty: boolean;
+  readonly output: string | null;
+  readonly help: boolean;
+}
+interface ArenaExperimentSuiteComposition {
+  readonly definition: ArenaExperimentDefinition;
+  readonly registries: Readonly<{
+    workloadRegistry: SimulationWorkloadRegistry;
+    collectorRegistry: MetricCollectorRegistry;
+  }>;
+}
+
+function usage(): string {
   return [
     'Usage:',
     '  npm run arena:experiment -- [--suite=scripted-pressure|matchcore-invariants|map-timeline|movement-stress|bot-capability|balance-candidate|balance-validation]',
@@ -63,7 +88,7 @@ function usage() {
   ].join('\n');
 }
 
-function parseInteger(value, minimum, maximum, name) {
+function parseInteger(value: string, minimum: number, maximum: number, name: string): number {
   const parsed = Number(value);
   if (!Number.isSafeInteger(parsed) || parsed < minimum || parsed > maximum) {
     throw new RangeError(`${name} 必须是 ${minimum}～${maximum} 的安全整数。`);
@@ -71,8 +96,22 @@ function parseInteger(value, minimum, maximum, name) {
   return parsed;
 }
 
-function parseArgs(values) {
-  const result = {
+function isExperimentSuite(value: string): value is ArenaExperimentSuite {
+  return (Object.values(SUITE) as readonly string[]).includes(value);
+}
+
+function parseArgs(values: readonly string[]): ArenaExperimentCliOptions {
+  const result: {
+    suite: ArenaExperimentSuite;
+    cases: number | null;
+    firstSeed: number | null;
+    replaySamples: number | null;
+    describe: boolean;
+    summary: boolean;
+    allowDirty: boolean;
+    output: string | null;
+    help: boolean;
+  } = {
     suite: SUITE.SCRIPTED_PRESSURE,
     cases: null,
     firstSeed: null,
@@ -83,7 +122,7 @@ function parseArgs(values) {
     output: null,
     help: false,
   };
-  const seen = new Set();
+  const seen = new Set<string>();
   for (const argument of values) {
     if (argument === '--help' || argument === '-h') {
       result.help = true;
@@ -100,30 +139,36 @@ function parseArgs(values) {
     const suiteMatch = argument.match(/^--suite=(.+)$/);
     if (suiteMatch) {
       if (seen.has('suite')) throw new Error('参数 --suite 不能重复。');
-      if (!Object.values(SUITE).includes(suiteMatch[1])) {
-        throw new RangeError(`不支持实验 suite ${suiteMatch[1]}。`);
+      const suite = suiteMatch[1];
+      if (!suite || !isExperimentSuite(suite)) {
+        throw new RangeError(`不支持实验 suite ${String(suite)}。`);
       }
       seen.add('suite');
-      result.suite = suiteMatch[1];
+      result.suite = suite;
       continue;
     }
     const outputMatch = argument.match(/^--output=(.+)$/);
     if (outputMatch) {
       if (seen.has('output')) throw new Error('参数 --output 不能重复。');
       seen.add('output');
-      result.output = outputMatch[1];
+      const output = outputMatch[1];
+      if (!output) throw new Error('--output 必须提供路径。');
+      result.output = output;
       continue;
     }
     const match = argument.match(/^--(cases|first-seed|replay-samples)=(.+)$/);
     if (!match) throw new Error(`未知参数 ${argument}。\n${usage()}`);
-    if (seen.has(match[1])) throw new Error(`参数 --${match[1]} 不能重复。`);
-    seen.add(match[1]);
-    if (match[1] === 'cases') {
-      result.cases = parseInteger(match[2], 1, 100_000, 'cases');
-    } else if (match[1] === 'first-seed') {
-      result.firstSeed = parseInteger(match[2], 0, 0xffffffff, 'first-seed');
+    const key = match[1];
+    const value = match[2];
+    if (!key || !value) throw new Error(`参数 ${argument} 无效。`);
+    if (seen.has(key)) throw new Error(`参数 --${key} 不能重复。`);
+    seen.add(key);
+    if (key === 'cases') {
+      result.cases = parseInteger(value, 1, 100_000, 'cases');
+    } else if (key === 'first-seed') {
+      result.firstSeed = parseInteger(value, 0, 0xffffffff, 'first-seed');
     } else {
-      result.replaySamples = parseInteger(match[2], 0, 1_000, 'replay-samples');
+      result.replaySamples = parseInteger(value, 0, 1_000, 'replay-samples');
     }
   }
   if (result.describe && result.summary) {
@@ -135,7 +180,7 @@ function parseArgs(values) {
   return result;
 }
 
-async function writeReportBundle(outputValue, bundle) {
+async function writeReportBundle(outputValue: string, bundle: unknown): Promise<string> {
   const output = path.resolve(root, outputValue);
   if (path.extname(output) !== '.json') throw new RangeError('--output 必须是 .json 文件。');
   await mkdir(path.dirname(output), { recursive: true });
@@ -146,7 +191,11 @@ async function writeReportBundle(outputValue, bundle) {
   return output;
 }
 
-function createReportSummary(suite, report, bundleHash = null) {
+function createReportSummary(
+  suite: ArenaExperimentSuite,
+  report: Readonly<ArenaExperimentReport>,
+  bundleHash: string | null = null,
+) {
   return Object.freeze({
     suite,
     definitionId: report.definitionId,
@@ -171,7 +220,10 @@ function createReportSummary(suite, report, bundleHash = null) {
   });
 }
 
-function createSuite(options, source) {
+function createSuite(
+  options: Readonly<ArenaExperimentCliOptions>,
+  source: Readonly<ArenaGitSourceIdentity>,
+): Readonly<ArenaExperimentSuiteComposition> {
   if (options.suite === SUITE.SCRIPTED_PRESSURE) {
     if (options.replaySamples !== null) {
       throw new RangeError('scripted-pressure suite 不接受 --replay-samples。');
@@ -259,7 +311,7 @@ function createSuite(options, source) {
   });
 }
 
-async function main() {
+async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
   if (options.help) {
     console.log(usage());
@@ -310,7 +362,7 @@ async function main() {
   ) process.exitCode = 2;
 }
 
-main().catch((error) => {
+void main().catch((error: unknown) => {
   console.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;
 });
