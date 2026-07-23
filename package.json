@@ -19,7 +19,7 @@
     "arena:map:stress": "node --import tsx scripts/arena-map-stress.ts --matches=100",
     "arena:movement:stress": "node --import tsx scripts/arena-movement-stress.ts --matches=100",
     "arena:bot:stress": "node --import tsx scripts/arena-bot-stress.ts --matches=300",
-    "arena:input:fuzz": "node --import tsx scripts/arena-input-fuzz.mjs --matches=40",
+    "arena:input:fuzz": "node --import tsx scripts/arena-input-fuzz.ts --matches=40",
     "arena:replay:verify": "node --import tsx scripts/arena-golden-replay.ts --verify",
     "arena:replay:candidate": "node --import tsx scripts/arena-golden-replay.ts",
     "arena:replay:promote": "node --import tsx scripts/arena-golden-replay.ts",

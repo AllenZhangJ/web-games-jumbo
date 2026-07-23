@@ -60,7 +60,7 @@ function processDefinitions(): readonly Readonly<RegressionProcessDefinition>[] 
       args: Object.freeze([
         '--import',
         'tsx',
-        'scripts/arena-input-fuzz.mjs',
+        'scripts/arena-input-fuzz.ts',
         `--matches=${requiredNumber(inputFuzz.matchesPerMapper, 'inputFuzz.matchesPerMapper')}`,
         `--replay-samples=${requiredNumber(inputFuzz.replaySamplesPerMapper, 'inputFuzz.replaySamplesPerMapper')}`,
       ]),
