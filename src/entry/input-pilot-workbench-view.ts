@@ -120,10 +120,22 @@ const INVOKABLE_ACTION_KEYS = new Set<InvokableAction>([
 const SNAPSHOT_KEYS = new Set(['state', 'workspace', 'lastRecord', 'lastError', 'evidence']);
 const ENVIRONMENT_KEYS = new Set(['platform', 'formFactor', 'orientation', 'inputMode']);
 const EVIDENCE_KEYS = new Set(['collectable', 'reason', 'commit', 'buildId', 'buildManifestHash']);
-const WORKSPACE_KEYS = new Set(['enrollment', 'activeTrial']);
-const ENROLLMENT_KEYS = new Set(['revision']);
-const ACTIVE_TRIAL_KEYS = new Set(['trialId', 'reviewDraft', 'assignment']);
-const ASSIGNMENT_KEYS = new Set(['participantId']);
+const WORKSPACE_KEYS = new Set([
+  'schemaVersion', 'definitionId', 'definitionHash', 'revision',
+  'enrollment', 'activeTrial', 'records',
+]);
+const ENROLLMENT_KEYS = new Set([
+  'schemaVersion', 'definitionId', 'definitionHash', 'revision', 'assignments',
+]);
+const ACTIVE_TRIAL_KEYS = new Set([
+  'schemaVersion', 'trialId', 'assignment', 'phase', 'terminationReason',
+  'device', 'eligibility', 'automated', 'reviewDraft',
+]);
+const ASSIGNMENT_KEYS = new Set([
+  'schemaVersion', 'definitionId', 'definitionHash', 'assignmentId',
+  'assignmentSeed', 'matchSeed', 'participantId', 'enrollmentIndex',
+  'variantId', 'mapperId',
+]);
 const LAST_RECORD_KEYS = new Set(['terminationReason']);
 const LAST_ERROR_KEYS = new Set(['message']);
 const REVIEW_KEYS = new Set(['observer', 'selfReport', 'invalidate']);

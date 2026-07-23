@@ -25,6 +25,9 @@ import {
   HumanMatchStudyWorkbenchView,
 } from '../../../src/entry/human-match-study-workbench-view.js';
 import {
+  HumanMatchStudyWebApp,
+} from '../../../src/entry/human-match-study-web-app.js';
+import {
   createWebResearchPageOwnerId,
   detectWebResearchEnvironment,
 } from '../../../src/entry/web-research-environment.js';
@@ -75,6 +78,46 @@ function createStudyViewHost() {
       querySelectorAll() { return []; },
     },
     nodes,
+  };
+}
+
+function createStudyAppHost(fetchManifest) {
+  const { root: mount } = createStudyViewHost();
+  const listeners = new Map();
+  return {
+    Date,
+    crypto: { randomUUID: () => 'study-web-app-owner' },
+    innerWidth: 390,
+    innerHeight: 844,
+    screen: { width: 390, height: 844 },
+    navigator: { maxTouchPoints: 5, userAgentData: { mobile: true } },
+    matchMedia: () => ({ matches: true }),
+    document: {
+      hidden: false,
+      querySelector: (selector) => selector === '#human-study-app' ? mount : null,
+    },
+    fetch: fetchManifest,
+    addEventListener(name, callback) { listeners.set(name, callback); },
+    removeEventListener(name, callback) {
+      if (listeners.get(name) === callback) listeners.delete(name);
+    },
+    setInterval() { return 1; },
+    clearInterval() {},
+  };
+}
+
+function createStudyAppPlatform() {
+  const storage = new Map();
+  return {
+    wallNow: () => 1_000,
+    onResize: () => () => {},
+    storageRead(key) {
+      return storage.has(key)
+        ? { ok: true, found: true, value: storage.get(key) }
+        : { ok: true, found: false, value: undefined };
+    },
+    storageWrite(key, value) { storage.set(key, value); return true; },
+    storageDelete(key) { storage.delete(key); return true; },
   };
 }
 
@@ -172,6 +215,19 @@ test('study build identity accepts only a clean Web manifest that covers study.h
   });
   assert.equal(invalid.collectable, false);
   assert.equal(invalid.reason, 'build-manifest-invalid');
+});
+
+test('Human Match Study Web app shares startup and cannot complete after destroy', async () => {
+  let resolveFetch;
+  const root = createStudyAppHost(() => new Promise((resolve) => { resolveFetch = resolve; }));
+  const app = new HumanMatchStudyWebApp({ platform: createStudyAppPlatform(), root });
+  const first = app.start();
+  const second = app.start();
+  assert.equal(first, second);
+  app.destroy();
+  resolveFetch({ ok: true, json: async () => buildManifest({ sourceDirty: true }) });
+  await assert.rejects(first, /启动期间已销毁/);
+  await assert.rejects(app.start(), /已销毁/);
 });
 
 test('study capture download hashes the exact UTF-8 bytes before returning a receipt', async () => {

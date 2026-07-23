@@ -1,7 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { InputPilotFormModel } from '@number-strategy-jump/arena-input-pilot';
+import {
+  InputPilotFormModel,
+  createArenaInputPilotV1Definition,
+  createInputPilotWorkspace,
+} from '@number-strategy-jump/arena-input-pilot';
 import {
   ARENA_BUILD_MANIFEST_SCHEMA_VERSION,
 } from '@number-strategy-jump/arena-device-acceptance';
@@ -15,6 +19,7 @@ import {
   detectInputPilotWebEnvironment,
 } from '../../../src/entry/input-pilot-web-environment.js';
 import { InputPilotWorkbenchView } from '../../../src/entry/input-pilot-workbench-view.js';
+import { InputPilotWebApp } from '../../../src/entry/input-pilot-web-app.js';
 
 const COMMIT = 'a'.repeat(40);
 const SHA256 = 'b'.repeat(64);
@@ -63,6 +68,56 @@ function createPilotViewHost() {
     },
   };
   return { root, nodes, canvas, listenerCount: () => listeners.size };
+}
+
+function createPilotAppHost(fetchManifest) {
+  const { root: mount } = createPilotViewHost();
+  const listeners = new Map();
+  return {
+    Date,
+    crypto: { randomUUID: () => 'pilot-web-app-owner' },
+    innerWidth: 390,
+    innerHeight: 844,
+    screen: { width: 390, height: 844 },
+    navigator: { maxTouchPoints: 5, userAgentData: { mobile: true } },
+    matchMedia: () => ({ matches: true }),
+    document: {
+      hidden: false,
+      querySelector: (selector) => selector === '#pilot-app' ? mount : null,
+    },
+    fetch: fetchManifest,
+    addEventListener(name, callback) { listeners.set(name, callback); },
+    removeEventListener(name, callback) {
+      if (listeners.get(name) === callback) listeners.delete(name);
+    },
+    setInterval() { return 1; },
+    clearInterval() {},
+  };
+}
+
+function createPilotAppPlatform({ failHideCleanupOnce = false } = {}) {
+  const storage = new Map();
+  let hideCleanupCount = 0;
+  return {
+    wallNow: () => 1_000,
+    onHide() {
+      return () => {
+        hideCleanupCount += 1;
+        if (failHideCleanupOnce && hideCleanupCount === 1) {
+          throw new Error('hide cleanup failed once');
+        }
+      };
+    },
+    onShow: () => () => {},
+    storageRead(key) {
+      return storage.has(key)
+        ? { ok: true, found: true, value: storage.get(key) }
+        : { ok: true, found: false, value: undefined };
+    },
+    storageWrite(key, value) { storage.set(key, value); return true; },
+    storageDelete(key) { storage.delete(key); return true; },
+    hideCleanupCount: () => hideCleanupCount,
+  };
 }
 
 function pilotViewDefinition(taskPrompt = '完成本局目标') {
@@ -210,6 +265,9 @@ test('Pilot Workbench rejects accessors, escapes operator data, and retries list
   });
   view.bind(pilotViewActions());
   view.render(pilotViewSnapshot({
+    workspace: createInputPilotWorkspace(createArenaInputPilotV1Definition()),
+  }));
+  view.render(pilotViewSnapshot({
     evidence: {
       collectable: false,
       reason: '<img src=x onerror=reason()>',
@@ -233,6 +291,34 @@ test('Pilot Workbench rejects accessors, escapes operator data, and retries list
   assert.equal(host.listenerCount(), 0);
   assert.equal(host.root.appended.at(-1), host.canvas);
   view.destroy();
+});
+
+test('Input Pilot Web app shares one startup and rejects completion after destroy', async () => {
+  let resolveFetch;
+  const root = createPilotAppHost(() => new Promise((resolve) => { resolveFetch = resolve; }));
+  const app = new InputPilotWebApp({ platform: createPilotAppPlatform(), root });
+  const first = app.start();
+  const second = app.start();
+  assert.equal(first, second);
+  app.destroy();
+  resolveFetch({ ok: true, json: async () => buildManifest({ sourceDirty: true }) });
+  await assert.rejects(first, /启动期间已销毁/);
+  await assert.rejects(app.start(), /已销毁/);
+});
+
+test('Input Pilot Web app retains failed lifecycle cleanup for one exact retry', async () => {
+  const platform = createPilotAppPlatform({ failHideCleanupOnce: true });
+  const root = createPilotAppHost(async () => ({
+    ok: true,
+    json: async () => buildManifest({ sourceDirty: true }),
+  }));
+  const app = new InputPilotWebApp({ platform, root });
+  await app.start();
+  assert.throws(() => app.destroy(), /清理未完整完成/);
+  assert.equal(platform.hideCleanupCount(), 1);
+  app.destroy();
+  assert.equal(platform.hideCleanupCount(), 2);
+  assert.deepEqual(app.getSnapshot(), { state: 'destroyed' });
 });
 
 test('web pilot environment distinguishes coarse phone touch from desktop mouse', () => {
