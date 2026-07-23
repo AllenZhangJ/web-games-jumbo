@@ -50,10 +50,10 @@ import {
 } from '@number-strategy-jump/arena-device-acceptance';
 import {
   writeArenaBuildManifest,
-} from '../../scripts/lib/arena-build-manifest-files.ts';
+} from '../../scripts/lib/arena-build-manifest-files.js';
 import {
   verifyArenaStage9ReleaseProducerEvidence,
-} from '../../scripts/lib/arena-stage9-release-producers.ts';
+} from '../../scripts/lib/arena-stage9-release-producers.js';
 import {
   createArenaStage9BalanceValidationExperimentDefinition,
 } from '@number-strategy-jump/arena-v1-experiment';
@@ -79,6 +79,24 @@ const COMMIT = 'a'.repeat(40);
 const BUILD_ID = 'arena-release-test';
 const SHA_A = '1'.repeat(64);
 const SHA_B = '2'.repeat(64);
+
+type ReleaseDefinition = ReturnType<typeof createArenaReleaseReadinessDefinition>;
+type BuildTarget = 'web' | 'wechat' | 'douyin';
+
+function required<T>(value: T | null | undefined, name: string): T {
+  assert.ok(value !== null && value !== undefined, `${name} 不存在。`);
+  return value;
+}
+
+function record(value: unknown, name: string): Record<string, unknown> {
+  assert.ok(value !== null && typeof value === 'object' && !Array.isArray(value), `${name} 必须是对象。`);
+  return value as Record<string, unknown>;
+}
+
+function array(value: unknown, name: string): readonly unknown[] {
+  assert.ok(Array.isArray(value), `${name} 必须是数组。`);
+  return value;
+}
 
 function definitionValue() {
   return {
@@ -106,7 +124,11 @@ function definitionValue() {
   };
 }
 
-function statementValue(definition, gateId, overrides = {}) {
+function statementValue(
+  definition: ReleaseDefinition,
+  gateId: string,
+  overrides: Readonly<Record<string, unknown>> = {},
+) {
   const gate = definition.requireGate(gateId);
   return {
     schemaVersion: ARENA_RELEASE_EVIDENCE_STATEMENT_SCHEMA_VERSION,
@@ -128,7 +150,11 @@ function statementValue(definition, gateId, overrides = {}) {
   };
 }
 
-function bundleValue(definition, evidence, overrides = {}) {
+function bundleValue(
+  definition: ReleaseDefinition,
+  evidence: readonly unknown[],
+  overrides: Readonly<Record<string, unknown>> = {},
+) {
   return {
     schemaVersion: ARENA_RELEASE_CANDIDATE_BUNDLE_SCHEMA_VERSION,
     definitionId: definition.id,
@@ -141,10 +167,14 @@ function bundleValue(definition, evidence, overrides = {}) {
   };
 }
 
-async function writeBuildTarget(root, target, { sourceDirty = false } = {}) {
+async function writeBuildTarget(
+  root: string,
+  target: BuildTarget,
+  { sourceDirty = false }: Readonly<{ sourceDirty?: boolean }> = {},
+) {
   const directory = path.join(root, target);
   await mkdir(directory, { recursive: true });
-  const files = target === 'web'
+  const files: ReadonlyArray<readonly [string, string]> = target === 'web'
     ? [
       ['greybox.html', 'greybox'],
       ['index.html', 'index'],
@@ -177,13 +207,21 @@ async function writeBuildTarget(root, target, { sourceDirty = false } = {}) {
   });
 }
 
-async function writeThreeTargetBuild(root, options = {}) {
-  return Promise.all(['web', 'wechat', 'douyin'].map((target) => (
+async function writeThreeTargetBuild(
+  root: string,
+  options: Readonly<{ sourceDirty?: boolean }> = {},
+) {
+  const targets: readonly BuildTarget[] = ['web', 'wechat', 'douyin'];
+  return Promise.all(targets.map((target) => (
     writeBuildTarget(root, target, options)
   )));
 }
 
-async function writeVerifiedMaterial(root, relativePath, bytesValue) {
+async function writeVerifiedMaterial(
+  root: string,
+  relativePath: string,
+  bytesValue: string | Buffer,
+) {
   const bytes = Buffer.isBuffer(bytesValue) ? bytesValue : Buffer.from(bytesValue);
   const resolvedPath = path.join(root, ...relativePath.split('/'));
   await mkdir(path.dirname(resolvedPath), { recursive: true });
@@ -308,7 +346,13 @@ test('Release Definition 拒绝未知字段、重复 Gate 与非法阶段，但�
   assert.throws(
     () => createArenaReleaseReadinessDefinition({
       ...base,
-      gates: [base.gates[0], { ...base.gates[1], id: base.gates[0].id }],
+      gates: [
+        required(base.gates[0], 'first gate'),
+        {
+          ...required(base.gates[1], 'second gate'),
+          id: required(base.gates[0], 'first gate').id,
+        },
+      ],
     }),
     /重复的 Release gate/,
   );
@@ -318,7 +362,13 @@ test('Release Definition 拒绝未知字段、重复 Gate 与非法阶段，但�
   );
   const sharedProducer = createArenaReleaseReadinessDefinition({
     ...base,
-    gates: [base.gates[0], { ...base.gates[1], producerId: base.gates[0].producerId }],
+    gates: [
+      required(base.gates[0], 'first gate'),
+      {
+        ...required(base.gates[1], 'second gate'),
+        producerId: required(base.gates[0], 'first gate').producerId,
+      },
+    ],
   });
   assert.equal(sharedProducer.gates.length, 2);
 });
@@ -405,7 +455,10 @@ test('Release Candidate 统一身份、排序并拒绝重复 Gate 和冲突材�
       sourceGate,
       {
         ...buildGate,
-        materials: [{ ...buildGate.materials[0], path: sourceGate.materials[0].path }],
+        materials: [{
+          ...required(buildGate.materials[0], 'build material'),
+          path: required(sourceGate.materials[0], 'source material').path,
+        }],
       },
     ])),
     /具有冲突描述/,
@@ -475,7 +528,7 @@ test('Release Report 已验证失败和 dirty source 均 fail closed', () => {
       status: ARENA_RELEASE_EVIDENCE_STATUS.FAILED,
     }),
   ]));
-  const failedHash = failedCandidate.evidence[0].getContentHash();
+  const failedHash = required(failedCandidate.evidence[0], 'failed evidence').getContentHash();
   const failed = createArenaReleaseReadinessReport(definition, failedCandidate, {
     verifiedEvidence: [{ gateId: 'source-gate', evidenceHash: failedHash }],
   });
@@ -517,15 +570,22 @@ test('Build release producers use one three-target identity and fail closed on d
     );
     assert.throws(
       () => createArenaBuildIntegrityReleaseResult([
-        manifests[0],
-        manifests[1],
-        createArenaBuildManifest({ ...manifests[2].toJSON(), commit: 'b'.repeat(40) }),
+        required(manifests[0], 'web manifest'),
+        required(manifests[1], 'wechat manifest'),
+        createArenaBuildManifest({
+          ...required(manifests[2], 'douyin manifest').toJSON(),
+          commit: 'b'.repeat(40),
+        }),
       ]),
       /同一 commit\/build/,
     );
+    const webManifest = required(
+      manifests.find(({ target }) => target === 'web'),
+      'web manifest',
+    );
     const oversizedWeb = createArenaBuildManifest({
-      ...manifests.find(({ target }) => target === 'web').toJSON(),
-      artifacts: manifests.find(({ target }) => target === 'web').artifacts.map((artifact, index) => (
+      ...webManifest.toJSON(),
+      artifacts: webManifest.artifacts.map((artifact, index) => (
         index === 0 ? { ...artifact, byteLength: 5 * 1024 * 1024 } : artifact
       )),
     });
@@ -630,7 +690,7 @@ test('Golden replay release producer replays the exact material set on one clean
   try {
     const fixtureRoot = path.resolve('tests/arena/fixtures/replays/v5');
     const manifestBytes = await readFile(path.join(fixtureRoot, 'manifest.json'));
-    const manifest = createArenaGoldenReplayManifest(JSON.parse(manifestBytes));
+    const manifest = createArenaGoldenReplayManifest(JSON.parse(manifestBytes.toString('utf8')));
     const fixtureValues = await Promise.all(manifest.entries.map(async ({ file }) => ({
       file,
       replay: JSON.parse(await readFile(path.join(fixtureRoot, file), 'utf8')),
@@ -676,7 +736,7 @@ test('Golden replay release producer replays the exact material set on one clean
       sourceIdentity: { sourceCommit: COMMIT, sourceDirty: false },
     });
     assert.equal(verified.length, 1);
-    assert.equal(verified[0].gateId, gate.id);
+    assert.equal(required(verified[0], 'verified golden replay').gateId, gate.id);
     await assert.rejects(
       verifyArenaStage9ReleaseProducerEvidence({
         definition,
@@ -703,7 +763,7 @@ test('Golden replay release producer replays the exact material set on one clean
       }),
       /只能在 clean candidate checkout/,
     );
-    await writeFile(written[1].verified.resolvedPath, '{}\n');
+    await writeFile(required(written[1], 'first replay material').verified.resolvedPath, '{}\n');
     await assert.rejects(
       verifyArenaStage9ReleaseProducerEvidence({
         definition,
@@ -785,7 +845,7 @@ test('Balance release producer rebuilds the fixed report and rejects an old comm
       sourceIdentity: { sourceCommit: COMMIT, sourceDirty: false },
     });
     assert.equal(verified.length, 1);
-    assert.equal(verified[0].gateId, gate.id);
+    assert.equal(required(verified[0], 'verified balance evidence').gateId, gate.id);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
@@ -838,7 +898,7 @@ test('Regression release producer 复算原子 Report 并严格绑定 clean cand
       sourceIdentity: { sourceCommit: COMMIT, sourceDirty: false },
     });
     assert.equal(verified.length, 1);
-    assert.equal(verified[0].gateId, gate.id);
+    assert.equal(required(verified[0], 'verified regression evidence').gateId, gate.id);
     await writeFile(written.verified.resolvedPath, '{}\n');
     await assert.rejects(
       verifyArenaStage9ReleaseProducerEvidence({
@@ -905,14 +965,21 @@ test('Stage 9 readiness CLI semantically verifies build integrity and budget fro
       directory,
     ], { cwd: process.cwd(), encoding: 'utf8' });
     assert.equal(command.status, 2, command.stderr);
-    const output = JSON.parse(command.stdout);
+    const output = record(JSON.parse(command.stdout), 'readiness CLI output');
+    const report = record(output.report, 'readiness CLI report');
     assert.equal(output.verifiedMaterialCount, 3);
     assert.equal(output.verifiedProducerEvidenceCount, 2);
-    assert.equal(output.report.verifiedEvidenceCount, 2);
-    assert.equal(output.report.readyGateCount, 2);
-    assert.equal(output.report.status, ARENA_RELEASE_READINESS_STATUS.INCOMPLETE);
+    assert.equal(report.verifiedEvidenceCount, 2);
+    assert.equal(report.readyGateCount, 2);
+    assert.equal(report.status, ARENA_RELEASE_READINESS_STATUS.INCOMPLETE);
+    const reportGates = array(report.gates, 'readiness CLI gates').map((value, index) => (
+      record(value, `readiness CLI gates[${index}]`)
+    ));
     for (const gateId of buildResults.keys()) {
-      const gate = output.report.gates.find((value) => value.gateId === gateId);
+      const gate = required(
+        reportGates.find((value) => value.gateId === gateId),
+        `readiness gate ${gateId}`,
+      );
       assert.equal(gate.evidenceVerified, true);
       assert.equal(gate.status, ARENA_RELEASE_EVIDENCE_STATUS.READY);
     }
@@ -972,7 +1039,8 @@ test('Stage 9 readiness CLI 校验未接入材料完整性但不会把声明当 
       bundlePath,
     ], { cwd: process.cwd(), encoding: 'utf8' });
     assert.equal(command.status, 2, command.stderr);
-    const output = JSON.parse(command.stdout);
+    const output = record(JSON.parse(command.stdout), 'partial readiness CLI output');
+    const report = record(output.report, 'partial readiness CLI report');
     assert.equal(output.verifiedMaterialCount, 1);
     assert.equal(output.producerSemanticVerification, 'partial');
     assert.deepEqual(output.supportedProducerIds, [
@@ -989,8 +1057,8 @@ test('Stage 9 readiness CLI 校验未接入材料完整性但不会把声明当 
       'arena:replay:verify',
     ]);
     assert.equal(output.verifiedProducerEvidenceCount, 0);
-    assert.equal(output.report.status, ARENA_RELEASE_READINESS_STATUS.INCOMPLETE);
-    assert.equal(output.report.freezeEligible, false);
+    assert.equal(report.status, ARENA_RELEASE_READINESS_STATUS.INCOMPLETE);
+    assert.equal(report.freezeEligible, false);
     const secondGate = definition.requireGate(ARENA_STAGE9_RC_HANDOFF_GATE_ID.INPUT_PILOT);
     const duplicateMaterial = { ...material, path: 'copied-output.json' };
     const duplicateCandidate = {
