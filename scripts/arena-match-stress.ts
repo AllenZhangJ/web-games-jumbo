@@ -5,15 +5,15 @@ import {
   createArenaStage9MatchCoreExperimentDefinition,
 } from '@number-strategy-jump/arena-v1-experiment';
 import { createArenaV1MatchCoreInvariantWorkloadEntry } from '@number-strategy-jump/arena-v1-experiment';
-import { assertSimulationCase } from '../src/arena/experiment/simulation-workload-registry.js';
+import { assertSimulationCase } from '@number-strategy-jump/arena-experiment';
 import {
   assertArenaGitSourceIdentityStable,
   readArenaGitSourceIdentity,
-} from './arena-git-source-identity.ts';
+} from './arena-git-source-identity.js';
 import {
   assertArenaStressCpuBudget,
   createArenaStressTiming,
-} from './arena-stress-timing.ts';
+} from './arena-stress-timing.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OPTION_NAMES = new Set([
@@ -23,44 +23,71 @@ const OPTION_NAMES = new Set([
   'heap-growth-budget-bytes',
 ]);
 
-function assertKnownOptions(values) {
+type MatchCoreExperimentDefinition = ReturnType<typeof createArenaStage9MatchCoreExperimentDefinition>;
+
+function assertKnownOptions(values: readonly string[]): void {
   for (const argument of values) {
     const match = argument.match(/^--([^=]+)=.+$/);
-    if (!match || !OPTION_NAMES.has(match[1])) {
+    const optionName = match?.[1];
+    if (!optionName || !OPTION_NAMES.has(optionName)) {
       throw new Error(`未知 Arena MatchCore 压测参数 ${argument}。`);
     }
   }
 }
 
-function readPositiveIntegerOption(name, fallback) {
+function readPositiveIntegerOption(name: string, fallback: number): number {
   const prefix = `--${name}=`;
   const options = process.argv.filter((argument) => argument.startsWith(prefix));
   if (options.length === 0) return fallback;
   if (options.length > 1) throw new Error(`${prefix}<value> 不能重复。`);
-  const value = Number(options[0].slice(prefix.length));
+  const option = options[0];
+  if (!option) throw new Error(`${prefix}<value> 缺失。`);
+  const value = Number(option.slice(prefix.length));
   if (!Number.isSafeInteger(value) || value < 1) {
     throw new RangeError(`${prefix}<value> 必须是正安全整数。`);
   }
   return value;
 }
 
-function readPositiveNumberOption(name, fallback) {
+function readPositiveNumberOption(name: string, fallback: number): number {
   const prefix = `--${name}=`;
   const options = process.argv.filter((argument) => argument.startsWith(prefix));
   if (options.length === 0) return fallback;
   if (options.length > 1) throw new Error(`${prefix}<value> 不能重复。`);
-  const value = Number(options[0].slice(prefix.length));
+  const option = options[0];
+  if (!option) throw new Error(`${prefix}<value> 缺失。`);
+  const value = Number(option.slice(prefix.length));
   if (!Number.isFinite(value) || value <= 0) {
     throw new RangeError(`${prefix}<value> 必须是正有限数。`);
   }
   return value;
 }
 
-function increment(map, key) {
+function increment(map: Map<string, number>, key: string): void {
   map.set(key, (map.get(key) ?? 0) + 1);
 }
 
-function assertMetadata(metadata, definition, seed) {
+function record(value: unknown, name: string): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new TypeError(`${name} 必须是对象。`);
+  }
+  return value as Record<string, unknown>;
+}
+
+function safeTick(value: unknown, name: string): number {
+  const tick = record(value, name).tick;
+  if (typeof tick !== 'number' || !Number.isSafeInteger(tick) || tick < 0) {
+    throw new RangeError(`${name}.tick 必须是非负安全整数。`);
+  }
+  return tick;
+}
+
+function assertMetadata(
+  value: unknown,
+  definition: MatchCoreExperimentDefinition,
+  seed: number,
+): void {
+  const metadata = record(value, `seed ${seed} metadata`);
   if (metadata.matchSeed !== seed) throw new Error(`seed ${seed} metadata.matchSeed 失配。`);
   const expected = definition.candidate.authority;
   for (const field of [
@@ -68,7 +95,7 @@ function assertMetadata(metadata, definition, seed) {
     'physicsBackendVersion',
     'configHash',
     'ruleContentHash',
-  ]) {
+  ] as const) {
     if (metadata[field] !== expected[field]) {
       throw new Error(`seed ${seed} metadata.${field} 与 Definition 不一致。`);
     }
@@ -95,9 +122,9 @@ const definition = createArenaStage9MatchCoreExperimentDefinition({
 });
 const workload = createArenaV1MatchCoreInvariantWorkloadEntry();
 workload.validateParameters(definition.workload.parameters);
-const results = new Map();
-const eventCounts = new Map();
-const finalHashes = new Set();
+const results = new Map<string, number>();
+const eventCounts = new Map<string, number>();
+const finalHashes = new Set<string>();
 let totalTicks = 0;
 let longestMatchTicks = 0;
 let totalEvents = 0;
@@ -115,28 +142,39 @@ for (const seed of definition.getSeeds()) {
   }), `MatchCore benchmark case ${seed}`);
   try {
     assertMetadata(simulationCase.getMetadata(), definition, seed);
-    let snapshot = simulationCase.getSnapshot();
+    let snapshotTick = safeTick(simulationCase.getSnapshot(), `seed ${seed} initial snapshot`);
     let matchEvents = 0;
     let steps = 0;
     while (!simulationCase.isComplete()) {
       if (steps >= definition.limits.maximumTicksPerCase) {
         throw new Error(`seed ${seed} 没有在权威时限内结束。`);
       }
-      const step = simulationCase.step();
-      if (step.snapshot.tick !== snapshot.tick + 1) {
+      const step = record(simulationCase.step(), `seed ${seed} step`);
+      const nextTick = safeTick(step.snapshot, `seed ${seed} step snapshot`);
+      if (nextTick !== snapshotTick + 1) {
         throw new Error(`seed ${seed} 没有精确推进一个 tick。`);
       }
-      snapshot = step.snapshot;
+      snapshotTick = nextTick;
       steps += 1;
+      if (!Array.isArray(step.events)) throw new TypeError(`seed ${seed} step.events 必须是数组。`);
       matchEvents += step.events.length;
-      for (const event of step.events) increment(eventCounts, event.type);
+      for (const eventValue of step.events) {
+        const event = record(eventValue, `seed ${seed} event`);
+        if (typeof event.type !== 'string') throw new TypeError(`seed ${seed} event.type 无效。`);
+        increment(eventCounts, event.type);
+      }
     }
-    const exported = simulationCase.exportResult();
-    if (exported.result.replayVerified) verifiedReplays += 1;
+    const exported = record(simulationCase.exportResult(), `seed ${seed} result`);
+    const exportedResult = record(exported.result, `seed ${seed} result.result`);
+    if (typeof exported.finalHash !== 'string' || !/^[0-9a-f]{8}$/.test(exported.finalHash)) {
+      throw new TypeError(`seed ${seed} finalHash 无效。`);
+    }
+    if (typeof exportedResult.reason !== 'string') throw new TypeError(`seed ${seed} reason 无效。`);
+    if (exportedResult.replayVerified === true) verifiedReplays += 1;
     finalHashes.add(exported.finalHash);
-    increment(results, exported.result.reason);
-    totalTicks += snapshot.tick;
-    longestMatchTicks = Math.max(longestMatchTicks, snapshot.tick);
+    increment(results, exportedResult.reason);
+    totalTicks += snapshotTick;
+    longestMatchTicks = Math.max(longestMatchTicks, snapshotTick);
     totalEvents += matchEvents;
   } finally {
     simulationCase.destroy();
