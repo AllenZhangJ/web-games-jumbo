@@ -46,10 +46,15 @@ export const ARENA_STAGE9_BALANCE_EXPLORATION_CANDIDATES = Object.freeze([
   }),
 ]);
 
+export interface ArenaStage9BalanceExplorationOptions {
+  readonly sourceCommit?: unknown;
+  readonly sourceDirty?: unknown;
+}
+
 export function createArenaStage9BalanceExplorationDefinitions({
   sourceCommit,
   sourceDirty,
-} = {}) {
+}: ArenaStage9BalanceExplorationOptions = {}) {
   const seeds = createArenaStage9BalanceExplorationSeeds();
   const balancePolicy = createArenaStage9BalancePolicy(seeds.length);
   const botGatePolicy = createArenaStage9BalanceBotGatePolicy(seeds.length);

@@ -10,7 +10,7 @@ import {
   ARENA_STAGE9_BALANCE_EXPLORATION_ID,
   createArenaStage9BalanceExplorationDefinitions,
   createArenaStage9BalanceExplorationRegistries,
-} from '../src/arena/experiment/arena-balance-exploration-composition.js';
+} from '@number-strategy-jump/arena-v1-experiment';
 import {
   ARENA_BALANCE_EXPLORATION_SELECTION_POLICY,
 } from '../src/arena/experiment/arena-balance-exploration-selection.js';

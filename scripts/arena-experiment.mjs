@@ -24,11 +24,11 @@ import {
 import {
   createArenaStage9BalanceExperimentDefinition,
   createArenaStage9BalanceExperimentRegistries,
-} from '../src/arena/experiment/arena-balance-experiment-composition.js';
+} from '@number-strategy-jump/arena-v1-experiment';
 import {
   createArenaStage9BalanceValidationExperimentDefinition,
   createArenaStage9BalanceValidationExperimentRegistries,
-} from '../src/arena/experiment/arena-balance-validation-composition.js';
+} from '@number-strategy-jump/arena-v1-experiment';
 import {
   ARENA_EXPERIMENT_OUTCOME,
 } from '@number-strategy-jump/arena-experiment';

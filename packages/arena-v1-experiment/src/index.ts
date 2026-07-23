@@ -131,3 +131,45 @@ export {
   createArenaBalanceCandidateCollectorEntry,
   createArenaBalanceCandidateCollectorParameters,
 } from './arena-balance-candidate-collector.js';
+export {
+  createArenaBalanceCandidateExperimentDefinition,
+  createArenaBalanceCandidateExperimentRegistries,
+} from './arena-balance-experiment-factory.js';
+export {
+  ARENA_STAGE9_BALANCE_BOT_GATE_POLICY_V1,
+  ARENA_STAGE9_BALANCE_CASE_COUNT,
+  ARENA_STAGE9_BALANCE_DEFAULT_CONFIG,
+  ARENA_STAGE9_BALANCE_EXPERIMENT_ID,
+  ARENA_STAGE9_BALANCE_POLICY_V1,
+  ARENA_STAGE9_BALANCE_REPLAY_SAMPLE_COUNT,
+  createArenaStage9BalanceExperimentDefinition,
+  createArenaStage9BalanceExperimentRegistries,
+} from './arena-balance-experiment-composition.js';
+export type {
+  ArenaStage9BalanceExperimentOptions,
+} from './arena-balance-experiment-composition.js';
+export {
+  ARENA_STAGE9_BALANCE_EXPLORATION_CANDIDATES,
+  ARENA_STAGE9_BALANCE_EXPLORATION_CASE_COUNT,
+  ARENA_STAGE9_BALANCE_EXPLORATION_FIRST_SEED_INDEX,
+  ARENA_STAGE9_BALANCE_EXPLORATION_ID,
+  ARENA_STAGE9_BALANCE_EXPLORATION_REPLAY_SAMPLE_COUNT,
+  ARENA_STAGE9_BALANCE_VALIDATION_CASE_COUNT,
+  ARENA_STAGE9_BALANCE_VALIDATION_FIRST_SEED_INDEX,
+  createArenaStage9BalanceExplorationDefinitions,
+  createArenaStage9BalanceExplorationRegistries,
+  createArenaStage9BalanceExplorationSeeds,
+  createArenaStage9BalanceValidationSeeds,
+} from './arena-balance-exploration-composition.js';
+export type {
+  ArenaStage9BalanceExplorationOptions,
+} from './arena-balance-exploration-composition.js';
+export {
+  ARENA_STAGE9_BALANCE_SELECTION_BUNDLE_HASH,
+  ARENA_STAGE9_BALANCE_VALIDATION_CANDIDATE_ID,
+  ARENA_STAGE9_BALANCE_VALIDATION_CONFIG,
+  ARENA_STAGE9_BALANCE_VALIDATION_EXPERIMENT_ID,
+  ARENA_STAGE9_BALANCE_VALIDATION_REPLAY_SAMPLE_COUNT,
+  createArenaStage9BalanceValidationExperimentDefinition,
+  createArenaStage9BalanceValidationExperimentRegistries,
+} from './arena-balance-validation-composition.js';

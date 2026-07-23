@@ -56,7 +56,7 @@ import {
 } from '../../scripts/lib/arena-stage9-release-producers.mjs';
 import {
   createArenaStage9BalanceValidationExperimentDefinition,
-} from '../../src/arena/experiment/arena-balance-validation-composition.js';
+} from '@number-strategy-jump/arena-v1-experiment';
 import { createArenaExperimentReport } from '@number-strategy-jump/arena-experiment';
 import {
   createArenaExperimentReportBundle,

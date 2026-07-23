@@ -55,13 +55,13 @@ import {
   ARENA_STAGE9_BALANCE_EXPERIMENT_ID,
   ARENA_STAGE9_BALANCE_POLICY_V1,
   createArenaStage9BalanceExperimentDefinition,
-} from '../../../src/arena/experiment/arena-balance-experiment-composition.js';
+} from '@number-strategy-jump/arena-v1-experiment';
 import {
   ARENA_STAGE9_BALANCE_EXPLORATION_CANDIDATES,
   createArenaStage9BalanceExplorationDefinitions,
   createArenaStage9BalanceExplorationSeeds,
   createArenaStage9BalanceValidationSeeds,
-} from '../../../src/arena/experiment/arena-balance-exploration-composition.js';
+} from '@number-strategy-jump/arena-v1-experiment';
 import {
   createArenaBalanceExplorationBundle,
   readArenaBalanceExplorationBundle,
@@ -75,7 +75,7 @@ import {
   ARENA_STAGE9_BALANCE_VALIDATION_REPLAY_SAMPLE_COUNT,
   ARENA_STAGE9_BALANCE_SELECTION_BUNDLE_HASH,
   createArenaStage9BalanceValidationExperimentDefinition,
-} from '../../../src/arena/experiment/arena-balance-validation-composition.js';
+} from '@number-strategy-jump/arena-v1-experiment';
 import {
   createArenaStage9BotSeeds,
 } from '@number-strategy-jump/arena-experiment';

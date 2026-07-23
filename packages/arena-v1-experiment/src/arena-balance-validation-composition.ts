@@ -10,5 +10,6 @@ export {
 } from '@number-strategy-jump/arena-balance';
 
 export function createArenaStage9BalanceValidationExperimentRegistries() {
-  return createArenaBalanceCandidateExperimentRegistries();
+  const registries = createArenaBalanceCandidateExperimentRegistries();
+  return registries;
 }

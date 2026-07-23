@@ -21,11 +21,17 @@ export {
   ARENA_STAGE9_BALANCE_POLICY_V1,
 };
 
+export interface ArenaStage9BalanceExperimentOptions {
+  readonly sourceCommit?: unknown;
+  readonly sourceDirty?: unknown;
+  readonly config?: unknown;
+}
+
 export function createArenaStage9BalanceExperimentDefinition({
   sourceCommit,
   sourceDirty,
   config = ARENA_STAGE9_BALANCE_DEFAULT_CONFIG,
-} = {}) {
+}: ArenaStage9BalanceExperimentOptions = {}) {
   return createArenaBalanceCandidateExperimentDefinition({
     sourceCommit,
     sourceDirty,
