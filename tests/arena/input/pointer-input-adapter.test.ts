@@ -6,35 +6,69 @@ import {
   PointerInputAdapter,
 } from '@number-strategy-jump/arena-presentation-runtime';
 
-const point = (pointerId, x, y) => ({ pointerId, x, y });
+interface PointerPoint {
+  readonly pointerId: number;
+  readonly x: number;
+  readonly y: number;
+}
 
-function platformHarness({ failAt = null } = {}) {
-  const handlers = {};
-  const active = new Set();
-  const bind = (name, callback) => {
+interface InputBindings {
+  readonly onStart: (point: PointerPoint) => boolean;
+  readonly onMove: (point: PointerPoint) => boolean;
+  readonly onEnd: (point: PointerPoint) => boolean;
+  readonly onCancel: (point: PointerPoint) => boolean;
+}
+
+type HandlerName = 'input' | 'resize' | 'hide' | 'show';
+type LifecycleHandler = () => unknown;
+
+const point = (pointerId: number, x: number, y: number): PointerPoint => ({
+  pointerId,
+  x,
+  y,
+});
+
+function platformHarness({
+  failAt = null,
+}: {
+  readonly failAt?: HandlerName | null;
+} = {}) {
+  const boundHandlers = new Map<HandlerName, unknown>();
+  const active = new Set<HandlerName>();
+  const bind = (name: HandlerName, callback: unknown) => {
     if (failAt === name) throw new Error(`${name} failed`);
-    handlers[name] = callback;
+    boundHandlers.set(name, callback);
     active.add(name);
     return () => {
       active.delete(name);
-      if (handlers[name] === callback) delete handlers[name];
+      if (boundHandlers.get(name) === callback) boundHandlers.delete(name);
     };
   };
+  const requireHandler = <Value>(name: HandlerName): Value => {
+    const handler = boundHandlers.get(name);
+    assert.ok(handler);
+    return handler as Value;
+  };
   return {
-    handlers,
+    handlers: {
+      get input(): InputBindings { return requireHandler<InputBindings>('input'); },
+      get resize(): LifecycleHandler { return requireHandler<LifecycleHandler>('resize'); },
+      get hide(): LifecycleHandler { return requireHandler<LifecycleHandler>('hide'); },
+      get show(): LifecycleHandler { return requireHandler<LifecycleHandler>('show'); },
+    },
     active,
     platform: {
-      bindInput: (callbacks) => bind('input', callbacks),
-      onResize: (callback) => bind('resize', callback),
-      onHide: (callback) => bind('hide', callback),
-      onShow: (callback) => bind('show', callback),
+      bindInput: (callbacks: unknown) => bind('input', callbacks),
+      onResize: (callback: unknown) => bind('resize', callback),
+      onHide: (callback: unknown) => bind('hide', callback),
+      onShow: (callback: unknown) => bind('show', callback),
     },
   };
 }
 
 test('PointerInputAdapter binds move/multitouch and clears ownership across hide/show', () => {
   const harness = platformHarness();
-  const errors = [];
+  const errors: unknown[] = [];
   let viewport = { width: 400, height: 800 };
   const sampler = new InputSampler({
     participantId: 'player-1',
@@ -45,7 +79,7 @@ test('PointerInputAdapter binds move/multitouch and clears ownership across hide
     platform: harness.platform,
     sampler,
     viewportProvider: () => viewport,
-    onError: (error) => errors.push(error),
+    onError: (error: unknown) => errors.push(error),
   });
   assert.equal(adapter.start(), true);
   assert.equal(adapter.start(), false);
@@ -121,7 +155,6 @@ test('PointerInputAdapter contains destroy reentry during start and stop cleanup
   });
 
   const startingSampler = createSampler();
-  let startingAdapter;
   let startingCleanupCalls = 0;
   const startingPlatform = {
     bindInput() {
@@ -132,7 +165,7 @@ test('PointerInputAdapter contains destroy reentry during start and stop cleanup
     onHide() { throw new Error('destroy 后不应继续绑定 hide'); },
     onShow() { throw new Error('destroy 后不应继续绑定 show'); },
   };
-  startingAdapter = new PointerInputAdapter({
+  const startingAdapter = new PointerInputAdapter({
     platform: startingPlatform,
     sampler: startingSampler,
     viewportProvider: () => ({ width: 400, height: 800 }),
@@ -144,7 +177,6 @@ test('PointerInputAdapter contains destroy reentry during start and stop cleanup
   startingSampler.destroy();
 
   const stoppingSampler = createSampler();
-  let stoppingAdapter;
   let cleanupCalls = 0;
   const cleanup = () => { cleanupCalls += 1; };
   const stoppingPlatform = {
@@ -156,7 +188,7 @@ test('PointerInputAdapter contains destroy reentry during start and stop cleanup
     onHide: () => cleanup,
     onShow: () => cleanup,
   };
-  stoppingAdapter = new PointerInputAdapter({
+  const stoppingAdapter = new PointerInputAdapter({
     platform: stoppingPlatform,
     sampler: stoppingSampler,
     viewportProvider: () => ({ width: 400, height: 800 }),

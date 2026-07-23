@@ -7,7 +7,6 @@
     "tests/architecture.test.js",
     "tests/arena/experiment/arena-experiment.test.js",
     "tests/arena/input-pilot-release-evidence.test.js",
-    "tests/arena/input/pointer-input-adapter.test.js",
     "tests/arena/local-match-session.test.js",
     "tests/arena/map-foundation.test.js",
     "tests/arena/match-core-equipment.test.js",
