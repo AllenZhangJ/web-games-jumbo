@@ -1,13 +1,15 @@
 export interface ArenaStressIntegerOptionDefinition {
-  readonly fallback: number;
+  readonly fallback: number | null;
   readonly minimum?: number;
   readonly maximum?: number;
 }
 
 export function parseArenaStressIntegerOptions<
   T extends Readonly<Record<string, ArenaStressIntegerOptionDefinition>>,
->(values: readonly string[], definitions: T): Readonly<{ [K in keyof T]: number }> {
-  const result: Record<string, number> = Object.fromEntries(
+>(values: readonly string[], definitions: T): Readonly<{
+  [K in keyof T]: T[K]['fallback'] extends null ? number | null : number;
+}> {
+  const result: Record<string, number | null> = Object.fromEntries(
     Object.entries(definitions).map(([name, definition]) => [
     name,
     definition.fallback,
@@ -33,5 +35,7 @@ export function parseArenaStressIntegerOptions<
     }
     result[name] = value;
   }
-  return Object.freeze(result) as Readonly<{ [K in keyof T]: number }>;
+  return Object.freeze(result) as Readonly<{
+    [K in keyof T]: T[K]['fallback'] extends null ? number | null : number;
+  }>;
 }

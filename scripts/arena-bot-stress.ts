@@ -8,13 +8,25 @@ import {
 import { ARENA_BOT_ASSIGNMENT_DISTRIBUTION_COLLECTOR_ID } from '@number-strategy-jump/arena-v1-experiment';
 import { ARENA_BOT_CAPABILITY_COLLECTOR_ID } from '@number-strategy-jump/arena-v1-experiment';
 import { ARENA_EXPERIMENT_OUTCOME } from '@number-strategy-jump/arena-experiment';
-import { readArenaGitSourceIdentity } from './arena-git-source-identity.ts';
-import { runArenaNodeExperiment } from './arena-node-experiment-runner.ts';
-import { parseArenaStressIntegerOptions } from './arena-stress-cli.ts';
+import { readArenaGitSourceIdentity } from './arena-git-source-identity.js';
+import { runArenaNodeExperiment } from './arena-node-experiment-runner.js';
+import { parseArenaStressIntegerOptions } from './arena-stress-cli.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-async function main() {
+interface BotDistributionMetricData {
+  readonly denominators: Readonly<{ assignmentSamples: number }>;
+  readonly raw: Readonly<{ counts: Readonly<Record<string, number>> }>;
+  readonly derived: Readonly<{ shares: Readonly<Record<string, number>> }>;
+  readonly gate: unknown;
+}
+
+interface BotCapabilityMetricData {
+  readonly derived: Readonly<{ difficulties: unknown }>;
+  readonly gate: unknown;
+}
+
+async function main(): Promise<void> {
   const options = parseArenaStressIntegerOptions(process.argv.slice(2), {
     matches: { fallback: 300, maximum: 100_000 },
     'replay-samples': { fallback: 3, minimum: 0, maximum: 1_000 },
@@ -35,12 +47,15 @@ async function main() {
     definition,
     registries: createArenaStage9BotExperimentRegistries(),
   });
-  const distribution = report.metrics.find(
+  const distributionResult = report.metrics.find(
     ({ id }) => id === ARENA_BOT_ASSIGNMENT_DISTRIBUTION_COLLECTOR_ID,
-  ).data;
-  const capability = report.metrics.find(
+  );
+  const capabilityResult = report.metrics.find(
     ({ id }) => id === ARENA_BOT_CAPABILITY_COLLECTOR_ID,
-  ).data;
+  );
+  if (!distributionResult || !capabilityResult) throw new Error('Bot stress 缺少必需 Metric。');
+  const distribution = distributionResult.data as unknown as BotDistributionMetricData;
+  const capability = capabilityResult.data as unknown as BotCapabilityMetricData;
   console.log(JSON.stringify({
     generatedAt: report.generatedAt,
     source,
@@ -65,7 +80,7 @@ async function main() {
   if (report.outcome !== ARENA_EXPERIMENT_OUTCOME.PASSED) process.exitCode = 2;
 }
 
-main().catch((error) => {
+void main().catch((error: unknown) => {
   console.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;
 });
