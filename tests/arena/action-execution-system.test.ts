@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ActionExecutionSystem } from '@number-strategy-jump/arena-core';
+import type { ActionResolution } from '@number-strategy-jump/arena-core';
 import { ActionRegistry } from '@number-strategy-jump/arena-definitions';
 import { ACTION_RESOLUTION_KIND } from '@number-strategy-jump/arena-core';
 import { ARENA_ACTION_PHASE } from '@number-strategy-jump/arena-core';
@@ -10,6 +11,9 @@ import {
   ACTION_INPUT_CHANNEL,
   ACTION_INPUT_TRIGGER,
   ACTION_LANE,
+  type ActionDefinition,
+  type ActionInputChannel,
+  type ActionLane,
 } from '@number-strategy-jump/arena-definitions';
 import {
   STAGE4_ACTION_DEFINITIONS,
@@ -26,14 +30,17 @@ function createSystem() {
 }
 
 function selected(
-  participantId,
-  actionDefinitionId,
-  candidateId = `${participantId}-candidate`,
+  participantId: string,
+  actionDefinitionId: string,
+  candidateId: string = `${participantId}-candidate`,
   {
     inputChannel = ACTION_INPUT_CHANNEL.PRIMARY,
     lane = ACTION_LANE.COMBAT,
-  } = {},
-) {
+  }: Readonly<{
+    inputChannel?: ActionInputChannel;
+    lane?: ActionLane;
+  }> = {},
+): ActionResolution {
   return {
     kind: ACTION_RESOLUTION_KIND.SELECTED,
     tick: 0,
@@ -47,11 +54,15 @@ function selected(
   };
 }
 
-function testAction(id, {
+function testAction(id: string, {
   inputChannel,
   lane,
   conflictTags = [],
-}) {
+}: Readonly<{
+  inputChannel: ActionInputChannel;
+  lane: ActionLane;
+  conflictTags?: readonly string[];
+}>): ActionDefinition {
   return {
     schemaVersion: ACTION_DEFINITION_SCHEMA_VERSION,
     id,
@@ -74,19 +85,25 @@ function testAction(id, {
 test('ActionExecutionSystem is the single writer for deterministic action timing', () => {
   const system = createSystem();
   const starts = system.start([selected('player-1', STAGE4_ACTION_ID.BASE_PUSH)]);
-  assert.equal(starts[0].phase, ARENA_ACTION_PHASE.WINDUP);
-  assert.equal(starts[0].ticksRemaining, 8);
+  const start = starts[0];
+  assert.ok(start);
+  assert.equal(start.phase, ARENA_ACTION_PHASE.WINDUP);
+  assert.equal(start.ticksRemaining, 8);
   for (let tick = 0; tick < 7; tick += 1) {
     assert.deepEqual(system.advance(), []);
   }
   const active = system.advance();
-  assert.equal(active[0].fromPhase, ARENA_ACTION_PHASE.WINDUP);
-  assert.equal(active[0].toPhase, ARENA_ACTION_PHASE.ACTIVE);
+  const activeTransition = active[0];
+  assert.ok(activeTransition);
+  assert.equal(activeTransition.fromPhase, ARENA_ACTION_PHASE.WINDUP);
+  assert.equal(activeTransition.toPhase, ARENA_ACTION_PHASE.ACTIVE);
   assert.equal(system.getSnapshot('player-1').ticksRemaining, 3);
   system.advance();
   system.advance();
   const recovery = system.advance();
-  assert.equal(recovery[0].toPhase, ARENA_ACTION_PHASE.RECOVERY);
+  const recoveryTransition = recovery[0];
+  assert.ok(recoveryTransition);
+  assert.equal(recoveryTransition.toPhase, ARENA_ACTION_PHASE.RECOVERY);
   assert.equal(system.getSnapshot('player-1').ticksRemaining, 15);
   for (let tick = 0; tick < 15; tick += 1) system.advance();
   assert.deepEqual(system.getSnapshot('player-1'), {
@@ -144,7 +161,9 @@ test('interrupt and reset clear action identity without exposing mutable state',
   const listed = system.listSnapshots();
   assert.deepEqual(listed.map(({ participantId }) => participantId), PARTICIPANTS);
   assert.ok(Object.isFrozen(listed));
-  assert.ok(Object.isFrozen(listed[0]));
+  const firstListed = listed[0];
+  assert.ok(firstListed);
+  assert.ok(Object.isFrozen(firstListed));
   const interrupted = system.interrupt(['player-2', 'player-1']);
   assert.deepEqual(interrupted.map(({ participantId }) => participantId), PARTICIPANTS);
   assert.equal(system.getSnapshot('player-1').definitionId, null);

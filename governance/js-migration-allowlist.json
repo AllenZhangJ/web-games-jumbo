@@ -5,9 +5,6 @@
   "policy": "exact-decreasing-allowlist",
   "files": [
     "tests/architecture.test.js",
-    "tests/arena/action-execution-system.test.js",
-    "tests/arena/action-resolver.test.js",
-    "tests/arena/action-rule-strategies.test.js",
     "tests/arena/arena-rule-engine.test.js",
     "tests/arena/bot-controller.test.js",
     "tests/arena/bot-mobility.test.js",

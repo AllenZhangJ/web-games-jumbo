@@ -12,17 +12,32 @@ import {
   ACTION_PRIORITY,
   ACTION_RESOLUTION_KIND,
   ActionResolver,
+  type ActionCandidate,
+  type ActionResolution,
+  type ActionResolutionContext,
+  type ActionResolutionResult,
 } from '@number-strategy-jump/arena-core';
+import type {
+  ActionDefinition,
+  ActionInputChannel,
+  ActionInputTrigger,
+  ActionLane,
+} from '@number-strategy-jump/arena-definitions';
 
 function action(
-  id,
+  id: string,
   {
     trigger = ACTION_INPUT_TRIGGER.PRESSED,
     channel = ACTION_INPUT_CHANNEL.PRIMARY,
     lane = ACTION_LANE.COMBAT,
     conflictTags = [],
-  } = {},
-) {
+  }: Readonly<{
+    trigger?: ActionInputTrigger;
+    channel?: ActionInputChannel;
+    lane?: ActionLane;
+    conflictTags?: readonly string[];
+  }> = {},
+): ActionDefinition {
   return {
     schemaVersion: ACTION_DEFINITION_SCHEMA_VERSION,
     id,
@@ -42,7 +57,12 @@ function action(
   };
 }
 
-function candidate(id, actionDefinitionId, priority, overrides = {}) {
+function candidate(
+  id: string,
+  actionDefinitionId: string,
+  priority: number,
+  overrides: Partial<ActionCandidate> = {},
+): ActionCandidate {
   return {
     id,
     actionDefinitionId,
@@ -50,11 +70,15 @@ function candidate(id, actionDefinitionId, priority, overrides = {}) {
     priority,
     available: true,
     blocksFallback: false,
+    unavailableReason: null,
     ...overrides,
   };
 }
 
-function context(candidates, overrides = {}) {
+function context(
+  candidates: readonly unknown[],
+  overrides: Partial<ActionResolutionContext> = {},
+): ActionResolutionContext {
   return {
     tick: 12,
     participantId: 'player-1',
@@ -73,12 +97,22 @@ function context(candidates, overrides = {}) {
   };
 }
 
-function resolver(...actions) {
+function resolver(...actions: readonly ActionDefinition[]): ActionResolver {
   return new ActionResolver({ actionRegistry: new ActionRegistry(actions) });
 }
 
-function primaryOutcome(result) {
-  return result.outcomes.find(({ inputChannel }) => inputChannel === ACTION_INPUT_CHANNEL.PRIMARY);
+function primaryOutcome(result: ActionResolutionResult): ActionResolution {
+  const outcome = result.outcomes.find(({ inputChannel }) => (
+    inputChannel === ACTION_INPUT_CHANNEL.PRIMARY
+  ));
+  assert.ok(outcome);
+  return outcome;
+}
+
+function outcomeAt(result: ActionResolutionResult, index: number): ActionResolution {
+  const outcome = result.outcomes[index];
+  assert.ok(outcome);
+  return outcome;
 }
 
 test('ActionResolver enforces contextual priority without knowing equipment implementations', () => {
@@ -135,9 +169,9 @@ test('unavailable participant and neutral input have explicit per-channel outcom
       slamPressed: false,
     },
   }));
-  assert.equal(neutral.outcomes[0].kind, ACTION_RESOLUTION_KIND.NONE);
-  assert.equal(neutral.outcomes[0].reason, 'no-input');
-  assert.equal(neutral.outcomes[0].inputChannel, null);
+  assert.equal(outcomeAt(neutral, 0).kind, ACTION_RESOLUTION_KIND.NONE);
+  assert.equal(outcomeAt(neutral, 0).reason, 'no-input');
+  assert.equal(outcomeAt(neutral, 0).inputChannel, null);
 });
 
 test('same-priority candidates resolve by stable id independent of registration order', () => {
@@ -226,11 +260,11 @@ test('a release-triggered candidate creates intent only while its provider expos
   const released = value.resolve(context([
     candidate('release-candidate', release.id, ACTION_PRIORITY.LOCOMOTION),
   ], { input: neutralInput }));
-  assert.equal(released.outcomes[0].inputChannel, ACTION_INPUT_CHANNEL.JUMP);
-  assert.equal(released.outcomes[0].kind, ACTION_RESOLUTION_KIND.SELECTED);
+  assert.equal(outcomeAt(released, 0).inputChannel, ACTION_INPUT_CHANNEL.JUMP);
+  assert.equal(outcomeAt(released, 0).kind, ACTION_RESOLUTION_KIND.SELECTED);
 
   const absent = value.resolve(context([], { input: neutralInput }));
-  assert.equal(absent.outcomes[0].reason, 'no-input');
+  assert.equal(outcomeAt(absent, 0).reason, 'no-input');
 });
 
 test('same-tick lane and conflict resolution uses priority then stable candidate id', () => {
@@ -253,7 +287,7 @@ test('same-tick lane and conflict resolution uses priority then stable candidate
     candidate('jump-candidate', 'jump', ACTION_PRIORITY.LOCOMOTION),
   ], { input }));
   assert.equal(primaryOutcome(laneResult).reason, 'same-tick-lane-conflict');
-  assert.equal(laneResult.outcomes[1].kind, ACTION_RESOLUTION_KIND.SELECTED);
+  assert.equal(outcomeAt(laneResult, 1).kind, ACTION_RESOLUTION_KIND.SELECTED);
 
   const conflict = resolver(
     action('attack', { conflictTags: ['full-body'] }),
@@ -267,7 +301,7 @@ test('same-tick lane and conflict resolution uses priority then stable candidate
   const second = candidate('z-jump', 'jump', 300);
   const conflictResult = conflict.resolve(context([second, first], { input }));
   assert.equal(primaryOutcome(conflictResult).kind, ACTION_RESOLUTION_KIND.SELECTED);
-  assert.equal(conflictResult.outcomes[1].reason, 'same-tick-action-conflict');
+  assert.equal(outcomeAt(conflictResult, 1).reason, 'same-tick-action-conflict');
 });
 
 test('active lane and conflict constraints reject starts before ActionExecution mutation', () => {
@@ -294,7 +328,7 @@ test('active lane and conflict constraints reject starts before ActionExecution 
     activeConflictTags: ['lower-body'],
   }));
   assert.equal(primaryOutcome(result).reason, 'action-lane-occupied');
-  assert.equal(result.outcomes[1].reason, 'active-action-conflict');
+  assert.equal(outcomeAt(result, 1).reason, 'active-action-conflict');
 });
 
 test('candidate and context validation reject ambiguity before resolution', () => {

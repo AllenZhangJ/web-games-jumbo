@@ -93,6 +93,7 @@ test('default effects convert data into frozen commands without mutating actors'
   effects.validateActionRegistry(actionRegistry);
   const basePush = actionRegistry.require(STAGE4_ACTION_ID.BASE_PUSH);
   const directional = basePush.effects.find(({ kind }) => kind === 'apply-directional-impulse');
+  assert.ok(directional);
   const commands = effects.resolve(directional, {
     actionDefinitionId: basePush.id,
     source: SOURCE,
@@ -105,7 +106,9 @@ test('default effects convert data into frozen commands without mutating actors'
     participantId: 'player-2',
   }]);
   assert.ok(Object.isFrozen(commands));
-  assert.ok(Object.isFrozen(commands[0].impulse));
+  const firstCommand = commands[0];
+  assert.ok(firstCommand);
+  assert.ok(Object.isFrozen(firstCommand.impulse));
   assert.equal(FRONT.position.x, 1);
 });
 
@@ -113,20 +116,28 @@ test('chain pull and front guard remain composable effect commands', () => {
   const { actionRegistry } = createStage4ContentRegistries();
   const effects = createDefaultActionEffectRegistry();
   const chain = actionRegistry.require(STAGE4_ACTION_ID.CHAIN_PULL);
-  const pull = effects.resolve(chain.effects.find(({ kind }) => kind === 'pull-to-source'), {
+  const pullEffect = chain.effects.find(({ kind }) => kind === 'pull-to-source');
+  assert.ok(pullEffect);
+  const pull = effects.resolve(pullEffect, {
     actionDefinitionId: chain.id,
     source: SOURCE,
     target: FRONT,
   });
-  assert.deepEqual(pull[0].impulse, { x: -10, y: 2.5, z: 0 });
+  const pullCommand = pull[0];
+  assert.ok(pullCommand);
+  assert.deepEqual(pullCommand.impulse, { x: -10, y: 2.5, z: 0 });
 
   const shield = actionRegistry.require(STAGE4_ACTION_ID.SHIELD_CHARGE);
-  const guard = effects.resolve(shield.effects.find(({ kind }) => kind === 'front-guard'), {
+  const guardEffect = shield.effects.find(({ kind }) => kind === 'front-guard');
+  assert.ok(guardEffect);
+  const guard = effects.resolve(guardEffect, {
     actionDefinitionId: shield.id,
     source: SOURCE,
   });
-  assert.equal(guard[0].kind, ACTION_RULE_COMMAND.REGISTER_FRONT_GUARD);
-  assert.deepEqual(guard[0].cancelledEffectKinds, ['pull-to-source']);
+  const guardCommand = guard[0];
+  assert.ok(guardCommand);
+  assert.equal(guardCommand.kind, ACTION_RULE_COMMAND.REGISTER_FRONT_GUARD);
+  assert.deepEqual(guardCommand.cancelledEffectKinds, ['pull-to-source']);
 });
 
 test('strategy registries reject unsupported kinds and invalid specialized parameters at bootstrap', () => {
@@ -160,11 +171,11 @@ test('strategy registries reject unsupported kinds and invalid specialized param
     /未注册 effect unregistered-effect/,
   );
   assert.throws(
-    () => new ActionEffectRegistry([{
+    () => new ActionEffectRegistry([({
       kind: 'broken',
       triggers: [ACTION_EFFECT_TRIGGER.ACTION_STARTED],
       validateParameters() {},
-    }]),
+    } as never)]),
     /缺少函数合同/,
   );
 
