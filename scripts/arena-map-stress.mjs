@@ -6,7 +6,7 @@ import {
   createArenaStage9MapExperimentRegistries,
 } from '../src/arena/experiment/arena-map-experiment-composition.js';
 import { ARENA_EXPERIMENT_OUTCOME } from '@number-strategy-jump/arena-experiment';
-import { ARENA_MAP_TIMELINE_COLLECTOR_ID } from '../src/arena/experiment/arena-map-timeline-collector.js';
+import { ARENA_MAP_TIMELINE_COLLECTOR_ID } from '@number-strategy-jump/arena-v1-experiment';
 import { readArenaGitSourceIdentity } from './arena-git-source-identity.mjs';
 import { runArenaNodeExperiment } from './arena-node-experiment-runner.mjs';
 import { parseArenaStressIntegerOptions } from './arena-stress-cli.mjs';

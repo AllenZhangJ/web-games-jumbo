@@ -1,11 +1,24 @@
 import {
+  assertIntegerAtLeast,
   assertNonEmptyString,
+  assertPlainRecord,
   cloneFrozenData,
 } from '@number-strategy-jump/arena-contracts';
+import type { ArenaInputFrame, PlainRecord } from '@number-strategy-jump/arena-contracts';
 import {
   assertArenaExperimentReplaySeedsPlanned,
   cloneArenaExperimentReplaySeeds,
 } from '@number-strategy-jump/arena-experiment';
+import type {
+  ArenaExperimentDefinition,
+  ArenaMetricCollectorBeginContext,
+  ArenaMetricCollectorCompleteContext,
+  ArenaMetricCollectorFactoryOptions,
+  ArenaMetricCollectorFailureContext,
+  ArenaMetricCollectorStepContext,
+  ArenaSimulationSnapshot,
+} from '@number-strategy-jump/arena-experiment';
+import type { ArenaAuthorityEvent } from '@number-strategy-jump/arena-match';
 import { createArenaMetricGate } from '@number-strategy-jump/arena-experiment';
 import {
   createSortedMetricCountRecord,
@@ -16,35 +29,56 @@ import {
 export const ARENA_MAP_TIMELINE_COLLECTOR_ID = 'arena.stage9.map-timeline';
 export const ARENA_MAP_TIMELINE_COLLECTOR_VERSION = 1;
 
-class ArenaMapTimelineCollector {
-  #plannedCases;
-  #replaySeeds;
-  #expectedEventCounts;
-  #active;
-  #completedCases;
-  #failedCases;
-  #verifiedReplays;
-  #totalTicks;
-  #totalEvents;
-  #eventCounts;
-  #failureNames;
-  #finalHashes;
-  #destroyed;
+type ArenaMapTimelineCaseResult = PlainRecord & {
+  readonly replayVerified: boolean;
+  readonly eventCounts: Readonly<Record<string, number>>;
+};
+interface ArenaMapTimelineActiveCase {
+  readonly seed: number;
+  readonly events: Map<string, number>;
+  eventCount: number;
+}
 
-  constructor(definition) {
+function cloneExpectedEventCounts(value: unknown): Readonly<Record<string, number>> {
+  const source = assertPlainRecord(
+    cloneFrozenData(value, 'Map timeline collector expectedEventCounts'),
+    'Map timeline collector expectedEventCounts',
+  );
+  return Object.freeze(Object.fromEntries(Object.entries(source).map(([type, count]) => [
+    assertNonEmptyString(type, 'Map timeline collector expected event type'),
+    assertIntegerAtLeast(count, 0, `Map timeline collector expectedEventCounts.${type}`),
+  ])));
+}
+
+class ArenaMapTimelineCollector {
+  #plannedCases: number;
+  #replaySeeds: Set<number>;
+  #expectedEventCounts: Readonly<Record<string, number>>;
+  #active: ArenaMapTimelineActiveCase | null;
+  #completedCases: number;
+  #failedCases: number;
+  #verifiedReplays: number;
+  #totalTicks: number;
+  #totalEvents: number;
+  #eventCounts: Map<string, number>;
+  #failureNames: Map<string, number>;
+  #finalHashes: Set<string>;
+  #destroyed: boolean;
+
+  constructor(definition: ArenaExperimentDefinition) {
     const plannedSeeds = definition.getSeeds();
-    this.#replaySeeds = new Set(cloneArenaExperimentReplaySeeds(
+    const replaySeeds = cloneArenaExperimentReplaySeeds(
       definition.workload.parameters.replaySeeds,
       'Map timeline collector replaySeeds',
-    ));
+    );
     assertArenaExperimentReplaySeedsPlanned(
-      this.#replaySeeds,
+      replaySeeds,
       plannedSeeds,
       'Map timeline replay',
     );
-    this.#expectedEventCounts = cloneFrozenData(
+    this.#replaySeeds = new Set(replaySeeds);
+    this.#expectedEventCounts = cloneExpectedEventCounts(
       definition.workload.parameters.expectedEventCounts,
-      'Map timeline collector expectedEventCounts',
     );
     this.#plannedCases = plannedSeeds.length;
     this.#active = null;
@@ -63,13 +97,17 @@ class ArenaMapTimelineCollector {
     if (this.#destroyed) throw new Error('ArenaMapTimelineCollector 已销毁。');
   }
 
-  beginCase(context) {
+  beginCase(context: Readonly<ArenaMetricCollectorBeginContext>) {
     this.#assertUsable();
     if (this.#active !== null) throw new Error('Map timeline collector 已有活动 case。');
     this.#active = { seed: context.seed, events: new Map(), eventCount: 0 };
   }
 
-  observeStep(observation) {
+  observeStep(observation: Readonly<ArenaMetricCollectorStepContext<
+    ArenaSimulationSnapshot,
+    ArenaInputFrame,
+    ArenaAuthorityEvent
+  >>) {
     this.#assertUsable();
     if (this.#active === null || this.#active.seed !== observation.seed) {
       throw new Error('Map timeline observation 没有对应活动 case。');
@@ -81,7 +119,10 @@ class ArenaMapTimelineCollector {
     }
   }
 
-  completeCase(context) {
+  completeCase(context: Readonly<ArenaMetricCollectorCompleteContext<
+    ArenaSimulationSnapshot,
+    ArenaMapTimelineCaseResult
+  >>) {
     this.#assertUsable();
     if (this.#active === null || this.#active.seed !== context.seed) {
       throw new Error('Map timeline completion 没有对应活动 case。');
@@ -110,7 +151,7 @@ class ArenaMapTimelineCollector {
     this.#active = null;
   }
 
-  failCase(context) {
+  failCase(context: Readonly<ArenaMetricCollectorFailureContext>) {
     this.#assertUsable();
     if (this.#active !== null && this.#active.seed !== context.seed) {
       throw new Error('Map timeline failure 与活动 case 不一致。');
@@ -193,6 +234,8 @@ export function createArenaMapTimelineCollectorEntry() {
   return Object.freeze({
     id: ARENA_MAP_TIMELINE_COLLECTOR_ID,
     version: ARENA_MAP_TIMELINE_COLLECTOR_VERSION,
-    create: ({ definition }) => new ArenaMapTimelineCollector(definition),
+    create: ({ definition }: ArenaMetricCollectorFactoryOptions) => (
+      new ArenaMapTimelineCollector(definition)
+    ),
   });
 }

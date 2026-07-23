@@ -1,9 +1,20 @@
 import { STAGE6_MOVEMENT_ACTION_ID } from '@number-strategy-jump/arena-v1-content';
 import { assertNonEmptyString, cloneFrozenData } from '@number-strategy-jump/arena-contracts';
+import type { ArenaInputFrame, PlainRecord } from '@number-strategy-jump/arena-contracts';
 import {
   assertArenaExperimentReplaySeedsPlanned,
   cloneArenaExperimentReplaySeeds,
 } from '@number-strategy-jump/arena-experiment';
+import type {
+  ArenaExperimentDefinition,
+  ArenaMetricCollectorBeginContext,
+  ArenaMetricCollectorCompleteContext,
+  ArenaMetricCollectorFactoryOptions,
+  ArenaMetricCollectorFailureContext,
+  ArenaMetricCollectorStepContext,
+  ArenaSimulationSnapshot,
+} from '@number-strategy-jump/arena-experiment';
+import type { ArenaAuthorityEvent } from '@number-strategy-jump/arena-match';
 import { createArenaMetricGate } from '@number-strategy-jump/arena-experiment';
 import {
   createSortedMetricCountRecord,
@@ -22,24 +33,38 @@ const REQUIRED_ACTIONS = Object.freeze([
   STAGE6_MOVEMENT_ACTION_ID.DOWN_SMASH,
 ]);
 
-class ArenaMovementStressCollector {
-  #plannedCases;
-  #replaySeeds;
-  #active;
-  #completedCases;
-  #failedCases;
-  #verifiedReplays;
-  #totalTicks;
-  #totalEvents;
-  #inputCounts;
-  #actionCounts;
-  #eventCounts;
-  #downSmashLandings;
-  #failureNames;
-  #finalHashes;
-  #destroyed;
+type ArenaMovementStressCaseResult = PlainRecord & { readonly replayVerified: boolean };
+interface ArenaMovementExperimentSnapshot extends ArenaSimulationSnapshot {
+  readonly activeParticipantIds: readonly string[];
+}
+interface ArenaMovementActiveCase {
+  readonly seed: number;
+  readonly inputs: Map<string, number>;
+  readonly actions: Map<string, number>;
+  readonly events: Map<string, number>;
+  eventCount: number;
+  downSmashLandings: number;
+  readonly previousJumpHeld: Map<string, boolean>;
+}
 
-  constructor(definition) {
+class ArenaMovementStressCollector {
+  #plannedCases: number;
+  #replaySeeds: Set<number>;
+  #active: ArenaMovementActiveCase | null;
+  #completedCases: number;
+  #failedCases: number;
+  #verifiedReplays: number;
+  #totalTicks: number;
+  #totalEvents: number;
+  #inputCounts: Map<string, number>;
+  #actionCounts: Map<string, number>;
+  #eventCounts: Map<string, number>;
+  #downSmashLandings: number;
+  #failureNames: Map<string, number>;
+  #finalHashes: Set<string>;
+  #destroyed: boolean;
+
+  constructor(definition: ArenaExperimentDefinition) {
     const plannedSeeds = definition.getSeeds();
     const replaySeeds = cloneArenaExperimentReplaySeeds(
       definition.workload.parameters.replaySeeds,
@@ -71,7 +96,7 @@ class ArenaMovementStressCollector {
     if (this.#destroyed) throw new Error('ArenaMovementStressCollector 已销毁。');
   }
 
-  beginCase(context) {
+  beginCase(context: Readonly<ArenaMetricCollectorBeginContext>) {
     this.#assertUsable();
     if (this.#active !== null) throw new Error('Movement stress collector 已有活动 case。');
     this.#active = {
@@ -85,7 +110,11 @@ class ArenaMovementStressCollector {
     };
   }
 
-  observeStep(observation) {
+  observeStep(observation: Readonly<ArenaMetricCollectorStepContext<
+    ArenaMovementExperimentSnapshot,
+    ArenaInputFrame,
+    ArenaAuthorityEvent
+  >>) {
     this.#assertUsable();
     if (this.#active === null || this.#active.seed !== observation.seed) {
       throw new Error('Movement stress observation 没有对应活动 case。');
@@ -108,12 +137,20 @@ class ArenaMovementStressCollector {
       const type = assertNonEmptyString(event.type, 'Movement stress event.type');
       incrementMetricCount(this.#active.events, type);
       this.#active.eventCount += 1;
-      if (type === 'ActionStarted') incrementMetricCount(this.#active.actions, event.action);
+      if (type === 'ActionStarted') {
+        incrementMetricCount(
+          this.#active.actions,
+          assertNonEmptyString(event.action, 'Movement stress ActionStarted.action'),
+        );
+      }
       if (type === 'DownSmashLanded') this.#active.downSmashLandings += 1;
     }
   }
 
-  completeCase(context) {
+  completeCase(context: Readonly<ArenaMetricCollectorCompleteContext<
+    ArenaMovementExperimentSnapshot,
+    ArenaMovementStressCaseResult
+  >>) {
     this.#assertUsable();
     if (this.#active === null || this.#active.seed !== context.seed) {
       throw new Error('Movement stress completion 没有对应活动 case。');
@@ -143,7 +180,7 @@ class ArenaMovementStressCollector {
     this.#active = null;
   }
 
-  failCase(context) {
+  failCase(context: Readonly<ArenaMetricCollectorFailureContext<ArenaMovementExperimentSnapshot>>) {
     this.#assertUsable();
     if (this.#active !== null && this.#active.seed !== context.seed) {
       throw new Error('Movement stress failure 与活动 case 不一致。');
@@ -234,6 +271,8 @@ export function createArenaMovementStressCollectorEntry() {
   return Object.freeze({
     id: ARENA_MOVEMENT_STRESS_COLLECTOR_ID,
     version: ARENA_MOVEMENT_STRESS_COLLECTOR_VERSION,
-    create: ({ definition }) => new ArenaMovementStressCollector(definition),
+    create: ({ definition }: ArenaMetricCollectorFactoryOptions) => (
+      new ArenaMovementStressCollector(definition)
+    ),
   });
 }

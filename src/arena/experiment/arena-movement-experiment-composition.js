@@ -15,7 +15,7 @@ import {
   ARENA_MOVEMENT_STRESS_COLLECTOR_ID,
   ARENA_MOVEMENT_STRESS_COLLECTOR_VERSION,
   createArenaMovementStressCollectorEntry,
-} from './arena-movement-stress-collector.js';
+} from '@number-strategy-jump/arena-v1-experiment';
 import {
   ARENA_V1_MOVEMENT_STRESS_DEFAULT_PARAMETERS,
   ARENA_V1_MOVEMENT_STRESS_WORKLOAD_ID,

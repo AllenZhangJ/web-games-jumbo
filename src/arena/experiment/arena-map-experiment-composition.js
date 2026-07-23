@@ -14,7 +14,7 @@ import {
   ARENA_MAP_TIMELINE_COLLECTOR_ID,
   ARENA_MAP_TIMELINE_COLLECTOR_VERSION,
   createArenaMapTimelineCollectorEntry,
-} from './arena-map-timeline-collector.js';
+} from '@number-strategy-jump/arena-v1-experiment';
 import {
   ARENA_V1_MAP_TIMELINE_DEFAULT_PARAMETERS,
   ARENA_V1_MAP_TIMELINE_WORKLOAD_ID,

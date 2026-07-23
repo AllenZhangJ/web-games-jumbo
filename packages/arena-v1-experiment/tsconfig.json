@@ -15,6 +15,7 @@
     { "path": "../arena-experiment" },
     { "path": "../arena-match" },
     { "path": "../arena-movement" },
-    { "path": "../arena-v1-composition" }
+    { "path": "../arena-v1-composition" },
+    { "path": "../arena-v1-content" }
   ]
 }

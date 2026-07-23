@@ -449,6 +449,7 @@ test('Arena V1 experiment runtime stays headless behind strict V1 composition', 
       '@number-strategy-jump/arena-match',
       '@number-strategy-jump/arena-movement',
       '@number-strategy-jump/arena-v1-composition',
+      '@number-strategy-jump/arena-v1-content',
     ],
   );
   const files = await listJavaScript(path.resolve('packages/arena-v1-experiment/src'));

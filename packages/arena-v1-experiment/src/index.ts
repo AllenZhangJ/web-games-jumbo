@@ -30,3 +30,13 @@ export {
   createArenaV1MovementStressParameters,
   createArenaV1MovementStressWorkloadEntry,
 } from './arena-v1-movement-stress-workload.js';
+export {
+  ARENA_MAP_TIMELINE_COLLECTOR_ID,
+  ARENA_MAP_TIMELINE_COLLECTOR_VERSION,
+  createArenaMapTimelineCollectorEntry,
+} from './arena-map-timeline-collector.js';
+export {
+  ARENA_MOVEMENT_STRESS_COLLECTOR_ID,
+  ARENA_MOVEMENT_STRESS_COLLECTOR_VERSION,
+  createArenaMovementStressCollectorEntry,
+} from './arena-movement-stress-collector.js';
