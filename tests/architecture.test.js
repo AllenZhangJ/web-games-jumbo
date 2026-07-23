@@ -389,8 +389,9 @@ test('Arena Stage 9 experiment orchestration stays headless and outside presenta
     [
       '@number-strategy-jump/arena-contracts',
       '@number-strategy-jump/arena-evidence-contracts',
+      '@number-strategy-jump/arena-match',
     ],
-    'arena-experiment 基础包只能依赖权威基础契约和证据值契约。',
+    'arena-experiment 基础包只能依赖权威基础契约、证据值契约和严格 Match。',
   );
   const experimentFiles = [
     ...await listJavaScript(path.resolve('src/arena/experiment')),

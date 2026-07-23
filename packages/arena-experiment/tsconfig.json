@@ -12,6 +12,7 @@
   "include": ["src/**/*.ts"],
   "references": [
     { "path": "../arena-contracts" },
-    { "path": "../arena-evidence-contracts" }
+    { "path": "../arena-evidence-contracts" },
+    { "path": "../arena-match" }
   ]
 }

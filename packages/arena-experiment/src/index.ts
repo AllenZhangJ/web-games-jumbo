@@ -64,6 +64,18 @@ export {
   SimulationExperimentRunner,
 } from './simulation-runner.js';
 export type { SimulationExperimentRunnerState } from './simulation-runner.js';
+export { createArenaV1PursuitInputStrategy } from './arena-v1-pursuit-input-strategy.js';
+export {
+  ARENA_V1_SCRIPTED_PRESSURE_DEFAULT_PARAMETERS,
+  createArenaV1ScriptedPressureInputStrategy,
+  createArenaV1ScriptedPressureParameters,
+} from './arena-v1-scripted-pressure-strategy.js';
+export {
+  ARENA_V1_MOVEMENT_STRESS_DEFAULT_TUNING,
+  ARENA_V1_MOVEMENT_STRESS_STRATEGY_VERSION,
+  createArenaV1MovementStressStrategy,
+  createArenaV1MovementStressTuning,
+} from './arena-v1-movement-stress-strategy.js';
 export type {
   ArenaSimulationCase,
   ArenaSimulationWorkloadEntry,

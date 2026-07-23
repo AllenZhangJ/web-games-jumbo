@@ -4,7 +4,7 @@ import {
   assertPositiveFinite,
   cloneFrozenData,
 } from '@number-strategy-jump/arena-contracts';
-import { createArenaV1PursuitInputStrategy } from './arena-v1-pursuit-input-strategy.js';
+import { createArenaV1PursuitInputStrategy } from '@number-strategy-jump/arena-experiment';
 
 export const ARENA_V1_MATCHCORE_STRESS_INPUT_DEFAULT_TUNING = Object.freeze({
   cadenceTicks: Object.freeze([31, 43]),

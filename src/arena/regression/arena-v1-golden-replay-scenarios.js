@@ -4,11 +4,11 @@ import { STAGE6_MOVEMENT_ACTION_ID } from '@number-strategy-jump/arena-v1-conten
 import {
   ARENA_V1_MOVEMENT_STRESS_DEFAULT_TUNING,
   createArenaV1MovementStressStrategy,
-} from '../experiment/arena-v1-movement-stress-strategy.js';
+} from '@number-strategy-jump/arena-experiment';
 import {
   ARENA_V1_SCRIPTED_PRESSURE_DEFAULT_PARAMETERS,
   createArenaV1ScriptedPressureInputStrategy,
-} from '../experiment/arena-v1-scripted-pressure-strategy.js';
+} from '@number-strategy-jump/arena-experiment';
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
 import { combineCleanupFailure, normalizeThrownError } from '@number-strategy-jump/arena-contracts';
 import { QuickMatchService } from '@number-strategy-jump/arena-v1-composition';

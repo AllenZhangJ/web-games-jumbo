@@ -6,9 +6,9 @@ import { createArenaV1MatchCore } from '@number-strategy-jump/arena-v1-compositi
 import {
   createArenaV1ScriptedPressureInputStrategy,
   createArenaV1ScriptedPressureParameters,
-} from './arena-v1-scripted-pressure-strategy.js';
+} from '@number-strategy-jump/arena-experiment';
 
-export { ARENA_V1_SCRIPTED_PRESSURE_DEFAULT_PARAMETERS } from './arena-v1-scripted-pressure-strategy.js';
+export { ARENA_V1_SCRIPTED_PRESSURE_DEFAULT_PARAMETERS } from '@number-strategy-jump/arena-experiment';
 
 export const ARENA_V1_SCRIPTED_PRESSURE_WORKLOAD_ID =
   'arena.stage9.scripted-pressure';

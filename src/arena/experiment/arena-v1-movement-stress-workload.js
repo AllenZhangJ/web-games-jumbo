@@ -19,7 +19,7 @@ import {
   ARENA_V1_MOVEMENT_STRESS_DEFAULT_TUNING,
   createArenaV1MovementStressStrategy,
   createArenaV1MovementStressTuning,
-} from './arena-v1-movement-stress-strategy.js';
+} from '@number-strategy-jump/arena-experiment';
 
 export const ARENA_V1_MOVEMENT_STRESS_WORKLOAD_ID = 'arena.stage9.movement-stress';
 export const ARENA_V1_MOVEMENT_STRESS_WORKLOAD_VERSION = 1;
