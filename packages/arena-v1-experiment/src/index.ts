@@ -125,3 +125,9 @@ export {
   createArenaStage9BotExperimentRegistries,
 } from './arena-bot-experiment-composition.js';
 export type { ArenaStage9BotExperimentOptions } from './arena-bot-experiment-composition.js';
+export {
+  ARENA_BALANCE_CANDIDATE_COLLECTOR_ID,
+  ARENA_BALANCE_CANDIDATE_COLLECTOR_VERSION,
+  createArenaBalanceCandidateCollectorEntry,
+  createArenaBalanceCandidateCollectorParameters,
+} from './arena-balance-candidate-collector.js';

@@ -1,17 +1,31 @@
 import { BOT_DIFFICULTY_IDS } from '@number-strategy-jump/arena-bot';
+import type { BotDifficultyId } from '@number-strategy-jump/arena-bot';
 import {
   assertIntegerAtLeast,
   assertKnownKeys,
   assertNonEmptyString,
+  assertPlainRecord,
   cloneFrozenData,
 } from '@number-strategy-jump/arena-contracts';
+import type { PlainRecord } from '@number-strategy-jump/arena-contracts';
 import { createArenaBalancePolicy } from '@number-strategy-jump/arena-experiment';
+import type { ArenaBalancePolicy } from '@number-strategy-jump/arena-experiment';
 import {
   createSortedMetricCountRecord,
   incrementMetricCount,
   metricRatioOrNull,
 } from '@number-strategy-jump/arena-experiment';
 import { createArenaMetricGate } from '@number-strategy-jump/arena-experiment';
+import type {
+  ArenaExperimentDefinition,
+  ArenaMetricCollectorBeginContext,
+  ArenaMetricCollectorCompleteContext,
+  ArenaMetricCollectorFactoryOptions,
+  ArenaMetricCollectorFailureContext,
+  ArenaMetricCollectorStepContext,
+  ArenaSimulationSnapshot,
+} from '@number-strategy-jump/arena-experiment';
+import type { ArenaAuthorityEvent } from '@number-strategy-jump/arena-match';
 import {
   ARENA_BALANCE_CANDIDATE_COLLECTOR_ID,
   ARENA_BALANCE_CANDIDATE_COLLECTOR_VERSION,
@@ -24,13 +38,51 @@ export {
 
 const PARAMETER_KEYS = new Set(['policy']);
 
-export function createArenaBalanceCandidateCollectorParameters(value) {
-  const source = cloneFrozenData(value, 'ArenaBalanceCandidateCollector parameters');
+export function createArenaBalanceCandidateCollectorParameters(value: unknown) {
+  const source = assertPlainRecord(
+    cloneFrozenData(value, 'ArenaBalanceCandidateCollector parameters'),
+    'ArenaBalanceCandidateCollector parameters',
+  );
   assertKnownKeys(source, PARAMETER_KEYS, 'ArenaBalanceCandidateCollector parameters');
   return Object.freeze({ policy: createArenaBalancePolicy(source.policy) });
 }
 
-function createEquipmentStats(policy) {
+interface EquipmentStats {
+  readonly actionDefinitionId: string;
+  pickups: number;
+  actions: number;
+  hits: number;
+  attributedEliminations: number;
+}
+interface LastHitStats {
+  readonly tick: number;
+  readonly attackerId: string;
+  readonly actionDefinitionId: string;
+}
+interface DifficultyStats {
+  matches: number;
+  ticks: number;
+  readonly durations: number[];
+  targetDurationMatches: number;
+  ultraShortMatches: number;
+  timeoutMatches: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  eventCount: number;
+  eliminations: number;
+  creditedEliminations: number;
+  equipmentAttributedEliminations: number;
+  baseAttackAttributedEliminations: number;
+  otherCreditedEliminations: number;
+  uncreditedEnvironmentEliminations: number;
+  readonly resultReasons: Map<string, number>;
+  readonly equipment: Map<string, EquipmentStats>;
+  readonly untrackedEquipmentEvents: Map<string, number>;
+  readonly lastHits: Map<string, LastHitStats>;
+}
+
+function createEquipmentStats(policy: ArenaBalancePolicy): Map<string, EquipmentStats> {
   return new Map(policy.equipment.actionBindings.map((binding) => [
     binding.equipmentDefinitionId,
     {
@@ -43,7 +95,7 @@ function createEquipmentStats(policy) {
   ]));
 }
 
-function createDifficultyStats(policy) {
+function createDifficultyStats(policy: ArenaBalancePolicy): DifficultyStats {
   return {
     matches: 0,
     ticks: 0,
@@ -68,8 +120,7 @@ function createDifficultyStats(policy) {
   };
 }
 
-function mergeDifficultyStats(target, source) {
-  for (const field of [
+const DIFFICULTY_NUMERIC_FIELDS = Object.freeze([
     'matches',
     'ticks',
     'targetDurationMatches',
@@ -85,14 +136,18 @@ function mergeDifficultyStats(target, source) {
     'baseAttackAttributedEliminations',
     'otherCreditedEliminations',
     'uncreditedEnvironmentEliminations',
-  ]) target[field] += source[field];
+] as const);
+
+function mergeDifficultyStats(target: DifficultyStats, source: DifficultyStats) {
+  for (const field of DIFFICULTY_NUMERIC_FIELDS) target[field] += source[field];
   target.durations.push(...source.durations);
   for (const [reason, count] of source.resultReasons) {
     incrementMetricCount(target.resultReasons, reason, count);
   }
   for (const [definitionId, sourceEquipment] of source.equipment) {
     const targetEquipment = target.equipment.get(definitionId);
-    for (const field of ['pickups', 'actions', 'hits', 'attributedEliminations']) {
+    if (!targetEquipment) throw new Error(`Balance candidate 缺少装备统计 ${definitionId}。`);
+    for (const field of ['pickups', 'actions', 'hits', 'attributedEliminations'] as const) {
       targetEquipment[field] += sourceEquipment[field];
     }
   }
@@ -101,7 +156,21 @@ function mergeDifficultyStats(target, source) {
   }
 }
 
-function addResult(stats, result, policy) {
+interface BalanceDifficultyResult {
+  readonly difficultyId: BotDifficultyId;
+  readonly ticks: unknown;
+  readonly outcome: Readonly<{
+    readonly reason?: unknown;
+    readonly isDraw?: unknown;
+    readonly winnerId?: unknown;
+  }>;
+}
+
+function addResult(
+  stats: DifficultyStats,
+  result: BalanceDifficultyResult,
+  policy: ArenaBalancePolicy,
+) {
   const ticks = assertIntegerAtLeast(
     result.ticks,
     0,
@@ -139,13 +208,13 @@ function addResult(stats, result, policy) {
   else stats.losses += 1;
 }
 
-function quantile(values, fraction) {
+function quantile(values: readonly number[], fraction: number): number | null {
   if (values.length === 0) return null;
   const sorted = [...values].sort((left, right) => left - right);
-  return sorted[Math.floor((sorted.length - 1) * fraction)];
+  return sorted[Math.floor((sorted.length - 1) * fraction)] ?? null;
 }
 
-function summarizeEquipment(stats) {
+function summarizeEquipment(stats: DifficultyStats) {
   const totalPickups = [...stats.equipment.values()].reduce(
     (sum, value) => sum + value.pickups,
     0,
@@ -175,7 +244,7 @@ function summarizeEquipment(stats) {
   });
 }
 
-function summarizeDifficulty(difficultyId, stats) {
+function summarizeDifficulty(difficultyId: string, stats: DifficultyStats) {
   const score = stats.wins + stats.draws * 0.5;
   return Object.freeze({
     difficultyId,
@@ -203,8 +272,22 @@ function summarizeDifficulty(difficultyId, stats) {
   });
 }
 
-function createGateChecks({ policy, completedPairedCases, overall, difficulties }) {
-  const checks = [
+function createGateChecks({
+  policy,
+  completedPairedCases,
+  overall,
+  difficulties,
+}: {
+  readonly policy: ArenaBalancePolicy;
+  readonly completedPairedCases: number;
+  readonly overall: ReturnType<typeof summarizeDifficulty> & Readonly<{
+    creditedEliminationShare: number | null;
+    equipmentAttributedEliminationShare: number | null;
+    uncreditedEnvironmentEliminationShare: number | null;
+  }>;
+  readonly difficulties: readonly ReturnType<typeof summarizeDifficulty>[];
+}) {
+  const checks: Array<{ id: string; passed: boolean }> = [
     {
       id: 'sample.completed-paired-cases',
       passed: completedPairedCases >= policy.minimumCompletedPairedCases,
@@ -299,34 +382,48 @@ function createGateChecks({ policy, completedPairedCases, overall, difficulties 
   return checks;
 }
 
-class ArenaBalanceCandidateCollector {
-  #plannedPairedCases;
-  #lastHitCreditTicks;
-  #policy;
-  #actionToEquipment;
-  #active;
-  #stats;
-  #completedPairedCases;
-  #failedPairedCases;
-  #failureNames;
-  #destroyed;
+interface BalanceCandidateSnapshot extends ArenaSimulationSnapshot {
+  readonly difficultyId: BotDifficultyId;
+}
+type BalanceCandidateCaseResult = PlainRecord & {
+  readonly difficulties: readonly Readonly<BalanceDifficultyResult>[];
+};
+interface BalanceCandidateActiveCase {
+  readonly seed: number;
+  eventCount: number;
+  currentDifficultyId: BotDifficultyId | null;
+  readonly stats: Map<BotDifficultyId, DifficultyStats>;
+}
 
-  constructor(definition, parameters) {
-    this.#policy = createArenaBalanceCandidateCollectorParameters(parameters).policy;
+class ArenaBalanceCandidateCollector {
+  #plannedPairedCases: number;
+  #lastHitCreditTicks: number;
+  #policy: ArenaBalancePolicy | null;
+  #actionToEquipment: Map<string, string>;
+  #active: BalanceCandidateActiveCase | null;
+  #stats: Map<BotDifficultyId, DifficultyStats>;
+  #completedPairedCases: number;
+  #failedPairedCases: number;
+  #failureNames: Map<string, number>;
+  #destroyed: boolean;
+
+  constructor(definition: ArenaExperimentDefinition, parameters: unknown) {
+    const policy = createArenaBalanceCandidateCollectorParameters(parameters).policy;
+    this.#policy = policy;
     this.#plannedPairedCases = definition.getSeeds().length;
     this.#lastHitCreditTicks = assertIntegerAtLeast(
       definition.candidate.matchConfig.lastHitCreditTicks,
       0,
       'Balance candidate matchConfig.lastHitCreditTicks',
     );
-    this.#actionToEquipment = new Map(this.#policy.equipment.actionBindings.map((binding) => [
+    this.#actionToEquipment = new Map(policy.equipment.actionBindings.map((binding) => [
       binding.actionDefinitionId,
       binding.equipmentDefinitionId,
     ]));
     this.#active = null;
     this.#stats = new Map(BOT_DIFFICULTY_IDS.map((id) => [
       id,
-      createDifficultyStats(this.#policy),
+      createDifficultyStats(policy),
     ]));
     this.#completedPairedCases = 0;
     this.#failedPairedCases = 0;
@@ -338,7 +435,13 @@ class ArenaBalanceCandidateCollector {
     if (this.#destroyed) throw new Error('ArenaBalanceCandidateCollector 已销毁。');
   }
 
-  beginCase(context) {
+  #requirePolicy() {
+    this.#assertUsable();
+    if (!this.#policy) throw new Error('ArenaBalanceCandidateCollector 缺少 policy。');
+    return this.#policy;
+  }
+
+  beginCase(context: Readonly<ArenaMetricCollectorBeginContext>) {
     this.#assertUsable();
     if (this.#active !== null) throw new Error('Balance candidate collector 已有活动 case。');
     this.#active = {
@@ -347,12 +450,16 @@ class ArenaBalanceCandidateCollector {
       currentDifficultyId: null,
       stats: new Map(BOT_DIFFICULTY_IDS.map((id) => [
         id,
-        createDifficultyStats(this.#policy),
+        createDifficultyStats(this.#requirePolicy()),
       ])),
     };
   }
 
-  observeStep(observation) {
+  observeStep(observation: Readonly<ArenaMetricCollectorStepContext<
+    BalanceCandidateSnapshot,
+    unknown,
+    ArenaAuthorityEvent
+  >>) {
     this.#assertUsable();
     if (this.#active === null || this.#active.seed !== observation.seed) {
       throw new Error('Balance candidate observation 没有对应活动 case。');
@@ -369,25 +476,37 @@ class ArenaBalanceCandidateCollector {
       stats.eventCount += 1;
       this.#active.eventCount += 1;
       if (type === 'EquipmentSpawned') {
-        if (!stats.equipment.has(event.equipmentDefinitionId)) {
+        const equipmentDefinitionId = typeof event.equipmentDefinitionId === 'string'
+          ? event.equipmentDefinitionId
+          : null;
+        if (!equipmentDefinitionId || !stats.equipment.has(equipmentDefinitionId)) {
           incrementMetricCount(
             stats.untrackedEquipmentEvents,
             `spawn:${String(event.equipmentDefinitionId)}`,
           );
         }
       } else if (type === 'EquipmentPickedUp') {
-        const equipment = stats.equipment.get(event.equipmentDefinitionId);
+        const equipmentDefinitionId = typeof event.equipmentDefinitionId === 'string'
+          ? event.equipmentDefinitionId
+          : null;
+        const equipment = equipmentDefinitionId
+          ? stats.equipment.get(equipmentDefinitionId)
+          : undefined;
         if (equipment) equipment.pickups += 1;
         else incrementMetricCount(
           stats.untrackedEquipmentEvents,
           `pickup:${String(event.equipmentDefinitionId)}`,
         );
       } else if (type === 'ActionStarted') {
-        const equipmentDefinitionId = this.#actionToEquipment.get(event.action);
-        if (equipmentDefinitionId) stats.equipment.get(equipmentDefinitionId).actions += 1;
+        const action = assertNonEmptyString(event.action, 'Balance candidate ActionStarted.action');
+        const equipmentDefinitionId = this.#actionToEquipment.get(action);
+        const equipment = equipmentDefinitionId ? stats.equipment.get(equipmentDefinitionId) : null;
+        if (equipment) equipment.actions += 1;
       } else if (type === 'HitResolved') {
-        const equipmentDefinitionId = this.#actionToEquipment.get(event.action);
-        if (equipmentDefinitionId) stats.equipment.get(equipmentDefinitionId).hits += 1;
+        const action = assertNonEmptyString(event.action, 'Balance candidate HitResolved.action');
+        const equipmentDefinitionId = this.#actionToEquipment.get(action);
+        const equipment = equipmentDefinitionId ? stats.equipment.get(equipmentDefinitionId) : null;
+        if (equipment) equipment.hits += 1;
         const targetId = assertNonEmptyString(
           event.targetId,
           'Balance candidate HitResolved.targetId',
@@ -403,7 +522,7 @@ class ArenaBalanceCandidateCollector {
             'Balance candidate HitResolved.attackerId',
           ),
           actionDefinitionId: assertNonEmptyString(
-            event.action,
+            action,
             'Balance candidate HitResolved.action',
           ),
         });
@@ -443,7 +562,11 @@ class ArenaBalanceCandidateCollector {
             );
             if (equipmentDefinitionId) {
               stats.equipmentAttributedEliminations += 1;
-              stats.equipment.get(equipmentDefinitionId).attributedEliminations += 1;
+              const equipment = stats.equipment.get(equipmentDefinitionId);
+              if (!equipment) {
+                throw new Error(`Balance candidate 缺少装备统计 ${equipmentDefinitionId}。`);
+              }
+              equipment.attributedEliminations += 1;
             } else if (hit.actionDefinitionId === 'base-push') {
               stats.baseAttackAttributedEliminations += 1;
             } else stats.otherCreditedEliminations += 1;
@@ -454,7 +577,10 @@ class ArenaBalanceCandidateCollector {
     }
   }
 
-  completeCase(context) {
+  completeCase(context: Readonly<ArenaMetricCollectorCompleteContext<
+    BalanceCandidateSnapshot,
+    BalanceCandidateCaseResult
+  >>) {
     this.#assertUsable();
     if (this.#active === null || this.#active.seed !== context.seed) {
       throw new Error('Balance candidate completion 没有对应活动 case。');
@@ -469,18 +595,21 @@ class ArenaBalanceCandidateCollector {
     for (let index = 0; index < BOT_DIFFICULTY_IDS.length; index += 1) {
       const difficultyId = BOT_DIFFICULTY_IDS[index];
       const result = context.result.difficulties[index];
+      if (!difficultyId || !result) throw new Error('Balance candidate result 难度项缺失。');
       if (result.difficultyId !== difficultyId) {
         throw new Error(`Balance candidate 难度顺序错误：${result.difficultyId}。`);
       }
       const source = this.#active.stats.get(difficultyId);
-      addResult(source, result, this.#policy);
-      mergeDifficultyStats(this.#stats.get(difficultyId), source);
+      const target = this.#stats.get(difficultyId);
+      if (!source || !target) throw new Error(`Balance candidate 缺少 ${difficultyId} 统计。`);
+      addResult(source, result, this.#requirePolicy());
+      mergeDifficultyStats(target, source);
     }
     this.#completedPairedCases += 1;
     this.#active = null;
   }
 
-  failCase(context) {
+  failCase(context: Readonly<ArenaMetricCollectorFailureContext<BalanceCandidateSnapshot>>) {
     this.#assertUsable();
     if (this.#active !== null && this.#active.seed !== context.seed) {
       throw new Error('Balance candidate failure 与活动 case 不一致。');
@@ -496,10 +625,13 @@ class ArenaBalanceCandidateCollector {
   getResult() {
     this.#assertUsable();
     if (this.#active !== null) throw new Error('活动 case 完成前不能导出 Balance 指标。');
-    const aggregate = createDifficultyStats(this.#policy);
+    const policy = this.#requirePolicy();
+    const aggregate = createDifficultyStats(policy);
     for (const stats of this.#stats.values()) mergeDifficultyStats(aggregate, stats);
     const difficulties = BOT_DIFFICULTY_IDS.map((id) => (
-      summarizeDifficulty(id, this.#stats.get(id))
+      summarizeDifficulty(id, this.#stats.get(id) ?? (() => {
+        throw new Error(`Balance candidate 缺少 ${id} 汇总统计。`);
+      })())
     ));
     const overallBase = summarizeDifficulty('all', aggregate);
     const overall = Object.freeze({
@@ -519,12 +651,12 @@ class ArenaBalanceCandidateCollector {
     });
     return cloneFrozenData({
       gate: createArenaMetricGate(createGateChecks({
-        policy: this.#policy,
+        policy,
         completedPairedCases: this.#completedPairedCases,
         overall,
         difficulties,
       })),
-      policy: this.#policy,
+      policy,
       denominators: {
         plannedPairedCases: this.#plannedPairedCases,
         executedPairedCases: this.#completedPairedCases + this.#failedPairedCases,
@@ -546,7 +678,6 @@ class ArenaBalanceCandidateCollector {
     this.#active = null;
     this.#policy = null;
     this.#actionToEquipment.clear();
-    this.#actionToEquipment = null;
     for (const stats of this.#stats.values()) {
       stats.resultReasons.clear();
       stats.equipment.clear();
@@ -563,7 +694,7 @@ export function createArenaBalanceCandidateCollectorEntry() {
     id: ARENA_BALANCE_CANDIDATE_COLLECTOR_ID,
     version: ARENA_BALANCE_CANDIDATE_COLLECTOR_VERSION,
     validateParameters: createArenaBalanceCandidateCollectorParameters,
-    create: ({ definition, parameters }) => (
+    create: ({ definition, parameters }: ArenaMetricCollectorFactoryOptions) => (
       new ArenaBalanceCandidateCollector(definition, parameters)
     ),
   });

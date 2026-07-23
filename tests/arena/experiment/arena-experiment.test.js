@@ -84,7 +84,7 @@ import {
   ARENA_BALANCE_CANDIDATE_COLLECTOR_VERSION,
   createArenaBalanceCandidateCollectorEntry,
   createArenaBalanceCandidateCollectorParameters,
-} from '../../../src/arena/experiment/arena-balance-candidate-collector.js';
+} from '@number-strategy-jump/arena-v1-experiment';
 import { createArenaBalancePolicy } from '@number-strategy-jump/arena-experiment';
 import { parseArenaStressIntegerOptions } from '../../../scripts/arena-stress-cli.mjs';
 

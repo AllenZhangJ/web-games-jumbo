@@ -48,7 +48,6 @@
     "scripts/lib/arena-stage9-release-producers.mjs",
     "scripts/lib/evidence-file-verifier.mjs",
     "src/arena/entry/match-core-poc.js",
-    "src/arena/experiment/arena-balance-candidate-collector.js",
     "src/arena/experiment/arena-balance-experiment-composition.js",
     "src/arena/experiment/arena-balance-experiment-factory.js",
     "src/arena/experiment/arena-balance-exploration-bundle.js",
