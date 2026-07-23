@@ -7,7 +7,7 @@ import {
   ARENA_REPLAY_ERROR_CODE,
   ARENA_REPLAY_SCHEMA_VERSION,
 } from '@number-strategy-jump/arena-match';
-import { replayMatch } from '../../../src/arena/replay.ts';
+import { replayMatch } from '../../../src/arena/replay.js';
 import {
   createArenaV1GoldenReplayScenarioRegistry,
 } from '@number-strategy-jump/arena-regression';
@@ -31,15 +31,47 @@ const fixtureDirectory = path.resolve(
   `tests/arena/fixtures/replays/v${ARENA_REPLAY_SCHEMA_VERSION}`,
 );
 
-async function readJson(file) {
-  return JSON.parse(await readFile(file, 'utf8'));
+interface RawManifestEntry {
+  id: string;
+  file: string;
+  replayHash: string;
 }
 
-async function readCorpus() {
-  const manifest = await readJson(path.join(fixtureDirectory, 'manifest.json'));
+interface RawManifest extends Record<string, unknown> {
+  entries: RawManifestEntry[];
+}
+
+interface RawFixture {
+  file: string;
+  replay: Record<string, unknown>;
+}
+
+function required<T>(value: T | null | undefined, name: string): T {
+  if (value === null || value === undefined) throw new Error(`测试缺少 ${name}。`);
+  return value;
+}
+
+function record(value: unknown, name: string): Record<string, unknown> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new TypeError(`${name} 必须是对象。`);
+  }
+  return value as Record<string, unknown>;
+}
+
+async function readJson(file: string): Promise<unknown> {
+  return JSON.parse(await readFile(file, 'utf8')) as unknown;
+}
+
+async function readCorpus(): Promise<{ manifest: RawManifest; fixtures: RawFixture[] }> {
+  const manifestValue = record(
+    await readJson(path.join(fixtureDirectory, 'manifest.json')),
+    'golden replay manifest',
+  );
+  if (!Array.isArray(manifestValue.entries)) throw new TypeError('manifest.entries 必须是数组。');
+  const manifest = manifestValue as RawManifest;
   const fixtures = await Promise.all(manifest.entries.map(async ({ file }) => ({
     file,
-    replay: await readJson(path.join(fixtureDirectory, file)),
+    replay: record(await readJson(path.join(fixtureDirectory, file)), `replay ${file}`),
   })));
   return { manifest, fixtures };
 }
@@ -67,15 +99,18 @@ test('committed Replay V5 corpus strictly replays and regenerates every register
 test('golden replay manifest rejects traversal, duplicate identities and silent hash updates', async () => {
   const corpus = await readCorpus();
   const traversal = structuredClone(corpus.manifest);
-  traversal.entries[0].file = '../equipment.json';
+  required(traversal.entries[0], '首个 manifest entry').file = '../equipment.json';
   assert.throws(() => createArenaGoldenReplayManifest(traversal), /安全 JSON 文件名/);
 
   const duplicate = structuredClone(corpus.manifest);
-  duplicate.entries[1].id = duplicate.entries[0].id;
+  required(duplicate.entries[1], '第二个 manifest entry').id = required(
+    duplicate.entries[0],
+    '首个 manifest entry',
+  ).id;
   assert.throws(() => createArenaGoldenReplayManifest(duplicate), /重复 id|严格递增/);
 
   const tamperedManifest = structuredClone(corpus.manifest);
-  tamperedManifest.entries[0].replayHash = '00000000';
+  required(tamperedManifest.entries[0], '首个 manifest entry').replayHash = '00000000';
   assert.throws(() => verifyArenaGoldenReplayCorpus({
     manifest: tamperedManifest,
     fixtures: corpus.fixtures,
@@ -85,7 +120,7 @@ test('golden replay manifest rejects traversal, duplicate identities and silent 
 
   assert.throws(() => verifyArenaGoldenReplayCorpus({
     manifest: corpus.manifest,
-    fixtures: [...corpus.fixtures, corpus.fixtures[0]],
+    fixtures: [...corpus.fixtures, required(corpus.fixtures[0], '首个 replay fixture')],
     scenarioRegistry: createArenaV1GoldenReplayScenarioRegistry(),
     coreFactory: createArenaV1MatchCore,
   }), /fixture 重复/);
@@ -145,9 +180,12 @@ test('current replay corpus requires exact bidirectional scenario coverage', asy
 
 test('unsupported replay schema has a stable code and is rejected before Core construction', async () => {
   const { fixtures } = await readCorpus();
-  const oldReplay = { ...fixtures[0].replay, replaySchemaVersion: 4 };
+  const oldReplay = {
+    ...required(fixtures[0], '首个 replay fixture').replay,
+    replaySchemaVersion: 4,
+  };
   let coreFactoryCalls = 0;
-  let failure;
+  let failure: unknown;
   try {
     replayMatch(oldReplay, {
       coreFactory() {
@@ -158,9 +196,10 @@ test('unsupported replay schema has a stable code and is rejected before Core co
   } catch (error) {
     failure = error;
   }
-  assert.equal(failure?.code, ARENA_REPLAY_ERROR_CODE.UNSUPPORTED_SCHEMA);
-  assert.equal(failure?.actualSchemaVersion, 4);
-  assert.equal(failure?.expectedSchemaVersion, 5);
+  const failureRecord = record(failure, 'replay failure');
+  assert.equal(failureRecord.code, ARENA_REPLAY_ERROR_CODE.UNSUPPORTED_SCHEMA);
+  assert.equal(failureRecord.actualSchemaVersion, 4);
+  assert.equal(failureRecord.expectedSchemaVersion, 5);
   assert.equal(coreFactoryCalls, 0);
 });
 

@@ -40,7 +40,6 @@
     "tests/arena/product/stage8-progression.test.js",
     "tests/arena/regression/arena-regression-evidence.test.js",
     "tests/arena/regression/arena-regression-process.test.js",
-    "tests/arena/regression/golden-replay.test.js",
     "tests/arena/release-external-evidence.test.js",
     "tests/arena/release-readiness.test.js",
     "tests/arena/replay.test.js",
