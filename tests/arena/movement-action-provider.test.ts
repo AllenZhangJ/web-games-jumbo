@@ -9,6 +9,8 @@ import {
   ACTION_PRIORITY,
   ACTION_RESOLUTION_KIND,
   ActionResolver,
+  type ActionCandidate,
+  type ActionIntentInput,
   createDefaultActionEffectRegistry,
   createDefaultTargetingRegistry,
 } from '@number-strategy-jump/arena-core';
@@ -22,14 +24,30 @@ import {
 } from '@number-strategy-jump/arena-v1-content';
 import { MovementActionCandidateProvider } from '@number-strategy-jump/arena-v1-composition';
 import { createMovementActionEffectHandlers } from '@number-strategy-jump/arena-v1-composition';
-import { MOVEMENT_COMMAND_KIND, MOVEMENT_MODE } from '@number-strategy-jump/arena-movement';
+import {
+  MOVEMENT_COMMAND_KIND,
+  MOVEMENT_MODE,
+  type MovementCapabilities,
+} from '@number-strategy-jump/arena-movement';
 
 const actionRegistry = new ActionRegistry([
   ...STAGE4_ACTION_DEFINITIONS,
   ...STAGE6_MOVEMENT_ACTION_DEFINITIONS,
 ]);
 
-function capabilities(overrides = {}) {
+function required<T>(value: T | null | undefined, name: string): T {
+  if (value === null || value === undefined) throw new Error(`测试缺少 ${name}。`);
+  return value;
+}
+
+function record(value: unknown, name: string): Record<string, unknown> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new TypeError(`${name} 必须是对象。`);
+  }
+  return value as Record<string, unknown>;
+}
+
+function capabilities(overrides: Partial<MovementCapabilities> = {}): MovementCapabilities {
   return {
     participantId: 'player-1',
     canMove: true,
@@ -46,7 +64,7 @@ function capabilities(overrides = {}) {
   };
 }
 
-function input(overrides = {}) {
+function input(overrides: Partial<ActionIntentInput> = {}): ActionIntentInput {
   return {
     primaryPressed: false,
     primaryHeld: false,
@@ -57,7 +75,7 @@ function input(overrides = {}) {
   };
 }
 
-function resolve(candidates, frame) {
+function resolve(candidates: readonly ActionCandidate[], frame: ActionIntentInput) {
   return new ActionResolver({ actionRegistry }).resolve({
     tick: 1,
     participantId: 'player-1',
@@ -88,16 +106,16 @@ test('MovementActionCandidateProvider derives explicit and context choices only 
   const provider = new MovementActionCandidateProvider({ actionRegistry });
   const candidates = provider.getCandidates(capabilities());
   const explicit = resolve(candidates, input({ jumpPressed: true }));
-  assert.equal(explicit.outcomes[0].actionDefinitionId, STAGE6_MOVEMENT_ACTION_ID.EXPLICIT_GROUND_JUMP);
+  assert.equal(required(explicit.outcomes[0], '显式跳跃裁决').actionDefinitionId, STAGE6_MOVEMENT_ACTION_ID.EXPLICIT_GROUND_JUMP);
 
   const ordinaryPress = resolve(candidates, input({ jumpPressed: true, jumpHeld: true }));
   assert.equal(
-    ordinaryPress.outcomes[0].actionDefinitionId,
+    required(ordinaryPress.outcomes[0], '普通跳跃裁决').actionDefinitionId,
     STAGE6_MOVEMENT_ACTION_ID.EXPLICIT_GROUND_JUMP,
   );
 
   const crouch = resolve(candidates, input({ jumpHeld: true }));
-  assert.equal(crouch.outcomes[0].actionDefinitionId, STAGE6_MOVEMENT_ACTION_ID.EXPLICIT_CROUCH_BEGIN);
+  assert.equal(required(crouch.outcomes[0], '蓄力跳裁决').actionDefinitionId, STAGE6_MOVEMENT_ACTION_ID.EXPLICIT_CROUCH_BEGIN);
 
   const baseUnavailable = {
     id: `base:${STAGE4_ACTION_ID.BASE_PUSH}`,
@@ -113,7 +131,7 @@ test('MovementActionCandidateProvider derives explicit and context choices only 
     input({ primaryPressed: true }),
   );
   assert.equal(
-    contextual.outcomes[0].actionDefinitionId,
+    required(contextual.outcomes[0], '上下文跳跃裁决').actionDefinitionId,
     STAGE6_MOVEMENT_ACTION_ID.CONTEXT_GROUND_JUMP,
   );
   const contextualCrouch = resolve(
@@ -121,7 +139,7 @@ test('MovementActionCandidateProvider derives explicit and context choices only 
     input({ primaryHeld: true }),
   );
   assert.equal(
-    contextualCrouch.outcomes[0].actionDefinitionId,
+    required(contextualCrouch.outcomes[0], '上下文蓄力裁决').actionDefinitionId,
     STAGE6_MOVEMENT_ACTION_ID.CONTEXT_CROUCH_BEGIN,
   );
   assert.equal(provider.getCandidates(capabilities()), candidates);
@@ -160,8 +178,8 @@ test('crouch release stays on the channel that began charging', () => {
     false,
   );
   const explicit = resolve(explicitCandidates, input());
-  assert.equal(explicit.outcomes[0].inputChannel, ACTION_INPUT_CHANNEL.JUMP);
-  assert.equal(explicit.outcomes[0].kind, ACTION_RESOLUTION_KIND.SELECTED);
+  assert.equal(required(explicit.outcomes[0], '显式释放裁决').inputChannel, ACTION_INPUT_CHANNEL.JUMP);
+  assert.equal(required(explicit.outcomes[0], '显式释放裁决').kind, ACTION_RESOLUTION_KIND.SELECTED);
 
   const contextCandidates = provider.getCandidates(capabilities({
     mode: MOVEMENT_MODE.CROUCH_CHARGING,
@@ -171,17 +189,17 @@ test('crouch release stays on the channel that began charging', () => {
     canReleaseCrouchJump: true,
   }));
   const held = resolve(contextCandidates, input({ primaryHeld: true }));
-  assert.equal(held.outcomes[0].kind, ACTION_RESOLUTION_KIND.NONE);
-  assert.equal(held.outcomes[0].reason, 'no-available-candidate');
+  assert.equal(required(held.outcomes[0], '保持蓄力裁决').kind, ACTION_RESOLUTION_KIND.NONE);
+  assert.equal(required(held.outcomes[0], '保持蓄力裁决').reason, 'no-available-candidate');
   const released = resolve(contextCandidates, input());
-  assert.equal(released.outcomes[0].inputChannel, ACTION_INPUT_CHANNEL.PRIMARY);
-  assert.equal(released.outcomes[0].actionDefinitionId, STAGE6_MOVEMENT_ACTION_ID.CONTEXT_CROUCH_RELEASE);
+  assert.equal(required(released.outcomes[0], '上下文释放裁决').inputChannel, ACTION_INPUT_CHANNEL.PRIMARY);
+  assert.equal(required(released.outcomes[0], '上下文释放裁决').actionDefinitionId, STAGE6_MOVEMENT_ACTION_ID.CONTEXT_CROUCH_RELEASE);
 });
 
 test('movement action effects produce generic rule commands without physics payloads', () => {
   const effects = createDefaultActionEffectRegistry(createMovementActionEffectHandlers());
   const definition = actionRegistry.require(STAGE6_MOVEMENT_ACTION_ID.DOWN_SMASH);
-  const commands = effects.resolve(definition.effects[0], {
+  const commands = effects.resolve(required(definition.effects[0], '下砸效果'), {
     actionDefinitionId: definition.id,
     source: {
       id: 'player-1',
@@ -193,7 +211,7 @@ test('movement action effects produce generic rule commands without physics payl
     kind: MOVEMENT_COMMAND_KIND.BEGIN_DOWN_SMASH,
     participantId: 'player-1',
   }]);
-  assert.equal(commands[0].speed, undefined);
+  assert.equal(record(commands[0], '下砸命令').speed, undefined);
   assert.ok(Object.isFrozen(commands));
-  assert.ok(Object.isFrozen(commands[0]));
+  assert.ok(Object.isFrozen(required(commands[0], '冻结的下砸命令')));
 });
