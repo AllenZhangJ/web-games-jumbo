@@ -41,7 +41,6 @@
     "tests/arena/product/stage8-product-state.test.js",
     "tests/arena/product/stage8-profile-persistence.test.js",
     "tests/arena/product/stage8-progression.test.js",
-    "tests/arena/product/stage8-test-content.js",
     "tests/arena/regression/arena-regression-evidence.test.js",
     "tests/arena/regression/arena-regression-process.test.js",
     "tests/arena/regression/golden-replay.test.js",
