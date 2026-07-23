@@ -2,44 +2,51 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   FixedTickAccumulator,
+  type PresentationFrame,
   PresentationFrameLoop,
 } from '@number-strategy-jump/arena-presentation-runtime';
 
 function schedulerHarness() {
+  type FrameCallback = (timestamp: unknown) => void;
   let nextToken = 1;
-  const callbacks = new Map();
+  const callbacks = new Map<number, FrameCallback>();
   return {
     callbacks,
-    request(callback) {
+    request(callback: FrameCallback) {
       const token = nextToken;
       nextToken += 1;
       callbacks.set(token, callback);
       return token;
     },
-    cancel(token) {
+    cancel(token: number) {
       callbacks.delete(token);
     },
-    fire(timestamp) {
+    fire(timestamp: number) {
       const [token, callback] = callbacks.entries().next().value ?? [];
       if (!callback) throw new Error('no frame');
-      callbacks.delete(token);
+      callbacks.delete(required(token, '帧 token'));
       callback(timestamp);
     },
   };
 }
 
+function required<T>(value: T | null | undefined, name: string): T {
+  if (value === null || value === undefined) throw new Error(`测试缺少 ${name}。`);
+  return value;
+}
+
 test('PresentationFrameLoop owns one frame, clamps wall time and suppresses late callbacks', () => {
   const scheduler = schedulerHarness();
-  const errors = [];
-  const frames = [];
+  const errors: unknown[] = [];
+  const frames: PresentationFrame[] = [];
   const loop = new PresentationFrameLoop({
-    requestFrame: (callback) => scheduler.request(callback),
-    cancelFrame: (token) => scheduler.cancel(token),
+    requestFrame: (callback: (timestamp: unknown) => void) => scheduler.request(callback),
+    cancelFrame: (token: unknown) => scheduler.cancel(token as number),
     now: () => 0,
-    onError: (error) => errors.push(error),
+    onError: (error: unknown) => errors.push(error),
     maxDeltaSeconds: 0.1,
   });
-  assert.equal(loop.start((frame) => { frames.push(frame); }), true);
+  assert.equal(loop.start((frame: PresentationFrame) => { frames.push(frame); }), true);
   assert.equal(loop.start(() => {}), false);
   assert.equal(scheduler.callbacks.size, 1);
   scheduler.fire(1_000);
@@ -50,7 +57,7 @@ test('PresentationFrameLoop owns one frame, clamps wall time and suppresses late
   const stale = scheduler.callbacks.values().next().value;
   assert.equal(loop.stop(), true);
   assert.equal(scheduler.callbacks.size, 0);
-  stale(2_000);
+  required(stale, '过期帧回调')(2_000);
   assert.equal(frames.length, 2);
   assert.equal(loop.stop(), false);
   assert.deepEqual(errors, []);
@@ -60,12 +67,12 @@ test('PresentationFrameLoop owns one frame, clamps wall time and suppresses late
 });
 
 test('PresentationFrameLoop rejects synchronous hosts and contains callback failure', () => {
-  const synchronousErrors = [];
+  const synchronousErrors: unknown[] = [];
   const synchronous = new PresentationFrameLoop({
-    requestFrame(callback) { callback(0); return 7; },
+    requestFrame(callback: (timestamp: unknown) => void) { callback(0); return 7; },
     cancelFrame() {},
     now: () => 0,
-    onError: (error) => synchronousErrors.push(error),
+    onError: (error: unknown) => synchronousErrors.push(error),
   });
   assert.throws(() => synchronous.start(() => {}), /同步 requestFrame/);
   assert.equal(synchronous.getDebugSnapshot().state, 'failed');
@@ -73,18 +80,19 @@ test('PresentationFrameLoop rejects synchronous hosts and contains callback fail
   synchronous.destroy();
 
   const scheduler = schedulerHarness();
-  const callbackErrors = [];
+  const callbackErrors: unknown[] = [];
   const broken = new PresentationFrameLoop({
-    requestFrame: (callback) => scheduler.request(callback),
-    cancelFrame: (token) => scheduler.cancel(token),
+    requestFrame: (callback: (timestamp: unknown) => void) => scheduler.request(callback),
+    cancelFrame: (token: unknown) => scheduler.cancel(token as number),
     now: () => 0,
-    onError: (error) => callbackErrors.push(error),
+    onError: (error: unknown) => callbackErrors.push(error),
   });
   broken.start(() => { throw new Error('frame failed'); });
   scheduler.fire(16);
   assert.equal(broken.getDebugSnapshot().state, 'failed');
   assert.equal(scheduler.callbacks.size, 0);
-  assert.match(callbackErrors[0].message, /frame failed/);
+  const callbackError = required(callbackErrors[0], '帧回调错误');
+  assert.match(callbackError instanceof Error ? callbackError.message : String(callbackError), /frame failed/);
   broken.destroy();
 });
 
@@ -98,8 +106,11 @@ test('FixedTickAccumulator preserves remainder and drops only excess catch-up ti
   const catchUp = accumulator.push(10 / 60 + 0.004);
   assert.equal(catchUp.steps, 4);
   assert.ok(Math.abs(catchUp.droppedSeconds - 6 / 60) < 1e-12);
-  assert.ok(Math.abs(accumulator.getDebugSnapshot().accumulatedSeconds - 0.004) < 1e-12);
+  assert.ok(Math.abs(required(
+    accumulator.getDebugSnapshot().accumulatedSeconds,
+    '累计余量',
+  ) - 0.004) < 1e-12);
   accumulator.reset();
   assert.equal(accumulator.getDebugSnapshot().accumulatedSeconds, 0);
-  assert.ok(accumulator.getDebugSnapshot().droppedSeconds > 0);
+  assert.ok(required(accumulator.getDebugSnapshot().droppedSeconds, '丢弃时间') > 0);
 });

@@ -25,7 +25,7 @@ function voiceHarness() {
 }
 
 test('impact audio preloads a bounded pool, rotates voices and honors sound settings', () => {
-  const voices = [];
+  const voices: ReturnType<typeof voiceHarness>[] = [];
   const audio = new ArenaImpactAudio({
     createAudio: () => {
       const voice = voiceHarness();

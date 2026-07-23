@@ -10,6 +10,11 @@ import {
   createArenaPresentationMemoryProviderForLaunch,
 } from '@number-strategy-jump/arena-v1-application-launch';
 
+interface TestLaunchRoot {
+  readonly performance: { readonly memory: { readonly usedJSHeapSize: number } };
+  __ARENA_PERFORMANCE_MEMORY_PROVIDER__?: () => unknown;
+}
+
 test('launch quality selection is explicit, host-neutral and falls back safely', () => {
   assert.equal(resolveArenaPresentationQualityForLaunch({
     platformId: 'web',
@@ -36,7 +41,7 @@ test('launch quality selection is explicit, host-neutral and falls back safely',
 });
 
 test('launch memory provider combines Web heap fallback with optional external process evidence', () => {
-  const root = {
+  const root: TestLaunchRoot = {
     performance: { memory: { usedJSHeapSize: 12_345 } },
   };
   const provider = createArenaPresentationMemoryProviderForLaunch({
