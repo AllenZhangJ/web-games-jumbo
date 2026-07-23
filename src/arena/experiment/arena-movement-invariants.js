@@ -1,5 +1,5 @@
 import { MOVEMENT_MODE } from '@number-strategy-jump/arena-movement';
-import { assertArenaMatchCoreSnapshotInvariants } from './arena-matchcore-invariants.js';
+import { assertArenaMatchCoreSnapshotInvariants } from '@number-strategy-jump/arena-experiment';
 
 export function assertArenaMovementSnapshotInvariants(
   snapshot,

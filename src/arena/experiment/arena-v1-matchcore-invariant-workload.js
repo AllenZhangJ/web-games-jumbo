@@ -12,13 +12,11 @@ import {
 import {
   assertArenaMatchCoreSnapshotInvariants,
   createArenaMatchCoreTickSnapshot,
-} from './arena-matchcore-invariants.js';
-import {
   ARENA_V1_MATCHCORE_STRESS_INPUT_DEFAULT_TUNING,
   createArenaV1MatchCoreStressInputParameters,
   createArenaV1MatchCoreStressInputStrategy,
-} from './arena-v1-matchcore-stress-strategy.js';
-import { cloneArenaExperimentReplaySeeds } from '@number-strategy-jump/arena-experiment';
+  cloneArenaExperimentReplaySeeds,
+} from '@number-strategy-jump/arena-experiment';
 
 export const ARENA_V1_MATCHCORE_INVARIANT_WORKLOAD_ID =
   'arena.stage9.matchcore-invariants';

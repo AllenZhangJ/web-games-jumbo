@@ -105,6 +105,14 @@ export type {
   ArenaBalanceEquipmentPolicy,
   ArenaBalancePolicy,
 } from './arena-balance-policy.js';
+export { assertArenaMatchCoreSnapshotInvariants, createArenaMatchCoreTickSnapshot } from './arena-matchcore-invariants.js';
+export { assertArenaMapTimelineFinalState, assertArenaMapTimelineSnapshotInvariants } from './arena-map-invariants.js';
+export {
+  ARENA_V1_MATCHCORE_STRESS_INPUT_DEFAULT_TUNING,
+  createArenaV1MatchCoreStressInputParameters,
+  createArenaV1MatchCoreStressInputStrategy,
+} from './arena-v1-matchcore-stress-strategy.js';
+export type { ArenaV1MatchCoreStressInputParameters } from './arena-v1-matchcore-stress-strategy.js';
 export type {
   ArenaSimulationCase,
   ArenaSimulationWorkloadEntry,

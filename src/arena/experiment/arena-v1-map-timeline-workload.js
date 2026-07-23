@@ -15,9 +15,9 @@ import {
 import {
   assertArenaMapTimelineFinalState,
   assertArenaMapTimelineSnapshotInvariants,
-} from './arena-map-invariants.js';
-import { createArenaMatchCoreTickSnapshot } from './arena-matchcore-invariants.js';
-import { cloneArenaExperimentReplaySeeds } from '@number-strategy-jump/arena-experiment';
+  createArenaMatchCoreTickSnapshot,
+  cloneArenaExperimentReplaySeeds,
+} from '@number-strategy-jump/arena-experiment';
 
 export const ARENA_V1_MAP_TIMELINE_WORKLOAD_ID = 'arena.stage9.map-timeline';
 export const ARENA_V1_MAP_TIMELINE_WORKLOAD_VERSION = 1;

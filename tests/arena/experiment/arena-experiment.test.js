@@ -36,7 +36,7 @@ import {
 import {
   ARENA_V1_MATCHCORE_STRESS_INPUT_DEFAULT_TUNING,
   createArenaV1MatchCoreStressInputStrategy,
-} from '../../../src/arena/experiment/arena-v1-matchcore-stress-strategy.js';
+} from '@number-strategy-jump/arena-experiment';
 import {
   createArenaStage9MapExperimentDefinition,
   createArenaStage9MapExperimentRegistries,

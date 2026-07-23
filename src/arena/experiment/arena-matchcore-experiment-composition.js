@@ -18,7 +18,7 @@ import {
   ARENA_V1_MATCHCORE_INVARIANT_WORKLOAD_VERSION,
   createArenaV1MatchCoreInvariantWorkloadEntry,
 } from './arena-v1-matchcore-invariant-workload.js';
-import { ARENA_V1_MATCHCORE_STRESS_INPUT_DEFAULT_TUNING } from './arena-v1-matchcore-stress-strategy.js';
+import { ARENA_V1_MATCHCORE_STRESS_INPUT_DEFAULT_TUNING } from '@number-strategy-jump/arena-experiment';
 import {
   createArenaExperimentReplaySeeds,
   createContiguousArenaExperimentSeedRange,
