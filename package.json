@@ -29,7 +29,7 @@
     "arena:session:soak": "node --expose-gc --import tsx scripts/arena-presentation-session-soak.mjs --matches=100",
     "arena:product:session:soak": "node --expose-gc --import tsx scripts/arena-product-presentation-session-soak.mjs --matches=100",
     "arena:profile:stress": "node --import tsx scripts/arena-profile-persistence-stress.ts --commits=500",
-    "arena:product:stress": "node --import tsx scripts/arena-product-session-stress.mjs --matches=200",
+    "arena:product:stress": "node --import tsx scripts/arena-product-session-stress.ts --matches=200",
     "arena:experiment": "node --import tsx scripts/arena-experiment.mjs",
     "arena:experiment:matchcore": "node --import tsx scripts/arena-experiment.mjs --suite=matchcore-invariants --cases=1000 --replay-samples=5 --summary",
     "arena:experiment:map": "node --import tsx scripts/arena-experiment.mjs --suite=map-timeline --cases=100 --replay-samples=3 --summary",

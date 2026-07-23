@@ -1,7 +1,7 @@
 import { createArenaV1ProductSession } from '@number-strategy-jump/arena-v1-composition';
 import { PRODUCT_SESSION_STATE } from '@number-strategy-jump/arena-product-state';
 
-function positiveIntegerFlag(name, fallback) {
+function positiveIntegerFlag(name: string, fallback: number): number {
   const prefix = `--${name}=`;
   const argument = process.argv.slice(2).find((value) => value.startsWith(prefix));
   if (!argument) return fallback;
@@ -12,23 +12,23 @@ function positiveIntegerFlag(name, fallback) {
   return value;
 }
 
-function clone(value) {
-  return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
+function clone<T>(value: T): T {
+  return value === undefined ? value : JSON.parse(JSON.stringify(value)) as T;
 }
 
 function createStorage() {
-  const values = new Map();
+  const values = new Map<string, unknown>();
   return {
-    storageRead(key) {
+    storageRead(key: string) {
       return values.has(key)
         ? { ok: true, found: true, value: clone(values.get(key)) }
         : { ok: true, found: false, value: undefined };
     },
-    storageWrite(key, value) {
+    storageWrite(key: string, value: unknown): boolean {
       values.set(key, clone(value));
       return true;
     },
-    storageDelete(key) {
+    storageDelete(key: string): boolean {
       values.delete(key);
       return true;
     },
@@ -39,9 +39,9 @@ const matches = positiveIntegerFlag('matches', 200);
 const storage = createStorage();
 let nextSeed = 10_000;
 let ownerGeneration = 0;
-let controller = null;
+let controller: ReturnType<typeof createArenaV1ProductSession> | null = null;
 
-function createController() {
+function createController(): ReturnType<typeof createArenaV1ProductSession> {
   ownerGeneration += 1;
   return createArenaV1ProductSession({
     storage,
@@ -57,13 +57,13 @@ function createController() {
   });
 }
 
-const authorityHashes = new Set();
-const contentHashes = new Set();
+const authorityHashes = new Set<string>();
+const contentHashes = new Set<string>();
 let lifecycleTransitions = 0;
 let rematches = 0;
 let maximumTicks = 0;
 let expectedExperience = 0;
-let latestGrantId = null;
+let latestGrantId: string | null = null;
 
 try {
   controller = createController();
@@ -104,7 +104,7 @@ try {
     }
     controller.beginMatch();
 
-    let finalStep = null;
+    let finalStep: ReturnType<typeof controller.stepMatch> | null = null;
     for (let tickIndex = 0; tickIndex < 100; tickIndex += 1) {
       if (tickIndex === 2 && matchIndex % 2 === 0) {
         controller.hide();
@@ -140,6 +140,9 @@ try {
     if (rewarded.state.state !== PRODUCT_SESSION_STATE.REWARD || rewarded.match.hasRuntime) {
       throw new Error(`第 ${matchIndex} 局奖励提交后未释放 Match。`);
     }
+    if (!rewarded.reward || !rewarded.profile) {
+      throw new Error(`第 ${matchIndex} 局奖励提交后缺少奖励或档案快照。`);
+    }
     expectedExperience += rewarded.reward.grant.experienceDelta;
     latestGrantId = rewarded.reward.grant.grantId;
     if (rewarded.profile.progression.experience !== expectedExperience) {
@@ -154,13 +157,16 @@ try {
       && matchIndex % 2 === 0;
     if (!shouldRematch) {
       controller.continueReward();
-      if (controller.state === PRODUCT_SESSION_STATE.UNLOCK) controller.dismissUnlocks();
+      if (controller.getSnapshot().state.state === PRODUCT_SESSION_STATE.UNLOCK) {
+        controller.dismissUnlocks();
+      }
     }
 
     if (shouldRestart) {
       controller.destroy();
       controller = createController();
       const restored = await controller.boot();
+      if (!restored.profile) throw new Error('产品重启后缺少档案快照。');
       if (restored.profile.selection.characterId !== 'wind-up-cube') {
         throw new Error('产品重启后角色选择未恢复。');
       }
@@ -177,6 +183,7 @@ try {
   if (snapshot.state.state !== PRODUCT_SESSION_STATE.READY || snapshot.match.hasRuntime) {
     throw new Error('压力结束后产品未回到无 Match 资源的 ready。');
   }
+  if (!snapshot.profile) throw new Error('压力结束后缺少档案快照。');
   controller.destroy();
   controller = null;
   console.log(JSON.stringify({
