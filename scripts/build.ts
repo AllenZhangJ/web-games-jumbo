@@ -11,22 +11,28 @@ import {
 import {
   ARENA_DEVICE_ACCEPTANCE_PLATFORM,
 } from '@number-strategy-jump/arena-device-acceptance';
-import { writeArenaBuildManifest } from './lib/arena-build-manifest-files.ts';
-import { verifyArenaFormalAssetBudget } from './lib/arena-formal-asset-budget-verifier.mjs';
+import { writeArenaBuildManifest } from './lib/arena-build-manifest-files.js';
+import { verifyArenaFormalAssetBudget } from './lib/arena-formal-asset-budget-verifier.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dist = path.join(root, 'dist');
 const execFileAsync = promisify(execFile);
 const GIT_COMMIT_PATTERN = /^[0-9a-f]{40}$/;
 
-async function gitText(args) {
-  const result = await execFileAsync('git', args, { cwd: root, encoding: 'utf8' });
+interface ArenaBuildIdentity {
+  readonly buildId: string;
+  readonly commit: string;
+  readonly sourceDirty: boolean;
+}
+
+async function gitText(args: readonly string[]): Promise<string> {
+  const result = await execFileAsync('git', [...args], { cwd: root, encoding: 'utf8' });
   return result.stdout.trim();
 }
 
-async function resolveBuildIdentity() {
+async function resolveBuildIdentity(): Promise<ArenaBuildIdentity> {
   const explicitCommit = process.env.ARENA_BUILD_COMMIT ?? null;
-  let repositoryCommit = null;
+  let repositoryCommit: string | null = null;
   try {
     repositoryCommit = await gitText(['rev-parse', 'HEAD']);
   } catch {
@@ -67,7 +73,7 @@ if (formalAssetBudget.status !== 'passed') {
   );
 }
 
-async function copyThirdPartyNotices(outDir) {
+async function copyThirdPartyNotices(outDir: string): Promise<void> {
   await Promise.all([
     cp(
       path.join(root, 'THIRD_PARTY_NOTICES.md'),
@@ -77,7 +83,7 @@ async function copyThirdPartyNotices(outDir) {
   ]);
 }
 
-async function buildWeb() {
+async function buildWeb(): Promise<void> {
   await viteBuild({
     root,
     base: './',
@@ -116,7 +122,7 @@ async function buildWeb() {
   });
 }
 
-async function bundleMiniGame(entryPoint, outfile) {
+async function bundleMiniGame(entryPoint: string, outfile: string): Promise<void> {
   await esbuild({
     entryPoints: [path.join(root, entryPoint)],
     outfile,
@@ -132,7 +138,12 @@ async function bundleMiniGame(entryPoint, outfile) {
   });
 }
 
-async function buildMiniGame(target, productEntryPoint, config, projectConfig) {
+async function buildMiniGame(
+  target: 'douyin' | 'wechat',
+  productEntryPoint: string,
+  config: Readonly<Record<string, unknown>>,
+  projectConfig: Readonly<Record<string, unknown>>,
+): Promise<void> {
   const outDir = path.join(dist, target);
   await mkdir(outDir, { recursive: true });
   await bundleMiniGame(

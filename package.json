@@ -68,7 +68,7 @@
     "check:governance": "npm run check:js-migration && npm run check:product-boundaries && npm run check:presentation-three-boundaries && npm run lint && npm run typecheck && npm run test:governance",
     "audit:dependencies": "npm audit --omit=dev --audit-level=high",
     "prebuild": "npm run build:packages",
-    "build": "node --import tsx scripts/build.mjs",
+    "build": "node --import tsx scripts/build.ts",
     "check": "npm run check:governance && npm run test:node && npm run arena:regression && npm run arena:assets:budget && npm run audit:dependencies && npm run build && npm run arena:build:verify -- --require-clean-source && npm run arena:build:budget && npm run check:production-artifacts"
   },
   "devDependencies": {

@@ -14,7 +14,6 @@
     "scripts/arena-product-presentation-session-soak.mjs",
     "scripts/arena-regression-evidence.mjs",
     "scripts/arena-stage9-readiness.mjs",
-    "scripts/build.mjs",
     "scripts/lib/arena-regression-evidence-producer.mjs",
     "scripts/lib/arena-stage9-release-producers.mjs",
     "tests/architecture.test.js",
