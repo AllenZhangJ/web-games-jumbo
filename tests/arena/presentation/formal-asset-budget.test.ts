@@ -9,15 +9,25 @@ import {
   FORMAL_ASSET_BUDGET_POLICY_SCHEMA_VERSION,
   createArenaStage7FormalAssetBudgetV1Policy,
   createFormalAssetBudgetPolicy,
-} from '../../../src/arena/presentation/assets/formal-asset-budget-policy.ts';
+} from '../../../src/arena/presentation/assets/formal-asset-budget-policy.js';
 import {
   createFormalAssetBudgetReport,
-} from '../../../src/arena/presentation/assets/formal-asset-budget-report.ts';
+  type FormalAssetBudgetObservation,
+} from '../../../src/arena/presentation/assets/formal-asset-budget-report.js';
 import {
   verifyArenaFormalAssetBudget,
-} from '../../../scripts/lib/arena-formal-asset-budget-verifier.mjs';
+} from '../../../scripts/lib/arena-formal-asset-budget-verifier.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
+
+function required<T>(value: T | null | undefined, name: string): T {
+  if (value === null || value === undefined) throw new Error(`测试缺少 ${name}。`);
+  return value;
+}
+
+type MutableObservation = {
+  -readonly [Key in keyof FormalAssetBudgetObservation]: FormalAssetBudgetObservation[Key];
+};
 
 test('Stage 7 formal asset budget fixes complete runtime asset and complexity limits', async () => {
   const policy = createArenaStage7FormalAssetBudgetV1Policy();
@@ -33,7 +43,7 @@ test('Stage 7 formal asset budget fixes complete runtime asset and complexity li
   assert.equal(policy.maximumCharacterAnimationCount, 18);
   assert.equal(policy.maximumTotalDecodedTextureBytes, 16 * 1024 * 1024);
   assert.throws(() => {
-    policy.artifacts.push({});
+    (policy.artifacts as unknown as unknown[]).push({});
   }, /not extensible|read only|object is not extensible/i);
 
   const report = await verifyArenaFormalAssetBudget({ repositoryRoot: ROOT });
@@ -56,24 +66,27 @@ test('formal asset budget report fails closed on animation, per-file and coverag
   const policy = createArenaStage7FormalAssetBudgetV1Policy();
   const current = await verifyArenaFormalAssetBudget({ repositoryRoot: ROOT });
 
-  const missing = structuredClone(current.observations);
+  const missing = structuredClone(current.observations) as MutableObservation[];
   missing.pop();
   assert.throws(
     () => createFormalAssetBudgetReport(policy, missing),
     /一一对应/,
   );
 
-  const wrongPath = structuredClone(current.observations);
-  wrongPath[0].path = 'public/assets/arena/foreign.glb';
+  const wrongPath = structuredClone(current.observations) as MutableObservation[];
+  (required(wrongPath[0], '预算观察') as { path: string }).path = 'public/assets/arena/foreign.glb';
   assert.throws(
     () => createFormalAssetBudgetReport(policy, wrongPath),
     /path\/kind 与 Policy 不一致/,
   );
 
-  const drifted = structuredClone(current.observations);
-  const character = drifted.find(({ kind }) => kind === 'character-model');
+  const drifted = structuredClone(current.observations) as MutableObservation[];
+  const character = required(
+    drifted.find(({ kind }) => kind === 'character-model'),
+    '角色模型观察',
+  );
   character.animationCount = 17;
-  const audio = drifted.find(({ kind }) => kind === 'audio');
+  const audio = required(drifted.find(({ kind }) => kind === 'audio'), '音频观察');
   audio.encodedBytes = 16 * 1024 + 1;
   const report = createFormalAssetBudgetReport(policy, drifted);
   assert.equal(report.status, 'failed');
@@ -81,7 +94,8 @@ test('formal asset budget report fails closed on animation, per-file and coverag
   assert.equal(report.failedGateIds.includes(`${audio.id}:encoded-bytes`), true);
 
   const duplicatePolicy = structuredClone(policy.toJSON());
-  duplicatePolicy.artifacts[1].path = duplicatePolicy.artifacts[0].path;
+  const firstArtifact = required(duplicatePolicy.artifacts[0], '首个预算定义');
+  (required(duplicatePolicy.artifacts[1], '第二个预算定义') as { path: string }).path = firstArtifact.path;
   assert.throws(() => createFormalAssetBudgetPolicy(duplicatePolicy), /重复.*path/);
 });
 

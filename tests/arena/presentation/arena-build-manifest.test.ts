@@ -13,7 +13,7 @@ import {
   collectArenaBuildArtifacts,
   verifyArenaBuildManifestDirectory,
   writeArenaBuildManifest,
-} from '../../../scripts/lib/arena-build-manifest-files.ts';
+} from '../../../scripts/lib/arena-build-manifest-files.js';
 import {
   createArenaStage9BuildBudgetV1Policy,
 } from '@number-strategy-jump/arena-performance-evidence';
@@ -23,8 +23,13 @@ import {
 
 const COMMIT = 'b'.repeat(40);
 
-function artifact(pathValue, byteLength, hashCharacter) {
+function artifact(pathValue: string, byteLength: number, hashCharacter: string) {
   return { path: pathValue, byteLength, sha256: hashCharacter.repeat(64) };
+}
+
+function required<T>(value: T | null | undefined, name: string): T {
+  if (value === null || value === undefined) throw new Error(`测试缺少 ${name}。`);
+  return value;
 }
 
 test('ArenaBuildManifest freezes required Web and mini-game artifacts and default entry identity', () => {
@@ -43,7 +48,7 @@ test('ArenaBuildManifest freezes required Web and mini-game artifacts and defaul
   });
   assert.equal(Object.isFrozen(manifest.artifacts), true);
   assert.equal(manifest.defaultEntry, ARENA_BUILD_DEFAULT_ENTRY.PRODUCT);
-  assert.equal(manifest.getArtifact('game.js').sha256, '1'.repeat(64));
+  assert.equal(required(manifest.getArtifact('game.js'), 'game.js artifact').sha256, '1'.repeat(64));
   assert.equal(manifest.getContentHash(), manifest.getContentHash());
   assert.throws(() => createArenaBuildManifest({
     ...manifest.toJSON(),
@@ -109,7 +114,10 @@ test('build manifest file helper detects mutation and unexpected output files', 
       defaultEntry: ARENA_BUILD_DEFAULT_ENTRY.PRODUCT,
     });
     assert.equal(written.artifacts.length, Object.keys(files).length);
-    assert.equal(written.getArtifact('assets/empty.marker').byteLength, 0);
+    assert.equal(required(
+      written.getArtifact('assets/empty.marker'),
+      'empty marker artifact',
+    ).byteLength, 0);
     assert.equal((await verifyArenaBuildManifestDirectory(root, {
       requireCleanSource: true,
     })).buildId, 'build-002');
