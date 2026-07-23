@@ -16,26 +16,41 @@ import {
   createPlayerProfileDefinition,
   createPlayerProfileSaveEnvelope,
   validatePlayerProfileSaveEnvelope,
+  type PlayerProfile,
+  type SaveMigrationRegistryData,
 } from '@number-strategy-jump/arena-profile-contracts';
 import { PlayerProfileRepository } from '@number-strategy-jump/arena-profile-persistence';
 import { SynchronousStorageLease } from '@number-strategy-jump/arena-storage';
 
-function clone(value) {
-  return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
+type DeepMutable<Value> = Value extends readonly (infer Item)[]
+  ? DeepMutable<Item>[]
+  : Value extends object
+    ? { -readonly [Key in keyof Value]: DeepMutable<Value[Key]> }
+    : Value;
+
+function clone<Value>(value: Value): DeepMutable<Value> {
+  return value === undefined
+    ? value as DeepMutable<Value>
+    : JSON.parse(JSON.stringify(value)) as DeepMutable<Value>;
+}
+
+function requiredRecord(value: unknown): Record<string, unknown> {
+  assert.ok(typeof value === 'object' && value !== null && !Array.isArray(value));
+  return value as Record<string, unknown>;
 }
 
 function storageHarness() {
-  const values = new Map();
-  const readFailures = new Set();
-  const writeFailures = new Set();
-  const writeThrowsAfterMutation = new Set();
-  const deleteFailures = new Set();
-  const deleteThrowsAfterMutation = new Set();
-  const failNextRead = new Set();
-  const armReadFailureOnWrite = new Set();
-  const writeTransforms = new Map();
-  const writeHooks = new Map();
-  const writeKeys = [];
+  const values = new Map<string, unknown>();
+  const readFailures = new Set<string>();
+  const writeFailures = new Set<string>();
+  const writeThrowsAfterMutation = new Set<string>();
+  const deleteFailures = new Set<string>();
+  const deleteThrowsAfterMutation = new Set<string>();
+  const failNextRead = new Set<string>();
+  const armReadFailureOnWrite = new Set<string>();
+  const writeTransforms = new Map<string, (value: unknown) => unknown>();
+  const writeHooks = new Map<string, () => void>();
+  const writeKeys: string[] = [];
   return {
     values,
     readFailures,
@@ -49,7 +64,7 @@ function storageHarness() {
     writeHooks,
     writeKeys,
     port: {
-      storageRead(key) {
+      storageRead(key: string) {
         if (failNextRead.delete(key) || readFailures.has(key)) {
           return { ok: false, found: false, value: undefined };
         }
@@ -57,7 +72,7 @@ function storageHarness() {
           ? { ok: true, found: true, value: clone(values.get(key)) }
           : { ok: true, found: false, value: undefined };
       },
-      storageWrite(key, value) {
+      storageWrite(key: string, value: unknown) {
         writeKeys.push(key);
         if (writeFailures.has(key)) return false;
         const transform = writeTransforms.get(key);
@@ -70,7 +85,7 @@ function storageHarness() {
         if (writeThrowsAfterMutation.has(key)) throw new Error(`write throw ${key}`);
         return true;
       },
-      storageDelete(key) {
+      storageDelete(key: string) {
         if (deleteFailures.has(key)) return false;
         values.delete(key);
         if (deleteThrowsAfterMutation.has(key)) throw new Error(`delete throw ${key}`);
@@ -80,7 +95,11 @@ function storageHarness() {
   };
 }
 
-function repository(harness, ownerId = 'owner-a', wallNow = () => 1000) {
+function repository(
+  harness: ReturnType<typeof storageHarness>,
+  ownerId = 'owner-a',
+  wallNow = () => 1000,
+) {
   return new PlayerProfileRepository({
     definition: ARENA_V1_PLAYER_PROFILE_DEFINITION,
     storage: harness.port,
@@ -90,7 +109,7 @@ function repository(harness, ownerId = 'owner-a', wallNow = () => 1000) {
   });
 }
 
-function withExperience(profile, experience) {
+function withExperience(profile: PlayerProfile, experience: number) {
   return advancePlayerProfile(ARENA_V1_PLAYER_PROFILE_DEFINITION, profile, {
     progression: { ...profile.progression, experience },
   });
@@ -186,19 +205,19 @@ test('profile envelopes verify raw payload hash and remain compatible across con
 test('future envelope and nested profile schemas are protected from recovery overwrite', () => {
   const definition = ARENA_V1_PLAYER_PROFILE_DEFINITION;
   const envelope = clone(createPlayerProfileSaveEnvelope(definition, createPlayerProfile(definition)));
-  envelope.schemaVersion = PLAYER_PROFILE_SAVE_ENVELOPE_SCHEMA_VERSION + 1;
+  Reflect.set(envelope, 'schemaVersion', PLAYER_PROFILE_SAVE_ENVELOPE_SCHEMA_VERSION + 1);
   assert.throws(
     () => assertPlayerProfileSaveEnvelopeHasNoFutureSchema(definition, envelope),
     PlayerProfileFutureSchemaError,
   );
-  envelope.schemaVersion = PLAYER_PROFILE_SAVE_ENVELOPE_SCHEMA_VERSION;
-  envelope.payloadSchemaVersion = definition.currentProfileSchemaVersion + 1;
+  Reflect.set(envelope, 'schemaVersion', PLAYER_PROFILE_SAVE_ENVELOPE_SCHEMA_VERSION);
+  Reflect.set(envelope, 'payloadSchemaVersion', definition.currentProfileSchemaVersion + 1);
   assert.throws(
     () => assertPlayerProfileSaveEnvelopeHasNoFutureSchema(definition, envelope),
     PlayerProfileFutureSchemaError,
   );
-  envelope.payloadSchemaVersion = definition.currentProfileSchemaVersion;
-  envelope.payload.schemaVersion = definition.currentProfileSchemaVersion + 1;
+  Reflect.set(envelope, 'payloadSchemaVersion', definition.currentProfileSchemaVersion);
+  Reflect.set(envelope.payload, 'schemaVersion', definition.currentProfileSchemaVersion + 1);
   assert.throws(
     () => assertPlayerProfileSaveEnvelopeHasNoFutureSchema(definition, envelope),
     PlayerProfileFutureSchemaError,
@@ -207,7 +226,11 @@ test('future envelope and nested profile schemas are protected from recovery ove
 
 test('SaveMigrationRegistry requires a contiguous chain and checks deterministic pure output', () => {
   assert.throws(
-    () => new SaveMigrationRegistry({ currentVersion: 1, migrations: [], unknown: true }),
+    () => new SaveMigrationRegistry({
+      currentVersion: 1,
+      migrations: [],
+      unknown: true,
+    } as unknown as SaveMigrationRegistryData),
     /不支持字段 unknown/,
   );
   assert.throws(
@@ -227,12 +250,18 @@ test('SaveMigrationRegistry requires a contiguous chain and checks deterministic
       {
         fromVersion: 1,
         toVersion: 2,
-        migrate: (value) => ({ ...value, schemaVersion: 2, middle: value.count + 1 }),
+        migrate: (value) => {
+          if (typeof value.count !== 'number') throw new TypeError('count 必须是数字。');
+          return { ...value, schemaVersion: 2, middle: value.count + 1 };
+        },
       },
       {
         fromVersion: 2,
         toVersion: 3,
-        migrate: (value) => ({ ...value, schemaVersion: 3, final: value.middle + 1 }),
+        migrate: (value) => {
+          if (typeof value.middle !== 'number') throw new TypeError('middle 必须是数字。');
+          return { ...value, schemaVersion: 3, final: value.middle + 1 };
+        },
       },
     ],
   });
@@ -363,7 +392,7 @@ test('repository blocks future data and releases its lease after open failure', 
   const blocked = repository(harness, 'owner-blocked');
   assert.throws(() => blocked.open(), PlayerProfileFutureSchemaError);
   assert.equal(harness.values.has(keys.lease), false);
-  assert.equal(harness.values.get(keys.slotA).generation, 99);
+  assert.equal(Reflect.get(requiredRecord(harness.values.get(keys.slotA)), 'generation'), 99);
 
   const retry = repository(harness, 'owner-retry');
   assert.throws(() => retry.open(), PlayerProfileFutureSchemaError);
@@ -524,8 +553,9 @@ test('opt-in same-owner takeover fences a stale single-host runtime before write
   });
   assert.equal(first.acquire(), true);
   assert.equal(replacement.acquire(), true);
-  assert.equal(harness.values.get(key).schemaVersion, 2);
-  assert.equal(harness.values.get(key).holderId, 'runtime-b');
+  const persistedHolder = requiredRecord(harness.values.get(key));
+  assert.equal(Reflect.get(persistedHolder, 'schemaVersion'), 2);
+  assert.equal(Reflect.get(persistedHolder, 'holderId'), 'runtime-b');
   assert.equal(replacement.getStatus().revision, 2);
   assert.throws(() => first.assertHeld(), /过期或被其他页面取代/);
   assert.equal(first.release(), true);
@@ -591,21 +621,21 @@ test('shared lease cleans a persisted candidate when acquisition read-back fails
 });
 
 test('shared lease rejects and contains asynchronous host write and delete callbacks', async () => {
-  const values = new Map();
+  const values = new Map<string, unknown>();
   let asyncWrite = true;
   let asyncDelete = false;
   const port = {
-    storageRead(key) {
+    storageRead(key: string) {
       return values.has(key)
         ? { ok: true, found: true, value: clone(values.get(key)) }
         : { ok: true, found: false, value: undefined };
     },
-    storageWrite(key, value) {
+    storageWrite(key: string, value: unknown) {
       if (asyncWrite) return Promise.reject(new Error('late write rejection'));
       values.set(key, clone(value));
       return true;
     },
-    storageDelete(key) {
+    storageDelete(key: string) {
       if (asyncDelete) return Promise.reject(new Error('late delete rejection'));
       values.delete(key);
       return true;
@@ -668,16 +698,18 @@ test('future data observed during write confirmation is preserved and closes the
   const repo = repository(harness);
   const initial = repo.open();
   const keys = repo.getStorageKeys();
-  harness.writeTransforms.set(keys.slotA, (value) => ({
-    ...clone(value),
+  harness.writeTransforms.set(keys.slotA, (value: unknown) => ({
+    ...requiredRecord(clone(value)),
     schemaVersion: PLAYER_PROFILE_SAVE_ENVELOPE_SCHEMA_VERSION + 1,
   }));
   assert.throws(
     () => repo.compareAndSet(withExperience(initial, 1), 0),
     PlayerProfileFutureSchemaError,
   );
+  const preservedFutureEnvelope = harness.values.get(keys.slotA);
+  assert.ok(typeof preservedFutureEnvelope === 'object' && preservedFutureEnvelope !== null);
   assert.equal(
-    harness.values.get(keys.slotA).schemaVersion,
+    Reflect.get(preservedFutureEnvelope, 'schemaVersion'),
     PLAYER_PROFILE_SAVE_ENVELOPE_SCHEMA_VERSION + 1,
   );
   assert.throws(() => repo.getSnapshot(), PlayerProfileIndeterminateWriteError);
@@ -701,7 +733,10 @@ test('a different valid generation observed after a reported write fails closed 
     () => repo.compareAndSet(withExperience(initial, 1), 0),
     PlayerProfileIndeterminateWriteError,
   );
-  assert.equal(harness.values.get(keys.slotA).payload.settings.reducedMotion, true);
+  const storedEnvelope = requiredRecord(harness.values.get(keys.slotA));
+  const storedPayload = requiredRecord(Reflect.get(storedEnvelope, 'payload'));
+  const storedSettings = requiredRecord(Reflect.get(storedPayload, 'settings'));
+  assert.equal(Reflect.get(storedSettings, 'reducedMotion'), true);
   repo.destroy();
 });
 

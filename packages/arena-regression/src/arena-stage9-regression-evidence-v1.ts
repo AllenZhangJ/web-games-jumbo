@@ -42,7 +42,7 @@ const DEFINITION: Readonly<ArenaRegressionEvidenceDefinition> = Object.freeze({
         'tests/arena/local-match-session.test.ts',
         'tests/arena/presentation/product-presentation-session.test.js',
         'tests/arena/product/stage8-product-session.test.ts',
-        'tests/arena/product/stage8-profile-persistence.test.js',
+        'tests/arena/product/stage8-profile-persistence.test.ts',
         'tests/arena/replay.test.ts',
       ].sort()),
     }),
