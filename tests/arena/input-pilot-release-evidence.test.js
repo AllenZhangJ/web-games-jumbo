@@ -359,7 +359,7 @@ test('Input Pilot producer requires the same candidate Stage 6 gate and reopens 
 test('Input Pilot CLI describes fixed release prerequisites', () => {
   const result = spawnSync(process.execPath, [
     '--import', 'tsx',
-    'scripts/arena-input-pilot-evidence.mjs',
+    'scripts/arena-input-pilot-evidence.ts',
     '--describe',
   ], { cwd: path.resolve('.'), encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr);

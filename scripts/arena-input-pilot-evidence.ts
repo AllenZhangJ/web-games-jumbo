@@ -8,15 +8,24 @@ import {
 import {
   createArenaStage6DeviceAcceptanceV1Definition,
 } from '@number-strategy-jump/arena-device-acceptance';
-import { readVerifiedTextFile } from './lib/evidence-file-verifier.ts';
+import { readVerifiedTextFile } from './lib/evidence-file-verifier.js';
 import {
   verifyArenaInputPilotEvidence,
-} from './lib/arena-input-pilot-evidence-verifier.mjs';
+} from './lib/arena-input-pilot-evidence-verifier.js';
 
 const MAXIMUM_BUNDLE_BYTES = 32 * 1024 * 1024;
 const MAXIMUM_DEVICE_BUNDLE_BYTES = 5 * 1024 * 1024;
 
-function usage() {
+interface InputPilotCliOptions {
+  bundle: string | null;
+  buildRoot: string | null;
+  deviceEvidence: string | null;
+  deviceArtifactsRoot: string | null;
+  describe: boolean;
+  help: boolean;
+}
+
+function usage(): string {
   return [
     'Usage:',
     '  npm run arena:input-pilot:evidence -- --describe',
@@ -26,8 +35,8 @@ function usage() {
   ].join('\n');
 }
 
-function parseArgs(values) {
-  const result = {
+function parseArgs(values: readonly string[]): InputPilotCliOptions {
+  const result: InputPilotCliOptions = {
     bundle: null,
     buildRoot: null,
     deviceEvidence: null,
@@ -35,9 +44,10 @@ function parseArgs(values) {
     describe: false,
     help: false,
   };
-  const seen = new Set();
+  const seen = new Set<string>();
   for (let index = 0; index < values.length; index += 1) {
     const argument = values[index];
+    if (!argument) throw new Error(`参数索引 ${index} 缺失。`);
     if (argument === '--help' || argument === '-h') {
       result.help = true;
       continue;
@@ -53,6 +63,7 @@ function parseArgs(values) {
     );
     if (!match) throw new Error(`未知参数 ${argument}。\n${usage()}`);
     const key = match[1];
+    if (!key) throw new Error(`参数 ${argument} 缺少名称。`);
     if (seen.has(key)) throw new Error(`参数 --${key} 不能重复。`);
     seen.add(key);
     const inlineValue = match[2];
@@ -78,12 +89,12 @@ function parseArgs(values) {
   return result;
 }
 
-async function readJson(filePath, label, maximumBytes) {
+async function readJson(filePath: string, label: string, maximumBytes: number): Promise<unknown> {
   const source = await readVerifiedTextFile(filePath, { label, maximumBytes });
   return JSON.parse(source.text);
 }
 
-async function main() {
+async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
   if (options.help) {
     console.log(usage());
@@ -104,6 +115,9 @@ async function main() {
       },
     }, null, 2));
     return;
+  }
+  if (!options.bundle || !options.buildRoot || !options.deviceEvidence) {
+    throw new Error('Input Pilot 必需路径缺失。');
   }
   const evidencePath = path.resolve(options.bundle);
   const devicePath = path.resolve(options.deviceEvidence);
@@ -134,7 +148,7 @@ async function main() {
   if (verified.result.status !== ARENA_RELEASE_EVIDENCE_STATUS.READY) process.exitCode = 2;
 }
 
-main().catch((error) => {
+void main().catch((error: unknown) => {
   console.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;
 });

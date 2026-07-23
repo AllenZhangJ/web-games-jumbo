@@ -66,7 +66,7 @@ import {
 } from './arena-human-fairness-evidence-verifier.mjs';
 import {
   verifyArenaInputPilotEvidence,
-} from './arena-input-pilot-evidence-verifier.mjs';
+} from './arena-input-pilot-evidence-verifier.ts';
 import { readVerifiedTextFile } from './evidence-file-verifier.ts';
 
 const MAXIMUM_BUILD_MANIFEST_BYTES = 5 * 1024 * 1024;

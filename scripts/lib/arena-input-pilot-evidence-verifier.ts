@@ -13,15 +13,20 @@ import {
 } from '@number-strategy-jump/arena-device-acceptance';
 import {
   verifyArenaBuildManifestDirectory,
-} from './arena-build-manifest-files.ts';
-import { verifyArenaDeviceEvidence } from './arena-device-evidence-verifier.ts';
+} from './arena-build-manifest-files.js';
+import { verifyArenaDeviceEvidence } from './arena-device-evidence-verifier.js';
 
 export async function verifyArenaInputPilotEvidence({
   evidenceBundleValue,
   buildRoot,
   deviceEvidenceBundleValue,
   deviceArtifactsRoot,
-}) {
+}: Readonly<{
+  evidenceBundleValue: unknown;
+  buildRoot: string;
+  deviceEvidenceBundleValue: unknown;
+  deviceArtifactsRoot: string;
+}>) {
   const definition = createArenaInputPilotV1Definition();
   const evidenceBundle = createInputPilotEvidenceBundle(definition, evidenceBundleValue);
   const buildManifest = await verifyArenaBuildManifestDirectory(
