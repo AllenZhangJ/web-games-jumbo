@@ -14,7 +14,7 @@ import {
   assertArenaMovementSnapshotInvariants,
   createArenaMovementExperimentSnapshot,
 } from './arena-movement-invariants.js';
-import { cloneArenaExperimentReplaySeeds } from './experiment-seed-utils.js';
+import { cloneArenaExperimentReplaySeeds } from '@number-strategy-jump/arena-experiment';
 import {
   ARENA_V1_MOVEMENT_STRESS_DEFAULT_TUNING,
   createArenaV1MovementStressStrategy,

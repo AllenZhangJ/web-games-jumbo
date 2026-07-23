@@ -15,7 +15,7 @@ import {
   createArenaV1BenchmarkPlayerStrategy,
   createArenaV1BenchmarkPlayerTuning,
 } from './arena-v1-benchmark-player-strategy.js';
-import { cloneArenaExperimentReplaySeeds } from './experiment-seed-utils.js';
+import { cloneArenaExperimentReplaySeeds } from '@number-strategy-jump/arena-experiment';
 
 export const ARENA_V1_BOT_CAPABILITY_WORKLOAD_ID = 'arena.stage9.bot-capability';
 export const ARENA_V1_BOT_CAPABILITY_WORKLOAD_VERSION = 1;

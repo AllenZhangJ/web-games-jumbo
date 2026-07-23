@@ -1,7 +1,7 @@
 import { BOT_DIFFICULTY_IDS } from '@number-strategy-jump/arena-bot';
 import { createMatchAssignment } from '@number-strategy-jump/arena-matchmaking';
 import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
-import { createArenaMetricGate } from './metric-gate.js';
+import { createArenaMetricGate } from '@number-strategy-jump/arena-experiment';
 
 export const ARENA_BOT_ASSIGNMENT_DISTRIBUTION_COLLECTOR_ID =
   'arena.stage9.bot-assignment-distribution';

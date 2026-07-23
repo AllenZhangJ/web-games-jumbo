@@ -21,7 +21,7 @@ import {
   SimulationExperimentRunner,
 } from '../../../src/arena/experiment/simulation-runner.js';
 import { SimulationWorkloadRegistry } from '../../../src/arena/experiment/simulation-workload-registry.js';
-import { createArenaMetricGate } from '../../../src/arena/experiment/metric-gate.js';
+import { createArenaMetricGate } from '@number-strategy-jump/arena-experiment';
 import {
   ARENA_MATCH_SUMMARY_COLLECTOR_ID,
 } from '../../../src/arena/experiment/arena-match-summary-collector.js';

@@ -32,7 +32,7 @@ import {
 import {
   createArenaExperimentReplaySeeds,
   createSortedArenaExperimentSeeds,
-} from './experiment-seed-utils.js';
+} from '@number-strategy-jump/arena-experiment';
 import { MetricCollectorRegistry } from './metric-collector-registry.js';
 import { SimulationWorkloadRegistry } from './simulation-workload-registry.js';
 import {

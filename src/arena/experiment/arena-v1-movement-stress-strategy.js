@@ -8,7 +8,7 @@ import {
   cloneFrozenStringSet,
 } from '@number-strategy-jump/arena-contracts';
 import { createRng, deriveSeed } from '@number-strategy-jump/arena-contracts';
-import { assertArenaExperimentUint32Seed } from './experiment-seed-utils.js';
+import { assertArenaExperimentUint32Seed } from '@number-strategy-jump/arena-experiment';
 
 export const ARENA_V1_MOVEMENT_STRESS_STRATEGY_VERSION = 1;
 

@@ -4,13 +4,13 @@ import { assertNonEmptyString, cloneFrozenData } from '@number-strategy-jump/are
 import {
   assertArenaExperimentReplaySeedsPlanned,
   cloneArenaExperimentReplaySeeds,
-} from './experiment-seed-utils.js';
-import { createArenaMetricGate } from './metric-gate.js';
+} from '@number-strategy-jump/arena-experiment';
+import { createArenaMetricGate } from '@number-strategy-jump/arena-experiment';
 import {
   createSortedMetricCountRecord,
   incrementMetricCount,
   metricRatioOrNull,
-} from './experiment-metric-utils.js';
+} from '@number-strategy-jump/arena-experiment';
 import {
   ARENA_BOT_CAPABILITY_MAP_EVENT_TYPES,
   ARENA_BOT_CAPABILITY_PARTICIPANT_ID,

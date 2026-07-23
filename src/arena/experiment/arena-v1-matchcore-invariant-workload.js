@@ -18,7 +18,7 @@ import {
   createArenaV1MatchCoreStressInputParameters,
   createArenaV1MatchCoreStressInputStrategy,
 } from './arena-v1-matchcore-stress-strategy.js';
-import { cloneArenaExperimentReplaySeeds } from './experiment-seed-utils.js';
+import { cloneArenaExperimentReplaySeeds } from '@number-strategy-jump/arena-experiment';
 
 export const ARENA_V1_MATCHCORE_INVARIANT_WORKLOAD_ID =
   'arena.stage9.matchcore-invariants';

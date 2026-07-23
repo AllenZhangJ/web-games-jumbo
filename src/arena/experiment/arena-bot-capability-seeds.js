@@ -1,7 +1,7 @@
 import {
   assertArenaExperimentCaseCount,
   createSortedArenaExperimentSeeds,
-} from './experiment-seed-utils.js';
+} from '@number-strategy-jump/arena-experiment';
 import { assertIntegerAtLeast, assertKnownKeys } from '@number-strategy-jump/arena-contracts';
 
 export const ARENA_STAGE9_BOT_SEED_BASE = 0x6d2b79f5;

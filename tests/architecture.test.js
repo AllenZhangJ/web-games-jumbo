@@ -380,7 +380,19 @@ test('Arena Stage 9 evidence content stays host-free and only composes approved 
 });
 
 test('Arena Stage 9 experiment orchestration stays headless and outside presentation/platform code', async () => {
-  const experimentFiles = await listJavaScript(path.resolve('src/arena/experiment'));
+  const packageDefinition = JSON.parse(await readFile(
+    path.resolve('packages/arena-experiment/package.json'),
+    'utf8',
+  ));
+  assert.deepEqual(
+    Object.keys(packageDefinition.dependencies).sort(),
+    ['@number-strategy-jump/arena-contracts'],
+    'arena-experiment 基础包只能依赖权威基础契约。',
+  );
+  const experimentFiles = [
+    ...await listJavaScript(path.resolve('src/arena/experiment')),
+    ...await listJavaScript(path.resolve('packages/arena-experiment/src')),
+  ];
   assert.ok(experimentFiles.length >= 7);
   for (const file of experimentFiles) {
     const source = await readFile(file, 'utf8');

@@ -10,8 +10,8 @@ import {
   createSortedMetricCountRecord,
   incrementMetricCount,
   metricRatioOrNull,
-} from './experiment-metric-utils.js';
-import { createArenaMetricGate } from './metric-gate.js';
+} from '@number-strategy-jump/arena-experiment';
+import { createArenaMetricGate } from '@number-strategy-jump/arena-experiment';
 
 export const ARENA_BALANCE_CANDIDATE_COLLECTOR_ID = 'arena.stage9.balance-candidate';
 export const ARENA_BALANCE_CANDIDATE_COLLECTOR_VERSION = 1;

@@ -7,7 +7,7 @@ import {
 } from './experiment-definition.js';
 import {
   createArenaExperimentReplaySeeds,
-} from './experiment-seed-utils.js';
+} from '@number-strategy-jump/arena-experiment';
 import {
   ARENA_STAGE9_BOT_SEED_BASE,
   ARENA_STAGE9_BOT_SEED_STEP,

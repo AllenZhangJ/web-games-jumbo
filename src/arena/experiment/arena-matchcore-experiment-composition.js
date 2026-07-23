@@ -22,7 +22,7 @@ import { ARENA_V1_MATCHCORE_STRESS_INPUT_DEFAULT_TUNING } from './arena-v1-match
 import {
   createArenaExperimentReplaySeeds,
   createContiguousArenaExperimentSeedRange,
-} from './experiment-seed-utils.js';
+} from '@number-strategy-jump/arena-experiment';
 
 export const ARENA_STAGE9_MATCHCORE_EXPERIMENT_ID =
   'arena.stage9.s9.1.matchcore-invariants.v1';

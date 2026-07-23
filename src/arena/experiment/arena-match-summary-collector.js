@@ -3,7 +3,7 @@ import {
   createSortedMetricCountRecord,
   incrementMetricCount,
   metricRatioOrNull,
-} from './experiment-metric-utils.js';
+} from '@number-strategy-jump/arena-experiment';
 
 export const ARENA_MATCH_SUMMARY_COLLECTOR_ID = 'arena.stage9.match-summary';
 export const ARENA_MATCH_SUMMARY_COLLECTOR_VERSION = 1;

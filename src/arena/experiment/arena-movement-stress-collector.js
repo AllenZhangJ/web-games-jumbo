@@ -3,13 +3,13 @@ import { assertNonEmptyString, cloneFrozenData } from '@number-strategy-jump/are
 import {
   assertArenaExperimentReplaySeedsPlanned,
   cloneArenaExperimentReplaySeeds,
-} from './experiment-seed-utils.js';
-import { createArenaMetricGate } from './metric-gate.js';
+} from '@number-strategy-jump/arena-experiment';
+import { createArenaMetricGate } from '@number-strategy-jump/arena-experiment';
 import {
   createSortedMetricCountRecord,
   incrementMetricCount,
   metricRatioOrNull,
-} from './experiment-metric-utils.js';
+} from '@number-strategy-jump/arena-experiment';
 
 export const ARENA_MOVEMENT_STRESS_COLLECTOR_ID = 'arena.stage9.movement-stress';
 export const ARENA_MOVEMENT_STRESS_COLLECTOR_VERSION = 1;

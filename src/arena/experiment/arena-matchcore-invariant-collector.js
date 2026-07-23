@@ -1,11 +1,11 @@
 import { assertNonEmptyString, cloneFrozenData } from '@number-strategy-jump/arena-contracts';
-import { createArenaMetricGate } from './metric-gate.js';
-import { assertArenaExperimentReplaySeedsPlanned } from './experiment-seed-utils.js';
+import { createArenaMetricGate } from '@number-strategy-jump/arena-experiment';
+import { assertArenaExperimentReplaySeedsPlanned } from '@number-strategy-jump/arena-experiment';
 import {
   createSortedMetricCountRecord,
   incrementMetricCount,
   metricRatioOrNull,
-} from './experiment-metric-utils.js';
+} from '@number-strategy-jump/arena-experiment';
 
 export const ARENA_MATCHCORE_INVARIANT_COLLECTOR_ID =
   'arena.stage9.matchcore-invariants';

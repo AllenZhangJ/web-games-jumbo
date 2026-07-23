@@ -1,7 +1,7 @@
 import {
   createSortedMetricCountRecord,
   metricRatioOrNull,
-} from './experiment-metric-utils.js';
+} from '@number-strategy-jump/arena-experiment';
 import {
   assertIntegerAtLeast,
   assertKnownKeys,
