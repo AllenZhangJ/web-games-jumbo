@@ -2,12 +2,12 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   createArenaStage7FormalAssetBudgetV1Policy,
-} from '../src/arena/presentation/assets/formal-asset-budget-policy.ts';
+} from '../src/arena/presentation/assets/formal-asset-budget-policy.js';
 import {
   verifyArenaFormalAssetBudget,
-} from './lib/arena-formal-asset-budget-verifier.mjs';
+} from './lib/arena-formal-asset-budget-verifier.js';
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const root: string = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const policy = createArenaStage7FormalAssetBudgetV1Policy();
 const report = await verifyArenaFormalAssetBudget({ repositoryRoot: root });
 process.stdout.write(`${JSON.stringify({

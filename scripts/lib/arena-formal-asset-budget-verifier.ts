@@ -1,20 +1,45 @@
 import { createHash } from 'node:crypto';
 import { constants } from 'node:fs';
 import { lstat, open, realpath, stat } from 'node:fs/promises';
+import type { BigIntStats } from 'node:fs';
 import path from 'node:path';
 import {
   FORMAL_ASSET_BUDGET_ARTIFACT_KIND,
   createArenaStage7FormalAssetBudgetV1Policy,
-} from '../../src/arena/presentation/assets/formal-asset-budget-policy.ts';
+  type FormalAssetBudgetArtifactDefinition,
+} from '../../src/arena/presentation/assets/formal-asset-budget-policy.js';
 import {
   createFormalAssetBudgetReport,
-} from '../../src/arena/presentation/assets/formal-asset-budget-report.ts';
+  type FormalAssetBudgetObservation,
+  type FormalAssetBudgetReport,
+} from '../../src/arena/presentation/assets/formal-asset-budget-report.js';
 
 const GLB_MAGIC = 'glTF';
 const GLB_JSON_CHUNK_TYPE = 0x4e4f534a;
 const PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 
-function sameFile(left, right) {
+interface BoundedArtifactRead {
+  readonly bytes: Buffer;
+  readonly encodedBytes: number;
+  readonly sha256: string;
+}
+
+interface GlbMetrics {
+  readonly nodeCount: number;
+  readonly jointCount: number;
+  readonly animationCount: number;
+  readonly primitiveCount: number;
+  readonly materialCount: number;
+  readonly embeddedImageCount: number;
+}
+
+interface PngMetrics {
+  readonly width: number;
+  readonly height: number;
+  readonly decodedRgbaBytes: number;
+}
+
+function sameFile(left: BigIntStats, right: BigIntStats): boolean {
   return left.dev === right.dev
     && left.ino === right.ino
     && left.size === right.size
@@ -22,7 +47,10 @@ function sameFile(left, right) {
     && left.ctimeNs === right.ctimeNs;
 }
 
-async function readBoundedRepositoryArtifact(root, definition) {
+async function readBoundedRepositoryArtifact(
+  root: string,
+  definition: FormalAssetBudgetArtifactDefinition,
+): Promise<BoundedArtifactRead> {
   const candidate = path.resolve(root, ...definition.path.split('/'));
   const relative = path.relative(root, candidate);
   if (
@@ -70,7 +98,14 @@ async function readBoundedRepositoryArtifact(root, definition) {
   }
 }
 
-function parseGlb(bytes, artifactPath) {
+function recordArray(value: unknown): readonly Record<string, unknown>[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((entry): entry is Record<string, unknown> => (
+    typeof entry === 'object' && entry !== null && !Array.isArray(entry)
+  ));
+}
+
+function parseGlb(bytes: Buffer, artifactPath: string): GlbMetrics {
   if (bytes.length < 20 || bytes.subarray(0, 4).toString('ascii') !== GLB_MAGIC) {
     throw new Error(`正式 GLB magic 无效：${artifactPath}。`);
   }
@@ -83,30 +118,37 @@ function parseGlb(bytes, artifactPath) {
     || jsonLength < 2
     || 20 + jsonLength > bytes.length
   ) throw new Error(`正式 GLB JSON chunk 无效：${artifactPath}。`);
-  let json;
+  let json: Record<string, unknown>;
   try {
-    json = JSON.parse(bytes.subarray(20, 20 + jsonLength).toString('utf8').trim());
-  } catch (error) {
-    throw new Error(`正式 GLB JSON 无法解析：${artifactPath}：${error.message}`);
+    const parsed: unknown = JSON.parse(
+      bytes.subarray(20, 20 + jsonLength).toString('utf8').trim(),
+    );
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+      throw new TypeError('GLB JSON 根必须是对象');
+    }
+    json = parsed as Record<string, unknown>;
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`正式 GLB JSON 无法解析：${artifactPath}：${message}`);
   }
-  const meshes = Array.isArray(json.meshes) ? json.meshes : [];
+  const meshes = recordArray(json.meshes);
   return Object.freeze({
-    nodeCount: Array.isArray(json.nodes) ? json.nodes.length : 0,
-    jointCount: Math.max(0, ...(Array.isArray(json.skins) ? json.skins : []).map((skin) => (
+    nodeCount: recordArray(json.nodes).length,
+    jointCount: Math.max(0, ...recordArray(json.skins).map((skin) => (
       Array.isArray(skin.joints) ? skin.joints.length : 0
     ))),
-    animationCount: Array.isArray(json.animations) ? json.animations.length : 0,
+    animationCount: recordArray(json.animations).length,
     primitiveCount: meshes.reduce((total, mesh) => (
       total + (Array.isArray(mesh.primitives) ? mesh.primitives.length : 0)
     ), 0),
-    materialCount: Array.isArray(json.materials) ? json.materials.length : 0,
-    embeddedImageCount: (Array.isArray(json.images) ? json.images : []).filter((image) => (
+    materialCount: recordArray(json.materials).length,
+    embeddedImageCount: recordArray(json.images).filter((image) => (
       Object.hasOwn(image, 'bufferView') || typeof image.uri === 'string' && image.uri.startsWith('data:')
     )).length,
   });
 }
 
-function parsePng(bytes, artifactPath) {
+function parsePng(bytes: Buffer, artifactPath: string): PngMetrics {
   if (
     bytes.length < 24
     || !bytes.subarray(0, PNG_SIGNATURE.length).equals(PNG_SIGNATURE)
@@ -121,19 +163,21 @@ function parsePng(bytes, artifactPath) {
   return Object.freeze({ width, height, decodedRgbaBytes });
 }
 
-function assertOgg(bytes, artifactPath) {
+function assertOgg(bytes: Buffer, artifactPath: string): void {
   if (bytes.length < 4 || bytes.subarray(0, 4).toString('ascii') !== 'OggS') {
     throw new Error(`正式音效不是有效 OGG：${artifactPath}。`);
   }
 }
 
-export async function verifyArenaFormalAssetBudget({ repositoryRoot }) {
+export async function verifyArenaFormalAssetBudget({
+  repositoryRoot,
+}: Readonly<{ repositoryRoot: string }>): Promise<FormalAssetBudgetReport> {
   const root = await realpath(path.resolve(repositoryRoot));
   const policy = createArenaStage7FormalAssetBudgetV1Policy();
-  const observations = [];
+  const observations: FormalAssetBudgetObservation[] = [];
   for (const definition of policy.artifacts) {
     const read = await readBoundedRepositoryArtifact(root, definition);
-    const base = {
+    const base: FormalAssetBudgetObservation = {
       id: definition.id,
       path: definition.path,
       kind: definition.kind,
