@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import {
   assertArenaStressCpuBudget,
   createArenaStressTiming,
-} from '../../scripts/arena-stress-timing.ts';
-import { assertArenaGitSourceIdentityStable } from '../../scripts/arena-git-source-identity.ts';
+} from '../../scripts/arena-stress-timing.js';
+import { assertArenaGitSourceIdentityStable } from '../../scripts/arena-git-source-identity.js';
 
 test('Arena stress timing separates process cost from suspension-inflated wall time', () => {
   const timing = createArenaStressTiming({
