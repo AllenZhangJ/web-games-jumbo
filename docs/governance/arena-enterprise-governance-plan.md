@@ -1,8 +1,8 @@
 # Arena 企业治理迁移计划
 
-- 目标分支：`feature/arena-enterprise-governance`
+- 目标分支：`feature/arena-main-integration`
 - 产品基线：`51e28220295c080261d30e33aaac7e43c5f91685`
-- 最终终点：完成对最新 `origin/main` 的合并前审计，不执行合并
+- 最终终点：保留 Arena 产品结果、集成一次最新 `origin/main` 并完成可合并终审；不修改或合并 `main`
 - 执行原则：Arena 行为不回退、治理能力不打折、证据先于结论
 
 ## 完成定义
@@ -89,18 +89,18 @@
 
 门禁：链接、命令、路径、hash、状态声明自动检查；“自动化通过 / Web 通过 / 真机通过 / 可发布”四类结论严格分离。
 
-### G10：最新 main 合并前独立审计
+### G10：最新 main 独立集成与最终审计
 
-状态：已执行当前候选审计，结论为不可直接合并。全量 TypeScript 测试发现、clean-install workspace 构建、未跟踪空目录假阳性、安装阶段隐式 npm audit 外发边界、开发依赖 high、跨平台 Replay、包级 ESLint、公开命令前置构建、启动失败边界、精确候选 Linux CI 和 `main` 保护均已闭环。rename-aware 虚拟合并现识别出 52 个产品/治理冲突并已补齐逐文件处置矩阵；候选为 `a71ecc1`。剩余阻断只有 iPhone 13 Pro/Chrome 最终手感确认，以及未来独立集成授权、实际冲突解决和集成后复验。详见 [合并前独立审计](arena-main-merge-preflight.md)与[冲突处置矩阵](arena-main-conflict-disposition.md)。
+状态：已完成，结论为可合并。全量 TypeScript 测试发现、clean-install workspace 构建、未跟踪空目录假阳性、安装阶段隐式 npm audit 外发边界、开发依赖 high、跨平台 Replay、包级 ESLint、公开命令前置构建、启动失败边界、精确候选 Linux CI 和 `main` 保护均已闭环。集成提交 `b4faa2c` 以已归真 Arena 为第一父、固定 `origin/main@4c340f1` 为第二父；52 个冲突和 main 非冲突旧产品新增已按矩阵处置，合并树与第一父相同。本地统一全门、全依赖审计、三端交付等价和 Allen 的 iPhone 13 Pro/Chrome 验收已关闭代码阻断。详见 [最终集成审计](arena-main-merge-preflight.md)、[冲突处置矩阵](arena-main-conflict-disposition.md)与 ADR-042。
 
-交付：fetch 最新 `origin/main`；建立主干新增提交/能力承接表；在临时 worktree 或无写入虚拟合并中检查文本和语义冲突；对候选提交执行完整门禁和 Web 手机验收；形成审计报告。
+交付：fetch 并固定最新 `origin/main`；建立主干新增提交/能力承接表；先以无写入虚拟合并检查文本和语义冲突，再在授权的集成分支执行一次普通 merge；对候选提交执行完整门禁、产物等价和 Web 手机验收绑定；形成审计报告。
 
 结论只能是：
 
 - `可合并`：无阻断项，列出仍属发布门禁的真机证据；或
 - `不可合并`：逐项列明可复现阻断、责任批次与修复入口。
 
-本批次禁止执行实际 merge、rebase main、修改 main 或 force push。
+本批次只允许在 `feature/arena-main-integration` 合入一次固定的 `origin/main`；禁止 rebase、修改或合并 `main`、force push。该约束已遵守。
 
 ## 每批提交协议
 

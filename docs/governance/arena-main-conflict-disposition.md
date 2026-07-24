@@ -9,7 +9,7 @@
 - 共同祖先：`d53e7349ff718b3fa0638af197e8f7c43d190b38`
 - 只读 rename-aware 虚拟合并结果：52 个冲突文件
 
-本文件只规定未来集成批次如何处置冲突，不授权也不执行 merge、rebase、修改 `main` 或 force push。目标不是让 Git “没有冲突”，而是在不恢复旧数值跳台的前提下承接 `main` 的治理意图。
+本文件先作为预审矩阵，后由 Allen 授权的 `feature/arena-main-integration` 实际批次逐项执行。目标不是让 Git “没有冲突”，而是在不恢复旧数值跳台的前提下承接 `main` 的治理意图。本批只在集成分支合入一次固定 main，没有 rebase、修改或合并 `main`，也没有 force push。
 
 ## 处置原则
 
@@ -90,16 +90,17 @@
 
 这些是学习和承接治理意图，不是复制或恢复旧玩法实现。
 
-## 未来集成批次的执行顺序
+## 实际集成批次的执行结果
 
-1. 再次 fetch，并确认 `origin/main` 仍是本矩阵绑定的 SHA；若变化，先重做虚拟合并和矩阵差异审计。
-2. 从干净的 Arena 候选创建专用集成分支；只执行一次普通 merge，不使用整树策略覆盖。
-3. 按矩阵逐文件解决；每个冲突在集成记录中标记对应行。
-4. 删除项必须保持不存在；manifest 裁决完成后重新生成锁文件，不手改锁文件。
-5. 先运行 lint、typecheck、产品/供应链/文档/架构门禁，再运行完整非联网测试、Replay、fuzz、生命周期、soak、三端 clean build 和预算。
-6. 按 Allen 已批准的审计边界运行唯一显式 npm 生产闭包审计，并对全依赖开发工具链另行复核；不得恢复安装隐式审计或使用 `audit fix --force`。
-7. 推送精确集成候选，等待 GitHub Actions 绿灯并核对 `main` 保护规则。
-8. 在同一 clean 候选上完成 iPhone 13 Pro/iOS 26/Chrome 验收；只在全部代码合并阻断关闭后给出“可合并”结论。
+1. fetch 后确认 `origin/main` 仍是本矩阵绑定的 `4c340f1c5bc00dcae712c2261462661d842339da`。
+2. 从干净的 Arena 候选 `55230dd5e5d655913fed2a8968c1720ec7538b16` 创建专用集成分支，只执行一次普通 `--no-ff` merge。
+3. 52 个冲突按上表解决；31 个旧产品 rename/delete 项保持删除，21 个同名文件保留 Arena 真值或既有治理承接。
+4. main 自动加入但没有文本冲突的旧产品包、测试、脚本和发布文档同样删除。根 `package.json` 与锁文件最终字节保持 Arena 候选，不需要重新生成依赖图。
+   本次暴露的 10 个旧 TypeScript 包、2 个旧治理脚本和 1 个旧组合入口已加入自动退役路径门禁，防止以后手工回流。
+5. 双父提交 `b4faa2c8f1af59605a95281948406376cb442ea6` 的树与第一父 tree hash 均为 `f3621cf35bddf90af1ceccd196d782a724cde5a2`。
+6. 完整 `npm run check`、全依赖审计、Replay、fuzz、104 项生命周期、两组 soak、正式资产、三端 clean build、预算和产物边界通过；生产和全依赖审计均为 0 vulnerabilities。
+7. 三端交付除 build manifest 的提交身份外与已验收基线逐文件相同；Allen 已确认 iPhone 13 Pro / iOS 26 / Chrome 验收。
+8. 精确集成候选已推送到 `origin/feature/arena-main-integration`；最终结论与 Actions 证据见[集成后独立终审](arena-main-merge-preflight.md)。
 
 ## 集成后必须保持的否定断言
 
@@ -108,4 +109,4 @@
 - 权威层没有新增 Three.js、DOM、宿主 API、墙钟或未注入随机依赖。
 - 安装阶段没有隐式 npm audit，完整门只调用一次显式审计。
 - 没有用降低画质、动作数、关节数或删除测试换取性能和覆盖率结果。
-- 未完成的目标手机与小游戏真机材料仍标记为未完成，不由桌面或模拟器结果代替。
+- Allen 已确认目标 iPhone Chrome 验收；微信/抖音 iOS/Android 发布材料仍标记为未完成，不由 Web、桌面或模拟器结果代替。

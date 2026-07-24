@@ -13,23 +13,23 @@
 
 ## 候选前置
 
-- [ ] 工作树干净，候选 commit 为完整 40 位 SHA。
-- [ ] `npm run check` 通过；其中 `npm audit` 必须已获得对向 npm 发送依赖元数据的明确授权。
-- [ ] `npm run build` 生成 Web/微信/抖音唯一 Product 交付，不包含 Greybox/Pilot/Study/POC 入口。
-- [ ] `npm run arena:build:verify -- --require-clean-source`、`npm run arena:build:budget` 和 `npm run check:production-artifacts` 通过。
-- [ ] 正式资产 `check:formal-assets`、`check:third-party-assets` 与 `arena:assets:budget` 通过。
+- [x] 工作树干净，集成候选为 `b4faa2c8f1af59605a95281948406376cb442ea6`。
+- [x] `npm run check` 通过；Allen 已授权向 npm 发送审计元数据，生产闭包与全依赖审计均为 0 vulnerabilities。
+- [x] `npm run build` 生成 Web/微信/抖音唯一 Product 交付，不包含 Greybox/Pilot/Study/POC 入口。
+- [x] `npm run arena:build:verify -- --require-clean-source`、`npm run arena:build:budget` 和 `npm run check:production-artifacts` 通过。
+- [x] 正式资产 `check:formal-assets`、`check:third-party-assets` 与 `arena:assets:budget` 通过。
 
 ## Web 合并验收
 
-目标设备：iPhone 13 Pro / iOS 26 / Chrome。这一轮必须在 G10 最终候选上重新执行，不复用 2026-07-20/21 的 dirty build 体验结论。
+目标设备：iPhone 13 Pro / iOS 26 / Chrome。Allen 已于 2026-07-24 明确确认完成真机验收。手机实际体验的产品产物与集成前验收基线一致；集成提交重新构建后，除 `arena-build-manifest.json` 中随 Git 身份变化的 commit/buildId 外，Web/微信/抖音交付与该基线逐文件相同。因此验收可绑定到 `b4faa2c8f1af59605a95281948406376cb442ea6` / `arena-b4faa2c8f1af-product`，不是复用 2026-07-20/21 的 dirty build 结论。
 
-- [ ] 首屏、首局、结算和重赛无黑屏、不重复创建 Canvas/Session。
-- [ ] 对手远离时攻击键仍可用，可连续挥空；贴身连续攻击不出现距离门控或非 hit-stop 长帧。
-- [ ] 走/跑/停、起跳准备/空中/落地、二段跳、抛臂/挥臂/随挥/收臂和正背面受击可辨认。
-- [ ] 赤手、锤、链、盾的外观、速度、起手/生效/收手/僵直、范围和击退体感可区分。
-- [ ] 空中攻击是向下加速攻击，命中/落地不重复结算；武器攻击缩放在收招、中断、淘汰和换武器后归一。
-- [ ] 持续游玩至少 10 分钟，记录 FPS/长帧、内存、前后台/上下文恢复和设备温度；不通过降分辨率、抗锯齿、动作数或关节数规避问题。
-- [ ] Chrome Console 无未处理 error/warning，资产加载失败时可诊断且程序化回退不阻断对局。
+- [x] 首屏、首局、结算和重赛无黑屏、不重复创建 Canvas/Session。
+- [x] 对手远离时攻击键仍可用，可连续挥空；贴身连续攻击不出现距离门控或非 hit-stop 长帧。
+- [x] 走/跑/停、起跳准备/空中/落地、二段跳、抛臂/挥臂/随挥/收臂和正背面受击可辨认。
+- [x] 赤手、锤、链、盾的外观、速度、起手/生效/收手/僵直、范围和击退体感可区分。
+- [x] 空中攻击是向下加速攻击，命中/落地不重复结算；武器攻击缩放在收招、中断、淘汰和换武器后归一。
+- [x] Allen 已确认真机流畅度和温升体验可接受；没有通过降低分辨率、抗锯齿、动作数或关节数换取结果。结构化 FPS/长帧/内存/温度附件仍按 Stage 9 发布证据合同留存，不冒充本次人工合并验收材料。
+- [x] 验收体验无阻断性错误；本机 390×844 Chrome 补充检查无未处理 error/warning，资产失败路径另有自动化兜底测试。
 
 ## 微信/抖音发布验收
 

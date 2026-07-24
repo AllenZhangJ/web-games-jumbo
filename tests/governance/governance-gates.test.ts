@@ -5,7 +5,10 @@ import { describe, expect, it } from 'vitest';
 import { createWorkspaceBuildPlan } from '../../scripts/build-workspace-packages.js';
 import { verifyJavaScriptMigration } from '../../scripts/governance/check-js-migration.js';
 import { verifyDocumentation } from '../../scripts/governance/check-documentation.js';
-import { verifyRetiredProductBoundaries } from '../../scripts/governance/check-product-boundaries.js';
+import {
+  RETIRED_PRODUCT_PATHS,
+  verifyRetiredProductBoundaries,
+} from '../../scripts/governance/check-product-boundaries.js';
 import { verifyPresentationThreeBoundaries } from '../../scripts/governance/check-presentation-three-boundaries.js';
 import { verifyRepositorySecurity } from '../../scripts/governance/check-repository-security.js';
 import { verifySupplyChain } from '../../scripts/governance/check-supply-chain.js';
@@ -32,6 +35,21 @@ describe('enterprise governance gates', () => {
 
   it('keeps the retired product outside the active repository', async () => {
     await expect(verifyRetiredProductBoundaries()).resolves.toBeUndefined();
+    expect(RETIRED_PRODUCT_PATHS).toEqual(expect.arrayContaining([
+      'packages/application',
+      'packages/content',
+      'packages/difficulty',
+      'packages/feedback',
+      'packages/game-contracts',
+      'packages/gameplay',
+      'packages/jump-engine',
+      'packages/persistence',
+      'packages/platform',
+      'packages/renderer-three',
+      'scripts/audit-assets.ts',
+      'scripts/check-zero-js.ts',
+      'src/entry/compose-game.ts',
+    ]));
   });
 
   it('keeps Three presentation dependencies and authority boundaries exact', async () => {

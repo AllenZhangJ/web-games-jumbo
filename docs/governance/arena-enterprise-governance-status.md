@@ -1,12 +1,12 @@
 # Arena 企业治理状态台账
 
 - 更新时间：2026-07-24
-- 当前分支：`feature/arena-enterprise-governance`
+- 当前分支：`feature/arena-main-integration`
 - Arena 产品基线：`51e28220295c080261d30e33aaac7e43c5f91685`
-- 目标：达到与最新 `origin/main` 的合并前审计条件；不执行合并
-- 总体状态：G7、G8、G9 已完成；G10 的本地/远端候选与 `main` 保护已闭环，目标手机最终确认和 52 个冲突的独立集成尚未闭环，结论为不可直接合并
+- 目标：在保留 Arena 产品树的前提下集成一次最新 `origin/main`，推送候选并完成最终可合并审计；不修改或合并 `main`
+- 总体状态：G0–G10 已完成；52 个冲突和 main 非冲突旧产品新增均已显式处置，目标 iPhone Chrome 验收由 Allen 确认并经三端交付字节等价绑定到集成候选。当前代码结论为可合并，微信/抖音四端真机材料仍是发布门禁
 
-> 口径：下方 G0–G7.29 是按提交追加的历史证据，其中“当前”只指该批次当时。文档顶部批次表、“当前不可合并原因”和文末最新批次才是现行结论。
+> 口径：下方 G0–G7.29 是按提交追加的历史证据，其中“当前”只指该批次当时。文档顶部批次表、“当前合并结论与发布边界”和文末最新批次才是现行结论。
 
 ## 决策登记
 
@@ -38,8 +38,8 @@
 | G6 Platform/入口/构建 | 已完成 | 三端默认入口是 Product；运行实例 ID、启动协调、失败兜底、Web teardown、三端平台适配、Arena V1 应用组合根、生产 Session、顶层 Launch、Web Product UI、三端实际 Product Entry，以及隔离 Greybox/Study/Pilot 入口、应用根、研究环境、clean build 身份、JSON 下载、Product Runtime、Workbench View 和两个研究 Web App 均已 strict 化。生产交付继续由产物门禁排除开发/研究入口；两个研究页面已在 390×844 浏览器视口完成加载与交互复验，真机证据边界见 G6.49 |
 | G7 零 JS/完整质量门 | 已完成 | 生产源码、测试和治理脚本全部 strict TypeScript，受维护 JavaScript 为 0，许可清单已删除；当前 61 个 Vitest 文件、387 项测试通过，分层 coverage 与零 JS 负向门禁已接入 `check:governance` |
 | G8 资产/安全/所有权 | 已完成 | Allen 已批准资产与 npm 审计外发；Bundle `e03ff2b4`、53 个 manifest、278 个精确声明（含 override）、368 个外部锁定包、完整 Action SHA、CODEOWNERS、Dependabot、secret/遥测与诊断门禁通过。开发链 3 个 high 已以精确 `sharp@0.35.3` override 闭环，全依赖和生产依赖审计均为 0 vulnerabilities |
-| G9 文档归真 | 已完成 | 112 个 Markdown、223 个本地链接、49 个去重 npm 命令与关键现行状态通过自动复验；历史批次与当前结论已分层，仓库运营策略已落盘 |
-| G10 最新 main 审计 | 已执行（不可直接合并） | 最新 `main` 为 `4c340f1`，相对共同祖先有 12 个旧产品治理提交；rename-aware 虚拟合并发现 52 个产品/治理冲突。候选 `a71ecc1` 本地全门与 Linux CI 已通过，`main` 保护已生效；目标手机最终确认和独立集成授权/执行未关闭 |
+| G9 文档归真 | 已完成 | 113 个 Markdown、225 个本地链接、49 个去重 npm 命令与关键现行状态通过自动复验；历史批次与当前结论已分层，仓库运营策略已落盘 |
+| G10 最新 main 审计 | 已完成（可合并） | 集成提交 `b4faa2c` 以 `55230dd` 为第一父、`4c340f1` 为第二父，合并树与第一父相同；52 个冲突和旧产品非冲突新增均已清除，本地统一全门、全依赖审计与三端产物等价通过。Allen 已确认 iPhone 13 Pro / iOS 26 / Chrome 验收；精确远端 CI 结果见 G10.7 |
 
 ## G0 已取得证据
 
@@ -55,13 +55,12 @@
 - 正式资产预算：结果 `82a8b378`，策略 `532faaa2`，通过。
 - 三端 clean build 与预算：通过；当前 Web/微信/抖音 delivery 分别为 3807531 / 3835130 / 3835105 bytes。
 
-## 当前不可合并原因
+## 当前合并结论与发布边界
 
-1. 最新 `main` 与治理分支有 52 个 rename-aware 产品/治理冲突；本批禁止实际合并，必须另行批准一次显式保留 Arena、拒绝旧产品回流的集成批次，并在集成提交上重新执行门禁。
-2. iPhone 13 Pro、iOS 26、Google Chrome 曾成功识别并打开候选；重开最新 build 时连接已变为 `unavailable`，Allen 尚未回传最终手感确认。桌面视口与“曾打开页面”都不能替代挥空、贴身连按、动作/武器、卡顿和温升验收。
-3. 微信/抖音 iOS 与 Android 真机材料继续属于发布阻断，不与代码合并判断混淆。
-
-以上是迁移入口，不是已接受的永久例外。
+1. 最新 `origin/main@4c340f1` 已作为第二父合入 `feature/arena-main-integration`；集成提交 `b4faa2c` 的第一父是已归真 Arena 候选 `55230dd`，52 个 rename-aware 冲突全部按矩阵关闭，旧产品非冲突新增也没有进入结果树。
+2. 集成树与第一父 tree hash 均为 `f3621cf35bddf90af1ceccd196d782a724cde5a2`。统一全门、完整开发/生产依赖审计和三端构建通过；除 build manifest 中必然变化的 commit/buildId 外，三端交付与已验收基线逐文件相同。
+3. Allen 已确认完成 iPhone 13 Pro、iOS 26、Google Chrome 真机验收。该人工验收通过产物等价继承到集成候选，不被桌面视口替代，也不扩张为微信/抖音发布结论。
+4. 当前没有代码合并阻断，结论为可合并；微信/抖音 iOS 与 Android 真机材料继续属于发布阻断，不耽误代码合并，也不能在缺失时宣称可正式发布。
 
 ## G1 完成证据
 
@@ -1535,3 +1534,15 @@
 - 刷新 `origin/main@4c340f1c5bc00dcae712c2261462661d842339da` 后，共同祖先仍为 `d53e7349ff718b3fa0638af197e8f7c43d190b38`，main 独有非 merge 提交仍为 12，代码候选独有非 merge 提交为 445。旧审计只统计文本冲突得到 23；rename-aware `git merge-tree --write-tree --name-only origin/main HEAD` 识别出 52 个冲突文件，新增项主要是 `main` 把退役产品 JavaScript rename 为 TypeScript 后与 Arena 删除结果形成的 rename/delete 冲突。处置矩阵已按当前 52 个文件补齐，旧 23 口径不再作为现行结论。
 - iPhone 13 Pro `(iPhone14,2)` 曾配对可用，iOS 26 的 Google Chrome 曾打开局域网候选；重开最新 build 时 CoreDevice 报告连接失效，当前列表状态为 `unavailable`。当前环境也没有运行中的 WebDriverAgent，且未配置 Midscene 视觉模型，因此自动化不能执行或证明真实点击；没有把“曾连接/曾打开页面”伪写为“真机通过”。恢复连接后仍需 Allen 确认任意距离挥空、贴身连续攻击、移动/停止/起跳/二段跳/空中下劈、武器外观与节奏、卡顿和温升。
 - 本批没有执行 merge/rebase、没有修改 `main` 内容、没有 force push。当前代码候选与治理证据已具备进入独立集成批次的前置质量，但在目标手机确认和 52 个冲突的实际集成/复验完成前，结论仍是不可直接合并；微信/抖音 iOS/Android 继续是发布阻断。
+
+## G10.7 Arena 保留型 main 集成与最终审计
+
+- Allen 授权创建 `feature/arena-main-integration` 后，先刷新远端并确认 `origin/main` 仍为 `4c340f1c5bc00dcae712c2261462661d842339da`。集成分支从已归真 `55230dd5e5d655913fed2a8968c1720ec7538b16` 创建，只执行一次普通 `--no-ff` merge；没有 rebase、force push、修改或合并 `main`。
+- 实际 merge 与 rename-aware 预审一致，产生 52 个冲突。31 个旧产品 rename/delete 路径保持删除；21 个入口、构建、配置、测试和治理文件按矩阵以 Arena 为产品真值。main 自动加入但没有文本冲突的旧 `application`、`content`、`difficulty`、`feedback`、`game-contracts`、`gameplay`、`jump-engine`、`persistence`、`platform`、`renderer-three` 包及旧发布文档也被显式清除，没有用“自动合并成功”绕过产品边界。
+- 双父合并提交为 `b4faa2c8f1af59605a95281948406376cb442ea6`，父提交依次为 `55230dd5e5d655913fed2a8968c1720ec7538b16` 与 `4c340f1c5bc00dcae712c2261462661d842339da`。合并提交与第一父的 tree hash 均为 `f3621cf35bddf90af1ceccd196d782a724cde5a2`，说明本次集成没有改变 Arena 产品、治理代码或既有文档字节；决策与替代方案见 ADR-042。
+- clean merge commit 的 `npm run check` 通过：52 个包/11 个构建波次、零受维护 JavaScript、53 个 manifest/278 个精确声明/368 个外部锁定包/2 个固定 Action、61 个 Vitest 文件/387 项、88 个 Node 文件/706 项、104 项生命周期、120 场输入 fuzz/6 次 Replay、Presentation/Product 各 100 场 soak、正式资产和生产闭包审计全部通过。另行执行的全依赖审计同样为 0 vulnerabilities；归真提交进一步把本次暴露的 13 个旧 TypeScript 包/脚本/组合入口加入退役路径门禁，使受保护路径从 16 增至 29。
+- Gameplay V2 hash 保持 `8c322912`；黄金 Replay manifest 保持 `a53b401d`，movement replay/final 保持 `8673e0bf / e560dd88`；正式资产 Bundle/预算保持 `e03ff2b4 / 82a8b378`。三端 build ID 为 `arena-b4faa2c8f1af-product`，`sourceDirty=false`、默认入口均为 Product；Web/微信/抖音 delivery 仍为 `3807531 / 3835130 / 3835105 B`，JavaScript 仍为 `1463921 / 1507034 / 1507034 B`。
+- 集成前已把三端验收产物完整冻结到独立基线。集成构建除 `arena-build-manifest.json` 中随提交变化的 commit/buildId 外，与该基线逐文件相同。Allen 已明确确认完成 iPhone 13 Pro / iOS 26 / Google Chrome 真机验收，因此当前候选继承同一产品字节的体验结论，不要求为仅有 Git 身份变化重复验收。
+- 分支已推送到 `origin/feature/arena-main-integration`。本地 `gh` 缓存令牌已失效，但不影响 Git 推送；远端 Actions 和保护状态改由 GitHub 公共 API 按精确 SHA 回读。该认证缓存问题不是仓库代码、CI 或合并阻断，但后续需要写服务端设置时应重新登录。
+- 最终审计时 main 分支端点仍回读 `protected: true`，要求的状态检查仍为 `quality`；main SHA 仍为 `4c340f1c5bc00dcae712c2261462661d842339da`，与本次第二父一致。
+- 最终代码结论为可合并。微信/抖音 iOS 与 Android 四端真机材料仍是可发布门禁，不属于本次合并判断，也没有被 Web/iPhone 或自动化结果替代。
