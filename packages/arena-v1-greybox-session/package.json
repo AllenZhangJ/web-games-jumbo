@@ -1,0 +1,25 @@
+{
+  "name": "@number-strategy-jump/arena-v1-greybox-session",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "dependencies": {
+    "@number-strategy-jump/arena-contracts": "0.1.0",
+    "@number-strategy-jump/arena-definitions": "0.1.0",
+    "@number-strategy-jump/arena-matchmaking": "0.1.0",
+    "@number-strategy-jump/arena-match": "0.1.0",
+    "@number-strategy-jump/arena-presentation-runtime": "0.1.0",
+    "@number-strategy-jump/arena-presentation-three": "0.1.0",
+    "@number-strategy-jump/arena-v1-composition": "0.1.0",
+    "@number-strategy-jump/arena-v1-presentation-content": "0.1.0"
+  }
+}

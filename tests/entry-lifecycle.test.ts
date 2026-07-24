@@ -1,24 +1,37 @@
-import { expect, test } from 'vitest';
+import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  clearWebStartupError,
   launchGame,
+  showMiniGameStartupError,
+  showWebStartupError,
   stopLaunchedGame,
-  type StartupRoot,
-} from '../src/entry/launch-game.js';
-import { showMiniGameStartupError } from '../src/entry/mini-game-startup-fallback.js';
-import { clearWebStartupError, showWebStartupError } from '../src/entry/web-startup-fallback.js';
+} from '@number-strategy-jump/arena-platform-runtime';
 
-function deferred<T = void>() {
-  let resolve: (value?: T | PromiseLike<T>) => void = () => {};
-  let reject: (reason?: unknown) => void = () => {};
-  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
-    resolve = resolvePromise as (value?: T | PromiseLike<T>) => void;
+interface TestLaunchRoot {
+  __NUMBER_STRATEGY_GAME__?: unknown;
+}
+
+function required<T>(value: T | null | undefined, name: string): T {
+  if (value === null || value === undefined) throw new Error(`测试缺少 ${name}。`);
+  return value;
+}
+
+function deferred(): {
+  promise: Promise<void>;
+  resolve: () => void;
+  reject: (reason?: unknown) => void;
+} {
+  let resolve!: () => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<void>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
     reject = rejectPromise;
   });
   return { promise, resolve, reject };
 }
 
-function fakeGame(start: () => unknown | Promise<unknown> = async () => {}) {
+function fakeGame(start: () => Promise<void> = async () => {}) {
   return {
     starts: 0,
     destroys: 0,
@@ -33,12 +46,14 @@ function fakeGame(start: () => unknown | Promise<unknown> = async () => {}) {
 }
 
 test('entry startup handles synchronous platform failure without an unhandled rejection', async () => {
-  const root: StartupRoot = {};
+  const root: TestLaunchRoot = {};
   const errors: string[] = [];
   const result = await launchGame(() => { throw new Error('WebGL2 unavailable'); }, {
     root,
     createGame: () => { throw new Error('must not construct'); },
-    onError: (error) => errors.push(error instanceof Error ? error.message : String(error)),
+    onError: (error: unknown) => errors.push(
+      error instanceof Error ? error.message : String(error),
+    ),
   });
   assert.equal(result, null);
   assert.deepEqual(errors, ['WebGL2 unavailable']);
@@ -46,26 +61,26 @@ test('entry startup handles synchronous platform failure without an unhandled re
 });
 
 test('entry startup contains invalid factories and optional callback failures', async () => {
-  const root: StartupRoot = {};
-  expect(await launchGame(null, {
+  const root: TestLaunchRoot = {};
+  assert.equal(await launchGame(null, {
     root,
     createGame: () => fakeGame(),
     onError: () => { throw new Error('presentation failed'); },
-  })).toBeNull();
+  }), null);
 
-  expect(await launchGame(() => ({ id: 'test' }), { root })).toBeNull();
+  assert.equal(await launchGame(() => ({ id: 'test' }), { root }), null);
 
   const game = fakeGame();
-  expect(await launchGame(() => ({ id: 'test' }), {
+  assert.equal(await launchGame(() => ({ id: 'test' }), {
     root,
     createGame: () => game,
-    onSuccess: () => { throw new Error('cleanup failed'); },
-  })).toBe(game);
+    onSuccess: () => { throw new Error('optional callback failed'); },
+  }), game);
   stopLaunchedGame(root);
 });
 
 test('entry startup destroys a partially started game when start rejects', async () => {
-  const root: StartupRoot = {};
+  const root: TestLaunchRoot = {};
   const game = fakeGame(async () => { throw new Error('load failed'); });
   const result = await launchGame(() => ({ id: 'test' }), {
     root,
@@ -77,7 +92,7 @@ test('entry startup destroys a partially started game when start rejects', async
 });
 
 test('a replacement launch does not wait for a stale pending start and destroys it immediately', async () => {
-  const root: StartupRoot = {};
+  const root: TestLaunchRoot = {};
   const gate = deferred();
   const first = fakeGame(() => gate.promise);
   const second = fakeGame();
@@ -105,7 +120,7 @@ test('a replacement launch does not wait for a stale pending start and destroys 
 });
 
 test('stopping a pending startup invalidates and destroys the in-flight game', async () => {
-  const root: StartupRoot = {};
+  const root: TestLaunchRoot = {};
   const gate = deferred();
   const game = fakeGame(() => gate.promise);
   const launch = launchGame(() => ({}), { root, createGame: () => game });
@@ -118,44 +133,55 @@ test('stopping a pending startup invalidates and destroys the in-flight game', a
   assert.equal(root.__NUMBER_STRATEGY_GAME__, null);
 });
 
-interface FakeNode {
-  tagName: string;
-  id: string;
-  style: Record<string, unknown>;
-  attributes: Map<string, string>;
-  children: FakeNode[];
-  textContent: string;
-  focused: boolean;
-  parent?: unknown;
-  setAttribute(name: string, value: string): void;
-  appendChild(node: FakeNode): void;
-  focus(): void;
-  remove(): void;
-}
-
 function fakeWebDocument() {
-  const elements = new Map<string, FakeNode>();
+  interface TestElement {
+    tagName: string;
+    id: string;
+    style: Record<string, unknown>;
+    attributes: Map<string, string>;
+    children: TestElement[];
+    textContent: string;
+    focused: boolean;
+    parent?: TestElement;
+    setAttribute(name: string, value: string): void;
+    removeAttribute(name: string): void;
+    appendChild(node: TestElement): void;
+    focus(): void;
+    remove(): void;
+  }
+  const elements = new Map<string, TestElement>();
   const shell = {
-    appendChild(node: FakeNode) {
+    tagName: 'div', id: 'shell', style: {}, attributes: new Map<string, string>(),
+    children: [] as TestElement[], textContent: '', focused: false,
+    setAttribute(name: string, value: string) { this.attributes.set(name, value); },
+    removeAttribute(name: string) { this.attributes.delete(name); },
+    appendChild(node: TestElement) {
       node.parent = this;
       elements.set(node.id, node);
     },
-  };
+    focus() { this.focused = true; },
+    remove() {},
+  } satisfies TestElement;
   const canvas = {
-    attributes: new Map<string, string>(),
+    tagName: 'canvas', id: 'game', style: {}, attributes: new Map<string, string>(),
+    children: [] as TestElement[], textContent: '', focused: false,
     setAttribute(name: string, value: string) { this.attributes.set(name, value); },
     removeAttribute(name: string) { this.attributes.delete(name); },
-  };
-  const createElement = (tagName: string) => ({
+    appendChild(node: TestElement) { this.children.push(node); },
+    focus() { this.focused = true; },
+    remove() {},
+  } satisfies TestElement;
+  const createElement = (tagName: string): TestElement => ({
     tagName,
     id: '',
-    style: {} as Record<string, unknown>,
+    style: {},
     attributes: new Map<string, string>(),
-    children: [] as FakeNode[],
+    children: [],
     textContent: '',
     focused: false,
     setAttribute(name: string, value: string) { this.attributes.set(name, value); },
-    appendChild(node: FakeNode) { this.children.push(node); },
+    removeAttribute(name: string) { this.attributes.delete(name); },
+    appendChild(node: TestElement) { this.children.push(node); },
     focus() { this.focused = true; },
     remove() { elements.delete(this.id); },
   });
@@ -163,7 +189,9 @@ function fakeWebDocument() {
     document: {
       createElement,
       getElementById: (id: string) => elements.get(id) ?? null,
-      querySelector: (selector: string) => (selector === '.game-shell' ? shell : selector === '#game' ? canvas : null),
+      querySelector: (selector: string) => (
+        selector === '.game-shell' ? shell : selector === '#game' ? canvas : null
+      ),
       body: shell,
     },
     elements,
@@ -174,13 +202,12 @@ function fakeWebDocument() {
 test('Web startup failure renders one visible accessible alert and can clear it', () => {
   const fixture = fakeWebDocument();
   assert.equal(showWebStartupError(new Error('WebGL2 unavailable'), fixture), true);
-  const panel = fixture.elements.get('game-startup-error');
-  assert.ok(panel);
+  const panel = required(fixture.elements.get('game-startup-error'), '启动错误面板');
   assert.equal(panel.attributes.get('role'), 'alert');
   assert.equal(panel.attributes.get('aria-live'), 'assertive');
   assert.equal(panel.focused, true);
-  assert.equal(panel.children[0]!.textContent, '游戏暂时无法启动');
-  assert.match(panel.children[1]!.textContent, /WebGL2/);
+  assert.equal(required(panel.children[0], '错误标题').textContent, '游戏暂时无法启动');
+  assert.match(required(panel.children[1], '错误正文').textContent, /WebGL2/);
   assert.equal(fixture.canvas.attributes.get('aria-hidden'), 'true');
 
   showWebStartupError(new Error('second failure'), fixture);
@@ -191,35 +218,35 @@ test('Web startup failure renders one visible accessible alert and can clear it'
 });
 
 test('mini-game startup fallback prefers a non-cancellable modal and falls back safely', () => {
-  const calls: Array<{ title: string; content: string; showCancel: boolean }> = [];
+  const calls: Array<{ showCancel?: boolean; content?: string }> = [];
   assert.equal(showMiniGameStartupError({
-    showModal: (payload) => calls.push(payload),
+    showModal: (payload: { showCancel?: boolean; content?: string }) => calls.push(payload),
   }), true);
-  assert.equal(calls[0]!.showCancel, false);
-  assert.match(calls[0]!.content, /WebGL2/);
+  assert.equal(required(calls[0], '模态框调用').showCancel, false);
+  assert.match(required(required(calls[0], '模态框调用').content, '模态框正文'), /WebGL2/);
 
-  const toastCalls: Array<{ title: string; icon: string; duration: number }> = [];
+  const toastCalls: Array<{ icon?: string }> = [];
   assert.equal(showMiniGameStartupError({
     showModal: () => { throw new Error('unsupported'); },
-    showToast: (payload) => toastCalls.push(payload),
+    showToast: (payload: { icon?: string }) => toastCalls.push(payload),
   }), true);
-  assert.equal(toastCalls[0]!.icon, 'none');
+  assert.equal(required(toastCalls[0], 'Toast 调用').icon, 'none');
 });
 
 test('startup fallbacks remain inert when host presentation APIs are missing or broken', () => {
-  expect(showMiniGameStartupError(null)).toBe(false);
-  expect(showMiniGameStartupError({})).toBe(false);
-  expect(showMiniGameStartupError({
+  assert.equal(showMiniGameStartupError(null), false);
+  assert.equal(showMiniGameStartupError({}), false);
+  assert.equal(showMiniGameStartupError({
     showToast: () => { throw new Error('toast failed'); },
-  })).toBe(false);
+  }), false);
 
-  expect(showWebStartupError(new Error('missing document'), {})).toBe(false);
-  expect(showWebStartupError(new Error('broken document'), {
+  assert.equal(showWebStartupError(new Error('missing document'), {}), false);
+  assert.equal(showWebStartupError(new Error('broken document'), {
     document: {
       createElement: () => { throw new Error('blocked'); },
     },
-  })).toBe(false);
-  expect(() => clearWebStartupError({
+  }), false);
+  assert.doesNotThrow(() => clearWebStartupError({
     get document(): never { throw new Error('detached'); },
-  })).not.toThrow();
+  }));
 });

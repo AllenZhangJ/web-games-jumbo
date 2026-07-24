@@ -1,0 +1,20 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "rootDir": "src",
+    "outDir": "dist"
+  },
+  "references": [
+    { "path": "../arena-contracts" },
+    { "path": "../arena-core" },
+    { "path": "../arena-definitions" },
+    { "path": "../arena-map" },
+    { "path": "../arena-movement" },
+    { "path": "../arena-physics" }
+  ],
+  "include": ["src/**/*.ts"]
+}

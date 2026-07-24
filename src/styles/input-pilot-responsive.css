@@ -1,0 +1,124 @@
+@media (max-width: 900px) {
+  html,
+  body,
+  #pilot-app {
+    height: auto;
+    min-height: 100%;
+  }
+
+  body {
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  #pilot-app {
+    display: block;
+    padding: 0;
+  }
+
+  .pilot-header {
+    position: sticky;
+    z-index: 5;
+    top: 0;
+    grid-template-columns: minmax(0, 1fr) max-content;
+    height: 56px;
+    padding: 0 16px;
+    border-width: 0 0 1px;
+    border-radius: 0;
+  }
+
+  .pilot-header h1 {
+    font-size: 17px;
+  }
+
+  .pilot-header p {
+    display: none;
+  }
+
+  .pilot-header-status > span {
+    display: none;
+  }
+
+  .pilot-main {
+    display: block;
+    border: 0;
+    border-radius: 0;
+    overflow: visible;
+  }
+
+  .pilot-stage {
+    width: 100%;
+    height: min(56svh, 560px);
+    min-height: 360px;
+    border-right: 0;
+    border-bottom: 1px solid var(--pilot-line);
+  }
+
+  .pilot-panel {
+    display: block;
+  }
+
+  .pilot-progress {
+    position: sticky;
+    z-index: 4;
+    top: 56px;
+    background: #fff;
+  }
+
+  .pilot-panel-scroll {
+    overflow: visible;
+  }
+
+  .pilot-primary-zone {
+    bottom: 68px;
+  }
+
+  .pilot-section,
+  .pilot-primary-zone,
+  .pilot-secondary-zone {
+    padding-right: 18px;
+    padding-left: 18px;
+  }
+
+  .pilot-export-bar {
+    position: sticky;
+    z-index: 3;
+    bottom: 0;
+    padding-bottom: max(13px, env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 480px) {
+  .pilot-stage {
+    height: 48svh;
+    min-height: 300px;
+  }
+
+  .pilot-progress {
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+
+  .pilot-progress li strong {
+    font-size: 11px;
+  }
+
+  .pilot-completion-list {
+    grid-template-columns: 1fr;
+  }
+
+  .pilot-radio-row > div {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

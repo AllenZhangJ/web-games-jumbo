@@ -1,0 +1,26 @@
+{
+  "name": "@number-strategy-jump/arena-release",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
+  "files": ["dist"],
+  "dependencies": {
+    "@number-strategy-jump/arena-balance": "0.1.0",
+    "@number-strategy-jump/arena-contracts": "0.1.0",
+    "@number-strategy-jump/arena-device-acceptance": "0.1.0",
+    "@number-strategy-jump/arena-definitions": "0.1.0",
+    "@number-strategy-jump/arena-evidence-contracts": "0.1.0",
+    "@number-strategy-jump/arena-experiment": "0.1.0",
+    "@number-strategy-jump/arena-human-match-study": "0.1.0",
+    "@number-strategy-jump/arena-input-pilot": "0.1.0",
+    "@number-strategy-jump/arena-match": "0.1.0",
+    "@number-strategy-jump/arena-performance-evidence": "0.1.0",
+    "@number-strategy-jump/arena-presentation-contracts": "0.1.0",
+    "@number-strategy-jump/arena-regression": "0.1.0",
+    "@number-strategy-jump/arena-release-contracts": "0.1.0",
+    "@number-strategy-jump/arena-stage9-evidence-content": "0.1.0"
+  }
+}

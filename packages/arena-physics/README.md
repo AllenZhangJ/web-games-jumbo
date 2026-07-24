@@ -1,0 +1,11 @@
+# Arena Physics
+
+Arena 确定性物理合同与实现的 strict TypeScript workspace。
+
+- 接受固定步长、显式 Arena/角色 Definition 与已验证 mutation；
+- 默认 fixed delta 与求解参数只从 Gameplay V2 Definition 派生；
+- `createCharacterPhysicsProfile` 是 CharacterDefinition 到物理角色参数的唯一纯投影，不持有角色运行时或表现数据；
+- 内置按稳定角色顺序推进的 lightweight 确定性求解器；
+- Movement 只能通过同步单批端口提交物理变更；
+- 不依赖 MatchCore、Bot、Presentation、Three.js、DOM、平台 API、墙钟或随机源；
+- POC、性能计时与报告保留在开发/测试编排层，不进入权威世界。

@@ -1,0 +1,21 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "rootDir": "src",
+    "outDir": "dist"
+  },
+  "include": ["src/**/*.ts"],
+  "references": [
+    { "path": "../arena-contracts" },
+    { "path": "../arena-definitions" },
+    { "path": "../arena-presentation-contracts" },
+    { "path": "../arena-presentation-runtime" },
+    { "path": "../arena-product-contracts" },
+    { "path": "../arena-product-state" },
+    { "path": "../arena-progression" }
+  ]
+}

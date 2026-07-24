@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "rootDir": "src",
+    "outDir": "dist"
+  },
+  "references": [
+    { "path": "../arena-definitions" },
+    { "path": "../arena-product-content" },
+    { "path": "../arena-profile-contracts" },
+    { "path": "../arena-progression" }
+  ],
+  "include": ["src/**/*.ts"]
+}

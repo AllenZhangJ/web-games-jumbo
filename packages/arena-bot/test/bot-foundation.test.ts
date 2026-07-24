@@ -1,0 +1,185 @@
+import { describe, expect, it } from 'vitest';
+import {
+  BOT_DIFFICULTY_IDS,
+  BOT_DIFFICULTY_PROFILES,
+  BotController,
+  BotMobilityScheduler,
+  cloneBotSourceSnapshot,
+  createBotArenaView,
+  createBotObservation,
+  createBotPersonality,
+  getBotDifficultyProfile,
+  selectHighestUtility,
+  type UtilityEvaluator,
+} from '../src/index.js';
+
+interface MarkerPlan {
+  readonly marker: string;
+}
+
+function evaluator(
+  id: string,
+  score: number,
+  priority = 0,
+): UtilityEvaluator<object, MarkerPlan> {
+  return {
+    id,
+    priority,
+    score: () => score,
+    createPlan: () => ({ marker: id }),
+  };
+}
+
+describe('arena-bot deterministic foundation', () => {
+  it('keeps all difficulty values centralized, validated and immutable', () => {
+    expect(BOT_DIFFICULTY_IDS).toEqual(['easy', 'normal', 'hard']);
+    expect(BOT_DIFFICULTY_PROFILES.hard.observationDelayTicks).toBe(6);
+    expect(BOT_DIFFICULTY_PROFILES.normal.replanIntervalTicks).toBe(7);
+    expect(Object.isFrozen(BOT_DIFFICULTY_IDS)).toBe(true);
+    expect(Object.isFrozen(BOT_DIFFICULTY_PROFILES)).toBe(true);
+    expect(Object.isFrozen(getBotDifficultyProfile('easy'))).toBe(true);
+    expect(() => getBotDifficultyProfile('impossible')).toThrow(/未知机器人难度/);
+  });
+
+  it('derives personality only from the injected uint32 seed', () => {
+    const first = createBotPersonality(0x12345678);
+    expect(createBotPersonality(0x12345678)).toEqual(first);
+    expect(createBotPersonality(0x12345679)).not.toEqual(first);
+    expect(Object.isFrozen(first)).toBe(true);
+    expect(() => createBotPersonality(-1)).toThrow(/uint32/);
+    expect(() => createBotPersonality(0x100000000)).toThrow(/uint32/);
+  });
+
+  it('uses stable score, priority and ID ordering without mutating candidates', () => {
+    const candidates = [
+      evaluator('z-goal', 0.5, 2),
+      evaluator('a-goal', 0.5, 2),
+      evaluator('low', 0.2, 99),
+    ];
+    const decision = selectHighestUtility(candidates, {});
+    expect(decision).toEqual({
+      goalId: 'a-goal',
+      score: 0.5,
+      plan: { marker: 'a-goal', goalId: 'a-goal' },
+    });
+    expect(Object.isFrozen(decision)).toBe(true);
+    expect(Object.isFrozen(decision.plan)).toBe(true);
+  });
+
+  it('rejects accessors and malformed output without executing caller getters', () => {
+    let getterCalls = 0;
+    const malicious = Object.defineProperty({}, 'id', {
+      enumerable: true,
+      get() {
+        getterCalls += 1;
+        return 'malicious';
+      },
+    });
+    expect(() => selectHighestUtility([malicious as never], {})).toThrow(/访问器/);
+    expect(getterCalls).toBe(0);
+
+    const plan = Object.defineProperty({}, 'marker', {
+      enumerable: true,
+      get() {
+        getterCalls += 1;
+        return 'malicious';
+      },
+    });
+    expect(() => selectHighestUtility([{
+      id: 'plan-getter',
+      score: () => 1,
+      createPlan: () => plan,
+    }], {})).toThrow(/数据字段|访问器/);
+    expect(getterCalls).toBe(0);
+  });
+
+  it('deeply freezes utility plans and rejects nested accessors without execution', () => {
+    const decision = selectHighestUtility([{
+      id: 'nested-plan',
+      score: () => 1,
+      createPlan: () => ({ target: { x: 1, z: 2 } }),
+    }], {});
+    expect(Object.isFrozen(decision.plan)).toBe(true);
+    expect(Object.isFrozen(decision.plan.target)).toBe(true);
+
+    let getterCalls = 0;
+    const target = Object.defineProperty({}, 'x', {
+      enumerable: true,
+      get() {
+        getterCalls += 1;
+        return 1;
+      },
+    });
+    expect(() => selectHighestUtility([{
+      id: 'nested-getter',
+      score: () => 1,
+      createPlan: () => ({ target }),
+    }], {})).toThrow(/数据字段|访问器/);
+    expect(getterCalls).toBe(0);
+  });
+
+  it('rejects mobility scheduler option accessors without execution', () => {
+    let getterCalls = 0;
+    const options = Object.defineProperty({ crouchHoldTicks: 8 }, 'minimumIntervalTicks', {
+      enumerable: true,
+      get() {
+        getterCalls += 1;
+        return 24;
+      },
+    });
+    expect(() => new BotMobilityScheduler(options as never)).toThrow(/数据字段|访问器/);
+    expect(getterCalls).toBe(0);
+  });
+
+  it('rejects observation and arena accessors without executing caller code', () => {
+    let getterCalls = 0;
+    const arena = Object.defineProperty({}, 'surfaces', {
+      enumerable: true,
+      get() {
+        getterCalls += 1;
+        return [];
+      },
+    });
+    expect(() => createBotArenaView(arena, 0.4)).toThrow(/数据字段|访问器/);
+    expect(getterCalls).toBe(0);
+
+    const snapshot = Object.defineProperty({}, 'tick', {
+      enumerable: true,
+      get() {
+        getterCalls += 1;
+        return 0;
+      },
+    });
+    expect(() => cloneBotSourceSnapshot(snapshot)).toThrow(/数据字段|访问器/);
+    expect(getterCalls).toBe(0);
+
+    const options = Object.defineProperty({}, 'commandSnapshot', {
+      enumerable: true,
+      get() {
+        getterCalls += 1;
+        return null;
+      },
+    });
+    expect(() => createBotObservation(options)).toThrow(/数据字段|访问器/);
+    expect(getterCalls).toBe(0);
+  });
+
+  it('rejects controller option accessors without executing caller code', () => {
+    let getterCalls = 0;
+    const options = Object.defineProperty({
+      difficultyId: 'hard',
+      behaviorSeed: 1,
+      personalitySeed: 2,
+      arena: {},
+      characterRadius: 0.4,
+    }, 'participantId', {
+      enumerable: true,
+      get() {
+        getterCalls += 1;
+        return 'player-2';
+      },
+    });
+    expect(() => new BotController(options as never)).toThrow(/数据字段/);
+    expect(getterCalls).toBe(0);
+  });
+});

@@ -1,0 +1,192 @@
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { describe, expect, it } from 'vitest';
+import { createWorkspaceBuildPlan } from '../../scripts/build-workspace-packages.js';
+import { verifyJavaScriptMigration } from '../../scripts/governance/check-js-migration.js';
+import { verifyDocumentation } from '../../scripts/governance/check-documentation.js';
+import {
+  RETIRED_PRODUCT_PATHS,
+  verifyRetiredProductBoundaries,
+} from '../../scripts/governance/check-product-boundaries.js';
+import { verifyPresentationThreeBoundaries } from '../../scripts/governance/check-presentation-three-boundaries.js';
+import { verifyRepositorySecurity } from '../../scripts/governance/check-repository-security.js';
+import { verifySupplyChain } from '../../scripts/governance/check-supply-chain.js';
+import { verifyThirdPartyAssets } from '../../scripts/governance/check-third-party-assets.js';
+import { verifyFormalAssets } from '../../scripts/governance/check-formal-assets.js';
+
+describe('enterprise governance gates', () => {
+  it('keeps the repository free of JavaScript source files', async () => {
+    const report = await verifyJavaScriptMigration();
+    expect(report.currentCount).toBe(0);
+  });
+
+  it('rejects every new JavaScript source file without an allowlist escape hatch', async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), 'arena-zero-js-gate-'));
+    try {
+      await writeFile(path.join(directory, 'regression.js'), 'export const regression = true;\n');
+      await expect(verifyJavaScriptMigration(directory)).rejects.toThrow(
+        /禁止提交 JavaScript 源文件：regression\.js/,
+      );
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('keeps the retired product outside the active repository', async () => {
+    await expect(verifyRetiredProductBoundaries()).resolves.toBeUndefined();
+    expect(RETIRED_PRODUCT_PATHS).toEqual(expect.arrayContaining([
+      'packages/application',
+      'packages/content',
+      'packages/difficulty',
+      'packages/feedback',
+      'packages/game-contracts',
+      'packages/gameplay',
+      'packages/jump-engine',
+      'packages/persistence',
+      'packages/platform',
+      'packages/renderer-three',
+      'scripts/audit-assets.ts',
+      'scripts/check-zero-js.ts',
+      'src/entry/compose-game.ts',
+    ]));
+  });
+
+  it('keeps Three presentation dependencies and authority boundaries exact', async () => {
+    await expect(verifyPresentationThreeBoundaries()).resolves.toEqual({
+      sourceFileCount: 21,
+      productSourceFileCount: 2,
+    });
+  });
+
+  it('rejects unpinned dependency declarations', async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), 'arena-supply-chain-gate-'));
+    try {
+      await mkdir(path.join(directory, 'packages'));
+      await writeFile(path.join(directory, 'package.json'), JSON.stringify({
+        name: 'fixture',
+        version: '1.0.0',
+        dependencies: { three: '^0.185.1' },
+      }));
+      await expect(verifySupplyChain(directory)).rejects.toThrow(/three 必须固定到精确 semver/);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects unpinned transitive dependency overrides', async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), 'arena-override-gate-'));
+    try {
+      await mkdir(path.join(directory, 'packages'));
+      await writeFile(path.join(directory, 'package.json'), JSON.stringify({
+        name: 'fixture',
+        version: '1.0.0',
+        overrides: { sharp: '^0.35.3' },
+      }));
+      await expect(verifySupplyChain(directory)).rejects.toThrow(
+        /overrides\.sharp 必须固定到精确 semver/,
+      );
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('builds internal workspace packages before clean-install governance checks', async () => {
+    const manifest = JSON.parse(
+      await readFile(path.resolve('package.json'), 'utf8'),
+    ) as {
+      scripts?: Record<string, string>;
+      engines?: Record<string, string>;
+    };
+    expect(manifest.engines?.node).toBe('>=20.9.0');
+    expect(manifest.scripts?.predev).toBe('npm run build:packages');
+    expect(manifest.scripts?.['predev:lan']).toBe('npm run build:packages');
+    expect(manifest.scripts?.pretest).toBe('npm run build:packages');
+    expect(manifest.scripts?.['prepreview:lan']).toBe('npm run build');
+    expect(manifest.scripts?.['check:governance']).toMatch(/^npm run build:packages && /);
+    expect(manifest.scripts?.typecheck).toBe('npm run build:packages && npm run typecheck:app');
+    expect(manifest.scripts?.['audit:dependencies']).toBe(
+      'npm audit --omit=dev --audit-level=high',
+    );
+    expect(manifest.scripts?.check?.match(/npm run audit:dependencies/g)).toHaveLength(1);
+  });
+
+  it('derives an acyclic workspace build order from declared internal dependencies', async () => {
+    const plan = await createWorkspaceBuildPlan();
+    const waveByPackage = new Map(
+      plan.waves.flatMap((wave, waveIndex) => (
+        wave.map((workspacePackage) => [workspacePackage.name, waveIndex] as const)
+      )),
+    );
+    expect(plan.packageCount).toBe(52);
+    expect(waveByPackage.get('@number-strategy-jump/arena-presentation-runtime')).toBeLessThan(
+      waveByPackage.get('@number-strategy-jump/arena-product-presentation') ?? -1,
+    );
+    expect(waveByPackage.get('@number-strategy-jump/arena-release-contracts')).toBeLessThan(
+      waveByPackage.get('@number-strategy-jump/arena-release') ?? -1,
+    );
+  });
+
+  it('rejects secret-bearing environment files', async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), 'arena-security-gate-'));
+    try {
+      await writeFile(path.join(directory, '.env'), 'EXAMPLE=value\n');
+      await expect(verifyRepositorySecurity(directory)).rejects.toThrow(/禁止提交密钥或环境文件/);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('requires third-party asset approval from the configured owner', async () => {
+    await expect(verifyThirdPartyAssets({ expectedApprover: 'not-the-owner' })).rejects.toThrow(
+      /approvedBy 必须是项目负责人/,
+    );
+  });
+
+  it('binds approved formal assets to the current runtime definitions and bytes', async () => {
+    await expect(verifyFormalAssets()).resolves.toEqual({
+      bundleId: 'arena.stage7.formal-assets.v1',
+      bundleHash: 'e03ff2b4',
+      assetCount: 3,
+      artifactCount: 10,
+    });
+  });
+
+  it('rejects broken local documentation links', async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), 'arena-documentation-gate-'));
+    try {
+      await writeFile(path.join(directory, 'package.json'), JSON.stringify({
+        name: 'fixture',
+        version: '1.0.0',
+        scripts: {},
+      }));
+      await writeFile(path.join(directory, 'README.md'), '[missing](./missing.md)\n');
+      await expect(verifyDocumentation({
+        repositoryRoot: directory,
+        markdownPaths: ['README.md'],
+        enforceCurrentTruth: false,
+      })).rejects.toThrow(/README\.md 包含断链：\.\/missing\.md/);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects documentation commands that are absent from package scripts', async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), 'arena-documentation-command-gate-'));
+    try {
+      await writeFile(path.join(directory, 'package.json'), JSON.stringify({
+        name: 'fixture',
+        version: '1.0.0',
+        scripts: {},
+      }));
+      await writeFile(path.join(directory, 'README.md'), 'Run `npm run removed-command`.\n');
+      await expect(verifyDocumentation({
+        repositoryRoot: directory,
+        markdownPaths: ['README.md'],
+        enforceCurrentTruth: false,
+      })).rejects.toThrow(/README\.md 引用不存在的 npm 命令：removed-command/);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+});

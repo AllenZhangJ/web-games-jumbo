@@ -1,0 +1,23 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "rootDir": "src",
+    "outDir": "dist",
+    "tsBuildInfoFile": "dist/.tsbuildinfo"
+  },
+  "include": ["src/**/*.ts"],
+  "references": [
+    { "path": "../arena-bot" },
+    { "path": "../arena-contracts" },
+    { "path": "../arena-human-match-study" },
+    { "path": "../arena-match" },
+    { "path": "../arena-matchmaking" },
+    { "path": "../arena-product-contracts" },
+    { "path": "../arena-v1-composition" },
+    { "path": "../arena-v1-content" }
+  ]
+}

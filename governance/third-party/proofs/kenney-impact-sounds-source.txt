@@ -1,0 +1,9 @@
+Arena third-party source approval record
+
+Source: https://www.kenney.nl/assets/impact-sounds
+Revision: upstream-version-1.0+zip-sha256-029d734af1582474edf3a694d1b0cebc97c1c152f2f39fa34d4c2bafc5de77f8
+License: CC0-1.0
+Rights holder: Kenney
+Approved use: selected and renamed impact sounds distributed with Arena builds
+Approved by: Allen
+Approved at: 2026-07-23T10:27:27.000Z

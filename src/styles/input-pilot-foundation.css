@@ -1,0 +1,55 @@
+:root {
+  color-scheme: light;
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: #eef1f4;
+  color: #17283e;
+  --pilot-ink: #17283e;
+  --pilot-muted: #657389;
+  --pilot-line: #bdc8d5;
+  --pilot-line-soft: #dce3ea;
+  --pilot-surface: #ffffff;
+  --pilot-canvas: #d8dde2;
+  --pilot-accent: #ff4d00;
+  --pilot-accent-dark: #d83f00;
+  --pilot-success: #187a51;
+  --pilot-warning: #a85212;
+  --pilot-danger: #9f2c2c;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#pilot-app {
+  width: 100%;
+  min-width: 320px;
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  overflow: hidden;
+  background: #eef1f4;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  color: inherit;
+}
+
+button:focus-visible,
+input:focus-visible {
+  outline: 3px solid rgb(255 77 0 / 25%);
+  outline-offset: 2px;
+}
+
+[hidden] {
+  display: none !important;
+}

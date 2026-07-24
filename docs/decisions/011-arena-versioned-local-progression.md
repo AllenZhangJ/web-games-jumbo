@@ -1,0 +1,85 @@
+# ADR-011：Arena 使用版本化双槽本地进度与对称内容池
+
+- 状态：已接受（S8.1～S8.4 已实施；S8.5 三端验收仍独立执行）
+- 日期：2026-07-18
+
+## 背景
+
+Stage 8 需要完成角色选择、快速匹配、结算、奖励、解锁和再来一局。首版运行在 Web、微信和抖音，复用现有 Platform Storage Contract，不建设账号或云服务。
+
+S6.6.3a 已先为盲测证据落地 `storageRead/storageWrite/storageDelete` 的明确结果语义、双槽读回和未来版本保护。Stage 8 复用这些平台与协议能力，但 PlayerProfile、迁移和奖励仍是独立聚合，不复用 Pilot Workspace 数据模型。
+
+单 key 原地覆盖无法保证异常退出时仍有有效数据；直接 `JSON.parse` 后使用也无法抵御损坏结构、未来版本或异常 getter。奖励页面和 App 生命周期还可能重复提交同一比赛结果。装备/地图解锁若只增强玩家，又会破坏隐藏机器人 1v1 的公平性。
+
+## 决策
+
+本地进度采用：
+
+- 版本化 `SaveEnvelope` 与严格 `SaveValidator`。
+- A/B 两个数据槽、单调 generation 和非权威 head 提示。
+- 写非当前槽、读回校验、再更新 head 的提交顺序。
+- 按 `N -> N+1` 连续执行的纯函数 `SaveMigrationRegistry`。
+- 从权威 `MatchResult` 和稳定 `grantId` 生成的幂等奖励事务。
+- 从当前 Profile 与内容 Definition 生成的 `FrozenMatchContentPool`。
+
+加载时始终校验两个槽并选择最高有效 generation，不盲信 head。任何写入或迁移失败都保留上一有效槽；未来版本不降级覆盖；两槽损坏时以默认 Profile 安全启动并记录诊断。完整性 hash 只用于发现损坏和部分写入，不承诺防作弊。
+
+同一局的玩家、隐藏对手、装备随机与地图规则使用相同的冻结内容池。解锁只扩大双方共享内容范围，不改变生命、速度、跳跃、冷却、击退或掉落概率。
+
+S8.1 将 Pilot 与 Product 共用的仅限于严格同步 Storage Port 和具名 lease 协议；二者的 Definition、聚合、envelope、repository 和生命周期继续完全独立。Profile 存储 key 只绑定稳定 Definition ID，不绑定内容 hash，防止新增默认内容或调整上限让旧存档整体失效。写入异常后以完整读回为最终依据：新槽已验证即提交，head 失败只记为非权威提示失败；无法确认且无法回滚时仓储进入 fail-closed，未来 schema 在任何读写确认阶段都原地保留。
+
+S8.2 使用独立显式产品状态机、Profile 选择服务和单 Match Coordinator 连接上述 Repository 与本地快速匹配；它不改变存档协议，也不把 MatchCore 生命周期并入 Profile。异步去重、挂起恢复、迟到资源和销毁重试见 [ADR-015](015-arena-headless-product-session-lifecycle.md)。
+
+S8.3 将选择服务升级为唯一 `PlayerProfileService` 写入者，并以 Profile revision、match seed 和已校验 authority hash 组成当前本地事务 grantId。Profile V1 只保留最近一次 grant，适用范围严格限制为单会话、单未结算结果；完整边界见 [ADR-016](016-arena-local-match-reward-transaction.md)。
+
+S8.4 以独立 Catalog、显式替代 Registry 和纯 Resolver 生成 `FrozenMatchContentPool`，只把版本化 `MatchContentSelection` 送入 MatchConfig/Replay V5。Authority Content 为角色、装备、动作和地图建立本局 Registry/Definition 投影；Profile provenance 不进入 Core。快捷重赛从 reward/unlock 直接进入 matching，失败恢复原展示。完整边界见 [ADR-017](017-arena-frozen-symmetric-match-content.md)。
+
+当前 `v1` 是第一个生产 Profile schema，没有编造 `v0` 历史迁移。迁移 Registry 已通过合成的连续多版本链验证；首次真实升级时必须新增固定历史 fixture，不能修改旧迁移函数。
+
+## GitHub 借鉴边界
+
+- [redux-persist](https://github.com/rt2zz/redux-persist)，参考 commit `d8b01a085e3679db43503a3858e8d4759d6f22fa`，MIT：借鉴“存储版本 -> 迁移 -> 最终协调/校验”的思路，不引入 Redux 或 redux-persist 运行时。
+- [stripe-node](https://github.com/stripe/stripe-node/tree/1bb09ad9866e3dcb516948eacc89373824a02523)，参考 commit `1bb09ad9866e3dcb516948eacc89373824a02523`，MIT：借鉴同一逻辑操作重试复用稳定 idempotency key 的协议思想，不引入支付或网络依赖。
+- 不引入 localForage。项目已有覆盖三端的 Storage Contract，首版需要的是存档协议、迁移和生命周期治理，不是再增加一层面向浏览器存储后端的抽象。
+
+本 ADR 不复制第三方代码，不新增依赖。
+
+## 被否决方案
+
+### 单 key 原地覆盖 JSON
+
+进程中断、容量失败或平台写失败时可能同时失去新旧数据，也无法可靠区分损坏和未来版本。
+
+### UI 直接读写存储
+
+会把迁移、校验、奖励幂等和生命周期分散到页面，重复点击或页面重建容易重复发奖。
+
+### 首版建设账号、数据库和云存档
+
+超出本地机器人 V1 范围，增加隐私、登录、同步冲突与后端运维，不解决当前玩法闭环。
+
+### 只为玩家解锁装备或数值成长
+
+会让局外时长直接转化为局内优势，违背公平竞技和双方共享装备规则。
+
+## 后果
+
+正面：
+
+- 写失败、损坏、升级和重复结算都有可测试兜底。
+- 产品状态机、存储、进度和比赛权威保持解耦。
+- 内容解锁可扩展而不破坏单局对称性。
+
+代价：
+
+- 需要维护双槽、generation、迁移 fixture、grant 去重和内容替代策略。
+- 本地数据仍可被高级用户修改，不能将其用于有价值排行榜或安全结算。
+
+## 生效条件
+
+- 双槽故障注入、每个历史迁移 fixture、未来版本与损坏恢复通过。
+- 相同 grant 重试不会重复奖励。
+- 连续多局和生命周期竞态不会重叠 session 或串局。
+- 双方共享内容池自动化检查通过后，将状态改为“已接受”。
+
+S8.1 的双槽故障注入、未来版本保护、竞争租约、生命周期、架构隔离和 500 次故障压力门禁已满足；其实现结论见 [S8.1 结果记录](../research/arena-stage8-profile-persistence-results.md)。S8.2 的无 UI 状态机、真实本地比赛集成、竞态与 200 局压力也已满足，见 [S8.2 结果记录](../research/arena-stage8-product-session-results.md)。S8.3 的奖励幂等、解锁解析与奖励生命周期已满足，见 [S8.3 结果记录](../research/arena-stage8-reward-progression-results.md)。S8.4 的共享池、Replay V5、快捷重赛和连续局隔离已满足，见 [S8.4 结果记录](../research/arena-stage8-content-pool-results.md)。因此本 ADR 的架构生效条件已经关闭；S8.5 的真实宿主证据仍是 Stage 8 完成门，不能由 Node 门禁替代。

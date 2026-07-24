@@ -1,0 +1,23 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "rootDir": "src",
+    "outDir": "dist",
+    "tsBuildInfoFile": "dist/.tsbuildinfo"
+  },
+  "include": ["src/**/*.ts"],
+  "references": [
+    { "path": "../arena-contracts" },
+    { "path": "../arena-product-content" },
+    { "path": "../arena-product-match" },
+    { "path": "../arena-product-progression" },
+    { "path": "../arena-product-session" },
+    { "path": "../arena-product-state" },
+    { "path": "../arena-profile-persistence" },
+    { "path": "../arena-profile-service" }
+  ]
+}

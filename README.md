@@ -1,137 +1,92 @@
-# 数域跃迁（Number Strategy Jump）v3
+# 深渊竞技场（Arena）
 
-一款以“左右选择数值运算 + 按住蓄力跳跃”为核心的竖屏小游戏。v3 保留现有数值策略、连续世界、真实落点、碰撞规则、测试和 Web/微信/抖音平台适配层，将原 Canvas 2D 表现层重构为 Three.js/WebGL2 三维场景。
+一款面向 Web、微信小游戏和抖音小游戏的本地 1v1 动作竞技游戏。玩家通过移动、跳跃、二段跳、下砸和武器攻击争夺空间，把对手击出平台；对手由遵守同一输入与规则的本地 Bot 驱动。
 
-v3 的动作与构图参考开源项目 [`shenmaxg/web-jump`](https://github.com/shenmaxg/web-jump)，但不使用它的单路线玩法作为游戏规则，也不直接复用来源不明的品牌纹理。参考代码的 MIT 许可与归属见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+Arena 是本仓库唯一生产产品。早期数值跳台实现已经退出活动源码与生产构建，只能通过 Git 历史查阅；不得作为兼容入口重新引入。
 
-> 当前代码和项目事实从 [项目文档索引](docs/README.md)进入。自动化测试或本机浏览器成功不等于真机通过；微信、抖音 iOS/Android 的 WebGL2、触摸、前后台、安全区和性能仍必须用最终构建产物验收。
+## 当前能力
 
-## 视觉基线
+- 固定整数 tick 的权威 MatchCore，同 seed、同输入可复现状态、事件与 Replay。
+- 任意距离可攻击并挥空；命中、击退、淘汰和胜负只由 Core 裁决。
+- 行走/跑动、停止、起跳准备、空中、二段跳、下砸、正背面受击等动作语义。
+- 基础攻击、链钩、锤击、盾冲具有独立范围、速度、阶段、僵直与击退 Definition。
+- 正式 KayKit 双角色、武器附件、纹理和 Kenney 打击音效；程序化角色只作为加载失败兜底。
+- 1v1 Quick Match、本地 Bot、角色选择、奖励事务、重赛与版本化本地 Profile。
+- Web、微信、抖音三个 Product 入口及可复现构建 Manifest、资产/产物预算。
+- 黄金 Replay、输入 fuzz、生命周期、压力与 soak 门禁。
 
-v3 概念图：[`public/assets/concept/web-jump-three-v3.png`](public/assets/concept/web-jump-three-v3.png)。本机运行验收截图：[`docs/render-final-v3.jpg`](docs/render-final-v3.jpg)。其实现规则见 [v3 视觉与动作系统](docs/design-system-v3.md)。
+当前游戏性仍在持续提高，尤其是动作灵活度、手臂起落/挥收、空中攻击、连招上限和移动质感。治理迁移不得以减少动作、关节、分辨率或抗锯齿换取性能结果。
 
-![数域跃迁 v3 竖屏三维概念](public/assets/concept/web-jump-three-v3.png)
+## 本地运行
 
-## 玩法核心
-
-- 玩家从当前平台出发，前方始终有左右两个运算候选。
-- 只有按住底部 `↖` / `↗` 按钮才会锁定左/右路线并蓄力，松开后按真实按住时长起跳；点击场景不会误触。
-- 只有物理落点位于目标平台顶面内，才执行运算并扣除一步。
-- 落地保留真实偏心位置，因此会改变下一跳的实际距离和所需力度。
-- 在有限步数内让当前值精确等于目标值。
-
-## 快速开始
-
-需要 Node.js 20 或更高版本。
+要求 Node.js 20.9.0 或更高版本。
 
 ```bash
-npm install
+npm ci --ignore-scripts --no-audit
 npm run dev
 ```
 
-执行完整自动化检查：
-
-```bash
-npm run check
-```
-
-构建产物：
-
-```text
-dist/
-├── web/       # 普通浏览器静态站点
-├── douyin/    # 导入抖音小游戏开发者工具
-└── wechat/    # 导入微信开发者工具
-```
-
-## 手机局域网预览
-
-手机和电脑连接同一 Wi-Fi 后，让 Vite 监听所有本机网卡：
+局域网手机验收：
 
 ```bash
 npm run dev:lan
 ```
 
-验收生产构建时使用：
+生产构建：
 
 ```bash
 npm run build
-npm run preview:lan
+npm run arena:build:verify -- --require-clean-source
+npm run arena:build:budget
 ```
 
-再在手机打开终端显示的 `Network` 地址。更换 Wi-Fi 后电脑的局域网 IP 通常会变化，之前的地址不应继续作为验收入口。Web 预览只能验证浏览器路径，不能代替微信或抖音真机验收。
+完整治理门禁：
 
-## 微信与抖音导入
+```bash
+npm run check
+```
 
-1. 执行 `npm run build`。
-2. 在对应开发者工具中导入 `dist/wechat` 或 `dist/douyin`。
-3. 填写项目方的真实 AppID；不要把仓库中的占位配置当作发布凭据。
-4. 在开发者工具先检查 WebGL2 创建、首帧、触摸和前后台。
-5. 分别使用 iOS 与 Android 真机完成 [平台验收清单](docs/platform-checklist.md)。
+## 架构边界
 
-## v3 架构
+实现必须按以下依赖方向推进：
 
 ```text
-packages/
-├── game-contracts/         # strict TS：版本化定义、Command/Event/Snapshot 与小型 Port
-├── difficulty/             # strict TS：easy/normal/hard、校验、注册和迁移投影
-├── jump-engine/            # strict TS：RNG、几何、轨迹、碰撞和 WorldState
-├── gameplay/               # strict TS：数值规则、状态机、Gameplay/Task 注册表
-├── application/            # strict TS：Session、Command、Clock、Lifecycle、Event、Snapshot
-├── content/                # strict TS：Scene/Character 注册、回退与资源生命周期
-├── feedback/               # strict TS：事件驱动声音/震动与本地设置
-├── persistence/            # strict TS：版本化存档、迁移、回放和诊断
-├── renderer-three/         # strict TS：World/HUD/Camera/Resource/Context Lifecycle
-└── platform/               # strict TS：Web / 微信 / 抖音宿主能力
-src/
-└── entry/                   # strict TS：唯一具体组合根与三端入口
+Definition / State
+        ↓
+Registry / Resolver / System
+        ↓
+MatchCore
+        ↓
+Bot Observation / Replay / Session
+        ↓
+Renderer / UI / Audio
 ```
 
-第四批已把平台、入口、测试、配置和构建/审计工具迁为 strict TypeScript，并删除旧 JS 与过渡 tsconfig。`npm run check:zero-js` 会在维护目录发现任一旧 JavaScript 或宽松迁移开关时失败。
+权威层不依赖 Three.js、DOM、平台全局、墙钟或未注入随机源。Bot 只能读取受限观察并输出 `InputFrame`。表现层只消费只读快照与权威事件，不能参与玩法判定。
 
-数据严格单向流动：
+详细规则见 [AGENTS.md](AGENTS.md) 与 [Arena V1 架构提案](docs/architecture/arena-v1-proposal.md)。
 
-```text
-平台输入 → Application → Gameplay + Jump Engine → 只读快照/事件 → Renderer3D
-```
+## 企业治理迁移
 
-Three.js Mesh、缓动和特效不得反向修改核心世界，不得决定是否落地，也不得把偏心落点吸附到平台中心。详细理由见 [技术架构](docs/architecture.md) 和 [ADR](docs/decisions/)。
+当前治理分支以 `51e28220295c080261d30e33aaac7e43c5f91685` 为不可变产品基线。全仓生产源码、测试和治理脚本已经完成 strict TypeScript 迁移，受维护 JavaScript 为零；ESLint、分层 Vitest coverage、架构边界、供应链、敏感信息、正式资产和唯一生产入口均已进入 `npm run check:governance`。
 
-## 重要边界
+- [ADR-030：Arena 唯一生产产品](docs/decisions/030-arena-only-enterprise-governance.md)
+- [完整迁移计划](docs/governance/arena-enterprise-governance-plan.md)
+- [实时状态台账](docs/governance/arena-enterprise-governance-status.md)
+- [最新 main 合并前审计](docs/governance/arena-main-merge-preflight.md)
+- [产品基线证据](docs/baselines/arena-product-51e2822.md)
 
-- 核心层不直接访问 Three.js、DOM、`window`、`tt.*` 或 `wx.*`。
-- 物理和状态更新使用固定逻辑步长；渲染只消费快照。
-- 世界 Scene 与 HUD Scene 共用一个上屏 WebGL Canvas。
-- `worldRoot` 的视觉平移不改变核心平台的绝对世界坐标。
-- 角色形变、空翻、拖尾、倾倒和粒子只属于表现层。
-- 现代 Three.js 路径以 WebGL2 为前提；任一目标真机不满足时，必须重新评审版本或降级路径，不得忽略失败。
+当前代码候选 `a71ecc1c0493a30fd1e94402a662cea9a46b5014` 的本地完整门禁、全依赖/生产依赖联网审计和 Linux GitHub Actions `quality` 已通过；`main` 已启用 PR-only、严格 `quality`、对话解决及禁止 force push/删除的保护。当前仍不可直接合并：rename-aware 虚拟合并识别出 52 个产品/治理冲突文件，必须另行批准并执行 Arena 保留型集成；iPhone 13 Pro/iOS 26/Google Chrome 曾成功识别并打开候选，但当前设备连接为 unavailable，最终手感验收尚未完成。微信/抖音 iOS/Android 真机证据继续作为发布阻断。
 
-## 文档
+## 验收边界
 
-- [项目文档索引](docs/README.md)
-- [项目概览](docs/project-overview.md)
-- [仓库结构与模块目录](docs/repository-structure.md)
-- [运行主流程与生命周期](docs/runtime-flow.md)
-- [测试、验证与发布](docs/testing-and-release.md)
-- [发布清单](docs/release-checklist.md)
-- [资产与许可证](docs/assets-and-licenses.md)
-- [v0.1.0 行为与工程基线](docs/baselines/v0.1.0.md)
-- [完整治理路线图](docs/governance/roadmap.md)
-- [当前治理状态](docs/governance/status.md)
-- [四批治理独立终验](docs/governance/final-verification.md)
-- [贡献指南](CONTRIBUTING.md)
-- [技术架构](docs/architecture.md)
-- [v3 视觉与动作系统](docs/design-system-v3.md)
-- [平台与真机验收清单](docs/platform-checklist.md)
-- [游戏规则与玩法](docs/gameplay-rules.md)
-- [产品边界](PRODUCT.md)
-- [ADR-001：Three.js/WebGL2 单 Canvas](docs/decisions/001-threejs-webgl2-single-canvas.md)
-- [ADR-002：核心状态单向驱动表现层](docs/decisions/002-core-driven-presentation.md)
-- [ADR-003：`web-jump` 参考与 MIT 合规](docs/decisions/003-web-jump-reference-and-license.md)
-- [ADR-004：分批治理的模块化单体](docs/decisions/004-modular-governance-roadmap.md)
+自动化和本机构建不能替代设备体验：
 
-## 许可与素材
+- 合并门禁：完整自动化、三端 clean build、Web iPhone 13 Pro/Chrome 验收。
+- 发布门禁：合并门禁之外，还必须补齐微信/抖音 iOS 与 Android 真机记录。
 
-- Three.js 与参考项目 `web-jump` 均按各自 MIT 许可使用，详见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) 与 `licenses/`。
-- `web-jump` 的参考基线固定为 commit `3fdcb17436f77ddb6664b9aad8f9c5fffdf0fe58`。
-- 不把参考项目的快递箱、魔方等纹理默认视为可发行资产；正式发布前仍需由项目方完成代码、美术、音频、商标与平台审核。
+缺少真机记录时可以形成代码合并审计判断，但不能宣称已经具备正式发布条件。
+
+## 第三方资产与代码
+
+第三方来源、固定 revision、许可和归属见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) 与 `licenses/`。Allen 已作为项目唯一负责人完成当前 3 个来源、10 个运行时资产和 3 个正式 GLTF Definition 的批准；`npm run check:third-party-assets` 与 `npm run check:formal-assets` 会复验来源、许可、证明、字节哈希和运行时绑定。该批准不替代目标真机可读性、性能、reduced-motion 或发行候选证据。

@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "id": "arena.stage9.golden-replays.v5",
+  "replaySchemaVersion": 5,
+  "rejectedReplaySchemaVersions": [
+    4
+  ],
+  "entries": [
+    {
+      "id": "equipment.scripted-pressure",
+      "category": "equipment",
+      "file": "equipment-scripted-pressure.json",
+      "scenario": {
+        "id": "equipment.scripted-pressure",
+        "version": 1
+      },
+      "replayHash": "17b60bcb",
+      "matchSeed": 2584805376,
+      "matchSchemaVersion": 5,
+      "physicsBackendVersion": "lightweight-v3",
+      "configHash": "d2826e3c",
+      "ruleContentHash": "1cf565bf",
+      "finalHash": "c9cd7e73",
+      "endedAtTick": 899,
+      "resultReason": "timeout-score",
+      "winnerId": "player-1",
+      "inputFrameCount": 1800,
+      "checkpointCount": 16,
+      "eventCounts": {
+        "ActionStarted": 34,
+        "EquipmentDropped": 1,
+        "EquipmentPickedUp": 1,
+        "EquipmentSpawned": 3,
+        "HitResolved": 8,
+        "KnockbackApplied": 8,
+        "MapEventStarted": 1,
+        "MapEventWarned": 1,
+        "MatchEnded": 1,
+        "MatchStarted": 1,
+        "PlayerEliminated": 5,
+        "PlayerRespawned": 5,
+        "SuddenDeathStarted": 1
+      }
+    },
+    {
+      "id": "lifecycle.quick-match-pause-resume",
+      "category": "lifecycle",
+      "file": "lifecycle-quick-match-pause-resume.json",
+      "scenario": {
+        "id": "lifecycle.quick-match-pause-resume",
+        "version": 1
+      },
+      "replayHash": "543a7a80",
+      "matchSeed": 1375600641,
+      "matchSchemaVersion": 5,
+      "physicsBackendVersion": "lightweight-v3",
+      "configHash": "fc46b34a",
+      "ruleContentHash": "1cf565bf",
+      "finalHash": "33a33688",
+      "endedAtTick": 479,
+      "resultReason": "timeout-score",
+      "winnerId": "player-2",
+      "inputFrameCount": 960,
+      "checkpointCount": 9,
+      "eventCounts": {
+        "ActionStarted": 3,
+        "HitResolved": 3,
+        "KnockbackApplied": 3,
+        "MatchEnded": 1,
+        "MatchStarted": 1,
+        "PlayerEliminated": 1,
+        "PlayerRespawned": 1,
+        "SuddenDeathStarted": 1
+      }
+    },
+    {
+      "id": "map.first-wind-cycle",
+      "category": "map",
+      "file": "map-first-wind-cycle.json",
+      "scenario": {
+        "id": "map.first-wind-cycle",
+        "version": 1
+      },
+      "replayHash": "2e092bc6",
+      "matchSeed": 1517158400,
+      "matchSchemaVersion": 5,
+      "physicsBackendVersion": "lightweight-v3",
+      "configHash": "4a5eb41f",
+      "ruleContentHash": "1cf565bf",
+      "finalHash": "389b7142",
+      "endedAtTick": 1199,
+      "resultReason": "timeout-draw",
+      "winnerId": null,
+      "inputFrameCount": 2400,
+      "checkpointCount": 11,
+      "eventCounts": {
+        "EquipmentSpawned": 3,
+        "MapEventEnded": 1,
+        "MapEventStarted": 1,
+        "MapEventWarned": 1,
+        "MatchEnded": 1,
+        "MatchStarted": 1,
+        "SuddenDeathStarted": 1
+      }
+    },
+    {
+      "id": "movement.semantic-actions",
+      "category": "movement",
+      "file": "movement-semantic-actions.json",
+      "scenario": {
+        "id": "movement.semantic-actions",
+        "version": 2
+      },
+      "replayHash": "8673e0bf",
+      "matchSeed": 1834352640,
+      "matchSchemaVersion": 5,
+      "physicsBackendVersion": "lightweight-v3",
+      "configHash": "17a54f3f",
+      "ruleContentHash": "1cf565bf",
+      "finalHash": "e560dd88",
+      "endedAtTick": 899,
+      "resultReason": "timeout-draw",
+      "winnerId": null,
+      "inputFrameCount": 1800,
+      "checkpointCount": 11,
+      "eventCounts": {
+        "ActionStarted": 56,
+        "DownSmashLanded": 8,
+        "MapEventStarted": 1,
+        "MapEventWarned": 1,
+        "MatchEnded": 1,
+        "MatchStarted": 1,
+        "SuddenDeathStarted": 1
+      }
+    }
+  ]
+}

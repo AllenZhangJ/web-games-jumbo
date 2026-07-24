@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "owner": {
+    "name": "Allen",
+    "githubLogin": "AllenZhangJ"
+  },
+  "defaultBranch": "main",
+  "dependencyVersionPolicy": "exact",
+  "githubActionRefPolicy": "full-commit-sha",
+  "runtimeTelemetry": "disabled",
+  "localDiagnostics": {
+    "commitRawLogs": false,
+    "retentionDays": 7
+  }
+}

@@ -1,0 +1,124 @@
+import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
+import { ARENA_PHYSICS } from '@number-strategy-jump/arena-match';
+import { createArenaV1MapRegistry } from '@number-strategy-jump/arena-v1-content';
+import {
+  createDefaultMapCommandRegistry,
+  createDefaultMapEventStrategyRegistry,
+  ArenaMapSystem,
+  validateCharacterSpawnSafety,
+  validateDefaultMapSafety,
+  validateWalkableMapTopology,
+  type EquipmentDefinitionCatalog,
+} from '@number-strategy-jump/arena-map';
+import {
+  STATIC_MAP_ID_PREFIX,
+  createStaticMapDefinition,
+  type CharacterDefinition,
+  type MapDefinition,
+} from '@number-strategy-jump/arena-definitions';
+import {
+  assertArenaV1AuthorityContent,
+  createArenaV1AuthorityContent,
+  type ArenaV1AuthorityContent,
+} from './arena-v1-authority-content.js';
+import type { ArenaMatchConfig } from '@number-strategy-jump/arena-match';
+
+export const ARENA_V1_MAP_RULESET_VERSION = 'arena-v1-map-ruleset-v1';
+
+interface MapRegistryContract {
+  require(id: string): MapDefinition;
+}
+
+interface CharacterDefinitionCatalog {
+  require(id: string): CharacterDefinition;
+}
+
+export interface CreateArenaV1MapSystemOptions {
+  readonly config: ArenaMatchConfig;
+  readonly matchSeed: number;
+  readonly equipmentDefinitionCatalog?: EquipmentDefinitionCatalog | null;
+  readonly characterDefinitionCatalog?: CharacterDefinitionCatalog | null;
+  readonly authorityContent?: ArenaV1AuthorityContent | null;
+}
+
+export function resolveArenaV1MapDefinition(
+  config: ArenaMatchConfig,
+  mapRegistry: MapRegistryContract = createArenaV1MapRegistry(),
+): MapDefinition {
+  if (!config || typeof config !== 'object') throw new TypeError('resolveArenaV1MapDefinition 需要 config。');
+  if (config.mapDefinitionId.startsWith(STATIC_MAP_ID_PREFIX)) {
+    const definition = createStaticMapDefinition(config.arena);
+    if (definition.id !== config.mapDefinitionId) {
+      throw new RangeError('custom static mapDefinitionId 与 arena 内容不一致。');
+    }
+    return definition;
+  }
+  if (!mapRegistry || typeof mapRegistry.require !== 'function') {
+    throw new TypeError('resolveArenaV1MapDefinition 需要 MapRegistry。');
+  }
+  const definition = mapRegistry.require(config.mapDefinitionId);
+  if (
+    createDeterministicDataHash(config.arena, 'configured map arena')
+    !== createDeterministicDataHash(definition.arena, 'registered map arena')
+  ) throw new RangeError(`MapDefinition ${definition.id} 与 config.arena 不一致。`);
+  return definition;
+}
+
+export function createArenaV1MapSystem({
+  config,
+  matchSeed,
+  equipmentDefinitionCatalog = null,
+  characterDefinitionCatalog = null,
+  authorityContent = null,
+}: CreateArenaV1MapSystemOptions): ArenaMapSystem {
+  const content = authorityContent
+    ? assertArenaV1AuthorityContent(authorityContent)
+    : createArenaV1AuthorityContent(config);
+  const mapDefinition = resolveArenaV1MapDefinition(config, content.mapRegistry);
+  const equipmentRegistry = equipmentDefinitionCatalog ?? content.equipmentRegistry;
+  if (!equipmentRegistry || typeof equipmentRegistry.require !== 'function') {
+    throw new TypeError('createArenaV1MapSystem 需要 EquipmentDefinition catalog。');
+  }
+  const characterRegistry = characterDefinitionCatalog ?? content.characterRegistry;
+  if (!characterRegistry || typeof characterRegistry.require !== 'function') {
+    throw new TypeError('createArenaV1MapSystem 需要 CharacterDefinition catalog。');
+  }
+  if (!Array.isArray(config.participantCharacters) || config.participantCharacters.length === 0) {
+    throw new RangeError('createArenaV1MapSystem 需要 participantCharacters。');
+  }
+  const selectedCharacters = config.participantIds.map((participantId) => {
+    const assignment = config.participantCharacters.find((candidate) => (
+      candidate.participantId === participantId
+    ));
+    if (!assignment) {
+      throw new RangeError(`participant ${participantId} 没有 CharacterDefinition 分配。`);
+    }
+    return characterRegistry.require(assignment.definitionId);
+  });
+  const characterRadius = Math.max(...selectedCharacters.map(({ collision }) => collision.radius));
+  const maximumStepHeight = Math.min(...selectedCharacters.map(
+    ({ movement }) => movement.automaticStepHeight,
+  ));
+  const strategyRegistry = createDefaultMapEventStrategyRegistry();
+  const permanentSafeSurfaceIds = validateDefaultMapSafety(mapDefinition);
+  validateWalkableMapTopology(mapDefinition, {
+    characterRadius,
+    maximumStepHeight,
+  });
+  validateCharacterSpawnSafety(mapDefinition, {
+    characterSpawns: selectedCharacters.map(({ id, collision }) => ({
+      characterId: id,
+      collision,
+    })),
+    permanentSafeSurfaceIds,
+    groundProbeTolerance: ARENA_PHYSICS.groundProbeTolerance,
+  });
+  return new ArenaMapSystem({
+    mapDefinition,
+    strategyRegistry,
+    commandRegistry: createDefaultMapCommandRegistry(),
+    matchSeed,
+    rulesetVersion: ARENA_V1_MAP_RULESET_VERSION,
+    validationContext: { equipmentRegistry },
+  });
+}

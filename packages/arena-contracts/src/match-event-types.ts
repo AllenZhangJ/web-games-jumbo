@@ -1,0 +1,18 @@
+export const ARENA_MATCH_EVENT = Object.freeze({
+  MATCH_STARTED: 'MatchStarted',
+  EQUIPMENT_SPAWNED: 'EquipmentSpawned',
+  EQUIPMENT_PICKED_UP: 'EquipmentPickedUp',
+  EQUIPMENT_DROPPED: 'EquipmentDropped',
+  EQUIPMENT_DESPAWNED: 'EquipmentDespawned',
+  EQUIPMENT_DROP_FALLBACK: 'EquipmentDropFallback',
+  ACTION_STARTED: 'ActionStarted',
+  HIT_RESOLVED: 'HitResolved',
+  KNOCKBACK_APPLIED: 'KnockbackApplied',
+  DOWN_SMASH_LANDED: 'DownSmashLanded',
+  PLAYER_ELIMINATED: 'PlayerEliminated',
+  PLAYER_RESPAWNED: 'PlayerRespawned',
+  SUDDEN_DEATH_STARTED: 'SuddenDeathStarted',
+  MATCH_ENDED: 'MatchEnded',
+} as const);
+
+export type ArenaMatchEventType = typeof ARENA_MATCH_EVENT[keyof typeof ARENA_MATCH_EVENT];

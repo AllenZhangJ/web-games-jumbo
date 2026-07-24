@@ -1,0 +1,25 @@
+{
+  "name": "@number-strategy-jump/arena-product-composition",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "dependencies": {
+    "@number-strategy-jump/arena-contracts": "0.1.0",
+    "@number-strategy-jump/arena-product-content": "0.1.0",
+    "@number-strategy-jump/arena-product-match": "0.1.0",
+    "@number-strategy-jump/arena-product-progression": "0.1.0",
+    "@number-strategy-jump/arena-product-session": "0.1.0",
+    "@number-strategy-jump/arena-product-state": "0.1.0",
+    "@number-strategy-jump/arena-profile-persistence": "0.1.0",
+    "@number-strategy-jump/arena-profile-service": "0.1.0"
+  }
+}

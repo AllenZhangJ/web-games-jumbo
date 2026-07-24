@@ -1,8 +1,0 @@
-{
-  "version": 1,
-  "seed": 45,
-  "difficultyId": "normal",
-  "actions": [
-    { "type": "jump", "choiceIndex": 0, "chargeMs": 612 }
-  ]
-}

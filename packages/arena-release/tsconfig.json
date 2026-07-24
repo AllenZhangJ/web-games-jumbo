@@ -1,0 +1,29 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "rootDir": "src",
+    "outDir": "dist",
+    "tsBuildInfoFile": "dist/.tsbuildinfo"
+  },
+  "include": ["src/**/*.ts"],
+  "references": [
+    { "path": "../arena-balance" },
+    { "path": "../arena-contracts" },
+    { "path": "../arena-device-acceptance" },
+    { "path": "../arena-definitions" },
+    { "path": "../arena-evidence-contracts" },
+    { "path": "../arena-experiment" },
+    { "path": "../arena-human-match-study" },
+    { "path": "../arena-input-pilot" },
+    { "path": "../arena-match" },
+    { "path": "../arena-performance-evidence" },
+    { "path": "../arena-presentation-contracts" },
+    { "path": "../arena-regression" },
+    { "path": "../arena-release-contracts" },
+    { "path": "../arena-stage9-evidence-content" }
+  ]
+}

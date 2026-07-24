@@ -1,0 +1,21 @@
+{
+  "name": "@number-strategy-jump/arena-input-pilot-presentation",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "dependencies": {
+    "@number-strategy-jump/arena-contracts": "0.1.0",
+    "@number-strategy-jump/arena-input-pilot": "0.1.0",
+    "@number-strategy-jump/arena-v1-composition": "0.1.0",
+    "@number-strategy-jump/arena-v1-greybox-session": "0.1.0"
+  }
+}

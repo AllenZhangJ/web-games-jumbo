@@ -1,0 +1,171 @@
+{
+  "schemaVersion": 1,
+  "id": "arena.stage7.formal-assets.v1",
+  "contentVersion": 1,
+  "policyId": "arena.stage7.formal-asset-intake.v1",
+  "policyHash": "79e1e13d",
+  "createdAt": "2026-07-23T10:27:27.000Z",
+  "assets": [
+    {
+      "schemaVersion": 1,
+      "id": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1",
+      "kind": "character-model",
+      "providerId": "arena.gltf-character.v1",
+      "sourceKey": "./assets/arena/characters/kaykit-adventurers/parkour-apprentice-rogue.glb",
+      "contentVersion": 1,
+      "tags": ["formal", "humanoid", "kaykit", "local-runner"]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1",
+      "kind": "character-model",
+      "providerId": "arena.gltf-character.v1",
+      "sourceKey": "./assets/arena/characters/kaykit-skeletons/clockwork-warrior.glb",
+      "contentVersion": 1,
+      "tags": ["formal", "skeleton", "kaykit", "robot", "opponent-runner"]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "arena.asset.attachment.shield.kaykit-round.v1",
+      "kind": "attachment",
+      "providerId": "arena.gltf-attachment.v1",
+      "sourceKey": "./assets/arena/equipment/kaykit-adventurers/shield-round.glb",
+      "contentVersion": 1,
+      "tags": ["formal", "equipment", "offhand", "kaykit"]
+    }
+  ],
+  "records": [
+    {
+      "schemaVersion": 1,
+      "recordId": "kaykit-adventurers-rogue-v1",
+      "assetId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1",
+      "assetDefinitionHash": "3d9dc895",
+      "sourceKind": "open-source",
+      "sourceLocator": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+      "sourceRevision": "672074b73ba276876a19e8816ecdc5241817ab47",
+      "contentArtifact": {
+        "path": "public/assets/arena/characters/kaykit-adventurers/parkour-apprentice-rogue.glb",
+        "sha256": "3ee71059eef32d9a6259c5cfd4121f31dffda0a9667509b5f24129fb2c7a1cab",
+        "byteLength": 922332
+      },
+      "dependencyArtifacts": [
+        {
+          "path": "public/assets/arena/characters/kaykit-adventurers/rogue_texture.png",
+          "sha256": "a4032e877c3b91939f5cdbb630349c1998fdbc3211bbd587c111125500fe4cc5",
+          "byteLength": 16670
+        }
+      ],
+      "license": {
+        "id": "CC0-1.0",
+        "name": "Creative Commons Zero v1.0 Universal",
+        "rightsHolder": "KayKit Game Assets / Kay Lousberg",
+        "textArtifact": {
+          "path": "licenses/kaykit-adventurers-CC0-LICENSE.txt",
+          "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+          "byteLength": 891
+        },
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionInBuildAllowed": true,
+        "attributionRequired": false,
+        "attributionText": null
+      },
+      "proofArtifact": {
+        "path": "governance/third-party/proofs/kaykit-adventurers-source.txt",
+        "sha256": "0f60d3f9f0beab6e131bf7b1b118d8d1930dff05f9c1d31cc4141ff19dcb4923",
+        "byteLength": 380
+      },
+      "acquiredAt": "2026-07-20T00:00:00.000Z",
+      "approvedAt": "2026-07-23T10:27:27.000Z",
+      "approvedBy": "Allen"
+    },
+    {
+      "schemaVersion": 1,
+      "recordId": "kaykit-skeletons-warrior-v1",
+      "assetId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1",
+      "assetDefinitionHash": "920b8432",
+      "sourceKind": "open-source",
+      "sourceLocator": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Skeletons-1.0",
+      "sourceRevision": "15b62b9bad122f72926c10fb14d622c73819fa54",
+      "contentArtifact": {
+        "path": "public/assets/arena/characters/kaykit-skeletons/clockwork-warrior.glb",
+        "sha256": "1a424efda14e7875180989a66186fafcc94a12ac85ebdfdc7e3f998a00584e39",
+        "byteLength": 974548
+      },
+      "dependencyArtifacts": [
+        {
+          "path": "public/assets/arena/characters/kaykit-skeletons/skeleton_texture.png",
+          "sha256": "15741a25c53e04fa9bf3beac3bc0de442359404b1ff9be863b892cb551ad3657",
+          "byteLength": 17037
+        }
+      ],
+      "license": {
+        "id": "CC0-1.0",
+        "name": "Creative Commons Zero v1.0 Universal",
+        "rightsHolder": "KayKit Game Assets / Kay Lousberg",
+        "textArtifact": {
+          "path": "licenses/kaykit-skeletons-CC0-LICENSE.txt",
+          "sha256": "5d822abca4e08c5a91d329e5372b3dc605cba8d994f752cb0f7dfdb7a0a79954",
+          "byteLength": 914
+        },
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionInBuildAllowed": true,
+        "attributionRequired": false,
+        "attributionText": null
+      },
+      "proofArtifact": {
+        "path": "governance/third-party/proofs/kaykit-skeletons-source.txt",
+        "sha256": "cdf22c97e7e0856d1dc96109a9623cd791376a9e5b75eb99340a17a60b8c5484",
+        "byteLength": 367
+      },
+      "acquiredAt": "2026-07-20T00:00:00.000Z",
+      "approvedAt": "2026-07-23T10:27:27.000Z",
+      "approvedBy": "Allen"
+    },
+    {
+      "schemaVersion": 1,
+      "recordId": "kaykit-adventurers-shield-round-v1",
+      "assetId": "arena.asset.attachment.shield.kaykit-round.v1",
+      "assetDefinitionHash": "c6e233ca",
+      "sourceKind": "open-source",
+      "sourceLocator": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+      "sourceRevision": "672074b73ba276876a19e8816ecdc5241817ab47",
+      "contentArtifact": {
+        "path": "public/assets/arena/equipment/kaykit-adventurers/shield-round.glb",
+        "sha256": "a61bcd83ccac9bc8596bf09894867ca491487d7a4b0662bb64dca2d1b19e790d",
+        "byteLength": 13084
+      },
+      "dependencyArtifacts": [
+        {
+          "path": "public/assets/arena/equipment/kaykit-adventurers/shield_texture.png",
+          "sha256": "5d250ccc5da020e6126bfa3839f83bd9a465a951ed223e4d13c08b1925e154d4",
+          "byteLength": 14172
+        }
+      ],
+      "license": {
+        "id": "CC0-1.0",
+        "name": "Creative Commons Zero v1.0 Universal",
+        "rightsHolder": "KayKit Game Assets / Kay Lousberg",
+        "textArtifact": {
+          "path": "licenses/kaykit-adventurers-CC0-LICENSE.txt",
+          "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+          "byteLength": 891
+        },
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionInBuildAllowed": true,
+        "attributionRequired": false,
+        "attributionText": null
+      },
+      "proofArtifact": {
+        "path": "governance/third-party/proofs/kaykit-adventurers-source.txt",
+        "sha256": "0f60d3f9f0beab6e131bf7b1b118d8d1930dff05f9c1d31cc4141ff19dcb4923",
+        "byteLength": 380
+      },
+      "acquiredAt": "2026-07-20T00:00:00.000Z",
+      "approvedAt": "2026-07-23T10:27:27.000Z",
+      "approvedBy": "Allen"
+    }
+  ]
+}

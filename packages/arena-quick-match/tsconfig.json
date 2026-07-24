@@ -1,0 +1,19 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "rootDir": "src",
+    "outDir": "dist"
+  },
+  "references": [
+    { "path": "../arena-bot" },
+    { "path": "../arena-contracts" },
+    { "path": "../arena-match" },
+    { "path": "../arena-matchmaking" },
+    { "path": "../arena-session" }
+  ],
+  "include": ["src/**/*.ts"]
+}
