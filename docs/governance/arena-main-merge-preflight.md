@@ -22,8 +22,8 @@
 | 第一父 / 第二父 | `55230dd5e5d655913fed2a8968c1720ec7538b16` / `4c340f1c5bc00dcae712c2261462661d842339da` |
 | 合并树 / 第一父树 | `f3621cf35bddf90af1ceccd196d782a724cde5a2` / `f3621cf35bddf90af1ceccd196d782a724cde5a2` |
 | 受保护合并 PR | [#1](https://github.com/AllenZhangJ/web-games-jumbo/pull/1) |
-| 现行 main / 父提交 | `8ab707ba52d925268e19fbe8c00be763cd6bec31` / `4c340f1`、`36b9959` |
-| main 树 / 候选树 | `021338ed4f2cf0803bfd48d60216ac30c9497051` / `021338ed4f2cf0803bfd48d60216ac30c9497051` |
+| Arena 代码主干合并 / 父提交 | `8ab707ba52d925268e19fbe8c00be763cd6bec31` / `4c340f1`、`36b9959` |
+| 代码合并树 / 候选树 | `021338ed4f2cf0803bfd48d60216ac30c9497051` / `021338ed4f2cf0803bfd48d60216ac30c9497051` |
 
 候选 `a71ecc1` 在 `2f28df1` 的冲突治理基础上关闭开发依赖 high 风险，并把 movement stress/replay 场景升级为不依赖平台三角函数末位差异的版本 2。其 clean build ID 为 `arena-a71ecc1c0493-product`，Web/微信/抖音 Manifest hash 分别为 `cc188290`、`35499189`、`c427e65f`。
 
