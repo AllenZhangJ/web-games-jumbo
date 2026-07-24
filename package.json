@@ -82,7 +82,7 @@
     "check": "npm run check:governance && npm run test:node && npm run arena:regression && npm run arena:assets:budget && npm run audit:dependencies && npm run build && npm run arena:build:verify -- --require-clean-source && npm run arena:build:budget && npm run check:production-artifacts"
   },
   "devDependencies": {
-    "@types/node": "24.13.3",
+    "@types/node": "26.1.1",
     "@types/three": "0.185.1",
     "@vitest/coverage-v8": "3.2.7",
     "@gltf-transform/core": "4.4.1",
