@@ -1544,5 +1544,6 @@
 - Gameplay V2 hash 保持 `8c322912`；黄金 Replay manifest 保持 `a53b401d`，movement replay/final 保持 `8673e0bf / e560dd88`；正式资产 Bundle/预算保持 `e03ff2b4 / 82a8b378`。三端 build ID 为 `arena-b4faa2c8f1af-product`，`sourceDirty=false`、默认入口均为 Product；Web/微信/抖音 delivery 仍为 `3807531 / 3835130 / 3835105 B`，JavaScript 仍为 `1463921 / 1507034 / 1507034 B`。
 - 集成前已把三端验收产物完整冻结到独立基线。集成构建除 `arena-build-manifest.json` 中随提交变化的 commit/buildId 外，与该基线逐文件相同。Allen 已明确确认完成 iPhone 13 Pro / iOS 26 / Google Chrome 真机验收，因此当前候选继承同一产品字节的体验结论，不要求为仅有 Git 身份变化重复验收。
 - 分支已推送到 `origin/feature/arena-main-integration`。本地 `gh` 缓存令牌已失效，但不影响 Git 推送；远端 Actions 和保护状态改由 GitHub 公共 API 按精确 SHA 回读。该认证缓存问题不是仓库代码、CI 或合并阻断，但后续需要写服务端设置时应重新登录。
+- 双父集成提交 `b4faa2c8f1af59605a95281948406376cb442ea6` 的 GitHub Actions [30075683221](https://github.com/AllenZhangJ/web-games-jumbo/actions/runs/30075683221) 已成功，远端 `head_sha` 与本地一致。归真提交在推送后仍必须取得自己的精确 `quality` 结果，不能用第一提交的绿灯替代最终分支头。
 - 最终审计时 main 分支端点仍回读 `protected: true`，要求的状态检查仍为 `quality`；main SHA 仍为 `4c340f1c5bc00dcae712c2261462661d842339da`，与本次第二父一致。
 - 最终代码结论为可合并。微信/抖音 iOS 与 Android 四端真机材料仍是可发布门禁，不属于本次合并判断，也没有被 Web/iPhone 或自动化结果替代。

@@ -115,6 +115,7 @@ vitest.config.ts
 ## GitHub 服务端状态
 
 - 候选 `af410da` 的 Linux CI [30070748191](https://github.com/AllenZhangJ/web-games-jumbo/actions/runs/30070748191) 暴露 movement 场景使用 `atan2/sin/cos` 产生跨平台末位差异；精确 Replay 在 Linux 可重放，差异只在场景输入再生成。ADR-041 采用固定有理方向表和量化点积选择，候选 `a71ecc1` 的 Linux CI [30072120655](https://github.com/AllenZhangJ/web-games-jumbo/actions/runs/30072120655) 已于 2026-07-24 成功，`quality` 用时 7 分 43 秒。
+- 双父集成提交 `b4faa2c8f1af59605a95281948406376cb442ea6` 的 Linux CI [30075683221](https://github.com/AllenZhangJ/web-games-jumbo/actions/runs/30075683221) 已于 2026-07-24 成功；run 从 `07:30:22Z` 到 `07:37:46Z`，精确 `head_sha`、提交 tree 与本地审计一致。
 - GitHub owner 身份已回读为 `AllenZhangJ`。classic `main` protection 已启用：PR-only、严格且要求分支最新的 `quality`、对话必须解决、禁止 force push 和删除；唯一负责人模式下审批数为 0、不要求 CODEOWNERS 自批，管理员保留紧急通道。分支端点回读为 `protected: true`。
 
 ## 当前阻断与边界
