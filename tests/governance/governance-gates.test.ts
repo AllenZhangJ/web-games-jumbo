@@ -56,10 +56,31 @@ describe('enterprise governance gates', () => {
     }
   });
 
+  it('rejects unpinned transitive dependency overrides', async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), 'arena-override-gate-'));
+    try {
+      await mkdir(path.join(directory, 'packages'));
+      await writeFile(path.join(directory, 'package.json'), JSON.stringify({
+        name: 'fixture',
+        version: '1.0.0',
+        overrides: { sharp: '^0.35.3' },
+      }));
+      await expect(verifySupplyChain(directory)).rejects.toThrow(
+        /overrides\.sharp 必须固定到精确 semver/,
+      );
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
   it('builds internal workspace packages before clean-install governance checks', async () => {
     const manifest = JSON.parse(
       await readFile(path.resolve('package.json'), 'utf8'),
-    ) as { scripts?: Record<string, string> };
+    ) as {
+      scripts?: Record<string, string>;
+      engines?: Record<string, string>;
+    };
+    expect(manifest.engines?.node).toBe('>=20.9.0');
     expect(manifest.scripts?.predev).toBe('npm run build:packages');
     expect(manifest.scripts?.['predev:lan']).toBe('npm run build:packages');
     expect(manifest.scripts?.pretest).toBe('npm run build:packages');

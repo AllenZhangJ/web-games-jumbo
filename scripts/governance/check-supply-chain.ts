@@ -15,10 +15,16 @@ interface PackageManifest {
   readonly devDependencies?: unknown;
   readonly optionalDependencies?: unknown;
   readonly peerDependencies?: unknown;
+  readonly overrides?: unknown;
+  readonly engines?: unknown;
 }
 
 function verifyCleanInstallCheckOrder(rootManifest: PackageManifest): void {
   const scripts = record(rootManifest.scripts, 'package.json.scripts');
+  const engines = record(rootManifest.engines, 'package.json.engines');
+  if (engines.node !== '>=20.9.0') {
+    throw new RangeError('package.json.engines.node 必须覆盖 sharp 0.35.3 的 Node >=20.9.0 要求。');
+  }
   const packageBuildLifecycleScripts = ['predev', 'predev:lan', 'pretest'] as const;
   for (const scriptName of packageBuildLifecycleScripts) {
     if (scripts[scriptName] !== 'npm run build:packages') {
@@ -117,6 +123,24 @@ function verifyManifestVersions(manifest: PackageManifest, relativePath: string)
   return count;
 }
 
+function verifyOverrideVersions(value: unknown, label: string): number {
+  if (value === undefined) return 0;
+  const overrides = record(value, label);
+  let count = 0;
+  for (const [name, overrideValue] of Object.entries(overrides)) {
+    const overrideLabel = `${label}.${name}`;
+    if (typeof overrideValue === 'string') {
+      if (!EXACT_VERSION.test(overrideValue)) {
+        throw new RangeError(`${overrideLabel} 必须固定到精确 semver，当前为 ${overrideValue}。`);
+      }
+      count += 1;
+      continue;
+    }
+    count += verifyOverrideVersions(overrideValue, overrideLabel);
+  }
+  return count;
+}
+
 function verifyLockfile(lock: PackageLock, rootManifest: PackageManifest): number {
   if (lock.lockfileVersion !== 3) throw new RangeError('package-lock.json 必须使用 lockfileVersion 3。');
   const packages = record(lock.packages, 'package-lock.json.packages');
@@ -192,6 +216,7 @@ export async function verifySupplyChain(repositoryRoot = process.cwd()): Promise
     const manifest = await json<PackageManifest>(manifestPath);
     const relativePath = path.relative(root, manifestPath);
     declaredDependencyCount += verifyManifestVersions(manifest, relativePath);
+    declaredDependencyCount += verifyOverrideVersions(manifest.overrides, `${relativePath}.overrides`);
     if (manifestPath === path.join(root, 'package.json')) rootManifest = manifest;
   }
   if (!rootManifest) throw new Error('缺少根 package.json。');
