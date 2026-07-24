@@ -1,10 +1,10 @@
 # Arena 企业治理状态台账
 
 - 更新时间：2026-07-24
-- 当前分支：`feature/arena-main-integration`
+- 现行主干：`main@8ab707ba52d925268e19fbe8c00be763cd6bec31`
 - Arena 产品基线：`51e28220295c080261d30e33aaac7e43c5f91685`
-- 目标：在保留 Arena 产品树的前提下集成一次最新 `origin/main`，推送候选并完成最终可合并审计；不修改或合并 `main`
-- 总体状态：G0–G10 已完成；52 个冲突和 main 非冲突旧产品新增均已显式处置，目标 iPhone Chrome 验收由 Allen 确认并经三端交付字节等价绑定到集成候选。当前代码结论为可合并，微信/抖音四端真机材料仍是发布门禁
+- 目标：保留 Arena 产品树，完成最新 `origin/main` 的保留型集成、独立终审与受保护主干合并
+- 总体状态：G0–G10 已完成；52 个冲突和 main 非冲突旧产品新增均已显式处置，目标 iPhone Chrome 验收由 Allen 确认并经三端交付字节等价绑定到集成候选。候选已通过 [PR #1](https://github.com/AllenZhangJ/web-games-jumbo/pull/1) 合入 `main`，合并后精确 `quality` 成功；微信/抖音四端真机材料仍是发布门禁
 
 > 口径：下方 G0–G7.29 是按提交追加的历史证据，其中“当前”只指该批次当时。文档顶部批次表、“当前合并结论与发布边界”和文末最新批次才是现行结论。
 
@@ -39,7 +39,7 @@
 | G7 零 JS/完整质量门 | 已完成 | 生产源码、测试和治理脚本全部 strict TypeScript，受维护 JavaScript 为 0，许可清单已删除；当前 61 个 Vitest 文件、387 项测试通过，分层 coverage 与零 JS 负向门禁已接入 `check:governance` |
 | G8 资产/安全/所有权 | 已完成 | Allen 已批准资产与 npm 审计外发；Bundle `e03ff2b4`、53 个 manifest、278 个精确声明（含 override）、368 个外部锁定包、完整 Action SHA、CODEOWNERS、Dependabot、secret/遥测与诊断门禁通过。开发链 3 个 high 已以精确 `sharp@0.35.3` override 闭环，全依赖和生产依赖审计均为 0 vulnerabilities |
 | G9 文档归真 | 已完成 | 113 个 Markdown、225 个本地链接、49 个去重 npm 命令与关键现行状态通过自动复验；历史批次与当前结论已分层，仓库运营策略已落盘 |
-| G10 最新 main 审计 | 已完成（可合并） | 集成提交 `b4faa2c` 以 `55230dd` 为第一父、`4c340f1` 为第二父，合并树与第一父相同；52 个冲突和旧产品非冲突新增均已清除，本地统一全门、全依赖审计与三端产物等价通过。Allen 已确认 iPhone 13 Pro / iOS 26 / Chrome 验收；精确远端 CI 结果见 G10.7 |
+| G10 最新 main 审计与合并 | 已完成（已合并） | 集成提交 `b4faa2c` 以 `55230dd` 为第一父、`4c340f1` 为第二父，合并树与第一父相同；52 个冲突和旧产品非冲突新增均已清除，本地统一全门、全依赖审计与三端产物等价通过。Allen 已确认 iPhone 13 Pro / iOS 26 / Chrome 验收；PR #1 和合并后证据见 G10.8 |
 
 ## G0 已取得证据
 
@@ -57,10 +57,10 @@
 
 ## 当前合并结论与发布边界
 
-1. 最新 `origin/main@4c340f1` 已作为第二父合入 `feature/arena-main-integration`；集成提交 `b4faa2c` 的第一父是已归真 Arena 候选 `55230dd`，52 个 rename-aware 冲突全部按矩阵关闭，旧产品非冲突新增也没有进入结果树。
+1. 审计时的 `origin/main@4c340f1` 已作为第二父合入 `feature/arena-main-integration`；集成提交 `b4faa2c` 的第一父是已归真 Arena 候选 `55230dd`，52 个 rename-aware 冲突全部按矩阵关闭，旧产品非冲突新增也没有进入结果树。候选随后通过 PR #1 合入现行 `main@8ab707b`。
 2. 集成树与第一父 tree hash 均为 `f3621cf35bddf90af1ceccd196d782a724cde5a2`。统一全门、完整开发/生产依赖审计和三端构建通过；除 build manifest 中必然变化的 commit/buildId 外，三端交付与已验收基线逐文件相同。
 3. Allen 已确认完成 iPhone 13 Pro、iOS 26、Google Chrome 真机验收。该人工验收通过产物等价继承到集成候选，不被桌面视口替代，也不扩张为微信/抖音发布结论。
-4. 当前没有代码合并阻断，结论为可合并；微信/抖音 iOS 与 Android 真机材料继续属于发布阻断，不耽误代码合并，也不能在缺失时宣称可正式发布。
+4. 代码合并已完成，PR 与合并后 `main` 的精确 `quality` 均成功；微信/抖音 iOS 与 Android 真机材料继续属于发布阻断，不能在缺失时宣称可正式发布。
 
 ## G1 完成证据
 
@@ -1547,3 +1547,11 @@
 - 双父集成提交 `b4faa2c8f1af59605a95281948406376cb442ea6` 的 GitHub Actions [30075683221](https://github.com/AllenZhangJ/web-games-jumbo/actions/runs/30075683221) 已成功，远端 `head_sha` 与本地一致。归真提交在推送后仍必须取得自己的精确 `quality` 结果，不能用第一提交的绿灯替代最终分支头。
 - 最终审计时 main 分支端点仍回读 `protected: true`，要求的状态检查仍为 `quality`；main SHA 仍为 `4c340f1c5bc00dcae712c2261462661d842339da`，与本次第二父一致。
 - 最终代码结论为可合并。微信/抖音 iOS 与 Android 四端真机材料仍是可发布门禁，不属于本次合并判断，也没有被 Web/iPhone 或自动化结果替代。
+
+## G10.8 受保护主干合并与合并后复验
+
+- Allen 完成 GitHub CLI 设备授权后，本机 `gh auth status` 回读为已登录 `AllenZhangJ`；没有复用失效缓存、泄露令牌或绕过分支保护。候选以正式 [PR #1](https://github.com/AllenZhangJ/web-games-jumbo/pull/1) 指向 `main`，不是直接推送主干。
+- 合并前 GitHub 回读 `headRefOid=36b995949ca04f36d85de8d3db2bb594f554670e`、`baseRefOid=4c340f1c5bc00dcae712c2261462661d842339da`、`mergeable=MERGEABLE`、`mergeStateStatus=CLEAN`，审查线程为 0。PR 上下文的 [quality 30078837950](https://github.com/AllenZhangJ/web-games-jumbo/actions/runs/30078837950) 对精确 HEAD 成功后才执行合并。
+- 合并使用普通 merge commit，未使用管理员绕过、rebase、squash、force push 或直接更新 `main`。GitHub 生成并签名 `8ab707ba52d925268e19fbe8c00be763cd6bec31`，父提交依次为旧 `main@4c340f1` 与候选 `36b9959`；tree hash 为 `021338ed4f2cf0803bfd48d60216ac30c9497051`，与候选树完全相同。
+- 合并后 `main` 的 [quality 30079353044](https://github.com/AllenZhangJ/web-games-jumbo/actions/runs/30079353044) 对精确合并提交成功。分支端点继续回读 `protected: true` 且必需检查仍为 `quality`；本地 `main` 通过 `git pull --ff-only` 同步到同一 SHA，工作区干净，旧产品退役路径没有回流。
+- 代码治理合并由此闭环。微信/抖音 iOS 与 Android 四端真机材料仍只属于发布门禁，不因主干合并或 CI 成功而自动完成。

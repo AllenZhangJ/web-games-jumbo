@@ -1,8 +1,9 @@
 # Arena 企业治理迁移计划
 
-- 目标分支：`feature/arena-main-integration`
+- 治理执行分支：`feature/arena-main-integration`
 - 产品基线：`51e28220295c080261d30e33aaac7e43c5f91685`
-- 最终终点：保留 Arena 产品结果、集成一次最新 `origin/main` 并完成可合并终审；不修改或合并 `main`
+- 治理批次终点：保留 Arena 产品结果、集成一次最新 `origin/main` 并完成可合并终审；该批次不修改或合并 `main`
+- 后续合并结果：候选已通过 [PR #1](https://github.com/AllenZhangJ/web-games-jumbo/pull/1) 按受保护分支流程合入 `main@8ab707ba52d925268e19fbe8c00be763cd6bec31`；合并提交树与候选树相同
 - 执行原则：Arena 行为不回退、治理能力不打折、证据先于结论
 
 ## 完成定义
@@ -89,9 +90,9 @@
 
 门禁：链接、命令、路径、hash、状态声明自动检查；“自动化通过 / Web 通过 / 真机通过 / 可发布”四类结论严格分离。
 
-### G10：最新 main 独立集成与最终审计
+### G10：最新 main 独立集成、最终审计与受保护合并
 
-状态：已完成，结论为可合并。全量 TypeScript 测试发现、clean-install workspace 构建、未跟踪空目录假阳性、安装阶段隐式 npm audit 外发边界、开发依赖 high、跨平台 Replay、包级 ESLint、公开命令前置构建、启动失败边界、精确候选 Linux CI 和 `main` 保护均已闭环。集成提交 `b4faa2c` 以已归真 Arena 为第一父、固定 `origin/main@4c340f1` 为第二父；52 个冲突和 main 非冲突旧产品新增已按矩阵处置，合并树与第一父相同。本地统一全门、全依赖审计、三端交付等价和 Allen 的 iPhone 13 Pro/Chrome 验收已关闭代码阻断。详见 [最终集成审计](arena-main-merge-preflight.md)、[冲突处置矩阵](arena-main-conflict-disposition.md)与 ADR-042。
+状态：已完成并已合入 `main`。全量 TypeScript 测试发现、clean-install workspace 构建、未跟踪空目录假阳性、安装阶段隐式 npm audit 外发边界、开发依赖 high、跨平台 Replay、包级 ESLint、公开命令前置构建、启动失败边界、精确候选 Linux CI 和 `main` 保护均已闭环。集成提交 `b4faa2c` 以已归真 Arena 为第一父、固定 `origin/main@4c340f1` 为第二父；52 个冲突和 main 非冲突旧产品新增已按矩阵处置，合并树与第一父相同。本地统一全门、全依赖审计、三端交付等价和 Allen 的 iPhone 13 Pro/Chrome 验收已关闭代码阻断。候选随后通过 [PR #1](https://github.com/AllenZhangJ/web-games-jumbo/pull/1) 以普通 merge commit 合入，`main@8ab707b` 的树与候选树相同，合并后精确 `quality` 亦成功。详见 [最终集成审计](arena-main-merge-preflight.md)、[冲突处置矩阵](arena-main-conflict-disposition.md)与 ADR-042。
 
 交付：fetch 并固定最新 `origin/main`；建立主干新增提交/能力承接表；先以无写入虚拟合并检查文本和语义冲突，再在授权的集成分支执行一次普通 merge；对候选提交执行完整门禁、产物等价和 Web 手机验收绑定；形成审计报告。
 
