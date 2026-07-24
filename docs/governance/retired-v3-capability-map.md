@@ -34,6 +34,6 @@ G0 的 `npm test` 为 696 项，混合了 Arena、共享基础设施和旧产品
 
 - 退役路径不存在，README/PRODUCT 唯一声明 Arena。
 - JavaScript 允许清单同步删除退役文件，只能缩小。
-- Arena 黄金 Replay manifest `0dace228` 保持可复验。
+- Arena 当前黄金 Replay manifest `a53b401d` 保持可复验；历史 `0dace228` 的 movement 场景已按 ADR-041 升级。
 - 全量 Arena/共享测试、回归、压力、资产和三端生产构建通过。
 - Web 生产产物不存在 Greybox、Pilot、Study 或跳转别名页面。

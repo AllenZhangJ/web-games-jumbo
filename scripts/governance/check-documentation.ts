@@ -97,10 +97,12 @@ export async function verifyDocumentation(options: Readonly<{
     assertIncludes(readme, '受维护 JavaScript 为零', 'README');
     assertIncludes(readme, policy.owner.name, 'README');
     assertIncludes(status, '| G7 零 JS/完整质量门 | 已完成 |', '治理状态台账');
-    assertIncludes(status, '只剩 `npm audit --omit=dev --audit-level=high`', '治理状态台账');
+    assertIncludes(status, '| G8 资产/安全/所有权 | 已完成 |', '治理状态台账');
+    assertIncludes(status, '全依赖和生产依赖审计均为 0 vulnerabilities', '治理状态台账');
     assertIncludes(acceptance, formalAssets.bundleHash, 'Stage 7 资产验收手册');
     assertIncludes(operations, `@${policy.owner.githubLogin}`, '仓库运营策略');
-    assertIncludes(operations, '会向 npm 服务发送依赖元数据', '仓库运营策略');
+    assertIncludes(operations, '分支端点返回 `protected: true`', '仓库运营策略');
+    assertIncludes(operations, '授权本项目 npm 审计元数据外发', '仓库运营策略');
   }
   return Object.freeze({
     markdownFileCount: paths.length,

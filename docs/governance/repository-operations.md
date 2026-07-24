@@ -4,22 +4,23 @@
 
 机器可读策略位于 `governance/repository-policy.json`。当前唯一负责人是 Allen，GitHub 账号是 `@AllenZhangJ`；默认分支是 `main`。策略修改必须与 CODEOWNERS、CI 和治理测试同时评审，不在文档中维护第二份值。
 
-## 分支保护建议
+## main 分支保护
 
-仓库内只能验证 CI 与 CODEOWNERS，不能证明 GitHub 服务端规则已启用。对 `main` 建议在远端启用：
+2026-07-24 已用 owner `@AllenZhangJ` 通过 GitHub API 写入并回读 classic `main` protection，分支端点返回 `protected: true`：
 
 - 禁止 force push 和分支删除。
 - 只允许 Pull Request 合并，要求 `quality` CI 成功且对话已解决。
-- 要求 CODEOWNERS 审批；项目只有一名负责人时，应保留管理员紧急修复通道，并在 PR 中留下原因，避免把单人审批配置成无法合并的死锁。
+- 唯一负责人模式不要求 CODEOWNERS 自批，`required_approving_review_count=0`；管理员保留紧急修复通道并必须在 PR/事故记录中说明原因，避免单人仓库审批死锁。
 - 要求分支在合并前与 `main` 最新状态一致，不允许绕过检查直接推送。
 
-上述只是建议；本治理分支没有修改远端分支保护，G10 审计时需单独核对实际配置。
+远端规则属于服务端状态，不能只依赖本文件；最终合并审计仍须回读 API，确认没有被仓库外操作改写。
 
 ## 依赖更新与漏洞
 
 - 所有 manifest 使用精确 semver，`package-lock.json` 使用 lockfile V3。项目 `.npmrc` 禁用安装阶段的隐式 audit，CI 使用 `npm ci --ignore-scripts --no-audit`，GitHub Actions 固定到 40 位 commit SHA。
 - Dependabot 每月分别检查 npm 和 GitHub Actions。更新 PR 必须通过统一治理、回放、压力、构建和预算门，不直接合并浮动版本。
-- `npm audit --omit=dev --audit-level=high` 是完整门禁中唯一的联网漏洞审计步骤。它会向 npm 服务发送依赖元数据，必须由 Allen 明确授权；未授权时不执行、不绕过、不宣称“0 漏洞”。不使用 npm 安装命令自动产生的审计副作用代替该显式步骤。
+- `npm audit --omit=dev --audit-level=high` 是统一 `npm run check` 中唯一的联网生产闭包审计步骤；安装始终使用 `--no-audit`，不以安装副作用代替显式结果。Allen 已于 2026-07-24 授权本项目 npm 审计元数据外发；范围或服务发生变化时需重新确认。
+- 全依赖审计用于单独核对开发工具链。当前开发链 3 个 high 已通过精确 `sharp@0.35.3` override 闭环，`npm audit --audit-level=high` 与生产闭包审计均为 0 vulnerabilities；供应链门禁阻止 override 漂移。
 - 发现 high/critical 时先固定 advisory、可达路径和影响范围，再做最小兼容升级。不使用 `audit fix --force`，不以删测试、降画质或跳过门禁关闭风险。
 
 ## 敏感信息、遥测与诊断

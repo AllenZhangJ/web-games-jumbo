@@ -4,10 +4,10 @@
 
 本矩阵绑定：
 
-- Arena 代码候选：`2f28df1bc7082d5ca1759f4c14547e6277ce4d68`
+- Arena 代码候选：`a71ecc1c0493a30fd1e94402a662cea9a46b5014`
 - 最新审计基准：`origin/main@4c340f1c5bc00dcae712c2261462661d842339da`
 - 共同祖先：`d53e7349ff718b3fa0638af197e8f7c43d190b38`
-- 只读虚拟合并结果：23 个文本冲突
+- 只读 rename-aware 虚拟合并结果：52 个冲突文件
 
 本文件只规定未来集成批次如何处置冲突，不授权也不执行 merge、rebase、修改 `main` 或 force push。目标不是让 Git “没有冲突”，而是在不恢复旧数值跳台的前提下承接 `main` 的治理意图。
 
@@ -20,7 +20,7 @@
 - **保持删除**：文件属于退役产品，冲突解决结果必须仍不存在，并由产品边界检查保护。
 - **重新生成**：锁文件等派生产物不手工拼接，先完成 manifest 裁决，再用固定工具链生成并复验。
 
-禁止对 23 个文件整体使用 `ours` 或 `theirs`。即使某一行的最终字节等于 Arena 版本，也必须按下表留下裁决记录。
+禁止对 52 个文件整体使用 `ours` 或 `theirs`。即使某一行的最终字节等于 Arena 版本，也必须按下表留下裁决记录。旧 23 文件口径来自非 rename-aware 文本冲突审计，已被本矩阵取代。
 
 ## 逐文件裁决
 
@@ -31,16 +31,45 @@
 | `.gitignore` | 忽略依赖、构建、覆盖率、日志和 TS 增量产物 | 规范合成 | 两侧语义相同，仅保留一份规范列表；验证没有忽略治理证据或生产源码。 |
 | `AGENTS.md` | 模块边界和实现顺序受约束 | 保留 Arena | 保留 Rule → Core → Bot → Presentation、确定性和生命周期约束；不恢复旧数值跳台规则。 |
 | `README.md` | 新克隆可安装、开发、测试和构建 | 保留 Arena并吸收意图 | 保留 Arena 唯一产品说明；已用 `predev`、`predev:lan`、`pretest`、`prepreview:lan` 承接干净环境入口，文档继续使用无隐式审计安装命令。 |
-| `docs/architecture.md` | 记录旧产品架构 | 保持删除 | Arena 架构由 `docs/architecture/` 和 ADR-030～040 表达；不得恢复同名旧产品真值。 |
+| `docs/architecture.md` | 记录旧产品架构 | 保持删除 | Arena 架构由 `docs/architecture/` 和 ADR-030～041 表达；不得恢复同名旧产品真值。 |
 | `docs/gameplay-rules.md` | 记录旧数值跳台规则 | 保持删除 | Arena 规则只由 `docs/gameplay/arena-v1-rules.md` 和版本化 Definition 表达。 |
 | `docs/platform-checklist.md` | 自动化、浏览器和真机证据分离 | 保留 Arena并吸收意图 | 保留 iPhone 13 Pro/iOS 26/Chrome 与微信/抖音当前清单；不导入旧 v3 勾选项、旧地址或旧 build。 |
 | `eslint.config.ts` | 包代码禁止显式 `any`，类型导入一致 | 吸收治理意图 | 候选已对全部 `packages/**/*.ts` 启用两条 error 规则并修正 3 个存量导入；集成后运行全量 lint。 |
-| `index.html` | Web 生产入口可访问且仅挂载一个游戏 | 保留 Arena | 保留 Arena Product 页面和入口；不得恢复旧跳台 DOM、按钮或文案。 |
-| `package-lock.json` | 锁定完整依赖图 | 重新生成 | 先裁决 `package.json`，再以项目固定 npm/lockfile V3 生成；检查精确 semver、registry、integrity、53 个 manifest 和 366 个外部锁定包。不得手工拼接冲突块。 |
+| `package-lock.json` | 锁定完整依赖图 | 重新生成 | 先裁决 `package.json`，再以项目固定 npm/lockfile V3 生成；检查精确 semver、registry、integrity、53 个 manifest、278 个声明（含 override）和 368 个外部锁定包。不得手工拼接冲突块。 |
 | `package.json` | workspace 构建、入口前置构建、测试、审计和三端构建 | 手工合成，Arena 为产品真值 | 保留 52 个 Arena 包、唯一显式 `audit:dependencies` 和统一 `check`；候选已恢复干净环境生命周期脚本。不得恢复旧产品包或旧测试/构建命令。 |
+| `packages/application/src/bootstrap.ts` | 旧产品应用装配被迁为 TS | 保持删除 | 不导入旧数值跳台 bootstrap；Arena 组合由 `arena-product-composition`、`arena-v1-application` 和三端入口承接。 |
+| `packages/application/test/number-strategy-game.test.ts` | 旧产品应用闭环测试被迁为 TS | 保持删除 | 不恢复旧游戏测试；以 Arena Product/Session/Launch 集成测试和产品压力门为准。 |
+| `packages/gameplay/test/game-state.test.ts` | 旧数值选择状态测试被迁为 TS | 保持删除 | 不恢复退役规则；Arena 权威状态由 MatchCore、Participant/Timeline 和 Replay 回归保护。 |
+| `packages/gameplay/test/operations.test.ts` | 旧数值运算规则测试被迁为 TS | 保持删除 | 不恢复旧 operations；Arena 动作候选只经 ActionResolver 裁决。 |
+| `packages/jump-engine/src/geometry.ts` | 旧跳台几何实现被迁为 TS | 保持删除 | 不恢复旧世界几何；Arena 使用版本化 Map/Physics Definition 与各自系统。 |
+| `packages/jump-engine/src/rng.ts` | 旧 RNG 实现被迁为 TS | 保持删除 | 不恢复旧导出；Arena 使用 `arena-contracts` 的 seed 派生和具名随机流。 |
+| `packages/jump-engine/test/physics.test.ts` | 旧蓄力跳物理测试被迁为 TS | 保持删除 | 不恢复旧玩法；Arena movement/physics、30/60/120 Hz、Replay 和 movement stress 作为门禁。 |
+| `packages/jump-engine/test/world-state.test.ts` | 旧跳台世界测试被迁为 TS | 保持删除 | 不恢复旧世界模型；Arena Map Timeline、MatchCore 和无渲染模拟承接有效治理意图。 |
+| `packages/platform/src/douyin.ts` | 旧产品抖音适配被迁为 TS | 保持删除 | 不恢复旧 platform 包；保留 `arena-platform-runtime` 的抖音适配和当前 Product entry。 |
+| `packages/platform/src/mini-game.ts` | 旧小游戏公共适配被迁为 TS | 保持删除 | 不恢复旧公共层；保留 Arena mini-game 平台合同、能力收窄和生命周期。 |
+| `packages/platform/src/platform-contract.ts` | 旧平台合同被迁为 TS | 保持删除 | 不恢复旧合同；保留 strict `arena-platform-contracts`。 |
+| `packages/platform/src/web.ts` | 旧产品 Web 适配被迁为 TS | 保持删除 | 不恢复旧 platform 包；保留 Arena Web 平台、teardown 和当前入口。 |
+| `packages/platform/src/wechat.ts` | 旧产品微信适配被迁为 TS | 保持删除 | 不恢复旧 platform 包；保留 Arena 微信适配和当前 Product entry。 |
+| `packages/platform/test/platform.test.ts` | 旧平台组合测试被迁为 TS | 保持删除 | 不恢复针对旧合同的断言；保留 Arena 平台包、三端 bundle 和入口生命周期测试。 |
+| `packages/renderer-three/src/camera-rig.ts` | 旧跳台相机实现被迁为 TS | 保持删除 | 不恢复旧 Renderer；Arena 相机由 `arena-presentation-three` 的 `arena-camera` 承接。 |
+| `packages/renderer-three/src/character-rig.ts` | 旧跳台角色骨架实现被迁为 TS | 保持删除 | 不恢复旧轮廓角色；Arena 使用正式 GLTF、41 关节动画控制和失败兜底。 |
+| `packages/renderer-three/src/constants.ts` | 旧渲染魔法数被迁为 TS | 保持删除 | 不恢复旧常量；Arena 表现参数由版本化 Presentation Definition 管理。 |
+| `packages/renderer-three/src/dispose.ts` | 旧 Three 资源清理被迁为 TS | 保持删除并承接意图 | 不复制实现；保留 Arena dispose、迟到加载、context loss 和清理重试测试。 |
+| `packages/renderer-three/src/effects/particle-burst.ts` | 旧粒子命中特效被迁为 TS | 保持删除并承接意图 | 不恢复旧效果；Arena 只消费权威事件产生有界命中反馈。 |
+| `packages/renderer-three/src/effects/tail-trail.ts` | 旧拖尾效果被迁为 TS | 保持删除并承接意图 | 不恢复旧效果；Arena 武器/动作表现由当前 Renderer 与资产绑定决定。 |
+| `packages/renderer-three/src/hud/hud-scene.ts` | 旧 HUD 场景被迁为 TS | 保持删除 | 不恢复旧产品 HUD；保留 Arena Product UI Scene Model 和 HUD layer。 |
+| `packages/renderer-three/src/lighting-rig.ts` | 旧灯光实现被迁为 TS | 保持删除 | 不恢复旧灯光树；Arena World Stage/正式资产表现为真值。 |
+| `packages/renderer-three/src/platform-mesh-factory.ts` | 旧平台网格工厂被迁为 TS | 保持删除 | 不恢复旧跳台网格；Arena Surface Registry 与 Map Definition 为真值。 |
+| `packages/renderer-three/src/platform-view-registry.ts` | 旧平台视图注册表被迁为 TS | 保持删除 | 不恢复旧注册表；Arena 使用只读 surface view registry。 |
+| `packages/renderer-three/src/renderer3d.ts` | 旧产品 Renderer 被迁为 TS | 保持删除 | 不恢复旧渲染主循环；Arena Product Renderer 只消费只读快照/事件。 |
+| `packages/renderer-three/src/stage.ts` | 旧舞台装配被迁为 TS | 保持删除 | 不恢复旧舞台；Arena World Stage、Camera、HUD 和资产加载由当前组合根拥有。 |
+| `packages/renderer-three/src/texture-manager.ts` | 旧纹理管理器被迁为 TS | 保持删除并承接意图 | 不恢复旧缓存；Arena 正式纹理受资产 hash/预算和资源生命周期门禁保护。 |
+| `packages/renderer-three/test/renderer-three.test.ts` | 旧 Renderer 测试被迁为 TS | 保持删除 | 不恢复旧产品断言；Arena Three、Product Presentation、context loss 与 soak 测试承接有效质量意图。 |
 | `scripts/build.ts` | Web/微信/抖音可复现构建 | 保留 Arena | 保留唯一 Product 入口、Manifest、clean-source、预算和生产产物边界；不得打包旧产品或开发入口。 |
-| `src/config.ts` | 旧跳台屏幕、规则、颜色和跳跃参数 | 保持删除 | 候选已删除该零引用魔法数文件并加入 16 个退役路径门禁；Arena 数值仅由版本化 tuning/Definition 管理。 |
 | `src/entry/douyin.ts` | 抖音启动失败可见且生命周期可清理 | 保留 Arena | 保留 Arena Product 组合、平台注入和启动协调器；运行小游戏 bundle、启动失败和销毁竞态测试。 |
+| `src/entry/launch-game.ts` | 旧顶层启动器被迁为 TS | 保持删除 | 不恢复旧启动器；保留 `arena-platform-runtime` 的 launch contract 与 Arena 顶层 Launch。 |
+| `src/entry/mini-game-startup-fallback.ts` | 旧小游戏兜底被迁为 TS | 保持删除并承接意图 | 不恢复旧产品文案/装配；Arena startup fallback 必须保持失败可见、清理可重试。 |
+| `src/entry/web-startup-fallback.ts` | 旧 Web 兜底被迁为 TS | 保持删除并承接意图 | 不恢复旧产品 DOM；Arena Web Product 使用当前错误表面与 teardown。 |
 | `src/entry/web.ts` | Web 启动、错误兜底、导航/HMR 清理 | 保留 Arena并吸收意图 | 保留 Arena Product；候选已补回无效工厂、可选回调和损坏宿主兜底用例。 |
 | `src/entry/wechat.ts` | 微信启动失败可见且生命周期可清理 | 保留 Arena | 保留 Arena Product 组合、平台注入和启动协调器；运行小游戏 bundle、启动失败和销毁竞态测试。 |
 | `tests/architecture.test.ts` | 平台隔离和核心无宿主依赖 | 保留 Arena | 保留 Arena 52 包依赖方向、迁移路径和证据边界测试；不恢复针对旧包名的断言。 |
@@ -52,7 +81,7 @@
 
 ## 已在候选中提前吸收的 `main` 意图
 
-代码候选 `2f28df1` 已完成以下不需要等待实际合并的修正：
+代码候选 `a71ecc1` 已完成以下不需要等待实际合并的修正：
 
 1. 对全部 Arena 包启用 `consistent-type-imports` 与 `no-explicit-any`，存量代码零违规。
 2. 恢复 `dev`、`dev:lan`、`test` 的 workspace 前置构建，以及 `preview:lan` 的生产前置构建；供应链门禁阻止回退。
@@ -68,7 +97,7 @@
 3. 按矩阵逐文件解决；每个冲突在集成记录中标记对应行。
 4. 删除项必须保持不存在；manifest 裁决完成后重新生成锁文件，不手改锁文件。
 5. 先运行 lint、typecheck、产品/供应链/文档/架构门禁，再运行完整非联网测试、Replay、fuzz、生命周期、soak、三端 clean build 和预算。
-6. 获得 Allen 对依赖元数据外发的明确授权后，才运行唯一显式 npm 漏洞审计。
+6. 按 Allen 已批准的审计边界运行唯一显式 npm 生产闭包审计，并对全依赖开发工具链另行复核；不得恢复安装隐式审计或使用 `audit fix --force`。
 7. 推送精确集成候选，等待 GitHub Actions 绿灯并核对 `main` 保护规则。
 8. 在同一 clean 候选上完成 iPhone 13 Pro/iOS 26/Chrome 验收；只在全部代码合并阻断关闭后给出“可合并”结论。
 

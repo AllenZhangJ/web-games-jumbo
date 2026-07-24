@@ -1,10 +1,10 @@
 # Arena 企业治理状态台账
 
-- 更新时间：2026-07-23
+- 更新时间：2026-07-24
 - 当前分支：`feature/arena-enterprise-governance`
 - Arena 产品基线：`51e28220295c080261d30e33aaac7e43c5f91685`
 - 目标：达到与最新 `origin/main` 的合并前审计条件；不执行合并
-- 总体状态：G7、G9 已完成，G8 只剩显式联网漏洞审计授权；G10 的本地候选审计已执行，远端 CI/保护、目标手机与冲突处置未闭环，结论为不可直接合并
+- 总体状态：G7、G8、G9 已完成；G10 的本地/远端候选与 `main` 保护已闭环，目标手机最终确认和 52 个冲突的独立集成尚未闭环，结论为不可直接合并
 
 > 口径：下方 G0–G7.29 是按提交追加的历史证据，其中“当前”只指该批次当时。文档顶部批次表、“当前不可合并原因”和文末最新批次才是现行结论。
 
@@ -32,14 +32,14 @@
 | G0 基线冻结 | 已完成 | 自动化、压力、资产和三端构建通过；ADR/计划/证据已落盘；tag `arena-product-baseline-51e2822` 指向基线提交 |
 | G1 治理外壳/唯一产品 | 已完成 | Arena 已成为唯一生产产品；旧产品实现/专属测试/资产/规范已退役；strict TS、ESLint、Vitest、CI、CODEOWNERS、JS 递减清单和唯一产物门禁已启用 |
 | G2 Definition/合同/配置 | 已完成 | strict TS `arena-contracts`、`arena-definitions`、`arena-profile-contracts` 与 `arena-platform-contracts` 已承接确定性、输入/事件、权威快照、同步存储、平台能力、玩家档案/存档协议，以及动作/角色/装备/地图 Definition、只读 Registry 和唯一 Gameplay V2 数值配置；受审计 JavaScript 已降至 500 个 |
-| G3 Rule/Core/Replay | 已完成 | strict TS `arena-core`、`arena-movement`、`arena-physics`、`arena-equipment`、`arena-map` 与 `arena-match` 已承接规则/移动/物理/装备、完整地图权威链、比赛配置、Participant/Timeline 唯一写入者、角色 Runtime/物理投影、状态 hash、完整 MatchCore 编排、fixed-step Runtime 与 Replay；strict `arena-v1-content` 集中发布具体动作、装备、角色、地图、移动动作与平衡 Definition；黄金语料保持 `0dace228` |
+| G3 Rule/Core/Replay | 已完成 | strict TS `arena-core`、`arena-movement`、`arena-physics`、`arena-equipment`、`arena-map` 与 `arena-match` 已承接规则/移动/物理/装备、完整地图权威链、比赛配置、Participant/Timeline 唯一写入者、角色 Runtime/物理投影、状态 hash、完整 MatchCore 编排、fixed-step Runtime 与 Replay；strict `arena-v1-content` 集中发布具体动作、装备、角色、地图、移动动作与平衡 Definition；当前黄金语料为 `a53b401d`，跨平台方向策略见 ADR-041 |
 | G4 Bot/Product/Persistence | 已完成 | strict TS Bot、Matchmaking、Quick Match、Local Match Session、Product State、Progression、ProductMatchResult、奖励事务、Profile Service/Repository、Storage Lease、Product Match、Product Session Controller、对称内容池、Arena V1 产品内容与通用 Product Composition 已闭环；Arena V1 应用组合根已在 G6.36 归入独立 strict 包 |
 | G5 Presentation/资产/反馈 | 已完成 | strict `arena-presentation-contracts`、`arena-presentation-runtime`、`arena-v1-presentation-content`、`arena-product-presentation`、`arena-presentation-three` 与 `arena-product-presentation-three` 已承接通用合同、输入/反馈/生命周期、具体 V1 表现、Product 表现所有权和 Three Surface；设备/性能证据合同已归入独立 strict 包；共享对局资源取得/回滚原语完成 strict 迁移。生产 Product Session 组合已在 G6.37 归包；旧 Greybox ArenaPresentationSession 是 G6 应用根，Pilot 是 G7 测试/研究链，不再伪装为 G5 通用表现缺口 |
 | G6 Platform/入口/构建 | 已完成 | 三端默认入口是 Product；运行实例 ID、启动协调、失败兜底、Web teardown、三端平台适配、Arena V1 应用组合根、生产 Session、顶层 Launch、Web Product UI、三端实际 Product Entry，以及隔离 Greybox/Study/Pilot 入口、应用根、研究环境、clean build 身份、JSON 下载、Product Runtime、Workbench View 和两个研究 Web App 均已 strict 化。生产交付继续由产物门禁排除开发/研究入口；两个研究页面已在 390×844 浏览器视口完成加载与交互复验，真机证据边界见 G6.49 |
-| G7 零 JS/完整质量门 | 已完成 | 生产源码、测试和治理脚本全部 strict TypeScript，受维护 JavaScript 为 0，许可清单已删除；当前 61 个 Vitest 文件、385 项测试通过，分层 coverage 与零 JS 负向门禁已接入 `check:governance` |
-| G8 资产/安全/所有权 | 进行中（外部授权） | Allen 已批准 3 个来源、10 个运行时资产和 3 个 GLTF Definition；Bundle `e03ff2b4`、精确依赖、lock integrity、完整 Action SHA、CODEOWNERS、Dependabot、secret/遥测和本地诊断策略门禁已通过。只剩 `npm audit --omit=dev --audit-level=high` 因会向 npm 披露依赖元数据，尚待 Allen 明确授权 |
-| G9 文档归真 | 已完成 | 110 个 Markdown、218 个本地链接、49 个去重 npm 命令与关键现行状态通过自动复验；历史批次与当前结论已分层，仓库运营策略已落盘 |
-| G10 最新 main 审计 | 已执行（不可直接合并） | 最新 `main` 为 `4c340f1`，相对共同祖先有 12 个旧产品治理提交；虚拟合并发现 23 个产品/治理冲突。能力已由 Arena 超集承接，但 npm 显式联网审计、精确候选远端 CI 绿灯、`main` 保护复验、目标手机验收和独立冲突处置授权未关闭 |
+| G7 零 JS/完整质量门 | 已完成 | 生产源码、测试和治理脚本全部 strict TypeScript，受维护 JavaScript 为 0，许可清单已删除；当前 61 个 Vitest 文件、387 项测试通过，分层 coverage 与零 JS 负向门禁已接入 `check:governance` |
+| G8 资产/安全/所有权 | 已完成 | Allen 已批准资产与 npm 审计外发；Bundle `e03ff2b4`、53 个 manifest、278 个精确声明（含 override）、368 个外部锁定包、完整 Action SHA、CODEOWNERS、Dependabot、secret/遥测与诊断门禁通过。开发链 3 个 high 已以精确 `sharp@0.35.3` override 闭环，全依赖和生产依赖审计均为 0 vulnerabilities |
+| G9 文档归真 | 已完成 | 112 个 Markdown、223 个本地链接、49 个去重 npm 命令与关键现行状态通过自动复验；历史批次与当前结论已分层，仓库运营策略已落盘 |
+| G10 最新 main 审计 | 已执行（不可直接合并） | 最新 `main` 为 `4c340f1`，相对共同祖先有 12 个旧产品治理提交；rename-aware 虚拟合并发现 52 个产品/治理冲突。候选 `a71ecc1` 本地全门与 Linux CI 已通过，`main` 保护已生效；目标手机最终确认和独立集成授权/执行未关闭 |
 
 ## G0 已取得证据
 
@@ -57,10 +57,9 @@
 
 ## 当前不可合并原因
 
-1. 联网生产依赖漏洞审计尚未获得对“向 npm 披露依赖元数据”的明确授权；不以旧安装提示推导当前结果。
-2. 修复候选尚未推送，没有精确 commit 的 GitHub Actions 绿灯；`main` 的 classic protection 也因 owner 凭证失效尚未复验。
-3. 最新 `main` 与治理分支有 23 个产品/治理冲突；本批禁止实际合并，必须另行批准一次显式保留 Arena、拒绝旧产品回流的集成批次。
-4. 桌面 Chrome 390×844 预检已通过，但 Allen 的 iPhone 13 Pro、iOS 26、Google Chrome 真机验收尚未完成；微信/抖音 iOS 与 Android 真机材料继续属于发布阻断，不与代码合并判断混淆。
+1. 最新 `main` 与治理分支有 52 个 rename-aware 产品/治理冲突；本批禁止实际合并，必须另行批准一次显式保留 Arena、拒绝旧产品回流的集成批次，并在集成提交上重新执行门禁。
+2. iPhone 13 Pro、iOS 26、Google Chrome 曾成功识别并打开候选；重开最新 build 时连接已变为 `unavailable`，Allen 尚未回传最终手感确认。桌面视口与“曾打开页面”都不能替代挥空、贴身连按、动作/武器、卡顿和温升验收。
+3. 微信/抖音 iOS 与 Android 真机材料继续属于发布阻断，不与代码合并判断混淆。
 
 以上是迁移入口，不是已接受的永久例外。
 
@@ -1514,3 +1513,25 @@
 - 代码候选为 `2f28df1bc7082d5ca1759f4c14547e6277ce4d68`。在无历史 `dist`/`.tsbuildinfo` 的隔离克隆中确认 `audit=false`，`npm ci --ignore-scripts --no-audit` 后公开 `npm test` 可自行构建 52 包；88 文件/706 项 Node 测试、61 文件/385 项 Vitest 和 governance coverage 均通过，clean coverage 为语句/行 `59.99%`、分支 `64.18%`、函数 `64.29%`。
 - 黄金 Replay `0dace228`、120 场 fuzz/6 次复验、104 项生命周期、Presentation/Product 各 100 场 soak、正式资产预算和三端 clean build/Manifest/预算/产物边界全部通过。build ID 为 `arena-2f28df1bc708-product`，Web/微信/抖音 Manifest 为 `ccc95c17 / bd96d30c / 403604d6`，delivery 为 `3807531 / 3835130 / 3835105 B`，三端 `sourceDirty=false`。
 - 本批未执行 merge/rebase、未修改 `main`、未运行显式 npm audit、未推送。联网漏洞审计授权、GitHub Actions 与保护规则、目标 iPhone 真机验收和未来实际集成授权仍是合并结论阻断。
+
+## G8.2 联网审计与开发依赖 high 闭环
+
+- Allen 于 2026-07-24 明确授权 npm 审计元数据外发。初次 `npm audit --audit-level=high` 报告 3 个 high，路径为开发工具链 `@gltf-transform/functions@4.4.1 → ndarray-pixels@5.0.1 → sharp@0.34.5`；生产依赖审计保持 0，因此没有把开发链风险误写成生产运行时可达漏洞。
+- 未运行 `npm audit fix --force`。根 manifest 以精确 override 固定 `sharp@0.35.3`，同时把 Node 运行要求收紧为 `>=20.9.0`；供应链门禁校验 override 键、版本和 lock resolution，避免未来安装悄悄回退到受影响版本。
+- 修复后 `npm audit --audit-level=high` 与 `npm audit --omit=dev --audit-level=high` 均为 0 vulnerabilities。当前治理面为 53 个 manifest、278 个精确声明（含 override）、368 个外部锁定包和 2 个固定到完整 SHA 的 GitHub Actions。
+- 代码提交 `af410da6744d8fe41ea9d98da376c3f198aff03f` 只关闭依赖风险；其后 Linux CI 暴露的 Replay 再生成跨平台差异按 G10.5 独立修复，没有以审计通过掩盖行为门失败。
+
+## G10.5 跨平台 Replay 修复与精确候选绿灯
+
+- `af410da` 的 GitHub Actions [30070748191](https://github.com/AllenZhangJ/web-games-jumbo/actions/runs/30070748191) 在 Linux `quality` 中失败：已提交的 movement Replay 可严格重放，但场景重新生成得到不同输入。根因是 stress 策略用 `Math.atan2/sin/cos` 生成方向，平台数学库末位差异会进入权威输入帧。
+- ADR-041 将 movement stress strategy、workload 和 golden scenario 升为版本 2：使用冻结的 12 方向有理向量表，并在与权威 state hash 相同的 `1_000_000` 精度量化位置后，以点积选取朝向；运行时不再调用三角函数。新增回归把 `atan2/sin/cos` 替换为抛错函数，证明场景策略不依赖它们。
+- 受控 Replay 提升后 manifest 为 `a53b401d`；movement replay/final hash 为 `8673e0bf / e560dd88`、结束 tick 为 899，其余三组 replay/final hash 不变。Stage 9 readiness Definition hash 同步从历史 `087dcd2f` 更新为 `ac9f523e`。
+- clean source `a71ecc1c0493a30fd1e94402a662cea9a46b5014` 的 `npm run check` 通过：61 个 Vitest 文件/387 项、88 个 Node 文件/706 项、黄金 Replay 4/4、120 场 fuzz/6 次 Replay、104 项生命周期、Presentation/Product 各 100 场 soak、正式资产、生产依赖审计和三端 clean build/预算/产物边界全部通过。build ID 为 `arena-a71ecc1c0493-product`，Web/微信/抖音 Manifest 为 `cc188290 / 35499189 / c427e65f`，三端 `sourceDirty=false`。
+- 同一精确提交的 Linux GitHub Actions [30072120655](https://github.com/AllenZhangJ/web-games-jumbo/actions/runs/30072120655) 成功，`quality` 用时 7 分 43 秒。该结果关闭 clean Linux 可复现性阻断，不替代 iPhone 体验证据。
+
+## G10.6 main 保护、rename-aware 冲突与 iPhone 交接
+
+- GitHub CLI 认证已回读为 owner `AllenZhangJ`。2026-07-24 通过 GitHub API 写入并回读 classic `main` protection：PR-only、`quality` 严格且要求分支最新、对话必须解决、禁止 force push 和删除；唯一负责人模式下 `required_approving_review_count=0`、不要求 CODEOWNERS 自批，`enforce_admins=false` 保留紧急通道。分支端点返回 `protected: true`。
+- 刷新 `origin/main@4c340f1c5bc00dcae712c2261462661d842339da` 后，共同祖先仍为 `d53e7349ff718b3fa0638af197e8f7c43d190b38`，main 独有非 merge 提交仍为 12，代码候选独有非 merge 提交为 445。旧审计只统计文本冲突得到 23；rename-aware `git merge-tree --write-tree --name-only origin/main HEAD` 识别出 52 个冲突文件，新增项主要是 `main` 把退役产品 JavaScript rename 为 TypeScript 后与 Arena 删除结果形成的 rename/delete 冲突。处置矩阵已按当前 52 个文件补齐，旧 23 口径不再作为现行结论。
+- iPhone 13 Pro `(iPhone14,2)` 曾配对可用，iOS 26 的 Google Chrome 曾打开局域网候选；重开最新 build 时 CoreDevice 报告连接失效，当前列表状态为 `unavailable`。当前环境也没有运行中的 WebDriverAgent，且未配置 Midscene 视觉模型，因此自动化不能执行或证明真实点击；没有把“曾连接/曾打开页面”伪写为“真机通过”。恢复连接后仍需 Allen 确认任意距离挥空、贴身连续攻击、移动/停止/起跳/二段跳/空中下劈、武器外观与节奏、卡顿和温升。
+- 本批没有执行 merge/rebase、没有修改 `main` 内容、没有 force push。当前代码候选与治理证据已具备进入独立集成批次的前置质量，但在目标手机确认和 52 个冲突的实际集成/复验完成前，结论仍是不可直接合并；微信/抖音 iOS/Android 继续是发布阻断。

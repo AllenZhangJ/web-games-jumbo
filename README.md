@@ -76,7 +76,7 @@ Renderer / UI / Audio
 - [最新 main 合并前审计](docs/governance/arena-main-merge-preflight.md)
 - [产品基线证据](docs/baselines/arena-product-51e2822.md)
 
-当前审计结论是不可直接合并：联网 `npm audit` 尚待负责人明确授权；精确候选的 GitHub Actions 绿灯与 `main` 远端保护尚未复验；最新 `main` 与治理分支有 23 个产品/治理冲突，必须另行批准 Arena 保留型集成；iPhone 13 Pro/iOS 26/Chrome 真机验收尚未完成。微信/抖音 iOS/Android 真机证据继续作为发布阻断。
+当前代码候选 `a71ecc1c0493a30fd1e94402a662cea9a46b5014` 的本地完整门禁、全依赖/生产依赖联网审计和 Linux GitHub Actions `quality` 已通过；`main` 已启用 PR-only、严格 `quality`、对话解决及禁止 force push/删除的保护。当前仍不可直接合并：rename-aware 虚拟合并识别出 52 个产品/治理冲突文件，必须另行批准并执行 Arena 保留型集成；iPhone 13 Pro/iOS 26/Google Chrome 曾成功识别并打开候选，但当前设备连接为 unavailable，最终手感验收尚未完成。微信/抖音 iOS/Android 真机证据继续作为发布阻断。
 
 ## 验收边界
 

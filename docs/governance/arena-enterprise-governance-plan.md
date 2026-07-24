@@ -45,7 +45,7 @@
 
 交付：动作裁决、移动、物理、装备、地图、胜负、固定 tick、具名随机流、Replay 与 state hash 进入 strict TS；每类权威状态保持唯一写入者。
 
-门禁：黄金 Replay `0dace228` 或经 ADR 明确批准的新 schema/hash、同 seed/输入确定性、30/60/120 Hz 等价、失败关闭、无渲染模拟、fuzz/stress 全通过。
+门禁：黄金 Replay 当前为 `a53b401d`（ADR-041 批准 movement 场景版本 2）或经 ADR 明确批准的新 schema/hash、同 seed/输入确定性、30/60/120 Hz 等价、失败关闭、无渲染模拟、fuzz/stress 全通过。
 
 ### G4：迁移 Bot、Product 与 Persistence
 
@@ -75,7 +75,7 @@
 
 ### G8：资产、安全与长期所有权
 
-状态：本地可复验交付已完成；联网生产依赖漏洞审计因会向 npm 披露依赖元数据，尚待 Allen 明确授权。
+状态：已完成。Allen 已授权联网审计；开发工具链 3 个 high 以精确 `sharp@0.35.3` override 闭环，全依赖与生产依赖审计均为 0 vulnerabilities，资产/owner/供应链/secret/遥测门禁通过。
 
 交付：资产批准记录、第三方声明、固定 revision/hash、CODEOWNERS `@AllenZhangJ`、分支保护建议、依赖更新和漏洞处置规则、敏感信息扫描、本地诊断保留策略。
 
@@ -91,7 +91,7 @@
 
 ### G10：最新 main 合并前独立审计
 
-状态：已执行当前候选审计，结论为不可直接合并。最新 `main` 与 Arena 治理分支有 23 个产品/治理冲突；全量 TypeScript 测试发现、clean-install workspace 构建、未跟踪空目录假阳性、安装阶段隐式 npm audit 外发边界、包级 ESLint、公开命令前置构建和启动失败边界均已修复。逐文件处置矩阵和精确候选 `2f28df1` 的隔离三端复验已完成，但显式联网依赖审计、精确候选的 GitHub Actions 绿灯、`main` 保护复验、iPhone 13 Pro/Chrome 真机验收和未来实际集成授权尚未关闭。详见 [合并前独立审计](arena-main-merge-preflight.md)与[冲突处置矩阵](arena-main-conflict-disposition.md)。
+状态：已执行当前候选审计，结论为不可直接合并。全量 TypeScript 测试发现、clean-install workspace 构建、未跟踪空目录假阳性、安装阶段隐式 npm audit 外发边界、开发依赖 high、跨平台 Replay、包级 ESLint、公开命令前置构建、启动失败边界、精确候选 Linux CI 和 `main` 保护均已闭环。rename-aware 虚拟合并现识别出 52 个产品/治理冲突并已补齐逐文件处置矩阵；候选为 `a71ecc1`。剩余阻断只有 iPhone 13 Pro/Chrome 最终手感确认，以及未来独立集成授权、实际冲突解决和集成后复验。详见 [合并前独立审计](arena-main-merge-preflight.md)与[冲突处置矩阵](arena-main-conflict-disposition.md)。
 
 交付：fetch 最新 `origin/main`；建立主干新增提交/能力承接表；在临时 worktree 或无写入虚拟合并中检查文本和语义冲突；对候选提交执行完整门禁和 Web 手机验收；形成审计报告。
 
