@@ -109,30 +109,27 @@
       "file": "movement-semantic-actions.json",
       "scenario": {
         "id": "movement.semantic-actions",
-        "version": 1
+        "version": 2
       },
-      "replayHash": "b68c763e",
+      "replayHash": "8673e0bf",
       "matchSeed": 1834352640,
       "matchSchemaVersion": 5,
       "physicsBackendVersion": "lightweight-v3",
       "configHash": "17a54f3f",
       "ruleContentHash": "1cf565bf",
-      "finalHash": "ee341734",
-      "endedAtTick": 836,
-      "resultReason": "last-participant-standing",
-      "winnerId": "player-1",
-      "inputFrameCount": 1674,
+      "finalHash": "e560dd88",
+      "endedAtTick": 899,
+      "resultReason": "timeout-draw",
+      "winnerId": null,
+      "inputFrameCount": 1800,
       "checkpointCount": 11,
       "eventCounts": {
-        "ActionStarted": 50,
+        "ActionStarted": 56,
         "DownSmashLanded": 8,
-        "HitResolved": 1,
-        "KnockbackApplied": 1,
         "MapEventStarted": 1,
         "MapEventWarned": 1,
         "MatchEnded": 1,
         "MatchStarted": 1,
-        "PlayerEliminated": 1,
         "SuddenDeathStarted": 1
       }
     }

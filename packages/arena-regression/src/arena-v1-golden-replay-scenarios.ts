@@ -29,6 +29,7 @@ import { ArenaGoldenReplayScenarioRegistry } from './golden-replay-scenario-regi
 
 export const ARENA_V1_GOLDEN_REPLAY_MANIFEST_ID = 'arena.stage9.golden-replays.v5';
 const SCENARIO_VERSION = 1;
+const MOVEMENT_SCENARIO_VERSION = 2;
 interface Destroyable { destroy(): void }
 
 function cleanupResources(resources: readonly (Destroyable | null)[], originalError: unknown = null): void {
@@ -236,7 +237,7 @@ export function createArenaV1GoldenReplayScenarioRegistry(): ArenaGoldenReplaySc
       createReplay: createMapReplay, assertReplay: assertMapReplay,
     },
     {
-      id: 'movement.semantic-actions', version: SCENARIO_VERSION,
+      id: 'movement.semantic-actions', version: MOVEMENT_SCENARIO_VERSION,
       category: ARENA_GOLDEN_REPLAY_CATEGORY.MOVEMENT, file: 'movement-semantic-actions.json',
       createReplay: createMovementReplay, assertReplay: assertMovementReplay,
     },

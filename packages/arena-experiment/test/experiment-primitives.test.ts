@@ -1,4 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import type { ArenaMatchSnapshot } from '@number-strategy-jump/arena-contracts';
+import { ARENA_PARTICIPANT_STATUS } from '@number-strategy-jump/arena-match';
 import {
   assertArenaExperimentReplaySeedsPlanned,
   cloneArenaExperimentReplaySeeds,
@@ -15,6 +17,9 @@ import {
   assertSimulationCase,
   SimulationWorkloadRegistry,
   SimulationExperimentRunner,
+  ARENA_V1_MOVEMENT_STRESS_DEFAULT_TUNING,
+  ARENA_V1_MOVEMENT_STRESS_STRATEGY_VERSION,
+  createArenaV1MovementStressStrategy,
 } from '../src/index.js';
 
 function createDefinition() {
@@ -43,6 +48,45 @@ function createDefinition() {
 }
 
 describe('Arena experiment primitives', () => {
+  it('generates versioned movement directions without platform math-library trig', () => {
+    const strategy = createArenaV1MovementStressStrategy({
+      matchSeed: 0x6d560000,
+      participantIds: ['player-1'],
+      tuning: ARENA_V1_MOVEMENT_STRESS_DEFAULT_TUNING,
+    });
+    const snapshot = {
+      tick: 0,
+      participants: [{
+        id: 'player-1',
+        status: ARENA_PARTICIPANT_STATUS.ACTIVE,
+        position: { x: 4, y: 0, z: -3 },
+        grounded: true,
+      }],
+    } as unknown as ArenaMatchSnapshot;
+    const atan2 = vi.spyOn(Math, 'atan2').mockImplementation(() => {
+      throw new Error('movement stress 不得调用 Math.atan2');
+    });
+    const cosine = vi.spyOn(Math, 'cos').mockImplementation(() => {
+      throw new Error('movement stress 不得调用 Math.cos');
+    });
+    const sine = vi.spyOn(Math, 'sin').mockImplementation(() => {
+      throw new Error('movement stress 不得调用 Math.sin');
+    });
+    try {
+      const [frame] = strategy.createFrames(snapshot);
+      expect(strategy.version).toBe(ARENA_V1_MOVEMENT_STRESS_STRATEGY_VERSION);
+      expect(frame).toBeDefined();
+      expect(Number.isFinite(frame?.moveX)).toBe(true);
+      expect(Number.isFinite(frame?.moveZ)).toBe(true);
+      expect(atan2).not.toHaveBeenCalled();
+      expect(cosine).not.toHaveBeenCalled();
+      expect(sine).not.toHaveBeenCalled();
+    } finally {
+      vi.restoreAllMocks();
+      strategy.destroy();
+    }
+  });
+
   it('creates stable metric counts and ratios without hiding an empty denominator', () => {
     const counts = new Map<string, number>();
     incrementMetricCount(counts, 'zeta');

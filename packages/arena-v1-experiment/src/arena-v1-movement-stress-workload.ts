@@ -26,7 +26,7 @@ import type { ArenaV1MovementStressTuning } from '@number-strategy-jump/arena-ex
 const replayMatch = createReplayMatch(createArenaV1MatchCore);
 
 export const ARENA_V1_MOVEMENT_STRESS_WORKLOAD_ID = 'arena.stage9.movement-stress';
-export const ARENA_V1_MOVEMENT_STRESS_WORKLOAD_VERSION = 1;
+export const ARENA_V1_MOVEMENT_STRESS_WORKLOAD_VERSION = 2;
 
 export const ARENA_V1_MOVEMENT_STRESS_DEFAULT_PARAMETERS = Object.freeze({
   input: ARENA_V1_MOVEMENT_STRESS_DEFAULT_TUNING,

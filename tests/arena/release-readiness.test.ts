@@ -318,7 +318,7 @@ test('Stage 9 RC handoff V1 固定全部真实门禁且不把外部证据当作�
   assert.equal(definition.id, 'arena.stage9.rc-handoff.v1');
   assert.equal(definition.stage, 'S9.6');
   assert.equal(definition.gates.length, 12);
-  assert.equal(definition.getContentHash(), '087dcd2f');
+  assert.equal(definition.getContentHash(), 'ac9f523e');
   assert.deepEqual(definition.gates.map(({ id }) => id), [
     ARENA_STAGE9_RC_HANDOFF_GATE_ID.INPUT_PILOT,
     ARENA_STAGE9_RC_HANDOFF_GATE_ID.FORMAL_ASSETS,

@@ -14,7 +14,7 @@ import {
 import { ARENA_PARTICIPANT_STATUS } from '@number-strategy-jump/arena-match';
 import { assertArenaExperimentUint32Seed } from './experiment-seed-utils.js';
 
-export const ARENA_V1_MOVEMENT_STRESS_STRATEGY_VERSION = 1;
+export const ARENA_V1_MOVEMENT_STRESS_STRATEGY_VERSION = 2;
 export const ARENA_V1_MOVEMENT_STRESS_DEFAULT_TUNING = Object.freeze({
   minimumSteerTicks: 7, maximumSteerTicks: 24, towardCenterProbability: 0.42,
   walkInputProbability: 0.4, minimumWalkMagnitude: 0.1, maximumWalkMagnitude: 0.6,
@@ -39,6 +39,51 @@ interface MovementController {
   nextSteerTick: number;
   moveX: number;
   moveZ: number;
+}
+interface MovementDirection {
+  readonly x: number;
+  readonly z: number;
+}
+
+// 固定的有理方向避免 Math.atan2/sin/cos 在不同系统数学库上的末位漂移进入 Replay。
+// 每个向量的长度为 1，顺序属于 strategy version 2 的确定性合同。
+const MOVEMENT_DIRECTIONS: readonly Readonly<MovementDirection>[] = Object.freeze([
+  Object.freeze({ x: 1, z: 0 }),
+  Object.freeze({ x: 0.8, z: 0.6 }),
+  Object.freeze({ x: 0.6, z: 0.8 }),
+  Object.freeze({ x: 0, z: 1 }),
+  Object.freeze({ x: -0.6, z: 0.8 }),
+  Object.freeze({ x: -0.8, z: 0.6 }),
+  Object.freeze({ x: -1, z: 0 }),
+  Object.freeze({ x: -0.8, z: -0.6 }),
+  Object.freeze({ x: -0.6, z: -0.8 }),
+  Object.freeze({ x: 0, z: -1 }),
+  Object.freeze({ x: 0.6, z: -0.8 }),
+  Object.freeze({ x: 0.8, z: -0.6 }),
+]);
+const MOVEMENT_POSITION_SCALE = 1_000_000;
+
+function requireDirection(index: number): Readonly<MovementDirection> {
+  const direction = MOVEMENT_DIRECTIONS[index];
+  if (!direction) throw new Error(`movement stress 方向索引 ${index} 无效。`);
+  return direction;
+}
+
+function selectCenterDirection(position: Readonly<{ x: number; z: number }>): Readonly<MovementDirection> {
+  // 与权威状态 hash 使用同一量化尺度，原始物理浮点的末位不能改变方向分支。
+  const targetX = -Math.round(position.x * MOVEMENT_POSITION_SCALE);
+  const targetZ = -Math.round(position.z * MOVEMENT_POSITION_SCALE);
+  let selected = requireDirection(0);
+  let bestScore = selected.x * targetX + selected.z * targetZ;
+  for (let index = 1; index < MOVEMENT_DIRECTIONS.length; index += 1) {
+    const candidate = requireDirection(index);
+    const score = candidate.x * targetX + candidate.z * targetZ;
+    if (score > bestScore) {
+      selected = candidate;
+      bestScore = score;
+    }
+  }
+  return selected;
 }
 function probability(value: unknown, name: string): number {
   if (!Number.isFinite(value) || (value as number) < 0 || (value as number) > 1) {
@@ -74,7 +119,7 @@ export function createArenaV1MovementStressTuning(value: unknown): Readonly<Aren
   });
 }
 export function createArenaV1MovementStressStrategy(options: unknown): Readonly<{
-  version: 1;
+  version: 2;
   createFrames: (snapshot: ArenaMatchSnapshot) => readonly ArenaInputFrame[];
   destroy: () => void;
 }> {
@@ -99,15 +144,15 @@ export function createArenaV1MovementStressStrategy(options: unknown): Readonly<
         if (snapshot.tick >= controller.nextSteerTick) {
           controller.nextSteerTick = snapshot.tick + controller.rng.int(resolved.minimumSteerTicks, resolved.maximumSteerTicks);
           const towardCenter = controller.rng.next() < resolved.towardCenterProbability;
-          const angle = towardCenter
-            ? Math.atan2(-participant.position.z, -participant.position.x)
-            : controller.rng.next() * Math.PI * 2;
+          const direction = towardCenter
+            ? selectCenterDirection(participant.position)
+            : requireDirection(controller.rng.int(0, MOVEMENT_DIRECTIONS.length - 1));
           const walk = controller.rng.next() < resolved.walkInputProbability;
           const minimum = walk ? resolved.minimumWalkMagnitude : resolved.minimumRunMagnitude;
           const maximum = walk ? resolved.maximumWalkMagnitude : resolved.maximumRunMagnitude;
           const magnitude = minimum + controller.rng.next() * (maximum - minimum);
-          controller.moveX = Math.cos(angle) * magnitude;
-          controller.moveZ = Math.sin(angle) * magnitude;
+          controller.moveX = direction.x * magnitude;
+          controller.moveZ = direction.z * magnitude;
         }
         const phase = (snapshot.tick + index * 53) % 240;
         const jumpPressed = phase === 5 || phase === 15 || phase === 125;
