@@ -2,9 +2,9 @@
 
 ## 结论
 
-当前结论是 **可合并**。最新 `main` 的 12 个独有提交继续治理已退役的数值跳台，因此不能直接自动合并；授权后的独立集成批次已经以 Arena 为第一父，只合入一次固定 main，并显式处置 52 个冲突及 main 没有文本冲突的旧产品新增。结果树与集成前 Arena 树完全相同，旧实现没有回流。
+本报告在终审时给出的结论是 **可合并**。最新 `main` 的 12 个独有提交继续治理已退役的数值跳台，因此不能直接自动合并；授权后的独立集成批次已经以 Arena 为第一父，只合入一次固定 main，并显式处置 52 个冲突及 main 没有文本冲突的旧产品新增。结果树与集成前 Arena 树完全相同，旧实现没有回流。
 
-本审计只在 `feature/arena-main-integration` 创建并推送候选，没有修改或合并 `main`，没有 rebase 或 force push。逐项裁决与替代方案见 [ADR-042](../decisions/042-arena-first-main-integration.md)；微信/抖音四端真机材料仍是发布门禁，不阻断代码合并。
+终审批次只在 `feature/arena-main-integration` 创建并推送候选，没有修改或合并 `main`，没有 rebase 或 force push。终审完成后，候选于 2026-07-24 通过 [PR #1](https://github.com/AllenZhangJ/web-games-jumbo/pull/1) 按受保护分支流程合入 `main@8ab707ba52d925268e19fbe8c00be763cd6bec31`。逐项裁决与替代方案见 [ADR-042](../decisions/042-arena-first-main-integration.md)；微信/抖音四端真机材料仍是发布门禁，不阻断代码合并。
 
 ## 审计身份
 
@@ -21,6 +21,9 @@
 | 集成提交 | `b4faa2c8f1af59605a95281948406376cb442ea6` |
 | 第一父 / 第二父 | `55230dd5e5d655913fed2a8968c1720ec7538b16` / `4c340f1c5bc00dcae712c2261462661d842339da` |
 | 合并树 / 第一父树 | `f3621cf35bddf90af1ceccd196d782a724cde5a2` / `f3621cf35bddf90af1ceccd196d782a724cde5a2` |
+| 受保护合并 PR | [#1](https://github.com/AllenZhangJ/web-games-jumbo/pull/1) |
+| 现行 main / 父提交 | `8ab707ba52d925268e19fbe8c00be763cd6bec31` / `4c340f1`、`36b9959` |
+| main 树 / 候选树 | `021338ed4f2cf0803bfd48d60216ac30c9497051` / `021338ed4f2cf0803bfd48d60216ac30c9497051` |
 
 候选 `a71ecc1` 在 `2f28df1` 的冲突治理基础上关闭开发依赖 high 风险，并把 movement stress/replay 场景升级为不依赖平台三角函数末位差异的版本 2。其 clean build ID 为 `arena-a71ecc1c0493-product`，Web/微信/抖音 Manifest hash 分别为 `cc188290`、`35499189`、`c427e65f`。
 
@@ -116,10 +119,12 @@ vitest.config.ts
 
 - 候选 `af410da` 的 Linux CI [30070748191](https://github.com/AllenZhangJ/web-games-jumbo/actions/runs/30070748191) 暴露 movement 场景使用 `atan2/sin/cos` 产生跨平台末位差异；精确 Replay 在 Linux 可重放，差异只在场景输入再生成。ADR-041 采用固定有理方向表和量化点积选择，候选 `a71ecc1` 的 Linux CI [30072120655](https://github.com/AllenZhangJ/web-games-jumbo/actions/runs/30072120655) 已于 2026-07-24 成功，`quality` 用时 7 分 43 秒。
 - 双父集成提交 `b4faa2c8f1af59605a95281948406376cb442ea6` 的 Linux CI [30075683221](https://github.com/AllenZhangJ/web-games-jumbo/actions/runs/30075683221) 已于 2026-07-24 成功；run 从 `07:30:22Z` 到 `07:37:46Z`，精确 `head_sha`、提交 tree 与本地审计一致。
+- 最终候选 `36b995949ca04f36d85de8d3db2bb594f554670e` 的分支 CI [30076325560](https://github.com/AllenZhangJ/web-games-jumbo/actions/runs/30076325560) 和 PR 上下文 CI [30078837950](https://github.com/AllenZhangJ/web-games-jumbo/actions/runs/30078837950) 均成功。合并前 GitHub 回读 PR 为 `CLEAN / MERGEABLE`，审查线程为 0。
+- PR #1 以普通 merge commit 合入后，GitHub 签名提交为 `8ab707ba52d925268e19fbe8c00be763cd6bec31`，其 [main CI 30079353044](https://github.com/AllenZhangJ/web-games-jumbo/actions/runs/30079353044) 对精确 SHA 成功；合并提交树与候选树相同。
 - GitHub owner 身份已回读为 `AllenZhangJ`。classic `main` protection 已启用：PR-only、严格且要求分支最新的 `quality`、对话必须解决、禁止 force push 和删除；唯一负责人模式下审批数为 0、不要求 CODEOWNERS 自批，管理员保留紧急通道。分支端点回读为 `protected: true`。
 
 ## 当前阻断与边界
 
-1. **代码合并阻断：无。** 目标手机验收、实际冲突处置、本地统一全门、三端产物等价和候选推送均已完成。
+1. **代码合并：已完成。** 目标手机验收、实际冲突处置、本地统一全门、三端产物等价、PR 保护检查和合并后 main CI 均已完成。
 2. **发布而非代码合并的外部门禁：仍有。** 微信/抖音 iOS 与 Android 真机材料尚未完成，所以本报告只给出可合并结论，不宣称可正式发布。
-3. **本机 GitHub CLI 缓存：非代码阻断。** `gh auth status` 报告旧令牌失效；Git push 正常，Actions 由 GitHub 公共 API 按精确 SHA 回读。需要再次写服务端配置时应重新登录，但这不改变仓库候选或服务端保护现状。
+3. **GitHub 身份：已恢复。** 旧 CLI 缓存令牌曾失效；Allen 已通过 GitHub 官方设备授权重新登录，随后完成 PR 创建和受保护合并。该历史认证问题未改变候选内容或服务端保护。
