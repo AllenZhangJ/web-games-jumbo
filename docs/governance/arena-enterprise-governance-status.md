@@ -1,7 +1,7 @@
 # Arena 企业治理状态台账
 
 - 更新时间：2026-07-24
-- 现行主干：`main@8ab707ba52d925268e19fbe8c00be763cd6bec31`
+- Arena 代码合入基线：`main` 合并提交 `8ab707ba52d925268e19fbe8c00be763cd6bec31`（后续主干提交仅归真治理文档，不改变游戏实现）
 - Arena 产品基线：`51e28220295c080261d30e33aaac7e43c5f91685`
 - 目标：保留 Arena 产品树，完成最新 `origin/main` 的保留型集成、独立终审与受保护主干合并
 - 总体状态：G0–G10 已完成；52 个冲突和 main 非冲突旧产品新增均已显式处置，目标 iPhone Chrome 验收由 Allen 确认并经三端交付字节等价绑定到集成候选。候选已通过 [PR #1](https://github.com/AllenZhangJ/web-games-jumbo/pull/1) 合入 `main`，合并后精确 `quality` 成功；微信/抖音四端真机材料仍是发布门禁
@@ -57,7 +57,7 @@
 
 ## 当前合并结论与发布边界
 
-1. 审计时的 `origin/main@4c340f1` 已作为第二父合入 `feature/arena-main-integration`；集成提交 `b4faa2c` 的第一父是已归真 Arena 候选 `55230dd`，52 个 rename-aware 冲突全部按矩阵关闭，旧产品非冲突新增也没有进入结果树。候选随后通过 PR #1 合入现行 `main@8ab707b`。
+1. 审计时的 `origin/main@4c340f1` 已作为第二父合入 `feature/arena-main-integration`；集成提交 `b4faa2c` 的第一父是已归真 Arena 候选 `55230dd`，52 个 rename-aware 冲突全部按矩阵关闭，旧产品非冲突新增也没有进入结果树。候选随后通过 PR #1 形成 Arena 代码主干合并提交 `8ab707b`。
 2. 集成树与第一父 tree hash 均为 `f3621cf35bddf90af1ceccd196d782a724cde5a2`。统一全门、完整开发/生产依赖审计和三端构建通过；除 build manifest 中必然变化的 commit/buildId 外，三端交付与已验收基线逐文件相同。
 3. Allen 已确认完成 iPhone 13 Pro、iOS 26、Google Chrome 真机验收。该人工验收通过产物等价继承到集成候选，不被桌面视口替代，也不扩张为微信/抖音发布结论。
 4. 代码合并已完成，PR 与合并后 `main` 的精确 `quality` 均成功；微信/抖音 iOS 与 Android 真机材料继续属于发布阻断，不能在缺失时宣称可正式发布。
