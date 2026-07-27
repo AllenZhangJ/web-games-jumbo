@@ -281,6 +281,8 @@ export type {
   ArenaV2WeaponCaseStudyOverview,
   ArenaV2WeaponCaseStudyOverviewAxisAudit,
   ArenaV2WeaponCaseStudyOverviewAxisStatus,
+  ArenaV2WeaponCaseStudyNumericProjection,
+  ArenaV2WeaponCaseStudyNumericReadout,
   ArenaV2WeaponCaseStudyOverviewRow,
 } from './arena-v2-weapon-case-study-overview-prototype.js';
 export { runArenaV2WeaponHookObstructionPrototype } from './arena-v2-weapon-hook-obstruction-prototype.js';

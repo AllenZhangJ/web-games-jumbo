@@ -20,9 +20,20 @@ import {
   ARENA_V2_WEAPON_PUBLIC_AXIS_DEFINITIONS,
   type ArenaV2WeaponPublicAxisId,
 } from './arena-v2-weapon-public-axis-contract.js';
+import {
+  ARENA_V2_WEAPON_LAUNCH_RESEARCH_DEFINITION_PROTOTYPES,
+} from './arena-v2-weapon-launch-research-definition-prototype.js';
+import {
+  createArenaV2WeaponPhantomTigerFistNumericOverview,
+} from './arena-v2-weapon-phantom-tiger-fist-definition-prototype.js';
+import {
+  createArenaV2WeaponResearchOverviewContexts,
+  type ArenaV2WeaponResearchOverviewContext,
+} from './arena-v2-weapon-research-overview-prototype.js';
 import type { ArenaV2WeaponCaseStudy } from './arena-v2-weapon-case-study-contract.js';
 
 export type ArenaV2WeaponCaseStudyOverviewAxisStatus = 'must-measure' | 'research-only';
+export type ArenaV2WeaponCaseStudyNumericReadout = 'not-yet-available' | 'research-projection';
 
 export interface ArenaV2WeaponCaseStudyOverviewAxisAudit {
   readonly axisId: ArenaV2WeaponPublicAxisId;
@@ -30,6 +41,13 @@ export interface ArenaV2WeaponCaseStudyOverviewAxisAudit {
   readonly status: ArenaV2WeaponCaseStudyOverviewAxisStatus;
   readonly reviewReasons: readonly string[];
   readonly playerMeaning: string;
+}
+
+export interface ArenaV2WeaponCaseStudyNumericProjection {
+  readonly contexts: readonly ArenaV2WeaponResearchOverviewContext[];
+  readonly comparisonWeaponIds: readonly string[];
+  readonly sourceDefinitionIds: readonly string[];
+  readonly numericStatus: 'definition-projected-hypothesis';
 }
 
 export interface ArenaV2WeaponCaseStudyOverviewRow {
@@ -47,8 +65,9 @@ export interface ArenaV2WeaponCaseStudyOverviewRow {
   readonly researchOnlyAxisIds: readonly ArenaV2WeaponPublicAxisId[];
   readonly mapSignals: readonly string[];
   readonly counterplay: readonly string[];
-  /** Prevents this research row from being mistaken for a player-facing numeric row. */
-  readonly numericReadout: 'not-yet-available';
+  /** Distinguishes a real research Definition projection from a narrative-only case study. */
+  readonly numericReadout: ArenaV2WeaponCaseStudyNumericReadout;
+  readonly numericProjection: ArenaV2WeaponCaseStudyNumericProjection | null;
   readonly numericReadoutReason: string;
 }
 
@@ -107,8 +126,58 @@ function createAxisAudit(
   }));
 }
 
+function createLaunchProjection(
+  referenceId: string,
+): ArenaV2WeaponCaseStudyNumericProjection | null {
+  const candidate = ARENA_V2_WEAPON_LAUNCH_RESEARCH_DEFINITION_PROTOTYPES.find(({ referenceId: id }) => (
+    id === referenceId
+  ));
+  if (!candidate) return null;
+  const comparisonProjections = Object.freeze(
+    ARENA_V2_WEAPON_LAUNCH_RESEARCH_DEFINITION_PROTOTYPES.map(({ groundStats, aerialStats }) => (
+      Object.freeze({ groundStats, aerialStats })
+    )),
+  );
+  return Object.freeze({
+    contexts: createArenaV2WeaponResearchOverviewContexts(
+      Object.freeze({ groundStats: candidate.groundStats, aerialStats: candidate.aerialStats }),
+      comparisonProjections,
+    ),
+    comparisonWeaponIds: Object.freeze(
+      ARENA_V2_WEAPON_LAUNCH_RESEARCH_DEFINITION_PROTOTYPES.map(({ weaponId }) => weaponId),
+    ),
+    sourceDefinitionIds: Object.freeze([
+      candidate.groundActionDefinitionId,
+      candidate.aerialActionDefinitionId,
+    ]),
+    numericStatus: 'definition-projected-hypothesis',
+  });
+}
+
+function createNumericProjection(
+  referenceId: string,
+): ArenaV2WeaponCaseStudyNumericProjection | null {
+  if (referenceId === 'phantom-tiger-fist') {
+    const overview = createArenaV2WeaponPhantomTigerFistNumericOverview();
+    return Object.freeze({
+      contexts: overview.contexts,
+      comparisonWeaponIds: overview.comparisonWeaponIds,
+      sourceDefinitionIds: Object.freeze([
+        'research-phantom-tiger-fist-ground',
+        'research-phantom-tiger-fist-aerial',
+      ]),
+      numericStatus: 'definition-projected-hypothesis',
+    });
+  }
+  return createLaunchProjection(referenceId);
+}
+
 function createRow(study: ArenaV2WeaponCaseStudy): ArenaV2WeaponCaseStudyOverviewRow {
   const axisAudit = createAxisAudit(study);
+  const numericProjection = createNumericProjection(study.referenceId);
+  const numericReadout: ArenaV2WeaponCaseStudyNumericReadout = numericProjection === null
+    ? 'not-yet-available'
+    : 'research-projection';
   const mustMeasureAxisIds = Object.freeze(
     axisAudit.filter(({ status }) => status === 'must-measure').map(({ axisId }) => axisId),
   );
@@ -129,8 +198,11 @@ function createRow(study: ArenaV2WeaponCaseStudy): ArenaV2WeaponCaseStudyOvervie
     researchOnlyAxisIds,
     mapSignals: unique(study.designReasons),
     counterplay: unique(study.moves.map(({ counterplay }) => counterplay)),
-    numericReadout: 'not-yet-available',
-    numericReadoutReason: '当前案例只有研究合同，尚未连接候选 Definition 的权威数值投影；研究推断不能直接展示为玩家数值。',
+    numericReadout,
+    numericProjection,
+    numericReadoutReason: numericProjection === null
+      ? '当前案例只有研究合同，尚未连接候选 Definition 的权威数值投影；研究推断不能直接展示为玩家数值。'
+      : '当前案例已连接研究候选 Definition 的权威数值投影；数值仍是本项目调优假设，不能视为原作数值或生产平衡结论。',
   });
 }
 

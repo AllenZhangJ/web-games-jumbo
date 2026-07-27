@@ -38,7 +38,7 @@ Arena V2 的核心目标是：
 | [V2 界面地图](arena-v2-screen-map.md) | 明确 11 个局外页面入口、对局 HUD 和竞技准备模板复用 | 页面合同已收敛，真机待验证 |
 | [V2 架构影响与迁移边界](../architecture/arena-v2-migration-boundary.md) | 说明哪些可以复用、哪些需要重构 | 初稿 |
 | [V2 搜索与验证清单](../research/arena-v2-research-backlog.md) | 管理后续搜索、原型和实测问题 | 第二轮收敛 |
-| [热血英豪武器研究 V1](../research/arena-v2-hot-blooded-weapon-study-v1.md) | 记录官方案例、蓄力/取消/方向/持续威胁证据、上下文动作矩阵、风险语义和完整数值展示要求 | 第三轮研究 |
+| [热血英豪武器研究 V1](../research/arena-v2-hot-blooded-weapon-study-v1.md) | 记录官方案例、蓄力/取消/方向/持续威胁证据、上下文动作矩阵、风险语义和完整数值展示要求；白金双枪与幻虎巨拳已连接研究投影 | 逐件研究持续收敛 |
 | `arena-v2-weapon-magic-blood-scythe-case-study.ts` | 魔血镰刃逐动作官方事实、设计推导、玩家反制、失败成本和数值审计 | 第四轮逐件研究证据，仅研究工具链 |
 | `arena-v2-weapon-case-study-contract.ts` | 逐件武器研究共享合同：动作事实、推导、反制、失败成本和公共数值轴审计 | 逐件研究基础设施，仅研究工具链 |
 | `arena-v2-weapon-true-hades-hook-scythe-case-study.ts` | 真·哈迪斯钩镰逐动作官方事实、支撑面/阶段命中推导、反制和数值审计 | 第五轮逐件研究证据，仅研究工具链 |
@@ -49,7 +49,7 @@ Arena V2 的核心目标是：
 | `arena-v2-weapon-phantom-tiger-fist-definition-prototype.ts` | 幻虎巨拳地面/空中 Definition、9 项主轴、6 项上下文轴、2 项行为轴及权威数值投影 | 数值投影假设，仅研究工具链 |
 | `arena-v2-weapon-phantom-tiger-fist-replay-prototype.ts` | 幻虎巨拳提前释放、成功提交、到期取消三组固定 Replay，并暴露承诺状态和位置采样 | 承诺 Replay 通过，仅研究工具链 |
 | `arena-v2-weapon-phantom-tiger-fist-edge-replay-prototype.ts` | 幻虎巨拳双人平台边缘 Replay，验证命中、位移、支撑面丢失和淘汰反馈 | 地图后果通过，仅研究工具链 |
-| `arena-v2-weapon-case-study-overview-prototype.ts` | 将六件逐动作深研案例投影为核心动词、上下文、公共轴状态、地图信号和反制读出；禁止未连接 Definition 的假数值 | 深研概览适配层，仅研究工具链 |
+| `arena-v2-weapon-case-study-overview-prototype.ts` | 将六件逐动作深研案例投影为核心动词、上下文、公共轴状态、地图信号和反制读出；已连接的研究 Definition 必须携带地面/空中数值投影，未连接案例禁止假数值 | 深研概览适配层，仅研究工具链 |
 | `arena-v2-weapon-mammoth-stone-axe-delay-prototype.ts` | 以整数 tick 验证猛犸石斧延迟落点的预警、路线躲避、高度躲避和命中反馈因果 | 第九轮延迟落点研究原型，仅研究工具链 |
 | `arena-v2-weapon-hook-obstruction-prototype.ts` | 以固定二维几何验证无遮挡、柱体阻挡、侧向错开和边角路线的拉位差异 | 血影钩刃障碍研究原型，仅研究工具链 |
 | [血影钩刃障碍阻挡原型结果 V1](../research/arena-v2-weapon-hook-obstruction-prototype-results-v1.md) | 记录拉位阻挡探针的固定场景、结果和未完成边界 | 障碍研究证据 |
@@ -69,7 +69,7 @@ Arena V2 的核心目标是：
 | [ADR-068：直线压制先以单一攻击线 Definition 验证](../decisions/068-arena-v2-line-pressure-definition-boundary.md) | 固化直线压制的单一攻击线、固定间隔、公开数值和候选 Registry/默认生产边界 | 原型边界已接入 |
 | [首发研究候选 Definition 原型结果 V1](../research/arena-v2-launch-research-definition-prototype-results-v1.md) | 将直线压制、读招反制、绕后三个首发候选统一为地面/空中 Definition，并绑定 9 项主概览数值、2 项行为数值和命中/空放证据 | 候选 Definition 已通过，默认生产未晋级 |
 | [研究武器概览比较矩阵原型结果 V1](../research/arena-v2-weapon-research-overview-prototype-results-v1.md) | 将三个候选 Registry 候选投影为带标签、单位、方向语义、玩家含义、地面/空中双上下文、地图用途和反制的可比较武器卡数据 | 双上下文矩阵通过，真人可读性待验证 |
-| [深研武器概览适配层原型结果 V1](../research/arena-v2-weapon-case-study-overview-prototype-results-v1.md) | 将六件逐动作深研案例的研究结论与公共数值轴审计接到同一份读出，明确禁止未连接权威投影的假数值 | 研究读出通过，未进入生产 UI |
+| [深研武器概览适配层原型结果 V1](../research/arena-v2-weapon-case-study-overview-prototype-results-v1.md) | 将六件逐动作深研案例的研究结论与公共数值轴审计接到同一份读出，区分两件已有研究投影与四件未连接案例 | 研究读出通过，未进入生产 UI |
 | [幻虎巨拳 Definition 数值投影原型结果 V1](../research/arena-v2-weapon-phantom-tiger-fist-definition-prototype-results-v1.md) | 将幻虎巨拳最小地面/空中动作接入 Definition → 数值投影 → 概览链路，显示主轴、上下文轴和行为轴 | 投影假设通过，未进入生产 UI |
 | [幻虎巨拳 Replay 与地图边缘原型结果 V1](../research/arena-v2-weapon-phantom-tiger-fist-replay-and-edge-results-v1.md) | 使用真实 MatchCore/MatchReplay 验证承诺取消、提交、命中，以及边缘平台的位移、失去支撑面和淘汰反馈 | 研究 Replay 与地图后果通过，未进入生产化 |
 | [猛犸石斧逐动作研究结果 V1](../research/arena-v2-weapon-mammoth-stone-axe-case-study-results-v1.md) | 将官方延迟落斧、蓄力分支、滚动物体、墙面反弹、公共危险和恢复物拆为六个研究动作单元 | 第九轮逐件研究，延迟/预警仍待原型 |
