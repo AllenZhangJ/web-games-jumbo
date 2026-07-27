@@ -193,6 +193,17 @@ export {
 } from './arena-v2-weapon-research-catalog.js';
 export type { ArenaV2WeaponResearchCard } from './arena-v2-weapon-research-catalog.js';
 export {
+  ARENA_V2_WEAPON_FUNCTION_LANGUAGE_FAMILY_MAP,
+  ARENA_V2_WEAPON_FUNCTION_LANGUAGE_ID,
+  ARENA_V2_WEAPON_FUNCTION_LANGUAGE_PROFILES,
+  resolveArenaV2WeaponFunctionLanguage,
+} from './arena-v2-weapon-function-language.js';
+export type {
+  ArenaV2WeaponFunctionLanguageId,
+  ArenaV2WeaponFunctionLanguageProfile,
+  ArenaV2WeaponModeFit,
+} from './arena-v2-weapon-function-language.js';
+export {
   runArenaV2WeaponMapPrototype,
 } from './arena-v2-weapon-map-prototype.js';
 export type {

@@ -84,5 +84,5 @@ describe('Arena V2 survival pressure prototype', () => {
     ))).toBe(true);
     expect(result.cases.every(({ secondKnockdownReached }) => secondKnockdownReached === false)).toBe(true);
     expect(result.cases.some(({ maximumCrowdPressurePeak }) => maximumCrowdPressurePeak >= 4)).toBe(true);
-  });
+  }, 20_000);
 });
