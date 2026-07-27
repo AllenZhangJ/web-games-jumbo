@@ -100,6 +100,8 @@
 当前新增证据：六类代表 KZ 地图样本已经形成结构化研究卡，新增记录来源明确公布的难度、路线长度和检查点事实，分别覆盖长跳练习、长路线检查点、垂直攀爬恢复、混合移动标签、连续 Bhop 节奏和短路线垂直入门；六段灰盒又通过同一套 Rule/Physics 武器攻击探针完成 18 个段落×武器组合，并以 10 tick 侧移和一次正式起跳扩展为 54 个响应组合，证明同一把武器在宽平台、迷宫、窄路和走钢丝上的后果不同；五种候选战斗语言进一步完成 90 个“语言×表面×固定回应”探针，证明前摇、有效窗口、目标朝向、横向冲量和支撑面会共同改变击落与路线转移结果；封路候选又补上公开标记位置和 24–26 tick 有效、27 tick 到期的最小状态；详见[CS1.6 KZ 跳跃地图研究 V1](arena-v2-cs16-kz-map-study-v1.md)、[武器战斗语言 × KZ 地图后果原型结果 V1](arena-v2-weapon-language-kz-consequence-results-v1.md)、`arena-v2-kz-map-research-catalog.ts`、`arena-v2-kz-route-combat-prototype.ts` 和 `arena-v2-kz-language-consequence-prototype.ts`。下一步仍需加入真人视野、移动方向选择、目标主动转身、区域内实际影响和复活重新进入路线验证，不引入第三方地图资产。
 当前新增证据：前述 54 个矩阵已扩展为五种语言共 90 个“语言×表面×固定回应”探针，并额外验证读招反制的有效窗口和绕后的目标朝向条件；固定结果见[武器战斗语言 × KZ 地图后果原型结果 V1](arena-v2-weapon-language-kz-consequence-results-v1.md)。
 
+当前新增证据：已开始逐件武器研究，第一件选择魔血镰刃，按中距离魔轮、脚下陷阱、急停背后、空中短按/长按、跑动三档蓄力和地面突起拆成 7 个动作单元；每个单元分别记录官方事实、设计推导、玩家决策、反制、失败成本和必须公开的数值轴。见 `arena-v2-weapon-magic-blood-scythe-case-study.ts`、[热血英豪武器研究 V1](arena-v2-hot-blooded-weapon-study-v1.md)和[ADR-080](../decisions/080-arena-v2-weapon-case-study-by-move.md)。下一件应按同一模板研究真·哈迪斯钩镰或白金双枪，不把本件案例视为全武器研究完成。
+
 ## 优先级三：弹壳特攻队局外信息架构研究
 
 第一轮至第四轮结果已记录在[弹壳特攻队界面研究 V1](arena-v2-survivor-io-ui-study-v1.md)与[弹壳特攻队局外界面研究结果 V2](arena-v2-survivor-io-ui-research-results-v2.md)。当前结论是：先把武器索引放入主页验证阅读行为，再决定是否拆独立武器库页面；11 个入口只作为信息职责，不引入 11 套复杂系统；1v1 与竞速共用竞技准备模板。

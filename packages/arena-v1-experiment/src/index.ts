@@ -232,6 +232,12 @@ export type {
   ArenaV2WeaponMinimumVersionSpecification,
   ArenaV2ProductionWeaponMinimumVersion,
 } from './arena-v2-weapon-minimum-version-contract.js';
+export { ARENA_V2_WEAPON_MAGIC_BLOOD_SCYTHE_CASE_STUDY } from './arena-v2-weapon-magic-blood-scythe-case-study.js';
+export type {
+  ArenaV2WeaponCaseStudyMove,
+  ArenaV2WeaponCaseStudyNumericReview,
+  ArenaV2WeaponMagicBloodScytheCaseStudy,
+} from './arena-v2-weapon-magic-blood-scythe-case-study.js';
 export {
   ARENA_V2_WEAPON_LAUNCH_CANDIDATES,
   ARENA_V2_WEAPON_LAUNCH_LANGUAGE_IDS,
