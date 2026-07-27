@@ -20,18 +20,38 @@ type AttackTuning = typeof ARENA_GAMEPLAY_V2_TUNING.attacks[
 const WEAPON_OVERVIEW_CONFIG: Readonly<Record<string, Readonly<{
   roleMessageId: string;
   descriptionMessageId: string;
+  coreVerbMessageId: string;
+  tradeoffMessageId: string;
+  counterplayMessageId: string;
+  groundSummaryMessageId: string;
+  aerialSummaryMessageId: string;
 }>>> = Object.freeze({
   [STAGE4_EQUIPMENT_ID.HAMMER]: Object.freeze({
     roleMessageId: 'equipment.hammer.role',
     descriptionMessageId: 'equipment.hammer.description',
+    coreVerbMessageId: 'equipment.hammer.core-verb',
+    tradeoffMessageId: 'equipment.hammer.tradeoff',
+    counterplayMessageId: 'equipment.hammer.counterplay',
+    groundSummaryMessageId: 'equipment.hammer.ground-summary',
+    aerialSummaryMessageId: 'equipment.hammer.aerial-summary',
   }),
   [STAGE4_EQUIPMENT_ID.CHAIN]: Object.freeze({
     roleMessageId: 'equipment.chain.role',
     descriptionMessageId: 'equipment.chain.description',
+    coreVerbMessageId: 'equipment.chain.core-verb',
+    tradeoffMessageId: 'equipment.chain.tradeoff',
+    counterplayMessageId: 'equipment.chain.counterplay',
+    groundSummaryMessageId: 'equipment.chain.ground-summary',
+    aerialSummaryMessageId: 'equipment.chain.aerial-summary',
   }),
   [STAGE4_EQUIPMENT_ID.SHIELD]: Object.freeze({
     roleMessageId: 'equipment.shield.role',
     descriptionMessageId: 'equipment.shield.description',
+    coreVerbMessageId: 'equipment.shield.core-verb',
+    tradeoffMessageId: 'equipment.shield.tradeoff',
+    counterplayMessageId: 'equipment.shield.counterplay',
+    groundSummaryMessageId: 'equipment.shield.ground-summary',
+    aerialSummaryMessageId: 'equipment.shield.aerial-summary',
   }),
 });
 
@@ -49,10 +69,19 @@ function stat(
   value: number,
   maxValue: number,
   unit: string,
-  direction: 'higher-is-better' | 'lower-is-better',
+  direction: 'higher-is-better' | 'lower-is-better' | 'higher-is-risk',
   precision = 2,
 ) {
   return { id, labelMessageId, value, maxValue, unit, direction, precision };
+}
+
+function contextStats(tuning: AttackTuning) {
+  return [
+    stat('range', 'equipment.stat.range', tuning.targeting.range, 6, '格', 'higher-is-better'),
+    stat('startup', 'equipment.stat.startup', tuning.cadence.windupSeconds, 0.5, '秒', 'lower-is-better'),
+    stat('impact', 'equipment.stat.impact', tuning.knockback.targetGroundDistance, 4, '格', 'higher-is-better'),
+    stat('vertical', 'equipment.stat.vertical', tuning.knockback.verticalImpulse, 7, '冲量', 'higher-is-better'),
+  ];
 }
 
 function createEquipmentOverview() {
@@ -61,9 +90,13 @@ function createEquipmentOverview() {
     const config = WEAPON_OVERVIEW_CONFIG[equipmentDefinition.id];
     if (!config) throw new RangeError(`武器 ${equipmentDefinition.id} 缺少概览文案配置。`);
     const tuning = attackTuning(equipmentDefinition.actionDefinitionId);
+    const aerialTuning = attackTuning(equipmentDefinition.aerialActionDefinitionId);
     result[equipmentDefinition.id] = {
       roleMessageId: config.roleMessageId,
       descriptionMessageId: config.descriptionMessageId,
+      coreVerbMessageId: config.coreVerbMessageId,
+      tradeoffMessageId: config.tradeoffMessageId,
+      counterplayMessageId: config.counterplayMessageId,
       stats: [
         stat('range', 'equipment.stat.range', tuning.targeting.range, 6, '格', 'higher-is-better'),
         stat('startup', 'equipment.stat.startup', tuning.cadence.windupSeconds, 0.5, '秒', 'lower-is-better'),
@@ -71,8 +104,22 @@ function createEquipmentOverview() {
         stat('impact', 'equipment.stat.impact', tuning.knockback.targetGroundDistance, 3, '格', 'higher-is-better'),
         stat('vertical', 'equipment.stat.vertical', tuning.knockback.verticalImpulse, 7, '冲量', 'higher-is-better'),
         stat('control', 'equipment.stat.control', tuning.hitstunTicks / ARENA_GAMEPLAY_V2_TUNING.units.tickRateHz, 0.6, '秒', 'higher-is-better'),
-        stat('self-movement', 'equipment.stat.self-movement', tuning.selfMovement?.horizontalImpulse ?? 0, 7, '冲量', 'higher-is-better'),
+        stat('self-movement', 'equipment.stat.self-movement', tuning.selfMovement?.horizontalImpulse ?? 0, 7, '冲量', 'higher-is-risk'),
         stat('cooldown', 'equipment.stat.cooldown', tuning.cadence.cooldownSeconds, 2, '秒', 'lower-is-better'),
+      ],
+      contexts: [
+        {
+          id: 'ground',
+          labelMessageId: 'equipment.context.ground',
+          summaryMessageId: config.groundSummaryMessageId,
+          stats: contextStats(tuning),
+        },
+        {
+          id: 'aerial',
+          labelMessageId: 'equipment.context.aerial',
+          summaryMessageId: config.aerialSummaryMessageId,
+          stats: contextStats(aerialTuning),
+        },
       ],
     };
   }

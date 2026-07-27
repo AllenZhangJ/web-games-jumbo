@@ -274,11 +274,20 @@ export class WebProductUiSurface {
     const title = element.querySelector<HTMLElement>('[data-weapon-title]');
     const role = element.querySelector<HTMLElement>('[data-weapon-role]');
     const description = element.querySelector<HTMLElement>('[data-weapon-description]');
+    const coreVerb = element.querySelector<HTMLElement>('[data-weapon-core-verb]');
+    const tradeoff = element.querySelector<HTMLElement>('[data-weapon-tradeoff]');
+    const counterplay = element.querySelector<HTMLElement>('[data-weapon-counterplay]');
     const stats = element.querySelector<HTMLElement>('[data-weapon-stats]');
-    if (!title || !role || !description || !stats) throw new Error(`武器卡片 ${card.id} 结构不完整。`);
+    const contexts = element.querySelector<HTMLElement>('[data-weapon-contexts]');
+    if (!title || !role || !description || !coreVerb || !tradeoff || !counterplay || !stats || !contexts) {
+      throw new Error(`武器卡片 ${card.id} 结构不完整。`);
+    }
     setText(title, card.name);
     setText(role, card.role);
+    setText(coreVerb, `核心：${card.coreVerb}`);
     setText(description, card.description);
+    setText(tradeoff, `风险：${card.tradeoff}`);
+    setText(counterplay, `反制：${card.counterplay}`);
     const existing = [...stats.querySelectorAll<HTMLElement>('[data-weapon-stat]')];
     if (existing.length !== card.stats.length) {
       stats.replaceChildren(...card.stats.map(() => {
@@ -303,10 +312,48 @@ export class WebProductUiSurface {
       const value = row.querySelector<HTMLElement>('[data-weapon-stat-value]');
       const track = row.querySelector<HTMLElement>('[data-weapon-stat-track]');
       if (!label || !value || !track) throw new Error(`武器数值 ${stat.id} 结构不完整。`);
-      setText(label, `${stat.label} ${stat.direction === 'lower-is-better' ? '↓' : '↑'}`);
+      const direction = stat.direction === 'lower-is-better'
+        ? '↓'
+        : stat.direction === 'higher-is-risk' ? '⚠' : '↑';
+      setText(label, `${stat.label} ${direction}`);
       setText(value, `${stat.value.toFixed(stat.precision)}${stat.unit}`);
       track.style.setProperty('--weapon-stat-fill', `${Math.max(0, Math.min(100, stat.value / stat.maxValue * 100))}%`);
       row.dataset.weaponStatDirection = stat.direction;
+    });
+    const existingContexts = [...contexts.querySelectorAll<HTMLElement>('[data-weapon-context]')];
+    if (existingContexts.length !== card.contexts.length) {
+      contexts.replaceChildren(...card.contexts.map(() => {
+        const context = this.#document.createElement('div');
+        const heading = this.#document.createElement('span');
+        const summary = this.#document.createElement('small');
+        const metrics = this.#document.createElement('div');
+        context.dataset.weaponContext = 'true';
+        context.className = 'product-weapon-context';
+        heading.dataset.weaponContextLabel = 'true';
+        summary.dataset.weaponContextSummary = 'true';
+        metrics.dataset.weaponContextMetrics = 'true';
+        metrics.className = 'product-weapon-context-metrics';
+        context.append(heading, summary, metrics);
+        return context;
+      }));
+    }
+    const contextNodes = [...contexts.querySelectorAll<HTMLElement>('[data-weapon-context]')];
+    card.contexts.forEach((context, index) => {
+      const contextNode = contextNodes[index]!;
+      const heading = contextNode.querySelector<HTMLElement>('[data-weapon-context-label]');
+      const summary = contextNode.querySelector<HTMLElement>('[data-weapon-context-summary]');
+      const metrics = contextNode.querySelector<HTMLElement>('[data-weapon-context-metrics]');
+      if (!heading || !summary || !metrics) throw new Error(`武器上下文 ${context.id} 结构不完整。`);
+      setText(heading, context.label);
+      setText(summary, context.summary);
+      const visibleStats = context.stats.filter(({ id }) => ['range', 'startup', 'impact'].includes(id));
+      metrics.replaceChildren(...visibleStats.map((stat) => {
+        const metric = this.#document.createElement('span');
+        metric.textContent = `${stat.value.toFixed(stat.precision)}${stat.unit}`;
+        metric.title = stat.label;
+        metric.dataset.weaponContextStat = stat.id;
+        return metric;
+      }));
     });
   }
 
@@ -329,13 +376,22 @@ export class WebProductUiSurface {
       const title = this.#document.createElement('strong');
       const role = this.#document.createElement('span');
       const description = this.#document.createElement('p');
+      const coreVerb = this.#document.createElement('span');
+      const tradeoff = this.#document.createElement('small');
+      const counterplay = this.#document.createElement('small');
       const stats = this.#document.createElement('div');
+      const contexts = this.#document.createElement('div');
       title.dataset.weaponTitle = 'true';
       role.dataset.weaponRole = 'true';
       description.dataset.weaponDescription = 'true';
+      coreVerb.dataset.weaponCoreVerb = 'true';
+      tradeoff.dataset.weaponTradeoff = 'true';
+      counterplay.dataset.weaponCounterplay = 'true';
       stats.dataset.weaponStats = 'true';
       stats.className = 'product-weapon-stats';
-      element.append(title, role, description, stats);
+      contexts.dataset.weaponContexts = 'true';
+      contexts.className = 'product-weapon-contexts';
+      element.append(title, role, coreVerb, description, tradeoff, counterplay, contexts, stats);
       this.#updateWeaponCard(element, card);
       fragment.append(element);
     }
@@ -365,7 +421,14 @@ export class WebProductUiSurface {
       viewModel.inputEnabled,
       viewModel.suspended,
       model.characterCards.find(({ selected }) => selected)?.id ?? '',
-      model.weaponCards.map((card) => `${card.id}:${card.stats.map((stat) => stat.value).join(',')}`).join('|'),
+      model.weaponCards.map((card) => [
+        card.id,
+        card.coreVerb,
+        card.tradeoff,
+        card.counterplay,
+        card.stats.map((stat) => `${stat.id}=${stat.value}`).join(','),
+        card.contexts.map((context) => `${context.id}:${context.stats.map((stat) => stat.value).join(',')}`).join(';'),
+      ].join(':')).join('|'),
       model.primaryAction?.enabled ?? false,
       model.primaryAction?.label ?? '',
       model.secondaryAction?.enabled ?? false,

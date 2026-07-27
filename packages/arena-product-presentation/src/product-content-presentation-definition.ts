@@ -21,6 +21,7 @@ export type ProductContentKind = typeof PRODUCT_CONTENT_KIND[keyof typeof PRODUC
 export const PRODUCT_CONTENT_STAT_DIRECTION = Object.freeze({
   HIGHER_IS_BETTER: 'higher-is-better',
   LOWER_IS_BETTER: 'lower-is-better',
+  HIGHER_IS_RISK: 'higher-is-risk',
 } as const);
 
 export type ProductContentStatDirection = typeof PRODUCT_CONTENT_STAT_DIRECTION[
@@ -37,10 +38,21 @@ export interface ProductContentStatJson {
   readonly precision: number;
 }
 
+export interface ProductContentActionContextJson {
+  readonly id: string;
+  readonly labelMessageId: string;
+  readonly summaryMessageId: string;
+  readonly stats: readonly ProductContentStatJson[];
+}
+
 export interface ProductContentOverviewJson {
   readonly roleMessageId: string;
   readonly descriptionMessageId: string;
+  readonly coreVerbMessageId: string;
+  readonly tradeoffMessageId: string;
+  readonly counterplayMessageId: string;
   readonly stats: readonly ProductContentStatJson[];
+  readonly contexts: readonly ProductContentActionContextJson[];
 }
 
 export interface ProductContentPresentationDefinitionJson {
@@ -67,7 +79,11 @@ const CONTENT_KINDS: ReadonlySet<unknown> = new Set(Object.values(PRODUCT_CONTEN
 const STAT_KEYS = new Set([
   'id', 'labelMessageId', 'value', 'maxValue', 'unit', 'direction', 'precision',
 ]);
-const OVERVIEW_KEYS = new Set(['roleMessageId', 'descriptionMessageId', 'stats']);
+const OVERVIEW_KEYS = new Set([
+  'roleMessageId', 'descriptionMessageId', 'coreVerbMessageId',
+  'tradeoffMessageId', 'counterplayMessageId', 'stats', 'contexts',
+]);
+const CONTEXT_KEYS = new Set(['id', 'labelMessageId', 'summaryMessageId', 'stats']);
 const STAT_DIRECTIONS: ReadonlySet<unknown> = new Set(
   Object.values(PRODUCT_CONTENT_STAT_DIRECTION),
 );
@@ -77,6 +93,31 @@ function finiteNumber(value: unknown, name: string, minimum: number): number {
     throw new RangeError(`${name} 必须是大于等于 ${minimum} 的有限数。`);
   }
   return value as number;
+}
+
+function statValue(value: unknown, name: string, ids: Set<string>): ProductContentStat {
+  const stat = assertPlainRecord(value, name);
+  assertKnownKeys(stat, STAT_KEYS, name);
+  const id = assertNonEmptyString(stat.id, `${name}.id`);
+  if (ids.has(id)) throw new RangeError(`武器概览不能包含重复数值 ${id}。`);
+  ids.add(id);
+  const valueNumber = finiteNumber(stat.value, `${name}.value`, 0);
+  const maxValue = finiteNumber(stat.maxValue, `${name}.maxValue`, 0);
+  if (maxValue <= 0 || valueNumber > maxValue) {
+    throw new RangeError(`${name}.maxValue 必须大于 value 且为有限正数。`);
+  }
+  if (!STAT_DIRECTIONS.has(stat.direction)) {
+    throw new RangeError(`${name}.direction 不受支持：${String(stat.direction)}。`);
+  }
+  return Object.freeze({
+    id,
+    labelMessageId: assertNonEmptyString(stat.labelMessageId, `${name}.labelMessageId`),
+    value: valueNumber,
+    maxValue,
+    unit: assertNonEmptyString(stat.unit, `${name}.unit`),
+    direction: stat.direction as ProductContentStatDirection,
+    precision: assertIntegerAtLeast(stat.precision, 0, `${name}.precision`),
+  });
 }
 
 function overviewValue(value: unknown, contentKind: ProductContentKind): ProductContentOverview | null {
@@ -89,30 +130,41 @@ function overviewValue(value: unknown, contentKind: ProductContentKind): Product
   if (!Array.isArray(source.stats) || source.stats.length === 0) {
     throw new RangeError('ProductContentPresentationDefinition.overview.stats 必须是非空数组。');
   }
-  const ids = new Set<string>();
-  const stats = source.stats.map((statValue, index) => {
-    const name = `ProductContentPresentationDefinition.overview.stats[${index}]`;
-    const stat = assertPlainRecord(statValue, name);
-    assertKnownKeys(stat, STAT_KEYS, name);
-    const id = assertNonEmptyString(stat.id, `${name}.id`);
-    if (ids.has(id)) throw new RangeError(`武器概览不能包含重复数值 ${id}。`);
-    ids.add(id);
-    const valueNumber = finiteNumber(stat.value, `${name}.value`, 0);
-    const maxValue = finiteNumber(stat.maxValue, `${name}.maxValue`, 0);
-    if (maxValue <= 0 || valueNumber > maxValue) {
-      throw new RangeError(`${name}.maxValue 必须大于 value 且为有限正数。`);
+  if (!Array.isArray(source.contexts) || source.contexts.length === 0) {
+    throw new RangeError(
+      'ProductContentPresentationDefinition.overview.contexts 必须是非空数组。',
+    );
+  }
+  const statIds = new Set<string>();
+  const stats = source.stats.map((value, index) => statValue(
+    value,
+    `ProductContentPresentationDefinition.overview.stats[${index}]`,
+    statIds,
+  ));
+  const contextIds = new Set<string>();
+  const contexts = source.contexts.map((contextValue, index) => {
+    const name = `ProductContentPresentationDefinition.overview.contexts[${index}]`;
+    const context = assertPlainRecord(contextValue, name);
+    assertKnownKeys(context, CONTEXT_KEYS, name);
+    const id = assertNonEmptyString(context.id, `${name}.id`);
+    if (contextIds.has(id)) throw new RangeError(`武器概览不能包含重复上下文 ${id}。`);
+    contextIds.add(id);
+    if (!Array.isArray(context.stats) || context.stats.length === 0) {
+      throw new RangeError(`${name}.stats 必须是非空数组。`);
     }
-    if (!STAT_DIRECTIONS.has(stat.direction)) {
-      throw new RangeError(`${name}.direction 不受支持：${String(stat.direction)}。`);
-    }
+    const contextStatIds = new Set<string>();
     return Object.freeze({
       id,
-      labelMessageId: assertNonEmptyString(stat.labelMessageId, `${name}.labelMessageId`),
-      value: valueNumber,
-      maxValue,
-      unit: assertNonEmptyString(stat.unit, `${name}.unit`),
-      direction: stat.direction as ProductContentStatDirection,
-      precision: assertIntegerAtLeast(stat.precision, 0, `${name}.precision`),
+      labelMessageId: assertNonEmptyString(context.labelMessageId, `${name}.labelMessageId`),
+      summaryMessageId: assertNonEmptyString(
+        context.summaryMessageId,
+        `${name}.summaryMessageId`,
+      ),
+      stats: Object.freeze(context.stats.map((value, statIndex) => statValue(
+        value,
+        `${name}.stats[${statIndex}]`,
+        contextStatIds,
+      ))),
     });
   });
   return Object.freeze({
@@ -124,7 +176,20 @@ function overviewValue(value: unknown, contentKind: ProductContentKind): Product
       source.descriptionMessageId,
       'ProductContentPresentationDefinition.overview.descriptionMessageId',
     ),
+    coreVerbMessageId: assertNonEmptyString(
+      source.coreVerbMessageId,
+      'ProductContentPresentationDefinition.overview.coreVerbMessageId',
+    ),
+    tradeoffMessageId: assertNonEmptyString(
+      source.tradeoffMessageId,
+      'ProductContentPresentationDefinition.overview.tradeoffMessageId',
+    ),
+    counterplayMessageId: assertNonEmptyString(
+      source.counterplayMessageId,
+      'ProductContentPresentationDefinition.overview.counterplayMessageId',
+    ),
     stats: Object.freeze(stats),
+    contexts: Object.freeze(contexts),
   });
 }
 

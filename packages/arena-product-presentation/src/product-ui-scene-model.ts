@@ -39,6 +39,17 @@ export interface ProductUiSceneWeaponCard {
   readonly previewAssetId: string | null;
   readonly role: string;
   readonly description: string;
+  readonly coreVerb: string;
+  readonly tradeoff: string;
+  readonly counterplay: string;
+  readonly stats: readonly ProductUiSceneWeaponStat[];
+  readonly contexts: readonly ProductUiSceneWeaponContext[];
+}
+
+export interface ProductUiSceneWeaponContext {
+  readonly id: string;
+  readonly label: string;
+  readonly summary: string;
   readonly stats: readonly ProductUiSceneWeaponStat[];
 }
 
@@ -157,6 +168,54 @@ function characterCards(
   return Object.freeze(cards);
 }
 
+function weaponStats(values: unknown, name: string): readonly ProductUiSceneWeaponStat[] {
+  if (!Array.isArray(values) || values.length === 0) {
+    throw new RangeError(`${name}.stats 必须是非空数组。`);
+  }
+  const statIds = new Set<string>();
+  return Object.freeze(values.map((statValue, statIndex) => {
+    const statName = `${name}.stats[${statIndex}]`;
+    const stat = dataRecord(statValue, statName);
+    const statId = assertNonEmptyString(stat.id, `${statName}.id`);
+    if (statIds.has(statId)) throw new RangeError(`${name} 包含重复数值 ${statId}。`);
+    statIds.add(statId);
+    const valueNumber = finiteNumber(stat.value, `${statName}.value`, 0);
+    const maxValue = finiteNumber(stat.maxValue, `${statName}.maxValue`, 0);
+    if (maxValue <= 0 || valueNumber > maxValue) {
+      throw new RangeError(`${statName} 的数值范围无效。`);
+    }
+    return Object.freeze({
+      id: statId,
+      label: assertNonEmptyString(stat.label, `${statName}.label`),
+      value: valueNumber,
+      maxValue,
+      unit: assertNonEmptyString(stat.unit, `${statName}.unit`),
+      direction: assertNonEmptyString(stat.direction, `${statName}.direction`),
+      precision: assertIntegerAtLeast(stat.precision, 0, `${statName}.precision`),
+    });
+  }));
+}
+
+function weaponContexts(values: unknown, name: string): readonly ProductUiSceneWeaponContext[] {
+  if (!Array.isArray(values) || values.length === 0) {
+    throw new RangeError(`${name}.contexts 必须是非空数组。`);
+  }
+  const contextIds = new Set<string>();
+  return Object.freeze(values.map((value, index) => {
+    const contextName = `${name}.contexts[${index}]`;
+    const context = dataRecord(value, contextName);
+    const id = assertNonEmptyString(context.id, `${contextName}.id`);
+    if (contextIds.has(id)) throw new RangeError(`${name} 包含重复上下文 ${id}。`);
+    contextIds.add(id);
+    return Object.freeze({
+      id,
+      label: assertNonEmptyString(context.label, `${contextName}.label`),
+      summary: assertNonEmptyString(context.summary, `${contextName}.summary`),
+      stats: weaponStats(context.stats, contextName),
+    });
+  }));
+}
+
 function weaponCards(values: unknown): readonly ProductUiSceneWeaponCard[] {
   if (values === undefined || values === null) return Object.freeze([]);
   if (!Array.isArray(values)) {
@@ -169,38 +228,17 @@ function weaponCards(values: unknown): readonly ProductUiSceneWeaponCard[] {
     const id = assertNonEmptyString(option.weaponDefinitionId, `${name}.weaponDefinitionId`);
     if (ids.has(id)) throw new RangeError(`Product UI ViewModel 包含重复武器 ${id}。`);
     ids.add(id);
-    if (!Array.isArray(option.stats) || option.stats.length === 0) {
-      throw new RangeError(`${name}.stats 必须是非空数组。`);
-    }
-    const statIds = new Set<string>();
-    const stats = Object.freeze(option.stats.map((statValue, statIndex) => {
-      const statName = `${name}.stats[${statIndex}]`;
-      const stat = dataRecord(statValue, statName);
-      const statId = assertNonEmptyString(stat.id, `${statName}.id`);
-      if (statIds.has(statId)) throw new RangeError(`${name} 包含重复数值 ${statId}。`);
-      statIds.add(statId);
-      const valueNumber = finiteNumber(stat.value, `${statName}.value`, 0);
-      const maxValue = finiteNumber(stat.maxValue, `${statName}.maxValue`, 0);
-      if (maxValue <= 0 || valueNumber > maxValue) {
-        throw new RangeError(`${statName} 的数值范围无效。`);
-      }
-      return Object.freeze({
-        id: statId,
-        label: assertNonEmptyString(stat.label, `${statName}.label`),
-        value: valueNumber,
-        maxValue,
-        unit: assertNonEmptyString(stat.unit, `${statName}.unit`),
-        direction: assertNonEmptyString(stat.direction, `${statName}.direction`),
-        precision: assertIntegerAtLeast(stat.precision, 0, `${statName}.precision`),
-      });
-    }));
     return Object.freeze({
       id,
       name: assertNonEmptyString(option.name, `${name}.name`),
       previewAssetId: nullableString(option.previewAssetId, `${name}.previewAssetId`),
       role: assertNonEmptyString(option.role, `${name}.role`),
       description: assertNonEmptyString(option.description, `${name}.description`),
-      stats,
+      coreVerb: assertNonEmptyString(option.coreVerb, `${name}.coreVerb`),
+      tradeoff: assertNonEmptyString(option.tradeoff, `${name}.tradeoff`),
+      counterplay: assertNonEmptyString(option.counterplay, `${name}.counterplay`),
+      stats: weaponStats(option.stats, name),
+      contexts: weaponContexts(option.contexts, name),
     });
   }));
 }

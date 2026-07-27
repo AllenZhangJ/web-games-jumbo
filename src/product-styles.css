@@ -318,6 +318,12 @@ button {
   font-weight: 800;
 }
 
+.product-weapon-card > [data-weapon-core-verb] {
+  color: var(--ink);
+  font-size: 0.54rem;
+  letter-spacing: 0.04em;
+}
+
 .product-weapon-card > p {
   display: -webkit-box;
   min-height: 2.1em;
@@ -328,6 +334,66 @@ button {
   line-height: 1.35;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+}
+
+.product-weapon-card > small {
+  display: block;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.5rem;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.product-weapon-card > [data-weapon-counterplay] {
+  margin-top: 0.12rem;
+  color: var(--ink);
+}
+
+.product-weapon-contexts {
+  display: grid;
+  gap: 0.24rem;
+  margin: 0.4rem 0;
+  padding: 0.3rem 0;
+  border-top: 1px dashed var(--line);
+  border-bottom: 1px dashed var(--line);
+}
+
+.product-weapon-context {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.1rem 0.3rem;
+  align-items: baseline;
+}
+
+.product-weapon-context > span {
+  color: var(--ink);
+  font-size: 0.52rem;
+  font-weight: 900;
+}
+
+.product-weapon-context > small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.48rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.product-weapon-context-metrics {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 0.32rem;
+  color: var(--coral-dark);
+  font-size: 0.5rem;
+  font-weight: 800;
+}
+
+.product-weapon-context-metrics span::before {
+  margin-right: 0.08rem;
+  color: var(--muted);
+  content: "·";
 }
 
 .product-weapon-stats {

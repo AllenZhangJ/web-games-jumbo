@@ -467,6 +467,53 @@ describe('Product presentation immutable data boundaries', () => {
     expect(getterCalls).toBe(0);
   });
 
+  it('projects weapon context values and risk direction into the UI scene model', () => {
+    const sceneModel = createProductUiSceneModel({
+      revision: 1,
+      locale: 'zh-CN',
+      busy: false,
+      suspended: false,
+      terminal: false,
+      inputEnabled: true,
+      screen: {
+        sceneId: 'home', title: '竞技场', body: '', announcement: '竞技场',
+        primaryAction: null, secondaryAction: null,
+      },
+      characterOptions: [],
+      weaponOptions: [{
+        weaponDefinitionId: 'shield',
+        name: '冲锋盾',
+        previewAssetId: 'weapon:shield',
+        role: '突进与换位',
+        description: '用距离换取主动权。',
+        coreVerb: '冲入',
+        tradeoff: '自身位移大。',
+        counterplay: '让出直线。',
+        stats: [{
+          id: 'self-movement', label: '自身位移风险', value: 6.5, maxValue: 7,
+          unit: '冲量', direction: 'higher-is-risk', precision: 2,
+        }],
+        contexts: [{
+          id: 'ground', label: '地面', summary: '冲撞换位。', stats: [{
+            id: 'range', label: '有效距离', value: 1.6, maxValue: 6,
+            unit: '格', direction: 'higher-is-better', precision: 2,
+          }],
+        }],
+      }],
+      match: null,
+      result: null,
+      reward: null,
+      unlocks: [],
+      error: null,
+    });
+    expect(sceneModel.weaponCards[0]).toMatchObject({
+      id: 'shield',
+      coreVerb: '冲入',
+      stats: [{ direction: 'higher-is-risk' }],
+      contexts: [{ id: 'ground', stats: [{ value: 1.6 }] }],
+    });
+  });
+
   it('paints a deterministic command stream without mutating scene or layout inputs', () => {
     const sceneModel = createProductUiSceneModel({
       revision: 2,

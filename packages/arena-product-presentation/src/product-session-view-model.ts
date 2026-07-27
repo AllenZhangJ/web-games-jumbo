@@ -97,6 +97,9 @@ export interface ProductSessionViewModel {
     previewAssetId: string;
     role: string;
     description: string;
+    coreVerb: string;
+    tradeoff: string;
+    counterplay: string;
     stats: readonly Readonly<{
       id: string;
       label: string;
@@ -105,6 +108,20 @@ export interface ProductSessionViewModel {
       unit: string;
       direction: string;
       precision: number;
+    }>[];
+    contexts: readonly Readonly<{
+      id: string;
+      label: string;
+      summary: string;
+      stats: readonly Readonly<{
+        id: string;
+        label: string;
+        value: number;
+        maxValue: number;
+        unit: string;
+        direction: string;
+        precision: number;
+      }>[];
     }>[];
   }>[];
   readonly match: Readonly<{
@@ -282,6 +299,9 @@ function profileView(
         previewAssetId: definition.previewAssetId,
         role: messages.format(definition.overview.roleMessageId),
         description: messages.format(definition.overview.descriptionMessageId),
+        coreVerb: messages.format(definition.overview.coreVerbMessageId),
+        tradeoff: messages.format(definition.overview.tradeoffMessageId),
+        counterplay: messages.format(definition.overview.counterplayMessageId),
         stats: Object.freeze(definition.overview.stats.map((stat) => Object.freeze({
           id: stat.id,
           label: messages.format(stat.labelMessageId),
@@ -290,6 +310,20 @@ function profileView(
           unit: stat.unit,
           direction: stat.direction,
           precision: stat.precision,
+        }))),
+        contexts: Object.freeze(definition.overview.contexts.map((context) => Object.freeze({
+          id: context.id,
+          label: messages.format(context.labelMessageId),
+          summary: messages.format(context.summaryMessageId),
+          stats: Object.freeze(context.stats.map((stat) => Object.freeze({
+            id: stat.id,
+            label: messages.format(stat.labelMessageId),
+            value: stat.value,
+            maxValue: stat.maxValue,
+            unit: stat.unit,
+            direction: stat.direction,
+            precision: stat.precision,
+          }))),
         }))),
       });
     });

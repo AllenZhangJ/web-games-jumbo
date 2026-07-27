@@ -38,6 +38,15 @@ describe('Arena V1 concrete presentation content', () => {
       direction: 'higher-is-better',
     });
     expect(hammer?.overview?.stats.some(({ id }) => id === 'startup')).toBe(true);
+    expect(hammer?.overview?.coreVerbMessageId).toBe('equipment.hammer.core-verb');
+    expect(hammer?.overview?.contexts.map(({ id }) => id)).toEqual(['ground', 'aerial']);
+    expect(hammer?.overview?.contexts[1]?.stats.find(({ id }) => id === 'range'))
+      .toMatchObject({ value: 2.5, unit: '格' });
+    const shield = weapons.find(({ contentId }) => contentId === 'shield');
+    expect(shield?.overview?.stats.find(({ id }) => id === 'self-movement')).toMatchObject({
+      value: 6.5,
+      direction: 'higher-is-risk',
+    });
     expect(ARENA_V1_PRODUCT_SCREEN_REGISTRY.list().length).toBeGreaterThan(0);
   });
 });

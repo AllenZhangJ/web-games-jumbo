@@ -38,10 +38,12 @@ V2 不需要推翻当前 Arena 的确定性规则、Definition/Registry、Replay
 
 - 不可变的武器基础定义；
 - 当前动作和命中效果；
+- 武器的地面/空中动作上下文与公开数值投影；
 - 生存模式的临时武器等级/Offer；
 - 局外收藏和解锁状态。
 
 临时等级不能修改永久 Definition，也不能让表现层直接写入战斗数值。
+当前已接入的 `ProductContentPresentationDefinition.overview` 只承担公开展示，不是第二套权威平衡源；最终 V2 迁移时必须把上下文动作和临时等级分别放入 Rule/Core 数据边界。
 
 ### 4. 地图定义
 

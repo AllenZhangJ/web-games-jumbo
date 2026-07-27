@@ -32,16 +32,17 @@ Arena V2 的核心目标是：
 |---|---|---|
 | [V2 产品总纲](arena-v2-product-brief.md) | 统一定位、目标用户、核心循环和非目标 | 初稿 |
 | [V2 玩法框架](../gameplay/arena-v2-gameplay-framework.md) | 角色、操作、1v1、生存、地图和反馈的总规则 | 初稿 |
-| [V2 武器设计与研究框架](../gameplay/arena-v2-weapon-design-framework.md) | 热血英豪研究方法、基础武器原型和武器卡模板 | 初稿 |
+| [V2 武器设计与研究框架](../gameplay/arena-v2-weapon-design-framework.md) | 热血英豪研究方法、上下文动作、基础武器原型和武器卡模板 | 第二轮收敛 |
 | [V2 生存 1vE 规则](../gameplay/arena-v2-survival-mode.md) | 生存流程、敌人、武器供给、掉落和结束条件 | 初稿 |
 | [V2 成长与 200 小时目标](../gameplay/arena-v2-progression-200-hours.md) | 收藏、熟悉、重复游玩和奖励边界 | 初稿 |
 | [V2 界面地图](arena-v2-screen-map.md) | 明确需要哪些局外页面和对局页面 | 初稿 |
 | [V2 架构影响与迁移边界](../architecture/arena-v2-migration-boundary.md) | 说明哪些可以复用、哪些需要重构 | 初稿 |
-| [V2 搜索与验证清单](../research/arena-v2-research-backlog.md) | 管理后续搜索、原型和实测问题 | 初稿 |
-| [热血英豪武器研究 V1](../research/arena-v2-hot-blooded-weapon-study-v1.md) | 记录官方案例、基础武器语言和数值展示要求 | 第一轮研究 |
-| [CS1.6 KZ 跳跃地图研究 V1](../research/arena-v2-cs16-kz-map-study-v1.md) | 记录地图段落、难度轴和竞速/生存复用边界 | 第一轮研究 |
-| [弹壳特攻队界面研究 V1](../research/arena-v2-survivor-io-ui-study-v1.md) | 记录局外信息架构和页面收敛规则 | 第一轮研究 |
+| [V2 搜索与验证清单](../research/arena-v2-research-backlog.md) | 管理后续搜索、原型和实测问题 | 第二轮收敛 |
+| [热血英豪武器研究 V1](../research/arena-v2-hot-blooded-weapon-study-v1.md) | 记录官方案例、上下文动作矩阵、风险语义和数值展示要求 | 第二轮研究 |
+| [CS1.6 KZ 跳跃地图研究 V1](../research/arena-v2-cs16-kz-map-study-v1.md) | 记录地图段落、六维难度轴、段落合同和竞速/生存复用边界 | 第二轮研究 |
+| [弹壳特攻队界面研究 V1](../research/arena-v2-survivor-io-ui-study-v1.md) | 记录局外信息层、页面职责、点击预算和收敛规则 | 第二轮研究 |
 | [ADR-044：武器不做格挡与公开数值概览](../decisions/044-arena-v2-weapon-no-guard-and-public-overview.md) | 固化武器边界与数值展示来源 | V2 提案 |
+| [ADR-045：武器上下文概览契约](../decisions/045-arena-v2-weapon-context-overview.md) | 固化主动作数值、地面/空中上下文与风险语义 | 表现原型已接入 |
 
 ## 文档收敛顺序
 
