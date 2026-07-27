@@ -6,6 +6,10 @@ import {
   type ArenaV2WeaponResearchOverviewRow,
   type ArenaV2WeaponResearchOverviewStat,
 } from './arena-v2-weapon-research-overview-prototype.js';
+import { createArenaV2WeaponCaseStudyOverview } from './arena-v2-weapon-case-study-overview-prototype.js';
+import {
+  ARENA_V2_WEAPON_PUBLIC_OVERVIEW_AXIS_IDS,
+} from './arena-v2-weapon-public-axis-contract.js';
 import type { ArenaV2WeaponPublicAxisId } from './arena-v2-weapon-public-axis-contract.js';
 
 export const ARENA_V2_WEAPON_READABILITY_TASK_SCHEMA_VERSION = 1 as const;
@@ -91,6 +95,46 @@ export interface ArenaV2WeaponReadabilityAttemptReport {
   readonly passedTaskCount: number;
   readonly passRate: number;
   readonly results: readonly ArenaV2WeaponReadabilityTaskResult[];
+}
+
+/**
+ * Adapts the six deep weapon studies to the same participant-safe matrix used
+ * by the readability task. The source remains research-only and is never a
+ * production content registry.
+ */
+export function createArenaV2WeaponCaseStudyReadabilityMatrix(): ArenaV2WeaponResearchOverviewMatrix {
+  const overview = createArenaV2WeaponCaseStudyOverview();
+  const rows = Object.freeze(overview.rows.map((row) => {
+    if (!row.numericProjection) {
+      throw new Error(`逐件武器研究缺少数值投影，不能进入真人可读性任务：${row.referenceId}`);
+    }
+    return Object.freeze({
+      candidateId: row.referenceId,
+      weaponId: `case-study-${row.referenceId}`,
+      displayName: row.referenceName,
+      languageId: row.referenceId,
+      coreVerb: row.coreVerb,
+      hitResult: `核心结果：${row.coreVerb}。`,
+      mapSpaces: Object.freeze([...row.mapSignals]),
+      counterplay: Object.freeze([...row.counterplay]),
+      contexts: row.numericProjection.contexts,
+    });
+  }));
+  const fingerprints = new Set(rows.map((row) => (
+    row.contexts.map(({ id, stats, behaviorStats }) => (
+      `${id}:${stats.map(({ id: statId, value }) => `${statId}:${value}`).join('|')}`
+        + behaviorStats.map(({ id: statId, value }) => `${statId}:${value}`).join('|')
+    )).join('||')
+  )));
+  if (fingerprints.size !== rows.length) {
+    throw new Error('逐件武器研究矩阵的行为指纹不能重复，避免六件武器只剩外观差异。');
+  }
+  return Object.freeze({
+    rows,
+    comparedAxisIds: Object.freeze([...ARENA_V2_WEAPON_PUBLIC_OVERVIEW_AXIS_IDS]),
+    allRowsHaveComparableAxes: true,
+    allRowsHaveDistinctBehaviorFingerprint: true,
+  });
 }
 
 function freezeOption(id: string, label: string): ArenaV2WeaponReadabilityOption {

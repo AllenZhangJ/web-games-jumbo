@@ -438,6 +438,9 @@ export {
   createArenaV2WeaponResearchOverviewContexts,
   createArenaV2WeaponResearchOverviewMatrix,
 } from './arena-v2-weapon-research-overview-prototype.js';
+export {
+  createArenaV2WeaponCaseStudyReadabilityMatrix,
+} from './arena-v2-weapon-readability-task-prototype.js';
 export type {
   ArenaV2WeaponResearchOverviewContext,
   ArenaV2WeaponResearchOverviewContextId,

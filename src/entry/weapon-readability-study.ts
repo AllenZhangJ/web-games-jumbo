@@ -1,11 +1,12 @@
 import {
-  createArenaV2WeaponResearchOverviewMatrix,
+  createArenaV2WeaponCaseStudyReadabilityMatrix,
   createArenaV2WeaponReadabilityTaskSet,
   evaluateArenaV2WeaponReadabilityAttempt,
   projectArenaV2WeaponReadabilityParticipantTasks,
   type ArenaV2WeaponReadabilityAttemptAnswer,
   type ArenaV2WeaponReadabilityAttemptReport,
   type ArenaV2WeaponReadabilityParticipantTask,
+  type ArenaV2WeaponResearchOverviewMatrix,
   type ArenaV2WeaponResearchOverviewContext,
   type ArenaV2WeaponResearchOverviewRow,
   type ArenaV2WeaponResearchOverviewStat,
@@ -152,9 +153,11 @@ function renderContextTable(
   return details;
 }
 
-function renderOverview(documentValue: Document): void {
+function renderOverview(
+  documentValue: Document,
+  matrix: ArenaV2WeaponResearchOverviewMatrix,
+): void {
   const overview = required<HTMLElement>(documentValue, '#readability-overview');
-  const matrix = createArenaV2WeaponResearchOverviewMatrix();
   overview.replaceChildren();
   const summary = documentValue.createElement('div');
   summary.className = 'readability-overview-summary';
@@ -314,9 +317,10 @@ function start(): void {
   const submit = required<HTMLButtonElement>(root, '#readability-submit');
   const exportButton = required<HTMLButtonElement>(root, '#readability-export');
   const error = required<HTMLElement>(root, '#readability-error');
-  const taskSet = createArenaV2WeaponReadabilityTaskSet();
+  const matrix = createArenaV2WeaponCaseStudyReadabilityMatrix();
+  const taskSet = createArenaV2WeaponReadabilityTaskSet(matrix);
   const tasks = projectArenaV2WeaponReadabilityParticipantTasks(taskSet);
-  renderOverview(documentValue);
+  renderOverview(documentValue, matrix);
   const taskHash = required<HTMLElement>(root, '#readability-task-hash');
   const matrixHash = required<HTMLElement>(root, '#readability-matrix-hash');
   const status = required<HTMLElement>(root, '#readability-status');

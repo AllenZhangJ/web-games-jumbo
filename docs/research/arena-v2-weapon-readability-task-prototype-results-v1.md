@@ -2,11 +2,11 @@
 
 ## 状态
 
-- 状态：研究页已接入并完成桌面浏览器交互验证；真人样本、目标设备和长期留存仍未开始
+- 状态：研究页已接入六件逐件研究武器矩阵，并完成自动化页面边界与任务合同验证；真人样本、目标设备和长期留存仍未开始
 - 日期：2026-07-28
-- 实现：`packages/arena-v1-experiment/src/arena-v2-weapon-readability-task-prototype.ts`
-- 测试：`packages/arena-v1-experiment/test/arena-v2-weapon-readability-task-prototype.test.ts`
-- 研究页：`readability.html`、`src/entry/weapon-readability-study.ts`、`src/weapon-readability-study.css`；题目前直接展示同源研究矩阵
+- 实现：`packages/arena-v1-experiment/src/arena-v2-weapon-readability-task-prototype.ts`、`createArenaV2WeaponCaseStudyReadabilityMatrix`
+- 测试：`packages/arena-v1-experiment/test/arena-v2-weapon-readability-task-prototype.test.ts`、`arena-v2-weapon-case-study-readability-matrix.test.ts`
+- 研究页：`readability.html`、`src/entry/weapon-readability-study.ts`、`src/weapon-readability-study.css`；题目前直接展示六件逐件研究武器的同源研究矩阵
 - 页面边界测试：`tests/arena/study/weapon-readability-study-web.test.ts`
 - 边界：只消费研究武器概览矩阵，不进入默认生产 UI、MatchCore、Replay 或存档；生产构建入口仍只有 `index.html`
 
@@ -14,19 +14,19 @@
 
 此前已经能在产品页面看到武器数值，但真人验证计划还没有可执行的、绑定真实矩阵的任务。此原型把“看懂数值”和“把数值用于地图选择”拆成可复核题目，同时确保题目和答案不会脱离当前研究候选 Definition 投影。
 
-## 当前生成的五项任务
+## 当前生成的五项任务（覆盖六件武器）
 
 | 任务 | 测量能力 | 当前矩阵推导的答案 | 主要数值轴 |
 | --- | --- | --- | --- |
-| `ground-range-highest` | 找出地面有效距离最高者 | 直线压制 | 有效距离 |
-| `ground-coverage-highest` | 找出地面覆盖宽度最高者 | 直线压制 | 覆盖宽度 |
+| `ground-range-highest` | 找出地面有效距离最高者 | 白金双枪研究案例 | 有效距离 |
+| `ground-coverage-highest` | 找出地面覆盖宽度最高者 | 白金双枪研究案例 | 覆盖宽度 |
 | `ground-risk-direction` | 解释风险方向 | 数值越高，风险越大 | 自身位移风险 |
-| `ground-narrow-edge-choice` | 为窄路边缘选择武器并给出数值理由 | 读招反制 | 横向击飞、收招时间 |
-| `ground-aerial-range-difference` | 找出地面/空中有效距离差异最大者，并指出较高上下文 | 直线压制，地面更高 | 有效距离 |
+| `ground-narrow-edge-choice` | 为窄路边缘选择武器并给出数值理由 | 幻虎巨拳研究案例 | 横向击飞、收招时间 |
+| `ground-aerial-range-difference` | 找出地面/空中有效距离差异最大者，并指出较高上下文 | 白金双枪研究案例，地面更高 | 有效距离 |
 
 这些答案是当前研究矩阵的投影结果，不是平衡结论。更换候选 Definition、数值轴或上下文值后，`sourceMatrixHash` 会变化，任务答案必须重新生成。
 
-本次验证的 `sourceMatrixHash` 为 `bb059826`，任务集哈希为 `2cf30a57`；哈希只绑定本次研究矩阵和题目合同，不代表生产版本号。
+六件逐件研究页面当前的 `sourceMatrixHash` 为 `1b0bfa97`，任务集哈希为 `d6117647`；哈希只绑定本次研究矩阵和题目合同，不代表生产版本号。旧的三种战斗语言矩阵仍保留给基础候选测试，不作为六件研究页的数据源。
 
 ## 数据边界
 
@@ -46,7 +46,8 @@
 
 ## 自动化结果
 
-- 5 个任务均能从当前矩阵生成且具有唯一答案；
+- 5 个任务均能从六件研究矩阵生成且具有唯一答案；
+- 六件研究武器均有唯一的 `case-study-*` 参与者选项身份，地面/空中各显示 9 个主轴、6 个上下文轴和 2 个行为轴；
 - 参与者投影不包含 `expectedOptionId` 或 `evidence`；
 - 正确答案通过率为单次模拟的 5/5，错误答案会降低对应任务结果；
 - 重复或未知任务答案会在评估前拒绝；
@@ -55,15 +56,15 @@
 
 ## 研究页验证
 
-独立研究页已接入参与者任务投影和同源研究矩阵：页面先展示三把研究候选的战斗语言、地图空间、反制方式，以及地面/空中的完整数值表；每个上下文的数值轴去重展示，数值名称同时写出单位和“越高/越低/风险”方向语义，然后再显示 5 道题、任务集哈希和数值矩阵哈希。参与者只能看到题目、选项和可观察数值，页面源码入口不消费 `expectedOptionId` 或 `evidence`。
+独立研究页已接入参与者任务投影和同源研究矩阵：页面先展示六件逐件研究武器的核心动词、地图空间、反制方式，以及地面/空中的完整数值表；每个上下文的数值轴去重展示，数值名称同时写出单位和“越高/越低/风险”方向语义，然后再显示 5 道题、任务集哈希和数值矩阵哈希。参与者只能看到题目、选项和可观察数值，页面源码入口不消费 `expectedOptionId` 或 `evidence`。
 
-2026-07-28 在本地桌面浏览器完成一次完整交互验证：地面/空中矩阵可见且没有重复数值行，5 道题均可选择，提交后显示 `5 / 5 题通过` 和“非真人结论”；导出按钮在评估后可用；控制台 warning/error 为 0。该结果只证明研究页、同源矩阵和任务合同可以工作，不代表真人解释率、设备可用性或生产平衡结论。
+自动化页面边界验证确认六件矩阵入口、5 道题、参与者答案隔离和生产入口隔离仍成立；此前本地桌面浏览器验证的 `5 / 5 题通过` 仍只代表研究页与任务合同可工作，不代表真人解释率、设备可用性或生产平衡结论。
 
 自动化通过只证明任务合同正确，不证明真人能在 10 秒内读懂数值。真人样本仍必须记录首次回答时间、风险方向解释、地面/空中复述和地图理由，并保持空样本为 `incomplete`。
 
 ## 下一步
 
-1. 在桌面与目标设备分别验证字号、横向滚动、触控和题目完成路径；
+1. 在桌面与目标设备分别验证六件矩阵的字号、横向滚动、触控和题目完成路径；
 2. 采集预注册的新手样本后，才计算 10 秒比较率、风险方向正确率和地面/空中复述率；
 3. 将结构化回答与参与者同意、设备信息和首次回答时间绑定，形成可审计的真人采集包；
 4. 若某个新候选在公共轴上出现并列或无法提供地图理由，先回到 Definition/数值设计，不用文案掩盖差异。

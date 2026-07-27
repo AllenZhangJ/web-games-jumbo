@@ -17,10 +17,11 @@ test('weapon readability study page stays separate from the production product e
   assert.match(html, /meta name="robots" content="noindex,nofollow"/);
   assert.match(html, /id="readability-task-form"/);
   assert.match(html, /id="readability-overview"/);
+  assert.match(html, /六件逐件研究武器概览/);
   assert.match(html, /src="\/src\/entry\/weapon-readability-study\.ts"/);
   assert.doesNotMatch(html, /web-human-match-study\.ts/);
   assert.match(entry, /projectArenaV2WeaponReadabilityParticipantTasks/);
-  assert.match(entry, /createArenaV2WeaponResearchOverviewMatrix/);
+  assert.match(entry, /createArenaV2WeaponCaseStudyReadabilityMatrix/);
   assert.match(entry, /readability-overview-table/);
   assert.match(entry, /evaluateArenaV2WeaponReadabilityAttempt/);
   assert.doesNotMatch(entry, /expectedOptionId/);

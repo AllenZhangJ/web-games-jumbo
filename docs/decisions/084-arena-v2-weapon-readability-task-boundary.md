@@ -10,7 +10,7 @@
 
 ## 决策
 
-1. 任务由 `arena-v2-weapon-research-overview-prototype` 的当前矩阵生成，绑定 `sourceMatrixHash`；题目不允许手写另一套武器值。
+1. 任务由 `arena-v2-weapon-research-overview-prototype` 的当前矩阵生成，六件逐件研究页另由 `createArenaV2WeaponCaseStudyReadabilityMatrix` 将六件 Definition 投影接入同一合同，并绑定 `sourceMatrixHash`；题目不允许手写另一套武器值。
 2. 任务分为四类：直接数值比较、方向语义、地图选择与数值理由、地面/空中上下文差异。它们对应“看懂数值”和“把数值用于玩法”的两层能力。
 3. 研究员任务对象保存正确答案、数值证据和所需理由轴；参与者投影只保留题目、选项、上下文和需要回答的数值轴，不能把答案或证据直接泄露给参与者。
 4. 若当前矩阵在需要唯一答案的题目上出现并列，任务状态为 `blocked`，整个任务集不能进入真人采集；不得任意加权或制造隐藏小数差异。
@@ -58,4 +58,4 @@
 - [武器数值可读性任务原型结果 V1](../research/arena-v2-weapon-readability-task-prototype-results-v1.md)
 - [V2 武器可读性与长期留存验证计划 V1](../research/arena-v2-weapon-readability-retention-study-v1.md)
 
-2026-07-28 浏览器验证：5/5 题可提交并通过，结果明确标记为“非真人结论”，控制台 warning/error 为 0；生产构建仍只以 `index.html` 为入口。
+2026-07-28 自动化验证：六件逐件研究矩阵可生成、5/5 任务有唯一答案、参与者投影不泄露答案，结果明确标记为“非真人结论”；目标设备触控与真人样本仍未完成，生产构建仍只以 `index.html` 为入口。
