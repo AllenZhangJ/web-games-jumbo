@@ -329,6 +329,9 @@ function buildWeaponContextComparison(
   const referenceContexts = cards[0]!.contexts;
   return Object.freeze(referenceContexts.flatMap((referenceContext) => {
     for (const card of cards.slice(1)) {
+      if (card.contexts.length !== referenceContexts.length) {
+        throw new RangeError(`Product UI 武器上下文比较要求所有武器使用同一组上下文：${card.id}。`);
+      }
       const context = card.contexts.find(({ id }) => id === referenceContext.id);
       if (!context) {
         throw new RangeError(

@@ -5,15 +5,16 @@ import {
 } from '../src/index.js';
 
 describe('Arena V2 weapon case-study overview', () => {
-  it('summarizes four deep studies without pretending they are production numeric rows', () => {
+  it('summarizes six deep studies without pretending they are production numeric rows', () => {
     const overview = createArenaV2WeaponCaseStudyOverview();
-    expect(overview.rows).toHaveLength(5);
+    expect(overview.rows).toHaveLength(6);
     expect(overview.rows.map(({ referenceId }) => referenceId)).toEqual([
       'magic-blood-scythe',
       'true-hades-hook-scythe',
       'white-platinum-dual-guns',
       'blood-shadow-hook-blade',
       'phantom-tiger-fist',
+      'mammoth-stone-axe',
     ]);
     expect(overview.rows.every(({ productionAssetStatus, numericReadout, numericReadoutReason }) => (
       productionAssetStatus === 'research-only'
@@ -35,6 +36,15 @@ describe('Arena V2 weapon case-study overview', () => {
     ))?.status).toBe('research-only');
     expect(hookBlade?.researchOnlyAxisIds).toContain(ARENA_V2_WEAPON_PUBLIC_AXIS_ID.WARNING);
     expect(hookBlade?.mapSignals).toContain('实体障碍切断钩刃拉位，验证地图几何是实际反制而非背景。');
+    const mammoth = overview.rows.find(({ referenceId }) => referenceId === 'mammoth-stone-axe');
+    expect(mammoth?.mustMeasureAxisIds).toEqual(expect.arrayContaining([
+      ARENA_V2_WEAPON_PUBLIC_AXIS_ID.COVERAGE,
+      ARENA_V2_WEAPON_PUBLIC_AXIS_ID.RECOVERY,
+    ]));
+    expect(mammoth?.researchOnlyAxisIds).toEqual(expect.arrayContaining([
+      ARENA_V2_WEAPON_PUBLIC_AXIS_ID.DELAY,
+      ARENA_V2_WEAPON_PUBLIC_AXIS_ID.WARNING,
+    ]));
   });
 
   it('is deterministic and deeply freezes the research readout', () => {
