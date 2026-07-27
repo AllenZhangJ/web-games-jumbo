@@ -256,3 +256,9 @@ export type {
   ArenaV2UiNextGoalKind,
   ArenaV2UiProgressSnapshot,
 } from './arena-v2-ui-next-goal-prototype.js';
+export { runArenaV2SurvivalEntityPrototype } from './arena-v2-survival-entity-prototype.js';
+export type {
+  ArenaV2SurvivalEntityEncounterKind,
+  ArenaV2SurvivalEntityEncounterResult,
+  ArenaV2SurvivalEntityPrototypeResult,
+} from './arena-v2-survival-entity-prototype.js';
