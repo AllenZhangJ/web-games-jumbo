@@ -233,11 +233,17 @@ export type {
   ArenaV2ProductionWeaponMinimumVersion,
 } from './arena-v2-weapon-minimum-version-contract.js';
 export { ARENA_V2_WEAPON_MAGIC_BLOOD_SCYTHE_CASE_STUDY } from './arena-v2-weapon-magic-blood-scythe-case-study.js';
+export type { ArenaV2WeaponMagicBloodScytheCaseStudy } from './arena-v2-weapon-magic-blood-scythe-case-study.js';
+export {
+  createArenaV2WeaponCaseStudyNumericReview,
+} from './arena-v2-weapon-case-study-contract.js';
+export { ARENA_V2_WEAPON_TRUE_HADES_HOOK_SCYTHE_CASE_STUDY } from './arena-v2-weapon-true-hades-hook-scythe-case-study.js';
+export type { ArenaV2WeaponTrueHadesHookScytheCaseStudy } from './arena-v2-weapon-true-hades-hook-scythe-case-study.js';
 export type {
+  ArenaV2WeaponCaseStudy,
   ArenaV2WeaponCaseStudyMove,
   ArenaV2WeaponCaseStudyNumericReview,
-  ArenaV2WeaponMagicBloodScytheCaseStudy,
-} from './arena-v2-weapon-magic-blood-scythe-case-study.js';
+} from './arena-v2-weapon-case-study-contract.js';
 export {
   ARENA_V2_WEAPON_LAUNCH_CANDIDATES,
   ARENA_V2_WEAPON_LAUNCH_LANGUAGE_IDS,

@@ -10,7 +10,7 @@
 
 ## 决策
 
-1. 每件深入研究的武器必须按动作保存：官方事实、设计推导、玩家决策、反制、失败成本和数值审计状态。
+1. 每件深入研究的武器必须按动作保存：官方事实、设计推导、玩家决策、反制、失败成本和数值审计状态；魔血镰刃和真·哈迪斯钩镰共同使用这一合同。
 2. 官方事实与 Arena 推导分开存储；官方页面只证明动作、输入上下文、命中结果或资源/持续描述，不直接证明 Arena 的平衡数值。
 3. 数值审计必须引用公共轴：距离、覆盖、出手、收招、横向作用、垂直控制、控制、再次使用、命中高度差；延迟和预警在未完成持续区域原型前保持 `research-only`。
 4. 逐件研究先生成研究工具链档案，再决定是否进入候选 Definition；研究档案不自动注册生产武器。
@@ -41,5 +41,9 @@
 
 - `packages/arena-v1-experiment/src/arena-v2-weapon-magic-blood-scythe-case-study.ts`
 - `packages/arena-v1-experiment/test/arena-v2-weapon-magic-blood-scythe-case-study.test.ts`
+- `packages/arena-v1-experiment/src/arena-v2-weapon-true-hades-hook-scythe-case-study.ts`
+- `packages/arena-v1-experiment/test/arena-v2-weapon-true-hades-hook-scythe-case-study.test.ts`
+- `packages/arena-v1-experiment/src/arena-v2-weapon-case-study-contract.ts`
 - [热血英豪武器研究 V1](../research/arena-v2-hot-blooded-weapon-study-v1.md)
 - [魔血镰刃官方说明](https://bfo.web.sdo.com/web4/introduce/prop_explanation.asp?id=793)
+- [真·哈迪斯钩镰官方说明](https://bfo.web.sdo.com/web4/introduce/prop_explanation.asp?id=526)

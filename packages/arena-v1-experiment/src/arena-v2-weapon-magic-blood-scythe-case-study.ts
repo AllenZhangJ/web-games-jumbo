@@ -1,51 +1,16 @@
 import {
   ARENA_V2_WEAPON_PUBLIC_AXIS_ID,
-  type ArenaV2WeaponPublicAxisId,
 } from './arena-v2-weapon-public-axis-contract.js';
-import type { ArenaV2WeaponOfficialActionContext } from './arena-v2-weapon-official-evidence.js';
+import {
+  createArenaV2WeaponCaseStudyNumericReview as numeric,
+  type ArenaV2WeaponCaseStudy,
+  type ArenaV2WeaponCaseStudyMove,
+} from './arena-v2-weapon-case-study-contract.js';
 
-export interface ArenaV2WeaponCaseStudyNumericReview {
-  readonly axisId: ArenaV2WeaponPublicAxisId;
-  readonly reviewReason: string;
-  readonly status: 'must-measure' | 'research-only';
-}
-
-export interface ArenaV2WeaponCaseStudyMove {
-  readonly id: string;
-  readonly input: string;
-  readonly context: ArenaV2WeaponOfficialActionContext;
-  /** Paraphrase of the official move description, not an Arena rule. */
-  readonly officialFact: string;
-  /** Design inference made from the official fact. */
-  readonly designPurpose: string;
-  readonly playerDecision: string;
-  readonly counterplay: string;
-  readonly failureCost: string;
-  readonly numericReview: readonly ArenaV2WeaponCaseStudyNumericReview[];
-  readonly arenaMinimumVersion: string;
-}
-
-export interface ArenaV2WeaponMagicBloodScytheCaseStudy {
+export type ArenaV2WeaponMagicBloodScytheCaseStudy = ArenaV2WeaponCaseStudy & {
   readonly referenceId: 'magic-blood-scythe';
   readonly referenceName: '魔血镰刃';
-  readonly sourceUrl: string;
-  readonly productionAssetStatus: 'research-only';
-  readonly battleThesis: string;
-  readonly designReasons: readonly string[];
-  readonly moves: readonly ArenaV2WeaponCaseStudyMove[];
-  readonly minimumVersion: Readonly<{
-    readonly coreVerb: string;
-    readonly contexts: readonly ArenaV2WeaponOfficialActionContext[];
-    readonly requiredPublicAxes: readonly ArenaV2WeaponPublicAxisId[];
-    readonly notToCopy: readonly string[];
-  }>;
-}
-
-const numeric = (
-  axisId: ArenaV2WeaponPublicAxisId,
-  reviewReason: string,
-  status: ArenaV2WeaponCaseStudyNumericReview['status'],
-): ArenaV2WeaponCaseStudyNumericReview => Object.freeze({ axisId, reviewReason, status });
+};
 
 const moves: readonly ArenaV2WeaponCaseStudyMove[] = [
   {
@@ -213,7 +178,7 @@ const caseStudy: ArenaV2WeaponMagicBloodScytheCaseStudy = {
     notToCopy: Object.freeze([
       '自动锁定',
       '无限叠加陷阱',
-      '三档高保护与无敌同时存在',
+      '三档蓄力保护与无敌叠加',
       '多段连招和自动派生追击',
       'MP 资源系统和原武器动作资产',
     ]),
