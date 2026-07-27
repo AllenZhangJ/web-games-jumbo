@@ -53,13 +53,14 @@
 - `arena-v2-weapon-magic-blood-scythe-replay-prototype.ts`：安全命中、active 前离开攻击线和平台边缘三组真实 MatchCore/MatchReplay 场景，并输出命中、未命中和击落反馈；
 - `arena-v2-weapon-mammoth-stone-axe-definition-prototype.ts`：猛犸石斧地面/空中 Definition、9 项主轴、6 项上下文轴、2 项行为轴及独立延迟预警研究假设；
 - `arena-v2-weapon-mammoth-stone-axe-replay-prototype.ts`：安全命中、active 前离开攻击线和平台边缘三组真实 MatchCore/MatchReplay 场景，并输出命中、预判失败和击落反馈；
+- `arena-v2-weapon-warning-signal-prototype.ts`：直接读取魔血镰刃与猛犸石斧 `warningHypothesis`，用统一预警区验证四类玩家回应；
 - `arena-v2-weapon-case-study-overview-prototype.test.ts`、真·哈迪斯钩镰 Definition/Replay 测试：相关 9 项测试通过；
 - 断言覆盖六件案例顺序、六件研究投影的来源 Definition 与上下文、`must-measure`/`research-only` 差异、血影钩刃障碍信号、魔血镰刃/猛犸石斧路线后果、目标朝向分支、确定性和深冻结；
 - 当前生产边界不变：研究 Definition 未注册默认生产装备。
 
 ## 下一步
 
-1. 将魔血镰刃与猛犸石斧的 `warningHypothesis` 接入独立预警运行时，保持其不进入普通动作数值；
+1. 将本轮统一研究预警信号继续接入权威预警运行时，保持其不进入普通动作数值；
 2. 对每件候选的地面/空中动作测出主 9 轴和行为 2 轴，不能凭官方原作数值换算；
 3. 将六件已有投影统一接入可读性矩阵，再进行真人首见时间、命中归因和反制可读性测试；
 4. 只有通过候选 Definition、Replay、地图后果、反馈表现和设备/真人门禁，才评估生产迁移。

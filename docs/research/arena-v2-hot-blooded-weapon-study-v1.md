@@ -545,6 +545,8 @@ Arena 当前不引入伤害血条作为主要胜负语言，所以武器数值�
 
 真实 `MatchCore + MatchReplay` 固定验证安全平台命中、active 前离开攻击线和边缘平台击落；三组都通过最终 hash 二次验证。已有延迟预警探针另行验证 `18 tick` 预警、`2 tick` 有效窗口、路线离开和跳跃越过，不与普通动作起手混为一谈。[猛犸石斧 Definition 与预判落点 Replay 原型结果 V1](arena-v2-weapon-mammoth-stone-axe-definition-and-replay-results-v1.md)
 
+本轮又把魔血镰刃和猛犸石斧的 `warningHypothesis` 接入同一个延迟/预警研究原型：两件武器各自保留延迟、预警、有效窗口、半径和最大高度差，统一测试停留、提前离开、到点离开和改变高度。8 个探针均能复现命中、路线躲避或高度躲避，且概览信号表与探针直接读取同一份 Definition 来源。[武器延迟/预警信号原型结果 V1](arena-v2-weapon-warning-signal-prototype-results-v1.md)
+
 这条证据证明“重击的预判窗口”和“命中后的地图支撑面后果”可被统一研究链路读取，但不证明滚动物体、墙面反弹、公共危险、恢复物、设备或真人可读性已经完成。
 
 ## 第五轮：真·哈迪斯钩镰单件逐动作深研

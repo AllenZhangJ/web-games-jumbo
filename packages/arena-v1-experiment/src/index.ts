@@ -597,6 +597,16 @@ export {
   ARENA_V2_UI_INFORMATION_MOBILE_BREAKPOINT_PX,
   runArenaV2UiInformationPrototype,
 } from './arena-v2-ui-information-prototype.js';
+export {
+  runArenaV2WeaponWarningSignalPrototype,
+} from './arena-v2-weapon-warning-signal-prototype.js';
+export type {
+  ArenaV2WeaponWarningSignalOutcome,
+  ArenaV2WeaponWarningSignalProbeResult,
+  ArenaV2WeaponWarningSignalPrototypeResult,
+  ArenaV2WeaponWarningSignalReferenceId,
+  ArenaV2WeaponWarningSignalResponsePolicy,
+} from './arena-v2-weapon-warning-signal-prototype.js';
 export type {
   ArenaV2UiFlowResult,
   ArenaV2UiInteractionAudit,
