@@ -233,6 +233,15 @@ export type {
   ArenaV2ProductionWeaponMinimumVersion,
 } from './arena-v2-weapon-minimum-version-contract.js';
 export {
+  ARENA_V2_WEAPON_LAUNCH_CANDIDATES,
+  ARENA_V2_WEAPON_LAUNCH_LANGUAGE_IDS,
+} from './arena-v2-weapon-launch-candidate-contract.js';
+export type {
+  ArenaV2WeaponLaunchCandidate,
+  ArenaV2WeaponLaunchCandidateImplementationStatus,
+  ArenaV2WeaponLaunchCandidateSource,
+} from './arena-v2-weapon-launch-candidate-contract.js';
+export {
   ARENA_V2_WEAPON_OFFICIAL_EVIDENCE,
 } from './arena-v2-weapon-official-evidence.js';
 export type {
