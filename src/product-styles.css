@@ -448,10 +448,11 @@ button {
 }
 
 .product-weapon-comparison {
-  margin-top: 0.65rem;
-  padding-top: 0.5rem;
+  margin: 0 0 0.65rem;
+  padding: 0.45rem 0 0.1rem;
   overflow-x: auto;
-  border-top: 1px solid var(--line);
+  border-top: 2px solid var(--ink);
+  border-bottom: 1px solid var(--line);
 }
 
 .product-comparison-heading {

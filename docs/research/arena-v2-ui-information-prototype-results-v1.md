@@ -89,4 +89,6 @@
 - DOM 验证覆盖重锤 `1.80 格` 与引力锁链 `5.00 格` 同行差异，以及冲锋盾的风险方向；
 - Canvas 绘制验证覆盖数值名称和格式化值；实现入口为 `src/entry/web-product-ui-surface.ts`、`packages/arena-product-presentation/src/product-canvas-painter.ts`，模型入口为 `packages/arena-product-presentation/src/product-ui-scene-model.ts`，测试见 `tests/entry-web-product-ui-surface.test.ts` 和 `packages/arena-product-presentation/test/product-presentation-boundaries.test.ts`。
 
+本轮页面收敛又将主页武器概览调整为“先看数值差异，再看语义卡片”：公开比较矩阵现在排在武器卡列表之前，三把武器的有效距离与冲锋盾自身位移风险在 Web DOM 测试中同屏验证。这个调整只改变当前主页的信息顺序，不新增页面或 V2 持久化状态；决策记录见[ADR-046：武器概览先显示数值比较](../decisions/046-arena-weapon-overview-comparison-first.md)。
+
 这关闭的是“数值是否能在当前主页同屏比较”的工程验证，不等于关闭真机字号、横向滚动和真人能否正确解释数值的研究问题。

@@ -297,7 +297,10 @@ test('WebProductUiSurface renders stable semantic controls and serializes DOM in
         counterplay: '离开正面线。',
         hitResult: '强横向击飞。',
         mapUse: '窄路和边缘。',
-        stats: [{ id: 'range', label: '有效距离', value: 1.8, maxValue: 6, unit: '格', direction: 'higher-is-better', precision: 2 }],
+        stats: [
+          { id: 'range', label: '有效距离', value: 1.8, maxValue: 6, unit: '格', direction: 'higher-is-better', precision: 2 },
+          { id: 'self-movement', label: '自身位移风险', value: 0, maxValue: 7, unit: '冲量', direction: 'higher-is-risk', precision: 2 },
+        ],
         contexts: [{
           id: 'ground', label: '地面', summary: '近身重击。',
           stats: [{ id: 'range', label: '有效距离', value: 1.8, maxValue: 6, unit: '格', direction: 'higher-is-better', precision: 2 }],
@@ -314,10 +317,33 @@ test('WebProductUiSurface renders stable semantic controls and serializes DOM in
         counterplay: '横向移动。',
         hitResult: '改变距离。',
         mapUse: '宽平台和窄路入口。',
-        stats: [{ id: 'range', label: '有效距离', value: 5, maxValue: 6, unit: '格', direction: 'higher-is-better', precision: 2 }],
+        stats: [
+          { id: 'range', label: '有效距离', value: 5, maxValue: 6, unit: '格', direction: 'higher-is-better', precision: 2 },
+          { id: 'self-movement', label: '自身位移风险', value: 0, maxValue: 7, unit: '冲量', direction: 'higher-is-risk', precision: 2 },
+        ],
         contexts: [{
           id: 'ground', label: '地面', summary: '远距离拉位。',
           stats: [{ id: 'range', label: '有效距离', value: 5, maxValue: 6, unit: '格', direction: 'higher-is-better', precision: 2 }],
+        }],
+      },
+      {
+        weaponDefinitionId: 'shield',
+        name: '冲锋盾',
+        previewAssetId: 'weapon:shield',
+        role: '突进与换位',
+        description: '用距离换取主动权。',
+        coreVerb: '冲入',
+        tradeoff: '自身位移大。',
+        counterplay: '让出直线。',
+        hitResult: '轻击飞并换位。',
+        mapUse: '长直线抢位。',
+        stats: [
+          { id: 'range', label: '有效距离', value: 1.6, maxValue: 6, unit: '格', direction: 'higher-is-better', precision: 2 },
+          { id: 'self-movement', label: '自身位移风险', value: 6.5, maxValue: 7, unit: '冲量', direction: 'higher-is-risk', precision: 2 },
+        ],
+        contexts: [{
+          id: 'ground', label: '地面', summary: '冲撞换位。',
+          stats: [{ id: 'range', label: '有效距离', value: 1.6, maxValue: 6, unit: '格', direction: 'higher-is-better', precision: 2 }],
         }],
       },
     ],
@@ -326,12 +352,16 @@ test('WebProductUiSurface renders stable semantic controls and serializes DOM in
     root.querySelector('#product-weapon-comparison'),
     'weapon comparison',
   );
-  assert.equal(comparison.children.length, 2);
+  assert.equal(comparison.children.length, 3);
   const comparisonHeader = required(comparison.children[0], 'comparison header');
   const comparisonRange = required(comparison.children[1], 'comparison range row');
+  const comparisonRisk = required(comparison.children[2], 'comparison risk row');
   assert.equal(comparisonHeader.children[1]?.textContent, '重锤');
+  assert.equal(comparisonHeader.children[3]?.textContent, '冲锋盾');
   assert.equal(comparisonRange.children[1]?.textContent, '1.80格 ↑');
   assert.equal(comparisonRange.children[2]?.textContent, '5.00格 ↑');
+  assert.equal(comparisonRange.children[3]?.textContent, '1.60格 ↑');
+  assert.equal(comparisonRisk.children[3]?.textContent, '6.50冲量 ⚠');
 
   const intents: Readonly<Record<string, unknown>>[] = [];
   let resolveIntent: (() => void) | undefined;

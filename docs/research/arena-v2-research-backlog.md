@@ -103,6 +103,7 @@
 - 结果和未完成边界见[生存 1vE 最小循环原型结果](arena-v2-survival-loop-prototype-results-v1.md)。
 - 11 个局外信息入口和关键点击预算已形成无渲染合同；见[局外信息原型结果](arena-v2-ui-information-prototype-results-v1.md)。
 - 局外下一目标已形成无渲染合同：只显示一个目标，并按武器收集 → 武器上下文 → 地图段落 → 生存记录的顺序给出立即行动；实现见 `arena-v2-ui-next-goal-prototype.ts`，真人点击和留存效果仍未验证。
+- 武器概览已将公开数值比较矩阵提升到武器语义卡之前，并用三把武器的 DOM 同屏证据验证距离差异和自身位移风险；详见[ADR-046：武器概览先显示数值比较](../decisions/046-arena-weapon-overview-comparison-first.md)。真机阅读率和数值解释正确率仍待验证。
 
 ## 优先级四：命中反馈与留存验证
 
