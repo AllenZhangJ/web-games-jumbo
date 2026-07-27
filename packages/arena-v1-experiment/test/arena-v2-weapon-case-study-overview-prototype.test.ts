@@ -7,12 +7,13 @@ import {
 describe('Arena V2 weapon case-study overview', () => {
   it('summarizes four deep studies without pretending they are production numeric rows', () => {
     const overview = createArenaV2WeaponCaseStudyOverview();
-    expect(overview.rows).toHaveLength(4);
+    expect(overview.rows).toHaveLength(5);
     expect(overview.rows.map(({ referenceId }) => referenceId)).toEqual([
       'magic-blood-scythe',
       'true-hades-hook-scythe',
       'white-platinum-dual-guns',
       'blood-shadow-hook-blade',
+      'phantom-tiger-fist',
     ]);
     expect(overview.rows.every(({ productionAssetStatus, numericReadout, numericReadoutReason }) => (
       productionAssetStatus === 'research-only'

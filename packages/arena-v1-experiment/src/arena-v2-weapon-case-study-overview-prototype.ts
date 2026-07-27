@@ -11,6 +11,9 @@ import {
   ARENA_V2_WEAPON_WHITE_PLATINUM_DUAL_GUNS_CASE_STUDY,
 } from './arena-v2-weapon-white-platinum-dual-guns-case-study.js';
 import {
+  ARENA_V2_WEAPON_PHANTOM_TIGER_FIST_CASE_STUDY,
+} from './arena-v2-weapon-phantom-tiger-fist-case-study.js';
+import {
   ARENA_V2_WEAPON_PUBLIC_AXIS_DEFINITIONS,
   type ArenaV2WeaponPublicAxisId,
 } from './arena-v2-weapon-public-axis-contract.js';
@@ -57,6 +60,7 @@ const CASE_STUDIES: readonly ArenaV2WeaponCaseStudy[] = Object.freeze([
   ARENA_V2_WEAPON_TRUE_HADES_HOOK_SCYTHE_CASE_STUDY,
   ARENA_V2_WEAPON_WHITE_PLATINUM_DUAL_GUNS_CASE_STUDY,
   ARENA_V2_WEAPON_BLOOD_SHADOW_HOOK_BLADE_CASE_STUDY,
+  ARENA_V2_WEAPON_PHANTOM_TIGER_FIST_CASE_STUDY,
 ]);
 
 const AXIS_DEFINITION_BY_ID = new Map(
