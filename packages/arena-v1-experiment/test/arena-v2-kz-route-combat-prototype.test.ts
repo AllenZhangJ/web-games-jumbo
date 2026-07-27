@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   runArenaV2KzRouteCombatPrototype,
+  runArenaV2KzRouteCombatResponsePrototype,
 } from '../src/index.js';
 
 describe('Arena V2 KZ route combat prototype', () => {
@@ -37,5 +38,37 @@ describe('Arena V2 KZ route combat prototype', () => {
       landedOnDifferentSurface: true,
       finalSupportSurfaceId: 'surface-06-wire',
     });
+  });
+
+  it('compares bounded strafe and jump responses without direct position writes', () => {
+    const probes = runArenaV2KzRouteCombatResponsePrototype();
+    expect(probes.probeCount).toBe(54);
+    const find = (segmentId: string, weaponId: string, responsePolicy: string) => (
+      probes.probes.find((probe) => (
+        probe.segmentId === segmentId
+        && probe.weaponId === weaponId
+        && probe.responsePolicy === responsePolicy
+      ))
+    );
+
+    expect(find('segment-01-platform', 'hammer', 'hold')).toMatchObject({
+      responseOutcome: 'hit-ring-out',
+      responseTicks: 0,
+      jumpStarted: false,
+    });
+    expect(find('segment-01-platform', 'hammer', 'jump')).toMatchObject({
+      responseOutcome: 'hit-safe',
+      responseTicks: 1,
+      jumpStarted: true,
+      finalSupportSurfaceId: 'surface-03-stair-a',
+    });
+    expect(find('segment-04-maze', 'hammer', 'jump')?.responseOutcome).toBe('hit-ring-out');
+    expect(find('segment-05-narrow', 'hammer', 'strafe')).toMatchObject({
+      responseOutcome: 'hit-ring-out',
+      responseTicks: 10,
+    });
+    expect(probes.probes.every(({ responsePolicy, responseTicks }) => (
+      responsePolicy !== 'strafe' || responseTicks <= 10
+    ))).toBe(true);
   });
 });

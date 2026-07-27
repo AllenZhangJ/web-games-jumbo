@@ -11,15 +11,23 @@ import {
   createArenaV1RuleEngine,
 } from '@number-strategy-jump/arena-v1-composition';
 import {
+  ARENA_GAMEPLAY_V2_TUNING,
+  ARENA_V1_CHARACTER_ID,
+} from '@number-strategy-jump/arena-definitions';
+import {
+  MOVEMENT_COMMAND_KIND,
+  MovementSystem,
+} from '@number-strategy-jump/arena-movement';
+import {
   ARENA_FIXED_DT,
   createCharacterPhysicsProfile,
   createLightweightPhysicsWorld,
   type PhysicsWorld,
 } from '@number-strategy-jump/arena-physics';
-import { ARENA_V1_CHARACTER_ID } from '@number-strategy-jump/arena-definitions';
 import {
   createArenaV1CharacterRegistry,
   STAGE4_EQUIPMENT_ID,
+  STAGE6_MOVEMENT_ACTION_ID,
 } from '@number-strategy-jump/arena-v1-content';
 import { createArenaV2JumpRoutePrototype } from './arena-v2-jump-route-prototype.js';
 
@@ -29,6 +37,11 @@ const KILL_Y = -6;
 const PROBE_TICKS = 120;
 
 export type ArenaV2KzRouteCombatOutcome = 'miss' | 'hit-safe' | 'hit-ring-out';
+export type ArenaV2KzRouteCombatResponsePolicy = 'hold' | 'strafe' | 'jump';
+export type ArenaV2KzRouteCombatResponseOutcome = (
+  | ArenaV2KzRouteCombatOutcome
+  | 'movement-fall'
+);
 
 export interface ArenaV2KzRouteCombatProbeResult {
   readonly segmentId: string;
@@ -36,6 +49,7 @@ export interface ArenaV2KzRouteCombatProbeResult {
   readonly survivalLoopRole: string;
   readonly combatDifficulty: number;
   readonly weaponId: string;
+  readonly responsePolicy: ArenaV2KzRouteCombatResponsePolicy;
   readonly surfaceWidth: number;
   readonly surfaceDepth: number;
   readonly firstHitTick: number | null;
@@ -45,6 +59,9 @@ export interface ArenaV2KzRouteCombatProbeResult {
   readonly finalSupportSurfaceId: string | null;
   readonly landedOnDifferentSurface: boolean;
   readonly outcome: ArenaV2KzRouteCombatOutcome;
+  readonly responseOutcome: ArenaV2KzRouteCombatResponseOutcome;
+  readonly responseTicks: number;
+  readonly jumpStarted: boolean;
 }
 
 export interface ArenaV2KzRouteCombatPrototypeResult {
@@ -65,6 +82,12 @@ interface RouteSurfaceView {
   readonly center: Readonly<{ x: number; y: number; z: number }>;
   readonly halfExtents: Readonly<{ x: number; y: number; z: number }>;
 }
+
+const RESPONSE_POLICIES: readonly ArenaV2KzRouteCombatResponsePolicy[] = Object.freeze([
+  'hold',
+  'strafe',
+  'jump',
+]);
 
 const WEAPONS: readonly WeaponProbe[] = Object.freeze([
   Object.freeze({ weaponId: STAGE4_EQUIPMENT_ID.HAMMER, targetDistance: 1.2 }),
@@ -105,10 +128,23 @@ function surfaceForSegment(
   return surface;
 }
 
+function responseInput(
+  tick: number,
+  responsePolicy: ArenaV2KzRouteCombatResponsePolicy,
+): Readonly<{ moveX: number; moveZ: number; jumpPressed: boolean; jumpHeld: boolean }> {
+  return Object.freeze({
+    moveX: 0,
+    moveZ: responsePolicy === 'strafe' && tick < 10 ? 1 : 0,
+    jumpPressed: responsePolicy === 'jump' && tick === 0,
+    jumpHeld: responsePolicy === 'jump' && tick === 0,
+  });
+}
+
 function runProbe(
   route: ReturnType<typeof createArenaV2JumpRoutePrototype>,
   segment: ReturnType<typeof createArenaV2JumpRoutePrototype>['segments'][number],
   weapon: WeaponProbe,
+  responsePolicy: ArenaV2KzRouteCombatResponsePolicy = 'hold',
 ): ArenaV2KzRouteCombatProbeResult {
   const surface = surfaceForSegment(route, segment.segmentId);
   const engine: ArenaRuleEngineContract = createArenaV1RuleEngine({
@@ -139,13 +175,20 @@ function runProbe(
   const targetStart = Object.freeze({ x: targetX, y: spawnY, z: surface.center.z });
   physics.addCharacter({ id: ATTACKER_ID, position: { x: attackerX, y: spawnY, z: surface.center.z }, ...profile });
   physics.addCharacter({ id: PLAYER_ID, position: targetStart, ...profile });
+  const movement = new MovementSystem({
+    participantCharacters: [{ participantId: PLAYER_ID, characterDefinition: character }],
+    airJumpHorizontalImpulse: ARENA_GAMEPLAY_V2_TUNING.character.jump.airHorizontalImpulse,
+  });
 
   let firstHitTick: number | null = null;
   let horizontalImpulse = 0;
   let targetFell = false;
+  let fellBeforeHit = false;
   let finalSupportSurfaceId: string | null = null;
   let finalTargetX = targetX;
   let finalTargetZ = surface.center.z;
+  let responseTicks = 0;
+  let jumpStarted = false;
   try {
     const instanceId = `v2-kz-route-combat:${segment.segmentId}:${weapon.weaponId}`;
     engine.spawnEquipment({
@@ -172,6 +215,41 @@ function runProbe(
     });
     for (let tick = 0; tick < PROBE_TICKS; tick += 1) {
       engine.advanceTimers();
+      const beforePlayer = physics.getCharacterState(PLAYER_ID);
+      const response = responseInput(tick, responsePolicy);
+      if (response.moveX !== 0 || response.moveZ !== 0 || response.jumpPressed) responseTicks += 1;
+      movement.prepareTick({
+        tick,
+        contacts: [{ participantId: PLAYER_ID, grounded: beforePlayer.grounded }],
+        inputs: [{
+          tick,
+          participantId: PLAYER_ID,
+          moveX: response.moveX,
+          moveZ: response.moveZ,
+          jumpPressed: response.jumpPressed,
+          jumpHeld: response.jumpHeld,
+        }],
+        availability: [{ participantId: PLAYER_ID, canMove: true }],
+      });
+      const capabilities = movement.getCapabilities(PLAYER_ID);
+      const jumpCommand = response.jumpPressed && capabilities.canGroundJump
+        ? {
+          kind: MOVEMENT_COMMAND_KIND.REQUEST_GROUND_JUMP,
+          participantId: PLAYER_ID,
+          actionDefinitionId: STAGE6_MOVEMENT_ACTION_ID.EXPLICIT_GROUND_JUMP,
+        }
+        : response.jumpPressed && capabilities.canAirJump
+          ? {
+            kind: MOVEMENT_COMMAND_KIND.REQUEST_AIR_JUMP,
+            participantId: PLAYER_ID,
+            actionDefinitionId: STAGE6_MOVEMENT_ACTION_ID.EXPLICIT_AIR_JUMP,
+          }
+          : null;
+      jumpStarted ||= jumpCommand !== null;
+      physics.setMovementIntent(PLAYER_ID, response.moveX, response.moveZ);
+      movement.execute(jumpCommand ? [jumpCommand] : [], {
+        applyBatch: (mutations) => physics.applyCharacterMutationBatch(mutations),
+      });
       const actors = createActors(physics);
       const batch = engine.resolveActions({
         tick,
@@ -189,12 +267,18 @@ function runProbe(
       finalTargetX = target.position.x;
       finalTargetZ = target.position.z;
       finalSupportSurfaceId = target.supportSurfaceId;
+      movement.completeTick({
+        tick,
+        contacts: [{ participantId: PLAYER_ID, grounded: target.grounded }],
+      });
       if (target.position.y < KILL_Y) {
         targetFell = true;
+        fellBeforeHit = firstHitTick === null;
         break;
       }
     }
   } finally {
+    movement.destroy();
     engine.destroy();
     physics.destroy();
   }
@@ -210,6 +294,7 @@ function runProbe(
     survivalLoopRole: segment.survivalLoopRole,
     combatDifficulty: segment.difficulty.combat,
     weaponId: weapon.weaponId,
+    responsePolicy,
     surfaceWidth: surface.halfExtents.x * 2,
     surfaceDepth: surface.halfExtents.z * 2,
     firstHitTick,
@@ -219,6 +304,11 @@ function runProbe(
     finalSupportSurfaceId,
     landedOnDifferentSurface,
     outcome: firstHitTick === null ? 'miss' : targetFell ? 'hit-ring-out' : 'hit-safe',
+    responseOutcome: fellBeforeHit
+      ? 'movement-fall'
+      : firstHitTick === null ? 'miss' : targetFell ? 'hit-ring-out' : 'hit-safe',
+    responseTicks,
+    jumpStarted,
   });
 }
 
@@ -226,6 +316,21 @@ export function runArenaV2KzRouteCombatPrototype(): ArenaV2KzRouteCombatPrototyp
   const route = createArenaV2JumpRoutePrototype();
   const probes = route.segments.flatMap((segment) => (
     WEAPONS.map((weapon) => runProbe(route, segment, weapon))
+  ));
+  return Object.freeze({
+    routeId: route.routeId,
+    usesSharedRuleAndPhysics: true,
+    probeCount: probes.length,
+    probes: Object.freeze(probes),
+  });
+}
+
+export function runArenaV2KzRouteCombatResponsePrototype(): ArenaV2KzRouteCombatPrototypeResult {
+  const route = createArenaV2JumpRoutePrototype();
+  const probes = route.segments.flatMap((segment) => (
+    WEAPONS.flatMap((weapon) => RESPONSE_POLICIES.map((responsePolicy) => (
+      runProbe(route, segment, weapon, responsePolicy)
+    )))
   ));
   return Object.freeze({
     routeId: route.routeId,

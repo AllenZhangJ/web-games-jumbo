@@ -46,7 +46,7 @@ Arena V2 的核心目标是：
 | [武器攻击者失位与双人争夺原型结果 V1](../research/arena-v2-weapon-contest-prototype-results-v1.md) | 记录自身位移、空中命中和双人同时出招的规则后果 | 第一轮对战拥挤证据 |
 | [CS1.6 KZ 跳跃地图研究 V1](../research/arena-v2-cs16-kz-map-study-v1.md) | 记录地图段落、六维难度轴、段落合同、灰盒可达性和竞速/生存复用边界 | 第二轮研究 + 灰盒原型 |
 | `arena-v2-kz-map-research-catalog.ts` | 四类代表 KZ 地图样本的学习点、来源和不复制边界，仅供开发/测试工具链使用 | 研究证据 |
-| `arena-v2-kz-route-combat-prototype.ts` | 将六段 KZ 灰盒与同一套武器命中/冲量规则组合，验证段落宽度、相邻恢复表面和武器击飞后果，仅供开发/测试工具链使用 | 第三轮地图×武器原型证据 |
+| `arena-v2-kz-route-combat-prototype.ts` | 将六段 KZ 灰盒与同一套武器命中/冲量/移动回应规则组合，验证段落宽度、相邻恢复表面、侧移和跳跃对武器击飞后果的影响，仅供开发/测试工具链使用 | 第三轮地图×武器原型证据 |
 | [生存 1vE 最小循环原型结果 V1](../research/arena-v2-survival-loop-prototype-results-v1.md) | 记录无武器开局、20 秒三选一、轮次成长、两次掉落和低维奖励证据 | 第一轮原型证据 |
 | `arena-v2-survival-entity-prototype.ts` | 验证单一敌人复用玩家规则/物理、敌我双方击飞和第一次复活/第二次终局，仅供开发/测试工具链使用 | 第二轮规则原型证据 |
 | `arena-v2-survival-pressure-prototype.ts` | 验证 1/2/4 同类敌人的有界自主追击、分阶段刷新、多人击飞压力、20 秒三武器供给争夺、等级专属武器 Definition 和 15/20/30 秒×两种路线分流矩阵，仅供开发/测试工具链使用 | 第六轮规则/武器原型证据 |

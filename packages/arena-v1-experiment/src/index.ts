@@ -225,11 +225,14 @@ export type {
 } from './arena-v2-jump-route-prototype.js';
 export {
   runArenaV2KzRouteCombatPrototype,
+  runArenaV2KzRouteCombatResponsePrototype,
 } from './arena-v2-kz-route-combat-prototype.js';
 export type {
   ArenaV2KzRouteCombatOutcome,
   ArenaV2KzRouteCombatProbeResult,
   ArenaV2KzRouteCombatPrototypeResult,
+  ArenaV2KzRouteCombatResponsePolicy,
+  ArenaV2KzRouteCombatResponseOutcome,
 } from './arena-v2-kz-route-combat-prototype.js';
 export {
   runArenaV2SurvivalLoopPrototype,
