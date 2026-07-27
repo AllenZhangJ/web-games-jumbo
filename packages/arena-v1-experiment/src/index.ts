@@ -188,6 +188,10 @@ export {
   createArenaV2JumpRoutePrototype,
   runArenaV2JumpRoutePrototype,
 } from './arena-v2-jump-route-prototype.js';
+export {
+  ARENA_V2_WEAPON_RESEARCH_CATALOG,
+} from './arena-v2-weapon-research-catalog.js';
+export type { ArenaV2WeaponResearchCard } from './arena-v2-weapon-research-catalog.js';
 export type {
   ArenaV2JumpRouteAnchor,
   ArenaV2JumpRoutePrototype,

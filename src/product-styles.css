@@ -351,6 +351,11 @@ button {
   color: var(--ink);
 }
 
+.product-weapon-card > [data-weapon-hit-result],
+.product-weapon-card > [data-weapon-map-use] {
+  color: var(--ink);
+}
+
 .product-weapon-contexts {
   display: grid;
   gap: 0.24rem;

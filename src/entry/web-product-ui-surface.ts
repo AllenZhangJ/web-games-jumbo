@@ -277,15 +277,20 @@ export class WebProductUiSurface {
     const coreVerb = element.querySelector<HTMLElement>('[data-weapon-core-verb]');
     const tradeoff = element.querySelector<HTMLElement>('[data-weapon-tradeoff]');
     const counterplay = element.querySelector<HTMLElement>('[data-weapon-counterplay]');
+    const hitResult = element.querySelector<HTMLElement>('[data-weapon-hit-result]');
+    const mapUse = element.querySelector<HTMLElement>('[data-weapon-map-use]');
     const stats = element.querySelector<HTMLElement>('[data-weapon-stats]');
     const contexts = element.querySelector<HTMLElement>('[data-weapon-contexts]');
-    if (!title || !role || !description || !coreVerb || !tradeoff || !counterplay || !stats || !contexts) {
+    if (!title || !role || !description || !coreVerb || !tradeoff || !counterplay
+      || !hitResult || !mapUse || !stats || !contexts) {
       throw new Error(`武器卡片 ${card.id} 结构不完整。`);
     }
     setText(title, card.name);
     setText(role, card.role);
     setText(coreVerb, `核心：${card.coreVerb}`);
     setText(description, card.description);
+    setText(hitResult, `命中：${card.hitResult}`);
+    setText(mapUse, `地图：${card.mapUse}`);
     setText(tradeoff, `风险：${card.tradeoff}`);
     setText(counterplay, `反制：${card.counterplay}`);
     const existing = [...stats.querySelectorAll<HTMLElement>('[data-weapon-stat]')];
@@ -377,6 +382,8 @@ export class WebProductUiSurface {
       const role = this.#document.createElement('span');
       const description = this.#document.createElement('p');
       const coreVerb = this.#document.createElement('span');
+      const hitResult = this.#document.createElement('small');
+      const mapUse = this.#document.createElement('small');
       const tradeoff = this.#document.createElement('small');
       const counterplay = this.#document.createElement('small');
       const stats = this.#document.createElement('div');
@@ -385,13 +392,26 @@ export class WebProductUiSurface {
       role.dataset.weaponRole = 'true';
       description.dataset.weaponDescription = 'true';
       coreVerb.dataset.weaponCoreVerb = 'true';
+      hitResult.dataset.weaponHitResult = 'true';
+      mapUse.dataset.weaponMapUse = 'true';
       tradeoff.dataset.weaponTradeoff = 'true';
       counterplay.dataset.weaponCounterplay = 'true';
       stats.dataset.weaponStats = 'true';
       stats.className = 'product-weapon-stats';
       contexts.dataset.weaponContexts = 'true';
       contexts.className = 'product-weapon-contexts';
-      element.append(title, role, coreVerb, description, tradeoff, counterplay, contexts, stats);
+      element.append(
+        title,
+        role,
+        coreVerb,
+        description,
+        hitResult,
+        mapUse,
+        tradeoff,
+        counterplay,
+        contexts,
+        stats,
+      );
       this.#updateWeaponCard(element, card);
       fragment.append(element);
     }

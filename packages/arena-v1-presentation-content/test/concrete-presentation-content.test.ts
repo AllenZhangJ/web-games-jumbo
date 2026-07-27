@@ -39,6 +39,8 @@ describe('Arena V1 concrete presentation content', () => {
     });
     expect(hammer?.overview?.stats.some(({ id }) => id === 'startup')).toBe(true);
     expect(hammer?.overview?.coreVerbMessageId).toBe('equipment.hammer.core-verb');
+    expect(hammer?.overview?.hitResultMessageId).toBe('equipment.hammer.hit-result');
+    expect(hammer?.overview?.mapUseMessageId).toBe('equipment.hammer.map-use');
     expect(hammer?.overview?.contexts.map(({ id }) => id)).toEqual(['ground', 'aerial']);
     expect(hammer?.overview?.contexts[1]?.stats.find(({ id }) => id === 'range'))
       .toMatchObject({ value: 2.5, unit: '格' });

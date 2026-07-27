@@ -42,6 +42,8 @@ export interface ProductUiSceneWeaponCard {
   readonly coreVerb: string;
   readonly tradeoff: string;
   readonly counterplay: string;
+  readonly hitResult: string;
+  readonly mapUse: string;
   readonly stats: readonly ProductUiSceneWeaponStat[];
   readonly contexts: readonly ProductUiSceneWeaponContext[];
 }
@@ -237,6 +239,8 @@ function weaponCards(values: unknown): readonly ProductUiSceneWeaponCard[] {
       coreVerb: assertNonEmptyString(option.coreVerb, `${name}.coreVerb`),
       tradeoff: assertNonEmptyString(option.tradeoff, `${name}.tradeoff`),
       counterplay: assertNonEmptyString(option.counterplay, `${name}.counterplay`),
+      hitResult: assertNonEmptyString(option.hitResult, `${name}.hitResult`),
+      mapUse: assertNonEmptyString(option.mapUse, `${name}.mapUse`),
       stats: weaponStats(option.stats, name),
       contexts: weaponContexts(option.contexts, name),
     });

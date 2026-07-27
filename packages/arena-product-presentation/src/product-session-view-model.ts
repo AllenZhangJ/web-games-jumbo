@@ -100,6 +100,8 @@ export interface ProductSessionViewModel {
     coreVerb: string;
     tradeoff: string;
     counterplay: string;
+    hitResult: string;
+    mapUse: string;
     stats: readonly Readonly<{
       id: string;
       label: string;
@@ -302,6 +304,8 @@ function profileView(
         coreVerb: messages.format(definition.overview.coreVerbMessageId),
         tradeoff: messages.format(definition.overview.tradeoffMessageId),
         counterplay: messages.format(definition.overview.counterplayMessageId),
+        hitResult: messages.format(definition.overview.hitResultMessageId),
+        mapUse: messages.format(definition.overview.mapUseMessageId),
         stats: Object.freeze(definition.overview.stats.map((stat) => Object.freeze({
           id: stat.id,
           label: messages.format(stat.labelMessageId),

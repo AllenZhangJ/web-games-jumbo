@@ -23,6 +23,8 @@ const WEAPON_OVERVIEW_CONFIG: Readonly<Record<string, Readonly<{
   coreVerbMessageId: string;
   tradeoffMessageId: string;
   counterplayMessageId: string;
+  hitResultMessageId: string;
+  mapUseMessageId: string;
   groundSummaryMessageId: string;
   aerialSummaryMessageId: string;
 }>>> = Object.freeze({
@@ -32,6 +34,8 @@ const WEAPON_OVERVIEW_CONFIG: Readonly<Record<string, Readonly<{
     coreVerbMessageId: 'equipment.hammer.core-verb',
     tradeoffMessageId: 'equipment.hammer.tradeoff',
     counterplayMessageId: 'equipment.hammer.counterplay',
+    hitResultMessageId: 'equipment.hammer.hit-result',
+    mapUseMessageId: 'equipment.hammer.map-use',
     groundSummaryMessageId: 'equipment.hammer.ground-summary',
     aerialSummaryMessageId: 'equipment.hammer.aerial-summary',
   }),
@@ -41,6 +45,8 @@ const WEAPON_OVERVIEW_CONFIG: Readonly<Record<string, Readonly<{
     coreVerbMessageId: 'equipment.chain.core-verb',
     tradeoffMessageId: 'equipment.chain.tradeoff',
     counterplayMessageId: 'equipment.chain.counterplay',
+    hitResultMessageId: 'equipment.chain.hit-result',
+    mapUseMessageId: 'equipment.chain.map-use',
     groundSummaryMessageId: 'equipment.chain.ground-summary',
     aerialSummaryMessageId: 'equipment.chain.aerial-summary',
   }),
@@ -50,6 +56,8 @@ const WEAPON_OVERVIEW_CONFIG: Readonly<Record<string, Readonly<{
     coreVerbMessageId: 'equipment.shield.core-verb',
     tradeoffMessageId: 'equipment.shield.tradeoff',
     counterplayMessageId: 'equipment.shield.counterplay',
+    hitResultMessageId: 'equipment.shield.hit-result',
+    mapUseMessageId: 'equipment.shield.map-use',
     groundSummaryMessageId: 'equipment.shield.ground-summary',
     aerialSummaryMessageId: 'equipment.shield.aerial-summary',
   }),
@@ -97,6 +105,8 @@ function createEquipmentOverview() {
       coreVerbMessageId: config.coreVerbMessageId,
       tradeoffMessageId: config.tradeoffMessageId,
       counterplayMessageId: config.counterplayMessageId,
+      hitResultMessageId: config.hitResultMessageId,
+      mapUseMessageId: config.mapUseMessageId,
       stats: [
         stat('range', 'equipment.stat.range', tuning.targeting.range, 6, '格', 'higher-is-better'),
         stat('startup', 'equipment.stat.startup', tuning.cadence.windupSeconds, 0.5, '秒', 'lower-is-better'),

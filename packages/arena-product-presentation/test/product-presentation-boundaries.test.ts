@@ -489,6 +489,8 @@ describe('Product presentation immutable data boundaries', () => {
         coreVerb: '冲入',
         tradeoff: '自身位移大。',
         counterplay: '让出直线。',
+        hitResult: '轻击飞并换位。',
+        mapUse: '长直线抢位。',
         stats: [{
           id: 'self-movement', label: '自身位移风险', value: 6.5, maxValue: 7,
           unit: '冲量', direction: 'higher-is-risk', precision: 2,

@@ -7,7 +7,7 @@ import {
   createDeterministicDataHash,
 } from '@number-strategy-jump/arena-contracts';
 
-export const PRODUCT_CONTENT_PRESENTATION_DEFINITION_SCHEMA_VERSION = 1 as const;
+export const PRODUCT_CONTENT_PRESENTATION_DEFINITION_SCHEMA_VERSION = 2 as const;
 
 export const PRODUCT_CONTENT_KIND = Object.freeze({
   CHARACTER: 'character',
@@ -51,6 +51,8 @@ export interface ProductContentOverviewJson {
   readonly coreVerbMessageId: string;
   readonly tradeoffMessageId: string;
   readonly counterplayMessageId: string;
+  readonly hitResultMessageId: string;
+  readonly mapUseMessageId: string;
   readonly stats: readonly ProductContentStatJson[];
   readonly contexts: readonly ProductContentActionContextJson[];
 }
@@ -81,7 +83,8 @@ const STAT_KEYS = new Set([
 ]);
 const OVERVIEW_KEYS = new Set([
   'roleMessageId', 'descriptionMessageId', 'coreVerbMessageId',
-  'tradeoffMessageId', 'counterplayMessageId', 'stats', 'contexts',
+  'tradeoffMessageId', 'counterplayMessageId', 'hitResultMessageId',
+  'mapUseMessageId', 'stats', 'contexts',
 ]);
 const CONTEXT_KEYS = new Set(['id', 'labelMessageId', 'summaryMessageId', 'stats']);
 const STAT_DIRECTIONS: ReadonlySet<unknown> = new Set(
@@ -187,6 +190,14 @@ function overviewValue(value: unknown, contentKind: ProductContentKind): Product
     counterplayMessageId: assertNonEmptyString(
       source.counterplayMessageId,
       'ProductContentPresentationDefinition.overview.counterplayMessageId',
+    ),
+    hitResultMessageId: assertNonEmptyString(
+      source.hitResultMessageId,
+      'ProductContentPresentationDefinition.overview.hitResultMessageId',
+    ),
+    mapUseMessageId: assertNonEmptyString(
+      source.mapUseMessageId,
+      'ProductContentPresentationDefinition.overview.mapUseMessageId',
     ),
     stats: Object.freeze(stats),
     contexts: Object.freeze(contexts),

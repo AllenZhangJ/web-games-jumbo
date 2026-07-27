@@ -16,6 +16,8 @@ Accepted for V2 presentation prototype（V2 表现原型已接入；权威层最
 2. 至少两个动作上下文：当前首批为 `ground` 和 `aerial`，各自提供距离、前摇、横向作用和垂直作用；
 3. 可读战斗语义：核心动词、主要代价和基础反制。
 
+在三层之外，概览合同还强制要求两条不可省略的语义：命中结果和地图用途。前者说明命中改变的是击退、距离、落点还是路线；后者说明这把武器在哪类空间中值得使用。它们作为 `hitResultMessageId` 和 `mapUseMessageId` 进入 Product 表现定义，不由 UI 临时拼文案。因为这是必填字段，`ProductContentPresentationDefinition` 内层 schema 已升级为 2，避免旧概览被静默当作完整 V2 数据。
+
 所有数值由当前权威动作调优投影到 Product 表现定义，不能在 UI 里重新手写一套平衡数字。`higher-is-risk` 与普通的“越高越好”分开，避免把冲锋距离误读为纯收益。
 
 ## 取舍
@@ -27,7 +29,7 @@ Accepted for V2 presentation prototype（V2 表现原型已接入；权威层最
 
 ## 当前证据
 
-- `ProductContentPresentationDefinition.overview` 已支持核心动词、代价、反制和上下文数值；
+- `ProductContentPresentationDefinition.overview` 已支持核心动词、代价、反制、命中结果、地图用途和上下文数值；
 - 主页已显示 3 把当前武器的主动作数值和地面/空中快速差异；
 - 重锤、锁链、冲锋盾的数值均从 `ARENA_GAMEPLAY_V2_TUNING.attacks` 读取；
 - 重点内容测试验证了重锤空中距离和冲锋盾自身位移风险语义；
