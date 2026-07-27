@@ -203,8 +203,13 @@ export type {
   ArenaV2WeaponFunctionLanguageProfile,
   ArenaV2WeaponModeFit,
 } from './arena-v2-weapon-function-language.js';
-export { runArenaV2WeaponLanguagePrototype } from './arena-v2-weapon-language-prototype.js';
+export {
+  createArenaV2WeaponLanguageCandidates,
+  createArenaV2WeaponLanguageResearchContent,
+  runArenaV2WeaponLanguagePrototype,
+} from './arena-v2-weapon-language-prototype.js';
 export type {
+  ArenaV2WeaponLanguageCandidate,
   ArenaV2WeaponLanguageProbeOutcome,
   ArenaV2WeaponLanguageProbePolicy,
   ArenaV2WeaponLanguageProbeResult,
@@ -252,6 +257,16 @@ export type {
   ArenaV2KzRouteCombatResponsePolicy,
   ArenaV2KzRouteCombatResponseOutcome,
 } from './arena-v2-kz-route-combat-prototype.js';
+export {
+  runArenaV2KzLanguageConsequencePrototype,
+} from './arena-v2-kz-language-consequence-prototype.js';
+export type {
+  ArenaV2KzLanguageCombatOutcome,
+  ArenaV2KzLanguageConsequenceProbeResult,
+  ArenaV2KzLanguageConsequencePrototypeResult,
+  ArenaV2KzLanguageResponseOutcome,
+  ArenaV2KzLanguageResponsePolicy,
+} from './arena-v2-kz-language-consequence-prototype.js';
 export {
   runArenaV2SurvivalLoopPrototype,
 } from './arena-v2-survival-loop-prototype.js';

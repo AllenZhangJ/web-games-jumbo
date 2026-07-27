@@ -292,7 +292,7 @@ Arena 的简化版本不需要增加拾取后专门的投掷按钮，但需要�
 
 结构化映射见 `arena-v2-weapon-function-language.ts`。它只用于研究卡和评审，不直接新增生产武器；当前三把 Arena 原型分别优先验证“推离/换位/冲入”，其余语言先用最小原型验证是否真的带来新的学习问题。
 
-本轮最小动作原型已经验证直线压制、封路和延迟重击在同一套 Rule/Targeting/Effect 链路中可以形成 8、24、30 tick 的不同回应时间，并把提前离开转化为未命中；这只是动作语法证据，不代表持续区域、投射物飞行或正式平衡已经完成。详见[武器战斗语言最小原型结果](arena-v2-weapon-language-prototype-results-v1.md)。
+本轮最小动作原型已经验证直线压制、封路和延迟重击在同一套 Rule/Targeting/Effect 链路中可以形成 8、24、30 tick 的不同回应时间，并把提前离开转化为未命中；随后六段 KZ 灰盒的 54 个固定回应探针又证明前摇、横向冲量和支撑面会共同改变击落与路线转移结果。这只是动作语法和地图后果证据，不代表持续区域、投射物飞行、真人反应或正式平衡已经完成。详见[武器战斗语言最小原型结果](arena-v2-weapon-language-prototype-results-v1.md)和[武器战斗语言 × KZ 地图后果原型结果](arena-v2-weapon-language-kz-consequence-results-v1.md)。
 
 ## 第一轮原型决策
 

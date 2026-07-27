@@ -67,7 +67,7 @@ export interface ArenaV2WeaponLanguagePrototypeResult {
   readonly persistentAreaEffectImplemented: false;
 }
 
-interface CandidateDefinition {
+export interface ArenaV2WeaponLanguageCandidate {
   readonly weaponId: string;
   readonly languageId: string;
   readonly groundAction: ActionDefinition;
@@ -166,7 +166,7 @@ function equipmentDefinition({
   });
 }
 
-function createCandidateDefinitions(): readonly CandidateDefinition[] {
+export function createArenaV2WeaponLanguageCandidates(): readonly ArenaV2WeaponLanguageCandidate[] {
   const lineGround = attackDefinition({
     id: 'research-line-pressure-ground',
     targeting: {
@@ -276,9 +276,9 @@ function createCandidateDefinitions(): readonly CandidateDefinition[] {
   })));
 }
 
-const CANDIDATES = createCandidateDefinitions();
+const CANDIDATES = createArenaV2WeaponLanguageCandidates();
 
-function createResearchAuthorityContent(): ResearchAuthorityContent {
+export function createArenaV2WeaponLanguageResearchContent(): ResearchAuthorityContent {
   const base = createStage4ContentRegistries({
     additionalActionDefinitions: [
       ...STAGE6_MOVEMENT_ACTION_DEFINITIONS,
@@ -320,7 +320,7 @@ function createActors(targetX: number): readonly RuleActor[] {
 }
 
 function targetXForPolicy(
-  candidate: CandidateDefinition,
+  candidate: ArenaV2WeaponLanguageCandidate,
   policy: ArenaV2WeaponLanguageProbePolicy,
   tick: number,
 ): number {
@@ -339,7 +339,7 @@ function createFrames(tick: number): readonly ArenaInputFrame[] {
 }
 
 function runProbe(
-  candidate: CandidateDefinition,
+  candidate: ArenaV2WeaponLanguageCandidate,
   policy: ArenaV2WeaponLanguageProbePolicy,
 ): ArenaV2WeaponLanguageProbeResult {
   const engine: ArenaRuleEngineContract = createArenaV1RuleEngine({
@@ -348,7 +348,7 @@ function runProbe(
       contextPrimaryMobilityEnabled: false,
       equipment: { initialSpawns: [] },
     }),
-    authorityContent: createResearchAuthorityContent(),
+    authorityContent: createArenaV2WeaponLanguageResearchContent(),
   });
   let actionStartedTick: number | null = null;
   let firstActiveTick: number | null = null;
