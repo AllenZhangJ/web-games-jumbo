@@ -221,6 +221,7 @@ export type {
 export {
   ARENA_V2_WEAPON_MINIMUM_VERSION_SPECIFICATIONS,
   ARENA_V2_WEAPON_MINIMUM_VERSIONS,
+  ARENA_V2_PRODUCTION_WEAPON_MINIMUM_VERSIONS,
   createArenaV2WeaponMinimumVersionCatalog,
   findArenaV2WeaponMinimumVersion,
   listArenaV2WeaponMinimumVersionLanguages,
@@ -229,6 +230,7 @@ export type {
   ArenaV2WeaponMinimumRule,
   ArenaV2WeaponMinimumVersion,
   ArenaV2WeaponMinimumVersionSpecification,
+  ArenaV2ProductionWeaponMinimumVersion,
 } from './arena-v2-weapon-minimum-version-contract.js';
 export {
   ARENA_V2_WEAPON_OFFICIAL_EVIDENCE,

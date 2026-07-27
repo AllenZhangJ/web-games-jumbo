@@ -2,6 +2,7 @@ import type { ArenaV2WeaponResearchCard } from './arena-v2-weapon-research-catal
 
 export const ARENA_V2_WEAPON_FUNCTION_LANGUAGE_ID = Object.freeze({
   APPROACH: 'approach',
+  PUSH_AWAY: 'push-away',
   ZONE_DENIAL: 'zone-denial',
   REPOSITION: 'reposition',
   READ_PUNISH: 'read-punish',
@@ -38,6 +39,16 @@ const profiles: readonly ArenaV2WeaponFunctionLanguageProfile[] = [
     mapSpaces: Object.freeze(['长直线', '窄路入口', '断层边缘']),
     modeFit: Object.freeze(['1v1', 'race', 'survival']),
     minimumArenaVersion: '短距离突进 + 低至中等目标击退 + 可见自身位移风险。',
+  },
+  {
+    id: ARENA_V2_WEAPON_FUNCTION_LANGUAGE_ID.PUSH_AWAY,
+    label: '推离',
+    whyEffective: '用一次清晰的命中把目标送向边缘，同时让前摇和收招成为可读的交换成本。',
+    requiredPublicAxes: Object.freeze(['range', 'startup', 'impact', 'vertical', 'recovery']),
+    counterplay: Object.freeze(['提前离开正面线', '诱导挥空', '从侧面接近']),
+    mapSpaces: Object.freeze(['平台边缘', '窄桥', '断层入口']),
+    modeFit: Object.freeze(['1v1', 'race', 'survival']),
+    minimumArenaVersion: '短距离重击 + 中高横向击退 + 明显前摇和收招。',
   },
   {
     id: ARENA_V2_WEAPON_FUNCTION_LANGUAGE_ID.ZONE_DENIAL,

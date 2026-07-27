@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   ARENA_V2_WEAPON_FUNCTION_LANGUAGE_ID,
+  ARENA_V2_PRODUCTION_WEAPON_MINIMUM_VERSIONS,
   ARENA_V2_WEAPON_MINIMUM_VERSION_SPECIFICATIONS,
   ARENA_V2_WEAPON_MINIMUM_VERSIONS,
   createArenaV2WeaponMinimumVersionCatalog,
@@ -10,9 +11,10 @@ import {
 
 describe('Arena V2 weapon minimum version contract', () => {
   it('defines one structured minimum contract for each battle language', () => {
-    expect(ARENA_V2_WEAPON_MINIMUM_VERSION_SPECIFICATIONS).toHaveLength(7);
+    expect(ARENA_V2_WEAPON_MINIMUM_VERSION_SPECIFICATIONS).toHaveLength(8);
     expect(listArenaV2WeaponMinimumVersionLanguages()).toEqual([
       ARENA_V2_WEAPON_FUNCTION_LANGUAGE_ID.APPROACH,
+      ARENA_V2_WEAPON_FUNCTION_LANGUAGE_ID.PUSH_AWAY,
       ARENA_V2_WEAPON_FUNCTION_LANGUAGE_ID.ZONE_DENIAL,
       ARENA_V2_WEAPON_FUNCTION_LANGUAGE_ID.REPOSITION,
       ARENA_V2_WEAPON_FUNCTION_LANGUAGE_ID.READ_PUNISH,
@@ -68,5 +70,19 @@ describe('Arena V2 weapon minimum version contract', () => {
     expect(Object.isFrozen(rebuilt)).toBe(true);
     expect(Object.isFrozen(rebuilt[0])).toBe(true);
     expect(Object.isFrozen(rebuilt[0]?.minimumRule)).toBe(true);
+  });
+
+  it('maps every current production weapon to an explicit minimum language', () => {
+    expect(ARENA_V2_PRODUCTION_WEAPON_MINIMUM_VERSIONS.map(({ equipmentDefinitionId }) => (
+      equipmentDefinitionId
+    ))).toEqual(['hammer', 'chain', 'shield']);
+    expect(ARENA_V2_PRODUCTION_WEAPON_MINIMUM_VERSIONS.map(({ languageId }) => languageId)).toEqual([
+      ARENA_V2_WEAPON_FUNCTION_LANGUAGE_ID.PUSH_AWAY,
+      ARENA_V2_WEAPON_FUNCTION_LANGUAGE_ID.REPOSITION,
+      ARENA_V2_WEAPON_FUNCTION_LANGUAGE_ID.APPROACH,
+    ]);
+    expect(ARENA_V2_PRODUCTION_WEAPON_MINIMUM_VERSIONS.every(({ mappingStatus, readiness }) => (
+      mappingStatus === 'aligned' && readiness === 'ready'
+    ))).toBe(true);
   });
 });

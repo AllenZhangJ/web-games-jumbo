@@ -12,6 +12,7 @@ import {
   createArenaV2WeaponLanguageReadabilityReport,
   type ArenaV2WeaponPublicAxisId,
 } from './arena-v2-weapon-public-axis-contract.js';
+import { STAGE4_EQUIPMENT_DEFINITIONS } from '@number-strategy-jump/arena-v1-content';
 
 export interface ArenaV2WeaponMinimumRule {
   readonly targeting: string;
@@ -23,7 +24,7 @@ export interface ArenaV2WeaponMinimumRule {
 
 export interface ArenaV2WeaponMinimumVersionSpecification {
   readonly languageId: ArenaV2WeaponFunctionLanguageId;
-  readonly representativeReferenceId: string;
+  readonly representativeReferenceId: string | null;
   readonly coreVerb: string;
   readonly input: 'primary-attack';
   readonly contexts: readonly ['ground', 'aerial'];
@@ -53,6 +54,22 @@ export interface ArenaV2WeaponMinimumVersion {
   readonly notToCopy: readonly string[];
 }
 
+export interface ArenaV2ProductionWeaponMinimumVersion {
+  readonly equipmentDefinitionId: string;
+  readonly displayName: string;
+  readonly groundActionDefinitionId: string;
+  readonly aerialActionDefinitionId: string;
+  readonly languageId: ArenaV2WeaponFunctionLanguageId;
+  readonly languageLabel: string;
+  readonly coreVerb: string;
+  readonly input: 'primary-attack';
+  readonly contexts: readonly ['ground', 'aerial'];
+  readonly minimumRule: ArenaV2WeaponMinimumRule;
+  readonly requiredPublicAxes: readonly ArenaV2WeaponPublicAxisId[];
+  readonly readiness: 'ready' | 'blocked';
+  readonly mappingStatus: 'aligned';
+}
+
 const specifications: readonly ArenaV2WeaponMinimumVersionSpecification[] = Object.freeze([
   Object.freeze({
     languageId: ARENA_V2_WEAPON_FUNCTION_LANGUAGE_ID.APPROACH,
@@ -69,6 +86,22 @@ const specifications: readonly ArenaV2WeaponMinimumVersionSpecification[] = Obje
     }),
     counterplay: Object.freeze(['让出直线', '跳过攻击线', '诱导冲过头']),
     notToCopy: Object.freeze(['多段连招', '无敌旋转', '复杂派生']),
+  }),
+  Object.freeze({
+    languageId: ARENA_V2_WEAPON_FUNCTION_LANGUAGE_ID.PUSH_AWAY,
+    representativeReferenceId: null,
+    coreVerb: '推离',
+    input: 'primary-attack',
+    contexts: Object.freeze(['ground', 'aerial'] as const),
+    minimumRule: Object.freeze({
+      targeting: '正面短距离目标，攻击方向决定是否进入重击范围。',
+      timing: '明显前摇后形成一次清晰有效命中，挥空后保留可惩罚收招。',
+      hitResult: '高于普通攻击的横向击退，并用垂直控制改变目标落点。',
+      mapRelationship: '平台边缘、窄桥和断层入口直接放大击退价值。',
+      failureCost: '对手提前离开正面线会诱导挥空，使用者在收招期间失去主动。',
+    }),
+    counterplay: Object.freeze(['提前离开正面线', '诱导挥空', '从侧面接近']),
+    notToCopy: Object.freeze(['真正格挡', '多段连招树', '命中即自动追击']),
   }),
   Object.freeze({
     languageId: ARENA_V2_WEAPON_FUNCTION_LANGUAGE_ID.ZONE_DENIAL,
@@ -184,6 +217,7 @@ function resolveSpecification(
 
 function validateRepresentativeReferences(): void {
   for (const specification of specifications) {
+    if (specification.representativeReferenceId === null) continue;
     const card = ARENA_V2_WEAPON_RESEARCH_CATALOG.find(({ referenceId }) => (
       referenceId === specification.representativeReferenceId
     ));
@@ -236,6 +270,60 @@ export function createArenaV2WeaponMinimumVersionCatalog(): readonly ArenaV2Weap
 
 export const ARENA_V2_WEAPON_MINIMUM_VERSIONS =
   createArenaV2WeaponMinimumVersionCatalog();
+
+const PRODUCTION_LANGUAGE_BY_EQUIPMENT_ID: Readonly<Record<string, {
+  readonly displayName: string;
+  readonly languageId: ArenaV2WeaponFunctionLanguageId;
+  readonly coreVerb: string;
+}>> = Object.freeze({
+  hammer: Object.freeze({
+    displayName: '重锤',
+    languageId: ARENA_V2_WEAPON_FUNCTION_LANGUAGE_ID.PUSH_AWAY,
+    coreVerb: '推离',
+  }),
+  chain: Object.freeze({
+    displayName: '引力锁链',
+    languageId: ARENA_V2_WEAPON_FUNCTION_LANGUAGE_ID.REPOSITION,
+    coreVerb: '换位',
+  }),
+  shield: Object.freeze({
+    displayName: '冲锋盾',
+    languageId: ARENA_V2_WEAPON_FUNCTION_LANGUAGE_ID.APPROACH,
+    coreVerb: '冲入',
+  }),
+});
+
+function createProductionMinimumVersion(
+  definition: typeof STAGE4_EQUIPMENT_DEFINITIONS[number],
+): ArenaV2ProductionWeaponMinimumVersion {
+  const mapping = PRODUCTION_LANGUAGE_BY_EQUIPMENT_ID[definition.id];
+  if (!mapping) throw new RangeError(`生产武器缺少最小版本语言映射：${definition.id}`);
+  const profile = ARENA_V2_WEAPON_FUNCTION_LANGUAGE_PROFILES.find(({ id }) => (
+    id === mapping.languageId
+  ));
+  if (!profile) throw new RangeError(`生产武器引用未知战斗语言：${mapping.languageId}`);
+  const specification = resolveSpecification(mapping.languageId);
+  const readability = createArenaV2WeaponLanguageReadabilityReport(profile);
+  return Object.freeze({
+    equipmentDefinitionId: definition.id,
+    displayName: mapping.displayName,
+    groundActionDefinitionId: definition.actionDefinitionId,
+    aerialActionDefinitionId: definition.aerialActionDefinitionId,
+    languageId: mapping.languageId,
+    languageLabel: profile.label,
+    coreVerb: mapping.coreVerb,
+    input: specification.input,
+    contexts: specification.contexts,
+    minimumRule: specification.minimumRule,
+    requiredPublicAxes: readability.requiredAxes,
+    readiness: readability.readiness,
+    mappingStatus: 'aligned',
+  });
+}
+
+export const ARENA_V2_PRODUCTION_WEAPON_MINIMUM_VERSIONS = Object.freeze(
+  STAGE4_EQUIPMENT_DEFINITIONS.map(createProductionMinimumVersion),
+);
 
 export function findArenaV2WeaponMinimumVersion(
   referenceId: string,
