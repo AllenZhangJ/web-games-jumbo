@@ -192,6 +192,23 @@ export {
   ARENA_V2_WEAPON_RESEARCH_CATALOG,
 } from './arena-v2-weapon-research-catalog.js';
 export type { ArenaV2WeaponResearchCard } from './arena-v2-weapon-research-catalog.js';
+export {
+  runArenaV2WeaponMapPrototype,
+} from './arena-v2-weapon-map-prototype.js';
+export type {
+  ArenaV2WeaponMapProbeKind,
+  ArenaV2WeaponMapProbeResult,
+} from './arena-v2-weapon-map-prototype.js';
+export {
+  runArenaV2UiInformationPrototype,
+} from './arena-v2-ui-information-prototype.js';
+export type {
+  ArenaV2UiFlowResult,
+  ArenaV2UiInformationLayer,
+  ArenaV2UiInformationPrototypeResult,
+  ArenaV2UiPageContract,
+  ArenaV2UiPageId,
+} from './arena-v2-ui-information-prototype.js';
 export type {
   ArenaV2JumpRouteAnchor,
   ArenaV2JumpRoutePrototype,

@@ -1,0 +1,33 @@
+import { describe, expect, it } from 'vitest';
+import { runArenaV2UiInformationPrototype } from '../src/index.js';
+
+describe('Arena V2 UI information prototype', () => {
+  it('keeps the eleven information entries small and centered on the next decision', () => {
+    const first = runArenaV2UiInformationPrototype();
+    const second = runArenaV2UiInformationPrototype();
+
+    expect(first).toEqual(second);
+    expect(first.passed).toBe(true);
+    expect(first.pageCount).toBe(11);
+    expect(first.complexSystemsIntroduced).toBe(0);
+    expect(first.resultToRematchActions).toBe(1);
+    expect(first.resultToChangeTargetActions).toBe(2);
+    expect(first.pages.find(({ id }) => id === 'weapon-detail')?.requiredInformation)
+      .toContain('命中结果');
+    expect(first.pages.find(({ id }) => id === 'map-detail')?.requiredInformation)
+      .toContain('武器适配空间');
+    expect(first.pages.find(({ id }) => id === 'survival-prep')?.requiredInformation)
+      .toContain('每 20 秒三选一');
+  });
+
+  it('proves the three most important player flows stay within the click budget', () => {
+    const result = runArenaV2UiInformationPrototype();
+
+    expect(result.flows).toHaveLength(4);
+    expect(result.flows.every(({ actionCount, passed }) => passed && actionCount <= 3)).toBe(true);
+    expect(result.flows.find(({ flowId }) => flowId === 'weapon-learning')?.pageIds).toEqual([
+      'home', 'weapon-index', 'weapon-detail', 'versus-prep',
+    ]);
+    expect(result.flows.find(({ flowId }) => flowId === 'survival-rematch')?.actionCount).toBe(2);
+  });
+});
