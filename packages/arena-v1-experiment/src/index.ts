@@ -271,3 +271,15 @@ export type {
   ArenaV2SurvivalPressurePrototypeResult,
   ArenaV2SurvivalPressureScenarioResult,
 } from './arena-v2-survival-pressure-prototype.js';
+export {
+  runArenaV2CollectionBudgetPrototype,
+} from './arena-v2-collection-budget-prototype.js';
+export type {
+  ArenaV2CollectionBudgetMilestone,
+  ArenaV2CollectionBudgetPrototypeResult,
+  ArenaV2CollectionBudgetSensitivity,
+  ArenaV2CollectionBudgetTrack,
+  ArenaV2CollectionEvidenceKind,
+  ArenaV2CollectionEvidenceStep,
+  ArenaV2CollectionWeaponPlan,
+} from './arena-v2-collection-budget-prototype.js';
