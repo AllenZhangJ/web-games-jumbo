@@ -299,6 +299,7 @@ test('WebProductUiSurface renders stable semantic controls and serializes DOM in
         mapUse: '窄路和边缘。',
         stats: [
           { id: 'range', label: '有效距离', value: 1.8, maxValue: 6, unit: '格', direction: 'higher-is-better', precision: 2 },
+          { id: 'coverage', label: '覆盖宽度', value: 3.3, maxValue: 12, unit: '格', direction: 'higher-is-better', precision: 2 },
           { id: 'self-movement', label: '自身位移风险', value: 0, maxValue: 7, unit: '冲量', direction: 'higher-is-risk', precision: 2 },
         ],
         contexts: [{
@@ -319,6 +320,7 @@ test('WebProductUiSurface renders stable semantic controls and serializes DOM in
         mapUse: '宽平台和窄路入口。',
         stats: [
           { id: 'range', label: '有效距离', value: 5, maxValue: 6, unit: '格', direction: 'higher-is-better', precision: 2 },
+          { id: 'coverage', label: '覆盖宽度', value: 8.35, maxValue: 12, unit: '格', direction: 'higher-is-better', precision: 2 },
           { id: 'self-movement', label: '自身位移风险', value: 0, maxValue: 7, unit: '冲量', direction: 'higher-is-risk', precision: 2 },
         ],
         contexts: [{
@@ -339,6 +341,7 @@ test('WebProductUiSurface renders stable semantic controls and serializes DOM in
         mapUse: '长直线抢位。',
         stats: [
           { id: 'range', label: '有效距离', value: 1.6, maxValue: 6, unit: '格', direction: 'higher-is-better', precision: 2 },
+          { id: 'coverage', label: '覆盖宽度', value: 1.3, maxValue: 12, unit: '格', direction: 'higher-is-better', precision: 2 },
           { id: 'self-movement', label: '自身位移风险', value: 6.5, maxValue: 7, unit: '冲量', direction: 'higher-is-risk', precision: 2 },
         ],
         contexts: [{
@@ -352,15 +355,20 @@ test('WebProductUiSurface renders stable semantic controls and serializes DOM in
     root.querySelector('#product-weapon-comparison'),
     'weapon comparison',
   );
-  assert.equal(comparison.children.length, 3);
+  assert.equal(comparison.children.length, 4);
   const comparisonHeader = required(comparison.children[0], 'comparison header');
   const comparisonRange = required(comparison.children[1], 'comparison range row');
-  const comparisonRisk = required(comparison.children[2], 'comparison risk row');
+  const comparisonRisk = required(comparison.children[3], 'comparison risk row');
   assert.equal(comparisonHeader.children[1]?.textContent, '重锤');
   assert.equal(comparisonHeader.children[3]?.textContent, '冲锋盾');
   assert.equal(comparisonRange.children[1]?.textContent, '1.80格 ↑');
   assert.equal(comparisonRange.children[2]?.textContent, '5.00格 ↑');
   assert.equal(comparisonRange.children[3]?.textContent, '1.60格 ↑');
+  const comparisonCoverage = required(comparison.children[2], 'comparison coverage row');
+  assert.equal(comparisonCoverage.children[0]?.textContent, '覆盖宽度 (格)');
+  assert.equal(comparisonCoverage.children[1]?.textContent, '3.30格 ↑');
+  assert.equal(comparisonCoverage.children[2]?.textContent, '8.35格 ↑');
+  assert.equal(comparisonCoverage.children[3]?.textContent, '1.30格 ↑');
   assert.equal(comparisonRisk.children[3]?.textContent, '6.50冲量 ⚠');
   assert.match(
     required(comparisonRisk.children[3], 'comparison risk value').getAttribute('aria-label') ?? '',

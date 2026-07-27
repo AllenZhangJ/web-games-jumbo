@@ -99,7 +99,7 @@ const PAGE_CONTRACTS: readonly ArenaV2UiPageContract[] = Object.freeze([
     id: 'weapon-index',
     layer: 'collection',
     question: '我收集了什么，下一把想练什么？',
-    requiredInformation: Object.freeze(['收集进度', '核心动词', '8 项主数值', '地面/空中摘要']),
+    requiredInformation: Object.freeze(['收集进度', '核心动词', '9 项主数值', '地面/空中摘要']),
     primaryAction: '查看武器详情',
     secondaryAction: '返回首页',
     maximumActionsBeforeNextStep: 1,

@@ -46,6 +46,7 @@ describe('Arena V1 concrete presentation content', () => {
       .toMatchObject({ value: 2.5, unit: '格' });
     expect(hammer?.overview?.contexts[1]?.stats.map(({ id }) => id)).toEqual([
       'range',
+      'coverage',
       'startup',
       'impact',
       'vertical',
@@ -53,6 +54,9 @@ describe('Arena V1 concrete presentation content', () => {
     ]);
     expect(hammer?.overview?.contexts[1]?.stats.find(({ id }) => id === 'height-gap'))
       .toMatchObject({ value: 2.5, unit: '格', direction: 'higher-is-better' });
+    const hammerCoverage = hammer?.overview?.stats.find(({ id }) => id === 'coverage');
+    expect(hammerCoverage).toMatchObject({ unit: '格', direction: 'higher-is-better' });
+    expect(hammerCoverage?.value).toBeCloseTo(3.29945, 4);
     const shield = weapons.find(({ contentId }) => contentId === 'shield');
     expect(shield?.overview?.stats.find(({ id }) => id === 'self-movement')).toMatchObject({
       value: 6.5,

@@ -65,7 +65,7 @@ Arena V2 的核心目标是：
 | [ADR-045：武器上下文概览契约](../decisions/045-arena-v2-weapon-context-overview.md) | 固化主动作数值、地面/空中上下文与风险语义 | 表现原型已接入 |
 | [ADR-046：武器概览先显示数值比较](../decisions/046-arena-weapon-overview-comparison-first.md) | 固化主页“先比较数值、再读武器语义”的信息顺序 | 当前主页已接入 |
 | [ADR-053：武器概览明确数值方向语义](../decisions/053-arena-weapon-overview-direction-semantics.md) | 固化“越高/越低/风险”文字、条形图和比较尺度一致性，避免只靠箭头猜含义 | 当前主页展示收敛 |
-| [ADR-055：武器上下文必须完整显示关键数值](../decisions/055-arena-v2-weapon-context-readout-completeness.md) | 固化地面/空中上下文的五项数值、标签和可访问解释 | 表现原型已接入 |
+| [ADR-055：武器上下文必须完整显示关键数值](../decisions/055-arena-v2-weapon-context-readout-completeness.md) | 固化地面/空中上下文的六项数值、标签和可访问解释 | 表现原型已接入 |
 | [ADR-056：武器先按可学习的战斗语言扩展](../decisions/056-arena-v2-weapon-function-language-boundary.md) | 固化参考武器到 Arena 战斗语言的研究映射与新增武器评审边界 | 研究原型已接入 |
 | [ADR-057：武器战斗语言必须通过地图后果验证](../decisions/057-arena-v2-weapon-language-map-consequence-boundary.md) | 固化六段 KZ 表面、三种回应和击退/支撑面证据作为武器候选评审门槛 | 研究原型已接入 |
 | [ADR-047：生存实体复用玩家规则/物理边界](../decisions/047-arena-v2-survival-entity-boundary.md) | 固化单敌人原型不得绕过命中、冲量和掉落规则 | V2 研究原型 |

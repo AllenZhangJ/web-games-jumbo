@@ -18,7 +18,7 @@
 
 ## 优先级一：热血英豪武器研究
 
-第一轮结果和第二轮动作矩阵已记录在[热血英豪武器研究 V1](arena-v2-hot-blooded-weapon-study-v1.md)。12 件参考武器也已经沉淀为开发/测试工具链中的结构化研究卡，并进一步归并为 7 种 Arena 战斗语言。当前结论是建立 8 个可比较的公开数值，并额外完整展示地面/空中上下文：有效距离、出招速度、收招时间、横向击飞、纵向控制、硬直时间、自身位移风险和再次使用时间；上下文再公开命中高度差，并为每项数值提供标签、方向语义和单位；同时强制公开命中结果和地图用途。
+第一轮结果和第二轮动作矩阵已记录在[热血英豪武器研究 V1](arena-v2-hot-blooded-weapon-study-v1.md)。12 件参考武器也已经沉淀为开发/测试工具链中的结构化研究卡，并进一步归并为 7 种 Arena 战斗语言。当前结论是建立 9 个可比较的公开数值，并额外完整展示地面/空中上下文：有效距离、覆盖宽度、出招速度、收招时间、横向击飞、纵向控制、硬直时间、自身位移风险和再次使用时间；上下文再公开命中高度差，并为每项数值提供标签、方向语义和单位；同时强制公开命中结果和地图用途。
 
 ### 目标
 
@@ -41,7 +41,7 @@
 - 哪些武器依赖角色/职业组合，不能直接迁移？
 - 哪些武器适合 1v1，哪些适合生存？
 
-当前新增证据：规则层横向冲量已经接入轻量物理，在宽平台、KZ 灰盒窄路和边缘平台形成不同的“命中但安全 / 命中后出界”结果；固定侧移目标又验证了重锤挥空、锁链和冲锋盾命中的前摇差异；攻击者失位、空中动作和双人同时出招也已经通过当前规则/物理链路形成可重复结果；本轮又把五项上下文数值完整投影到 DOM，并显示垂直命中边界；12 件参考武器已由结构化映射归并为 7 种战斗语言；直线压制、封路和延迟重击又通过临时 ActionDefinition 完成 8/24/30 tick 回应时间对照，并在六段 KZ 灰盒上完成 54 个“语言×表面×固定回应”探针，详见[武器战斗语言最小原型结果](arena-v2-weapon-language-prototype-results-v1.md)与[武器战斗语言 × KZ 地图后果原型结果](arena-v2-weapon-language-kz-consequence-results-v1.md)。详见[ADR-056](../decisions/056-arena-v2-weapon-function-language-boundary.md)、[ADR-057](../decisions/057-arena-v2-weapon-language-map-consequence-boundary.md)、[武器地图边缘原型结果](arena-v2-weapon-map-prototype-results-v1.md)、[武器移动目标原型结果](arena-v2-weapon-moving-target-prototype-results-v1.md)和[武器攻击者失位与双人争夺原型结果](arena-v2-weapon-contest-prototype-results-v1.md)。下一步加入真实多人拥挤、攻击/跳跃互相穿插、持续封路状态和真人可读性验证。
+当前新增证据：规则层横向冲量已经接入轻量物理，在宽平台、KZ 灰盒窄路和边缘平台形成不同的“命中但安全 / 命中后出界”结果；固定侧移目标又验证了重锤挥空、锁链和冲锋盾命中的前摇差异；攻击者失位、空中动作和双人同时出招也已经通过当前规则/物理链路形成可重复结果；本轮又把六项上下文数值完整投影到 DOM，并显示覆盖宽度和垂直命中边界；12 件参考武器已由结构化映射归并为 7 种战斗语言；直线压制、封路和延迟重击又通过临时 ActionDefinition 完成 8/24/30 tick 回应时间对照，并在六段 KZ 灰盒上完成 54 个“语言×表面×固定回应”探针，详见[武器战斗语言最小原型结果](arena-v2-weapon-language-prototype-results-v1.md)与[武器战斗语言 × KZ 地图后果原型结果](arena-v2-weapon-language-kz-consequence-results-v1.md)。详见[ADR-056](../decisions/056-arena-v2-weapon-function-language-boundary.md)、[ADR-057](../decisions/057-arena-v2-weapon-language-map-consequence-boundary.md)、[武器地图边缘原型结果](arena-v2-weapon-map-prototype-results-v1.md)、[武器移动目标原型结果](arena-v2-weapon-moving-target-prototype-results-v1.md)和[武器攻击者失位与双人争夺原型结果](arena-v2-weapon-contest-prototype-results-v1.md)。下一步加入真实多人拥挤、攻击/跳跃互相穿插、持续封路状态和真人可读性验证。
 
 ## 优先级二：CS 1.6 跳跃/KZ 地图研究
 

@@ -83,9 +83,19 @@ function stat(
   return { id, labelMessageId, value, maxValue, unit, direction, precision };
 }
 
+function targetingCoverageWidth(tuning: AttackTuning): number {
+  const { range, radius, minimumFacingDot } = tuning.targeting;
+  if (radius !== undefined) return radius * 2;
+  if (minimumFacingDot !== undefined) {
+    return range * 2 * Math.sqrt(Math.max(0, 1 - minimumFacingDot ** 2));
+  }
+  return range * 2;
+}
+
 function contextStats(tuning: AttackTuning) {
   return [
     stat('range', 'equipment.stat.range', tuning.targeting.range, 6, '格', 'higher-is-better'),
+    stat('coverage', 'equipment.stat.coverage', targetingCoverageWidth(tuning), 12, '格', 'higher-is-better'),
     stat('startup', 'equipment.stat.startup', tuning.cadence.windupSeconds, 0.5, '秒', 'lower-is-better'),
     stat('impact', 'equipment.stat.impact', tuning.knockback.targetGroundDistance, 4, '格', 'higher-is-better'),
     stat('vertical', 'equipment.stat.vertical', tuning.knockback.verticalImpulse, 7, '冲量', 'higher-is-better'),
@@ -117,6 +127,7 @@ function createEquipmentOverview() {
       mapUseMessageId: config.mapUseMessageId,
       stats: [
         stat('range', 'equipment.stat.range', tuning.targeting.range, 6, '格', 'higher-is-better'),
+        stat('coverage', 'equipment.stat.coverage', targetingCoverageWidth(tuning), 12, '格', 'higher-is-better'),
         stat('startup', 'equipment.stat.startup', tuning.cadence.windupSeconds, 0.5, '秒', 'lower-is-better'),
         stat('recovery', 'equipment.stat.recovery', tuning.cadence.recoverySeconds, 0.5, '秒', 'lower-is-better'),
         stat('impact', 'equipment.stat.impact', tuning.knockback.targetGroundDistance, 3, '格', 'higher-is-better'),

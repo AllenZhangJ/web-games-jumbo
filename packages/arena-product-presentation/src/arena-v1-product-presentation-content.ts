@@ -163,6 +163,7 @@ export const ARENA_V1_ZH_CN_PRODUCT_MESSAGES = new ProductMessageCatalog({
     'equipment.shield.ground-summary': '冲撞换自身位移，抢直线位置。',
     'equipment.shield.aerial-summary': '下砸改变落点，适合压过窄路。',
     'equipment.stat.range': '有效距离',
+    'equipment.stat.coverage': '覆盖宽度',
     'equipment.stat.startup': '出招速度',
     'equipment.stat.recovery': '收招安全',
     'equipment.stat.impact': '横向击飞',
