@@ -333,6 +333,7 @@ export type {
   ArenaV2UiInformationPrototypeResult,
   ArenaV2UiPageContract,
   ArenaV2UiPageId,
+  ArenaV2UiMatchMode,
 } from './arena-v2-ui-information-prototype.js';
 export type {
   ArenaV2JumpRouteAnchor,

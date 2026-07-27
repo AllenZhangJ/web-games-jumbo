@@ -18,6 +18,9 @@ describe('Arena V2 UI information prototype', () => {
       .toContain('武器适配空间');
     expect(first.pages.find(({ id }) => id === 'survival-prep')?.requiredInformation)
       .toContain('每 20 秒三选一');
+    expect(first.pages.find(({ id }) => id === 'loading')?.maximumActionsBeforeNextStep).toBe(0);
+    expect(first.pages.find(({ id }) => id === 'match-prep')?.supportedModes).toEqual(['versus', 'race']);
+    expect(first.pages.some(({ id }) => (id as string) === 'race-prep')).toBe(false);
     expect(first.pages.every(({ firstViewInformation }) => (
       firstViewInformation.length >= 1 && firstViewInformation.length <= 3
     ))).toBe(true);
@@ -33,7 +36,10 @@ describe('Arena V2 UI information prototype', () => {
     expect(result.flows).toHaveLength(4);
     expect(result.flows.every(({ actionCount, passed }) => passed && actionCount <= 3)).toBe(true);
     expect(result.flows.find(({ flowId }) => flowId === 'weapon-learning')?.pageIds).toEqual([
-      'home', 'weapon-index', 'weapon-detail', 'versus-prep',
+      'home', 'weapon-index', 'weapon-detail', 'match-prep',
+    ]);
+    expect(result.flows.find(({ flowId }) => flowId === 'map-learning')?.pageIds).toEqual([
+      'home', 'map-index', 'map-detail', 'match-prep',
     ]);
     expect(result.flows.find(({ flowId }) => flowId === 'survival-rematch')?.actionCount).toBe(2);
   });

@@ -631,9 +631,9 @@ describe('Arena Presentation Three lifecycle boundaries', () => {
     expect(transfer).toBeDefined();
     expect(evaded).toBeDefined();
     expect((transfer!.children[1] as THREE.Group).visible).toBe(true);
-    expect(transfer!.children[0].visible).toBe(false);
-    expect(evaded!.children[0].visible).toBe(true);
-    expect(evaded!.children[1].visible).toBe(false);
+    expect(transfer!.children[0]!.visible).toBe(false);
+    expect(evaded!.children[0]!.visible).toBe(true);
+    expect(evaded!.children[1]!.visible).toBe(false);
     effects.dispose();
   });
 
