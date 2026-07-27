@@ -15,6 +15,7 @@
 3. 数值审计必须引用公共轴：距离、覆盖、出手、收招、横向作用、垂直控制、控制、再次使用、命中高度差；延迟和预警在未完成持续区域原型前保持 `research-only`。
 4. 逐件研究先生成研究工具链档案，再决定是否进入候选 Definition；研究档案不自动注册生产武器。
 5. 复杂参考武器先收敛为一个可玩的最小功能版本，最多保留核心空间关系和一组明确反制，不把自动锁定、无限堆叠、无敌、MP 或复杂派生整体迁移。
+6. 逐件案例可以生成研究概览适配层，但在连接候选 `Definition` 的权威数值投影前，必须明确标记为 `not-yet-available`；研究轴状态不能被当作玩家数值。
 
 ## 被拒绝的替代方案
 
@@ -49,8 +50,10 @@
 - `packages/arena-v1-experiment/test/arena-v2-weapon-blood-shadow-hook-blade-case-study.test.ts`
 - `packages/arena-v1-experiment/src/arena-v2-weapon-case-study-contract.ts`
 - `packages/arena-v1-experiment/src/arena-v2-weapon-hook-obstruction-prototype.ts`
+- `packages/arena-v1-experiment/src/arena-v2-weapon-case-study-overview-prototype.ts`
 - [热血英豪武器研究 V1](../research/arena-v2-hot-blooded-weapon-study-v1.md)
 - [血影钩刃障碍阻挡原型结果 V1](../research/arena-v2-weapon-hook-obstruction-prototype-results-v1.md)
+- [深研武器概览适配层原型结果 V1](../research/arena-v2-weapon-case-study-overview-prototype-results-v1.md)
 - [魔血镰刃官方说明](https://bfo.web.sdo.com/web4/introduce/prop_explanation.asp?id=793)
 - [真·哈迪斯钩镰官方说明](https://bfo.web.sdo.com/web4/introduce/prop_explanation.asp?id=526)
 - [白金双枪官方说明](https://bfo.web.sdo.com/web4/introduce/prop_explanation.asp?id=329)

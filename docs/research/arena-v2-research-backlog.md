@@ -55,6 +55,7 @@
 - [x] 在 KZ 武器后果探针上增加命中确认、支撑面转移、击落、避开攻击线和路线失误五种因果反馈语义；见[武器战斗语言 × KZ 地图后果原型结果 V1](arena-v2-weapon-language-kz-consequence-results-v1.md)和[ADR-069](../decisions/069-arena-v2-hit-feedback-causal-contract.md)。
 - [x] 将五种反馈语义接入正式 `WeaponFeedbackPresented` Presentation 事件，并复用事件窗口去重；见[ADR-071](../decisions/071-arena-v2-feedback-presentation-event-mapping.md)。
 - [x] 将正式反馈事件接入 Three 灰盒冲击/警告效果、冲击镜头、震动和现有音频触发链；见[ADR-072](../decisions/072-arena-v2-feedback-presentation-three-consumption.md)。
+- [x] 将四件逐动作深研案例接入研究概览适配层，区分必须实测的公共轴、仍属研究字段的轴和禁止伪造的玩家数值；见[深研武器概览适配层原型结果 V1](arena-v2-weapon-case-study-overview-prototype-results-v1.md)与[ADR-080](../decisions/080-arena-v2-weapon-case-study-by-move.md)。
 - [ ] 绑定最终声音/特效资产并完成目标设备可读性、低动效和真人反馈测试；当前没有真机证据。
 
 ### 需要回答

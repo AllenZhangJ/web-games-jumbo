@@ -243,6 +243,15 @@ export { ARENA_V2_WEAPON_WHITE_PLATINUM_DUAL_GUNS_CASE_STUDY } from './arena-v2-
 export type { ArenaV2WeaponWhitePlatinumDualGunsCaseStudy } from './arena-v2-weapon-white-platinum-dual-guns-case-study.js';
 export { ARENA_V2_WEAPON_BLOOD_SHADOW_HOOK_BLADE_CASE_STUDY } from './arena-v2-weapon-blood-shadow-hook-blade-case-study.js';
 export type { ArenaV2WeaponBloodShadowHookBladeCaseStudy } from './arena-v2-weapon-blood-shadow-hook-blade-case-study.js';
+export {
+  createArenaV2WeaponCaseStudyOverview,
+} from './arena-v2-weapon-case-study-overview-prototype.js';
+export type {
+  ArenaV2WeaponCaseStudyOverview,
+  ArenaV2WeaponCaseStudyOverviewAxisAudit,
+  ArenaV2WeaponCaseStudyOverviewAxisStatus,
+  ArenaV2WeaponCaseStudyOverviewRow,
+} from './arena-v2-weapon-case-study-overview-prototype.js';
 export { runArenaV2WeaponHookObstructionPrototype } from './arena-v2-weapon-hook-obstruction-prototype.js';
 export type {
   ArenaV2WeaponHookObstructionPoint,
