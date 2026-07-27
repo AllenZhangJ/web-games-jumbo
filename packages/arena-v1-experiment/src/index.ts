@@ -260,6 +260,18 @@ export type {
 export { ARENA_V2_WEAPON_MAGIC_BLOOD_SCYTHE_CASE_STUDY } from './arena-v2-weapon-magic-blood-scythe-case-study.js';
 export type { ArenaV2WeaponMagicBloodScytheCaseStudy } from './arena-v2-weapon-magic-blood-scythe-case-study.js';
 export {
+  ARENA_V2_WEAPON_MAGIC_BLOOD_SCYTHE_AERIAL_ACTION_ID,
+  ARENA_V2_WEAPON_MAGIC_BLOOD_SCYTHE_DEFINITION_ID,
+  ARENA_V2_WEAPON_MAGIC_BLOOD_SCYTHE_DEFINITION_PROTOTYPE,
+  ARENA_V2_WEAPON_MAGIC_BLOOD_SCYTHE_GROUND_ACTION_ID,
+  createArenaV2WeaponMagicBloodScytheNumericOverview,
+} from './arena-v2-weapon-magic-blood-scythe-definition-prototype.js';
+export type {
+  ArenaV2WeaponMagicBloodScytheDefinitionPrototype,
+  ArenaV2WeaponMagicBloodScytheNumericOverview,
+  ArenaV2WeaponMagicBloodScytheWarningHypothesis,
+} from './arena-v2-weapon-magic-blood-scythe-definition-prototype.js';
+export {
   createArenaV2WeaponCaseStudyNumericReview,
 } from './arena-v2-weapon-case-study-contract.js';
 export { ARENA_V2_WEAPON_TRUE_HADES_HOOK_SCYTHE_CASE_STUDY } from './arena-v2-weapon-true-hades-hook-scythe-case-study.js';
@@ -468,6 +480,16 @@ export type {
   ArenaV2WeaponTrueHadesHookScytheReplayScenario,
   ArenaV2WeaponTrueHadesHookScytheReplayScenarioResult,
 } from './arena-v2-weapon-true-hades-hook-scythe-replay-prototype.js';
+export {
+  createArenaV2WeaponMagicBloodScytheReplayCore,
+  runArenaV2WeaponMagicBloodScytheReplayPrototype,
+} from './arena-v2-weapon-magic-blood-scythe-replay-prototype.js';
+export type {
+  ArenaV2WeaponMagicBloodScytheActionSample,
+  ArenaV2WeaponMagicBloodScytheReplayPrototypeResult,
+  ArenaV2WeaponMagicBloodScytheReplayScenario,
+  ArenaV2WeaponMagicBloodScytheReplayScenarioResult,
+} from './arena-v2-weapon-magic-blood-scythe-replay-prototype.js';
 export {
   ARENA_V2_LINE_PRESSURE_DEFINITION_PROTOTYPE,
   createArenaV2LinePressureDefinitionPrototype,

@@ -21,8 +21,8 @@ describe('Arena V2 weapon case-study overview', () => {
       && numericReadoutReason.length > 20
     ))).toBe(true);
     expect(overview.rows.filter(({ numericReadout }) => numericReadout === 'research-projection').map(({ referenceId }) => referenceId))
-      .toEqual(['true-hades-hook-scythe', 'white-platinum-dual-guns', 'blood-shadow-hook-blade', 'phantom-tiger-fist']);
-    expect(overview.rows.filter(({ numericReadout }) => numericReadout === 'not-yet-available')).toHaveLength(2);
+      .toEqual(['magic-blood-scythe', 'true-hades-hook-scythe', 'white-platinum-dual-guns', 'blood-shadow-hook-blade', 'phantom-tiger-fist']);
+    expect(overview.rows.filter(({ numericReadout }) => numericReadout === 'not-yet-available')).toHaveLength(1);
   });
 
   it('makes the difference between must-measure axes and research-only signals explicit', () => {
@@ -77,7 +77,12 @@ describe('Arena V2 weapon case-study overview', () => {
     expect(trueHades?.numericProjection?.comparisonWeaponIds).toContain('research-true-hades-hook-scythe');
     expect(Object.isFrozen(guns?.numericProjection)).toBe(true);
     expect(Object.isFrozen(guns?.numericProjection?.contexts)).toBe(true);
-    expect(overview.rows.find(({ referenceId }) => referenceId === 'magic-blood-scythe')?.numericProjection).toBeNull();
+    const magic = overview.rows.find(({ referenceId }) => referenceId === 'magic-blood-scythe');
+    expect(magic?.numericProjection?.sourceDefinitionIds).toEqual([
+      'research-magic-blood-scythe-ground',
+      'research-magic-blood-scythe-aerial',
+    ]);
+    expect(magic?.numericProjection?.comparisonWeaponIds).toContain('research-magic-blood-scythe');
   });
 
   it('is deterministic and deeply freezes the research readout', () => {

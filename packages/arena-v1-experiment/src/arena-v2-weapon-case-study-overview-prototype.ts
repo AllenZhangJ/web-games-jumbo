@@ -33,6 +33,9 @@ import {
   createArenaV2WeaponTrueHadesHookScytheNumericOverview,
 } from './arena-v2-weapon-true-hades-hook-scythe-definition-prototype.js';
 import {
+  createArenaV2WeaponMagicBloodScytheNumericOverview,
+} from './arena-v2-weapon-magic-blood-scythe-definition-prototype.js';
+import {
   createArenaV2WeaponResearchOverviewContexts,
   type ArenaV2WeaponResearchOverviewContext,
 } from './arena-v2-weapon-research-overview-prototype.js';
@@ -163,6 +166,18 @@ function createLaunchProjection(
 function createNumericProjection(
   referenceId: string,
 ): ArenaV2WeaponCaseStudyNumericProjection | null {
+  if (referenceId === 'magic-blood-scythe') {
+    const overview = createArenaV2WeaponMagicBloodScytheNumericOverview();
+    return Object.freeze({
+      contexts: overview.contexts,
+      comparisonWeaponIds: overview.comparisonWeaponIds,
+      sourceDefinitionIds: Object.freeze([
+        'research-magic-blood-scythe-ground',
+        'research-magic-blood-scythe-aerial',
+      ]),
+      numericStatus: 'definition-projected-hypothesis',
+    });
+  }
   if (referenceId === 'phantom-tiger-fist') {
     const overview = createArenaV2WeaponPhantomTigerFistNumericOverview();
     return Object.freeze({
