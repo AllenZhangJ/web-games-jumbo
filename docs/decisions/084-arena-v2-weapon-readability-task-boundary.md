@@ -38,7 +38,7 @@
 - 数值比较题始终绑定当前研究矩阵，能够及时暴露字段漂移或并列答案；
 - “答对数值”与“能用数值解释地图选择”被分开记录；
 - 参与者侧不会泄露答案，自动化评估不会伪装成人类样本；
-- 后续目标设备或真人工作台可以直接消费同一份任务合同。
+- 独立研究页可以直接消费同一份任务合同，并在不进入生产构建的前提下完成结构化回答验证。
 
 限制：
 
@@ -50,5 +50,11 @@
 
 - `packages/arena-v1-experiment/src/arena-v2-weapon-readability-task-prototype.ts`
 - `packages/arena-v1-experiment/test/arena-v2-weapon-readability-task-prototype.test.ts`
+- `readability.html`
+- `src/entry/weapon-readability-study.ts`
+- `src/weapon-readability-study.css`
+- `tests/arena/study/weapon-readability-study-web.test.ts`
 - [武器数值可读性任务原型结果 V1](../research/arena-v2-weapon-readability-task-prototype-results-v1.md)
 - [V2 武器可读性与长期留存验证计划 V1](../research/arena-v2-weapon-readability-retention-study-v1.md)
+
+2026-07-28 浏览器验证：5/5 题可提交并通过，结果明确标记为“非真人结论”，控制台 warning/error 为 0；生产构建仍只以 `index.html` 为入口。

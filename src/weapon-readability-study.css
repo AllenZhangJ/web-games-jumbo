@@ -1,0 +1,83 @@
+:root {
+  color-scheme: light;
+  --readability-paper: #f1eee6;
+  --readability-ink: #272a28;
+  --readability-muted: #6d6a63;
+  --readability-line: #b6b0a3;
+  --readability-coral: #e5523c;
+  --readability-cyan: #2b9da1;
+  --readability-night: #222725;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: #d9d5ca;
+  color: var(--readability-ink);
+  font-family: "Avenir Next", "Noto Sans CJK SC", system-ui, sans-serif;
+}
+
+button, input { font: inherit; }
+
+.readability-app {
+  width: min(100% - 2rem, 54rem);
+  margin: 0 auto;
+  min-height: 100vh;
+  padding: 2rem 0 4rem;
+}
+
+.readability-header,
+.readability-meta,
+.readability-tasks,
+.readability-result {
+  background: var(--readability-paper);
+  border: 1px solid var(--readability-line);
+  box-shadow: 0 0.5rem 1.5rem rgb(39 42 40 / 9%);
+}
+
+.readability-header { padding: 2rem; border-bottom: 0.35rem solid var(--readability-ink); }
+.readability-kicker { margin: 0 0 0.55rem; color: var(--readability-coral); font-size: 0.75rem; font-weight: 800; letter-spacing: 0.16em; }
+.readability-header h1 { margin: 0; font-size: clamp(2rem, 7vw, 3.8rem); line-height: 0.98; }
+.readability-header p:last-child { max-width: 38rem; margin: 1rem 0 0; color: var(--readability-muted); line-height: 1.6; }
+
+.readability-meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1rem; padding: 1rem 1.25rem; }
+.readability-meta div { min-width: 0; }
+.readability-meta span { display: block; color: var(--readability-muted); font-size: 0.72rem; letter-spacing: 0.08em; }
+.readability-meta strong { display: block; margin-top: 0.35rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.readability-alert { padding: 0.8rem 1rem; border: 1px solid var(--readability-coral); background: #fff1ed; color: #8c2e20; }
+.readability-tasks { display: grid; gap: 1rem; margin-top: 1rem; padding: 1rem; }
+.readability-task { margin: 0; padding: 1rem; border: 1px solid var(--readability-line); }
+.readability-task legend { max-width: 100%; padding: 0 0.4rem; font-weight: 800; line-height: 1.45; }
+.readability-task-status { margin: 0.25rem 0 0.8rem; color: var(--readability-muted); font-size: 0.8rem; }
+.readability-options { display: grid; gap: 0.55rem; }
+.readability-option,
+.readability-reason { display: flex; align-items: flex-start; gap: 0.6rem; padding: 0.7rem; border: 1px solid var(--readability-line); background: #faf8f2; cursor: pointer; line-height: 1.35; }
+.readability-option:has(input:checked),
+.readability-reason:has(input:checked) { border-color: var(--readability-cyan); background: #e8f5f3; }
+.readability-option input,
+.readability-reason input { margin-top: 0.2rem; accent-color: var(--readability-cyan); }
+.readability-reasons { display: grid; gap: 0.55rem; margin: 0.9rem 0 0; padding: 0; border: 0; }
+.readability-reasons legend { padding: 0; color: var(--readability-muted); font-size: 0.82rem; font-weight: 600; }
+.readability-context { display: flex; flex-wrap: wrap; gap: 0.55rem; margin-top: 0.9rem; }
+.readability-context label { display: flex; align-items: center; gap: 0.4rem; color: var(--readability-muted); }
+
+.readability-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1rem; }
+.readability-actions button { flex: 1 1 15rem; min-height: 3rem; border: 0; background: var(--readability-coral); color: white; font-weight: 800; cursor: pointer; }
+.readability-actions button:last-child { background: var(--readability-night); }
+.readability-actions button:disabled { cursor: not-allowed; opacity: 0.45; }
+
+.readability-result { margin-top: 1rem; padding: 1.25rem; }
+.readability-result h2 { margin-top: 0; }
+.readability-result ol { display: grid; gap: 0.45rem; padding-left: 1.5rem; }
+.readability-result li.is-pass { color: #176d58; }
+.readability-result li.is-fail { color: #a13627; }
+.readability-note { color: var(--readability-muted); font-size: 0.82rem; line-height: 1.5; }
+
+@media (max-width: 600px) {
+  .readability-app { width: min(100% - 1rem, 54rem); padding-top: 0.5rem; }
+  .readability-header { padding: 1.25rem; }
+  .readability-meta { grid-template-columns: 1fr; gap: 0.7rem; }
+}

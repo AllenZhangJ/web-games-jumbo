@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#e9e6de" />
+    <meta name="robots" content="noindex,nofollow" />
+    <link rel="stylesheet" href="/src/weapon-readability-study.css" />
+    <title>Arena 武器数值可读性研究</title>
+  </head>
+  <body>
+    <main id="weapon-readability-study" class="readability-app" aria-labelledby="readability-title">
+      <header class="readability-header">
+        <p class="readability-kicker">ARENA V2 / READABILITY STUDY</p>
+        <h1 id="readability-title">武器数值可读性</h1>
+        <p>请只根据当前武器概览完成选择。页面不会解释答案，本页结果也不代表真人样本结论。</p>
+      </header>
+      <section class="readability-meta" aria-label="研究版本信息">
+        <div><span>任务集</span><strong id="readability-task-hash">读取中</strong></div>
+        <div><span>数值矩阵</span><strong id="readability-matrix-hash">读取中</strong></div>
+        <div><span>状态</span><strong id="readability-status">准备中</strong></div>
+      </section>
+      <p id="readability-error" class="readability-alert" role="alert" hidden></p>
+      <form id="readability-task-form" class="readability-tasks" novalidate></form>
+      <div class="readability-actions">
+        <button id="readability-submit" type="submit" form="readability-task-form">提交本次回答</button>
+        <button id="readability-export" type="button" disabled>导出本次结果</button>
+      </div>
+      <section id="readability-result" class="readability-result" aria-live="polite" hidden>
+        <h2>本次任务结果</h2>
+        <p id="readability-result-summary"></p>
+        <ol id="readability-result-list"></ol>
+        <p class="readability-note">这是一次任务评估，不是真人解释率、留存率或生产平衡结论。</p>
+      </section>
+    </main>
+    <script type="module" src="/src/entry/weapon-readability-study.ts"></script>
+  </body>
+</html>
