@@ -13,6 +13,7 @@ import {
   createActionDefinition,
   createEquipmentDefinition,
   type ActionDefinition,
+  type ActionCommitmentDefinition,
   type EquipmentDefinition,
 } from '@number-strategy-jump/arena-definitions';
 import {
@@ -90,6 +91,7 @@ interface AttackDefinitionInput {
   readonly verticalImpulse: number;
   readonly hitstunTicks: number;
   readonly tags: readonly string[];
+  readonly commitment?: ActionCommitmentDefinition;
 }
 
 function attackDefinition(input: AttackDefinitionInput): ActionDefinition {
@@ -104,6 +106,7 @@ function attackDefinition(input: AttackDefinitionInput): ActionDefinition {
     lane: ACTION_LANE.COMBAT,
     conflictTags: ['research-language-commitment'],
     timing: input.timing,
+    ...(input.commitment ? { commitment: input.commitment } : {}),
     targeting: input.targeting,
     effects: [
       {
@@ -245,11 +248,18 @@ export function createArenaV2WeaponLanguageCandidates(): readonly ArenaV2WeaponL
       kind: 'facing-cone',
       parameters: { range: 3.2, minimumFacingDot: 0.75, maximumVerticalDifference: 1.5 },
     },
-    timing: { windupTicks: 18, activeTicks: 2, recoveryTicks: 28, cooldownTicks: 96 },
+    timing: { windupTicks: 24, activeTicks: 2, recoveryTicks: 28, cooldownTicks: 96 },
     targetGroundKnockbackDistance: 2.4,
     verticalImpulse: 4.8,
     hitstunTicks: 24,
     tags: ['read-punish', 'active-frames', 'ground'],
+    commitment: {
+      commitTicks: 12,
+      expireTicks: 18,
+      expireOutcome: 'cancel',
+      canTurn: true,
+      levelThresholds: [6, 12],
+    },
   });
   const readPunishAir = attackDefinition({
     id: 'research-read-punish-aerial',
@@ -257,11 +267,18 @@ export function createArenaV2WeaponLanguageCandidates(): readonly ArenaV2WeaponL
       kind: 'downward-cylinder',
       parameters: { range: 2.8, radius: 1.1, minimumVerticalDrop: 0, maximumVerticalDifference: 2.8 },
     },
-    timing: { windupTicks: 12, activeTicks: 3, recoveryTicks: 30, cooldownTicks: 96 },
+    timing: { windupTicks: 20, activeTicks: 3, recoveryTicks: 30, cooldownTicks: 96 },
     targetGroundKnockbackDistance: 2.6,
     verticalImpulse: 5.4,
     hitstunTicks: 26,
     tags: ['read-punish', 'active-frames', 'aerial'],
+    commitment: {
+      commitTicks: 12,
+      expireTicks: 18,
+      expireOutcome: 'cancel',
+      canTurn: true,
+      levelThresholds: [6, 12],
+    },
   });
   const flankGround = attackDefinition({
     id: 'research-flank-ground',
@@ -392,11 +409,22 @@ function targetXForPolicy(
   return candidate.targetDistance + 3;
 }
 
-function createFrames(tick: number): readonly ArenaInputFrame[] {
+function createFrames(
+  tick: number,
+  candidate: ArenaV2WeaponLanguageCandidate,
+  policy: ArenaV2WeaponLanguageProbePolicy,
+): readonly ArenaInputFrame[] {
+  const commitment = candidate.groundAction.commitment;
+  const primaryHeld = commitment
+    ? policy === 'hold'
+      ? tick < commitment.commitTicks
+      : tick < Math.max(1, commitment.commitTicks - 4)
+    : false;
   return Object.freeze([
     Object.freeze({
       ...createNeutralInputFrame(tick, 'player-1'),
       primaryPressed: tick === 0,
+      primaryHeld,
     }),
     createNeutralInputFrame(tick, 'player-2'),
   ]);
@@ -446,7 +474,7 @@ function runProbe(
       const batch = engine.resolveActions({
         tick,
         actors,
-        inputFrames: createFrames(tick),
+        inputFrames: createFrames(tick, candidate, policy),
         additionalCandidates: Object.freeze([]),
       });
       if (batch.starts.some(({ participantId }) => participantId === 'player-1')) {

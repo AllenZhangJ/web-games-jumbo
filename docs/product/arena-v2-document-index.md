@@ -61,6 +61,11 @@ Arena V2 的核心目标是：
 | [首发武器生产迁移门禁结果 V1](../research/arena-v2-weapon-production-migration-gate-results-v1.md) | 将六个候选拆为正式 Definition、动作状态、Replay、地图后果和反馈表现五项独立证据 | 门禁已接入，当前 0/6 晋级 |
 | [ADR-074：首发武器必须通过五项生产迁移门禁](../decisions/074-arena-v2-weapon-production-migration-gate.md) | 固化研究原型与生产迁移的分层边界，不以综合评分替代缺失证据 | 门禁已接入 |
 | `arena-v2-weapon-launch-replay-prototype.ts` | 使用真实 MatchCore、ActionExecutionSystem 和 MatchReplay 验证直线压制候选的正式动作状态与固定回放 | 直线压制研究证据已接入，仍未生产化 |
+| [读招反制承诺状态与 Replay 原型结果 V1](../research/arena-v2-weapon-read-punish-replay-results-v1.md) | 使用真实 MatchCore、ActionExecutionSystem 和 MatchReplay 验证提前取消、成功提交、到期取消、蓄力等级和可转向结果 | 读招反制研究证据已接入，仍未生产化 |
+| [ADR-075：承诺动作由统一 ActionExecutionSystem 裁决](../decisions/075-arena-v2-action-commitment-state.md) | 固化承诺字段、active 前结算、取消/提交语义和快照/事件边界 | 研究动作状态已接入 |
+| `arena-v2-weapon-read-punish-replay-prototype.ts` | 为读招反制生成提前释放、成功提交、到期持续按住三组固定 Replay | 三组研究 Replay 通过，仍未生产化 |
+| [绕后目标主动转身 Replay 原型结果 V1](../research/arena-v2-weapon-flank-replay-results-v1.md) | 使用真实 MatchCore、普通移动输入和 MatchReplay 验证保持背向命中、主动转身避开 | 绕后研究证据已接入，仍未生产化 |
+| `arena-v2-weapon-flank-replay-prototype.ts` | 为绕后生成保持背向与目标主动转身两组固定 Replay | 两组研究 Replay 通过，仍未生产化 |
 | [武器战斗语言最小原型结果 V1](../research/arena-v2-weapon-language-prototype-results-v1.md) | 记录直线压制、封路、延迟重击、读招反制和绕后的 Rule/Targeting/Effect 最小验证与回应时间 | 扩展武器原型证据 |
 | [武器战斗语言 × KZ 地图后果原型结果 V1](../research/arena-v2-weapon-language-kz-consequence-results-v1.md) | 记录五种战斗语言在六段 KZ 表面上的击落、路线转移、前摇、有效窗口和固定回应后果 | 扩展武器×地图原型证据 |
 | `arena-v2-warning-zone-prototype.ts` | 验证封路候选的公开标记位置、整数 tick 生命周期和到期，不实现持续伤害或新操作 | 第四轮武器状态原型证据 |

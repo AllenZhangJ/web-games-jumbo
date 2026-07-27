@@ -7,18 +7,8 @@ import {
   createReplayMatch,
   HeadlessMatchRunner,
   type ArenaReplay,
-  type MatchCoreFactoryContext,
-  type MatchCoreMapFactoryContext,
-  type ReplayCoreFactoryOptions,
 } from '@number-strategy-jump/arena-match';
-import {
-  createArenaV1MapSystem,
-  createArenaV1MatchCore,
-  createArenaV1RuleEngine,
-} from '@number-strategy-jump/arena-v1-composition';
-import {
-  createArenaV2WeaponLanguageResearchContent,
-} from './arena-v2-weapon-language-prototype.js';
+import { createArenaV2WeaponResearchReplayCore } from './arena-v2-weapon-replay-core.js';
 
 const LINE_PRESSURE_CANDIDATE_ID = 'launch-04-line-pressure';
 const LINE_PRESSURE_WEAPON_ID = 'research-line-pressure';
@@ -67,32 +57,7 @@ export interface ArenaV2WeaponLaunchReplayPrototypeResult {
   readonly replayVerified: true;
 }
 
-function createLinePressureCore({
-  seed,
-  config,
-}: ReplayCoreFactoryOptions): ReturnType<typeof createArenaV1MatchCore> {
-  const authorityContent = createArenaV2WeaponLanguageResearchContent();
-  return createArenaV1MatchCore({
-    seed,
-    config,
-    ruleEngineFactory: ({
-      participantIds,
-      config: matchConfig,
-    }: MatchCoreFactoryContext) => (
-      createArenaV1RuleEngine({
-        participantIds,
-        config: matchConfig,
-        authorityContent,
-      })
-    ),
-    mapSystemFactory: (context: MatchCoreMapFactoryContext) => createArenaV1MapSystem({
-      ...context,
-      authorityContent,
-    }),
-  });
-}
-
-const replayMatch = createReplayMatch(createLinePressureCore);
+const replayMatch = createReplayMatch(createArenaV2WeaponResearchReplayCore);
 
 function inputFor(snapshot: ArenaMatchSnapshot): readonly ArenaInputFrame[] {
   return Object.freeze(snapshot.participants.map(({ id }) => (
@@ -139,7 +104,7 @@ function createReplay(): Readonly<{
   replay: ArenaReplay;
   actionStateSamples: readonly ArenaV2WeaponLaunchActionStateSample[];
 }> {
-  const core = createLinePressureCore({
+  const core = createArenaV2WeaponResearchReplayCore({
     seed: REPLAY_SEED,
     config: LINE_PRESSURE_REPLAY_CONFIG,
   });

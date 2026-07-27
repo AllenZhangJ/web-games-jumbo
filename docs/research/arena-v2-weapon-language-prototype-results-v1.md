@@ -19,7 +19,7 @@ packages/arena-v1-experiment/src/arena-v2-weapon-language-prototype.ts
 packages/arena-v1-experiment/test/arena-v2-weapon-language-prototype.test.ts
 ```
 
-固定测试使用同一套 Rule/Effect/Targeting 注册表，攻击者在第 0 tick 出招，对手分别采取 `hold` 或在预警结束前 `step-out`。`responseTicks` 是对手从动作开始到进入有效判定前的固定 tick 数，不是最终玩家反应时间承诺。
+固定测试使用同一套 Rule/Effect/Targeting 注册表，攻击者在第 0 tick 出招，对手分别采取 `hold` 或在预警结束前 `step-out`；读招反制的 `hold` 会在 12 tick 承诺后释放，`step-out` 会在承诺前取消。`responseTicks` 是对手从动作开始到进入有效判定前的固定 tick 数，不是最终玩家反应时间承诺。
 
 ## 固定结果
 
@@ -28,7 +28,7 @@ packages/arena-v1-experiment/test/arena-v2-weapon-language-prototype.test.ts
 | 直线压制 | 8 | 命中，第 8 tick | 未命中 | 6.80 |
 | 封路 | 24 | 命中，第 24 tick | 未命中 | 8.20 |
 | 延迟重击 | 30 | 命中，第 30 tick | 未命中 | 16.65 |
-| 读招反制 | 18 | 命中，第 18 tick | 未命中 | 14.20 |
+| 读招反制 | 24 | 命中，第 24 tick | 未命中 | 14.20 |
 | 绕后 | 10 | 命中，第 10 tick（目标背对攻击者） | 未命中 | 12.96 |
 
 五组都满足“等待会承担结果、提前回应可以规避”的最小边界，但它们的学习问题不同：直线压制要求快速绕线，封路要求提前改变路线，延迟重击要求预判标记和高击飞风险，读招反制要求识别短有效窗口，绕后要求先观察目标朝向再换位。

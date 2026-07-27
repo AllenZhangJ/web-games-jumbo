@@ -3,7 +3,12 @@ export {
   createActionRuntimeState,
   resetActionRuntimeState,
 } from './action-state.js';
-export type { ActionRuntimeState, ArenaActionPhase } from './action-state.js';
+export type {
+  ActionCommitmentFacing,
+  ActionCommitmentStatus,
+  ActionRuntimeState,
+  ArenaActionPhase,
+} from './action-state.js';
 export {
   compareActionCandidates,
   createActionCandidate,
@@ -30,6 +35,10 @@ export type {
 export { ActionExecutionSystem } from './action-execution-system.js';
 export type {
   ActionConstraints,
+  ActionCommitmentActor,
+  ActionCommitmentStateSnapshot,
+  ActionCommitmentTransition,
+  ActionCommitmentTransitionKind,
   ActionHit,
   ActionStart,
   ActionStateSnapshot,

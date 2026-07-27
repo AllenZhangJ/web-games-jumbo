@@ -23,7 +23,7 @@
 ## 当前基线
 
 - 三把生产基线通过正式 Definition、正式动作状态、地图后果和共享反馈表现合同，但尚未补齐候选专属 Replay，因此当前仍不能被本门禁标为生产迁移完成；
-- 直线压制已经通过研究边界内的正式 `ActionExecutionSystem` 生命周期和候选专属 MatchReplay，仍缺少正式 Definition 与正式动作来源反馈；读招反制、绕后仍缺少正式 Definition、正式动作状态、候选专属 Replay 和正式动作来源反馈；
+- 直线压制已经通过研究边界内的正式 `ActionExecutionSystem` 生命周期和候选专属 MatchReplay，仍缺少正式 Definition 与正式动作来源反馈；读招反制又通过统一 `ActionExecutionSystem` 的承诺/取消/提交状态和三组候选专属 MatchReplay，仍缺少正式 Definition 与正式动作来源反馈；绕后又通过统一动作生命周期、目标主动转身和两组候选专属 MatchReplay，仍缺少正式 Definition 与正式动作来源反馈；
 - 当前六把候选的生产就绪数为 `0/6`，这是门禁的预期结果，不是实现失败。
 
 ## 被拒绝的替代方案

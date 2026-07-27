@@ -9,12 +9,15 @@ import {
   assertIntegerAtLeast,
   assertKnownKeys,
   assertNonEmptyString,
+  type ArenaInputFrame,
 } from '@number-strategy-jump/arena-contracts';
 import {
   ARENA_ACTION_PHASE,
   createActionRuntimeState,
   resetActionRuntimeState,
   type ActionRuntimeState,
+  type ActionCommitmentFacing,
+  type ActionCommitmentStatus,
   type ArenaActionPhase,
 } from './action-state.js';
 import {
@@ -27,6 +30,32 @@ export interface ActionStateSnapshot {
   readonly phase: ArenaActionPhase;
   readonly ticksRemaining: number;
   readonly hitTargetIds: readonly string[];
+  readonly commitment?: ActionCommitmentStateSnapshot;
+}
+
+export interface ActionCommitmentStateSnapshot {
+  readonly status: ActionCommitmentStatus;
+  readonly chargeTicks: number;
+  readonly chargeLevel: number;
+  readonly facingAtStart: Readonly<ActionCommitmentFacing>;
+  readonly facingAtResult: Readonly<ActionCommitmentFacing>;
+}
+
+export interface ActionCommitmentActor {
+  readonly id: string;
+  readonly facing: Readonly<ActionCommitmentFacing>;
+}
+
+export type ActionCommitmentTransitionKind = 'cancelled' | 'committed';
+
+export interface ActionCommitmentTransition {
+  readonly participantId: string;
+  readonly actionDefinitionId: string;
+  readonly kind: ActionCommitmentTransitionKind;
+  readonly chargeTicks: number;
+  readonly chargeLevel: number;
+  readonly facingAtStart: Readonly<ActionCommitmentFacing>;
+  readonly facingAtResult: Readonly<ActionCommitmentFacing>;
 }
 
 export interface ActionConstraints {
@@ -60,6 +89,7 @@ export interface ActionHit {
 
 interface PendingStart {
   readonly participantId: string;
+  readonly tick: number;
   readonly state: ActionRuntimeState;
   readonly definition: ActionDefinition;
   readonly candidateId: string;
@@ -104,12 +134,26 @@ function freezeTransition(
 }
 
 function snapshotState(state: ActionRuntimeState): ActionStateSnapshot {
-  return Object.freeze({
+  const snapshot: ActionStateSnapshot = {
     definitionId: state.definitionId,
     phase: state.phase,
     ticksRemaining: state.ticksRemaining,
     hitTargetIds: Object.freeze([...state.hitTargets].sort(compareText)),
-  });
+    ...(state.commitmentStatus !== null
+      && state.commitmentFacingAtStart !== null
+      && state.commitmentFacingAtResult !== null
+      ? {
+        commitment: Object.freeze({
+          status: state.commitmentStatus,
+          chargeTicks: state.commitmentChargeTicks,
+          chargeLevel: state.commitmentChargeLevel,
+          facingAtStart: Object.freeze({ ...state.commitmentFacingAtStart }),
+          facingAtResult: Object.freeze({ ...state.commitmentFacingAtResult }),
+        }),
+      }
+      : {}),
+  };
+  return Object.freeze(snapshot);
 }
 
 function intersects(left: readonly string[], right: ReadonlySet<string>): boolean {
@@ -218,6 +262,112 @@ export class ActionExecutionSystem {
     return Object.freeze(transitions);
   }
 
+  applyCommitmentInputs(options: {
+    readonly tick: number;
+    readonly actors: readonly ActionCommitmentActor[];
+    readonly inputFrames: readonly ArenaInputFrame[];
+  }): readonly ActionCommitmentTransition[] {
+    assertIntegerAtLeast(options.tick, 0, 'ActionCommitmentInput.tick');
+    if (!Array.isArray(options.actors) || options.actors.length !== this.#participantIds.length) {
+      throw new RangeError('ActionCommitmentInput.actors 必须覆盖全部 participants。');
+    }
+    if (!Array.isArray(options.inputFrames) || options.inputFrames.length !== this.#participantIds.length) {
+      throw new RangeError('ActionCommitmentInput.inputFrames 必须覆盖全部 participants。');
+    }
+    const actorsById = new Map(options.actors.map((actor) => [actor.id, actor]));
+    const framesById = new Map(options.inputFrames.map((frame) => [frame.participantId, frame]));
+    if (
+      actorsById.size !== this.#participantIds.length
+      || this.#participantIds.some((id) => !actorsById.has(id))
+      || framesById.size !== this.#participantIds.length
+      || this.#participantIds.some((id) => !framesById.has(id))
+    ) throw new RangeError('ActionCommitmentInput 的 actors/inputFrames ID 必须与 participants 一致。');
+
+    const transitions: ActionCommitmentTransition[] = [];
+    for (const participantId of this.#participantIds) {
+      const states = this.#requireParticipant(participantId);
+      const frame = requireMapEntry(framesById, participantId, `缺少 ${participantId} InputFrame。`);
+      const actor = requireMapEntry(actorsById, participantId, `缺少 ${participantId} ActionCommitmentActor。`);
+      for (const lane of this.#laneIds) {
+        const state = requireMapEntry(states, lane, `participant ${participantId} 缺少 action lane ${lane}。`);
+        if (
+          state.phase !== ARENA_ACTION_PHASE.WINDUP
+          || state.definitionId === null
+          || state.commitmentStatus === null
+        ) continue;
+        const definition = this.#actionRegistry.require(state.definitionId);
+        const commitment = definition.commitment;
+        if (!commitment) continue;
+        const startedTick = state.commitmentStartedTick;
+        if (startedTick === null || options.tick < startedTick) {
+          throw new Error(`ActionCommitment ${definition.id} 缺少有效 startedTick。`);
+        }
+        const facing = Object.freeze({ x: actor.facing.x, z: actor.facing.z });
+        if (state.commitmentFacingAtStart === null) {
+          state.commitmentFacingAtStart = facing;
+          state.commitmentFacingAtResult = facing;
+        }
+        const chargeTicks = options.tick - startedTick;
+        state.commitmentChargeTicks = chargeTicks;
+        state.commitmentChargeLevel = commitment.levelThresholds.reduce(
+          (level, threshold) => chargeTicks >= threshold ? level + 1 : level,
+          0,
+        );
+        if (state.commitmentStatus === 'charging' && commitment.canTurn) {
+          state.commitmentFacingAtResult = facing;
+        }
+        const facingAtStart = state.commitmentFacingAtStart;
+        const facingAtResult = state.commitmentFacingAtResult;
+        if (facingAtStart === null || facingAtResult === null) {
+          throw new Error(`ActionCommitment ${definition.id} 缺少 facing 状态。`);
+        }
+
+        if (state.commitmentStatus === 'charging') {
+          const expired = chargeTicks >= commitment.expireTicks;
+          if (expired && commitment.expireOutcome === 'cancel') {
+            transitions.push(Object.freeze({
+              participantId,
+              actionDefinitionId: definition.id,
+              kind: 'cancelled',
+              chargeTicks,
+              chargeLevel: state.commitmentChargeLevel,
+              facingAtStart: Object.freeze({ ...facingAtStart }),
+              facingAtResult: Object.freeze({ ...facingAtResult }),
+            }));
+            resetActionRuntimeState(state);
+            continue;
+          }
+          if (expired || !frame.primaryHeld) {
+            if (chargeTicks < commitment.commitTicks) {
+              transitions.push(Object.freeze({
+                participantId,
+                actionDefinitionId: definition.id,
+                kind: 'cancelled',
+                chargeTicks,
+                chargeLevel: state.commitmentChargeLevel,
+                facingAtStart: Object.freeze({ ...facingAtStart }),
+                facingAtResult: Object.freeze({ ...facingAtResult }),
+              }));
+              resetActionRuntimeState(state);
+              continue;
+            }
+            state.commitmentStatus = 'committed';
+            transitions.push(Object.freeze({
+              participantId,
+              actionDefinitionId: definition.id,
+              kind: 'committed',
+              chargeTicks,
+              chargeLevel: state.commitmentChargeLevel,
+              facingAtStart: Object.freeze({ ...facingAtStart }),
+              facingAtResult: Object.freeze({ ...facingAtResult }),
+            }));
+          }
+        }
+      }
+    }
+    return Object.freeze(transitions);
+  }
+
   start(resolutions: unknown): readonly ActionStart[] {
     if (!Array.isArray(resolutions)) throw new TypeError('Action resolutions 必须是数组。');
     const starts: PendingStart[] = [];
@@ -228,7 +378,7 @@ export class ActionExecutionSystem {
       if (resolution.kind !== ACTION_RESOLUTION_KIND.SELECTED) {
         throw new RangeError('ActionExecutionSystem.start 只接受 selected resolution。');
       }
-      assertIntegerAtLeast(resolution.tick, 0, 'ActionResolution.tick');
+      const tick = assertIntegerAtLeast(resolution.tick, 0, 'ActionResolution.tick');
       const participantId = assertNonEmptyString(resolution.participantId, 'ActionResolution.participantId');
       const laneValue = assertNonEmptyString(resolution.lane, 'ActionResolution.lane');
       const inputChannelValue = assertNonEmptyString(resolution.inputChannel, 'ActionResolution.inputChannel');
@@ -262,7 +412,14 @@ export class ActionExecutionSystem {
       if (definition.lane !== lane || definition.input.channel !== inputChannel) {
         throw new RangeError(`ActionResolution ${definition.id} 的 lane/input 与定义不一致。`);
       }
-      starts.push({ participantId, state, definition, candidateId, inputChannel });
+      starts.push({
+        participantId,
+        tick,
+        state,
+        definition,
+        candidateId,
+        inputChannel,
+      });
     }
 
     const startsByParticipant = new Map<string, PendingStart[]>();
@@ -293,7 +450,7 @@ export class ActionExecutionSystem {
     }
 
     starts.sort(compareStarts);
-    return Object.freeze(starts.map(({ participantId, state, definition, candidateId, inputChannel }) => {
+    return Object.freeze(starts.map(({ participantId, tick, state, definition, candidateId, inputChannel }) => {
       state.definitionId = definition.id;
       state.phase = definition.timing.windupTicks > 0
         ? ARENA_ACTION_PHASE.WINDUP
@@ -302,6 +459,14 @@ export class ActionExecutionSystem {
         ? definition.timing.windupTicks
         : definition.timing.activeTicks;
       state.hitTargets.clear();
+      if (definition.commitment) {
+        state.commitmentStartedTick = tick;
+        state.commitmentStatus = 'charging';
+        state.commitmentChargeTicks = 0;
+        state.commitmentChargeLevel = 0;
+        state.commitmentFacingAtStart = null;
+        state.commitmentFacingAtResult = null;
+      }
       return Object.freeze({
         participantId,
         inputChannel,

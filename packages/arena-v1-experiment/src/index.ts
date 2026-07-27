@@ -276,6 +276,25 @@ export type {
   ArenaV2WeaponLaunchReplayPrototypeResult,
 } from './arena-v2-weapon-launch-replay-prototype.js';
 export {
+  runArenaV2WeaponReadPunishReplayPrototype,
+} from './arena-v2-weapon-read-punish-replay-prototype.js';
+export type {
+  ArenaV2WeaponReadPunishActionSample,
+  ArenaV2WeaponReadPunishCommitmentStatus,
+  ArenaV2WeaponReadPunishReplayPrototypeResult,
+  ArenaV2WeaponReadPunishScenario,
+  ArenaV2WeaponReadPunishScenarioResult,
+} from './arena-v2-weapon-read-punish-replay-prototype.js';
+export {
+  runArenaV2WeaponFlankReplayPrototype,
+} from './arena-v2-weapon-flank-replay-prototype.js';
+export type {
+  ArenaV2WeaponFlankActionSample,
+  ArenaV2WeaponFlankReplayPrototypeResult,
+  ArenaV2WeaponFlankScenario,
+  ArenaV2WeaponFlankScenarioResult,
+} from './arena-v2-weapon-flank-replay-prototype.js';
+export {
   projectArenaV2ActionDefinitionPublicNumbers,
 } from './arena-v2-weapon-action-public-projection.js';
 export {

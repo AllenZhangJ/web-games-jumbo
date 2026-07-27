@@ -8,6 +8,8 @@ export {
 } from './action-definition.js';
 export type {
   ActionDefinition,
+  ActionCommitmentDefinition,
+  ActionCommitmentExpireOutcome,
   ActionEffect,
   ActionEffectTrigger,
   ActionInput,

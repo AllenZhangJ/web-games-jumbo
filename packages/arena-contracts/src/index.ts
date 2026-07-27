@@ -37,6 +37,7 @@ export type {
 export { createArenaMatchSnapshotAudit } from './match-snapshot.js';
 export type {
   ArenaActionSnapshot,
+  ArenaActionCommitmentSnapshot,
   ArenaEquipmentSnapshot,
   ArenaHeldEquipmentSnapshot,
   ArenaMapOccurrenceSnapshot,

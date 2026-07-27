@@ -132,9 +132,17 @@ function createActors(physics: PhysicsWorld, targetFacingX = -1): readonly RuleA
   }));
 }
 
-function createFrames(tick: number): readonly ArenaInputFrame[] {
+function createFrames(
+  tick: number,
+  candidate: ArenaV2WeaponLanguageCandidate,
+): readonly ArenaInputFrame[] {
+  const commitment = candidate.groundAction.commitment;
   return Object.freeze([
-    Object.freeze({ ...createNeutralInputFrame(tick, ATTACKER_ID), primaryPressed: tick === 0 }),
+    Object.freeze({
+      ...createNeutralInputFrame(tick, ATTACKER_ID),
+      primaryPressed: tick === 0,
+      primaryHeld: commitment ? tick < commitment.commitTicks : false,
+    }),
     createNeutralInputFrame(tick, PLAYER_ID),
   ]);
 }
@@ -313,7 +321,7 @@ function runProbe(
       const batch = engine.resolveActions({
         tick,
         actors,
-        inputFrames: createFrames(tick),
+        inputFrames: createFrames(tick, candidate),
       });
       if (batch.starts.some(({ participantId }) => participantId === ATTACKER_ID)) {
         firstActiveTick ??= tick + candidate.groundAction.timing.windupTicks;

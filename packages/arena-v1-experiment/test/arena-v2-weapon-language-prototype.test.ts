@@ -41,7 +41,7 @@ describe('Arena V2 weapon language prototype', () => {
     expect(byId.get('research-delayed-heavy:hold')?.responseTicks).toBe(30);
     expect(byId.get('research-read-punish:hold')).toMatchObject({
       languageId: 'read-punish',
-      responseTicks: 18,
+      responseTicks: 24,
       actionDefinitionId: 'research-read-punish-ground',
     });
     expect(byId.get('research-flank:hold')).toMatchObject({

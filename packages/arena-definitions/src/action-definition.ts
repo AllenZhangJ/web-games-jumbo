@@ -50,6 +50,16 @@ export interface ActionTiming {
   readonly cooldownTicks: number;
 }
 
+export type ActionCommitmentExpireOutcome = 'cancel' | 'release';
+
+export interface ActionCommitmentDefinition {
+  readonly commitTicks: number;
+  readonly expireTicks: number;
+  readonly expireOutcome: ActionCommitmentExpireOutcome;
+  readonly canTurn: boolean;
+  readonly levelThresholds: readonly number[];
+}
+
 export interface ActionTargeting {
   readonly kind: string;
   readonly parameters: DeepReadonly<unknown>;
@@ -70,6 +80,7 @@ export interface ActionDefinition {
   readonly lane: ActionLane;
   readonly conflictTags: readonly string[];
   readonly timing: ActionTiming;
+  readonly commitment?: ActionCommitmentDefinition;
   readonly targeting: ActionTargeting;
   readonly effects: readonly ActionEffect[];
   readonly tags: readonly string[];
@@ -77,7 +88,7 @@ export interface ActionDefinition {
 
 const DEFINITION_KEYS = new Set([
   'schemaVersion', 'id', 'kind', 'input', 'lane', 'conflictTags',
-  'timing', 'targeting', 'effects', 'tags',
+  'timing', 'commitment', 'targeting', 'effects', 'tags',
 ]);
 const INPUT_KEYS = new Set(['channel', 'trigger']);
 const TIMING_KEYS = new Set(['windupTicks', 'activeTicks', 'recoveryTicks', 'cooldownTicks']);
@@ -87,6 +98,10 @@ const INPUT_TRIGGERS: ReadonlySet<unknown> = new Set(Object.values(ACTION_INPUT_
 const INPUT_CHANNELS: ReadonlySet<unknown> = new Set(Object.values(ACTION_INPUT_CHANNEL));
 const ACTION_LANES: ReadonlySet<unknown> = new Set(Object.values(ACTION_LANE));
 const EFFECT_TRIGGERS: ReadonlySet<unknown> = new Set(Object.values(ACTION_EFFECT_TRIGGER));
+const COMMITMENT_KEYS = new Set([
+  'commitTicks', 'expireTicks', 'expireOutcome', 'canTurn', 'levelThresholds',
+]);
+const COMMITMENT_OUTCOMES: ReadonlySet<unknown> = new Set(['cancel', 'release']);
 
 function cloneInput(value: unknown, name: string): ActionInput {
   assertKnownKeys(value, INPUT_KEYS, name);
@@ -112,6 +127,40 @@ function cloneTiming(value: unknown, name: string): ActionTiming {
     activeTicks: assertIntegerAtLeast(value.activeTicks, 1, `${name}.activeTicks`),
     recoveryTicks: assertIntegerAtLeast(value.recoveryTicks, 0, `${name}.recoveryTicks`),
     cooldownTicks: assertIntegerAtLeast(value.cooldownTicks, 0, `${name}.cooldownTicks`),
+  });
+}
+
+function cloneCommitment(value: unknown, name: string): ActionCommitmentDefinition {
+  assertKnownKeys(value, COMMITMENT_KEYS, name);
+  const commitTicks = assertIntegerAtLeast(value.commitTicks, 1, `${name}.commitTicks`);
+  const expireTicks = assertIntegerAtLeast(value.expireTicks, commitTicks + 1, `${name}.expireTicks`);
+  if (!COMMITMENT_OUTCOMES.has(value.expireOutcome)) {
+    throw new RangeError(`${name}.expireOutcome 不受支持：${String(value.expireOutcome)}。`);
+  }
+  if (typeof value.canTurn !== 'boolean') {
+    throw new TypeError(`${name}.canTurn 必须是布尔值。`);
+  }
+  if (!Array.isArray(value.levelThresholds) || value.levelThresholds.length === 0) {
+    throw new RangeError(`${name}.levelThresholds 必须是非空数组。`);
+  }
+  let previous = 0;
+  const levelThresholds = value.levelThresholds.map((threshold: unknown, index: number) => {
+    const normalized = assertIntegerAtLeast(threshold, 1, `${name}.levelThresholds[${index}]`);
+    if (normalized <= previous) {
+      throw new RangeError(`${name}.levelThresholds 必须严格递增。`);
+    }
+    if (normalized > expireTicks) {
+      throw new RangeError(`${name}.levelThresholds[${index}] 不能超过 expireTicks。`);
+    }
+    previous = normalized;
+    return normalized;
+  });
+  return Object.freeze({
+    commitTicks,
+    expireTicks,
+    expireOutcome: value.expireOutcome as ActionCommitmentExpireOutcome,
+    canTurn: value.canTurn,
+    levelThresholds: Object.freeze(levelThresholds),
   });
 }
 
@@ -156,16 +205,27 @@ export function createActionDefinition(value: unknown): ActionDefinition {
   if (!ACTION_LANES.has(value.lane)) {
     throw new RangeError(`ActionDefinition.lane 不受支持：${String(value.lane)}。`);
   }
-  return Object.freeze({
+  const timing = cloneTiming(value.timing, 'ActionDefinition.timing');
+  const commitment = value.commitment === undefined
+    ? undefined
+    : cloneCommitment(value.commitment, 'ActionDefinition.commitment');
+  if (commitment && timing.windupTicks <= commitment.expireTicks) {
+    throw new RangeError(
+      'ActionDefinition.commitment.expireTicks 必须小于 timing.windupTicks，才能在 active 前完成承诺结算。',
+    );
+  }
+  const definition = {
     schemaVersion: ACTION_DEFINITION_SCHEMA_VERSION,
     id: assertNonEmptyString(value.id, 'ActionDefinition.id'),
     kind: assertNonEmptyString(value.kind, 'ActionDefinition.kind'),
     input: cloneInput(value.input, 'ActionDefinition.input'),
     lane: value.lane as ActionLane,
     conflictTags: cloneFrozenStringSet(value.conflictTags as readonly unknown[] | undefined, 'ActionDefinition.conflictTags'),
-    timing: cloneTiming(value.timing, 'ActionDefinition.timing'),
+    timing,
+    ...(commitment === undefined ? {} : { commitment }),
     targeting: cloneTargeting(value.targeting, 'ActionDefinition.targeting'),
     effects: cloneEffects(value.effects, 'ActionDefinition.effects'),
     tags: cloneFrozenStringSet(value.tags as readonly unknown[] | undefined, 'ActionDefinition.tags'),
-  });
+  } satisfies ActionDefinition;
+  return Object.freeze(definition);
 }

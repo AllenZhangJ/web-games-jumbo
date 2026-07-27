@@ -248,8 +248,22 @@ function requireActorById(
   return actor;
 }
 
+function projectCommittedActionFacing(
+  action: ActionStateSnapshot,
+  actor: RuleActor,
+): RuleActor {
+  const facing = action.commitment?.facingAtResult;
+  if (!facing) return actor;
+  return Object.freeze({
+    ...actor,
+    facing: Object.freeze({ x: facing.x, z: facing.z }),
+  });
+}
+
 export const ARENA_RULE_EVENT = Object.freeze({
   ACTION_STARTED: 'ActionStarted',
+  ACTION_COMMITMENT_CANCELLED: 'ActionCommitmentCancelled',
+  ACTION_COMMITMENT_COMMITTED: 'ActionCommitmentCommitted',
   HIT_RESOLVED: 'HitResolved',
   KNOCKBACK_APPLIED: 'KnockbackApplied',
 });
@@ -708,6 +722,15 @@ export class ArenaRuleEngine {
       frameById.size !== this.#participantIds.length
       || this.#participantIds.some((id) => !frameById.has(id))
     ) throw new RangeError('ArenaRuleEngine inputFrames 必须覆盖全部 participants。');
+    const commitmentTransitions = this.#actionExecution.applyCommitmentInputs({
+      tick,
+      actors,
+      inputFrames: Object.freeze(this.#participantIds.map((id) => requireMapValue(
+        frameById,
+        id,
+        `缺少 ${id} InputFrame。`,
+      ))),
+    });
     const additionalCandidates = cloneAdditionalCandidates(
       options.additionalCandidates,
       this.#participantIds,
@@ -762,7 +785,17 @@ export class ArenaRuleEngine {
       }
     }
     const commands: EnrichedRuleCommand[] = [];
-    const events: ArenaRuleDomainEvent[] = [];
+    const events: ArenaRuleDomainEvent[] = commitmentTransitions.map((transition) => Object.freeze({
+      type: transition.kind === 'cancelled'
+        ? ARENA_RULE_EVENT.ACTION_COMMITMENT_CANCELLED
+        : ARENA_RULE_EVENT.ACTION_COMMITMENT_COMMITTED,
+      participantId: transition.participantId,
+      action: transition.actionDefinitionId,
+      chargeTicks: transition.chargeTicks,
+      chargeLevel: transition.chargeLevel,
+      facingAtStart: transition.facingAtStart,
+      facingAtResult: transition.facingAtResult,
+    }));
     for (const [index, start] of starts.entries()) {
       const definition = this.#actionRegistry.require(start.actionDefinitionId);
       const source = requireMapValue(
@@ -831,11 +864,11 @@ export class ArenaRuleEngine {
         action.definitionId,
         'active action definitionId',
       ));
-      const source = requireMapValue(
+      const source = projectCommittedActionFacing(action, requireMapValue(
         actorsById,
         action.participantId,
         `active source ${action.participantId} 缺少 RuleActor。`,
-      );
+      ));
       for (const effect of definition.effects) {
         if (effect.trigger !== ACTION_EFFECT_TRIGGER.ACTION_ACTIVE) continue;
         for (const command of this.#effectRegistry.resolve(effect, {
@@ -862,11 +895,11 @@ export class ArenaRuleEngine {
         action.definitionId,
         'active action definitionId',
       ));
-      const source = requireMapValue(
+      const source = projectCommittedActionFacing(action, requireMapValue(
         actorsById,
         action.participantId,
         `active source ${action.participantId} 缺少 RuleActor。`,
-      );
+      ));
       const candidates = actors.filter(({ id, targetable }) => id !== source.id && targetable);
       const targets = this.#targetingRegistry.resolve({ definition, source, candidates })
         .filter((targetId) => !action.hitTargetIds.includes(targetId));

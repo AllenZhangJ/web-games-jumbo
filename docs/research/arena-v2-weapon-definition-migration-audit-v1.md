@@ -28,7 +28,7 @@
 | 候选 | 审计状态 | Definition 状态 | 当前还不能宣称完成的内容 |
 |---|---|---|---|
 | 直线压制 | `ready` | `research-only-definition` | 真实投射物飞行、多人拥挤和正式生产迁移 |
-| 读招反制 | `ready` | `research-only-definition` | 蓄力承诺状态接入、取消表现和正式生产迁移 |
+| 读招反制 | `ready` | `research-only-definition` | 正式 Definition、取消/提交反馈表现和正式生产迁移 |
 | 绕后 | `ready` | `research-only-definition` | 主动转身、多方向拥挤和正式生产迁移 |
 
 三个候选现在都有统一的地面/空中研究 `ActionDefinition`、9 项主概览数值、2 项行为补充数值和固定命中/空放证据，但仍没有生产 `EquipmentDefinition`，不能进入生产目录。详见[首发研究候选 Definition 原型结果 V1](arena-v2-launch-research-definition-prototype-results-v1.md)和[ADR-070](../decisions/070-arena-v2-research-launch-definition-projection.md)。
@@ -63,7 +63,7 @@
 
 ### 第二步：读招反制
 
-复用已通过的整数 tick 承诺原型，把提前释放、完成承诺和到期取消变成权威状态。必须保证蓄力可读、失败有收招成本，不引入格挡或额外按键。
+已将整数 tick 承诺原型接入研究边界内的权威状态与 Replay。下一步必须补齐正式 Definition、反馈表现和多人/地图边缘场景，保证蓄力可读、失败有收招成本，不引入格挡或额外按键。
 
 ### 第三步：绕后
 

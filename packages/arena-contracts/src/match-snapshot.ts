@@ -21,6 +21,15 @@ export interface ArenaActionSnapshot {
   readonly definitionId: string | null;
   readonly phase: string;
   readonly ticksRemaining: number;
+  readonly commitment?: ArenaActionCommitmentSnapshot;
+}
+
+export interface ArenaActionCommitmentSnapshot {
+  readonly status: string;
+  readonly chargeTicks: number;
+  readonly chargeLevel: number;
+  readonly facingAtStart: ArenaVector2Snapshot;
+  readonly facingAtResult: ArenaVector2Snapshot;
 }
 
 export interface ArenaMovementSnapshot {
@@ -153,7 +162,10 @@ const PUBLIC_PARTICIPANT_KEYS = new Set([
 const INTERNAL_PARTICIPANT_KEYS = new Set(
   [...PUBLIC_PARTICIPANT_KEYS].filter((key) => key !== 'actionAffordance'),
 );
-const ACTION_KEYS = new Set(['definitionId', 'phase', 'ticksRemaining']);
+const ACTION_KEYS = new Set(['definitionId', 'phase', 'ticksRemaining', 'commitment']);
+const ACTION_COMMITMENT_KEYS = new Set([
+  'status', 'chargeTicks', 'chargeLevel', 'facingAtStart', 'facingAtResult',
+]);
 const MOVEMENT_KEYS = new Set([
   'schemaVersion', 'participantId', 'characterDefinitionId', 'mode',
   'coyoteTicksRemaining', 'jumpBufferTicksRemaining', 'airJumpsUsed',
@@ -225,6 +237,14 @@ function auditParticipant(value: unknown, index: number, includeInternal: boolea
   nullableIdentifier(value.action.definitionId, `${name}.action.definitionId`);
   assertNonEmptyString(value.action.phase, `${name}.action.phase`);
   assertIntegerAtLeast(value.action.ticksRemaining, 0, `${name}.action.ticksRemaining`);
+  if (value.action.commitment !== undefined) {
+    assertKnownKeys(value.action.commitment, ACTION_COMMITMENT_KEYS, `${name}.action.commitment`);
+    assertNonEmptyString(value.action.commitment.status, `${name}.action.commitment.status`);
+    assertIntegerAtLeast(value.action.commitment.chargeTicks, 0, `${name}.action.commitment.chargeTicks`);
+    assertIntegerAtLeast(value.action.commitment.chargeLevel, 0, `${name}.action.commitment.chargeLevel`);
+    vector2(value.action.commitment.facingAtStart, `${name}.action.commitment.facingAtStart`);
+    vector2(value.action.commitment.facingAtResult, `${name}.action.commitment.facingAtResult`);
+  }
 
   assertKnownKeys(value.movement, MOVEMENT_KEYS, `${name}.movement`);
   if (value.movement.participantId !== id) {

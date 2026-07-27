@@ -1102,6 +1102,7 @@ export class MatchCore {
               definitionId: action.definitionId,
               phase: action.phase,
               ticksRemaining: action.ticksRemaining,
+              ...(action.commitment ? { commitment: action.commitment } : {}),
             };
           })(),
           actionRule: this.#ruleEngine.getParticipantActionRule(id),

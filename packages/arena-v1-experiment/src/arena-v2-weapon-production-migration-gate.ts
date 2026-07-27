@@ -8,6 +8,8 @@ import {
 } from './arena-v2-weapon-launch-candidate-contract.js';
 import { runArenaV2KzLanguageConsequencePrototype } from './arena-v2-kz-language-consequence-prototype.js';
 import { runArenaV2WeaponLaunchReplayPrototype } from './arena-v2-weapon-launch-replay-prototype.js';
+import { runArenaV2WeaponReadPunishReplayPrototype } from './arena-v2-weapon-read-punish-replay-prototype.js';
+import { runArenaV2WeaponFlankReplayPrototype } from './arena-v2-weapon-flank-replay-prototype.js';
 import { runArenaV2WeaponMapPrototype } from './arena-v2-weapon-map-prototype.js';
 
 export type ArenaV2WeaponProductionMigrationGateId =
@@ -99,6 +101,8 @@ function createCandidateResult(
   mapResults: ReturnType<typeof runArenaV2WeaponMapPrototype>,
   languageResults: ReturnType<typeof runArenaV2KzLanguageConsequencePrototype>,
   lineReplayResult: ReturnType<typeof runArenaV2WeaponLaunchReplayPrototype>,
+  readPunishReplayResult: ReturnType<typeof runArenaV2WeaponReadPunishReplayPrototype>,
+  flankReplayResult: ReturnType<typeof runArenaV2WeaponFlankReplayPrototype>,
 ): ArenaV2WeaponProductionMigrationCandidateResult {
   const audit = auditFor(candidate);
   const isProductionDefinition = audit.implementationStatus === 'production-authority';
@@ -106,11 +110,36 @@ function createCandidateResult(
     && audit.groundActionDefinitionId !== null
     && audit.aerialActionDefinitionId !== null
     && audit.contexts.every(({ missingAxes }) => missingAxes.length === 0);
-  const hasResearchActionState = candidate.candidateId === lineReplayResult.candidateId
+  const hasLineResearchActionState = candidate.candidateId === lineReplayResult.candidateId
     && lineReplayResult.actionPhaseSequence.join(',') === 'idle,windup,active,recovery';
+  const hasReadResearchActionState = candidate.candidateId === readPunishReplayResult.candidateId
+    && readPunishReplayResult.scenarios.every(({ actionStateSamples }) => (
+      actionStateSamples.some(({ commitmentStatus }) => commitmentStatus === 'charging')
+    ))
+    && readPunishReplayResult.scenarios.some(({ scenario, actionStateSamples }) => (
+      scenario === 'committed-release'
+      && actionStateSamples.some(({ commitmentStatus }) => commitmentStatus === 'committed')
+    ));
+  const hasFlankResearchActionState = candidate.candidateId === flankReplayResult.candidateId
+    && flankReplayResult.scenarios.every(({ firstActiveTick, replayVerified }) => (
+      firstActiveTick !== null && replayVerified
+    ))
+    && flankReplayResult.scenarios.some(({ targetFacingAtActive }) => targetFacingAtActive === 1)
+    && flankReplayResult.scenarios.some(({ targetFacingAtActive }) => targetFacingAtActive === -1);
+  const hasResearchActionState = hasLineResearchActionState
+    || hasReadResearchActionState
+    || hasFlankResearchActionState;
   const hasActionState = hasProductionActionState || hasResearchActionState;
-  const hasCandidateReplay = candidate.candidateId === lineReplayResult.candidateId
-    && lineReplayResult.replayVerified;
+  const hasCandidateReplay = (
+    candidate.candidateId === lineReplayResult.candidateId
+    && lineReplayResult.replayVerified
+  ) || (
+    candidate.candidateId === readPunishReplayResult.candidateId
+    && readPunishReplayResult.scenarios.every(({ replayVerified }) => replayVerified)
+  ) || (
+    candidate.candidateId === flankReplayResult.candidateId
+    && flankReplayResult.scenarios.every(({ replayVerified }) => replayVerified)
+  );
   const hasMapConsequence = hasDistinctMapConsequences(
     candidate,
     audit,
@@ -125,10 +154,18 @@ function createCandidateResult(
     hasActionState
       ? passed('formal-action-state', hasProductionActionState
         ? '正式动作身份具备地面/空中上下文、前摇、有效、收招和冷却时间。'
-        : '直线压制已通过正式 ActionExecutionSystem 的 idle→windup→active→recovery 生命周期探针。')
+        : candidate.candidateId === readPunishReplayResult.candidateId
+          ? '读招反制已通过统一 ActionExecutionSystem 的承诺、提前取消、提交和到期取消状态探针。'
+          : candidate.candidateId === flankReplayResult.candidateId
+            ? '绕后已通过统一 ActionExecutionSystem 生命周期，并验证目标保持背向命中与主动转身避开。'
+            : '直线压制已通过正式 ActionExecutionSystem 的 idle→windup→active→recovery 生命周期探针.')
       : blocked('formal-action-state', '研究动作只有原型时序，尚未完成正式动作状态、取消和冲突规则接入。'),
     hasCandidateReplay
-      ? passed('replay', `直线压制候选已通过 MatchReplay schema、${lineReplayResult.checkpointCount} 个 checkpoint 和最终 hash 验证。`)
+        ? candidate.candidateId === readPunishReplayResult.candidateId
+        ? passed('replay', '读招反制三种承诺场景已通过 MatchReplay schema、每场 checkpoint 和最终 hash 验证。')
+        : candidate.candidateId === flankReplayResult.candidateId
+          ? passed('replay', '绕后保持背向/主动转身两种场景已通过 MatchReplay schema、每场 checkpoint 和最终 hash 验证。')
+          : passed('replay', `直线压制候选已通过 MatchReplay schema、${lineReplayResult.checkpointCount} 个 checkpoint 和最终 hash 验证。`)
       : blocked('replay', '尚无该候选的 MatchReplay fixture、checkpoint 和最终 hash 证据；确定性原型不能替代正式回放。'),
     hasMapConsequence
       ? passed('map-consequence', candidate.source === 'production-baseline'
@@ -157,8 +194,17 @@ export function runArenaV2WeaponProductionMigrationGate(): ArenaV2WeaponProducti
   const mapResults = runArenaV2WeaponMapPrototype();
   const languageResults = runArenaV2KzLanguageConsequencePrototype();
   const lineReplayResult = runArenaV2WeaponLaunchReplayPrototype();
+  const readPunishReplayResult = runArenaV2WeaponReadPunishReplayPrototype();
+  const flankReplayResult = runArenaV2WeaponFlankReplayPrototype();
   const candidates = Object.freeze(ARENA_V2_WEAPON_LAUNCH_CANDIDATES.map((candidate) => (
-    createCandidateResult(candidate, mapResults, languageResults, lineReplayResult)
+    createCandidateResult(
+      candidate,
+      mapResults,
+      languageResults,
+      lineReplayResult,
+      readPunishReplayResult,
+      flankReplayResult,
+    )
   )));
   if (candidates.some(({ gates }) => gates.length !== GATE_IDS.length)) {
     throw new Error('首发武器迁移门禁必须为每个候选提供完整五项证据。');

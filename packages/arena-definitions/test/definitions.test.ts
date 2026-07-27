@@ -141,6 +141,30 @@ describe('Arena Definition public contracts', () => {
     })).toThrow(/runSpeed/);
   });
 
+  it('validates optional action commitment before active frames', () => {
+    const commitment = createActionDefinition({
+      ...action('commitment'),
+      timing: { windupTicks: 20, activeTicks: 1, recoveryTicks: 1, cooldownTicks: 0 },
+      commitment: {
+        commitTicks: 12,
+        expireTicks: 18,
+        expireOutcome: 'cancel',
+        canTurn: true,
+        levelThresholds: [6, 12],
+      },
+    });
+    expect(commitment.commitment).toMatchObject({
+      commitTicks: 12,
+      expireTicks: 18,
+      canTurn: true,
+    });
+    expect(Object.isFrozen(commitment.commitment)).toBe(true);
+    expect(() => createActionDefinition({
+      ...commitment,
+      timing: { ...commitment.timing, windupTicks: 18 },
+    })).toThrow(/expireTicks/);
+  });
+
   it('binds equipment actions at Registry construction without mutable publication', () => {
     const actionRegistry = new ActionRegistry([action('ground'), action('air')]);
     const equipment: EquipmentDefinition = createEquipmentDefinition({

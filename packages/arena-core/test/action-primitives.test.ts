@@ -36,6 +36,12 @@ describe('Arena action core primitives', () => {
       phase: ARENA_ACTION_PHASE.IDLE,
       ticksRemaining: 0,
       hitTargets: new Set(),
+      commitmentStartedTick: null,
+      commitmentStatus: null,
+      commitmentChargeTicks: 0,
+      commitmentChargeLevel: 0,
+      commitmentFacingAtStart: null,
+      commitmentFacingAtResult: null,
     });
     expect(state.hitTargets).toBe(hitTargets);
   });
