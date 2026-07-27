@@ -37,3 +37,7 @@ Greybox、输入 Pilot、真人 Study 和 POC 仅用于开发/测试，不进入
 - [Arena V1 架构提案](docs/architecture/arena-v1-proposal.md)
 - [统一配置值说明](docs/gameplay/arena-stage6-input-movement-config.md)
 - [ADR-030：Arena 唯一生产产品](docs/decisions/030-arena-only-enterprise-governance.md)
+
+未来版本设计草案（不代表当前实现）：
+
+- [Arena V2 新版本文档索引](docs/product/arena-v2-document-index.md)
