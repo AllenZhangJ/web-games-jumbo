@@ -44,6 +44,8 @@ Arena V2 的核心目标是：
 | `arena-v2-weapon-true-hades-hook-scythe-case-study.ts` | 真·哈迪斯钩镰逐动作官方事实、支撑面/阶段命中推导、反制和数值审计 | 第五轮逐件研究证据，仅研究工具链 |
 | `arena-v2-weapon-white-platinum-dual-guns-case-study.ts` | 白金双枪逐动作官方事实、距离/覆盖/高度差推导、反制和数值审计 | 第六轮逐件研究证据，仅研究工具链 |
 | `arena-v2-weapon-blood-shadow-hook-blade-case-study.ts` | 血影钩刃逐动作官方事实、拉位/障碍/目标朝向推导、反制和数值审计 | 第七轮逐件研究证据，仅研究工具链 |
+| `arena-v2-weapon-hook-obstruction-prototype.ts` | 以固定二维几何验证无遮挡、柱体阻挡、侧向错开和边角路线的拉位差异 | 血影钩刃障碍研究原型，仅研究工具链 |
+| [血影钩刃障碍阻挡原型结果 V1](../research/arena-v2-weapon-hook-obstruction-prototype-results-v1.md) | 记录拉位阻挡探针的固定场景、结果和未完成边界 | 障碍研究证据 |
 | `arena-v2-weapon-research-catalog.ts` | 12 件参考武器的结构化研究卡，仅供开发/测试工具链使用 | 研究证据 |
 | `arena-v2-weapon-official-evidence.ts` | 9 组官方招式证据的信号与逐动作上下文、命中结果、地图意义和失败成本，仅供开发/测试工具链使用 | 第四轮研究证据 |
 | `arena-v2-weapon-commitment-prototype.ts` | 用整数 tick 验证读招反制与延迟重击的提前取消、承诺释放、到期取消和蓄力转向，仅供开发/测试工具链使用 | 第四轮武器状态原型证据 |

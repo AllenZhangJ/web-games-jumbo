@@ -48,7 +48,9 @@
 - `packages/arena-v1-experiment/src/arena-v2-weapon-blood-shadow-hook-blade-case-study.ts`
 - `packages/arena-v1-experiment/test/arena-v2-weapon-blood-shadow-hook-blade-case-study.test.ts`
 - `packages/arena-v1-experiment/src/arena-v2-weapon-case-study-contract.ts`
+- `packages/arena-v1-experiment/src/arena-v2-weapon-hook-obstruction-prototype.ts`
 - [热血英豪武器研究 V1](../research/arena-v2-hot-blooded-weapon-study-v1.md)
+- [血影钩刃障碍阻挡原型结果 V1](../research/arena-v2-weapon-hook-obstruction-prototype-results-v1.md)
 - [魔血镰刃官方说明](https://bfo.web.sdo.com/web4/introduce/prop_explanation.asp?id=793)
 - [真·哈迪斯钩镰官方说明](https://bfo.web.sdo.com/web4/introduce/prop_explanation.asp?id=526)
 - [白金双枪官方说明](https://bfo.web.sdo.com/web4/introduce/prop_explanation.asp?id=329)
