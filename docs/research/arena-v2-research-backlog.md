@@ -35,6 +35,7 @@
 - “越高越好”和“越高风险”分开的显示语义。
 - 战斗语言公开轴就绪检查：冲入、换位、读招反制、直线压制和绕后已具备当前公开轴，封路和延迟重击仍需补齐延迟/预警字段；见[ADR-059](../decisions/059-arena-v2-weapon-public-axis-readiness-boundary.md)。五种扩展语言已经通过统一规则原型，绕后使用目标朝向判定；见[ADR-060](../decisions/060-arena-v2-rear-cone-and-language-prototype-boundary.md)。
 - 武器卡已增加两项不扩张主比较表的补充行为数值：有效窗口和方向容错角；它们由权威调优投影，延迟、预警和连续区域效果仍保持研究状态，见[ADR-061](../decisions/061-arena-v2-weapon-overview-behavior-readout.md)。
+- [x] 将 7 种战斗语言收敛为结构化最小功能版本合同，并投影回 12 件研究卡；合同只属于开发/测试工具链，不自动创建生产武器，见[武器最小功能版本合同 V1](arena-v2-weapon-minimum-version-contract-v1.md)和[ADR-064](../decisions/064-arena-v2-weapon-minimum-version-contract.md)。
 
 ### 需要回答
 

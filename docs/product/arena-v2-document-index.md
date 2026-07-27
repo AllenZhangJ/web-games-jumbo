@@ -43,6 +43,8 @@ Arena V2 的核心目标是：
 | `arena-v2-weapon-official-evidence.ts` | 5 组官方招式证据的蓄力、取消、方向、上下文、资源、持续威胁和物理阻碍信号，仅供开发/测试工具链使用 | 第三轮研究证据 |
 | `arena-v2-weapon-commitment-prototype.ts` | 用整数 tick 验证读招反制与延迟重击的提前取消、承诺释放、到期取消和蓄力转向，仅供开发/测试工具链使用 | 第四轮武器状态原型证据 |
 | `arena-v2-weapon-function-language.ts` | 将 12 件参考武器归并为 7 种 Arena 战斗语言，绑定数值轴、反制、地图空间和模式候选 | 研究证据 |
+| [武器最小功能版本合同 V1](../research/arena-v2-weapon-minimum-version-contract-v1.md) | 将 7 种战斗语言结构化为单一基础输入、地面/空中上下文、命中结果、地图关系、失败成本和反制，并投影回 12 件研究卡 | 第四轮研究合同 |
+| [ADR-064：武器必须先通过最小功能版本合同](../decisions/064-arena-v2-weapon-minimum-version-contract.md) | 固化研究卡到后续武器 Definition 之间的中间评审边界 | 研究合同已接入 |
 | [武器战斗语言最小原型结果 V1](../research/arena-v2-weapon-language-prototype-results-v1.md) | 记录直线压制、封路、延迟重击、读招反制和绕后的 Rule/Targeting/Effect 最小验证与回应时间 | 扩展武器原型证据 |
 | [武器战斗语言 × KZ 地图后果原型结果 V1](../research/arena-v2-weapon-language-kz-consequence-results-v1.md) | 记录五种战斗语言在六段 KZ 表面上的击落、路线转移、前摇、有效窗口和固定回应后果 | 扩展武器×地图原型证据 |
 | `arena-v2-warning-zone-prototype.ts` | 验证封路候选的公开标记位置、整数 tick 生命周期和到期，不实现持续伤害或新操作 | 第四轮武器状态原型证据 |

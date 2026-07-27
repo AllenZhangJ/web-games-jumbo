@@ -219,6 +219,18 @@ export type {
   ArenaV2WeaponPublicAxisSurface,
 } from './arena-v2-weapon-public-axis-contract.js';
 export {
+  ARENA_V2_WEAPON_MINIMUM_VERSION_SPECIFICATIONS,
+  ARENA_V2_WEAPON_MINIMUM_VERSIONS,
+  createArenaV2WeaponMinimumVersionCatalog,
+  findArenaV2WeaponMinimumVersion,
+  listArenaV2WeaponMinimumVersionLanguages,
+} from './arena-v2-weapon-minimum-version-contract.js';
+export type {
+  ArenaV2WeaponMinimumRule,
+  ArenaV2WeaponMinimumVersion,
+  ArenaV2WeaponMinimumVersionSpecification,
+} from './arena-v2-weapon-minimum-version-contract.js';
+export {
   ARENA_V2_WEAPON_OFFICIAL_EVIDENCE,
 } from './arena-v2-weapon-official-evidence.js';
 export type {
