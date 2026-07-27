@@ -39,6 +39,7 @@
 - [x] 将 8 种战斗语言收敛为 6 个首发候选位置：生产基线为冲入、推离、换位，研究候选为直线压制、读招反制、绕后；封路和延迟重击因延迟/预警公开轴未闭合暂缓，见[首发武器候选合同 V1](arena-v2-weapon-launch-candidate-contract-v1.md)和[ADR-066](../decisions/066-arena-v2-weapon-launch-candidate-selection.md)。
 - [x] 将直线压制、读招反制、绕后三个研究候选编译为统一 research-only Definition，补齐地面/空中数值、主概览 9 轴、行为 2 轴和等待/离开回应证据；见[首发研究候选 Definition 原型结果](arena-v2-launch-research-definition-prototype-results-v1.md)和[ADR-070](../decisions/070-arena-v2-research-launch-definition-projection.md)。
 - [ ] 将三个 research-only Definition 接入 KZ 地图后果、正式 Presentation 反馈事件、声音/特效和回放证据，再评估是否具备生产迁移条件。
+- [x] 建立六个首发候选的五项生产迁移门禁，明确正式 Definition、正式动作状态、候选专属 Replay、地图后果和反馈表现的独立证据；当前生产就绪为 0/6，不自动晋级，见[生产迁移门禁结果 V1](arena-v2-weapon-production-migration-gate-results-v1.md)和[ADR-074](../decisions/074-arena-v2-weapon-production-migration-gate.md)。
 - [x] 审计三把生产基线的权威字段能否覆盖 11 个公开数值轴，并记录三个研究候选的结构缺口和迁移顺序；见[武器 Definition 迁移审计 V1](arena-v2-weapon-definition-migration-audit-v1.md)和[ADR-067](../decisions/067-arena-v2-weapon-definition-migration-boundary.md)。
 - [x] 将直线压制编译为 research-only 的地面/空中 Definition 原型，并绑定 11 个数值轴与等待/离线回应证据；见[直线压制 Definition 原型结果 V1](arena-v2-line-pressure-definition-prototype-results-v1.md)和[ADR-068](../decisions/068-arena-v2-line-pressure-definition-boundary.md)。
 - [x] 在 KZ 武器后果探针上增加命中确认、支撑面转移、击落、避开攻击线和路线失误五种因果反馈语义；见[武器战斗语言 × KZ 地图后果原型结果 V1](arena-v2-weapon-language-kz-consequence-results-v1.md)和[ADR-069](../decisions/069-arena-v2-hit-feedback-causal-contract.md)。

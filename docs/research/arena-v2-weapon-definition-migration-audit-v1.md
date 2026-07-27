@@ -7,6 +7,7 @@
 - 适用范围：Arena V2 开发/测试工具链与现有 V1 权威内容
 - 关联实现：`packages/arena-v1-experiment/src/arena-v2-weapon-definition-migration-audit.ts`
 - 关联决策：[ADR-067：武器概览数值必须从权威 Definition 投影](../decisions/067-arena-v2-weapon-definition-migration-boundary.md)
+- 后续门禁：[首发武器生产迁移门禁结果 V1](arena-v2-weapon-production-migration-gate-results-v1.md)
 
 本文档回答两个问题：当前三把生产武器能否提供真实的概览数值；三个首发研究候选是否已经具备可比较的研究 Definition，以及进入生产前还缺什么。它不把研究审计结果写回生产 Definition，也不把研究候选显示成已实现武器。
 
@@ -82,3 +83,5 @@
 - 在宽平台、窄路、边缘和高低差上产生不同且可解释的后果；
 - 通过确定性、回放、无渲染和概览展示测试；
 - 真人能够在短时间内说出它和另外五种语言的主要区别。
+
+本节条件现在由五项迁移门禁统一执行；当前六个首发候选的生产就绪数为 `0/6`。详见[首发武器生产迁移门禁结果 V1](arena-v2-weapon-production-migration-gate-results-v1.md)和[ADR-074](../decisions/074-arena-v2-weapon-production-migration-gate.md)。

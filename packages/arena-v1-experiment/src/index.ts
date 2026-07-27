@@ -258,6 +258,16 @@ export type {
   ArenaV2WeaponLaunchResearchDefinitionPrototype,
 } from './arena-v2-weapon-launch-research-definition-prototype.js';
 export {
+  runArenaV2WeaponProductionMigrationGate,
+} from './arena-v2-weapon-production-migration-gate.js';
+export type {
+  ArenaV2WeaponProductionMigrationCandidateResult,
+  ArenaV2WeaponProductionMigrationGateId,
+  ArenaV2WeaponProductionMigrationGateResult,
+  ArenaV2WeaponProductionMigrationGateReport,
+  ArenaV2WeaponProductionMigrationGateStatus,
+} from './arena-v2-weapon-production-migration-gate.js';
+export {
   projectArenaV2ActionDefinitionPublicNumbers,
 } from './arena-v2-weapon-action-public-projection.js';
 export {
