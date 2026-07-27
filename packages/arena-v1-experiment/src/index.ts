@@ -245,3 +245,8 @@ export type {
   ArenaV2WeaponContestResult,
   ArenaV2WeaponContestScenario,
 } from './arena-v2-weapon-contest-prototype.js';
+export { ARENA_V2_KZ_MAP_RESEARCH_CATALOG } from './arena-v2-kz-map-research-catalog.js';
+export type {
+  ArenaV2KzMapEvidenceType,
+  ArenaV2KzMapResearchCard,
+} from './arena-v2-kz-map-research-catalog.js';
