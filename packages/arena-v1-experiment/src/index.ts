@@ -251,6 +251,16 @@ export type {
   ArenaV2WeaponPublicAxisAuthoritySource,
 } from './arena-v2-weapon-definition-migration-audit.js';
 export {
+  findArenaV2WeaponLaunchResearchDefinitionPrototype,
+  ARENA_V2_WEAPON_LAUNCH_RESEARCH_DEFINITION_PROTOTYPES,
+} from './arena-v2-weapon-launch-research-definition-prototype.js';
+export type {
+  ArenaV2WeaponLaunchResearchDefinitionPrototype,
+} from './arena-v2-weapon-launch-research-definition-prototype.js';
+export {
+  projectArenaV2ActionDefinitionPublicNumbers,
+} from './arena-v2-weapon-action-public-projection.js';
+export {
   ARENA_V2_LINE_PRESSURE_DEFINITION_PROTOTYPE,
   createArenaV2LinePressureDefinitionPrototype,
 } from './arena-v2-weapon-line-pressure-prototype.js';

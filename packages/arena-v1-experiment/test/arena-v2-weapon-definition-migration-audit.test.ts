@@ -26,23 +26,39 @@ describe('Arena V2 weapon Definition migration audit', () => {
     ]);
   });
 
-  it('keeps research candidates out of production until their Definition gaps close', () => {
+  it('keeps research candidates research-only after their minimum Definition gaps close', () => {
     const researchAudits = ARENA_V2_WEAPON_DEFINITION_MIGRATION_AUDITS.filter(({ source }) => (
       source === 'research-candidate'
     ));
     expect(researchAudits).toHaveLength(3);
-    expect(researchAudits.every(({ status, productionEquipmentDefinitionId }) => (
-      status === 'needs-definition' && productionEquipmentDefinitionId === null
+    expect(researchAudits.every(({ status, implementationStatus, productionEquipmentDefinitionId }) => (
+      status === 'ready'
+      && implementationStatus === 'research-only-definition'
+      && productionEquipmentDefinitionId === null
+    ))).toBe(true);
+    expect(researchAudits.every(({ structuralGaps, contexts, missingOverviewAxes }) => (
+      structuralGaps.length === 0
+      && missingOverviewAxes.length === 0
+      && contexts.every(({ missingAxes }) => missingAxes.length === 0)
     ))).toBe(true);
     expect(researchAudits.find(({ languageId }) => (
       languageId === ARENA_V2_WEAPON_FUNCTION_LANGUAGE_ID.LINE_PRESSURE
-    ))?.structuralGaps).toContain('直线投射或刺击的目标策略');
+    ))).toMatchObject({
+      groundActionDefinitionId: 'research-line-pressure-ground',
+      aerialActionDefinitionId: 'research-line-pressure-aerial',
+    });
     expect(researchAudits.find(({ languageId }) => (
       languageId === ARENA_V2_WEAPON_FUNCTION_LANGUAGE_ID.READ_PUNISH
-    ))?.structuralGaps).toContain('蓄力承诺、提前取消和到期取消状态');
+    ))).toMatchObject({
+      groundActionDefinitionId: 'research-read-punish-ground',
+      aerialActionDefinitionId: 'research-read-punish-aerial',
+    });
     expect(researchAudits.find(({ languageId }) => (
       languageId === ARENA_V2_WEAPON_FUNCTION_LANGUAGE_ID.FLANK
-    ))?.structuralGaps).toContain('侧向/后方目标判定策略');
+    ))).toMatchObject({
+      groundActionDefinitionId: 'research-flank-ground',
+      aerialActionDefinitionId: 'research-flank-aerial',
+    });
   });
 
   it('keeps one explicit authority source contract for the eleven public axes', () => {

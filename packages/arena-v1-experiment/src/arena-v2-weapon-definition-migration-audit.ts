@@ -1,4 +1,5 @@
 import { ARENA_GAMEPLAY_V2_TUNING } from '@number-strategy-jump/arena-definitions';
+import type { ActionDefinition } from '@number-strategy-jump/arena-definitions';
 import {
   STAGE4_ACTION_DEFINITIONS,
   STAGE4_EQUIPMENT_DEFINITIONS,
@@ -12,6 +13,10 @@ import {
   ARENA_V2_WEAPON_PUBLIC_CONTEXT_AXIS_IDS,
   type ArenaV2WeaponPublicAxisId,
 } from './arena-v2-weapon-public-axis-contract.js';
+import {
+  findArenaV2WeaponLaunchResearchDefinitionPrototype,
+} from './arena-v2-weapon-launch-research-definition-prototype.js';
+import { projectArenaV2ActionDefinitionPublicNumbers } from './arena-v2-weapon-action-public-projection.js';
 
 export interface ArenaV2WeaponPublicAxisAuthoritySource {
   readonly axisId: ArenaV2WeaponPublicAxisId;
@@ -41,6 +46,7 @@ export interface ArenaV2WeaponDefinitionMigrationAudit {
   readonly contexts: readonly ArenaV2WeaponDefinitionMigrationContextAudit[];
   readonly authorityFieldPaths: readonly string[];
   readonly structuralGaps: readonly string[];
+  readonly implementationStatus: 'production-authority' | 'research-only-definition' | 'missing';
   readonly status: 'ready' | 'needs-definition';
 }
 
@@ -226,10 +232,102 @@ function createResearchContextAudit(
   });
 }
 
+function hasActionAxis(action: ActionDefinition, axisId: ArenaV2WeaponPublicAxisId): boolean {
+  const projection = projectArenaV2ActionDefinitionPublicNumbers(action);
+  switch (axisId) {
+    case ARENA_V2_WEAPON_PUBLIC_AXIS_ID.RANGE:
+      return Number.isFinite(projection.range);
+    case ARENA_V2_WEAPON_PUBLIC_AXIS_ID.COVERAGE:
+      return Number.isFinite(projection.coverage);
+    case ARENA_V2_WEAPON_PUBLIC_AXIS_ID.STARTUP:
+      return Number.isFinite(projection.windupTicks);
+    case ARENA_V2_WEAPON_PUBLIC_AXIS_ID.RECOVERY:
+      return Number.isFinite(projection.recoveryTicks);
+    case ARENA_V2_WEAPON_PUBLIC_AXIS_ID.IMPACT:
+      return Number.isFinite(projection.impactDistance);
+    case ARENA_V2_WEAPON_PUBLIC_AXIS_ID.VERTICAL:
+      return Number.isFinite(projection.verticalImpulse);
+    case ARENA_V2_WEAPON_PUBLIC_AXIS_ID.CONTROL:
+      return Number.isFinite(projection.hitstunTicks);
+    case ARENA_V2_WEAPON_PUBLIC_AXIS_ID.SELF_MOVEMENT:
+      return Number.isFinite(projection.selfMovementImpulse);
+    case ARENA_V2_WEAPON_PUBLIC_AXIS_ID.COOLDOWN:
+      return Number.isFinite(projection.cooldownTicks);
+    case ARENA_V2_WEAPON_PUBLIC_AXIS_ID.HEIGHT_GAP:
+      return Number.isFinite(projection.heightGap);
+    case ARENA_V2_WEAPON_PUBLIC_AXIS_ID.ACTIVE_FRAMES:
+      return Number.isFinite(projection.activeTicks);
+    case ARENA_V2_WEAPON_PUBLIC_AXIS_ID.DIRECTION_TOLERANCE:
+      return Number.isFinite(projection.directionToleranceDegrees);
+    case ARENA_V2_WEAPON_PUBLIC_AXIS_ID.DELAY:
+    case ARENA_V2_WEAPON_PUBLIC_AXIS_ID.WARNING:
+      return false;
+    default:
+      return false;
+  }
+}
+
+function createResearchDefinitionContextAudit(
+  context: 'ground' | 'aerial',
+  action: ActionDefinition,
+): ArenaV2WeaponDefinitionMigrationContextAudit {
+  const availableAxes = Object.freeze(ARENA_V2_WEAPON_PUBLIC_CONTEXT_AXIS_IDS.filter((axisId) => (
+    hasActionAxis(action, axisId)
+  )));
+  return Object.freeze({
+    context,
+    actionDefinitionId: action.id,
+    availableAxes,
+    missingAxes: Object.freeze(ARENA_V2_WEAPON_PUBLIC_CONTEXT_AXIS_IDS.filter((axisId) => (
+      !availableAxes.includes(axisId)
+    ))),
+  });
+}
+
 function createMigrationAudit(
   candidate: ArenaV2WeaponLaunchCandidate,
 ): ArenaV2WeaponDefinitionMigrationAudit {
   if (candidate.source === 'research-candidate') {
+    const prototype = findArenaV2WeaponLaunchResearchDefinitionPrototype(candidate.candidateId);
+    if (prototype) {
+      const availableAxes = Object.freeze([
+        ...prototype.publicOverviewAxes,
+        ...prototype.publicBehaviorAxes,
+      ]);
+      const availableOverviewAxes = Object.freeze(candidate.requiredPublicAxes.filter((axisId) => (
+        availableAxes.includes(axisId)
+      )));
+      const contexts = Object.freeze([
+        createResearchDefinitionContextAudit('ground', prototype.groundAction),
+        createResearchDefinitionContextAudit('aerial', prototype.aerialAction),
+      ]);
+      const authorityFieldPaths = Object.freeze(candidate.requiredPublicAxes.map((axisId) => {
+        const source = authoritySourceByAxisId.get(axisId);
+        if (!source) throw new RangeError(`公开数值轴缺少权威来源：${axisId}`);
+        return source.sourceFieldPath;
+      }));
+      const missingOverviewAxes = Object.freeze(candidate.requiredPublicAxes.filter((axisId) => (
+        !availableOverviewAxes.includes(axisId)
+      )));
+      const contextMissing = contexts.some(({ missingAxes }) => missingAxes.length > 0);
+      return Object.freeze({
+        candidateId: candidate.candidateId,
+        displayName: candidate.displayName,
+        languageId: candidate.languageId,
+        source: candidate.source,
+        productionEquipmentDefinitionId: null,
+        groundActionDefinitionId: prototype.groundActionDefinitionId,
+        aerialActionDefinitionId: prototype.aerialActionDefinitionId,
+        requiredOverviewAxes: candidate.requiredPublicAxes,
+        availableOverviewAxes,
+        missingOverviewAxes,
+        contexts,
+        authorityFieldPaths,
+        structuralGaps: Object.freeze([]),
+        implementationStatus: 'research-only-definition',
+        status: missingOverviewAxes.length === 0 && !contextMissing ? 'ready' : 'needs-definition',
+      });
+    }
     return Object.freeze({
       candidateId: candidate.candidateId,
       displayName: candidate.displayName,
@@ -247,6 +345,7 @@ function createMigrationAudit(
       ]),
       authorityFieldPaths: Object.freeze([]),
       structuralGaps: structuralGaps(candidate),
+      implementationStatus: 'missing',
       status: 'needs-definition',
     });
   }
@@ -297,6 +396,7 @@ function createMigrationAudit(
     contexts,
     authorityFieldPaths,
     structuralGaps: Object.freeze([]),
+    implementationStatus: 'production-authority',
     status: missingOverviewAxes.length === 0 && !contextMissing ? 'ready' : 'needs-definition',
   });
 }

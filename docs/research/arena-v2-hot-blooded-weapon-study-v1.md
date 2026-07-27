@@ -2,7 +2,7 @@
 
 ## 文档状态
 
-- 状态：已完成第一轮研究、结构化研究卡、官方招式证据增补、主页数值对比与行为数值接入、固定侧移目标原型；真人可读性、多人拥挤与 V2 权威迁移待验证
+- 状态：已完成第一轮研究、结构化研究卡、官方招式证据增补、主页数值对比与行为数值接入、固定侧移目标原型、六个首发位置的统一数值 Definition 原型；真人可读性、多人拥挤与 V2 生产迁移待验证
 - 日期：2026-07-27
 - 研究对象：新热血英豪官方武器说明与官方新手指南
 - 研究边界：提炼对战规律，不复制名称、动作、数值、美术或输入组合
@@ -314,7 +314,7 @@ Arena 的简化版本不需要增加拾取后专门的投掷按钮，但需要�
 | 延迟重击 | 如何用预判换取范围或强击飞 | 延迟、预警、覆盖、击退、垂直控制 | 离开标记、诱导提前释放、找恢复面 |
 | 推离 | 如何用一次重击直接改变目标的边缘位置 | 距离、前摇、横向击退、垂直控制、收招 | 提前离开正面线、诱导挥空、从侧面接近 |
 
-结构化映射见 `arena-v2-weapon-function-language.ts`，当前生产映射和真实动作绑定见 `arena-v2-weapon-minimum-version-contract.ts` 与 [ADR-065](../decisions/065-arena-v2-production-weapon-language-mapping.md)。它只用于研究卡、生产基线审计和评审，不直接新增生产武器；当前三把 Arena 正式原型分别明确映射为“推离/换位/冲入”，五种扩展语言已经通过临时 Rule/Effect/Targeting 原型验证动作差异。公开轴就绪检查见 `arena-v2-weapon-public-axis-contract.ts`：冲入、推离、换位、读招反制、直线压制和绕后已经具备当前卡片需要的公开轴，封路和延迟重击仍因延迟/预警字段处于 `blocked`，不能把研究原型当成产品完成。
+结构化映射见 `arena-v2-weapon-function-language.ts`，当前生产映射和真实动作绑定见 `arena-v2-weapon-minimum-version-contract.ts` 与 [ADR-065](../decisions/065-arena-v2-production-weapon-language-mapping.md)。它只用于研究卡、生产基线审计和评审，不直接新增生产武器；当前三把 Arena 正式原型分别明确映射为“推离/换位/冲入”，五种扩展语言已经通过临时 Rule/Effect/Targeting 原型验证动作差异。现在直线压制、读招反制、绕后又通过统一的 research-only Definition 和共享数值投影接入六个首发位置的概览审计，见[首发研究候选 Definition 原型结果](arena-v2-launch-research-definition-prototype-results-v1.md)与[ADR-070](../decisions/070-arena-v2-research-launch-definition-projection.md)。公开轴就绪检查见 `arena-v2-weapon-public-axis-contract.ts`：冲入、推离、换位、读招反制、直线压制和绕后已经具备当前卡片需要的公开轴，封路和延迟重击仍因延迟/预警字段处于 `blocked`，不能把研究原型当成产品完成。
 
 本轮最小动作原型已经验证直线压制、封路、延迟重击、读招反制和绕后在同一套 Rule/Targeting/Effect 链路中可以形成 8、24、30、18、10 tick 的不同回应时间、有效窗口和目标朝向条件，并把提前离开转化为未命中；随后六段 KZ 灰盒的 90 个固定回应探针又证明前摇、横向冲量、目标朝向和支撑面会共同改变击落与路线转移结果，封路还补上了公开标记位置和到期状态。这只是动作语法和地图后果证据，不代表持续区域影响、投射物飞行、真人反应或正式平衡已经完成。详见[武器战斗语言最小原型结果](arena-v2-weapon-language-prototype-results-v1.md)、[武器战斗语言 × KZ 地图后果原型结果](arena-v2-weapon-language-kz-consequence-results-v1.md)和[ADR-060：绕后使用目标朝向判定，五种语言共用同一规则原型](../decisions/060-arena-v2-rear-cone-and-language-prototype-boundary.md)。
 

@@ -2,13 +2,13 @@
 
 ## 1. 文档状态
 
-- 状态：审计完成，迁移尚未开始
+- 状态：三把生产基线审计完成，三个研究候选已形成统一 research-only Definition，生产迁移尚未开始
 - 日期：2026-07-28
 - 适用范围：Arena V2 开发/测试工具链与现有 V1 权威内容
 - 关联实现：`packages/arena-v1-experiment/src/arena-v2-weapon-definition-migration-audit.ts`
 - 关联决策：[ADR-067：武器概览数值必须从权威 Definition 投影](../decisions/067-arena-v2-weapon-definition-migration-boundary.md)
 
-本文档回答两个问题：当前三把生产武器能否提供真实的概览数值；三个首发研究候选在进入生产前究竟缺什么。它不把研究审计结果写回生产 Definition，也不把研究候选显示成已实现武器。
+本文档回答两个问题：当前三把生产武器能否提供真实的概览数值；三个首发研究候选是否已经具备可比较的研究 Definition，以及进入生产前还缺什么。它不把研究审计结果写回生产 Definition，也不把研究候选显示成已实现武器。
 
 ## 2. 审计结论
 
@@ -24,13 +24,13 @@
 
 ### 三个研究候选
 
-| 候选 | 状态 | 必须新增的权威结构 |
-|---|---|---|
-| 直线压制 | `needs-definition` | 直线投射/刺击目标策略、固定重复间隔、空放后的可读恢复 |
-| 读招反制 | `needs-definition` | 蓄力承诺、提前取消、到期取消、高回报命中但不引入真正格挡 |
-| 绕后 | `needs-definition` | 侧向/后方目标判定、基于目标朝向的方向性击退 |
+| 候选 | 审计状态 | Definition 状态 | 当前还不能宣称完成的内容 |
+|---|---|---|---|
+| 直线压制 | `ready` | `research-only-definition` | 真实投射物飞行、多人拥挤和正式生产迁移 |
+| 读招反制 | `ready` | `research-only-definition` | 蓄力承诺状态接入、取消表现和正式生产迁移 |
+| 绕后 | `ready` | `research-only-definition` | 主动转身、多方向拥挤和正式生产迁移 |
 
-三个候选目前都没有生产 `EquipmentDefinition`、地面/空中 `ActionDefinition` 或权威数值，因此不能进入生产目录。
+三个候选现在都有统一的地面/空中研究 `ActionDefinition`、9 项主概览数值、2 项行为补充数值和固定命中/空放证据，但仍没有生产 `EquipmentDefinition`，不能进入生产目录。详见[首发研究候选 Definition 原型结果 V1](arena-v2-launch-research-definition-prototype-results-v1.md)和[ADR-070](../decisions/070-arena-v2-research-launch-definition-projection.md)。
 
 ## 3. 权威字段到玩家数值的固定映射
 
@@ -50,7 +50,11 @@
 
 所有数值必须由整数 tick 和权威调优计算得到，UI 只接收只读 ViewModel。覆盖宽度和方向容错属于派生量，必须固定公式，不能按武器卡手工填写。
 
-## 4. 迁移顺序
+## 4. 当前研究 Definition 证据
+
+三个候选共用 `projectArenaV2ActionDefinitionPublicNumbers`，统一投影距离、覆盖、时间、击退、控制、自身风险、冷却、有效窗口和方向容错。迁移审计现在能够检查三把研究候选的地面/空中动作身份、公开轴和上下文轴；这一步解决的是“六个首发位置都能看出数值差异”的结构缺口，不是生产迁移。
+
+## 5. 迁移顺序
 
 ### 第一步：直线压制
 
@@ -66,9 +70,9 @@
 
 每一步都要按 `Rule → Core → Bot → Presentation` 推进；表现层不得直接判断命中或改变位置。
 
-## 5. 验收门槛
+## 6. 生产迁移验收门槛
 
-研究候选只有在以下条件全部满足后，才能从 `needs-definition` 改成生产候选：
+研究候选只有在以下条件全部满足后，才能从 `research-only-definition` 进入生产候选：
 
 - 具备地面/空中两套权威动作身份；
 - 具备至少一套可复现的命中、空放和收招行为；

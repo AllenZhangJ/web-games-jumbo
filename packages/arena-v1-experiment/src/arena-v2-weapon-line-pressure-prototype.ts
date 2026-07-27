@@ -1,5 +1,4 @@
 import {
-  ARENA_GAMEPLAY_V2_TUNING,
   type ActionDefinition,
   type ArenaWeaponPublicNumericProjection,
 } from '@number-strategy-jump/arena-definitions';
@@ -8,6 +7,7 @@ import {
   runArenaV2WeaponLanguagePrototype,
 } from './arena-v2-weapon-language-prototype.js';
 import { ARENA_V2_WEAPON_FUNCTION_LANGUAGE_ID } from './arena-v2-weapon-function-language.js';
+import { projectArenaV2ActionDefinitionPublicNumbers } from './arena-v2-weapon-action-public-projection.js';
 
 export interface ArenaV2LinePressureDefinitionPrototype {
   readonly weaponId: 'research-line-pressure';
@@ -28,79 +28,8 @@ export interface ArenaV2LinePressureDefinitionPrototype {
   }>;
 }
 
-function record(value: unknown, name: string): Readonly<Record<string, unknown>> {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    throw new TypeError(`${name} 必须是对象。`);
-  }
-  return value as Readonly<Record<string, unknown>>;
-}
-
-function positiveNumber(value: unknown, name: string): number {
-  if (!Number.isFinite(value) || (value as number) <= 0) {
-    throw new RangeError(`${name} 必须是大于 0 的有限数。`);
-  }
-  return value as number;
-}
-
-function effectNumber(action: ActionDefinition, kind: string, field: string): number {
-  const effect = action.effects.find(({ kind: effectKind }) => effectKind === kind);
-  if (!effect) throw new RangeError(`${action.id} 缺少 ${kind} effect。`);
-  const parameters = record(effect.parameters, `${action.id}.${kind}.parameters`);
-  return positiveNumber(parameters[field], `${action.id}.${kind}.${field}`);
-}
-
-function targetParameter(action: ActionDefinition, field: string): number | undefined {
-  const parameters = record(action.targeting.parameters, `${action.id}.targeting.parameters`);
-  const value = parameters[field];
-  if (value === undefined) return undefined;
-  return positiveNumber(value, `${action.id}.targeting.${field}`);
-}
-
-function coverageWidth(action: ActionDefinition, range: number): number {
-  const radius = targetParameter(action, 'radius');
-  if (radius !== undefined) return radius * 2;
-  const minimumFacingDot = targetParameter(action, 'minimumFacingDot');
-  if (minimumFacingDot !== undefined) {
-    return range * 2 * Math.sqrt(Math.max(0, 1 - minimumFacingDot ** 2));
-  }
-  return range * 2;
-}
-
-function directionToleranceDegrees(action: ActionDefinition, range: number): number {
-  const radius = targetParameter(action, 'radius');
-  const minimumFacingDot = targetParameter(action, 'minimumFacingDot');
-  if (minimumFacingDot !== undefined) {
-    return (2 * Math.acos(Math.max(-1, Math.min(1, minimumFacingDot))) * 180) / Math.PI;
-  }
-  if (radius !== undefined) return (2 * Math.atan(radius / range) * 180) / Math.PI;
-  return 180;
-}
-
 function projectAction(action: ActionDefinition): ArenaWeaponPublicNumericProjection {
-  const range = targetParameter(action, 'range');
-  const maximumVerticalDifference = targetParameter(action, 'maximumVerticalDifference');
-  if (range === undefined || maximumVerticalDifference === undefined) {
-    throw new RangeError(`${action.id} 缺少 range 或 maximumVerticalDifference。`);
-  }
-  const horizontalImpulse = effectNumber(action, 'apply-directional-impulse', 'horizontalImpulse');
-  const verticalImpulse = effectNumber(action, 'apply-directional-impulse', 'verticalImpulse');
-  const hitstunTicks = effectNumber(action, 'apply-hitstun', 'ticks');
-  const impactDistance = (horizontalImpulse ** 2)
-    / (2 * ARENA_GAMEPLAY_V2_TUNING.physics.standardGroundDeceleration);
-  return Object.freeze({
-    range,
-    coverage: coverageWidth(action, range),
-    windupTicks: action.timing.windupTicks,
-    activeTicks: action.timing.activeTicks,
-    recoveryTicks: action.timing.recoveryTicks,
-    cooldownTicks: action.timing.cooldownTicks,
-    impactDistance,
-    verticalImpulse,
-    hitstunTicks,
-    selfMovementImpulse: 0,
-    heightGap: maximumVerticalDifference,
-    directionToleranceDegrees: directionToleranceDegrees(action, range),
-  });
+  return projectArenaV2ActionDefinitionPublicNumbers(action);
 }
 
 export function createArenaV2LinePressureDefinitionPrototype(): ArenaV2LinePressureDefinitionPrototype {
