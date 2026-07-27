@@ -18,6 +18,13 @@ describe('Arena V2 UI information prototype', () => {
       .toContain('武器适配空间');
     expect(first.pages.find(({ id }) => id === 'survival-prep')?.requiredInformation)
       .toContain('每 20 秒三选一');
+    expect(first.pages.every(({ firstViewInformation }) => (
+      firstViewInformation.length >= 1 && firstViewInformation.length <= 3
+    ))).toBe(true);
+    expect(first.pages.find(({ id }) => id === 'weapon-detail')).toMatchObject({
+      firstViewInformation: ['动作时序', '命中结果', '适用地图空间'],
+      deferredInformation: ['反制方式', '个人使用记录'],
+    });
   });
 
   it('proves the three most important player flows stay within the click budget', () => {

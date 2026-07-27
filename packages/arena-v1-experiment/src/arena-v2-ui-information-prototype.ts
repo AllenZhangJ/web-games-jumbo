@@ -18,6 +18,8 @@ export interface ArenaV2UiPageContract {
   readonly layer: ArenaV2UiInformationLayer;
   readonly question: string;
   readonly requiredInformation: readonly string[];
+  readonly firstViewInformation: readonly string[];
+  readonly deferredInformation: readonly string[];
   readonly primaryAction: string;
   readonly secondaryAction: string | null;
   readonly maximumActionsBeforeNextStep: number;
@@ -46,6 +48,8 @@ const PAGE_CONTRACTS: readonly ArenaV2UiPageContract[] = Object.freeze([
     layer: 'entry',
     question: '我现在能玩什么？',
     requiredInformation: Object.freeze(['当前默认模式', '开始入口', '武器索引摘要']),
+    firstViewInformation: Object.freeze(['当前默认模式', '开始入口', '武器索引摘要']),
+    deferredInformation: Object.freeze([]),
     primaryAction: '进入模式选择',
     secondaryAction: '查看武器索引',
     maximumActionsBeforeNextStep: 1,
@@ -55,6 +59,8 @@ const PAGE_CONTRACTS: readonly ArenaV2UiPageContract[] = Object.freeze([
     layer: 'entry',
     question: '这一局想练什么？',
     requiredInformation: Object.freeze(['1v1目标', '竞速目标', '生存目标', '推荐时长']),
+    firstViewInformation: Object.freeze(['1v1目标', '竞速目标', '生存目标']),
+    deferredInformation: Object.freeze(['推荐时长']),
     primaryAction: '确认模式',
     secondaryAction: '返回首页',
     maximumActionsBeforeNextStep: 1,
@@ -64,6 +70,8 @@ const PAGE_CONTRACTS: readonly ArenaV2UiPageContract[] = Object.freeze([
     layer: 'selection',
     question: '我用哪个基础手感？',
     requiredInformation: Object.freeze(['角色操作差异', '基础移动提示']),
+    firstViewInformation: Object.freeze(['角色操作差异', '基础移动提示']),
+    deferredInformation: Object.freeze([]),
     primaryAction: '确认角色',
     secondaryAction: '返回模式',
     maximumActionsBeforeNextStep: 1,
@@ -73,6 +81,8 @@ const PAGE_CONTRACTS: readonly ArenaV2UiPageContract[] = Object.freeze([
     layer: 'selection',
     question: '1v1 这一局用什么？',
     requiredInformation: Object.freeze(['当前角色', '武器概览', '地图摘要', '击落胜负条件']),
+    firstViewInformation: Object.freeze(['当前角色', '武器概览', '击落胜负条件']),
+    deferredInformation: Object.freeze(['地图摘要']),
     primaryAction: '开始 1v1',
     secondaryAction: '查看武器详情',
     maximumActionsBeforeNextStep: 1,
@@ -82,6 +92,8 @@ const PAGE_CONTRACTS: readonly ArenaV2UiPageContract[] = Object.freeze([
     layer: 'selection',
     question: '这张跳跃路线要练什么？',
     requiredInformation: Object.freeze(['地图六维难度', '段落数量', '重生规则', '玩家人数']),
+    firstViewInformation: Object.freeze(['地图六维难度', '段落数量', '玩家人数']),
+    deferredInformation: Object.freeze(['重生规则']),
     primaryAction: '开始竞速',
     secondaryAction: '查看地图详情',
     maximumActionsBeforeNextStep: 1,
@@ -91,6 +103,8 @@ const PAGE_CONTRACTS: readonly ArenaV2UiPageContract[] = Object.freeze([
     layer: 'selection',
     question: '我能坚持多久？',
     requiredInformation: Object.freeze(['开局无武器', '每 20 秒三选一', '第一次复活', '第二次结束']),
+    firstViewInformation: Object.freeze(['开局无武器', '每 20 秒三选一', '第一次复活']),
+    deferredInformation: Object.freeze(['第二次结束']),
     primaryAction: '开始生存',
     secondaryAction: '查看地图详情',
     maximumActionsBeforeNextStep: 1,
@@ -100,6 +114,8 @@ const PAGE_CONTRACTS: readonly ArenaV2UiPageContract[] = Object.freeze([
     layer: 'collection',
     question: '我收集了什么，下一把想练什么？',
     requiredInformation: Object.freeze(['收集进度', '核心动词', '9 项主数值', '地面/空中摘要']),
+    firstViewInformation: Object.freeze(['收集进度', '核心动词', '9 项主数值']),
+    deferredInformation: Object.freeze(['地面/空中摘要']),
     primaryAction: '查看武器详情',
     secondaryAction: '返回首页',
     maximumActionsBeforeNextStep: 1,
@@ -109,6 +125,8 @@ const PAGE_CONTRACTS: readonly ArenaV2UiPageContract[] = Object.freeze([
     layer: 'collection',
     question: '这把武器命中后会发生什么？',
     requiredInformation: Object.freeze(['动作时序', '命中结果', '适用地图空间', '反制方式', '个人使用记录']),
+    firstViewInformation: Object.freeze(['动作时序', '命中结果', '适用地图空间']),
+    deferredInformation: Object.freeze(['反制方式', '个人使用记录']),
     primaryAction: '用这把武器开始',
     secondaryAction: '返回武器索引',
     maximumActionsBeforeNextStep: 1,
@@ -118,6 +136,8 @@ const PAGE_CONTRACTS: readonly ArenaV2UiPageContract[] = Object.freeze([
     layer: 'collection',
     question: '我熟悉了哪些地图？',
     requiredInformation: Object.freeze(['地图收集进度', '最佳竞速时间', '最高生存时间']),
+    firstViewInformation: Object.freeze(['地图收集进度', '最佳竞速时间', '最高生存时间']),
+    deferredInformation: Object.freeze([]),
     primaryAction: '查看地图详情',
     secondaryAction: '返回首页',
     maximumActionsBeforeNextStep: 1,
@@ -127,6 +147,8 @@ const PAGE_CONTRACTS: readonly ArenaV2UiPageContract[] = Object.freeze([
     layer: 'collection',
     question: '这张地图的路线和危险是什么？',
     requiredInformation: Object.freeze(['六段路线', '安全段', '压力段', '选择段', '武器适配空间']),
+    firstViewInformation: Object.freeze(['六段路线', '安全段', '压力段']),
+    deferredInformation: Object.freeze(['选择段', '武器适配空间']),
     primaryAction: '选择地图开始',
     secondaryAction: '返回地图索引',
     maximumActionsBeforeNextStep: 1,
@@ -136,6 +158,8 @@ const PAGE_CONTRACTS: readonly ArenaV2UiPageContract[] = Object.freeze([
     layer: 'feedback',
     question: '这局留下了什么，下一局做什么？',
     requiredInformation: Object.freeze(['结果', '获得内容', '地图/武器熟练记录', '下一目标']),
+    firstViewInformation: Object.freeze(['结果', '获得内容', '下一目标']),
+    deferredInformation: Object.freeze(['地图/武器熟练记录']),
     primaryAction: '立即再来一局',
     secondaryAction: '切换目标',
     maximumActionsBeforeNextStep: 2,
@@ -185,6 +209,14 @@ function assertPageContracts(pages: readonly ArenaV2UiPageContract[]): void {
     if (!Number.isInteger(page.maximumActionsBeforeNextStep) || page.maximumActionsBeforeNextStep < 1) {
       throw new RangeError(`页面 ${page.id} 的点击预算无效。`);
     }
+    if (page.firstViewInformation.length === 0 || page.firstViewInformation.length > 3) {
+      throw new RangeError(`页面 ${page.id} 的首屏信息必须保持在 1-3 项。`);
+    }
+    const information = new Set(page.requiredInformation);
+    if ([...page.firstViewInformation, ...page.deferredInformation]
+      .some((item) => !information.has(item))) {
+      throw new RangeError(`页面 ${page.id} 的首屏/延后信息必须来自必要信息。`);
+    }
   }
 }
 
@@ -203,6 +235,7 @@ export function runArenaV2UiInformationPrototype(): ArenaV2UiInformationPrototyp
     && survivalPrep.requiredInformation.includes('每 20 秒三选一')
     && resultReward.requiredInformation.includes('下一目标')
     && resultReward.maximumActionsBeforeNextStep === 2
+    && pagesHaveReadableFirstView(PAGE_CONTRACTS)
     && flows.every(({ passed: flowPassed }) => flowPassed);
   return Object.freeze({
     pageCount: PAGE_CONTRACTS.length,
@@ -213,4 +246,11 @@ export function runArenaV2UiInformationPrototype(): ArenaV2UiInformationPrototyp
     complexSystemsIntroduced: 0,
     passed,
   });
+}
+
+function pagesHaveReadableFirstView(pages: readonly ArenaV2UiPageContract[]): boolean {
+  return pages.every(({ firstViewInformation, deferredInformation }) => (
+    firstViewInformation.length <= 3
+    && firstViewInformation.length + deferredInformation.length > 0
+  ));
 }

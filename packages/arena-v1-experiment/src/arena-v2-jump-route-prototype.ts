@@ -20,8 +20,10 @@ export const ARENA_V2_JUMP_ROUTE_INPUTS = Object.freeze(['direction', 'jump']);
 
 type SegmentKind = 'basic-platform' | 'gap' | 'stairs' | 'maze' | 'narrow-path' | 'wire';
 type SurvivalLoopRole = 'safe' | 'pressure' | 'choice' | 'recovery';
+export type ArenaV2JumpRouteResponseOption = 'hold' | 'strafe' | 'jump';
+export type ArenaV2JumpRouteHitRecovery = 'same-segment' | 'adjacent-segment' | 'respawn-anchor';
 
-interface JumpRouteSegment {
+export interface ArenaV2JumpRouteSegment {
   readonly segmentId: string;
   readonly kind: SegmentKind;
   readonly lesson: string;
@@ -38,6 +40,9 @@ interface JumpRouteSegment {
   readonly exitAnchor: string;
   readonly respawnAnchor: string;
   readonly survivalLoopRole: SurvivalLoopRole;
+  readonly responseOptions: readonly ArenaV2JumpRouteResponseOption[];
+  readonly responseWindowTicks: number;
+  readonly hitRecovery: ArenaV2JumpRouteHitRecovery;
 }
 
 export interface ArenaV2JumpRouteSurface {
@@ -74,7 +79,7 @@ export interface ArenaV2JumpRouteSimulationResult {
 export interface ArenaV2JumpRoutePrototype {
   readonly routeId: string;
   readonly segmentIds: readonly string[];
-  readonly segments: readonly JumpRouteSegment[];
+  readonly segments: readonly ArenaV2JumpRouteSegment[];
   readonly finishAnchor: string;
   readonly respawnSeconds: number;
   readonly surfacesCanCollapse: false;
@@ -154,7 +159,7 @@ function routeAnchor(id: string): ArenaV2JumpRouteAnchor {
   return anchor;
 }
 
-const ROUTE_SEGMENTS: readonly JumpRouteSegment[] = Object.freeze([
+const ROUTE_SEGMENTS: readonly ArenaV2JumpRouteSegment[] = Object.freeze([
   Object.freeze({
     segmentId: 'segment-01-platform',
     kind: 'basic-platform',
@@ -165,6 +170,9 @@ const ROUTE_SEGMENTS: readonly JumpRouteSegment[] = Object.freeze([
     exitAnchor: 'anchor-platform-end',
     respawnAnchor: 'anchor-start',
     survivalLoopRole: 'safe',
+    responseOptions: Object.freeze(['hold', 'strafe', 'jump'] as const),
+    responseWindowTicks: 10,
+    hitRecovery: 'same-segment',
   }),
   Object.freeze({
     segmentId: 'segment-02-gap',
@@ -176,6 +184,9 @@ const ROUTE_SEGMENTS: readonly JumpRouteSegment[] = Object.freeze([
     exitAnchor: 'anchor-gap-end',
     respawnAnchor: 'anchor-platform-end',
     survivalLoopRole: 'recovery',
+    responseOptions: Object.freeze(['jump'] as const),
+    responseWindowTicks: 8,
+    hitRecovery: 'respawn-anchor',
   }),
   Object.freeze({
     segmentId: 'segment-03-stairs',
@@ -187,6 +198,9 @@ const ROUTE_SEGMENTS: readonly JumpRouteSegment[] = Object.freeze([
     exitAnchor: 'anchor-stairs-end',
     respawnAnchor: 'anchor-gap-end',
     survivalLoopRole: 'pressure',
+    responseOptions: Object.freeze(['strafe', 'jump'] as const),
+    responseWindowTicks: 10,
+    hitRecovery: 'adjacent-segment',
   }),
   Object.freeze({
     segmentId: 'segment-04-maze',
@@ -198,6 +212,9 @@ const ROUTE_SEGMENTS: readonly JumpRouteSegment[] = Object.freeze([
     exitAnchor: 'anchor-maze-end',
     respawnAnchor: 'anchor-stairs-end',
     survivalLoopRole: 'choice',
+    responseOptions: Object.freeze(['strafe', 'jump'] as const),
+    responseWindowTicks: 12,
+    hitRecovery: 'adjacent-segment',
   }),
   Object.freeze({
     segmentId: 'segment-05-narrow',
@@ -209,6 +226,9 @@ const ROUTE_SEGMENTS: readonly JumpRouteSegment[] = Object.freeze([
     exitAnchor: 'anchor-narrow-end',
     respawnAnchor: 'anchor-maze-end',
     survivalLoopRole: 'pressure',
+    responseOptions: Object.freeze(['jump'] as const),
+    responseWindowTicks: 6,
+    hitRecovery: 'adjacent-segment',
   }),
   Object.freeze({
     segmentId: 'segment-06-wire',
@@ -220,6 +240,9 @@ const ROUTE_SEGMENTS: readonly JumpRouteSegment[] = Object.freeze([
     exitAnchor: 'anchor-finish',
     respawnAnchor: 'anchor-narrow-end',
     survivalLoopRole: 'choice',
+    responseOptions: Object.freeze(['strafe'] as const),
+    responseWindowTicks: 4,
+    hitRecovery: 'respawn-anchor',
   }),
 ]);
 
@@ -228,6 +251,9 @@ function assertPrototypeShape(): void {
   const ids = ROUTE_SEGMENTS.map(({ segmentId }) => segmentId);
   if (new Set(ids).size !== ids.length) throw new Error('V2 跳跃路线段落 ID 不能重复。');
   for (const segment of ROUTE_SEGMENTS) {
+    if (segment.responseOptions.length === 0 || segment.responseWindowTicks <= 0) {
+      throw new Error(`V2 跳跃路线必须声明可读回应：${segment.segmentId}`);
+    }
     for (const value of Object.values(segment.difficulty)) {
       if (!Number.isInteger(value) || value < 1 || value > 4) {
         throw new RangeError(`V2 跳跃路线难度必须位于 1-4：${segment.segmentId}`);

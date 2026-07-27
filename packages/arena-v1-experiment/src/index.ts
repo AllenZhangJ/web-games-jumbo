@@ -285,7 +285,10 @@ export type {
 } from './arena-v2-ui-information-prototype.js';
 export type {
   ArenaV2JumpRouteAnchor,
+  ArenaV2JumpRouteHitRecovery,
   ArenaV2JumpRoutePrototype,
+  ArenaV2JumpRouteResponseOption,
+  ArenaV2JumpRouteSegment,
   ArenaV2JumpRouteSegmentArrival,
   ArenaV2JumpRouteSimulationResult,
   ArenaV2JumpRouteSurface,
