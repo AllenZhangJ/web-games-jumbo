@@ -268,6 +268,14 @@ export type {
   ArenaV2WeaponProductionMigrationGateStatus,
 } from './arena-v2-weapon-production-migration-gate.js';
 export {
+  runArenaV2WeaponLaunchReplayPrototype,
+} from './arena-v2-weapon-launch-replay-prototype.js';
+export type {
+  ArenaV2WeaponLaunchActionPhase,
+  ArenaV2WeaponLaunchActionStateSample,
+  ArenaV2WeaponLaunchReplayPrototypeResult,
+} from './arena-v2-weapon-launch-replay-prototype.js';
+export {
   projectArenaV2ActionDefinitionPublicNumbers,
 } from './arena-v2-weapon-action-public-projection.js';
 export {

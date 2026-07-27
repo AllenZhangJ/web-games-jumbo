@@ -7,6 +7,7 @@ import {
   type ArenaV2WeaponLaunchCandidate,
 } from './arena-v2-weapon-launch-candidate-contract.js';
 import { runArenaV2KzLanguageConsequencePrototype } from './arena-v2-kz-language-consequence-prototype.js';
+import { runArenaV2WeaponLaunchReplayPrototype } from './arena-v2-weapon-launch-replay-prototype.js';
 import { runArenaV2WeaponMapPrototype } from './arena-v2-weapon-map-prototype.js';
 
 export type ArenaV2WeaponProductionMigrationGateId =
@@ -97,13 +98,19 @@ function createCandidateResult(
   candidate: ArenaV2WeaponLaunchCandidate,
   mapResults: ReturnType<typeof runArenaV2WeaponMapPrototype>,
   languageResults: ReturnType<typeof runArenaV2KzLanguageConsequencePrototype>,
+  lineReplayResult: ReturnType<typeof runArenaV2WeaponLaunchReplayPrototype>,
 ): ArenaV2WeaponProductionMigrationCandidateResult {
   const audit = auditFor(candidate);
   const isProductionDefinition = audit.implementationStatus === 'production-authority';
-  const hasActionState = isProductionDefinition
+  const hasProductionActionState = isProductionDefinition
     && audit.groundActionDefinitionId !== null
     && audit.aerialActionDefinitionId !== null
     && audit.contexts.every(({ missingAxes }) => missingAxes.length === 0);
+  const hasResearchActionState = candidate.candidateId === lineReplayResult.candidateId
+    && lineReplayResult.actionPhaseSequence.join(',') === 'idle,windup,active,recovery';
+  const hasActionState = hasProductionActionState || hasResearchActionState;
+  const hasCandidateReplay = candidate.candidateId === lineReplayResult.candidateId
+    && lineReplayResult.replayVerified;
   const hasMapConsequence = hasDistinctMapConsequences(
     candidate,
     audit,
@@ -116,9 +123,13 @@ function createCandidateResult(
       ? passed('production-definition', '地面/空中动作均来自正式 EquipmentDefinition 与权威调优。')
       : blocked('production-definition', '当前仍是 research-only Definition，尚未进入正式 EquipmentRegistry。'),
     hasActionState
-      ? passed('formal-action-state', '正式动作身份具备地面/空中上下文、前摇、有效、收招和冷却时间。')
+      ? passed('formal-action-state', hasProductionActionState
+        ? '正式动作身份具备地面/空中上下文、前摇、有效、收招和冷却时间。'
+        : '直线压制已通过正式 ActionExecutionSystem 的 idle→windup→active→recovery 生命周期探针。')
       : blocked('formal-action-state', '研究动作只有原型时序，尚未完成正式动作状态、取消和冲突规则接入。'),
-    blocked('replay', '尚无该候选的 MatchReplay fixture、checkpoint 和最终 hash 证据；确定性原型不能替代正式回放。'),
+    hasCandidateReplay
+      ? passed('replay', `直线压制候选已通过 MatchReplay schema、${lineReplayResult.checkpointCount} 个 checkpoint 和最终 hash 验证。`)
+      : blocked('replay', '尚无该候选的 MatchReplay fixture、checkpoint 和最终 hash 证据；确定性原型不能替代正式回放。'),
     hasMapConsequence
       ? passed('map-consequence', candidate.source === 'production-baseline'
         ? '宽平台、窄路和边缘平台均产生可区分的命中安全/击落结果。'
@@ -145,8 +156,9 @@ function createCandidateResult(
 export function runArenaV2WeaponProductionMigrationGate(): ArenaV2WeaponProductionMigrationGateReport {
   const mapResults = runArenaV2WeaponMapPrototype();
   const languageResults = runArenaV2KzLanguageConsequencePrototype();
+  const lineReplayResult = runArenaV2WeaponLaunchReplayPrototype();
   const candidates = Object.freeze(ARENA_V2_WEAPON_LAUNCH_CANDIDATES.map((candidate) => (
-    createCandidateResult(candidate, mapResults, languageResults)
+    createCandidateResult(candidate, mapResults, languageResults, lineReplayResult)
   )));
   if (candidates.some(({ gates }) => gates.length !== GATE_IDS.length)) {
     throw new Error('首发武器迁移门禁必须为每个候选提供完整五项证据。');

@@ -27,14 +27,23 @@ describe('Arena V2 weapon production migration gate', () => {
     expect(production.every(({ blockers }) => (
       JSON.stringify(blockers) === JSON.stringify(['replay'])
     ))).toBe(true);
-    expect(research.every(({ blockers }) => (
+    expect(research.find(({ candidateId }) => candidateId === 'launch-04-line-pressure'))
+      .toMatchObject({
+        blockers: ['production-definition', 'feedback-presentation'],
+        gates: expect.arrayContaining([
+          expect.objectContaining({ gateId: 'formal-action-state', status: 'passed' }),
+          expect.objectContaining({ gateId: 'replay', status: 'passed' }),
+        ]),
+      });
+    expect(research.filter(({ candidateId }) => candidateId !== 'launch-04-line-pressure')
+      .every(({ blockers }) => (
       JSON.stringify(blockers) === JSON.stringify([
       'production-definition',
       'formal-action-state',
       'replay',
       'feedback-presentation',
       ])
-    ))).toBe(true);
+      ))).toBe(true);
     expect(report.candidates.every(({ gates }) => (
       gates.some(({ gateId, status }) => gateId === 'map-consequence' && status === 'passed')
     ))).toBe(true);
