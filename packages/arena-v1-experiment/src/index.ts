@@ -262,3 +262,12 @@ export type {
   ArenaV2SurvivalEntityEncounterResult,
   ArenaV2SurvivalEntityPrototypeResult,
 } from './arena-v2-survival-entity-prototype.js';
+export {
+  runArenaV2SurvivalPressurePrototype,
+} from './arena-v2-survival-pressure-prototype.js';
+export type {
+  ArenaV2SurvivalPressureOffer,
+  ArenaV2SurvivalPressurePickup,
+  ArenaV2SurvivalPressurePrototypeResult,
+  ArenaV2SurvivalPressureScenarioResult,
+} from './arena-v2-survival-pressure-prototype.js';
