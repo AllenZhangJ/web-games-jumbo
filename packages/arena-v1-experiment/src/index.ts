@@ -468,7 +468,10 @@ export type {
 export { ARENA_V2_KZ_MAP_RESEARCH_CATALOG } from './arena-v2-kz-map-research-catalog.js';
 export type {
   ArenaV2KzMapEvidenceType,
+  ArenaV2KzMapDifficultyLabel,
+  ArenaV2KzMapLengthLabel,
   ArenaV2KzMapResearchCard,
+  ArenaV2KzMapSourceProfile,
 } from './arena-v2-kz-map-research-catalog.js';
 export { resolveArenaV2UiNextGoal } from './arena-v2-ui-next-goal-prototype.js';
 export type {

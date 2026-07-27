@@ -83,7 +83,7 @@ Arena V2 的核心目标是：
 | [武器攻击者失位与双人争夺原型结果 V1](../research/arena-v2-weapon-contest-prototype-results-v1.md) | 记录自身位移、空中命中和双人同时出招的规则后果 | 第一轮对战拥挤证据 |
 | [CS1.6 KZ 跳跃地图研究 V1](../research/arena-v2-cs16-kz-map-study-v1.md) | 记录地图段落、六维难度轴、段落合同、灰盒可达性和竞速/生存复用边界 | 第二轮研究 + 灰盒原型 |
 | [ADR-063：KZ 地图段落必须声明回应窗口与恢复关系](../decisions/063-arena-v2-kz-route-response-contract.md) | 固化段落可用回应、固定探针窗口和命中后恢复关系，避免地图只用宽度与难度描述 | KZ 灰盒合同已接入 |
-| `arena-v2-kz-map-research-catalog.ts` | 四类代表 KZ 地图样本的学习点、来源和不复制边界，仅供开发/测试工具链使用 | 研究证据 |
+| `arena-v2-kz-map-research-catalog.ts` | 六类代表 KZ 地图样本的来源事实、学习点、设计信号和不复制边界，仅供开发/测试工具链使用 | 研究证据 |
 | `arena-v2-kz-route-combat-prototype.ts` | 将六段 KZ 灰盒与同一套武器命中/冲量/移动回应规则组合，验证段落宽度、相邻恢复表面、侧移和跳跃对武器击飞后果的影响，仅供开发/测试工具链使用 | 第三轮地图×武器原型证据 |
 | [生存 1vE 最小循环原型结果 V1](../research/arena-v2-survival-loop-prototype-results-v1.md) | 记录无武器开局、20 秒三选一、轮次成长、两次掉落和低维奖励证据 | 第一轮原型证据 |
 | `arena-v2-survival-entity-prototype.ts` | 验证单一敌人复用玩家规则/物理、敌我双方击飞和第一次复活/第二次终局，仅供开发/测试工具链使用 | 第二轮规则原型证据 |
@@ -104,6 +104,7 @@ Arena V2 的核心目标是：
 | [ADR-053：武器概览明确数值方向语义](../decisions/053-arena-weapon-overview-direction-semantics.md) | 固化“越高/越低/风险”文字、条形图和比较尺度一致性，避免只靠箭头猜含义 | 当前主页展示收敛 |
 | [ADR-055：武器上下文必须完整显示关键数值](../decisions/055-arena-v2-weapon-context-readout-completeness.md) | 固化地面/空中上下文的八项数值、标签和可访问解释 | 表现原型已接入 |
 | [ADR-077：研究武器概览必须分离地面与空中上下文](../decisions/077-arena-v2-research-overview-context-separation.md) | 固化研究矩阵的 `ground/aerial` 双上下文、公共数值轴和权威 Definition 投影边界 | 双上下文矩阵已接入，真人可读性待验证 |
+| [ADR-078：KZ 地图研究卡必须区分来源事实与 Arena 迁移结论](../decisions/078-arena-v2-kz-research-source-profile.md) | 固化外部难度/长度/检查点事实、可迁移地图语言和生产地图边界 | 六类研究样本已接入，真实地图仍待设计 |
 | [ADR-056：武器先按可学习的战斗语言扩展](../decisions/056-arena-v2-weapon-function-language-boundary.md) | 固化参考武器到 Arena 战斗语言的研究映射与新增武器评审边界 | 研究原型已接入 |
 | [ADR-057：武器战斗语言必须通过地图后果验证](../decisions/057-arena-v2-weapon-language-map-consequence-boundary.md) | 固化六段 KZ 表面、三种回应和击退/支撑面证据作为武器候选评审门槛 | 研究原型已接入 |
 | [ADR-058：V2 可读性与留存使用独立真人任务合同](../decisions/058-arena-v2-readability-retention-study-boundary.md) | 固化 3 分钟操作、数值解释、地图归因和 200 小时里程碑的独立验证边界 | 合同已建立，尚无真人样本 |

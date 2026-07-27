@@ -1,6 +1,6 @@
 # Arena V2：CS1.6 跳跃地图研究初稿
 
-状态：已完成第一轮研究、四类代表地图样本、六段路线合同和轻量物理灰盒可达性原型；移动/攻击实战和真机视野仍待验证（2026-07-27）
+状态：已完成第一轮研究、六类代表地图样本、六段路线合同和轻量物理灰盒可达性原型；移动/攻击实战和真机视野仍待验证（2026-07-28）
 用途：为竞速地图基座和生存模式地图复用建立约束，不代表已经完成地图制作。
 
 ## 1. 研究对象与项目约束
@@ -25,9 +25,9 @@ KZ 社区通常把地图难度拆成多个等级，并用长跳距离、连续�
 2. 地图应该由可命名的段落组成：玩家失败后能说出“窄路段没过”，而不是只知道整张图失败。
 3. 段落要形成训练曲线：先单独教一个动作，再把两个动作组合，最后加入对手干扰。
 
-## 2.1 四类代表地图样本
+## 2.1 六类代表地图样本
 
-这里的“有名”不采用未经核实的排行榜断言，而采用社区可追溯、能代表不同移动学习问题的样本。四张样本已经沉淀为开发/测试工具链中的结构化卡片：`arena-v2-kz-map-research-catalog.ts`。它们只用于研究，不意味着获得了原地图的改编或发行许可。
+这里的“有名”不采用未经核实的排行榜断言，而采用社区可追溯、能代表不同移动学习问题的样本。六张样本已经沉淀为开发/测试工具链中的结构化卡片：`arena-v2-kz-map-research-catalog.ts`。它们只用于研究，不意味着获得了原地图的改编或发行许可。
 
 | 样本 | 可观察的学习对象 | Arena 借鉴结论 | 明确不复制 |
 |---|---|---|---|
@@ -35,8 +35,12 @@ KZ 社区通常把地图难度拆成多个等级，并用长跳距离、连续�
 | `kz_cmp_collage_v2` | 长路线、难度/长度标签、检查点和完成记录 | 用可命名节点组织长地图，失败时能定位到段落 | 原几何、计时插件、检查点文件 |
 | `kz_climbers_b01` | 垂直攀爬、桥/台阶、低处恢复空间和计时 | 高难路线保留恢复段，生存模式可转为安全区 | 原场景主题、高度比例和下载资源 |
 | `kz_bhop_arcane` | Bhop、Surf、Raceway 标签和分档难度 | 只借鉴移动类型标签与难度信息，不引入 Surf 物理 | 原路线、服务器参数和视觉资产 |
+| `bkz_goldbhop_v2` | Bhop、长跳、连续节奏、Average / Middle 分档、16 CP / 3 GC 记录 | 用连续节奏制造中段压力，用普通节点与高标准节点区分完成和熟练 | 原路线、检查点文件、计时规则和素材 |
+| `kz_giantbean_b15` | 垂直攀爬、短路线、Easy-Average / Short 分档、1 CP / 1 GC 记录 | 用短而完整的垂直段建立落点信心，再把同一动作组合进长路线 | 原路线、地图主题、检查点和计时实现 |
 
-原始资料入口：[kz_longjumps2 Workshop 页面](https://steamcommunity.com/workshop/filedetails/?id=1583718472)、[KZ-Rush 的 kz_cmp_collage_v2 记录](https://kz-rush.com/en/maps/cs16/kz_cmp_collage_v2)、[kz_climbers_b01 社区档案](https://cs-games.net/cs16/maps/kz/344-karta-kz_climbers_b01-dlja-cs-16.html)、[Kreedz Climbing Workshop 目录](https://steamcommunity.com/app/626680/workshop/)。其中第三方档案和 Workshop 页面只证明观察对象与研究来源，不证明可商用授权。
+原始资料入口：[kz_longjumps2 Workshop 页面](https://steamcommunity.com/workshop/filedetails/?id=1583718472)、[KZ-Rush 的 kz_cmp_collage_v2 记录](https://kz-rush.com/en/maps/cs16/kz_cmp_collage_v2)、[kz_climbers_b01 社区档案](https://cs-games.net/cs16/maps/kz/344-karta-kz_climbers_b01-dlja-cs-16.html)、[Kreedz Climbing Workshop 目录](https://steamcommunity.com/app/626680/workshop/)、[bkz_goldbhop_v2 KZ-Rush 记录](https://kz-rush.com/en/maps/cs16/bkz_goldbhop_v2)、[kz_giantbean_b15 KZ-Rush 记录](https://kz-rush.com/en/maps/cs16/kz_giantbean_b15)。其中第三方档案、KZ-Rush 和 Workshop 页面只证明观察对象与研究来源，不证明可商用授权。
+
+本轮新增的来源字段只保存来源明确公布的事实：难度、长度、普通检查点和金检查点数量；来源没有公布的字段统一写 `unknown` 或 `null`，不把 Arena 自己的估计伪装成原地图数据。KZ-Rush 的难度说明也明确把预加速、连续侧移数量、长跳距离和站立 Bhop 等能力拆开，而不是用一个总分代替。
 
 ## 3. Arena 地图段落语法
 
