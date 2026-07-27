@@ -250,3 +250,9 @@ export type {
   ArenaV2KzMapEvidenceType,
   ArenaV2KzMapResearchCard,
 } from './arena-v2-kz-map-research-catalog.js';
+export { resolveArenaV2UiNextGoal } from './arena-v2-ui-next-goal-prototype.js';
+export type {
+  ArenaV2UiNextGoal,
+  ArenaV2UiNextGoalKind,
+  ArenaV2UiProgressSnapshot,
+} from './arena-v2-ui-next-goal-prototype.js';
