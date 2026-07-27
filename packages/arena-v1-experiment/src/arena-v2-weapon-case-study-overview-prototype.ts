@@ -27,6 +27,9 @@ import {
   createArenaV2WeaponPhantomTigerFistNumericOverview,
 } from './arena-v2-weapon-phantom-tiger-fist-definition-prototype.js';
 import {
+  createArenaV2WeaponBloodShadowHookBladeNumericOverview,
+} from './arena-v2-weapon-blood-shadow-hook-blade-definition-prototype.js';
+import {
   createArenaV2WeaponResearchOverviewContexts,
   type ArenaV2WeaponResearchOverviewContext,
 } from './arena-v2-weapon-research-overview-prototype.js';
@@ -165,6 +168,18 @@ function createNumericProjection(
       sourceDefinitionIds: Object.freeze([
         'research-phantom-tiger-fist-ground',
         'research-phantom-tiger-fist-aerial',
+      ]),
+      numericStatus: 'definition-projected-hypothesis',
+    });
+  }
+  if (referenceId === 'blood-shadow-hook-blade') {
+    const overview = createArenaV2WeaponBloodShadowHookBladeNumericOverview();
+    return Object.freeze({
+      contexts: overview.contexts,
+      comparisonWeaponIds: overview.comparisonWeaponIds,
+      sourceDefinitionIds: Object.freeze([
+        'research-blood-shadow-hook-blade-ground',
+        'research-blood-shadow-hook-blade-aerial',
       ]),
       numericStatus: 'definition-projected-hypothesis',
     });

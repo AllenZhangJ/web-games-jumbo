@@ -420,6 +420,27 @@ export {
   projectArenaV2ActionDefinitionPublicNumbers,
 } from './arena-v2-weapon-action-public-projection.js';
 export {
+  ARENA_V2_WEAPON_BLOOD_SHADOW_HOOK_BLADE_AERIAL_ACTION_ID,
+  ARENA_V2_WEAPON_BLOOD_SHADOW_HOOK_BLADE_DEFINITION_ID,
+  ARENA_V2_WEAPON_BLOOD_SHADOW_HOOK_BLADE_DEFINITION_PROTOTYPE,
+  ARENA_V2_WEAPON_BLOOD_SHADOW_HOOK_BLADE_GROUND_ACTION_ID,
+  createArenaV2WeaponBloodShadowHookBladeNumericOverview,
+} from './arena-v2-weapon-blood-shadow-hook-blade-definition-prototype.js';
+export type {
+  ArenaV2WeaponBloodShadowHookBladeDefinitionPrototype,
+  ArenaV2WeaponBloodShadowHookBladeNumericOverview,
+} from './arena-v2-weapon-blood-shadow-hook-blade-definition-prototype.js';
+export {
+  createArenaV2WeaponBloodShadowHookBladeReplayCore,
+  runArenaV2WeaponBloodShadowHookBladeReplayPrototype,
+} from './arena-v2-weapon-blood-shadow-hook-blade-replay-prototype.js';
+export type {
+  ArenaV2WeaponBloodShadowHookBladeActionSample,
+  ArenaV2WeaponBloodShadowHookBladeReplayPrototypeResult,
+  ArenaV2WeaponBloodShadowHookBladeReplayScenario,
+  ArenaV2WeaponBloodShadowHookBladeReplayScenarioResult,
+} from './arena-v2-weapon-blood-shadow-hook-blade-replay-prototype.js';
+export {
   ARENA_V2_LINE_PRESSURE_DEFINITION_PROTOTYPE,
   createArenaV2LinePressureDefinitionPrototype,
 } from './arena-v2-weapon-line-pressure-prototype.js';

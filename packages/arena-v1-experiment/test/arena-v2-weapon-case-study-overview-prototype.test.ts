@@ -21,8 +21,8 @@ describe('Arena V2 weapon case-study overview', () => {
       && numericReadoutReason.length > 20
     ))).toBe(true);
     expect(overview.rows.filter(({ numericReadout }) => numericReadout === 'research-projection').map(({ referenceId }) => referenceId))
-      .toEqual(['white-platinum-dual-guns', 'phantom-tiger-fist']);
-    expect(overview.rows.filter(({ numericReadout }) => numericReadout === 'not-yet-available')).toHaveLength(4);
+      .toEqual(['white-platinum-dual-guns', 'blood-shadow-hook-blade', 'phantom-tiger-fist']);
+    expect(overview.rows.filter(({ numericReadout }) => numericReadout === 'not-yet-available')).toHaveLength(3);
   });
 
   it('makes the difference between must-measure axes and research-only signals explicit', () => {
@@ -52,6 +52,7 @@ describe('Arena V2 weapon case-study overview', () => {
   it('binds projected cases to frozen Definition identities and comparable contexts', () => {
     const overview = createArenaV2WeaponCaseStudyOverview();
     const guns = overview.rows.find(({ referenceId }) => referenceId === 'white-platinum-dual-guns');
+    const hookBlade = overview.rows.find(({ referenceId }) => referenceId === 'blood-shadow-hook-blade');
     const fist = overview.rows.find(({ referenceId }) => referenceId === 'phantom-tiger-fist');
     expect(guns?.numericProjection?.sourceDefinitionIds).toEqual([
       'research-line-pressure-ground',
@@ -62,6 +63,12 @@ describe('Arena V2 weapon case-study overview', () => {
       'research-phantom-tiger-fist-ground',
       'research-phantom-tiger-fist-aerial',
     ]);
+    const hookBladeProjection = hookBlade?.numericProjection;
+    expect(hookBladeProjection?.sourceDefinitionIds).toEqual([
+      'research-blood-shadow-hook-blade-ground',
+      'research-blood-shadow-hook-blade-aerial',
+    ]);
+    expect(hookBladeProjection?.comparisonWeaponIds).toContain('research-blood-shadow-hook-blade');
     expect(Object.isFrozen(guns?.numericProjection)).toBe(true);
     expect(Object.isFrozen(guns?.numericProjection?.contexts)).toBe(true);
     expect(overview.rows.find(({ referenceId }) => referenceId === 'magic-blood-scythe')?.numericProjection).toBeNull();

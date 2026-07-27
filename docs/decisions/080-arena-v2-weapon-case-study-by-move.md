@@ -56,6 +56,8 @@
 - `packages/arena-v1-experiment/src/arena-v2-weapon-case-study-contract.ts`
 - `packages/arena-v1-experiment/src/arena-v2-weapon-hook-obstruction-prototype.ts`
 - `packages/arena-v1-experiment/src/arena-v2-weapon-case-study-overview-prototype.ts`
+- `packages/arena-v1-experiment/src/arena-v2-weapon-blood-shadow-hook-blade-definition-prototype.ts`
+- `packages/arena-v1-experiment/src/arena-v2-weapon-blood-shadow-hook-blade-replay-prototype.ts`
 - `packages/arena-v1-experiment/src/arena-v2-weapon-phantom-tiger-fist-definition-prototype.ts`
 - `packages/arena-v1-experiment/test/arena-v2-weapon-phantom-tiger-fist-definition-prototype.test.ts`
 - [热血英豪武器研究 V1](../research/arena-v2-hot-blooded-weapon-study-v1.md)

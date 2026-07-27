@@ -76,16 +76,11 @@ export function projectArenaV2ActionDefinitionPublicNumbers(
   if (range === undefined || maximumVerticalDifference === undefined) {
     throw new RangeError(`${action.id} 缺少 range 或 maximumVerticalDifference。`);
   }
-  const horizontalImpulse = effectParameter(
-    action,
-    'apply-directional-impulse',
-    'horizontalImpulse',
-  );
-  const verticalImpulse = effectParameter(
-    action,
-    'apply-directional-impulse',
-    'verticalImpulse',
-  );
+  const impulseEffectKind = action.effects.some(({ kind }) => kind === 'apply-directional-impulse')
+    ? 'apply-directional-impulse'
+    : 'pull-to-source';
+  const horizontalImpulse = effectParameter(action, impulseEffectKind, 'horizontalImpulse');
+  const verticalImpulse = effectParameter(action, impulseEffectKind, 'verticalImpulse');
   const hitstunTicks = effectParameter(action, 'apply-hitstun', 'ticks');
   const selfMovementImpulse = effectParameter(
     action,
