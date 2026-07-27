@@ -11,6 +11,7 @@ import {
 } from './targeting-registry.js';
 
 const CONE_KEYS = new Set(['range', 'minimumFacingDot', 'maximumVerticalDifference']);
+const REAR_CONE_KEYS = new Set(['range', 'minimumFacingDot', 'maximumVerticalDifference']);
 const CAPSULE_KEYS = new Set(['range', 'radius', 'maximumVerticalDifference']);
 const DOWNWARD_CYLINDER_KEYS = new Set([
   'range', 'radius', 'minimumVerticalDrop', 'maximumVerticalDifference',
@@ -23,6 +24,7 @@ interface ConeParameters {
   readonly minimumFacingDot: number;
   readonly maximumVerticalDifference: number;
 }
+type RearConeParameters = ConeParameters;
 interface CapsuleParameters {
   readonly range: number;
   readonly radius: number;
@@ -87,6 +89,47 @@ function resolveCone({ parameters, source, candidates }: TargetingResolutionCont
     const directionX = distance > 1e-7 ? dx / distance : facingX;
     const directionZ = distance > 1e-7 ? dz / distance : facingZ;
     return directionX * facingX + directionZ * facingZ >= validated.minimumFacingDot;
+  }).map(({ id }) => id);
+}
+
+function validateRearCone(
+  parameters: unknown,
+  actionId: string,
+): asserts parameters is PlainRecord & RearConeParameters {
+  assertKnownKeys(parameters, REAR_CONE_KEYS, `${actionId}.targeting.parameters`);
+  assertPositiveFinite(parameters.range, `${actionId}.targeting.range`);
+  assertPositiveFinite(
+    parameters.maximumVerticalDifference,
+    `${actionId}.targeting.maximumVerticalDifference`,
+  );
+  if (
+    !Number.isFinite(parameters.minimumFacingDot)
+    || (parameters.minimumFacingDot as number) < 0
+    || (parameters.minimumFacingDot as number) > 1
+  ) throw new RangeError(`${actionId}.targeting.minimumFacingDot 必须位于 [0, 1]。`);
+}
+
+function resolveRearCone({
+  parameters,
+  source,
+  candidates,
+}: TargetingResolutionContext): readonly string[] {
+  const validated = parameters as unknown as RearConeParameters;
+  validateCommonActorInputs(source, candidates);
+  return candidates.filter((candidate) => {
+    if (candidate.id === source.id) return false;
+    const targetFacing = requireFacing(candidate.facing, `candidate ${candidate.id}`);
+    const dx = source.position.x - candidate.position.x;
+    const dz = source.position.z - candidate.position.z;
+    const distance = Math.hypot(dx, dz);
+    if (
+      distance < 1e-7
+      || distance > validated.range
+      || Math.abs(candidate.position.y - source.position.y) > validated.maximumVerticalDifference
+    ) return false;
+    const directionX = dx / distance;
+    const directionZ = dz / distance;
+    return directionX * targetFacing.x + directionZ * targetFacing.z <= -validated.minimumFacingDot;
   }).map(({ id }) => id);
 }
 
@@ -164,6 +207,7 @@ export function createDefaultTargetingRegistry(): TargetingRegistry {
       resolveTargets: () => [],
     },
     { kind: 'facing-cone', validateParameters: validateCone, resolveTargets: resolveCone },
+    { kind: 'rear-cone', validateParameters: validateRearCone, resolveTargets: resolveRearCone },
     { kind: 'facing-capsule', validateParameters: validateCapsule, resolveTargets: resolveCapsule },
     {
       kind: 'downward-cylinder',

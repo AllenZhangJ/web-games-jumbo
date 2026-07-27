@@ -239,6 +239,54 @@ export function createArenaV2WeaponLanguageCandidates(): readonly ArenaV2WeaponL
     hitstunTicks: 32,
     tags: ['delayed-heavy', 'warning', 'aerial'],
   });
+  const readPunishGround = attackDefinition({
+    id: 'research-read-punish-ground',
+    targeting: {
+      kind: 'facing-cone',
+      parameters: { range: 3.2, minimumFacingDot: 0.75, maximumVerticalDifference: 1.5 },
+    },
+    timing: { windupTicks: 18, activeTicks: 2, recoveryTicks: 28, cooldownTicks: 96 },
+    targetGroundKnockbackDistance: 2.4,
+    verticalImpulse: 4.8,
+    hitstunTicks: 24,
+    tags: ['read-punish', 'active-frames', 'ground'],
+  });
+  const readPunishAir = attackDefinition({
+    id: 'research-read-punish-aerial',
+    targeting: {
+      kind: 'downward-cylinder',
+      parameters: { range: 2.8, radius: 1.1, minimumVerticalDrop: 0, maximumVerticalDifference: 2.8 },
+    },
+    timing: { windupTicks: 12, activeTicks: 3, recoveryTicks: 30, cooldownTicks: 96 },
+    targetGroundKnockbackDistance: 2.6,
+    verticalImpulse: 5.4,
+    hitstunTicks: 26,
+    tags: ['read-punish', 'active-frames', 'aerial'],
+  });
+  const flankGround = attackDefinition({
+    id: 'research-flank-ground',
+    targeting: {
+      kind: 'rear-cone',
+      parameters: { range: 3.4, minimumFacingDot: 0.65, maximumVerticalDifference: 1.5 },
+    },
+    timing: { windupTicks: 10, activeTicks: 3, recoveryTicks: 22, cooldownTicks: 72 },
+    targetGroundKnockbackDistance: 2,
+    verticalImpulse: 3.2,
+    hitstunTicks: 16,
+    tags: ['flank', 'directional', 'ground'],
+  });
+  const flankAir = attackDefinition({
+    id: 'research-flank-aerial',
+    targeting: {
+      kind: 'rear-cone',
+      parameters: { range: 2.8, minimumFacingDot: 0.6, maximumVerticalDifference: 2.8 },
+    },
+    timing: { windupTicks: 8, activeTicks: 3, recoveryTicks: 24, cooldownTicks: 72 },
+    targetGroundKnockbackDistance: 2.2,
+    verticalImpulse: 3.8,
+    hitstunTicks: 18,
+    tags: ['flank', 'directional', 'aerial'],
+  });
   const definitions = [
     {
       weaponId: 'research-line-pressure',
@@ -263,6 +311,22 @@ export function createArenaV2WeaponLanguageCandidates(): readonly ArenaV2WeaponL
       aerialAction: delayedAir,
       targetDistance: 1.8,
       responseTicks: delayedGround.timing.windupTicks,
+    },
+    {
+      weaponId: 'research-read-punish',
+      languageId: ARENA_V2_WEAPON_FUNCTION_LANGUAGE_ID.READ_PUNISH,
+      groundAction: readPunishGround,
+      aerialAction: readPunishAir,
+      targetDistance: 2.2,
+      responseTicks: readPunishGround.timing.windupTicks,
+    },
+    {
+      weaponId: 'research-flank',
+      languageId: ARENA_V2_WEAPON_FUNCTION_LANGUAGE_ID.FLANK,
+      groundAction: flankGround,
+      aerialAction: flankAir,
+      targetDistance: 2.3,
+      responseTicks: flankGround.timing.windupTicks,
     },
   ] as const;
   return Object.freeze(definitions.map((definition) => Object.freeze({
@@ -300,7 +364,7 @@ export function createArenaV2WeaponLanguageResearchContent(): ResearchAuthorityC
   });
 }
 
-function createActors(targetX: number): readonly RuleActor[] {
+function createActors(targetX: number, targetFacingX = -1): readonly RuleActor[] {
   return Object.freeze([
     Object.freeze({
       id: 'player-1',
@@ -314,7 +378,7 @@ function createActors(targetX: number): readonly RuleActor[] {
       canAct: true,
       targetable: true,
       position: Object.freeze({ x: targetX, y: 1, z: 0 }),
-      facing: Object.freeze({ x: -1, z: 0 }),
+      facing: Object.freeze({ x: targetFacingX, z: 0 }),
     }),
   ]);
 }
@@ -375,7 +439,10 @@ function runProbe(
     });
     for (let tick = 0; tick < PROBE_TICKS; tick += 1) {
       engine.advanceTimers();
-      const actors = createActors(targetXForPolicy(candidate, policy, tick));
+      const actors = createActors(
+        targetXForPolicy(candidate, policy, tick),
+        candidate.languageId === ARENA_V2_WEAPON_FUNCTION_LANGUAGE_ID.FLANK ? 1 : -1,
+      );
       const batch = engine.resolveActions({
         tick,
         actors,

@@ -45,6 +45,7 @@ export interface ProductUiSceneWeaponCard {
   readonly hitResult: string;
   readonly mapUse: string;
   readonly stats: readonly ProductUiSceneWeaponStat[];
+  readonly behaviorStats: readonly ProductUiSceneWeaponStat[];
   readonly contexts: readonly ProductUiSceneWeaponContext[];
 }
 
@@ -216,6 +217,14 @@ function weaponStats(values: unknown, name: string): readonly ProductUiSceneWeap
   }));
 }
 
+function optionalWeaponStats(
+  values: unknown,
+  name: string,
+): readonly ProductUiSceneWeaponStat[] {
+  if (values === undefined || values === null) return Object.freeze([]);
+  return weaponStats(values, name);
+}
+
 function weaponContexts(values: unknown, name: string): readonly ProductUiSceneWeaponContext[] {
   if (!Array.isArray(values) || values.length === 0) {
     throw new RangeError(`${name}.contexts 必须是非空数组。`);
@@ -260,6 +269,7 @@ function weaponCards(values: unknown): readonly ProductUiSceneWeaponCard[] {
       hitResult: assertNonEmptyString(option.hitResult, `${name}.hitResult`),
       mapUse: assertNonEmptyString(option.mapUse, `${name}.mapUse`),
       stats: weaponStats(option.stats, name),
+      behaviorStats: optionalWeaponStats(option.behaviorStats, `${name}.behaviorStats`),
       contexts: weaponContexts(option.contexts, name),
     });
   }));

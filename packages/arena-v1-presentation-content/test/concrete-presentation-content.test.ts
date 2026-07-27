@@ -38,6 +38,14 @@ describe('Arena V1 concrete presentation content', () => {
       direction: 'higher-is-better',
     });
     expect(hammer?.overview?.stats.some(({ id }) => id === 'startup')).toBe(true);
+    expect(hammer?.overview?.behaviorStats?.map(({ id }) => id)).toEqual([
+      'active-span',
+      'direction-tolerance',
+    ]);
+    expect(hammer?.overview?.behaviorStats?.find(({ id }) => id === 'active-span'))
+      .toMatchObject({ value: 0.05, unit: '秒', direction: 'higher-is-better' });
+    expect(hammer?.overview?.behaviorStats?.find(({ id }) => id === 'direction-tolerance'))
+      .toMatchObject({ unit: '°', direction: 'higher-is-better' });
     expect(hammer?.overview?.coreVerbMessageId).toBe('equipment.hammer.core-verb');
     expect(hammer?.overview?.hitResultMessageId).toBe('equipment.hammer.hit-result');
     expect(hammer?.overview?.mapUseMessageId).toBe('equipment.hammer.map-use');

@@ -92,6 +92,39 @@ function targetingCoverageWidth(tuning: AttackTuning): number {
   return range * 2;
 }
 
+function targetingDirectionToleranceDegrees(tuning: AttackTuning): number {
+  const { range, radius, minimumFacingDot } = tuning.targeting;
+  if (minimumFacingDot !== undefined) {
+    return (2 * Math.acos(Math.max(-1, Math.min(1, minimumFacingDot))) * 180) / Math.PI;
+  }
+  if (radius !== undefined) {
+    return (2 * Math.atan(radius / range) * 180) / Math.PI;
+  }
+  return 180;
+}
+
+function behaviorStats(tuning: AttackTuning) {
+  return [
+    stat(
+      'active-span',
+      'equipment.stat.active-span',
+      tuning.cadence.activeSeconds,
+      0.5,
+      '秒',
+      'higher-is-better',
+    ),
+    stat(
+      'direction-tolerance',
+      'equipment.stat.direction-tolerance',
+      targetingDirectionToleranceDegrees(tuning),
+      180,
+      '°',
+      'higher-is-better',
+      0,
+    ),
+  ];
+}
+
 function contextStats(tuning: AttackTuning) {
   return [
     stat('range', 'equipment.stat.range', tuning.targeting.range, 6, '格', 'higher-is-better'),
@@ -136,6 +169,7 @@ function createEquipmentOverview() {
         stat('self-movement', 'equipment.stat.self-movement', tuning.selfMovement?.horizontalImpulse ?? 0, 7, '冲量', 'higher-is-risk'),
         stat('cooldown', 'equipment.stat.cooldown', tuning.cadence.cooldownSeconds, 2, '秒', 'lower-is-better'),
       ],
+      behaviorStats: behaviorStats(tuning),
       contexts: [
         {
           id: 'ground',

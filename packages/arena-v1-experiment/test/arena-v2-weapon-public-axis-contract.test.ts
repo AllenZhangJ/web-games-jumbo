@@ -45,7 +45,7 @@ describe('Arena V2 weapon public axis contract', () => {
 
   it('rejects an unknown axis instead of silently treating it as readable', () => {
     expect(() => createArenaV2WeaponLanguageReadabilityReport({
-      ...ARENA_V2_WEAPON_FUNCTION_LANGUAGE_PROFILES[0],
+      ...ARENA_V2_WEAPON_FUNCTION_LANGUAGE_PROFILES[0]!,
       requiredPublicAxes: ['range', 'unpublished-axis'],
     })).toThrow('未知公开数值轴');
   });

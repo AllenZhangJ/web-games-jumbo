@@ -302,6 +302,10 @@ test('WebProductUiSurface renders stable semantic controls and serializes DOM in
           { id: 'coverage', label: '覆盖宽度', value: 3.3, maxValue: 12, unit: '格', direction: 'higher-is-better', precision: 2 },
           { id: 'self-movement', label: '自身位移风险', value: 0, maxValue: 7, unit: '冲量', direction: 'higher-is-risk', precision: 2 },
         ],
+        behaviorStats: [
+          { id: 'active-span', label: '有效窗口', value: 0.05, maxValue: 0.5, unit: '秒', direction: 'higher-is-better', precision: 2 },
+          { id: 'direction-tolerance', label: '方向容错角', value: 133, maxValue: 180, unit: '°', direction: 'higher-is-better', precision: 0 },
+        ],
         contexts: [{
           id: 'ground', label: '地面', summary: '近身重击。',
           stats: [{ id: 'range', label: '有效距离', value: 1.8, maxValue: 6, unit: '格', direction: 'higher-is-better', precision: 2 }],
@@ -323,6 +327,10 @@ test('WebProductUiSurface renders stable semantic controls and serializes DOM in
           { id: 'coverage', label: '覆盖宽度', value: 8.35, maxValue: 12, unit: '格', direction: 'higher-is-better', precision: 2 },
           { id: 'self-movement', label: '自身位移风险', value: 0, maxValue: 7, unit: '冲量', direction: 'higher-is-risk', precision: 2 },
         ],
+        behaviorStats: [
+          { id: 'active-span', label: '有效窗口', value: 0.05, maxValue: 0.5, unit: '秒', direction: 'higher-is-better', precision: 2 },
+          { id: 'direction-tolerance', label: '方向容错角', value: 113, maxValue: 180, unit: '°', direction: 'higher-is-better', precision: 0 },
+        ],
         contexts: [{
           id: 'ground', label: '地面', summary: '远距离拉位。',
           stats: [{ id: 'range', label: '有效距离', value: 5, maxValue: 6, unit: '格', direction: 'higher-is-better', precision: 2 }],
@@ -343,6 +351,10 @@ test('WebProductUiSurface renders stable semantic controls and serializes DOM in
           { id: 'range', label: '有效距离', value: 1.6, maxValue: 6, unit: '格', direction: 'higher-is-better', precision: 2 },
           { id: 'coverage', label: '覆盖宽度', value: 1.3, maxValue: 12, unit: '格', direction: 'higher-is-better', precision: 2 },
           { id: 'self-movement', label: '自身位移风险', value: 6.5, maxValue: 7, unit: '冲量', direction: 'higher-is-risk', precision: 2 },
+        ],
+        behaviorStats: [
+          { id: 'active-span', label: '有效窗口', value: 0.07, maxValue: 0.5, unit: '秒', direction: 'higher-is-better', precision: 2 },
+          { id: 'direction-tolerance', label: '方向容错角', value: 90, maxValue: 180, unit: '°', direction: 'higher-is-better', precision: 0 },
         ],
         contexts: [{
           id: 'ground', label: '地面', summary: '冲撞换位。',
@@ -391,6 +403,14 @@ test('WebProductUiSurface renders stable semantic controls and serializes DOM in
   );
   assert.equal(hammerContextMetric.textContent, '有效距离 ↑ 1.80格');
   assert.match(hammerContextMetric.getAttribute('aria-label') ?? '', /越高越有利/);
+  const hammerBehaviorMetric = required(
+    hammerCard.querySelectorAll('[data-weapon-behavior-stat]')
+      .find(({ dataset }) => dataset.weaponBehaviorStat === 'active-span') ?? null,
+    'hammer behavior active-span metric',
+  );
+  assert.equal(hammerBehaviorMetric.textContent, '有效窗口 ↑ 0.05秒');
+  assert.match(hammerBehaviorMetric.getAttribute('aria-label') ?? '', /越高越有利/);
+  assert.equal(hammerCard.querySelectorAll('[data-weapon-behavior-stat]').length, 2);
 
   const intents: Readonly<Record<string, unknown>>[] = [];
   let resolveIntent: (() => void) | undefined;

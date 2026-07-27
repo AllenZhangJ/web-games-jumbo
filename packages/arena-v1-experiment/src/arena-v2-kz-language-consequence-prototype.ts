@@ -105,7 +105,7 @@ const RESPONSE_POLICIES: readonly ArenaV2KzLanguageResponsePolicy[] = Object.fre
   'jump',
 ]);
 
-function createActors(physics: PhysicsWorld): readonly RuleActor[] {
+function createActors(physics: PhysicsWorld, targetFacingX = -1): readonly RuleActor[] {
   return Object.freeze([ATTACKER_ID, PLAYER_ID].map((id) => {
     const state = physics.getCharacterState(id);
     return Object.freeze({
@@ -113,7 +113,7 @@ function createActors(physics: PhysicsWorld): readonly RuleActor[] {
       canAct: true,
       targetable: true,
       position: Object.freeze({ ...state.position }),
-      facing: Object.freeze({ x: id === ATTACKER_ID ? 1 : -1, z: 0 }),
+      facing: Object.freeze({ x: id === ATTACKER_ID ? 1 : targetFacingX, z: 0 }),
     });
   }));
 }
@@ -214,6 +214,7 @@ function runProbe(
   let finalTargetZ = surface.center.z;
   let responseTicks = 0;
   let jumpStarted = false;
+  const targetFacingX = candidate.languageId === ARENA_V2_WEAPON_FUNCTION_LANGUAGE_ID.FLANK ? 1 : -1;
   const warningZoneParameters = candidate.groundAction.targeting.parameters;
   let warningZone: ArenaV2WarningZoneRuntime | null = candidate.languageId
     === ARENA_V2_WEAPON_FUNCTION_LANGUAGE_ID.ZONE_DENIAL
@@ -294,7 +295,7 @@ function runProbe(
       movement.execute(jumpCommand ? [jumpCommand] : [], {
         applyBatch: (mutations) => physics.applyCharacterMutationBatch(mutations),
       });
-      const actors = createActors(physics);
+      const actors = createActors(physics, targetFacingX);
       const batch = engine.resolveActions({
         tick,
         actors,
@@ -304,7 +305,7 @@ function runProbe(
         firstActiveTick ??= tick + candidate.groundAction.timing.windupTicks;
       }
       engine.commit(batch, ports);
-      const activeBatch = engine.resolveActiveActions({ actors: createActors(physics) });
+      const activeBatch = engine.resolveActiveActions({ actors: createActors(physics, targetFacingX) });
       if (activeBatch.hits.some(({ attackerId, targetId }) => (
         attackerId === ATTACKER_ID && targetId === PLAYER_ID
       ))) firstHitTick ??= tick;

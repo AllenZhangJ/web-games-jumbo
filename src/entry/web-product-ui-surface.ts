@@ -293,9 +293,10 @@ export class WebProductUiSurface {
     const hitResult = element.querySelector<HTMLElement>('[data-weapon-hit-result]');
     const mapUse = element.querySelector<HTMLElement>('[data-weapon-map-use]');
     const stats = element.querySelector<HTMLElement>('[data-weapon-stats]');
+    const behaviorStats = element.querySelector<HTMLElement>('[data-weapon-behavior-stats]');
     const contexts = element.querySelector<HTMLElement>('[data-weapon-contexts]');
     if (!title || !role || !description || !coreVerb || !tradeoff || !counterplay
-      || !hitResult || !mapUse || !stats || !contexts) {
+      || !hitResult || !mapUse || !stats || !behaviorStats || !contexts) {
       throw new Error(`武器卡片 ${card.id} 结构不完整。`);
     }
     setText(title, card.name);
@@ -347,6 +348,22 @@ export class WebProductUiSurface {
       );
       row.dataset.weaponStatDirection = stat.direction;
     });
+    behaviorStats.replaceChildren(...card.behaviorStats.map((stat) => {
+      const metric = this.#document.createElement('span');
+      const direction = stat.direction === 'lower-is-better'
+        ? '↓'
+        : stat.direction === 'higher-is-risk' ? '⚠' : '↑';
+      const value = `${stat.value.toFixed(stat.precision)}${stat.unit}`;
+      metric.textContent = `${stat.label} ${direction} ${value}`;
+      metric.title = `${stat.label}：${value}，${weaponDirectionHint(stat.direction)}`;
+      metric.setAttribute(
+        'aria-label',
+        `${stat.label}：${value}，${weaponDirectionHint(stat.direction)}`,
+      );
+      metric.dataset.weaponBehaviorStat = stat.id;
+      metric.dataset.weaponBehaviorDirection = stat.direction;
+      return metric;
+    }));
     const existingContexts = [...contexts.querySelectorAll<HTMLElement>('[data-weapon-context]')];
     if (existingContexts.length !== card.contexts.length) {
       contexts.replaceChildren(...card.contexts.map(() => {
@@ -417,6 +434,7 @@ export class WebProductUiSurface {
       const tradeoff = this.#document.createElement('small');
       const counterplay = this.#document.createElement('small');
       const stats = this.#document.createElement('div');
+      const behaviorStats = this.#document.createElement('div');
       const contexts = this.#document.createElement('div');
       title.dataset.weaponTitle = 'true';
       role.dataset.weaponRole = 'true';
@@ -428,6 +446,8 @@ export class WebProductUiSurface {
       counterplay.dataset.weaponCounterplay = 'true';
       stats.dataset.weaponStats = 'true';
       stats.className = 'product-weapon-stats';
+      behaviorStats.dataset.weaponBehaviorStats = 'true';
+      behaviorStats.className = 'product-weapon-behavior-stats';
       contexts.dataset.weaponContexts = 'true';
       contexts.className = 'product-weapon-contexts';
       element.append(
@@ -439,6 +459,7 @@ export class WebProductUiSurface {
         mapUse,
         tradeoff,
         counterplay,
+        behaviorStats,
         contexts,
         stats,
       );
@@ -529,6 +550,7 @@ export class WebProductUiSurface {
         card.tradeoff,
         card.counterplay,
         card.stats.map((stat) => `${stat.id}=${stat.value}`).join(','),
+        card.behaviorStats.map((stat) => `${stat.id}=${stat.value}`).join(','),
         card.contexts.map((context) => `${context.id}:${context.stats.map((stat) => stat.value).join(',')}`).join(';'),
       ].join(':')).join('|'),
       model.primaryAction?.enabled ?? false,

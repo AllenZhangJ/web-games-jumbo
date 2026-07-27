@@ -111,6 +111,15 @@ export interface ProductSessionViewModel {
       direction: string;
       precision: number;
     }>[];
+    behaviorStats: readonly Readonly<{
+      id: string;
+      label: string;
+      value: number;
+      maxValue: number;
+      unit: string;
+      direction: string;
+      precision: number;
+    }>[];
     contexts: readonly Readonly<{
       id: string;
       label: string;
@@ -307,6 +316,15 @@ function profileView(
         hitResult: messages.format(definition.overview.hitResultMessageId),
         mapUse: messages.format(definition.overview.mapUseMessageId),
         stats: Object.freeze(definition.overview.stats.map((stat) => Object.freeze({
+          id: stat.id,
+          label: messages.format(stat.labelMessageId),
+          value: stat.value,
+          maxValue: stat.maxValue,
+          unit: stat.unit,
+          direction: stat.direction,
+          precision: stat.precision,
+        }))),
+        behaviorStats: Object.freeze((definition.overview.behaviorStats ?? []).map((stat) => Object.freeze({
           id: stat.id,
           label: messages.format(stat.labelMessageId),
           value: stat.value,

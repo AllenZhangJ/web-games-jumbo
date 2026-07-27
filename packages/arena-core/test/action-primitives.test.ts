@@ -122,6 +122,37 @@ describe('Arena action core primitives', () => {
     expect(Object.isFrozen(targets)).toBe(true);
   });
 
+  it('resolves rear-cone targeting from the target facing direction', () => {
+    const definition = new ActionRegistry([{
+      schemaVersion: ACTION_DEFINITION_SCHEMA_VERSION,
+      id: 'rear-attack',
+      kind: 'attack',
+      input: { channel: ACTION_INPUT_CHANNEL.PRIMARY, trigger: ACTION_INPUT_TRIGGER.PRESSED },
+      lane: ACTION_LANE.COMBAT,
+      conflictTags: [],
+      timing: { windupTicks: 1, activeTicks: 1, recoveryTicks: 1, cooldownTicks: 0 },
+      targeting: {
+        kind: 'rear-cone',
+        parameters: { range: 3, minimumFacingDot: 0.75, maximumVerticalDifference: 1 },
+      },
+      effects: [{
+        id: 'hitstun', kind: 'apply-hitstun', trigger: ACTION_EFFECT_TRIGGER.HIT_RESOLVED,
+        parameters: { ticks: 2 },
+      }],
+      tags: [],
+    }]).require('rear-attack');
+    const targets = createDefaultTargetingRegistry().resolve({
+      definition,
+      source: { id: 'source', position: { x: -1, y: 0, z: 0 }, facing: { x: 1, z: 0 } },
+      candidates: [
+        { id: 'back', position: { x: 0, y: 0, z: 0 }, facing: { x: 1, z: 0 } },
+        { id: 'front', position: { x: 1, y: 0, z: 0 }, facing: { x: -1, z: 0 } },
+        { id: 'side', position: { x: 0, y: 0, z: 1 }, facing: { x: 1, z: 0 } },
+      ],
+    });
+    expect(targets).toEqual(['back']);
+  });
+
   it('turns immutable action effects into frozen commands without retaining actor ownership', () => {
     const definition = new ActionRegistry([{
       schemaVersion: ACTION_DEFINITION_SCHEMA_VERSION,

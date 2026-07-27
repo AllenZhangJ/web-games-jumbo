@@ -6,14 +6,16 @@ describe('Arena V2 KZ weapon language consequence prototype', () => {
     const result = runArenaV2KzLanguageConsequencePrototype();
     expect(result.routeId).toBe('arena-v2-kz-base-route-prototype-v1');
     expect(result.usesSharedRuleAndPhysics).toBe(true);
-    expect(result.candidateCount).toBe(3);
+    expect(result.candidateCount).toBe(5);
     expect(result.responsePolicies).toEqual(['hold', 'step-out', 'jump']);
-    expect(result.probeCount).toBe(54);
+    expect(result.probeCount).toBe(90);
     expect(new Set(result.probes.map(({ segmentId }) => segmentId)).size).toBe(6);
     expect(new Set(result.probes.map(({ weaponId }) => weaponId))).toEqual(new Set([
       'research-line-pressure',
       'research-zone-denial',
       'research-delayed-heavy',
+      'research-read-punish',
+      'research-flank',
     ]));
   });
 

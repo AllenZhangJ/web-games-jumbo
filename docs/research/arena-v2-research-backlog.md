@@ -33,7 +33,8 @@
 - 3 把后续候选武器的最小原型方案。
 - 地面/空中动作上下文矩阵；
 - “越高越好”和“越高风险”分开的显示语义。
-- 战斗语言公开轴就绪检查：冲入、换位、直线压制已具备当前公开轴，封路、读招反制、绕后和延迟重击仍需补齐研究字段；见[ADR-059](../decisions/059-arena-v2-weapon-public-axis-readiness-boundary.md)。
+- 战斗语言公开轴就绪检查：冲入、换位、直线压制已具备当前公开轴，封路、读招反制、绕后和延迟重击仍需补齐研究字段；见[ADR-059](../decisions/059-arena-v2-weapon-public-axis-readiness-boundary.md)。五种扩展语言已经通过统一规则原型，绕后使用目标朝向判定；见[ADR-060](../decisions/060-arena-v2-rear-cone-and-language-prototype-boundary.md)。
+- 武器卡已增加两项不扩张主比较表的补充行为数值：有效窗口和方向容错角；它们由权威调优投影，延迟、预警和连续区域效果仍保持研究状态，见[ADR-061](../decisions/061-arena-v2-weapon-overview-behavior-readout.md)。
 
 ### 需要回答
 
@@ -42,7 +43,7 @@
 - 哪些武器依赖角色/职业组合，不能直接迁移？
 - 哪些武器适合 1v1，哪些适合生存？
 
-当前新增证据：规则层横向冲量已经接入轻量物理，在宽平台、KZ 灰盒窄路和边缘平台形成不同的“命中但安全 / 命中后出界”结果；固定侧移目标又验证了重锤挥空、锁链和冲锋盾命中的前摇差异；攻击者失位、空中动作和双人同时出招也已经通过当前规则/物理链路形成可重复结果；本轮又把六项上下文数值完整投影到 DOM，并显示覆盖宽度和垂直命中边界；12 件参考武器已由结构化映射归并为 7 种战斗语言；直线压制、封路和延迟重击又通过临时 ActionDefinition 完成 8/24/30 tick 回应时间对照，并在六段 KZ 灰盒上完成 54 个“语言×表面×固定回应”探针，详见[武器战斗语言最小原型结果](arena-v2-weapon-language-prototype-results-v1.md)与[武器战斗语言 × KZ 地图后果原型结果](arena-v2-weapon-language-kz-consequence-results-v1.md)。详见[ADR-056](../decisions/056-arena-v2-weapon-function-language-boundary.md)、[ADR-057](../decisions/057-arena-v2-weapon-language-map-consequence-boundary.md)、[武器地图边缘原型结果](arena-v2-weapon-map-prototype-results-v1.md)、[武器移动目标原型结果](arena-v2-weapon-moving-target-prototype-results-v1.md)和[武器攻击者失位与双人争夺原型结果](arena-v2-weapon-contest-prototype-results-v1.md)。下一步加入真实多人拥挤、攻击/跳跃互相穿插、持续封路状态和真人可读性验证。
+当前新增证据：规则层横向冲量已经接入轻量物理，在宽平台、KZ 灰盒窄路和边缘平台形成不同的“命中但安全 / 命中后出界”结果；固定侧移目标又验证了重锤挥空、锁链和冲锋盾命中的前摇差异；攻击者失位、空中动作和双人同时出招也已经通过当前规则/物理链路形成可重复结果；本轮又把六项上下文数值完整投影到 DOM，并显示覆盖宽度和垂直命中边界；12 件参考武器已由结构化映射归并为 7 种战斗语言；直线压制、封路、延迟重击、读招反制和绕后又通过临时 ActionDefinition 完成 8/24/30/18/10 tick 回应时间、有效窗口和目标朝向对照，并在六段 KZ 灰盒上完成 90 个“语言×表面×固定回应”探针，详见[武器战斗语言最小原型结果](arena-v2-weapon-language-prototype-results-v1.md)与[武器战斗语言 × KZ 地图后果原型结果](arena-v2-weapon-language-kz-consequence-results-v1.md)。详见[ADR-056](../decisions/056-arena-v2-weapon-function-language-boundary.md)、[ADR-057](../decisions/057-arena-v2-weapon-language-map-consequence-boundary.md)、[ADR-060](../decisions/060-arena-v2-rear-cone-and-language-prototype-boundary.md)、[武器地图边缘原型结果](arena-v2-weapon-map-prototype-results-v1.md)、[武器移动目标原型结果](arena-v2-weapon-moving-target-prototype-results-v1.md)和[武器攻击者失位与双人争夺原型结果](arena-v2-weapon-contest-prototype-results-v1.md)。下一步加入真实多人拥挤、攻击/跳跃互相穿插、持续封路状态和真人可读性验证。
 
 ## 优先级二：CS 1.6 跳跃/KZ 地图研究
 
@@ -75,7 +76,8 @@
 - 生存地图的安全区、危险区和敌人压力点；
 - 竞速地图基座与生存规则的分离说明。
 
-当前新增证据：四类代表 KZ 地图样本已经形成结构化研究卡，分别覆盖长跳练习、长路线检查点、垂直攀爬恢复和混合移动标签；六段灰盒又通过同一套 Rule/Physics 武器攻击探针完成 18 个段落×武器组合，并以 10 tick 侧移和一次正式起跳扩展为 54 个响应组合，证明同一把武器在宽平台、迷宫、窄路和走钢丝上的后果不同；三种候选战斗语言进一步完成 54 个“语言×表面×固定回应”探针，证明前摇、横向冲量和支撑面会共同改变击落与路线转移结果；封路候选又补上公开标记位置和 24–26 tick 有效、27 tick 到期的最小状态；详见[CS1.6 KZ 跳跃地图研究 V1](arena-v2-cs16-kz-map-study-v1.md)、[武器战斗语言 × KZ 地图后果原型结果 V1](arena-v2-weapon-language-kz-consequence-results-v1.md)、`arena-v2-kz-map-research-catalog.ts`、`arena-v2-kz-route-combat-prototype.ts` 和 `arena-v2-kz-language-consequence-prototype.ts`。下一步仍需加入真人视野、移动方向选择、区域内实际影响和复活重新进入路线验证，不引入第三方地图资产。
+当前新增证据：四类代表 KZ 地图样本已经形成结构化研究卡，分别覆盖长跳练习、长路线检查点、垂直攀爬恢复和混合移动标签；六段灰盒又通过同一套 Rule/Physics 武器攻击探针完成 18 个段落×武器组合，并以 10 tick 侧移和一次正式起跳扩展为 54 个响应组合，证明同一把武器在宽平台、迷宫、窄路和走钢丝上的后果不同；五种候选战斗语言进一步完成 90 个“语言×表面×固定回应”探针，证明前摇、有效窗口、目标朝向、横向冲量和支撑面会共同改变击落与路线转移结果；封路候选又补上公开标记位置和 24–26 tick 有效、27 tick 到期的最小状态；详见[CS1.6 KZ 跳跃地图研究 V1](arena-v2-cs16-kz-map-study-v1.md)、[武器战斗语言 × KZ 地图后果原型结果 V1](arena-v2-weapon-language-kz-consequence-results-v1.md)、`arena-v2-kz-map-research-catalog.ts`、`arena-v2-kz-route-combat-prototype.ts` 和 `arena-v2-kz-language-consequence-prototype.ts`。下一步仍需加入真人视野、移动方向选择、目标主动转身、区域内实际影响和复活重新进入路线验证，不引入第三方地图资产。
+当前新增证据：前述 54 个矩阵已扩展为五种语言共 90 个“语言×表面×固定回应”探针，并额外验证读招反制的有效窗口和绕后的目标朝向条件；固定结果见[武器战斗语言 × KZ 地图后果原型结果 V1](arena-v2-weapon-language-kz-consequence-results-v1.md)。
 
 ## 优先级三：弹壳特攻队局外信息架构研究
 

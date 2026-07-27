@@ -63,7 +63,7 @@
 
 - 功能语言是研究抽象，不代表最终正式武器必须严格一一对应；
 - “适合模式”是候选判断，必须通过真实对局和真人理解数据复核；
-- 当前只有冲入、换位和重击三类有 Arena 实际战斗原型，其余语言仍需最小规则原型验证。
+- 当前五种扩展语言（直线压制、封路、延迟重击、读招反制、绕后）已经有统一 Rule/Effect/Targeting 原型；冲入、换位仍以正式武器与生存 Definition 为主要证据，其余语言仍不是生产武器。
 
 ## 验证证据
 
@@ -72,3 +72,4 @@
 - 研究卡：`packages/arena-v1-experiment/src/arena-v2-weapon-research-catalog.ts`
 - 测试：`packages/arena-v1-experiment/test/arena-v2-weapon-function-language.test.ts`
 - 来源研究：[Arena V2 热血英豪武器研究 V1](../research/arena-v2-hot-blooded-weapon-study-v1.md#基础武器语言)
+- 统一扩展原型：[ADR-060：绕后使用目标朝向判定，五种语言共用同一规则原型](060-arena-v2-rear-cone-and-language-prototype-boundary.md)

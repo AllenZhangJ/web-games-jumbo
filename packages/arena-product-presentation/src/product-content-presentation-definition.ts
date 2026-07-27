@@ -54,6 +54,7 @@ export interface ProductContentOverviewJson {
   readonly hitResultMessageId: string;
   readonly mapUseMessageId: string;
   readonly stats: readonly ProductContentStatJson[];
+  readonly behaviorStats?: readonly ProductContentStatJson[];
   readonly contexts: readonly ProductContentActionContextJson[];
 }
 
@@ -84,7 +85,7 @@ const STAT_KEYS = new Set([
 const OVERVIEW_KEYS = new Set([
   'roleMessageId', 'descriptionMessageId', 'coreVerbMessageId',
   'tradeoffMessageId', 'counterplayMessageId', 'hitResultMessageId',
-  'mapUseMessageId', 'stats', 'contexts',
+  'mapUseMessageId', 'stats', 'behaviorStats', 'contexts',
 ]);
 const CONTEXT_KEYS = new Set(['id', 'labelMessageId', 'summaryMessageId', 'stats']);
 const STAT_DIRECTIONS: ReadonlySet<unknown> = new Set(
@@ -144,6 +145,21 @@ function overviewValue(value: unknown, contentKind: ProductContentKind): Product
     `ProductContentPresentationDefinition.overview.stats[${index}]`,
     statIds,
   ));
+  const behaviorStatIds = new Set<string>(stats.map(({ id }) => id));
+  const behaviorStats = source.behaviorStats === undefined
+    ? Object.freeze([])
+    : (() => {
+      if (!Array.isArray(source.behaviorStats)) {
+        throw new TypeError(
+          'ProductContentPresentationDefinition.overview.behaviorStats 必须是数组。',
+        );
+      }
+      return Object.freeze(source.behaviorStats.map((value, index) => statValue(
+        value,
+        `ProductContentPresentationDefinition.overview.behaviorStats[${index}]`,
+        behaviorStatIds,
+      )));
+    })();
   const contextIds = new Set<string>();
   const contexts = source.contexts.map((contextValue, index) => {
     const name = `ProductContentPresentationDefinition.overview.contexts[${index}]`;
@@ -200,6 +216,7 @@ function overviewValue(value: unknown, contentKind: ProductContentKind): Product
       'ProductContentPresentationDefinition.overview.mapUseMessageId',
     ),
     stats: Object.freeze(stats),
+    behaviorStats,
     contexts: Object.freeze(contexts),
   });
 }

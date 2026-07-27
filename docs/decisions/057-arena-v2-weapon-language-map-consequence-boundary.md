@@ -46,7 +46,7 @@ Arena 的主要深度来自武器和地图的组合。仅在平面上验证一�
 
 限制：
 
-- 当前 54 个探针使用固定回应脚本，不能给出真人反应时间；
+- 当前扩展后的 90 个探针使用固定回应脚本，不能给出真人反应时间；
 - 当前封路已具备公开标记和整数 tick 到期状态，但没有持续伤害、阻挡或区域击退；
 - KZ 灰盒不是最终地图资产，结果不代表正式地图的美术、镜头和网络表现。
 
@@ -56,3 +56,4 @@ Arena 的主要深度来自武器和地图的组合。仅在平面上验证一�
 - 测试：`packages/arena-v1-experiment/test/arena-v2-kz-language-consequence-prototype.test.ts`
 - 结果：[武器战斗语言 × KZ 地图后果原型结果 V1](../research/arena-v2-weapon-language-kz-consequence-results-v1.md)
 - 前置边界：[ADR-056：武器先按可学习的战斗语言扩展](056-arena-v2-weapon-function-language-boundary.md)
+- 扩展边界：[ADR-060：绕后使用目标朝向判定，五种语言共用同一规则原型](060-arena-v2-rear-cone-and-language-prototype-boundary.md)
