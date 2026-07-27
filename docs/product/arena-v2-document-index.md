@@ -43,6 +43,7 @@ Arena V2 的核心目标是：
 | [武器上下文无渲染原型结果 V1](../research/arena-v2-weapon-prototype-results-v1.md) | 记录三把武器地面/空中命中节奏、击飞差异和挥空边界 | 第一轮原型证据 |
 | [武器地图边缘原型结果 V1](../research/arena-v2-weapon-map-prototype-results-v1.md) | 记录规则命中进入轻量物理后在宽平台、窄路和边缘的实际后果 | 第一轮地图交互证据 |
 | [武器移动目标原型结果 V1](../research/arena-v2-weapon-moving-target-prototype-results-v1.md) | 记录固定侧移目标下前摇差异如何转化为命中/挥空 | 第一轮移动反制证据 |
+| [武器攻击者失位与双人争夺原型结果 V1](../research/arena-v2-weapon-contest-prototype-results-v1.md) | 记录自身位移、空中命中和双人同时出招的规则后果 | 第一轮对战拥挤证据 |
 | [CS1.6 KZ 跳跃地图研究 V1](../research/arena-v2-cs16-kz-map-study-v1.md) | 记录地图段落、六维难度轴、段落合同、灰盒可达性和竞速/生存复用边界 | 第二轮研究 + 灰盒原型 |
 | [生存 1vE 最小循环原型结果 V1](../research/arena-v2-survival-loop-prototype-results-v1.md) | 记录无武器开局、20 秒三选一、轮次成长、两次掉落和低维奖励证据 | 第一轮原型证据 |
 | [弹壳特攻队界面研究 V1](../research/arena-v2-survivor-io-ui-study-v1.md) | 记录局外信息层、页面职责、点击预算和收敛规则 | 第二轮研究 |

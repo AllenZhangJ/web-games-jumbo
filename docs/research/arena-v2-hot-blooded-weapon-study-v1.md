@@ -400,4 +400,4 @@ Arena 当前不引入伤害血条作为主要胜负语言，所以武器数值�
 - 被击飞后，玩家能否解释是距离、横向作用、垂直作用还是挥空造成；
 - 对手是否能用方向和跳跃理解反制，而不是只能猜数值。
 
-研究状态更新：热血英豪部分已从“案例摘录”进入“结构化研究卡、动作上下文、公开数值契约、主页横向数值矩阵、地图后果和移动反制原型”阶段。三把原型武器的地面/空中首次命中节奏、击飞差异、明确挥空边界、移动目标下的命中差异和当前页面同屏数值差异已形成可重复证据，详见[武器上下文无渲染原型结果](arena-v2-weapon-prototype-results-v1.md)、[武器地图边缘原型结果](arena-v2-weapon-map-prototype-results-v1.md)、[武器移动目标原型结果](arena-v2-weapon-moving-target-prototype-results-v1.md)与[局外信息原型结果](arena-v2-ui-information-prototype-results-v1.md)。尚未完成的是攻击者失位、多人拥挤、真人可读性和 V2 权威迁移。
+研究状态更新：热血英豪部分已从“案例摘录”进入“结构化研究卡、动作上下文、公开数值契约、主页横向数值矩阵、地图后果和移动反制原型”阶段。三把原型武器的地面/空中首次命中节奏、击飞差异、明确挥空边界、移动目标下的命中差异、攻击者自身位移、双人同时出招结果和当前页面同屏数值差异已形成可重复证据，详见[武器上下文无渲染原型结果](arena-v2-weapon-prototype-results-v1.md)、[武器地图边缘原型结果](arena-v2-weapon-map-prototype-results-v1.md)、[武器移动目标原型结果](arena-v2-weapon-moving-target-prototype-results-v1.md)、[武器攻击者失位与双人争夺原型结果](arena-v2-weapon-contest-prototype-results-v1.md)与[局外信息原型结果](arena-v2-ui-information-prototype-results-v1.md)。尚未完成的是真实多人拥挤、攻击/跳跃互相穿插、真人可读性和 V2 权威迁移。

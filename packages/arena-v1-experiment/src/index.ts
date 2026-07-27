@@ -237,3 +237,11 @@ export {
 export type {
   ArenaV2WeaponContextPrototypeResult,
 } from './arena-v2-weapon-context-prototype.js';
+export {
+  runArenaV2WeaponContestPrototype,
+} from './arena-v2-weapon-contest-prototype.js';
+export type {
+  ArenaV2WeaponContestActorResult,
+  ArenaV2WeaponContestResult,
+  ArenaV2WeaponContestScenario,
+} from './arena-v2-weapon-contest-prototype.js';
