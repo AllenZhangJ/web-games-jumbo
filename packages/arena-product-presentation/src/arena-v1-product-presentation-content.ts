@@ -1,6 +1,7 @@
 import {
   assertKnownKeys,
   assertNonEmptyString,
+  assertPlainRecord,
   cloneFrozenData,
 } from '@number-strategy-jump/arena-contracts';
 import { ARENA_V1_CHARACTER_ID } from '@number-strategy-jump/arena-definitions';
@@ -129,6 +130,23 @@ export const ARENA_V1_ZH_CN_PRODUCT_MESSAGES = new ProductMessageCatalog({
     'action.start-match': '开始匹配',
     'character.parkour-apprentice.name': '跑酷学徒',
     'character.wind-up-cube.name': '发条方块',
+    'equipment.chain.name': '引力锁链',
+    'equipment.hammer.name': '重锤',
+    'equipment.shield.name': '冲锋盾',
+    'equipment.chain.role': '牵制与拉位',
+    'equipment.hammer.role': '重击与击飞',
+    'equipment.shield.role': '突进与换位',
+    'equipment.chain.description': '远距离命中后把对手拉回，适合控制站位。',
+    'equipment.hammer.description': '前摇较长但击飞强，命中一次就能改变边缘位置。',
+    'equipment.shield.description': '向前冲撞并带动自身位移，用距离换取主动权。',
+    'equipment.stat.range': '有效距离',
+    'equipment.stat.startup': '出招速度',
+    'equipment.stat.recovery': '收招安全',
+    'equipment.stat.impact': '横向击飞',
+    'equipment.stat.vertical': '纵向控制',
+    'equipment.stat.control': '硬直时间',
+    'equipment.stat.self-movement': '自身位移',
+    'equipment.stat.cooldown': '再次使用',
     'error.cleanup-failed': '资源清理未完成，请重新进入',
     'error.lifecycle-failed': '恢复游戏失败，请重试',
     'error.match-prepare-failed': '暂时无法开始，进度已保留',
@@ -168,6 +186,10 @@ const CHARACTER_IDS = Object.freeze([
   ARENA_V1_CHARACTER_ID.WIND_UP_CUBE,
 ]);
 const CHARACTER_KEYS = new Set<string>(CHARACTER_IDS);
+const PRESENTATION_KEYS = new Set<string>([
+  ...CHARACTER_KEYS,
+  'equipmentOverview',
+]);
 const NAME_MESSAGE_BY_CHARACTER_ID: Readonly<Record<string, string>> = Object.freeze({
   [ARENA_V1_CHARACTER_ID.PARKOUR_APPRENTICE]: 'character.parkour-apprentice.name',
   [ARENA_V1_CHARACTER_ID.WIND_UP_CUBE]: 'character.wind-up-cube.name',
@@ -180,8 +202,8 @@ export function createArenaV1ProductPresentationContent(
     characterPreviewAssetIdsValue,
     'Arena V1 product character preview assets',
   );
-  assertKnownKeys(source, CHARACTER_KEYS, 'Arena V1 product character preview assets');
-  const definitions = CHARACTER_IDS.map((characterDefinitionId) => ({
+  assertKnownKeys(source, PRESENTATION_KEYS, 'Arena V1 product presentation assets');
+  const definitions: unknown[] = CHARACTER_IDS.map((characterDefinitionId) => ({
     schemaVersion: PRODUCT_CONTENT_PRESENTATION_DEFINITION_SCHEMA_VERSION,
     id: `arena.product.content.character.${characterDefinitionId}.v1`,
     contentVersion: 1,
@@ -194,6 +216,25 @@ export function createArenaV1ProductPresentationContent(
     ),
     selectable: true,
   }));
+  const equipmentOverview = source.equipmentOverview;
+  if (equipmentOverview !== undefined) {
+    const overviewRecord = assertPlainRecord(
+      equipmentOverview,
+      'Arena V1 product equipment overview',
+    );
+    const equipmentDefinitions = Object.keys(overviewRecord).sort().map((equipmentId) => ({
+      schemaVersion: PRODUCT_CONTENT_PRESENTATION_DEFINITION_SCHEMA_VERSION,
+      id: `arena.product.content.equipment.${equipmentId}.v1`,
+      contentVersion: 1,
+      contentKind: PRODUCT_CONTENT_KIND.EQUIPMENT,
+      contentId: equipmentId,
+      nameMessageId: `equipment.${equipmentId}.name`,
+      previewAssetId: `weapon:${equipmentId}`,
+      selectable: false,
+      overview: overviewRecord[equipmentId],
+    }));
+    definitions.push(...equipmentDefinitions);
+  }
   return Object.freeze({
     schemaVersion: ARENA_V1_PRODUCT_PRESENTATION_CONTENT_SCHEMA_VERSION,
     screenRegistry: ARENA_V1_PRODUCT_SCREEN_REGISTRY,

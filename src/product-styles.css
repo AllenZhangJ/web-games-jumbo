@@ -213,9 +213,10 @@ button {
 
 .product-home {
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-rows: minmax(8rem, 0.72fr) auto minmax(0, 1.28fr);
   align-items: end;
   padding: 0 0.6rem;
+  overflow: auto;
 }
 
 .product-hero-frame {
@@ -257,6 +258,138 @@ button {
   padding: 0.18rem 0.4rem;
   color: var(--paper);
   background: var(--ink);
+}
+
+.product-weapon-overview {
+  min-height: 0;
+  padding: 0.45rem 0 0.2rem;
+}
+
+.product-section-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.7rem;
+  margin-bottom: 0.4rem;
+  color: var(--ink);
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.product-section-heading small {
+  color: var(--muted);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.product-weapon-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.product-weapon-card {
+  min-width: 0;
+  padding: 0.55rem 0.5rem 0.5rem;
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--cyan);
+  background: rgba(255, 253, 247, 0.72);
+}
+
+.product-weapon-card > strong,
+.product-weapon-card > span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.product-weapon-card > strong {
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.product-weapon-card > span {
+  margin-top: 0.12rem;
+  color: var(--coral-dark);
+  font-size: 0.58rem;
+  font-weight: 800;
+}
+
+.product-weapon-card > p {
+  display: -webkit-box;
+  min-height: 2.1em;
+  margin: 0.3rem 0 0.45rem;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.56rem;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.product-weapon-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.28rem 0.4rem;
+}
+
+.product-weapon-stat {
+  min-width: 0;
+}
+
+.product-weapon-stat > span:first-child,
+.product-weapon-stat > strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.product-weapon-stat > span:first-child {
+  color: var(--muted);
+  font-size: 0.52rem;
+  font-weight: 700;
+}
+
+.product-weapon-stat > strong {
+  color: var(--ink);
+  font-size: 0.58rem;
+  font-weight: 900;
+}
+
+.product-weapon-stat-track {
+  display: block;
+  height: 0.16rem;
+  margin-top: 0.14rem;
+  overflow: hidden;
+  background: var(--paper-deep);
+}
+
+.product-weapon-stat-track::after {
+  display: block;
+  width: var(--weapon-stat-fill, 0%);
+  height: 100%;
+  content: "";
+  background: var(--cyan);
+}
+
+@media (max-width: 28rem) {
+  .product-weapon-list {
+    grid-template-columns: 1fr;
+  }
+
+  .product-weapon-card {
+    padding: 0.45rem;
+  }
+
+  .product-weapon-card > p {
+    min-height: 0;
+    margin-block: 0.2rem 0.35rem;
+    -webkit-line-clamp: 1;
+  }
 }
 
 .product-character-select {

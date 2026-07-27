@@ -28,6 +28,16 @@ describe('Arena V1 concrete presentation content', () => {
         .toBe(ARENA_V1_GREYBOX_CONTENT.characters[characterId]?.modelAssetId);
       ARENA_V1_ZH_CN_PRODUCT_MESSAGES.require(productDefinition.nameMessageId);
     }
+    const weapons = ARENA_V1_PRODUCT_PRESENTATION_CONTENT.contentRegistry.list()
+      .filter(({ contentKind }) => contentKind === 'equipment');
+    expect(weapons).toHaveLength(3);
+    const hammer = weapons.find(({ contentId }) => contentId === 'hammer');
+    expect(hammer?.overview?.stats.find(({ id }) => id === 'range')).toMatchObject({
+      value: 1.8,
+      unit: '格',
+      direction: 'higher-is-better',
+    });
+    expect(hammer?.overview?.stats.some(({ id }) => id === 'startup')).toBe(true);
     expect(ARENA_V1_PRODUCT_SCREEN_REGISTRY.list().length).toBeGreaterThan(0);
   });
 });

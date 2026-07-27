@@ -91,6 +91,22 @@ export interface ProductSessionViewModel {
     selected: boolean;
     selectIntent: ProductUiIntent;
   }>[];
+  readonly weaponOptions?: readonly Readonly<{
+    weaponDefinitionId: string;
+    name: string;
+    previewAssetId: string;
+    role: string;
+    description: string;
+    stats: readonly Readonly<{
+      id: string;
+      label: string;
+      value: number;
+      maxValue: number;
+      unit: string;
+      direction: string;
+      precision: number;
+    }>[];
+  }>[];
   readonly match: Readonly<{
     matchSeed: number;
     opponent: Readonly<{ displayName: string; portraitKey: string; appearanceKey: string }>;
@@ -190,8 +206,10 @@ function profileView(
   source: PlainRecord,
   contentRegistry: ProductContentPresentationRegistry,
   messages: ProductMessageCatalog,
-): Pick<ProductSessionViewModel, 'profile' | 'characterOptions'> {
-  if (source.profile === null) return Object.freeze({ profile: null, characterOptions: [] });
+): Pick<ProductSessionViewModel, 'profile' | 'characterOptions' | 'weaponOptions'> {
+  if (source.profile === null) {
+    return Object.freeze({ profile: null, characterOptions: [], weaponOptions: [] });
+  }
   const profile = record(source.profile, 'Product snapshot profile');
   const selection = record(profile.selection, 'Product snapshot profile.selection');
   const unlocks = record(profile.unlocks, 'Product snapshot profile.unlocks');
@@ -206,6 +224,15 @@ function profileView(
   }
   if (new Set(unlocks.characterIds).size !== unlocks.characterIds.length) {
     throw new RangeError('Product snapshot profile.unlocks.characterIds 不能包含重复项。');
+  }
+  const equipmentIds = unlocks.equipmentIds === undefined
+    ? []
+    : unlocks.equipmentIds;
+  if (!Array.isArray(equipmentIds)) {
+    throw new TypeError('Product snapshot profile.unlocks.equipmentIds 必须是数组。');
+  }
+  if (new Set(equipmentIds).size !== equipmentIds.length) {
+    throw new RangeError('Product snapshot profile.unlocks.equipmentIds 不能包含重复项。');
   }
   const characterOptions = unlocks.characterIds
     .map((value, index) => assertNonEmptyString(
@@ -236,6 +263,36 @@ function profileView(
   if (!characterOptions.some(({ selected }) => selected)) {
     throw new RangeError('Product ViewModel 当前选择缺少可选表现定义。');
   }
+  const weaponOptions = equipmentIds
+    .map((value, index) => assertNonEmptyString(
+      value,
+      `Product snapshot profile.unlocks.equipmentIds[${index}]`,
+    ))
+    .map((weaponDefinitionId) => contentRegistry.requireContent(
+      PRODUCT_CONTENT_KIND.EQUIPMENT,
+      weaponDefinitionId,
+    ))
+    .map((definition) => {
+      if (definition.overview === null) {
+        throw new RangeError(`Product ViewModel 武器 ${definition.contentId} 缺少公开数值概览。`);
+      }
+      return Object.freeze({
+        weaponDefinitionId: definition.contentId,
+        name: messages.format(definition.nameMessageId),
+        previewAssetId: definition.previewAssetId,
+        role: messages.format(definition.overview.roleMessageId),
+        description: messages.format(definition.overview.descriptionMessageId),
+        stats: Object.freeze(definition.overview.stats.map((stat) => Object.freeze({
+          id: stat.id,
+          label: messages.format(stat.labelMessageId),
+          value: stat.value,
+          maxValue: stat.maxValue,
+          unit: stat.unit,
+          direction: stat.direction,
+          precision: stat.precision,
+        }))),
+      });
+    });
   return Object.freeze({
     profile: Object.freeze({
       revision: assertIntegerAtLeast(profile.revision, 0, 'Product snapshot profile.revision'),
@@ -259,6 +316,7 @@ function profileView(
       ),
     }),
     characterOptions: Object.freeze(characterOptions),
+    weaponOptions: Object.freeze(weaponOptions),
   });
 }
 
@@ -445,6 +503,7 @@ export function createProductSessionViewModel(
     }),
     profile: profile.profile,
     characterOptions: profile.characterOptions,
+    weaponOptions: profile.weaponOptions ?? [],
     match: publicMatchView(source),
     result,
     reward: reward.reward,

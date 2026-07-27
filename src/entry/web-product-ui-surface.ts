@@ -7,6 +7,7 @@ import {
   type WebProductCharacterCard,
   type WebProductSceneModel,
 } from './web-product-scene-model.js';
+import type { ProductUiSceneWeaponCard } from '@number-strategy-jump/arena-product-presentation';
 
 export const WEB_PRODUCT_UI_SURFACE_STATE = Object.freeze({
   CREATED: 'created',
@@ -35,6 +36,7 @@ interface UiNodes {
   readonly secondary: HTMLButtonElement;
   readonly heroImage: HTMLImageElement;
   readonly characterList: HTMLElement;
+  readonly weaponList: HTMLElement | null;
   readonly matchingPlayerImage: HTMLImageElement;
   readonly matchingPlayerName: HTMLElement;
   readonly matchingOpponentImage: HTMLImageElement;
@@ -178,6 +180,7 @@ export class WebProductUiSurface {
       secondary: requiredElement<HTMLButtonElement>(this.#root, '#product-secondary-action'),
       heroImage: requiredElement<HTMLImageElement>(this.#root, '#product-hero-image'),
       characterList: requiredElement<HTMLElement>(this.#root, '#product-character-list'),
+      weaponList: this.#root.querySelector<HTMLElement>('#product-weapon-list'),
       matchingPlayerImage: requiredElement<HTMLImageElement>(this.#root, '#product-matching-player-image'),
       matchingPlayerName: requiredElement<HTMLElement>(this.#root, '#product-matching-player-name'),
       matchingOpponentImage: requiredElement<HTMLImageElement>(this.#root, '#product-matching-opponent-image'),
@@ -267,6 +270,78 @@ export class WebProductUiSurface {
     nodes.characterList.replaceChildren(fragment);
   }
 
+  #updateWeaponCard(element: HTMLElement, card: ProductUiSceneWeaponCard): void {
+    const title = element.querySelector<HTMLElement>('[data-weapon-title]');
+    const role = element.querySelector<HTMLElement>('[data-weapon-role]');
+    const description = element.querySelector<HTMLElement>('[data-weapon-description]');
+    const stats = element.querySelector<HTMLElement>('[data-weapon-stats]');
+    if (!title || !role || !description || !stats) throw new Error(`武器卡片 ${card.id} 结构不完整。`);
+    setText(title, card.name);
+    setText(role, card.role);
+    setText(description, card.description);
+    const existing = [...stats.querySelectorAll<HTMLElement>('[data-weapon-stat]')];
+    if (existing.length !== card.stats.length) {
+      stats.replaceChildren(...card.stats.map(() => {
+        const row = this.#document.createElement('div');
+        const label = this.#document.createElement('span');
+        const value = this.#document.createElement('strong');
+        const track = this.#document.createElement('span');
+        row.dataset.weaponStat = 'true';
+        row.className = 'product-weapon-stat';
+        label.dataset.weaponStatLabel = 'true';
+        value.dataset.weaponStatValue = 'true';
+        track.dataset.weaponStatTrack = 'true';
+        track.className = 'product-weapon-stat-track';
+        row.append(label, value, track);
+        return row;
+      }));
+    }
+    const rows = [...stats.querySelectorAll<HTMLElement>('[data-weapon-stat]')];
+    card.stats.forEach((stat, index) => {
+      const row = rows[index]!;
+      const label = row.querySelector<HTMLElement>('[data-weapon-stat-label]');
+      const value = row.querySelector<HTMLElement>('[data-weapon-stat-value]');
+      const track = row.querySelector<HTMLElement>('[data-weapon-stat-track]');
+      if (!label || !value || !track) throw new Error(`武器数值 ${stat.id} 结构不完整。`);
+      setText(label, `${stat.label} ${stat.direction === 'lower-is-better' ? '↓' : '↑'}`);
+      setText(value, `${stat.value.toFixed(stat.precision)}${stat.unit}`);
+      track.style.setProperty('--weapon-stat-fill', `${Math.max(0, Math.min(100, stat.value / stat.maxValue * 100))}%`);
+      row.dataset.weaponStatDirection = stat.direction;
+    });
+  }
+
+  #syncWeaponCards(model: WebProductSceneModel): void {
+    const list = this.#readyNodes().weaponList;
+    if (!list) return;
+    const existing = [...list.querySelectorAll<HTMLElement>('[data-weapon-card]')];
+    const reusable = existing.length === model.weaponCards.length
+      && existing.every((element, index) => element.dataset.weaponId === model.weaponCards[index]!.id);
+    if (reusable) {
+      existing.forEach((element, index) => this.#updateWeaponCard(element, model.weaponCards[index]!));
+      return;
+    }
+    const fragment = this.#document.createDocumentFragment();
+    for (const card of model.weaponCards) {
+      const element = this.#document.createElement('article');
+      element.className = 'product-weapon-card';
+      element.dataset.weaponCard = 'true';
+      element.dataset.weaponId = card.id;
+      const title = this.#document.createElement('strong');
+      const role = this.#document.createElement('span');
+      const description = this.#document.createElement('p');
+      const stats = this.#document.createElement('div');
+      title.dataset.weaponTitle = 'true';
+      role.dataset.weaponRole = 'true';
+      description.dataset.weaponDescription = 'true';
+      stats.dataset.weaponStats = 'true';
+      stats.className = 'product-weapon-stats';
+      element.append(title, role, description, stats);
+      this.#updateWeaponCard(element, card);
+      fragment.append(element);
+    }
+    list.replaceChildren(fragment);
+  }
+
   #syncInteractive(): void {
     if (!this.#lastModel) return;
     const nodes = this.#readyNodes();
@@ -290,6 +365,7 @@ export class WebProductUiSurface {
       viewModel.inputEnabled,
       viewModel.suspended,
       model.characterCards.find(({ selected }) => selected)?.id ?? '',
+      model.weaponCards.map((card) => `${card.id}:${card.stats.map((stat) => stat.value).join(',')}`).join('|'),
       model.primaryAction?.enabled ?? false,
       model.primaryAction?.label ?? '',
       model.secondaryAction?.enabled ?? false,
@@ -325,6 +401,7 @@ export class WebProductUiSurface {
     }
     setImage(nodes.heroImage, model.lobbyAsset, '跑酷学徒和发条方块站在竞技场平台上');
     this.#syncCharacterCards(model);
+    this.#syncWeaponCards(model);
     setImage(
       nodes.matchingPlayerImage,
       model.selectedCharacterAsset,

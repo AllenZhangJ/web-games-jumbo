@@ -23,6 +23,25 @@ export interface ProductUiSceneCharacterCard {
   readonly intent: Readonly<Record<string, unknown>>;
 }
 
+export interface ProductUiSceneWeaponStat {
+  readonly id: string;
+  readonly label: string;
+  readonly value: number;
+  readonly maxValue: number;
+  readonly unit: string;
+  readonly direction: string;
+  readonly precision: number;
+}
+
+export interface ProductUiSceneWeaponCard {
+  readonly id: string;
+  readonly name: string;
+  readonly previewAssetId: string | null;
+  readonly role: string;
+  readonly description: string;
+  readonly stats: readonly ProductUiSceneWeaponStat[];
+}
+
 export interface ProductUiSceneModel {
   readonly revision: number;
   readonly locale: string;
@@ -44,6 +63,7 @@ export interface ProductUiSceneModel {
   }> | null;
   readonly opponentName: string;
   readonly characterCards: readonly ProductUiSceneCharacterCard[];
+  readonly weaponCards: readonly ProductUiSceneWeaponCard[];
   readonly outcome: string | null;
   readonly experienceDelta: number | null;
   readonly unlock: Readonly<{
@@ -85,6 +105,13 @@ function optionalText(value: unknown, name: string): string | null {
   if (value === null || value === undefined) return null;
   if (typeof value !== 'string') throw new TypeError(`${name} 必须是字符串。`);
   return value;
+}
+
+function finiteNumber(value: unknown, name: string, minimum: number): number {
+  if (!Number.isFinite(value) || (value as number) < minimum) {
+    throw new RangeError(`${name} 必须是大于等于 ${minimum} 的有限数。`);
+  }
+  return value as number;
 }
 
 function dataRecord(value: unknown, name: string): PlainRecord {
@@ -130,6 +157,54 @@ function characterCards(
   return Object.freeze(cards);
 }
 
+function weaponCards(values: unknown): readonly ProductUiSceneWeaponCard[] {
+  if (values === undefined || values === null) return Object.freeze([]);
+  if (!Array.isArray(values)) {
+    throw new TypeError('Product UI ViewModel.weaponOptions 必须是数组。');
+  }
+  const ids = new Set<string>();
+  return Object.freeze(values.map((value, index) => {
+    const name = `Product UI ViewModel.weaponOptions[${index}]`;
+    const option = dataRecord(value, name);
+    const id = assertNonEmptyString(option.weaponDefinitionId, `${name}.weaponDefinitionId`);
+    if (ids.has(id)) throw new RangeError(`Product UI ViewModel 包含重复武器 ${id}。`);
+    ids.add(id);
+    if (!Array.isArray(option.stats) || option.stats.length === 0) {
+      throw new RangeError(`${name}.stats 必须是非空数组。`);
+    }
+    const statIds = new Set<string>();
+    const stats = Object.freeze(option.stats.map((statValue, statIndex) => {
+      const statName = `${name}.stats[${statIndex}]`;
+      const stat = dataRecord(statValue, statName);
+      const statId = assertNonEmptyString(stat.id, `${statName}.id`);
+      if (statIds.has(statId)) throw new RangeError(`${name} 包含重复数值 ${statId}。`);
+      statIds.add(statId);
+      const valueNumber = finiteNumber(stat.value, `${statName}.value`, 0);
+      const maxValue = finiteNumber(stat.maxValue, `${statName}.maxValue`, 0);
+      if (maxValue <= 0 || valueNumber > maxValue) {
+        throw new RangeError(`${statName} 的数值范围无效。`);
+      }
+      return Object.freeze({
+        id: statId,
+        label: assertNonEmptyString(stat.label, `${statName}.label`),
+        value: valueNumber,
+        maxValue,
+        unit: assertNonEmptyString(stat.unit, `${statName}.unit`),
+        direction: assertNonEmptyString(stat.direction, `${statName}.direction`),
+        precision: assertIntegerAtLeast(stat.precision, 0, `${statName}.precision`),
+      });
+    }));
+    return Object.freeze({
+      id,
+      name: assertNonEmptyString(option.name, `${name}.name`),
+      previewAssetId: nullableString(option.previewAssetId, `${name}.previewAssetId`),
+      role: assertNonEmptyString(option.role, `${name}.role`),
+      description: assertNonEmptyString(option.description, `${name}.description`),
+      stats,
+    });
+  }));
+}
+
 function selectedCharacter(
   cards: readonly ProductUiSceneCharacterCard[],
 ): ProductUiSceneModel['selectedCharacter'] {
@@ -169,6 +244,7 @@ export function createProductUiSceneModel(viewModelValue: unknown): ProductUiSce
   const scene = assertNonEmptyString(screen.sceneId, 'Product UI ViewModel.screen.sceneId');
   const inputEnabled = booleanValue(source.inputEnabled, 'Product UI ViewModel.inputEnabled');
   const cards = characterCards(source.characterOptions, inputEnabled);
+  const weapons = weaponCards(source.weaponOptions);
   const match = source.match === null || source.match === undefined
     ? null
     : dataRecord(source.match, 'Product UI ViewModel.match');
@@ -221,6 +297,7 @@ export function createProductUiSceneModel(viewModelValue: unknown): ProductUiSce
         'Product UI ViewModel.match.opponent.displayName',
       ),
     characterCards: cards,
+    weaponCards: weapons,
     outcome: result === null
       ? null
       : assertNonEmptyString(result.outcome, 'Product UI ViewModel.result.outcome'),
