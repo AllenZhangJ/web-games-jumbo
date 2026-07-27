@@ -57,6 +57,7 @@ Arena V2 的核心目标是：
 | `arena-v2-weapon-mammoth-stone-axe-delay-prototype.ts` | 以整数 tick 验证猛犸石斧延迟落点的预警、路线躲避、高度躲避和命中反馈因果 | 第九轮延迟落点研究原型，仅研究工具链 |
 | `arena-v2-weapon-hook-obstruction-prototype.ts` | 以固定二维几何验证无遮挡、柱体阻挡、侧向错开和边角路线的拉位差异 | 血影钩刃障碍研究原型，仅研究工具链 |
 | [血影钩刃障碍阻挡原型结果 V1](../research/arena-v2-weapon-hook-obstruction-prototype-results-v1.md) | 记录拉位阻挡探针的固定场景、结果和未完成边界 | 障碍研究证据 |
+| `arena-v2-kz-map-definition-prototype.ts` | 将六段 KZ 路线、10 个静态 surface、4 个起点和 6 个段落装备锚点编译为研究 MapDefinition，竞速/生存共享几何 | MapDefinition 研究原型，仅研究工具链 |
 | `arena-v2-weapon-research-catalog.ts` | 12 件参考武器的结构化研究卡，仅供开发/测试工具链使用 | 研究证据 |
 | `arena-v2-weapon-official-evidence.ts` | 10 组官方招式证据的信号与逐动作上下文、命中结果、地图意义和失败成本，仅供开发/测试工具链使用 | 第四轮至第九轮研究证据 |
 | `arena-v2-weapon-commitment-prototype.ts` | 用整数 tick 验证读招反制与延迟重击的提前取消、承诺释放、到期取消和蓄力转向，仅供开发/测试工具链使用 | 第四轮武器状态原型证据 |
@@ -108,8 +109,9 @@ Arena V2 的核心目标是：
 | [武器地图边缘原型结果 V1](../research/arena-v2-weapon-map-prototype-results-v1.md) | 记录规则命中进入轻量物理后在宽平台、窄路和边缘的实际后果 | 第一轮地图交互证据 |
 | [武器移动目标原型结果 V1](../research/arena-v2-weapon-moving-target-prototype-results-v1.md) | 记录固定侧移目标下前摇差异如何转化为命中/挥空 | 第一轮移动反制证据 |
 | [武器攻击者失位与双人争夺原型结果 V1](../research/arena-v2-weapon-contest-prototype-results-v1.md) | 记录自身位移、空中命中和双人同时出招的规则后果 | 第一轮对战拥挤证据 |
-| [CS1.6 KZ 跳跃地图研究 V1](../research/arena-v2-cs16-kz-map-study-v1.md) | 记录地图段落、六维难度轴、段落合同、灰盒可达性和竞速/生存复用边界 | 第二轮研究 + 灰盒原型 |
+| [CS1.6 KZ 跳跃地图研究 V1](../research/arena-v2-cs16-kz-map-study-v1.md) | 记录地图段落、六维难度轴、段落合同、研究 MapDefinition、灰盒可达性和竞速/生存复用边界 | 第二轮研究 + MapDefinition 灰盒原型 |
 | [ADR-063：KZ 地图段落必须声明回应窗口与恢复关系](../decisions/063-arena-v2-kz-route-response-contract.md) | 固化段落可用回应、固定探针窗口和命中后恢复关系，避免地图只用宽度与难度描述 | KZ 灰盒合同已接入 |
+| [ADR-087：CS1.6 KZ 路线先接入研究 MapDefinition，再进入生产地图](../decisions/087-arena-v2-kz-map-definition-research-boundary.md) | 固化六段路线、4 个起点、竞速/生存共用几何和研究/生产地图边界 | 研究 MapDefinition 已接入，真人/真机仍待验证 |
 | `arena-v2-kz-map-research-catalog.ts` | 六类代表 KZ 地图样本的来源事实、学习点、设计信号和不复制边界，仅供开发/测试工具链使用 | 研究证据 |
 | `arena-v2-kz-route-combat-prototype.ts` | 将六段 KZ 灰盒与同一套武器命中/冲量/移动回应规则组合，验证段落宽度、相邻恢复表面、侧移和跳跃对武器击飞后果的影响，仅供开发/测试工具链使用 | 第三轮地图×武器原型证据 |
 | [生存 1vE 最小循环原型结果 V1](../research/arena-v2-survival-loop-prototype-results-v1.md) | 记录无武器开局、20 秒三选一、轮次成长、两次掉落和低维奖励证据 | 第一轮原型证据 |

@@ -189,6 +189,13 @@ export {
   runArenaV2JumpRoutePrototype,
 } from './arena-v2-jump-route-prototype.js';
 export {
+  ARENA_V2_KZ_MAP_DEFINITION_ID,
+  createArenaV2KzMapDefinitionPrototype,
+} from './arena-v2-kz-map-definition-prototype.js';
+export type {
+  ArenaV2KzMapDefinitionPrototype,
+} from './arena-v2-kz-map-definition-prototype.js';
+export {
   ARENA_V2_WEAPON_RESEARCH_CATALOG,
 } from './arena-v2-weapon-research-catalog.js';
 export type { ArenaV2WeaponResearchCard } from './arena-v2-weapon-research-catalog.js';
