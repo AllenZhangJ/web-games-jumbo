@@ -186,10 +186,23 @@ export {
 export {
   ARENA_V2_JUMP_ROUTE_INPUTS,
   createArenaV2JumpRoutePrototype,
+  runArenaV2JumpRoutePrototype,
 } from './arena-v2-jump-route-prototype.js';
 export type {
+  ArenaV2JumpRouteAnchor,
   ArenaV2JumpRoutePrototype,
+  ArenaV2JumpRouteSegmentArrival,
+  ArenaV2JumpRouteSimulationResult,
+  ArenaV2JumpRouteSurface,
 } from './arena-v2-jump-route-prototype.js';
+export {
+  runArenaV2SurvivalLoopPrototype,
+} from './arena-v2-survival-loop-prototype.js';
+export type {
+  ArenaV2SurvivalLoopPrototypeResult,
+  ArenaV2SurvivalRoundResult,
+  ArenaV2SurvivalWeaponOffer,
+} from './arena-v2-survival-loop-prototype.js';
 export {
   runArenaV2WeaponContextPrototype,
 } from './arena-v2-weapon-context-prototype.js';
