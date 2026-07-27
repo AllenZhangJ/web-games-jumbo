@@ -271,6 +271,9 @@ function drawWeaponComparison(
   const comparisonRows = Object.freeze([
     ...model.weaponComparison.map((row) => ({ row, kind: 'main' as const })),
     ...model.weaponBehaviorComparison.map((row) => ({ row, kind: 'behavior' as const })),
+    ...model.weaponContextComparison
+      .filter(({ id }) => id.endsWith(':range') || id.endsWith(':coverage'))
+      .map((row) => ({ row, kind: 'context' as const })),
   ]);
   if (comparisonRows.length === 0) return;
   const { visual, scale } = layout;
@@ -325,7 +328,7 @@ function drawWeaponComparison(
     context.fillStyle = COLOR.muted;
     context.font = font(10 * scale, 700);
     context.fillText(
-      `${kind === 'behavior' ? '行为·' : ''}${row.label}`,
+      `${kind === 'behavior' ? '行为·' : kind === 'context' ? '场景·' : ''}${row.label}`,
       panel.x + 8 * scale,
       y,
     );
@@ -360,7 +363,8 @@ function drawHome(
 ): void {
   const { visual, scale } = layout;
   const hasWeaponComparison = model.weaponComparison.length > 0
-    || model.weaponBehaviorComparison.length > 0;
+    || model.weaponBehaviorComparison.length > 0
+    || model.weaponContextComparison.length > 0;
   const floorY = hasWeaponComparison
     ? visual.y + visual.height * 0.48
     : visual.y + visual.height * 0.82;

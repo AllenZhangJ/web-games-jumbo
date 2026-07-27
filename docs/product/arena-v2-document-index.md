@@ -136,6 +136,7 @@ Arena V2 的核心目标是：
 | [ADR-059：战斗语言必须通过公开数值轴就绪检查](../decisions/059-arena-v2-weapon-public-axis-readiness-boundary.md) | 固化 9 个主数值、8 个上下文数值、2 个行为补充轴和 2 个研究专用未闭合轴的进入边界 | 研究评审已接入 |
 | [ADR-060：绕后使用目标朝向判定，五种语言共用同一规则原型](../decisions/060-arena-v2-rear-cone-and-language-prototype-boundary.md) | 固化 `rear-cone`、五种语言统一 Rule/Effect/Targeting 原型和 90 个 KZ 探针边界 | 研究原型已接入 |
 | [ADR-061：武器概览补充有效窗口与方向容错](../decisions/061-arena-v2-weapon-overview-behavior-readout.md) | 固化由权威调优推导的两项补充行为数值及其不进入主比较表的边界 | Product UI 已接入 |
+| [ADR-083：武器概览必须横向展示地面与空中场景数值](../decisions/083-arena-v2-weapon-context-comparison-readout.md) | 固化主数值、行为数值和地面/空中场景数值的比较顺序、字段一致性校验与 Web/Canvas 展示差异 | Product UI 与 Canvas 已接入，真人页面已验证 |
 | [ADR-062：蓄力承诺先以可取消的整数 tick 原型验证](../decisions/062-arena-v2-weapon-commitment-prototype-boundary.md) | 固化蓄力承诺、提前取消、到期处理和方向记录的研究边界，不直接进入生产武器 | 研究原型已接入 |
 | [ADR-047：生存实体复用玩家规则/物理边界](../decisions/047-arena-v2-survival-entity-boundary.md) | 固化单敌人原型不得绕过命中、冲量和掉落规则 | V2 研究原型 |
 | [ADR-048：生存多敌压力先复用规则引擎](../decisions/048-arena-v2-survival-multi-enemy-pressure-boundary.md) | 固化多敌研究原型的输入决策、供给争夺和正式接入前的边界 | V2 研究原型 |

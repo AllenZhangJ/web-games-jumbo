@@ -543,6 +543,15 @@ button {
   color: var(--coral-dark);
 }
 
+.product-weapon-comparison-row[data-weapon-comparison-surface="context"] {
+  background: rgba(22, 166, 161, 0.055);
+}
+
+.product-weapon-comparison-row[data-weapon-comparison-surface="context"] > span:first-child {
+  color: var(--coral-dark);
+  font-weight: 800;
+}
+
 @media (max-width: 28rem) {
   .product-weapon-list {
     grid-template-columns: 1fr;

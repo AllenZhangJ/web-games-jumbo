@@ -367,7 +367,7 @@ test('WebProductUiSurface renders stable semantic controls and serializes DOM in
     root.querySelector('#product-weapon-comparison'),
     'weapon comparison',
   );
-  assert.equal(comparison.children.length, 6);
+  assert.equal(comparison.children.length, 7);
   const comparisonHeader = required(comparison.children[0], 'comparison header');
   const comparisonRange = required(comparison.children[1], 'comparison range row');
   const comparisonRisk = required(comparison.children[3], 'comparison risk row');
@@ -397,6 +397,12 @@ test('WebProductUiSurface renders stable semantic controls and serializes DOM in
   assert.equal(comparisonDirectionTolerance.children[2]?.textContent, '113° ↑');
   assert.equal(comparisonDirectionTolerance.children[3]?.textContent, '90° ↑');
   assert.equal(comparisonActiveSpan.dataset.weaponComparisonSurface, 'behavior');
+  const comparisonGroundRange = required(comparison.children[6], 'ground context range row');
+  assert.equal(comparisonGroundRange.children[0]?.textContent, '场景·地面·有效距离 (格)');
+  assert.equal(comparisonGroundRange.children[1]?.textContent, '1.80格 ↑');
+  assert.equal(comparisonGroundRange.children[2]?.textContent, '5.00格 ↑');
+  assert.equal(comparisonGroundRange.children[3]?.textContent, '1.60格 ↑');
+  assert.equal(comparisonGroundRange.dataset.weaponComparisonSurface, 'context');
   const hammerCard = required(
     root.querySelector('[data-weapon-card]'),
     'hammer weapon card',

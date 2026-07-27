@@ -97,6 +97,7 @@ export interface ProductUiSceneModel {
   readonly weaponCards: readonly ProductUiSceneWeaponCard[];
   readonly weaponComparison: readonly ProductUiSceneWeaponComparisonRow[];
   readonly weaponBehaviorComparison: readonly ProductUiSceneWeaponComparisonRow[];
+  readonly weaponContextComparison: readonly ProductUiSceneWeaponComparisonRow[];
   readonly outcome: string | null;
   readonly experienceDelta: number | null;
   readonly unlock: Readonly<{
@@ -321,6 +322,42 @@ function buildWeaponComparison(
   })));
 }
 
+function buildWeaponContextComparison(
+  cards: readonly ProductUiSceneWeaponCard[],
+): readonly ProductUiSceneWeaponComparisonRow[] {
+  if (cards.length === 0) return Object.freeze([]);
+  const referenceContexts = cards[0]!.contexts;
+  return Object.freeze(referenceContexts.flatMap((referenceContext) => {
+    for (const card of cards.slice(1)) {
+      const context = card.contexts.find(({ id }) => id === referenceContext.id);
+      if (!context) {
+        throw new RangeError(
+          `Product UI 武器上下文比较缺少 ${referenceContext.id}：${card.id}。`,
+        );
+      }
+      if (context.label !== referenceContext.label) {
+        throw new RangeError(
+          `Product UI 武器上下文 ${referenceContext.id} 的标签不一致。`,
+        );
+      }
+    }
+    const rows = buildWeaponComparison(
+      cards,
+      (card) => {
+        const context = card.contexts.find(({ id }) => id === referenceContext.id);
+        if (!context) throw new RangeError(`Product UI 武器缺少上下文 ${referenceContext.id}。`);
+        return context.stats;
+      },
+      `${referenceContext.label}数值比较`,
+    );
+    return rows.map((row) => Object.freeze({
+      ...row,
+      id: `context:${referenceContext.id}:${row.id}`,
+      label: `${referenceContext.label}·${row.label}`,
+    }));
+  }));
+}
+
 function selectedCharacter(
   cards: readonly ProductUiSceneCharacterCard[],
 ): ProductUiSceneModel['selectedCharacter'] {
@@ -367,6 +404,7 @@ export function createProductUiSceneModel(viewModelValue: unknown): ProductUiSce
     (card) => card.behaviorStats,
     '行为数值比较',
   );
+  const contextComparison = buildWeaponContextComparison(weapons);
   const match = source.match === null || source.match === undefined
     ? null
     : dataRecord(source.match, 'Product UI ViewModel.match');
@@ -422,6 +460,7 @@ export function createProductUiSceneModel(viewModelValue: unknown): ProductUiSce
     weaponCards: weapons,
     weaponComparison: comparison,
     weaponBehaviorComparison: behaviorComparison,
+    weaponContextComparison: contextComparison,
     outcome: result === null
       ? null
       : assertNonEmptyString(result.outcome, 'Product UI ViewModel.result.outcome'),

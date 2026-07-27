@@ -562,6 +562,22 @@ describe('Product presentation immutable data boundaries', () => {
         }],
       },
     ]);
+    expect(sceneModel.weaponContextComparison).toEqual([
+      {
+        id: 'context:ground:range',
+        label: '地面·有效距离',
+        unit: '格',
+        values: [{
+          weaponId: 'shield',
+          weaponName: '冲锋盾',
+          value: 1.6,
+          maxValue: 6,
+          unit: '格',
+          direction: 'higher-is-better',
+          precision: 2,
+        }],
+      },
+    ]);
   });
 
   it('paints a deterministic command stream without mutating scene or layout inputs', () => {
@@ -665,6 +681,8 @@ describe('Product presentation immutable data boundaries', () => {
     expect(first.commands.some(([command, text]) => command === 'fillText' && text === '1.80格 ↑')).toBe(true);
     expect(first.commands.some(([command, text]) => command === 'fillText' && text === '行为·有效窗口')).toBe(true);
     expect(first.commands.some(([command, text]) => command === 'fillText' && text === '0.05秒 ↑')).toBe(true);
+    expect(first.commands.some(([command, text]) => command === 'fillText' && text === '场景·地面·有效距离')).toBe(true);
+    expect(first.commands.some(([command, text]) => command === 'fillText' && text === '1.80格 ↑')).toBe(true);
     expect(JSON.stringify(sceneModel)).toBe(sceneBefore);
     expect(JSON.stringify(layout)).toBe(layoutBefore);
     expect(Object.isFrozen(sceneModel)).toBe(true);

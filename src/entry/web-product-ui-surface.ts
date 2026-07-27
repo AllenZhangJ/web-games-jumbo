@@ -475,6 +475,7 @@ export class WebProductUiSurface {
     const comparisonRows = [
       ...model.weaponComparison.map((row) => ({ row, kind: 'main' as const })),
       ...model.weaponBehaviorComparison.map((row) => ({ row, kind: 'behavior' as const })),
+      ...model.weaponContextComparison.map((row) => ({ row, kind: 'context' as const })),
     ];
     if (comparisonRows.length === 0) {
       comparison.replaceChildren();
@@ -503,7 +504,8 @@ export class WebProductUiSurface {
       row.dataset.weaponComparisonSurface = kind;
       row.setAttribute('role', 'row');
       const label = this.#document.createElement('span');
-      label.textContent = `${kind === 'behavior' ? '行为·' : ''}${rowValue.label} (${rowValue.unit})`;
+      const prefix = kind === 'behavior' ? '行为·' : kind === 'context' ? '场景·' : '';
+      label.textContent = `${prefix}${rowValue.label} (${rowValue.unit})`;
       label.setAttribute('role', 'rowheader');
       row.append(label);
       for (const value of rowValue.values) {
