@@ -283,3 +283,10 @@ export type {
   ArenaV2CollectionEvidenceStep,
   ArenaV2CollectionWeaponPlan,
 } from './arena-v2-collection-budget-prototype.js';
+export {
+  runArenaV2SurvivalTierCombatPrototype,
+} from './arena-v2-survival-tier-combat-prototype.js';
+export type {
+  ArenaV2SurvivalTierCombatProbeResult,
+  ArenaV2SurvivalTierCombatPrototypeResult,
+} from './arena-v2-survival-tier-combat-prototype.js';
