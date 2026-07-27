@@ -21,8 +21,8 @@ describe('Arena V2 weapon case-study overview', () => {
       && numericReadoutReason.length > 20
     ))).toBe(true);
     expect(overview.rows.filter(({ numericReadout }) => numericReadout === 'research-projection').map(({ referenceId }) => referenceId))
-      .toEqual(['white-platinum-dual-guns', 'blood-shadow-hook-blade', 'phantom-tiger-fist']);
-    expect(overview.rows.filter(({ numericReadout }) => numericReadout === 'not-yet-available')).toHaveLength(3);
+      .toEqual(['true-hades-hook-scythe', 'white-platinum-dual-guns', 'blood-shadow-hook-blade', 'phantom-tiger-fist']);
+    expect(overview.rows.filter(({ numericReadout }) => numericReadout === 'not-yet-available')).toHaveLength(2);
   });
 
   it('makes the difference between must-measure axes and research-only signals explicit', () => {
@@ -69,6 +69,12 @@ describe('Arena V2 weapon case-study overview', () => {
       'research-blood-shadow-hook-blade-aerial',
     ]);
     expect(hookBladeProjection?.comparisonWeaponIds).toContain('research-blood-shadow-hook-blade');
+    const trueHades = overview.rows.find(({ referenceId }) => referenceId === 'true-hades-hook-scythe');
+    expect(trueHades?.numericProjection?.sourceDefinitionIds).toEqual([
+      'research-true-hades-hook-scythe-ground',
+      'research-true-hades-hook-scythe-aerial',
+    ]);
+    expect(trueHades?.numericProjection?.comparisonWeaponIds).toContain('research-true-hades-hook-scythe');
     expect(Object.isFrozen(guns?.numericProjection)).toBe(true);
     expect(Object.isFrozen(guns?.numericProjection?.contexts)).toBe(true);
     expect(overview.rows.find(({ referenceId }) => referenceId === 'magic-blood-scythe')?.numericProjection).toBeNull();

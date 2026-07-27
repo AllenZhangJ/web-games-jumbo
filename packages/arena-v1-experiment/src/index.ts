@@ -441,6 +441,27 @@ export type {
   ArenaV2WeaponBloodShadowHookBladeReplayScenarioResult,
 } from './arena-v2-weapon-blood-shadow-hook-blade-replay-prototype.js';
 export {
+  ARENA_V2_WEAPON_TRUE_HADES_HOOK_SCYTHE_AERIAL_ACTION_ID,
+  ARENA_V2_WEAPON_TRUE_HADES_HOOK_SCYTHE_DEFINITION_ID,
+  ARENA_V2_WEAPON_TRUE_HADES_HOOK_SCYTHE_DEFINITION_PROTOTYPE,
+  ARENA_V2_WEAPON_TRUE_HADES_HOOK_SCYTHE_GROUND_ACTION_ID,
+  createArenaV2WeaponTrueHadesHookScytheNumericOverview,
+} from './arena-v2-weapon-true-hades-hook-scythe-definition-prototype.js';
+export type {
+  ArenaV2WeaponTrueHadesHookScytheDefinitionPrototype,
+  ArenaV2WeaponTrueHadesHookScytheNumericOverview,
+} from './arena-v2-weapon-true-hades-hook-scythe-definition-prototype.js';
+export {
+  createArenaV2WeaponTrueHadesHookScytheReplayCore,
+  runArenaV2WeaponTrueHadesHookScytheReplayPrototype,
+} from './arena-v2-weapon-true-hades-hook-scythe-replay-prototype.js';
+export type {
+  ArenaV2WeaponTrueHadesHookScytheActionSample,
+  ArenaV2WeaponTrueHadesHookScytheReplayPrototypeResult,
+  ArenaV2WeaponTrueHadesHookScytheReplayScenario,
+  ArenaV2WeaponTrueHadesHookScytheReplayScenarioResult,
+} from './arena-v2-weapon-true-hades-hook-scythe-replay-prototype.js';
+export {
   ARENA_V2_LINE_PRESSURE_DEFINITION_PROTOTYPE,
   createArenaV2LinePressureDefinitionPrototype,
 } from './arena-v2-weapon-line-pressure-prototype.js';

@@ -30,6 +30,9 @@ import {
   createArenaV2WeaponBloodShadowHookBladeNumericOverview,
 } from './arena-v2-weapon-blood-shadow-hook-blade-definition-prototype.js';
 import {
+  createArenaV2WeaponTrueHadesHookScytheNumericOverview,
+} from './arena-v2-weapon-true-hades-hook-scythe-definition-prototype.js';
+import {
   createArenaV2WeaponResearchOverviewContexts,
   type ArenaV2WeaponResearchOverviewContext,
 } from './arena-v2-weapon-research-overview-prototype.js';
@@ -180,6 +183,18 @@ function createNumericProjection(
       sourceDefinitionIds: Object.freeze([
         'research-blood-shadow-hook-blade-ground',
         'research-blood-shadow-hook-blade-aerial',
+      ]),
+      numericStatus: 'definition-projected-hypothesis',
+    });
+  }
+  if (referenceId === 'true-hades-hook-scythe') {
+    const overview = createArenaV2WeaponTrueHadesHookScytheNumericOverview();
+    return Object.freeze({
+      contexts: overview.contexts,
+      comparisonWeaponIds: overview.comparisonWeaponIds,
+      sourceDefinitionIds: Object.freeze([
+        'research-true-hades-hook-scythe-ground',
+        'research-true-hades-hook-scythe-aerial',
       ]),
       numericStatus: 'definition-projected-hypothesis',
     });
