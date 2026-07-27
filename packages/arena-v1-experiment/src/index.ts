@@ -412,6 +412,11 @@ export type {
   ArenaV2UiPageId,
   ArenaV2UiMatchMode,
 } from './arena-v2-ui-information-prototype.js';
+export { ARENA_V2_SURVIVOR_IO_UI_EVIDENCE } from './arena-v2-survivor-io-ui-evidence.js';
+export type {
+  ArenaV2SurvivorIoUiEvidenceCard,
+  ArenaV2SurvivorIoUiEvidenceType,
+} from './arena-v2-survivor-io-ui-evidence.js';
 export type {
   ArenaV2JumpRouteAnchor,
   ArenaV2JumpRouteHitRecovery,

@@ -32,6 +32,12 @@
 
 这不是 Arena 应该追求的页面数量。它反而验证了本项目的边界：借鉴“信息分层和下一步行动”，不引入宠物、科技、部件、商城、活动中心、社交或多货币。Arena 的长期内容容量应由武器、地图段落和模式记录提供。
 
+### 1.4 官方证据已经结构化
+
+四张官方资料研究卡已写入 `packages/arena-v1-experiment/src/arena-v2-survivor-io-ui-evidence.ts`。它们分别记录官方商店页的核心承诺、Google Play 页的跨入口承诺、官方生存指南的武器/场景语言，以及版本记录暴露出的复杂度边界。每张卡都分开保存来源事实、信息组织推导、Arena 最小翻译和不复制范围，且全部标记为 `research-only`。
+
+这一步解决了两个容易混淆的问题：官方资料能证明“参考对象如何描述自己的核心体验”，但不能直接证明 Arena 需要同样的系统；Arena 的“11 个信息入口、一个主要开始动作、结算一个下一目标”是本项目的收敛决策，需要通过原型和真人测试继续验证。[官方 App Store 页面](https://apps.apple.com/cn/app/%E5%BC%B9%E5%A3%B3%E7%89%B9%E6%94%BB%E9%98%9F/id1628270358)、[官方 Google Play 页面](https://play.google.com/store/apps/details?id=com.dxx.firenow)、[官方生存指南](https://apps.apple.com/cn/ipad/story/id1649510203)
+
 ## 2. Arena 页面合同收敛
 
 “11 个页面”现在明确指 11 个信息入口，具体页面为：
