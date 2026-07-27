@@ -1,5 +1,6 @@
 export * from './arena-v1-presentation-quality.js';
 export * from './arena-impact-audio.js';
+export * from './arena-v2-weapon-feedback-presentation.js';
 export * from './arena-input-mapper.js';
 export * from './arena-input-router.js';
 export * from './arena-match-resources.js';
