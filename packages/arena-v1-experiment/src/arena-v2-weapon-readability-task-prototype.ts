@@ -8,6 +8,12 @@ import {
 } from './arena-v2-weapon-research-overview-prototype.js';
 import { createArenaV2WeaponCaseStudyOverview } from './arena-v2-weapon-case-study-overview-prototype.js';
 import {
+  ARENA_V2_WEAPON_MAGIC_BLOOD_SCYTHE_DEFINITION_PROTOTYPE,
+} from './arena-v2-weapon-magic-blood-scythe-definition-prototype.js';
+import {
+  ARENA_V2_WEAPON_MAMMOTH_STONE_AXE_DEFINITION_PROTOTYPE,
+} from './arena-v2-weapon-mammoth-stone-axe-definition-prototype.js';
+import {
   ARENA_V2_WEAPON_PUBLIC_OVERVIEW_AXIS_IDS,
 } from './arena-v2-weapon-public-axis-contract.js';
 import type { ArenaV2WeaponPublicAxisId } from './arena-v2-weapon-public-axis-contract.js';
@@ -98,6 +104,23 @@ export interface ArenaV2WeaponReadabilityAttemptReport {
 }
 
 /**
+ * Delayed impact is intentionally not flattened into windup/recovery. It is
+ * a separate research signal until the warning runtime becomes authoritative.
+ * The overview still exposes it so the defining difference is not hidden in
+ * the source Definition.
+ */
+export interface ArenaV2WeaponCaseStudyResearchSignalReadout {
+  readonly referenceId: string;
+  readonly displayName: string;
+  readonly coreVerb: string;
+  readonly delayTicks: number | null;
+  readonly warningTicks: number | null;
+  readonly activeTicks: number | null;
+  readonly status: 'research-hypothesis' | 'not-declared';
+  readonly explanation: string;
+}
+
+/**
  * Adapts the six deep weapon studies to the same participant-safe matrix used
  * by the readability task. The source remains research-only and is never a
  * production content registry.
@@ -135,6 +158,46 @@ export function createArenaV2WeaponCaseStudyReadabilityMatrix(): ArenaV2WeaponRe
     allRowsHaveComparableAxes: true,
     allRowsHaveDistinctBehaviorFingerprint: true,
   });
+}
+
+/**
+ * Returns research-only warning values for all six case studies. `null` means
+ * that the case has not yet earned an independent warning contract; it does
+ * not mean zero delay. This prevents the common numeric matrix from implying
+ * false production readiness while keeping the important weapon distinction
+ * visible to researchers and participants.
+ */
+export function createArenaV2WeaponCaseStudyResearchSignalReadout(): readonly ArenaV2WeaponCaseStudyResearchSignalReadout[] {
+  const overview = createArenaV2WeaponCaseStudyOverview();
+  const warningByReferenceId = new Map<string, {
+    readonly delayTicks: number;
+    readonly warningTicks: number;
+    readonly activeTicks: number;
+  }>([
+    [
+      ARENA_V2_WEAPON_MAGIC_BLOOD_SCYTHE_DEFINITION_PROTOTYPE.referenceId,
+      ARENA_V2_WEAPON_MAGIC_BLOOD_SCYTHE_DEFINITION_PROTOTYPE.warningHypothesis,
+    ],
+    [
+      ARENA_V2_WEAPON_MAMMOTH_STONE_AXE_DEFINITION_PROTOTYPE.referenceId,
+      ARENA_V2_WEAPON_MAMMOTH_STONE_AXE_DEFINITION_PROTOTYPE.warningHypothesis,
+    ],
+  ]);
+  return Object.freeze(overview.rows.map((row) => {
+    const warning = warningByReferenceId.get(row.referenceId);
+    return Object.freeze({
+      referenceId: row.referenceId,
+      displayName: row.referenceName,
+      coreVerb: row.coreVerb,
+      delayTicks: warning?.delayTicks ?? null,
+      warningTicks: warning?.warningTicks ?? null,
+      activeTicks: warning?.activeTicks ?? null,
+      status: warning ? 'research-hypothesis' : 'not-declared',
+      explanation: warning
+        ? '研究假设：延迟、预警和有效窗口仍未接入权威运行时。'
+        : '尚未建立独立延迟信号；不能把未声明误读为 0 tick。',
+    });
+  }));
 }
 
 function freezeOption(id: string, label: string): ArenaV2WeaponReadabilityOption {

@@ -6,7 +6,7 @@
 - 日期：2026-07-28
 - 实现：`packages/arena-v1-experiment/src/arena-v2-weapon-readability-task-prototype.ts`、`createArenaV2WeaponCaseStudyReadabilityMatrix`
 - 测试：`packages/arena-v1-experiment/test/arena-v2-weapon-readability-task-prototype.test.ts`、`arena-v2-weapon-case-study-readability-matrix.test.ts`
-- 研究页：`readability.html`、`src/entry/weapon-readability-study.ts`、`src/weapon-readability-study.css`；题目前直接展示六件逐件研究武器的同源研究矩阵
+- 研究页：`readability.html`、`src/entry/weapon-readability-study.ts`、`src/weapon-readability-study.css`；题目前直接展示六件逐件研究武器的同源研究矩阵，并单独展示延迟/预警研究信号
 - 页面边界测试：`tests/arena/study/weapon-readability-study-web.test.ts`
 - 边界：只消费研究武器概览矩阵，不进入默认生产 UI、MatchCore、Replay 或存档；生产构建入口仍只有 `index.html`
 
@@ -27,6 +27,12 @@
 这些答案是当前研究矩阵的投影结果，不是平衡结论。更换候选 Definition、数值轴或上下文值后，`sourceMatrixHash` 会变化，任务答案必须重新生成。
 
 六件逐件研究页面当前的 `sourceMatrixHash` 为 `1b0bfa97`，任务集哈希为 `d6117647`；哈希只绑定本次研究矩阵和题目合同，不代表生产版本号。旧的三种战斗语言矩阵仍保留给基础候选测试，不作为六件研究页的数据源。
+
+## 延迟与预警信号的可见边界
+
+公共地面/空中矩阵不能吞掉延迟武器最重要的差异。本页因此增加独立的“延迟与预警研究信号”表：魔血镰刃展示 `18 / 18 / 6 tick`，猛犸石斧展示 `18 / 18 / 2 tick`，分别对应延迟、预警和有效窗口；另外四件武器显示“未建立”，而不是伪造 `0 tick`。
+
+这组数值来自两件研究 Definition 的 `warningHypothesis`，状态明确标记为“研究假设”。它们尚未接入权威预警运行时，不能直接作为生产平衡参数、真人任务答案或玩家正式说明。这样既让武器的核心差异在概览中可见，也保持研究假设与生产规则之间的边界。
 
 ## 数据边界
 
@@ -56,7 +62,7 @@
 
 ## 研究页验证
 
-独立研究页已接入参与者任务投影和同源研究矩阵：页面先展示六件逐件研究武器的核心动词、地图空间、反制方式，以及地面/空中的完整数值表；每个上下文的数值轴去重展示，数值名称同时写出单位和“越高/越低/风险”方向语义，然后再显示 5 道题、任务集哈希和数值矩阵哈希。参与者只能看到题目、选项和可观察数值，页面源码入口不消费 `expectedOptionId` 或 `evidence`。
+独立研究页已接入参与者任务投影和同源研究矩阵：页面先展示六件逐件研究武器的核心动词、地图空间、反制方式、地面/空中的完整数值表，以及独立的延迟/预警研究信号表；每个上下文的数值轴去重展示，数值名称同时写出单位和“越高/越低/风险”方向语义，然后再显示 5 道题、任务集哈希和数值矩阵哈希。参与者只能看到题目、选项和可观察数值，页面源码入口不消费 `expectedOptionId` 或 `evidence`。
 
 自动化页面边界验证确认六件矩阵入口、5 道题、参与者答案隔离和生产入口隔离仍成立；此前本地桌面浏览器验证的 `5 / 5 题通过` 仍只代表研究页与任务合同可工作，不代表真人解释率、设备可用性或生产平衡结论。
 

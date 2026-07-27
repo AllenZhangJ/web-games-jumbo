@@ -440,6 +440,7 @@ export {
 } from './arena-v2-weapon-research-overview-prototype.js';
 export {
   createArenaV2WeaponCaseStudyReadabilityMatrix,
+  createArenaV2WeaponCaseStudyResearchSignalReadout,
 } from './arena-v2-weapon-readability-task-prototype.js';
 export type {
   ArenaV2WeaponResearchOverviewContext,
@@ -450,6 +451,9 @@ export type {
   ArenaV2WeaponResearchOverviewRow,
   ArenaV2WeaponResearchOverviewStat,
 } from './arena-v2-weapon-research-overview-prototype.js';
+export type {
+  ArenaV2WeaponCaseStudyResearchSignalReadout,
+} from './arena-v2-weapon-readability-task-prototype.js';
 export {
   projectArenaV2ActionDefinitionPublicNumbers,
 } from './arena-v2-weapon-action-public-projection.js';

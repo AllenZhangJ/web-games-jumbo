@@ -68,6 +68,15 @@ button, input { font: inherit; }
 .readability-overview-table tbody th small { display: block; }
 .readability-overview-table tbody th small { margin-top: 0.2rem; color: var(--readability-muted); font-size: 0.7rem; font-weight: 400; line-height: 1.35; }
 .readability-overview-table tbody tr:nth-child(even) { background: #faf8f2; }
+.readability-research-signals { margin-top: 1.15rem; padding-top: 1rem; border-top: 2px solid var(--readability-coral); }
+.readability-research-signals h3 { margin: 0; }
+.readability-research-signal-table { width: 100%; min-width: 42rem; border-collapse: collapse; font-size: 0.8rem; }
+.readability-research-signal-table caption { padding: 0 0 0.55rem; color: var(--readability-muted); text-align: left; }
+.readability-research-signal-table th,
+.readability-research-signal-table td { padding: 0.55rem 0.65rem; border: 1px solid var(--readability-line); text-align: left; vertical-align: top; }
+.readability-research-signal-table thead th { background: var(--readability-coral); color: white; }
+.readability-research-signal-table tbody th { background: #fff1ed; }
+.readability-research-signal-table tbody tr:nth-child(even) { background: #faf8f2; }
 .readability-tasks { display: grid; gap: 1rem; margin-top: 1rem; padding: 1rem; }
 .readability-task { margin: 0; padding: 1rem; border: 1px solid var(--readability-line); }
 .readability-task legend { max-width: 100%; padding: 0 0.4rem; font-weight: 800; line-height: 1.45; }

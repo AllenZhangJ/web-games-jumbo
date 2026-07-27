@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   createArenaV2WeaponCaseStudyReadabilityMatrix,
+  createArenaV2WeaponCaseStudyResearchSignalReadout,
   createArenaV2WeaponReadabilityTaskSet,
 } from '../src/index.js';
 
@@ -30,5 +31,26 @@ describe('Arena V2 six-case weapon readability matrix', () => {
     expect(taskSet.tasks.every(({ status }) => status === 'ready')).toBe(true);
     expect(Object.isFrozen(matrix)).toBe(true);
     expect(Object.isFrozen(matrix.rows)).toBe(true);
+  });
+
+  it('keeps delayed impact visible as an explicit research signal without inventing zeroes', () => {
+    const signals = createArenaV2WeaponCaseStudyResearchSignalReadout();
+    expect(signals).toHaveLength(6);
+    expect(signals.find(({ referenceId }) => referenceId === 'magic-blood-scythe')).toMatchObject({
+      delayTicks: 18,
+      warningTicks: 18,
+      activeTicks: 6,
+      status: 'research-hypothesis',
+    });
+    expect(signals.find(({ referenceId }) => referenceId === 'mammoth-stone-axe')).toMatchObject({
+      delayTicks: 18,
+      warningTicks: 18,
+      activeTicks: 2,
+      status: 'research-hypothesis',
+    });
+    expect(signals.filter(({ status }) => status === 'not-declared')).toHaveLength(4);
+    expect(signals.filter(({ delayTicks }) => delayTicks === null)).toHaveLength(4);
+    expect(Object.isFrozen(signals)).toBe(true);
+    expect(Object.isFrozen(signals[0])).toBe(true);
   });
 });

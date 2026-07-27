@@ -1,5 +1,6 @@
 import {
   createArenaV2WeaponCaseStudyReadabilityMatrix,
+  createArenaV2WeaponCaseStudyResearchSignalReadout,
   createArenaV2WeaponReadabilityTaskSet,
   evaluateArenaV2WeaponReadabilityAttempt,
   projectArenaV2WeaponReadabilityParticipantTasks,
@@ -11,6 +12,7 @@ import {
   type ArenaV2WeaponResearchOverviewRow,
   type ArenaV2WeaponResearchOverviewStat,
   type ArenaV2WeaponReadabilityTaskSet,
+  type ArenaV2WeaponCaseStudyResearchSignalReadout,
 } from '@number-strategy-jump/arena-v1-experiment';
 import type { ArenaV2WeaponPublicAxisId } from '@number-strategy-jump/arena-v1-experiment';
 
@@ -156,8 +158,10 @@ function renderContextTable(
 function renderOverview(
   documentValue: Document,
   matrix: ArenaV2WeaponResearchOverviewMatrix,
+  researchSignals: readonly ArenaV2WeaponCaseStudyResearchSignalReadout[],
 ): void {
   const overview = required<HTMLElement>(documentValue, '#readability-overview');
+  const researchSignalsRoot = required<HTMLElement>(overview, '#readability-research-signals');
   overview.replaceChildren();
   const summary = documentValue.createElement('div');
   summary.className = 'readability-overview-summary';
@@ -165,6 +169,71 @@ function renderOverview(
   overview.append(summary);
   overview.append(renderContextTable(documentValue, matrix.rows, 'ground'));
   overview.append(renderContextTable(documentValue, matrix.rows, 'aerial'));
+  overview.append(researchSignalsRoot);
+  renderResearchSignals(documentValue, researchSignals);
+}
+
+function formatResearchSignal(value: number | null): string {
+  return value === null ? '未建立' : `${value} tick`;
+}
+
+function renderResearchSignals(
+  documentValue: Document,
+  signals: readonly ArenaV2WeaponCaseStudyResearchSignalReadout[],
+): void {
+  const root = required<HTMLElement>(documentValue, '#readability-research-signals');
+  root.replaceChildren();
+  const heading = documentValue.createElement('h3');
+  text(heading, '延迟与预警研究信号');
+  root.append(heading);
+  const note = documentValue.createElement('p');
+  note.className = 'readability-note';
+  text(note, '这组数字单独展示延迟武器的核心差异；它们是研究假设，不是生产战斗参数。未建立不等于 0 tick。');
+  root.append(note);
+
+  const wrap = documentValue.createElement('div');
+  wrap.className = 'readability-table-wrap';
+  const table = documentValue.createElement('table');
+  table.className = 'readability-research-signal-table';
+  const caption = documentValue.createElement('caption');
+  text(caption, '延迟：动作开始到危险窗口；预警：玩家可见危险到有效窗口；有效：危险实际生效窗口。');
+  table.append(caption);
+  const head = documentValue.createElement('thead');
+  const headRow = documentValue.createElement('tr');
+  for (const label of ['武器', '核心动词', '延迟', '预警', '有效窗口', '状态']) {
+    const cell = documentValue.createElement('th');
+    cell.scope = 'col';
+    text(cell, label);
+    headRow.append(cell);
+  }
+  head.append(headRow);
+  table.append(head);
+
+  const body = documentValue.createElement('tbody');
+  for (const signal of signals) {
+    const row = documentValue.createElement('tr');
+    row.dataset.referenceId = signal.referenceId;
+    const name = documentValue.createElement('th');
+    name.scope = 'row';
+    text(name, signal.displayName);
+    row.append(name);
+    const verb = documentValue.createElement('td');
+    text(verb, signal.coreVerb);
+    row.append(verb);
+    for (const value of [signal.delayTicks, signal.warningTicks, signal.activeTicks]) {
+      const cell = documentValue.createElement('td');
+      text(cell, formatResearchSignal(value));
+      row.append(cell);
+    }
+    const status = documentValue.createElement('td');
+    text(status, signal.status === 'research-hypothesis' ? '研究假设' : '未声明');
+    status.title = signal.explanation;
+    row.append(status);
+    body.append(row);
+  }
+  table.append(body);
+  wrap.append(table);
+  root.append(wrap);
 }
 
 function appendLabel(
@@ -318,9 +387,10 @@ function start(): void {
   const exportButton = required<HTMLButtonElement>(root, '#readability-export');
   const error = required<HTMLElement>(root, '#readability-error');
   const matrix = createArenaV2WeaponCaseStudyReadabilityMatrix();
+  const researchSignals = createArenaV2WeaponCaseStudyResearchSignalReadout();
   const taskSet = createArenaV2WeaponReadabilityTaskSet(matrix);
   const tasks = projectArenaV2WeaponReadabilityParticipantTasks(taskSet);
-  renderOverview(documentValue, matrix);
+  renderOverview(documentValue, matrix, researchSignals);
   const taskHash = required<HTMLElement>(root, '#readability-task-hash');
   const matrixHash = required<HTMLElement>(root, '#readability-matrix-hash');
   const status = required<HTMLElement>(root, '#readability-status');
