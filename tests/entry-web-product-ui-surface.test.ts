@@ -362,6 +362,20 @@ test('WebProductUiSurface renders stable semantic controls and serializes DOM in
   assert.equal(comparisonRange.children[2]?.textContent, '5.00格 ↑');
   assert.equal(comparisonRange.children[3]?.textContent, '1.60格 ↑');
   assert.equal(comparisonRisk.children[3]?.textContent, '6.50冲量 ⚠');
+  assert.match(
+    required(comparisonRisk.children[3], 'comparison risk value').getAttribute('aria-label') ?? '',
+    /越高风险越大/,
+  );
+  const hammerCard = required(
+    root.querySelector('[data-weapon-card]'),
+    'hammer weapon card',
+  );
+  const hammerRisk = required(
+    hammerCard.querySelectorAll('[data-weapon-stat-direction]')
+      .find(({ dataset }) => dataset.weaponStatDirection === 'higher-is-risk'),
+    'hammer stat row',
+  );
+  assert.match(hammerRisk.getAttribute('aria-label') ?? '', /越高风险越大/);
 
   const intents: Readonly<Record<string, unknown>>[] = [];
   let resolveIntent: (() => void) | undefined;

@@ -292,6 +292,10 @@ function drawWeaponComparison(
   context.font = font(10 * scale, 900);
   context.textAlign = 'left';
   context.fillText('公开数值对比', panel.x + 8 * scale, headerY);
+  context.fillStyle = COLOR.muted;
+  context.font = font(7 * scale, 700);
+  context.textAlign = 'right';
+  context.fillText('↑越高有利 · ↓越低有利 · ⚠越高风险', panel.x + panel.width - 8 * scale, headerY);
   context.textAlign = 'right';
   firstRow.values.forEach((value, index) => {
     context.fillText(

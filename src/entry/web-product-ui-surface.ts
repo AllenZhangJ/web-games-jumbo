@@ -111,6 +111,17 @@ function setImage(image: HTMLImageElement, source: string, alt: string): void {
   if (image.getAttribute('alt') !== alt) image.setAttribute('alt', alt);
 }
 
+function weaponDirectionHint(direction: string): string {
+  return direction === 'lower-is-better'
+    ? '越低越有利'
+    : direction === 'higher-is-risk' ? '越高风险越大' : '越高越有利';
+}
+
+function weaponStatFill(value: number, maxValue: number, direction: string): number {
+  const ratio = Math.max(0, Math.min(1, value / maxValue));
+  return (direction === 'lower-is-better' ? 1 - ratio : ratio) * 100;
+}
+
 export class WebProductUiSurface {
   readonly #canvas: HTMLCanvasElement;
   readonly #root: HTMLElement;
@@ -324,7 +335,16 @@ export class WebProductUiSurface {
         : stat.direction === 'higher-is-risk' ? '⚠' : '↑';
       setText(label, `${stat.label} ${direction}`);
       setText(value, `${stat.value.toFixed(stat.precision)}${stat.unit}`);
-      track.style.setProperty('--weapon-stat-fill', `${Math.max(0, Math.min(100, stat.value / stat.maxValue * 100))}%`);
+      row.setAttribute(
+        'aria-label',
+        `${stat.label}：${stat.value.toFixed(stat.precision)}${stat.unit}，${weaponDirectionHint(stat.direction)}`,
+      );
+      track.setAttribute('aria-hidden', 'true');
+      track.setAttribute('title', weaponDirectionHint(stat.direction));
+      track.style.setProperty(
+        '--weapon-stat-fill',
+        `${weaponStatFill(stat.value, stat.maxValue, stat.direction)}%`,
+      );
       row.dataset.weaponStatDirection = stat.direction;
     });
     const existingContexts = [...contexts.querySelectorAll<HTMLElement>('[data-weapon-context]')];
@@ -462,8 +482,9 @@ export class WebProductUiSurface {
         cell.setAttribute('role', 'cell');
         cell.setAttribute(
           'aria-label',
-          `${value.weaponName}${rowValue.label}${value.value.toFixed(value.precision)}${value.unit}`,
+          `${value.weaponName}${rowValue.label}${value.value.toFixed(value.precision)}${value.unit}，${weaponDirectionHint(value.direction)}`,
         );
+        cell.title = weaponDirectionHint(value.direction);
         row.append(cell);
       }
       fragment.append(row);

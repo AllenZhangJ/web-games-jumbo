@@ -103,7 +103,7 @@
 - 结果和未完成边界见[生存 1vE 最小循环原型结果](arena-v2-survival-loop-prototype-results-v1.md)。
 - 11 个局外信息入口和关键点击预算已形成无渲染合同；见[局外信息原型结果](arena-v2-ui-information-prototype-results-v1.md)。
 - 局外下一目标已形成无渲染合同：只显示一个目标，并按武器收集 → 武器上下文 → 地图段落 → 生存记录的顺序给出立即行动；实现见 `arena-v2-ui-next-goal-prototype.ts`，真人点击和留存效果仍未验证。
-- 武器概览已将公开数值比较矩阵提升到武器语义卡之前，并用三把武器的 DOM 同屏证据验证距离差异和自身位移风险；详见[ADR-046：武器概览先显示数值比较](../decisions/046-arena-weapon-overview-comparison-first.md)。真机阅读率和数值解释正确率仍待验证。
+- 武器概览已将公开数值比较矩阵提升到武器语义卡之前，并用三把武器的 DOM 同屏证据验证距离差异和自身位移风险；本轮又把“越高/越低/风险”从箭头约定收敛为文字图例、可访问标签、反向有利度条和同尺度校验，详见[ADR-046](../decisions/046-arena-weapon-overview-comparison-first.md)与[ADR-053](../decisions/053-arena-weapon-overview-direction-semantics.md)。真机阅读率和数值解释正确率仍待验证。
 - 生存实体原型已验证单一 `enemy-1` 与玩家共享 Rule/Physics、敌人可被击落、玩家第一次掉落复活且第二次终局；多敌压力原型进一步验证了 1/2/4 个同类敌人的有界追击、出招、供给争夺、等级专属 Definition 和同屏压力峰值。详见[生存实体与掉落原型结果](arena-v2-survival-loop-prototype-results-v1.md#5-单敌人实体与掉落闭环验证)和[多敌压力原型结果](arena-v2-survival-loop-prototype-results-v1.md#6-多敌自主压力与武器争夺原型验证)。当前反例是 50 秒内所有敌人都被击落、玩家只掉落一次，说明敌人数和等级接通都不能直接当作难度曲线；下一步要验证刷新节奏、分流/拥挤、AI 行为阶段和后期压力可读性。
 
 ### 新增：生存压力与 200 小时目标的硬缺口

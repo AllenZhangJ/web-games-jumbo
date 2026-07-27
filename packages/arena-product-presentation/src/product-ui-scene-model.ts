@@ -288,6 +288,12 @@ function weaponComparison(
       if (stat.unit !== referenceStat.unit) {
         throw new RangeError(`Product UI 武器比较的 ${referenceStat.id} 单位不一致。`);
       }
+      if (stat.direction !== referenceStat.direction) {
+        throw new RangeError(`Product UI 武器比较的 ${referenceStat.id} 方向语义不一致。`);
+      }
+      if (stat.maxValue !== referenceStat.maxValue) {
+        throw new RangeError(`Product UI 武器比较的 ${referenceStat.id} 尺度不一致。`);
+      }
       return Object.freeze({
         weaponId: card.id,
         weaponName: card.name,

@@ -447,6 +447,10 @@ button {
   background: var(--cyan);
 }
 
+.product-weapon-stat[data-weapon-stat-direction="higher-is-risk"] .product-weapon-stat-track::after {
+  background: var(--coral);
+}
+
 .product-weapon-comparison {
   margin: 0 0 0.65rem;
   padding: 0.45rem 0 0.1rem;

@@ -2,7 +2,7 @@
 
 ## 状态
 
-Accepted for current product UI（不扩展 V2 页面导航，不改变权威规则）
+Accepted for current product UI（方向语义细化见 [ADR-053](053-arena-weapon-overview-direction-semantics.md)）
 
 ## 日期
 
@@ -18,7 +18,7 @@ Arena 的主要深度来自武器和地图，而不是角色数量。当前主�
 
 武器概览采用“比较矩阵 → 武器语义卡”的固定顺序：
 
-1. 第一层显示同一组公开数值的横向比较，保留单位、实际数值和方向语义（↑优势、↓更省反应、⚠风险）；
+1. 第一层显示同一组公开数值的横向比较，保留单位、实际数值和方向语义；具体文字解释由 ADR-053 固化；
 2. 第二层显示核心动词、命中结果、地图用途、主要代价、反制和地面/空中上下文，解释数值意味着什么；
 3. 数值仍由 `ProductUiSceneModel.weaponComparison` 统一投影，Web DOM 与 Canvas 不各自维护一套数据；
 4. 窄屏允许比较矩阵横向滚动，但不增加新的页面、武器详情系统或复杂筛选。
