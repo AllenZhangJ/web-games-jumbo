@@ -216,6 +216,17 @@ export type {
   ArenaV2WeaponLanguagePrototypeResult,
 } from './arena-v2-weapon-language-prototype.js';
 export {
+  advanceArenaV2WarningZone,
+  createArenaV2WarningZoneRuntime,
+  isArenaV2WarningZonePointInside,
+} from './arena-v2-warning-zone-prototype.js';
+export type {
+  ArenaV2WarningZoneDefinition,
+  ArenaV2WarningZonePhase,
+  ArenaV2WarningZonePoint,
+  ArenaV2WarningZoneRuntime,
+} from './arena-v2-warning-zone-prototype.js';
+export {
   runArenaV2WeaponMapPrototype,
 } from './arena-v2-weapon-map-prototype.js';
 export type {

@@ -28,11 +28,17 @@ import {
   createArenaV1CharacterRegistry,
   STAGE6_MOVEMENT_ACTION_ID,
 } from '@number-strategy-jump/arena-v1-content';
+import { ARENA_V2_WEAPON_FUNCTION_LANGUAGE_ID } from './arena-v2-weapon-function-language.js';
 import {
   createArenaV2WeaponLanguageCandidates,
   createArenaV2WeaponLanguageResearchContent,
   type ArenaV2WeaponLanguageCandidate,
 } from './arena-v2-weapon-language-prototype.js';
+import {
+  advanceArenaV2WarningZone,
+  createArenaV2WarningZoneRuntime,
+  type ArenaV2WarningZoneRuntime,
+} from './arena-v2-warning-zone-prototype.js';
 import { createArenaV2JumpRoutePrototype } from './arena-v2-jump-route-prototype.js';
 
 const ATTACKER_ID = 'language-route-attacker';
@@ -69,6 +75,12 @@ export interface ArenaV2KzLanguageConsequenceProbeResult {
   readonly responseOutcome: ArenaV2KzLanguageResponseOutcome;
   readonly responseTicks: number;
   readonly jumpStarted: boolean;
+  readonly warningZone: Readonly<{
+    startsAtTick: number;
+    expiresAtTickExclusive: number;
+    lastObservedTick: number;
+    phase: 'telegraph' | 'active' | 'expired';
+  }> | null;
 }
 
 export interface ArenaV2KzLanguageConsequencePrototypeResult {
@@ -115,6 +127,12 @@ function createFrames(tick: number): readonly ArenaInputFrame[] {
 
 function horizontalMagnitude(value: Readonly<{ x: number; z: number }>): number {
   return Math.hypot(value.x, value.z);
+}
+
+function numericTargetingParameter(parameters: unknown, key: string, fallback: number): number {
+  if (typeof parameters !== 'object' || parameters === null) return fallback;
+  const value = (parameters as Readonly<Record<string, unknown>>)[key];
+  return typeof value === 'number' ? value : fallback;
 }
 
 function surfaceForSegment(
@@ -196,6 +214,24 @@ function runProbe(
   let finalTargetZ = surface.center.z;
   let responseTicks = 0;
   let jumpStarted = false;
+  const warningZoneParameters = candidate.groundAction.targeting.parameters;
+  let warningZone: ArenaV2WarningZoneRuntime | null = candidate.languageId
+    === ARENA_V2_WEAPON_FUNCTION_LANGUAGE_ID.ZONE_DENIAL
+    ? createArenaV2WarningZoneRuntime({
+      id: `v2-warning-zone:${segment.segmentId}:${candidate.weaponId}`,
+      ownerId: ATTACKER_ID,
+      languageId: candidate.languageId,
+      center: { x: targetX, y: spawnY, z: surface.center.z },
+      radius: numericTargetingParameter(warningZoneParameters, 'radius', 1),
+      maximumVerticalDifference: numericTargetingParameter(
+        warningZoneParameters,
+        'maximumVerticalDifference',
+        1,
+      ),
+      startsAtTick: candidate.groundAction.timing.windupTicks,
+      activeTicks: candidate.groundAction.timing.activeTicks,
+    })
+    : null;
   try {
     const instanceId = `v2-kz-language:${segment.segmentId}:${candidate.weaponId}`;
     engine.spawnEquipment({
@@ -222,6 +258,7 @@ function runProbe(
     });
     for (let tick = 0; tick < PROBE_TICKS; tick += 1) {
       engine.advanceTimers();
+      if (warningZone) warningZone = advanceArenaV2WarningZone(warningZone, tick);
       const beforePlayer = physics.getCharacterState(PLAYER_ID);
       const response = responseInput(tick, responsePolicy);
       if (response.moveX !== 0 || response.moveZ !== 0 || response.jumpPressed) responseTicks += 1;
@@ -322,6 +359,14 @@ function runProbe(
       : firstHitTick === null ? 'miss' : targetFell ? 'hit-ring-out' : 'hit-safe',
     responseTicks,
     jumpStarted,
+    warningZone: warningZone === null
+      ? null
+      : Object.freeze({
+        startsAtTick: warningZone.startsAtTick,
+        expiresAtTickExclusive: warningZone.expiresAtTickExclusive,
+        lastObservedTick: warningZone.lastObservedTick,
+        phase: warningZone.phase,
+      }),
   });
 }
 

@@ -36,6 +36,13 @@ describe('Arena V2 KZ weapon language consequence prototype', () => {
       'miss:miss',
       'miss:movement-fall',
     ]));
+    const warningZones = result.probes.filter(({ weaponId }) => weaponId === 'research-zone-denial');
+    expect(warningZones.every(({ warningZone }) => warningZone !== null)).toBe(true);
+    expect(warningZones.every(({ warningZone }) => (
+      warningZone?.startsAtTick === 24
+      && warningZone.expiresAtTickExclusive === 27
+      && (warningZone.lastObservedTick ?? -1) >= 24
+    ))).toBe(true);
     expect(result.probes.some(({ landedOnDifferentSurface }) => landedOnDifferentSurface)).toBe(true);
     expect(result.probes.some(({ jumpStarted }) => jumpStarted)).toBe(true);
   });

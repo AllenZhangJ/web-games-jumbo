@@ -10,13 +10,15 @@
 
 每个组合都使用当前 `ArenaRuleEngine`、`MovementSystem` 和轻量 `PhysicsWorld`，共运行 6 段 × 3 种语言 × 3 种固定回应 = 54 个探针。固定回应不是真人模型：`hold` 原地承受，`step-out` 在前 10 tick 沿路线前方移动，`jump` 在第 0 tick 起跳。
 
-本原型只存在于开发/测试工具链，不新增生产武器、地图、存档或玩家收藏 ID。封路仍然只是“带预警的宽判定动作”，不是持续存在的危险区；结果不能证明最终区域效果、真人反应时间或正式平衡已经成立。
+本原型只存在于开发/测试工具链，不新增生产武器、地图、存档或玩家收藏 ID。封路已经补上“公开标记位置 + 整数 tick 到期”的最小状态，但仍然只是可读预警，不是持续伤害或持续阻挡的危险区；结果不能证明最终区域效果、真人反应时间或正式平衡已经成立。
 
 ## 验证入口
 
 ```text
 packages/arena-v1-experiment/src/arena-v2-kz-language-consequence-prototype.ts
 packages/arena-v1-experiment/test/arena-v2-kz-language-consequence-prototype.test.ts
+packages/arena-v1-experiment/src/arena-v2-warning-zone-prototype.ts
+packages/arena-v1-experiment/test/arena-v2-warning-zone-prototype.test.ts
 ```
 
 ## 固定结果
@@ -55,6 +57,16 @@ packages/arena-v1-experiment/test/arena-v2-kz-language-consequence-prototype.tes
 
 这说明“武器强不强”不能脱离地图谈：同一把武器的横向控制在起点平台可能只是位移，在迷宫或走钢丝却会直接改变失败概率；同一段窄路又可能把不同前摇的武器都转化为路线转移，而不是单纯伤害差异。
 
+## 封路最小标记状态
+
+封路候选从动作开始后创建一个公开标记，使用同一整数 tick 时间轴：
+
+- `telegraph`：第 0–23 tick，玩家能看到标记位置，但不受区域判定影响；
+- `active`：第 24–26 tick，标记处于 3 tick 的有效阶段；
+- `expired`：第 27 tick 起，标记不再判定玩家是否处于区域内。
+
+六段 KZ 探针中的封路候选均记录到 `startsAtTick=24`、`expiresAtTickExclusive=27`，并在命中或提前掉落前至少观察到有效阶段。当前点内判定只返回公开状态，不生成伤害、击退或新的输入要求，因此不会绕过 `ArenaRuleEngine` 的动作命中链路。
+
 ## 研究判断
 
 ### 已经得到的证据
@@ -67,7 +79,7 @@ packages/arena-v1-experiment/test/arena-v2-kz-language-consequence-prototype.tes
 ### 仍然不能关闭的问题
 
 - `step-out` 和 `jump` 是固定脚本，不能代替真人的视野、输入延迟和路线判断；
-- 当前封路没有持续危险区状态，不能宣称已经验证了“封路”完整功能；
+- 当前封路只有公开标记和到期状态，没有持续伤害、阻挡或区域击退，不能宣称已经验证了“封路”完整功能；
 - 当前结果没有敌人追击、复活重新进入路线或多人拥挤，不能直接冻结竞速/生存数值；
 - 命中反馈的声音、特效、镜头和伤害解释率仍未进行设备/真人验证。
 
@@ -76,7 +88,7 @@ packages/arena-v1-experiment/test/arena-v2-kz-language-consequence-prototype.tes
 下一批优先保留三种语言的差异，不增加新的按键：
 
 1. 直线压制作为低前摇、低击退的基础学习样本；
-2. 封路先补“公开标记位置 + 到期”的最小权威状态，再决定是否需要持续伤害；
+2. 封路先保留“公开标记位置 + 到期”的最小权威状态，再决定是否需要持续区域影响；
 3. 延迟重击保留最长预警和最高击退，并把可规避性作为硬验收条件；
 4. 正式武器候选必须同时提交动作前摇、命中冲量、地图段落结果和玩家反制说明，不能只提交总评分。
 

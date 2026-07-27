@@ -74,7 +74,7 @@
 - 生存地图的安全区、危险区和敌人压力点；
 - 竞速地图基座与生存规则的分离说明。
 
-当前新增证据：四类代表 KZ 地图样本已经形成结构化研究卡，分别覆盖长跳练习、长路线检查点、垂直攀爬恢复和混合移动标签；六段灰盒又通过同一套 Rule/Physics 武器攻击探针完成 18 个段落×武器组合，并以 10 tick 侧移和一次正式起跳扩展为 54 个响应组合，证明同一把武器在宽平台、迷宫、窄路和走钢丝上的后果不同；三种候选战斗语言进一步完成 54 个“语言×表面×固定回应”探针，证明前摇、横向冲量和支撑面会共同改变击落与路线转移结果；详见[CS1.6 KZ 跳跃地图研究 V1](arena-v2-cs16-kz-map-study-v1.md)、[武器战斗语言 × KZ 地图后果原型结果 V1](arena-v2-weapon-language-kz-consequence-results-v1.md)、`arena-v2-kz-map-research-catalog.ts`、`arena-v2-kz-route-combat-prototype.ts` 和 `arena-v2-kz-language-consequence-prototype.ts`。下一步仍需加入真人视野、移动方向选择、持续封路状态和复活重新进入路线验证，不引入第三方地图资产。
+当前新增证据：四类代表 KZ 地图样本已经形成结构化研究卡，分别覆盖长跳练习、长路线检查点、垂直攀爬恢复和混合移动标签；六段灰盒又通过同一套 Rule/Physics 武器攻击探针完成 18 个段落×武器组合，并以 10 tick 侧移和一次正式起跳扩展为 54 个响应组合，证明同一把武器在宽平台、迷宫、窄路和走钢丝上的后果不同；三种候选战斗语言进一步完成 54 个“语言×表面×固定回应”探针，证明前摇、横向冲量和支撑面会共同改变击落与路线转移结果；封路候选又补上公开标记位置和 24–26 tick 有效、27 tick 到期的最小状态；详见[CS1.6 KZ 跳跃地图研究 V1](arena-v2-cs16-kz-map-study-v1.md)、[武器战斗语言 × KZ 地图后果原型结果 V1](arena-v2-weapon-language-kz-consequence-results-v1.md)、`arena-v2-kz-map-research-catalog.ts`、`arena-v2-kz-route-combat-prototype.ts` 和 `arena-v2-kz-language-consequence-prototype.ts`。下一步仍需加入真人视野、移动方向选择、区域内实际影响和复活重新进入路线验证，不引入第三方地图资产。
 
 ## 优先级三：弹壳特攻队局外信息架构研究
 
