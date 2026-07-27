@@ -367,7 +367,7 @@ test('WebProductUiSurface renders stable semantic controls and serializes DOM in
     root.querySelector('#product-weapon-comparison'),
     'weapon comparison',
   );
-  assert.equal(comparison.children.length, 4);
+  assert.equal(comparison.children.length, 6);
   const comparisonHeader = required(comparison.children[0], 'comparison header');
   const comparisonRange = required(comparison.children[1], 'comparison range row');
   const comparisonRisk = required(comparison.children[3], 'comparison risk row');
@@ -386,6 +386,17 @@ test('WebProductUiSurface renders stable semantic controls and serializes DOM in
     required(comparisonRisk.children[3], 'comparison risk value').getAttribute('aria-label') ?? '',
     /越高风险越大/,
   );
+  const comparisonActiveSpan = required(comparison.children[4], 'comparison active span row');
+  const comparisonDirectionTolerance = required(comparison.children[5], 'comparison direction tolerance row');
+  assert.equal(comparisonActiveSpan.children[0]?.textContent, '行为·有效窗口 (秒)');
+  assert.equal(comparisonActiveSpan.children[1]?.textContent, '0.05秒 ↑');
+  assert.equal(comparisonActiveSpan.children[2]?.textContent, '0.05秒 ↑');
+  assert.equal(comparisonActiveSpan.children[3]?.textContent, '0.07秒 ↑');
+  assert.equal(comparisonDirectionTolerance.children[0]?.textContent, '行为·方向容错角 (°)');
+  assert.equal(comparisonDirectionTolerance.children[1]?.textContent, '133° ↑');
+  assert.equal(comparisonDirectionTolerance.children[2]?.textContent, '113° ↑');
+  assert.equal(comparisonDirectionTolerance.children[3]?.textContent, '90° ↑');
+  assert.equal(comparisonActiveSpan.dataset.weaponComparisonSurface, 'behavior');
   const hammerCard = required(
     root.querySelector('[data-weapon-card]'),
     'hammer weapon card',

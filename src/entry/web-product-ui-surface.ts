@@ -472,7 +472,11 @@ export class WebProductUiSurface {
   #syncWeaponComparison(model: WebProductSceneModel): void {
     const comparison = this.#readyNodes().weaponComparison;
     if (!comparison) return;
-    if (model.weaponComparison.length === 0) {
+    const comparisonRows = [
+      ...model.weaponComparison.map((row) => ({ row, kind: 'main' as const })),
+      ...model.weaponBehaviorComparison.map((row) => ({ row, kind: 'behavior' as const })),
+    ];
+    if (comparisonRows.length === 0) {
       comparison.replaceChildren();
       return;
     }
@@ -484,7 +488,7 @@ export class WebProductUiSurface {
     headerLabel.textContent = '数值';
     headerLabel.setAttribute('role', 'columnheader');
     header.append(headerLabel);
-    const firstRow = model.weaponComparison[0]!;
+    const firstRow = comparisonRows[0]!.row;
     for (const value of firstRow.values) {
       const weapon = this.#document.createElement('span');
       weapon.textContent = value.weaponName;
@@ -492,13 +496,14 @@ export class WebProductUiSurface {
       header.append(weapon);
     }
     fragment.append(header);
-    for (const rowValue of model.weaponComparison) {
+    for (const { row: rowValue, kind } of comparisonRows) {
       const row = this.#document.createElement('div');
       row.className = 'product-weapon-comparison-row';
       row.dataset.weaponComparisonRow = rowValue.id;
+      row.dataset.weaponComparisonSurface = kind;
       row.setAttribute('role', 'row');
       const label = this.#document.createElement('span');
-      label.textContent = `${rowValue.label} (${rowValue.unit})`;
+      label.textContent = `${kind === 'behavior' ? '行为·' : ''}${rowValue.label} (${rowValue.unit})`;
       label.setAttribute('role', 'rowheader');
       row.append(label);
       for (const value of rowValue.values) {

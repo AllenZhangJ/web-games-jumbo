@@ -663,7 +663,7 @@ describe('Product presentation immutable data boundaries', () => {
     expect(first.commands.some(([command, text]) => command === 'fillText' && text === '开始')).toBe(true);
     expect(first.commands.some(([command, text]) => command === 'fillText' && text === '有效距离')).toBe(true);
     expect(first.commands.some(([command, text]) => command === 'fillText' && text === '1.80格 ↑')).toBe(true);
-    expect(first.commands.some(([command, text]) => command === 'fillText' && text === '有效窗口')).toBe(true);
+    expect(first.commands.some(([command, text]) => command === 'fillText' && text === '行为·有效窗口')).toBe(true);
     expect(first.commands.some(([command, text]) => command === 'fillText' && text === '0.05秒 ↑')).toBe(true);
     expect(JSON.stringify(sceneModel)).toBe(sceneBefore);
     expect(JSON.stringify(layout)).toBe(layoutBefore);

@@ -268,11 +268,11 @@ function drawWeaponComparison(
   model: ProductUiSceneModel,
   layout: ProductCanvasLayout,
 ): void {
-  if (model.weaponComparison.length === 0) return;
   const comparisonRows = Object.freeze([
-    ...model.weaponComparison,
-    ...model.weaponBehaviorComparison,
+    ...model.weaponComparison.map((row) => ({ row, kind: 'main' as const })),
+    ...model.weaponBehaviorComparison.map((row) => ({ row, kind: 'behavior' as const })),
   ]);
+  if (comparisonRows.length === 0) return;
   const { visual, scale } = layout;
   const panel = {
     x: visual.x + 10 * scale,
@@ -287,7 +287,7 @@ function drawWeaponComparison(
   context.lineWidth = Math.max(1, scale);
   context.stroke();
 
-  const firstRow = model.weaponComparison[0]!;
+  const firstRow = comparisonRows[0]!.row;
   const labelWidth = panel.width * 0.38;
   const valueWidth = (panel.width - labelWidth - 10 * scale) / Math.max(1, firstRow.values.length);
   const headerY = panel.y + 13 * scale;
@@ -319,12 +319,16 @@ function drawWeaponComparison(
   );
 
   const rowHeight = Math.max(12 * scale, (panel.height - 31 * scale) / comparisonRows.length);
-  comparisonRows.forEach((row, rowIndex) => {
+  comparisonRows.forEach(({ row, kind }, rowIndex) => {
     const y = panel.y + 32 * scale + rowHeight * rowIndex;
     context.textAlign = 'left';
     context.fillStyle = COLOR.muted;
     context.font = font(10 * scale, 700);
-    context.fillText(row.label, panel.x + 8 * scale, y);
+    context.fillText(
+      `${kind === 'behavior' ? '行为·' : ''}${row.label}`,
+      panel.x + 8 * scale,
+      y,
+    );
     context.textAlign = 'right';
     context.fillStyle = COLOR.ink;
     context.font = font(10 * scale, 900);
@@ -355,7 +359,9 @@ function drawHome(
   layout: ProductCanvasLayout,
 ): void {
   const { visual, scale } = layout;
-  const floorY = model.weaponComparison.length > 0
+  const hasWeaponComparison = model.weaponComparison.length > 0
+    || model.weaponBehaviorComparison.length > 0;
+  const floorY = hasWeaponComparison
     ? visual.y + visual.height * 0.48
     : visual.y + visual.height * 0.82;
   const center = visual.x + visual.width / 2;
@@ -377,7 +383,7 @@ function drawHome(
   context.fillText(
     '1V1  ·  装备  ·  地图  ·  击飞',
     center,
-    model.weaponComparison.length > 0
+    hasWeaponComparison
       ? visual.y + visual.height - 8 * scale
       : visual.y + visual.height - 22 * scale,
   );
