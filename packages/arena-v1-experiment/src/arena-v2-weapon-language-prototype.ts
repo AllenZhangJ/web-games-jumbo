@@ -80,6 +80,7 @@ export interface ArenaV2WeaponLanguageCandidate {
 
 interface AttackDefinitionInput {
   readonly id: string;
+  readonly aerial?: boolean;
   readonly targeting: Readonly<{ kind: string; parameters: Readonly<Record<string, unknown>> }>;
   readonly timing: Readonly<{
     windupTicks: number;
@@ -109,6 +110,12 @@ function attackDefinition(input: AttackDefinitionInput): ActionDefinition {
     ...(input.commitment ? { commitment: input.commitment } : {}),
     targeting: input.targeting,
     effects: [
+      ...(input.aerial ? [{
+        id: `${input.id}-begin-descent`,
+        kind: 'begin-down-smash',
+        trigger: ACTION_EFFECT_TRIGGER.ACTION_STARTED,
+        parameters: {},
+      }] : []),
       {
         id: `${input.id}-interrupt`,
         kind: 'interrupt-action',
@@ -184,6 +191,7 @@ export function createArenaV2WeaponLanguageCandidates(): readonly ArenaV2WeaponL
   });
   const lineAir = attackDefinition({
     id: 'research-line-pressure-aerial',
+    aerial: true,
     targeting: {
       kind: 'downward-cylinder',
       parameters: { range: 3, radius: 1.1, minimumVerticalDrop: 0, maximumVerticalDifference: 3 },
@@ -208,6 +216,7 @@ export function createArenaV2WeaponLanguageCandidates(): readonly ArenaV2WeaponL
   });
   const zoneAir = attackDefinition({
     id: 'research-zone-denial-aerial',
+    aerial: true,
     targeting: {
       kind: 'downward-cylinder',
       parameters: { range: 3.2, radius: 1.4, minimumVerticalDrop: 0, maximumVerticalDifference: 3.2 },
@@ -232,6 +241,7 @@ export function createArenaV2WeaponLanguageCandidates(): readonly ArenaV2WeaponL
   });
   const delayedAir = attackDefinition({
     id: 'research-delayed-heavy-aerial',
+    aerial: true,
     targeting: {
       kind: 'downward-cylinder',
       parameters: { range: 3, radius: 1.3, minimumVerticalDrop: 0, maximumVerticalDifference: 3 },
@@ -263,6 +273,7 @@ export function createArenaV2WeaponLanguageCandidates(): readonly ArenaV2WeaponL
   });
   const readPunishAir = attackDefinition({
     id: 'research-read-punish-aerial',
+    aerial: true,
     targeting: {
       kind: 'downward-cylinder',
       parameters: { range: 2.8, radius: 1.1, minimumVerticalDrop: 0, maximumVerticalDifference: 2.8 },
@@ -294,6 +305,7 @@ export function createArenaV2WeaponLanguageCandidates(): readonly ArenaV2WeaponL
   });
   const flankAir = attackDefinition({
     id: 'research-flank-aerial',
+    aerial: true,
     targeting: {
       kind: 'rear-cone',
       parameters: { range: 2.8, minimumFacingDot: 0.6, maximumVerticalDifference: 2.8 },

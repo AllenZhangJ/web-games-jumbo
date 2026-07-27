@@ -69,6 +69,8 @@ Arena V2 的核心目标是：
 | `arena-v2-weapon-flank-replay-prototype.ts` | 为绕后生成保持背向与目标主动转身两组固定 Replay | 两组研究 Replay 通过，仍未生产化 |
 | [研究武器双人拥挤与地图边缘 Replay 结果 V1](../research/arena-v2-weapon-multiplayer-edge-replay-results-v1.md) | 使用真实双人 MatchCore 验证三类研究候选同时出招、窄平台击退、击落和真实反馈来源映射 | 三个研究候选反馈来源已通过，仍未生产化 |
 | `arena-v2-weapon-multiplayer-edge-replay-prototype.ts` | 为直线压制、读招反制、绕后生成双方同时出招的边缘平台 Replay，并输出命中/击落/反馈语义 | 双人边缘研究证据 |
+| [武器攻击/跳跃穿插 Replay 原型结果 V1](../research/arena-v2-weapon-attack-jump-interleave-replay-results-v1.md) | 使用真实 MatchCore 验证同 tick 攻击与跳跃独立通道，以及空中切换武器专属下砸动作 | 三个研究候选穿插证据已通过，仍未生产化 |
+| `arena-v2-weapon-attack-jump-interleave-replay-prototype.ts` | 为三个研究候选生成同 tick 独立通道与空中武器动作 Replay，并验证 `begin-down-smash` 状态效果 | 攻击/跳跃穿插研究证据 |
 | [武器战斗语言最小原型结果 V1](../research/arena-v2-weapon-language-prototype-results-v1.md) | 记录直线压制、封路、延迟重击、读招反制和绕后的 Rule/Targeting/Effect 最小验证与回应时间 | 扩展武器原型证据 |
 | [武器战斗语言 × KZ 地图后果原型结果 V1](../research/arena-v2-weapon-language-kz-consequence-results-v1.md) | 记录五种战斗语言在六段 KZ 表面上的击落、路线转移、前摇、有效窗口和固定回应后果 | 扩展武器×地图原型证据 |
 | `arena-v2-warning-zone-prototype.ts` | 验证封路候选的公开标记位置、整数 tick 生命周期和到期，不实现持续伤害或新操作 | 第四轮武器状态原型证据 |

@@ -305,6 +305,15 @@ export type {
   ArenaV2WeaponMultiplayerEdgeReplayResult,
 } from './arena-v2-weapon-multiplayer-edge-replay-prototype.js';
 export {
+  runArenaV2WeaponAttackJumpInterleaveReplayPrototype,
+} from './arena-v2-weapon-attack-jump-interleave-replay-prototype.js';
+export type {
+  ArenaV2WeaponAttackJumpActionStart,
+  ArenaV2WeaponAttackJumpInterleaveReplayResult,
+  ArenaV2WeaponAttackJumpInterleaveReplayPrototypeResult,
+  ArenaV2WeaponAttackJumpInterleaveScenario,
+} from './arena-v2-weapon-attack-jump-interleave-replay-prototype.js';
+export {
   createArenaV2WeaponResearchOverviewMatrix,
 } from './arena-v2-weapon-research-overview-prototype.js';
 export type {

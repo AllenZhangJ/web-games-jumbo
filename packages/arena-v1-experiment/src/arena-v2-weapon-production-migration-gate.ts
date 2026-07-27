@@ -11,6 +11,7 @@ import { runArenaV2WeaponLaunchReplayPrototype } from './arena-v2-weapon-launch-
 import { runArenaV2WeaponReadPunishReplayPrototype } from './arena-v2-weapon-read-punish-replay-prototype.js';
 import { runArenaV2WeaponFlankReplayPrototype } from './arena-v2-weapon-flank-replay-prototype.js';
 import { runArenaV2WeaponMultiplayerEdgeReplayPrototype } from './arena-v2-weapon-multiplayer-edge-replay-prototype.js';
+import { runArenaV2WeaponAttackJumpInterleaveReplayPrototype } from './arena-v2-weapon-attack-jump-interleave-replay-prototype.js';
 import { runArenaV2WeaponMapPrototype } from './arena-v2-weapon-map-prototype.js';
 
 export type ArenaV2WeaponProductionMigrationGateId =
@@ -105,6 +106,7 @@ function createCandidateResult(
   readPunishReplayResult: ReturnType<typeof runArenaV2WeaponReadPunishReplayPrototype>,
   flankReplayResult: ReturnType<typeof runArenaV2WeaponFlankReplayPrototype>,
   multiplayerEdgeReplayResult: ReturnType<typeof runArenaV2WeaponMultiplayerEdgeReplayPrototype>,
+  attackJumpInterleaveResult: ReturnType<typeof runArenaV2WeaponAttackJumpInterleaveReplayPrototype>,
 ): ArenaV2WeaponProductionMigrationCandidateResult {
   const audit = auditFor(candidate);
   const isProductionDefinition = audit.implementationStatus === 'production-authority';
@@ -131,7 +133,21 @@ function createCandidateResult(
   const hasResearchActionState = hasLineResearchActionState
     || hasReadResearchActionState
     || hasFlankResearchActionState;
-  const hasActionState = hasProductionActionState || hasResearchActionState;
+  const attackJumpInterleaveResults = attackJumpInterleaveResult.results.filter(({ candidateId }) => (
+    candidateId === candidate.languageId
+  ));
+  const hasResearchAttackJumpInterleave = candidate.source === 'research-candidate'
+    && attackJumpInterleaveResults.length === 2
+    && attackJumpInterleaveResults.some(({ scenario, sameTickAttackAndJumpStarted }) => (
+      scenario === 'same-tick-independent-lanes' && sameTickAttackAndJumpStarted
+    ))
+    && attackJumpInterleaveResults.some(({ scenario, airborneWeaponActionStarted, airborneMovementMode }) => (
+      scenario === 'airborne-weapon-action'
+      && airborneWeaponActionStarted
+      && airborneMovementMode === 'down-smash'
+    ));
+  const hasActionState = hasProductionActionState
+    || (hasResearchActionState && hasResearchAttackJumpInterleave);
   const hasCandidateReplay = (
     candidate.candidateId === lineReplayResult.candidateId
     && lineReplayResult.replayVerified
@@ -164,10 +180,10 @@ function createCandidateResult(
       ? passed('formal-action-state', hasProductionActionState
         ? '正式动作身份具备地面/空中上下文、前摇、有效、收招和冷却时间。'
         : candidate.candidateId === readPunishReplayResult.candidateId
-          ? '读招反制已通过统一 ActionExecutionSystem 的承诺、提前取消、提交和到期取消状态探针。'
+          ? '读招反制已通过统一 ActionExecutionSystem 的承诺、提前取消、提交和到期取消状态探针；攻击/跳跃保持独立通道，空中动作进入下砸语义。'
           : candidate.candidateId === flankReplayResult.candidateId
-            ? '绕后已通过统一 ActionExecutionSystem 生命周期，并验证目标保持背向命中与主动转身避开。'
-            : '直线压制已通过正式 ActionExecutionSystem 的 idle→windup→active→recovery 生命周期探针.')
+            ? '绕后已通过统一 ActionExecutionSystem 生命周期，并验证目标保持背向命中与主动转身避开；攻击/跳跃保持独立通道，空中动作进入下砸语义。'
+            : '直线压制已通过正式 ActionExecutionSystem 的 idle→windup→active→recovery 生命周期探针；攻击/跳跃保持独立通道，空中动作进入下砸语义。')
       : blocked('formal-action-state', '研究动作只有原型时序，尚未完成正式动作状态、取消和冲突规则接入。'),
     hasCandidateReplay
         ? candidate.candidateId === readPunishReplayResult.candidateId
@@ -208,6 +224,7 @@ export function runArenaV2WeaponProductionMigrationGate(): ArenaV2WeaponProducti
   const readPunishReplayResult = runArenaV2WeaponReadPunishReplayPrototype();
   const flankReplayResult = runArenaV2WeaponFlankReplayPrototype();
   const multiplayerEdgeReplayResult = runArenaV2WeaponMultiplayerEdgeReplayPrototype();
+  const attackJumpInterleaveResult = runArenaV2WeaponAttackJumpInterleaveReplayPrototype();
   const candidates = Object.freeze(ARENA_V2_WEAPON_LAUNCH_CANDIDATES.map((candidate) => (
     createCandidateResult(
       candidate,
@@ -217,6 +234,7 @@ export function runArenaV2WeaponProductionMigrationGate(): ArenaV2WeaponProducti
       readPunishReplayResult,
       flankReplayResult,
       multiplayerEdgeReplayResult,
+      attackJumpInterleaveResult,
     )
   )));
   if (candidates.some(({ gates }) => gates.length !== GATE_IDS.length)) {
