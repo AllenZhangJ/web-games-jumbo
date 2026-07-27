@@ -619,6 +619,7 @@ export type {
   ArenaV2JumpRouteSurface,
 } from './arena-v2-jump-route-prototype.js';
 export {
+  runArenaV2KzRouteRespawnReentryPrototype,
   runArenaV2KzRouteCombatPrototype,
   runArenaV2KzRouteCombatResponsePrototype,
 } from './arena-v2-kz-route-combat-prototype.js';

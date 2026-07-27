@@ -282,6 +282,14 @@ KZ-Rush 的难度标准把距离、空中修正和连续节奏拆开记录，而
 
 当前结论：KZ 基座需要按段落明确“可回应方式”，而不是只记录难度等级。六段灰盒已经把可用回应、回应窗口、命中后的恢复类型写入 `ArenaV2JumpRouteSegment`；研究 MapDefinition 已经把这套几何、四个竞速起点和六个段落装备锚点接入正式地图合同，但尚未进入生产 Registry。后续仍要用真人视野验证窗口是否可读，并把复活后重新进入的第一个安全锚点作为地图验收项。
 
+### 12.2 复活后重新进入路线的最小探针
+
+为关闭“复活锚点只存在于字段里”的结构性缺口，新增 `runArenaV2KzRouteRespawnReentryPrototype()`。探针选择迷宫段的冲锋盾击落场景：命中仍由 `ArenaRuleEngine` 产生，掉落仍由轻量 `PhysicsWorld` 产生；检测到玩家低于 `killY` 后，先重置 Rule participant，再等待路线合同声明的 3 秒（180 tick），最后把玩家放回 `segment-04-maze` 的 `anchor-stairs-end`。
+
+探针随后再走两个物理 tick，确认玩家实际支撑表面仍是 `surface-03-stair-c`，而不是只比较一组预设坐标。当前结果为：`fallTick` 可重复、`respawnTick - fallTick = 180`、复活表面与重入表面均为 `surface-03-stair-c`，结果为 `reentered-route`。这证明“被击落 → 等待 → 回到声明安全锚点 → 重新获得路线支撑”已经能沿同一 Rule/Physics 链路复现。
+
+该探针仍不等于正式复活体验：没有验证摄像机、无敌表现、多人同时重生、竞速排名冻结或真人是否能立即看懂自己回到了哪一段；这些仍是设备和真人研究项。
+
 ## 13. 研究 MapDefinition 适配结果
 
 为关闭“路线合同没有真正落到地图合同”的结构性缺口，新增 `arena-v2-kz-map-definition-prototype.ts`。它只存在于 `arena-v1-experiment` 研究工具链，不注册默认生产地图，负责把六段路线投影为当前权威 `MapDefinition`：
@@ -307,4 +315,4 @@ KZ-Rush 的难度标准把距离、空中修正和连续节奏拆开记录，而
 - `packages/arena-v1-experiment/test/arena-v2-jump-route-prototype.test.ts`
 - `packages/arena-v1-experiment/test/arena-v2-kz-route-combat-prototype.test.ts`
 
-当前仍不能称为正式地图完成：MapDefinition 只证明静态几何、起点和模式分流合同成立；2–4 人真实争抢、攻击中移动、3 秒原处重生、摄像机视野、手机触控和真人路线学习仍需要独立验收。
+当前仍不能称为正式地图完成：MapDefinition 和复活重入探针只证明静态几何、起点、模式分流以及单人复活锚点合同成立；2–4 人真实争抢、攻击中移动、多人同时重生、摄像机视野、手机触控和真人路线学习仍需要独立验收。

@@ -19,6 +19,7 @@ CS1.6 KZ 研究已经形成六段自有灰盒路线，并通过固定输入证�
 - 冲量通过现有 `PhysicsWorld` 端口应用；
 - 输出命中 tick、横向冲量、实际位移、是否出界和命中后的支撑表面；
 - 响应版本只允许 `hold`、最多 10 tick 的 `strafe` 和一次正式 `jump`，通过 `MovementSystem` 处理，不直接写玩家位置；
+- 复活重入版本选择迷宫段冲锋盾击落场景，使用路线 `respawnSeconds` 换算 180 tick，重置 Rule participant 后通过 `PhysicsWorld.resetCharacter` 回到声明的 `respawnAnchor`，并再次检查实际支撑表面；
 - 只作为开发/测试工具链研究，不修改生产武器、地图、存档、网络合同或玩家操作；
 - 不因一次静态命中结果直接冻结正式地图宽度或武器数值。
 
@@ -47,15 +48,18 @@ CS1.6 KZ 研究已经形成六段自有灰盒路线，并通过固定输入证�
 - 54 个段落×武器×回应组合可以区分“被武器击落”和“玩家回应本身导致掉落”；
 - 证据明确显示同一武器的价值随表面宽度、段落角色和相邻恢复表面变化；
 - 为后续移动/跳跃回应和生存敌人分流提供可复用的段落探针入口。
+- 复活锚点不再只是地图字段：单人探针已证明击落、3 秒等待、Rule 重置和路线表面重入可以在同一确定性链路中复现。
 
 限制：
 
 - 当前回应是固定输入脚本，不代表真人反应时间或最佳方向选择；
 - 攻击者只执行一次静态攻击，不能证明追击、拥挤和失位行为；
-- 还缺少真人视野、窄屏读图和复活后重新进入路线的证据。
+- 复活重入目前只有一个迷宫段单人样本，不能证明多人同时重生、摄像机表现、排名冻结或所有段落的重入公平性；
+- 还缺少真人视野和窄屏读图证据。
 
 ## 验证入口
 
 - 实现：`packages/arena-v1-experiment/src/arena-v2-kz-route-combat-prototype.ts`
 - 测试：`packages/arena-v1-experiment/test/arena-v2-kz-route-combat-prototype.test.ts`
 - 结果：[CS1.6 KZ 跳跃地图研究 V1](../research/arena-v2-cs16-kz-map-study-v1.md#12-六段路线的攻击段落探针)
+- 复活入口：`runArenaV2KzRouteRespawnReentryPrototype()`、`packages/arena-v1-experiment/test/arena-v2-kz-route-combat-prototype.test.ts`
