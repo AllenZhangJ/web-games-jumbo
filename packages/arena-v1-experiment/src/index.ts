@@ -264,12 +264,18 @@ export type {
 } from './arena-v2-survival-entity-prototype.js';
 export {
   runArenaV2SurvivalPressurePrototype,
+  runArenaV2SurvivalPressureMatrixPrototype,
 } from './arena-v2-survival-pressure-prototype.js';
 export type {
+  ArenaV2SurvivalPressureMatrixCase,
+  ArenaV2SurvivalPressureMatrixPrototypeResult,
+  ArenaV2SurvivalPressurePrototypeOptions,
   ArenaV2SurvivalPressureOffer,
   ArenaV2SurvivalPressurePickup,
   ArenaV2SurvivalPressurePrototypeResult,
   ArenaV2SurvivalPressureScenarioResult,
+  ArenaV2SurvivalPressureRouteLayout,
+  ArenaV2SurvivalPressureSupplyLayout,
 } from './arena-v2-survival-pressure-prototype.js';
 export {
   runArenaV2CollectionBudgetPrototype,

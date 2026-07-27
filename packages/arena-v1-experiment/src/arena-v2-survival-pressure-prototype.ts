@@ -1,5 +1,8 @@
 import {
   createNeutralInputFrame,
+  assertIntegerAtLeast,
+  assertKnownKeys,
+  cloneFrozenData,
   type ArenaInputFrame,
 } from '@number-strategy-jump/arena-contracts';
 import {
@@ -26,7 +29,6 @@ import {
 } from './arena-v2-survival-weapon-definition.js';
 
 const SURVIVAL_TICK_RATE = 60;
-const OFFER_INTERVAL_TICKS = SURVIVAL_TICK_RATE * 20;
 const PROBE_TICKS = SURVIVAL_TICK_RATE * 50;
 const PROBE_SEED = 20260727;
 const PLAYER_ID = 'player-1';
@@ -44,6 +46,52 @@ const COMMON_TIER_MULTIPLIER: Readonly<Record<number, number>> = Object.freeze({
   5: 1.24,
   10: 1.72,
 });
+
+export type ArenaV2SurvivalPressureRouteLayout = 'split' | 'compressed';
+export type ArenaV2SurvivalPressureSupplyLayout = 'wide' | 'narrow';
+
+export interface ArenaV2SurvivalPressurePrototypeOptions {
+  readonly offerIntervalSeconds?: number;
+  readonly routeLayout?: ArenaV2SurvivalPressureRouteLayout;
+  readonly supplyLayout?: ArenaV2SurvivalPressureSupplyLayout;
+}
+
+interface ResolvedPressureOptions {
+  readonly offerIntervalSeconds: number;
+  readonly offerIntervalTicks: number;
+  readonly routeLayout: ArenaV2SurvivalPressureRouteLayout;
+  readonly supplyLayout: ArenaV2SurvivalPressureSupplyLayout;
+}
+
+const PRESSURE_OPTIONS_KEYS = new Set(['offerIntervalSeconds', 'routeLayout', 'supplyLayout']);
+const SUPPORTED_OFFER_INTERVALS = Object.freeze([15, 20, 30]);
+
+function resolvePressureOptions(value: unknown): ResolvedPressureOptions {
+  const source = cloneFrozenData(value ?? {}, 'Arena V2 survival pressure options');
+  assertKnownKeys(source, PRESSURE_OPTIONS_KEYS, 'Arena V2 survival pressure options');
+  const offerIntervalSeconds = assertIntegerAtLeast(
+    source.offerIntervalSeconds ?? 20,
+    1,
+    'offerIntervalSeconds',
+  );
+  if (!SUPPORTED_OFFER_INTERVALS.includes(offerIntervalSeconds)) {
+    throw new RangeError('offerIntervalSeconds 研究矩阵只支持 15/20/30 秒。');
+  }
+  const routeLayout = source.routeLayout ?? 'split';
+  if (routeLayout !== 'split' && routeLayout !== 'compressed') {
+    throw new RangeError(`不支持的生存路线布局 ${String(routeLayout)}。`);
+  }
+  const supplyLayout = source.supplyLayout ?? 'wide';
+  if (supplyLayout !== 'wide' && supplyLayout !== 'narrow') {
+    throw new RangeError(`不支持的生存供给布局 ${String(supplyLayout)}。`);
+  }
+  return Object.freeze({
+    offerIntervalSeconds,
+    offerIntervalTicks: offerIntervalSeconds * SURVIVAL_TICK_RATE,
+    routeLayout,
+    supplyLayout,
+  });
+}
 
 export interface ArenaV2SurvivalPressurePickup {
   readonly weaponId: string;
@@ -66,6 +114,9 @@ export interface ArenaV2SurvivalPressureOffer {
 
 export interface ArenaV2SurvivalPressureScenarioResult {
   readonly enemyCount: number;
+  readonly offerIntervalSeconds: number;
+  readonly routeLayout: ArenaV2SurvivalPressureRouteLayout;
+  readonly supplyLayout: ArenaV2SurvivalPressureSupplyLayout;
   readonly ticksSimulated: number;
   readonly survivalSeconds: number;
   readonly firstEnemyContactTick: number | null;
@@ -87,6 +138,9 @@ export interface ArenaV2SurvivalPressureScenarioResult {
 export interface ArenaV2SurvivalPressurePrototypeResult {
   readonly modeId: 'survival-1ve';
   readonly seed: number;
+  readonly offerIntervalSeconds: number;
+  readonly routeLayout: ArenaV2SurvivalPressureRouteLayout;
+  readonly supplyLayout: ArenaV2SurvivalPressureSupplyLayout;
   readonly enemyDefinitionId: 'single-enemy-family';
   readonly enemyInputPolicy: 'bounded-pursuit-with-supply-priority';
   readonly sharedMovementAndCombatRules: true;
@@ -187,6 +241,7 @@ function createSupplyOffer(
   ground: number,
   engine: ArenaRuleEngineContract,
   content: ArenaV2SurvivalAuthorityContent,
+  options: ResolvedPressureOptions,
 ): SupplyOfferRecord {
   const offerTier = tierForOffer(offerIndex);
   const offerTierMultiplier = COMMON_TIER_MULTIPLIER[offerTier];
@@ -196,10 +251,11 @@ function createSupplyOffer(
   const weaponIds = Object.freeze(WEAPON_IDS.map((_, index) => (
     WEAPON_IDS[(index + seed + offerIndex) % WEAPON_IDS.length]!
   )));
+  const supplyHalfWidth = options.supplyLayout === 'wide' ? 4 : 2;
   const positions = Object.freeze([
-    Object.freeze({ x: -4, y: ground, z: 0 }),
+    Object.freeze({ x: -supplyHalfWidth, y: ground, z: 0 }),
     Object.freeze({ x: 0, y: ground, z: 0 }),
-    Object.freeze({ x: 4, y: ground, z: 0 }),
+    Object.freeze({ x: supplyHalfWidth, y: ground, z: 0 }),
   ]);
   const instanceIds = weaponIds.map((weaponId, index) => {
     const instanceId = `v2-survival-pressure:offer-${offerIndex}:${index}:${weaponId}`;
@@ -417,7 +473,11 @@ function createOfferResult(
   });
 }
 
-function createScenario(enemyCount: number, seed: number): ArenaV2SurvivalPressureScenarioResult {
+function createScenario(
+  enemyCount: number,
+  seed: number,
+  options: ResolvedPressureOptions,
+): ArenaV2SurvivalPressureScenarioResult {
   const participants = Object.freeze([PLAYER_ID, ...enemyIds(enemyCount)]);
   const config = createArenaV1MatchConfig({
     contextPrimaryMobilityEnabled: false,
@@ -459,12 +519,14 @@ function createScenario(enemyCount: number, seed: number): ArenaV2SurvivalPressu
     physics.addCharacter({ id: PLAYER_ID, position: { x: 0, y: spawnY, z: 0 }, ...profile });
     for (let index = 0; index < enemyCount; index += 1) {
       const id = enemyId(index);
+      const spawnHalfWidth = options.routeLayout === 'split' ? 10 : 6;
+      const spawnLaneGap = options.routeLayout === 'split' ? 3.4 : 1.8;
       physics.addCharacter({
         id,
         position: {
-          x: index % 2 === 0 ? -10 : 10,
+          x: index % 2 === 0 ? -spawnHalfWidth : spawnHalfWidth,
           y: spawnY,
-          z: (index - (enemyCount - 1) / 2) * 3.4,
+          z: (index - (enemyCount - 1) / 2) * spawnLaneGap,
         },
         ...profile,
       });
@@ -484,7 +546,7 @@ function createScenario(enemyCount: number, seed: number): ArenaV2SurvivalPressu
     });
     for (let tick = 0; tick < PROBE_TICKS; tick += 1) {
       ticksSimulated = tick;
-      if (tick > 0 && tick % OFFER_INTERVAL_TICKS === 0) {
+      if (tick > 0 && tick % options.offerIntervalTicks === 0) {
         offers.push(createSupplyOffer(
           offers.length + 1,
           tick,
@@ -492,6 +554,7 @@ function createScenario(enemyCount: number, seed: number): ArenaV2SurvivalPressu
           spawnY,
           engine,
           content,
+          options,
         ));
       }
       engine.advanceTimers();
@@ -550,6 +613,9 @@ function createScenario(enemyCount: number, seed: number): ArenaV2SurvivalPressu
       .filter((weaponId): weaponId is string => weaponId !== undefined))];
     const output = Object.freeze({
       enemyCount,
+      offerIntervalSeconds: options.offerIntervalSeconds,
+      routeLayout: options.routeLayout,
+      supplyLayout: options.supplyLayout,
       ticksSimulated: ticksSimulated + 1,
       survivalSeconds: Number(((ticksSimulated + 1) / SURVIVAL_TICK_RATE).toFixed(2)),
       firstEnemyContactTick: state.firstEnemyContactTick,
@@ -574,14 +640,71 @@ function createScenario(enemyCount: number, seed: number): ArenaV2SurvivalPressu
   }
 }
 
-export function runArenaV2SurvivalPressurePrototype(): ArenaV2SurvivalPressurePrototypeResult {
+export function runArenaV2SurvivalPressurePrototype(
+  options: ArenaV2SurvivalPressurePrototypeOptions = {},
+): ArenaV2SurvivalPressurePrototypeResult {
+  const resolved = resolvePressureOptions(options);
   return Object.freeze({
     modeId: 'survival-1ve',
     seed: PROBE_SEED,
+    offerIntervalSeconds: resolved.offerIntervalSeconds,
+    routeLayout: resolved.routeLayout,
+    supplyLayout: resolved.supplyLayout,
     enemyDefinitionId: 'single-enemy-family',
     enemyInputPolicy: 'bounded-pursuit-with-supply-priority',
     sharedMovementAndCombatRules: true,
     tieredOfferCombatWired: true,
-    scenarios: Object.freeze(ENEMY_COUNTS.map((enemyCount) => createScenario(enemyCount, PROBE_SEED))),
+    scenarios: Object.freeze(ENEMY_COUNTS.map((enemyCount) => (
+      createScenario(enemyCount, PROBE_SEED, resolved)
+    ))),
+  });
+}
+
+export interface ArenaV2SurvivalPressureMatrixCase {
+  readonly caseId: string;
+  readonly offerIntervalSeconds: number;
+  readonly routeLayout: ArenaV2SurvivalPressureRouteLayout;
+  readonly supplyLayout: ArenaV2SurvivalPressureSupplyLayout;
+  readonly scenarios: readonly ArenaV2SurvivalPressureScenarioResult[];
+  readonly secondKnockdownReached: boolean;
+  readonly maximumCrowdPressurePeak: number;
+}
+
+export interface ArenaV2SurvivalPressureMatrixPrototypeResult {
+  readonly modeId: 'survival-1ve-pressure-matrix';
+  readonly seed: number;
+  readonly cases: readonly ArenaV2SurvivalPressureMatrixCase[];
+}
+
+const PRESSURE_MATRIX_CASES = Object.freeze([
+  Object.freeze({ offerIntervalSeconds: 15, routeLayout: 'split' as const }),
+  Object.freeze({ offerIntervalSeconds: 15, routeLayout: 'compressed' as const }),
+  Object.freeze({ offerIntervalSeconds: 20, routeLayout: 'split' as const }),
+  Object.freeze({ offerIntervalSeconds: 20, routeLayout: 'compressed' as const }),
+  Object.freeze({ offerIntervalSeconds: 30, routeLayout: 'split' as const }),
+  Object.freeze({ offerIntervalSeconds: 30, routeLayout: 'compressed' as const }),
+]);
+
+export function runArenaV2SurvivalPressureMatrixPrototype(): ArenaV2SurvivalPressureMatrixPrototypeResult {
+  const cases = PRESSURE_MATRIX_CASES.map(({ offerIntervalSeconds, routeLayout }) => {
+    const result = runArenaV2SurvivalPressurePrototype({
+      offerIntervalSeconds,
+      routeLayout,
+      supplyLayout: 'wide',
+    });
+    return Object.freeze({
+      caseId: `${offerIntervalSeconds}s-${routeLayout}`,
+      offerIntervalSeconds,
+      routeLayout,
+      supplyLayout: 'wide' as const,
+      scenarios: result.scenarios,
+      secondKnockdownReached: result.scenarios.some(({ playerDowns }) => playerDowns >= 2),
+      maximumCrowdPressurePeak: Math.max(...result.scenarios.map(({ crowdPressurePeak }) => crowdPressurePeak)),
+    });
+  });
+  return Object.freeze({
+    modeId: 'survival-1ve-pressure-matrix',
+    seed: PROBE_SEED,
+    cases: Object.freeze(cases),
   });
 }

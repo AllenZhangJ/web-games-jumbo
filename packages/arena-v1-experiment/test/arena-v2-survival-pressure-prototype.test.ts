@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { runArenaV2SurvivalPressurePrototype } from '../src/arena-v2-survival-pressure-prototype.js';
+import {
+  runArenaV2SurvivalPressureMatrixPrototype,
+  runArenaV2SurvivalPressurePrototype,
+} from '../src/arena-v2-survival-pressure-prototype.js';
 
 describe('Arena V2 survival pressure prototype', () => {
   it('runs one enemy family with bounded input decisions and shared rule/physics boundaries', () => {
@@ -46,5 +49,25 @@ describe('Arena V2 survival pressure prototype', () => {
 
   it('is deterministic for the same seed', () => {
     expect(runArenaV2SurvivalPressurePrototype()).toEqual(runArenaV2SurvivalPressurePrototype());
+  });
+
+  it('covers three supply rhythms and two route layouts through the same pressure rules', () => {
+    const result = runArenaV2SurvivalPressureMatrixPrototype();
+    expect(result.modeId).toBe('survival-1ve-pressure-matrix');
+    expect(result.cases.map(({ caseId }) => caseId)).toEqual([
+      '15s-split',
+      '15s-compressed',
+      '20s-split',
+      '20s-compressed',
+      '30s-split',
+      '30s-compressed',
+    ]);
+    expect(result.cases.every(({ scenarios, supplyLayout }) => (
+      supplyLayout === 'wide'
+      && scenarios.length === 3
+      && scenarios.every(({ offerIntervalSeconds }) => [15, 20, 30].includes(offerIntervalSeconds))
+    ))).toBe(true);
+    expect(result.cases.every(({ secondKnockdownReached }) => secondKnockdownReached === false)).toBe(true);
+    expect(result.cases.some(({ maximumCrowdPressurePeak }) => maximumCrowdPressurePeak >= 4)).toBe(true);
   });
 });

@@ -111,6 +111,21 @@ Test File 1 passed；Test 1 passed
 
 实现与测试见 `arena-v2-survival-pressure-prototype.ts` 和 `arena-v2-survival-pressure-prototype.test.ts`。下一步不是盲目把敌人数量继续加大，而是验证敌人刷新节奏、可攻击间隔、地形分散和等级成长是否能形成“更紧张但仍可读”的后期压力；同时需要真人测试确认玩家是否能看懂供给争夺与第一次复活后的下一目标。
 
+### 6.1 刷新节奏与路线分流矩阵
+
+新增 `runArenaV2SurvivalPressureMatrixPrototype()`，固定测试 15/20/30 秒三种供给节奏和 `split`/`compressed` 两种敌人路线布局，仍然使用宽供给布局、同一批正式等级 Definition 和同一套敌我输入策略。矩阵不是最终地图平衡，只用于判断“供给节奏/分流变化是否足以让后期变紧张”。
+
+| 组合 | 供给轮数 | 2 敌人命中玩家次数 / 供给路线 tick | 4 敌人命中玩家次数 | 压力峰值 | 二次掉落 |
+| --- | ---: | ---: | ---: | ---: | --- |
+| 15 秒 + split | 3 | 54 / 74 | 9 | 4 | 否 |
+| 15 秒 + compressed | 3 | 41 / 212 | 6 | 4 | 否 |
+| 20 秒 + split | 2 | 51 / 232 | 9 | 4 | 否 |
+| 20 秒 + compressed | 2 | 38 / 1 | 6 | 4 | 否 |
+| 30 秒 + split | 1 | 45 / 1 | 9 | 4 | 否 |
+| 30 秒 + compressed | 1 | 38 / 1 | 6 | 4 | 否 |
+
+这里的 `供给路线 tick` 只是玩家朝向可见供给移动的研究信号，不等于完成一次路线或玩家主观感受。当前六个组合都只发生一次玩家掉落、最终所有敌人都被击落，说明供给节奏和初始分流会改变交互数量与移动行为，但还没有形成有效的第二次终局压力。下一步必须加入敌人刷新阶段、地图段落可达性和真人命中结果解释率，不能单纯继续缩短供给间隔。
+
 ## 7. 生存临时武器等级实际战斗原型
 
 新增入口为 `runArenaV2SurvivalTierCombatPrototype()`。第一版曾用研究端冲量端口验证“等级确实改变战斗结果”；本轮已经收敛为 `formal-tier-definition`：由 `arena-v2-survival-weapon-definition.ts` 生成等级专属的 Action/Equipment Definition，再通过同一套 `ArenaRuleEngine` 和轻量物理运行。操作输入仍然只有原来的基础攻击，不增加新按键，也不修改局外收藏属性。
