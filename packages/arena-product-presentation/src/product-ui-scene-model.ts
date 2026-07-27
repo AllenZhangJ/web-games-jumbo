@@ -55,6 +55,23 @@ export interface ProductUiSceneWeaponContext {
   readonly stats: readonly ProductUiSceneWeaponStat[];
 }
 
+export interface ProductUiSceneWeaponComparisonValue {
+  readonly weaponId: string;
+  readonly weaponName: string;
+  readonly value: number;
+  readonly maxValue: number;
+  readonly unit: string;
+  readonly direction: string;
+  readonly precision: number;
+}
+
+export interface ProductUiSceneWeaponComparisonRow {
+  readonly id: string;
+  readonly label: string;
+  readonly unit: string;
+  readonly values: readonly ProductUiSceneWeaponComparisonValue[];
+}
+
 export interface ProductUiSceneModel {
   readonly revision: number;
   readonly locale: string;
@@ -77,6 +94,7 @@ export interface ProductUiSceneModel {
   readonly opponentName: string;
   readonly characterCards: readonly ProductUiSceneCharacterCard[];
   readonly weaponCards: readonly ProductUiSceneWeaponCard[];
+  readonly weaponComparison: readonly ProductUiSceneWeaponComparisonRow[];
   readonly outcome: string | null;
   readonly experienceDelta: number | null;
   readonly unlock: Readonly<{
@@ -247,6 +265,42 @@ function weaponCards(values: unknown): readonly ProductUiSceneWeaponCard[] {
   }));
 }
 
+function weaponComparison(
+  cards: readonly ProductUiSceneWeaponCard[],
+): readonly ProductUiSceneWeaponComparisonRow[] {
+  if (cards.length === 0) return Object.freeze([]);
+  const referenceStats = cards[0]!.stats;
+  for (const card of cards.slice(1)) {
+    if (
+      card.stats.length !== referenceStats.length
+      || referenceStats.some(({ id }) => !card.stats.some((stat) => stat.id === id))
+    ) {
+      throw new RangeError('Product UI 武器比较要求所有武器使用同一组公开数值。');
+    }
+  }
+  return Object.freeze(referenceStats.map((referenceStat) => Object.freeze({
+    id: referenceStat.id,
+    label: referenceStat.label,
+    unit: referenceStat.unit,
+    values: Object.freeze(cards.map((card) => {
+      const stat = card.stats.find(({ id }) => id === referenceStat.id);
+      if (!stat) throw new RangeError(`Product UI 武器比较缺少数值 ${referenceStat.id}。`);
+      if (stat.unit !== referenceStat.unit) {
+        throw new RangeError(`Product UI 武器比较的 ${referenceStat.id} 单位不一致。`);
+      }
+      return Object.freeze({
+        weaponId: card.id,
+        weaponName: card.name,
+        value: stat.value,
+        maxValue: stat.maxValue,
+        unit: stat.unit,
+        direction: stat.direction,
+        precision: stat.precision,
+      });
+    })),
+  })));
+}
+
 function selectedCharacter(
   cards: readonly ProductUiSceneCharacterCard[],
 ): ProductUiSceneModel['selectedCharacter'] {
@@ -340,6 +394,7 @@ export function createProductUiSceneModel(viewModelValue: unknown): ProductUiSce
       ),
     characterCards: cards,
     weaponCards: weapons,
+    weaponComparison: weaponComparison(weapons),
     outcome: result === null
       ? null
       : assertNonEmptyString(result.outcome, 'Product UI ViewModel.result.outcome'),

@@ -30,7 +30,9 @@ Accepted for V2 presentation prototype（V2 表现原型已接入；权威层最
 ## 当前证据
 
 - `ProductContentPresentationDefinition.overview` 已支持核心动词、代价、反制、命中结果、地图用途和上下文数值；
-- 主页已显示 3 把当前武器的主动作数值和地面/空中快速差异；
+- 主页已显示 3 把当前武器的主动作数值、地面/空中快速差异和横向公开数值比较矩阵；
+- `ProductUiSceneModel.weaponComparison` 要求当前武器使用同一组可比较字段，网页 DOM 测试已验证不同武器的实际数值同屏出现，并保留 `higher-is-risk` 的风险方向；
+- Web DOM 与 Canvas 两条局外表现路径都消费同一比较模型，避免小游戏平台只显示外观而缺少公开数值；
 - 重锤、锁链、冲锋盾的数值均从 `ARENA_GAMEPLAY_V2_TUNING.attacks` 读取；
 - 重点内容测试验证了重锤空中距离和冲锋盾自身位移风险语义；
 - 浏览器验收已验证 3 张武器卡、风险标识和角色选择交互。

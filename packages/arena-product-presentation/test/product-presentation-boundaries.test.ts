@@ -432,6 +432,28 @@ describe('Product presentation immutable data boundaries', () => {
         secondaryAction: null,
       },
       characterOptions: [],
+      weaponOptions: [{
+        weaponDefinitionId: 'hammer',
+        name: '重锤',
+        previewAssetId: 'weapon:hammer',
+        role: '重击与击飞',
+        description: '把目标送向边缘。',
+        coreVerb: '推离',
+        tradeoff: '出手慢。',
+        counterplay: '侧移。',
+        hitResult: '强击飞。',
+        mapUse: '窄路和边缘。',
+        stats: [{
+          id: 'range', label: '有效距离', value: 1.8, maxValue: 6,
+          unit: '格', direction: 'higher-is-better', precision: 2,
+        }],
+        contexts: [{
+          id: 'ground', label: '地面', summary: '近身重击。', stats: [{
+            id: 'range', label: '有效距离', value: 1.8, maxValue: 6,
+            unit: '格', direction: 'higher-is-better', precision: 2,
+          }],
+        }],
+      }],
       match: null,
       result: null,
       reward: null,
@@ -514,6 +536,22 @@ describe('Product presentation immutable data boundaries', () => {
       stats: [{ direction: 'higher-is-risk' }],
       contexts: [{ id: 'ground', stats: [{ value: 1.6 }] }],
     });
+    expect(sceneModel.weaponComparison).toEqual([
+      {
+        id: 'self-movement',
+        label: '自身位移风险',
+        unit: '冲量',
+        values: [{
+          weaponId: 'shield',
+          weaponName: '冲锋盾',
+          value: 6.5,
+          maxValue: 7,
+          unit: '冲量',
+          direction: 'higher-is-risk',
+          precision: 2,
+        }],
+      },
+    ]);
   });
 
   it('paints a deterministic command stream without mutating scene or layout inputs', () => {
@@ -530,6 +568,28 @@ describe('Product presentation immutable data boundaries', () => {
         secondaryAction: null,
       },
       characterOptions: [],
+      weaponOptions: [{
+        weaponDefinitionId: 'hammer',
+        name: '重锤',
+        previewAssetId: 'weapon:hammer',
+        role: '重击与击飞',
+        description: '把目标送向边缘。',
+        coreVerb: '推离',
+        tradeoff: '出手慢。',
+        counterplay: '侧移。',
+        hitResult: '强击飞。',
+        mapUse: '窄路和边缘。',
+        stats: [{
+          id: 'range', label: '有效距离', value: 1.8, maxValue: 6,
+          unit: '格', direction: 'higher-is-better', precision: 2,
+        }],
+        contexts: [{
+          id: 'ground', label: '地面', summary: '近身重击。', stats: [{
+            id: 'range', label: '有效距离', value: 1.8, maxValue: 6,
+            unit: '格', direction: 'higher-is-better', precision: 2,
+          }],
+        }],
+      }],
       match: null,
       result: null,
       reward: null,
@@ -581,6 +641,8 @@ describe('Product presentation immutable data boundaries', () => {
     expect(first.commands.length).toBeGreaterThan(40);
     expect(first.commands).toContainEqual(['fillText', '竞技场', layout.header.x, layout.header.y + 24 * layout.scale]);
     expect(first.commands.some(([command, text]) => command === 'fillText' && text === '开始')).toBe(true);
+    expect(first.commands.some(([command, text]) => command === 'fillText' && text === '有效距离')).toBe(true);
+    expect(first.commands.some(([command, text]) => command === 'fillText' && text === '1.80格 ↑')).toBe(true);
     expect(JSON.stringify(sceneModel)).toBe(sceneBefore);
     expect(JSON.stringify(layout)).toBe(layoutBefore);
     expect(Object.isFrozen(sceneModel)).toBe(true);

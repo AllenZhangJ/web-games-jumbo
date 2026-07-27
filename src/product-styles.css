@@ -447,6 +447,74 @@ button {
   background: var(--cyan);
 }
 
+.product-weapon-comparison {
+  margin-top: 0.65rem;
+  padding-top: 0.5rem;
+  overflow-x: auto;
+  border-top: 1px solid var(--line);
+}
+
+.product-comparison-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-bottom: 0.3rem;
+  color: var(--ink);
+  font-size: 0.58rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.product-comparison-heading small {
+  color: var(--muted);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.product-weapon-comparison-row {
+  display: grid;
+  grid-template-columns: minmax(4.7rem, 1.2fr) repeat(auto-fit, minmax(4.5rem, 1fr));
+  gap: 0.28rem;
+  min-width: 18.6rem;
+  padding: 0.24rem 0;
+  border-bottom: 1px dashed rgba(166, 159, 145, 0.65);
+  color: var(--muted);
+  font-size: 0.5rem;
+  line-height: 1.2;
+}
+
+.product-weapon-comparison-row:last-child {
+  border-bottom: 0;
+}
+
+.product-weapon-comparison-row > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.product-weapon-comparison-row > span:not(:first-child) {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.product-weapon-comparison-row.is-header {
+  padding-top: 0;
+  color: var(--coral-dark);
+  border-bottom: 2px solid var(--ink);
+  font-size: 0.52rem;
+  font-weight: 900;
+}
+
+.product-weapon-comparison-row.is-header > span:not(:first-child) {
+  color: var(--coral-dark);
+}
+
 @media (max-width: 28rem) {
   .product-weapon-list {
     grid-template-columns: 1fr;

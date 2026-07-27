@@ -2,7 +2,7 @@
 
 ## 文档状态
 
-- 状态：已完成无渲染页面合同和关键流程验证；真实 DOM 页面、字号密度、真机触控和真人阅读率仍待验证
+- 状态：已完成无渲染页面合同、关键流程验证和武器概览真实 DOM 接入；其余页面、字号密度、真机触控和真人阅读率仍待验证
 - 日期：2026-07-27
 - 目的：把“11 个页面”收敛为信息职责和点击预算，而不是提前实现 11 套复杂系统
 - 不代表：V2 页面已经接入当前生产 V1 导航
@@ -68,3 +68,14 @@
 - 页面原型接入生产 V1 状态机时，是否需要独立 V2 导航边界。
 
 本文件关闭的是“页面职责和关键点击预算是否可写成合同”，不关闭真实页面验收和留存指标。
+
+## 5. 武器概览的真实页面验证
+
+为了满足“玩家至少能在概览中看出武器数值差异”，当前 V1 主页已经增加一层横向公开数值矩阵，不再只依赖三张独立卡片：
+
+- `ProductUiSceneModel.weaponComparison` 由同一组公开数值定义派生，要求所有当前武器使用同一组可比较字段；
+- Web DOM 主页和 Canvas 局外主页都显示数值名称、当前武器列、实际数值和方向语义（↑优势、↓更省反应、⚠风险）；
+- DOM 验证覆盖重锤 `1.80 格` 与引力锁链 `5.00 格` 同行差异，以及冲锋盾的风险方向；
+- Canvas 绘制验证覆盖数值名称和格式化值；实现入口为 `src/entry/web-product-ui-surface.ts`、`packages/arena-product-presentation/src/product-canvas-painter.ts`，模型入口为 `packages/arena-product-presentation/src/product-ui-scene-model.ts`，测试见 `tests/entry-web-product-ui-surface.test.ts` 和 `packages/arena-product-presentation/test/product-presentation-boundaries.test.ts`。
+
+这关闭的是“数值是否能在当前主页同屏比较”的工程验证，不等于关闭真机字号、横向滚动和真人能否正确解释数值的研究问题。

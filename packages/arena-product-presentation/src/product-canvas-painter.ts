@@ -257,9 +257,99 @@ function drawHeader(
   }
 }
 
-function drawHome(context: ProductCanvasPaintContext, layout: ProductCanvasLayout): void {
+function weaponDirectionGlyph(direction: string): string {
+  return direction === 'lower-is-better'
+    ? '↓'
+    : direction === 'higher-is-risk' ? '⚠' : '↑';
+}
+
+function drawWeaponComparison(
+  context: ProductCanvasPaintContext,
+  model: ProductUiSceneModel,
+  layout: ProductCanvasLayout,
+): void {
+  if (model.weaponComparison.length === 0) return;
   const { visual, scale } = layout;
-  const floorY = visual.y + visual.height * 0.82;
+  const panel = {
+    x: visual.x + 10 * scale,
+    y: visual.y + visual.height * 0.55,
+    width: Math.max(1, visual.width - 20 * scale),
+    height: Math.min(190 * scale, visual.height * 0.43),
+  };
+  roundedRect(context, panel, 10 * scale);
+  context.fillStyle = 'rgba(255,253,247,0.88)';
+  context.fill();
+  context.strokeStyle = COLOR.line;
+  context.lineWidth = Math.max(1, scale);
+  context.stroke();
+
+  const firstRow = model.weaponComparison[0]!;
+  const labelWidth = panel.width * 0.38;
+  const valueWidth = (panel.width - labelWidth - 10 * scale) / Math.max(1, firstRow.values.length);
+  const headerY = panel.y + 13 * scale;
+  context.textBaseline = 'middle';
+  context.fillStyle = COLOR.coralDark;
+  context.font = font(10 * scale, 900);
+  context.textAlign = 'left';
+  context.fillText('公开数值对比', panel.x + 8 * scale, headerY);
+  context.textAlign = 'right';
+  firstRow.values.forEach((value, index) => {
+    context.fillText(
+      value.weaponName,
+      panel.x + labelWidth + 6 * scale + valueWidth * (index + 1),
+      headerY,
+    );
+  });
+  drawLine(
+    context,
+    panel.x + 7 * scale,
+    panel.y + 25 * scale,
+    panel.x + panel.width - 7 * scale,
+    panel.y + 25 * scale,
+    COLOR.ink,
+    Math.max(1, scale),
+  );
+
+  const rowHeight = Math.max(12 * scale, (panel.height - 31 * scale) / model.weaponComparison.length);
+  model.weaponComparison.forEach((row, rowIndex) => {
+    const y = panel.y + 32 * scale + rowHeight * rowIndex;
+    context.textAlign = 'left';
+    context.fillStyle = COLOR.muted;
+    context.font = font(10 * scale, 700);
+    context.fillText(row.label, panel.x + 8 * scale, y);
+    context.textAlign = 'right';
+    context.fillStyle = COLOR.ink;
+    context.font = font(10 * scale, 900);
+    row.values.forEach((value, valueIndex) => {
+      context.fillText(
+        `${value.value.toFixed(value.precision)}${value.unit} ${weaponDirectionGlyph(value.direction)}`,
+        panel.x + labelWidth + 6 * scale + valueWidth * (valueIndex + 1),
+        y,
+      );
+    });
+    if (rowIndex < model.weaponComparison.length - 1) {
+      drawLine(
+        context,
+        panel.x + 7 * scale,
+        y + rowHeight * 0.5,
+        panel.x + panel.width - 7 * scale,
+        y + rowHeight * 0.5,
+        COLOR.line,
+        Math.max(0.5, scale * 0.5),
+      );
+    }
+  });
+}
+
+function drawHome(
+  context: ProductCanvasPaintContext,
+  model: ProductUiSceneModel,
+  layout: ProductCanvasLayout,
+): void {
+  const { visual, scale } = layout;
+  const floorY = model.weaponComparison.length > 0
+    ? visual.y + visual.height * 0.48
+    : visual.y + visual.height * 0.82;
   const center = visual.x + visual.width / 2;
   context.fillStyle = 'rgba(255,255,255,0.66)';
   roundedRect(context, {
@@ -271,11 +361,18 @@ function drawHome(context: ProductCanvasPaintContext, layout: ProductCanvasLayou
   context.fill();
   drawCharacter(context, 'parkour-apprentice', center - 62 * scale, floorY, scale * 0.9, 1);
   drawCharacter(context, 'wind-up-cube', center + 72 * scale, floorY, scale * 0.86, -1);
+  drawWeaponComparison(context, model, layout);
   context.textAlign = 'center';
   context.textBaseline = 'middle';
   context.fillStyle = COLOR.ink;
   context.font = font(14 * scale, 800);
-  context.fillText('1V1  ·  装备  ·  地图  ·  击飞', center, visual.y + visual.height - 22 * scale);
+  context.fillText(
+    '1V1  ·  装备  ·  地图  ·  击飞',
+    center,
+    model.weaponComparison.length > 0
+      ? visual.y + visual.height - 8 * scale
+      : visual.y + visual.height - 22 * scale,
+  );
 }
 
 function drawCharacterCards(
@@ -421,7 +518,7 @@ function drawVisual(
   model: ProductUiSceneModel,
   layout: ProductCanvasLayout,
 ): void {
-  if (model.scene === 'home') drawHome(context, layout);
+  if (model.scene === 'home') drawHome(context, model, layout);
   else if (model.scene === 'character-select') drawCharacterCards(context, layout);
   else if (model.scene === 'matching') drawMatching(context, model, layout);
   else if (model.scene === 'result' || model.scene === 'reward') drawResult(context, model, layout);

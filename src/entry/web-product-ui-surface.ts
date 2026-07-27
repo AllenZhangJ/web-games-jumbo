@@ -37,6 +37,7 @@ interface UiNodes {
   readonly heroImage: HTMLImageElement;
   readonly characterList: HTMLElement;
   readonly weaponList: HTMLElement | null;
+  readonly weaponComparison: HTMLElement | null;
   readonly matchingPlayerImage: HTMLImageElement;
   readonly matchingPlayerName: HTMLElement;
   readonly matchingOpponentImage: HTMLImageElement;
@@ -181,6 +182,7 @@ export class WebProductUiSurface {
       heroImage: requiredElement<HTMLImageElement>(this.#root, '#product-hero-image'),
       characterList: requiredElement<HTMLElement>(this.#root, '#product-character-list'),
       weaponList: this.#root.querySelector<HTMLElement>('#product-weapon-list'),
+      weaponComparison: this.#root.querySelector<HTMLElement>('#product-weapon-comparison'),
       matchingPlayerImage: requiredElement<HTMLImageElement>(this.#root, '#product-matching-player-image'),
       matchingPlayerName: requiredElement<HTMLElement>(this.#root, '#product-matching-player-name'),
       matchingOpponentImage: requiredElement<HTMLImageElement>(this.#root, '#product-matching-opponent-image'),
@@ -418,6 +420,57 @@ export class WebProductUiSurface {
     list.replaceChildren(fragment);
   }
 
+  #syncWeaponComparison(model: WebProductSceneModel): void {
+    const comparison = this.#readyNodes().weaponComparison;
+    if (!comparison) return;
+    if (model.weaponComparison.length === 0) {
+      comparison.replaceChildren();
+      return;
+    }
+    const fragment = this.#document.createDocumentFragment();
+    const header = this.#document.createElement('div');
+    header.className = 'product-weapon-comparison-row is-header';
+    header.setAttribute('role', 'row');
+    const headerLabel = this.#document.createElement('span');
+    headerLabel.textContent = '数值';
+    headerLabel.setAttribute('role', 'columnheader');
+    header.append(headerLabel);
+    const firstRow = model.weaponComparison[0]!;
+    for (const value of firstRow.values) {
+      const weapon = this.#document.createElement('span');
+      weapon.textContent = value.weaponName;
+      weapon.setAttribute('role', 'columnheader');
+      header.append(weapon);
+    }
+    fragment.append(header);
+    for (const rowValue of model.weaponComparison) {
+      const row = this.#document.createElement('div');
+      row.className = 'product-weapon-comparison-row';
+      row.dataset.weaponComparisonRow = rowValue.id;
+      row.setAttribute('role', 'row');
+      const label = this.#document.createElement('span');
+      label.textContent = `${rowValue.label} (${rowValue.unit})`;
+      label.setAttribute('role', 'rowheader');
+      row.append(label);
+      for (const value of rowValue.values) {
+        const cell = this.#document.createElement('span');
+        const direction = value.direction === 'lower-is-better'
+          ? '↓'
+          : value.direction === 'higher-is-risk' ? '⚠' : '↑';
+        cell.textContent = `${value.value.toFixed(value.precision)}${value.unit} ${direction}`;
+        cell.dataset.weaponComparisonValue = value.weaponId;
+        cell.setAttribute('role', 'cell');
+        cell.setAttribute(
+          'aria-label',
+          `${value.weaponName}${rowValue.label}${value.value.toFixed(value.precision)}${value.unit}`,
+        );
+        row.append(cell);
+      }
+      fragment.append(row);
+    }
+    comparison.replaceChildren(fragment);
+  }
+
   #syncInteractive(): void {
     if (!this.#lastModel) return;
     const nodes = this.#readyNodes();
@@ -485,6 +538,7 @@ export class WebProductUiSurface {
     setImage(nodes.heroImage, model.lobbyAsset, '跑酷学徒和发条方块站在竞技场平台上');
     this.#syncCharacterCards(model);
     this.#syncWeaponCards(model);
+    this.#syncWeaponComparison(model);
     setImage(
       nodes.matchingPlayerImage,
       model.selectedCharacterAsset,

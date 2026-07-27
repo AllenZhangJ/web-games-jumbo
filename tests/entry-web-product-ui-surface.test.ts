@@ -85,6 +85,11 @@ class FakeElement {
     if (selector === '[data-product-visual]') {
       return this.#walk().filter(({ dataset }) => dataset.productVisual !== undefined);
     }
+    const dataSelector = /^\[data-([a-z]+(?:-[a-z]+)*)\]$/.exec(selector);
+    if (dataSelector) {
+      const key = dataSelector[1]!.replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase());
+      return this.#walk().filter(({ dataset }) => dataset[key] !== undefined);
+    }
     if (selector === 'button') return this.#walk().filter(({ tagName }) => tagName === 'button');
     if (selector === 'img') return this.#walk().filter(({ tagName }) => tagName === 'img');
     if (selector === 'span') return this.#walk().filter(({ tagName }) => tagName === 'span');
@@ -142,6 +147,8 @@ const REQUIRED_IDS = [
   'product-secondary-action',
   'product-hero-image',
   'product-character-list',
+  'product-weapon-list',
+  'product-weapon-comparison',
   'product-matching-player-image',
   'product-matching-player-name',
   'product-matching-opponent-image',
@@ -275,6 +282,56 @@ test('WebProductUiSurface renders stable semantic controls and serializes DOM in
   const primary = required(root.querySelector('#product-primary-action'), 'primary action');
   assert.equal(primary.textContent, '开始匹配');
   assert.equal(primary.disabled, false);
+
+  surface.render(viewModel('home', {
+    revision: 2,
+    weaponOptions: [
+      {
+        weaponDefinitionId: 'hammer',
+        name: '重锤',
+        previewAssetId: 'weapon:hammer',
+        role: '重击与击飞',
+        description: '把目标送向边缘。',
+        coreVerb: '推离',
+        tradeoff: '出手慢。',
+        counterplay: '离开正面线。',
+        hitResult: '强横向击飞。',
+        mapUse: '窄路和边缘。',
+        stats: [{ id: 'range', label: '有效距离', value: 1.8, maxValue: 6, unit: '格', direction: 'higher-is-better', precision: 2 }],
+        contexts: [{
+          id: 'ground', label: '地面', summary: '近身重击。',
+          stats: [{ id: 'range', label: '有效距离', value: 1.8, maxValue: 6, unit: '格', direction: 'higher-is-better', precision: 2 }],
+        }],
+      },
+      {
+        weaponDefinitionId: 'chain',
+        name: '引力锁链',
+        previewAssetId: 'weapon:chain',
+        role: '牵制与拉位',
+        description: '改变双方距离。',
+        coreVerb: '拉位',
+        tradeoff: '角度窄。',
+        counterplay: '横向移动。',
+        hitResult: '改变距离。',
+        mapUse: '宽平台和窄路入口。',
+        stats: [{ id: 'range', label: '有效距离', value: 5, maxValue: 6, unit: '格', direction: 'higher-is-better', precision: 2 }],
+        contexts: [{
+          id: 'ground', label: '地面', summary: '远距离拉位。',
+          stats: [{ id: 'range', label: '有效距离', value: 5, maxValue: 6, unit: '格', direction: 'higher-is-better', precision: 2 }],
+        }],
+      },
+    ],
+  }));
+  const comparison = required(
+    root.querySelector('#product-weapon-comparison'),
+    'weapon comparison',
+  );
+  assert.equal(comparison.children.length, 2);
+  const comparisonHeader = required(comparison.children[0], 'comparison header');
+  const comparisonRange = required(comparison.children[1], 'comparison range row');
+  assert.equal(comparisonHeader.children[1]?.textContent, '重锤');
+  assert.equal(comparisonRange.children[1]?.textContent, '1.80格 ↑');
+  assert.equal(comparisonRange.children[2]?.textContent, '5.00格 ↑');
 
   const intents: Readonly<Record<string, unknown>>[] = [];
   let resolveIntent: (() => void) | undefined;

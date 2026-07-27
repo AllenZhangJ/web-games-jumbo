@@ -200,6 +200,13 @@ export type {
   ArenaV2WeaponMapProbeResult,
 } from './arena-v2-weapon-map-prototype.js';
 export {
+  runArenaV2WeaponMovingTargetPrototype,
+} from './arena-v2-weapon-moving-target-prototype.js';
+export type {
+  ArenaV2WeaponMovingTargetResult,
+  ArenaV2WeaponTargetMotion,
+} from './arena-v2-weapon-moving-target-prototype.js';
+export {
   runArenaV2UiInformationPrototype,
 } from './arena-v2-ui-information-prototype.js';
 export type {
