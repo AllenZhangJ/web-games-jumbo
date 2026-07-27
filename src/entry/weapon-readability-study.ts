@@ -1,10 +1,14 @@
 import {
+  createArenaV2WeaponResearchOverviewMatrix,
   createArenaV2WeaponReadabilityTaskSet,
   evaluateArenaV2WeaponReadabilityAttempt,
   projectArenaV2WeaponReadabilityParticipantTasks,
   type ArenaV2WeaponReadabilityAttemptAnswer,
   type ArenaV2WeaponReadabilityAttemptReport,
   type ArenaV2WeaponReadabilityParticipantTask,
+  type ArenaV2WeaponResearchOverviewContext,
+  type ArenaV2WeaponResearchOverviewRow,
+  type ArenaV2WeaponResearchOverviewStat,
   type ArenaV2WeaponReadabilityTaskSet,
 } from '@number-strategy-jump/arena-v1-experiment';
 import type { ArenaV2WeaponPublicAxisId } from '@number-strategy-jump/arena-v1-experiment';
@@ -39,6 +43,125 @@ function reasonInputName(taskId: string): string {
 
 function contextInputName(taskId: string): string {
   return `readability-context-${taskId}`;
+}
+
+function directionLabel(direction: ArenaV2WeaponResearchOverviewStat['direction']): string {
+  switch (direction) {
+    case 'higher-is-better':
+      return '越高越强';
+    case 'lower-is-better':
+      return '越低越快';
+    case 'higher-is-risk':
+      return '越高风险越大';
+  }
+}
+
+function formatStat(stat: ArenaV2WeaponResearchOverviewStat): string {
+  return `${stat.value.toFixed(stat.precision)} ${stat.unit}`;
+}
+
+function allContextStats(context: ArenaV2WeaponResearchOverviewContext): readonly ArenaV2WeaponResearchOverviewStat[] {
+  const stats = new Map<string, ArenaV2WeaponResearchOverviewStat>();
+  for (const stat of [...context.stats, ...context.contextStats, ...context.behaviorStats]) {
+    if (!stats.has(stat.id)) stats.set(stat.id, stat);
+  }
+  return Object.freeze([...stats.values()]);
+}
+
+function renderWeaponSummary(documentValue: Document, row: ArenaV2WeaponResearchOverviewRow): HTMLElement {
+  const article = documentValue.createElement('article');
+  article.className = 'readability-overview-card';
+  const heading = documentValue.createElement('h3');
+  text(heading, row.displayName);
+  article.append(heading);
+  const verb = documentValue.createElement('p');
+  verb.className = 'readability-overview-verb';
+  text(verb, `${row.coreVerb} · ${row.hitResult}`);
+  article.append(verb);
+  const map = documentValue.createElement('p');
+  text(map, `适合：${row.mapSpaces.join(' / ')}`);
+  article.append(map);
+  const counterplay = documentValue.createElement('p');
+  text(counterplay, `反制：${row.counterplay.join(' / ')}`);
+  article.append(counterplay);
+  return article;
+}
+
+function renderContextTable(
+  documentValue: Document,
+  rows: readonly ArenaV2WeaponResearchOverviewRow[],
+  contextId: 'ground' | 'aerial',
+): HTMLDetailsElement {
+  const context = rows[0]?.contexts.find(({ id }) => id === contextId);
+  if (!context) throw new Error(`研究矩阵缺少 ${contextId} 上下文。`);
+  const details = documentValue.createElement('details');
+  details.className = 'readability-overview-context';
+  details.open = contextId === 'ground';
+  const summary = documentValue.createElement('summary');
+  text(summary, `${context.label}：完整数值矩阵（横向比较）`);
+  details.append(summary);
+
+  const wrap = documentValue.createElement('div');
+  wrap.className = 'readability-table-wrap';
+  const table = documentValue.createElement('table');
+  table.className = 'readability-overview-table';
+  const caption = documentValue.createElement('caption');
+  text(caption, '数值保留原始单位；方向语义直接写在每个数值名称下。');
+  table.append(caption);
+  const head = documentValue.createElement('thead');
+  const headRow = documentValue.createElement('tr');
+  const axisHead = documentValue.createElement('th');
+  axisHead.scope = 'col';
+  text(axisHead, '数值轴');
+  headRow.append(axisHead);
+  for (const row of rows) {
+    const weaponHead = documentValue.createElement('th');
+    weaponHead.scope = 'col';
+    text(weaponHead, row.displayName);
+    headRow.append(weaponHead);
+  }
+  head.append(headRow);
+  table.append(head);
+
+  const body = documentValue.createElement('tbody');
+  const stats = allContextStats(context);
+  for (const stat of stats) {
+    const row = documentValue.createElement('tr');
+    row.dataset.axisId = stat.id;
+    const axisCell = documentValue.createElement('th');
+    axisCell.scope = 'row';
+    const label = documentValue.createElement('span');
+    text(label, stat.label);
+    const meaning = documentValue.createElement('small');
+    text(meaning, `${stat.playerMeaning} · ${directionLabel(stat.direction)}`);
+    axisCell.append(label, meaning);
+    row.append(axisCell);
+    for (const candidate of rows) {
+      const candidateContext = candidate.contexts.find(({ id }) => id === contextId);
+      const candidateStat = candidateContext && allContextStats(candidateContext).find(({ id }) => id === stat.id);
+      if (!candidateStat) throw new Error(`研究矩阵缺少 ${candidate.displayName} 的 ${stat.id} 数值。`);
+      const valueCell = documentValue.createElement('td');
+      text(valueCell, formatStat(candidateStat));
+      row.append(valueCell);
+    }
+    body.append(row);
+  }
+  table.append(body);
+  wrap.append(table);
+  details.append(wrap);
+  return details;
+}
+
+function renderOverview(documentValue: Document): void {
+  const overview = required<HTMLElement>(documentValue, '#readability-overview');
+  const matrix = createArenaV2WeaponResearchOverviewMatrix();
+  overview.replaceChildren();
+  const summary = documentValue.createElement('div');
+  summary.className = 'readability-overview-summary';
+  for (const row of matrix.rows) summary.append(renderWeaponSummary(documentValue, row));
+  overview.append(summary);
+  overview.append(renderContextTable(documentValue, matrix.rows, 'ground'));
+  overview.append(renderContextTable(documentValue, matrix.rows, 'aerial'));
 }
 
 function appendLabel(
@@ -193,6 +316,7 @@ function start(): void {
   const error = required<HTMLElement>(root, '#readability-error');
   const taskSet = createArenaV2WeaponReadabilityTaskSet();
   const tasks = projectArenaV2WeaponReadabilityParticipantTasks(taskSet);
+  renderOverview(documentValue);
   const taskHash = required<HTMLElement>(root, '#readability-task-hash');
   const matrixHash = required<HTMLElement>(root, '#readability-matrix-hash');
   const status = required<HTMLElement>(root, '#readability-status');

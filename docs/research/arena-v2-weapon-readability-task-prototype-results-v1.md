@@ -6,7 +6,7 @@
 - 日期：2026-07-28
 - 实现：`packages/arena-v1-experiment/src/arena-v2-weapon-readability-task-prototype.ts`
 - 测试：`packages/arena-v1-experiment/test/arena-v2-weapon-readability-task-prototype.test.ts`
-- 研究页：`readability.html`、`src/entry/weapon-readability-study.ts`、`src/weapon-readability-study.css`
+- 研究页：`readability.html`、`src/entry/weapon-readability-study.ts`、`src/weapon-readability-study.css`；题目前直接展示同源研究矩阵
 - 页面边界测试：`tests/arena/study/weapon-readability-study-web.test.ts`
 - 边界：只消费研究武器概览矩阵，不进入默认生产 UI、MatchCore、Replay 或存档；生产构建入口仍只有 `index.html`
 
@@ -55,9 +55,9 @@
 
 ## 研究页验证
 
-独立研究页已接入参与者任务投影：页面显示 5 道题、任务集哈希和数值矩阵哈希；参与者只能看到题目与选项，页面源码入口不消费 `expectedOptionId` 或 `evidence`。
+独立研究页已接入参与者任务投影和同源研究矩阵：页面先展示三把研究候选的战斗语言、地图空间、反制方式，以及地面/空中的完整数值表；每个上下文的数值轴去重展示，数值名称同时写出单位和“越高/越低/风险”方向语义，然后再显示 5 道题、任务集哈希和数值矩阵哈希。参与者只能看到题目、选项和可观察数值，页面源码入口不消费 `expectedOptionId` 或 `evidence`。
 
-2026-07-28 在本地桌面浏览器完成一次完整交互验证：5 道题均可选择，提交后显示 `5 / 5 题通过` 和“非真人结论”；导出按钮在评估后可用；控制台 warning/error 为 0。该结果只证明研究页和任务合同可以工作，不代表真人解释率、设备可用性或生产平衡结论。
+2026-07-28 在本地桌面浏览器完成一次完整交互验证：地面/空中矩阵可见且没有重复数值行，5 道题均可选择，提交后显示 `5 / 5 题通过` 和“非真人结论”；导出按钮在评估后可用；控制台 warning/error 为 0。该结果只证明研究页、同源矩阵和任务合同可以工作，不代表真人解释率、设备可用性或生产平衡结论。
 
 自动化通过只证明任务合同正确，不证明真人能在 10 秒内读懂数值。真人样本仍必须记录首次回答时间、风险方向解释、地面/空中复述和地图理由，并保持空样本为 `incomplete`。
 

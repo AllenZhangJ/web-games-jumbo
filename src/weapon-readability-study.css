@@ -48,6 +48,26 @@ button, input { font: inherit; }
 .readability-meta strong { display: block; margin-top: 0.35rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .readability-alert { padding: 0.8rem 1rem; border: 1px solid var(--readability-coral); background: #fff1ed; color: #8c2e20; }
+.readability-overview { margin-top: 1rem; padding: 1.25rem; background: var(--readability-paper); border: 1px solid var(--readability-line); box-shadow: 0 0.5rem 1.5rem rgb(39 42 40 / 9%); }
+.readability-overview h2 { margin: 0; }
+.readability-overview-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-top: 1rem; }
+.readability-overview-card { min-width: 0; padding: 0.85rem; border: 1px solid var(--readability-line); background: #faf8f2; }
+.readability-overview-card h3 { margin: 0; font-size: 1.05rem; }
+.readability-overview-card p { margin: 0.45rem 0 0; color: var(--readability-muted); font-size: 0.8rem; line-height: 1.45; }
+.readability-overview-card .readability-overview-verb { color: var(--readability-ink); font-weight: 700; }
+.readability-overview-context { margin-top: 0.85rem; border-top: 1px solid var(--readability-line); }
+.readability-overview-context summary { padding: 0.8rem 0; cursor: pointer; font-weight: 800; }
+.readability-table-wrap { overflow-x: auto; }
+.readability-overview-table { width: 100%; min-width: 42rem; border-collapse: collapse; font-size: 0.8rem; }
+.readability-overview-table caption { padding: 0 0 0.55rem; color: var(--readability-muted); text-align: left; }
+.readability-overview-table th,
+.readability-overview-table td { padding: 0.55rem 0.65rem; border: 1px solid var(--readability-line); text-align: left; vertical-align: top; }
+.readability-overview-table thead th { background: var(--readability-night); color: var(--readability-paper); }
+.readability-overview-table tbody th { min-width: 10rem; background: #ebe7dc; }
+.readability-overview-table tbody th span,
+.readability-overview-table tbody th small { display: block; }
+.readability-overview-table tbody th small { margin-top: 0.2rem; color: var(--readability-muted); font-size: 0.7rem; font-weight: 400; line-height: 1.35; }
+.readability-overview-table tbody tr:nth-child(even) { background: #faf8f2; }
 .readability-tasks { display: grid; gap: 1rem; margin-top: 1rem; padding: 1rem; }
 .readability-task { margin: 0; padding: 1rem; border: 1px solid var(--readability-line); }
 .readability-task legend { max-width: 100%; padding: 0 0.4rem; font-weight: 800; line-height: 1.45; }
@@ -80,4 +100,6 @@ button, input { font: inherit; }
   .readability-app { width: min(100% - 1rem, 54rem); padding-top: 0.5rem; }
   .readability-header { padding: 1.25rem; }
   .readability-meta { grid-template-columns: 1fr; gap: 0.7rem; }
+  .readability-overview { padding: 0.9rem; }
+  .readability-overview-summary { grid-template-columns: 1fr; }
 }
