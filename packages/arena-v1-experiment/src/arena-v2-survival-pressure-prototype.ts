@@ -3,9 +3,6 @@ import {
   type ArenaInputFrame,
 } from '@number-strategy-jump/arena-contracts';
 import {
-  ARENA_GAMEPLAY_V2_TUNING,
-} from '@number-strategy-jump/arena-definitions';
-import {
   type ArenaRuleEngineContract,
   type RuleActor,
 } from '@number-strategy-jump/arena-core';
@@ -22,9 +19,11 @@ import {
 import { ARENA_V1_CHARACTER_ID } from '@number-strategy-jump/arena-definitions';
 import {
   createArenaV1CharacterRegistry,
-  STAGE4_ACTION_ID,
-  STAGE4_EQUIPMENT_ID,
 } from '@number-strategy-jump/arena-v1-content';
+import {
+  createArenaV2SurvivalAuthorityContent,
+  type ArenaV2SurvivalAuthorityContent,
+} from './arena-v2-survival-weapon-definition.js';
 
 const SURVIVAL_TICK_RATE = 60;
 const OFFER_INTERVAL_TICKS = SURVIVAL_TICK_RATE * 20;
@@ -38,19 +37,12 @@ const SURFACE = Object.freeze({
   center: Object.freeze({ x: 0, y: 0, z: 0 }),
   halfExtents: Object.freeze({ x: 18, y: 0.5, z: 10 }),
 });
-const WEAPON_IDS = Object.freeze([
-  STAGE4_EQUIPMENT_ID.HAMMER,
-  STAGE4_EQUIPMENT_ID.CHAIN,
-  STAGE4_EQUIPMENT_ID.SHIELD,
-]);
-
-const BASE_CONTROL_POWER: Readonly<Record<string, number>> = Object.freeze({
-  [STAGE4_EQUIPMENT_ID.HAMMER]: ARENA_GAMEPLAY_V2_TUNING.attacks[STAGE4_ACTION_ID.HAMMER_SMASH]
-    .knockback.horizontalImpulse,
-  [STAGE4_EQUIPMENT_ID.CHAIN]: ARENA_GAMEPLAY_V2_TUNING.attacks[STAGE4_ACTION_ID.CHAIN_PULL]
-    .knockback.horizontalImpulse,
-  [STAGE4_EQUIPMENT_ID.SHIELD]: ARENA_GAMEPLAY_V2_TUNING.attacks[STAGE4_ACTION_ID.SHIELD_CHARGE]
-    .knockback.horizontalImpulse,
+const WEAPON_IDS = Object.freeze(['hammer', 'chain', 'shield']);
+const SURVIVAL_TIERS = Object.freeze([1, 5, 10]);
+const COMMON_TIER_MULTIPLIER: Readonly<Record<number, number>> = Object.freeze({
+  1: 1,
+  5: 1.24,
+  10: 1.72,
 });
 
 export interface ArenaV2SurvivalPressurePickup {
@@ -64,8 +56,10 @@ export interface ArenaV2SurvivalPressureOffer {
   readonly survivalLevel: number;
   readonly offerTier: number;
   readonly weaponIds: readonly string[];
-  readonly controlPowerMultiplier: number;
+  readonly offerTierMultiplier: number;
+  readonly weaponControlPowerMultiplier: Readonly<Record<string, number>>;
   readonly temporaryControlPower: Readonly<Record<string, number>>;
+  readonly definitionBundleHash: string;
   readonly pickups: readonly ArenaV2SurvivalPressurePickup[];
   readonly contested: boolean;
 }
@@ -96,7 +90,7 @@ export interface ArenaV2SurvivalPressurePrototypeResult {
   readonly enemyDefinitionId: 'single-enemy-family';
   readonly enemyInputPolicy: 'bounded-pursuit-with-supply-priority';
   readonly sharedMovementAndCombatRules: true;
-  readonly tieredOfferTelemetryOnly: true;
+  readonly tieredOfferCombatWired: true;
   readonly scenarios: readonly ArenaV2SurvivalPressureScenarioResult[];
 }
 
@@ -106,8 +100,10 @@ interface SupplyOfferRecord {
   readonly survivalLevel: number;
   readonly offerTier: number;
   readonly weaponIds: readonly string[];
-  readonly controlPowerMultiplier: number;
+  readonly offerTierMultiplier: number;
+  readonly weaponControlPowerMultiplier: Readonly<Record<string, number>>;
   readonly temporaryControlPower: Readonly<Record<string, number>>;
+  readonly definitionBundleHash: string;
   readonly instanceIds: readonly string[];
   contested: boolean;
 }
@@ -173,15 +169,30 @@ function directionTo(
   return Object.freeze({ x: dx / length, z: dz / length });
 }
 
+function tierForOffer(offerIndex: number): number {
+  const index = Math.min(Math.max(offerIndex - 1, 0), SURVIVAL_TIERS.length - 1);
+  const tier = SURVIVAL_TIERS[index];
+  if (tier === undefined) throw new RangeError(`供给轮次 ${offerIndex} 缺少生存等级。`);
+  return tier;
+}
+
+function weaponIdFromDefinitionId(definitionId: string): string {
+  return definitionId.split('.survival-tier-')[0] ?? definitionId;
+}
+
 function createSupplyOffer(
   offerIndex: number,
   tick: number,
   seed: number,
   ground: number,
   engine: ArenaRuleEngineContract,
+  content: ArenaV2SurvivalAuthorityContent,
 ): SupplyOfferRecord {
-  const controlPowerMultiplier = Number((1 + (offerIndex - 1) * 0.08).toFixed(4));
-  const offerTier = 1 + Math.floor((offerIndex - 1) / 3);
+  const offerTier = tierForOffer(offerIndex);
+  const offerTierMultiplier = COMMON_TIER_MULTIPLIER[offerTier];
+  if (offerTierMultiplier === undefined) {
+    throw new RangeError(`生存等级 ${offerTier} 缺少通用展示倍率。`);
+  }
   const weaponIds = Object.freeze(WEAPON_IDS.map((_, index) => (
     WEAPON_IDS[(index + seed + offerIndex) % WEAPON_IDS.length]!
   )));
@@ -194,19 +205,34 @@ function createSupplyOffer(
     const instanceId = `v2-survival-pressure:offer-${offerIndex}:${index}:${weaponId}`;
     const position = positions[index];
     if (!position) throw new Error(`生存供给缺少位置 ${offerIndex}:${index}。`);
+    const selection = content.weapons.find(({ weaponId: id, tier }) => (
+      id === weaponId && tier === offerTier
+    ));
+    if (!selection) throw new RangeError(`生存供给缺少 ${weaponId} 等级 ${offerTier} Definition。`);
     engine.spawnEquipment({
       instanceId,
-      definitionId: weaponId,
+      definitionId: selection.equipmentDefinitionId,
       spawnId: instanceId,
       position,
     });
     return instanceId;
   });
+  const weaponControlPowerMultiplier = Object.freeze(Object.fromEntries(
+    weaponIds.map((weaponId) => {
+      const selection = content.weapons.find(({ weaponId: id, tier }) => (
+        id === weaponId && tier === offerTier
+      ));
+      if (!selection) throw new RangeError(`生存供给缺少 ${weaponId} 等级 ${offerTier} 数值。`);
+      return [weaponId, selection.multiplier];
+    }),
+  ));
   const temporaryControlPower = Object.freeze(Object.fromEntries(
     weaponIds.map((weaponId) => {
-      const base = BASE_CONTROL_POWER[weaponId];
-      if (base === undefined) throw new Error(`生存供给缺少武器作用力 ${weaponId}。`);
-      return [weaponId, Number((base * controlPowerMultiplier).toFixed(4))];
+      const selection = content.weapons.find(({ weaponId: id, tier }) => (
+        id === weaponId && tier === offerTier
+      ));
+      if (!selection) throw new RangeError(`生存供给缺少 ${weaponId} 等级 ${offerTier} 作用力。`);
+      return [weaponId, Number(selection.stats.horizontalControl.toFixed(4))];
     }),
   ));
   return {
@@ -215,8 +241,10 @@ function createSupplyOffer(
     survivalLevel: offerIndex,
     offerTier,
     weaponIds,
-    controlPowerMultiplier,
+    offerTierMultiplier,
+    weaponControlPowerMultiplier,
     temporaryControlPower,
+    definitionBundleHash: content.definitionBundleHash,
     instanceIds: Object.freeze(instanceIds),
     contested: false,
   };
@@ -370,7 +398,7 @@ function createOfferResult(
     const snapshot = engine.getEquipmentSnapshot(instanceId);
     if (!snapshot.ownerId) return [];
     return [{
-      weaponId: snapshot.definitionId,
+      weaponId: weaponIdFromDefinitionId(snapshot.definitionId),
       participantId: snapshot.ownerId,
     }];
   });
@@ -380,8 +408,10 @@ function createOfferResult(
     survivalLevel: offer.survivalLevel,
     offerTier: offer.offerTier,
     weaponIds: offer.weaponIds,
-    controlPowerMultiplier: offer.controlPowerMultiplier,
+    offerTierMultiplier: offer.offerTierMultiplier,
+    weaponControlPowerMultiplier: offer.weaponControlPowerMultiplier,
     temporaryControlPower: offer.temporaryControlPower,
+    definitionBundleHash: offer.definitionBundleHash,
     pickups: Object.freeze(pickups),
     contested: offer.contested,
   });
@@ -389,12 +419,20 @@ function createOfferResult(
 
 function createScenario(enemyCount: number, seed: number): ArenaV2SurvivalPressureScenarioResult {
   const participants = Object.freeze([PLAYER_ID, ...enemyIds(enemyCount)]);
+  const config = createArenaV1MatchConfig({
+    contextPrimaryMobilityEnabled: false,
+    equipment: { initialSpawns: [] },
+  });
+  const content = createArenaV2SurvivalAuthorityContent(config, SURVIVAL_TIERS);
   const engine = createArenaV1RuleEngine({
     participantIds: participants,
-    config: createArenaV1MatchConfig({
-      contextPrimaryMobilityEnabled: false,
-      equipment: { initialSpawns: [] },
-    }),
+    config,
+    authorityContent: {
+      actionRegistry: content.actionRegistry,
+      equipmentRegistry: content.equipmentRegistry,
+      mapRegistry: content.mapRegistry,
+      characterRegistry: content.characterRegistry,
+    },
   });
   const physics = createPhysics();
   const character = createArenaV1CharacterRegistry().require(ARENA_V1_CHARACTER_ID.PARKOUR_APPRENTICE);
@@ -453,6 +491,7 @@ function createScenario(enemyCount: number, seed: number): ArenaV2SurvivalPressu
           seed,
           spawnY,
           engine,
+          content,
         ));
       }
       engine.advanceTimers();
@@ -505,7 +544,9 @@ function createScenario(enemyCount: number, seed: number): ArenaV2SurvivalPressu
     playerWeaponIds = [...new Set(participants
       .map((id) => engine.getHeldEquipment(id))
       .filter((equipment) => equipment?.ownerId === PLAYER_ID)
-      .map((equipment) => equipment?.definitionId)
+      .map((equipment) => equipment?.definitionId === undefined
+        ? undefined
+        : weaponIdFromDefinitionId(equipment.definitionId))
       .filter((weaponId): weaponId is string => weaponId !== undefined))];
     const output = Object.freeze({
       enemyCount,
@@ -540,7 +581,7 @@ export function runArenaV2SurvivalPressurePrototype(): ArenaV2SurvivalPressurePr
     enemyDefinitionId: 'single-enemy-family',
     enemyInputPolicy: 'bounded-pursuit-with-supply-priority',
     sharedMovementAndCombatRules: true,
-    tieredOfferTelemetryOnly: true,
+    tieredOfferCombatWired: true,
     scenarios: Object.freeze(ENEMY_COUNTS.map((enemyCount) => createScenario(enemyCount, PROBE_SEED))),
   });
 }

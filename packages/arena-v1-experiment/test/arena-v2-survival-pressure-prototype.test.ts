@@ -26,14 +26,22 @@ describe('Arena V2 survival pressure prototype', () => {
     expect(result.scenarios.every(({ offers }) => offers[0]?.offerTick === 1200)).toBe(true);
   });
 
-  it('keeps tiered offer attributes visible while marking combat scaling as not yet wired', () => {
+  it('wires tiered offer attributes into actual combat definitions', () => {
     const result = runArenaV2SurvivalPressurePrototype();
-    expect(result.tieredOfferTelemetryOnly).toBe(true);
+    expect(result.tieredOfferCombatWired).toBe(true);
     const offer = result.scenarios[0]?.offers[0];
+    const secondOffer = result.scenarios[0]?.offers[1];
     expect(offer?.survivalLevel).toBe(1);
     expect(offer?.offerTier).toBe(1);
-    expect(offer?.controlPowerMultiplier).toBe(1);
+    expect(offer?.offerTierMultiplier).toBe(1);
+    expect(offer?.definitionBundleHash).toHaveLength(8);
     expect(Object.keys(offer?.temporaryControlPower ?? {})).toHaveLength(3);
+    expect(secondOffer?.offerTier).toBe(5);
+    expect(secondOffer?.weaponControlPowerMultiplier.chain).toBe(1.32);
+    expect(secondOffer?.temporaryControlPower.chain).toBe(13.2);
+    expect(secondOffer?.pickups.every(({ weaponId }) => (
+      ['hammer', 'chain', 'shield'].includes(weaponId)
+    ))).toBe(true);
   });
 
   it('is deterministic for the same seed', () => {

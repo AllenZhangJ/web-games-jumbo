@@ -92,6 +92,22 @@ export interface ArenaV2SurvivalTierAuthorityContent {
   readonly definitionBundleHash: string;
 }
 
+export interface ArenaV2SurvivalAuthorityContent {
+  readonly tiers: readonly number[];
+  readonly weapons: readonly ArenaV2SurvivalWeaponTierSelection[];
+  readonly actionRegistry: ActionRegistry;
+  readonly equipmentRegistry: EquipmentRegistry;
+  readonly mapRegistry: {
+    require(id: string): MapDefinition;
+    list(): readonly MapDefinition[];
+  };
+  readonly characterRegistry: {
+    require(id: string): CharacterDefinition;
+    list(): readonly CharacterDefinition[];
+  };
+  readonly definitionBundleHash: string;
+}
+
 const TIER_STEPS = Object.freeze([1, 5, 10]);
 const GROWTH_FIELDS: ReadonlySet<unknown> = new Set([
   'target-horizontal-control',
@@ -441,17 +457,40 @@ export function createArenaV2SurvivalTierAuthorityContent(
   config: ArenaMatchConfig,
 ): ArenaV2SurvivalTierAuthorityContent {
   const normalizedTier = assertIntegerAtLeast(tier, 1, 'survival tier');
+  const content = createArenaV2SurvivalAuthorityContent(config, [normalizedTier]);
+  return Object.freeze({
+    ...content,
+    tier: normalizedTier,
+    weapons: Object.freeze(content.weapons.filter(({ tier: value }) => value === normalizedTier)),
+  });
+}
+
+export function createArenaV2SurvivalAuthorityContent(
+  config: ArenaMatchConfig,
+  tiers: readonly number[],
+): ArenaV2SurvivalAuthorityContent {
+  if (!Array.isArray(tiers) || tiers.length === 0) {
+    throw new RangeError('survival tiers 必须是非空数组。');
+  }
+  const normalizedTiers = Object.freeze([...new Set(tiers.map((tier) => (
+    assertIntegerAtLeast(tier, 1, 'survival tier')
+  )))].sort((left, right) => left - right));
+  for (const tier of normalizedTiers) {
+    if (!TIER_STEPS.includes(tier)) {
+      throw new RangeError(`生存武器 Definition 不支持等级 ${tier}。`);
+    }
+  }
   const baseContent = createArenaV1AuthorityContent(config);
-  const weapons = Object.freeze(ARENA_V2_SURVIVAL_WEAPON_DEFINITIONS.map((definition) => (
-    createSelection(definition, normalizedTier)
+  const weapons = Object.freeze(normalizedTiers.flatMap((tier) => (
+    ARENA_V2_SURVIVAL_WEAPON_DEFINITIONS.map((definition) => createSelection(definition, tier))
   )));
   const tierActions = weapons.flatMap((selection) => {
     const definition = ARENA_V2_SURVIVAL_WEAPON_DEFINITIONS.find(({ id }) => id === selection.weaponId)!;
     const groundAction = actionFor(definition.groundActionDefinitionId);
     const aerialAction = actionFor(definition.aerialActionDefinitionId);
     return [
-      createTierAction(groundAction, selection.multiplier, normalizedTier, selection.growthField),
-      createTierAction(aerialAction, selection.multiplier, normalizedTier, selection.growthField),
+      createTierAction(groundAction, selection.multiplier, selection.tier, selection.growthField),
+      createTierAction(aerialAction, selection.multiplier, selection.tier, selection.growthField),
     ];
   });
   const tierEquipment = weapons.map((selection) => {
@@ -471,13 +510,13 @@ export function createArenaV2SurvivalTierAuthorityContent(
   });
   const definitionBundleHash = createDeterministicDataHash({
     schemaVersion: ARENA_V2_SURVIVAL_WEAPON_DEFINITION_SCHEMA_VERSION,
-    tier: normalizedTier,
+    tiers: normalizedTiers,
     weapons,
     actions: tierActions,
     equipment: tierEquipment,
   }, 'Arena V2 survival tier definition bundle');
   return Object.freeze({
-    tier: normalizedTier,
+    tiers: normalizedTiers,
     weapons,
     actionRegistry,
     equipmentRegistry,

@@ -293,12 +293,14 @@ export type {
 export {
   ARENA_V2_SURVIVAL_WEAPON_DEFINITION_SCHEMA_VERSION,
   ARENA_V2_SURVIVAL_WEAPON_DEFINITIONS,
+  createArenaV2SurvivalAuthorityContent,
   createArenaV2SurvivalTierAuthorityContent,
   createArenaV2SurvivalWeaponDefinition,
   selectArenaV2SurvivalTierWeapon,
 } from './arena-v2-survival-weapon-definition.js';
 export type {
   ArenaV2SurvivalTierAuthorityContent,
+  ArenaV2SurvivalAuthorityContent,
   ArenaV2SurvivalWeaponDefinition,
   ArenaV2SurvivalWeaponGrowthField,
   ArenaV2SurvivalWeaponPublicStats,
