@@ -29,10 +29,11 @@ describe('Arena V2 weapon production migration gate', () => {
     ))).toBe(true);
     expect(research.find(({ candidateId }) => candidateId === 'launch-04-line-pressure'))
       .toMatchObject({
-        blockers: ['production-definition', 'feedback-presentation'],
+        blockers: ['production-definition'],
         gates: expect.arrayContaining([
           expect.objectContaining({ gateId: 'formal-action-state', status: 'passed' }),
           expect.objectContaining({ gateId: 'replay', status: 'passed' }),
+          expect.objectContaining({ gateId: 'feedback-presentation', status: 'passed' }),
         ]),
       });
     expect(research.filter(({ candidateId }) => candidateId !== 'launch-04-line-pressure')
@@ -48,18 +49,20 @@ describe('Arena V2 weapon production migration gate', () => {
       ))).toBe(true);
     expect(research.find(({ candidateId }) => candidateId === 'launch-05-read-punish'))
       .toMatchObject({
-        blockers: ['production-definition', 'feedback-presentation'],
+        blockers: ['production-definition'],
         gates: expect.arrayContaining([
           expect.objectContaining({ gateId: 'formal-action-state', status: 'passed' }),
           expect.objectContaining({ gateId: 'replay', status: 'passed' }),
+          expect.objectContaining({ gateId: 'feedback-presentation', status: 'passed' }),
         ]),
       });
     expect(research.find(({ candidateId }) => candidateId === 'launch-06-flank'))
       .toMatchObject({
-        blockers: ['production-definition', 'feedback-presentation'],
+        blockers: ['production-definition'],
         gates: expect.arrayContaining([
           expect.objectContaining({ gateId: 'formal-action-state', status: 'passed' }),
           expect.objectContaining({ gateId: 'replay', status: 'passed' }),
+          expect.objectContaining({ gateId: 'feedback-presentation', status: 'passed' }),
         ]),
       });
     expect(report.candidates.every(({ gates }) => (

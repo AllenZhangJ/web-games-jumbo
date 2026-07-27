@@ -53,6 +53,7 @@ Arena V2 的核心目标是：
 | [直线压制 Definition 原型结果 V1](../research/arena-v2-line-pressure-definition-prototype-results-v1.md) | 将直线压制编译为地面/空中临时 Definition，并绑定 11 个数值轴与等待/离线回应证据 | 研究原型通过 |
 | [ADR-068：直线压制先以单一攻击线 Definition 验证](../decisions/068-arena-v2-line-pressure-definition-boundary.md) | 固化直线压制的单一攻击线、固定间隔、公开数值和 research-only 边界 | 原型边界已接入 |
 | [首发研究候选 Definition 原型结果 V1](../research/arena-v2-launch-research-definition-prototype-results-v1.md) | 将直线压制、读招反制、绕后三个首发研究候选统一为地面/空中 research-only Definition，并绑定 9 项主概览数值、2 项行为数值和命中/空放证据 | 三个研究 Definition 原型通过 |
+| [研究武器概览比较矩阵原型结果 V1](../research/arena-v2-weapon-research-overview-prototype-results-v1.md) | 将三个 research-only 候选投影为带标签、单位、方向语义、玩家含义、地图用途和反制的可比较武器卡数据 | 数值比较矩阵通过，真人可读性待验证 |
 | [ADR-070：六个首发位置统一使用 Definition 数值投影](../decisions/070-arena-v2-research-launch-definition-projection.md) | 固化生产基线与研究候选共用可比较数值结构，同时保留 research-only 与生产目录边界 | 研究投影边界已接入 |
 | [ADR-069：命中反馈必须保留失败原因的因果区分](../decisions/069-arena-v2-hit-feedback-causal-contract.md) | 固化命中确认、支撑面转移、击落、避开攻击线和路线失误五种反馈语义 | KZ 无渲染反馈合同已接入 |
 | [ADR-071：武器反馈先映射为表现事件，再绑定声音与特效](../decisions/071-arena-v2-feedback-presentation-event-mapping.md) | 将五种因果反馈映射为可去重的 `WeaponFeedbackPresented` 事件，表现层只选择 Cue 不重新判定 | Presentation 事件映射已接入，真机表现待验证 |
@@ -66,6 +67,8 @@ Arena V2 的核心目标是：
 | `arena-v2-weapon-read-punish-replay-prototype.ts` | 为读招反制生成提前释放、成功提交、到期持续按住三组固定 Replay | 三组研究 Replay 通过，仍未生产化 |
 | [绕后目标主动转身 Replay 原型结果 V1](../research/arena-v2-weapon-flank-replay-results-v1.md) | 使用真实 MatchCore、普通移动输入和 MatchReplay 验证保持背向命中、主动转身避开 | 绕后研究证据已接入，仍未生产化 |
 | `arena-v2-weapon-flank-replay-prototype.ts` | 为绕后生成保持背向与目标主动转身两组固定 Replay | 两组研究 Replay 通过，仍未生产化 |
+| [研究武器双人拥挤与地图边缘 Replay 结果 V1](../research/arena-v2-weapon-multiplayer-edge-replay-results-v1.md) | 使用真实双人 MatchCore 验证三类研究候选同时出招、窄平台击退、击落和真实反馈来源映射 | 三个研究候选反馈来源已通过，仍未生产化 |
+| `arena-v2-weapon-multiplayer-edge-replay-prototype.ts` | 为直线压制、读招反制、绕后生成双方同时出招的边缘平台 Replay，并输出命中/击落/反馈语义 | 双人边缘研究证据 |
 | [武器战斗语言最小原型结果 V1](../research/arena-v2-weapon-language-prototype-results-v1.md) | 记录直线压制、封路、延迟重击、读招反制和绕后的 Rule/Targeting/Effect 最小验证与回应时间 | 扩展武器原型证据 |
 | [武器战斗语言 × KZ 地图后果原型结果 V1](../research/arena-v2-weapon-language-kz-consequence-results-v1.md) | 记录五种战斗语言在六段 KZ 表面上的击落、路线转移、前摇、有效窗口和固定回应后果 | 扩展武器×地图原型证据 |
 | `arena-v2-warning-zone-prototype.ts` | 验证封路候选的公开标记位置、整数 tick 生命周期和到期，不实现持续伤害或新操作 | 第四轮武器状态原型证据 |

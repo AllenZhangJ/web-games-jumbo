@@ -23,7 +23,7 @@
 ## 当前基线
 
 - 三把生产基线通过正式 Definition、正式动作状态、地图后果和共享反馈表现合同，但尚未补齐候选专属 Replay，因此当前仍不能被本门禁标为生产迁移完成；
-- 直线压制已经通过研究边界内的正式 `ActionExecutionSystem` 生命周期和候选专属 MatchReplay，仍缺少正式 Definition 与正式动作来源反馈；读招反制又通过统一 `ActionExecutionSystem` 的承诺/取消/提交状态和三组候选专属 MatchReplay，仍缺少正式 Definition 与正式动作来源反馈；绕后又通过统一动作生命周期、目标主动转身和两组候选专属 MatchReplay，仍缺少正式 Definition 与正式动作来源反馈；
+- 直线压制已经通过研究边界内的正式 `ActionExecutionSystem` 生命周期、候选专属 MatchReplay 和双人边缘反馈来源，仍缺少正式 Definition；读招反制又通过统一 `ActionExecutionSystem` 的承诺/取消/提交状态、三组候选专属 MatchReplay 和双人边缘反馈来源，仍缺少正式 Definition；绕后又通过统一动作生命周期、目标主动转身、两组候选专属 MatchReplay 和双人边缘反馈来源，仍缺少正式 Definition。这里的反馈来源仍属于 research-only，不能替代正式生产动作来源；
 - 当前六把候选的生产就绪数为 `0/6`，这是门禁的预期结果，不是实现失败。
 
 ## 被拒绝的替代方案
@@ -45,7 +45,7 @@
 - 迁移工作有明确的最小闭环：Definition → Action State → Replay → Map Consequence → Feedback；
 - 研究可以继续推进，而不会因为“已有数值和地图探针”误触生产注册表；
 - 生产基线也必须补候选专属 Replay，避免旧武器被默认视为 V2 迁移完成；
-- 仍需后续完成正式动作实现、回放样本、多人/复活场景、最终声音特效和真人/设备验证。
+- 仍需后续完成正式动作实现、生产回放样本、攻击/跳跃穿插、最终声音特效和真人/设备验证；当前双人边缘 Replay 不代表三人/网络多人已经完成。
 
 ## 验证入口
 

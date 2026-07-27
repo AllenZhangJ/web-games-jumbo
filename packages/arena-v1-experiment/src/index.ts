@@ -295,6 +295,25 @@ export type {
   ArenaV2WeaponFlankScenarioResult,
 } from './arena-v2-weapon-flank-replay-prototype.js';
 export {
+  runArenaV2WeaponMultiplayerEdgeReplayPrototype,
+} from './arena-v2-weapon-multiplayer-edge-replay-prototype.js';
+export type {
+  ArenaV2WeaponMultiplayerEdgeHit,
+  ArenaV2WeaponMultiplayerEdgeFeedback,
+  ArenaV2WeaponMultiplayerEdgeOutcome,
+  ArenaV2WeaponMultiplayerEdgeReplayPrototypeResult,
+  ArenaV2WeaponMultiplayerEdgeReplayResult,
+} from './arena-v2-weapon-multiplayer-edge-replay-prototype.js';
+export {
+  createArenaV2WeaponResearchOverviewMatrix,
+} from './arena-v2-weapon-research-overview-prototype.js';
+export type {
+  ArenaV2WeaponResearchOverviewDirection,
+  ArenaV2WeaponResearchOverviewMatrix,
+  ArenaV2WeaponResearchOverviewRow,
+  ArenaV2WeaponResearchOverviewStat,
+} from './arena-v2-weapon-research-overview-prototype.js';
+export {
   projectArenaV2ActionDefinitionPublicNumbers,
 } from './arena-v2-weapon-action-public-projection.js';
 export {

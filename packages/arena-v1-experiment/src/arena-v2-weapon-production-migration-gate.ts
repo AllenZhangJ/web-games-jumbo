@@ -10,6 +10,7 @@ import { runArenaV2KzLanguageConsequencePrototype } from './arena-v2-kz-language
 import { runArenaV2WeaponLaunchReplayPrototype } from './arena-v2-weapon-launch-replay-prototype.js';
 import { runArenaV2WeaponReadPunishReplayPrototype } from './arena-v2-weapon-read-punish-replay-prototype.js';
 import { runArenaV2WeaponFlankReplayPrototype } from './arena-v2-weapon-flank-replay-prototype.js';
+import { runArenaV2WeaponMultiplayerEdgeReplayPrototype } from './arena-v2-weapon-multiplayer-edge-replay-prototype.js';
 import { runArenaV2WeaponMapPrototype } from './arena-v2-weapon-map-prototype.js';
 
 export type ArenaV2WeaponProductionMigrationGateId =
@@ -103,6 +104,7 @@ function createCandidateResult(
   lineReplayResult: ReturnType<typeof runArenaV2WeaponLaunchReplayPrototype>,
   readPunishReplayResult: ReturnType<typeof runArenaV2WeaponReadPunishReplayPrototype>,
   flankReplayResult: ReturnType<typeof runArenaV2WeaponFlankReplayPrototype>,
+  multiplayerEdgeReplayResult: ReturnType<typeof runArenaV2WeaponMultiplayerEdgeReplayPrototype>,
 ): ArenaV2WeaponProductionMigrationCandidateResult {
   const audit = auditFor(candidate);
   const isProductionDefinition = audit.implementationStatus === 'production-authority';
@@ -146,7 +148,14 @@ function createCandidateResult(
     mapResults,
     languageResults,
   );
-  const hasCandidateFeedback = isProductionDefinition;
+  const multiplayerEdgeResult = multiplayerEdgeReplayResult.results.find(({ candidateId }) => (
+    candidateId === candidate.languageId
+  ));
+  const hasResearchFeedback = candidate.source === 'research-candidate'
+    && multiplayerEdgeResult !== undefined
+    && multiplayerEdgeResult.hits.length > 0
+    && multiplayerEdgeResult.feedback.kind.length > 0;
+  const hasCandidateFeedback = isProductionDefinition || hasResearchFeedback;
   const gates = Object.freeze([
     isProductionDefinition
       ? passed('production-definition', '地面/空中动作均来自正式 EquipmentDefinition 与权威调优。')
@@ -173,7 +182,9 @@ function createCandidateResult(
         : '六段 KZ 灰盒、三种回应和该战斗语言均产生可区分的命中安全/击落结果。')
       : blocked('map-consequence', '尚未形成至少两类可解释地图后果，不能证明武器改变路线决策。'),
     hasCandidateFeedback
-      ? passed('feedback-presentation', '正式命中反馈已通过 WeaponFeedbackPresented 事件进入表现层。')
+      ? passed('feedback-presentation', isProductionDefinition
+        ? '正式命中反馈已通过 WeaponFeedbackPresented 事件进入表现层。'
+        : '研究候选的真实边缘 Replay 命中事件已映射为 WeaponFeedbackPresented；表现映射回归已覆盖来源 ID、Cue 和去重。')
       : blocked('feedback-presentation', '研究候选尚无正式动作来源事件，不能把灰盒反馈当作生产表现完成。'),
   ]);
   const blockers = Object.freeze(gates
@@ -196,6 +207,7 @@ export function runArenaV2WeaponProductionMigrationGate(): ArenaV2WeaponProducti
   const lineReplayResult = runArenaV2WeaponLaunchReplayPrototype();
   const readPunishReplayResult = runArenaV2WeaponReadPunishReplayPrototype();
   const flankReplayResult = runArenaV2WeaponFlankReplayPrototype();
+  const multiplayerEdgeReplayResult = runArenaV2WeaponMultiplayerEdgeReplayPrototype();
   const candidates = Object.freeze(ARENA_V2_WEAPON_LAUNCH_CANDIDATES.map((candidate) => (
     createCandidateResult(
       candidate,
@@ -204,6 +216,7 @@ export function runArenaV2WeaponProductionMigrationGate(): ArenaV2WeaponProducti
       lineReplayResult,
       readPunishReplayResult,
       flankReplayResult,
+      multiplayerEdgeReplayResult,
     )
   )));
   if (candidates.some(({ gates }) => gates.length !== GATE_IDS.length)) {

@@ -28,7 +28,7 @@
 - 正式动作状态：统一 `ActionExecutionSystem` 的 idle、windup、active、recovery 生命周期，以及目标转身前后的 active 判定；
 - 候选 Replay：保持背向和主动转身两种场景都有 checkpoint、事件和最终 hash。
 
-地图后果此前已经通过六段 KZ 灰盒探针。仍阻塞正式 Definition、正式反馈表现、多人拥挤和真人可读性，因此不会进入生产 `EquipmentRegistry`。
+地图后果此前已经通过六段 KZ 灰盒探针；双人边缘 Replay 和研究反馈来源已补齐。仍阻塞正式 Definition、正式生产动作来源、多人遮挡和真人可读性，因此不会进入生产 `EquipmentRegistry`。
 
 ## 后续
 
