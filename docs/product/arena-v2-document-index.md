@@ -38,7 +38,7 @@ Arena V2 的核心目标是：
 | [V2 界面地图](arena-v2-screen-map.md) | 明确需要哪些局外页面和对局页面 | 初稿 |
 | [V2 架构影响与迁移边界](../architecture/arena-v2-migration-boundary.md) | 说明哪些可以复用、哪些需要重构 | 初稿 |
 | [V2 搜索与验证清单](../research/arena-v2-research-backlog.md) | 管理后续搜索、原型和实测问题 | 第二轮收敛 |
-| [热血英豪武器研究 V1](../research/arena-v2-hot-blooded-weapon-study-v1.md) | 记录官方案例、上下文动作矩阵、风险语义和数值展示要求 | 第二轮研究 |
+| [热血英豪武器研究 V1](../research/arena-v2-hot-blooded-weapon-study-v1.md) | 记录官方案例、上下文动作矩阵、风险语义和完整数值展示要求 | 第三轮研究 |
 | `arena-v2-weapon-research-catalog.ts` | 12 件参考武器的结构化研究卡，仅供开发/测试工具链使用 | 研究证据 |
 | [武器上下文无渲染原型结果 V1](../research/arena-v2-weapon-prototype-results-v1.md) | 记录三把武器地面/空中命中节奏、击飞差异和挥空边界 | 第一轮原型证据 |
 | [武器地图边缘原型结果 V1](../research/arena-v2-weapon-map-prototype-results-v1.md) | 记录规则命中进入轻量物理后在宽平台、窄路和边缘的实际后果 | 第一轮地图交互证据 |
@@ -61,6 +61,7 @@ Arena V2 的核心目标是：
 | [ADR-045：武器上下文概览契约](../decisions/045-arena-v2-weapon-context-overview.md) | 固化主动作数值、地面/空中上下文与风险语义 | 表现原型已接入 |
 | [ADR-046：武器概览先显示数值比较](../decisions/046-arena-weapon-overview-comparison-first.md) | 固化主页“先比较数值、再读武器语义”的信息顺序 | 当前主页已接入 |
 | [ADR-053：武器概览明确数值方向语义](../decisions/053-arena-weapon-overview-direction-semantics.md) | 固化“越高/越低/风险”文字、条形图和比较尺度一致性，避免只靠箭头猜含义 | 当前主页展示收敛 |
+| [ADR-055：武器上下文必须完整显示关键数值](../decisions/055-arena-v2-weapon-context-readout-completeness.md) | 固化地面/空中上下文的五项数值、标签和可访问解释 | 表现原型已接入 |
 | [ADR-047：生存实体复用玩家规则/物理边界](../decisions/047-arena-v2-survival-entity-boundary.md) | 固化单敌人原型不得绕过命中、冲量和掉落规则 | V2 研究原型 |
 | [ADR-048：生存多敌压力先复用规则引擎](../decisions/048-arena-v2-survival-multi-enemy-pressure-boundary.md) | 固化多敌研究原型的输入决策、供给争夺和正式接入前的边界 | V2 研究原型 |
 | [200 小时收集容量原型结果 V1](../research/arena-v2-collection-budget-prototype-results-v1.md) | 记录候选武器数量、上下文证据、地图/模式/挑战预算和敏感性分析 | 第三轮成长原型证据 |

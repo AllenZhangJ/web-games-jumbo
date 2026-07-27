@@ -376,6 +376,13 @@ test('WebProductUiSurface renders stable semantic controls and serializes DOM in
     'hammer stat row',
   );
   assert.match(hammerRisk.getAttribute('aria-label') ?? '', /越高风险越大/);
+  const hammerContextMetric = required(
+    hammerCard.querySelectorAll('[data-weapon-context-stat]')
+      .find(({ dataset }) => dataset.weaponContextStat === 'range') ?? null,
+    'hammer context range metric',
+  );
+  assert.equal(hammerContextMetric.textContent, '有效距离 ↑ 1.80格');
+  assert.match(hammerContextMetric.getAttribute('aria-label') ?? '', /越高越有利/);
 
   const intents: Readonly<Record<string, unknown>>[] = [];
   let resolveIntent: (() => void) | undefined;

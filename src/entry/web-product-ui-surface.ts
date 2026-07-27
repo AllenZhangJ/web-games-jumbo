@@ -373,12 +373,20 @@ export class WebProductUiSurface {
       if (!heading || !summary || !metrics) throw new Error(`武器上下文 ${context.id} 结构不完整。`);
       setText(heading, context.label);
       setText(summary, context.summary);
-      const visibleStats = context.stats.filter(({ id }) => ['range', 'startup', 'impact'].includes(id));
-      metrics.replaceChildren(...visibleStats.map((stat) => {
+      metrics.replaceChildren(...context.stats.map((stat) => {
         const metric = this.#document.createElement('span');
-        metric.textContent = `${stat.value.toFixed(stat.precision)}${stat.unit}`;
-        metric.title = stat.label;
+        const direction = stat.direction === 'lower-is-better'
+          ? '↓'
+          : stat.direction === 'higher-is-risk' ? '⚠' : '↑';
+        const value = `${stat.value.toFixed(stat.precision)}${stat.unit}`;
+        metric.textContent = `${stat.label} ${direction} ${value}`;
+        metric.title = `${stat.label}：${value}，${weaponDirectionHint(stat.direction)}`;
+        metric.setAttribute(
+          'aria-label',
+          `${stat.label}：${value}，${weaponDirectionHint(stat.direction)}`,
+        );
         metric.dataset.weaponContextStat = stat.id;
+        metric.dataset.weaponContextDirection = stat.direction;
         return metric;
       }));
     });

@@ -89,6 +89,14 @@ function contextStats(tuning: AttackTuning) {
     stat('startup', 'equipment.stat.startup', tuning.cadence.windupSeconds, 0.5, '秒', 'lower-is-better'),
     stat('impact', 'equipment.stat.impact', tuning.knockback.targetGroundDistance, 4, '格', 'higher-is-better'),
     stat('vertical', 'equipment.stat.vertical', tuning.knockback.verticalImpulse, 7, '冲量', 'higher-is-better'),
+    stat(
+      'height-gap',
+      'equipment.stat.height-gap',
+      tuning.targeting.maximumVerticalDifference,
+      4,
+      '格',
+      'higher-is-better',
+    ),
   ];
 }
 

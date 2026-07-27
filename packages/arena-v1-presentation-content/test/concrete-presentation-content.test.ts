@@ -44,6 +44,15 @@ describe('Arena V1 concrete presentation content', () => {
     expect(hammer?.overview?.contexts.map(({ id }) => id)).toEqual(['ground', 'aerial']);
     expect(hammer?.overview?.contexts[1]?.stats.find(({ id }) => id === 'range'))
       .toMatchObject({ value: 2.5, unit: '格' });
+    expect(hammer?.overview?.contexts[1]?.stats.map(({ id }) => id)).toEqual([
+      'range',
+      'startup',
+      'impact',
+      'vertical',
+      'height-gap',
+    ]);
+    expect(hammer?.overview?.contexts[1]?.stats.find(({ id }) => id === 'height-gap'))
+      .toMatchObject({ value: 2.5, unit: '格', direction: 'higher-is-better' });
     const shield = weapons.find(({ contentId }) => contentId === 'shield');
     expect(shield?.overview?.stats.find(({ id }) => id === 'self-movement')).toMatchObject({
       value: 6.5,

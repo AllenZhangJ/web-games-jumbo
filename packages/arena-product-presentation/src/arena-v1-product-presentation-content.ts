@@ -170,6 +170,7 @@ export const ARENA_V1_ZH_CN_PRODUCT_MESSAGES = new ProductMessageCatalog({
     'equipment.stat.control': '硬直时间',
     'equipment.stat.self-movement': '自身位移风险',
     'equipment.stat.cooldown': '再次使用',
+    'equipment.stat.height-gap': '命中高度差',
     'error.cleanup-failed': '资源清理未完成，请重新进入',
     'error.lifecycle-failed': '恢复游戏失败，请重试',
     'error.match-prepare-failed': '暂时无法开始，进度已保留',
