@@ -50,7 +50,8 @@ Arena V2 的核心目标是：
 | `arena-v2-survival-entity-prototype.ts` | 验证单一敌人复用玩家规则/物理、敌我双方击飞和第一次复活/第二次终局，仅供开发/测试工具链使用 | 第二轮规则原型证据 |
 | `arena-v2-survival-pressure-prototype.ts` | 验证 1/2/4 同类敌人的有界自主追击、多人击飞压力、20 秒三武器供给争夺和后期属性遥测，仅供开发/测试工具链使用 | 第三轮规则原型证据 |
 | `arena-v2-collection-budget-prototype.ts` | 将 200 小时拆为武器上下文、地图段落、模式记录和交叉挑战，并输出武器数量敏感性，仅供开发/测试工具链使用 | 第三轮成长原型证据 |
-| `arena-v2-survival-tier-combat-prototype.ts` | 验证生存等级 1/5/10 在不增加按键的情况下实际改变三把武器的横向控制结果，仅供开发/测试工具链使用 | 第四轮武器数值原型证据 |
+| `arena-v2-survival-weapon-definition.ts` | 将地面/空中公开数值、按武器核心语法选择的成长字段和等级专属 Action/Equipment ID 收敛为研究定义，仅供开发/测试工具链使用 | 第五轮武器 Definition 原型证据 |
+| `arena-v2-survival-tier-combat-prototype.ts` | 通过等级专属 Definition 验证生存等级 1/5/10 在不增加按键的情况下实际改变三把武器的横向控制结果，仅供开发/测试工具链使用 | 第五轮武器数值原型证据 |
 | [弹壳特攻队界面研究 V1](../research/arena-v2-survivor-io-ui-study-v1.md) | 记录局外信息层、页面职责、点击预算和收敛规则 | 第二轮研究 |
 | [战斗外界面原型验证结果 V1](../research/arena-v2-ui-prototype-results-v1.md) | 记录当前主页、武器概览、角色选择和进入对局链路验证 | 第一轮原型证据 |
 | [局外信息原型结果 V1](../research/arena-v2-ui-information-prototype-results-v1.md) | 记录 11 个信息入口、四条关键流程和点击预算 | 第二轮信息架构原型 |
@@ -62,6 +63,7 @@ Arena V2 的核心目标是：
 | [ADR-048：生存多敌压力先复用规则引擎](../decisions/048-arena-v2-survival-multi-enemy-pressure-boundary.md) | 固化多敌研究原型的输入决策、供给争夺和正式接入前的边界 | V2 研究原型 |
 | [200 小时收集容量原型结果 V1](../research/arena-v2-collection-budget-prototype-results-v1.md) | 记录候选武器数量、上下文证据、地图/模式/挑战预算和敏感性分析 | 第三轮成长原型证据 |
 | [ADR-050：生存武器等级先走研究冲量端口](../decisions/050-arena-v2-survival-tier-scaling-research-port.md) | 固化等级实际战斗影响、统一倍率反例和正式 Definition 接入前的边界 | V2 研究原型 |
+| [ADR-051：生存武器等级采用按核心语法的正式 Definition 变体](../decisions/051-arena-v2-survival-tier-formal-definition.md) | 固化地面/空中数值、按武器语法成长、等级专属动作身份和回放 hash 边界 | V2 研究原型 |
 
 ## 文档收敛顺序
 

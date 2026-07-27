@@ -290,3 +290,18 @@ export type {
   ArenaV2SurvivalTierCombatProbeResult,
   ArenaV2SurvivalTierCombatPrototypeResult,
 } from './arena-v2-survival-tier-combat-prototype.js';
+export {
+  ARENA_V2_SURVIVAL_WEAPON_DEFINITION_SCHEMA_VERSION,
+  ARENA_V2_SURVIVAL_WEAPON_DEFINITIONS,
+  createArenaV2SurvivalTierAuthorityContent,
+  createArenaV2SurvivalWeaponDefinition,
+  selectArenaV2SurvivalTierWeapon,
+} from './arena-v2-survival-weapon-definition.js';
+export type {
+  ArenaV2SurvivalTierAuthorityContent,
+  ArenaV2SurvivalWeaponDefinition,
+  ArenaV2SurvivalWeaponGrowthField,
+  ArenaV2SurvivalWeaponPublicStats,
+  ArenaV2SurvivalWeaponTierSelection,
+  ArenaV2SurvivalWeaponTierStep,
+} from './arena-v2-survival-weapon-definition.js';

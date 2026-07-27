@@ -2,7 +2,7 @@
 
 ## 状态
 
-已接受（研究原型边界，不代表正式 Weapon Definition 已冻结）
+已接受（第一阶段研究证据；当前战斗接入路径由 [ADR-051](051-arena-v2-survival-tier-formal-definition.md) 收敛）
 
 ## 日期
 
@@ -14,7 +14,7 @@
 
 ## 决策
 
-新增 `arena-v2-survival-tier-combat-prototype.ts`，在研究工具链中使用 `research-impulse-port` 对规则层已经产生的横向冲量进行等级缩放：
+新增 `arena-v2-survival-tier-combat-prototype.ts` 的第一版，先在研究工具链中使用 `research-impulse-port` 对规则层已经产生的横向冲量进行等级缩放：
 
 - 等级使用 1、5、10 三个探针；
 - 倍率使用 `1 + (tier - 1) × 0.08`，只作为当前研究假设；
@@ -40,15 +40,17 @@
 - 代价：研究端不是正式回放/网络/存档合同，仍需下一批结构化 Definition 设计。
 - 结论：采用此方案。
 
-## 结果与后果
+## 第一阶段结果与后果
 
 - 正向结果：等级 1/5/10 的实际横向控制力和目标位移可复现，操作输入保持不变；
 - 正向结果：三把武器的基础数值差异仍然存在，概览可以同时显示基础值、临时倍率和实测结果；
 - 重要反例：重锤等级 5 与 10 的目标位移相同，说明物理上限会吞掉继续加击飞的收益；
 - 接入条件：正式 Definition 必须按武器核心问题选择成长字段，并补齐回放 hash、地图边缘、命中反馈、局外展示和真人解释率证据。
 
+当前正式研究路径已由 ADR-051 接替：等级通过唯一 Action/Equipment Definition ID 进入规则层，研究冲量端口只保留为早期证据。
+
 ## 验证证据
 
 - 实现：`packages/arena-v1-experiment/src/arena-v2-survival-tier-combat-prototype.ts`
 - 测试：`packages/arena-v1-experiment/test/arena-v2-survival-tier-combat-prototype.test.ts`
-- 结果：[Arena V2 生存 1vE 最小循环原型结果 V1](../research/arena-v2-survival-loop-prototype-results-v1.md#7-生存临时武器等级实际冲量原型)
+- 结果：[Arena V2 生存 1vE 最小循环原型结果 V1](../research/arena-v2-survival-loop-prototype-results-v1.md#7-生存临时武器等级实际战斗原型)

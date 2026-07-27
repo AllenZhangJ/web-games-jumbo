@@ -2,14 +2,19 @@ import { describe, expect, it } from 'vitest';
 import { runArenaV2SurvivalTierCombatPrototype } from '../src/arena-v2-survival-tier-combat-prototype.js';
 
 describe('Arena V2 survival tier combat prototype', () => {
-  it('applies tier scaling through the research impulse port without adding input buttons', () => {
+  it('applies tier scaling through formal action definitions without adding input buttons', () => {
     const result = runArenaV2SurvivalTierCombatPrototype();
-    expect(result.scalingBoundary).toBe('research-impulse-port');
+    expect(result.scalingBoundary).toBe('formal-tier-definition');
     expect(result.inputGrammarUnchanged).toBe(true);
     expect(result.weaponIds).toEqual(['hammer', 'chain', 'shield']);
     expect(result.tiers).toEqual([1, 5, 10]);
     expect(result.probes).toHaveLength(9);
     expect(result.probes.every(({ firstHitTick }) => firstHitTick !== null)).toBe(true);
+    expect(result.probes.every(({ equipmentDefinitionId, actionId, definitionBundleHash }) => (
+      equipmentDefinitionId.includes('survival-tier-')
+      && actionId.includes('survival-tier-')
+      && definitionBundleHash.length === 8
+    ))).toBe(true);
   });
 
   it('makes higher tiers produce a measurable stronger horizontal control result', () => {

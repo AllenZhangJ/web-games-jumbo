@@ -111,26 +111,29 @@ Test File 1 passed；Test 1 passed
 
 实现与测试见 `arena-v2-survival-pressure-prototype.ts` 和 `arena-v2-survival-pressure-prototype.test.ts`。下一步不是盲目把敌人数量继续加大，而是先验证敌人刷新节奏、可攻击间隔、地形分散和武器等级接入是否能形成“更紧张但仍可读”的后期压力；同时需要真人测试确认玩家是否能看懂供给争夺与第一次复活后的下一目标。
 
-## 7. 生存临时武器等级实际冲量原型
+## 7. 生存临时武器等级实际战斗原型
 
-新增入口为 `runArenaV2SurvivalTierCombatPrototype()`。它使用同一套 `ArenaRuleEngine`、武器 Definition 和轻量物理，只在研究端的冲量端口按本局等级缩放横向冲量；操作输入仍然只有原来的基础攻击，不增加新按键，也不修改局外收藏属性。
+新增入口为 `runArenaV2SurvivalTierCombatPrototype()`。第一版曾用研究端冲量端口验证“等级确实改变战斗结果”；本轮已经收敛为 `formal-tier-definition`：由 `arena-v2-survival-weapon-definition.ts` 生成等级专属的 Action/Equipment Definition，再通过同一套 `ArenaRuleEngine` 和轻量物理运行。操作输入仍然只有原来的基础攻击，不增加新按键，也不修改局外收藏属性。
 
 固定三把武器和等级 1/5/10 的结果如下：
 
 | 武器 | 等级 | 横向作用力 | 目标位移 |
 | --- | ---: | ---: | ---: |
-| 重锤 | 1 / 5 / 10 | 15.0 / 19.8 / 25.8 | 6.494 / 8.676 / 8.676 |
+| 重锤 | 1 / 5 / 10 | 15.0 / 18.6 / 25.8 | 6.494 / 8.676 / 8.676 |
 | 锁链 | 1 / 5 / 10 | 10.0 / 13.2 / 17.2 | 2.255 / 2.610 / 3.101 |
-| 冲锋盾 | 1 / 5 / 10 | 7.5 / 9.9 / 12.9 | 1.691 / 2.541 / 3.795 |
+| 冲锋盾 | 1 / 5 / 10 | 7.5 / 9.3 / 12.9 | 1.691 / 2.316 / 3.795 |
 
 ### 结论
 
 - 等级属性已经能通过实际命中冲量改变结果，而不是只有概览数字变化；
-- 三把武器在相同等级公式下的结果不同，保留了基础武器差异；
+- 等级现在通过确定性的等级专属 Action/Equipment ID 进入规则层，定义包会生成稳定 hash，可作为后续回放内容身份的输入；
+- 三把武器不再被迫使用同一个成长语义：重锤声明“目标横向控制”、锁链声明“目标换位控制”、冲锋盾声明“目标接触控制”；
+- 地面和空中上下文各自保留公开数值，空中动作按自己的基础动作参数乘以等级倍率，不把地面数值误套到空中；
+- 冲锋盾的自身位移风险保持为基础值 6.5，等级只改变目标接触控制，避免“攻击更强”同时把自身失位风险悄悄放大；
 - 重锤等级 5 到 10 的最终位移没有继续增加，说明物理速度上限或平台空间会吞掉统一倍率；
 - 因此正式版本不能简单对所有武器使用同一套百分比成长。应按武器的核心语法选择成长字段，例如锁链优先扩大有效距离/拉扯稳定性，冲锋盾优先控制自身位移风险，重锤优先改善前摇或二次威胁，而不是只继续提高击飞。
 
-当前证据仍属于研究端 `research-impulse-port`，尚未成为正式 V2 Weapon Definition、回放合同或局外存档字段。实现与测试见 `arena-v2-survival-tier-combat-prototype.ts` 和 `arena-v2-survival-tier-combat-prototype.test.ts`。
+当前证据仍只属于开发/测试工具链：它已经是可回放边界的 Definition 原型，但尚未成为正式 V2 网络、局外存档或生产入口合同。实现与测试见 `arena-v2-survival-weapon-definition.ts`、`arena-v2-survival-tier-combat-prototype.ts`、`arena-v2-survival-weapon-definition.test.ts` 和 `arena-v2-survival-tier-combat-prototype.test.ts`。
 
 ## 5. 单敌人实体与掉落闭环验证
 

@@ -3,9 +3,6 @@ import {
   type ArenaInputFrame,
 } from '@number-strategy-jump/arena-contracts';
 import {
-  ARENA_GAMEPLAY_V2_TUNING,
-} from '@number-strategy-jump/arena-definitions';
-import {
   type ArenaRuleEngineContract,
   type RuleActor,
 } from '@number-strategy-jump/arena-core';
@@ -22,15 +19,18 @@ import {
 import { ARENA_V1_CHARACTER_ID } from '@number-strategy-jump/arena-definitions';
 import {
   createArenaV1CharacterRegistry,
-  STAGE4_ACTION_ID,
-  STAGE4_EQUIPMENT_ID,
 } from '@number-strategy-jump/arena-v1-content';
+import {
+  ARENA_V2_SURVIVAL_WEAPON_DEFINITIONS,
+  createArenaV2SurvivalTierAuthorityContent,
+  selectArenaV2SurvivalTierWeapon,
+  type ArenaV2SurvivalWeaponDefinition,
+} from './arena-v2-survival-weapon-definition.js';
 
 const PLAYER_ID = 'player-1';
 const TARGET_ID = 'target-1';
 const PROBE_TICKS = 120;
 const KILL_Y = -20;
-const CONTROL_POWER_STEP = 0.08;
 const TIERS = Object.freeze([1, 5, 10]);
 const SURFACE = Object.freeze({
   id: 'v2-survival-tier-combat-surface',
@@ -39,39 +39,28 @@ const SURFACE = Object.freeze({
 });
 
 interface WeaponProbe {
-  readonly weaponId: string;
-  readonly actionId: string;
+  readonly definition: ArenaV2SurvivalWeaponDefinition;
   readonly targetDistance: number;
-  readonly baseControlPower: number;
 }
 
-const WEAPONS: readonly WeaponProbe[] = Object.freeze([
-  Object.freeze({
-    weaponId: STAGE4_EQUIPMENT_ID.HAMMER,
-    actionId: STAGE4_ACTION_ID.HAMMER_SMASH,
-    targetDistance: 1.2,
-    baseControlPower: ARENA_GAMEPLAY_V2_TUNING.attacks[STAGE4_ACTION_ID.HAMMER_SMASH]
-      .knockback.horizontalImpulse,
-  }),
-  Object.freeze({
-    weaponId: STAGE4_EQUIPMENT_ID.CHAIN,
-    actionId: STAGE4_ACTION_ID.CHAIN_PULL,
-    targetDistance: 3.2,
-    baseControlPower: ARENA_GAMEPLAY_V2_TUNING.attacks[STAGE4_ACTION_ID.CHAIN_PULL]
-      .knockback.horizontalImpulse,
-  }),
-  Object.freeze({
-    weaponId: STAGE4_EQUIPMENT_ID.SHIELD,
-    actionId: STAGE4_ACTION_ID.SHIELD_CHARGE,
-    targetDistance: 1,
-    baseControlPower: ARENA_GAMEPLAY_V2_TUNING.attacks[STAGE4_ACTION_ID.SHIELD_CHARGE]
-      .knockback.horizontalImpulse,
-  }),
-]);
+const PROBE_TARGET_DISTANCE: Readonly<Record<string, number>> = Object.freeze({
+  hammer: 1.2,
+  chain: 3.2,
+  shield: 1,
+});
+
+const WEAPONS: readonly WeaponProbe[] = Object.freeze(
+  ARENA_V2_SURVIVAL_WEAPON_DEFINITIONS.map((definition) => Object.freeze({
+    definition,
+    targetDistance: PROBE_TARGET_DISTANCE[definition.id] ?? definition.baseStats.effectiveDistance / 2,
+  })),
+);
 
 export interface ArenaV2SurvivalTierCombatProbeResult {
   readonly weaponId: string;
   readonly actionId: string;
+  readonly equipmentDefinitionId: string;
+  readonly definitionBundleHash: string;
   readonly tier: number;
   readonly controlPowerMultiplier: number;
   readonly baseControlPower: number;
@@ -83,7 +72,7 @@ export interface ArenaV2SurvivalTierCombatProbeResult {
 
 export interface ArenaV2SurvivalTierCombatPrototypeResult {
   readonly modeId: 'survival-1ve';
-  readonly scalingBoundary: 'research-impulse-port';
+  readonly scalingBoundary: 'formal-tier-definition';
   readonly inputGrammarUnchanged: true;
   readonly weaponIds: readonly string[];
   readonly tiers: readonly number[];
@@ -144,12 +133,21 @@ function groundY(): number {
 }
 
 function runProbe(weapon: WeaponProbe, tier: number): ArenaV2SurvivalTierCombatProbeResult {
+  const config = createArenaV1MatchConfig({
+    contextPrimaryMobilityEnabled: false,
+    equipment: { initialSpawns: [] },
+  });
+  const content = createArenaV2SurvivalTierAuthorityContent(tier, config);
+  const selection = selectArenaV2SurvivalTierWeapon(content, weapon.definition.id);
   const engine: ArenaRuleEngineContract = createArenaV1RuleEngine({
     participantIds: Object.freeze([PLAYER_ID, TARGET_ID]),
-    config: createArenaV1MatchConfig({
-      contextPrimaryMobilityEnabled: false,
-      equipment: { initialSpawns: [] },
-    }),
+    config,
+    authorityContent: {
+      actionRegistry: content.actionRegistry,
+      equipmentRegistry: content.equipmentRegistry,
+      mapRegistry: content.mapRegistry,
+      characterRegistry: content.characterRegistry,
+    },
   });
   const physics = createPhysics();
   const character = createArenaV1CharacterRegistry().require(ARENA_V1_CHARACTER_ID.PARKOUR_APPRENTICE);
@@ -164,12 +162,11 @@ function runProbe(weapon: WeaponProbe, tier: number): ArenaV2SurvivalTierCombatP
   let firstHitTick: number | null = null;
   let appliedHorizontalControlPower = 0;
   const attackerByTarget = new Map<string, string>();
-  const controlPowerMultiplier = Number((1 + (tier - 1) * CONTROL_POWER_STEP).toFixed(4));
   try {
     engine.spawnEquipment({
-      instanceId: `v2-tier:${weapon.weaponId}:${tier}`,
-      definitionId: weapon.weaponId,
-      spawnId: `v2-tier:${weapon.weaponId}:${tier}`,
+      instanceId: `v2-tier:${weapon.definition.id}:${tier}`,
+      definitionId: selection.equipmentDefinitionId,
+      spawnId: `v2-tier:${weapon.definition.id}:${tier}`,
       position: { x: playerX, y: spawnY, z: 0 },
     });
     engine.resolveEquipmentPickups({
@@ -186,17 +183,13 @@ function runProbe(weapon: WeaponProbe, tier: number): ArenaV2SurvivalTierCombatP
       },
       applyHitstun: () => undefined,
       applyImpulse: (participantId: string, impulse: Readonly<{ x: number; y: number; z: number }>) => {
-        const attackerId = attackerByTarget.get(participantId);
-        const multiplier = attackerId === PLAYER_ID ? controlPowerMultiplier : 1;
-        const scaled = Object.freeze({
-          x: impulse.x * multiplier,
-          y: impulse.y,
-          z: impulse.z * multiplier,
-        });
-        appliedHorizontalControlPower = Math.max(
-          appliedHorizontalControlPower,
-          Math.hypot(scaled.x, scaled.z),
-        );
+        const scaled = Object.freeze({ ...impulse });
+        if (participantId === TARGET_ID && attackerByTarget.get(participantId) === PLAYER_ID) {
+          appliedHorizontalControlPower = Math.max(
+            appliedHorizontalControlPower,
+            Math.hypot(scaled.x, scaled.z),
+          );
+        }
         physics.applyImpulse(participantId, scaled);
       },
     });
@@ -222,11 +215,13 @@ function runProbe(weapon: WeaponProbe, tier: number): ArenaV2SurvivalTierCombatP
     physics.destroy();
   }
   return Object.freeze({
-    weaponId: weapon.weaponId,
-    actionId: weapon.actionId,
+    weaponId: weapon.definition.id,
+    actionId: selection.groundActionDefinitionId,
+    equipmentDefinitionId: selection.equipmentDefinitionId,
+    definitionBundleHash: content.definitionBundleHash,
     tier,
-    controlPowerMultiplier,
-    baseControlPower: weapon.baseControlPower,
+    controlPowerMultiplier: selection.multiplier,
+    baseControlPower: weapon.definition.baseStats.horizontalControl,
     appliedHorizontalControlPower,
     firstHitTick,
     targetHorizontalDisplacement: Math.hypot(
@@ -241,18 +236,18 @@ export function runArenaV2SurvivalTierCombatPrototype(): ArenaV2SurvivalTierComb
   const probes = WEAPONS.flatMap((weapon) => TIERS.map((tier) => runProbe(weapon, tier)));
   const tier1 = probes.filter(({ tier }) => tier === 1);
   const tier10 = probes.filter(({ tier }) => tier === 10);
-  const sameWeaponTier10DisplacementExceedsTier1 = WEAPONS.every(({ weaponId }) => {
-    const low = tier1.find((probe) => probe.weaponId === weaponId);
-    const high = tier10.find((probe) => probe.weaponId === weaponId);
+  const sameWeaponTier10DisplacementExceedsTier1 = WEAPONS.every(({ definition }) => {
+    const low = tier1.find((probe) => probe.weaponId === definition.id);
+    const high = tier10.find((probe) => probe.weaponId === definition.id);
     return low !== undefined
       && high !== undefined
       && high.targetHorizontalDisplacement > low.targetHorizontalDisplacement;
   });
   return Object.freeze({
     modeId: 'survival-1ve',
-    scalingBoundary: 'research-impulse-port',
+    scalingBoundary: 'formal-tier-definition',
     inputGrammarUnchanged: true,
-    weaponIds: Object.freeze(WEAPONS.map(({ weaponId }) => weaponId)),
+    weaponIds: Object.freeze(WEAPONS.map(({ definition }) => definition.id)),
     tiers: TIERS,
     probes: Object.freeze(probes),
     sameWeaponTier10DisplacementExceedsTier1,
