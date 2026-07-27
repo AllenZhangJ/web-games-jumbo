@@ -16,6 +16,7 @@
 4. 逐件研究先生成研究工具链档案，再决定是否进入候选 Definition；研究档案不自动注册生产武器。
 5. 复杂参考武器先收敛为一个可玩的最小功能版本，最多保留核心空间关系和一组明确反制，不把自动锁定、无限堆叠、无敌、MP 或复杂派生整体迁移。
 6. 逐件案例可以生成研究概览适配层，但在连接候选 `Definition` 的权威数值投影前，必须明确标记为 `not-yet-available`；研究轴状态不能被当作玩家数值。
+7. 当某件案例进入候选 Definition 原型后，必须同时输出 9 项主轴、6 项上下文轴和 2 项行为轴；所有数值来自 Definition 投影，并标明 `definition-projected-hypothesis`，不能与真人验证后的生产数值混称。
 
 ## 被拒绝的替代方案
 
@@ -53,6 +54,8 @@
 - `packages/arena-v1-experiment/src/arena-v2-weapon-case-study-contract.ts`
 - `packages/arena-v1-experiment/src/arena-v2-weapon-hook-obstruction-prototype.ts`
 - `packages/arena-v1-experiment/src/arena-v2-weapon-case-study-overview-prototype.ts`
+- `packages/arena-v1-experiment/src/arena-v2-weapon-phantom-tiger-fist-definition-prototype.ts`
+- `packages/arena-v1-experiment/test/arena-v2-weapon-phantom-tiger-fist-definition-prototype.test.ts`
 - [热血英豪武器研究 V1](../research/arena-v2-hot-blooded-weapon-study-v1.md)
 - [血影钩刃障碍阻挡原型结果 V1](../research/arena-v2-weapon-hook-obstruction-prototype-results-v1.md)
 - [深研武器概览适配层原型结果 V1](../research/arena-v2-weapon-case-study-overview-prototype-results-v1.md)

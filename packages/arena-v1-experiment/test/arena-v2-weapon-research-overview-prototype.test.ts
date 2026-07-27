@@ -13,8 +13,9 @@ describe('Arena V2 weapon research overview matrix', () => {
       && hitResult.length > 0
       && mapSpaces.length > 0
       && counterplay.length > 0
-      && contexts.every(({ stats, behaviorStats }) => (
+      && contexts.every(({ stats, contextStats, behaviorStats }) => (
         stats.length === 9
+        && contextStats.length === 6
         && behaviorStats.length === 2
         && stats.every(({ label, value, maxValue, unit, direction, playerMeaning }) => (
           label.length > 0
@@ -40,6 +41,8 @@ describe('Arena V2 weapon research overview matrix', () => {
       .not.toBe(matrix.rows[0]?.contexts[0]?.stats.find(({ id }) => id === 'range')?.value);
     expect(matrix.rows[0]?.contexts[0]?.behaviorStats.find(({ id }) => id === 'direction-tolerance')?.unit)
       .toBe('°');
+    expect(matrix.rows[0]?.contexts[0]?.contextStats.find(({ id }) => id === 'height-gap')?.unit)
+      .toBe('格');
   });
 
   it('freezes the research-only matrix and preserves distinct behavior fingerprints', () => {
@@ -51,5 +54,6 @@ describe('Arena V2 weapon research overview matrix', () => {
     expect(Object.isFrozen(first.rows)).toBe(true);
     expect(Object.isFrozen(first.rows[0]?.contexts)).toBe(true);
     expect(Object.isFrozen(first.rows[0]?.contexts[0]?.stats)).toBe(true);
+    expect(Object.isFrozen(first.rows[0]?.contexts[0]?.contextStats)).toBe(true);
   });
 });

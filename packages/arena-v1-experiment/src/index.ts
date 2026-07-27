@@ -246,6 +246,15 @@ export type { ArenaV2WeaponBloodShadowHookBladeCaseStudy } from './arena-v2-weap
 export { ARENA_V2_WEAPON_PHANTOM_TIGER_FIST_CASE_STUDY } from './arena-v2-weapon-phantom-tiger-fist-case-study.js';
 export type { ArenaV2WeaponPhantomTigerFistCaseStudy } from './arena-v2-weapon-phantom-tiger-fist-case-study.js';
 export {
+  ARENA_V2_WEAPON_PHANTOM_TIGER_FIST_DEFINITION_PROTOTYPE,
+  createArenaV2WeaponPhantomTigerFistNumericOverview,
+} from './arena-v2-weapon-phantom-tiger-fist-definition-prototype.js';
+export type {
+  ArenaV2WeaponPhantomTigerFistDefinitionPrototype,
+  ArenaV2WeaponPhantomTigerFistNumericOverview,
+  ArenaV2WeaponPhantomTigerFistNumericStatus,
+} from './arena-v2-weapon-phantom-tiger-fist-definition-prototype.js';
+export {
   createArenaV2WeaponCaseStudyOverview,
 } from './arena-v2-weapon-case-study-overview-prototype.js';
 export type {
@@ -356,6 +365,7 @@ export type {
   ArenaV2WeaponAttackJumpInterleaveScenario,
 } from './arena-v2-weapon-attack-jump-interleave-replay-prototype.js';
 export {
+  createArenaV2WeaponResearchOverviewContexts,
   createArenaV2WeaponResearchOverviewMatrix,
 } from './arena-v2-weapon-research-overview-prototype.js';
 export type {
@@ -363,6 +373,7 @@ export type {
   ArenaV2WeaponResearchOverviewContextId,
   ArenaV2WeaponResearchOverviewDirection,
   ArenaV2WeaponResearchOverviewMatrix,
+  ArenaV2WeaponResearchOverviewProjectionPair,
   ArenaV2WeaponResearchOverviewRow,
   ArenaV2WeaponResearchOverviewStat,
 } from './arena-v2-weapon-research-overview-prototype.js';

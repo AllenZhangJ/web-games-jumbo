@@ -1,5 +1,6 @@
 import type { ArenaWeaponPublicNumericProjection } from '@number-strategy-jump/arena-definitions';
 import {
+  ARENA_V2_WEAPON_PUBLIC_CONTEXT_AXIS_IDS,
   ARENA_V2_WEAPON_PUBLIC_AXIS_DEFINITIONS,
   ARENA_V2_WEAPON_PUBLIC_OVERVIEW_AXIS_IDS,
   type ArenaV2WeaponPublicAxisId,
@@ -31,7 +32,14 @@ export interface ArenaV2WeaponResearchOverviewContext {
   readonly id: ArenaV2WeaponResearchOverviewContextId;
   readonly label: string;
   readonly stats: readonly ArenaV2WeaponResearchOverviewStat[];
+  /** Context-only values keep height and state requirements visible without expanding the main axis set. */
+  readonly contextStats: readonly ArenaV2WeaponResearchOverviewStat[];
   readonly behaviorStats: readonly ArenaV2WeaponResearchOverviewStat[];
+}
+
+export interface ArenaV2WeaponResearchOverviewProjectionPair {
+  readonly groundStats: ArenaWeaponPublicNumericProjection;
+  readonly aerialStats: ArenaWeaponPublicNumericProjection;
 }
 
 export interface ArenaV2WeaponResearchOverviewRow {
@@ -83,6 +91,7 @@ const AXIS_READOUTS: Readonly<Record<string, AxisReadout>> = Object.freeze({
   control: Object.freeze({ source: 'hitstunTicks', unit: 'tick', direction: 'higher-is-better', precision: 0 }),
   'self-movement': Object.freeze({ source: 'selfMovementImpulse', unit: '冲量', direction: 'higher-is-risk', precision: 2 }),
   cooldown: Object.freeze({ source: 'cooldownTicks', unit: 'tick', direction: 'lower-is-better', precision: 0 }),
+  'height-gap': Object.freeze({ source: 'heightGap', unit: '格', direction: 'higher-is-better', precision: 2 }),
 });
 
 const HIT_RESULT_BY_LANGUAGE: Readonly<Record<string, string>> = Object.freeze({
@@ -98,29 +107,29 @@ function readoutFor(axisId: ArenaV2WeaponPublicAxisId): AxisReadout {
 }
 
 function maxValueFor(
-  prototypes: readonly ArenaV2WeaponLaunchResearchDefinitionPrototype[],
-  action: 'groundStats' | 'aerialStats',
+  projections: readonly ArenaV2WeaponResearchOverviewProjectionPair[],
   source: ProjectionKey,
 ): number {
-  const maximum = Math.max(...prototypes.map((prototype) => prototype[action][source]));
+  const maximum = Math.max(...projections.flatMap(({ groundStats, aerialStats }) => (
+    [groundStats[source], aerialStats[source]]
+  )));
   return Math.max(1, Math.ceil((maximum * 1.25) * 100) / 100);
 }
 
 function createStat(
   axisId: ArenaV2WeaponPublicAxisId,
-  prototype: ArenaV2WeaponLaunchResearchDefinitionPrototype,
-  action: 'groundStats' | 'aerialStats',
-  prototypes: readonly ArenaV2WeaponLaunchResearchDefinitionPrototype[],
+  projection: ArenaWeaponPublicNumericProjection,
+  projections: readonly ArenaV2WeaponResearchOverviewProjectionPair[],
 ): ArenaV2WeaponResearchOverviewStat {
   const definition = ARENA_V2_WEAPON_PUBLIC_AXIS_DEFINITIONS.find(({ id }) => id === axisId);
   if (!definition) throw new RangeError(`研究武器概览引用未知数值轴：${axisId}`);
   const readout = readoutFor(axisId);
-  const value = prototype[action][readout.source];
+  const value = projection[readout.source];
   return Object.freeze({
     id: axisId,
     label: definition.label,
     value,
-    maxValue: maxValueFor(prototypes, action, readout.source),
+    maxValue: maxValueFor(projections, readout.source),
     unit: readout.unit,
     direction: readout.direction,
     precision: readout.precision,
@@ -130,21 +139,20 @@ function createStat(
 
 function behaviorStat(
   axisId: ArenaV2WeaponPublicAxisId,
-  prototype: ArenaV2WeaponLaunchResearchDefinitionPrototype,
-  action: 'groundStats' | 'aerialStats',
-  prototypes: readonly ArenaV2WeaponLaunchResearchDefinitionPrototype[],
+  projection: ArenaWeaponPublicNumericProjection,
+  projections: readonly ArenaV2WeaponResearchOverviewProjectionPair[],
 ): ArenaV2WeaponResearchOverviewStat {
   const source: ProjectionKey = axisId === 'active-frames'
     ? 'activeTicks'
     : 'directionToleranceDegrees';
   const definition = ARENA_V2_WEAPON_PUBLIC_AXIS_DEFINITIONS.find(({ id }) => id === axisId);
   if (!definition) throw new RangeError(`研究武器行为概览引用未知数值轴：${axisId}`);
-  const value = prototype[action][source];
+  const value = projection[source];
   return Object.freeze({
     id: axisId,
     label: definition.label,
     value,
-    maxValue: maxValueFor(prototypes, action, source),
+    maxValue: maxValueFor(projections, source),
     unit: axisId === 'direction-tolerance' ? '°' : 'tick',
     direction: 'higher-is-better',
     precision: axisId === 'direction-tolerance' ? 2 : 0,
@@ -160,24 +168,41 @@ function behaviorFingerprint(row: ArenaV2WeaponResearchOverviewRow): string {
 }
 
 function createContext(
-  prototype: ArenaV2WeaponLaunchResearchDefinitionPrototype,
+  projection: ArenaWeaponPublicNumericProjection,
   config: ContextConfig,
-  prototypes: readonly ArenaV2WeaponLaunchResearchDefinitionPrototype[],
+  projections: readonly ArenaV2WeaponResearchOverviewProjectionPair[],
 ): ArenaV2WeaponResearchOverviewContext {
   return Object.freeze({
     id: config.id,
     label: config.label,
     stats: Object.freeze(ARENA_V2_WEAPON_PUBLIC_OVERVIEW_AXIS_IDS.map((axisId) => (
-      createStat(axisId, prototype, config.action, prototypes)
+      createStat(axisId, projection, projections)
+    ))),
+    contextStats: Object.freeze(ARENA_V2_WEAPON_PUBLIC_CONTEXT_AXIS_IDS.map((axisId) => (
+      createStat(axisId, projection, projections)
     ))),
     behaviorStats: Object.freeze(['active-frames', 'direction-tolerance'].map((axisId) => (
-      behaviorStat(axisId as ArenaV2WeaponPublicAxisId, prototype, config.action, prototypes)
+      behaviorStat(axisId as ArenaV2WeaponPublicAxisId, projection, projections)
     ))),
   });
 }
 
+export function createArenaV2WeaponResearchOverviewContexts(
+  projectionPair: ArenaV2WeaponResearchOverviewProjectionPair,
+  comparisonProjections: readonly ArenaV2WeaponResearchOverviewProjectionPair[] = [projectionPair],
+): readonly ArenaV2WeaponResearchOverviewContext[] {
+  return Object.freeze(CONTEXT_CONFIGS.map((config) => createContext(
+    config.action === 'groundStats' ? projectionPair.groundStats : projectionPair.aerialStats,
+    config,
+    comparisonProjections,
+  )));
+}
+
 export function createArenaV2WeaponResearchOverviewMatrix(): ArenaV2WeaponResearchOverviewMatrix {
   const prototypes = ARENA_V2_WEAPON_LAUNCH_RESEARCH_DEFINITION_PROTOTYPES;
+  const projections = Object.freeze(prototypes.map(({ groundStats, aerialStats }) => (
+    Object.freeze({ groundStats, aerialStats })
+  )));
   const rows = Object.freeze(prototypes.map((prototype) => Object.freeze({
     candidateId: prototype.candidateId,
     weaponId: prototype.weaponId,
@@ -187,9 +212,10 @@ export function createArenaV2WeaponResearchOverviewMatrix(): ArenaV2WeaponResear
     hitResult: HIT_RESULT_BY_LANGUAGE[prototype.languageId] ?? '命中后改变目标位置。',
     mapSpaces: prototype.mapSpaces,
     counterplay: prototype.counterplay,
-    contexts: Object.freeze(CONTEXT_CONFIGS.map((config) => (
-      createContext(prototype, config, prototypes)
-    ))),
+    contexts: createArenaV2WeaponResearchOverviewContexts(
+      Object.freeze({ groundStats: prototype.groundStats, aerialStats: prototype.aerialStats }),
+      projections,
+    ),
   })));
   const fingerprints = new Set(rows.map(behaviorFingerprint));
   if (fingerprints.size !== rows.length) {
