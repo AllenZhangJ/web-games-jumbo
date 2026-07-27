@@ -41,7 +41,7 @@
 - 哪些武器依赖角色/职业组合，不能直接迁移？
 - 哪些武器适合 1v1，哪些适合生存？
 
-当前新增证据：规则层横向冲量已经接入轻量物理，在宽平台、KZ 灰盒窄路和边缘平台形成不同的“命中但安全 / 命中后出界”结果；固定侧移目标又验证了重锤挥空、锁链和冲锋盾命中的前摇差异；攻击者失位、空中动作和双人同时出招也已经通过当前规则/物理链路形成可重复结果；本轮又把五项上下文数值完整投影到 DOM，并显示垂直命中边界；12 件参考武器已由结构化映射归并为 7 种战斗语言，详见[ADR-056](../decisions/056-arena-v2-weapon-function-language-boundary.md)。详见[武器地图边缘原型结果](arena-v2-weapon-map-prototype-results-v1.md)、[武器移动目标原型结果](arena-v2-weapon-moving-target-prototype-results-v1.md)和[武器攻击者失位与双人争夺原型结果](arena-v2-weapon-contest-prototype-results-v1.md)。下一步为封路、直线压制和延迟重击制作最小无渲染规则原型，再加入真实多人拥挤、攻击/跳跃互相穿插和真人可读性验证。
+当前新增证据：规则层横向冲量已经接入轻量物理，在宽平台、KZ 灰盒窄路和边缘平台形成不同的“命中但安全 / 命中后出界”结果；固定侧移目标又验证了重锤挥空、锁链和冲锋盾命中的前摇差异；攻击者失位、空中动作和双人同时出招也已经通过当前规则/物理链路形成可重复结果；本轮又把五项上下文数值完整投影到 DOM，并显示垂直命中边界；12 件参考武器已由结构化映射归并为 7 种战斗语言；直线压制、封路和延迟重击又通过临时 ActionDefinition 完成 8/24/30 tick 回应时间对照，详见[武器战斗语言最小原型结果](arena-v2-weapon-language-prototype-results-v1.md)。详见[ADR-056](../decisions/056-arena-v2-weapon-function-language-boundary.md)、[武器地图边缘原型结果](arena-v2-weapon-map-prototype-results-v1.md)、[武器移动目标原型结果](arena-v2-weapon-moving-target-prototype-results-v1.md)和[武器攻击者失位与双人争夺原型结果](arena-v2-weapon-contest-prototype-results-v1.md)。下一步把三种候选语言接入 KZ 地图后果，再加入真实多人拥挤、攻击/跳跃互相穿插和真人可读性验证。
 
 ## 优先级二：CS 1.6 跳跃/KZ 地图研究
 

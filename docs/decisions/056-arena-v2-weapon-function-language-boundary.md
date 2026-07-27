@@ -68,6 +68,7 @@
 ## 验证证据
 
 - 实现：`packages/arena-v1-experiment/src/arena-v2-weapon-function-language.ts`
+- 最小动作原型：[武器战斗语言最小原型结果 V1](../research/arena-v2-weapon-language-prototype-results-v1.md)
 - 研究卡：`packages/arena-v1-experiment/src/arena-v2-weapon-research-catalog.ts`
 - 测试：`packages/arena-v1-experiment/test/arena-v2-weapon-function-language.test.ts`
 - 来源研究：[Arena V2 热血英豪武器研究 V1](../research/arena-v2-hot-blooded-weapon-study-v1.md#基础武器语言)

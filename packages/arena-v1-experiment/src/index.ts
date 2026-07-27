@@ -203,6 +203,13 @@ export type {
   ArenaV2WeaponFunctionLanguageProfile,
   ArenaV2WeaponModeFit,
 } from './arena-v2-weapon-function-language.js';
+export { runArenaV2WeaponLanguagePrototype } from './arena-v2-weapon-language-prototype.js';
+export type {
+  ArenaV2WeaponLanguageProbeOutcome,
+  ArenaV2WeaponLanguageProbePolicy,
+  ArenaV2WeaponLanguageProbeResult,
+  ArenaV2WeaponLanguagePrototypeResult,
+} from './arena-v2-weapon-language-prototype.js';
 export {
   runArenaV2WeaponMapPrototype,
 } from './arena-v2-weapon-map-prototype.js';
