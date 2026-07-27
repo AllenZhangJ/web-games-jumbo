@@ -267,6 +267,10 @@ export {
   runArenaV2WeaponLanguagePrototype,
 } from './arena-v2-weapon-language-prototype.js';
 export type {
+  ArenaV2WeaponHitFeedback,
+  ArenaV2WeaponHitFeedbackKind,
+} from './arena-v2-kz-language-consequence-prototype.js';
+export type {
   ArenaV2WeaponLanguageCandidate,
   ArenaV2WeaponLanguageProbeOutcome,
   ArenaV2WeaponLanguageProbePolicy,

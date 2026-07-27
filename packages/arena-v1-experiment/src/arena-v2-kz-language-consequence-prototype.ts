@@ -53,6 +53,19 @@ export type ArenaV2KzLanguageResponseOutcome = (
   | 'movement-fall'
 );
 
+export type ArenaV2WeaponHitFeedbackKind =
+  | 'hit-confirm'
+  | 'hit-surface-transfer'
+  | 'hit-ring-out'
+  | 'attack-evaded'
+  | 'movement-fall';
+
+export interface ArenaV2WeaponHitFeedback {
+  readonly kind: ArenaV2WeaponHitFeedbackKind;
+  readonly title: string;
+  readonly explanation: string;
+}
+
 export interface ArenaV2KzLanguageConsequenceProbeResult {
   readonly segmentId: string;
   readonly surfaceId: string;
@@ -75,6 +88,7 @@ export interface ArenaV2KzLanguageConsequenceProbeResult {
   readonly responseOutcome: ArenaV2KzLanguageResponseOutcome;
   readonly responseTicks: number;
   readonly jumpStarted: boolean;
+  readonly feedback: ArenaV2WeaponHitFeedback;
   readonly warningZone: Readonly<{
     startsAtTick: number;
     expiresAtTickExclusive: number;
@@ -336,6 +350,41 @@ function runProbe(
   );
   const landedOnDifferentSurface = finalSupportSurfaceId !== null
     && finalSupportSurfaceId !== surface.id;
+  const outcome: ArenaV2KzLanguageCombatOutcome = firstHitTick === null
+    ? 'miss'
+    : targetFell ? 'hit-ring-out' : 'hit-safe';
+  const responseOutcome: ArenaV2KzLanguageResponseOutcome = fellBeforeHit
+    ? 'movement-fall'
+    : outcome;
+  const feedback = firstHitTick === null
+    ? responseOutcome === 'movement-fall'
+      ? Object.freeze({
+        kind: 'movement-fall' as const,
+        title: '路线失误·先于命中掉落',
+        explanation: '玩家在武器命中前失去支撑面，失败原因来自路线而不是武器命中。',
+      })
+      : Object.freeze({
+        kind: 'attack-evaded' as const,
+        title: '未命中·已避开攻击线',
+        explanation: '目标在有效判定前离开了攻击线，使用者承担了本次空放窗口。',
+      })
+    : targetFell
+      ? Object.freeze({
+        kind: 'hit-ring-out' as const,
+        title: '击落·失去支撑面',
+        explanation: '武器命中产生的横向控制把目标推出当前安全支撑面。',
+      })
+      : landedOnDifferentSurface
+        ? Object.freeze({
+          kind: 'hit-surface-transfer' as const,
+          title: '命中·落点改变',
+          explanation: '武器命中改变了目标的最终支撑面，路线位置发生了转移。',
+        })
+        : Object.freeze({
+          kind: 'hit-confirm' as const,
+          title: '命中·位置被改变',
+          explanation: '武器命中成立，目标仍有支撑面，但位置和路线压力已经改变。',
+        });
   return Object.freeze({
     segmentId: segment.segmentId,
     surfaceId: surface.id,
@@ -354,12 +403,11 @@ function runProbe(
     targetFell,
     finalSupportSurfaceId,
     landedOnDifferentSurface,
-    outcome: firstHitTick === null ? 'miss' : targetFell ? 'hit-ring-out' : 'hit-safe',
-    responseOutcome: fellBeforeHit
-      ? 'movement-fall'
-      : firstHitTick === null ? 'miss' : targetFell ? 'hit-ring-out' : 'hit-safe',
+    outcome,
+    responseOutcome,
     responseTicks,
     jumpStarted,
+    feedback,
     warningZone: warningZone === null
       ? null
       : Object.freeze({

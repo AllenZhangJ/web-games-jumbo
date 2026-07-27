@@ -47,6 +47,25 @@ describe('Arena V2 KZ weapon language consequence prototype', () => {
     ))).toBe(true);
     expect(result.probes.some(({ landedOnDifferentSurface }) => landedOnDifferentSurface)).toBe(true);
     expect(result.probes.some(({ jumpStarted }) => jumpStarted)).toBe(true);
+    const delayedStepOut = result.probes.filter(({ weaponId, responsePolicy }) => (
+      weaponId === 'research-delayed-heavy' && responsePolicy === 'step-out'
+    ));
+    expect(new Set(delayedStepOut.map(({ feedback }) => feedback.kind))).toEqual(new Set([
+      'attack-evaded',
+      'movement-fall',
+    ]));
+    const ringOut = result.probes.find(({ outcome }) => outcome === 'hit-ring-out');
+    expect(ringOut?.feedback).toMatchObject({
+      kind: 'hit-ring-out',
+      title: '击落·失去支撑面',
+    });
+    const surfaceTransfer = result.probes.find(({ landedOnDifferentSurface }) => landedOnDifferentSurface);
+    expect(surfaceTransfer?.feedback.kind).toBe('hit-surface-transfer');
+    for (const probe of result.probes) {
+      if (probe.outcome === 'hit-safe' && !probe.landedOnDifferentSurface) {
+        expect(probe.feedback.kind).toBe('hit-confirm');
+      }
+    }
   });
 
   it('is deterministic for the same route, seed and scripted response', () => {

@@ -75,6 +75,20 @@ packages/arena-v1-experiment/test/arena-v2-warning-zone-prototype.test.ts
 
 六段 KZ 探针中的封路候选均记录到 `startsAtTick=24`、`expiresAtTickExclusive=27`，并在命中或提前掉落前至少观察到有效阶段。当前点内判定只返回公开状态，不生成伤害、击退或新的输入要求，因此不会绕过 `ArenaRuleEngine` 的动作命中链路。
 
+## 命中反馈因果合同
+
+本轮在每个 KZ 探针结果上增加只读 `feedback` 语义，避免把所有失败都显示成同一种“被击落”：
+
+| feedback kind | 玩家应理解的原因 | 典型表现 |
+|---|---|---|
+| `hit-confirm` | 命中成立，但目标仍有支撑面 | 命中特效 + 位移提示 |
+| `hit-surface-transfer` | 命中改变了最终落点或支撑面 | 命中特效 + 落点/路线转移提示 |
+| `hit-ring-out` | 命中把目标推出安全支撑面 | 强命中特效 + 击落提示 |
+| `attack-evaded` | 目标在有效判定前离开攻击线 | 空放反馈 +“已避开攻击线” |
+| `movement-fall` | 玩家在命中前先因路线失误掉落 | 路线失误反馈，不播放武器命中特效 |
+
+这五种语义由同一份命中 tick、最终支撑面、掉落状态和回应结果推导。当前只验证语义和确定性，不代表声音、特效、镜头和设备可读性已经完成；边界见[ADR-069](../decisions/069-arena-v2-hit-feedback-causal-contract.md)。
+
 ## 研究判断
 
 ### 已经得到的证据
@@ -93,6 +107,7 @@ packages/arena-v1-experiment/test/arena-v2-warning-zone-prototype.test.ts
 - 当前结果没有敌人追击、复活重新进入路线或多人拥挤，不能直接冻结竞速/生存数值；
 - 绕后目标朝向是固定脚本，尚未验证目标主动转身和多人视线遮挡。
 - 命中反馈的声音、特效、镜头和伤害解释率仍未进行设备/真人验证。
+- 反馈语义已经在无渲染探针中区分，但还没有接入正式 Presentation 事件和设备表现。
 
 ## 收敛决定
 
@@ -109,3 +124,4 @@ packages/arena-v1-experiment/test/arena-v2-warning-zone-prototype.test.ts
 - [武器战斗语言最小原型结果 V1](arena-v2-weapon-language-prototype-results-v1.md)
 - [CS1.6 KZ 跳跃地图研究 V1](arena-v2-cs16-kz-map-study-v1.md)
 - [ADR-057：武器战斗语言必须通过地图后果验证](../decisions/057-arena-v2-weapon-language-map-consequence-boundary.md)
+- [ADR-069：命中反馈必须保留失败原因的因果区分](../decisions/069-arena-v2-hit-feedback-causal-contract.md)
