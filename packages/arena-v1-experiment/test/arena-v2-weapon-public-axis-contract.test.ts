@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ARENA_V2_WEAPON_PUBLIC_AXIS_DEFINITIONS,
   ARENA_V2_WEAPON_PUBLIC_CONTEXT_AXIS_IDS,
+  ARENA_V2_WEAPON_PUBLIC_BEHAVIOR_AXIS_IDS,
   ARENA_V2_WEAPON_PUBLIC_OVERVIEW_AXIS_IDS,
   ARENA_V2_WEAPON_FUNCTION_LANGUAGE_ID,
   ARENA_V2_WEAPON_FUNCTION_LANGUAGE_PROFILES,
@@ -19,10 +20,13 @@ describe('Arena V2 weapon public axis contract', () => {
     expect(ARENA_V2_WEAPON_PUBLIC_CONTEXT_AXIS_IDS).toEqual([
       'range', 'coverage', 'startup', 'impact', 'vertical', 'height-gap',
     ]);
+    expect(ARENA_V2_WEAPON_PUBLIC_BEHAVIOR_AXIS_IDS).toEqual([
+      'active-frames', 'direction-tolerance',
+    ]);
     expect(ARENA_V2_WEAPON_PUBLIC_AXIS_DEFINITIONS
       .filter(({ surface }) => surface === 'research-only')
       .map(({ id }) => id))
-      .toEqual(['delay', 'warning', 'active-frames', 'direction-tolerance']);
+      .toEqual(['delay', 'warning']);
   });
 
   it('blocks languages whose required player explanation is not on the current card', () => {
@@ -33,7 +37,9 @@ describe('Arena V2 weapon public axis contract', () => {
       .toEqual([
         ARENA_V2_WEAPON_FUNCTION_LANGUAGE_ID.APPROACH,
         ARENA_V2_WEAPON_FUNCTION_LANGUAGE_ID.REPOSITION,
+        ARENA_V2_WEAPON_FUNCTION_LANGUAGE_ID.READ_PUNISH,
         ARENA_V2_WEAPON_FUNCTION_LANGUAGE_ID.LINE_PRESSURE,
+        ARENA_V2_WEAPON_FUNCTION_LANGUAGE_ID.FLANK,
       ]);
     expect(reports.find(({ languageId }) => (
       languageId === ARENA_V2_WEAPON_FUNCTION_LANGUAGE_ID.ZONE_DENIAL

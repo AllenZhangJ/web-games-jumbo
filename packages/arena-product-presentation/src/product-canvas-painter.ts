@@ -269,6 +269,10 @@ function drawWeaponComparison(
   layout: ProductCanvasLayout,
 ): void {
   if (model.weaponComparison.length === 0) return;
+  const comparisonRows = Object.freeze([
+    ...model.weaponComparison,
+    ...model.weaponBehaviorComparison,
+  ]);
   const { visual, scale } = layout;
   const panel = {
     x: visual.x + 10 * scale,
@@ -314,8 +318,8 @@ function drawWeaponComparison(
     Math.max(1, scale),
   );
 
-  const rowHeight = Math.max(12 * scale, (panel.height - 31 * scale) / model.weaponComparison.length);
-  model.weaponComparison.forEach((row, rowIndex) => {
+  const rowHeight = Math.max(12 * scale, (panel.height - 31 * scale) / comparisonRows.length);
+  comparisonRows.forEach((row, rowIndex) => {
     const y = panel.y + 32 * scale + rowHeight * rowIndex;
     context.textAlign = 'left';
     context.fillStyle = COLOR.muted;
@@ -331,7 +335,7 @@ function drawWeaponComparison(
         y,
       );
     });
-    if (rowIndex < model.weaponComparison.length - 1) {
+    if (rowIndex < comparisonRows.length - 1) {
       drawLine(
         context,
         panel.x + 7 * scale,

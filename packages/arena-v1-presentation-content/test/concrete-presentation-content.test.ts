@@ -56,8 +56,10 @@ describe('Arena V1 concrete presentation content', () => {
       'range',
       'coverage',
       'startup',
+      'active-span',
       'impact',
       'vertical',
+      'direction-tolerance',
       'height-gap',
     ]);
     expect(hammer?.overview?.contexts[1]?.stats.find(({ id }) => id === 'height-gap'))

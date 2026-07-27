@@ -206,6 +206,7 @@ export type {
 export {
   ARENA_V2_WEAPON_PUBLIC_AXIS_DEFINITIONS,
   ARENA_V2_WEAPON_PUBLIC_AXIS_ID,
+  ARENA_V2_WEAPON_PUBLIC_BEHAVIOR_AXIS_IDS,
   ARENA_V2_WEAPON_PUBLIC_CONTEXT_AXIS_IDS,
   ARENA_V2_WEAPON_PUBLIC_OVERVIEW_AXIS_IDS,
   createArenaV2WeaponLanguageReadabilityReport,
@@ -218,6 +219,12 @@ export type {
   ArenaV2WeaponPublicAxisSurface,
 } from './arena-v2-weapon-public-axis-contract.js';
 export {
+  ARENA_V2_WEAPON_OFFICIAL_EVIDENCE,
+} from './arena-v2-weapon-official-evidence.js';
+export type {
+  ArenaV2WeaponOfficialEvidence,
+} from './arena-v2-weapon-official-evidence.js';
+export {
   createArenaV2WeaponLanguageCandidates,
   createArenaV2WeaponLanguageResearchContent,
   runArenaV2WeaponLanguagePrototype,
@@ -229,6 +236,18 @@ export type {
   ArenaV2WeaponLanguageProbeResult,
   ArenaV2WeaponLanguagePrototypeResult,
 } from './arena-v2-weapon-language-prototype.js';
+export {
+  ARENA_V2_WEAPON_COMMITMENT_PROFILES,
+  runArenaV2WeaponCommitmentPrototype,
+} from './arena-v2-weapon-commitment-prototype.js';
+export type {
+  ArenaV2WeaponCommitmentFacing,
+  ArenaV2WeaponCommitmentInput,
+  ArenaV2WeaponCommitmentOutcome,
+  ArenaV2WeaponCommitmentProbe,
+  ArenaV2WeaponCommitmentProfile,
+  ArenaV2WeaponCommitmentPrototypeResult,
+} from './arena-v2-weapon-commitment-prototype.js';
 export {
   advanceArenaV2WarningZone,
   createArenaV2WarningZoneRuntime,

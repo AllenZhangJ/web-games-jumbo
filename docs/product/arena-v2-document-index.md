@@ -38,8 +38,10 @@ Arena V2 的核心目标是：
 | [V2 界面地图](arena-v2-screen-map.md) | 明确需要哪些局外页面和对局页面 | 初稿 |
 | [V2 架构影响与迁移边界](../architecture/arena-v2-migration-boundary.md) | 说明哪些可以复用、哪些需要重构 | 初稿 |
 | [V2 搜索与验证清单](../research/arena-v2-research-backlog.md) | 管理后续搜索、原型和实测问题 | 第二轮收敛 |
-| [热血英豪武器研究 V1](../research/arena-v2-hot-blooded-weapon-study-v1.md) | 记录官方案例、上下文动作矩阵、风险语义和完整数值展示要求 | 第三轮研究 |
+| [热血英豪武器研究 V1](../research/arena-v2-hot-blooded-weapon-study-v1.md) | 记录官方案例、蓄力/取消/方向/持续威胁证据、上下文动作矩阵、风险语义和完整数值展示要求 | 第三轮研究 |
 | `arena-v2-weapon-research-catalog.ts` | 12 件参考武器的结构化研究卡，仅供开发/测试工具链使用 | 研究证据 |
+| `arena-v2-weapon-official-evidence.ts` | 5 组官方招式证据的蓄力、取消、方向、上下文、资源、持续威胁和物理阻碍信号，仅供开发/测试工具链使用 | 第三轮研究证据 |
+| `arena-v2-weapon-commitment-prototype.ts` | 用整数 tick 验证读招反制与延迟重击的提前取消、承诺释放、到期取消和蓄力转向，仅供开发/测试工具链使用 | 第四轮武器状态原型证据 |
 | `arena-v2-weapon-function-language.ts` | 将 12 件参考武器归并为 7 种 Arena 战斗语言，绑定数值轴、反制、地图空间和模式候选 | 研究证据 |
 | [武器战斗语言最小原型结果 V1](../research/arena-v2-weapon-language-prototype-results-v1.md) | 记录直线压制、封路、延迟重击、读招反制和绕后的 Rule/Targeting/Effect 最小验证与回应时间 | 扩展武器原型证据 |
 | [武器战斗语言 × KZ 地图后果原型结果 V1](../research/arena-v2-weapon-language-kz-consequence-results-v1.md) | 记录五种战斗语言在六段 KZ 表面上的击落、路线转移、前摇、有效窗口和固定回应后果 | 扩展武器×地图原型证据 |
@@ -66,14 +68,15 @@ Arena V2 的核心目标是：
 | [ADR-045：武器上下文概览契约](../decisions/045-arena-v2-weapon-context-overview.md) | 固化主动作数值、地面/空中上下文与风险语义 | 表现原型已接入 |
 | [ADR-046：武器概览先显示数值比较](../decisions/046-arena-weapon-overview-comparison-first.md) | 固化主页“先比较数值、再读武器语义”的信息顺序 | 当前主页已接入 |
 | [ADR-053：武器概览明确数值方向语义](../decisions/053-arena-weapon-overview-direction-semantics.md) | 固化“越高/越低/风险”文字、条形图和比较尺度一致性，避免只靠箭头猜含义 | 当前主页展示收敛 |
-| [ADR-055：武器上下文必须完整显示关键数值](../decisions/055-arena-v2-weapon-context-readout-completeness.md) | 固化地面/空中上下文的六项数值、标签和可访问解释 | 表现原型已接入 |
+| [ADR-055：武器上下文必须完整显示关键数值](../decisions/055-arena-v2-weapon-context-readout-completeness.md) | 固化地面/空中上下文的八项数值、标签和可访问解释 | 表现原型已接入 |
 | [ADR-056：武器先按可学习的战斗语言扩展](../decisions/056-arena-v2-weapon-function-language-boundary.md) | 固化参考武器到 Arena 战斗语言的研究映射与新增武器评审边界 | 研究原型已接入 |
 | [ADR-057：武器战斗语言必须通过地图后果验证](../decisions/057-arena-v2-weapon-language-map-consequence-boundary.md) | 固化六段 KZ 表面、三种回应和击退/支撑面证据作为武器候选评审门槛 | 研究原型已接入 |
 | [ADR-058：V2 可读性与留存使用独立真人任务合同](../decisions/058-arena-v2-readability-retention-study-boundary.md) | 固化 3 分钟操作、数值解释、地图归因和 200 小时里程碑的独立验证边界 | 合同已建立，尚无真人样本 |
 | `arena-v2-weapon-public-axis-contract.ts` | 检查七种战斗语言依赖的数值是否已经在主概览、地面/空中上下文或研究字段中明确出现，阻止未公开轴进入正式武器卡 | 研究评审证据 |
-| [ADR-059：战斗语言必须通过公开数值轴就绪检查](../decisions/059-arena-v2-weapon-public-axis-readiness-boundary.md) | 固化 9 个主数值、6 个上下文数值和 4 个研究专用未闭合轴的进入边界 | 研究评审已接入 |
+| [ADR-059：战斗语言必须通过公开数值轴就绪检查](../decisions/059-arena-v2-weapon-public-axis-readiness-boundary.md) | 固化 9 个主数值、8 个上下文数值、2 个行为补充轴和 2 个研究专用未闭合轴的进入边界 | 研究评审已接入 |
 | [ADR-060：绕后使用目标朝向判定，五种语言共用同一规则原型](../decisions/060-arena-v2-rear-cone-and-language-prototype-boundary.md) | 固化 `rear-cone`、五种语言统一 Rule/Effect/Targeting 原型和 90 个 KZ 探针边界 | 研究原型已接入 |
 | [ADR-061：武器概览补充有效窗口与方向容错](../decisions/061-arena-v2-weapon-overview-behavior-readout.md) | 固化由权威调优推导的两项补充行为数值及其不进入主比较表的边界 | Product UI 已接入 |
+| [ADR-062：蓄力承诺先以可取消的整数 tick 原型验证](../decisions/062-arena-v2-weapon-commitment-prototype-boundary.md) | 固化蓄力承诺、提前取消、到期处理和方向记录的研究边界，不直接进入生产武器 | 研究原型已接入 |
 | [ADR-047：生存实体复用玩家规则/物理边界](../decisions/047-arena-v2-survival-entity-boundary.md) | 固化单敌人原型不得绕过命中、冲量和掉落规则 | V2 研究原型 |
 | [ADR-048：生存多敌压力先复用规则引擎](../decisions/048-arena-v2-survival-multi-enemy-pressure-boundary.md) | 固化多敌研究原型的输入决策、供给争夺和正式接入前的边界 | V2 研究原型 |
 | [200 小时收集容量原型结果 V1](../research/arena-v2-collection-budget-prototype-results-v1.md) | 记录候选武器数量、上下文证据、地图/模式/挑战预算和敏感性分析 | 第三轮成长原型证据 |

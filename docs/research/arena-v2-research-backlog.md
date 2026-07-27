@@ -18,7 +18,7 @@
 
 ## 优先级一：热血英豪武器研究
 
-第一轮结果和第二轮动作矩阵已记录在[热血英豪武器研究 V1](arena-v2-hot-blooded-weapon-study-v1.md)。12 件参考武器也已经沉淀为开发/测试工具链中的结构化研究卡，并进一步归并为 7 种 Arena 战斗语言。当前结论是建立 9 个可比较的公开数值，并额外完整展示地面/空中上下文：有效距离、覆盖宽度、出招速度、收招时间、横向击退、纵向控制、控制时间、自身位移风险和再次使用时间；上下文再公开命中高度差，并为每项数值提供标签、方向语义和单位；同时强制公开命中结果和地图用途。新增公开轴就绪检查后，延迟、预警、有效攻击窗口和方向容错在没有正式字段前保持研究状态。
+第一轮结果、第二轮动作矩阵和第三轮官方招式证据已记录在[热血英豪武器研究 V1](arena-v2-hot-blooded-weapon-study-v1.md)。12 件参考武器已经沉淀为结构化研究卡，并从魔血镰刃、幻虎巨拳、白金双枪、血刃和血影钩刃中抽取蓄力承诺、取消、方向、上下文、资源、陷阱持续和物理阻碍信号，见 `arena-v2-weapon-official-evidence.ts`。当前结论是建立 9 个可比较的公开数值，并额外完整展示地面/空中上下文；有效攻击窗口和方向容错已经进入独立行为补充区，延迟和预警仍保持研究状态。
 
 ### 目标
 
@@ -33,7 +33,7 @@
 - 3 把后续候选武器的最小原型方案。
 - 地面/空中动作上下文矩阵；
 - “越高越好”和“越高风险”分开的显示语义。
-- 战斗语言公开轴就绪检查：冲入、换位、直线压制已具备当前公开轴，封路、读招反制、绕后和延迟重击仍需补齐研究字段；见[ADR-059](../decisions/059-arena-v2-weapon-public-axis-readiness-boundary.md)。五种扩展语言已经通过统一规则原型，绕后使用目标朝向判定；见[ADR-060](../decisions/060-arena-v2-rear-cone-and-language-prototype-boundary.md)。
+- 战斗语言公开轴就绪检查：冲入、换位、读招反制、直线压制和绕后已具备当前公开轴，封路和延迟重击仍需补齐延迟/预警字段；见[ADR-059](../decisions/059-arena-v2-weapon-public-axis-readiness-boundary.md)。五种扩展语言已经通过统一规则原型，绕后使用目标朝向判定；见[ADR-060](../decisions/060-arena-v2-rear-cone-and-language-prototype-boundary.md)。
 - 武器卡已增加两项不扩张主比较表的补充行为数值：有效窗口和方向容错角；它们由权威调优投影，延迟、预警和连续区域效果仍保持研究状态，见[ADR-061](../decisions/061-arena-v2-weapon-overview-behavior-readout.md)。
 
 ### 需要回答
@@ -43,7 +43,7 @@
 - 哪些武器依赖角色/职业组合，不能直接迁移？
 - 哪些武器适合 1v1，哪些适合生存？
 
-当前新增证据：规则层横向冲量已经接入轻量物理，在宽平台、KZ 灰盒窄路和边缘平台形成不同的“命中但安全 / 命中后出界”结果；固定侧移目标又验证了重锤挥空、锁链和冲锋盾命中的前摇差异；攻击者失位、空中动作和双人同时出招也已经通过当前规则/物理链路形成可重复结果；本轮又把六项上下文数值完整投影到 DOM，并显示覆盖宽度和垂直命中边界；12 件参考武器已由结构化映射归并为 7 种战斗语言；直线压制、封路、延迟重击、读招反制和绕后又通过临时 ActionDefinition 完成 8/24/30/18/10 tick 回应时间、有效窗口和目标朝向对照，并在六段 KZ 灰盒上完成 90 个“语言×表面×固定回应”探针，详见[武器战斗语言最小原型结果](arena-v2-weapon-language-prototype-results-v1.md)与[武器战斗语言 × KZ 地图后果原型结果](arena-v2-weapon-language-kz-consequence-results-v1.md)。详见[ADR-056](../decisions/056-arena-v2-weapon-function-language-boundary.md)、[ADR-057](../decisions/057-arena-v2-weapon-language-map-consequence-boundary.md)、[ADR-060](../decisions/060-arena-v2-rear-cone-and-language-prototype-boundary.md)、[武器地图边缘原型结果](arena-v2-weapon-map-prototype-results-v1.md)、[武器移动目标原型结果](arena-v2-weapon-moving-target-prototype-results-v1.md)和[武器攻击者失位与双人争夺原型结果](arena-v2-weapon-contest-prototype-results-v1.md)。下一步加入真实多人拥挤、攻击/跳跃互相穿插、持续封路状态和真人可读性验证。
+当前新增证据：规则层横向冲量已经接入轻量物理，在宽平台、KZ 灰盒窄路和边缘平台形成不同的“命中但安全 / 命中后出界”结果；固定侧移目标又验证了重锤挥空、锁链和冲锋盾命中的前摇差异；攻击者失位、空中动作和双人同时出招也已经通过当前规则/物理链路形成可重复结果；本轮又把八项上下文数值完整投影到 DOM 与 Canvas，并显示覆盖宽度、方向容错和垂直命中边界；12 件参考武器已由结构化映射归并为 7 种战斗语言；直线压制、封路、延迟重击、读招反制和绕后又通过临时 ActionDefinition 完成 8/24/30/18/10 tick 回应时间、有效窗口和目标朝向对照，并在六段 KZ 灰盒上完成 90 个“语言×表面×固定回应”探针，详见[武器战斗语言最小原型结果](arena-v2-weapon-language-prototype-results-v1.md)与[武器战斗语言 × KZ 地图后果原型结果](arena-v2-weapon-language-kz-consequence-results-v1.md)。详见[ADR-056](../decisions/056-arena-v2-weapon-function-language-boundary.md)、[ADR-057](../decisions/057-arena-v2-weapon-language-map-consequence-boundary.md)、[ADR-060](../decisions/060-arena-v2-rear-cone-and-language-prototype-boundary.md)、[武器地图边缘原型结果](arena-v2-weapon-map-prototype-results-v1.md)、[武器移动目标原型结果](arena-v2-weapon-moving-target-prototype-results-v1.md)和[武器攻击者失位与双人争夺原型结果](arena-v2-weapon-contest-prototype-results-v1.md)。下一步加入真实多人拥挤、攻击/跳跃互相穿插、持续封路状态和真人可读性验证。
 
 ## 优先级二：CS 1.6 跳跃/KZ 地图研究
 

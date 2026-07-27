@@ -447,6 +447,16 @@ describe('Product presentation immutable data boundaries', () => {
           id: 'range', label: '有效距离', value: 1.8, maxValue: 6,
           unit: '格', direction: 'higher-is-better', precision: 2,
         }],
+        behaviorStats: [
+          {
+            id: 'active-span', label: '有效窗口', value: 0.05, maxValue: 0.5,
+            unit: '秒', direction: 'higher-is-better', precision: 2,
+          },
+          {
+            id: 'direction-tolerance', label: '方向容错角', value: 133, maxValue: 180,
+            unit: '°', direction: 'higher-is-better', precision: 0,
+          },
+        ],
         contexts: [{
           id: 'ground', label: '地面', summary: '近身重击。', stats: [{
             id: 'range', label: '有效距离', value: 1.8, maxValue: 6,
@@ -583,6 +593,16 @@ describe('Product presentation immutable data boundaries', () => {
           id: 'range', label: '有效距离', value: 1.8, maxValue: 6,
           unit: '格', direction: 'higher-is-better', precision: 2,
         }],
+        behaviorStats: [
+          {
+            id: 'active-span', label: '有效窗口', value: 0.05, maxValue: 0.5,
+            unit: '秒', direction: 'higher-is-better', precision: 2,
+          },
+          {
+            id: 'direction-tolerance', label: '方向容错角', value: 133, maxValue: 180,
+            unit: '°', direction: 'higher-is-better', precision: 0,
+          },
+        ],
         contexts: [{
           id: 'ground', label: '地面', summary: '近身重击。', stats: [{
             id: 'range', label: '有效距离', value: 1.8, maxValue: 6,
@@ -643,6 +663,8 @@ describe('Product presentation immutable data boundaries', () => {
     expect(first.commands.some(([command, text]) => command === 'fillText' && text === '开始')).toBe(true);
     expect(first.commands.some(([command, text]) => command === 'fillText' && text === '有效距离')).toBe(true);
     expect(first.commands.some(([command, text]) => command === 'fillText' && text === '1.80格 ↑')).toBe(true);
+    expect(first.commands.some(([command, text]) => command === 'fillText' && text === '有效窗口')).toBe(true);
+    expect(first.commands.some(([command, text]) => command === 'fillText' && text === '0.05秒 ↑')).toBe(true);
     expect(JSON.stringify(sceneModel)).toBe(sceneBefore);
     expect(JSON.stringify(layout)).toBe(layoutBefore);
     expect(Object.isFrozen(sceneModel)).toBe(true);

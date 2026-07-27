@@ -130,8 +130,18 @@ function contextStats(tuning: AttackTuning) {
     stat('range', 'equipment.stat.range', tuning.targeting.range, 6, '格', 'higher-is-better'),
     stat('coverage', 'equipment.stat.coverage', targetingCoverageWidth(tuning), 12, '格', 'higher-is-better'),
     stat('startup', 'equipment.stat.startup', tuning.cadence.windupSeconds, 0.5, '秒', 'lower-is-better'),
+    stat('active-span', 'equipment.stat.active-span', tuning.cadence.activeSeconds, 0.5, '秒', 'higher-is-better'),
     stat('impact', 'equipment.stat.impact', tuning.knockback.targetGroundDistance, 4, '格', 'higher-is-better'),
     stat('vertical', 'equipment.stat.vertical', tuning.knockback.verticalImpulse, 7, '冲量', 'higher-is-better'),
+    stat(
+      'direction-tolerance',
+      'equipment.stat.direction-tolerance',
+      targetingDirectionToleranceDegrees(tuning),
+      180,
+      '°',
+      'higher-is-better',
+      0,
+    ),
     stat(
       'height-gap',
       'equipment.stat.height-gap',

@@ -96,6 +96,7 @@ export interface ProductUiSceneModel {
   readonly characterCards: readonly ProductUiSceneCharacterCard[];
   readonly weaponCards: readonly ProductUiSceneWeaponCard[];
   readonly weaponComparison: readonly ProductUiSceneWeaponComparisonRow[];
+  readonly weaponBehaviorComparison: readonly ProductUiSceneWeaponComparisonRow[];
   readonly outcome: string | null;
   readonly experienceDelta: number | null;
   readonly unlock: Readonly<{
@@ -275,17 +276,20 @@ function weaponCards(values: unknown): readonly ProductUiSceneWeaponCard[] {
   }));
 }
 
-function weaponComparison(
+function buildWeaponComparison(
   cards: readonly ProductUiSceneWeaponCard[],
+  selectStats: (card: ProductUiSceneWeaponCard) => readonly ProductUiSceneWeaponStat[],
+  comparisonName: string,
 ): readonly ProductUiSceneWeaponComparisonRow[] {
   if (cards.length === 0) return Object.freeze([]);
-  const referenceStats = cards[0]!.stats;
+  const referenceStats = selectStats(cards[0]!);
   for (const card of cards.slice(1)) {
+    const stats = selectStats(card);
     if (
-      card.stats.length !== referenceStats.length
-      || referenceStats.some(({ id }) => !card.stats.some((stat) => stat.id === id))
+      stats.length !== referenceStats.length
+      || referenceStats.some(({ id }) => !stats.some((stat) => stat.id === id))
     ) {
-      throw new RangeError('Product UI 武器比较要求所有武器使用同一组公开数值。');
+      throw new RangeError(`Product UI 武器${comparisonName}要求所有武器使用同一组公开数值。`);
     }
   }
   return Object.freeze(referenceStats.map((referenceStat) => Object.freeze({
@@ -293,16 +297,16 @@ function weaponComparison(
     label: referenceStat.label,
     unit: referenceStat.unit,
     values: Object.freeze(cards.map((card) => {
-      const stat = card.stats.find(({ id }) => id === referenceStat.id);
-      if (!stat) throw new RangeError(`Product UI 武器比较缺少数值 ${referenceStat.id}。`);
+      const stat = selectStats(card).find(({ id }) => id === referenceStat.id);
+      if (!stat) throw new RangeError(`Product UI 武器${comparisonName}缺少数值 ${referenceStat.id}。`);
       if (stat.unit !== referenceStat.unit) {
-        throw new RangeError(`Product UI 武器比较的 ${referenceStat.id} 单位不一致。`);
+        throw new RangeError(`Product UI 武器${comparisonName}的 ${referenceStat.id} 单位不一致。`);
       }
       if (stat.direction !== referenceStat.direction) {
-        throw new RangeError(`Product UI 武器比较的 ${referenceStat.id} 方向语义不一致。`);
+        throw new RangeError(`Product UI 武器${comparisonName}的 ${referenceStat.id} 方向语义不一致。`);
       }
       if (stat.maxValue !== referenceStat.maxValue) {
-        throw new RangeError(`Product UI 武器比较的 ${referenceStat.id} 尺度不一致。`);
+        throw new RangeError(`Product UI 武器${comparisonName}的 ${referenceStat.id} 尺度不一致。`);
       }
       return Object.freeze({
         weaponId: card.id,
@@ -357,6 +361,12 @@ export function createProductUiSceneModel(viewModelValue: unknown): ProductUiSce
   const inputEnabled = booleanValue(source.inputEnabled, 'Product UI ViewModel.inputEnabled');
   const cards = characterCards(source.characterOptions, inputEnabled);
   const weapons = weaponCards(source.weaponOptions);
+  const comparison = buildWeaponComparison(weapons, (card) => card.stats, '主数值比较');
+  const behaviorComparison = buildWeaponComparison(
+    weapons,
+    (card) => card.behaviorStats,
+    '行为数值比较',
+  );
   const match = source.match === null || source.match === undefined
     ? null
     : dataRecord(source.match, 'Product UI ViewModel.match');
@@ -410,7 +420,8 @@ export function createProductUiSceneModel(viewModelValue: unknown): ProductUiSce
       ),
     characterCards: cards,
     weaponCards: weapons,
-    weaponComparison: weaponComparison(weapons),
+    weaponComparison: comparison,
+    weaponBehaviorComparison: behaviorComparison,
     outcome: result === null
       ? null
       : assertNonEmptyString(result.outcome, 'Product UI ViewModel.result.outcome'),

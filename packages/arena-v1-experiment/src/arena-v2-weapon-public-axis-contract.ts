@@ -25,7 +25,11 @@ export type ArenaV2WeaponPublicAxisId = typeof ARENA_V2_WEAPON_PUBLIC_AXIS_ID[
   keyof typeof ARENA_V2_WEAPON_PUBLIC_AXIS_ID
 ];
 
-export type ArenaV2WeaponPublicAxisSurface = 'overview' | 'context' | 'research-only';
+export type ArenaV2WeaponPublicAxisSurface =
+  | 'overview'
+  | 'context'
+  | 'overview-behavior'
+  | 'research-only';
 
 export interface ArenaV2WeaponPublicAxisDefinition {
   readonly id: ArenaV2WeaponPublicAxisId;
@@ -132,15 +136,15 @@ const definitions: readonly ArenaV2WeaponPublicAxisDefinition[] = [
   {
     id: ARENA_V2_WEAPON_PUBLIC_AXIS_ID.ACTIVE_FRAMES,
     label: '有效攻击窗口',
-    surface: 'research-only',
-    sourceStatIds: Object.freeze([]),
+    surface: 'overview-behavior',
+    sourceStatIds: Object.freeze(['active-span']),
     playerMeaning: '攻击判定保持有效的时间窗口。',
   },
   {
     id: ARENA_V2_WEAPON_PUBLIC_AXIS_ID.DIRECTION_TOLERANCE,
     label: '方向容错',
-    surface: 'research-only',
-    sourceStatIds: Object.freeze([]),
+    surface: 'overview-behavior',
+    sourceStatIds: Object.freeze(['direction-tolerance']),
     playerMeaning: '攻击方向偏离目标后仍能成立的范围。',
   },
 ];
@@ -166,6 +170,11 @@ export const ARENA_V2_WEAPON_PUBLIC_CONTEXT_AXIS_IDS = Object.freeze([
   'impact',
   'vertical',
   'height-gap',
+] as const);
+
+export const ARENA_V2_WEAPON_PUBLIC_BEHAVIOR_AXIS_IDS = Object.freeze([
+  'active-frames',
+  'direction-tolerance',
 ] as const);
 
 const definitionById = new Map<string, ArenaV2WeaponPublicAxisDefinition>(
