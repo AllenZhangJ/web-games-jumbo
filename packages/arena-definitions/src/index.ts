@@ -39,6 +39,11 @@ export {
   compileHorizontalImpulseFromDistance,
   compileJumpImpulseFromHeight,
 } from './arena-gameplay-v2-tuning.js';
+export { projectArenaWeaponPublicNumbers } from './arena-weapon-public-projection.js';
+export type {
+  ArenaGameplayV2AttackTuning,
+  ArenaWeaponPublicNumericProjection,
+} from './arena-weapon-public-projection.js';
 export {
   createEquipmentDefinition,
   EQUIPMENT_DEFINITION_SCHEMA_VERSION,

@@ -22,6 +22,7 @@ import {
   EquipmentRegistry,
   MAP_DEFINITION_SCHEMA_VERSION,
   MapRegistry,
+  projectArenaWeaponPublicNumbers,
   STAGE4_EQUIPMENT_ID,
   STAGE5_MAP_ID,
 } from '../src/index.js';
@@ -95,6 +96,23 @@ describe('Arena Definition public contracts', () => {
   it('freezes the one executable gameplay tuning table behind a reviewed hash', () => {
     expect(Object.isFrozen(ARENA_GAMEPLAY_V2_TUNING)).toBe(true);
     expect(createDeterministicDataHash(ARENA_GAMEPLAY_V2_TUNING)).toBe('8c322912');
+  });
+
+  it('projects weapon overview geometry from authoritative tuning with one shared formula', () => {
+    const hammer = projectArenaWeaponPublicNumbers(ARENA_GAMEPLAY_V2_TUNING.attacks['hammer-smash']);
+    const shield = projectArenaWeaponPublicNumbers(ARENA_GAMEPLAY_V2_TUNING.attacks['shield-charge']);
+    expect(hammer).toMatchObject({
+      range: 1.8,
+      windupTicks: 18,
+      activeTicks: 3,
+      recoveryTicks: 24,
+      impactDistance: 2.6785714285714284,
+      heightGap: 1.5,
+    });
+    expect(hammer.coverage).toBeCloseTo(3.29945, 4);
+    expect(hammer.directionToleranceDegrees).toBeCloseTo(132.84, 1);
+    expect(shield.selfMovementImpulse).toBe(6.5);
+    expect(Object.isFrozen(hammer)).toBe(true);
   });
 
   it('exposes immutable typed definitions from its public API', () => {

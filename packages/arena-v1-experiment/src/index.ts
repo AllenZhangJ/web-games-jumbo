@@ -251,6 +251,11 @@ export type {
   ArenaV2WeaponPublicAxisAuthoritySource,
 } from './arena-v2-weapon-definition-migration-audit.js';
 export {
+  ARENA_V2_LINE_PRESSURE_DEFINITION_PROTOTYPE,
+  createArenaV2LinePressureDefinitionPrototype,
+} from './arena-v2-weapon-line-pressure-prototype.js';
+export type { ArenaV2LinePressureDefinitionPrototype } from './arena-v2-weapon-line-pressure-prototype.js';
+export {
   ARENA_V2_WEAPON_OFFICIAL_EVIDENCE,
 } from './arena-v2-weapon-official-evidence.js';
 export type {

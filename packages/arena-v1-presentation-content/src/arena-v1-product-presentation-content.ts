@@ -1,6 +1,7 @@
 import {
   ARENA_GAMEPLAY_V2_TUNING,
   ARENA_V1_CHARACTER_ID,
+  projectArenaWeaponPublicNumbers,
 } from '@number-strategy-jump/arena-definitions';
 import {
   ARENA_V1_PRODUCT_SCREEN_REGISTRY,
@@ -83,32 +84,13 @@ function stat(
   return { id, labelMessageId, value, maxValue, unit, direction, precision };
 }
 
-function targetingCoverageWidth(tuning: AttackTuning): number {
-  const { range, radius, minimumFacingDot } = tuning.targeting;
-  if (radius !== undefined) return radius * 2;
-  if (minimumFacingDot !== undefined) {
-    return range * 2 * Math.sqrt(Math.max(0, 1 - minimumFacingDot ** 2));
-  }
-  return range * 2;
-}
-
-function targetingDirectionToleranceDegrees(tuning: AttackTuning): number {
-  const { range, radius, minimumFacingDot } = tuning.targeting;
-  if (minimumFacingDot !== undefined) {
-    return (2 * Math.acos(Math.max(-1, Math.min(1, minimumFacingDot))) * 180) / Math.PI;
-  }
-  if (radius !== undefined) {
-    return (2 * Math.atan(radius / range) * 180) / Math.PI;
-  }
-  return 180;
-}
-
 function behaviorStats(tuning: AttackTuning) {
+  const projected = projectArenaWeaponPublicNumbers(tuning);
   return [
     stat(
       'active-span',
       'equipment.stat.active-span',
-      tuning.cadence.activeSeconds,
+      projected.activeTicks / ARENA_GAMEPLAY_V2_TUNING.units.tickRateHz,
       0.5,
       '秒',
       'higher-is-better',
@@ -116,7 +98,7 @@ function behaviorStats(tuning: AttackTuning) {
     stat(
       'direction-tolerance',
       'equipment.stat.direction-tolerance',
-      targetingDirectionToleranceDegrees(tuning),
+      projected.directionToleranceDegrees,
       180,
       '°',
       'higher-is-better',
@@ -126,17 +108,32 @@ function behaviorStats(tuning: AttackTuning) {
 }
 
 function contextStats(tuning: AttackTuning) {
+  const projected = projectArenaWeaponPublicNumbers(tuning);
   return [
-    stat('range', 'equipment.stat.range', tuning.targeting.range, 6, '格', 'higher-is-better'),
-    stat('coverage', 'equipment.stat.coverage', targetingCoverageWidth(tuning), 12, '格', 'higher-is-better'),
-    stat('startup', 'equipment.stat.startup', tuning.cadence.windupSeconds, 0.5, '秒', 'lower-is-better'),
-    stat('active-span', 'equipment.stat.active-span', tuning.cadence.activeSeconds, 0.5, '秒', 'higher-is-better'),
-    stat('impact', 'equipment.stat.impact', tuning.knockback.targetGroundDistance, 4, '格', 'higher-is-better'),
-    stat('vertical', 'equipment.stat.vertical', tuning.knockback.verticalImpulse, 7, '冲量', 'higher-is-better'),
+    stat('range', 'equipment.stat.range', projected.range, 6, '格', 'higher-is-better'),
+    stat('coverage', 'equipment.stat.coverage', projected.coverage, 12, '格', 'higher-is-better'),
+    stat(
+      'startup',
+      'equipment.stat.startup',
+      projected.windupTicks / ARENA_GAMEPLAY_V2_TUNING.units.tickRateHz,
+      0.5,
+      '秒',
+      'lower-is-better',
+    ),
+    stat(
+      'active-span',
+      'equipment.stat.active-span',
+      projected.activeTicks / ARENA_GAMEPLAY_V2_TUNING.units.tickRateHz,
+      0.5,
+      '秒',
+      'higher-is-better',
+    ),
+    stat('impact', 'equipment.stat.impact', projected.impactDistance, 4, '格', 'higher-is-better'),
+    stat('vertical', 'equipment.stat.vertical', projected.verticalImpulse, 7, '冲量', 'higher-is-better'),
     stat(
       'direction-tolerance',
       'equipment.stat.direction-tolerance',
-      targetingDirectionToleranceDegrees(tuning),
+      projected.directionToleranceDegrees,
       180,
       '°',
       'higher-is-better',
@@ -145,7 +142,7 @@ function contextStats(tuning: AttackTuning) {
     stat(
       'height-gap',
       'equipment.stat.height-gap',
-      tuning.targeting.maximumVerticalDifference,
+      projected.heightGap,
       4,
       '格',
       'higher-is-better',
@@ -160,6 +157,7 @@ function createEquipmentOverview() {
     if (!config) throw new RangeError(`武器 ${equipmentDefinition.id} 缺少概览文案配置。`);
     const tuning = attackTuning(equipmentDefinition.actionDefinitionId);
     const aerialTuning = attackTuning(equipmentDefinition.aerialActionDefinitionId);
+    const projected = projectArenaWeaponPublicNumbers(tuning);
     result[equipmentDefinition.id] = {
       roleMessageId: config.roleMessageId,
       descriptionMessageId: config.descriptionMessageId,
@@ -169,15 +167,43 @@ function createEquipmentOverview() {
       hitResultMessageId: config.hitResultMessageId,
       mapUseMessageId: config.mapUseMessageId,
       stats: [
-        stat('range', 'equipment.stat.range', tuning.targeting.range, 6, '格', 'higher-is-better'),
-        stat('coverage', 'equipment.stat.coverage', targetingCoverageWidth(tuning), 12, '格', 'higher-is-better'),
-        stat('startup', 'equipment.stat.startup', tuning.cadence.windupSeconds, 0.5, '秒', 'lower-is-better'),
-        stat('recovery', 'equipment.stat.recovery', tuning.cadence.recoverySeconds, 0.5, '秒', 'lower-is-better'),
-        stat('impact', 'equipment.stat.impact', tuning.knockback.targetGroundDistance, 3, '格', 'higher-is-better'),
-        stat('vertical', 'equipment.stat.vertical', tuning.knockback.verticalImpulse, 7, '冲量', 'higher-is-better'),
-        stat('control', 'equipment.stat.control', tuning.hitstunTicks / ARENA_GAMEPLAY_V2_TUNING.units.tickRateHz, 0.6, '秒', 'higher-is-better'),
-        stat('self-movement', 'equipment.stat.self-movement', tuning.selfMovement?.horizontalImpulse ?? 0, 7, '冲量', 'higher-is-risk'),
-        stat('cooldown', 'equipment.stat.cooldown', tuning.cadence.cooldownSeconds, 2, '秒', 'lower-is-better'),
+        stat('range', 'equipment.stat.range', projected.range, 6, '格', 'higher-is-better'),
+        stat('coverage', 'equipment.stat.coverage', projected.coverage, 12, '格', 'higher-is-better'),
+        stat(
+          'startup',
+          'equipment.stat.startup',
+          projected.windupTicks / ARENA_GAMEPLAY_V2_TUNING.units.tickRateHz,
+          0.5,
+          '秒',
+          'lower-is-better',
+        ),
+        stat(
+          'recovery',
+          'equipment.stat.recovery',
+          projected.recoveryTicks / ARENA_GAMEPLAY_V2_TUNING.units.tickRateHz,
+          0.5,
+          '秒',
+          'lower-is-better',
+        ),
+        stat('impact', 'equipment.stat.impact', projected.impactDistance, 3, '格', 'higher-is-better'),
+        stat('vertical', 'equipment.stat.vertical', projected.verticalImpulse, 7, '冲量', 'higher-is-better'),
+        stat(
+          'control',
+          'equipment.stat.control',
+          projected.hitstunTicks / ARENA_GAMEPLAY_V2_TUNING.units.tickRateHz,
+          0.6,
+          '秒',
+          'higher-is-better',
+        ),
+        stat('self-movement', 'equipment.stat.self-movement', projected.selfMovementImpulse, 7, '冲量', 'higher-is-risk'),
+        stat(
+          'cooldown',
+          'equipment.stat.cooldown',
+          projected.cooldownTicks / ARENA_GAMEPLAY_V2_TUNING.units.tickRateHz,
+          2,
+          '秒',
+          'lower-is-better',
+        ),
       ],
       behaviorStats: behaviorStats(tuning),
       contexts: [
