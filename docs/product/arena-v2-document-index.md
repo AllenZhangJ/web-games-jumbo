@@ -66,10 +66,12 @@ Arena V2 的核心目标是：
 | [读招反制承诺状态与 Replay 原型结果 V1](../research/arena-v2-weapon-read-punish-replay-results-v1.md) | 使用真实 MatchCore、ActionExecutionSystem 和 MatchReplay 验证提前取消、成功提交、到期取消、蓄力等级和可转向结果 | 读招反制研究证据已接入，仍未生产化 |
 | [ADR-075：承诺动作由统一 ActionExecutionSystem 裁决](../decisions/075-arena-v2-action-commitment-state.md) | 固化承诺字段、active 前结算、取消/提交语义和快照/事件边界 | 研究动作状态已接入 |
 | `arena-v2-weapon-read-punish-replay-prototype.ts` | 为读招反制生成提前释放、成功提交、到期持续按住三组固定 Replay | 三组研究 Replay 通过，仍未生产化 |
-| [绕后目标主动转身 Replay 原型结果 V1](../research/arena-v2-weapon-flank-replay-results-v1.md) | 使用真实 MatchCore、普通移动输入和 MatchReplay 验证保持背向命中、主动转身避开 | 绕后研究证据已接入，仍未生产化 |
-| `arena-v2-weapon-flank-replay-prototype.ts` | 为绕后生成保持背向与目标主动转身两组固定 Replay | 两组研究 Replay 通过，仍未生产化 |
+| [绕后目标主动转身 Replay 原型结果 V1](../research/arena-v2-weapon-flank-replay-results-v1.md) | 使用真实 MatchCore、普通移动输入和 MatchReplay 验证保持背向命中、主动转身避开、侧向进入后命中 | 绕后研究证据已接入，仍未生产化 |
+| `arena-v2-weapon-flank-replay-prototype.ts` | 为绕后生成保持背向、目标主动转身、多次转身和侧向进入四组固定 Replay | 四组研究 Replay 通过，仍未生产化 |
 | [研究武器双人拥挤与地图边缘 Replay 结果 V1](../research/arena-v2-weapon-multiplayer-edge-replay-results-v1.md) | 使用真实双人 MatchCore 验证三类研究候选同时出招、窄平台击退、击落和真实反馈来源映射 | 三个研究候选反馈来源已通过，仍未生产化 |
 | `arena-v2-weapon-multiplayer-edge-replay-prototype.ts` | 为直线压制、读招反制、绕后生成双方同时出招的边缘平台 Replay，并输出命中/击落/反馈语义 | 双人边缘研究证据 |
+| [ADR-076：多目标遮挡先固化观察证据，不扩张双人权威边界](../decisions/076-arena-v2-multi-target-visibility-feedback-boundary.md) | 固化多目标遮挡研究探针、目标/深度反馈语义与当前双人 MatchCore 边界 | 15 个研究结果通过，三人/网络多人仍未完成 |
+| [武器多目标视线遮挡研究原型结果 V1](../research/arena-v2-weapon-occlusion-research-prototype-results-v1.md) | 使用 5 个候选地面 Definition 的真实 targeting 参数验证近目标遮挡远目标和侧向进入的观察负担 | 15 个研究结果通过，三人/网络多人仍未完成 |
 | [武器攻击/跳跃穿插 Replay 原型结果 V1](../research/arena-v2-weapon-attack-jump-interleave-replay-results-v1.md) | 使用真实 MatchCore 验证同 tick 攻击与跳跃独立通道，以及空中切换武器专属下砸动作 | 三个研究候选穿插证据已通过，仍未生产化 |
 | `arena-v2-weapon-attack-jump-interleave-replay-prototype.ts` | 为三个研究候选生成同 tick 独立通道与空中武器动作 Replay，并验证 `begin-down-smash` 状态效果 | 攻击/跳跃穿插研究证据 |
 | [武器战斗语言最小原型结果 V1](../research/arena-v2-weapon-language-prototype-results-v1.md) | 记录直线压制、封路、延迟重击、读招反制和绕后的 Rule/Targeting/Effect 最小验证与回应时间 | 扩展武器原型证据 |

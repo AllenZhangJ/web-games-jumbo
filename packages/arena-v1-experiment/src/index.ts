@@ -295,6 +295,14 @@ export type {
   ArenaV2WeaponFlankScenarioResult,
 } from './arena-v2-weapon-flank-replay-prototype.js';
 export {
+  runArenaV2WeaponOcclusionResearchPrototype,
+} from './arena-v2-weapon-occlusion-research-prototype.js';
+export type {
+  ArenaV2WeaponOcclusionProbeResult,
+  ArenaV2WeaponOcclusionResearchPrototypeResult,
+  ArenaV2WeaponOcclusionScenario,
+} from './arena-v2-weapon-occlusion-research-prototype.js';
+export {
   runArenaV2WeaponMultiplayerEdgeReplayPrototype,
 } from './arena-v2-weapon-multiplayer-edge-replay-prototype.js';
 export type {

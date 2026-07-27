@@ -43,9 +43,31 @@ describe('Arena V2 flank target-turn Replay prototype', () => {
       expect.objectContaining({ tick: 11, targetFacingX: 1 }),
       expect.objectContaining({ tick: 12, phase: 'active', targetFacingX: 1 }),
     ]));
+    expect(result.scenarios[3]).toMatchObject({
+      scenario: 'side-entry',
+      actionStartTick: 24,
+      firstActiveTick: 35,
+      firstHitTick: 34,
+      targetFacingAtActive: -1,
+      rearAlignmentAtStart: expect.closeTo(-0.624695, 5),
+      rearAlignmentAtActive: expect.closeTo(-0.800204, 5),
+      finalHash: 'ef8764cd',
+      replayVerified: true,
+    });
+    expect(result.scenarios[3]?.actionStateSamples).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        tick: 0,
+        attackerPosition: { x: 1.2, z: 1.5 },
+      }),
+      expect.objectContaining({
+        tick: 35,
+        phase: 'active',
+        attackerPosition: { x: 1.2, z: -0.9000000000000005 },
+      }),
+    ]));
   });
 
-  it('is deterministic across active-turn scenarios', () => {
+  it('is deterministic across active-turn and side-entry scenarios', () => {
     expect(runArenaV2WeaponFlankReplayPrototype())
       .toEqual(runArenaV2WeaponFlankReplayPrototype());
   });

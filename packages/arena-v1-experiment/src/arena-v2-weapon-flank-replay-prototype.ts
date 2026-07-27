@@ -20,6 +20,9 @@ const REPLAY_SEED = 0x464c414e;
 const START_TICK = 1;
 const TURN_TICK = 8;
 const SECOND_TURN_TICK = 10;
+const SIDE_ENTRY_START_TICK = 24;
+const SIDE_ENTRY_PLAYER_START = Object.freeze({ x: 1.2, z: 1.5 });
+const SIDE_ENTRY_TARGET_START = Object.freeze({ x: 0, z: 0 });
 
 const FLANK_REPLAY_CONFIG = Object.freeze({
   participantIds: Object.freeze(['player-1', 'player-2']),
@@ -40,7 +43,8 @@ const FLANK_REPLAY_CONFIG = Object.freeze({
 export type ArenaV2WeaponFlankScenario =
   | 'keep-facing-away'
   | 'turn-to-attacker'
-  | 'turn-twice-before-active';
+  | 'turn-twice-before-active'
+  | 'side-entry';
 
 export interface ArenaV2WeaponFlankActionSample {
   readonly tick: number;
@@ -48,6 +52,8 @@ export interface ArenaV2WeaponFlankActionSample {
   readonly definitionId: string | null;
   readonly ticksRemaining: number;
   readonly targetFacingX: number;
+  readonly attackerPosition: Readonly<{ readonly x: number; readonly z: number }>;
+  readonly targetPosition: Readonly<{ readonly x: number; readonly z: number }>;
 }
 
 export interface ArenaV2WeaponFlankScenarioResult {
@@ -57,6 +63,8 @@ export interface ArenaV2WeaponFlankScenarioResult {
   readonly firstHitTick: number | null;
   readonly targetFacingBeforeActive: number | null;
   readonly targetFacingAtActive: number | null;
+  readonly rearAlignmentAtStart: number | null;
+  readonly rearAlignmentAtActive: number | null;
   readonly actionStateSamples: readonly ArenaV2WeaponFlankActionSample[];
   readonly replaySchemaVersion: number;
   readonly matchSeed: number;
@@ -82,26 +90,63 @@ function createCore({
   return createArenaV2WeaponResearchReplayCore({ seed, config });
 }
 
+function configFor(scenario: ArenaV2WeaponFlankScenario) {
+  if (scenario !== 'side-entry') return FLANK_REPLAY_CONFIG;
+  return Object.freeze({
+    ...FLANK_REPLAY_CONFIG,
+    hardLimitTicks: 60,
+    suddenDeathStartTick: 45,
+    arena: Object.freeze({
+      killY: -5,
+      surfaces: Object.freeze([Object.freeze({
+        id: 'flank-side-entry-platform',
+        center: Object.freeze({ x: 0, y: -0.5, z: 0 }),
+        halfExtents: Object.freeze({ x: 6, y: 0.5, z: 4 }),
+      })]),
+      spawns: Object.freeze([
+        Object.freeze({ x: SIDE_ENTRY_PLAYER_START.x, y: 1.02, z: SIDE_ENTRY_PLAYER_START.z }),
+        Object.freeze({ x: SIDE_ENTRY_TARGET_START.x, y: 1.02, z: SIDE_ENTRY_TARGET_START.z }),
+      ]),
+    }),
+    equipment: Object.freeze({
+      initialSpawns: Object.freeze([Object.freeze({
+        id: 'flank-side-entry-spawn',
+        definitionId: FLANK_WEAPON_ID,
+        position: Object.freeze({
+          x: SIDE_ENTRY_PLAYER_START.x,
+          y: 1.02,
+          z: SIDE_ENTRY_PLAYER_START.z,
+        }),
+      })]),
+    }),
+  });
+}
+
 function inputFor(
   snapshot: ArenaMatchSnapshot,
   scenario: ArenaV2WeaponFlankScenario,
 ): readonly ArenaInputFrame[] {
+  const isSideEntry = scenario === 'side-entry';
   const targetMoveX = scenario === 'keep-facing-away'
     ? snapshot.tick === 0 ? 1 : 0
     : scenario === 'turn-to-attacker'
       ? snapshot.tick === 0
         ? 1
         : snapshot.tick === TURN_TICK ? -1 : 0
-      : snapshot.tick === 0
-        ? 1
-        : snapshot.tick === TURN_TICK
-          ? -1
-          : snapshot.tick === SECOND_TURN_TICK ? 1 : 0;
+      : scenario === 'turn-twice-before-active'
+        ? snapshot.tick === 0
+          ? 1
+          : snapshot.tick === TURN_TICK
+            ? -1
+            : snapshot.tick === SECOND_TURN_TICK ? 1 : 0
+        : 0;
+  const actionStartTick = isSideEntry ? SIDE_ENTRY_START_TICK : START_TICK;
   return Object.freeze(snapshot.participants.map(({ id }) => (
     id === PLAYER_ID
       ? Object.freeze({
         ...createNeutralInputFrame(snapshot.tick, id),
-        primaryPressed: snapshot.tick === START_TICK,
+        moveZ: isSideEntry && snapshot.tick < actionStartTick ? -1 : 0,
+        primaryPressed: snapshot.tick === actionStartTick,
       })
       : id === TARGET_ID
         ? Object.freeze({ ...createNeutralInputFrame(snapshot.tick, id), moveX: targetMoveX })
@@ -123,7 +168,17 @@ function actionStateFor(snapshot: ArenaMatchSnapshot): ArenaV2WeaponFlankActionS
     definitionId: player.action.definitionId,
     ticksRemaining: player.action.ticksRemaining,
     targetFacingX: target.facing.x,
+    attackerPosition: Object.freeze({ x: player.position.x, z: player.position.z }),
+    targetPosition: Object.freeze({ x: target.position.x, z: target.position.z }),
   });
+}
+
+function rearAlignment(sample: ArenaV2WeaponFlankActionSample): number {
+  const dx = sample.attackerPosition.x - sample.targetPosition.x;
+  const dz = sample.attackerPosition.z - sample.targetPosition.z;
+  const distance = Math.hypot(dx, dz);
+  if (distance < 1e-7) return 0;
+  return (dx / distance) * sample.targetFacingX;
 }
 
 function actionDefinitionId(event: Readonly<Record<string, unknown>>): string | null {
@@ -134,7 +189,7 @@ function createScenarioReplay(scenario: ArenaV2WeaponFlankScenario): Readonly<{
   replay: ArenaReplay;
   actionStateSamples: readonly ArenaV2WeaponFlankActionSample[];
 }> {
-  const core = createCore({ seed: REPLAY_SEED, config: FLANK_REPLAY_CONFIG });
+  const core = createCore({ seed: REPLAY_SEED, config: configFor(scenario) });
   const runner = new HeadlessMatchRunner(core, { checkpointInterval: 6 });
   const actionStateSamples: ArenaV2WeaponFlankActionSample[] = [];
   try {
@@ -170,6 +225,7 @@ function runScenario(scenario: ArenaV2WeaponFlankScenario): ArenaV2WeaponFlankSc
   }
   firstActiveTick = actionStateSamples.find(({ phase }) => phase === 'active')?.tick ?? null;
   const activeSample = actionStateSamples.find(({ phase }) => phase === 'active');
+  const initialSample = actionStateSamples[0];
   const beforeActiveSample = activeSample
     ? [...actionStateSamples].reverse().find(({ tick }) => tick < activeSample.tick)
     : undefined;
@@ -193,6 +249,17 @@ function runScenario(scenario: ArenaV2WeaponFlankScenario): ArenaV2WeaponFlankSc
   if (scenario === 'turn-twice-before-active' && firstHitTick === null) {
     throw new Error('绕后目标多次转身回到背向后应恢复命中。');
   }
+  if (scenario === 'side-entry') {
+    if (!initialSample || !activeSample) throw new Error('绕后侧向进入缺少位置快照。');
+    if (rearAlignment(initialSample) <= -0.65) {
+      throw new Error('绕后侧向进入必须从 rear-cone 外开始。');
+    }
+    if (rearAlignment(activeSample) > -0.65 || firstHitTick === null) {
+      throw new Error(
+        `绕后侧向进入必须在 active 前进入目标背后并命中（alignment=${rearAlignment(activeSample)}, hit=${String(firstHitTick)}）。`,
+      );
+    }
+  }
   return Object.freeze({
     scenario,
     actionStartTick,
@@ -200,6 +267,8 @@ function runScenario(scenario: ArenaV2WeaponFlankScenario): ArenaV2WeaponFlankSc
     firstHitTick,
     targetFacingBeforeActive: beforeActiveSample?.targetFacingX ?? null,
     targetFacingAtActive: activeSample?.targetFacingX ?? null,
+    rearAlignmentAtStart: initialSample ? rearAlignment(initialSample) : null,
+    rearAlignmentAtActive: activeSample ? rearAlignment(activeSample) : null,
     actionStateSamples: Object.freeze(actionStateSamples),
     replaySchemaVersion: replay.replaySchemaVersion,
     matchSeed: replay.matchSeed,
@@ -219,6 +288,7 @@ export function runArenaV2WeaponFlankReplayPrototype(): ArenaV2WeaponFlankReplay
       'keep-facing-away',
       'turn-to-attacker',
       'turn-twice-before-active',
+      'side-entry',
     ] as const).map(runScenario)),
   });
 }
