@@ -204,6 +204,20 @@ export type {
   ArenaV2WeaponModeFit,
 } from './arena-v2-weapon-function-language.js';
 export {
+  ARENA_V2_WEAPON_PUBLIC_AXIS_DEFINITIONS,
+  ARENA_V2_WEAPON_PUBLIC_AXIS_ID,
+  ARENA_V2_WEAPON_PUBLIC_CONTEXT_AXIS_IDS,
+  ARENA_V2_WEAPON_PUBLIC_OVERVIEW_AXIS_IDS,
+  createArenaV2WeaponLanguageReadabilityReport,
+  createArenaV2WeaponLanguageReadabilityReports,
+} from './arena-v2-weapon-public-axis-contract.js';
+export type {
+  ArenaV2WeaponLanguageReadabilityReport,
+  ArenaV2WeaponPublicAxisDefinition,
+  ArenaV2WeaponPublicAxisId,
+  ArenaV2WeaponPublicAxisSurface,
+} from './arena-v2-weapon-public-axis-contract.js';
+export {
   createArenaV2WeaponLanguageCandidates,
   createArenaV2WeaponLanguageResearchContent,
   runArenaV2WeaponLanguagePrototype,
