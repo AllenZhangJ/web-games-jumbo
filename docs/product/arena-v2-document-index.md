@@ -128,6 +128,7 @@ Arena V2 的核心目标是：
 | [战斗外界面原型验证结果 V1](../research/arena-v2-ui-prototype-results-v1.md) | 记录当前主页、武器概览、角色选择和进入对局链路验证 | 第一轮原型证据 |
 | [局外信息原型结果 V1](../research/arena-v2-ui-information-prototype-results-v1.md) | 记录 11 个信息入口、四条关键流程和点击预算 | 第二轮信息架构原型 |
 | `arena-v2-ui-information-prototype.ts` | 为 11 个局外页面声明必要信息、首屏最多三项、延后信息和点击预算，验证单一下一决策 | 第三轮信息层原型证据 |
+| `ui-information.html` / `src/entry/ui-information-study.ts` | 独立展示 11 个页面合同、首屏/延后信息、主次动作和四条关键流程，不进入生产构建 | 局外信息研究页，仅研究工具链 |
 | `arena-v2-ui-next-goal-prototype.ts` | 将收集、武器熟悉、地图熟悉和生存记录收敛为单一局外下一目标，仅供开发/测试工具链使用 | 第二轮信息架构证据 |
 | [ADR-044：武器不做格挡与公开数值概览](../decisions/044-arena-v2-weapon-no-guard-and-public-overview.md) | 固化武器边界与数值展示来源 | V2 提案 |
 | [ADR-045：武器上下文概览契约](../decisions/045-arena-v2-weapon-context-overview.md) | 固化主动作数值、地面/空中上下文与风险语义 | 表现原型已接入 |
@@ -137,6 +138,7 @@ Arena V2 的核心目标是：
 | [ADR-077：研究武器概览必须分离地面与空中上下文](../decisions/077-arena-v2-research-overview-context-separation.md) | 固化研究矩阵的 `ground/aerial` 双上下文、公共数值轴和权威 Definition 投影边界 | 双上下文矩阵已接入，真人可读性待验证 |
 | [ADR-078：KZ 地图研究卡必须区分来源事实与 Arena 迁移结论](../decisions/078-arena-v2-kz-research-source-profile.md) | 固化外部难度/长度/检查点事实、可迁移地图语言和生产地图边界 | 六类研究样本已接入，真实地图仍待设计 |
 | [ADR-079：局外界面研究必须区分官方承诺、信息模式与 Arena 翻译](../decisions/079-arena-v2-survivor-io-ui-evidence-boundary.md) | 固化官方资料、设计推导和不复制边界的字段分离，以及 11 个页面合同不扩张的评审门槛 | 四张官方证据卡已接入，真人可读性仍待验证 |
+| [ADR-088：11 个局外页面先用独立研究页验证信息合同](../decisions/088-arena-v2-ui-information-study-page-boundary.md) | 固化研究页复用唯一页面合同、窄屏布局验证和生产入口隔离边界 | 研究页已接入，真机/真人仍待验证 |
 | [ADR-080：热血英豪武器逐件研究必须以动作链和数值审计为单位](../decisions/080-arena-v2-weapon-case-study-by-move.md) | 固化逐动作事实、反制、失败成本和公共数值轴审计边界 | 六件逐动作案例已接入，真人可读性与生产迁移待验证 |
 | [ADR-085：血影钩刃动作规则与障碍后果分层验证](../decisions/085-arena-v2-blood-shadow-hook-blade-definition-boundary.md) | 固化目标朝向/拉近由真实 Rule/Replay 验证，实体障碍由独立地图探针验证，禁止把未接入规则的障碍属性写成武器数值 | 研究 Definition/Replay 已接入，障碍仍待真实地图表面验证 |
 | [ADR-086：真·哈迪斯钩镰先以承诺、上下文和支撑面后果收敛](../decisions/086-arena-v2-true-hades-hook-scythe-definition-boundary.md) | 固化地面承诺、空中独立上下文、取消/提交、命中与支撑面后果的研究边界 | 研究 Definition/Replay 已接入，未进入生产 |

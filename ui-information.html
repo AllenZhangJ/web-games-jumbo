@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#e9e6de" />
+    <meta name="robots" content="noindex,nofollow" />
+    <link rel="stylesheet" href="/src/ui-information-study.css" />
+    <title>Arena 局外 11 页面研究</title>
+  </head>
+  <body>
+    <main id="ui-information-study" class="ui-study" aria-labelledby="ui-study-title">
+      <header class="ui-study-header">
+        <p class="ui-study-kicker">ARENA V2 / INFORMATION ARCHITECTURE STUDY</p>
+        <h1 id="ui-study-title">局外 11 页面研究</h1>
+        <p>这是研究工具页：先验证页面职责、首屏信息和下一步动作，再进入真实手机与真人测试。本页不是生产导航。</p>
+      </header>
+
+      <section class="ui-study-summary" aria-label="研究合同摘要">
+        <div><span>信息入口</span><strong id="ui-page-count">读取中</strong></div>
+        <div><span>关键流程</span><strong id="ui-flow-count">读取中</strong></div>
+        <div><span>复杂系统</span><strong id="ui-complexity-count">读取中</strong></div>
+        <div><span>合同状态</span><strong id="ui-contract-status">准备中</strong></div>
+      </section>
+
+      <p id="ui-study-error" class="ui-study-alert" role="alert" hidden></p>
+
+      <section class="ui-study-workbench" aria-label="页面合同研究工作台">
+        <nav id="ui-page-nav" class="ui-page-nav" aria-label="11 个局外页面"></nav>
+        <article id="ui-page-preview" class="ui-page-preview" aria-live="polite"></article>
+      </section>
+
+      <section class="ui-flow-section" aria-labelledby="ui-flow-title">
+        <div class="ui-section-heading">
+          <div>
+            <p class="ui-study-kicker">FLOW CHECK</p>
+            <h2 id="ui-flow-title">关键流程点击预算</h2>
+          </div>
+          <p>流程只验证“下一步是否清楚”，不代表生产状态机已经接入。</p>
+        </div>
+        <div id="ui-flow-nav" class="ui-flow-nav" aria-label="关键流程"></div>
+        <article id="ui-flow-preview" class="ui-flow-preview" aria-live="polite"></article>
+      </section>
+
+      <footer class="ui-study-footer">
+        当前可证明：11 页合同、首屏最多 3 项、四条流程和点击预算。当前不可证明：真实手机字号、触控命中率、真人阅读率和结算后的再次开始率。
+      </footer>
+    </main>
+    <script type="module" src="/src/entry/ui-information-study.ts"></script>
+  </body>
+</html>
