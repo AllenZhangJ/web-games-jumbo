@@ -175,7 +175,9 @@ function createCandidateResult(
   const gates = Object.freeze([
     isProductionDefinition
       ? passed('production-definition', '地面/空中动作均来自正式 EquipmentDefinition 与权威调优。')
-      : blocked('production-definition', '当前仍是 research-only Definition，尚未进入正式 EquipmentRegistry。'),
+      : blocked('production-definition', audit.implementationStatus === 'candidate-definition'
+        ? '候选 Definition 已抽到 arena-v1-content 的显式候选 Registry，但尚未接入默认生产 Registry；最终资产和真人可读性仍未验收。'
+        : '当前仍缺少候选 Definition，尚未进入任何 EquipmentRegistry。'),
     hasActionState
       ? passed('formal-action-state', hasProductionActionState
         ? '正式动作身份具备地面/空中上下文、前摇、有效、收招和冷却时间。'
@@ -189,7 +191,7 @@ function createCandidateResult(
         ? candidate.candidateId === readPunishReplayResult.candidateId
         ? passed('replay', '读招反制三种承诺场景已通过 MatchReplay schema、每场 checkpoint 和最终 hash 验证。')
         : candidate.candidateId === flankReplayResult.candidateId
-          ? passed('replay', '绕后保持背向/主动转身两种场景已通过 MatchReplay schema、每场 checkpoint 和最终 hash 验证。')
+          ? passed('replay', '绕后保持背向、主动转身和多次转身三种场景已通过 MatchReplay schema、每场 checkpoint 和最终 hash 验证。')
           : passed('replay', `直线压制候选已通过 MatchReplay schema、${lineReplayResult.checkpointCount} 个 checkpoint 和最终 hash 验证。`)
       : blocked('replay', '尚无该候选的 MatchReplay fixture、checkpoint 和最终 hash 证据；确定性原型不能替代正式回放。'),
     hasMapConsequence

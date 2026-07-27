@@ -32,3 +32,15 @@ export {
   STAGE6_MOVEMENT_ACTION_DEFINITIONS,
   STAGE6_MOVEMENT_ACTION_ID,
 } from './stage6-movement-actions.js';
+export {
+  ARENA_V2_WEAPON_CANDIDATE_ACTION_ID,
+  ARENA_V2_WEAPON_CANDIDATE_CONTENT_DEFINITIONS,
+  ARENA_V2_WEAPON_CANDIDATE_ID,
+  ARENA_V2_WEAPON_CANDIDATE_LANGUAGE_ID,
+  createArenaV2WeaponCandidateContentRegistries,
+} from './arena-v2-weapon-candidate-content.js';
+export type {
+  ArenaV2WeaponCandidateContentDefinition,
+  ArenaV2WeaponCandidateContentRegistryOptions,
+  ArenaV2WeaponCandidateLanguageId,
+} from './arena-v2-weapon-candidate-content.js';

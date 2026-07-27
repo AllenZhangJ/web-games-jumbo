@@ -718,7 +718,7 @@ test('Arena V1 authority content stays immutable and outside runtime ownership',
     'arena-v1-content 只能依赖底层数据、规则常量和 Definition/Registry。',
   );
   const files = await listJavaScript(path.resolve('packages/arena-v1-content/src'));
-  assert.equal(files.length, 8);
+  assert.equal(files.length, 9);
   for (const file of files) {
     const source = await readFile(file, 'utf8');
     assert.doesNotMatch(

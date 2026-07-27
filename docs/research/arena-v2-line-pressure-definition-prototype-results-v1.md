@@ -2,13 +2,13 @@
 
 ## 1. 状态与边界
 
-- 状态：研究原型通过，尚未进入生产武器目录
+- 状态：候选 Definition 原型通过，已进入内容层显式候选 Registry，尚未进入默认生产武器目录
 - 日期：2026-07-28
-- 实现：`packages/arena-v1-experiment/src/arena-v2-weapon-line-pressure-prototype.ts`
+- 实现：`packages/arena-v1-content/src/arena-v2-weapon-candidate-content.ts`、`packages/arena-v1-experiment/src/arena-v2-weapon-line-pressure-prototype.ts`
 - 测试：`packages/arena-v1-experiment/test/arena-v2-weapon-line-pressure-prototype.test.ts`
 - 关联决策：[ADR-068：直线压制先以单一攻击线 Definition 验证](../decisions/068-arena-v2-line-pressure-definition-boundary.md)
 
-这个原型把“直线压制”从研究语言进一步编译为地面/空中两套临时 `ActionDefinition`，并生成可直接用于武器概览的数值快照。它仍是开发/测试工具链内容，不新增正式武器 ID、存档字段、生产资产或玩家入口。
+这个原型把“直线压制”从研究语言进一步编译为内容层候选 Registry 中的地面/空中两套 `ActionDefinition`，并生成可直接用于武器概览的数值快照。候选 Registry 只供研究与测试显式 opt-in 使用，不新增默认生产武器 ID、存档字段、生产资产或玩家入口。
 
 ## 2. 最小功能版本
 
@@ -53,4 +53,4 @@
 1. 将该原型接入 KZ 六段地图和三种固定回应，确认长直线、窄路、边缘上的路线后果；
 2. 接入命中特效、音效和空放反馈的可读性探针；
 3. 真人确认“绕线、贴身、利用高低差”三种反制是否能被说出；
-4. 只有在上述证据通过后，才考虑迁移为正式 V2 Definition。
+4. 只有在上述证据通过后，才考虑从候选 Registry 迁移为默认生产 V2 Definition。

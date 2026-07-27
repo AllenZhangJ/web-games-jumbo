@@ -2,7 +2,7 @@
 
 ## 文档状态
 
-- 状态：研究候选验证完成；不进入生产 `EquipmentRegistry`
+- 状态：候选验证完成；不进入默认生产 `EquipmentRegistry`
 - 日期：2026-07-28
 - 目的：验证直线压制、读招反制、绕后在当前真实双人 MatchCore 边界下，同时出招与窄平台是否产生可区分的命中、击退和反馈结果
 - 实现：`packages/arena-v1-experiment/src/arena-v2-weapon-multiplayer-edge-replay-prototype.ts`
@@ -25,9 +25,9 @@
 
 | 候选 | 双方动作开始 | 命中事件 | 地图结果 | 反馈语义 | checkpoint / inputs | final hash |
 |---|---|---|---|---|---:|---|
-| 直线压制 | tick 1 / tick 1 | tick 9，双方互相命中 | `player-2` 击落 | `hit-ring-out` | 11 / 116 | `1276fb98` |
-| 读招反制 | tick 1 / tick 1 | tick 25，双方互相命中 | 双方仍有支撑面 | `hit-confirm` | 11 / 120 | `a9706ac5` |
-| 绕后 | tick 1 / tick 1 | tick 11，仅 `player-1 → player-2` 命中 | 双方仍有支撑面 | `hit-confirm` | 11 / 120 | `9a17f28e` |
+| 直线压制 | tick 1 / tick 1 | tick 9，双方互相命中 | `player-2` 击落 | `hit-ring-out` | 11 / 116 | `efd1a73c` |
+| 读招反制 | tick 1 / tick 1 | tick 25，双方互相命中 | 双方仍有支撑面 | `hit-confirm` | 11 / 120 | `ca1c67e9` |
+| 绕后 | tick 1 / tick 1 | tick 11，仅 `player-1 → player-2` 命中 | 双方仍有支撑面 | `hit-confirm` | 11 / 120 | `1a62479a` |
 
 三组 Replay 二次验证后的最终 hash 均一致。绕后中，`player-2` 在 tick 0 向右转身，攻击者从目标背后命中；目标的同时出招没有命中攻击者，说明拥挤情况下仍保留了目标朝向语义。
 
@@ -56,6 +56,6 @@
 
 - 三人或 2v2 规则与网络多人；
 - 攻击与跳跃同时发生时的边缘恢复；
-- 绕后的侧向进入、多次转身和分叉路线遮挡；
+- 绕后的侧向进入和分叉路线遮挡；多次转身已由独立 Flank Replay 补齐；
 - 真人是否能读懂击落与命中反馈；
-- 正式 `EquipmentDefinition`、最终声音/特效和设备验收。
+- 默认生产 `EquipmentDefinition`、最终声音/特效和设备验收。

@@ -29,6 +29,20 @@ describe('Arena V2 flank target-turn Replay prototype', () => {
       expect.objectContaining({ tick: 1, targetFacingX: 1 }),
       expect.objectContaining({ tick: 12, phase: 'active', targetFacingX: -1 }),
     ]));
+    expect(result.scenarios[2]).toMatchObject({
+      scenario: 'turn-twice-before-active',
+      actionStartTick: 1,
+      firstActiveTick: 12,
+      firstHitTick: 11,
+      targetFacingBeforeActive: 1,
+      targetFacingAtActive: 1,
+      replayVerified: true,
+    });
+    expect(result.scenarios[2]?.actionStateSamples).toEqual(expect.arrayContaining([
+      expect.objectContaining({ tick: 9, targetFacingX: -1 }),
+      expect.objectContaining({ tick: 11, targetFacingX: 1 }),
+      expect.objectContaining({ tick: 12, phase: 'active', targetFacingX: 1 }),
+    ]));
   });
 
   it('is deterministic across active-turn scenarios', () => {

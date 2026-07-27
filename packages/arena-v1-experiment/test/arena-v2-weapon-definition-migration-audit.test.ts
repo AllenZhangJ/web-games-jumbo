@@ -31,10 +31,16 @@ describe('Arena V2 weapon Definition migration audit', () => {
       source === 'research-candidate'
     ));
     expect(researchAudits).toHaveLength(3);
-    expect(researchAudits.every(({ status, implementationStatus, productionEquipmentDefinitionId }) => (
+    expect(researchAudits.every(({
+      status,
+      implementationStatus,
+      productionEquipmentDefinitionId,
+      candidateEquipmentDefinitionId,
+    }) => (
       status === 'ready'
-      && implementationStatus === 'research-only-definition'
+      && implementationStatus === 'candidate-definition'
       && productionEquipmentDefinitionId === null
+      && candidateEquipmentDefinitionId?.startsWith('research-')
     ))).toBe(true);
     expect(researchAudits.every(({ structuralGaps, contexts, missingOverviewAxes }) => (
       structuralGaps.length === 0

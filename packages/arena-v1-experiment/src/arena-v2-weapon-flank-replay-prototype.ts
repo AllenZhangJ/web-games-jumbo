@@ -19,6 +19,7 @@ const TARGET_ID = 'player-2';
 const REPLAY_SEED = 0x464c414e;
 const START_TICK = 1;
 const TURN_TICK = 8;
+const SECOND_TURN_TICK = 10;
 
 const FLANK_REPLAY_CONFIG = Object.freeze({
   participantIds: Object.freeze(['player-1', 'player-2']),
@@ -36,7 +37,10 @@ const FLANK_REPLAY_CONFIG = Object.freeze({
   }),
 });
 
-export type ArenaV2WeaponFlankScenario = 'keep-facing-away' | 'turn-to-attacker';
+export type ArenaV2WeaponFlankScenario =
+  | 'keep-facing-away'
+  | 'turn-to-attacker'
+  | 'turn-twice-before-active';
 
 export interface ArenaV2WeaponFlankActionSample {
   readonly tick: number;
@@ -84,9 +88,15 @@ function inputFor(
 ): readonly ArenaInputFrame[] {
   const targetMoveX = scenario === 'keep-facing-away'
     ? snapshot.tick === 0 ? 1 : 0
-    : snapshot.tick === 0
-      ? 1
-      : snapshot.tick === TURN_TICK ? -1 : 0;
+    : scenario === 'turn-to-attacker'
+      ? snapshot.tick === 0
+        ? 1
+        : snapshot.tick === TURN_TICK ? -1 : 0
+      : snapshot.tick === 0
+        ? 1
+        : snapshot.tick === TURN_TICK
+          ? -1
+          : snapshot.tick === SECOND_TURN_TICK ? 1 : 0;
   return Object.freeze(snapshot.participants.map(({ id }) => (
     id === PLAYER_ID
       ? Object.freeze({
@@ -180,6 +190,9 @@ function runScenario(scenario: ArenaV2WeaponFlankScenario): ArenaV2WeaponFlankSc
   if (scenario === 'turn-to-attacker' && firstHitTick !== null) {
     throw new Error('绕后目标主动转身后不应继续命中。');
   }
+  if (scenario === 'turn-twice-before-active' && firstHitTick === null) {
+    throw new Error('绕后目标多次转身回到背向后应恢复命中。');
+  }
   return Object.freeze({
     scenario,
     actionStartTick,
@@ -205,6 +218,7 @@ export function runArenaV2WeaponFlankReplayPrototype(): ArenaV2WeaponFlankReplay
     scenarios: Object.freeze(([
       'keep-facing-away',
       'turn-to-attacker',
+      'turn-twice-before-active',
     ] as const).map(runScenario)),
   });
 }

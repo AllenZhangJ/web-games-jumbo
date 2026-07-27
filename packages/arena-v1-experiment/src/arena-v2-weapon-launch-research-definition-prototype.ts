@@ -32,6 +32,7 @@ export interface ArenaV2WeaponLaunchResearchDefinitionPrototype {
   readonly aerialActionDefinitionId: string;
   readonly groundAction: ActionDefinition;
   readonly aerialAction: ActionDefinition;
+  readonly equipment: ArenaV2WeaponLanguageCandidate['equipment'];
   readonly groundStats: ArenaWeaponPublicNumericProjection;
   readonly aerialStats: ArenaWeaponPublicNumericProjection;
   readonly publicOverviewAxes: readonly ArenaV2WeaponPublicAxisId[];
@@ -110,6 +111,7 @@ function createPrototype(
     aerialActionDefinitionId: candidate.aerialAction.id,
     groundAction: candidate.groundAction,
     aerialAction: candidate.aerialAction,
+    equipment: candidate.equipment,
     groundStats,
     aerialStats,
     publicOverviewAxes: Object.freeze([...ARENA_V2_WEAPON_PUBLIC_OVERVIEW_AXIS_IDS]),

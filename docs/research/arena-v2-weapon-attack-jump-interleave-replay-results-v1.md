@@ -2,7 +2,7 @@
 
 ## 1. 状态与边界
 
-- 状态：研究候选验证通过，仍属于 research-only 工具链
+- 状态：候选 Definition 验证通过，仍属于显式 opt-in 工具链
 - 日期：2026-07-28
 - 实现：`packages/arena-v1-experiment/src/arena-v2-weapon-attack-jump-interleave-replay-prototype.ts`
 - 测试：`packages/arena-v1-experiment/test/arena-v2-weapon-attack-jump-interleave-replay-prototype.test.ts`
@@ -40,12 +40,12 @@
 
 | 候选 / 场景 | 关键动作开始 tick | checkpoint | 最终 hash |
 |---|---|---:|---|
-| 直线压制 / 同 tick | 地面攻击 + 跳跃：1 | 8 | `0be62679` |
-| 直线压制 / 空中 | 空中攻击：7 | 8 | `6b71244e` |
-| 读招反制 / 同 tick | 地面攻击 + 跳跃：1 | 8 | `594452c2` |
-| 读招反制 / 空中 | 空中攻击：7 | 8 | `7fe090f7` |
-| 绕后 / 同 tick | 地面攻击 + 跳跃：1 | 8 | `06f03b59` |
-| 绕后 / 空中 | 空中攻击：7 | 8 | `fbded32f` |
+| 直线压制 / 同 tick | 地面攻击 + 跳跃：1 | 8 | `528e9e41` |
+| 直线压制 / 空中 | 空中攻击：7 | 8 | `ae82e972` |
+| 读招反制 / 同 tick | 地面攻击 + 跳跃：1 | 8 | `0b3d65c2` |
+| 读招反制 / 空中 | 空中攻击：7 | 8 | `faad5c4d` |
+| 绕后 / 同 tick | 地面攻击 + 跳跃：1 | 8 | `0df068dd` |
+| 绕后 / 空中 | 空中攻击：7 | 8 | `914ea151` |
 
 ## 4. 结构性修正
 
@@ -55,9 +55,9 @@
 
 ## 5. 尚未完成
 
-- 仍没有将三个候选加入正式 `EquipmentRegistry`、玩家存档或生产目录；
+- 仍没有将三个候选加入默认生产 `EquipmentRegistry`、玩家存档或生产目录；
 - 尚未验证侧向进入、连续转身、多人遮挡和最终命中特效/音效；
 - Replay 证明确定性和状态因果，不等于真人能在 3 分钟内读懂；
 - `down-smash` 是当前规则语义，最终攻击姿态、音效和视觉资产仍需正式资产门禁。
 
-因此本结果关闭“攻击/跳跃穿插研究验证”这一项，但不关闭正式 Definition 迁移门禁。
+因此本结果关闭“攻击/跳跃穿插候选验证”这一项，但不关闭默认生产 Definition 迁移门禁。

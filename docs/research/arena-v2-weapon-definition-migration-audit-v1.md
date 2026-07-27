@@ -2,7 +2,7 @@
 
 ## 1. 文档状态
 
-- 状态：三把生产基线审计完成，三个研究候选已形成统一 research-only Definition，生产迁移尚未开始
+- 状态：三把生产基线审计完成，三个研究候选已进入内容层显式候选 Registry，默认生产迁移尚未开始
 - 日期：2026-07-28
 - 适用范围：Arena V2 开发/测试工具链与现有 V1 权威内容
 - 关联实现：`packages/arena-v1-experiment/src/arena-v2-weapon-definition-migration-audit.ts`
@@ -27,11 +27,11 @@
 
 | 候选 | 审计状态 | Definition 状态 | 当前还不能宣称完成的内容 |
 |---|---|---|---|
-| 直线压制 | `ready` | `research-only-definition` | 真实投射物飞行、多人拥挤和正式生产迁移 |
-| 读招反制 | `ready` | `research-only-definition` | 正式 Definition、取消/提交反馈表现和正式生产迁移 |
-| 绕后 | `ready` | `research-only-definition` | 主动转身、多方向拥挤和正式生产迁移 |
+| 直线压制 | `ready` | `candidate-definition` | 默认生产注册、多人拥挤和最终资产/真人验收 |
+| 读招反制 | `ready` | `candidate-definition` | 默认生产注册、取消/提交反馈表现和最终资产/真人验收 |
+| 绕后 | `ready` | `candidate-definition` | 默认生产注册、主动转身、多方向拥挤和最终资产/真人验收 |
 
-三个候选现在都有统一的地面/空中研究 `ActionDefinition`、9 项主概览数值、2 项行为补充数值和固定命中/空放证据，但仍没有生产 `EquipmentDefinition`，不能进入生产目录。详见[首发研究候选 Definition 原型结果 V1](arena-v2-launch-research-definition-prototype-results-v1.md)和[ADR-070](../decisions/070-arena-v2-research-launch-definition-projection.md)。
+三个候选现在都有统一的地面/空中 `ActionDefinition`、候选 `EquipmentDefinition`、9 项主概览数值、2 项行为补充数值和固定命中/空放证据；候选 Definition 位于内容层的显式 opt-in Registry，但仍未进入默认生产目录。详见[武器候选 Content Registry 结果 V1](arena-v2-weapon-candidate-content-registry-results-v1.md)、[首发研究候选 Definition 原型结果 V1](arena-v2-launch-research-definition-prototype-results-v1.md)和[ADR-070](../decisions/070-arena-v2-research-launch-definition-projection.md)。
 
 ## 3. 权威字段到玩家数值的固定映射
 
@@ -53,7 +53,7 @@
 
 ## 4. 当前研究 Definition 证据
 
-三个候选共用 `projectArenaV2ActionDefinitionPublicNumbers`，统一投影距离、覆盖、时间、击退、控制、自身风险、冷却、有效窗口和方向容错。迁移审计现在能够检查三把研究候选的地面/空中动作身份、公开轴和上下文轴；这一步解决的是“六个首发位置都能看出数值差异”的结构缺口，不是生产迁移。
+三个候选共用 `projectArenaV2ActionDefinitionPublicNumbers`，统一投影距离、覆盖、时间、击退、控制、自身风险、冷却、有效窗口和方向容错。迁移审计现在读取内容层候选 Definition，能够检查三把候选的地面/空中动作身份、公开轴和上下文轴；这一步解决了“研究工厂与内容工厂可能漂移”的结构缺口，但不是默认生产迁移。
 
 ## 5. 迁移顺序
 
@@ -63,7 +63,7 @@
 
 ### 第二步：读招反制
 
-已将整数 tick 承诺原型接入研究边界内的权威状态与 Replay。下一步必须补齐正式 Definition、反馈表现和多人/地图边缘场景，保证蓄力可读、失败有收招成本，不引入格挡或额外按键。
+已将整数 tick 承诺原型接入候选内容层的权威状态与 Replay。下一步必须补齐默认生产注册、反馈表现和多人/地图边缘场景，保证蓄力可读、失败有收招成本，不引入格挡或额外按键。
 
 ### 第三步：绕后
 
@@ -73,7 +73,7 @@
 
 ## 6. 生产迁移验收门槛
 
-研究候选只有在以下条件全部满足后，才能从 `research-only-definition` 进入生产候选：
+候选 Definition 只有在以下条件全部满足后，才能从 `candidate-definition` 进入默认生产候选：
 
 - 具备地面/空中两套权威动作身份；
 - 具备至少一套可复现的命中、空放和收招行为；

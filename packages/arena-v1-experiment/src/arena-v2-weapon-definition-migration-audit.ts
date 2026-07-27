@@ -38,6 +38,7 @@ export interface ArenaV2WeaponDefinitionMigrationAudit {
   readonly languageId: ArenaV2WeaponLaunchCandidate['languageId'];
   readonly source: ArenaV2WeaponLaunchCandidate['source'];
   readonly productionEquipmentDefinitionId: string | null;
+  readonly candidateEquipmentDefinitionId: string | null;
   readonly groundActionDefinitionId: string | null;
   readonly aerialActionDefinitionId: string | null;
   readonly requiredOverviewAxes: readonly ArenaV2WeaponPublicAxisId[];
@@ -46,7 +47,7 @@ export interface ArenaV2WeaponDefinitionMigrationAudit {
   readonly contexts: readonly ArenaV2WeaponDefinitionMigrationContextAudit[];
   readonly authorityFieldPaths: readonly string[];
   readonly structuralGaps: readonly string[];
-  readonly implementationStatus: 'production-authority' | 'research-only-definition' | 'missing';
+  readonly implementationStatus: 'production-authority' | 'candidate-definition' | 'missing';
   readonly status: 'ready' | 'needs-definition';
 }
 
@@ -316,6 +317,7 @@ function createMigrationAudit(
         languageId: candidate.languageId,
         source: candidate.source,
         productionEquipmentDefinitionId: null,
+        candidateEquipmentDefinitionId: prototype.equipment.id,
         groundActionDefinitionId: prototype.groundActionDefinitionId,
         aerialActionDefinitionId: prototype.aerialActionDefinitionId,
         requiredOverviewAxes: candidate.requiredPublicAxes,
@@ -324,7 +326,7 @@ function createMigrationAudit(
         contexts,
         authorityFieldPaths,
         structuralGaps: Object.freeze([]),
-        implementationStatus: 'research-only-definition',
+        implementationStatus: 'candidate-definition',
         status: missingOverviewAxes.length === 0 && !contextMissing ? 'ready' : 'needs-definition',
       });
     }
@@ -334,6 +336,7 @@ function createMigrationAudit(
       languageId: candidate.languageId,
       source: candidate.source,
       productionEquipmentDefinitionId: null,
+      candidateEquipmentDefinitionId: null,
       groundActionDefinitionId: null,
       aerialActionDefinitionId: null,
       requiredOverviewAxes: candidate.requiredPublicAxes,
@@ -388,6 +391,7 @@ function createMigrationAudit(
     languageId: candidate.languageId,
     source: candidate.source,
     productionEquipmentDefinitionId: equipmentDefinition.id,
+    candidateEquipmentDefinitionId: null,
     groundActionDefinitionId: equipmentDefinition.actionDefinitionId,
     aerialActionDefinitionId: equipmentDefinition.aerialActionDefinitionId,
     requiredOverviewAxes: candidate.requiredPublicAxes,

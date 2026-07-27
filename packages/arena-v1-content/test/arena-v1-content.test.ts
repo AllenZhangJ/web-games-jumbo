@@ -13,6 +13,8 @@ import {
   STAGE4_ACTION_ID,
   STAGE4_EQUIPMENT_DEFINITIONS,
   STAGE6_MOVEMENT_ACTION_DEFINITIONS,
+  ARENA_V2_WEAPON_CANDIDATE_CONTENT_DEFINITIONS,
+  createArenaV2WeaponCandidateContentRegistries,
   createArenaV1CharacterRegistry,
   createArenaV1MapRegistry,
   createStage4ContentRegistries,
@@ -57,5 +59,31 @@ describe('Arena V1 authority content', () => {
     expect(() => createStage4ContentRegistries(options)).toThrow(/数据字段/);
     expect(getterCalls).toBe(0);
     expect(() => createStage4ContentRegistries({ futureMode: true })).toThrow(/futureMode/);
+  });
+
+  it('keeps five weapon candidates in an explicit opt-in content registry', () => {
+    expect(ARENA_V2_WEAPON_CANDIDATE_CONTENT_DEFINITIONS).toHaveLength(5);
+    expect(Object.isFrozen(ARENA_V2_WEAPON_CANDIDATE_CONTENT_DEFINITIONS)).toBe(true);
+    expect(ARENA_V2_WEAPON_CANDIDATE_CONTENT_DEFINITIONS.every(({ groundAction, aerialAction }) => (
+      groundAction.tags.includes('ground')
+      && aerialAction.tags.includes('aerial')
+      && aerialAction.effects.some(({ kind }) => kind === 'begin-down-smash')
+    ))).toBe(true);
+    expect(ARENA_V2_WEAPON_CANDIDATE_CONTENT_DEFINITIONS.find(({ languageId }) => (
+      languageId === 'read-punish'
+    ))?.groundAction.commitment).toMatchObject({
+      commitTicks: 12,
+      expireTicks: 18,
+      expireOutcome: 'cancel',
+    });
+
+    const defaultRegistries = createStage4ContentRegistries();
+    const candidateRegistries = createArenaV2WeaponCandidateContentRegistries();
+    expect(defaultRegistries.equipmentRegistry.list()).toHaveLength(3);
+    expect(candidateRegistries.equipmentRegistry.list()).toHaveLength(8);
+    expect(candidateRegistries.equipmentRegistry.require('research-line-pressure'))
+      .toEqual(ARENA_V2_WEAPON_CANDIDATE_CONTENT_DEFINITIONS[0]!.equipment);
+    expect(candidateRegistries.actionRegistry.require('research-line-pressure-aerial'))
+      .toEqual(ARENA_V2_WEAPON_CANDIDATE_CONTENT_DEFINITIONS[0]!.aerialAction);
   });
 });

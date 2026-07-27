@@ -2,14 +2,14 @@
 
 ## 1. 状态与边界
 
-- 状态：三个首发研究候选的统一数值 Definition 原型通过，仍未进入生产目录
+- 状态：三个首发候选的统一数值 Definition 已进入内容层候选 Registry，仍未进入默认生产目录
 - 日期：2026-07-28
 - 实现：`packages/arena-v1-experiment/src/arena-v2-weapon-launch-research-definition-prototype.ts`
 - 共享投影：`packages/arena-v1-experiment/src/arena-v2-weapon-action-public-projection.ts`
 - 测试：`packages/arena-v1-experiment/test/arena-v2-weapon-launch-research-definition-prototype.test.ts`
 - 关联决策：[ADR-070：六个首发位置统一使用 Definition 数值投影](../decisions/070-arena-v2-research-launch-definition-projection.md)
 
-本原型不是新增三把正式武器，而是把直线压制、读招反制、绕后三个候选从“动作语言原型”编译为统一的 research-only Definition。生产基线仍由真实权威内容提供，研究候选只用于比较、地图探针、规则验证和后续表现研究。
+本原型不是直接新增三把玩家可获得的武器，而是把直线压制、读招反制、绕后三个候选从“动作语言原型”编译为统一的候选 Definition，并由内容层的显式 Registry 提供给研究和迁移审计。生产基线仍由默认权威内容提供，候选只有在资产、真人和生产门禁通过后才允许进入默认目录。
 
 ## 2. 统一合同
 
@@ -63,8 +63,8 @@
 
 ## 6. 未完成项
 
-- 读招反制的蓄力承诺、取消和到期状态已经接入研究边界内的统一动作状态与候选 Replay；正式 Definition、反馈来源和生产迁移仍未完成，详见[读招反制承诺状态与 Replay 原型结果](arena-v2-weapon-read-punish-replay-results-v1.md)；
+- 读招反制的蓄力承诺、取消和到期状态已经接入候选内容层的统一动作状态与候选 Replay；默认生产注册、反馈资产和最终生产迁移仍未完成，详见[读招反制承诺状态与 Replay 原型结果](arena-v2-weapon-read-punish-replay-results-v1.md)；
 - 直线压制仍是可读攻击线判定，不是真实投射物飞行；
 - 绕后需要继续验证目标主动转身、侧后方判定和分叉路线；
 - 三个候选还没有正式 Presentation 事件、音效、特效、设备字号和真人可读性证据；
-- 所有候选仍不得进入生产 `EquipmentDefinition`。
+- 候选 Definition 已存在于显式 opt-in Registry，但仍不得进入默认生产 `EquipmentRegistry`。

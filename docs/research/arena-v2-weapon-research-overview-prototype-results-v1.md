@@ -6,7 +6,7 @@
 - 日期：2026-07-28
 - 实现：`packages/arena-v1-experiment/src/arena-v2-weapon-research-overview-prototype.ts`
 - 测试：`packages/arena-v1-experiment/test/arena-v2-weapon-research-overview-prototype.test.ts`
-- 边界：只生成 research-only 概览数据，不注册生产武器、不修改玩家存档
+- 边界：只生成候选概览数据，不注册默认生产武器、不修改玩家存档
 
 ## 1. 这次解决的问题
 
@@ -16,7 +16,7 @@
 - 每个数值同时携带标签、原始值、统一单位、比较方向和玩家含义；
 - 另外显示 2 个行为数值：有效攻击窗口、方向容错；
 - 同时显示核心动词、命中结果、适合地图空间和反制方式；
-- 每一行都从 research-only `ActionDefinition` 的权威投影生成，UI 不手写数值。
+- 每一行都从内容层候选 `ActionDefinition` 的权威投影生成，UI 不手写数值。
 
 ## 2. 三个候选的地面比较
 

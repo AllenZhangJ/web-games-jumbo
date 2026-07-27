@@ -49,17 +49,18 @@ Arena V2 的核心目标是：
 | [V2 首发武器候选合同 V1](../research/arena-v2-weapon-launch-candidate-contract-v1.md) | 将 8 种语言收敛为 6 个首发功能位置，区分生产基线、研究候选和延后语言 | 候选集合已收敛 |
 | [ADR-066：首发武器候选按六种战斗语言收敛](../decisions/066-arena-v2-weapon-launch-candidate-selection.md) | 固化三把生产基线、三把研究候选、六种公开可比较语言和两种延后语言 | 候选筛选已接入 |
 | [V2 武器 Definition 迁移审计 V1](../research/arena-v2-weapon-definition-migration-audit-v1.md) | 对照当前权威调优审计 11 个公开数值轴，并列出三个研究候选的 Definition 结构缺口 | 审计完成，迁移未开始 |
+| [V2 武器候选 Content Registry 结果 V1](../research/arena-v2-weapon-candidate-content-registry-results-v1.md) | 将五种候选武器的 Action/Equipment Definition 抽到内容层，提供显式候选 Registry，同时保持默认生产目录不变 | 候选内容层已接入，生产未晋级 |
 | [ADR-067：武器概览数值必须从权威 Definition 投影](../decisions/067-arena-v2-weapon-definition-migration-boundary.md) | 固化权威字段、派生数值、地面/空中上下文与表现层的单向投影边界 | 迁移边界已接入 |
-| [直线压制 Definition 原型结果 V1](../research/arena-v2-line-pressure-definition-prototype-results-v1.md) | 将直线压制编译为地面/空中临时 Definition，并绑定 11 个数值轴与等待/离线回应证据 | 研究原型通过 |
-| [ADR-068：直线压制先以单一攻击线 Definition 验证](../decisions/068-arena-v2-line-pressure-definition-boundary.md) | 固化直线压制的单一攻击线、固定间隔、公开数值和 research-only 边界 | 原型边界已接入 |
-| [首发研究候选 Definition 原型结果 V1](../research/arena-v2-launch-research-definition-prototype-results-v1.md) | 将直线压制、读招反制、绕后三个首发研究候选统一为地面/空中 research-only Definition，并绑定 9 项主概览数值、2 项行为数值和命中/空放证据 | 三个研究 Definition 原型通过 |
-| [研究武器概览比较矩阵原型结果 V1](../research/arena-v2-weapon-research-overview-prototype-results-v1.md) | 将三个 research-only 候选投影为带标签、单位、方向语义、玩家含义、地图用途和反制的可比较武器卡数据 | 数值比较矩阵通过，真人可读性待验证 |
-| [ADR-070：六个首发位置统一使用 Definition 数值投影](../decisions/070-arena-v2-research-launch-definition-projection.md) | 固化生产基线与研究候选共用可比较数值结构，同时保留 research-only 与生产目录边界 | 研究投影边界已接入 |
+| [直线压制 Definition 原型结果 V1](../research/arena-v2-line-pressure-definition-prototype-results-v1.md) | 将直线压制编译为内容层候选地面/空中 Definition，并绑定 11 个数值轴与等待/离线回应证据 | 候选内容层已接入 |
+| [ADR-068：直线压制先以单一攻击线 Definition 验证](../decisions/068-arena-v2-line-pressure-definition-boundary.md) | 固化直线压制的单一攻击线、固定间隔、公开数值和候选 Registry/默认生产边界 | 原型边界已接入 |
+| [首发研究候选 Definition 原型结果 V1](../research/arena-v2-launch-research-definition-prototype-results-v1.md) | 将直线压制、读招反制、绕后三个首发候选统一为地面/空中 Definition，并绑定 9 项主概览数值、2 项行为数值和命中/空放证据 | 候选 Definition 已通过，默认生产未晋级 |
+| [研究武器概览比较矩阵原型结果 V1](../research/arena-v2-weapon-research-overview-prototype-results-v1.md) | 将三个候选 Registry 候选投影为带标签、单位、方向语义、玩家含义、地图用途和反制的可比较武器卡数据 | 数值比较矩阵通过，真人可读性待验证 |
+| [ADR-070：六个首发位置统一使用 Definition 数值投影](../decisions/070-arena-v2-research-launch-definition-projection.md) | 固化生产基线与候选 Registry 共用可比较数值结构，同时保留候选 Registry 与默认生产目录边界 | 研究投影边界已接入 |
 | [ADR-069：命中反馈必须保留失败原因的因果区分](../decisions/069-arena-v2-hit-feedback-causal-contract.md) | 固化命中确认、支撑面转移、击落、避开攻击线和路线失误五种反馈语义 | KZ 无渲染反馈合同已接入 |
 | [ADR-071：武器反馈先映射为表现事件，再绑定声音与特效](../decisions/071-arena-v2-feedback-presentation-event-mapping.md) | 将五种因果反馈映射为可去重的 `WeaponFeedbackPresented` 事件，表现层只选择 Cue 不重新判定 | Presentation 事件映射已接入，真机表现待验证 |
 | [ADR-073：Arena V2 以 11 个信息入口和一个共享竞技准备模板收敛界面](../decisions/073-arena-v2-ui-eleven-page-contract.md) | 固定 11 个局外入口，明确加载页、竞技准备模板复用和生存准备独立边界 | 页面合同已接入无渲染原型 |
 | [ADR-072：正式武器反馈事件接入 Three 灰盒表现](../decisions/072-arena-v2-feedback-presentation-three-consumption.md) | 将五种反馈 Cue 接入灰盒冲击/警告效果、镜头、震动和现有音频入口，不在表现层重新判定 | 灰盒表现链已接入，最终资产与真机待验证 |
-| [首发武器生产迁移门禁结果 V1](../research/arena-v2-weapon-production-migration-gate-results-v1.md) | 将六个候选拆为正式 Definition、动作状态、Replay、地图后果和反馈表现五项独立证据 | 门禁已接入，当前 0/6 晋级 |
+| [首发武器生产迁移门禁结果 V1](../research/arena-v2-weapon-production-migration-gate-results-v1.md) | 将六个候选拆为默认生产 Definition/注册、动作状态、Replay、地图后果和反馈表现五项独立证据 | 门禁已接入，当前 0/6 晋级 |
 | [ADR-074：首发武器必须通过五项生产迁移门禁](../decisions/074-arena-v2-weapon-production-migration-gate.md) | 固化研究原型与生产迁移的分层边界，不以综合评分替代缺失证据 | 门禁已接入 |
 | `arena-v2-weapon-launch-replay-prototype.ts` | 使用真实 MatchCore、ActionExecutionSystem 和 MatchReplay 验证直线压制候选的正式动作状态与固定回放 | 直线压制研究证据已接入，仍未生产化 |
 | [读招反制承诺状态与 Replay 原型结果 V1](../research/arena-v2-weapon-read-punish-replay-results-v1.md) | 使用真实 MatchCore、ActionExecutionSystem 和 MatchReplay 验证提前取消、成功提交、到期取消、蓄力等级和可转向结果 | 读招反制研究证据已接入，仍未生产化 |
