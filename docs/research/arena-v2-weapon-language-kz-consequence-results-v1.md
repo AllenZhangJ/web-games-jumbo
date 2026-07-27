@@ -87,7 +87,7 @@ packages/arena-v1-experiment/test/arena-v2-warning-zone-prototype.test.ts
 | `attack-evaded` | 目标在有效判定前离开攻击线 | 空放反馈 +“已避开攻击线” |
 | `movement-fall` | 玩家在命中前先因路线失误掉落 | 路线失误反馈，不播放武器命中特效 |
 
-这五种语义由同一份命中 tick、最终支撑面、掉落状态和回应结果推导。现在已通过 `projectArenaV2WeaponFeedbackPresentationEvent` 映射为统一的 `WeaponFeedbackPresented` 表现事件，并由现有 `PresentationEventWindow` 负责稳定去重；表现层只选择 Cue，不重新判断原因。当前仍只验证语义、事件映射和确定性，不代表声音、特效、镜头和设备可读性已经完成；边界见[ADR-069](../decisions/069-arena-v2-hit-feedback-causal-contract.md)与[ADR-071](../decisions/071-arena-v2-feedback-presentation-event-mapping.md)。
+这五种语义由同一份命中 tick、最终支撑面、掉落状态和回应结果推导。现在已通过 `projectArenaV2WeaponFeedbackPresentationEvent` 映射为统一的 `WeaponFeedbackPresented` 表现事件，并由现有 `PresentationEventWindow` 负责稳定去重；Three 灰盒已经消费这些 Cue，分别显示冲击或警告效果，并接入既有镜头、震动和音频触发入口。表现层仍不重新判断原因；最终声音/特效资产、设备可读性和真人反馈尚未完成，边界见[ADR-069](../decisions/069-arena-v2-hit-feedback-causal-contract.md)、[ADR-071](../decisions/071-arena-v2-feedback-presentation-event-mapping.md)与[ADR-072](../decisions/072-arena-v2-feedback-presentation-three-consumption.md)。
 
 ## 研究判断
 
@@ -107,7 +107,7 @@ packages/arena-v1-experiment/test/arena-v2-warning-zone-prototype.test.ts
 - 当前结果没有敌人追击、复活重新进入路线或多人拥挤，不能直接冻结竞速/生存数值；
 - 绕后目标朝向是固定脚本，尚未验证目标主动转身和多人视线遮挡。
 - 命中反馈的声音、特效、镜头和伤害解释率仍未进行设备/真人验证。
-- 五种反馈语义已经接入正式 Presentation 事件映射，但声音/特效仍只是 Cue 合同，尚未完成真实资产绑定和设备表现验证。
+- 五种反馈语义已经接入正式 Presentation 事件，并被 Three 灰盒冲击/警告效果、镜头、震动和现有音频入口消费；最终资产绑定和设备表现验证仍未完成。
 
 ## 收敛决定
 
@@ -126,3 +126,4 @@ packages/arena-v1-experiment/test/arena-v2-warning-zone-prototype.test.ts
 - [ADR-057：武器战斗语言必须通过地图后果验证](../decisions/057-arena-v2-weapon-language-map-consequence-boundary.md)
 - [ADR-069：命中反馈必须保留失败原因的因果区分](../decisions/069-arena-v2-hit-feedback-causal-contract.md)
 - [ADR-071：武器反馈先映射为表现事件，再绑定声音与特效](../decisions/071-arena-v2-feedback-presentation-event-mapping.md)
+- [ADR-072：正式武器反馈事件接入 Three 灰盒表现](../decisions/072-arena-v2-feedback-presentation-three-consumption.md)

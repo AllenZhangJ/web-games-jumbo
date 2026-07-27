@@ -42,8 +42,9 @@
 - [x] 审计三把生产基线的权威字段能否覆盖 11 个公开数值轴，并记录三个研究候选的结构缺口和迁移顺序；见[武器 Definition 迁移审计 V1](arena-v2-weapon-definition-migration-audit-v1.md)和[ADR-067](../decisions/067-arena-v2-weapon-definition-migration-boundary.md)。
 - [x] 将直线压制编译为 research-only 的地面/空中 Definition 原型，并绑定 11 个数值轴与等待/离线回应证据；见[直线压制 Definition 原型结果 V1](arena-v2-line-pressure-definition-prototype-results-v1.md)和[ADR-068](../decisions/068-arena-v2-line-pressure-definition-boundary.md)。
 - [x] 在 KZ 武器后果探针上增加命中确认、支撑面转移、击落、避开攻击线和路线失误五种因果反馈语义；见[武器战斗语言 × KZ 地图后果原型结果 V1](arena-v2-weapon-language-kz-consequence-results-v1.md)和[ADR-069](../decisions/069-arena-v2-hit-feedback-causal-contract.md)。
-- [x] 将五种反馈语义接入正式 `WeaponFeedbackPresented` Presentation 事件，并复用事件窗口去重；声音/特效暂以 Cue 合同承载，见[ADR-071](../decisions/071-arena-v2-feedback-presentation-event-mapping.md)。
-- [ ] 将五种 Cue 绑定真实声音/特效、镜头反馈并完成目标设备可读性测试；当前没有真机证据。
+- [x] 将五种反馈语义接入正式 `WeaponFeedbackPresented` Presentation 事件，并复用事件窗口去重；见[ADR-071](../decisions/071-arena-v2-feedback-presentation-event-mapping.md)。
+- [x] 将正式反馈事件接入 Three 灰盒冲击/警告效果、冲击镜头、震动和现有音频触发链；见[ADR-072](../decisions/072-arena-v2-feedback-presentation-three-consumption.md)。
+- [ ] 绑定最终声音/特效资产并完成目标设备可读性、低动效和真人反馈测试；当前没有真机证据。
 
 ### 需要回答
 

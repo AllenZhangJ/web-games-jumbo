@@ -12,12 +12,31 @@ const EFFECT_TARGET_FIELDS = Object.freeze([
 
 const EFFECT_EVENT_TYPES: ReadonlySet<string> = new Set([
   'HitResolved',
+  'WeaponFeedbackPresented',
   'KnockbackApplied',
   'DownSmashLanded',
   'PlayerEliminated',
   'PlayerRespawned',
   'EquipmentPickedUp',
 ]);
+
+const FEEDBACK_VISUAL_CUES: ReadonlySet<string> = new Set([
+  'impact-confirm',
+  'impact-surface-transfer',
+  'ring-out',
+  'evaded-warning',
+  'movement-fall-warning',
+]);
+
+const FEEDBACK_KINDS: ReadonlySet<string> = new Set([
+  'hit-confirm',
+  'hit-surface-transfer',
+  'hit-ring-out',
+  'attack-evaded',
+  'movement-fall',
+]);
+
+const FEEDBACK_EMPHASIS: ReadonlySet<string> = new Set(['normal', 'strong', 'warning']);
 
 const EFFECT_KIND = Object.freeze({
   PULSE: 'pulse',
@@ -47,6 +66,9 @@ interface EffectEventSnapshot {
   readonly action: string | null;
   readonly targetId: string | null;
   readonly attackerId: string | null;
+  readonly feedbackKind: string | null;
+  readonly visualCue: string | null;
+  readonly emphasis: string | null;
 }
 
 interface EffectActivation {
@@ -118,12 +140,30 @@ function snapshotEvent(value: unknown, index: number): EffectEventSnapshot | nul
     const candidate = optionalString(ownData(value, field, name, false), `${name}.${field}`);
     if (targetId === null && candidate !== null) targetId = candidate;
   }
+  const feedbackKind = optionalString(ownData(value, 'feedbackKind', name, false), `${name}.feedbackKind`);
+  if (feedbackKind !== null && !FEEDBACK_KINDS.has(feedbackKind)) {
+    throw new RangeError(`${name}.feedbackKind 不是受支持的武器反馈语义。`);
+  }
+  const visualCue = optionalString(ownData(value, 'visualCue', name, false), `${name}.visualCue`);
+  if (visualCue !== null && !FEEDBACK_VISUAL_CUES.has(visualCue)) {
+    throw new RangeError(`${name}.visualCue 不是受支持的武器反馈 Cue。`);
+  }
+  if (type === 'WeaponFeedbackPresented' && visualCue === null) {
+    throw new TypeError(`${name}.visualCue 缺失。`);
+  }
+  const emphasis = optionalString(ownData(value, 'emphasis', name, false), `${name}.emphasis`);
+  if (emphasis !== null && !FEEDBACK_EMPHASIS.has(emphasis)) {
+    throw new RangeError(`${name}.emphasis 不是受支持的武器反馈强度。`);
+  }
   return Object.freeze({
     id: nonEmptyString(ownData(value, 'id', name), `${name}.id`),
     type,
     action: optionalString(ownData(value, 'action', name, false), `${name}.action`),
     targetId,
     attackerId: optionalString(ownData(value, 'attackerId', name, false), `${name}.attackerId`),
+    feedbackKind,
+    visualCue,
+    emphasis,
   });
 }
 
@@ -251,13 +291,19 @@ class PooledEventEffect {
     this.root.visible = true;
     this.root.rotation.set(0, 0, 0);
     this.root.scale.setScalar(1);
-    if (event.type !== 'HitResolved') {
+    const isImpact = event.type === 'HitResolved'
+      || event.visualCue === 'impact-confirm'
+      || event.visualCue === 'impact-surface-transfer'
+      || event.visualCue === 'ring-out';
+    if (!isImpact) {
       this.#kind = EFFECT_KIND.PULSE;
       this.#duration = danger ? 0.72 : 0.42;
       this.#pulse.visible = true;
       this.#impact.visible = false;
       this.#pulse.material.color.setHex(
-        danger ? ARENA_GREYBOX_COLOR.danger : ARENA_GREYBOX_COLOR.teal,
+        event.visualCue === 'evaded-warning' || event.visualCue === 'movement-fall-warning'
+          ? ARENA_GREYBOX_COLOR.warning
+          : danger ? ARENA_GREYBOX_COLOR.danger : ARENA_GREYBOX_COLOR.teal,
       );
       this.#pulse.material.opacity = 0.8;
       this.#pulse.scale.setScalar(1);
@@ -266,8 +312,12 @@ class PooledEventEffect {
     }
 
     this.#kind = EFFECT_KIND.IMPACT;
-    this.#duration = event.action === 'hammer-smash' ? 0.34 : 0.22;
-    this.#scale = event.action === 'hammer-smash'
+    this.#duration = event.emphasis === 'strong' || event.action === 'hammer-smash' ? 0.34 : 0.22;
+    this.#scale = event.visualCue === 'ring-out'
+      ? 1.65
+      : event.visualCue === 'impact-surface-transfer'
+        ? 1.35
+        : event.action === 'hammer-smash'
       ? 1.65
       : event.action === 'shield-charge' ? 1.25 : event.action === 'chain-pull' ? 1.1 : 0.9;
     this.#pulse.visible = false;
@@ -278,7 +328,13 @@ class PooledEventEffect {
       const dz = position.z - attackerPosition.z;
       this.root.rotation.y = Math.atan2(dx, dz);
     }
-    const color = event.action === 'hammer-smash'
+    const color = event.visualCue === 'ring-out'
+      ? ARENA_GREYBOX_COLOR.danger
+      : event.visualCue === 'impact-surface-transfer'
+        ? ARENA_GREYBOX_COLOR.warning
+        : event.visualCue === 'impact-confirm'
+          ? ARENA_GREYBOX_COLOR.teal
+          : event.action === 'hammer-smash'
       ? ARENA_GREYBOX_COLOR.warning
       : event.action === 'chain-pull'
         ? ARENA_GREYBOX_COLOR.danger
@@ -458,7 +514,10 @@ export class GreyboxEventEffects {
           event,
           position,
           attackerPosition,
-          danger: event.type === 'PlayerEliminated' || event.type === 'KnockbackApplied',
+          danger: event.type === 'PlayerEliminated'
+            || event.type === 'KnockbackApplied'
+            || event.visualCue === 'ring-out'
+            || event.visualCue === 'movement-fall-warning',
         }));
       }
       this.#assertNoReentry();

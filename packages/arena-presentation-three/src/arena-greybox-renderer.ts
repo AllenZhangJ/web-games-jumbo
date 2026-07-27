@@ -19,6 +19,13 @@ const RENDER_OPTION_KEYS = new Set<PropertyKey>([
   'deltaSeconds', 'mode', 'mapperLabel', 'soundEnabled', 'reducedMotion',
 ]);
 const EMPTY_EVENTS = Object.freeze([]) as readonly FeedbackEvent[];
+const FEEDBACK_VISUAL_CUES: ReadonlySet<string> = new Set([
+  'impact-confirm',
+  'impact-surface-transfer',
+  'ring-out',
+  'evaded-warning',
+  'movement-fall-warning',
+]);
 
 export const ARENA_GREYBOX_RENDERER_STATE = Object.freeze({
   CREATED: 'created',
@@ -71,6 +78,8 @@ interface FeedbackEvent {
   readonly sequence: number;
   readonly type: string;
   readonly action: string | null;
+  readonly visualCue: string | null;
+  readonly emphasis: string | null;
 }
 
 interface FeedbackFrame {
@@ -245,6 +254,16 @@ function snapshotFeedbackFrame(value: unknown): FeedbackFrame {
     if (actionValue !== undefined && actionValue !== null && typeof actionValue !== 'string') {
       throw new TypeError('反馈事件 action 必须是字符串或 null。');
     }
+    const visualCueValue = ownData(event, 'visualCue', `ArenaGreyboxRenderer frame.events[${index}]`, false);
+    if (visualCueValue !== undefined && visualCueValue !== null) {
+      if (typeof visualCueValue !== 'string' || !FEEDBACK_VISUAL_CUES.has(visualCueValue)) {
+        throw new TypeError('反馈事件 visualCue 必须是受支持的字符串。');
+      }
+    }
+    const emphasisValue = ownData(event, 'emphasis', `ArenaGreyboxRenderer frame.events[${index}]`, false);
+    if (emphasisValue !== undefined && emphasisValue !== null && typeof emphasisValue !== 'string') {
+      throw new TypeError('反馈事件 emphasis 必须是字符串或 null。');
+    }
     return Object.freeze({
       sequence: nonNegativeInteger(
         ownData(event, 'sequence', `ArenaGreyboxRenderer frame.events[${index}]`),
@@ -252,6 +271,8 @@ function snapshotFeedbackFrame(value: unknown): FeedbackFrame {
       ),
       type,
       action: actionValue === undefined ? null : actionValue,
+      visualCue: visualCueValue === undefined ? null : visualCueValue as string | null,
+      emphasis: emphasisValue === undefined ? null : emphasisValue as string | null,
     }) as FeedbackEvent;
   });
   return Object.freeze({ matchSeed, tick, events: Object.freeze(events) });
@@ -543,8 +564,11 @@ export class ArenaGreyboxRenderer {
     const matchChanged = this.#lastFeedbackMatchSeed !== frame.matchSeed || frame.tick < this.#lastFeedbackTick;
     if (matchChanged) this.#lastFeedbackSequence = -1;
     for (const event of feedbackEventsAfter(frame.events, this.#lastFeedbackSequence)) {
-      if (event.type === 'HitResolved') {
-        const heavy = event.action === 'hammer-smash' || event.action === 'shield-charge';
+      const isPresentedFeedback = event.type === 'WeaponFeedbackPresented';
+      if (event.type === 'HitResolved' || isPresentedFeedback) {
+        const heavy = event.action === 'hammer-smash'
+          || event.action === 'shield-charge'
+          || event.emphasis === 'strong';
         if (this.#platform.vibrate) {
           try {
             this.#callExternal(this.#platform.vibrate, heavy && !options.reducedMotion ? 'heavy' : 'light');
@@ -553,7 +577,13 @@ export class ArenaGreyboxRenderer {
             // Optional host feedback must not block rendering.
           }
         }
-        this.#impactAudio?.play(event.action, { enabled: options.soundEnabled });
+        const isImpactFeedback = event.type === 'HitResolved'
+          || event.visualCue === 'impact-confirm'
+          || event.visualCue === 'impact-surface-transfer'
+          || event.visualCue === 'ring-out';
+        if (event.action !== null && isImpactFeedback) {
+          this.#impactAudio?.play(event.action, { enabled: options.soundEnabled });
+        }
       }
       this.#lastFeedbackSequence = Math.max(this.#lastFeedbackSequence, event.sequence);
     }

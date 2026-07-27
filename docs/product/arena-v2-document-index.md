@@ -56,6 +56,7 @@ Arena V2 的核心目标是：
 | [ADR-070：六个首发位置统一使用 Definition 数值投影](../decisions/070-arena-v2-research-launch-definition-projection.md) | 固化生产基线与研究候选共用可比较数值结构，同时保留 research-only 与生产目录边界 | 研究投影边界已接入 |
 | [ADR-069：命中反馈必须保留失败原因的因果区分](../decisions/069-arena-v2-hit-feedback-causal-contract.md) | 固化命中确认、支撑面转移、击落、避开攻击线和路线失误五种反馈语义 | KZ 无渲染反馈合同已接入 |
 | [ADR-071：武器反馈先映射为表现事件，再绑定声音与特效](../decisions/071-arena-v2-feedback-presentation-event-mapping.md) | 将五种因果反馈映射为可去重的 `WeaponFeedbackPresented` 事件，表现层只选择 Cue 不重新判定 | Presentation 事件映射已接入，真机表现待验证 |
+| [ADR-072：正式武器反馈事件接入 Three 灰盒表现](../decisions/072-arena-v2-feedback-presentation-three-consumption.md) | 将五种反馈 Cue 接入灰盒冲击/警告效果、镜头、震动和现有音频入口，不在表现层重新判定 | 灰盒表现链已接入，最终资产与真机待验证 |
 | [武器战斗语言最小原型结果 V1](../research/arena-v2-weapon-language-prototype-results-v1.md) | 记录直线压制、封路、延迟重击、读招反制和绕后的 Rule/Targeting/Effect 最小验证与回应时间 | 扩展武器原型证据 |
 | [武器战斗语言 × KZ 地图后果原型结果 V1](../research/arena-v2-weapon-language-kz-consequence-results-v1.md) | 记录五种战斗语言在六段 KZ 表面上的击落、路线转移、前摇、有效窗口和固定回应后果 | 扩展武器×地图原型证据 |
 | `arena-v2-warning-zone-prototype.ts` | 验证封路候选的公开标记位置、整数 tick 生命周期和到期，不实现持续伤害或新操作 | 第四轮武器状态原型证据 |

@@ -81,6 +81,7 @@ interface StageEvent {
   readonly sequence: number;
   readonly type: string;
   readonly action: string | null;
+  readonly visualCue: string | null;
 }
 
 interface StageFrame {
@@ -291,6 +292,7 @@ function snapshotFrame(value: unknown, followCamera: boolean): StageFrame {
       sequence,
       type: nonEmptyString(ownData(event, 'type', name), `${name}.type`),
       action: optionalString(ownData(event, 'action', name, false), `${name}.action`),
+      visualCue: optionalString(ownData(event, 'visualCue', name, false), `${name}.visualCue`),
     });
   }));
   return Object.freeze({ value, matchSeed, tick, map, equipment, events, localPosition });
@@ -703,7 +705,13 @@ export class ArenaWorldStage {
 
   #consumeCameraImpact(events: readonly StageEvent[], reducedMotion: boolean): void {
     for (const event of events) {
-      if (event.type !== 'HitResolved') continue;
+      const isWeaponFeedbackImpact = event.type === 'WeaponFeedbackPresented'
+        && (
+          event.visualCue === 'impact-confirm'
+          || event.visualCue === 'impact-surface-transfer'
+          || event.visualCue === 'ring-out'
+        );
+      if (event.type !== 'HitResolved' && !isWeaponFeedbackImpact) continue;
       if (reducedMotion) {
         this.#cameraImpactTime = 0;
         this.#cameraImpactDuration = 0;

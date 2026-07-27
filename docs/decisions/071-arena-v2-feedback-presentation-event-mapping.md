@@ -17,7 +17,8 @@ ADR-069 已经把武器×地图结果区分为五种因果语义，但仅有语�
 1. 五种权威反馈语义通过 `projectArenaV2WeaponFeedbackPresentationEvent` 映射为统一的 `WeaponFeedbackPresented` 只读表现事件。
 2. 表现事件只携带展示所需的 `visualCue`、`audioCue`、`emphasis`、标题和解释；它不计算命中、掉落、支撑面或回应结果。
 3. 事件使用稳定的 `presentation:weapon-feedback:<sourceEventId>` 身份，复用现有 `PresentationEventWindow` 的去重和顺序约束。
-4. 当前的声音/特效字段是语义 Cue，不代表已经存在对应资产或通过真机验证；实际资产绑定必须继续走现有 Presentation 资产预算和设备验收。
+4. 事件可以携带来源动作、目标和攻击者 ID 作为表现上下文；这些字段只用于定位和选择表现，不允许在表现层重新判断命中结果。
+5. 当前的声音/特效字段是语义 Cue，不代表已经存在对应最终资产或通过真机验证；实际资产绑定必须继续走现有 Presentation 资产预算和设备验收。接入现状见[ADR-072](072-arena-v2-feedback-presentation-three-consumption.md)。
 
 ## 映射
 

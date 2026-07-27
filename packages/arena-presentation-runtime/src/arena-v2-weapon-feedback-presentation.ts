@@ -36,6 +36,9 @@ export interface ArenaV2WeaponFeedbackPresentationInput {
   readonly id: string;
   readonly tick: number;
   readonly sequence: number;
+  readonly action?: string | null;
+  readonly targetId?: string | null;
+  readonly attackerId?: string | null;
   readonly feedback: Readonly<{
     readonly kind: ArenaV2WeaponFeedbackKind;
     readonly title: string;
@@ -46,6 +49,9 @@ export interface ArenaV2WeaponFeedbackPresentationInput {
 export interface ArenaV2WeaponFeedbackPresentationEvent extends PresentationEvent {
   readonly type: 'WeaponFeedbackPresented';
   readonly sourceEventId: string;
+  readonly action: string | null;
+  readonly targetId: string | null;
+  readonly attackerId: string | null;
   readonly feedbackKind: ArenaV2WeaponFeedbackKind;
   readonly title: string;
   readonly explanation: string;
@@ -60,7 +66,9 @@ interface CueDefinition {
   readonly emphasis: ArenaV2WeaponFeedbackPresentationEvent['emphasis'];
 }
 
-const INPUT_KEYS = new Set(['id', 'tick', 'sequence', 'feedback']);
+const INPUT_KEYS = new Set([
+  'id', 'tick', 'sequence', 'action', 'targetId', 'attackerId', 'feedback',
+]);
 const FEEDBACK_KEYS = new Set(['kind', 'title', 'explanation']);
 const CUE_BY_KIND: Readonly<Record<ArenaV2WeaponFeedbackKind, CueDefinition>> = Object.freeze({
   'hit-confirm': Object.freeze({
@@ -97,6 +105,11 @@ function readKind(value: unknown, name: string): ArenaV2WeaponFeedbackKind {
   return value as ArenaV2WeaponFeedbackKind;
 }
 
+function readOptionalString(value: unknown, name: string): string | null {
+  if (value === undefined || value === null) return null;
+  return assertNonEmptyString(value, name);
+}
+
 /**
  * Maps an authority-owned feedback semantic into a presentation event.
  * Presentation only chooses cues and emphasis; it never derives hit causes
@@ -119,6 +132,18 @@ export function projectArenaV2WeaponFeedbackPresentationEvent(
     0,
     'Arena V2 weapon feedback presentation input.sequence',
   );
+  const action = readOptionalString(
+    source.action,
+    'Arena V2 weapon feedback presentation input.action',
+  );
+  const targetId = readOptionalString(
+    source.targetId,
+    'Arena V2 weapon feedback presentation input.targetId',
+  );
+  const attackerId = readOptionalString(
+    source.attackerId,
+    'Arena V2 weapon feedback presentation input.attackerId',
+  );
   const kind = readKind(
     source.feedback.kind,
     'Arena V2 weapon feedback presentation input.feedback.kind',
@@ -130,6 +155,9 @@ export function projectArenaV2WeaponFeedbackPresentationEvent(
     tick,
     sequence,
     sourceEventId: id,
+    action,
+    targetId,
+    attackerId,
     feedbackKind: kind,
     title: assertNonEmptyString(
       source.feedback.title,

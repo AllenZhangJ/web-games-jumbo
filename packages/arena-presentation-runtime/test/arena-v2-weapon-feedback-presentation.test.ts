@@ -54,6 +54,25 @@ describe('Arena V2 weapon feedback presentation contract', () => {
     ]);
   });
 
+  it('preserves source action and participant context without moving judgment into presentation', () => {
+    const event = projectArenaV2WeaponFeedbackPresentationEvent({
+      id: 'kz:surface-transfer',
+      tick: 8,
+      sequence: 3,
+      action: 'chain-pull',
+      targetId: 'player-1',
+      attackerId: 'player-2',
+      feedback: { kind: 'hit-surface-transfer', ...FEEDBACK['hit-surface-transfer'] },
+    });
+    expect(event).toMatchObject({
+      action: 'chain-pull',
+      targetId: 'player-1',
+      attackerId: 'player-2',
+      visualCue: 'impact-surface-transfer',
+    });
+    expect(Object.isFrozen(event)).toBe(true);
+  });
+
   it('produces stable events that the existing event window can consume', () => {
     const event = projectArenaV2WeaponFeedbackPresentationEvent({
       id: 'kz:hit-ring-out',

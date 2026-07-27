@@ -595,6 +595,48 @@ describe('Arena Presentation Three lifecycle boundaries', () => {
     effects.dispose();
   });
 
+  it('renders formal weapon feedback cues as impact or warning effects', () => {
+    const root = new THREE.Group();
+    const effects = new GreyboxEventEffects(root, { maximumEffects: 2 });
+    effects.consume([
+      Object.freeze({
+        id: 'presentation:weapon-feedback:transfer',
+        type: 'WeaponFeedbackPresented',
+        action: 'chain-pull',
+        feedbackKind: 'hit-surface-transfer',
+        visualCue: 'impact-surface-transfer',
+        emphasis: 'strong',
+        targetId: 'player-1',
+        attackerId: 'player-2',
+      }),
+      Object.freeze({
+        id: 'presentation:weapon-feedback:evaded',
+        type: 'WeaponFeedbackPresented',
+        action: 'chain-pull',
+        feedbackKind: 'attack-evaded',
+        visualCue: 'evaded-warning',
+        emphasis: 'warning',
+        targetId: 'player-1',
+        attackerId: 'player-2',
+      }),
+    ], (participantId: string) => (
+      participantId === 'player-1' ? { x: 1, y: 1, z: 0 } : { x: 0, y: 1, z: 0 }
+    ));
+    const transfer = root.children.find(
+      (child) => child.name === 'ArenaEventEffect:presentation:weapon-feedback:transfer',
+    ) as THREE.Group | undefined;
+    const evaded = root.children.find(
+      (child) => child.name === 'ArenaEventEffect:presentation:weapon-feedback:evaded',
+    ) as THREE.Group | undefined;
+    expect(transfer).toBeDefined();
+    expect(evaded).toBeDefined();
+    expect((transfer!.children[1] as THREE.Group).visible).toBe(true);
+    expect(transfer!.children[0].visible).toBe(false);
+    expect(evaded!.children[0].visible).toBe(true);
+    expect(evaded!.children[1].visible).toBe(false);
+    effects.dispose();
+  });
+
   it('retains only incomplete event-effect resources for cleanup retry', () => {
     const originalDispose = THREE.Material.prototype.dispose;
     let materialDisposals = 0;
