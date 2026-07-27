@@ -245,6 +245,8 @@ export { ARENA_V2_WEAPON_BLOOD_SHADOW_HOOK_BLADE_CASE_STUDY } from './arena-v2-w
 export type { ArenaV2WeaponBloodShadowHookBladeCaseStudy } from './arena-v2-weapon-blood-shadow-hook-blade-case-study.js';
 export { ARENA_V2_WEAPON_PHANTOM_TIGER_FIST_CASE_STUDY } from './arena-v2-weapon-phantom-tiger-fist-case-study.js';
 export type { ArenaV2WeaponPhantomTigerFistCaseStudy } from './arena-v2-weapon-phantom-tiger-fist-case-study.js';
+export { ARENA_V2_WEAPON_MAMMOTH_STONE_AXE_CASE_STUDY } from './arena-v2-weapon-mammoth-stone-axe-case-study.js';
+export type { ArenaV2WeaponMammothStoneAxeCaseStudy } from './arena-v2-weapon-mammoth-stone-axe-case-study.js';
 export {
   ARENA_V2_WEAPON_PHANTOM_TIGER_FIST_DEFINITION_PROTOTYPE,
   createArenaV2WeaponPhantomTigerFistNumericOverview,
@@ -449,6 +451,13 @@ export type {
   ArenaV2WarningZonePoint,
   ArenaV2WarningZoneRuntime,
 } from './arena-v2-warning-zone-prototype.js';
+export { runArenaV2MammothStoneAxeDelayPrototype } from './arena-v2-weapon-mammoth-stone-axe-delay-prototype.js';
+export type {
+  ArenaV2MammothStoneAxeDelayProbeOutcome,
+  ArenaV2MammothStoneAxeDelayProbePolicy,
+  ArenaV2MammothStoneAxeDelayProbeResult,
+  ArenaV2MammothStoneAxeDelayPrototypeResult,
+} from './arena-v2-weapon-mammoth-stone-axe-delay-prototype.js';
 export {
   runArenaV2WeaponMapPrototype,
 } from './arena-v2-weapon-map-prototype.js';
