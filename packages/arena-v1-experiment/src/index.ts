@@ -329,6 +329,23 @@ export type {
   ArenaV2WeaponReadPunishScenarioResult,
 } from './arena-v2-weapon-read-punish-replay-prototype.js';
 export {
+  runArenaV2WeaponPhantomTigerFistReplayPrototype,
+  createArenaV2WeaponPhantomTigerFistReplayCore,
+} from './arena-v2-weapon-phantom-tiger-fist-replay-prototype.js';
+export type {
+  ArenaV2WeaponPhantomTigerFistActionSample,
+  ArenaV2WeaponPhantomTigerFistReplayPrototypeResult,
+  ArenaV2WeaponPhantomTigerFistReplayScenario,
+  ArenaV2WeaponPhantomTigerFistScenarioResult,
+} from './arena-v2-weapon-phantom-tiger-fist-replay-prototype.js';
+export {
+  runArenaV2WeaponPhantomTigerFistEdgeReplayPrototype,
+} from './arena-v2-weapon-phantom-tiger-fist-edge-replay-prototype.js';
+export type {
+  ArenaV2WeaponPhantomTigerFistEdgeReplayPrototypeResult,
+  ArenaV2WeaponPhantomTigerFistEdgeReplayResult,
+} from './arena-v2-weapon-phantom-tiger-fist-edge-replay-prototype.js';
+export {
   runArenaV2WeaponFlankReplayPrototype,
 } from './arena-v2-weapon-flank-replay-prototype.js';
 export type {

@@ -57,6 +57,7 @@
 - [x] 将正式反馈事件接入 Three 灰盒冲击/警告效果、冲击镜头、震动和现有音频触发链；见[ADR-072](../decisions/072-arena-v2-feedback-presentation-three-consumption.md)。
 - [x] 将五件逐动作深研案例接入研究概览适配层，区分必须实测的公共轴、仍属研究字段的轴和禁止伪造的玩家数值；见[深研武器概览适配层原型结果 V1](arena-v2-weapon-case-study-overview-prototype-results-v1.md)与[ADR-080](../decisions/080-arena-v2-weapon-case-study-by-move.md)。
 - [x] 将幻虎巨拳建立为首个逐件 Definition 数值投影原型，补齐 9 项主轴、6 项地面/空中上下文轴和 2 项行为轴；数值标记为 `definition-projected-hypothesis`，未进入生产 UI。见[幻虎巨拳 Definition 数值投影原型结果 V1](arena-v2-weapon-phantom-tiger-fist-definition-prototype-results-v1.md)、[ADR-077](../decisions/077-arena-v2-research-overview-context-separation.md)和[ADR-080](../decisions/080-arena-v2-weapon-case-study-by-move.md)。
+- [x] 将幻虎巨拳接入真实 `MatchCore + ActionExecutionSystem + MatchReplay`，验证提前释放、成功提交、到期取消和可观察蓄力等级；再用双人边缘平台 Replay 验证命中、位移、失去支撑面和淘汰反馈。见[幻虎巨拳 Replay 与地图边缘原型结果 V1](arena-v2-weapon-phantom-tiger-fist-replay-and-edge-results-v1.md)与[ADR-081](../decisions/081-arena-v2-phantom-tiger-fist-replay-and-map-consequence.md)。
 - [ ] 绑定最终声音/特效资产并完成目标设备可读性、低动效和真人反馈测试；当前没有真机证据。
 
 ### 需要回答

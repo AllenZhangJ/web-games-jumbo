@@ -7,7 +7,6 @@ import {
 } from './arena-v2-weapon-public-axis-contract.js';
 import {
   ARENA_V2_WEAPON_LAUNCH_RESEARCH_DEFINITION_PROTOTYPES,
-  type ArenaV2WeaponLaunchResearchDefinitionPrototype,
 } from './arena-v2-weapon-launch-research-definition-prototype.js';
 
 export type ArenaV2WeaponResearchOverviewDirection =
