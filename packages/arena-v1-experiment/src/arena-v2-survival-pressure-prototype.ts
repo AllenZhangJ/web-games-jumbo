@@ -41,6 +41,12 @@ const SURFACE = Object.freeze({
 });
 const WEAPON_IDS = Object.freeze(['hammer', 'chain', 'shield']);
 const SURVIVAL_TIERS = Object.freeze([1, 5, 10]);
+const STAGED_ENEMY_SPAWN_TICKS = Object.freeze([
+  0,
+  SURVIVAL_TICK_RATE * 15,
+  SURVIVAL_TICK_RATE * 30,
+  SURVIVAL_TICK_RATE * 45,
+]);
 const COMMON_TIER_MULTIPLIER: Readonly<Record<number, number>> = Object.freeze({
   1: 1,
   5: 1.24,
@@ -49,11 +55,13 @@ const COMMON_TIER_MULTIPLIER: Readonly<Record<number, number>> = Object.freeze({
 
 export type ArenaV2SurvivalPressureRouteLayout = 'split' | 'compressed';
 export type ArenaV2SurvivalPressureSupplyLayout = 'wide' | 'narrow';
+export type ArenaV2SurvivalPressureEnemySpawnProfile = 'all-at-start' | 'staged';
 
 export interface ArenaV2SurvivalPressurePrototypeOptions {
   readonly offerIntervalSeconds?: number;
   readonly routeLayout?: ArenaV2SurvivalPressureRouteLayout;
   readonly supplyLayout?: ArenaV2SurvivalPressureSupplyLayout;
+  readonly enemySpawnProfile?: ArenaV2SurvivalPressureEnemySpawnProfile;
 }
 
 interface ResolvedPressureOptions {
@@ -61,9 +69,15 @@ interface ResolvedPressureOptions {
   readonly offerIntervalTicks: number;
   readonly routeLayout: ArenaV2SurvivalPressureRouteLayout;
   readonly supplyLayout: ArenaV2SurvivalPressureSupplyLayout;
+  readonly enemySpawnProfile: ArenaV2SurvivalPressureEnemySpawnProfile;
 }
 
-const PRESSURE_OPTIONS_KEYS = new Set(['offerIntervalSeconds', 'routeLayout', 'supplyLayout']);
+const PRESSURE_OPTIONS_KEYS = new Set([
+  'offerIntervalSeconds',
+  'routeLayout',
+  'supplyLayout',
+  'enemySpawnProfile',
+]);
 const SUPPORTED_OFFER_INTERVALS = Object.freeze([15, 20, 30]);
 
 function resolvePressureOptions(value: unknown): ResolvedPressureOptions {
@@ -85,11 +99,16 @@ function resolvePressureOptions(value: unknown): ResolvedPressureOptions {
   if (supplyLayout !== 'wide' && supplyLayout !== 'narrow') {
     throw new RangeError(`不支持的生存供给布局 ${String(supplyLayout)}。`);
   }
+  const enemySpawnProfile = source.enemySpawnProfile ?? 'all-at-start';
+  if (enemySpawnProfile !== 'all-at-start' && enemySpawnProfile !== 'staged') {
+    throw new RangeError(`不支持的生存敌人刷新策略 ${String(enemySpawnProfile)}。`);
+  }
   return Object.freeze({
     offerIntervalSeconds,
     offerIntervalTicks: offerIntervalSeconds * SURVIVAL_TICK_RATE,
     routeLayout,
     supplyLayout,
+    enemySpawnProfile,
   });
 }
 
@@ -117,8 +136,11 @@ export interface ArenaV2SurvivalPressureScenarioResult {
   readonly offerIntervalSeconds: number;
   readonly routeLayout: ArenaV2SurvivalPressureRouteLayout;
   readonly supplyLayout: ArenaV2SurvivalPressureSupplyLayout;
+  readonly enemySpawnProfile: ArenaV2SurvivalPressureEnemySpawnProfile;
   readonly ticksSimulated: number;
   readonly survivalSeconds: number;
+  readonly enemySpawnTicks: readonly number[];
+  readonly activeEnemyPeak: number;
   readonly firstEnemyContactTick: number | null;
   readonly playerHitCount: number;
   readonly enemyAttackCount: number;
@@ -141,6 +163,7 @@ export interface ArenaV2SurvivalPressurePrototypeResult {
   readonly offerIntervalSeconds: number;
   readonly routeLayout: ArenaV2SurvivalPressureRouteLayout;
   readonly supplyLayout: ArenaV2SurvivalPressureSupplyLayout;
+  readonly enemySpawnProfile: ArenaV2SurvivalPressureEnemySpawnProfile;
   readonly enemyDefinitionId: 'single-enemy-family';
   readonly enemyInputPolicy: 'bounded-pursuit-with-supply-priority';
   readonly sharedMovementAndCombatRules: true;
@@ -172,6 +195,8 @@ interface ScenarioState {
   enemyAttackIntentCount: number;
   firstEnemyContactTick: number | null;
   crowdPressurePeak: number;
+  activeEnemyPeak: number;
+  readonly enemySpawnTicks: number[];
   supplyRouteTicks: number;
   ended: boolean;
 }
@@ -182,6 +207,16 @@ function enemyId(index: number): string {
 
 function enemyIds(enemyCount: number): readonly string[] {
   return Object.freeze(Array.from({ length: enemyCount }, (_, index) => enemyId(index)));
+}
+
+function enemySpawnTick(
+  index: number,
+  profile: ArenaV2SurvivalPressureEnemySpawnProfile,
+): number {
+  if (profile === 'all-at-start' || index === 0) return 0;
+  const tick = STAGED_ENEMY_SPAWN_TICKS[index];
+  if (tick === undefined) throw new RangeError(`生存敌人刷新阶段 ${index + 1} 未定义。`);
+  return tick;
 }
 
 function createPhysics(): PhysicsWorld {
@@ -498,7 +533,7 @@ function createScenario(
   const character = createArenaV1CharacterRegistry().require(ARENA_V1_CHARACTER_ID.PARKOUR_APPRENTICE);
   const profile = createCharacterPhysicsProfile(character);
   const spawnY = groundY();
-  const activeIds = new Set(participants);
+  const activeIds = new Set<string>([PLAYER_ID]);
   const state: ScenarioState = {
     activeIds,
     playerDowns: 0,
@@ -509,6 +544,8 @@ function createScenario(
     enemyAttackIntentCount: 0,
     firstEnemyContactTick: null,
     crowdPressurePeak: 0,
+    activeEnemyPeak: 0,
+    enemySpawnTicks: [],
     supplyRouteTicks: 0,
     ended: false,
   };
@@ -525,7 +562,7 @@ function createScenario(
         id,
         position: {
           x: index % 2 === 0 ? -spawnHalfWidth : spawnHalfWidth,
-          y: spawnY,
+          y: enemySpawnTick(index, options.enemySpawnProfile) === 0 ? spawnY : KILL_Y - 1,
           z: (index - (enemyCount - 1) / 2) * spawnLaneGap,
         },
         ...profile,
@@ -546,6 +583,27 @@ function createScenario(
     });
     for (let tick = 0; tick < PROBE_TICKS; tick += 1) {
       ticksSimulated = tick;
+      for (let index = 0; index < enemyCount; index += 1) {
+        const id = enemyId(index);
+        if (activeIds.has(id) || enemySpawnTick(index, options.enemySpawnProfile) !== tick) continue;
+        engine.resetParticipant(id);
+        const spawnHalfWidth = options.routeLayout === 'split' ? 10 : 6;
+        const spawnLaneGap = options.routeLayout === 'split' ? 3.4 : 1.8;
+        physics.resetCharacter(id, {
+          position: {
+            x: index % 2 === 0 ? -spawnHalfWidth : spawnHalfWidth,
+            y: spawnY,
+            z: (index - (enemyCount - 1) / 2) * spawnLaneGap,
+          },
+          facing: { x: index % 2 === 0 ? 1 : -1, z: 0 },
+        });
+        activeIds.add(id);
+        state.enemySpawnTicks.push(tick);
+      }
+      state.activeEnemyPeak = Math.max(
+        state.activeEnemyPeak,
+        [...activeIds].filter((id) => id !== PLAYER_ID).length,
+      );
       if (tick > 0 && tick % options.offerIntervalTicks === 0) {
         offers.push(createSupplyOffer(
           offers.length + 1,
@@ -616,8 +674,11 @@ function createScenario(
       offerIntervalSeconds: options.offerIntervalSeconds,
       routeLayout: options.routeLayout,
       supplyLayout: options.supplyLayout,
+      enemySpawnProfile: options.enemySpawnProfile,
       ticksSimulated: ticksSimulated + 1,
       survivalSeconds: Number(((ticksSimulated + 1) / SURVIVAL_TICK_RATE).toFixed(2)),
+      enemySpawnTicks: Object.freeze([...state.enemySpawnTicks]),
+      activeEnemyPeak: state.activeEnemyPeak,
       firstEnemyContactTick: state.firstEnemyContactTick,
       playerHitCount: state.playerHitCount,
       enemyAttackCount: state.enemyAttackCount,
@@ -650,6 +711,7 @@ export function runArenaV2SurvivalPressurePrototype(
     offerIntervalSeconds: resolved.offerIntervalSeconds,
     routeLayout: resolved.routeLayout,
     supplyLayout: resolved.supplyLayout,
+    enemySpawnProfile: resolved.enemySpawnProfile,
     enemyDefinitionId: 'single-enemy-family',
     enemyInputPolicy: 'bounded-pursuit-with-supply-priority',
     sharedMovementAndCombatRules: true,

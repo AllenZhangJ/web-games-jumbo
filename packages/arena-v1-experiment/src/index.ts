@@ -276,6 +276,7 @@ export type {
   ArenaV2SurvivalPressureScenarioResult,
   ArenaV2SurvivalPressureRouteLayout,
   ArenaV2SurvivalPressureSupplyLayout,
+  ArenaV2SurvivalPressureEnemySpawnProfile,
 } from './arena-v2-survival-pressure-prototype.js';
 export {
   runArenaV2CollectionBudgetPrototype,

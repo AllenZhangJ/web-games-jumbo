@@ -51,6 +51,21 @@ describe('Arena V2 survival pressure prototype', () => {
     expect(runArenaV2SurvivalPressurePrototype()).toEqual(runArenaV2SurvivalPressurePrototype());
   });
 
+  it('supports staged same-family enemy refresh without adding a new combat rule', () => {
+    const result = runArenaV2SurvivalPressurePrototype({ enemySpawnProfile: 'staged' });
+    const oneEnemy = result.scenarios[0];
+    const twoEnemies = result.scenarios[1];
+    const fourEnemies = result.scenarios[2];
+    expect(result.enemySpawnProfile).toBe('staged');
+    expect(oneEnemy?.enemySpawnTicks).toEqual([0]);
+    expect(twoEnemies?.enemySpawnTicks).toEqual([0, 900]);
+    expect(fourEnemies?.enemySpawnTicks).toEqual([0, 900]);
+    expect(fourEnemies?.activeEnemyPeak).toBe(2);
+    expect(fourEnemies?.playerDowns).toBe(2);
+    expect(fourEnemies?.endReason).toBe('second-knockdown');
+    expect(fourEnemies?.survivalSeconds).toBe(27.08);
+  });
+
   it('covers three supply rhythms and two route layouts through the same pressure rules', () => {
     const result = runArenaV2SurvivalPressureMatrixPrototype();
     expect(result.modeId).toBe('survival-1ve-pressure-matrix');
