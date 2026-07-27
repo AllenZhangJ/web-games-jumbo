@@ -13,6 +13,9 @@ export type ArenaV2UiPageId =
 
 export type ArenaV2UiMatchMode = 'versus' | 'race' | 'survival';
 
+export const ARENA_V2_UI_INFORMATION_MINIMUM_TOUCH_TARGET_PX = 48 as const;
+export const ARENA_V2_UI_INFORMATION_MOBILE_BREAKPOINT_PX = 760 as const;
+
 export type ArenaV2UiInformationLayer = 'entry' | 'selection' | 'collection' | 'feedback';
 
 export interface ArenaV2UiPageContract {
@@ -35,6 +38,15 @@ export interface ArenaV2UiFlowResult {
   readonly passed: boolean;
 }
 
+export interface ArenaV2UiInteractionAudit {
+  readonly pageNavigationCount: number;
+  readonly flowNavigationCount: number;
+  readonly minimumTouchTargetPx: typeof ARENA_V2_UI_INFORMATION_MINIMUM_TOUCH_TARGET_PX;
+  readonly mobileBreakpointPx: typeof ARENA_V2_UI_INFORMATION_MOBILE_BREAKPOINT_PX;
+  readonly allPagesHavePrimaryAction: boolean;
+  readonly passed: boolean;
+}
+
 export interface ArenaV2UiInformationPrototypeResult {
   readonly pageCount: number;
   readonly pages: readonly ArenaV2UiPageContract[];
@@ -42,6 +54,7 @@ export interface ArenaV2UiInformationPrototypeResult {
   readonly resultToRematchActions: number;
   readonly resultToChangeTargetActions: number;
   readonly complexSystemsIntroduced: number;
+  readonly interactionAudit: ArenaV2UiInteractionAudit;
   readonly passed: boolean;
 }
 
@@ -248,12 +261,22 @@ export function runArenaV2UiInformationPrototype(): ArenaV2UiInformationPrototyp
     ...flow,
     passed: flow.passed && flow.pageIds.every((id) => PAGE_CONTRACTS.some((page) => page.id === id)),
   }));
+  const interactionAudit: ArenaV2UiInteractionAudit = Object.freeze({
+    pageNavigationCount: PAGE_CONTRACTS.length,
+    flowNavigationCount: flows.length,
+    minimumTouchTargetPx: ARENA_V2_UI_INFORMATION_MINIMUM_TOUCH_TARGET_PX,
+    mobileBreakpointPx: ARENA_V2_UI_INFORMATION_MOBILE_BREAKPOINT_PX,
+    allPagesHavePrimaryAction: PAGE_CONTRACTS.every(({ primaryAction }) => primaryAction.trim().length > 0),
+    passed: PAGE_CONTRACTS.every(({ primaryAction }) => primaryAction.trim().length > 0)
+      && ARENA_V2_UI_INFORMATION_MINIMUM_TOUCH_TARGET_PX >= 44,
+  });
   const passed = weaponDetail.requiredInformation.includes('命中结果')
     && weaponDetail.requiredInformation.includes('适用地图空间')
     && survivalPrep.requiredInformation.includes('每 20 秒三选一')
     && resultReward.requiredInformation.includes('下一目标')
     && resultReward.maximumActionsBeforeNextStep === 2
     && pagesHaveReadableFirstView(PAGE_CONTRACTS)
+    && interactionAudit.passed
     && flows.every(({ passed: flowPassed }) => flowPassed);
   return Object.freeze({
     pageCount: PAGE_CONTRACTS.length,
@@ -262,6 +285,7 @@ export function runArenaV2UiInformationPrototype(): ArenaV2UiInformationPrototyp
     resultToRematchActions: 1,
     resultToChangeTargetActions: 2,
     complexSystemsIntroduced: 0,
+    interactionAudit,
     passed,
   });
 }

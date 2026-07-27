@@ -19,6 +19,7 @@
 3. 生存使用独立 `survival-prep`，因为它有无武器开局、20 秒供给、一次复活和第二次终局等不同决策节奏。
 4. 首页、模式、准备和结算页面的首屏最多展示 3 个信息块；武器和地图详情可以延后展示反制、个人记录和完整路线信息，但不能增加必经点击。
 5. 参考弹壳特攻队的内容只转译为“快速进入、行为化武器说明、场景化选择和结算后的下一目标”，不迁移宠物、科技、部件、活动、商城、多货币或 Roguelike 技能组合。
+6. 研究页的交互规格固定为 48px 最小触控目标和 760px 窄屏断点；页面导航与流程导航的按钮数量必须分别由 11 个页面合同和 4 条流程生成，不能手写另一套入口数量。该规格用于真机验收，不等同于真机已通过。
 
 ## 验证证据
 
@@ -26,6 +27,7 @@
 - `packages/arena-v1-experiment/test/arena-v2-ui-information-prototype.test.ts`
 - [Arena V2 弹壳特攻队局外界面研究结果 V2](../research/arena-v2-survivor-io-ui-research-results-v2.md)
 - [Arena V2 界面地图](../product/arena-v2-screen-map.md)
+- `ArenaV2UiInteractionAudit`：无渲染交互规格审计，固定触控目标、断点和入口数量
 
 ## 不采用
 

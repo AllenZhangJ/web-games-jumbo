@@ -10,6 +10,14 @@ describe('Arena V2 UI information prototype', () => {
     expect(first.passed).toBe(true);
     expect(first.pageCount).toBe(11);
     expect(first.complexSystemsIntroduced).toBe(0);
+    expect(first.interactionAudit).toMatchObject({
+      pageNavigationCount: 11,
+      flowNavigationCount: 4,
+      minimumTouchTargetPx: 48,
+      mobileBreakpointPx: 760,
+      allPagesHavePrimaryAction: true,
+      passed: true,
+    });
     expect(first.resultToRematchActions).toBe(1);
     expect(first.resultToChangeTargetActions).toBe(2);
     expect(first.pages.find(({ id }) => id === 'weapon-detail')?.requiredInformation)

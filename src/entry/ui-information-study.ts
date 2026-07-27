@@ -217,6 +217,7 @@ function run(documentValue: UiInformationStudyDocument): void {
   text(required(documentValue, '#ui-page-count'), `${result.pageCount} 页`);
   text(required(documentValue, '#ui-flow-count'), `${result.flows.length} 条`);
   text(required(documentValue, '#ui-complexity-count'), `${result.complexSystemsIntroduced}`);
+  text(required(documentValue, '#ui-touch-target'), `${result.interactionAudit.minimumTouchTargetPx} px`);
   text(required(documentValue, '#ui-contract-status'), result.passed ? '通过' : '阻塞');
   renderPageNav(documentValue, result, (pageId) => selectPage(documentValue, result, pageId));
   renderFlowNav(documentValue, result);

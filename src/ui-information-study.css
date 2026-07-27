@@ -44,7 +44,7 @@ button { font: inherit; }
 .ui-study-header h1 { margin: 0; font-size: clamp(2rem, 6vw, 3.8rem); line-height: 0.98; }
 .ui-study-header > p:last-child { max-width: 46rem; margin: 1rem 0 0; color: var(--ui-muted); line-height: 1.6; }
 
-.ui-study-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 1rem; padding: 1rem 1.25rem; }
+.ui-study-summary { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; margin-top: 1rem; padding: 1rem 1.25rem; }
 .ui-study-summary span { display: block; color: var(--ui-muted); font-size: 0.72rem; letter-spacing: 0.08em; }
 .ui-study-summary strong { display: block; margin-top: 0.35rem; font-size: 1.2rem; }
 #ui-contract-status { color: var(--ui-green); }
@@ -54,7 +54,7 @@ button { font: inherit; }
 .ui-page-nav { display: grid; align-content: start; gap: 0.45rem; }
 .ui-page-nav button,
 .ui-flow-nav button {
-  min-height: 3rem;
+  min-height: 48px;
   padding: 0.7rem 0.8rem;
   border: 1px solid var(--ui-line);
   background: #faf8f2;

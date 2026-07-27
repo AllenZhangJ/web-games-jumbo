@@ -593,10 +593,13 @@ export type {
   ArenaV2WeaponTargetMotion,
 } from './arena-v2-weapon-moving-target-prototype.js';
 export {
+  ARENA_V2_UI_INFORMATION_MINIMUM_TOUCH_TARGET_PX,
+  ARENA_V2_UI_INFORMATION_MOBILE_BREAKPOINT_PX,
   runArenaV2UiInformationPrototype,
 } from './arena-v2-ui-information-prototype.js';
 export type {
   ArenaV2UiFlowResult,
+  ArenaV2UiInteractionAudit,
   ArenaV2UiInformationLayer,
   ArenaV2UiInformationPrototypeResult,
   ArenaV2UiPageContract,

@@ -15,12 +15,14 @@ test('11-page UI information study stays separate from the production entry', as
   assert.match(html, /meta name="robots" content="noindex,nofollow"/);
   assert.match(html, /id="ui-page-nav"/);
   assert.match(html, /id="ui-flow-preview"/);
+  assert.match(html, /id="ui-touch-target"/);
   assert.match(html, /src="\/src\/entry\/ui-information-study\.ts"/);
   assert.match(entry, /runArenaV2UiInformationPrototype/);
   assert.match(entry, /maximumActionsBeforeNextStep/);
   assert.match(entry, /firstViewInformation/);
+  assert.match(entry, /interactionAudit/);
   assert.doesNotMatch(entry, /MatchCore|localStorage|sessionStorage/);
   assert.match(css, /@media \(max-width: 760px\)/);
-  assert.match(css, /min-height: 3rem/);
+  assert.match(css, /min-height: 48px/);
   assert.doesNotMatch(build, /ui-information\.html/);
 });
