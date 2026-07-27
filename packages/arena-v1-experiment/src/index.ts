@@ -239,6 +239,8 @@ export {
 } from './arena-v2-weapon-case-study-contract.js';
 export { ARENA_V2_WEAPON_TRUE_HADES_HOOK_SCYTHE_CASE_STUDY } from './arena-v2-weapon-true-hades-hook-scythe-case-study.js';
 export type { ArenaV2WeaponTrueHadesHookScytheCaseStudy } from './arena-v2-weapon-true-hades-hook-scythe-case-study.js';
+export { ARENA_V2_WEAPON_WHITE_PLATINUM_DUAL_GUNS_CASE_STUDY } from './arena-v2-weapon-white-platinum-dual-guns-case-study.js';
+export type { ArenaV2WeaponWhitePlatinumDualGunsCaseStudy } from './arena-v2-weapon-white-platinum-dual-guns-case-study.js';
 export type {
   ArenaV2WeaponCaseStudy,
   ArenaV2WeaponCaseStudyMove,
