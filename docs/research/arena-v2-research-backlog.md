@@ -38,6 +38,7 @@
 - [x] 将 7 种参考战斗语言和 1 种生产基线“推离”收敛为结构化最小功能版本合同，并投影回 12 件研究卡及当前三把生产武器；合同只属于开发/测试工具链，不自动创建生产武器，见[武器最小功能版本合同 V1](arena-v2-weapon-minimum-version-contract-v1.md)、[ADR-064](../decisions/064-arena-v2-weapon-minimum-version-contract.md)和[ADR-065](../decisions/065-arena-v2-production-weapon-language-mapping.md)。
 - [x] 将 8 种战斗语言收敛为 6 个首发候选位置：生产基线为冲入、推离、换位，研究候选为直线压制、读招反制、绕后；封路和延迟重击因延迟/预警公开轴未闭合暂缓，见[首发武器候选合同 V1](arena-v2-weapon-launch-candidate-contract-v1.md)和[ADR-066](../decisions/066-arena-v2-weapon-launch-candidate-selection.md)。
 - [x] 将直线压制、读招反制、绕后三个研究候选编译为统一候选 Definition，补齐地面/空中数值、主概览 9 轴、行为 2 轴和等待/离开回应证据；见[首发研究候选 Definition 原型结果](arena-v2-launch-research-definition-prototype-results-v1.md)和[ADR-070](../decisions/070-arena-v2-research-launch-definition-projection.md)。
+- [x] 将 9 组官方武器证据扩展为逐动作学习链，记录输入、地面/跑动/空中/蓄力/延迟/命中后上下文、可观察结果、地图意义和失败成本；见 `arena-v2-weapon-official-evidence.ts` 与[热血英豪武器研究 V1](arena-v2-hot-blooded-weapon-study-v1.md)。
 - [x] 将五种候选武器的 Action/Equipment Definition 抽到 `arena-v1-content`，建立显式候选 Registry，并保持默认生产目录只有三把已验收武器；见[武器候选 Content Registry 结果](arena-v2-weapon-candidate-content-registry-results-v1.md)。
 - [ ] 将三个候选 Definition 接入正式生产 Presentation 反馈事件、声音/特效和生产迁移证据，再评估是否进入默认生产目录；候选内容层已完成，但最终资产、设备与真人验收仍未完成。
 - [x] 建立六个首发候选的五项生产迁移门禁，明确默认生产 Definition/注册、正式动作状态、候选专属 Replay、地图后果和反馈表现的独立证据；当前生产就绪为 0/6，不自动晋级，见[生产迁移门禁结果 V1](arena-v2-weapon-production-migration-gate-results-v1.md)和[ADR-074](../decisions/074-arena-v2-weapon-production-migration-gate.md)。
@@ -48,7 +49,7 @@
 - [x] 用内容层 5 个候选地面 Definition 的真实 targeting 参数建立多目标视线遮挡研究探针，覆盖单目标、同线近目标遮挡远目标和侧向进入三种场景；见[武器多目标视线遮挡研究原型结果](arena-v2-weapon-occlusion-research-prototype-results-v1.md)。
 - [x] 将三个研究候选接入双人同时出招与窄平台边缘 Replay，验证直线压制击落、读招反制命中但未击落、绕后按目标朝向命中，并把真实 `HitResolved` 来源映射到 `WeaponFeedbackPresented`；见[研究武器双人拥挤与地图边缘 Replay 结果](arena-v2-weapon-multiplayer-edge-replay-results-v1.md)。
 - [x] 将三个研究候选接入攻击/跳跃穿插 Replay：同 tick 保持武器与跳跃独立动作通道，空中攻击选择候选专属 aerial Definition 并进入 `down-smash`；见[武器攻击/跳跃穿插 Replay 原型结果](arena-v2-weapon-attack-jump-interleave-replay-results-v1.md)。
-- [x] 将三个候选 Registry 候选投影为带标签、单位、方向语义和玩家含义的 9 轴主概览 + 2 轴行为比较矩阵，保留核心动词、命中结果、地图空间和反制信息；见[研究武器概览比较矩阵原型结果](arena-v2-weapon-research-overview-prototype-results-v1.md)。真人解释率仍未采集。
+- [x] 将三个候选 Registry 候选投影为带标签、单位、方向语义和玩家含义的地面/空中双上下文 9 轴主概览 + 2 轴行为比较矩阵，保留核心动词、命中结果、地图空间和反制信息；见[研究武器概览比较矩阵原型结果](arena-v2-weapon-research-overview-prototype-results-v1.md)和[ADR-077](../decisions/077-arena-v2-research-overview-context-separation.md)。真人解释率仍未采集。
 - [x] 审计三把生产基线的权威字段能否覆盖 11 个公开数值轴，并记录三个研究候选的结构缺口和迁移顺序；见[武器 Definition 迁移审计 V1](arena-v2-weapon-definition-migration-audit-v1.md)和[ADR-067](../decisions/067-arena-v2-weapon-definition-migration-boundary.md)。
 - [x] 将直线压制编译为候选内容层的地面/空中 Definition 原型，并绑定 11 个数值轴与等待/离线回应证据；见[直线压制 Definition 原型结果 V1](arena-v2-line-pressure-definition-prototype-results-v1.md)和[ADR-068](../decisions/068-arena-v2-line-pressure-definition-boundary.md)。
 - [x] 在 KZ 武器后果探针上增加命中确认、支撑面转移、击落、避开攻击线和路线失误五种因果反馈语义；见[武器战斗语言 × KZ 地图后果原型结果 V1](arena-v2-weapon-language-kz-consequence-results-v1.md)和[ADR-069](../decisions/069-arena-v2-hit-feedback-causal-contract.md)。

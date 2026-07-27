@@ -40,7 +40,7 @@ Arena V2 的核心目标是：
 | [V2 搜索与验证清单](../research/arena-v2-research-backlog.md) | 管理后续搜索、原型和实测问题 | 第二轮收敛 |
 | [热血英豪武器研究 V1](../research/arena-v2-hot-blooded-weapon-study-v1.md) | 记录官方案例、蓄力/取消/方向/持续威胁证据、上下文动作矩阵、风险语义和完整数值展示要求 | 第三轮研究 |
 | `arena-v2-weapon-research-catalog.ts` | 12 件参考武器的结构化研究卡，仅供开发/测试工具链使用 | 研究证据 |
-| `arena-v2-weapon-official-evidence.ts` | 5 组官方招式证据的蓄力、取消、方向、上下文、资源、持续威胁和物理阻碍信号，仅供开发/测试工具链使用 | 第三轮研究证据 |
+| `arena-v2-weapon-official-evidence.ts` | 9 组官方招式证据的信号与逐动作上下文、命中结果、地图意义和失败成本，仅供开发/测试工具链使用 | 第四轮研究证据 |
 | `arena-v2-weapon-commitment-prototype.ts` | 用整数 tick 验证读招反制与延迟重击的提前取消、承诺释放、到期取消和蓄力转向，仅供开发/测试工具链使用 | 第四轮武器状态原型证据 |
 | `arena-v2-weapon-function-language.ts` | 将 12 件参考武器归并为 7 种参考战斗语言，并补齐生产基线“推离”语言，绑定数值轴、反制、地图空间和模式候选 | 研究证据 |
 | [武器最小功能版本合同 V1](../research/arena-v2-weapon-minimum-version-contract-v1.md) | 将 8 种战斗语言结构化为单一基础输入、地面/空中上下文、命中结果、地图关系、失败成本和反制，并投影回研究卡与生产武器 | 第四轮研究合同 |
@@ -54,7 +54,7 @@ Arena V2 的核心目标是：
 | [直线压制 Definition 原型结果 V1](../research/arena-v2-line-pressure-definition-prototype-results-v1.md) | 将直线压制编译为内容层候选地面/空中 Definition，并绑定 11 个数值轴与等待/离线回应证据 | 候选内容层已接入 |
 | [ADR-068：直线压制先以单一攻击线 Definition 验证](../decisions/068-arena-v2-line-pressure-definition-boundary.md) | 固化直线压制的单一攻击线、固定间隔、公开数值和候选 Registry/默认生产边界 | 原型边界已接入 |
 | [首发研究候选 Definition 原型结果 V1](../research/arena-v2-launch-research-definition-prototype-results-v1.md) | 将直线压制、读招反制、绕后三个首发候选统一为地面/空中 Definition，并绑定 9 项主概览数值、2 项行为数值和命中/空放证据 | 候选 Definition 已通过，默认生产未晋级 |
-| [研究武器概览比较矩阵原型结果 V1](../research/arena-v2-weapon-research-overview-prototype-results-v1.md) | 将三个候选 Registry 候选投影为带标签、单位、方向语义、玩家含义、地图用途和反制的可比较武器卡数据 | 数值比较矩阵通过，真人可读性待验证 |
+| [研究武器概览比较矩阵原型结果 V1](../research/arena-v2-weapon-research-overview-prototype-results-v1.md) | 将三个候选 Registry 候选投影为带标签、单位、方向语义、玩家含义、地面/空中双上下文、地图用途和反制的可比较武器卡数据 | 双上下文矩阵通过，真人可读性待验证 |
 | [ADR-070：六个首发位置统一使用 Definition 数值投影](../decisions/070-arena-v2-research-launch-definition-projection.md) | 固化生产基线与候选 Registry 共用可比较数值结构，同时保留候选 Registry 与默认生产目录边界 | 研究投影边界已接入 |
 | [ADR-069：命中反馈必须保留失败原因的因果区分](../decisions/069-arena-v2-hit-feedback-causal-contract.md) | 固化命中确认、支撑面转移、击落、避开攻击线和路线失误五种反馈语义 | KZ 无渲染反馈合同已接入 |
 | [ADR-071：武器反馈先映射为表现事件，再绑定声音与特效](../decisions/071-arena-v2-feedback-presentation-event-mapping.md) | 将五种因果反馈映射为可去重的 `WeaponFeedbackPresented` 事件，表现层只选择 Cue 不重新判定 | Presentation 事件映射已接入，真机表现待验证 |
@@ -103,6 +103,7 @@ Arena V2 的核心目标是：
 | [ADR-046：武器概览先显示数值比较](../decisions/046-arena-weapon-overview-comparison-first.md) | 固化主页“先比较数值、再读武器语义”的信息顺序 | 当前主页已接入 |
 | [ADR-053：武器概览明确数值方向语义](../decisions/053-arena-weapon-overview-direction-semantics.md) | 固化“越高/越低/风险”文字、条形图和比较尺度一致性，避免只靠箭头猜含义 | 当前主页展示收敛 |
 | [ADR-055：武器上下文必须完整显示关键数值](../decisions/055-arena-v2-weapon-context-readout-completeness.md) | 固化地面/空中上下文的八项数值、标签和可访问解释 | 表现原型已接入 |
+| [ADR-077：研究武器概览必须分离地面与空中上下文](../decisions/077-arena-v2-research-overview-context-separation.md) | 固化研究矩阵的 `ground/aerial` 双上下文、公共数值轴和权威 Definition 投影边界 | 双上下文矩阵已接入，真人可读性待验证 |
 | [ADR-056：武器先按可学习的战斗语言扩展](../decisions/056-arena-v2-weapon-function-language-boundary.md) | 固化参考武器到 Arena 战斗语言的研究映射与新增武器评审边界 | 研究原型已接入 |
 | [ADR-057：武器战斗语言必须通过地图后果验证](../decisions/057-arena-v2-weapon-language-map-consequence-boundary.md) | 固化六段 KZ 表面、三种回应和击退/支撑面证据作为武器候选评审门槛 | 研究原型已接入 |
 | [ADR-058：V2 可读性与留存使用独立真人任务合同](../decisions/058-arena-v2-readability-retention-study-boundary.md) | 固化 3 分钟操作、数值解释、地图归因和 200 小时里程碑的独立验证边界 | 合同已建立，尚无真人样本 |

@@ -325,6 +325,8 @@ export {
   createArenaV2WeaponResearchOverviewMatrix,
 } from './arena-v2-weapon-research-overview-prototype.js';
 export type {
+  ArenaV2WeaponResearchOverviewContext,
+  ArenaV2WeaponResearchOverviewContextId,
   ArenaV2WeaponResearchOverviewDirection,
   ArenaV2WeaponResearchOverviewMatrix,
   ArenaV2WeaponResearchOverviewRow,
@@ -342,6 +344,8 @@ export {
   ARENA_V2_WEAPON_OFFICIAL_EVIDENCE,
 } from './arena-v2-weapon-official-evidence.js';
 export type {
+  ArenaV2WeaponOfficialActionContext,
+  ArenaV2WeaponOfficialActionPattern,
   ArenaV2WeaponOfficialEvidence,
 } from './arena-v2-weapon-official-evidence.js';
 export {

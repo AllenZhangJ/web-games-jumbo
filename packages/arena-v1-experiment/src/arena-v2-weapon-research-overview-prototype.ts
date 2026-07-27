@@ -25,6 +25,15 @@ export interface ArenaV2WeaponResearchOverviewStat {
   readonly playerMeaning: string;
 }
 
+export type ArenaV2WeaponResearchOverviewContextId = 'ground' | 'aerial';
+
+export interface ArenaV2WeaponResearchOverviewContext {
+  readonly id: ArenaV2WeaponResearchOverviewContextId;
+  readonly label: string;
+  readonly stats: readonly ArenaV2WeaponResearchOverviewStat[];
+  readonly behaviorStats: readonly ArenaV2WeaponResearchOverviewStat[];
+}
+
 export interface ArenaV2WeaponResearchOverviewRow {
   readonly candidateId: string;
   readonly weaponId: string;
@@ -34,8 +43,8 @@ export interface ArenaV2WeaponResearchOverviewRow {
   readonly hitResult: string;
   readonly mapSpaces: readonly string[];
   readonly counterplay: readonly string[];
-  readonly stats: readonly ArenaV2WeaponResearchOverviewStat[];
-  readonly behaviorStats: readonly ArenaV2WeaponResearchOverviewStat[];
+  /** Ground and aerial values stay separate so the overview cannot hide context changes. */
+  readonly contexts: readonly ArenaV2WeaponResearchOverviewContext[];
 }
 
 export interface ArenaV2WeaponResearchOverviewMatrix {
@@ -52,6 +61,17 @@ interface AxisReadout {
   readonly direction: ArenaV2WeaponResearchOverviewDirection;
   readonly precision: number;
 }
+
+interface ContextConfig {
+  readonly id: ArenaV2WeaponResearchOverviewContextId;
+  readonly label: string;
+  readonly action: 'groundStats' | 'aerialStats';
+}
+
+const CONTEXT_CONFIGS: readonly ContextConfig[] = Object.freeze([
+  Object.freeze({ id: 'ground', label: '地面动作', action: 'groundStats' }),
+  Object.freeze({ id: 'aerial', label: '空中动作', action: 'aerialStats' }),
+]);
 
 const AXIS_READOUTS: Readonly<Record<string, AxisReadout>> = Object.freeze({
   range: Object.freeze({ source: 'range', unit: '格', direction: 'higher-is-better', precision: 2 }),
@@ -133,8 +153,27 @@ function behaviorStat(
 }
 
 function behaviorFingerprint(row: ArenaV2WeaponResearchOverviewRow): string {
-  return row.stats.map(({ id, value }) => `${id}:${value}`).join('|')
-    + row.behaviorStats.map(({ id, value }) => `${id}:${value}`).join('|');
+  return row.contexts.map(({ id, stats, behaviorStats }) => (
+    `${id}:${stats.map(({ id: statId, value }) => `${statId}:${value}`).join('|')}`
+      + behaviorStats.map(({ id: statId, value }) => `${statId}:${value}`).join('|')
+  )).join('||');
+}
+
+function createContext(
+  prototype: ArenaV2WeaponLaunchResearchDefinitionPrototype,
+  config: ContextConfig,
+  prototypes: readonly ArenaV2WeaponLaunchResearchDefinitionPrototype[],
+): ArenaV2WeaponResearchOverviewContext {
+  return Object.freeze({
+    id: config.id,
+    label: config.label,
+    stats: Object.freeze(ARENA_V2_WEAPON_PUBLIC_OVERVIEW_AXIS_IDS.map((axisId) => (
+      createStat(axisId, prototype, config.action, prototypes)
+    ))),
+    behaviorStats: Object.freeze(['active-frames', 'direction-tolerance'].map((axisId) => (
+      behaviorStat(axisId as ArenaV2WeaponPublicAxisId, prototype, config.action, prototypes)
+    ))),
+  });
 }
 
 export function createArenaV2WeaponResearchOverviewMatrix(): ArenaV2WeaponResearchOverviewMatrix {
@@ -148,11 +187,8 @@ export function createArenaV2WeaponResearchOverviewMatrix(): ArenaV2WeaponResear
     hitResult: HIT_RESULT_BY_LANGUAGE[prototype.languageId] ?? '命中后改变目标位置。',
     mapSpaces: prototype.mapSpaces,
     counterplay: prototype.counterplay,
-    stats: Object.freeze(ARENA_V2_WEAPON_PUBLIC_OVERVIEW_AXIS_IDS.map((axisId) => (
-      createStat(axisId, prototype, 'groundStats', prototypes)
-    ))),
-    behaviorStats: Object.freeze(['active-frames', 'direction-tolerance'].map((axisId) => (
-      behaviorStat(axisId as ArenaV2WeaponPublicAxisId, prototype, 'groundStats', prototypes)
+    contexts: Object.freeze(CONTEXT_CONFIGS.map((config) => (
+      createContext(prototype, config, prototypes)
     ))),
   })));
   const fingerprints = new Set(rows.map(behaviorFingerprint));

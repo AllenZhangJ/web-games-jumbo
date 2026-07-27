@@ -2,7 +2,7 @@
 
 ## 文档状态
 
-- 状态：已完成第一轮研究、结构化研究卡、官方招式证据增补、主页数值对比与行为数值接入、固定侧移目标原型、六个首发位置的统一数值 Definition 原型、侧向进入 Replay 和多目标视线遮挡研究；真人可读性与 V2 生产迁移待验证
+- 状态：已完成第一轮研究、12 件结构化研究卡、9 组官方逐动作证据、主页数值对比与行为数值接入、地面/空中双上下文矩阵、固定侧移目标原型、六个首发位置的统一数值 Definition 原型、侧向进入 Replay 和多目标视线遮挡研究；真人可读性与 V2 生产迁移待验证
 - 日期：2026-07-28
 - 研究对象：新热血英豪官方武器说明与官方新手指南
 - 研究边界：提炼对战规律，不复制名称、动作、数值、美术或输入组合
@@ -24,7 +24,7 @@
 
 12 件参考武器已经同步沉淀为开发/测试工具链中的结构化研究卡：
 `packages/arena-v1-experiment/src/arena-v2-weapon-research-catalog.ts`。
-本轮又将 5 组官方招式证据沉淀到 `arena-v2-weapon-official-evidence.ts`，把蓄力承诺、取消、方向、上下文、资源和持续威胁拆成独立信号；随后用 `arena-v2-weapon-commitment-prototype.ts` 验证提前取消、承诺释放、到期取消和蓄力转向。
+本轮又将 9 组官方招式证据沉淀到 `arena-v2-weapon-official-evidence.ts`，把蓄力承诺、取消、方向、上下文、资源和持续威胁拆成独立信号，并进一步为代表动作记录输入、上下文、可观察命中结果、地图意义和失败代价；随后用 `arena-v2-weapon-commitment-prototype.ts` 验证提前取消、承诺释放、到期取消和蓄力转向。
 研究卡只保存研究证据和 Arena 最小翻译，不进入生产规则、发布资产或玩家存档。
 每件卡片同时记录官方来源、功能族、核心动词、上下文、命中结果、地图用途、失败代价、最小版本和明确不复制项，避免研究结论退化成不可验证的长文。
 
@@ -42,6 +42,27 @@
 | 机甲榴弹炮 | [官方说明](https://bfo.web.sdo.com/web4/introduce/prop_explanation.asp?id=686) | 直线榴弹、冲拳、粘地延迟爆炸和区域封锁 |
 | 猛犸石斧 | [官方说明](https://bfo.web.sdo.com/web4/introduce/prop_explanation.asp?id=775) | 延迟落点、蓄力等级、滚动物体和地图墙面反弹 |
 | 独眼巨人战锤 | [官方说明](https://bfo.web.sdo.com/web4/introduce/prop_explanation.asp?id=991) | 重武器、强击飞、延迟落雷和锁定威胁 |
+
+### 2.2.1 本轮：从“武器说明”推进到“逐动作学习链”
+
+官方页面不只提供招式名称，而是同时给出输入上下文、命中结果、资源/承诺和地图关系。本轮把代表动作拆成可供原型消费的学习链：
+
+| 武器 | 代表动作 | 上下文 | 玩家要观察的结果 | 地图/失败含义 |
+|---|---|---|---|---|
+| [红魔爪](https://bfo.web.sdo.com/web4/introduce/prop_explanation.asp?id=729) | 跑X、跑XC、空中X | 跑动 / 蓄力 / 空中 | 挑空、摔落、下切 | 追击依赖路线；跑动错误会把自己送入近身危险 |
+| [真·哈迪斯钩镰](https://bfo.web.sdo.com/web4/introduce/prop_explanation.asp?id=526) | VXC、DXC | 空中反弹 / 短蓄力 | 两阶段高度关系、破防和固定结果 | 第一段空放不会被第二段自动补偿；收招是反制窗口 |
+| [白金双枪](https://bfo.web.sdo.com/web4/introduce/prop_explanation.asp?id=329) | X-X、空中XC、跑XC | 地面 / 空中 / 跑动 | 点射、水平扫射、扇形压制 | 宽平台收益高，贴身后远程价值快速下降 |
+| [幻虎巨拳](https://bfo.web.sdo.com/web4/introduce/prop_explanation.asp?id=546) | ZX、ZXC-XC | 反击 / 蓄力 | 读招成功后的高浮空 | 预测失败损失蓄力时间；承诺节点要可读 |
+| [真·托尔雷神锤](https://bfo.web.sdo.com/web4/introduce/prop_explanation.asp?id=802) | DXC 蓄力、ZXC | 延迟 / 多目标资源 | 标记落雷顺序、首个目标与连锁目标 | 标记放错可被提前离开；反馈必须区分目标身份 |
+| [幻虎猛旋棍](https://bfo.web.sdo.com/web4/introduce/prop_explanation.asp?id=1375) | 带★动作、X 后 XC | 命中后状态 / 命中门槛派生 | 十秒节奏状态、命中后升空派生 | 先手命中改变后续节奏；派生落地仍有暴露 |
+
+这组拆解形成了比“近战/远程/高伤害”更稳定的武器学习单位：
+
+```text
+输入上下文 → 可观察承诺 → 命中结果 → 地图关系 → 失败恢复成本
+```
+
+它也给 Arena 的概览提出了硬要求：不能只显示一个总攻击力或一组平面条形图，而要让玩家看出“跑动/空中/蓄力/命中后”哪一层改变了武器价值。代码中的 `actionPatterns` 仍是研究证据，不进入默认生产装备；对应结构见 `packages/arena-v1-experiment/src/arena-v2-weapon-official-evidence.ts`。
 
 ## 第三轮：把官方招式拆成可验证的风险结构
 
