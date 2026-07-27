@@ -219,6 +219,24 @@ export type {
   ArenaV2WeaponPublicAxisSurface,
 } from './arena-v2-weapon-public-axis-contract.js';
 export {
+  ARENA_V2_WEAPON_READABILITY_TASK_SCHEMA_VERSION,
+  createArenaV2WeaponReadabilityTaskSet,
+  evaluateArenaV2WeaponReadabilityAttempt,
+  projectArenaV2WeaponReadabilityParticipantTasks,
+} from './arena-v2-weapon-readability-task-prototype.js';
+export type {
+  ArenaV2WeaponReadabilityAttemptAnswer,
+  ArenaV2WeaponReadabilityAttemptReport,
+  ArenaV2WeaponReadabilityEvidenceValue,
+  ArenaV2WeaponReadabilityOption,
+  ArenaV2WeaponReadabilityParticipantTask,
+  ArenaV2WeaponReadabilityTask,
+  ArenaV2WeaponReadabilityTaskKind,
+  ArenaV2WeaponReadabilityTaskSet,
+  ArenaV2WeaponReadabilityTaskResult,
+  ArenaV2WeaponReadabilityTaskStatus,
+} from './arena-v2-weapon-readability-task-prototype.js';
+export {
   ARENA_V2_WEAPON_MINIMUM_VERSION_SPECIFICATIONS,
   ARENA_V2_WEAPON_MINIMUM_VERSIONS,
   ARENA_V2_PRODUCTION_WEAPON_MINIMUM_VERSIONS,

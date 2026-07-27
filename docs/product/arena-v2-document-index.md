@@ -116,6 +116,7 @@ Arena V2 的核心目标是：
 | [弹壳特攻队局外界面研究结果 V2](../research/arena-v2-survivor-io-ui-research-results-v2.md) | 将官方单手/行为化武器/场景化选择证据收敛为 11 个页面入口和竞技准备模板 | 研究结论与原型对齐 |
 | `arena-v2-survivor-io-ui-evidence.ts` | 将官方商店页、生存指南和版本记录拆成来源事实、信息模式、Arena 翻译和不复制边界 | 第四轮研究证据，仅研究工具链 |
 | [V2 武器可读性与长期留存验证计划 V1](../research/arena-v2-weapon-readability-retention-study-v1.md) | 定义 3 分钟操作、10 秒数值解释、KZ 归因和 30/60/120/200 小时真人验证任务 | 真人研究合同，尚无样本 |
+| [武器数值可读性任务原型结果 V1](../research/arena-v2-weapon-readability-task-prototype-results-v1.md) | 从真实研究矩阵生成五项比较/方向/地图/上下文任务，隔离参与者题目与研究员答案并绑定矩阵哈希 | 任务合同通过，真人样本尚无 |
 | [战斗外界面原型验证结果 V1](../research/arena-v2-ui-prototype-results-v1.md) | 记录当前主页、武器概览、角色选择和进入对局链路验证 | 第一轮原型证据 |
 | [局外信息原型结果 V1](../research/arena-v2-ui-information-prototype-results-v1.md) | 记录 11 个信息入口、四条关键流程和点击预算 | 第二轮信息架构原型 |
 | `arena-v2-ui-information-prototype.ts` | 为 11 个局外页面声明必要信息、首屏最多三项、延后信息和点击预算，验证单一下一决策 | 第三轮信息层原型证据 |
@@ -137,6 +138,7 @@ Arena V2 的核心目标是：
 | [ADR-060：绕后使用目标朝向判定，五种语言共用同一规则原型](../decisions/060-arena-v2-rear-cone-and-language-prototype-boundary.md) | 固化 `rear-cone`、五种语言统一 Rule/Effect/Targeting 原型和 90 个 KZ 探针边界 | 研究原型已接入 |
 | [ADR-061：武器概览补充有效窗口与方向容错](../decisions/061-arena-v2-weapon-overview-behavior-readout.md) | 固化由权威调优推导的两项补充行为数值及其不进入主比较表的边界 | Product UI 已接入 |
 | [ADR-083：武器概览必须横向展示地面与空中场景数值](../decisions/083-arena-v2-weapon-context-comparison-readout.md) | 固化主数值、行为数值和地面/空中场景数值的比较顺序、字段一致性校验与 Web/Canvas 展示差异 | Product UI 与 Canvas 已接入，真人页面已验证 |
+| [ADR-084：武器数值可读性任务必须从研究矩阵生成并隔离答案](../decisions/084-arena-v2-weapon-readability-task-boundary.md) | 固化可读性题目从真实矩阵生成、参与者投影不泄露答案、并列数值阻塞和单次评估不冒充真人结论 | 研究工具链已接入，真人样本尚无 |
 | [ADR-062：蓄力承诺先以可取消的整数 tick 原型验证](../decisions/062-arena-v2-weapon-commitment-prototype-boundary.md) | 固化蓄力承诺、提前取消、到期处理和方向记录的研究边界，不直接进入生产武器 | 研究原型已接入 |
 | [ADR-047：生存实体复用玩家规则/物理边界](../decisions/047-arena-v2-survival-entity-boundary.md) | 固化单敌人原型不得绕过命中、冲量和掉落规则 | V2 研究原型 |
 | [ADR-048：生存多敌压力先复用规则引擎](../decisions/048-arena-v2-survival-multi-enemy-pressure-boundary.md) | 固化多敌研究原型的输入决策、供给争夺和正式接入前的边界 | V2 研究原型 |
