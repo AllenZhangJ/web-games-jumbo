@@ -21,8 +21,8 @@ describe('Arena V2 weapon case-study overview', () => {
       && numericReadoutReason.length > 20
     ))).toBe(true);
     expect(overview.rows.filter(({ numericReadout }) => numericReadout === 'research-projection').map(({ referenceId }) => referenceId))
-      .toEqual(['magic-blood-scythe', 'true-hades-hook-scythe', 'white-platinum-dual-guns', 'blood-shadow-hook-blade', 'phantom-tiger-fist']);
-    expect(overview.rows.filter(({ numericReadout }) => numericReadout === 'not-yet-available')).toHaveLength(1);
+      .toEqual(['magic-blood-scythe', 'true-hades-hook-scythe', 'white-platinum-dual-guns', 'blood-shadow-hook-blade', 'phantom-tiger-fist', 'mammoth-stone-axe']);
+    expect(overview.rows.filter(({ numericReadout }) => numericReadout === 'not-yet-available')).toHaveLength(0);
   });
 
   it('makes the difference between must-measure axes and research-only signals explicit', () => {
@@ -83,6 +83,12 @@ describe('Arena V2 weapon case-study overview', () => {
       'research-magic-blood-scythe-aerial',
     ]);
     expect(magic?.numericProjection?.comparisonWeaponIds).toContain('research-magic-blood-scythe');
+    const mammoth = overview.rows.find(({ referenceId }) => referenceId === 'mammoth-stone-axe');
+    expect(mammoth?.numericProjection?.sourceDefinitionIds).toEqual([
+      'research-mammoth-stone-axe-ground',
+      'research-mammoth-stone-axe-aerial',
+    ]);
+    expect(mammoth?.numericProjection?.comparisonWeaponIds).toContain('research-mammoth-stone-axe');
   });
 
   it('is deterministic and deeply freezes the research readout', () => {

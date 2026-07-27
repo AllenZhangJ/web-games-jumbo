@@ -36,6 +36,9 @@ import {
   createArenaV2WeaponMagicBloodScytheNumericOverview,
 } from './arena-v2-weapon-magic-blood-scythe-definition-prototype.js';
 import {
+  createArenaV2WeaponMammothStoneAxeNumericOverview,
+} from './arena-v2-weapon-mammoth-stone-axe-definition-prototype.js';
+import {
   createArenaV2WeaponResearchOverviewContexts,
   type ArenaV2WeaponResearchOverviewContext,
 } from './arena-v2-weapon-research-overview-prototype.js';
@@ -174,6 +177,18 @@ function createNumericProjection(
       sourceDefinitionIds: Object.freeze([
         'research-magic-blood-scythe-ground',
         'research-magic-blood-scythe-aerial',
+      ]),
+      numericStatus: 'definition-projected-hypothesis',
+    });
+  }
+  if (referenceId === 'mammoth-stone-axe') {
+    const overview = createArenaV2WeaponMammothStoneAxeNumericOverview();
+    return Object.freeze({
+      contexts: overview.contexts,
+      comparisonWeaponIds: overview.comparisonWeaponIds,
+      sourceDefinitionIds: Object.freeze([
+        'research-mammoth-stone-axe-ground',
+        'research-mammoth-stone-axe-aerial',
       ]),
       numericStatus: 'definition-projected-hypothesis',
     });

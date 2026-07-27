@@ -285,6 +285,18 @@ export type { ArenaV2WeaponPhantomTigerFistCaseStudy } from './arena-v2-weapon-p
 export { ARENA_V2_WEAPON_MAMMOTH_STONE_AXE_CASE_STUDY } from './arena-v2-weapon-mammoth-stone-axe-case-study.js';
 export type { ArenaV2WeaponMammothStoneAxeCaseStudy } from './arena-v2-weapon-mammoth-stone-axe-case-study.js';
 export {
+  ARENA_V2_WEAPON_MAMMOTH_STONE_AXE_AERIAL_ACTION_ID,
+  ARENA_V2_WEAPON_MAMMOTH_STONE_AXE_DEFINITION_ID,
+  ARENA_V2_WEAPON_MAMMOTH_STONE_AXE_DEFINITION_PROTOTYPE,
+  ARENA_V2_WEAPON_MAMMOTH_STONE_AXE_GROUND_ACTION_ID,
+  createArenaV2WeaponMammothStoneAxeNumericOverview,
+} from './arena-v2-weapon-mammoth-stone-axe-definition-prototype.js';
+export type {
+  ArenaV2WeaponMammothStoneAxeDefinitionPrototype,
+  ArenaV2WeaponMammothStoneAxeNumericOverview,
+  ArenaV2WeaponMammothStoneAxeWarningHypothesis,
+} from './arena-v2-weapon-mammoth-stone-axe-definition-prototype.js';
+export {
   ARENA_V2_WEAPON_PHANTOM_TIGER_FIST_DEFINITION_PROTOTYPE,
   createArenaV2WeaponPhantomTigerFistNumericOverview,
 } from './arena-v2-weapon-phantom-tiger-fist-definition-prototype.js';
@@ -490,6 +502,16 @@ export type {
   ArenaV2WeaponMagicBloodScytheReplayScenario,
   ArenaV2WeaponMagicBloodScytheReplayScenarioResult,
 } from './arena-v2-weapon-magic-blood-scythe-replay-prototype.js';
+export {
+  createArenaV2WeaponMammothStoneAxeReplayCore,
+  runArenaV2WeaponMammothStoneAxeReplayPrototype,
+} from './arena-v2-weapon-mammoth-stone-axe-replay-prototype.js';
+export type {
+  ArenaV2WeaponMammothStoneAxeActionSample,
+  ArenaV2WeaponMammothStoneAxeReplayPrototypeResult,
+  ArenaV2WeaponMammothStoneAxeReplayScenario,
+  ArenaV2WeaponMammothStoneAxeReplayScenarioResult,
+} from './arena-v2-weapon-mammoth-stone-axe-replay-prototype.js';
 export {
   ARENA_V2_LINE_PRESSURE_DEFINITION_PROTOTYPE,
   createArenaV2LinePressureDefinitionPrototype,
