@@ -31,8 +31,10 @@ Proposed（V2 方向已确认，权威层迁移待单独批次）
 - 当前 V1 Stage4 与其 Replay/规则测试保持不变；
 - `ProductContentPresentationDefinition.overview` 验证数值字段、单位、方向和精度；
 - Product UI 主页显示三把现有武器的公开数值卡片。
+- 三把武器的地面/空中动作已通过同一权威规则层完成无渲染对比，证据见[武器上下文无渲染原型结果](../research/arena-v2-weapon-prototype-results-v1.md)。
 
 ## 后续
 
 - 研究完成后，将把“动作时序、命中结果、适用地形、风险和反制”补入武器详情页；
+- 当前静态对比已证明差异存在，但不替代窄路/边缘地图与真人可读性验证；
 - V2 权威 tuning 正式分支建立后，删除未使用的 guard 字段和历史兼容路径，单独记录 Replay/hash 迁移证据；在此之前不更新 V1 固定回放和实验哈希。

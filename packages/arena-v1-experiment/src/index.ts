@@ -183,3 +183,16 @@ export {
   createArenaBalanceExplorationBundle,
   readArenaBalanceExplorationBundle,
 } from './arena-balance-exploration-bundle.js';
+export {
+  ARENA_V2_JUMP_ROUTE_INPUTS,
+  createArenaV2JumpRoutePrototype,
+} from './arena-v2-jump-route-prototype.js';
+export type {
+  ArenaV2JumpRoutePrototype,
+} from './arena-v2-jump-route-prototype.js';
+export {
+  runArenaV2WeaponContextPrototype,
+} from './arena-v2-weapon-context-prototype.js';
+export type {
+  ArenaV2WeaponContextPrototypeResult,
+} from './arena-v2-weapon-context-prototype.js';
