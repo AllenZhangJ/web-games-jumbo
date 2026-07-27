@@ -38,6 +38,7 @@
 - [x] 将 7 种参考战斗语言和 1 种生产基线“推离”收敛为结构化最小功能版本合同，并投影回 12 件研究卡及当前三把生产武器；合同只属于开发/测试工具链，不自动创建生产武器，见[武器最小功能版本合同 V1](arena-v2-weapon-minimum-version-contract-v1.md)、[ADR-064](../decisions/064-arena-v2-weapon-minimum-version-contract.md)和[ADR-065](../decisions/065-arena-v2-production-weapon-language-mapping.md)。
 - [x] 将 8 种战斗语言收敛为 6 个首发候选位置：生产基线为冲入、推离、换位，研究候选为直线压制、读招反制、绕后；封路和延迟重击因延迟/预警公开轴未闭合暂缓，见[首发武器候选合同 V1](arena-v2-weapon-launch-candidate-contract-v1.md)和[ADR-066](../decisions/066-arena-v2-weapon-launch-candidate-selection.md)。
 - [ ] 依次把直线压制、读招反制、绕后三个研究候选迁移为正式 Definition，并为每个候选补齐地面/空中数值、反馈、地图后果和回放证据。
+- [x] 审计三把生产基线的权威字段能否覆盖 11 个公开数值轴，并记录三个研究候选的结构缺口和迁移顺序；见[武器 Definition 迁移审计 V1](arena-v2-weapon-definition-migration-audit-v1.md)和[ADR-067](../decisions/067-arena-v2-weapon-definition-migration-boundary.md)。
 
 ### 需要回答
 

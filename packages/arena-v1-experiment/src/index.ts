@@ -242,6 +242,15 @@ export type {
   ArenaV2WeaponLaunchCandidateSource,
 } from './arena-v2-weapon-launch-candidate-contract.js';
 export {
+  ARENA_V2_WEAPON_DEFINITION_MIGRATION_AUDITS,
+  ARENA_V2_WEAPON_PUBLIC_AXIS_AUTHORITY_SOURCES,
+} from './arena-v2-weapon-definition-migration-audit.js';
+export type {
+  ArenaV2WeaponDefinitionMigrationAudit,
+  ArenaV2WeaponDefinitionMigrationContextAudit,
+  ArenaV2WeaponPublicAxisAuthoritySource,
+} from './arena-v2-weapon-definition-migration-audit.js';
+export {
   ARENA_V2_WEAPON_OFFICIAL_EVIDENCE,
 } from './arena-v2-weapon-official-evidence.js';
 export type {

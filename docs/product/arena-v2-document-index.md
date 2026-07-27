@@ -48,6 +48,8 @@ Arena V2 的核心目标是：
 | [ADR-065：生产武器必须显式映射到最小战斗语言](../decisions/065-arena-v2-production-weapon-language-mapping.md) | 固化重锤、锁链、冲锋盾与最小战斗语言及地面/空中动作的显式映射 | 生产基线审计已接入 |
 | [V2 首发武器候选合同 V1](../research/arena-v2-weapon-launch-candidate-contract-v1.md) | 将 8 种语言收敛为 6 个首发功能位置，区分生产基线、研究候选和延后语言 | 候选集合已收敛 |
 | [ADR-066：首发武器候选按六种战斗语言收敛](../decisions/066-arena-v2-weapon-launch-candidate-selection.md) | 固化三把生产基线、三把研究候选、六种公开可比较语言和两种延后语言 | 候选筛选已接入 |
+| [V2 武器 Definition 迁移审计 V1](../research/arena-v2-weapon-definition-migration-audit-v1.md) | 对照当前权威调优审计 11 个公开数值轴，并列出三个研究候选的 Definition 结构缺口 | 审计完成，迁移未开始 |
+| [ADR-067：武器概览数值必须从权威 Definition 投影](../decisions/067-arena-v2-weapon-definition-migration-boundary.md) | 固化权威字段、派生数值、地面/空中上下文与表现层的单向投影边界 | 迁移边界已接入 |
 | [武器战斗语言最小原型结果 V1](../research/arena-v2-weapon-language-prototype-results-v1.md) | 记录直线压制、封路、延迟重击、读招反制和绕后的 Rule/Targeting/Effect 最小验证与回应时间 | 扩展武器原型证据 |
 | [武器战斗语言 × KZ 地图后果原型结果 V1](../research/arena-v2-weapon-language-kz-consequence-results-v1.md) | 记录五种战斗语言在六段 KZ 表面上的击落、路线转移、前摇、有效窗口和固定回应后果 | 扩展武器×地图原型证据 |
 | `arena-v2-warning-zone-prototype.ts` | 验证封路候选的公开标记位置、整数 tick 生命周期和到期，不实现持续伤害或新操作 | 第四轮武器状态原型证据 |
