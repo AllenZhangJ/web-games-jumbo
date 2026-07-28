@@ -38,6 +38,9 @@ export type {
   EquipmentSupplyPickupDecision,
   EquipmentSupplyPickupEvent,
   EquipmentSupplyPickupTransactionResult,
+  EquipmentSupplyExpiredEvent,
+  EquipmentSupplyTimelinePhaseResult,
+  EquipmentSupplyTimelineSpawn,
 } from './equipment-system.js';
 export {
   EQUIPMENT_SUPPLY_LIFECYCLE_SCHEMA_VERSION,
@@ -48,3 +51,12 @@ export type {
   EquipmentSupplyEventIdentity,
   EquipmentSupplyLifecycle,
 } from './equipment-supply-lifecycle.js';
+export {
+  EQUIPMENT_SUPPLY_TIMELINE_SNAPSHOT_SCHEMA_VERSION,
+  EquipmentSupplyTimelineSystem,
+} from './equipment-supply-timeline-system.js';
+export type {
+  EquipmentSupplySpawnSpec,
+  EquipmentSupplyTimelineSnapshot,
+  EquipmentSupplyTimelineStepResult,
+} from './equipment-supply-timeline-system.js';

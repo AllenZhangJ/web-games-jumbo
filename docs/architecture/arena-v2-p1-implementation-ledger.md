@@ -3,12 +3,13 @@
 ## 状态
 
 - 阶段：P1 自动替换与 10 秒权威回收。
-- 当前小门：P1.2a「单槽原子替换事务」。
-- 当前结论：P1.2a `core-transaction-ready` 已由主协调于 2026-07-28 签核；P1.1 `contract-ready` 已于 2026-07-28 签核。
-- P1 总体结论：**未完成、不得 advance**。P1.2a 只完成可独立验收的 EquipmentSystem Core 事务，不代表供给时间轴、600 tick 过期、MatchCore/Replay/hash、Bot、Presentation 或 Platform 已接入。
+- 当前小门：P1.2b「权威供给时间线与 600 tick 过期」。
+- 当前结论：P1.2b `timeline-ready` 已由主协调于 2026-07-28 签核；P1.2a `core-transaction-ready` 与 P1.1 `contract-ready` 已于 2026-07-28 签核。
+- P1 总体结论：**未完成、不得 advance**。P1.2b 只完成可独立验收的 Equipment Core 时间线，不代表 MatchCore/Replay/hash、Bot、Presentation 或 Platform 已接入。
 - P1.1 实现审计起始基线：`d6f906008d0af1ed0133a199a8dc9e15cb1d23d0`。
 - P1.1 提交父节点：`fb0bc404508bf9d7f34df53fedfaf20d31239591`。`d6f9060..fb0bc40` 之间仅包含已经独立验收的 A0.1 美术生产合同与阶段门禁文档，不包含 P1.1 代码，不改变 P1.1 行为审计结论。
-- P1.2a 实现审计起始基线：`8e3e6eff6724612e83b124aa2ae6574a3967af9e`；实际提交父节点与当前安全回滚点为 `4420d4b585025cd6999e5becf6a6f4d10b895063`。`8e3e6ef..4420d4b` 仅包含已经独立验收的 A0.2.1 来源权利包，不包含 P1.2a 代码，不改变 P1.2a 行为审计结论；P1.2a 尚未提交。
+- P1.2a 实现审计起始基线：`8e3e6eff6724612e83b124aa2ae6574a3967af9e`；提交父节点为 `4420d4b585025cd6999e5becf6a6f4d10b895063`，实际提交为 `22b9fd0e39b83de0b6a3ed766a2a66f3d2f67b1d`。`8e3e6ef..4420d4b` 仅包含已经独立验收的 A0.2.1 来源权利包，不改变 P1.2a 行为审计结论。
+- P1.2b 实现审计起始基线与当前安全回滚点：`22b9fd0e39b83de0b6a3ed766a2a66f3d2f67b1d`；P1.2b 尚未提交。
 - 证据日期：2026-07-28。
 
 ## 前置条件与依据
@@ -200,20 +201,94 @@ P1.2a 只评分 Core 事务小门；签核条件为总分至少 90，且每维�
 | 文档检查 | 255 个 Markdown、788 个本地链接、50 个命令通过（执行时工作树包含并行 A0.2.1 文档） |
 | `git diff --check` | 通过 |
 
-旧 MatchCore 压力脚本尚未接入 `resolveSupplyPickups`，所以两次 CPU 超预算既不是新事务性能回归的直接证据，也不能被忽略或改写为通过。本批直接资源结论只来自隔离的 1000 次连续替换测试；完整 100+ seed 生存长局、供给时间轴、过期和事件窗口有界仍是 P1 总体硬门。并行 A0.2.1 美术文件不计入 P1.2a 代码、评分或门禁成果；其类型错误只作为共享工作树中间态记录，不属于 P1.2a 行为证据。
+旧 MatchCore 压力脚本尚未接入 `resolveSupplyPickups`，所以两次 CPU 超预算既不是新事务性能回归的直接证据，也不能被忽略或改写为通过。P1.2a 的直接资源结论只来自隔离的 1000 次连续替换测试；其签核时尚未实现的供给时间线、过期与事件窗口现由 P1.2b 隔离 Core 候选覆盖，但完整 100+ seed 正式长局仍是 P1 总体硬门。并行 A0.2.1 美术文件不计入 P1.2a 代码、评分或门禁成果；其类型错误只作为共享工作树中间态记录，不属于 P1.2a 行为证据。
 
 ### 风险、回滚与未完成项
 
 - 风险：后续 MatchCore 接入时错误地把普通拾取切到 Supply 路径；在事件发射前后再做可失败操作；恢复/Replay 时缺失 Supply 生命周期；调用者错误映射淘汰或比赛结束资格。
 - P1.2a 实现审计基线仍为 `8e3e6ef`，实际提交父节点与安全回滚点为 `4420d4b`。只撤回 EquipmentSystem/Resolver/export、生命周期波次校验、对应测试和本节台账，不触碰已验收 P1.1 或 `8e3e6ef..4420d4b` 间已经验收的 A0.2.1 文件。
-- P1.2b 仍需：权威供给时间轴、世界实例生成、600 tick 过期、生成→过期→拾取→动作同 tick 调度、599/600/601、过期与拾取同 tick、序列化恢复、MatchCore 事件收集、Replay/hash 和黄金 Replay。
+- P1.2b 当前候选已补齐隔离权威时间线、世界实例生成/过期、固定阶段顺序、599/600/601、同 tick 冲突与时间线快照恢复；MatchCore 事件收集、Replay/hash 和黄金 Replay仍属于 P1.2c。
 - 更后阶段仍需完整前摇/受击/淘汰/比赛结束 MatchCore 临界矩阵、100+ seed 长局压力、Bot、Presentation、HUD、音频和 Platform；不得用 P1.2a 的隔离事务测试冒充完成。
+
+## P1.2b 权威供给时间线与 600 tick 过期
+
+### 范围、依赖与写入者
+
+- `EquipmentSupplyTimelineSystem` 只拥有整数 tick、稳定波次身份和活跃 Supply 生命周期账本；`EquipmentSystem` 继续是 equipment runtime、owner 和 primary slot 的唯一权威写入者。
+- Timeline 只消费组合层注入的 Supply Definition ID、三个固定 `slotId/equipmentDefinitionId/spawnId/position` 规格以及已验证 Registry。它不选择地图、武器、位置或随机内容，本批不引入 RNG。
+- EquipmentSystem 新增原子时间线阶段：在任何写入前验证全部 Registry、生命周期、重复实例、owner/slot 不变量、world/held 状态与 Expired payload；提交区只执行私有 Map 新增/删除，不调用外部回调。提交区异常会终止并清空 EquipmentSystem，fail closed。
+- 固定单 tick 调度为 `spawn → expire → pickup → action`。Timeline 的一次 `step` 只在前三阶段成功后返回 `nextPhase=action`；动作解析仍由后续 MatchCore 接线负责，不能提前或旁路调用。
+- Timeline 借用而不拥有 EquipmentSystem：`destroy()` 幂等清空自身生命周期账本并终止 Timeline，但不越权销毁 EquipmentSystem；Composition 必须按所有权分别销毁二者。
+
+### 行为映射
+
+| 冻结规则 | P1.2b 行为 | 证据与边界 |
+|---|---|---|
+| 首波 1200，后续每 1200 tick | 只在 Definition 合法波次计算 waveIndex | 1200/2400 生成，1199/2399 不生成 |
+| 单波三件 | 构造时要求 spawn specs 数量严格等于 `spawnCount=3` | 按稳定 `slotId` 排序为 center/left/right |
+| 生命周期 600 tick | lifecycle 固定 `expireTick=spawnTick+600` | 1799 存在、1800 删除、1801 不重复 |
+| 同 tick 先过期后拾取 | expireTick 先从 runtime 与活跃账本移除，再把剩余生命周期交给 P1.2a 拾取 | 1800 进入范围仍无 pickup decision |
+| 已持有不受地面过期影响 | 到期时 held runtime 保留，只结束 Supply 生命周期跟踪 | 同波另外两个 world runtime 产生 Expired，held 保持单槽占有 |
+| 同波连续替换 | P1.2a 回收旧 held 实例后，Timeline 依据严格 Recycled 事件同步结束其 Supply 生命周期 | A→B 替换后 A 不会在 expireTick 形成悬空恢复/过期冲突 |
+| 稳定身份 | `Definition:wave-N:slot-X` 与其 `:equipment` 实例 ID 由 wave/slot 纯函数生成 | 相同配置、tick、seed、输入得到相同生命周期、事件和快照 |
+| 失败关闭 | 非法/跳跃 tick、非有限规格、重复 runtime、未知 schema/字段、恢复冲突在对应提交前拒绝 | 三件批量生成不会只提交一部分；拾取输入失败保留同 tick 可修正重试且不重复生成 |
+
+### 快照、恢复与确定性
+
+- `EquipmentSupplyTimelineSnapshot` schema v1 只在完整 tick 之间导出，包含 Definition 身份、`nextTick` 和稳定排序的活跃 lifecycle；未完成 pickup 阶段拒绝快照，避免持久化半阶段。
+- 恢复重新执行 P1.1 lifecycle/合法波次校验，并校验每个 supply/instance 必须来自组合层注册的 wave/slot、当前 EquipmentSystem 必须存在同 Definition 且非 despawned 的 runtime。未知版本、未知字段、非安全 tick、重复身份和 authority 冲突均失败关闭且不改 EquipmentSystem。
+- 恢复后继续到 expireTick 与不中断对照组得到完全相同的结果、时间线快照和 EquipmentSystem 快照。
+- 本批没有修改 `packages/arena-match`、Replay V5、state hash 或黄金 Replay。上述确定性是隔离 Core 证据；MatchCore 事件收集、Replay/checkpoint/hash 接线属于 P1.2c 硬门。
+
+### 生命周期、性能与失败策略
+
+- world 状态在 expireTick 产生严格 `EquipmentExpired` payload 并直接从权威 runtime 集合删除；despawned 墓碑只清理不重复发事件；held runtime 保留。同波内被 P1.2a 替换回收的供给会依据严格 Recycled identity 同步移出活跃账本。
+- 生成/过期批次全量预检后一次同步提交。拾取阶段复用 P1.2a 原子事务；若可恢复拾取输入失败，已合法完成的 spawn/expire 阶段不回滚也不重复，Timeline 保持同 tick pending 并允许修正后重试。
+- 20 个连续波次的无渲染模拟中，world runtime 最大 3、活跃 lifecycle 最大 3；P1.2a 连续 1000 次替换后 runtime 始终为 1 的证据继续通过。
+- 本批没有墙钟、DOM、Three.js、平台 API、地图选择或表现层定时器。
+
+### P1.2b 独立评分（100 分）
+
+P1.2b 只评分隔离 Equipment Core 时间线小门；候选条件为总分至少 90，且每维至少达到该维满分的 80%。
+
+| 维度 | 满分 | 得分 | 达成率 | 判断 |
+|---|---:|---:|---:|---|
+| 权威 tick 与规则顺序 | 25 | 24 | 96% | 1200/2400、三件、600 tick 与 spawn→expire→pickup→action 已锁定；实际 MatchCore action 接线未开始 |
+| 原子性与 fail-closed | 20 | 19 | 95% | 批量生成/过期全量预检后提交，拾取失败同 tick 可重试；完整 MatchCore tick 中途异常仍属 P1.2c |
+| 快照恢复与确定性 | 20 | 18 | 90% | schema v1、恢复冲突、连续/恢复对照一致；黄金 Replay/checkpoint/hash 尚未接线 |
+| 生命周期与资源 | 15 | 14 | 93% | 599/600/601、held 保留、20 波次上限与1000替换均有证据；100+ seed 正式长局仍未完成 |
+| 依赖与兼容边界 | 10 | 9 | 90% | Rule→Core、单一写入者、普通1v1和既有Replay路径不变；正式生存Composition未接入 |
+| 测试与治理 | 10 | 9 | 90% | 定向、完整Node、单worker、类型、架构、构建和直接压力已覆盖；旧MatchCore stress CPU门仍未绿 |
+| **合计** | **100** | **93** | **93%** | **达到 P1.2b timeline-ready 小门并由主协调签核；不代表 P1、P1.2c 或真机完成** |
+
+### P1.2b 实际门禁证据
+
+| 门禁 | 2026-07-28 有效结果 |
+|---|---|
+| P1 合同定向 | 4 文件，38/38 通过 |
+| P1.2a/P1.2b + RuleEngine/MatchCore/Replay 相关 Node | 61/61 通过；其中 Timeline 8 项、EquipmentSystem 14 项，保留1000次替换用例 |
+| 完整 Node | 95 文件，727/727 通过 |
+| 完整治理 Vitest（单 worker） | 首次与完整 Node 并行时，研究原型两例超过5秒，133/134文件、596/598；失败文件随后独立6/6通过；无并行重负载全量复跑134文件、598/598通过；同波次替换生命周期修正后再次无并行重负载复跑134文件、598/598通过（82.59秒） |
+| 严格类型 / 包构建 | `npm run typecheck` 通过；52 packages、11 waves |
+| 架构与边界 | 架构39/39、Product边界、Presentation-Three边界通过 |
+| 三端构建 | Web / 抖音 / 微信通过；仅有既有的大 chunk 非阻断提示 |
+| P1.2b直接长期压力 | 20个波次，world runtime与active lifecycle最大值均为3 |
+| P1.2a直接替换压力 | 连续1000次替换通过，权威runtime始终为1 |
+| 旧 MatchCore `arena:stress` | 本轮1000/1000完成、0 invariant failure、0 non-finite、5 Replay验证，堆增长3.41 MB/32 MB；CPU tick 0.281954 ms超过0.25 ms并退出1。该旧链不执行新Timeline，继续作为P1总体风险，不记为P1.2b通过证据 |
+| 文档 / diff | 文档检查通过：256个 Markdown、800个本地链接、51条文档命令；`git diff --check` 通过 |
+
+### 风险、回滚与未完成项
+
+- 风险：P1.2c 接线时绕过 Timeline 直接生成/删除；动作在 pickup 前解析；MatchCore 快照只恢复 equipment 而漏恢复 timeline；Composition 销毁顺序遗漏 EquipmentSystem；把隔离事件数组误报为 Replay/hash 已接入。
+- 安全回滚点为已验收并推送的 `22b9fd0`。撤回新增 Timeline 文件、EquipmentSystem 时间线阶段、export、直接测试和本节台账即可，不触碰 P1.2a 或美术并行文件。
+- P1.2c 仍需：正式生存 Composition/MatchCore 接入，真实 MatchCore 事件序列，EquipmentSpawned/Expired/Recycled/Replaced 收集，内部快照、Replay V5、checkpoint、state hash 与黄金 Replay；实际 action 阶段必须接在 Timeline 成功返回之后。
+- 更后阶段仍需100+ seed正式长局、暂停/恢复、前后台、低表现帧率、Bot只读观察、Presentation/HUD/音频投影和Platform证据。P1、真机和发布均不得 advance。
 
 ## P1 总体未完成硬门
 
-- P1.2：P1.2a 已提供隔离的单槽原子替换/直接回收事务；Composition 消费、权威时间轴生成、世界实例接入、过期和 MatchCore 真实事件发射仍未完成。
+- P1.2：P1.2a 已提供隔离原子替换，P1.2b 已提供隔离权威时间线与过期；正式 Composition、MatchCore 调度和真实事件发射仍未完成。
 - Replay/hash：600 tick 回收与持有者原子替换的黄金 Replay；二次执行、checkpoint、序列化恢复和最终 hash 一致。
-- 事务矩阵：空槽/持有者、拒绝双持、599/600/601、过期与拾取同 tick、1/2/4 人竞争及输入顺序置换。
+- 事务矩阵：隔离Core已覆盖空槽/持有者、拒绝双持、599/600/601、过期与拾取同 tick、1/2/4 人竞争及输入置换；仍需在真实MatchCore/Replay中复验。
 - 生命周期矩阵：前摇、冷却、受击、掉落、淘汰、比赛结束、暂停恢复、前后台和低表现帧率。
 - 压力与资源：100+ seed、长局实例上限、内存和事件窗口有界。
 - Bot / Presentation / Platform：只读观察与普通移动、权威剩余 tick 和事件投影、无墙钟删除；这些必须在 Core 硬门通过后推进。
@@ -223,5 +298,5 @@ P1.2a 只评分 Core 事务小门；签核条件为总分至少 90，且每维�
 
 - 主要风险：后续 Composition 绕过 Registry；Core 只实现“先清空再赋值”的非原子替换；事件载荷和实际状态身份分叉；将生存 `pickupRadius` 静默推广为普通 1v1 全局策略；把合同测试误报为 Replay/hash 完成。
 - 回滚点：P1.1 的安全父提交为 `fb0bc40`。只删除 5 个 P1.1 新增合同文件，并撤回相应 package export、测试、架构边界、当前台账及索引入口，即可回到 `fb0bc40`；不得回滚到 `d6f9060`，以免误删已经验收的 A0.1 美术提交。本批没有存档、运行时状态或最终资产迁移。
-- 当前签核：开发自检、主协调代码审查、生命周期波次/加法溢出、1000 次有界替换、独立定向复跑和治理台账均通过；P1.1 `contract-ready` 与 P1.2a `core-transaction-ready` 均已由主协调签核（2026-07-28）。P1.2b 与 P1 总体仍未完成、不得 advance。
-- 提交状态：未 commit、未 push；本任务按主协调要求只完成状态收尾，提交由主协调后续处理。
+- 当前签核：P1.1 `contract-ready`、P1.2a `core-transaction-ready` 与 P1.2b `timeline-ready` 已由主协调签核（2026-07-28）。P1.2b 主协调独立审读了权威写入、失败关闭、同 tick 重试、快照恢复、连续替换与销毁边界，并独立复跑 Timeline 8 项和 EquipmentSystem 14 项通过；P1.2c 与 P1 总体仍未完成、不得 advance。
+- 提交状态：P1.2b 未 commit、未 push。

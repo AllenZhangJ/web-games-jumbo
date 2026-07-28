@@ -1,13 +1,16 @@
 import {
   ARENA_MATCH_EVENT,
+  EQUIPMENT_EXPIRY_REASON,
   EQUIPMENT_RECYCLE_REASON,
   EQUIPMENT_SUPPLY_EVENT_PAYLOAD_SCHEMA_VERSION,
   assertIntegerAtLeast,
   assertKnownKeys,
   assertNonEmptyString,
   cloneFrozenData,
+  createEquipmentExpiredEventPayload,
   createEquipmentRecycledEventPayload,
   createEquipmentReplacedEventPayload,
+  type EquipmentExpiredEventPayload,
   type EquipmentRecycledEventPayload,
   type EquipmentReplacedEventPayload,
 } from '@number-strategy-jump/arena-contracts';
@@ -37,6 +40,13 @@ import { serializeEquipmentRuntimeStates } from './equipment-serializer.js';
 
 const PICKUP_OPTIONS_KEYS = new Set(['participants', 'contestSeed']);
 const SUPPLY_PICKUP_OPTIONS_KEYS = new Set(['participants', 'supplies', 'contestSeed', 'tick']);
+const SUPPLY_TIMELINE_OPTIONS_KEYS = new Set(['tick', 'spawns', 'expirations']);
+const SUPPLY_TIMELINE_SPAWN_KEYS = new Set([
+  'lifecycle',
+  'definitionId',
+  'spawnId',
+  'position',
+]);
 const SUPPLY_LIFECYCLE_KEYS = new Set([
   'schemaVersion',
   'supplyDefinitionId',
@@ -87,6 +97,23 @@ export interface EquipmentSupplyPickupDecision {
 export interface EquipmentSupplyPickupTransactionResult {
   readonly decisions: readonly EquipmentSupplyPickupDecision[];
   readonly events: readonly EquipmentSupplyPickupEvent[];
+}
+
+export interface EquipmentSupplyTimelineSpawn {
+  readonly lifecycle: EquipmentSupplyLifecycle;
+  readonly definitionId: string;
+  readonly spawnId: string;
+  readonly position: EquipmentPosition;
+}
+
+export interface EquipmentSupplyExpiredEvent {
+  readonly type: typeof ARENA_MATCH_EVENT.EQUIPMENT_EXPIRED;
+  readonly payload: EquipmentExpiredEventPayload;
+}
+
+export interface EquipmentSupplyTimelinePhaseResult {
+  readonly spawned: readonly EquipmentRuntimeSnapshot[];
+  readonly events: readonly EquipmentSupplyExpiredEvent[];
 }
 
 function compareStrings(left: string, right: string): number {
@@ -222,6 +249,158 @@ export class EquipmentSystem {
       }
       this.#runtimes.set(runtime.instanceId, runtime);
       return createEquipmentRuntimeSnapshot(runtime);
+    });
+  }
+
+  applySupplyTimelinePhase(options: unknown): EquipmentSupplyTimelinePhaseResult {
+    return this.#runMutation(() => {
+      if (!this.#equipmentSupplyRegistry) {
+        throw new Error('EquipmentSystem 未配置 EquipmentSupplyRegistry。');
+      }
+      assertKnownKeys(options, SUPPLY_TIMELINE_OPTIONS_KEYS, 'EquipmentSystem supply timeline');
+      const tick = assertIntegerAtLeast(options.tick, 0, 'EquipmentSystem supply timeline tick');
+      if (!Number.isSafeInteger(tick)) {
+        throw new RangeError('EquipmentSystem supply timeline tick 必须是安全整数。');
+      }
+      if (!Array.isArray(options.spawns) || !Array.isArray(options.expirations)) {
+        throw new TypeError('EquipmentSystem supply timeline spawns/expirations 必须是数组。');
+      }
+      this.#assertOwnershipInvariants();
+
+      const pendingSpawns: Array<Readonly<{
+        lifecycle: EquipmentSupplyLifecycle;
+        runtime: EquipmentRuntimeState;
+      }>> = [];
+      const pendingSpawnIds = new Set<string>();
+      for (let index = 0; index < options.spawns.length; index += 1) {
+        const source = cloneFrozenData(
+          options.spawns[index],
+          `EquipmentSystem supply timeline spawn[${index}]`,
+        );
+        assertKnownKeys(
+          source,
+          SUPPLY_TIMELINE_SPAWN_KEYS,
+          `EquipmentSystem supply timeline spawn[${index}]`,
+        );
+        const lifecycleSource = cloneFrozenData(
+          source.lifecycle,
+          `EquipmentSystem supply timeline spawn[${index}].lifecycle`,
+        );
+        assertKnownKeys(
+          lifecycleSource,
+          SUPPLY_LIFECYCLE_KEYS,
+          `EquipmentSystem supply timeline spawn[${index}].lifecycle`,
+        );
+        const definitionId = assertNonEmptyString(
+          lifecycleSource.supplyDefinitionId,
+          `EquipmentSystem supply timeline spawn[${index}].supplyDefinitionId`,
+        );
+        const supplyDefinition = this.#equipmentSupplyRegistry.require(definitionId);
+        const lifecycle = createEquipmentSupplyLifecycle(lifecycleSource, supplyDefinition);
+        if (lifecycle.spawnTick !== tick) {
+          throw new RangeError(`supply ${lifecycle.supplyId} 只能在 spawnTick 生成。`);
+        }
+        if (
+          pendingSpawnIds.has(lifecycle.equipmentInstanceId)
+          || this.#runtimes.has(lifecycle.equipmentInstanceId)
+        ) throw new RangeError(`重复 equipment instance ${lifecycle.equipmentInstanceId}。`);
+        pendingSpawnIds.add(lifecycle.equipmentInstanceId);
+        const runtime = this.#spawner.createRuntime({
+          instanceId: lifecycle.equipmentInstanceId,
+          definitionId: source.definitionId,
+          spawnId: source.spawnId,
+          position: source.position,
+        });
+        pendingSpawns.push(Object.freeze({ lifecycle, runtime }));
+      }
+      pendingSpawns.sort((left, right) => compareStrings(
+        left.lifecycle.supplyId,
+        right.lifecycle.supplyId,
+      ));
+
+      const pendingExpirations: Array<Readonly<{
+        lifecycle: EquipmentSupplyLifecycle;
+        runtime: EquipmentRuntimeState;
+        event: EquipmentSupplyExpiredEvent | null;
+        remove: boolean;
+      }>> = [];
+      const expirationIds = new Set<string>();
+      for (let index = 0; index < options.expirations.length; index += 1) {
+        const lifecycleSource = cloneFrozenData(
+          options.expirations[index],
+          `EquipmentSystem supply timeline expiration[${index}]`,
+        );
+        const definitionId = assertNonEmptyString(
+          lifecycleSource.supplyDefinitionId,
+          `EquipmentSystem supply timeline expiration[${index}].supplyDefinitionId`,
+        );
+        const supplyDefinition = this.#equipmentSupplyRegistry.require(definitionId);
+        const lifecycle = createEquipmentSupplyLifecycle(lifecycleSource, supplyDefinition);
+        if (lifecycle.expireTick !== tick) {
+          throw new RangeError(`supply ${lifecycle.supplyId} 只能在 expireTick 过期。`);
+        }
+        if (
+          expirationIds.has(lifecycle.equipmentInstanceId)
+          || pendingSpawnIds.has(lifecycle.equipmentInstanceId)
+        ) throw new RangeError(`重复 supply expiration ${lifecycle.equipmentInstanceId}。`);
+        expirationIds.add(lifecycle.equipmentInstanceId);
+        const runtime = this.#requireRuntime(lifecycle.equipmentInstanceId);
+        this.#equipmentRegistry.require(runtime.definitionId);
+        const world = runtime.locationState === EQUIPMENT_LOCATION_STATE.SPAWNED
+          || runtime.locationState === EQUIPMENT_LOCATION_STATE.DROPPED;
+        const held = runtime.locationState === EQUIPMENT_LOCATION_STATE.HELD;
+        if (!world && !held && runtime.locationState !== EQUIPMENT_LOCATION_STATE.DESPAWNED) {
+          throw new Error(`supply ${lifecycle.supplyId} 状态不可判定。`);
+        }
+        const event = world
+          ? Object.freeze({
+            type: ARENA_MATCH_EVENT.EQUIPMENT_EXPIRED,
+            payload: createEquipmentExpiredEventPayload({
+              schemaVersion: EQUIPMENT_SUPPLY_EVENT_PAYLOAD_SCHEMA_VERSION,
+              supplyDefinitionId: lifecycle.supplyDefinitionId,
+              supplyId: lifecycle.supplyId,
+              equipmentInstanceId: lifecycle.equipmentInstanceId,
+              spawnTick: lifecycle.spawnTick,
+              expireTick: lifecycle.expireTick,
+              tick,
+              expiredEquipmentInstanceId: lifecycle.equipmentInstanceId,
+              reason: EQUIPMENT_EXPIRY_REASON.LIFETIME_EXPIRED,
+            }),
+          })
+          : null;
+        pendingExpirations.push(Object.freeze({
+          lifecycle,
+          runtime,
+          event,
+          remove: !held,
+        }));
+      }
+      pendingExpirations.sort((left, right) => compareStrings(
+        left.lifecycle.supplyId,
+        right.lifecycle.supplyId,
+      ));
+
+      const result = Object.freeze({
+        spawned: Object.freeze(pendingSpawns.map(({ runtime }) => (
+          createEquipmentRuntimeSnapshot(runtime)
+        ))),
+        events: Object.freeze(pendingExpirations.flatMap(({ event }) => event ? [event] : [])),
+      });
+      // Atomic authority commit: all registries, identities, states and payloads are validated above.
+      try {
+        for (const { runtime } of pendingSpawns) this.#runtimes.set(runtime.instanceId, runtime);
+        for (const { runtime, remove } of pendingExpirations) {
+          if (remove && !this.#runtimes.delete(runtime.instanceId)) {
+            throw new Error(`待过期 equipment ${runtime.instanceId} 已不在权威集合。`);
+          }
+        }
+      } catch (error) {
+        this.#destroyed = true;
+        this.#heldByParticipant.clear();
+        this.#runtimes.clear();
+        throw error;
+      }
+      return result;
     });
   }
 
