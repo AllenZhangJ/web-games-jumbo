@@ -103,6 +103,8 @@ export interface EquipmentSystemContract {
   getHeldEquipment(participantId: string): RuleEquipmentSnapshot | null;
   getSnapshot(instanceId: string): RuleEquipmentSnapshot;
   listSnapshots(): readonly RuleEquipmentSnapshot[];
+  applySupplyTimelinePhase?(options: unknown): unknown;
+  resolveSupplyPickups?(options: unknown): unknown;
   destroy(): void;
 }
 
@@ -149,6 +151,8 @@ export interface ArenaRuleEngineContract {
   getHeldEquipment(participantId: string): RuleEquipmentSnapshot | null;
   getEquipmentSnapshot(instanceId: string): RuleEquipmentSnapshot;
   listEquipmentSnapshots(): readonly RuleEquipmentSnapshot[];
+  applyEquipmentSupplyTimelinePhase?(options: unknown): unknown;
+  resolveEquipmentSupplyPickups?(options: unknown): unknown;
   spawnEquipment(options: unknown): RuleEquipmentSnapshot;
   resolveEquipmentPickups(options: unknown): readonly RuleEquipmentPickupDecision[];
   updateEquipmentLastSafePosition(
@@ -1052,6 +1056,22 @@ export class ArenaRuleEngine {
   listEquipmentSnapshots(): readonly RuleEquipmentSnapshot[] {
     this.#assertUsable();
     return this.#equipmentSystem.listSnapshots();
+  }
+
+  applyEquipmentSupplyTimelinePhase(options: unknown): unknown {
+    this.#assertUsable();
+    if (typeof this.#equipmentSystem.applySupplyTimelinePhase !== 'function') {
+      throw new Error('当前 EquipmentSystem 未启用供给时间线。');
+    }
+    return this.#equipmentSystem.applySupplyTimelinePhase(options);
+  }
+
+  resolveEquipmentSupplyPickups(options: unknown): unknown {
+    this.#assertUsable();
+    if (typeof this.#equipmentSystem.resolveSupplyPickups !== 'function') {
+      throw new Error('当前 EquipmentSystem 未启用供给替换事务。');
+    }
+    return this.#equipmentSystem.resolveSupplyPickups(options);
   }
 
   getContentHash(): string {

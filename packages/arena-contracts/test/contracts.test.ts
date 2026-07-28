@@ -12,6 +12,7 @@ import {
   createEquipmentExpiredEventPayload,
   createEquipmentRecycledEventPayload,
   createEquipmentReplacedEventPayload,
+  createEquipmentSpawnedEventPayload,
   createRng,
   createNeutralInputFrame,
   createArenaMatchSnapshotAudit,
@@ -27,6 +28,7 @@ import type {
   EquipmentExpiredEventPayload,
   EquipmentRecycledEventPayload,
   EquipmentReplacedEventPayload,
+  EquipmentSpawnedEventPayload,
 } from '../src/index.js';
 
 describe('Arena deterministic contracts', () => {
@@ -138,7 +140,7 @@ describe('Arena deterministic contracts', () => {
     expect(Object.isFrozen(ARENA_MATCH_EVENT)).toBe(true);
   });
 
-  it('publishes frozen versioned supply replacement, recycle and expiry payloads', () => {
+  it('publishes frozen versioned supply spawn, replacement, recycle and expiry payloads', () => {
     const identity = {
       schemaVersion: EQUIPMENT_SUPPLY_EVENT_PAYLOAD_SCHEMA_VERSION,
       supplyDefinitionId: 'arena-v2.survival-supply.v1',
@@ -147,6 +149,13 @@ describe('Arena deterministic contracts', () => {
       spawnTick: 1_200,
       expireTick: 1_800,
     };
+    const spawned: EquipmentSpawnedEventPayload = createEquipmentSpawnedEventPayload({
+      ...identity,
+      tick: identity.spawnTick,
+      equipmentDefinitionId: 'hammer',
+      spawnId: 'left',
+      position: { x: -1, y: 1, z: 0 },
+    });
     const replaced: EquipmentReplacedEventPayload = createEquipmentReplacedEventPayload({
       ...identity,
       tick: 1_250,
@@ -169,10 +178,12 @@ describe('Arena deterministic contracts', () => {
       reason: EQUIPMENT_EXPIRY_REASON.LIFETIME_EXPIRED,
     });
 
+    expect(spawned.tick).toBe(spawned.spawnTick);
     expect(replaced.nextEquipmentInstanceId).toBe(identity.equipmentInstanceId);
     expect(recycled.reason).toBe('replaced');
     expect(expired.tick).toBe(expired.expireTick);
-    expect([replaced, recycled, expired].every(Object.isFrozen)).toBe(true);
+    expect([spawned, replaced, recycled, expired].every(Object.isFrozen)).toBe(true);
+    expect(Object.isFrozen(spawned.position)).toBe(true);
   });
 
   it('rejects ambiguous or unsafe supply event payloads before publication', () => {
@@ -206,6 +217,30 @@ describe('Arena deterministic contracts', () => {
       ...replaced,
       nextEquipmentInstanceId: 'other-equipment',
     })).toThrow(/供给身份不一致/);
+    expect(() => createEquipmentSpawnedEventPayload({
+      schemaVersion: replaced.schemaVersion,
+      supplyDefinitionId: replaced.supplyDefinitionId,
+      supplyId: replaced.supplyId,
+      equipmentInstanceId: replaced.equipmentInstanceId,
+      spawnTick: replaced.spawnTick,
+      expireTick: replaced.expireTick,
+      tick: replaced.spawnTick + 1,
+      equipmentDefinitionId: 'hammer',
+      spawnId: 'left',
+      position: { x: 0, y: 1, z: 0 },
+    })).toThrow(/tick 必须等于 spawnTick/);
+    expect(() => createEquipmentSpawnedEventPayload({
+      schemaVersion: replaced.schemaVersion,
+      supplyDefinitionId: replaced.supplyDefinitionId,
+      supplyId: replaced.supplyId,
+      equipmentInstanceId: replaced.equipmentInstanceId,
+      spawnTick: replaced.spawnTick,
+      expireTick: replaced.expireTick,
+      tick: replaced.spawnTick,
+      equipmentDefinitionId: 'hammer',
+      spawnId: 'left',
+      position: { x: Number.NaN, y: 1, z: 0 },
+    })).toThrow(/有限数/);
     expect(() => createEquipmentRecycledEventPayload({
       schemaVersion: replaced.schemaVersion,
       supplyDefinitionId: replaced.supplyDefinitionId,

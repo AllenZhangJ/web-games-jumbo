@@ -14,6 +14,14 @@ export {
   createArenaV1MatchCore,
 } from './arena-v1-match-core.js';
 export {
+  ARENA_V2_SURVIVAL_SUPPLY_COMPOSITION_ID,
+  createArenaV2SurvivalSupplyMatchCore,
+} from './arena-v2-survival-supply-match-core.js';
+export type {
+  ArenaV2SurvivalSupplyComposition,
+  ArenaV2SurvivalSupplyMatchCoreOptions,
+} from './arena-v2-survival-supply-match-core.js';
+export {
   ArenaV1QuickMatchService,
   QuickMatchService,
 } from './quick-match-service.js';

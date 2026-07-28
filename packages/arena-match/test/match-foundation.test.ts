@@ -172,6 +172,35 @@ describe('arena-match authority foundation', () => {
     expect(createMatchStateHash(first)).toBe(createMatchStateHash(reordered));
   });
 
+  it('adds survival supply future state to hash without changing ordinary snapshots', () => {
+    const ordinary = snapshotFixture();
+    const lifecycle = {
+      schemaVersion: 1,
+      supplyDefinitionId: 'arena-v2.survival-supply.v1',
+      supplyId: 'arena-v2.survival-supply.v1:wave-0:slot-left',
+      equipmentInstanceId: 'arena-v2.survival-supply.v1:wave-0:slot-left:equipment',
+      spawnTick: 1_200,
+      expireTick: 1_800,
+    };
+    const supplied: ArenaInternalMatchSnapshot = {
+      ...ordinary,
+      equipmentSupplyTimeline: {
+        schemaVersion: 1,
+        supplyDefinitionId: lifecycle.supplyDefinitionId,
+        nextTick: 1_201,
+        activeSupplies: [lifecycle],
+      },
+    };
+    expect(createMatchStateHash(supplied)).not.toBe(createMatchStateHash(ordinary));
+    expect(createMatchStateHash({
+      ...supplied,
+      equipmentSupplyTimeline: {
+        ...supplied.equipmentSupplyTimeline!,
+        nextTick: 1_202,
+      },
+    })).not.toBe(createMatchStateHash(supplied));
+  });
+
   it('rejects non-finite or incomplete internal hash snapshots', () => {
     const snapshot = snapshotFixture();
     expect(() => createMatchStateHash({

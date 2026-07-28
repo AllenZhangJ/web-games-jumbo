@@ -35,11 +35,13 @@ export {
   createEquipmentExpiredEventPayload,
   createEquipmentRecycledEventPayload,
   createEquipmentReplacedEventPayload,
+  createEquipmentSpawnedEventPayload,
 } from './equipment-supply-event-payload.js';
 export type {
   EquipmentExpiredEventPayload,
   EquipmentRecycledEventPayload,
   EquipmentReplacedEventPayload,
+  EquipmentSpawnedEventPayload,
 } from './equipment-supply-event-payload.js';
 export { createSynchronousStoragePort } from './synchronous-storage-port.js';
 export type {

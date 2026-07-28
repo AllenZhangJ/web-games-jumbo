@@ -4,12 +4,14 @@ import {
   assertKnownKeys,
   assertNonEmptyString,
   cloneFrozenData,
+  createDeterministicDataHash,
 } from '@number-strategy-jump/arena-contracts';
 import type { EquipmentSupplyRegistryContract } from '@number-strategy-jump/arena-definitions';
 import {
   EQUIPMENT_LOCATION_STATE,
   type EquipmentPosition,
   type EquipmentRegistryContract,
+  type EquipmentRuntimeSnapshot,
 } from './equipment-runtime.js';
 import {
   EQUIPMENT_SUPPLY_LIFECYCLE_SCHEMA_VERSION,
@@ -17,10 +19,11 @@ import {
   type EquipmentSupplyLifecycle,
 } from './equipment-supply-lifecycle.js';
 import {
-  EquipmentSystem,
   type EquipmentSupplyExpiredEvent,
   type EquipmentSupplyPickupDecision,
   type EquipmentSupplyPickupEvent,
+  type EquipmentSupplySpawnedEvent,
+  type EquipmentSupplyTimelinePhaseResult,
 } from './equipment-system.js';
 
 export const EQUIPMENT_SUPPLY_TIMELINE_SNAPSHOT_SCHEMA_VERSION = 1 as const;
@@ -62,6 +65,7 @@ export interface EquipmentSupplyTimelineStepResult {
   readonly tick: number;
   readonly phaseOrder: readonly ['spawn', 'expire', 'pickup', 'action'];
   readonly spawned: readonly EquipmentSupplyLifecycle[];
+  readonly spawnedEvents: readonly EquipmentSupplySpawnedEvent[];
   readonly expiredEvents: readonly EquipmentSupplyExpiredEvent[];
   readonly pickupDecisions: readonly EquipmentSupplyPickupDecision[];
   readonly pickupEvents: readonly EquipmentSupplyPickupEvent[];
@@ -71,7 +75,17 @@ export interface EquipmentSupplyTimelineStepResult {
 interface PendingTick {
   readonly tick: number;
   readonly spawned: readonly EquipmentSupplyLifecycle[];
+  readonly spawnedEvents: readonly EquipmentSupplySpawnedEvent[];
   readonly expiredEvents: readonly EquipmentSupplyExpiredEvent[];
+}
+
+export interface EquipmentSupplyAuthorityContract {
+  applySupplyTimelinePhase(options: unknown): EquipmentSupplyTimelinePhaseResult;
+  resolveSupplyPickups(options: unknown): Readonly<{
+    decisions: readonly EquipmentSupplyPickupDecision[];
+    events: readonly EquipmentSupplyPickupEvent[];
+  }>;
+  getSnapshot(instanceId: string): EquipmentRuntimeSnapshot;
 }
 
 function compareStrings(left: string, right: string): number {
@@ -104,12 +118,52 @@ function createEquipmentInstanceId(supplyId: string): string {
   return `${supplyId}:equipment`;
 }
 
+function dataMethod(
+  value: unknown,
+  methodName: keyof EquipmentSupplyAuthorityContract,
+): (...args: unknown[]) => unknown {
+  if (!value || typeof value !== 'object') {
+    throw new TypeError('EquipmentSupplyTimelineSystem 需要 equipment authority。');
+  }
+  let current: object | null = value;
+  const visited = new Set<object>();
+  while (current !== null) {
+    if (visited.has(current) || visited.size >= 32) {
+      throw new TypeError('EquipmentSupplyTimelineSystem equipment authority 原型链无效。');
+    }
+    visited.add(current);
+    const descriptor = Object.getOwnPropertyDescriptor(current, methodName);
+    if (descriptor) {
+      if (!Object.hasOwn(descriptor, 'value') || typeof descriptor.value !== 'function') {
+        throw new TypeError(`EquipmentSupplyTimelineSystem authority.${methodName} 必须是数据方法。`);
+      }
+      return descriptor.value.bind(value) as (...args: unknown[]) => unknown;
+    }
+    current = Object.getPrototypeOf(current) as object | null;
+  }
+  throw new TypeError(`EquipmentSupplyTimelineSystem authority 缺少 ${methodName}()。`);
+}
+
+function createAuthorityContract(value: unknown): EquipmentSupplyAuthorityContract {
+  const apply = dataMethod(value, 'applySupplyTimelinePhase');
+  const resolve = dataMethod(value, 'resolveSupplyPickups');
+  const get = dataMethod(value, 'getSnapshot');
+  return Object.freeze({
+    applySupplyTimelinePhase: (options: unknown) => apply(options) as EquipmentSupplyTimelinePhaseResult,
+    resolveSupplyPickups: (options: unknown) => resolve(options) as ReturnType<
+      EquipmentSupplyAuthorityContract['resolveSupplyPickups']
+    >,
+    getSnapshot: (instanceId: string) => get(instanceId) as EquipmentRuntimeSnapshot,
+  });
+}
+
 export class EquipmentSupplyTimelineSystem {
   readonly #definitionId: string;
   readonly #equipmentRegistry: EquipmentRegistryContract;
   readonly #supplyRegistry: EquipmentSupplyRegistryContract;
-  readonly #equipmentSystem: EquipmentSystem;
+  readonly #equipmentSystem: EquipmentSupplyAuthorityContract;
   readonly #spawnSpecs: readonly EquipmentSupplySpawnSpec[];
+  readonly #contentHash: string;
   readonly #activeSupplies = new Map<string, EquipmentSupplyLifecycle>();
   #nextTick = 0;
   #pending: PendingTick | null = null;
@@ -127,12 +181,9 @@ export class EquipmentSupplyTimelineSystem {
     if (!supplyRegistry || typeof supplyRegistry.require !== 'function') {
       throw new TypeError('EquipmentSupplyTimelineSystem 需要只读 EquipmentSupplyRegistry。');
     }
-    if (!(equipmentSystem instanceof EquipmentSystem)) {
-      throw new TypeError('EquipmentSupplyTimelineSystem 需要 EquipmentSystem authority。');
-    }
     this.#equipmentRegistry = equipmentRegistry as EquipmentRegistryContract;
     this.#supplyRegistry = supplyRegistry as EquipmentSupplyRegistryContract;
-    this.#equipmentSystem = equipmentSystem;
+    this.#equipmentSystem = createAuthorityContract(equipmentSystem);
     this.#definitionId = assertNonEmptyString(
       source.supplyDefinitionId,
       'EquipmentSupplyTimelineSystem.supplyDefinitionId',
@@ -177,6 +228,10 @@ export class EquipmentSupplyTimelineSystem {
         ),
       });
     }).sort((left, right) => compareStrings(left.slotId, right.slotId)));
+    this.#contentHash = createDeterministicDataHash({
+      definition,
+      spawnSpecs: this.#spawnSpecs,
+    }, 'Equipment supply timeline content');
 
     if (source.snapshot !== undefined) this.#restore(source.snapshot);
   }
@@ -184,6 +239,11 @@ export class EquipmentSupplyTimelineSystem {
   get nextTick(): number {
     this.#assertUsable();
     return this.#nextTick;
+  }
+
+  getContentHash(): string {
+    this.#assertUsable();
+    return this.#contentHash;
   }
 
   #assertUsable(): void {
@@ -244,6 +304,7 @@ export class EquipmentSupplyTimelineSystem {
     return Object.freeze({
       tick,
       spawned: Object.freeze(spawned),
+      spawnedEvents: phase.spawnedEvents,
       expiredEvents: phase.events,
     });
   }
@@ -286,6 +347,7 @@ export class EquipmentSupplyTimelineSystem {
       tick,
       phaseOrder: Object.freeze(['spawn', 'expire', 'pickup', 'action'] as const),
       spawned: pending.spawned,
+      spawnedEvents: pending.spawnedEvents,
       expiredEvents: pending.expiredEvents,
       pickupDecisions: pickup.decisions,
       pickupEvents: pickup.events,

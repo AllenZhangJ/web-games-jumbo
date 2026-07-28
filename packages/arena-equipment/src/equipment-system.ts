@@ -10,9 +10,11 @@ import {
   createEquipmentExpiredEventPayload,
   createEquipmentRecycledEventPayload,
   createEquipmentReplacedEventPayload,
+  createEquipmentSpawnedEventPayload,
   type EquipmentExpiredEventPayload,
   type EquipmentRecycledEventPayload,
   type EquipmentReplacedEventPayload,
+  type EquipmentSpawnedEventPayload,
 } from '@number-strategy-jump/arena-contracts';
 import type { EquipmentSupplyRegistryContract } from '@number-strategy-jump/arena-definitions';
 import {
@@ -38,7 +40,11 @@ import {
 import { EquipmentSpawner } from './equipment-spawner.js';
 import { serializeEquipmentRuntimeStates } from './equipment-serializer.js';
 
-const PICKUP_OPTIONS_KEYS = new Set(['participants', 'contestSeed']);
+const PICKUP_OPTIONS_KEYS = new Set([
+  'participants',
+  'contestSeed',
+  'excludedEquipmentInstanceIds',
+]);
 const SUPPLY_PICKUP_OPTIONS_KEYS = new Set(['participants', 'supplies', 'contestSeed', 'tick']);
 const SUPPLY_TIMELINE_OPTIONS_KEYS = new Set(['tick', 'spawns', 'expirations']);
 const SUPPLY_TIMELINE_SPAWN_KEYS = new Set([
@@ -111,8 +117,14 @@ export interface EquipmentSupplyExpiredEvent {
   readonly payload: EquipmentExpiredEventPayload;
 }
 
+export interface EquipmentSupplySpawnedEvent {
+  readonly type: typeof ARENA_MATCH_EVENT.EQUIPMENT_SPAWNED;
+  readonly payload: EquipmentSpawnedEventPayload;
+}
+
 export interface EquipmentSupplyTimelinePhaseResult {
   readonly spawned: readonly EquipmentRuntimeSnapshot[];
+  readonly spawnedEvents: readonly EquipmentSupplySpawnedEvent[];
   readonly events: readonly EquipmentSupplyExpiredEvent[];
 }
 
@@ -384,6 +396,21 @@ export class EquipmentSystem {
         spawned: Object.freeze(pendingSpawns.map(({ runtime }) => (
           createEquipmentRuntimeSnapshot(runtime)
         ))),
+        spawnedEvents: Object.freeze(pendingSpawns.map(({ lifecycle, runtime }) => Object.freeze({
+          type: ARENA_MATCH_EVENT.EQUIPMENT_SPAWNED,
+          payload: createEquipmentSpawnedEventPayload({
+            schemaVersion: EQUIPMENT_SUPPLY_EVENT_PAYLOAD_SCHEMA_VERSION,
+            supplyDefinitionId: lifecycle.supplyDefinitionId,
+            supplyId: lifecycle.supplyId,
+            equipmentInstanceId: lifecycle.equipmentInstanceId,
+            spawnTick: lifecycle.spawnTick,
+            expireTick: lifecycle.expireTick,
+            tick,
+            equipmentDefinitionId: runtime.definitionId,
+            spawnId: runtime.spawnId,
+            position: runtime.position,
+          }),
+        }))),
         events: Object.freeze(pendingExpirations.flatMap(({ event }) => event ? [event] : [])),
       });
       // Atomic authority commit: all registries, identities, states and payloads are validated above.
@@ -426,6 +453,20 @@ export class EquipmentSystem {
       if (participantById.size !== this.#participantIds.length) {
         throw new RangeError('EquipmentSystem pickup 必须包含全部 participants。');
       }
+      const excludedIds = new Set<string>();
+      if (options.excludedEquipmentInstanceIds !== undefined) {
+        if (!Array.isArray(options.excludedEquipmentInstanceIds)) {
+          throw new TypeError('excludedEquipmentInstanceIds 必须是数组。');
+        }
+        for (const value of options.excludedEquipmentInstanceIds) {
+          const instanceId = assertNonEmptyString(value, 'excluded equipment instanceId');
+          if (excludedIds.has(instanceId)) {
+            throw new RangeError(`重复 excluded equipment ${instanceId}。`);
+          }
+          this.#requireRuntime(instanceId);
+          excludedIds.add(instanceId);
+        }
+      }
       const decisions = this.#pickupResolver.resolve({
         participants: this.#participantIds.map((id) => {
           const participant = participantById.get(id);
@@ -435,7 +476,9 @@ export class EquipmentSystem {
             eligible: participant.eligible && !this.#heldByParticipant.has(id),
           };
         }),
-        equipment: [...this.#runtimes.values()].map(createEquipmentRuntimeSnapshot),
+        equipment: [...this.#runtimes.values()]
+          .filter(({ instanceId }) => !excludedIds.has(instanceId))
+          .map(createEquipmentRuntimeSnapshot),
         contestSeed,
       });
       const pending = decisions.map((decision) => {

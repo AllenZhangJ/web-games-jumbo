@@ -25,6 +25,13 @@ interface EquipmentSupplyEventIdentityPayload {
   readonly tick: number;
 }
 
+export interface EquipmentSpawnedEventPayload extends EquipmentSupplyEventIdentityPayload {
+  readonly schemaVersion: typeof EQUIPMENT_SUPPLY_EVENT_PAYLOAD_SCHEMA_VERSION;
+  readonly equipmentDefinitionId: string;
+  readonly spawnId: string;
+  readonly position: Readonly<{ x: number; y: number; z: number }>;
+}
+
 export interface EquipmentReplacedEventPayload extends EquipmentSupplyEventIdentityPayload {
   readonly schemaVersion: typeof EQUIPMENT_SUPPLY_EVENT_PAYLOAD_SCHEMA_VERSION;
   readonly participantId: string;
@@ -55,6 +62,13 @@ const IDENTITY_KEYS = [
   'expireTick',
   'tick',
 ] as const;
+const SPAWNED_KEYS = new Set([
+  ...IDENTITY_KEYS,
+  'equipmentDefinitionId',
+  'spawnId',
+  'position',
+]);
+const POSITION_KEYS = new Set(['x', 'y', 'z']);
 const REPLACED_KEYS = new Set([
   ...IDENTITY_KEYS,
   'participantId',
@@ -111,6 +125,35 @@ function parseIdentity(
     expireTick,
     tick,
   };
+}
+
+export function createEquipmentSpawnedEventPayload(value: unknown): EquipmentSpawnedEventPayload {
+  const source = cloneFrozenData(value, 'EquipmentSpawnedEventPayload');
+  assertKnownKeys(source, SPAWNED_KEYS, 'EquipmentSpawnedEventPayload');
+  const identity = parseIdentity(source, 'EquipmentSpawnedEventPayload', {
+    requireBeforeExpiry: true,
+  });
+  if (identity.tick !== identity.spawnTick) {
+    throw new RangeError('EquipmentSpawnedEventPayload.tick 必须等于 spawnTick。');
+  }
+  assertKnownKeys(source.position, POSITION_KEYS, 'EquipmentSpawnedEventPayload.position');
+  const position = { x: 0, y: 0, z: 0 };
+  for (const axis of ['x', 'y', 'z'] as const) {
+    if (!Number.isFinite(source.position[axis])) {
+      throw new RangeError(`EquipmentSpawnedEventPayload.position.${axis} 必须是有限数。`);
+    }
+    position[axis] = source.position[axis] as number;
+  }
+  return Object.freeze({
+    schemaVersion: EQUIPMENT_SUPPLY_EVENT_PAYLOAD_SCHEMA_VERSION,
+    ...identity,
+    equipmentDefinitionId: assertNonEmptyString(
+      source.equipmentDefinitionId,
+      'EquipmentSpawnedEventPayload.equipmentDefinitionId',
+    ),
+    spawnId: assertNonEmptyString(source.spawnId, 'EquipmentSpawnedEventPayload.spawnId'),
+    position: Object.freeze(position),
+  });
 }
 
 export function createEquipmentReplacedEventPayload(value: unknown): EquipmentReplacedEventPayload {

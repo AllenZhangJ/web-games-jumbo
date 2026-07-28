@@ -782,7 +782,7 @@ test('Arena V1 application composition only wires governed authority and product
     'arena-v1-composition 只能组合已治理的规则、内容、比赛与产品边界。',
   );
   const files = await listJavaScript(path.resolve('packages/arena-v1-composition/src'));
-  assert.equal(files.length, 10);
+  assert.equal(files.length, 11);
   for (const file of files) {
     const source = await readFile(file, 'utf8');
     assert.doesNotMatch(

@@ -19,12 +19,17 @@ import {
 import {
   createArenaConfigHash,
   createMatchStateHash,
+  type ArenaInternalEquipmentSupplyTimelineSnapshot,
   type ArenaInternalMatchSnapshot,
 } from './state-hash.js';
 import {
   ARENA_MATCH_EVENT as EVENT,
   combineCleanupFailure,
   createDeterministicDataHash,
+  createEquipmentExpiredEventPayload,
+  createEquipmentRecycledEventPayload,
+  createEquipmentReplacedEventPayload,
+  createEquipmentSpawnedEventPayload,
   createRng,
   deriveSeed,
   normalizeInputFrames,
@@ -96,6 +101,44 @@ export interface MatchCoreMapFactoryContext {
   }>;
 }
 
+export interface MatchCoreEquipmentSupplyAuthority {
+  applySupplyTimelinePhase(options: unknown): unknown;
+  resolveSupplyPickups(options: unknown): unknown;
+  getSnapshot(instanceId: string): unknown;
+}
+
+export interface MatchCoreEquipmentSupplyTimelineStepResult {
+  readonly tick: number;
+  readonly phaseOrder: readonly ['spawn', 'expire', 'pickup', 'action'];
+  readonly spawnedEvents: readonly Readonly<{ readonly type: string; readonly payload: UnknownRecord }>[];
+  readonly expiredEvents: readonly Readonly<{ readonly type: string; readonly payload: UnknownRecord }>[];
+  readonly pickupDecisions: readonly Readonly<{
+    readonly participantId: string;
+    readonly equipmentInstanceId: string;
+    readonly kind: 'picked-up' | 'replaced';
+  }>[];
+  readonly pickupEvents: readonly Readonly<{ readonly type: string; readonly payload: UnknownRecord }>[];
+  readonly nextPhase: 'action';
+}
+
+export interface MatchCoreEquipmentSupplyTimelineContract {
+  step(options: unknown): MatchCoreEquipmentSupplyTimelineStepResult;
+  getSnapshot(): ArenaInternalEquipmentSupplyTimelineSnapshot;
+  getContentHash(): string;
+  destroy(): void;
+}
+
+export interface MatchCoreEquipmentSupplyTimelineFactoryContext {
+  readonly participantIds: readonly string[];
+  readonly config: ArenaMatchConfig;
+  readonly matchSeed: number;
+  readonly equipmentDefinitionCatalog: Readonly<{
+    require(definitionId: string): unknown;
+  }>;
+  readonly equipmentAuthority: MatchCoreEquipmentSupplyAuthority;
+  readonly isEquipmentPositionValid: (position: unknown) => boolean;
+}
+
 export interface MatchCoreOptions {
   readonly seed?: unknown;
   readonly config?: unknown;
@@ -103,6 +146,9 @@ export interface MatchCoreOptions {
   readonly ruleEngineFactory?: (context: MatchCoreFactoryContext) => unknown;
   readonly mapSystemFactory?: (context: MatchCoreMapFactoryContext) => unknown;
   readonly characterRegistry?: unknown;
+  readonly equipmentSupplyTimelineFactory?: (
+    context: MatchCoreEquipmentSupplyTimelineFactoryContext
+  ) => unknown;
 }
 
 export interface MatchReplayMetadata {
@@ -197,6 +243,20 @@ function adoptFactoryResource<T>(
   }
 }
 
+function assertEquipmentSupplyTimeline(
+  value: unknown,
+): MatchCoreEquipmentSupplyTimelineContract {
+  if (!value || typeof value !== 'object') {
+    throw new TypeError('equipmentSupplyTimelineFactory 必须返回对象。');
+  }
+  for (const methodName of ['step', 'getSnapshot', 'getContentHash', 'destroy'] as const) {
+    if (findDataMethod(value, methodName) === null) {
+      throw new TypeError(`equipment supply timeline 缺少 ${methodName}()。`);
+    }
+  }
+  return value as MatchCoreEquipmentSupplyTimelineContract;
+}
+
 /**
  * Authoritative, renderer-free 1v1 arena simulation. All time is integer ticks;
  * callers may sample snapshots at any render rate without changing outcomes.
@@ -215,6 +275,7 @@ export class MatchCore {
   #map: ArenaMapSystemContract | null;
   #participantSystem: MatchParticipantSystem | null;
   #timeline: MatchTimelineSystem | null;
+  #equipmentSupplyTimeline: MatchCoreEquipmentSupplyTimelineContract | null;
   #terminalTimelineSnapshot: MatchTimelineSnapshot | null;
   #rngStreams: Readonly<Record<string, DeterministicRng>>;
   #events: ArenaAuthorityEvent[];
@@ -257,6 +318,17 @@ export class MatchCore {
 
   #cleanupConstructionFailure(error: unknown): Error {
     const cleanupErrors: Error[] = [];
+    try {
+      if (typeof this.#equipmentSupplyTimeline?.destroy === 'function') {
+        this.#equipmentSupplyTimeline.destroy();
+      }
+      this.#equipmentSupplyTimeline = null;
+    } catch (cleanupError) {
+      cleanupErrors.push(normalizeThrownError(
+        cleanupError,
+        'MatchCore equipment supply timeline 构造清理失败',
+      ));
+    }
     try {
       if (typeof this.#timeline?.destroy === 'function') this.#matchTimeline.destroy();
       this.#timeline = null;
@@ -318,6 +390,7 @@ export class MatchCore {
     ruleEngineFactory,
     mapSystemFactory,
     characterRegistry,
+    equipmentSupplyTimelineFactory,
   }: MatchCoreOptions = {}) {
     if (typeof physicsFactory !== 'function') throw new TypeError('physicsFactory 必须是函数。');
     if (typeof ruleEngineFactory !== 'function') {
@@ -326,6 +399,10 @@ export class MatchCore {
     if (typeof mapSystemFactory !== 'function') {
       throw new TypeError('MatchCore 需要显式 mapSystemFactory。');
     }
+    if (
+      equipmentSupplyTimelineFactory !== undefined
+      && typeof equipmentSupplyTimelineFactory !== 'function'
+    ) throw new TypeError('equipmentSupplyTimelineFactory 必须是函数。');
     this.#characterRegistry = assertCharacterRegistry(characterRegistry);
     this.#matchSeed = normalizeSeed(seed);
     this.#config = createArenaMatchConfig(config);
@@ -345,6 +422,7 @@ export class MatchCore {
     this.#characterRuntimes = new Map<string, CharacterRuntimeReference>();
     this.#participantSystem = null;
     this.#timeline = null;
+    this.#equipmentSupplyTimeline = null;
     this.#physics = null;
     this.#movement = null;
     this.#movementPhysicsPort = null;
@@ -413,10 +491,52 @@ export class MatchCore {
         assertArenaMapSystem,
         'mapSystemFactory',
       );
+      if (equipmentSupplyTimelineFactory !== undefined) {
+        const applySupplyPhase = findDataMethod(
+          this.#ruleEngine,
+          'applyEquipmentSupplyTimelinePhase',
+        );
+        const resolveSupplyPickups = findDataMethod(
+          this.#ruleEngine,
+          'resolveEquipmentSupplyPickups',
+        );
+        if (applySupplyPhase === null || resolveSupplyPickups === null) {
+          throw new TypeError('生存供给 Composition 需要 RuleEngine supply authority。');
+        }
+        this.#equipmentSupplyTimeline = adoptFactoryResource(
+          equipmentSupplyTimelineFactory({
+            participantIds: this.config.participantIds,
+            config: this.config,
+            matchSeed: this.matchSeed,
+            equipmentDefinitionCatalog: Object.freeze({
+              require: (definitionId) => this.#ruleEngine.requireEquipmentDefinition(definitionId),
+            }),
+            equipmentAuthority: Object.freeze({
+              applySupplyTimelinePhase: (options: unknown) => applySupplyPhase.call(
+                this.#ruleEngine,
+                options,
+              ),
+              resolveSupplyPickups: (options: unknown) => resolveSupplyPickups.call(
+                this.#ruleEngine,
+                options,
+              ),
+              getSnapshot: (instanceId: string) => (
+                this.#ruleEngine.getEquipmentSnapshot(instanceId)
+              ),
+            }),
+            isEquipmentPositionValid: (position) => this.#isEquipmentPositionValid(position),
+          }),
+          assertEquipmentSupplyTimeline,
+          'equipmentSupplyTimelineFactory',
+        );
+      }
       this.#ruleContentHash = createDeterministicDataHash({
         combat: this.#ruleEngine.getContentHash(),
         map: this.#mapSystem.getContentHash(),
         characters: this.#characterRegistry.list(),
+        ...(this.#equipmentSupplyTimeline === null ? {} : {
+          equipmentSupplyTimeline: this.#equipmentSupplyTimeline.getContentHash(),
+        }),
       }, 'Arena authority content');
       if (typeof this.#ruleContentHash !== 'string' || !/^[0-9a-f]{8}$/.test(this.#ruleContentHash)) {
         throw new TypeError('ruleEngine content hash 必须是 8 位十六进制字符串。');
@@ -541,6 +661,61 @@ export class MatchCore {
     }
   }
 
+  #stepEquipmentSupplyTimeline(): readonly string[] {
+    const timeline = this.#equipmentSupplyTimeline;
+    if (timeline === null) return Object.freeze([]);
+    const result = timeline.step({
+      tick: this.tick,
+      participants: this.config.participantIds.map((id) => ({
+        id,
+        position: { ...this.#physicsWorld.getCharacterState(id).position },
+        eligible: this.phase !== ARENA_MATCH_PHASE.PREPARING && this.#participants.canAct(id),
+      })),
+      contestSeed: deriveSeed(this.matchSeed, `equipment-supply:${this.tick}`),
+    });
+    if (
+      result.tick !== this.tick
+      || result.nextPhase !== 'action'
+      || result.phaseOrder.length !== 4
+      || result.phaseOrder.some((phase, index) => (
+        phase !== ['spawn', 'expire', 'pickup', 'action'][index]
+      ))
+    ) throw new Error('Equipment supply timeline 阶段合同不一致。');
+    for (const event of result.spawnedEvents) {
+      if (event.type !== EVENT.EQUIPMENT_SPAWNED) {
+        throw new RangeError(`供给生成阶段包含未知事件 ${event.type}。`);
+      }
+      this.#emit(event.type, { payload: createEquipmentSpawnedEventPayload(event.payload) });
+    }
+    for (const event of result.expiredEvents) {
+      if (event.type !== EVENT.EQUIPMENT_EXPIRED) {
+        throw new RangeError(`供给过期阶段包含未知事件 ${event.type}。`);
+      }
+      this.#emit(event.type, { payload: createEquipmentExpiredEventPayload(event.payload) });
+    }
+    for (const event of result.pickupEvents) {
+      if (event.type === EVENT.EQUIPMENT_RECYCLED) {
+        this.#emit(event.type, { payload: createEquipmentRecycledEventPayload(event.payload) });
+      } else if (event.type === EVENT.EQUIPMENT_REPLACED) {
+        this.#emit(event.type, { payload: createEquipmentReplacedEventPayload(event.payload) });
+      } else {
+        throw new RangeError(`供给拾取阶段包含未知事件 ${event.type}。`);
+      }
+    }
+    for (const decision of result.pickupDecisions) {
+      if (decision.kind !== 'picked-up') continue;
+      const equipment = this.#ruleEngine.getEquipmentSnapshot(decision.equipmentInstanceId);
+      this.#emit(EVENT.EQUIPMENT_PICKED_UP, {
+        participantId: decision.participantId,
+        equipmentInstanceId: equipment.instanceId,
+        equipmentDefinitionId: equipment.definitionId,
+      });
+    }
+    return Object.freeze(timeline.getSnapshot().activeSupplies.map((supply) => (
+      supply.equipmentInstanceId
+    )));
+  }
+
   step(inputFrames: readonly unknown[] = []): readonly ArenaAuthorityEvent[] {
     this.#assertUsable();
     if (this.phase === ARENA_MATCH_PHASE.ENDED) throw new Error('比赛已经结束，不能继续 step。');
@@ -586,6 +761,7 @@ export class MatchCore {
   #stepNormalized(frames: readonly ArenaInputFrame[]): readonly ArenaAuthorityEvent[] {
     this.#matchTimeline.beginStep();
     if (this.phase === ARENA_MATCH_PHASE.PREPARING) {
+      this.#stepEquipmentSupplyTimeline();
       for (const id of this.config.participantIds) this.#physicsWorld.setMovementIntent(id, 0, 0);
       this.#physicsWorld.step(this.config.fixedDeltaSeconds);
       if (this.#matchTimeline.advancePreparation()) this.#startRunningIfNeeded();
@@ -597,7 +773,8 @@ export class MatchCore {
     this.#advanceParticipantTimers();
     this.#ruleEngine.advanceTimers();
     this.#advanceMapState();
-    this.#updateEquipmentState();
+    const supplyEquipmentIds = this.#stepEquipmentSupplyTimeline();
+    this.#updateEquipmentState(supplyEquipmentIds);
     const frameById = new Map(frames.map((frame) => [frame.participantId, frame]));
     const movementPreparation = this.#prepareMovement(frameById);
     const startedActions = this.#ruleEngine.resolveActions({
@@ -813,7 +990,7 @@ export class MatchCore {
     }
   }
 
-  #updateEquipmentState(): void {
+  #updateEquipmentState(excludedEquipmentInstanceIds: readonly string[] = []): void {
     const participants = this.config.participantIds.map((id) => {
       const physics = this.#physicsWorld.getCharacterState(id);
       if (
@@ -831,6 +1008,7 @@ export class MatchCore {
     const pickups = this.#ruleEngine.resolveEquipmentPickups({
       participants,
       contestSeed: deriveSeed(this.matchSeed, `equipment-pickup:${this.tick}`),
+      ...(excludedEquipmentInstanceIds.length === 0 ? {} : { excludedEquipmentInstanceIds }),
     });
     for (const pickup of pickups) {
       const equipment = this.#ruleEngine.getEquipmentSnapshot(pickup.equipmentInstanceId);
@@ -1169,6 +1347,11 @@ export class MatchCore {
     if (includeInternal) {
       return Object.freeze({
         ...snapshot,
+        ...(this.#equipmentSupplyTimeline === null ? {} : {
+          equipmentSupplyTimeline: cloneSnapshotData(
+            this.#equipmentSupplyTimeline.getSnapshot(),
+          ),
+        }),
         rngStates: Object.freeze(Object.fromEntries(
           Object.entries(this.#rngStreams).map(([name, rng]) => [name, rng.snapshot()]),
         )),
@@ -1237,6 +1420,7 @@ export class MatchCore {
     if (
       this.#destroyed
       && !this.#timeline
+      && !this.#equipmentSupplyTimeline
       && !this.#participantSystem
       && !this.#movement
       && !this.#rules
@@ -1248,6 +1432,14 @@ export class MatchCore {
     this.#events.length = 0;
     this.#characterRuntimes.clear();
     const errors: Error[] = [];
+    if (this.#equipmentSupplyTimeline) {
+      try {
+        this.#equipmentSupplyTimeline.destroy();
+        this.#equipmentSupplyTimeline = null;
+      } catch (error) {
+        errors.push(normalizeThrownError(error, 'MatchCore equipment supply timeline 清理失败'));
+      }
+    }
     if (this.#timeline) {
       try {
         this.#terminalTimelineSnapshot = this.#matchTimeline.getSnapshot();

@@ -22,6 +22,7 @@ import {
   isMovementCommandKind,
 } from '@number-strategy-jump/arena-movement';
 import type { ArenaMatchConfig } from '@number-strategy-jump/arena-match';
+import type { EquipmentSupplyRegistryContract } from '@number-strategy-jump/arena-definitions';
 
 const MOVEMENT_COMMAND_ADAPTER = Object.freeze({
   isCommandKind: isMovementCommandKind,
@@ -32,10 +33,12 @@ export function createArenaV1RuleEngine({
   participantIds,
   config,
   authorityContent = null,
+  equipmentSupplyRegistry,
 }: Readonly<{
   participantIds: readonly string[];
   config: ArenaMatchConfig;
   authorityContent?: ArenaV1AuthorityContent | null;
+  equipmentSupplyRegistry?: EquipmentSupplyRegistryContract;
 }>): ArenaRuleEngineContract {
   if (!config || typeof config !== 'object') {
     throw new TypeError('createArenaV1RuleEngine 需要已验证 match config。');
@@ -56,7 +59,10 @@ export function createArenaV1RuleEngine({
     targetingRegistry: createDefaultTargetingRegistry(),
     effectRegistry: createDefaultActionEffectRegistry(createMovementActionEffectHandlers()),
     commandRegistry: createDefaultRuleCommandRegistry(),
-    createEquipmentSystem: (options) => new EquipmentSystem(options),
+    createEquipmentSystem: (options) => new EquipmentSystem({
+      ...options,
+      ...(equipmentSupplyRegistry === undefined ? {} : { equipmentSupplyRegistry }),
+    }),
     movementCommandAdapter: MOVEMENT_COMMAND_ADAPTER,
     movementCandidateProvider: new MovementActionCandidateProvider({
       actionRegistry,

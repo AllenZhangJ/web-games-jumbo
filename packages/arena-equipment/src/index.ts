@@ -39,6 +39,7 @@ export type {
   EquipmentSupplyPickupEvent,
   EquipmentSupplyPickupTransactionResult,
   EquipmentSupplyExpiredEvent,
+  EquipmentSupplySpawnedEvent,
   EquipmentSupplyTimelinePhaseResult,
   EquipmentSupplyTimelineSpawn,
 } from './equipment-system.js';
@@ -56,6 +57,7 @@ export {
   EquipmentSupplyTimelineSystem,
 } from './equipment-supply-timeline-system.js';
 export type {
+  EquipmentSupplyAuthorityContract,
   EquipmentSupplySpawnSpec,
   EquipmentSupplyTimelineSnapshot,
   EquipmentSupplyTimelineStepResult,

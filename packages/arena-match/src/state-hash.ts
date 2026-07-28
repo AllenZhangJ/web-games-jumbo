@@ -4,8 +4,25 @@ import {
   type ArenaMatchSnapshot,
 } from '@number-strategy-jump/arena-contracts';
 
+export interface ArenaInternalEquipmentSupplyLifecycle {
+  readonly schemaVersion: number;
+  readonly supplyDefinitionId: string;
+  readonly supplyId: string;
+  readonly equipmentInstanceId: string;
+  readonly spawnTick: number;
+  readonly expireTick: number;
+}
+
+export interface ArenaInternalEquipmentSupplyTimelineSnapshot {
+  readonly schemaVersion: number;
+  readonly supplyDefinitionId: string;
+  readonly nextTick: number;
+  readonly activeSupplies: readonly ArenaInternalEquipmentSupplyLifecycle[];
+}
+
 export type ArenaInternalMatchSnapshot = ArenaMatchSnapshot & Readonly<{
   rngStates: Readonly<Record<string, number>>;
+  equipmentSupplyTimeline?: ArenaInternalEquipmentSupplyTimelineSnapshot;
 }>;
 
 function finiteInteger(value: number, scale = 1_000_000): number {
@@ -102,6 +119,27 @@ export function createMatchStateHash(snapshot: ArenaInternalMatchSnapshot): stri
       equipment.cooldownRemainingTicks,
       equipment.revision,
     );
+  }
+  if (snapshot.equipmentSupplyTimeline !== undefined) {
+    const supply = snapshot.equipmentSupplyTimeline;
+    fields.push(
+      'equipment-supply-timeline',
+      supply.schemaVersion,
+      supply.supplyDefinitionId,
+      supply.nextTick,
+    );
+    for (const lifecycle of [...supply.activeSupplies].sort((left, right) => (
+      compareText(left.supplyId, right.supplyId)
+    ))) {
+      fields.push(
+        lifecycle.schemaVersion,
+        lifecycle.supplyDefinitionId,
+        lifecycle.supplyId,
+        lifecycle.equipmentInstanceId,
+        lifecycle.spawnTick,
+        lifecycle.expireTick,
+      );
+    }
   }
   if (!snapshot.map || !Array.isArray(snapshot.map.surfaces) || !Array.isArray(snapshot.map.occurrences)) {
     throw new TypeError('状态 hash 缺少 map runtime 快照。');

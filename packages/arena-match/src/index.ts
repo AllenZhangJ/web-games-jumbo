@@ -43,7 +43,11 @@ export {
   createArenaConfigHash,
   createMatchStateHash,
 } from './state-hash.js';
-export type { ArenaInternalMatchSnapshot } from './state-hash.js';
+export type {
+  ArenaInternalEquipmentSupplyLifecycle,
+  ArenaInternalEquipmentSupplyTimelineSnapshot,
+  ArenaInternalMatchSnapshot,
+} from './state-hash.js';
 export {
   ARENA_MATCH_EVENT,
   MatchCore,
@@ -51,6 +55,10 @@ export {
 export type {
   ArenaAuthorityEvent,
   MatchCoreFactoryContext,
+  MatchCoreEquipmentSupplyAuthority,
+  MatchCoreEquipmentSupplyTimelineContract,
+  MatchCoreEquipmentSupplyTimelineFactoryContext,
+  MatchCoreEquipmentSupplyTimelineStepResult,
   MatchCoreMapFactoryContext,
   MatchCoreOptions,
   MatchReplayMetadata,

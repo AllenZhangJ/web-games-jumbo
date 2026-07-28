@@ -12,6 +12,7 @@ import {
   assertCharacterRegistry,
   createStaticMapDefinition,
   type MapDefinition,
+  type EquipmentSupplyRegistryContract,
 } from '@number-strategy-jump/arena-definitions';
 import {
   MatchCore,
@@ -33,6 +34,8 @@ const MATCH_CORE_OPTION_KEYS = new Set([
   'ruleEngineFactory',
   'mapSystemFactory',
   'characterRegistry',
+  'equipmentSupplyRegistry',
+  'equipmentSupplyTimelineFactory',
 ]);
 
 interface MapRegistryContract {
@@ -137,9 +140,16 @@ export function createArenaV1MatchCore(options: unknown = {}): MatchCore {
     createArenaMatchConfig(configOverrides),
     { mapRegistry, characterRegistry },
   );
+  const equipmentSupplyRegistry = dataField(options, 'equipmentSupplyRegistry');
   const ruleEngineFactory = dataField(options, 'ruleEngineFactory')
     ?? ((context: Parameters<NonNullable<MatchCoreOptions['ruleEngineFactory']>>[0]) => (
-    createArenaV1RuleEngine({ ...context, authorityContent })
+    createArenaV1RuleEngine({
+      ...context,
+      authorityContent,
+      ...(equipmentSupplyRegistry === undefined ? {} : {
+        equipmentSupplyRegistry: equipmentSupplyRegistry as EquipmentSupplyRegistryContract,
+      }),
+    })
   ));
   const mapSystemFactory = dataField(options, 'mapSystemFactory')
     ?? ((context: Parameters<NonNullable<MatchCoreOptions['mapSystemFactory']>>[0]) => (
@@ -155,5 +165,11 @@ export function createArenaV1MatchCore(options: unknown = {}): MatchCore {
     ruleEngineFactory: ruleEngineFactory as NonNullable<MatchCoreOptions['ruleEngineFactory']>,
     mapSystemFactory: mapSystemFactory as NonNullable<MatchCoreOptions['mapSystemFactory']>,
     characterRegistry: authorityContent.characterRegistry,
+    ...(dataField(options, 'equipmentSupplyTimelineFactory') === undefined ? {} : {
+      equipmentSupplyTimelineFactory: dataField(
+        options,
+        'equipmentSupplyTimelineFactory',
+      ) as NonNullable<MatchCoreOptions['equipmentSupplyTimelineFactory']>,
+    }),
   });
 }
