@@ -3,15 +3,16 @@
 ## 状态
 
 - 阶段：P1 自动替换与 10 秒权威回收。
-- 当前小门：P1.2c-2「原子全系统 checkpoint、生存黄金 Replay 与 100+ seed 长局」。
-- 当前结论：P1.2c-2 `atomic-checkpoint-golden-ready` 已由主协调于 2026-07-28 签核；P1.1、P1.2a、P1.2b 与 P1.2c-1 已于 2026-07-28 签核。
-- P1 总体结论：**未完成、不得 advance**。P1.2c-2 不包含 4 人参与者模型、Bot、Presentation、Platform 或真机；新旧两条 stress 的 0.25ms/tick CPU 门仍为红色硬门。
+- 当前小门：P1 Core 性能整改「普通 1v1 与正式生存 CPU 硬门」。
+- 当前结论：性能整改 `candidate`；additional candidate Proxy 的 TOCTOU/普通属性读取回归已完成严格快照修复，普通 1v1 与正式生存各完成隔离五轮，CPU 硬门通过，修复后完整门禁已复跑。clean `9d87e7e` 的 `mini game.js` 已超预算 2,666 bytes，当前候选再增加 1,305 bytes、总超预算 3,971 bytes；因此只能签 P1 Core CPU 性能小门候选，不能签 Platform 或 P1 advance。P1.1、P1.2a、P1.2b、P1.2c-1 与 P1.2c-2 已于 2026-07-28 签核。
+- P1 总体结论：**未完成、不得 advance**。当前 CPU 证据不能从修复前候选继承；4 人参与者模型、Bot、Presentation、Platform 与真机仍未完成。
 - P1.1 实现审计起始基线：`d6f906008d0af1ed0133a199a8dc9e15cb1d23d0`。
 - P1.1 提交父节点：`fb0bc404508bf9d7f34df53fedfaf20d31239591`。`d6f9060..fb0bc40` 之间仅包含已经独立验收的 A0.1 美术生产合同与阶段门禁文档，不包含 P1.1 代码，不改变 P1.1 行为审计结论。
 - P1.2a 实现审计起始基线：`8e3e6eff6724612e83b124aa2ae6574a3967af9e`；提交父节点为 `4420d4b585025cd6999e5becf6a6f4d10b895063`，实际提交为 `22b9fd0e39b83de0b6a3ed766a2a66f3d2f67b1d`。`8e3e6ef..4420d4b` 仅包含已经独立验收的 A0.2.1 来源权利包，不改变 P1.2a 行为审计结论。
 - P1.2b 实现审计起始基线为 `22b9fd0e39b83de0b6a3ed766a2a66f3d2f67b1d`，实际签核提交为 `7f9f09b6dfeb8b68a0d9ea64aa013bd348b14099`。
 - P1.2c-1 实现审计起始基线为 `7f9f09b6dfeb8b68a0d9ea64aa013bd348b14099`，已签核、提交并推送为 `8de2997a76601afce18b26d8126fb5cb24ca6feb`。
-- P1.2c-2 实现审计起始基线为 `8de2997a76601afce18b26d8126fb5cb24ca6feb`；当前实际父节点与安全回滚点为 `484d012934b6097043a6041f73b580699287ca39`。`8de2997..484d012` 仅为已独立签核的 A0.2.2 美术来源/参考板提交，不改变 c-2 行为审计，不计入开发证据。
+- P1.2c-2 实现审计起始基线为 `8de2997a76601afce18b26d8126fb5cb24ca6feb`，实际签核提交为 `5d26a4f`；其提交父节点为 `484d012934b6097043a6041f73b580699287ca39`。`8de2997..484d012` 仅为已独立签核的 A0.2.2 美术来源/参考板提交，不改变 c-2 行为审计，不计入开发证据。
+- 性能整改实现审计起始基线为 `5d26a4f`；当前实际父节点与安全回滚点为 `9d87e7e`。`dd786a9..9d87e7e` 仅包含已签核并推送的 A1.0 合同，不改变性能行为证据，也不计入开发证据。
 - 证据日期：2026-07-28。
 
 ## 前置条件与依据
@@ -426,13 +427,143 @@ P1.2b 只评分隔离 Equipment Core 时间线小门；候选条件为总分至�
 - 生产参与者仍严格为 2 人。4 人没有通过，而是 P2 计划阶段边界；不得用 EquipmentSystem 隔离 4 人竞争测试冒充生产支持。
 - Bot、HUD、音频、Presentation、Platform 和真机仍未接入。P1.2c-2 签核也不能使 P1 总体 advance。
 
+## P1 Core 性能整改（候选）
+
+### 范围、前置条件与行为映射
+
+- 本小门只移除 Rule/Core 正式路径中的重复数据扫描、重复描述符读取与候选深克隆；没有降低 match/seed/tick、动作或验证规模，没有修改 0.25ms/tick 门槛，也没有增加仅供 stress 使用的旁路。
+- `ArenaRuleEngine` 仍是既有 Rule 组合入口，`ActionResolver` 仍执行候选完整校验与稳定裁决。优化只把 `additionalCandidates` 外层/内层数组改为一次严格数据描述符快照；候选对象仍由原 Resolver 验证，不增加状态写入者、缓存或第二 tick 路径。
+- 公共 Definition 数据克隆仍拒绝 Symbol、访问器、不可枚举字段、不安全键、循环和非有限值，并按键排序深冻结；实现复用第一次描述符检查得到的数据值，移除了随后再次批量读取描述符的重复工作。
+- 没有改动 Supply、Equipment、MatchCore、事件、Replay、state hash、RNG、浮点、tick 或 destroy 合同。普通 1v1 与生存使用同一生产 Rule/Core 路径；生存 Timeline 增量没有单独特判。
+
+### 证据化热点与优化裁决
+
+- P1.2c-2 已签核基线：旧普通 1v1 平均 CPU 0.281072ms/tick，正式生存 P95 0.311562ms/tick，均超过 0.25ms。
+- 在不缩小工作量的 CPU profile 中，旧链带 profiler 为 0.322727ms/tick；主要采样为 `cloneData` 17260ms、`ownDataKeys` 11152ms、GC 3569ms、`assertKnownKeys` 2873ms、`cloneSnapshotData` 2371ms 和 Resolver 2369ms。调用归因集中在 `getActionAffordance` 对 additional candidate/actor 的重复克隆，而非 Timeline。
+- 生存 profile 带 profiler为 P50 0.295139、P95 0.344202ms/tick；`cloneData` 26675ms、`ownDataKeys` 16681ms、GC 4784ms、`assertKnownKeys` 3889ms、Resolver 3190ms，Timeline 自身仅约 200ms 采样。
+- 第一项优化后 `cloneAdditionalCandidates` 采样降至约 281ms，但正式生存探索轮 P95 仍为 0.258325ms，故未停止整改。第二项复用严格描述符扫描后才进入正式稳定性矩阵。
+- 没有引入缓存，因而没有缓存失效、跨 match 污染或 destroy 时残留引用；快照只在同步调用栈内存在并冻结。
+
+### 端产物基线对照（不把已有红门改写为本批通过）
+
+- clean `9d87e7e` 基线的 `mini game.js` 为 1,575,530 bytes，相对 1,572,864 bytes 上限已超 2,666 bytes；该事实说明 Platform 预算在本批之前已是红门。
+- 当前性能候选产物为 1,576,835 bytes，相对同一上限超 3,971 bytes；相对 clean 基线新增 1,305 bytes。该回归属于本批必须暴露的治理结果，不能因基线本来已超限而豁免，也不能把 CPU 通过写成 Platform 通过。
+- 因此本批结论严格限定为“P1 Core CPU 性能小门候选”：CPU 与 Core 资源证据可候选验收，Platform 产物预算保持红色，P1 总体不得 advance。
+
+### 首轮候选的空闲环境五轮矩阵（已被代码修订取代）
+
+执行环境为 macOS 26.5.1（25F80）、Apple M4 10 核、24GiB、arm64、Node v20.19.5。每轮均由新的 npm/Node 进程串行执行。协调发现并行美术自审可能与早期测量重叠后，美术任务明确暂停全部构建、类型、测试和生成命令；重叠期间即使为绿色的旧链 0.207195/0.211991ms 与生存 P95 0.231866ms 均标记为可能污染，**不计入正式五轮**。
+
+| 正式轮次 | 普通 1v1 平均 CPU ms/tick | 生存 P50 | 生存 P95 | 生存 P99 | 生存最坏单场 |
+|---:|---:|---:|---:|---:|---:|
+| 1 | 0.204078 | 0.206273 | 0.232407 | 0.316271 | 0.490639 |
+| 2 | 0.202974 | 0.204638 | 0.226558 | 0.294717 | 0.476954 |
+| 3 | 0.204444 | 0.206035 | 0.222456 | 0.301864 | 0.514678 |
+| 4 | 0.204864 | 0.203730 | 0.228392 | 0.302951 | 0.473085 |
+| 5 | 0.205857 | 0.206184 | 0.231598 | 0.309191 | 0.478410 |
+
+- 普通 1v1 五轮平均值的 P50 为 0.204444ms、P95/最坏为 0.205857ms；相对签核基线下降约 27.3%，五轮均低于 0.25ms。
+- 生存五轮 P95 的 P50 为 0.228392ms、P95/最坏为 0.232407ms；相对签核基线下降约 26.7%，五轮均低于 0.25ms。表中 P99/最坏是诊断数据，不替代冻结的 P95 硬门。
+- 每轮普通链均 1000/1000 完赛、1026775 tick、1000 个唯一终局 hash、5 个 Replay、0 invariant/non-finite，固定 75501 个事件及各类型计数不变，堆增长 3.39–3.52MB/32MB。
+- 每轮生存链均 120/120、300000 tick、120 个唯一终局 hash、60 场同物竞争、0 invariant/non-finite；runtime/lifecycle/event 最大值固定为 3/3/9（上限 3/5/10），堆增长 3.65–4.05MB/32MB。
+
+上述矩阵证明首轮优化方向有性能余量，但主协调随后发现首轮 `cloneAdditionalCandidates` 在 `assertKnownKeys(entry)` 后直接读取原始 `entry.participantId` / `entry.candidates`。unknown Proxy 可令 `get` trap 返回与已验证 descriptor 不同的值或产生副作用，构成 TOCTOU 和“访问器零执行”语义退化。因此首轮候选被拒绝；表中五轮不再作为当前代码的正式 CPU 通过证据，也不得用于签核。
+
+### 协调审查修订与当前静态结论
+
+- `snapshotDataArray` 现在从一次 `length` own data descriptor 固定长度，不再读取原数组 `length`；随后按固定长度逐个读取 own data descriptor，并要求 `Reflect.ownKeys` 精确等于 `length + 0..n-1`，拒绝隐藏索引、重复键、稀疏、访问器、Symbol 与额外字段。
+- additional candidate entry 现在经一次严格浅层 record snapshot：验证普通对象原型、known keys、enumerable own data descriptors，从 descriptor 取值写入冻结副本；participant/candidates 后续只读副本，不再直接读取 unknown entry。
+- Proxy 正向测试令外层数组和 entry 的 `get` trap 直接抛错，生产调用仍成功且计数均为 0；分叉测试令 descriptor participant 为 `unknown`、普通 `get` 伪装为 `player-1`，系统按 descriptor 拒绝且 `get` 计数为 0；新增 ownKeys 隐藏索引和 ownKeys/descriptor 不一致负向覆盖，所有 `get` 仍为 0。稀疏、访问器、额外字段、unknown entry 字段继续负向覆盖。
+- additional candidate 快照校验已前移到 `applyCommitmentInputs` 之前；任何 Proxy/shape/identity 失败发生在 ActionExecution 写入前，同一 tick 可用合法输入重试，不产生半 commitment 状态。
+- 修改后第一次定向 Node 为 21/22，原因是未先重建 workspace package，测试加载了仍含旧 `value.length` 的构建产物；52-package 重建后当前定向 Proxy/commitment 测试为 12/12。该次构建顺序错误保留为过程事实，不计绿。
+- 修复后 200-match 微基准为 0.212429ms/tick、200 个唯一 hash、5 Replay、0 invariant/non-finite。随后正式旧链前三轮为 0.215083/0.204463/0.206760ms，第四轮为 0.288566ms 并触发预算失败、使第五轮未执行。
+- 主协调只读确认第四轮期间新启动了 iOS Simulator Runner、Xcode `ibtoold` 和大量模拟器服务，另有 Virtualization VM 高负载；这些进程与红轮时间重叠。红轮及原因必须保留，不能作为普通噪声删除，也不能用前三轮或修复前五轮补齐。按协调指令，当前暂停所有性能采样且不终止外部进程，等待真正空闲后从零重跑连续 5+5 轮。
+
+### 修复后正式隔离 5+5 轮矩阵（当前候选证据）
+
+状态更新：上一条关于“等待真正空闲后重跑”的记录为过程状态；正式隔离矩阵现已完成。执行环境为 macOS 26.5.1（25F80）、Apple M4 10 核、24GiB、arm64、Node v20.19.5。预检连续三次确认没有 Runner、booted simulator、`xcodebuild`、`ibtooll` 或活跃构建/测试；Colima VM 与容器未达到协调规定的阻断条件。每轮均从新进程启动、串行执行，修复前五轮和并行重负载污染前三轮不计入本表。每轮前后记录关键负载；最后一轮命令结束后的独立采样曾见 VM 12.5%、WebKit 7.4%，发生在产品计时结束后，不作为任何 CPU 轮次数据，也不补跑或拼接矩阵。
+
+普通 1v1 正式 `npm run arena:stress`：
+
+| 轮次 | 完赛/总场 | 总 tick | 平均 CPU ms/tick | 堆增长 | 结果 |
+|---:|---:|---:|---:|---:|---|
+| 1 | 1000/1000 | 1026775 | 0.200071 | 3.47 MB | 通过 |
+| 2 | 1000/1000 | 1026775 | 0.199807 | 3.42 MB | 通过 |
+| 3 | 1000/1000 | 1026775 | 0.200820 | 3.46 MB | 通过 |
+| 4 | 1000/1000 | 1026775 | 0.200614 | 3.48 MB | 通过 |
+| 5 | 1000/1000 | 1026775 | 0.199767 | 3.47 MB | 通过 |
+
+五轮普通链均为 0 invariant failure、0 non-finite、1000 个唯一终局 hash、5 个 Replay 验证、75501 个事件；事件类型计数与修复前基线一致，平均 CPU 最大 0.200820ms/tick，低于 0.25ms 硬门。
+
+正式生存 `npm run arena:survival:stress`：
+
+| 轮次 | 完赛/总场 | 总 tick | P50 | P95 | P99 | 最坏单 tick | 堆增长 | 结果 |
+|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| 1 | 120/120 | 300000 | 0.202408 | 0.214875 | 0.296396 | 0.466465 | 4.09 MB | 通过 |
+| 2 | 120/120 | 300000 | 0.200701 | 0.213946 | 0.295238 | 0.464600 | 4.02 MB | 通过 |
+| 3 | 120/120 | 300000 | 0.201676 | 0.213469 | 0.296042 | 0.468264 | 3.66 MB | 通过 |
+| 4 | 120/120 | 300000 | 0.203005 | 0.227698 | 0.290674 | 0.468424 | 3.86 MB | 通过 |
+| 5 | 120/120 | 300000 | 0.202596 | 0.214166 | 0.292837 | 0.467355 | 3.83 MB | 通过 |
+
+五轮生存链均为 60 场同物竞争、120 个唯一终局 hash、0 invariant failure、0 non-finite；最大 runtime/lifecycle/event 窗口固定为 3/3/9（上限 3/5/10），P95 最大 0.227698ms/tick，低于 0.25ms 硬门。P99/最坏仅作诊断，不替代冻结的 P95 门。
+
+该矩阵只证明当前 P1 Core 性能候选和资源边界，不证明 P1 总体完成；旧 `arena:stress` 红轮及其外部重负载原因继续保留为历史证据。
+
+### 失败关闭、确定性与生命周期自审
+
+- 竞态/重入：优化不新增异步点、共享缓存、可变静态变量或 authority 写入；原 commit 重入保护与同 tick 顺序不变。
+- 错误兜底：稀疏候选数组、访问器和额外字段在读取候选或进入 Resolver 前拒绝；访问器读取次数锁定为 0。Definition 对象仍先完成全部描述符/键校验再递归克隆。
+- 边界与主流程：空数组、多个 participant 候选和稳定顺序设计上沿用既有语义；修复后 Proxy/commitment 定向 12/12、完整 Node 738/738、架构 39/39 均通过。
+- 生命周期/资源：没有常驻缓存、临时 Manager 或跨 match 所有权；destroy 无新增清理分支。修复后普通五轮堆增长 3.42–3.48MB、生存五轮 3.66–4.09MB，runtime/lifecycle/event 窗口仍在 3/3/9 上限内。
+- 确定性/Replay/hash：静态 diff 未改事件/hash/Replay/RNG字段；修复后普通黄金 Replay 4/4（manifest `a53b401d`）、生存黄金 Replay 1/1（manifest `dd30e771`）均复跑通过，未发现漂移。
+- 普通 1v1：未启用生存 Timeline，也没有内容或 hash 合同字段变化；修复后五轮平均 CPU 0.199767–0.200820ms/tick，1000 个唯一终局 hash 与事件计数稳定，旧 1v1 兼容性候选通过。
+- 回退：若严格快照出现未覆盖输入，可整体撤回本小门的两个生产实现和一项负向测试，不需要 schema、存档或 Replay 迁移。
+
+### 性能整改候选评分（100分）
+
+| 维度 | 满分 | 得分 | 达成率 | 判断 |
+|---|---:|---:|---:|---|
+| Profiling 与根因证据 | 20 | 19 | 95% | 两链 profile、调用归因、分步结果和未达标中间轮均保留；未将历史污染轮抹除 |
+| 等价优化与 fail-closed | 20 | 18 | 90% | 严格描述符/数组边界保持；未引入缓存或旁路，Proxy/commitment 12/12；但产物相对 clean 基线新增 1,305 bytes |
+| 确定性与兼容性 | 20 | 19 | 95% | 事件、黄金 Replay、hash、RNG/tick 语义复跑无漂移；P1 总体仍有未完成边界 |
+| CPU、资源与生命周期 | 20 | 20 | 100% | 普通与生存各独立五轮通过，资源窗口有界，未降低负载或 0.25ms 门槛 |
+| 测试与治理 | 20 | 16 | 80% | Node/治理/类型/架构/黄金语料通过；clean 基线与当前候选均违反产物预算，且曾有一次 Node runner 混用，虽已纠正但不满分 |
+| **合计** | **100** | **92** | **92%** | **达到 P1 Core CPU 性能候选评分门；Platform 红门未关闭，不代表 P1 advance** |
+
+### 性能整改门禁证据状态
+
+| 门禁 | 2026-07-28 候选结果 |
+|---|---|
+| Proxy/TOCTOU 定向 | workspace 52-package 重建后 Node 12/12；覆盖 get trap 0、descriptor/value 分叉、隐藏索引、ownKeys/descriptor 不一致和真实 commitment 同 tick retry |
+| 完整 Node | 96 文件、738/738 通过 |
+| 单 worker 治理 | 134 文件、599/599 通过；按 `--maxWorkers=1 --minWorkers=1` 复跑 |
+| 严格类型 / 包构建 / lint | `typecheck:app` 通过；`build:packages` 52/52、11 waves；lint 通过 |
+| 架构与边界 | 架构 39/39 通过；错误的 Node runner 混跑记录为过程事实，随后按正确 runner 单独通过 |
+| 黄金 Replay | 普通 4/4，manifest `a53b401d`；生存 1/1，manifest `dd30e771` |
+| 三端构建 | `build` 与 `arena:build:verify` 通过；`arena:build:budget` 的 Douyin/WeChat 最大交付产物均 1,576,835 bytes，超过 1,572,864 上限 3,971 bytes；clean `9d87e7e` 同一 `mini game.js` 为 1,575,530 bytes、已超 2,666 bytes，本批相对回归 +1,305 bytes，Platform 预算门保持红色 |
+| 文档 / diff | 文档检查 263 markdown/834 local links/53 commands 通过；`git diff --check` 通过，并行A1.1文件不计入开发成果 |
+
+### 本轮台账严格自审
+
+- 范围核对：本轮只更新本台账；未修改生产代码、测试、美术文档或美术来源包，工作树中的并行 A1.1 dirty 文件不纳入 P1 证据。
+- 证据核对：clean `9d87e7e` 与当前候选的 `mini game.js` 均按同一 1,572,864-byte 上限对照；已明确记录基础红门与本批 +1,305-byte 回归，没有把 `build:budget` 红结果写成通过。
+- 命令核对：一次将架构 Node 测试与治理 Vitest 文件混跑的命令被记录为 runner 误用并排除；随后架构 39/39 与单 worker 治理 599/599 均使用各自正确入口复跑通过。
+- 污染核对：修复前五轮、并行重负载污染前三轮和污染期间第四轮红结果均保留，未拼接为当前 5+5；最后一轮产品计时结束后的 VM/WebKit 峰值只作环境事实，不进入 CPU 统计。
+- 结论核对：评分由 94 下调为 92（各维度不低于 80%）；结论仅为 P1 Core CPU 性能小门候选，Platform、P1 总体和 `advance` 均保持 fail closed。
+
+### 风险、回滚与阶段边界
+
+- 安全回滚点为 `9d87e7e`；只撤回 `arena-rule-engine.ts`、`definition-utils.ts`、对应负向测试和本节台账，不得回滚 `dd786a9..9d87e7e` 间已签核的 A1.0 合同。
+- 保留风险：CPU 数据依赖当前机器与进程隔离，需主协调独立复跑签核；未来候选数据结构扩展必须继续保持严格 descriptor 边界，不能绕过 Resolver 校验。
+- 性能 CPU 小门可提交主协调候选验收；Douyin/WeChat 交付预算仍分别超限 3,971 bytes，且 Bot、Presentation、Platform、前后台/真机生命周期和发布证据仍未开始或未完成，4 人生产权威参与者仍为 P2 边界。
+
 ## P1 总体未完成硬门
 
-- P1.2 Core：c-2 已补齐并由主协调签核隔离重演式原子全系统 checkpoint、生存黄金 Replay/篡改矩阵和 120 seed 资源长局；CPU 硬门仍未关闭。
+- P1.2 Core：c-2 已补齐并由主协调签核隔离重演式原子全系统 checkpoint、生存黄金 Replay/篡改矩阵和 120 seed 资源长局；性能 CPU 小门当前已有 5+5 候选证据，但不改变 P1 仍受 Platform 预算、Bot、Presentation、真机等硬门阻断。
 - Replay/hash：Replay V5 保持兼容，内部 checkpoint schema v1 和黄金生存 Replay 已有候选证据；未来如引入直接快照，必须新 schema 且不得静默替换当前重演恢复语义。
 - 事务矩阵：生产2人MatchCore已覆盖1200/1800、同tick拾取后动作、同波替换及竞争输入置换；4人生产权威参与者模型属于P2，不能把隔离EquipmentSystem 4人测试误报为P1通过。
 - 生命周期矩阵：Core 候选已覆盖前摇继续、淘汰与比赛结束恢复；Session 暂停、前后台、低表现帧率和真机仍未验收。
-- 压力与资源：120 seed 实例/lifecycle/事件窗口/内存有界已有候选证据；新旧 stress CPU 均超 0.25ms/tick，仍是 P1 总体阻断门。
+- 压力与资源：120 seed 实例/lifecycle/事件窗口/内存有界；修复前 CPU 五轮已失去当前代码证明力，修复后旧链第四轮受已确认外部重负载污染并红门；其后真正隔离的普通与生存各五轮均通过，历史红轮继续保留。
 - Bot / Presentation / Platform：只读观察与普通移动、权威剩余 tick 和事件投影、无墙钟删除；这些必须在 Core 硬门通过后推进。
 - 正式生存 Mode/HUD 不得在上述 P1 硬门关闭前 advance。
 
@@ -440,5 +571,5 @@ P1.2b 只评分隔离 Equipment Core 时间线小门；候选条件为总分至�
 
 - 主要风险：后续 Composition 绕过 Registry；Core 只实现“先清空再赋值”的非原子替换；事件载荷和实际状态身份分叉；将生存 `pickupRadius` 静默推广为普通 1v1 全局策略；把合同测试误报为 Replay/hash 完成。
 - 回滚点：P1.1 的安全父提交为 `fb0bc40`。只删除 5 个 P1.1 新增合同文件，并撤回相应 package export、测试、架构边界、当前台账及索引入口，即可回到 `fb0bc40`；不得回滚到 `d6f9060`，以免误删已经验收的 A0.1 美术提交。本批没有存档、运行时状态或最终资产迁移。
-- 当前签核：P1.1 `contract-ready`、P1.2a `core-transaction-ready`、P1.2b `timeline-ready`、P1.2c-1 `integration-replay-ready` 与 P1.2c-2 `atomic-checkpoint-golden-ready` 已由主协调签核（2026-07-28）；P1.2c-1 已提交并推送为 `8de2997`。P1.2c-2 主协调独立审读了隔离候选重演、身份/事件/hash 校验、失败清理、黄金语料隔离和 O(tick) 风险，并独立复跑 checkpoint、篡改、生存/旧黄金共 14 项通过。P1 总体受 CPU、Bot、Presentation、Platform 与真机硬门阻断，不得 advance。
-- 提交状态：P1.2c-2 未 commit、未 push；当前 HEAD `484d012` 仅比审计基线多已签核 A0.2.2。
+- 当前签核：P1.1 `contract-ready`、P1.2a `core-transaction-ready`、P1.2b `timeline-ready`、P1.2c-1 `integration-replay-ready` 与 P1.2c-2 `atomic-checkpoint-golden-ready` 已由主协调签核（2026-07-28）；P1.2c-2 已提交并推送为 `5d26a4f`。性能整改为 `candidate`，等待主协调独立验收；P1 总体仍受 Platform 预算、Bot、Presentation 与真机硬门阻断，不得 advance。
+- 提交状态：性能整改未 commit、未 push；当前 HEAD `9d87e7e` 比性能审计基线只多已签核并推送的 A1.0 合同。

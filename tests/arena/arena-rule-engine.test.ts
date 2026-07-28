@@ -1,15 +1,24 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import type { ArenaInputFrame } from '@number-strategy-jump/arena-contracts';
+import {
+  ActionRegistry,
+  EquipmentRegistry,
+  createActionDefinition,
+} from '@number-strategy-jump/arena-definitions';
 import type {
   ArenaRuleEngineContract,
   RuleActor,
   RuleImpulse,
   RuleMutationPorts,
 } from '@number-strategy-jump/arena-core';
-import { createArenaV1RuleEngine } from '@number-strategy-jump/arena-v1-composition';
+import {
+  createArenaV1AuthorityContent,
+  createArenaV1RuleEngine,
+} from '@number-strategy-jump/arena-v1-composition';
 import { createArenaMatchConfig } from '@number-strategy-jump/arena-match';
 import {
+  createArenaV2WeaponCandidateContentRegistries,
   STAGE4_ACTION_ID,
   STAGE4_EQUIPMENT_ID,
 } from '@number-strategy-jump/arena-v1-content';
@@ -22,6 +31,46 @@ function required<T>(value: T | null | undefined, name: string): T {
 function createEngine(configOverrides: Record<string, unknown> = {}): ArenaRuleEngineContract {
   const config = createArenaMatchConfig({ preparingTicks: 0, ...configOverrides });
   return createArenaV1RuleEngine({ participantIds: config.participantIds, config });
+}
+
+function createCommitmentEngine(): ArenaRuleEngineContract {
+  const config = createArenaMatchConfig({ preparingTicks: 0 });
+  const base = createArenaV2WeaponCandidateContentRegistries();
+  const baseAction = base.actionRegistry.require(STAGE4_ACTION_ID.BASE_PUSH);
+  const actionRegistry = new ActionRegistry(base.actionRegistry.list().map((definition) => (
+    definition.id === baseAction.id
+      ? createActionDefinition({
+        ...definition,
+        commitment: {
+          commitTicks: 1,
+          expireTicks: 4,
+          expireOutcome: 'cancel',
+          canTurn: true,
+          levelThresholds: [1],
+        },
+      })
+      : definition
+  )));
+  const equipmentRegistry = new EquipmentRegistry({
+    definitions: base.equipmentRegistry.list(),
+    actionRegistry,
+  });
+  const authorityContent = createArenaV1AuthorityContent(config);
+  return createArenaV1RuleEngine({
+    participantIds: config.participantIds,
+    config,
+    authorityContent: {
+      ...authorityContent,
+      actionRegistry,
+      equipmentRegistry,
+    },
+  });
+}
+
+function commitmentFrames(tick: number, primaryHeld: boolean): ArenaInputFrame[] {
+  return frames(tick, ['player-1']).map((frame) => (
+    frame.participantId === 'player-1' ? { ...frame, primaryHeld } : frame
+  ));
 }
 
 function actor(
@@ -196,6 +245,195 @@ test('ActionAffordance is a frozen next-tick projection of the same resolver can
     leaked: true,
   }), /不支持字段 leaked/);
   engine.destroy();
+});
+
+test('ActionAffordance rejects malformed candidate arrays without invoking accessors', () => {
+  const engine = createEngine();
+  const currentActors = actors();
+  const sparseCandidates: unknown[] = [];
+  sparseCandidates.length = 1;
+  assert.throws(() => engine.getActionAffordance({
+    tick: 0,
+    participantId: 'player-1',
+    actors: currentActors,
+    additionalCandidates: sparseCandidates,
+  }), /必须是可枚举数据字段/);
+
+  let accessorReads = 0;
+  const accessorCandidates: unknown[] = [];
+  Object.defineProperty(accessorCandidates, '0', {
+    enumerable: true,
+    get() {
+      accessorReads += 1;
+      return {};
+    },
+  });
+  accessorCandidates.length = 1;
+  assert.throws(() => engine.getActionAffordance({
+    tick: 0,
+    participantId: 'player-1',
+    actors: currentActors,
+    additionalCandidates: accessorCandidates,
+  }), /必须是可枚举数据字段/);
+  assert.equal(accessorReads, 0);
+
+  const candidatesWithExtraField: unknown[] & { leaked?: boolean } = [];
+  candidatesWithExtraField.leaked = true;
+  assert.throws(() => engine.getActionAffordance({
+    tick: 0,
+    participantId: 'player-1',
+    actors: currentActors,
+    additionalCandidates: candidatesWithExtraField,
+  }), /不能包含额外字段/);
+
+  let hiddenIndexReads = 0;
+  const hiddenIndex = new Proxy([{}], {
+    ownKeys() {
+      return ['length'];
+    },
+    getOwnPropertyDescriptor(target, key) {
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+    get() {
+      hiddenIndexReads += 1;
+      throw new Error('hidden index get trap must not execute');
+    },
+  });
+  assert.throws(() => engine.getActionAffordance({
+    tick: 0,
+    participantId: 'player-1',
+    actors: currentActors,
+    additionalCandidates: hiddenIndex,
+  }), /隐藏索引/);
+  assert.equal(hiddenIndexReads, 0);
+
+  let missingDescriptorReads = 0;
+  const missingDescriptor = new Proxy([{}], {
+    ownKeys() {
+      return ['length', '0'];
+    },
+    getOwnPropertyDescriptor(target, key) {
+      return key === '0' ? undefined : Reflect.getOwnPropertyDescriptor(target, key);
+    },
+    get() {
+      missingDescriptorReads += 1;
+      throw new Error('missing descriptor get trap must not execute');
+    },
+  });
+  assert.throws(() => engine.getActionAffordance({
+    tick: 0,
+    participantId: 'player-1',
+    actors: currentActors,
+    additionalCandidates: missingDescriptor,
+  }), /必须是可枚举数据字段/);
+  assert.equal(missingDescriptorReads, 0);
+  engine.destroy();
+});
+
+test('additional candidate snapshots never read Proxy values after descriptor validation', () => {
+  const engine = createEngine();
+  let arrayReads = 0;
+  let entryReads = 0;
+  const entry = new Proxy({ participantId: 'player-1', candidates: [] }, {
+    get() {
+      entryReads += 1;
+      throw new Error('entry get trap must not execute');
+    },
+  });
+  const additionalCandidates = new Proxy([entry], {
+    get() {
+      arrayReads += 1;
+      throw new Error('array get trap must not execute');
+    },
+  });
+  const resolved = engine.resolveActions({
+    tick: 0,
+    actors: actors(),
+    inputFrames: frames(0),
+    additionalCandidates,
+  });
+  assert.deepEqual(resolved.starts, []);
+  assert.equal(arrayReads, 0);
+  assert.equal(entryReads, 0);
+  engine.destroy();
+
+  const inconsistentEngine = createEngine();
+  let inconsistentReads = 0;
+  const inconsistentEntry = new Proxy({ participantId: 'unknown', candidates: [] }, {
+    get(target, key, receiver) {
+      inconsistentReads += 1;
+      if (key === 'participantId') return 'player-1';
+      return Reflect.get(target, key, receiver);
+    },
+  });
+  assert.throws(() => inconsistentEngine.resolveActions({
+    tick: 0,
+    actors: actors(),
+    inputFrames: frames(0),
+    additionalCandidates: [inconsistentEntry],
+  }), /未知 participant unknown/);
+  assert.equal(inconsistentReads, 0);
+  inconsistentEngine.destroy();
+
+  const unknownFieldEngine = createEngine();
+  assert.throws(() => unknownFieldEngine.resolveActions({
+    tick: 0,
+    actors: actors(),
+    inputFrames: frames(0),
+    additionalCandidates: [{ participantId: 'player-1', candidates: [], leaked: true }],
+  }), /不支持字段 leaked/);
+  assert.deepEqual(unknownFieldEngine.resolveActions({
+    tick: 0,
+    actors: actors(),
+    inputFrames: frames(0),
+    additionalCandidates: [],
+  }).starts, []);
+  unknownFieldEngine.destroy();
+});
+
+test('malformed candidate rejection leaves a real commitment retryable in the same tick', () => {
+  const subject = createCommitmentEngine();
+  const fresh = createCommitmentEngine();
+  const initial = commitmentFrames(0, true);
+  const initialSubject = subject.resolveActions({
+    tick: 0,
+    actors: actors(),
+    inputFrames: initial,
+    additionalCandidates: [],
+  });
+  const initialFresh = fresh.resolveActions({
+    tick: 0,
+    actors: actors(),
+    inputFrames: initial,
+    additionalCandidates: [],
+  });
+  assert.equal(initialSubject.starts.length, 1);
+  assert.deepEqual(initialSubject.starts, initialFresh.starts);
+
+  const retryFrames = commitmentFrames(1, false);
+  assert.throws(() => subject.resolveActions({
+    tick: 1,
+    actors: actors(),
+    inputFrames: retryFrames,
+    additionalCandidates: [{ participantId: 'player-1', candidates: [], leaked: true }],
+  }), /不支持字段 leaked/);
+  const retried = subject.resolveActions({
+    tick: 1,
+    actors: actors(),
+    inputFrames: retryFrames,
+    additionalCandidates: [],
+  });
+  const expected = fresh.resolveActions({
+    tick: 1,
+    actors: actors(),
+    inputFrames: retryFrames,
+    additionalCandidates: [],
+  });
+  assert.deepEqual(retried.starts, expected.starts);
+  assert.deepEqual(retried.events, expected.events);
+  assert.deepEqual(subject.getActionSnapshot('player-1'), fresh.getActionSnapshot('player-1'));
+  subject.destroy();
+  fresh.destroy();
 });
 
 test('same-tick symmetric actions collect both hits before interruption commits', () => {

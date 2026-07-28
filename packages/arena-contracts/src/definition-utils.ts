@@ -8,9 +8,14 @@ export type DeepReadonly<T> =
       : T extends object ? { readonly [K in keyof T]: DeepReadonly<T[K]> }
         : T;
 
-function ownDataKeys(value: object, name: string): string[] {
+interface OwnDataEntry {
+  readonly key: string;
+  readonly value: unknown;
+}
+
+function ownDataEntries(value: object, name: string): OwnDataEntry[] {
   const keys = Reflect.ownKeys(value);
-  const result: string[] = [];
+  const result: OwnDataEntry[] = [];
   for (const key of keys) {
     if (typeof key !== 'string') throw new TypeError(`${name} 不能包含 Symbol 字段。`);
     const descriptor = Object.getOwnPropertyDescriptor(value, key);
@@ -21,7 +26,7 @@ function ownDataKeys(value: object, name: string): string[] {
     ) {
       throw new TypeError(`${name}.${key} 必须是可枚举数据字段。`);
     }
-    result.push(key);
+    result.push({ key, value: descriptor.value });
   }
   return result;
 }
@@ -43,7 +48,7 @@ export function assertKnownKeys(
   name: string,
 ): asserts value is PlainRecord {
   const record = assertPlainRecord(value, name);
-  for (const key of ownDataKeys(record, name)) {
+  for (const { key } of ownDataEntries(record, name)) {
     if (UNSAFE_KEYS.has(key)) throw new RangeError(`${name} 包含不安全字段 ${key}。`);
     if (!allowedKeys.has(key)) throw new RangeError(`${name} 不支持字段 ${key}。`);
   }
@@ -112,14 +117,12 @@ function cloneData(value: unknown, name: string, active: WeakSet<object>): unkno
     }
     const record = assertPlainRecord(value, name);
     const result: PlainRecord = {};
-    const descriptors = Object.getOwnPropertyDescriptors(record);
-    for (const key of ownDataKeys(record, name).sort()) {
+    const entries = ownDataEntries(record, name).sort((left, right) => (
+      left.key < right.key ? -1 : left.key > right.key ? 1 : 0
+    ));
+    for (const { key, value: child } of entries) {
       if (UNSAFE_KEYS.has(key)) throw new RangeError(`${name} 包含不安全字段 ${key}。`);
-      const descriptor = descriptors[key];
-      if (!descriptor || !Object.prototype.hasOwnProperty.call(descriptor, 'value')) {
-        throw new TypeError(`${name}.${key} 必须是数据字段。`);
-      }
-      result[key] = cloneData(descriptor.value, `${name}.${key}`, active);
+      result[key] = cloneData(child, `${name}.${key}`, active);
     }
     return Object.freeze(result);
   } finally {

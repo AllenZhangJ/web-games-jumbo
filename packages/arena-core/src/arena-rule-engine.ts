@@ -422,6 +422,74 @@ function createBaseCandidate(actionDefinitionId: string, available: boolean): Ac
   });
 }
 
+function snapshotDataArray(value: unknown, name: string): readonly unknown[] {
+  if (!Array.isArray(value)) throw new TypeError(`${name} 必须是数组。`);
+  const keys = Reflect.ownKeys(value);
+  const lengthDescriptor = Object.getOwnPropertyDescriptor(value, 'length');
+  if (
+    !lengthDescriptor
+    || lengthDescriptor.enumerable
+    || !Object.prototype.hasOwnProperty.call(lengthDescriptor, 'value')
+    || !Number.isSafeInteger(lengthDescriptor.value)
+    || (lengthDescriptor.value as number) < 0
+  ) throw new TypeError(`${name}.length 必须是非负安全整数数据字段。`);
+  const length = lengthDescriptor.value as number;
+  const expectedKeys = new Set<string>(['length']);
+  const result: unknown[] = [];
+  for (let index = 0; index < length; index += 1) {
+    const key = String(index);
+    expectedKeys.add(key);
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (
+      !descriptor
+      || !descriptor.enumerable
+      || !Object.prototype.hasOwnProperty.call(descriptor, 'value')
+    ) throw new TypeError(`${name}[${index}] 必须是可枚举数据字段。`);
+    result.push(descriptor.value);
+  }
+  const actualKeys = new Set(keys);
+  if (
+    actualKeys.size !== keys.length
+    || actualKeys.size !== expectedKeys.size
+    || keys.some((key) => typeof key !== 'string' || !expectedKeys.has(key))
+  ) {
+    throw new TypeError(`${name} 不能包含额外字段或隐藏索引。`);
+  }
+  return Object.freeze(result);
+}
+
+function snapshotKnownDataRecord(
+  value: unknown,
+  allowedKeys: ReadonlySet<string>,
+  name: string,
+): UnknownRecord {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new TypeError(`${name} 必须是普通对象。`);
+  }
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) {
+    throw new TypeError(`${name} 必须是普通对象。`);
+  }
+  const result: Record<string, unknown> = {};
+  for (const key of Reflect.ownKeys(value)) {
+    if (typeof key !== 'string') throw new TypeError(`${name} 不能包含 Symbol 字段。`);
+    if (!allowedKeys.has(key)) throw new RangeError(`${name} 不支持字段 ${key}。`);
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (
+      !descriptor
+      || !descriptor.enumerable
+      || !Object.prototype.hasOwnProperty.call(descriptor, 'value')
+    ) throw new TypeError(`${name}.${key} 必须是可枚举数据字段。`);
+    Object.defineProperty(result, key, {
+      configurable: false,
+      enumerable: true,
+      value: descriptor.value,
+      writable: false,
+    });
+  }
+  return Object.freeze(result);
+}
+
 function cloneAdditionalCandidates(
   values: unknown,
   participantIds: readonly string[],
@@ -431,15 +499,14 @@ function cloneAdditionalCandidates(
       participantIds.map((id) => [id, Object.freeze([])] as const),
     );
   }
-  if (!Array.isArray(values)) throw new TypeError('additionalCandidates 必须是数组。');
+  const entries = snapshotDataArray(values, 'additionalCandidates');
   const result = new Map<string, readonly unknown[]>(
     participantIds.map((id) => [id, Object.freeze([])] as const),
   );
   const seen = new Set<string>();
-  for (let index = 0; index < values.length; index += 1) {
-    const entry = cloneFrozenData(values[index], `additionalCandidates[${index}]`);
-    assertKnownKeys(
-      entry,
+  for (let index = 0; index < entries.length; index += 1) {
+    const entry = snapshotKnownDataRecord(
+      entries[index],
       ADDITIONAL_CANDIDATE_ENTRY_KEYS,
       `additionalCandidates[${index}]`,
     );
@@ -453,11 +520,12 @@ function cloneAdditionalCandidates(
     if (seen.has(participantId)) {
       throw new RangeError(`additionalCandidates 包含重复 participant ${participantId}。`);
     }
-    if (!Array.isArray(entry.candidates)) {
-      throw new TypeError(`additionalCandidates[${index}].candidates 必须是数组。`);
-    }
+    const candidates = snapshotDataArray(
+      entry.candidates,
+      `additionalCandidates[${index}].candidates`,
+    );
     seen.add(participantId);
-    result.set(participantId, entry.candidates);
+    result.set(participantId, candidates);
   }
   return result;
 }
@@ -726,6 +794,10 @@ export class ArenaRuleEngine {
       frameById.size !== this.#participantIds.length
       || this.#participantIds.some((id) => !frameById.has(id))
     ) throw new RangeError('ArenaRuleEngine inputFrames 必须覆盖全部 participants。');
+    const additionalCandidates = cloneAdditionalCandidates(
+      options.additionalCandidates,
+      this.#participantIds,
+    );
     const commitmentTransitions = this.#actionExecution.applyCommitmentInputs({
       tick,
       actors,
@@ -735,10 +807,6 @@ export class ArenaRuleEngine {
         `缺少 ${id} InputFrame。`,
       ))),
     });
-    const additionalCandidates = cloneAdditionalCandidates(
-      options.additionalCandidates,
-      this.#participantIds,
-    );
     const actorsById = new Map(actors.map((actor) => [actor.id, actor]));
     const resolutions = this.#participantIds.map((participantId) => {
       const actor = requireMapValue(
