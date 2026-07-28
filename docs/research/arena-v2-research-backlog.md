@@ -146,6 +146,8 @@
 
 本轮新增 Product 数值差异事实：从同源主数值比较中派生唯一极值的优势/代价，每张卡最多两条，保留原始值和单位且不计算综合评分；Web 卡片已通过定向模型和语义 DOM 验证。结果见[Product 武器数值差异事实原型结果 V1](arena-v2-product-weapon-comparison-facts-v1.md)与[ADR-093](../decisions/093-arena-v2-weapon-comparison-facts.md)，真人理解率和实体设备仍待验证。
 
+本轮新增 Product 场景差异事实：从同源地面/空中比较行派生唯一极值，每张卡最多两条并保留上下文 ID、原始值和单位；Web 卡片已接入场景事实，完整矩阵和 Canvas 比较表继续保留。结果见[Product 武器数值差异事实原型结果 V1](arena-v2-product-weapon-comparison-facts-v1.md)与[ADR-095](../decisions/095-arena-v2-weapon-context-comparison-facts.md)，真人理解率、真机密度和多语言仍待验证。
+
 ### 新增：生存压力与 200 小时目标的硬缺口
 
 - [x] 在研究冲量端口验证 Offer 等级会实际改变横向控制结果，且不增加操作按键；结果见[生存临时武器等级原型](arena-v2-survival-loop-prototype-results-v1.md#7-生存临时武器等级实际战斗原型)。这是第一阶段证据。

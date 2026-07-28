@@ -346,6 +346,27 @@ button {
   background: rgba(232, 84, 62, 0.1);
 }
 
+.product-weapon-context-comparison-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.22rem;
+  margin: 0.22rem 0 0.3rem;
+}
+
+.product-weapon-context-comparison-facts span {
+  padding: 0.14rem 0.22rem;
+  color: var(--coral-dark);
+  background: rgba(232, 84, 62, 0.08);
+  font-size: 0.46rem;
+  font-weight: 850;
+  line-height: 1.25;
+}
+
+.product-weapon-context-comparison-facts span[data-weapon-comparison-fact-kind="advantage"] {
+  color: var(--ink);
+  background: rgba(67, 184, 189, 0.1);
+}
+
 .product-weapon-card > p {
   display: -webkit-box;
   min-height: 2.1em;

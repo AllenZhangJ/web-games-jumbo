@@ -177,6 +177,7 @@ Arena V2 的核心目标是：
 | [ADR-083：武器概览必须横向展示地面与空中场景数值](../decisions/083-arena-v2-weapon-context-comparison-readout.md) | 固化主数值、行为数值和地面/空中场景数值的比较顺序、字段一致性校验与 Web/Canvas 展示差异 | Product UI 与 Canvas 已接入，真人页面已验证 |
 | [ADR-091：Product 武器概览采用两层数值读出](../decisions/091-arena-v2-product-weapon-overview-two-level-readout.md) | 固化首屏四项关键差异、武器语义卡和可展开完整 27 行矩阵的同源展示边界 | Product UI 已接入，本地浏览器通过，真人/设备仍待验证 |
 | [ADR-093：武器概览用数值差异事实连接武器语法](../decisions/093-arena-v2-weapon-comparison-facts.md) | 固化由唯一数值极值派生优势/代价事实、并列阻塞和不计算综合评分的展示边界 | Web Product 已接入，Canvas 保持同源比较表 |
+| [ADR-095：武器概览补充地面/空中场景差异事实](../decisions/095-arena-v2-weapon-context-comparison-facts.md) | 固化由同源地面/空中比较行派生场景优势/代价事实、上下文保真和不合成评分的展示边界 | Web Product 卡片已接入，Canvas 保持同源比较表 |
 | [ADR-084：武器数值可读性任务必须从研究矩阵生成并隔离答案](../decisions/084-arena-v2-weapon-readability-task-boundary.md) | 固化可读性题目从真实矩阵生成、参与者投影不泄露答案、并列数值阻塞和单次评估不冒充真人结论 | 研究页已接入并完成桌面验证，真人样本尚无 |
 | [ADR-062：蓄力承诺先以可取消的整数 tick 原型验证](../decisions/062-arena-v2-weapon-commitment-prototype-boundary.md) | 固化蓄力承诺、提前取消、到期处理和方向记录的研究边界，不直接进入生产武器 | 研究原型已接入 |
 | [ADR-047：生存实体复用玩家规则/物理边界](../decisions/047-arena-v2-survival-entity-boundary.md) | 固化单敌人原型不得绕过命中、冲量和掉落规则 | V2 研究原型 |

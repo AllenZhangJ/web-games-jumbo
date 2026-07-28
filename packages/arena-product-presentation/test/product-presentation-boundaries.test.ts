@@ -178,6 +178,39 @@ function comparisonWeapon(
   };
 }
 
+function contextComparisonWeapon(
+  id: string,
+  groundRange: number,
+  aerialRange: number,
+  impact: number,
+  selfMovement: number,
+): Record<string, unknown> {
+  const weapon = comparisonWeapon(id, groundRange, 0.1, impact, selfMovement);
+  return {
+    ...weapon,
+    contexts: [
+      {
+        id: 'ground',
+        label: '地面',
+        summary: '地面测试上下文。',
+        stats: [{
+          id: 'range', label: '有效距离', value: groundRange, maxValue: 6,
+          unit: '格', direction: 'higher-is-better', precision: 2,
+        }],
+      },
+      {
+        id: 'aerial',
+        label: '空中',
+        summary: '空中测试上下文。',
+        stats: [{
+          id: 'range', label: '有效距离', value: aerialRange, maxValue: 6,
+          unit: '格', direction: 'higher-is-better', precision: 2,
+        }],
+      },
+    ],
+  };
+}
+
 function controller() {
   let active = 'ready';
   const calls: string[] = [];
@@ -652,6 +685,59 @@ describe('Product presentation immutable data boundaries', () => {
     expect(sceneModel.weaponCards[1]?.comparisonFacts).toEqual([
       expect.objectContaining({ statement: '击飞最强', value: 4, kind: 'advantage' }),
       expect.objectContaining({ statement: '射程最近', value: 2, kind: 'tradeoff' }),
+    ]);
+  });
+
+  it('derives scene-specific facts from the same ground/aerial comparison rows', () => {
+    const sceneModel = createProductUiSceneModel({
+      revision: 1,
+      locale: 'zh-CN',
+      busy: false,
+      suspended: false,
+      terminal: false,
+      inputEnabled: true,
+      screen: {
+        sceneId: 'home', title: '竞技场', body: '', announcement: '竞技场',
+        primaryAction: null, secondaryAction: null,
+      },
+      characterOptions: [],
+      weaponOptions: [
+        contextComparisonWeapon('air-long', 2, 5, 1, 0),
+        contextComparisonWeapon('air-heavy', 4, 2, 4, 2),
+      ],
+      match: null,
+      result: null,
+      reward: null,
+      unlocks: [],
+      error: null,
+    });
+    expect(sceneModel.weaponCards[0]?.contextComparisonFacts).toEqual([
+      expect.objectContaining({
+        statement: '空中射程最远',
+        contextId: 'aerial',
+        value: 5,
+        kind: 'advantage',
+      }),
+      expect.objectContaining({
+        statement: '地面射程最近',
+        contextId: 'ground',
+        value: 2,
+        kind: 'tradeoff',
+      }),
+    ]);
+    expect(sceneModel.weaponCards[1]?.contextComparisonFacts).toEqual([
+      expect.objectContaining({
+        statement: '地面射程最远',
+        contextId: 'ground',
+        value: 4,
+        kind: 'advantage',
+      }),
+      expect.objectContaining({
+        statement: '空中射程最近',
+        contextId: 'aerial',
+        value: 2,
+        kind: 'tradeoff',
+      }),
     ]);
   });
 

@@ -45,6 +45,18 @@ export interface ProductUiSceneWeaponComparisonFact {
   readonly kind: ProductUiSceneWeaponComparisonFactKind;
 }
 
+export interface ProductUiSceneWeaponContextComparisonFact {
+  readonly id: string;
+  readonly contextId: string;
+  readonly contextLabel: string;
+  readonly statId: string;
+  readonly statement: string;
+  readonly value: number;
+  readonly unit: string;
+  readonly precision: number;
+  readonly kind: ProductUiSceneWeaponComparisonFactKind;
+}
+
 export interface ProductUiSceneWeaponCard {
   readonly id: string;
   readonly name: string;
@@ -61,6 +73,8 @@ export interface ProductUiSceneWeaponCard {
   readonly contexts: readonly ProductUiSceneWeaponContext[];
   /** 由可比数值派生的差异事实，不合并为综合评分。 */
   readonly comparisonFacts: readonly ProductUiSceneWeaponComparisonFact[];
+  /** 由地面/空中比较派生的场景差异事实，不合并为综合评分。 */
+  readonly contextComparisonFacts: readonly ProductUiSceneWeaponContextComparisonFact[];
 }
 
 export interface ProductUiSceneWeaponContext {
@@ -288,6 +302,7 @@ function weaponCards(values: unknown): readonly ProductUiSceneWeaponCard[] {
       behaviorStats: optionalWeaponStats(option.behaviorStats, `${name}.behaviorStats`),
       contexts: weaponContexts(option.contexts, name),
       comparisonFacts: Object.freeze([]),
+      contextComparisonFacts: Object.freeze([]),
     });
   }));
 }
@@ -352,6 +367,32 @@ function createComparisonFact(
   });
 }
 
+function selectComparisonFacts<T extends Readonly<{
+  readonly id: string;
+  readonly statId: string;
+  readonly kind: ProductUiSceneWeaponComparisonFactKind;
+}>>(facts: readonly T[]): readonly T[] {
+  const ordered = [...facts].sort((left, right) => {
+    const priorityDelta = comparisonFactPriority(left.statId)
+      - comparisonFactPriority(right.statId);
+    if (priorityDelta !== 0) return priorityDelta;
+    return left.kind === right.kind ? 0 : left.kind === 'advantage' ? -1 : 1;
+  });
+  const advantage = ordered.find(({ kind }) => kind === 'advantage');
+  const tradeoff = ordered.find(({ kind }) => kind === 'tradeoff');
+  const selected = [advantage, tradeoff].filter(
+    (fact): fact is T => fact !== undefined,
+  );
+  if (selected.length < 2) {
+    for (const fact of ordered) {
+      if (selected.some(({ id }) => id === fact.id)) continue;
+      selected.push(fact);
+      if (selected.length === 2) break;
+    }
+  }
+  return Object.freeze(selected);
+}
+
 function attachWeaponComparisonFacts(
   cards: readonly ProductUiSceneWeaponCard[],
   rows: readonly ProductUiSceneWeaponComparisonRow[],
@@ -386,26 +427,127 @@ function attachWeaponComparisonFacts(
   }
   return Object.freeze(cards.map((card) => {
     const facts = factsByWeapon.get(card.id) ?? [];
-    const ordered = [...facts].sort((left, right) => {
-      const priorityDelta = comparisonFactPriority(left.statId)
-        - comparisonFactPriority(right.statId);
-      if (priorityDelta !== 0) return priorityDelta;
-      return left.kind === right.kind ? 0 : left.kind === 'advantage' ? -1 : 1;
-    });
-    const advantage = ordered.find(({ kind }) => kind === 'advantage');
-    const tradeoff = ordered.find(({ kind }) => kind === 'tradeoff');
-    const selected = [advantage, tradeoff].filter(
-      (fact): fact is ProductUiSceneWeaponComparisonFact => fact !== undefined,
-    );
-    if (selected.length < 2) {
-      for (const fact of ordered) {
-        if (selected.some(({ id }) => id === fact.id)) continue;
-        selected.push(fact);
-        if (selected.length === 2) break;
-      }
-    }
-    return Object.freeze({ ...card, comparisonFacts: Object.freeze(selected) });
+    return Object.freeze({ ...card, comparisonFacts: selectComparisonFacts(facts) });
   }));
+}
+
+function contextFactContextId(rowId: string): string {
+  const [, contextId] = rowId.split(':');
+  if (!contextId) throw new RangeError(`Product UI 场景比较行缺少上下文 ID：${rowId}。`);
+  return contextId;
+}
+
+function contextFactStatId(rowId: string): string {
+  const parts = rowId.split(':');
+  const statId = parts[parts.length - 1];
+  if (!statId) throw new RangeError(`Product UI 场景比较行缺少数值 ID：${rowId}。`);
+  return statId;
+}
+
+function contextFactContextLabel(row: ProductUiSceneWeaponComparisonRow): string {
+  const separator = row.label.indexOf('·');
+  return separator < 1 ? '场景' : row.label.slice(0, separator);
+}
+
+function contextFactStatLabel(row: ProductUiSceneWeaponComparisonRow): string {
+  const separator = row.label.indexOf('·');
+  return separator < 1 ? row.label : row.label.slice(separator + 1);
+}
+
+function createContextComparisonFact(
+  row: ProductUiSceneWeaponComparisonRow,
+  stat: ProductUiSceneWeaponComparisonValue,
+  kind: ProductUiSceneWeaponComparisonFactKind,
+): ProductUiSceneWeaponContextComparisonFact {
+  const statId = contextFactStatId(row.id);
+  const contextLabel = contextFactContextLabel(row);
+  return Object.freeze({
+    id: `${row.id}:${kind}`,
+    contextId: contextFactContextId(row.id),
+    contextLabel,
+    statId,
+    statement: `${contextLabel}${comparisonFactStatement({
+      ...row,
+      id: statId,
+      label: contextFactStatLabel(row),
+    }, kind)}`,
+    value: stat.value,
+    unit: stat.unit,
+    precision: stat.precision,
+    kind,
+  });
+}
+
+const CONTEXT_FACT_CONTEXT_PRIORITY = Object.freeze(['aerial', 'ground']);
+
+function contextComparisonFactPriority(fact: ProductUiSceneWeaponContextComparisonFact): number {
+  const contextIndex = CONTEXT_FACT_CONTEXT_PRIORITY.indexOf(fact.contextId);
+  const contextPriority = contextIndex < 0
+    ? CONTEXT_FACT_CONTEXT_PRIORITY.length
+    : contextIndex;
+  return contextPriority * 100 + comparisonFactPriority(fact.statId);
+}
+
+function selectContextComparisonFacts(
+  facts: readonly ProductUiSceneWeaponContextComparisonFact[],
+): readonly ProductUiSceneWeaponContextComparisonFact[] {
+  const ordered = [...facts].sort((left, right) => {
+    const priorityDelta = contextComparisonFactPriority(left)
+      - contextComparisonFactPriority(right);
+    if (priorityDelta !== 0) return priorityDelta;
+    return left.kind === right.kind ? 0 : left.kind === 'advantage' ? -1 : 1;
+  });
+  const advantage = ordered.find(({ kind }) => kind === 'advantage');
+  const tradeoff = ordered.find(({ kind }) => kind === 'tradeoff');
+  const selected = [advantage, tradeoff].filter(
+    (fact): fact is ProductUiSceneWeaponContextComparisonFact => fact !== undefined,
+  );
+  if (selected.length < 2) {
+    for (const fact of ordered) {
+      if (selected.some(({ id }) => id === fact.id)) continue;
+      selected.push(fact);
+      if (selected.length === 2) break;
+    }
+  }
+  return Object.freeze(selected);
+}
+
+function attachWeaponContextComparisonFacts(
+  cards: readonly ProductUiSceneWeaponCard[],
+  rows: readonly ProductUiSceneWeaponComparisonRow[],
+): readonly ProductUiSceneWeaponCard[] {
+  const factsByWeapon = new Map<string, ProductUiSceneWeaponContextComparisonFact[]>();
+  for (const card of cards) factsByWeapon.set(card.id, []);
+  for (const row of rows) {
+    if (row.values.length < 2) continue;
+    const minimum = Math.min(...row.values.map(({ value }) => value));
+    const maximum = Math.max(...row.values.map(({ value }) => value));
+    const minimumValues = row.values.filter(({ value }) => value === minimum);
+    const maximumValues = row.values.filter(({ value }) => value === maximum);
+    const uniqueMinimum = minimumValues.length === 1 ? minimumValues[0] : null;
+    const uniqueMaximum = maximumValues.length === 1 ? maximumValues[0] : null;
+    const direction = row.values[0]!.direction;
+    const advantageValue = direction === 'higher-is-risk' || direction === 'lower-is-better'
+      ? uniqueMinimum
+      : uniqueMaximum;
+    const tradeoffValue = direction === 'higher-is-risk' || direction === 'lower-is-better'
+      ? uniqueMaximum
+      : uniqueMinimum;
+    if (advantageValue) {
+      factsByWeapon.get(advantageValue.weaponId)?.push(
+        createContextComparisonFact(row, advantageValue, 'advantage'),
+      );
+    }
+    if (tradeoffValue) {
+      factsByWeapon.get(tradeoffValue.weaponId)?.push(
+        createContextComparisonFact(row, tradeoffValue, 'tradeoff'),
+      );
+    }
+  }
+  return Object.freeze(cards.map((card) => Object.freeze({
+    ...card,
+    contextComparisonFacts: selectContextComparisonFacts(factsByWeapon.get(card.id) ?? []),
+  })));
 }
 
 function buildWeaponComparison(
@@ -539,7 +681,10 @@ export function createProductUiSceneModel(viewModelValue: unknown): ProductUiSce
     '行为数值比较',
   );
   const contextComparison = buildWeaponContextComparison(parsedWeapons);
-  const weapons = attachWeaponComparisonFacts(parsedWeapons, comparison);
+  const weapons = attachWeaponContextComparisonFacts(
+    attachWeaponComparisonFacts(parsedWeapons, comparison),
+    contextComparison,
+  );
   const match = source.match === null || source.match === undefined
     ? null
     : dataRecord(source.match, 'Product UI ViewModel.match');
