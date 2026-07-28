@@ -307,6 +307,9 @@ const ROUTE_SEGMENTS: readonly ArenaV2JumpRouteSegment[] = Object.freeze([
         exposureWindowTicks: 4,
         waypoints: Object.freeze([
           Object.freeze({ x: 25, y: 1.95, z: -2 }),
+          Object.freeze({ x: 26, y: 1.95, z: -0.8 }),
+          Object.freeze({ x: 27.2, y: 1.95, z: -2.8 }),
+          Object.freeze({ x: 28.6, y: 1.95, z: -0.8 }),
           Object.freeze({ x: 30.5, y: 1.95, z: -2 }),
         ]),
       }),
@@ -320,8 +323,9 @@ const ROUTE_SEGMENTS: readonly ArenaV2JumpRouteSegment[] = Object.freeze([
         routeTicks: 44,
         exposureWindowTicks: 8,
         waypoints: Object.freeze([
-          Object.freeze({ x: 25, y: 1.95, z: -1.78 }),
-          Object.freeze({ x: 30.5, y: 1.95, z: -1.78 }),
+          Object.freeze({ x: 25, y: 1.95, z: -2 }),
+          Object.freeze({ x: 27.75, y: 1.95, z: -1.78 }),
+          Object.freeze({ x: 30.5, y: 1.95, z: -2 }),
         ]),
       }),
     ]),

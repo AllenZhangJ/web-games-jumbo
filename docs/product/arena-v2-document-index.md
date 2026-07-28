@@ -122,8 +122,10 @@ Arena V2 的核心目标是：
 | [ADR-087：CS1.6 KZ 路线先接入研究 MapDefinition，再进入生产地图](../decisions/087-arena-v2-kz-map-definition-research-boundary.md) | 固化六段路线、4 个起点、竞速/生存共用几何和研究/生产地图边界 | 研究 MapDefinition 已接入，真人/真机仍待验证 |
 | `arena-v2-kz-map-research-catalog.ts` | 六类代表 KZ 地图样本的来源事实、学习点、设计信号和不复制边界，仅供开发/测试工具链使用 | 研究证据 |
 | `arena-v2-kz-route-combat-prototype.ts` | 将六段 KZ 灰盒与同一套武器命中/冲量/移动回应/复活重入规则组合，验证段落宽度、相邻恢复表面、侧移、跳跃和 3 秒复活锚点对武器击飞后果的影响，仅供开发/测试工具链使用 | 第三轮地图×武器原型证据，单人复活重入已验证 |
-| `arena-v2-kz-route-choice-return-prototype.ts` | 为迷宫/走钢丝选择段声明快/安全分叉、路线 tick、战斗暴露窗口和复活后的段落/锚点重入标签，仅供开发/测试工具链使用 | 4 个分叉场景通过，真实分叉几何待验证 |
+| `arena-v2-kz-route-choice-return-prototype.ts` | 为迷宫/走钢丝选择段声明快/安全分叉、路线 tick、战斗暴露窗口和复活后的段落/锚点重入标签，仅供开发/测试工具链使用 | 4 个分叉场景通过，独立灰盒已验证，生产几何仍待验证 |
 | [KZ 分叉路线与复活重入观察原型结果 V1](../research/arena-v2-kz-route-choice-reentry-results-v1.md) | 记录四个分叉场景的速度/暴露交换、180 tick 复活等待和重入后路线词汇保持 | 研究观察合同通过，真机/真人仍待验证 |
+| `arena-v2-kz-branch-greybox-prototype.ts` | 将四条研究分叉 waypoints 转为独立 surface，使用真实 PhysicsWorld + MovementSystem 测量完成 tick、空中持续和最终支撑面，仅供开发/测试工具链使用 | 四条分叉均完成，快/安全时间交换已出现，武器/摄像机/多人仍待验证 |
+| [KZ 分叉路线独立灰盒结果 V1](../research/arena-v2-kz-branch-greybox-results-v1.md) | 记录 5/7/8/5 个独立 surface 与 76/151/154/81 个实测完成 tick，并区分计划值与物理实测值 | 研究灰盒物理通过，生产地图仍未接入 |
 | [生存 1vE 最小循环原型结果 V1](../research/arena-v2-survival-loop-prototype-results-v1.md) | 记录无武器开局、20 秒三选一、轮次成长、两次掉落和低维奖励证据 | 第一轮原型证据 |
 | `arena-v2-survival-entity-prototype.ts` | 验证单一敌人复用玩家规则/物理、敌我双方击飞和第一次复活/第二次终局，仅供开发/测试工具链使用 | 第二轮规则原型证据 |
 | `arena-v2-survival-pressure-prototype.ts` | 验证 1/2/4 同类敌人的有界自主追击、分阶段刷新、多人击飞压力、20 秒三武器供给争夺、等级专属武器 Definition 和 15/20/30 秒×两种路线分流矩阵，仅供开发/测试工具链使用 | 第六轮规则/武器原型证据 |

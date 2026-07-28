@@ -663,6 +663,14 @@ export type {
   ArenaV2KzRouteChoiceSnapshot,
 } from './arena-v2-kz-route-choice-return-prototype.js';
 export {
+  runArenaV2KzBranchGreyboxPrototype,
+} from './arena-v2-kz-branch-greybox-prototype.js';
+export type {
+  ArenaV2KzBranchGreyboxPrototypeResult,
+  ArenaV2KzBranchGreyboxScenario,
+  ArenaV2KzBranchGreyboxSurface,
+} from './arena-v2-kz-branch-greybox-prototype.js';
+export {
   runArenaV2KzRouteRespawnReentryPrototype,
   runArenaV2KzRouteCombatPrototype,
   runArenaV2KzRouteCombatResponsePrototype,
