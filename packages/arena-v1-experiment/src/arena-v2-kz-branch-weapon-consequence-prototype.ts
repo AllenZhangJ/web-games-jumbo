@@ -37,6 +37,7 @@ import {
 import {
   advanceArenaV2WarningZone,
   createArenaV2WarningZoneRuntime,
+  type ArenaV2WarningZonePhase,
   type ArenaV2WarningZoneRuntime,
 } from './arena-v2-warning-zone-prototype.js';
 import {
@@ -83,7 +84,7 @@ export interface ArenaV2KzBranchWeaponConsequenceProbeResult {
     startsAtTick: number;
     expiresAtTickExclusive: number;
     lastObservedTick: number;
-    phase: 'telegraph' | 'active' | 'expired';
+    phase: ArenaV2WarningZonePhase;
   }> | null;
 }
 

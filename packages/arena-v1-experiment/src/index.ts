@@ -628,6 +628,16 @@ export type {
   ArenaV2WeaponWarningSignalReferenceId,
   ArenaV2WeaponWarningSignalResponsePolicy,
 } from './arena-v2-weapon-warning-signal-prototype.js';
+export {
+  runArenaV2WeaponPersistentZonePrototype,
+} from './arena-v2-weapon-persistent-zone-prototype.js';
+export type {
+  ArenaV2WeaponPersistentZoneOutcome,
+  ArenaV2WeaponPersistentZoneProbeResult,
+  ArenaV2WeaponPersistentZonePrototypeResult,
+  ArenaV2WeaponPersistentZoneReferenceId,
+  ArenaV2WeaponPersistentZoneResponsePolicy,
+} from './arena-v2-weapon-persistent-zone-prototype.js';
 export type {
   ArenaV2UiFlowResult,
   ArenaV2UiInteractionAudit,

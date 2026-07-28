@@ -547,6 +547,8 @@ Arena 当前不引入伤害血条作为主要胜负语言，所以武器数值�
 
 本轮又把魔血镰刃和猛犸石斧的 `warningHypothesis` 接入同一个延迟/预警研究原型：两件武器各自保留延迟、预警、有效窗口、半径和最大高度差，统一测试停留、提前离开、到点离开和改变高度。8 个探针均能复现命中、路线躲避或高度躲避，且概览信号表与探针直接读取同一份 Definition 来源。[武器延迟/预警信号原型结果 V1](arena-v2-weapon-warning-signal-prototype-results-v1.md)
 
+随后将预警区生命周期扩展为 `telegraph → active → lingering → expired`，并用 6 个固定探针对照两种时间语法：魔血镰刃在有效窗口结束后仍有 12 tick 研究性持续占位，重新进入可产生 `linger-zone-hit`；猛犸石斧为 0 tick 持续，重新进入不产生二次命中。该结果只证明持续封路和瞬时延迟重击需要不同的状态与反馈，不代表原作时间已换算为 Arena 平衡值。详见[武器持续封路原型结果 V1](arena-v2-weapon-persistent-zone-prototype-results-v1.md)与[ADR-092](../decisions/092-arena-v2-persistent-zone-lifecycle.md)。
+
 这条证据证明“重击的预判窗口”和“命中后的地图支撑面后果”可被统一研究链路读取，但不证明滚动物体、墙面反弹、公共危险、恢复物、设备或真人可读性已经完成。
 
 ## 第五轮：真·哈迪斯钩镰单件逐动作深研

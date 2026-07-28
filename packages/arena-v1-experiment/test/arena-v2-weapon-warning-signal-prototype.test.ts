@@ -31,12 +31,12 @@ describe('Arena V2 weapon warning signal prototype', () => {
   it('keeps the displayed timing values bound to the two source Definitions', () => {
     const probes = runArenaV2WeaponWarningSignalPrototype().probes;
     expect(probes.filter(({ referenceId }) => referenceId === 'magic-blood-scythe')
-      .every(({ delayTicks, warningTicks, activeTicks }) => (
-        delayTicks === 18 && warningTicks === 18 && activeTicks === 6
+      .every(({ delayTicks, warningTicks, activeTicks, lingerTicks }) => (
+        delayTicks === 18 && warningTicks === 18 && activeTicks === 6 && lingerTicks === 12
       ))).toBe(true);
     expect(probes.filter(({ referenceId }) => referenceId === 'mammoth-stone-axe')
-      .every(({ delayTicks, warningTicks, activeTicks }) => (
-        delayTicks === 18 && warningTicks === 18 && activeTicks === 2
+      .every(({ delayTicks, warningTicks, activeTicks, lingerTicks }) => (
+        delayTicks === 18 && warningTicks === 18 && activeTicks === 2 && lingerTicks === 0
       ))).toBe(true);
     expect(Object.isFrozen(probes)).toBe(true);
     expect(Object.isFrozen(probes[0])).toBe(true);

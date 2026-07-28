@@ -49,6 +49,8 @@ export interface ArenaV2WeaponMagicBloodScytheWarningHypothesis {
   readonly delayTicks: number;
   readonly warningTicks: number;
   readonly activeTicks: number;
+  /** Research-only persistence after the impact phase; not an original-game time conversion. */
+  readonly lingerTicks: number;
   readonly radius: number;
   readonly maximumVerticalDifference: number;
   readonly status: 'research-only';
@@ -203,6 +205,7 @@ const warningHypothesis: ArenaV2WeaponMagicBloodScytheWarningHypothesis = Object
   delayTicks: 18,
   warningTicks: 18,
   activeTicks: 6,
+  lingerTicks: 12,
   radius: 1.35,
   maximumVerticalDifference: 1.5,
   status: 'research-only',

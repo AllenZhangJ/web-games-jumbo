@@ -18,7 +18,7 @@
 
 ## 优先级一：热血英豪武器研究
 
-第一轮结果、第二轮动作矩阵和第三轮官方招式证据已记录在[热血英豪武器研究 V1](arena-v2-hot-blooded-weapon-study-v1.md)。12 件参考武器已经沉淀为结构化研究卡，并从魔血镰刃、幻虎巨拳、白金双枪、血刃和血影钩刃中抽取蓄力承诺、取消、方向、上下文、资源、陷阱持续和物理阻碍信号，见 `arena-v2-weapon-official-evidence.ts`。当前结论是建立 9 个可比较的公开数值，并额外完整展示地面/空中上下文；有效攻击窗口和方向容错已经进入独立行为补充区，延迟和预警仍保持研究状态。
+第一轮结果、第二轮动作矩阵和第三轮官方招式证据已记录在[热血英豪武器研究 V1](arena-v2-hot-blooded-weapon-study-v1.md)。12 件参考武器已经沉淀为结构化研究卡，并从魔血镰刃、幻虎巨拳、白金双枪、血刃和血影钩刃中抽取蓄力承诺、取消、方向、上下文、资源、陷阱持续和物理阻碍信号，见 `arena-v2-weapon-official-evidence.ts`。当前结论是建立 9 个可比较的公开数值，并额外完整展示地面/空中上下文；有效攻击窗口和方向容错已经进入独立行为补充区，延迟、预警和持续封路仍只属于研究状态。
 
 ### 目标
 
@@ -34,7 +34,7 @@
 - 地面/空中动作上下文矩阵；
 - “越高越好”和“越高风险”分开的显示语义。
 - 战斗语言公开轴就绪检查：冲入、换位、读招反制、直线压制和绕后已具备当前公开轴，封路和延迟重击仍需补齐延迟/预警字段；见[ADR-059](../decisions/059-arena-v2-weapon-public-axis-readiness-boundary.md)。五种扩展语言已经通过统一规则原型，绕后使用目标朝向判定；见[ADR-060](../decisions/060-arena-v2-rear-cone-and-language-prototype-boundary.md)。
-- 武器卡已增加两项不扩张主比较表的补充行为数值：有效窗口和方向容错角；它们由权威调优投影，延迟、预警和连续区域效果仍保持研究状态，见[ADR-061](../decisions/061-arena-v2-weapon-overview-behavior-readout.md)。
+- 武器卡已增加两项不扩张主比较表的补充行为数值：有效窗口和方向容错角；它们由权威调优投影，延迟、预警和持续区域效果仍保持研究状态，见[ADR-061](../decisions/061-arena-v2-weapon-overview-behavior-readout.md)。
 - [x] 将 7 种参考战斗语言和 1 种生产基线“推离”收敛为结构化最小功能版本合同，并投影回 12 件研究卡及当前三把生产武器；合同只属于开发/测试工具链，不自动创建生产武器，见[武器最小功能版本合同 V1](arena-v2-weapon-minimum-version-contract-v1.md)、[ADR-064](../decisions/064-arena-v2-weapon-minimum-version-contract.md)和[ADR-065](../decisions/065-arena-v2-production-weapon-language-mapping.md)。
 - [x] 将 8 种战斗语言收敛为 6 个首发候选位置：生产基线为冲入、推离、换位，研究候选为直线压制、读招反制、绕后；封路和延迟重击因延迟/预警公开轴未闭合暂缓，见[首发武器候选合同 V1](arena-v2-weapon-launch-candidate-contract-v1.md)和[ADR-066](../decisions/066-arena-v2-weapon-launch-candidate-selection.md)。
 - [x] 将直线压制、读招反制、绕后三个研究候选编译为统一候选 Definition，补齐地面/空中数值、主概览 9 轴、行为 2 轴和等待/离开回应证据；见[首发研究候选 Definition 原型结果](arena-v2-launch-research-definition-prototype-results-v1.md)和[ADR-070](../decisions/070-arena-v2-research-launch-definition-projection.md)。
@@ -61,6 +61,7 @@
 - [x] 将幻虎巨拳接入真实 `MatchCore + ActionExecutionSystem + MatchReplay`，验证提前释放、成功提交、到期取消和可观察蓄力等级；再用双人边缘平台 Replay 验证命中、位移、失去支撑面和淘汰反馈。见[幻虎巨拳 Replay 与地图边缘原型结果 V1](arena-v2-weapon-phantom-tiger-fist-replay-and-edge-results-v1.md)与[ADR-081](../decisions/081-arena-v2-phantom-tiger-fist-replay-and-map-consequence.md)。
 - [x] 深研猛犸石斧：按延迟落斧、蓄力地面重击、滚动物体、跑动撞墙、猛犸公共危险和恢复物拆成六个动作单元，并接入官方证据集；见[猛犸石斧逐动作研究结果 V1](arena-v2-weapon-mammoth-stone-axe-case-study-results-v1.md)。
 - [x] 验证猛犸石斧延迟落点的预警、有效窗口、路线躲避和高度躲避，并为命中/路线/高度建立不同反馈因果；研究 tick 不进入生产 Definition；见[猛犸石斧延迟落点原型结果 V1](arena-v2-weapon-mammoth-stone-axe-delay-prototype-results-v1.md)与[ADR-082](../decisions/082-arena-v2-mammoth-stone-axe-delay-boundary.md)。
+- [x] 将预警区从瞬时 `active` 扩展为可选 `lingering` 阶段，使用同一研究运行时对照魔血镰刃持续封路与猛犸石斧瞬时延迟重击；6 个固定探针通过，叠加、刷新、多人和真人仍未验证；见[武器持续封路原型结果 V1](arena-v2-weapon-persistent-zone-prototype-results-v1.md)与[ADR-092](../decisions/092-arena-v2-persistent-zone-lifecycle.md)。
 - [ ] 绑定最终声音/特效资产并完成目标设备可读性、低动效和真人反馈测试；当前没有真机证据。
 
 ### 需要回答

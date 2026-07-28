@@ -89,6 +89,7 @@ Arena V2 的核心目标是：
 | [猛犸石斧逐动作研究结果 V1](../research/arena-v2-weapon-mammoth-stone-axe-case-study-results-v1.md) | 将官方延迟落斧、蓄力分支、滚动物体、墙面反弹、公共危险和恢复物拆为六个研究动作单元 | 第九轮逐件研究，延迟/预警仍待原型 |
 | [猛犸石斧延迟落点原型结果 V1](../research/arena-v2-weapon-mammoth-stone-axe-delay-prototype-results-v1.md) | 验证预警、有效窗口、路线躲避、高度躲避和三类反馈因果；研究假设不进入生产 Definition | 延迟落点研究证据 |
 | [武器延迟/预警信号原型结果 V1](../research/arena-v2-weapon-warning-signal-prototype-results-v1.md) | 直接读取魔血镰刃与猛犸石斧 `warningHypothesis`，统一验证停留、提前离开、到点离开和改变高度四类回应 | 8 个研究探针通过，仍未进入生产运行时 |
+| [武器持续封路原型结果 V1](../research/arena-v2-weapon-persistent-zone-prototype-results-v1.md) | 将预警区扩展为 `telegraph → active → lingering → expired`，对照魔血镰刃持续占位与猛犸石斧瞬时延迟重击 | 6 个研究探针通过，持续区叠加/多人/真人仍待验证 |
 | [ADR-082：延迟落点先以预警区和整数 tick 验证](../decisions/082-arena-v2-mammoth-stone-axe-delay-boundary.md) | 固化延迟/预警的研究边界，避免将官方时间和复杂公共危险直接迁移到生产规则 | 研究边界已接入 |
 | [ADR-070：六个首发位置统一使用 Definition 数值投影](../decisions/070-arena-v2-research-launch-definition-projection.md) | 固化生产基线与候选 Registry 共用可比较数值结构，同时保留候选 Registry 与默认生产目录边界 | 研究投影边界已接入 |
 | [ADR-069：命中反馈必须保留失败原因的因果区分](../decisions/069-arena-v2-hit-feedback-causal-contract.md) | 固化命中确认、支撑面转移、击落、避开攻击线和路线失误五种反馈语义 | KZ 无渲染反馈合同已接入 |
@@ -112,7 +113,8 @@ Arena V2 的核心目标是：
 | `arena-v2-weapon-attack-jump-interleave-replay-prototype.ts` | 为三个研究候选生成同 tick 独立通道与空中武器动作 Replay，并验证 `begin-down-smash` 状态效果 | 攻击/跳跃穿插研究证据 |
 | [武器战斗语言最小原型结果 V1](../research/arena-v2-weapon-language-prototype-results-v1.md) | 记录直线压制、封路、延迟重击、读招反制和绕后的 Rule/Targeting/Effect 最小验证与回应时间 | 扩展武器原型证据 |
 | [武器战斗语言 × KZ 地图后果原型结果 V1](../research/arena-v2-weapon-language-kz-consequence-results-v1.md) | 记录五种战斗语言在六段 KZ 表面上的击落、路线转移、前摇、有效窗口和固定回应后果 | 扩展武器×地图原型证据 |
-| `arena-v2-warning-zone-prototype.ts` | 验证封路候选的公开标记位置、整数 tick 生命周期和到期，不实现持续伤害或新操作 | 第四轮武器状态原型证据 |
+| `arena-v2-warning-zone-prototype.ts` | 验证封路候选的公开标记位置、整数 tick 生命周期、可选持续阶段和到期，不实现持续伤害或新操作 | 第四轮武器状态原型证据 |
+| `arena-v2-weapon-persistent-zone-prototype.ts` | 对照持续封路与瞬时延迟重击，验证有效窗口后的区域占位和重新进入反馈 | 研究工具链，6 个固定探针通过 |
 | [武器上下文无渲染原型结果 V1](../research/arena-v2-weapon-prototype-results-v1.md) | 记录三把武器地面/空中命中节奏、击飞差异和挥空边界 | 第一轮原型证据 |
 | [武器地图边缘原型结果 V1](../research/arena-v2-weapon-map-prototype-results-v1.md) | 记录规则命中进入轻量物理后在宽平台、窄路和边缘的实际后果 | 第一轮地图交互证据 |
 | [武器移动目标原型结果 V1](../research/arena-v2-weapon-moving-target-prototype-results-v1.md) | 记录固定侧移目标下前摇差异如何转化为命中/挥空 | 第一轮移动反制证据 |
@@ -161,6 +163,7 @@ Arena V2 的核心目标是：
 | [ADR-085：血影钩刃动作规则与障碍后果分层验证](../decisions/085-arena-v2-blood-shadow-hook-blade-definition-boundary.md) | 固化目标朝向/拉近由真实 Rule/Replay 验证，实体障碍由独立地图探针验证，禁止把未接入规则的障碍属性写成武器数值 | 研究 Definition/Replay 已接入，障碍仍待真实地图表面验证 |
 | [ADR-086：真·哈迪斯钩镰先以承诺、上下文和支撑面后果收敛](../decisions/086-arena-v2-true-hades-hook-scythe-definition-boundary.md) | 固化地面承诺、空中独立上下文、取消/提交、命中与支撑面后果的研究边界 | 研究 Definition/Replay 已接入，未进入生产 |
 | [ADR-089：魔血镰刃先以封路、上下文和路线后果收敛](../decisions/089-arena-v2-magic-blood-scythe-definition-boundary.md) | 固化地面宽覆盖、空中高度分支、路线躲避和边缘后果；延迟危险区先保持独立研究信号 | 研究 Definition/Replay 已接入，未进入生产 |
+| [ADR-092：延迟区域必须区分瞬时命中和持续封路](../decisions/092-arena-v2-persistent-zone-lifecycle.md) | 固化 `telegraph → active → lingering → expired` 研究生命周期、0 tick 兼容和持续区反馈边界 | 研究工具链已接入，生产/真人仍待验证 |
 | [ADR-090：猛犸石斧先以预判、上下文和支撑面后果收敛](../decisions/090-arena-v2-mammoth-stone-axe-definition-boundary.md) | 固化地面长前摇、空中高度分支、预判失败和边缘后果；滚动/墙反弹/公共危险先保持独立研究边界 | 研究 Definition/Replay 已接入，未进入生产 |
 | [ADR-056：武器先按可学习的战斗语言扩展](../decisions/056-arena-v2-weapon-function-language-boundary.md) | 固化参考武器到 Arena 战斗语言的研究映射与新增武器评审边界 | 研究原型已接入 |
 | [ADR-057：武器战斗语言必须通过地图后果验证](../decisions/057-arena-v2-weapon-language-map-consequence-boundary.md) | 固化六段 KZ 表面、三种回应和击退/支撑面证据作为武器候选评审门槛 | 研究原型已接入 |

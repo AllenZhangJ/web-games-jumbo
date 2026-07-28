@@ -52,6 +52,8 @@ export interface ArenaV2WeaponMammothStoneAxeWarningHypothesis {
   readonly delayTicks: number;
   readonly warningTicks: number;
   readonly activeTicks: number;
+  /** A zero-length lingering phase keeps delayed impact distinct from a persistent trap. */
+  readonly lingerTicks: number;
   readonly radius: number;
   readonly maximumVerticalDifference: number;
   readonly status: 'research-only';
@@ -206,6 +208,7 @@ const warningHypothesis: ArenaV2WeaponMammothStoneAxeWarningHypothesis = Object.
   delayTicks: 18,
   warningTicks: 18,
   activeTicks: 2,
+  lingerTicks: 0,
   radius: 1.4,
   maximumVerticalDifference: 1,
   status: 'research-only',

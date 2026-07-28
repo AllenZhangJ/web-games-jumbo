@@ -38,6 +38,30 @@ describe('Arena V2 warning zone prototype', () => {
     expect(isArenaV2WarningZonePointInside(runtime, { x: 2, y: 1, z: 0 })).toBe(false);
   });
 
+  it('keeps a persistent zone active after the impact window without changing telegraph timing', () => {
+    let runtime = createArenaV2WarningZoneRuntime({
+      id: 'persistent-warning-zone',
+      ownerId: 'player-1',
+      languageId: 'zone-denial',
+      center: { x: 0, y: 0, z: 0 },
+      radius: 1,
+      maximumVerticalDifference: 1,
+      startsAtTick: 24,
+      activeTicks: 3,
+      lingerTicks: 2,
+    });
+    for (let tick = 0; tick <= 27; tick += 1) runtime = advanceArenaV2WarningZone(runtime, tick);
+    expect(runtime.phase).toBe('lingering');
+    expect(runtime.lingerStartsAtTick).toBe(27);
+    expect(runtime.expiresAtTickExclusive).toBe(29);
+    expect(isArenaV2WarningZonePointInside(runtime, { x: 0, y: 0, z: 0 })).toBe(true);
+    runtime = advanceArenaV2WarningZone(runtime, 28);
+    expect(runtime.phase).toBe('lingering');
+    runtime = advanceArenaV2WarningZone(runtime, 29);
+    expect(runtime.phase).toBe('expired');
+    expect(isArenaV2WarningZonePointInside(runtime, { x: 0, y: 0, z: 0 })).toBe(false);
+  });
+
   it('rejects gaps and non-positive active duration before state can advance', () => {
     expect(() => createArenaV2WarningZoneRuntime({
       id: 'invalid',

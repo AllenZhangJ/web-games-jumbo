@@ -1,4 +1,4 @@
-export type ArenaV2WarningZonePhase = 'telegraph' | 'active' | 'expired';
+export type ArenaV2WarningZonePhase = 'telegraph' | 'active' | 'lingering' | 'expired';
 
 export interface ArenaV2WarningZoneDefinition {
   readonly id: string;
@@ -9,6 +9,8 @@ export interface ArenaV2WarningZoneDefinition {
   readonly maximumVerticalDifference: number;
   readonly startsAtTick: number;
   readonly activeTicks: number;
+  readonly lingerTicks: number;
+  readonly lingerStartsAtTick: number;
   readonly expiresAtTickExclusive: number;
 }
 
@@ -42,13 +44,14 @@ function nonNegativeInteger(value: number, label: string): number {
 function phaseAtTick(
   tick: number,
   startsAtTick: number,
+  lingerStartsAtTick: number,
   expiresAtTickExclusive: number,
 ): ArenaV2WarningZonePhase {
   return tick < startsAtTick
     ? 'telegraph'
-    : tick < expiresAtTickExclusive
+    : tick < lingerStartsAtTick
       ? 'active'
-      : 'expired';
+      : tick < expiresAtTickExclusive ? 'lingering' : 'expired';
 }
 
 export function createArenaV2WarningZoneRuntime(input: Readonly<{
@@ -60,10 +63,15 @@ export function createArenaV2WarningZoneRuntime(input: Readonly<{
   maximumVerticalDifference: number;
   startsAtTick: number;
   activeTicks: number;
+  lingerTicks?: number;
 }>): ArenaV2WarningZoneRuntime {
   const startsAtTick = nonNegativeInteger(input.startsAtTick, 'startsAtTick');
   const activeTicks = positiveNumber(input.activeTicks, 'activeTicks');
   if (!Number.isInteger(activeTicks)) throw new RangeError('activeTicks 必须是正整数 tick。');
+  const lingerTicks = input.lingerTicks ?? 0;
+  if (!Number.isInteger(lingerTicks) || lingerTicks < 0) {
+    throw new RangeError('lingerTicks 必须是非负整数 tick。');
+  }
   const radius = positiveNumber(input.radius, 'radius');
   const maximumVerticalDifference = positiveNumber(
     input.maximumVerticalDifference,
@@ -74,7 +82,8 @@ export function createArenaV2WarningZoneRuntime(input: Readonly<{
     y: finiteNumber(input.center.y, 'center.y'),
     z: finiteNumber(input.center.z, 'center.z'),
   });
-  const expiresAtTickExclusive = startsAtTick + activeTicks;
+  const lingerStartsAtTick = startsAtTick + activeTicks;
+  const expiresAtTickExclusive = lingerStartsAtTick + lingerTicks;
   return Object.freeze({
     id: input.id,
     ownerId: input.ownerId,
@@ -84,6 +93,8 @@ export function createArenaV2WarningZoneRuntime(input: Readonly<{
     maximumVerticalDifference,
     startsAtTick,
     activeTicks,
+    lingerTicks,
+    lingerStartsAtTick,
     expiresAtTickExclusive,
     lastObservedTick: -1,
     phase: 'telegraph',
@@ -103,7 +114,12 @@ export function advanceArenaV2WarningZone(
   return Object.freeze({
     ...runtime,
     lastObservedTick: tick,
-    phase: phaseAtTick(tick, runtime.startsAtTick, runtime.expiresAtTickExclusive),
+    phase: phaseAtTick(
+      tick,
+      runtime.startsAtTick,
+      runtime.lingerStartsAtTick,
+      runtime.expiresAtTickExclusive,
+    ),
   });
 }
 
@@ -111,7 +127,7 @@ export function isArenaV2WarningZonePointInside(
   runtime: ArenaV2WarningZoneRuntime,
   point: ArenaV2WarningZonePoint,
 ): boolean {
-  if (runtime.phase !== 'active') return false;
+  if (runtime.phase !== 'active' && runtime.phase !== 'lingering') return false;
   return Math.hypot(point.x - runtime.center.x, point.z - runtime.center.z) <= runtime.radius
     && Math.abs(point.y - runtime.center.y) <= runtime.maximumVerticalDifference;
 }

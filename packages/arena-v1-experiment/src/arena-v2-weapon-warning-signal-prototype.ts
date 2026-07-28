@@ -33,6 +33,7 @@ export interface ArenaV2WeaponWarningSignalProbeResult {
   readonly delayTicks: number;
   readonly warningTicks: number;
   readonly activeTicks: number;
+  readonly lingerTicks: number;
   readonly warningRadius: number;
   readonly maximumVerticalDifference: number;
   readonly responseAtTick: number | null;
@@ -58,6 +59,7 @@ interface WarningSignalDefinition {
     readonly delayTicks: number;
     readonly warningTicks: number;
     readonly activeTicks: number;
+    readonly lingerTicks: number;
     readonly radius: number;
     readonly maximumVerticalDifference: number;
   }>;
@@ -142,6 +144,7 @@ function runProbe(
     maximumVerticalDifference: warning.maximumVerticalDifference,
     startsAtTick: warning.warningTicks,
     activeTicks: warning.activeTicks,
+    lingerTicks: warning.lingerTicks,
   });
   let firstActiveTick: number | null = null;
   let firstHitTick: number | null = null;
@@ -167,6 +170,7 @@ function runProbe(
     delayTicks: warning.delayTicks,
     warningTicks: warning.warningTicks,
     activeTicks: warning.activeTicks,
+    lingerTicks: warning.lingerTicks,
     warningRadius: warning.radius,
     maximumVerticalDifference: warning.maximumVerticalDifference,
     responseAtTick: responseAtTick(definition, responsePolicy),
