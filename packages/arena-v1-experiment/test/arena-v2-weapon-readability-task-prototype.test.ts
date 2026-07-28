@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   createArenaV2WeaponResearchOverviewMatrix,
+  createArenaV2WeaponCaseStudyReadabilityMatrix,
+  createArenaV2WeaponReadabilityContextFacts,
   createArenaV2WeaponReadabilityTaskSet,
   evaluateArenaV2WeaponReadabilityAttempt,
   projectArenaV2WeaponReadabilityParticipantTasks,
@@ -31,6 +33,27 @@ describe('Arena V2 weapon readability task prototype', () => {
       .toBe('research-line-pressure');
     expect(taskSet.tasks.find(({ id }) => id === 'ground-aerial-range-difference')?.expectedContextId)
       .toBe('ground');
+  });
+
+  it('derives concise scene facts from unique extrema without scoring weapons', () => {
+    const facts = createArenaV2WeaponReadabilityContextFacts(
+      createArenaV2WeaponCaseStudyReadabilityMatrix(),
+    );
+    expect(facts.length).toBeGreaterThan(0);
+    expect(facts.every(({ value, unit, statement }) => (
+      Number.isFinite(value) && unit.length > 0 && statement.includes('动作')
+    ))).toBe(true);
+    for (const weaponId of new Set(facts.map(({ weaponId }) => weaponId))) {
+      const weaponFacts = facts.filter((fact) => fact.weaponId === weaponId);
+      expect(weaponFacts.length).toBeLessThanOrEqual(2);
+      expect(new Set(weaponFacts.map(({ kind }) => kind)).size).toBe(weaponFacts.length);
+    }
+    expect(facts.some(({ displayName, statement, kind }) => (
+      displayName === '魔血镰刃' && statement === '空中动作覆盖宽度最高' && kind === 'advantage'
+    ))).toBe(true);
+    expect(facts.some(({ displayName, statement, kind }) => (
+      displayName === '猛犸石斧' && statement === '空中动作收招时间最高' && kind === 'tradeoff'
+    ))).toBe(true);
   });
 
   it('projects participant-safe tasks without leaking expected answers or evidence', () => {
@@ -96,5 +119,8 @@ describe('Arena V2 weapon readability task prototype', () => {
     expect(taskSet.participantReady).toBe(false);
     expect(taskSet.tasks.find(({ id }) => id === 'ground-range-highest')?.status).toBe('blocked');
     expect(evaluateArenaV2WeaponReadabilityAttempt(taskSet, []).status).toBe('blocked');
+
+    const facts = createArenaV2WeaponReadabilityContextFacts(source);
+    expect(facts.some(({ statId, contextId }) => statId === 'range' && contextId === 'ground')).toBe(false);
   });
 });

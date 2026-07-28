@@ -142,7 +142,7 @@ Arena V2 的核心目标是：
 | [弹壳特攻队局外界面研究结果 V2](../research/arena-v2-survivor-io-ui-research-results-v2.md) | 将官方单手/行为化武器/场景化选择证据收敛为 11 个页面入口和竞技准备模板 | 研究结论与原型对齐 |
 | `arena-v2-survivor-io-ui-evidence.ts` | 将官方商店页、生存指南和版本记录拆成来源事实、信息模式、Arena 翻译和不复制边界 | 第四轮研究证据，仅研究工具链 |
 | [V2 武器可读性与长期留存验证计划 V1](../research/arena-v2-weapon-readability-retention-study-v1.md) | 定义 3 分钟操作、10 秒数值解释、KZ 归因和 30/60/120/200 小时真人验证任务 | 真人研究合同，尚无样本 |
-| [武器数值可读性任务原型结果 V1](../research/arena-v2-weapon-readability-task-prototype-results-v1.md) | 在题目前展示六件逐件研究武器的四项首屏快速数值、同源地面/空中矩阵和独立延迟/预警研究信号，再生成五项比较/方向/地图/上下文任务，隔离参与者题目与研究员答案并绑定矩阵哈希 | 六件矩阵、快速数值与研究信号已接入，自动化验证通过，真人/设备样本尚无 |
+| [武器数值可读性任务原型结果 V1](../research/arena-v2-weapon-readability-task-prototype-results-v1.md) | 在题目前展示六件逐件研究武器的四项首屏快速数值、唯一极值场景差异速览、同源地面/空中矩阵和独立延迟/预警研究信号，再生成五项比较/方向/地图/上下文任务，隔离参与者题目与研究员答案并绑定矩阵哈希 | 六件矩阵、快速数值、场景速览与研究信号已接入，自动化验证通过，真人/设备样本尚无 |
 | [研究页浏览器布局证据 V1](../research/arena-v2-browser-layout-evidence-v1.md) | 记录 1280×720 与 390×844 下的六件武器快速数值卡、完整矩阵、11 页面入口、触控尺寸和 Product 数值比较检查 | 本地浏览器布局通过，实体设备/真人仍待验证 |
 | [Product 武器概览首屏收敛结果 V1](../research/arena-v2-product-weapon-overview-convergence-v1.md) | 记录正式 Product 入口从完整 27 行矩阵收敛为 4 行首屏关键差异、3 张语义卡和可展开完整矩阵的桌面/窄屏证据 | 首屏收敛已接入，本地浏览器通过，实体设备/真人仍待验证 |
 | [Product 武器数值差异事实原型结果 V1](../research/arena-v2-product-weapon-comparison-facts-v1.md) | 从同源主数值比较中派生唯一极值的优势/代价事实，帮助玩家快速理解锁链、重锤和冲锋盾的数字差异，不计算综合评分 | Web Product 卡片已接入，真人/多语言仍待验证 |
@@ -179,6 +179,7 @@ Arena V2 的核心目标是：
 | [ADR-093：武器概览用数值差异事实连接武器语法](../decisions/093-arena-v2-weapon-comparison-facts.md) | 固化由唯一数值极值派生优势/代价事实、并列阻塞和不计算综合评分的展示边界 | Web Product 已接入，Canvas 保持同源比较表 |
 | [ADR-095：武器概览补充地面/空中场景差异事实](../decisions/095-arena-v2-weapon-context-comparison-facts.md) | 固化由同源地面/空中比较行派生场景优势/代价事实、上下文保真和不合成评分的展示边界 | Web Product 卡片已接入，Canvas 保持同源比较表 |
 | [ADR-084：武器数值可读性任务必须从研究矩阵生成并隔离答案](../decisions/084-arena-v2-weapon-readability-task-boundary.md) | 固化可读性题目从真实矩阵生成、参与者投影不泄露答案、并列数值阻塞和单次评估不冒充真人结论 | 研究页已接入并完成桌面验证，真人样本尚无 |
+| [ADR-096：可读性研究页增加场景差异速览](../decisions/096-arena-v2-readability-context-fact-summary.md) | 固化从六件研究矩阵派生唯一极值、每件最多一条优势/代价、保留原始单位且不计算综合评分的研究页边界 | 研究页已接入，自动化验证通过，真人/设备样本尚无 |
 | [ADR-062：蓄力承诺先以可取消的整数 tick 原型验证](../decisions/062-arena-v2-weapon-commitment-prototype-boundary.md) | 固化蓄力承诺、提前取消、到期处理和方向记录的研究边界，不直接进入生产武器 | 研究原型已接入 |
 | [ADR-047：生存实体复用玩家规则/物理边界](../decisions/047-arena-v2-survival-entity-boundary.md) | 固化单敌人原型不得绕过命中、冲量和掉落规则 | V2 研究原型 |
 | [ADR-048：生存多敌压力先复用规则引擎](../decisions/048-arena-v2-survival-multi-enemy-pressure-boundary.md) | 固化多敌研究原型的输入决策、供给争夺和正式接入前的边界 | V2 研究原型 |

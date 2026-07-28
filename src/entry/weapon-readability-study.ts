@@ -1,6 +1,7 @@
 import {
   createArenaV2WeaponCaseStudyReadabilityMatrix,
   createArenaV2WeaponCaseStudyResearchSignalReadout,
+  createArenaV2WeaponReadabilityContextFacts,
   createArenaV2WeaponReadabilityTaskSet,
   evaluateArenaV2WeaponReadabilityAttempt,
   projectArenaV2WeaponReadabilityParticipantTasks,
@@ -13,6 +14,7 @@ import {
   type ArenaV2WeaponResearchOverviewStat,
   type ArenaV2WeaponReadabilityTaskSet,
   type ArenaV2WeaponCaseStudyResearchSignalReadout,
+  type ArenaV2WeaponReadabilityContextFact,
 } from '@number-strategy-jump/arena-v1-experiment';
 import type { ArenaV2WeaponPublicAxisId } from '@number-strategy-jump/arena-v1-experiment';
 
@@ -230,6 +232,46 @@ function renderContextTable(
   return details;
 }
 
+function renderContextFacts(
+  documentValue: Document,
+  facts: readonly ArenaV2WeaponReadabilityContextFact[],
+): HTMLElement {
+  const section = documentValue.createElement('section');
+  section.className = 'readability-context-facts';
+  section.setAttribute('aria-labelledby', 'readability-context-facts-title');
+  const heading = documentValue.createElement('h3');
+  heading.id = 'readability-context-facts-title';
+  text(heading, '场景差异速览');
+  section.append(heading);
+  const note = documentValue.createElement('p');
+  note.className = 'readability-note';
+  text(note, '只展示六件研究武器矩阵中的唯一极值；每条都保留场景、数值和单位，完整矩阵可继续核对。');
+  section.append(note);
+  const list = documentValue.createElement('div');
+  list.className = 'readability-context-fact-list';
+  for (const fact of facts) {
+    const item = documentValue.createElement('div');
+    item.className = 'readability-context-fact';
+    item.dataset.contextFactKind = fact.kind;
+    item.dataset.contextFactContext = fact.contextId;
+    item.dataset.contextFactStat = fact.statId;
+    item.setAttribute(
+      'aria-label',
+      `${fact.displayName}：${fact.statement}，${fact.value.toFixed(fact.precision)} ${fact.unit}`,
+    );
+    const name = documentValue.createElement('strong');
+    text(name, fact.displayName);
+    const statement = documentValue.createElement('span');
+    text(statement, fact.statement);
+    const value = documentValue.createElement('b');
+    text(value, `${fact.value.toFixed(fact.precision)} ${fact.unit}`);
+    item.append(name, statement, value);
+    list.append(item);
+  }
+  section.append(list);
+  return section;
+}
+
 function renderOverview(
   documentValue: Document,
   matrix: ArenaV2WeaponResearchOverviewMatrix,
@@ -242,6 +284,7 @@ function renderOverview(
   summary.className = 'readability-overview-summary';
   for (const row of matrix.rows) summary.append(renderWeaponSummary(documentValue, row));
   overview.append(summary);
+  overview.append(renderContextFacts(documentValue, createArenaV2WeaponReadabilityContextFacts(matrix)));
   overview.append(renderContextTable(documentValue, matrix.rows, 'ground'));
   overview.append(renderContextTable(documentValue, matrix.rows, 'aerial'));
   overview.append(researchSignalsRoot);

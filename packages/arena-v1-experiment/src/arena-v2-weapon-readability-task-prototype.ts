@@ -120,6 +120,28 @@ export interface ArenaV2WeaponCaseStudyResearchSignalReadout {
   readonly explanation: string;
 }
 
+export type ArenaV2WeaponReadabilityContextFactKind = 'advantage' | 'tradeoff';
+
+/**
+ * A concise, participant-visible fact derived from the six-weapon matrix.
+ * It is intentionally not a score: the context, axis, direction and source
+ * value remain visible so a participant can verify the claim in the table.
+ */
+export interface ArenaV2WeaponReadabilityContextFact {
+  readonly id: string;
+  readonly weaponId: string;
+  readonly displayName: string;
+  readonly contextId: ArenaV2WeaponResearchOverviewContextId;
+  readonly contextLabel: string;
+  readonly statId: ArenaV2WeaponPublicAxisId;
+  readonly statement: string;
+  readonly value: number;
+  readonly unit: ArenaV2WeaponResearchOverviewStat['unit'];
+  readonly precision: number;
+  readonly direction: ArenaV2WeaponResearchOverviewStat['direction'];
+  readonly kind: ArenaV2WeaponReadabilityContextFactKind;
+}
+
 /**
  * Adapts the six deep weapon studies to the same participant-safe matrix used
  * by the readability task. The source remains research-only and is never a
@@ -200,6 +222,107 @@ export function createArenaV2WeaponCaseStudyResearchSignalReadout(): readonly Ar
   }));
 }
 
+const READABILITY_CONTEXT_FACT_CONTEXT_PRIORITY: readonly ArenaV2WeaponResearchOverviewContextId[] = Object.freeze([
+  'aerial',
+  'ground',
+]);
+
+const READABILITY_CONTEXT_FACT_AXIS_PRIORITY: readonly ArenaV2WeaponPublicAxisId[] = Object.freeze([
+  'range',
+  'coverage',
+  'startup',
+  'recovery',
+  'impact',
+  'vertical',
+  'height-gap',
+]);
+
+function contextFactSuffix(
+  stat: ArenaV2WeaponResearchOverviewStat,
+  kind: ArenaV2WeaponReadabilityContextFactKind,
+): string {
+  if (stat.direction === 'higher-is-risk') return kind === 'advantage' ? '最低风险' : '最高风险';
+  if (stat.direction === 'lower-is-better') return kind === 'advantage' ? '最低' : '最高';
+  return kind === 'advantage' ? '最高' : '最低';
+}
+
+function contextFactExtremeDirection(
+  stat: ArenaV2WeaponResearchOverviewStat,
+  kind: ArenaV2WeaponReadabilityContextFactKind,
+): 'max' | 'min' {
+  const bestIsMin = stat.direction === 'lower-is-better' || stat.direction === 'higher-is-risk';
+  if (kind === 'advantage') return bestIsMin ? 'min' : 'max';
+  return bestIsMin ? 'max' : 'min';
+}
+
+function contextFactFor(
+  row: ArenaV2WeaponResearchOverviewRow,
+  contextId: ArenaV2WeaponResearchOverviewContextId,
+  statId: ArenaV2WeaponPublicAxisId,
+  kind: ArenaV2WeaponReadabilityContextFactKind,
+): ArenaV2WeaponReadabilityContextFact {
+  const context = contextFor(row, contextId);
+  const stat = statFor(row, contextId, statId);
+  return Object.freeze({
+    id: `${contextId}-${statId}-${kind}-${row.weaponId}`,
+    weaponId: row.weaponId,
+    displayName: row.displayName,
+    contextId,
+    contextLabel: context.label,
+    statId,
+    statement: `${context.label}${stat.label}${contextFactSuffix(stat, kind)}`,
+    value: stat.value,
+    unit: stat.unit,
+    precision: stat.precision,
+    direction: stat.direction,
+    kind,
+  });
+}
+
+/**
+ * Derives at most one advantage and one tradeoff per weapon from unique
+ * extrema. Ties are omitted so the research page never invents a winner.
+ */
+export function createArenaV2WeaponReadabilityContextFacts(
+  matrix: ArenaV2WeaponResearchOverviewMatrix,
+): readonly ArenaV2WeaponReadabilityContextFact[] {
+  const candidates: ArenaV2WeaponReadabilityContextFact[] = [];
+  for (const contextId of READABILITY_CONTEXT_FACT_CONTEXT_PRIORITY) {
+    for (const statId of READABILITY_CONTEXT_FACT_AXIS_PRIORITY) {
+      const comparable = matrix.rows.every((row) => {
+        const context = contextFor(row, contextId);
+        return [...context.stats, ...context.contextStats, ...context.behaviorStats]
+          .some(({ id }) => id === statId);
+      });
+      if (!comparable) continue;
+      const referenceStat = statFor(matrix.rows[0]!, contextId, statId);
+      for (const kind of ['advantage', 'tradeoff'] as const) {
+        const winner = uniqueWinner(
+          matrix.rows,
+          contextId,
+          statId,
+          contextFactExtremeDirection(referenceStat, kind),
+        );
+        if (!winner) continue;
+        const row = matrix.rows.find(({ weaponId }) => weaponId === winner);
+        if (!row) throw new Error(`场景差异事实缺少武器行：${winner}`);
+        candidates.push(contextFactFor(row, contextId, statId, kind));
+      }
+    }
+  }
+
+  const selectedByWeapon = new Map<string, ArenaV2WeaponReadabilityContextFact[]>();
+  for (const candidate of candidates) {
+    const selected = selectedByWeapon.get(candidate.weaponId) ?? [];
+    if (selected.some(({ kind }) => kind === candidate.kind) || selected.length >= 2) continue;
+    selected.push(candidate);
+    selectedByWeapon.set(candidate.weaponId, selected);
+  }
+  return Object.freeze(matrix.rows.flatMap(({ weaponId }) => (
+    selectedByWeapon.get(weaponId) ?? []
+  )));
+}
+
 function freezeOption(id: string, label: string): ArenaV2WeaponReadabilityOption {
   return Object.freeze({ id, label });
 }
@@ -218,7 +341,9 @@ function statFor(
   contextId: ArenaV2WeaponResearchOverviewContextId,
   axisId: ArenaV2WeaponPublicAxisId,
 ): ArenaV2WeaponResearchOverviewStat {
-  const stat = contextFor(row, contextId).stats.find(({ id }) => id === axisId);
+  const context = contextFor(row, contextId);
+  const stat = [...context.stats, ...context.contextStats, ...context.behaviorStats]
+    .find(({ id }) => id === axisId);
   if (!stat) throw new RangeError(`研究可读性任务缺少数值轴：${row.weaponId}/${contextId}/${axisId}`);
   return stat;
 }

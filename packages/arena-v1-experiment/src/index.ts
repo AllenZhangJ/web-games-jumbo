@@ -227,6 +227,7 @@ export type {
 } from './arena-v2-weapon-public-axis-contract.js';
 export {
   ARENA_V2_WEAPON_READABILITY_TASK_SCHEMA_VERSION,
+  createArenaV2WeaponReadabilityContextFacts,
   createArenaV2WeaponReadabilityTaskSet,
   evaluateArenaV2WeaponReadabilityAttempt,
   projectArenaV2WeaponReadabilityParticipantTasks,
@@ -234,6 +235,8 @@ export {
 export type {
   ArenaV2WeaponReadabilityAttemptAnswer,
   ArenaV2WeaponReadabilityAttemptReport,
+  ArenaV2WeaponReadabilityContextFact,
+  ArenaV2WeaponReadabilityContextFactKind,
   ArenaV2WeaponReadabilityEvidenceValue,
   ArenaV2WeaponReadabilityOption,
   ArenaV2WeaponReadabilityParticipantTask,
