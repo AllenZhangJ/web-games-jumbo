@@ -482,6 +482,31 @@ button {
   border-bottom: 1px solid var(--line);
 }
 
+.product-weapon-details {
+  margin: 0 0 0.65rem;
+  border-top: 1px solid var(--line);
+}
+
+.product-weapon-details > summary {
+  padding: 0.55rem 0.1rem;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 0.58rem;
+  font-weight: 900;
+  list-style-position: inside;
+}
+
+.product-weapon-details > summary small {
+  margin-left: 0.35rem;
+  color: var(--muted);
+  font-size: 0.5rem;
+  font-weight: 700;
+}
+
+.product-weapon-comparison-details {
+  margin-top: 0.15rem;
+}
+
 .product-comparison-heading {
   display: flex;
   align-items: baseline;

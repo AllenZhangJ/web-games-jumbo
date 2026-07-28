@@ -1,14 +1,14 @@
 import {
   type ProductSessionViewModel,
   type ProductUiSceneAction,
+  type ProductUiSceneWeaponCard,
+  type ProductUiSceneWeaponComparisonRow,
 } from '@number-strategy-jump/arena-product-presentation';
 import {
   createWebProductSceneModel,
   type WebProductCharacterCard,
   type WebProductSceneModel,
 } from './web-product-scene-model.js';
-import type { ProductUiSceneWeaponCard } from '@number-strategy-jump/arena-product-presentation';
-
 export const WEB_PRODUCT_UI_SURFACE_STATE = Object.freeze({
   CREATED: 'created',
   READY: 'ready',
@@ -21,6 +21,11 @@ type WebProductUiSurfaceState = typeof WEB_PRODUCT_UI_SURFACE_STATE[
 type ProductIntent = Readonly<Record<string, unknown>>;
 type IntentHandler = (intent: ProductIntent) => unknown;
 type IntentRejectedHandler = (error: unknown, intent: ProductIntent) => unknown;
+type WeaponComparisonKind = 'main' | 'behavior' | 'context';
+type WeaponComparisonRow = Readonly<{
+  row: ProductUiSceneWeaponComparisonRow;
+  kind: WeaponComparisonKind;
+}>;
 
 interface ViewportLike {
   readonly width?: unknown;
@@ -38,6 +43,7 @@ interface UiNodes {
   readonly characterList: HTMLElement;
   readonly weaponList: HTMLElement | null;
   readonly weaponComparison: HTMLElement | null;
+  readonly weaponComparisonDetails: HTMLElement | null;
   readonly matchingPlayerImage: HTMLImageElement;
   readonly matchingPlayerName: HTMLElement;
   readonly matchingOpponentImage: HTMLImageElement;
@@ -194,6 +200,7 @@ export class WebProductUiSurface {
       characterList: requiredElement<HTMLElement>(this.#root, '#product-character-list'),
       weaponList: this.#root.querySelector<HTMLElement>('#product-weapon-list'),
       weaponComparison: this.#root.querySelector<HTMLElement>('#product-weapon-comparison'),
+      weaponComparisonDetails: this.#root.querySelector<HTMLElement>('#product-weapon-comparison-details'),
       matchingPlayerImage: requiredElement<HTMLImageElement>(this.#root, '#product-matching-player-image'),
       matchingPlayerName: requiredElement<HTMLElement>(this.#root, '#product-matching-player-name'),
       matchingOpponentImage: requiredElement<HTMLImageElement>(this.#root, '#product-matching-opponent-image'),
@@ -469,14 +476,10 @@ export class WebProductUiSurface {
     list.replaceChildren(fragment);
   }
 
-  #syncWeaponComparison(model: WebProductSceneModel): void {
-    const comparison = this.#readyNodes().weaponComparison;
-    if (!comparison) return;
-    const comparisonRows = [
-      ...model.weaponComparison.map((row) => ({ row, kind: 'main' as const })),
-      ...model.weaponBehaviorComparison.map((row) => ({ row, kind: 'behavior' as const })),
-      ...model.weaponContextComparison.map((row) => ({ row, kind: 'context' as const })),
-    ];
+  #renderWeaponComparison(
+    comparison: HTMLElement,
+    comparisonRows: readonly WeaponComparisonRow[],
+  ): void {
     if (comparisonRows.length === 0) {
       comparison.replaceChildren();
       return;
@@ -489,8 +492,8 @@ export class WebProductUiSurface {
     headerLabel.textContent = '数值';
     headerLabel.setAttribute('role', 'columnheader');
     header.append(headerLabel);
-    const firstRow = comparisonRows[0]!.row;
-    for (const value of firstRow.values) {
+    const firstRow = comparisonRows[0]!.row.values;
+    for (const value of firstRow) {
       const weapon = this.#document.createElement('span');
       weapon.textContent = value.weaponName;
       weapon.setAttribute('role', 'columnheader');
@@ -504,7 +507,9 @@ export class WebProductUiSurface {
       row.dataset.weaponComparisonSurface = kind;
       row.setAttribute('role', 'row');
       const label = this.#document.createElement('span');
-      const prefix = kind === 'behavior' ? '行为·' : kind === 'context' ? '场景·' : '';
+      const prefix = row.dataset.weaponComparisonSurface === 'behavior'
+        ? '行为·'
+        : row.dataset.weaponComparisonSurface === 'context' ? '场景·' : '';
       label.textContent = `${prefix}${rowValue.label} (${rowValue.unit})`;
       label.setAttribute('role', 'rowheader');
       row.append(label);
@@ -540,6 +545,34 @@ export class WebProductUiSurface {
       fragment.append(row);
     }
     comparison.replaceChildren(fragment);
+  }
+
+  #syncWeaponComparison(model: WebProductSceneModel): void {
+    const nodes = this.#readyNodes();
+    const comparison = nodes.weaponComparison;
+    if (!comparison) return;
+    const comparisonRows: readonly WeaponComparisonRow[] = [
+      ...model.weaponComparison.map((row) => ({ row, kind: 'main' as const })),
+      ...model.weaponBehaviorComparison.map((row) => ({ row, kind: 'behavior' as const })),
+      ...model.weaponContextComparison.map((row) => ({ row, kind: 'context' as const })),
+    ];
+    const quickIds = ['range', 'startup', 'impact', 'recovery'];
+    const mainRows = comparisonRows.filter(({ kind }) => kind === 'main');
+    const mainById = new Map(mainRows.map((entry) => [entry.row.id, entry]));
+    const quickRows = quickIds
+      .map((id) => mainById.get(id))
+      .filter((row): row is WeaponComparisonRow => row !== undefined);
+    for (const row of mainRows) {
+      if (quickRows.length >= 4) break;
+      if (!quickRows.some(({ row: quickRow }) => quickRow.id === row.row.id)) quickRows.push(row);
+    }
+    this.#renderWeaponComparison(comparison, quickRows);
+    if (nodes.weaponComparisonDetails) {
+      this.#renderWeaponComparison(
+        nodes.weaponComparisonDetails,
+        comparisonRows,
+      );
+    }
   }
 
   #syncInteractive(): void {
