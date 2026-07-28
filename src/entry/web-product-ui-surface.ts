@@ -513,7 +513,20 @@ export class WebProductUiSurface {
         const direction = value.direction === 'lower-is-better'
           ? '↓'
           : value.direction === 'higher-is-risk' ? '⚠' : '↑';
-        cell.textContent = `${value.value.toFixed(value.precision)}${value.unit} ${direction}`;
+        const valueText = this.#document.createElement('strong');
+        const track = this.#document.createElement('span');
+        const formattedValue = `${value.value.toFixed(value.precision)}${value.unit} ${direction}`;
+        valueText.textContent = formattedValue;
+        valueText.dataset.weaponComparisonText = 'true';
+        track.className = 'product-weapon-comparison-track';
+        track.dataset.weaponComparisonTrack = 'true';
+        track.setAttribute('aria-hidden', 'true');
+        track.style.setProperty(
+          '--weapon-comparison-fill',
+          `${weaponStatFill(value.value, value.maxValue, value.direction)}%`,
+        );
+        cell.className = 'product-weapon-comparison-cell';
+        cell.dataset.weaponComparisonDirection = value.direction;
         cell.dataset.weaponComparisonValue = value.weaponId;
         cell.setAttribute('role', 'cell');
         cell.setAttribute(
@@ -521,6 +534,7 @@ export class WebProductUiSurface {
           `${value.weaponName}${rowValue.label}${value.value.toFixed(value.precision)}${value.unit}，${weaponDirectionHint(value.direction)}`,
         );
         cell.title = weaponDirectionHint(value.direction);
+        cell.append(valueText, track);
         row.append(cell);
       }
       fragment.append(row);

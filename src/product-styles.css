@@ -531,6 +531,42 @@ button {
   text-align: right;
 }
 
+.product-weapon-comparison-cell {
+  display: grid;
+  gap: 0.16rem;
+  min-width: 0;
+  text-align: right;
+}
+
+.product-weapon-comparison-cell > strong {
+  display: block;
+  overflow: hidden;
+  font-size: inherit;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.product-weapon-comparison-track {
+  display: block;
+  height: 0.14rem;
+  overflow: hidden;
+  background: var(--paper-deep);
+  border-radius: 999px;
+}
+
+.product-weapon-comparison-track::after {
+  display: block;
+  width: var(--weapon-comparison-fill, 0%);
+  height: 100%;
+  content: "";
+  background: var(--cyan);
+}
+
+.product-weapon-comparison-cell[data-weapon-comparison-direction="higher-is-risk"] .product-weapon-comparison-track::after {
+  background: var(--coral);
+}
+
 .product-weapon-comparison-row.is-header {
   padding-top: 0;
   color: var(--coral-dark);

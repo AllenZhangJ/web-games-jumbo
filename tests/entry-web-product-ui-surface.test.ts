@@ -373,15 +373,28 @@ test('WebProductUiSurface renders stable semantic controls and serializes DOM in
   const comparisonRisk = required(comparison.children[3], 'comparison risk row');
   assert.equal(comparisonHeader.children[1]?.textContent, '重锤');
   assert.equal(comparisonHeader.children[3]?.textContent, '冲锋盾');
-  assert.equal(comparisonRange.children[1]?.textContent, '1.80格 ↑');
-  assert.equal(comparisonRange.children[2]?.textContent, '5.00格 ↑');
-  assert.equal(comparisonRange.children[3]?.textContent, '1.60格 ↑');
+  assert.equal(comparisonRange.children[1]?.children[0]?.textContent, '1.80格 ↑');
+  assert.equal(comparisonRange.children[2]?.children[0]?.textContent, '5.00格 ↑');
+  assert.equal(comparisonRange.children[3]?.children[0]?.textContent, '1.60格 ↑');
+  const comparisonRangeCell = required(comparisonRange.children[1], 'comparison range value cell');
+  assert.equal(comparisonRangeCell.className, 'product-weapon-comparison-cell');
+  assert.equal(comparisonRangeCell.children[0]?.textContent, '1.80格 ↑');
+  const comparisonRangeTrack = required(comparisonRangeCell.children[1], 'comparison range value track');
+  const comparisonRangeFill = Number.parseFloat(
+    comparisonRangeTrack.style.values.get('--weapon-comparison-fill') ?? '',
+  );
+  assert.ok(comparisonRangeFill > 0 && comparisonRangeFill < 100);
+  assert.equal(comparisonRangeTrack.getAttribute('aria-hidden'), 'true');
   const comparisonCoverage = required(comparison.children[2], 'comparison coverage row');
   assert.equal(comparisonCoverage.children[0]?.textContent, '覆盖宽度 (格)');
-  assert.equal(comparisonCoverage.children[1]?.textContent, '3.30格 ↑');
-  assert.equal(comparisonCoverage.children[2]?.textContent, '8.35格 ↑');
-  assert.equal(comparisonCoverage.children[3]?.textContent, '1.30格 ↑');
-  assert.equal(comparisonRisk.children[3]?.textContent, '6.50冲量 ⚠');
+  assert.equal(comparisonCoverage.children[1]?.children[0]?.textContent, '3.30格 ↑');
+  assert.equal(comparisonCoverage.children[2]?.children[0]?.textContent, '8.35格 ↑');
+  assert.equal(comparisonCoverage.children[3]?.children[0]?.textContent, '1.30格 ↑');
+  assert.equal(comparisonRisk.children[3]?.children[0]?.textContent, '6.50冲量 ⚠');
+  assert.equal(
+    required(comparisonRisk.children[3], 'comparison risk value').dataset.weaponComparisonDirection,
+    'higher-is-risk',
+  );
   assert.match(
     required(comparisonRisk.children[3], 'comparison risk value').getAttribute('aria-label') ?? '',
     /越高风险越大/,
@@ -389,19 +402,19 @@ test('WebProductUiSurface renders stable semantic controls and serializes DOM in
   const comparisonActiveSpan = required(comparison.children[4], 'comparison active span row');
   const comparisonDirectionTolerance = required(comparison.children[5], 'comparison direction tolerance row');
   assert.equal(comparisonActiveSpan.children[0]?.textContent, '行为·有效窗口 (秒)');
-  assert.equal(comparisonActiveSpan.children[1]?.textContent, '0.05秒 ↑');
-  assert.equal(comparisonActiveSpan.children[2]?.textContent, '0.05秒 ↑');
-  assert.equal(comparisonActiveSpan.children[3]?.textContent, '0.07秒 ↑');
+  assert.equal(comparisonActiveSpan.children[1]?.children[0]?.textContent, '0.05秒 ↑');
+  assert.equal(comparisonActiveSpan.children[2]?.children[0]?.textContent, '0.05秒 ↑');
+  assert.equal(comparisonActiveSpan.children[3]?.children[0]?.textContent, '0.07秒 ↑');
   assert.equal(comparisonDirectionTolerance.children[0]?.textContent, '行为·方向容错角 (°)');
-  assert.equal(comparisonDirectionTolerance.children[1]?.textContent, '133° ↑');
-  assert.equal(comparisonDirectionTolerance.children[2]?.textContent, '113° ↑');
-  assert.equal(comparisonDirectionTolerance.children[3]?.textContent, '90° ↑');
+  assert.equal(comparisonDirectionTolerance.children[1]?.children[0]?.textContent, '133° ↑');
+  assert.equal(comparisonDirectionTolerance.children[2]?.children[0]?.textContent, '113° ↑');
+  assert.equal(comparisonDirectionTolerance.children[3]?.children[0]?.textContent, '90° ↑');
   assert.equal(comparisonActiveSpan.dataset.weaponComparisonSurface, 'behavior');
   const comparisonGroundRange = required(comparison.children[6], 'ground context range row');
   assert.equal(comparisonGroundRange.children[0]?.textContent, '场景·地面·有效距离 (格)');
-  assert.equal(comparisonGroundRange.children[1]?.textContent, '1.80格 ↑');
-  assert.equal(comparisonGroundRange.children[2]?.textContent, '5.00格 ↑');
-  assert.equal(comparisonGroundRange.children[3]?.textContent, '1.60格 ↑');
+  assert.equal(comparisonGroundRange.children[1]?.children[0]?.textContent, '1.80格 ↑');
+  assert.equal(comparisonGroundRange.children[2]?.children[0]?.textContent, '5.00格 ↑');
+  assert.equal(comparisonGroundRange.children[3]?.children[0]?.textContent, '1.60格 ↑');
   assert.equal(comparisonGroundRange.dataset.weaponComparisonSurface, 'context');
   const hammerCard = required(
     root.querySelector('[data-weapon-card]'),
