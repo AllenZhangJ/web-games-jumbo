@@ -1,0 +1,627 @@
+{
+  "schemaVersion": 1,
+  "id": "arena.art.reference-board.character.a0.2.2.v1",
+  "status": "board-ready",
+  "category": "character",
+  "artBibleRevision": "a0.1-contract-ready@22b9fd0e39b83de0b6a3ed766a2a66f3d2f67b1d",
+  "sourcePack": {
+    "path": "docs/quality/art/reference-sources/arena-a0.2.1-source-pack-v1.json",
+    "id": "arena.art.reference-source-pack.a0.2.1.v1",
+    "sha256": "061f94357d55a5f1ea194e72723daae172aa9294901cb7b8fca5abddbf092e8c",
+    "status": "source-ready"
+  },
+  "supplementalPack": {
+    "path": "docs/quality/art/reference-sources/arena-a0.2.1-supplemental-weapon-feedback-v1.json",
+    "id": "arena.art.reference-source-pack.a0.2.1.supplemental.weapon-feedback.v1",
+    "sha256": "d49343413702dbad9f7ac874e053dc0eb56a51313b611a4fa9c16efa0137561e",
+    "status": "supplemental-source-ready"
+  },
+  "generatedAt": "2026-07-28",
+  "weights": {
+    "adopt": 70,
+    "avoid": 20,
+    "experiment": 10
+  },
+  "layout": {
+    "canvas": {
+      "width": 2560,
+      "height": 1440,
+      "colorSpace": "srgb",
+      "transparent": false
+    },
+    "grid": {
+      "x": 80,
+      "y": 140,
+      "columns": 5,
+      "rows": 2,
+      "tileWidth": 480,
+      "tileHeight": 480,
+      "visualHeight": 320,
+      "annotationHeight": 160
+    },
+    "order": [
+      "USE01",
+      "USE02",
+      "USE03",
+      "USE04",
+      "USE05",
+      "USE06",
+      "USE07",
+      "AVOID01",
+      "AVOID02",
+      "TEST01"
+    ]
+  },
+  "purpose": "固定角色生产时可采用的头肩、重心、负空间和附件关系，并把换色、巨型头饰与外部职业符号排除在角色差异之外。",
+  "sourceArtifact": {
+    "path": "docs/quality/art/reference-boards/arena-reference-board-character-v1.svg",
+    "sha256": "b786d36ff24c32bfe1d561c2e9e8e611c53bc813dff9cda9c286dbe1f32dc6f3",
+    "byteLength": 847360,
+    "width": 2560,
+    "height": 1440,
+    "colorSpace": "srgb"
+  },
+  "reviewArtifact": {
+    "path": "docs/quality/art/reference-boards/arena-reference-board-character-v1.png",
+    "sha256": "3dc45c92b449f4881f388e57eb5596af40cee989067e49edb72ec7ddd0065c7d",
+    "byteLength": 973292,
+    "width": 2560,
+    "height": 1440,
+    "colorSpace": "srgb"
+  },
+  "tenPercentReview": {
+    "path": "docs/quality/art/reference-boards/arena-reference-board-character-v1-10pct.png",
+    "sha256": "937ce047f3c85ae4179bb3ae689ac3e49a323040f430df7b7db9bdc388f08714",
+    "byteLength": 43481,
+    "width": 256,
+    "height": 144,
+    "colorSpace": "srgb",
+    "scale": 0.1,
+    "readabilityScope": [
+      "board-identity",
+      "7-2-1-decision-zones",
+      "embedded-vs-link-only",
+      "dominant-silhouette-and-value"
+    ],
+    "fullAnnotationReadability": "mobile-equivalent-required",
+    "status": "overview-readable"
+  },
+  "mobileEquivalentReview": {
+    "path": "docs/quality/art/reference-boards/arena-reference-board-character-v1-mobile-review.png",
+    "sha256": "c85c4a19669a26040e41dc6974b0e35a91d927d39f85199ce6d8c0e792ed4b5a",
+    "byteLength": 859240,
+    "width": 780,
+    "height": 6420,
+    "colorSpace": "srgb",
+    "cssViewport": {
+      "width": 390,
+      "height": 844,
+      "devicePixelRatio": 2
+    },
+    "capture": "full-page-scroll-equivalent",
+    "entryCount": 10,
+    "annotationReadability": "full",
+    "status": "board-ready"
+  },
+  "entries": [
+    {
+      "entryId": "character-b01",
+      "decisionSlot": "USE01",
+      "decisionClass": "adopt",
+      "tileIndex": 0,
+      "sourceKind": "project-original",
+      "title": "KayKit Rogue front and side clean review render",
+      "creator": "Arena project from KayKit CC0 formal asset",
+      "rightsHolder": "Arena project owner / KayKit source under CC0",
+      "sourceLocator": "public/assets/arena/characters/kaykit-adventurers/parkour-apprentice-rogue.glb",
+      "sourceRevision": "672074b73ba276876a19e8816ecdc5241817ab47@formal-bundle-v1",
+      "retrievedAt": "2026-07-23",
+      "licenseId": "CC0-1.0",
+      "licenseLocator": "licenses/kaykit-adventurers-CC0-LICENSE.txt",
+      "proofLocator": "docs/quality/art/reference-sources/project-character-renders/character-render-manifest-v1.json",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "embedded",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/project-character-renders/character-b01-rogue-front-side.png",
+        "byteLength": 116434,
+        "sha256": "ce21db1d2c098747d4760d32a46a4cab209ded203286bf769cb4fae6e3dd0739",
+        "width": 960,
+        "height": 960
+      },
+      "crop": {
+        "mode": "contain",
+        "sourceRect": {
+          "x": 0,
+          "y": 0,
+          "width": 960,
+          "height": 960
+        },
+        "displayRect": {
+          "x": 80,
+          "y": 0,
+          "width": 320,
+          "height": 320
+        },
+        "croppedPixels": 0,
+        "approval": {
+          "status": "approved-no-crop",
+          "reviewer": "Codex / game-art-director self-review",
+          "signedAt": "2026-07-28",
+          "rationale": "完整源图按contain缩放，保留全部上下文；不裁切、不拉伸。"
+        }
+      },
+      "decisionReason": "采用，因为正面检查头肩、躯干与肢体负空间，侧面检查头发、鼻部、背披与脚部重心在低多边形体块中的分离。",
+      "specificTakeaway": "正面检查头肩、躯干与肢体负空间，侧面检查头发、鼻部、背披与脚部重心在低多边形体块中的分离。",
+      "arenaConstraint": "角色槽必须在正/侧视保留头肩、披风、手脚空隙；换色不得替代轮廓差异。",
+      "doNotCopy": "不复制原角色服装、面孔、配色或贴图布局。",
+      "usageBoundary": "固定相机、GLB与纹理输入hash见character-render-manifest-v1.json；仅来源质量视图，不计A0.3剪影。",
+      "antiReferenceReason": null,
+      "reviewStatus": "coordination-approved"
+    },
+    {
+      "entryId": "character-b02",
+      "decisionSlot": "USE02",
+      "decisionClass": "adopt",
+      "tileIndex": 1,
+      "sourceKind": "project-original",
+      "title": "KayKit Clockwork Warrior front and three-quarter clean review render",
+      "creator": "Arena project from KayKit CC0 formal asset",
+      "rightsHolder": "Arena project owner / KayKit source under CC0",
+      "sourceLocator": "public/assets/arena/characters/kaykit-skeletons/clockwork-warrior.glb",
+      "sourceRevision": "15b62b9bad122f72926c10fb14d622c73819fa54@formal-bundle-v1",
+      "retrievedAt": "2026-07-23",
+      "licenseId": "CC0-1.0",
+      "licenseLocator": "licenses/kaykit-skeletons-CC0-LICENSE.txt",
+      "proofLocator": "docs/quality/art/reference-sources/project-character-renders/character-render-manifest-v1.json",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "embedded",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/project-character-renders/character-b02-skeleton-front-three-quarter.png",
+        "byteLength": 132105,
+        "sha256": "3089d9fbd58642821a27b19226f7a0a918d80a861f670685b683de768aeb5e7a",
+        "width": 960,
+        "height": 960
+      },
+      "crop": {
+        "mode": "contain",
+        "sourceRect": {
+          "x": 0,
+          "y": 0,
+          "width": 960,
+          "height": 960
+        },
+        "displayRect": {
+          "x": 80,
+          "y": 0,
+          "width": 320,
+          "height": 320
+        },
+        "croppedPixels": 0,
+        "approval": {
+          "status": "approved-no-crop",
+          "reviewer": "Codex / game-art-director self-review",
+          "signedAt": "2026-07-28",
+          "rationale": "完整源图按contain缩放，保留全部上下文；不裁切、不拉伸。"
+        }
+      },
+      "decisionReason": "采用，因为正面与三分之四视图证明方硬头盔、上扬肩角、骨架空隙和短腿重心与Rogue形成可审阅差异。",
+      "specificTakeaway": "正面与三分之四视图证明方硬头盔、上扬肩角、骨架空隙和短腿重心与Rogue形成可审阅差异。",
+      "arenaConstraint": "方硬角色必须以头盔横宽、肩角和短腿重心区别于Rogue。",
+      "doNotCopy": "不复制骷髅身份、头盔图案、服装或配色。",
+      "usageBoundary": "固定相机、GLB与纹理输入hash见character-render-manifest-v1.json；仅来源质量视图，不计A0.3剪影。",
+      "antiReferenceReason": null,
+      "reviewStatus": "coordination-approved"
+    },
+    {
+      "entryId": "character-b03",
+      "decisionSlot": "USE03",
+      "decisionClass": "adopt",
+      "tileIndex": 2,
+      "sourceKind": "project-original",
+      "title": "KayKit Rogue and round shield three-quarter clean review render",
+      "creator": "Arena project from KayKit CC0 formal assets",
+      "rightsHolder": "Arena project owner / KayKit source under CC0",
+      "sourceLocator": "public/assets/arena/equipment/kaykit-adventurers/shield-round.glb",
+      "sourceRevision": "672074b73ba276876a19e8816ecdc5241817ab47@formal-bundle-v1",
+      "retrievedAt": "2026-07-23",
+      "licenseId": "CC0-1.0",
+      "licenseLocator": "licenses/kaykit-adventurers-CC0-LICENSE.txt",
+      "proofLocator": "docs/quality/art/reference-sources/project-character-renders/character-render-manifest-v1.json",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "embedded",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/project-character-renders/character-b03-rogue-round-shield-three-quarter.png",
+        "byteLength": 87394,
+        "sha256": "aa1b0e021193a1c0de08bd728c7d06ce8ad1c56410d06ad188c691407a2767a9",
+        "width": 960,
+        "height": 960
+      },
+      "crop": {
+        "mode": "contain",
+        "sourceRect": {
+          "x": 0,
+          "y": 0,
+          "width": 960,
+          "height": 960
+        },
+        "displayRect": {
+          "x": 80,
+          "y": 0,
+          "width": 320,
+          "height": 320
+        },
+        "croppedPixels": 0,
+        "approval": {
+          "status": "approved-no-crop",
+          "reviewer": "Codex / game-art-director self-review",
+          "signedAt": "2026-07-28",
+          "rationale": "完整源图按contain缩放，保留全部上下文；不裁切、不拉伸。"
+        }
+      },
+      "decisionReason": "采用，因为三分之四视图把圆盾实际并置在角色持握侧，检查附件面积、圆形语义与单侧负空间如何改变整体轮廓。",
+      "specificTakeaway": "三分之四视图把圆盾实际并置在角色持握侧，检查附件面积、圆形语义与单侧负空间如何改变整体轮廓。",
+      "arenaConstraint": "圆盾可占单侧轮廓，但不得遮住面向、肩线或攻击手。",
+      "doNotCopy": "不复制盾面配色、分区、厚度或角色持握姿态。",
+      "usageBoundary": "并置关系不是运行时挂点证明；固定相机、两份GLB与纹理输入hash见character-render-manifest-v1.json，且不计A0.3剪影。",
+      "antiReferenceReason": null,
+      "reviewStatus": "coordination-approved"
+    },
+    {
+      "entryId": "character-b04",
+      "decisionSlot": "USE04",
+      "decisionClass": "adopt",
+      "tileIndex": 3,
+      "sourceKind": "public-domain",
+      "title": "Armor (Gusoku)",
+      "creator": "Bamen Tomotsugu",
+      "rightsHolder": "The Metropolitan Museum of Art Open Access / public-domain work",
+      "sourceLocator": "https://www.metmuseum.org/art/collection/search/24975",
+      "sourceRevision": "met-object-24975@retrieved-2026-07-28",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "CC0-1.0",
+      "licenseLocator": "https://www.metmuseum.org/hubs/open-access",
+      "proofLocator": "https://collectionapi.metmuseum.org/public/collection/v1/objects/24975",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "embedded",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/met-open-access/character-b04-gusoku.jpg",
+        "byteLength": 67602,
+        "sha256": "b6b55bf20c6e76c40fcc361a234fbb41e27d58b3b56f31b99621110a5c847cd6",
+        "width": 500,
+        "height": 625
+      },
+      "crop": {
+        "mode": "contain",
+        "sourceRect": {
+          "x": 0,
+          "y": 0,
+          "width": 500,
+          "height": 625
+        },
+        "displayRect": {
+          "x": 112,
+          "y": 0,
+          "width": 256,
+          "height": 320
+        },
+        "croppedPixels": 0,
+        "approval": {
+          "status": "approved-no-crop",
+          "reviewer": "Codex / game-art-director self-review",
+          "signedAt": "2026-07-28",
+          "rationale": "完整源图按contain缩放，保留全部上下文；不裁切、不拉伸。"
+        }
+      },
+      "decisionReason": "采用，因为观察肩宽、腰收束、裙甲节奏如何建立稳定重心。",
+      "specificTakeaway": "观察肩宽、腰收束、裙甲节奏如何建立稳定重心。",
+      "arenaConstraint": "重型候选只借肩—腰—下摆节奏，不引入写实甲片密度。",
+      "doNotCopy": "不复制日本甲胄文化符号、纹样、材料或整套造型。",
+      "usageBoundary": "只提炼体块层级与关节负空间。",
+      "antiReferenceReason": null,
+      "reviewStatus": "coordination-approved"
+    },
+    {
+      "entryId": "character-b05",
+      "decisionSlot": "USE05",
+      "decisionClass": "adopt",
+      "tileIndex": 4,
+      "sourceKind": "project-document",
+      "title": "Arena当前两角色边界",
+      "creator": "Arena project",
+      "rightsHolder": "Arena project owner",
+      "sourceLocator": "docs/characters/README.md",
+      "sourceRevision": "retrieved-2026-07-28",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "PROJECT-DOCUMENT",
+      "licenseLocator": "docs/characters/README.md",
+      "proofLocator": "docs/characters/README.md",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "link-only",
+      "artifact": null,
+      "crop": null,
+      "decisionReason": "采用，因为固定当前只有两名正式角色且不提前编造技能。",
+      "specificTakeaway": "固定当前只有两名正式角色且不提前编造技能。",
+      "arenaConstraint": "板面固定只承认2个正式角色；其余4槽保持未设计。",
+      "doNotCopy": "不把概念图当正式来源资产。",
+      "usageBoundary": "内部文字合同，不嵌入概念图。",
+      "antiReferenceReason": null,
+      "reviewStatus": "coordination-approved"
+    },
+    {
+      "entryId": "character-b06",
+      "decisionSlot": "USE06",
+      "decisionClass": "adopt",
+      "tileIndex": 5,
+      "sourceKind": "research-link",
+      "title": "KayKit Adventurers固定来源",
+      "creator": "KayKit Game Assets",
+      "rightsHolder": "KayKit / Kay Lousberg",
+      "sourceLocator": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+      "sourceRevision": "retrieved-2026-07-28",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "PROJECT-DOCUMENT",
+      "licenseLocator": "governance/third-party/proofs/kaykit-adventurers-source.txt",
+      "proofLocator": "governance/third-party/proofs/kaykit-adventurers-source.txt",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "link-only",
+      "artifact": null,
+      "crop": null,
+      "decisionReason": "采用，因为复核当前轻型角色与圆盾的固定版本。",
+      "specificTakeaway": "复核当前轻型角色与圆盾的固定版本。",
+      "arenaConstraint": "轻型来源只证明资产身份，不等于Arena原创角色造型完成。",
+      "doNotCopy": "不从上游新增未审计资产。",
+      "usageBoundary": "来源链接卡；不重复嵌入纹理。",
+      "antiReferenceReason": null,
+      "reviewStatus": "coordination-approved"
+    },
+    {
+      "entryId": "character-b07",
+      "decisionSlot": "USE07",
+      "decisionClass": "adopt",
+      "tileIndex": 6,
+      "sourceKind": "research-link",
+      "title": "KayKit Skeletons固定来源",
+      "creator": "KayKit Game Assets",
+      "rightsHolder": "KayKit / Kay Lousberg",
+      "sourceLocator": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Skeletons-1.0",
+      "sourceRevision": "retrieved-2026-07-28",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "PROJECT-DOCUMENT",
+      "licenseLocator": "governance/third-party/proofs/kaykit-skeletons-source.txt",
+      "proofLocator": "governance/third-party/proofs/kaykit-skeletons-source.txt",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "link-only",
+      "artifact": null,
+      "crop": null,
+      "decisionReason": "采用，因为复核当前方硬角色的固定版本。",
+      "specificTakeaway": "复核当前方硬角色的固定版本。",
+      "arenaConstraint": "方型来源只证明正式输入，不得复制骷髅世界观或身份。",
+      "doNotCopy": "不从上游新增未审计资产。",
+      "usageBoundary": "来源链接卡；不重复嵌入纹理。",
+      "antiReferenceReason": null,
+      "reviewStatus": "coordination-approved"
+    },
+    {
+      "entryId": "character-a02",
+      "decisionSlot": "AVOID01",
+      "decisionClass": "avoid",
+      "tileIndex": 7,
+      "sourceKind": "project-document",
+      "title": "热血英豪武器姿态研究",
+      "creator": "JUNEiNTER",
+      "rightsHolder": "JUNEiNTER",
+      "sourceLocator": "docs/gameplay/arena-v2-hot-blooded-weapon-design-synthesis.md",
+      "sourceRevision": "retrieved-2026-07-28",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "RIGHTS-RESTRICTED",
+      "licenseLocator": "https://getamped.game.naver.com/",
+      "proofLocator": "https://getamped.game.naver.com/",
+      "rights": {
+        "commercialUseAllowed": false,
+        "modificationAllowed": false,
+        "redistributionAllowed": false
+      },
+      "embeddingMode": "link-only",
+      "artifact": null,
+      "crop": null,
+      "decisionReason": "规避，因为不复制角色、武器名、职业、招式、截图或数值。",
+      "specificTakeaway": "借鉴夸张装备改变姿态、重心和动作承诺。",
+      "arenaConstraint": "不得复制热血英豪角色、武器姿态或职业符号，只保留“装备改变重心”的研究问题。",
+      "doNotCopy": "不复制角色、武器名、职业、招式、截图或数值。",
+      "usageBoundary": "无图像再分发授权，只能link-only。",
+      "antiReferenceReason": null,
+      "reviewStatus": "coordination-approved"
+    },
+    {
+      "entryId": "character-t01",
+      "decisionSlot": "AVOID02",
+      "decisionClass": "avoid",
+      "tileIndex": 8,
+      "sourceKind": "public-domain",
+      "title": "Helmet (Hoshi Kabuto) and Mask with Gorget",
+      "creator": "Unrecorded artist in The Met object record",
+      "rightsHolder": "The Metropolitan Museum of Art Open Access / public-domain work",
+      "sourceLocator": "https://www.metmuseum.org/art/collection/search/22674",
+      "sourceRevision": "met-object-22674@retrieved-2026-07-28",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "CC0-1.0",
+      "licenseLocator": "https://www.metmuseum.org/hubs/open-access",
+      "proofLocator": "https://collectionapi.metmuseum.org/public/collection/v1/objects/22674",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "embedded",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/met-open-access/character-t01-hoshi-kabuto.jpg",
+        "byteLength": 96207,
+        "sha256": "da2216e0c8ed796f2864f41e0b16681a3b2590ef6ac32c1c262f65b8f45653f9",
+        "width": 599,
+        "height": 428
+      },
+      "crop": {
+        "mode": "contain",
+        "sourceRect": {
+          "x": 0,
+          "y": 0,
+          "width": 599,
+          "height": 428
+        },
+        "displayRect": {
+          "x": 16.075,
+          "y": 0,
+          "width": 447.85,
+          "height": 320
+        },
+        "croppedPixels": 0,
+        "approval": {
+          "status": "approved-no-crop",
+          "reviewer": "Codex / game-art-director self-review",
+          "signedAt": "2026-07-28",
+          "rationale": "完整源图按contain缩放，保留全部上下文；不裁切、不拉伸。"
+        }
+      },
+      "decisionReason": "规避，因为拒绝靠巨大头饰制造角色差异并遮挡动作方向。",
+      "specificTakeaway": "用极强头部轮廓测试头饰是否会吞掉肩颈负空间。",
+      "arenaConstraint": "头饰高度不得吞掉肩颈负空间，也不得遮挡移动与攻击方向。",
+      "doNotCopy": "不复制头盔、面具、文化符号或装饰细节。",
+      "usageBoundary": "只用于轮廓过载压力测试。",
+      "antiReferenceReason": "拒绝靠巨大头饰制造角色差异并遮挡动作方向。",
+      "reviewStatus": "coordination-approved"
+    },
+    {
+      "entryId": "character-a01",
+      "decisionSlot": "TEST01",
+      "decisionClass": "experiment",
+      "tileIndex": 9,
+      "sourceKind": "public-domain",
+      "title": "Armor (Yoroi) of Ashikaga Takauji",
+      "creator": "Unrecorded artist in The Met object record",
+      "rightsHolder": "The Metropolitan Museum of Art Open Access / public-domain work",
+      "sourceLocator": "https://www.metmuseum.org/art/collection/search/22506",
+      "sourceRevision": "met-object-22506@retrieved-2026-07-28",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "CC0-1.0",
+      "licenseLocator": "https://www.metmuseum.org/hubs/open-access",
+      "proofLocator": "https://collectionapi.metmuseum.org/public/collection/v1/objects/22506",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "embedded",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/met-open-access/character-a01-yoroi.jpg",
+        "byteLength": 114686,
+        "sha256": "578f9bcaaf94e7bb7db4531796bc856d2e9781b730ac65fb3641dcebd93675f9",
+        "width": 449,
+        "height": 624
+      },
+      "crop": {
+        "mode": "contain",
+        "sourceRect": {
+          "x": 0,
+          "y": 0,
+          "width": 449,
+          "height": 624
+        },
+        "displayRect": {
+          "x": 124.872,
+          "y": 0,
+          "width": 230.256,
+          "height": 320
+        },
+        "croppedPixels": 0,
+        "approval": {
+          "status": "approved-no-crop",
+          "reviewer": "Codex / game-art-director self-review",
+          "signedAt": "2026-07-28",
+          "rationale": "完整源图按contain缩放，保留全部上下文；不裁切、不拉伸。"
+        }
+      },
+      "decisionReason": "实验，用“追求远距离仍清晰的宽肩、窄腰与分层下摆。”验证边界。",
+      "specificTakeaway": "追求远距离仍清晰的宽肩、窄腰与分层下摆。",
+      "arenaConstraint": "只在后续Blockout候选测试宽肩/窄腰/分层下摆是否适配玩具比例。",
+      "doNotCopy": "不复制历史人物、甲胄结构、纹样或配件。",
+      "usageBoundary": "只提炼大轮廓与层级。",
+      "antiReferenceReason": null,
+      "reviewStatus": "coordination-approved"
+    }
+  ],
+  "keyTakeaways": [
+    "先用头肩、重心和负空间分角色，再讨论表面细节。",
+    "附件必须改变轮廓但不能遮挡面向与攻击方向。",
+    "当前只有2个正式角色，六角色上限不是六个已设计角色。"
+  ],
+  "antiReferences": [
+    "拒绝把换色、服装纹样或世界观符号当作新角色。",
+    "拒绝用巨型头饰、写实甲片密度或外部职业姿态制造差异。"
+  ],
+  "selfReview": {
+    "status": "board-ready",
+    "evidenceScope": "actual-reference-board",
+    "score": 94,
+    "maximum": 100,
+    "dimensions": {
+      "sourceFit": 18,
+      "annotation": 19,
+      "composition": 19,
+      "consistency": 14,
+      "scaleEvidence": 14,
+      "governance": 10
+    },
+    "risk": "角色图仍是固定Idle来源审阅视图，不是A0.3游戏镜头剪影或真人识别证据。",
+    "hardGatePassed": true,
+    "hardGateReason": "Arena V2 coordinator approved the A0.2.2 board-level gate on 2026-07-28; this does not approve A0.2 overall or downstream gates."
+  },
+  "signOff": {
+    "status": "coordination-approved",
+    "artDirector": {
+      "name": "Codex / game-art-director self-review",
+      "signedAt": "2026-07-28"
+    },
+    "coordinator": {
+      "name": "Arena V2 主协调",
+      "signedAt": "2026-07-28"
+    }
+  },
+  "failClosed": {
+    "a0_2_2Passed": true,
+    "a0_2Passed": false,
+    "referenceBoardPassed": false,
+    "blockoutAllowed": false,
+    "a0_3Passed": false,
+    "deviceVerified": false,
+    "humanVerified": false,
+    "finalApproved": false
+  }
+}

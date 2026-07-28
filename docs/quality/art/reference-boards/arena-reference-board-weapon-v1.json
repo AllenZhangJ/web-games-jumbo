@@ -1,0 +1,882 @@
+{
+  "schemaVersion": 1,
+  "id": "arena.art.reference-board.weapon.a0.2.2.v1",
+  "status": "board-ready",
+  "category": "weapon",
+  "artBibleRevision": "a0.1-contract-ready@22b9fd0e39b83de0b6a3ed766a2a66f3d2f67b1d",
+  "sourcePack": {
+    "path": "docs/quality/art/reference-sources/arena-a0.2.1-source-pack-v1.json",
+    "id": "arena.art.reference-source-pack.a0.2.1.v1",
+    "sha256": "061f94357d55a5f1ea194e72723daae172aa9294901cb7b8fca5abddbf092e8c",
+    "status": "source-ready"
+  },
+  "supplementalPack": {
+    "path": "docs/quality/art/reference-sources/arena-a0.2.1-supplemental-weapon-feedback-v1.json",
+    "id": "arena.art.reference-source-pack.a0.2.1.supplemental.weapon-feedback.v1",
+    "sha256": "d49343413702dbad9f7ac874e053dc0eb56a51313b611a4fa9c16efa0137561e",
+    "status": "supplemental-source-ready"
+  },
+  "generatedAt": "2026-07-28",
+  "weights": {
+    "adopt": 70,
+    "avoid": 20,
+    "experiment": 10
+  },
+  "layout": {
+    "canvas": {
+      "width": 2560,
+      "height": 1440,
+      "colorSpace": "srgb",
+      "transparent": false
+    },
+    "grid": {
+      "x": 80,
+      "y": 140,
+      "columns": 5,
+      "rows": 2,
+      "tileWidth": 480,
+      "tileHeight": 480,
+      "visualHeight": 320,
+      "annotationHeight": 160
+    },
+    "order": [
+      "USE01",
+      "USE02",
+      "USE03",
+      "USE04",
+      "USE05",
+      "USE06",
+      "USE07",
+      "AVOID01",
+      "AVOID02",
+      "TEST01"
+    ]
+  },
+  "purpose": "直接固定武器体量、轮廓、握持、准备—命中—恢复、地空差异、位移承诺和空挥后果；正式模型与动作仍等待P4逐把冻结。",
+  "sourceArtifact": {
+    "path": "docs/quality/art/reference-boards/arena-reference-board-weapon-v1.svg",
+    "sha256": "1ca0dc3b2f62a78d5900310663da2c4575afd7491914235b1352fb0e0b80653f",
+    "byteLength": 875734,
+    "width": 2560,
+    "height": 1440,
+    "colorSpace": "srgb"
+  },
+  "reviewArtifact": {
+    "path": "docs/quality/art/reference-boards/arena-reference-board-weapon-v1.png",
+    "sha256": "b36ae8e8c358d9585b60c8f1099f09987a0abab17663903b1d297f33ee9bf6e1",
+    "byteLength": 527316,
+    "width": 2560,
+    "height": 1440,
+    "colorSpace": "srgb"
+  },
+  "tenPercentReview": {
+    "path": "docs/quality/art/reference-boards/arena-reference-board-weapon-v1-10pct.png",
+    "sha256": "401e1c1924c7911514f2805ee163a3546031cfb0108ad16913fea116b082825b",
+    "byteLength": 45605,
+    "width": 256,
+    "height": 144,
+    "colorSpace": "srgb",
+    "scale": 0.1,
+    "readabilityScope": [
+      "board-identity",
+      "7-2-1-decision-zones",
+      "embedded-vs-link-only",
+      "dominant-silhouette-and-value"
+    ],
+    "fullAnnotationReadability": "mobile-equivalent-required",
+    "status": "overview-readable"
+  },
+  "mobileEquivalentReview": {
+    "path": "docs/quality/art/reference-boards/arena-reference-board-weapon-v1-mobile-review.png",
+    "sha256": "45591d032c83a9f730b517eb299c12446c7897621f1df2d5d106e6ca7b937711",
+    "byteLength": 711972,
+    "width": 780,
+    "height": 6420,
+    "colorSpace": "srgb",
+    "cssViewport": {
+      "width": 390,
+      "height": 844,
+      "devicePixelRatio": 2
+    },
+    "capture": "full-page-scroll-equivalent",
+    "entryCount": 10,
+    "annotationReadability": "full",
+    "status": "board-ready"
+  },
+  "entries": [
+    {
+      "entryId": "weapon-s01",
+      "decisionSlot": "USE01",
+      "decisionClass": "adopt",
+      "tileIndex": 0,
+      "sourceKind": "project-original",
+      "title": "武器体量阶梯与握持边界",
+      "creator": "Arena Art Direction / Codex clean-room vector study",
+      "rightsHolder": "Arena project",
+      "sourceLocator": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/weapon-s01.svg",
+      "sourceRevision": "generator-sha256:bdea78f08672fd9e2fa5ce5549a26dd921c68edbd156975102c024f3b1d0232a",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "PROJECT-ORIGINAL-INTERNAL",
+      "licenseLocator": "docs/quality/art/reference-sources/original/arena-a0.2.1-supplemental-clean-room-declaration.md",
+      "proofLocator": "docs/quality/art/reference-sources/original/arena-a0.2.1-supplemental-clean-room-declaration.md",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "embedded",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/weapon-s01.png",
+        "byteLength": 78611,
+        "sha256": "412b6db0bd8253de3b51a69c355e07be6f5035a61369b7b00c982f65201cef8c",
+        "width": 1600,
+        "height": 900,
+        "colorSpace": "srgb",
+        "transparent": false
+      },
+      "crop": {
+        "mode": "contain",
+        "sourceRect": {
+          "x": 0,
+          "y": 0,
+          "width": 1600,
+          "height": 900
+        },
+        "displayRect": {
+          "x": 0,
+          "y": 25,
+          "width": 480,
+          "height": 270
+        },
+        "croppedPixels": 0,
+        "approval": {
+          "status": "approved-no-crop",
+          "reviewer": "Codex / game-art-director self-review",
+          "signedAt": "2026-07-28",
+          "rationale": "完整源图按contain缩放，保留全部上下文；不裁切、不拉伸。"
+        }
+      },
+      "decisionReason": "采用，因为以三列等比例角色和不同支点直接比较轻、中、重体量；握手区、身体负空间和前端质量均可见。",
+      "specificTakeaway": "以三列等比例角色和不同支点直接比较轻、中、重体量；握手区、身体负空间和前端质量均可见。",
+      "arenaConstraint": "轻/中/重必须由体量、支点、握持和身体负空间直接区分。",
+      "doNotCopy": "不把几何训练道具当正式武器造型，不写外部武器名称或职业。",
+      "usageBoundary": "仅冻结体量/轮廓/握持问题，正式模型、命中盒和数值等待P4。",
+      "reviewStatus": "coordination-approved",
+      "sourceArtifact": {
+        "path": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/weapon-s01.svg",
+        "byteLength": 5143,
+        "sha256": "2e82d884bf1386bf3ef6702cc435d45d2f7d54a86d5b6d39e3b6dc6a638e128a",
+        "width": 1600,
+        "height": 900,
+        "colorSpace": "srgb",
+        "transparent": false
+      },
+      "domain": "weapon-direct",
+      "creationMethod": "Deterministic clean-room SVG assembled from Arena semantic tokens and primitive geometry; rasterized by sharp without external image inputs.",
+      "compositionSignature": "three-columns-mass-ladder",
+      "perceptualHash": "111110000000011000100000000000000000001010011000001000010000111001111001110011110111000111001100011000010000100001100011000110000000000000000000",
+      "coverageTags": [
+        "mass-light",
+        "mass-medium",
+        "mass-heavy",
+        "silhouette",
+        "grip-boundary"
+      ],
+      "eventMappings": [
+        "ActionStarted:future-presentation-mapping"
+      ],
+      "cleanRoomBoundary": "No third-party screenshot, character, weapon silhouette, move frame, number, texture, logo or proprietary expression was used as an image input."
+    },
+    {
+      "entryId": "weapon-s02",
+      "decisionSlot": "USE02",
+      "decisionClass": "adopt",
+      "tileIndex": 1,
+      "sourceKind": "project-original",
+      "title": "六个正式武器功能槽的轮廓问题",
+      "creator": "Arena Art Direction / Codex clean-room vector study",
+      "rightsHolder": "Arena project",
+      "sourceLocator": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/weapon-s02.svg",
+      "sourceRevision": "generator-sha256:bdea78f08672fd9e2fa5ce5549a26dd921c68edbd156975102c024f3b1d0232a",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "PROJECT-ORIGINAL-INTERNAL",
+      "licenseLocator": "docs/quality/art/reference-sources/original/arena-a0.2.1-supplemental-clean-room-declaration.md",
+      "proofLocator": "docs/quality/art/reference-sources/original/arena-a0.2.1-supplemental-clean-room-declaration.md",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "embedded",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/weapon-s02.png",
+        "byteLength": 68746,
+        "sha256": "c150f48b294e9230b5efd14049f6a41ec1db570575ef9068fe41c90cadaf32ac",
+        "width": 1600,
+        "height": 900,
+        "colorSpace": "srgb",
+        "transparent": false
+      },
+      "crop": {
+        "mode": "contain",
+        "sourceRect": {
+          "x": 0,
+          "y": 0,
+          "width": 1600,
+          "height": 900
+        },
+        "displayRect": {
+          "x": 0,
+          "y": 25,
+          "width": 480,
+          "height": 270
+        },
+        "croppedPixels": 0,
+        "approval": {
+          "status": "approved-no-crop",
+          "reviewer": "Codex / game-art-director self-review",
+          "signedAt": "2026-07-28",
+          "rationale": "完整源图按contain缩放，保留全部上下文；不裁切、不拉伸。"
+        }
+      },
+      "decisionReason": "采用，因为用六个不同外接框和作用方向区分功能槽，前三个对应重锤、锁链、圆盾，后三个只定义学习问题。",
+      "specificTakeaway": "用六个不同外接框和作用方向区分功能槽，前三个对应重锤、锁链、圆盾，后三个只定义学习问题。",
+      "arenaConstraint": "前三把生产基线与后三个门禁槽必须六轮廓可分，但不新增操作键。",
+      "doNotCopy": "不把后三槽画成Final，不复制研究游戏的武器、招式、数值或专有命名。",
+      "usageBoundary": "仅为P4逐件Concept提供槽位；每把仍须独立四门、提交和回滚。",
+      "reviewStatus": "coordination-approved",
+      "sourceArtifact": {
+        "path": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/weapon-s02.svg",
+        "byteLength": 5553,
+        "sha256": "d9fa3d55cceb2c649847362e39b414a2f2a260cbea54be44d0205fd1c06af164",
+        "width": 1600,
+        "height": 900,
+        "colorSpace": "srgb",
+        "transparent": false
+      },
+      "domain": "weapon-direct",
+      "creationMethod": "Deterministic clean-room SVG assembled from Arena semantic tokens and primitive geometry; rasterized by sharp without external image inputs.",
+      "compositionSignature": "hex-functional-silhouette-roster",
+      "perceptualHash": "111111100000111000000000000000000111001111001110011100111100111000010000000001000100000100000010011100111100111001110011110011000000000000000000",
+      "coverageTags": [
+        "six-weapon-directions",
+        "silhouette",
+        "base-hammer",
+        "base-chain",
+        "base-shield",
+        "line-pressure",
+        "read-counter",
+        "flank"
+      ],
+      "eventMappings": [
+        "ActionStarted:future-presentation-mapping"
+      ],
+      "cleanRoomBoundary": "No third-party screenshot, character, weapon silhouette, move frame, number, texture, logo or proprietary expression was used as an image input."
+    },
+    {
+      "entryId": "weapon-s03",
+      "decisionSlot": "USE03",
+      "decisionClass": "adopt",
+      "tileIndex": 2,
+      "sourceKind": "project-original",
+      "title": "准备 → 命中 → 恢复三段视觉节奏",
+      "creator": "Arena Art Direction / Codex clean-room vector study",
+      "rightsHolder": "Arena project",
+      "sourceLocator": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/weapon-s03.svg",
+      "sourceRevision": "generator-sha256:bdea78f08672fd9e2fa5ce5549a26dd921c68edbd156975102c024f3b1d0232a",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "PROJECT-ORIGINAL-INTERNAL",
+      "licenseLocator": "docs/quality/art/reference-sources/original/arena-a0.2.1-supplemental-clean-room-declaration.md",
+      "proofLocator": "docs/quality/art/reference-sources/original/arena-a0.2.1-supplemental-clean-room-declaration.md",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "embedded",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/weapon-s03.png",
+        "byteLength": 78144,
+        "sha256": "8d30ef2670f34994ea996f7b1f7f3998f5ef8c2a08a770f81e7e3ead0502f5c1",
+        "width": 1600,
+        "height": 900,
+        "colorSpace": "srgb",
+        "transparent": false
+      },
+      "crop": {
+        "mode": "contain",
+        "sourceRect": {
+          "x": 0,
+          "y": 0,
+          "width": 1600,
+          "height": 900
+        },
+        "displayRect": {
+          "x": 0,
+          "y": 25,
+          "width": 480,
+          "height": 270
+        },
+        "croppedPixels": 0,
+        "approval": {
+          "status": "approved-no-crop",
+          "reviewer": "Codex / game-art-director self-review",
+          "signedAt": "2026-07-28",
+          "rationale": "完整源图按contain缩放，保留全部上下文；不裁切、不拉伸。"
+        }
+      },
+      "decisionReason": "采用，因为准备帧保留高举负空间，命中帧只保留单一接触焦点，恢复帧明确武器落后身体与反制窗口。",
+      "specificTakeaway": "准备帧保留高举负空间，命中帧只保留单一接触焦点，恢复帧明确武器落后身体与反制窗口。",
+      "arenaConstraint": "准备、命中、恢复分别承担方向承诺、单一焦点和反制窗口。",
+      "doNotCopy": "不把三帧当动画关键帧、tick数或命中盒，不复制外部招式。",
+      "usageBoundary": "节奏比例为美术方向；精确tick和Action Definition由P4冻结。",
+      "reviewStatus": "coordination-approved",
+      "sourceArtifact": {
+        "path": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/weapon-s03.svg",
+        "byteLength": 5404,
+        "sha256": "2174a674c061cb4cd67ef94e22b3832c3c881b4559129efce915af9af352ddc3",
+        "width": 1600,
+        "height": 900,
+        "colorSpace": "srgb",
+        "transparent": false
+      },
+      "domain": "weapon-direct",
+      "creationMethod": "Deterministic clean-room SVG assembled from Arena semantic tokens and primitive geometry; rasterized by sharp without external image inputs.",
+      "compositionSignature": "horizontal-three-phase-storyboard",
+      "perceptualHash": "111111100000011000000000000000000111100000011000001110000000000000110001100011000111000111101100001000011111110000000000001100000000000000000000",
+      "coverageTags": [
+        "phase-windup",
+        "phase-hit",
+        "phase-recovery",
+        "timing-readability"
+      ],
+      "eventMappings": [
+        "ActionStarted:future-presentation-mapping",
+        "HitResolved:future-presentation-mapping"
+      ],
+      "cleanRoomBoundary": "No third-party screenshot, character, weapon silhouette, move frame, number, texture, logo or proprietary expression was used as an image input."
+    },
+    {
+      "entryId": "weapon-s04",
+      "decisionSlot": "USE04",
+      "decisionClass": "adopt",
+      "tileIndex": 3,
+      "sourceKind": "project-original",
+      "title": "地面 / 空中动作可读差异",
+      "creator": "Arena Art Direction / Codex clean-room vector study",
+      "rightsHolder": "Arena project",
+      "sourceLocator": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/weapon-s04.svg",
+      "sourceRevision": "generator-sha256:bdea78f08672fd9e2fa5ce5549a26dd921c68edbd156975102c024f3b1d0232a",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "PROJECT-ORIGINAL-INTERNAL",
+      "licenseLocator": "docs/quality/art/reference-sources/original/arena-a0.2.1-supplemental-clean-room-declaration.md",
+      "proofLocator": "docs/quality/art/reference-sources/original/arena-a0.2.1-supplemental-clean-room-declaration.md",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "embedded",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/weapon-s04.png",
+        "byteLength": 68909,
+        "sha256": "131ad95133659ac05024a85bfc8bd891480db76f54eeb85c167b4a068ba16be6",
+        "width": 1600,
+        "height": 900,
+        "colorSpace": "srgb",
+        "transparent": false
+      },
+      "crop": {
+        "mode": "contain",
+        "sourceRect": {
+          "x": 0,
+          "y": 0,
+          "width": 1600,
+          "height": 900
+        },
+        "displayRect": {
+          "x": 0,
+          "y": 25,
+          "width": 480,
+          "height": 270
+        },
+        "croppedPixels": 0,
+        "approval": {
+          "status": "approved-no-crop",
+          "reviewer": "Codex / game-art-director self-review",
+          "signedAt": "2026-07-28",
+          "rationale": "完整源图按contain缩放，保留全部上下文；不裁切、不拉伸。"
+        }
+      },
+      "decisionReason": "采用，因为地面攻击以支撑脚和水平承诺读取，空中攻击以角色下方负空间、垂直轨迹和落点读取。",
+      "specificTakeaway": "地面攻击以支撑脚和水平承诺读取，空中攻击以角色下方负空间、垂直轨迹和落点读取。",
+      "arenaConstraint": "地面用支撑脚和水平结果，空中用下方负空间、垂直轨迹和落点。",
+      "doNotCopy": "不增加空中专用按键，不把轨迹线当权威判定范围。",
+      "usageBoundary": "只约束Presentation可读差异；输入和Action Resolver不由美术改变。",
+      "reviewStatus": "coordination-approved",
+      "sourceArtifact": {
+        "path": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/weapon-s04.svg",
+        "byteLength": 4451,
+        "sha256": "689fbfd95dc209859931b0901a9fbcc6980ab254a7db1545923b2cc7f3ffab7f",
+        "width": 1600,
+        "height": 900,
+        "colorSpace": "srgb",
+        "transparent": false
+      },
+      "domain": "weapon-direct",
+      "creationMethod": "Deterministic clean-room SVG assembled from Arena semantic tokens and primitive geometry; rasterized by sharp without external image inputs.",
+      "compositionSignature": "split-ground-air-platform",
+      "perceptualHash": "111111000000011000010000000000000100000000100000001100000011000000111100001110000011110000111000011111100111111001100000011000000000000000000000",
+      "coverageTags": [
+        "ground-read",
+        "air-read",
+        "support-surface",
+        "trajectory"
+      ],
+      "eventMappings": [
+        "ActionStarted:future-presentation-mapping",
+        "HitResolved:future-presentation-mapping"
+      ],
+      "cleanRoomBoundary": "No third-party screenshot, character, weapon silhouette, move frame, number, texture, logo or proprietary expression was used as an image input."
+    },
+    {
+      "entryId": "weapon-s05",
+      "decisionSlot": "USE05",
+      "decisionClass": "adopt",
+      "tileIndex": 4,
+      "sourceKind": "project-original",
+      "title": "击退 / 位移承诺的形状语法",
+      "creator": "Arena Art Direction / Codex clean-room vector study",
+      "rightsHolder": "Arena project",
+      "sourceLocator": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/weapon-s05.svg",
+      "sourceRevision": "generator-sha256:bdea78f08672fd9e2fa5ce5549a26dd921c68edbd156975102c024f3b1d0232a",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "PROJECT-ORIGINAL-INTERNAL",
+      "licenseLocator": "docs/quality/art/reference-sources/original/arena-a0.2.1-supplemental-clean-room-declaration.md",
+      "proofLocator": "docs/quality/art/reference-sources/original/arena-a0.2.1-supplemental-clean-room-declaration.md",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "embedded",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/weapon-s05.png",
+        "byteLength": 75690,
+        "sha256": "56144ded447c885468c22a99870b7a07d27337656a9fde8ac074821f4f9184c4",
+        "width": 1600,
+        "height": 900,
+        "colorSpace": "srgb",
+        "transparent": false
+      },
+      "crop": {
+        "mode": "contain",
+        "sourceRect": {
+          "x": 0,
+          "y": 0,
+          "width": 1600,
+          "height": 900
+        },
+        "displayRect": {
+          "x": 0,
+          "y": 25,
+          "width": 480,
+          "height": 270
+        },
+        "croppedPixels": 0,
+        "approval": {
+          "status": "approved-no-crop",
+          "reviewer": "Codex / game-art-director self-review",
+          "signedAt": "2026-07-28",
+          "rationale": "完整源图按contain缩放，保留全部上下文；不裁切、不拉伸。"
+        }
+      },
+      "decisionReason": "采用，因为三条独立路线用直推、回拉和抛弧区分位移后果，箭头从武器承诺连续到目标结果。",
+      "specificTakeaway": "三条独立路线用直推、回拉和抛弧区分位移后果，箭头从武器承诺连续到目标结果。",
+      "arenaConstraint": "圆盾推离、锁链回拉、重锤抛弧在命中前后保持同一方向承诺。",
+      "doNotCopy": "箭头长度不表示公开数值，轨迹不是物理模拟或命中盒。",
+      "usageBoundary": "未来从HitResolved/KnockbackApplied只读事件映射；冲量参数仍属Core。",
+      "reviewStatus": "coordination-approved",
+      "sourceArtifact": {
+        "path": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/weapon-s05.svg",
+        "byteLength": 6309,
+        "sha256": "3c0702e46efa3c87cd172d1d40661b5e74977179303bae059cc4987da24c8860",
+        "width": 1600,
+        "height": 900,
+        "colorSpace": "srgb",
+        "transparent": false
+      },
+      "domain": "weapon-direct",
+      "creationMethod": "Deterministic clean-room SVG assembled from Arena semantic tokens and primitive geometry; rasterized by sharp without external image inputs.",
+      "compositionSignature": "three-lane-displacement-vectors",
+      "perceptualHash": "111111000000010000000000000000000011010111011000001111011101100001011010001011000001101111110000011111111111110000111101000011000000000000000000",
+      "coverageTags": [
+        "knockback-push",
+        "displacement-pull",
+        "vertical-launch",
+        "direction-promise"
+      ],
+      "eventMappings": [
+        "HitResolved:future-presentation-mapping",
+        "KnockbackApplied:future-presentation-mapping"
+      ],
+      "cleanRoomBoundary": "No third-party screenshot, character, weapon silhouette, move frame, number, texture, logo or proprietary expression was used as an image input."
+    },
+    {
+      "entryId": "weapon-s06",
+      "decisionSlot": "USE06",
+      "decisionClass": "adopt",
+      "tileIndex": 5,
+      "sourceKind": "project-original",
+      "title": "失败 / 空挥后的可反制后果",
+      "creator": "Arena Art Direction / Codex clean-room vector study",
+      "rightsHolder": "Arena project",
+      "sourceLocator": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/weapon-s06.svg",
+      "sourceRevision": "generator-sha256:bdea78f08672fd9e2fa5ce5549a26dd921c68edbd156975102c024f3b1d0232a",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "PROJECT-ORIGINAL-INTERNAL",
+      "licenseLocator": "docs/quality/art/reference-sources/original/arena-a0.2.1-supplemental-clean-room-declaration.md",
+      "proofLocator": "docs/quality/art/reference-sources/original/arena-a0.2.1-supplemental-clean-room-declaration.md",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "embedded",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/weapon-s06.png",
+        "byteLength": 80515,
+        "sha256": "dbba3c223529e070475b491514b83c3b10773ddb9d75979140e9789c3953c24d",
+        "width": 1600,
+        "height": 900,
+        "colorSpace": "srgb",
+        "transparent": false
+      },
+      "crop": {
+        "mode": "contain",
+        "sourceRect": {
+          "x": 0,
+          "y": 0,
+          "width": 1600,
+          "height": 900
+        },
+        "displayRect": {
+          "x": 0,
+          "y": 25,
+          "width": 480,
+          "height": 270
+        },
+        "croppedPixels": 0,
+        "approval": {
+          "status": "approved-no-crop",
+          "reviewer": "Codex / game-art-director self-review",
+          "signedAt": "2026-07-28",
+          "rationale": "完整源图按contain缩放，保留全部上下文；不裁切、不拉伸。"
+        }
+      },
+      "decisionReason": "采用，因为攻击弧与目标错开后，接触焦点消失；武器落后身体、脚步停滞和虚线窗口共同说明空挥代价。",
+      "specificTakeaway": "攻击弧与目标错开后，接触焦点消失；武器落后身体、脚步停滞和虚线窗口共同说明空挥代价。",
+      "arenaConstraint": "空挥不得补HitResolved特效；恢复姿态和危险窗口承担失败后果。",
+      "doNotCopy": "不伪造HitResolved，不用红叉伤害数字替代姿态结果。",
+      "usageBoundary": "空挥Presentation读取动作快照；字段名与阶段必须等P4合同冻结。",
+      "reviewStatus": "coordination-approved",
+      "sourceArtifact": {
+        "path": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/weapon-s06.svg",
+        "byteLength": 4411,
+        "sha256": "c5cca00124daa6d1c097a0581476b21eb70f80e1836010f48f6c5658e9068ea3",
+        "width": 1600,
+        "height": 900,
+        "colorSpace": "srgb",
+        "transparent": false
+      },
+      "domain": "weapon-direct",
+      "creationMethod": "Deterministic clean-room SVG assembled from Arena semantic tokens and primitive geometry; rasterized by sharp without external image inputs.",
+      "compositionSignature": "miss-arc-recovery-window",
+      "perceptualHash": "111111000000011000000000000000000000000001111000001111000111001000111110001100100011111000110010001101100111111000001000011010000000000000000000",
+      "coverageTags": [
+        "whiff",
+        "miss-consequence",
+        "recovery-window",
+        "no-fake-hit"
+      ],
+      "eventMappings": [
+        "ActionStarted:future-presentation-mapping",
+        "action-snapshot:field-pending-P4"
+      ],
+      "cleanRoomBoundary": "No third-party screenshot, character, weapon silhouette, move frame, number, texture, logo or proprietary expression was used as an image input."
+    },
+    {
+      "entryId": "mood-a02",
+      "decisionSlot": "USE07",
+      "decisionClass": "adopt",
+      "tileIndex": 6,
+      "sourceKind": "project-document",
+      "title": "Arena美术音频流程",
+      "creator": "Arena project",
+      "rightsHolder": "Arena project owner",
+      "sourceLocator": "docs/architecture/arena-art-and-audio-development-flow.md",
+      "sourceRevision": "retrieved-2026-07-28",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "PROJECT-DOCUMENT",
+      "licenseLocator": "docs/architecture/arena-art-and-audio-development-flow.md",
+      "proofLocator": "docs/architecture/arena-art-and-audio-development-flow.md",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "link-only",
+      "artifact": null,
+      "crop": null,
+      "decisionReason": "采用，因为追求视觉、瞬态反馈和声音共同解释事件来源。",
+      "specificTakeaway": "追求视觉、瞬态反馈和声音共同解释事件来源。",
+      "arenaConstraint": "武器视觉、瞬态反馈与声音必须同源解释同一权威事件。",
+      "doNotCopy": "不把流程表当最终表现。",
+      "usageBoundary": "内部合同链接，不嵌入图片。",
+      "antiReferenceReason": null,
+      "reviewStatus": "coordination-approved"
+    },
+    {
+      "entryId": "weapon-s07",
+      "decisionSlot": "AVOID01",
+      "decisionClass": "avoid",
+      "tileIndex": 7,
+      "sourceKind": "project-original",
+      "title": "规避：轮廓、轨迹与特效同时过载",
+      "creator": "Arena Art Direction / Codex clean-room vector study",
+      "rightsHolder": "Arena project",
+      "sourceLocator": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/weapon-s07.svg",
+      "sourceRevision": "generator-sha256:bdea78f08672fd9e2fa5ce5549a26dd921c68edbd156975102c024f3b1d0232a",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "PROJECT-ORIGINAL-INTERNAL",
+      "licenseLocator": "docs/quality/art/reference-sources/original/arena-a0.2.1-supplemental-clean-room-declaration.md",
+      "proofLocator": "docs/quality/art/reference-sources/original/arena-a0.2.1-supplemental-clean-room-declaration.md",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "embedded",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/weapon-s07.png",
+        "byteLength": 112616,
+        "sha256": "9f67992939073e85b62676b0e707ed42e090bb8f19baaf9f3fc42d7a9267cc98",
+        "width": 1600,
+        "height": 900,
+        "colorSpace": "srgb",
+        "transparent": false
+      },
+      "crop": {
+        "mode": "contain",
+        "sourceRect": {
+          "x": 0,
+          "y": 0,
+          "width": 1600,
+          "height": 900
+        },
+        "displayRect": {
+          "x": 0,
+          "y": 25,
+          "width": 480,
+          "height": 270
+        },
+        "croppedPixels": 0,
+        "approval": {
+          "status": "approved-no-crop",
+          "reviewer": "Codex / game-art-director self-review",
+          "signedAt": "2026-07-28",
+          "rationale": "完整源图按contain缩放，保留全部上下文；不裁切、不拉伸。"
+        }
+      },
+      "decisionReason": "规避，因为不复制该故意过载造型；禁止以更多发光、尖刺和轨迹制造“旗舰感”。",
+      "specificTakeaway": "反例把五种尖刃、三圈轨迹和多色焦点叠在同一角色上，证明信息竞争会吞掉面向与支撑脚。",
+      "arenaConstraint": "拒绝多刃、多环、多色常驻光和遮脸握持同时竞争。",
+      "doNotCopy": "不复制该故意过载造型；禁止以更多发光、尖刺和轨迹制造“旗舰感”。",
+      "usageBoundary": "仅为Anti-reference，不得进入Concept候选。",
+      "reviewStatus": "coordination-approved",
+      "sourceArtifact": {
+        "path": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/weapon-s07.svg",
+        "byteLength": 3373,
+        "sha256": "c0c11785b0608a6f8218a2e79dc812120e3ca4cb483219cc66acc8a52a6b6b56",
+        "width": 1600,
+        "height": 900,
+        "colorSpace": "srgb",
+        "transparent": false
+      },
+      "domain": "weapon-direct",
+      "creationMethod": "Deterministic clean-room SVG assembled from Arena semantic tokens and primitive geometry; rasterized by sharp without external image inputs.",
+      "compositionSignature": "anti-reference-overloaded-weapon",
+      "perceptualHash": "111111100000011000111000000000000011111111011100000011111111000000001111111000000000111111100000000111111111100000110111110011000000000000000000",
+      "coverageTags": [
+        "anti-overload",
+        "anti-silhouette-noise",
+        "anti-face-occlusion"
+      ],
+      "eventMappings": [
+        "none:anti-reference"
+      ],
+      "cleanRoomBoundary": "No third-party screenshot, character, weapon silhouette, move frame, number, texture, logo or proprietary expression was used as an image input."
+    },
+    {
+      "entryId": "mood-b06",
+      "decisionSlot": "AVOID02",
+      "decisionClass": "avoid",
+      "tileIndex": 8,
+      "sourceKind": "research-link",
+      "title": "热血英豪官方方向",
+      "creator": "JUNEiNTER / Naver",
+      "rightsHolder": "JUNEiNTER",
+      "sourceLocator": "https://getamped.game.naver.com/",
+      "sourceRevision": "retrieved-2026-07-28",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "RIGHTS-RESTRICTED",
+      "licenseLocator": "docs/gameplay/arena-v2-hot-blooded-weapon-design-synthesis.md",
+      "proofLocator": "docs/gameplay/arena-v2-hot-blooded-weapon-design-synthesis.md",
+      "rights": {
+        "commercialUseAllowed": false,
+        "modificationAllowed": false,
+        "redistributionAllowed": false
+      },
+      "embeddingMode": "link-only",
+      "artifact": null,
+      "crop": null,
+      "decisionReason": "规避，因为不复制角色、武器、动作、特效、数值、截图。",
+      "specificTakeaway": "借鉴动作承诺、命中后果与反制带来的热血张力。",
+      "arenaConstraint": "热血英豪只保留功能关系研究，不嵌图、不复制造型、招式或专有表达。",
+      "doNotCopy": "不复制角色、武器、动作、特效、数值、截图。",
+      "usageBoundary": "无图像再分发授权，只能link-only。",
+      "antiReferenceReason": null,
+      "reviewStatus": "coordination-approved"
+    },
+    {
+      "entryId": "weapon-s08",
+      "decisionSlot": "TEST01",
+      "decisionClass": "experiment",
+      "tileIndex": 9,
+      "sourceKind": "project-original",
+      "title": "实验：后三个功能槽的负空间测试",
+      "creator": "Arena Art Direction / Codex clean-room vector study",
+      "rightsHolder": "Arena project",
+      "sourceLocator": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/weapon-s08.svg",
+      "sourceRevision": "generator-sha256:bdea78f08672fd9e2fa5ce5549a26dd921c68edbd156975102c024f3b1d0232a",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "PROJECT-ORIGINAL-INTERNAL",
+      "licenseLocator": "docs/quality/art/reference-sources/original/arena-a0.2.1-supplemental-clean-room-declaration.md",
+      "proofLocator": "docs/quality/art/reference-sources/original/arena-a0.2.1-supplemental-clean-room-declaration.md",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "embedded",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/weapon-s08.png",
+        "byteLength": 72778,
+        "sha256": "b6a51707c89ea48aa05e7b71d8f88d62ee79ae5876b415e6fd01a59e8e14f0df",
+        "width": 1600,
+        "height": 900,
+        "colorSpace": "srgb",
+        "transparent": false
+      },
+      "crop": {
+        "mode": "contain",
+        "sourceRect": {
+          "x": 0,
+          "y": 0,
+          "width": 1600,
+          "height": 900
+        },
+        "displayRect": {
+          "x": 0,
+          "y": 25,
+          "width": 480,
+          "height": 270
+        },
+        "croppedPixels": 0,
+        "approval": {
+          "status": "approved-no-crop",
+          "reviewer": "Codex / game-art-director self-review",
+          "signedAt": "2026-07-28",
+          "rationale": "完整源图按contain缩放，保留全部上下文；不裁切、不拉伸。"
+        }
+      },
+      "decisionReason": "实验，用“用窄直廊、前置反制扇区和背后弧区三种负空间检验学习问题，避免先画具体武器。”验证边界。",
+      "specificTakeaway": "用窄直廊、前置反制扇区和背后弧区三种负空间检验学习问题，避免先画具体武器。",
+      "arenaConstraint": "实验后三个功能槽的负空间，只测学习问题，不提前定义武器外形。",
+      "doNotCopy": "不把空间图当地图、攻击范围、数值或已批准的后三把武器。",
+      "usageBoundary": "实验项须等P4 Definition和预警字段冻结后再进入单件Concept。",
+      "reviewStatus": "coordination-approved",
+      "sourceArtifact": {
+        "path": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/weapon-s08.svg",
+        "byteLength": 4765,
+        "sha256": "b3ac563f99411146bd83c29f31e8510f1633d22cc494d9e9f384d4466b4971e7",
+        "width": 1600,
+        "height": 900,
+        "colorSpace": "srgb",
+        "transparent": false
+      },
+      "domain": "weapon-direct",
+      "creationMethod": "Deterministic clean-room SVG assembled from Arena semantic tokens and primitive geometry; rasterized by sharp without external image inputs.",
+      "compositionSignature": "experimental-three-spatial-functions",
+      "perceptualHash": "111111100000011000000000000000000110000100111110000110000110011001111011111110100111101111111000011110110001100000000000000000000000000000000000",
+      "coverageTags": [
+        "experiment-line-pressure",
+        "experiment-read-counter",
+        "experiment-flank",
+        "negative-space"
+      ],
+      "eventMappings": [
+        "ActionStarted:future-presentation-mapping",
+        "HitResolved:future-presentation-mapping"
+      ],
+      "cleanRoomBoundary": "No third-party screenshot, character, weapon silhouette, move frame, number, texture, logo or proprietary expression was used as an image input."
+    }
+  ],
+  "keyTakeaways": [
+    "轻/中/重先由轮廓、握持支点和身体负空间区分。",
+    "准备、命中、恢复与地面/空中后果必须在固定镜头直接可读。",
+    "推离、回拉、抛弧和空挥窗口从权威事件/快照读取，不增加操作键。"
+  ],
+  "antiReferences": [
+    "拒绝复制热血英豪或其他研究对象的武器、招式、职业、数值和特效。",
+    "拒绝多刃、多环、多色常驻光、遮脸握持和伪造HitResolved。"
+  ],
+  "selfReview": {
+    "status": "board-ready",
+    "evidenceScope": "direction-contract",
+    "score": 93,
+    "maximum": 100,
+    "dimensions": {
+      "sourceFit": 19,
+      "annotation": 19,
+      "composition": 18,
+      "consistency": 14,
+      "scaleEvidence": 13,
+      "governance": 10
+    },
+    "risk": "本板已用clean-room直接视觉证明武器方向，但仍没有正式重锤/锁链/圆盾模型与动作；P4须逐把独立Concept。",
+    "hardGatePassed": true,
+    "hardGateReason": "Arena V2 coordinator approved the A0.2.2 board-level gate on 2026-07-28; this does not approve A0.2 overall or downstream gates."
+  },
+  "signOff": {
+    "status": "coordination-approved",
+    "artDirector": {
+      "name": "Codex / game-art-director self-review",
+      "signedAt": "2026-07-28"
+    },
+    "coordinator": {
+      "name": "Arena V2 主协调",
+      "signedAt": "2026-07-28"
+    }
+  },
+  "failClosed": {
+    "a0_2_2Passed": true,
+    "a0_2Passed": false,
+    "referenceBoardPassed": false,
+    "blockoutAllowed": false,
+    "a0_3Passed": false,
+    "deviceVerified": false,
+    "humanVerified": false,
+    "finalApproved": false
+  }
+}

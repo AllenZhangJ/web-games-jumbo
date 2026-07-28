@@ -2,7 +2,7 @@
 
 ## 文档状态
 
-- 状态：A0.1合同为 `contract-ready`，主协调已签核（2026-07-28）；A0.2实际参考板与A0.3剪影工具/盲测均`incomplete`
+- 状态：A0.1合同为 `contract-ready`；原A0.2.1为`source-ready`、补充来源为`supplemental-source-ready`、A0.2.2实际参考板为`board-ready`，均由主协调于2026-07-28签核；A0.2整体与A0.3剪影工具/盲测仍`incomplete`
 - 日期：2026-07-28
 - 审计基线：`d6f906008d0af1ed0133a199a8dc9e15cb1d23d0`
 - 关联：[Art Bible](arena-art-bible.md)、[美术与音频流程](arena-art-and-audio-development-flow.md)、[V2 生产计划](arena-v2-production-development-plan.md)
@@ -57,12 +57,12 @@
 
 ### A0.2 ↔ P0：六类实际注释参考板
 
-- 子门：A0.2.1先交付六类各10条的来源与权利包、36个唯一可嵌入视觉、24条link-only卡及六张来源质量抽检页；A0.2.2再交付实际板面。A0.2.1为`source-ready`，主协调已签核（2026-07-28）；A0.2.2为`incomplete`。
+- 子门：A0.2.1原包为`source-ready`；武器/反馈16个项目原创直接视觉的独立补充包为`supplemental-source-ready`；A0.2.2六板为`board-ready`。三个来源/板面小门均由主协调于2026-07-28签核，但A0.2整体仍为`incomplete`。
 - 输入：已签核A0.1、六类文字登记、A0.2.1协调通过的权利/proof/hash与link-only台账。
-- 输出：A0.2.1见[来源与权利包](arena-art-reference-source-pack-a0.2.1.md)；A0.2.2输出六份`2560×1440` SVG+PNG、每板10格7/2/1布局、六份板面manifest、全部输入hash、美术指导与协调签核。
+- 输出：A0.2.1见[来源与权利包](arena-art-reference-source-pack-a0.2.1.md)，独立新增项见[武器/反馈补充来源包](arena-art-reference-source-supplement-a0.2.1.md)；A0.2.2见[正式参考板与自审](arena-art-reference-boards-a0.2.2.md)，含六份`2560×1440` SVG+PNG、每板10格7/2/1布局、六份板面manifest、全部输入/输出hash、10%与移动等效证据；六板已双签核。
 - 依赖：A0.1必须先`contract-ready`；板面只能嵌入原创、CC0/Public Domain或已获商业/修改/再分发权素材。
 - 评分：六板/比例25、注释20、来源许可/hash20、一致性/Anti-reference15、版式10、双签核10。
-- 硬门：A0.2.1和A0.2.2均须总分≥90且每维度≥80%；每板至少6个合法嵌入视觉，不能空占位或全link-only；六板双签核。A0.2.1以95/100且各维度≥80%通过主协调签核（2026-07-28），仅代表来源与权利包硬门；六张抽检页显式`a0_2_2BoardPass=false`，A0.2.2及A0.2整体为`incomplete`，不得把来源包分数算作板面分。
+- 硬门：原A0.2.1与补充来源均为95/100，A0.2.2为94/100，全部维度≥80%并由主协调于2026-07-28签核。武器/反馈方向板各有8个领域直接视觉，但没有正式模型、动作或事件驱动VFX样件；不得把这些小门分数算作A0.2整体、Blockout或资产成熟度。
 - 返工：Art Bible支柱/色彩/禁用项改变，来源权利撤销、hash漂移、板面裁切误导或任一签核撤回。
 
 ### A0.3 ↔ P0：剪影工具与盲测基线

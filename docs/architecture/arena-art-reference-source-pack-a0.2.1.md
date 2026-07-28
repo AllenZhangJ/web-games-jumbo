@@ -10,7 +10,7 @@
 - 机器台账：[arena-a0.2.1-source-pack-v1.json](../quality/art/reference-sources/arena-a0.2.1-source-pack-v1.json)
 - 离线复核：`node --import tsx scripts/art/check-arena-reference-source-pack.ts`
 
-本包只批准六张参考板的来源输入、权利结论和可复算身份，不是六张板面。A0.2.2 的 SVG、PNG、板面 manifest、裁切与双签核尚未开始；A0.2、Reference Board、生产 Blockout、LOD、设备、真人和 Final 均继续 `incomplete` / fail closed。
+本包只批准六张参考板的来源输入、权利结论和可复算身份，不是六张板面。本包签核时A0.2.2尚未开始；当前A0.2.2已于2026-07-28另行签核为`board-ready`，不改变本包证据范围。A0.2整体、Reference Board、生产Blockout、LOD、设备、真人和Final仍继续`incomplete`/fail closed。
 
 ## 1. 技能影响
 
@@ -100,4 +100,4 @@ The Met文件位于`docs/quality/art/reference-sources/met-open-access/`，只�
 
 文件漂移、重复图片、权利字段缺失、受限图进入仓库、任一板不足6个合法视觉、出现占位符或A0.2.2把link-only卡替换成截图，都会使A0.2.1退回`incomplete`。
 
-A0.2.2才生成六张2560×1440 SVG/PNG，执行contain裁切、可见注释、板面manifest、缩略可读性和双签核。本包没有创建这些文件；即使A0.2.1获批，A0.2整体仍不可写“Reference Board通过”，也不得开始生产Blockout。
+A0.2.2已在独立小门生成六张2560×1440 SVG/PNG，执行contain裁切、可见注释、板面manifest、缩略可读性和双签核，并于2026-07-28签核为`board-ready`。本包没有创建或借用这些文件；两个小门通过后，A0.2整体仍不可写“Reference Board通过”，也不得开始生产Blockout。

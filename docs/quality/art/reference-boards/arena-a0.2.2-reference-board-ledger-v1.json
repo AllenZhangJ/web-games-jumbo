@@ -1,0 +1,527 @@
+{
+  "schemaVersion": 1,
+  "id": "arena.art.reference-boards.a0.2.2.v1",
+  "status": "board-ready",
+  "generatedAt": "2026-07-28",
+  "baselineCommit": "8de2997a76601afce18b26d8126fb5cb24ca6feb",
+  "generator": {
+    "path": "scripts/art/generate-arena-reference-boards.ts",
+    "sha256": "3ee069b540bde9d7f8dfc8f3cdfc51b97a40861a0cbe1a9afa4378c90fd08ddd"
+  },
+  "sourcePack": {
+    "path": "docs/quality/art/reference-sources/arena-a0.2.1-source-pack-v1.json",
+    "id": "arena.art.reference-source-pack.a0.2.1.v1",
+    "sha256": "061f94357d55a5f1ea194e72723daae172aa9294901cb7b8fca5abddbf092e8c",
+    "status": "source-ready"
+  },
+  "supplementalPack": {
+    "path": "docs/quality/art/reference-sources/arena-a0.2.1-supplemental-weapon-feedback-v1.json",
+    "id": "arena.art.reference-source-pack.a0.2.1.supplemental.weapon-feedback.v1",
+    "sha256": "d49343413702dbad9f7ac874e053dc0eb56a51313b611a4fa9c16efa0137561e",
+    "status": "supplemental-source-ready"
+  },
+  "boardCount": 6,
+  "sourceEntryCount": 60,
+  "originalApprovedSourceUseCount": 44,
+  "supplementalDirectSourceUseCount": 16,
+  "uniqueSourceUse": true,
+  "decisionTotals": {
+    "adopt": 42,
+    "avoid": 12,
+    "experiment": 6
+  },
+  "boards": [
+    {
+      "id": "character",
+      "manifest": {
+        "path": "docs/quality/art/reference-boards/arena-reference-board-character-v1.json",
+        "sha256": "3dedf5107ab2a7b771785087045db9103770b385a307d2550a786da3a840a21c",
+        "byteLength": 25505
+      },
+      "svg": {
+        "path": "docs/quality/art/reference-boards/arena-reference-board-character-v1.svg",
+        "sha256": "b786d36ff24c32bfe1d561c2e9e8e611c53bc813dff9cda9c286dbe1f32dc6f3",
+        "byteLength": 847360,
+        "width": 2560,
+        "height": 1440,
+        "colorSpace": "srgb"
+      },
+      "png": {
+        "path": "docs/quality/art/reference-boards/arena-reference-board-character-v1.png",
+        "sha256": "3dc45c92b449f4881f388e57eb5596af40cee989067e49edb72ec7ddd0065c7d",
+        "byteLength": 973292,
+        "width": 2560,
+        "height": 1440,
+        "colorSpace": "srgb"
+      },
+      "tenPercent": {
+        "path": "docs/quality/art/reference-boards/arena-reference-board-character-v1-10pct.png",
+        "sha256": "937ce047f3c85ae4179bb3ae689ac3e49a323040f430df7b7db9bdc388f08714",
+        "byteLength": 43481,
+        "width": 256,
+        "height": 144,
+        "colorSpace": "srgb",
+        "scale": 0.1,
+        "readabilityScope": [
+          "board-identity",
+          "7-2-1-decision-zones",
+          "embedded-vs-link-only",
+          "dominant-silhouette-and-value"
+        ],
+        "fullAnnotationReadability": "mobile-equivalent-required",
+        "status": "overview-readable"
+      },
+      "mobile": {
+        "path": "docs/quality/art/reference-boards/arena-reference-board-character-v1-mobile-review.png",
+        "sha256": "c85c4a19669a26040e41dc6974b0e35a91d927d39f85199ce6d8c0e792ed4b5a",
+        "byteLength": 859240,
+        "width": 780,
+        "height": 6420,
+        "colorSpace": "srgb",
+        "cssViewport": {
+          "width": 390,
+          "height": 844,
+          "devicePixelRatio": 2
+        },
+        "capture": "full-page-scroll-equivalent",
+        "entryCount": 10,
+        "annotationReadability": "full",
+        "status": "board-ready"
+      },
+      "selfScore": {
+        "status": "board-ready",
+        "evidenceScope": "actual-reference-board",
+        "score": 94,
+        "maximum": 100,
+        "dimensions": {
+          "sourceFit": 18,
+          "annotation": 19,
+          "composition": 19,
+          "consistency": 14,
+          "scaleEvidence": 14,
+          "governance": 10
+        },
+        "risk": "角色图仍是固定Idle来源审阅视图，不是A0.3游戏镜头剪影或真人识别证据。",
+        "hardGatePassed": true,
+        "hardGateReason": "Arena V2 coordinator approved the A0.2.2 board-level gate on 2026-07-28; this does not approve A0.2 overall or downstream gates."
+      }
+    },
+    {
+      "id": "weapon",
+      "manifest": {
+        "path": "docs/quality/art/reference-boards/arena-reference-board-weapon-v1.json",
+        "sha256": "c77c5fd0f3c6b0338fd95ec544124aa6eb375a84b6df801e13c3024a7936add2",
+        "byteLength": 39396
+      },
+      "svg": {
+        "path": "docs/quality/art/reference-boards/arena-reference-board-weapon-v1.svg",
+        "sha256": "1ca0dc3b2f62a78d5900310663da2c4575afd7491914235b1352fb0e0b80653f",
+        "byteLength": 875734,
+        "width": 2560,
+        "height": 1440,
+        "colorSpace": "srgb"
+      },
+      "png": {
+        "path": "docs/quality/art/reference-boards/arena-reference-board-weapon-v1.png",
+        "sha256": "b36ae8e8c358d9585b60c8f1099f09987a0abab17663903b1d297f33ee9bf6e1",
+        "byteLength": 527316,
+        "width": 2560,
+        "height": 1440,
+        "colorSpace": "srgb"
+      },
+      "tenPercent": {
+        "path": "docs/quality/art/reference-boards/arena-reference-board-weapon-v1-10pct.png",
+        "sha256": "401e1c1924c7911514f2805ee163a3546031cfb0108ad16913fea116b082825b",
+        "byteLength": 45605,
+        "width": 256,
+        "height": 144,
+        "colorSpace": "srgb",
+        "scale": 0.1,
+        "readabilityScope": [
+          "board-identity",
+          "7-2-1-decision-zones",
+          "embedded-vs-link-only",
+          "dominant-silhouette-and-value"
+        ],
+        "fullAnnotationReadability": "mobile-equivalent-required",
+        "status": "overview-readable"
+      },
+      "mobile": {
+        "path": "docs/quality/art/reference-boards/arena-reference-board-weapon-v1-mobile-review.png",
+        "sha256": "45591d032c83a9f730b517eb299c12446c7897621f1df2d5d106e6ca7b937711",
+        "byteLength": 711972,
+        "width": 780,
+        "height": 6420,
+        "colorSpace": "srgb",
+        "cssViewport": {
+          "width": 390,
+          "height": 844,
+          "devicePixelRatio": 2
+        },
+        "capture": "full-page-scroll-equivalent",
+        "entryCount": 10,
+        "annotationReadability": "full",
+        "status": "board-ready"
+      },
+      "selfScore": {
+        "status": "board-ready",
+        "evidenceScope": "direction-contract",
+        "score": 93,
+        "maximum": 100,
+        "dimensions": {
+          "sourceFit": 19,
+          "annotation": 19,
+          "composition": 18,
+          "consistency": 14,
+          "scaleEvidence": 13,
+          "governance": 10
+        },
+        "risk": "本板已用clean-room直接视觉证明武器方向，但仍没有正式重锤/锁链/圆盾模型与动作；P4须逐把独立Concept。",
+        "hardGatePassed": true,
+        "hardGateReason": "Arena V2 coordinator approved the A0.2.2 board-level gate on 2026-07-28; this does not approve A0.2 overall or downstream gates."
+      }
+    },
+    {
+      "id": "map-composition",
+      "manifest": {
+        "path": "docs/quality/art/reference-boards/arena-reference-board-map-composition-v1.json",
+        "sha256": "c9b0216ecc13205952c606f12651b4bbb407545050950bc71eea73517fc3e115",
+        "byteLength": 24898
+      },
+      "svg": {
+        "path": "docs/quality/art/reference-boards/arena-reference-board-map-composition-v1.svg",
+        "sha256": "ef5466e76a0f2ab3a607ddaf1a078a185aa2215ea4161203c5233cb3be0b9fe5",
+        "byteLength": 979220,
+        "width": 2560,
+        "height": 1440,
+        "colorSpace": "srgb"
+      },
+      "png": {
+        "path": "docs/quality/art/reference-boards/arena-reference-board-map-composition-v1.png",
+        "sha256": "e4f6dc4e3b9c919d24f2c94847703e7303c22ef53ceeed3296788c5c91faa31a",
+        "byteLength": 2044558,
+        "width": 2560,
+        "height": 1440,
+        "colorSpace": "srgb"
+      },
+      "tenPercent": {
+        "path": "docs/quality/art/reference-boards/arena-reference-board-map-composition-v1-10pct.png",
+        "sha256": "f4f92707e0a9105db6ed62c1ff36b8d97bb622790955428bc4c9d3e5f68e8da9",
+        "byteLength": 51407,
+        "width": 256,
+        "height": 144,
+        "colorSpace": "srgb",
+        "scale": 0.1,
+        "readabilityScope": [
+          "board-identity",
+          "7-2-1-decision-zones",
+          "embedded-vs-link-only",
+          "dominant-silhouette-and-value"
+        ],
+        "fullAnnotationReadability": "mobile-equivalent-required",
+        "status": "overview-readable"
+      },
+      "mobile": {
+        "path": "docs/quality/art/reference-boards/arena-reference-board-map-composition-v1-mobile-review.png",
+        "sha256": "37d1a3fa045acec92197104077e7735836d7b4cc0f3b6837cd5f16559d92b26c",
+        "byteLength": 1319248,
+        "width": 780,
+        "height": 6420,
+        "colorSpace": "srgb",
+        "cssViewport": {
+          "width": 390,
+          "height": 844,
+          "devicePixelRatio": 2
+        },
+        "capture": "full-page-scroll-equivalent",
+        "entryCount": 10,
+        "annotationReadability": "full",
+        "status": "board-ready"
+      },
+      "selfScore": {
+        "status": "board-ready",
+        "evidenceScope": "actual-reference-board",
+        "score": 95,
+        "maximum": 100,
+        "dimensions": {
+          "sourceFit": 19,
+          "annotation": 19,
+          "composition": 19,
+          "consistency": 14,
+          "scaleEvidence": 14,
+          "governance": 10
+        },
+        "risk": "构图板没有正式Map Definition与生产相机截图，不能替代P3可达、拥挤或真人路线理解。",
+        "hardGatePassed": true,
+        "hardGateReason": "Arena V2 coordinator approved the A0.2.2 board-level gate on 2026-07-28; this does not approve A0.2 overall or downstream gates."
+      }
+    },
+    {
+      "id": "combat-feedback",
+      "manifest": {
+        "path": "docs/quality/art/reference-boards/arena-reference-board-combat-feedback-v1.json",
+        "sha256": "a813be5845bd5099523903e9719752d88f770438ada948465b1e7bd03417f628",
+        "byteLength": 39344
+      },
+      "svg": {
+        "path": "docs/quality/art/reference-boards/arena-reference-board-combat-feedback-v1.svg",
+        "sha256": "65a5280efabaed8c506767bc2e53033a34cf9b9dcc17993fae48286b8ff5e374",
+        "byteLength": 808620,
+        "width": 2560,
+        "height": 1440,
+        "colorSpace": "srgb"
+      },
+      "png": {
+        "path": "docs/quality/art/reference-boards/arena-reference-board-combat-feedback-v1.png",
+        "sha256": "0f99ac3fc6941ae6f5e2502293546479d889bfd8b8aa7148a71e6672782ab908",
+        "byteLength": 513927,
+        "width": 2560,
+        "height": 1440,
+        "colorSpace": "srgb"
+      },
+      "tenPercent": {
+        "path": "docs/quality/art/reference-boards/arena-reference-board-combat-feedback-v1-10pct.png",
+        "sha256": "519a814465c9e4370b02209f4319911e4cb0a64e40e84bc955e35c7896b44d76",
+        "byteLength": 43621,
+        "width": 256,
+        "height": 144,
+        "colorSpace": "srgb",
+        "scale": 0.1,
+        "readabilityScope": [
+          "board-identity",
+          "7-2-1-decision-zones",
+          "embedded-vs-link-only",
+          "dominant-silhouette-and-value"
+        ],
+        "fullAnnotationReadability": "mobile-equivalent-required",
+        "status": "overview-readable"
+      },
+      "mobile": {
+        "path": "docs/quality/art/reference-boards/arena-reference-board-combat-feedback-v1-mobile-review.png",
+        "sha256": "8e6f90d1b9657de24f54c45bf4d35b20de0ae82b2d1c4e45a99860346ca6a765",
+        "byteLength": 693912,
+        "width": 780,
+        "height": 6420,
+        "colorSpace": "srgb",
+        "cssViewport": {
+          "width": 390,
+          "height": 844,
+          "devicePixelRatio": 2
+        },
+        "capture": "full-page-scroll-equivalent",
+        "entryCount": 10,
+        "annotationReadability": "full",
+        "status": "board-ready"
+      },
+      "selfScore": {
+        "status": "board-ready",
+        "evidenceScope": "direction-contract",
+        "score": 94,
+        "maximum": 100,
+        "dimensions": {
+          "sourceFit": 20,
+          "annotation": 19,
+          "composition": 18,
+          "consistency": 14,
+          "scaleEvidence": 13,
+          "governance": 10
+        },
+        "risk": "本板已用clean-room直接视觉证明反馈层级并标注权威事件映射，但仍不是运行中VFX样件；A1/A4继续受事件与设备门阻断。",
+        "hardGatePassed": true,
+        "hardGateReason": "Arena V2 coordinator approved the A0.2.2 board-level gate on 2026-07-28; this does not approve A0.2 overall or downstream gates."
+      }
+    },
+    {
+      "id": "ui",
+      "manifest": {
+        "path": "docs/quality/art/reference-boards/arena-reference-board-ui-v1.json",
+        "sha256": "4b683b10fab2778f073b8f48d28a5c55fb44e4d7aa4ed929fd53bd50bbfc1e17",
+        "byteLength": 25866
+      },
+      "svg": {
+        "path": "docs/quality/art/reference-boards/arena-reference-board-ui-v1.svg",
+        "sha256": "51d8067b00a7265f49fe75ad0773eb30bbcaf99f824da860d862d2e22ad72d63",
+        "byteLength": 255123,
+        "width": 2560,
+        "height": 1440,
+        "colorSpace": "srgb"
+      },
+      "png": {
+        "path": "docs/quality/art/reference-boards/arena-reference-board-ui-v1.png",
+        "sha256": "d65d7f03a406b92d745da0cc2fef1e4d1cf4b13bcf4b9ddf6bdf43d1d6b044fa",
+        "byteLength": 460640,
+        "width": 2560,
+        "height": 1440,
+        "colorSpace": "srgb"
+      },
+      "tenPercent": {
+        "path": "docs/quality/art/reference-boards/arena-reference-board-ui-v1-10pct.png",
+        "sha256": "e7e25384491ac68c7678efddf9f05464999da46cdb48d67747f3315717731280",
+        "byteLength": 38470,
+        "width": 256,
+        "height": 144,
+        "colorSpace": "srgb",
+        "scale": 0.1,
+        "readabilityScope": [
+          "board-identity",
+          "7-2-1-decision-zones",
+          "embedded-vs-link-only",
+          "dominant-silhouette-and-value"
+        ],
+        "fullAnnotationReadability": "mobile-equivalent-required",
+        "status": "overview-readable"
+      },
+      "mobile": {
+        "path": "docs/quality/art/reference-boards/arena-reference-board-ui-v1-mobile-review.png",
+        "sha256": "c7744ed7bc72baeed9c095406f7d776a2ffc03217a362762783222d8c1757d87",
+        "byteLength": 651323,
+        "width": 780,
+        "height": 6420,
+        "colorSpace": "srgb",
+        "cssViewport": {
+          "width": 390,
+          "height": 844,
+          "devicePixelRatio": 2
+        },
+        "capture": "full-page-scroll-equivalent",
+        "entryCount": 10,
+        "annotationReadability": "full",
+        "status": "board-ready"
+      },
+      "selfScore": {
+        "status": "board-ready",
+        "evidenceScope": "actual-reference-board",
+        "score": 96,
+        "maximum": 100,
+        "dimensions": {
+          "sourceFit": 20,
+          "annotation": 19,
+          "composition": 19,
+          "consistency": 14,
+          "scaleEvidence": 14,
+          "governance": 10
+        },
+        "risk": "本板使用合同线框而非当前运行页面；响应式、触控、真机和真人证据仍未产生。",
+        "hardGatePassed": true,
+        "hardGateReason": "Arena V2 coordinator approved the A0.2.2 board-level gate on 2026-07-28; this does not approve A0.2 overall or downstream gates."
+      }
+    },
+    {
+      "id": "color-material",
+      "manifest": {
+        "path": "docs/quality/art/reference-boards/arena-reference-board-color-material-v1.json",
+        "sha256": "675f2b441e69d823195bf1dd6e0f9af3bfc6b5735a50c65e784781a89fcb4568",
+        "byteLength": 24533
+      },
+      "svg": {
+        "path": "docs/quality/art/reference-boards/arena-reference-board-color-material-v1.svg",
+        "sha256": "4f72dd350d65580a1e336e4ccdbcbf53582d08005199e0cd9f8a4fee4b1d68a1",
+        "byteLength": 1272058,
+        "width": 2560,
+        "height": 1440,
+        "colorSpace": "srgb"
+      },
+      "png": {
+        "path": "docs/quality/art/reference-boards/arena-reference-board-color-material-v1.png",
+        "sha256": "9d140a325adf548d495d6da33f8edffef9a6f86e2924e1ec31a4908dc14c8362",
+        "byteLength": 2330651,
+        "width": 2560,
+        "height": 1440,
+        "colorSpace": "srgb"
+      },
+      "tenPercent": {
+        "path": "docs/quality/art/reference-boards/arena-reference-board-color-material-v1-10pct.png",
+        "sha256": "d19eee63259e4f6f23a7b38e6b301367dbf1888bf7f5c1ed124bc40d7ace7abd",
+        "byteLength": 51731,
+        "width": 256,
+        "height": 144,
+        "colorSpace": "srgb",
+        "scale": 0.1,
+        "readabilityScope": [
+          "board-identity",
+          "7-2-1-decision-zones",
+          "embedded-vs-link-only",
+          "dominant-silhouette-and-value"
+        ],
+        "fullAnnotationReadability": "mobile-equivalent-required",
+        "status": "overview-readable"
+      },
+      "mobile": {
+        "path": "docs/quality/art/reference-boards/arena-reference-board-color-material-v1-mobile-review.png",
+        "sha256": "23d7e313d647c057fababe0766191f3d8afaebae7aa40ea8fe97ddf19a1185b9",
+        "byteLength": 1434884,
+        "width": 780,
+        "height": 6420,
+        "colorSpace": "srgb",
+        "cssViewport": {
+          "width": 390,
+          "height": 844,
+          "devicePixelRatio": 2
+        },
+        "capture": "full-page-scroll-equivalent",
+        "entryCount": 10,
+        "annotationReadability": "full",
+        "status": "board-ready"
+      },
+      "selfScore": {
+        "status": "board-ready",
+        "evidenceScope": "actual-reference-board",
+        "score": 94,
+        "maximum": 100,
+        "dimensions": {
+          "sourceFit": 19,
+          "annotation": 19,
+          "composition": 19,
+          "consistency": 14,
+          "scaleEvidence": 13,
+          "governance": 10
+        },
+        "risk": "馆藏图只提供色彩/材质关系，不是生产贴图；真实材质参数和设备色彩仍待后续阶段。",
+        "hardGatePassed": true,
+        "hardGateReason": "Arena V2 coordinator approved the A0.2.2 board-level gate on 2026-07-28; this does not approve A0.2 overall or downstream gates."
+      }
+    }
+  ],
+  "a0_2_2GateScore": {
+    "total": 94,
+    "maximum": 100,
+    "dimensions": {
+      "boardsAndRatio": {
+        "score": 25,
+        "maximum": 25
+      },
+      "annotationActionability": {
+        "score": 19,
+        "maximum": 20
+      },
+      "sourceLicenseHash": {
+        "score": 20,
+        "maximum": 20
+      },
+      "consistencyAndAntiReference": {
+        "score": 12,
+        "maximum": 15
+      },
+      "layoutAndReviewability": {
+        "score": 8,
+        "maximum": 10
+      },
+      "dualSignOff": {
+        "score": 10,
+        "maximum": 10
+      }
+    },
+    "hardGatePassed": true,
+    "gateReason": "Arena V2 coordinator approved all six boards on 2026-07-28; score remains 94 and approval is limited to A0.2.2 board evidence."
+  },
+  "statusBoundary": {
+    "a0_2_2": "board-ready",
+    "a0_2": "incomplete",
+    "referenceBoard": "incomplete",
+    "blockout": "forbidden",
+    "a0_3": "incomplete",
+    "device": "incomplete",
+    "human": "incomplete",
+    "final": "incomplete"
+  }
+}

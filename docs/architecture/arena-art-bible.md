@@ -2,12 +2,12 @@
 
 ## 文档状态
 
-- 状态：A0.1 视觉宪法/来源登记/对齐合同为 `contract-ready`，主协调已签核（2026-07-28）；A0.2实际参考板、A0.3剪影工具/盲测均为 `incomplete`
+- 状态：A0.1为`contract-ready`、A0.2.1补充来源为`supplemental-source-ready`、A0.2.2六张实际参考板为`board-ready`，主协调均已签核（2026-07-28）；A0.2整体与A0.3剪影工具/盲测仍为 `incomplete`
 - 日期：2026-07-28
 - 审计基线：`d6f906008d0af1ed0133a199a8dc9e15cb1d23d0`
 - 上游真值：[V2 产品总纲](../product/arena-v2-product-brief.md)、[V2 玩法框架](../gameplay/arena-v2-gameplay-framework.md)、[V2 生产计划](arena-v2-production-development-plan.md)、[ADR-108](../decisions/108-arena-v2-survival-auto-replace-and-expiry.md)
 - 执行基线：[美术与音频开发流程](arena-art-and-audio-development-flow.md)、[A0–A7 对齐矩阵](arena-art-development-alignment-matrix.md)
-- 参考登记：[六类注释参考登记](arena-art-reference-register.md)（文字登记完成，六张图片板与签核仍为 `incomplete`）
+- 参考登记：[六类注释参考登记](arena-art-reference-register.md)（原来源包、武器/反馈补充来源与六张板面小门均已签核；A0.2整体仍为 `incomplete`）
 
 本文件是 Arena Product 的视觉宪法与生产约束，不是完成度声明。任何资产仍须独立通过 `Concept → Blockout → Integration → Final`。研究图、AI 原图、KZ 灰盒、程序化角色或程序化武器只能作为研究、样件或加载失败兜底，不能标为正式生产资产。
 
@@ -299,7 +299,7 @@ Bundle hash `e03ff2b4`，Policy hash `532faaa2`，Report hash `82a8b378`。这�
 | 小门 | 范围 | 当前状态 | 通过含义 | 明确不代表 |
 |---|---|---|---|---|
 | A0.1 视觉宪法/来源登记/对齐合同 | Art Bible、14技能审计、六类来源文字登记、色彩计算、角色/武器边界、预算、四门、A0–A7矩阵 | `contract-ready`，主协调已签核（2026-07-28） | 后续任务有唯一、可执行且可追溯的制作合同 | 实际Reference Board、剪影、LOD、设备、真人或Final通过 |
-| A0.2 六类实际注释参考板 | 六张合法板面、源文件、review PNG、manifest、hash与双签核 | `incomplete` | 六类视觉方向已有可审阅、可追溯板面 | 任何运行时资产或设备表现通过 |
+| A0.2 六类实际注释参考板 | 六张合法板面、源文件、review PNG、manifest、hash与双签核 | 原来源包`source-ready`、补充来源`supplemental-source-ready`、A0.2.2 `board-ready`，主协调已签核（2026-07-28）；A0.2整体`incomplete` | 六类实际参考板方向已通过板面小门 | 任何运行时资产、Blockout或设备表现通过 |
 | A0.3 剪影工具与盲测基线 | 可重复渲染工具、正式角色/武器输出、manifest、盲测数据与≥90%结论 | `incomplete` | 当前正式角色/武器在固定相机下具有实证可读基线 | 新角色、新武器、LOD、三端设备或Final通过 |
 
 A0.1、A0.2、A0.3分别执行总分≥90且单维度≥80%的门槛；未执行的小门只写 `incomplete`，不得借用A0.1分数。A0.2和A0.3都通过前，后续任务可以继续冻结Rule/Core和准备合同，但不得开始生产资产Blockout或宣称视觉方向已通过。
@@ -323,7 +323,7 @@ A0.1 当前没有缺失的必需输入。实际图片板是A0.2输出，剪影�
 
 | 项目 | 得分 | 依据/扣分 |
 |---|---:|---|
-| 视觉宪法核心 | 19/20 | 支柱、形状、色彩、材质、灯光、渲染、角色、环境、UI、VFX与反例齐全；扣1分：主协调尚未签核 |
+| 视觉宪法核心 | 19/20 | 支柱、形状、色彩、材质、灯光、渲染、角色、环境、UI、VFX与反例齐全；扣1分：该分只覆盖合同，不借用实际板、剪影或资产成熟度 |
 | 来源与六类参考登记合同 | 14/15 | 六类70/20/10、借鉴/禁用、许可与嵌入边界完成；扣1分：逐图机器manifest归A0.2 |
 | 色彩计算证据 | 15/15 | 13组实际ratio、正文/大字/图形PASS/FAIL和非色彩组合已记录 |
 | 小门拆分与零歧义执行合同 | 14/15 | A0.1/0.2/0.3输入、输出、阻断、状态和不得宣称项完整；扣1分：机器校验器归对应执行门 |

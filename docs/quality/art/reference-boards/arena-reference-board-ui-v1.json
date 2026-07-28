@@ -1,0 +1,627 @@
+{
+  "schemaVersion": 1,
+  "id": "arena.art.reference-board.ui.a0.2.2.v1",
+  "status": "board-ready",
+  "category": "ui",
+  "artBibleRevision": "a0.1-contract-ready@22b9fd0e39b83de0b6a3ed766a2a66f3d2f67b1d",
+  "sourcePack": {
+    "path": "docs/quality/art/reference-sources/arena-a0.2.1-source-pack-v1.json",
+    "id": "arena.art.reference-source-pack.a0.2.1.v1",
+    "sha256": "061f94357d55a5f1ea194e72723daae172aa9294901cb7b8fca5abddbf092e8c",
+    "status": "source-ready"
+  },
+  "supplementalPack": {
+    "path": "docs/quality/art/reference-sources/arena-a0.2.1-supplemental-weapon-feedback-v1.json",
+    "id": "arena.art.reference-source-pack.a0.2.1.supplemental.weapon-feedback.v1",
+    "sha256": "d49343413702dbad9f7ac874e053dc0eb56a51313b611a4fa9c16efa0137561e",
+    "status": "supplemental-source-ready"
+  },
+  "generatedAt": "2026-07-28",
+  "weights": {
+    "adopt": 70,
+    "avoid": 20,
+    "experiment": 10
+  },
+  "layout": {
+    "canvas": {
+      "width": 2560,
+      "height": 1440,
+      "colorSpace": "srgb",
+      "transparent": false
+    },
+    "grid": {
+      "x": 80,
+      "y": 140,
+      "columns": 5,
+      "rows": 2,
+      "tileWidth": 480,
+      "tileHeight": 480,
+      "visualHeight": 320,
+      "annotationHeight": 160
+    },
+    "order": [
+      "USE01",
+      "USE02",
+      "USE03",
+      "USE04",
+      "USE05",
+      "USE06",
+      "USE07",
+      "AVOID01",
+      "AVOID02",
+      "TEST01"
+    ]
+  },
+  "purpose": "固定Arena局外UI的信息优先级、单一主动作、武器/地图学习入口和窄屏密度上限。",
+  "sourceArtifact": {
+    "path": "docs/quality/art/reference-boards/arena-reference-board-ui-v1.svg",
+    "sha256": "51d8067b00a7265f49fe75ad0773eb30bbcaf99f824da860d862d2e22ad72d63",
+    "byteLength": 255123,
+    "width": 2560,
+    "height": 1440,
+    "colorSpace": "srgb"
+  },
+  "reviewArtifact": {
+    "path": "docs/quality/art/reference-boards/arena-reference-board-ui-v1.png",
+    "sha256": "d65d7f03a406b92d745da0cc2fef1e4d1cf4b13bcf4b9ddf6bdf43d1d6b044fa",
+    "byteLength": 460640,
+    "width": 2560,
+    "height": 1440,
+    "colorSpace": "srgb"
+  },
+  "tenPercentReview": {
+    "path": "docs/quality/art/reference-boards/arena-reference-board-ui-v1-10pct.png",
+    "sha256": "e7e25384491ac68c7678efddf9f05464999da46cdb48d67747f3315717731280",
+    "byteLength": 38470,
+    "width": 256,
+    "height": 144,
+    "colorSpace": "srgb",
+    "scale": 0.1,
+    "readabilityScope": [
+      "board-identity",
+      "7-2-1-decision-zones",
+      "embedded-vs-link-only",
+      "dominant-silhouette-and-value"
+    ],
+    "fullAnnotationReadability": "mobile-equivalent-required",
+    "status": "overview-readable"
+  },
+  "mobileEquivalentReview": {
+    "path": "docs/quality/art/reference-boards/arena-reference-board-ui-v1-mobile-review.png",
+    "sha256": "c7744ed7bc72baeed9c095406f7d776a2ffc03217a362762783222d8c1757d87",
+    "byteLength": 651323,
+    "width": 780,
+    "height": 6420,
+    "colorSpace": "srgb",
+    "cssViewport": {
+      "width": 390,
+      "height": 844,
+      "devicePixelRatio": 2
+    },
+    "capture": "full-page-scroll-equivalent",
+    "entryCount": 10,
+    "annotationReadability": "full",
+    "status": "board-ready"
+  },
+  "entries": [
+    {
+      "entryId": "ui-b01",
+      "decisionSlot": "USE01",
+      "decisionClass": "adopt",
+      "tileIndex": 0,
+      "sourceKind": "project-original",
+      "title": "Arena V2 home quick-start contract wireframe",
+      "creator": "Arena project",
+      "rightsHolder": "Arena project owner",
+      "sourceLocator": "docs/product/arena-v2-screen-map.md",
+      "sourceRevision": "git:8e3e6eff6724612e83b124aa2ae6574a3967af9e@generator-v1",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "PROJECT-ORIGINAL-INTERNAL",
+      "licenseLocator": "scripts/art/generate-arena-reference-source-visuals.ts",
+      "proofLocator": "docs/quality/art/reference-sources/project-ui-wireframes/ui-source-visual-manifest-v1.json",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "embedded",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/project-ui-wireframes/ui-b01-home-quick-start.png",
+        "byteLength": 29449,
+        "sha256": "950ca859e7e3a9dfe95b3c398483a91d28d896f005236f57565666edb9cef3c7",
+        "width": 1280,
+        "height": 720
+      },
+      "crop": {
+        "mode": "contain",
+        "sourceRect": {
+          "x": 0,
+          "y": 0,
+          "width": 1280,
+          "height": 720
+        },
+        "displayRect": {
+          "x": 0,
+          "y": 25,
+          "width": 480,
+          "height": 270
+        },
+        "croppedPixels": 0,
+        "approval": {
+          "status": "approved-no-crop",
+          "reviewer": "Codex / game-art-director self-review",
+          "signedAt": "2026-07-28",
+          "rationale": "完整源图按contain缩放，保留全部上下文；不裁切、不拉伸。"
+        }
+      },
+      "decisionReason": "采用，因为首页把默认模式、当前角色/武器和地图下一段压缩到一个快速开局主动作，满足两次主要点击内开局。",
+      "specificTakeaway": "首页把默认模式、当前角色/武器和地图下一段压缩到一个快速开局主动作，满足两次主要点击内开局。",
+      "arenaConstraint": "首页到开局不超过两次主要点击，首屏只保留一个主动作。",
+      "doNotCopy": "不把合同线框中的排版、图标或假记录直接当生产UI。",
+      "usageBoundary": "由V2 screen map与Art Bible token生成，仅作A0.2.1来源输入；不是已实现页面、设备证据或Final。",
+      "antiReferenceReason": null,
+      "reviewStatus": "coordination-approved"
+    },
+    {
+      "entryId": "ui-b02",
+      "decisionSlot": "USE02",
+      "decisionClass": "adopt",
+      "tileIndex": 1,
+      "sourceKind": "project-original",
+      "title": "Arena V2 weapon collection contract wireframe",
+      "creator": "Arena project",
+      "rightsHolder": "Arena project owner",
+      "sourceLocator": "docs/product/arena-v2-screen-map.md",
+      "sourceRevision": "git:8e3e6eff6724612e83b124aa2ae6574a3967af9e@generator-v1",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "PROJECT-ORIGINAL-INTERNAL",
+      "licenseLocator": "scripts/art/generate-arena-reference-source-visuals.ts",
+      "proofLocator": "docs/quality/art/reference-sources/project-ui-wireframes/ui-source-visual-manifest-v1.json",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "embedded",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/project-ui-wireframes/ui-b02-weapon-collection.png",
+        "byteLength": 33675,
+        "sha256": "b7d0071ba36219cec0638648421b1002697efb2ba2c64e34796e5e0310201b8a",
+        "width": 1280,
+        "height": 720
+      },
+      "crop": {
+        "mode": "contain",
+        "sourceRect": {
+          "x": 0,
+          "y": 0,
+          "width": 1280,
+          "height": 720
+        },
+        "displayRect": {
+          "x": 0,
+          "y": 25,
+          "width": 480,
+          "height": 270
+        },
+        "croppedPixels": 0,
+        "approval": {
+          "status": "approved-no-crop",
+          "reviewer": "Codex / game-art-director self-review",
+          "signedAt": "2026-07-28",
+          "rationale": "完整源图按contain缩放，保留全部上下文；不裁切、不拉伸。"
+        }
+      },
+      "decisionReason": "采用，因为武器收藏先按功能族浏览，以核心动词、优势/代价和个人使用记录区分重锤、锁链与圆盾。",
+      "specificTakeaway": "武器收藏先按功能族浏览，以核心动词、优势/代价和个人使用记录区分重锤、锁链与圆盾。",
+      "arenaConstraint": "收藏先显示核心动词、优势/代价和记录，不展示综合战力。",
+      "doNotCopy": "不把三件示意卡、假数量、图标或排版直接当生产收藏页。",
+      "usageBoundary": "由V2 screen map与Art Bible token生成，仅作A0.2.1来源输入；不是已实现页面、设备证据或Final。",
+      "antiReferenceReason": null,
+      "reviewStatus": "coordination-approved"
+    },
+    {
+      "entryId": "ui-b03",
+      "decisionSlot": "USE03",
+      "decisionClass": "adopt",
+      "tileIndex": 2,
+      "sourceKind": "project-original",
+      "title": "Arena V2 weapon detail contract wireframe",
+      "creator": "Arena project",
+      "rightsHolder": "Arena project owner",
+      "sourceLocator": "docs/product/arena-v2-screen-map.md",
+      "sourceRevision": "git:8e3e6eff6724612e83b124aa2ae6574a3967af9e@generator-v1",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "PROJECT-ORIGINAL-INTERNAL",
+      "licenseLocator": "scripts/art/generate-arena-reference-source-visuals.ts",
+      "proofLocator": "docs/quality/art/reference-sources/project-ui-wireframes/ui-source-visual-manifest-v1.json",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "embedded",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/project-ui-wireframes/ui-b03-weapon-detail.png",
+        "byteLength": 26625,
+        "sha256": "2355480c8f8d2270baa7340d239a075382e6477eaf479bed7223c69845274b4e",
+        "width": 1280,
+        "height": 720
+      },
+      "crop": {
+        "mode": "contain",
+        "sourceRect": {
+          "x": 0,
+          "y": 0,
+          "width": 1280,
+          "height": 720
+        },
+        "displayRect": {
+          "x": 0,
+          "y": 25,
+          "width": 480,
+          "height": 270
+        },
+        "croppedPixels": 0,
+        "approval": {
+          "status": "approved-no-crop",
+          "reviewer": "Codex / game-art-director self-review",
+          "signedAt": "2026-07-28",
+          "rationale": "完整源图按contain缩放，保留全部上下文；不裁切、不拉伸。"
+        }
+      },
+      "decisionReason": "采用，因为武器详情用准备—有效—收招时序、命中/空中/反制标签、地图用途与固定数值轴回答一把武器如何改变对局。",
+      "specificTakeaway": "武器详情用准备—有效—收招时序、命中/空中/反制标签、地图用途与固定数值轴回答一把武器如何改变对局。",
+      "arenaConstraint": "详情按时序、地图用途和反制解释武器，数值必须同源。",
+      "doNotCopy": "不把重锤假数据、图标、条长或排版直接当生产定义与UI。",
+      "usageBoundary": "由V2 screen map与Art Bible token生成，仅作A0.2.1来源输入；不写入规则，也不是已实现页面或Final。",
+      "antiReferenceReason": null,
+      "reviewStatus": "coordination-approved"
+    },
+    {
+      "entryId": "ui-b04",
+      "decisionSlot": "USE04",
+      "decisionClass": "adopt",
+      "tileIndex": 3,
+      "sourceKind": "project-original",
+      "title": "Arena V2 map and mode contract wireframe",
+      "creator": "Arena project",
+      "rightsHolder": "Arena project owner",
+      "sourceLocator": "docs/product/arena-v2-screen-map.md",
+      "sourceRevision": "git:8e3e6eff6724612e83b124aa2ae6574a3967af9e@generator-v1",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "PROJECT-ORIGINAL-INTERNAL",
+      "licenseLocator": "scripts/art/generate-arena-reference-source-visuals.ts",
+      "proofLocator": "docs/quality/art/reference-sources/project-ui-wireframes/ui-source-visual-manifest-v1.json",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "embedded",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/project-ui-wireframes/ui-b04-map-mode.png",
+        "byteLength": 28061,
+        "sha256": "3fe47c26e0808296a6b5f4a0e1f2787eb92506109528e1364a821bab16128f28",
+        "width": 1280,
+        "height": 720
+      },
+      "crop": {
+        "mode": "contain",
+        "sourceRect": {
+          "x": 0,
+          "y": 0,
+          "width": 1280,
+          "height": 720
+        },
+        "displayRect": {
+          "x": 0,
+          "y": 25,
+          "width": 480,
+          "height": 270
+        },
+        "croppedPixels": 0,
+        "approval": {
+          "status": "approved-no-crop",
+          "reviewer": "Codex / game-art-director self-review",
+          "signedAt": "2026-07-28",
+          "rationale": "完整源图按contain缩放，保留全部上下文；不裁切、不拉伸。"
+        }
+      },
+      "decisionReason": "采用，因为同一KZ路线图与1v1、竞速、生存三种目标并列，模式差异由目标和重生语义表达而不是复制三套页面。",
+      "specificTakeaway": "同一KZ路线图与1v1、竞速、生存三种目标并列，模式差异由目标和重生语义表达而不是复制三套页面。",
+      "arenaConstraint": "三模式共用地图基础语法，目标与重生差异不复制三套页面。",
+      "doNotCopy": "不把示意路线、模式卡排版或选中态直接当生产地图与页面。",
+      "usageBoundary": "由V2 screen map与Art Bible token生成，仅作A0.2.1来源输入；不是地图Blockout、已实现页面或Final。",
+      "antiReferenceReason": null,
+      "reviewStatus": "coordination-approved"
+    },
+    {
+      "entryId": "ui-b05",
+      "decisionSlot": "USE05",
+      "decisionClass": "adopt",
+      "tileIndex": 4,
+      "sourceKind": "project-document",
+      "title": "Arena V2界面地图",
+      "creator": "Arena project",
+      "rightsHolder": "Arena project owner",
+      "sourceLocator": "docs/product/arena-v2-screen-map.md",
+      "sourceRevision": "retrieved-2026-07-28",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "PROJECT-DOCUMENT",
+      "licenseLocator": "docs/product/arena-v2-screen-map.md",
+      "proofLocator": "docs/product/arena-v2-screen-map.md",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "link-only",
+      "artifact": null,
+      "crop": null,
+      "decisionReason": "采用，因为固定11页职责、一页一问题和单一主动作。",
+      "specificTakeaway": "固定11页职责、一页一问题和单一主动作。",
+      "arenaConstraint": "11页清单、一页一问题和单一主动作是不可扩张边界。",
+      "doNotCopy": "不把文档表格直接画成页面。",
+      "usageBoundary": "内部合同链接，不嵌入图片。",
+      "antiReferenceReason": null,
+      "reviewStatus": "coordination-approved"
+    },
+    {
+      "entryId": "ui-a01",
+      "decisionSlot": "USE06",
+      "decisionClass": "adopt",
+      "tileIndex": 5,
+      "sourceKind": "project-original",
+      "title": "Arena V2 result and next-goal contract wireframe",
+      "creator": "Arena project",
+      "rightsHolder": "Arena project owner",
+      "sourceLocator": "docs/product/arena-v2-screen-map.md",
+      "sourceRevision": "git:8e3e6eff6724612e83b124aa2ae6574a3967af9e@generator-v1",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "PROJECT-ORIGINAL-INTERNAL",
+      "licenseLocator": "scripts/art/generate-arena-reference-source-visuals.ts",
+      "proofLocator": "docs/quality/art/reference-sources/project-ui-wireframes/ui-source-visual-manifest-v1.json",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "embedded",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/project-ui-wireframes/ui-a01-result-next-goal.png",
+        "byteLength": 29811,
+        "sha256": "edef6af82f8f5b4cc023bcbab7cc670702930582fd8c8232ff53d0954687b9cc",
+        "width": 1280,
+        "height": 720
+      },
+      "crop": {
+        "mode": "contain",
+        "sourceRect": {
+          "x": 0,
+          "y": 0,
+          "width": 1280,
+          "height": 720
+        },
+        "displayRect": {
+          "x": 0,
+          "y": 25,
+          "width": 480,
+          "height": 270
+        },
+        "croppedPixels": 0,
+        "approval": {
+          "status": "approved-no-crop",
+          "reviewer": "Codex / game-art-director self-review",
+          "signedAt": "2026-07-28",
+          "rationale": "完整源图按contain缩放，保留全部上下文；不裁切、不拉伸。"
+        }
+      },
+      "decisionReason": "采用，因为结算先显示真实结果和关键事件，再只给一个地图熟练目标与再次开始入口，避免奖励和入口竞争。",
+      "specificTakeaway": "结算先显示真实结果和关键事件，再只给一个地图熟练目标与再次开始入口，避免奖励和入口竞争。",
+      "arenaConstraint": "结算先结果与原因，再给唯一下一目标和再次开始。",
+      "doNotCopy": "不把假时间、奖励数值、路线缩略或排版直接当生产结算页。",
+      "usageBoundary": "由V2 screen map与Art Bible token生成，仅作A0.2.1来源输入；不是Profile数据、已实现页面或Final。",
+      "antiReferenceReason": null,
+      "reviewStatus": "coordination-approved"
+    },
+    {
+      "entryId": "ui-a02",
+      "decisionSlot": "USE07",
+      "decisionClass": "adopt",
+      "tileIndex": 6,
+      "sourceKind": "research-link",
+      "title": "Apple官方生存指南",
+      "creator": "Apple Editorial / Habby",
+      "rightsHolder": "Apple / Habby",
+      "sourceLocator": "https://apps.apple.com/cn/ipad/story/id1649510203",
+      "sourceRevision": "retrieved-2026-07-28",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "RIGHTS-RESTRICTED",
+      "licenseLocator": "docs/research/arena-v2-survivor-io-ui-study-v1.md",
+      "proofLocator": "docs/research/arena-v2-survivor-io-ui-study-v1.md",
+      "rights": {
+        "commercialUseAllowed": false,
+        "modificationAllowed": false,
+        "redistributionAllowed": false
+      },
+      "embeddingMode": "link-only",
+      "artifact": null,
+      "crop": null,
+      "decisionReason": "采用，因为借鉴先用行为与场景解释武器，再显示细数值。",
+      "specificTakeaway": "借鉴先用行为与场景解释武器，再显示细数值。",
+      "arenaConstraint": "先用行为和场景解释武器，再显示细数值；外部图像不嵌入。",
+      "doNotCopy": "不复制武器、自动瞄准、截图或文案。",
+      "usageBoundary": "官方图像无再分发权，只能link-only。",
+      "antiReferenceReason": null,
+      "reviewStatus": "coordination-approved"
+    },
+    {
+      "entryId": "ui-b06",
+      "decisionSlot": "AVOID01",
+      "decisionClass": "avoid",
+      "tileIndex": 7,
+      "sourceKind": "research-link",
+      "title": "弹壳特攻队App Store官方页",
+      "creator": "Habby",
+      "rightsHolder": "Habby / Apple",
+      "sourceLocator": "https://apps.apple.com/cn/app/id1628270358",
+      "sourceRevision": "retrieved-2026-07-28",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "RIGHTS-RESTRICTED",
+      "licenseLocator": "docs/research/arena-v2-survivor-io-ui-study-v1.md",
+      "proofLocator": "docs/research/arena-v2-survivor-io-ui-study-v1.md",
+      "rights": {
+        "commercialUseAllowed": false,
+        "modificationAllowed": false,
+        "redistributionAllowed": false
+      },
+      "embeddingMode": "link-only",
+      "artifact": null,
+      "crop": null,
+      "decisionReason": "规避，因为不复制截图、卡片皮肤、图标、文案、货币或成长系统。",
+      "specificTakeaway": "借鉴把核心承诺压缩为快速开始入口。",
+      "arenaConstraint": "不复制弹壳特攻队页面、图标、货币、成长结构或商店皮肤。",
+      "doNotCopy": "不复制截图、卡片皮肤、图标、文案、货币或成长系统。",
+      "usageBoundary": "官方图像无再分发权，只能link-only。",
+      "antiReferenceReason": null,
+      "reviewStatus": "coordination-approved"
+    },
+    {
+      "entryId": "ui-b07",
+      "decisionSlot": "AVOID02",
+      "decisionClass": "avoid",
+      "tileIndex": 8,
+      "sourceKind": "research-link",
+      "title": "Survivor.io Google Play官方页",
+      "creator": "Habby",
+      "rightsHolder": "Habby / Google",
+      "sourceLocator": "https://play.google.com/store/apps/details?id=com.dxx.firenow",
+      "sourceRevision": "retrieved-2026-07-28",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "RIGHTS-RESTRICTED",
+      "licenseLocator": "docs/research/arena-v2-survivor-io-ui-study-v1.md",
+      "proofLocator": "docs/research/arena-v2-survivor-io-ui-study-v1.md",
+      "rights": {
+        "commercialUseAllowed": false,
+        "modificationAllowed": false,
+        "redistributionAllowed": false
+      },
+      "embeddingMode": "link-only",
+      "artifact": null,
+      "crop": null,
+      "decisionReason": "规避，因为不复制商店图、营销排版或功能列表。",
+      "specificTakeaway": "核对跨商店入口仍强调同一组核心问题。",
+      "arenaConstraint": "不以商店截图或跨商店营销信息代替Arena产品信息架构。",
+      "doNotCopy": "不复制商店图、营销排版或功能列表。",
+      "usageBoundary": "官方图像无再分发权，只能link-only。",
+      "antiReferenceReason": null,
+      "reviewStatus": "coordination-approved"
+    },
+    {
+      "entryId": "ui-t01",
+      "decisionSlot": "TEST01",
+      "decisionClass": "experiment",
+      "tileIndex": 9,
+      "sourceKind": "project-original",
+      "title": "Arena V2 390x844 narrow-screen pressure contract wireframe",
+      "creator": "Arena project",
+      "rightsHolder": "Arena project owner",
+      "sourceLocator": "docs/product/arena-v2-screen-map.md",
+      "sourceRevision": "git:8e3e6eff6724612e83b124aa2ae6574a3967af9e@generator-v1",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "PROJECT-ORIGINAL-INTERNAL",
+      "licenseLocator": "scripts/art/generate-arena-reference-source-visuals.ts",
+      "proofLocator": "docs/quality/art/reference-sources/project-ui-wireframes/ui-source-visual-manifest-v1.json",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "embedded",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/project-ui-wireframes/ui-t01-mobile-narrow-stress.png",
+        "byteLength": 22441,
+        "sha256": "aee660f5891f6e4a77a2ce57887ad9f729ee8288908612c9a0ab1fc0f3228cd7",
+        "width": 390,
+        "height": 844
+      },
+      "crop": {
+        "mode": "contain",
+        "sourceRect": {
+          "x": 0,
+          "y": 0,
+          "width": 390,
+          "height": 844
+        },
+        "displayRect": {
+          "x": 166.067,
+          "y": 0,
+          "width": 147.867,
+          "height": 320
+        },
+        "croppedPixels": 0,
+        "approval": {
+          "status": "approved-no-crop",
+          "reviewer": "Codex / game-art-director self-review",
+          "signedAt": "2026-07-28",
+          "rationale": "完整源图按contain缩放，保留全部上下文；不裁切、不拉伸。"
+        }
+      },
+      "decisionReason": "实验，用“在390×844与虚线安全区内并置快速开局、武器、地图、长标签、固定六位记录和唯一下一步，暴露窄屏密度上限。”验证边界。",
+      "specificTakeaway": "在390×844与虚线安全区内并置快速开局、武器、地图、长标签、固定六位记录和唯一下一步，暴露窄屏密度上限。",
+      "arenaConstraint": "实验390×844下长标签、六位记录和安全区；任一重叠即返工。",
+      "doNotCopy": "不把四段内容同时塞入真实单页，也不复制假记录、图标或卡片排版。",
+      "usageBoundary": "刻意张力样本只用于发现拥挤风险；不是响应式实现、真机证据或Final。",
+      "antiReferenceReason": "拒绝把完整日志、红点和多入口挤入结算首屏。",
+      "reviewStatus": "coordination-approved"
+    }
+  ],
+  "keyTakeaways": [
+    "每页只回答一个问题，主动作始终优先于收藏与记录。",
+    "武器、地图和下一目标承担长期学习，不扩张商城或多货币。",
+    "390×844必须保持48px触控、长标签与固定数值槽。"
+  ],
+  "antiReferences": [
+    "拒绝复制弹壳特攻队页面皮肤、图标、货币和成长系统。",
+    "拒绝日志、红点、排行榜、多入口和营销卡挤入首屏。"
+  ],
+  "selfReview": {
+    "status": "board-ready",
+    "evidenceScope": "actual-reference-board",
+    "score": 96,
+    "maximum": 100,
+    "dimensions": {
+      "sourceFit": 20,
+      "annotation": 19,
+      "composition": 19,
+      "consistency": 14,
+      "scaleEvidence": 14,
+      "governance": 10
+    },
+    "risk": "本板使用合同线框而非当前运行页面；响应式、触控、真机和真人证据仍未产生。",
+    "hardGatePassed": true,
+    "hardGateReason": "Arena V2 coordinator approved the A0.2.2 board-level gate on 2026-07-28; this does not approve A0.2 overall or downstream gates."
+  },
+  "signOff": {
+    "status": "coordination-approved",
+    "artDirector": {
+      "name": "Codex / game-art-director self-review",
+      "signedAt": "2026-07-28"
+    },
+    "coordinator": {
+      "name": "Arena V2 主协调",
+      "signedAt": "2026-07-28"
+    }
+  },
+  "failClosed": {
+    "a0_2_2Passed": true,
+    "a0_2Passed": false,
+    "referenceBoardPassed": false,
+    "blockoutAllowed": false,
+    "a0_3Passed": false,
+    "deviceVerified": false,
+    "humanVerified": false,
+    "finalApproved": false
+  }
+}

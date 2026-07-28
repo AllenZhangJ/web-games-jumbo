@@ -1,0 +1,627 @@
+{
+  "schemaVersion": 1,
+  "id": "arena.art.reference-board.map-composition.a0.2.2.v1",
+  "status": "board-ready",
+  "category": "map-composition",
+  "artBibleRevision": "a0.1-contract-ready@22b9fd0e39b83de0b6a3ed766a2a66f3d2f67b1d",
+  "sourcePack": {
+    "path": "docs/quality/art/reference-sources/arena-a0.2.1-source-pack-v1.json",
+    "id": "arena.art.reference-source-pack.a0.2.1.v1",
+    "sha256": "061f94357d55a5f1ea194e72723daae172aa9294901cb7b8fca5abddbf092e8c",
+    "status": "source-ready"
+  },
+  "supplementalPack": {
+    "path": "docs/quality/art/reference-sources/arena-a0.2.1-supplemental-weapon-feedback-v1.json",
+    "id": "arena.art.reference-source-pack.a0.2.1.supplemental.weapon-feedback.v1",
+    "sha256": "d49343413702dbad9f7ac874e053dc0eb56a51313b611a4fa9c16efa0137561e",
+    "status": "supplemental-source-ready"
+  },
+  "generatedAt": "2026-07-28",
+  "weights": {
+    "adopt": 70,
+    "avoid": 20,
+    "experiment": 10
+  },
+  "layout": {
+    "canvas": {
+      "width": 2560,
+      "height": 1440,
+      "colorSpace": "srgb",
+      "transparent": false
+    },
+    "grid": {
+      "x": 80,
+      "y": 140,
+      "columns": 5,
+      "rows": 2,
+      "tileWidth": 480,
+      "tileHeight": 480,
+      "visualHeight": 320,
+      "annotationHeight": 160
+    },
+    "order": [
+      "USE01",
+      "USE02",
+      "USE03",
+      "USE04",
+      "USE05",
+      "USE06",
+      "USE07",
+      "AVOID01",
+      "AVOID02",
+      "TEST01"
+    ]
+  },
+  "purpose": "固定入口—承诺—落点—恢复—目标的构图层级，并用轴线、前中远层和高位分区保证地图选择可读。",
+  "sourceArtifact": {
+    "path": "docs/quality/art/reference-boards/arena-reference-board-map-composition-v1.svg",
+    "sha256": "ef5466e76a0f2ab3a607ddaf1a078a185aa2215ea4161203c5233cb3be0b9fe5",
+    "byteLength": 979220,
+    "width": 2560,
+    "height": 1440,
+    "colorSpace": "srgb"
+  },
+  "reviewArtifact": {
+    "path": "docs/quality/art/reference-boards/arena-reference-board-map-composition-v1.png",
+    "sha256": "e4f6dc4e3b9c919d24f2c94847703e7303c22ef53ceeed3296788c5c91faa31a",
+    "byteLength": 2044558,
+    "width": 2560,
+    "height": 1440,
+    "colorSpace": "srgb"
+  },
+  "tenPercentReview": {
+    "path": "docs/quality/art/reference-boards/arena-reference-board-map-composition-v1-10pct.png",
+    "sha256": "f4f92707e0a9105db6ed62c1ff36b8d97bb622790955428bc4c9d3e5f68e8da9",
+    "byteLength": 51407,
+    "width": 256,
+    "height": 144,
+    "colorSpace": "srgb",
+    "scale": 0.1,
+    "readabilityScope": [
+      "board-identity",
+      "7-2-1-decision-zones",
+      "embedded-vs-link-only",
+      "dominant-silhouette-and-value"
+    ],
+    "fullAnnotationReadability": "mobile-equivalent-required",
+    "status": "overview-readable"
+  },
+  "mobileEquivalentReview": {
+    "path": "docs/quality/art/reference-boards/arena-reference-board-map-composition-v1-mobile-review.png",
+    "sha256": "37d1a3fa045acec92197104077e7735836d7b4cc0f3b6837cd5f16559d92b26c",
+    "byteLength": 1319248,
+    "width": 780,
+    "height": 6420,
+    "colorSpace": "srgb",
+    "cssViewport": {
+      "width": 390,
+      "height": 844,
+      "devicePixelRatio": 2
+    },
+    "capture": "full-page-scroll-equivalent",
+    "entryCount": 10,
+    "annotationReadability": "full",
+    "status": "board-ready"
+  },
+  "entries": [
+    {
+      "entryId": "composition-b01",
+      "decisionSlot": "USE01",
+      "decisionClass": "adopt",
+      "tileIndex": 0,
+      "sourceKind": "project-original",
+      "title": "Arena KZ route hierarchy contract visual",
+      "creator": "Arena project",
+      "rightsHolder": "Arena project owner",
+      "sourceLocator": "docs/product/arena-v2-screen-map.md",
+      "sourceRevision": "git:8e3e6eff6724612e83b124aa2ae6574a3967af9e",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "PROJECT-ORIGINAL",
+      "licenseLocator": "scripts/art/generate-arena-reference-source-visuals.ts",
+      "proofLocator": "docs/quality/art/reference-sources/project-ui-wireframes/ui-source-visual-manifest-v1.json",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "embedded",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/project-composition/composition-b01-kz-route-hierarchy.png",
+        "byteLength": 18619,
+        "sha256": "3f7ed0b31a22a3423aec54f3029b19f006d9c38a3cbf48e17a916b921bc95d2c",
+        "width": 960,
+        "height": 640
+      },
+      "crop": {
+        "mode": "contain",
+        "sourceRect": {
+          "x": 0,
+          "y": 0,
+          "width": 960,
+          "height": 640
+        },
+        "displayRect": {
+          "x": 0,
+          "y": 0,
+          "width": 480,
+          "height": 320
+        },
+        "croppedPixels": 0,
+        "approval": {
+          "status": "approved-no-crop",
+          "reviewer": "Codex / game-art-director self-review",
+          "signedAt": "2026-07-28",
+          "rationale": "完整源图按contain缩放，保留全部上下文；不裁切、不拉伸。"
+        }
+      },
+      "decisionReason": "采用，因为在480×320抽检尺度仍以圆形入口、粗主路、菱形落点、紫色恢复支路和箭头目标形成入口—承诺—落点—恢复—目标层级。",
+      "specificTakeaway": "在480×320抽检尺度仍以圆形入口、粗主路、菱形落点、紫色恢复支路和箭头目标形成入口—承诺—落点—恢复—目标层级。",
+      "arenaConstraint": "固定镜头必须同时读出入口、主路、落点、恢复支路和远端目标。",
+      "doNotCopy": "不把该合同路线、节点比例或颜色位置直接当作生产地图几何。",
+      "usageBoundary": "项目自产构图输入；缩略预检参数与缩略图hash记录在ui-source-visual-manifest-v1.json，不是A0.2.2板面或地图Blockout。",
+      "antiReferenceReason": null,
+      "reviewStatus": "coordination-approved"
+    },
+    {
+      "entryId": "composition-b02",
+      "decisionSlot": "USE02",
+      "decisionClass": "adopt",
+      "tileIndex": 1,
+      "sourceKind": "public-domain",
+      "title": "Versailles",
+      "creator": "Auguste Renoir",
+      "rightsHolder": "The Metropolitan Museum of Art Open Access / public-domain work",
+      "sourceLocator": "https://www.metmuseum.org/art/collection/search/459113",
+      "sourceRevision": "met-object-459113@retrieved-2026-07-28",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "CC0-1.0",
+      "licenseLocator": "https://www.metmuseum.org/hubs/open-access",
+      "proofLocator": "https://collectionapi.metmuseum.org/public/collection/v1/objects/459113",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "embedded",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/met-open-access/composition-b02-versailles.jpg",
+        "byteLength": 124046,
+        "sha256": "2248b3bb135940592620606573e5a7a2099dc18bbb2feab70442d9fbee6501fc",
+        "width": 599,
+        "height": 500
+      },
+      "crop": {
+        "mode": "contain",
+        "sourceRect": {
+          "x": 0,
+          "y": 0,
+          "width": 599,
+          "height": 500
+        },
+        "displayRect": {
+          "x": 48.32,
+          "y": 0,
+          "width": 383.36,
+          "height": 320
+        },
+        "croppedPixels": 0,
+        "approval": {
+          "status": "approved-no-crop",
+          "reviewer": "Codex / game-art-director self-review",
+          "signedAt": "2026-07-28",
+          "rationale": "完整源图按contain缩放，保留全部上下文；不裁切、不拉伸。"
+        }
+      },
+      "decisionReason": "采用，因为用两侧重复地标和中央通道形成无需箭头的前进轴。",
+      "specificTakeaway": "用两侧重复地标和中央通道形成无需箭头的前进轴。",
+      "arenaConstraint": "重复地标只服务前进轴，不得形成可误判为落地面的装饰。",
+      "doNotCopy": "不复制凡尔赛、雕塑、树列或印象派处理。",
+      "usageBoundary": "只提炼轴线与节奏。",
+      "antiReferenceReason": null,
+      "reviewStatus": "coordination-approved"
+    },
+    {
+      "entryId": "composition-b03",
+      "decisionSlot": "USE03",
+      "decisionClass": "adopt",
+      "tileIndex": 2,
+      "sourceKind": "public-domain",
+      "title": "The Arrival in Bethlehem",
+      "creator": "Master of the Brussels Calling of Saint Matthew",
+      "rightsHolder": "The Metropolitan Museum of Art Open Access / public-domain work",
+      "sourceLocator": "https://www.metmuseum.org/art/collection/search/437010",
+      "sourceRevision": "met-object-437010@retrieved-2026-07-28",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "CC0-1.0",
+      "licenseLocator": "https://www.metmuseum.org/hubs/open-access",
+      "proofLocator": "https://collectionapi.metmuseum.org/public/collection/v1/objects/437010",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "embedded",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/met-open-access/composition-b03-arrival-bethlehem.jpg",
+        "byteLength": 148278,
+        "sha256": "4d93eeda35ad5c4ce30306758502405af1b1d4e24238ce9965d5bf7316fd7341",
+        "width": 599,
+        "height": 434
+      },
+      "crop": {
+        "mode": "contain",
+        "sourceRect": {
+          "x": 0,
+          "y": 0,
+          "width": 599,
+          "height": 434
+        },
+        "displayRect": {
+          "x": 19.171,
+          "y": 0,
+          "width": 441.659,
+          "height": 320
+        },
+        "croppedPixels": 0,
+        "approval": {
+          "status": "approved-no-crop",
+          "reviewer": "Codex / game-art-director self-review",
+          "signedAt": "2026-07-28",
+          "rationale": "完整源图按contain缩放，保留全部上下文；不裁切、不拉伸。"
+        }
+      },
+      "decisionReason": "采用，因为用前景事件、中景路径、远景目的地维持多层叙事仍有主次。",
+      "specificTakeaway": "用前景事件、中景路径、远景目的地维持多层叙事仍有主次。",
+      "arenaConstraint": "前景事件不得遮住中景路径和远端目标，三层必须有明确主次。",
+      "doNotCopy": "不复制人物、城镇、宗教叙事或建筑。",
+      "usageBoundary": "只提炼三层信息排序。",
+      "antiReferenceReason": null,
+      "reviewStatus": "coordination-approved"
+    },
+    {
+      "entryId": "composition-b04",
+      "decisionSlot": "USE04",
+      "decisionClass": "adopt",
+      "tileIndex": 3,
+      "sourceKind": "public-domain",
+      "title": "The Gulf of Marseille Seen from L'Estaque",
+      "creator": "Paul Cézanne",
+      "rightsHolder": "The Metropolitan Museum of Art Open Access / public-domain work",
+      "sourceLocator": "https://www.metmuseum.org/art/collection/search/435872",
+      "sourceRevision": "met-object-435872@retrieved-2026-07-28",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "CC0-1.0",
+      "licenseLocator": "https://www.metmuseum.org/hubs/open-access",
+      "proofLocator": "https://collectionapi.metmuseum.org/public/collection/v1/objects/435872",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "embedded",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/met-open-access/composition-b04-gulf-marseille.jpg",
+        "byteLength": 238661,
+        "sha256": "24fd3e198f230a8c004fa137a6da01741193434af96fa04b7696a697278af51e",
+        "width": 599,
+        "height": 438
+      },
+      "crop": {
+        "mode": "contain",
+        "sourceRect": {
+          "x": 0,
+          "y": 0,
+          "width": 599,
+          "height": 438
+        },
+        "displayRect": {
+          "x": 21.187,
+          "y": 0,
+          "width": 437.626,
+          "height": 320
+        },
+        "croppedPixels": 0,
+        "approval": {
+          "status": "approved-no-crop",
+          "reviewer": "Codex / game-art-director self-review",
+          "signedAt": "2026-07-28",
+          "rationale": "完整源图按contain缩放，保留全部上下文；不裁切、不拉伸。"
+        }
+      },
+      "decisionReason": "采用，因为用高位观察与大块几何分区说明斜俯视镜头中的可走区域。",
+      "specificTakeaway": "用高位观察与大块几何分区说明斜俯视镜头中的可走区域。",
+      "arenaConstraint": "斜俯视下可走区以大块明度分区，不依赖细纹理或小箭头。",
+      "doNotCopy": "不复制港湾、房屋或塞尚画法。",
+      "usageBoundary": "只提炼大块可读分区。",
+      "antiReferenceReason": null,
+      "reviewStatus": "coordination-approved"
+    },
+    {
+      "entryId": "composition-b06",
+      "decisionSlot": "USE05",
+      "decisionClass": "adopt",
+      "tileIndex": 4,
+      "sourceKind": "research-link",
+      "title": "CS1.6 KZ作者指南",
+      "creator": "Steam Community guide author",
+      "rightsHolder": "guide author / Valve platform",
+      "sourceLocator": "https://steamcommunity.com/sharedfiles/filedetails/?id=3272385460",
+      "sourceRevision": "retrieved-2026-07-28",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "RIGHTS-RESTRICTED",
+      "licenseLocator": "docs/research/arena-v2-cs16-kz-map-study-v1.md",
+      "proofLocator": "docs/research/arena-v2-cs16-kz-map-study-v1.md",
+      "rights": {
+        "commercialUseAllowed": false,
+        "modificationAllowed": false,
+        "redistributionAllowed": false
+      },
+      "embeddingMode": "link-only",
+      "artifact": null,
+      "crop": null,
+      "decisionReason": "采用，因为借鉴长跳、连续修正与练习段的学习顺序。",
+      "specificTakeaway": "借鉴长跳、连续修正与练习段的学习顺序。",
+      "arenaConstraint": "长跳、连续修正和练习段只转译为原创路线节奏。",
+      "doNotCopy": "不复制截图、地图、插件、参数或教程文案。",
+      "usageBoundary": "作者未授予图像再分发权，只能link-only。",
+      "antiReferenceReason": null,
+      "reviewStatus": "coordination-approved"
+    },
+    {
+      "entryId": "composition-b07",
+      "decisionSlot": "USE06",
+      "decisionClass": "adopt",
+      "tileIndex": 5,
+      "sourceKind": "research-link",
+      "title": "KZ-Rush难度标准",
+      "creator": "KZ-Rush",
+      "rightsHolder": "KZ-Rush",
+      "sourceLocator": "https://kz-rush.com/en/article/map-difficulty-criterias",
+      "sourceRevision": "retrieved-2026-07-28",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "RIGHTS-RESTRICTED",
+      "licenseLocator": "docs/research/arena-v2-cs16-kz-map-study-v1.md",
+      "proofLocator": "docs/research/arena-v2-cs16-kz-map-study-v1.md",
+      "rights": {
+        "commercialUseAllowed": false,
+        "modificationAllowed": false,
+        "redistributionAllowed": false
+      },
+      "embeddingMode": "link-only",
+      "artifact": null,
+      "crop": null,
+      "decisionReason": "采用，因为把距离、节奏、空中修正拆成独立构图压力。",
+      "specificTakeaway": "把距离、节奏、空中修正拆成独立构图压力。",
+      "arenaConstraint": "距离、节奏、空中修正分别成为可测构图压力，不混成难度标签。",
+      "doNotCopy": "不复制页面图片、地图缩略图或难度品牌。",
+      "usageBoundary": "社区资料只作研究链接。",
+      "antiReferenceReason": null,
+      "reviewStatus": "coordination-approved"
+    },
+    {
+      "entryId": "composition-a02",
+      "decisionSlot": "USE07",
+      "decisionClass": "adopt",
+      "tileIndex": 6,
+      "sourceKind": "research-link",
+      "title": "CS2KZ地图审核说明",
+      "creator": "CS2KZ contributors",
+      "rightsHolder": "CS2KZ project",
+      "sourceLocator": "https://docs.cs2kz.org/mapping/approval",
+      "sourceRevision": "retrieved-2026-07-28",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "RIGHTS-RESTRICTED",
+      "licenseLocator": "docs/research/arena-v2-cs16-kz-map-study-v1.md",
+      "proofLocator": "docs/research/arena-v2-cs16-kz-map-study-v1.md",
+      "rights": {
+        "commercialUseAllowed": false,
+        "modificationAllowed": false,
+        "redistributionAllowed": false
+      },
+      "embeddingMode": "link-only",
+      "artifact": null,
+      "crop": null,
+      "decisionReason": "采用，因为借鉴路线可读、完成条件与审核式检查。",
+      "specificTakeaway": "借鉴路线可读、完成条件与审核式检查。",
+      "arenaConstraint": "每条生产路线必须具备身份、完成条件和审阅式检查记录。",
+      "doNotCopy": "不复制地图规范、截图或CS物理实现。",
+      "usageBoundary": "文档仅作作者来源链接。",
+      "antiReferenceReason": null,
+      "reviewStatus": "coordination-approved"
+    },
+    {
+      "entryId": "composition-b05",
+      "decisionSlot": "AVOID01",
+      "decisionClass": "avoid",
+      "tileIndex": 7,
+      "sourceKind": "research-link",
+      "title": "Counter-Strike 1.6官方产品页",
+      "creator": "Valve",
+      "rightsHolder": "Valve",
+      "sourceLocator": "https://store.steampowered.com/app/10/CounterStrike/",
+      "sourceRevision": "retrieved-2026-07-28",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "RIGHTS-RESTRICTED",
+      "licenseLocator": "docs/research/arena-v2-cs16-kz-map-study-v1.md",
+      "proofLocator": "docs/research/arena-v2-cs16-kz-map-study-v1.md",
+      "rights": {
+        "commercialUseAllowed": false,
+        "modificationAllowed": false,
+        "redistributionAllowed": false
+      },
+      "embeddingMode": "link-only",
+      "artifact": null,
+      "crop": null,
+      "decisionReason": "规避，因为不下载官方截图，不复制军事主题、HUD或地图。",
+      "specificTakeaway": "确认研究对象产品身份，KZ只借路线学习语法。",
+      "arenaConstraint": "CS1.6只确认研究对象身份，禁止嵌图、复制布局、材质、名称或标志。",
+      "doNotCopy": "不下载官方截图，不复制军事主题、HUD或地图。",
+      "usageBoundary": "官方图像无再分发权，只能link-only。",
+      "antiReferenceReason": null,
+      "reviewStatus": "coordination-approved"
+    },
+    {
+      "entryId": "composition-t01",
+      "decisionSlot": "AVOID02",
+      "decisionClass": "avoid",
+      "tileIndex": 8,
+      "sourceKind": "public-domain",
+      "title": "Alexander the Great Rescued from the River Cydnus",
+      "creator": "Pietro Testa",
+      "rightsHolder": "The Metropolitan Museum of Art Open Access / public-domain work",
+      "sourceLocator": "https://www.metmuseum.org/art/collection/search/437784",
+      "sourceRevision": "met-object-437784@retrieved-2026-07-28",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "CC0-1.0",
+      "licenseLocator": "https://www.metmuseum.org/hubs/open-access",
+      "proofLocator": "https://collectionapi.metmuseum.org/public/collection/v1/objects/437784",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "embedded",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/met-open-access/composition-b06-alexander-cydnus.jpg",
+        "byteLength": 88820,
+        "sha256": "0dc3000e96b2f788e286aa2b0e99d5b703366c3b32ce37b99566f6253cc6218b",
+        "width": 599,
+        "height": 445
+      },
+      "crop": {
+        "mode": "contain",
+        "sourceRect": {
+          "x": 0,
+          "y": 0,
+          "width": 599,
+          "height": 445
+        },
+        "displayRect": {
+          "x": 24.629,
+          "y": 0,
+          "width": 430.742,
+          "height": 320
+        },
+        "croppedPixels": 0,
+        "approval": {
+          "status": "approved-no-crop",
+          "reviewer": "Codex / game-art-director self-review",
+          "signedAt": "2026-07-28",
+          "rationale": "完整源图按contain缩放，保留全部上下文；不裁切、不拉伸。"
+        }
+      },
+      "decisionReason": "规避，因为拒绝用持续拥挤和英雄特写遮住下一落点。",
+      "specificTakeaway": "以拥挤人物、强对角线和水面冲突测试高压事件下路线是否仍可读。",
+      "arenaConstraint": "持续拥挤、英雄特写与强对角线不得遮住下一落点和恢复面。",
+      "doNotCopy": "不复制人物、历史叙事、姿势或戏剧构图。",
+      "usageBoundary": "只用于压力检查，不能成为常态镜头。",
+      "antiReferenceReason": "拒绝用持续拥挤和英雄特写遮住下一落点。",
+      "reviewStatus": "coordination-approved"
+    },
+    {
+      "entryId": "composition-a01",
+      "decisionSlot": "TEST01",
+      "decisionClass": "experiment",
+      "tileIndex": 9,
+      "sourceKind": "public-domain",
+      "title": "River Landscape in Wales",
+      "creator": "David Cox",
+      "rightsHolder": "The Metropolitan Museum of Art Open Access / public-domain work",
+      "sourceLocator": "https://www.metmuseum.org/art/collection/search/341093",
+      "sourceRevision": "met-object-341093@retrieved-2026-07-28",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "CC0-1.0",
+      "licenseLocator": "https://www.metmuseum.org/hubs/open-access",
+      "proofLocator": "https://collectionapi.metmuseum.org/public/collection/v1/objects/341093",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "embedded",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/met-open-access/composition-b05-river-wales.jpg",
+        "byteLength": 94977,
+        "sha256": "f58de1ee8cb1e012a8f273dcf906e932aaef7ab85ca7487af4d8c44cbb109866",
+        "width": 599,
+        "height": 411
+      },
+      "crop": {
+        "mode": "contain",
+        "sourceRect": {
+          "x": 0,
+          "y": 0,
+          "width": 599,
+          "height": 411
+        },
+        "displayRect": {
+          "x": 6.813,
+          "y": 0,
+          "width": 466.375,
+          "height": 320
+        },
+        "croppedPixels": 0,
+        "approval": {
+          "status": "approved-no-crop",
+          "reviewer": "Codex / game-art-director self-review",
+          "signedAt": "2026-07-28",
+          "rationale": "完整源图按contain缩放，保留全部上下文；不裁切、不拉伸。"
+        }
+      },
+      "decisionReason": "实验，用“追求以明度和岸线弯折同时表达主路与恢复支路。”验证边界。",
+      "specificTakeaway": "追求以明度和岸线弯折同时表达主路与恢复支路。",
+      "arenaConstraint": "实验以岸线式明度弯折同时提示快路与恢复支路。",
+      "doNotCopy": "不复制威尔士河谷、自然地貌或水彩笔触。",
+      "usageBoundary": "只提炼双路线层级。",
+      "antiReferenceReason": null,
+      "reviewStatus": "coordination-approved"
+    }
+  ],
+  "keyTakeaways": [
+    "构图中心始终是下一决策和可恢复关系。",
+    "路线依靠大块明度、地标重复和形状分支，不依赖细节。",
+    "KZ研究只提供句法，正式几何、材质和命名必须原创。"
+  ],
+  "antiReferences": [
+    "拒绝缓存或转绘CS1.6/KZ截图并冒充原创地图。",
+    "拒绝英雄特写、持续拥挤、风暴或装饰遮住落点。"
+  ],
+  "selfReview": {
+    "status": "board-ready",
+    "evidenceScope": "actual-reference-board",
+    "score": 95,
+    "maximum": 100,
+    "dimensions": {
+      "sourceFit": 19,
+      "annotation": 19,
+      "composition": 19,
+      "consistency": 14,
+      "scaleEvidence": 14,
+      "governance": 10
+    },
+    "risk": "构图板没有正式Map Definition与生产相机截图，不能替代P3可达、拥挤或真人路线理解。",
+    "hardGatePassed": true,
+    "hardGateReason": "Arena V2 coordinator approved the A0.2.2 board-level gate on 2026-07-28; this does not approve A0.2 overall or downstream gates."
+  },
+  "signOff": {
+    "status": "coordination-approved",
+    "artDirector": {
+      "name": "Codex / game-art-director self-review",
+      "signedAt": "2026-07-28"
+    },
+    "coordinator": {
+      "name": "Arena V2 主协调",
+      "signedAt": "2026-07-28"
+    }
+  },
+  "failClosed": {
+    "a0_2_2Passed": true,
+    "a0_2Passed": false,
+    "referenceBoardPassed": false,
+    "blockoutAllowed": false,
+    "a0_3Passed": false,
+    "deviceVerified": false,
+    "humanVerified": false,
+    "finalApproved": false
+  }
+}

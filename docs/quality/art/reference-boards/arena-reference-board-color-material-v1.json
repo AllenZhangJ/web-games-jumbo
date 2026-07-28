@@ -1,0 +1,627 @@
+{
+  "schemaVersion": 1,
+  "id": "arena.art.reference-board.color-material.a0.2.2.v1",
+  "status": "board-ready",
+  "category": "color-material",
+  "artBibleRevision": "a0.1-contract-ready@22b9fd0e39b83de0b6a3ed766a2a66f3d2f67b1d",
+  "sourcePack": {
+    "path": "docs/quality/art/reference-sources/arena-a0.2.1-source-pack-v1.json",
+    "id": "arena.art.reference-source-pack.a0.2.1.v1",
+    "sha256": "061f94357d55a5f1ea194e72723daae172aa9294901cb7b8fca5abddbf092e8c",
+    "status": "source-ready"
+  },
+  "supplementalPack": {
+    "path": "docs/quality/art/reference-sources/arena-a0.2.1-supplemental-weapon-feedback-v1.json",
+    "id": "arena.art.reference-source-pack.a0.2.1.supplemental.weapon-feedback.v1",
+    "sha256": "d49343413702dbad9f7ac874e053dc0eb56a51313b611a4fa9c16efa0137561e",
+    "status": "supplemental-source-ready"
+  },
+  "generatedAt": "2026-07-28",
+  "weights": {
+    "adopt": 70,
+    "avoid": 20,
+    "experiment": 10
+  },
+  "layout": {
+    "canvas": {
+      "width": 2560,
+      "height": 1440,
+      "colorSpace": "srgb",
+      "transparent": false
+    },
+    "grid": {
+      "x": 80,
+      "y": 140,
+      "columns": 5,
+      "rows": 2,
+      "tileWidth": 480,
+      "tileHeight": 480,
+      "visualHeight": 320,
+      "annotationHeight": 160
+    },
+    "order": [
+      "USE01",
+      "USE02",
+      "USE03",
+      "USE04",
+      "USE05",
+      "USE06",
+      "USE07",
+      "AVOID01",
+      "AVOID02",
+      "TEST01"
+    ]
+  },
+  "purpose": "固定暖纸白与深墨色的稳定骨架、有限语义强调和低纹理密度材质方向，并标出高饱和与金红过载上限。",
+  "sourceArtifact": {
+    "path": "docs/quality/art/reference-boards/arena-reference-board-color-material-v1.svg",
+    "sha256": "4f72dd350d65580a1e336e4ccdbcbf53582d08005199e0cd9f8a4fee4b1d68a1",
+    "byteLength": 1272058,
+    "width": 2560,
+    "height": 1440,
+    "colorSpace": "srgb"
+  },
+  "reviewArtifact": {
+    "path": "docs/quality/art/reference-boards/arena-reference-board-color-material-v1.png",
+    "sha256": "9d140a325adf548d495d6da33f8edffef9a6f86e2924e1ec31a4908dc14c8362",
+    "byteLength": 2330651,
+    "width": 2560,
+    "height": 1440,
+    "colorSpace": "srgb"
+  },
+  "tenPercentReview": {
+    "path": "docs/quality/art/reference-boards/arena-reference-board-color-material-v1-10pct.png",
+    "sha256": "d19eee63259e4f6f23a7b38e6b301367dbf1888bf7f5c1ed124bc40d7ace7abd",
+    "byteLength": 51731,
+    "width": 256,
+    "height": 144,
+    "colorSpace": "srgb",
+    "scale": 0.1,
+    "readabilityScope": [
+      "board-identity",
+      "7-2-1-decision-zones",
+      "embedded-vs-link-only",
+      "dominant-silhouette-and-value"
+    ],
+    "fullAnnotationReadability": "mobile-equivalent-required",
+    "status": "overview-readable"
+  },
+  "mobileEquivalentReview": {
+    "path": "docs/quality/art/reference-boards/arena-reference-board-color-material-v1-mobile-review.png",
+    "sha256": "23d7e313d647c057fababe0766191f3d8afaebae7aa40ea8fe97ddf19a1185b9",
+    "byteLength": 1434884,
+    "width": 780,
+    "height": 6420,
+    "colorSpace": "srgb",
+    "cssViewport": {
+      "width": 390,
+      "height": 844,
+      "devicePixelRatio": 2
+    },
+    "capture": "full-page-scroll-equivalent",
+    "entryCount": 10,
+    "annotationReadability": "full",
+    "status": "board-ready"
+  },
+  "entries": [
+    {
+      "entryId": "color-b01",
+      "decisionSlot": "USE01",
+      "decisionClass": "adopt",
+      "tileIndex": 0,
+      "sourceKind": "public-domain",
+      "title": "Wheat Field with Cypresses",
+      "creator": "Vincent van Gogh",
+      "rightsHolder": "The Metropolitan Museum of Art Open Access / public-domain work",
+      "sourceLocator": "https://www.metmuseum.org/art/collection/search/436535",
+      "sourceRevision": "met-object-436535@retrieved-2026-07-28",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "CC0-1.0",
+      "licenseLocator": "https://www.metmuseum.org/hubs/open-access",
+      "proofLocator": "https://collectionapi.metmuseum.org/public/collection/v1/objects/436535",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "embedded",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/met-open-access/color-b01-wheat-cypresses.jpg",
+        "byteLength": 221383,
+        "sha256": "af0e3486621c210b54932d055294051b5601aa3362af4b84ab97e2831f8163bc",
+        "width": 599,
+        "height": 477
+      },
+      "crop": {
+        "mode": "contain",
+        "sourceRect": {
+          "x": 0,
+          "y": 0,
+          "width": 599,
+          "height": 477
+        },
+        "displayRect": {
+          "x": 39.077,
+          "y": 0,
+          "width": 401.845,
+          "height": 320
+        },
+        "croppedPixels": 0,
+        "approval": {
+          "status": "approved-no-crop",
+          "reviewer": "Codex / game-art-director self-review",
+          "signedAt": "2026-07-28",
+          "rationale": "完整源图按contain缩放，保留全部上下文；不裁切、不拉伸。"
+        }
+      },
+      "decisionReason": "采用，因为观察黄绿主场、深蓝轮廓与暖白高光如何保持清晰分区。",
+      "specificTakeaway": "观察黄绿主场、深蓝轮廓与暖白高光如何保持清晰分区。",
+      "arenaConstraint": "黄绿场景、深蓝结构和暖白高光必须保持主次，不增加无名强调色。",
+      "doNotCopy": "不复制梵高笔触、柏树或画面配色比例。",
+      "usageBoundary": "只提炼暖场/深轮廓/高光三级关系。",
+      "antiReferenceReason": null,
+      "reviewStatus": "coordination-approved"
+    },
+    {
+      "entryId": "color-b02",
+      "decisionSlot": "USE02",
+      "decisionClass": "adopt",
+      "tileIndex": 1,
+      "sourceKind": "public-domain",
+      "title": "Under the Wave off Kanagawa",
+      "creator": "Katsushika Hokusai",
+      "rightsHolder": "The Metropolitan Museum of Art Open Access / public-domain work",
+      "sourceLocator": "https://www.metmuseum.org/art/collection/search/45434",
+      "sourceRevision": "met-object-45434@retrieved-2026-07-28",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "CC0-1.0",
+      "licenseLocator": "https://www.metmuseum.org/hubs/open-access",
+      "proofLocator": "https://collectionapi.metmuseum.org/public/collection/v1/objects/45434",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "embedded",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/met-open-access/color-b02-great-wave.jpg",
+        "byteLength": 166452,
+        "sha256": "b76ccf0710b8e4b32e778a45e5398a0cf4777994523116f994a0430f4ee6a841",
+        "width": 600,
+        "height": 403
+      },
+      "crop": {
+        "mode": "contain",
+        "sourceRect": {
+          "x": 0,
+          "y": 0,
+          "width": 600,
+          "height": 403
+        },
+        "displayRect": {
+          "x": 1.786,
+          "y": 0,
+          "width": 476.427,
+          "height": 320
+        },
+        "croppedPixels": 0,
+        "approval": {
+          "status": "approved-no-crop",
+          "reviewer": "Codex / game-art-director self-review",
+          "signedAt": "2026-07-28",
+          "rationale": "完整源图按contain缩放，保留全部上下文；不裁切、不拉伸。"
+        }
+      },
+      "decisionReason": "采用，因为观察有限蓝阶、纸白负空间与单一暖色如何建立强层级。",
+      "specificTakeaway": "观察有限蓝阶、纸白负空间与单一暖色如何建立强层级。",
+      "arenaConstraint": "同一语义最多使用有限蓝阶，纸白负空间保持视觉休息。",
+      "doNotCopy": "不复制海浪、富士山、日式版画线条或构图。",
+      "usageBoundary": "只提炼有限色与负空间。",
+      "antiReferenceReason": null,
+      "reviewStatus": "coordination-approved"
+    },
+    {
+      "entryId": "color-b03",
+      "decisionSlot": "USE03",
+      "decisionClass": "adopt",
+      "tileIndex": 2,
+      "sourceKind": "public-domain",
+      "title": "The Annunciation",
+      "creator": "Hans Memling",
+      "rightsHolder": "The Metropolitan Museum of Art Open Access / public-domain work",
+      "sourceLocator": "https://www.metmuseum.org/art/collection/search/459055",
+      "sourceRevision": "met-object-459055@retrieved-2026-07-28",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "CC0-1.0",
+      "licenseLocator": "https://www.metmuseum.org/hubs/open-access",
+      "proofLocator": "https://collectionapi.metmuseum.org/public/collection/v1/objects/459055",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "embedded",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/met-open-access/color-b03-annunciation.jpg",
+        "byteLength": 146955,
+        "sha256": "0d49e28af695e159c5e2bd39ee92a6b7791587fa69fcd430c9d0b5adcddae558",
+        "width": 456,
+        "height": 624
+      },
+      "crop": {
+        "mode": "contain",
+        "sourceRect": {
+          "x": 0,
+          "y": 0,
+          "width": 456,
+          "height": 624
+        },
+        "displayRect": {
+          "x": 123.077,
+          "y": 0,
+          "width": 233.846,
+          "height": 320
+        },
+        "croppedPixels": 0,
+        "approval": {
+          "status": "approved-no-crop",
+          "reviewer": "Codex / game-art-director self-review",
+          "signedAt": "2026-07-28",
+          "rationale": "完整源图按contain缩放，保留全部上下文；不裁切、不拉伸。"
+        }
+      },
+      "decisionReason": "采用，因为观察低饱和室内底色如何让蓝与暖红承担具名焦点。",
+      "specificTakeaway": "观察低饱和室内底色如何让蓝与暖红承担具名焦点。",
+      "arenaConstraint": "低饱和底色只允许蓝与暖红承担具名焦点并配形状冗余。",
+      "doNotCopy": "不复制宗教人物、服饰或室内陈设。",
+      "usageBoundary": "只提炼低饱和底与双焦点。",
+      "antiReferenceReason": null,
+      "reviewStatus": "coordination-approved"
+    },
+    {
+      "entryId": "color-b04",
+      "decisionSlot": "USE04",
+      "decisionClass": "adopt",
+      "tileIndex": 3,
+      "sourceKind": "public-domain",
+      "title": "The Monet Family in Their Garden at Argenteuil",
+      "creator": "Edouard Manet",
+      "rightsHolder": "The Metropolitan Museum of Art Open Access / public-domain work",
+      "sourceLocator": "https://www.metmuseum.org/art/collection/search/436965",
+      "sourceRevision": "met-object-436965@retrieved-2026-07-28",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "CC0-1.0",
+      "licenseLocator": "https://www.metmuseum.org/hubs/open-access",
+      "proofLocator": "https://collectionapi.metmuseum.org/public/collection/v1/objects/436965",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "embedded",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/met-open-access/color-b05-monet-family.jpg",
+        "byteLength": 109986,
+        "sha256": "a3fb8768269a7d778d07b5e958ac10825e34d2213361ccf53a2996b35e3117ba",
+        "width": 599,
+        "height": 377
+      },
+      "crop": {
+        "mode": "contain",
+        "sourceRect": {
+          "x": 0,
+          "y": 0,
+          "width": 599,
+          "height": 377
+        },
+        "displayRect": {
+          "x": 0,
+          "y": 8.948,
+          "width": 480,
+          "height": 302.104
+        },
+        "croppedPixels": 0,
+        "approval": {
+          "status": "approved-no-crop",
+          "reviewer": "Codex / game-art-director self-review",
+          "signedAt": "2026-07-28",
+          "rationale": "完整源图按contain缩放，保留全部上下文；不裁切、不拉伸。"
+        }
+      },
+      "decisionReason": "采用，因为观察自然绿背景中深色人物块和暖肤色的前景分离。",
+      "specificTakeaway": "观察自然绿背景中深色人物块和暖肤色的前景分离。",
+      "arenaConstraint": "自然绿背景中角色依靠深色体块与暖肤分离，不靠荧光描边。",
+      "doNotCopy": "不复制人物、花园、服饰或印象派处理。",
+      "usageBoundary": "只提炼前景/背景分离。",
+      "antiReferenceReason": null,
+      "reviewStatus": "coordination-approved"
+    },
+    {
+      "entryId": "color-b05",
+      "decisionSlot": "USE05",
+      "decisionClass": "adopt",
+      "tileIndex": 4,
+      "sourceKind": "project-document",
+      "title": "Arena语义色Token",
+      "creator": "Arena project",
+      "rightsHolder": "Arena project owner",
+      "sourceLocator": "docs/architecture/arena-art-bible.md#3-语义色彩",
+      "sourceRevision": "retrieved-2026-07-28",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "PROJECT-DOCUMENT",
+      "licenseLocator": "docs/architecture/arena-art-bible.md",
+      "proofLocator": "docs/architecture/arena-art-bible.md",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "link-only",
+      "artifact": null,
+      "crop": null,
+      "decisionReason": "采用，因为所有参考色必须回落到已签核Token和非色彩冗余。",
+      "specificTakeaway": "所有参考色必须回落到已签核Token和非色彩冗余。",
+      "arenaConstraint": "所有取色必须回落到已签核Token及使用限制。",
+      "doNotCopy": "不从参考图直接吸色成为新Token。",
+      "usageBoundary": "内部合同链接，不嵌入图片。",
+      "antiReferenceReason": null,
+      "reviewStatus": "coordination-approved"
+    },
+    {
+      "entryId": "color-b06",
+      "decisionSlot": "USE06",
+      "decisionClass": "adopt",
+      "tileIndex": 5,
+      "sourceKind": "research-link",
+      "title": "KayKit Adventurers CC0色块来源",
+      "creator": "KayKit Game Assets",
+      "rightsHolder": "KayKit / Kay Lousberg",
+      "sourceLocator": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+      "sourceRevision": "retrieved-2026-07-28",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "PROJECT-DOCUMENT",
+      "licenseLocator": "licenses/kaykit-adventurers-CC0-LICENSE.txt",
+      "proofLocator": "licenses/kaykit-adventurers-CC0-LICENSE.txt",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "link-only",
+      "artifact": null,
+      "crop": null,
+      "decisionReason": "采用，因为观察低纹理密度下的大色块角色分区。",
+      "specificTakeaway": "观察低纹理密度下的大色块角色分区。",
+      "arenaConstraint": "低纹理密度大色块用于角色分区，不把KayKit身份色当规则色。",
+      "doNotCopy": "不沿用KayKit默认身份配色。",
+      "usageBoundary": "本格只作来源链接，实际纹理仅在角色板嵌入。",
+      "antiReferenceReason": null,
+      "reviewStatus": "coordination-approved"
+    },
+    {
+      "entryId": "color-b07",
+      "decisionSlot": "USE07",
+      "decisionClass": "adopt",
+      "tileIndex": 6,
+      "sourceKind": "project-document",
+      "title": "Arena无障碍对比证据",
+      "creator": "Arena project",
+      "rightsHolder": "Arena project owner",
+      "sourceLocator": "docs/architecture/arena-art-bible.md#31-wcag实测配对",
+      "sourceRevision": "retrieved-2026-07-28",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "PROJECT-DOCUMENT",
+      "licenseLocator": "docs/architecture/arena-art-bible.md",
+      "proofLocator": "docs/architecture/arena-art-bible.md",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "link-only",
+      "artifact": null,
+      "crop": null,
+      "decisionReason": "采用，因为将色彩参考约束到已计算的前景/背景对比。",
+      "specificTakeaway": "将色彩参考约束到已计算的前景/背景对比。",
+      "arenaConstraint": "正文、大字和图形配对必须继续满足已计算对比与非色彩冗余。",
+      "doNotCopy": "不以审美参考覆盖PASS/FAIL结论。",
+      "usageBoundary": "内部合同链接，不嵌入图片。",
+      "antiReferenceReason": null,
+      "reviewStatus": "coordination-approved"
+    },
+    {
+      "entryId": "color-a02",
+      "decisionSlot": "AVOID01",
+      "decisionClass": "avoid",
+      "tileIndex": 7,
+      "sourceKind": "project-document",
+      "title": "弹壳特攻队UI色彩研究",
+      "creator": "Habby / Apple",
+      "rightsHolder": "Habby",
+      "sourceLocator": "docs/research/arena-v2-survivor-io-ui-study-v1.md",
+      "sourceRevision": "retrieved-2026-07-28",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "RIGHTS-RESTRICTED",
+      "licenseLocator": "https://apps.apple.com/cn/app/id1628270358",
+      "proofLocator": "https://apps.apple.com/cn/app/id1628270358",
+      "rights": {
+        "commercialUseAllowed": false,
+        "modificationAllowed": false,
+        "redistributionAllowed": false
+      },
+      "embeddingMode": "link-only",
+      "artifact": null,
+      "crop": null,
+      "decisionReason": "规避，因为不复制渐变、稀有度、货币色、图标或商店氛围。",
+      "specificTakeaway": "把高饱和奖励色作为Arena强调色上限压力样本。",
+      "arenaConstraint": "拒绝复制弹壳特攻队高饱和奖励、稀有度、货币与渐变体系。",
+      "doNotCopy": "不复制渐变、稀有度、货币色、图标或商店氛围。",
+      "usageBoundary": "官方图像无再分发权，只保留研究链接。",
+      "antiReferenceReason": null,
+      "reviewStatus": "coordination-approved"
+    },
+    {
+      "entryId": "color-t01",
+      "decisionSlot": "AVOID02",
+      "decisionClass": "avoid",
+      "tileIndex": 8,
+      "sourceKind": "public-domain",
+      "title": "Saint Reparata Being Prepared for Execution",
+      "creator": "Bernardo Daddi",
+      "rightsHolder": "The Metropolitan Museum of Art Open Access / public-domain work",
+      "sourceLocator": "https://www.metmuseum.org/art/collection/search/436070",
+      "sourceRevision": "met-object-436070@retrieved-2026-07-28",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "CC0-1.0",
+      "licenseLocator": "https://www.metmuseum.org/hubs/open-access",
+      "proofLocator": "https://collectionapi.metmuseum.org/public/collection/v1/objects/436070",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "embedded",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/met-open-access/color-b06-saint-reparata.jpg",
+        "byteLength": 199569,
+        "sha256": "7406b3e09215eceeed5ec2a5ac5d63b77f929516f3476b09684bc789cb289a1a",
+        "width": 599,
+        "height": 475
+      },
+      "crop": {
+        "mode": "contain",
+        "sourceRect": {
+          "x": 0,
+          "y": 0,
+          "width": 599,
+          "height": 475
+        },
+        "displayRect": {
+          "x": 38.232,
+          "y": 0,
+          "width": 403.537,
+          "height": 320
+        },
+        "croppedPixels": 0,
+        "approval": {
+          "status": "approved-no-crop",
+          "reviewer": "Codex / game-art-director self-review",
+          "signedAt": "2026-07-28",
+          "rationale": "完整源图按contain缩放，保留全部上下文；不裁切、不拉伸。"
+        }
+      },
+      "decisionReason": "规避，因为拒绝金底与红色同时占据全屏造成语义竞争。",
+      "specificTakeaway": "以大面积金底和高对比红作为语义色过载压力样本。",
+      "arenaConstraint": "拒绝金底、红色和发光同时大面积出现造成语义竞争。",
+      "doNotCopy": "不复制圣像、人物、金箔质感或红色服饰。",
+      "usageBoundary": "只用于验证Arena不会让所有事件都发光。",
+      "antiReferenceReason": "拒绝金底与红色同时占据全屏造成语义竞争。",
+      "reviewStatus": "coordination-approved"
+    },
+    {
+      "entryId": "color-a01",
+      "decisionSlot": "TEST01",
+      "decisionClass": "experiment",
+      "tileIndex": 9,
+      "sourceKind": "public-domain",
+      "title": "The Adoration of the Magi",
+      "creator": "Joos van Wassenhove",
+      "rightsHolder": "The Metropolitan Museum of Art Open Access / public-domain work",
+      "sourceLocator": "https://www.metmuseum.org/art/collection/search/436803",
+      "sourceRevision": "met-object-436803@retrieved-2026-07-28",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "CC0-1.0",
+      "licenseLocator": "https://www.metmuseum.org/hubs/open-access",
+      "proofLocator": "https://collectionapi.metmuseum.org/public/collection/v1/objects/436803",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "embedded",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/met-open-access/color-b04-adoration-magi.jpg",
+        "byteLength": 88894,
+        "sha256": "78a49188711d1ccfe64a3ec124c4116724b2d4049a6a5879e76ee69925f7e753",
+        "width": 599,
+        "height": 425
+      },
+      "crop": {
+        "mode": "contain",
+        "sourceRect": {
+          "x": 0,
+          "y": 0,
+          "width": 599,
+          "height": 425
+        },
+        "displayRect": {
+          "x": 14.494,
+          "y": 0,
+          "width": 451.012,
+          "height": 320
+        },
+        "croppedPixels": 0,
+        "approval": {
+          "status": "approved-no-crop",
+          "reviewer": "Codex / game-art-director self-review",
+          "signedAt": "2026-07-28",
+          "rationale": "完整源图按contain缩放，保留全部上下文；不裁切、不拉伸。"
+        }
+      },
+      "decisionReason": "实验，用“追求在克制底色中用小面积金、红、蓝建立多焦点但不失序。”验证边界。",
+      "specificTakeaway": "追求在克制底色中用小面积金、红、蓝建立多焦点但不失序。",
+      "arenaConstraint": "实验小面积金/红/蓝多焦点是否仍能在克制底色中保持阅读顺序。",
+      "doNotCopy": "不复制宗教场景、人物、金饰或织物纹样。",
+      "usageBoundary": "只提炼面积比例与焦点顺序。",
+      "antiReferenceReason": null,
+      "reviewStatus": "coordination-approved"
+    }
+  ],
+  "keyTakeaways": [
+    "暖纸白和深墨色构成稳定骨架，语义色只承担具名事件。",
+    "低纹理密度、大色块与有限焦点优先于写实材质噪声。",
+    "颜色从不单独表达状态，必须配形状、图标、纹理或声音。"
+  ],
+  "antiReferences": [
+    "拒绝高饱和稀有度、货币色、商业渐变和全屏奖励金光。",
+    "拒绝金底、红光、蓝紫霓虹同时竞争并掩盖材质与轮廓。"
+  ],
+  "selfReview": {
+    "status": "board-ready",
+    "evidenceScope": "actual-reference-board",
+    "score": 94,
+    "maximum": 100,
+    "dimensions": {
+      "sourceFit": 19,
+      "annotation": 19,
+      "composition": 19,
+      "consistency": 14,
+      "scaleEvidence": 13,
+      "governance": 10
+    },
+    "risk": "馆藏图只提供色彩/材质关系，不是生产贴图；真实材质参数和设备色彩仍待后续阶段。",
+    "hardGatePassed": true,
+    "hardGateReason": "Arena V2 coordinator approved the A0.2.2 board-level gate on 2026-07-28; this does not approve A0.2 overall or downstream gates."
+  },
+  "signOff": {
+    "status": "coordination-approved",
+    "artDirector": {
+      "name": "Codex / game-art-director self-review",
+      "signedAt": "2026-07-28"
+    },
+    "coordinator": {
+      "name": "Arena V2 主协调",
+      "signedAt": "2026-07-28"
+    }
+  },
+  "failClosed": {
+    "a0_2_2Passed": true,
+    "a0_2Passed": false,
+    "referenceBoardPassed": false,
+    "blockoutAllowed": false,
+    "a0_3Passed": false,
+    "deviceVerified": false,
+    "humanVerified": false,
+    "finalApproved": false
+  }
+}

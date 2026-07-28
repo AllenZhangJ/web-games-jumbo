@@ -1,0 +1,881 @@
+{
+  "schemaVersion": 1,
+  "id": "arena.art.reference-board.combat-feedback.a0.2.2.v1",
+  "status": "board-ready",
+  "category": "combat-feedback",
+  "artBibleRevision": "a0.1-contract-ready@22b9fd0e39b83de0b6a3ed766a2a66f3d2f67b1d",
+  "sourcePack": {
+    "path": "docs/quality/art/reference-sources/arena-a0.2.1-source-pack-v1.json",
+    "id": "arena.art.reference-source-pack.a0.2.1.v1",
+    "sha256": "061f94357d55a5f1ea194e72723daae172aa9294901cb7b8fca5abddbf092e8c",
+    "status": "source-ready"
+  },
+  "supplementalPack": {
+    "path": "docs/quality/art/reference-sources/arena-a0.2.1-supplemental-weapon-feedback-v1.json",
+    "id": "arena.art.reference-source-pack.a0.2.1.supplemental.weapon-feedback.v1",
+    "sha256": "d49343413702dbad9f7ac874e053dc0eb56a51313b611a4fa9c16efa0137561e",
+    "status": "supplemental-source-ready"
+  },
+  "generatedAt": "2026-07-28",
+  "weights": {
+    "adopt": 70,
+    "avoid": 20,
+    "experiment": 10
+  },
+  "layout": {
+    "canvas": {
+      "width": 2560,
+      "height": 1440,
+      "colorSpace": "srgb",
+      "transparent": false
+    },
+    "grid": {
+      "x": 80,
+      "y": 140,
+      "columns": 5,
+      "rows": 2,
+      "tileWidth": 480,
+      "tileHeight": 480,
+      "visualHeight": 320,
+      "annotationHeight": 160
+    },
+    "order": [
+      "USE01",
+      "USE02",
+      "USE03",
+      "USE04",
+      "USE05",
+      "USE06",
+      "USE07",
+      "AVOID01",
+      "AVOID02",
+      "TEST01"
+    ]
+  },
+  "purpose": "直接固定命中核心/方向、受击停顿、击退落点、落边淘汰、拾取替换过期、同屏层级与reduced-motion等效语法。",
+  "sourceArtifact": {
+    "path": "docs/quality/art/reference-boards/arena-reference-board-combat-feedback-v1.svg",
+    "sha256": "65a5280efabaed8c506767bc2e53033a34cf9b9dcc17993fae48286b8ff5e374",
+    "byteLength": 808620,
+    "width": 2560,
+    "height": 1440,
+    "colorSpace": "srgb"
+  },
+  "reviewArtifact": {
+    "path": "docs/quality/art/reference-boards/arena-reference-board-combat-feedback-v1.png",
+    "sha256": "0f99ac3fc6941ae6f5e2502293546479d889bfd8b8aa7148a71e6672782ab908",
+    "byteLength": 513927,
+    "width": 2560,
+    "height": 1440,
+    "colorSpace": "srgb"
+  },
+  "tenPercentReview": {
+    "path": "docs/quality/art/reference-boards/arena-reference-board-combat-feedback-v1-10pct.png",
+    "sha256": "519a814465c9e4370b02209f4319911e4cb0a64e40e84bc955e35c7896b44d76",
+    "byteLength": 43621,
+    "width": 256,
+    "height": 144,
+    "colorSpace": "srgb",
+    "scale": 0.1,
+    "readabilityScope": [
+      "board-identity",
+      "7-2-1-decision-zones",
+      "embedded-vs-link-only",
+      "dominant-silhouette-and-value"
+    ],
+    "fullAnnotationReadability": "mobile-equivalent-required",
+    "status": "overview-readable"
+  },
+  "mobileEquivalentReview": {
+    "path": "docs/quality/art/reference-boards/arena-reference-board-combat-feedback-v1-mobile-review.png",
+    "sha256": "8e6f90d1b9657de24f54c45bf4d35b20de0ae82b2d1c4e45a99860346ca6a765",
+    "byteLength": 693912,
+    "width": 780,
+    "height": 6420,
+    "colorSpace": "srgb",
+    "cssViewport": {
+      "width": 390,
+      "height": 844,
+      "devicePixelRatio": 2
+    },
+    "capture": "full-page-scroll-equivalent",
+    "entryCount": 10,
+    "annotationReadability": "full",
+    "status": "board-ready"
+  },
+  "entries": [
+    {
+      "entryId": "feedback-s01",
+      "decisionSlot": "USE01",
+      "decisionClass": "adopt",
+      "tileIndex": 0,
+      "sourceKind": "project-original",
+      "title": "命中核心火花与方向指针",
+      "creator": "Arena Art Direction / Codex clean-room vector study",
+      "rightsHolder": "Arena project",
+      "sourceLocator": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/feedback-s01.svg",
+      "sourceRevision": "generator-sha256:bdea78f08672fd9e2fa5ce5549a26dd921c68edbd156975102c024f3b1d0232a",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "PROJECT-ORIGINAL-INTERNAL",
+      "licenseLocator": "docs/quality/art/reference-sources/original/arena-a0.2.1-supplemental-clean-room-declaration.md",
+      "proofLocator": "docs/quality/art/reference-sources/original/arena-a0.2.1-supplemental-clean-room-declaration.md",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "embedded",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/feedback-s01.png",
+        "byteLength": 62324,
+        "sha256": "02435134a9efaf4f1158c04a1cf5d400b6fac368b2443fc6cf16ad3ed186203f",
+        "width": 1600,
+        "height": 900,
+        "colorSpace": "srgb",
+        "transparent": false
+      },
+      "crop": {
+        "mode": "contain",
+        "sourceRect": {
+          "x": 0,
+          "y": 0,
+          "width": 1600,
+          "height": 900
+        },
+        "displayRect": {
+          "x": 0,
+          "y": 25,
+          "width": 480,
+          "height": 270
+        },
+        "croppedPixels": 0,
+        "approval": {
+          "status": "approved-no-crop",
+          "reviewer": "Codex / game-art-director self-review",
+          "signedAt": "2026-07-28",
+          "rationale": "完整源图按contain缩放，保留全部上下文；不裁切、不拉伸。"
+        }
+      },
+      "decisionReason": "采用，因为命中核心限制为暖白菱形，青色来源尾迹和红色法线箭头分别说明从哪来、往哪去。",
+      "specificTakeaway": "命中核心限制为暖白菱形，青色来源尾迹和红色法线箭头分别说明从哪来、往哪去。",
+      "arenaConstraint": "命中只保留接触核心、来源尾迹和击退法线三层。",
+      "doNotCopy": "不加入伤害数字、全屏闪白或持续粒子云。",
+      "usageBoundary": "未来只消费HitResolved；火花不参与命中判定。",
+      "reviewStatus": "coordination-approved",
+      "sourceArtifact": {
+        "path": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/feedback-s01.svg",
+        "byteLength": 3483,
+        "sha256": "4343d40fa3fd45296afc554c243870193b2eb80b6c948ed408fac83df17077e8",
+        "width": 1600,
+        "height": 900,
+        "colorSpace": "srgb",
+        "transparent": false
+      },
+      "domain": "combat-feedback-direct",
+      "creationMethod": "Deterministic clean-room SVG assembled from Arena semantic tokens and primitive geometry; rasterized by sharp without external image inputs.",
+      "compositionSignature": "impact-core-normal-tail",
+      "perceptualHash": "011110000000010000001000000000000000010000000000000000111100000000011111111100000001111110110000000110011011000000011000000100000000000000000000",
+      "coverageTags": [
+        "hit-spark",
+        "hit-direction",
+        "source-tail",
+        "core-layer"
+      ],
+      "eventMappings": [
+        "HitResolved:future-presentation-mapping"
+      ],
+      "cleanRoomBoundary": "No third-party screenshot, character, weapon silhouette, move frame, number, texture, logo or proprietary expression was used as an image input."
+    },
+    {
+      "entryId": "feedback-s02",
+      "decisionSlot": "USE02",
+      "decisionClass": "adopt",
+      "tileIndex": 1,
+      "sourceKind": "project-original",
+      "title": "受击停顿的四帧时间条",
+      "creator": "Arena Art Direction / Codex clean-room vector study",
+      "rightsHolder": "Arena project",
+      "sourceLocator": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/feedback-s02.svg",
+      "sourceRevision": "generator-sha256:bdea78f08672fd9e2fa5ce5549a26dd921c68edbd156975102c024f3b1d0232a",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "PROJECT-ORIGINAL-INTERNAL",
+      "licenseLocator": "docs/quality/art/reference-sources/original/arena-a0.2.1-supplemental-clean-room-declaration.md",
+      "proofLocator": "docs/quality/art/reference-sources/original/arena-a0.2.1-supplemental-clean-room-declaration.md",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "embedded",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/feedback-s02.png",
+        "byteLength": 63031,
+        "sha256": "49c7a46e0ab6e5dd33cc1ff9856a4ff2c49e77aa0c0a8ab33af186c0d3a037f1",
+        "width": 1600,
+        "height": 900,
+        "colorSpace": "srgb",
+        "transparent": false
+      },
+      "crop": {
+        "mode": "contain",
+        "sourceRect": {
+          "x": 0,
+          "y": 0,
+          "width": 1600,
+          "height": 900
+        },
+        "displayRect": {
+          "x": 0,
+          "y": 25,
+          "width": 480,
+          "height": 270
+        },
+        "croppedPixels": 0,
+        "approval": {
+          "status": "approved-no-crop",
+          "reviewer": "Codex / game-art-director self-review",
+          "signedAt": "2026-07-28",
+          "rationale": "完整源图按contain缩放，保留全部上下文；不裁切、不拉伸。"
+        }
+      },
+      "decisionReason": "采用，因为四帧用姿态间距和背景脉冲说明停顿位置；核心帧最亮，保持帧不新增第二次爆点。",
+      "specificTakeaway": "四帧用姿态间距和背景脉冲说明停顿位置；核心帧最亮，保持帧不新增第二次爆点。",
+      "arenaConstraint": "受击停顿分接触前、核心、保持、释放四段，不把示意帧当tick。",
+      "doNotCopy": "不把示意帧数当tick，不用镜头冻结替代权威模拟。",
+      "usageBoundary": "表现时间窗等待P4/P5事件字段；Core继续整数tick推进。",
+      "reviewStatus": "coordination-approved",
+      "sourceArtifact": {
+        "path": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/feedback-s02.svg",
+        "byteLength": 6675,
+        "sha256": "45662e345660d81be780181d707ed3f14c36608155d376905cfb085d819046a8",
+        "width": 1600,
+        "height": 900,
+        "colorSpace": "srgb",
+        "transparent": false
+      },
+      "domain": "combat-feedback-direct",
+      "creationMethod": "Deterministic clean-room SVG assembled from Arena semantic tokens and primitive geometry; rasterized by sharp without external image inputs.",
+      "compositionSignature": "four-frame-hitstop-timeline",
+      "perceptualHash": "111110000000011000000000000000000100010001101110000000001111100001110111111111100111011101111110011111111111111000000000000000000000000000000000",
+      "coverageTags": [
+        "hitstop",
+        "contact-frame",
+        "hold-frame",
+        "release-frame"
+      ],
+      "eventMappings": [
+        "HitResolved:future-presentation-mapping",
+        "action-snapshot:timing-field-pending-P4"
+      ],
+      "cleanRoomBoundary": "No third-party screenshot, character, weapon silhouette, move frame, number, texture, logo or proprietary expression was used as an image input."
+    },
+    {
+      "entryId": "feedback-s03",
+      "decisionSlot": "USE03",
+      "decisionClass": "adopt",
+      "tileIndex": 2,
+      "sourceKind": "project-original",
+      "title": "击退轨迹与落点结果",
+      "creator": "Arena Art Direction / Codex clean-room vector study",
+      "rightsHolder": "Arena project",
+      "sourceLocator": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/feedback-s03.svg",
+      "sourceRevision": "generator-sha256:bdea78f08672fd9e2fa5ce5549a26dd921c68edbd156975102c024f3b1d0232a",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "PROJECT-ORIGINAL-INTERNAL",
+      "licenseLocator": "docs/quality/art/reference-sources/original/arena-a0.2.1-supplemental-clean-room-declaration.md",
+      "proofLocator": "docs/quality/art/reference-sources/original/arena-a0.2.1-supplemental-clean-room-declaration.md",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "embedded",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/feedback-s03.png",
+        "byteLength": 55486,
+        "sha256": "2a286cb9075df2e6f8e63c6c59db6540d8da7e47a4b169e111b9a7a6310dea64",
+        "width": 1600,
+        "height": 900,
+        "colorSpace": "srgb",
+        "transparent": false
+      },
+      "crop": {
+        "mode": "contain",
+        "sourceRect": {
+          "x": 0,
+          "y": 0,
+          "width": 1600,
+          "height": 900
+        },
+        "displayRect": {
+          "x": 0,
+          "y": 25,
+          "width": 480,
+          "height": 270
+        },
+        "croppedPixels": 0,
+        "approval": {
+          "status": "approved-no-crop",
+          "reviewer": "Codex / game-art-director self-review",
+          "signedAt": "2026-07-28",
+          "rationale": "完整源图按contain缩放，保留全部上下文；不裁切、不拉伸。"
+        }
+      },
+      "decisionReason": "采用，因为实线表示已发生位移，虚线只提示趋势；落点菱形必须贴支撑面，越界后才转入淘汰语义。",
+      "specificTakeaway": "实线表示已发生位移，虚线只提示趋势；落点菱形必须贴支撑面，越界后才转入淘汰语义。",
+      "arenaConstraint": "击退实线、趋势虚线和支撑面落点分层，越界后才转淘汰语义。",
+      "doNotCopy": "不把整条预测线当永久HUD，不预判Core尚未裁决的淘汰。",
+      "usageBoundary": "轨迹消费KnockbackApplied和只读位置；PlayerEliminated后才显示淘汰结果。",
+      "reviewStatus": "coordination-approved",
+      "sourceArtifact": {
+        "path": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/feedback-s03.svg",
+        "byteLength": 3225,
+        "sha256": "c170ccc1e8afe078913777e0a4804d2148b7e7976f3ae065969a5471bee32d71",
+        "width": 1600,
+        "height": 900,
+        "colorSpace": "srgb",
+        "transparent": false
+      },
+      "domain": "combat-feedback-direct",
+      "creationMethod": "Deterministic clean-room SVG assembled from Arena semantic tokens and primitive geometry; rasterized by sharp without external image inputs.",
+      "compositionSignature": "trajectory-arc-landing-support",
+      "perceptualHash": "111111111111111101110000000000000000000100000000000000111000000000101111111000000011100000110000011111111111111001111111111111100000000000000000",
+      "coverageTags": [
+        "knockback-trajectory",
+        "landing-point",
+        "support-surface",
+        "direction"
+      ],
+      "eventMappings": [
+        "KnockbackApplied:future-presentation-mapping",
+        "PlayerEliminated:future-presentation-mapping"
+      ],
+      "cleanRoomBoundary": "No third-party screenshot, character, weapon silhouette, move frame, number, texture, logo or proprietary expression was used as an image input."
+    },
+    {
+      "entryId": "feedback-s04",
+      "decisionSlot": "USE04",
+      "decisionClass": "adopt",
+      "tileIndex": 3,
+      "sourceKind": "project-original",
+      "title": "落边 / 击落的事件递进",
+      "creator": "Arena Art Direction / Codex clean-room vector study",
+      "rightsHolder": "Arena project",
+      "sourceLocator": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/feedback-s04.svg",
+      "sourceRevision": "generator-sha256:bdea78f08672fd9e2fa5ce5549a26dd921c68edbd156975102c024f3b1d0232a",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "PROJECT-ORIGINAL-INTERNAL",
+      "licenseLocator": "docs/quality/art/reference-sources/original/arena-a0.2.1-supplemental-clean-room-declaration.md",
+      "proofLocator": "docs/quality/art/reference-sources/original/arena-a0.2.1-supplemental-clean-room-declaration.md",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "embedded",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/feedback-s04.png",
+        "byteLength": 77137,
+        "sha256": "84c523523103d023b66dba7c519013dfeb098ef491bfab4d279b8792f7fc283b",
+        "width": 1600,
+        "height": 900,
+        "colorSpace": "srgb",
+        "transparent": false
+      },
+      "crop": {
+        "mode": "contain",
+        "sourceRect": {
+          "x": 0,
+          "y": 0,
+          "width": 1600,
+          "height": 900
+        },
+        "displayRect": {
+          "x": 0,
+          "y": 25,
+          "width": 480,
+          "height": 270
+        },
+        "croppedPixels": 0,
+        "approval": {
+          "status": "approved-no-crop",
+          "reviewer": "Codex / game-art-director self-review",
+          "signedAt": "2026-07-28",
+          "rationale": "完整源图按contain缩放，保留全部上下文；不裁切、不拉伸。"
+        }
+      },
+      "decisionReason": "采用，因为边缘阶段只显示脚下危险形，越界阶段保留轨迹，收到PlayerEliminated后才出现封闭淘汰印记。",
+      "specificTakeaway": "边缘阶段只显示脚下危险形，越界阶段保留轨迹，收到PlayerEliminated后才出现封闭淘汰印记。",
+      "arenaConstraint": "危险边缘、越界和PlayerEliminated必须按权威事件递进。",
+      "doNotCopy": "不在接近边缘时提前播放死亡或胜负反馈。",
+      "usageBoundary": "严格按权威事件递进；本图不定义killY或淘汰时机。",
+      "reviewStatus": "coordination-approved",
+      "sourceArtifact": {
+        "path": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/feedback-s04.svg",
+        "byteLength": 4323,
+        "sha256": "d86749f547b4de67728a0ff1768da1ee85f9401b7f1d1ad071a6626a4e3adb0b",
+        "width": 1600,
+        "height": 900,
+        "colorSpace": "srgb",
+        "transparent": false
+      },
+      "domain": "combat-feedback-direct",
+      "creationMethod": "Deterministic clean-room SVG assembled from Arena semantic tokens and primitive geometry; rasterized by sharp without external image inputs.",
+      "compositionSignature": "ledge-ringout-three-stage",
+      "perceptualHash": "111110000000010000000000000000000110001110001100000000000001111000011000000111100111101111011110011110111101110000010000110000000000000000000000",
+      "coverageTags": [
+        "ledge-risk",
+        "ringout",
+        "elimination",
+        "event-sequence"
+      ],
+      "eventMappings": [
+        "KnockbackApplied:future-presentation-mapping",
+        "PlayerEliminated:future-presentation-mapping"
+      ],
+      "cleanRoomBoundary": "No third-party screenshot, character, weapon silhouette, move frame, number, texture, logo or proprietary expression was used as an image input."
+    },
+    {
+      "entryId": "feedback-s05",
+      "decisionSlot": "USE05",
+      "decisionClass": "adopt",
+      "tileIndex": 4,
+      "sourceKind": "project-original",
+      "title": "拾取 / 替换 / 回收 / 过期反馈链",
+      "creator": "Arena Art Direction / Codex clean-room vector study",
+      "rightsHolder": "Arena project",
+      "sourceLocator": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/feedback-s05.svg",
+      "sourceRevision": "generator-sha256:bdea78f08672fd9e2fa5ce5549a26dd921c68edbd156975102c024f3b1d0232a",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "PROJECT-ORIGINAL-INTERNAL",
+      "licenseLocator": "docs/quality/art/reference-sources/original/arena-a0.2.1-supplemental-clean-room-declaration.md",
+      "proofLocator": "docs/quality/art/reference-sources/original/arena-a0.2.1-supplemental-clean-room-declaration.md",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "embedded",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/feedback-s05.png",
+        "byteLength": 75138,
+        "sha256": "2d009997af2194e6d8a1d106a9c8a8c7136d7ffa37f2c1e1210c494b479c59e4",
+        "width": 1600,
+        "height": 900,
+        "colorSpace": "srgb",
+        "transparent": false
+      },
+      "crop": {
+        "mode": "contain",
+        "sourceRect": {
+          "x": 0,
+          "y": 0,
+          "width": 1600,
+          "height": 900
+        },
+        "displayRect": {
+          "x": 0,
+          "y": 25,
+          "width": 480,
+          "height": 270
+        },
+        "croppedPixels": 0,
+        "approval": {
+          "status": "approved-no-crop",
+          "reviewer": "Codex / game-art-director self-review",
+          "signedAt": "2026-07-28",
+          "rationale": "完整源图按contain缩放，保留全部上下文；不裁切、不拉伸。"
+        }
+      },
+      "decisionReason": "采用，因为四节点以同一equipment identity线连接；替换同时显示旧件回收，新件过期只在权威expire事件发生后消退。",
+      "specificTakeaway": "四节点以同一equipment identity线连接；替换同时显示旧件回收，新件过期只在权威expire事件发生后消退。",
+      "arenaConstraint": "拾取、替换、回收、过期绑定同一权威身份和事件顺序。",
+      "doNotCopy": "不在Presentation推算600 tick，不自行删除或复制装备身份。",
+      "usageBoundary": "消费P1.2a权威事件；视觉不参与CAS、拾取竞争或回收。",
+      "reviewStatus": "coordination-approved",
+      "sourceArtifact": {
+        "path": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/feedback-s05.svg",
+        "byteLength": 4363,
+        "sha256": "1df9c57c5e06cabcde8b13b731f69eaaddaa6ad3cea0db69eb4048e6bdf70357",
+        "width": 1600,
+        "height": 900,
+        "colorSpace": "srgb",
+        "transparent": false
+      },
+      "domain": "combat-feedback-direct",
+      "creationMethod": "Deterministic clean-room SVG assembled from Arena semantic tokens and primitive geometry; rasterized by sharp without external image inputs.",
+      "compositionSignature": "equipment-lifecycle-event-chain",
+      "perceptualHash": "111111111111111101111100000000000000000000000000001001100000010001111111111111100110011001101100011001100000001000000000000000000000000111100000",
+      "coverageTags": [
+        "equipment-pickup",
+        "equipment-replaced",
+        "equipment-recycled",
+        "equipment-expired",
+        "identity-continuity"
+      ],
+      "eventMappings": [
+        "EquipmentPickedUp:future-presentation-mapping",
+        "EquipmentReplaced:future-presentation-mapping",
+        "EquipmentRecycled:future-presentation-mapping",
+        "EquipmentExpired:future-presentation-mapping"
+      ],
+      "cleanRoomBoundary": "No third-party screenshot, character, weapon silhouette, move frame, number, texture, logo or proprietary expression was used as an image input."
+    },
+    {
+      "entryId": "feedback-s06",
+      "decisionSlot": "USE06",
+      "decisionClass": "adopt",
+      "tileIndex": 5,
+      "sourceKind": "project-original",
+      "title": "同屏层级与遮挡上限",
+      "creator": "Arena Art Direction / Codex clean-room vector study",
+      "rightsHolder": "Arena project",
+      "sourceLocator": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/feedback-s06.svg",
+      "sourceRevision": "generator-sha256:bdea78f08672fd9e2fa5ce5549a26dd921c68edbd156975102c024f3b1d0232a",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "PROJECT-ORIGINAL-INTERNAL",
+      "licenseLocator": "docs/quality/art/reference-sources/original/arena-a0.2.1-supplemental-clean-room-declaration.md",
+      "proofLocator": "docs/quality/art/reference-sources/original/arena-a0.2.1-supplemental-clean-room-declaration.md",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "embedded",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/feedback-s06.png",
+        "byteLength": 78021,
+        "sha256": "0fee14896041c1bcd3296a3ce79652ef976e900fe62a9439b12e8f5e001389ad",
+        "width": 1600,
+        "height": 900,
+        "colorSpace": "srgb",
+        "transparent": false
+      },
+      "crop": {
+        "mode": "contain",
+        "sourceRect": {
+          "x": 0,
+          "y": 0,
+          "width": 1600,
+          "height": 900
+        },
+        "displayRect": {
+          "x": 0,
+          "y": 25,
+          "width": 480,
+          "height": 270
+        },
+        "croppedPixels": 0,
+        "approval": {
+          "status": "approved-no-crop",
+          "reviewer": "Codex / game-art-director self-review",
+          "signedAt": "2026-07-28",
+          "rationale": "完整源图按contain缩放，保留全部上下文；不裁切、不拉伸。"
+        }
+      },
+      "decisionReason": "采用，因为三组同时事件中，命中核心最小但最高对比；方向箭头次之；装饰圈限制低透明度且不得跨越支撑面。",
+      "specificTakeaway": "三组同时事件中，命中核心最小但最高对比；方向箭头次之；装饰圈限制低透明度且不得跨越支撑面。",
+      "arenaConstraint": "同屏核心层高于方向层和装饰层，角色轮廓与支撑面始终可见。",
+      "doNotCopy": "不让装饰层覆盖角色头肩、落点或超过单事件局部区域。",
+      "usageBoundary": "遮挡比例为美术候选，需后续游戏镜头和设备证据复核。",
+      "reviewStatus": "coordination-approved",
+      "sourceArtifact": {
+        "path": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/feedback-s06.svg",
+        "byteLength": 4673,
+        "sha256": "16e6677f068e6e6cb103f091f817b4ce167a7945e62c21b52f9b998a0052cb9b",
+        "width": 1600,
+        "height": 900,
+        "colorSpace": "srgb",
+        "transparent": false
+      },
+      "domain": "combat-feedback-direct",
+      "creationMethod": "Deterministic clean-room SVG assembled from Arena semantic tokens and primitive geometry; rasterized by sharp without external image inputs.",
+      "compositionSignature": "multiplayer-layer-budget",
+      "perceptualHash": "111110000000011001111000000000000111101111111110000000000000000000011100110001100011100111001100001101011010110001101111111101100000000000000000",
+      "coverageTags": [
+        "same-screen-hierarchy",
+        "occlusion-budget",
+        "core-direction-decoration",
+        "multiplayer"
+      ],
+      "eventMappings": [
+        "HitResolved:future-presentation-mapping",
+        "KnockbackApplied:future-presentation-mapping"
+      ],
+      "cleanRoomBoundary": "No third-party screenshot, character, weapon silhouette, move frame, number, texture, logo or proprietary expression was used as an image input."
+    },
+    {
+      "entryId": "environment-b05",
+      "decisionSlot": "USE07",
+      "decisionClass": "adopt",
+      "tileIndex": 6,
+      "sourceKind": "project-document",
+      "title": "Arena CS1.6 KZ地图研究",
+      "creator": "Arena project",
+      "rightsHolder": "Arena project owner",
+      "sourceLocator": "docs/research/arena-v2-cs16-kz-map-study-v1.md",
+      "sourceRevision": "retrieved-2026-07-28",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "PROJECT-DOCUMENT",
+      "licenseLocator": "docs/research/arena-v2-cs16-kz-map-study-v1.md",
+      "proofLocator": "docs/research/arena-v2-cs16-kz-map-study-v1.md",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "link-only",
+      "artifact": null,
+      "crop": null,
+      "decisionReason": "采用，因为借鉴六段路线、恢复空间和难度轴。",
+      "specificTakeaway": "借鉴六段路线、恢复空间和难度轴。",
+      "arenaConstraint": "六段路线只在决策点触发反馈，不让地图研究轴变成常驻HUD。",
+      "doNotCopy": "不复制第三方地图几何、纹理、标志或名称。",
+      "usageBoundary": "内部研究链接，不嵌入外部截图。",
+      "antiReferenceReason": null,
+      "reviewStatus": "coordination-approved"
+    },
+    {
+      "entryId": "feedback-s07",
+      "decisionSlot": "AVOID01",
+      "decisionClass": "avoid",
+      "tileIndex": 7,
+      "sourceKind": "project-original",
+      "title": "规避：全屏反馈与多焦点遮挡",
+      "creator": "Arena Art Direction / Codex clean-room vector study",
+      "rightsHolder": "Arena project",
+      "sourceLocator": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/feedback-s07.svg",
+      "sourceRevision": "generator-sha256:bdea78f08672fd9e2fa5ce5549a26dd921c68edbd156975102c024f3b1d0232a",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "PROJECT-ORIGINAL-INTERNAL",
+      "licenseLocator": "docs/quality/art/reference-sources/original/arena-a0.2.1-supplemental-clean-room-declaration.md",
+      "proofLocator": "docs/quality/art/reference-sources/original/arena-a0.2.1-supplemental-clean-room-declaration.md",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "embedded",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/feedback-s07.png",
+        "byteLength": 95258,
+        "sha256": "6a00734ed9276b7f2efbaf1891d61acb9afb72d67b69924d796f50791c029e2e",
+        "width": 1600,
+        "height": 900,
+        "colorSpace": "srgb",
+        "transparent": false
+      },
+      "crop": {
+        "mode": "contain",
+        "sourceRect": {
+          "x": 0,
+          "y": 0,
+          "width": 1600,
+          "height": 900
+        },
+        "displayRect": {
+          "x": 0,
+          "y": 25,
+          "width": 480,
+          "height": 270
+        },
+        "croppedPixels": 0,
+        "approval": {
+          "status": "approved-no-crop",
+          "reviewer": "Codex / game-art-director self-review",
+          "signedAt": "2026-07-28",
+          "rationale": "完整源图按contain缩放，保留全部上下文；不裁切、不拉伸。"
+        }
+      },
+      "decisionReason": "规避，因为禁止把该过载反例拆成多个可用特效；任何单层也需独立过遮挡门。",
+      "specificTakeaway": "反例故意叠加全屏红幕、多个爆点和无来源数字，直接展示路线、角色与事件来源被吞没。",
+      "arenaConstraint": "拒绝常驻雾、全屏闪、伤害数字雨和无来源多焦点。",
+      "doNotCopy": "禁止把该过载反例拆成多个可用特效；任何单层也需独立过遮挡门。",
+      "usageBoundary": "只作Anti-reference，不是VFX样件。",
+      "reviewStatus": "coordination-approved",
+      "sourceArtifact": {
+        "path": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/feedback-s07.svg",
+        "byteLength": 3477,
+        "sha256": "c9bc8a87ba9bd6b182585e3b8efc7fd22e194020171b1c58ad39050e1e497a75",
+        "width": 1600,
+        "height": 900,
+        "colorSpace": "srgb",
+        "transparent": false
+      },
+      "domain": "combat-feedback-direct",
+      "creationMethod": "Deterministic clean-room SVG assembled from Arena semantic tokens and primitive geometry; rasterized by sharp without external image inputs.",
+      "compositionSignature": "anti-reference-fullscreen-vfx",
+      "perceptualHash": "001110000000000000000000000000000011000011001100001111001111100000111111111111000001111111011100000111100011110000110000000011000000000000000100",
+      "coverageTags": [
+        "anti-fullscreen",
+        "anti-occlusion",
+        "anti-multi-focus"
+      ],
+      "eventMappings": [
+        "none:anti-reference"
+      ],
+      "cleanRoomBoundary": "No third-party screenshot, character, weapon silhouette, move frame, number, texture, logo or proprietary expression was used as an image input."
+    },
+    {
+      "entryId": "environment-a02",
+      "decisionSlot": "AVOID02",
+      "decisionClass": "avoid",
+      "tileIndex": 8,
+      "sourceKind": "research-link",
+      "title": "CS2KZ地图系统",
+      "creator": "CS2KZ contributors",
+      "rightsHolder": "CS2KZ project",
+      "sourceLocator": "https://docs.cs2kz.org/systems/maps",
+      "sourceRevision": "retrieved-2026-07-28",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "RIGHTS-RESTRICTED",
+      "licenseLocator": "docs/research/arena-v2-cs16-kz-map-study-v1.md",
+      "proofLocator": "docs/research/arena-v2-cs16-kz-map-study-v1.md",
+      "rights": {
+        "commercialUseAllowed": false,
+        "modificationAllowed": false,
+        "redistributionAllowed": false
+      },
+      "embeddingMode": "link-only",
+      "artifact": null,
+      "crop": null,
+      "decisionReason": "规避，因为不复制系统实现、文案或地图资产。",
+      "specificTakeaway": "追求可审计的路线身份、难度与完成条件。",
+      "arenaConstraint": "拒绝把插件审核、排行榜和系统状态直接搬进战斗反馈。",
+      "doNotCopy": "不复制系统实现、文案或地图资产。",
+      "usageBoundary": "作者文档只作链接。",
+      "antiReferenceReason": null,
+      "reviewStatus": "coordination-approved"
+    },
+    {
+      "entryId": "feedback-s08",
+      "decisionSlot": "TEST01",
+      "decisionClass": "experiment",
+      "tileIndex": 9,
+      "sourceKind": "project-original",
+      "title": "实验：reduced-motion等效反馈",
+      "creator": "Arena Art Direction / Codex clean-room vector study",
+      "rightsHolder": "Arena project",
+      "sourceLocator": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/feedback-s08.svg",
+      "sourceRevision": "generator-sha256:bdea78f08672fd9e2fa5ce5549a26dd921c68edbd156975102c024f3b1d0232a",
+      "retrievedAt": "2026-07-28",
+      "licenseId": "PROJECT-ORIGINAL-INTERNAL",
+      "licenseLocator": "docs/quality/art/reference-sources/original/arena-a0.2.1-supplemental-clean-room-declaration.md",
+      "proofLocator": "docs/quality/art/reference-sources/original/arena-a0.2.1-supplemental-clean-room-declaration.md",
+      "rights": {
+        "commercialUseAllowed": true,
+        "modificationAllowed": true,
+        "redistributionAllowed": true
+      },
+      "embeddingMode": "embedded",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/feedback-s08.png",
+        "byteLength": 79478,
+        "sha256": "b48edce5858689a4a5df0dbda57843129f281c48090893469fc4a7e48f9d5378",
+        "width": 1600,
+        "height": 900,
+        "colorSpace": "srgb",
+        "transparent": false
+      },
+      "crop": {
+        "mode": "contain",
+        "sourceRect": {
+          "x": 0,
+          "y": 0,
+          "width": 1600,
+          "height": 900
+        },
+        "displayRect": {
+          "x": 0,
+          "y": 25,
+          "width": 480,
+          "height": 270
+        },
+        "croppedPixels": 0,
+        "approval": {
+          "status": "approved-no-crop",
+          "reviewer": "Codex / game-art-director self-review",
+          "signedAt": "2026-07-28",
+          "rationale": "完整源图按contain缩放，保留全部上下文；不裁切、不拉伸。"
+        }
+      },
+      "decisionReason": "实验，用“关闭高运动反馈时保留静态方向楔、短时接触印记和非视觉槽位，事件语义不变。”验证边界。",
+      "specificTakeaway": "关闭高运动反馈时保留静态方向楔、短时接触印记和非视觉槽位，事件语义不变。",
+      "arenaConstraint": "实验reduced-motion下用静态方向楔、接触印记和非视觉槽位保持等效语义。",
+      "doNotCopy": "不把reduced-motion变成删光信息，也不由美术定义音频或触觉实现。",
+      "usageBoundary": "实验项需在后续Presentation、静音替代、设备和真人门中验证。",
+      "reviewStatus": "coordination-approved",
+      "sourceArtifact": {
+        "path": "docs/quality/art/reference-sources/original/a0.2.1-supplemental-weapon-feedback/feedback-s08.svg",
+        "byteLength": 3550,
+        "sha256": "b803d35790d903804ac90d24bf8612e04765e2b340e946565a33ae839c07fa94",
+        "width": 1600,
+        "height": 900,
+        "colorSpace": "srgb",
+        "transparent": false
+      },
+      "domain": "combat-feedback-direct",
+      "creationMethod": "Deterministic clean-room SVG assembled from Arena semantic tokens and primitive geometry; rasterized by sharp without external image inputs.",
+      "compositionSignature": "reduced-motion-equivalent-triptych",
+      "perceptualHash": "111111100000010001000000000000000110001100011100000010011000111000111011110111100011101111011110000100011000111000000000000000000000000000000000",
+      "coverageTags": [
+        "reduced-motion",
+        "static-direction",
+        "impact-mark",
+        "accessibility-equivalent"
+      ],
+      "eventMappings": [
+        "HitResolved:future-presentation-mapping",
+        "KnockbackApplied:future-presentation-mapping"
+      ],
+      "cleanRoomBoundary": "No third-party screenshot, character, weapon silhouette, move frame, number, texture, logo or proprietary expression was used as an image input."
+    }
+  ],
+  "keyTakeaways": [
+    "命中核心、来源尾迹和击退法线分别解释接触、来源与结果。",
+    "危险边缘、越界、淘汰及拾取/替换/回收/过期必须按权威事件递进。",
+    "同屏核心层高于方向层和装饰层，角色轮廓与支撑面始终可见。"
+  ],
+  "antiReferences": [
+    "拒绝全屏闪、常驻雾、伤害数字雨、无来源粒子和多焦点遮挡。",
+    "拒绝由Presentation推算tick、淘汰、替换、过期或装备身份。"
+  ],
+  "selfReview": {
+    "status": "board-ready",
+    "evidenceScope": "direction-contract",
+    "score": 94,
+    "maximum": 100,
+    "dimensions": {
+      "sourceFit": 20,
+      "annotation": 19,
+      "composition": 18,
+      "consistency": 14,
+      "scaleEvidence": 13,
+      "governance": 10
+    },
+    "risk": "本板已用clean-room直接视觉证明反馈层级并标注权威事件映射，但仍不是运行中VFX样件；A1/A4继续受事件与设备门阻断。",
+    "hardGatePassed": true,
+    "hardGateReason": "Arena V2 coordinator approved the A0.2.2 board-level gate on 2026-07-28; this does not approve A0.2 overall or downstream gates."
+  },
+  "signOff": {
+    "status": "coordination-approved",
+    "artDirector": {
+      "name": "Codex / game-art-director self-review",
+      "signedAt": "2026-07-28"
+    },
+    "coordinator": {
+      "name": "Arena V2 主协调",
+      "signedAt": "2026-07-28"
+    }
+  },
+  "failClosed": {
+    "a0_2_2Passed": true,
+    "a0_2Passed": false,
+    "referenceBoardPassed": false,
+    "blockoutAllowed": false,
+    "a0_3Passed": false,
+    "deviceVerified": false,
+    "humanVerified": false,
+    "finalApproved": false
+  }
+}
