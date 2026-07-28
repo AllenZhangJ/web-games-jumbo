@@ -336,10 +336,13 @@ KZ-Rush 的难度标准把距离、空中修正和连续节奏拆开记录，而
 | 中线稳定 | 8 | 56 | 154 | 完成 |
 | 边线抢时 | 5 | 44 | 81 | 完成 |
 
-两组分叉都出现了可验证的时间交换：恢复线比直行线慢，宽而绕行的中线比窄而直切的边线慢。这个结果支持“快/安全”作为路线设计方向，但只代表研究控制器和当前灰盒参数，不能直接视为玩家最终速度或生产地图平衡。下一步应把同一套灰盒接入武器击落、摄像机和多人拥挤测试。
+两组分叉都出现了可验证的时间交换：恢复线比直行线慢，宽而绕行的中线比窄而直切的边线慢。这个结果支持“快/安全”作为路线设计方向，但只代表研究控制器和当前灰盒参数，不能直接视为玩家最终速度或生产地图平衡。镜头观察合同已单独记录在[KZ 分叉路线镜头观察结果 V1](arena-v2-kz-branch-camera-observation-results-v1.md)；下一步仍应把同一套灰盒接入武器击落、真实画布和多人拥挤测试。
 
 验证入口：
 
 - `packages/arena-v1-experiment/src/arena-v2-kz-branch-greybox-prototype.ts`
 - `packages/arena-v1-experiment/test/arena-v2-kz-branch-greybox-prototype.test.ts`
+- `packages/arena-v1-experiment/src/arena-v2-kz-branch-camera-observation-prototype.ts`
+- `packages/arena-v1-experiment/test/arena-v2-kz-branch-camera-observation-prototype.test.ts`
 - [KZ 分叉路线独立灰盒结果 V1](arena-v2-kz-branch-greybox-results-v1.md)
+- [KZ 分叉路线镜头观察结果 V1](arena-v2-kz-branch-camera-observation-results-v1.md)

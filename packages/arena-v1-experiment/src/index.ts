@@ -671,6 +671,16 @@ export type {
   ArenaV2KzBranchGreyboxSurface,
 } from './arena-v2-kz-branch-greybox-prototype.js';
 export {
+  runArenaV2KzBranchCameraObservationPrototype,
+} from './arena-v2-kz-branch-camera-observation-prototype.js';
+export type {
+  ArenaV2KzBranchCameraObservation,
+  ArenaV2KzBranchCameraObservationPhase,
+  ArenaV2KzBranchCameraObservationPrototypeResult,
+  ArenaV2KzBranchCameraViewport,
+  ArenaV2KzBranchCameraViewportId,
+} from './arena-v2-kz-branch-camera-observation-prototype.js';
+export {
   runArenaV2KzRouteRespawnReentryPrototype,
   runArenaV2KzRouteCombatPrototype,
   runArenaV2KzRouteCombatResponsePrototype,
