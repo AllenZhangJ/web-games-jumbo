@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "skills": {
+    "art-bible": {
+      "source": "donchitos/claude-code-game-studios",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/art-bible/SKILL.md",
+      "computedHash": "c2a97820eed410f7cda67af3b0729dc5ca1157fc3625024a50672f7a335ed7b7"
+    },
+    "audio-design": {
+      "source": "gamedev-skills/awesome-gamedev-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/disciplines/audio-design/SKILL.md",
+      "computedHash": "482cacffa636618dfa2ed5ffc89d32817813bdeb78e0019f99c09e2a4ea0aac1"
+    },
+    "blender-web-pipeline": {
+      "source": "freshtechbro/claudedesignskills",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/blender-web-pipeline/SKILL.md",
+      "computedHash": "342295a1d79b24a1e8ff4c048da51b9a1dc22d9c01dea183af389c0e4a1297e6"
+    },
+    "character-design-sheet": {
+      "source": "inference-sh/skills",
+      "sourceType": "github",
+      "skillPath": "guides/design/character-design-sheet/SKILL.md",
+      "computedHash": "85c5ee67cac322ed5c7c443be2e1a238d72b3a613773aa719e8441df6f3a7240"
+    },
+    "game-3d-assets": {
+      "source": "opusgamelabs/game-creator",
+      "sourceType": "github",
+      "skillPath": "skills/game-3d-assets/SKILL.md",
+      "computedHash": "a86170227cd6267a477700ac0e5b9b7bc65c8fb0f0bbfd9c7c39dece494241a7"
+    },
+    "game-art-director": {
+      "source": "alterlab-ieu/alterlab_gameforge",
+      "sourceType": "github",
+      "skillPath": "skills/agents/game-art-director/SKILL.md",
+      "computedHash": "90d5e110f26f0bab75ba79a4e7380b5ef9ad5930cc68858aae88a5b8522ee45d"
+    },
+    "glb-compressor-cli": {
+      "source": "kjanat/glb-compressor",
+      "sourceType": "github",
+      "skillPath": "skills/glb-compressor-cli/SKILL.md",
+      "computedHash": "fc9795cdcf88c0426275d87287bafaa892ce8aa9d53ad2b82021c56d16a9e5db"
+    },
+    "level-design": {
+      "source": "gamedev-skills/awesome-gamedev-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/disciplines/level-design/SKILL.md",
+      "computedHash": "59f5f9ba341902f57319ce52b5e469c0b73be61a268ab18491e0794fdb32ce06"
+    },
+    "media-asset-management": {
+      "source": "rampstackco/claude-skills",
+      "sourceType": "github",
+      "skillPath": "skills/media-asset-management/SKILL.md",
+      "computedHash": "ba8c4990752d4d208a161d13f7124207a91ea4966f6af1ca6b5d3d24870db2bc"
+    },
+    "particle-systems": {
+      "source": "pluginagentmarketplace/custom-plugin-game-developer",
+      "sourceType": "github",
+      "skillPath": "skills/particle-systems/SKILL.md",
+      "computedHash": "a921e4a962218fd4f15575052c5c5498d533c656c31c4b21a7ef31916a937f79"
+    },
+    "threejs-animation": {
+      "source": "cloudai-x/threejs-skills",
+      "sourceType": "github",
+      "skillPath": "skills/threejs-animation/SKILL.md",
+      "computedHash": "8c50b1493812bd88f3ed0637c0c3c5d846afdb322157b67b2ffba4ce8e552835"
+    },
+    "threejs-game-ui-designer": {
+      "source": "majidmanzarpour/threejs-game-skills",
+      "sourceType": "github",
+      "skillPath": "skills/threejs-game-ui-designer/SKILL.md",
+      "computedHash": "272a6b4cf8d684c7eb3b79a655681a26ad431de48070e6ab6d0ea303f8387b29"
+    },
+    "threejs-materials-lighting": {
+      "source": "gamedev-skills/awesome-gamedev-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/web-engines/threejs-materials-lighting/SKILL.md",
+      "computedHash": "8addf2e45ddb5569ac0433990f5d9a9ea3dcf3706c0e92af6e63ace0c8b764b9"
+    },
+    "vfx-realtime": {
+      "source": "omer-metin/skills-for-antigravity",
+      "sourceType": "github",
+      "skillPath": "skills/vfx-realtime/SKILL.md",
+      "computedHash": "7e3388a0a3a598578a43574a444310f68fc79440ad91a3bd8a7f5af096ff6380"
+    }
+  }
+}

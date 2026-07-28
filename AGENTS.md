@@ -54,6 +54,13 @@ Renderer / UI / Audio
 
 新增 Core 能力至少需要：Definition/Registry 校验、边界单测、确定性或回放测试、无渲染模拟，以及架构依赖检查。阶段完成前运行 `npm test`、相关 stress 脚本、`npm run build` 和 `git diff --check`；真机表现证据不能由 Node 测试替代。
 
+## 美术与音频开发流程
+
+- 角色、武器、地图、VFX、HUD、音乐和音效按 [`docs/architecture/arena-art-and-audio-development-flow.md`](docs/architecture/arena-art-and-audio-development-flow.md) 路由到 `.agents/skills/` 中的14个技能；任务记录必须写明使用的技能和强制参考文件。
+- 美术/音频只能消费只读快照与稳定表现事件，不得重新判定命中、拾取、淘汰、计时、随机或胜负。研究、灰盒和程序化素材不得成为生产正常路径。
+- 正式素材必须完成来源 revision、许可证、SHA-256、批准记录、项目资产预算、浏览器/真机和 reduced-motion/静音检查；外部技能的泛化预算不覆盖项目 `arena.stage7.formal-asset-budget.v1`。
+- 新增或替换技能必须同步更新 `skills-lock.json`、上述流程和对应 ADR。
+
 ## 治理批次协议
 
 - 每个迁移批次必须在状态台账中写明范围、前置条件、行为映射、风险、验证证据、回滚点和未完成项。

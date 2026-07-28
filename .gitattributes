@@ -1,0 +1,4 @@
+# Imported skills are vendored reference material. Preserve their source
+# formatting while excluding intentional code-block alignment spaces from the
+# repository-wide whitespace check.
+/.agents/skills/** whitespace=-trailing-space

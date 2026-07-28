@@ -38,6 +38,8 @@ Arena V2 的核心目标是：
 | [武器概览与可读性浏览器任务验证结果 V2](../research/arena-v2-weapon-browser-task-validation-results-v2.md) | 在 390×844 浏览器视口复核 Product 数值方向、六件研究武器卡和 5 道可读性任务提交闭环 | 浏览器任务 5/5，通过但不代表真人或真机 |
 | [V2 生存 1vE 规则](../gameplay/arena-v2-survival-mode.md) | 生存流程、敌人、20秒三实体供给、自动替换、10秒回收、掉落和结束条件 | 供给规则已冻结，Rule/Core待实现 |
 | [V2 生产化分阶段开发与治理计划](../architecture/arena-v2-production-development-plan.md) | 固定从规则收敛到发布冻结的阶段、执行标准、百分制评分、治理证据和禁止越级条件 | 执行基线 |
+| [Arena 美术与音频开发流程](../architecture/arena-art-and-audio-development-flow.md) | 将14个美术、3D、VFX、UI、地图、音乐和音频技能按产物分流，固定资产来源、表现事件、预算、真机和真人门禁 | Presentation / Platform 执行基线 |
+| [ADR-109：Arena 美术与音频工作统一走14技能路由和资产门禁](../decisions/109-arena-art-and-audio-skill-routing.md) | 固化技能安装、使用范围、项目规则优先级、AI/下载素材边界和回滚处理 | 已接受 |
 | [V2 成长与 200 小时目标](../gameplay/arena-v2-progression-200-hours.md) | 收藏、熟悉、重复游玩和奖励边界 | 初稿 |
 | [V2 界面地图](arena-v2-screen-map.md) | 明确 11 个局外页面入口、对局 HUD 和竞技准备模板复用 | 页面合同已收敛，真机待验证 |
 | [V2 架构影响与迁移边界](../architecture/arena-v2-migration-boundary.md) | 说明哪些可以复用、哪些需要重构 | 初稿 |

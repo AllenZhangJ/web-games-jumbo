@@ -78,6 +78,15 @@
 - 生产表现改动在 Web、微信、抖音对应目标环境留证；
 - 中文提交并推送当前功能分支，禁止 force push；合并 `main` 只由最终独立审计决定。
 
+### 2.5 美术与音频专用交付包
+
+角色、武器、地图、VFX、HUD、音乐和音效统一遵循[《Arena 美术与音频开发流程》](arena-art-and-audio-development-flow.md)及[ADR-109](../decisions/109-arena-art-and-audio-skill-routing.md)。每个表现批次在 `Rule → Core → Bot` 行为合同稳定后才进入制作，并按产物类型记录对应技能、强制参考文件、来源 revision、许可证、SHA-256、项目资产预算、reduced-motion/静音回退和目标设备证据。
+
+- P3 只允许把已通过路线可达、多人拥挤、重入和来源边界的 KZ 生产几何进行原创视觉化；研究地图和灰盒装饰不能进入正式交付。
+- P4 以单把武器为批次补齐正式模型/附件、动作映射、五类反馈 Cue、音频和低动效方案；表现层只消费稳定反馈事件，不能从坐标或动画时间重判原因。
+- P5 以11页面和 HUD 为批次复核 DOM/Canvas 同源、48px 触控、390×844 无溢出、目标设备声音开关和最终反馈；浏览器或 Node 证据不能替代真机/真人证据。
+- `arena.stage7.formal-asset-budget.v1`、三端 4 MiB delivery budget、`npm run arena:assets:budget`、`npm run check:formal-assets` 和 `npm run check:third-party-assets` 是表现资产的共同前门禁。
+
 ## 3. P0：规则与文档唯一真值冻结
 
 ### 目标
