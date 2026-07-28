@@ -2,12 +2,13 @@
 
 ## 状态
 
-- 状态：研究页已接入六件逐件研究武器矩阵，并完成自动化页面边界与任务合同验证；真人样本、目标设备和长期留存仍未开始
+- 状态：研究页已接入六件逐件研究武器矩阵，并完成自动化页面边界、任务合同和本地浏览器布局验证；真人样本、目标设备和长期留存仍未开始
 - 日期：2026-07-28
 - 实现：`packages/arena-v1-experiment/src/arena-v2-weapon-readability-task-prototype.ts`、`createArenaV2WeaponCaseStudyReadabilityMatrix`
 - 测试：`packages/arena-v1-experiment/test/arena-v2-weapon-readability-task-prototype.test.ts`、`arena-v2-weapon-case-study-readability-matrix.test.ts`
 - 研究页：`readability.html`、`src/entry/weapon-readability-study.ts`、`src/weapon-readability-study.css`；题目前直接展示六件逐件研究武器的同源研究矩阵，并单独展示延迟/预警研究信号
 - 页面边界测试：`tests/arena/study/weapon-readability-study-web.test.ts`
+- 本地浏览器布局证据：[研究页浏览器布局证据 V1](arena-v2-browser-layout-evidence-v1.md)
 - 边界：只消费研究武器概览矩阵，不进入默认生产 UI、MatchCore、Replay 或存档；生产构建入口仍只有 `index.html`
 
 ## 解决的问题
