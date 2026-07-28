@@ -733,6 +733,15 @@ export type {
   ArenaV2KzBranchWeaponConsequencePrototypeResult,
   ArenaV2KzBranchWeaponConsequenceSummary,
 } from './arena-v2-kz-branch-weapon-consequence-prototype.js';
+export {
+  runArenaV2KzMultiplayerCrowdingPrototype,
+} from './arena-v2-kz-multiplayer-crowding-prototype.js';
+export type {
+  ArenaV2KzMultiplayerCrowdingBranchSummary,
+  ArenaV2KzMultiplayerCrowdingProbeResult,
+  ArenaV2KzMultiplayerCrowdingPrototypeResult,
+  ArenaV2KzMultiplayerCrowdingTargetResult,
+} from './arena-v2-kz-multiplayer-crowding-prototype.js';
 export type {
   ArenaV2KzLanguageCombatOutcome,
   ArenaV2KzLanguageConsequenceProbeResult,
