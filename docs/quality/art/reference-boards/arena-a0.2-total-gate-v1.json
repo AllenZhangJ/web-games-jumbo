@@ -1,0 +1,295 @@
+{
+  "schemaVersion": 1,
+  "id": "arena.art.reference-board.total.a0.2.v1",
+  "status": "ready",
+  "generatedAt": "2026-07-28",
+  "baselineCommit": "5d26a4f52a0be61226130ce883e91f981b1cfec8",
+  "generator": {
+    "path": "scripts/art/generate-arena-reference-total-gate.ts",
+    "sha256": "38bca051fb557e87f2e9c162e0f072c45adbdac83f612d8e5f6fb2b732446e77"
+  },
+  "dependencies": {
+    "originalSourcePack": {
+      "path": "docs/quality/art/reference-sources/arena-a0.2.1-source-pack-v1.json",
+      "id": "arena.art.reference-source-pack.a0.2.1.v1",
+      "status": "source-ready",
+      "sha256": "061f94357d55a5f1ea194e72723daae172aa9294901cb7b8fca5abddbf092e8c",
+      "byteLength": 92750
+    },
+    "supplementalSourcePack": {
+      "path": "docs/quality/art/reference-sources/arena-a0.2.1-supplemental-weapon-feedback-v1.json",
+      "id": "arena.art.reference-source-pack.a0.2.1.supplemental.weapon-feedback.v1",
+      "status": "supplemental-source-ready",
+      "sha256": "d018901eb351bc25623258d83ed66f0e289f3f0d3af730ce94de500eb1492bd4",
+      "byteLength": 51077
+    },
+    "boardLedger": {
+      "path": "docs/quality/art/reference-boards/arena-a0.2.2-reference-board-ledger-v1.json",
+      "id": "arena.art.reference-boards.a0.2.2.v1",
+      "status": "board-ready",
+      "sha256": "4a2e1773b79c0e28480010f6bce9baf29334ebbe808db72bb50bd62149ac0a98",
+      "byteLength": 19085
+    },
+    "boardManifests": [
+      {
+        "path": "docs/quality/art/reference-boards/arena-reference-board-character-v1.json",
+        "id": "arena.art.reference-board.character.a0.2.2.v1",
+        "status": "board-ready",
+        "sha256": "3c89e241cedc8940f7e548387e5dda5075e0eec95d3e5d0fa710e1715e969ea4",
+        "byteLength": 25505
+      },
+      {
+        "path": "docs/quality/art/reference-boards/arena-reference-board-weapon-v1.json",
+        "id": "arena.art.reference-board.weapon.a0.2.2.v1",
+        "status": "board-ready",
+        "sha256": "ff5ab66a1ad9b3bf1e62fe84950cf8065b32d21250afc46d649eab47f5d266bb",
+        "byteLength": 39396
+      },
+      {
+        "path": "docs/quality/art/reference-boards/arena-reference-board-map-composition-v1.json",
+        "id": "arena.art.reference-board.map-composition.a0.2.2.v1",
+        "status": "board-ready",
+        "sha256": "725fc65e7ff66f5fc1e4088b04f3a6bceea64cd01947df63bb6baf7dd6bb712a",
+        "byteLength": 24898
+      },
+      {
+        "path": "docs/quality/art/reference-boards/arena-reference-board-combat-feedback-v1.json",
+        "id": "arena.art.reference-board.combat-feedback.a0.2.2.v1",
+        "status": "board-ready",
+        "sha256": "d49780e873151dee2ac0de0b16720bdac02b2b03411e74453dd4356eae4cdda3",
+        "byteLength": 39344
+      },
+      {
+        "path": "docs/quality/art/reference-boards/arena-reference-board-ui-v1.json",
+        "id": "arena.art.reference-board.ui.a0.2.2.v1",
+        "status": "board-ready",
+        "sha256": "e724668b137cdffd325939b4078214a6dc1ed4b399b1d1883e77422d6a56d5ff",
+        "byteLength": 25866
+      },
+      {
+        "path": "docs/quality/art/reference-boards/arena-reference-board-color-material-v1.json",
+        "id": "arena.art.reference-board.color-material.a0.2.2.v1",
+        "status": "board-ready",
+        "sha256": "e7edab0f3c277da6d9197e3aae9fa89c619fa9e64d91edc1a1c9711533e3989c",
+        "byteLength": 24533
+      }
+    ]
+  },
+  "sourceUseAudit": {
+    "originalSourceEntryCount": 60,
+    "supplementalSourceEntryCount": 16,
+    "boardSourceUseCount": 60,
+    "boardOriginalUseCount": 44,
+    "boardSupplementalUseCount": 16,
+    "uniqueBoardSourceUseCount": 60,
+    "originalIds": [
+      "character-a01",
+      "character-a02",
+      "character-b01",
+      "character-b02",
+      "character-b03",
+      "character-b04",
+      "character-b05",
+      "character-b06",
+      "character-b07",
+      "character-t01",
+      "color-a01",
+      "color-a02",
+      "color-b01",
+      "color-b02",
+      "color-b03",
+      "color-b04",
+      "color-b05",
+      "color-b06",
+      "color-b07",
+      "color-t01",
+      "composition-a01",
+      "composition-a02",
+      "composition-b01",
+      "composition-b02",
+      "composition-b03",
+      "composition-b04",
+      "composition-b05",
+      "composition-b06",
+      "composition-b07",
+      "composition-t01",
+      "environment-a01",
+      "environment-a02",
+      "environment-b01",
+      "environment-b02",
+      "environment-b03",
+      "environment-b04",
+      "environment-b05",
+      "environment-b06",
+      "environment-b07",
+      "environment-t01",
+      "mood-a01",
+      "mood-a02",
+      "mood-b01",
+      "mood-b02",
+      "mood-b03",
+      "mood-b04",
+      "mood-b05",
+      "mood-b06",
+      "mood-b07",
+      "mood-t01",
+      "ui-a01",
+      "ui-a02",
+      "ui-b01",
+      "ui-b02",
+      "ui-b03",
+      "ui-b04",
+      "ui-b05",
+      "ui-b06",
+      "ui-b07",
+      "ui-t01"
+    ],
+    "supplementalIds": [
+      "feedback-s01",
+      "feedback-s02",
+      "feedback-s03",
+      "feedback-s04",
+      "feedback-s05",
+      "feedback-s06",
+      "feedback-s07",
+      "feedback-s08",
+      "weapon-s01",
+      "weapon-s02",
+      "weapon-s03",
+      "weapon-s04",
+      "weapon-s05",
+      "weapon-s06",
+      "weapon-s07",
+      "weapon-s08"
+    ],
+    "boardIds": [
+      "character-a01",
+      "character-a02",
+      "character-b01",
+      "character-b02",
+      "character-b03",
+      "character-b04",
+      "character-b05",
+      "character-b06",
+      "character-b07",
+      "character-t01",
+      "color-a01",
+      "color-a02",
+      "color-b01",
+      "color-b02",
+      "color-b03",
+      "color-b04",
+      "color-b05",
+      "color-b06",
+      "color-b07",
+      "color-t01",
+      "composition-a01",
+      "composition-a02",
+      "composition-b01",
+      "composition-b02",
+      "composition-b03",
+      "composition-b04",
+      "composition-b05",
+      "composition-b06",
+      "composition-b07",
+      "composition-t01",
+      "environment-a02",
+      "environment-b05",
+      "feedback-s01",
+      "feedback-s02",
+      "feedback-s03",
+      "feedback-s04",
+      "feedback-s05",
+      "feedback-s06",
+      "feedback-s07",
+      "feedback-s08",
+      "mood-a02",
+      "mood-b06",
+      "ui-a01",
+      "ui-a02",
+      "ui-b01",
+      "ui-b02",
+      "ui-b03",
+      "ui-b04",
+      "ui-b05",
+      "ui-b06",
+      "ui-b07",
+      "ui-t01",
+      "weapon-s01",
+      "weapon-s02",
+      "weapon-s03",
+      "weapon-s04",
+      "weapon-s05",
+      "weapon-s06",
+      "weapon-s07",
+      "weapon-s08"
+    ]
+  },
+  "boardAudit": {
+    "boardCount": 6,
+    "entriesPerBoard": 10,
+    "decisionTotals": {
+      "adopt": 42,
+      "avoid": 12,
+      "experiment": 6
+    },
+    "embeddedCount": 40,
+    "linkOnlyCount": 20,
+    "coordinatorSignedBoardCount": 6,
+    "tenPercentEvidenceCount": 6,
+    "mobileEvidenceCount": 6
+  },
+  "score": {
+    "total": 96,
+    "maximum": 100,
+    "dimensions": {
+      "dependencyIdentityAndHash": {
+        "score": 20,
+        "maximum": 20
+      },
+      "sourceRightsAndLicense": {
+        "score": 18,
+        "maximum": 20
+      },
+      "boardUseTraceability": {
+        "score": 20,
+        "maximum": 20
+      },
+      "decisionRatioAndAnnotation": {
+        "score": 15,
+        "maximum": 15
+      },
+      "signOffAndBoundaryHonesty": {
+        "score": 15,
+        "maximum": 15
+      },
+      "governanceReproducibility": {
+        "score": 8,
+        "maximum": 10
+      }
+    },
+    "hardGatePassed": true,
+    "gateReason": "Independent A0.2 total checker recomputes source identity, rights, board use, 7/2/1, sign-offs and downstream false states; device, human and production evidence remain out of scope."
+  },
+  "review": {
+    "status": "machine-and-art-director-ready",
+    "reviewer": "Codex / game-art-director",
+    "reviewedAt": "2026-07-28",
+    "coordinatorApprovedSubgates": [
+      "source-ready",
+      "supplemental-source-ready",
+      "board-ready"
+    ],
+    "coordinatorAggregateSignOff": null
+  },
+  "statusBoundary": {
+    "a0_2": "ready",
+    "referenceBoard": "ready",
+    "a0_3": "incomplete",
+    "blockout": "forbidden",
+    "lod": "incomplete",
+    "device": "incomplete",
+    "human": "incomplete",
+    "final": "incomplete"
+  }
+}

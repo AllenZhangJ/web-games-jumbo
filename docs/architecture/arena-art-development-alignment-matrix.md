@@ -2,7 +2,7 @@
 
 ## 文档状态
 
-- 状态：A0.1合同为 `contract-ready`；原A0.2.1为`source-ready`、补充来源为`supplemental-source-ready`、A0.2.2实际参考板为`board-ready`，均由主协调于2026-07-28签核；A0.2整体与A0.3剪影工具/盲测仍`incomplete`
+- 状态：A0.1为`contract-ready`；A0.2三个子门已签核且独立聚合总门为`ready`（96/100），Reference Board视觉方向总门`ready`；A0.3技术/代理候选85/100且离屏0，但真人0/10，仍`incomplete`/fail closed
 - 日期：2026-07-28
 - 审计基线：`d6f906008d0af1ed0133a199a8dc9e15cb1d23d0`
 - 关联：[Art Bible](arena-art-bible.md)、[美术与音频流程](arena-art-and-audio-development-flow.md)、[V2 生产计划](arena-v2-production-development-plan.md)
@@ -57,12 +57,12 @@
 
 ### A0.2 ↔ P0：六类实际注释参考板
 
-- 子门：A0.2.1原包为`source-ready`；武器/反馈16个项目原创直接视觉的独立补充包为`supplemental-source-ready`；A0.2.2六板为`board-ready`。三个来源/板面小门均由主协调于2026-07-28签核，但A0.2整体仍为`incomplete`。
+- 子门：A0.2.1原包为`source-ready`，补充包为`supplemental-source-ready`，A0.2.2六板为`board-ready`。三个子门签核后，[A0.2独立聚合总门](arena-art-reference-total-gate-a0.2.md)重新复算身份、权利、使用、比例、签核和下游边界，以96/100通过为`ready`。
 - 输入：已签核A0.1、六类文字登记、A0.2.1协调通过的权利/proof/hash与link-only台账。
 - 输出：A0.2.1见[来源与权利包](arena-art-reference-source-pack-a0.2.1.md)，独立新增项见[武器/反馈补充来源包](arena-art-reference-source-supplement-a0.2.1.md)；A0.2.2见[正式参考板与自审](arena-art-reference-boards-a0.2.2.md)，含六份`2560×1440` SVG+PNG、每板10格7/2/1布局、六份板面manifest、全部输入/输出hash、10%与移动等效证据；六板已双签核。
 - 依赖：A0.1必须先`contract-ready`；板面只能嵌入原创、CC0/Public Domain或已获商业/修改/再分发权素材。
 - 评分：六板/比例25、注释20、来源许可/hash20、一致性/Anti-reference15、版式10、双签核10。
-- 硬门：原A0.2.1与补充来源均为95/100，A0.2.2为94/100，全部维度≥80%并由主协调于2026-07-28签核。武器/反馈方向板各有8个领域直接视觉，但没有正式模型、动作或事件驱动VFX样件；不得把这些小门分数算作A0.2整体、Blockout或资产成熟度。
+- 硬门：原A0.2.1与补充来源均95/100、A0.2.2为94/100；A0.2-total独立评分96/100且各维度≥80%，10类失败关闭通过。A0.2与Reference Board仅在视觉方向范围`ready`；没有正式模型、动作或事件驱动VFX样件，不得计入Blockout或资产成熟度。
 - 返工：Art Bible支柱/色彩/禁用项改变，来源权利撤销、hash漂移、板面裁切误导或任一签核撤回。
 
 ### A0.3 ↔ P0：剪影工具与盲测基线
@@ -71,7 +71,7 @@
 - 输出：`scripts/art/render-arena-silhouettes.ts`、两角色×赤手/圆盾×六方向×0/5/12距离×两视口输出、每批manifest、随机盲测题单、≥10人原始答案与汇总报告。
 - 依赖：A0.1和A0.2均通过；程序化角色/锤/链不得代替正式资产。尚不存在的重锤/锁链不阻断A0.3工具基线，而是在对应A4 Blockout独立复用本门。
 - 评分：工具可重复20、六方向/距离/武器覆盖20、渲染完整15、盲测与统计20、manifest/hash10、生命周期/回归10、状态诚实5。
-- 硬门：总分≥90且每维度≥80%；当前两角色的角色/武器态/方向分别≥90%，任一角色×赤手或圆盾组合≥80%；重跑结果hash稳定；当前`incomplete`，不评分。
+- 硬门：总分≥90且每维度≥80%；当前两角色的角色/武器态/方向分别≥90%，任一角色×赤手或圆盾组合≥80%；重跑结果hash稳定。当前[候选基线](arena-art-silhouette-a0.3.md)为85/100、144/144在画面内，非真人代理整体及距离分层三项均≥90%；但真人0/10使该维度0%，因此`hardGatePassed=false`、A0.3仍`incomplete`。
 - 返工：相机、方向resolver、角色/武器字节、持握点、缩略规则、盲测题目或样本资格改变。
 
 A0.1通过后只允许将合同交给下一任务；A0.2与A0.3任一未通过时，A1/A3/A4可以准备事件映射或资产清单，但不能开始生产Blockout、标记`concept-approved`或宣称Reference Board/剪影已通过。

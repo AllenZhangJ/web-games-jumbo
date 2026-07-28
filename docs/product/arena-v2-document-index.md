@@ -41,11 +41,13 @@ Arena V2 的核心目标是：
 | [V2 P1 实施状态台账](../architecture/arena-v2-p1-implementation-ledger.md) | 记录 P1.1 供给合同小门的行为映射、代码落点、百分制评分、门禁证据、风险、回滚与 P1 未完成硬门 | P1.1 `contract-ready`，主协调已签核（2026-07-28）；P1 未完成、不得 advance |
 | [Arena 美术与音频开发流程](../architecture/arena-art-and-audio-development-flow.md) | 将14个美术、3D、VFX、UI、地图、音乐和音频技能按产物分流，固定资产来源、表现事件、预算、真机和真人门禁 | Presentation / Platform 执行基线 |
 | [Arena Art Bible](../architecture/arena-art-bible.md) | 固定低多边形玩具 × 手稿反馈的视觉宪法、语义色、材质灯光、角色/武器/KZ/HUD/VFX、资产与音频预算、来源治理和四门验收 | A0.1合同94/100且各维度≥80%，主协调已签核为`contract-ready`（2026-07-28）；不代表后续门通过 |
-| [Arena 六类注释参考登记](../architecture/arena-art-reference-register.md) | 按mood/color/composition/character/environment/UI建立70/20/10登记，并固定A0.2实际板面、manifest、hash和签核规格 | 原A0.2.1、补充来源与A0.2.2板面小门均已签核；A0.2整体仍incomplete |
-| [A0.2.1 六类参考板来源与权利包](../architecture/arena-art-reference-source-pack-a0.2.1.md) | 为六板固定60条7/2/1输入、36个唯一合法嵌入视觉、24条link-only卡、角色模型渲染、六类UI职责样图、构图缩略预检、六张来源抽检页和离线复核 | 95/100且各维度≥80%，主协调已签核`source-ready`（2026-07-28）；抽检页不计A0.2.2，正式板面、A0.2整体与后续门仍incomplete/fail closed |
+| [Arena 六类注释参考登记](../architecture/arena-art-reference-register.md) | 按mood/color/composition/character/environment/UI建立70/20/10登记，并固定A0.2实际板面、manifest、hash和签核规格 | 原A0.2.1、补充来源与A0.2.2板面小门均已签核；A0.2视觉方向总门ready |
+| [A0.2.1 六类参考板来源与权利包](../architecture/arena-art-reference-source-pack-a0.2.1.md) | 为六板固定60条7/2/1输入、36个唯一合法嵌入视觉、24条link-only卡、角色模型渲染、六类UI职责样图、构图缩略预检、六张来源抽检页和离线复核 | 95/100且各维度≥80%，主协调已签核`source-ready`（2026-07-28）；抽检页不计A0.2.2，本小门不单独代表总门，当前A0.2 ready来自后续独立聚合 |
 | [A0.2.1 武器与战斗反馈补充来源包](../architecture/arena-art-reference-source-supplement-a0.2.1.md) | 独立交付16个项目原创clean-room直接视觉、权利声明、hash/尺寸/构图与感知差异、事件映射及6类失败关闭证据 | 95/100且各维度≥80%，主协调于2026-07-28签核为`supplemental-source-ready`；不改写原A0.2.1签核事实，不代表生产样件通过 |
-| [A0.2.2 六张正式参考板与自审](../architecture/arena-art-reference-boards-a0.2.2.md) | 交付六张2560×1440 SVG+PNG，60条7/2/1注释、40嵌入/20 link-only、武器/反馈各8个直接视觉、裁切/hash、10%与移动证据及失败关闭检查 | 94/100且各维度≥80%，主协调于2026-07-28签核为`board-ready`；两核心板仍为方向合同而非模型/VFX样件，A0.2整体、Blockout、A0.3、设备、真人与Final仍incomplete/fail closed |
-| [美术 A0–A7 与开发 P0–P7 对齐矩阵](../architecture/arena-art-development-alignment-matrix.md) | 将A0拆为合同、实际参考板、剪影盲测三门，并固定A1–A7输入、依赖、评分、硬门和返工范围 | A0.1 `contract-ready`，A0.2.1原包`source-ready`、补充包`supplemental-source-ready`，A0.2.2 `board-ready`；A0.2整体/A0.3 incomplete |
+| [A0.2.2 六张正式参考板与自审](../architecture/arena-art-reference-boards-a0.2.2.md) | 交付六张2560×1440 SVG+PNG，60条7/2/1注释、40嵌入/20 link-only、武器/反馈各8个直接视觉、裁切/hash、10%与移动证据及失败关闭检查 | 94/100且各维度≥80%，主协调于2026-07-28签核为`board-ready`；两核心板仍为方向合同而非模型/VFX样件，当前A0.2 ready来自后续独立聚合，Blockout/A0.3/设备/真人/Final不随之通过 |
+| [A0.2 视觉方向聚合总门](../architecture/arena-art-reference-total-gate-a0.2.md) | 独立复算三个子门的来源身份、权利、hash、板面使用、7/2/1、签核和下游false边界，并提供10类失败关闭 | 96/100且各维度≥80%，A0.2与Reference Board视觉方向`ready`；A0.3、Blockout和所有资产成熟度仍incomplete/fail closed |
+| [A0.3 剪影工具与盲测候选基线](../architecture/arena-art-silhouette-a0.3.md) | 固定两正式角色×赤手/圆盾×六方向×0/5/12m×双视口渲染、匿名题包、代理混淆矩阵/距离分层、评分与15类失败关闭 | 技术/代理候选85/100；离屏0且代理分层≥90%，但真人0/10，A0.3仍incomplete且Blockout禁止 |
+| [美术 A0–A7 与开发 P0–P7 对齐矩阵](../architecture/arena-art-development-alignment-matrix.md) | 将A0拆为合同、实际参考板、剪影盲测三门，并固定A1–A7输入、依赖、评分、硬门和返工范围 | A0.1 `contract-ready`，A0.2视觉方向总门`ready`；A0.3技术/代理候选85/100但真人缺失，仍incomplete |
 | [ADR-109：Arena 美术与音频工作统一走14技能路由和资产门禁](../decisions/109-arena-art-and-audio-skill-routing.md) | 固化技能安装、使用范围、项目规则优先级、AI/下载素材边界和回滚处理 | 已接受 |
 | [V2 成长与 200 小时目标](../gameplay/arena-v2-progression-200-hours.md) | 收藏、熟悉、重复游玩和奖励边界 | 初稿 |
 | [V2 界面地图](arena-v2-screen-map.md) | 明确 11 个局外页面入口、对局 HUD 和竞技准备模板复用 | 页面合同已收敛，真机待验证 |

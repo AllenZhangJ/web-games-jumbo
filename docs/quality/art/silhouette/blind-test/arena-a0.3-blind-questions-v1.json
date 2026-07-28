@@ -1,0 +1,1050 @@
+{
+  "schemaVersion": 1,
+  "id": "arena.art.silhouette-blind-questions.a0.3.v1",
+  "status": "awaiting-human-responses",
+  "seed": 20260728,
+  "instructions": "Do not inspect repository filenames or the separate answer key. For each opaque image, choose one character slot, one equipment state and one facing direction.",
+  "options": {
+    "character": [
+      "C01",
+      "C02"
+    ],
+    "equipment": [
+      "unarmed",
+      "shield"
+    ],
+    "direction": [
+      "front",
+      "front-right",
+      "back-right",
+      "back",
+      "back-left",
+      "front-left"
+    ]
+  },
+  "forms": [
+    {
+      "formId": "form-01",
+      "seed": 20260729,
+      "questions": [
+        {
+          "questionId": "q0056",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0056.png"
+        },
+        {
+          "questionId": "q0022",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0022.png"
+        },
+        {
+          "questionId": "q0043",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0043.png"
+        },
+        {
+          "questionId": "q0011",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0011.png"
+        },
+        {
+          "questionId": "q0117",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0117.png"
+        },
+        {
+          "questionId": "q0059",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0059.png"
+        },
+        {
+          "questionId": "q0125",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0125.png"
+        },
+        {
+          "questionId": "q0044",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0044.png"
+        },
+        {
+          "questionId": "q0132",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0132.png"
+        },
+        {
+          "questionId": "q0140",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0140.png"
+        },
+        {
+          "questionId": "q0062",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0062.png"
+        },
+        {
+          "questionId": "q0091",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0091.png"
+        },
+        {
+          "questionId": "q0023",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0023.png"
+        },
+        {
+          "questionId": "q0074",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0074.png"
+        },
+        {
+          "questionId": "q0097",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0097.png"
+        },
+        {
+          "questionId": "q0124",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0124.png"
+        },
+        {
+          "questionId": "q0142",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0142.png"
+        },
+        {
+          "questionId": "q0024",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0024.png"
+        },
+        {
+          "questionId": "q0137",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0137.png"
+        },
+        {
+          "questionId": "q0042",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0042.png"
+        },
+        {
+          "questionId": "q0025",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0025.png"
+        },
+        {
+          "questionId": "q0021",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0021.png"
+        },
+        {
+          "questionId": "q0131",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0131.png"
+        },
+        {
+          "questionId": "q0082",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0082.png"
+        }
+      ]
+    },
+    {
+      "formId": "form-02",
+      "seed": 20260730,
+      "questions": [
+        {
+          "questionId": "q0058",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0058.png"
+        },
+        {
+          "questionId": "q0115",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0115.png"
+        },
+        {
+          "questionId": "q0084",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0084.png"
+        },
+        {
+          "questionId": "q0034",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0034.png"
+        },
+        {
+          "questionId": "q0086",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0086.png"
+        },
+        {
+          "questionId": "q0022",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0022.png"
+        },
+        {
+          "questionId": "q0032",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0032.png"
+        },
+        {
+          "questionId": "q0087",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0087.png"
+        },
+        {
+          "questionId": "q0123",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0123.png"
+        },
+        {
+          "questionId": "q0037",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0037.png"
+        },
+        {
+          "questionId": "q0110",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0110.png"
+        },
+        {
+          "questionId": "q0041",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0041.png"
+        },
+        {
+          "questionId": "q0054",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0054.png"
+        },
+        {
+          "questionId": "q0033",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0033.png"
+        },
+        {
+          "questionId": "q0124",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0124.png"
+        },
+        {
+          "questionId": "q0113",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0113.png"
+        },
+        {
+          "questionId": "q0097",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0097.png"
+        },
+        {
+          "questionId": "q0094",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0094.png"
+        },
+        {
+          "questionId": "q0108",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0108.png"
+        },
+        {
+          "questionId": "q0070",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0070.png"
+        },
+        {
+          "questionId": "q0019",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0019.png"
+        },
+        {
+          "questionId": "q0126",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0126.png"
+        },
+        {
+          "questionId": "q0116",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0116.png"
+        },
+        {
+          "questionId": "q0023",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0023.png"
+        }
+      ]
+    },
+    {
+      "formId": "form-03",
+      "seed": 20260731,
+      "questions": [
+        {
+          "questionId": "q0073",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0073.png"
+        },
+        {
+          "questionId": "q0134",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0134.png"
+        },
+        {
+          "questionId": "q0133",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0133.png"
+        },
+        {
+          "questionId": "q0135",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0135.png"
+        },
+        {
+          "questionId": "q0092",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0092.png"
+        },
+        {
+          "questionId": "q0132",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0132.png"
+        },
+        {
+          "questionId": "q0083",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0083.png"
+        },
+        {
+          "questionId": "q0138",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0138.png"
+        },
+        {
+          "questionId": "q0104",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0104.png"
+        },
+        {
+          "questionId": "q0127",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0127.png"
+        },
+        {
+          "questionId": "q0068",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0068.png"
+        },
+        {
+          "questionId": "q0036",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0036.png"
+        },
+        {
+          "questionId": "q0109",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0109.png"
+        },
+        {
+          "questionId": "q0111",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0111.png"
+        },
+        {
+          "questionId": "q0072",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0072.png"
+        },
+        {
+          "questionId": "q0037",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0037.png"
+        },
+        {
+          "questionId": "q0075",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0075.png"
+        },
+        {
+          "questionId": "q0128",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0128.png"
+        },
+        {
+          "questionId": "q0031",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0031.png"
+        },
+        {
+          "questionId": "q0124",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0124.png"
+        },
+        {
+          "questionId": "q0063",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0063.png"
+        },
+        {
+          "questionId": "q0130",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0130.png"
+        },
+        {
+          "questionId": "q0006",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0006.png"
+        },
+        {
+          "questionId": "q0112",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0112.png"
+        }
+      ]
+    },
+    {
+      "formId": "form-04",
+      "seed": 20260732,
+      "questions": [
+        {
+          "questionId": "q0142",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0142.png"
+        },
+        {
+          "questionId": "q0048",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0048.png"
+        },
+        {
+          "questionId": "q0045",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0045.png"
+        },
+        {
+          "questionId": "q0059",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0059.png"
+        },
+        {
+          "questionId": "q0116",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0116.png"
+        },
+        {
+          "questionId": "q0008",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0008.png"
+        },
+        {
+          "questionId": "q0096",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0096.png"
+        },
+        {
+          "questionId": "q0024",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0024.png"
+        },
+        {
+          "questionId": "q0016",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0016.png"
+        },
+        {
+          "questionId": "q0026",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0026.png"
+        },
+        {
+          "questionId": "q0102",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0102.png"
+        },
+        {
+          "questionId": "q0072",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0072.png"
+        },
+        {
+          "questionId": "q0031",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0031.png"
+        },
+        {
+          "questionId": "q0141",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0141.png"
+        },
+        {
+          "questionId": "q0042",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0042.png"
+        },
+        {
+          "questionId": "q0117",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0117.png"
+        },
+        {
+          "questionId": "q0006",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0006.png"
+        },
+        {
+          "questionId": "q0129",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0129.png"
+        },
+        {
+          "questionId": "q0121",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0121.png"
+        },
+        {
+          "questionId": "q0036",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0036.png"
+        },
+        {
+          "questionId": "q0007",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0007.png"
+        },
+        {
+          "questionId": "q0011",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0011.png"
+        },
+        {
+          "questionId": "q0029",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0029.png"
+        },
+        {
+          "questionId": "q0057",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0057.png"
+        }
+      ]
+    },
+    {
+      "formId": "form-05",
+      "seed": 20260733,
+      "questions": [
+        {
+          "questionId": "q0018",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0018.png"
+        },
+        {
+          "questionId": "q0004",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0004.png"
+        },
+        {
+          "questionId": "q0121",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0121.png"
+        },
+        {
+          "questionId": "q0031",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0031.png"
+        },
+        {
+          "questionId": "q0074",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0074.png"
+        },
+        {
+          "questionId": "q0097",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0097.png"
+        },
+        {
+          "questionId": "q0109",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0109.png"
+        },
+        {
+          "questionId": "q0108",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0108.png"
+        },
+        {
+          "questionId": "q0047",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0047.png"
+        },
+        {
+          "questionId": "q0105",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0105.png"
+        },
+        {
+          "questionId": "q0110",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0110.png"
+        },
+        {
+          "questionId": "q0135",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0135.png"
+        },
+        {
+          "questionId": "q0046",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0046.png"
+        },
+        {
+          "questionId": "q0040",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0040.png"
+        },
+        {
+          "questionId": "q0037",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0037.png"
+        },
+        {
+          "questionId": "q0099",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0099.png"
+        },
+        {
+          "questionId": "q0073",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0073.png"
+        },
+        {
+          "questionId": "q0120",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0120.png"
+        },
+        {
+          "questionId": "q0039",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0039.png"
+        },
+        {
+          "questionId": "q0068",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0068.png"
+        },
+        {
+          "questionId": "q0009",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0009.png"
+        },
+        {
+          "questionId": "q0096",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0096.png"
+        },
+        {
+          "questionId": "q0049",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0049.png"
+        },
+        {
+          "questionId": "q0024",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0024.png"
+        }
+      ]
+    },
+    {
+      "formId": "form-06",
+      "seed": 20260734,
+      "questions": [
+        {
+          "questionId": "q0068",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0068.png"
+        },
+        {
+          "questionId": "q0086",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0086.png"
+        },
+        {
+          "questionId": "q0129",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0129.png"
+        },
+        {
+          "questionId": "q0139",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0139.png"
+        },
+        {
+          "questionId": "q0055",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0055.png"
+        },
+        {
+          "questionId": "q0026",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0026.png"
+        },
+        {
+          "questionId": "q0053",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0053.png"
+        },
+        {
+          "questionId": "q0035",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0035.png"
+        },
+        {
+          "questionId": "q0061",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0061.png"
+        },
+        {
+          "questionId": "q0122",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0122.png"
+        },
+        {
+          "questionId": "q0033",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0033.png"
+        },
+        {
+          "questionId": "q0013",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0013.png"
+        },
+        {
+          "questionId": "q0059",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0059.png"
+        },
+        {
+          "questionId": "q0125",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0125.png"
+        },
+        {
+          "questionId": "q0076",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0076.png"
+        },
+        {
+          "questionId": "q0070",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0070.png"
+        },
+        {
+          "questionId": "q0131",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0131.png"
+        },
+        {
+          "questionId": "q0119",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0119.png"
+        },
+        {
+          "questionId": "q0067",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0067.png"
+        },
+        {
+          "questionId": "q0015",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0015.png"
+        },
+        {
+          "questionId": "q0030",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0030.png"
+        },
+        {
+          "questionId": "q0047",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0047.png"
+        },
+        {
+          "questionId": "q0138",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0138.png"
+        },
+        {
+          "questionId": "q0029",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0029.png"
+        }
+      ]
+    },
+    {
+      "formId": "form-07",
+      "seed": 20260735,
+      "questions": [
+        {
+          "questionId": "q0097",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0097.png"
+        },
+        {
+          "questionId": "q0104",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0104.png"
+        },
+        {
+          "questionId": "q0100",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0100.png"
+        },
+        {
+          "questionId": "q0105",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0105.png"
+        },
+        {
+          "questionId": "q0112",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0112.png"
+        },
+        {
+          "questionId": "q0096",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0096.png"
+        },
+        {
+          "questionId": "q0119",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0119.png"
+        },
+        {
+          "questionId": "q0128",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0128.png"
+        },
+        {
+          "questionId": "q0078",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0078.png"
+        },
+        {
+          "questionId": "q0085",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0085.png"
+        },
+        {
+          "questionId": "q0109",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0109.png"
+        },
+        {
+          "questionId": "q0084",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0084.png"
+        },
+        {
+          "questionId": "q0037",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0037.png"
+        },
+        {
+          "questionId": "q0013",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0013.png"
+        },
+        {
+          "questionId": "q0088",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0088.png"
+        },
+        {
+          "questionId": "q0082",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0082.png"
+        },
+        {
+          "questionId": "q0107",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0107.png"
+        },
+        {
+          "questionId": "q0038",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0038.png"
+        },
+        {
+          "questionId": "q0138",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0138.png"
+        },
+        {
+          "questionId": "q0122",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0122.png"
+        },
+        {
+          "questionId": "q0092",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0092.png"
+        },
+        {
+          "questionId": "q0137",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0137.png"
+        },
+        {
+          "questionId": "q0070",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0070.png"
+        },
+        {
+          "questionId": "q0017",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0017.png"
+        }
+      ]
+    },
+    {
+      "formId": "form-08",
+      "seed": 20260736,
+      "questions": [
+        {
+          "questionId": "q0096",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0096.png"
+        },
+        {
+          "questionId": "q0109",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0109.png"
+        },
+        {
+          "questionId": "q0054",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0054.png"
+        },
+        {
+          "questionId": "q0144",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0144.png"
+        },
+        {
+          "questionId": "q0075",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0075.png"
+        },
+        {
+          "questionId": "q0099",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0099.png"
+        },
+        {
+          "questionId": "q0107",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0107.png"
+        },
+        {
+          "questionId": "q0135",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0135.png"
+        },
+        {
+          "questionId": "q0121",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0121.png"
+        },
+        {
+          "questionId": "q0060",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0060.png"
+        },
+        {
+          "questionId": "q0015",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0015.png"
+        },
+        {
+          "questionId": "q0008",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0008.png"
+        },
+        {
+          "questionId": "q0122",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0122.png"
+        },
+        {
+          "questionId": "q0088",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0088.png"
+        },
+        {
+          "questionId": "q0120",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0120.png"
+        },
+        {
+          "questionId": "q0039",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0039.png"
+        },
+        {
+          "questionId": "q0142",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0142.png"
+        },
+        {
+          "questionId": "q0132",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0132.png"
+        },
+        {
+          "questionId": "q0065",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0065.png"
+        },
+        {
+          "questionId": "q0112",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0112.png"
+        },
+        {
+          "questionId": "q0013",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0013.png"
+        },
+        {
+          "questionId": "q0115",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0115.png"
+        },
+        {
+          "questionId": "q0106",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0106.png"
+        },
+        {
+          "questionId": "q0079",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0079.png"
+        }
+      ]
+    },
+    {
+      "formId": "form-09",
+      "seed": 20260737,
+      "questions": [
+        {
+          "questionId": "q0001",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0001.png"
+        },
+        {
+          "questionId": "q0070",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0070.png"
+        },
+        {
+          "questionId": "q0118",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0118.png"
+        },
+        {
+          "questionId": "q0022",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0022.png"
+        },
+        {
+          "questionId": "q0035",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0035.png"
+        },
+        {
+          "questionId": "q0013",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0013.png"
+        },
+        {
+          "questionId": "q0081",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0081.png"
+        },
+        {
+          "questionId": "q0046",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0046.png"
+        },
+        {
+          "questionId": "q0112",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0112.png"
+        },
+        {
+          "questionId": "q0080",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0080.png"
+        },
+        {
+          "questionId": "q0094",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0094.png"
+        },
+        {
+          "questionId": "q0098",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0098.png"
+        },
+        {
+          "questionId": "q0124",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0124.png"
+        },
+        {
+          "questionId": "q0019",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0019.png"
+        },
+        {
+          "questionId": "q0044",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0044.png"
+        },
+        {
+          "questionId": "q0010",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0010.png"
+        },
+        {
+          "questionId": "q0024",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0024.png"
+        },
+        {
+          "questionId": "q0050",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0050.png"
+        },
+        {
+          "questionId": "q0138",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0138.png"
+        },
+        {
+          "questionId": "q0086",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0086.png"
+        },
+        {
+          "questionId": "q0048",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0048.png"
+        },
+        {
+          "questionId": "q0066",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0066.png"
+        },
+        {
+          "questionId": "q0121",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0121.png"
+        },
+        {
+          "questionId": "q0063",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0063.png"
+        }
+      ]
+    },
+    {
+      "formId": "form-10",
+      "seed": 20260738,
+      "questions": [
+        {
+          "questionId": "q0016",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0016.png"
+        },
+        {
+          "questionId": "q0098",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0098.png"
+        },
+        {
+          "questionId": "q0070",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0070.png"
+        },
+        {
+          "questionId": "q0086",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0086.png"
+        },
+        {
+          "questionId": "q0109",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0109.png"
+        },
+        {
+          "questionId": "q0110",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0110.png"
+        },
+        {
+          "questionId": "q0017",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0017.png"
+        },
+        {
+          "questionId": "q0080",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0080.png"
+        },
+        {
+          "questionId": "q0071",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0071.png"
+        },
+        {
+          "questionId": "q0069",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0069.png"
+        },
+        {
+          "questionId": "q0087",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0087.png"
+        },
+        {
+          "questionId": "q0008",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0008.png"
+        },
+        {
+          "questionId": "q0129",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0129.png"
+        },
+        {
+          "questionId": "q0029",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0029.png"
+        },
+        {
+          "questionId": "q0046",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0046.png"
+        },
+        {
+          "questionId": "q0007",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0007.png"
+        },
+        {
+          "questionId": "q0139",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0139.png"
+        },
+        {
+          "questionId": "q0047",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0047.png"
+        },
+        {
+          "questionId": "q0052",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0052.png"
+        },
+        {
+          "questionId": "q0018",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0018.png"
+        },
+        {
+          "questionId": "q0103",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0103.png"
+        },
+        {
+          "questionId": "q0010",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0010.png"
+        },
+        {
+          "questionId": "q0015",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0015.png"
+        },
+        {
+          "questionId": "q0091",
+          "imagePath": "docs/quality/art/silhouette/blind-test/question-images/q0091.png"
+        }
+      ]
+    }
+  ],
+  "minimumIndependentHumanParticipants": 10,
+  "receivedIndependentHumanParticipants": 0,
+  "answersIncluded": false
+}

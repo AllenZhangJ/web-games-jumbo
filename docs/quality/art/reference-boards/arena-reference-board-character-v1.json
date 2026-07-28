@@ -13,7 +13,7 @@
   "supplementalPack": {
     "path": "docs/quality/art/reference-sources/arena-a0.2.1-supplemental-weapon-feedback-v1.json",
     "id": "arena.art.reference-source-pack.a0.2.1.supplemental.weapon-feedback.v1",
-    "sha256": "d49343413702dbad9f7ac874e053dc0eb56a51313b611a4fa9c16efa0137561e",
+    "sha256": "d018901eb351bc25623258d83ed66f0e289f3f0d3af730ce94de500eb1492bd4",
     "status": "supplemental-source-ready"
   },
   "generatedAt": "2026-07-28",

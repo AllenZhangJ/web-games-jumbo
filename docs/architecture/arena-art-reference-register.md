@@ -2,14 +2,14 @@
 
 ## 状态与使用规则
 
-- 状态：A0.1六类来源文字登记完成；原A0.2.1为`source-ready`、武器/反馈[补充来源包](arena-art-reference-source-supplement-a0.2.1.md)为`supplemental-source-ready`、A0.2.2六张实际板为`board-ready`，主协调均已于2026-07-28签核；A0.2整体仍`incomplete`
+- 状态：原A0.2.1为`source-ready`、补充来源为`supplemental-source-ready`、A0.2.2为`board-ready`；[A0.2视觉方向总门](arena-art-reference-total-gate-a0.2.md)经独立复算为`ready`（96/100），Reference Board视觉方向总门同步`ready`；A0.3与生产门仍`incomplete`
 - 日期：2026-07-28
 - 比例：每类按 `70% 基线 / 20% 追求 / 10% 刻意张力` 使用；比例表示评审决策权重，不表示复制面积、训练集比例或最终资产来源比例
 - 边界：本文只登记“借鉴什么”和“明确不复制什么”。没有可再分发许可的外部图片只保留链接或研究文档，不下载、不嵌入、不进入模型训练、生产纹理或正式 Bundle
 
-所有图片必须存入独立参考板目录并带来源、作者、URL/revision、许可、取得日期和用途标签。A0.2.2实际板见[正式参考板与自审](arena-art-reference-boards-a0.2.2.md)及其[机器总台账](../quality/art/reference-boards/arena-a0.2.2-reference-board-ledger-v1.json)。板面小门已通过，但A0.2整体与Reference Board总门仍不得写“通过”。
+所有图片必须存入独立参考板目录并带来源、作者、URL/revision、许可、取得日期和用途标签。A0.2.2实际板见[正式参考板与自审](arena-art-reference-boards-a0.2.2.md)及其[机器总台账](../quality/art/reference-boards/arena-a0.2.2-reference-board-ledger-v1.json)。独立[A0.2总门](arena-art-reference-total-gate-a0.2.md)已通过，A0.2与Reference Board只在“视觉方向”范围内为`ready`。
 
-A0.2.1原始60条来源输入见[A0.2.1来源与权利包](arena-art-reference-source-pack-a0.2.1.md)及其[机器台账](../quality/art/reference-sources/arena-a0.2.1-source-pack-v1.json)，签核事实保持不变。武器/反馈另有16个项目原创直接视觉的[独立补充来源包](arena-art-reference-source-supplement-a0.2.1.md)，已签核但不回写原包。六类[来源抽检页manifest](../quality/art/reference-source-inspection/a0.2.1-contact-sheet-manifest-v1.json)只用于审阅原36个embedded输入；来源与板面小门通过仍不等于A0.2整体或生产样件通过。
+A0.2.1原始60条来源输入见[A0.2.1来源与权利包](arena-art-reference-source-pack-a0.2.1.md)及其[机器台账](../quality/art/reference-sources/arena-a0.2.1-source-pack-v1.json)，签核事实保持不变。武器/反馈另有16个项目原创直接视觉的[独立补充来源包](arena-art-reference-source-supplement-a0.2.1.md)，已签核但不回写原包。六类[来源抽检页manifest](../quality/art/reference-source-inspection/a0.2.1-contact-sheet-manifest-v1.json)只用于审阅原36个embedded输入；各子门本身不自动代表A0.2整体，当前整体`ready`来自其后的独立聚合总门，且仍不代表生产样件通过。
 
 ## 1. Mood / 情绪
 
@@ -192,4 +192,4 @@ A0.2.1原始60条来源输入见[A0.2.1来源与权利包](arena-art-reference-s
 
 ### 8.7 当前结论
 
-A0.2.2六张`2560×1440` SVG+PNG实际板每板恰好10条7采用/2规避/1实验。六板消费44条原签核来源和16条已签核补充来源，共40个embedded与20个link-only；武器、反馈板各有8个领域直接视觉。10%概览与移动长页、板面12类及补充来源6类失败关闭测试均通过。武器93/100、战斗反馈94/100，仍为`direction-contract`而非生产样件。A0.2.2总体94/100且双签核10/10，主协调于2026-07-28签核为`board-ready`；A0.2整体、Reference Board与Blockout继续为`incomplete`/fail closed。
+A0.2.2六张实际板每板恰好10条7采用/2规避/1实验，消费44条原签核来源和16条补充来源，共40个embedded与20个link-only。独立总门再复算来源、权利、hash、板面使用、签核和下游false状态，以96/100通过为`ready`。武器与反馈仍为`direction-contract`而非生产样件；A0.3、Blockout、LOD、设备、真人与Final继续`incomplete`/fail closed。

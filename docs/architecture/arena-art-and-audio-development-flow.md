@@ -9,7 +9,7 @@
 - 技能锁定清单：[`skills-lock.json`](../../skills-lock.json)
 - 关联治理：[`AGENTS.md`](../../AGENTS.md)、[V2 生产化分阶段开发与治理计划](arena-v2-production-development-plan.md)、[ADR-109](../decisions/109-arena-art-and-audio-skill-routing.md)
 - 视觉生产基线：[Arena Art Bible](arena-art-bible.md)
-- 注释参考登记：[mood / color / composition / character / environment / UI 六类70/20/10登记与A0.2板面规格](arena-art-reference-register.md)；原[A0.2.1来源与权利包](arena-art-reference-source-pack-a0.2.1.md)为`source-ready`，[武器/反馈补充来源包](arena-art-reference-source-supplement-a0.2.1.md)为`supplemental-source-ready`，[A0.2.2六张实际参考板](arena-art-reference-boards-a0.2.2.md)为`board-ready`，均由主协调于2026-07-28签核；正式模型/VFX样件仍缺，A0.2整体、Reference Board与Blockout保持 `incomplete`/fail closed
+- 注释参考登记：[六类70/20/10登记](arena-art-reference-register.md)；A0.2三个子门已签核，[独立视觉方向总门](arena-art-reference-total-gate-a0.2.md)以96/100通过，A0.2与Reference Board视觉方向为`ready`；[A0.3技术/代理候选](arena-art-silhouette-a0.3.md)85/100但真人0/10，A0.3、正式模型/VFX样件、Blockout及后续成熟度仍`incomplete`/fail closed
 - 阶段协作基线：[美术 A0–A7 与开发 P0–P7 对齐矩阵](arena-art-development-alignment-matrix.md)
 
 ## 1. 目的与项目特化边界

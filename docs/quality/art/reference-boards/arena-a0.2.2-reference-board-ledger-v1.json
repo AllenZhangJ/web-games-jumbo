@@ -17,7 +17,7 @@
   "supplementalPack": {
     "path": "docs/quality/art/reference-sources/arena-a0.2.1-supplemental-weapon-feedback-v1.json",
     "id": "arena.art.reference-source-pack.a0.2.1.supplemental.weapon-feedback.v1",
-    "sha256": "d49343413702dbad9f7ac874e053dc0eb56a51313b611a4fa9c16efa0137561e",
+    "sha256": "d018901eb351bc25623258d83ed66f0e289f3f0d3af730ce94de500eb1492bd4",
     "status": "supplemental-source-ready"
   },
   "boardCount": 6,
@@ -35,7 +35,7 @@
       "id": "character",
       "manifest": {
         "path": "docs/quality/art/reference-boards/arena-reference-board-character-v1.json",
-        "sha256": "3dedf5107ab2a7b771785087045db9103770b385a307d2550a786da3a840a21c",
+        "sha256": "3c89e241cedc8940f7e548387e5dda5075e0eec95d3e5d0fa710e1715e969ea4",
         "byteLength": 25505
       },
       "svg": {
@@ -110,7 +110,7 @@
       "id": "weapon",
       "manifest": {
         "path": "docs/quality/art/reference-boards/arena-reference-board-weapon-v1.json",
-        "sha256": "c77c5fd0f3c6b0338fd95ec544124aa6eb375a84b6df801e13c3024a7936add2",
+        "sha256": "ff5ab66a1ad9b3bf1e62fe84950cf8065b32d21250afc46d649eab47f5d266bb",
         "byteLength": 39396
       },
       "svg": {
@@ -185,7 +185,7 @@
       "id": "map-composition",
       "manifest": {
         "path": "docs/quality/art/reference-boards/arena-reference-board-map-composition-v1.json",
-        "sha256": "c9b0216ecc13205952c606f12651b4bbb407545050950bc71eea73517fc3e115",
+        "sha256": "725fc65e7ff66f5fc1e4088b04f3a6bceea64cd01947df63bb6baf7dd6bb712a",
         "byteLength": 24898
       },
       "svg": {
@@ -260,7 +260,7 @@
       "id": "combat-feedback",
       "manifest": {
         "path": "docs/quality/art/reference-boards/arena-reference-board-combat-feedback-v1.json",
-        "sha256": "a813be5845bd5099523903e9719752d88f770438ada948465b1e7bd03417f628",
+        "sha256": "d49780e873151dee2ac0de0b16720bdac02b2b03411e74453dd4356eae4cdda3",
         "byteLength": 39344
       },
       "svg": {
@@ -335,7 +335,7 @@
       "id": "ui",
       "manifest": {
         "path": "docs/quality/art/reference-boards/arena-reference-board-ui-v1.json",
-        "sha256": "4b683b10fab2778f073b8f48d28a5c55fb44e4d7aa4ed929fd53bd50bbfc1e17",
+        "sha256": "e724668b137cdffd325939b4078214a6dc1ed4b399b1d1883e77422d6a56d5ff",
         "byteLength": 25866
       },
       "svg": {
@@ -410,7 +410,7 @@
       "id": "color-material",
       "manifest": {
         "path": "docs/quality/art/reference-boards/arena-reference-board-color-material-v1.json",
-        "sha256": "675f2b441e69d823195bf1dd6e0f9af3bfc6b5735a50c65e784781a89fcb4568",
+        "sha256": "e7edab0f3c277da6d9197e3aae9fa89c619fa9e64d91edc1a1c9711533e3989c",
         "byteLength": 24533
       },
       "svg": {

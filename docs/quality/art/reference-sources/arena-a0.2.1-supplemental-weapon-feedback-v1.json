@@ -12,8 +12,8 @@
   },
   "declaration": {
     "path": "docs/quality/art/reference-sources/original/arena-a0.2.1-supplemental-clean-room-declaration.md",
-    "sha256": "81f1de94e3f6ebeb9353c4db69bd80f0ac8dbbe15a3764df9dbe51823d1fd7b1",
-    "byteLength": 1537
+    "sha256": "1c0fdbc91444526c6a611beb5c239358ef77556f4d4aa84f59d9b1839dc107fa",
+    "byteLength": 1536
   },
   "generator": {
     "path": "scripts/art/generate-arena-weapon-feedback-supplement.ts",

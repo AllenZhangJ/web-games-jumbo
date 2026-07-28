@@ -2,7 +2,7 @@
 
 ## 文档状态
 
-- 状态：A0.1为`contract-ready`、A0.2.1补充来源为`supplemental-source-ready`、A0.2.2六张实际参考板为`board-ready`，主协调均已签核（2026-07-28）；A0.2整体与A0.3剪影工具/盲测仍为 `incomplete`
+- 状态：A0.1为`contract-ready`；A0.2独立聚合总门与Reference Board视觉方向为`ready`（96/100）；A0.3技术/代理候选85/100但真人0/10，仍为`incomplete`
 - 日期：2026-07-28
 - 审计基线：`d6f906008d0af1ed0133a199a8dc9e15cb1d23d0`
 - 上游真值：[V2 产品总纲](../product/arena-v2-product-brief.md)、[V2 玩法框架](../gameplay/arena-v2-gameplay-framework.md)、[V2 生产计划](arena-v2-production-development-plan.md)、[ADR-108](../decisions/108-arena-v2-survival-auto-replace-and-expiry.md)
@@ -154,7 +154,7 @@
 7. 盲测至少10名未参与制作的受试者；随机顺序回答“哪个角色槽位？”“赤手/锤/链/盾？”“朝向六选一？”。角色、武器、方向三个指标分别≥90%，且任一角色×武器组合不得低于80%。
 8. 失败时退回Blockout：优先改体块、重心、头肩、背部识别点、武器端点或负空间；禁止先加颜色、文字、发光或扩大权威hitbox。改后重跑全部受影响方向/距离，不能只补失败截图。
 
-当前状态：`incomplete`。仓库尚无自动剪影渲染脚本、当前两角色×赤手/圆盾的上述命名产物、10人盲测样本或≥90%结果；因此本项不计视觉质量通过分。
+当前状态：`incomplete`。仓库已有[自动渲染、匿名题包与治理候选](arena-art-silhouette-a0.3.md)：144/144组合在固定target/统一frustum布局内，非真人代理整体及距离分层的角色/装备/方向均≥90%；但真人仍为0/10。候选评分85/100、真人维度0%，因此不计真人可读性通过分，也不授权Blockout。
 
 ## 6. 武器视觉与声音语言
 
@@ -299,8 +299,8 @@ Bundle hash `e03ff2b4`，Policy hash `532faaa2`，Report hash `82a8b378`。这�
 | 小门 | 范围 | 当前状态 | 通过含义 | 明确不代表 |
 |---|---|---|---|---|
 | A0.1 视觉宪法/来源登记/对齐合同 | Art Bible、14技能审计、六类来源文字登记、色彩计算、角色/武器边界、预算、四门、A0–A7矩阵 | `contract-ready`，主协调已签核（2026-07-28） | 后续任务有唯一、可执行且可追溯的制作合同 | 实际Reference Board、剪影、LOD、设备、真人或Final通过 |
-| A0.2 六类实际注释参考板 | 六张合法板面、源文件、review PNG、manifest、hash与双签核 | 原来源包`source-ready`、补充来源`supplemental-source-ready`、A0.2.2 `board-ready`，主协调已签核（2026-07-28）；A0.2整体`incomplete` | 六类实际参考板方向已通过板面小门 | 任何运行时资产、Blockout或设备表现通过 |
-| A0.3 剪影工具与盲测基线 | 可重复渲染工具、正式角色/武器输出、manifest、盲测数据与≥90%结论 | `incomplete` | 当前正式角色/武器在固定相机下具有实证可读基线 | 新角色、新武器、LOD、三端设备或Final通过 |
+| A0.2 六类实际注释参考板 | 六张合法板面、源文件、review PNG、manifest、hash与双签核 | 三个子门已签核；独立聚合总门96/100，A0.2与Reference Board视觉方向`ready` | 六类视觉方向可作为A0.3输入 | 任何运行时资产、Blockout、剪影或设备表现通过 |
+| A0.3 剪影工具与盲测基线 | 可重复渲染工具、正式角色/武器输出、manifest、盲测数据与≥90%结论 | 技术/代理候选85/100；真人0/10，仍`incomplete` | 当前正式角色/武器在固定相机下具有实证可读基线 | 新角色、新武器、LOD、三端设备或Final通过 |
 
 A0.1、A0.2、A0.3分别执行总分≥90且单维度≥80%的门槛；未执行的小门只写 `incomplete`，不得借用A0.1分数。A0.2和A0.3都通过前，后续任务可以继续冻结Rule/Core和准备合同，但不得开始生产资产Blockout或宣称视觉方向已通过。
 

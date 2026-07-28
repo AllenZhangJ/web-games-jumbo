@@ -1,0 +1,1304 @@
+{
+  "schemaVersion": 1,
+  "id": "arena.art.silhouette-blind-answer-key.a0.3.v1",
+  "status": "restricted-evaluator-only",
+  "questionPackId": "arena.art.silhouette-blind-questions.a0.3.v1",
+  "answers": [
+    {
+      "questionId": "q0001",
+      "character": "C01",
+      "equipment": "shield",
+      "direction": "back-left",
+      "distanceMeters": 12,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__shield__back-left__d12__390x844@2x"
+    },
+    {
+      "questionId": "q0002",
+      "character": "C01",
+      "equipment": "shield",
+      "direction": "front-right",
+      "distanceMeters": 0,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__shield__front-right__d00__1280x720@1x"
+    },
+    {
+      "questionId": "q0003",
+      "character": "C02",
+      "equipment": "shield",
+      "direction": "back-left",
+      "distanceMeters": 0,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__shield__back-left__d00__1280x720@1x"
+    },
+    {
+      "questionId": "q0004",
+      "character": "C02",
+      "equipment": "unarmed",
+      "direction": "back-left",
+      "distanceMeters": 12,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__unarmed__back-left__d12__390x844@2x"
+    },
+    {
+      "questionId": "q0005",
+      "character": "C01",
+      "equipment": "shield",
+      "direction": "back-right",
+      "distanceMeters": 5,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__shield__back-right__d05__390x844@2x"
+    },
+    {
+      "questionId": "q0006",
+      "character": "C02",
+      "equipment": "unarmed",
+      "direction": "front",
+      "distanceMeters": 12,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__unarmed__front__d12__1280x720@1x"
+    },
+    {
+      "questionId": "q0007",
+      "character": "C02",
+      "equipment": "unarmed",
+      "direction": "front",
+      "distanceMeters": 5,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__unarmed__front__d05__1280x720@1x"
+    },
+    {
+      "questionId": "q0008",
+      "character": "C01",
+      "equipment": "shield",
+      "direction": "back",
+      "distanceMeters": 12,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__shield__back__d12__390x844@2x"
+    },
+    {
+      "questionId": "q0009",
+      "character": "C01",
+      "equipment": "unarmed",
+      "direction": "back",
+      "distanceMeters": 5,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__unarmed__back__d05__1280x720@1x"
+    },
+    {
+      "questionId": "q0010",
+      "character": "C02",
+      "equipment": "shield",
+      "direction": "back",
+      "distanceMeters": 5,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__shield__back__d05__1280x720@1x"
+    },
+    {
+      "questionId": "q0011",
+      "character": "C02",
+      "equipment": "unarmed",
+      "direction": "front-left",
+      "distanceMeters": 12,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__unarmed__front-left__d12__390x844@2x"
+    },
+    {
+      "questionId": "q0012",
+      "character": "C02",
+      "equipment": "shield",
+      "direction": "front-left",
+      "distanceMeters": 5,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__shield__front-left__d05__1280x720@1x"
+    },
+    {
+      "questionId": "q0013",
+      "character": "C01",
+      "equipment": "unarmed",
+      "direction": "back-right",
+      "distanceMeters": 12,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__unarmed__back-right__d12__390x844@2x"
+    },
+    {
+      "questionId": "q0014",
+      "character": "C01",
+      "equipment": "shield",
+      "direction": "front-left",
+      "distanceMeters": 5,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__shield__front-left__d05__390x844@2x"
+    },
+    {
+      "questionId": "q0015",
+      "character": "C01",
+      "equipment": "shield",
+      "direction": "front-right",
+      "distanceMeters": 5,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__shield__front-right__d05__390x844@2x"
+    },
+    {
+      "questionId": "q0016",
+      "character": "C01",
+      "equipment": "unarmed",
+      "direction": "front-right",
+      "distanceMeters": 5,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__unarmed__front-right__d05__1280x720@1x"
+    },
+    {
+      "questionId": "q0017",
+      "character": "C02",
+      "equipment": "unarmed",
+      "direction": "front",
+      "distanceMeters": 0,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__unarmed__front__d00__390x844@2x"
+    },
+    {
+      "questionId": "q0018",
+      "character": "C02",
+      "equipment": "unarmed",
+      "direction": "back-left",
+      "distanceMeters": 12,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__unarmed__back-left__d12__1280x720@1x"
+    },
+    {
+      "questionId": "q0019",
+      "character": "C02",
+      "equipment": "shield",
+      "direction": "front-right",
+      "distanceMeters": 5,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__shield__front-right__d05__1280x720@1x"
+    },
+    {
+      "questionId": "q0020",
+      "character": "C01",
+      "equipment": "unarmed",
+      "direction": "front-right",
+      "distanceMeters": 0,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__unarmed__front-right__d00__1280x720@1x"
+    },
+    {
+      "questionId": "q0021",
+      "character": "C02",
+      "equipment": "shield",
+      "direction": "back",
+      "distanceMeters": 0,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__shield__back__d00__390x844@2x"
+    },
+    {
+      "questionId": "q0022",
+      "character": "C01",
+      "equipment": "shield",
+      "direction": "front-left",
+      "distanceMeters": 12,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__shield__front-left__d12__1280x720@1x"
+    },
+    {
+      "questionId": "q0023",
+      "character": "C01",
+      "equipment": "unarmed",
+      "direction": "back",
+      "distanceMeters": 0,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__unarmed__back__d00__390x844@2x"
+    },
+    {
+      "questionId": "q0024",
+      "character": "C01",
+      "equipment": "unarmed",
+      "direction": "front-left",
+      "distanceMeters": 5,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__unarmed__front-left__d05__1280x720@1x"
+    },
+    {
+      "questionId": "q0025",
+      "character": "C01",
+      "equipment": "shield",
+      "direction": "front",
+      "distanceMeters": 5,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__shield__front__d05__1280x720@1x"
+    },
+    {
+      "questionId": "q0026",
+      "character": "C01",
+      "equipment": "shield",
+      "direction": "back",
+      "distanceMeters": 0,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__shield__back__d00__390x844@2x"
+    },
+    {
+      "questionId": "q0027",
+      "character": "C01",
+      "equipment": "shield",
+      "direction": "front-right",
+      "distanceMeters": 12,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__shield__front-right__d12__390x844@2x"
+    },
+    {
+      "questionId": "q0028",
+      "character": "C02",
+      "equipment": "unarmed",
+      "direction": "front-right",
+      "distanceMeters": 12,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__unarmed__front-right__d12__390x844@2x"
+    },
+    {
+      "questionId": "q0029",
+      "character": "C01",
+      "equipment": "unarmed",
+      "direction": "back-right",
+      "distanceMeters": 0,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__unarmed__back-right__d00__1280x720@1x"
+    },
+    {
+      "questionId": "q0030",
+      "character": "C01",
+      "equipment": "shield",
+      "direction": "back-right",
+      "distanceMeters": 5,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__shield__back-right__d05__1280x720@1x"
+    },
+    {
+      "questionId": "q0031",
+      "character": "C02",
+      "equipment": "unarmed",
+      "direction": "back",
+      "distanceMeters": 5,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__unarmed__back__d05__390x844@2x"
+    },
+    {
+      "questionId": "q0032",
+      "character": "C02",
+      "equipment": "unarmed",
+      "direction": "back",
+      "distanceMeters": 0,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__unarmed__back__d00__1280x720@1x"
+    },
+    {
+      "questionId": "q0033",
+      "character": "C02",
+      "equipment": "unarmed",
+      "direction": "back-left",
+      "distanceMeters": 0,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__unarmed__back-left__d00__1280x720@1x"
+    },
+    {
+      "questionId": "q0034",
+      "character": "C02",
+      "equipment": "unarmed",
+      "direction": "back",
+      "distanceMeters": 12,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__unarmed__back__d12__390x844@2x"
+    },
+    {
+      "questionId": "q0035",
+      "character": "C01",
+      "equipment": "shield",
+      "direction": "back-left",
+      "distanceMeters": 0,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__shield__back-left__d00__390x844@2x"
+    },
+    {
+      "questionId": "q0036",
+      "character": "C02",
+      "equipment": "unarmed",
+      "direction": "front-left",
+      "distanceMeters": 5,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__unarmed__front-left__d05__1280x720@1x"
+    },
+    {
+      "questionId": "q0037",
+      "character": "C01",
+      "equipment": "shield",
+      "direction": "front-right",
+      "distanceMeters": 5,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__shield__front-right__d05__1280x720@1x"
+    },
+    {
+      "questionId": "q0038",
+      "character": "C01",
+      "equipment": "unarmed",
+      "direction": "back",
+      "distanceMeters": 12,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__unarmed__back__d12__1280x720@1x"
+    },
+    {
+      "questionId": "q0039",
+      "character": "C02",
+      "equipment": "shield",
+      "direction": "back-left",
+      "distanceMeters": 5,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__shield__back-left__d05__390x844@2x"
+    },
+    {
+      "questionId": "q0040",
+      "character": "C01",
+      "equipment": "unarmed",
+      "direction": "front-right",
+      "distanceMeters": 12,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__unarmed__front-right__d12__1280x720@1x"
+    },
+    {
+      "questionId": "q0041",
+      "character": "C02",
+      "equipment": "unarmed",
+      "direction": "back-right",
+      "distanceMeters": 0,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__unarmed__back-right__d00__390x844@2x"
+    },
+    {
+      "questionId": "q0042",
+      "character": "C02",
+      "equipment": "shield",
+      "direction": "front-right",
+      "distanceMeters": 12,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__shield__front-right__d12__1280x720@1x"
+    },
+    {
+      "questionId": "q0043",
+      "character": "C02",
+      "equipment": "shield",
+      "direction": "front",
+      "distanceMeters": 5,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__shield__front__d05__1280x720@1x"
+    },
+    {
+      "questionId": "q0044",
+      "character": "C02",
+      "equipment": "unarmed",
+      "direction": "front-right",
+      "distanceMeters": 5,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__unarmed__front-right__d05__390x844@2x"
+    },
+    {
+      "questionId": "q0045",
+      "character": "C02",
+      "equipment": "unarmed",
+      "direction": "back-right",
+      "distanceMeters": 0,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__unarmed__back-right__d00__1280x720@1x"
+    },
+    {
+      "questionId": "q0046",
+      "character": "C01",
+      "equipment": "shield",
+      "direction": "back-left",
+      "distanceMeters": 12,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__shield__back-left__d12__1280x720@1x"
+    },
+    {
+      "questionId": "q0047",
+      "character": "C02",
+      "equipment": "shield",
+      "direction": "back-right",
+      "distanceMeters": 12,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__shield__back-right__d12__1280x720@1x"
+    },
+    {
+      "questionId": "q0048",
+      "character": "C02",
+      "equipment": "shield",
+      "direction": "front",
+      "distanceMeters": 0,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__shield__front__d00__390x844@2x"
+    },
+    {
+      "questionId": "q0049",
+      "character": "C01",
+      "equipment": "shield",
+      "direction": "front-right",
+      "distanceMeters": 0,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__shield__front-right__d00__390x844@2x"
+    },
+    {
+      "questionId": "q0050",
+      "character": "C02",
+      "equipment": "shield",
+      "direction": "back-left",
+      "distanceMeters": 5,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__shield__back-left__d05__1280x720@1x"
+    },
+    {
+      "questionId": "q0051",
+      "character": "C02",
+      "equipment": "unarmed",
+      "direction": "back",
+      "distanceMeters": 5,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__unarmed__back__d05__1280x720@1x"
+    },
+    {
+      "questionId": "q0052",
+      "character": "C02",
+      "equipment": "shield",
+      "direction": "back-right",
+      "distanceMeters": 5,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__shield__back-right__d05__390x844@2x"
+    },
+    {
+      "questionId": "q0053",
+      "character": "C02",
+      "equipment": "unarmed",
+      "direction": "back-right",
+      "distanceMeters": 5,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__unarmed__back-right__d05__390x844@2x"
+    },
+    {
+      "questionId": "q0054",
+      "character": "C01",
+      "equipment": "unarmed",
+      "direction": "front-left",
+      "distanceMeters": 0,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__unarmed__front-left__d00__1280x720@1x"
+    },
+    {
+      "questionId": "q0055",
+      "character": "C01",
+      "equipment": "shield",
+      "direction": "back",
+      "distanceMeters": 5,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__shield__back__d05__390x844@2x"
+    },
+    {
+      "questionId": "q0056",
+      "character": "C02",
+      "equipment": "shield",
+      "direction": "front",
+      "distanceMeters": 5,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__shield__front__d05__390x844@2x"
+    },
+    {
+      "questionId": "q0057",
+      "character": "C01",
+      "equipment": "unarmed",
+      "direction": "back-left",
+      "distanceMeters": 5,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__unarmed__back-left__d05__1280x720@1x"
+    },
+    {
+      "questionId": "q0058",
+      "character": "C02",
+      "equipment": "unarmed",
+      "direction": "front-left",
+      "distanceMeters": 5,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__unarmed__front-left__d05__390x844@2x"
+    },
+    {
+      "questionId": "q0059",
+      "character": "C01",
+      "equipment": "unarmed",
+      "direction": "front-right",
+      "distanceMeters": 12,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__unarmed__front-right__d12__390x844@2x"
+    },
+    {
+      "questionId": "q0060",
+      "character": "C01",
+      "equipment": "unarmed",
+      "direction": "front-right",
+      "distanceMeters": 0,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__unarmed__front-right__d00__390x844@2x"
+    },
+    {
+      "questionId": "q0061",
+      "character": "C01",
+      "equipment": "unarmed",
+      "direction": "front",
+      "distanceMeters": 12,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__unarmed__front__d12__1280x720@1x"
+    },
+    {
+      "questionId": "q0062",
+      "character": "C02",
+      "equipment": "shield",
+      "direction": "back-right",
+      "distanceMeters": 0,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__shield__back-right__d00__390x844@2x"
+    },
+    {
+      "questionId": "q0063",
+      "character": "C02",
+      "equipment": "unarmed",
+      "direction": "back-left",
+      "distanceMeters": 5,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__unarmed__back-left__d05__390x844@2x"
+    },
+    {
+      "questionId": "q0064",
+      "character": "C02",
+      "equipment": "unarmed",
+      "direction": "back-right",
+      "distanceMeters": 5,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__unarmed__back-right__d05__1280x720@1x"
+    },
+    {
+      "questionId": "q0065",
+      "character": "C02",
+      "equipment": "shield",
+      "direction": "back-left",
+      "distanceMeters": 12,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__shield__back-left__d12__1280x720@1x"
+    },
+    {
+      "questionId": "q0066",
+      "character": "C01",
+      "equipment": "shield",
+      "direction": "front-left",
+      "distanceMeters": 0,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__shield__front-left__d00__390x844@2x"
+    },
+    {
+      "questionId": "q0067",
+      "character": "C02",
+      "equipment": "unarmed",
+      "direction": "back-right",
+      "distanceMeters": 12,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__unarmed__back-right__d12__390x844@2x"
+    },
+    {
+      "questionId": "q0068",
+      "character": "C01",
+      "equipment": "unarmed",
+      "direction": "front-left",
+      "distanceMeters": 5,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__unarmed__front-left__d05__390x844@2x"
+    },
+    {
+      "questionId": "q0069",
+      "character": "C01",
+      "equipment": "shield",
+      "direction": "back-right",
+      "distanceMeters": 0,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__shield__back-right__d00__1280x720@1x"
+    },
+    {
+      "questionId": "q0070",
+      "character": "C02",
+      "equipment": "unarmed",
+      "direction": "front-left",
+      "distanceMeters": 0,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__unarmed__front-left__d00__390x844@2x"
+    },
+    {
+      "questionId": "q0071",
+      "character": "C01",
+      "equipment": "unarmed",
+      "direction": "back-left",
+      "distanceMeters": 12,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__unarmed__back-left__d12__390x844@2x"
+    },
+    {
+      "questionId": "q0072",
+      "character": "C02",
+      "equipment": "shield",
+      "direction": "front-right",
+      "distanceMeters": 0,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__shield__front-right__d00__1280x720@1x"
+    },
+    {
+      "questionId": "q0073",
+      "character": "C01",
+      "equipment": "shield",
+      "direction": "front",
+      "distanceMeters": 12,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__shield__front__d12__390x844@2x"
+    },
+    {
+      "questionId": "q0074",
+      "character": "C01",
+      "equipment": "unarmed",
+      "direction": "front",
+      "distanceMeters": 5,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__unarmed__front__d05__1280x720@1x"
+    },
+    {
+      "questionId": "q0075",
+      "character": "C02",
+      "equipment": "shield",
+      "direction": "back-left",
+      "distanceMeters": 12,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__shield__back-left__d12__390x844@2x"
+    },
+    {
+      "questionId": "q0076",
+      "character": "C01",
+      "equipment": "unarmed",
+      "direction": "back",
+      "distanceMeters": 0,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__unarmed__back__d00__1280x720@1x"
+    },
+    {
+      "questionId": "q0077",
+      "character": "C01",
+      "equipment": "shield",
+      "direction": "back-left",
+      "distanceMeters": 5,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__shield__back-left__d05__1280x720@1x"
+    },
+    {
+      "questionId": "q0078",
+      "character": "C01",
+      "equipment": "unarmed",
+      "direction": "back-left",
+      "distanceMeters": 0,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__unarmed__back-left__d00__390x844@2x"
+    },
+    {
+      "questionId": "q0079",
+      "character": "C01",
+      "equipment": "shield",
+      "direction": "back-right",
+      "distanceMeters": 0,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__shield__back-right__d00__390x844@2x"
+    },
+    {
+      "questionId": "q0080",
+      "character": "C02",
+      "equipment": "shield",
+      "direction": "back-right",
+      "distanceMeters": 5,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__shield__back-right__d05__1280x720@1x"
+    },
+    {
+      "questionId": "q0081",
+      "character": "C01",
+      "equipment": "shield",
+      "direction": "back",
+      "distanceMeters": 5,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__shield__back__d05__1280x720@1x"
+    },
+    {
+      "questionId": "q0082",
+      "character": "C02",
+      "equipment": "shield",
+      "direction": "front-left",
+      "distanceMeters": 0,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__shield__front-left__d00__1280x720@1x"
+    },
+    {
+      "questionId": "q0083",
+      "character": "C01",
+      "equipment": "unarmed",
+      "direction": "front",
+      "distanceMeters": 0,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__unarmed__front__d00__390x844@2x"
+    },
+    {
+      "questionId": "q0084",
+      "character": "C02",
+      "equipment": "unarmed",
+      "direction": "front-left",
+      "distanceMeters": 12,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__unarmed__front-left__d12__1280x720@1x"
+    },
+    {
+      "questionId": "q0085",
+      "character": "C01",
+      "equipment": "unarmed",
+      "direction": "back-left",
+      "distanceMeters": 5,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__unarmed__back-left__d05__390x844@2x"
+    },
+    {
+      "questionId": "q0086",
+      "character": "C02",
+      "equipment": "shield",
+      "direction": "back",
+      "distanceMeters": 12,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__shield__back__d12__1280x720@1x"
+    },
+    {
+      "questionId": "q0087",
+      "character": "C01",
+      "equipment": "shield",
+      "direction": "front-left",
+      "distanceMeters": 5,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__shield__front-left__d05__1280x720@1x"
+    },
+    {
+      "questionId": "q0088",
+      "character": "C01",
+      "equipment": "shield",
+      "direction": "front",
+      "distanceMeters": 0,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__shield__front__d00__1280x720@1x"
+    },
+    {
+      "questionId": "q0089",
+      "character": "C01",
+      "equipment": "unarmed",
+      "direction": "back-left",
+      "distanceMeters": 12,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__unarmed__back-left__d12__1280x720@1x"
+    },
+    {
+      "questionId": "q0090",
+      "character": "C01",
+      "equipment": "unarmed",
+      "direction": "back-right",
+      "distanceMeters": 5,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__unarmed__back-right__d05__1280x720@1x"
+    },
+    {
+      "questionId": "q0091",
+      "character": "C02",
+      "equipment": "shield",
+      "direction": "back",
+      "distanceMeters": 5,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__shield__back__d05__390x844@2x"
+    },
+    {
+      "questionId": "q0092",
+      "character": "C02",
+      "equipment": "shield",
+      "direction": "front-right",
+      "distanceMeters": 12,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__shield__front-right__d12__390x844@2x"
+    },
+    {
+      "questionId": "q0093",
+      "character": "C02",
+      "equipment": "unarmed",
+      "direction": "front",
+      "distanceMeters": 0,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__unarmed__front__d00__1280x720@1x"
+    },
+    {
+      "questionId": "q0094",
+      "character": "C02",
+      "equipment": "unarmed",
+      "direction": "front",
+      "distanceMeters": 5,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__unarmed__front__d05__390x844@2x"
+    },
+    {
+      "questionId": "q0095",
+      "character": "C02",
+      "equipment": "shield",
+      "direction": "back",
+      "distanceMeters": 0,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__shield__back__d00__1280x720@1x"
+    },
+    {
+      "questionId": "q0096",
+      "character": "C02",
+      "equipment": "shield",
+      "direction": "front",
+      "distanceMeters": 12,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__shield__front__d12__390x844@2x"
+    },
+    {
+      "questionId": "q0097",
+      "character": "C01",
+      "equipment": "shield",
+      "direction": "front",
+      "distanceMeters": 12,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__shield__front__d12__1280x720@1x"
+    },
+    {
+      "questionId": "q0098",
+      "character": "C01",
+      "equipment": "shield",
+      "direction": "back-left",
+      "distanceMeters": 5,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__shield__back-left__d05__390x844@2x"
+    },
+    {
+      "questionId": "q0099",
+      "character": "C02",
+      "equipment": "unarmed",
+      "direction": "back",
+      "distanceMeters": 0,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__unarmed__back__d00__390x844@2x"
+    },
+    {
+      "questionId": "q0100",
+      "character": "C01",
+      "equipment": "unarmed",
+      "direction": "back",
+      "distanceMeters": 5,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__unarmed__back__d05__390x844@2x"
+    },
+    {
+      "questionId": "q0101",
+      "character": "C02",
+      "equipment": "unarmed",
+      "direction": "back-left",
+      "distanceMeters": 5,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__unarmed__back-left__d05__1280x720@1x"
+    },
+    {
+      "questionId": "q0102",
+      "character": "C01",
+      "equipment": "unarmed",
+      "direction": "back",
+      "distanceMeters": 12,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__unarmed__back__d12__390x844@2x"
+    },
+    {
+      "questionId": "q0103",
+      "character": "C01",
+      "equipment": "shield",
+      "direction": "back",
+      "distanceMeters": 0,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__shield__back__d00__1280x720@1x"
+    },
+    {
+      "questionId": "q0104",
+      "character": "C02",
+      "equipment": "shield",
+      "direction": "front-left",
+      "distanceMeters": 12,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__shield__front-left__d12__390x844@2x"
+    },
+    {
+      "questionId": "q0105",
+      "character": "C01",
+      "equipment": "shield",
+      "direction": "front",
+      "distanceMeters": 5,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__shield__front__d05__390x844@2x"
+    },
+    {
+      "questionId": "q0106",
+      "character": "C02",
+      "equipment": "shield",
+      "direction": "front-right",
+      "distanceMeters": 5,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__shield__front-right__d05__390x844@2x"
+    },
+    {
+      "questionId": "q0107",
+      "character": "C01",
+      "equipment": "shield",
+      "direction": "back-left",
+      "distanceMeters": 0,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__shield__back-left__d00__1280x720@1x"
+    },
+    {
+      "questionId": "q0108",
+      "character": "C02",
+      "equipment": "shield",
+      "direction": "front-left",
+      "distanceMeters": 0,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__shield__front-left__d00__390x844@2x"
+    },
+    {
+      "questionId": "q0109",
+      "character": "C01",
+      "equipment": "unarmed",
+      "direction": "front-left",
+      "distanceMeters": 12,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__unarmed__front-left__d12__390x844@2x"
+    },
+    {
+      "questionId": "q0110",
+      "character": "C01",
+      "equipment": "shield",
+      "direction": "front",
+      "distanceMeters": 0,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__shield__front__d00__390x844@2x"
+    },
+    {
+      "questionId": "q0111",
+      "character": "C02",
+      "equipment": "shield",
+      "direction": "front-left",
+      "distanceMeters": 12,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__shield__front-left__d12__1280x720@1x"
+    },
+    {
+      "questionId": "q0112",
+      "character": "C01",
+      "equipment": "unarmed",
+      "direction": "front-left",
+      "distanceMeters": 0,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__unarmed__front-left__d00__390x844@2x"
+    },
+    {
+      "questionId": "q0113",
+      "character": "C01",
+      "equipment": "shield",
+      "direction": "front-left",
+      "distanceMeters": 12,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__shield__front-left__d12__390x844@2x"
+    },
+    {
+      "questionId": "q0114",
+      "character": "C02",
+      "equipment": "shield",
+      "direction": "front-right",
+      "distanceMeters": 0,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__shield__front-right__d00__390x844@2x"
+    },
+    {
+      "questionId": "q0115",
+      "character": "C02",
+      "equipment": "unarmed",
+      "direction": "front-right",
+      "distanceMeters": 0,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__unarmed__front-right__d00__1280x720@1x"
+    },
+    {
+      "questionId": "q0116",
+      "character": "C01",
+      "equipment": "unarmed",
+      "direction": "front-right",
+      "distanceMeters": 5,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__unarmed__front-right__d05__390x844@2x"
+    },
+    {
+      "questionId": "q0117",
+      "character": "C02",
+      "equipment": "shield",
+      "direction": "front",
+      "distanceMeters": 12,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__shield__front__d12__1280x720@1x"
+    },
+    {
+      "questionId": "q0118",
+      "character": "C02",
+      "equipment": "shield",
+      "direction": "back-left",
+      "distanceMeters": 0,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__shield__back-left__d00__390x844@2x"
+    },
+    {
+      "questionId": "q0119",
+      "character": "C02",
+      "equipment": "unarmed",
+      "direction": "front-right",
+      "distanceMeters": 5,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__unarmed__front-right__d05__1280x720@1x"
+    },
+    {
+      "questionId": "q0120",
+      "character": "C02",
+      "equipment": "shield",
+      "direction": "back-right",
+      "distanceMeters": 12,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__shield__back-right__d12__390x844@2x"
+    },
+    {
+      "questionId": "q0121",
+      "character": "C01",
+      "equipment": "unarmed",
+      "direction": "front",
+      "distanceMeters": 5,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__unarmed__front__d05__390x844@2x"
+    },
+    {
+      "questionId": "q0122",
+      "character": "C01",
+      "equipment": "shield",
+      "direction": "front-left",
+      "distanceMeters": 0,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__shield__front-left__d00__1280x720@1x"
+    },
+    {
+      "questionId": "q0123",
+      "character": "C01",
+      "equipment": "unarmed",
+      "direction": "front-left",
+      "distanceMeters": 12,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__unarmed__front-left__d12__1280x720@1x"
+    },
+    {
+      "questionId": "q0124",
+      "character": "C02",
+      "equipment": "unarmed",
+      "direction": "back-left",
+      "distanceMeters": 0,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__unarmed__back-left__d00__390x844@2x"
+    },
+    {
+      "questionId": "q0125",
+      "character": "C02",
+      "equipment": "unarmed",
+      "direction": "front-right",
+      "distanceMeters": 0,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__unarmed__front-right__d00__390x844@2x"
+    },
+    {
+      "questionId": "q0126",
+      "character": "C01",
+      "equipment": "unarmed",
+      "direction": "back-right",
+      "distanceMeters": 5,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__unarmed__back-right__d05__390x844@2x"
+    },
+    {
+      "questionId": "q0127",
+      "character": "C01",
+      "equipment": "unarmed",
+      "direction": "back-right",
+      "distanceMeters": 12,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__unarmed__back-right__d12__1280x720@1x"
+    },
+    {
+      "questionId": "q0128",
+      "character": "C02",
+      "equipment": "unarmed",
+      "direction": "front-left",
+      "distanceMeters": 0,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__unarmed__front-left__d00__1280x720@1x"
+    },
+    {
+      "questionId": "q0129",
+      "character": "C02",
+      "equipment": "unarmed",
+      "direction": "back-right",
+      "distanceMeters": 12,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__unarmed__back-right__d12__1280x720@1x"
+    },
+    {
+      "questionId": "q0130",
+      "character": "C02",
+      "equipment": "shield",
+      "direction": "back-right",
+      "distanceMeters": 0,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__shield__back-right__d00__1280x720@1x"
+    },
+    {
+      "questionId": "q0131",
+      "character": "C02",
+      "equipment": "unarmed",
+      "direction": "back",
+      "distanceMeters": 12,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__unarmed__back__d12__1280x720@1x"
+    },
+    {
+      "questionId": "q0132",
+      "character": "C01",
+      "equipment": "shield",
+      "direction": "front-right",
+      "distanceMeters": 12,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__shield__front-right__d12__1280x720@1x"
+    },
+    {
+      "questionId": "q0133",
+      "character": "C01",
+      "equipment": "unarmed",
+      "direction": "front",
+      "distanceMeters": 12,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__unarmed__front__d12__390x844@2x"
+    },
+    {
+      "questionId": "q0134",
+      "character": "C01",
+      "equipment": "unarmed",
+      "direction": "back-left",
+      "distanceMeters": 0,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__unarmed__back-left__d00__1280x720@1x"
+    },
+    {
+      "questionId": "q0135",
+      "character": "C01",
+      "equipment": "unarmed",
+      "direction": "front",
+      "distanceMeters": 0,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__unarmed__front__d00__1280x720@1x"
+    },
+    {
+      "questionId": "q0136",
+      "character": "C01",
+      "equipment": "shield",
+      "direction": "back",
+      "distanceMeters": 12,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__shield__back__d12__1280x720@1x"
+    },
+    {
+      "questionId": "q0137",
+      "character": "C01",
+      "equipment": "shield",
+      "direction": "back-right",
+      "distanceMeters": 12,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__shield__back-right__d12__390x844@2x"
+    },
+    {
+      "questionId": "q0138",
+      "character": "C02",
+      "equipment": "unarmed",
+      "direction": "front-right",
+      "distanceMeters": 12,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__unarmed__front-right__d12__1280x720@1x"
+    },
+    {
+      "questionId": "q0139",
+      "character": "C02",
+      "equipment": "shield",
+      "direction": "back",
+      "distanceMeters": 12,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__shield__back__d12__390x844@2x"
+    },
+    {
+      "questionId": "q0140",
+      "character": "C01",
+      "equipment": "unarmed",
+      "direction": "back-right",
+      "distanceMeters": 0,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__unarmed__back-right__d00__390x844@2x"
+    },
+    {
+      "questionId": "q0141",
+      "character": "C02",
+      "equipment": "shield",
+      "direction": "front",
+      "distanceMeters": 0,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__shield__front__d00__1280x720@1x"
+    },
+    {
+      "questionId": "q0142",
+      "character": "C01",
+      "equipment": "shield",
+      "direction": "back-right",
+      "distanceMeters": 12,
+      "viewport": "1280x720@1x",
+      "sourceOutputId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1__shield__back-right__d12__1280x720@1x"
+    },
+    {
+      "questionId": "q0143",
+      "character": "C02",
+      "equipment": "unarmed",
+      "direction": "front",
+      "distanceMeters": 12,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__unarmed__front__d12__390x844@2x"
+    },
+    {
+      "questionId": "q0144",
+      "character": "C02",
+      "equipment": "shield",
+      "direction": "front-left",
+      "distanceMeters": 5,
+      "viewport": "390x844@2x",
+      "sourceOutputId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1__shield__front-left__d05__390x844@2x"
+    }
+  ]
+}

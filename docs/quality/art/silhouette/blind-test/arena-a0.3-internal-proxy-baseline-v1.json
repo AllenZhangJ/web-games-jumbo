@@ -1,0 +1,849 @@
+{
+  "schemaVersion": 1,
+  "id": "arena.art.silhouette-internal-proxy.a0.3.v1",
+  "status": "non-human-proxy-only",
+  "method": "64x64 centered binary silhouette nearest-neighbor; 10 deterministic 80% template folds",
+  "disclaimer": "This is a tooling and gross-confusion sanity baseline. It is not a human participant, usability result, device result or A0.3 pass.",
+  "runs": [
+    {
+      "runId": "internal-proxy-01",
+      "kind": "non-human-nearest-silhouette-sanity-proxy",
+      "seed": 20260828,
+      "sampleCount": 144,
+      "characterAccuracy": 0.9930555555555556,
+      "equipmentAccuracy": 0.9722222222222222,
+      "directionAccuracy": 0.9513888888888888,
+      "confusion": {
+        "character": {
+          "parkour-apprentice": {
+            "parkour-apprentice": 72
+          },
+          "wind-up-cube": {
+            "wind-up-cube": 71,
+            "parkour-apprentice": 1
+          }
+        },
+        "equipment": {
+          "unarmed": {
+            "unarmed": 71,
+            "shield": 1
+          },
+          "shield": {
+            "shield": 69,
+            "unarmed": 3
+          }
+        },
+        "direction": {
+          "front": {
+            "front": 23,
+            "back": 1
+          },
+          "front-right": {
+            "front-right": 23,
+            "back-right": 1
+          },
+          "back-right": {
+            "back-right": 22,
+            "front-right": 1,
+            "back-left": 1
+          },
+          "back": {
+            "back": 22,
+            "front": 2
+          },
+          "back-left": {
+            "back-left": 23,
+            "back-right": 1
+          },
+          "front-left": {
+            "front-left": 24
+          }
+        }
+      },
+      "byDistance": {
+        "0": {
+          "sampleCount": 48,
+          "characterAccuracy": 1,
+          "equipmentAccuracy": 0.9791666666666666,
+          "directionAccuracy": 1
+        },
+        "5": {
+          "sampleCount": 48,
+          "characterAccuracy": 0.9791666666666666,
+          "equipmentAccuracy": 0.9791666666666666,
+          "directionAccuracy": 0.8958333333333334
+        },
+        "12": {
+          "sampleCount": 48,
+          "characterAccuracy": 1,
+          "equipmentAccuracy": 0.9583333333333334,
+          "directionAccuracy": 0.9583333333333334
+        }
+      }
+    },
+    {
+      "runId": "internal-proxy-02",
+      "kind": "non-human-nearest-silhouette-sanity-proxy",
+      "seed": 20260829,
+      "sampleCount": 144,
+      "characterAccuracy": 0.9930555555555556,
+      "equipmentAccuracy": 0.9652777777777778,
+      "directionAccuracy": 0.9583333333333334,
+      "confusion": {
+        "character": {
+          "parkour-apprentice": {
+            "parkour-apprentice": 72
+          },
+          "wind-up-cube": {
+            "wind-up-cube": 71,
+            "parkour-apprentice": 1
+          }
+        },
+        "equipment": {
+          "unarmed": {
+            "unarmed": 70,
+            "shield": 2
+          },
+          "shield": {
+            "shield": 69,
+            "unarmed": 3
+          }
+        },
+        "direction": {
+          "front": {
+            "front-right": 1,
+            "front": 22,
+            "back": 1
+          },
+          "front-right": {
+            "front-right": 24
+          },
+          "back-right": {
+            "back-right": 22,
+            "front-right": 1,
+            "back-left": 1
+          },
+          "back": {
+            "back": 22,
+            "front": 2
+          },
+          "back-left": {
+            "back-left": 24
+          },
+          "front-left": {
+            "front-left": 24
+          }
+        }
+      },
+      "byDistance": {
+        "0": {
+          "sampleCount": 48,
+          "characterAccuracy": 1,
+          "equipmentAccuracy": 0.9583333333333334,
+          "directionAccuracy": 0.9791666666666666
+        },
+        "5": {
+          "sampleCount": 48,
+          "characterAccuracy": 0.9791666666666666,
+          "equipmentAccuracy": 0.9791666666666666,
+          "directionAccuracy": 0.9166666666666666
+        },
+        "12": {
+          "sampleCount": 48,
+          "characterAccuracy": 1,
+          "equipmentAccuracy": 0.9583333333333334,
+          "directionAccuracy": 0.9791666666666666
+        }
+      }
+    },
+    {
+      "runId": "internal-proxy-03",
+      "kind": "non-human-nearest-silhouette-sanity-proxy",
+      "seed": 20260830,
+      "sampleCount": 144,
+      "characterAccuracy": 0.9930555555555556,
+      "equipmentAccuracy": 0.9652777777777778,
+      "directionAccuracy": 0.9513888888888888,
+      "confusion": {
+        "character": {
+          "parkour-apprentice": {
+            "parkour-apprentice": 72
+          },
+          "wind-up-cube": {
+            "wind-up-cube": 71,
+            "parkour-apprentice": 1
+          }
+        },
+        "equipment": {
+          "unarmed": {
+            "unarmed": 68,
+            "shield": 4
+          },
+          "shield": {
+            "shield": 71,
+            "unarmed": 1
+          }
+        },
+        "direction": {
+          "front": {
+            "front": 23,
+            "back": 1
+          },
+          "front-right": {
+            "front-right": 23,
+            "back-right": 1
+          },
+          "back-right": {
+            "back-right": 22,
+            "front-right": 1,
+            "back-left": 1
+          },
+          "back": {
+            "back": 22,
+            "front": 2
+          },
+          "back-left": {
+            "back-left": 24
+          },
+          "front-left": {
+            "front-left": 23,
+            "back-right": 1
+          }
+        }
+      },
+      "byDistance": {
+        "0": {
+          "sampleCount": 48,
+          "characterAccuracy": 1,
+          "equipmentAccuracy": 0.9583333333333334,
+          "directionAccuracy": 0.9583333333333334
+        },
+        "5": {
+          "sampleCount": 48,
+          "characterAccuracy": 0.9791666666666666,
+          "equipmentAccuracy": 0.9791666666666666,
+          "directionAccuracy": 0.9375
+        },
+        "12": {
+          "sampleCount": 48,
+          "characterAccuracy": 1,
+          "equipmentAccuracy": 0.9583333333333334,
+          "directionAccuracy": 0.9583333333333334
+        }
+      }
+    },
+    {
+      "runId": "internal-proxy-04",
+      "kind": "non-human-nearest-silhouette-sanity-proxy",
+      "seed": 20260831,
+      "sampleCount": 144,
+      "characterAccuracy": 0.9930555555555556,
+      "equipmentAccuracy": 0.9722222222222222,
+      "directionAccuracy": 0.9444444444444444,
+      "confusion": {
+        "character": {
+          "parkour-apprentice": {
+            "parkour-apprentice": 72
+          },
+          "wind-up-cube": {
+            "wind-up-cube": 71,
+            "parkour-apprentice": 1
+          }
+        },
+        "equipment": {
+          "unarmed": {
+            "unarmed": 69,
+            "shield": 3
+          },
+          "shield": {
+            "shield": 71,
+            "unarmed": 1
+          }
+        },
+        "direction": {
+          "front": {
+            "front": 22,
+            "back": 2
+          },
+          "front-right": {
+            "front-right": 22,
+            "back-left": 1,
+            "back-right": 1
+          },
+          "back-right": {
+            "back-right": 22,
+            "front-right": 1,
+            "back-left": 1
+          },
+          "back": {
+            "back": 22,
+            "front": 2
+          },
+          "back-left": {
+            "back-left": 24
+          },
+          "front-left": {
+            "front-left": 24
+          }
+        }
+      },
+      "byDistance": {
+        "0": {
+          "sampleCount": 48,
+          "characterAccuracy": 1,
+          "equipmentAccuracy": 0.9791666666666666,
+          "directionAccuracy": 1
+        },
+        "5": {
+          "sampleCount": 48,
+          "characterAccuracy": 0.9791666666666666,
+          "equipmentAccuracy": 0.9583333333333334,
+          "directionAccuracy": 0.8958333333333334
+        },
+        "12": {
+          "sampleCount": 48,
+          "characterAccuracy": 1,
+          "equipmentAccuracy": 0.9791666666666666,
+          "directionAccuracy": 0.9375
+        }
+      }
+    },
+    {
+      "runId": "internal-proxy-05",
+      "kind": "non-human-nearest-silhouette-sanity-proxy",
+      "seed": 20260832,
+      "sampleCount": 144,
+      "characterAccuracy": 0.9930555555555556,
+      "equipmentAccuracy": 0.9652777777777778,
+      "directionAccuracy": 0.9236111111111112,
+      "confusion": {
+        "character": {
+          "parkour-apprentice": {
+            "parkour-apprentice": 72
+          },
+          "wind-up-cube": {
+            "wind-up-cube": 71,
+            "parkour-apprentice": 1
+          }
+        },
+        "equipment": {
+          "unarmed": {
+            "unarmed": 68,
+            "shield": 4
+          },
+          "shield": {
+            "shield": 71,
+            "unarmed": 1
+          }
+        },
+        "direction": {
+          "front": {
+            "front": 23,
+            "back": 1
+          },
+          "front-right": {
+            "front-right": 21,
+            "back-right": 3
+          },
+          "back-right": {
+            "back-right": 21,
+            "front-left": 1,
+            "front-right": 1,
+            "back-left": 1
+          },
+          "back": {
+            "back": 21,
+            "front": 3
+          },
+          "back-left": {
+            "back-left": 24
+          },
+          "front-left": {
+            "front-left": 23,
+            "back-right": 1
+          }
+        }
+      },
+      "byDistance": {
+        "0": {
+          "sampleCount": 48,
+          "characterAccuracy": 1,
+          "equipmentAccuracy": 0.9583333333333334,
+          "directionAccuracy": 0.9375
+        },
+        "5": {
+          "sampleCount": 48,
+          "characterAccuracy": 0.9791666666666666,
+          "equipmentAccuracy": 0.9583333333333334,
+          "directionAccuracy": 0.8958333333333334
+        },
+        "12": {
+          "sampleCount": 48,
+          "characterAccuracy": 1,
+          "equipmentAccuracy": 0.9791666666666666,
+          "directionAccuracy": 0.9375
+        }
+      }
+    },
+    {
+      "runId": "internal-proxy-06",
+      "kind": "non-human-nearest-silhouette-sanity-proxy",
+      "seed": 20260833,
+      "sampleCount": 144,
+      "characterAccuracy": 0.9930555555555556,
+      "equipmentAccuracy": 0.9722222222222222,
+      "directionAccuracy": 0.9444444444444444,
+      "confusion": {
+        "character": {
+          "parkour-apprentice": {
+            "parkour-apprentice": 72
+          },
+          "wind-up-cube": {
+            "wind-up-cube": 71,
+            "parkour-apprentice": 1
+          }
+        },
+        "equipment": {
+          "unarmed": {
+            "unarmed": 69,
+            "shield": 3
+          },
+          "shield": {
+            "shield": 71,
+            "unarmed": 1
+          }
+        },
+        "direction": {
+          "front": {
+            "front": 23,
+            "back": 1
+          },
+          "front-right": {
+            "front-right": 23,
+            "back-right": 1
+          },
+          "back-right": {
+            "back-right": 23,
+            "back-left": 1
+          },
+          "back": {
+            "back": 21,
+            "front": 3
+          },
+          "back-left": {
+            "front-left": 2,
+            "back-left": 22
+          },
+          "front-left": {
+            "front-left": 24
+          }
+        }
+      },
+      "byDistance": {
+        "0": {
+          "sampleCount": 48,
+          "characterAccuracy": 1,
+          "equipmentAccuracy": 0.9791666666666666,
+          "directionAccuracy": 0.9583333333333334
+        },
+        "5": {
+          "sampleCount": 48,
+          "characterAccuracy": 0.9791666666666666,
+          "equipmentAccuracy": 0.9791666666666666,
+          "directionAccuracy": 0.8958333333333334
+        },
+        "12": {
+          "sampleCount": 48,
+          "characterAccuracy": 1,
+          "equipmentAccuracy": 0.9583333333333334,
+          "directionAccuracy": 0.9791666666666666
+        }
+      }
+    },
+    {
+      "runId": "internal-proxy-07",
+      "kind": "non-human-nearest-silhouette-sanity-proxy",
+      "seed": 20260834,
+      "sampleCount": 144,
+      "characterAccuracy": 0.9930555555555556,
+      "equipmentAccuracy": 0.9722222222222222,
+      "directionAccuracy": 0.9166666666666666,
+      "confusion": {
+        "character": {
+          "parkour-apprentice": {
+            "parkour-apprentice": 72
+          },
+          "wind-up-cube": {
+            "wind-up-cube": 71,
+            "parkour-apprentice": 1
+          }
+        },
+        "equipment": {
+          "unarmed": {
+            "unarmed": 69,
+            "shield": 3
+          },
+          "shield": {
+            "shield": 71,
+            "unarmed": 1
+          }
+        },
+        "direction": {
+          "front": {
+            "front": 24
+          },
+          "front-right": {
+            "front-right": 22,
+            "back-right": 2
+          },
+          "back-right": {
+            "back-right": 20,
+            "front-right": 3,
+            "back-left": 1
+          },
+          "back": {
+            "back": 21,
+            "front": 3
+          },
+          "back-left": {
+            "front-left": 2,
+            "back-left": 22
+          },
+          "front-left": {
+            "front-left": 23,
+            "back-right": 1
+          }
+        }
+      },
+      "byDistance": {
+        "0": {
+          "sampleCount": 48,
+          "characterAccuracy": 1,
+          "equipmentAccuracy": 1,
+          "directionAccuracy": 0.9166666666666666
+        },
+        "5": {
+          "sampleCount": 48,
+          "characterAccuracy": 0.9791666666666666,
+          "equipmentAccuracy": 0.9583333333333334,
+          "directionAccuracy": 0.8958333333333334
+        },
+        "12": {
+          "sampleCount": 48,
+          "characterAccuracy": 1,
+          "equipmentAccuracy": 0.9583333333333334,
+          "directionAccuracy": 0.9375
+        }
+      }
+    },
+    {
+      "runId": "internal-proxy-08",
+      "kind": "non-human-nearest-silhouette-sanity-proxy",
+      "seed": 20260835,
+      "sampleCount": 144,
+      "characterAccuracy": 0.9930555555555556,
+      "equipmentAccuracy": 0.9583333333333334,
+      "directionAccuracy": 0.9375,
+      "confusion": {
+        "character": {
+          "parkour-apprentice": {
+            "parkour-apprentice": 72
+          },
+          "wind-up-cube": {
+            "wind-up-cube": 71,
+            "parkour-apprentice": 1
+          }
+        },
+        "equipment": {
+          "unarmed": {
+            "unarmed": 69,
+            "shield": 3
+          },
+          "shield": {
+            "shield": 69,
+            "unarmed": 3
+          }
+        },
+        "direction": {
+          "front": {
+            "front": 22,
+            "back": 1,
+            "back-right": 1
+          },
+          "front-right": {
+            "front-right": 24
+          },
+          "back-right": {
+            "back-right": 22,
+            "front-right": 1,
+            "back-left": 1
+          },
+          "back": {
+            "back": 20,
+            "front": 4
+          },
+          "back-left": {
+            "back-left": 23,
+            "back-right": 1
+          },
+          "front-left": {
+            "front-left": 24
+          }
+        }
+      },
+      "byDistance": {
+        "0": {
+          "sampleCount": 48,
+          "characterAccuracy": 1,
+          "equipmentAccuracy": 0.9375,
+          "directionAccuracy": 0.9791666666666666
+        },
+        "5": {
+          "sampleCount": 48,
+          "characterAccuracy": 0.9791666666666666,
+          "equipmentAccuracy": 0.9583333333333334,
+          "directionAccuracy": 0.8541666666666666
+        },
+        "12": {
+          "sampleCount": 48,
+          "characterAccuracy": 1,
+          "equipmentAccuracy": 0.9791666666666666,
+          "directionAccuracy": 0.9791666666666666
+        }
+      }
+    },
+    {
+      "runId": "internal-proxy-09",
+      "kind": "non-human-nearest-silhouette-sanity-proxy",
+      "seed": 20260836,
+      "sampleCount": 144,
+      "characterAccuracy": 0.9930555555555556,
+      "equipmentAccuracy": 0.9722222222222222,
+      "directionAccuracy": 0.9375,
+      "confusion": {
+        "character": {
+          "parkour-apprentice": {
+            "parkour-apprentice": 72
+          },
+          "wind-up-cube": {
+            "wind-up-cube": 71,
+            "parkour-apprentice": 1
+          }
+        },
+        "equipment": {
+          "unarmed": {
+            "unarmed": 69,
+            "shield": 3
+          },
+          "shield": {
+            "shield": 71,
+            "unarmed": 1
+          }
+        },
+        "direction": {
+          "front": {
+            "front": 23,
+            "back": 1
+          },
+          "front-right": {
+            "front-right": 21,
+            "back-right": 2,
+            "back-left": 1
+          },
+          "back-right": {
+            "back-right": 22,
+            "front-right": 1,
+            "back-left": 1
+          },
+          "back": {
+            "back": 21,
+            "front": 3
+          },
+          "back-left": {
+            "back-left": 24
+          },
+          "front-left": {
+            "front-left": 24
+          }
+        }
+      },
+      "byDistance": {
+        "0": {
+          "sampleCount": 48,
+          "characterAccuracy": 1,
+          "equipmentAccuracy": 0.9791666666666666,
+          "directionAccuracy": 0.9791666666666666
+        },
+        "5": {
+          "sampleCount": 48,
+          "characterAccuracy": 0.9791666666666666,
+          "equipmentAccuracy": 0.9583333333333334,
+          "directionAccuracy": 0.8958333333333334
+        },
+        "12": {
+          "sampleCount": 48,
+          "characterAccuracy": 1,
+          "equipmentAccuracy": 0.9791666666666666,
+          "directionAccuracy": 0.9375
+        }
+      }
+    },
+    {
+      "runId": "internal-proxy-10",
+      "kind": "non-human-nearest-silhouette-sanity-proxy",
+      "seed": 20260837,
+      "sampleCount": 144,
+      "characterAccuracy": 0.9930555555555556,
+      "equipmentAccuracy": 0.9652777777777778,
+      "directionAccuracy": 0.9444444444444444,
+      "confusion": {
+        "character": {
+          "parkour-apprentice": {
+            "parkour-apprentice": 72
+          },
+          "wind-up-cube": {
+            "wind-up-cube": 71,
+            "parkour-apprentice": 1
+          }
+        },
+        "equipment": {
+          "unarmed": {
+            "unarmed": 69,
+            "shield": 3
+          },
+          "shield": {
+            "unarmed": 2,
+            "shield": 70
+          }
+        },
+        "direction": {
+          "front": {
+            "front": 22,
+            "back": 1,
+            "back-left": 1
+          },
+          "front-right": {
+            "front-right": 22,
+            "back-right": 2
+          },
+          "back-right": {
+            "back-right": 22,
+            "front-right": 1,
+            "back-left": 1
+          },
+          "back": {
+            "back": 22,
+            "front": 2
+          },
+          "back-left": {
+            "back-left": 24
+          },
+          "front-left": {
+            "front-left": 24
+          }
+        }
+      },
+      "byDistance": {
+        "0": {
+          "sampleCount": 48,
+          "characterAccuracy": 1,
+          "equipmentAccuracy": 0.9375,
+          "directionAccuracy": 0.9583333333333334
+        },
+        "5": {
+          "sampleCount": 48,
+          "characterAccuracy": 0.9791666666666666,
+          "equipmentAccuracy": 0.9791666666666666,
+          "directionAccuracy": 0.9166666666666666
+        },
+        "12": {
+          "sampleCount": 48,
+          "characterAccuracy": 1,
+          "equipmentAccuracy": 0.9791666666666666,
+          "directionAccuracy": 0.9583333333333334
+        }
+      }
+    }
+  ],
+  "aggregate": {
+    "runCount": 10,
+    "sampleCountPerRun": 144,
+    "characterAccuracy": 0.9930555555555556,
+    "equipmentAccuracy": 0.9680555555555556,
+    "directionAccuracy": 0.9409722222222223,
+    "confusion": {
+      "character": {
+        "parkour-apprentice": {
+          "parkour-apprentice": 720
+        },
+        "wind-up-cube": {
+          "wind-up-cube": 710,
+          "parkour-apprentice": 10
+        }
+      },
+      "equipment": {
+        "unarmed": {
+          "unarmed": 691,
+          "shield": 29
+        },
+        "shield": {
+          "shield": 703,
+          "unarmed": 17
+        }
+      },
+      "direction": {
+        "front": {
+          "front": 227,
+          "back": 10,
+          "front-right": 1,
+          "back-right": 1,
+          "back-left": 1
+        },
+        "front-right": {
+          "front-right": 225,
+          "back-right": 13,
+          "back-left": 2
+        },
+        "back-right": {
+          "back-right": 218,
+          "front-right": 11,
+          "back-left": 10,
+          "front-left": 1
+        },
+        "back": {
+          "back": 214,
+          "front": 26
+        },
+        "back-left": {
+          "back-left": 234,
+          "back-right": 2,
+          "front-left": 4
+        },
+        "front-left": {
+          "front-left": 237,
+          "back-right": 3
+        }
+      }
+    },
+    "byDistance": {
+      "0": {
+        "sampleCountPerRun": 48,
+        "characterAccuracy": 1,
+        "equipmentAccuracy": 0.9666666666666666,
+        "directionAccuracy": 0.9666666666666668
+      },
+      "5": {
+        "sampleCountPerRun": 48,
+        "characterAccuracy": 0.9791666666666666,
+        "equipmentAccuracy": 0.96875,
+        "directionAccuracy": 0.9
+      },
+      "12": {
+        "sampleCountPerRun": 48,
+        "characterAccuracy": 1,
+        "equipmentAccuracy": 0.9687499999999998,
+        "directionAccuracy": 0.9562500000000002
+      }
+    }
+  }
+}

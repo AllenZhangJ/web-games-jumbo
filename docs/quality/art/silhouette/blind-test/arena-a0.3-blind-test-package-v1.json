@@ -1,0 +1,1195 @@
+{
+  "schemaVersion": 1,
+  "id": "arena.art.silhouette-blind-test-package.a0.3.v1",
+  "status": "awaiting-human-responses",
+  "generatedAt": "2026-07-28",
+  "seed": 20260728,
+  "renderManifest": {
+    "path": "docs/quality/art/silhouette/arena-a0.3-silhouette-render-manifest-v1.json",
+    "sha256": "1b85c5442fbb08c3ff7e8d82538d0f6fdc2cb17dad06c3a279d4b7e1350805c7"
+  },
+  "questions": {
+    "path": "docs/quality/art/silhouette/blind-test/arena-a0.3-blind-questions-v1.json",
+    "sha256": "9ec3db64f79ec694f523603504701ad57649b8bdc4636cb6ae25af7300ab0c3a",
+    "byteLength": 36199
+  },
+  "answerKey": {
+    "path": "docs/quality/art/silhouette/blind-test/arena-a0.3-blind-answer-key-v1.json",
+    "sha256": "10baa24ad462fc4c742c060cdcb7bd844d2350e098fc0e965dbd4770315ee801",
+    "byteLength": 44874
+  },
+  "proxyBaseline": {
+    "path": "docs/quality/art/silhouette/blind-test/arena-a0.3-internal-proxy-baseline-v1.json",
+    "sha256": "d4088e62f38e33fbbdfe14c1d354dcf0ac950eb70512335300ba72b5fa97a540",
+    "byteLength": 21709
+  },
+  "questionImages": [
+    {
+      "questionId": "q0001",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0001.png",
+      "sha256": "8cbb78e0214d7b3c976e34025feee615bcd687b7c4003e813fc779ee76293640",
+      "byteLength": 308,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0002",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0002.png",
+      "sha256": "e7195cffe1b124d88cbf194f35033c4021facea855fb02f081051134c14d0b5f",
+      "byteLength": 224,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0003",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0003.png",
+      "sha256": "c5c4b0b6ed63ea73b1c761d7cca59d0a5b30e0af00a459fe3da4e7b8f711e602",
+      "byteLength": 223,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0004",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0004.png",
+      "sha256": "119e5666d0c6e34468d3c6beeacacc94733985b24487d663d50faf1249f0e822",
+      "byteLength": 312,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0005",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0005.png",
+      "sha256": "ac73e3b4577f85e57398dcb578e8ff28de8a1d8ff9435c4c9dae195ce1070742",
+      "byteLength": 309,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0006",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0006.png",
+      "sha256": "78769d77f03318c1bf8d4a310f5d8022f226ee12b1551e323f55913b0e4b653d",
+      "byteLength": 226,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0007",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0007.png",
+      "sha256": "cb48b6052b7146a18ee1d55ca2a9ad7c106d1d3918a3c635d752cda7cbccf577",
+      "byteLength": 226,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0008",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0008.png",
+      "sha256": "2ade25548d3a9a7cbfa4c8d4a6c7cb836a5209d46c1fda872307a06dfc2ba850",
+      "byteLength": 294,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0009",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0009.png",
+      "sha256": "6476df533a510de3f24ca22188fff2dc719cc134cbdc3acc7adbf4ec6c7bd178",
+      "byteLength": 219,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0010",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0010.png",
+      "sha256": "354a1e2874b72991032fca96c7cc1b5d4b5cba50bbd6a4d9b0d33f5b6eb1703b",
+      "byteLength": 224,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0011",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0011.png",
+      "sha256": "9551831b04603f5e41c7de8cbb4592db391b55dd6ac16ade6c9df6eef06b87a4",
+      "byteLength": 315,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0012",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0012.png",
+      "sha256": "0afbc95ce5ce0ff99ec118cff4573913fda45019ea8b8c9253bb910d774dabf7",
+      "byteLength": 234,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0013",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0013.png",
+      "sha256": "b593f6cd7d75b500a92b7e9ce7fc6881a4d0392748433367f140605836c568fd",
+      "byteLength": 294,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0014",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0014.png",
+      "sha256": "5195c36e89188f121c0780964a211de75b26ddc15602134a10ec9d15c81f67f2",
+      "byteLength": 295,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0015",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0015.png",
+      "sha256": "eec096074049d657b2a79f6dcaf14857510cf2105fbc08eb10150ddf9adb72bd",
+      "byteLength": 310,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0016",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0016.png",
+      "sha256": "620eee9d9cc9aac84685c971668ff6abf817462436f3416c5bf54a27d8989203",
+      "byteLength": 215,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0017",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0017.png",
+      "sha256": "da4aed0e976c76c4c972137d3e9822ae123cb6f91c69d6ea3fa20f47828cbf06",
+      "byteLength": 319,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0018",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0018.png",
+      "sha256": "027bcf887f3c4f280252a0c490e510cb47e8070fd7c6e453d0a7fdf07930c04c",
+      "byteLength": 227,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0019",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0019.png",
+      "sha256": "a058ccbcc9bf7cdcbb8ae177ead4efff31d710cce16a4193a8df23ac6e744ae1",
+      "byteLength": 226,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0020",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0020.png",
+      "sha256": "77131fac4dd73a5285fd8c2f09da70414fed40319631cb238307930acdbd303c",
+      "byteLength": 219,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0021",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0021.png",
+      "sha256": "90a8ba07f0051fd95e19441e98c716a460dc569e9bfa0bd63e48f10b0065c3bb",
+      "byteLength": 316,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0022",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0022.png",
+      "sha256": "40fc1f50e6559fdfbd38ea76e7a0c47149e5e498ad69030ed9d872b8e56bf1f9",
+      "byteLength": 226,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0023",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0023.png",
+      "sha256": "f72dddebb1d44a2c0982d2403eec375d6c29e89ff74e932e230fa670c7988a8d",
+      "byteLength": 295,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0024",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0024.png",
+      "sha256": "87efe8e5dded3d01c41f437b021b703a9f71e5f8f67c457df23a60cecf2835d1",
+      "byteLength": 213,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0025",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0025.png",
+      "sha256": "af23283324b34ddda3b3ed3e3272403a985b371c03c03e398f4b431307dccd22",
+      "byteLength": 223,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0026",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0026.png",
+      "sha256": "63c8c5e66207a38001b4b0a6a853f0677fc31ed8a4bd4a30d5ef4780b2bb29bd",
+      "byteLength": 304,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0027",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0027.png",
+      "sha256": "b41028bde89d40b88e070232d13b2e958a7e5072074c095b940b0937d25192cf",
+      "byteLength": 313,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0028",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0028.png",
+      "sha256": "faba5ac100b7d85e2fe01aaed51fa5d7224f6cb7dfd382a65119c18af539f041",
+      "byteLength": 322,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0029",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0029.png",
+      "sha256": "1acaa732aafc979dcdc3c81fdae20f9c2ca23d7e6865887e07fa77ce26a4cb81",
+      "byteLength": 215,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0030",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0030.png",
+      "sha256": "f62ba01778b8351297ffdf1baf14ff18242d2f3fe07ab99f379883c6dd2d62b7",
+      "byteLength": 226,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0031",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0031.png",
+      "sha256": "687d64761a1201e30073b9e5a3c462ecd01f4e8715a0dbe74b4579e2711514d1",
+      "byteLength": 313,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0032",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0032.png",
+      "sha256": "322019a82d48952489b71fcd144e99f058fffb4694901448ff13e0a0d97f9499",
+      "byteLength": 234,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0033",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0033.png",
+      "sha256": "36988e02841b77dd953f0cec5b97de9e433ded3ab51df71419054c9f2d9b9c79",
+      "byteLength": 224,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0034",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0034.png",
+      "sha256": "13efd83260918efc540d2e4447cc59cf72ce6e4daccb908554961ec48eb1031f",
+      "byteLength": 316,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0035",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0035.png",
+      "sha256": "a14f8882174ae79316803a1eaaf98e1dfb8c979e7658e5c9b18543e7c84b0b42",
+      "byteLength": 305,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0036",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0036.png",
+      "sha256": "c435988a3574755962d21391ce681fbdffdcda76a581af065ef23408454b32d1",
+      "byteLength": 223,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0037",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0037.png",
+      "sha256": "39ff2c83a9825ffac28ae9f1fb1f620c9234c044a3b1a64f22b179501b63d930",
+      "byteLength": 220,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0038",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0038.png",
+      "sha256": "51eb3700a3e41b14bae6829f455c5a49aa33f6800ec2c4f78883eab36836707c",
+      "byteLength": 220,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0039",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0039.png",
+      "sha256": "caddf15568c8d1ce8a9c971787da5aff4633b7ada072f516404f0743c26af805",
+      "byteLength": 308,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0040",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0040.png",
+      "sha256": "7a69276cf5b1e2300bb4a865e0d8c5303c9d460018ff51d157f4498f350f200b",
+      "byteLength": 220,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0041",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0041.png",
+      "sha256": "1ed3cad35e2727a044d5c9d70438b8ac3c57a403560b0801e2cafc21461e6bbb",
+      "byteLength": 310,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0042",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0042.png",
+      "sha256": "3d63672b943f0bf2783c0cee1255702903b0954abcfa104b5103fa966c27e87c",
+      "byteLength": 225,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0043",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0043.png",
+      "sha256": "23c4289e2c1ccef79b825ec761274814841af47b6f458e5350a6bd45cb78f5c4",
+      "byteLength": 227,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0044",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0044.png",
+      "sha256": "717cfaf32489edacd66695aa4e05850a8d19c06d967cd96c349f7eb0be4688a7",
+      "byteLength": 315,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0045",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0045.png",
+      "sha256": "81b482341c8b420ee5313939d91fa7912494d208a868a7c47d896ea56178504f",
+      "byteLength": 225,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0046",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0046.png",
+      "sha256": "5a2bf29fdde0b57072878f1a755702a79e2de83f84f8b7138f18cf83b5188349",
+      "byteLength": 219,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0047",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0047.png",
+      "sha256": "d3105184fbe01827dd7e33636d4e5dfa5ff6469e0005c7cd0a9f86e182239d8d",
+      "byteLength": 223,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0048",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0048.png",
+      "sha256": "7189dfd2ec514b7b77452371d6457632917ba2514a4aa184bd73605e9535cfce",
+      "byteLength": 321,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0049",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0049.png",
+      "sha256": "f1693285bf638e78b2113f7abe1c7df559ad26a57c14447b2367403b11dc6e2c",
+      "byteLength": 303,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0050",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0050.png",
+      "sha256": "215b14a0513b769aec3bfa5e8cbcc82956483f27823197ef4144cce401653ca7",
+      "byteLength": 226,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0051",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0051.png",
+      "sha256": "0eeaf98b1bc5f2c191ada4b00e2efd2a72d1fbec2a59674aebd16e533d3ae8dd",
+      "byteLength": 229,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0052",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0052.png",
+      "sha256": "fcefd2b6f9025ebca7425f532b899221579eb3bb8dd51e37beacc913daa9c2ce",
+      "byteLength": 315,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0053",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0053.png",
+      "sha256": "1371bf890565b583c8e497b781484676c8e8c8de074deeef524477c13a920465",
+      "byteLength": 313,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0054",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0054.png",
+      "sha256": "a8b165dfc989271054e969f3caa1ffc8b6fcb7d604f309b76f38926133961bcb",
+      "byteLength": 214,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0055",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0055.png",
+      "sha256": "346ab0cd612f6944dfad271fc81e55f0b0b26117747a10819105860e19eab166",
+      "byteLength": 300,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0056",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0056.png",
+      "sha256": "77efe5db0b6a33e4b452f24cfe8946940e20d5d556c0adba28d6cac8caf9e9d2",
+      "byteLength": 314,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0057",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0057.png",
+      "sha256": "b39ce597216ac0cbf7f3825d82363924734530eaf165fc78139e5c9671e43593",
+      "byteLength": 215,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0058",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0058.png",
+      "sha256": "98c8f5356e99aaedf814db51d43843f0193477fabd3e554857f4d1f70cc64b58",
+      "byteLength": 306,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0059",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0059.png",
+      "sha256": "5e116acec96fe8583dc0f01c72d3c10d9418f4d4345b0d46f24260bae6fc5f91",
+      "byteLength": 293,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0060",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0060.png",
+      "sha256": "eb7daac77b03543a063507c45e62c942db5cc1474d5781e9d7d8014e4d160cff",
+      "byteLength": 289,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0061",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0061.png",
+      "sha256": "dd613eda4231945c3e9612db8c3380060f6471dd1bed535e9a55175252e19004",
+      "byteLength": 223,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0062",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0062.png",
+      "sha256": "eed505c506bd0980cc12d7f1450ab36b2feaf96e97f52fff88a4b28f75b55b81",
+      "byteLength": 316,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0063",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0063.png",
+      "sha256": "7ee48f7832efd0032dfcfa2efb7f6bb5a5535aab3e36e34e149af336beb59057",
+      "byteLength": 317,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0064",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0064.png",
+      "sha256": "2a9a06efce84a775d0f4b55f74953ec1b7c3a11bb11299e20fb670f81ebf2076",
+      "byteLength": 220,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0065",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0065.png",
+      "sha256": "759482ae7b9ff827a85678c7f77ba673494398dee649a3165635b8eeacdee144",
+      "byteLength": 217,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0066",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0066.png",
+      "sha256": "43529da57699f446e86afa55edfa076c5f2a061adf581b007e93ae6a33afda4d",
+      "byteLength": 303,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0067",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0067.png",
+      "sha256": "91aea9937847b5f199961e12ccf611108cb8508e452fe5b5c9238edfc0a355c0",
+      "byteLength": 315,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0068",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0068.png",
+      "sha256": "7fa092e907be5c9833086412f117d3ef505bfcb018fb0c257430760138681b2a",
+      "byteLength": 296,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0069",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0069.png",
+      "sha256": "da0dd4d4ce99e8cc1af0c7db37c03b881fa8c3bdb109e51d6113e6ad7e6de1c0",
+      "byteLength": 225,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0070",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0070.png",
+      "sha256": "7ee93c9f7cb3c75b5909ffc938e824bb59c30d77addb6814715edc2a85675b7d",
+      "byteLength": 314,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0071",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0071.png",
+      "sha256": "d0ed7c83ef00d78b413365e38de5aab30ee5d5d3dbd42f0d8d66157bb1325fb5",
+      "byteLength": 292,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0072",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0072.png",
+      "sha256": "6528a99bddbcbd1623c1bab4c569148d2cfe22741947d165f829d10b73c94c9a",
+      "byteLength": 227,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0073",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0073.png",
+      "sha256": "ea1131315cee44f7ccf868dfcacd4b02df036d899602378cc7f0e3bb4d59420f",
+      "byteLength": 307,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0074",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0074.png",
+      "sha256": "5e740aecf33415b2dae6193868c239ed38256ba92d358601f1fe8382327a30fb",
+      "byteLength": 218,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0075",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0075.png",
+      "sha256": "d789614982c0298a488344fdad7e17518a0a8c2644d0dc720bc6ecf778f4615e",
+      "byteLength": 314,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0076",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0076.png",
+      "sha256": "0a4c9055340db8112508fa9a42125e49c90d90153615928d6dfc714103142eb1",
+      "byteLength": 220,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0077",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0077.png",
+      "sha256": "a1cf69f132575d0220de9d78aa0dabd5e0e2bb805c0f775a8bb78c598c8823eb",
+      "byteLength": 223,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0078",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0078.png",
+      "sha256": "1ee94f5fc258b34103a26804f131ff593f473ca013a18c1ad9bf8bff88f39193",
+      "byteLength": 292,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0079",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0079.png",
+      "sha256": "dad561155750f8e27632f28b1fa92bad7ecbd29e774249c433e147b03effd3ac",
+      "byteLength": 308,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0080",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0080.png",
+      "sha256": "3ab1eaaf4b04e1e83a9391110b0bd69cb22d34d90d8a389e616c1d228f4c2093",
+      "byteLength": 223,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0081",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0081.png",
+      "sha256": "f3117e2812717ffd3e5d03bc50576b5e281e724ed5afe481af808495c962cfb2",
+      "byteLength": 223,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0082",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0082.png",
+      "sha256": "372b33b47d292230ddc9190b63048ffd75c89f192edd9f4dfb661fd6d4923460",
+      "byteLength": 230,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0083",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0083.png",
+      "sha256": "49da430b7f210261e776d309a02fa22eb5ee0be2ab6cee3088db4fb4b6bb99cd",
+      "byteLength": 298,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0084",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0084.png",
+      "sha256": "4a8240d19ac24ee9575982c5656fcb9813caf0afbaa7c08ce022dd64d7c5d3df",
+      "byteLength": 222,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0085",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0085.png",
+      "sha256": "5a17f43eb74820577177b6c271ddd3e81a01f5cb2a44c607fa4a4ce0f4d59825",
+      "byteLength": 297,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0086",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0086.png",
+      "sha256": "48d23a1d7e0cbf9a8d13ba3cd96a80f828be1f3ce826e23bc39ebf20a9f513f5",
+      "byteLength": 223,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0087",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0087.png",
+      "sha256": "ba03e69912880955fb0240dc90d6d5c95e077070b6b37eac2b7c1e0cded4c0d9",
+      "byteLength": 222,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0088",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0088.png",
+      "sha256": "61d7ada9486ac7e7b2e11331a5df826a25ad776c5c2a5da4960d69711c4453c0",
+      "byteLength": 226,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0089",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0089.png",
+      "sha256": "f162b49c93b2d51b133646d6a9d02bd31210e41ecd4647de9b32afb2b1211276",
+      "byteLength": 217,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0090",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0090.png",
+      "sha256": "08818c4f73f39f8d28ebd9697847b6ec40665248de3bc1a02af80684d8837869",
+      "byteLength": 215,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0091",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0091.png",
+      "sha256": "b4fd55fa5fe18c3a8b03f76b07a26f63c1c8ddc587cafb1849881b7a73cb3e74",
+      "byteLength": 325,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0092",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0092.png",
+      "sha256": "6072dcd7100f476877227da96df41f783333c37c69145fedafe79c1e89c1a8e0",
+      "byteLength": 312,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0093",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0093.png",
+      "sha256": "dda44411860aefc044e0f8ec3828cf2c5acd86c93f830e0711dc99bb7ccde2d9",
+      "byteLength": 229,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0094",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0094.png",
+      "sha256": "1f9280633461c5dbd23d9e1072a21dde8d409c65df96cd32d4ba4c699f31994a",
+      "byteLength": 309,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0095",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0095.png",
+      "sha256": "8c237acfe5dfde619e63dd21b7a2a03ecccca409546111b96995de4e84e38097",
+      "byteLength": 226,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0096",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0096.png",
+      "sha256": "86f11478f0d537ea93ae2d5826785e961dd9d291de3db7b7d682a36832f068e0",
+      "byteLength": 315,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0097",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0097.png",
+      "sha256": "4fafc8d472add624555c856332a52c8af6fe332d002005c92d7386e7e9afcee5",
+      "byteLength": 222,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0098",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0098.png",
+      "sha256": "4376da77990d0468e36ba5c777866d407cce91b8c34eb40253628328bc483445",
+      "byteLength": 302,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0099",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0099.png",
+      "sha256": "c4b9615f088609b44f31f8535ba36f9090efe2c56dd2959464456000a50673e0",
+      "byteLength": 316,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0100",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0100.png",
+      "sha256": "c3fce68ed85ffba800f6e58f9f677ce7853f738739c2e1bdfdcbd429365ccd32",
+      "byteLength": 295,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0101",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0101.png",
+      "sha256": "9fc6f1cb96bf3ab598f6f0db9159328c38a8f8d2f0b126afc13636cbbf871e14",
+      "byteLength": 219,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0102",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0102.png",
+      "sha256": "0756068c0b28be261e6f30bbf6d05c7450aa8755f345c8c909aa97c1878a7178",
+      "byteLength": 294,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0103",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0103.png",
+      "sha256": "2ef7b8e825eea6d67cbace3d1d14765ea44a9a9b26fd69257f6ab14fb74fdab3",
+      "byteLength": 225,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0104",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0104.png",
+      "sha256": "ad7f443aefb825052844081a312c7ce3d4e0e9b8856653ff05bae3bfc8ce26b9",
+      "byteLength": 327,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0105",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0105.png",
+      "sha256": "d2325dc6529822ab91d9138c42d0b05f4433264e66dc234e81eb9ccb9e10cb96",
+      "byteLength": 306,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0106",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0106.png",
+      "sha256": "c94398fa37f540a826aefd87d42d2aed1ac4a55d4ae2f5e2e2cfba49eef7032c",
+      "byteLength": 308,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0107",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0107.png",
+      "sha256": "eb83ba8e7708d1c63e721ca2d5de509c3c52984b09dd5f86f2eaff29d64091a1",
+      "byteLength": 221,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0108",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0108.png",
+      "sha256": "80df1d64636d0df0a26ef075d65dfcefc650c191930b3e098007ec7664593b80",
+      "byteLength": 320,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0109",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0109.png",
+      "sha256": "a6125ea9cbd95691b77709784c7dc20139a010e9b5cd43d56898047fa43e57f8",
+      "byteLength": 295,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0110",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0110.png",
+      "sha256": "89abbb2b5b2700a75db0318ed20a7a040e049a16b625b90849748e48749fa5a9",
+      "byteLength": 304,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0111",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0111.png",
+      "sha256": "2e21b7542981b8780dd960772d54a52863c86742142e70ffadff51f2b8032f3d",
+      "byteLength": 231,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0112",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0112.png",
+      "sha256": "fdd54acefbd7df641a926f72549e59973c4bbf553a01e3e7245a8b60dbf8bfb8",
+      "byteLength": 300,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0113",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0113.png",
+      "sha256": "592d8ecdf72635d1fedda42b0fd0cce77291240580edd6a6dde6f23ebce5d926",
+      "byteLength": 316,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0114",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0114.png",
+      "sha256": "559a496a7e24f530d1ba2c4f6d44e724dc71eb9838a09d22700fb92e9d280fe5",
+      "byteLength": 309,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0115",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0115.png",
+      "sha256": "38fcddb6a806b8417a8fc48b7c9782599090568102d2030d62607fe4537894c9",
+      "byteLength": 227,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0116",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0116.png",
+      "sha256": "a456dea2744e08cae997e40494e050a69e959ffc383366f74209a1e5ca23e54a",
+      "byteLength": 294,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0117",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0117.png",
+      "sha256": "611de49c21c8157539d297667bd709e015e15fb403bb2e51b1c419fd0830f01c",
+      "byteLength": 226,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0118",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0118.png",
+      "sha256": "853a9976c16d075dfb978e7147bf01814d71ef6b7064f56ba983732cef1f9662",
+      "byteLength": 307,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0119",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0119.png",
+      "sha256": "4a5a498ad2b8be3e2adab9be73c82f7d07d22d1f1faa50c1a4e7a2840c5f3a5d",
+      "byteLength": 224,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0120",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0120.png",
+      "sha256": "099df2b1e55808f519bf6682a4c231646523b9df47e984591f5697bfdbf12beb",
+      "byteLength": 308,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0121",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0121.png",
+      "sha256": "3c315b58504e75609595749e743ddc52127f50ec23f491d9a54b7cf511238a44",
+      "byteLength": 289,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0122",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0122.png",
+      "sha256": "d657ebf12ce727622ac7e6f14e4dd206d28097bbcbc1cc9303c7cd47114025b6",
+      "byteLength": 228,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0123",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0123.png",
+      "sha256": "a65cd025dc0eece38ae13c6eb842581d176850a70cf98b1eeb4df5a0d9d5b0cc",
+      "byteLength": 218,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0124",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0124.png",
+      "sha256": "49ebd1a4693abb4afdb2ba007f994b70dcdda3cdccb7867242ffc53e0d62ad5c",
+      "byteLength": 310,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0125",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0125.png",
+      "sha256": "4465e1d47fa4890b7a05a56736392cded46ff30b86d69ecaac7a9dfcbdd873c0",
+      "byteLength": 308,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0126",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0126.png",
+      "sha256": "9ee4bf67360a1615f36312f86d9a8900b54b5fbc6c840594557824f0cc7735c5",
+      "byteLength": 295,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0127",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0127.png",
+      "sha256": "e04ef81aac8e142a991f43306fd99ee01949d219a411627d7aa8f81a51510e4f",
+      "byteLength": 223,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0128",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0128.png",
+      "sha256": "1e64bb333f5d54852b34ef589a91042380b9579e3de001c6b51e8f145a0b751d",
+      "byteLength": 225,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0129",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0129.png",
+      "sha256": "b7f32adddffa0520555077922390fc7490bf4ead40489470a96ffbc5bc366713",
+      "byteLength": 228,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0130",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0130.png",
+      "sha256": "2de45569af869a15adfc634409c75a624f5f6e6a2c96524fdedb421300ca3cac",
+      "byteLength": 226,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0131",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0131.png",
+      "sha256": "8725e5aa617795ffe61907f6ec29ce509d15db7d2792d497091998f50631dca4",
+      "byteLength": 235,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0132",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0132.png",
+      "sha256": "27297e23fbcb006dc16062c8a62d8f93ada5bad54e5fbccc2ff7a0221c8e544f",
+      "byteLength": 223,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0133",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0133.png",
+      "sha256": "d887bd5f26ebe38a598fddb306ff844fd0547a16a0924a4e3f87ce275c6a96c1",
+      "byteLength": 289,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0134",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0134.png",
+      "sha256": "c5a8b3956a7286fdcc01946820390510df3414ecad737194ce1768018b796d94",
+      "byteLength": 217,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0135",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0135.png",
+      "sha256": "53c89c9100189b74cf4c5e4e73a0620e671aa5c0e7b5373bdeaeec3dc76f4839",
+      "byteLength": 223,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0136",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0136.png",
+      "sha256": "3c4150ecfc6584444c655a2475632dbf2dccaec88cd75201b5af3f3b2842a78b",
+      "byteLength": 219,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0137",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0137.png",
+      "sha256": "640daff63e46ad5c6f883adb69a6f98e1dd435deb0bef28264ca58a9faf17dca",
+      "byteLength": 308,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0138",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0138.png",
+      "sha256": "70f0288a7efd4e05951cf8e20f071c92eac408badd62c61ad073636e3bf44cc9",
+      "byteLength": 223,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0139",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0139.png",
+      "sha256": "b26ccb670abb357f83cc7dabd65f40b823fc6e3d7e4beeca80ecb203b04dd434",
+      "byteLength": 319,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0140",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0140.png",
+      "sha256": "47e3e8c16a3eae8874c0c854ecfa839defdba752c6df083dd28974efe43aec27",
+      "byteLength": 294,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0141",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0141.png",
+      "sha256": "8854972f7dadb242a976a26328fce019619e262348c623a12635e4abcfbb67e2",
+      "byteLength": 230,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0142",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0142.png",
+      "sha256": "cbc9f1220743a2d3a4389fded8bbc759e5996892c64c42de15e62d5ea65004dd",
+      "byteLength": 226,
+      "width": 128,
+      "height": 72
+    },
+    {
+      "questionId": "q0143",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0143.png",
+      "sha256": "71b2b71be2d6a8bd654529e5edcd17a4bab9a8d00a0933e1ecd096dc5dafd6ab",
+      "byteLength": 297,
+      "width": 78,
+      "height": 169
+    },
+    {
+      "questionId": "q0144",
+      "path": "docs/quality/art/silhouette/blind-test/question-images/q0144.png",
+      "sha256": "0619dabd7f7ba6651c42776de626ee97c06bb04b39928c17e78eebaf96fc2333",
+      "byteLength": 327,
+      "width": 78,
+      "height": 169
+    }
+  ],
+  "formCount": 10,
+  "questionsPerForm": 24,
+  "humanEvidence": {
+    "participantCount": 0,
+    "minimum": 10,
+    "independentFromProduction": true,
+    "rawResponses": [],
+    "status": "missing-blocking"
+  },
+  "thresholds": {
+    "character": 0.9,
+    "equipment": 0.9,
+    "direction": 0.9,
+    "minimumCombination": 0.8
+  }
+}
