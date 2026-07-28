@@ -663,12 +663,14 @@ export type {
   ArenaV2KzRouteChoiceSnapshot,
 } from './arena-v2-kz-route-choice-return-prototype.js';
 export {
+  createArenaV2KzBranchGreyboxSurfaceSets,
   runArenaV2KzBranchGreyboxPrototype,
 } from './arena-v2-kz-branch-greybox-prototype.js';
 export type {
   ArenaV2KzBranchGreyboxPrototypeResult,
   ArenaV2KzBranchGreyboxScenario,
   ArenaV2KzBranchGreyboxSurface,
+  ArenaV2KzBranchGreyboxSurfaceSet,
 } from './arena-v2-kz-branch-greybox-prototype.js';
 export {
   runArenaV2KzBranchCameraObservationPrototype,
@@ -695,6 +697,14 @@ export type {
 export {
   runArenaV2KzLanguageConsequencePrototype,
 } from './arena-v2-kz-language-consequence-prototype.js';
+export {
+  runArenaV2KzBranchWeaponConsequencePrototype,
+} from './arena-v2-kz-branch-weapon-consequence-prototype.js';
+export type {
+  ArenaV2KzBranchWeaponConsequenceProbeResult,
+  ArenaV2KzBranchWeaponConsequencePrototypeResult,
+  ArenaV2KzBranchWeaponConsequenceSummary,
+} from './arena-v2-kz-branch-weapon-consequence-prototype.js';
 export type {
   ArenaV2KzLanguageCombatOutcome,
   ArenaV2KzLanguageConsequenceProbeResult,

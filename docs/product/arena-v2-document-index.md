@@ -124,10 +124,12 @@ Arena V2 的核心目标是：
 | `arena-v2-kz-route-combat-prototype.ts` | 将六段 KZ 灰盒与同一套武器命中/冲量/移动回应/复活重入规则组合，验证段落宽度、相邻恢复表面、侧移、跳跃和 3 秒复活锚点对武器击飞后果的影响，仅供开发/测试工具链使用 | 第三轮地图×武器原型证据，单人复活重入已验证 |
 | `arena-v2-kz-route-choice-return-prototype.ts` | 为迷宫/走钢丝选择段声明快/安全分叉、路线 tick、战斗暴露窗口和复活后的段落/锚点重入标签，仅供开发/测试工具链使用 | 4 个分叉场景通过，独立灰盒已验证，生产几何仍待验证 |
 | [KZ 分叉路线与复活重入观察原型结果 V1](../research/arena-v2-kz-route-choice-reentry-results-v1.md) | 记录四个分叉场景的速度/暴露交换、180 tick 复活等待和重入后路线词汇保持 | 研究观察合同通过，真机/真人仍待验证 |
-| `arena-v2-kz-branch-greybox-prototype.ts` | 将四条研究分叉 waypoints 转为独立 surface，使用真实 PhysicsWorld + MovementSystem 测量完成 tick、空中持续和最终支撑面，仅供开发/测试工具链使用 | 四条分叉均完成，快/安全时间交换已出现，武器/摄像机/多人仍待验证 |
+| `arena-v2-kz-branch-greybox-prototype.ts` | 将四条研究分叉 waypoints 转为独立 surface，使用真实 PhysicsWorld + MovementSystem 测量完成 tick、空中持续和最终支撑面，并提供分叉灰盒 surface 集合，仅供开发/测试工具链使用 | 四条分叉均完成，快/安全时间交换已出现，摄像机已完成几何观察，武器/多人仍待扩展 |
 | [KZ 分叉路线独立灰盒结果 V1](../research/arena-v2-kz-branch-greybox-results-v1.md) | 记录 5/7/8/5 个独立 surface 与 76/151/154/81 个实测完成 tick，并区分计划值与物理实测值 | 研究灰盒物理通过，生产地图仍未接入 |
 | `arena-v2-kz-branch-camera-observation-prototype.ts` | 用正交视锥数学检查选择/重入时两条分叉的前两个路线点是否同时进入移动端纵向/横向观察窗口，仅供开发/测试工具链使用 | 8 个观察场景通过，走钢丝纵向余量仅 0.066，真实画布仍待验证 |
 | [KZ 分叉路线镜头观察结果 V1](../research/arena-v2-kz-branch-camera-observation-results-v1.md) | 记录 390×844 与 844×390 视口的世界范围、最小余量和选择/重入可见性边界 | 几何观察合同通过，Renderer/真人理解仍待验证 |
+| `arena-v2-kz-branch-weapon-consequence-prototype.ts` | 将五种武器战斗语言和三种固定回应接入四条独立分叉 surface，输出命中、击落、支撑面转移、路线失误和反馈因果 | 60 个 Rule/Action/Physics 探针通过，分叉已产生不同武器后果，攻击点/多人/真人仍待扩展 |
+| [KZ 分叉路线 × 武器后果原型结果 V1](../research/arena-v2-kz-branch-weapon-consequence-results-v1.md) | 记录四条分叉的表面宽深、命中、击落、转移、路线失误和空放差异 | 研究证据已接入，未进入生产平衡 |
 | [生存 1vE 最小循环原型结果 V1](../research/arena-v2-survival-loop-prototype-results-v1.md) | 记录无武器开局、20 秒三选一、轮次成长、两次掉落和低维奖励证据 | 第一轮原型证据 |
 | `arena-v2-survival-entity-prototype.ts` | 验证单一敌人复用玩家规则/物理、敌我双方击飞和第一次复活/第二次终局，仅供开发/测试工具链使用 | 第二轮规则原型证据 |
 | `arena-v2-survival-pressure-prototype.ts` | 验证 1/2/4 同类敌人的有界自主追击、分阶段刷新、多人击飞压力、20 秒三武器供给争夺、等级专属武器 Definition 和 15/20/30 秒×两种路线分流矩阵，仅供开发/测试工具链使用 | 第六轮规则/武器原型证据 |

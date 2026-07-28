@@ -346,3 +346,15 @@ KZ-Rush 的难度标准把距离、空中修正和连续节奏拆开记录，而
 - `packages/arena-v1-experiment/test/arena-v2-kz-branch-camera-observation-prototype.test.ts`
 - [KZ 分叉路线独立灰盒结果 V1](arena-v2-kz-branch-greybox-results-v1.md)
 - [KZ 分叉路线镜头观察结果 V1](arena-v2-kz-branch-camera-observation-results-v1.md)
+
+## 16. 分叉路线 × 武器后果原型
+
+本轮把四条独立分叉灰盒接入五种武器战斗语言，并分别测试保持、侧移、起跳三种已有回应，共 60 个确定性探针。结果显示，分叉角色已经能通过真实战斗后果表达：低位直行与边线抢时的表面更容易形成击落或路线失误，高位恢复线更常保留或转移到其他支撑面；走钢丝中线与边线的深度差也改变了击落与转移比例。详细数据见[KZ 分叉路线 × 武器后果原型结果 V1](arena-v2-kz-branch-weapon-consequence-results-v1.md)。
+
+这一步关闭了“分叉只改变路线时间、不改变武器价值”的结构缺口，但不等于正式平衡完成。当前仍是单人固定应对和每条分叉一个代表战斗面，下一步必须扩展到入口/转折/出口三个战斗位置，加入 2–4 人拥挤和真人任务；走钢丝纵向镜头余量 `0.066` 仍需真实画布验证。
+
+验证入口：
+
+- `packages/arena-v1-experiment/src/arena-v2-kz-branch-weapon-consequence-prototype.ts`
+- `packages/arena-v1-experiment/test/arena-v2-kz-branch-weapon-consequence-prototype.test.ts`
+- [KZ 分叉路线 × 武器后果原型结果 V1](arena-v2-kz-branch-weapon-consequence-results-v1.md)

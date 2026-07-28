@@ -35,6 +35,13 @@ export interface ArenaV2KzBranchGreyboxSurface {
   readonly halfExtents: Readonly<{ x: number; y: number; z: number }>;
 }
 
+export interface ArenaV2KzBranchGreyboxSurfaceSet {
+  readonly segmentId: string;
+  readonly branchId: string;
+  readonly branchRole: ArenaV2JumpRouteBranchOption['role'];
+  readonly surfaces: readonly ArenaV2KzBranchGreyboxSurface[];
+}
+
 export interface ArenaV2KzBranchGreyboxScenario {
   readonly segmentId: string;
   readonly branchId: string;
@@ -128,6 +135,20 @@ function createBranchSurfaces(
       z: policy.halfZ,
     }),
   })));
+}
+
+export function createArenaV2KzBranchGreyboxSurfaceSets(): readonly ArenaV2KzBranchGreyboxSurfaceSet[] {
+  const route = createArenaV2JumpRoutePrototype();
+  const character = createArenaV1CharacterRegistry().require(ARENA_V1_CHARACTER_ID.PARKOUR_APPRENTICE);
+  const profile = createCharacterPhysicsProfile(character);
+  return Object.freeze(route.segments.flatMap((segment) => (
+    segment.branchOptions.map((branch) => Object.freeze({
+      segmentId: segment.segmentId,
+      branchId: branch.branchId,
+      branchRole: branch.role,
+      surfaces: createBranchSurfaces(branch, profile),
+    }))
+  )));
 }
 
 function branchDirection(
