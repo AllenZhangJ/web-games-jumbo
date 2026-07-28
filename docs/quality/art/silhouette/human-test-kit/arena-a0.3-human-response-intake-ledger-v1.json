@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "arena.art.silhouette-human-response-intake.a0.3.v1",
+  "status": "awaiting-external-human-input",
+  "kitId": "arena.art.silhouette-human-test-kit.a0.3.v1",
+  "participantCount": 0,
+  "minimumParticipants": 10,
+  "entries": [],
+  "hardGatePassed": false,
+  "coordinatorSignOff": null,
+  "downstream": {
+    "a0_3": "incomplete",
+    "blockout": "forbidden",
+    "final": "incomplete"
+  }
+}

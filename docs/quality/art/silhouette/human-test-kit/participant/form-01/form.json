@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "kitId": "arena.art.silhouette-human-test-kit.a0.3.v1",
+  "formId": "form-01",
+  "questionCount": 24,
+  "questions": [
+    {
+      "questionId": "q0036",
+      "image": "images/q0036.png",
+      "sha256": "c435988a3574755962d21391ce681fbdffdcda76a581af065ef23408454b32d1"
+    },
+    {
+      "questionId": "q0011",
+      "image": "images/q0011.png",
+      "sha256": "9551831b04603f5e41c7de8cbb4592db391b55dd6ac16ade6c9df6eef06b87a4"
+    },
+    {
+      "questionId": "q0133",
+      "image": "images/q0133.png",
+      "sha256": "d887bd5f26ebe38a598fddb306ff844fd0547a16a0924a4e3f87ce275c6a96c1"
+    },
+    {
+      "questionId": "q0071",
+      "image": "images/q0071.png",
+      "sha256": "d0ed7c83ef00d78b413365e38de5aab30ee5d5d3dbd42f0d8d66157bb1325fb5"
+    },
+    {
+      "questionId": "q0051",
+      "image": "images/q0051.png",
+      "sha256": "0eeaf98b1bc5f2c191ada4b00e2efd2a72d1fbec2a59674aebd16e533d3ae8dd"
+    },
+    {
+      "questionId": "q0023",
+      "image": "images/q0023.png",
+      "sha256": "f72dddebb1d44a2c0982d2403eec375d6c29e89ff74e932e230fa670c7988a8d"
+    },
+    {
+      "questionId": "q0005",
+      "image": "images/q0005.png",
+      "sha256": "ac73e3b4577f85e57398dcb578e8ff28de8a1d8ff9435c4c9dae195ce1070742"
+    },
+    {
+      "questionId": "q0061",
+      "image": "images/q0061.png",
+      "sha256": "dd613eda4231945c3e9612db8c3380060f6471dd1bed535e9a55175252e19004"
+    },
+    {
+      "questionId": "q0141",
+      "image": "images/q0141.png",
+      "sha256": "8854972f7dadb242a976a26328fce019619e262348c623a12635e4abcfbb67e2"
+    },
+    {
+      "questionId": "q0081",
+      "image": "images/q0081.png",
+      "sha256": "f3117e2812717ffd3e5d03bc50576b5e281e724ed5afe481af808495c962cfb2"
+    },
+    {
+      "questionId": "q0001",
+      "image": "images/q0001.png",
+      "sha256": "8cbb78e0214d7b3c976e34025feee615bcd687b7c4003e813fc779ee76293640"
+    },
+    {
+      "questionId": "q0091",
+      "image": "images/q0091.png",
+      "sha256": "b4fd55fa5fe18c3a8b03f76b07a26f63c1c8ddc587cafb1849881b7a73cb3e74"
+    },
+    {
+      "questionId": "q0072",
+      "image": "images/q0072.png",
+      "sha256": "6528a99bddbcbd1623c1bab4c569148d2cfe22741947d165f829d10b73c94c9a"
+    },
+    {
+      "questionId": "q0111",
+      "image": "images/q0111.png",
+      "sha256": "2e21b7542981b8780dd960772d54a52863c86742142e70ffadff51f2b8032f3d"
+    },
+    {
+      "questionId": "q0031",
+      "image": "images/q0031.png",
+      "sha256": "687d64761a1201e30073b9e5a3c462ecd01f4e8715a0dbe74b4579e2711514d1"
+    },
+    {
+      "questionId": "q0030",
+      "image": "images/q0030.png",
+      "sha256": "f62ba01778b8351297ffdf1baf14ff18242d2f3fe07ab99f379883c6dd2d62b7"
+    },
+    {
+      "questionId": "q0121",
+      "image": "images/q0121.png",
+      "sha256": "3c315b58504e75609595749e743ddc52127f50ec23f491d9a54b7cf511238a44"
+    },
+    {
+      "questionId": "q0021",
+      "image": "images/q0021.png",
+      "sha256": "90a8ba07f0051fd95e19441e98c716a460dc569e9bfa0bd63e48f10b0065c3bb"
+    },
+    {
+      "questionId": "q0041",
+      "image": "images/q0041.png",
+      "sha256": "1ed3cad35e2727a044d5c9d70438b8ac3c57a403560b0801e2cafc21461e6bbb"
+    },
+    {
+      "questionId": "q0022",
+      "image": "images/q0022.png",
+      "sha256": "40fc1f50e6559fdfbd38ea76e7a0c47149e5e498ad69030ed9d872b8e56bf1f9"
+    },
+    {
+      "questionId": "q0131",
+      "image": "images/q0131.png",
+      "sha256": "8725e5aa617795ffe61907f6ec29ce509d15db7d2792d497091998f50631dca4"
+    },
+    {
+      "questionId": "q0135",
+      "image": "images/q0135.png",
+      "sha256": "53c89c9100189b74cf4c5e4e73a0620e671aa5c0e7b5373bdeaeec3dc76f4839"
+    },
+    {
+      "questionId": "q0107",
+      "image": "images/q0107.png",
+      "sha256": "eb83ba8e7708d1c63e721ca2d5de509c3c52984b09dd5f86f2eaff29d64091a1"
+    },
+    {
+      "questionId": "q0101",
+      "image": "images/q0101.png",
+      "sha256": "9fc6f1cb96bf3ab598f6f0db9159328c38a8f8d2f0b126afc13636cbbf871e14"
+    }
+  ]
+}

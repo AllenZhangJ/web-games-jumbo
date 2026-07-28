@@ -47,6 +47,7 @@ Arena V2 的核心目标是：
 | [A0.2.2 六张正式参考板与自审](../architecture/arena-art-reference-boards-a0.2.2.md) | 交付六张2560×1440 SVG+PNG，60条7/2/1注释、40嵌入/20 link-only、武器/反馈各8个直接视觉、裁切/hash、10%与移动证据及失败关闭检查 | 94/100且各维度≥80%，主协调于2026-07-28签核为`board-ready`；两核心板仍为方向合同而非模型/VFX样件，当前A0.2 ready来自后续独立聚合，Blockout/A0.3/设备/真人/Final不随之通过 |
 | [A0.2 视觉方向聚合总门](../architecture/arena-art-reference-total-gate-a0.2.md) | 独立复算三个子门的来源身份、权利、hash、板面使用、7/2/1、签核和下游false边界，并提供10类失败关闭 | 96/100且各维度≥80%，A0.2与Reference Board视觉方向`ready`；A0.3、Blockout和所有资产成熟度仍incomplete/fail closed |
 | [A0.3 剪影工具与盲测候选基线](../architecture/arena-art-silhouette-a0.3.md) | 固定两正式角色×赤手/圆盾×六方向×0/5/12m×双视口渲染、匿名题包、代理混淆矩阵/距离分层、评分与15类失败关闭 | 技术/代理候选85/100；离屏0且代理分层≥90%，但真人0/10，A0.3仍incomplete且Blockout禁止 |
+| [A0.3 真人剪影盲测最小执行包](../architecture/arena-art-silhouette-human-test-a0.3.md) | 10份离线参与者页面、144题全覆盖、匿名原始JSON、intake hash台账、混淆矩阵/距离/视口评分，以及包级14项、intake 12项、评分器15项失败关闭与正向候选探针 | `ready-for-external-human-input`；真人仍0/10，自动评分和主协调签核前A0.3/Blockout/Final保持关闭 |
 | [美术 A0–A7 与开发 P0–P7 对齐矩阵](../architecture/arena-art-development-alignment-matrix.md) | 将A0拆为合同、实际参考板、剪影盲测三门，并固定A1–A7输入、依赖、评分、硬门和返工范围 | A0.1 `contract-ready`，A0.2视觉方向总门`ready`；A0.3技术/代理候选85/100但真人缺失，仍incomplete |
 | [ADR-109：Arena 美术与音频工作统一走14技能路由和资产门禁](../decisions/109-arena-art-and-audio-skill-routing.md) | 固化技能安装、使用范围、项目规则优先级、AI/下载素材边界和回滚处理 | 已接受 |
 | [V2 成长与 200 小时目标](../gameplay/arena-v2-progression-200-hours.md) | 收藏、熟悉、重复游玩和奖励边界 | 初稿 |

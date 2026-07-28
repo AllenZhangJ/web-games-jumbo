@@ -44,16 +44,29 @@ const mapping = randomized.map((output, index) => {
   return { questionId, image: { path, sha256: sha256Bytes(bytes), byteLength: bytes.length, width: output.thumbnail.width, height: output.thumbnail.height }, output };
 });
 
-const forms = Array.from({ length: 10 }, (_, formIndex) => {
-  const ordered = shuffle(mapping, SEED + formIndex + 1);
-  const selected = ordered.slice(0, 24);
+const formBuckets = Array.from({ length: 10 }, () => [] as typeof mapping[number][]);
+mapping.forEach((item, index) => formBuckets[index % formBuckets.length]!.push(item));
+const repeatOrder = shuffle(mapping, SEED + 50);
+let repeatCursor = 0;
+for (const bucket of formBuckets) {
+  const seen = new Set(bucket.map((item) => item.questionId));
+  while (bucket.length < 24) {
+    const candidate = repeatOrder[repeatCursor % repeatOrder.length]!; repeatCursor += 1;
+    if (seen.has(candidate.questionId)) continue;
+    bucket.push(candidate); seen.add(candidate.questionId);
+  }
+}
+const forms = formBuckets.map((bucket, formIndex) => {
+  const selected = shuffle(bucket, SEED + formIndex + 1);
   return { formId: `form-${String(formIndex + 1).padStart(2, '0')}`, seed: SEED + formIndex + 1, questions: selected.map((item) => ({ questionId: item.questionId, imagePath: item.image.path })) };
 });
+const formQuestionCounts = new Map<string, number>();
+for (const form of forms) for (const question of form.questions) formQuestionCounts.set(question.questionId, (formQuestionCounts.get(question.questionId) ?? 0) + 1);
 const questions = {
   schemaVersion: 1, id: 'arena.art.silhouette-blind-questions.a0.3.v1', status: 'awaiting-human-responses', seed: SEED,
   instructions: 'Do not inspect repository filenames or the separate answer key. For each opaque image, choose one character slot, one equipment state and one facing direction.',
   options: { character: ['C01', 'C02'], equipment: ['unarmed', 'shield'], direction: ['front', 'front-right', 'back-right', 'back', 'back-left', 'front-left'] },
-  forms, minimumIndependentHumanParticipants: 10, receivedIndependentHumanParticipants: 0, answersIncluded: false,
+  forms, aggregateCoverage: { uniqueQuestions: formQuestionCounts.size, minimumAppearances: Math.min(...formQuestionCounts.values()), maximumAppearances: Math.max(...formQuestionCounts.values()) }, minimumIndependentHumanParticipants: 10, receivedIndependentHumanParticipants: 0, answersIncluded: false,
 };
 writeFileSync(resolve(ROOT, QUESTION_PATH), `${JSON.stringify(questions, null, 2)}\n`);
 const answerKey = {

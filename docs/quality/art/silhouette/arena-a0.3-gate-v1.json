@@ -17,7 +17,7 @@
     },
     "blindPackage": {
       "path": "docs/quality/art/silhouette/blind-test/arena-a0.3-blind-test-package-v1.json",
-      "sha256": "beeb80affea342746a874d5af85d25bc1cabe9c3aef658d129efdc050e6ab781",
+      "sha256": "69610c9bd27c5b0ff10ab6c0a8c47fd136892fe5d2e606cbdbbdad12736e90d2",
       "byteLength": 40562
     },
     "proxyBaseline": {

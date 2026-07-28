@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "kitId": "arena.art.silhouette-human-test-kit.a0.3.v1",
+  "formId": "form-04",
+  "questionCount": 24,
+  "questions": [
+    {
+      "questionId": "q0014",
+      "image": "images/q0014.png",
+      "sha256": "5195c36e89188f121c0780964a211de75b26ddc15602134a10ec9d15c81f67f2"
+    },
+    {
+      "questionId": "q0104",
+      "image": "images/q0104.png",
+      "sha256": "ad7f443aefb825052844081a312c7ce3d4e0e9b8856653ff05bae3bfc8ce26b9"
+    },
+    {
+      "questionId": "q0106",
+      "image": "images/q0106.png",
+      "sha256": "c94398fa37f540a826aefd87d42d2aed1ac4a55d4ae2f5e2e2cfba49eef7032c"
+    },
+    {
+      "questionId": "q0094",
+      "image": "images/q0094.png",
+      "sha256": "1f9280633461c5dbd23d9e1072a21dde8d409c65df96cd32d4ba4c699f31994a"
+    },
+    {
+      "questionId": "q0102",
+      "image": "images/q0102.png",
+      "sha256": "0756068c0b28be261e6f30bbf6d05c7450aa8755f345c8c909aa97c1878a7178"
+    },
+    {
+      "questionId": "q0074",
+      "image": "images/q0074.png",
+      "sha256": "5e740aecf33415b2dae6193868c239ed38256ba92d358601f1fe8382327a30fb"
+    },
+    {
+      "questionId": "q0084",
+      "image": "images/q0084.png",
+      "sha256": "4a8240d19ac24ee9575982c5656fcb9813caf0afbaa7c08ce022dd64d7c5d3df"
+    },
+    {
+      "questionId": "q0105",
+      "image": "images/q0105.png",
+      "sha256": "d2325dc6529822ab91d9138c42d0b05f4433264e66dc234e81eb9ccb9e10cb96"
+    },
+    {
+      "questionId": "q0124",
+      "image": "images/q0124.png",
+      "sha256": "49ebd1a4693abb4afdb2ba007f994b70dcdda3cdccb7867242ffc53e0d62ad5c"
+    },
+    {
+      "questionId": "q0044",
+      "image": "images/q0044.png",
+      "sha256": "717cfaf32489edacd66695aa4e05850a8d19c06d967cd96c349f7eb0be4688a7"
+    },
+    {
+      "questionId": "q0063",
+      "image": "images/q0063.png",
+      "sha256": "7ee48f7832efd0032dfcfa2efb7f6bb5a5535aab3e36e34e149af336beb59057"
+    },
+    {
+      "questionId": "q0004",
+      "image": "images/q0004.png",
+      "sha256": "119e5666d0c6e34468d3c6beeacacc94733985b24487d663d50faf1249f0e822"
+    },
+    {
+      "questionId": "q0034",
+      "image": "images/q0034.png",
+      "sha256": "13efd83260918efc540d2e4447cc59cf72ce6e4daccb908554961ec48eb1031f"
+    },
+    {
+      "questionId": "q0024",
+      "image": "images/q0024.png",
+      "sha256": "87efe8e5dded3d01c41f437b021b703a9f71e5f8f67c457df23a60cecf2835d1"
+    },
+    {
+      "questionId": "q0108",
+      "image": "images/q0108.png",
+      "sha256": "80df1d64636d0df0a26ef075d65dfcefc650c191930b3e098007ec7664593b80"
+    },
+    {
+      "questionId": "q0134",
+      "image": "images/q0134.png",
+      "sha256": "c5a8b3956a7286fdcc01946820390510df3414ecad737194ce1768018b796d94"
+    },
+    {
+      "questionId": "q0126",
+      "image": "images/q0126.png",
+      "sha256": "9ee4bf67360a1615f36312f86d9a8900b54b5fbc6c840594557824f0cc7735c5"
+    },
+    {
+      "questionId": "q0114",
+      "image": "images/q0114.png",
+      "sha256": "559a496a7e24f530d1ba2c4f6d44e724dc71eb9838a09d22700fb92e9d280fe5"
+    },
+    {
+      "questionId": "q0054",
+      "image": "images/q0054.png",
+      "sha256": "a8b165dfc989271054e969f3caa1ffc8b6fcb7d604f309b76f38926133961bcb"
+    },
+    {
+      "questionId": "q0064",
+      "image": "images/q0064.png",
+      "sha256": "2a9a06efce84a775d0f4b55f74953ec1b7c3a11bb11299e20fb670f81ebf2076"
+    },
+    {
+      "questionId": "q0053",
+      "image": "images/q0053.png",
+      "sha256": "1371bf890565b583c8e497b781484676c8e8c8de074deeef524477c13a920465"
+    },
+    {
+      "questionId": "q0144",
+      "image": "images/q0144.png",
+      "sha256": "0619dabd7f7ba6651c42776de626ee97c06bb04b39928c17e78eebaf96fc2333"
+    },
+    {
+      "questionId": "q0040",
+      "image": "images/q0040.png",
+      "sha256": "7a69276cf5b1e2300bb4a865e0d8c5303c9d460018ff51d157f4498f350f200b"
+    },
+    {
+      "questionId": "q0015",
+      "image": "images/q0015.png",
+      "sha256": "eec096074049d657b2a79f6dcaf14857510cf2105fbc08eb10150ddf9adb72bd"
+    }
+  ]
+}

@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "kitId": "arena.art.silhouette-human-test-kit.a0.3.v1",
+  "formId": "form-09",
+  "questionCount": 24,
+  "questions": [
+    {
+      "questionId": "q0131",
+      "image": "images/q0131.png",
+      "sha256": "8725e5aa617795ffe61907f6ec29ce509d15db7d2792d497091998f50631dca4"
+    },
+    {
+      "questionId": "q0099",
+      "image": "images/q0099.png",
+      "sha256": "c4b9615f088609b44f31f8535ba36f9090efe2c56dd2959464456000a50673e0"
+    },
+    {
+      "questionId": "q0019",
+      "image": "images/q0019.png",
+      "sha256": "a058ccbcc9bf7cdcbb8ae177ead4efff31d710cce16a4193a8df23ac6e744ae1"
+    },
+    {
+      "questionId": "q0079",
+      "image": "images/q0079.png",
+      "sha256": "dad561155750f8e27632f28b1fa92bad7ecbd29e774249c433e147b03effd3ac"
+    },
+    {
+      "questionId": "q0055",
+      "image": "images/q0055.png",
+      "sha256": "346ab0cd612f6944dfad271fc81e55f0b0b26117747a10819105860e19eab166"
+    },
+    {
+      "questionId": "q0109",
+      "image": "images/q0109.png",
+      "sha256": "a6125ea9cbd95691b77709784c7dc20139a010e9b5cd43d56898047fa43e57f8"
+    },
+    {
+      "questionId": "q0059",
+      "image": "images/q0059.png",
+      "sha256": "5e116acec96fe8583dc0f01c72d3c10d9418f4d4345b0d46f24260bae6fc5f91"
+    },
+    {
+      "questionId": "q0143",
+      "image": "images/q0143.png",
+      "sha256": "71b2b71be2d6a8bd654529e5edcd17a4bab9a8d00a0933e1ecd096dc5dafd6ab"
+    },
+    {
+      "questionId": "q0070",
+      "image": "images/q0070.png",
+      "sha256": "7ee93c9f7cb3c75b5909ffc938e824bb59c30d77addb6814715edc2a85675b7d"
+    },
+    {
+      "questionId": "q0049",
+      "image": "images/q0049.png",
+      "sha256": "f1693285bf638e78b2113f7abe1c7df559ad26a57c14447b2367403b11dc6e2c"
+    },
+    {
+      "questionId": "q0139",
+      "image": "images/q0139.png",
+      "sha256": "b26ccb670abb357f83cc7dabd65f40b823fc6e3d7e4beeca80ecb203b04dd434"
+    },
+    {
+      "questionId": "q0009",
+      "image": "images/q0009.png",
+      "sha256": "6476df533a510de3f24ca22188fff2dc719cc134cbdc3acc7adbf4ec6c7bd178"
+    },
+    {
+      "questionId": "q0069",
+      "image": "images/q0069.png",
+      "sha256": "da0dd4d4ce99e8cc1af0c7db37c03b881fa8c3bdb109e51d6113e6ad7e6de1c0"
+    },
+    {
+      "questionId": "q0129",
+      "image": "images/q0129.png",
+      "sha256": "b7f32adddffa0520555077922390fc7490bf4ead40489470a96ffbc5bc366713"
+    },
+    {
+      "questionId": "q0115",
+      "image": "images/q0115.png",
+      "sha256": "38fcddb6a806b8417a8fc48b7c9782599090568102d2030d62607fe4537894c9"
+    },
+    {
+      "questionId": "q0029",
+      "image": "images/q0029.png",
+      "sha256": "1acaa732aafc979dcdc3c81fdae20f9c2ca23d7e6865887e07fa77ce26a4cb81"
+    },
+    {
+      "questionId": "q0010",
+      "image": "images/q0010.png",
+      "sha256": "354a1e2874b72991032fca96c7cc1b5d4b5cba50bbd6a4d9b0d33f5b6eb1703b"
+    },
+    {
+      "questionId": "q0119",
+      "image": "images/q0119.png",
+      "sha256": "4a5a498ad2b8be3e2adab9be73c82f7d07d22d1f1faa50c1a4e7a2840c5f3a5d"
+    },
+    {
+      "questionId": "q0039",
+      "image": "images/q0039.png",
+      "sha256": "caddf15568c8d1ce8a9c971787da5aff4633b7ada072f516404f0743c26af805"
+    },
+    {
+      "questionId": "q0004",
+      "image": "images/q0004.png",
+      "sha256": "119e5666d0c6e34468d3c6beeacacc94733985b24487d663d50faf1249f0e822"
+    },
+    {
+      "questionId": "q0089",
+      "image": "images/q0089.png",
+      "sha256": "f162b49c93b2d51b133646d6a9d02bd31210e41ecd4647de9b32afb2b1211276"
+    },
+    {
+      "questionId": "q0136",
+      "image": "images/q0136.png",
+      "sha256": "3c4150ecfc6584444c655a2475632dbf2dccaec88cd75201b5af3f3b2842a78b"
+    },
+    {
+      "questionId": "q0065",
+      "image": "images/q0065.png",
+      "sha256": "759482ae7b9ff827a85678c7f77ba673494398dee649a3165635b8eeacdee144"
+    },
+    {
+      "questionId": "q0074",
+      "image": "images/q0074.png",
+      "sha256": "5e740aecf33415b2dae6193868c239ed38256ba92d358601f1fe8382327a30fb"
+    }
+  ]
+}

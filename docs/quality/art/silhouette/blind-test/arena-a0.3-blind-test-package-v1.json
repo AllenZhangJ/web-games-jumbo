@@ -10,8 +10,8 @@
   },
   "questions": {
     "path": "docs/quality/art/silhouette/blind-test/arena-a0.3-blind-questions-v1.json",
-    "sha256": "9ec3db64f79ec694f523603504701ad57649b8bdc4636cb6ae25af7300ab0c3a",
-    "byteLength": 36199
+    "sha256": "03de99450211ee6dbb0e74c63e72a7b5cbf20f85a6d317065abd4fba06bb814e",
+    "byteLength": 36314
   },
   "answerKey": {
     "path": "docs/quality/art/silhouette/blind-test/arena-a0.3-blind-answer-key-v1.json",
