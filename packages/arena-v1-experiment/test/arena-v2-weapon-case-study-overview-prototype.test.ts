@@ -55,8 +55,8 @@ describe('Arena V2 weapon case-study overview', () => {
     const hookBlade = overview.rows.find(({ referenceId }) => referenceId === 'blood-shadow-hook-blade');
     const fist = overview.rows.find(({ referenceId }) => referenceId === 'phantom-tiger-fist');
     expect(guns?.numericProjection?.sourceDefinitionIds).toEqual([
-      'research-line-pressure-ground',
-      'research-line-pressure-aerial',
+      'research-white-platinum-dual-guns-ground',
+      'research-white-platinum-dual-guns-aerial',
     ]);
     expect(guns?.numericProjection?.contexts.map(({ id }) => id)).toEqual(['ground', 'aerial']);
     expect(fist?.numericProjection?.sourceDefinitionIds).toEqual([

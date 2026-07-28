@@ -45,6 +45,8 @@ Arena V2 的核心目标是：
 | `arena-v2-weapon-case-study-contract.ts` | 逐件武器研究共享合同：动作事实、推导、反制、失败成本和公共数值轴审计 | 逐件研究基础设施，仅研究工具链 |
 | `arena-v2-weapon-true-hades-hook-scythe-case-study.ts` | 真·哈迪斯钩镰逐动作官方事实、支撑面/阶段命中推导、反制和数值审计 | 第五轮逐件研究证据，仅研究工具链 |
 | `arena-v2-weapon-white-platinum-dual-guns-case-study.ts` | 白金双枪逐动作官方事实、距离/覆盖/高度差推导、反制和数值审计 | 第六轮逐件研究证据，仅研究工具链 |
+| `arena-v2-weapon-white-platinum-dual-guns-definition-prototype.ts` | 白金双枪独立地面点射/空中斜线 Definition、公开数值轴和攻击线/落点研究信号 | 独立研究 Definition，仅研究工具链 |
+| `arena-v2-weapon-white-platinum-dual-guns-replay-prototype.ts` | 白金双枪地面点射留在线内命中、离开攻击线挥空的真实 MatchCore/MatchReplay | 专属 Replay 通过，仅研究工具链 |
 | `arena-v2-weapon-blood-shadow-hook-blade-case-study.ts` | 血影钩刃逐动作官方事实、拉位/障碍/目标朝向推导、反制和数值审计 | 第七轮逐件研究证据，仅研究工具链 |
 | `arena-v2-weapon-phantom-tiger-fist-case-study.ts` | 幻虎巨拳逐动作官方事实、蓄力承诺/取消/方向、反制和数值审计 | 第八轮逐件研究证据，仅研究工具链 |
 | `arena-v2-weapon-mammoth-stone-axe-case-study.ts` | 猛犸石斧逐动作官方事实、延迟落点、蓄力覆盖、滚动物体、墙面反弹和公共危险研究 | 第九轮逐件研究证据，仅研究工具链 |
@@ -76,7 +78,8 @@ Arena V2 的核心目标是：
 | [ADR-068：直线压制先以单一攻击线 Definition 验证](../decisions/068-arena-v2-line-pressure-definition-boundary.md) | 固化直线压制的单一攻击线、固定间隔、公开数值和候选 Registry/默认生产边界 | 原型边界已接入 |
 | [首发研究候选 Definition 原型结果 V1](../research/arena-v2-launch-research-definition-prototype-results-v1.md) | 将直线压制、读招反制、绕后三个首发候选统一为地面/空中 Definition，并绑定 9 项主概览数值、2 项行为数值和命中/空放证据 | 候选 Definition 已通过，默认生产未晋级 |
 | [研究武器概览比较矩阵原型结果 V1](../research/arena-v2-weapon-research-overview-prototype-results-v1.md) | 将三个候选 Registry 候选投影为带标签、单位、方向语义、玩家含义、地面/空中双上下文、地图用途和反制的可比较武器卡数据 | 双上下文矩阵通过，真人可读性待验证 |
-| [深研武器概览适配层原型结果 V1](../research/arena-v2-weapon-case-study-overview-prototype-results-v1.md) | 将六件逐动作深研案例的研究结论与公共数值轴审计接到同一份读出，六件均已有研究投影，复杂行为仍独立管理 | 研究读出通过，未进入生产 UI |
+| [深研武器概览适配层原型结果 V1](../research/arena-v2-weapon-case-study-overview-prototype-results-v1.md) | 将六件逐动作深研案例的研究结论与公共数值轴审计接到同一份读出，六件均有独立研究投影与专属 Replay，复杂行为仍独立管理 | 研究读出通过，未进入生产 UI |
+| [白金双枪 Definition 与攻击线 Replay 原型结果 V1](../research/arena-v2-weapon-white-platinum-dual-guns-definition-and-replay-results-v1.md) | 记录白金双枪从独立 Definition 到攻击线命中/挥空 Replay 的证据和未完成边界 | 独立逐件研究通过，未进入生产 UI |
 | [血影钩刃 Definition 与目标朝向 Replay 原型结果 V1](../research/arena-v2-weapon-blood-shadow-hook-blade-definition-and-replay-results-v1.md) | 将血影钩刃最小地面/空中动作接入 Definition → 数值投影 → Replay，验证目标朝向、拉近结果和命中/躲避反馈；障碍仍由独立探针负责 | 研究 Definition/Replay 通过，未进入生产 UI |
 | [真·哈迪斯钩镰 Definition 与承诺/支撑面 Replay 原型结果 V1](../research/arena-v2-weapon-true-hades-hook-scythe-definition-and-replay-results-v1.md) | 将真·哈迪斯钩镰地面/空中动作接入 Definition → 数值投影 → Replay，验证承诺取消、提交命中、支撑面保留和边缘击落 | 研究 Definition/Replay 通过，未进入生产 UI |
 | [魔血镰刃 Definition 与路线 Replay 原型结果 V1](../research/arena-v2-weapon-magic-blood-scythe-definition-and-replay-results-v1.md) | 将魔血镰刃地面/空中动作接入 Definition → 数值投影 → Replay，验证宽覆盖、路线躲避、命中位移和平台边缘击落；延迟危险区保持独立研究信号 | 研究 Definition/Replay 通过，未进入生产 UI |

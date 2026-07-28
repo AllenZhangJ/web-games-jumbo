@@ -36,6 +36,9 @@ import {
   createArenaV2WeaponMagicBloodScytheNumericOverview,
 } from './arena-v2-weapon-magic-blood-scythe-definition-prototype.js';
 import {
+  createArenaV2WeaponWhitePlatinumDualGunsNumericOverview,
+} from './arena-v2-weapon-white-platinum-dual-guns-definition-prototype.js';
+import {
   createArenaV2WeaponMammothStoneAxeNumericOverview,
 } from './arena-v2-weapon-mammoth-stone-axe-definition-prototype.js';
 import {
@@ -225,6 +228,18 @@ function createNumericProjection(
       sourceDefinitionIds: Object.freeze([
         'research-true-hades-hook-scythe-ground',
         'research-true-hades-hook-scythe-aerial',
+      ]),
+      numericStatus: 'definition-projected-hypothesis',
+    });
+  }
+  if (referenceId === 'white-platinum-dual-guns') {
+    const overview = createArenaV2WeaponWhitePlatinumDualGunsNumericOverview();
+    return Object.freeze({
+      contexts: overview.contexts,
+      comparisonWeaponIds: overview.comparisonWeaponIds,
+      sourceDefinitionIds: Object.freeze([
+        'research-white-platinum-dual-guns-ground',
+        'research-white-platinum-dual-guns-aerial',
       ]),
       numericStatus: 'definition-projected-hypothesis',
     });

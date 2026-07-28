@@ -2,14 +2,14 @@
 
 ## 状态
 
-- 状态：研究工具链原型通过；六件逐动作深研案例均已接入研究 Definition 数值投影，延迟/预警/障碍等复杂行为仍保留独立研究边界
+- 状态：研究工具链原型通过；六件逐动作深研案例均已接入独立研究 Definition 与数值投影，六件均已有专属地面/空中 Replay，延迟/预警/障碍等复杂行为仍保留独立研究边界
 - 日期：2026-07-28
 - 范围：魔血镰刃、真·哈迪斯钩镰、白金双枪、血影钩刃、幻虎巨拳、猛犸石斧六件逐动作深研案例
 - 生产影响：不新增默认武器、不修改 Content Registry、不改变现有玩家界面
 
 ## 为什么补这一层
 
-当前生产武器概览已经能够从权威 `Definition` 投影 9 个主数值轴、2 个行为轴和地面/空中上下文。六件逐动作深研案例中，白金双枪已经映射到 `research-line-pressure`，其余五件已经有独立研究 Definition 与 Replay；魔血镰刃、猛犸石斧、幻虎巨拳和真·哈迪斯钩镰另有边缘结果，血影钩刃另有独立障碍探针。所有六件仍是研究投影假设，不能直接视为生产平衡数值。
+当前生产武器概览已经能够从权威 `Definition` 投影 9 个主数值轴、2 个行为轴和地面/空中上下文。六件逐动作深研案例现在都拥有独立研究 Definition、数值投影和专属 Replay；白金双枪不再复用 `research-line-pressure` 的动作身份，而是单独验证地面点射、前摇、方向攻击线和离线挥空。魔血镰刃、猛犸石斧、幻虎巨拳和真·哈迪斯钩镰另有边缘结果，血影钩刃另有独立障碍探针。所有六件仍是研究投影假设，不能直接视为生产平衡数值。
 
 如果直接把案例写入玩家数值卡，研究推断会被误读为已经平衡的数值。因此本原型只负责把“研究结论”和“还必须测量什么”接到同一份结构化读出，不填假数值。
 
@@ -31,7 +31,7 @@
 | --- | --- | --- | --- | --- |
 | 魔血镰刃 | 封路并改变落点 | 地面、跑动、空中、蓄力、延迟、命中后 | 仅研究 | 已连接 `research-magic-blood-scythe` 研究投影 |
 | 真·哈迪斯钩镰 | 利用支撑面换位并改变高度 | 地面、跑动、空中、蓄力、反击、命中后 | 仅研究 | 已连接 `research-true-hades-hook-scythe` 研究投影 |
-| 白金双枪 | 保持距离并逼走位 | 地面、跑动、空中、资源 | 仅研究 | 已连接 `research-line-pressure` 研究投影 |
+| 白金双枪 | 保持距离并逼走位 | 地面、跑动、空中、资源 | 仅研究 | 已连接 `research-white-platinum-dual-guns` 独立研究投影与 Replay |
 | 血影钩刃 | 拉近并重写相对位置 | 地面、跑动、空中 | 仅研究 | 已连接 `research-blood-shadow-hook-blade` 研究投影 |
 | 幻虎巨拳 | 读懂承诺并用重拳改变落点 | 地面、跑动、空中、蓄力、反击 | 仅研究 | 已连接 `research-phantom-tiger-fist` 研究投影 |
 | 猛犸石斧 | 预判落点并改变路线 | 地面、跑动、蓄力、延迟、资源 | 仅研究 | 已连接 `research-mammoth-stone-axe` 研究投影 |
@@ -44,18 +44,20 @@
 
 ## 验证
 
-- `arena-v2-weapon-case-study-overview-prototype.ts`：六件案例的统一研究读出，并区分已有研究 Definition 投影与尚未连接的案例；
+- `arena-v2-weapon-case-study-overview-prototype.ts`：六件案例的统一研究读出，并区分独立研究 Definition 投影与仍未声明的复杂研究字段；
 - `arena-v2-weapon-blood-shadow-hook-blade-definition-prototype.ts`：血影钩刃地面/空中 Definition、9 项主轴、6 项上下文轴、2 项行为轴及权威数值投影；
 - `arena-v2-weapon-blood-shadow-hook-blade-replay-prototype.ts`：目标保持背向、主动转身、active 前转回三组真实 MatchCore/MatchReplay 场景，并输出拉近/躲避反馈；
 - `arena-v2-weapon-true-hades-hook-scythe-definition-prototype.ts`：真·哈迪斯钩镰地面承诺动作、空中下砸动作、9 项主轴、6 项上下文轴、2 项行为轴及权威数值投影；
 - `arena-v2-weapon-true-hades-hook-scythe-replay-prototype.ts`：提前释放、提交释放、到期持续按住和平台边缘四组真实 MatchCore/MatchReplay 场景，并输出承诺取消、命中保留支撑面和击落反馈；
 - `arena-v2-weapon-magic-blood-scythe-definition-prototype.ts`：魔血镰刃地面/空中 Definition、9 项主轴、6 项上下文轴、2 项行为轴及独立延迟危险区研究假设；
 - `arena-v2-weapon-magic-blood-scythe-replay-prototype.ts`：安全命中、active 前离开攻击线和平台边缘三组真实 MatchCore/MatchReplay 场景，并输出命中、未命中和击落反馈；
+- `arena-v2-weapon-white-platinum-dual-guns-definition-prototype.ts`：白金双枪独立地面点射/空中斜线 Definition、9 项主轴、6 项上下文轴、2 项行为轴和方向攻击线研究信号；
+- `arena-v2-weapon-white-platinum-dual-guns-replay-prototype.ts`：白金双枪地面点射留在线内命中、目标在有效窗口前离线挥空两组真实 MatchCore/MatchReplay 场景；
 - `arena-v2-weapon-mammoth-stone-axe-definition-prototype.ts`：猛犸石斧地面/空中 Definition、9 项主轴、6 项上下文轴、2 项行为轴及独立延迟预警研究假设；
 - `arena-v2-weapon-mammoth-stone-axe-replay-prototype.ts`：安全命中、active 前离开攻击线和平台边缘三组真实 MatchCore/MatchReplay 场景，并输出命中、预判失败和击落反馈；
 - `arena-v2-weapon-warning-signal-prototype.ts`：直接读取魔血镰刃与猛犸石斧 `warningHypothesis`，用统一预警区验证四类玩家回应；
-- `arena-v2-weapon-case-study-overview-prototype.test.ts`、真·哈迪斯钩镰 Definition/Replay 测试：相关 9 项测试通过；
-- 断言覆盖六件案例顺序、六件研究投影的来源 Definition 与上下文、`must-measure`/`research-only` 差异、血影钩刃障碍信号、魔血镰刃/猛犸石斧路线后果、目标朝向分支、确定性和深冻结；
+- `arena-v2-weapon-case-study-overview-prototype.test.ts`、白金双枪 Definition/Replay、真·哈迪斯钩镰 Definition/Replay 测试：相关研究测试通过；
+- 断言覆盖六件案例顺序、六件独立研究投影的来源 Definition 与上下文、白金双枪攻击线命中/挥空、`must-measure`/`research-only` 差异、血影钩刃障碍信号、魔血镰刃/猛犸石斧路线后果、目标朝向分支、确定性和深冻结；
 - 当前生产边界不变：研究 Definition 未注册默认生产装备。
 
 ## 下一步

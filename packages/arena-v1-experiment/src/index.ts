@@ -278,6 +278,27 @@ export { ARENA_V2_WEAPON_TRUE_HADES_HOOK_SCYTHE_CASE_STUDY } from './arena-v2-we
 export type { ArenaV2WeaponTrueHadesHookScytheCaseStudy } from './arena-v2-weapon-true-hades-hook-scythe-case-study.js';
 export { ARENA_V2_WEAPON_WHITE_PLATINUM_DUAL_GUNS_CASE_STUDY } from './arena-v2-weapon-white-platinum-dual-guns-case-study.js';
 export type { ArenaV2WeaponWhitePlatinumDualGunsCaseStudy } from './arena-v2-weapon-white-platinum-dual-guns-case-study.js';
+export {
+  ARENA_V2_WEAPON_WHITE_PLATINUM_DUAL_GUNS_DEFINITION_PROTOTYPE,
+  ARENA_V2_WEAPON_WHITE_PLATINUM_DUAL_GUNS_DEFINITION_ID,
+  ARENA_V2_WEAPON_WHITE_PLATINUM_DUAL_GUNS_GROUND_ACTION_ID,
+  ARENA_V2_WEAPON_WHITE_PLATINUM_DUAL_GUNS_AERIAL_ACTION_ID,
+  createArenaV2WeaponWhitePlatinumDualGunsNumericOverview,
+} from './arena-v2-weapon-white-platinum-dual-guns-definition-prototype.js';
+export type {
+  ArenaV2WeaponWhitePlatinumDualGunsDefinitionPrototype,
+  ArenaV2WeaponWhitePlatinumDualGunsNumericOverview,
+} from './arena-v2-weapon-white-platinum-dual-guns-definition-prototype.js';
+export {
+  createArenaV2WeaponWhitePlatinumDualGunsReplayCore,
+  runArenaV2WeaponWhitePlatinumDualGunsReplayPrototype,
+} from './arena-v2-weapon-white-platinum-dual-guns-replay-prototype.js';
+export type {
+  ArenaV2WeaponWhitePlatinumDualGunsActionSample,
+  ArenaV2WeaponWhitePlatinumDualGunsReplayPrototypeResult,
+  ArenaV2WeaponWhitePlatinumDualGunsReplayScenario,
+  ArenaV2WeaponWhitePlatinumDualGunsScenarioResult,
+} from './arena-v2-weapon-white-platinum-dual-guns-replay-prototype.js';
 export { ARENA_V2_WEAPON_BLOOD_SHADOW_HOOK_BLADE_CASE_STUDY } from './arena-v2-weapon-blood-shadow-hook-blade-case-study.js';
 export type { ArenaV2WeaponBloodShadowHookBladeCaseStudy } from './arena-v2-weapon-blood-shadow-hook-blade-case-study.js';
 export { ARENA_V2_WEAPON_PHANTOM_TIGER_FIST_CASE_STUDY } from './arena-v2-weapon-phantom-tiger-fist-case-study.js';
