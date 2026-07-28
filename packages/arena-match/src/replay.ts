@@ -21,6 +21,11 @@ import {
   type ArenaAuthorityEvent,
 } from './match-core.js';
 import type { MatchTimelineResult } from './match-timeline-system.js';
+import {
+  ARENA_INTERNAL_MATCH_CHECKPOINT_SCHEMA_VERSION,
+  createArenaInternalMatchCheckpoint,
+  type ArenaInternalMatchCheckpoint,
+} from './match-checkpoint.js';
 
 export const ARENA_REPLAY_SCHEMA_VERSION = 5 as const;
 
@@ -310,6 +315,27 @@ export class HeadlessMatchRunner {
       finalHash: core.getStateHash(),
       result,
     };
+  }
+
+  exportInternalCheckpoint(): ArenaInternalMatchCheckpoint {
+    const core = this.#requireCore();
+    const metadata = core.getReplayMetadata();
+    const identity = core.getInternalCheckpointIdentity();
+    return createArenaInternalMatchCheckpoint({
+      checkpointSchemaVersion: ARENA_INTERNAL_MATCH_CHECKPOINT_SCHEMA_VERSION,
+      matchSchemaVersion: metadata.schemaVersion,
+      physicsBackendVersion: metadata.physicsBackendVersion,
+      configHash: metadata.configHash,
+      ruleContentHash: metadata.ruleContentHash,
+      matchSeed: metadata.matchSeed,
+      config: metadata.config,
+      tick: identity.tick,
+      phase: identity.phase,
+      eventSequence: identity.eventSequence,
+      inputFrames: this.#inputFrames.map(copyInput),
+      events: this.#events.map(copyEvent),
+      stateHash: identity.stateHash,
+    });
   }
 
   destroy(): void {

@@ -3,14 +3,15 @@
 ## 状态
 
 - 阶段：P1 自动替换与 10 秒权威回收。
-- 当前小门：P1.2c-1「正式生存供给 Composition / MatchCore 事件与 Replay 接线」。
-- 当前结论：P1.2c-1 `integration-replay-ready` 已由主协调于 2026-07-28 签核；P1.1、P1.2a 与 P1.2b 已于 2026-07-28 签核。
-- P1 总体结论：**未完成、不得 advance**。P1.2c-1 不包含原子全系统 checkpoint 恢复、黄金生存 Replay、100+ seed 压力、4 人参与者模型、Bot、Presentation 或 Platform。
+- 当前小门：P1.2c-2「原子全系统 checkpoint、生存黄金 Replay 与 100+ seed 长局」。
+- 当前结论：P1.2c-2 `atomic-checkpoint-golden-ready` 已由主协调于 2026-07-28 签核；P1.1、P1.2a、P1.2b 与 P1.2c-1 已于 2026-07-28 签核。
+- P1 总体结论：**未完成、不得 advance**。P1.2c-2 不包含 4 人参与者模型、Bot、Presentation、Platform 或真机；新旧两条 stress 的 0.25ms/tick CPU 门仍为红色硬门。
 - P1.1 实现审计起始基线：`d6f906008d0af1ed0133a199a8dc9e15cb1d23d0`。
 - P1.1 提交父节点：`fb0bc404508bf9d7f34df53fedfaf20d31239591`。`d6f9060..fb0bc40` 之间仅包含已经独立验收的 A0.1 美术生产合同与阶段门禁文档，不包含 P1.1 代码，不改变 P1.1 行为审计结论。
 - P1.2a 实现审计起始基线：`8e3e6eff6724612e83b124aa2ae6574a3967af9e`；提交父节点为 `4420d4b585025cd6999e5becf6a6f4d10b895063`，实际提交为 `22b9fd0e39b83de0b6a3ed766a2a66f3d2f67b1d`。`8e3e6ef..4420d4b` 仅包含已经独立验收的 A0.2.1 来源权利包，不改变 P1.2a 行为审计结论。
 - P1.2b 实现审计起始基线为 `22b9fd0e39b83de0b6a3ed766a2a66f3d2f67b1d`，实际签核提交为 `7f9f09b6dfeb8b68a0d9ea64aa013bd348b14099`。
-- P1.2c-1 实现审计起始基线与安全回滚点：`7f9f09b6dfeb8b68a0d9ea64aa013bd348b14099`；本小门尚未提交。
+- P1.2c-1 实现审计起始基线为 `7f9f09b6dfeb8b68a0d9ea64aa013bd348b14099`，已签核、提交并推送为 `8de2997a76601afce18b26d8126fb5cb24ca6feb`。
+- P1.2c-2 实现审计起始基线为 `8de2997a76601afce18b26d8126fb5cb24ca6feb`；当前实际父节点与安全回滚点为 `484d012934b6097043a6041f73b580699287ca39`。`8de2997..484d012` 仅为已独立签核的 A0.2.2 美术来源/参考板提交，不改变 c-2 行为审计，不计入开发证据。
 - 证据日期：2026-07-28。
 
 ## 前置条件与依据
@@ -350,13 +351,88 @@ P1.2b 只评分隔离 Equipment Core 时间线小门；候选条件为总分至�
 - P1.2c-2还需黄金生存Replay、checkpoint恢复继续、Replay篡改、比赛结束/淘汰/暂停恢复临界矩阵、100+ seed无渲染长局、runtime/lifecycle/event窗口/内存上限。
 - 当前没有Bot、HUD、音频、Presentation或Platform接入；P1总体仍未完成、不得advance。
 
+## P1.2c-2 原子全系统 checkpoint、生存黄金 Replay 与长局
+
+### 恢复能力审计与方案裁决
+
+- 审计确认 Equipment Supply Timeline 与 Map Runtime 存在局部内部快照，但 Participant、Physics、Movement、Action Execution、Match Timeline 和 RNG 没有统一、原子的恢复构造口。为这些系统新增 setter 或“先构造再逐个 patch”会暴露半权威状态，故明确拒绝。
+- 内部 `ArenaInternalMatchCheckpoint` schema v1 保存初始 match/config/content/physics/seed 身份、完整输入前缀、完整权威事件前缀、tick/phase/eventSequence 游标和内部 state hash。它是内部 schema，不增加 Replay V5 字段，不改写旧 V5 读取语义。
+- 恢复在全新隔离 MatchCore 中从 tick 0 重演输入前缀。候选的 schema、physics backend、config hash、rule content hash、seed、tick、phase、eventSequence、事件前缀与 state hash 全部相等后才返回 Core；任一失败均销毁候选及其所有子资源。
+- 该方案使 Participant、Physics、Movement、Action、Equipment、Supply Timeline、Map、RNG 和 Match Timeline 都通过各自生产转移恢复，而不是相互写入；代价是 checkpoint 体积与恢复时间均为 O(tick)。在没有可原子发布的完整直接快照 schema 前，不新增第二恢复路径。
+- `MatchCore.getInternalCheckpointIdentity()` 在 step 重入/半 tick 期间明确拒绝；`HeadlessMatchRunner.exportInternalCheckpoint()` 只在完整 tick 边界导出。
+
+### 严格校验、身份与失败关闭
+
+| 冲突/失败 | 处理 | 证据边界 |
+|---|---|---|
+| 未知 checkpoint schema / future field | 在 coreFactory 调用前拒绝 | schema 2 和顶层未知字段负向测试 |
+| 非安全 tick、非有限输入/事件 | 数据克隆与确定性 hash 阶段拒绝 | 候选 Core 不发布 |
+| config / physics / content / seed 冲突 | 重演前比较初始元数据 | 错误 Supply spawn identity 导致 rule hash 失配并销毁候选 |
+| participant / Definition / map 身份冲突 | 由严格 config/Registry/Composition 构造和 config/rule hash 双重拒绝 | 不允许 Core 在恢复时选择替代内容 |
+| 输入缺失/多余/重复 | 每 tick 依当前 2 人 config 严格 normalize | 不引入 4 人兼容分支 |
+| event cursor / ID / payload 篡改 | 要求 sequence 从 0 连续、`seed:tick:sequence` 稳定 ID，并与重演完整事件前缀比较 | 额外载荷、游标与 ID 冲突均拒绝 |
+| state/checkpoint hash 篡改 | 重演后以内部 state hash 校验所有影响未来的状态 | 不发布分叉候选 |
+| 恢复或清理失败 | 合并原失败和 cleanup causes，候选不可用 | 无全局 Manager/事件总线或外部权威更改 |
+
+动态地图表面撤销的业务策略仍属 P3；checkpoint 不吞掉它的身份，当前 map definition、内部 surface/occurrence/revision 和状态 hash 都参与恢复校验。本小门不提前定义 P3 撤销语义。
+
+### 连续/恢复对照与黄金 Replay
+
+- 生存生产 Composition 在 tick 0、1199/1200/1201/1202、1800/1801/1802 和 2401 导出 checkpoint；每个恢复候选的 snapshot/hash/eventSequence 均与连续组一致。从 2401 继续到结束时，逐 tick 事件、公开快照、state hash 和最终结果一致。
+- 独立强推场景在动作前摇后导出，恢复继续产生相同的 PlayerEliminated、MatchEnded 和结算结果，覆盖淘汰/比赛结束边界。
+- 固定生存黄金 Replay 为独立语料 `tests/arena/fixtures/replays/survival-v5/regression-survival-supply-lifecycle.json`，场景 ID `regression.survival-supply-lifecycle` v1，使用显式生存 Core factory、固定地图/Supply/config/seed 和 Replay V5。独立 Manifest ID 为 `arena.v2.survival.golden-replays.v1`、hash `dd30e771`，replay hash `2448457c`，final hash `d460b945`。
+- 现有 Stage9 普通 1v1 黄金语料保持 4 项，Manifest hash 仍为 `a53b401d`，4 项 replay/final hash 全部不变。协调自审中曾把生存条目直接加入旧 Stage9 Manifest，完整 Node 因 readiness 期望从 `a53b401d` 漂移为 `a9f0d883` 而 734/735；没有修改 readiness 期望掩盖失败，而是拆出独立生存 Registry/Manifest/校验命令，修正后完整 Node 735/735。
+- 生存语料的输入、供给事件 payload、中间 checkpoint hash 和 final hash 篡改均在严格重放中拒绝。旧语料校验命令为 `npm run arena:replay:verify`，生存语料校验命令为 `npm run arena:survival:replay:verify`；两者都做 Manifest 双向覆盖、fixture 完整性、严格重放与固定场景再生成。
+- Session pause 不是 MatchCore 权威 tick 状态；暂停期间不形成伪 checkpoint 或伪输入。已有 lifecycle 黄金语料仍锁定 pause 不推进 Core，本小门不将 Session 墙钟态写入权威 checkpoint。
+
+### 120 seed 正式生存长局
+
+- `npm run arena:survival:stress` 使用正式 `createArenaV2SurvivalSupplyMatchCore`，120 个固定 seed、每场 2500 tick，总计 300000 tick；覆盖 3 种输入数组顺序/移动模式和 60 场同物竞争。
+- 三次完整执行均为 0 invariant failure、0 non-finite，runtime 最大 3/3、active lifecycle 最大 3/5、单 tick 事件最大 9/10；最终候选执行为 120/120、300000 tick、60 场同物竞争、120 个唯一终局 hash，回收后堆增长 3.83MB（预算 32MB）。资源与生命周期门通过。
+- 首次审计将“每 tick 完整 state hash 重算”也算入 CPU，得到 P50 0.313238、P95 0.373785、P99 0.438466、最坏 0.639841ms/tick。对齐旧正式 stress 后，改为每 tick 仍检查快照有限性/游标，并在 1200、1801、2401 与最终态验证 hash；复跑 P50 0.284410、P95 0.317642、P99 0.387504、最坏 0.666382ms/tick。
+- 最终候选复跑 P50 0.284702、P95 0.311562、P99 0.384700、最坏 0.576706ms/tick。**CPU P95 仍超过 0.25ms/tick，新链不得记为性能通过。**同一共享树上旧普通 1v1 `arena:stress` 完成 1000/1000、0 invariant/non-finite、1000 个唯一终局 hash、堆增长 3.48MB，但平均 CPU 0.281072ms/tick 超过 0.25ms 并 exit 1。两者共同保留为 P1 总体 CPU 红色硬门，不归因为 checkpoint 泄漏，也不通过缩小 seed/tick/检查范围变绿。
+
+### P1.2c-2 独立评分（100分）
+
+| 维度 | 满分 | 得分 | 达成率 | 判断 |
+|---|---:|---:|---:|---|
+| 全系统恢复合同 | 25 | 24 | 96% | 隔离重演恢复所有未来状态，无子系统 patch 入口；O(tick) 成本已披露 |
+| 严格校验与fail-closed | 20 | 19 | 95% | schema/身份/游标/hash/输入/事件冲突拒绝并清理候选；直接快照迁移不在本 schema |
+| 恢复确定性与边界 | 20 | 19 | 95% | 生成/过期/拾取/替换/动作/淘汰/终局逐 tick 对照一致；4人为P2 |
+| 黄金Replay与防漂移 | 15 | 15 | 100% | 固定语料、Manifest、内容签名、再生成和四类篡改矩阵通过；V5未改义 |
+| 资源与性能 | 10 | 8 | 80% | 120 seed 资源/内存/事件窗口有界且无非有限态；CPU 0.25ms 红门未关闭 |
+| 测试与治理 | 10 | 9 | 90% | 定向、黄金、类型、架构与压力已有直接证据；CPU 风险保留 |
+| **合计** | **100** | **94** | **94%** | **达到 c-2 合同/语料/长局小门并由主协调签核；不代表 P1 或性能 advance** |
+
+### P1.2c-2 门禁证据
+
+| 门禁 | 2026-07-28 有效结果 |
+|---|---|
+| checkpoint / 生存 MatchCore / 篡改定向 | 2 文件、14/14 通过；其中 checkpoint 边界、原子失败与淘汰终局 3 项，黄金防篡改 1 项 |
+| 黄金 Replay | 旧 Stage9 `arena:replay:verify` 4/4、Manifest `a53b401d`；独立生存 `arena:survival:replay:verify` 1/1、Manifest `dd30e771`；均严格重放与再生成通过 |
+| 120 seed 生存 stress | 最终执行完成 120/120、300000 tick、120 个唯一终局 hash，资源门通过；CPU P95 0.311562ms，超 0.25ms并exit 1；此前两次P95 0.373785/0.317642ms的超限事实保留 |
+| 旧普通1v1 stress | 1000/1000、0 invariant/non-finite、1000唯一hash、堆增长3.48MB；平均CPU 0.281072ms/tick超预算并exit 1 |
+| 严格类型 / 包构建 / lint | 52 packages/11 waves、`typecheck:app` 和本批开发文件 lint 通过 |
+| 架构与边界 | 39/39，Product 与 Presentation-Three 边界通过 |
+| 完整 Node | 黄金语料拆分后的最终共享树为96文件、735/735；拆分前首次734/735及原因见上，不记绿 |
+| 单 worker 治理 | `npx vitest run --maxWorkers=1 --fileParallelism=false`：134文件、599/599，82.46秒 |
+| 三端构建 | Web/抖音/微信通过；仅既有大chunk提示；dirty build不作为发布候选证据 |
+| 文档 / diff | `check:documentation` 与 `git diff --check` 最终通过；并行A0文件不计入开发成果 |
+
+### 风险、回滚与阶段边界
+
+- 安全回滚点为 `484d012934b6097043a6041f73b580699287ca39`。撤回 checkpoint 模块、MatchCore/Runner 内部出口、黄金场景/fixture/Manifest、长局脚本、测试和本节即可；不得回滚 `8de2997..484d012` 的已签核 A0.2.2。
+- 保留风险：checkpoint O(tick) 体积/恢复延迟；0.25ms/tick CPU 超预算；Session/前后台/真机生命周期尚未验收；动态表面撤销策略属 P3。
+- 生产参与者仍严格为 2 人。4 人没有通过，而是 P2 计划阶段边界；不得用 EquipmentSystem 隔离 4 人竞争测试冒充生产支持。
+- Bot、HUD、音频、Presentation、Platform 和真机仍未接入。P1.2c-2 签核也不能使 P1 总体 advance。
+
 ## P1 总体未完成硬门
 
-- P1.2：P1.2c-1 已提供2人生产Composition、MatchCore四阶段调度、真实事件、state hash与Replay V5初始重演；P1.2c-2原子全系统checkpoint恢复仍未完成。
-- Replay/hash：600 tick 回收与持有者替换已进入生产Replay/hash重演，但黄金生存Replay、checkpoint恢复继续、坏恢复/篡改与最终hash一致仍未完成。
+- P1.2 Core：c-2 已补齐并由主协调签核隔离重演式原子全系统 checkpoint、生存黄金 Replay/篡改矩阵和 120 seed 资源长局；CPU 硬门仍未关闭。
+- Replay/hash：Replay V5 保持兼容，内部 checkpoint schema v1 和黄金生存 Replay 已有候选证据；未来如引入直接快照，必须新 schema 且不得静默替换当前重演恢复语义。
 - 事务矩阵：生产2人MatchCore已覆盖1200/1800、同tick拾取后动作、同波替换及竞争输入置换；4人生产权威参与者模型属于P2，不能把隔离EquipmentSystem 4人测试误报为P1通过。
-- 生命周期矩阵：前摇、冷却、受击、掉落、淘汰、比赛结束、暂停恢复、前后台和低表现帧率。
-- 压力与资源：100+ seed、长局实例上限、内存和事件窗口有界。
+- 生命周期矩阵：Core 候选已覆盖前摇继续、淘汰与比赛结束恢复；Session 暂停、前后台、低表现帧率和真机仍未验收。
+- 压力与资源：120 seed 实例/lifecycle/事件窗口/内存有界已有候选证据；新旧 stress CPU 均超 0.25ms/tick，仍是 P1 总体阻断门。
 - Bot / Presentation / Platform：只读观察与普通移动、权威剩余 tick 和事件投影、无墙钟删除；这些必须在 Core 硬门通过后推进。
 - 正式生存 Mode/HUD 不得在上述 P1 硬门关闭前 advance。
 
@@ -364,5 +440,5 @@ P1.2b 只评分隔离 Equipment Core 时间线小门；候选条件为总分至�
 
 - 主要风险：后续 Composition 绕过 Registry；Core 只实现“先清空再赋值”的非原子替换；事件载荷和实际状态身份分叉；将生存 `pickupRadius` 静默推广为普通 1v1 全局策略；把合同测试误报为 Replay/hash 完成。
 - 回滚点：P1.1 的安全父提交为 `fb0bc40`。只删除 5 个 P1.1 新增合同文件，并撤回相应 package export、测试、架构边界、当前台账及索引入口，即可回到 `fb0bc40`；不得回滚到 `d6f9060`，以免误删已经验收的 A0.1 美术提交。本批没有存档、运行时状态或最终资产迁移。
-- 当前签核：P1.1 `contract-ready`、P1.2a `core-transaction-ready`、P1.2b `timeline-ready` 与 P1.2c-1 `integration-replay-ready` 已由主协调签核（2026-07-28）；P1.2b已提交并推送为`7f9f09b`。P1.2c-1 主协调独立审读了 Composition、唯一阶段顺序、供给事件、普通拾取隔离、内部 hash、Replay V5 重演与销毁边界，并独立复跑生存 MatchCore、Timeline 与 EquipmentSystem 共 26 项通过。P1.2c-2与P1总体仍未完成、不得advance。
-- 提交状态：P1.2c-1 未 commit、未 push。
+- 当前签核：P1.1 `contract-ready`、P1.2a `core-transaction-ready`、P1.2b `timeline-ready`、P1.2c-1 `integration-replay-ready` 与 P1.2c-2 `atomic-checkpoint-golden-ready` 已由主协调签核（2026-07-28）；P1.2c-1 已提交并推送为 `8de2997`。P1.2c-2 主协调独立审读了隔离候选重演、身份/事件/hash 校验、失败清理、黄金语料隔离和 O(tick) 风险，并独立复跑 checkpoint、篡改、生存/旧黄金共 14 项通过。P1 总体受 CPU、Bot、Presentation、Platform 与真机硬门阻断，不得 advance。
+- 提交状态：P1.2c-2 未 commit、未 push；当前 HEAD `484d012` 仅比审计基线多已签核 A0.2.2。

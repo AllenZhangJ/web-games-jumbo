@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "id": "arena.v2.survival.golden-replays.v1",
+  "replaySchemaVersion": 5,
+  "rejectedReplaySchemaVersions": [
+    4
+  ],
+  "entries": [
+    {
+      "id": "regression.survival-supply-lifecycle",
+      "category": "regression",
+      "file": "regression-survival-supply-lifecycle.json",
+      "scenario": {
+        "id": "regression.survival-supply-lifecycle",
+        "version": 1
+      },
+      "replayHash": "2448457c",
+      "matchSeed": 1517949442,
+      "matchSchemaVersion": 5,
+      "physicsBackendVersion": "lightweight-v3",
+      "configHash": "e2cdd6d7",
+      "ruleContentHash": "06ee7a13",
+      "finalHash": "d460b945",
+      "endedAtTick": 2499,
+      "resultReason": "timeout-draw",
+      "winnerId": null,
+      "inputFrameCount": 5000,
+      "checkpointCount": 26,
+      "eventCounts": {
+        "ActionStarted": 2,
+        "EquipmentExpired": 1,
+        "EquipmentPickedUp": 2,
+        "EquipmentRecycled": 2,
+        "EquipmentReplaced": 2,
+        "EquipmentSpawned": 6,
+        "MatchEnded": 1,
+        "MatchStarted": 1,
+        "SuddenDeathStarted": 1
+      }
+    }
+  ]
+}

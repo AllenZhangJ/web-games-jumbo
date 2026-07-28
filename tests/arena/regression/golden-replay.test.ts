@@ -6,10 +6,13 @@ import { createArenaV1MatchCore } from '@number-strategy-jump/arena-v1-compositi
 import {
   ARENA_REPLAY_ERROR_CODE,
   ARENA_REPLAY_SCHEMA_VERSION,
+  createReplayMatch,
 } from '@number-strategy-jump/arena-match';
 import { replayMatch } from '../../../src/arena/replay.js';
 import {
   createArenaV1GoldenReplayScenarioRegistry,
+  createArenaV2SurvivalGoldenReplayCore,
+  createArenaV2SurvivalGoldenReplayScenarioRegistry,
 } from '@number-strategy-jump/arena-regression';
 import {
   createArenaGoldenReplayManifest,
@@ -30,6 +33,7 @@ import {
 const fixtureDirectory = path.resolve(
   `tests/arena/fixtures/replays/v${ARENA_REPLAY_SCHEMA_VERSION}`,
 );
+const survivalFixtureDirectory = path.resolve('tests/arena/fixtures/replays/survival-v5');
 
 interface RawManifestEntry {
   id: string;
@@ -94,6 +98,65 @@ test('committed Replay V5 corpus strictly replays and regenerates every register
     'map.first-wind-cycle',
     'movement.semantic-actions',
   ]);
+});
+
+test('committed survival Replay rejects input, event payload, checkpoint and final hash tampering', async () => {
+  const manifest = record(
+    await readJson(path.join(survivalFixtureDirectory, 'manifest.json')),
+    'survival golden replay manifest',
+  ) as RawManifest;
+  const corpus = {
+    manifest,
+    fixtures: await Promise.all(manifest.entries.map(async ({ file }) => ({
+      file,
+      replay: record(
+        await readJson(path.join(survivalFixtureDirectory, file)),
+        `survival replay ${file}`,
+      ),
+    }))),
+  };
+  const report = verifyArenaGoldenReplayCorpus({
+    ...corpus,
+    scenarioRegistry: createArenaV2SurvivalGoldenReplayScenarioRegistry(),
+    coreFactory: createArenaV2SurvivalGoldenReplayCore,
+  });
+  assert.equal(report.manifestId, 'arena.v2.survival.golden-replays.v1');
+  assert.equal(report.manifestHash, 'dd30e771');
+  assert.equal(report.verifiedEntryCount, 1);
+  const entry = required(
+    corpus.manifest.entries.find(({ id }) => id === 'regression.survival-supply-lifecycle'),
+    '生存黄金回放 manifest entry',
+  );
+  const fixture = required(
+    corpus.fixtures.find(({ file }) => file === entry.file),
+    '生存黄金回放 fixture',
+  );
+  const verify = createReplayMatch(createArenaV2SurvivalGoldenReplayCore);
+  assert.equal(verify(fixture.replay).finalHash, fixture.replay.finalHash);
+
+  const inputTamper = structuredClone(fixture.replay);
+  const inputFrames = inputTamper.inputFrames as Array<Record<string, unknown>>;
+  required(inputFrames[0], '生存黄金回放首帧输入').moveX = 1;
+  assert.throws(() => verify(inputTamper), /分叉|hash 不一致/);
+
+  const eventTamper = structuredClone(fixture.replay);
+  const events = eventTamper.events as Array<Record<string, unknown>>;
+  const supplyEvent = required(
+    events.find((event) => event.type === 'EquipmentSpawned' && event.payload !== undefined),
+    '生存黄金回放供给事件',
+  );
+  const payload = record(supplyEvent.payload, '生存黄金回放供给 payload');
+  payload.spawnId = 'tampered-spawn';
+  assert.throws(() => verify(eventTamper), /事件序列不一致/);
+
+  const checkpointTamper = structuredClone(fixture.replay);
+  const checkpoints = checkpointTamper.checkpoints as Array<Record<string, unknown>>;
+  required(checkpoints[1], '生存黄金回放 checkpoint').hash = '00000000';
+  assert.throws(() => verify(checkpointTamper), /分叉/);
+
+  const finalHashTamper = structuredClone(fixture.replay);
+  finalHashTamper.finalHash = '00000000';
+  assert.throws(() => verify(finalHashTamper), /最终 hash 不一致/);
 });
 
 test('golden replay manifest rejects traversal, duplicate identities and silent hash updates', async () => {

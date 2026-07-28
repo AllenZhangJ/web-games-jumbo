@@ -160,6 +160,13 @@ export interface MatchReplayMetadata {
   readonly config: ArenaMatchConfigOverrides;
 }
 
+export interface MatchInternalCheckpointIdentity {
+  readonly tick: number;
+  readonly phase: ArenaMatchPhase;
+  readonly eventSequence: number;
+  readonly stateHash: string;
+}
+
 interface MovementPreparation {
   readonly additionalCandidates: readonly Readonly<{
     participantId: string;
@@ -1362,6 +1369,17 @@ export class MatchCore {
 
   getSnapshot(): ArenaMatchSnapshot {
     return this.#createSnapshot(false);
+  }
+
+  getInternalCheckpointIdentity(): MatchInternalCheckpointIdentity {
+    if (this.#stepping) throw new Error('MatchCore 不允许在半 tick 创建 checkpoint。');
+    const snapshot = this.#createSnapshot(true);
+    return Object.freeze({
+      tick: snapshot.tick,
+      phase: this.phase,
+      eventSequence: snapshot.eventSequence,
+      stateHash: createMatchStateHash(snapshot),
+    });
   }
 
   getStateHash(): string {

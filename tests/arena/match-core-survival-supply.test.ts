@@ -5,7 +5,10 @@ import {
   ARENA_REPLAY_SCHEMA_VERSION,
   HeadlessMatchRunner,
   createReplayMatch,
+  restoreMatchCoreFromCheckpoint,
   type ArenaAuthorityEvent,
+  type ArenaInternalMatchCheckpoint,
+  type InternalCheckpointCoreFactoryOptions,
   type MatchCore,
 } from '@number-strategy-jump/arena-match';
 import {
@@ -89,6 +92,16 @@ function stepTo(core: MatchCore, targetTick: number, primaryParticipantId: strin
 
 function eventTypes(events: readonly ArenaAuthorityEvent[]): string[] {
   return events.map(({ type }) => type);
+}
+
+function mutableCheckpoint(
+  checkpoint: ArenaInternalMatchCheckpoint,
+): Record<string, unknown> {
+  return structuredClone(checkpoint) as unknown as Record<string, unknown>;
+}
+
+function survivalCoreFactory({ seed, config }: { seed: number; config: unknown }): MatchCore {
+  return createArenaV2SurvivalSupplyMatchCore({ seed, config, supply: SUPPLY });
 }
 
 test('explicit survival composition owns spawn-expire-pickup-action order in production MatchCore', () => {
@@ -219,4 +232,186 @@ test('survival composition rejects parallel initial authority and invalid map po
     },
     supply: SUPPLY,
   }), /preparingTicks 不能晚于首波供给/);
+});
+
+test('internal checkpoint restores every survival authority boundary before publishing Core', () => {
+  const source = createSurvivalCore(904, 2_500);
+  const runner = new HeadlessMatchRunner(source, { checkpointInterval: 60 });
+  const checkpointTicks = new Set([0, 1_199, 1_200, 1_201, 1_202, 1_800, 1_801, 1_802, 2_401]);
+  const checkpoints = new Map<number, ArenaInternalMatchCheckpoint>();
+  checkpoints.set(0, runner.exportInternalCheckpoint());
+  while (source.tick < 2_401) {
+    runner.step(neutralFrames(
+      source,
+      source.tick === 1_200 || source.tick === 2_400 ? 'player-1' : null,
+    ));
+    if (checkpointTicks.has(source.tick)) {
+      checkpoints.set(source.tick, runner.exportInternalCheckpoint());
+    }
+  }
+  for (const tick of checkpointTicks) {
+    const checkpoint = checkpoints.get(tick);
+    assert.ok(checkpoint, `缺少 tick ${tick} checkpoint`);
+    const restored = restoreMatchCoreFromCheckpoint(checkpoint, {
+      coreFactory: survivalCoreFactory,
+    });
+    assert.equal(restored.tick, source.tick === tick ? source.tick : tick);
+    assert.equal(restored.getStateHash(), checkpoint.stateHash);
+    assert.equal(restored.getInternalCheckpointIdentity().eventSequence, checkpoint.eventSequence);
+    restored.destroy();
+  }
+
+  const resumed = restoreMatchCoreFromCheckpoint(checkpoints.get(2_401), {
+    coreFactory: survivalCoreFactory,
+  });
+  while (source.phase !== 'ended') {
+    const frames = neutralFrames(source);
+    const continuousEvents = runner.step(frames);
+    const resumedEvents = resumed.step(frames);
+    assert.deepEqual(resumedEvents, continuousEvents);
+    assert.deepEqual(resumed.getSnapshot(), source.getSnapshot());
+    assert.equal(resumed.getStateHash(), source.getStateHash());
+  }
+  const terminal = runner.exportInternalCheckpoint();
+  const restoredTerminal = restoreMatchCoreFromCheckpoint(terminal, {
+    coreFactory: survivalCoreFactory,
+  });
+  assert.deepEqual(restoredTerminal.result, source.result);
+  assert.equal(restoredTerminal.getStateHash(), source.getStateHash());
+  assert.throws(() => restoredTerminal.step(neutralFrames(restoredTerminal)), /已经结束/);
+  restoredTerminal.destroy();
+  resumed.destroy();
+  runner.destroy();
+  source.destroy();
+});
+
+test('internal checkpoint rejects schema, identity, cursor, input, event and map tampering atomically', () => {
+  const source = createSurvivalCore(905, 1_850);
+  const runner = new HeadlessMatchRunner(source, { checkpointInterval: 60 });
+  while (source.tick < 1_201) runner.step(neutralFrames(source));
+  const checkpoint = runner.exportInternalCheckpoint();
+
+  let factoryCalls = 0;
+  const future = mutableCheckpoint(checkpoint);
+  future.checkpointSchemaVersion = 2;
+  assert.throws(() => restoreMatchCoreFromCheckpoint(future, {
+    coreFactory(options: InternalCheckpointCoreFactoryOptions) {
+      factoryCalls += 1;
+      return survivalCoreFactory(options);
+    },
+  }), /checkpoint schema 2/);
+  assert.equal(factoryCalls, 0);
+  const extended = mutableCheckpoint(checkpoint);
+  extended.futureField = true;
+  assert.throws(() => restoreMatchCoreFromCheckpoint(extended, {
+    coreFactory: survivalCoreFactory,
+  }), /不支持字段 futureField/);
+
+  for (const [name, mutate, pattern] of [
+    ['unsafe tick', (value: Record<string, unknown>) => { value.tick = Number.MAX_SAFE_INTEGER + 1; }, /安全整数/],
+    ['match schema', (value: Record<string, unknown>) => { value.matchSchemaVersion = 999; }, /match schema/],
+    ['physics backend', (value: Record<string, unknown>) => { value.physicsBackendVersion = 'future-physics'; }, /physics backend/],
+    ['config hash', (value: Record<string, unknown>) => { value.configHash = '00000000'; }, /config hash/],
+    ['state hash', (value: Record<string, unknown>) => { value.stateHash = '00000000'; }, /state hash/],
+    ['rule hash', (value: Record<string, unknown>) => { value.ruleContentHash = '00000000'; }, /rule content hash/],
+    ['seed', (value: Record<string, unknown>) => { value.matchSeed = 906; }, /稳定身份|match seed/],
+    ['cursor', (value: Record<string, unknown>) => { value.eventSequence = Number(value.eventSequence) + 1; }, /eventSequence/],
+  ] as const) {
+    const tampered = mutableCheckpoint(checkpoint);
+    mutate(tampered);
+    assert.throws(() => restoreMatchCoreFromCheckpoint(tampered, {
+      coreFactory: survivalCoreFactory,
+    }), pattern, name);
+  }
+
+  const participantConflict = mutableCheckpoint(checkpoint);
+  const participantConfig = participantConflict.config as Record<string, unknown>;
+  participantConfig.participantIds = ['player-1', 'player-3'];
+  assert.throws(() => restoreMatchCoreFromCheckpoint(participantConflict, {
+    coreFactory: survivalCoreFactory,
+  }), /participant|config hash/);
+
+  const badInput = mutableCheckpoint(checkpoint);
+  const inputFrames = badInput.inputFrames as Array<Record<string, unknown>>;
+  assert.ok(inputFrames[0]);
+  inputFrames[0]!.moveX = Number.POSITIVE_INFINITY;
+  assert.throws(() => restoreMatchCoreFromCheckpoint(badInput, {
+    coreFactory: survivalCoreFactory,
+  }), /有限|finite/);
+
+  const badEvent = mutableCheckpoint(checkpoint);
+  const events = badEvent.events as Array<Record<string, unknown>>;
+  assert.ok(events[0]);
+  events[0]!.futurePayload = 'tampered';
+  assert.throws(() => restoreMatchCoreFromCheckpoint(badEvent, {
+    coreFactory: survivalCoreFactory,
+  }), /事件前缀/);
+
+  let rejectedCandidate: MatchCore | null = null;
+  assert.throws(() => restoreMatchCoreFromCheckpoint(checkpoint, {
+    coreFactory({ seed, config }: InternalCheckpointCoreFactoryOptions) {
+      rejectedCandidate = createArenaV2SurvivalSupplyMatchCore({
+        seed,
+        config,
+        supply: {
+          ...SUPPLY,
+          spawnSpecs: SUPPLY.spawnSpecs.map((spec, index) => index === 0
+            ? { ...spec, spawnId: 'conflicting-map-supply-identity' }
+            : spec),
+        },
+      });
+      return rejectedCandidate;
+    },
+  }), /rule content hash/);
+  assert.ok(rejectedCandidate);
+  assert.throws(() => rejectedCandidate?.getSnapshot(), /已销毁/);
+  runner.destroy();
+  source.destroy();
+});
+
+test('checkpoint continuation preserves elimination and terminal result boundaries', () => {
+  const eliminationArena = {
+    ...SURVIVAL_ARENA,
+    killY: -3,
+    spawns: [{ x: -0.55, y: 1, z: 0 }, { x: 0.55, y: 1, z: 0 }],
+  };
+  const config = {
+    arena: eliminationArena,
+    preparingTicks: 0,
+    livesPerParticipant: 1,
+    suddenDeathStartTick: 1_300,
+    hardLimitTicks: 1_400,
+    basePush: {
+      range: 2,
+      windupTicks: 1,
+      activeTicks: 2,
+      recoveryTicks: 2,
+      horizontalImpulse: 16,
+      verticalImpulse: 3,
+      hitstunTicks: 6,
+    },
+  };
+  const createCore = ({ seed, config: restoredConfig }: InternalCheckpointCoreFactoryOptions) => (
+    createArenaV2SurvivalSupplyMatchCore({ seed, config: restoredConfig, supply: SUPPLY })
+  );
+  const source = createArenaV2SurvivalSupplyMatchCore({ seed: 906, config, supply: SUPPLY });
+  const runner = new HeadlessMatchRunner(source, { checkpointInterval: 20 });
+  runner.step(neutralFrames(source, 'player-1'));
+  const checkpoint = runner.exportInternalCheckpoint();
+  const restored = restoreMatchCoreFromCheckpoint(checkpoint, { coreFactory: createCore });
+  const continuousEvents: ArenaAuthorityEvent[] = [];
+  const restoredEvents: ArenaAuthorityEvent[] = [];
+  for (let index = 0; index < 240 && source.phase !== 'ended'; index += 1) {
+    const values = neutralFrames(source);
+    continuousEvents.push(...runner.step(values));
+    restoredEvents.push(...restored.step(values));
+    assert.equal(restored.getStateHash(), source.getStateHash());
+  }
+  assert.equal(source.phase, 'ended');
+  assert.ok(continuousEvents.some(({ type }) => type === ARENA_MATCH_EVENT.PLAYER_ELIMINATED));
+  assert.deepEqual(restoredEvents, continuousEvents);
+  assert.deepEqual(restored.result, source.result);
+  restored.destroy();
+  runner.destroy();
+  source.destroy();
 });

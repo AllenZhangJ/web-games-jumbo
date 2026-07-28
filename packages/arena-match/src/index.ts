@@ -62,7 +62,20 @@ export type {
   MatchCoreMapFactoryContext,
   MatchCoreOptions,
   MatchReplayMetadata,
+  MatchInternalCheckpointIdentity,
 } from './match-core.js';
+export {
+  ARENA_INTERNAL_MATCH_CHECKPOINT_SCHEMA_VERSION,
+  createArenaInternalMatchCheckpoint,
+  restoreMatchCoreFromCheckpoint,
+  validateArenaInternalMatchCheckpoint,
+} from './match-checkpoint.js';
+export type {
+  ArenaInternalMatchCheckpoint,
+  InternalCheckpointCoreFactory,
+  InternalCheckpointCoreFactoryOptions,
+  RestoreMatchCoreFromCheckpointOptions,
+} from './match-checkpoint.js';
 export {
   FIXED_STEP_RUNTIME_DEFAULTS,
   FixedStepMatchRuntime,

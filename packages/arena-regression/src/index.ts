@@ -48,6 +48,11 @@ export {
   ARENA_V1_GOLDEN_REPLAY_MANIFEST_ID,
   createArenaV1GoldenReplayScenarioRegistry,
 } from './arena-v1-golden-replay-scenarios.js';
+export {
+  ARENA_V2_SURVIVAL_GOLDEN_REPLAY_MANIFEST_ID,
+  createArenaV2SurvivalGoldenReplayCore,
+  createArenaV2SurvivalGoldenReplayScenarioRegistry,
+} from './arena-v2-survival-golden-replay-scenario.js';
 export type {
   ArenaGoldenReplayManifest,
   ArenaGoldenReplayManifestEntry,
