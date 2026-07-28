@@ -8,6 +8,9 @@
 - 技能安装目录：`.agents/skills/`
 - 技能锁定清单：[`skills-lock.json`](../../skills-lock.json)
 - 关联治理：[`AGENTS.md`](../../AGENTS.md)、[V2 生产化分阶段开发与治理计划](arena-v2-production-development-plan.md)、[ADR-109](../decisions/109-arena-art-and-audio-skill-routing.md)
+- 视觉生产基线：[Arena Art Bible](arena-art-bible.md)
+- 注释参考登记：[mood / color / composition / character / environment / UI 六类70/20/10登记与A0.2板面规格](arena-art-reference-register.md)；六张实际板与签核完成前A0.2保持 `incomplete`
+- 阶段协作基线：[美术 A0–A7 与开发 P0–P7 对齐矩阵](arena-art-development-alignment-matrix.md)
 
 ## 1. 目的与项目特化边界
 
@@ -65,6 +68,10 @@
 | 图片/视频交付 | `.agents/skills/media-asset-management/references/responsive-image-patterns.md` |
 
 ## 3. 按阶段执行的生产流程
+
+本节的 A–F 是单件资产的门禁顺序；跨项目阶段的排期、输入、评分、硬门和返工范围以[美术 A0–A7 与开发 P0–P7 对齐矩阵](arena-art-development-alignment-matrix.md)为准。任何单件 Final 资产都必须完整经过 `Concept → Blockout → Integration → Final`，不得因开发阶段推进而跳门。
+
+跨阶段A0前置拆为：A0.1视觉宪法/来源登记/对齐合同、A0.2六类实际注释参考板、A0.3剪影工具与盲测基线。A0.1签核只批准合同；A0.2/A0.3任一`incomplete`时，后续可继续Rule/Core和合同准备，但生产资产不得进入Blockout。
 
 ### A. 视觉与声音 Brief 门
 
