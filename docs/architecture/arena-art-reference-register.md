@@ -2,12 +2,14 @@
 
 ## 状态与使用规则
 
-- 状态：A0.1 六类来源文字登记完成；A0.2 六张实际板、manifest与签核为 `incomplete`
+- 状态：A0.1 六类来源文字登记完成；A0.2.1来源与权利包为`source-ready`，主协调已签核（2026-07-28）；A0.2.2六张实际板、板面manifest与签核为 `incomplete`
 - 日期：2026-07-28
 - 比例：每类按 `70% 基线 / 20% 追求 / 10% 刻意张力` 使用；比例表示评审决策权重，不表示复制面积、训练集比例或最终资产来源比例
 - 边界：本文只登记“借鉴什么”和“明确不复制什么”。没有可再分发许可的外部图片只保留链接或研究文档，不下载、不嵌入、不进入模型训练、生产纹理或正式 Bundle
 
 所有图片后续必须存入独立参考板目录并带来源、作者、URL/revision、许可、取得日期和用途标签。当前没有合法完备的六类图片板，因此 Reference Board 不得写“通过”。
+
+A0.2.1的60条来源输入、权利结论、36个唯一可嵌入文件与离线复核见[A0.2.1来源与权利包](arena-art-reference-source-pack-a0.2.1.md)及其[机器台账](../quality/art/reference-sources/arena-a0.2.1-source-pack-v1.json)。六类各一张的[480×320来源抽检页manifest](../quality/art/reference-source-inspection/a0.2.1-contact-sheet-manifest-v1.json)只用于一次审阅36个embedded输入并显式拒绝A0.2.2板面通过；来源包通过不等于A0.2.2板面通过。
 
 ## 1. Mood / 情绪
 
@@ -190,4 +192,4 @@
 
 ### 8.7 当前结论
 
-本轮没有生成板面。当前来源登记中多类只有受限链接或尚未补正式权利记录的仓库概念图，无法满足每板至少6个合法嵌入视觉的硬门；为避免用空占位板冒充成果，A0.2继续为`incomplete`。
+本轮仍未生成A0.2.2正式板面。A0.2.1来源包已为每板准备恰好10条7/2/1输入，其中6条为权利可嵌入且内容hash唯一的视觉，4条为不缓存图片的link-only研究卡；Character B01–B03已替换为正式GLB的正/侧/三分之四干净渲染，UI六项已替换为V2 screen map六种不同职责的项目自产合同视觉，Composition B01已替换为通过480×320预检的高对比路径层级样图。六张自动抽检页覆盖36个embedded输入，其manifest明确`a0_2_2BoardPass=false`。主协调于2026-07-28仅签核A0.2.1来源与权利包为`source-ready`；A0.2.2的10格SVG/PNG、完整注释、板面manifest、裁切批准和双签核均未开始，因此A0.2整体、Reference Board与Blockout继续为`incomplete`/fail closed。

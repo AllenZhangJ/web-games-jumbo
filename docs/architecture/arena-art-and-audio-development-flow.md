@@ -9,7 +9,7 @@
 - 技能锁定清单：[`skills-lock.json`](../../skills-lock.json)
 - 关联治理：[`AGENTS.md`](../../AGENTS.md)、[V2 生产化分阶段开发与治理计划](arena-v2-production-development-plan.md)、[ADR-109](../decisions/109-arena-art-and-audio-skill-routing.md)
 - 视觉生产基线：[Arena Art Bible](arena-art-bible.md)
-- 注释参考登记：[mood / color / composition / character / environment / UI 六类70/20/10登记与A0.2板面规格](arena-art-reference-register.md)；六张实际板与签核完成前A0.2保持 `incomplete`
+- 注释参考登记：[mood / color / composition / character / environment / UI 六类70/20/10登记与A0.2板面规格](arena-art-reference-register.md)；[A0.2.1来源与权利包](arena-art-reference-source-pack-a0.2.1.md)已补角色正式模型渲染、六类UI职责样图、构图替换与六张480×320抽检页，并由主协调于2026-07-28签核为`source-ready`；A0.2.2六张实际板与签核完成前A0.2、Reference Board与Blockout保持 `incomplete`/fail closed
 - 阶段协作基线：[美术 A0–A7 与开发 P0–P7 对齐矩阵](arena-art-development-alignment-matrix.md)
 
 ## 1. 目的与项目特化边界

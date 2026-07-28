@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "id": "arena.art.reference-ui-source-visuals.a0.2.1.v1",
+  "status": "source-review-only",
+  "generatedAt": "2026-07-28",
+  "generator": {
+    "path": "scripts/art/generate-arena-reference-source-visuals.ts",
+    "sha256": "b3ec2a1c1590a39b2e32f14fb90e051a37446dc59f62e7a8087afa9b6fa06136",
+    "revision": "arena-reference-source-visual-generator-v1",
+    "artBibleTokens": [
+      "#172033",
+      "#F4EBDD",
+      "#35B8FF",
+      "#FF5C5C",
+      "#FFB020",
+      "#45D483",
+      "#8B6DFF",
+      "#273451",
+      "#CFC6B3"
+    ],
+    "limitation": "A0.2.1 source-quality inputs only; not implemented UI, A0.2.2 board artwork, device evidence, human evidence or Final."
+  },
+  "authority": {
+    "path": "docs/product/arena-v2-screen-map.md",
+    "sha256": "b5e9728592d4955b8c0987e4f84903f58566533d5967534bab0fc70aa4a26760",
+    "baselineCommit": "8e3e6eff6724612e83b124aa2ae6574a3967af9e"
+  },
+  "outputs": [
+    {
+      "entryId": "ui-b01",
+      "purpose": "首页快速开局",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/project-ui-wireframes/ui-b01-home-quick-start.png",
+        "byteLength": 29449,
+        "sha256": "950ca859e7e3a9dfe95b3c398483a91d28d896f005236f57565666edb9cef3c7",
+        "width": 1280,
+        "height": 720
+      }
+    },
+    {
+      "entryId": "ui-b02",
+      "purpose": "武器收藏",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/project-ui-wireframes/ui-b02-weapon-collection.png",
+        "byteLength": 33675,
+        "sha256": "b7d0071ba36219cec0638648421b1002697efb2ba2c64e34796e5e0310201b8a",
+        "width": 1280,
+        "height": 720
+      }
+    },
+    {
+      "entryId": "ui-b03",
+      "purpose": "武器详情",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/project-ui-wireframes/ui-b03-weapon-detail.png",
+        "byteLength": 26625,
+        "sha256": "2355480c8f8d2270baa7340d239a075382e6477eaf479bed7223c69845274b4e",
+        "width": 1280,
+        "height": 720
+      }
+    },
+    {
+      "entryId": "ui-b04",
+      "purpose": "地图与模式",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/project-ui-wireframes/ui-b04-map-mode.png",
+        "byteLength": 28061,
+        "sha256": "3fe47c26e0808296a6b5f4a0e1f2787eb92506109528e1364a821bab16128f28",
+        "width": 1280,
+        "height": 720
+      }
+    },
+    {
+      "entryId": "ui-a01",
+      "purpose": "结算与下一目标",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/project-ui-wireframes/ui-a01-result-next-goal.png",
+        "byteLength": 29811,
+        "sha256": "edef6af82f8f5b4cc023bcbab7cc670702930582fd8c8232ff53d0954687b9cc",
+        "width": 1280,
+        "height": 720
+      }
+    },
+    {
+      "entryId": "ui-t01",
+      "purpose": "窄屏压力样本",
+      "artifact": {
+        "path": "docs/quality/art/reference-sources/project-ui-wireframes/ui-t01-mobile-narrow-stress.png",
+        "byteLength": 22441,
+        "sha256": "aee660f5891f6e4a77a2ce57887ad9f729ee8288908612c9a0ab1fc0f3228cd7",
+        "width": 390,
+        "height": 844
+      }
+    }
+  ],
+  "compositionReplacement": {
+    "entryId": "composition-b01",
+    "purpose": "在480×320抽检尺度保持入口—路径—落点—恢复—目标层级",
+    "artifact": {
+      "path": "docs/quality/art/reference-sources/project-composition/composition-b01-kz-route-hierarchy.png",
+      "byteLength": 18619,
+      "sha256": "3f7ed0b31a22a3423aec54f3029b19f006d9c38a3cbf48e17a916b921bc95d2c",
+      "width": 960,
+      "height": 640
+    },
+    "thumbnailPreflight": {
+      "width": 480,
+      "height": 320,
+      "sha256": "fe45d03ecdf8089cbbca2fa4cc48da064bfb95f306dd1b40b8281078e0e5553e",
+      "mainRouteStrokePx": 23,
+      "recoveryRouteStrokePx": 18,
+      "minimumLabelPx": 10,
+      "shapeRedundancy": [
+        "green-circle-entry",
+        "white-main-route",
+        "red-diamond-landing",
+        "purple-branch-recovery",
+        "orange-arrow-goal"
+      ],
+      "result": "pass-source-quality-only"
+    }
+  }
+}

@@ -1,0 +1,313 @@
+{
+  "schemaVersion": 1,
+  "id": "arena.art.reference-source-inspection.a0.2.1.v1",
+  "status": "source-quality-inspection-only",
+  "generatedAt": "2026-07-28",
+  "sourcePack": {
+    "path": "docs/quality/art/reference-sources/arena-a0.2.1-source-pack-v1.json",
+    "id": "arena.art.reference-source-pack.a0.2.1.v1"
+  },
+  "generator": {
+    "path": "scripts/art/generate-arena-reference-contact-sheets.ts",
+    "sha256": "dba6fcd7895a5eb07e4e6baf1361ad1ad062a26b09c44db82f6d68e23c2ac0bf"
+  },
+  "embeddedEntryCount": 36,
+  "a0_2_2BoardPass": false,
+  "limitation": "These six sheets only expose embedded-source quality at a fixed thumbnail frame. They omit full board annotations and signatures and cannot pass A0.2.2, Reference Board, Blockout or Final.",
+  "sheets": [
+    {
+      "category": "mood",
+      "status": "source-quality-inspection-only",
+      "entryCount": 6,
+      "thumbnailFrame": {
+        "width": 480,
+        "height": 320,
+        "fit": "contain"
+      },
+      "entries": [
+        {
+          "entryId": "mood-b01",
+          "sourceArtifactSha256": "170c6eee7a6a23a081da610db9e11e7fcb0ab95d3317c3b7ca2bddb24a2192d0",
+          "thumbnailSha256": "ef41eb23786001953e4a4210b1bf24644364bba73fde8f8ee81fbbb372b64c50"
+        },
+        {
+          "entryId": "mood-b02",
+          "sourceArtifactSha256": "bb3728fed7905f8b928542c243eb0ff657d7198c78254181c2dd63adf9ad10ef",
+          "thumbnailSha256": "a2ba5562a9bc8475f4a60c0b8f417c8bc57f7fdff8f86c8aba19e065426b7708"
+        },
+        {
+          "entryId": "mood-b03",
+          "sourceArtifactSha256": "05c75308d81536565f44d090ac49eff015df1bb7ce736aba115c0daf9c020656",
+          "thumbnailSha256": "90761b3ee5290be0f4b8815949c2396b57cefc4842013175af0b57053ff64e09"
+        },
+        {
+          "entryId": "mood-b04",
+          "sourceArtifactSha256": "abea779395c38fb7756d21663677dc409c53a21a276882e19ca21419c2e3ecf7",
+          "thumbnailSha256": "6848edb5692ad45d182ef302d2573e7acfdcc1d80c5d661fcba2e2fd03142aa0"
+        },
+        {
+          "entryId": "mood-a01",
+          "sourceArtifactSha256": "443ef9ecf70fe6fe352922469823ef015d70801d209811a971c472558339d170",
+          "thumbnailSha256": "69cfd1789dfdb6ce49ecb2a01d72387d31feb9faedd836902e6589643c81a185"
+        },
+        {
+          "entryId": "mood-t01",
+          "sourceArtifactSha256": "b0247791160f37a40b8e39b301c4879cd20fcfedc5fb88f9986ea2ed57276a5a",
+          "thumbnailSha256": "42504f49cec0cfbba1590f44315593460dadafdecd82683ff697be6e79ce1666"
+        }
+      ],
+      "artifact": {
+        "path": "docs/quality/art/reference-source-inspection/a0.2.1-mood-embedded-source-inspection.png",
+        "byteLength": 467586,
+        "sha256": "5d1ca7d536086d5400c46b34ae465ebf60fab8c15ac9a2366045bfce72e75e15",
+        "width": 1600,
+        "height": 930
+      }
+    },
+    {
+      "category": "color",
+      "status": "source-quality-inspection-only",
+      "entryCount": 6,
+      "thumbnailFrame": {
+        "width": 480,
+        "height": 320,
+        "fit": "contain"
+      },
+      "entries": [
+        {
+          "entryId": "color-b01",
+          "sourceArtifactSha256": "af0e3486621c210b54932d055294051b5601aa3362af4b84ab97e2831f8163bc",
+          "thumbnailSha256": "11bcbd971638a98b16abeac28153b671f5d65be8a97b414f863aba5cb9db3cd5"
+        },
+        {
+          "entryId": "color-b02",
+          "sourceArtifactSha256": "b76ccf0710b8e4b32e778a45e5398a0cf4777994523116f994a0430f4ee6a841",
+          "thumbnailSha256": "0650e02693b92520ddeec12d5be3a4fdfa9179f3af654cead7040e523a47e899"
+        },
+        {
+          "entryId": "color-b03",
+          "sourceArtifactSha256": "0d49e28af695e159c5e2bd39ee92a6b7791587fa69fcd430c9d0b5adcddae558",
+          "thumbnailSha256": "808242a407ad366d46399278d15833429847fd764bf27aca5609b4d34deccb4b"
+        },
+        {
+          "entryId": "color-b04",
+          "sourceArtifactSha256": "a3fb8768269a7d778d07b5e958ac10825e34d2213361ccf53a2996b35e3117ba",
+          "thumbnailSha256": "bd6e3e4b4db1239dfbbd5501bfe376a94684dc12514ad3e49ace5b6f0478a5ca"
+        },
+        {
+          "entryId": "color-a01",
+          "sourceArtifactSha256": "78a49188711d1ccfe64a3ec124c4116724b2d4049a6a5879e76ee69925f7e753",
+          "thumbnailSha256": "e9269f6e86de60f7de7e670415184b64eec6eb8933da770d2cc4e9137f761cf9"
+        },
+        {
+          "entryId": "color-t01",
+          "sourceArtifactSha256": "7406b3e09215eceeed5ec2a5ac5d63b77f929516f3476b09684bc789cb289a1a",
+          "thumbnailSha256": "3c5c0bcbfbe0c95e79b562adf6822f70504329c7b5fd74d91640912a8008b135"
+        }
+      ],
+      "artifact": {
+        "path": "docs/quality/art/reference-source-inspection/a0.2.1-color-embedded-source-inspection.png",
+        "byteLength": 487897,
+        "sha256": "a56f2ec68b192468fb508261fd82f7f1778975aed5bedcd05a73beeb58da7e55",
+        "width": 1600,
+        "height": 930
+      }
+    },
+    {
+      "category": "composition",
+      "status": "source-quality-inspection-only",
+      "entryCount": 6,
+      "thumbnailFrame": {
+        "width": 480,
+        "height": 320,
+        "fit": "contain"
+      },
+      "entries": [
+        {
+          "entryId": "composition-b01",
+          "sourceArtifactSha256": "3f7ed0b31a22a3423aec54f3029b19f006d9c38a3cbf48e17a916b921bc95d2c",
+          "thumbnailSha256": "fe45d03ecdf8089cbbca2fa4cc48da064bfb95f306dd1b40b8281078e0e5553e"
+        },
+        {
+          "entryId": "composition-b02",
+          "sourceArtifactSha256": "2248b3bb135940592620606573e5a7a2099dc18bbb2feab70442d9fbee6501fc",
+          "thumbnailSha256": "70ef3636e312650d6e6bfe94d8ea5814716be21d02c89b98588f36644c845dec"
+        },
+        {
+          "entryId": "composition-b03",
+          "sourceArtifactSha256": "4d93eeda35ad5c4ce30306758502405af1b1d4e24238ce9965d5bf7316fd7341",
+          "thumbnailSha256": "fbbaf87b0966b1daa3045f90434dd940f5efc034557fc8f577fc797d6bc82e05"
+        },
+        {
+          "entryId": "composition-b04",
+          "sourceArtifactSha256": "24fd3e198f230a8c004fa137a6da01741193434af96fa04b7696a697278af51e",
+          "thumbnailSha256": "df62f568aa43e699ef0a32d0d80b211812acb4ddcafba8ba9ac03927825dba63"
+        },
+        {
+          "entryId": "composition-a01",
+          "sourceArtifactSha256": "f58de1ee8cb1e012a8f273dcf906e932aaef7ab85ca7487af4d8c44cbb109866",
+          "thumbnailSha256": "e5211b6fce0f6314b658a96f397ea682e166eda5a6b2eab78d720859d2fc372d"
+        },
+        {
+          "entryId": "composition-t01",
+          "sourceArtifactSha256": "0dc3000e96b2f788e286aa2b0e99d5b703366c3b32ce37b99566f6253cc6218b",
+          "thumbnailSha256": "eab352d0f7f3283bf114e1cca1fca08630f602823e804526f22390602fe7e40f"
+        }
+      ],
+      "artifact": {
+        "path": "docs/quality/art/reference-source-inspection/a0.2.1-composition-embedded-source-inspection.png",
+        "byteLength": 411352,
+        "sha256": "f46af27e5fa0084fda415bd96b9a7649ebf7287910b657d3dc13e5075f7ee8a8",
+        "width": 1600,
+        "height": 930
+      }
+    },
+    {
+      "category": "character",
+      "status": "source-quality-inspection-only",
+      "entryCount": 6,
+      "thumbnailFrame": {
+        "width": 480,
+        "height": 320,
+        "fit": "contain"
+      },
+      "entries": [
+        {
+          "entryId": "character-b01",
+          "sourceArtifactSha256": "ce21db1d2c098747d4760d32a46a4cab209ded203286bf769cb4fae6e3dd0739",
+          "thumbnailSha256": "879373572dae368cdc14138b393b6fa9f839b8b9e9e95ee0a1cb346ec3d03eeb"
+        },
+        {
+          "entryId": "character-b02",
+          "sourceArtifactSha256": "3089d9fbd58642821a27b19226f7a0a918d80a861f670685b683de768aeb5e7a",
+          "thumbnailSha256": "643cb7de92aeaabfe7b3bfd43818f867d052cb7837460365ee8dd4022aa06712"
+        },
+        {
+          "entryId": "character-b03",
+          "sourceArtifactSha256": "aa1b0e021193a1c0de08bd728c7d06ce8ad1c56410d06ad188c691407a2767a9",
+          "thumbnailSha256": "6ff61909aeff0c04a723df5a88ac28f9e2c66edd8cc087c6e67b0d1a59f3150d"
+        },
+        {
+          "entryId": "character-b04",
+          "sourceArtifactSha256": "b6b55bf20c6e76c40fcc361a234fbb41e27d58b3b56f31b99621110a5c847cd6",
+          "thumbnailSha256": "2faee02068254b8c16936a26970e01a96a3ce40fa9c3e535ee25b73f1a1bba27"
+        },
+        {
+          "entryId": "character-a01",
+          "sourceArtifactSha256": "578f9bcaaf94e7bb7db4531796bc856d2e9781b730ac65fb3641dcebd93675f9",
+          "thumbnailSha256": "f3c53e1d7834dd6012216d3ec4a6deda20e01e0a400a59813ff9c43afa9f1dee"
+        },
+        {
+          "entryId": "character-t01",
+          "sourceArtifactSha256": "da2216e0c8ed796f2864f41e0b16681a3b2590ef6ac32c1c262f65b8f45653f9",
+          "thumbnailSha256": "ce9f4db696e130c7b72f978361b7824badfd58b6df98059c341deffdde465730"
+        }
+      ],
+      "artifact": {
+        "path": "docs/quality/art/reference-source-inspection/a0.2.1-character-embedded-source-inspection.png",
+        "byteLength": 215843,
+        "sha256": "f7e8f61db1eabda54ea1a8c15ddd8a347a3fe8485dddec8d1ffd4e0fc3633e5a",
+        "width": 1600,
+        "height": 930
+      }
+    },
+    {
+      "category": "environment",
+      "status": "source-quality-inspection-only",
+      "entryCount": 6,
+      "thumbnailFrame": {
+        "width": 480,
+        "height": 320,
+        "fit": "contain"
+      },
+      "entries": [
+        {
+          "entryId": "environment-b01",
+          "sourceArtifactSha256": "0e88957ab1b738cde293d468eb690c2c2ecd9ceefa2b9d2e0c586a5d53125193",
+          "thumbnailSha256": "968acafc0b6357e76dc112229bb3a0d6abbf7cc2abb6c2552dfcb29f234b7501"
+        },
+        {
+          "entryId": "environment-b02",
+          "sourceArtifactSha256": "6797453ceaf92217e2bed1b517b9ac00a15cb30c078c5d1c5d8c631db55f6416",
+          "thumbnailSha256": "812a1292883bdb0b3b08f2e9bfeeda5c7ac5115b4d97d9e34fef0259754df5f8"
+        },
+        {
+          "entryId": "environment-b03",
+          "sourceArtifactSha256": "a8a7546ff2d1a61a1ad761e1770f580c193f62113415b229a4b4d42a1b5bd192",
+          "thumbnailSha256": "3924c298355c3d7fb783e577dfd6f1fd5db126323c17e2854d3beadfb9a36a05"
+        },
+        {
+          "entryId": "environment-b04",
+          "sourceArtifactSha256": "e99f015c6808ecde1bc5c206b797c0315ec6be73454268ef56c0c5a9c2ce3490",
+          "thumbnailSha256": "cdb6e252cfffea0bb2bbb175985f161d03dbbe960c711a91fb34c6fb2f433c39"
+        },
+        {
+          "entryId": "environment-a01",
+          "sourceArtifactSha256": "0770bd8b8fa237fc39b2715ec65b21cc35ab9864fa7529042afe0070889f6aaa",
+          "thumbnailSha256": "78619b4e5c2041a18ae085f58807d7f0d72c798736cfb338f14e2f83fa437c4a"
+        },
+        {
+          "entryId": "environment-t01",
+          "sourceArtifactSha256": "6985d2fbc3ea2a9a1a40d9042150bec2370e33ba57cc2f40b6fb83dea186ede5",
+          "thumbnailSha256": "d2cfebf39868b86e44d1518a1c183ee800179768270b886b6ccba9441152d396"
+        }
+      ],
+      "artifact": {
+        "path": "docs/quality/art/reference-source-inspection/a0.2.1-environment-embedded-source-inspection.png",
+        "byteLength": 454485,
+        "sha256": "96605afc1bb7ee376059ca0e8e90a23c4d09081d671fcb94d79c73c34748404f",
+        "width": 1600,
+        "height": 930
+      }
+    },
+    {
+      "category": "ui",
+      "status": "source-quality-inspection-only",
+      "entryCount": 6,
+      "thumbnailFrame": {
+        "width": 480,
+        "height": 320,
+        "fit": "contain"
+      },
+      "entries": [
+        {
+          "entryId": "ui-b01",
+          "sourceArtifactSha256": "950ca859e7e3a9dfe95b3c398483a91d28d896f005236f57565666edb9cef3c7",
+          "thumbnailSha256": "d01ff7286a793a3f069584e7fd6d43ad2726ee24e087d0816dcfda9ccba95e4e"
+        },
+        {
+          "entryId": "ui-b02",
+          "sourceArtifactSha256": "b7d0071ba36219cec0638648421b1002697efb2ba2c64e34796e5e0310201b8a",
+          "thumbnailSha256": "4b34fca7a5226d0912f5d01816bbb959333b6acc35fdcac5e616042f9196eab7"
+        },
+        {
+          "entryId": "ui-b03",
+          "sourceArtifactSha256": "2355480c8f8d2270baa7340d239a075382e6477eaf479bed7223c69845274b4e",
+          "thumbnailSha256": "c760cc06bcab01b9ea158c2f1a987851035b0b29b8909461300b511e0910d695"
+        },
+        {
+          "entryId": "ui-b04",
+          "sourceArtifactSha256": "3fe47c26e0808296a6b5f4a0e1f2787eb92506109528e1364a821bab16128f28",
+          "thumbnailSha256": "a735f0fd91f531f78d367758bd960a496aec32df729548d3511b4b4a53d2e225"
+        },
+        {
+          "entryId": "ui-a01",
+          "sourceArtifactSha256": "edef6af82f8f5b4cc023bcbab7cc670702930582fd8c8232ff53d0954687b9cc",
+          "thumbnailSha256": "6e8eabcd8544e52b2776a3ef1eff52c3da95ce1bd506a8fad6e2f614e923f0e6"
+        },
+        {
+          "entryId": "ui-t01",
+          "sourceArtifactSha256": "aee660f5891f6e4a77a2ce57887ad9f729ee8288908612c9a0ab1fc0f3228cd7",
+          "thumbnailSha256": "16b8ba08468735e2f00d2a8a5021f41fe474014db18cf67786e6d049b1141c2a"
+        }
+      ],
+      "artifact": {
+        "path": "docs/quality/art/reference-source-inspection/a0.2.1-ui-embedded-source-inspection.png",
+        "byteLength": 98189,
+        "sha256": "dedc9f2ec50229d48df13f7707c89d7aa1037304e7977171be0fe303b451d584",
+        "width": 1600,
+        "height": 930
+      }
+    }
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "id": "arena.art.reference-character-renders.a0.2.1.v1",
+  "status": "source-review-only",
+  "generatedAt": "2026-07-28",
+  "generator": {
+    "path": "scripts/art/render-arena-reference-characters.ts",
+    "sha256": "e7682b2ff433c8351baf77f98160a13ebbbcc1b81d500fed38e133ab2c075f7e",
+    "version": "arena-reference-software-renderer-v1",
+    "projection": "orthographic",
+    "cameraViews": [
+      "front-0deg",
+      "side-90deg",
+      "three-quarter-35deg"
+    ],
+    "pose": "GLB Idle clip sampled at min(0.35s, 25% clip duration)",
+    "raster": "960x960 sRGB PNG via sharp",
+    "lighting": "software lambert, fixed vector (-0.35, 0.8, 0.45)",
+    "limitation": "Source-quality visual review only; no gameplay camera, black silhouette, blind test, runtime attachment socket, device or Final claim."
+  },
+  "inputs": [
+    {
+      "glb": {
+        "path": "public/assets/arena/characters/kaykit-adventurers/parkour-apprentice-rogue.glb",
+        "byteLength": 922332,
+        "sha256": "3ee71059eef32d9a6259c5cfd4121f31dffda0a9667509b5f24129fb2c7a1cab"
+      },
+      "texture": {
+        "path": "public/assets/arena/characters/kaykit-adventurers/rogue_texture.png",
+        "byteLength": 16670,
+        "sha256": "a4032e877c3b91939f5cdbb630349c1998fdbc3211bbd587c111125500fe4cc5"
+      }
+    },
+    {
+      "glb": {
+        "path": "public/assets/arena/characters/kaykit-skeletons/clockwork-warrior.glb",
+        "byteLength": 974548,
+        "sha256": "1a424efda14e7875180989a66186fafcc94a12ac85ebdfdc7e3f998a00584e39"
+      },
+      "texture": {
+        "path": "public/assets/arena/characters/kaykit-skeletons/skeleton_texture.png",
+        "byteLength": 17037,
+        "sha256": "15741a25c53e04fa9bf3beac3bc0de442359404b1ff9be863b892cb551ad3657"
+      }
+    },
+    {
+      "glb": {
+        "path": "public/assets/arena/equipment/kaykit-adventurers/shield-round.glb",
+        "byteLength": 13084,
+        "sha256": "a61bcd83ccac9bc8596bf09894867ca491487d7a4b0662bb64dca2d1b19e790d"
+      },
+      "texture": {
+        "path": "public/assets/arena/equipment/kaykit-adventurers/shield_texture.png",
+        "byteLength": 14172,
+        "sha256": "5d250ccc5da020e6126bfa3839f83bd9a465a951ed223e4d13c08b1925e154d4"
+      }
+    }
+  ],
+  "outputs": [
+    {
+      "path": "docs/quality/art/reference-sources/project-character-renders/character-b01-rogue-front-side.png",
+      "byteLength": 116434,
+      "sha256": "ce21db1d2c098747d4760d32a46a4cab209ded203286bf769cb4fae6e3dd0739",
+      "width": 960,
+      "height": 960
+    },
+    {
+      "path": "docs/quality/art/reference-sources/project-character-renders/character-b02-skeleton-front-three-quarter.png",
+      "byteLength": 132105,
+      "sha256": "3089d9fbd58642821a27b19226f7a0a918d80a861f670685b683de768aeb5e7a",
+      "width": 960,
+      "height": 960
+    },
+    {
+      "path": "docs/quality/art/reference-sources/project-character-renders/character-b03-rogue-round-shield-three-quarter.png",
+      "byteLength": 87394,
+      "sha256": "aa1b0e021193a1c0de08bd728c7d06ce8ad1c56410d06ad188c691407a2767a9",
+      "width": 960,
+      "height": 960
+    }
+  ]
+}
