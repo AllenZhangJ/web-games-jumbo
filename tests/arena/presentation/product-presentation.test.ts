@@ -37,6 +37,7 @@ import {
   ProductScreenRegistry,
   ProductSessionIntentDispatcher,
   createProductSessionViewModel,
+  createProductUiSceneModel,
   type ProductInputSamplerPort,
   type ProductMatchPresentationProjectorOptions,
   type ProductPresentationFlowOptions,
@@ -291,6 +292,60 @@ test('Arena V1 product presentation content covers every active product state wi
   assert.throws(
     () => new ProductScreenRegistry(sparse as never[]),
     /空槽或访问器/,
+  );
+});
+
+test('default production weapons expose real numeric differences on the Product overview path', () => {
+  const ready = viewModel(productSnapshot(PRODUCT_SESSION_STATE.READY));
+  const weapons = required(ready.weaponOptions, 'ready.weaponOptions');
+  assert.deepEqual(
+    weapons.map(({ weaponDefinitionId }) => weaponDefinitionId),
+    ['chain', 'hammer', 'shield'],
+  );
+  for (const weapon of weapons) {
+    assert.ok(weapon.coreVerb.length > 0, `${weapon.weaponDefinitionId} 缺少核心动词。`);
+    for (const statId of ['range', 'startup', 'recovery', 'impact', 'self-movement']) {
+      assert.ok(
+        weapon.stats.some(({ id }) => id === statId),
+        `${weapon.weaponDefinitionId} 缺少公开数值 ${statId}。`,
+      );
+    }
+    assert.deepEqual(
+      weapon.contexts.map(({ id }) => id),
+      ['ground', 'aerial'],
+    );
+  }
+
+  const sceneModel = createProductUiSceneModel(ready);
+  assert.equal(sceneModel.weaponCards.length, 3);
+  assert.deepEqual(
+    sceneModel.weaponComparison.map(({ id }) => id),
+    ['range', 'coverage', 'startup', 'recovery', 'impact', 'vertical', 'control', 'self-movement', 'cooldown'],
+  );
+  const comparisonById = new Map(sceneModel.weaponComparison.map((row) => [row.id, row]));
+  const roundedValues = (id: string) => comparisonById.get(id)!.values.map(({ value }) => (
+    Math.round(value * 100) / 100
+  ));
+  assert.deepEqual(roundedValues('range'), [5, 1.8, 1.6]);
+  assert.deepEqual(roundedValues('startup'), [0.2, 0.3, 0.08]);
+  assert.deepEqual(roundedValues('recovery'), [0.33, 0.4, 0.3]);
+  assert.deepEqual(roundedValues('impact'), [1.19, 2.68, 0.67]);
+  for (const row of sceneModel.weaponComparison.filter(({ id }) => (
+    ['range', 'startup', 'recovery', 'impact'].includes(id)
+  ))) {
+    assert.equal(new Set(row.values.map(({ value }) => value)).size, 3, `${row.id} 没有真实数值区分。`);
+  }
+  assert.deepEqual(
+    sceneModel.weaponCards.map(({ id, coreVerb, comparisonFacts }) => ({
+      id,
+      coreVerb,
+      facts: comparisonFacts.map(({ statement }) => statement),
+    })),
+    [
+      { id: 'chain', coreVerb: '拉位', facts: ['射程最远', '纵向控制最弱'] },
+      { id: 'hammer', coreVerb: '推离', facts: ['击飞最强', '出手最慢'] },
+      { id: 'shield', coreVerb: '冲入', facts: ['出手最快', '射程最近'] },
+    ],
   );
 });
 
