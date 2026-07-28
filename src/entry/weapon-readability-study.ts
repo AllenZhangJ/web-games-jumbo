@@ -71,6 +71,74 @@ function allContextStats(context: ArenaV2WeaponResearchOverviewContext): readonl
   return Object.freeze([...stats.values()]);
 }
 
+type ReadabilityQuickStatContext = 'ground' | 'aerial';
+
+interface ReadabilityQuickStatSpec {
+  readonly contextId: ReadabilityQuickStatContext;
+  readonly statId: ArenaV2WeaponPublicAxisId;
+  readonly label: string;
+}
+
+const READABILITY_QUICK_STAT_SPECS: readonly ReadabilityQuickStatSpec[] = Object.freeze([
+  Object.freeze({ contextId: 'ground', statId: 'range', label: '地面距离' }),
+  Object.freeze({ contextId: 'aerial', statId: 'range', label: '空中距离' }),
+  Object.freeze({ contextId: 'ground', statId: 'startup', label: '地面前摇' }),
+  Object.freeze({ contextId: 'ground', statId: 'recovery', label: '地面恢复' }),
+]);
+
+function directionGlyph(direction: ArenaV2WeaponResearchOverviewStat['direction']): string {
+  switch (direction) {
+    case 'higher-is-better':
+      return '↑';
+    case 'lower-is-better':
+      return '↓';
+    case 'higher-is-risk':
+      return '⚠';
+  }
+}
+
+function quickStatFor(
+  row: ArenaV2WeaponResearchOverviewRow,
+  spec: ReadabilityQuickStatSpec,
+): ArenaV2WeaponResearchOverviewStat {
+  const context = row.contexts.find(({ id }) => id === spec.contextId);
+  const stat = context && allContextStats(context).find(({ id }) => id === spec.statId);
+  if (!stat) throw new Error(`研究概览缺少 ${row.displayName} 的 ${spec.contextId}/${spec.statId} 快速数值。`);
+  return stat;
+}
+
+function renderQuickStat(
+  documentValue: Document,
+  row: ArenaV2WeaponResearchOverviewRow,
+  spec: ReadabilityQuickStatSpec,
+): HTMLElement {
+  const stat = quickStatFor(row, spec);
+  const item = documentValue.createElement('div');
+  item.className = 'readability-quick-stat';
+  item.dataset.weaponQuickStat = spec.statId;
+  item.dataset.weaponQuickContext = spec.contextId;
+  item.dataset.weaponQuickDirection = stat.direction;
+  item.setAttribute(
+    'aria-label',
+    `${spec.label}：${formatStat(stat)}，${directionLabel(stat.direction)}`,
+  );
+  const label = documentValue.createElement('span');
+  label.className = 'readability-quick-stat-label';
+  text(label, `${spec.label} ${directionGlyph(stat.direction)}`);
+  const value = documentValue.createElement('strong');
+  value.className = 'readability-quick-stat-value';
+  text(value, formatStat(stat));
+  const track = documentValue.createElement('span');
+  track.className = 'readability-quick-stat-track';
+  track.setAttribute('aria-hidden', 'true');
+  track.style.setProperty(
+    '--readability-quick-fill',
+    `${Math.min(100, Math.max(8, (stat.value / stat.maxValue) * 100))}%`,
+  );
+  item.append(label, value, track);
+  return item;
+}
+
 function renderWeaponSummary(documentValue: Document, row: ArenaV2WeaponResearchOverviewRow): HTMLElement {
   const article = documentValue.createElement('article');
   article.className = 'readability-overview-card';
@@ -81,6 +149,13 @@ function renderWeaponSummary(documentValue: Document, row: ArenaV2WeaponResearch
   verb.className = 'readability-overview-verb';
   text(verb, `${row.coreVerb} · ${row.hitResult}`);
   article.append(verb);
+  const quickStats = documentValue.createElement('div');
+  quickStats.className = 'readability-overview-quick-stats';
+  quickStats.setAttribute('aria-label', '核心数值摘要');
+  for (const spec of READABILITY_QUICK_STAT_SPECS) {
+    quickStats.append(renderQuickStat(documentValue, row, spec));
+  }
+  article.append(quickStats);
   const map = documentValue.createElement('p');
   text(map, `适合：${row.mapSpaces.join(' / ')}`);
   article.append(map);

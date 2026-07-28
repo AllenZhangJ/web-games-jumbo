@@ -23,6 +23,8 @@ test('weapon readability study page stays separate from the production product e
   assert.doesNotMatch(html, /web-human-match-study\.ts/);
   assert.match(entry, /projectArenaV2WeaponReadabilityParticipantTasks/);
   assert.match(entry, /createArenaV2WeaponCaseStudyReadabilityMatrix/);
+  assert.match(entry, /readability-overview-quick-stats/);
+  assert.match(entry, /readability-quick-stat/);
   assert.match(entry, /readability-overview-table/);
   assert.match(entry, /readability-research-signal-table/);
   assert.match(entry, /createArenaV2WeaponCaseStudyResearchSignalReadout/);

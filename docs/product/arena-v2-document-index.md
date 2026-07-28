@@ -132,8 +132,8 @@ Arena V2 的核心目标是：
 | [弹壳特攻队局外界面研究结果 V2](../research/arena-v2-survivor-io-ui-research-results-v2.md) | 将官方单手/行为化武器/场景化选择证据收敛为 11 个页面入口和竞技准备模板 | 研究结论与原型对齐 |
 | `arena-v2-survivor-io-ui-evidence.ts` | 将官方商店页、生存指南和版本记录拆成来源事实、信息模式、Arena 翻译和不复制边界 | 第四轮研究证据，仅研究工具链 |
 | [V2 武器可读性与长期留存验证计划 V1](../research/arena-v2-weapon-readability-retention-study-v1.md) | 定义 3 分钟操作、10 秒数值解释、KZ 归因和 30/60/120/200 小时真人验证任务 | 真人研究合同，尚无样本 |
-| [武器数值可读性任务原型结果 V1](../research/arena-v2-weapon-readability-task-prototype-results-v1.md) | 在题目前展示六件逐件研究武器的同源地面/空中矩阵和独立延迟/预警研究信号，再生成五项比较/方向/地图/上下文任务，隔离参与者题目与研究员答案并绑定矩阵哈希 | 六件矩阵与研究信号已接入，自动化验证通过，真人/设备样本尚无 |
-| [研究页浏览器布局证据 V1](../research/arena-v2-browser-layout-evidence-v1.md) | 记录 1280×720 与 390×844 下的六件武器矩阵、11 页面入口、触控尺寸和 Product 数值比较检查 | 本地浏览器布局通过，实体设备/真人仍待验证 |
+| [武器数值可读性任务原型结果 V1](../research/arena-v2-weapon-readability-task-prototype-results-v1.md) | 在题目前展示六件逐件研究武器的四项首屏快速数值、同源地面/空中矩阵和独立延迟/预警研究信号，再生成五项比较/方向/地图/上下文任务，隔离参与者题目与研究员答案并绑定矩阵哈希 | 六件矩阵、快速数值与研究信号已接入，自动化验证通过，真人/设备样本尚无 |
+| [研究页浏览器布局证据 V1](../research/arena-v2-browser-layout-evidence-v1.md) | 记录 1280×720 与 390×844 下的六件武器快速数值卡、完整矩阵、11 页面入口、触控尺寸和 Product 数值比较检查 | 本地浏览器布局通过，实体设备/真人仍待验证 |
 | [战斗外界面原型验证结果 V1](../research/arena-v2-ui-prototype-results-v1.md) | 记录当前主页、武器概览、角色选择和进入对局链路验证 | 第一轮原型证据 |
 | [局外信息原型结果 V1](../research/arena-v2-ui-information-prototype-results-v1.md) | 记录 11 个信息入口、四条关键流程、48px 触控门槛、760px 窄屏断点和点击预算 | 第二轮信息架构原型 |
 | `arena-v2-ui-information-prototype.ts` | 为 11 个局外页面声明必要信息、首屏最多三项、延后信息和点击预算，验证单一下一决策 | 第三轮信息层原型证据 |
