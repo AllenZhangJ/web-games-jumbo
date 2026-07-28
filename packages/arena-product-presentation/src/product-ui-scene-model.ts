@@ -33,6 +33,18 @@ export interface ProductUiSceneWeaponStat {
   readonly precision: number;
 }
 
+export type ProductUiSceneWeaponComparisonFactKind = 'advantage' | 'tradeoff';
+
+export interface ProductUiSceneWeaponComparisonFact {
+  readonly id: string;
+  readonly statId: string;
+  readonly statement: string;
+  readonly value: number;
+  readonly unit: string;
+  readonly precision: number;
+  readonly kind: ProductUiSceneWeaponComparisonFactKind;
+}
+
 export interface ProductUiSceneWeaponCard {
   readonly id: string;
   readonly name: string;
@@ -47,6 +59,8 @@ export interface ProductUiSceneWeaponCard {
   readonly stats: readonly ProductUiSceneWeaponStat[];
   readonly behaviorStats: readonly ProductUiSceneWeaponStat[];
   readonly contexts: readonly ProductUiSceneWeaponContext[];
+  /** 由可比数值派生的差异事实，不合并为综合评分。 */
+  readonly comparisonFacts: readonly ProductUiSceneWeaponComparisonFact[];
 }
 
 export interface ProductUiSceneWeaponContext {
@@ -273,7 +287,124 @@ function weaponCards(values: unknown): readonly ProductUiSceneWeaponCard[] {
       stats: weaponStats(option.stats, name),
       behaviorStats: optionalWeaponStats(option.behaviorStats, `${name}.behaviorStats`),
       contexts: weaponContexts(option.contexts, name),
+      comparisonFacts: Object.freeze([]),
     });
+  }));
+}
+
+const COMPARISON_FACT_PRIORITY = Object.freeze([
+  'range',
+  'coverage',
+  'startup',
+  'impact',
+  'recovery',
+  'self-movement',
+  'cooldown',
+  'vertical',
+  'control',
+  'active-span',
+  'direction-tolerance',
+]);
+
+const COMPARISON_FACT_STATEMENTS: Readonly<Record<string, Readonly<{
+  readonly advantage: string;
+  readonly tradeoff: string;
+}>>> = Object.freeze({
+  range: Object.freeze({ advantage: '射程最远', tradeoff: '射程最近' }),
+  coverage: Object.freeze({ advantage: '覆盖最宽', tradeoff: '覆盖最窄' }),
+  startup: Object.freeze({ advantage: '出手最快', tradeoff: '出手最慢' }),
+  recovery: Object.freeze({ advantage: '收招最短', tradeoff: '收招最长' }),
+  impact: Object.freeze({ advantage: '击飞最强', tradeoff: '击飞最弱' }),
+  vertical: Object.freeze({ advantage: '纵向控制最强', tradeoff: '纵向控制最弱' }),
+  control: Object.freeze({ advantage: '控制最长', tradeoff: '控制最短' }),
+  'self-movement': Object.freeze({ advantage: '自身风险最低', tradeoff: '自身风险最高' }),
+  cooldown: Object.freeze({ advantage: '再次使用最快', tradeoff: '再次使用最慢' }),
+  'active-span': Object.freeze({ advantage: '有效窗口最长', tradeoff: '有效窗口最短' }),
+  'direction-tolerance': Object.freeze({ advantage: '方向容错最大', tradeoff: '方向容错最小' }),
+});
+
+function comparisonFactStatement(
+  row: ProductUiSceneWeaponComparisonRow,
+  kind: ProductUiSceneWeaponComparisonFactKind,
+): string {
+  const statements = COMPARISON_FACT_STATEMENTS[row.id];
+  return statements?.[kind] ?? `${row.label}${kind === 'advantage' ? '更突出' : '是代价'}`;
+}
+
+function comparisonFactPriority(statId: string): number {
+  const index = COMPARISON_FACT_PRIORITY.indexOf(statId);
+  return index < 0 ? COMPARISON_FACT_PRIORITY.length : index;
+}
+
+function createComparisonFact(
+  row: ProductUiSceneWeaponComparisonRow,
+  stat: ProductUiSceneWeaponComparisonValue,
+  kind: ProductUiSceneWeaponComparisonFactKind,
+): ProductUiSceneWeaponComparisonFact {
+  return Object.freeze({
+    id: `${row.id}:${kind}`,
+    statId: row.id,
+    statement: comparisonFactStatement(row, kind),
+    value: stat.value,
+    unit: stat.unit,
+    precision: stat.precision,
+    kind,
+  });
+}
+
+function attachWeaponComparisonFacts(
+  cards: readonly ProductUiSceneWeaponCard[],
+  rows: readonly ProductUiSceneWeaponComparisonRow[],
+): readonly ProductUiSceneWeaponCard[] {
+  const factsByWeapon = new Map<string, ProductUiSceneWeaponComparisonFact[]>();
+  for (const card of cards) factsByWeapon.set(card.id, []);
+  for (const row of rows) {
+    if (row.values.length < 2) continue;
+    const minimum = Math.min(...row.values.map(({ value }) => value));
+    const maximum = Math.max(...row.values.map(({ value }) => value));
+    const minimumValues = row.values.filter(({ value }) => value === minimum);
+    const maximumValues = row.values.filter(({ value }) => value === maximum);
+    const uniqueMinimum = minimumValues.length === 1 ? minimumValues[0] : null;
+    const uniqueMaximum = maximumValues.length === 1 ? maximumValues[0] : null;
+    const direction = row.values[0]!.direction;
+    const advantageValue = direction === 'higher-is-risk' || direction === 'lower-is-better'
+      ? uniqueMinimum
+      : uniqueMaximum;
+    const tradeoffValue = direction === 'higher-is-risk' || direction === 'lower-is-better'
+      ? uniqueMaximum
+      : uniqueMinimum;
+    if (advantageValue) {
+      factsByWeapon.get(advantageValue.weaponId)?.push(
+        createComparisonFact(row, advantageValue, 'advantage'),
+      );
+    }
+    if (tradeoffValue) {
+      factsByWeapon.get(tradeoffValue.weaponId)?.push(
+        createComparisonFact(row, tradeoffValue, 'tradeoff'),
+      );
+    }
+  }
+  return Object.freeze(cards.map((card) => {
+    const facts = factsByWeapon.get(card.id) ?? [];
+    const ordered = [...facts].sort((left, right) => {
+      const priorityDelta = comparisonFactPriority(left.statId)
+        - comparisonFactPriority(right.statId);
+      if (priorityDelta !== 0) return priorityDelta;
+      return left.kind === right.kind ? 0 : left.kind === 'advantage' ? -1 : 1;
+    });
+    const advantage = ordered.find(({ kind }) => kind === 'advantage');
+    const tradeoff = ordered.find(({ kind }) => kind === 'tradeoff');
+    const selected = [advantage, tradeoff].filter(
+      (fact): fact is ProductUiSceneWeaponComparisonFact => fact !== undefined,
+    );
+    if (selected.length < 2) {
+      for (const fact of ordered) {
+        if (selected.some(({ id }) => id === fact.id)) continue;
+        selected.push(fact);
+        if (selected.length === 2) break;
+      }
+    }
+    return Object.freeze({ ...card, comparisonFacts: Object.freeze(selected) });
   }));
 }
 
@@ -400,14 +531,15 @@ export function createProductUiSceneModel(viewModelValue: unknown): ProductUiSce
   const scene = assertNonEmptyString(screen.sceneId, 'Product UI ViewModel.screen.sceneId');
   const inputEnabled = booleanValue(source.inputEnabled, 'Product UI ViewModel.inputEnabled');
   const cards = characterCards(source.characterOptions, inputEnabled);
-  const weapons = weaponCards(source.weaponOptions);
-  const comparison = buildWeaponComparison(weapons, (card) => card.stats, '主数值比较');
+  const parsedWeapons = weaponCards(source.weaponOptions);
+  const comparison = buildWeaponComparison(parsedWeapons, (card) => card.stats, '主数值比较');
   const behaviorComparison = buildWeaponComparison(
-    weapons,
+    parsedWeapons,
     (card) => card.behaviorStats,
     '行为数值比较',
   );
-  const contextComparison = buildWeaponContextComparison(weapons);
+  const contextComparison = buildWeaponContextComparison(parsedWeapons);
+  const weapons = attachWeaponComparisonFacts(parsedWeapons, comparison);
   const match = source.match === null || source.match === undefined
     ? null
     : dataRecord(source.match, 'Product UI ViewModel.match');

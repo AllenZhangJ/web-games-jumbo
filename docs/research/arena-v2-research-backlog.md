@@ -144,6 +144,8 @@
 - 武器概览已将公开数值比较矩阵提升到武器语义卡之前，并用三把武器的 DOM 同屏证据验证距离差异和自身位移风险；本轮又把“越高/越低/风险”从箭头约定收敛为文字图例、可访问标签、反向有利度条和同尺度校验，详见[ADR-046](../decisions/046-arena-weapon-overview-comparison-first.md)与[ADR-053](../decisions/053-arena-weapon-overview-direction-semantics.md)。真机阅读率和数值解释正确率仍待验证。
 - 生存实体原型已验证单一 `enemy-1` 与玩家共享 Rule/Physics、敌人可被击落、玩家第一次掉落复活且第二次终局；多敌压力原型进一步验证了 1/2/4 个同类敌人的有界追击、出招、供给争夺、等级专属 Definition 和同屏压力峰值。详见[生存实体与掉落原型结果](arena-v2-survival-loop-prototype-results-v1.md#5-单敌人实体与掉落闭环验证)和[多敌压力原型结果](arena-v2-survival-loop-prototype-results-v1.md#6-多敌自主压力与武器争夺原型验证)。当前反例是 50 秒内所有敌人都被击落、玩家只掉落一次，说明敌人数和等级接通都不能直接当作难度曲线；下一步要验证刷新节奏、分流/拥挤、AI 行为阶段和后期压力可读性。
 
+本轮新增 Product 数值差异事实：从同源主数值比较中派生唯一极值的优势/代价，每张卡最多两条，保留原始值和单位且不计算综合评分；Web 卡片已通过定向模型和语义 DOM 验证。结果见[Product 武器数值差异事实原型结果 V1](arena-v2-product-weapon-comparison-facts-v1.md)与[ADR-093](../decisions/093-arena-v2-weapon-comparison-facts.md)，真人理解率和实体设备仍待验证。
+
 ### 新增：生存压力与 200 小时目标的硬缺口
 
 - [x] 在研究冲量端口验证 Offer 等级会实际改变横向控制结果，且不增加操作按键；结果见[生存临时武器等级原型](arena-v2-survival-loop-prototype-results-v1.md#7-生存临时武器等级实际战斗原型)。这是第一阶段证据。

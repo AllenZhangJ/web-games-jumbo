@@ -426,6 +426,20 @@ test('WebProductUiSurface renders stable semantic controls and serializes DOM in
     root.querySelector('[data-weapon-card]'),
     'hammer weapon card',
   );
+  const chainCard = required(
+    root.querySelectorAll('[data-weapon-card]')[1] ?? null,
+    'chain weapon card',
+  );
+  assert.deepEqual(
+    [...chainCard.querySelectorAll('[data-weapon-comparison-fact]')].map((element) => ({
+      text: element.textContent,
+      kind: element.dataset.weaponComparisonFactKind,
+    })),
+    [
+      { text: '射程最远 5.00格', kind: 'advantage' },
+      { text: '覆盖最宽 8.35格', kind: 'advantage' },
+    ],
+  );
   const hammerRisk = required(
     hammerCard.querySelectorAll('[data-weapon-stat-direction]')
       .find(({ dataset }) => dataset.weaponStatDirection === 'higher-is-risk'),

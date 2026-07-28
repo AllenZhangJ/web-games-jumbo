@@ -299,11 +299,12 @@ export class WebProductUiSurface {
     const counterplay = element.querySelector<HTMLElement>('[data-weapon-counterplay]');
     const hitResult = element.querySelector<HTMLElement>('[data-weapon-hit-result]');
     const mapUse = element.querySelector<HTMLElement>('[data-weapon-map-use]');
+    const comparisonFacts = element.querySelector<HTMLElement>('[data-weapon-comparison-facts]');
     const stats = element.querySelector<HTMLElement>('[data-weapon-stats]');
     const behaviorStats = element.querySelector<HTMLElement>('[data-weapon-behavior-stats]');
     const contexts = element.querySelector<HTMLElement>('[data-weapon-contexts]');
     if (!title || !role || !description || !coreVerb || !tradeoff || !counterplay
-      || !hitResult || !mapUse || !stats || !behaviorStats || !contexts) {
+      || !hitResult || !mapUse || !comparisonFacts || !stats || !behaviorStats || !contexts) {
       throw new Error(`武器卡片 ${card.id} 结构不完整。`);
     }
     setText(title, card.name);
@@ -314,6 +315,15 @@ export class WebProductUiSurface {
     setText(mapUse, `地图：${card.mapUse}`);
     setText(tradeoff, `风险：${card.tradeoff}`);
     setText(counterplay, `反制：${card.counterplay}`);
+    comparisonFacts.replaceChildren(...card.comparisonFacts.map((fact) => {
+      const metric = this.#document.createElement('span');
+      const value = `${fact.value.toFixed(fact.precision)}${fact.unit}`;
+      metric.textContent = `${fact.statement} ${value}`;
+      metric.setAttribute('aria-label', `${fact.statement}：${value}`);
+      metric.dataset.weaponComparisonFact = fact.statId;
+      metric.dataset.weaponComparisonFactKind = fact.kind;
+      return metric;
+    }));
     const existing = [...stats.querySelectorAll<HTMLElement>('[data-weapon-stat]')];
     if (existing.length !== card.stats.length) {
       stats.replaceChildren(...card.stats.map(() => {
@@ -440,6 +450,7 @@ export class WebProductUiSurface {
       const mapUse = this.#document.createElement('small');
       const tradeoff = this.#document.createElement('small');
       const counterplay = this.#document.createElement('small');
+      const comparisonFacts = this.#document.createElement('div');
       const stats = this.#document.createElement('div');
       const behaviorStats = this.#document.createElement('div');
       const contexts = this.#document.createElement('div');
@@ -451,6 +462,8 @@ export class WebProductUiSurface {
       mapUse.dataset.weaponMapUse = 'true';
       tradeoff.dataset.weaponTradeoff = 'true';
       counterplay.dataset.weaponCounterplay = 'true';
+      comparisonFacts.dataset.weaponComparisonFacts = 'true';
+      comparisonFacts.className = 'product-weapon-comparison-facts';
       stats.dataset.weaponStats = 'true';
       stats.className = 'product-weapon-stats';
       behaviorStats.dataset.weaponBehaviorStats = 'true';
@@ -466,6 +479,7 @@ export class WebProductUiSurface {
         mapUse,
         tradeoff,
         counterplay,
+        comparisonFacts,
         behaviorStats,
         contexts,
         stats,
@@ -606,6 +620,7 @@ export class WebProductUiSurface {
         card.stats.map((stat) => `${stat.id}=${stat.value}`).join(','),
         card.behaviorStats.map((stat) => `${stat.id}=${stat.value}`).join(','),
         card.contexts.map((context) => `${context.id}:${context.stats.map((stat) => stat.value).join(',')}`).join(';'),
+        card.comparisonFacts.map((fact) => `${fact.id}=${fact.value}`).join(','),
       ].join(':')).join('|'),
       model.primaryAction?.enabled ?? false,
       model.primaryAction?.label ?? '',

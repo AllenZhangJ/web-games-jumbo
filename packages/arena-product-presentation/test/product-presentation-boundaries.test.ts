@@ -136,6 +136,48 @@ function sampler(overrides: Record<string, unknown> = {}) {
   return { calls, value };
 }
 
+function comparisonWeapon(
+  id: string,
+  range: number,
+  startup: number,
+  impact: number,
+  selfMovement: number,
+): Record<string, unknown> {
+  const stat = (statId: string, label: string, value: number, direction = 'higher-is-better') => ({
+    id: statId,
+    label,
+    value,
+    maxValue: statId === 'self-movement' ? 7 : 6,
+    unit: statId === 'self-movement' ? '冲量' : statId === 'startup' ? '秒' : '格',
+    direction,
+    precision: 2,
+  });
+  return {
+    weaponDefinitionId: id,
+    name: id,
+    previewAssetId: `weapon:${id}`,
+    role: '测试武器',
+    description: '测试用武器。',
+    coreVerb: '改变路线',
+    tradeoff: '测试代价。',
+    counterplay: '测试反制。',
+    hitResult: '测试命中。',
+    mapUse: '测试地图。',
+    stats: [
+      stat('range', '有效距离', range),
+      stat('startup', '出手时间', startup, 'lower-is-better'),
+      stat('impact', '横向击飞', impact),
+      stat('self-movement', '自身位移风险', selfMovement, 'higher-is-risk'),
+    ],
+    contexts: [{
+      id: 'ground',
+      label: '地面',
+      summary: '测试上下文。',
+      stats: [stat('range', '有效距离', range)],
+    }],
+  };
+}
+
 function controller() {
   let active = 'ready';
   const calls: string[] = [];
@@ -577,6 +619,39 @@ describe('Product presentation immutable data boundaries', () => {
           precision: 2,
         }],
       },
+    ]);
+  });
+
+  it('derives at most one advantage and one tradeoff from unique numeric extremes', () => {
+    const sceneModel = createProductUiSceneModel({
+      revision: 1,
+      locale: 'zh-CN',
+      busy: false,
+      suspended: false,
+      terminal: false,
+      inputEnabled: true,
+      screen: {
+        sceneId: 'home', title: '竞技场', body: '', announcement: '竞技场',
+        primaryAction: null, secondaryAction: null,
+      },
+      characterOptions: [],
+      weaponOptions: [
+        comparisonWeapon('long', 5, 0.1, 1, 2),
+        comparisonWeapon('heavy', 2, 0.3, 4, 6),
+      ],
+      match: null,
+      result: null,
+      reward: null,
+      unlocks: [],
+      error: null,
+    });
+    expect(sceneModel.weaponCards[0]?.comparisonFacts).toEqual([
+      expect.objectContaining({ statement: '射程最远', value: 5, kind: 'advantage' }),
+      expect.objectContaining({ statement: '击飞最弱', value: 1, kind: 'tradeoff' }),
+    ]);
+    expect(sceneModel.weaponCards[1]?.comparisonFacts).toEqual([
+      expect.objectContaining({ statement: '击飞最强', value: 4, kind: 'advantage' }),
+      expect.objectContaining({ statement: '射程最近', value: 2, kind: 'tradeoff' }),
     ]);
   });
 
