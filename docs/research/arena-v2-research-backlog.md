@@ -66,6 +66,7 @@
 - [x] 验证猛犸石斧延迟落点的预警、有效窗口、路线躲避和高度躲避，并为命中/路线/高度建立不同反馈因果；研究 tick 不进入生产 Definition；见[猛犸石斧延迟落点原型结果 V1](arena-v2-weapon-mammoth-stone-axe-delay-prototype-results-v1.md)与[ADR-082](../decisions/082-arena-v2-mammoth-stone-axe-delay-boundary.md)。
 - [x] 将预警区从瞬时 `active` 扩展为可选 `lingering` 阶段，使用同一研究运行时对照魔血镰刃持续封路与猛犸石斧瞬时延迟重击；6 个固定探针通过，叠加、刷新、多人和真人仍未验证；见[武器持续封路原型结果 V1](arena-v2-weapon-persistent-zone-prototype-results-v1.md)与[ADR-092](../decisions/092-arena-v2-persistent-zone-lifecycle.md)。
 - [ ] 绑定最终声音/特效资产并完成目标设备可读性、低动效和真人反馈测试；当前没有真机证据。
+- [x] 新增命中反馈因果研究工作台：用 90 个真实 KZ 探针选出命中确认、支撑面转移、击落、攻击被避开和路线失误五类代表样本，投影为 `WeaponFeedbackPresented` 的视觉/音频 Cue，并提供可交互判断和 JSON 导出；仅研究工具链，真机、真人、多人和最终资产仍待验证，见[命中反馈因果研究工作台结果 V1](arena-v2-weapon-feedback-study-results-v1.md)和[ADR-102](../decisions/102-arena-v2-weapon-feedback-study-boundary.md)。
 
 ### 需要回答
 

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#131a1b" />
+    <meta name="robots" content="noindex,nofollow" />
+    <link rel="stylesheet" href="/src/weapon-feedback-study.css" />
+    <title>Arena 命中反馈因果研究</title>
+  </head>
+  <body>
+    <main id="weapon-feedback-study" class="feedback-study" aria-labelledby="feedback-title">
+      <header class="feedback-header">
+        <div class="feedback-header-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+        <p class="feedback-kicker">ARENA V2 / IMPACT LEDGER</p>
+        <h1 id="feedback-title">命中之后，玩家到底看懂了什么？</h1>
+        <p class="feedback-intro">
+          这是一页研究工作台：同一套 KZ 真实规则探针，投影成五类表现 Cue。请先只根据视觉、音频和场景信号判断原因，提交后再查看权威结果。
+        </p>
+        <p class="feedback-boundary">研究工具 · 不进入生产入口 · 不代表真人解释率</p>
+      </header>
+
+      <section class="feedback-meta" aria-label="研究状态">
+        <div><span>因果类型</span><strong id="feedback-scenario-count">读取中</strong></div>
+        <div><span>真实规则探针</span><strong id="feedback-source-count">读取中</strong></div>
+        <div><span>状态</span><strong id="feedback-status">准备中</strong></div>
+      </section>
+
+      <section class="feedback-legend" aria-labelledby="feedback-legend-title">
+        <div>
+          <p class="feedback-section-kicker">先记住</p>
+          <h2 id="feedback-legend-title">一个反馈，只回答一个原因</h2>
+        </div>
+        <p>命中、落点转移、击落、闪避和路线失误不能共用一个“失败”特效。反馈必须帮玩家把武器、地图和下一次选择连起来。</p>
+      </section>
+
+      <p id="feedback-error" class="feedback-alert" role="alert" hidden></p>
+      <form id="feedback-task-form" class="feedback-cases" novalidate></form>
+
+      <div class="feedback-actions">
+        <button id="feedback-submit" type="submit" form="feedback-task-form">提交因果判断</button>
+        <button id="feedback-export" type="button" disabled>导出研究结果</button>
+      </div>
+
+      <section id="feedback-study-result" class="feedback-result" aria-live="polite" hidden>
+        <p class="feedback-section-kicker">REPLAY → CUE → PLAYER</p>
+        <h2>本次反馈阅读结果</h2>
+        <p id="feedback-result-summary"></p>
+        <ol id="feedback-result-list"></ol>
+        <p class="feedback-note">结果只说明这组研究任务的判断情况。要变成产品结论，还需要真机、真人、多人和最终声音/特效资产验证。</p>
+      </section>
+    </main>
+    <script type="module" src="/src/entry/weapon-feedback-study.ts"></script>
+  </body>
+</html>
