@@ -11,6 +11,7 @@
 - 视觉生产基线：[Arena Art Bible](arena-art-bible.md)
 - 注释参考登记：[六类70/20/10登记](arena-art-reference-register.md)；A0.2三个子门已签核，[独立视觉方向总门](arena-art-reference-total-gate-a0.2.md)以96/100通过，A0.2与Reference Board视觉方向为`ready`；[A0.3技术/代理候选](arena-art-silhouette-a0.3.md)85/100但真人0/10，A0.3、正式模型/VFX样件、Blockout及后续成熟度仍`incomplete`/fail closed
 - 阶段协作基线：[美术 A0–A7 与开发 P0–P7 对齐矩阵](arena-art-development-alignment-matrix.md)
+- 当前供给表现合同：[A1.0供给表现预生产合同](arena-art-supply-presentation-contract-a1.0.md)由主协调于2026-07-28以94/100签核为`contract-ready`；只通过合同小门，`runtimeAdapterTested=false`，代表样件、A0.3真人、A1、Blockout、正式VFX/音频仍关闭
 
 ## 1. 目的与项目特化边界
 

@@ -1,0 +1,247 @@
+{
+  "schemaVersion": 1,
+  "id": "arena.art.supply-presentation.a1.0.v1",
+  "status": "contract-ready",
+  "baselineCommit": "dd786a922625472643b2f6c96f80c7049a57d3e2",
+  "reviewedAt": "2026-07-28",
+  "scope": "contract-and-fixture-plan-only",
+  "authority": {
+    "fixedHz": 60,
+    "spawnCount": 3,
+    "spawnIntervalTicks": 1200,
+    "pickupRadius": 0.8,
+    "lifetimeTicks": 600,
+    "replacementPolicy": "atomic-recycle-held",
+    "expiryPolicy": "world-only-at-expire-tick",
+    "tickOrder": ["spawn", "expire", "pickup", "action"],
+    "commonEnvelopeFields": ["id", "sequence", "tick", "type"],
+    "payloadSchemaVersion": 1
+  },
+  "eventShapes": [
+    {
+      "shapeId": "supply-spawned-strict",
+      "type": "EquipmentSpawned",
+      "outerRequiredFields": ["id", "sequence", "tick", "type", "payload"],
+      "outerOptionalFields": [],
+      "outerForbiddenFields": ["equipmentInstanceId", "equipmentDefinitionId", "spawnId", "position"],
+      "payloadFields": ["schemaVersion", "supplyDefinitionId", "supplyId", "equipmentInstanceId", "spawnTick", "expireTick", "tick", "equipmentDefinitionId", "spawnId", "position"],
+      "adapterDisposition": "consume-supply-lifecycle",
+      "presentationState": "world-supply-visible",
+      "cue": "three-prong ground marker plus equipment silhouette; one restrained spawn onset",
+      "terminalRule": "remains active until matched supply pickup, replacement, expiry or authoritative resync removal"
+    },
+    {
+      "shapeId": "ordinary-spawned-flat-bypass",
+      "type": "EquipmentSpawned",
+      "outerRequiredFields": ["id", "sequence", "tick", "type", "equipmentInstanceId", "equipmentDefinitionId", "spawnId", "position"],
+      "outerOptionalFields": [],
+      "outerForbiddenFields": ["payload"],
+      "payloadFields": [],
+      "adapterDisposition": "bypass-known-ordinary-event",
+      "presentationState": "unchanged-by-supply-adapter",
+      "cue": "none from the supply adapter; ordinary equipment presentation owns this legal flat event",
+      "terminalRule": "not tracked by supply lifecycle adapter"
+    },
+    {
+      "shapeId": "ordinary-picked-up-flat-conditional",
+      "type": "EquipmentPickedUp",
+      "outerRequiredFields": ["id", "sequence", "tick", "type", "participantId", "equipmentInstanceId", "equipmentDefinitionId"],
+      "outerOptionalFields": [],
+      "outerForbiddenFields": ["payload", "supplyId", "spawnTick", "expireTick"],
+      "payloadFields": ["participantId", "equipmentInstanceId", "equipmentDefinitionId"],
+      "adapterDisposition": "consume-only-if-equipment-id-matches-one-active-validated-supply-otherwise-bypass-no-active-match-or-fail-closed",
+      "presentationState": "empty-slot-pickup-confirmed",
+      "cue": "inward bracket closes around held-slot icon; world marker removed only after authoritative event/snapshot",
+      "terminalRule": "with a ready bounded active supply ledger, terminate exactly one uniquely matched active supply; no active match bypasses with no cue or marker change; definition conflict or multiple active matches fail closed"
+    },
+    {
+      "shapeId": "supply-recycled-strict",
+      "type": "EquipmentRecycled",
+      "outerRequiredFields": ["id", "sequence", "tick", "type", "payload"],
+      "outerOptionalFields": [],
+      "outerForbiddenFields": ["participantId", "equipmentInstanceId", "supplyId"],
+      "payloadFields": ["schemaVersion", "supplyDefinitionId", "supplyId", "equipmentInstanceId", "spawnTick", "expireTick", "tick", "participantId", "recycledEquipmentInstanceId", "replacementEquipmentInstanceId", "reason"],
+      "adapterDisposition": "consume-supply-replacement-pair-start",
+      "presentationState": "old-held-item-recycled",
+      "cue": "broken-ring recycle notch on old held slot; no world drop",
+      "terminalRule": "require one matching active supply identity, then hold at most one pending pair for it until the immediately paired EquipmentReplaced identity validates; no active match fails closed"
+    },
+    {
+      "shapeId": "supply-replaced-strict",
+      "type": "EquipmentReplaced",
+      "outerRequiredFields": ["id", "sequence", "tick", "type", "payload"],
+      "outerOptionalFields": [],
+      "outerForbiddenFields": ["participantId", "equipmentInstanceId", "supplyId"],
+      "payloadFields": ["schemaVersion", "supplyDefinitionId", "supplyId", "equipmentInstanceId", "spawnTick", "expireTick", "tick", "participantId", "previousEquipmentInstanceId", "nextEquipmentInstanceId"],
+      "adapterDisposition": "consume-supply-replacement-pair-terminal",
+      "presentationState": "replacement-committed",
+      "cue": "exchange-arrow closes from old slot to new slot; paired with preceding recycle identity",
+      "terminalRule": "require one matching active supply identity and pending recycle pair; paired Replaced terminates target marker once, clears pending and never waits for EquipmentPickedUp; no active match fails closed"
+    },
+    {
+      "shapeId": "supply-expired-strict",
+      "type": "EquipmentExpired",
+      "outerRequiredFields": ["id", "sequence", "tick", "type", "payload"],
+      "outerOptionalFields": [],
+      "outerForbiddenFields": ["equipmentInstanceId", "expiredEquipmentInstanceId", "supplyId"],
+      "payloadFields": ["schemaVersion", "supplyDefinitionId", "supplyId", "equipmentInstanceId", "spawnTick", "expireTick", "tick", "expiredEquipmentInstanceId", "reason"],
+      "adapterDisposition": "consume-supply-lifecycle-terminal",
+      "presentationState": "world-supply-expired",
+      "cue": "notched perimeter collapses to a stable crossed-hourglass endpoint; no lingering rescue frame",
+      "terminalRule": "require and terminate exactly one matched active supply at expireTick; no active match, definition conflict or multiple match fails closed"
+    }
+  ],
+  "routingRules": {
+    "adapterReadinessRule": "before processing any event, require gap-free history or an eventSequence-bound complete active supply lifecycle projection; otherwise enter resync and process nothing",
+    "supplySpawnPredicate": "EquipmentSpawned has exactly the common envelope plus payload, no flat equipment fields, and strict payload identity validates",
+    "ordinarySpawnBypassPredicate": "EquipmentSpawned has exactly the common envelope plus flat equipmentInstanceId/equipmentDefinitionId/spawnId/position and no payload",
+    "ambiguousSpawnRule": "payload mixed with any flat spawned field, neither legal shape, or malformed strict payload fails closed and creates no marker",
+    "activeSupplyPickupRule": "with a ready bounded active ledger, EquipmentPickedUp terminates only the single active supply whose equipmentInstanceId and equipmentDefinitionId both match",
+    "ordinaryPickupBypassRule": "with a ready bounded active ledger, a legal flat EquipmentPickedUp matching no active supply bypasses, emits no supply cue and changes no supply marker",
+    "pickupConflictRule": "an equipmentInstanceId active match with definition mismatch or more than one active match removes no marker and requests authoritative resync",
+    "replacementTerminalRule": "a contiguous identity-matched EquipmentRecycled then EquipmentReplaced pair terminates the target supply; EquipmentPickedUp is neither awaited nor consumed for replacement",
+    "strictTerminalMatchRule": "EquipmentRecycled, EquipmentReplaced and EquipmentExpired must each match exactly one active supply identity; no match or conflicting match fails closed"
+  },
+  "tickProjection": {
+    "formula": "remainingTicks=max(0,expireTick-currentSnapshotTick)",
+    "secondsLabelFormula": "ceil(remainingTicks/60)",
+    "visibleLabels": [10, 9, 8, 7, 6, 5, 4, 3, 2, 1],
+    "boundaryFixtures": [
+      {"offset": 599, "remainingTicks": 1, "worldVisible": true, "pickupEligible": true},
+      {"offset": 600, "remainingTicks": 0, "worldVisible": false, "pickupEligible": false},
+      {"offset": 601, "remainingTicks": 0, "worldVisible": false, "duplicateExpiry": false}
+    ],
+    "wallClockDeletionForbidden": true,
+    "zeroSecondLingeringForbidden": true
+  },
+  "semantics": {
+    "notAChoiceUi": true,
+    "newInputForbidden": true,
+    "pauseOrModalForbidden": true,
+    "colorIsNeverSoleEncoding": true,
+    "tokens": [
+      {"meaning": "available-supply", "color": "#F4EBDD", "shape": "three-prong-ground-marker", "textureOrIcon": "equipment-silhouette"},
+      {"meaning": "route-to-supply", "color": "#8B6DFF", "shape": "world-space-chevron-chain", "textureOrIcon": "direction-notch"},
+      {"meaning": "expiry-warning", "color": "#FFB020", "shape": "segmented-notched-perimeter", "textureOrIcon": "hourglass-notch"},
+      {"meaning": "replacement-committed", "color": "#35B8FF", "shape": "paired-exchange-arrows", "textureOrIcon": "old-cross/new-solid"},
+      {"meaning": "brief-contact", "color": "#FFF4B8", "shape": "single-frame-edge-core", "textureOrIcon": "stable-edge-in-reduced-motion"}
+    ]
+  },
+  "resilience": {
+    "duplicate": "keep one lastAppliedSequence waterline plus a 64-entry recent canonical hash ring; sequence at or below waterline and present with identical hash is ignored, while conflicting hash fails closed",
+    "outOfOrder": "next sequence must equal lastAppliedSequence plus one; a forward gap enters resync, while an event older than the 64-entry ring is never applied and never replays a one-shot",
+    "disconnectRecovery": "require gap-free history or an eventSequence-bound complete active supply lifecycle projection before processing any event; otherwise the entire adapter enters resync, processes nothing and hides countdown",
+    "pauseResume": "frozen authority tick freezes all persistent progress; no wall-clock catch-up",
+    "replay": "seek or reset creates a new projection epoch, clears the recent hash ring and pending replacement pairs, restores bounded active identities, and never reuses dedupe state across epochs",
+    "assetFailure": "diagnostic geometry plus icon code is accessibility fallback only and fails representative-asset gate",
+    "unknownOrFuture": "unknown type, schema, field or missing required field fails closed without best-effort rendering",
+    "destroy": "idempotently clear active identities, lastAppliedSequence, recent hash ring, pending replacement pairs, current projection epoch, markers, particles, audio voices, listeners and pooled references"
+  },
+  "accessibility": {
+    "reducedMotion": "replace expansion, collapse and travel with stable edge, notch and state swap at the same authority tick",
+    "silent": "every supply cue retains shape, icon and short text/state announcement; no countdown audio loop",
+    "colorVision": "red-green and blue-purple distinctions always retain different shape plus texture/icon",
+    "screenReader": "announce spawn count once, replacement result once, and expiry once; never announce each countdown tick"
+  },
+  "proposedBudgets": {
+    "status": "unmeasured-contract-ceilings",
+    "persistentWorldMarkers": 3,
+    "desktopBurstParticlesPerMarker": 24,
+    "mobileBurstParticlesPerMarker": 12,
+    "desktopConcurrentSupplyParticles": 72,
+    "mobileConcurrentSupplyParticles": 36,
+    "additiveLayers": 1,
+    "distortionPasses": 0,
+    "countdownAudioLoops": 0,
+    "simultaneousSupplyOneShots": 4,
+    "requiredFrameRateFixture": 30,
+    "activeSupplyIdentities": 3,
+    "recentCanonicalEventHashRingEntries": 64,
+    "pendingReplacementPairs": 3,
+    "lastAppliedSequenceWatermarks": 1,
+    "projectionEpochsRetained": 1
+  },
+  "testFixturePlan": [
+    "spawn-three-physical-entities-without-modal",
+    "ordinary-flat-equipment-spawn-bypasses-supply-adapter",
+    "mixed-flat-and-payload-spawn-fails-closed",
+    "active-supply-flat-pickup-terminates-exactly-one-marker",
+    "flat-pickup-not-matching-active-bypasses-without-cue-or-marker-change",
+    "definition-conflict-or-multiple-active-pickup-fails-closed",
+    "missing-history-or-bound-active-projection-enters-resync-before-any-event",
+    "replacement-pair-terminates-without-waiting-for-picked-up",
+    "strict-replacement-without-active-match-fails-closed",
+    "strict-expiry-without-active-match-fails-closed",
+    "remaining-tick-599-600-601",
+    "same-tick-expire-before-pickup",
+    "same-tick-recycle-before-replace-and-pickup-before-action",
+    "duplicate-identical-event-idempotent",
+    "duplicate-conflicting-event-fail-closed",
+    "event-older-than-recent-ring-never-applies-or-replays-one-shot",
+    "sequence-gap-and-out-of-order-resync",
+    "missing-required-and-future-field-rejected",
+    "pause-resume-no-wall-clock-progress",
+    "30fps-terminal-state-exact",
+    "replay-forward-and-catch-up-no-double-one-shot",
+    "replay-seek-or-reset-starts-new-epoch-and-clears-ring-and-pending",
+    "asset-failure-accessible-fallback-does-not-pass-asset-gate",
+    "reduced-motion-and-silent-equivalence",
+    "destroy-twice-no-live-resources"
+  ],
+  "formalRepresentativeInputs": [
+    "A0.3 human blind test coordinator approval with at least 10 qualified people",
+    "approved gap-free event history or eventSequence-bound complete active supply lifecycle projection",
+    "approved representative equipment silhouette/icon and provenance",
+    "approved temporary VFX/audio source manifests with license and hashes",
+    "target desktop and 390x844 capture harness",
+    "approved measurement plan, budget thresholds and capture method for GPU, overdraw, memory, voice and lifecycle"
+  ],
+  "hardGates": {
+    "a1_0CoordinatorSignOff": true,
+    "a1_0ContractPassed": true,
+    "a1RepresentativeSpecimenStarted": false,
+    "a1Passed": false,
+    "a0_3Passed": false,
+    "blockoutAllowed": false,
+    "productionVfxIntegrated": false,
+    "productionAudioIntegrated": false,
+    "deviceVerified": false,
+    "humanVerified": false,
+    "finalPassed": false
+  },
+  "score": {
+    "basis": "A1.0 contract completeness only; no asset, device, runtime integration or human maturity",
+    "total": 94,
+    "maximum": 100,
+    "hardGatePassed": true,
+    "dimensions": [
+      {"id": "authority-audit", "score": 24, "maximum": 25},
+      {"id": "event-to-cue-mapping", "score": 19, "maximum": 20},
+      {"id": "accessibility-semantics", "score": 14, "maximum": 15},
+      {"id": "resilience-replay", "score": 14, "maximum": 15},
+      {"id": "budget-lifecycle", "score": 13, "maximum": 15},
+      {"id": "evidence-fixture-governance", "score": 10, "maximum": 10}
+    ]
+  },
+  "sourceAudit": [
+    {"path": "packages/arena-contracts/src/match-event-types.ts", "byteLength": 840, "sha256": "ba3033f6d784c5e989288e3854f18ab8c082f494480d52669eb59f1bfe3d4d85"},
+    {"path": "packages/arena-contracts/src/equipment-supply-event-payload.ts", "byteLength": 9425, "sha256": "3365f7f32b18bfb62acfc4016f9375f533948ca7dc1f93cfe3da09381220ee9c"},
+    {"path": "packages/arena-contracts/src/match-snapshot.ts", "byteLength": 18829, "sha256": "f92e2c162563248ebf1cb13f87a1f37e7a9878f2b07fece5e11ffe7f9090f449"},
+    {"path": "packages/arena-definitions/src/equipment-supply-definition.ts", "byteLength": 5281, "sha256": "ef3d42d29141cb128a782be31f395c34b8320de1c646aa7265ed18fe774ab1f3"},
+    {"path": "packages/arena-v1-content/src/arena-v2-survival-supply.ts", "byteLength": 1039, "sha256": "0007b0b8e11feda8721162cf4c22a7a574a4f66e2f5fc7de8213082097b12cee"},
+    {"path": "packages/arena-equipment/src/equipment-supply-lifecycle.ts", "byteLength": 3847, "sha256": "79dac98ed7bf04699dcaad963f93dc44ccd0e78f235e0ca04d7aac120c23da5c"},
+    {"path": "packages/arena-equipment/src/equipment-supply-timeline-system.ts", "byteLength": 17595, "sha256": "434160815c9567c88071b960e2e034735ab372eb27fdecf69cb0c956c643b4c0"},
+    {"path": "packages/arena-equipment/src/equipment-system.ts", "byteLength": 38459, "sha256": "d48b520bafd5ba86a34f2b528e37cf07b0fdfa417b220dc8cf2d130eafcd9286"},
+    {"path": "packages/arena-match/src/match-core.ts", "byteLength": 56514, "sha256": "5bdcf53e4ac85265f3d039cb42aac173de86c640d92f6f003268da9d060816a1"},
+    {"path": "packages/arena-v1-composition/src/arena-v2-survival-supply-match-core.ts", "byteLength": 3933, "sha256": "1e41a4734333df096dc5cfc3877b94641d4177daffc0d8abb8be304b16644caa"},
+    {"path": "tests/arena/equipment-supply-timeline.test.ts", "byteLength": 15443, "sha256": "01a9d7aeb11a2f3abe6bf4c15c8494157b8c0556959d9cd95418506ee44cdee5"},
+    {"path": "tests/arena/match-core-survival-supply.test.ts", "byteLength": 16512, "sha256": "54933d244799badeb13474d0d0d26b7b67ee1f7525d62120a0bee45bfefcd345"},
+    {"path": "tests/arena/replay.test.ts", "byteLength": 16926, "sha256": "c8fd6560925f2c4d634c211ad2b1d1809447aaefc0b56c4b3bbd5b0e2279d6d6"},
+    {"path": "tests/arena/local-match-session.test.ts", "byteLength": 18367, "sha256": "05b0ecff597606113f129a2beecbf47ad7e695913cc7eb23bc8f1f628b8b1b2a"},
+    {"path": "docs/decisions/108-arena-v2-survival-auto-replace-and-expiry.md", "byteLength": 4410, "sha256": "a5ae003a8f63f1f18a8d99fd06b0e71a61520ccee873ff9411a34a5cf18a107d"}
+  ],
+  "missingMandatorySkillReferences": [
+    "docs/collaboration-protocol.md",
+    "docs/game-design-theory.md"
+  ]
+}

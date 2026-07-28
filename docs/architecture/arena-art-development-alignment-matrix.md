@@ -2,7 +2,7 @@
 
 ## 文档状态
 
-- 状态：A0.1为`contract-ready`；A0.2三个子门已签核且独立聚合总门为`ready`（96/100），Reference Board视觉方向总门`ready`；A0.3技术/代理候选85/100且离屏0，但真人0/10，仍`incomplete`/fail closed
+- 状态：A0.1为`contract-ready`；A0.2三个子门已签核且独立聚合总门为`ready`（96/100），Reference Board视觉方向总门`ready`；A0.3技术/代理候选85/100且真人0/10，仍`incomplete`；A1.0供给表现合同94/100，主协调于2026-07-28签核为`contract-ready`，代表样件、A1及Blockout仍关闭
 - 日期：2026-07-28
 - 审计基线：`d6f906008d0af1ed0133a199a8dc9e15cb1d23d0`
 - 关联：[Art Bible](arena-art-bible.md)、[美术与音频流程](arena-art-and-audio-development-flow.md)、[V2 生产计划](arena-v2-production-development-plan.md)
@@ -78,11 +78,12 @@ A0.1通过后只允许将合同交给下一任务；A0.2与A0.3任一未通过�
 
 ### A1 ↔ P1：供给表现合同与代表样件
 
+- 当前小门：[A1.0供给表现预生产合同](arena-art-supply-presentation-contract-a1.0.md)与机器台账绑定`dd786a9`的P1.1/P1.2事件、Definition、599/600/601、Replay及暂停/销毁证据；主协调于2026-07-28以94/100签核，A1.0合同自身`hardGatePassed=true`、状态`contract-ready`。该签核不启动代表样件，A1、A0.3和Blockout仍关闭。
 - 输入：P1.1冻结后的供给 Definition、稳定事件/字段、600 tick/同 tick顺序、Snapshot/ViewModel。
 - 输出：供给/替换/过期形色表、10秒显示样件、Cue候选、音效草样、低动效/静音/失败回退。
 - 依赖：开发先完成 P1.1；美术不定义事件、不运行墙钟删除。
 - 评分：事件映射25、替换/过期区分20、镜头/HUD20、预算/生命周期15、无障碍10、来源10。
-- 硬门：599/600/601及同 tick拾取只投影权威结果；没有三选一弹窗；代表样件过门后才扩量。
+- 硬门：599/600/601及同 tick拾取只投影权威结果；没有三选一弹窗；A0.3真人门、可恢复只读生命周期投影、临时资产来源与测量夹具齐全后才可启动代表样件，代表样件过门后才扩量。
 - 返工：事件名/字段、权威顺序、生命周期、拾取半径/替换策略或暂停恢复投影改变。
 
 ### A2 ↔ P2：模式与参与者视觉合同
