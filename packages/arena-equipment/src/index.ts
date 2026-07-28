@@ -12,6 +12,7 @@ export { EquipmentPickupResolver } from './equipment-pickup-resolver.js';
 export type {
   EquipmentPickupDecision,
   EquipmentPickupParticipant,
+  EquipmentSupplyPickupCandidate,
 } from './equipment-pickup-resolver.js';
 export {
   EQUIPMENT_LOCATION_STATE,
@@ -32,7 +33,12 @@ export {
 } from './equipment-serializer.js';
 export { EquipmentSpawner } from './equipment-spawner.js';
 export { EquipmentSystem } from './equipment-system.js';
-export type { EquipmentDropResult } from './equipment-system.js';
+export type {
+  EquipmentDropResult,
+  EquipmentSupplyPickupDecision,
+  EquipmentSupplyPickupEvent,
+  EquipmentSupplyPickupTransactionResult,
+} from './equipment-system.js';
 export {
   EQUIPMENT_SUPPLY_LIFECYCLE_SCHEMA_VERSION,
   createEquipmentSupplyEventIdentity,

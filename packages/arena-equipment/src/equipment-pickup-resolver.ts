@@ -12,6 +12,8 @@ import {
 } from '@number-strategy-jump/arena-contracts';
 
 const RESOLVE_KEYS = new Set(['participants', 'equipment', 'contestSeed']);
+const SUPPLY_RESOLVE_KEYS = new Set(['participants', 'supplies', 'contestSeed']);
+const SUPPLY_ENTRY_KEYS = new Set(['equipment', 'pickupRadius']);
 
 export interface EquipmentPickupParticipant {
   readonly id: string;
@@ -27,6 +29,16 @@ export interface EquipmentPickupDecision {
 
 interface EquipmentPickupPair extends EquipmentPickupDecision {
   readonly contestScore: number;
+}
+
+interface EquipmentPickupCandidate {
+  readonly equipment: EquipmentRuntimeSnapshot;
+  readonly pickupRadius: number;
+}
+
+export interface EquipmentSupplyPickupCandidate {
+  readonly equipment: EquipmentRuntimeSnapshot;
+  readonly pickupRadius: number;
 }
 
 function compareStrings(left: string, right: string): number {
@@ -74,14 +86,53 @@ export class EquipmentPickupResolver {
     }
     const seed = assertIntegerAtLeast(contestSeed, 0, 'pickup contestSeed');
     if (seed > 0xffffffff) throw new RangeError('pickup contestSeed 必须是 uint32。');
-    const normalizedParticipants = participants.map(assertParticipant);
+    const candidates: EquipmentPickupCandidate[] = equipment.map((runtimeValue) => {
+      const runtime = runtimeValue as Partial<EquipmentRuntimeSnapshot> | null;
+      const definitionId = assertNonEmptyString(
+        runtime?.definitionId,
+        'pickup equipment.definitionId',
+      );
+      return {
+        equipment: runtimeValue as EquipmentRuntimeSnapshot,
+        pickupRadius: this.#equipmentRegistry.require(definitionId).pickup.radius,
+      };
+    });
+    return this.#resolveCandidates(normalizedParticipants(participants), candidates, seed);
+  }
+
+  resolveSupply(options: unknown): readonly EquipmentPickupDecision[] {
+    assertKnownKeys(options, SUPPLY_RESOLVE_KEYS, 'EquipmentPickupResolver supply options');
+    const { participants, supplies, contestSeed } = options;
+    if (!Array.isArray(participants) || !Array.isArray(supplies)) {
+      throw new TypeError('supply pickup participants/supplies 必须是数组。');
+    }
+    const seed = assertIntegerAtLeast(contestSeed, 0, 'supply pickup contestSeed');
+    if (seed > 0xffffffff) throw new RangeError('supply pickup contestSeed 必须是 uint32。');
+    const candidates = supplies.map((value, index): EquipmentPickupCandidate => {
+      assertKnownKeys(value, SUPPLY_ENTRY_KEYS, `supply pickup[${index}]`);
+      if (!Number.isFinite(value.pickupRadius) || (value.pickupRadius as number) <= 0) {
+        throw new RangeError(`supply pickup[${index}].pickupRadius 必须是有限正数。`);
+      }
+      return {
+        equipment: value.equipment as EquipmentRuntimeSnapshot,
+        pickupRadius: value.pickupRadius as number,
+      };
+    });
+    return this.#resolveCandidates(normalizedParticipants(participants), candidates, seed);
+  }
+
+  #resolveCandidates(
+    normalizedParticipants: readonly EquipmentPickupParticipant[],
+    candidates: readonly EquipmentPickupCandidate[],
+    seed: number,
+  ): readonly EquipmentPickupDecision[] {
     if (new Set(normalizedParticipants.map(({ id }) => id)).size !== normalizedParticipants.length) {
       throw new RangeError('pickup participants 不能包含重复 ID。');
     }
     const equipmentIds = new Set<string>();
     const pairs: EquipmentPickupPair[] = [];
-    for (const runtimeValue of equipment) {
-      const runtime = runtimeValue as Partial<EquipmentRuntimeSnapshot> | null;
+    for (const candidate of candidates) {
+      const runtime = candidate.equipment as Partial<EquipmentRuntimeSnapshot> | null;
       const instanceId = assertNonEmptyString(runtime?.instanceId, 'pickup equipment.instanceId');
       if (equipmentIds.has(instanceId)) throw new RangeError(`重复 equipment instance ${instanceId}。`);
       equipmentIds.add(instanceId);
@@ -89,18 +140,13 @@ export class EquipmentPickupResolver {
         runtime?.locationState !== EQUIPMENT_LOCATION_STATE.SPAWNED
         && runtime?.locationState !== EQUIPMENT_LOCATION_STATE.DROPPED
       ) continue;
-      const definitionId = assertNonEmptyString(
-        runtime?.definitionId,
-        'pickup equipment.definitionId',
-      );
-      const definition = this.#equipmentRegistry.require(definitionId);
       for (const participant of normalizedParticipants) {
         if (!participant.eligible) continue;
         const distanceSquared = equipmentPickupDistanceSquared(
           participant.position,
           runtime?.position,
         );
-        if (distanceSquared > definition.pickup.radius * definition.pickup.radius) continue;
+        if (distanceSquared > candidate.pickupRadius * candidate.pickupRadius) continue;
         pairs.push({
           participantId: participant.id,
           equipmentInstanceId: instanceId,
@@ -137,4 +183,8 @@ export class EquipmentPickupResolver {
     ));
     return Object.freeze(decisions);
   }
+}
+
+function normalizedParticipants(values: readonly unknown[]): readonly EquipmentPickupParticipant[] {
+  return values.map(assertParticipant);
 }

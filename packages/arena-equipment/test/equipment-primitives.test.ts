@@ -133,6 +133,23 @@ describe('arena-equipment primitives', () => {
       .toThrow(/schemaVersion/);
     expect(() => createEquipmentSupplyLifecycle({ ...valid, expireTick: 1_799 }, SUPPLY_DEFINITION))
       .toThrow(/spawnTick \+ 600/);
+    expect(createEquipmentSupplyLifecycle({
+      ...valid,
+      supplyId: 'wave-2:left',
+      equipmentInstanceId: 'wave-2:left:hammer',
+      spawnTick: 2_400,
+      expireTick: 3_000,
+    }, SUPPLY_DEFINITION).spawnTick).toBe(2_400);
+    expect(() => createEquipmentSupplyLifecycle({
+      ...valid,
+      spawnTick: 1_199,
+      expireTick: 1_799,
+    }, SUPPLY_DEFINITION)).toThrow(/firstSpawnTick/);
+    expect(() => createEquipmentSupplyLifecycle({
+      ...valid,
+      spawnTick: 1_201,
+      expireTick: 1_801,
+    }, SUPPLY_DEFINITION)).toThrow(/合法生成波次/);
     expect(() => createEquipmentSupplyLifecycle({
       ...valid,
       supplyDefinitionId: 'unknown-supply',
@@ -147,9 +164,22 @@ describe('arena-equipment primitives', () => {
     }, SUPPLY_DEFINITION)).toThrow(/数据字段/);
     expect(() => createEquipmentSupplyLifecycle({
       ...valid,
-      spawnTick: Number.MAX_SAFE_INTEGER,
+      spawnTick: Number.MAX_SAFE_INTEGER + 1,
+      expireTick: Number.MAX_SAFE_INTEGER + 1,
+    }, SUPPLY_DEFINITION)).toThrow(/安全整数/);
+    const overflowDefinition = createEquipmentSupplyDefinition({
+      ...SUPPLY_DEFINITION,
+      id: 'overflow-supply',
+      firstSpawnTick: Number.MAX_SAFE_INTEGER - 1,
+      spawnIntervalTicks: 1,
+      lifetimeTicks: 2,
+    });
+    expect(() => createEquipmentSupplyLifecycle({
+      ...valid,
+      supplyDefinitionId: overflowDefinition.id,
+      spawnTick: Number.MAX_SAFE_INTEGER - 1,
       expireTick: Number.MAX_SAFE_INTEGER,
-    }, SUPPLY_DEFINITION)).toThrow(/安全整数范围/);
+    }, overflowDefinition)).toThrow(/超出安全整数范围/);
   });
 
   it('keeps identity immutable and round-trips only validated runtime data', () => {

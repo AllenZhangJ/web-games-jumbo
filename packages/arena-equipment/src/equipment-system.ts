@@ -1,4 +1,22 @@
 import {
+  ARENA_MATCH_EVENT,
+  EQUIPMENT_RECYCLE_REASON,
+  EQUIPMENT_SUPPLY_EVENT_PAYLOAD_SCHEMA_VERSION,
+  assertIntegerAtLeast,
+  assertKnownKeys,
+  assertNonEmptyString,
+  cloneFrozenData,
+  createEquipmentRecycledEventPayload,
+  createEquipmentReplacedEventPayload,
+  type EquipmentRecycledEventPayload,
+  type EquipmentReplacedEventPayload,
+} from '@number-strategy-jump/arena-contracts';
+import type { EquipmentSupplyRegistryContract } from '@number-strategy-jump/arena-definitions';
+import {
+  createEquipmentSupplyLifecycle,
+  type EquipmentSupplyLifecycle,
+} from './equipment-supply-lifecycle.js';
+import {
   ACTION_PRIORITY,
   type ActionCandidate,
   type ActionRegistryContract,
@@ -16,9 +34,17 @@ import {
 } from './equipment-runtime.js';
 import { EquipmentSpawner } from './equipment-spawner.js';
 import { serializeEquipmentRuntimeStates } from './equipment-serializer.js';
-import { assertKnownKeys, assertNonEmptyString } from '@number-strategy-jump/arena-contracts';
 
 const PICKUP_OPTIONS_KEYS = new Set(['participants', 'contestSeed']);
+const SUPPLY_PICKUP_OPTIONS_KEYS = new Set(['participants', 'supplies', 'contestSeed', 'tick']);
+const SUPPLY_LIFECYCLE_KEYS = new Set([
+  'schemaVersion',
+  'supplyDefinitionId',
+  'supplyId',
+  'equipmentInstanceId',
+  'spawnTick',
+  'expireTick',
+]);
 const DROP_OPTIONS_KEYS = new Set(['isPositionValid']);
 const RECONCILE_OPTIONS_KEYS = new Set(['isPositionValid']);
 const PICKUP_PARTICIPANT_KEYS = new Set(['id', 'position', 'eligible']);
@@ -28,6 +54,7 @@ interface EquipmentSystemOptions {
   readonly participantIds: unknown;
   readonly actionRegistry: unknown;
   readonly equipmentRegistry: unknown;
+  readonly equipmentSupplyRegistry?: unknown;
 }
 
 interface SystemPickupParticipant {
@@ -42,6 +69,24 @@ export interface EquipmentDropResult {
   readonly fallbackUsed: boolean;
   readonly despawned: boolean;
   readonly diagnosticCode: string | null;
+}
+
+export type EquipmentSupplyPickupEvent = Readonly<
+  | { readonly type: typeof ARENA_MATCH_EVENT.EQUIPMENT_RECYCLED; readonly payload: EquipmentRecycledEventPayload }
+  | { readonly type: typeof ARENA_MATCH_EVENT.EQUIPMENT_REPLACED; readonly payload: EquipmentReplacedEventPayload }
+>;
+
+export interface EquipmentSupplyPickupDecision {
+  readonly participantId: string;
+  readonly equipmentInstanceId: string;
+  readonly previousEquipmentInstanceId: string | null;
+  readonly distanceSquared: number;
+  readonly kind: 'picked-up' | 'replaced';
+}
+
+export interface EquipmentSupplyPickupTransactionResult {
+  readonly decisions: readonly EquipmentSupplyPickupDecision[];
+  readonly events: readonly EquipmentSupplyPickupEvent[];
 }
 
 function compareStrings(left: string, right: string): number {
@@ -66,6 +111,7 @@ function clonePosition(value: unknown, name: string): EquipmentPosition {
 export class EquipmentSystem {
   readonly #actionRegistry: ActionRegistryContract;
   readonly #equipmentRegistry: EquipmentRegistryContract;
+  readonly #equipmentSupplyRegistry: EquipmentSupplyRegistryContract | null;
   readonly #participantIds: readonly string[];
   readonly #runtimes: Map<string, EquipmentRuntimeState>;
   readonly #heldByParticipant: Map<string, string>;
@@ -74,7 +120,12 @@ export class EquipmentSystem {
   #destroyed: boolean;
   #mutating: boolean;
 
-  constructor({ participantIds, actionRegistry, equipmentRegistry }: EquipmentSystemOptions) {
+  constructor({
+    participantIds,
+    actionRegistry,
+    equipmentRegistry,
+    equipmentSupplyRegistry,
+  }: EquipmentSystemOptions) {
     const actionCatalog = actionRegistry as Partial<ActionRegistryContract> | null;
     const equipmentCatalog = equipmentRegistry as Partial<EquipmentRegistryContract> | null;
     if (
@@ -91,6 +142,15 @@ export class EquipmentSystem {
     }
     this.#actionRegistry = actionCatalog as ActionRegistryContract;
     this.#equipmentRegistry = equipmentCatalog as EquipmentRegistryContract;
+    if (equipmentSupplyRegistry === undefined) {
+      this.#equipmentSupplyRegistry = null;
+    } else {
+      const supplyCatalog = equipmentSupplyRegistry as Partial<EquipmentSupplyRegistryContract> | null;
+      if (!supplyCatalog || typeof supplyCatalog.require !== 'function') {
+        throw new TypeError('EquipmentSystem equipmentSupplyRegistry 必须是只读 Registry。');
+      }
+      this.#equipmentSupplyRegistry = supplyCatalog as EquipmentSupplyRegistryContract;
+    }
     this.#participantIds = Object.freeze([...(participantIds as string[])].sort(compareStrings));
     this.#runtimes = new Map<string, EquipmentRuntimeState>();
     this.#heldByParticipant = new Map<string, string>();
@@ -126,6 +186,31 @@ export class EquipmentSystem {
       return operation();
     } finally {
       this.#mutating = false;
+    }
+  }
+
+  #assertOwnershipInvariants(): void {
+    const seenOwners = new Set<string>();
+    for (const runtime of this.#runtimes.values()) {
+      this.#equipmentRegistry.require(runtime.definitionId);
+      const snapshot = createEquipmentRuntimeSnapshot(runtime);
+      if (snapshot.locationState !== EQUIPMENT_LOCATION_STATE.HELD) continue;
+      const ownerId = this.#requireParticipant(snapshot.ownerId);
+      if (seenOwners.has(ownerId)) {
+        throw new Error(`participant ${ownerId} 同时拥有多件 primary equipment。`);
+      }
+      seenOwners.add(ownerId);
+      if (this.#heldByParticipant.get(ownerId) !== snapshot.instanceId) {
+        throw new Error(`participant ${ownerId} 的 primary slot 与 owner 不一致。`);
+      }
+    }
+    for (const [participantId, instanceId] of this.#heldByParticipant) {
+      this.#requireParticipant(participantId);
+      const runtime = this.#requireRuntime(instanceId);
+      if (
+        runtime.locationState !== EQUIPMENT_LOCATION_STATE.HELD
+        || runtime.ownerId !== participantId
+      ) throw new Error(`participant ${participantId} 的 primary slot 指向错误 owner。`);
     }
   }
 
@@ -189,6 +274,196 @@ export class EquipmentSystem {
         this.#heldByParticipant.set(decision.participantId, runtime.instanceId);
       }
       return decisions;
+    });
+  }
+
+  resolveSupplyPickups(options: unknown): EquipmentSupplyPickupTransactionResult {
+    return this.#runMutation(() => {
+      if (!this.#equipmentSupplyRegistry) {
+        throw new Error('EquipmentSystem 未配置 EquipmentSupplyRegistry。');
+      }
+      assertKnownKeys(options, SUPPLY_PICKUP_OPTIONS_KEYS, 'EquipmentSystem supply pickup options');
+      const { participants, supplies, contestSeed } = options;
+      const tick = assertIntegerAtLeast(options.tick, 0, 'EquipmentSystem supply pickup tick');
+      if (!Array.isArray(participants) || !Array.isArray(supplies)) {
+        throw new TypeError('EquipmentSystem supply pickup participants/supplies 必须是数组。');
+      }
+      this.#assertOwnershipInvariants();
+      const participantById = new Map<string, SystemPickupParticipant>();
+      for (const participant of participants) {
+        assertKnownKeys(participant, PICKUP_PARTICIPANT_KEYS, 'EquipmentSupplyPickup participant');
+        const id = this.#requireParticipant(participant.id);
+        if (participantById.has(id)) throw new RangeError(`重复 supply pickup participant ${id}。`);
+        if (typeof participant.eligible !== 'boolean') {
+          throw new TypeError('EquipmentSupplyPickup participant.eligible 必须是布尔值。');
+        }
+        participantById.set(id, {
+          id,
+          position: clonePosition(
+            participant.position,
+            'EquipmentSupplyPickup participant.position',
+          ),
+          eligible: participant.eligible,
+        });
+      }
+      if (participantById.size !== this.#participantIds.length) {
+        throw new RangeError('EquipmentSystem supply pickup 必须包含全部 participants。');
+      }
+
+      const lifecycleByEquipment = new Map<string, EquipmentSupplyLifecycle>();
+      const supplyIds = new Set<string>();
+      const candidates: Array<Readonly<{
+        equipment: EquipmentRuntimeSnapshot;
+        pickupRadius: number;
+      }>> = [];
+      for (let index = 0; index < supplies.length; index += 1) {
+        const source = cloneFrozenData(supplies[index], `EquipmentSupplyPickup supply[${index}]`);
+        assertKnownKeys(source, SUPPLY_LIFECYCLE_KEYS, `EquipmentSupplyPickup supply[${index}]`);
+        const definitionId = assertNonEmptyString(
+          source.supplyDefinitionId,
+          `EquipmentSupplyPickup supply[${index}].supplyDefinitionId`,
+        );
+        const definition = this.#equipmentSupplyRegistry.require(definitionId);
+        const lifecycle = createEquipmentSupplyLifecycle(source, definition);
+        if (supplyIds.has(lifecycle.supplyId)) {
+          throw new RangeError(`重复 equipment supply ${lifecycle.supplyId}。`);
+        }
+        if (lifecycleByEquipment.has(lifecycle.equipmentInstanceId)) {
+          throw new RangeError(`重复 supply equipment ${lifecycle.equipmentInstanceId}。`);
+        }
+        supplyIds.add(lifecycle.supplyId);
+        lifecycleByEquipment.set(lifecycle.equipmentInstanceId, lifecycle);
+        if (tick < lifecycle.spawnTick || tick >= lifecycle.expireTick) {
+          throw new RangeError(`supply equipment ${lifecycle.equipmentInstanceId} 当前 tick 不可拾取。`);
+        }
+        const runtime = this.#requireRuntime(lifecycle.equipmentInstanceId);
+        this.#equipmentRegistry.require(runtime.definitionId);
+        if (
+          runtime.locationState === EQUIPMENT_LOCATION_STATE.SPAWNED
+          || runtime.locationState === EQUIPMENT_LOCATION_STATE.DROPPED
+        ) {
+          candidates.push(Object.freeze({
+            equipment: createEquipmentRuntimeSnapshot(runtime),
+            pickupRadius: definition.pickupRadius,
+          }));
+          continue;
+        }
+        if (
+          runtime.locationState !== EQUIPMENT_LOCATION_STATE.HELD
+          && runtime.locationState !== EQUIPMENT_LOCATION_STATE.DESPAWNED
+        ) throw new Error(`supply equipment ${runtime.instanceId} 状态不可判定。`);
+      }
+
+      const decisions = this.#pickupResolver.resolveSupply({
+        participants: this.#participantIds.map((id) => {
+          const participant = participantById.get(id);
+          if (!participant) throw new Error(`supply pickup participant map 缺少 ${id}。`);
+          return participant;
+        }),
+        supplies: candidates,
+        contestSeed,
+      });
+      const pending: Array<Readonly<{
+        target: EquipmentRuntimeState;
+        previous: EquipmentRuntimeState | null;
+        decision: EquipmentSupplyPickupDecision;
+      }>> = [];
+      const transactionEvents: EquipmentSupplyPickupEvent[] = [];
+      const transactionDecisions: EquipmentSupplyPickupDecision[] = [];
+      for (const decision of decisions) {
+        const participant = participantById.get(decision.participantId);
+        if (!participant?.eligible) {
+          throw new Error(`participant ${decision.participantId} 在提交前失去拾取资格。`);
+        }
+        const target = this.#requireRuntime(decision.equipmentInstanceId);
+        if (
+          target.locationState !== EQUIPMENT_LOCATION_STATE.SPAWNED
+          && target.locationState !== EQUIPMENT_LOCATION_STATE.DROPPED
+        ) throw new Error(`supply target ${target.instanceId} 在提交前不属于世界实例。`);
+        if (target.ownerId !== null || target.position === null) {
+          throw new Error(`supply target ${target.instanceId} owner/position 不一致。`);
+        }
+        const lifecycle = lifecycleByEquipment.get(target.instanceId);
+        if (!lifecycle) throw new Error(`supply target ${target.instanceId} 缺少生命周期身份。`);
+        const previousId = this.#heldByParticipant.get(decision.participantId) ?? null;
+        if (previousId === target.instanceId) {
+          throw new Error(`participant ${decision.participantId} 不能用同一装备替换自身。`);
+        }
+        const previous = previousId ? this.#requireRuntime(previousId) : null;
+        if (previous && (
+          previous.locationState !== EQUIPMENT_LOCATION_STATE.HELD
+          || previous.ownerId !== decision.participantId
+          || previous.position !== null
+        )) throw new Error(`participant ${decision.participantId} 的旧装备 owner/slot 不一致。`);
+        if (!Number.isSafeInteger(target.revision + 1) || (previous && !Number.isSafeInteger(previous.revision + 1))) {
+          throw new RangeError('EquipmentSupplyPickup revision 超出安全整数范围。');
+        }
+        const resultDecision = Object.freeze({
+          participantId: decision.participantId,
+          equipmentInstanceId: decision.equipmentInstanceId,
+          previousEquipmentInstanceId: previousId,
+          distanceSquared: decision.distanceSquared,
+          kind: previous ? 'replaced' as const : 'picked-up' as const,
+        });
+        transactionDecisions.push(resultDecision);
+        if (previous) {
+          const identity = {
+            schemaVersion: EQUIPMENT_SUPPLY_EVENT_PAYLOAD_SCHEMA_VERSION,
+            supplyDefinitionId: lifecycle.supplyDefinitionId,
+            supplyId: lifecycle.supplyId,
+            equipmentInstanceId: lifecycle.equipmentInstanceId,
+            spawnTick: lifecycle.spawnTick,
+            expireTick: lifecycle.expireTick,
+            tick,
+            participantId: decision.participantId,
+          };
+          transactionEvents.push(Object.freeze({
+            type: ARENA_MATCH_EVENT.EQUIPMENT_RECYCLED,
+            payload: createEquipmentRecycledEventPayload({
+              ...identity,
+              recycledEquipmentInstanceId: previous.instanceId,
+              replacementEquipmentInstanceId: target.instanceId,
+              reason: EQUIPMENT_RECYCLE_REASON.REPLACED,
+            }),
+          }));
+          transactionEvents.push(Object.freeze({
+            type: ARENA_MATCH_EVENT.EQUIPMENT_REPLACED,
+            payload: createEquipmentReplacedEventPayload({
+              ...identity,
+              previousEquipmentInstanceId: previous.instanceId,
+              nextEquipmentInstanceId: target.instanceId,
+            }),
+          }));
+        }
+        pending.push(Object.freeze({ target, previous, decision: resultDecision }));
+      }
+
+      const result = Object.freeze({
+        decisions: Object.freeze(transactionDecisions),
+        events: Object.freeze(transactionEvents),
+      });
+      // Commit point: every external value, invariant and event payload is now validated.
+      // The remaining block performs only private, synchronous assignments and exposes no callback.
+      try {
+        for (const { target, previous, decision } of pending) {
+          if (previous) {
+            if (!this.#runtimes.delete(previous.instanceId)) {
+              throw new Error(`待回收 equipment ${previous.instanceId} 已不在权威集合。`);
+            }
+          }
+          target.locationState = EQUIPMENT_LOCATION_STATE.HELD;
+          target.ownerId = decision.participantId;
+          target.position = null;
+          target.revision += 1;
+          this.#heldByParticipant.set(decision.participantId, target.instanceId);
+        }
+      } catch (error) {
+        this.#destroyed = true;
+        this.#heldByParticipant.clear();
+        this.#runtimes.clear();
+        throw error;
+      }
+      return result;
     });
   }
 

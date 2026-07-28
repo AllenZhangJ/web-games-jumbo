@@ -1,12 +1,20 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  ARENA_V2_SURVIVAL_SUPPLY_DEFINITION,
   STAGE4_ACTION_ID,
   STAGE4_EQUIPMENT_ID,
+  createArenaV2SurvivalSupplyRegistry,
   createStage4ContentRegistries,
 } from '@number-strategy-jump/arena-v1-content';
 import {
+  ARENA_MATCH_EVENT,
+  EQUIPMENT_RECYCLE_REASON,
+  EQUIPMENT_SUPPLY_EVENT_PAYLOAD_SCHEMA_VERSION,
+} from '@number-strategy-jump/arena-contracts';
+import {
   EQUIPMENT_LOCATION_STATE,
+  EQUIPMENT_SUPPLY_LIFECYCLE_SCHEMA_VERSION,
   EquipmentPickupResolver,
   EquipmentSpawner,
   EquipmentSystem,
@@ -28,6 +36,46 @@ function createSystem() {
     ...registries,
     system: new EquipmentSystem({ participantIds: PARTICIPANT_IDS, ...registries }),
   };
+}
+
+function createSupplySystem(participantIds: readonly string[] = PARTICIPANT_IDS) {
+  const registries = createStage4ContentRegistries();
+  return {
+    ...registries,
+    system: new EquipmentSystem({
+      participantIds,
+      ...registries,
+      equipmentSupplyRegistry: createArenaV2SurvivalSupplyRegistry(),
+    }),
+  };
+}
+
+function supplyLifecycle(
+  equipmentInstanceId: string,
+  supplyId = `supply:${equipmentInstanceId}`,
+) {
+  return {
+    schemaVersion: EQUIPMENT_SUPPLY_LIFECYCLE_SCHEMA_VERSION,
+    supplyDefinitionId: ARENA_V2_SURVIVAL_SUPPLY_DEFINITION.id,
+    supplyId,
+    equipmentInstanceId,
+    spawnTick: ARENA_V2_SURVIVAL_SUPPLY_DEFINITION.firstSpawnTick,
+    expireTick: ARENA_V2_SURVIVAL_SUPPLY_DEFINITION.firstSpawnTick
+      + ARENA_V2_SURVIVAL_SUPPLY_DEFINITION.lifetimeTicks,
+  };
+}
+
+function participantSet(ids: readonly string[], reverse = false) {
+  const values = ids.map((id, index) => ({
+    id,
+    position: {
+      x: index % 2 === 0 ? -0.2 : 0.2,
+      y: 1,
+      z: index < 2 ? -0.2 : 0.2,
+    },
+    eligible: true,
+  }));
+  return reverse ? values.reverse() : values;
 }
 
 function participants(player1X = 0, player2X = 4) {
@@ -73,7 +121,7 @@ test('EquipmentSystem owns spawn, automatic pickup, slot and cooldown state', ()
   system.destroy();
 });
 
-test('single primary slot prevents a participant from collecting another nearby equipment', () => {
+test('ordinary pickup keeps the legacy single-slot behavior without applying survival replacement', () => {
   const { system } = createSystem();
   spawnHammer(system);
   system.spawn({
@@ -90,6 +138,279 @@ test('single primary slot prevents a participant from collecting another nearby 
     locationState === EQUIPMENT_LOCATION_STATE.HELD
   )).length, 1);
   system.destroy();
+});
+
+test('supply pickup atomically recycles the old primary and emits strict events in stable order', () => {
+  const { system } = createSupplySystem();
+  spawnHammer(system);
+  system.resolvePickups({ participants: participants(), contestSeed: 1 });
+  system.markActionStarted('player-1', STAGE4_ACTION_ID.HAMMER_SMASH);
+  system.spawn({
+    instanceId: 'supply-equipment',
+    definitionId: STAGE4_EQUIPMENT_ID.CHAIN,
+    spawnId: 'survival-supply',
+    position: { x: 0.2, y: 1, z: 0 },
+  });
+
+  const result = system.resolveSupplyPickups({
+    participants: participants(),
+    supplies: [supplyLifecycle('supply-equipment')],
+    contestSeed: 9,
+    tick: 1_300,
+  });
+  assert.deepEqual(result.decisions.map(({ distanceSquared: _distanceSquared, ...decision }) => decision), [{
+    participantId: 'player-1',
+    equipmentInstanceId: 'supply-equipment',
+    previousEquipmentInstanceId: 'equipment-1',
+    kind: 'replaced',
+  }]);
+  assert.ok(Math.abs(required(result.decisions[0], '替换决策').distanceSquared - 0.04) < 1e-12);
+  assert.deepEqual(result.events.map(({ type }) => type), [
+    ARENA_MATCH_EVENT.EQUIPMENT_RECYCLED,
+    ARENA_MATCH_EVENT.EQUIPMENT_REPLACED,
+  ]);
+  assert.equal(Object.isFrozen(result), true);
+  assert.equal(Object.isFrozen(result.events), true);
+  const recycledPayload = required(result.events[0], '回收事件').payload;
+  assert.equal(recycledPayload.schemaVersion, EQUIPMENT_SUPPLY_EVENT_PAYLOAD_SCHEMA_VERSION);
+  assert.equal(recycledPayload.equipmentInstanceId, 'supply-equipment');
+  assert.equal(Reflect.get(recycledPayload, 'recycledEquipmentInstanceId'), 'equipment-1');
+  assert.equal(Reflect.get(recycledPayload, 'reason'), EQUIPMENT_RECYCLE_REASON.REPLACED);
+  assert.equal(required(result.events[1], '替换事件').payload.equipmentInstanceId, 'supply-equipment');
+
+  assert.throws(() => system.getSnapshot('equipment-1'), /未知 equipment instance equipment-1/);
+  const held = required(system.getHeldEquipment('player-1'), '替换后的主武器');
+  assert.equal(held.instanceId, 'supply-equipment');
+  assert.equal(held.locationState, EQUIPMENT_LOCATION_STATE.HELD);
+  assert.equal(held.ownerId, 'player-1');
+  assert.equal(system.listSnapshots().filter(({ ownerId }) => ownerId === 'player-1').length, 1);
+  assert.equal(system.listSnapshots().some(({ locationState }) => (
+    locationState === EQUIPMENT_LOCATION_STATE.DROPPED
+  )), false);
+  system.destroy();
+});
+
+test('1000 consecutive replacements keep the authoritative runtime set bounded', () => {
+  const { system } = createSupplySystem(['player-1']);
+  system.spawn({
+    instanceId: 'equipment-0',
+    definitionId: STAGE4_EQUIPMENT_ID.HAMMER,
+    spawnId: 'initial',
+    position: { x: 0, y: 1, z: 0 },
+  });
+  system.resolvePickups({ participants: participantSet(['player-1']), contestSeed: 0 });
+  for (let index = 1; index <= 1_000; index += 1) {
+    const instanceId = `equipment-${index}`;
+    system.spawn({
+      instanceId,
+      definitionId: index % 2 === 0 ? STAGE4_EQUIPMENT_ID.CHAIN : STAGE4_EQUIPMENT_ID.SHIELD,
+      spawnId: `supply-${index}`,
+      position: { x: 0, y: 1, z: 0 },
+    });
+    const result = system.resolveSupplyPickups({
+      participants: participantSet(['player-1']),
+      supplies: [supplyLifecycle(instanceId, `supply-${index}`)],
+      contestSeed: index,
+      tick: 1_300,
+    });
+    assert.deepEqual(result.events.map(({ type }) => type), [
+      ARENA_MATCH_EVENT.EQUIPMENT_RECYCLED,
+      ARENA_MATCH_EVENT.EQUIPMENT_REPLACED,
+    ]);
+    assert.equal(system.listSnapshots().length, 1);
+    assert.equal(required(system.getHeldEquipment('player-1'), '连续替换主武器').instanceId, instanceId);
+  }
+  assert.equal(system.listSnapshots().length, 1);
+  system.destroy();
+});
+
+test('supply pickup preserves empty-slot semantics and repeated execution is a deterministic no-op', () => {
+  const { system } = createSupplySystem();
+  system.spawn({
+    instanceId: 'supply-equipment',
+    definitionId: STAGE4_EQUIPMENT_ID.SHIELD,
+    spawnId: 'survival-supply',
+    position: { x: 0, y: 1, z: 0 },
+  });
+  const options = {
+    participants: participants(),
+    supplies: [supplyLifecycle('supply-equipment')],
+    contestSeed: 3,
+    tick: 1_300,
+  };
+  const first = system.resolveSupplyPickups(options);
+  assert.equal(required(first.decisions[0], '空槽拾取').kind, 'picked-up');
+  assert.deepEqual(first.events, []);
+  assert.equal(required(system.getHeldEquipment('player-1'), '空槽拾取装备').instanceId, 'supply-equipment');
+  const before = system.listSnapshots();
+  const duplicate = system.resolveSupplyPickups(options);
+  assert.deepEqual(duplicate, { decisions: [], events: [] });
+  assert.deepEqual(system.listSnapshots(), before);
+  system.destroy();
+});
+
+test('supply replacement validates every contract before the commit point', () => {
+  const { system } = createSupplySystem();
+  spawnHammer(system);
+  system.resolvePickups({ participants: participants(), contestSeed: 1 });
+  system.spawn({
+    instanceId: 'supply-equipment',
+    definitionId: STAGE4_EQUIPMENT_ID.CHAIN,
+    spawnId: 'survival-supply',
+    position: { x: 0, y: 1, z: 0 },
+  });
+  const before = system.listSnapshots();
+  assert.throws(() => system.resolveSupplyPickups({
+    participants: participants(),
+    supplies: [{ ...supplyLifecycle('supply-equipment'), supplyDefinitionId: 'unknown.v1' }],
+    contestSeed: 1,
+    tick: 1_300,
+  }), /未知 EquipmentSupplyDefinition/);
+  assert.deepEqual(system.listSnapshots(), before);
+  assert.throws(() => system.resolveSupplyPickups({
+    participants: participants(),
+    supplies: [supplyLifecycle('unknown-equipment')],
+    contestSeed: 1,
+    tick: 1_300,
+  }), /未知 equipment instance/);
+  assert.deepEqual(system.listSnapshots(), before);
+  assert.throws(() => system.resolveSupplyPickups({
+    participants: [{ ...participants()[0], eligible: true }],
+    supplies: [supplyLifecycle('supply-equipment')],
+    contestSeed: 1,
+    tick: 1_300,
+  }), /必须包含全部 participants/);
+  assert.deepEqual(system.listSnapshots(), before);
+  assert.throws(() => system.resolveSupplyPickups({
+    participants: participants(),
+    supplies: [
+      supplyLifecycle('supply-equipment'),
+      supplyLifecycle('supply-equipment', 'duplicate-target'),
+    ],
+    contestSeed: 1,
+    tick: 1_300,
+  }), /重复 supply equipment/);
+  assert.deepEqual(system.listSnapshots(), before);
+  assert.throws(() => system.resolveSupplyPickups({
+    participants: participants(),
+    supplies: [{ ...supplyLifecycle('supply-equipment'), futureOwner: 'player-1' }],
+    contestSeed: 1,
+    tick: 1_300,
+  }), /不支持字段 futureOwner/);
+  assert.deepEqual(system.listSnapshots(), before);
+  system.destroy();
+
+  const legacy = createSystem().system;
+  spawnHammer(legacy);
+  const legacyBefore = legacy.listSnapshots();
+  assert.throws(() => legacy.resolveSupplyPickups({
+    participants: participants(),
+    supplies: [supplyLifecycle('equipment-1')],
+    contestSeed: 1,
+    tick: 1_300,
+  }), /未配置 EquipmentSupplyRegistry/);
+  assert.deepEqual(legacy.listSnapshots(), legacyBefore);
+  legacy.destroy();
+});
+
+test('1/2/4 participant supply contests are input-order invariant with held primary slots', () => {
+  for (const count of [1, 2, 4]) {
+    const ids = Array.from({ length: count }, (_, index) => `player-${index + 1}`);
+    const run = (reverse: boolean) => {
+      const { system } = createSupplySystem(ids);
+      for (let index = 0; index < ids.length; index += 1) {
+        const id = required(ids[index], `participant ${index}`);
+        const position = required(participantSet(ids)[index], `position ${index}`).position;
+        system.spawn({
+          instanceId: `old-${id}`,
+          definitionId: STAGE4_EQUIPMENT_ID.HAMMER,
+          spawnId: `old-spawn-${id}`,
+          position,
+        });
+        system.resolvePickups({
+          participants: participantSet(ids).map((participant) => ({
+            ...participant,
+            eligible: participant.id === id,
+          })),
+          contestSeed: index,
+        });
+      }
+      system.spawn({
+        instanceId: 'contested-supply',
+        definitionId: STAGE4_EQUIPMENT_ID.CHAIN,
+        spawnId: 'contested-supply-spawn',
+        position: { x: 0, y: 1, z: 0 },
+      });
+      const result = system.resolveSupplyPickups({
+        participants: participantSet(ids, reverse),
+        supplies: [supplyLifecycle('contested-supply')],
+        contestSeed: 41,
+        tick: 1_300,
+      });
+      const projection = {
+        decisions: result.decisions,
+        events: result.events,
+        snapshots: system.listSnapshots(),
+      };
+      system.destroy();
+      return projection;
+    };
+    assert.deepEqual(run(false), run(true));
+  }
+});
+
+test('replacement eligibility is independent of action/cooldown while inactive boundaries reject writes', () => {
+  const createReady = () => {
+    const value = createSupplySystem();
+    spawnHammer(value.system);
+    value.system.resolvePickups({ participants: participants(), contestSeed: 1 });
+    value.system.markActionStarted('player-1', STAGE4_ACTION_ID.HAMMER_SMASH);
+    value.system.spawn({
+      instanceId: 'supply-equipment',
+      definitionId: STAGE4_EQUIPMENT_ID.SHIELD,
+      spawnId: 'survival-supply',
+      position: { x: 0, y: 1, z: 0 },
+    });
+    return value.system;
+  };
+  const active = createReady();
+  assert.equal(required(active.getHeldEquipment('player-1'), '冷却旧武器').cooldownRemainingTicks, 72);
+  assert.equal(required(active.resolveSupplyPickups({
+    participants: participants(),
+    supplies: [supplyLifecycle('supply-equipment')],
+    contestSeed: 1,
+    tick: 1_300,
+  }).decisions[0], '动作临界替换').kind, 'replaced');
+  active.destroy();
+
+  for (const boundary of ['eliminated', 'match-ended']) {
+    const inactive = createReady();
+    const before = inactive.listSnapshots();
+    const result = inactive.resolveSupplyPickups({
+      participants: participants().map((participant) => ({
+        ...participant,
+        eligible: participant.id === 'player-1' ? false : participant.eligible,
+      })),
+      supplies: [supplyLifecycle('supply-equipment')],
+      contestSeed: 1,
+      tick: 1_300,
+    });
+    assert.deepEqual(result, { decisions: [], events: [] }, boundary);
+    assert.deepEqual(inactive.listSnapshots(), before, boundary);
+    inactive.destroy();
+  }
+
+  const dropped = createReady();
+  dropped.dropOwned('player-1', { isPositionValid: () => true });
+  const dropResult = dropped.resolveSupplyPickups({
+    participants: participants(),
+    supplies: [supplyLifecycle('supply-equipment')],
+    contestSeed: 1,
+    tick: 1_300,
+  });
+  assert.equal(required(dropResult.decisions[0], '掉落后空槽拾取').kind, 'picked-up');
+  assert.deepEqual(dropResult.events, []);
+  dropped.destroy();
 });
 
 test('pickup contests are independent of input array order and seeded ties do not hard-code one player', () => {

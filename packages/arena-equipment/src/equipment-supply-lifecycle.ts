@@ -58,6 +58,17 @@ export function createEquipmentSupplyLifecycle(
   }
   const spawnTick = safeTick(source.spawnTick, 'EquipmentSupplyLifecycle.spawnTick');
   const expireTick = safeTick(source.expireTick, 'EquipmentSupplyLifecycle.expireTick');
+  if (spawnTick < definition.firstSpawnTick) {
+    throw new RangeError(
+      `EquipmentSupplyLifecycle.spawnTick 不能早于 firstSpawnTick ${definition.firstSpawnTick}。`,
+    );
+  }
+  const waveOffsetTicks = spawnTick - definition.firstSpawnTick;
+  if (waveOffsetTicks % definition.spawnIntervalTicks !== 0) {
+    throw new RangeError(
+      'EquipmentSupplyLifecycle.spawnTick 必须属于 Definition 的合法生成波次。',
+    );
+  }
   const expectedExpireTick = spawnTick + definition.lifetimeTicks;
   if (!Number.isSafeInteger(expectedExpireTick)) {
     throw new RangeError('EquipmentSupplyLifecycle.expireTick 超出安全整数范围。');
