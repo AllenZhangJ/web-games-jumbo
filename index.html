@@ -51,11 +51,19 @@
                 <span>WEAPON INDEX</span>
                 <small>先看对比，再看语义</small>
               </div>
-              <div class="product-weapon-comparison" role="table" aria-label="武器公开数值对比">
+              <div
+                class="product-weapon-comparison"
+                role="table"
+                aria-label="武器公开数值对比"
+                aria-describedby="product-weapon-comparison-legend"
+              >
                 <div class="product-comparison-heading">
                   <span>先看 4 个差异</span>
                   <small>距离 · 出招 · 击飞 · 收招</small>
                 </div>
+                <p id="product-weapon-comparison-legend" class="product-comparison-legend">
+                  ↑ 越高越有利　↓ 越低越有利　⚠ 越高风险越大
+                </p>
                 <div id="product-weapon-comparison"></div>
               </div>
               <div id="product-weapon-list" class="product-weapon-list"></div>

@@ -153,7 +153,7 @@ Arena V2 的核心目标是：
 | [V2 武器可读性与长期留存验证计划 V1](../research/arena-v2-weapon-readability-retention-study-v1.md) | 定义 3 分钟操作、10 秒数值解释、KZ 归因和 30/60/120/200 小时真人验证任务 | 真人研究合同，尚无样本 |
 | [武器数值可读性任务原型结果 V1](../research/arena-v2-weapon-readability-task-prototype-results-v1.md) | 在题目前展示六件逐件研究武器的四项首屏快速数值、唯一极值场景差异速览、同源地面/空中矩阵和独立延迟/预警研究信号，再生成五项比较/方向/地图/上下文任务，隔离参与者题目与研究员答案并绑定矩阵哈希 | 六件矩阵、快速数值、场景速览与研究信号已接入，自动化验证通过，真人/设备样本尚无 |
 | [研究页浏览器布局证据 V1](../research/arena-v2-browser-layout-evidence-v1.md) | 记录 1280×720 与 390×844 下的六件武器快速数值卡、完整矩阵、11 页面入口、触控尺寸和 Product 数值比较检查 | 本地浏览器布局通过，实体设备/真人仍待验证 |
-| [Product 武器概览首屏收敛结果 V1](../research/arena-v2-product-weapon-overview-convergence-v1.md) | 记录正式 Product 入口从完整 27 行矩阵收敛为 4 行首屏关键差异、3 张语义卡和可展开完整矩阵的桌面/窄屏证据 | 首屏收敛已接入，本地浏览器通过，实体设备/真人仍待验证 |
+| [Product 武器概览首屏收敛结果 V1](../research/arena-v2-product-weapon-overview-convergence-v1.md) | 记录正式 Product 入口从完整 27 行矩阵收敛为 4 行首屏关键差异、方向图例、3 张语义卡和可展开完整矩阵的桌面/窄屏证据 | 首屏收敛已接入，本地浏览器通过，实体设备/真人仍待验证 |
 | [Product 武器数值差异事实原型结果 V1](../research/arena-v2-product-weapon-comparison-facts-v1.md) | 从同源主数值比较中派生唯一极值的优势/代价事实，帮助玩家快速理解锁链、重锤和冲锋盾的数字差异，不计算综合评分 | Web Product 卡片已接入，真人/多语言仍待验证 |
 | [战斗外界面原型验证结果 V1](../research/arena-v2-ui-prototype-results-v1.md) | 记录当前主页、武器概览、角色选择和进入对局链路验证 | 第一轮原型证据 |
 | [局外信息原型结果 V1](../research/arena-v2-ui-information-prototype-results-v1.md) | 记录 11 个信息入口、四条关键流程、48px 触控门槛、760px 窄屏断点和点击预算 | 第二轮信息架构原型 |
