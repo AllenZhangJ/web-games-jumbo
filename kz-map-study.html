@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#111923" />
+    <meta name="robots" content="noindex,nofollow" />
+    <link rel="stylesheet" href="/src/kz-map-study.css" />
+    <title>Arena KZ 跳跃地图研究</title>
+  </head>
+  <body>
+    <main id="kz-map-study" class="kz-study" aria-labelledby="kz-study-title">
+      <header class="kz-header">
+        <div>
+          <p class="kz-kicker">ARENA V2 / KZ ROUTE LAB</p>
+          <h1 id="kz-study-title">一张地图，六种练习</h1>
+          <p class="kz-lede">
+            借鉴 CS1.6 KZ 的“可命名段落 + 反复练习 + 记录熟练度”，把竞速与生存放在同一张路线图里。
+            这里只有方向和跳跃；战斗只改变路线压力，不增加操作。
+          </p>
+        </div>
+        <div class="kz-header-stamp" aria-label="研究边界">
+          <strong>RESEARCH ONLY</strong>
+          <span>不复制第三方地图资产</span>
+          <span>不进入生产导航</span>
+        </div>
+      </header>
+
+      <section class="kz-metrics" aria-label="路线研究摘要">
+        <div><span>路线段落</span><strong id="kz-segment-count">读取中</strong></div>
+        <div><span>基础输入</span><strong id="kz-input-count">读取中</strong></div>
+        <div><span>可选分叉</span><strong id="kz-branch-count">读取中</strong></div>
+        <div><span>复活等待</span><strong id="kz-respawn-time">读取中</strong></div>
+        <div><span>研究状态</span><strong id="kz-contract-status">校验中</strong></div>
+      </section>
+
+      <p id="kz-study-error" class="kz-alert" role="alert" hidden></p>
+
+      <section class="kz-lab" aria-label="KZ 路线画布研究台">
+        <div class="kz-map-panel">
+          <div class="kz-panel-heading">
+            <div>
+              <p class="kz-kicker">LIVE ROUTE CANVAS</p>
+              <h2>先看路线，再看数值</h2>
+            </div>
+            <p id="kz-canvas-caption" class="kz-canvas-caption">选一个段落，观察它在两种模式中的职责。</p>
+          </div>
+
+          <div class="kz-controls" aria-label="路线画布控制">
+            <div class="kz-control-group" role="group" aria-label="地图模式">
+              <span>地图用途</span>
+              <button type="button" data-mode="race" aria-pressed="true">竞速·有终点</button>
+              <button type="button" data-mode="survival" aria-pressed="false">生存·无终点</button>
+            </div>
+            <div class="kz-control-group" role="group" aria-label="分叉路线">
+              <span>路线倾向</span>
+              <button type="button" data-branch="fast" aria-pressed="true">快线·高暴露</button>
+              <button type="button" data-branch="safe" aria-pressed="false">恢复线·低暴露</button>
+            </div>
+            <button id="kz-attack-button" class="kz-action" type="button">标出下一攻击点</button>
+          </div>
+
+          <div class="kz-canvas-shell">
+            <canvas id="kz-map-canvas" width="1200" height="560" role="img" aria-label="六段 KZ 路线画布"></canvas>
+            <div class="kz-canvas-legend" aria-label="路线图例">
+              <span><i class="legend-route"></i>主路线</span>
+              <span><i class="legend-fast"></i>快线</span>
+              <span><i class="legend-safe"></i>恢复线</span>
+              <span><i class="legend-attack"></i>攻击点</span>
+            </div>
+          </div>
+          <p id="kz-canvas-announcement" class="kz-canvas-announcement" aria-live="polite"></p>
+        </div>
+
+        <aside class="kz-inspector" aria-live="polite">
+          <div class="kz-inspector-topline">
+            <span id="kz-selected-index">SEGMENT 01</span>
+            <span id="kz-selected-role">SAFE</span>
+          </div>
+          <h2 id="kz-selected-title">读取中</h2>
+          <p id="kz-selected-lesson" class="kz-selected-lesson"></p>
+          <div id="kz-selected-metrics" class="kz-axis-grid"></div>
+          <div class="kz-inspector-block">
+            <span class="kz-label">被攻击时还能做什么</span>
+            <strong id="kz-selected-response"></strong>
+            <p id="kz-selected-recovery"></p>
+          </div>
+          <div class="kz-inspector-block kz-attack-readout">
+            <span class="kz-label">当前攻击点</span>
+            <strong id="kz-selected-attack-point">入口·尚未标记</strong>
+            <p id="kz-selected-attack-result">先点击“标出下一攻击点”，再观察这段路线的暴露窗口。</p>
+          </div>
+          <div class="kz-inspector-block">
+            <span class="kz-label">在生存模式中的职责</span>
+            <strong id="kz-selected-survival-role"></strong>
+            <p id="kz-selected-remix"></p>
+          </div>
+        </aside>
+      </section>
+
+      <section class="kz-segment-section" aria-labelledby="kz-segment-title">
+        <div class="kz-section-heading">
+          <div>
+            <p class="kz-kicker">SEGMENT CONTRACT</p>
+            <h2 id="kz-segment-title">六段路线，不是六个装饰</h2>
+          </div>
+          <p>每段只教一个主要动作，再把上一段动作组合一次；失败要能说出原因。</p>
+        </div>
+        <nav id="kz-segment-nav" class="kz-segment-nav" aria-label="六个路线段落"></nav>
+      </section>
+
+      <section class="kz-evidence-section" aria-labelledby="kz-evidence-title">
+        <div class="kz-section-heading">
+          <div>
+            <p class="kz-kicker">SOURCE → TRANSLATION</p>
+            <h2 id="kz-evidence-title">外部地图学什么，Arena 不复制什么</h2>
+          </div>
+          <p id="kz-evidence-note">来源事实与 Arena 迁移结论分栏，避免把社区数据误写成产品数值。</p>
+        </div>
+        <article id="kz-evidence-card" class="kz-evidence-card" aria-live="polite"></article>
+      </section>
+
+      <footer class="kz-footer">
+        当前可证明：六段路线合同、分叉路线、路线画布、两种模式职责、攻击点和来源迁移边界。当前不可证明：真实手机镜头、2–4 人拥挤、真人 3 分钟理解和最终地图资产公平性。
+      </footer>
+    </main>
+    <script type="module" src="/src/entry/kz-map-study.ts"></script>
+  </body>
+</html>

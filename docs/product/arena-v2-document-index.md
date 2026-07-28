@@ -132,6 +132,7 @@ Arena V2 的核心目标是：
 | `arena-v2-kz-branch-camera-observation-prototype.ts` | 用正交视锥数学检查选择/重入时两条分叉的前两个路线点是否同时进入移动端纵向/横向观察窗口，仅供开发/测试工具链使用 | 8 个观察场景通过，走钢丝纵向余量仅 0.066，真实画布仍待验证 |
 | [KZ 分叉路线镜头观察结果 V1](../research/arena-v2-kz-branch-camera-observation-results-v1.md) | 记录 390×844 与 844×390 视口的世界范围、最小余量和选择/重入可见性边界 | 几何观察合同通过，Renderer/真人理解仍待验证 |
 | `arena-v2-kz-branch-weapon-consequence-prototype.ts` | 将五种武器战斗语言和三种固定回应接入四条独立分叉 surface，输出命中、击落、支撑面转移、路线失误和反馈因果 | 60 个 Rule/Action/Physics 探针通过，分叉已产生不同武器后果，攻击点/多人/真人仍待扩展 |
+| `kz-map-study.html` / `src/entry/kz-map-study.ts` | 独立 KZ 路线 Canvas 研究页，切换竞速/生存、快线/恢复线、段落和入口/转折/出口攻击点，并分栏显示来源事实与 Arena 迁移结论 | 真实 Canvas 已通过 1280×720 与 390×844 本地浏览器验证，2–4 人/真人/生产地图仍待验证 |
 | [KZ 分叉路线 × 武器后果原型结果 V1](../research/arena-v2-kz-branch-weapon-consequence-results-v1.md) | 记录四条分叉入口/转折/出口的表面宽深、命中、击落、转移、路线失误和空放差异 | 180 个研究探针已接入，未进入生产平衡 |
 | [生存 1vE 最小循环原型结果 V1](../research/arena-v2-survival-loop-prototype-results-v1.md) | 记录无武器开局、20 秒三选一、轮次成长、两次掉落和低维奖励证据 | 第一轮原型证据 |
 | `arena-v2-survival-entity-prototype.ts` | 验证单一敌人复用玩家规则/物理、敌我双方击飞和第一次复活/第二次终局，仅供开发/测试工具链使用 | 第二轮规则原型证据 |
@@ -165,6 +166,7 @@ Arena V2 的核心目标是：
 | [ADR-080：热血英豪武器逐件研究必须以动作链和数值审计为单位](../decisions/080-arena-v2-weapon-case-study-by-move.md) | 固化逐动作事实、反制、失败成本和公共数值轴审计边界 | 六件逐动作案例已接入，真人可读性与生产迁移待验证 |
 | [ADR-097：逐件武器研究先按三步学习路径收敛](../decisions/097-arena-v2-weapon-learning-path-research-contract.md) | 固化从动作链派生核心动作、上下文转换、地图/失败代价三步学习顺序，并绑定每步数值重点 | 六件学习路径已接入研究页，真人学习顺序与生产成长仍待验证 |
 | [ADR-099：六件逐件武器研究先绑定主战斗语言](../decisions/099-arena-v2-case-study-primary-combat-language.md) | 固化六件深研案例的一对一主战斗语言、关键数值轴存在性检查和概览读出边界 | 六件语言绑定与关键轴验证通过，仍属研究推导 |
+| [ADR-100：KZ 路线先用真实画布验证路线职责](../decisions/100-arena-v2-kz-route-canvas-study-boundary.md) | 固化 KZ 研究页的真实 Canvas、竞速/生存切换、分叉路线、攻击点和来源迁移边界 | 桌面/窄屏本地浏览器通过，2–4 人/真人/生产地图仍待验证 |
 | [ADR-085：血影钩刃动作规则与障碍后果分层验证](../decisions/085-arena-v2-blood-shadow-hook-blade-definition-boundary.md) | 固化目标朝向/拉近由真实 Rule/Replay 验证，实体障碍由独立地图探针验证，禁止把未接入规则的障碍属性写成武器数值 | 研究 Definition/Replay 已接入，障碍仍待真实地图表面验证 |
 | [ADR-086：真·哈迪斯钩镰先以承诺、上下文和支撑面后果收敛](../decisions/086-arena-v2-true-hades-hook-scythe-definition-boundary.md) | 固化地面承诺、空中独立上下文、取消/提交、命中与支撑面后果的研究边界 | 研究 Definition/Replay 已接入，未进入生产 |
 | [ADR-089：魔血镰刃先以封路、上下文和路线后果收敛](../decisions/089-arena-v2-magic-blood-scythe-definition-boundary.md) | 固化地面宽覆盖、空中高度分支、路线躲避和边缘后果；延迟危险区先保持独立研究信号 | 研究 Definition/Replay 已接入，未进入生产 |
