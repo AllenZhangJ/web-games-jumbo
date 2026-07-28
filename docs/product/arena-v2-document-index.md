@@ -35,6 +35,7 @@ Arena V2 的核心目标是：
 | [V2 武器设计与研究框架](../gameplay/arena-v2-weapon-design-framework.md) | 热血英豪研究方法、上下文动作、基础武器原型和武器卡模板 | 第二轮收敛 |
 | [热血英豪武器研究综合与设计收敛 V1](../gameplay/arena-v2-hot-blooded-weapon-design-synthesis.md) | 将六件逐动作案例收敛为动作身份、承诺时间、空间条件、命中后果、失败成本、反制与反馈六项武器独立性门槛 | 研究综合已完成，生产迁移仍需独立门禁 |
 | [武器价值链结构审计结果 V1](../research/arena-v2-weapon-value-chain-audit-results-v1.md) | 将六项武器独立性门槛变成可执行研究合同，并验证六件深研案例的完整性 | 六件结构审计通过，仍不等于生产就绪 |
+| [武器概览与可读性浏览器任务验证结果 V2](../research/arena-v2-weapon-browser-task-validation-results-v2.md) | 在 390×844 浏览器视口复核 Product 数值方向、六件研究武器卡和 5 道可读性任务提交闭环 | 浏览器任务 5/5，通过但不代表真人或真机 |
 | [V2 生存 1vE 规则](../gameplay/arena-v2-survival-mode.md) | 生存流程、敌人、武器供给、掉落和结束条件 | 初稿 + 最小循环原型 |
 | [V2 成长与 200 小时目标](../gameplay/arena-v2-progression-200-hours.md) | 收藏、熟悉、重复游玩和奖励边界 | 初稿 |
 | [V2 界面地图](arena-v2-screen-map.md) | 明确 11 个局外页面入口、对局 HUD 和竞技准备模板复用 | 页面合同已收敛，真机待验证 |
