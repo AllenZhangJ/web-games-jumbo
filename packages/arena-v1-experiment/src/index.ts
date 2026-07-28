@@ -778,6 +778,16 @@ export type {
   ArenaV2WeaponContextPrototypeResult,
 } from './arena-v2-weapon-context-prototype.js';
 export {
+  ARENA_V2_WEAPON_FEEDBACK_ASSET_CANDIDATES,
+  getArenaV2WeaponFeedbackAssetCandidate,
+  runArenaV2WeaponFeedbackAssetCandidateAudit,
+} from './arena-v2-weapon-feedback-asset-candidate-contract.js';
+export type {
+  ArenaV2WeaponFeedbackAssetCandidate,
+  ArenaV2WeaponFeedbackAssetCandidateAudit,
+  ArenaV2WeaponFeedbackAssetCandidateStatus,
+} from './arena-v2-weapon-feedback-asset-candidate-contract.js';
+export {
   runArenaV2WeaponContestPrototype,
 } from './arena-v2-weapon-contest-prototype.js';
 export type {

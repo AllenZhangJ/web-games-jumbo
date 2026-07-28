@@ -98,6 +98,7 @@ Arena V2 的核心目标是：
 | [ADR-073：Arena V2 以 11 个信息入口和一个共享竞技准备模板收敛界面](../decisions/073-arena-v2-ui-eleven-page-contract.md) | 固定 11 个局外入口，明确加载页、竞技准备模板复用和生存准备独立边界 | 页面合同已接入无渲染原型 |
 | [ADR-072：正式武器反馈事件接入 Three 灰盒表现](../decisions/072-arena-v2-feedback-presentation-three-consumption.md) | 将五种反馈 Cue 接入灰盒冲击/警告效果、镜头、震动和现有音频入口，不在表现层重新判定 | 灰盒表现链已接入，最终资产与真机待验证 |
 | [命中反馈因果研究工作台结果 V1](../research/arena-v2-weapon-feedback-study-results-v1.md) | 使用 90 个真实 KZ 探针选取五类代表反馈，投影为视觉/音频 Cue，并提供因果判断与 JSON 导出任务 | 研究页已接入，真人/真机/多人/最终资产仍待验证 |
+| [命中反馈候选资产合同结果 V1](../research/arena-v2-weapon-feedback-asset-candidate-contract-results-v1.md) | 为五类反馈固定候选视觉、音频和低动效资产 ID，并将最终资产、设备与真人验收保留为阻塞 | 候选合同已接入，未绑定正式资产 |
 | `weapon-feedback-study.ts` / `feedback.html` | 独立展示命中确认、支撑面转移、击落、攻击被避开和路线失误五类反馈阅读任务，不进入生产构建 | 命中反馈研究页，仅研究工具链 |
 | [首发武器生产迁移门禁结果 V1](../research/arena-v2-weapon-production-migration-gate-results-v1.md) | 将六个候选拆为默认生产 Definition/注册、动作状态、Replay、地图后果和反馈表现五项独立证据 | 门禁已接入，当前 0/6 晋级 |
 | [ADR-074：首发武器必须通过五项生产迁移门禁](../decisions/074-arena-v2-weapon-production-migration-gate.md) | 固化研究原型与生产迁移的分层边界，不以综合评分替代缺失证据 | 门禁已接入 |
@@ -113,6 +114,7 @@ Arena V2 的核心目标是：
 | [ADR-076：多目标遮挡先固化观察证据，不扩张双人权威边界](../decisions/076-arena-v2-multi-target-visibility-feedback-boundary.md) | 固化多目标遮挡研究探针、目标/深度反馈语义与当前双人 MatchCore 边界 | 15 个研究结果通过，三人/网络多人仍未完成 |
 | [武器多目标视线遮挡研究原型结果 V1](../research/arena-v2-weapon-occlusion-research-prototype-results-v1.md) | 使用 5 个候选地面 Definition 的真实 targeting 参数验证近目标遮挡远目标和侧向进入的观察负担 | 15 个研究结果通过，三人/网络多人仍未完成 |
 | [ADR-102：命中反馈先用真实因果探针做独立阅读研究](../decisions/102-arena-v2-weapon-feedback-study-boundary.md) | 固化五类反馈的真实探针、Presentation Cue 和玩家判断任务边界，禁止研究页答案直接成为生产结论 | 研究工作台已接入，真人/真机/多人仍待验证 |
+| [ADR-105：命中反馈先固定候选资产合同，再绑定最终资产](../decisions/105-arena-v2-weapon-feedback-asset-candidate-contract.md) | 固定五类反馈的视觉、音频和低动效候选身份，并保留正式资产、设备与真人门禁 | 候选合同已接入，审计仍为 blocked |
 | [武器攻击/跳跃穿插 Replay 原型结果 V1](../research/arena-v2-weapon-attack-jump-interleave-replay-results-v1.md) | 使用真实 MatchCore 验证同 tick 攻击与跳跃独立通道，以及空中切换武器专属下砸动作 | 三个研究候选穿插证据已通过，仍未生产化 |
 | `arena-v2-weapon-attack-jump-interleave-replay-prototype.ts` | 为三个研究候选生成同 tick 独立通道与空中武器动作 Replay，并验证 `begin-down-smash` 状态效果 | 攻击/跳跃穿插研究证据 |
 | [武器战斗语言最小原型结果 V1](../research/arena-v2-weapon-language-prototype-results-v1.md) | 记录直线压制、封路、延迟重击、读招反制和绕后的 Rule/Targeting/Effect 最小验证与回应时间 | 扩展武器原型证据 |
