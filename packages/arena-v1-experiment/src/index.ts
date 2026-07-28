@@ -185,6 +185,7 @@ export {
 } from './arena-balance-exploration-bundle.js';
 export {
   ARENA_V2_JUMP_ROUTE_INPUTS,
+  createArenaV2JumpRouteInputForTick,
   createArenaV2JumpRoutePrototype,
   runArenaV2JumpRoutePrototype,
 } from './arena-v2-jump-route-prototype.js';
@@ -670,6 +671,7 @@ export type {
 } from './arena-v2-survivor-io-ui-evidence.js';
 export type {
   ArenaV2JumpRouteAnchor,
+  ArenaV2JumpRouteInput,
   ArenaV2JumpRouteBranchOption,
   ArenaV2JumpRouteBranchRole,
   ArenaV2JumpRouteHitRecovery,
@@ -749,6 +751,18 @@ export type {
   ArenaV2KzLanguageResponseOutcome,
   ArenaV2KzLanguageResponsePolicy,
 } from './arena-v2-kz-language-consequence-prototype.js';
+export {
+  runArenaV2KzRaceMultiplayerPrototype,
+} from './arena-v2-kz-race-multiplayer-prototype.js';
+export type {
+  ArenaV2KzRaceEvent,
+  ArenaV2KzRaceMultiplayerPrototypeResult,
+  ArenaV2KzRaceParticipantResult,
+  ArenaV2KzRaceParticipantStatus,
+  ArenaV2KzRacePhase,
+  ArenaV2KzRaceProbeResult,
+  ArenaV2KzRaceScenario,
+} from './arena-v2-kz-race-multiplayer-prototype.js';
 export {
   runArenaV2SurvivalLoopPrototype,
 } from './arena-v2-survival-loop-prototype.js';

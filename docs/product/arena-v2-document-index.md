@@ -139,6 +139,8 @@ Arena V2 的核心目标是：
 | [KZ 分叉路线 × 武器后果原型结果 V1](../research/arena-v2-kz-branch-weapon-consequence-results-v1.md) | 记录四条分叉入口/转折/出口的表面宽深、命中、击落、转移、路线失误和空放差异 | 180 个研究探针已接入，未进入生产平衡 |
 | `arena-v2-kz-multiplayer-crowding-prototype.ts` | 使用同一 Rule/Targeting/Physics 链路在四条分叉中段运行 2/3/4 人拥挤与五种武器语言，输出容量压力、多目标命中、逐目标反馈和 180 tick 重入合同 | 60 个研究探针通过，竞速胜负、网络多人、目标身份 Cue 和真人仍待验证 |
 | [KZ 多人拥挤研究原型结果 V1](../research/arena-v2-kz-multiplayer-crowding-results-v1.md) | 记录四条分叉的估算并排容量、3–4 人溢出、多目标命中和重入可读字段 | 37/60 探针出现多目标命中，未进入生产多人平衡 |
+| `arena-v2-kz-race-multiplayer-prototype.ts` | 使用共享路线输入、MovementSystem、RuleEngine 和 PhysicsWorld 运行 2/3/4 人倒计时、终点、winner、攻击和 180 tick 最近安全位置重生 | 6 个本地竞速研究探针通过，网络/真人/生产 MatchMode 仍待验证 |
+| [KZ 2–4 人竞速流程研究结果 V1](../research/arena-v2-kz-race-multiplayer-results-v1.md) | 记录无攻击终点顺序、攻击未命中/多目标命中/掉落差异和原处安全快照重生 | 2–4 人本地流程通过，未进入生产竞速 |
 | [生存 1vE 最小循环原型结果 V1](../research/arena-v2-survival-loop-prototype-results-v1.md) | 记录无武器开局、20 秒三选一、轮次成长、两次掉落和低维奖励证据 | 第一轮原型证据 |
 | `arena-v2-survival-entity-prototype.ts` | 验证单一敌人复用玩家规则/物理、敌我双方击飞和第一次复活/第二次终局，仅供开发/测试工具链使用 | 第二轮规则原型证据 |
 | `arena-v2-survival-pressure-prototype.ts` | 验证 1/2/4 同类敌人的有界自主追击、分阶段刷新、多人击飞压力、20 秒三武器供给争夺、等级专属武器 Definition 和 15/20/30 秒×两种路线分流矩阵，仅供开发/测试工具链使用 | 第六轮规则/武器原型证据 |
@@ -175,6 +177,7 @@ Arena V2 的核心目标是：
 | [ADR-099：六件逐件武器研究先绑定主战斗语言](../decisions/099-arena-v2-case-study-primary-combat-language.md) | 固化六件深研案例的一对一主战斗语言、关键数值轴存在性检查和概览读出边界 | 六件语言绑定与关键轴验证通过，仍属研究推导 |
 | [ADR-100：KZ 路线先用真实画布验证路线职责](../decisions/100-arena-v2-kz-route-canvas-study-boundary.md) | 固化 KZ 研究页的真实 Canvas、竞速/生存切换、分叉路线、攻击点和来源迁移边界 | 桌面/窄屏本地浏览器通过，2–4 人/真人/生产地图仍待验证 |
 | [ADR-103：KZ 多人拥挤先以 2–4 人真实规则/物理合同验证](../decisions/103-arena-v2-kz-multiplayer-crowding-boundary.md) | 固化四条分叉中段、2/3/4 人、五种武器语言、容量压力、多目标命中和 180 tick 重入的研究边界 | 60 个研究探针通过，真实竞速/网络/真人仍待验证 |
+| [ADR-104：KZ 竞速先以本地 2–4 人流程合同验证](../decisions/104-arena-v2-kz-race-multiplayer-contract.md) | 固化 60 tick 倒计时、终点 winner、真实攻击后果和 180 tick 最近安全位置重生的研究边界 | 6 个本地竞速探针通过，网络/真人/生产仍待验证 |
 | [ADR-085：血影钩刃动作规则与障碍后果分层验证](../decisions/085-arena-v2-blood-shadow-hook-blade-definition-boundary.md) | 固化目标朝向/拉近由真实 Rule/Replay 验证，实体障碍由独立地图探针验证，禁止把未接入规则的障碍属性写成武器数值 | 研究 Definition/Replay 已接入，障碍仍待真实地图表面验证 |
 | [ADR-086：真·哈迪斯钩镰先以承诺、上下文和支撑面后果收敛](../decisions/086-arena-v2-true-hades-hook-scythe-definition-boundary.md) | 固化地面承诺、空中独立上下文、取消/提交、命中与支撑面后果的研究边界 | 研究 Definition/Replay 已接入，未进入生产 |
 | [ADR-089：魔血镰刃先以封路、上下文和路线后果收敛](../decisions/089-arena-v2-magic-blood-scythe-definition-boundary.md) | 固化地面宽覆盖、空中高度分支、路线躲避和边缘后果；延迟危险区先保持独立研究信号 | 研究 Definition/Replay 已接入，未进入生产 |

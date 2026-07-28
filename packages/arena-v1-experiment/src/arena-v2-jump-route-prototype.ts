@@ -73,6 +73,13 @@ export interface ArenaV2JumpRouteAnchor {
   readonly z: number;
 }
 
+export interface ArenaV2JumpRouteInput {
+  readonly moveX: number;
+  readonly moveZ: number;
+  readonly jumpPressed: boolean;
+  readonly jumpHeld: boolean;
+}
+
 export interface ArenaV2JumpRouteSegmentArrival {
   readonly segmentId: string;
   readonly surfaceId: string;
@@ -399,7 +406,10 @@ function directionToTarget(
   return { moveX: deltaX / distance, moveZ: deltaZ / distance };
 }
 
-function routeInputForTick(position: ArenaV2JumpRouteAnchor, grounded: boolean) {
+export function createArenaV2JumpRouteInputForTick(
+  position: ArenaV2JumpRouteAnchor,
+  grounded: boolean,
+): ArenaV2JumpRouteInput {
   const targets: readonly ArenaV2JumpRouteAnchor[] = [
     routeAnchor('anchor-platform-end'),
     routeAnchor('anchor-gap-end'),
@@ -478,7 +488,7 @@ export function runArenaV2JumpRoutePrototype(): ArenaV2JumpRouteSimulationResult
   try {
     for (let tick = 0; tick < maximumTicks; tick += 1) {
       const before = physics.getCharacterState(participantId);
-      const input = routeInputForTick(before.position, before.grounded);
+      const input = createArenaV2JumpRouteInputForTick(before.position, before.grounded);
       movement.prepareTick({
         tick,
         contacts: [{ participantId, grounded: before.grounded }],
