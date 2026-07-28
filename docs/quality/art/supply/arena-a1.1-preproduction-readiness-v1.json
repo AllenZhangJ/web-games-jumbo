@@ -1,0 +1,236 @@
+{
+  "schemaVersion": 1,
+  "id": "arena.art.supply-preproduction-readiness.a1.1.v1",
+  "status": "preproduction-readiness-candidate",
+  "baselineCommit": "21948d43f00140036699c8ff2d7fe5e71723dedd",
+  "reviewedAt": "2026-07-28",
+  "scope": "source-rights-and-measurement-plan-only-no-specimen-or-runtime",
+  "upstream": {
+    "a1_0ContractPath": "docs/quality/art/supply/arena-a1.0-supply-presentation-contract-v1.json",
+    "a1_0ContractSha256": "719e68766a03c82d76ef1eb49eeab29bc5045c57dad450032f96db26f410ed1e",
+    "a1_0Status": "contract-ready",
+    "a0_3QualifiedHumanParticipants": 0,
+    "activeLifecycleProjectionAvailable": false
+  },
+  "repositoryAudits": [
+    {"path": "governance/formal-assets/arena-stage7-formal-assets-v1.json", "byteLength": 6893, "sha256": "68a79e95e8920e2b98df8bad3a4b44d22f3dc7f17b53acd5ed8398e426c5b0bf"},
+    {"path": "governance/third-party/arena-runtime-assets-v1.json", "byteLength": 4580, "sha256": "73916959ae685ae7ebea359cb618b6b5edf265a4a8f4b7ebb5e4600943261d76"},
+    {"path": "docs/quality/art/silhouette/arena-a0.3-silhouette-render-manifest-v1.json", "byteLength": 257391, "sha256": "1b85c5442fbb08c3ff7e8d82538d0f6fdc2cb17dad06c3a279d4b7e1350805c7"},
+    {"path": "docs/quality/art/reference-sources/project-ui-wireframes/ui-source-visual-manifest-v1.json", "byteLength": 4088, "sha256": "ace4813c8036a8ed13d1182f91bcad6f44df12002c4ec990f7ff7a12512e9109"}
+  ],
+  "equipmentInputAudit": [
+    {
+      "id": "a11-equipment-shield-round-glb",
+      "category": "formal-round-shield-model",
+      "artifact": {"path": "public/assets/arena/equipment/kaykit-adventurers/shield-round.glb", "byteLength": 13084, "sha256": "a61bcd83ccac9bc8596bf09894867ca491487d7a4b0662bb64dca2d1b19e790d"},
+      "sourceRevision": "672074b73ba276876a19e8816ecdc5241817ab47",
+      "license": {"id": "CC0-1.0", "rightsHolder": "KayKit Game Assets / Kay Lousberg", "proofArtifact": {"path": "governance/third-party/proofs/kaykit-adventurers-source.txt", "byteLength": 380, "sha256": "0f60d3f9f0beab6e131bf7b1b118d8d1930dff05f9c1d31cc4141ff19dcb4923"}, "textArtifact": {"path": "licenses/kaykit-adventurers-CC0-LICENSE.txt", "byteLength": 891, "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629"}, "commercialUseAllowed": true, "modificationAllowed": true, "redistributionAllowed": true, "attribution": "not-required"},
+      "existingMaturity": "verified-intake-only",
+      "a1_1Disposition": "representative-equipment-input-candidate",
+      "usableDirection": "round shield mass, rim, boss and held-equipment silhouette only",
+      "forbiddenUse": "does not prove supply icon, pickup marker, final attachment pose, runtime lifecycle or Blockout",
+      "a1_1Approved": false
+    },
+    {
+      "id": "a11-equipment-shield-texture",
+      "category": "formal-round-shield-texture-dependency",
+      "artifact": {"path": "public/assets/arena/equipment/kaykit-adventurers/shield_texture.png", "byteLength": 14172, "sha256": "5d250ccc5da020e6126bfa3839f83bd9a465a951ed223e4d13c08b1925e154d4"},
+      "sourceRevision": "672074b73ba276876a19e8816ecdc5241817ab47",
+      "license": {"id": "CC0-1.0", "rightsHolder": "KayKit Game Assets / Kay Lousberg", "proofArtifact": {"path": "governance/third-party/proofs/kaykit-adventurers-source.txt", "byteLength": 380, "sha256": "0f60d3f9f0beab6e131bf7b1b118d8d1930dff05f9c1d31cc4141ff19dcb4923"}, "textArtifact": {"path": "licenses/kaykit-adventurers-CC0-LICENSE.txt", "byteLength": 891, "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629"}, "commercialUseAllowed": true, "modificationAllowed": true, "redistributionAllowed": true, "attribution": "not-required"},
+      "existingMaturity": "verified-intake-only-dependency",
+      "a1_1Disposition": "supporting-material-candidate-not-icon",
+      "usableDirection": "only material support for the audited shield model",
+      "forbiddenUse": "a UV texture is not an equipment silhouette, icon or supply marker",
+      "a1_1Approved": false
+    },
+    {
+      "id": "a11-equipment-a03-shield-silhouette",
+      "category": "diagnostic-silhouette-evidence",
+      "artifact": {"path": "docs/quality/art/silhouette/arena.asset.character.parkour-apprentice.kaykit-rogue.v1/arena.asset.character.parkour-apprentice.kaykit-rogue.v1__shield__front__d05__390x844@2x.png", "byteLength": 6912, "sha256": "020ca9fc6a3e6719aebf21fe5971071c3c241ccc4ade3bebb590f8648bf34029"},
+      "sourceRevision": "A0.3 deterministic-render-manifest-v1",
+      "license": {"id": "PROJECT-DIAGNOSTIC-DERIVATIVE-OF-CC0", "rightsHolder": "Arena project plus KayKit CC0 source", "proofArtifact": {"path": "governance/third-party/proofs/kaykit-adventurers-source.txt", "byteLength": 380, "sha256": "0f60d3f9f0beab6e131bf7b1b118d8d1930dff05f9c1d31cc4141ff19dcb4923"}, "textArtifact": {"path": "licenses/kaykit-adventurers-CC0-LICENSE.txt", "byteLength": 891, "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629"}, "commercialUseAllowed": true, "modificationAllowed": true, "redistributionAllowed": true, "attribution": "not-required"},
+      "existingMaturity": "diagnostic-evidence-only",
+      "a1_1Disposition": "audit-reference-only",
+      "usableDirection": "inspect whether the round shield remains legible at the frozen A0.3 mobile camera",
+      "forbiddenUse": "must not ship, become a supply icon, count as a representative asset or claim A0.3 human passage",
+      "a1_1Approved": false
+    },
+    {
+      "id": "a11-equipment-ui-wireframes",
+      "category": "programmatic-contract-wireframes",
+      "artifact": {"path": "docs/quality/art/reference-sources/project-ui-wireframes/ui-source-visual-manifest-v1.json", "byteLength": 4088, "sha256": "ace4813c8036a8ed13d1182f91bcad6f44df12002c4ec990f7ff7a12512e9109"},
+      "sourceRevision": "arena-a0.2.1-project-ui-wireframes.v1",
+      "license": {"id": "PROJECT-ORIGINAL-INTERNAL", "rightsHolder": "Arena project", "proofArtifact": {"path": "docs/quality/art/reference-sources/project-ui-wireframes/ui-source-visual-manifest-v1.json", "byteLength": 4088, "sha256": "ace4813c8036a8ed13d1182f91bcad6f44df12002c4ec990f7ff7a12512e9109"}, "textArtifact": {"path": "docs/quality/art/reference-sources/project-ui-wireframes/ui-source-visual-manifest-v1.json", "byteLength": 4088, "sha256": "ace4813c8036a8ed13d1182f91bcad6f44df12002c4ec990f7ff7a12512e9109"}, "commercialUseAllowed": true, "modificationAllowed": true, "redistributionAllowed": false, "attribution": "internal-only"},
+      "existingMaturity": "reference-contract-only",
+      "a1_1Disposition": "research-only",
+      "usableDirection": "layout responsibility audit only",
+      "forbiddenUse": "programmatic wireframes are not production equipment icons or representative sample UI",
+      "a1_1Approved": false
+    }
+  ],
+  "missingEquipmentInputs": [
+    {"id": "supply-equipment-icon-set", "required": true, "bytesPresent": false, "hashRecorded": false, "status": "missing-not-approved", "minimumCloseAction": "author or legally acquire distinct supply equipment silhouettes/icons, then record source, license, bytes and coordinator approval"}
+  ],
+  "temporarySourceCandidates": [
+    {
+      "id": "a11-vfx-supply-spawn",
+      "domain": "vfx",
+      "sourceKind": "project-clean-room-to-be-authored",
+      "creator": "unassigned",
+      "sourceLocator": "none-no-bytes-acquired",
+      "sourceRevision": "none",
+      "artifact": null,
+      "license": {"id": "PROJECT-RIGHTS-PENDING-AUTHORSHIP", "rightsHolder": "unassigned", "proofArtifact": null, "textArtifact": null, "commercialUseAllowed": false, "modificationAllowed": false, "redistributionAllowed": false, "attribution": "unresolved"},
+      "status": "research-candidate",
+      "allowedUse": "contract discussion only before authorship and rights intake",
+      "prohibitedUse": "no generation, download, runtime integration, representative sample or production claim",
+      "withdrawalPoint": "remove ledger entry before any authored bytes exist",
+      "a1_1Approved": false
+    },
+    {
+      "id": "a11-vfx-supply-replace",
+      "domain": "vfx",
+      "sourceKind": "project-clean-room-to-be-authored",
+      "creator": "unassigned",
+      "sourceLocator": "none-no-bytes-acquired",
+      "sourceRevision": "none",
+      "artifact": null,
+      "license": {"id": "PROJECT-RIGHTS-PENDING-AUTHORSHIP", "rightsHolder": "unassigned", "proofArtifact": null, "textArtifact": null, "commercialUseAllowed": false, "modificationAllowed": false, "redistributionAllowed": false, "attribution": "unresolved"},
+      "status": "research-candidate",
+      "allowedUse": "contract discussion only before authorship and rights intake",
+      "prohibitedUse": "no generation, download, runtime integration, representative sample or production claim",
+      "withdrawalPoint": "remove ledger entry before any authored bytes exist",
+      "a1_1Approved": false
+    },
+    {
+      "id": "a11-vfx-supply-expire",
+      "domain": "vfx",
+      "sourceKind": "project-clean-room-to-be-authored",
+      "creator": "unassigned",
+      "sourceLocator": "none-no-bytes-acquired",
+      "sourceRevision": "none",
+      "artifact": null,
+      "license": {"id": "PROJECT-RIGHTS-PENDING-AUTHORSHIP", "rightsHolder": "unassigned", "proofArtifact": null, "textArtifact": null, "commercialUseAllowed": false, "modificationAllowed": false, "redistributionAllowed": false, "attribution": "unresolved"},
+      "status": "research-candidate",
+      "allowedUse": "contract discussion only before authorship and rights intake",
+      "prohibitedUse": "no generation, download, runtime integration, representative sample or production claim",
+      "withdrawalPoint": "remove ledger entry before any authored bytes exist",
+      "a1_1Approved": false
+    },
+    {
+      "id": "a11-audio-kenney-base-push",
+      "domain": "audio",
+      "sourceKind": "existing-audited-third-party-byte",
+      "creator": "Kenney",
+      "sourceLocator": "https://www.kenney.nl/assets/impact-sounds",
+      "sourceRevision": "upstream-version-1.0+zip-sha256-029d734af1582474edf3a694d1b0cebc97c1c152f2f39fa34d4c2bafc5de77f8",
+      "artifact": {"path": "public/assets/arena/audio/kenney-impact-sounds/base-push.ogg", "byteLength": 8800, "sha256": "486988aa2d6440ffc4c62a0e8ccf3c23673ba84424bd4723378d451b7255eb5c"},
+      "license": {"id": "CC0-1.0", "rightsHolder": "Kenney", "proofArtifact": {"path": "governance/third-party/proofs/kenney-impact-sounds-source.txt", "byteLength": 375, "sha256": "74f8d5796e067f689269ec7f77f4ebfa523bab0fe15d3d5f7ab909c8921585ec"}, "textArtifact": {"path": "licenses/kenney-impact-sounds-CC0-LICENSE.txt", "byteLength": 448, "sha256": "d66be41e71d4f284733729d7edb2cbbb65811b8b9603c8640b0ca0f687ba0c7c"}, "commercialUseAllowed": true, "modificationAllowed": true, "redistributionAllowed": true, "attribution": "not-required"},
+      "status": "source-byte-candidate",
+      "allowedUse": "offline semantic audition after A1.1 coordinator approval",
+      "prohibitedUse": "must not be relabelled as approved supply audio, integrated, shipped or replace its current HitResolved purpose",
+      "withdrawalPoint": "remove candidate reference without deleting the existing formal HitResolved asset",
+      "a1_1Approved": false
+    },
+    {
+      "id": "a11-audio-kenney-chain-pull",
+      "domain": "audio",
+      "sourceKind": "existing-audited-third-party-byte",
+      "creator": "Kenney",
+      "sourceLocator": "https://www.kenney.nl/assets/impact-sounds",
+      "sourceRevision": "upstream-version-1.0+zip-sha256-029d734af1582474edf3a694d1b0cebc97c1c152f2f39fa34d4c2bafc5de77f8",
+      "artifact": {"path": "public/assets/arena/audio/kenney-impact-sounds/chain-pull.ogg", "byteLength": 7651, "sha256": "33b5e6e37c6e9d54e07bf5a89b12c76e879f40c1ea83cdd82714df1d6f9fec6d"},
+      "license": {"id": "CC0-1.0", "rightsHolder": "Kenney", "proofArtifact": {"path": "governance/third-party/proofs/kenney-impact-sounds-source.txt", "byteLength": 375, "sha256": "74f8d5796e067f689269ec7f77f4ebfa523bab0fe15d3d5f7ab909c8921585ec"}, "textArtifact": {"path": "licenses/kenney-impact-sounds-CC0-LICENSE.txt", "byteLength": 448, "sha256": "d66be41e71d4f284733729d7edb2cbbb65811b8b9603c8640b0ca0f687ba0c7c"}, "commercialUseAllowed": true, "modificationAllowed": true, "redistributionAllowed": true, "attribution": "not-required"},
+      "status": "source-byte-candidate",
+      "allowedUse": "offline semantic audition after A1.1 coordinator approval",
+      "prohibitedUse": "must not be relabelled as approved supply audio, integrated, shipped or replace its current HitResolved purpose",
+      "withdrawalPoint": "remove candidate reference without deleting the existing formal HitResolved asset",
+      "a1_1Approved": false
+    },
+    {
+      "id": "a11-audio-kenney-hammer-smash",
+      "domain": "audio",
+      "sourceKind": "existing-audited-third-party-byte",
+      "creator": "Kenney",
+      "sourceLocator": "https://www.kenney.nl/assets/impact-sounds",
+      "sourceRevision": "upstream-version-1.0+zip-sha256-029d734af1582474edf3a694d1b0cebc97c1c152f2f39fa34d4c2bafc5de77f8",
+      "artifact": {"path": "public/assets/arena/audio/kenney-impact-sounds/hammer-smash.ogg", "byteLength": 6110, "sha256": "e07045693e4a2b3d165c424e3dab4c781d9ff8880a386880ac89a51315d7f831"},
+      "license": {"id": "CC0-1.0", "rightsHolder": "Kenney", "proofArtifact": {"path": "governance/third-party/proofs/kenney-impact-sounds-source.txt", "byteLength": 375, "sha256": "74f8d5796e067f689269ec7f77f4ebfa523bab0fe15d3d5f7ab909c8921585ec"}, "textArtifact": {"path": "licenses/kenney-impact-sounds-CC0-LICENSE.txt", "byteLength": 448, "sha256": "d66be41e71d4f284733729d7edb2cbbb65811b8b9603c8640b0ca0f687ba0c7c"}, "commercialUseAllowed": true, "modificationAllowed": true, "redistributionAllowed": true, "attribution": "not-required"},
+      "status": "source-byte-candidate",
+      "allowedUse": "offline semantic audition after A1.1 coordinator approval",
+      "prohibitedUse": "must not be relabelled as approved supply audio, integrated, shipped or replace its current HitResolved purpose",
+      "withdrawalPoint": "remove candidate reference without deleting the existing formal HitResolved asset",
+      "a1_1Approved": false
+    },
+    {
+      "id": "a11-audio-kenney-shield-charge",
+      "domain": "audio",
+      "sourceKind": "existing-audited-third-party-byte",
+      "creator": "Kenney",
+      "sourceLocator": "https://www.kenney.nl/assets/impact-sounds",
+      "sourceRevision": "upstream-version-1.0+zip-sha256-029d734af1582474edf3a694d1b0cebc97c1c152f2f39fa34d4c2bafc5de77f8",
+      "artifact": {"path": "public/assets/arena/audio/kenney-impact-sounds/shield-charge.ogg", "byteLength": 10032, "sha256": "112d4f93ddcc370b410630f971c0f5d991856102da9c76bc5c5540d388e75aaa"},
+      "license": {"id": "CC0-1.0", "rightsHolder": "Kenney", "proofArtifact": {"path": "governance/third-party/proofs/kenney-impact-sounds-source.txt", "byteLength": 375, "sha256": "74f8d5796e067f689269ec7f77f4ebfa523bab0fe15d3d5f7ab909c8921585ec"}, "textArtifact": {"path": "licenses/kenney-impact-sounds-CC0-LICENSE.txt", "byteLength": 448, "sha256": "d66be41e71d4f284733729d7edb2cbbb65811b8b9603c8640b0ca0f687ba0c7c"}, "commercialUseAllowed": true, "modificationAllowed": true, "redistributionAllowed": true, "attribution": "not-required"},
+      "status": "source-byte-candidate",
+      "allowedUse": "offline semantic audition after A1.1 coordinator approval",
+      "prohibitedUse": "must not be relabelled as approved supply audio, integrated, shipped or replace its current HitResolved purpose",
+      "withdrawalPoint": "remove candidate reference without deleting the existing formal HitResolved asset",
+      "a1_1Approved": false
+    }
+  ],
+  "measurementPlan": {
+    "status": "plan-candidate-not-approved-not-measured",
+    "preStartPlanApproved": false,
+    "postSpecimenMeasuredEvidencePresent": false,
+    "viewports": [
+      {"id": "desktop", "cssWidth": 1440, "cssHeight": 900, "devicePixelRatio": 1, "captureKind": "deterministic-browser-harness", "deviceGap": "browser and GPU identity must be recorded when harness exists"},
+      {"id": "mobile-390x844", "cssWidth": 390, "cssHeight": 844, "devicePixelRatio": 1, "captureKind": "deterministic-browser-harness", "deviceGap": "emulation is not real iOS or Android device evidence"}
+    ],
+    "timing": {"fixedHz": 60, "requiredPresentationFps": 30, "warmupTicks": 300, "sampleTicks": 1800, "terminalOffsets": [599, 600, 601], "repetitions": 3, "wallClockAuthorityForbidden": true},
+    "budgets": {"activeMarkers": 3, "desktopParticles": 72, "mobileParticles": 36, "additiveLayers": 1, "distortionPasses": 0, "simultaneousSupplyVoices": 4, "countdownLoops": 0, "desktopAverageOverdrawMultiple": 4, "desktopPeakOverdrawMultiple": 8, "mobileAverageOverdrawMultiple": 2, "mobilePeakOverdrawMultiple": 4, "p95FrameMilliseconds": 33.33, "supplyGpuDeltaMilliseconds": 2, "heapGrowthAcrossTwentyCyclesBytes": 1048576, "postDestroyOwnedResources": 0},
+    "captures": [
+      {"id": "terminal-30fps", "window": "599/600/601 at 30 FPS for all three supply entities", "method": "frame-indexed screenshot plus authority tick/eventSequence log", "pass": "599 visible and eligible; 600 absent and ineligible; 601 no duplicate cue"},
+      {"id": "gpu-and-frame", "window": "10 seconds containing one spawn, one pickup-or-replacement and one expiry fixture", "method": "browser GPU/frame trace with renderer and adapter marks", "pass": "p95 frame and supply GPU delta stay within fixed budgets"},
+      {"id": "overdraw", "window": "peak three-marker overlap and each one-shot peak", "method": "overdraw visualization capture plus pixel-area calculation", "pass": "desktop and mobile average/peak multiples stay within fixed budgets"},
+      {"id": "memory", "window": "20 fixture cycles then five seconds settled", "method": "heap/resource counters before, peak, settled and after destroy", "pass": "growth stays within budget and owned resources reach zero"},
+      {"id": "voice", "window": "same-tick maximum spawn/replacement/expiry cue pressure", "method": "audio bus voice ledger", "pass": "at most four supply one-shots and zero countdown loops"},
+      {"id": "pause-resume", "window": "pause for five wall-clock seconds between authority ticks", "method": "tick/event/cue/resource ledger", "pass": "no authority progress, new cue or particle during pause; resume does not catch-up replay one-shots"},
+      {"id": "destroy-twice", "window": "after active three-marker peak", "method": "call destroy twice and record owned resources/listeners/voices", "pass": "both calls are safe and every owned count is zero"}
+    ],
+    "evidenceBoundary": "this approved-plan candidate is a start input only; all traces, screenshots and measured values must be created after a representative specimen exists and belong to its separate pass gate",
+    "missingExecutionInputs": ["capture harness implementation", "approved browser and GPU identity", "real iOS device", "real Android device", "readonly active lifecycle projection", "A0.3 ten-person human approval", "A1.1 coordinator approval"]
+  },
+  "hardGates": {
+    "a1_1CoordinatorSignOff": false,
+    "equipmentInputApproved": false,
+    "temporaryVfxSourcesApproved": false,
+    "temporaryAudioSourcesApproved": false,
+    "capturePlanApproved": false,
+    "a0_3Passed": false,
+    "activeLifecycleProjectionAvailable": false,
+    "a1RepresentativeSpecimenStarted": false,
+    "a1Passed": false,
+    "blockoutAllowed": false,
+    "productionVfxIntegrated": false,
+    "productionAudioIntegrated": false,
+    "deviceVerified": false,
+    "humanVerified": false,
+    "finalPassed": false
+  },
+  "score": {
+    "basis": "A1.1 preproduction source audit and measurement-plan contract only; no source approval, specimen, runtime, device or human maturity",
+    "total": 92,
+    "maximum": 100,
+    "hardGatePassed": false,
+    "dimensions": [
+      {"id": "repository-asset-truth", "score": 19, "maximum": 20},
+      {"id": "rights-and-withdrawal", "score": 18, "maximum": 20},
+      {"id": "vfx-audio-candidate-honesty", "score": 17, "maximum": 20},
+      {"id": "measurement-repeatability", "score": 19, "maximum": 20},
+      {"id": "fail-closed-governance", "score": 19, "maximum": 20}
+    ],
+    "maturity": {"asset": 10, "device": 0, "human": 0, "runtime": 0, "maximumEach": 100}
+  },
+  "missingMandatorySkillReferences": ["docs/collaboration-protocol.md", "docs/game-design-theory.md"],
+  "rollback": "remove this ledger, its checker/probes and the A1.1 markdown/index references; preserve A1.0, formal assets, licenses, A0.3 evidence and parallel P1 files"
+}
