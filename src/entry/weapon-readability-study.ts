@@ -194,7 +194,7 @@ function renderLearningPath(
 function renderWeaponSummary(
   documentValue: Document,
   row: ArenaV2WeaponResearchOverviewRow,
-  learningPath: readonly ArenaV2WeaponCaseStudyLearningStep[],
+  caseStudyRow: ArenaV2WeaponCaseStudyOverviewRow,
 ): HTMLElement {
   const article = documentValue.createElement('article');
   article.className = 'readability-overview-card';
@@ -205,6 +205,18 @@ function renderWeaponSummary(
   verb.className = 'readability-overview-verb';
   text(verb, `${row.coreVerb} · ${row.hitResult}`);
   article.append(verb);
+  const language = documentValue.createElement('p');
+  language.className = 'readability-overview-language';
+  language.dataset.weaponLanguage = caseStudyRow.functionLanguage.functionLanguageId;
+  text(language, `战斗语言：${caseStudyRow.functionLanguage.languageLabel}`);
+  article.append(language);
+  const signatureAxes = documentValue.createElement('p');
+  signatureAxes.className = 'readability-overview-signature-axes';
+  text(
+    signatureAxes,
+    `关键数值：${caseStudyRow.functionLanguage.signatureAxes.map(({ label }) => label).join('、')}`,
+  );
+  article.append(signatureAxes);
   const quickStats = documentValue.createElement('div');
   quickStats.className = 'readability-overview-quick-stats';
   quickStats.setAttribute('aria-label', '核心数值摘要');
@@ -212,7 +224,7 @@ function renderWeaponSummary(
     quickStats.append(renderQuickStat(documentValue, row, spec));
   }
   article.append(quickStats);
-  article.append(renderLearningPath(documentValue, learningPath));
+  article.append(renderLearningPath(documentValue, caseStudyRow.learningPath));
   const map = documentValue.createElement('p');
   text(map, `适合：${row.mapSpaces.join(' / ')}`);
   article.append(map);
@@ -341,7 +353,7 @@ function renderOverview(
   for (const row of matrix.rows) {
     const caseStudyRow = caseStudyRows.find(({ referenceId }) => referenceId === row.candidateId);
     if (!caseStudyRow) throw new Error(`研究概览缺少学习路径：${row.candidateId}`);
-    summary.append(renderWeaponSummary(documentValue, row, caseStudyRow.learningPath));
+    summary.append(renderWeaponSummary(documentValue, row, caseStudyRow));
   }
   overview.append(summary);
   overview.append(renderContextFacts(documentValue, createArenaV2WeaponReadabilityContextFacts(matrix)));

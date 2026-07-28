@@ -343,6 +343,16 @@ export type {
   ArenaV2WeaponCaseStudyNumericReadout,
   ArenaV2WeaponCaseStudyOverviewRow,
 } from './arena-v2-weapon-case-study-overview-prototype.js';
+export {
+  ARENA_V2_WEAPON_CASE_STUDY_LANGUAGE_BINDINGS,
+  createArenaV2WeaponCaseStudyLanguageBinding,
+  createArenaV2WeaponCaseStudyLanguageBindings,
+} from './arena-v2-weapon-case-study-language.js';
+export type {
+  ArenaV2WeaponCaseStudyLanguageBinding,
+  ArenaV2WeaponCaseStudyLanguageBindingInput,
+  ArenaV2WeaponCaseStudySignatureAxis,
+} from './arena-v2-weapon-case-study-language.js';
 export { runArenaV2WeaponHookObstructionPrototype } from './arena-v2-weapon-hook-obstruction-prototype.js';
 export type {
   ArenaV2WeaponHookObstructionPoint,

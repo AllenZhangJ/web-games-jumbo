@@ -23,6 +23,7 @@ const moves: readonly ArenaV2WeaponCaseStudyMove[] = [
     numericReview: Object.freeze([
       numeric(ARENA_V2_WEAPON_PUBLIC_AXIS_ID.RANGE, '点射首先依赖有效距离，必须与近战武器直接可比较。', 'must-measure'),
       numeric(ARENA_V2_WEAPON_PUBLIC_AXIS_ID.STARTUP, '出手速度决定对手能否在看到枪口后改变落点。', 'must-measure'),
+      numeric(ARENA_V2_WEAPON_PUBLIC_AXIS_ID.IMPACT, '点射不是只造成视觉压力，横向击飞决定它能否把对手从火线或边缘推开。', 'must-measure'),
       numeric(ARENA_V2_WEAPON_PUBLIC_AXIS_ID.RECOVERY, '点射后的恢复决定贴身反制是否成立。', 'must-measure'),
       numeric(ARENA_V2_WEAPON_PUBLIC_AXIS_ID.COOLDOWN, '连续点射间隔是资源和覆盖之间的约束。', 'must-measure'),
     ]),

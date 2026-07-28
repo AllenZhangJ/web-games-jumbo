@@ -116,6 +116,36 @@ describe('Arena V2 weapon case-study overview', () => {
     expect(mammoth?.numericProjection?.comparisonWeaponIds).toContain('research-mammoth-stone-axe');
   });
 
+  it('binds every deep study to one distinct primary combat language and its signature axes', () => {
+    const overview = createArenaV2WeaponCaseStudyOverview();
+    expect(overview.rows.map(({ functionLanguage }) => functionLanguage.languageLabel)).toEqual([
+      '封路',
+      '换位',
+      '直线压制',
+      '绕后',
+      '读招反制',
+      '延迟重击',
+    ]);
+    expect(new Set(overview.rows.map(({ functionLanguage }) => functionLanguage.functionLanguageId)).size)
+      .toBe(6);
+    expect(overview.rows.every(({ functionLanguage, axisAudit }) => (
+      functionLanguage.signatureAxisIds.length >= 3
+      && functionLanguage.bindingReason.length > 10
+      && functionLanguage.signatureAxisIds.every((axisId) => (
+        axisAudit.some(({ axisId: auditedAxisId }) => auditedAxisId === axisId)
+      ))
+      && functionLanguage.counterplay.length > 0
+      && functionLanguage.mapSpaces.length > 0
+    ))).toBe(true);
+    const guns = overview.rows.find(({ referenceId }) => referenceId === 'white-platinum-dual-guns');
+    expect(guns?.functionLanguage.signatureAxisIds).toEqual(expect.arrayContaining([
+      ARENA_V2_WEAPON_PUBLIC_AXIS_ID.RANGE,
+      ARENA_V2_WEAPON_PUBLIC_AXIS_ID.COVERAGE,
+    ]));
+    expect(Object.isFrozen(guns?.functionLanguage)).toBe(true);
+    expect(Object.isFrozen(guns?.functionLanguage.signatureAxisIds)).toBe(true);
+  });
+
   it('is deterministic and deeply freezes the research readout', () => {
     const first = createArenaV2WeaponCaseStudyOverview();
     expect(first).toEqual(createArenaV2WeaponCaseStudyOverview());

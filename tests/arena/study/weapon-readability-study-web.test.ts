@@ -28,6 +28,8 @@ test('weapon readability study page stays separate from the production product e
   assert.match(entry, /createArenaV2WeaponReadabilityContextFacts/);
   assert.match(entry, /readability-context-facts/);
   assert.match(entry, /createArenaV2WeaponCaseStudyOverview/);
+  assert.match(entry, /readability-overview-language/);
+  assert.match(entry, /readability-overview-signature-axes/);
   assert.match(entry, /readability-learning-path/);
   assert.match(entry, /readability-overview-table/);
   assert.match(entry, /readability-research-signal-table/);

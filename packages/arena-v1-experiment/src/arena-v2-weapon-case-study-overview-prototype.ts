@@ -45,6 +45,10 @@ import {
   createArenaV2WeaponResearchOverviewContexts,
   type ArenaV2WeaponResearchOverviewContext,
 } from './arena-v2-weapon-research-overview-prototype.js';
+import {
+  createArenaV2WeaponCaseStudyLanguageBindings,
+  type ArenaV2WeaponCaseStudyLanguageBinding,
+} from './arena-v2-weapon-case-study-language.js';
 import type { ArenaV2WeaponCaseStudy } from './arena-v2-weapon-case-study-contract.js';
 
 export type ArenaV2WeaponCaseStudyOverviewAxisStatus = 'must-measure' | 'research-only';
@@ -104,6 +108,7 @@ export interface ArenaV2WeaponCaseStudyOverviewRow {
   readonly researchOnlyAxisIds: readonly ArenaV2WeaponPublicAxisId[];
   readonly mapSignals: readonly string[];
   readonly counterplay: readonly string[];
+  readonly functionLanguage: ArenaV2WeaponCaseStudyLanguageBinding;
   readonly learningPath: readonly ArenaV2WeaponCaseStudyLearningStep[];
   /** Distinguishes a real research Definition projection from a narrative-only case study. */
   readonly numericReadout: ArenaV2WeaponCaseStudyNumericReadout;
@@ -128,6 +133,9 @@ const CASE_STUDIES: readonly ArenaV2WeaponCaseStudy[] = Object.freeze([
 
 const AXIS_DEFINITION_BY_ID = new Map(
   ARENA_V2_WEAPON_PUBLIC_AXIS_DEFINITIONS.map((definition) => [definition.id, definition]),
+);
+const LANGUAGE_BINDING_BY_REFERENCE_ID = new Map(
+  createArenaV2WeaponCaseStudyLanguageBindings().map((binding) => [binding.referenceId, binding]),
 );
 
 function unique<T>(values: readonly T[]): readonly T[] {
@@ -316,6 +324,14 @@ function createNumericProjection(
 
 function createRow(study: ArenaV2WeaponCaseStudy): ArenaV2WeaponCaseStudyOverviewRow {
   const axisAudit = createAxisAudit(study);
+  const functionLanguage = LANGUAGE_BINDING_BY_REFERENCE_ID.get(study.referenceId);
+  if (!functionLanguage) throw new RangeError(`逐件研究案例缺少主战斗语言：${study.referenceId}`);
+  const auditedAxisIds = new Set(axisAudit.map(({ axisId }) => axisId));
+  for (const axisId of functionLanguage.signatureAxisIds) {
+    if (!auditedAxisIds.has(axisId)) {
+      throw new RangeError(`逐件研究案例缺少战斗语言公开轴：${study.referenceId}/${axisId}`);
+    }
+  }
   const numericProjection = createNumericProjection(study.referenceId);
   const numericReadout: ArenaV2WeaponCaseStudyNumericReadout = numericProjection === null
     ? 'not-yet-available'
@@ -340,6 +356,7 @@ function createRow(study: ArenaV2WeaponCaseStudy): ArenaV2WeaponCaseStudyOvervie
     researchOnlyAxisIds,
     mapSignals: unique(study.designReasons),
     counterplay: unique(study.moves.map(({ counterplay }) => counterplay)),
+    functionLanguage,
     learningPath: createLearningPath(study),
     numericReadout,
     numericProjection,
