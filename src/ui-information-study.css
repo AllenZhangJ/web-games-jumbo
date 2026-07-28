@@ -33,6 +33,7 @@ button { font: inherit; }
 .ui-study-summary,
 .ui-study-workbench,
 .ui-flow-section,
+.ui-goal-section,
 .ui-study-footer {
   background: var(--ui-paper);
   border: 1px solid var(--ui-line);
@@ -98,6 +99,25 @@ button { font: inherit; }
 .ui-flow-preview ol { display: flex; flex-wrap: wrap; gap: 0.45rem 1.8rem; margin: 0; padding-left: 1.5rem; }
 .ui-flow-preview li { padding: 0.35rem 0; }
 .ui-flow-result { margin-top: 0.9rem; color: var(--ui-green); font-weight: 800; }
+.ui-goal-section { margin-top: 1rem; padding: 1.25rem; }
+.ui-next-goal-nav { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.65rem; margin-top: 1rem; }
+.ui-next-goal-nav button {
+  min-height: 48px;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--ui-line);
+  background: #faf8f2;
+  color: var(--ui-ink);
+  cursor: pointer;
+}
+.ui-next-goal-nav button:hover,
+.ui-next-goal-nav button:focus-visible { border-color: var(--ui-cyan); outline: 0.15rem solid rgb(43 157 161 / 18%); }
+.ui-next-goal-nav button[aria-pressed="true"] { border-color: var(--ui-cyan); background: #e8f5f3; font-weight: 800; }
+.ui-next-goal-preview { margin-top: 0.9rem; padding: 1rem; border: 1px solid var(--ui-line); background: #faf8f2; }
+.ui-next-goal-preview h3 { margin: 0; font-size: clamp(1.15rem, 3vw, 1.7rem); }
+.ui-next-goal-reason { color: var(--ui-muted); line-height: 1.5; }
+.ui-next-goal-progress { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.8rem; align-items: center; }
+.ui-next-goal-progress progress { width: 100%; height: 0.8rem; accent-color: var(--ui-cyan); }
+.ui-next-goal-action { display: inline-block; margin-top: 0.9rem; padding: 0.7rem 0.9rem; background: var(--ui-night); color: white; font-weight: 800; }
 .ui-study-footer { margin-top: 1rem; padding: 1rem 1.25rem; color: var(--ui-muted); font-size: 0.82rem; line-height: 1.55; }
 
 @media (max-width: 760px) {
@@ -111,9 +131,11 @@ button { font: inherit; }
   .ui-section-heading { display: block; }
   .ui-section-heading > p { margin-top: 0.7rem; }
   .ui-flow-nav { grid-template-columns: repeat(2, 1fr); }
+  .ui-next-goal-nav { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 420px) {
   .ui-page-nav { grid-template-columns: 1fr; }
   .ui-flow-nav { grid-template-columns: 1fr; }
+  .ui-next-goal-nav { grid-template-columns: 1fr; }
 }

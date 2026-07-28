@@ -1,14 +1,82 @@
 import {
+  resolveArenaV2UiNextGoal,
   runArenaV2UiInformationPrototype,
   type ArenaV2UiFlowResult,
   type ArenaV2UiInformationPrototypeResult,
+  type ArenaV2UiNextGoal,
   type ArenaV2UiPageContract,
   type ArenaV2UiPageId,
+  type ArenaV2UiProgressSnapshot,
 } from '@number-strategy-jump/arena-v1-experiment';
 
 interface UiInformationStudyDocument extends Document {
   readonly defaultView: (Window & typeof globalThis) | null;
 }
+
+interface UiNextGoalScenario {
+  readonly id: string;
+  readonly label: string;
+  readonly progress: ArenaV2UiProgressSnapshot;
+}
+
+const NEXT_GOAL_SCENARIOS: readonly UiNextGoalScenario[] = Object.freeze([
+  Object.freeze({
+    id: 'collect',
+    label: '收集阶段',
+    progress: Object.freeze({
+      weaponCatalogSize: 12,
+      ownedWeaponCount: 3,
+      masteredWeaponContextCount: 0,
+      totalWeaponContextCount: 24,
+      masteredMapSegmentCount: 0,
+      totalMapSegmentCount: 6,
+      bestSurvivalSeconds: 200,
+      nextSurvivalTargetSeconds: 240,
+    }),
+  }),
+  Object.freeze({
+    id: 'context',
+    label: '熟悉阶段',
+    progress: Object.freeze({
+      weaponCatalogSize: 12,
+      ownedWeaponCount: 12,
+      masteredWeaponContextCount: 8,
+      totalWeaponContextCount: 24,
+      masteredMapSegmentCount: 1,
+      totalMapSegmentCount: 6,
+      bestSurvivalSeconds: 200,
+      nextSurvivalTargetSeconds: 240,
+    }),
+  }),
+  Object.freeze({
+    id: 'route',
+    label: '地图阶段',
+    progress: Object.freeze({
+      weaponCatalogSize: 12,
+      ownedWeaponCount: 12,
+      masteredWeaponContextCount: 24,
+      totalWeaponContextCount: 24,
+      masteredMapSegmentCount: 4,
+      totalMapSegmentCount: 6,
+      bestSurvivalSeconds: 200,
+      nextSurvivalTargetSeconds: 240,
+    }),
+  }),
+  Object.freeze({
+    id: 'survival',
+    label: '生存阶段',
+    progress: Object.freeze({
+      weaponCatalogSize: 12,
+      ownedWeaponCount: 12,
+      masteredWeaponContextCount: 24,
+      totalWeaponContextCount: 24,
+      masteredMapSegmentCount: 6,
+      totalMapSegmentCount: 6,
+      bestSurvivalSeconds: 200,
+      nextSurvivalTargetSeconds: 240,
+    }),
+  }),
+]);
 
 function required<T extends Element>(root: ParentNode, selector: string): T {
   const node = root.querySelector<T>(selector);
@@ -212,6 +280,62 @@ function renderFlowNav(
   }
 }
 
+function renderNextGoal(
+  documentValue: Document,
+  goal: ArenaV2UiNextGoal,
+): void {
+  const preview = required<HTMLElement>(documentValue, '#ui-next-goal-preview');
+  preview.replaceChildren();
+  const heading = documentValue.createElement('h3');
+  text(heading, goal.title);
+  preview.append(heading);
+  const reason = documentValue.createElement('p');
+  reason.className = 'ui-next-goal-reason';
+  text(reason, goal.reason);
+  preview.append(reason);
+
+  const progressLine = documentValue.createElement('div');
+  progressLine.className = 'ui-next-goal-progress';
+  const progress = documentValue.createElement('progress');
+  progress.max = goal.progressTarget;
+  progress.value = goal.progressValue;
+  progress.setAttribute('aria-label', `${goal.title}进度`);
+  const progressText = documentValue.createElement('strong');
+  text(progressText, `${goal.progressValue} / ${goal.progressTarget}`);
+  progressLine.append(progress, progressText);
+  preview.append(progressLine);
+
+  const action = documentValue.createElement('span');
+  action.className = 'ui-next-goal-action';
+  text(action, `立即行动：${goal.actionLabel}`);
+  preview.append(action);
+}
+
+function renderNextGoalNav(
+  documentValue: Document,
+  selectScenario: (scenario: UiNextGoalScenario) => void,
+): void {
+  const nav = required<HTMLElement>(documentValue, '#ui-next-goal-nav');
+  nav.replaceChildren();
+  for (const [index, scenario] of NEXT_GOAL_SCENARIOS.entries()) {
+    const button = documentValue.createElement('button');
+    button.type = 'button';
+    button.dataset.nextGoalScenario = scenario.id;
+    button.setAttribute('aria-pressed', index === 0 ? 'true' : 'false');
+    text(button, scenario.label);
+    button.addEventListener('click', () => {
+      selectScenario(scenario);
+      for (const candidate of documentValue.querySelectorAll<HTMLButtonElement>('#ui-next-goal-nav button')) {
+        candidate.setAttribute(
+          'aria-pressed',
+          candidate.dataset.nextGoalScenario === scenario.id ? 'true' : 'false',
+        );
+      }
+    });
+    nav.append(button);
+  }
+}
+
 function run(documentValue: UiInformationStudyDocument): void {
   const result = runArenaV2UiInformationPrototype();
   text(required(documentValue, '#ui-page-count'), `${result.pageCount} 页`);
@@ -221,11 +345,18 @@ function run(documentValue: UiInformationStudyDocument): void {
   text(required(documentValue, '#ui-contract-status'), result.passed ? '通过' : '阻塞');
   renderPageNav(documentValue, result, (pageId) => selectPage(documentValue, result, pageId));
   renderFlowNav(documentValue, result);
+  renderNextGoalNav(documentValue, (scenario) => {
+    renderNextGoal(documentValue, resolveArenaV2UiNextGoal(scenario.progress));
+  });
   const firstPage = result.pages[0];
   const firstFlow = result.flows[0];
-  if (!firstPage || !firstFlow) throw new Error('局外页面研究缺少默认页面或流程。');
+  const firstGoalScenario = NEXT_GOAL_SCENARIOS[0];
+  if (!firstPage || !firstFlow || !firstGoalScenario) {
+    throw new Error('局外页面研究缺少默认页面、流程或下一目标。');
+  }
   renderPage(documentValue, firstPage);
   renderFlow(documentValue, firstFlow);
+  renderNextGoal(documentValue, resolveArenaV2UiNextGoal(firstGoalScenario.progress));
 }
 
 const documentValue = globalThis.document as UiInformationStudyDocument | undefined;

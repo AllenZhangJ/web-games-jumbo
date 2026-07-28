@@ -151,6 +151,7 @@ Arena V2 的核心目标是：
 | `arena-v2-ui-information-prototype.ts` | 为 11 个局外页面声明必要信息、首屏最多三项、延后信息和点击预算，验证单一下一决策 | 第三轮信息层原型证据 |
 | `ui-information.html` / `src/entry/ui-information-study.ts` | 独立展示 11 个页面合同、首屏/延后信息、主次动作和四条关键流程，不进入生产构建 | 局外信息研究页，仅研究工具链 |
 | `arena-v2-ui-next-goal-prototype.ts` | 将收集、武器熟悉、地图熟悉和生存记录收敛为单一局外下一目标，仅供开发/测试工具链使用 | 第二轮信息架构证据 |
+| [ADR-094：局外研究页必须把单一下一目标做成可切换验证面](../decisions/094-arena-v2-ui-single-next-goal-study-surface.md) | 固化研究页直接消费下一目标合同、四阶段研究夹具和单目标渲染边界 | 研究页已接入，生产结算页和真人留存仍待验证 |
 | [ADR-044：武器不做格挡与公开数值概览](../decisions/044-arena-v2-weapon-no-guard-and-public-overview.md) | 固化武器边界与数值展示来源 | V2 提案 |
 | [ADR-045：武器上下文概览契约](../decisions/045-arena-v2-weapon-context-overview.md) | 固化主动作数值、地面/空中上下文与风险语义 | 表现原型已接入 |
 | [ADR-046：武器概览先显示数值比较](../decisions/046-arena-weapon-overview-comparison-first.md) | 固化主页“先比较数值、再读武器语义”的信息顺序 | 当前主页已接入 |
