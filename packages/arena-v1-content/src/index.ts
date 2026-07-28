@@ -4,6 +4,11 @@ export {
   ARENA_GAMEPLAY_V2_MAP_ID,
 } from './arena-gameplay-v2-map.js';
 export {
+  ARENA_V2_SURVIVAL_SUPPLY_DEFINITION,
+  ARENA_V2_SURVIVAL_SUPPLY_DEFINITIONS,
+  createArenaV2SurvivalSupplyRegistry,
+} from './arena-v2-survival-supply.js';
+export {
   ARENA_V1_BALANCE_DEFINITION,
   ARENA_V1_BALANCE_DEFINITION_SCHEMA_VERSION,
 } from './arena-v1-balance.js';

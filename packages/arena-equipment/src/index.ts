@@ -33,3 +33,12 @@ export {
 export { EquipmentSpawner } from './equipment-spawner.js';
 export { EquipmentSystem } from './equipment-system.js';
 export type { EquipmentDropResult } from './equipment-system.js';
+export {
+  EQUIPMENT_SUPPLY_LIFECYCLE_SCHEMA_VERSION,
+  createEquipmentSupplyEventIdentity,
+  createEquipmentSupplyLifecycle,
+} from './equipment-supply-lifecycle.js';
+export type {
+  EquipmentSupplyEventIdentity,
+  EquipmentSupplyLifecycle,
+} from './equipment-supply-lifecycle.js';

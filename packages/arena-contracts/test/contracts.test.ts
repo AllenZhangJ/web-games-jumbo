@@ -2,10 +2,16 @@ import { describe, expect, it } from 'vitest';
 import {
   ACTION_RESOLUTION_KIND,
   ARENA_MATCH_EVENT,
+  EQUIPMENT_EXPIRY_REASON,
+  EQUIPMENT_RECYCLE_REASON,
+  EQUIPMENT_SUPPLY_EVENT_PAYLOAD_SCHEMA_VERSION,
   assertKnownKeys,
   cloneFrozenData,
   cloneFrozenStringSet,
   createDeterministicDataHash,
+  createEquipmentExpiredEventPayload,
+  createEquipmentRecycledEventPayload,
+  createEquipmentReplacedEventPayload,
   createRng,
   createNeutralInputFrame,
   createArenaMatchSnapshotAudit,
@@ -15,7 +21,13 @@ import {
   normalizeInputFrames,
   normalizeThrownError,
 } from '../src/index.js';
-import type { ArenaInputFrame, ArenaMatchEventType } from '../src/index.js';
+import type {
+  ArenaInputFrame,
+  ArenaMatchEventType,
+  EquipmentExpiredEventPayload,
+  EquipmentRecycledEventPayload,
+  EquipmentReplacedEventPayload,
+} from '../src/index.js';
 
 describe('Arena deterministic contracts', () => {
   it('publishes the immutable action resolution vocabulary for downstream readers', () => {
@@ -124,6 +136,100 @@ describe('Arena deterministic contracts', () => {
     const event: ArenaMatchEventType = ARENA_MATCH_EVENT.HIT_RESOLVED;
     expect(event).toBe('HitResolved');
     expect(Object.isFrozen(ARENA_MATCH_EVENT)).toBe(true);
+  });
+
+  it('publishes frozen versioned supply replacement, recycle and expiry payloads', () => {
+    const identity = {
+      schemaVersion: EQUIPMENT_SUPPLY_EVENT_PAYLOAD_SCHEMA_VERSION,
+      supplyDefinitionId: 'arena-v2.survival-supply.v1',
+      supplyId: 'wave-1:left',
+      equipmentInstanceId: 'wave-1:left:hammer',
+      spawnTick: 1_200,
+      expireTick: 1_800,
+    };
+    const replaced: EquipmentReplacedEventPayload = createEquipmentReplacedEventPayload({
+      ...identity,
+      tick: 1_250,
+      participantId: 'player-1',
+      previousEquipmentInstanceId: 'held:chain',
+      nextEquipmentInstanceId: identity.equipmentInstanceId,
+    });
+    const recycled: EquipmentRecycledEventPayload = createEquipmentRecycledEventPayload({
+      ...identity,
+      tick: 1_250,
+      participantId: 'player-1',
+      recycledEquipmentInstanceId: 'held:chain',
+      replacementEquipmentInstanceId: identity.equipmentInstanceId,
+      reason: EQUIPMENT_RECYCLE_REASON.REPLACED,
+    });
+    const expired: EquipmentExpiredEventPayload = createEquipmentExpiredEventPayload({
+      ...identity,
+      tick: 1_800,
+      expiredEquipmentInstanceId: identity.equipmentInstanceId,
+      reason: EQUIPMENT_EXPIRY_REASON.LIFETIME_EXPIRED,
+    });
+
+    expect(replaced.nextEquipmentInstanceId).toBe(identity.equipmentInstanceId);
+    expect(recycled.reason).toBe('replaced');
+    expect(expired.tick).toBe(expired.expireTick);
+    expect([replaced, recycled, expired].every(Object.isFrozen)).toBe(true);
+  });
+
+  it('rejects ambiguous or unsafe supply event payloads before publication', () => {
+    const replaced = {
+      schemaVersion: EQUIPMENT_SUPPLY_EVENT_PAYLOAD_SCHEMA_VERSION,
+      supplyDefinitionId: 'arena-v2.survival-supply.v1',
+      supplyId: 'wave-1:left',
+      equipmentInstanceId: 'wave-1:left:hammer',
+      spawnTick: 1_200,
+      expireTick: 1_800,
+      tick: 1_250,
+      participantId: 'player-1',
+      previousEquipmentInstanceId: 'held:chain',
+      nextEquipmentInstanceId: 'wave-1:left:hammer',
+    };
+    expect(() => createEquipmentReplacedEventPayload({ ...replaced, schemaVersion: 2 }))
+      .toThrow(/schemaVersion/);
+    expect(() => createEquipmentReplacedEventPayload({ ...replaced, futureField: true }))
+      .toThrow(/futureField/);
+    expect(() => createEquipmentReplacedEventPayload({
+      ...replaced,
+      get tick() {
+        throw new Error('getter must not run');
+      },
+    })).toThrow(/数据字段/);
+    expect(() => createEquipmentReplacedEventPayload({
+      ...replaced,
+      tick: Number.MAX_SAFE_INTEGER + 1,
+    })).toThrow(/tick/);
+    expect(() => createEquipmentReplacedEventPayload({
+      ...replaced,
+      nextEquipmentInstanceId: 'other-equipment',
+    })).toThrow(/供给身份不一致/);
+    expect(() => createEquipmentRecycledEventPayload({
+      schemaVersion: replaced.schemaVersion,
+      supplyDefinitionId: replaced.supplyDefinitionId,
+      supplyId: replaced.supplyId,
+      equipmentInstanceId: replaced.equipmentInstanceId,
+      spawnTick: replaced.spawnTick,
+      expireTick: replaced.expireTick,
+      tick: replaced.tick,
+      participantId: replaced.participantId,
+      recycledEquipmentInstanceId: 'held:chain',
+      replacementEquipmentInstanceId: 'other-equipment',
+      reason: EQUIPMENT_RECYCLE_REASON.REPLACED,
+    })).toThrow(/供给身份不一致/);
+    expect(() => createEquipmentExpiredEventPayload({
+      schemaVersion: EQUIPMENT_SUPPLY_EVENT_PAYLOAD_SCHEMA_VERSION,
+      supplyDefinitionId: replaced.supplyDefinitionId,
+      supplyId: replaced.supplyId,
+      equipmentInstanceId: replaced.equipmentInstanceId,
+      spawnTick: replaced.spawnTick,
+      expireTick: replaced.expireTick,
+      tick: 1_799,
+      expiredEquipmentInstanceId: replaced.equipmentInstanceId,
+      reason: EQUIPMENT_EXPIRY_REASON.LIFETIME_EXPIRED,
+    })).toThrow(/tick 必须等于 expireTick/);
   });
 
   it('adapts one synchronous storage boundary and rejects ambiguous host results', () => {

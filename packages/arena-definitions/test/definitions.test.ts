@@ -11,7 +11,10 @@ import {
   ActionRegistry,
   CHARACTER_DEFINITION_SCHEMA_VERSION,
   CharacterRegistry,
+  EquipmentSupplyRegistry,
+  calculateEquipmentSupplySpawnTick,
   createEquipmentDefinition,
+  createEquipmentSupplyDefinition,
   createMapDefinition,
   createActionDefinition,
   createCharacterDefinition,
@@ -19,6 +22,10 @@ import {
   EQUIPMENT_DROP_FALLBACK,
   EQUIPMENT_DROP_POLICY,
   EQUIPMENT_PICKUP_MODE,
+  EQUIPMENT_SUPPLY_DEFINITION_SCHEMA_VERSION,
+  EQUIPMENT_SUPPLY_EXPIRY_POLICY,
+  EQUIPMENT_SUPPLY_REPLACEMENT_POLICY,
+  EQUIPMENT_SUPPLY_TICK_ORDER,
   EquipmentRegistry,
   MAP_DEFINITION_SCHEMA_VERSION,
   MapRegistry,
@@ -30,6 +37,7 @@ import type {
   ActionDefinition,
   CharacterDefinition,
   EquipmentDefinition,
+  EquipmentSupplyDefinition,
   MapDefinition,
 } from '../src/index.js';
 import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
@@ -188,6 +196,135 @@ describe('Arena Definition public contracts', () => {
       definitions: [{ ...equipment, actionDefinitionId: 'missing' }],
       actionRegistry,
     })).toThrow(/未知 ActionDefinition/);
+  });
+
+  it('publishes a strict equipment supply rule contract with one authoritative tick order', () => {
+    const supply: EquipmentSupplyDefinition = createEquipmentSupplyDefinition({
+      schemaVersion: EQUIPMENT_SUPPLY_DEFINITION_SCHEMA_VERSION,
+      id: 'survival-supply',
+      firstSpawnTick: 1_200,
+      spawnIntervalTicks: 1_200,
+      spawnCount: 3,
+      pickupRadius: 0.8,
+      lifetimeTicks: 600,
+      replacementPolicy: EQUIPMENT_SUPPLY_REPLACEMENT_POLICY.ATOMIC_RECYCLE_HELD,
+      expiryPolicy: EQUIPMENT_SUPPLY_EXPIRY_POLICY.WORLD_ONLY_AT_EXPIRE_TICK,
+      tickOrder: EQUIPMENT_SUPPLY_TICK_ORDER,
+    });
+
+    expect(supply).toMatchObject({
+      firstSpawnTick: 1_200,
+      spawnIntervalTicks: 1_200,
+      spawnCount: 3,
+      pickupRadius: 0.8,
+      lifetimeTicks: 600,
+      replacementPolicy: 'atomic-recycle-held',
+      expiryPolicy: 'world-only-at-expire-tick',
+      tickOrder: ['spawn', 'expire', 'pickup', 'action'],
+    });
+    expect(Object.isFrozen(supply)).toBe(true);
+    expect(Object.isFrozen(supply.tickOrder)).toBe(true);
+  });
+
+  it('rejects supply schema drift, unknown policy and reordered same-tick phases', () => {
+    const valid = {
+      schemaVersion: EQUIPMENT_SUPPLY_DEFINITION_SCHEMA_VERSION,
+      id: 'survival-supply',
+      firstSpawnTick: 1_200,
+      spawnIntervalTicks: 1_200,
+      spawnCount: 3,
+      pickupRadius: 0.8,
+      lifetimeTicks: 600,
+      replacementPolicy: EQUIPMENT_SUPPLY_REPLACEMENT_POLICY.ATOMIC_RECYCLE_HELD,
+      expiryPolicy: EQUIPMENT_SUPPLY_EXPIRY_POLICY.WORLD_ONLY_AT_EXPIRE_TICK,
+      tickOrder: EQUIPMENT_SUPPLY_TICK_ORDER,
+    };
+    expect(() => createEquipmentSupplyDefinition({ ...valid, schemaVersion: 0 }))
+      .toThrow(/schemaVersion/);
+    expect(() => createEquipmentSupplyDefinition({ ...valid, futurePolicy: true }))
+      .toThrow(/futurePolicy/);
+    expect(() => createEquipmentSupplyDefinition({
+      ...valid,
+      get lifetimeTicks() {
+        throw new Error('getter must not run');
+      },
+    })).toThrow(/数据字段/);
+    expect(() => createEquipmentSupplyDefinition({ ...valid, lifetimeTicks: 0 }))
+      .toThrow(/lifetimeTicks/);
+    expect(() => createEquipmentSupplyDefinition({ ...valid, pickupRadius: 0 }))
+      .toThrow(/pickupRadius/);
+    expect(() => createEquipmentSupplyDefinition({ ...valid, pickupRadius: Number.NaN }))
+      .toThrow(/pickupRadius/);
+    expect(() => createEquipmentSupplyDefinition({ ...valid, firstSpawnTick: -1 }))
+      .toThrow(/firstSpawnTick/);
+    expect(() => createEquipmentSupplyDefinition({
+      ...valid,
+      firstSpawnTick: Number.MAX_SAFE_INTEGER + 1,
+    })).toThrow(/firstSpawnTick/);
+    expect(() => createEquipmentSupplyDefinition({
+      ...valid,
+      replacementPolicy: 'drop-held',
+    })).toThrow(/replacementPolicy/);
+    expect(() => createEquipmentSupplyDefinition({
+      ...valid,
+      tickOrder: ['spawn', 'pickup', 'expire', 'action'],
+    })).toThrow(/spawn → expire → pickup → action/);
+  });
+
+  it('calculates the first and subsequent supply waves from one safe integer formula', () => {
+    const supply = createEquipmentSupplyDefinition({
+      schemaVersion: EQUIPMENT_SUPPLY_DEFINITION_SCHEMA_VERSION,
+      id: 'survival-supply',
+      firstSpawnTick: 1_200,
+      spawnIntervalTicks: 1_200,
+      spawnCount: 3,
+      pickupRadius: 0.8,
+      lifetimeTicks: 600,
+      replacementPolicy: EQUIPMENT_SUPPLY_REPLACEMENT_POLICY.ATOMIC_RECYCLE_HELD,
+      expiryPolicy: EQUIPMENT_SUPPLY_EXPIRY_POLICY.WORLD_ONLY_AT_EXPIRE_TICK,
+      tickOrder: EQUIPMENT_SUPPLY_TICK_ORDER,
+    });
+    expect([0, 1, 2].map((index) => calculateEquipmentSupplySpawnTick(supply, index)))
+      .toEqual([1_200, 2_400, 3_600]);
+    expect(() => calculateEquipmentSupplySpawnTick(supply, -1)).toThrow(/waveIndex/);
+    expect(() => calculateEquipmentSupplySpawnTick(supply, Number.MAX_SAFE_INTEGER + 1))
+      .toThrow(/waveIndex/);
+    expect(() => calculateEquipmentSupplySpawnTick({
+      ...supply,
+      firstSpawnTick: Number.MAX_SAFE_INTEGER,
+    }, 1)).toThrow(/安全整数范围/);
+  });
+
+  it('keeps EquipmentSupplyRegistry sorted, immutable and strict at composition time', () => {
+    const base = createEquipmentSupplyDefinition({
+      schemaVersion: EQUIPMENT_SUPPLY_DEFINITION_SCHEMA_VERSION,
+      id: 'supply-z.v1',
+      firstSpawnTick: 0,
+      spawnIntervalTicks: 60,
+      spawnCount: 1,
+      pickupRadius: 0.8,
+      lifetimeTicks: 30,
+      replacementPolicy: EQUIPMENT_SUPPLY_REPLACEMENT_POLICY.ATOMIC_RECYCLE_HELD,
+      expiryPolicy: EQUIPMENT_SUPPLY_EXPIRY_POLICY.WORLD_ONLY_AT_EXPIRE_TICK,
+      tickOrder: EQUIPMENT_SUPPLY_TICK_ORDER,
+    });
+    const registry = new EquipmentSupplyRegistry([{ ...base }, { ...base, id: 'supply-a.v1' }]);
+    expect(registry.size).toBe(2);
+    expect(registry.has('supply-a.v1')).toBe(true);
+    expect(registry.get('supply-a.v1')?.id).toBe('supply-a.v1');
+    expect(registry.require('supply-z.v1')).toEqual(base);
+    expect(registry.list().map(({ id }) => id)).toEqual(['supply-a.v1', 'supply-z.v1']);
+    expect(Object.isFrozen(registry)).toBe(true);
+    expect(Object.isFrozen(registry.list())).toBe(true);
+    expect(() => registry.require('unknown')).toThrow(/未知 EquipmentSupplyDefinition/);
+    expect(() => new EquipmentSupplyRegistry([base, base])).toThrow(/重复 id/);
+    expect(() => new EquipmentSupplyRegistry([{ ...base, firstSpawnTick: -1 }]))
+      .toThrow(/firstSpawnTick/);
+    expect(() => new EquipmentSupplyRegistry([Object.defineProperty(
+      { ...base },
+      'id',
+      { enumerable: true, get: () => 'getter-must-not-run' },
+    )])).toThrow(/数据字段/);
   });
 
   it('publishes only validated, stable map geometry and timeline data', () => {

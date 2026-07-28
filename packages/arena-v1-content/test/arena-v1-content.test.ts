@@ -6,6 +6,8 @@ import {
 } from '@number-strategy-jump/arena-definitions';
 import {
   ARENA_GAMEPLAY_V2_MAP_DEFINITION,
+  ARENA_V2_SURVIVAL_SUPPLY_DEFINITION,
+  ARENA_V2_SURVIVAL_SUPPLY_DEFINITIONS,
   ARENA_V1_BALANCE_DEFINITION,
   ARENA_V1_CHARACTER_DEFINITIONS,
   ARENA_V1_MAP_DEFINITIONS,
@@ -15,6 +17,7 @@ import {
   STAGE6_MOVEMENT_ACTION_DEFINITIONS,
   ARENA_V2_WEAPON_CANDIDATE_CONTENT_DEFINITIONS,
   createArenaV2WeaponCandidateContentRegistries,
+  createArenaV2SurvivalSupplyRegistry,
   createArenaV1CharacterRegistry,
   createArenaV1MapRegistry,
   createStage4ContentRegistries,
@@ -33,6 +36,23 @@ describe('Arena V1 authority content', () => {
       .toEqual(Object.values(STAGE4_EQUIPMENT_ID).sort());
     expect(Object.isFrozen(STAGE4_ACTION_DEFINITIONS)).toBe(true);
     expect(Object.isFrozen(STAGE6_MOVEMENT_ACTION_DEFINITIONS)).toBe(true);
+    expect(ARENA_V2_SURVIVAL_SUPPLY_DEFINITION).toMatchObject({
+      id: 'arena-v2.survival-supply.v1',
+      firstSpawnTick: 1_200,
+      spawnIntervalTicks: 1_200,
+      spawnCount: 3,
+      pickupRadius: 0.8,
+      lifetimeTicks: 600,
+      replacementPolicy: 'atomic-recycle-held',
+      tickOrder: ['spawn', 'expire', 'pickup', 'action'],
+    });
+    expect(ARENA_V2_SURVIVAL_SUPPLY_DEFINITIONS).toEqual([
+      ARENA_V2_SURVIVAL_SUPPLY_DEFINITION,
+    ]);
+    const supplyRegistry = createArenaV2SurvivalSupplyRegistry();
+    expect(supplyRegistry.list()).toEqual(ARENA_V2_SURVIVAL_SUPPLY_DEFINITIONS);
+    expect(supplyRegistry.require('arena-v2.survival-supply.v1'))
+      .toBe(supplyRegistry.list()[0]);
   });
 
   it('compiles the public attack tuning into the authoritative action definitions', () => {

@@ -28,6 +28,19 @@ export type {
 } from './input-frame.js';
 export { ARENA_MATCH_EVENT } from './match-event-types.js';
 export type { ArenaMatchEventType } from './match-event-types.js';
+export {
+  EQUIPMENT_EXPIRY_REASON,
+  EQUIPMENT_RECYCLE_REASON,
+  EQUIPMENT_SUPPLY_EVENT_PAYLOAD_SCHEMA_VERSION,
+  createEquipmentExpiredEventPayload,
+  createEquipmentRecycledEventPayload,
+  createEquipmentReplacedEventPayload,
+} from './equipment-supply-event-payload.js';
+export type {
+  EquipmentExpiredEventPayload,
+  EquipmentRecycledEventPayload,
+  EquipmentReplacedEventPayload,
+} from './equipment-supply-event-payload.js';
 export { createSynchronousStoragePort } from './synchronous-storage-port.js';
 export type {
   SynchronousStoragePort,

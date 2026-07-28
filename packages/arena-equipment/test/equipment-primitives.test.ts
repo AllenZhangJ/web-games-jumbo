@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  ARENA_MATCH_EVENT,
+} from '@number-strategy-jump/arena-contracts';
+import {
   EQUIPMENT_DEFINITION_SCHEMA_VERSION,
+  EQUIPMENT_SUPPLY_DEFINITION_SCHEMA_VERSION,
+  EQUIPMENT_SUPPLY_EXPIRY_POLICY,
+  EQUIPMENT_SUPPLY_REPLACEMENT_POLICY,
+  EQUIPMENT_SUPPLY_TICK_ORDER,
+  createEquipmentSupplyDefinition,
   type EquipmentDefinition,
   type ActionDefinition,
 } from '@number-strategy-jump/arena-definitions';
@@ -14,12 +22,27 @@ import {
   EquipmentSystem,
   advanceEquipmentCooldown,
   createEquipmentRuntimeSnapshot,
+  createEquipmentSupplyEventIdentity,
+  createEquipmentSupplyLifecycle,
   deserializeEquipmentRuntimeState,
   isEquipmentCooldownReady,
   resolveEquipmentDrop,
   serializeEquipmentRuntimeStates,
   type EquipmentRegistryContract,
 } from '../src/index.js';
+
+const SUPPLY_DEFINITION = createEquipmentSupplyDefinition({
+  schemaVersion: EQUIPMENT_SUPPLY_DEFINITION_SCHEMA_VERSION,
+  id: 'survival-supply',
+  firstSpawnTick: 1_200,
+  spawnIntervalTicks: 1_200,
+  spawnCount: 3,
+  pickupRadius: 0.8,
+  lifetimeTicks: 600,
+  replacementPolicy: EQUIPMENT_SUPPLY_REPLACEMENT_POLICY.ATOMIC_RECYCLE_HELD,
+  expiryPolicy: EQUIPMENT_SUPPLY_EXPIRY_POLICY.WORLD_ONLY_AT_EXPIRE_TICK,
+  tickOrder: EQUIPMENT_SUPPLY_TICK_ORDER,
+});
 
 const EQUIPMENT_DEFINITION: EquipmentDefinition = Object.freeze({
   schemaVersion: EQUIPMENT_DEFINITION_SCHEMA_VERSION,
@@ -74,6 +97,61 @@ function createSystem(): EquipmentSystem {
 }
 
 describe('arena-equipment primitives', () => {
+  it('validates supply spawn/expiry identity and projects stable event identity', () => {
+    const lifecycle = createEquipmentSupplyLifecycle({
+      schemaVersion: 1,
+      supplyDefinitionId: SUPPLY_DEFINITION.id,
+      supplyId: 'wave-1:left',
+      equipmentInstanceId: 'wave-1:left:hammer',
+      spawnTick: 1_200,
+      expireTick: 1_800,
+    }, SUPPLY_DEFINITION);
+
+    expect(createEquipmentSupplyEventIdentity(lifecycle, SUPPLY_DEFINITION)).toEqual({
+      supplyDefinitionId: SUPPLY_DEFINITION.id,
+      supplyId: 'wave-1:left',
+      equipmentInstanceId: 'wave-1:left:hammer',
+      spawnTick: 1_200,
+      expireTick: 1_800,
+    });
+    expect(Object.isFrozen(lifecycle)).toBe(true);
+    expect(ARENA_MATCH_EVENT.EQUIPMENT_REPLACED).toBe('EquipmentReplaced');
+    expect(ARENA_MATCH_EVENT.EQUIPMENT_RECYCLED).toBe('EquipmentRecycled');
+    expect(ARENA_MATCH_EVENT.EQUIPMENT_EXPIRED).toBe('EquipmentExpired');
+  });
+
+  it('rejects unsupported lifecycle schema and invalid 600-tick expiry before publication', () => {
+    const valid = {
+      schemaVersion: 1,
+      supplyDefinitionId: SUPPLY_DEFINITION.id,
+      supplyId: 'wave-1:left',
+      equipmentInstanceId: 'wave-1:left:hammer',
+      spawnTick: 1_200,
+      expireTick: 1_800,
+    };
+    expect(() => createEquipmentSupplyLifecycle({ ...valid, schemaVersion: 2 }, SUPPLY_DEFINITION))
+      .toThrow(/schemaVersion/);
+    expect(() => createEquipmentSupplyLifecycle({ ...valid, expireTick: 1_799 }, SUPPLY_DEFINITION))
+      .toThrow(/spawnTick \+ 600/);
+    expect(() => createEquipmentSupplyLifecycle({
+      ...valid,
+      supplyDefinitionId: 'unknown-supply',
+    }, SUPPLY_DEFINITION)).toThrow(/Definition 不一致/);
+    expect(() => createEquipmentSupplyLifecycle({ ...valid, futureState: true }, SUPPLY_DEFINITION))
+      .toThrow(/futureState/);
+    expect(() => createEquipmentSupplyLifecycle({
+      ...valid,
+      get expireTick() {
+        throw new Error('getter must not run');
+      },
+    }, SUPPLY_DEFINITION)).toThrow(/数据字段/);
+    expect(() => createEquipmentSupplyLifecycle({
+      ...valid,
+      spawnTick: Number.MAX_SAFE_INTEGER,
+      expireTick: Number.MAX_SAFE_INTEGER,
+    }, SUPPLY_DEFINITION)).toThrow(/安全整数范围/);
+  });
+
   it('keeps identity immutable and round-trips only validated runtime data', () => {
     const spawner = new EquipmentSpawner({ equipmentRegistry: EQUIPMENT_REGISTRY });
     const runtime = spawner.createRuntime({

@@ -56,6 +56,23 @@ export {
 export type { EquipmentDefinition } from './equipment-definition.js';
 export { EquipmentRegistry } from './equipment-registry.js';
 export {
+  EQUIPMENT_SUPPLY_DEFINITION_SCHEMA_VERSION,
+  EQUIPMENT_SUPPLY_EXPIRY_POLICY,
+  EQUIPMENT_SUPPLY_REPLACEMENT_POLICY,
+  EQUIPMENT_SUPPLY_TICK_ORDER,
+  EQUIPMENT_SUPPLY_TICK_PHASE,
+  calculateEquipmentSupplySpawnTick,
+  createEquipmentSupplyDefinition,
+} from './equipment-supply-definition.js';
+export { EquipmentSupplyRegistry } from './equipment-supply-registry.js';
+export type { EquipmentSupplyRegistryContract } from './equipment-supply-registry.js';
+export type {
+  EquipmentSupplyDefinition,
+  EquipmentSupplyExpiryPolicy,
+  EquipmentSupplyReplacementPolicy,
+  EquipmentSupplyTickPhase,
+} from './equipment-supply-definition.js';
+export {
   createMapDefinition,
   createStaticMapDefinition,
   MAP_DEFINITION_SCHEMA_VERSION,

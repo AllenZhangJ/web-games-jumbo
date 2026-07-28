@@ -718,7 +718,7 @@ test('Arena V1 authority content stays immutable and outside runtime ownership',
     'arena-v1-content 只能依赖底层数据、规则常量和 Definition/Registry。',
   );
   const files = await listJavaScript(path.resolve('packages/arena-v1-content/src'));
-  assert.equal(files.length, 9);
+  assert.equal(files.length, 10);
   for (const file of files) {
     const source = await readFile(file, 'utf8');
     assert.doesNotMatch(
@@ -1121,6 +1121,7 @@ test('Arena Rule/Core foundation preserves dependency direction and deterministi
   const retiredDirectories = ['rules', 'action', 'equipment', 'map']
     .map((directory) => path.resolve('src/arena', directory));
   const packageDirectories = [
+    path.resolve('packages/arena-definitions/src'),
     path.resolve('packages/arena-core/src'),
     path.resolve('packages/arena-equipment/src'),
     path.resolve('packages/arena-map/src'),

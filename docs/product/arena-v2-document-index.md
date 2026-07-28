@@ -38,6 +38,7 @@ Arena V2 的核心目标是：
 | [武器概览与可读性浏览器任务验证结果 V2](../research/arena-v2-weapon-browser-task-validation-results-v2.md) | 在 390×844 浏览器视口复核 Product 数值方向、六件研究武器卡和 5 道可读性任务提交闭环 | 浏览器任务 5/5，通过但不代表真人或真机 |
 | [V2 生存 1vE 规则](../gameplay/arena-v2-survival-mode.md) | 生存流程、敌人、20秒三实体供给、自动替换、10秒回收、掉落和结束条件 | 供给规则已冻结，Rule/Core待实现 |
 | [V2 生产化分阶段开发与治理计划](../architecture/arena-v2-production-development-plan.md) | 固定从规则收敛到发布冻结的阶段、执行标准、百分制评分、治理证据和禁止越级条件 | 执行基线 |
+| [V2 P1 实施状态台账](../architecture/arena-v2-p1-implementation-ledger.md) | 记录 P1.1 供给合同小门的行为映射、代码落点、百分制评分、门禁证据、风险、回滚与 P1 未完成硬门 | P1.1 `contract-ready`，主协调已签核（2026-07-28）；P1 未完成、不得 advance |
 | [Arena 美术与音频开发流程](../architecture/arena-art-and-audio-development-flow.md) | 将14个美术、3D、VFX、UI、地图、音乐和音频技能按产物分流，固定资产来源、表现事件、预算、真机和真人门禁 | Presentation / Platform 执行基线 |
 | [Arena Art Bible](../architecture/arena-art-bible.md) | 固定低多边形玩具 × 手稿反馈的视觉宪法、语义色、材质灯光、角色/武器/KZ/HUD/VFX、资产与音频预算、来源治理和四门验收 | A0.1合同94/100且各维度≥80%，主协调已签核为`contract-ready`（2026-07-28）；不代表后续门通过 |
 | [Arena 六类注释参考登记](../architecture/arena-art-reference-register.md) | 按mood/color/composition/character/environment/UI建立70/20/10文字登记，并固定A0.2实际板面、manifest、hash和签核规格 | A0.1登记完成；A0.2六张实际板仍incomplete |
