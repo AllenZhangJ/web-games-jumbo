@@ -43,6 +43,12 @@ describe('Arena V2 CS1.6 KZ-inspired jump route prototype', () => {
       responseWindowTicks: 4,
       hitRecovery: 'respawn-anchor',
     });
+    expect(route.segments.find(({ segmentId }) => segmentId === 'segment-04-maze')?.branchOptions.map(({ branchId }) => branchId))
+      .toEqual(['maze-direct-low', 'maze-recovery-high']);
+    expect(route.segments.find(({ segmentId }) => segmentId === 'segment-04-maze')?.branchOptions.map(({ routeTicks }) => routeTicks))
+      .toEqual([48, 68]);
+    expect(route.segments.find(({ segmentId }) => segmentId === 'segment-06-wire')?.branchOptions.map(({ role }) => role))
+      .toEqual(['safe-recovery', 'fast-exposed']);
   });
 
   it('uses the real lightweight physics loop to verify the deterministic six-segment greybox', () => {

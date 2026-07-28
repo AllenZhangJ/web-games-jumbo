@@ -17,6 +17,7 @@ export interface ArenaV2KzMapDefinitionPrototype {
   readonly routeId: string;
   readonly segmentIds: readonly string[];
   readonly segmentSurfaceIds: Readonly<Record<string, readonly string[]>>;
+  readonly branchOptionsBySegment: Readonly<Record<string, readonly string[]>>;
   readonly respawnAnchorBySegment: Readonly<Record<string, string>>;
   readonly finishAnchor: string;
   readonly respawnSeconds: 3;
@@ -104,6 +105,12 @@ export function createArenaV2KzMapDefinitionPrototype(): ArenaV2KzMapDefinitionP
   const respawnAnchorBySegment = Object.freeze(Object.fromEntries(
     route.segments.map(({ segmentId, respawnAnchor }) => [segmentId, respawnAnchor]),
   ) as Record<string, string>);
+  const branchOptionsBySegment = Object.freeze(Object.fromEntries(
+    route.segments.map(({ segmentId, branchOptions }) => [
+      segmentId,
+      Object.freeze(branchOptions.map(({ branchId }) => branchId)),
+    ]),
+  ) as Record<string, readonly string[]>);
   const mapDefinition = createMapDefinitionForRoute(route);
   if (mapDefinition.arena.surfaces.length !== route.surfaces.length) {
     throw new Error('KZ MapDefinition 与路线 surface 数量不一致。');
@@ -117,6 +124,7 @@ export function createArenaV2KzMapDefinitionPrototype(): ArenaV2KzMapDefinitionP
     routeId: route.routeId,
     segmentIds: Object.freeze([...route.segmentIds]),
     segmentSurfaceIds,
+    branchOptionsBySegment,
     respawnAnchorBySegment,
     finishAnchor: route.finishAnchor,
     respawnSeconds: 3,

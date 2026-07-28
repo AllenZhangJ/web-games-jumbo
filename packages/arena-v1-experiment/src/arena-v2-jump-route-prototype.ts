@@ -22,6 +22,20 @@ type SegmentKind = 'basic-platform' | 'gap' | 'stairs' | 'maze' | 'narrow-path' 
 type SurvivalLoopRole = 'safe' | 'pressure' | 'choice' | 'recovery';
 export type ArenaV2JumpRouteResponseOption = 'hold' | 'strafe' | 'jump';
 export type ArenaV2JumpRouteHitRecovery = 'same-segment' | 'adjacent-segment' | 'respawn-anchor';
+export type ArenaV2JumpRouteBranchRole = 'fast-exposed' | 'safe-recovery';
+
+export interface ArenaV2JumpRouteBranchOption {
+  readonly branchId: string;
+  readonly label: string;
+  readonly role: ArenaV2JumpRouteBranchRole;
+  readonly entryAnchor: string;
+  readonly exitAnchor: string;
+  readonly recoveryAnchor: string;
+  readonly routeTicks: number;
+  readonly exposureWindowTicks: number;
+  /** Research waypoints describe a proposed lane; they are not production geometry. */
+  readonly waypoints: readonly ArenaV2JumpRouteAnchor[];
+}
 
 export interface ArenaV2JumpRouteSegment {
   readonly segmentId: string;
@@ -43,6 +57,7 @@ export interface ArenaV2JumpRouteSegment {
   readonly responseOptions: readonly ArenaV2JumpRouteResponseOption[];
   readonly responseWindowTicks: number;
   readonly hitRecovery: ArenaV2JumpRouteHitRecovery;
+  readonly branchOptions: readonly ArenaV2JumpRouteBranchOption[];
 }
 
 export interface ArenaV2JumpRouteSurface {
@@ -173,6 +188,7 @@ const ROUTE_SEGMENTS: readonly ArenaV2JumpRouteSegment[] = Object.freeze([
     responseOptions: Object.freeze(['hold', 'strafe', 'jump'] as const),
     responseWindowTicks: 10,
     hitRecovery: 'same-segment',
+    branchOptions: Object.freeze([]),
   }),
   Object.freeze({
     segmentId: 'segment-02-gap',
@@ -187,6 +203,7 @@ const ROUTE_SEGMENTS: readonly ArenaV2JumpRouteSegment[] = Object.freeze([
     responseOptions: Object.freeze(['jump'] as const),
     responseWindowTicks: 8,
     hitRecovery: 'respawn-anchor',
+    branchOptions: Object.freeze([]),
   }),
   Object.freeze({
     segmentId: 'segment-03-stairs',
@@ -201,6 +218,7 @@ const ROUTE_SEGMENTS: readonly ArenaV2JumpRouteSegment[] = Object.freeze([
     responseOptions: Object.freeze(['strafe', 'jump'] as const),
     responseWindowTicks: 10,
     hitRecovery: 'adjacent-segment',
+    branchOptions: Object.freeze([]),
   }),
   Object.freeze({
     segmentId: 'segment-04-maze',
@@ -215,6 +233,39 @@ const ROUTE_SEGMENTS: readonly ArenaV2JumpRouteSegment[] = Object.freeze([
     responseOptions: Object.freeze(['strafe', 'jump'] as const),
     responseWindowTicks: 12,
     hitRecovery: 'adjacent-segment',
+    branchOptions: Object.freeze([
+      Object.freeze({
+        branchId: 'maze-direct-low',
+        label: '低位直行',
+        role: 'fast-exposed',
+        entryAnchor: 'anchor-stairs-end',
+        exitAnchor: 'anchor-maze-end',
+        recoveryAnchor: 'anchor-stairs-end',
+        routeTicks: 48,
+        exposureWindowTicks: 12,
+        waypoints: Object.freeze([
+          Object.freeze({ x: 15.5, y: 1.95, z: 0 }),
+          Object.freeze({ x: 17.5, y: 1.95, z: -2 }),
+          Object.freeze({ x: 20, y: 1.95, z: -2 }),
+        ]),
+      }),
+      Object.freeze({
+        branchId: 'maze-recovery-high',
+        label: '高位恢复线',
+        role: 'safe-recovery',
+        entryAnchor: 'anchor-stairs-end',
+        exitAnchor: 'anchor-maze-end',
+        recoveryAnchor: 'anchor-stairs-end',
+        routeTicks: 68,
+        exposureWindowTicks: 5,
+        waypoints: Object.freeze([
+          Object.freeze({ x: 15.5, y: 1.95, z: 0 }),
+          Object.freeze({ x: 17.5, y: 2.35, z: 1.4 }),
+          Object.freeze({ x: 20, y: 2.35, z: 1.4 }),
+          Object.freeze({ x: 20, y: 1.95, z: -2 }),
+        ]),
+      }),
+    ]),
   }),
   Object.freeze({
     segmentId: 'segment-05-narrow',
@@ -229,6 +280,7 @@ const ROUTE_SEGMENTS: readonly ArenaV2JumpRouteSegment[] = Object.freeze([
     responseOptions: Object.freeze(['jump'] as const),
     responseWindowTicks: 6,
     hitRecovery: 'adjacent-segment',
+    branchOptions: Object.freeze([]),
   }),
   Object.freeze({
     segmentId: 'segment-06-wire',
@@ -243,6 +295,36 @@ const ROUTE_SEGMENTS: readonly ArenaV2JumpRouteSegment[] = Object.freeze([
     responseOptions: Object.freeze(['strafe'] as const),
     responseWindowTicks: 4,
     hitRecovery: 'respawn-anchor',
+    branchOptions: Object.freeze([
+      Object.freeze({
+        branchId: 'wire-centerline',
+        label: '中线稳定',
+        role: 'safe-recovery',
+        entryAnchor: 'anchor-narrow-end',
+        exitAnchor: 'anchor-finish',
+        recoveryAnchor: 'anchor-narrow-end',
+        routeTicks: 56,
+        exposureWindowTicks: 4,
+        waypoints: Object.freeze([
+          Object.freeze({ x: 25, y: 1.95, z: -2 }),
+          Object.freeze({ x: 30.5, y: 1.95, z: -2 }),
+        ]),
+      }),
+      Object.freeze({
+        branchId: 'wire-edge-cut',
+        label: '边线抢时',
+        role: 'fast-exposed',
+        entryAnchor: 'anchor-narrow-end',
+        exitAnchor: 'anchor-finish',
+        recoveryAnchor: 'anchor-narrow-end',
+        routeTicks: 44,
+        exposureWindowTicks: 8,
+        waypoints: Object.freeze([
+          Object.freeze({ x: 25, y: 1.95, z: -1.78 }),
+          Object.freeze({ x: 30.5, y: 1.95, z: -1.78 }),
+        ]),
+      }),
+    ]),
   }),
 ]);
 
@@ -257,6 +339,21 @@ function assertPrototypeShape(): void {
     for (const value of Object.values(segment.difficulty)) {
       if (!Number.isInteger(value) || value < 1 || value > 4) {
         throw new RangeError(`V2 跳跃路线难度必须位于 1-4：${segment.segmentId}`);
+      }
+    }
+    if (segment.survivalLoopRole === 'choice' && segment.branchOptions.length < 2) {
+      throw new Error(`选择段必须声明至少两个分叉选项：${segment.segmentId}`);
+    }
+    const branchIds = new Set<string>();
+    for (const branch of segment.branchOptions) {
+      if (branchIds.has(branch.branchId)) throw new Error(`分叉 ID 不能重复：${branch.branchId}`);
+      branchIds.add(branch.branchId);
+      if (branch.routeTicks <= 0 || branch.exposureWindowTicks <= 0 || branch.waypoints.length < 2) {
+        throw new RangeError(`分叉必须声明路线长度、暴露窗口和至少两个观察点：${branch.branchId}`);
+      }
+      if (!ROUTE_ANCHORS[branch.entryAnchor] || !ROUTE_ANCHORS[branch.exitAnchor]
+        || !ROUTE_ANCHORS[branch.recoveryAnchor]) {
+        throw new RangeError(`分叉引用了未知路线锚点：${branch.branchId}`);
       }
     }
   }

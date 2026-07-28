@@ -644,6 +644,8 @@ export type {
 } from './arena-v2-survivor-io-ui-evidence.js';
 export type {
   ArenaV2JumpRouteAnchor,
+  ArenaV2JumpRouteBranchOption,
+  ArenaV2JumpRouteBranchRole,
   ArenaV2JumpRouteHitRecovery,
   ArenaV2JumpRoutePrototype,
   ArenaV2JumpRouteResponseOption,
@@ -652,6 +654,14 @@ export type {
   ArenaV2JumpRouteSimulationResult,
   ArenaV2JumpRouteSurface,
 } from './arena-v2-jump-route-prototype.js';
+export {
+  runArenaV2KzRouteChoiceReentryPrototype,
+} from './arena-v2-kz-route-choice-return-prototype.js';
+export type {
+  ArenaV2KzRouteChoiceReentryPrototypeResult,
+  ArenaV2KzRouteChoiceReentryScenario,
+  ArenaV2KzRouteChoiceSnapshot,
+} from './arena-v2-kz-route-choice-return-prototype.js';
 export {
   runArenaV2KzRouteRespawnReentryPrototype,
   runArenaV2KzRouteCombatPrototype,

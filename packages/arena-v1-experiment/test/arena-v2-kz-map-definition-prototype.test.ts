@@ -28,6 +28,14 @@ describe('Arena V2 CS1.6 KZ-inspired MapDefinition prototype', () => {
       prototype.segmentSurfaceIds[segmentId]!.length > 0
       && prototype.respawnAnchorBySegment[segmentId] !== undefined
     ))).toBe(true);
+    expect(prototype.branchOptionsBySegment['segment-04-maze']).toEqual([
+      'maze-direct-low',
+      'maze-recovery-high',
+    ]);
+    expect(prototype.branchOptionsBySegment['segment-06-wire']).toEqual([
+      'wire-centerline',
+      'wire-edge-cut',
+    ]);
     expect(prototype.productionStatus).toBe('research-only');
   });
 
@@ -38,6 +46,7 @@ describe('Arena V2 CS1.6 KZ-inspired MapDefinition prototype', () => {
     expect(Object.isFrozen(prototype.mapDefinition.arena)).toBe(true);
     expect(Object.isFrozen(prototype.mapDefinition.arena.surfaces)).toBe(true);
     expect(Object.isFrozen(prototype.segmentSurfaceIds)).toBe(true);
+    expect(Object.isFrozen(prototype.branchOptionsBySegment)).toBe(true);
     expect(Object.isFrozen(prototype.modeProfiles)).toBe(true);
   });
 });
