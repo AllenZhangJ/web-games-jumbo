@@ -152,6 +152,7 @@ Arena V2 的核心目标是：
 | [局外信息原型结果 V1](../research/arena-v2-ui-information-prototype-results-v1.md) | 记录 11 个信息入口、四条关键流程、48px 触控门槛、760px 窄屏断点和点击预算 | 第二轮信息架构原型 |
 | `arena-v2-ui-information-prototype.ts` | 为 11 个局外页面声明必要信息、首屏最多三项、延后信息和点击预算，验证单一下一决策 | 第三轮信息层原型证据 |
 | `ui-information.html` / `src/entry/ui-information-study.ts` | 独立展示 11 个页面合同、首屏/延后信息、主次动作和四条关键流程，不进入生产构建 | 局外信息研究页，仅研究工具链 |
+| [弹壳特攻队参考的局外布局预览结果 V1](../research/arena-v2-survivor-io-ui-surface-results-v1.md) | 记录 11 个页面统一的目标—三张信息卡—一个主动作—四类入口布局，以及 390×844 窄屏证据 | 布局草图已接入，真机/真人仍待验证 |
 | `arena-v2-ui-next-goal-prototype.ts` | 将收集、武器熟悉、地图熟悉和生存记录收敛为单一局外下一目标，仅供开发/测试工具链使用 | 第二轮信息架构证据 |
 | [ADR-094：局外研究页必须把单一下一目标做成可切换验证面](../decisions/094-arena-v2-ui-single-next-goal-study-surface.md) | 固化研究页直接消费下一目标合同、四阶段研究夹具和单目标渲染边界 | 研究页已接入，生产结算页和真人留存仍待验证 |
 | [ADR-044：武器不做格挡与公开数值概览](../decisions/044-arena-v2-weapon-no-guard-and-public-overview.md) | 固化武器边界与数值展示来源 | V2 提案 |
@@ -163,6 +164,7 @@ Arena V2 的核心目标是：
 | [ADR-078：KZ 地图研究卡必须区分来源事实与 Arena 迁移结论](../decisions/078-arena-v2-kz-research-source-profile.md) | 固化外部难度/长度/检查点事实、可迁移地图语言和生产地图边界 | 六类研究样本已接入，真实地图仍待设计 |
 | [ADR-079：局外界面研究必须区分官方承诺、信息模式与 Arena 翻译](../decisions/079-arena-v2-survivor-io-ui-evidence-boundary.md) | 固化官方资料、设计推导和不复制边界的字段分离，以及 11 个页面合同不扩张的评审门槛 | 四张官方证据卡已接入，真人可读性仍待验证 |
 | [ADR-088：11 个局外页面先用独立研究页验证信息合同](../decisions/088-arena-v2-ui-information-study-page-boundary.md) | 固化研究页复用唯一页面合同、48px 触控门槛、窄屏布局验证和生产入口隔离边界 | 研究页已接入，真机/真人仍待验证 |
+| [ADR-101：弹壳特攻队参考只转译为统一局外布局节奏](../decisions/101-arena-v2-survivor-ui-common-layout-boundary.md) | 固化 11 页面草图的目标、三项首屏信息、一个主动作和四类入口边界 | 窄屏浏览器通过，真机/真人仍待验证 |
 | [ADR-080：热血英豪武器逐件研究必须以动作链和数值审计为单位](../decisions/080-arena-v2-weapon-case-study-by-move.md) | 固化逐动作事实、反制、失败成本和公共数值轴审计边界 | 六件逐动作案例已接入，真人可读性与生产迁移待验证 |
 | [ADR-097：逐件武器研究先按三步学习路径收敛](../decisions/097-arena-v2-weapon-learning-path-research-contract.md) | 固化从动作链派生核心动作、上下文转换、地图/失败代价三步学习顺序，并绑定每步数值重点 | 六件学习路径已接入研究页，真人学习顺序与生产成长仍待验证 |
 | [ADR-099：六件逐件武器研究先绑定主战斗语言](../decisions/099-arena-v2-case-study-primary-combat-language.md) | 固化六件深研案例的一对一主战斗语言、关键数值轴存在性检查和概览读出边界 | 六件语言绑定与关键轴验证通过，仍属研究推导 |

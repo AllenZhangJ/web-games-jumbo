@@ -120,6 +120,89 @@ function renderList(
   return list;
 }
 
+function surfaceHeroLabel(page: ArenaV2UiPageContract): string {
+  if (page.id === 'home' || page.id === 'result-reward') return '下一步';
+  if (page.id === 'loading') return '准备中';
+  return '当前决定';
+}
+
+function surfaceHeroTitle(page: ArenaV2UiPageContract): string {
+  const titles: Readonly<Partial<Record<ArenaV2UiPageId, string>>> = {
+    home: '今天先完成一局',
+    'mode-select': '选一种练习目标',
+    'character-select': '六个基础手感，先选一个',
+    'match-prep': '准备好就开始',
+    'survival-prep': '撑过下一轮供给',
+    'weapon-index': '下一把想练什么？',
+    'weapon-detail': '先看它改变什么位置',
+    'map-index': '下一段地图熟悉度',
+    'map-detail': '先记住第一段危险',
+    'result-reward': '这局留下一个明确目标',
+  };
+  return titles[page.id] ?? page.question;
+}
+
+function renderPageSurface(
+  documentValue: Document,
+  page: ArenaV2UiPageContract,
+): HTMLElement {
+  const surface = documentValue.createElement('section');
+  surface.className = 'ui-page-surface';
+  surface.dataset.pageId = page.id;
+  surface.dataset.layer = page.layer;
+  surface.setAttribute('aria-label', `${labelForPage(page)}布局草图`);
+
+  const topbar = documentValue.createElement('div');
+  topbar.className = 'ui-surface-topbar';
+  const brand = documentValue.createElement('strong');
+  text(brand, 'ARENA');
+  const pageName = documentValue.createElement('span');
+  text(pageName, labelForPage(page));
+  const marker = documentValue.createElement('span');
+  marker.className = 'ui-surface-marker';
+  text(marker, 'LAYOUT STUDY');
+  topbar.append(brand, pageName, marker);
+
+  const hero = documentValue.createElement('div');
+  hero.className = 'ui-surface-hero';
+  const eyebrow = documentValue.createElement('span');
+  eyebrow.className = 'ui-surface-eyebrow';
+  text(eyebrow, surfaceHeroLabel(page));
+  const title = documentValue.createElement('h3');
+  text(title, surfaceHeroTitle(page));
+  const description = documentValue.createElement('p');
+  text(description, page.question);
+  const action = documentValue.createElement('span');
+  action.className = 'ui-surface-primary-action';
+  text(action, page.primaryAction);
+  hero.append(eyebrow, title, description, action);
+
+  const cards = documentValue.createElement('div');
+  cards.className = 'ui-surface-cards';
+  for (const [index, information] of page.firstViewInformation.entries()) {
+    const card = documentValue.createElement('div');
+    card.className = 'ui-surface-card';
+    card.dataset.surfaceSlot = String(index + 1);
+    const indexLabel = documentValue.createElement('span');
+    indexLabel.className = 'ui-surface-card-index';
+    text(indexLabel, `0${index + 1}`);
+    const value = documentValue.createElement('strong');
+    text(value, information);
+    card.append(indexLabel, value);
+    cards.append(card);
+  }
+
+  const bottom = documentValue.createElement('div');
+  bottom.className = 'ui-surface-bottom-nav';
+  for (const item of ['开始', '武器', '地图', '记录']) {
+    const navItem = documentValue.createElement('span');
+    text(navItem, item);
+    bottom.append(navItem);
+  }
+  surface.append(topbar, hero, cards, bottom);
+  return surface;
+}
+
 function renderPage(
   documentValue: Document,
   page: ArenaV2UiPageContract,
@@ -133,6 +216,7 @@ function renderPage(
   question.className = 'ui-page-question';
   text(question, page.question);
   preview.append(question);
+  preview.append(renderPageSurface(documentValue, page));
 
   const metrics = documentValue.createElement('div');
   metrics.className = 'ui-page-metrics';

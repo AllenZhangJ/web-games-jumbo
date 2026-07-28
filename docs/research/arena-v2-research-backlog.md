@@ -142,6 +142,7 @@
 - 结果和未完成边界见[生存 1vE 最小循环原型结果](arena-v2-survival-loop-prototype-results-v1.md)。
 - 11 个局外信息入口和关键点击预算已形成无渲染合同；见[局外信息原型结果](arena-v2-ui-information-prototype-results-v1.md)。
 - 11 个入口合同已与界面地图对齐：包含加载页、移除独立 `race-prep`，并用 `match-prep.supportedModes` 表达 1v1/竞速模板复用；见[弹壳特攻队局外界面研究结果 V2](arena-v2-survivor-io-ui-research-results-v2.md)和[ADR-073](../decisions/073-arena-v2-ui-eleven-page-contract.md)。
+- [x] 11 个页面合同已增加统一布局草图：当前目标、最多三项首屏信息、一个主动作和四类长期入口；390×844 浏览器验证无横向溢出，仍不代表真机/真人结论；见[弹壳特攻队参考的局外布局预览结果 V1](arena-v2-survivor-io-ui-surface-results-v1.md)和[ADR-101](../decisions/101-arena-v2-survivor-ui-common-layout-boundary.md)。
 - [x] 将官方商店页、Google Play 页、官方生存指南和版本记录拆成四张结构化界面证据卡，分离来源事实、信息组织推导、Arena 最小翻译和不复制范围；见 `arena-v2-survivor-io-ui-evidence.ts`、[弹壳特攻队界面研究 V1](arena-v2-survivor-io-ui-study-v1.md)和[ADR-079](../decisions/079-arena-v2-survivor-io-ui-evidence-boundary.md)。
 - 局外下一目标已形成无渲染合同：只显示一个目标，并按武器收集 → 武器上下文 → 地图段落 → 生存记录的顺序给出立即行动；实现见 `arena-v2-ui-next-goal-prototype.ts`，真人点击和留存效果仍未验证。
 - 武器概览已将公开数值比较矩阵提升到武器语义卡之前，并用三把武器的 DOM 同屏证据验证距离差异和自身位移风险；本轮又把“越高/越低/风险”从箭头约定收敛为文字图例、可访问标签、反向有利度条和同尺度校验，详见[ADR-046](../decisions/046-arena-weapon-overview-comparison-first.md)与[ADR-053](../decisions/053-arena-weapon-overview-direction-semantics.md)。真机阅读率和数值解释正确率仍待验证。
