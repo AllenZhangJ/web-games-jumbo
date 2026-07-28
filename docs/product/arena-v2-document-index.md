@@ -33,6 +33,7 @@ Arena V2 的核心目标是：
 | [V2 产品总纲](arena-v2-product-brief.md) | 统一定位、目标用户、核心循环和非目标 | 初稿 |
 | [V2 玩法框架](../gameplay/arena-v2-gameplay-framework.md) | 角色、操作、1v1、生存、地图和反馈的总规则 | 初稿 |
 | [V2 武器设计与研究框架](../gameplay/arena-v2-weapon-design-framework.md) | 热血英豪研究方法、上下文动作、基础武器原型和武器卡模板 | 第二轮收敛 |
+| [热血英豪武器研究综合与设计收敛 V1](../gameplay/arena-v2-hot-blooded-weapon-design-synthesis.md) | 将六件逐动作案例收敛为动作身份、承诺时间、空间条件、命中后果、失败成本、反制与反馈六项武器独立性门槛 | 研究综合已完成，生产迁移仍需独立门禁 |
 | [V2 生存 1vE 规则](../gameplay/arena-v2-survival-mode.md) | 生存流程、敌人、武器供给、掉落和结束条件 | 初稿 + 最小循环原型 |
 | [V2 成长与 200 小时目标](../gameplay/arena-v2-progression-200-hours.md) | 收藏、熟悉、重复游玩和奖励边界 | 初稿 |
 | [V2 界面地图](arena-v2-screen-map.md) | 明确 11 个局外页面入口、对局 HUD 和竞技准备模板复用 | 页面合同已收敛，真机待验证 |
@@ -175,6 +176,7 @@ Arena V2 的核心目标是：
 | [ADR-088：11 个局外页面先用独立研究页验证信息合同](../decisions/088-arena-v2-ui-information-study-page-boundary.md) | 固化研究页复用唯一页面合同、48px 触控门槛、窄屏布局验证和生产入口隔离边界 | 研究页已接入，真机/真人仍待验证 |
 | [ADR-101：弹壳特攻队参考只转译为统一局外布局节奏](../decisions/101-arena-v2-survivor-ui-common-layout-boundary.md) | 固化 11 页面草图的目标、三项首屏信息、一个主动作和四类入口边界 | 窄屏浏览器通过，真机/真人仍待验证 |
 | [ADR-080：热血英豪武器逐件研究必须以动作链和数值审计为单位](../decisions/080-arena-v2-weapon-case-study-by-move.md) | 固化逐动作事实、反制、失败成本和公共数值轴审计边界 | 六件逐动作案例已接入，真人可读性与生产迁移待验证 |
+| [ADR-106：武器必须以动作链和地图后果形成独立价值](../decisions/106-arena-v2-weapon-value-chain-synthesis.md) | 固化六项武器价值链和 Product 数值概览门槛，不用外观、类型或综合评分替代行为差异 | 六件研究案例已收敛，生产迁移待验证 |
 | [ADR-097：逐件武器研究先按三步学习路径收敛](../decisions/097-arena-v2-weapon-learning-path-research-contract.md) | 固化从动作链派生核心动作、上下文转换、地图/失败代价三步学习顺序，并绑定每步数值重点 | 六件学习路径已接入研究页，真人学习顺序与生产成长仍待验证 |
 | [ADR-099：六件逐件武器研究先绑定主战斗语言](../decisions/099-arena-v2-case-study-primary-combat-language.md) | 固化六件深研案例的一对一主战斗语言、关键数值轴存在性检查和概览读出边界 | 六件语言绑定与关键轴验证通过，仍属研究推导 |
 | [ADR-100：KZ 路线先用真实画布验证路线职责](../decisions/100-arena-v2-kz-route-canvas-study-boundary.md) | 固化 KZ 研究页的真实 Canvas、竞速/生存切换、分叉路线、攻击点和来源迁移边界 | 桌面/窄屏本地浏览器通过，2–4 人/真人/生产地图仍待验证 |

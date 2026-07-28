@@ -69,6 +69,7 @@
 - [x] 新增命中反馈因果研究工作台：用 90 个真实 KZ 探针选出命中确认、支撑面转移、击落、攻击被避开和路线失误五类代表样本，投影为 `WeaponFeedbackPresented` 的视觉/音频 Cue，并提供可交互判断和 JSON 导出；仅研究工具链，真机、真人、多人和最终资产仍待验证，见[命中反馈因果研究工作台结果 V1](arena-v2-weapon-feedback-study-results-v1.md)和[ADR-102](../decisions/102-arena-v2-weapon-feedback-study-boundary.md)。
 - [x] 将 `WeaponFeedbackPresented` 的权威标题/解释接入 Three HUD 短时提示；提示只消费事件、不重判命中原因，过期隐藏，仍不替代最终声音/特效与真人验证。
 - [x] 为五类反馈固定候选视觉、音频和低动效资产 ID，并把最终资产、设备和真人验收保持为显式阻塞；见[命中反馈候选资产合同结果 V1](arena-v2-weapon-feedback-asset-candidate-contract-results-v1.md)和[ADR-105](../decisions/105-arena-v2-weapon-feedback-asset-candidate-contract.md)。
+- [x] 将六件热血英豪逐动作案例收敛为动作身份、承诺时间、空间条件、命中后果、失败成本、反制与反馈六项武器独立性门槛，并明确公共数值轴与研究字段边界；见[热血英豪武器研究综合与设计收敛 V1](../gameplay/arena-v2-hot-blooded-weapon-design-synthesis.md)和[ADR-106](../decisions/106-arena-v2-weapon-value-chain-synthesis.md)。
 
 ### 需要回答
 
