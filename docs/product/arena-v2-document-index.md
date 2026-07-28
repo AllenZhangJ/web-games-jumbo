@@ -96,8 +96,8 @@ Arena V2 的核心目标是：
 | [ADR-069：命中反馈必须保留失败原因的因果区分](../decisions/069-arena-v2-hit-feedback-causal-contract.md) | 固化命中确认、支撑面转移、击落、避开攻击线和路线失误五种反馈语义 | KZ 无渲染反馈合同已接入 |
 | [ADR-071：武器反馈先映射为表现事件，再绑定声音与特效](../decisions/071-arena-v2-feedback-presentation-event-mapping.md) | 将五种因果反馈映射为可去重的 `WeaponFeedbackPresented` 事件，表现层只选择 Cue 不重新判定 | Presentation 事件映射已接入，真机表现待验证 |
 | [ADR-073：Arena V2 以 11 个信息入口和一个共享竞技准备模板收敛界面](../decisions/073-arena-v2-ui-eleven-page-contract.md) | 固定 11 个局外入口，明确加载页、竞技准备模板复用和生存准备独立边界 | 页面合同已接入无渲染原型 |
-| [ADR-072：正式武器反馈事件接入 Three 灰盒表现](../decisions/072-arena-v2-feedback-presentation-three-consumption.md) | 将五种反馈 Cue 接入灰盒冲击/警告效果、镜头、震动和现有音频入口，不在表现层重新判定 | 灰盒表现链已接入，最终资产与真机待验证 |
-| [命中反馈因果研究工作台结果 V1](../research/arena-v2-weapon-feedback-study-results-v1.md) | 使用 90 个真实 KZ 探针选取五类代表反馈，投影为视觉/音频 Cue，并提供因果判断与 JSON 导出任务 | 研究页已接入，真人/真机/多人/最终资产仍待验证 |
+| [ADR-072：正式武器反馈事件接入 Three 灰盒表现](../decisions/072-arena-v2-feedback-presentation-three-consumption.md) | 将五种反馈 Cue 接入灰盒冲击/警告效果、镜头、震动、HUD 因果提示和现有音频入口，不在表现层重新判定 | 灰盒表现链已接入，最终资产与真机待验证 |
+| [命中反馈因果研究工作台结果 V1](../research/arena-v2-weapon-feedback-study-results-v1.md) | 使用 90 个真实 KZ 探针选取五类代表反馈，投影为视觉/音频 Cue，并提供因果判断、JSON 导出和短时 HUD 消费 | 研究页与 HUD 已接入，真人/真机/多人/最终资产仍待验证 |
 | [命中反馈候选资产合同结果 V1](../research/arena-v2-weapon-feedback-asset-candidate-contract-results-v1.md) | 为五类反馈固定候选视觉、音频和低动效资产 ID，并将最终资产、设备与真人验收保留为阻塞 | 候选合同已接入，未绑定正式资产 |
 | `weapon-feedback-study.ts` / `feedback.html` | 独立展示命中确认、支撑面转移、击落、攻击被避开和路线失误五类反馈阅读任务，不进入生产构建 | 命中反馈研究页，仅研究工具链 |
 | [首发武器生产迁移门禁结果 V1](../research/arena-v2-weapon-production-migration-gate-results-v1.md) | 将六个候选拆为默认生产 Definition/注册、动作状态、Replay、地图后果和反馈表现五项独立证据 | 门禁已接入，当前 0/6 晋级 |

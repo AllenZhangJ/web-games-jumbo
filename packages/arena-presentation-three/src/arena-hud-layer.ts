@@ -11,6 +11,14 @@ const VIEWPORT_KEYS = new Set<PropertyKey>(['width', 'height', 'pixelRatio', 'sa
 const SAFE_AREA_KEYS = new Set<PropertyKey>(['left', 'top', 'right', 'bottom', 'width', 'height']);
 const STATE_KEYS = new Set<PropertyKey>(['mode', 'mapperLabel']);
 const POINT_KEYS = new Set<PropertyKey>(['x', 'y', 'pointerId']);
+const FEEDBACK_KINDS = new Set([
+  'hit-confirm',
+  'hit-surface-transfer',
+  'hit-ring-out',
+  'attack-evaded',
+  'movement-fall',
+]);
+const FEEDBACK_EMPHASIS = new Set(['normal', 'strong', 'warning']);
 const CONTEXT_METHODS = Object.freeze([
   'setTransform', 'clearRect', 'beginPath', 'moveTo', 'lineTo', 'quadraticCurveTo',
   'closePath', 'fill', 'stroke', 'arc', 'fillRect', 'fillText',
@@ -47,7 +55,7 @@ interface HudParticipant {
 }
 
 interface HudFrame {
-  readonly source: Readonly<{ matchSeed: number }>;
+  readonly source: Readonly<{ matchSeed: number; tick: number }>;
   readonly phase: string;
   readonly hud: Readonly<{
     remainingSeconds: number;
@@ -58,6 +66,16 @@ interface HudFrame {
     result: Readonly<{ winnerId: string | null; isDraw: boolean }> | null;
   }>;
   readonly world: Readonly<{ participants: readonly HudParticipant[] }>;
+  readonly feedback: readonly HudFeedback[];
+}
+
+interface HudFeedback {
+  readonly tick: number;
+  readonly sequence: number;
+  readonly feedbackKind: string;
+  readonly title: string;
+  readonly explanation: string;
+  readonly emphasis: string;
 }
 
 interface RematchRect {
@@ -142,6 +160,29 @@ function booleanValue(value: unknown, name: string): boolean {
   return value;
 }
 
+function feedbackFromEvent(value: unknown, index: number): HudFeedback | null {
+  const name = `ArenaHudLayer frame.events[${index}]`;
+  assertRecord(value, name);
+  const type = stringValue(ownData(value, 'type', name), `${name}.type`);
+  if (type !== 'WeaponFeedbackPresented') return null;
+  const feedbackKind = stringValue(ownData(value, 'feedbackKind', name), `${name}.feedbackKind`);
+  if (!FEEDBACK_KINDS.has(feedbackKind)) {
+    throw new RangeError(`${name}.feedbackKind 不是受支持的武器反馈语义。`);
+  }
+  const emphasis = stringValue(ownData(value, 'emphasis', name), `${name}.emphasis`);
+  if (!FEEDBACK_EMPHASIS.has(emphasis)) {
+    throw new RangeError(`${name}.emphasis 不是受支持的武器反馈强调等级。`);
+  }
+  return Object.freeze({
+    tick: nonNegativeInteger(ownData(value, 'tick', name), `${name}.tick`),
+    sequence: nonNegativeInteger(ownData(value, 'sequence', name), `${name}.sequence`),
+    feedbackKind,
+    title: stringValue(ownData(value, 'title', name), `${name}.title`),
+    explanation: stringValue(ownData(value, 'explanation', name), `${name}.explanation`),
+    emphasis,
+  });
+}
+
 function optionalString(value: unknown, name: string): string | null {
   if (value === null || value === undefined) return null;
   return stringValue(value, name);
@@ -204,6 +245,12 @@ function normalizeFrame(value: unknown): HudFrame {
   const opponent = ownData(hud, 'opponent', 'ArenaHudLayer frame.hud');
   const action = ownData(hud, 'action', 'ArenaHudLayer frame.hud');
   const resultValue = ownData(hud, 'result', 'ArenaHudLayer frame.hud', false) ?? null;
+  const eventValues = ownData(value, 'events', 'ArenaHudLayer frame', false) ?? [];
+  if (!Array.isArray(eventValues)) throw new TypeError('ArenaHudLayer frame.events 必须是数组。');
+  const feedback = Object.freeze(readDataArray(
+    eventValues,
+    'ArenaHudLayer frame.events',
+  ).map(feedbackFromEvent).filter((event): event is HudFeedback => event !== null));
   const result = resultValue === null ? null : Object.freeze({
     winnerId: optionalString(
       ownData(resultValue, 'winnerId', 'ArenaHudLayer frame.hud.result', false),
@@ -239,6 +286,10 @@ function normalizeFrame(value: unknown): HudFrame {
         ownData(source, 'matchSeed', 'ArenaHudLayer frame.source'),
         'ArenaHudLayer frame.source.matchSeed',
       ),
+      tick: nonNegativeInteger(
+        ownData(source, 'tick', 'ArenaHudLayer frame.source', false) ?? 0,
+        'ArenaHudLayer frame.source.tick',
+      ),
     }),
     phase: stringValue(ownData(value, 'phase', 'ArenaHudLayer frame'), 'ArenaHudLayer frame.phase'),
     hud: Object.freeze({
@@ -264,6 +315,7 @@ function normalizeFrame(value: unknown): HudFrame {
       result,
     }),
     world: Object.freeze({ participants }),
+    feedback,
   });
 }
 
@@ -371,12 +423,14 @@ function drawControlRing(context: HudContext, x: number, y: number, radius: numb
 function presentationSignature(frame: HudFrame, state: Readonly<{ mode: string; mapperLabel: string }>): string {
   const local = frame.world.participants.find(({ id }) => id === frame.hud.local.participantId);
   const opponent = frame.world.participants.find(({ id }) => id === frame.hud.opponent.participantId);
+  const feedback = frame.feedback.at(-1);
   return JSON.stringify([
-    frame.source.matchSeed, frame.phase, frame.hud.remainingSeconds, frame.hud.local.lives,
+    frame.source.matchSeed, frame.source.tick, frame.phase, frame.hud.remainingSeconds, frame.hud.local.lives,
     frame.hud.opponent.lives, frame.hud.opponent.displayName, frame.hud.action.definitionId,
     frame.hud.action.available, frame.hud.result,
     local ? [Math.round(local.position.x * 2), Math.round(local.position.z * 2)] : null,
     opponent ? [Math.round(opponent.position.x * 2), Math.round(opponent.position.z * 2)] : null,
+    feedback ? [feedback.tick, feedback.sequence, feedback.feedbackKind, feedback.title, feedback.explanation] : null,
     state.mode, state.mapperLabel,
   ]);
 }
@@ -661,6 +715,40 @@ export class ArenaHudLayer {
     }
   }
 
+  #drawFeedback(context: HudContext, frame: HudFrame, scale: number): void {
+    const feedback = frame.feedback.at(-1);
+    if (!feedback || frame.source.tick < feedback.tick || frame.source.tick - feedback.tick > 90) return;
+    const safe = this.#safeRect;
+    const centerX = safe.left + safe.width / 2;
+    const width = Math.min(safe.width - 32 * scale, 360 * scale);
+    const height = 70 * scale;
+    const x = centerX - width / 2;
+    const y = safe.top + 78 * scale;
+    const warning = feedback.emphasis === 'warning';
+    const strong = feedback.emphasis === 'strong';
+    roundedRect(context, x, y, width, height, 14 * scale);
+    context.fillStyle = warning
+      ? 'rgba(255,243,224,0.96)'
+      : strong
+        ? 'rgba(232,248,246,0.96)'
+        : 'rgba(255,255,255,0.94)';
+    context.fill();
+    context.strokeStyle = warning ? 'rgba(229,57,53,0.68)' : 'rgba(22,166,161,0.62)';
+    context.lineWidth = Math.max(1, 2 * scale);
+    context.stroke();
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillStyle = warning ? '#B71C1C' : '#263238';
+    context.font = font(17 * scale, 900);
+    context.fillText(feedback.title, centerX, y + 23 * scale);
+    context.fillStyle = 'rgba(38,50,56,0.68)';
+    context.font = font(11 * scale, 650);
+    const explanation = feedback.explanation.length > 34
+      ? `${feedback.explanation.slice(0, 34)}…`
+      : feedback.explanation;
+    context.fillText(explanation, centerX, y + 48 * scale);
+  }
+
   #drawOverlay(context: HudContext, frame: HudFrame, scale: number): void {
     const safe = this.#safeRect;
     const centerX = safe.left + safe.width / 2;
@@ -741,6 +829,7 @@ export class ArenaHudLayer {
     this.#context.setTransform(this.#textureScale, 0, 0, this.#textureScale, 0, 0);
     this.#context.clearRect(0, 0, this.#viewport.width, this.#viewport.height);
     this.#drawTop(this.#context, this.#frame, scale);
+    this.#drawFeedback(this.#context, this.#frame, scale);
     drawOffscreenOpponent(this.#context, this.#frame, this.#safeRect, scale);
     this.#drawControls(this.#context, this.#frame, scale);
     this.#drawOverlay(this.#context, this.#frame, scale);

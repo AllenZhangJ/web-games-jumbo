@@ -228,7 +228,7 @@ function createGltfView(characterTemplate = createGltfTemplate()): GltfCharacter
 
 function hudFrame(phase = 'running'): unknown {
   return {
-    source: { matchSeed: 17 },
+    source: { matchSeed: 17, tick: 20 },
     phase,
     hud: {
       remainingSeconds: 120,
@@ -244,6 +244,7 @@ function hudFrame(phase = 'running'): unknown {
         { id: 'player-2', status: 'active', position: { x: 12, z: 0 } },
       ],
     },
+    events: [],
   };
 }
 
@@ -305,6 +306,25 @@ describe('Arena Presentation Three lifecycle boundaries', () => {
       hasRematchControl: true,
     });
     expect(hud.hitTestRematch({ pointerId: 1, x: 390, y: 940 }, { width: 780, height: 1688 })).toBe(true);
+    hud.dispose();
+  });
+
+  it('shows the latest causal weapon feedback briefly without inferring it from geometry', () => {
+    const labels: string[] = [];
+    const hud = new ArenaHudLayer(hudPlatform((value) => labels.push(value)));
+    hud.resize({ width: 390, height: 844 });
+    const frame = hudFrame() as Record<string, unknown>;
+    frame.events = [{
+      type: 'WeaponFeedbackPresented',
+      tick: 20,
+      sequence: 4,
+      feedbackKind: 'hit-ring-out',
+      title: '击落·失去支撑面',
+      explanation: '命中产生的横向控制把目标推出当前安全支撑面。',
+      emphasis: 'strong',
+    }];
+    hud.sync(frame);
+    expect(labels).toContain('击落·失去支撑面');
     hud.dispose();
   });
 
