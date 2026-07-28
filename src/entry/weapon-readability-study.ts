@@ -1,4 +1,5 @@
 import {
+  createArenaV2WeaponCaseStudyOverview,
   createArenaV2WeaponCaseStudyReadabilityMatrix,
   createArenaV2WeaponCaseStudyResearchSignalReadout,
   createArenaV2WeaponReadabilityContextFacts,
@@ -14,6 +15,8 @@ import {
   type ArenaV2WeaponResearchOverviewStat,
   type ArenaV2WeaponReadabilityTaskSet,
   type ArenaV2WeaponCaseStudyResearchSignalReadout,
+  type ArenaV2WeaponCaseStudyLearningStep,
+  type ArenaV2WeaponCaseStudyOverviewRow,
   type ArenaV2WeaponReadabilityContextFact,
 } from '@number-strategy-jump/arena-v1-experiment';
 import type { ArenaV2WeaponPublicAxisId } from '@number-strategy-jump/arena-v1-experiment';
@@ -141,7 +144,58 @@ function renderQuickStat(
   return item;
 }
 
-function renderWeaponSummary(documentValue: Document, row: ArenaV2WeaponResearchOverviewRow): HTMLElement {
+function contextLabel(context: ArenaV2WeaponCaseStudyLearningStep['context']): string {
+  switch (context) {
+    case 'ground': return '地面';
+    case 'running': return '跑动';
+    case 'aerial': return '空中';
+    case 'charged': return '蓄力';
+    case 'delayed': return '延迟';
+    case 'counter': return '反制';
+    case 'after-hit': return '命中后';
+    case 'resource': return '资源';
+  }
+}
+
+function renderLearningPath(
+  documentValue: Document,
+  steps: readonly ArenaV2WeaponCaseStudyLearningStep[],
+): HTMLDetailsElement {
+  const details = documentValue.createElement('details');
+  details.className = 'readability-learning-path';
+  const summary = documentValue.createElement('summary');
+  text(summary, `学习路径：${steps.length} 步`);
+  details.append(summary);
+  const list = documentValue.createElement('ol');
+  for (const step of steps) {
+    const item = documentValue.createElement('li');
+    const title = documentValue.createElement('strong');
+    text(title, step.title);
+    const context = documentValue.createElement('span');
+    text(context, `${step.input} · ${contextLabel(step.context)}`);
+    const decision = documentValue.createElement('p');
+    text(decision, `要做的决定：${step.decision}`);
+    const observe = documentValue.createElement('p');
+    text(observe, `要观察：${step.observe}`);
+    const failure = documentValue.createElement('p');
+    text(failure, `失败代价：${step.failureCost}`);
+    const numeric = documentValue.createElement('p');
+    const focus = step.numericFocus.map(({ label, status }) => (
+      `${label}${status === 'research-only' ? '（研究中）' : ''}`
+    ));
+    text(numeric, `数值重点：${focus.length > 0 ? focus.join('、') : '暂无'}`);
+    item.append(title, context, decision, observe, failure, numeric);
+    list.append(item);
+  }
+  details.append(list);
+  return details;
+}
+
+function renderWeaponSummary(
+  documentValue: Document,
+  row: ArenaV2WeaponResearchOverviewRow,
+  learningPath: readonly ArenaV2WeaponCaseStudyLearningStep[],
+): HTMLElement {
   const article = documentValue.createElement('article');
   article.className = 'readability-overview-card';
   const heading = documentValue.createElement('h3');
@@ -158,6 +212,7 @@ function renderWeaponSummary(documentValue: Document, row: ArenaV2WeaponResearch
     quickStats.append(renderQuickStat(documentValue, row, spec));
   }
   article.append(quickStats);
+  article.append(renderLearningPath(documentValue, learningPath));
   const map = documentValue.createElement('p');
   text(map, `适合：${row.mapSpaces.join(' / ')}`);
   article.append(map);
@@ -276,13 +331,18 @@ function renderOverview(
   documentValue: Document,
   matrix: ArenaV2WeaponResearchOverviewMatrix,
   researchSignals: readonly ArenaV2WeaponCaseStudyResearchSignalReadout[],
+  caseStudyRows: readonly ArenaV2WeaponCaseStudyOverviewRow[],
 ): void {
   const overview = required<HTMLElement>(documentValue, '#readability-overview');
   const researchSignalsRoot = required<HTMLElement>(overview, '#readability-research-signals');
   overview.replaceChildren();
   const summary = documentValue.createElement('div');
   summary.className = 'readability-overview-summary';
-  for (const row of matrix.rows) summary.append(renderWeaponSummary(documentValue, row));
+  for (const row of matrix.rows) {
+    const caseStudyRow = caseStudyRows.find(({ referenceId }) => referenceId === row.candidateId);
+    if (!caseStudyRow) throw new Error(`研究概览缺少学习路径：${row.candidateId}`);
+    summary.append(renderWeaponSummary(documentValue, row, caseStudyRow.learningPath));
+  }
   overview.append(summary);
   overview.append(renderContextFacts(documentValue, createArenaV2WeaponReadabilityContextFacts(matrix)));
   overview.append(renderContextTable(documentValue, matrix.rows, 'ground'));
@@ -505,10 +565,11 @@ function start(): void {
   const exportButton = required<HTMLButtonElement>(root, '#readability-export');
   const error = required<HTMLElement>(root, '#readability-error');
   const matrix = createArenaV2WeaponCaseStudyReadabilityMatrix();
+  const caseStudyRows = createArenaV2WeaponCaseStudyOverview().rows;
   const researchSignals = createArenaV2WeaponCaseStudyResearchSignalReadout();
   const taskSet = createArenaV2WeaponReadabilityTaskSet(matrix);
   const tasks = projectArenaV2WeaponReadabilityParticipantTasks(taskSet);
-  renderOverview(documentValue, matrix, researchSignals);
+  renderOverview(documentValue, matrix, researchSignals, caseStudyRows);
   const taskHash = required<HTMLElement>(root, '#readability-task-hash');
   const matrixHash = required<HTMLElement>(root, '#readability-matrix-hash');
   const status = required<HTMLElement>(root, '#readability-status');

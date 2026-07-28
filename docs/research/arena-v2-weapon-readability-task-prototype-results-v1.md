@@ -6,7 +6,7 @@
 - 日期：2026-07-28
 - 实现：`packages/arena-v1-experiment/src/arena-v2-weapon-readability-task-prototype.ts`、`createArenaV2WeaponCaseStudyReadabilityMatrix`
 - 测试：`packages/arena-v1-experiment/test/arena-v2-weapon-readability-task-prototype.test.ts`、`arena-v2-weapon-case-study-readability-matrix.test.ts`
-- 研究页：`readability.html`、`src/entry/weapon-readability-study.ts`、`src/weapon-readability-study.css`；题目前直接展示六件逐件研究武器的同源研究矩阵、场景差异速览，并单独展示延迟/预警研究信号
+- 研究页：`readability.html`、`src/entry/weapon-readability-study.ts`、`src/weapon-readability-study.css`；题目前直接展示六件逐件研究武器的同源研究矩阵、场景差异速览和折叠三步学习路径，并单独展示延迟/预警研究信号
 - 页面边界测试：`tests/arena/study/weapon-readability-study-web.test.ts`
 - 本地浏览器布局证据：[研究页浏览器布局证据 V1](arena-v2-browser-layout-evidence-v1.md)
 - 边界：只消费研究武器概览矩阵，不进入默认生产 UI、MatchCore、Replay 或存档；生产构建入口仍只有 `index.html`
@@ -69,7 +69,7 @@
 
 ## 研究页验证
 
-独立研究页已接入参与者任务投影和同源研究矩阵：页面先展示六件逐件研究武器的核心动词、四项首屏快速数值（地面/空中有效距离、地面前摇、地面恢复）、场景差异速览、地图空间和反制方式，再展示地面/空中的完整数值表，以及独立的延迟/预警研究信号表。快速数值和速览使用真实单位、方向符号和同源量级条，完整矩阵仍保留所有主轴、上下文轴和行为轴；然后再显示 5 道题、任务集哈希和数值矩阵哈希。参与者只能看到题目、选项和可观察数值，页面源码入口不消费 `expectedOptionId` 或 `evidence`。
+独立研究页已接入参与者任务投影和同源研究矩阵：页面先展示六件逐件研究武器的核心动词、四项首屏快速数值（地面/空中有效距离、地面前摇、地面恢复）、折叠三步学习路径、场景差异速览、地图空间和反制方式，再展示地面/空中的完整数值表，以及独立的延迟/预警研究信号表。学习路径中的“先学核心动作、再学上下文转换、最后放进地图”来自逐动作研究卡，并显示每一步的数值重点和失败代价；它是研究提示，不是正式奖励。快速数值和速览使用真实单位、方向符号和同源量级条，完整矩阵仍保留所有主轴、上下文轴和行为轴；然后再显示 5 道题、任务集哈希和数值矩阵哈希。参与者只能看到题目、选项和可观察数值，页面源码入口不消费 `expectedOptionId` 或 `evidence`。
 
 这层摘要解决的是“必须先横向滚动才知道武器不同”的首见负担：桌面页六张卡共显示 24 个快速数值，并增加 10 条由唯一极值生成的场景事实；窄屏每张卡仍保留 4 个数值，完整矩阵继续作为核对和深入学习入口。它不把快速数值或场景事实升级成综合评分，也不隐藏延迟/预警尚未声明的研究边界。
 

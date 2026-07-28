@@ -12,8 +12,11 @@ describe('Arena V2 KZ branch weapon consequence prototype', () => {
     expect(first.branchCount).toBe(4);
     expect(first.candidateCount).toBe(5);
     expect(first.responsePolicies).toEqual(['hold', 'step-out', 'jump']);
-    expect(first.probeCount).toBe(60);
+    expect(first.attackPoints).toEqual(['entry', 'turn', 'exit']);
+    expect(first.probeCount).toBe(180);
     expect(first.summaries).toHaveLength(4);
+    expect(first.attackPointSummaries).toHaveLength(12);
+    expect(first.attackPointSummaries.every(({ probeCount }) => probeCount === 15)).toBe(true);
     expect(new Set(first.probes.map(({ branchId }) => branchId))).toEqual(new Set([
       'maze-direct-low',
       'maze-recovery-high',
@@ -41,5 +44,13 @@ describe('Arena V2 KZ branch weapon consequence prototype', () => {
     expect(result.probes.some(({ feedback }) => feedback.kind === 'movement-fall')).toBe(true);
     expect(result.probes.some(({ warningZone }) => warningZone !== null)).toBe(true);
     expect(result.probes.some(({ jumpStarted }) => jumpStarted)).toBe(true);
+    const mazeDirectPoints = result.attackPointSummaries.filter(({ branchId }) => branchId === 'maze-direct-low');
+    expect(mazeDirectPoints.map(({ attackPoint }) => attackPoint)).toEqual(['entry', 'turn', 'exit']);
+    expect(new Set(mazeDirectPoints.map(({ surfaceWaypointIndex }) => surfaceWaypointIndex)).size).toBe(3);
+    expect(mazeDirectPoints.find(({ attackPoint }) => attackPoint === 'turn')?.surfaceTransferCount)
+      .toBeGreaterThan(mazeDirectPoints.find(({ attackPoint }) => attackPoint === 'entry')?.surfaceTransferCount ?? -1);
+    expect(result.probes.some(({ attackPoint }) => attackPoint === 'entry')).toBe(true);
+    expect(result.probes.some(({ attackPoint }) => attackPoint === 'turn')).toBe(true);
+    expect(result.probes.some(({ attackPoint }) => attackPoint === 'exit')).toBe(true);
   });
 });

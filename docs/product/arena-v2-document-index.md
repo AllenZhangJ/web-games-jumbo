@@ -57,7 +57,7 @@ Arena V2 的核心目标是：
 | `arena-v2-weapon-blood-shadow-hook-blade-replay-prototype.ts` | 血影钩刃目标保持背向、主动转身、active 前转回三组真实 MatchCore/MatchReplay，并输出拉近/躲避反馈 | 目标朝向 Replay 通过，仅研究工具链 |
 | `arena-v2-weapon-true-hades-hook-scythe-definition-prototype.ts` | 真·哈迪斯钩镰地面承诺/空中下砸 Definition、9 项主轴、6 项上下文轴和 2 项行为轴的权威投影 | 数值投影假设，仅研究工具链 |
 | `arena-v2-weapon-true-hades-hook-scythe-replay-prototype.ts` | 真·哈迪斯钩镰提前释放、提交释放、到期取消和平台边缘四组真实 MatchCore/MatchReplay，并输出承诺与支撑面反馈 | 承诺/地图后果 Replay 通过，仅研究工具链 |
-| `arena-v2-weapon-case-study-overview-prototype.ts` | 将六件逐动作深研案例投影为核心动词、上下文、公共轴状态、地图信号和反制读出；六件均已连接研究 Definition 地面/空中数值投影，复杂行为仍保持独立研究边界 | 深研概览适配层，仅研究工具链 |
+| `arena-v2-weapon-case-study-overview-prototype.ts` | 将六件逐动作深研案例投影为核心动词、上下文、公共轴状态、三步学习路径、地图信号和反制读出；六件均已连接研究 Definition 地面/空中数值投影，复杂行为仍保持独立研究边界 | 深研概览适配层，仅研究工具链 |
 | `arena-v2-weapon-mammoth-stone-axe-delay-prototype.ts` | 以整数 tick 验证猛犸石斧延迟落点的预警、路线躲避、高度躲避和命中反馈因果 | 第九轮延迟落点研究原型，仅研究工具链 |
 | `arena-v2-weapon-hook-obstruction-prototype.ts` | 以固定二维几何验证无遮挡、柱体阻挡、侧向错开和边角路线的拉位差异 | 血影钩刃障碍研究原型，仅研究工具链 |
 | [血影钩刃障碍阻挡原型结果 V1](../research/arena-v2-weapon-hook-obstruction-prototype-results-v1.md) | 记录拉位阻挡探针的固定场景、结果和未完成边界 | 障碍研究证据 |
@@ -78,7 +78,7 @@ Arena V2 的核心目标是：
 | [ADR-068：直线压制先以单一攻击线 Definition 验证](../decisions/068-arena-v2-line-pressure-definition-boundary.md) | 固化直线压制的单一攻击线、固定间隔、公开数值和候选 Registry/默认生产边界 | 原型边界已接入 |
 | [首发研究候选 Definition 原型结果 V1](../research/arena-v2-launch-research-definition-prototype-results-v1.md) | 将直线压制、读招反制、绕后三个首发候选统一为地面/空中 Definition，并绑定 9 项主概览数值、2 项行为数值和命中/空放证据 | 候选 Definition 已通过，默认生产未晋级 |
 | [研究武器概览比较矩阵原型结果 V1](../research/arena-v2-weapon-research-overview-prototype-results-v1.md) | 将三个候选 Registry 候选投影为带标签、单位、方向语义、玩家含义、地面/空中双上下文、地图用途和反制的可比较武器卡数据 | 双上下文矩阵通过，真人可读性待验证 |
-| [深研武器概览适配层原型结果 V1](../research/arena-v2-weapon-case-study-overview-prototype-results-v1.md) | 将六件逐动作深研案例的研究结论与公共数值轴审计接到同一份读出，六件均有独立研究投影与专属 Replay，复杂行为仍独立管理 | 研究读出通过，未进入生产 UI |
+| [深研武器概览适配层原型结果 V1](../research/arena-v2-weapon-case-study-overview-prototype-results-v1.md) | 将六件逐动作深研案例的研究结论、三步学习路径与公共数值轴审计接到同一份读出，六件均有独立研究投影与专属 Replay，复杂行为仍独立管理 | 研究读出与学习路径通过，未进入生产 UI |
 | [白金双枪 Definition 与攻击线 Replay 原型结果 V1](../research/arena-v2-weapon-white-platinum-dual-guns-definition-and-replay-results-v1.md) | 记录白金双枪从独立 Definition 到攻击线命中/挥空 Replay 的证据和未完成边界 | 独立逐件研究通过，未进入生产 UI |
 | [血影钩刃 Definition 与目标朝向 Replay 原型结果 V1](../research/arena-v2-weapon-blood-shadow-hook-blade-definition-and-replay-results-v1.md) | 将血影钩刃最小地面/空中动作接入 Definition → 数值投影 → Replay，验证目标朝向、拉近结果和命中/躲避反馈；障碍仍由独立探针负责 | 研究 Definition/Replay 通过，未进入生产 UI |
 | [真·哈迪斯钩镰 Definition 与承诺/支撑面 Replay 原型结果 V1](../research/arena-v2-weapon-true-hades-hook-scythe-definition-and-replay-results-v1.md) | 将真·哈迪斯钩镰地面/空中动作接入 Definition → 数值投影 → Replay，验证承诺取消、提交命中、支撑面保留和边缘击落 | 研究 Definition/Replay 通过，未进入生产 UI |
@@ -131,7 +131,7 @@ Arena V2 的核心目标是：
 | `arena-v2-kz-branch-camera-observation-prototype.ts` | 用正交视锥数学检查选择/重入时两条分叉的前两个路线点是否同时进入移动端纵向/横向观察窗口，仅供开发/测试工具链使用 | 8 个观察场景通过，走钢丝纵向余量仅 0.066，真实画布仍待验证 |
 | [KZ 分叉路线镜头观察结果 V1](../research/arena-v2-kz-branch-camera-observation-results-v1.md) | 记录 390×844 与 844×390 视口的世界范围、最小余量和选择/重入可见性边界 | 几何观察合同通过，Renderer/真人理解仍待验证 |
 | `arena-v2-kz-branch-weapon-consequence-prototype.ts` | 将五种武器战斗语言和三种固定回应接入四条独立分叉 surface，输出命中、击落、支撑面转移、路线失误和反馈因果 | 60 个 Rule/Action/Physics 探针通过，分叉已产生不同武器后果，攻击点/多人/真人仍待扩展 |
-| [KZ 分叉路线 × 武器后果原型结果 V1](../research/arena-v2-kz-branch-weapon-consequence-results-v1.md) | 记录四条分叉的表面宽深、命中、击落、转移、路线失误和空放差异 | 研究证据已接入，未进入生产平衡 |
+| [KZ 分叉路线 × 武器后果原型结果 V1](../research/arena-v2-kz-branch-weapon-consequence-results-v1.md) | 记录四条分叉入口/转折/出口的表面宽深、命中、击落、转移、路线失误和空放差异 | 180 个研究探针已接入，未进入生产平衡 |
 | [生存 1vE 最小循环原型结果 V1](../research/arena-v2-survival-loop-prototype-results-v1.md) | 记录无武器开局、20 秒三选一、轮次成长、两次掉落和低维奖励证据 | 第一轮原型证据 |
 | `arena-v2-survival-entity-prototype.ts` | 验证单一敌人复用玩家规则/物理、敌我双方击飞和第一次复活/第二次终局，仅供开发/测试工具链使用 | 第二轮规则原型证据 |
 | `arena-v2-survival-pressure-prototype.ts` | 验证 1/2/4 同类敌人的有界自主追击、分阶段刷新、多人击飞压力、20 秒三武器供给争夺、等级专属武器 Definition 和 15/20/30 秒×两种路线分流矩阵，仅供开发/测试工具链使用 | 第六轮规则/武器原型证据 |
@@ -162,6 +162,7 @@ Arena V2 的核心目标是：
 | [ADR-079：局外界面研究必须区分官方承诺、信息模式与 Arena 翻译](../decisions/079-arena-v2-survivor-io-ui-evidence-boundary.md) | 固化官方资料、设计推导和不复制边界的字段分离，以及 11 个页面合同不扩张的评审门槛 | 四张官方证据卡已接入，真人可读性仍待验证 |
 | [ADR-088：11 个局外页面先用独立研究页验证信息合同](../decisions/088-arena-v2-ui-information-study-page-boundary.md) | 固化研究页复用唯一页面合同、48px 触控门槛、窄屏布局验证和生产入口隔离边界 | 研究页已接入，真机/真人仍待验证 |
 | [ADR-080：热血英豪武器逐件研究必须以动作链和数值审计为单位](../decisions/080-arena-v2-weapon-case-study-by-move.md) | 固化逐动作事实、反制、失败成本和公共数值轴审计边界 | 六件逐动作案例已接入，真人可读性与生产迁移待验证 |
+| [ADR-097：逐件武器研究先按三步学习路径收敛](../decisions/097-arena-v2-weapon-learning-path-research-contract.md) | 固化从动作链派生核心动作、上下文转换、地图/失败代价三步学习顺序，并绑定每步数值重点 | 六件学习路径已接入研究页，真人学习顺序与生产成长仍待验证 |
 | [ADR-085：血影钩刃动作规则与障碍后果分层验证](../decisions/085-arena-v2-blood-shadow-hook-blade-definition-boundary.md) | 固化目标朝向/拉近由真实 Rule/Replay 验证，实体障碍由独立地图探针验证，禁止把未接入规则的障碍属性写成武器数值 | 研究 Definition/Replay 已接入，障碍仍待真实地图表面验证 |
 | [ADR-086：真·哈迪斯钩镰先以承诺、上下文和支撑面后果收敛](../decisions/086-arena-v2-true-hades-hook-scythe-definition-boundary.md) | 固化地面承诺、空中独立上下文、取消/提交、命中与支撑面后果的研究边界 | 研究 Definition/Replay 已接入，未进入生产 |
 | [ADR-089：魔血镰刃先以封路、上下文和路线后果收敛](../decisions/089-arena-v2-magic-blood-scythe-definition-boundary.md) | 固化地面宽覆盖、空中高度分支、路线躲避和边缘后果；延迟危险区先保持独立研究信号 | 研究 Definition/Replay 已接入，未进入生产 |
@@ -188,6 +189,7 @@ Arena V2 的核心目标是：
 | [ADR-051：生存武器等级采用按核心语法的正式 Definition 变体](../decisions/051-arena-v2-survival-tier-formal-definition.md) | 固化地面/空中数值、按武器语法成长、等级专属动作身份和回放 hash 边界 | V2 研究原型 |
 | [ADR-052：生存同类敌人采用分阶段刷新研究边界](../decisions/052-arena-v2-survival-staged-enemy-refresh-boundary.md) | 固化不增加敌人类型和操作按键、仅以分阶段刷新验证后期压力的研究边界 | V2 研究原型 |
 | [ADR-054：KZ 段落攻击探针复用地图与武器规则](../decisions/054-arena-v2-kz-route-combat-probe-boundary.md) | 固化六段地图与武器冲量的交叉验证边界，不把几何可达性误判为战斗公平 | V2 研究原型 |
+| [ADR-098：KZ 分叉武器研究必须覆盖入口、转折和出口](../decisions/098-arena-v2-kz-weapon-attack-points.md) | 固化四条分叉三个攻击点、五种战斗语言和三种回应的交叉验证边界 | 180 个研究探针已通过，真实画布/多人/真人仍待验证 |
 
 ## 文档收敛顺序
 

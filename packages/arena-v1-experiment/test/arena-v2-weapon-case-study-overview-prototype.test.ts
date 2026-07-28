@@ -49,6 +49,31 @@ describe('Arena V2 weapon case-study overview', () => {
     ]));
   });
 
+  it('derives a three-step learning path from each case study action chain', () => {
+    const overview = createArenaV2WeaponCaseStudyOverview();
+    expect(overview.rows.every(({ learningPath }) => (
+      learningPath.length === 3
+      && learningPath.map(({ id }) => id).join('/') === 'core/context/map'
+      && learningPath.every(({ sourceMoveId, input, decision, observe, failureCost, numericFocus }) => (
+        sourceMoveId.length > 0
+        && input.length > 0
+        && decision.length > 0
+        && observe.length > 0
+        && failureCost.length > 0
+        && numericFocus.length > 0
+      ))
+    ))).toBe(true);
+    const guns = overview.rows.find(({ referenceId }) => referenceId === 'white-platinum-dual-guns');
+    expect(guns?.learningPath[0]).toMatchObject({
+      id: 'core',
+      sourceMoveId: 'ground-double-shot',
+      context: 'ground',
+    });
+    expect(guns?.learningPath[1]?.numericFocus.map(({ label }) => label)).toContain('覆盖宽度');
+    expect(Object.isFrozen(guns?.learningPath)).toBe(true);
+    expect(Object.isFrozen(guns?.learningPath[0]?.numericFocus)).toBe(true);
+  });
+
   it('binds projected cases to frozen Definition identities and comparable contexts', () => {
     const overview = createArenaV2WeaponCaseStudyOverview();
     const guns = overview.rows.find(({ referenceId }) => referenceId === 'white-platinum-dual-guns');

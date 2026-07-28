@@ -336,6 +336,9 @@ export type {
   ArenaV2WeaponCaseStudyOverview,
   ArenaV2WeaponCaseStudyOverviewAxisAudit,
   ArenaV2WeaponCaseStudyOverviewAxisStatus,
+  ArenaV2WeaponCaseStudyLearningAxisFocus,
+  ArenaV2WeaponCaseStudyLearningStageId,
+  ArenaV2WeaponCaseStudyLearningStep,
   ArenaV2WeaponCaseStudyNumericProjection,
   ArenaV2WeaponCaseStudyNumericReadout,
   ArenaV2WeaponCaseStudyOverviewRow,
@@ -714,6 +717,8 @@ export {
   runArenaV2KzBranchWeaponConsequencePrototype,
 } from './arena-v2-kz-branch-weapon-consequence-prototype.js';
 export type {
+  ArenaV2KzBranchWeaponAttackPoint,
+  ArenaV2KzBranchWeaponAttackPointSummary,
   ArenaV2KzBranchWeaponConsequenceProbeResult,
   ArenaV2KzBranchWeaponConsequencePrototypeResult,
   ArenaV2KzBranchWeaponConsequenceSummary,

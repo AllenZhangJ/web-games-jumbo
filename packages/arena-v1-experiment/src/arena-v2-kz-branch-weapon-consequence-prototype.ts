@@ -57,11 +57,15 @@ const PLAYER_ID = 'branch-weapon-player';
 const KILL_Y = -6;
 const PROBE_TICKS = 120;
 
+export type ArenaV2KzBranchWeaponAttackPoint = 'entry' | 'turn' | 'exit';
+
 export interface ArenaV2KzBranchWeaponConsequenceProbeResult {
   readonly segmentId: string;
   readonly branchId: string;
   readonly branchRole: ArenaV2KzBranchGreyboxSurfaceSet['branchRole'];
+  readonly attackPoint: ArenaV2KzBranchWeaponAttackPoint;
   readonly surfaceId: string;
+  readonly surfaceWaypointIndex: number;
   readonly weaponId: string;
   readonly languageId: string;
   readonly actionDefinitionId: string;
@@ -104,6 +108,21 @@ export interface ArenaV2KzBranchWeaponConsequenceSummary {
   readonly meanTargetHorizontalDisplacement: number;
 }
 
+export interface ArenaV2KzBranchWeaponAttackPointSummary {
+  readonly segmentId: string;
+  readonly branchId: string;
+  readonly branchRole: ArenaV2KzBranchGreyboxSurfaceSet['branchRole'];
+  readonly attackPoint: ArenaV2KzBranchWeaponAttackPoint;
+  readonly surfaceId: string;
+  readonly surfaceWaypointIndex: number;
+  readonly probeCount: number;
+  readonly hitCount: number;
+  readonly ringOutCount: number;
+  readonly surfaceTransferCount: number;
+  readonly movementFallCount: number;
+  readonly evadedCount: number;
+}
+
 export interface ArenaV2KzBranchWeaponConsequencePrototypeResult {
   readonly routeId: string;
   readonly productionStatus: 'research-only';
@@ -111,9 +130,11 @@ export interface ArenaV2KzBranchWeaponConsequencePrototypeResult {
   readonly branchCount: number;
   readonly candidateCount: number;
   readonly responsePolicies: readonly ArenaV2KzLanguageResponsePolicy[];
+  readonly attackPoints: readonly ArenaV2KzBranchWeaponAttackPoint[];
   readonly probeCount: number;
   readonly probes: readonly ArenaV2KzBranchWeaponConsequenceProbeResult[];
   readonly summaries: readonly ArenaV2KzBranchWeaponConsequenceSummary[];
+  readonly attackPointSummaries: readonly ArenaV2KzBranchWeaponAttackPointSummary[];
 }
 
 const RESPONSE_POLICIES: readonly ArenaV2KzLanguageResponsePolicy[] = Object.freeze([
@@ -212,12 +233,28 @@ function createFeedback(
   });
 }
 
+function attackPointSurfaceIndex(
+  surfaceCount: number,
+  attackPoint: ArenaV2KzBranchWeaponAttackPoint,
+): number {
+  if (surfaceCount <= 1) return 0;
+  switch (attackPoint) {
+    case 'entry':
+      return 0;
+    case 'turn':
+      return Math.floor((surfaceCount - 1) / 2);
+    case 'exit':
+      return surfaceCount - 1;
+  }
+}
+
 function runProbe(
   surfaceSet: ArenaV2KzBranchGreyboxSurfaceSet,
   candidate: ArenaV2WeaponLanguageCandidate,
   responsePolicy: ArenaV2KzLanguageResponsePolicy,
+  attackPoint: ArenaV2KzBranchWeaponAttackPoint,
 ): ArenaV2KzBranchWeaponConsequenceProbeResult {
-  const surface = surfaceSet.surfaces[Math.min(1, surfaceSet.surfaces.length - 1)]!;
+  const surface = surfaceSet.surfaces[attackPointSurfaceIndex(surfaceSet.surfaces.length, attackPoint)]!;
   const engine: ArenaRuleEngineContract = createArenaV1RuleEngine({
     participantIds: [ATTACKER_ID, PLAYER_ID],
     config: createArenaV1MatchConfig({
@@ -395,7 +432,9 @@ function runProbe(
     segmentId: surfaceSet.segmentId,
     branchId: surfaceSet.branchId,
     branchRole: surfaceSet.branchRole,
+    attackPoint,
     surfaceId: surface.id,
+    surfaceWaypointIndex: surface.waypointIndex,
     weaponId: candidate.weaponId,
     languageId: candidate.languageId,
     actionDefinitionId: candidate.groundAction.id,
@@ -429,7 +468,7 @@ function summarize(
   surfaceSet: ArenaV2KzBranchGreyboxSurfaceSet,
   probes: readonly ArenaV2KzBranchWeaponConsequenceProbeResult[],
 ): ArenaV2KzBranchWeaponConsequenceSummary {
-  const surface = surfaceSet.surfaces[Math.min(1, surfaceSet.surfaces.length - 1)]!;
+  const surface = surfaceSet.surfaces[attackPointSurfaceIndex(surfaceSet.surfaces.length, 'turn')]!;
   const totalImpulse = probes.reduce((sum, probe) => sum + probe.horizontalImpulse, 0);
   const totalDisplacement = probes.reduce((sum, probe) => sum + probe.targetHorizontalDisplacement, 0);
   return Object.freeze({
@@ -449,18 +488,58 @@ function summarize(
   });
 }
 
+function summarizeAttackPoint(
+  surfaceSet: ArenaV2KzBranchGreyboxSurfaceSet,
+  attackPoint: ArenaV2KzBranchWeaponAttackPoint,
+  probes: readonly ArenaV2KzBranchWeaponConsequenceProbeResult[],
+): ArenaV2KzBranchWeaponAttackPointSummary {
+  const surface = surfaceSet.surfaces[attackPointSurfaceIndex(surfaceSet.surfaces.length, attackPoint)]!;
+  return Object.freeze({
+    segmentId: surfaceSet.segmentId,
+    branchId: surfaceSet.branchId,
+    branchRole: surfaceSet.branchRole,
+    attackPoint,
+    surfaceId: surface.id,
+    surfaceWaypointIndex: surface.waypointIndex,
+    probeCount: probes.length,
+    hitCount: probes.filter(({ firstHitTick }) => firstHitTick !== null).length,
+    ringOutCount: probes.filter(({ outcome }) => outcome === 'hit-ring-out').length,
+    surfaceTransferCount: probes.filter(({ landedOnDifferentSurface }) => landedOnDifferentSurface).length,
+    movementFallCount: probes.filter(({ responseOutcome }) => responseOutcome === 'movement-fall').length,
+    evadedCount: probes.filter(({ outcome }) => outcome === 'miss').length,
+  });
+}
+
 export function runArenaV2KzBranchWeaponConsequencePrototype(): ArenaV2KzBranchWeaponConsequencePrototypeResult {
   const route = createArenaV2JumpRoutePrototype();
   const candidates = createArenaV2WeaponLanguageCandidates();
   const surfaceSets = createArenaV2KzBranchGreyboxSurfaceSets();
+  const attackPoints: readonly ArenaV2KzBranchWeaponAttackPoint[] = Object.freeze([
+    'entry',
+    'turn',
+    'exit',
+  ]);
   const probes = surfaceSets.flatMap((surfaceSet) => (
-    candidates.flatMap((candidate) => (
-      RESPONSE_POLICIES.map((responsePolicy) => runProbe(surfaceSet, candidate, responsePolicy))
+    attackPoints.flatMap((attackPoint) => (
+      candidates.flatMap((candidate) => (
+        RESPONSE_POLICIES.map((responsePolicy) => (
+          runProbe(surfaceSet, candidate, responsePolicy, attackPoint)
+        ))
+      ))
     ))
   ));
   const summaries = surfaceSets.map((surfaceSet) => summarize(
     surfaceSet,
     probes.filter(({ branchId }) => branchId === surfaceSet.branchId),
+  ));
+  const attackPointSummaries = surfaceSets.flatMap((surfaceSet) => (
+    attackPoints.map((attackPoint) => summarizeAttackPoint(
+      surfaceSet,
+      attackPoint,
+      probes.filter(({ branchId, attackPoint: probeAttackPoint }) => (
+        branchId === surfaceSet.branchId && probeAttackPoint === attackPoint
+      )),
+    ))
   ));
   return Object.freeze({
     routeId: route.routeId,
@@ -469,8 +548,10 @@ export function runArenaV2KzBranchWeaponConsequencePrototype(): ArenaV2KzBranchW
     branchCount: surfaceSets.length,
     candidateCount: candidates.length,
     responsePolicies: RESPONSE_POLICIES,
+    attackPoints,
     probeCount: probes.length,
     probes: Object.freeze(probes),
     summaries: Object.freeze(summaries),
+    attackPointSummaries: Object.freeze(attackPointSummaries),
   });
 }

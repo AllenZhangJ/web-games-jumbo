@@ -62,6 +62,15 @@ button, input { font: inherit; }
 .readability-quick-stat-track { display: block; height: 0.22rem; margin-top: 0.35rem; overflow: hidden; background: #d8d3c7; }
 .readability-quick-stat-track::after { display: block; width: var(--readability-quick-fill, 0%); height: 100%; background: var(--readability-cyan); content: ''; }
 .readability-quick-stat[data-weapon-quick-direction="higher-is-risk"] .readability-quick-stat-track::after { background: var(--readability-coral); }
+.readability-learning-path { margin-top: 0.75rem; border-top: 1px solid var(--readability-line); }
+.readability-learning-path summary { padding: 0.65rem 0 0.25rem; cursor: pointer; color: var(--readability-ink); font-size: 0.8rem; font-weight: 800; }
+.readability-learning-path ol { display: grid; gap: 0.55rem; margin: 0.35rem 0 0; padding-left: 1.2rem; }
+.readability-learning-path li { padding-left: 0.15rem; color: var(--readability-muted); font-size: 0.74rem; line-height: 1.4; }
+.readability-learning-path li > strong,
+.readability-learning-path li > span { display: inline-block; margin-right: 0.45rem; }
+.readability-learning-path li > strong { color: var(--readability-ink); }
+.readability-learning-path li > span { color: var(--readability-cyan); font-weight: 700; }
+.readability-learning-path p { margin: 0.25rem 0 0; }
 .readability-context-facts { margin-top: 1rem; padding: 0.85rem; border: 1px solid var(--readability-cyan); background: #eef8f6; }
 .readability-context-facts h3 { margin: 0; }
 .readability-context-fact-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; margin-top: 0.75rem; }

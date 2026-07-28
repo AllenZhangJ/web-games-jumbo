@@ -2,7 +2,7 @@
 
 ## 状态
 
-- 状态：研究工具链原型通过；六件逐动作深研案例均已接入独立研究 Definition 与数值投影，六件均已有专属地面/空中 Replay，延迟/预警/障碍等复杂行为仍保留独立研究边界
+- 状态：研究工具链原型通过；六件逐动作深研案例均已接入独立研究 Definition、数值投影和三步学习路径，六件均已有专属地面/空中 Replay，延迟/预警/障碍等复杂行为仍保留独立研究边界
 - 日期：2026-07-28
 - 范围：魔血镰刃、真·哈迪斯钩镰、白金双枪、血影钩刃、幻虎巨拳、猛犸石斧六件逐动作深研案例
 - 生产影响：不新增默认武器、不修改 Content Registry、不改变现有玩家界面
@@ -21,9 +21,12 @@
 - 必须公开的公共数值轴；
 - 每个数值轴的 `must-measure` 或 `research-only` 状态、原因和玩家含义；
 - 地图关系信号和动作级反制集合；
+- 三步学习路径：核心动作、上下文转换、地图/失败代价；每一步保留来源动作、数值重点和研究状态；
 - `numericReadout: research-projection` 或 `not-yet-available`：前者必须带来源 Definition、地面/空中投影和比较集合，后者必须解释为什么仍不能展示数值。
 
 `must-measure` 不是“已经测出”，而是说明该轴必须进入后续候选 `Definition` 与边界测试；`research-only` 说明当前还不能承诺为玩家可读数值，例如预警、持续状态或障碍依赖。
+
+学习路径不新增奖励或成长规则。它从每件案例已经声明的动作顺序派生：第一动作作为核心动作，第一个上下文变化作为迁移动作，最后一个动作作为地图/失败代价动作。这样玩家先建立武器核心记忆，再理解地面/空中/蓄力等上下文，最后观察地图后果；每一步的数值重点仍回到同一份公共轴定义。
 
 ## 固定结果
 
@@ -45,6 +48,7 @@
 ## 验证
 
 - `arena-v2-weapon-case-study-overview-prototype.ts`：六件案例的统一研究读出，并区分独立研究 Definition 投影与仍未声明的复杂研究字段；
+- `arena-v2-weapon-case-study-overview-prototype.ts`：六件案例的统一研究读出，并从动作链派生三步学习路径；
 - `arena-v2-weapon-blood-shadow-hook-blade-definition-prototype.ts`：血影钩刃地面/空中 Definition、9 项主轴、6 项上下文轴、2 项行为轴及权威数值投影；
 - `arena-v2-weapon-blood-shadow-hook-blade-replay-prototype.ts`：目标保持背向、主动转身、active 前转回三组真实 MatchCore/MatchReplay 场景，并输出拉近/躲避反馈；
 - `arena-v2-weapon-true-hades-hook-scythe-definition-prototype.ts`：真·哈迪斯钩镰地面承诺动作、空中下砸动作、9 项主轴、6 项上下文轴、2 项行为轴及权威数值投影；
@@ -57,12 +61,12 @@
 - `arena-v2-weapon-mammoth-stone-axe-replay-prototype.ts`：安全命中、active 前离开攻击线和平台边缘三组真实 MatchCore/MatchReplay 场景，并输出命中、预判失败和击落反馈；
 - `arena-v2-weapon-warning-signal-prototype.ts`：直接读取魔血镰刃与猛犸石斧 `warningHypothesis`，用统一预警区验证四类玩家回应；
 - `arena-v2-weapon-case-study-overview-prototype.test.ts`、白金双枪 Definition/Replay、真·哈迪斯钩镰 Definition/Replay 测试：相关研究测试通过；
-- 断言覆盖六件案例顺序、六件独立研究投影的来源 Definition 与上下文、白金双枪攻击线命中/挥空、`must-measure`/`research-only` 差异、血影钩刃障碍信号、魔血镰刃/猛犸石斧路线后果、目标朝向分支、确定性和深冻结；
+- 断言覆盖六件案例顺序、六件独立研究投影的来源 Definition 与上下文、三步学习路径、白金双枪攻击线命中/挥空、`must-measure`/`research-only` 差异、血影钩刃障碍信号、魔血镰刃/猛犸石斧路线后果、目标朝向分支、确定性和深冻结；
 - 当前生产边界不变：研究 Definition 未注册默认生产装备。
 
 ## 下一步
 
 1. 将本轮统一研究预警信号继续接入权威预警运行时，保持其不进入普通动作数值；
 2. 对每件候选的地面/空中动作测出主 9 轴和行为 2 轴，不能凭官方原作数值换算；
-3. 将六件已有投影统一接入可读性矩阵，再进行真人首见时间、命中归因和反制可读性测试；
+3. 将六件已有投影与三步学习路径统一接入可读性矩阵，再进行真人首见时间、学习顺序、命中归因和反制可读性测试；
 4. 只有通过候选 Definition、Replay、地图后果、反馈表现和设备/真人门禁，才评估生产迁移。

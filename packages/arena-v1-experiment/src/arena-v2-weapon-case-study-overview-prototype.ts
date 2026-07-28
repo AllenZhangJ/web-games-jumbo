@@ -58,6 +58,30 @@ export interface ArenaV2WeaponCaseStudyOverviewAxisAudit {
   readonly playerMeaning: string;
 }
 
+export type ArenaV2WeaponCaseStudyLearningStageId = 'core' | 'context' | 'map';
+
+export interface ArenaV2WeaponCaseStudyLearningAxisFocus {
+  readonly axisId: ArenaV2WeaponPublicAxisId;
+  readonly label: string;
+  readonly status: ArenaV2WeaponCaseStudyOverviewAxisStatus;
+}
+
+/**
+ * Research-only learning ladder. It describes what to notice next; it does
+ * not grant rewards, unlock content or alter authority rules.
+ */
+export interface ArenaV2WeaponCaseStudyLearningStep {
+  readonly id: ArenaV2WeaponCaseStudyLearningStageId;
+  readonly title: string;
+  readonly sourceMoveId: string;
+  readonly input: string;
+  readonly context: ArenaV2WeaponCaseStudy['moves'][number]['context'];
+  readonly decision: string;
+  readonly observe: string;
+  readonly failureCost: string;
+  readonly numericFocus: readonly ArenaV2WeaponCaseStudyLearningAxisFocus[];
+}
+
 export interface ArenaV2WeaponCaseStudyNumericProjection {
   readonly contexts: readonly ArenaV2WeaponResearchOverviewContext[];
   readonly comparisonWeaponIds: readonly string[];
@@ -80,6 +104,7 @@ export interface ArenaV2WeaponCaseStudyOverviewRow {
   readonly researchOnlyAxisIds: readonly ArenaV2WeaponPublicAxisId[];
   readonly mapSignals: readonly string[];
   readonly counterplay: readonly string[];
+  readonly learningPath: readonly ArenaV2WeaponCaseStudyLearningStep[];
   /** Distinguishes a real research Definition projection from a narrative-only case study. */
   readonly numericReadout: ArenaV2WeaponCaseStudyNumericReadout;
   readonly numericProjection: ArenaV2WeaponCaseStudyNumericProjection | null;
@@ -139,6 +164,48 @@ function createAxisAudit(
       playerMeaning: definition.playerMeaning,
     });
   }));
+}
+
+function createLearningAxisFocus(
+  move: ArenaV2WeaponCaseStudy['moves'][number],
+): readonly ArenaV2WeaponCaseStudyLearningAxisFocus[] {
+  return Object.freeze(move.numericReview.map(({ axisId, status }) => {
+    const definition = AXIS_DEFINITION_BY_ID.get(axisId);
+    if (!definition) throw new RangeError(`学习路径引用未知公共数值轴：${axisId}`);
+    return Object.freeze({ axisId, label: definition.label, status });
+  }));
+}
+
+function createLearningStep(
+  id: ArenaV2WeaponCaseStudyLearningStageId,
+  title: string,
+  move: ArenaV2WeaponCaseStudy['moves'][number],
+): ArenaV2WeaponCaseStudyLearningStep {
+  return Object.freeze({
+    id,
+    title,
+    sourceMoveId: move.id,
+    input: move.input,
+    context: move.context,
+    decision: move.playerDecision,
+    observe: move.designPurpose,
+    failureCost: move.failureCost,
+    numericFocus: createLearningAxisFocus(move),
+  });
+}
+
+function createLearningPath(
+  study: ArenaV2WeaponCaseStudy,
+): readonly ArenaV2WeaponCaseStudyLearningStep[] {
+  const firstMove = study.moves[0];
+  if (!firstMove) throw new RangeError(`逐件研究案例缺少基础动作：${study.referenceId}`);
+  const contextMove = study.moves.find(({ context }) => context !== firstMove.context) ?? firstMove;
+  const mapMove = study.moves[study.moves.length - 1] ?? firstMove;
+  return Object.freeze([
+    createLearningStep('core', '先学核心动作', firstMove),
+    createLearningStep('context', '再学上下文转换', contextMove),
+    createLearningStep('map', '最后放进地图', mapMove),
+  ]);
 }
 
 function createLaunchProjection(
@@ -273,6 +340,7 @@ function createRow(study: ArenaV2WeaponCaseStudy): ArenaV2WeaponCaseStudyOvervie
     researchOnlyAxisIds,
     mapSignals: unique(study.designReasons),
     counterplay: unique(study.moves.map(({ counterplay }) => counterplay)),
+    learningPath: createLearningPath(study),
     numericReadout,
     numericProjection,
     numericReadoutReason: numericProjection === null
