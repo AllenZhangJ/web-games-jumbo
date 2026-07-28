@@ -277,7 +277,11 @@ export type {
 } from './arena-v2-weapon-magic-blood-scythe-definition-prototype.js';
 export {
   createArenaV2WeaponCaseStudyNumericReview,
+  auditArenaV2WeaponValueChain,
 } from './arena-v2-weapon-case-study-contract.js';
+export {
+  createArenaV2WeaponValueChainAuditReport,
+} from './arena-v2-weapon-value-chain-audit.js';
 export { ARENA_V2_WEAPON_TRUE_HADES_HOOK_SCYTHE_CASE_STUDY } from './arena-v2-weapon-true-hades-hook-scythe-case-study.js';
 export type { ArenaV2WeaponTrueHadesHookScytheCaseStudy } from './arena-v2-weapon-true-hades-hook-scythe-case-study.js';
 export { ARENA_V2_WEAPON_WHITE_PLATINUM_DUAL_GUNS_CASE_STUDY } from './arena-v2-weapon-white-platinum-dual-guns-case-study.js';
@@ -365,7 +369,11 @@ export type {
   ArenaV2WeaponCaseStudy,
   ArenaV2WeaponCaseStudyMove,
   ArenaV2WeaponCaseStudyNumericReview,
+  ArenaV2WeaponValueChainAudit,
+  ArenaV2WeaponValueChainGateId,
+  ArenaV2WeaponValueChainGateResult,
 } from './arena-v2-weapon-case-study-contract.js';
+export type { ArenaV2WeaponValueChainAuditReport } from './arena-v2-weapon-value-chain-audit.js';
 export {
   ARENA_V2_WEAPON_LAUNCH_CANDIDATES,
   ARENA_V2_WEAPON_LAUNCH_LANGUAGE_IDS,

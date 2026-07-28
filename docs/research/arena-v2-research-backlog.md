@@ -70,6 +70,7 @@
 - [x] 将 `WeaponFeedbackPresented` 的权威标题/解释接入 Three HUD 短时提示；提示只消费事件、不重判命中原因，过期隐藏，仍不替代最终声音/特效与真人验证。
 - [x] 为五类反馈固定候选视觉、音频和低动效资产 ID，并把最终资产、设备和真人验收保持为显式阻塞；见[命中反馈候选资产合同结果 V1](arena-v2-weapon-feedback-asset-candidate-contract-results-v1.md)和[ADR-105](../decisions/105-arena-v2-weapon-feedback-asset-candidate-contract.md)。
 - [x] 将六件热血英豪逐动作案例收敛为动作身份、承诺时间、空间条件、命中后果、失败成本、反制与反馈六项武器独立性门槛，并明确公共数值轴与研究字段边界；见[热血英豪武器研究综合与设计收敛 V1](../gameplay/arena-v2-hot-blooded-weapon-design-synthesis.md)和[ADR-106](../decisions/106-arena-v2-weapon-value-chain-synthesis.md)。
+- [x] 将六项武器独立性门槛落成结构审计，验证六件逐动作案例均通过，并用缺失动作/失败成本/反制的负向样例验证阻断；见[武器价值链结构审计结果 V1](arena-v2-weapon-value-chain-audit-results-v1.md)和[ADR-107](../decisions/107-arena-v2-weapon-value-chain-audit.md)。
 
 ### 需要回答
 
