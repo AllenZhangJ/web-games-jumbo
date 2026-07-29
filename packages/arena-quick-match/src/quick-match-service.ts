@@ -1,6 +1,10 @@
 import {
+  assertBotProfileRegistry,
+  BOT_DIFFICULTY_IDS,
+  BOT_PROFILE_REGISTRY,
   BotController,
   type BotControllerOptions,
+  type BotProfileRegistryContract,
 } from '@number-strategy-jump/arena-bot';
 import {
   assertKnownKeys,
@@ -50,6 +54,7 @@ export interface QuickMatchServiceOptions {
   readonly seedSource?: MatchSeedSource | null;
   readonly coreFactory?: QuickMatchCoreFactory;
   readonly botControllerFactory?: (options: BotControllerOptions) => BotInputController;
+  readonly botProfileRegistry?: BotProfileRegistryContract;
   readonly sessionFactory?: (options: LocalMatchSessionOptions) => LocalMatchSession;
   readonly diagnosticSink?: ((diagnostics: MatchAssignmentDiagnostics) => void) | null;
   readonly allowDifficultyOverride?: boolean;
@@ -82,6 +87,7 @@ interface NormalizedServiceOptions {
   readonly nextSeed: (() => number) | null;
   readonly coreFactory: QuickMatchCoreFactory;
   readonly botControllerFactory: (options: BotControllerOptions) => BotInputController;
+  readonly botProfileRegistry: BotProfileRegistryContract;
   readonly sessionFactory: (options: LocalMatchSessionOptions) => LocalMatchSession;
   readonly diagnosticSink: ((diagnostics: MatchAssignmentDiagnostics) => void) | null;
   readonly allowDifficultyOverride: boolean;
@@ -92,6 +98,7 @@ const SERVICE_OPTION_KEYS = new Set([
   'seedSource',
   'coreFactory',
   'botControllerFactory',
+  'botProfileRegistry',
   'sessionFactory',
   'diagnosticSink',
   'allowDifficultyOverride',
@@ -184,6 +191,13 @@ function normalizeServiceOptions(
     (factoryOptions: BotControllerOptions) => new BotController(factoryOptions),
     'botControllerFactory',
   ) as (factoryOptions: BotControllerOptions) => BotInputController;
+  const botProfileRegistry = assertBotProfileRegistry(
+    readOptionalDataProperty(record, 'botProfileRegistry', 'QuickMatchService options')
+      ?? BOT_PROFILE_REGISTRY,
+  );
+  for (const difficultyId of BOT_DIFFICULTY_IDS) {
+    botProfileRegistry.require(difficultyId);
+  }
   const sessionFactory = optionalFactory(
     readOptionalDataProperty(record, 'sessionFactory', 'QuickMatchService options'),
     (factoryOptions: LocalMatchSessionOptions) => new LocalMatchSession(factoryOptions),
@@ -221,6 +235,7 @@ function normalizeServiceOptions(
     nextSeed,
     coreFactory,
     botControllerFactory,
+    botProfileRegistry,
     sessionFactory,
     diagnosticSink: diagnosticSink as ((diagnostics: MatchAssignmentDiagnostics) => void) | null,
     allowDifficultyOverride,
@@ -444,6 +459,7 @@ export class QuickMatchService {
         difficultyId: assignment.effectiveDifficultyId,
         behaviorSeed: assignment.seeds.botBehavior,
         personalitySeed: assignment.seeds.botPersonality,
+        profileRegistry: this.#options.botProfileRegistry,
         arena: coreConfig.arena,
         characterRadius: botCharacter.collision.radius,
         maximumStepHeight: botCharacter.movement.automaticStepHeight,

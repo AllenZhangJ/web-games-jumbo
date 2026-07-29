@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
+  BOT_PROFILE_DEFINITION_SCHEMA_VERSION,
+  BOT_PROFILE_REGISTRY,
   BOT_DIFFICULTY_IDS,
   BOT_DIFFICULTY_PROFILES,
+  BotProfileRegistry,
   BotController,
   BotMobilityScheduler,
   cloneBotSourceSnapshot,
+  createBotProfileDefinition,
+  createBotProfileRegistrySnapshot,
   createBotArenaView,
   createBotObservation,
   createBotPersonality,
@@ -31,6 +36,124 @@ function evaluator(
 }
 
 describe('arena-bot deterministic foundation', () => {
+  it('uses a strict immutable profile Definition and deterministic read-only Registry', () => {
+    expect(BOT_PROFILE_DEFINITION_SCHEMA_VERSION).toBe(1);
+    expect(BOT_PROFILE_REGISTRY.list().map(({ id }) => id)).toEqual([
+      'easy',
+      'hard',
+      'normal',
+    ]);
+    expect(BOT_PROFILE_REGISTRY.size).toBe(3);
+    expect(BOT_PROFILE_REGISTRY.has('hard')).toBe(true);
+    expect(BOT_PROFILE_REGISTRY.get('missing')).toBeUndefined();
+    expect(() => BOT_PROFILE_REGISTRY.require('missing')).toThrow(/未知 Bot Profile/);
+    expect(BOT_PROFILE_REGISTRY.require('hard').schemaVersion)
+      .toBe(BOT_PROFILE_DEFINITION_SCHEMA_VERSION);
+    expect(Object.isFrozen(BOT_PROFILE_REGISTRY)).toBe(true);
+    expect(Object.isFrozen(BOT_PROFILE_REGISTRY.list())).toBe(true);
+    expect(Object.isFrozen(BOT_PROFILE_REGISTRY.list()[0])).toBe(true);
+    expect(Object.keys(BOT_PROFILE_REGISTRY.require('hard'))).toEqual([
+      'schemaVersion',
+      'id',
+      'observationDelayTicks',
+      'replanIntervalTicks',
+      'replanJitterTicks',
+      'directionJitterRadians',
+      'actionCommitChance',
+      'shortPauseChance',
+      'maximumPauseTicks',
+      'maximumInputMagnitude',
+      'edgeSafetyMargin',
+      'targetPredictionTicks',
+      'threatAwareness',
+      'attackRangeScale',
+      'minimumMobilityIntervalTicks',
+      'crouchHoldTicks',
+    ]);
+    expect(Object.keys(BOT_DIFFICULTY_PROFILES.hard)).toEqual([
+      'id',
+      'observationDelayTicks',
+      'replanIntervalTicks',
+      'replanJitterTicks',
+      'directionJitterRadians',
+      'actionCommitChance',
+      'shortPauseChance',
+      'maximumPauseTicks',
+      'maximumInputMagnitude',
+      'edgeSafetyMargin',
+      'targetPredictionTicks',
+      'threatAwareness',
+      'attackRangeScale',
+      'minimumMobilityIntervalTicks',
+      'crouchHoldTicks',
+    ]);
+    expect('schemaVersion' in BOT_DIFFICULTY_PROFILES.hard).toBe(false);
+    for (const key of Object.keys(BOT_DIFFICULTY_PROFILES.hard) as Array<keyof typeof BOT_DIFFICULTY_PROFILES.hard>) {
+      expect(BOT_DIFFICULTY_PROFILES.hard[key])
+        .toBe(BOT_PROFILE_REGISTRY.require('hard')[key]);
+    }
+
+    const snapshot = createBotProfileRegistrySnapshot(BOT_PROFILE_REGISTRY);
+    expect(snapshot.list()).toEqual(BOT_PROFILE_REGISTRY.list());
+    expect(snapshot).not.toBe(BOT_PROFILE_REGISTRY);
+    expect(() => new BotProfileRegistry([
+      ...BOT_PROFILE_REGISTRY.list(),
+      BOT_PROFILE_REGISTRY.require('hard'),
+    ])).toThrow(/重复 id/);
+    expect(() => new BotProfileRegistry({} as never)).toThrow(/必须是数组/);
+
+    expect(() => createBotProfileDefinition({
+      ...BOT_PROFILE_REGISTRY.require('hard'),
+      unsupported: true,
+    })).toThrow(/不支持字段/);
+    expect(() => createBotProfileDefinition({
+      ...BOT_PROFILE_REGISTRY.require('hard'),
+      schemaVersion: 0,
+    })).toThrow(/schemaVersion/);
+    expect(() => createBotProfileDefinition({
+      ...BOT_PROFILE_REGISTRY.require('hard'),
+      schemaVersion: BOT_PROFILE_DEFINITION_SCHEMA_VERSION + 1,
+    })).toThrow(/schemaVersion/);
+    const missingSchemaVersion = {
+      ...BOT_PROFILE_REGISTRY.require('hard'),
+    } as Record<string, unknown>;
+    delete missingSchemaVersion.schemaVersion;
+    expect(() => createBotProfileDefinition(missingSchemaVersion)).toThrow(/必填字段/);
+    expect(() => createBotProfileDefinition({
+      ...BOT_PROFILE_REGISTRY.require('hard'),
+      maximumPauseTicks: 1,
+    })).toThrow(/至少为 2/);
+    const missingField = {
+      ...BOT_PROFILE_REGISTRY.require('hard'),
+    } as Record<string, unknown>;
+    delete missingField.crouchHoldTicks;
+    expect(() => createBotProfileDefinition(missingField)).toThrow(/必填字段/);
+    expect(() => createBotProfileDefinition({
+      ...BOT_PROFILE_REGISTRY.require('hard'),
+      replanIntervalTicks: Number.MAX_SAFE_INTEGER + 1,
+    })).toThrow(/非负安全整数/);
+    expect(() => createBotProfileDefinition({
+      ...BOT_PROFILE_REGISTRY.require('hard'),
+      directionJitterRadians: Number.NaN,
+    })).toThrow(/非有限数/);
+    expect(() => createBotProfileDefinition({
+      ...BOT_PROFILE_REGISTRY.require('hard'),
+      directionJitterRadians: 0,
+    })).toThrow(/正有限数/);
+    let getterCalls = 0;
+    const accessor = Object.defineProperty({
+      ...BOT_PROFILE_REGISTRY.require('hard'),
+    }, 'id', {
+      enumerable: true,
+      get() {
+        getterCalls += 1;
+        return 'hard';
+      },
+    });
+    expect(() => createBotProfileDefinition(accessor)).toThrow(/数据字段|访问器/);
+    expect(getterCalls).toBe(0);
+  });
+
   it('keeps all difficulty values centralized, validated and immutable', () => {
     expect(BOT_DIFFICULTY_IDS).toEqual(['easy', 'normal', 'hard']);
     expect(BOT_DIFFICULTY_PROFILES.hard.observationDelayTicks).toBe(6);

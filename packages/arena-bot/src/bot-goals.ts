@@ -17,7 +17,7 @@ import {
   supportSurface,
   surfaceForPosition,
 } from './bot-map-navigation.js';
-import type { BotDifficultyProfile } from './bot-difficulty.js';
+import type { BotProfileDefinition } from './bot-profile-definition.js';
 import type { BotPersonality } from './bot-personality.js';
 import type {
   BotArenaSurface,
@@ -48,7 +48,7 @@ export interface BotGoalPlan {
 
 export interface BotGoalContext {
   readonly observation: BotObservation;
-  readonly profile: BotDifficultyProfile;
+  readonly profile: BotProfileDefinition;
   readonly personality: BotPersonality;
 }
 

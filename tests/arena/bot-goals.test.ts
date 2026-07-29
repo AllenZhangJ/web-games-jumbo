@@ -1,10 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  getBotDifficultyProfile,
+  BOT_PROFILE_REGISTRY,
   BOT_GOAL_ID,
   getArenaBotEvaluators,
   selectHighestUtility,
+  type BotPersonality,
 } from '@number-strategy-jump/arena-bot';
 import {
   cloneBotSourceSnapshot,
@@ -13,6 +14,15 @@ import {
 } from '@number-strategy-jump/arena-bot';
 import { createArenaV1MatchCore } from '@number-strategy-jump/arena-v1-composition';
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
+
+function testPersonality(
+  id: BotPersonality['id'],
+  aggression: number,
+  patience: number,
+  riskTolerance: number,
+): BotPersonality {
+  return { id, aggression, patience, riskTolerance };
+}
 
 test('bot threat evaluation uses the delayed opponent equipment action range', () => {
   const core = createArenaV1MatchCore({
@@ -40,8 +50,8 @@ test('bot threat evaluation uses the delayed opponent equipment action range', (
   assert.ok(observation.opponentActionRule.range > observation.actionRule.range);
   const decision = selectHighestUtility(getArenaBotEvaluators(), {
     observation,
-    profile: getBotDifficultyProfile('hard'),
-    personality: { id: 'test-passive', aggression: 0, patience: 0, riskTolerance: 0.5 },
+    profile: BOT_PROFILE_REGISTRY.require('hard'),
+    personality: testPersonality('survivor', 0, 0, 0.5),
   });
   assert.equal(decision.goalId, BOT_GOAL_ID.EVADE_THREAT);
   assert.equal(decision.plan.actionCandidate, false);
@@ -85,8 +95,8 @@ test('bot reacts only to publicly observed collapse warnings and uses ordinary m
     delayedSnapshot: withWarning,
   });
   const context = {
-    profile: getBotDifficultyProfile('hard'),
-    personality: { id: 'test-balanced', aggression: 0.5, patience: 0.5, riskTolerance: 0.5 },
+    profile: BOT_PROFILE_REGISTRY.require('hard'),
+    personality: testPersonality('tactician', 0.5, 0.5, 0.5),
   };
   const delayedDecision = selectHighestUtility(getArenaBotEvaluators(), {
     ...context,
@@ -134,8 +144,8 @@ test('hard bot can finish edge recovery on the final center platform', () => {
   });
   const decision = selectHighestUtility(getArenaBotEvaluators(), {
     observation,
-    profile: getBotDifficultyProfile('hard'),
-    personality: { id: 'test-cautious', aggression: 0.8, patience: 0.5, riskTolerance: 0.2 },
+    profile: BOT_PROFILE_REGISTRY.require('hard'),
+    personality: testPersonality('survivor', 0.8, 0.5, 0.2),
   });
   assert.notEqual(decision.goalId, BOT_GOAL_ID.RECOVER_EDGE);
   core.destroy();
@@ -178,8 +188,8 @@ test('bot treats missing corners of a plus-shaped topology as real outer edges',
   });
   const decision = selectHighestUtility(getArenaBotEvaluators(), {
     observation,
-    profile: getBotDifficultyProfile('hard'),
-    personality: { id: 'test-cautious', aggression: 0.8, patience: 0.5, riskTolerance: 0.2 },
+    profile: BOT_PROFILE_REGISTRY.require('hard'),
+    personality: testPersonality('survivor', 0.8, 0.5, 0.2),
   });
   assert.equal(decision.goalId, BOT_GOAL_ID.RECOVER_EDGE);
   assert.deepEqual(decision.plan.target, { x: 0, y: -0.5, z: 4 });

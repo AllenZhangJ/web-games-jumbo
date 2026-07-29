@@ -8,10 +8,13 @@ import {
 } from '@number-strategy-jump/arena-contracts';
 import { ARENA_PARTICIPANT_STATUS } from '@number-strategy-jump/arena-match';
 import {
-  getBotDifficultyProfile,
-  type BotDifficultyId,
-  type BotDifficultyProfile,
+  BOT_PROFILE_REGISTRY,
 } from './bot-difficulty.js';
+import {
+  assertBotProfileRegistry,
+  type BotProfileRegistryContract,
+} from './bot-profile-registry.js';
+import type { BotProfileDefinition } from './bot-profile-definition.js';
 import {
   BOT_GOAL_ID,
   getArenaBotEvaluators,
@@ -43,6 +46,7 @@ const CONTROLLER_OPTION_KEYS = new Set([
   'difficultyId',
   'behaviorSeed',
   'personalitySeed',
+  'profileRegistry',
   'arena',
   'characterRadius',
   'maximumStepHeight',
@@ -50,9 +54,11 @@ const CONTROLLER_OPTION_KEYS = new Set([
 
 export interface BotControllerOptions {
   readonly participantId: string;
-  readonly difficultyId: BotDifficultyId;
+  /** A validated Profile Registry ID; default IDs remain easy/normal/hard. */
+  readonly difficultyId: string;
   readonly behaviorSeed: number;
   readonly personalitySeed: number;
+  readonly profileRegistry?: BotProfileRegistryContract;
   readonly arena: unknown;
   readonly characterRadius: number;
   readonly maximumStepHeight?: number;
@@ -60,7 +66,7 @@ export interface BotControllerOptions {
 
 export interface BotControllerDebugSnapshot {
   readonly participantId: string;
-  readonly difficultyId: BotDifficultyId;
+  readonly difficultyId: string;
   readonly personality: BotPersonality;
   readonly lastCommandTick: number;
   readonly observedTick: number | null;
@@ -74,7 +80,8 @@ export interface BotControllerDebugSnapshot {
 
 interface NormalizedBotControllerOptions {
   readonly participantId: string;
-  readonly difficulty: BotDifficultyProfile;
+  readonly difficultyId: string;
+  readonly difficulty: BotProfileDefinition;
   readonly behaviorSeed: number;
   readonly personalitySeed: number;
   readonly arena: BotArenaView;
@@ -111,9 +118,15 @@ function normalizeOptions(options: unknown): NormalizedBotControllerOptions {
   if (typeof participantId !== 'string' || participantId.length === 0) {
     throw new TypeError('Bot participantId 必须是非空字符串。');
   }
-  const difficulty = getBotDifficultyProfile(
-    readDataProperty(record, 'difficultyId', 'BotController options'),
+  const profileRegistry = assertBotProfileRegistry(
+    readOptionalDataProperty(record, 'profileRegistry', 'BotController options')
+      ?? BOT_PROFILE_REGISTRY,
   );
+  const difficultyId = readDataProperty(record, 'difficultyId', 'BotController options');
+  if (typeof difficultyId !== 'string' || difficultyId.length === 0) {
+    throw new TypeError('BotController difficultyId 必须是非空字符串。');
+  }
+  const difficulty = profileRegistry.require(difficultyId);
   const behaviorSeed = uint32(
     readDataProperty(record, 'behaviorSeed', 'BotController options'),
     'behaviorSeed',
@@ -127,12 +140,20 @@ function normalizeOptions(options: unknown): NormalizedBotControllerOptions {
     readDataProperty(record, 'characterRadius', 'BotController options'),
     readOptionalDataProperty(record, 'maximumStepHeight', 'BotController options'),
   );
-  return Object.freeze({ participantId, difficulty, behaviorSeed, personalitySeed, arena });
+  return Object.freeze({
+    participantId,
+    difficultyId,
+    difficulty,
+    behaviorSeed,
+    personalitySeed,
+    arena,
+  });
 }
 
 export class BotController {
   #participantId: string;
-  #difficulty: BotDifficultyProfile;
+  #difficultyId: string;
+  #difficulty: BotProfileDefinition;
   #personality: BotPersonality;
   #rng: DeterministicRng;
   #arena: BotArenaView;
@@ -158,6 +179,7 @@ export class BotController {
       crouchHoldTicks: normalized.difficulty.crouchHoldTicks,
     });
     this.#participantId = normalized.participantId;
+    this.#difficultyId = normalized.difficultyId;
     this.#difficulty = normalized.difficulty;
     this.#personality = personality;
     this.#rng = rng;
@@ -335,7 +357,7 @@ export class BotController {
     );
     return Object.freeze({
       participantId: this.#participantId,
-      difficultyId: this.#difficulty.id,
+      difficultyId: this.#difficultyId,
       personality: this.#personality,
       lastCommandTick: this.#lastCommandTick,
       observedTick: this.#sourceSnapshots[delayedIndex]?.tick ?? null,

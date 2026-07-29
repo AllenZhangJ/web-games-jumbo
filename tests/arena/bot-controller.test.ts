@@ -1,8 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  BOT_PROFILE_DEFINITION_SCHEMA_VERSION,
+  BOT_PROFILE_REGISTRY,
   type BotDifficultyId,
   BOT_DIFFICULTY_PROFILES,
+  BotProfileRegistry,
   BOT_GOAL_ID,
   BotController,
 } from '@number-strategy-jump/arena-bot';
@@ -146,5 +149,51 @@ test('an internal planning failure destroys the controller instead of continuing
   }
   assert.throws(() => controller.createInput(core.getSnapshot()), /已销毁/);
   controller.destroy();
+  core.destroy();
+});
+
+test('BotController resolves its profile through the injected immutable Registry', () => {
+  const core = createArenaV1MatchCore({ seed: 41, config: { preparingTicks: 0 } });
+  const character = core.getCharacterDefinition('player-2');
+  const hard = BOT_PROFILE_REGISTRY.require('hard');
+  const customRegistry = new BotProfileRegistry([{
+    ...hard,
+    schemaVersion: BOT_PROFILE_DEFINITION_SCHEMA_VERSION,
+    id: 'rush',
+    maximumInputMagnitude: 0.5,
+  }]);
+  const controller = new BotController({
+    participantId: 'player-2',
+    difficultyId: 'rush',
+    behaviorSeed: 100,
+    personalitySeed: 200,
+    profileRegistry: customRegistry,
+    arena: core.config.arena,
+    characterRadius: character.collision.radius,
+    maximumStepHeight: character.movement.automaticStepHeight,
+  });
+  const frame = controller.createInput(core.getSnapshot());
+  assert.ok(Math.hypot(frame.moveX, frame.moveZ) <= 0.5 + 1e-12);
+  controller.destroy();
+  assert.throws(() => new BotController({
+    participantId: 'player-2',
+    difficultyId: 'missing',
+    behaviorSeed: 100,
+    personalitySeed: 200,
+    profileRegistry: customRegistry,
+    arena: core.config.arena,
+    characterRadius: character.collision.radius,
+    maximumStepHeight: character.movement.automaticStepHeight,
+  }), /未知 Bot Profile/);
+  assert.throws(() => new BotController({
+    participantId: 'player-2',
+    difficultyId: 'hard',
+    behaviorSeed: 100,
+    personalitySeed: 200,
+    profileRegistry: { require: () => hard } as never,
+    arena: core.config.arena,
+    characterRadius: character.collision.radius,
+    maximumStepHeight: character.movement.automaticStepHeight,
+  }), /已校验的只读 Registry/);
   core.destroy();
 });
