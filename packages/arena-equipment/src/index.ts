@@ -58,6 +58,7 @@ export {
 } from './equipment-supply-timeline-system.js';
 export type {
   EquipmentSupplyAuthorityContract,
+  EquipmentSupplyPublicProjectionResult,
   EquipmentSupplySpawnSpec,
   EquipmentSupplyTimelineSnapshot,
   EquipmentSupplyTimelineStepResult,

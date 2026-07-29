@@ -4,6 +4,7 @@ import {
   createRng,
   normalizeInputFrame,
   type ArenaInputFrame,
+  type ArenaPublicSupplyProjectionLifecycleContract,
   type DeterministicRng,
 } from '@number-strategy-jump/arena-contracts';
 import { ARENA_PARTICIPANT_STATUS } from '@number-strategy-jump/arena-match';
@@ -47,6 +48,8 @@ const CONTROLLER_OPTION_KEYS = new Set([
   'behaviorSeed',
   'personalitySeed',
   'profileRegistry',
+  'requireActiveSupplyProjection',
+  'supplyProjectionContract',
   'arena',
   'characterRadius',
   'maximumStepHeight',
@@ -59,6 +62,9 @@ export interface BotControllerOptions {
   readonly behaviorSeed: number;
   readonly personalitySeed: number;
   readonly profileRegistry?: BotProfileRegistryContract;
+  /** Survival composition sets this; ordinary 1v1 keeps the optional view. */
+  readonly requireActiveSupplyProjection?: boolean;
+  readonly supplyProjectionContract?: ArenaPublicSupplyProjectionLifecycleContract;
   readonly arena: unknown;
   readonly characterRadius: number;
   readonly maximumStepHeight?: number;
@@ -85,6 +91,8 @@ interface NormalizedBotControllerOptions {
   readonly behaviorSeed: number;
   readonly personalitySeed: number;
   readonly arena: BotArenaView;
+  readonly requireActiveSupplyProjection: boolean;
+  readonly supplyProjectionContract?: ArenaPublicSupplyProjectionLifecycleContract;
 }
 
 function uint32(value: unknown, name: string): number {
@@ -135,6 +143,28 @@ function normalizeOptions(options: unknown): NormalizedBotControllerOptions {
     readDataProperty(record, 'personalitySeed', 'BotController options'),
     'personalitySeed',
   );
+  const requireActiveSupplyProjection = readOptionalDataProperty(
+    record,
+    'requireActiveSupplyProjection',
+    'BotController options',
+  );
+  if (
+    requireActiveSupplyProjection !== undefined
+    && typeof requireActiveSupplyProjection !== 'boolean'
+  ) {
+    throw new TypeError('BotController requireActiveSupplyProjection 必须是布尔值。');
+  }
+  const supplyProjectionContract = readOptionalDataProperty(
+    record,
+    'supplyProjectionContract',
+    'BotController options',
+  );
+  if (supplyProjectionContract === null) {
+    throw new TypeError('BotController supplyProjectionContract 不能是 null。');
+  }
+  if (requireActiveSupplyProjection && supplyProjectionContract === undefined) {
+    throw new TypeError('survival BotController 必须注入 supplyProjectionContract。');
+  }
   const arena = createBotArenaView(
     readDataProperty(record, 'arena', 'BotController options'),
     readDataProperty(record, 'characterRadius', 'BotController options'),
@@ -147,6 +177,10 @@ function normalizeOptions(options: unknown): NormalizedBotControllerOptions {
     behaviorSeed,
     personalitySeed,
     arena,
+    requireActiveSupplyProjection: requireActiveSupplyProjection ?? false,
+    ...(supplyProjectionContract === undefined ? {} : {
+      supplyProjectionContract: supplyProjectionContract as ArenaPublicSupplyProjectionLifecycleContract,
+    }),
   });
 }
 
@@ -166,6 +200,9 @@ export class BotController {
   #mobilityScheduler: BotMobilityScheduler;
   #lastMobilityIntent: BotMobilityIntent;
   #lastCommandTick: number;
+  #lastCommandEventSequence: number;
+  #requireActiveSupplyProjection: boolean;
+  #supplyProjectionContract: ArenaPublicSupplyProjectionLifecycleContract | undefined;
   #creatingInput: boolean;
   #destroyed: boolean;
 
@@ -193,6 +230,9 @@ export class BotController {
     this.#mobilityScheduler = mobilityScheduler;
     this.#lastMobilityIntent = BOT_MOBILITY_INTENT.NONE;
     this.#lastCommandTick = -1;
+    this.#lastCommandEventSequence = -1;
+    this.#requireActiveSupplyProjection = normalized.requireActiveSupplyProjection;
+    this.#supplyProjectionContract = normalized.supplyProjectionContract;
     this.#creatingInput = false;
     this.#destroyed = false;
   }
@@ -205,10 +245,27 @@ export class BotController {
     source: BotSourceSnapshot;
     observation: BotObservation;
   }> {
-    const source = cloneBotSourceSnapshot(snapshot);
+    const source = this.#supplyProjectionContract === undefined
+      ? cloneBotSourceSnapshot(snapshot)
+      : cloneBotSourceSnapshot(snapshot, {
+        lifecycleContract: this.#supplyProjectionContract,
+      });
+    if (this.#requireActiveSupplyProjection && source.activeSupplyProjection === null) {
+      throw new RangeError(
+        'survival Bot 缺少完整 activeSupplyProjection，已 fail closed。',
+      );
+    }
     if (this.#lastCommandTick >= 0 && source.tick !== this.#lastCommandTick + 1) {
       throw new RangeError(
         `BotController tick 必须连续：上次 ${this.#lastCommandTick}，本次 ${source.tick}。`,
+      );
+    }
+    if (
+      this.#lastCommandEventSequence >= 0
+      && source.eventSequence < this.#lastCommandEventSequence
+    ) {
+      throw new RangeError(
+        `BotController eventSequence 不能回退：上次 ${this.#lastCommandEventSequence}，本次 ${source.eventSequence}。`,
       );
     }
     const maximum = this.#difficulty.observationDelayTicks + 2;
@@ -340,6 +397,7 @@ export class BotController {
       const frame = this.#createFrame(prepared.observation);
       this.#commitSourceSnapshot(prepared.source);
       this.#lastCommandTick = prepared.observation.commandTick;
+      this.#lastCommandEventSequence = prepared.source.eventSequence;
       return frame;
     } catch (error) {
       if (internalPhase && !this.#destroyed) this.#destroyOwnedState();

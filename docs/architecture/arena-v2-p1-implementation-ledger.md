@@ -3,17 +3,17 @@
 ## 状态
 
 - 阶段：P1 自动替换与 10 秒权威回收。
-- 当前小门：P1 Bot「Profile Definition/Registry foundation-ready」。
-- 当前结论：Profile Definition/Registry foundation 已由主协调签核为 `profile-registry-foundation-ready`（2026-07-29），覆盖可扩展 Profile 合同、只读 Registry、组合阶段完整默认难度校验和既有 Controller 输入兼容性；不代表已完成 P1 要求的公开供给剩余 tick 观察，也不代表 Bot 已接入正式生存 Composition 或 P1 完成。P1 CPU 小门已由主协调签核并提交推送为 `21948d4`；Platform 产物预算继续保持红色，不能签 Platform 或 P1 advance。P1.1、P1.2a、P1.2b、P1.2c-1 与 P1.2c-2 已于 2026-07-28 签核。
-- P1 总体结论：**未完成、不得 advance**。正式生存 Bot 接入、4 人参与者模型、Presentation、Platform 与真机仍未完成；本小门签核不改变这些硬门。
+- 当前小门：P1 Bot「public active-supply projection + formal survival Composition 接线（已签核，待主协调提交推送）」；签核名 `public-supply-projection-survival-bot-ready`（2026-07-29）。
+- 当前结论：Profile Definition/Registry foundation 已由主协调签核并提交推送为 `7e9e3c4`（2026-07-29）；公开单物 active lifecycle projection 合同与正式生存 Composition Bot 接线本小门已签核为 `public-supply-projection-survival-bot-ready`，待主协调提交推送。投影通过 `resyncReadiness` 明确区分可交互 post-step 快照与 `+600` pre-step command view；Bot 仅消费只读观察并输出 InputFrame。该签核不代表 Presentation、Platform、4 人 P2 模型或 P1 完成。P1 CPU 小门已由主协调签核并提交推送为 `21948d4`；Platform 产物预算继续保持红色，不能签 Platform 或 P1 advance。P1.1、P1.2a、P1.2b、P1.2c-1 与 P1.2c-2 已于 2026-07-28 签核。
+- P1 总体结论：**未完成、不得 advance**。本小门的正式生存 Composition Bot 接线与 active lifecycle projection 合同已签核；Coverage、Douyin/WeChat 预算、300-case Bot stress、Presentation、Platform、真机与 4 人参与者模型仍未完成并保持红门，本小门签核不改变这些硬门。
 - P1.1 实现审计起始基线：`d6f906008d0af1ed0133a199a8dc9e15cb1d23d0`。
 - P1.1 提交父节点：`fb0bc404508bf9d7f34df53fedfaf20d31239591`。`d6f9060..fb0bc40` 之间仅包含已经独立验收的 A0.1 美术生产合同与阶段门禁文档，不包含 P1.1 代码，不改变 P1.1 行为审计结论。
 - P1.2a 实现审计起始基线：`8e3e6eff6724612e83b124aa2ae6574a3967af9e`；提交父节点为 `4420d4b585025cd6999e5becf6a6f4d10b895063`，实际提交为 `22b9fd0e39b83de0b6a3ed766a2a66f3d2f67b1d`。`8e3e6ef..4420d4b` 仅包含已经独立验收的 A0.2.1 来源权利包，不改变 P1.2a 行为审计结论。
 - P1.2b 实现审计起始基线为 `22b9fd0e39b83de0b6a3ed766a2a66f3d2f67b1d`，实际签核提交为 `7f9f09b6dfeb8b68a0d9ea64aa013bd348b14099`。
 - P1.2c-1 实现审计起始基线为 `7f9f09b6dfeb8b68a0d9ea64aa013bd348b14099`，已签核、提交并推送为 `8de2997a76601afce18b26d8126fb5cb24ca6feb`。
 - P1.2c-2 实现审计起始基线为 `8de2997a76601afce18b26d8126fb5cb24ca6feb`，实际签核提交为 `5d26a4f`；其提交父节点为 `484d012934b6097043a6041f73b580699287ca39`。`8de2997..484d012` 仅为已独立签核的 A0.2.2 美术来源/参考板提交，不改变 c-2 行为审计，不计入开发证据。
-- 性能整改实现审计起始基线为 `5d26a4f`；已由主协调签核并提交推送为 `21948d4`。当前 Bot 实现审计父节点与安全回滚点为 `e49f15928f8d3ebfa3031875f3a4980a74fbc4ed`；本小门已由主协调签核，提交由主协调执行，不把 `e49f159` 之后的本地代码证据误写成已提交行为。
-- `21948d4..e49f159` 仅为已独立验收的 A1.1 提交，不改变 Bot 实现审计基线；并行美术文件不纳入本批开发证据。
+- 性能整改实现审计起始基线为 `5d26a4f`；已由主协调签核并提交推送为 `21948d4`。Profile Definition/Registry foundation 的实现审计基线为 `e49f159`，已由主协调提交推送为 `7e9e3c4`；当前 public projection/Bot 接线小门以 `7e9e3c4` 为实际父节点与安全回滚点，已签核为 `public-supply-projection-survival-bot-ready`，待主协调提交推送，不把尚未提交的本地代码误写成已提交行为。
+- `e49f159..7e9e3c4` 只包含已验收的 Profile/Registry foundation 提交；本小门实现审计从 `7e9e3c4` 起算。当前工作树没有美术 dirty，本小门提交不包含美术文件；A1.1 文档缺口将在本提交落地后由美术线以实际父 commit 单独修订。
 - 证据日期：2026-07-29。
 
 ## 前置条件与依据
@@ -261,7 +261,7 @@ P1.2b 只评分隔离 Equipment Core 时间线小门；候选条件为总分至�
 | 原子性与 fail-closed | 20 | 19 | 95% | 批量生成/过期全量预检后提交，拾取失败同 tick 可重试；完整 MatchCore tick 中途异常仍属 P1.2c |
 | 快照恢复与确定性 | 20 | 18 | 90% | schema v1、恢复冲突、连续/恢复对照一致；黄金 Replay/checkpoint/hash 尚未接线 |
 | 生命周期与资源 | 15 | 14 | 93% | 599/600/601、held 保留、20 波次上限与1000替换均有证据；100+ seed 正式长局仍未完成 |
-| 依赖与兼容边界 | 10 | 9 | 90% | Rule→Core、单一写入者、普通1v1和既有Replay路径不变；正式生存Composition未接入 |
+| 依赖与兼容边界 | 10 | 9 | 90% | Rule→Core、单一写入者、普通1v1和既有Replay路径不变；正式生存 Composition 不属于该 P1.2b 时间线小门，后续已由本台账下一节小门接入并签核 |
 | 测试与治理 | 10 | 9 | 90% | 定向、完整Node、单worker、类型、架构、构建和直接压力已覆盖；旧MatchCore stress CPU门仍未绿 |
 | **合计** | **100** | **93** | **93%** | **达到 P1.2b timeline-ready 小门并由主协调签核；不代表 P1、P1.2c 或真机完成** |
 
@@ -351,7 +351,7 @@ P1.2b 只评分隔离 Equipment Core 时间线小门；候选条件为总分至�
 - 安全回滚点为已验收并推送的 `7f9f09b`。撤回本节对应的Spawn合同、RuleEngine供给委托、MatchCore factory/hash接线、显式Composition、测试和架构计数即可；不得回滚P1.2b或并行A0.2.2文件。
 - P1.2c-2必须提供可验证的组合恢复设计：先在隔离候选资源中恢复并校验全部系统，全部成功后才发布MatchCore，任何未知版本/future field/identity冲突均不得改动现有authority。
 - P1.2c-2还需黄金生存Replay、checkpoint恢复继续、Replay篡改、比赛结束/淘汰/暂停恢复临界矩阵、100+ seed无渲染长局、runtime/lifecycle/event窗口/内存上限。
-- 当前没有Bot、HUD、音频、Presentation或Platform接入；P1总体仍未完成、不得advance。
+- P1.2c-2 时点尚未纳入 Bot、HUD、音频、Presentation 或 Platform；当前 public projection + formal survival Composition Bot 接线已由本小门签核，但 P1 总体仍未完成、不得 advance。
 
 ## P1.2c-2 原子全系统 checkpoint、生存黄金 Replay 与长局
 
@@ -546,7 +546,7 @@ P1.2b 只评分隔离 Equipment Core 时间线小门；候选条件为总分至�
 
 ### 本轮台账严格自审
 
-- 范围核对：本轮只更新本台账；未修改生产代码、测试、美术文档或美术来源包，工作树中的并行 A1.1 dirty 文件不纳入 P1 证据。
+- 范围核对：本轮只更新本台账；未修改生产代码、测试、美术文档或美术来源包。当前工作树没有美术 dirty，本小门提交不包含美术文件。
 - 证据核对：clean `9d87e7e` 与当前候选的 `mini game.js` 均按同一 1,572,864-byte 上限对照；已明确记录基础红门与本批 +1,305-byte 回归，没有把 `build:budget` 红结果写成通过。
 - 命令核对：一次将架构 Node 测试与治理 Vitest 文件混跑的命令被记录为 runner 误用并排除；随后架构 39/39 与单 worker 治理 599/599 均使用各自正确入口复跑通过。
 - 污染核对：修复前五轮、并行重负载污染前三轮和污染期间第四轮红结果均保留，未拼接为当前 5+5；最后一轮产品计时结束后的 VM/WebKit 峰值只作环境事实，不进入 CPU 统计。
@@ -562,12 +562,12 @@ P1.2b 只评分隔离 Equipment Core 时间线小门；候选条件为总分至�
 
 ### 阶段定位、前置与范围
 
-- 本小门遵循 `Rule → Core → Bot → Presentation → Platform`，实现审计父节点与安全回滚点为已验收并推送的 `e49f159`；本小门已由主协调签核，提交由主协调执行；并行 A1.1 美术文件不纳入开发证据。
+- 本小门遵循 `Rule → Core → Bot → Presentation → Platform`，实现审计基线为 `e49f159`，已由主协调提交推送为 `7e9e3c4`；并行 A1.1 美术文件不纳入开发证据。
 - 前置是 P1.1/P1.2 Core 合同与主协调已签核的 P1 CPU 小门；本批只把已有 Bot 逻辑治理为严格 Definition/Profile/Registry，并在 QuickMatch 组合根显式校验、注入只读 Registry。
 - `BotProfileDefinition` schema v1 是对象内真实字段 `schemaVersion=1`，缺失、0、未来版本均拒绝；Registry Definition 保留版本字段，而 legacy `BOT_DIFFICULTY_PROFILES`/`getBotDifficultyProfile` 通过显式 projection 去掉该字段，保持旧字段顺序、值和研究 hash 形状。不新增 Replay/hash 字段，不改变默认 1v1 的难度、seed、tick 或输入语义。
 - `BotProfileRegistry` 构造时完成严格复制、字段/数值校验、重复 ID 拒绝和稳定 ID 排序；Registry、列表和 Definition 均冻结，`get/require/has/list` 只读，组合阶段拒绝伪造或未校验 Registry。
 - 本批只验证既有 BotController 的受限输入边界兼容性：它消费既有 `BotObservation`/arena view，按注入的 uint32 seed、整数 tick、延迟观察和普通移动策略输出归一化 `ArenaInputFrame`；它不直接拾取、替换、命中或写入 Core 状态，ActionResolver 仍是唯一裁决者。
-- 当前 `BotVisibleEquipment` 只有 `instanceId`、`definitionId`、`locationState` 和 `position`，没有单物 `remainingTicks` 字段；公开供给剩余 tick 的生命周期投影和正式生存 Composition 属于下一小门，不能由本批 foundation 标题或测试暗示已完成。
+- 在 foundation 小门签核时，`BotVisibleEquipment` 只有 `instanceId`、`definitionId`、`locationState` 和 `position`，没有单物 `remainingTicks` 字段；该历史范围由下一节 public projection + formal survival Composition 小门覆盖并已签核，不能把 foundation 签核倒写成公开生命周期已完成。
 - 本批没有新增对 MatchCore、Session、Replay、Renderer 或 Platform 的生产依赖；现有 `arena-match` 仅提供公开 participant status/observation 合同，生产 Bot 未导入 `MatchCore`、Session、Replay 或 Renderer。QuickMatch 只负责组合时注入 Registry，不把组合根下沉为 Bot authority。
 
 ### 计划行为映射与兼容边界
@@ -578,7 +578,7 @@ P1.2b 只评分隔离 Equipment Core 时间线小门；候选条件为总分至�
 | 组合阶段前置校验 | QuickMatch 在保存组合选项前要求 `easy/normal/hard` 全部可 `require`，缺任一项立即失败 | `coreFactory`、`botControllerFactory`、`sessionFactory` 均未调用，不创建半资源 |
 | 普通移动兼容性 | 既有 `BotController` 继续通过 mobility policy/scheduler 输出有界 `ArenaInputFrame` | 不绕过 ActionResolver，不直接写 position、weapon、命中或胜负 |
 | 确定性 | behavior/personality seed 严格 uint32；同 snapshot/tick/input 通过同一 Profile 得到相同帧和调试快照 | 不引入墙钟、`Math.random()`、宿主 API 或新的 RNG 流 |
-| 普通 1v1 兼容 | 默认 Profile 数值、字段顺序、旧投影和 Matchmaking 字面量类型保持；QuickMatch 仅增加等价 Registry 注入 | 正式生存 Composition、公开剩余 tick 和 4 人生产仍未接入 |
+| 普通 1v1 兼容 | 默认 Profile 数值、字段顺序、旧投影和 Matchmaking 字面量类型保持；QuickMatch 仅增加等价 Registry 注入 | 正式生存 Composition/公开剩余 tick 不属于 foundation 小门，现由下一节已签核小门单独审计；4 人生产仍未接入 |
 
 ### 失败关闭、竞态与生命周期
 
@@ -607,7 +607,7 @@ P1.2b 只评分隔离 Equipment Core 时间线小门；候选条件为总分至�
 | 维度 | 满分 | 得分 | 达成率 | 判断 |
 |---|---:|---:|---:|---|
 | Profile Definition / Registry 合同 | 20 | 20 | 100% | 对象内 schema v1、缺失/0/未来版本拒绝、稳定排序、冻结、重复/未知/坏 Definition 和 legacy projection 均有测试 |
-| Profile ID extensibility / Controller 边界 | 20 | 18 | 90% | Controller 只依赖注入 Registry，默认与自定义 ID 均可解析；正式生存公开生命周期投影尚未接入 |
+| Profile ID extensibility / Controller 边界 | 20 | 18 | 90% | Controller 只依赖注入 Registry，默认与自定义 ID 均可解析；正式生存公开生命周期投影不属于该 foundation 小门，已由下一节小门接入并签核 |
 | seed/tick 确定性与 Replay/hash 兼容 | 20 | 19 | 95% | 90 场 stress、9 replay checks、黄金 Replay 无漂移；无新增 Replay/hash schema |
 | fail-closed、重入与生命周期 | 15 | 14 | 93% | accessor/非法输入/同 tick retry/重入/destroy 覆盖；更广压力仍受既有治理红门约束 |
 | 无渲染行为覆盖 | 15 | 12 | 80% | 21 个 Node 定向与 90 场 stress 通过；默认 300-match stress 超时并被停止，不能记为通过 |
@@ -616,27 +616,119 @@ P1.2b 只评分隔离 Equipment Core 时间线小门；候选条件为总分至�
 
 ### 未完成项、风险与回滚
 
-- 本小门未实现正式生存 Composition 的 Bot 注入、`BotVisibleEquipment` 单物剩余 tick 公开投影、4 人权威参与者模型、HUD/音频/Presentation、Platform、前后台/真机生命周期；4 人属于 P2 阶段边界，不是本批漏测后通过。
-- 本小门未改变 Replay V5、state hash 或事件 schema，也没有将 Bot 变成第二 tick authority；后续正式生存接线必须由 Composition 注入已注册内容和只读观察，不能让 Bot 选择地图/武器或直接修改供给。
+- foundation 小门未实现正式生存 Composition 的 Bot 注入、`BotVisibleEquipment` 单物剩余 tick 公开投影、4 人权威参与者模型、HUD/音频/Presentation、Platform、前后台/真机生命周期；上述公开 projection 与正式生存 Bot 接线现由下一节小门覆盖并已签核，4 人仍属于 P2 阶段边界。
+- foundation 小门未改变 Replay V5、state hash 或事件 schema，也没有将 Bot 变成第二 tick authority；当前正式生存接线仍由 Composition 注入已注册内容和只读观察，Bot 不选择地图/武器或直接修改供给。
 - 默认 300-match Bot stress 曾运行约 12 分钟后因无输出被停止；随后 30×3 difficulty 的直接脚本通过。曾错误使用 `npm run arena:bot:stress -- --matches=30 --replay-samples=3`，因重复 `--matches` 被拒绝；已改用脚本直接调用并保留该命令误用事实，两者均不冒充 300-match 通过。
 - `npm run check:governance` 默认 coverage 有 2 个既有研究测试超时；提高测试超时后 601/601 但 `arena-equipment` coverage threshold 仍为 67.84%/78% 红门。该事实与当前 Platform 产物超限共同保持 fail-closed。
 - 当前 dirty 产物相对 `e49f159` 的包体增量仍是未关闭的 Platform 风险；本批没有把它归因或拆分为 Bot 单独增量，也没有因此修改预算门槛。当前 douyin/wechat `game.js` 超限数据必须继续保留。
 - 安全回滚点为 `e49f159`：只撤回本批 Bot Profile Definition/Registry、难度投影调整、Controller/QuickMatch Registry 注入、对应测试和本节台账；不得回滚已验收的 A1.1 美术提交，也不触碰此前 P1 Core 签核提交。
-- 当前状态是 **profile-registry-foundation-ready，主协调已签核（2026-07-29），等待主协调提交**；P1 总体仍 **未完成、不得 advance**。
+- 当前状态是 **profile-registry-foundation-ready，主协调已签核并提交推送（2026-07-29，`7e9e3c4`）**；下一节 public projection + formal survival Composition Bot 小门已另行签核，P1 总体仍 **未完成、不得 advance**。
+
+## P1 Bot：public active-supply projection + formal survival Composition（已签核，待主协调提交推送）
+
+### 阶段定位、审计基线与范围
+
+- 本小门严格位于 `Rule → Core → Bot`：审计起始基线、实际父提交和安全回滚点均为 `7e9e3c44e728`（Profile/Registry foundation 已签核提交）。当前工作树没有美术 dirty；本小门提交不包含美术文件，也不触碰 A0/A1 文档。A1.1 文档缺口将在本提交落地后由美术线以实际父 commit 单独修订。
+- 本小门只覆盖两件事：
+  1. Timeline 从权威整数 tick、冻结 Definition/spawn spec 和稳定 instance identity 生成版本化 public active-supply projection；
+  2. 正式 survival Composition 在组合阶段注入已注册 Profile Registry 和已严格校验的 projection lifecycle contract，Bot 只通过只读观察输出普通 `InputFrame`。
+- 不在本小门实现 Presentation adapter、HUD/音频、Platform/真机、4 人生产权威参与者、地图或武器选择、第二 tick authority、供给旁路拾取、Replay V5 新字段或 state-hash 新字段。4 人仍是 P2 计划边界，不是本批遗漏后的通过。
+- 普通 1v1 不启用生存 Timeline 和严格 projection contract；既有 equipment snapshot 字段、内部 checkpoint、Replay V5、state hash、动作与输入语义保持不变。
+- Bot 明确分离两类输入：`cloneBotSourceSnapshot(raw ArenaMatchSnapshot)` 使用严格 raw equipment key 集，不包含 `originPosition` 或通用 `remainingTicks`；`createBotObservation(BotSourceSnapshot)` 使用独立 normalized `BotVisibleEquipment` key 集，允许其合法的派生 `remainingTicks`。后者只接受 `null` 或能与同一 `activeSupplyProjection` 映射一致的值；普通 1v1 的该字段保持 `null`，不能把 normalized Bot 数据当作 raw authority 快照。
+
+### 生产落点与行为映射
+
+| 计划/审查要求 | 本小门落点 | 明确边界 |
+|---|---|---|
+| 单物生命周期公开剩余 tick | `arena-public-supply-projection.ts` 定义版本化 projection；Timeline 是唯一 producer | 不把内部 active ledger 直接暴露给 Bot 或表现层 |
+| 稳定供给身份 | 每项同时绑定 `supplyDefinitionId/supplyId/equipmentInstanceId/equipmentDefinitionId/equipmentSpawnId/spawnTick/expireTick/position/spawnPosition` | `spawnPosition` 只存在于 projection item，不扩散进普通 `ArenaEquipmentSnapshot`、internal snapshot、hash 或旧 Replay |
+| pre-expiry authority identity | projection schema 已升级为 v2，增加有界、稳定排序的 `pendingExpiryEquipmentInstanceIds` | v1 projection 不静默读取；未知/旧 schema fail closed；pending identity 自身按 formal namespace 解析并证明 `expireTick===snapshotTick` |
+| 剩余 tick 算法 | `remainingTicks = max(0, expireTick - snapshotTick)`；到期前公开正值 | `remainingTicks=0` 不发布为可交互供给；+600 先 expire 后 pickup |
+| 世界可争夺过滤 | projection 只保留世界中仍可表现/争夺的 supply；HELD/DESPAWNED、已拾取/替换完成项过滤 | 空槽拾取后内部 timeline ledger 可暂存至 expireTick，但同一 public snapshot 立即移除 |
+| 双向完整性 | producer 与消费侧都校验 projection 集合 ↔ 当前 world-supply equipment 集合 | 删除 projection 而保留 world item、重复 supply/instance 或身份连接冲突均拒绝；合法 held/despawned replacement 作为 nonWorld，不要求继续出现在 projection |
+| formal identity-first | consumer 先从 `equipmentInstanceId` 的正式 supply namespace 解析 wave/slot，再校验 Definition/spawn spec/lifecycle | 普通1v1无 lifecycle contract 时不误伤；正式 survival 下任何 spawned/dropped 普通 namespace 都 fail closed |
+| 正式生存身份 | `ArenaPublicSupplyProjectionLifecycleContract` 以纯数据携带正式 Definition、合法波次、spawn spec、Registry equipment IDs | 通用 contracts 不依赖 Definition package；Composition/Core/Bot 边界强制注入和审计 |
+| Bot 接线 | survival Composition 使用已验证 Profile Registry；`BotController` 在 strict 模式要求 projection 并只返回 InputFrame；raw/normalized snapshot 双入口分别 fail closed | Bot 不调用拾取/替换、不写 Core、不读取 Timeline 私有状态、Session/Replay/Renderer 或未来状态；normalized 路径只做结构、tick/sequence、可见 equipment 映射与 pending/world 互斥校验，完整 Definition/spawn/lifecycle authority 审计仍由 raw clone 路径完成 |
+
+`arena-v2-survival-supply-bot-composition.ts` 先对 `supply` 做 `cloneFrozenData`、严格键校验、正式 Definition ID 校验和 `spawnSpecs` 数组校验，再提取冻结副本为局部 `spawnSpecs`，供 Core 构造和 `supplyProjectionContract` 使用；不存在未定义变量，也不把原始输入对象直接注入 projection contract。Core 构造继续对每一项做完整 spec/地图表面/Definition/波次校验，构造失败时清理 Core/Controller 资源。
+
+### 同 tick、pre-step 与恢复语义
+
+- Timeline/MatchCore 唯一顺序仍为 `spawn → expire → pickup → action`。在 `expireTick` 恰到达时，内部 expire 先移除可交互 world item，随后 pickup 不得命中；已持有武器不受地面物品过期影响。
+- post-step public snapshot 是 `resyncReadiness='ready'`、`pendingAuthorityTick=null` 且 `pendingExpiryEquipmentInstanceIds=[]`，可供未来只读消费者验证和恢复。
+- `+600` 的 pre-step snapshot 是合法的当前 tick command view：projection 为空、`resyncReadiness='not-ready-pre-expiry'`、`pendingAuthorityTick=snapshotTick`，并携带每个仍待过期 world instance 的 pending identity。MatchCore 对外 equipment 可已过滤为空；formal consumer 不能从该空集合推导 pending，而是独立解析 pending identity 并验证其 contract-derived `expireTick===snapshotTick`。它**不是**可恢复到上一 tick 的 active 状态，也不声称能从空 projection 重建 `+599`。
+- `assertArenaPublicSupplyProjectionResyncReady()` 对该 pre-step view fail closed；冷启动、seek、断流或未来 Presentation adapter 必须等待下一份 post-step ready snapshot，内部 checkpoint 恢复则使用权威内部状态，不把 command view 当作恢复输入。没有增加 Presentation adapter 或第二份生命周期 authority。
+- projection audit 拒绝 tick/sequence 错配、非安全整数、未来/旧 schema、未知字段、缺字段、重复 identity、Definition/Registry/slot/spawn/expire/position 不一致、formal namespace world equipment 未映射、过期后仍在 world、pending identity 超界或边界不符和不完整 event 水位。通用 `createArenaMatchSnapshotAudit` 不注入 lifecycle contract，只做严格 v2 结构与 ready/pending 互斥审计；合法 expiry 边界由 formal `require...(... lifecycleContract)` 路径验证。
+
+### 旧行为、兼容性与确定性
+
+- 普通 1v1：不创建 survival Timeline，不要求 `activeSupplyProjection`，原有 `ArenaEquipmentSnapshot` 的字段顺序和数据形状保持；不把 `spawnPosition` 或 projection 字段写入 internal checkpoint、Replay 或 hash。
+- 生存：地图和装备仍由 Composition 传入且经过 Registry/Definition 校验；Core 不随机选择内容，Bot 不选择供给内容。相同 Definition、seed、整数 tick 和输入顺序得到相同 projection identity、remainingTicks、eventSequence 和 Bot InputFrame。
+- 已有普通黄金 Replay 与生存黄金 Replay 的 manifest/hash 未更新：普通 `a53b401d`，生存 `dd30e771`；普通四条与生存一条黄金均复验通过，证明本小门没有改变既有 Replay V5/hash 字节合同。
+
+### 实际验证证据
+
+| 门禁 | 当前有效结果 | 说明 |
+|---|---|---|
+| projection/Timeline/MatchCore/Bot 定向 Node | 主协调独立 33/33 通过 | 覆盖 1200/2400、599/600/601（MatchCore 直接断言 public equipment 与 3 个稳定 pending ID）、+600 pre-step pending metadata、future/expired/ordinary namespace/slot-definition-spawn 篡改、双向完整性、合法同波 recycle、空槽拾取后内部暂存/public 移除、恢复后无重复 expiry、Bot 缺 projection 与同 tick 修正重试 fail closed；另覆盖 raw public equipment 的 `originPosition`/通用 `remainingTicks` 额外字段拒绝、合法 structured normalized BotSourceSnapshot、缺 projection 保留非空派生 remainingTicks 拒绝、pending/world overlap 拒绝与普通 1v1 正常快照通过 |
+| contracts/Match/Bot foundation Vitest | 主协调独立 26/26 通过 | 覆盖严格 projection contract、未来字段/身份篡改、resync readiness 和旧基础链；最后双 normalizer 只改 Bot 内部与测试，依赖边界未变 |
+| 完整 Node | `npm run test:node` exit 0 | 当前命令的终局计数未从截断输出复核，故不把历史计数冒充本小门精确计数；定向结果单列且可采信 |
+| 架构 | 主协调独立 39/39 通过 | 本小门代码完成后运行；最后双 normalizer 只改 Bot 内部与测试，依赖边界未变 |
+| 严格类型 | `npm run typecheck:app` exit 0（本轮复跑） | 包含 raw/normalized Bot 双入口、`spawnSpecs` 局部冻结副本和 formal contract 类型检查 |
+| 包构建 / lint | `build:packages` 52 packages、11 waves 通过；`npm run lint` exit 0 | 无新增生产旁路 |
+| 三端构建 | `npm run build` 与 `npm run arena:build:verify` 通过 | 当前 dirty buildId；三端入口均为 Arena product |
+| 边界 / 文档 / diff | `typecheck:app`、lint、文档检查与 `git diff --check` 通过 | 当前工作树没有美术 dirty；本小门提交不包含美术文件 |
+| 黄金 Replay 防漂移 | 主协调独立普通 4/4，manifest `a53b401d`；生存 1/1，manifest `dd30e771` | 不代表 Presentation adapter、checkpoint 新入口或真机验收 |
+| 单 worker 治理 | 134 files、601 tests 全部通过，但 coverage threshold 仍红 | Statements/Lines 62.33%、Branches 70.25%、Functions 68.87%；`arena-contracts` branches 73.9%<75%，`arena-equipment` lines/statements 70.5%<78% |
+| 产物预算 | `arena:build:budget` fail closed | Web 1,559,079 通过；Douyin/WeChat `game.js` 1,594,413，较 1,572,864 上限超 21,549；Platform 红门保持 |
+
+一次将 Node runner 与 Vitest 文件混在同一命令中执行，触发 Vitest internal-state 错误；该命令结果不计入证据。随后已用独立 Node/Vitest 入口复跑并取得上表 33/33 与 26/26。coverage 的既有并发临时文件错误同样不计入产品结果；单 worker 结果仍保持“测试通过但 coverage threshold 红”。
+
+曾有一次 coverage 并发启动导致 `coverage/.tmp/coverage-40.json` `ENOENT`，该命令被排除为治理工具使用错误；随后使用 `--maxWorkers=1 --minWorkers=1 --fileParallelism=false` 的单 worker 复跑，得到上述 134/601 全通过但覆盖率阈值红的有效结果。不得把并发污染或历史研究原型超时抹平成绿门。
+
+### 本小门评分（100 分）
+
+评分只判断本小门的合同和接线质量，不替代 P1 总体硬门；本小门已达到 90 分且各维度达到 80%，并已完成主协调独立验收签核。
+
+| 维度 | 满分 | 得分 | 达成率 | 判断 |
+|---|---:|---:|---:|---|
+| 公开生命周期规则合同 | 20 | 19 | 95% | identity、remaining、过滤、+600 readiness 和同 tick 语义已落地；表现 adapter 尚未实现 |
+| 消费侧严格审计/双向完整性 | 20 | 18 | 90% | 纯数据 contract 能拒绝自洽篡改、缺 projection 和 world/projection 不一致 |
+| 生存 Composition/Bot 边界 | 15 | 14 | 93% | Registry 注入、冻结 supply 副本、strict projection、InputFrame-only 边界通过 |
+| pre-step/resync/生命周期 | 20 | 18 | 90% | pre-step 明确不可恢复且 post-step ready；跨 Presentation/冷启动 adapter 仍未验收 |
+| 1v1 兼容/确定性/Replay/hash | 15 | 14 | 93% | 旧字段与黄金 manifest/hash 无漂移；未覆盖 4 人 P2 |
+| 测试与治理 | 10 | 8 | 80% | 定向、架构、类型、构建、Replay 与 diff 通过；coverage 与 Platform 预算继续红 |
+| **合计** | **100** | **91** | **91%** | **达到评分线；本小门已签核为 `public-supply-projection-survival-bot-ready`（2026-07-29），待主协调提交推送** |
+
+### 本轮自审、风险与回滚
+
+- Rule→Core：Timeline 是唯一 supply projection producer；MatchCore 只按同一 tick 顺序发布 snapshot；Bot 不拥有生命周期、拾取、替换或动作裁决 authority。
+- 竞态/重入：projection 在公共发布前完成 tick、sequence、双向集合和身份校验；Bot 严格模式缺 projection 时在消费 RNG/历史前失败，同 tick 可用完整 ready snapshot 重试；pre-step pending identity 不作为可交互对象。
+- 失败兜底：未知/旧 schema、未知字段、accessor、非安全 tick、重复 ID、Definition/Registry/spec/position/expire 冲突、formal namespace world equipment 未映射、过期后仍在 world、pending identity 边界冲突、resync not-ready 误用和缺 projection 均 fail closed；合法 held/despawned replacement 被归为 nonWorld，不误报；Composition 构造失败清理已创建 Core/Controller。
+- 边界：首波 1200、后续 2400；+599 remaining=1；+600 expire-before-pickup 且不发布 0 tick；+601 无重复 expiry；空槽拾取后 public 立即移除而内部 ledger 可保留到生命周期终点；held item 不随地面 expiry 消失。
+- 生命周期/资源：内部 timeline ledger 与 public projection 分离；旧实例回收从权威 runtime 删除；Composition 所有权转移后清空本地 cleanup 引用；不新增无界 runtime、事件总线或跨 match 缓存。
+- 主流程阻断：正式生存缺 projection 不会产生 Bot 供给决策；普通 1v1 不被 survival contract 强制；Presentation adapter 尚未开放，A0.3、A1.1 执行/代表样件与 Blockout 也尚未开放，不能把本小门签核解释为表现层完成。
+- Replay/hash：projection 不进入既有 internal snapshot/hash；黄金 Replay manifest 和 hash 精确复验通过。完整 checkpoint/Replay 状态闭环仍属于 P1.2c-2 已签核基础，不在本小门重新宣称完成。
+- 未完成风险：单 worker coverage threshold 红；Douyin/WeChat 预算红；300-case Bot stress、Presentation adapter、Platform、真机、前后台、4 人 P2 和 P1 总体 advance 均未完成；A0.3、A1.1 执行/代表样件与 Blockout 尚未开放。active lifecycle projection 合同已具备且本小门已签核，但不扩大这些未完成范围。
+- 回滚：回滚到 `7e9e3c4`，只撤回本小门的 projection contract、Timeline public producer、survival Composition/Bot 接线及对应测试/台账段落，不回滚已签核 Profile foundation 或任何已验收美术提交。
+
+### 签核状态
+
+**本小门已签核为 `public-supply-projection-survival-bot-ready`（2026-07-29），待主协调提交推送。** 本节不得将 P1 标记为 advance；Presentation adapter、A0.3、A1.1 执行/代表样件与 Blockout 均未开放。
 
 ## P1 总体未完成硬门
 
-- P1.2 Core：c-2 已补齐并由主协调签核隔离重演式原子全系统 checkpoint、生存黄金 Replay/篡改矩阵和 120 seed 资源长局；性能 CPU 小门当前已有 5+5 候选证据，但不改变 P1 仍受 Platform 预算、Bot、Presentation、真机等硬门阻断。
-- Replay/hash：Replay V5 保持兼容，内部 checkpoint schema v1 和黄金生存 Replay 已有候选证据；未来如引入直接快照，必须新 schema 且不得静默替换当前重演恢复语义。
+- P1.2 Core：c-2 已补齐并由主协调签核隔离重演式原子全系统 checkpoint、生存黄金 Replay/篡改矩阵和 120 seed 资源长局；性能 CPU 小门已有 5+5 证据，但不改变 P1 仍受 Platform 预算、Bot stress、Presentation、真机等硬门阻断。
+- Replay/hash：Replay V5 保持兼容，内部 checkpoint schema v1 和黄金生存 Replay 已有签核证据；未来如引入直接快照，必须新 schema 且不得静默替换当前重演恢复语义。
 - 事务矩阵：生产2人MatchCore已覆盖1200/1800、同tick拾取后动作、同波替换及竞争输入置换；4人生产权威参与者模型属于P2，不能把隔离EquipmentSystem 4人测试误报为P1通过。
 - 生命周期矩阵：Core 候选已覆盖前摇继续、淘汰与比赛结束恢复；Session 暂停、前后台、低表现帧率和真机仍未验收。
 - 压力与资源：120 seed 实例/lifecycle/事件窗口/内存有界；修复前 CPU 五轮已失去当前代码证明力，修复后旧链第四轮受已确认外部重负载污染并红门；其后真正隔离的普通与生存各五轮均通过，历史红轮继续保留。
-- Bot / Presentation / Platform：Bot 目前仅到 Profile Definition/Registry foundation-ready；正式生存接线、`BotVisibleEquipment` 单物剩余 tick/权威生命周期投影、Presentation、Platform、前后台和真机仍未完成；不得把本批 Registry/无渲染 stress 证据升级为生产接入。
+- Bot / Presentation / Platform：Profile Definition/Registry foundation 与 public projection + formal survival Composition Bot 接线均已签核；active lifecycle projection 合同已具备，但 300-case Bot stress、Presentation adapter、Platform、前后台和真机仍未完成；A0.3、A1.1 执行/代表样件与 Blockout 尚未开放，不得把本小门升级为 P1 完成。
 - 正式生存 Mode/HUD 不得在上述 P1 硬门关闭前 advance。
 
 ## 风险、回滚与签核
 
 - 主要风险：后续 Composition 绕过 Registry；Core 只实现“先清空再赋值”的非原子替换；事件载荷和实际状态身份分叉；将生存 `pickupRadius` 静默推广为普通 1v1 全局策略；把合同测试误报为 Replay/hash 完成。
 - 回滚点：P1.1 的安全父提交为 `fb0bc40`。只删除 5 个 P1.1 新增合同文件，并撤回相应 package export、测试、架构边界、当前台账及索引入口，即可回到 `fb0bc40`；不得回滚到 `d6f9060`，以免误删已经验收的 A0.1 美术提交。本批没有存档、运行时状态或最终资产迁移。
-- 当前签核：P1.1 `contract-ready`、P1.2a `core-transaction-ready`、P1.2b `timeline-ready`、P1.2c-1 `integration-replay-ready` 与 P1.2c-2 `atomic-checkpoint-golden-ready` 已由主协调签核（2026-07-28）；P1.2c-2 已提交并推送为 `5d26a4f`；P1 CPU 性能小门已签核并提交推送为 `21948d4`。Profile Definition/Registry foundation 已由主协调签核为 `profile-registry-foundation-ready`（2026-07-29），等待主协调提交；P1 总体仍受正式生存 Bot 接入、公开剩余 tick 投影、coverage threshold、Platform 预算、Presentation 与真机硬门阻断，不得 advance。
-- 提交状态：Profile Definition/Registry foundation 已由主协调签核，提交由主协调执行；本地实现审计父节点与安全回滚点为 `e49f159`，并行 A1.1 文件不计入开发证据。
+- 当前签核：P1.1 `contract-ready`、P1.2a `core-transaction-ready`、P1.2b `timeline-ready`、P1.2c-1 `integration-replay-ready` 与 P1.2c-2 `atomic-checkpoint-golden-ready` 已由主协调签核（2026-07-28）；P1.2c-2 已提交并推送为 `5d26a4f`；P1 CPU 性能小门已签核并提交推送为 `21948d4`。Profile Definition/Registry foundation 已由主协调签核并提交推送为 `profile-registry-foundation-ready`（2026-07-29，`7e9e3c4`）。public projection + formal survival Composition Bot 接线已由主协调签核为 `public-supply-projection-survival-bot-ready`（2026-07-29），待主协调提交推送；P1 总体仍受 coverage threshold、Douyin/WeChat 预算、300-case Bot stress、Presentation、Platform、真机和 4 人 P2 硬门阻断，不得 advance。
+- 提交状态：Profile Definition/Registry foundation 已提交为 `7e9e3c4`；本小门实际父节点与安全回滚点为 `7e9e3c4`，待主协调提交推送；本小门提交不包含美术文件，当前工作树没有美术 dirty。A1.1 文档缺口将在本提交落地后由美术线以实际父 commit 单独修订。

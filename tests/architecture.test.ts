@@ -767,6 +767,7 @@ test('Arena V1 application composition only wires governed authority and product
   assert.deepEqual(
     Object.keys(packageDefinition.dependencies).sort(),
     [
+      '@number-strategy-jump/arena-bot',
       '@number-strategy-jump/arena-contracts',
       '@number-strategy-jump/arena-core',
       '@number-strategy-jump/arena-definitions',
@@ -777,12 +778,13 @@ test('Arena V1 application composition only wires governed authority and product
       '@number-strategy-jump/arena-product-composition',
       '@number-strategy-jump/arena-product-v1-content',
       '@number-strategy-jump/arena-quick-match',
+      '@number-strategy-jump/arena-session',
       '@number-strategy-jump/arena-v1-content',
     ],
     'arena-v1-composition 只能组合已治理的规则、内容、比赛与产品边界。',
   );
   const files = await listJavaScript(path.resolve('packages/arena-v1-composition/src'));
-  assert.equal(files.length, 11);
+  assert.equal(files.length, 12);
   for (const file of files) {
     const source = await readFile(file, 'utf8');
     assert.doesNotMatch(

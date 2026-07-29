@@ -19,7 +19,10 @@ import {
   ARENA_V2_SURVIVAL_SUPPLY_DEFINITION,
   STAGE4_EQUIPMENT_ID,
 } from '@number-strategy-jump/arena-v1-content';
-import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
+import {
+  assertArenaPublicSupplyProjectionResyncReady,
+  createNeutralInputFrame,
+} from '@number-strategy-jump/arena-contracts';
 
 const SURVIVAL_ARENA = Object.freeze({
   killY: -4,
@@ -281,6 +284,95 @@ test('internal checkpoint restores every survival authority boundary before publ
   assert.throws(() => restoredTerminal.step(neutralFrames(restoredTerminal)), /已经结束/);
   restoredTerminal.destroy();
   resumed.destroy();
+  runner.destroy();
+  source.destroy();
+});
+
+test('public projection survives +599 checkpoint restore and rejects +600 pre-step resync', () => {
+  const noPickupArena = {
+    ...SURVIVAL_ARENA,
+    spawns: [{ x: -3, y: 1, z: 3 }, { x: 3, y: 1, z: 3 }],
+  };
+  const source = createArenaV2SurvivalSupplyMatchCore({
+    seed: 907,
+    config: {
+      preparingTicks: 0,
+      suddenDeathStartTick: 2_400,
+      hardLimitTicks: 2_500,
+      arena: noPickupArena,
+    },
+    supply: SUPPLY,
+  });
+  const runner = new HeadlessMatchRunner(source, { checkpointInterval: 60 });
+  while (source.tick < 1_799) runner.step(neutralFrames(source));
+  const checkpoint599 = runner.exportInternalCheckpoint();
+  const restored = restoreMatchCoreFromCheckpoint(checkpoint599, {
+    coreFactory: survivalCoreFactory,
+  });
+  assert.deepEqual(
+    restored.getSnapshot().activeSupplyProjection,
+    source.getSnapshot().activeSupplyProjection,
+  );
+  assert.deepEqual(
+    restored.getSnapshot().activeSupplyProjection?.supplies.map(({ remainingTicks }) => remainingTicks),
+    [1, 1, 1],
+  );
+  const expectedPendingExpiryIds = SUPPLY.spawnSpecs
+    .map(({ slotId }) => (
+      `${SUPPLY.supplyDefinitionId}:wave-0:slot-${slotId}:equipment`
+    ))
+    .sort();
+  const preExpiry599 = source.getSnapshot();
+  assert.equal(preExpiry599.tick, 1_799);
+  assert.equal(preExpiry599.equipment.length, 3);
+  assert.deepEqual(preExpiry599.activeSupplyProjection?.pendingExpiryEquipmentInstanceIds, []);
+
+  const beforeExpiry = runner.step(neutralFrames(source));
+  const restoredBeforeExpiry = restored.step(neutralFrames(restored));
+  assert.deepEqual(restoredBeforeExpiry, beforeExpiry);
+  const preStep = source.getSnapshot();
+  assert.equal(preStep.tick, 1_800);
+  assert.equal(preStep.activeSupplyProjection?.resyncReadiness, 'not-ready-pre-expiry');
+  assert.equal(preStep.activeSupplyProjection?.pendingAuthorityTick, 1_800);
+  assert.deepEqual(preStep.equipment, []);
+  assert.deepEqual(
+    preStep.activeSupplyProjection?.pendingExpiryEquipmentInstanceIds,
+    expectedPendingExpiryIds,
+  );
+  assert.deepEqual(preStep.activeSupplyProjection?.supplies, []);
+  assert.throws(() => assertArenaPublicSupplyProjectionResyncReady(
+    preStep.activeSupplyProjection,
+    { snapshotTick: preStep.tick, eventSequence: preStep.eventSequence, equipment: preStep.equipment },
+  ), /不是 resync-ready/);
+
+  const expiry = runner.step(neutralFrames(source));
+  const restoredExpiry = restored.step(neutralFrames(restored));
+  assert.deepEqual(restoredExpiry, expiry);
+  assert.equal(expiry.filter(({ type }) => type === ARENA_MATCH_EVENT.EQUIPMENT_EXPIRED).length, 3);
+  assert.deepEqual(
+    restored.getSnapshot().activeSupplyProjection,
+    source.getSnapshot().activeSupplyProjection,
+  );
+  assert.equal(restored.getSnapshot().activeSupplyProjection?.resyncReadiness, 'ready');
+  assert.equal(source.getSnapshot().activeSupplyProjection?.pendingAuthorityTick, null);
+  assert.deepEqual(source.getSnapshot().activeSupplyProjection?.pendingExpiryEquipmentInstanceIds, []);
+  assert.equal(source.getSnapshot().equipment.length, 0);
+  assert.equal(restored.getSnapshot().equipment.length, 0);
+  assert.deepEqual(restored.getSnapshot().activeSupplyProjection?.pendingExpiryEquipmentInstanceIds, []);
+  assert.deepEqual(restored.getSnapshot().activeSupplyProjection?.supplies, []);
+
+  const afterExpiry = runner.step(neutralFrames(source));
+  const restoredAfterExpiry = restored.step(neutralFrames(restored));
+  assert.deepEqual(restoredAfterExpiry, afterExpiry);
+  assert.equal(afterExpiry.filter(({ type }) => type === ARENA_MATCH_EVENT.EQUIPMENT_EXPIRED).length, 0);
+  assert.equal(afterExpiry.length, 0);
+  assert.equal(source.getSnapshot().tick, 1_802);
+  assert.equal(source.getSnapshot().equipment.length, 0);
+  assert.equal(source.getSnapshot().activeSupplyProjection?.resyncReadiness, 'ready');
+  assert.equal(source.getSnapshot().activeSupplyProjection?.pendingAuthorityTick, null);
+  assert.deepEqual(source.getSnapshot().activeSupplyProjection?.pendingExpiryEquipmentInstanceIds, []);
+  assert.deepEqual(source.getSnapshot().activeSupplyProjection?.supplies, []);
+  restored.destroy();
   runner.destroy();
   source.destroy();
 });

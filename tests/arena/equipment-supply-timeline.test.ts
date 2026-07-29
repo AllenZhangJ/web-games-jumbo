@@ -130,6 +130,47 @@ test('599/600/601 boundary expires world supply before same-tick pickup', () => 
   equipmentSystem.destroy();
 });
 
+test('public projection marks the +600 pre-step view non-resync-ready and binds both directions', () => {
+  const { timeline, equipmentSystem } = createHarness();
+  stepTo(timeline, 1_799);
+  const equipment = equipmentSystem.listSnapshots();
+  const preExpiry = timeline.getPublicSupplyProjection({
+    snapshotTick: 1_800,
+    eventSequence: 17,
+    equipment,
+  });
+  assert.equal(preExpiry.projection.resyncReadiness, 'not-ready-pre-expiry');
+  assert.equal(preExpiry.projection.pendingAuthorityTick, 1_800);
+  assert.deepEqual(preExpiry.projection.supplies, []);
+  assert.equal(preExpiry.pendingExpiryEquipmentInstanceIds.length, 3);
+
+  assert.throws(() => timeline.getPublicSupplyProjection({
+    snapshotTick: 1_800,
+    eventSequence: 17,
+    equipment: equipment.slice(0, 2),
+  }), /缺少 equipment runtime/);
+  assert.throws(() => timeline.getPublicSupplyProjection({
+    snapshotTick: 1_800,
+    eventSequence: 17,
+    equipment: equipment.map((runtime, index) => index === 0
+      ? { ...runtime, originPosition: { x: runtime.originPosition.x + 1, y: runtime.originPosition.y, z: runtime.originPosition.z } }
+      : runtime),
+  }), /Definition\/spawn spec/);
+
+  stepTo(timeline, 1_800);
+  const ready = timeline.getPublicSupplyProjection({
+    snapshotTick: 1_801,
+    eventSequence: 18,
+    equipment: equipmentSystem.listSnapshots(),
+  });
+  assert.equal(ready.projection.resyncReadiness, 'ready');
+  assert.equal(ready.projection.pendingAuthorityTick, null);
+  assert.deepEqual(ready.projection.supplies, []);
+  assert.deepEqual(ready.pendingExpiryEquipmentInstanceIds, []);
+  timeline.destroy();
+  equipmentSystem.destroy();
+});
+
 test('held supply survives expireTick while remaining world supplies expire', () => {
   const { timeline, equipmentSystem } = createHarness();
   stepTo(timeline, 1_199);
@@ -148,6 +189,28 @@ test('held supply survives expireTick while remaining world supplies expire', ()
   assert.equal(equipmentSystem.getSnapshot(heldId).locationState, EQUIPMENT_LOCATION_STATE.HELD);
   assert.equal(equipmentSystem.listSnapshots().length, 1);
   assert.deepEqual(timeline.listActiveSupplies(), []);
+  timeline.destroy();
+  equipmentSystem.destroy();
+});
+
+test('empty-slot pickup removes only the public candidate while timeline lifecycle remains until expiry', () => {
+  const { timeline, equipmentSystem } = createHarness();
+  stepTo(timeline, 1_199);
+  const nearCenter = [
+    { id: 'player-1', position: { x: 0, y: 1, z: 0 }, eligible: true },
+    FAR_PARTICIPANTS[1],
+  ];
+  const picked = stepTo(timeline, 1_200, nearCenter);
+  assert.equal(picked.pickupDecisions.length, 1);
+  const heldInstanceId = equipmentSystem.getHeldEquipment('player-1')?.instanceId;
+  assert.ok(heldInstanceId);
+  assert.equal(
+    timeline.listActiveSupplies().some(({ equipmentInstanceId }) => (
+      equipmentInstanceId === heldInstanceId
+    )),
+    true,
+  );
+  assert.equal(equipmentSystem.getSnapshot(heldInstanceId).locationState, EQUIPMENT_LOCATION_STATE.HELD);
   timeline.destroy();
   equipmentSystem.destroy();
 });

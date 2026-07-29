@@ -16,6 +16,10 @@ import {
   createRng,
   createNeutralInputFrame,
   createArenaMatchSnapshotAudit,
+  ARENA_PUBLIC_SUPPLY_PROJECTION_SCHEMA_VERSION,
+  assertArenaPublicSupplyProjectionResyncReady,
+  createArenaPublicSupplyProjectionAudit,
+  requireArenaPublicSupplyProjection,
   createSynchronousStoragePort,
   combineCleanupFailure,
   deriveSeed,
@@ -114,6 +118,376 @@ describe('Arena deterministic contracts', () => {
       ...snapshotFixture(),
       unknown: true,
     })).toThrow(/unknown/);
+    const supplyProjection = {
+      ...snapshotFixture(),
+      equipment: [{
+        schemaVersion: 1,
+        instanceId: 'supply:equipment',
+        definitionId: 'hammer',
+        spawnId: 'supply-left',
+        locationState: 'spawned',
+        ownerId: null,
+        position: { x: 0, y: 1, z: 0 },
+        lastSafePosition: { x: 0, y: 1, z: 0 },
+        cooldownRemainingTicks: 0,
+        revision: 0,
+      }],
+      activeSupplyProjection: {
+        schemaVersion: ARENA_PUBLIC_SUPPLY_PROJECTION_SCHEMA_VERSION,
+        snapshotTick: 3,
+        snapshotEventSequence: 4,
+        resyncReadiness: 'ready',
+        pendingAuthorityTick: null,
+        pendingExpiryEquipmentInstanceIds: [],
+        supplies: [{
+          schemaVersion: ARENA_PUBLIC_SUPPLY_PROJECTION_SCHEMA_VERSION,
+          supplyDefinitionId: 'arena-v2.survival-supply.v1',
+          supplyId: 'supply:1',
+          slotId: 'left',
+          equipmentInstanceId: 'supply:equipment',
+          equipmentDefinitionId: 'hammer',
+          equipmentSpawnId: 'supply-left',
+          spawnPosition: { x: 0, y: 1, z: 0 },
+          spawnTick: 0,
+          expireTick: 10,
+          remainingTicks: 7,
+          position: { x: 0, y: 1, z: 0 },
+        }],
+      },
+    };
+    expect(createArenaMatchSnapshotAudit(supplyProjection).activeSupplyProjection?.supplies[0])
+      .toMatchObject({ remainingTicks: 7, equipmentInstanceId: 'supply:equipment' });
+    expect(() => createArenaPublicSupplyProjectionAudit({
+      ...supplyProjection.activeSupplyProjection,
+      schemaVersion: 1,
+    }, {
+      snapshotTick: 3,
+      eventSequence: 4,
+      equipment: supplyProjection.equipment,
+    })).toThrow(/必须是 2/);
+    expect(() => createArenaMatchSnapshotAudit({
+      ...supplyProjection,
+      equipment: [{
+        ...supplyProjection.equipment[0],
+        locationState: 'held',
+      }],
+    })).toThrow(/不能连接非世界 equipment/);
+    expect(() => createArenaMatchSnapshotAudit({
+      ...supplyProjection,
+      activeSupplyProjection: {
+        ...supplyProjection.activeSupplyProjection,
+        snapshotEventSequence: 3,
+      },
+    })).toThrow(/eventSequence/);
+    expect(() => createArenaMatchSnapshotAudit({
+      ...supplyProjection,
+      activeSupplyProjection: {
+        ...supplyProjection.activeSupplyProjection,
+        supplies: [{
+          ...supplyProjection.activeSupplyProjection.supplies[0],
+          remainingTicks: 0,
+        }],
+      },
+    })).toThrow(/remainingTicks/);
+    expect(() => createArenaPublicSupplyProjectionAudit(
+      supplyProjection.activeSupplyProjection,
+      {
+        snapshotTick: 3,
+        eventSequence: 4,
+        equipment: supplyProjection.equipment,
+        expectedWorldSupplyEquipmentInstanceIds: [],
+      },
+    )).toThrow(/集合与 active supply projection/);
+    expect(assertArenaPublicSupplyProjectionResyncReady(
+      supplyProjection.activeSupplyProjection,
+      {
+        snapshotTick: 3,
+        eventSequence: 4,
+        equipment: supplyProjection.equipment,
+        expectedWorldSupplyEquipmentInstanceIds: ['supply:equipment'],
+      },
+    ).pendingAuthorityTick).toBeNull();
+    const preExpiry = {
+      ...supplyProjection.activeSupplyProjection,
+      snapshotTick: 1_800,
+      snapshotEventSequence: 4,
+      resyncReadiness: 'not-ready-pre-expiry' as const,
+      pendingAuthorityTick: 1_800,
+      pendingExpiryEquipmentInstanceIds: ['pending:equipment'],
+      supplies: [],
+    };
+    expect(() => assertArenaPublicSupplyProjectionResyncReady(preExpiry, {
+      snapshotTick: 1_800,
+      eventSequence: 4,
+      equipment: [],
+      expectedWorldSupplyEquipmentInstanceIds: [],
+    })).toThrow(/不是 resync-ready/);
+    expect(() => createArenaPublicSupplyProjectionAudit({
+      ...preExpiry,
+      pendingExpiryEquipmentInstanceIds: [
+        'pending:0',
+        'pending:1',
+        'pending:2',
+        'pending:3',
+      ],
+    }, {
+      snapshotTick: 1_800,
+      eventSequence: 4,
+      equipment: [],
+    })).toThrow(/超过有界 active 数量/);
+    const formalSupplyId = 'arena-v2.survival-supply.v1:wave-0:slot-left';
+    const formalEquipmentId = `${formalSupplyId}:equipment`;
+    const formalContract = {
+      supplyDefinitionId: 'arena-v2.survival-supply.v1',
+      firstSpawnTick: 0,
+      spawnIntervalTicks: 1_200,
+      spawnCount: 1,
+      lifetimeTicks: 10,
+      spawnSpecs: [{
+        slotId: 'left',
+        equipmentDefinitionId: 'hammer',
+        spawnId: 'supply-left',
+        position: { x: 0, y: 1, z: 0 },
+      }],
+      equipmentDefinitionIds: ['hammer'],
+    } as const;
+    const formalProjection = {
+      ...supplyProjection,
+      equipment: [{
+        ...supplyProjection.equipment[0],
+        instanceId: formalEquipmentId,
+      }],
+      activeSupplyProjection: {
+        ...supplyProjection.activeSupplyProjection,
+        supplies: [{
+          ...supplyProjection.activeSupplyProjection.supplies[0],
+          supplyId: formalSupplyId,
+          equipmentInstanceId: formalEquipmentId,
+          spawnPosition: { x: 0, y: 1, z: 0 },
+        }],
+      },
+    };
+    expect(createArenaPublicSupplyProjectionAudit(
+      formalProjection.activeSupplyProjection,
+      {
+        snapshotTick: 3,
+        eventSequence: 4,
+        equipment: formalProjection.equipment,
+        lifecycleContract: formalContract,
+      },
+    ).supplies[0]?.supplyId).toBe(formalSupplyId);
+    expect(() => createArenaPublicSupplyProjectionAudit(
+      { ...formalProjection.activeSupplyProjection, supplies: [] },
+      {
+        snapshotTick: 3,
+        eventSequence: 4,
+        equipment: formalProjection.equipment,
+        lifecycleContract: formalContract,
+      },
+    )).toThrow(/集合与 active supply projection/);
+    expect(() => requireArenaPublicSupplyProjection(undefined, {
+      snapshotTick: 3,
+      eventSequence: 4,
+      equipment: formalProjection.equipment,
+      lifecycleContract: formalContract,
+    })).toThrow(/缺少 activeSupplyProjection/);
+    expect(() => createArenaPublicSupplyProjectionAudit(
+      {
+        ...formalProjection.activeSupplyProjection,
+        supplies: [{
+          ...formalProjection.activeSupplyProjection.supplies[0],
+          spawnPosition: { x: 99, y: 1, z: 0 },
+        }],
+      },
+      {
+        snapshotTick: 3,
+        eventSequence: 4,
+        equipment: formalProjection.equipment,
+        lifecycleContract: formalContract,
+      },
+    )).toThrow(/spawnPosition/);
+    expect(() => createArenaPublicSupplyProjectionAudit(
+      {
+        ...formalProjection.activeSupplyProjection,
+        supplies: [{
+          ...formalProjection.activeSupplyProjection.supplies[0],
+          expireTick: 11,
+        }],
+      },
+      {
+        snapshotTick: 3,
+        eventSequence: 4,
+        equipment: formalProjection.equipment,
+        lifecycleContract: formalContract,
+      },
+    )).toThrow(/expireTick/);
+
+    const formalWorldEquipment = formalProjection.equipment[0];
+    const formalActiveProjection = {
+      ...formalProjection.activeSupplyProjection,
+      pendingExpiryEquipmentInstanceIds: [],
+    };
+    expect(() => createArenaPublicSupplyProjectionAudit(
+      { ...formalActiveProjection, supplies: [] },
+      {
+        snapshotTick: 3,
+        eventSequence: 4,
+        equipment: [{
+          ...formalWorldEquipment,
+          instanceId: 'arena-v2.survival-supply.v1:wave-1:slot-left:equipment',
+        }],
+        lifecycleContract: formalContract,
+      },
+    )).toThrow(/spawnTick 前/);
+    expect(() => createArenaPublicSupplyProjectionAudit(
+      { ...formalActiveProjection, snapshotTick: 11, supplies: [] },
+      {
+        snapshotTick: 11,
+        eventSequence: 4,
+        equipment: [formalWorldEquipment],
+        lifecycleContract: formalContract,
+      },
+    )).toThrow(/expireTick 后/);
+    expect(() => createArenaPublicSupplyProjectionAudit(
+      { ...formalActiveProjection, supplies: [] },
+      {
+        snapshotTick: 3,
+        eventSequence: 4,
+        equipment: [{
+          ...formalWorldEquipment,
+          definitionId: 'chain',
+          spawnId: 'tampered-spawn',
+        }],
+        lifecycleContract: formalContract,
+      },
+    )).toThrow(/definition\/spawn/);
+    expect(() => createArenaPublicSupplyProjectionAudit(
+      { ...formalActiveProjection, supplies: [] },
+      {
+        snapshotTick: 3,
+        eventSequence: 4,
+        equipment: [{
+          ...formalWorldEquipment,
+          instanceId: 'arena-v2.survival-supply.v1:wave-0:slot-right:equipment',
+          definitionId: 'chain',
+          spawnId: 'right-spawn',
+        }],
+        lifecycleContract: formalContract,
+      },
+    )).toThrow(/slot 未在冻结 spawn spec/);
+    expect(() => createArenaPublicSupplyProjectionAudit(
+      { ...formalActiveProjection, supplies: [] },
+      {
+        snapshotTick: 3,
+        eventSequence: 4,
+        equipment: [{
+          ...formalWorldEquipment,
+          instanceId: 'ordinary-equipment',
+          definitionId: 'ordinary',
+          spawnId: 'ordinary-spawn',
+        }],
+        lifecycleContract: formalContract,
+      },
+    )).toThrow(/未映射到正式 supply identity/);
+    for (const locationState of ['held', 'despawned'] as const) {
+      expect(() => createArenaPublicSupplyProjectionAudit(
+        {
+          ...formalActiveProjection,
+          snapshotTick: 10,
+          resyncReadiness: 'not-ready-pre-expiry',
+          pendingAuthorityTick: 10,
+          pendingExpiryEquipmentInstanceIds: [formalEquipmentId],
+          supplies: [],
+        },
+        {
+          snapshotTick: 10,
+          eventSequence: 4,
+          equipment: [{
+            ...formalWorldEquipment,
+            locationState,
+            ownerId: locationState === 'held' ? 'player-1' : null,
+            position: null,
+          }],
+          lifecycleContract: formalContract,
+        },
+      )).toThrow(/nonWorld equipment/);
+    }
+    expect(() => createArenaPublicSupplyProjectionAudit(
+      { ...formalActiveProjection, supplies: [] },
+      {
+        snapshotTick: 3,
+        eventSequence: 4,
+        equipment: [formalWorldEquipment],
+        expectedWorldSupplyEquipmentInstanceIds: [],
+        lifecycleContract: formalContract,
+      },
+    )).toThrow(/显式 expected world supply 集合/);
+
+    const pendingContract = {
+      ...formalContract,
+      firstSpawnTick: 1_200,
+      lifetimeTicks: 600,
+    } as const;
+    const pendingSupplyId = 'arena-v2.survival-supply.v1:wave-0:slot-left';
+    const pendingEquipmentId = `${pendingSupplyId}:equipment`;
+    const pendingProjection = {
+      ...formalActiveProjection,
+      snapshotTick: 1_800,
+      snapshotEventSequence: 4,
+      resyncReadiness: 'not-ready-pre-expiry' as const,
+      pendingAuthorityTick: 1_800,
+      pendingExpiryEquipmentInstanceIds: [pendingEquipmentId],
+      supplies: [],
+    };
+    expect(requireArenaPublicSupplyProjection(pendingProjection, {
+      snapshotTick: 1_800,
+      eventSequence: 4,
+      equipment: [],
+      lifecycleContract: pendingContract,
+    }).pendingExpiryEquipmentInstanceIds).toEqual([pendingEquipmentId]);
+    expect(() => assertArenaPublicSupplyProjectionResyncReady(pendingProjection, {
+      snapshotTick: 1_800,
+      eventSequence: 4,
+      equipment: [],
+      lifecycleContract: pendingContract,
+    })).toThrow(/不是 resync-ready/);
+    expect(() => requireArenaPublicSupplyProjection({
+      ...pendingProjection,
+      pendingExpiryEquipmentInstanceIds: [pendingEquipmentId],
+      snapshotTick: 1_799,
+      pendingAuthorityTick: 1_799,
+    }, {
+      snapshotTick: 1_799,
+      eventSequence: 4,
+      equipment: [],
+      lifecycleContract: pendingContract,
+    })).toThrow(/expireTick 等于 snapshotTick/);
+    expect(requireArenaPublicSupplyProjection({
+      ...pendingProjection,
+      snapshotTick: 1_801,
+      resyncReadiness: 'ready',
+      pendingAuthorityTick: null,
+      pendingExpiryEquipmentInstanceIds: [],
+    }, {
+      snapshotTick: 1_801,
+      eventSequence: 4,
+      equipment: [],
+      lifecycleContract: pendingContract,
+    }).resyncReadiness).toBe('ready');
+    expect(requireArenaPublicSupplyProjection({
+      ...formalActiveProjection,
+      supplies: [],
+    }, {
+      snapshotTick: 3,
+      eventSequence: 4,
+      equipment: [{
+        ...formalWorldEquipment,
+        locationState: 'despawned',
+        ownerId: null,
+        position: null,
+      }],
+      lifecycleContract: formalContract,
+    }).supplies).toEqual([]);
     const accessor = snapshotFixture();
     Object.defineProperty(accessor, 'tick', { enumerable: true, get: () => 3 });
     expect(() => createArenaMatchSnapshotAudit(accessor)).toThrow(/数据字段/);

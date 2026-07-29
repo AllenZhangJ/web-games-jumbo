@@ -66,6 +66,28 @@ test('BotObservation exposes only public delayed opponent state and is deeply fr
   core.destroy();
 });
 
+test('BotObservation rejects lifecycle fields leaked into raw public equipment', () => {
+  const core = createArenaV1MatchCore({ seed: 11, config: { preparingTicks: 0 } });
+  // A normal 1v1 snapshot remains valid and is the control for both rejection cases.
+  assert.equal(cloneBotSourceSnapshot(core.getSnapshot()).equipment.length, 3);
+  for (const extraField of ['originPosition', 'remainingTicks']) {
+    const tampered = structuredClone(core.getSnapshot()) as unknown as {
+      equipment: Array<Record<string, unknown>>;
+    };
+    const firstEquipment = tampered.equipment[0];
+    if (!firstEquipment) throw new Error('测试快照缺少场上装备。');
+    firstEquipment[extraField] = extraField === 'originPosition'
+      ? { x: 0, y: 1, z: 0 }
+      : 599;
+    assert.throws(
+      () => cloneBotSourceSnapshot(tampered),
+      /不支持字段/,
+      `raw public equipment 不得注入 ${extraField}`,
+    );
+  }
+  core.destroy();
+});
+
 test('BotObservation keeps self movement current while delaying opponent movement and affordance', () => {
   const core = createArenaV1MatchCore({ seed: 10, config: { preparingTicks: 0 } });
   const beforeJump = cloneBotSourceSnapshot(core.getSnapshot());
@@ -153,6 +175,13 @@ test('BotObservation rejects future information', () => {
     commandSnapshot: earlier,
     delayedSnapshot: later,
   }), /未来快照/);
+  const futureSequence = structuredClone(earlier) as Mutable<typeof earlier>;
+  futureSequence.eventSequence = later.eventSequence + 1;
+  assert.throws(() => createBotObservation({
+    ...common,
+    commandSnapshot: earlier,
+    delayedSnapshot: futureSequence,
+  }), /未来 eventSequence/);
   core.destroy();
 });
 

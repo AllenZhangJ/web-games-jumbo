@@ -36,6 +36,7 @@ import {
   normalizeThrownError,
   type ArenaInputFrame,
   type ArenaMatchSnapshot,
+  type ArenaPublicSupplyProjection,
   type DeepReadonly,
   type DeterministicRng,
 } from '@number-strategy-jump/arena-contracts';
@@ -124,6 +125,10 @@ export interface MatchCoreEquipmentSupplyTimelineStepResult {
 export interface MatchCoreEquipmentSupplyTimelineContract {
   step(options: unknown): MatchCoreEquipmentSupplyTimelineStepResult;
   getSnapshot(): ArenaInternalEquipmentSupplyTimelineSnapshot;
+  getPublicSupplyProjection(options: unknown): Readonly<{
+    readonly projection: ArenaPublicSupplyProjection;
+    readonly pendingExpiryEquipmentInstanceIds: readonly string[];
+  }>;
   getContentHash(): string;
   destroy(): void;
 }
@@ -256,7 +261,13 @@ function assertEquipmentSupplyTimeline(
   if (!value || typeof value !== 'object') {
     throw new TypeError('equipmentSupplyTimelineFactory 必须返回对象。');
   }
-  for (const methodName of ['step', 'getSnapshot', 'getContentHash', 'destroy'] as const) {
+  for (const methodName of [
+    'step',
+    'getSnapshot',
+    'getPublicSupplyProjection',
+    'getContentHash',
+    'destroy',
+  ] as const) {
     if (findDataMethod(value, methodName) === null) {
       throw new TypeError(`equipment supply timeline 缺少 ${methodName}()。`);
     }
@@ -1247,6 +1258,34 @@ export class MatchCore {
   ): ArenaMatchSnapshot | ArenaInternalMatchSnapshot {
     this.#assertUsable();
     const timeline = this.#matchTimeline.getSnapshot();
+    const equipmentSupplySnapshot = this.#equipmentSupplyTimeline?.getSnapshot() ?? null;
+    const equipmentSnapshots = this.#ruleEngine.listEquipmentSnapshots();
+    const supplyByEquipmentInstance = new Map<
+      string,
+      ArenaInternalEquipmentSupplyTimelineSnapshot['activeSupplies'][number]
+    >();
+    const expiredSupplyEquipmentIds = new Set<string>();
+    let activeSupplyProjection: ArenaPublicSupplyProjection | undefined;
+    if (equipmentSupplySnapshot !== null) {
+      for (const lifecycle of equipmentSupplySnapshot.activeSupplies) {
+        if (supplyByEquipmentInstance.has(lifecycle.equipmentInstanceId)) {
+          throw new RangeError(`供给 equipment instance ${lifecycle.equipmentInstanceId} 重复。`);
+        }
+        supplyByEquipmentInstance.set(lifecycle.equipmentInstanceId, lifecycle);
+      }
+      if (!includeInternal) {
+        const projectionResult = this.#equipmentSupplyTimeline?.getPublicSupplyProjection({
+          snapshotTick: timeline.tick,
+          eventSequence: this.#eventSequence,
+          equipment: equipmentSnapshots,
+        });
+        if (!projectionResult) throw new Error('供给 public projection 构造结果缺失。');
+        activeSupplyProjection = projectionResult.projection;
+        for (const instanceId of projectionResult.pendingExpiryEquipmentInstanceIds) {
+          expiredSupplyEquipmentIds.add(instanceId);
+        }
+      }
+    }
     // ActionAffordance is a public next-input projection, not authority state.
     // Internal hash snapshots omit it entirely instead of recomputing derived data.
     const ruleActors: readonly RuleActor[] = includeInternal ? [] : this.#createRuleActors();
@@ -1332,7 +1371,9 @@ export class MatchCore {
           supportSurfaceId: physics.supportSurfaceId,
         };
       }),
-      equipment: this.#ruleEngine.listEquipmentSnapshots().map((equipment) => ({
+      equipment: equipmentSnapshots
+        .filter((equipment) => !expiredSupplyEquipmentIds.has(equipment.instanceId))
+        .map((equipment) => ({
         schemaVersion: equipment.schemaVersion,
         instanceId: equipment.instanceId,
         definitionId: equipment.definitionId,
@@ -1346,6 +1387,7 @@ export class MatchCore {
         cooldownRemainingTicks: equipment.cooldownRemainingTicks,
         revision: equipment.revision,
       })),
+      ...(activeSupplyProjection === undefined ? {} : { activeSupplyProjection }),
       map: cloneSnapshotData(includeInternal
         ? this.#mapSystem.getStateSnapshot()
         : this.#mapSystem.getSnapshot()),

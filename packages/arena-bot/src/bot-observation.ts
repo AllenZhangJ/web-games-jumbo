@@ -2,7 +2,14 @@ import {
   assertKnownKeys,
   assertNonEmptyString,
   assertPlainRecord,
+  ARENA_PUBLIC_SUPPLY_PROJECTION_MAX_ITEMS,
+  ARENA_PUBLIC_SUPPLY_PROJECTION_READINESS,
+  ARENA_PUBLIC_SUPPLY_PROJECTION_SCHEMA_VERSION,
   cloneFrozenData,
+  createArenaPublicSupplyProjectionAudit,
+  requireArenaPublicSupplyProjection,
+  type ArenaPublicSupplyProjection,
+  type ArenaPublicSupplyProjectionLifecycleContract,
   type ArenaMapSnapshot,
   type DeepReadonly,
 } from '@number-strategy-jump/arena-contracts';
@@ -20,7 +27,8 @@ import {
 } from '@number-strategy-jump/arena-movement';
 
 const SOURCE_KEYS = new Set([
-  'tick', 'activeTick', 'phase', 'remainingTicks', 'participants', 'equipment', 'map',
+  'tick', 'activeTick', 'eventSequence', 'phase', 'remainingTicks', 'participants',
+  'equipment', 'activeSupplyProjection', 'map',
 ]);
 const OBSERVATION_OPTION_KEYS = new Set([
   'commandSnapshot', 'delayedSnapshot', 'selfId', 'arena', 'objectives',
@@ -62,6 +70,8 @@ export interface BotVisibleEquipment {
   readonly instanceId: string;
   readonly definitionId: string;
   readonly locationState: 'spawned' | 'dropped';
+  /** Null means this is an ordinary non-supply world item. */
+  readonly remainingTicks: number | null;
   readonly position: BotVector3;
 }
 
@@ -128,10 +138,12 @@ export interface BotParticipantObservation {
 export interface BotSourceSnapshot {
   readonly tick: number;
   readonly activeTick: number;
+  readonly eventSequence: number;
   readonly phase: string;
   readonly remainingTicks: number;
   readonly participants: readonly BotParticipantObservation[];
   readonly equipment: readonly BotVisibleEquipment[];
+  readonly activeSupplyProjection: ArenaPublicSupplyProjection | null;
   readonly map: ArenaMapSnapshot;
 }
 
@@ -205,6 +217,15 @@ function readDataProperty(record: object, key: string, name: string): unknown {
   return descriptor.value;
 }
 
+function readOptionalDataProperty(record: object, key: string, name: string): unknown {
+  const descriptor = Object.getOwnPropertyDescriptor(record, key);
+  if (descriptor === undefined) return undefined;
+  if (!descriptor.enumerable || !('value' in descriptor)) {
+    throw new TypeError(`${name}.${key} 必须是可枚举数据字段。`);
+  }
+  return descriptor.value;
+}
+
 function freezeOwned<T>(value: T): DeepReadonly<T> {
   if (typeof value !== 'object' || value === null || Object.isFrozen(value)) {
     return value as DeepReadonly<T>;
@@ -226,8 +247,51 @@ function copyHeldEquipment(value: unknown, name: string): BotHeldEquipment | nul
   };
 }
 
-function copyVisibleEquipment(value: unknown, name: string): BotVisibleEquipment {
+const RAW_PUBLIC_EQUIPMENT_KEYS = new Set([
+  'schemaVersion', 'instanceId', 'definitionId', 'spawnId', 'locationState',
+  'ownerId', 'position', 'lastSafePosition',
+  'cooldownRemainingTicks', 'revision',
+]);
+const NORMALIZED_VISIBLE_EQUIPMENT_KEYS = new Set([
+  'instanceId', 'definitionId', 'locationState', 'remainingTicks', 'position',
+]);
+const NORMALIZED_PROJECTION_KEYS = new Set([
+  'schemaVersion', 'snapshotTick', 'snapshotEventSequence', 'resyncReadiness',
+  'pendingAuthorityTick', 'pendingExpiryEquipmentInstanceIds', 'supplies',
+]);
+const NORMALIZED_PROJECTION_ITEM_KEYS = new Set([
+  'schemaVersion', 'supplyDefinitionId', 'supplyId', 'slotId', 'equipmentInstanceId',
+  'equipmentDefinitionId', 'equipmentSpawnId', 'spawnPosition', 'spawnTick', 'expireTick',
+  'remainingTicks', 'position',
+]);
+
+function copyRawVisibleEquipment(
+  value: unknown,
+  name: string,
+  remainingTicksByInstance: ReadonlyMap<string, number>,
+): BotVisibleEquipment {
   const record = assertPlainRecord(value, name);
+  assertKnownKeys(record, RAW_PUBLIC_EQUIPMENT_KEYS, name);
+  if (
+    record.locationState !== EQUIPMENT_LOCATION_STATE.SPAWNED
+    && record.locationState !== EQUIPMENT_LOCATION_STATE.DROPPED
+  ) {
+    throw new RangeError(`${name}.locationState 不是可见世界状态。`);
+  }
+  const instanceId = assertNonEmptyString(record.instanceId, `${name}.instanceId`);
+  const projectedRemainingTicks = remainingTicksByInstance.get(instanceId);
+  return {
+    instanceId,
+    definitionId: assertNonEmptyString(record.definitionId, `${name}.definitionId`),
+    locationState: record.locationState,
+    remainingTicks: projectedRemainingTicks ?? null,
+    position: finiteVector(record.position, `${name}.position`),
+  };
+}
+
+function copyNormalizedVisibleEquipment(value: unknown, name: string): BotVisibleEquipment {
+  const record = assertPlainRecord(value, name);
+  assertKnownKeys(record, NORMALIZED_VISIBLE_EQUIPMENT_KEYS, name);
   if (
     record.locationState !== EQUIPMENT_LOCATION_STATE.SPAWNED
     && record.locationState !== EQUIPMENT_LOCATION_STATE.DROPPED
@@ -238,8 +302,193 @@ function copyVisibleEquipment(value: unknown, name: string): BotVisibleEquipment
     instanceId: assertNonEmptyString(record.instanceId, `${name}.instanceId`),
     definitionId: assertNonEmptyString(record.definitionId, `${name}.definitionId`),
     locationState: record.locationState,
+    remainingTicks: record.remainingTicks === null
+      ? null
+      : nonNegativeInteger(record.remainingTicks, `${name}.remainingTicks`),
     position: finiteVector(record.position, `${name}.position`),
   };
+}
+
+function sameVector(left: BotVector3, right: BotVector3): boolean {
+  return left.x === right.x && left.y === right.y && left.z === right.z;
+}
+
+/**
+ * Validates an already-normalized BotSourceSnapshot projection view. Full
+ * definition/spawn/lifecycle and raw equipment authority auditing remains the
+ * responsibility of cloneBotSourceSnapshot before a production BotController
+ * commits a source snapshot; this path never treats cropped Bot equipment as
+ * an ArenaMatchSnapshot.
+ */
+function normalizeBotProjectionView(
+  value: unknown,
+  name: string,
+  snapshotTick: number,
+  eventSequence: number,
+  equipment: readonly BotVisibleEquipment[],
+): ArenaPublicSupplyProjection {
+  const source = cloneFrozenData(value, name);
+  assertKnownKeys(source, NORMALIZED_PROJECTION_KEYS, name);
+  if (source.schemaVersion !== ARENA_PUBLIC_SUPPLY_PROJECTION_SCHEMA_VERSION) {
+    throw new RangeError(`${name}.schemaVersion 无效。`);
+  }
+  const projectionTick = nonNegativeInteger(source.snapshotTick, `${name}.snapshotTick`);
+  const projectionEventSequence = nonNegativeInteger(
+    source.snapshotEventSequence,
+    `${name}.snapshotEventSequence`,
+  );
+  if (projectionTick !== snapshotTick) {
+    throw new RangeError(`${name}.snapshotTick 与 Bot snapshot 不一致。`);
+  }
+  if (projectionEventSequence !== eventSequence) {
+    throw new RangeError(`${name}.snapshotEventSequence 与 Bot snapshot 不一致。`);
+  }
+  if (
+    source.resyncReadiness !== ARENA_PUBLIC_SUPPLY_PROJECTION_READINESS.READY
+    && source.resyncReadiness !== ARENA_PUBLIC_SUPPLY_PROJECTION_READINESS.NOT_READY_PRE_EXPIRY
+  ) {
+    throw new RangeError(`${name}.resyncReadiness 无效。`);
+  }
+  const pendingAuthorityTick = source.pendingAuthorityTick === null
+    ? null
+    : nonNegativeInteger(source.pendingAuthorityTick, `${name}.pendingAuthorityTick`);
+  const expectedPendingAuthorityTick = source.resyncReadiness
+    === ARENA_PUBLIC_SUPPLY_PROJECTION_READINESS.READY ? null : snapshotTick;
+  if (pendingAuthorityTick !== expectedPendingAuthorityTick) {
+    throw new RangeError(`${name}.pendingAuthorityTick 与 readiness 不一致。`);
+  }
+  if (!Array.isArray(source.pendingExpiryEquipmentInstanceIds)) {
+    throw new TypeError(`${name}.pendingExpiryEquipmentInstanceIds 必须是数组。`);
+  }
+  const pendingExpiryEquipmentInstanceIds = source.pendingExpiryEquipmentInstanceIds.map(
+    (pendingId, index) => assertNonEmptyString(
+      pendingId,
+      `${name}.pendingExpiryEquipmentInstanceIds[${index}]`,
+    ),
+  );
+  if (
+    pendingExpiryEquipmentInstanceIds.length > ARENA_PUBLIC_SUPPLY_PROJECTION_MAX_ITEMS
+    || new Set(pendingExpiryEquipmentInstanceIds).size !== pendingExpiryEquipmentInstanceIds.length
+    || pendingExpiryEquipmentInstanceIds.some((pendingId, index) => (
+      index > 0 && pendingExpiryEquipmentInstanceIds[index - 1]! >= pendingId
+    ))
+  ) {
+    throw new RangeError(`${name}.pendingExpiryEquipmentInstanceIds 必须唯一、排序且有界。`);
+  }
+  if (
+    (source.resyncReadiness === ARENA_PUBLIC_SUPPLY_PROJECTION_READINESS.READY
+      && pendingExpiryEquipmentInstanceIds.length !== 0)
+    || (source.resyncReadiness === ARENA_PUBLIC_SUPPLY_PROJECTION_READINESS.NOT_READY_PRE_EXPIRY
+      && pendingExpiryEquipmentInstanceIds.length === 0)
+  ) {
+    throw new RangeError(`${name}.pendingExpiryEquipmentInstanceIds 与 readiness 不一致。`);
+  }
+  if (!Array.isArray(source.supplies)) throw new TypeError(`${name}.supplies 必须是数组。`);
+  if (
+    source.supplies.length > ARENA_PUBLIC_SUPPLY_PROJECTION_MAX_ITEMS
+    || (source.resyncReadiness === ARENA_PUBLIC_SUPPLY_PROJECTION_READINESS.NOT_READY_PRE_EXPIRY
+      && source.supplies.length !== 0)
+  ) {
+    throw new RangeError(`${name}.supplies 数量或 pre-expiry 状态非法。`);
+  }
+  const supplies = source.supplies.map((value, index): ArenaPublicSupplyProjection['supplies'][number] => {
+    const itemName = `${name}.supplies[${index}]`;
+    assertKnownKeys(value, NORMALIZED_PROJECTION_ITEM_KEYS, itemName);
+    if (value.schemaVersion !== ARENA_PUBLIC_SUPPLY_PROJECTION_SCHEMA_VERSION) {
+      throw new RangeError(`${itemName}.schemaVersion 无效。`);
+    }
+    const supplyDefinitionId = assertNonEmptyString(
+      value.supplyDefinitionId,
+      `${itemName}.supplyDefinitionId`,
+    );
+    const supplyId = assertNonEmptyString(value.supplyId, `${itemName}.supplyId`);
+    const slotId = assertNonEmptyString(value.slotId, `${itemName}.slotId`);
+    const equipmentInstanceId = assertNonEmptyString(
+      value.equipmentInstanceId,
+      `${itemName}.equipmentInstanceId`,
+    );
+    const equipmentDefinitionId = assertNonEmptyString(
+      value.equipmentDefinitionId,
+      `${itemName}.equipmentDefinitionId`,
+    );
+    const equipmentSpawnId = assertNonEmptyString(
+      value.equipmentSpawnId,
+      `${itemName}.equipmentSpawnId`,
+    );
+    const spawnTick = nonNegativeInteger(value.spawnTick, `${itemName}.spawnTick`);
+    const expireTick = nonNegativeInteger(value.expireTick, `${itemName}.expireTick`);
+    const remainingTicks = nonNegativeInteger(value.remainingTicks, `${itemName}.remainingTicks`);
+    if (
+      spawnTick > snapshotTick
+      || expireTick <= snapshotTick
+      || expireTick <= spawnTick
+      || remainingTicks === 0
+      || remainingTicks !== expireTick - snapshotTick
+    ) {
+      throw new RangeError(`${itemName} 生命周期或 remainingTicks 非法。`);
+    }
+    return Object.freeze({
+      schemaVersion: ARENA_PUBLIC_SUPPLY_PROJECTION_SCHEMA_VERSION,
+      supplyDefinitionId,
+      supplyId,
+      slotId,
+      equipmentInstanceId,
+      equipmentDefinitionId,
+      equipmentSpawnId,
+      spawnPosition: finiteVector(value.spawnPosition, `${itemName}.spawnPosition`),
+      spawnTick,
+      expireTick,
+      remainingTicks,
+      position: finiteVector(value.position, `${itemName}.position`),
+    });
+  });
+  const supplyIds = new Set<string>();
+  const equipmentIds = new Set<string>();
+  for (let index = 0; index < supplies.length; index += 1) {
+    const item = supplies[index]!;
+    if (supplyIds.has(item.supplyId) || equipmentIds.has(item.equipmentInstanceId)) {
+      throw new RangeError(`${name}.supplies identity 必须唯一。`);
+    }
+    if (index > 0 && supplies[index - 1]!.supplyId >= item.supplyId) {
+      throw new RangeError(`${name}.supplies 必须按 supplyId 稳定排序。`);
+    }
+    supplyIds.add(item.supplyId);
+    equipmentIds.add(item.equipmentInstanceId);
+  }
+  const equipmentById = new Map(equipment.map((item) => [item.instanceId, item]));
+  if (equipmentById.size !== equipment.length) {
+    throw new RangeError(`${name}.equipment instanceId 必须唯一。`);
+  }
+  if (pendingExpiryEquipmentInstanceIds.some((id) => equipmentById.has(id))) {
+    throw new RangeError(`${name}.pending expiry identity 不能出现在 BotVisibleEquipment 世界列表。`);
+  }
+  for (const item of supplies) {
+    const runtime = equipmentById.get(item.equipmentInstanceId);
+    if (!runtime) throw new RangeError(`${name} 缺少供给 equipment 映射。`);
+    if (
+      runtime.definitionId !== item.equipmentDefinitionId
+      || runtime.locationState !== EQUIPMENT_LOCATION_STATE.SPAWNED
+      && runtime.locationState !== EQUIPMENT_LOCATION_STATE.DROPPED
+      || !sameVector(runtime.position, item.position)
+      || runtime.remainingTicks !== item.remainingTicks
+    ) {
+      throw new RangeError(`${name} 供给与 normalized equipment 映射不一致。`);
+    }
+  }
+  for (const runtime of equipment) {
+    if (runtime.remainingTicks !== null && !equipmentIds.has(runtime.instanceId)) {
+      throw new RangeError(`${name} equipment remainingTicks 缺少 projection 映射。`);
+    }
+  }
+  return Object.freeze({
+    schemaVersion: ARENA_PUBLIC_SUPPLY_PROJECTION_SCHEMA_VERSION,
+    snapshotTick: projectionTick,
+    snapshotEventSequence: projectionEventSequence,
+    resyncReadiness: source.resyncReadiness,
+    pendingAuthorityTick,
+    pendingExpiryEquipmentInstanceIds: Object.freeze(pendingExpiryEquipmentInstanceIds),
+    supplies: Object.freeze(supplies),
+  });
 }
 
 function copyActionRule(value: unknown, name: string): BotActionRule {
@@ -422,6 +671,8 @@ function normalizeSourceSnapshot(
   value: unknown,
   name: string,
   filterWorldEquipment = false,
+  lifecycleContract?: ArenaPublicSupplyProjectionLifecycleContract,
+  inputKind: 'raw' | 'normalized' = 'raw',
 ): BotSourceSnapshot {
   if (typeof value === 'object' && value !== null && TRUSTED_SOURCE_SNAPSHOTS.has(value)) {
     return value as BotSourceSnapshot;
@@ -430,6 +681,7 @@ function normalizeSourceSnapshot(
   assertKnownKeys(source, SOURCE_KEYS, name);
   const tick = nonNegativeInteger(source.tick, `${name}.tick`);
   const activeTick = nonNegativeInteger(source.activeTick, `${name}.activeTick`);
+  const eventSequence = nonNegativeInteger(source.eventSequence, `${name}.eventSequence`);
   const remainingTicks = nonNegativeInteger(source.remainingTicks, `${name}.remainingTicks`);
   if (typeof source.phase !== 'string' || !MATCH_PHASES.has(source.phase)) {
     throw new RangeError(`${name}.phase 无效。`);
@@ -438,6 +690,30 @@ function normalizeSourceSnapshot(
     throw new RangeError(`${name} 必须包含两名参赛者。`);
   }
   if (!Array.isArray(source.equipment)) throw new TypeError(`${name}.equipment 必须是数组。`);
+  let activeSupplyProjection: ArenaPublicSupplyProjection | null = null;
+  let remainingTicksByInstance = new Map<string, number>();
+  if (inputKind === 'raw') {
+    activeSupplyProjection = source.activeSupplyProjection === null
+      || source.activeSupplyProjection === undefined
+      ? null
+      : lifecycleContract === undefined
+        ? createArenaPublicSupplyProjectionAudit(source.activeSupplyProjection, {
+          snapshotTick: tick,
+          eventSequence,
+          equipment: source.equipment,
+        })
+        : requireArenaPublicSupplyProjection(source.activeSupplyProjection, {
+          snapshotTick: tick,
+          eventSequence,
+          equipment: source.equipment,
+          lifecycleContract,
+        });
+    remainingTicksByInstance = new Map(
+      activeSupplyProjection?.supplies.map(({ equipmentInstanceId, remainingTicks: value }) => (
+        [equipmentInstanceId, value]
+      )) ?? [],
+    );
+  }
   const participants = source.participants.map((participant, index) => (
     copyParticipant(participant, `${name}.participants[${index}]`)
   ));
@@ -450,42 +726,79 @@ function normalizeSourceSnapshot(
       );
     }
   }
-  const visibleEquipment = filterWorldEquipment
+  const visibleEquipment = inputKind === 'raw' && filterWorldEquipment
     ? source.equipment.filter((equipment) => {
       const record = assertPlainRecord(equipment, `${name}.equipment`);
       return record.locationState === EQUIPMENT_LOCATION_STATE.SPAWNED
         || record.locationState === EQUIPMENT_LOCATION_STATE.DROPPED;
-    })
+      })
     : source.equipment;
+  const normalizedEquipment = visibleEquipment.map((equipment, index) => (
+    inputKind === 'raw'
+      ? copyRawVisibleEquipment(equipment, `${name}.equipment[${index}]`, remainingTicksByInstance)
+      : copyNormalizedVisibleEquipment(equipment, `${name}.equipment[${index}]`)
+  )).sort((left, right) => (
+    left.instanceId < right.instanceId ? -1 : left.instanceId > right.instanceId ? 1 : 0
+  ));
+  if (inputKind === 'normalized') {
+    if (source.activeSupplyProjection === null || source.activeSupplyProjection === undefined) {
+      if (normalizedEquipment.some(({ remainingTicks: value }) => value !== null)) {
+        throw new RangeError(`${name}.equipment remainingTicks 缺少 projection，已 fail closed。`);
+      }
+    } else {
+      activeSupplyProjection = normalizeBotProjectionView(
+        source.activeSupplyProjection,
+        `${name}.activeSupplyProjection`,
+        tick,
+        eventSequence,
+        normalizedEquipment,
+      );
+    }
+  }
   const result = freezeOwned<BotSourceSnapshot>({
     tick,
     activeTick,
+    eventSequence,
     phase: source.phase,
     remainingTicks,
     participants,
-    equipment: visibleEquipment.map((equipment, index) => (
-      copyVisibleEquipment(equipment, `${name}.equipment[${index}]`)
-    )).sort((left, right) => (
-      left.instanceId < right.instanceId ? -1 : left.instanceId > right.instanceId ? 1 : 0
-    )),
+    equipment: normalizedEquipment,
+    activeSupplyProjection,
     map: copyMapSnapshot(source.map, `${name}.map`),
   });
   TRUSTED_SOURCE_SNAPSHOTS.add(result);
   return result;
 }
 
-export function cloneBotSourceSnapshot(snapshot: unknown): BotSourceSnapshot {
+export function cloneBotSourceSnapshot(
+  snapshot: unknown,
+  options: Readonly<{
+    readonly lifecycleContract?: ArenaPublicSupplyProjectionLifecycleContract;
+  }> = {},
+): BotSourceSnapshot {
   const source = assertPlainRecord(snapshot, 'Bot source snapshot');
   const reduced = {
     tick: readDataProperty(source, 'tick', 'Bot source snapshot'),
     activeTick: readDataProperty(source, 'activeTick', 'Bot source snapshot'),
+    eventSequence: readDataProperty(source, 'eventSequence', 'Bot source snapshot'),
     phase: readDataProperty(source, 'phase', 'Bot source snapshot'),
     remainingTicks: readDataProperty(source, 'remainingTicks', 'Bot source snapshot'),
     participants: readDataProperty(source, 'participants', 'Bot source snapshot'),
     equipment: readDataProperty(source, 'equipment', 'Bot source snapshot'),
+    activeSupplyProjection: readOptionalDataProperty(
+      source,
+      'activeSupplyProjection',
+      'Bot source snapshot',
+    ) ?? null,
     map: readDataProperty(source, 'map', 'Bot source snapshot'),
   };
-  return normalizeSourceSnapshot(reduced, 'Bot source snapshot', true);
+  return normalizeSourceSnapshot(
+    reduced,
+    'Bot source snapshot',
+    true,
+    options.lifecycleContract,
+    'raw',
+  );
 }
 
 function normalizeArenaView(value: unknown, name: string): BotArenaView {
@@ -552,13 +865,22 @@ export function createBotObservation(options: unknown): BotObservation {
   const commandSnapshot = normalizeSourceSnapshot(
     options.commandSnapshot,
     'commandSnapshot',
+    false,
+    undefined,
+    'normalized',
   );
   const delayedSnapshot = normalizeSourceSnapshot(
     options.delayedSnapshot,
     'delayedSnapshot',
+    false,
+    undefined,
+    'normalized',
   );
   if (delayedSnapshot.tick > commandSnapshot.tick) {
     throw new RangeError('机器人不能观察未来快照。');
+  }
+  if (delayedSnapshot.eventSequence > commandSnapshot.eventSequence) {
+    throw new RangeError('机器人不能观察未来 eventSequence。');
   }
   const selfId = assertNonEmptyString(options.selfId, 'Bot selfId');
   const arena = normalizeArenaView(options.arena, 'Bot observation arena');

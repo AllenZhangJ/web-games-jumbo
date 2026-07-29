@@ -50,6 +50,14 @@ export type {
   SynchronousStorageReadResult,
 } from './synchronous-storage-port.js';
 export { createArenaMatchSnapshotAudit } from './match-snapshot.js';
+export {
+  ARENA_PUBLIC_SUPPLY_PROJECTION_MAX_ITEMS,
+  ARENA_PUBLIC_SUPPLY_PROJECTION_READINESS,
+  ARENA_PUBLIC_SUPPLY_PROJECTION_SCHEMA_VERSION,
+  assertArenaPublicSupplyProjectionResyncReady,
+  createArenaPublicSupplyProjectionAudit,
+  requireArenaPublicSupplyProjection,
+} from './arena-public-supply-projection.js';
 export type {
   ArenaActionSnapshot,
   ArenaActionCommitmentSnapshot,
@@ -66,6 +74,14 @@ export type {
   ArenaVector2Snapshot,
   ArenaVector3Snapshot,
 } from './match-snapshot.js';
+export type {
+  ArenaPublicSupplyProjection,
+  ArenaPublicSupplyProjectionAuditOptions,
+  ArenaPublicSupplyProjectionItem,
+  ArenaPublicSupplyProjectionLifecycleContract,
+  ArenaPublicSupplyProjectionReadiness,
+  ArenaPublicSupplyProjectionSpawnSpec,
+} from './arena-public-supply-projection.js';
 export { ACTION_RESOLUTION_KIND } from './action-resolution.js';
 export type { ActionResolutionKind } from './action-resolution.js';
 export {

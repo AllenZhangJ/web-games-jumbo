@@ -17,10 +17,16 @@ export {
   ARENA_V2_SURVIVAL_SUPPLY_COMPOSITION_ID,
   createArenaV2SurvivalSupplyMatchCore,
 } from './arena-v2-survival-supply-match-core.js';
+export {
+  createArenaV2SurvivalSupplyBotSession,
+} from './arena-v2-survival-supply-bot-composition.js';
 export type {
   ArenaV2SurvivalSupplyComposition,
   ArenaV2SurvivalSupplyMatchCoreOptions,
 } from './arena-v2-survival-supply-match-core.js';
+export type {
+  ArenaV2SurvivalSupplyBotCompositionOptions,
+} from './arena-v2-survival-supply-bot-composition.js';
 export {
   ArenaV1QuickMatchService,
   QuickMatchService,

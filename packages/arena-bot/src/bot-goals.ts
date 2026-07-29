@@ -144,6 +144,9 @@ function nearestReachableEquipment(observation: BotObservation): ReachableEquipm
       };
     })
     .filter((candidate): candidate is ReachableEquipment => candidate.path !== null)
+    .filter(({ equipment }) => (
+      equipment.remainingTicks === null || equipment.remainingTicks > 0
+    ))
     .sort((left, right) => (
       left.distance - right.distance
       || compareText(left.equipment.instanceId, right.equipment.instanceId)

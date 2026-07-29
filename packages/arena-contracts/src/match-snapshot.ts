@@ -5,6 +5,10 @@ import {
   cloneFrozenData,
 } from './definition-utils.js';
 import type { DeepReadonly, PlainRecord } from './definition-utils.js';
+import {
+  createArenaPublicSupplyProjectionAudit,
+  type ArenaPublicSupplyProjection,
+} from './arena-public-supply-projection.js';
 
 export interface ArenaVector3Snapshot {
   readonly x: number;
@@ -138,6 +142,8 @@ export interface ArenaMatchSnapshot {
   readonly eventSequence: number;
   readonly participants: readonly ArenaParticipantSnapshot[];
   readonly equipment: readonly ArenaEquipmentSnapshot[];
+  /** Present only for a survival composition that publishes a complete, current-tick supply view. */
+  readonly activeSupplyProjection?: ArenaPublicSupplyProjection;
   readonly map: ArenaMapSnapshot;
   readonly result: ArenaMatchResultSnapshot | null;
   readonly rngStates?: Readonly<Record<string, number>>;
@@ -150,7 +156,7 @@ export interface ArenaMatchSnapshotAuditOptions {
 const PUBLIC_SNAPSHOT_KEYS = new Set([
   'schemaVersion', 'physicsBackendVersion', 'configHash', 'ruleContentHash', 'matchSeed',
   'tick', 'activeTick', 'phase', 'remainingTicks', 'eventSequence', 'participants',
-  'equipment', 'map', 'result',
+  'equipment', 'activeSupplyProjection', 'map', 'result',
 ]);
 const INTERNAL_SNAPSHOT_KEYS = new Set([...PUBLIC_SNAPSHOT_KEYS, 'rngStates']);
 const PUBLIC_PARTICIPANT_KEYS = new Set([
@@ -384,7 +390,11 @@ export function createArenaMatchSnapshotAudit(
   }
   assertNonEmptyString(source.phase, 'ArenaMatchSnapshot.phase');
   assertIntegerAtLeast(source.remainingTicks, 0, 'ArenaMatchSnapshot.remainingTicks');
-  assertIntegerAtLeast(source.eventSequence, 0, 'ArenaMatchSnapshot.eventSequence');
+  const eventSequence = assertIntegerAtLeast(
+    source.eventSequence,
+    0,
+    'ArenaMatchSnapshot.eventSequence',
+  );
   if (!Array.isArray(source.participants) || source.participants.length === 0) {
     throw new RangeError('ArenaMatchSnapshot.participants 必须是非空数组。');
   }
@@ -397,6 +407,13 @@ export function createArenaMatchSnapshotAudit(
   ));
   const equipmentIds = new Set<string>();
   source.equipment.forEach((equipment, index) => auditEquipment(equipment, index, equipmentIds));
+  if (source.activeSupplyProjection !== undefined) {
+    createArenaPublicSupplyProjectionAudit(source.activeSupplyProjection, {
+      snapshotTick: tick,
+      eventSequence,
+      equipment: source.equipment,
+    });
+  }
   auditMap(source.map, includeInternal);
   if (source.result !== null) {
     assertKnownKeys(source.result, RESULT_KEYS, 'ArenaMatchSnapshot.result');
