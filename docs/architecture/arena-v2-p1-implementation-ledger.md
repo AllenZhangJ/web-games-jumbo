@@ -3,17 +3,17 @@
 ## 状态
 
 - 阶段：P1 自动替换与 10 秒权威回收。
-- 当前小门：P1 Bot「public active-supply projection + formal survival Composition 接线（已签核，待主协调提交推送）」；签核名 `public-supply-projection-survival-bot-ready`（2026-07-29）。
-- 当前结论：Profile Definition/Registry foundation 已由主协调签核并提交推送为 `7e9e3c4`（2026-07-29）；公开单物 active lifecycle projection 合同与正式生存 Composition Bot 接线本小门已签核为 `public-supply-projection-survival-bot-ready`，待主协调提交推送。投影通过 `resyncReadiness` 明确区分可交互 post-step 快照与 `+600` pre-step command view；Bot 仅消费只读观察并输出 InputFrame。该签核不代表 Presentation、Platform、4 人 P2 模型或 P1 完成。P1 CPU 小门已由主协调签核并提交推送为 `21948d4`；Platform 产物预算继续保持红色，不能签 Platform 或 P1 advance。P1.1、P1.2a、P1.2b、P1.2c-1 与 P1.2c-2 已于 2026-07-28 签核。
-- P1 总体结论：**未完成、不得 advance**。本小门的正式生存 Composition Bot 接线与 active lifecycle projection 合同已签核；Coverage、Douyin/WeChat 预算、300-case Bot stress、Presentation、Platform、真机与 4 人参与者模型仍未完成并保持红门，本小门签核不改变这些硬门。
+- 当前小门：P1 `formal-survival-bot-session-performance-A1.1` 生命周期/合同修订候选；实现审计起始基线、实际父节点与安全回滚点为 `2abd7f7`。正式 300-case/120-seed 压力门仍未启动，当前不得签核。
+- 当前结论：`public-supply-projection-survival-bot-ready` 已由主协调提交为 `f80307b`，A1.1 同步提交为 `2abd7f7`。A1.1 只修正 Session 构造 ownership 与 trusted binding 合同，A1 的 Performance 生产改动、CPU 红证据和 formalGate=false 均保留；未修改 ActionResolver、Replay V5、InputFrame、规则语义、Presentation、Platform 或资产。A1 的 1-case 三轮候选 CPU 为 0.5350848/0.6369048/0.573974ms/tick，均超过 0.25ms；预检确认 Runner/CoreSimulator 活跃，只计污染环境候选红证据。A0 被驳回的 0.6456924/0.6547600/0.6683812ms/tick、此前 pressure 0.8172684ms/tick、主协调 0.7417632ms/tick 与污染窗口 2.2888232ms/tick 全部保留。P1.1、P1.2a、P1.2b、P1.2c-1、P1.2c-2 与 CPU 小门仍按既有签核记录保留。
+- P1 总体结论：**未完成、不得 advance**。Coverage、Douyin/WeChat 预算、正式 300-case Bot stress、Presentation、Platform、真机、前后台与 4 人参与者模型仍未完成并保持红门。
 - P1.1 实现审计起始基线：`d6f906008d0af1ed0133a199a8dc9e15cb1d23d0`。
 - P1.1 提交父节点：`fb0bc404508bf9d7f34df53fedfaf20d31239591`。`d6f9060..fb0bc40` 之间仅包含已经独立验收的 A0.1 美术生产合同与阶段门禁文档，不包含 P1.1 代码，不改变 P1.1 行为审计结论。
 - P1.2a 实现审计起始基线：`8e3e6eff6724612e83b124aa2ae6574a3967af9e`；提交父节点为 `4420d4b585025cd6999e5becf6a6f4d10b895063`，实际提交为 `22b9fd0e39b83de0b6a3ed766a2a66f3d2f67b1d`。`8e3e6ef..4420d4b` 仅包含已经独立验收的 A0.2.1 来源权利包，不改变 P1.2a 行为审计结论。
 - P1.2b 实现审计起始基线为 `22b9fd0e39b83de0b6a3ed766a2a66f3d2f67b1d`，实际签核提交为 `7f9f09b6dfeb8b68a0d9ea64aa013bd348b14099`。
 - P1.2c-1 实现审计起始基线为 `7f9f09b6dfeb8b68a0d9ea64aa013bd348b14099`，已签核、提交并推送为 `8de2997a76601afce18b26d8126fb5cb24ca6feb`。
 - P1.2c-2 实现审计起始基线为 `8de2997a76601afce18b26d8126fb5cb24ca6feb`，实际签核提交为 `5d26a4f`；其提交父节点为 `484d012934b6097043a6041f73b580699287ca39`。`8de2997..484d012` 仅为已独立签核的 A0.2.2 美术来源/参考板提交，不改变 c-2 行为审计，不计入开发证据。
-- 性能整改实现审计起始基线为 `5d26a4f`；已由主协调签核并提交推送为 `21948d4`。Profile Definition/Registry foundation 的实现审计基线为 `e49f159`，已由主协调提交推送为 `7e9e3c4`；当前 public projection/Bot 接线小门以 `7e9e3c4` 为实际父节点与安全回滚点，已签核为 `public-supply-projection-survival-bot-ready`，待主协调提交推送，不把尚未提交的本地代码误写成已提交行为。
-- `e49f159..7e9e3c4` 只包含已验收的 Profile/Registry foundation 提交；本小门实现审计从 `7e9e3c4` 起算。当前工作树没有美术 dirty，本小门提交不包含美术文件；A1.1 文档缺口将在本提交落地后由美术线以实际父 commit 单独修订。
+- 性能整改实现审计起始基线为 `5d26a4f`；已由主协调签核并提交推送为 `21948d4`。Profile Definition/Registry foundation 已由主协调提交推送为 `7e9e3c4`；public projection/Bot 接线小门已由主协调提交推送为 `f80307b`，A1.1 同步已提交为 `2abd7f7`。本批实现审计与安全回滚点为 `2abd7f7`。
+- `7e9e3c4..f80307b` 只包含已验收的 public projection + formal survival Composition Bot 接线，`f80307b..2abd7f7` 为已验收 A1.1 同步；当前工作树没有美术 dirty，本批包含既有 pressure runner/定向测试/package 脚本/台账，以及 Performance-A 允许范围内的 MatchCore/Bot/Session 生产改动和回归测试，不包含美术文件。
 - 证据日期：2026-07-29。
 
 ## 前置条件与依据
@@ -624,11 +624,11 @@ P1.2b 只评分隔离 Equipment Core 时间线小门；候选条件为总分至�
 - 安全回滚点为 `e49f159`：只撤回本批 Bot Profile Definition/Registry、难度投影调整、Controller/QuickMatch Registry 注入、对应测试和本节台账；不得回滚已验收的 A1.1 美术提交，也不触碰此前 P1 Core 签核提交。
 - 当前状态是 **profile-registry-foundation-ready，主协调已签核并提交推送（2026-07-29，`7e9e3c4`）**；下一节 public projection + formal survival Composition Bot 小门已另行签核，P1 总体仍 **未完成、不得 advance**。
 
-## P1 Bot：public active-supply projection + formal survival Composition（已签核，待主协调提交推送）
+## P1 Bot：public active-supply projection + formal survival Composition（已签核，已提交 `f80307b`）
 
 ### 阶段定位、审计基线与范围
 
-- 本小门严格位于 `Rule → Core → Bot`：审计起始基线、实际父提交和安全回滚点均为 `7e9e3c44e728`（Profile/Registry foundation 已签核提交）。当前工作树没有美术 dirty；本小门提交不包含美术文件，也不触碰 A0/A1 文档。A1.1 文档缺口将在本提交落地后由美术线以实际父 commit 单独修订。
+- 本小门严格位于 `Rule → Core → Bot`：实现审计起始基线为 `7e9e3c4`，实际提交为 `f80307b`；A1.1 同步已提交为 `2abd7f7`。本小门不触碰 A0/A1 文档或美术文件。
 - 本小门只覆盖两件事：
   1. Timeline 从权威整数 tick、冻结 Definition/spawn spec 和稳定 instance identity 生成版本化 public active-supply projection；
   2. 正式 survival Composition 在组合阶段注入已注册 Profile Registry 和已严格校验的 projection lifecycle contract，Bot 只通过只读观察输出普通 `InputFrame`。
@@ -698,7 +698,7 @@ P1.2b 只评分隔离 Equipment Core 时间线小门；候选条件为总分至�
 | pre-step/resync/生命周期 | 20 | 18 | 90% | pre-step 明确不可恢复且 post-step ready；跨 Presentation/冷启动 adapter 仍未验收 |
 | 1v1 兼容/确定性/Replay/hash | 15 | 14 | 93% | 旧字段与黄金 manifest/hash 无漂移；未覆盖 4 人 P2 |
 | 测试与治理 | 10 | 8 | 80% | 定向、架构、类型、构建、Replay 与 diff 通过；coverage 与 Platform 预算继续红 |
-| **合计** | **100** | **91** | **91%** | **达到评分线；本小门已签核为 `public-supply-projection-survival-bot-ready`（2026-07-29），待主协调提交推送** |
+| **合计** | **100** | **91** | **91%** | **达到评分线；本小门已签核为 `public-supply-projection-survival-bot-ready`（2026-07-29），已提交 `f80307b`** |
 
 ### 本轮自审、风险与回滚
 
@@ -714,7 +714,282 @@ P1.2b 只评分隔离 Equipment Core 时间线小门；候选条件为总分至�
 
 ### 签核状态
 
-**本小门已签核为 `public-supply-projection-survival-bot-ready`（2026-07-29），待主协调提交推送。** 本节不得将 P1 标记为 advance；Presentation adapter、A0.3、A1.1 执行/代表样件与 Blockout 均未开放。
+**本小门已签核为 `public-supply-projection-survival-bot-ready`（2026-07-29），已提交 `f80307b`。** 本节不得将 P1 标记为 advance；Presentation adapter、A0.3、A1.1 执行/代表样件与 Blockout 均未开放。
+
+## P1 Bot：formal survival pressure / determinism（前置候选，已转入 Performance-A；压力门仍阻断）
+
+### 阶段定位、基线、前置与范围
+
+- 小门名：`P1 formal-survival-bot-pressure-ready`；实现审计起始基线、实际父节点和安全回滚点均为 `2abd7f7`。本节保留 pressure runner 的独立候选证据；Performance-A 的生产改动与当前状态见下节，不代表主协调签核、提交或 P1 advance。
+- 前置：`public-supply-projection-survival-bot-ready` 已提交于 `f80307b`，A1.1 同步父提交为 `2abd7f7`；正式 survival Composition、Profile Registry、active lifecycle projection、普通 InputFrame 路径和 Replay V5/hash 兼容合同已存在。
+- 允许改动：`scripts/arena-formal-survival-bot-pressure.ts`、正式定向 Bot 测试、package 脚本、本节台账。未修改 Timeline、EquipmentSystem、MatchCore、Replay、Presentation、Platform、正式资产或 A0/A1 文件。
+- 正式门：默认 300 个完整 case、至少 120 个唯一 seed、每个 case 双跑；固定 manifest/case/seed/config/Definition/input-plan identity；不降低 2500 tick、参与者、动作、验证或 `0.25ms/tick` 门槛。
+- 明确边界：现有生产权威为 2 人；4 人仍是 P2。正式 Bot stress 不是 Presentation、Platform、真机或 P1 总体完成。
+
+### 实现与行为映射
+
+| 要求 | 本批落点 | 证据/边界 |
+|---|---|---|
+| 正式 survival Composition | 新 runner 每个 case 均调用 `createArenaV2SurvivalSupplyBotSession`，注入 `BOT_PROFILE_REGISTRY`、正式 Definition 和固定 spawn specs | 禁止导入 `arena-v1-experiment`；旧 `scripts/arena-bot-stress.ts` 仍明确不是本门证据 |
+| 固定 case/seed/config/input identity | manifest 携带完整 `ARENA_V2_SURVIVAL_SUPPLY_DEFINITION`、ARENA、config template、Profile Definition 集合、6 个完整 input plan、pause boundary 集合；300/120 默认；caseIdentity 不含 caseId | smoke manifest hash `9b350afb`、definition hash `26a9eb8c`、config hash `b55acfab`；正式默认 hash 必须由完整门输出并锁定，不提前伪造 |
+| 状态与正式请求分类 | `formalRequest` 只表示 300/≥120/2500 请求形状；纯分类器输出 `formal-passed`、`formal-failed`、`smoke-passed` 或 `smoke-failed`，不以 `formalGateEligible` 代替请求形状 | 正式形状即使 CPU/heap 红也只能是 `formal-failed`；1-case 为 `smoke-passed` |
+| 双跑确定性 | 每 case 比较完整 Replay InputFrame、authority events、公开 snapshot projection hash、checkpoint state hash、final hash、result | 不把不同 input plan 误断言为 hash 相等；相同 case 才要求完全相等 |
+| 事件/终局覆盖 | 每 case 保存 eventTypeCounts、spawnTicks、boundary snapshots；聚合硬门要求 `MatchStarted/EquipmentSpawned/EquipmentDropped/EquipmentPickedUp/EquipmentReplaced/EquipmentRecycled/EquipmentExpired/ActionStarted/HitResolved/KnockbackApplied/PlayerEliminated/PlayerRespawned/SuddenDeathStarted/MatchEnded`，1200/2400 spawn、active=3、MatchEnded 和所有生命周期边界出现 | smoke canonical 56、双跑 executed 112；扩展事件链与 terminal projection 五项全部为 true；正式 300-case 仍未启动 |
+| hash/计数口径 | `resultManifestHash` 只哈希有序 stable case results；`evidenceHash` 另哈希 manifest/definition/config/result manifest 与确定性 coverage 聚合；报告拆分 canonical/executed ticks/events | smoke evidence `7e52e9f9` ≠ result manifest `d0f3632d`；canonical `2500/56`，executed `5000/112` |
+| terminal projection 硬门 | 新增 `terminalProjectionCoverage`，必须由规范 case 证明 1201=599、1799=1、1800 pending+not-ready+authorityTick=1800、1801 ready+pending empty、2401=599 | smoke 五项均 true；不再仅以 boundary tick 被记录替代语义断言 |
+| 生命周期与边界 | 每场完整至 2500 tick；输入覆盖 1200/2400、599/600/601、抢夺、连续波次；pause 集合旋转覆盖 1199/1200/1201、1799/1800/1801、2399/2400/2401 与 null，并逐 case 记录暂停保留 tick/恢复 tick；结算后重复 destroy | 1-case smoke 完成全部边界采样、结算和重复 destroy，但其 caseIdentity 的 `pauseAtTick=null`、`maximumPauseSteps=0`，未执行暂停；pause case 仅由默认 manifest 构造与纯测试证明会覆盖，运行证据待正式矩阵或后续单独 pause smoke |
+| 失败关闭 | 现有定向覆盖缺失/未来/篡改 projection、pending/world 冲突、未知 Definition、同 tick 修正重试；本批新增 future projection 与未知 Definition 测试 | 错误不得提交 Bot history/RNG/InputFrame；正式负向矩阵仍需在干净门禁复跑 |
+| 资源/有限性 | 每 tick 检查有限数、runtime≤3、active supply≤3、event window≤10；记录 heap、CPU、trace/event 数 | smoke：runtime 3、active 3、event 6、heap +5,560,176 bytes/32MB；CPU 0.8172684ms/tick，仍超过 0.25 门 |
+
+### 当前验证证据与阻断
+
+| 门禁 | 结果 | 解释 |
+|---|---|---|
+| 修订后 typecheck / lint / docs / architecture / diff | `typecheck:app`、`npm run lint`、`check:documentation`、架构 39/39 与 `git diff --check` 均通过 | 本轮只运行指定定向门禁；仅包含本批允许文件 |
+| Bot 定向 Node | 11/11 通过 | 覆盖既有投影/Composition/同 tick retry/确定性、输入顺序置换、future projection 与未知 Definition |
+| runner 开发 smoke | 1/1 case 双跑；canonical 2500 tick/56 events，executed 5000 tick/112 events；InputFrame/event/public projection/checkpoint/final/result 一致；evidence `7e52e9f9` 与 result manifest `d0f3632d` 分层且不同；扩展 event coverage、terminal projection coverage 与全部 boundary ticks 通过；`status=smoke-passed`、`formalRequest=false`、`formalGatePassed=false` | 参数化 `caseCount=1/uniqueSeedCount=1/hardLimitTicks=2500`，不是正式 300-case 证据；独立 runner+Bot 定向测试 16/16 通过 |
+| smoke CPU | 当前小规模 smoke 0.8172684ms/tick，超过 0.25ms | 作为红证据保留；未降低门槛。主协调独立的 0.7417632ms/tick 与此前污染窗口 2.2888232ms/tick 也继续保留，不能以清洁后自然下降推断正式门通过 |
+| 正式 300/120 stress | **未启动** | 只读预检发现 Runner PID 34548、booted CoreSimulator、Simulator PID 59698、Android/Gradle active build（PID 91476 约131.3% CPU，PID 32219 为 Flutter Android assemble），另有 Virtualization PID 69235 和 WebKit；按污染协议停止，不停止外部进程 |
+| 架构依赖 | 39/39 通过 | 本批只新增 scripts/test/package/ledger，依赖方向未变 |
+| 完整 Node/Vitest/build/黄金 | 本轮按要求未运行，待干净窗口 | 不把此前小门结果冒充本批最终证据；普通 `a53b401d`、生存 `dd30e771` 不得改写 |
+
+### 本小门评分（当前候选，不满足签核线）
+
+| 维度 | 满分 | 当前得分 | 达成率 | 说明 |
+|---|---:|---:|---:|---|
+| 正式 300-case/seed 压力覆盖 | 25 | 0 | 0% | 仅 1-case smoke，正式门因污染未启动 |
+| 双跑确定性、Replay/hash/trace | 25 | 22 | 88% | smoke 全 trace 比较通过，既有正式黄金未漂移；完整 300-case 缺失 |
+| Bot/Core 边界与规则兼容 | 15 | 15 | 100% | runner 只调用 Composition；无权威生产文件改动 |
+| 负向、原子失败、竞态与生命周期 | 15 | 14 | 93% | 11/11 定向覆盖；正式 300-case 仍未完成 |
+| 性能与资源 | 10 | 4 | 40% | 资源通过，CPU smoke 超 0.25；无干净正式矩阵 |
+| 治理、复现与证据 | 10 | 7 | 70% | 固定 manifest、runner 16/16、typecheck/lint/docs/architecture/diff 通过；完整门禁按要求未运行 |
+| **合计** | **100** | **61** | **61%** | **低于总分≥90及各维≥80，保持 fail closed，不得签核** |
+
+### 代码自检
+
+- 健壮性：runner 固定 formal Definition、Profile Registry、arena、spawn specs 和 case manifest；未知 Profile/Definition、非法 projection 由正式 Composition/Bot validator 拒绝。所有 case 失败通过异常终止，不跳过或拼接结果。
+- 竞态/重入：Bot 仍由 `LocalMatchSession.step()` 单入口驱动；同 tick 输入顺序置换由定向测试直接对正式 Core + BotController 验证；暂停时 step 不推进 tick，恢复后继续同一 tick。BotController 既有 `#creatingInput` 和连续 tick/eventSequence 防护未改变。
+- 原子失败：future projection 和 namespace/缺 projection 失败后，定向测试比较 debug state，确认 history/RNG/lastCommand 未提交；同 tick 使用原快照重试成功。Composition 构造失败由既有资源清理路径处理。
+- 兜底/fail-closed：异常、非有限数、runtime/active supply/event window 越界、Replay schema 非 V5、case 未结束或 trace 不一致均使 runner 失败；没有默认 fallback、静默跳过或失败 case 过滤。
+- 文件内聚性：runner 仍是本小门唯一的正式执行入口；新增的状态分类、coverage 聚合和 hash 分层均为小型纯函数，直接消费本 runner 的报告类型，不引入第二套执行入口。若后续纯治理逻辑继续增长，将优先提取独立小模块，而不是继续扩张 CLI 文件。
+- 边界：代码固定检查完整结算 tick、投影数量、event window，并通过正式 Composition 覆盖 1200/2400 与 599/600/601；+600 pending 不被作为交互物。未知 Definition 新测试确保 Composition 在 Core 创建前拒绝。
+- 生命周期/资源：每 case 使用独立 Session，`finally` 中双次 destroy；smoke runtime/active/event/heap 均在上限内。Bot history 上限仍由 Profile 的 `observationDelayTicks + 2` 控制，未新增跨 match 缓存或 authority。
+- 主流程阻断：正式 runner 不创建第二 Tick/事件/拾取写入者；Bot 只经 Session 产生 InputFrame。任何一个 case、双跑或 manifest 校验失败都会退出非零，因此不会生成部分通过报告。
+- 确定性/Replay/hash：比较 InputFrame、事件、公开 snapshot projection、Replay checkpoint state hash、final hash 和 result；不改 Replay V5、既有 golden manifest 或 state hash 字段。不同 input plan 只用于行为矩阵，不要求错误的 hash 相等。
+- 旧 1v1：本批未触碰普通 1v1 Core/Replay；普通黄金 `a53b401d` 作为后续干净门禁的零漂移控制。4 人和 Presentation 不在本门范围。
+
+### 未完成、风险与回滚
+
+- 未完成硬门：正式 300/120 双跑、干净 CPU/资源矩阵、完整 Node/Vitest/build、普通/生存黄金复验；coverage、Douyin/WeChat、Presentation、Platform、真机、前后台和 4 人 P2 继续红/未完成。runner 专项 16/16、Bot 定向 11/11、typecheck/lint/docs/architecture/diff 仅为修订后开发证据，不替代正式压力门。
+- 性能风险：当前 smoke 的正式 `session.step()` CPU 为 0.8172684ms/tick，明显超过 0.25；主协调独立 0.7417632ms/tick 与此前污染窗口 2.2888232ms/tick 也保留。不能解释为通过，也不能以清洁后自然下降覆盖；正式矩阵须在污染解除后从零运行，任一红即停止。
+- 环境风险：预检捕获到 Flutter Runner/booted Simulator/Android active build/Virtualization/WebKit，未停止外部进程；污染轮不会进入签核表。
+- Replay/hash 风险：当前 runner 只比较已有 Replay V5 checkpoint/final hash，不新增 schema；manifest/trace identity 变化必须重新审计，不能更新黄金绕过漂移。
+- 回滚：本批安全回滚点为 `2abd7f7`；仅撤回 `scripts/arena-formal-survival-bot-pressure.ts`、Bot 定向测试、package script 和本节台账，不触碰父提交中的 A1.1 或既有 P1 代码。
+
+### 签核状态
+
+**本节 `formal-survival-bot-pressure-ready` 仍因正式压力未启动且 CPU smoke 红而未签核；当前开发状态转入下节 `formal-survival-bot-session-performance-A`，P1 总体和 Presentation 均不得 advance。**
+
+## P1 性能整改：formal-survival-bot-session-performance-A0（已被独立审查驳回；正式门 fail closed）
+
+### 阶段定位、基线、前置与范围
+
+- 小门名：`formal-survival-bot-session-performance-A`；实现审计起始基线、当前实际父节点与安全回滚点均为 `2abd7f7`。本节是 pressure runner 之后的独立性能实现候选，不是正式 300-case 压力签核。
+- 前置：`public-supply-projection-survival-bot-ready` 已提交为 `f80307b`，A1.1 同步已提交为 `2abd7f7`；Profile Registry、active lifecycle projection、正式 survival Composition、Replay V5/hash 合同与既有 Bot 压力 runner 已存在。
+- 允许范围：MatchCore public snapshot 的同状态复用与递归深冻结；绑定具体 MatchCore 的不透明 trusted snapshot reader；LocalMatchSession 到本地 BotController 的同 Core 能力握手；Bot 内部 trusted observation 适配；formal survival Composition 注入 trusted Core；对应定向/回归测试与本节台账。
+- 明确不做：不改 ActionResolver、InputFrame 字节/顺序、Replay V5、state-hash 字段/算法、Rule/Timeline/EquipmentSystem 语义、Presentation、Platform、正式资产；不降低 tick、动作、验证范围或 `0.25ms/tick` 门槛；不跑正式 300-case、完整回归、完整 build 或全量 golden。
+- 2 人生产权威模型保持不变；4 人仍为 P2。Performance-A 只优化同一 Core/Session 的数据读取，不增加第二 tick、事件总线、拾取写入者或 authority。
+
+### 实现与行为映射
+
+| 要求 | 本批落点 | 证据/边界 |
+|---|---|---|
+| public snapshot 复用 | `MatchCore` 按具体实例缓存 `tick/eventSequence/phase` 对应的 public snapshot；同状态重复读取返回同一 identity，成功权威 step 后失效，destroy 清除 | 只缓存 public view，不缓存 internal snapshot/state hash；step 期间拒绝读取，暂停/ended 读取不返回陈旧状态 |
+| 运行时不可变 | `freezeSnapshotData` 从严格 own data descriptor 递归冻结 public snapshot，拒绝 accessor、循环与不可验证结构；数组和嵌套 participant/equipment/projection 均冻结 | `Reflect.set`、数组/嵌套修改在测试中失败且不影响后续 tick/hash；缓存按 Core 实例隔离，无跨 match 共享 |
+| 输入失败可恢复 | `step()` 在 `normalizeInputFrames` 成功后才使 public cache 失效；规范化失败不改变 authority 或缓存 | MatchCore invalid-input regression 证明同一缓存仍可读且下一次合法 step 可继续；内部异常仍按既有 fail-closed 清理 |
+| trusted 能力来源 | `MatchCoreTrustedPublicSnapshotReader` 带 owner Core、WeakSet 能力身份和只读 `read()`；LocalMatchSession 只有 attach 返回 true 才启用 | cross-Core reader、普通 clone、伪造/拷贝 reader、destroy 后 reader 全部拒绝；不把任意全局 mark 函数暴露给调用者 |
+| Bot fast path | `BotController` 仅在 formal composition 注入同一 Core 后走 trusted adapter；该 adapter 仍检查 tick/eventSequence、2 名参与者、survival projection、position 与 599/600/601 readiness | 外部 `createInput(snapshot)` 仍走原严格 raw/normalized audit；trusted 与 strict 同 seed/config 输入逐 tick 比较 InputFrame、事件、stateHash、debug snapshot |
+| 普通 1v1 兼容 | 普通 `BotController` 无 trustedCore 时 attach 返回 false，`LocalMatchSession` 保留原 `getSnapshot → createInput` 严格路径 | 既有 quick-match/session/match-core 定向链通过；不注入 survival contract、不改变普通 1v1 内容或 hash |
+| 生命周期/边界 | trusted 路径只消费 Core 已构造的 public projection，不重新计算 authority；覆盖 pickup/replacement/expiry 及 1201=599、1799=1、1800 pending/not-ready、1801 ready/empty | 不增加 remainingTicks 第二权威；同 Core trusted/strict 对照通过，+600 不生成 0-tick 可交互项 |
+
+### 代码落点与文件边界
+
+- 生产：`packages/arena-match/src/match-core.ts`、`packages/arena-match/src/index.ts`、`packages/arena-bot/src/bot-controller.ts`、`packages/arena-bot/src/bot-observation.ts`、`packages/arena-session/src/local-match-session.ts`、`packages/arena-v1-composition/src/arena-v2-survival-supply-bot-composition.ts`。
+- 测试：`tests/arena/match-core.test.ts`、`tests/arena/bot-survival-composition.test.ts`；既有 `tests/arena/bot-survival-stress.test.ts` 继续验证 pressure runner 身份/分类/hash 分层。
+- 本批未触碰美术文档、A0/A1 文件、Timeline、EquipmentSystem、ActionResolver、Replay 实现或 Platform。
+
+### 当前验证证据与性能候选
+
+| 门禁 | 结果 | 解释 |
+|---|---|---|
+| 受影响 Core/Session/Bot/Composition Node | 63/63 通过 | 覆盖 snapshot cache/deep-freeze、invalid-input recovery、destroy、trusted reader、cross-Core 拒绝、普通 1v1 生命周期与 survival 同 Core 对照 |
+| runner + Bot + Core/Session 定向 Node | 68/68 通过 | 含 runner 专项 6 项新增治理断言、压力 runner smoke 双跑与完整受影响链 |
+| `npm run typecheck:app` / `npm run lint` | 通过 | 修订后严格类型与 lint 均无错误 |
+| 架构边界 | 39/39 通过 | 仍保持 Rule → Core → Bot → Session/Replay → Presentation 依赖方向；无第二 authority |
+| 文档 / diff | 263 markdown、837 local links、55 documented commands；`git diff --check` 通过 | 本轮 ledger 更新前后均保持无格式错误；无美术文件计入 |
+| `npm run build:packages` | 52 packages、11 waves 通过 | 作为候选实现的包级构建证据；未跑本批禁止的完整三端/全量 build |
+| Replay / golden | 未在本批重跑全量 golden | 未修改 Replay V5/state-hash 合同；既有普通 `a53b401d`、生存 `dd30e771` 作为零漂移基线保留，正式签核前仍需独立复验 |
+| 只读环境预检 | Runner 66475 约 18.8% CPU；SimRenderServer 59700 约 18.9%；SimMetalHost 59703 约 10.5%；Simulator 59698 约 2.6% | 未停止外部进程；该环境明确不是清洁性能签核环境 |
+| Performance-A 1-case round 1 | `smoke-passed`，formal=false，formalGate=false；CPU `0.6683812ms/tick`，heap `5,853,928` bytes | 2500 canonical ticks、56 canonical events；仅功能 smoke |
+| Performance-A 1-case round 2 | `smoke-passed`，formal=false，formalGate=false；CPU `0.6547600ms/tick`，heap `5,877,176` bytes | 每轮新 Node 进程，未拼接旧轮 |
+| Performance-A 1-case round 3 | `smoke-passed`，formal=false，formalGate=false；CPU `0.6456924ms/tick`，heap `5,860,848` bytes | 三轮均明显超过 0.25，按要求停止扩展性能采样；不能解释为正式通过 |
+
+三轮均报告 `canonicalTotalTicks=2500`、`canonicalTotalEvents=56`、`uniqueTraceHashes=1`、`uniqueFinalHashes=1`；由于每轮只有 1 case，这些是 smoke 完整性结果，不是 300-case 多样性证据。CPU 使用 runner 的 process CPU 口径，不以 wall time 替代；Runner/CoreSimulator 活跃使本轮只可作为污染环境候选红证据。此前 0.8172684、0.7417632 与污染窗口 2.2888232ms/tick 继续保留。
+
+### 本小门评分（当前实现候选，不满足提交线）
+
+| 维度 | 满分 | 得分 | 达成率 | 判断 |
+|---|---:|---:|---:|---|
+| public snapshot 正确性与深不可变 | 25 | 24 | 96% | cache key、递归冻结、destroy/step 失效和 invalid-input 恢复均有直接测试 |
+| Core 绑定与 Bot fail-closed | 25 | 23 | 92% | WeakSet + owner handshake、cross-Core/clone/Proxy 边界通过；未覆盖正式 300-case |
+| 确定性与兼容性 | 15 | 14 | 93% | trusted/strict InputFrame、事件、stateHash 对照通过；全量 golden 尚未重跑 |
+| 原子性、竞态与生命周期 | 15 | 13 | 87% | 重入、destroy、暂停/恢复、expiry 边界与失败恢复通过；生产全长局资源证据未完成 |
+| CPU 与资源证据 | 10 | 4 | 40% | 三轮 CPU 均超过 0.25，且环境污染；不建议签核/提交 |
+| 测试与治理 | 10 | 8 | 80% | 68/68、39/39、typecheck/lint/docs/diff 通过；正式 stress/full golden/build 尚缺 |
+| **合计** | **100** | **86** | **86%** | **低于总分 90；Performance-A 保持候选，formalGate=false，不得提交/不得 P1 advance** |
+
+### 代码自审
+
+- 健壮性：缓存只属于具体 `MatchCore`，key 包含 tick/eventSequence/phase；递归冻结拒绝 accessor/cycle，trusted reader 仅由同一 Core 产生，不能由结构相同对象或调用者伪造。
+- 竞态/重入：`getSnapshot()` 在 `#stepping` 期间拒绝，LocalMatchSession 仍是单一 step 入口；BotController 原有 `#creatingInput`、连续 tick/eventSequence 和 destroy 防护未旁路。trusted attach 只能发生在构造阶段并验证 owner。
+- 失败兜底/fail-closed：输入规范化失败发生在 cache invalidation 前；cross-Core、future/回退 sequence、缺 projection、错误 participant/position 等仍由 trusted adapter 或严格路径拒绝。内部 step 失败沿用 Session/Core 清理，不发布半快照。
+- 边界：暂停/恢复/ended 重复读、destroy 后 reader、同状态 identity、成功 step 后 identity 变化、599/600/601、pickup/replacement/expiry、普通 1v1 均有定向证据；不把 +600 pending 当交互供给。
+- 生命周期/资源：未引入跨 match 全局缓存；cache 与 reader 在 Core destroy 时失效；Bot history/RNG 提交逻辑未改变。1-case heap 约 5.85MB，仍须正式矩阵验证长期窗口。
+- 主流程阻断：trusted path 不写 Core、不调用拾取/替换、不新增事件/输入；它只把已由同一 Core 生成的 public view 交给 Bot，Session 仍统一提交 InputFrame。
+- 确定性/Replay/hash：同 Core trusted 与 strict 逐 tick 的 InputFrame、事件、stateHash、debug snapshot 一致；未改 Replay V5 字节/算法或 hash 字段。full golden 未重跑，所以不把本批写成 Replay 签核。
+- 普通 1v1：普通 Controller attach 返回 false，继续严格外部 snapshot 路径；既有 quick-match/session/match-core 相关测试通过，未注入 survival Definition/Projection。
+- 回滚：可整体撤回本批 MatchCore/Bot/Session/Composition 生产改动及其测试；不需 schema/replay migration，回到 `2abd7f7` 不会删除父提交 A1.1。
+
+### 未完成、风险与签核状态
+
+- 本小门未完成的硬门：清洁环境 CPU 复验、正式 300-case/至少 120 seed 双跑、完整 Node/Vitest、三端 build/产物预算、普通/生存 golden 复验、coverage、Douyin/WeChat、Presentation adapter、Platform、前后台/真机和 P1 总体 advance。
+- 当前 CPU 三轮是在 Runner/CoreSimulator 活跃环境中取得，且仍为 1-case smoke；不得把 0.6456924 的最低值当作接近通过的依据，不得调阈值、缩负载或把 wall time 替代 CPU。
+- 现有 pressure runner 的正式状态仍由请求形状与 hard gates 区分；`formalGate=false`。本 Performance-A 只改善 step 内重复 public snapshot/严格审计成本，不完成 Bot pressure 门。
+- **A0 历史结论：`formal-survival-bot-session-performance-A` 实现候选评分 86/100，已被独立审查驳回；本行不代表当前状态。**
+
+## P1 性能整改：formal-survival-bot-session-performance-A1（修订候选；正式门 fail closed）
+
+### 阶段定位、基线与范围
+
+- 本节是对上一节 A0 候选的独立审查修订，不是新的正式压力门，也不代表 P1 或 Presentation advance。实现审计起始基线、实际父节点与安全回滚点均为 `2abd7f7`；本工作区仍不提交、不推送。
+- A0 记录保持为被驳回证据：评分 `86/100`，CPU 三轮为 `0.6683812 / 0.6547600 / 0.6456924ms/tick`，另有既往 `0.8172684`、`0.7417632` 与污染窗口 `2.2888232ms/tick`；拒绝原因是 Bot→MatchCore 具体依赖、trusted 结果未进入内部快路径、设备顺序不一致、合同绑定不足及生命周期握手清理证据不足。A0 不得被改写为通过。
+- A1 只修正 Performance-A：Bot 不再 import/instanceof/持有 `MatchCore`；由 Composition/Session 建立同 Core、同正式 survival contract 的不透明 reader/binding；trusted source 进入 Bot 内部 WeakSet 快路径；trusted/strict 使用同一 `instanceId` 稳定排序；Session 构造失败按所有权顺序清理 Core/Bot/runner；public snapshot 只接受 plain object/array 的递归冻结数据。
+- 明确不做：不进入 ActionResolver、Replay V5、InputFrame 语义、Rule/Timeline/EquipmentSystem、Presentation、Platform、资产或 300-case/full pressure；不降低 tick、动作、校验强度或 `0.25ms/tick` 门槛。普通 1v1 仍走严格 snapshot 路径，生存快路径只由正式 Composition 注入。
+
+### 行为映射与实现落点
+
+| 要求 | A1 落点 | 失败/兼容边界 |
+|---|---|---|
+| Bot 依赖方向 | `packages/arena-bot/src/bot-controller.ts` 只接收受限 `read()` port 与 opaque `trustedBinding`，不依赖 MatchCore/Session/Replay | `tests/architecture.test.ts` 直接扫描 `packages/arena-bot/src`；具体 Core 所有权只保留在 Match/Session 侧 WeakMap，不暴露 `owner` 字段 |
+| trusted 快路径 | `createTrustedBotSourceSnapshot` 在完成同 Core public projection 校验后登记内部 WeakSet；`createBotObservation` 对可信对象不再进入完整 `normalizeSourceSnapshot` | 外部 `createInput`、普通 clone、Proxy/accessor、跨 Core reader 仍走严格路径或 fail closed；profile 未发现 command/delayed 路径的 normalizer 节点 |
+| 稳定确定性 | `bot-observation.ts` 的 strict 与 trusted 共用 `compareVisibleEquipment(instanceId)`；trusted equipment 先排序再冻结 | 反序输入、多装备、同 seed/config 的 InputFrame/debug/RNG 对照通过；不改变事件、Replay 或 state hash |
+| 合同绑定 | Composition 冻结正式 Definition/spawnSpecs，计算 `contractHash`；Core reader 绑定 `authorityContentHash`；Bot/Session 同时验证 opaque binding | 相似配置但跨 Core、错误 Definition/spawnSpecs、错误 contract、reader 替换均在 Bot history/RNG 提交前拒绝 |
+| snapshot 生命周期 | MatchCore public cache 绑定实例、tick/eventSequence/phase；成功 step 后失效，invalid input 在失效前拒绝，destroy 后 reader/cache 不可读 | `freezeSnapshotData` 只接受 plain object/array，拒绝 Map/Set/Date/typed array、accessor、Symbol、真实循环；共享引用不误报循环 |
+| Session 原子构造 | `LocalMatchSession` attach handshake 失败时按 runner→Bot→Core 清理，构造不发布半拥有实例 | attach 重入/替换、pause/resume/ended、destroy、无效输入身份继续由既有测试覆盖；普通 1v1 不注入 trusted binding |
+
+### A1 文件边界
+
+- 生产：`packages/arena-match/src/match-core.ts`、`packages/arena-match/src/index.ts`、`packages/arena-bot/src/bot-controller.ts`、`packages/arena-bot/src/bot-observation.ts`、`packages/arena-session/src/local-match-session.ts`、`packages/arena-v1-composition/src/arena-v2-survival-supply-bot-composition.ts`。
+- 测试/治理：`tests/arena/match-core.test.ts`、`tests/arena/local-match-session.test.ts`、`tests/arena/bot-survival-composition.test.ts`、`tests/architecture.test.ts`、既有 `tests/arena/bot-survival-stress.test.ts` 与本台账；压力 runner/package script 仍是前置 pressure 候选的一部分。
+- 未修改美术文档、A0/A1 美术文件、Timeline、EquipmentSystem、ActionResolver、Replay 实现、Presentation、Platform 或正式资产；当前工作区没有美术 dirty，本批不包含美术文件。
+
+### A1 验证证据
+
+| 门禁 | 结果 | 证据口径 |
+|---|---|---|
+| 受影响 Core/Session/Bot/Composition Node | `72/72` 通过 | 覆盖 public cache/deep-freeze、invalid-input 恢复、destroy、opaque reader/binding、跨 Core/clone/Proxy 拒绝、Session 构造清理、普通 1v1 与 survival trusted/strict 对照、反序多装备排序 |
+| 架构边界 | `40/40` 通过 | 新增源文件扫描明确禁止 arena-bot 依赖 `MatchCore`、`arena-session`、`arena-replay` 或 Replay V5；仍保持 Rule→Core→Bot→Session/Replay→Presentation |
+| workspace 包级刷新 | `52 packages / 11 waves` 通过 | 仅为当前工作区测试刷新包产物；不是完整应用/三端 build，正式候选仍需另行门禁 |
+| `typecheck:app` / lint | 通过 | A1 代码及测试严格类型、lint 无错误；最终台账更新后再次复跑 |
+| trusted path profile | `/private/tmp/arena-p1-performance-a1-profile` | 新 Node CPU profile 中 `normalizeSourceSnapshot` 未出现采样节点；`createTrustedBotSourceSnapshot` 命中 9、`createBotObservation` 命中 4。profile 不入 Git，只证明慢路径绕过证据，不等同 CPU 通过 |
+| A1 CPU round 1 | `smoke-passed`，formalRequest=false/formalGate=false；`0.5350848ms/tick` | 新 Node 进程；1 case、1 seed、2500 canonical ticks、56 events、heap `5,543,080` bytes |
+| A1 CPU round 2 | `smoke-passed`，formalRequest=false/formalGate=false；`0.6369048ms/tick` | 新 Node 进程；功能/资源摘要与首轮一致 |
+| A1 CPU round 3 | `smoke-passed`，formalRequest=false/formalGate=false；`0.573974ms/tick` | 新 Node 进程；仍明显超过 `0.25ms/tick`，按要求停止，不拼接旧轮 |
+| 只读环境证据 | 污染 | 复验时 Runner PID `82872` 约 `20.2%`、SimRenderServer `59700` 约 `13.6%`、SimMetalHost `59703` 约 `5.2%`、Simulator `59698` 约 `5.0%`；未停止外部进程 |
+
+三轮均为 2500 canonical ticks / 56 canonical events / `uniqueTraceHashes=1` / `uniqueFinalHashes=1` 的 1-case 功能 smoke，不是 300-case、120-seed 或正式 CPU 证据。A1 不把污染环境下的数值解释为接近通过，也不以 wall time 替代 process CPU。
+
+### A1 三轮代码自审
+
+1. **架构与合同轮：通过。** 源扫描 `40/40` 证明 Bot 无具体 MatchCore/Session/Replay 依赖；reader owner 只在 Match 包内 WeakMap 保存，Composition/Session 验证同 Core 与 `authorityContentHash`，Bot 验证 `contractHash`。跨 Core、错误 binding、reader replacement 与外部 clone 均拒绝。
+2. **确定性、原子性与生命周期轮：通过。** `72/72` 覆盖同状态 snapshot identity、成功 step 后失效、invalid input 不破坏恢复、递归冻结/真实循环、反序设备、599/600/601、destroy 与 Session handshake 清理；trusted/strict InputFrame、事件、stateHash/debug 对照一致。A1 未改 Replay V5、InputFrame 或权威写入。
+3. **性能与治理轮：不通过正式门。** trusted profile 证明不再进入完整 normalizer，但三轮 1-case 仍为 `0.5350848/0.6369048/0.573974ms/tick`，全部高于 `0.25`，且 Runner/CoreSimulator 活跃；因此停止性能扩展，不进入 B/ActionResolver，不建议提交。
+
+### A1 评分与状态
+
+| 维度 | 满分 | 得分 | 判断 |
+|---|---:|---:|---|
+| 架构边界与依赖治理 | 25 | 24 | Bot 具体 Core 依赖已移除，源扫描通过 |
+| trusted 合同、失败关闭与正确性 | 25 | 23 | binding/authority/contract 交叉验证与负向测试通过，正式长矩阵未完成 |
+| 确定性与兼容性 | 15 | 14 | trusted/strict 对照通过，完整 golden 未重跑 |
+| 原子性、竞态与生命周期 | 15 | 14 | attach 失败清理、cache 失效、destroy/边界通过；正式长局资源证据未完成 |
+| CPU 与资源硬门 | 10 | 4 | 三轮均超过 `0.25ms/tick`，并处于污染环境 |
+| 测试与治理证据 | 10 | 9 | `72/72`、`40/40`、profile、类型/lint 已有；完整门禁尚缺 |
+| **合计** | **100** | **88** | **低于提交线 90；formalGate=false，不得提交、不建议 P1 advance** |
+
+### A1 未完成项、风险与回滚
+
+- 未完成硬门：清洁环境 CPU 三轮稳定复验、默认 300/300 且至少 120 unique seed、完整 Node/Vitest、普通/生存 golden、防漂移、coverage、三端 build/包体、Douyin/WeChat、Presentation、Platform、前后台/真机与 P1 总体 advance。
+- 仍保留旧压力事实：旧 1v1/生存压力红证据及旧 A0 三轮不能从当前台账删除或拼入 A1；当前 1-case 也不能冒充正式门。
+- 性能风险：trusted path 已移除已确认的重复 normalizer，但 `0.25ms/tick` 仍未达成；下一批应继续按分段 profile 处理，不得放宽预算、缩短 tick、减少动作或降低校验。
+- 安全回滚：回到 `2abd7f7`，仅撤回 A1 的 MatchCore/Bot/Session/Composition 改动及对应测试；不触碰父提交中的 A1.1，也不回滚已签核的 `f80307b`。
+- **当前结论：`formal-survival-bot-session-performance-A1` 为 88/100 修订候选，CPU 硬门红，formalGate=false；等待主协调独立审查。P1 总体、Presentation、Platform 均不得 advance。**
+
+## P1 性能整改：formal-survival-bot-session-performance-A1.1（生命周期/合同修订候选；正式门 fail closed）
+
+### 阶段定位、基线、范围与不做项
+
+- A1.1 是 A1 的生命周期/合同修订小门，实际父节点与安全回滚点为 `2abd7f7`；不重新评估 A1 的 CPU，也不把 A1.1 标成 Performance-A 或 P1 签核。A0 的 86/100 与 A1 的 88/100 均作为历史审查结果保留。
+- 本批修正：`LocalMatchSession` 构造成功前不接管调用方提供的 Core/Bot；trusted handshake 失败只销毁 Session 自己创建的 `HeadlessMatchRunner`（只断开其 Core 引用）；错误 `contractHash` 在 Bot 构造时拒绝，错误 `authorityContentHash` 在 Core reader 创建时拒绝；同一 binding 首次绑定后，其他 Core 不能取得其 trusted reader。
+- 本批不做：不重跑 CPU、不实现 Performance-B、不改 ActionResolver、Replay V5、InputFrame、Rule/Timeline/EquipmentSystem、Presentation、Platform、压力规模或 `0.25ms/tick` 门槛；不跑 300-case/full/golden/全量 build。
+
+### 行为映射与代码落点
+
+| 要求 | A1.1 落点 | 证据与边界 |
+|---|---|---|
+| 构造 ownership | `packages/arena-session/src/local-match-session.ts` 的 handshake catch 只清理本 Session 创建的 runner；调用方 Core/Bot 留给外层 cleanup | 失败后 Core 仍可读、Bot destroy 次数为 0；调用方随后各 destroy 一次；成功构造后的 step 失败清理语义未改变 |
+| binding 原子性 | `packages/arena-match/src/match-core.ts` 以 WeakMap 绑定 binding→具体 Core；`BotController` 校验 contract hash；Core 校验 authority content hash | 错误合同发生在 Bot 创建、Core state/hash、Bot history/RNG 之前；同 binding 跨 Core、reader 替换继续拒绝 |
+| composition 边界 | `arena-v2-survival-supply-bot-composition.ts` 仍使用外层 `controller/core` nullable ownership；Session 失败后由 composition 清理各资源一次 | formal composition 的 factory 输入先经过严格可序列化校验，无法注入可计数函数来直接观察 handshake exact-once；因此本小门只把 Session port 的计数证据作为直接证据，composition exact-once 不宣称已有独立可观察证明 |
+| 依赖/确定性 | reader 仍是 opaque `read()` port，Bot 不持有 MatchCore；A1 的 trusted WeakSet/稳定 equipment comparator 保持 | 不新增 authority、事件总线、第二 tick 或 Replay/hash 字段；普通 1v1 路径不变 |
+
+### A1.1 验证证据
+
+| 门禁 | 结果 | 实际证据 |
+|---|---|---|
+| 包级产物刷新 | `52 packages / 11 waves` 通过 | 仅用于让定向 Node 使用当前源代码包产物；不是完整应用/三端构建 |
+| A1.1 受影响 Node + 架构 | `97/97` 通过，其中架构 `40/40` | 包含 MatchCore、LocalMatchSession、survival Composition trusted binding、普通 1v1 回归；新增调用方 ownership、错误 hash、跨 Core binding 与反序 trusted 对照 |
+| `npm run typecheck:app` | exit 0 | 严格类型通过 |
+| `npm run lint` | exit 0 | 无 lint 错误 |
+| `npm run check:documentation` | passed | `263` Markdown、`837` 本地链接、`56` documented commands |
+| `git diff --check` | exit 0 | 无空白错误 |
+| CPU / Performance-B | 未运行 | 按本小门要求不重测；A1 的三轮 `0.5350848/0.6369048/0.573974ms/tick` 红证据保持不变，B 仍待只读诊断 |
+
+### A1.1 代码自审
+
+- 健壮性/失败关闭：构造 handshake 抛错时 runner 已断开引用，Core/Bot 仍由调用方持有；错误 contract/authority/hash 不会创建可用 trusted path，也不会写 Bot history/RNG 或 Core 状态。
+- 竞态/重入：A1 原有 `attach` 不可替换、Session step 不可重入、Core stepping 期间禁止 snapshot 读取保持；binding WeakMap 只建立对象身份归属，不引入全局可伪造 mark。
+- 原子性：Session 只有构造成功返回后才拥有 Core/Bot；失败构造没有可供调用方使用的 Session 实例。成功后的 step/整体 cleanup 继续由 Session 所有权路径处理。
+- 生命周期：runner destroy 只清空其记录与 Core 引用；外层 composition 的 `controller/core` nullable cleanup 仍有效；Session 层计数测试证明 caller-owned Bot/Core 不被握手失败提前销毁。Composition factory 不允许注入可计数函数，exact-once 观察仍是明确风险而非通过项。
+- 边界/兼容：错误 contract、错误 authority、同 binding 跨 Core、reader replacement、普通 1v1、pause/resume/ended/destroy 与 trusted 599/600/601 既有回归均通过；未改变 public snapshot、Replay V5、state hash 或 InputFrame。
+- 主流程阻断：A1.1 不改变拾取、动作、事件或规则裁决；唯一新增阻断是错误 trusted 合同在 history/RNG 前 fail closed。
+
+### A1.1 评分与状态
+
+| 维度 | 满分 | 得分 | 判断 |
+|---|---:|---:|---|
+| ownership 架构与依赖边界 | 25 | 24 | 构造前不接管、runner 单独清理、Bot 依赖边界保持 |
+| binding 合同与 fail-closed | 25 | 23 | contract/authority/跨 Core 负向证据通过 |
+| 确定性与兼容性 | 15 | 15 | 未改 InputFrame、Replay V5、state hash，定向回归通过 |
+| 原子性、竞态与生命周期 | 15 | 12 | Session 直接计数通过；composition exact-once 缺独立可注入观测 |
+| 错误/边界测试 | 10 | 10 | 97/97 覆盖 handshake、destroy、pause/resume、trusted 边界 |
+| 治理与证据完整性 | 10 | 8 | A1.1 已单列；CPU/B/full gate 明确保持未完成 |
+| **合计** | **100** | **92** | **A1.1 修订候选可交主协调审查；不代表 Performance-A/P1 formalGate 通过** |
+
+### A1.1 未完成项、回滚与后续
+
+- 未完成：只读 Performance-B 分段诊断、清洁 CPU 复验、300/120 Bot pressure、完整回归/full build/golden、coverage、Presentation、Platform、真机与 P1 总体 advance。
+- 回滚：回到 `2abd7f7`，撤回 A1.1 的 Session ownership、binding owner map、对应测试和台账段；不触碰父提交 A1.1 美术同步及已验收 `f80307b`。
+- **当前结论：`formal-survival-bot-session-performance-A1.1` 评分 92/100，A1.1 仅作为生命周期/合同修订候选等待主协调验收；`formalGate=false`。A1 的 88 分、CPU 红证据和 A0 历史记录不变。**
 
 ## P1 总体未完成硬门
 
@@ -730,5 +1005,5 @@ P1.2b 只评分隔离 Equipment Core 时间线小门；候选条件为总分至�
 
 - 主要风险：后续 Composition 绕过 Registry；Core 只实现“先清空再赋值”的非原子替换；事件载荷和实际状态身份分叉；将生存 `pickupRadius` 静默推广为普通 1v1 全局策略；把合同测试误报为 Replay/hash 完成。
 - 回滚点：P1.1 的安全父提交为 `fb0bc40`。只删除 5 个 P1.1 新增合同文件，并撤回相应 package export、测试、架构边界、当前台账及索引入口，即可回到 `fb0bc40`；不得回滚到 `d6f9060`，以免误删已经验收的 A0.1 美术提交。本批没有存档、运行时状态或最终资产迁移。
-- 当前签核：P1.1 `contract-ready`、P1.2a `core-transaction-ready`、P1.2b `timeline-ready`、P1.2c-1 `integration-replay-ready` 与 P1.2c-2 `atomic-checkpoint-golden-ready` 已由主协调签核（2026-07-28）；P1.2c-2 已提交并推送为 `5d26a4f`；P1 CPU 性能小门已签核并提交推送为 `21948d4`。Profile Definition/Registry foundation 已由主协调签核并提交推送为 `profile-registry-foundation-ready`（2026-07-29，`7e9e3c4`）。public projection + formal survival Composition Bot 接线已由主协调签核为 `public-supply-projection-survival-bot-ready`（2026-07-29），待主协调提交推送；P1 总体仍受 coverage threshold、Douyin/WeChat 预算、300-case Bot stress、Presentation、Platform、真机和 4 人 P2 硬门阻断，不得 advance。
-- 提交状态：Profile Definition/Registry foundation 已提交为 `7e9e3c4`；本小门实际父节点与安全回滚点为 `7e9e3c4`，待主协调提交推送；本小门提交不包含美术文件，当前工作树没有美术 dirty。A1.1 文档缺口将在本提交落地后由美术线以实际父 commit 单独修订。
+- 当前签核：P1.1 `contract-ready`、P1.2a `core-transaction-ready`、P1.2b `timeline-ready`、P1.2c-1 `integration-replay-ready` 与 P1.2c-2 `atomic-checkpoint-golden-ready` 已由主协调签核（2026-07-28）；P1.2c-2 已提交并推送为 `5d26a4f`；P1 CPU 性能小门已签核并提交推送为 `21948d4`。Profile Definition/Registry foundation 已由主协调签核并提交推送为 `profile-registry-foundation-ready`（2026-07-29，`7e9e3c4`）；public projection + formal survival Composition Bot 接线已提交为 `f80307b`，A1.1 同步后当前父节点为 `2abd7f7`。Pressure runner 仍为未签核候选，Performance-A1 为当前修订候选；P1 总体受 coverage threshold、Douyin/WeChat 预算、300-case Bot stress、CPU、Presentation、Platform、真机和 4 人 P2 硬门阻断，不得 advance。
+- 提交状态：当前实际父节点与安全回滚点为 `2abd7f7`，pressure runner/tests/ledger 与 Performance-A 生产代码/测试尚未提交；本批不包含美术文件，当前工作树没有美术 dirty。A1.1 已在父提交 `2abd7f7` 落地，不得通过本批回滚删除。

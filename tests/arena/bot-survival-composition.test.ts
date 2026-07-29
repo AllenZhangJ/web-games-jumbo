@@ -12,10 +12,13 @@ import {
   getArenaBotEvaluators,
 } from '@number-strategy-jump/arena-bot';
 import {
+  ARENA_PUBLIC_SUPPLY_PROJECTION_READINESS,
+  createDeterministicDataHash,
   createNeutralInputFrame,
 } from '@number-strategy-jump/arena-contracts';
 import {
   ARENA_MATCH_EVENT,
+  assertMatchCoreTrustedPublicSnapshotReader,
   type ArenaAuthorityEvent,
   type MatchCore,
 } from '@number-strategy-jump/arena-match';
@@ -23,6 +26,7 @@ import {
   createArenaV2SurvivalSupplyBotSession,
   createArenaV2SurvivalSupplyMatchCore,
 } from '@number-strategy-jump/arena-v1-composition';
+import { createTrustedBotSourceSnapshot } from '../../packages/arena-bot/src/bot-observation.js';
 import {
   ARENA_V2_SURVIVAL_SUPPLY_DEFINITION,
   STAGE4_EQUIPMENT_ID,
@@ -95,6 +99,16 @@ const SUPPLY_PROJECTION_CONTRACT = Object.freeze({
     equipmentDefinitionId
   )))]),
 });
+
+function createTrustedBinding(core: MatchCore): object {
+  return Object.freeze({
+    contractHash: createDeterministicDataHash(
+      SUPPLY_PROJECTION_CONTRACT,
+      'formal survival Bot trusted contract',
+    ),
+    authorityContentHash: core.getReplayMetadata().ruleContentHash,
+  });
+}
 
 function createSurvivalCore(
   seed = 1201,
@@ -360,6 +374,286 @@ test('formal survival composition injects a validated Profile Registry and only 
   }), /未知 Bot Profile/);
 });
 
+test('trusted binding errors fail before Bot history/RNG or Core state changes', () => {
+  const core = createSurvivalCore(1216, 1_850);
+  const otherCore = createSurvivalCore(1217, 1_850);
+  const validBinding = createTrustedBinding(core);
+  const beforeHash = core.getStateHash();
+  const botOptions = (trustedBinding: object) => ({
+    participantId: 'player-2',
+    difficultyId: 'survival-rush',
+    behaviorSeed: 0x10203040,
+    personalitySeed: 0x50607080,
+    profileRegistry: SURVIVAL_BOT_REGISTRY,
+    requireActiveSupplyProjection: true,
+    supplyProjectionContract: SUPPLY_PROJECTION_CONTRACT,
+    trustedBinding,
+    arena: core.config.arena,
+    characterRadius: core.getCharacterDefinition('player-2').collision.radius,
+  });
+  try {
+    assert.throws(
+      () => new BotController(botOptions(Object.freeze({
+        ...validBinding,
+        contractHash: 'deadbeef',
+      }))),
+      /trusted Bot binding 与 supplyProjectionContract 不一致/,
+    );
+    assert.equal(core.getStateHash(), beforeHash);
+    assert.throws(
+      () => core.createTrustedPublicSnapshotReader(Object.freeze({
+        ...validBinding,
+        authorityContentHash: 'deadbeef',
+      })),
+      /权威 content hash/,
+    );
+    assert.equal(core.getStateHash(), beforeHash);
+
+    core.createTrustedPublicSnapshotReader(validBinding);
+    assert.throws(
+      () => otherCore.createTrustedPublicSnapshotReader(validBinding),
+      /已绑定其他 MatchCore/,
+    );
+    assert.equal(core.getStateHash(), beforeHash);
+    assert.equal(otherCore.tick, 0);
+  } finally {
+    core.destroy();
+    otherCore.destroy();
+  }
+});
+
+test('trusted same-Core Bot path matches strict external observations and rejects cross-Core readers', () => {
+  const trustedCore = createSurvivalCore(1210, 1_850);
+  const strictCore = createSurvivalCore(1210, 1_850);
+  const trustedBinding = createTrustedBinding(trustedCore);
+  const createController = (core: MatchCore, trusted = false) => new BotController({
+    participantId: 'player-2',
+    difficultyId: 'survival-rush',
+    behaviorSeed: 0x10203040,
+    personalitySeed: 0x50607080,
+    profileRegistry: SURVIVAL_BOT_REGISTRY,
+    requireActiveSupplyProjection: true,
+    supplyProjectionContract: SUPPLY_PROJECTION_CONTRACT,
+    ...(trusted ? { trustedBinding } : {}),
+    arena: core.config.arena,
+    characterRadius: core.getCharacterDefinition('player-2').collision.radius,
+  });
+  const trustedController = createController(trustedCore, true);
+  const strictController = createController(strictCore);
+  const otherCore = createSurvivalCore(1211, 1_850);
+  const trustedReader = trustedCore.createTrustedPublicSnapshotReader(trustedBinding);
+  assert.throws(
+    () => assertMatchCoreTrustedPublicSnapshotReader(
+      otherCore.createTrustedPublicSnapshotReader(trustedBinding),
+      trustedCore,
+      trustedBinding,
+    ),
+    /不一致|已绑定其他 MatchCore/,
+  );
+  trustedController.attachTrustedSnapshotReader(
+    trustedReader,
+    trustedBinding,
+  );
+  assert.throws(
+    () => trustedController.attachTrustedSnapshotReader(
+      trustedCore.createTrustedPublicSnapshotReader(trustedBinding),
+      trustedBinding,
+    ),
+    /不可替换/,
+  );
+  try {
+    const trustedEvents: ArenaAuthorityEvent[] = [];
+    const strictEvents: ArenaAuthorityEvent[] = [];
+    while (trustedCore.tick <= 1_801) {
+      const trustedFrame = trustedController.createInputFromTrustedSnapshot();
+      const strictFrame = strictController.createInput(strictCore.getSnapshot());
+      assert.deepEqual(trustedFrame, strictFrame);
+      trustedEvents.push(...trustedCore.step([
+        createNeutralInputFrame(trustedCore.tick, 'player-1'),
+        trustedFrame,
+      ]));
+      strictEvents.push(...strictCore.step([
+        createNeutralInputFrame(strictCore.tick, 'player-1'),
+        strictFrame,
+      ]));
+      assert.equal(trustedCore.getStateHash(), strictCore.getStateHash());
+      if (trustedCore.tick === 1_201 || trustedCore.tick === 1_799) {
+        assert.deepEqual(
+          trustedCore.getSnapshot().activeSupplyProjection?.supplies.map((item) => item.remainingTicks),
+          trustedCore.getSnapshot().activeSupplyProjection?.supplies.map(() => (
+          trustedCore.tick === 1_799 ? 1 : 599
+          )),
+        );
+      }
+    }
+    assert.deepEqual(trustedEvents, strictEvents);
+    assert.ok(trustedEvents.some(({ type }) => type === ARENA_MATCH_EVENT.EQUIPMENT_PICKED_UP));
+    assert.deepEqual(trustedController.getDebugSnapshot(), strictController.getDebugSnapshot());
+    assert.equal(trustedCore.getSnapshot().tick, 1_802);
+    assert.equal(strictCore.getSnapshot().tick, 1_802);
+  } finally {
+    trustedController.destroy();
+    strictController.destroy();
+    trustedCore.destroy();
+    strictCore.destroy();
+    otherCore.destroy();
+  }
+});
+
+test('trusted survival Bot path preserves the three-item 599/600/601 projection boundary', () => {
+  const idleProfile = createBotProfileDefinition({
+    ...BOT_PROFILE_REGISTRY.require('easy'),
+    id: 'survival-idle-trusted',
+    maximumInputMagnitude: 0,
+    actionCommitChance: 0,
+    shortPauseChance: 0,
+  });
+  const idleRegistry = new BotProfileRegistry([idleProfile]);
+  const idleArena = {
+    ...SURVIVAL_ARENA,
+    surfaces: Object.freeze([Object.freeze({
+      ...SURVIVAL_ARENA.surfaces[0]!,
+      halfExtents: Object.freeze({ x: 20, y: 0.5, z: 4 }),
+    })]),
+    spawns: Object.freeze([
+      Object.freeze({ x: -8, y: 1, z: 0 }),
+      Object.freeze({ x: 8, y: 1, z: 0 }),
+    ]),
+  };
+  const trustedCore = createSurvivalCore(1212, 1_850, idleArena);
+  const strictCore = createSurvivalCore(1212, 1_850, idleArena);
+  const trustedBinding = createTrustedBinding(trustedCore);
+  const createController = (core: MatchCore, trusted: boolean) => new BotController({
+    participantId: 'player-2',
+    difficultyId: idleProfile.id,
+    behaviorSeed: 0x10203040,
+    personalitySeed: 0x50607080,
+    profileRegistry: idleRegistry,
+    requireActiveSupplyProjection: true,
+    supplyProjectionContract: SUPPLY_PROJECTION_CONTRACT,
+    ...(trusted ? { trustedBinding } : {}),
+    arena: core.config.arena,
+    characterRadius: core.getCharacterDefinition('player-2').collision.radius,
+  });
+  const trustedController = createController(trustedCore, true);
+  const strictController = createController(strictCore, false);
+  trustedController.attachTrustedSnapshotReader(
+    trustedCore.createTrustedPublicSnapshotReader(trustedBinding),
+    trustedBinding,
+  );
+  try {
+    while (trustedCore.tick <= 1_801) {
+      const trustedFrame = trustedController.createInputFromTrustedSnapshot();
+      const strictFrame = strictController.createInput(strictCore.getSnapshot());
+      assert.deepEqual(trustedFrame, strictFrame);
+      trustedCore.step([
+        createNeutralInputFrame(trustedCore.tick, 'player-1'),
+        trustedFrame,
+      ]);
+      strictCore.step([
+        createNeutralInputFrame(strictCore.tick, 'player-1'),
+        strictFrame,
+      ]);
+      assert.equal(trustedCore.getStateHash(), strictCore.getStateHash());
+      if (trustedCore.tick === 1_201) {
+        assert.deepEqual(
+          trustedCore.getSnapshot().activeSupplyProjection?.supplies.map(({ remainingTicks }) => remainingTicks),
+          [599, 599, 599],
+        );
+      }
+      if (trustedCore.tick === 1_799) {
+        assert.deepEqual(
+          trustedCore.getSnapshot().activeSupplyProjection?.supplies.map(({ remainingTicks }) => remainingTicks),
+          [1, 1, 1],
+        );
+      }
+      if (trustedCore.tick === 1_800) {
+        const projection = trustedCore.getSnapshot().activeSupplyProjection;
+        assert.ok(projection);
+        assert.deepEqual(projection.supplies, []);
+        assert.equal(
+          projection.resyncReadiness,
+          ARENA_PUBLIC_SUPPLY_PROJECTION_READINESS.NOT_READY_PRE_EXPIRY,
+        );
+        assert.equal(projection.pendingAuthorityTick, 1_800);
+        assert.equal(projection.pendingExpiryEquipmentInstanceIds.length, 3);
+      }
+      if (trustedCore.tick === 1_801) {
+        const projection = trustedCore.getSnapshot().activeSupplyProjection;
+        assert.ok(projection);
+        assert.equal(projection.resyncReadiness, ARENA_PUBLIC_SUPPLY_PROJECTION_READINESS.READY);
+        assert.equal(projection.pendingAuthorityTick, null);
+        assert.deepEqual(projection.pendingExpiryEquipmentInstanceIds, []);
+      }
+    }
+  } finally {
+    trustedController.destroy();
+    strictController.destroy();
+    trustedCore.destroy();
+    strictCore.destroy();
+  }
+});
+
+test('trusted source preserves the strict visible-equipment order for reversed world input', () => {
+  const core = createSurvivalCore(1213, 1_850);
+  try {
+    while (core.tick <= 1_200) core.step(neutralFrames(core));
+    const snapshot = core.getSnapshot();
+    const trusted = createTrustedBotSourceSnapshot(snapshot, {
+      lifecycleContract: SUPPLY_PROJECTION_CONTRACT,
+      requireActiveSupplyProjection: true,
+    });
+    const reversed = {
+      ...trusted,
+      equipment: [...trusted.equipment].reverse(),
+    };
+    const arena = createBotArenaView(
+      core.config.arena,
+      core.getCharacterDefinition('player-2').collision.radius,
+    );
+    const trustedObservation = createBotObservation({
+      commandSnapshot: trusted,
+      delayedSnapshot: trusted,
+      selfId: 'player-2',
+      arena,
+    });
+    const strictObservation = createBotObservation({
+      commandSnapshot: reversed,
+      delayedSnapshot: reversed,
+      selfId: 'player-2',
+      arena,
+    });
+    assert.deepEqual(strictObservation, trustedObservation);
+    assert.deepEqual(
+      strictObservation.equipment.map(({ instanceId }) => instanceId),
+      [...strictObservation.equipment]
+        .sort((left, right) => left.instanceId.localeCompare(right.instanceId))
+        .map(({ instanceId }) => instanceId),
+    );
+  } finally {
+    core.destroy();
+  }
+});
+
+test('formal survival composition rejects an unknown supply Definition before Core construction', () => {
+  assert.throws(() => createArenaV2SurvivalSupplyBotSession({
+    seed: 1204,
+    config: { preparingTicks: 0, arena: SURVIVAL_ARENA },
+    supply: {
+      ...SUPPLY,
+      supplyDefinitionId: 'arena-v2.survival-supply.v2',
+    },
+    bot: {
+      participantId: 'player-2',
+      difficultyId: 'survival-rush',
+      behaviorSeed: 1,
+      personalitySeed: 2,
+      profileRegistry: SURVIVAL_BOT_REGISTRY,
+    },
+    publicMatchInfo: publicMatchInfo(1204),
+  }), /正式 survival supply Definition/);
+});
+
 test('formal survival Bot fails closed when the public supply projection is missing', () => {
   const core = createSurvivalCore(1204, 1_250);
   const controller = new BotController({
@@ -447,4 +741,91 @@ test('survival Bot composition is deterministic across repeated multi-seed runs'
   assert.notEqual(third.finalHash, first.finalHash);
   assert.ok(first.events.some(({ type }) => type === ARENA_MATCH_EVENT.EQUIPMENT_SPAWNED));
   assert.equal(first.inputFrames.length, 2_500);
+});
+
+test('formal survival Bot preserves same-tick result under participant input order permutation', () => {
+  function run(reverse: boolean) {
+    const core = createSurvivalCore(1210, 1_850);
+    const controller = new BotController({
+      participantId: 'player-2',
+      difficultyId: 'survival-rush',
+      behaviorSeed: 0x10203040,
+      personalitySeed: 0x50607080,
+      profileRegistry: SURVIVAL_BOT_REGISTRY,
+      requireActiveSupplyProjection: true,
+      supplyProjectionContract: SUPPLY_PROJECTION_CONTRACT,
+      arena: core.config.arena,
+      characterRadius: core.getCharacterDefinition('player-2').collision.radius,
+    });
+    const events: ArenaAuthorityEvent[] = [];
+    const snapshotHashes: string[] = [];
+    try {
+      while (core.phase !== 'ended') {
+        const snapshot = core.getSnapshot();
+        const botFrame = controller.createInput(snapshot);
+        const playerFrame = createNeutralInputFrame(snapshot.tick, 'player-1');
+        const frames = reverse
+          ? [botFrame, playerFrame]
+          : [playerFrame, botFrame];
+        events.push(...core.step(frames));
+        const after = core.getSnapshot();
+        snapshotHashes.push(createDeterministicDataHash({
+          tick: after.tick,
+          eventSequence: after.eventSequence,
+          participants: after.participants,
+          equipment: after.equipment,
+          activeSupplyProjection: after.activeSupplyProjection,
+        }, 'formal survival Bot input order snapshot'));
+      }
+      return {
+        events,
+        snapshotHashes,
+        finalHash: core.getStateHash(),
+        result: core.result,
+      };
+    } finally {
+      controller.destroy();
+      core.destroy();
+    }
+  }
+
+  assert.deepEqual(run(true), run(false));
+});
+
+test('formal survival Bot rejects future projection before history/RNG commit and retries same tick', () => {
+  const core = createSurvivalCore(1211, 1_850);
+  const controller = new BotController({
+    participantId: 'player-2',
+    difficultyId: 'survival-rush',
+    behaviorSeed: 0x10203040,
+    personalitySeed: 0x50607080,
+    profileRegistry: SURVIVAL_BOT_REGISTRY,
+    requireActiveSupplyProjection: true,
+    supplyProjectionContract: SUPPLY_PROJECTION_CONTRACT,
+    arena: core.config.arena,
+    characterRadius: core.getCharacterDefinition('player-2').collision.radius,
+  });
+  try {
+    stepTo(core, 1_200);
+    const snapshot = core.getSnapshot();
+    const before = controller.getDebugSnapshot();
+    const futureProjection = {
+      ...snapshot,
+      activeSupplyProjection: {
+        ...snapshot.activeSupplyProjection!,
+        schemaVersion: 3,
+      },
+    };
+    assert.throws(
+      () => controller.createInput(futureProjection),
+      /schema|版本|projection/,
+    );
+    assert.deepEqual(controller.getDebugSnapshot(), before);
+    const retry = controller.createInput(snapshot);
+    assert.equal(retry.tick, snapshot.tick);
+    assert.equal(controller.getDebugSnapshot().lastCommandTick, snapshot.tick);
+  } finally {
+    controller.destroy();
+    core.destroy();
+  }
 });

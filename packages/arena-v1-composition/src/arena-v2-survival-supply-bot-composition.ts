@@ -4,6 +4,7 @@ import {
   assertPlainRecord,
   combineCleanupFailure,
   cloneFrozenData,
+  createDeterministicDataHash,
   normalizeThrownError,
 } from '@number-strategy-jump/arena-contracts';
 import { ARENA_V2_SURVIVAL_SUPPLY_DEFINITION } from '@number-strategy-jump/arena-v1-content';
@@ -183,6 +184,21 @@ export function createArenaV2SurvivalSupplyBotSession(options: unknown): LocalMa
     throw new TypeError('Arena V2 survival Bot composition.supply.spawnSpecs 必须是数组。');
   }
   const spawnSpecs = frozenSupply.spawnSpecs as readonly EquipmentSupplySpawnSpec[];
+  const supplyProjectionContract = Object.freeze({
+    supplyDefinitionId: ARENA_V2_SURVIVAL_SUPPLY_DEFINITION.id,
+    firstSpawnTick: ARENA_V2_SURVIVAL_SUPPLY_DEFINITION.firstSpawnTick,
+    spawnIntervalTicks: ARENA_V2_SURVIVAL_SUPPLY_DEFINITION.spawnIntervalTicks,
+    spawnCount: ARENA_V2_SURVIVAL_SUPPLY_DEFINITION.spawnCount,
+    lifetimeTicks: ARENA_V2_SURVIVAL_SUPPLY_DEFINITION.lifetimeTicks,
+    spawnSpecs,
+    equipmentDefinitionIds: Object.freeze([...new Set(spawnSpecs.map(({ equipmentDefinitionId }) => (
+      equipmentDefinitionId
+    )))]),
+  });
+  const trustedContractHash = createDeterministicDataHash(
+    supplyProjectionContract,
+    'formal survival Bot trusted contract',
+  );
 
   const coreOptions: Record<string, unknown> = {};
   for (const key of CORE_OPTION_KEYS) {
@@ -205,6 +221,10 @@ export function createArenaV2SurvivalSupplyBotSession(options: unknown): LocalMa
       throw new RangeError('survival Bot/player participantId 不在 MatchCore 组合中。');
     }
     const botCharacter = core.getCharacterDefinition(botParticipantId);
+    const trustedBinding = Object.freeze({
+      contractHash: trustedContractHash,
+      authorityContentHash: core.getReplayMetadata().ruleContentHash,
+    });
     controller = new BotController({
       participantId: botParticipantId,
       difficultyId,
@@ -212,17 +232,8 @@ export function createArenaV2SurvivalSupplyBotSession(options: unknown): LocalMa
       personalitySeed,
       profileRegistry,
       requireActiveSupplyProjection: true,
-      supplyProjectionContract: {
-        supplyDefinitionId: ARENA_V2_SURVIVAL_SUPPLY_DEFINITION.id,
-        firstSpawnTick: ARENA_V2_SURVIVAL_SUPPLY_DEFINITION.firstSpawnTick,
-        spawnIntervalTicks: ARENA_V2_SURVIVAL_SUPPLY_DEFINITION.spawnIntervalTicks,
-        spawnCount: ARENA_V2_SURVIVAL_SUPPLY_DEFINITION.spawnCount,
-        lifetimeTicks: ARENA_V2_SURVIVAL_SUPPLY_DEFINITION.lifetimeTicks,
-        spawnSpecs,
-        equipmentDefinitionIds: [...new Set(spawnSpecs.map(({ equipmentDefinitionId }) => (
-          equipmentDefinitionId
-        )))],
-      },
+      supplyProjectionContract,
+      trustedBinding,
       arena: core.config.arena,
       characterRadius: botCharacter.collision.radius,
       maximumStepHeight: botCharacter.movement.automaticStepHeight,
@@ -232,6 +243,7 @@ export function createArenaV2SurvivalSupplyBotSession(options: unknown): LocalMa
       botController: controller,
       playerParticipantId,
       botParticipantId,
+      trustedBotBinding: trustedBinding,
       publicMatchInfo,
     });
     core = null;

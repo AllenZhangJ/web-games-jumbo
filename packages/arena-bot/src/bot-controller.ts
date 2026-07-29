@@ -2,9 +2,12 @@ import {
   assertKnownKeys,
   assertPlainRecord,
   createRng,
+  createDeterministicDataHash,
   normalizeInputFrame,
   type ArenaInputFrame,
+  type ArenaMatchSnapshot,
   type ArenaPublicSupplyProjectionLifecycleContract,
+  type DeepReadonly,
   type DeterministicRng,
 } from '@number-strategy-jump/arena-contracts';
 import { ARENA_PARTICIPANT_STATUS } from '@number-strategy-jump/arena-match';
@@ -35,6 +38,7 @@ import {
   cloneBotSourceSnapshot,
   createBotArenaView,
   createBotObservation,
+  createTrustedBotSourceSnapshot,
   type BotArenaView,
   type BotObservation,
   type BotSourceSnapshot,
@@ -50,6 +54,7 @@ const CONTROLLER_OPTION_KEYS = new Set([
   'profileRegistry',
   'requireActiveSupplyProjection',
   'supplyProjectionContract',
+  'trustedBinding',
   'arena',
   'characterRadius',
   'maximumStepHeight',
@@ -65,6 +70,8 @@ export interface BotControllerOptions {
   /** Survival composition sets this; ordinary 1v1 keeps the optional view. */
   readonly requireActiveSupplyProjection?: boolean;
   readonly supplyProjectionContract?: ArenaPublicSupplyProjectionLifecycleContract;
+  /** Internal opaque composition token; Session binds it to its authority reader. */
+  readonly trustedBinding?: object;
   readonly arena: unknown;
   readonly characterRadius: number;
   readonly maximumStepHeight?: number;
@@ -93,6 +100,11 @@ interface NormalizedBotControllerOptions {
   readonly arena: BotArenaView;
   readonly requireActiveSupplyProjection: boolean;
   readonly supplyProjectionContract?: ArenaPublicSupplyProjectionLifecycleContract;
+  readonly trustedBinding: object | null;
+}
+
+interface TrustedSnapshotReader {
+  read(): DeepReadonly<ArenaMatchSnapshot>;
 }
 
 function uint32(value: unknown, name: string): number {
@@ -117,6 +129,33 @@ function readOptionalDataProperty(record: object, key: string, name: string): un
     throw new TypeError(`${name}.${key} 必须是可枚举数据字段。`);
   }
   return descriptor.value;
+}
+
+function assertTrustedBinding(
+  value: object,
+  supplyProjectionContract: ArenaPublicSupplyProjectionLifecycleContract | undefined,
+): object {
+  if (supplyProjectionContract === undefined) {
+    throw new TypeError('trusted Bot 必须同时注入 supplyProjectionContract。');
+  }
+  const contractHash = Object.getOwnPropertyDescriptor(value, 'contractHash');
+  const authorityContentHash = Object.getOwnPropertyDescriptor(value, 'authorityContentHash');
+  if (
+    !contractHash || !('value' in contractHash) || typeof contractHash.value !== 'string'
+    || !authorityContentHash || !('value' in authorityContentHash)
+    || typeof authorityContentHash.value !== 'string'
+    || !/^[0-9a-f]{8}$/.test(authorityContentHash.value)
+  ) {
+    throw new TypeError('trusted Bot binding 缺少严格 content hash。');
+  }
+  const expectedContractHash = createDeterministicDataHash(
+    supplyProjectionContract,
+    'formal survival Bot trusted contract',
+  );
+  if (contractHash.value !== expectedContractHash) {
+    throw new RangeError('trusted Bot binding 与 supplyProjectionContract 不一致。');
+  }
+  return value;
 }
 
 function normalizeOptions(options: unknown): NormalizedBotControllerOptions {
@@ -165,6 +204,17 @@ function normalizeOptions(options: unknown): NormalizedBotControllerOptions {
   if (requireActiveSupplyProjection && supplyProjectionContract === undefined) {
     throw new TypeError('survival BotController 必须注入 supplyProjectionContract。');
   }
+  const trustedBinding = readOptionalDataProperty(record, 'trustedBinding', 'BotController options');
+  if (
+    trustedBinding !== undefined
+    && (typeof trustedBinding !== 'object' || trustedBinding === null)
+  ) {
+    throw new TypeError('BotController trustedBinding 必须是 opaque object。');
+  }
+  const normalizedTrustedBinding = trustedBinding === undefined
+    ? null
+    : assertTrustedBinding(trustedBinding, supplyProjectionContract as
+      ArenaPublicSupplyProjectionLifecycleContract | undefined);
   const arena = createBotArenaView(
     readDataProperty(record, 'arena', 'BotController options'),
     readDataProperty(record, 'characterRadius', 'BotController options'),
@@ -178,6 +228,7 @@ function normalizeOptions(options: unknown): NormalizedBotControllerOptions {
     personalitySeed,
     arena,
     requireActiveSupplyProjection: requireActiveSupplyProjection ?? false,
+    trustedBinding: normalizedTrustedBinding,
     ...(supplyProjectionContract === undefined ? {} : {
       supplyProjectionContract: supplyProjectionContract as ArenaPublicSupplyProjectionLifecycleContract,
     }),
@@ -203,6 +254,9 @@ export class BotController {
   #lastCommandEventSequence: number;
   #requireActiveSupplyProjection: boolean;
   #supplyProjectionContract: ArenaPublicSupplyProjectionLifecycleContract | undefined;
+  #trustedBinding: object | null;
+  #trustedSnapshotReader: TrustedSnapshotReader | null;
+  #trustedSnapshotReaderSource: object | null;
   #creatingInput: boolean;
   #destroyed: boolean;
 
@@ -233,6 +287,9 @@ export class BotController {
     this.#lastCommandEventSequence = -1;
     this.#requireActiveSupplyProjection = normalized.requireActiveSupplyProjection;
     this.#supplyProjectionContract = normalized.supplyProjectionContract;
+    this.#trustedBinding = normalized.trustedBinding;
+    this.#trustedSnapshotReader = null;
+    this.#trustedSnapshotReaderSource = null;
     this.#creatingInput = false;
     this.#destroyed = false;
   }
@@ -241,11 +298,21 @@ export class BotController {
     if (this.#destroyed) throw new Error('BotController 已销毁。');
   }
 
-  #prepareObservation(snapshot: unknown): Readonly<{
+  #prepareObservation(snapshot: unknown, trusted = false): Readonly<{
     source: BotSourceSnapshot;
     observation: BotObservation;
   }> {
-    const source = this.#supplyProjectionContract === undefined
+    const source = trusted
+      ? createTrustedBotSourceSnapshot(
+        snapshot as DeepReadonly<ArenaMatchSnapshot>,
+        this.#supplyProjectionContract === undefined
+          ? { requireActiveSupplyProjection: this.#requireActiveSupplyProjection }
+          : {
+            lifecycleContract: this.#supplyProjectionContract,
+            requireActiveSupplyProjection: this.#requireActiveSupplyProjection,
+          },
+      )
+      : this.#supplyProjectionContract === undefined
       ? cloneBotSourceSnapshot(snapshot)
       : cloneBotSourceSnapshot(snapshot, {
         lifecycleContract: this.#supplyProjectionContract,
@@ -385,13 +452,16 @@ export class BotController {
     });
   }
 
-  createInput(snapshot: unknown): ArenaInputFrame {
+  #createInputInternal(
+    snapshotFactory: () => unknown,
+    trusted: boolean,
+  ): ArenaInputFrame {
     this.#assertUsable();
     if (this.#creatingInput) throw new Error('BotController createInput 不允许重入。');
     this.#creatingInput = true;
     let internalPhase = false;
     try {
-      const prepared = this.#prepareObservation(snapshot);
+      const prepared = this.#prepareObservation(snapshotFactory(), trusted);
       this.#assertUsable();
       internalPhase = true;
       const frame = this.#createFrame(prepared.observation);
@@ -405,6 +475,48 @@ export class BotController {
     } finally {
       this.#creatingInput = false;
     }
+  }
+
+  createInput(snapshot: unknown): ArenaInputFrame {
+    return this.#createInputInternal(() => snapshot, false);
+  }
+
+  attachTrustedSnapshotReader(reader: unknown, binding: unknown): boolean {
+    this.#assertUsable();
+    if (this.#trustedBinding === null) {
+      return false;
+    }
+    if (binding !== this.#trustedBinding) {
+      throw new RangeError('BotController trusted snapshot reader 与组合合同不一致。');
+    }
+    if (typeof reader !== 'object' || reader === null) {
+      throw new TypeError('BotController trusted snapshot reader 必须是 opaque object。');
+    }
+    const descriptor = Object.getOwnPropertyDescriptor(reader, 'read');
+    if (!descriptor || !descriptor.enumerable || !('value' in descriptor)
+      || typeof descriptor.value !== 'function') {
+      throw new TypeError('BotController trusted snapshot reader.read 必须是数据方法。');
+    }
+    if (
+      this.#trustedSnapshotReaderSource !== null
+      && this.#trustedSnapshotReaderSource !== reader
+    ) {
+      throw new Error('BotController trusted snapshot reader 不可替换。');
+    }
+    this.#trustedSnapshotReaderSource = reader;
+    this.#trustedSnapshotReader = Object.freeze({
+      read: descriptor.value.bind(reader) as () => DeepReadonly<ArenaMatchSnapshot>,
+    });
+    return true;
+  }
+
+  createInputFromTrustedSnapshot(): ArenaInputFrame {
+    this.#assertUsable();
+    const reader = this.#trustedSnapshotReader;
+    if (reader === null) {
+      throw new Error('BotController trusted snapshot reader 尚未由 LocalMatchSession 绑定。');
+    }
+    return this.#createInputInternal(() => reader.read(), true);
   }
 
   getDebugSnapshot(): BotControllerDebugSnapshot {

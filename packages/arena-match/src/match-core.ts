@@ -172,12 +172,55 @@ export interface MatchInternalCheckpointIdentity {
   readonly stateHash: string;
 }
 
+/** Opaque reader bound to one concrete MatchCore instance. */
+export interface MatchCoreTrustedPublicSnapshotReader {
+  read(): DeepReadonly<ArenaMatchSnapshot>;
+}
+
+const TRUSTED_PUBLIC_SNAPSHOT_READERS = new WeakSet<object>();
+const TRUSTED_PUBLIC_SNAPSHOT_READER_OWNERS = new WeakMap<object, MatchCore>();
+const TRUSTED_PUBLIC_SNAPSHOT_READER_BINDINGS = new WeakMap<object, object | undefined>();
+const TRUSTED_PUBLIC_SNAPSHOT_BINDING_OWNERS = new WeakMap<object, MatchCore>();
+
+export function assertMatchCoreTrustedPublicSnapshotReader(
+  value: unknown,
+  expectedOwner?: MatchCore,
+  expectedBinding?: object,
+): MatchCoreTrustedPublicSnapshotReader {
+  if (
+    (typeof value !== 'object' || value === null)
+    || !TRUSTED_PUBLIC_SNAPSHOT_READERS.has(value)
+  ) {
+    throw new TypeError('MatchCore trusted public snapshot reader 无效。');
+  }
+  if (
+    expectedOwner !== undefined
+    && TRUSTED_PUBLIC_SNAPSHOT_READER_OWNERS.get(value) !== expectedOwner
+  ) {
+    throw new RangeError('trusted public snapshot reader 与当前 MatchCore 不一致。');
+  }
+  if (
+    expectedBinding !== undefined
+    && TRUSTED_PUBLIC_SNAPSHOT_READER_BINDINGS.get(value) !== expectedBinding
+  ) {
+    throw new RangeError('trusted public snapshot reader 与当前组合合同不一致。');
+  }
+  return value as MatchCoreTrustedPublicSnapshotReader;
+}
+
 interface MovementPreparation {
   readonly additionalCandidates: readonly Readonly<{
     participantId: string;
     candidates: readonly ActionCandidate[];
   }>[];
   readonly resolutionInputFrames: readonly ArenaInputFrame[] | null;
+}
+
+interface PublicSnapshotCacheEntry {
+  readonly tick: number;
+  readonly eventSequence: number;
+  readonly phase: ArenaMatchPhase;
+  readonly snapshot: DeepReadonly<ArenaMatchSnapshot>;
 }
 
 interface MatchOutcome {
@@ -200,6 +243,31 @@ function cloneSnapshotData<T>(value: T): DeepReadonly<T> {
     key,
     cloneSnapshotData(child),
   ])) as DeepReadonly<T>;
+}
+
+function freezeSnapshotData<T>(value: T, active = new WeakSet<object>()): DeepReadonly<T> {
+  if (value === null || typeof value !== 'object') return value as DeepReadonly<T>;
+  const object = value as object;
+  const prototype = Object.getPrototypeOf(object);
+  if (!Array.isArray(object) && prototype !== Object.prototype && prototype !== null) {
+    throw new TypeError('MatchCore public snapshot 只能包含 plain object 或 array。');
+  }
+  if (active.has(object)) throw new TypeError('MatchCore public snapshot 不能包含循环引用。');
+  active.add(object);
+  for (const key of Reflect.ownKeys(object)) {
+    if (typeof key === 'symbol') {
+      throw new TypeError('MatchCore public snapshot 不允许 Symbol 字段。');
+    }
+    const descriptor = Object.getOwnPropertyDescriptor(object, key);
+    if (descriptor === undefined) throw new TypeError('MatchCore public snapshot 字段读取失败。');
+    if (!('value' in descriptor)) {
+      throw new TypeError('MatchCore public snapshot 不能包含访问器字段。');
+    }
+    freezeSnapshotData(descriptor.value, active);
+  }
+  Object.freeze(object);
+  active.delete(object);
+  return value as DeepReadonly<T>;
 }
 
 function cleanupCauses(value: unknown): readonly unknown[] | null {
@@ -300,6 +368,7 @@ export class MatchCore {
   #destroyed: boolean;
   #eventSequence: number;
   #stepping: boolean;
+  #publicSnapshotCache: PublicSnapshotCacheEntry | null;
 
   #requireResource<T>(resource: T | null, name: string): T {
     if (resource === null) throw new Error(`MatchCore ${name} 资源不可用。`);
@@ -431,6 +500,7 @@ export class MatchCore {
     this.#destroyed = false;
     this.#terminalTimelineSnapshot = null;
     this.#stepping = false;
+    this.#publicSnapshotCache = null;
     this.#rngStreams = Object.fromEntries(
       ['spawn', 'map', 'equipment', 'bot', 'presentation'].map((name) => [
         name,
@@ -744,6 +814,7 @@ export class MatchCore {
         tick: this.tick,
         participantIds: this.config.participantIds,
       });
+      this.#publicSnapshotCache = null;
       this.#events = [];
       try {
         return this.#stepNormalized(frames);
@@ -1409,8 +1480,56 @@ export class MatchCore {
     return snapshot;
   }
 
-  getSnapshot(): ArenaMatchSnapshot {
-    return this.#createSnapshot(false);
+  getSnapshot(): DeepReadonly<ArenaMatchSnapshot> {
+    this.#assertUsable();
+    if (this.#stepping) throw new Error('MatchCore step() 期间不能读取 public snapshot。');
+    const cached = this.#publicSnapshotCache;
+    if (
+      cached !== null
+      && cached.tick === this.tick
+      && cached.eventSequence === this.#eventSequence
+      && cached.phase === this.phase
+    ) return cached.snapshot;
+    const snapshot = freezeSnapshotData(this.#createSnapshot(false));
+    this.#publicSnapshotCache = Object.freeze({
+      tick: snapshot.tick,
+      eventSequence: snapshot.eventSequence,
+      phase: this.phase,
+      snapshot,
+    });
+    return snapshot;
+  }
+
+  createTrustedPublicSnapshotReader(binding?: object): MatchCoreTrustedPublicSnapshotReader {
+    this.#assertUsable();
+    if (binding !== undefined && (typeof binding !== 'object' || binding === null)) {
+      throw new TypeError('MatchCore trusted snapshot binding 必须是 opaque object。');
+    }
+    if (binding !== undefined) {
+      const bindingOwner = TRUSTED_PUBLIC_SNAPSHOT_BINDING_OWNERS.get(binding);
+      if (bindingOwner !== undefined && bindingOwner !== this) {
+        throw new RangeError('MatchCore trusted snapshot binding 已绑定其他 MatchCore。');
+      }
+      const authorityContentHash = Object.getOwnPropertyDescriptor(
+        binding,
+        'authorityContentHash',
+      );
+      if (
+        authorityContentHash !== undefined
+        && (!('value' in authorityContentHash)
+          || authorityContentHash.value !== this.#ruleContentHash)
+      ) {
+        throw new RangeError('MatchCore trusted snapshot binding 与权威 content hash 不一致。');
+      }
+      TRUSTED_PUBLIC_SNAPSHOT_BINDING_OWNERS.set(binding, this);
+    }
+    const reader = Object.freeze({
+      read: (): DeepReadonly<ArenaMatchSnapshot> => this.getSnapshot(),
+    });
+    TRUSTED_PUBLIC_SNAPSHOT_READERS.add(reader);
+    TRUSTED_PUBLIC_SNAPSHOT_READER_OWNERS.set(reader, this);
+    TRUSTED_PUBLIC_SNAPSHOT_READER_BINDINGS.set(reader, binding);
+    return reader;
   }
 
   getInternalCheckpointIdentity(): MatchInternalCheckpointIdentity {
@@ -1489,6 +1608,7 @@ export class MatchCore {
     ) return;
     if (this.#stepping) throw new Error('step() 期间不能销毁 MatchCore。');
     this.#destroyed = true;
+    this.#publicSnapshotCache = null;
     this.#events.length = 0;
     this.#characterRuntimes.clear();
     const errors: Error[] = [];

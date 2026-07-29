@@ -16,6 +16,7 @@
     "arena:poc:stress": "node --import tsx scripts/arena-physics-poc.ts --stress-ticks=100000",
     "arena:stress": "node --expose-gc --import tsx scripts/arena-match-stress.ts --matches=1000",
     "arena:survival:stress": "node --expose-gc --import tsx scripts/arena-survival-supply-stress.ts",
+    "arena:survival:bot:stress": "node --expose-gc --import tsx scripts/arena-formal-survival-bot-pressure.ts",
     "arena:map:stress": "node --import tsx scripts/arena-map-stress.ts --matches=100",
     "arena:movement:stress": "node --import tsx scripts/arena-movement-stress.ts --matches=100",
     "arena:bot:stress": "node --import tsx scripts/arena-bot-stress.ts --matches=300",

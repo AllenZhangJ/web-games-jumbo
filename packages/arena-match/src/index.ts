@@ -50,6 +50,7 @@ export type {
 } from './state-hash.js';
 export {
   ARENA_MATCH_EVENT,
+  assertMatchCoreTrustedPublicSnapshotReader,
   MatchCore,
 } from './match-core.js';
 export type {
@@ -61,6 +62,7 @@ export type {
   MatchCoreEquipmentSupplyTimelineStepResult,
   MatchCoreMapFactoryContext,
   MatchCoreOptions,
+  MatchCoreTrustedPublicSnapshotReader,
   MatchReplayMetadata,
   MatchInternalCheckpointIdentity,
 } from './match-core.js';

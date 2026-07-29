@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   ARENA_MATCH_PHASE,
   ARENA_PARTICIPANT_STATUS,
+  assertMatchCoreTrustedPublicSnapshotReader,
   type ArenaAuthorityEvent,
   type MatchCore,
   type MatchCoreOptions,
@@ -136,12 +137,67 @@ test('MatchCore internals are not exposed and snapshots cannot mutate authority'
   assert.throws(() => { Object.assign(core, { config: {} }); }, TypeError);
   const snapshot = core.getSnapshot();
   assert.equal(snapshot.rngStates, undefined);
-  assert.equal(Reflect.set(participant(snapshot, 0), 'lives', 0), true);
-  assert.equal(Reflect.set(participant(snapshot, 0).position, 'x', 999), true);
+  assert.equal(Reflect.set(participant(snapshot, 0), 'lives', 0), false);
+  assert.equal(Reflect.set(participant(snapshot, 0).position, 'x', 999), false);
+  assert.equal(Reflect.set(snapshot.equipment, 0, snapshot.equipment[0]), false);
   const authority = core.getSnapshot();
   assert.equal(participant(authority, 0).lives, 3);
   assert.notEqual(participant(authority, 0).position.x, 999);
+  assert.strictEqual(authority, snapshot);
   core.destroy();
+});
+
+test('public snapshot cache is identity-stable per state and invalidates after a successful step', () => {
+  const core = createFastCore();
+  const first = core.getSnapshot();
+  const repeated = core.getSnapshot();
+  assert.strictEqual(repeated, first);
+  assert.equal(first.tick, 0);
+  assert.equal(first.eventSequence, 0);
+  step(core);
+  const next = core.getSnapshot();
+  assert.notStrictEqual(next, first);
+  assert.equal(next.tick, 1);
+  assert.ok(next.eventSequence >= first.eventSequence);
+  assert.strictEqual(next, core.getSnapshot());
+  assert.throws(() => core.step([createNeutralInputFrame(999, 'player-1')]), /tick/);
+  assert.strictEqual(core.getSnapshot(), next);
+  core.destroy();
+});
+
+test('public snapshot reader is opaque, core-bound, deeply frozen and invalid after destroy', () => {
+  const first = createFastCore({ preparingTicks: 0 });
+  const second = createFastCore({ preparingTicks: 0 });
+  const binding = Object.freeze({ contractHash: 'match-core-test-v1' });
+  const reader = first.createTrustedPublicSnapshotReader(binding);
+  assert.strictEqual(
+    assertMatchCoreTrustedPublicSnapshotReader(reader, first, binding),
+    reader,
+  );
+  assert.throws(
+    () => assertMatchCoreTrustedPublicSnapshotReader(
+      second.createTrustedPublicSnapshotReader(binding),
+      first,
+      binding,
+    ),
+    /不一致|已绑定其他 MatchCore/,
+  );
+  assert.throws(
+    () => first.createTrustedPublicSnapshotReader.call({}),
+    /MatchCore|已销毁/,
+  );
+  assert.throws(
+    () => Object.assign(reader, { read: () => first.getSnapshot() }),
+    TypeError,
+  );
+  const snapshot = reader.read();
+  assert.strictEqual(snapshot, first.getSnapshot());
+  assert.equal(Reflect.set(snapshot, 'tick', 9), false);
+  assert.equal(Reflect.set(snapshot.participants, 0, snapshot.participants[0]), false);
+  assert.equal(Reflect.set(snapshot.map.surfaces[0]!, 'enabled', false), false);
+  first.destroy();
+  assert.throws(() => reader.read(), /已销毁/);
+  second.destroy();
 });
 
 test('MatchCore public snapshot satisfies the shared audit schema without entering the tick path', () => {

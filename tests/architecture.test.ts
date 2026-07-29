@@ -1649,3 +1649,15 @@ test('Arena Rule/Core foundation preserves dependency direction and deterministi
     'MatchCore 不得重新持有 participant Map、私有 participant 构造器或 timeline 可写字段。',
   );
 });
+
+test('Arena Bot only consumes restricted snapshots and emits InputFrames', async () => {
+  const botSourceFiles = await listJavaScript(path.resolve('packages/arena-bot/src'));
+  for (const file of botSourceFiles) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(
+      source,
+      /\bMatchCore\b|arena-session|arena-replay|Replay V5/,
+      `${file} 的 Bot 不得持有 Core/Session/Replay 具体依赖。`,
+    );
+  }
+});

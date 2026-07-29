@@ -10,6 +10,7 @@ import {
   requireArenaPublicSupplyProjection,
   type ArenaPublicSupplyProjection,
   type ArenaPublicSupplyProjectionLifecycleContract,
+  type ArenaMatchSnapshot,
   type ArenaMapSnapshot,
   type DeepReadonly,
 } from '@number-strategy-jump/arena-contracts';
@@ -46,6 +47,13 @@ const AFFORDANCE_KINDS: ReadonlySet<string> = new Set(['none', 'ignored', 'selec
 const ACTION_LANES: ReadonlySet<string> = new Set(['combat', 'locomotion', 'interaction']);
 const TRUSTED_SOURCE_SNAPSHOTS = new WeakSet<object>();
 const TRUSTED_ARENA_VIEWS = new WeakSet<object>();
+
+function compareVisibleEquipment(
+  left: Pick<BotVisibleEquipment, 'instanceId'>,
+  right: Pick<BotVisibleEquipment, 'instanceId'>,
+): number {
+  return left.instanceId < right.instanceId ? -1 : left.instanceId > right.instanceId ? 1 : 0;
+}
 
 type BotAffordanceChannel = 'primary' | 'primaryHold' | 'jump' | 'slam';
 
@@ -737,9 +745,7 @@ function normalizeSourceSnapshot(
     inputKind === 'raw'
       ? copyRawVisibleEquipment(equipment, `${name}.equipment[${index}]`, remainingTicksByInstance)
       : copyNormalizedVisibleEquipment(equipment, `${name}.equipment[${index}]`)
-  )).sort((left, right) => (
-    left.instanceId < right.instanceId ? -1 : left.instanceId > right.instanceId ? 1 : 0
-  ));
+  )).sort(compareVisibleEquipment);
   if (inputKind === 'normalized') {
     if (source.activeSupplyProjection === null || source.activeSupplyProjection === undefined) {
       if (normalizedEquipment.some(({ remainingTicks: value }) => value !== null)) {
@@ -768,6 +774,111 @@ function normalizeSourceSnapshot(
   });
   TRUSTED_SOURCE_SNAPSHOTS.add(result);
   return result;
+}
+
+/**
+ * Adopts a public snapshot produced by the per-match trusted reader.
+ * The reader has already constructed and deeply frozen the public projection;
+ * this function only creates the Bot-shaped view and keeps the contract/tick
+ * continuity checks in BotController. Untrusted callers must use
+ * cloneBotSourceSnapshot instead.
+ */
+export function createTrustedBotSourceSnapshot(
+  snapshot: DeepReadonly<ArenaMatchSnapshot>,
+  options: Readonly<{
+    readonly lifecycleContract?: ArenaPublicSupplyProjectionLifecycleContract;
+    readonly requireActiveSupplyProjection?: boolean;
+  }> = {},
+): BotSourceSnapshot {
+  if (!Number.isSafeInteger(snapshot.tick) || snapshot.tick < 0) {
+    throw new RangeError('trusted Bot snapshot.tick 无效。');
+  }
+  if (!Number.isSafeInteger(snapshot.eventSequence) || snapshot.eventSequence < 0) {
+    throw new RangeError('trusted Bot snapshot.eventSequence 无效。');
+  }
+  if (snapshot.participants.length !== 2) {
+    throw new RangeError('trusted Bot snapshot 必须包含两名参赛者。');
+  }
+  const projection = snapshot.activeSupplyProjection ?? null;
+  if (options.requireActiveSupplyProjection && projection === null) {
+    throw new RangeError('trusted survival Bot snapshot 缺少 activeSupplyProjection。');
+  }
+  if (
+    projection !== null
+    && (
+      projection.snapshotTick !== snapshot.tick
+      || projection.snapshotEventSequence !== snapshot.eventSequence
+    )
+  ) {
+    throw new RangeError('trusted Bot snapshot projection 与快照身份不一致。');
+  }
+  if (options.lifecycleContract !== undefined && projection === null) {
+    throw new RangeError('trusted survival Bot snapshot 缺少 lifecycle projection。');
+  }
+
+  const remainingTicksByInstance = new Map(
+    projection?.supplies.map(({ equipmentInstanceId, remainingTicks }) => (
+      [equipmentInstanceId, remainingTicks]
+    )) ?? [],
+  );
+  const participants = Object.freeze(snapshot.participants.map((participant, index) => {
+    if (participant.actionAffordance === undefined) {
+      throw new RangeError(`trusted Bot snapshot.participants[${index}] 缺少 actionAffordance。`);
+    }
+    return Object.freeze({
+      id: participant.id,
+      characterDefinitionId: participant.characterDefinitionId,
+      status: participant.status,
+      lives: participant.lives,
+      eliminations: participant.eliminations,
+      deaths: participant.deaths,
+      hitstunTicks: participant.hitstunTicks,
+      invulnerableTicks: participant.invulnerableTicks,
+      respawnTicks: participant.respawnTicks,
+      action: participant.action,
+      actionRule: participant.actionRule as BotActionRule,
+      movement: participant.movement,
+      actionAffordance: participant.actionAffordance as BotActionAffordance,
+      equipment: participant.equipment,
+      position: participant.position,
+      velocity: participant.velocity,
+      facing: participant.facing,
+      grounded: participant.grounded,
+      supportSurfaceId: participant.supportSurfaceId,
+    });
+  })) as readonly BotParticipantObservation[];
+  const equipment = snapshot.equipment
+    .filter(({ locationState }) => (
+      locationState === EQUIPMENT_LOCATION_STATE.SPAWNED
+      || locationState === EQUIPMENT_LOCATION_STATE.DROPPED
+    ))
+    .map((item, index) => {
+      if (item.position === null) {
+        throw new RangeError(`trusted Bot snapshot.equipment[${index}] 缺少 world position。`);
+      }
+      return Object.freeze({
+        instanceId: item.instanceId,
+        definitionId: item.definitionId,
+        locationState: item.locationState as 'spawned' | 'dropped',
+        remainingTicks: remainingTicksByInstance.get(item.instanceId) ?? null,
+        position: item.position,
+      });
+    })
+    .sort(compareVisibleEquipment);
+  const result = {
+    tick: snapshot.tick,
+    activeTick: snapshot.activeTick,
+    eventSequence: snapshot.eventSequence,
+    phase: snapshot.phase,
+    remainingTicks: snapshot.remainingTicks,
+    participants,
+    equipment: Object.freeze(equipment) as readonly BotVisibleEquipment[],
+    activeSupplyProjection: projection,
+    map: snapshot.map,
+  } satisfies BotSourceSnapshot;
+  const trusted = freezeOwned(result);
+  TRUSTED_SOURCE_SNAPSHOTS.add(trusted);
+  return trusted;
 }
 
 export function cloneBotSourceSnapshot(

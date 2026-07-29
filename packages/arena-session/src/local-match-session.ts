@@ -14,6 +14,7 @@ import {
   ARENA_MATCH_PHASE,
   HeadlessMatchRunner,
   MatchCore,
+  assertMatchCoreTrustedPublicSnapshotReader,
   type ArenaAuthorityEvent,
   type ArenaReplay,
 } from '@number-strategy-jump/arena-match';
@@ -44,6 +45,8 @@ export interface LocalMatchPublicInfo {
 
 export interface BotInputController {
   createInput(snapshot: ArenaMatchSnapshot): ArenaInputFrame;
+  attachTrustedSnapshotReader?(reader: unknown, binding: unknown): boolean;
+  createInputFromTrustedSnapshot?(): ArenaInputFrame;
   destroy(): void;
 }
 
@@ -52,6 +55,7 @@ export interface LocalMatchSessionOptions {
   readonly botController: BotInputController;
   readonly playerParticipantId?: string;
   readonly botParticipantId?: string;
+  readonly trustedBotBinding?: object;
   readonly publicMatchInfo: LocalMatchPublicInfo;
 }
 
@@ -75,6 +79,8 @@ interface OwnedResource {
 
 interface BotControllerPort extends OwnedResource {
   createInput(snapshot: ArenaMatchSnapshot): ArenaInputFrame;
+  attachTrustedSnapshotReader?(reader: unknown, binding: unknown): boolean;
+  createInputFromTrustedSnapshot?(): ArenaInputFrame;
 }
 
 interface NormalizedSessionOptions {
@@ -82,6 +88,7 @@ interface NormalizedSessionOptions {
   readonly botController: BotControllerPort;
   readonly playerParticipantId: string;
   readonly botParticipantId: string;
+  readonly trustedBotBinding: object | null;
   readonly publicMatchInfo: LocalMatchPublicInfo;
 }
 
@@ -90,6 +97,7 @@ const SESSION_OPTION_KEYS = new Set([
   'botController',
   'playerParticipantId',
   'botParticipantId',
+  'trustedBotBinding',
   'publicMatchInfo',
 ]);
 const PUBLIC_INFO_KEYS = new Set(['matchSeed', 'opponent']);
@@ -152,13 +160,55 @@ function methodFromPrototypeChain(value: unknown, methodName: string): (...args:
   throw new TypeError(`BotController.${methodName}() 不存在。`);
 }
 
+function optionalMethodFromPrototypeChain(
+  value: unknown,
+  methodName: string,
+): ((...args: unknown[]) => unknown) | null {
+  if ((typeof value !== 'object' || value === null) && typeof value !== 'function') {
+    return null;
+  }
+  const visited = new Set<object>();
+  let current: object | null = value as object;
+  while (current !== null) {
+    if (visited.has(current) || visited.size >= 32) {
+      throw new TypeError('BotController 原型链无效。');
+    }
+    visited.add(current);
+    const descriptor = Object.getOwnPropertyDescriptor(current, methodName);
+    if (descriptor) {
+      if (!('value' in descriptor) || typeof descriptor.value !== 'function') {
+        throw new TypeError(`BotController.${methodName} 必须是数据方法。`);
+      }
+      return descriptor.value as (...args: unknown[]) => unknown;
+    }
+    current = Object.getPrototypeOf(current) as object | null;
+  }
+  return null;
+}
+
 function normalizeController(controller: unknown): BotControllerPort {
   const createInput = methodFromPrototypeChain(controller, 'createInput');
   const destroy = methodFromPrototypeChain(controller, 'destroy');
+  const attachTrustedSnapshotReader = optionalMethodFromPrototypeChain(
+    controller,
+    'attachTrustedSnapshotReader',
+  );
+  const createInputFromTrustedSnapshot = optionalMethodFromPrototypeChain(
+    controller,
+    'createInputFromTrustedSnapshot',
+  );
   return Object.freeze({
     createInput: (snapshot: ArenaMatchSnapshot): ArenaInputFrame => (
       createInput.call(controller, snapshot) as ArenaInputFrame
     ),
+    ...(attachTrustedSnapshotReader === null || createInputFromTrustedSnapshot === null ? {} : {
+      attachTrustedSnapshotReader: (reader: unknown, binding: unknown): boolean => (
+        attachTrustedSnapshotReader.call(controller, reader, binding) === true
+      ),
+      createInputFromTrustedSnapshot: (): ArenaInputFrame => (
+        createInputFromTrustedSnapshot.call(controller) as ArenaInputFrame
+      ),
+    }),
     destroy: (): void => { destroy.call(controller); },
   });
 }
@@ -222,11 +272,23 @@ function normalizeOptions(options: unknown): NormalizedSessionOptions {
   const publicMatchInfo = copyPublicInfo(
     readDataProperty(record, 'publicMatchInfo', 'LocalMatchSession options'),
   );
+  const trustedBotBinding = readOptionalDataProperty(
+    record,
+    'trustedBotBinding',
+    'LocalMatchSession options',
+  );
+  if (
+    trustedBotBinding !== undefined
+    && (typeof trustedBotBinding !== 'object' || trustedBotBinding === null)
+  ) {
+    throw new TypeError('LocalMatchSession trustedBotBinding 必须是 opaque object。');
+  }
   return Object.freeze({
     core,
     botController,
     playerParticipantId,
     botParticipantId,
+    trustedBotBinding: trustedBotBinding ?? null,
     publicMatchInfo,
   });
 }
@@ -266,6 +328,7 @@ export class LocalMatchSession {
   #runningUntilEnded: boolean;
   #cleaning: boolean;
   #pauseRequested: boolean;
+  #useTrustedBotInput: boolean;
 
   constructor(options: LocalMatchSessionOptions);
   constructor(options: unknown) {
@@ -282,6 +345,46 @@ export class LocalMatchSession {
     this.#runningUntilEnded = false;
     this.#cleaning = false;
     this.#pauseRequested = false;
+    this.#useTrustedBotInput = false;
+    try {
+      if (normalized.trustedBotBinding !== null) {
+        if (
+          normalized.botController.attachTrustedSnapshotReader === undefined
+          || normalized.botController.createInputFromTrustedSnapshot === undefined
+        ) {
+          throw new TypeError('LocalMatchSession trusted Bot 缺少 opaque reader handshake。');
+        }
+        const reader = normalized.core.createTrustedPublicSnapshotReader(
+          normalized.trustedBotBinding,
+        );
+        assertMatchCoreTrustedPublicSnapshotReader(
+          reader,
+          normalized.core,
+          normalized.trustedBotBinding,
+        );
+        this.#useTrustedBotInput = normalized.botController.attachTrustedSnapshotReader(
+          reader,
+          normalized.trustedBotBinding,
+        );
+        if (!this.#useTrustedBotInput) {
+          throw new Error('LocalMatchSession trusted Bot handshake 未被接受。');
+        }
+      }
+    } catch (error) {
+      const cleanupErrors: Error[] = [];
+      // `core` and `botController` are supplied by the caller.  A failed
+      // constructor never publishes a session, so it must not take ownership
+      // of either resource or race the outer composition cleanup.  The runner
+      // is the only resource created by this session and only disconnects its
+      // references on destroy().
+      destroyOwned(this.#runner, cleanupErrors);
+      this.#runner = null;
+      throw combineCleanupFailure(
+        normalizeThrownError(error, 'LocalMatchSession trusted Bot handshake 失败'),
+        cleanupErrors,
+        'LocalMatchSession 构造失败且资源清理未完整完成。',
+      );
+    }
   }
 
   get state(): LocalMatchSessionState {
@@ -377,8 +480,10 @@ export class LocalMatchSession {
         if (runner === null || botController === null) {
           throw new Error('LocalMatchSession 内部资源不可用。');
         }
-        const snapshotBeforeStep = core.getSnapshot();
-        const botFrame = botController.createInput(snapshotBeforeStep);
+        const botFrame = this.#useTrustedBotInput
+          && botController.createInputFromTrustedSnapshot !== undefined
+          ? botController.createInputFromTrustedSnapshot()
+          : botController.createInput(core.getSnapshot());
         if (botFrame.participantId !== this.#botParticipantId) {
           throw new RangeError('BotController 返回了错误的参与者输入。');
         }

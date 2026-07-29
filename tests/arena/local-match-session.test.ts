@@ -202,6 +202,46 @@ test('failed LocalMatchSession construction does not take ownership of the core'
   core.destroy();
 });
 
+test('trusted Bot handshake failure leaves caller-owned Core and Bot for outer cleanup', () => {
+  const core = createArenaV1MatchCore({ seed: 17, config: { preparingTicks: 0 } });
+  const bindingB = Object.freeze({ contractHash: 'binding-b' });
+  let destroyCount = 0;
+  let controllerDestroyed = false;
+  const botController: BotInputController = {
+    createInput: (snapshot) => createNeutralInputFrame(snapshot.tick, 'player-2'),
+    attachTrustedSnapshotReader: () => {
+      throw new RangeError('组合合同不一致');
+    },
+    createInputFromTrustedSnapshot: () => createNeutralInputFrame(core.tick, 'player-2'),
+    destroy: () => {
+      destroyCount += 1;
+      controllerDestroyed = true;
+    },
+  };
+  assert.throws(() => new LocalMatchSession({
+    core,
+    botController,
+    trustedBotBinding: bindingB,
+    publicMatchInfo: {
+      matchSeed: 17,
+      opponent: {
+        id: 'test-opponent',
+        displayName: '测试对手',
+        portraitKey: 'portrait-test',
+        appearanceKey: 'appearance-test',
+      },
+    },
+  }), /组合合同/);
+  assert.equal(destroyCount, 0);
+  assert.equal(controllerDestroyed, false);
+  assert.equal(core.getSnapshot().tick, 0);
+  botController.destroy();
+  core.destroy();
+  assert.equal(destroyCount, 1);
+  assert.equal(controllerDestroyed, true);
+  assert.throws(() => core.getSnapshot(), /已销毁/);
+});
+
 test('same quick-match seed and player inputs reproduce final replay hash', () => {
   const run = () => {
     const { session } = new QuickMatchService().create({
