@@ -11,7 +11,7 @@
 - 视觉生产基线：[Arena Art Bible](arena-art-bible.md)
 - 注释参考登记：[六类70/20/10登记](arena-art-reference-register.md)；A0.2三个子门已签核，[独立视觉方向总门](arena-art-reference-total-gate-a0.2.md)以96/100通过，A0.2与Reference Board视觉方向为`ready`；[A0.3技术/代理候选](arena-art-silhouette-a0.3.md)85/100但真人0/10，A0.3、正式模型/VFX样件、Blockout及后续成熟度仍`incomplete`/fail closed
 - 阶段协作基线：[美术 A0–A7 与开发 P0–P7 对齐矩阵](arena-art-development-alignment-matrix.md)
-- 当前供给表现合同：[A1.0供给表现预生产合同](arena-art-supply-presentation-contract-a1.0.md)由主协调于2026-07-28以94/100签核为`contract-ready`；[A1.1来源与测量就绪包](arena-art-supply-readiness-a1.1.md)当前仅为92/100的`preproduction-readiness-candidate`，所有A1.1协调硬门false。两者都未启动代表样件；`runtimeAdapterTested=false`，A0.3真人、A1、Blockout、正式VFX/音频仍关闭
+- 当前供给表现合同：[A1.0供给表现预生产合同](arena-art-supply-presentation-contract-a1.0.md)由主协调于2026-07-28以94/100签核为`contract-ready`；[A1.1来源与测量就绪包](arena-art-supply-readiness-a1.1.md)已绑定主协调签核提交`f80307b`的schema v2只读生命周期合同，状态仅升级为92/100的`upstream-contract-ready-candidate`，A1.1协调、来源、捕获和执行硬门仍false。两者都未启动代表样件；`runtimeAdapterTested=false`，A0.3真人、A1、Blockout、Presentation、正式VFX/音频仍关闭
 
 ## 1. 目的与项目特化边界
 

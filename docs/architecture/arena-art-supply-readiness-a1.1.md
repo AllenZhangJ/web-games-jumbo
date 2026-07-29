@@ -2,10 +2,10 @@
 
 ## 状态与边界
 
-- 状态：`preproduction-readiness-candidate`，待主协调签核；实际父节点为`21948d43f00140036699c8ff2d7fe5e71723dedd`。
+- 状态：`upstream-contract-ready-candidate`，待主协调签核A1.1整体；实际父节点为`f80307b375eb9f8f5380372e5b002d1eb86a4df7`。
 - 机器台账：[arena-a1.1-preproduction-readiness-v1.json](../quality/art/supply/arena-a1.1-preproduction-readiness-v1.json)。
 - 本门只审计A1.0第9节可前置的来源/权利与捕获/测量方案，不制作或接入Blockout、模型、图标、VFX、音频、捕获夹具或运行时adapter。
-- A0.3仍为真人`0/10`；公共只读active supply lifecycle投影仍不存在。A1.1所有协调硬门为false，代表样件不得启动，A1/Blockout/设备/真人/Final全部fail closed。
+- A0.3仍为真人`0/10`。公共只读active supply lifecycle projection合同已由开发小门签核并绑定`f80307b`，仅关闭这一项上游缺口；A1.1协调、来源、捕获方案和所有执行/样件硬门仍为false，代表样件不得启动，A1/Blockout/Presentation/设备/真人/Final全部fail closed。
 
 ## 技能约束与缺失引用
 
@@ -18,6 +18,10 @@
 | `threejs-game-ui-designer` | 捕获固定桌面1440×900和390×844，窄屏模拟不等于真机；UI不复制规则，供给仍是三实体而非三选一弹窗。 |
 
 强制项目依据为[Art Bible](arena-art-bible.md)、[美术音频流程](arena-art-and-audio-development-flow.md)、[A0–A7对齐矩阵](arena-art-development-alignment-matrix.md)和[A1.0合同](arena-art-supply-presentation-contract-a1.0.md)。
+
+## 已具备的只读生命周期合同
+
+开发侧签核提交`f80307b375eb9f8f5380372e5b002d1eb86a4df7`提供schema v2只读投影，并由A1.1机器账本固定合同、Timeline producer、MatchCore过滤和正式Bot消费边界的文件hash。该合同将projection绑定同一public snapshot的`snapshotTick`与`snapshotEventSequence`，每个active实体公开`remainingTicks`；`+600` pre-step以`pendingExpiryEquipmentInstanceIds`、`resyncReadiness=not-ready-pre-expiry`和`pendingAuthorityTick=snapshotTick`保留非交互terminal identity，恢复消费者必须等待下一份`ready`投影。该事实只证明表现层未来已有可消费的只读上游合同，不代表A1 adapter、捕获夹具或视觉/音频样件存在。
 
 ## 资产与权利审计结论
 
@@ -33,20 +37,20 @@
 
 启动前方案候选固定两个浏览器视口：桌面`1440×900@1x`与窄屏`390×844@1x`；后者只作确定性窄屏证据，不替代真实iOS/Android。夹具形成时还必须记录浏览器版本、GPU、OS、DPR与构建commit。
 
-- 固定60Hz权威tick、30 FPS表现终态；预热300 tick、采样1800 tick、三次重复，逐帧核对`599/600/601`。
+- 固定60Hz权威tick、30 FPS表现终态；预热300 tick、采样1800 tick、三次重复，逐帧核对`599/600/601`，同时记录`snapshotTick/snapshotEventSequence`、`remainingTicks`、`pendingExpiryEquipmentInstanceIds`、`resyncReadiness`和`pendingAuthorityTick`，不得由表现层重算生命周期。
 - 预算候选：3 marker；桌面/移动粒子72/36；1 additive、0 distortion；供给voice最多4且无倒计时loop；桌面overdraw平均/峰值≤4×/8×，移动≤2×/4×；p95帧≤33.33ms，供给GPU增量≤2ms；20周期settle后heap增长≤1 MiB；destroy后自有资源为0。
 - 捕获七项：30 FPS终态、GPU/帧、overdraw、内存、voice、暂停恢复、双destroy。暂停五秒墙钟期间tick/Cue/粒子不得推进；恢复不得补播one-shot；两次destroy都安全且资源、监听器、voice归零。
 
-这些数字是待批准的启动前上限，不是测量结果。浏览器/GPU身份、夹具、真实iOS/Android、active lifecycle投影、A0.3十人和A1.1签核仍缺。任何截图、trace或实测值只能在代表样件形成后进入独立样件通过门。
+这些数字是待批准的启动前上限，不是测量结果。active lifecycle projection合同已具备；浏览器/GPU身份、capture harness、供给专用图标、真实iOS/Android、A0.3十人和A1.1整体签核仍缺。任何截图、trace或实测值只能在代表样件形成后进入独立样件通过门。
 
 ## 机器门与失败关闭
 
-检查器验证根对象与嵌套对象exact keys、基线、仓库路径不越界且不经symlink逃逸、byteLength/SHA-256、许可证明、无字节不得hash/批准、固定视口/预算/窗口、设备缺口及所有下游false。身份不能只靠台账自报：代码固定四个repository audit的路径和顺序，按ID固定四个equipment与四个audio的artifact、revision、许可身份/布尔、用途和撤回边界，并固定三个VFX的pending-rights/source/use全文。A1.0固定路径/hash后还会解析实际JSON，核对`id/status`、A1.0自身硬门true及全部下游false。
+检查器验证根对象与嵌套对象exact keys、基线、仓库路径不越界且不经symlink逃逸、byteLength/SHA-256、许可证明、无字节不得hash/批准、固定视口/预算/窗口、设备缺口及所有下游false。身份不能只靠台账自报：代码固定四个repository audit的路径和顺序，按ID固定四个equipment与四个audio的artifact、revision、许可身份/布尔、用途和撤回边界，并固定三个VFX的pending-rights/source/use全文。A1.0固定路径/hash后还会解析实际JSON，核对`id/status`、A1.0自身硬门true及全部下游false；schema v2 lifecycle projection另固定`f80307b`、六个源文件path/size/hash、六个消费字段及pre-step不可恢复边界。
 
-篡改探针除未来字段、hash/尺寸漂移、路径逃逸、许可撤回缺失、无字节假批准、诊断图升级、预算时序倒置、设备缺口删除和下游门误开外，还会把`path+byteLength+sha256`整体一致替换成仓库中另一个真实文件，分别覆盖repository audit、equipment、audio和A1.0 upstream；这些coherent substitution必须全部失败关闭。
+篡改探针除未来字段、hash/尺寸漂移、路径逃逸、许可撤回缺失、无字节假批准、诊断图升级、预算时序倒置、设备缺口删除和下游门误开外，还会把`path+byteLength+sha256`整体一致替换成仓库中另一个真实文件，分别覆盖repository audit、equipment、audio、A1.0 upstream和active lifecycle projection源文件；投影可用性回退、commit/schema/字段/resync边界漂移也必须失败关闭。
 
 本门不运行A1 adapter测试、不做浏览器/Simulator捕获，也不运行全量构建。回滚只删除A1.1文档、台账、检查器与索引引用；不得删除正式资产、许可、A0.3/A1.0证据或并行P1文件。
 
 ## 候选自评
 
-合同/治理完整度仍为`92/100`：仓库资产事实19/20、权利与撤回18/20、VFX/音频候选诚实性17/20、测量可重复性19/20、失败关闭治理19/20。身份固定修复关闭了检查器漏洞，但没有新增资产、批准、夹具、设备、真人或运行时证据，因此不提高分数；`hardGatePassed=false`。成熟度继续单列为资产10/100、设备0/100、真人0/100、运行时0/100。
+合同/治理完整度仍为`92/100`：仓库资产事实19/20、权利与撤回18/20、VFX/音频候选诚实性17/20、测量可重复性19/20、失败关闭治理19/20。`f80307b`只关闭只读生命周期合同缺口，没有新增或批准资产、夹具、浏览器/GPU、设备、真人、运行时adapter或样件实测，因此不提高分数；A1.1自身`hardGatePassed=false`。成熟度继续单列为资产10/100、设备0/100、真人0/100、运行时0/100。

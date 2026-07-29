@@ -18,6 +18,9 @@ function copyFile(root: string, path: string): void {
 }
 function collectPaths(value: JsonRecord): string[] {
   const paths = new Set<string>([LEDGER, String(object(value.upstream).a1_0ContractPath)]);
+  for (const entry of objectArray(object(object(value.upstream).activeLifecycleProjectionContract).sourceArtifacts)) {
+    paths.add(String(entry.path));
+  }
   for (const entry of objectArray(value.repositoryAudits)) paths.add(String(entry.path));
   for (const entry of objectArray(value.equipmentInputAudit)) {
     paths.add(String(object(entry.artifact).path));
@@ -54,7 +57,7 @@ try {
 
   mustFail('future ledger field', (v) => { v.future = true; });
   mustFail('baseline drift', (v) => { v.baselineCommit = '0'.repeat(40); });
-  mustFail('candidate promoted', (v) => { v.status = 'ready'; });
+  mustFail('candidate promoted', (v) => { v.status = 'preproduction-readiness-ready'; });
   mustFail('future upstream field', (v) => { object(v.upstream).future = true; });
   mustFail('coherent A1.0 upstream substitution', (v) => {
     const replacement = objectArray(v.repositoryAudits)[0]!;
@@ -62,7 +65,18 @@ try {
     object(v.upstream).a1_0ContractSha256 = replacement.sha256;
   });
   mustFail('A0.3 humans falsified', (v) => { object(v.upstream).a0_3QualifiedHumanParticipants = 10; });
-  mustFail('active projection falsified', (v) => { object(v.upstream).activeLifecycleProjectionAvailable = true; });
+  mustFail('active projection availability regressed', (v) => { object(v.upstream).activeLifecycleProjectionAvailable = false; });
+  mustFail('active projection commit drift', (v) => { object(object(v.upstream).activeLifecycleProjectionContract).signedCommit = '0'.repeat(40); });
+  mustFail('active projection schema drift', (v) => { object(object(v.upstream).activeLifecycleProjectionContract).schemaVersion = 1; });
+  mustFail('active projection source substitution', (v) => {
+    objectArray(object(object(v.upstream).activeLifecycleProjectionContract).sourceArtifacts)[0] = structuredClone(objectArray(v.repositoryAudits)[0]!);
+  });
+  mustFail('active projection binding removed', (v) => {
+    object(object(v.upstream).activeLifecycleProjectionContract).requiredBindings = ['snapshotTick'];
+  });
+  mustFail('active projection resync boundary weakened', (v) => {
+    object(object(v.upstream).activeLifecycleProjectionContract).recoveryBoundary = 'pre-step may recover';
+  });
   mustFail('repository hash drift', (v) => { objectArray(v.repositoryAudits)[0]!.sha256 = '0'.repeat(64); });
   mustFail('repository artifact future field', (v) => { objectArray(v.repositoryAudits)[0]!.future = true; });
   mustFail('coherent repository audit substitution', (v) => { objectArray(v.repositoryAudits)[0] = structuredClone(objectArray(v.repositoryAudits)[1]!); });
@@ -124,7 +138,13 @@ try {
   mustFail('maturity inflated', (v) => { object(object(v.score).maturity).device = 100; });
   mustFail('future score field', (v) => { object(v.score).future = true; });
   mustFail('future dimension field', (v) => { objectArray(object(v.score).dimensions)[0]!.future = true; });
-  for (const gate of Object.keys(object(source.hardGates))) mustFail(`gate opened: ${gate}`, (v) => { object(v.hardGates)[gate] = true; });
+  for (const gate of Object.keys(object(source.hardGates))) {
+    if (gate === 'activeLifecycleProjectionAvailable') {
+      mustFail(`gate regressed: ${gate}`, (v) => { object(v.hardGates)[gate] = false; });
+    } else {
+      mustFail(`gate opened: ${gate}`, (v) => { object(v.hardGates)[gate] = true; });
+    }
+  }
 
   writeFileSync(ledgerPath, `${JSON.stringify(source, null, 2)}\n`);
   const symlinkTarget = resolve(tempRoot, String(object(objectArray(source.equipmentInputAudit)[0]!.artifact).path));
@@ -134,7 +154,7 @@ try {
   if (symlinkResult.status === 0) throw new Error('probe unexpectedly passed: symlink artifact');
   expectedFailures += 1;
 
-  process.stdout.write(`${JSON.stringify({ positiveCandidate: 1, expectedFailures, status: 'pass', hardGatePassed: false, representativeSpecimenStarted: false })}\n`);
+  process.stdout.write(`${JSON.stringify({ positiveCandidate: 1, expectedFailures, status: 'pass', activeLifecycleProjectionAvailable: true, hardGatePassed: false, representativeSpecimenStarted: false })}\n`);
 } finally {
   rmSync(tempRoot, { recursive: true, force: true });
   rmSync(outsideRoot, { recursive: true, force: true });

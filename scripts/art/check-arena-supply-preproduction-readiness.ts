@@ -6,12 +6,24 @@ type JsonRecord = Record<string, unknown>;
 
 const ROOT = resolve(process.env.ARENA_A11_CHECK_ROOT ?? resolve(import.meta.dirname, '../..'));
 const LEDGER_PATH = 'docs/quality/art/supply/arena-a1.1-preproduction-readiness-v1.json';
-const BASELINE = '21948d43f00140036699c8ff2d7fe5e71723dedd';
+const BASELINE = 'f80307b375eb9f8f5380372e5b002d1eb86a4df7';
 const FALSE_GATES = [
   'a1_1CoordinatorSignOff', 'equipmentInputApproved', 'temporaryVfxSourcesApproved', 'temporaryAudioSourcesApproved',
-  'capturePlanApproved', 'a0_3Passed', 'activeLifecycleProjectionAvailable', 'a1RepresentativeSpecimenStarted',
+  'capturePlanApproved', 'a0_3Passed', 'a1RepresentativeSpecimenStarted',
   'a1Passed', 'blockoutAllowed', 'productionVfxIntegrated', 'productionAudioIntegrated', 'deviceVerified',
   'humanVerified', 'finalPassed',
+] as const;
+const ACTIVE_LIFECYCLE_PROJECTION_ARTIFACTS = [
+  { path: 'packages/arena-contracts/src/arena-public-supply-projection.ts', byteLength: 29094, sha256: 'b1ad32bc9e3d023af0cfbcbac41c31efee69d291de856e1914e5622dfa5ec7ec' },
+  { path: 'packages/arena-contracts/src/match-snapshot.ts', byteLength: 19417, sha256: '89ca74403445cbe8333e68e0e907a914500dce51b3bcf3cbce8ebb928e51fe38' },
+  { path: 'packages/arena-equipment/src/equipment-supply-timeline-system.ts', byteLength: 26241, sha256: '57bf117fb918724e77bd3ec0bb2f3dc0727803747b335f6039d13aab29937d0e' },
+  { path: 'packages/arena-match/src/match-core.ts', byteLength: 58363, sha256: '208a736b7d95c654bc99592bb0b82a14fa760c117d9afd4d30dbf744b10f7347' },
+  { path: 'packages/arena-bot/src/bot-observation.ts', byteLength: 36050, sha256: 'ceaaaf020a2a2168e52aa4356dd32feb88736fbfd894c751fc404b863bc2dac3' },
+  { path: 'packages/arena-bot/src/bot-controller.ts', byteLength: 16293, sha256: '75ce2cd9d69822ffe38ffb67f14467b63df7cde49ea0b33b34653a7f7d0fb99d' },
+] as const;
+const ACTIVE_LIFECYCLE_BINDINGS = [
+  'snapshotTick', 'snapshotEventSequence', 'remainingTicks', 'pendingExpiryEquipmentInstanceIds',
+  'resyncReadiness', 'pendingAuthorityTick',
 ] as const;
 const EQUIPMENT_IDS = [
   'a11-equipment-shield-round-glb', 'a11-equipment-shield-texture',
@@ -147,12 +159,12 @@ exactKeys(ledger, [
   'equipmentInputAudit', 'missingEquipmentInputs', 'temporarySourceCandidates', 'measurementPlan', 'hardGates',
   'score', 'missingMandatorySkillReferences', 'rollback',
 ], 'ledger');
-if (ledger.schemaVersion !== 1 || ledger.id !== 'arena.art.supply-preproduction-readiness.a1.1.v1') fail('identity drift');
-if (ledger.status !== 'preproduction-readiness-candidate' || ledger.baselineCommit !== BASELINE || ledger.reviewedAt !== '2026-07-28') fail('status/baseline/date drift');
+if (ledger.schemaVersion !== 2 || ledger.id !== 'arena.art.supply-preproduction-readiness.a1.1.v1') fail('identity drift');
+if (ledger.status !== 'upstream-contract-ready-candidate' || ledger.baselineCommit !== BASELINE || ledger.reviewedAt !== '2026-07-29') fail('status/baseline/date drift');
 if (ledger.scope !== 'source-rights-and-measurement-plan-only-no-specimen-or-runtime') fail('scope expanded');
 
 const upstream = object(ledger.upstream, 'upstream');
-exactKeys(upstream, ['a1_0ContractPath', 'a1_0ContractSha256', 'a1_0Status', 'a0_3QualifiedHumanParticipants', 'activeLifecycleProjectionAvailable'], 'upstream');
+exactKeys(upstream, ['a1_0ContractPath', 'a1_0ContractSha256', 'a1_0Status', 'a0_3QualifiedHumanParticipants', 'activeLifecycleProjectionAvailable', 'activeLifecycleProjectionContract'], 'upstream');
 if (upstream.a1_0ContractPath !== 'docs/quality/art/supply/arena-a1.0-supply-presentation-contract-v1.json' || upstream.a1_0ContractSha256 !== '719e68766a03c82d76ef1eb49eeab29bc5045c57dad450032f96db26f410ed1e' || upstream.a1_0Status !== 'contract-ready') fail('A1.0 pinned path/hash/status drift');
 const a10Bytes = readFileSync(repositoryFile(upstream.a1_0ContractPath, 'upstream.a1_0ContractPath'));
 if (upstream.a1_0ContractSha256 !== sha256(a10Bytes)) fail('A1.0 bytes drift');
@@ -165,7 +177,15 @@ if (a10Gates.a1_0CoordinatorSignOff !== true || a10Gates.a1_0ContractPassed !== 
 for (const gate of ['a1RepresentativeSpecimenStarted', 'a1Passed', 'a0_3Passed', 'blockoutAllowed', 'productionVfxIntegrated', 'productionAudioIntegrated', 'deviceVerified', 'humanVerified', 'finalPassed']) {
   if (a10Gates[gate] !== false) fail(`actual A1.0 downstream gate ${gate} must remain false`);
 }
-if (upstream.a0_3QualifiedHumanParticipants !== 0 || upstream.activeLifecycleProjectionAvailable !== false) fail('blocked upstream input was falsely closed');
+if (upstream.a0_3QualifiedHumanParticipants !== 0 || upstream.activeLifecycleProjectionAvailable !== true) fail('upstream availability/human boundary drift');
+const activeLifecycle = object(upstream.activeLifecycleProjectionContract, 'upstream.activeLifecycleProjectionContract');
+exactKeys(activeLifecycle, ['status', 'signedCommit', 'schemaVersion', 'sourceArtifacts', 'requiredBindings', 'recoveryBoundary'], 'upstream.activeLifecycleProjectionContract');
+if (activeLifecycle.status !== 'contract-available-upstream-signed' || activeLifecycle.signedCommit !== BASELINE || activeLifecycle.schemaVersion !== 2) fail('active lifecycle contract identity drift');
+const activeLifecycleArtifacts = records(activeLifecycle.sourceArtifacts, 'upstream.activeLifecycleProjectionContract.sourceArtifacts');
+exactArray(activeLifecycleArtifacts, ACTIVE_LIFECYCLE_PROJECTION_ARTIFACTS, 'active lifecycle source artifacts');
+for (const [index, artifact] of activeLifecycleArtifacts.entries()) verifyArtifact(artifact, `activeLifecycleProjectionContract.sourceArtifacts[${index}]`);
+exactArray(activeLifecycle.requiredBindings, ACTIVE_LIFECYCLE_BINDINGS, 'active lifecycle required bindings');
+if (activeLifecycle.recoveryBoundary !== 'not-ready-pre-expiry is a current-tick command view only; recovery must wait for the next ready projection') fail('active lifecycle recovery boundary drift');
 
 const audits = records(ledger.repositoryAudits, 'repositoryAudits');
 if (audits.length !== 4) fail('four repository audits required');
@@ -248,11 +268,12 @@ for (const [index, capture] of captures.entries()) {
   for (const key of ['window', 'method', 'pass']) if (typeof capture[key] !== 'string' || String(capture[key]).length < 20) fail(`capture[${index}].${key} incomplete`);
 }
 if (typeof plan.evidenceBoundary !== 'string' || !String(plan.evidenceBoundary).includes('after a representative specimen exists')) fail('measurement evidence timing boundary missing');
-exactArray(plan.missingExecutionInputs, ['capture harness implementation', 'approved browser and GPU identity', 'real iOS device', 'real Android device', 'readonly active lifecycle projection', 'A0.3 ten-person human approval', 'A1.1 coordinator approval'], 'measurementPlan.missingExecutionInputs');
+exactArray(plan.missingExecutionInputs, ['capture harness implementation', 'approved browser and GPU identity', 'real iOS device', 'real Android device', 'A0.3 ten-person human approval', 'A1.1 coordinator approval'], 'measurementPlan.missingExecutionInputs');
 
 const gates = object(ledger.hardGates, 'hardGates');
-exactKeys(gates, FALSE_GATES, 'hardGates');
+exactKeys(gates, [...FALSE_GATES, 'activeLifecycleProjectionAvailable'], 'hardGates');
 for (const gate of FALSE_GATES) if (gates[gate] !== false) fail(`gate ${gate} must remain false`);
+if (gates.activeLifecycleProjectionAvailable !== true) fail('active lifecycle projection prerequisite must remain available');
 const score = object(ledger.score, 'score');
 exactKeys(score, ['basis', 'total', 'maximum', 'hardGatePassed', 'dimensions', 'maturity'], 'score');
 if (score.basis !== 'A1.1 preproduction source audit and measurement-plan contract only; no source approval, specimen, runtime, device or human maturity' || score.total !== 92 || score.maximum !== 100 || score.hardGatePassed !== false) fail('score basis/value drift');
@@ -273,4 +294,4 @@ exactArray(ledger.missingMandatorySkillReferences, ['docs/collaboration-protocol
 for (const path of strings(ledger.missingMandatorySkillReferences, 'missingMandatorySkillReferences')) if (existsSync(resolve(ROOT, path))) fail(`skill reference now exists and audit must be updated: ${path}`);
 if (typeof ledger.rollback !== 'string' || !ledger.rollback.includes('preserve A1.0')) fail('rollback boundary incomplete');
 
-process.stdout.write(`${JSON.stringify({ status: ledger.status, equipmentAudits: equipment.length, temporaryCandidates: candidates.length, capturePlans: captures.length, score: score.total, hardGatePassed: false, a0_3Humans: 0, representativeSpecimenStarted: false })}\n`);
+process.stdout.write(`${JSON.stringify({ status: ledger.status, equipmentAudits: equipment.length, temporaryCandidates: candidates.length, capturePlans: captures.length, score: score.total, hardGatePassed: false, activeLifecycleProjectionAvailable: true, a0_3Humans: 0, representativeSpecimenStarted: false })}\n`);
