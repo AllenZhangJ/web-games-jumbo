@@ -881,6 +881,9 @@ function readProgressFile(
       if (!fdBefore.isFile()) throw new Error('PA7 progress fd 必须是普通文件。');
       if (!sameProgressFileInode(pathBefore, fdBefore)) continue;
       if (!sameProgressFileIdentity(pathBefore, fdBefore)) {
+        // chmod/link-count publication bookkeeping may advance ctime without changing bytes.
+        // Retry that bounded race, but keep size/mtime drift fail-closed.
+        if (sameProgressFileContentIdentity(pathBefore, fdBefore)) continue;
         throw new Error('PA7 progress 同 inode metadata 在打开时漂移。');
       }
       const candidateText = readFileSync(descriptor, 'utf8');
@@ -899,9 +902,12 @@ function readProgressFile(
         continue;
       }
       if (!sameProgressFileIdentity(fdBefore, fdAfter)) {
-        throw new Error('PA7 progress fd 同 inode ctime 在读取期间漂移。');
+        // Content identity was checked above, so the remaining delta is ctime-only.
+        // Require a fresh stable generation instead of accepting or rejecting the transient sample.
+        continue;
       }
       if (!sameProgressFileIdentity(fdAfter, pathAfter)) {
+        if (sameProgressFileContentIdentity(fdAfter, pathAfter)) continue;
         throw new Error('PA7 progress 同 inode metadata 在读取后漂移。');
       }
       text = candidateText;

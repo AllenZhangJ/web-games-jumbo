@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
+  chmodSync,
   linkSync,
   renameSync,
   symlinkSync,
@@ -1442,6 +1443,40 @@ test('PA7 progress fd capture retries one ordinary supersede but bounds churn an
     && error.kind === 'timeout');
   assert.equal(replacedAfterRead, true);
   assert.equal(acceptedReplacement, true);
+
+  let changedCtimeOnce = false;
+  let acceptedAfterCtimeRetry = false;
+  await assert.rejects(runArenaPa7StrictJsonWorkerV1({
+    ...options(),
+    inactivityTimeoutMs: 150,
+    progressReadHooks: {
+      afterPathBefore(progressPath) {
+        if (changedCtimeOnce) return;
+        chmodSync(progressPath, 0o400);
+        changedCtimeOnce = true;
+      },
+      afterProgressAccepted() {
+        acceptedAfterCtimeRetry = true;
+      },
+    },
+  }), (error: unknown) => error instanceof ArenaPa7FormalWorkerFailureV1
+    && error.kind === 'timeout');
+  assert.equal(changedCtimeOnce, true);
+  assert.equal(acceptedAfterCtimeRetry, true);
+
+  let ctimeChurnCount = 0;
+  await assert.rejects(runArenaPa7StrictJsonWorkerV1({
+    ...options(),
+    progressReadHooks: {
+      afterPathBefore(progressPath) {
+        chmodSync(progressPath, ctimeChurnCount % 2 === 0 ? 0o400 : 0o600);
+        ctimeChurnCount += 1;
+      },
+    },
+  }), (error: unknown) => error instanceof ArenaPa7FormalWorkerFailureV1
+    && error.kind === 'progress-invalid'
+    && /持续替换|稳定样本/i.test(error.message));
+  assert.equal(ctimeChurnCount, 3);
 
   const churnCandidates = Array.from({ length: 3 }, (_, index) => {
     const candidate = path.join(directory, `prebuilt-progress-churn-${index}.json`);
