@@ -4,6 +4,7 @@
 
 - 状态：已接受的执行基线
 - 日期：2026-07-28
+- 当前修订：2026-08-03 按 [ADR-115](../decisions/115-arena-v2-deferred-joint-performance-gate.md)一次性调整 P1 内部性能执行顺序；不改变 P1→P2 产品阶段硬门
 - 目标：把 Arena V2 的研究结论按 `Rule → Core → Bot → Presentation → Platform` 迁入唯一生产游戏
 - 边界：本计划不把研究原型、自动化通过、浏览器通过、真机通过或真人通过互相替代
 
@@ -87,6 +88,24 @@
 - P5 以11页面和 HUD 为批次复核 DOM/Canvas 同源、48px 触控、390×844 无溢出、目标设备声音开关和最终反馈；浏览器或 Node 证据不能替代真机/真人证据。
 - `arena.stage7.formal-asset-budget.v1`、三端 4 MiB delivery budget、`npm run arena:assets:budget`、`npm run check:formal-assets` 和 `npm run check:third-party-assets` 是表现资产的共同前门禁。
 
+### 2.6 P1 一次性延期性能与最终同源联合门
+
+按 [ADR-115](../decisions/115-arena-v2-deferred-joint-performance-gate.md)，PA6 本轮只延期执行，不豁免、不通过：状态继续为
+`coordinator-correctness-approved / performance-deferred / formalGate=false`，既有正式 CPU 红证据继续有效。
+
+为减少中间性能轮被后续源码变化必然作废的重复工作，P1 内部允许在不进入 P2 的前提下先完成最终性能前必须冻结的非性能实现：PA7-0 合同、PA7 A/B runner/evidence、P1-PP0–PP3、A1.0-v2 联合反证以及主协调共享接线。每个小门仍要求零重叠文件域、六维自检加变更治理、定向红绿轮和主协调独立验收；开发/美术线程不得 commit/push 或运行性能采样。
+
+截至 2026-08-04，PA7-0.2–0.5 与 lane A/B 非性能实现已分别完成签核，lane A/B 为 `96/100`、`97/100`。P1-PP0、PP1、PP2、PP3a、PP3b 已分别以 `95/100`、`96/100`、`95/100`、`97/100`、`96/100` 完成主协调签核，A1.0-v2 当前源码合同为 `94/100`。PP3b 已闭合 platform-neutral host、三端隔离 entry/build、PP2 build-side attestation、A1.0-v2 原字节与 production reachability；其 formal index 明确保持 `deviceEvidenceStatus=not-run / formalGate=false`。主协调中央接线、architecture/reachability、116 文件非性能 Node 集、140 文件 717/717 覆盖率门、三端 Product build/manifest、生产产物门与正式资产预算均已通过；Web launch 子路径隔离、共享表现 helper 去重及 [ADR-117](../decisions/117-arena-v2-production-error-catalog.md) 的三端稳定诊断目录在不改变规则、公开文案与画质的前提下关闭了 Web JavaScript 门，微信/抖音则以 ES2020、包内 CommonJS 共享块和原子候选发布关闭包体门。当前 dirty candidate 的 Web/微信/抖音 JavaScript 分别为 `1,567,050 B / 1,668,921 B / 1,668,921 B`，总交付分别为 `4,144,900 B / 3,997,267 B / 3,997,242 B`，全部低于既有阈值；诊断目录正文仅由 Web 交付，小游戏各携带 `250 B` 同源 reference。保守 Terser 候选因实测体积回退已撤回。包体开发门已关闭，但工作树仍 dirty，尚未形成 clean source freeze；PP2/PP3b 完成也不表示七目标设备已经运行或通过，不改变 PA6/PA7 `formalGate=false`，不开放 P2、A2、commit 或 push。
+
+完整非性能正确性门通过后，主协调才可建立本地 `evidence-candidate`，并在同一 clean source identity 上依次执行：
+
+```text
+PA6 ABBA×3
+  → PA7 300 cases / 120 unique seeds / 2500 ticks / doubleRunsPerCase=2
+```
+
+PA6 失败即停止 PA7，修复后在新 source 上从零重跑；任一后续源码变化同时使两份性能证据过期。该例外只调整 P1 内部执行顺序，不允许把 P1 写成 `advance`，也不开放 P2 正式 Mode、A2、设备/真人通过、发布或 push。
+
 ## 3. P0：规则与文档唯一真值冻结
 
 ### 目标
@@ -136,15 +155,22 @@
 
 - Bot 只能观察公开供给位置和剩余 tick，通过普通移动决定是否争夺；不能调用拾取或替换接口。
 - 表现层只消费权威剩余 tick、拾取、替换和过期事件，不运行删除定时器。
+- P1 必须按[ADR-113](../decisions/113-arena-v2-supply-presentation-adapter-boundary.md)提供一套生产级供给表现 adapter：只接收冻结的只读投影和稳定事件，输出场上标记、剩余 tick、拾取/替换/过期 Cue 与独立有界调试快照；不得从坐标、动画、声音完成、墙钟或事件到达先后重新判定规则。
+- P1 内部开发和性能验证顺序按 [ADR-115](../decisions/115-arena-v2-deferred-joint-performance-gate.md)执行；本轮跳过 PA6 只表示最终同源联合门延期，不减少任何性能阈值、样本或 P1 硬门。
+- P2 正式生存 Mode 尚未开放时，P1 adapter 只能由开发/测试 acceptance harness 驱动。harness 必须与默认 Product 入口和发布产物隔离，不能借 P1 验收提前暴露正式生存、三选一弹窗、新操作键或第二套 authority。
+- A1.0按[ADR-114](../decisions/114-arena-v2-art-evidence-versioning-and-joint-gate.md)保留历史v1并在PP0/PP1候选后追加当前源码v2；A1.0/A1.1机器包必须在最终source identity上重建并通过后才能用于代表样件或P1美术验收。历史94/92分和可定位字段不能替代当前sourceAudit、25项adapter矩阵、来源/预算与设备证据。
 - 前后台、暂停、30 FPS 表现和恢复追赶不得改变 600 tick 结果。
+- P1 设备证据必须使用独立的供给验收 Definition；现有通用 Stage 8 产品闭环记录只能复用同一 clean source/build 下的重叠原始产物，不能替代供给专属检查。Web 必须覆盖 `390×844` 与 `1440×900`，微信/抖音开发者工具及 iOS/Android 真机必须分别形成目标记录。
 
 ### 测试矩阵
 
 - 空槽拾取、持有者替换、拒绝双持、旧武器回收；
 - 599/600/601 tick 边界；过期与拾取同 tick；
-- 1/2/4 人同 tick 竞争及输入顺序置换；
+- EquipmentSystem/拾取Resolver层覆盖1/2/4个竞争者的同tick裁决及输入顺序置换；P1正式MatchCore继续使用既有2人模型。完整2–4人权威参与者、Replay、Session与结果属于P2，不是P1 advance前置，不能把隔离事务测试误报为4人比赛支持，也不能让P1/P2形成循环依赖；
 - 替换发生在前摇、冷却、受击、掉落、淘汰和比赛结束临界 tick；
 - 暂停恢复、Replay 二次执行、序列化恢复和未知 Definition 失败关闭；
+- 三个标记且无弹窗/额外输入、1200/2400 波次、权威 `remainingTicks`、相对出生 tick 的 599/600/601、原子替换、catch-up 不重复一次性 Cue、低动效/静音等效、资产失败回退和双次 destroy 资源清零；
+- acceptance harness 不进入默认 Product reachability、三端发布清单或正式资产清单；测试构建身份必须与被验收 adapter 的 clean source identity 一致；
 - 100+ seed 压力和长局实例上限无增长。
 
 ### 评分
@@ -163,6 +189,8 @@
 
 - 600 tick 回收和持有者原子替换均有黄金 Replay。
 - 现有 1v1 拾取语义的预期变化有独立 ADR/行为映射，不允许静默改变。
+- 供给表现 adapter 的自动化、Web 双视口和六个微信/抖音目标记录全部通过；暂停/前后台、catch-up、低动效、静音、资产失败和清理都绑定同一 clean source/build/content identity。
+- A0.3 至少 10 名合格真人通过并由主协调签核；A1.1 在最终源码身份上重建并通过，A1 代表样件完成独立表现/资源门。历史分、代理样本或通用 Stage 8 记录不能替代这些证据。
 - 未通过不得进入正式生存 Mode 或 HUD 开发。
 
 ## 5. P2：竞速与生存正式 MatchCore

@@ -10,7 +10,7 @@ import {
   requireArenaPublicSupplyProjection,
   type ArenaPublicSupplyProjection,
   type ArenaPublicSupplyProjectionLifecycleContract,
-  type ArenaMatchSnapshot,
+  type ArenaMapOccurrenceSnapshot,
   type ArenaMapSnapshot,
   type DeepReadonly,
 } from '@number-strategy-jump/arena-contracts';
@@ -47,6 +47,36 @@ const AFFORDANCE_KINDS: ReadonlySet<string> = new Set(['none', 'ignored', 'selec
 const ACTION_LANES: ReadonlySet<string> = new Set(['combat', 'locomotion', 'interaction']);
 const TRUSTED_SOURCE_SNAPSHOTS = new WeakSet<object>();
 const TRUSTED_ARENA_VIEWS = new WeakSet<object>();
+const COMMAND_SOURCE_V5_KEYS = new Set([
+  'schemaVersion', 'commandTick', 'commandEventSequence', 'phase', 'remainingTicks',
+  'self', 'opponent', 'botMobility', 'equipment', 'map',
+]);
+const COMMAND_SOURCE_V5_PARTICIPANT_KEYS = new Set([
+  'id', 'characterDefinitionId', 'status', 'lives', 'eliminations', 'deaths',
+  'hitstunTicks', 'invulnerableTicks', 'respawnTicks', 'action', 'actionRule',
+  'movement', 'equipment', 'position', 'velocity', 'facing', 'grounded',
+  'supportSurfaceId',
+]);
+const BOT_MOBILITY_SIDECAR_V5_KEYS = new Set([
+  'schemaVersion', 'tick', 'eventSequence', 'participantId', 'profile', 'channels',
+]);
+const BOT_MOBILITY_SIDECAR_V5_CHANNEL_KEYS = new Set(['jump', 'slam']);
+const V5_ACTION_KEYS = new Set(['definitionId', 'phase', 'ticksRemaining']);
+const V5_ACTION_RULE_KEYS = new Set([
+  'definitionId', 'targetingKind', 'range', 'minimumFacingDot',
+  'maximumVerticalDifference', 'windupTicks', 'activeTicks', 'recoveryTicks',
+]);
+const V5_MOVEMENT_KEYS = new Set([
+  'schemaVersion', 'mode', 'airJumpsUsed', 'crouchChargeTicks', 'grounded',
+]);
+const V5_HELD_EQUIPMENT_KEYS = new Set([
+  'instanceId', 'definitionId', 'cooldownRemainingTicks',
+]);
+const V5_VECTOR3_KEYS = new Set(['x', 'y', 'z']);
+const V5_VECTOR2_KEYS = new Set(['x', 'z']);
+const V5_OUTCOME_KEYS = new Set([
+  'kind', 'actionDefinitionId', 'lane', 'source', 'reason',
+]);
 
 function compareVisibleEquipment(
   left: Pick<BotVisibleEquipment, 'instanceId'>,
@@ -143,6 +173,39 @@ export interface BotParticipantObservation {
   readonly supportSurfaceId: string | null;
 }
 
+/** The participant shape shared by legacy and V5 policy inputs. */
+export type BotPolicyParticipant = Omit<BotParticipantObservation, 'actionAffordance'>;
+
+export interface BotMobilitySidecarV5 {
+  readonly schemaVersion: 2;
+  readonly tick: number;
+  readonly eventSequence: number;
+  readonly participantId: string;
+  readonly profile: 'bot-mobility';
+  readonly channels: Readonly<{
+    readonly jump: BotActionAffordanceOutcome;
+    readonly slam: BotActionAffordanceOutcome;
+  }>;
+}
+
+export interface BotCommandSourceV5 {
+  readonly schemaVersion: 5;
+  readonly commandTick: number;
+  readonly commandEventSequence: number;
+  readonly phase: string;
+  readonly remainingTicks: number;
+  readonly self: BotPolicyParticipant;
+  readonly opponent: BotPolicyParticipant;
+  readonly botMobility: BotMobilitySidecarV5;
+  readonly equipment: readonly BotVisibleEquipment[];
+  readonly map: BotRestrictedMapV5;
+}
+
+export type BotRestrictedMapOccurrenceV5 = Omit<ArenaMapOccurrenceSnapshot, 'privatePlan'>;
+export type BotRestrictedMapV5 = Omit<ArenaMapSnapshot, 'occurrences'> & {
+  readonly occurrences: readonly BotRestrictedMapOccurrenceV5[];
+};
+
 export interface BotSourceSnapshot {
   readonly tick: number;
   readonly activeTick: number;
@@ -184,6 +247,34 @@ export interface BotObservation {
   readonly objectives: readonly DeepReadonly<unknown>[];
 }
 
+export interface BotPolicyObservation {
+  readonly commandTick: number;
+  readonly observedTick: number;
+  readonly phase: string;
+  readonly remainingTicks: number;
+  readonly self: BotPolicyParticipant;
+  readonly opponent: BotPolicyParticipant;
+  readonly equipment: readonly BotVisibleEquipment[];
+  readonly map: ArenaMapSnapshot;
+  readonly arena: BotArenaView;
+  readonly actionRule: BotActionRule;
+  readonly opponentActionRule: BotActionRule;
+}
+
+export interface BotObservationV5 extends BotPolicyObservation {
+  readonly schemaVersion: 5;
+  readonly commandEventSequence: number;
+  readonly observedEventSequence: number;
+  readonly botMobility: BotMobilitySidecarV5;
+  readonly map: BotRestrictedMapV5;
+  readonly objectives: readonly DeepReadonly<unknown>[];
+}
+
+export interface BotCommandSourceReaderV5 {
+  readonly read: () => unknown;
+}
+
+
 export interface BotObservationOptions {
   readonly commandSnapshot: BotSourceSnapshot;
   readonly delayedSnapshot: BotSourceSnapshot;
@@ -213,6 +304,13 @@ function finiteVector(value: unknown, name: string): BotVector3 {
   };
 }
 
+function strictFiniteVector(value: unknown, name: string): BotVector3 {
+  const record = assertPlainRecord(value, name);
+  assertKnownKeys(record, V5_VECTOR3_KEYS, name);
+  assertRequiredDataKeys(record, V5_VECTOR3_KEYS, name);
+  return finiteVector(record, name);
+}
+
 function nullableString(value: unknown, name: string): string | null {
   return value === null || value === undefined ? null : assertNonEmptyString(value, name);
 }
@@ -234,11 +332,37 @@ function readOptionalDataProperty(record: object, key: string, name: string): un
   return descriptor.value;
 }
 
+function assertRequiredDataKeys(
+  value: object,
+  keys: ReadonlySet<string>,
+  name: string,
+): void {
+  for (const key of keys) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (
+      !descriptor
+      || !descriptor.enumerable
+      || !Object.prototype.hasOwnProperty.call(descriptor, 'value')
+    ) {
+      throw new TypeError(`${name}.${key} 必须是显式可枚举数据字段。`);
+    }
+  }
+}
+
 function freezeOwned<T>(value: T): DeepReadonly<T> {
   if (typeof value !== 'object' || value === null || Object.isFrozen(value)) {
     return value as DeepReadonly<T>;
   }
   for (const child of Object.values(value)) freezeOwned(child);
+  return Object.freeze(value) as DeepReadonly<T>;
+}
+
+function freezeV5Owned<T>(value: T, seen = new WeakSet<object>()): DeepReadonly<T> {
+  if (typeof value !== 'object' || value === null || seen.has(value)) {
+    return value as DeepReadonly<T>;
+  }
+  seen.add(value);
+  for (const child of Object.values(value)) freezeV5Owned(child, seen);
   return Object.freeze(value) as DeepReadonly<T>;
 }
 
@@ -293,13 +417,14 @@ function copyRawVisibleEquipment(
     definitionId: assertNonEmptyString(record.definitionId, `${name}.definitionId`),
     locationState: record.locationState,
     remainingTicks: projectedRemainingTicks ?? null,
-    position: finiteVector(record.position, `${name}.position`),
+    position: strictFiniteVector(record.position, `${name}.position`),
   };
 }
 
 function copyNormalizedVisibleEquipment(value: unknown, name: string): BotVisibleEquipment {
   const record = assertPlainRecord(value, name);
   assertKnownKeys(record, NORMALIZED_VISIBLE_EQUIPMENT_KEYS, name);
+  assertRequiredDataKeys(record, NORMALIZED_VISIBLE_EQUIPMENT_KEYS, name);
   if (
     record.locationState !== EQUIPMENT_LOCATION_STATE.SPAWNED
     && record.locationState !== EQUIPMENT_LOCATION_STATE.DROPPED
@@ -313,7 +438,7 @@ function copyNormalizedVisibleEquipment(value: unknown, name: string): BotVisibl
     remainingTicks: record.remainingTicks === null
       ? null
       : nonNegativeInteger(record.remainingTicks, `${name}.remainingTicks`),
-    position: finiteVector(record.position, `${name}.position`),
+    position: strictFiniteVector(record.position, `${name}.position`),
   };
 }
 
@@ -443,11 +568,11 @@ function normalizeBotProjectionView(
       equipmentInstanceId,
       equipmentDefinitionId,
       equipmentSpawnId,
-      spawnPosition: finiteVector(value.spawnPosition, `${itemName}.spawnPosition`),
+      spawnPosition: strictFiniteVector(value.spawnPosition, `${itemName}.spawnPosition`),
       spawnTick,
       expireTick,
       remainingTicks,
-      position: finiteVector(value.position, `${itemName}.position`),
+      position: strictFiniteVector(value.position, `${itemName}.position`),
     });
   });
   const supplyIds = new Set<string>();
@@ -776,111 +901,6 @@ function normalizeSourceSnapshot(
   return result;
 }
 
-/**
- * Adopts a public snapshot produced by the per-match trusted reader.
- * The reader has already constructed and deeply frozen the public projection;
- * this function only creates the Bot-shaped view and keeps the contract/tick
- * continuity checks in BotController. Untrusted callers must use
- * cloneBotSourceSnapshot instead.
- */
-export function createTrustedBotSourceSnapshot(
-  snapshot: DeepReadonly<ArenaMatchSnapshot>,
-  options: Readonly<{
-    readonly lifecycleContract?: ArenaPublicSupplyProjectionLifecycleContract;
-    readonly requireActiveSupplyProjection?: boolean;
-  }> = {},
-): BotSourceSnapshot {
-  if (!Number.isSafeInteger(snapshot.tick) || snapshot.tick < 0) {
-    throw new RangeError('trusted Bot snapshot.tick 无效。');
-  }
-  if (!Number.isSafeInteger(snapshot.eventSequence) || snapshot.eventSequence < 0) {
-    throw new RangeError('trusted Bot snapshot.eventSequence 无效。');
-  }
-  if (snapshot.participants.length !== 2) {
-    throw new RangeError('trusted Bot snapshot 必须包含两名参赛者。');
-  }
-  const projection = snapshot.activeSupplyProjection ?? null;
-  if (options.requireActiveSupplyProjection && projection === null) {
-    throw new RangeError('trusted survival Bot snapshot 缺少 activeSupplyProjection。');
-  }
-  if (
-    projection !== null
-    && (
-      projection.snapshotTick !== snapshot.tick
-      || projection.snapshotEventSequence !== snapshot.eventSequence
-    )
-  ) {
-    throw new RangeError('trusted Bot snapshot projection 与快照身份不一致。');
-  }
-  if (options.lifecycleContract !== undefined && projection === null) {
-    throw new RangeError('trusted survival Bot snapshot 缺少 lifecycle projection。');
-  }
-
-  const remainingTicksByInstance = new Map(
-    projection?.supplies.map(({ equipmentInstanceId, remainingTicks }) => (
-      [equipmentInstanceId, remainingTicks]
-    )) ?? [],
-  );
-  const participants = Object.freeze(snapshot.participants.map((participant, index) => {
-    if (participant.actionAffordance === undefined) {
-      throw new RangeError(`trusted Bot snapshot.participants[${index}] 缺少 actionAffordance。`);
-    }
-    return Object.freeze({
-      id: participant.id,
-      characterDefinitionId: participant.characterDefinitionId,
-      status: participant.status,
-      lives: participant.lives,
-      eliminations: participant.eliminations,
-      deaths: participant.deaths,
-      hitstunTicks: participant.hitstunTicks,
-      invulnerableTicks: participant.invulnerableTicks,
-      respawnTicks: participant.respawnTicks,
-      action: participant.action,
-      actionRule: participant.actionRule as BotActionRule,
-      movement: participant.movement,
-      actionAffordance: participant.actionAffordance as BotActionAffordance,
-      equipment: participant.equipment,
-      position: participant.position,
-      velocity: participant.velocity,
-      facing: participant.facing,
-      grounded: participant.grounded,
-      supportSurfaceId: participant.supportSurfaceId,
-    });
-  })) as readonly BotParticipantObservation[];
-  const equipment = snapshot.equipment
-    .filter(({ locationState }) => (
-      locationState === EQUIPMENT_LOCATION_STATE.SPAWNED
-      || locationState === EQUIPMENT_LOCATION_STATE.DROPPED
-    ))
-    .map((item, index) => {
-      if (item.position === null) {
-        throw new RangeError(`trusted Bot snapshot.equipment[${index}] 缺少 world position。`);
-      }
-      return Object.freeze({
-        instanceId: item.instanceId,
-        definitionId: item.definitionId,
-        locationState: item.locationState as 'spawned' | 'dropped',
-        remainingTicks: remainingTicksByInstance.get(item.instanceId) ?? null,
-        position: item.position,
-      });
-    })
-    .sort(compareVisibleEquipment);
-  const result = {
-    tick: snapshot.tick,
-    activeTick: snapshot.activeTick,
-    eventSequence: snapshot.eventSequence,
-    phase: snapshot.phase,
-    remainingTicks: snapshot.remainingTicks,
-    participants,
-    equipment: Object.freeze(equipment) as readonly BotVisibleEquipment[],
-    activeSupplyProjection: projection,
-    map: snapshot.map,
-  } satisfies BotSourceSnapshot;
-  const trusted = freezeOwned(result);
-  TRUSTED_SOURCE_SNAPSHOTS.add(trusted);
-  return trusted;
-}
-
 export function cloneBotSourceSnapshot(
   snapshot: unknown,
   options: Readonly<{
@@ -1025,6 +1045,382 @@ export function createBotObservation(options: unknown): BotObservation {
     arena,
     actionRule: self.actionRule,
     opponentActionRule: opponent.actionRule,
+    objectives: copiedObjectives,
+  });
+}
+
+function createBotMobilitySidecarV5(
+  tick: number,
+  eventSequence: number,
+  participant: BotParticipantObservation,
+  name: string,
+): BotMobilitySidecarV5 {
+  const affordance = participant.actionAffordance;
+  return freezeV5Owned({
+    schemaVersion: 2 as const,
+    tick,
+    eventSequence,
+    participantId: participant.id,
+    profile: 'bot-mobility' as const,
+    channels: {
+      jump: copyAffordanceOutcome(affordance.channels.jump, `${name}.channels.jump`),
+      slam: copyAffordanceOutcome(affordance.channels.slam, `${name}.channels.slam`),
+    },
+  });
+}
+
+function copyCommandParticipantV5(
+  value: unknown,
+  name: string,
+): BotPolicyParticipant {
+  const participant = assertPlainRecord(value, name);
+  assertKnownKeys(participant, COMMAND_SOURCE_V5_PARTICIPANT_KEYS, name);
+  assertRequiredDataKeys(participant, COMMAND_SOURCE_V5_PARTICIPANT_KEYS, name);
+  const action = assertPlainRecord(participant.action, `${name}.action`);
+  assertKnownKeys(action, V5_ACTION_KEYS, `${name}.action`);
+  assertRequiredDataKeys(action, V5_ACTION_KEYS, `${name}.action`);
+  const actionRule = assertPlainRecord(participant.actionRule, `${name}.actionRule`);
+  assertKnownKeys(actionRule, V5_ACTION_RULE_KEYS, `${name}.actionRule`);
+  assertRequiredDataKeys(actionRule, V5_ACTION_RULE_KEYS, `${name}.actionRule`);
+  const movement = assertPlainRecord(participant.movement, `${name}.movement`);
+  assertKnownKeys(movement, V5_MOVEMENT_KEYS, `${name}.movement`);
+  assertRequiredDataKeys(movement, V5_MOVEMENT_KEYS, `${name}.movement`);
+  const position = assertPlainRecord(participant.position, `${name}.position`);
+  assertKnownKeys(position, V5_VECTOR3_KEYS, `${name}.position`);
+  assertRequiredDataKeys(position, V5_VECTOR3_KEYS, `${name}.position`);
+  const velocity = assertPlainRecord(participant.velocity, `${name}.velocity`);
+  assertKnownKeys(velocity, V5_VECTOR3_KEYS, `${name}.velocity`);
+  assertRequiredDataKeys(velocity, V5_VECTOR3_KEYS, `${name}.velocity`);
+  const facing = assertPlainRecord(participant.facing, `${name}.facing`);
+  assertKnownKeys(facing, V5_VECTOR2_KEYS, `${name}.facing`);
+  assertRequiredDataKeys(facing, V5_VECTOR2_KEYS, `${name}.facing`);
+  if (participant.equipment !== null && participant.equipment !== undefined) {
+    const equipment = assertPlainRecord(participant.equipment, `${name}.equipment`);
+    assertKnownKeys(equipment, V5_HELD_EQUIPMENT_KEYS, `${name}.equipment`);
+    assertRequiredDataKeys(equipment, V5_HELD_EQUIPMENT_KEYS, `${name}.equipment`);
+  } else if (participant.equipment === undefined) {
+    throw new TypeError(`${name}.equipment 必须显式为 null 或 held equipment。`);
+  }
+  return {
+    id: assertNonEmptyString(participant.id, `${name}.id`),
+    characterDefinitionId: assertNonEmptyString(
+      participant.characterDefinitionId,
+      `${name}.characterDefinitionId`,
+    ),
+    status: typeof participant.status === 'string' && PARTICIPANT_STATUSES.has(participant.status)
+      ? participant.status
+      : (() => { throw new RangeError(`${name}.status 无效。`); })(),
+    lives: nonNegativeInteger(participant.lives, `${name}.lives`),
+    eliminations: nonNegativeInteger(participant.eliminations, `${name}.eliminations`),
+    deaths: nonNegativeInteger(participant.deaths, `${name}.deaths`),
+    hitstunTicks: nonNegativeInteger(participant.hitstunTicks, `${name}.hitstunTicks`),
+    invulnerableTicks: nonNegativeInteger(
+      participant.invulnerableTicks,
+      `${name}.invulnerableTicks`,
+    ),
+    respawnTicks: nonNegativeInteger(participant.respawnTicks, `${name}.respawnTicks`),
+    action: {
+      definitionId: nullableString(action.definitionId, `${name}.action.definitionId`),
+      phase: typeof action.phase === 'string' && ACTION_PHASES.has(action.phase)
+        ? action.phase
+        : (() => { throw new RangeError(`${name}.action.phase 无效。`); })(),
+      ticksRemaining: nonNegativeInteger(
+        action.ticksRemaining,
+        `${name}.action.ticksRemaining`,
+      ),
+    },
+    actionRule: copyActionRule(participant.actionRule, `${name}.actionRule`),
+    movement: copyMovement(participant.movement, `${name}.movement`),
+    equipment: copyHeldEquipment(participant.equipment, `${name}.equipment`),
+    position: finiteVector(participant.position, `${name}.position`),
+    velocity: finiteVector(participant.velocity, `${name}.velocity`),
+    facing: {
+      x: finite(facing.x, `${name}.facing.x`),
+      z: finite(facing.z, `${name}.facing.z`),
+    },
+    grounded: typeof participant.grounded === 'boolean'
+      ? participant.grounded
+      : (() => { throw new TypeError(`${name}.grounded 必须是布尔值。`); })(),
+    supportSurfaceId: nullableString(participant.supportSurfaceId, `${name}.supportSurfaceId`),
+  };
+}
+
+function copyCommandOutcomeV5(value: unknown, name: string): BotActionAffordanceOutcome {
+  const record = assertPlainRecord(value, name);
+  assertKnownKeys(record, V5_OUTCOME_KEYS, name);
+  assertRequiredDataKeys(record, V5_OUTCOME_KEYS, name);
+  return copyAffordanceOutcome(record, name);
+}
+
+function copyBotMobilitySidecarV5(
+  value: unknown,
+  name: string,
+  expectedTick: number,
+  expectedEventSequence: number,
+  expectedParticipantId: string,
+): BotMobilitySidecarV5 {
+  const sidecar = assertPlainRecord(value, name);
+  assertKnownKeys(sidecar, BOT_MOBILITY_SIDECAR_V5_KEYS, name);
+  assertRequiredDataKeys(sidecar, BOT_MOBILITY_SIDECAR_V5_KEYS, name);
+  if (sidecar.schemaVersion !== 2 || sidecar.profile !== 'bot-mobility') {
+    throw new RangeError(`${name}.schemaVersion/profile 无效。`);
+  }
+  const tick = nonNegativeInteger(sidecar.tick, `${name}.tick`);
+  const eventSequence = nonNegativeInteger(sidecar.eventSequence, `${name}.eventSequence`);
+  const participantId = assertNonEmptyString(sidecar.participantId, `${name}.participantId`);
+  if (
+    tick !== expectedTick
+    || eventSequence !== expectedEventSequence
+    || participantId !== expectedParticipantId
+  ) {
+    throw new RangeError(`${name} 与 command source identity 不一致。`);
+  }
+  const channels = assertPlainRecord(sidecar.channels, `${name}.channels`);
+  assertKnownKeys(channels, BOT_MOBILITY_SIDECAR_V5_CHANNEL_KEYS, `${name}.channels`);
+  assertRequiredDataKeys(channels, BOT_MOBILITY_SIDECAR_V5_CHANNEL_KEYS, `${name}.channels`);
+  return freezeV5Owned({
+    schemaVersion: 2 as const,
+    tick,
+    eventSequence,
+    participantId,
+    profile: 'bot-mobility' as const,
+    channels: {
+      jump: copyCommandOutcomeV5(channels.jump, `${name}.channels.jump`),
+      slam: copyCommandOutcomeV5(channels.slam, `${name}.channels.slam`),
+    },
+  });
+}
+
+function assertNoPrivatePlanDeep(
+  value: unknown,
+  name: string,
+  seen = new WeakSet<object>(),
+): void {
+  if (value === null || typeof value !== 'object') return;
+  if (seen.has(value)) return;
+  seen.add(value);
+  for (const key of Reflect.ownKeys(value)) {
+    if (typeof key !== 'string') throw new TypeError(`${name} 不能包含 Symbol 字段。`);
+    if (key === 'privatePlan') throw new RangeError(`${name} 不得包含 privatePlan。`);
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (!descriptor || !('value' in descriptor)) {
+      throw new TypeError(`${name}.${key} 必须是可枚举数据字段。`);
+    }
+    assertNoPrivatePlanDeep(descriptor.value, `${name}.${key}`, seen);
+  }
+}
+
+function copyRestrictedMapV5(value: unknown, name: string): BotRestrictedMapV5 {
+  const record = assertPlainRecord(value, name);
+  assertNoPrivatePlanDeep(record, name);
+  const mapKeys = new Set([
+    'schemaVersion', 'definitionId', 'nextActiveTick', 'revision', 'surfaces', 'occurrences',
+  ]);
+  assertKnownKeys(record, mapKeys, name);
+  assertRequiredDataKeys(record, mapKeys, name);
+  if (!Array.isArray(record.surfaces) || !Array.isArray(record.occurrences)) {
+    throw new TypeError(`${name}.surfaces/occurrences 必须是数组。`);
+  }
+  const surfaceKeys = new Set(['id', 'enabled', 'revision']);
+  const occurrenceKeys = new Set([
+    'occurrenceId', 'eventId', 'kind', 'warningTick', 'startTick', 'endTick',
+    'phase', 'publicPayload', 'revision',
+  ]);
+  for (const [index, surface] of record.surfaces.entries()) {
+    const surfaceRecord = assertPlainRecord(surface, `${name}.surfaces[${index}]`);
+    assertKnownKeys(surfaceRecord, surfaceKeys, `${name}.surfaces[${index}]`);
+    assertRequiredDataKeys(surfaceRecord, surfaceKeys, `${name}.surfaces[${index}]`);
+  }
+  for (const [index, occurrence] of record.occurrences.entries()) {
+    const occurrenceRecord = assertPlainRecord(occurrence, `${name}.occurrences[${index}]`);
+    assertKnownKeys(occurrenceRecord, occurrenceKeys, `${name}.occurrences[${index}]`);
+    assertRequiredDataKeys(occurrenceRecord, occurrenceKeys, `${name}.occurrences[${index}]`);
+  }
+  const serialized = copyMapSnapshot(value, name);
+  const occurrences = serialized.occurrences.map((occurrence) => {
+    const { privatePlan: _privatePlan, ...publicOccurrence } = occurrence;
+    return publicOccurrence;
+  });
+  return freezeV5Owned({
+    schemaVersion: serialized.schemaVersion,
+    definitionId: serialized.definitionId,
+    nextActiveTick: serialized.nextActiveTick,
+    revision: serialized.revision,
+    surfaces: serialized.surfaces,
+    occurrences,
+  }) as BotRestrictedMapV5;
+}
+
+function normalizeBotCommandSourceV5(
+  value: unknown,
+  name: string,
+  expectedParticipantId?: string,
+): BotCommandSourceV5 {
+  const source = cloneFrozenData(value, name);
+  assertKnownKeys(source, COMMAND_SOURCE_V5_KEYS, name);
+  assertRequiredDataKeys(source, COMMAND_SOURCE_V5_KEYS, name);
+  if (source.schemaVersion !== 5) throw new RangeError(`${name}.schemaVersion 必须为 5。`);
+  const commandTick = nonNegativeInteger(source.commandTick, `${name}.commandTick`);
+  const commandEventSequence = nonNegativeInteger(
+    source.commandEventSequence,
+    `${name}.commandEventSequence`,
+  );
+  const phase = typeof source.phase === 'string' && MATCH_PHASES.has(source.phase)
+    ? source.phase
+    : (() => { throw new RangeError(`${name}.phase 无效。`); })();
+  const remainingTicks = nonNegativeInteger(source.remainingTicks, `${name}.remainingTicks`);
+  const self = copyCommandParticipantV5(source.self, `${name}.self`);
+  const opponent = copyCommandParticipantV5(source.opponent, `${name}.opponent`);
+  if (self.id === opponent.id) throw new RangeError(`${name} participant identity 必须唯一。`);
+  if (expectedParticipantId !== undefined && self.id !== expectedParticipantId) {
+    throw new RangeError(`${name}.self participant identity 不匹配。`);
+  }
+  if (!Array.isArray(source.equipment)) throw new TypeError(`${name}.equipment 必须是数组。`);
+  const equipment = source.equipment.map((item, index) => (
+    copyNormalizedVisibleEquipment(item, `${name}.equipment[${index}]`)
+  )).sort(compareVisibleEquipment);
+  const equipmentIds = new Set(equipment.map((item) => item.instanceId));
+  if (equipmentIds.size !== equipment.length) {
+    throw new RangeError(`${name}.equipment instanceId 必须唯一。`);
+  }
+  return freezeV5Owned({
+    schemaVersion: 5 as const,
+    commandTick,
+    commandEventSequence,
+    phase,
+    remainingTicks,
+    self,
+    opponent,
+    botMobility: copyBotMobilitySidecarV5(
+      source.botMobility,
+      `${name}.botMobility`,
+      commandTick,
+      commandEventSequence,
+      self.id,
+    ),
+    equipment: Object.freeze(equipment),
+    map: copyRestrictedMapV5(source.map, `${name}.map`),
+  });
+}
+
+export function cloneBotCommandSourceV5(
+  value: unknown,
+  options: Readonly<{ readonly participantId?: string }> = {},
+): BotCommandSourceV5 {
+  const optionsRecord = cloneFrozenData(options, 'BotCommandSourceV5 clone options');
+  assertKnownKeys(optionsRecord, new Set(['participantId']), 'BotCommandSourceV5 clone options');
+  const participantId = readOptionalDataProperty(
+    optionsRecord,
+    'participantId',
+    'BotCommandSourceV5 clone options',
+  );
+  if (
+    Object.prototype.hasOwnProperty.call(optionsRecord, 'participantId')
+    && typeof participantId !== 'string'
+  ) {
+    throw new TypeError('BotCommandSourceV5 clone participantId 必须是字符串。');
+  }
+  return normalizeBotCommandSourceV5(value, 'BotCommandSourceV5', participantId as string | undefined);
+}
+
+export function createBotCommandSourceV5FromLegacy(
+  source: BotSourceSnapshot,
+  participantId: string,
+): BotCommandSourceV5 {
+  const self = source.participants.find((participant) => participant.id === participantId);
+  const opponent = source.participants.find((participant) => participant.id !== participantId);
+  if (!self || !opponent) throw new RangeError('BotCommandSourceV5 participant identity 不一致。');
+  const { actionAffordance: _selfAffordance, ...selfWithoutAffordance } = self;
+  const { actionAffordance: _opponentAffordance, ...opponentWithoutAffordance } = opponent;
+  return normalizeBotCommandSourceV5({
+    schemaVersion: 5,
+    commandTick: source.tick,
+    commandEventSequence: source.eventSequence,
+    phase: source.phase,
+    remainingTicks: source.remainingTicks,
+    self: selfWithoutAffordance,
+    opponent: opponentWithoutAffordance,
+    botMobility: createBotMobilitySidecarV5(
+      source.tick,
+      source.eventSequence,
+      self,
+      'BotCommandSourceV5.botMobility',
+    ),
+    equipment: source.equipment,
+    map: source.map,
+  }, 'BotCommandSourceV5', participantId);
+}
+
+const OBSERVATION_V5_OPTION_KEYS = new Set([
+  'commandSource', 'delayedSource', 'selfId', 'arena', 'objectives',
+]);
+
+export interface BotObservationV5Options {
+  readonly commandSource: BotCommandSourceV5;
+  readonly delayedSource: BotCommandSourceV5;
+  readonly selfId: string;
+  readonly arena: BotArenaView;
+  readonly objectives?: readonly unknown[];
+}
+
+export function createBotObservationV5(options: BotObservationV5Options): BotObservationV5;
+export function createBotObservationV5(options: unknown): BotObservationV5 {
+  const optionSnapshot = cloneFrozenData(options, 'BotObservationV5 options');
+  assertKnownKeys(optionSnapshot, OBSERVATION_V5_OPTION_KEYS, 'BotObservationV5 options');
+  assertRequiredDataKeys(
+    optionSnapshot,
+    new Set(['commandSource', 'delayedSource', 'selfId', 'arena']),
+    'BotObservationV5 options',
+  );
+  const commandSource = normalizeBotCommandSourceV5(
+    optionSnapshot.commandSource,
+    'BotObservationV5.commandSource',
+  );
+  const delayedSource = normalizeBotCommandSourceV5(
+    optionSnapshot.delayedSource,
+    'BotObservationV5.delayedSource',
+  );
+  const selfId = assertNonEmptyString(optionSnapshot.selfId, 'BotObservationV5 selfId');
+  if (commandSource.self.id !== selfId || delayedSource.self.id !== selfId) {
+    throw new RangeError('BotObservationV5 self participant identity 不一致。');
+  }
+  if (delayedSource.commandTick > commandSource.commandTick) {
+    throw new RangeError('BotObservationV5 不能观察未来 tick。');
+  }
+  if (delayedSource.commandEventSequence > commandSource.commandEventSequence) {
+    throw new RangeError('BotObservationV5 不能观察未来 eventSequence。');
+  }
+  if (delayedSource.opponent.id !== commandSource.opponent.id) {
+    throw new RangeError('BotObservationV5 opponent participant identity 不一致。');
+  }
+  const arena = normalizeArenaView(optionSnapshot.arena, 'BotObservationV5 arena');
+  if (
+    Object.prototype.hasOwnProperty.call(optionSnapshot, 'objectives')
+    && optionSnapshot.objectives === undefined
+  ) {
+    throw new TypeError('BotObservationV5 objectives 不能显式为 undefined。');
+  }
+  const objectives = optionSnapshot.objectives ?? [];
+  if (!Array.isArray(objectives)) throw new TypeError('BotObservationV5 objectives 必须是数组。');
+  const copiedObjectives = Object.freeze(objectives.map((objective, index) => (
+    cloneFrozenData(objective, `BotObservationV5 objectives[${index}]`)
+  )));
+  return freezeV5Owned({
+    schemaVersion: 5 as const,
+    commandTick: commandSource.commandTick,
+    commandEventSequence: commandSource.commandEventSequence,
+    observedTick: delayedSource.commandTick,
+    observedEventSequence: delayedSource.commandEventSequence,
+    phase: commandSource.phase,
+    remainingTicks: commandSource.remainingTicks,
+    self: commandSource.self,
+    opponent: delayedSource.opponent,
+    equipment: delayedSource.equipment,
+    map: delayedSource.map,
+    arena,
+    actionRule: commandSource.self.actionRule,
+    opponentActionRule: delayedSource.opponent.actionRule,
+    botMobility: commandSource.botMobility,
     objectives: copiedObjectives,
   });
 }

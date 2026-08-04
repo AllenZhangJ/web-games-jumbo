@@ -125,7 +125,7 @@ class ArenaV1MatchCoreInvariantCase {
 
   #assertAuthoritySnapshot() {
     const core = this.#requireCore();
-    return assertArenaMatchCoreSnapshotInvariants(core.getSnapshot(), core.config);
+    return assertArenaMatchCoreSnapshotInvariants(core.getLegacyFullSnapshotForAudit(), core.config);
   }
 
   getMetadata() {

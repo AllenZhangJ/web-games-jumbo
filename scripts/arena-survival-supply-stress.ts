@@ -159,7 +159,7 @@ for (let matchIndex = 0; matchIndex < MATCH_COUNT; matchIndex += 1) {
         maximumActiveLifecycleCount,
         activeSupplyIds.size,
       );
-      const snapshot = core.getSnapshot();
+      const snapshot = core.getLegacyFullSnapshotForAudit();
       maximumRuntimeCount = Math.max(maximumRuntimeCount, snapshot.equipment.length);
       try {
         assertFinite(snapshot);

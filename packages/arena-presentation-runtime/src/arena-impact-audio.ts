@@ -1,5 +1,14 @@
+import {
+  assertCapabilityKnownKeys as assertKnownKeys,
+  assertCapabilityRecord as assertRecord,
+  readCapabilityOwnData as ownData,
+  rejectThenable,
+  snapshotLegacyMethod as snapshotMethod,
+} from './capability-utils.js';
+
 const OPTION_KEYS = new Set<PropertyKey>(['createAudio', 'sourceByAction', 'voicesPerAction']);
 const PLAY_OPTION_KEYS = new Set<PropertyKey>(['enabled']);
+const NATIVE_PROMISE_THEN = Promise.prototype.then;
 
 export const ARENA_IMPACT_AUDIO_SOURCE_BY_ACTION = Object.freeze({
   'base-push': './assets/arena/audio/kenney-impact-sounds/base-push.ogg',
@@ -37,43 +46,6 @@ interface VoiceRecord {
   destroyed: boolean;
 }
 
-function assertRecord(value: unknown, name: string): asserts value is object {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new TypeError(`${name} 必须是对象。`);
-}
-
-function assertKnownKeys(value: unknown, allowed: ReadonlySet<PropertyKey>, name: string): void {
-  assertRecord(value, name);
-  const unknown = Reflect.ownKeys(value).find((key) => !allowed.has(key));
-  if (unknown !== undefined) throw new TypeError(`${name} 包含未知字段 ${String(unknown)}。`);
-}
-
-function ownData(value: unknown, field: PropertyKey, name: string, required = true): unknown {
-  assertRecord(value, name);
-  const descriptor = Object.getOwnPropertyDescriptor(value, field);
-  if (!descriptor) {
-    if (!required) return undefined;
-    throw new TypeError(`${name}.${String(field)} 缺失。`);
-  }
-  if (!Object.hasOwn(descriptor, 'value')) throw new TypeError(`${name}.${String(field)} 必须是数据字段。`);
-  return descriptor.value;
-}
-
-function snapshotMethod(value: object, name: string, methodName: string): UnknownMethod | null {
-  let owner: object | null = value;
-  while (owner) {
-    const descriptor = Object.getOwnPropertyDescriptor(owner, methodName);
-    if (descriptor) {
-      if (!Object.hasOwn(descriptor, 'value') || typeof descriptor.value !== 'function') {
-        throw new TypeError(`${name}.${methodName} 必须是数据方法。`);
-      }
-      const method = descriptor.value as UnknownMethod;
-      return (...args: unknown[]) => method.call(value, ...args);
-    }
-    owner = Object.getPrototypeOf(owner) as object | null;
-  }
-  return null;
-}
-
 function snapshotRequiredFunction(value: unknown, name: string): UnknownMethod {
   if (typeof value !== 'function') throw new TypeError(`${name} 必须是函数。`);
   return (...args: unknown[]) => Reflect.apply(value, undefined, args) as unknown;
@@ -83,13 +55,14 @@ function setProperty(value: object, field: string, fieldValue: unknown, name: st
   if (!Reflect.set(value, field, fieldValue)) throw new Error(`${name}.${field} 写入失败。`);
 }
 
-function rejectThenable(value: unknown, name: string): void {
-  if (!value || (typeof value !== 'object' && typeof value !== 'function')) return;
-  let then: unknown;
-  try { then = Reflect.get(value, 'then'); } catch { throw new TypeError(`${name} 返回值不可检查。`); }
-  if (typeof then !== 'function') return;
-  try { Promise.resolve(value).catch(() => {}); } catch { /* invalid thenable */ }
-  throw new TypeError(`${name} 必须同步完成。`);
+function observeNativePromise(value: unknown): boolean {
+  if ((typeof value !== 'object' || value === null) && typeof value !== 'function') return false;
+  try {
+    Reflect.apply(NATIVE_PROMISE_THEN, value, [() => undefined, () => undefined]);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function sourceEntries(value: unknown): readonly (readonly [string, string])[] {
@@ -118,12 +91,12 @@ function createVoiceRecord(value: unknown): VoiceRecord {
   assertRecord(value, 'ArenaImpactAudio voice');
   return {
     value,
-    stop: snapshotMethod(value, 'ArenaImpactAudio voice', 'stop'),
-    pause: snapshotMethod(value, 'ArenaImpactAudio voice', 'pause'),
-    load: snapshotMethod(value, 'ArenaImpactAudio voice', 'load'),
-    play: snapshotMethod(value, 'ArenaImpactAudio voice', 'play'),
-    destroy: snapshotMethod(value, 'ArenaImpactAudio voice', 'destroy'),
-    removeAttribute: snapshotMethod(value, 'ArenaImpactAudio voice', 'removeAttribute'),
+    stop: snapshotMethod(value, 'ArenaImpactAudio voice', 'stop', false),
+    pause: snapshotMethod(value, 'ArenaImpactAudio voice', 'pause', false),
+    load: snapshotMethod(value, 'ArenaImpactAudio voice', 'load', false),
+    play: snapshotMethod(value, 'ArenaImpactAudio voice', 'play', false),
+    destroy: snapshotMethod(value, 'ArenaImpactAudio voice', 'destroy', false),
+    removeAttribute: snapshotMethod(value, 'ArenaImpactAudio voice', 'removeAttribute', false),
     stopped: false,
     sourceRemoved: false,
     destroyed: false,
@@ -131,7 +104,13 @@ function createVoiceRecord(value: unknown): VoiceRecord {
 }
 
 function stopForPlayback(record: VoiceRecord): void {
-  try { (record.stop ?? record.pause)?.(); } catch { /* optional feedback is isolated */ }
+  try {
+    const stop = record.stop ?? record.pause;
+    if (stop) rejectThenable(stop(), 'ArenaImpactAudio voice.stop()');
+  } catch (error) {
+    observeNativePromise(error);
+    // Optional feedback is isolated.
+  }
   try {
     if (Reflect.has(record.value, 'currentTime')) setProperty(record.value, 'currentTime', 0, 'ArenaImpactAudio voice');
   } catch { /* host may expose a read-only cursor */ }
@@ -151,14 +130,20 @@ function releaseVoice(record: VoiceRecord): readonly unknown[] {
       const stop = record.stop ?? record.pause;
       if (stop) rejectThenable(stop(), 'ArenaImpactAudio voice.stop()');
       record.stopped = true;
-    } catch (error) { errors.push(error); }
+    } catch (error) {
+      observeNativePromise(error);
+      errors.push(error);
+    }
   }
   if (!record.sourceRemoved) {
     try {
       if (record.removeAttribute) rejectThenable(record.removeAttribute('src'), 'ArenaImpactAudio voice.removeAttribute()');
       else setProperty(record.value, 'src', '', 'ArenaImpactAudio voice');
       record.sourceRemoved = true;
-    } catch (error) { errors.push(error); }
+    } catch (error) {
+      observeNativePromise(error);
+      errors.push(error);
+    }
   }
   if (record.destroy && !record.destroyed) {
     try {
@@ -166,7 +151,10 @@ function releaseVoice(record: VoiceRecord): readonly unknown[] {
       record.destroyed = true;
       record.stopped = true;
       record.sourceRemoved = true;
-    } catch (error) { errors.push(error); }
+    } catch (error) {
+      observeNativePromise(error);
+      errors.push(error);
+    }
   }
   return recordComplete(record) ? Object.freeze([]) : Object.freeze(errors);
 }
@@ -260,6 +248,7 @@ export class ArenaImpactAudio {
           let record: VoiceRecord | null = null;
           try {
             const value = this.#createAudio();
+            rejectThenable(value, 'ArenaImpactAudio.createAudio()');
             if (!value || typeof value !== 'object' || Array.isArray(value)) continue;
             record = createVoiceRecord(value);
             setProperty(record.value, 'src', source, 'ArenaImpactAudio voice');
@@ -267,7 +256,8 @@ export class ArenaImpactAudio {
             setProperty(record.value, 'volume', volumeForAction(action), 'ArenaImpactAudio voice');
             if (record.load) rejectThenable(record.load(), 'ArenaImpactAudio voice.load()');
             this.#trackCandidate(record, action);
-          } catch {
+          } catch (error) {
+            observeNativePromise(error);
             if (record) this.#discardCandidate(record);
           }
         }
@@ -275,6 +265,7 @@ export class ArenaImpactAudio {
       this.#loaded = true;
       this.#complete();
     } catch (error) {
+      observeNativePromise(error);
       this.#operating = false;
       if (this.#reentryDetected) {
         this.#disabled = true;
@@ -309,12 +300,13 @@ export class ArenaImpactAudio {
       setProperty(voice.value, 'volume', volumeForAction(actionValue), 'ArenaImpactAudio voice');
       if (!voice.play) { this.#complete(); return false; }
       const pending = voice.play();
-      if (pending && (typeof pending === 'object' || typeof pending === 'function')) {
-        try { Promise.resolve(pending).catch(() => {}); } catch { /* optional playback */ }
+      if (!observeNativePromise(pending)) {
+        rejectThenable(pending, 'ArenaImpactAudio voice.play()');
       }
       this.#complete();
       return true;
-    } catch {
+    } catch (error) {
+      observeNativePromise(error);
       this.#operating = false;
       if (this.#reentryDetected) this.#disabled = true;
       return false;

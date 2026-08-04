@@ -85,7 +85,7 @@ function runAtOuterRate(hz: number) {
   const result = {
     hash: core.getStateHash(),
     frames,
-    snapshot: core.getSnapshot(),
+    snapshot: core.getLegacyFullSnapshotForAudit(),
   };
   runtime.destroy();
   sampler.destroy();

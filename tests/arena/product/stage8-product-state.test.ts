@@ -5,6 +5,13 @@ import {
   ProductMatchCoordinator,
   PRODUCT_MATCH_COORDINATOR_STATE,
 } from '@number-strategy-jump/arena-product-match';
+import {
+  ACTION_RESOLUTION_KIND,
+  ARENA_MATCH_READ_PROFILE,
+  createMatchReadFrameV2Audit,
+  createNeutralInputFrame,
+  normalizeInputFrame,
+} from '@number-strategy-jump/arena-contracts';
 import { createProductMatchResult } from '@number-strategy-jump/arena-product-contracts';
 import {
   PlayerProfileIndeterminateWriteError,
@@ -22,7 +29,10 @@ import {
   ProductSessionStateMachine,
   ProductSessionTransitionRegistry,
 } from '@number-strategy-jump/arena-product-state';
-import { TEST_MATCH_CONTENT_PUBLIC_VIEW } from './stage8-test-content.js';
+import {
+  createStage8ProductMatchResult,
+  TEST_MATCH_CONTENT_PUBLIC_VIEW,
+} from './stage8-test-content.js';
 
 function required<T>(value: T | null | undefined, name: string): T {
   assert.ok(value != null, `${name} 不存在。`);
@@ -88,44 +98,149 @@ function runtimeHarness({
   endAfterSteps = 1,
   destroyFailures = 0,
 }: Readonly<{ endAfterSteps?: number; destroyFailures?: number }> = {}) {
+  const position = Object.freeze({ x: 0, y: 0, z: 0 });
+  const participant = (id: string) => ({
+    id,
+    characterDefinitionId: 'character-basic',
+    status: 'active',
+    lives: 2,
+    eliminations: 0,
+    deaths: 0,
+    hitstunTicks: 0,
+    invulnerableTicks: 0,
+    respawnTicks: 0,
+    lastHitBy: null,
+    lastHitTick: -1,
+    action: { definitionId: null, phase: 'idle', ticksRemaining: 0 },
+    actionRule: { schemaVersion: 1, mode: 'fixture' },
+    movement: {
+      schemaVersion: 1,
+      participantId: id,
+      characterDefinitionId: 'character-basic',
+      mode: 'grounded',
+      coyoteTicksRemaining: 0,
+      jumpBufferTicksRemaining: 0,
+      airJumpsUsed: 0,
+      crouchChargeTicks: 0,
+      crouchActionId: null,
+      downSmashActionId: null,
+      revision: 0,
+      grounded: true,
+    },
+    equipment: null,
+    position,
+    velocity: position,
+    facing: { x: 1, z: 0 },
+    grounded: true,
+    supportSurfaceId: 'surface-ground',
+  });
+  const actionOutcome = () => ({
+    kind: ACTION_RESOLUTION_KIND.NONE,
+    actionDefinitionId: null,
+    lane: null,
+    source: null,
+    reason: 'no-candidate',
+  });
+  const readFrame = (tick: number, result: ReturnType<typeof createStage8ProductMatchResult> | null) => (
+    createMatchReadFrameV2Audit({
+      schemaVersion: 2,
+      worldSnapshot: {
+        authoritySchemaVersion: 1,
+        physicsBackendVersion: 'physics-v1',
+        configHash: '12345678',
+        ruleContentHash: 'abcdef01',
+        matchSeed: 1,
+        tick,
+        activeTick: tick,
+        phase: result === null ? 'running' : 'ended',
+        remainingTicks: result === null ? 100 : 0,
+        eventSequence: tick,
+        participants: [participant('player-1'), participant('player-2')],
+        equipment: [],
+        activeSupplyProjection: null,
+        map: {
+          schemaVersion: 1,
+          definitionId: 'arena-map-training',
+          nextActiveTick: 0,
+          revision: 0,
+          surfaces: [{ id: 'surface-ground', enabled: true, revision: 0 }],
+          occurrences: [{
+            occurrenceId: 'occurrence-0',
+            eventId: 'none',
+            kind: 'none',
+            warningTick: 0,
+            startTick: 0,
+            endTick: null,
+            phase: result === null ? 'running' : 'ended',
+            publicPayload: {},
+            revision: 0,
+          }],
+        },
+        result: result?.authorityResult ?? null,
+      },
+      localActionSidecar: {
+        schemaVersion: 2,
+        tick,
+        eventSequence: tick,
+        participantId: 'player-1',
+        profile: ARENA_MATCH_READ_PROFILE.LOCAL_CONTEXT_PRIMARY,
+        primaryActionDefinitionId: null,
+        channels: { primary: actionOutcome(), primaryHold: actionOutcome() },
+      },
+    })
+  );
   let state = 'created';
   let paused = false;
   let steps = 0;
   let destroys = 0;
-  let result: Readonly<{ authorityHash: string }> | null = null;
+  const publicInfo = Object.freeze({
+    matchSeed: 1,
+    opponent: Object.freeze({
+      id: 'opponent-1',
+      displayName: '玩家1024',
+      portraitKey: 'portrait-1',
+      appearanceKey: 'appearance-1',
+    }),
+    content: TEST_MATCH_CONTENT_PUBLIC_VIEW,
+  });
+  let result: ReturnType<typeof createStage8ProductMatchResult> | null = null;
+  let currentFrame = readFrame(0, null);
   return {
     get state() { return state; },
     get destroys() { return destroys; },
     get paused() { return paused; },
-    start() { state = paused ? 'paused' : 'running'; },
+    get result() { return result; },
+    startWithReadFrame() {
+      state = paused ? 'paused' : 'running';
+      currentFrame = readFrame(0, null);
+      return Object.freeze({ readFrame: currentFrame });
+    },
     setPaused(value: boolean) {
       paused = value;
       if (state === 'running' || state === 'paused') state = value ? 'paused' : 'running';
     },
-    step() {
+    getReadFrame() { return currentFrame; },
+    stepWithReadFrame(input: unknown = null) {
       steps += 1;
       if (steps >= endAfterSteps) {
-        result = Object.freeze({ authorityHash: '12345678' });
+        result = createStage8ProductMatchResult({
+          publicInfo,
+          endedAtTick: steps,
+        });
         state = 'ended';
       }
+      currentFrame = readFrame(steps, result);
       return Object.freeze({
         events: Object.freeze([]),
-        snapshot: Object.freeze({ tick: steps }),
+        readFrame: currentFrame,
+        input: normalizeInputFrame(
+          input === null ? createNeutralInputFrame(steps - 1, 'player-1') : input,
+        ),
         result,
       });
     },
-    getSnapshot() { return Object.freeze({ tick: steps }); },
     getPublicInfo() {
-      return Object.freeze({
-        matchSeed: 1,
-        opponent: Object.freeze({
-          id: 'opponent-1',
-          displayName: '玩家1024',
-          portraitKey: 'portrait-1',
-          appearanceKey: 'appearance-1',
-        }),
-        content: TEST_MATCH_CONTENT_PUBLIC_VIEW,
-      });
+      return publicInfo;
     },
     getResult() { return result; },
     destroy() {
@@ -405,13 +520,16 @@ test('ProductMatchCoordinator deduplicates prepare and applies pause before a la
   assert.equal(createCalls, 1);
   assert.equal(coordinator.state, PRODUCT_MATCH_COORDINATOR_STATE.READY);
   assert.equal(runtime.paused, true);
-  coordinator.start();
+  coordinator.startWithReadFrame();
   assert.equal(coordinator.state, PRODUCT_MATCH_COORDINATOR_STATE.PAUSED);
-  assert.equal(coordinator.step().snapshot.tick, 0);
+  assert.equal(coordinator.stepWithReadFrame().readFrame.worldSnapshot.tick, 0);
   coordinator.setPaused(false);
-  coordinator.step();
-  const ended = coordinator.step();
-  assert.equal(required(ended.result, 'ended result').authorityHash, '12345678');
+  coordinator.stepWithReadFrame();
+  const ended = coordinator.stepWithReadFrame();
+  assert.equal(
+    required(ended.result, 'ended result').authorityHash,
+    required(runtime.result, 'runtime result').authorityHash,
+  );
   assert.equal(coordinator.state, PRODUCT_MATCH_COORDINATOR_STATE.RESULT);
   coordinator.release();
   assert.equal(coordinator.state, PRODUCT_MATCH_COORDINATOR_STATE.IDLE);

@@ -58,7 +58,7 @@ function createSampler(mapper: ArenaInputMapper): InputSampler {
 }
 
 function step(core: MatchCore, sampler: InputSampler): ReturnType<MatchCore['step']> {
-  const snapshot = core.getSnapshot();
+  const snapshot = core.getLegacyFullSnapshotForAudit();
   const player = required(
     snapshot.participants.find(({ id }) => id === 'player-1'),
     'player-1 快照',
@@ -128,7 +128,7 @@ test('Mapper A long upward hold begins and releases an explicit crouch jump', ()
     STAGE6_MOVEMENT_ACTION_ID.EXPLICIT_CROUCH_BEGIN,
   ), true);
   assert.equal(
-    required(core.getSnapshot().participants[0], 'player-1 移动状态').movement.mode,
+    required(core.getLegacyFullSnapshotForAudit().participants[0], 'player-1 移动状态').movement.mode,
     MOVEMENT_MODE.CROUCH_CHARGING,
   );
   sampler.pointerEnd(point(10, 100, 530));
@@ -173,7 +173,7 @@ test('Mapper B uses Rule affordance for contextual jump, crouch hold and down sm
     STAGE6_MOVEMENT_ACTION_ID.CONTEXT_CROUCH_BEGIN,
   ), true);
   assert.equal(
-    required(crouchCore.getSnapshot().participants[0], 'player-1 蓄力状态').movement.mode,
+    required(crouchCore.getLegacyFullSnapshotForAudit().participants[0], 'player-1 蓄力状态').movement.mode,
     MOVEMENT_MODE.CROUCH_CHARGING,
   );
   crouchSampler.pointerEnd(point(22, 320, 600));
@@ -204,7 +204,7 @@ test('Mapper B long hold keeps a legal combat primary above contextual crouch', 
     STAGE6_MOVEMENT_ACTION_ID.CONTEXT_CROUCH_BEGIN,
   ), false);
   assert.equal(
-    required(core.getSnapshot().participants[0], 'player-1 标准状态').movement.mode,
+    required(core.getLegacyFullSnapshotForAudit().participants[0], 'player-1 标准状态').movement.mode,
     MOVEMENT_MODE.STANDARD,
   );
 

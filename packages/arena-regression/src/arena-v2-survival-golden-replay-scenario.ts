@@ -78,7 +78,7 @@ function createSurvivalReplay(): ArenaReplay {
   });
   const runner = new HeadlessMatchRunner(core, { checkpointInterval: 100 });
   try {
-    return runner.runUntilEnded((snapshot) => snapshot.participants.map(({ id }) => ({
+    return runner.runLegacyUntilEndedForAudit((snapshot) => snapshot.participants.map(({ id }) => ({
       ...createNeutralInputFrame(snapshot.tick, id),
       primaryPressed: id === 'player-1' && (snapshot.tick === 1_200 || snapshot.tick === 2_400),
     })));

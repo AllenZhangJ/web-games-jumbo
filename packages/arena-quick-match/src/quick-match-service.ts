@@ -28,6 +28,7 @@ import {
   type OpponentProfile,
 } from '@number-strategy-jump/arena-matchmaking';
 import {
+  createMatchReadBotBundleV2,
   LocalMatchSession,
   type BotInputController,
   type LocalMatchSessionOptions,
@@ -83,6 +84,19 @@ interface OwnedCleanup {
   cleanup(): void;
 }
 
+const MISSING_DATA_METHOD_ERRORS = new WeakSet<object>();
+
+class MissingDataMethodError extends TypeError {
+  constructor(message: string) {
+    super(message);
+    MISSING_DATA_METHOD_ERRORS.add(this);
+  }
+}
+
+function isMissingDataMethodError(value: unknown): value is MissingDataMethodError {
+  return typeof value === 'object' && value !== null && MISSING_DATA_METHOD_ERRORS.has(value);
+}
+
 interface NormalizedServiceOptions {
   readonly nextSeed: (() => number) | null;
   readonly coreFactory: QuickMatchCoreFactory;
@@ -109,9 +123,8 @@ const CREATE_OPTION_KEYS = new Set(['matchSeed', 'config', 'difficultyOverride']
 const SESSION_METHODS = Object.freeze([
   'start',
   'setPaused',
-  'step',
-  'runUntilEnded',
-  'getSnapshot',
+  'getPresentationReadFrame',
+  'stepWithPresentationReadFrame',
   'getPublicMatchInfo',
   'exportReplay',
   'destroy',
@@ -120,6 +133,7 @@ const MATCH_CORE_CONFIG_GETTER = Object.getOwnPropertyDescriptor(
   MatchCore.prototype,
   'config',
 )?.get;
+const QUICK_MATCH_COMPOSITION_ID = 'arena-quick-match.v2';
 
 function nativeMatchCoreConfig(core: MatchCore): MatchCore['config'] {
   const getter = MATCH_CORE_CONFIG_GETTER;
@@ -138,7 +152,7 @@ function readOptionalDataProperty(record: object, key: string, name: string): un
 
 function dataMethod(value: unknown, methodName: string, ownerName: string): (...args: never[]) => unknown {
   if ((typeof value !== 'object' || value === null) && typeof value !== 'function') {
-    throw new TypeError(`${ownerName} 必须实现 ${methodName}()。`);
+    throw new MissingDataMethodError(`${ownerName} 必须实现 ${methodName}()。`);
   }
   const visited = new Set<object>();
   let current: object | null = value as object;
@@ -156,7 +170,7 @@ function dataMethod(value: unknown, methodName: string, ownerName: string): (...
     }
     current = Object.getPrototypeOf(current) as object | null;
   }
-  throw new TypeError(`${ownerName} 必须实现 ${methodName}()。`);
+  throw new MissingDataMethodError(`${ownerName} 必须实现 ${methodName}()。`);
 }
 
 function optionalFactory(value: unknown, fallback: unknown, name: string): (...args: never[]) => unknown {
@@ -291,7 +305,7 @@ function validateForeignSessionCandidate(value: unknown): never {
     try {
       dataMethod(value, methodName, 'sessionFactory 返回值');
     } catch (error) {
-      if (error instanceof TypeError && error.message.includes('必须实现')) {
+      if (isMissingDataMethodError(error)) {
         throw new TypeError(`sessionFactory 返回值缺少 ${methodName}()。`);
       }
       throw error;
@@ -452,14 +466,35 @@ export class QuickMatchService {
       core = coreCandidate;
       this.#retainedCleanup.push(coreCleanup(core));
 
-      const botCharacter = MatchCore.prototype.getCharacterDefinition.call(core, 'player-2');
       const coreConfig = nativeMatchCoreConfig(core);
+      if (
+        coreConfig.participantIds.length !== 2
+        || coreConfig.participantIds[0] !== 'player-1'
+        || coreConfig.participantIds[1] !== 'player-2'
+      ) {
+        throw new RangeError('QuickMatch Core participantIds 必须严格为 player-1, player-2。');
+      }
+      const botMatchReadBundle = createMatchReadBotBundleV2({
+        ownedNewCore: core,
+        descriptor: Object.freeze({
+          schemaVersion: 1,
+          compositionId: QUICK_MATCH_COMPOSITION_ID,
+          participantIds: Object.freeze([...coreConfig.participantIds]),
+          mapDefinitionId: coreConfig.mapDefinitionId,
+          contentSelectionHash: coreConfig.contentSelection?.contentHash ?? null,
+          compositionContractHash: null,
+        }),
+        localId: 'player-1',
+        botId: 'player-2',
+      });
+      const botCharacter = MatchCore.prototype.getCharacterDefinition.call(core, 'player-2');
       controller = this.#options.botControllerFactory(Object.freeze({
         participantId: 'player-2',
         difficultyId: assignment.effectiveDifficultyId,
         behaviorSeed: assignment.seeds.botBehavior,
         personalitySeed: assignment.seeds.botPersonality,
         profileRegistry: this.#options.botProfileRegistry,
+        trustedCommandSourceHandle: botMatchReadBundle,
         arena: coreConfig.arena,
         characterRadius: botCharacter.collision.radius,
         maximumStepHeight: botCharacter.movement.automaticStepHeight,
@@ -475,6 +510,7 @@ export class QuickMatchService {
         botController: controller,
         playerParticipantId: 'player-1',
         botParticipantId: 'player-2',
+        botMatchReadBundle,
         publicMatchInfo,
       }));
       if (sessionCandidate instanceof LocalMatchSession) {

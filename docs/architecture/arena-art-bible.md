@@ -2,12 +2,12 @@
 
 ## 文档状态
 
-- 状态：A0.1为`contract-ready`；A0.2独立聚合总门与Reference Board视觉方向为`ready`（96/100）；A0.3技术/代理候选85/100但真人0/10，仍为`incomplete`
-- 日期：2026-07-28
+- 状态：A0.1为`contract-ready`；A0.2独立聚合总门与Reference Board视觉方向为`ready`（96/100）；A0.3技术/代理候选85/100但真人0/10，仍为`incomplete`；A2模式视觉语法只完成ADR-112只读预审，仍`planned / hardGate=false`
+- 日期：2026-08-02
 - 审计基线：`d6f906008d0af1ed0133a199a8dc9e15cb1d23d0`
-- 上游真值：[V2 产品总纲](../product/arena-v2-product-brief.md)、[V2 玩法框架](../gameplay/arena-v2-gameplay-framework.md)、[V2 生产计划](arena-v2-production-development-plan.md)、[ADR-108](../decisions/108-arena-v2-survival-auto-replace-and-expiry.md)
+- 上游真值：[V2 产品总纲](../product/arena-v2-product-brief.md)、[V2 玩法框架](../gameplay/arena-v2-gameplay-framework.md)、[V2 生产计划](arena-v2-production-development-plan.md)、[ADR-108](../decisions/108-arena-v2-survival-auto-replace-and-expiry.md)；P2候选另见尚未签核的[ADR-112](../decisions/112-arena-v2-formal-mode-definition-and-policy-boundary.md)
 - 执行基线：[美术与音频开发流程](arena-art-and-audio-development-flow.md)、[A0–A7 对齐矩阵](arena-art-development-alignment-matrix.md)
-- 参考登记：[六类注释参考登记](arena-art-reference-register.md)（原来源包、武器/反馈补充来源与六张板面小门均已签核；A0.2整体仍为 `incomplete`）
+- 参考登记：[六类注释参考登记](arena-art-reference-register.md)（原来源包、武器/反馈补充来源与六张板面小门均已签核；A0.2独立聚合总门与Reference Board视觉方向为 `ready`，A0.3真人门仍为 `incomplete`）
 
 本文件是 Arena Product 的视觉宪法与生产约束，不是完成度声明。任何资产仍须独立通过 `Concept → Blockout → Integration → Final`。研究图、AI 原图、KZ 灰盒、程序化角色或程序化武器只能作为研究、样件或加载失败兜底，不能标为正式生产资产。
 
@@ -195,6 +195,24 @@ P4完整生产范围与顺序固定为：
 - DOM/Canvas 使用同一 ViewModel、token 和语义顺序；UI 不写命中、拾取、奖励、终局或计时。
 - reduced-motion 改淡入、状态边缘和静态方向标；静音状态始终可见，关键结果有语义公告。
 
+### 8.1 三模式视觉语法（A2只读预审）
+
+本节服务[美术对齐矩阵A2.0](arena-art-development-alignment-matrix.md#a20-权威事件音画职责候选)，不表示P2、A2、HUD或资产已经获批。所有图形只消费权威Mode/Participant/Result/Respawn事件与投影。
+
+| 模式 | 核心形状句法 | 常驻信息 | 结束语法 | 禁止混淆 |
+|---|---|---|---|---|
+| Duel | 两个相向括号/楔形，中间保留冲突空隙 | 双方身份、生命/阶段和剩余权威时间 | 单一胜者用闭合章；同时终局用对称断章 | 不引入队伍色、路线rank或Survival fall环 |
+| Race | 分叉菱形路线→小型回转锚门→大型终点门框 | 固定宽rank、participant短编号、权威progress/respawn ticks | 有finisher才闭合终点章；同tick共享第一；`no-finisher`保持开放门框 | 锚点不得像终点，终点不得像供给范围；事件序不制造先后 |
+| Survival | 外围压力箭头→场上三实体供给→两格断环fall计数 | survived ticks、pressure stage、active enemy count、`0/2–2/2` | 第二次fall后断环闭合为中性成绩章，不使用Duel winner/draw | enemy generation不变成新敌种/稀有度；fall计数不画成永久生命成长 |
+
+- Race 2–4人身份采用“稳定短编号＋不同内部glyph＋纹理方向”，阵营/participant颜色只能辅助。缩至`390×844`游戏镜头和灰度后仍须区分本地玩家、每名竞速对手、终点和安全锚点。
+- 同tick并列只允许一个共享finish核心Cue，再把并列参与者放入同一第一名容器；禁止按事件到达顺序播放先后不同的胜利姿势、音高或章形。
+- `no-finisher`、Survival time cap和资源加载失败都使用中性结果语言；不得为了“有反馈”伪造winner、完整排名、重生或奖励成功。
+- Survival敌人始终属于同一低多边形视觉族。数量/压力变化通过同屏数量、入口方向、疏密和权威stage标记表达，不靠更大碰撞暗示、颜色稀有度或新增技能轮廓。
+- Race掉落与Survival掉落都复用向下断线，但上下文结果不同：Race连接180 tick锚点重生；Survival连接两格fall count。命中导致的掉落必须先有接触/来源Cue，移动失足不得补命中红闪。
+- 声音模式与视觉同源：Race并列合并单次stinger，`no-finisher`用中性Cue，Survival同tick多enemy slot激活合并压力Cue；静音只关闭播放，不能移除数字、形状、文字或语义公告。
+- 正式A2必须在默认、灰度、色觉差异、reduced-motion、静音、低质量级、2/3/4人拥挤和最小/最大enemy count下分别截图/录屏；任何只在彩色或声音开启时可理解的状态都退回Concept。
+
 ## 9. VFX 与五类反馈
 
 VFX 按 `Shape → Timing → Color` 制作，先灰度核心层，再加方向、结果和装饰层。五类反馈不得共享完全相同的形状、时序与声音。
@@ -302,7 +320,8 @@ Bundle hash `e03ff2b4`，Policy hash `532faaa2`，Report hash `82a8b378`。这�
 | A0.2 六类实际注释参考板 | 六张合法板面、源文件、review PNG、manifest、hash与双签核 | 三个子门已签核；独立聚合总门96/100，A0.2与Reference Board视觉方向`ready` | 六类视觉方向可作为A0.3输入 | 任何运行时资产、Blockout、剪影或设备表现通过 |
 | A0.3 剪影工具与盲测基线 | 可重复渲染工具、正式角色/武器输出、manifest、盲测数据与≥90%结论 | 技术/代理候选85/100；真人0/10，仍`incomplete` | 当前正式角色/武器在固定相机下具有实证可读基线 | 新角色、新武器、LOD、三端设备或Final通过 |
 
-A0.1、A0.2、A0.3分别执行总分≥90且单维度≥80%的门槛；未执行的小门只写 `incomplete`，不得借用A0.1分数。A0.2和A0.3都通过前，后续任务可以继续冻结Rule/Core和准备合同，但不得开始生产资产Blockout或宣称视觉方向已通过。
+A0.1、A0.2、A0.3分别执行总分≥90且单维度≥80%的门槛；未执行的小门只写 `incomplete`，不得借用A0.1分数。A0.2未通过时不得宣称
+Reference Board视觉方向完成；A0.3未通过时可以继续冻结Rule/Core和准备合同，但不得开始生产资产Blockout或宣称剪影/生产视觉前置总门通过。
 
 ### 15.2 A0.1 必需输入闭环
 
@@ -333,21 +352,30 @@ A0.1 当前没有缺失的必需输入。实际图片板是A0.2输出，剪影�
 
 该94分来自已存在文档、清单、计算与仓库合同；所有维度均≥80%。它不包含计划中的图片、脚本、设备或真人分。主协调已于2026-07-28通过A0.1硬门并将其签核为`contract-ready`；此次签核没有新增或替代任何A0.2、A0.3及成熟度证据。
 
-### 15.4 资产/设备/真人成熟度：20/100
+### 15.4 资产/设备/真人成熟度：35/100
 
 | 证据 | 得分 | 当前状态 |
 |---|---:|---|
-| 六类合法图片参考板 | 0/15 | `incomplete` |
+| 六类合法图片参考板 | 15/15 | A0.2三个子门已有协调签核；独立聚合总门为`machine-and-art-director-ready`且96/100硬门通过，`coordinatorAggregateSignOff=null`按合同保持诚实；视觉方向为`ready`，不代表运行时资产成熟 |
 | 实际六方向剪影/镜头渲染与盲测 | 0/20 | `incomplete` |
 | 正式资产来源/hash/现有自动预算 | 20/20 | 3个正式资产身份、10个artifact通过；仍非Final |
 | triangle/vertex/LOD自动门 | 0/15 | 候选预算存在，自动检查缺失 |
 | 目标设备视觉/音频/性能 | 0/15 | A0.1无绑定当前clean build的新证据 |
 | 真人识别、归因、低动效与静音 | 0/15 | A0.1无有效样本 |
 
-成熟度20分只来自现有正式资产的来源/hash/自动预算；A0.1通过后也不会增加该分。Reference Board、剪影、LOD、目标设备、真人和Final继续 fail closed。
+成熟度35分来自A0.2六类合法参考板，以及现有正式资产的来源/hash/自动预算。A0.2只提高视觉方向证据，不提高任何运行时资产的
+`integrated`、设备、真人或Final状态；A0.3剪影真人门、LOD、目标设备、真人归因和Final继续 fail closed。
 
 ## 16. 当前依赖边界
 
-- 开发任务先做 **P1.1 Rule / Definition / 稳定事件合同**，覆盖自动替换和600 tick 权威回收。美术不重复实现、不命名第二套事件，也不批量生产供给 Final。
-- P1.1 冻结前只交供给形状/色彩/倒计时投影合同或代表样件；事件字段、同 tick 顺序和生命周期以开发合同为准。
-- P3 Map、P4 武器、P5 ViewModel、P6 Profile 未冻结时分别只做合同/代表样件，不做批量最终地图、武器、反馈或收藏资产。
+- 开发已完成并冻结 PA5 总门，PA6-P Presentation async boundary hardening 已签核；PA6 runner 为
+  `coordinator-correctness-approved / performance-deferred-by-ADR-115 / formalGate=false`，清洁环境 ABBA×3 延期到最终同源候选；PA7/PP只开放非性能条件实现窗口。该进度不改变已冻结的 P1 供给 Rule、Definition、
+  稳定事件、自动替换和600 tick权威回收合同；美术不得创建第二套事件词表或用表现反推规则。
+- 美术当前的首要硬缺口仍是 A0.3 真人样本 `0/10`；A1.1 的92/100
+  `upstream-contract-ready-candidate`只保留为绑定`f80307b`的历史状态，当前机器复验因三个上游源码artifact漂移而红，状态降为
+  `stale-upstream-evidence / hardGatePassed=false`。协调、来源、捕获和执行硬门仍为 false。两门未关闭前，只允许校对合同、来源、测量夹具、
+  同源重建方案与失败回退，
+  不启动供给代表样件、生产 Blockout 或正式资产接入。
+- ADR-115 的顺序调整不自动开放美术制作；美术只有在真实PP0/PP1候选出现后才能创建A1.0-v2机器包，代表样件和正式资产仍须另行授权。美术仍须取得本文件与
+  [A0–A7 对齐矩阵](arena-art-development-alignment-matrix.md)规定的独立上游、来源、预算、设备和真人证据，并由主协调逐门授权。
+- P3 Map、P4 武器、P5 ViewModel、P6 Profile 未冻结时分别只做合同或获批代表样件，不做批量最终地图、武器、反馈或收藏资产。

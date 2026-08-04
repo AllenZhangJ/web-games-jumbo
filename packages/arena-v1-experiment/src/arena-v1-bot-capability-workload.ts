@@ -228,13 +228,27 @@ class ArenaV1BotCapabilityCase {
       },
       botControllerFactory: (options: ConstructorParameters<typeof BotController>[0]) => {
         const controller = new BotController(options);
+        const createInput = controller.createInput.bind(controller);
+        const attachTrustedCommandSourceReader = controller.attachTrustedCommandSourceReader.bind(controller);
+        const createInputFromTrustedCommandSource = controller.createInputFromTrustedCommandSource.bind(controller);
+        const destroy = controller.destroy.bind(controller);
+        const recordBotFrame = (frame: ArenaInputFrame): ArenaInputFrame => {
+          this.#lastBotFrame = frame;
+          return frame;
+        };
         return {
           createInput: (snapshot: ArenaMatchSnapshot) => {
-            const frame = controller.createInput(snapshot);
-            this.#lastBotFrame = frame;
-            return frame;
+            return recordBotFrame(createInput(snapshot));
           },
-          destroy: () => controller.destroy(),
+          attachTrustedCommandSourceReader: (reader: unknown, handle: unknown) => (
+            attachTrustedCommandSourceReader(reader, handle)
+          ),
+          createInputFromTrustedCommandSource: () => (
+            recordBotFrame(createInputFromTrustedCommandSource())
+          ),
+          destroy: () => {
+            destroy();
+          },
         };
       },
     });
@@ -251,7 +265,7 @@ class ArenaV1BotCapabilityCase {
         tuning: parameters.benchmarkPlayer,
       });
       match.session.start();
-      const snapshot = match.session.getSnapshot();
+      const snapshot = match.session.getLegacyFullSnapshotForAudit();
       this.#metadata ??= createdMetadata;
       this.#session = match.session;
       this.#playerStrategy = playerStrategy;
@@ -372,10 +386,10 @@ class ArenaV1BotCapabilityCase {
     const difficultyId = parameters.difficultyIds[this.#difficultyIndex];
     if (!difficultyId) throw new Error('Bot capability 没有活动难度。');
     if (!this.#session || !this.#playerStrategy) throw new Error('Bot capability 缺少活动运行时。');
-    const snapshot = this.#session.getSnapshot();
+    const snapshot = this.#session.getLegacyFullSnapshotForAudit();
     const playerFrame = this.#playerStrategy.createInput(snapshot);
     this.#lastBotFrame = null;
-    const stepped = this.#session.step(playerFrame);
+    const stepped = this.#session.stepWithLegacySnapshotForAudit(playerFrame);
     const botFrame = this.#lastBotFrame;
     if (!botFrame) throw new Error(`Bot capability ${difficultyId} 未产生 Bot InputFrame。`);
     this.#experimentTick += 1;

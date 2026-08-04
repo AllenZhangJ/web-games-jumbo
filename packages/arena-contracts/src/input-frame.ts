@@ -40,6 +40,12 @@ const INPUT_FRAME_KEYS = new Set([
   'slamPressed',
 ]);
 
+// B1 trusted input batches may only be created from frames that crossed the
+// strict normalizer.  Keeping provenance here prevents a caller from wrapping
+// a frozen frame in an accessor/Proxy and presenting it as an already-checked
+// frame to the MatchCore internal port.
+const NORMALIZED_INPUT_FRAMES = new WeakSet<object>();
+
 function assertTick(value: unknown, name = 'tick'): number {
   if (!Number.isSafeInteger(value) || (value as number) < 0) {
     throw new RangeError(`${name} 必须是非负安全整数。`);
@@ -98,7 +104,7 @@ function normalizeClonedInputFrame(
     }
   }
   const movement = normalizeMovementIntent(source.moveX, source.moveZ);
-  return Object.freeze({
+  const normalized = Object.freeze({
     tick,
     participantId,
     moveX: movement.x,
@@ -109,6 +115,8 @@ function normalizeClonedInputFrame(
     jumpHeld: source.jumpHeld as boolean,
     slamPressed: source.slamPressed as boolean,
   });
+  NORMALIZED_INPUT_FRAMES.add(normalized);
+  return normalized;
 }
 
 export function normalizeInputFrame(
@@ -138,4 +146,15 @@ export function normalizeInputFrames(
   return Object.freeze(participantIds.map((participantId) => (
     byParticipant.get(participantId) ?? createNeutralInputFrame(tick, participantId)
   )));
+}
+
+/**
+ * Internal provenance check for MatchCore's same-instance input batch port.
+ * The returned boolean is deliberately weaker than public input validation;
+ * callers must still verify the exact batch shape and current authority state.
+ */
+export function isNormalizedInputFrame(value: unknown): value is ArenaInputFrame {
+  return typeof value === 'object'
+    && value !== null
+    && NORMALIZED_INPUT_FRAMES.has(value);
 }

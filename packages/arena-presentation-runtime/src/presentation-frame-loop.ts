@@ -1,6 +1,7 @@
-import { assertKnownKeys } from '@number-strategy-jump/arena-contracts';
+import { rejectThenable } from './capability-utils.js';
 
 const OPTION_KEYS = new Set(['requestFrame', 'cancelFrame', 'now', 'onError', 'maxDeltaSeconds']);
+const NATIVE_PROMISE_THEN = Promise.prototype.then;
 
 export interface PresentationFrame {
   readonly timestamp: number;
@@ -18,26 +19,58 @@ function requiredFunction<T extends (...args: never[]) => unknown>(value: unknow
   return value as T;
 }
 
+function ownOptions(value: unknown, name: string): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new TypeError(`${name} 必须是普通对象。`);
+  }
+  const prototype = Object.getPrototypeOf(value) as object | null;
+  if (prototype !== Object.prototype && prototype !== null) {
+    throw new TypeError(`${name} 必须是普通对象。`);
+  }
+  const result: Record<string, unknown> = {};
+  for (const key of Reflect.ownKeys(value)) {
+    if (typeof key !== 'string') throw new RangeError(`${name} 不支持 Symbol 字段。`);
+    if (!OPTION_KEYS.has(key)) throw new RangeError(`${name} 不支持字段 ${key}。`);
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (!descriptor || !descriptor.enumerable || !Object.hasOwn(descriptor, 'value')) {
+      throw new TypeError(`${name}.${key} 必须是可枚举数据字段。`);
+    }
+    result[key] = descriptor.value;
+  }
+  return result;
+}
+
+function observeNativePromise(value: unknown): boolean {
+  if ((typeof value !== 'object' || value === null) && typeof value !== 'function') return false;
+  try {
+    Reflect.apply(NATIVE_PROMISE_THEN, value, [() => undefined, () => undefined]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function containDiagnosticReturn(value: unknown, name: string): void {
+  if (observeNativePromise(value)) return;
+  try { rejectThenable(value, name); } catch { /* diagnostics are observer-only */ }
+}
+
 function safeTimestamp(timestamp: unknown, now: Now, previous: number | null): number {
-  if (Number.isFinite(timestamp)) return timestamp as number;
+  try {
+    rejectThenable(timestamp, 'PresentationFrameLoop frame timestamp');
+    if (Number.isFinite(timestamp)) return timestamp as number;
+  } catch (error) {
+    observeNativePromise(error);
+  }
   try {
     const fallback = now();
+    rejectThenable(fallback, 'PresentationFrameLoop.now()');
     if (Number.isFinite(fallback)) return fallback as number;
-  } catch {
+  } catch (error) {
+    observeNativePromise(error);
     // Host clock failure falls back to a monotonic synthetic timestamp.
   }
   return previous === null ? 0 : previous + 1000 / 60;
-}
-
-function containThenable(value: unknown): boolean {
-  if (!value || (typeof value !== 'object' && typeof value !== 'function')) return false;
-  let then: unknown;
-  try { then = Reflect.get(value, 'then'); } catch { return true; }
-  if (typeof then !== 'function') return false;
-  try {
-    Promise.resolve(value).catch(() => {});
-  } catch { /* malformed thenable is still rejected synchronously */ }
-  return true;
 }
 
 export class PresentationFrameLoop {
@@ -54,9 +87,10 @@ export class PresentationFrameLoop {
   #state: FrameLoopState = 'idle';
   #scheduling = false;
   #delivering = false;
+  #cancelling = false;
 
-  constructor(options: unknown) {
-    assertKnownKeys(options, OPTION_KEYS, 'PresentationFrameLoop options');
+  constructor(optionsValue: unknown) {
+    const options = ownOptions(optionsValue, 'PresentationFrameLoop options');
     this.#requestFrame = requiredFunction<RequestFrame>(options.requestFrame, 'PresentationFrameLoop.requestFrame');
     this.#cancelFrame = requiredFunction<CancelFrame>(options.cancelFrame, 'PresentationFrameLoop.cancelFrame');
     this.#now = requiredFunction<Now>(options.now, 'PresentationFrameLoop.now');
@@ -69,7 +103,29 @@ export class PresentationFrameLoop {
   }
 
   #report(error: unknown): void {
-    try { this.#onError(error); } catch { /* diagnostics cannot restart the loop */ }
+    observeNativePromise(error);
+    try {
+      containDiagnosticReturn(this.#onError(error), 'PresentationFrameLoop.onError()');
+    } catch (observerError) {
+      observeNativePromise(observerError);
+      // Diagnostics cannot restart the loop.
+    }
+  }
+
+  #cancel(token: unknown): void {
+    if (this.#cancelling) return;
+    this.#cancelling = true;
+    try {
+      containDiagnosticReturn(
+        this.#cancelFrame(token),
+        'PresentationFrameLoop.cancelFrame()',
+      );
+    } catch (error) {
+      observeNativePromise(error);
+      // Generation checks suppress callbacks even when the host cannot cancel.
+    } finally {
+      this.#cancelling = false;
+    }
   }
 
   #schedule(): boolean {
@@ -83,17 +139,29 @@ export class PresentationFrameLoop {
       token = this.#requestFrame((timestamp) => {
         if (synchronous) {
           invokedSynchronously = true;
+          containDiagnosticReturn(timestamp, 'PresentationFrameLoop synchronous timestamp');
           return;
         }
-        if (this.#state !== 'running' || generation !== this.#generation) return;
+        if (this.#state !== 'running' || generation !== this.#generation) {
+          observeNativePromise(timestamp);
+          return;
+        }
         this.#hasPendingFrame = false;
         this.#token = undefined;
         this.#deliver(timestamp, generation);
       });
       synchronous = false;
+      const asyncToken = observeNativePromise(token);
       if (invokedSynchronously) {
-        try { this.#cancelFrame(token); } catch { /* callback was already suppressed */ }
+        this.#cancel(token);
         throw new Error('PresentationFrameLoop 不接受同步 requestFrame 回调。');
+      }
+      if (this.#state !== 'running' || generation !== this.#generation) {
+        this.#cancel(token);
+        return false;
+      }
+      if (asyncToken) {
+        throw new TypeError('PresentationFrameLoop.requestFrame() 必须同步返回 token。');
       }
       this.#token = token;
       this.#hasPendingFrame = true;
@@ -106,6 +174,7 @@ export class PresentationFrameLoop {
 
   #deliver(timestamp: unknown, generation: number): void {
     if (this.#delivering) {
+      observeNativePromise(timestamp);
       this.#state = 'failed';
       this.#report(new Error('PresentationFrameLoop callback 不可重入。'));
       return;
@@ -122,9 +191,7 @@ export class PresentationFrameLoop {
       const callback = this.#callback;
       if (!callback) throw new Error('PresentationFrameLoop 缺少活动 callback。');
       const result = callback(Object.freeze({ timestamp: normalized, deltaSeconds }));
-      if (containThenable(result)) {
-        throw new TypeError('PresentationFrameLoop callback 必须同步返回。');
-      }
+      rejectThenable(result, 'PresentationFrameLoop callback');
       if (result === false && this.#state === 'running' && generation === this.#generation) {
         this.#state = 'idle';
         this.#callback = null;
@@ -144,6 +211,7 @@ export class PresentationFrameLoop {
   }
 
   start(callbackValue: unknown): boolean {
+    if (this.#cancelling) throw new Error('PresentationFrameLoop 不可在 cancelFrame() 中重入。');
     if (this.#state === 'destroyed') throw new Error('PresentationFrameLoop 已销毁。');
     if (this.#state === 'failed') throw new Error('PresentationFrameLoop 已失败。');
     const callback = requiredFunction<PresentationFrameCallback>(callbackValue, 'PresentationFrameLoop.callback');
@@ -153,10 +221,9 @@ export class PresentationFrameLoop {
     this.#generation += 1;
     this.#state = 'running';
     try {
-      this.#schedule();
-      return true;
+      return this.#schedule();
     } catch (error) {
-      this.#state = 'failed';
+      if ((this.#state as FrameLoopState) !== 'destroyed') this.#state = 'failed';
       this.#callback = null;
       this.#report(error);
       throw error;
@@ -164,6 +231,7 @@ export class PresentationFrameLoop {
   }
 
   stop(): boolean {
+    if (this.#cancelling) throw new Error('PresentationFrameLoop 不可在 cancelFrame() 中重入。');
     if (this.#state === 'destroyed' || this.#state === 'idle') return false;
     this.#generation += 1;
     const token = this.#token;
@@ -174,7 +242,7 @@ export class PresentationFrameLoop {
     this.#lastTimestamp = null;
     if (this.#state !== 'failed') this.#state = 'idle';
     if (hadPendingFrame) {
-      try { this.#cancelFrame(token); } catch { /* generation suppresses late callbacks */ }
+      this.#cancel(token);
     }
     return true;
   }
@@ -188,6 +256,7 @@ export class PresentationFrameLoop {
   }
 
   destroy(): void {
+    if (this.#cancelling) throw new Error('PresentationFrameLoop 不可在 cancelFrame() 中重入。');
     if (this.#state === 'destroyed') return;
     this.stop();
     this.#generation += 1;

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { runInNewContext } from 'node:vm';
 import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
 import { ARENA_MATCH_PHASE } from '@number-strategy-jump/arena-match';
 import {
@@ -723,8 +724,8 @@ describe('Input Pilot strict observed adapters', () => {
       state: 'created',
       start() {},
       setPaused(value: unknown) { paused = value === true; },
-      step() { return null; },
-      getSnapshot() { return null; },
+      stepWithLegacySnapshotForAudit() { return null; },
+      getLegacyFullSnapshotForAudit() { return null; },
       getPublicMatchInfo() { return null; },
       exportReplay() { return null; },
       destroy() { destroyCount += 1; },
@@ -739,5 +740,83 @@ describe('Input Pilot strict observed adapters', () => {
     expect(paused).toBe(true);
     session.destroy();
     expect(destroyCount).toBe(1);
+  });
+
+  it('rejects audit inputProvider and state async returns before delegate use', async () => {
+    const unhandled: unknown[] = [];
+    const listener = (reason: unknown) => { unhandled.push(reason); };
+    process.on('unhandledRejection', listener);
+    let hostileCalls = 0;
+    let destroys = 0;
+    try {
+      const values = [
+        (() => {
+          const rejected = Promise.reject(new Error('pilot native rejection'));
+          Object.defineProperty(rejected, 'then', { configurable: true, value: null });
+          return rejected;
+        })(),
+        runInNewContext('Promise.reject(new Error("pilot foreign rejection"))'),
+        {
+          then() {
+            hostileCalls += 1;
+            return Promise.reject(new Error('pilot returned rejection'));
+          },
+        },
+        { then: null },
+      ];
+      for (const value of values) {
+        let snapshotCalls = 0;
+        const delegate = {
+          state: 'created',
+          start() {},
+          setPaused() {},
+          stepWithLegacySnapshotForAudit() {
+            throw new Error('inputProvider failure must prevent delegate step');
+          },
+          getLegacyFullSnapshotForAudit() {
+            snapshotCalls += 1;
+            return snapshotCalls === 1
+              ? Object.freeze({ tick: 0, phase: ARENA_MATCH_PHASE.RUNNING })
+              : Object.freeze({ tick: 1, phase: ARENA_MATCH_PHASE.ENDED });
+          },
+          getPublicMatchInfo() { return null; },
+          exportReplay() { return Object.freeze({}); },
+          destroy() { destroys += 1; },
+        };
+        const session = new InputPilotObservedSession({
+          session: delegate,
+          collector: { observeStep() {} },
+        });
+        let failure: unknown;
+        try {
+          session.runLegacyUntilEndedForAudit(() => value);
+        } catch (error) {
+          failure = error;
+        }
+        expect(failure).toBeInstanceOf(Error);
+        expect((failure as Error).message).not.toMatch(/必须同步完成/);
+        expect(session.state).toBe('destroyed');
+      }
+
+      const stateRejected = Promise.reject(new Error('pilot state rejection'));
+      const stateDelegate = {
+        state: stateRejected,
+        start() {}, setPaused() {}, stepWithLegacySnapshotForAudit() { return null; },
+        getLegacyFullSnapshotForAudit() { return null; }, getPublicMatchInfo() { return null; },
+        exportReplay() { return null; }, destroy() { destroys += 1; },
+      };
+      const stateSession = new InputPilotObservedSession({
+        session: stateDelegate,
+        collector: { observeStep() {} },
+      });
+      expect(() => stateSession.state).toThrow(/同步完成/);
+      stateSession.destroy();
+      await new Promise<void>((resolve) => setImmediate(resolve));
+    } finally {
+      process.off('unhandledRejection', listener);
+    }
+    expect(unhandled).toHaveLength(0);
+    expect(hostileCalls).toBe(0);
+    expect(destroys).toBe(5);
   });
 });

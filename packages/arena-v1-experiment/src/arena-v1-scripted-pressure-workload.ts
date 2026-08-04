@@ -83,7 +83,7 @@ class ArenaV1ScriptedPressureCase {
 
   getSnapshot() {
     this.#assertUsable();
-    return this.#requireCore().getSnapshot();
+    return this.#requireCore().getLegacyFullSnapshotForAudit();
   }
 
   isComplete() {
@@ -95,12 +95,12 @@ class ArenaV1ScriptedPressureCase {
     this.#assertUsable();
     if (this.isComplete()) throw new Error('已完成的 scripted pressure case 不能继续 step。');
     const core = this.#requireCore();
-    const frames = this.#requireInputStrategy().createFrames(core.getSnapshot());
+    const frames = this.#requireInputStrategy().createFrames(core.getLegacyFullSnapshotForAudit());
     const events = this.#requireRunner().step(frames);
     return Object.freeze({
       inputFrames: frames,
       events,
-      snapshot: core.getSnapshot(),
+      snapshot: core.getLegacyFullSnapshotForAudit(),
     });
   }
 

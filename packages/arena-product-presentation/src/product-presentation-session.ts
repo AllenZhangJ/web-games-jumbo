@@ -10,6 +10,7 @@ import {
 } from '@number-strategy-jump/arena-presentation-contracts';
 import { PRODUCT_SESSION_STATE } from '@number-strategy-jump/arena-product-state';
 import {
+  ARENA_INPUT_SOURCE_MODE,
   createPresentationMemorySnapshot,
   mergePresentationMemorySnapshot,
   type PresentationQualityDefinition,
@@ -485,6 +486,21 @@ function errorMessage(error: unknown): string {
   return normalizeThrownError(error, '未知错误').message;
 }
 
+function safelyWrapMapperFactoryError(error: unknown): Error {
+  const failure = new Error('ProductPresentationSession mapperFactory 失败。');
+  try {
+    Object.defineProperty(failure, 'cause', {
+      value: error,
+      enumerable: false,
+      configurable: true,
+      writable: false,
+    });
+  } catch {
+    // The static failure remains authoritative if even cause attachment is unavailable.
+  }
+  return failure;
+}
+
 function validateOwnedCandidate<T>(
   value: unknown,
   name: string,
@@ -806,10 +822,15 @@ export class ProductPresentationSession {
   }
 
   #createSampler(): unknown {
-    const mapper = syncResult(
-      this.#composition.mapperFactory(this.#composition.mapperId),
-      'ProductPresentationSession mapperFactory()',
-    );
+    let mapper: unknown;
+    try {
+      mapper = syncResult(
+        this.#composition.mapperFactory(this.#composition.mapperId),
+        'ProductPresentationSession mapperFactory()',
+      );
+    } catch (error) {
+      throw safelyWrapMapperFactoryError(error);
+    }
     const mapperObject = asObject(mapper, 'ProductPresentationSession mapper');
     if (ownData(mapperObject, 'id', 'ProductPresentationSession mapper') !== this.#composition.mapperId) {
       throw new TypeError('ProductPresentationSession mapperFactory 返回值不符合合同。');
@@ -819,6 +840,7 @@ export class ProductPresentationSession {
       participantId: 'player-1',
       viewport: this.#requireRenderer().getInputViewport(),
       mapper,
+      actionSourceMode: ARENA_INPUT_SOURCE_MODE.LOCAL_SIDECAR_V2,
     }), 'ProductPresentationSession samplerFactory()');
   }
 

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ARENA_INPUT_MAPPER_ID } from '@number-strategy-jump/arena-presentation-runtime';
 import { createProductPresentationSessionComposition } from '../src/index.js';
 
 function platformHarness(): Record<string, unknown> {
@@ -61,6 +62,32 @@ describe('Arena V1 application session composition', () => {
     expect((composition.seedSource as { nextSeed(): unknown }).nextSeed()).toBe(41);
     expect(Object.isFrozen(composition.platform)).toBe(true);
     expect(Object.isFrozen(composition.seedSource)).toBe(true);
+  });
+
+  it('defaults the V2 composition to the context-primary mapper', () => {
+    const composition = createProductPresentationSessionComposition(platformHarness(), {
+      rendererFactory: () => ({}),
+      ownerId: 'context-primary-owner',
+    });
+    expect(composition.mapperId).toBe(ARENA_INPUT_MAPPER_ID.CONTEXT_PRIMARY);
+  });
+
+  it('rejects legacy and gesture mapper ids before renderer or host factories run', () => {
+    let rendererCalls = 0;
+    for (const mapperId of [
+      ARENA_INPUT_MAPPER_ID.EXPLICIT_COMBAT_JUMP,
+      ARENA_INPUT_MAPPER_ID.GESTURE_MOBILITY,
+    ]) {
+      expect(() => createProductPresentationSessionComposition(platformHarness(), {
+        mapperId,
+        rendererFactory: () => {
+          rendererCalls += 1;
+          return {};
+        },
+        ownerId: `rejected-${mapperId}`,
+      })).toThrow(/仅支持 context-primary mapper/);
+    }
+    expect(rendererCalls).toBe(0);
   });
 
   it('rejects optional host accessors and symbol options without executing them', () => {

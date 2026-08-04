@@ -62,8 +62,8 @@ interface RendererPort {
 interface MatchSessionPort {
   readonly start: () => unknown;
   readonly setPaused: (paused: boolean) => unknown;
-  readonly step: (input: unknown) => unknown;
-  readonly getSnapshot: () => unknown;
+  readonly stepWithLegacySnapshotForAudit: (input: unknown) => unknown;
+  readonly getLegacyFullSnapshotForAudit: () => unknown;
   readonly destroy: () => unknown;
 }
 
@@ -589,7 +589,7 @@ export class ArenaPresentationSession {
     this.#matchSession = candidate.session as MatchSessionPort;
     this.#eventWindow = candidate.eventWindow as EventWindowPort;
     this.#publicMatchInfo = candidate.publicMatchInfo as unknown as ArenaPresentationPublicMatchInfo;
-    this.#snapshot = candidate.snapshot as unknown as ArenaMatchSnapshot;
+    this.#snapshot = candidate.legacySnapshotForAudit as unknown as ArenaMatchSnapshot;
     this.#inputRouter = router;
     this.#inputAdapter = snapshotOwnedPort<InputAdapterPort>(this.#composition.inputAdapterFactory({
       platform: this.#composition.platform,
@@ -669,7 +669,7 @@ export class ArenaPresentationSession {
     const matchSession = this.#assertStartedResource(this.#matchSession, 'matchSession');
     const inputRouter = this.#assertStartedResource(this.#inputRouter, 'inputRouter');
     const before = arenaSnapshot(
-      callSync(matchSession.getSnapshot, 'Arena matchSession.getSnapshot'),
+      callSync(matchSession.getLegacyFullSnapshotForAudit, 'Arena matchSession.getLegacyFullSnapshotForAudit'),
       'Arena matchSession snapshot',
     );
     const local = before.participants.find(({ id }) => id === 'player-1');
@@ -678,7 +678,7 @@ export class ArenaPresentationSession {
       actionAffordance: local.actionAffordance,
     }), 'Arena inputRouter.sample');
     const result = recordData(
-      rejectThenable(matchSession.step(input), 'Arena matchSession.step'),
+      rejectThenable(matchSession.stepWithLegacySnapshotForAudit(input), 'Arena matchSession.stepWithLegacySnapshotForAudit'),
       'Arena match step result',
     );
     const snapshot = arenaSnapshot(
@@ -752,7 +752,7 @@ export class ArenaPresentationSession {
     this.#matchSession = candidate.session as MatchSessionPort;
     this.#eventWindow = candidate.eventWindow as EventWindowPort;
     this.#publicMatchInfo = candidate.publicMatchInfo as unknown as ArenaPresentationPublicMatchInfo;
-    this.#snapshot = candidate.snapshot as unknown as ArenaMatchSnapshot;
+    this.#snapshot = candidate.legacySnapshotForAudit as unknown as ArenaMatchSnapshot;
     this.#lastPresentationFrame = null;
     this.#matchingElapsed = 0;
     rejectThenable(this.#accumulator.reset(), 'Arena accumulator.reset');

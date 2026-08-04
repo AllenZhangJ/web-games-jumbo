@@ -102,9 +102,9 @@ try {
     if (/sourceProfileRevision|poolHash|difficulty/i.test(JSON.stringify(preparedContent))) {
       throw new Error(`第 ${matchIndex} 局公开内容泄漏产品来源或难度。`);
     }
-    controller.beginMatch();
+    controller.beginMatchWithReadFrame();
 
-    let finalStep: ReturnType<typeof controller.stepMatch> | null = null;
+    let finalStep: ReturnType<typeof controller.stepMatchWithReadFrame> | null = null;
     for (let tickIndex = 0; tickIndex < 100; tickIndex += 1) {
       if (tickIndex === 2 && matchIndex % 2 === 0) {
         controller.hide();
@@ -114,7 +114,7 @@ try {
         controller.show();
         lifecycleTransitions += 1;
       }
-      finalStep = controller.stepMatch();
+      finalStep = controller.stepMatchWithReadFrame();
       if (controller.state === PRODUCT_SESSION_STATE.RESULTS) break;
     }
     if (controller.state !== PRODUCT_SESSION_STATE.RESULTS || !finalStep?.matchStep?.result) {

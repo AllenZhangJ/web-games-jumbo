@@ -2,7 +2,7 @@ import {
   assertNonEmptyString,
   assertPlainRecord,
   combineCleanupFailure,
-  normalizeThrownError,
+  isNormalizedInputFrame,
   type PlainRecord,
 } from '@number-strategy-jump/arena-contracts';
 import {
@@ -32,21 +32,25 @@ export type ProductMatchPresentationRuntimeState = typeof PRODUCT_MATCH_PRESENTA
 ];
 
 interface ProductControllerAdapter {
-  beginMatch(): unknown;
-  stepMatch(input: unknown): unknown;
-  getActiveMatchSnapshot(): unknown;
-  getSnapshot(): unknown;
+  beginMatchWithReadFrame(): unknown;
+  stepMatchWithReadFrame(input: unknown): unknown;
+  getActiveMatchReadFrame(): unknown;
 }
 
 export interface ProductMatchPresentationControllerPort {
-  beginMatch(): unknown;
-  stepMatch(input: unknown): unknown;
-  getActiveMatchSnapshot(): unknown;
-  getSnapshot(): unknown;
+  beginMatchWithReadFrame(): unknown;
+  stepMatchWithReadFrame(input: unknown): unknown;
+  getActiveMatchReadFrame(): unknown;
 }
 
 export interface ProductMatchPresentationInputPort {
-  sample(tick: number, options: Readonly<{ actionAffordance: unknown }>): unknown;
+  sample(
+    tick: number,
+    options: Readonly<{
+      eventSequence: number;
+      localActionSidecar: unknown;
+    }>,
+  ): unknown;
 }
 
 export interface ProductMatchPresentationEventWindowPort {
@@ -55,7 +59,8 @@ export interface ProductMatchPresentationEventWindowPort {
 }
 
 export interface ProductMatchPresentationProjectorOptions {
-  readonly snapshot: unknown;
+  readonly worldSnapshot: unknown;
+  readonly localActionSidecar: unknown;
   readonly events: readonly unknown[];
   readonly publicMatchInfo: ProductPublicMatchInfo;
   readonly localParticipantId: string;
@@ -86,35 +91,44 @@ function syncResult(value: unknown, name: string): unknown {
 }
 
 function normalizeController(value: unknown): ProductControllerAdapter {
-  const beginMatch = snapshotMethod(value, 'ProductSessionController', 'beginMatch')!;
-  const stepMatch = snapshotMethod(value, 'ProductSessionController', 'stepMatch')!;
-  const getActiveMatchSnapshot = snapshotMethod(
+  const beginMatchWithReadFrame = snapshotMethod(
     value,
     'ProductSessionController',
-    'getActiveMatchSnapshot',
+    'beginMatchWithReadFrame',
   )!;
-  const getSnapshot = snapshotMethod(value, 'ProductSessionController', 'getSnapshot')!;
+  const stepMatchWithReadFrame = snapshotMethod(
+    value,
+    'ProductSessionController',
+    'stepMatchWithReadFrame',
+  )!;
+  const getActiveMatchReadFrame = snapshotMethod(
+    value,
+    'ProductSessionController',
+    'getActiveMatchReadFrame',
+  )!;
   return Object.freeze({
-    beginMatch: () => syncResult(beginMatch(), 'ProductSessionController.beginMatch()'),
-    stepMatch: (input: unknown) => syncResult(
-      stepMatch(input),
-      'ProductSessionController.stepMatch()',
+    beginMatchWithReadFrame: () => syncResult(
+      beginMatchWithReadFrame(),
+      'ProductSessionController.beginMatchWithReadFrame()',
     ),
-    getActiveMatchSnapshot: () => syncResult(
-      getActiveMatchSnapshot(),
-      'ProductSessionController.getActiveMatchSnapshot()',
+    stepMatchWithReadFrame: (input: unknown) => syncResult(
+      stepMatchWithReadFrame(input),
+      'ProductSessionController.stepMatchWithReadFrame()',
     ),
-    getSnapshot: () => syncResult(getSnapshot(), 'ProductSessionController.getSnapshot()'),
+    getActiveMatchReadFrame: () => syncResult(
+      getActiveMatchReadFrame(),
+      'ProductSessionController.getActiveMatchReadFrame()',
+    ),
   });
 }
 
 function normalizeInputSource(value: unknown): ProductMatchPresentationInputPort {
   const sample = snapshotMethod(value, 'ProductMatch inputSource', 'sample')!;
   return Object.freeze({
-    sample: (tick: number, options: Readonly<{ actionAffordance: unknown }>) => syncResult(
-      sample(tick, options),
-      'ProductMatch inputSource.sample()',
-    ),
+    sample: (tick: number, options: Readonly<{
+      eventSequence: number;
+      localActionSidecar: unknown;
+    }>) => sample(tick, options),
   });
 }
 
@@ -126,7 +140,7 @@ function normalizeEventWindow(value: unknown): ProductMatchPresentationEventWind
     destroy = snapshotMethod(value, 'ProductMatch eventWindow', 'destroy')!;
   } catch (error) {
     throw new TypeError('ProductMatchPresentationRuntime eventWindow 不符合合同。', {
-      cause: normalizeThrownError(error, 'ProductMatch eventWindow 合同无效'),
+      cause: safelyWrapThrownError(error, 'ProductMatch eventWindow 合同无效'),
     });
   }
   return Object.freeze({
@@ -149,30 +163,233 @@ function activeProductState(snapshotValue: unknown): unknown {
   return state.state === PRODUCT_SESSION_STATE.SUSPENDED ? state.activeState : state.state;
 }
 
-function requireLocalParticipant(snapshotValue: unknown, participantId: string): PlainRecord {
-  const snapshot = assertPlainRecord(snapshotValue, 'Product match snapshot');
-  if (!Array.isArray(snapshot.participants)) {
-    throw new TypeError('Product match snapshot 缺少 participants。');
+const V2_FRAME_KEYS = new Set(['schemaVersion', 'worldSnapshot', 'localActionSidecar']);
+const V2_LOCAL_KEYS = new Set([
+  'schemaVersion', 'tick', 'eventSequence', 'participantId', 'profile',
+  'primaryActionDefinitionId', 'channels',
+]);
+const V2_CHANNEL_KEYS = new Set(['primary', 'primaryHold']);
+const INPUT_FRAME_SEMANTIC_KEYS = [
+  'tick', 'participantId', 'moveX', 'moveZ',
+  'primaryPressed', 'primaryHeld', 'jumpPressed', 'jumpHeld', 'slamPressed',
+] as const;
+
+function strictFrozenDataRecord(
+  value: unknown,
+  keys: ReadonlySet<string>,
+  name: string,
+): PlainRecord {
+  const record = assertPlainRecord(value, name);
+  if (!Object.isFrozen(record)) throw new TypeError(`${name} 必须冻结。`);
+  const ownKeys = Object.keys(record);
+  if (ownKeys.length !== keys.size || ownKeys.some((key) => !keys.has(key))) {
+    throw new TypeError(`${name} 字段集合不符合 V2 合同。`);
   }
-  let participant: PlainRecord | null = null;
-  for (let index = 0; index < snapshot.participants.length; index += 1) {
-    const candidate = assertPlainRecord(
-      snapshot.participants[index],
-      `Product match snapshot.participants[${index}]`,
-    );
-    if (candidate.id === participantId) participant = candidate;
+  for (const key of keys) {
+    const descriptor = Object.getOwnPropertyDescriptor(record, key);
+    if (!descriptor || !descriptor.enumerable || !Object.hasOwn(descriptor, 'value')) {
+      throw new TypeError(`${name}.${key} 必须是冻结数据字段。`);
+    }
   }
-  if (participant === null) {
-    throw new RangeError(`Product match snapshot 缺少本地参与者 ${participantId}。`);
+  return record;
+}
+
+interface TrustedV2FrameParts {
+  readonly frame: PlainRecord;
+  readonly world: PlainRecord;
+  readonly local: PlainRecord;
+}
+
+function readV2Frame(value: unknown, localParticipantId: string): TrustedV2FrameParts {
+  const frame = strictFrozenDataRecord(value, V2_FRAME_KEYS, 'ProductMatch MatchReadFrameV2');
+  if (frame.schemaVersion !== 2) throw new RangeError('ProductMatch MatchReadFrameV2.schemaVersion 必须是 2。');
+  const world = assertPlainRecord(frame.worldSnapshot, 'ProductMatch WorldSnapshotV2');
+  if (!Object.isFrozen(world)) throw new TypeError('ProductMatch WorldSnapshotV2 必须冻结。');
+  const local = strictFrozenDataRecord(
+    frame.localActionSidecar,
+    V2_LOCAL_KEYS,
+    'ProductMatch LocalActionSidecarV2',
+  );
+  if (local.schemaVersion !== 2 || local.profile !== 'local-context-primary') {
+    throw new RangeError('ProductMatch LocalActionSidecarV2 profile/schema 无效。');
   }
-  assertPlainRecord(participant.actionAffordance, `${participantId}.actionAffordance`);
-  return participant;
+  if (local.participantId !== localParticipantId) {
+    throw new RangeError('ProductMatch LocalActionSidecarV2 participantId 不匹配。');
+  }
+  if (local.tick !== world.tick || local.eventSequence !== world.eventSequence) {
+    throw new RangeError('ProductMatch V2 frame world/local identity 不一致。');
+  }
+  const channels = strictFrozenDataRecord(
+    local.channels,
+    V2_CHANNEL_KEYS,
+    'ProductMatch LocalActionSidecarV2.channels',
+  );
+  for (const channel of V2_CHANNEL_KEYS) {
+    const outcome = assertPlainRecord(channels[channel], `ProductMatch local ${channel}`);
+    if (!Object.isFrozen(outcome)) throw new TypeError(`ProductMatch local ${channel} 必须冻结。`);
+  }
+  return Object.freeze({ frame, world, local });
+}
+
+function assertPostStepInputIdentity(
+  submittedValue: unknown,
+  returnedValue: unknown,
+  postFrame: TrustedV2FrameParts,
+  localParticipantId: string,
+): void {
+  if (!isNormalizedInputFrame(submittedValue) || !isNormalizedInputFrame(returnedValue)) {
+    throw new TypeError('ProductMatch V2 step input 必须是 trusted normalized InputFrame。');
+  }
+  const submitted = submittedValue;
+  const returned = returnedValue;
+  const postTick = postFrame.world.tick;
+  if (
+    submitted.participantId !== localParticipantId
+    || returned.participantId !== localParticipantId
+    || postFrame.local.participantId !== localParticipantId
+  ) {
+    throw new RangeError('ProductMatch V2 step input participant identity 不一致。');
+  }
+  if (!Number.isSafeInteger(postTick) || (postTick as number) < 1) {
+    throw new RangeError('ProductMatch V2 post frame tick 无效。');
+  }
+  const expectedInputTick = (postTick as number) - 1;
+  if (
+    submitted.tick !== returned.tick
+    || submitted.tick !== expectedInputTick
+    || returned.tick !== expectedInputTick
+  ) {
+    throw new RangeError('ProductMatch V2 step input 与 post frame tick identity 不一致。');
+  }
+  for (const key of INPUT_FRAME_SEMANTIC_KEYS) {
+    if (!Object.is(submitted[key], returned[key])) {
+      throw new Error('ProductMatch V2 step returned input 与本次提交 input 语义不一致。');
+    }
+  }
+}
+
+function assertResultMatchIdentity(
+  result: ProductMatchResult,
+  publicMatchInfo: ProductPublicMatchInfo,
+): void {
+  if (
+    result.matchSeed !== publicMatchInfo.matchSeed
+    || result.content.contentHash !== publicMatchInfo.content.contentHash
+    || result.opponent.id !== publicMatchInfo.opponent.id
+    || result.opponent.displayName !== publicMatchInfo.opponent.displayName
+    || result.opponent.portraitKey !== publicMatchInfo.opponent.portraitKey
+    || result.opponent.appearanceKey !== publicMatchInfo.opponent.appearanceKey
+  ) {
+    throw new RangeError('ProductMatch V2 result 与当前 public match identity 不一致。');
+  }
+}
+
+function assertPublicMatchIdentity(
+  publicMatchInfo: ProductPublicMatchInfo,
+  localParticipantId: string,
+  opponentParticipantId: string,
+): void {
+  const participantIds = publicMatchInfo.content.participantCharacters.map(
+    (assignment) => assignment.participantId,
+  );
+  if (!participantIds.includes(localParticipantId) || !participantIds.includes(opponentParticipantId)) {
+    throw new RangeError('ProductMatch public content 未覆盖本局 local/opponent participant。');
+  }
+}
+
+function readWorldOutcomeField(
+  outcome: PlainRecord,
+  field: string,
+  name: string,
+): unknown {
+  const descriptor = Object.getOwnPropertyDescriptor(outcome, field);
+  if (!descriptor || !descriptor.enumerable || !Object.hasOwn(descriptor, 'value')) {
+    throw new TypeError(`${name}.${field} 必须是可枚举数据字段。`);
+  }
+  return descriptor.value;
+}
+
+function assertPostWorldResultConsistency(
+  result: ProductMatchResult | null,
+  postFrame: TrustedV2FrameParts,
+  localParticipantId: string,
+  opponentParticipantId: string,
+): void {
+  const world = postFrame.world;
+  const worldResultValue = world.result;
+  if (result === null) {
+    if (worldResultValue !== null || world.phase === 'ended') {
+      throw new RangeError('ProductMatch V2 post world 已终局但 Product result 缺失。');
+    }
+    return;
+  }
+  if (world.phase !== 'ended' || worldResultValue === null) {
+    throw new RangeError('ProductMatch V2 terminal result 与 post world phase/result 不一致。');
+  }
+  const worldResult = assertPlainRecord(worldResultValue, 'ProductMatch post WorldSnapshot.result');
+  const winnerId = readWorldOutcomeField(
+    worldResult,
+    'winnerId',
+    'ProductMatch post WorldSnapshot.result',
+  );
+  const reason = readWorldOutcomeField(
+    worldResult,
+    'reason',
+    'ProductMatch post WorldSnapshot.result',
+  );
+  const isDraw = readWorldOutcomeField(
+    worldResult,
+    'isDraw',
+    'ProductMatch post WorldSnapshot.result',
+  );
+  const endedAtTick = readWorldOutcomeField(
+    worldResult,
+    'endedAtTick',
+    'ProductMatch post WorldSnapshot.result',
+  );
+  if (
+    winnerId !== null
+    && winnerId !== localParticipantId
+    && winnerId !== opponentParticipantId
+  ) throw new RangeError('ProductMatch post WorldSnapshot.result.winnerId 不属于本局。');
+  if (typeof reason !== 'string' || reason.trim().length === 0) {
+    throw new TypeError('ProductMatch post WorldSnapshot.result.reason 无效。');
+  }
+  if (typeof isDraw !== 'boolean' || isDraw !== (winnerId === null)) {
+    throw new RangeError('ProductMatch post WorldSnapshot.result winner/draw 不一致。');
+  }
+  if (!Number.isSafeInteger(endedAtTick) || (endedAtTick as number) < 0) {
+    throw new RangeError('ProductMatch post WorldSnapshot.result.endedAtTick 无效。');
+  }
+  const authority = result.authorityResult;
+  if (
+    authority.winnerId !== winnerId
+    || authority.reason !== reason
+    || authority.isDraw !== isDraw
+    || authority.endedAtTick !== endedAtTick
+  ) throw new RangeError('ProductMatch result 与 post WorldSnapshot.result 身份不一致。');
 }
 
 function runtimeFailure(error: unknown, message: string): Error {
-  const cause = normalizeThrownError(error, message);
-  const failure = new Error(`${message}：${cause.message}`, { cause });
+  return safelyWrapThrownError(error, message);
+}
+
+function attachOpaqueCause(failure: Error, error: unknown): Error {
+  try {
+    Object.defineProperty(failure, 'cause', {
+      value: error,
+      enumerable: false,
+      configurable: true,
+      writable: false,
+    });
+  } catch {
+    // A hostile thrown value must never prevent the static failure from being registered.
+  }
   return failure;
+}
+
+function safelyWrapThrownError(error: unknown, message: string): Error {
+  return attachOpaqueCause(new Error(message), error);
 }
 
 export class ProductMatchPresentationRuntime {
@@ -244,10 +461,10 @@ export class ProductMatchPresentationRuntime {
         );
         if (destroy) syncResult(destroy(), '无效 ProductMatch eventWindow.destroy()');
       } catch (cleanupError) {
-        cleanupErrors.push(normalizeThrownError(cleanupError, '无效 eventWindow 清理失败'));
+        cleanupErrors.push(safelyWrapThrownError(cleanupError, '无效 eventWindow 清理失败'));
       }
       throw combineCleanupFailure(
-        normalizeThrownError(error, 'ProductMatchPresentationRuntime 构造失败'),
+        safelyWrapThrownError(error, 'ProductMatchPresentationRuntime 构造失败'),
         cleanupErrors,
         'ProductMatchPresentationRuntime 构造失败且清理未完整完成。',
       );
@@ -296,13 +513,14 @@ export class ProductMatchPresentationRuntime {
   }
 
   #fail(error: unknown, message: string): Error {
-    this.#lastError = runtimeFailure(error, message);
+    const failure = new Error(message);
+    this.#lastError = failure;
     this.#state = PRODUCT_MATCH_PRESENTATION_RUNTIME_STATE.FAILED;
-    return this.#lastError;
+    return attachOpaqueCause(failure, error);
   }
 
   #project(
-    snapshot: unknown,
+    readFrame: TrustedV2FrameParts,
     events: readonly unknown[],
     publicMatchInfo: ProductPublicMatchInfo,
   ): unknown {
@@ -316,7 +534,8 @@ export class ProductMatchPresentationRuntime {
       throw new TypeError('ProductMatch eventWindow.consume() 必须返回数组。');
     }
     const frame = frameProjector({
-      snapshot,
+      worldSnapshot: readFrame.world,
+      localActionSidecar: readFrame.local,
       events: accepted,
       publicMatchInfo,
       localParticipantId: this.#localParticipantId,
@@ -340,18 +559,25 @@ export class ProductMatchPresentationRuntime {
       ) return this.#lastFrame;
       const controller = this.#controller;
       if (controller === null) throw new Error('ProductSessionController 已释放。');
-      const productSnapshotValue = controller.beginMatch();
+      const outcome = assertPlainRecord(
+        controller.beginMatchWithReadFrame(),
+        'ProductSession V2 begin outcome',
+      );
       this.#assertNoSwallowedReentry();
+      const productSnapshotValue = outcome.productSnapshot;
       if (activeProductState(productSnapshotValue) !== PRODUCT_SESSION_STATE.IN_MATCH) {
         throw new Error('Product match 启动后未进入 in-match。');
       }
       const productSnapshot = assertPlainRecord(productSnapshotValue, 'ProductSession snapshot');
       const match = assertPlainRecord(productSnapshot.match, 'ProductSession snapshot.match');
       const publicMatchInfo = createProductPublicMatchInfo(match.publicMatchInfo);
-      const snapshot = controller.getActiveMatchSnapshot();
-      this.#assertNoSwallowedReentry();
-      if (snapshot === null) throw new Error('Product match 启动后缺少权威快照。');
-      const frame = this.#project(snapshot, [], publicMatchInfo);
+      assertPublicMatchIdentity(
+        publicMatchInfo,
+        this.#localParticipantId,
+        this.#opponentParticipantId,
+      );
+      const readFrame = readV2Frame(outcome.readFrame, this.#localParticipantId);
+      const frame = this.#project(readFrame, [], publicMatchInfo);
       this.#publicMatchInfo = publicMatchInfo;
       this.#lastFrame = frame;
       this.#lastError = null;
@@ -367,6 +593,10 @@ export class ProductMatchPresentationRuntime {
   step(): unknown {
     this.#assertUsable();
     this.#enter('step');
+    let sampleStarted = false;
+    let sampleReturned = false;
+    let authorityEntered = false;
+    let failureMessage = 'Product match 表现 step 失败';
     try {
       if (this.#state === PRODUCT_MATCH_PRESENTATION_RUNTIME_STATE.RESULT) return this.#lastFrame;
       if (this.#state !== PRODUCT_MATCH_PRESENTATION_RUNTIME_STATE.RUNNING) {
@@ -378,41 +608,79 @@ export class ProductMatchPresentationRuntime {
       if (controller === null) throw new Error('ProductSessionController 已释放。');
       const inputSource = this.#inputSource;
       if (inputSource === null) throw new Error('ProductMatch inputSource 已释放。');
-      const before = controller.getActiveMatchSnapshot();
+      const before = readV2Frame(
+        controller.getActiveMatchReadFrame(),
+        this.#localParticipantId,
+      );
       this.#assertNoSwallowedReentry();
-      if (before === null) throw new Error('Product match 运行中缺少权威快照。');
-      const beforeRecord = assertPlainRecord(before, 'Product match snapshot');
-      const tick = beforeRecord.tick;
+      const tick = before.world.tick;
       if (!Number.isSafeInteger(tick) || (tick as number) < 0) {
-        throw new RangeError('Product match snapshot.tick 必须是非负安全整数。');
+        throw new RangeError('ProductMatch V2 world.tick 必须是非负安全整数。');
       }
-      const local = requireLocalParticipant(before, this.#localParticipantId);
-      const input = inputSource.sample(tick as number, {
-        actionAffordance: local.actionAffordance,
+      sampleStarted = true;
+      const sampledValue = inputSource.sample(tick as number, {
+        eventSequence: before.local.eventSequence as number,
+        localActionSidecar: before.local,
       });
+      sampleReturned = true;
+      rejectThenable(sampledValue, 'ProductMatch inputSource.sample()');
+      const input = sampledValue;
       this.#assertNoSwallowedReentry();
+      if (!isNormalizedInputFrame(input)) {
+        throw new TypeError('Product match V2 inputSource 必须返回 trusted normalized InputFrame。');
+      }
+      if (input.tick !== tick) {
+        throw new RangeError(
+          `Product match V2 input.tick ${input.tick} 与当前 frame.tick ${tick} 不一致。`,
+        );
+      }
+      if (input.participantId !== this.#localParticipantId) {
+        throw new RangeError('Product match V2 input.participantId 与本地 participant 不一致。');
+      }
+      authorityEntered = true;
       const outcome = assertPlainRecord(
-        controller.stepMatch(input),
-        'Product match step outcome',
+        controller.stepMatchWithReadFrame(input),
+        'ProductSession V2 step outcome',
       );
       this.#assertNoSwallowedReentry();
       if (outcome.matchStep === null) {
-        throw new Error('Product match 权威 step 失败并已关闭。');
+        throw new Error('Product match V2 权威 step 失败并已关闭。');
       }
       const matchStep = assertPlainRecord(outcome.matchStep, 'Product match step');
-      if (!Array.isArray(matchStep.events) || !matchStep.snapshot) {
+      if (!Array.isArray(matchStep.events) || !matchStep.readFrame) {
         throw new TypeError('Product match step 返回值不符合表现合同。');
+      }
+      const postFrame = readV2Frame(matchStep.readFrame, this.#localParticipantId);
+      try {
+        assertPostStepInputIdentity(input, matchStep.input, postFrame, this.#localParticipantId);
+      } catch (error) {
+        failureMessage = 'Product match 表现 step 失败：post input identity';
+        throw error;
       }
       const result = matchStep.result === null
         ? null
         : validateProductMatchResult(matchStep.result);
+      if (result !== null) {
+        failureMessage = 'Product match 表现 step 失败：post result identity';
+        assertResultMatchIdentity(result, publicMatchInfo);
+      }
+      assertPostWorldResultConsistency(
+        result,
+        postFrame,
+        this.#localParticipantId,
+        this.#opponentParticipantId,
+      );
       const expectedProductState = result === null
         ? PRODUCT_SESSION_STATE.IN_MATCH
         : PRODUCT_SESSION_STATE.RESULTS;
       if (activeProductState(outcome.productSnapshot) !== expectedProductState) {
         throw new Error(`Product match step 后未进入 ${expectedProductState}。`);
       }
-      const frame = this.#project(matchStep.snapshot, matchStep.events, publicMatchInfo);
+      const frame = this.#project(
+        postFrame,
+        matchStep.events,
+        publicMatchInfo,
+      );
       this.#lastFrame = frame;
       if (result !== null) {
         this.#lastResult = result;
@@ -420,7 +688,10 @@ export class ProductMatchPresentationRuntime {
       }
       return frame;
     } catch (error) {
-      throw this.#fail(error, 'Product match 表现 step 失败');
+      if (sampleStarted && !sampleReturned && !authorityEntered && !this.#reentryAttempted) {
+        throw runtimeFailure(error, 'Product match 输入采样失败');
+      }
+      throw this.#fail(error, failureMessage);
     } finally {
       this.#leave();
     }

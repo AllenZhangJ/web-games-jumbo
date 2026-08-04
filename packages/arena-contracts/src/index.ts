@@ -17,6 +17,7 @@ export type { DeterministicRng } from './deterministic-rng.js';
 export {
   ARENA_INPUT_FRAME_SCHEMA_VERSION,
   createNeutralInputFrame,
+  isNormalizedInputFrame,
   normalizeInputFrame,
   normalizeInputFrames,
   normalizeMovementIntent,
@@ -30,6 +31,7 @@ export { ARENA_MATCH_EVENT } from './match-event-types.js';
 export type { ArenaMatchEventType } from './match-event-types.js';
 export {
   EQUIPMENT_EXPIRY_REASON,
+  EQUIPMENT_DESPAWN_REASON,
   EQUIPMENT_RECYCLE_REASON,
   EQUIPMENT_SUPPLY_EVENT_PAYLOAD_SCHEMA_VERSION,
   createEquipmentExpiredEventPayload,
@@ -82,6 +84,26 @@ export type {
   ArenaPublicSupplyProjectionReadiness,
   ArenaPublicSupplyProjectionSpawnSpec,
 } from './arena-public-supply-projection.js';
+export {
+  ARENA_MATCH_READ_PROFILE,
+  MATCH_READ_FRAME_V2_SCHEMA_VERSION,
+  createBotMobilitySidecarV2Audit,
+  createFullAuditSidecarV2Audit,
+  createLocalActionSidecarV2Audit,
+  createMatchReadFrameV2Audit,
+  createWorldSnapshotV2Audit,
+  requireArenaSurvivalSupplyProjectionV2,
+} from './match-read-frame-v2.js';
+export type {
+  ActionAffordanceViewV2,
+  ArenaMatchReadProfile,
+  BotMobilitySidecarV2,
+  FullAuditSidecarV2,
+  LocalActionSidecarV2,
+  MatchReadFrameV2,
+  WorldParticipantSnapshotV2,
+  WorldSnapshotV2,
+} from './match-read-frame-v2.js';
 export { ACTION_RESOLUTION_KIND } from './action-resolution.js';
 export type { ActionResolutionKind } from './action-resolution.js';
 export {

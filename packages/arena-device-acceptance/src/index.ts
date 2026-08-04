@@ -25,6 +25,20 @@ export {
   createArenaStage8ProductDeviceAcceptanceV1Definition,
 } from './arena-stage8-product-device-acceptance-v1.js';
 export {
+  ARENA_P1_SUPPLY_ACCEPTANCE_BUILD_ATTESTATION_PURPOSE,
+  ARENA_P1_SUPPLY_ACCEPTANCE_BUILD_ATTESTATION_SCHEMA_VERSION,
+  ARENA_P1_SUPPLY_ACCEPTANCE_PLATFORM,
+  ARENA_P1_SUPPLY_DEVICE_ACCEPTANCE_V1_ID,
+  ARENA_P1_SUPPLY_DEVICE_CHECK_ID,
+  ARENA_P1_SUPPLY_DEVICE_TARGET_ID,
+  createArenaP1SupplyAcceptanceBuildAttestationV1,
+  createArenaP1SupplyDeviceAcceptanceV1Definition,
+} from './arena-p1-supply-device-acceptance-v1.js';
+export type {
+  ArenaP1SupplyAcceptanceBuildAttestationV1,
+  ArenaP1SupplyAcceptancePlatform,
+} from './arena-p1-supply-device-acceptance-v1.js';
+export {
   ARENA_DEVICE_ACCEPTANCE_CHECK_RESULT,
   ARENA_DEVICE_ACCEPTANCE_RECORD_SCHEMA_VERSION,
   createArenaDeviceAcceptanceRecord,

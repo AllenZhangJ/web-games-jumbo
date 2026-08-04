@@ -246,7 +246,7 @@ test('MatchCore resolves participant character IDs and includes character conten
       ],
     },
   });
-  assert.deepEqual(first.getSnapshot().participants.map(({ id, characterDefinitionId }) => ({
+  assert.deepEqual(first.getLegacyFullSnapshotForAudit().participants.map(({ id, characterDefinitionId }) => ({
     participantId: id,
     definitionId: characterDefinitionId,
   })), first.config.participantCharacters);

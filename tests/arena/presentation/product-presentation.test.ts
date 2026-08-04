@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createNeutralInputFrame } from '@number-strategy-jump/arena-contracts';
+import { createNeutralInputFrame, normalizeInputFrame } from '@number-strategy-jump/arena-contracts';
 import { createArenaV1ProductSession } from '@number-strategy-jump/arena-v1-composition';
 import { ARENA_V1_PLAYER_PROFILE_DEFINITION } from '@number-strategy-jump/arena-product-v1-content';
 import {
@@ -25,7 +25,7 @@ import {
   ARENA_V1_PRODUCT_SCREEN_REGISTRY,
   ARENA_V1_ZH_CN_PRODUCT_MESSAGES,
   ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT,
-  projectArenaPresentationFrame,
+  projectArenaPresentationFrameV2,
 } from '@number-strategy-jump/arena-v1-presentation-content';
 import {
   PRODUCT_MESSAGE_CATALOG_SCHEMA_VERSION,
@@ -58,7 +58,7 @@ import type {
 } from '@number-strategy-jump/arena-presentation-runtime';
 import { TEST_MATCH_CONTENT_PUBLIC_VIEW } from '../product/stage8-test-content.js';
 
-const arenaFrameProjector = projectArenaPresentationFrame as unknown as (
+const arenaV2FrameProjector = projectArenaPresentationFrameV2 as unknown as (
   options: ProductMatchPresentationProjectorOptions,
 ) => unknown;
 
@@ -568,16 +568,19 @@ test('Product match presentation runtime bridges the one owned Product match int
   await controller.requestMatch();
   const sampled: Array<Readonly<{ tick: number; actionAffordance: unknown }>> = [];
   const inputSource = {
-    sample(tick: number, { actionAffordance }: Readonly<{ actionAffordance: unknown }>) {
-      sampled.push({ tick, actionAffordance });
-      return createNeutralInputFrame(tick, 'player-1');
+    sample(tick: number, { localActionSidecar }: Readonly<{
+      eventSequence: number;
+      localActionSidecar: unknown;
+    }>) {
+      sampled.push({ tick, actionAffordance: localActionSidecar });
+      return normalizeInputFrame(createNeutralInputFrame(tick, 'player-1'));
     },
   };
   const runtime = new ProductMatchPresentationRuntime({
     controller,
     inputSource,
     content: ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT,
-    frameProjector: arenaFrameProjector,
+    frameProjector: arenaV2FrameProjector,
   });
   const initial = record(runtime.start(), 'initial presentation frame');
   const initialSource = record(initial.source, 'initial.source');
@@ -587,7 +590,7 @@ test('Product match presentation runtime bridges the one owned Product match int
   assert.equal(initialSource.matchSeed, 8801);
   assert.equal(String(initialOpponent.displayName).length > 0, true);
   assert.equal(
-    required(controller.getActiveMatchSnapshot(), 'active match snapshot').tick,
+    required(controller.getActiveMatchReadFrame(), 'active V2 frame').worldSnapshot.tick,
     initialSource.tick,
   );
 
@@ -616,20 +619,38 @@ function runtimeControllerHarness({ failStep = false }: Readonly<{ failStep?: bo
   let destroyed = 0;
   const info = publicMatchInfo(91);
   const productState = (state: ProductSessionState) => productSnapshot(state, { publicMatchInfo: info });
-  const authoritySnapshot = () => ({
-    tick,
-    participants: [
-      { id: 'player-1', actionAffordance: { tick, participantId: 'player-1' } },
-      { id: 'player-2', actionAffordance: { tick, participantId: 'player-2' } },
-    ],
-  });
+  const authorityFrame = () => {
+    const outcome = Object.freeze({
+      kind: 'none',
+      actionDefinitionId: null,
+      lane: null,
+      source: null,
+      reason: 'no-input',
+    });
+    const local = Object.freeze({
+      schemaVersion: 2,
+      tick,
+      eventSequence: tick,
+      participantId: 'player-1',
+      profile: 'local-context-primary',
+      primaryActionDefinitionId: null,
+      channels: Object.freeze({ primary: outcome, primaryHold: outcome }),
+    });
+    return Object.freeze({
+      schemaVersion: 2,
+      worldSnapshot: Object.freeze({ tick, eventSequence: tick, result: null }),
+      localActionSidecar: local,
+    });
+  };
   return {
     get destroyCalls() { return destroyed; },
     controller: {
-      beginMatch: () => productState(PRODUCT_SESSION_STATE.IN_MATCH),
-      getActiveMatchSnapshot: authoritySnapshot,
-      getSnapshot: () => productState(PRODUCT_SESSION_STATE.IN_MATCH),
-      stepMatch() {
+      beginMatchWithReadFrame: () => ({
+        readFrame: authorityFrame(),
+        productSnapshot: productState(PRODUCT_SESSION_STATE.IN_MATCH),
+      }),
+      getActiveMatchReadFrame: authorityFrame,
+      stepMatchWithReadFrame(input: unknown) {
         tick += 1;
         if (failStep) {
           return {
@@ -645,7 +666,8 @@ function runtimeControllerHarness({ failStep = false }: Readonly<{ failStep?: bo
         return {
           matchStep: {
             events: [event],
-            snapshot: authoritySnapshot(),
+            readFrame: authorityFrame(),
+            input,
             result: null,
           },
           productSnapshot: productState(PRODUCT_SESSION_STATE.IN_MATCH),
@@ -657,10 +679,10 @@ function runtimeControllerHarness({ failStep = false }: Readonly<{ failStep?: bo
 }
 
 function contractFrameProjector({
-  snapshot,
+  worldSnapshot,
   events,
 }: ProductMatchPresentationProjectorOptions): unknown {
-  const source = record(snapshot, 'contract projector snapshot');
+  const source = record(worldSnapshot, 'contract projector snapshot');
   return Object.freeze({
     source: Object.freeze({ tick: source.tick }),
     events: Object.freeze([...events]),
@@ -671,7 +693,7 @@ test('Product match presentation runtime deduplicates events and fails closed on
   const healthy = runtimeControllerHarness();
   const runtime = new ProductMatchPresentationRuntime({
     controller: healthy.controller,
-    inputSource: { sample: (tick: number) => ({ tick }) },
+    inputSource: { sample: (tick: number) => normalizeInputFrame(createNeutralInputFrame(tick, 'player-1')) },
     frameProjector: contractFrameProjector,
   });
   runtime.start();
@@ -687,11 +709,11 @@ test('Product match presentation runtime deduplicates events and fails closed on
   const failing = runtimeControllerHarness({ failStep: true });
   const failedRuntime = new ProductMatchPresentationRuntime({
     controller: failing.controller,
-    inputSource: { sample: (tick: number) => ({ tick }) },
+    inputSource: { sample: (tick: number) => normalizeInputFrame(createNeutralInputFrame(tick, 'player-1')) },
     frameProjector: contractFrameProjector,
   });
   const initial = failedRuntime.start();
-  assert.throws(() => failedRuntime.step(), /权威 step 失败/);
+  assert.throws(() => failedRuntime.step(), /Product match 表现 step 失败/);
   assert.equal(failedRuntime.state, PRODUCT_MATCH_PRESENTATION_RUNTIME_STATE.FAILED);
   assert.equal(failedRuntime.getLastPresentationFrame(), initial);
   assert.throws(() => failedRuntime.step(), /已失败关闭/);
@@ -704,7 +726,7 @@ test('Product match presentation runtime retries owned event-window cleanup with
   let destroyCalls = 0;
   const runtime = new ProductMatchPresentationRuntime({
     controller: harness.controller,
-    inputSource: { sample: (tick: number) => ({ tick }) },
+    inputSource: { sample: (tick: number) => normalizeInputFrame(createNeutralInputFrame(tick, 'player-1')) },
     frameProjector: contractFrameProjector,
     eventWindowFactory: () => ({
       consume: (events: readonly unknown[]) => events,
@@ -728,12 +750,12 @@ test('Product match presentation runtime cleans an invalid constructed event win
   let destroyCalls = 0;
   assert.throws(() => new ProductMatchPresentationRuntime({
     controller: harness.controller,
-    inputSource: { sample: (tick: number) => ({ tick }) },
+    inputSource: { sample: (tick: number) => normalizeInputFrame(createNeutralInputFrame(tick, 'player-1')) },
     frameProjector: contractFrameProjector,
     eventWindowFactory: () => ({
       destroy() { destroyCalls += 1; },
     }) as never,
-  }), /eventWindow 不符合合同/);
+  }), /ProductMatchPresentationRuntime 构造失败/);
   assert.equal(destroyCalls, 1);
   assert.equal(harness.destroyCalls, 0);
 });
@@ -755,7 +777,7 @@ function productFlowHarness({
     },
   });
   const inputSource = {
-    sample: (tick: number) => createNeutralInputFrame(tick, 'player-1'),
+    sample: (tick: number) => normalizeInputFrame(createNeutralInputFrame(tick, 'player-1')),
   };
   return {
     controller,
@@ -772,7 +794,7 @@ function createProductPresentationFlow(
   return new ProductPresentationFlow({
     presentationContent: ARENA_V1_PRODUCT_PRESENTATION_CONTENT,
     matchPresentationContent: ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT,
-    frameProjector: arenaFrameProjector,
+    frameProjector: arenaV2FrameProjector,
     ...options,
   });
 }
@@ -874,17 +896,17 @@ test('ProductPresentationFlow lifecycle pauses authority and never owns the cont
   const { controller, flow } = productFlowHarness({ seed: 9903 });
   await flow.start();
   await flow.dispatch({ id: PRODUCT_UI_INTENT_ID.START_MATCH });
-  const before = required(controller.getActiveMatchSnapshot(), 'active match snapshot').tick;
+  const before = required(controller.getActiveMatchReadFrame(), 'active V2 frame').worldSnapshot.tick;
   assert.equal(typeof before, 'number');
   const hidden = flow.hide();
   assert.equal(required(hidden.viewModel, 'hidden view model').suspended, true);
   assert.throws(() => flow.stepMatch(), /挂起/);
-  assert.equal(required(controller.getActiveMatchSnapshot(), 'hidden match snapshot').tick, before);
+  assert.equal(required(controller.getActiveMatchReadFrame(), 'hidden V2 frame').worldSnapshot.tick, before);
   const shown = flow.show();
   assert.equal(required(shown.viewModel, 'shown view model').activeState, PRODUCT_SESSION_STATE.IN_MATCH);
   flow.stepMatch();
   assert.equal(
-    required(controller.getActiveMatchSnapshot(), 'resumed match snapshot').tick,
+    required(controller.getActiveMatchReadFrame(), 'resumed V2 frame').worldSnapshot.tick,
     (before as number) + 1,
   );
   flow.destroy();
@@ -908,7 +930,7 @@ test('ProductPresentationFlow heartbeat releases match presentation after a conf
   });
   const flow = createProductPresentationFlow({
     controller,
-    inputSource: { sample: (tick: number) => createNeutralInputFrame(tick, 'player-1') },
+    inputSource: { sample: (tick: number) => normalizeInputFrame(createNeutralInputFrame(tick, 'player-1')) },
   });
   await flow.start();
   await flow.dispatch({ id: PRODUCT_UI_INTENT_ID.START_MATCH });
@@ -939,7 +961,7 @@ test('ProductPresentationFlow cleans an invalid match runtime candidate before f
   let destroyCalls = 0;
   const flow = createProductPresentationFlow({
     controller,
-    inputSource: { sample: (tick: number) => createNeutralInputFrame(tick, 'player-1') },
+    inputSource: { sample: (tick: number) => normalizeInputFrame(createNeutralInputFrame(tick, 'player-1')) },
     matchRuntimeFactory: () => ({
       start() {},
       destroy() { destroyCalls += 1; },
@@ -965,7 +987,7 @@ test('ProductPresentationFlow retries owned runtime cleanup and leaves controlle
   let destroyCalls = 0;
   const flow = createProductPresentationFlow({
     controller,
-    inputSource: { sample: (tick: number) => createNeutralInputFrame(tick, 'player-1') },
+    inputSource: { sample: (tick: number) => normalizeInputFrame(createNeutralInputFrame(tick, 'player-1')) },
     matchRuntimeFactory: (options) => {
       const runtime = new ProductMatchPresentationRuntime(options);
       return {

@@ -2,10 +2,10 @@
 
 ## 文档状态
 
-- 状态：初稿，讨论中
-- 日期：2026-07-27
+- 状态：执行中；以阶段门禁区分“研究、实现、自动化、性能、真机、发布”
+- 日期：2026-08-02
 - 适用范围：Arena 后续产品方向
-- 重要说明：本文档组描述目标版本，不代表当前代码已经实现。当前实现和工程验收仍以 V1 文档、治理台账和代码为准。
+- 重要说明：本文档组同时包含目标合同、研究证据和已实现批次；任何“完成”都必须以对应状态台账、当前代码和可复核证据为准，研究原型不得冒充生产实现。
 
 ## V2 方向摘要
 
@@ -26,6 +26,21 @@ Arena V2 的核心目标是：
 - 热血英豪用于深入学习武器的对战语法、位置关系、风险和反制，不直接复制武器名称、动作、数值或资产。
 - 弹壳特攻队只作为局外信息架构和页面组织参考，不照搬其成长系统。
 
+## P0–P7 当前总门快照
+
+截至 2026-08-02，本表是阶段级导航，不替代各批次台账。`hardGate=false` 表示允许继续不依赖该门的审计或准备工作，但禁止把后续阶段声明为生产完成。
+
+| 阶段 | 当前可证明状态 | 当前硬门 |
+|---|---|---|
+| P0 规则与文档唯一真值 | 核心产品、玩法、界面、迁移和治理合同已形成 | 当前共享工作树尚未形成最终干净 source identity，且全局冲突审计需随本批文档重跑；`hardGate=false` |
+| P1 自动替换与10秒权威回收 | Rule/Core/Bot/Presentation read model 已实现；PA5 总批次冻结，PA6-P 以95/100独立签核，PA6 runner 正确性已签核 | PA6 正式 CPU ABBA 复验尚未在隔离环境通过，P1 不得 advance；`formalGate=false` |
+| P2 竞速与生存正式 MatchCore | 竞速、生存、敌人压力和供给已有研究原型；P1 生存供给组合不是完整 Mode 实现 | 正式 Race/Survival Mode Definition、参与者/复活/结束语义与生产组合未实现；`hardGate=false` |
+| P3 KZ 地图与单一敌人生产接入 | 路线、可达性、重入、多人拥挤与同类敌人已有研究证据 | 正式地图资产、生产地图注册和敌人生产接入未开始；`hardGate=false` |
+| P4 首批武器逐把生产迁移 | 六件深研案例、数值矩阵、Replay 与迁移门禁已建立 | 当前生产晋级仍为0/6，逐把 Definition、动作、地图后果和反馈验收未开始；`hardGate=false` |
+| P5 11页面、HUD与最终反馈 | 页面合同及部分 Product/Web 只读展示已接入并有浏览器证据 | 完整11页面、对局HUD、正式反馈、真机与真人验收未完成；`hardGate=false` |
+| P6 收藏、熟练与200小时容量 | 收藏容量和下一目标已有研究模型/原型 | 正式 Profile schema、CAS/版本保护、结算写入、200小时经济与留存验证未实现；`hardGate=false` |
+| P7 真人、真机、平衡与发布冻结 | 发布门禁与证据要求已规划 | A0.3真人剪影仍0/10，设备、平衡、soak、资产预算和发布证据未完成；`hardGate=false` |
+
 ## 初稿文档清单
 
 | 文档 | 作用 | 当前状态 |
@@ -36,9 +51,10 @@ Arena V2 的核心目标是：
 | [热血英豪武器研究综合与设计收敛 V1](../gameplay/arena-v2-hot-blooded-weapon-design-synthesis.md) | 将六件逐动作案例收敛为动作身份、承诺时间、空间条件、命中后果、失败成本、反制与反馈六项武器独立性门槛 | 研究综合已完成，生产迁移仍需独立门禁 |
 | [武器价值链结构审计结果 V1](../research/arena-v2-weapon-value-chain-audit-results-v1.md) | 将六项武器独立性门槛变成可执行研究合同，并验证六件深研案例的完整性 | 六件结构审计通过，仍不等于生产就绪 |
 | [武器概览与可读性浏览器任务验证结果 V2](../research/arena-v2-weapon-browser-task-validation-results-v2.md) | 在 390×844 浏览器视口复核 Product 数值方向、六件研究武器卡和 5 道可读性任务提交闭环 | 浏览器任务 5/5，通过但不代表真人或真机 |
-| [V2 生存 1vE 规则](../gameplay/arena-v2-survival-mode.md) | 生存流程、敌人、20秒三实体供给、自动替换、10秒回收、掉落和结束条件 | 供给规则已冻结，Rule/Core待实现 |
+| [V2 生存 1vE 规则](../gameplay/arena-v2-survival-mode.md) | 生存流程、敌人、20秒三实体供给、自动替换、10秒回收、掉落和结束条件 | P1供给Rule/Core/Bot/Presentation read model已实现并签核至PA6正确性；完整P2生存Mode仍未实现，正式性能门未通过 |
 | [V2 生产化分阶段开发与治理计划](../architecture/arena-v2-production-development-plan.md) | 固定从规则收敛到发布冻结的阶段、执行标准、百分制评分、治理证据和禁止越级条件 | 执行基线 |
-| [V2 P1 实施状态台账](../architecture/arena-v2-p1-implementation-ledger.md) | 记录 P1.1 供给合同小门的行为映射、代码落点、百分制评分、门禁证据、风险、回滚与 P1 未完成硬门 | P1.1 `contract-ready`，主协调已签核（2026-07-28）；P1 未完成、不得 advance |
+| [V2 P1 实施状态台账](../architecture/arena-v2-p1-implementation-ledger.md) | 记录 P1.1–P1.2c、正式 Bot pressure 与 PA/PP 架构批次的行为映射、评分、门禁证据、风险、回滚与未完成硬门 | PA6按ADR-115延期；PA7/PP非性能实现与三端包体开发门已关闭，等待最终治理、clean source freeze、性能/设备/真人外门；P1不得advance |
+| [V2 P2 正式模式实施状态台账](../architecture/arena-v2-p2-implementation-ledger.md) | 审计当前二人MatchCore缺口，冻结Mode/参与者/终局/重生/Replay迁移顺序、双开发零重叠写域和小/大门自检 | 只读设计预审候选；P1正式CPU门、clean source identity和线程回执未满足，P2实现未授权 |
 | [Arena 美术与音频开发流程](../architecture/arena-art-and-audio-development-flow.md) | 将14个美术、3D、VFX、UI、地图、音乐和音频技能按产物分流，固定资产来源、表现事件、预算、真机和真人门禁 | Presentation / Platform 执行基线 |
 | [Arena Art Bible](../architecture/arena-art-bible.md) | 固定低多边形玩具 × 手稿反馈的视觉宪法、语义色、材质灯光、角色/武器/KZ/HUD/VFX、资产与音频预算、来源治理和四门验收 | A0.1合同94/100且各维度≥80%，主协调已签核为`contract-ready`（2026-07-28）；不代表后续门通过 |
 | [Arena 六类注释参考登记](../architecture/arena-art-reference-register.md) | 按mood/color/composition/character/environment/UI建立70/20/10登记，并固定A0.2实际板面、manifest、hash和签核规格 | 原A0.2.1、补充来源与A0.2.2板面小门均已签核；A0.2视觉方向总门ready |
@@ -48,9 +64,9 @@ Arena V2 的核心目标是：
 | [A0.2 视觉方向聚合总门](../architecture/arena-art-reference-total-gate-a0.2.md) | 独立复算三个子门的来源身份、权利、hash、板面使用、7/2/1、签核和下游false边界，并提供10类失败关闭 | 96/100且各维度≥80%，A0.2与Reference Board视觉方向`ready`；A0.3、Blockout和所有资产成熟度仍incomplete/fail closed |
 | [A0.3 剪影工具与盲测候选基线](../architecture/arena-art-silhouette-a0.3.md) | 固定两正式角色×赤手/圆盾×六方向×0/5/12m×双视口渲染、匿名题包、代理混淆矩阵/距离分层、评分与15类失败关闭 | 技术/代理候选85/100；离屏0且代理分层≥90%，但真人0/10，A0.3仍incomplete且Blockout禁止 |
 | [A0.3 真人剪影盲测最小执行包](../architecture/arena-art-silhouette-human-test-a0.3.md) | 10份离线参与者页面、144题全覆盖、匿名原始JSON、intake hash台账、混淆矩阵/距离/视口评分，以及包级14项、intake 12项、评分器15项失败关闭与正向候选探针 | `ready-for-external-human-input`；真人仍0/10，自动评分和主协调签核前A0.3/Blockout/Final保持关闭 |
-| [A1.0 供给表现预生产合同](../architecture/arena-art-supply-presentation-contract-a1.0.md) | 审计P1.1/P1.2供给事件与599/600/601，精确区分strict/普通shape，以最多3项active身份、64项hash ring、3个pending pair和Replay epoch约束旁路、去重、恢复与销毁，并固定25项运行时夹具计划 | 主协调于2026-07-28以94/100签核为`contract-ready`；仅A1.0合同自身通过，runtime adapter、代表样件、A0.3真人、A1/Blockout/正式VFX音频/设备/Final全部关闭 |
-| [A1.1 代表样件来源与测量就绪包](../architecture/arena-art-supply-readiness-a1.1.md) | 绑定`f80307b`的schema v2只读active lifecycle projection合同，并继续审计正式圆盾、诊断剪影、研究线框与Kenney音频权利边界；无字节VFX保持research-candidate，固定桌面1440×900、390×844、30 FPS、GPU/overdraw/内存/voice/暂停恢复/双destroy测量方案 | `upstream-contract-ready-candidate`，合同治理92/100、A1.1硬门false；A0.3仍0/10，供给图标、capture harness、批准浏览器/GPU、真iOS/Android、正式VFX/音频和实测仍缺，代表样件与全部下游禁止 |
-| [美术 A0–A7 与开发 P0–P7 对齐矩阵](../architecture/arena-art-development-alignment-matrix.md) | 将A0拆为合同、实际参考板、剪影盲测三门，并固定A1–A7输入、依赖、评分、硬门和返工范围 | A0.1 `contract-ready`，A0.2视觉方向总门`ready`；A0.3技术/代理候选85/100但真人缺失，仍incomplete |
+| [A1.0 供给表现预生产合同](../architecture/arena-art-supply-presentation-contract-a1.0.md) | 审计P1.1/P1.2供给事件与599/600/601，精确区分strict/普通shape，以最多3项active身份、64项hash ring、3个pending pair和Replay epoch约束旁路、去重、恢复与销毁，并固定25项运行时夹具计划 | 2026-07-28历史`dd786a9`合同以94/100签核；2026-08-02当前源码复验因15个绑定来源中10个漂移而红，当前`stale-upstream-evidence / hardGatePassed=false`。必须在最终source重建；runtime adapter、代表样件、A0.3真人、A1/Blockout/正式VFX音频/设备/Final全部关闭 |
+| [A1.1 代表样件来源与测量就绪包](../architecture/arena-art-supply-readiness-a1.1.md) | 历史包绑定`f80307b`的schema v2只读active lifecycle projection合同，并审计正式圆盾、诊断剪影、研究线框与Kenney音频权利边界；无字节VFX保持research-candidate，固定桌面1440×900、390×844、30 FPS、GPU/overdraw/内存/voice/暂停恢复/双destroy测量方案 | 当前`stale-upstream-evidence / hardGatePassed=false`：2026-08-02机器复验因MatchCore与两个Bot artifact漂移而红；92/100只作历史。A0.3仍0/10，最终source identity重建、供给图标、capture harness、批准浏览器/GPU、真iOS/Android、正式VFX/音频和实测仍缺，代表样件与全部下游禁止 |
+| [美术 A0–A7 与开发 P0–P7 对齐矩阵](../architecture/arena-art-development-alignment-matrix.md) | 将A0拆为合同、实际参考板、剪影盲测三门，并固定A1–A7输入、依赖、评分、硬门和返工范围 | A0.1 `contract-ready`，A0.2视觉方向总门`ready`；A0.3技术/代理候选85/100但真人缺失；A2.0已补ADR-112事件/Cue只读预审，仍`planned / hardGate=false` |
 | [ADR-109：Arena 美术与音频工作统一走14技能路由和资产门禁](../decisions/109-arena-art-and-audio-skill-routing.md) | 固化技能安装、使用范围、项目规则优先级、AI/下载素材边界和回滚处理 | 已接受 |
 | [V2 成长与 200 小时目标](../gameplay/arena-v2-progression-200-hours.md) | 收藏、熟悉、重复游玩和奖励边界 | 初稿 |
 | [V2 界面地图](arena-v2-screen-map.md) | 明确 11 个局外页面入口、对局 HUD 和竞技准备模板复用 | 页面合同已收敛，真机待验证 |
@@ -221,7 +237,15 @@ Arena V2 的核心目标是：
 | [ADR-062：蓄力承诺先以可取消的整数 tick 原型验证](../decisions/062-arena-v2-weapon-commitment-prototype-boundary.md) | 固化蓄力承诺、提前取消、到期处理和方向记录的研究边界，不直接进入生产武器 | 研究原型已接入 |
 | [ADR-047：生存实体复用玩家规则/物理边界](../decisions/047-arena-v2-survival-entity-boundary.md) | 固化单敌人原型不得绕过命中、冲量和掉落规则 | V2 研究原型 |
 | [ADR-048：生存多敌压力先复用规则引擎](../decisions/048-arena-v2-survival-multi-enemy-pressure-boundary.md) | 固化多敌研究原型的输入决策、供给争夺和正式接入前的边界 | V2 研究原型 |
-| [ADR-108：生存供给采用靠近自动替换与10秒权威回收](../decisions/108-arena-v2-survival-auto-replace-and-expiry.md) | 冻结20秒三实体供给、持有者原子替换、旧武器回收和600 tick过期语义 | 已接受，Rule/Core待实现 |
+| [ADR-108：生存供给采用靠近自动替换与10秒权威回收](../decisions/108-arena-v2-survival-auto-replace-and-expiry.md) | 冻结20秒三实体供给、持有者原子替换、旧武器回收和600 tick过期语义 | 已接受并完成Rule/Core/Bot与Presentation只读输入模型验收；供给表现adapter尚未实现，正式CPU门仍false，P1不得advance |
+| [ADR-110：过期持有供给释放时不可回到世界](../decisions/110-arena-v2-expired-held-release-disposition.md) | 补充过期 held 跨 tick 使用、owner release 原子回收、EquipmentDespawned reason、disposition hash 与 golden checkpoint 影响 | 已接受并完成对应Rule/Core、Replay/golden与下游只读投影验收；正式CPU门仍false |
+| [ADR-111：Action Read Model 性能边界](../decisions/111-arena-v2-action-read-model-performance-boundary.md) | 固化 world/local/Bot read model 分离、固定 profile owner-bound reader 与 Resolver multi-intent；定义 PA3–PA5 迁移、审计、证据和性能边界 | PA5总批次completed / coordinator-approved；PA6-P completed / 95分；PA6 runner正确性已签核，正式ABBA按ADR-115延期且formalGate=false |
+| [ADR-112：正式三模式采用数据 Definition 与注册 Policy 组合](../decisions/112-arena-v2-formal-mode-definition-and-policy-boundary.md) | 冻结单一MatchCore下的Mode/Policy Registry、参与者角色、Race终点/重生、Survival有界敌人slot及V5→V6显式schema边界 | P2.0提议；线程回执、六维自检、enemy slot安全上限与主协调评分未完成，生产实现未授权 |
+| [ADR-113：供给表现使用只读投影与有界事件适配器](../decisions/113-arena-v2-supply-presentation-adapter-boundary.md) | 冻结Marker/Cue/View exact-key合同、snapshot+event事务、replacement配对、sequence gap重同步、有界生命周期及P1 acceptance隔离 | PP0/PP1/PP2/PP3与A1.0-v2非性能门已签核；正式设备/性能/真人未完成 |
+| [ADR-114：供给美术证据采用不可变版本与开发—美术联合签核](../decisions/114-arena-v2-art-evidence-versioning-and-joint-gate.md) | 保留A1.0-v1历史身份，在PP0/PP1真实候选后追加当前源码v2；分离开发B、美术和主协调写域并关闭循环门 | v2已创建并以94分完成主协调外部联合签核；A0.3/A1.1/代表样件与全部外部门仍未完成 |
+| [ADR-115：P1当前性能执行延期并合并为最终同源联合门](../decisions/115-arena-v2-deferred-joint-performance-gate.md) | 本轮不运行PA6，先完成PA7与P1-PP非性能实现；最终clean source上依次执行PA6 ABBA×3与PA7 300/120 | 已接受的一次性P1内部顺序调整；PA7/PP非性能实现与包体开发门已关闭，等待最终治理与clean source freeze；PA6/PA7/P1仍formalGate=false，P2/A2/commit/push未开放 |
+| [ADR-116：正式生存 Composition 身份使用 provenance reader](../decisions/116-arena-v2-formal-composition-identity-provenance.md) | 由生产 Composition 私有 WeakMap 绑定原生 Session 与最小冻结身份，PA7 只读取得真实 compositionContractHash | Accepted；身份 reader 已接入正式 worker 并通过PA7非性能复核；正式性能仍延期，不开放P2/A2/commit/push |
+| [ADR-117：三端生产技术错误使用稳定诊断目录](../decisions/117-arena-v2-production-error-catalog.md) | 三端共享稳定七字符诊断码，Web交付完整canonical gzip目录，小游戏只携带同源reference；保持构造器、动态求值、cause、公开文案与TypeScript source map | Accepted；2,495-entry目录、3,005处变换、三端预算和构建治理已通过dirty candidate复核；clean source、性能、设备和发布门未通过 |
 | [200 小时收集容量原型结果 V1](../research/arena-v2-collection-budget-prototype-results-v1.md) | 记录候选武器数量、上下文证据、地图/模式/挑战预算和敏感性分析 | 第三轮成长原型证据 |
 | [ADR-050：生存武器等级先走研究冲量端口](../decisions/050-arena-v2-survival-tier-scaling-research-port.md) | 固化等级实际战斗影响、统一倍率反例和正式 Definition 接入前的边界 | V2 研究原型 |
 | [ADR-051：生存武器等级采用按核心语法的正式 Definition 变体](../decisions/051-arena-v2-survival-tier-formal-definition.md) | 固化地面/空中数值、按武器语法成长、等级专属动作身份和回放 hash 边界 | V2 研究原型 |

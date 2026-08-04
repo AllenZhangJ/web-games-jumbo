@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   ARENA_MATCH_EVENT,
+  EQUIPMENT_DESPAWN_REASON,
 } from '@number-strategy-jump/arena-contracts';
 import {
   EQUIPMENT_DEFINITION_SCHEMA_VERSION,
@@ -9,6 +10,7 @@ import {
   EQUIPMENT_SUPPLY_EXPIRY_POLICY,
   EQUIPMENT_SUPPLY_REPLACEMENT_POLICY,
   EQUIPMENT_SUPPLY_TICK_ORDER,
+  EquipmentSupplyRegistry,
   createEquipmentSupplyDefinition,
   type EquipmentDefinition,
   type ActionDefinition,
@@ -17,8 +19,10 @@ import type { ActionRegistryContract } from '@number-strategy-jump/arena-core';
 
 import {
   EQUIPMENT_LOCATION_STATE,
+  EQUIPMENT_SUPPLY_TIMELINE_SNAPSHOT_SCHEMA_VERSION,
   EquipmentPickupResolver,
   EquipmentSpawner,
+  EquipmentSupplyTimelineSystem,
   EquipmentSystem,
   advanceEquipmentCooldown,
   createEquipmentRuntimeSnapshot,
@@ -44,6 +48,19 @@ const SUPPLY_DEFINITION = createEquipmentSupplyDefinition({
   tickOrder: EQUIPMENT_SUPPLY_TICK_ORDER,
 });
 
+const SHORT_SUPPLY_DEFINITION = createEquipmentSupplyDefinition({
+  schemaVersion: EQUIPMENT_SUPPLY_DEFINITION_SCHEMA_VERSION,
+  id: 'short-survival-supply',
+  firstSpawnTick: 2,
+  spawnIntervalTicks: 4,
+  spawnCount: 3,
+  pickupRadius: 0.8,
+  lifetimeTicks: 2,
+  replacementPolicy: EQUIPMENT_SUPPLY_REPLACEMENT_POLICY.ATOMIC_RECYCLE_HELD,
+  expiryPolicy: EQUIPMENT_SUPPLY_EXPIRY_POLICY.WORLD_ONLY_AT_EXPIRE_TICK,
+  tickOrder: EQUIPMENT_SUPPLY_TICK_ORDER,
+});
+
 const EQUIPMENT_DEFINITION: EquipmentDefinition = Object.freeze({
   schemaVersion: EQUIPMENT_DEFINITION_SCHEMA_VERSION,
   id: 'test-hammer',
@@ -60,10 +77,25 @@ const EQUIPMENT_DEFINITION: EquipmentDefinition = Object.freeze({
   tags: Object.freeze(['test']),
 });
 
+const LEFT_EQUIPMENT_DEFINITION: EquipmentDefinition = Object.freeze({
+  ...EQUIPMENT_DEFINITION,
+  id: 'test-hammer-left',
+});
+const RIGHT_EQUIPMENT_DEFINITION: EquipmentDefinition = Object.freeze({
+  ...EQUIPMENT_DEFINITION,
+  id: 'test-hammer-right',
+});
+const EQUIPMENT_DEFINITIONS = Object.freeze([
+  EQUIPMENT_DEFINITION,
+  LEFT_EQUIPMENT_DEFINITION,
+  RIGHT_EQUIPMENT_DEFINITION,
+]);
+
 const EQUIPMENT_REGISTRY: EquipmentRegistryContract = Object.freeze({
   require(id: string) {
-    if (id !== EQUIPMENT_DEFINITION.id) throw new RangeError(`未知装备 ${id}`);
-    return EQUIPMENT_DEFINITION;
+    const definition = EQUIPMENT_DEFINITIONS.find((candidate) => candidate.id === id);
+    if (!definition) throw new RangeError(`未知装备 ${id}`);
+    return definition;
   },
 });
 
@@ -78,6 +110,94 @@ const ACTION_REGISTRY: ActionRegistryContract = Object.freeze({
     } as ActionDefinition;
   },
 });
+
+const SUPPLY_REGISTRY = new EquipmentSupplyRegistry([SHORT_SUPPLY_DEFINITION]);
+const SHORT_SPAWN_SPECS = Object.freeze([
+  Object.freeze({
+    slotId: 'right',
+    equipmentDefinitionId: RIGHT_EQUIPMENT_DEFINITION.id,
+    spawnId: 'supply-right',
+    position: Object.freeze({ x: 2, y: 1, z: 0 }),
+  }),
+  Object.freeze({
+    slotId: 'left',
+    equipmentDefinitionId: LEFT_EQUIPMENT_DEFINITION.id,
+    spawnId: 'supply-left',
+    position: Object.freeze({ x: -2, y: 1, z: 0 }),
+  }),
+  Object.freeze({
+    slotId: 'center',
+    equipmentDefinitionId: EQUIPMENT_DEFINITION.id,
+    spawnId: 'supply-center',
+    position: Object.freeze({ x: 0, y: 1, z: 0 }),
+  }),
+]);
+const FAR_PARTICIPANTS = Object.freeze([
+  Object.freeze({
+    id: 'player-1',
+    eligible: true,
+    position: Object.freeze({ x: 50, y: 1, z: 50 }),
+  }),
+  Object.freeze({
+    id: 'player-2',
+    eligible: true,
+    position: Object.freeze({ x: -50, y: 1, z: -50 }),
+  }),
+]);
+
+function nearCenterParticipants() {
+  return [
+    { id: 'player-1', eligible: true, position: { x: 0, y: 1, z: 0 } },
+    FAR_PARTICIPANTS[1],
+  ];
+}
+
+function createSupplySystem(): EquipmentSystem {
+  return new EquipmentSystem({
+    participantIds: ['player-1', 'player-2'],
+    actionRegistry: ACTION_REGISTRY,
+    equipmentRegistry: EQUIPMENT_REGISTRY,
+    equipmentSupplyRegistry: SUPPLY_REGISTRY,
+  });
+}
+
+function createTimelineHarness(snapshot?: unknown) {
+  const equipmentSystem = createSupplySystem();
+  const timeline = new EquipmentSupplyTimelineSystem({
+    supplyDefinitionId: SHORT_SUPPLY_DEFINITION.id,
+    spawnSpecs: SHORT_SPAWN_SPECS,
+    equipmentRegistry: EQUIPMENT_REGISTRY,
+    equipmentSupplyRegistry: SUPPLY_REGISTRY,
+    equipmentSystem,
+    ...(snapshot === undefined ? {} : { snapshot }),
+  });
+  return { equipmentSystem, timeline };
+}
+
+function shortLifecycle(slotId = 'center', waveIndex = 0) {
+  const spawnTick = SHORT_SUPPLY_DEFINITION.firstSpawnTick
+    + SHORT_SUPPLY_DEFINITION.spawnIntervalTicks * waveIndex;
+  const supplyId = `${SHORT_SUPPLY_DEFINITION.id}:wave-${waveIndex}:slot-${slotId}`;
+  return createEquipmentSupplyLifecycle({
+    schemaVersion: 1,
+    supplyDefinitionId: SHORT_SUPPLY_DEFINITION.id,
+    supplyId,
+    equipmentInstanceId: `${supplyId}:equipment`,
+    spawnTick,
+    expireTick: spawnTick + SHORT_SUPPLY_DEFINITION.lifetimeTicks,
+  }, SHORT_SUPPLY_DEFINITION);
+}
+
+function timelineSpawn(slotId = 'center') {
+  const spec = SHORT_SPAWN_SPECS.find((value) => value.slotId === slotId);
+  if (!spec) throw new Error(`测试缺少 supply slot ${slotId}。`);
+  return {
+    lifecycle: shortLifecycle(slotId),
+    definitionId: spec.equipmentDefinitionId,
+    spawnId: spec.spawnId,
+    position: spec.position,
+  };
+}
 
 function preview(instanceId = 'equipment-1') {
   return new EquipmentSpawner({ equipmentRegistry: EQUIPMENT_REGISTRY }).preview({
@@ -329,5 +449,445 @@ describe('arena-equipment primitives', () => {
       EQUIPMENT_LOCATION_STATE.SPAWNED,
     ]);
     system.destroy();
+  });
+
+  it('runs a short supply timeline through spawn, projection and expiry deterministically', () => {
+    const { equipmentSystem, timeline } = createTimelineHarness();
+    const contentHash = timeline.getContentHash();
+    expect(contentHash).toMatch(/^[0-9a-f]{8}$/);
+    for (const tick of [0, 1]) {
+      const idle = timeline.step({ tick, participants: FAR_PARTICIPANTS, contestSeed: 7 });
+      expect(idle.spawned).toEqual([]);
+      expect(idle.expiredEvents).toEqual([]);
+    }
+
+    const spawned = timeline.step({ tick: 2, participants: FAR_PARTICIPANTS, contestSeed: 7 });
+    expect(spawned.phaseOrder).toEqual(['spawn', 'expire', 'pickup', 'action']);
+    expect(spawned.spawned.map(({ supplyId }) => supplyId)).toEqual([
+      'short-survival-supply:wave-0:slot-center',
+      'short-survival-supply:wave-0:slot-left',
+      'short-survival-supply:wave-0:slot-right',
+    ]);
+    expect(spawned.spawnedEvents).toHaveLength(3);
+    expect(spawned.pickupDecisions).toEqual([]);
+    expect(equipmentSystem.listSnapshots()).toHaveLength(3);
+
+    const ready = timeline.getPublicSupplyProjection({
+      snapshotTick: 3,
+      eventSequence: 9,
+      equipment: equipmentSystem.listSnapshots(),
+    });
+    expect(ready.projection.resyncReadiness).toBe('ready');
+    expect(ready.projection.supplies).toHaveLength(3);
+    expect(ready.projection.supplies.every(({ remainingTicks }) => remainingTicks === 1)).toBe(true);
+    expect(Object.isFrozen(ready.projection)).toBe(true);
+
+    timeline.step({ tick: 3, participants: FAR_PARTICIPANTS, contestSeed: 7 });
+    const pending = timeline.getPublicSupplyProjection({
+      snapshotTick: 4,
+      eventSequence: 10,
+      equipment: equipmentSystem.listSnapshots(),
+    });
+    expect(pending.projection.resyncReadiness).toBe('not-ready-pre-expiry');
+    expect(pending.projection.supplies).toEqual([]);
+    expect(pending.pendingExpiryEquipmentInstanceIds).toHaveLength(3);
+
+    const expired = timeline.step({ tick: 4, participants: FAR_PARTICIPANTS, contestSeed: 7 });
+    expect(expired.expiredEvents).toHaveLength(3);
+    expect(expired.expiredEvents.every(({ type }) => (
+      type === ARENA_MATCH_EVENT.EQUIPMENT_EXPIRED
+    ))).toBe(true);
+    expect(timeline.listActiveSupplies()).toEqual([]);
+    expect(equipmentSystem.listSnapshots()).toEqual([]);
+    expect(timeline.getContentHash()).toBe(contentHash);
+
+    timeline.destroy();
+    timeline.destroy();
+    expect(() => timeline.getSnapshot()).toThrow(/已销毁/);
+    expect(() => timeline.nextTick).toThrow(/已销毁/);
+    equipmentSystem.destroy();
+  });
+
+  it('retains one pending tick after pickup validation fails and retries without duplicate spawn', () => {
+    const { equipmentSystem, timeline } = createTimelineHarness();
+    timeline.step({ tick: 0, participants: FAR_PARTICIPANTS, contestSeed: 1 });
+    timeline.step({ tick: 1, participants: FAR_PARTICIPANTS, contestSeed: 1 });
+    expect(() => timeline.step({
+      tick: 2,
+      participants: [FAR_PARTICIPANTS[0]],
+      contestSeed: 1,
+    })).toThrow(/必须包含全部 participants/);
+    expect(timeline.nextTick).toBe(2);
+    expect(equipmentSystem.listSnapshots()).toHaveLength(3);
+    expect(() => timeline.getSnapshot()).toThrow(/不能快照未完成 tick/);
+
+    const retried = timeline.step({
+      tick: 2,
+      participants: FAR_PARTICIPANTS,
+      contestSeed: 1,
+    });
+    expect(retried.spawned).toHaveLength(3);
+    expect(equipmentSystem.listSnapshots()).toHaveLength(3);
+    expect(timeline.nextTick).toBe(3);
+    expect(timeline.getSnapshot().activeSupplies).toHaveLength(3);
+    timeline.destroy();
+    equipmentSystem.destroy();
+  });
+
+  it('replaces held equipment and atomically disposes an expired held supply', () => {
+    const { equipmentSystem, timeline } = createTimelineHarness();
+    equipmentSystem.spawn({
+      instanceId: 'old-primary',
+      definitionId: EQUIPMENT_DEFINITION.id,
+      spawnId: 'old-spawn',
+      position: { x: 0, y: 1, z: 0 },
+    });
+    equipmentSystem.resolvePickups({ participants: nearCenterParticipants(), contestSeed: 1 });
+    timeline.step({ tick: 0, participants: FAR_PARTICIPANTS, contestSeed: 1 });
+    timeline.step({ tick: 1, participants: FAR_PARTICIPANTS, contestSeed: 1 });
+    const replacement = timeline.step({
+      tick: 2,
+      participants: nearCenterParticipants(),
+      contestSeed: 1,
+    });
+    expect(replacement.pickupDecisions).toHaveLength(1);
+    expect(replacement.pickupDecisions[0]).toMatchObject({
+      participantId: 'player-1',
+      previousEquipmentInstanceId: 'old-primary',
+      kind: 'replaced',
+    });
+    expect(replacement.pickupEvents.map(({ type }) => type)).toEqual([
+      ARENA_MATCH_EVENT.EQUIPMENT_RECYCLED,
+      ARENA_MATCH_EVENT.EQUIPMENT_REPLACED,
+    ]);
+    expect(() => equipmentSystem.getSnapshot('old-primary')).toThrow(/未知 equipment instance/);
+
+    timeline.step({ tick: 3, participants: FAR_PARTICIPANTS, contestSeed: 1 });
+    const expiry = timeline.step({ tick: 4, participants: FAR_PARTICIPANTS, contestSeed: 1 });
+    expect(expiry.expiredEvents).toHaveLength(2);
+    const heldId = equipmentSystem.getHeldEquipment('player-1')?.instanceId;
+    expect(heldId).toMatch(/slot-center/);
+    expect(equipmentSystem.listExpiredHeldSupplyEquipmentInstanceIds()).toEqual([heldId]);
+    let callbackCalls = 0;
+    const disposed = equipmentSystem.dropOwned('player-1', {
+      isPositionValid() {
+        callbackCalls += 1;
+        return true;
+      },
+    });
+    expect(callbackCalls).toBe(0);
+    expect(disposed).toMatchObject({
+      fallbackUsed: false,
+      despawned: true,
+      diagnosticCode: EQUIPMENT_DESPAWN_REASON.EXPIRED_HELD_LIFECYCLE,
+    });
+    expect(equipmentSystem.listSnapshots()).toEqual([]);
+    expect(equipmentSystem.listExpiredHeldSupplyEquipmentInstanceIds()).toEqual([]);
+    expect(equipmentSystem.dropOwned('player-1', { isPositionValid: () => true })).toBeNull();
+    timeline.destroy();
+    equipmentSystem.destroy();
+  });
+
+  it('validates a supply phase completely before spawning or expiring authority state', () => {
+    const legacy = createSystem();
+    expect(() => legacy.applySupplyTimelinePhase({ tick: 2, spawns: [], expirations: [] }))
+      .toThrow(/未配置 EquipmentSupplyRegistry/);
+    expect(legacy.listSnapshots()).toEqual([]);
+    legacy.destroy();
+
+    const system = createSupplySystem();
+    const spawn = timelineSpawn();
+    expect(() => system.applySupplyTimelinePhase({ tick: 2, spawns: {}, expirations: [] }))
+      .toThrow(/必须是数组/);
+    expect(() => system.applySupplyTimelinePhase({
+      tick: 3,
+      spawns: [spawn],
+      expirations: [],
+    })).toThrow(/只能在 spawnTick/);
+    expect(() => system.applySupplyTimelinePhase({
+      tick: 2,
+      spawns: [spawn, spawn],
+      expirations: [],
+    })).toThrow(/重复 equipment instance/);
+    expect(system.listSnapshots()).toEqual([]);
+
+    const phase = system.applySupplyTimelinePhase({ tick: 2, spawns: [spawn], expirations: [] });
+    expect(phase.spawned).toHaveLength(1);
+    expect(phase.spawnedEvents[0]?.type).toBe(ARENA_MATCH_EVENT.EQUIPMENT_SPAWNED);
+    expect(() => system.applySupplyTimelinePhase({
+      tick: 3,
+      spawns: [],
+      expirations: [spawn.lifecycle],
+    })).toThrow(/只能在 expireTick/);
+    expect(() => system.applySupplyTimelinePhase({
+      tick: 4,
+      spawns: [],
+      expirations: [spawn.lifecycle, spawn.lifecycle],
+    })).toThrow(/重复 supply expiration/);
+    expect(system.getSnapshot(spawn.lifecycle.equipmentInstanceId).locationState)
+      .toBe(EQUIPMENT_LOCATION_STATE.SPAWNED);
+
+    const expiry = system.applySupplyTimelinePhase({
+      tick: 4,
+      spawns: [],
+      expirations: [spawn.lifecycle],
+    });
+    expect(expiry.events).toHaveLength(1);
+    expect(expiry.events[0]?.type).toBe(ARENA_MATCH_EVENT.EQUIPMENT_EXPIRED);
+    expect(system.listSnapshots()).toEqual([]);
+    system.destroy();
+  });
+
+  it('fails closed when a supply replacement commit cannot recycle the previous runtime', () => {
+    const system = createSupplySystem();
+    system.spawn({
+      instanceId: 'old-primary',
+      definitionId: EQUIPMENT_DEFINITION.id,
+      spawnId: 'old-spawn',
+      position: { x: 0, y: 1, z: 0 },
+    });
+    system.resolvePickups({ participants: nearCenterParticipants(), contestSeed: 1 });
+    const spawn = timelineSpawn();
+    system.applySupplyTimelinePhase({ tick: 2, spawns: [spawn], expirations: [] });
+
+    const originalDelete = Map.prototype.delete as (
+      this: Map<unknown, unknown>,
+      key: unknown,
+    ) => boolean;
+    let injected = false;
+    Object.defineProperty(Map.prototype, 'delete', {
+      configurable: true,
+      writable: true,
+      value(this: Map<unknown, unknown>, key: unknown): boolean {
+        if (!injected && key === 'old-primary') {
+          injected = true;
+          throw new Error('controlled recycle commit failure');
+        }
+        return originalDelete.call(this, key);
+      },
+    });
+    try {
+      expect(() => system.resolveSupplyPickups({
+        participants: nearCenterParticipants(),
+        supplies: [spawn.lifecycle],
+        contestSeed: 3,
+        tick: 3,
+      })).toThrow(/controlled recycle commit failure/);
+    } finally {
+      Object.defineProperty(Map.prototype, 'delete', {
+        configurable: true,
+        writable: true,
+        value: originalDelete,
+      });
+    }
+    expect(injected).toBe(true);
+    expect(() => system.listSnapshots()).toThrow(/已销毁/);
+    expect(() => system.listExpiredHeldSupplyEquipmentInstanceIds()).toThrow(/已销毁/);
+    system.destroy();
+  });
+
+  it('covers action, drop and reconcile boundaries without publishing partial state', () => {
+    const system = createSystem();
+    expect(system.getActionCandidate('player-1')).toBeNull();
+    expect(system.getAerialActionCandidate('player-1')).toBeNull();
+    expect(system.updateLastSafePosition('player-1', { x: 1, y: 1, z: 0 })).toBeNull();
+    expect(system.dropOwned('player-1', { isPositionValid: () => true })).toBeNull();
+    expect(() => system.getActionCandidate('unknown-player')).toThrow(/未知 equipment participant/);
+
+    system.spawn({
+      instanceId: 'equipment-action',
+      definitionId: EQUIPMENT_DEFINITION.id,
+      spawnId: 'action-spawn',
+      position: { x: 0, y: 1, z: 0 },
+    });
+    expect(() => system.spawn({
+      instanceId: 'equipment-action',
+      definitionId: EQUIPMENT_DEFINITION.id,
+      spawnId: 'duplicate',
+      position: { x: 0, y: 1, z: 0 },
+    })).toThrow(/重复 equipment instance/);
+    system.resolvePickups({ participants: nearCenterParticipants(), contestSeed: 2 });
+    expect(system.getAerialActionCandidate('player-1')).toMatchObject({
+      actionDefinitionId: 'hammer-air',
+      available: true,
+    });
+    expect(() => system.assertActionCanStart('player-1', 'other-action')).toThrow(/动作不匹配/);
+    const unchanged = system.updateLastSafePosition('player-1', { x: 0, y: 1, z: 0 });
+    const moved = system.updateLastSafePosition('player-1', { x: 2, y: 1, z: 0 });
+    expect(moved?.revision).toBe((unchanged?.revision ?? 0) + 1);
+    expect(system.markActionStarted('player-1', 'hammer-air').cooldownRemainingTicks).toBe(3);
+    expect(() => system.assertActionCanStart('player-1', 'hammer-air')).toThrow(/仍在冷却/);
+    expect(system.advanceCooldowns()).toHaveLength(1);
+
+    const dropped = system.dropOwned('player-1', {
+      isPositionValid: (position: Readonly<{ x: number }>) => position.x === 2,
+    });
+    expect(dropped).toMatchObject({ fallbackUsed: false, despawned: false });
+    expect(dropped?.equipment.position).toEqual({ x: 2, y: 1, z: 0 });
+    system.spawn({
+      instanceId: 'equipment-reconcile-extra',
+      definitionId: EQUIPMENT_DEFINITION.id,
+      spawnId: 'reconcile-extra',
+      position: { x: 3, y: 1, z: 0 },
+    });
+    expect(() => system.despawnInvalidWorldEquipment({ isPositionValid: true }))
+      .toThrow(/需要 isPositionValid/);
+    let callbackCalls = 0;
+    expect(() => system.despawnInvalidWorldEquipment({
+      isPositionValid() {
+        callbackCalls += 1;
+        if (callbackCalls === 1) return false;
+        return Promise.resolve(true);
+      },
+    })).toThrow(/必须返回布尔值/);
+    expect(system.getSnapshot('equipment-action').locationState)
+      .toBe(EQUIPMENT_LOCATION_STATE.DROPPED);
+    const despawned = system.despawnInvalidWorldEquipment({ isPositionValid: () => false });
+    expect(despawned).toHaveLength(2);
+    expect(despawned.every(({ locationState }) => (
+      locationState === EQUIPMENT_LOCATION_STATE.DESPAWNED
+    ))).toBe(true);
+    system.destroy();
+    expect(() => system.getSnapshot('equipment-action')).toThrow(/已销毁/);
+  });
+
+  it('rejects invalid construction and timeline authority descriptors without invoking getters', () => {
+    expect(() => new EquipmentSystem({
+      participantIds: [],
+      actionRegistry: ACTION_REGISTRY,
+      equipmentRegistry: EQUIPMENT_REGISTRY,
+    })).toThrow(/participantIds/);
+    expect(() => new EquipmentSystem({
+      participantIds: ['player-1'],
+      actionRegistry: null,
+      equipmentRegistry: EQUIPMENT_REGISTRY,
+    })).toThrow(/ActionRegistry/);
+    expect(() => new EquipmentSystem({
+      participantIds: ['player-1'],
+      actionRegistry: ACTION_REGISTRY,
+      equipmentRegistry: null,
+    })).toThrow(/EquipmentRegistry/);
+    expect(() => new EquipmentSystem({
+      participantIds: ['player-1'],
+      actionRegistry: ACTION_REGISTRY,
+      equipmentRegistry: EQUIPMENT_REGISTRY,
+      equipmentSupplyRegistry: {},
+    })).toThrow(/equipmentSupplyRegistry/);
+
+    let getterCalls = 0;
+    const hostileAuthority = Object.create(null) as Record<string, unknown>;
+    Object.defineProperty(hostileAuthority, 'applySupplyTimelinePhase', {
+      configurable: true,
+      get() {
+        getterCalls += 1;
+        return () => ({ spawned: [], spawnedEvents: [], events: [] });
+      },
+    });
+    expect(() => new EquipmentSupplyTimelineSystem({
+      supplyDefinitionId: SHORT_SUPPLY_DEFINITION.id,
+      spawnSpecs: SHORT_SPAWN_SPECS,
+      equipmentRegistry: EQUIPMENT_REGISTRY,
+      equipmentSupplyRegistry: SUPPLY_REGISTRY,
+      equipmentSystem: hostileAuthority,
+    })).toThrow(/数据方法/);
+    expect(getterCalls).toBe(0);
+    expect(() => new EquipmentSupplyTimelineSystem({
+      supplyDefinitionId: SHORT_SUPPLY_DEFINITION.id,
+      spawnSpecs: SHORT_SPAWN_SPECS.slice(0, 2),
+      equipmentRegistry: EQUIPMENT_REGISTRY,
+      equipmentSupplyRegistry: SUPPLY_REGISTRY,
+      equipmentSystem: createSupplySystem(),
+    })).toThrow(/恰好包含 3 项/);
+    expect(() => new EquipmentSupplyTimelineSystem({
+      supplyDefinitionId: SHORT_SUPPLY_DEFINITION.id,
+      spawnSpecs: SHORT_SPAWN_SPECS.map((spec, index) => index === 1
+        ? { ...spec, slotId: 'center' }
+        : spec),
+      equipmentRegistry: EQUIPMENT_REGISTRY,
+      equipmentSupplyRegistry: SUPPLY_REGISTRY,
+      equipmentSystem: createSupplySystem(),
+    })).toThrow(/重复 supply slotId/);
+    expect(() => new EquipmentSupplyTimelineSystem({
+      supplyDefinitionId: SHORT_SUPPLY_DEFINITION.id,
+      spawnSpecs: SHORT_SPAWN_SPECS.map((spec, index) => index === 0
+        ? { ...spec, position: { x: Number.NaN, y: 1, z: 0 } }
+        : spec),
+      equipmentRegistry: EQUIPMENT_REGISTRY,
+      equipmentSupplyRegistry: SUPPLY_REGISTRY,
+      equipmentSystem: createSupplySystem(),
+    })).toThrow(/有限数/);
+  });
+
+  it('restores only active registered supply identities and continues from a frozen snapshot', () => {
+    const first = createTimelineHarness();
+    first.timeline.step({ tick: 0, participants: FAR_PARTICIPANTS, contestSeed: 4 });
+    first.timeline.step({ tick: 1, participants: FAR_PARTICIPANTS, contestSeed: 4 });
+    first.timeline.step({ tick: 2, participants: FAR_PARTICIPANTS, contestSeed: 4 });
+    const snapshot = first.timeline.getSnapshot();
+    expect(snapshot).toMatchObject({
+      schemaVersion: EQUIPMENT_SUPPLY_TIMELINE_SNAPSHOT_SCHEMA_VERSION,
+      supplyDefinitionId: SHORT_SUPPLY_DEFINITION.id,
+      nextTick: 3,
+    });
+    expect(Object.isFrozen(snapshot.activeSupplies)).toBe(true);
+    first.timeline.destroy();
+
+    const restored = new EquipmentSupplyTimelineSystem({
+      supplyDefinitionId: SHORT_SUPPLY_DEFINITION.id,
+      spawnSpecs: SHORT_SPAWN_SPECS,
+      equipmentRegistry: EQUIPMENT_REGISTRY,
+      equipmentSupplyRegistry: SUPPLY_REGISTRY,
+      equipmentSystem: first.equipmentSystem,
+      snapshot,
+    });
+    expect(restored.getSnapshot()).toEqual(snapshot);
+    restored.step({ tick: 3, participants: FAR_PARTICIPANTS, contestSeed: 4 });
+    const expired = restored.step({ tick: 4, participants: FAR_PARTICIPANTS, contestSeed: 4 });
+    expect(expired.expiredEvents).toHaveLength(3);
+
+    for (const invalidSnapshot of [
+      { ...snapshot, schemaVersion: 2 },
+      { ...snapshot, supplyDefinitionId: 'other-supply' },
+      { ...snapshot, activeSupplies: null },
+      { ...snapshot, nextTick: 2 },
+      { ...snapshot, activeSupplies: [...snapshot.activeSupplies, snapshot.activeSupplies[0]] },
+      {
+        ...snapshot,
+        activeSupplies: snapshot.activeSupplies.map((lifecycle, index) => index === 0
+          ? { ...lifecycle, supplyId: 'unregistered-supply-id' }
+          : lifecycle),
+      },
+    ]) {
+      expect(() => new EquipmentSupplyTimelineSystem({
+        supplyDefinitionId: SHORT_SUPPLY_DEFINITION.id,
+        spawnSpecs: SHORT_SPAWN_SPECS,
+        equipmentRegistry: EQUIPMENT_REGISTRY,
+        equipmentSupplyRegistry: SUPPLY_REGISTRY,
+        equipmentSystem: first.equipmentSystem,
+        snapshot: invalidSnapshot,
+      })).toThrow();
+    }
+
+    const overflow = new EquipmentSupplyTimelineSystem({
+      supplyDefinitionId: SHORT_SUPPLY_DEFINITION.id,
+      spawnSpecs: SHORT_SPAWN_SPECS,
+      equipmentRegistry: EQUIPMENT_REGISTRY,
+      equipmentSupplyRegistry: SUPPLY_REGISTRY,
+      equipmentSystem: createSupplySystem(),
+      snapshot: {
+        schemaVersion: EQUIPMENT_SUPPLY_TIMELINE_SNAPSHOT_SCHEMA_VERSION,
+        supplyDefinitionId: SHORT_SUPPLY_DEFINITION.id,
+        nextTick: Number.MAX_SAFE_INTEGER,
+        activeSupplies: [],
+      },
+    });
+    expect(() => overflow.step({
+      tick: Number.MAX_SAFE_INTEGER,
+      participants: FAR_PARTICIPANTS,
+      contestSeed: 0,
+    })).toThrow(/nextTick 超出安全整数范围/);
+    overflow.destroy();
+    restored.destroy();
+    first.equipmentSystem.destroy();
   });
 });

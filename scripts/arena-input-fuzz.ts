@@ -348,7 +348,7 @@ function runMatch({
   let failure: InputFuzzError | null = null;
   try {
     while (core.phase !== ARENA_MATCH_PHASE.ENDED) {
-      const snapshot = core.getSnapshot();
+      const snapshot = core.getLegacyFullSnapshotForAudit();
       assertSnapshot(snapshot);
       if (snapshot.tick < 40) {
         applyPrelude(sampler, mapperDefinition.id, snapshot.tick);
@@ -403,7 +403,7 @@ function runMatch({
       if (runner) runner.step(frames);
       else core.step(frames);
     }
-    assertSnapshot(core.getSnapshot());
+    assertSnapshot(core.getLegacyFullSnapshotForAudit());
     if (!core.result) throw new Error('输入 fuzz 比赛没有完整结算。');
     if (runner) {
       const replay = runner.exportReplay();

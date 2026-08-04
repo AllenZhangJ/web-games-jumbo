@@ -10,6 +10,80 @@ import {
 import { ownOptions, rejectThenable, snapshotMethod } from './capability-utils.js';
 
 const OPTION_KEYS = new Set(['controller']);
+const NATIVE_PROMISE_THEN = Promise.prototype.then;
+
+type SyncReturnInspection =
+  | Readonly<{ kind: 'native-promise'; value: object }>
+  | Readonly<{ kind: 'sync'; value: unknown }>;
+
+function inspectSyncOrNativePromise(value: unknown, label: string): SyncReturnInspection {
+  if ((typeof value !== 'object' || value === null) && typeof value !== 'function') {
+    return { kind: 'sync', value };
+  }
+  try {
+    Reflect.apply(NATIVE_PROMISE_THEN, value, [() => undefined, () => undefined]);
+    return { kind: 'native-promise', value: value as object };
+  } catch {
+    // Ordinary thenables have no Promise internal slot; never invoke their then.
+  }
+  const visited = new Set<object>();
+  let current: object | null = value as object;
+  let depth = 0;
+  while (current !== null && depth < 32 && !visited.has(current)) {
+    visited.add(current);
+    depth += 1;
+    const descriptor = Object.getOwnPropertyDescriptor(current, 'then');
+    if (descriptor) {
+      if (!Object.hasOwn(descriptor, 'value')) {
+        throw new TypeError(`${label} 返回了访问器 thenable。`);
+      }
+      if (typeof descriptor.value === 'function') {
+        throw new TypeError(`${label} 返回了普通 thenable。`);
+      }
+      return { kind: 'sync', value };
+    }
+    current = Object.getPrototypeOf(current) as object | null;
+  }
+  if (current !== null) throw new TypeError(`${label} 返回值原型链无效。`);
+  return { kind: 'sync', value };
+}
+
+function resolveSyncOrNativePromise<T>(
+  value: unknown,
+  label: string,
+): Promise<Readonly<{ value: T }>> {
+  const inspected = inspectSyncOrNativePromise(value, label);
+  if (inspected.kind === 'sync') {
+    return Promise.resolve(Object.freeze({ value: inspected.value as T }));
+  }
+  return new Promise<Readonly<{ value: T }>>((resolve, reject) => {
+    try {
+      Reflect.apply(NATIVE_PROMISE_THEN, inspected.value, [
+        (resolved: unknown) => resolve(Object.freeze({ value: resolved as T })),
+        (rejected: unknown) => reject(rejected),
+      ]);
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+function observeNativePromise(value: unknown): boolean {
+  if ((typeof value !== 'object' || value === null) && typeof value !== 'function') return false;
+  try {
+    Reflect.apply(NATIVE_PROMISE_THEN, value, [() => undefined, () => undefined]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function observedRejectedOperation(error: unknown): Promise<never> {
+  observeNativePromise(error);
+  const operation = Promise.reject(error);
+  observeNativePromise(operation);
+  return operation;
+}
 
 export interface ProductSessionControllerPresentationPort {
   boot(): unknown;
@@ -121,32 +195,77 @@ export class ProductSessionIntentDispatcher {
     Object.freeze(this);
   }
 
-  #perform(controller: ControllerAdapter, intent: ProductUiIntent): unknown {
+  #resolveControllerResult<T>(
+    value: unknown,
+    label: string,
+  ): Promise<Readonly<{ value: T }>> {
+    if (this.#pending !== null && value === this.#pending) {
+      throw new Error(`${label} 不得自返回当前 pending operation。`);
+    }
+    return resolveSyncOrNativePromise<T>(value, label);
+  }
+
+  #perform(
+    controller: ControllerAdapter,
+    intent: ProductUiIntent,
+  ): Promise<Readonly<{ value: unknown }>> {
     switch (intent.id) {
       case PRODUCT_UI_INTENT_ID.BOOT:
-        return controller.boot();
+        return this.#resolveControllerResult(
+          controller.boot(),
+          'ProductSessionController.boot()',
+        );
       case PRODUCT_UI_INTENT_ID.START_MATCH:
         if (currentActiveState(controller) !== PRODUCT_SESSION_STATE.READY) {
           throw new Error('start-match 只能从 ready 发起。');
         }
-        controller.openCharacterSelect();
-        return controller.requestMatch();
+        return this.#resolveControllerResult(
+          controller.openCharacterSelect(),
+          'ProductSessionController.openCharacterSelect()',
+        ).then(() => this.#resolveControllerResult(
+          controller.requestMatch(),
+          'ProductSessionController.requestMatch()',
+        ));
       case PRODUCT_UI_INTENT_ID.OPEN_CHARACTER_SELECT:
-        return controller.openCharacterSelect();
+        return this.#resolveControllerResult(
+          controller.openCharacterSelect(),
+          'ProductSessionController.openCharacterSelect()',
+        );
       case PRODUCT_UI_INTENT_ID.CLOSE_CHARACTER_SELECT:
-        return controller.closeCharacterSelect();
+        return this.#resolveControllerResult(
+          controller.closeCharacterSelect(),
+          'ProductSessionController.closeCharacterSelect()',
+        );
       case PRODUCT_UI_INTENT_ID.SELECT_CHARACTER:
-        return controller.selectCharacter(intent.characterDefinitionId!);
+        return this.#resolveControllerResult(
+          controller.selectCharacter(intent.characterDefinitionId!),
+          'ProductSessionController.selectCharacter()',
+        );
       case PRODUCT_UI_INTENT_ID.REQUEST_MATCH:
-        return controller.requestMatch();
+        return this.#resolveControllerResult(
+          controller.requestMatch(),
+          'ProductSessionController.requestMatch()',
+        );
       case PRODUCT_UI_INTENT_ID.REQUEST_REMATCH:
-        return controller.requestRematch();
+        return this.#resolveControllerResult(
+          controller.requestRematch(),
+          'ProductSessionController.requestRematch()',
+        );
       case PRODUCT_UI_INTENT_ID.CONTINUE_REWARD:
-        return controller.continueReward();
+        return this.#resolveControllerResult(
+          controller.continueReward(),
+          'ProductSessionController.continueReward()',
+        );
       case PRODUCT_UI_INTENT_ID.DISMISS_UNLOCKS:
-        return controller.dismissUnlocks();
+        return this.#resolveControllerResult(
+          controller.dismissUnlocks(),
+          'ProductSessionController.dismissUnlocks()',
+        );
       case PRODUCT_UI_INTENT_ID.RETRY:
-        return controller.retry();
+        return this.#resolveControllerResult(
+          controller.retry(),
+          'ProductSessionController.retry()',
+        );
       default:
         throw new RangeError('未实现 Product UI intent。');
     }
@@ -154,18 +273,29 @@ export class ProductSessionIntentDispatcher {
 
   dispatch(intentValue: unknown): Promise<unknown> {
     if (this.#destroyed || this.#controller === null) {
-      return Promise.reject(new Error('ProductSessionIntentDispatcher 已销毁。'));
+      return observedRejectedOperation(new Error('ProductSessionIntentDispatcher 已销毁。'));
     }
-    const intent = createProductUiIntent(intentValue);
-    const key = createProductUiIntentKey(intent);
+    let intent: ProductUiIntent;
+    let key: string;
+    try {
+      intent = createProductUiIntent(intentValue);
+      key = createProductUiIntentKey(intent);
+    } catch (error) {
+      observeNativePromise(error);
+      throw error;
+    }
     if (this.#pending !== null) {
       if (this.#pendingKey === key) return this.#pending;
-      return Promise.reject(new Error('已有 Product UI intent 正在处理。'));
+      return observedRejectedOperation(new Error('已有 Product UI intent 正在处理。'));
     }
     const controller = this.#controller;
     const operation: Promise<unknown> = Promise.resolve()
       .then(() => this.#perform(controller, intent))
-      .then((snapshot) => snapshot ?? controller.getSnapshot())
+      .then(({ value: snapshot }) => snapshot ?? controller.getSnapshot())
+      .catch((error: unknown) => {
+        observeNativePromise(error);
+        throw error;
+      })
       .finally(() => {
         if (this.#pending === operation) {
           this.#pending = null;
@@ -175,6 +305,7 @@ export class ProductSessionIntentDispatcher {
       });
     this.#pendingKey = key;
     this.#pending = operation;
+    observeNativePromise(operation);
     return operation;
   }
 

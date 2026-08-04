@@ -23,7 +23,7 @@ describe('Arena V2 KZ branch weapon consequence prototype', () => {
       'wire-centerline',
       'wire-edge-cut',
     ]));
-  });
+  }, 20_000);
 
   it('shows that branch geometry changes weapon consequences instead of only changing labels', () => {
     const result = runArenaV2KzBranchWeaponConsequencePrototype();

@@ -39,7 +39,7 @@ test('bot threat evaluation uses the delayed opponent equipment action range', (
     },
   });
   core.step([{ ...createNeutralInputFrame(0, 'player-1'), primaryPressed: true, primaryHeld: true }]);
-  const source = cloneBotSourceSnapshot(core.getSnapshot());
+  const source = cloneBotSourceSnapshot(core.getLegacyFullSnapshotForAudit());
   const observation = createBotObservation({
     commandSnapshot: source,
     delayedSnapshot: source,
@@ -60,8 +60,8 @@ test('bot threat evaluation uses the delayed opponent equipment action range', (
 
 test('bot reacts only to publicly observed collapse warnings and uses ordinary movement', () => {
   const core = createArenaV1MatchCore({ seed: 91, config: { preparingTicks: 0 } });
-  const beforeWarning = cloneBotSourceSnapshot(core.getSnapshot());
-  const sourceSnapshot = core.getSnapshot();
+  const beforeWarning = cloneBotSourceSnapshot(core.getLegacyFullSnapshotForAudit());
+  const sourceSnapshot = core.getLegacyFullSnapshotForAudit();
   const rawWarning = {
     ...sourceSnapshot,
     map: {
@@ -115,7 +115,7 @@ test('bot reacts only to publicly observed collapse warnings and uses ordinary m
 
 test('hard bot can finish edge recovery on the final center platform', () => {
   const core = createArenaV1MatchCore({ seed: 92, config: { preparingTicks: 0 } });
-  const base = core.getSnapshot();
+  const base = core.getLegacyFullSnapshotForAudit();
   const raw = {
     ...base,
     map: {
@@ -153,7 +153,7 @@ test('hard bot can finish edge recovery on the final center platform', () => {
 
 test('bot treats missing corners of a plus-shaped topology as real outer edges', () => {
   const core = createArenaV1MatchCore({ seed: 93, config: { preparingTicks: 0 } });
-  const base = core.getSnapshot();
+  const base = core.getLegacyFullSnapshotForAudit();
   const disabled = new Set([
     'tile-north-west',
     'tile-north-east',

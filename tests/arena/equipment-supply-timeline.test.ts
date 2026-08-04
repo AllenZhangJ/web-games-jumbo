@@ -6,7 +6,10 @@ import {
   createArenaV2SurvivalSupplyRegistry,
   createStage4ContentRegistries,
 } from '@number-strategy-jump/arena-v1-content';
-import { ARENA_MATCH_EVENT } from '@number-strategy-jump/arena-contracts';
+import {
+  ARENA_MATCH_EVENT,
+  EQUIPMENT_DESPAWN_REASON,
+} from '@number-strategy-jump/arena-contracts';
 import {
   EQUIPMENT_LOCATION_STATE,
   EQUIPMENT_SUPPLY_TIMELINE_SNAPSHOT_SCHEMA_VERSION,
@@ -189,6 +192,49 @@ test('held supply survives expireTick while remaining world supplies expire', ()
   assert.equal(equipmentSystem.getSnapshot(heldId).locationState, EQUIPMENT_LOCATION_STATE.HELD);
   assert.equal(equipmentSystem.listSnapshots().length, 1);
   assert.deepEqual(timeline.listActiveSupplies(), []);
+  assert.deepEqual(
+    equipmentSystem.listExpiredHeldSupplyEquipmentInstanceIds(),
+    [heldId],
+  );
+  const disposed = equipmentSystem.dropOwned('player-1', {
+    isPositionValid: () => true,
+  });
+  assert.ok(disposed);
+  assert.equal(disposed.despawned, true);
+  assert.equal(disposed.fallbackUsed, false);
+  assert.equal(disposed.diagnosticCode, EQUIPMENT_DESPAWN_REASON.EXPIRED_HELD_LIFECYCLE);
+  assert.equal(disposed.equipment.locationState, EQUIPMENT_LOCATION_STATE.DESPAWNED);
+  assert.equal(disposed.equipment.position, null);
+  assert.equal(equipmentSystem.listSnapshots().length, 0);
+  assert.equal(equipmentSystem.getHeldEquipment('player-1'), null);
+  assert.deepEqual(equipmentSystem.listExpiredHeldSupplyEquipmentInstanceIds(), []);
+  timeline.destroy();
+  equipmentSystem.destroy();
+});
+
+test('held supply dropped before expireTick remains a pickable world item', () => {
+  const { timeline, equipmentSystem } = createHarness();
+  stepTo(timeline, 1_199);
+  const nearCenter = [
+    { id: 'player-1', position: { x: 0, y: 1, z: 0 }, eligible: true },
+    FAR_PARTICIPANTS[1],
+  ];
+  const spawned = stepTo(timeline, 1_200, nearCenter);
+  assert.equal(spawned.pickupDecisions.length, 1);
+  const dropped = equipmentSystem.dropOwned('player-1', {
+    isPositionValid: () => true,
+  });
+  assert.ok(dropped);
+  assert.equal(dropped.despawned, false);
+  assert.equal(dropped.equipment.locationState, EQUIPMENT_LOCATION_STATE.DROPPED);
+  assert.ok(dropped.equipment.position);
+
+  const repicked = stepTo(timeline, 1_201, nearCenter);
+  assert.deepEqual(
+    repicked.pickupDecisions.map(({ equipmentInstanceId }) => equipmentInstanceId),
+    [dropped.equipment.instanceId],
+  );
+  assert.equal(equipmentSystem.getHeldEquipment('player-1')?.instanceId, dropped.equipment.instanceId);
   timeline.destroy();
   equipmentSystem.destroy();
 });
@@ -245,6 +291,80 @@ test('same-wave replacement retires the recycled supply lifecycle before expiry'
   const expiry = stepTo(timeline, 1_800, nearLeft);
   assert.equal(expiry.expiredEvents.length, 1, '只剩未拾取的right供给需要过期');
   assert.match(equipmentSystem.getHeldEquipment('player-1')?.instanceId ?? '', /slot-left/);
+  timeline.destroy();
+  equipmentSystem.destroy();
+});
+
+test('expired held supply is removed from disposition atomically when a later wave replaces it', () => {
+  const { timeline, equipmentSystem } = createHarness();
+  stepTo(timeline, 1_199);
+  const nearCenter = [
+    { id: 'player-1', position: { x: 0, y: 1, z: 0 }, eligible: true },
+    FAR_PARTICIPANTS[1],
+  ];
+  stepTo(timeline, 1_200, nearCenter);
+  const wave0Held = equipmentSystem.getHeldEquipment('player-1')?.instanceId;
+  assert.match(wave0Held ?? '', /wave-0:slot-center/);
+  stepTo(timeline, 1_800, nearCenter);
+  assert.deepEqual(equipmentSystem.listExpiredHeldSupplyEquipmentInstanceIds(), [wave0Held]);
+
+  const wave1 = stepTo(timeline, 2_400, nearCenter);
+  assert.equal(wave1.pickupDecisions.length, 1);
+  assert.equal(wave1.pickupDecisions[0]?.kind, 'replaced');
+  assert.equal(equipmentSystem.listExpiredHeldSupplyEquipmentInstanceIds().length, 0);
+  assert.equal(equipmentSystem.listSnapshots().length, 3);
+  assert.throws(() => equipmentSystem.getSnapshot(wave0Held), /未知 equipment instance/);
+  timeline.destroy();
+  equipmentSystem.destroy();
+});
+
+test('replacement commit failure destroys runtime and disposition together', () => {
+  const { timeline, equipmentSystem } = createHarness();
+  stepTo(timeline, 1_199);
+  const nearCenter = [
+    { id: 'player-1', position: { x: 0, y: 1, z: 0 }, eligible: true },
+    FAR_PARTICIPANTS[1],
+  ];
+  stepTo(timeline, 1_200, nearCenter);
+  const expiredHeldId = equipmentSystem.getHeldEquipment('player-1')?.instanceId;
+  assert.ok(expiredHeldId);
+  stepTo(timeline, 1_800, nearCenter);
+  assert.deepEqual(
+    equipmentSystem.listExpiredHeldSupplyEquipmentInstanceIds(),
+    [expiredHeldId],
+  );
+
+  const originalDelete = Map.prototype.delete as (
+    this: Map<unknown, unknown>,
+    key: unknown,
+  ) => boolean;
+  let injected = false;
+  Object.defineProperty(Map.prototype, 'delete', {
+    configurable: true,
+    writable: true,
+    value: function injectedDelete(this: Map<unknown, unknown>, key: unknown): boolean {
+      if (!injected && key === expiredHeldId) {
+        injected = true;
+        throw new Error('injected replacement commit failure');
+      }
+      return originalDelete.call(this, key);
+    },
+  });
+  try {
+    assert.throws(
+      () => stepTo(timeline, 2_400, nearCenter),
+      /injected replacement commit failure/,
+    );
+  } finally {
+    Object.defineProperty(Map.prototype, 'delete', {
+      configurable: true,
+      writable: true,
+      value: originalDelete,
+    });
+  }
+  assert.equal(injected, true);
+  assert.throws(() => equipmentSystem.listSnapshots(), /已销毁/);
+  assert.throws(() => equipmentSystem.listExpiredHeldSupplyEquipmentInstanceIds(), /已销毁/);
   timeline.destroy();
   equipmentSystem.destroy();
 });

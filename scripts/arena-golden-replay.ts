@@ -1,8 +1,10 @@
 import {
   copyFile,
+  lstat,
   mkdir,
   readFile,
   readdir,
+  realpath,
   rename,
   rm,
   stat,
@@ -24,7 +26,7 @@ import {
   verifyArenaGoldenReplayCorpus,
 } from '@number-strategy-jump/arena-regression';
 import { ARENA_REPLAY_SCHEMA_VERSION } from '@number-strategy-jump/arena-match';
-import { combineCleanupFailure, normalizeThrownError } from '@number-strategy-jump/arena-contracts';
+import { combineCleanupFailure } from '@number-strategy-jump/arena-contracts';
 import { createDeterministicDataHash } from '@number-strategy-jump/arena-contracts';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -114,9 +116,30 @@ function hasErrorCode(error: unknown, code: string): boolean {
   return error instanceof Error && 'code' in error && error.code === code;
 }
 
+function safelyWrapThrownError(value: unknown, prefix: string): Error {
+  const error = new Error(prefix);
+  Object.defineProperty(error, 'cause', {
+    configurable: false,
+    enumerable: false,
+    writable: false,
+    value,
+  });
+  return error;
+}
+
 async function exists(target: string): Promise<boolean> {
   try {
     await stat(target);
+    return true;
+  } catch (error: unknown) {
+    if (hasErrorCode(error, 'ENOENT')) return false;
+    throw error;
+  }
+}
+
+async function entryExists(target: string): Promise<boolean> {
+  try {
+    await lstat(target);
     return true;
   } catch (error: unknown) {
     if (hasErrorCode(error, 'ENOENT')) return false;
@@ -130,6 +153,31 @@ function assertExternalCandidateDirectory(directory: string): void {
   if (!outside || path.isAbsolute(relative)) {
     throw new Error('候选目录必须位于 repository 之外。');
   }
+}
+
+async function resolveExternalCandidateDirectory(directoryValue: string): Promise<string> {
+  const lexicalDirectory = path.resolve(root, directoryValue);
+  assertExternalCandidateDirectory(lexicalDirectory);
+  const lexicalParent = path.dirname(lexicalDirectory);
+  const canonicalRoot = await realpath(root);
+  let canonicalParent: string;
+  try {
+    canonicalParent = await realpath(lexicalParent);
+  } catch (error: unknown) {
+    if (hasErrorCode(error, 'ENOENT')) {
+      throw new Error('候选目录的 parent 必须预先存在，canonical 校验前不得自动创建。');
+    }
+    throw error;
+  }
+  const relativeParent = path.relative(canonicalRoot, canonicalParent);
+  const parentIsInsideRepository = relativeParent === ''
+    || (!path.isAbsolute(relativeParent) && relativeParent !== '..' && !relativeParent.startsWith(`..${path.sep}`));
+  if (parentIsInsideRepository) throw new Error('候选目录的 canonical parent 必须位于 repository 之外。');
+  const basename = path.basename(lexicalDirectory);
+  if (basename === '' || basename === '.' || basename === '..') {
+    throw new Error('候选目录名称无效。');
+  }
+  return path.join(canonicalParent, basename);
 }
 
 async function readJson(file: string): Promise<unknown> {
@@ -180,17 +228,30 @@ async function writeJson(file: string, value: unknown): Promise<void> {
   await writeFile(file, `${JSON.stringify(value, null, 2)}\n`, { encoding: 'utf8', flag: 'wx' });
 }
 
-async function generateCandidate(directoryValue: string): Promise<Readonly<{
+export async function generateCandidate(directoryValue: string): Promise<Readonly<{
   directory: string;
   report: GoldenReplayVerificationReport;
 }>> {
-  const directory = path.resolve(root, directoryValue);
-  assertExternalCandidateDirectory(directory);
-  if (await exists(directory)) throw new Error(`候选目录已存在：${directory}。`);
-  await mkdir(directory, { recursive: true });
-  const registry = createArenaV1GoldenReplayScenarioRegistry();
-  const generated: Array<Readonly<{ scenario: GoldenReplayScenario; replay: GoldenReplay }>> = [];
+  let directory = '';
+  let staging = '';
+  let publicationLock = '';
+  let stagingCreated = false;
+  let lockHeld = false;
   try {
+    directory = await resolveExternalCandidateDirectory(directoryValue);
+    if (await entryExists(directory)) throw new Error(`候选目录已存在：${directory}。`);
+    const parent = path.dirname(directory);
+    const basename = path.basename(directory);
+    staging = path.join(parent, `.${basename}.pa5d-${process.pid}`);
+    publicationLock = path.join(parent, `.${basename}.pa5d.lock`);
+    await writeFile(publicationLock, `${process.pid}\n`, { encoding: 'utf8', flag: 'wx' });
+    lockHeld = true;
+    if (await entryExists(directory)) throw new Error(`候选目录已存在：${directory}。`);
+    if (await entryExists(staging)) throw new Error(`候选 staging 目录已存在：${staging}。`);
+    await mkdir(staging, { recursive: false });
+    stagingCreated = true;
+    const registry = createArenaV1GoldenReplayScenarioRegistry();
+    const generated: Array<Readonly<{ scenario: GoldenReplayScenario; replay: GoldenReplay }>> = [];
     for (const reference of registry.list()) {
       const scenario = registry.require(reference);
       const replay = scenario.createReplay();
@@ -203,18 +264,48 @@ async function generateCandidate(directoryValue: string): Promise<Readonly<{
       replaySchemaVersion: ARENA_REPLAY_SCHEMA_VERSION,
       rejectedReplaySchemaVersions: [ARENA_REPLAY_SCHEMA_VERSION - 1],
       entries: generated.map(({ scenario, replay }) => (
-        createArenaGoldenReplayManifestEntry(scenario, replay)
+        createArenaGoldenReplayManifestEntry({
+          id: scenario.id,
+          version: scenario.version,
+          category: scenario.category,
+          file: scenario.file,
+        }, replay)
       )).sort((left, right) => (left.id < right.id ? -1 : left.id > right.id ? 1 : 0)),
     });
     for (const { scenario, replay } of generated) {
-      await writeJson(path.join(directory, scenario.file), replay);
+      await writeJson(path.join(staging, scenario.file), replay);
     }
-    await writeJson(path.join(directory, 'manifest.json'), manifest);
-    const report = await verifyDirectory(directory, { enforceDirectoryName: false });
+    await writeJson(path.join(staging, 'manifest.json'), manifest);
+    const report = await verifyDirectory(staging, { enforceDirectoryName: false });
+    if (await entryExists(directory)) {
+      throw new Error(`候选目录在发布前被其他进程创建：${directory}。`);
+    }
+    await rename(staging, directory);
+    stagingCreated = false;
+    const lockCleanupErrors: Error[] = [];
+    await removeForCleanup(publicationLock, { force: true }, lockCleanupErrors);
+    if (lockCleanupErrors.length > 0) {
+      throw combineCleanupFailure(
+        new Error('黄金回放候选已发布，但发布锁清理失败。'),
+        lockCleanupErrors,
+        '黄金回放候选已发布但发布锁清理未完成。',
+      );
+    }
+    lockHeld = false;
     return Object.freeze({ directory, report });
   } catch (error: unknown) {
-    await rm(directory, { recursive: true, force: true });
-    throw error;
+    const cleanupErrors: Error[] = [];
+    if (stagingCreated) {
+      await removeForCleanup(staging, { recursive: true, force: true }, cleanupErrors);
+    }
+    if (lockHeld) {
+      await removeForCleanup(publicationLock, { force: true }, cleanupErrors);
+    }
+    throw combineCleanupFailure(
+      safelyWrapThrownError(error, '黄金回放候选生成失败。'),
+      cleanupErrors,
+      '黄金回放候选生成失败且 staging 清理未完成。',
+    );
   }
 }
 
@@ -234,7 +325,7 @@ async function removeForCleanup(
   try {
     await rm(target, options);
   } catch (error: unknown) {
-    cleanupErrors.push(normalizeThrownError(error, `黄金回放清理 ${target} 失败`));
+    cleanupErrors.push(safelyWrapThrownError(error, `黄金回放清理 ${target} 失败`));
   }
 }
 
@@ -253,7 +344,7 @@ async function withPromotionLock<T>(operation: () => Promise<T>): Promise<T> {
   try {
     result = await operation();
   } catch (error: unknown) {
-    failure = normalizeThrownError(error, '黄金回放提升失败');
+    failure = safelyWrapThrownError(error, '黄金回放提升失败');
   }
   const cleanupErrors: Error[] = [];
   await removeForCleanup(promotionLock, { force: true }, cleanupErrors);
@@ -306,7 +397,7 @@ async function promoteCandidate(candidateValue: string, approval: string): Promi
     const cleanupErrors: Error[] = [];
     await removeForCleanup(temporary, { recursive: true, force: true }, cleanupErrors);
     throw combineCleanupFailure(
-      normalizeThrownError(error, '黄金回放 staging 失败'),
+      safelyWrapThrownError(error, '黄金回放 staging 失败'),
       cleanupErrors,
       '黄金回放 staging 失败且临时目录清理未完成。',
     );
@@ -336,12 +427,12 @@ async function promoteCandidate(candidateValue: string, approval: string): Promi
       try {
         await rename(previous, currentDirectory);
       } catch (rollbackError: unknown) {
-        rollbackErrors.push(normalizeThrownError(rollbackError, '黄金回放旧版本回滚失败'));
+        rollbackErrors.push(safelyWrapThrownError(rollbackError, '黄金回放旧版本回滚失败'));
       }
     }
     await removeForCleanup(temporary, { recursive: true, force: true }, rollbackErrors);
     throw combineCleanupFailure(
-      normalizeThrownError(error, '黄金回放提升提交失败'),
+      safelyWrapThrownError(error, '黄金回放提升提交失败'),
       rollbackErrors,
       '黄金回放提升提交失败且回滚未完整完成。',
     );
@@ -374,7 +465,9 @@ async function main(): Promise<void> {
   console.log(JSON.stringify(result, null, 2));
 }
 
-void main().catch((error: unknown) => {
-  console.error(error instanceof Error ? error.message : String(error));
-  process.exitCode = 1;
-});
+if (process.argv[1] !== undefined && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  void main().catch((error: unknown) => {
+    console.error(safelyWrapThrownError(error, '黄金回放命令失败。').message);
+    process.exitCode = 1;
+  });
+}

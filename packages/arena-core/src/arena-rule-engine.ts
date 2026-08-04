@@ -13,13 +13,19 @@ import { ActionExecutionSystem } from './action-execution-system.js';
 import type { ActionStateSnapshot } from './action-execution-system.js';
 import {
   ActionAffordanceProjector,
+  assertActionAffordanceProfile,
   type ActionAffordance,
+  type ActionAffordanceProfile,
+  type ActionAffordanceProfileResult,
+  type BotMobilityAffordance,
+  type LocalActionAffordance,
 } from './action-affordance.js';
 import { ACTION_RULE_COMMAND } from './default-effect-handlers.js';
 import {
   assertIntegerAtLeast,
   assertKnownKeys,
   assertNonEmptyString,
+  assertPlainRecord,
   cloneFrozenData,
   createDeterministicDataHash,
   type ArenaInputFrame,
@@ -103,6 +109,7 @@ export interface EquipmentSystemContract {
   getHeldEquipment(participantId: string): RuleEquipmentSnapshot | null;
   getSnapshot(instanceId: string): RuleEquipmentSnapshot;
   listSnapshots(): readonly RuleEquipmentSnapshot[];
+  listExpiredHeldSupplyEquipmentInstanceIds(): readonly string[];
   applySupplyTimelinePhase?(options: unknown): unknown;
   resolveSupplyPickups?(options: unknown): unknown;
   destroy(): void;
@@ -151,6 +158,7 @@ export interface ArenaRuleEngineContract {
   getHeldEquipment(participantId: string): RuleEquipmentSnapshot | null;
   getEquipmentSnapshot(instanceId: string): RuleEquipmentSnapshot;
   listEquipmentSnapshots(): readonly RuleEquipmentSnapshot[];
+  listExpiredHeldSupplyEquipmentInstanceIds(): readonly string[];
   applyEquipmentSupplyTimelinePhase?(options: unknown): unknown;
   resolveEquipmentSupplyPickups?(options: unknown): unknown;
   spawnEquipment(options: unknown): RuleEquipmentSnapshot;
@@ -165,6 +173,22 @@ export interface ArenaRuleEngineContract {
   getContentHash(): string;
   getMovementActionCandidates(capabilities: MovementCapabilities): readonly ActionCandidate[];
   getActionAffordance(options: unknown): ActionAffordance;
+  getActionAffordanceProfile(
+    options: unknown,
+    profile: 'local-context-primary',
+  ): LocalActionAffordance;
+  getActionAffordanceProfile(
+    options: unknown,
+    profile: 'bot-mobility',
+  ): BotMobilityAffordance;
+  getActionAffordanceProfile(
+    options: unknown,
+    profile: 'full-audit',
+  ): ActionAffordance;
+  getActionAffordanceProfile(
+    options: unknown,
+    profile: ActionAffordanceProfile,
+  ): ActionAffordanceProfileResult;
   getParticipantActionRule(participantId: string): PublicActionRule;
   destroy(): void;
 }
@@ -286,6 +310,32 @@ const AFFORDANCE_KEYS = new Set([
   'actors',
   'additionalCandidates',
 ]);
+const UNSAFE_AFFORDANCE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
+function snapshotAffordanceOptions(value: unknown): Record<string, unknown> {
+  const record = assertPlainRecord(value, 'ArenaRuleEngine action affordance options');
+  const result: Record<string, unknown> = {};
+  for (const key of Reflect.ownKeys(record)) {
+    if (typeof key !== 'string') {
+      throw new TypeError('ArenaRuleEngine action affordance options 不能包含 Symbol 字段。');
+    }
+    if (UNSAFE_AFFORDANCE_KEYS.has(key) || !AFFORDANCE_KEYS.has(key)) {
+      throw new RangeError(`ArenaRuleEngine action affordance options 不支持字段 ${key}。`);
+    }
+    const descriptor = Object.getOwnPropertyDescriptor(record, key);
+    if (
+      !descriptor
+      || !descriptor.enumerable
+      || !Object.prototype.hasOwnProperty.call(descriptor, 'value')
+    ) {
+      throw new TypeError(
+        `ArenaRuleEngine action affordance options.${key} 必须是可枚举数据字段。`,
+      );
+    }
+    result[key] = descriptor.value;
+  }
+  return Object.freeze(result);
+}
 const COMMIT_KEYS = new Set(['recordHit', 'applyHitstun', 'applyImpulse']);
 const ACTOR_KEYS = new Set(['id', 'canAct', 'targetable', 'position', 'facing']);
 const INPUT_FRAME_KEYS = new Set([
@@ -311,6 +361,7 @@ const REQUIRED_ENGINE_METHODS = Object.freeze([
   'getHeldEquipment',
   'getEquipmentSnapshot',
   'listEquipmentSnapshots',
+  'listExpiredHeldSupplyEquipmentInstanceIds',
   'spawnEquipment',
   'resolveEquipmentPickups',
   'updateEquipmentLastSafePosition',
@@ -320,6 +371,7 @@ const REQUIRED_ENGINE_METHODS = Object.freeze([
   'getContentHash',
   'getMovementActionCandidates',
   'getActionAffordance',
+  'getActionAffordanceProfile',
   'getParticipantActionRule',
   'destroy',
 ]);
@@ -328,6 +380,7 @@ const REQUIRED_EQUIPMENT_SYSTEM_METHODS = Object.freeze([
   'markActionStarted', 'advanceCooldowns', 'spawn', 'resolvePickups',
   'updateLastSafePosition', 'dropOwned', 'despawnInvalidWorldEquipment',
   'getHeldEquipment', 'getSnapshot', 'listSnapshots', 'destroy',
+  'listExpiredHeldSupplyEquipmentInstanceIds',
 ]);
 
 function assertEquipmentSystem(value: unknown): EquipmentSystemContract {
@@ -1126,6 +1179,11 @@ export class ArenaRuleEngine {
     return this.#equipmentSystem.listSnapshots();
   }
 
+  listExpiredHeldSupplyEquipmentInstanceIds(): readonly string[] {
+    this.#assertUsable();
+    return this.#equipmentSystem.listExpiredHeldSupplyEquipmentInstanceIds();
+  }
+
   applyEquipmentSupplyTimelinePhase(options: unknown): unknown {
     this.#assertUsable();
     if (typeof this.#equipmentSystem.applySupplyTimelinePhase !== 'function') {
@@ -1170,34 +1228,75 @@ export class ArenaRuleEngine {
     return Object.freeze([...movementCandidates, aerialCandidate]);
   }
 
-  getActionAffordance(options: unknown): ActionAffordance {
-    this.#assertUsable();
-    assertKnownKeys(options, AFFORDANCE_KEYS, 'ArenaRuleEngine action affordance options');
-    const tick = assertIntegerAtLeast(options.tick, 0, 'ArenaRuleEngine affordance tick');
+  #createActionAffordanceProjectOptions(options: unknown): {
+    readonly tick: number;
+    readonly participantId: string;
+    readonly canAct: boolean;
+    readonly candidates: readonly unknown[];
+    readonly occupiedLanes: readonly unknown[];
+    readonly activeConflictTags: readonly string[];
+  } {
+    const source = snapshotAffordanceOptions(options);
+    const tick = assertIntegerAtLeast(source.tick, 0, 'ArenaRuleEngine affordance tick');
     const participantId = assertNonEmptyString(
-      options.participantId,
+      source.participantId,
       'ArenaRuleEngine affordance participantId',
     );
     if (!this.#participantIds.includes(participantId)) {
       throw new RangeError(`未知 affordance participant ${participantId}。`);
     }
-    const actors = this.#cloneActors(options.actors);
+    const actors = this.#cloneActors(source.actors);
     const actor = requireActorById(actors, participantId, 'affordance participant');
     const additionalCandidates = cloneAdditionalCandidates(
-      options.additionalCandidates === undefined
+      source.additionalCandidates === undefined
         ? undefined
-        : [{ participantId, candidates: options.additionalCandidates }],
+        : [{ participantId, candidates: source.additionalCandidates }],
       this.#participantIds,
     ).get(participantId);
     const constraints = this.#actionExecution.getNextTickConstraints(participantId);
-    return this.#actionAffordanceProjector.project({
+    return {
       tick,
       participantId,
       canAct: actor.canAct,
       candidates: this.#createCandidates(participantId, actors, additionalCandidates ?? []),
       occupiedLanes: constraints.occupiedLanes,
       activeConflictTags: constraints.activeConflictTags,
-    });
+    };
+  }
+
+  getActionAffordance(options: unknown): ActionAffordance {
+    this.#assertUsable();
+    return this.#actionAffordanceProjector.project(
+      this.#createActionAffordanceProjectOptions(options),
+    );
+  }
+
+  getActionAffordanceProfile(
+    options: unknown,
+    profile: 'local-context-primary',
+  ): LocalActionAffordance;
+  getActionAffordanceProfile(
+    options: unknown,
+    profile: 'bot-mobility',
+  ): BotMobilityAffordance;
+  getActionAffordanceProfile(
+    options: unknown,
+    profile: 'full-audit',
+  ): ActionAffordance;
+  getActionAffordanceProfile(
+    options: unknown,
+    profile: ActionAffordanceProfile,
+  ): ActionAffordanceProfileResult;
+  getActionAffordanceProfile(
+    options: unknown,
+    profileValue: unknown,
+  ): ActionAffordanceProfileResult {
+    this.#assertUsable();
+    const profile = assertActionAffordanceProfile(profileValue);
+    return this.#actionAffordanceProjector.projectProfile(
+      this.#createActionAffordanceProjectOptions(options),
+      profile,
+    );
   }
 
   getParticipantActionRule(participantId: string): PublicActionRule {

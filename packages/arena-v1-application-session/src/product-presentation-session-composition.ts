@@ -23,7 +23,7 @@ import { createArenaV1ProductSession } from '@number-strategy-jump/arena-v1-comp
 import {
   ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT,
   ARENA_V1_PRODUCT_PRESENTATION_CONTENT,
-  projectArenaPresentationFrame,
+  projectArenaPresentationFrameV2,
 } from '@number-strategy-jump/arena-v1-presentation-content';
 
 type UnknownFunction = (...args: unknown[]) => unknown;
@@ -295,9 +295,11 @@ export function createProductPresentationSessionComposition(
 ): ProductPresentationSessionComposition {
   const platform = snapshotPlatform(platformValue);
   const options = ownOptions(optionsInput);
-  const mapperId = options.mapperId ?? ARENA_INPUT_MAPPER_ID.EXPLICIT_COMBAT_JUMP;
-  if (!Object.values(ARENA_INPUT_MAPPER_ID).includes(mapperId as never)) {
-    throw new RangeError(`未知 Product Presentation mapperId ${String(mapperId)}。`);
+  const mapperId = options.mapperId ?? ARENA_INPUT_MAPPER_ID.CONTEXT_PRIMARY;
+  if (mapperId !== ARENA_INPUT_MAPPER_ID.CONTEXT_PRIMARY) {
+    throw new RangeError(
+      'ProductPresentationSession V2 composition 仅支持 context-primary mapper。',
+    );
   }
   const maximumCatchUpTicks = integerInRange(
     options.maximumCatchUpTicks ?? 8,
@@ -356,7 +358,7 @@ export function createProductPresentationSessionComposition(
         ...(args[0] as ConstructorParameters<typeof ProductPresentationFlow>[0]),
         presentationContent: ARENA_V1_PRODUCT_PRESENTATION_CONTENT,
         matchPresentationContent: ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT,
-        frameProjector: projectArenaPresentationFrame as unknown as
+        frameProjector: projectArenaPresentationFrameV2 as unknown as
           ConstructorParameters<typeof ProductPresentationFlow>[0]['frameProjector'],
       }))
       : requiredFunction(options.flowFactory, 'ProductPresentationSession.flowFactory'),

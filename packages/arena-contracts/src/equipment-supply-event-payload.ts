@@ -16,6 +16,13 @@ export const EQUIPMENT_EXPIRY_REASON = Object.freeze({
   LIFETIME_EXPIRED: 'lifetime-expired',
 } as const);
 
+// A held supply may outlive its public lifecycle, but it must not re-enter the
+// world when its owner is eliminated after expiry. This reason is shared by
+// the equipment authority and MatchCore's authoritative despawn event.
+export const EQUIPMENT_DESPAWN_REASON = Object.freeze({
+  EXPIRED_HELD_LIFECYCLE: 'supply-lifecycle-expired-held-drop',
+} as const);
+
 interface EquipmentSupplyEventIdentityPayload {
   readonly supplyDefinitionId: string;
   readonly supplyId: string;

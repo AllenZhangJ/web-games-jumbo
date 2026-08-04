@@ -1,4 +1,4 @@
-import { assertIntegerAtLeast, assertKnownKeys } from '@number-strategy-jump/arena-contracts';
+import { assertIntegerAtLeast, assertKnownKeys, cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 import type { PlainRecord } from '@number-strategy-jump/arena-contracts';
 import {
   ARENA_REGRESSION_COMPONENT_ID,
@@ -30,6 +30,14 @@ const PRODUCT_PRESENTATION_SOAK_KEYS: ReadonlySet<string> = new Set([
 const PRODUCT_STRESS_KEYS: ReadonlySet<string> = new Set([
   'id', 'ok', 'matches', 'authorityHashCount', 'contentHashCount', 'lifecycleTransitions',
   'rematches', 'maximumTicks', 'restarts', 'experience', 'latestGrantId',
+]);
+const COMPONENT_KEYS: ReadonlySet<string> = new Set([
+  ...INPUT_FUZZ_KEYS,
+  ...INPUT_MAPPER_KEYS,
+  ...LIFECYCLE_KEYS,
+  ...PRESENTATION_SOAK_KEYS,
+  ...PRODUCT_PRESENTATION_SOAK_KEYS,
+  ...PRODUCT_STRESS_KEYS,
 ]);
 
 function definitionComponent(id: string): Readonly<ArenaRegressionComponentDefinition> {
@@ -186,12 +194,13 @@ function cloneProductStress(value: unknown): Readonly<PlainRecord> {
 }
 
 export function cloneArenaRegressionEvidenceComponents(values: unknown): readonly Readonly<PlainRecord>[] {
-  if (!Array.isArray(values) || values.length !== DEFINITION.components.length) {
+  const sourceValues = cloneFrozenData(values, 'ArenaRegressionEvidence.components');
+  if (!Array.isArray(sourceValues) || sourceValues.length !== DEFINITION.components.length) {
     throw new RangeError('ArenaRegressionEvidence.components 必须精确覆盖 V1 Definition。');
   }
   const byId = new Map<string, unknown>();
-  for (const value of values) {
-    assertKnownKeys(value, new Set(Reflect.ownKeys(value as object).filter((key): key is string => typeof key === 'string')), 'ArenaRegressionEvidence component');
+  for (const value of sourceValues) {
+    assertKnownKeys(value, COMPONENT_KEYS, 'ArenaRegressionEvidence component');
     if (typeof value.id !== 'string') throw new TypeError('ArenaRegressionEvidence component 必须包含 id。');
     if (byId.has(value.id)) throw new RangeError(`重复 Regression component ${value.id}。`);
     byId.set(value.id, value);

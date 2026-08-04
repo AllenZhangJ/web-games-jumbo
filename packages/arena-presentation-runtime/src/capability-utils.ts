@@ -1,16 +1,60 @@
 export type UnknownMethod = (...args: unknown[]) => unknown;
 
-export function snapshotMethod(
+const NATIVE_PROMISE_THEN = Promise.prototype.then;
+
+export function assertCapabilityRecord(
   value: unknown,
   name: string,
-  methodName: string,
-  required = true,
-): UnknownMethod | null {
+): asserts value is Record<PropertyKey, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new TypeError(`${name} 必须是对象。`);
   }
+}
+
+export function assertCapabilityKnownKeys(
+  value: unknown,
+  allowed: ReadonlySet<PropertyKey>,
+  name: string,
+): void {
+  assertCapabilityRecord(value, name);
+  const unknown = Reflect.ownKeys(value).find((key) => !allowed.has(key));
+  if (unknown !== undefined) throw new TypeError(`${name} 包含未知字段 ${String(unknown)}。`);
+}
+
+export function readCapabilityOwnData(
+  value: unknown,
+  field: PropertyKey,
+  name: string,
+  required = true,
+): unknown {
+  assertCapabilityRecord(value, name);
+  const descriptor = Object.getOwnPropertyDescriptor(value, field);
+  if (!descriptor) {
+    if (!required) return undefined;
+    throw new TypeError(`${name}.${String(field)} 缺失。`);
+  }
+  if (!Object.hasOwn(descriptor, 'value')) {
+    throw new TypeError(`${name}.${String(field)} 必须是数据字段。`);
+  }
+  return descriptor.value;
+}
+
+function snapshotMethodWithTraversal(
+  value: unknown,
+  name: string,
+  methodName: string,
+  required: boolean,
+  bounded: boolean,
+): UnknownMethod | null {
+  assertCapabilityRecord(value, name);
   let owner: object | null = value;
-  while (owner) {
+  const visited = bounded ? new Set<object>() : null;
+  let depth = 0;
+  while (owner && (!visited || (depth < 32 && !visited.has(owner)))) {
+    if (visited) {
+      visited.add(owner);
+      depth += 1;
+    }
     const descriptor = Object.getOwnPropertyDescriptor(owner, methodName);
     if (descriptor) {
       if (!Object.hasOwn(descriptor, 'value') || typeof descriptor.value !== 'function') {
@@ -21,27 +65,83 @@ export function snapshotMethod(
     }
     owner = Object.getPrototypeOf(owner) as object | null;
   }
+  if (owner !== null && visited) throw new TypeError(`${name} 返回值原型链无效。`);
   if (!required) return null;
   throw new TypeError(`${name} 缺少 ${methodName}()。`);
 }
 
+export function snapshotMethod(value: unknown, name: string, methodName: string): UnknownMethod;
+export function snapshotMethod(
+  value: unknown,
+  name: string,
+  methodName: string,
+  required: true,
+): UnknownMethod;
+export function snapshotMethod(
+  value: unknown,
+  name: string,
+  methodName: string,
+  required: false,
+): UnknownMethod | null;
+export function snapshotMethod(
+  value: unknown,
+  name: string,
+  methodName: string,
+  required = true,
+): UnknownMethod | null {
+  return snapshotMethodWithTraversal(value, name, methodName, required, true);
+}
+
+export function snapshotLegacyMethod(value: unknown, name: string, methodName: string): UnknownMethod;
+export function snapshotLegacyMethod(
+  value: unknown,
+  name: string,
+  methodName: string,
+  required: true,
+): UnknownMethod;
+export function snapshotLegacyMethod(
+  value: unknown,
+  name: string,
+  methodName: string,
+  required: false,
+): UnknownMethod | null;
+export function snapshotLegacyMethod(
+  value: unknown,
+  name: string,
+  methodName: string,
+  required = true,
+): UnknownMethod | null {
+  return snapshotMethodWithTraversal(value, name, methodName, required, false);
+}
+
 export function rejectThenable(value: unknown, name: string): void {
   if (!value || (typeof value !== 'object' && typeof value !== 'function')) return;
+  let hasPromiseBrand = false;
+  try {
+    Reflect.apply(NATIVE_PROMISE_THEN, value, [() => {}, () => {}]);
+    hasPromiseBrand = true;
+  } catch {
+    // Ordinary thenables have no Promise internal slot; never invoke their then.
+  }
+  if (hasPromiseBrand) throw new TypeError(`${name} 必须同步完成。`);
+
   let owner: object | null = value as object;
-  while (owner) {
+  const visited = new Set<object>();
+  let depth = 0;
+  while (owner && depth < 32 && !visited.has(owner)) {
+    visited.add(owner);
+    depth += 1;
     const descriptor = Object.getOwnPropertyDescriptor(owner, 'then');
     if (descriptor) {
       if (!Object.hasOwn(descriptor, 'value')) {
         throw new TypeError(`${name} 返回了访问器 thenable。`);
       }
       if (typeof descriptor.value !== 'function') return;
-      try {
-        Promise.prototype.then.call(value, undefined, () => {});
-      } catch { /* non-Promise thenables must not be executed while rejecting them */ }
       throw new TypeError(`${name} 必须同步完成。`);
     }
     owner = Object.getPrototypeOf(owner) as object | null;
   }
+  if (owner !== null) throw new TypeError(`${name} 返回值原型链无效。`);
 }
 
 export function snapshotFunction(value: unknown, name: string): UnknownMethod {

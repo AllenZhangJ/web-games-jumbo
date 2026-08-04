@@ -65,7 +65,7 @@ function recordHeadless(options: {
   try {
     core = createArenaV1MatchCore({ seed: options.seed, config: options.config });
     runner = new HeadlessMatchRunner(core, { checkpointInterval: options.checkpointInterval });
-    replay = runner.runUntilEnded(options.createFrames);
+    replay = runner.runLegacyUntilEndedForAudit(options.createFrames);
   } catch (error) {
     failure = error;
   }
@@ -182,26 +182,28 @@ function createLifecycleReplay(): ArenaReplay {
         hardLimitTicks: 480, equipment: { initialSpawns: [] },
       },
     }));
-    const initialTick = session.getSnapshot().tick;
+    const initialTick = session.getLegacyFullSnapshotForAudit().tick;
     session.setPaused(true);
     session.start();
-    const pausedBeforeStart = session.step();
+    const pausedBeforeStart = session.stepWithLegacySnapshotForAudit();
     if (pausedBeforeStart.snapshot.tick !== initialTick || pausedBeforeStart.input !== null) {
       throw new Error('黄金生命周期场景在 start 前 pause 后错误推进。');
     }
     session.setPaused(false);
     for (let index = 0; index < 12; index += 1) {
-      const snapshot = session.getSnapshot();
-      session.step(createNeutralInputFrame(snapshot.tick, 'player-1'));
+      const snapshot = session.getLegacyFullSnapshotForAudit();
+      session.stepWithLegacySnapshotForAudit(createNeutralInputFrame(snapshot.tick, 'player-1'));
     }
-    const beforeSecondPause = session.getSnapshot().tick;
+    const beforeSecondPause = session.getLegacyFullSnapshotForAudit().tick;
     session.setPaused(true);
-    const pausedDuringMatch = session.step();
+    const pausedDuringMatch = session.stepWithLegacySnapshotForAudit();
     if (pausedDuringMatch.snapshot.tick !== beforeSecondPause || pausedDuringMatch.input !== null) {
       throw new Error('黄金生命周期场景在对局 pause 后错误推进。');
     }
     session.setPaused(false);
-    replay = session.runUntilEnded((snapshot: ArenaMatchSnapshot) => createNeutralInputFrame(snapshot.tick, 'player-1'));
+    replay = session.runLegacyUntilEndedForAudit(
+      (snapshot: ArenaMatchSnapshot) => createNeutralInputFrame(snapshot.tick, 'player-1'),
+    );
   } catch (error) {
     failure = error;
   }

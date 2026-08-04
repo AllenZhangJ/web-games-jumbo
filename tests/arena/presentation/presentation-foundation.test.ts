@@ -19,6 +19,7 @@ import {
   projectArenaPresentationFrame,
   type ProjectArenaPresentationFrameOptions,
 } from '@number-strategy-jump/arena-v1-presentation-content';
+import type { ArenaMatchSnapshot } from '@number-strategy-jump/arena-contracts';
 
 const PUBLIC_INFO = Object.freeze({
   matchSeed: 65,
@@ -50,6 +51,30 @@ function record(value: unknown, name: string): Readonly<Record<string, unknown>>
 function array(value: unknown, name: string): readonly unknown[] {
   assert.ok(Array.isArray(value), `${name} 必须是数组。`);
   return value;
+}
+
+function cloneSnapshotForMutation(snapshot: ArenaMatchSnapshot): {
+  readonly value: ArenaMatchSnapshot;
+  readonly assertAuthorityUnchanged: () => void;
+} {
+  const serialized = JSON.stringify(snapshot);
+  assert.equal(Object.isFrozen(snapshot), true);
+  assert.equal(Object.isFrozen(snapshot.participants), true);
+  assert.equal(Object.isFrozen(snapshot.participants[0]), true);
+  assert.equal(Object.isFrozen(snapshot.map), true);
+  assert.equal(Object.isFrozen(snapshot.map.surfaces), true);
+  const value = structuredClone(snapshot) as ArenaMatchSnapshot;
+  return {
+    value,
+    assertAuthorityUnchanged: () => {
+      assert.equal(Object.isFrozen(snapshot), true);
+      assert.equal(Object.isFrozen(snapshot.participants), true);
+      assert.equal(Object.isFrozen(snapshot.participants[0]), true);
+      assert.equal(Object.isFrozen(snapshot.map), true);
+      assert.equal(Object.isFrozen(snapshot.map.surfaces), true);
+      assert.equal(JSON.stringify(snapshot), serialized);
+    },
+  };
 }
 
 test('Arena greybox content copies frozen authority geometry and presentation semantics', () => {
@@ -126,7 +151,7 @@ test('Arena action, weapon and character presentation values come from one expor
 
 test('Arena frame projector reads ActionAffordance and exposes no hidden bot difficulty', () => {
   const core = createCore();
-  const source = core.getSnapshot();
+  const source = core.getLegacyFullSnapshotForAudit();
   const sourceParticipant = required(source.participants[0], 'source participant');
   const sourceAffordance = record(
     sourceParticipant.actionAffordance,
@@ -184,7 +209,9 @@ test('Arena frame projector reads ActionAffordance and exposes no hidden bot dif
 
 test('Arena frame projector fails closed on missing presentation content', () => {
   const core = createCore();
-  const snapshot = core.getSnapshot();
+  const source = core.getLegacyFullSnapshotForAudit();
+  const mutable = cloneSnapshotForMutation(source);
+  const snapshot = mutable.value;
   assert.equal(Reflect.set(
     required(snapshot.participants[0], 'first participant'),
     'characterDefinitionId',
@@ -195,12 +222,15 @@ test('Arena frame projector fails closed on missing presentation content', () =>
     publicMatchInfo: PUBLIC_INFO,
     content: ARENA_V1_GREYBOX_CONTENT,
   }), /missing-character/);
+  mutable.assertAuthorityUnchanged();
   core.destroy();
 });
 
 test('Arena frame projector rejects cross-match HUD data and stale affordance', () => {
   const core = createCore();
-  const snapshot = core.getSnapshot();
+  const source = core.getLegacyFullSnapshotForAudit();
+  const mutable = cloneSnapshotForMutation(source);
+  const snapshot = mutable.value;
   assert.throws(() => projectArenaPresentationFrame({
     snapshot,
     publicMatchInfo: { ...PUBLIC_INFO, matchSeed: PUBLIC_INFO.matchSeed + 1 },
@@ -219,12 +249,15 @@ test('Arena frame projector rejects cross-match HUD data and stale affordance', 
     publicMatchInfo: PUBLIC_INFO,
     content: ARENA_V1_GREYBOX_CONTENT,
   }), /actionAffordance 身份无效/i);
+  mutable.assertAuthorityUnchanged();
   core.destroy();
 });
 
 test('Arena frame projector requires explicit content and rejects malformed snapshots atomically', () => {
   const core = createCore();
-  const snapshot = core.getSnapshot();
+  const source = core.getLegacyFullSnapshotForAudit();
+  const mutable = cloneSnapshotForMutation(source);
+  const snapshot = mutable.value;
   assert.throws(() => projectArenaPresentationFrame({
     snapshot,
     publicMatchInfo: PUBLIC_INFO,
@@ -251,6 +284,7 @@ test('Arena frame projector requires explicit content and rejects malformed snap
     content: ARENA_V1_GREYBOX_CONTENT,
   }), /数据字段/);
   assert.equal(getterCalls, 0);
+  mutable.assertAuthorityUnchanged();
   core.destroy();
 });
 

@@ -64,6 +64,13 @@ import {
   TEST_MATCH_CONTENT_SELECTION,
 } from '../product/stage8-test-content.js';
 import {
+  ACTION_RESOLUTION_KIND,
+  ARENA_MATCH_READ_PROFILE,
+  createMatchReadFrameV2Audit,
+  createNeutralInputFrame,
+  normalizeInputFrame,
+} from '@number-strategy-jump/arena-contracts';
+import {
   writeArenaBuildManifest,
 } from '../../../scripts/lib/arena-build-manifest-files.js';
 
@@ -460,6 +467,105 @@ function completedFakeLocalMatch(matchSeed: number, winnerId: string | null = 'p
   const assignment = createMatchAssignment({ matchSeed });
   const replay = productReplay(matchSeed, winnerId);
   let state = 'created';
+  const position = Object.freeze({ x: 0, y: 0, z: 0 });
+  const participant = (id: string) => ({
+    id,
+    characterDefinitionId: id === 'player-1' ? 'parkour-apprentice' : 'wind-up-cube',
+    status: 'active',
+    lives: 1,
+    eliminations: 0,
+    deaths: 0,
+    hitstunTicks: 0,
+    invulnerableTicks: 0,
+    respawnTicks: 0,
+    lastHitBy: null,
+    lastHitTick: -1,
+    action: { definitionId: null, phase: 'idle', ticksRemaining: 0 },
+    actionRule: { schemaVersion: 1, mode: 'fixture' },
+    movement: {
+      schemaVersion: 1,
+      participantId: id,
+      characterDefinitionId: id === 'player-1' ? 'parkour-apprentice' : 'wind-up-cube',
+      mode: 'grounded',
+      coyoteTicksRemaining: 0,
+      jumpBufferTicksRemaining: 0,
+      airJumpsUsed: 0,
+      crouchChargeTicks: 0,
+      crouchActionId: null,
+      downSmashActionId: null,
+      revision: 0,
+      grounded: true,
+    },
+    equipment: null,
+    position,
+    velocity: position,
+    facing: { x: 1, z: 0 },
+    grounded: true,
+    supportSurfaceId: 'surface-ground',
+  });
+  const frame = (tick: number, phase: 'running' | 'ended') => createMatchReadFrameV2Audit({
+    schemaVersion: 2,
+    worldSnapshot: {
+      authoritySchemaVersion: 1,
+      physicsBackendVersion: 'physics-v1',
+      configHash: replay.configHash,
+      ruleContentHash: replay.ruleContentHash,
+      matchSeed,
+      tick,
+      activeTick: tick,
+      phase,
+      remainingTicks: phase === 'ended' ? 0 : 1,
+      eventSequence: tick,
+      participants: [participant('player-1'), participant('player-2')],
+      equipment: [],
+      activeSupplyProjection: null,
+      map: {
+        schemaVersion: 1,
+        definitionId: 'abyss-grid-wind-v1',
+        nextActiveTick: 0,
+        revision: 0,
+        surfaces: [{ id: 'surface-ground', enabled: true, revision: 0 }],
+        occurrences: [{
+          occurrenceId: 'occurrence-0',
+          eventId: 'none',
+          kind: 'none',
+          warningTick: 0,
+          startTick: 0,
+          endTick: null,
+          phase,
+          publicPayload: {},
+          revision: 0,
+        }],
+      },
+      result: phase === 'ended'
+        ? { ...replay.result, endedAtTick: tick }
+        : null,
+    },
+    localActionSidecar: {
+      schemaVersion: 2,
+      tick,
+      eventSequence: tick,
+      participantId: 'player-1',
+      profile: ARENA_MATCH_READ_PROFILE.LOCAL_CONTEXT_PRIMARY,
+      primaryActionDefinitionId: null,
+      channels: {
+        primary: {
+          kind: ACTION_RESOLUTION_KIND.NONE,
+          actionDefinitionId: null,
+          lane: null,
+          source: null,
+          reason: 'no-candidate',
+        },
+        primaryHold: {
+          kind: ACTION_RESOLUTION_KIND.NONE,
+          actionDefinitionId: null,
+          lane: null,
+          source: null,
+          reason: 'no-candidate',
+        },
+      },
+    },
+  });
   return {
     matchSeed,
     opponent: assignment.opponent,
@@ -468,11 +574,15 @@ function completedFakeLocalMatch(matchSeed: number, winnerId: string | null = 'p
       get state() { return state; },
       start() { state = 'running'; },
       setPaused() {},
-      step() {
+      stepWithPresentationReadFrame() {
         state = 'ended';
-        return Object.freeze({ events: Object.freeze([]), snapshot: Object.freeze({ tick: 1 }) });
+        return Object.freeze({
+          events: Object.freeze([]),
+          readFrame: frame(1, 'ended'),
+          input: normalizeInputFrame(createNeutralInputFrame(0, 'player-1')),
+        });
       },
-      getSnapshot() { return Object.freeze({ tick: state === 'ended' ? 1 : 0 }); },
+      getPresentationReadFrame() { return frame(0, 'running'); },
       exportReplay() { return replay; },
       destroy() { state = 'destroyed'; },
     },
@@ -495,8 +605,8 @@ test('HumanMatchStudyCaptureSession drives the unchanged Product runtime and hid
       completedFakeLocalMatch(matchSeed, index === 2 ? 'player-2' : 'player-1'),
       { completionSink: ports.matchCompletionSink },
     );
-    runtime.start();
-    runtime.step();
+    runtime.startWithReadFrame();
+    runtime.stepWithReadFrame();
     assert.equal(runtime.state, PRODUCT_MATCH_RUNTIME_STATE.ENDED);
     runtime.destroy();
   }
@@ -534,8 +644,8 @@ test('study capture and Product completion ports fail closed on missing replay o
     completedFakeLocalMatch(required(assignment.matchSeeds[0], '首局种子')),
     { completionSink: async () => {} },
   );
-  runtime.start();
-  assert.throws(() => runtime.step(), /必须同步完成/);
+  runtime.startWithReadFrame();
+  assert.throws(() => runtime.stepWithReadFrame(), /必须同步完成/);
   assert.equal(runtime.state, PRODUCT_MATCH_RUNTIME_STATE.FAILED);
   runtime.destroy();
 });
@@ -620,9 +730,9 @@ test('Human Match Study CLI reproduces authority and every hidden Bot input', as
       contentSelection: TEST_MATCH_CONTENT_SELECTION,
     },
   });
-  let replay!: ReturnType<typeof localMatch.session.runUntilEnded>;
+  let replay!: ReturnType<typeof localMatch.session.runLegacyUntilEndedForAudit>;
   try {
-    replay = localMatch.session.runUntilEnded(() => null);
+    replay = localMatch.session.runLegacyUntilEndedForAudit(() => null);
   } finally {
     localMatch.session.destroy();
   }

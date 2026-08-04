@@ -3,6 +3,22 @@ import { optionalMethod, optionalProperty, rejectThenable } from './host-capabil
 const FALLBACK_ID = 'game-startup-error';
 const DEFAULT_MINI_GAME_TITLE = '游戏启动失败';
 const MINI_GAME_CONTENT = '当前设备或基础库无法启动游戏，请升级客户端/基础库并确认支持 WebGL2。';
+const WEB_STARTUP_CONTENT = '请确认浏览器已启用 WebGL2，或更换设备后重试。';
+const DIAGNOSTIC_CODE_PATTERN = /^E[A-Za-z0-9_-]{6}/;
+
+function safeDiagnosticCode(value: unknown): string | null {
+  if ((typeof value !== 'object' || value === null) && typeof value !== 'function') return null;
+  let descriptor: PropertyDescriptor | undefined;
+  try {
+    descriptor = Object.getOwnPropertyDescriptor(value, 'message');
+  } catch {
+    return null;
+  }
+  if (descriptor === undefined || !('value' in descriptor) || typeof descriptor.value !== 'string') {
+    return null;
+  }
+  return DIAGNOSTIC_CODE_PATTERN.exec(descriptor.value)?.[0] ?? null;
+}
 
 function safeTitle(value: unknown): string {
   if (value === undefined) return DEFAULT_MINI_GAME_TITLE;
@@ -131,7 +147,7 @@ export function showWebStartupError(error: unknown, environment: unknown = globa
       createdPanel = true;
     }
 
-    const detail = error instanceof Error ? error.message : String(error ?? '未知错误');
+    const diagnosticCode = safeDiagnosticCode(error);
     setOptionalProperty(panel, 'textContent', '');
     const title = createElement('strong');
     rejectThenable(title, 'document.createElement');
@@ -146,7 +162,7 @@ export function showWebStartupError(error: unknown, environment: unknown = globa
     setOptionalProperty(
       message,
       'textContent',
-      `请确认浏览器已启用 WebGL2，或更换设备后重试。${detail ? `（${detail}）` : ''}`,
+      `${WEB_STARTUP_CONTENT}${diagnosticCode === null ? '' : `（诊断码：${diagnosticCode}）`}`,
     );
     callDomMethod(panel, 'appendChild', title);
     callDomMethod(panel, 'appendChild', message);

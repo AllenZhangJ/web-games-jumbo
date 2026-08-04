@@ -1,19 +1,20 @@
 import {
   cloneFrozenData,
   combineCleanupFailure,
-  normalizeThrownError,
 } from '@number-strategy-jump/arena-contracts';
 import { ARENA_MATCH_PHASE } from '@number-strategy-jump/arena-match';
 
 type DataRecord = Readonly<Record<string, unknown>>;
 type BoundMethod = (...args: readonly unknown[]) => unknown;
 
+const NATIVE_PROMISE_THEN = Promise.prototype.then;
+
 interface DelegateSessionPort {
   readonly owner: object;
   readonly start: BoundMethod;
   readonly setPaused: BoundMethod;
-  readonly step: BoundMethod;
-  readonly getSnapshot: BoundMethod;
+  readonly stepWithLegacySnapshotForAudit: BoundMethod;
+  readonly getLegacyFullSnapshotForAudit: BoundMethod;
   readonly getPublicMatchInfo: BoundMethod;
   readonly exportReplay: BoundMethod;
   readonly destroy: BoundMethod;
@@ -56,14 +57,60 @@ function findDataMethod(owner: object, method: string, name: string): BoundMetho
   throw new TypeError(`${name} 缺少 ${method}()。`);
 }
 
+function rejectAsyncSyncReturn(value: unknown, label: string): void {
+  if ((typeof value !== 'object' || value === null) && typeof value !== 'function') return;
+  let nativePromise = false;
+  try {
+    Reflect.apply(NATIVE_PROMISE_THEN, value, [() => {}, () => {}]);
+    nativePromise = true;
+  } catch {
+    // 普通对象和 hostile thenable 没有 Promise internal slot。
+  }
+  if (nativePromise) throw new TypeError(`${label} 必须同步完成。`);
+  const visited = new Set<object>();
+  let current: object | null = value as object;
+  let depth = 0;
+  while (current !== null && depth < 32 && !visited.has(current)) {
+    visited.add(current);
+    depth += 1;
+    const descriptor = Object.getOwnPropertyDescriptor(current, 'then');
+    if (descriptor) {
+      if (!('value' in descriptor)) throw new TypeError(`${label} 返回了访问器 thenable。`);
+      if (typeof descriptor.value !== 'function') return;
+      throw new TypeError(`${label} 必须同步完成。`);
+    }
+    current = Object.getPrototypeOf(current) as object | null;
+  }
+  if (current !== null) throw new TypeError(`${label} 返回值原型链无效。`);
+}
+
+function safelyWrapThrownError(value: unknown, message: string): Error {
+  const failure = new Error(message);
+  try {
+    Object.defineProperty(failure, 'cause', {
+      value,
+      enumerable: false,
+      configurable: true,
+      writable: false,
+    });
+  } catch {
+    // Caller-thrown values remain opaque; the static failure is authoritative.
+  }
+  return failure;
+}
+
 function validateSession(value: unknown): DelegateSessionPort {
   const owner = dataRecord(value, 'pilot delegate session');
   return Object.freeze({
     owner,
     start: findDataMethod(owner, 'start', 'pilot delegate session'),
     setPaused: findDataMethod(owner, 'setPaused', 'pilot delegate session'),
-    step: findDataMethod(owner, 'step', 'pilot delegate session'),
-    getSnapshot: findDataMethod(owner, 'getSnapshot', 'pilot delegate session'),
+    stepWithLegacySnapshotForAudit: findDataMethod(owner, 'stepWithLegacySnapshotForAudit', 'pilot delegate session'),
+    getLegacyFullSnapshotForAudit: findDataMethod(
+      owner,
+      'getLegacyFullSnapshotForAudit',
+      'pilot delegate session',
+    ),
     getPublicMatchInfo: findDataMethod(owner, 'getPublicMatchInfo', 'pilot delegate session'),
     exportReplay: findDataMethod(owner, 'exportReplay', 'pilot delegate session'),
     destroy: findDataMethod(owner, 'destroy', 'pilot delegate session'),
@@ -118,13 +165,15 @@ export class InputPilotObservedSession {
   get state(): unknown {
     if (this.#destroyed || this.#delegate === null) return 'destroyed';
     if (this.#failed) return 'failed';
-    return Reflect.get(this.#delegate.owner, 'state');
+    const state = Reflect.get(this.#delegate.owner, 'state');
+    rejectAsyncSyncReturn(state, 'InputPilotObservedSession state');
+    return state;
   }
 
   #assertUsable(allowRunning = false): void {
     if (this.#destroyed || this.#failed) throw new Error('InputPilotObservedSession 已销毁。');
     if (this.#running && !allowRunning) {
-      throw new Error('runUntilEnded() 期间不能重入 InputPilotObservedSession。');
+      throw new Error('runLegacyUntilEndedForAudit() 期间不能重入 InputPilotObservedSession。');
     }
   }
 
@@ -135,21 +184,19 @@ export class InputPilotObservedSession {
   }
 
   #fail(error: unknown, operation: string): Error {
-    const failure = normalizeThrownError(
-      error,
-      `InputPilotObservedSession ${operation} 失败`,
-    );
+    const failure = safelyWrapThrownError(error, `InputPilotObservedSession ${operation} 失败`);
     const cleanupErrors: Error[] = [];
     const delegate = this.#delegate;
     this.#collector = null;
     this.#failed = true;
     if (delegate !== null) {
       try {
-        delegate.destroy();
+        const cleanupResult = delegate.destroy();
+        rejectAsyncSyncReturn(cleanupResult, 'InputPilotObservedSession delegate.destroy()');
         this.#delegate = null;
         this.#destroyed = true;
       } catch (cleanupError) {
-        cleanupErrors.push(normalizeThrownError(
+        cleanupErrors.push(safelyWrapThrownError(
           cleanupError,
           'InputPilotObservedSession delegate 清理失败',
         ));
@@ -164,7 +211,9 @@ export class InputPilotObservedSession {
 
   #startCore(): unknown {
     try {
-      return this.#requireDelegate().start();
+      const result = this.#requireDelegate().start();
+      rejectAsyncSyncReturn(result, 'InputPilotObservedSession delegate.start()');
+      return result;
     } catch (error) {
       throw this.#fail(error, 'start');
     }
@@ -178,27 +227,39 @@ export class InputPilotObservedSession {
   setPaused(paused: unknown): unknown {
     this.#assertUsable();
     if (typeof paused !== 'boolean') throw new TypeError('paused 必须是布尔值。');
-    if (this.#stepping) throw new Error('step() 期间不能暂停 InputPilotObservedSession。');
+    if (this.#stepping) throw new Error('stepWithLegacySnapshotForAudit() 期间不能暂停 InputPilotObservedSession。');
     try {
-      return this.#requireDelegate().setPaused(paused);
+      const result = this.#requireDelegate().setPaused(paused);
+      rejectAsyncSyncReturn(result, 'InputPilotObservedSession delegate.setPaused()');
+      return result;
     } catch (error) {
       throw this.#fail(error, 'setPaused');
     }
   }
 
   #stepCore(input: unknown): unknown {
-    if (this.#stepping) throw new Error('InputPilotObservedSession.step() 不可重入。');
+    if (this.#stepping) throw new Error('InputPilotObservedSession.stepWithLegacySnapshotForAudit() 不可重入。');
     this.#stepping = true;
     try {
       try {
         const delegate = this.#requireDelegate();
         const collector = this.#collector;
         if (collector === null) throw new Error('InputPilotObservedSession Collector 已释放。');
+        const beforeValue = delegate.getLegacyFullSnapshotForAudit();
+        rejectAsyncSyncReturn(
+          beforeValue,
+          'InputPilotObservedSession delegate.getLegacyFullSnapshotForAudit()',
+        );
         const beforeSnapshot = immutableObservation(
-          delegate.getSnapshot(),
+          beforeValue,
           'pilot before snapshot',
         );
-        const result = immutableObservation(delegate.step(input), 'pilot observed result');
+        const stepValue = delegate.stepWithLegacySnapshotForAudit(input);
+        rejectAsyncSyncReturn(
+          stepValue,
+          'InputPilotObservedSession delegate.stepWithLegacySnapshotForAudit()',
+        );
+        const result = immutableObservation(stepValue, 'pilot observed result');
         const resultSource = dataRecord(result, 'pilot observed result');
         const resultSnapshot = ownDataValue(resultSource, 'snapshot', 'pilot observed result');
         const resultEvents = ownDataValue(resultSource, 'events', 'pilot observed result');
@@ -213,17 +274,18 @@ export class InputPilotObservedSession {
             input: null,
           });
         }
-        const observedResult = Object.freeze({
+        const committedResult = Object.freeze({
           events: immutableObservation(resultEvents, 'pilot observed events'),
           snapshot: immutableObservation(resultSnapshot, 'pilot observed snapshot'),
           input: immutableObservation(resultInput, 'pilot observed input'),
         });
-        collector.observeStep({
+        const collectorResult = collector.observeStep({
           beforeSnapshot,
-          input: observedResult.input,
-          result: observedResult,
+          input: committedResult.input,
+          result: committedResult,
         });
-        return observedResult;
+        rejectAsyncSyncReturn(collectorResult, 'InputPilotObservedSession collector.observeStep()');
+        return committedResult;
       } catch (error) {
         throw this.#fail(error, 'step');
       }
@@ -232,12 +294,12 @@ export class InputPilotObservedSession {
     }
   }
 
-  step(input: unknown = null): unknown {
+  stepWithLegacySnapshotForAudit(input: unknown = null): unknown {
     this.#assertUsable();
     return this.#stepCore(input);
   }
 
-  runUntilEnded(
+  runLegacyUntilEndedForAudit(
     inputProvider: (snapshot: unknown) => unknown = () => null,
     optionsValue: unknown = {},
   ): unknown {
@@ -254,16 +316,27 @@ export class InputPilotObservedSession {
     this.#running = true;
     try {
       this.#startCore();
+      const firstSnapshotValue = this.#requireDelegate().getLegacyFullSnapshotForAudit();
+      rejectAsyncSyncReturn(
+        firstSnapshotValue,
+        'InputPilotObservedSession delegate.getLegacyFullSnapshotForAudit()',
+      );
       let steps = 0;
       let current = immutableObservation(
-        this.#requireDelegate().getSnapshot(),
+        firstSnapshotValue,
         'pilot public snapshot',
       );
       while (snapshotPhase(current, 'pilot public snapshot') !== ARENA_MATCH_PHASE.ENDED && steps < (maxTicksValue as number)) {
         const input = inputProvider(current);
+        rejectAsyncSyncReturn(input, 'InputPilotObservedSession inputProvider()');
         this.#stepCore(input ?? null);
+        const nextSnapshotValue = this.#requireDelegate().getLegacyFullSnapshotForAudit();
+        rejectAsyncSyncReturn(
+          nextSnapshotValue,
+          'InputPilotObservedSession delegate.getLegacyFullSnapshotForAudit()',
+        );
         current = immutableObservation(
-          this.#requireDelegate().getSnapshot(),
+          nextSnapshotValue,
           'pilot public snapshot',
         );
         steps += 1;
@@ -271,38 +344,61 @@ export class InputPilotObservedSession {
       if (snapshotPhase(current, 'pilot public snapshot') !== ARENA_MATCH_PHASE.ENDED) {
         throw new Error(`pilot match 在 ${String(maxTicksValue)} tick 内未结束。`);
       }
-      return this.#requireDelegate().exportReplay();
+      const replay = this.#requireDelegate().exportReplay();
+      rejectAsyncSyncReturn(replay, 'InputPilotObservedSession delegate.exportReplay()');
+      return replay;
+    } catch (error) {
+      if (this.#failed) throw error;
+      throw this.#fail(error, 'runLegacyUntilEndedForAudit');
     } finally {
       this.#running = false;
     }
   }
 
-  getSnapshot(): unknown {
+  getLegacyFullSnapshotForAudit(): unknown {
     this.#assertUsable();
-    return immutableObservation(this.#requireDelegate().getSnapshot(), 'pilot public snapshot');
+    const value = this.#requireDelegate().getLegacyFullSnapshotForAudit();
+    rejectAsyncSyncReturn(
+      value,
+      'InputPilotObservedSession delegate.getLegacyFullSnapshotForAudit()',
+    );
+    return immutableObservation(
+      value,
+      'pilot public snapshot',
+    );
   }
 
   getPublicMatchInfo(): unknown {
     this.#assertUsable();
+    const value = this.#requireDelegate().getPublicMatchInfo();
+    rejectAsyncSyncReturn(
+      value,
+      'InputPilotObservedSession delegate.getPublicMatchInfo()',
+    );
     return immutableObservation(
-      this.#requireDelegate().getPublicMatchInfo(),
+      value,
       'pilot public match info',
     );
   }
 
   exportReplay(): unknown {
     this.#assertUsable();
-    return this.#requireDelegate().exportReplay();
+    const replay = this.#requireDelegate().exportReplay();
+    rejectAsyncSyncReturn(replay, 'InputPilotObservedSession delegate.exportReplay()');
+    return replay;
   }
 
   destroy(): void {
     if (this.#destroyed) return;
-    if (this.#stepping) throw new Error('step() 期间不能销毁 InputPilotObservedSession。');
-    if (this.#running) throw new Error('runUntilEnded() 期间不能销毁 InputPilotObservedSession。');
+    if (this.#stepping) throw new Error('stepWithLegacySnapshotForAudit() 期间不能销毁 InputPilotObservedSession。');
+    if (this.#running) {
+      throw new Error('runLegacyUntilEndedForAudit() 期间不能销毁 InputPilotObservedSession。');
+    }
     const delegate = this.#delegate;
     this.#failed = true;
     if (delegate !== null) {
-      delegate.destroy();
+      const result = delegate.destroy();
+      rejectAsyncSyncReturn(result, 'InputPilotObservedSession delegate.destroy()');
       this.#delegate = null;
     }
     this.#collector = null;

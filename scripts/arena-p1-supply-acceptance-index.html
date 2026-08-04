@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+    <meta name="color-scheme" content="dark">
+    <title>Arena P1 Supply Acceptance</title>
+    <link rel="stylesheet" href="./arena-p1-supply-acceptance.css">
+  </head>
+  <body>
+    <main class="arena-p1-shell" aria-labelledby="arena-p1-title">
+      <header class="arena-p1-header">
+        <h1 id="arena-p1-title">Arena Supply Acceptance</h1>
+        <p id="arena-p1-status" data-failed="false" aria-live="polite">正在建立隔离验收运行时…</p>
+      </header>
+      <section class="arena-p1-stage" aria-label="Arena 供给表现验收画面">
+        <canvas id="game" aria-label="Arena 供给标记与反馈画布"></canvas>
+        <p id="arena-p1-live" class="arena-p1-live" aria-live="assertive" aria-atomic="true"></p>
+      </section>
+      <p class="arena-p1-footer">隔离候选 · 非默认产品入口 · 无额外操作</p>
+    </main>
+    <script src="./app.js"></script>
+  </body>
+</html>

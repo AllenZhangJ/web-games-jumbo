@@ -175,7 +175,9 @@ export class FixedStepMatchRuntime {
         && steps < this.#maxStepsPerAdvance
         && !this.#hasEnded()
       ) {
-        const frames = this.#inputProvider(this.#core.getSnapshot()) ?? [];
+        const frames = this.#inputProvider(
+          this.#core.getLegacyFullSnapshotForAudit(),
+        ) ?? [];
         if (!Array.isArray(frames)) {
           throw new TypeError('inputProvider 必须返回 InputFrame 数组。');
         }

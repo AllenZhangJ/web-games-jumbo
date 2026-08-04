@@ -53,7 +53,7 @@ test('default Arena V1 map warns, applies wind, releases equipment and collapses
     config: { preparingTicks: 0, livesPerParticipant: 99 },
   });
   assert.equal(core.config.mapDefinitionId, STAGE5_MAP_ID);
-  assert.equal(core.getSnapshot().map.definitionId, STAGE5_MAP_ID);
+  assert.equal(core.getLegacyFullSnapshotForAudit().map.definitionId, STAGE5_MAP_ID);
 
   const windWarning = runToActiveTick(core, 480);
   const warning = required(windWarning.find((event) => (
@@ -72,15 +72,15 @@ test('default Arena V1 map warns, applies wind, releases equipment and collapses
     event.type === ARENA_MAP_EVENT.EVENT_WARNED && event.mapEventId === 'artifact-wave'
   )), '装备波次预告');
   assert.equal(spawnPoints(waveMarker.publicPayload).length, 1);
-  const equipmentBefore = core.getSnapshot().equipment.length;
+  const equipmentBefore = core.getLegacyFullSnapshotForAudit().equipment.length;
   const waveStart = runToActiveTick(core, 1800);
   assert.ok(waveStart.some((event) => event.type === MAP_DOMAIN_EVENT.EQUIPMENT_WAVE_RELEASED));
   assert.ok(waveStart.some((event) => event.type === ARENA_MATCH_EVENT.EQUIPMENT_SPAWNED));
-  assert.equal(core.getSnapshot().equipment.length, equipmentBefore + 1);
+  assert.equal(core.getLegacyFullSnapshotForAudit().equipment.length, equipmentBefore + 1);
 
   const collapse = runToActiveTick(core, 3600);
   assert.ok(collapse.some((event) => event.type === MAP_DOMAIN_EVENT.SURFACE_COLLAPSED));
-  const disabled = core.getSnapshot().map.surfaces.filter(({ enabled }) => !enabled);
+  const disabled = core.getLegacyFullSnapshotForAudit().map.surfaces.filter(({ enabled }) => !enabled);
   assert.equal(disabled.length, 4);
   core.destroy();
 });
@@ -118,7 +118,7 @@ test('equipment left on a collapsed surface is removed by authority in the same 
   assert.equal(required(spawnPoints(warning.publicPayload)[0], '装备出生点').surfaceId, 'tile-south');
   runToActiveTick(core, 1_800);
   assert.equal(
-    required(core.getSnapshot().equipment.find(({ instanceId }) => (
+    required(core.getLegacyFullSnapshotForAudit().equipment.find(({ instanceId }) => (
       instanceId === 'map:artifact-wave:0:0'
     )), '生成的地图装备').locationState,
     EQUIPMENT_LOCATION_STATE.SPAWNED,
@@ -129,7 +129,7 @@ test('equipment left on a collapsed surface is removed by authority in the same 
     && event.equipmentInstanceId === 'map:artifact-wave:0:0'
     && event.reason === 'invalid-map-surface'
   )));
-  const removed = required(core.getSnapshot().equipment.find(({ instanceId }) => (
+  const removed = required(core.getLegacyFullSnapshotForAudit().equipment.find(({ instanceId }) => (
     instanceId === 'map:artifact-wave:0:0'
   )), '已清理的地图装备');
   assert.equal(removed.locationState, EQUIPMENT_LOCATION_STATE.DESPAWNED);

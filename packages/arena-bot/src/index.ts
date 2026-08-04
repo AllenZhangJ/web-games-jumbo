@@ -34,8 +34,10 @@ export type {
 } from './utility-arbitrator.js';
 export {
   cloneBotSourceSnapshot,
+  cloneBotCommandSourceV5,
   createBotArenaView,
   createBotObservation,
+  createBotObservationV5,
 } from './bot-observation.js';
 export {
   activeWindThreat,
@@ -88,7 +90,16 @@ export type {
   BotHeldEquipment,
   BotMovementSnapshot,
   BotObservation,
+  BotObservationV5,
+  BotObservationV5Options,
   BotObservationOptions,
+  BotCommandSourceV5,
+  BotCommandSourceReaderV5,
+  BotRestrictedMapOccurrenceV5,
+  BotRestrictedMapV5,
+  BotMobilitySidecarV5,
+  BotPolicyObservation,
+  BotPolicyParticipant,
   BotParticipantObservation,
   BotSourceSnapshot,
   BotVector2,

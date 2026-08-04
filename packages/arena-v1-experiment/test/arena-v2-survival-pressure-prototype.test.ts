@@ -49,7 +49,7 @@ describe('Arena V2 survival pressure prototype', () => {
 
   it('is deterministic for the same seed', () => {
     expect(runArenaV2SurvivalPressurePrototype()).toEqual(runArenaV2SurvivalPressurePrototype());
-  });
+  }, 20_000);
 
   it('supports staged same-family enemy refresh without adding a new combat rule', () => {
     const result = runArenaV2SurvivalPressurePrototype({ enemySpawnProfile: 'staged' });

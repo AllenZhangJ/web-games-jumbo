@@ -176,8 +176,8 @@ function createReplay(candidate: (typeof RESEARCH_CANDIDATES)[number]): Readonly
   } satisfies ReplayCoreFactoryOptions);
   const runner = new HeadlessMatchRunner(core, { checkpointInterval: 6 });
   try {
-    while (core.phase !== 'ended') runner.step(inputFor(core.getSnapshot(), candidate));
-    return Object.freeze({ replay: runner.exportReplay(), finalSnapshot: core.getSnapshot() });
+    while (core.phase !== 'ended') runner.step(inputFor(core.getLegacyFullSnapshotForAudit(), candidate));
+    return Object.freeze({ replay: runner.exportReplay(), finalSnapshot: core.getLegacyFullSnapshotForAudit() });
   } finally {
     runner.destroy();
     core.destroy();

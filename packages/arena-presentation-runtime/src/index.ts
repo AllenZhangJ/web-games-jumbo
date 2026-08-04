@@ -4,6 +4,7 @@ export * from './arena-v2-weapon-feedback-presentation.js';
 export * from './arena-input-mapper.js';
 export * from './arena-input-router.js';
 export * from './arena-match-resources.js';
+export * from './arena-supply-presentation-adapter.js';
 export * from './character-view-runtime.js';
 export * from './control-layout.js';
 export * from './fixed-tick-accumulator.js';

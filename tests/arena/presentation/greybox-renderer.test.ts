@@ -46,6 +46,30 @@ function record(value: unknown, name: string): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
+function cloneSnapshotForMutation(snapshot: ArenaMatchSnapshot): {
+  readonly value: ArenaMatchSnapshot;
+  readonly assertAuthorityUnchanged: () => void;
+} {
+  const serialized = JSON.stringify(snapshot);
+  assert.equal(Object.isFrozen(snapshot), true);
+  assert.equal(Object.isFrozen(snapshot.participants), true);
+  assert.equal(Object.isFrozen(snapshot.participants[0]), true);
+  assert.equal(Object.isFrozen(snapshot.map), true);
+  assert.equal(Object.isFrozen(snapshot.map.surfaces), true);
+  const value = structuredClone(snapshot) as ArenaMatchSnapshot;
+  return {
+    value,
+    assertAuthorityUnchanged: () => {
+      assert.equal(Object.isFrozen(snapshot), true);
+      assert.equal(Object.isFrozen(snapshot.participants), true);
+      assert.equal(Object.isFrozen(snapshot.participants[0]), true);
+      assert.equal(Object.isFrozen(snapshot.map), true);
+      assert.equal(Object.isFrozen(snapshot.map.surfaces), true);
+      assert.equal(JSON.stringify(snapshot), serialized);
+    },
+  };
+}
+
 function createCore() {
   return createArenaV1MatchCore({
     seed: MATCH_SEED,
@@ -149,7 +173,7 @@ function deferred<T>() {
 
 test('ArenaWorldStage syncs programmatic views without mutating authority-derived frames', () => {
   const core = createCore();
-  const snapshot = core.getSnapshot();
+  const snapshot = core.getLegacyFullSnapshotForAudit();
   const authorityHash = core.getStateHash();
   const eventWindow = new PresentationEventWindow();
   const hit = {
@@ -201,7 +225,9 @@ test('ArenaWorldStage syncs programmatic views without mutating authority-derive
   stage.sync(duplicateFree);
   assert.equal(stage.getDebugSnapshot().effectCount, 1);
 
-  const aerialSnapshot = core.getSnapshot();
+  const aerialSource = core.getLegacyFullSnapshotForAudit();
+  const aerialMutable = cloneSnapshotForMutation(aerialSource);
+  const aerialSnapshot = aerialMutable.value;
   const aerialPlayer = required(aerialSnapshot.participants[0], '空中玩家');
   Reflect.set(aerialPlayer, 'grounded', false);
   Reflect.set(aerialPlayer.velocity, 'y', -16);
@@ -223,7 +249,9 @@ test('ArenaWorldStage syncs programmatic views without mutating authority-derive
   assert.match(String(aerialDebug.poseState), /attack-air-hammer-swing/);
   assert.ok(Number(aerialDebug.heldEquipmentScale) > 1.02);
 
-  Reflect.set(snapshot.map, 'occurrences', [{
+  const changedMutable = cloneSnapshotForMutation(snapshot);
+  const changedSnapshot = changedMutable.value;
+  Reflect.set(changedSnapshot.map, 'occurrences', [{
     occurrenceId: 'collapse-test:0',
     eventId: 'collapse-test',
     kind: 'collapse-surfaces',
@@ -235,11 +263,11 @@ test('ArenaWorldStage syncs programmatic views without mutating authority-derive
     revision: 1,
   }]);
   Reflect.set(
-    required(snapshot.map.surfaces.find(({ id }) => id === 'tile-south-east'), '东南地块'),
+    required(changedSnapshot.map.surfaces.find(({ id }) => id === 'tile-south-east'), '东南地块'),
     'enabled',
     false,
   );
-  stage.sync(frameFrom(snapshot));
+  stage.sync(frameFrom(changedSnapshot));
   const changed = stage.getDebugSnapshot();
   assert.equal(changed.warningSurfaceCount, 1);
   assert.equal(changed.disabledSurfaceCount, 1);
@@ -248,6 +276,8 @@ test('ArenaWorldStage syncs programmatic views without mutating authority-derive
   stage.dispose();
   assert.throws(() => stage.sync(frame), /已销毁/);
   eventWindow.destroy();
+  aerialMutable.assertAuthorityUnchanged();
+  changedMutable.assertAuthorityUnchanged();
   core.destroy();
 });
 
@@ -272,7 +302,7 @@ test('Gameplay V2 renders a world larger than the phone frustum with a local fol
   await stage.load();
   const camera = stage.resize({ width: 390, height: 844 });
   const frame = projectArenaPresentationFrame({
-    snapshot: core.getSnapshot(),
+    snapshot: core.getLegacyFullSnapshotForAudit(),
     events: [],
     publicMatchInfo: PUBLIC_INFO,
     content: ARENA_GAMEPLAY_V2_PRESENTATION_CONTENT,
@@ -311,7 +341,7 @@ test('EquipmentViewRegistry rejects duplicate instance IDs before creating parti
 
 test('ArenaGreyboxRenderer draws world and HUD, pauses on context loss and releases resources', async () => {
   const core = createCore();
-  const frame = frameFrom(core.getSnapshot());
+  const frame = frameFrom(core.getLegacyFullSnapshotForAudit());
   const canvas = { width: 1, height: 1, style: {}, getContext: () => ({}) };
   const webgl = fakeWebGLRenderer(canvas);
   const renderer = new ArenaGreyboxRenderer({
@@ -442,7 +472,7 @@ test('ArenaGreyboxRenderer preserves context loss across an in-flight asset load
 
 test('ArenaGreyboxRenderer deduplicates hit vibration/audio and honors the sound setting', async () => {
   const core = createCore();
-  const snapshot = core.getSnapshot();
+  const snapshot = core.getLegacyFullSnapshotForAudit();
   const canvas = { width: 1, height: 1, style: {}, getContext: () => ({}) };
   const feedback: string[] = [];
   const audioPlays: string[] = [];
@@ -512,7 +542,7 @@ test('ArenaGreyboxRenderer deduplicates hit vibration/audio and honors the sound
 
 test('reduced motion keeps a short hit stop but suppresses camera shake and zoom', () => {
   const core = createCore();
-  const snapshot = core.getSnapshot();
+  const snapshot = core.getLegacyFullSnapshotForAudit();
   const stage = new ArenaWorldStage({ content: ARENA_V1_GREYBOX_CONTENT });
   stage.resize({ width: 390, height: 844 });
   const frame = frameFrom(snapshot, [{
@@ -585,11 +615,11 @@ test('ArenaGreyboxRenderer fails closed on render errors and releases all owned 
     webglRendererFactory: () => webgl,
   });
   await renderer.load();
-  assert.throws(() => renderer.render(frameFrom(core.getSnapshot())), /render 失败/);
+  assert.throws(() => renderer.render(frameFrom(core.getLegacyFullSnapshotForAudit())), /render 失败/);
   assert.equal(renderer.state, ARENA_GREYBOX_RENDERER_STATE.DISPOSED);
   assert.equal(webgl.disposed, true);
   assert.equal(webgl.contextForced, true);
-  assert.throws(() => renderer.render(frameFrom(core.getSnapshot())), /已销毁/);
+  assert.throws(() => renderer.render(frameFrom(core.getLegacyFullSnapshotForAudit())), /已销毁/);
   core.destroy();
 });
 
@@ -642,7 +672,7 @@ test('ArenaGreyboxRenderer detects swallowed host callback reentry and fails clo
   });
   rendererOwner.value = renderer;
   await renderer.load();
-  const frame = frameFrom(core.getSnapshot(), [{
+  const frame = frameFrom(core.getLegacyFullSnapshotForAudit(), [{
     id: `${MATCH_SEED.toString(16)}:0:reentry`,
     type: 'HitResolved',
     tick: 0,
@@ -714,7 +744,9 @@ test('default presentation quality keeps MSAA and a high-DPI render target for c
 
 test('Arena HUD renders the authoritative life count instead of a fixed three-dot placeholder', async () => {
   const core = createCore();
-  const snapshot = core.getSnapshot();
+  const source = core.getLegacyFullSnapshotForAudit();
+  const mutable = cloneSnapshotForMutation(source);
+  const snapshot = mutable.value;
   for (const participant of snapshot.participants) Reflect.set(participant, 'lives', 11);
   const renderedText: string[] = [];
   const canvas = { width: 1, height: 1, style: {}, getContext: () => ({}) };
@@ -728,6 +760,7 @@ test('Arena HUD renders the authoritative life count instead of a fixed three-do
   renderer.render(frameFrom(snapshot));
   assert.equal(renderedText.filter((value) => value === '×11').length, 2);
   renderer.dispose();
+  mutable.assertAuthorityUnchanged();
   core.destroy();
 });
 

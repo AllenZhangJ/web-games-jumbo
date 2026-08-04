@@ -63,7 +63,7 @@ function scriptedFrames(snapshot: ArenaMatchSnapshot) {
 test('headless replay reproduces checkpoints, final hash, result and events', () => {
   const core = createReplayCore();
   const runner = new HeadlessMatchRunner(core, { checkpointInterval: 20 });
-  const replay = runner.runUntilEnded(scriptedFrames);
+  const replay = runner.runLegacyUntilEndedForAudit(scriptedFrames);
   const result = replayMatch(replay);
   assert.equal(result.finalHash, replay.finalHash);
   assert.deepEqual(result.result, replay.result);
@@ -84,7 +84,7 @@ test('replay metadata preserves product mobility overrides required to reconstru
     },
   });
   const replay = new HeadlessMatchRunner(core, { checkpointInterval: 20 })
-    .runUntilEnded(scriptedFrames);
+    .runLegacyUntilEndedForAudit(scriptedFrames);
   assert.equal(replay.config.airJumpHorizontalImpulse, 0.43);
   assert.equal(replay.config.contextPrimaryMobilityEnabled, false);
   assert.equal(replayMatch(replay).finalHash, replay.finalHash);
@@ -94,7 +94,7 @@ test('replay metadata preserves product mobility overrides required to reconstru
 test('replay beforeStep sees immutable copies and rejects asynchronous verification', () => {
   const core = createReplayCore();
   const runner = new HeadlessMatchRunner(core, { checkpointInterval: 20 });
-  const replay = runner.runUntilEnded(scriptedFrames);
+  const replay = runner.runLegacyUntilEndedForAudit(scriptedFrames);
   let observedSteps = 0;
   replayMatch(replay, {
     beforeStep({ snapshot, frames }) {
@@ -151,7 +151,7 @@ test('runner and replay options reject accessors without executing them', () => 
   assert.equal(runnerGetterCalls, 0);
 
   const replay = new HeadlessMatchRunner(core, { checkpointInterval: 20 })
-    .runUntilEnded(scriptedFrames);
+    .runLegacyUntilEndedForAudit(scriptedFrames);
   let replayGetterCalls = 0;
   const replayOptions = {};
   Object.defineProperty(replayOptions, 'beforeStep', {
@@ -181,18 +181,18 @@ test('runner records a tick only after the authoritative step succeeds', () => {
     },
   });
   const runner = new HeadlessMatchRunner(core);
-  assert.throws(() => runner.step(scriptedFrames(core.getSnapshot())), /forced physics failure/);
+  assert.throws(() => runner.step(scriptedFrames(core.getLegacyFullSnapshotForAudit())), /forced physics failure/);
   assert.equal(runner.inputFrames.length, 0);
   assert.equal(runner.events.length, 0);
   assert.throws(() => runner.exportReplay(), /只能导出/);
-  assert.throws(() => core.getSnapshot(), /已销毁/);
+  assert.throws(() => core.getLegacyFullSnapshotForAudit(), /已销毁/);
   core.destroy();
 });
 
 test('runner refuses to export an unfinished match', () => {
   const core = createReplayCore();
   const runner = new HeadlessMatchRunner(core);
-  runner.step(scriptedFrames(core.getSnapshot()));
+  runner.step(scriptedFrames(core.getLegacyFullSnapshotForAudit()));
   const exposedInputs = runner.inputFrames;
   exposedInputs.length = 0;
   assert.equal(runner.inputFrames.length, 2);
@@ -207,7 +207,7 @@ test('runner refuses to export an unfinished match', () => {
 test('tampered replay is rejected at a deterministic checkpoint', () => {
   const core = createReplayCore();
   const runner = new HeadlessMatchRunner(core, { checkpointInterval: 10 });
-  const replay = runner.runUntilEnded(scriptedFrames);
+  const replay = runner.runLegacyUntilEndedForAudit(scriptedFrames);
   const tampered = mutableClone(replay);
   const [firstInput] = tampered.inputFrames;
   assert.ok(firstInput);
@@ -219,7 +219,7 @@ test('tampered replay is rejected at a deterministic checkpoint', () => {
 test('tampered replay config or recorded result is rejected even without changing inputs', () => {
   const core = createReplayCore();
   const runner = new HeadlessMatchRunner(core, { checkpointInterval: 20 });
-  const replay = runner.runUntilEnded(scriptedFrames);
+  const replay = runner.runLegacyUntilEndedForAudit(scriptedFrames);
   const changedConfig = mutableClone(replay);
   assert.ok(changedConfig.config.basePush);
   changedConfig.config.basePush.horizontalImpulse = (
@@ -241,7 +241,7 @@ test('tampered replay config or recorded result is rejected even without changin
 test('Replay V5 rejects undeclared top-level evidence fields', () => {
   const core = createReplayCore();
   const replay = new HeadlessMatchRunner(core, { checkpointInterval: 20 })
-    .runUntilEnded(scriptedFrames);
+    .runLegacyUntilEndedForAudit(scriptedFrames);
   Reflect.set(replay, 'operatorNotes', 'must not enter authority replay');
   assert.throws(() => replayMatch(replay), /不支持字段 operatorNotes/);
   core.destroy();
@@ -250,7 +250,7 @@ test('Replay V5 rejects undeclared top-level evidence fields', () => {
 test('Replay V5 rejects V4 and legacy action fields instead of silently adapting them', () => {
   const core = createReplayCore();
   const replay = new HeadlessMatchRunner(core, { checkpointInterval: 20 })
-    .runUntilEnded(scriptedFrames);
+    .runLegacyUntilEndedForAudit(scriptedFrames);
   const oldSchema = mutableClone(replay);
   Reflect.set(oldSchema, 'replaySchemaVersion', 4);
   let factoryCalls = 0;
@@ -285,7 +285,7 @@ test('Replay V5 rejects V4 and legacy action fields instead of silently adapting
 test('truncated, incomplete or duplicate-checkpoint replays fail and always destroy replay core', () => {
   const source = createReplayCore();
   const replay = new HeadlessMatchRunner(source, { checkpointInterval: 20 })
-    .runUntilEnded(scriptedFrames);
+    .runLegacyUntilEndedForAudit(scriptedFrames);
 
   const truncated = mutableClone(replay);
   truncated.inputFrames.splice(-2);
@@ -300,7 +300,7 @@ test('truncated, incomplete or duplicate-checkpoint replays fail and always dest
   }), /尚未结算/);
   const replayCore = replayCoreHolder.current;
   assert.ok(replayCore);
-  assert.throws(() => replayCore.getSnapshot(), /已销毁/);
+  assert.throws(() => replayCore.getLegacyFullSnapshotForAudit(), /已销毁/);
 
   const missingParticipant = mutableClone(replay);
   missingParticipant.inputFrames.splice(10, 1);
@@ -322,7 +322,7 @@ test('truncated, incomplete or duplicate-checkpoint replays fail and always dest
 test('replay destroys an invalid factory result before rejecting the factory contract', () => {
   const source = createReplayCore();
   const replay = new HeadlessMatchRunner(source, { checkpointInterval: 20 })
-    .runUntilEnded(scriptedFrames);
+    .runLegacyUntilEndedForAudit(scriptedFrames);
   let destroyCalls = 0;
   assert.throws(() => replayMatch(replay, {
     coreFactory() {
@@ -374,7 +374,7 @@ function runAtRenderRate(renderRate: number) {
   for (let frame = 0; frame < renderRate * 2 && core.phase !== ARENA_MATCH_PHASE.ENDED; frame += 1) {
     runtime.advance(1 / renderRate);
   }
-  const result = { hash: core.getStateHash(), snapshot: core.getSnapshot() };
+  const result = { hash: core.getStateHash(), snapshot: core.getLegacyFullSnapshotForAudit() };
   core.destroy();
   return result;
 }

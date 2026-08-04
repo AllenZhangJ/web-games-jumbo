@@ -2,6 +2,12 @@ import {
   DEFAULT_ARENA_CONTROL_LAYOUT,
   actionButtonRadius,
 } from '@number-strategy-jump/arena-presentation-runtime';
+import {
+  assertCapabilityKnownKeys as assertKnownKeys,
+  assertCapabilityRecord as assertRecord,
+  readCapabilityOwnData as ownData,
+  snapshotLegacyMethod as snapshotMethod,
+} from '@number-strategy-jump/arena-presentation-runtime/capability-utils';
 import * as THREE from 'three';
 import { createThreeObjectDisposalLease, type ThreeObjectDisposalLease } from './dispose-three-resources.js';
 import { ARENA_GREYBOX_DESIGN } from './greybox-style.js';
@@ -83,44 +89,6 @@ interface RematchRect {
   readonly y: number;
   readonly width: number;
   readonly height: number;
-}
-
-function assertRecord(value: unknown, name: string): asserts value is object {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new TypeError(`${name} 必须是对象。`);
-}
-
-function assertKnownKeys(value: unknown, allowed: ReadonlySet<PropertyKey>, name: string): void {
-  assertRecord(value, name);
-  const unknown = Reflect.ownKeys(value).find((key) => !allowed.has(key));
-  if (unknown !== undefined) throw new TypeError(`${name} 包含未知字段 ${String(unknown)}。`);
-}
-
-function ownData(value: unknown, field: PropertyKey, name: string, required = true): unknown {
-  assertRecord(value, name);
-  const descriptor = Object.getOwnPropertyDescriptor(value, field);
-  if (!descriptor) {
-    if (!required) return undefined;
-    throw new TypeError(`${name}.${String(field)} 缺失。`);
-  }
-  if (!Object.hasOwn(descriptor, 'value')) throw new TypeError(`${name}.${String(field)} 必须是数据字段。`);
-  return descriptor.value;
-}
-
-function snapshotMethod(value: unknown, name: string, methodName: string): UnknownMethod {
-  assertRecord(value, name);
-  let owner: object | null = value;
-  while (owner) {
-    const descriptor = Object.getOwnPropertyDescriptor(owner, methodName);
-    if (descriptor) {
-      if (!Object.hasOwn(descriptor, 'value') || typeof descriptor.value !== 'function') {
-        throw new TypeError(`${name}.${methodName} 必须是数据方法。`);
-      }
-      const method = descriptor.value as UnknownMethod;
-      return (...args: unknown[]) => method.call(value, ...args);
-    }
-    owner = Object.getPrototypeOf(owner) as object | null;
-  }
-  throw new TypeError(`${name} 缺少 ${methodName}()。`);
 }
 
 function rejectThenable(value: unknown, name: string): void {

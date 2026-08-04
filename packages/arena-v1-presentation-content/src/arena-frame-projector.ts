@@ -3,6 +3,9 @@ import {
   assertNonEmptyString,
   assertPlainRecord,
   cloneFrozenData,
+  type LocalActionSidecarV2,
+  type WorldParticipantSnapshotV2,
+  type WorldSnapshotV2,
   type ArenaEquipmentSnapshot,
   type ArenaMapSnapshot,
   type ArenaMatchSnapshot,
@@ -77,9 +80,9 @@ function finiteFacing(value: unknown, name: string): Readonly<{ x: number; z: nu
 }
 
 function requireParticipant(
-  participants: readonly ArenaParticipantSnapshot[],
+  participants: readonly (ArenaParticipantSnapshot | WorldParticipantSnapshotV2)[],
   participantId: string,
-): ArenaParticipantSnapshot {
+): ArenaParticipantSnapshot | WorldParticipantSnapshotV2 {
   const matches = participants.filter(({ id }) => id === participantId);
   if (matches.length !== 1) {
     throw new RangeError(`snapshot participant ${participantId} 必须且只能出现一次。`);
@@ -150,7 +153,7 @@ function actionView(
 }
 
 function participantActionView(
-  participant: ArenaParticipantSnapshot,
+  participant: ArenaParticipantSnapshot | WorldParticipantSnapshotV2,
   content: ArenaV1PresentationContent,
 ): Readonly<Record<string, unknown>> {
   const action = record(participant.action, `${participant.id}.action`);
@@ -171,7 +174,7 @@ function participantActionView(
 }
 
 function participantView(
-  participant: ArenaParticipantSnapshot,
+  participant: ArenaParticipantSnapshot | WorldParticipantSnapshotV2,
   content: ArenaV1PresentationContent,
 ): Readonly<Record<string, unknown>> {
   const definition = content.characterPresentationRegistry.requireDefaultForCharacter(
@@ -233,7 +236,7 @@ function equipmentView(
 }
 
 function mapView(
-  snapshotMap: ArenaMapSnapshot,
+  snapshotMap: ArenaMapSnapshot | WorldSnapshotV2['map'],
   content: ArenaV1PresentationContent,
 ): Readonly<Record<string, unknown>> {
   if (snapshotMap.definitionId !== content.map.id) {
@@ -354,6 +357,192 @@ export function projectArenaPresentationFrame({
       }),
       action,
       result: cloneFrozenData(snapshot.result, 'snapshot.result'),
+    }),
+    events: projectedEvents,
+  });
+}
+
+const V2_SIDECAR_KEYS = new Set([
+  'schemaVersion', 'tick', 'eventSequence', 'participantId', 'profile',
+  'primaryActionDefinitionId', 'channels',
+]);
+const V2_CHANNEL_KEYS = new Set(['primary', 'primaryHold']);
+const V2_OUTCOME_KEYS = new Set([
+  'kind', 'actionDefinitionId', 'lane', 'source', 'reason',
+]);
+
+function strictV2Record(value: unknown, keys: ReadonlySet<string>, name: string): PlainRecord {
+  const source = record(value, name);
+  if (!Object.isFrozen(source)) throw new TypeError(`${name} 必须冻结。`);
+  const ownKeys = Object.keys(source);
+  if (ownKeys.length !== keys.size || ownKeys.some((key) => !keys.has(key))) {
+    throw new TypeError(`${name} 字段集合不符合 V2 合同。`);
+  }
+  for (const key of keys) {
+    const descriptor = Object.getOwnPropertyDescriptor(source, key);
+    if (!descriptor || !descriptor.enumerable || !Object.hasOwn(descriptor, 'value')) {
+      throw new TypeError(`${name}.${key} 必须是冻结数据字段。`);
+    }
+  }
+  return source;
+}
+
+function actionViewFromLocalSidecar(
+  sidecarValue: LocalActionSidecarV2,
+  world: WorldSnapshotV2,
+  content: ArenaV1PresentationContent,
+): Readonly<Record<string, unknown>> {
+  const sidecar = strictV2Record(
+    sidecarValue,
+    V2_SIDECAR_KEYS,
+    'LocalActionSidecarV2',
+  );
+  if (sidecar.schemaVersion !== 2 || sidecar.profile !== 'local-context-primary') {
+    throw new RangeError('LocalActionSidecarV2 schema/profile 无效。');
+  }
+  if (sidecar.tick !== world.tick || sidecar.eventSequence !== world.eventSequence) {
+    throw new RangeError('LocalActionSidecarV2 与 WorldSnapshotV2 identity 不一致。');
+  }
+  if (sidecar.participantId !== sidecarValue.participantId) {
+    throw new RangeError('LocalActionSidecarV2 participantId 无效。');
+  }
+  const channels = strictV2Record(
+    sidecar.channels,
+    V2_CHANNEL_KEYS,
+    'LocalActionSidecarV2.channels',
+  );
+  const primary = strictV2Record(
+    channels.primary,
+    V2_OUTCOME_KEYS,
+    'LocalActionSidecarV2.channels.primary',
+  );
+  const primaryHold = strictV2Record(
+    channels.primaryHold,
+    V2_OUTCOME_KEYS,
+    'LocalActionSidecarV2.channels.primaryHold',
+  );
+  const definitionIdValue = sidecar.primaryActionDefinitionId;
+  if (definitionIdValue !== null && typeof definitionIdValue !== 'string') {
+    throw new TypeError('LocalActionSidecarV2.primaryActionDefinitionId 必须是字符串或 null。');
+  }
+  const definitionId = definitionIdValue as string | null;
+  const definition = definitionId === null ? undefined : content.actions[definitionId];
+  if (definitionId !== null && !definition) {
+    throw new RangeError(`缺少 action presentation ${definitionId}。`);
+  }
+  return Object.freeze({
+    definitionId,
+    semantic: definition?.semantic ?? 'none',
+    label: definition?.label ?? '行动',
+    available:
+      primary.kind === ACTION_RESOLUTION_KIND.SELECTED
+      || primaryHold.kind === ACTION_RESOLUTION_KIND.SELECTED,
+    pressOutcome: cloneFrozenData(primary, 'LocalActionSidecarV2.primary outcome'),
+    holdOutcome: cloneFrozenData(primaryHold, 'LocalActionSidecarV2.primaryHold outcome'),
+  });
+}
+
+export interface ProjectArenaPresentationFrameV2Options {
+  readonly worldSnapshot: WorldSnapshotV2;
+  readonly localActionSidecar: LocalActionSidecarV2;
+  readonly events?: readonly unknown[];
+  readonly publicMatchInfo: ArenaPresentationPublicMatchInfo;
+  readonly localParticipantId?: string;
+  readonly opponentParticipantId?: string;
+  readonly content: ArenaV1PresentationContent;
+}
+
+/**
+ * PA4b-3 production projector.  It consumes only the trusted V2 world and
+ * local sidecar; the legacy projectArenaPresentationFrame remains an explicit
+ * migration/differential entry until PA5 removes it.
+ */
+export function projectArenaPresentationFrameV2({
+  worldSnapshot,
+  localActionSidecar,
+  events = [],
+  publicMatchInfo,
+  localParticipantId = 'player-1',
+  opponentParticipantId = 'player-2',
+  content,
+}: ProjectArenaPresentationFrameV2Options): Readonly<Record<string, unknown>> {
+  if (!worldSnapshot || typeof worldSnapshot !== 'object') {
+    throw new TypeError('Arena WorldSnapshotV2 不存在。');
+  }
+  if (!content || typeof content !== 'object') throw new TypeError('Arena presentation content 不存在。');
+  if (!Array.isArray(events)) throw new TypeError('Arena presentation events 必须是数组。');
+  const localId = assertNonEmptyString(localParticipantId, 'localParticipantId');
+  const opponentId = assertNonEmptyString(opponentParticipantId, 'opponentParticipantId');
+  if (localId === opponentId) throw new RangeError('本地与对手 participant id 不能相同。');
+  const world = worldSnapshot;
+  const tick = integerAtLeast(world.tick, 0, 'WorldSnapshotV2.tick');
+  const eventSequence = integerAtLeast(world.eventSequence, 0, 'WorldSnapshotV2.eventSequence');
+  const matchSeed = integerAtLeast(world.matchSeed, 0, 'WorldSnapshotV2.matchSeed');
+  if (matchSeed > 0xffffffff) throw new RangeError('WorldSnapshotV2.matchSeed 必须是 uint32。');
+  if (publicMatchInfo?.matchSeed !== matchSeed) {
+    throw new RangeError('publicMatchInfo.matchSeed 与 WorldSnapshotV2 不一致。');
+  }
+  if (!Array.isArray(world.participants) || !Array.isArray(world.equipment)) {
+    throw new TypeError('WorldSnapshotV2 participants/equipment 必须是数组。');
+  }
+  const participantIds = world.participants.map((participant) => participant.id);
+  if (new Set(participantIds).size !== participantIds.length) {
+    throw new RangeError('WorldSnapshotV2 participants 不能包含重复 id。');
+  }
+  const local = requireParticipant(world.participants, localId);
+  const opponent = requireParticipant(world.participants, opponentId);
+  const sidecar = strictV2Record(
+    localActionSidecar,
+    V2_SIDECAR_KEYS,
+    'LocalActionSidecarV2',
+  );
+  if (sidecar.participantId !== localId) {
+    throw new RangeError('LocalActionSidecarV2 participantId 与本地玩家不一致。');
+  }
+  if (sidecar.tick !== tick || sidecar.eventSequence !== eventSequence) {
+    throw new RangeError('LocalActionSidecarV2 与 WorldSnapshotV2 identity 不一致。');
+  }
+  const opponentInfo = publicOpponentInfo(publicMatchInfo);
+  const action = actionViewFromLocalSidecar(localActionSidecar, world, content);
+  const participants = Object.freeze(world.participants.map((participant) => (
+    participantView(participant, content)
+  )));
+  const phase = assertNonEmptyString(world.phase, 'WorldSnapshotV2.phase');
+  const projectedEvents = cloneFrozenData(events, 'Arena presentation events');
+  return Object.freeze({
+    schemaVersion: 1,
+    source: Object.freeze({
+      matchSeed,
+      tick,
+      activeTick: integerAtLeast(world.activeTick, 0, 'WorldSnapshotV2.activeTick'),
+      configHash: assertNonEmptyString(world.configHash, 'WorldSnapshotV2.configHash'),
+      ruleContentHash: assertNonEmptyString(world.ruleContentHash, 'WorldSnapshotV2.ruleContentHash'),
+    }),
+    phase,
+    world: Object.freeze({
+      map: mapView(world.map, content),
+      participants,
+      equipment: Object.freeze(world.equipment.map((item) => equipmentView(item, content))),
+    }),
+    hud: Object.freeze({
+      phase,
+      phaseLabel: phaseLabel(phase),
+      remainingSeconds: Math.ceil(
+        integerAtLeast(world.remainingTicks, 0, 'WorldSnapshotV2.remainingTicks') / ARENA_TICK_RATE,
+      ),
+      local: Object.freeze({
+        participantId: local.id,
+        lives: integerAtLeast(local.lives, 0, `${local.id}.lives`),
+      }),
+      opponent: Object.freeze({
+        participantId: opponent.id,
+        displayName: opponentInfo.displayName,
+        portraitKey: opponentInfo.portraitKey,
+        appearanceKey: opponentInfo.appearanceKey,
+        lives: integerAtLeast(opponent.lives, 0, `${opponent.id}.lives`),
+      }),
+      action,
+      result: cloneFrozenData(world.result, 'WorldSnapshotV2.result'),
     }),
     events: projectedEvents,
   });

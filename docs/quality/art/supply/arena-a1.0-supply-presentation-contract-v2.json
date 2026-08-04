@@ -1,0 +1,285 @@
+{
+  "schemaVersion": 2,
+  "id": "arena.art.supply-presentation.a1.0.v2",
+  "status": "joint-gate-candidate",
+  "reviewedAt": "2026-08-03",
+  "supersedes": {
+    "id": "arena.art.supply-presentation.a1.0.v1",
+    "path": "docs/quality/art/supply/arena-a1.0-supply-presentation-contract-v1.json",
+    "sha256": "719e68766a03c82d76ef1eb49eeab29bc5045c57dad450032f96db26f410ed1e",
+    "baselineCommit": "dd786a922625472643b2f6c96f80c7049a57d3e2"
+  },
+  "scope": "current-source-art-contract-and-node-evidence-only",
+  "contractSurface": {
+    "schemaVersion": 1,
+    "markerKeys": ["schemaVersion", "supplyDefinitionId", "supplyId", "equipmentInstanceId", "equipmentDefinitionId", "position", "spawnTick", "expireTick", "remainingTicks", "labelSeconds"],
+    "cueKeys": ["schemaVersion", "id", "kind", "sourceEventIds", "tick", "sequenceStart", "sequenceEnd", "supplyId", "equipmentInstanceId", "participantId", "previousEquipmentInstanceId", "nextEquipmentInstanceId"],
+    "viewKeys": ["schemaVersion", "streamId", "status", "snapshotTick", "snapshotEventSequence", "nextExpectedEventSequence", "resyncedFromSnapshot", "markers", "cues"],
+    "optionsKeys": ["schemaVersion", "streamId", "ticksPerSecond", "lifecycleContract", "recentEventCapacity"],
+    "startInputKeys": ["schemaVersion", "snapshotTick", "snapshotEventSequence", "equipment", "activeSupplyProjection"],
+    "updateInputKeys": ["schemaVersion", "snapshotTick", "snapshotEventSequence", "equipment", "activeSupplyProjection", "events"],
+    "debugKeys": ["schemaVersion", "streamId", "lifecycleState", "snapshotTick", "nextExpectedEventSequence", "markerCount", "pendingReplacementPairCount", "recentEventHashCount", "acceptedEventCount", "duplicateEventCount", "resyncCount", "terminalFailureKind"],
+    "adapterMethods": ["constructor", "destroy", "getDebugSnapshot", "start", "update"],
+    "cueKinds": ["spawned", "picked-up", "replaced", "expired"],
+    "viewStatuses": ["ready", "resync-required"],
+    "lifecycleStates": ["created", "active", "resync-required", "failed", "destroyed"],
+    "terminalFailureKinds": ["input-invalid", "event-identity-conflict", "reentrant-call", "internal-invariant"],
+    "updateOutcomes": ["committed", "snapshot-resync", "terminal-failed"],
+    "invariants": {
+      "ticksPerSecond": 60,
+      "maximumMarkers": 3,
+      "recentEventCapacity": 64,
+      "maximumSemanticEventsPerUpdate": 64,
+      "maximumStructuralResyncEventsPerUpdate": 256,
+      "maximumPendingReplacementPairs": 3,
+      "maximumCuesPerView": 64,
+      "startOnce": true,
+      "destroyIdempotent": true,
+      "sequenceWindow": "[previousNextExpectedEventSequence,postSnapshotEventSequence)"
+    }
+  },
+  "eventRouting": {
+    "commonEnvelopeKeys": ["id", "sequence", "tick", "type"],
+    "shapes": [
+      {
+        "id": "supply-spawned-strict",
+        "type": "EquipmentSpawned",
+        "outerKeys": ["id", "sequence", "tick", "type", "payload"],
+        "payloadKeys": ["schemaVersion", "supplyDefinitionId", "supplyId", "equipmentInstanceId", "spawnTick", "expireTick", "tick", "equipmentDefinitionId", "spawnId", "position"],
+        "disposition": "consume-strict-supply",
+        "cueKind": "spawned",
+        "terminalRule": "create-or-refresh-one-validated-active-marker"
+      },
+      {
+        "id": "ordinary-spawned-flat-bypass",
+        "type": "EquipmentSpawned",
+        "outerKeys": ["id", "sequence", "tick", "type", "equipmentInstanceId", "equipmentDefinitionId", "spawnId", "position"],
+        "payloadKeys": [],
+        "disposition": "bypass-known-ordinary-equipment-event",
+        "cueKind": null,
+        "terminalRule": "never-create-or-remove-a-supply-marker"
+      },
+      {
+        "id": "ordinary-picked-up-flat-conditional",
+        "type": "EquipmentPickedUp",
+        "outerKeys": ["id", "sequence", "tick", "type", "participantId", "equipmentInstanceId", "equipmentDefinitionId"],
+        "payloadKeys": [],
+        "disposition": "consume-only-unique-active-identity-and-definition-match-otherwise-safe-bypass-or-resync",
+        "cueKind": "picked-up-or-none",
+        "terminalRule": "unique-active-match-removes-one-marker-unmatched-removes-none-conflict-resyncs"
+      },
+      {
+        "id": "supply-recycled-strict",
+        "type": "EquipmentRecycled",
+        "outerKeys": ["id", "sequence", "tick", "type", "payload"],
+        "payloadKeys": ["schemaVersion", "supplyDefinitionId", "supplyId", "equipmentInstanceId", "spawnTick", "expireTick", "tick", "participantId", "recycledEquipmentInstanceId", "replacementEquipmentInstanceId", "reason"],
+        "disposition": "start-contiguous-replacement-pair",
+        "cueKind": null,
+        "terminalRule": "hold-bounded-pending-pair-only-until-immediately-following-matched-replaced"
+      },
+      {
+        "id": "supply-replaced-strict",
+        "type": "EquipmentReplaced",
+        "outerKeys": ["id", "sequence", "tick", "type", "payload"],
+        "payloadKeys": ["schemaVersion", "supplyDefinitionId", "supplyId", "equipmentInstanceId", "spawnTick", "expireTick", "tick", "participantId", "previousEquipmentInstanceId", "nextEquipmentInstanceId"],
+        "disposition": "close-contiguous-replacement-pair",
+        "cueKind": "replaced",
+        "terminalRule": "remove-marker-on-paired-replaced-without-waiting-for-picked-up"
+      },
+      {
+        "id": "supply-expired-strict",
+        "type": "EquipmentExpired",
+        "outerKeys": ["id", "sequence", "tick", "type", "payload"],
+        "payloadKeys": ["schemaVersion", "supplyDefinitionId", "supplyId", "equipmentInstanceId", "spawnTick", "expireTick", "tick", "expiredEquipmentInstanceId", "reason"],
+        "disposition": "consume-strict-terminal",
+        "cueKind": "expired",
+        "terminalRule": "remove-one-matched-marker-at-authority-expire-tick"
+      }
+    ],
+    "knownOrdinaryEventRule": "registered non-equipment authority events participate in sequence continuity and canonical identity but never create supply markers or cues",
+    "unknownEventRule": "unregistered type or malformed, mixed, missing, extra, future or ambiguous equipment shape fails closed before publication",
+    "canonicalHashRule": "copy the complete event to frozen plain data and hash the entire normalized value before semantic processing; same id and sequence with identical hash is idempotent, any conflicting binding is terminal",
+    "terminalPositionRule": "terminal cues contain no position; PP3a may resolve supplyId plus equipmentInstanceId only against the previous committed View, otherwise it must use a generic non-spatial accessible fallback or safe hide"
+  },
+  "sequenceAndRecovery": {
+    "continuousUpdate": "new non-duplicate events must cover the complete half-open sequence window in monotonic order before one atomic commit",
+    "batch65To256": "structurally valid batches of 65 through 256 events snapshot-resync before canonical event hashing or event semantics and emit no cues",
+    "batchAbove256": "more than 256 events is input-invalid and terminal-failed",
+    "gapStaleOrUnpaired": "gap, stale ordering, event outside the recent ring, or an incomplete/reversed replacement pair snapshot-resyncs without replaying a one-shot",
+    "resyncReady": "a complete ready post projection rebuilds sorted markers with no cues and resyncedFromSnapshot true",
+    "resyncNotReady": "not-ready projection publishes resync-required with empty markers and cues; countdown stays hidden",
+    "pauseResume": "only integer authority snapshotTick changes remainingTicks; wall clock and presentation cadence never advance or delete supply",
+    "replay": "seek or reset creates a new stream adapter and clears recent hashes, pending replacement state and prior one-shot history",
+    "destroy": "destroy is idempotent, clears adapter-owned bounded data and owns no GPU, DOM, timer, listener, particle or audio resources"
+  },
+  "fixtureCoverage": {
+    "testPath": "tests/arena/presentation/arena-supply-presentation-adapter.test.ts",
+    "candidateReportedTestCount": 51,
+    "runtimeAdapterTested": true,
+    "fixtures": [
+      {"id": "spawn-three-physical-entities-without-modal", "testName": "PP1 A1 #1 strict spawn creates exactly three sorted markers and one-shot cues", "nodeEvidence": "frozen-candidate-passed", "artReview": "three-entity-marker-and-spawn-cue-contract"},
+      {"id": "ordinary-flat-equipment-spawn-bypasses-supply-adapter", "testName": "PP1 A1 #2 ordinary flat spawn bypasses supply markers and cues", "nodeEvidence": "frozen-candidate-passed", "artReview": "authority-bypass-boundary"},
+      {"id": "mixed-flat-and-payload-spawn-fails-closed", "testName": "PP1 A1 #3 mixed flat and payload spawn fails terminal before publication", "nodeEvidence": "frozen-candidate-passed", "artReview": "authority-bypass-boundary"},
+      {"id": "active-supply-flat-pickup-terminates-exactly-one-marker", "testName": "PP1 A1 #4 active pickup removes exactly one marker and emits picked-up once", "nodeEvidence": "frozen-candidate-passed", "artReview": "pickup-cue-and-marker-terminal-contract"},
+      {"id": "flat-pickup-not-matching-active-bypasses-without-cue-or-marker-change", "testName": "PP1 A1 #5 unmatched ordinary pickup bypasses without marker or cue mutation", "nodeEvidence": "frozen-candidate-passed", "artReview": "no-false-cue-contract"},
+      {"id": "definition-conflict-or-multiple-active-pickup-fails-closed", "testName": "PP1 A1 #6 pickup identity ambiguity snapshot-resyncs for ready and not-ready posts", "nodeEvidence": "frozen-candidate-passed", "artReview": "resync-hide-contract"},
+      {"id": "missing-history-or-bound-active-projection-enters-resync-before-any-event", "testName": "PP1 A1 #7 missing history and initial not-ready snapshots enter explicit resync", "nodeEvidence": "frozen-candidate-passed", "artReview": "resync-hide-contract"},
+      {"id": "replacement-pair-terminates-without-waiting-for-picked-up", "testName": "PP1 A1 #8 replacement pair terminates immediately without waiting for pickup", "nodeEvidence": "frozen-candidate-passed", "artReview": "replacement-cue-terminal-contract"},
+      {"id": "strict-replacement-without-active-match-fails-closed", "testName": "PP1 A1 #9 strict replacement without an active match snapshot-resyncs", "nodeEvidence": "frozen-candidate-passed", "artReview": "no-false-cue-contract"},
+      {"id": "strict-expiry-without-active-match-fails-closed", "testName": "PP1 A1 #10 strict expiry without an active match snapshot-resyncs", "nodeEvidence": "frozen-candidate-passed", "artReview": "no-false-cue-contract"},
+      {"id": "remaining-tick-599-600-601", "testName": "PP1 A1 #11 remaining tick 600/599/+601 boundaries never expire early", "nodeEvidence": "frozen-candidate-passed", "artReview": "ten-second-countdown-and-terminal-boundary"},
+      {"id": "same-tick-expire-before-pickup", "testName": "PP1 A1 #12 same-tick expiry before pickup emits only expired", "nodeEvidence": "frozen-candidate-passed", "artReview": "expiry-cue-order"},
+      {"id": "same-tick-recycle-before-replace-and-pickup-before-action", "testName": "PP1 A1 #13 recycle-replace-pickup authority order emits one replacement cue", "nodeEvidence": "frozen-candidate-passed", "artReview": "replacement-single-cue-order"},
+      {"id": "duplicate-identical-event-idempotent", "testName": "PP1 A1 #14 identical duplicate is idempotent and never replays a cue", "nodeEvidence": "frozen-candidate-passed", "artReview": "one-shot-no-replay-contract"},
+      {"id": "duplicate-conflicting-event-fail-closed", "testName": "PP1 A1 #15 duplicate id or sequence with another hash fails terminal atomically", "nodeEvidence": "frozen-candidate-passed", "artReview": "no-conflicting-cue-publication"},
+      {"id": "event-older-than-recent-ring-never-applies-or-replays-one-shot", "testName": "PP1 A1 #16 an event evicted from the 64-entry ring resyncs without replay", "nodeEvidence": "frozen-candidate-passed", "artReview": "one-shot-no-replay-contract"},
+      {"id": "sequence-gap-and-out-of-order-resync", "testName": "PP1 A1 #17 sequence gaps and stale ordering snapshot-resync without sorting", "nodeEvidence": "frozen-candidate-passed", "artReview": "resync-hide-contract"},
+      {"id": "missing-required-and-future-field-rejected", "testName": "PP1 A1 #18 missing and future input schemas fail terminal", "nodeEvidence": "frozen-candidate-passed", "artReview": "exact-key-fail-closed-boundary"},
+      {"id": "pause-resume-no-wall-clock-progress", "testName": "PP1 A1 #19 pause/resume uses only integer snapshots and emits no stale cues", "nodeEvidence": "frozen-candidate-passed", "artReview": "tick-only-countdown-contract"},
+      {"id": "30fps-terminal-state-exact", "testName": "PP1 A1 #20 adapter terminal state is tick-exact and independent of presentation cadence", "nodeEvidence": "frozen-candidate-passed", "artReview": "cadence-independent-terminal-contract"},
+      {"id": "replay-forward-and-catch-up-no-double-one-shot", "testName": "PP1 A1 #21 catch-up rebuilds from snapshot and never double-emits one-shot cues", "nodeEvidence": "frozen-candidate-passed", "artReview": "one-shot-no-replay-contract"},
+      {"id": "replay-seek-or-reset-starts-new-epoch-and-clears-ring-and-pending", "testName": "PP1 A1 #22 replay seek uses a new stream instance with cleared ring and pending state", "nodeEvidence": "frozen-candidate-passed", "artReview": "stream-epoch-contract"},
+      {"id": "asset-failure-accessible-fallback-does-not-pass-asset-gate", "testName": "PP1 A1 #23 asset fallback stays outside adapter authority and gate claims", "nodeEvidence": "frozen-candidate-passed", "artReview": "fallback-is-not-production-asset-evidence"},
+      {"id": "reduced-motion-and-silent-equivalence", "testName": "PP1 A1 #24 reduced-motion and silent hosts consume identical adapter authority data", "nodeEvidence": "frozen-candidate-passed", "artReview": "silent-and-reduced-motion-equivalence-contract"},
+      {"id": "destroy-twice-no-live-resources", "testName": "PP1 A1 #25 destroy is idempotent and clears adapter-owned state only", "nodeEvidence": "frozen-candidate-passed", "artReview": "adapter-lifecycle-boundary"}
+    ]
+  },
+  "artCounterevidence": {
+    "cueContracts": [
+      {"kind": "spawned", "shape": "three-prong-ground-marker-plus-equipment-silhouette", "timing": "one-shot-on-committed-strict-spawn", "reducedMotion": "stable-marker-appearance-without-expansion-or-travel", "silentEquivalent": "shape-icon-and-single-state-announcement", "assetFailureFallback": "diagnostic-three-prong-plus-text-or-screen-reader-only"},
+      {"kind": "picked-up", "shape": "inward-bracket-closes-on-held-slot", "timing": "one-shot-on-unique-authoritative-active-pickup", "reducedMotion": "instant-bracket-state-swap", "silentEquivalent": "pickup-icon-state-and-single-announcement", "assetFailureFallback": "generic-non-spatial-pickup-confirmation"},
+      {"kind": "replaced", "shape": "paired-exchange-arrows-old-cross-new-solid", "timing": "one-shot-on-contiguous-recycled-plus-replaced-pair", "reducedMotion": "instant-old-cross-new-solid-swap", "silentEquivalent": "exchange-icon-and-single-replacement-announcement", "assetFailureFallback": "generic-non-spatial-replacement-confirmation"},
+      {"kind": "expired", "shape": "segmented-perimeter-to-crossed-hourglass-endpoint", "timing": "one-shot-on-authoritative-expire-tick", "reducedMotion": "instant-crossed-hourglass-endpoint-without-collapse", "silentEquivalent": "expired-icon-and-single-announcement", "assetFailureFallback": "generic-non-spatial-expiry-announcement-or-safe-hide"}
+    ],
+    "terminalCuePosition": {
+      "cueContainsPosition": false,
+      "lookupIdentity": ["supplyId", "equipmentInstanceId"],
+      "onlySpatialSource": "previous-committed-view",
+      "fallback": "generic-non-spatial-accessible-cue-or-safe-hide",
+      "forbiddenSources": ["current-post-marker", "parsed-instance-id", "participant-distance", "authority-reread"],
+      "pp3aRuntimeEvidencePassed": false
+    },
+    "markerCountdown": {
+      "formula": "remainingTicks=expireTick-snapshotTick",
+      "labelFormula": "ceil(remainingTicks/60)",
+      "offset599": "one-tick-world-marker-remains-visible-and-pickup-eligible",
+      "offset600": "marker-hidden-and-pickup-ineligible-with-expiry-identity-carried-by-authority-contract",
+      "offset601": "ready-with-no-marker-and-no-duplicate-expiry-cue",
+      "wallClockForbidden": true
+    },
+    "resyncPresentation": {
+      "markerPolicy": "hide-all-supply-markers-and-countdowns",
+      "cuePolicy": "emit-no-cues-until-ready-projection-rebuild",
+      "assetPolicy": "do-not-retain-stale-or-fallback-marker-as-authority"
+    },
+    "assetFailureBoundary": {
+      "fallbackIsAccessibilityOnly": true,
+      "fallbackMayUseDiagnosticGeometry": true,
+      "fallbackMayClaimRepresentativeAssetGate": false,
+      "representativeAssetGatePassed": false,
+      "formalVfxGatePassed": false,
+      "formalAudioGatePassed": false
+    },
+    "authoritySeparation": {
+      "colorIsNeverSoleEncoding": true,
+      "reducedMotionFieldInView": false,
+      "silentFieldInView": false,
+      "assetGateFieldInView": false,
+      "rendererFallbackFieldInView": false,
+      "newGameplayInputAllowed": false,
+      "wallClockDeletionAllowed": false
+    }
+  },
+  "externalEvidenceBoundary": {
+    "nodeCanProve": ["exact-key-data-contracts", "event-routing-and-canonical-deduplication", "599-600-601-tick-semantics", "resync-replay-and-destroy-state", "silent-and-reduced-motion-authority-data-equivalence", "fallback-does-not-open-asset-gates"],
+    "pp3aMustProve": ["single-runtime-owner-wiring", "pre-step-to-atomic-post-frame-consumption", "previous-committed-view-terminal-cue-origin-or-non-spatial-fallback", "host-commit-failure-terminal-cleanup", "retry-and-destroy-resource-ownership"],
+    "pp3bDeviceMustProve": ["shared-runtime-across-web-wechat-douyin", "isolated-output-and-no-product-reachability", "desktop-and-390x844-readable-capture", "approved-browser-gpu-overdraw-memory-and-voice-measurement", "real-ios-and-android-behavior"],
+    "a1MustProve": ["approved-equipment-silhouette-and-icon-provenance", "approved-vfx-and-audio-source-license-and-sha256", "representative-specimen-visual-and-audio-quality", "measured-budget-and-lifecycle-release"],
+    "humanMustProve": ["a0.3-ten-qualified-participant-blind-test-at-or-above-threshold"],
+    "allExternalEvidencePassed": false
+  },
+  "hardGates": {
+    "sourceAuditVerified": true,
+    "fixtureMappingVerified": true,
+    "artContractSelfCheckPassed": true,
+    "a1_0V2CoordinatorSignOff": false,
+    "a1_0V2JointGatePassed": false,
+    "pp1Completed": false,
+    "pp2Authorized": false,
+    "pp3aAuthorized": false,
+    "pp3bAuthorized": false,
+    "a0_3Passed": false,
+    "a1_1Passed": false,
+    "representativeSpecimenStarted": false,
+    "a1Passed": false,
+    "blockoutAllowed": false,
+    "productionVfxIntegrated": false,
+    "productionAudioIntegrated": false,
+    "browserVerified": false,
+    "deviceVerified": false,
+    "humanVerified": false,
+    "formalPerformancePassed": false,
+    "finalPassed": false
+  },
+  "score": {
+    "basis": "A1.0-v2 current-source contract, PP0/PP1 candidate identity, 25-fixture mapping and art counterevidence only; no PP3, asset, device, human or final maturity",
+    "total": 94,
+    "maximum": 100,
+    "hardGatePassed": false,
+    "dimensions": [
+      {"id": "robustness-closure", "score": 16, "maximum": 17},
+      {"id": "race-determinism", "score": 16, "maximum": 17},
+      {"id": "fallback-fail-closed", "score": 16, "maximum": 17},
+      {"id": "boundary-malicious-input", "score": 16, "maximum": 17},
+      {"id": "lifecycle-cleanup", "score": 15, "maximum": 16},
+      {"id": "production-path-isolation", "score": 15, "maximum": 16}
+    ],
+    "governance": {
+      "authorizedFiles": ["docs/quality/art/supply/arena-a1.0-supply-presentation-contract-v2.json", "scripts/art/check-arena-supply-presentation-contract-v2.ts", "scripts/art/test-arena-supply-presentation-contract-v2-fail-closed.ts"],
+      "modifiedOutsideAuthorizedFiles": false,
+      "v1Preserved": true,
+      "pp0Pp1AndTestsPreserved": true,
+      "latestHashesRecomputed": true,
+      "commitOrPushPerformed": false,
+      "coordinatorReviewPending": true
+    }
+  },
+  "sourceAudit": [
+    {"path": "packages/arena-contracts/src/match-event-types.ts", "role": "authority-event-types", "byteLength": 840, "sha256": "ba3033f6d784c5e989288e3854f18ab8c082f494480d52669eb59f1bfe3d4d85"},
+    {"path": "packages/arena-contracts/src/equipment-supply-event-payload.ts", "role": "strict-supply-payload", "byteLength": 9788, "sha256": "2dc466abb5bae193aab091b084a835fd45e2c430daa3b0b194356618a177aa9c"},
+    {"path": "packages/arena-contracts/src/match-snapshot.ts", "role": "public-world-snapshot", "byteLength": 19417, "sha256": "89ca74403445cbe8333e68e0e907a914500dce51b3bcf3cbce8ebb928e51fe38"},
+    {"path": "packages/arena-contracts/src/arena-public-supply-projection.ts", "role": "active-supply-projection", "byteLength": 29094, "sha256": "b1ad32bc9e3d023af0cfbcbac41c31efee69d291de856e1914e5622dfa5ec7ec"},
+    {"path": "packages/arena-contracts/src/match-read-frame-v2.ts", "role": "readonly-match-frame-v2", "byteLength": 31017, "sha256": "6f18c6cc18934e8b97147a63a87ff12c7b976bef4e5df29c7d1fa965844ed144"},
+    {"path": "packages/arena-definitions/src/equipment-supply-definition.ts", "role": "supply-definition", "byteLength": 5281, "sha256": "ef3d42d29141cb128a782be31f395c34b8320de1c646aa7265ed18fe774ab1f3"},
+    {"path": "packages/arena-v1-content/src/arena-v2-survival-supply.ts", "role": "formal-survival-supply-content", "byteLength": 1039, "sha256": "0007b0b8e11feda8721162cf4c22a7a574a4f66e2f5fc7de8213082097b12cee"},
+    {"path": "packages/arena-equipment/src/equipment-supply-lifecycle.ts", "role": "lifecycle-contract", "byteLength": 3847, "sha256": "79dac98ed7bf04699dcaad963f93dc44ccd0e78f235e0ca04d7aac120c23da5c"},
+    {"path": "packages/arena-equipment/src/equipment-supply-timeline-system.ts", "role": "authority-timeline", "byteLength": 26241, "sha256": "57bf117fb918724e77bd3ec0bb2f3dc0727803747b335f6039d13aab29937d0e"},
+    {"path": "packages/arena-equipment/src/equipment-system.ts", "role": "world-equipment-system", "byteLength": 40775, "sha256": "fd04f4c51873ec7a91461e6b836aa3a2aa8f854794d1e2365266ca6afc7ef580"},
+    {"path": "packages/arena-match/src/match-core.ts", "role": "match-authority", "byteLength": 85977, "sha256": "6d024b18ddba7bddbe6ccbcfb226581fe53a81b8f1a6789696f0cd4a1c5daf04"},
+    {"path": "packages/arena-match/src/match-read-frame.ts", "role": "post-frame-projector", "byteLength": 9174, "sha256": "d7b104964d7d39d7c4844b4ffde2196a94d4aad132a82935e544fdf592d7739c"},
+    {"path": "packages/arena-match/src/replay.ts", "role": "replay", "byteLength": 22555, "sha256": "3921cc6cd0d713877f875c9922f0060541743a41630703372bb41c0c67fb6a87"},
+    {"path": "packages/arena-session/src/local-match-session.ts", "role": "session", "byteLength": 30619, "sha256": "5ee25b71979ea9c2c429374d94f2534b079429b1189efd8ce46e46a0a3c6776f"},
+    {"path": "packages/arena-v1-composition/src/arena-v2-survival-supply-match-core.ts", "role": "formal-composition-root", "byteLength": 3933, "sha256": "1e41a4734333df096dc5cfc3877b94641d4177daffc0d8abb8be304b16644caa"},
+    {"path": "tests/arena/equipment-supply-timeline.test.ts", "role": "timeline-599-600-601-tests", "byteLength": 22512, "sha256": "c9f86bfe1f71d6d09d11e7939f560364da0d969a4178f2b6cbc88e01710ca680"},
+    {"path": "tests/arena/match-core-survival-supply.test.ts", "role": "matchcore-supply-tests", "byteLength": 25313, "sha256": "1e2b40c0fd2ae419f8891766b5dd38753bf2a5024823f01c8bf3c9e672a611b0"},
+    {"path": "tests/arena/match-read-frame-v2-contract.test.ts", "role": "read-frame-projection-tests", "byteLength": 24958, "sha256": "1a9c7b6278d72ff79e91c0e5ad86a8eda68e9a744c261b34a9212bef870d550d"},
+    {"path": "tests/arena/replay.test.ts", "role": "replay-tests", "byteLength": 17156, "sha256": "ac5e42e1a546e6f611d30cad9d05d516969197d6ed3a9b468c6df4272bf8a4f4"},
+    {"path": "tests/arena/local-match-session.test.ts", "role": "session-tests", "byteLength": 20752, "sha256": "7f41b8d56eaaf92cd5e179758be2f1e68d5d2eee09b3e599d31893cd9b53f8f2"},
+    {"path": "tests/arena/pa4a-session-read-frame.test.ts", "role": "pa4a-read-frame-tests", "byteLength": 31616, "sha256": "faa0141939e893304dada456b67b36f058118bd4fc6624a42e8b967ce7ea566d"},
+    {"path": "docs/decisions/108-arena-v2-survival-auto-replace-and-expiry.md", "role": "adr-108-authority", "byteLength": 4680, "sha256": "9a400fb5ec45fa04c3ea3f3aa26217c3ba2281c7e15eedb789402c6b12a6aaa9"},
+    {"path": "docs/decisions/110-arena-v2-expired-held-release-disposition.md", "role": "adr-110-expired-held", "byteLength": 4534, "sha256": "9d56a2a139499a42d8654143ca33c8b59bd93aa412c9b0d71d07abaa2476b47d"},
+    {"path": "docs/decisions/113-arena-v2-supply-presentation-adapter-boundary.md", "role": "adr-113-adapter-boundary", "byteLength": 21125, "sha256": "0ccce7df97a8e505e2212cea5da155190edd13b7de26d808fbdc3c84a8943653"},
+    {"path": "docs/decisions/114-arena-v2-art-evidence-versioning-and-joint-gate.md", "role": "adr-114-joint-gate", "byteLength": 10908, "sha256": "580efe43771b09552bf481066d3380719dec53aad88d77b5883e1b0bcb185cd5"},
+    {"path": "packages/arena-presentation-contracts/src/arena-supply-presentation-contract.ts", "role": "pp0-presentation-contract", "byteLength": 61277, "sha256": "42ce6bcda78981effe41141ae5f0aa70642b8ff3c5dba72280e3788eaeaaae46"},
+    {"path": "packages/arena-presentation-runtime/src/arena-supply-presentation-adapter.ts", "role": "pp1-presentation-adapter", "byteLength": 38153, "sha256": "9e8b6102b9a7c4d18f31b4c8132f573425024fa37da62ead0d4a53e1396d6014"},
+    {"path": "tests/arena/presentation/arena-supply-presentation-adapter.test.ts", "role": "pp0-pp1-joint-tests", "byteLength": 61240, "sha256": "cefaa8e80b226f0a5ba726b970a01ed4d681a436d63b5c1fe0c0449b142d7270"}
+  ],
+  "missingMandatorySkillReferences": ["docs/collaboration-protocol.md", "docs/game-design-theory.md"],
+  "rollback": {
+    "action": "delete-only-the-three-uncommitted-v2-files",
+    "allowedPaths": ["docs/quality/art/supply/arena-a1.0-supply-presentation-contract-v2.json", "scripts/art/check-arena-supply-presentation-contract-v2.ts", "scripts/art/test-arena-supply-presentation-contract-v2-fail-closed.ts"],
+    "preservePaths": ["docs/quality/art/supply/arena-a1.0-supply-presentation-contract-v1.json", "packages/arena-presentation-contracts/src/arena-supply-presentation-contract.ts", "packages/arena-presentation-runtime/src/arena-supply-presentation-adapter.ts", "tests/arena/presentation/arena-supply-presentation-adapter.test.ts"],
+    "condition": "before-coordinator-sign-off",
+    "resetOrCheckoutAllowed": false
+  }
+}

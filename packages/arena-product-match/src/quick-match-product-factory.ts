@@ -10,6 +10,7 @@ import {
   readRequiredDataField,
   requireRecord,
   snapshotMethod,
+  snapshotOptionalMethod,
 } from './ports.js';
 import {
   ProductMatchRuntime,
@@ -24,6 +25,8 @@ export interface QuickMatchProductFactoryOptions {
 
 export interface ProductMatchFactoryPort {
   create(): unknown;
+  readonly retryPendingCleanup?: () => void;
+  readonly hasPendingCleanup?: () => boolean;
 }
 
 interface NormalizedOptions {
@@ -80,6 +83,7 @@ export class QuickMatchProductFactory implements ProductMatchFactoryPort {
   readonly #matchConfig: Readonly<Record<string, unknown>>;
   readonly #completionSink: ProductMatchCompletionSink | null;
   #creating = false;
+  #cleanupRetry: (() => unknown) | null = null;
 
   constructor(options: QuickMatchProductFactoryOptions) {
     const normalized = normalizeOptions(options);
@@ -95,6 +99,15 @@ export class QuickMatchProductFactory implements ProductMatchFactoryPort {
     let localMatch: unknown = null;
     let destroyLocalMatch: (() => unknown) | null = null;
     try {
+      if (this.#cleanupRetry) {
+        const cleanup = this.#cleanupRetry;
+        try {
+          containRejectedAsyncReturn(cleanup(), 'QuickMatchProductFactory LocalMatchSession 重试清理');
+          this.#cleanupRetry = null;
+        } catch (error) {
+          throw normalizeThrownError(error, 'QuickMatchProductFactory LocalMatchSession 重试清理失败');
+        }
+      }
       // The product surface intentionally exposes neither difficulty override
       // nor hidden assignment diagnostics.
       localMatch = this.#createQuickMatch(Object.freeze({ config: this.#matchConfig }));
@@ -109,8 +122,12 @@ export class QuickMatchProductFactory implements ProductMatchFactoryPort {
       const cleanupErrors: Error[] = [];
       if (destroyLocalMatch) {
         try {
-          destroyLocalMatch();
+          containRejectedAsyncReturn(
+            destroyLocalMatch(),
+            'QuickMatchProductFactory LocalMatchSession 清理失败',
+          );
         } catch (cleanupError) {
+          this.#cleanupRetry = destroyLocalMatch;
           cleanupErrors.push(normalizeThrownError(
             cleanupError,
             'QuickMatchProductFactory LocalMatchSession 清理失败',
@@ -126,14 +143,59 @@ export class QuickMatchProductFactory implements ProductMatchFactoryPort {
       this.#creating = false;
     }
   }
+
+  retryPendingCleanup(): void {
+    const cleanup = this.#cleanupRetry;
+    if (!cleanup) return;
+    try {
+      containRejectedAsyncReturn(cleanup(), 'QuickMatchProductFactory LocalMatchSession 重试清理');
+      this.#cleanupRetry = null;
+    } catch (error) {
+      throw normalizeThrownError(error, 'QuickMatchProductFactory LocalMatchSession 重试清理失败');
+    }
+  }
+
+  hasPendingCleanup(): boolean {
+    return this.#cleanupRetry !== null;
+  }
 }
 
 export function createProductMatchFactoryPort(value: unknown): Readonly<ProductMatchFactoryPort> {
+  const retryPendingCleanup = snapshotOptionalMethod<() => void>(
+    value,
+    'retryPendingCleanup',
+    'ProductMatchFactory',
+  );
+  const hasPendingCleanup = snapshotOptionalMethod<() => boolean>(
+    value,
+    'hasPendingCleanup',
+    'ProductMatchFactory',
+  );
   return Object.freeze({
     create: snapshotMethod<ProductMatchFactoryPort['create']>(
       value,
       'create',
       'ProductMatchFactory',
     ),
+    ...(retryPendingCleanup
+      ? {
+        retryPendingCleanup: (): void => {
+          const result = retryPendingCleanup();
+          containRejectedAsyncReturn(result, 'ProductMatchFactory.retryPendingCleanup');
+        },
+      }
+      : {}),
+    ...(hasPendingCleanup
+      ? {
+        hasPendingCleanup: (): boolean => {
+          const result = hasPendingCleanup();
+          containRejectedAsyncReturn(result, 'ProductMatchFactory.hasPendingCleanup');
+          if (typeof result !== 'boolean') {
+            throw new TypeError('ProductMatchFactory.hasPendingCleanup 必须返回 boolean。');
+          }
+          return result;
+        },
+      }
+      : {}),
   });
 }

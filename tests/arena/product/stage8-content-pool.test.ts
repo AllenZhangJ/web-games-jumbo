@@ -248,7 +248,7 @@ test('frozen authority content filters registries and map waves, and Replay V5 r
     [STAGE4_EQUIPMENT_ID.HAMMER],
   );
   const runner = new HeadlessMatchRunner(core, { checkpointInterval: 300 });
-  const replay = runner.runUntilEnded(neutralFrames);
+  const replay = runner.runLegacyUntilEndedForAudit(neutralFrames);
   const spawnedDefinitionIds = replay.events
     .filter(({ type }) => type === 'EquipmentSpawned')
     .map(({ equipmentDefinitionId }) => equipmentDefinitionId);

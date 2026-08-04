@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { runInNewContext } from 'node:vm';
 import {
   createArenaMatchResources,
   destroyArenaMatchCandidate,
@@ -9,8 +10,8 @@ function createHarness(options: { failEventWindow?: boolean } = {}) {
   const session = {
     start() {},
     setPaused() {},
-    step() {},
-    getSnapshot() { return { matchSeed: 7, tick: 0 }; },
+    stepWithLegacySnapshotForAudit() {},
+    getLegacyFullSnapshotForAudit() { return { matchSeed: 7, tick: 0 }; },
     getPublicMatchInfo() { return { matchSeed: 7 }; },
     destroy() { cleanup.push('session'); },
   };
@@ -83,5 +84,54 @@ describe('Arena match presentation resources', () => {
     };
     expect(() => createArenaMatchResources(asyncComposition, {})).toThrow(/同步完成/);
     expect(harness.cleanup).toEqual(['session']);
+  });
+
+  it('brand-probes resource creation returns without executing hostile thenables', async () => {
+    let hostileCalls = 0;
+    let getterCalls = 0;
+    const values = [
+      () => {
+        const native = Promise.reject(new Error('resource shadow rejection'));
+        Object.defineProperty(native, 'then', {
+          configurable: true,
+          get() { getterCalls += 1; throw new Error('resource then getter must not execute'); },
+        });
+        return native;
+      },
+      () => {
+        const foreign = runInNewContext('Promise.reject(new Error("resource foreign rejection"))');
+        Object.defineProperty(foreign as object, 'then', { configurable: true, value: null });
+        return foreign;
+      },
+      () => ({ then() { hostileCalls += 1; return Promise.reject(new Error('resource returned rejection')); } }),
+    ];
+    const unhandled: unknown[] = [];
+    const listener = (reason: unknown) => { unhandled.push(reason); };
+    process.on('unhandledRejection', listener);
+    try {
+      for (const makeValue of values) {
+        const value = makeValue();
+        const harness = createHarness();
+        harness.composition.matchService.create = () => value;
+        expect(() => createArenaMatchResources(harness.composition, { width: 1, height: 1 }))
+          .toThrow(/同步完成|Arena quick match/);
+      }
+      const ordinaryHarness = createHarness();
+      ordinaryHarness.composition.matchService.create = () => ({ then: null } as never);
+      let ordinaryError: unknown;
+      try {
+        createArenaMatchResources(ordinaryHarness.composition, { width: 1, height: 1 });
+      } catch (error) {
+        ordinaryError = error;
+      }
+      expect(ordinaryError).toBeInstanceOf(Error);
+      expect((ordinaryError as Error).message).not.toMatch(/同步完成/);
+      await new Promise<void>((resolve) => setImmediate(resolve));
+    } finally {
+      process.off('unhandledRejection', listener);
+    }
+    expect(unhandled).toHaveLength(0);
+    expect(getterCalls).toBe(0);
+    expect(hostileCalls).toBe(0);
   });
 });

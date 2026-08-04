@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import {
   ARENA_MATCH_PHASE,
   ARENA_PARTICIPANT_STATUS,
-  assertMatchCoreTrustedPublicSnapshotReader,
   type ArenaAuthorityEvent,
   type MatchCore,
   type MatchCoreOptions,
@@ -110,16 +109,16 @@ function attackAndWaitForElimination(core: MatchCore) {
 
 test('preparing phase ignores movement and emits one MatchStarted transition', () => {
   const core = createFastCore({ preparingTicks: 2 });
-  const initial = core.getSnapshot();
+  const initial = core.getLegacyFullSnapshotForAudit();
   assert.equal(core.phase, ARENA_MATCH_PHASE.PREPARING);
   const firstEvents = step(core, { 'player-1': { moveX: 1 } });
   assert.equal(firstEvents.length, 0);
-  assert.equal(participant(core.getSnapshot(), 0).position.x, participant(initial, 0).position.x);
+  assert.equal(participant(core.getLegacyFullSnapshotForAudit(), 0).position.x, participant(initial, 0).position.x);
   const secondEvents = step(core, { 'player-1': { moveX: 1 } });
   assert.deepEqual(secondEvents.map((event) => event.type), [ARENA_MATCH_EVENT.MATCH_STARTED]);
   assert.equal(core.phase, ARENA_MATCH_PHASE.RUNNING);
   step(core, { 'player-1': { moveX: 1 } });
-  assert.ok(participant(core.getSnapshot(), 0).position.x > participant(initial, 0).position.x);
+  assert.ok(participant(core.getLegacyFullSnapshotForAudit(), 0).position.x > participant(initial, 0).position.x);
   core.destroy();
 });
 
@@ -135,12 +134,12 @@ test('MatchCore internals are not exposed and snapshots cannot mutate authority'
   assert.throws(() => { Object.assign(core, { matchSeed: 999 }); }, TypeError);
   assert.throws(() => { Object.assign(core, { configHash: 'tampered' }); }, TypeError);
   assert.throws(() => { Object.assign(core, { config: {} }); }, TypeError);
-  const snapshot = core.getSnapshot();
+  const snapshot = core.getLegacyFullSnapshotForAudit();
   assert.equal(snapshot.rngStates, undefined);
   assert.equal(Reflect.set(participant(snapshot, 0), 'lives', 0), false);
   assert.equal(Reflect.set(participant(snapshot, 0).position, 'x', 999), false);
   assert.equal(Reflect.set(snapshot.equipment, 0, snapshot.equipment[0]), false);
-  const authority = core.getSnapshot();
+  const authority = core.getLegacyFullSnapshotForAudit();
   assert.equal(participant(authority, 0).lives, 3);
   assert.notEqual(participant(authority, 0).position.x, 999);
   assert.strictEqual(authority, snapshot);
@@ -149,60 +148,37 @@ test('MatchCore internals are not exposed and snapshots cannot mutate authority'
 
 test('public snapshot cache is identity-stable per state and invalidates after a successful step', () => {
   const core = createFastCore();
-  const first = core.getSnapshot();
-  const repeated = core.getSnapshot();
+  const first = core.getLegacyFullSnapshotForAudit();
+  const repeated = core.getLegacyFullSnapshotForAudit();
   assert.strictEqual(repeated, first);
   assert.equal(first.tick, 0);
   assert.equal(first.eventSequence, 0);
   step(core);
-  const next = core.getSnapshot();
+  const next = core.getLegacyFullSnapshotForAudit();
   assert.notStrictEqual(next, first);
   assert.equal(next.tick, 1);
   assert.ok(next.eventSequence >= first.eventSequence);
-  assert.strictEqual(next, core.getSnapshot());
+  assert.strictEqual(next, core.getLegacyFullSnapshotForAudit());
   assert.throws(() => core.step([createNeutralInputFrame(999, 'player-1')]), /tick/);
-  assert.strictEqual(core.getSnapshot(), next);
+  assert.strictEqual(core.getLegacyFullSnapshotForAudit(), next);
   core.destroy();
 });
 
-test('public snapshot reader is opaque, core-bound, deeply frozen and invalid after destroy', () => {
-  const first = createFastCore({ preparingTicks: 0 });
-  const second = createFastCore({ preparingTicks: 0 });
-  const binding = Object.freeze({ contractHash: 'match-core-test-v1' });
-  const reader = first.createTrustedPublicSnapshotReader(binding);
-  assert.strictEqual(
-    assertMatchCoreTrustedPublicSnapshotReader(reader, first, binding),
-    reader,
-  );
-  assert.throws(
-    () => assertMatchCoreTrustedPublicSnapshotReader(
-      second.createTrustedPublicSnapshotReader(binding),
-      first,
-      binding,
-    ),
-    /不一致|已绑定其他 MatchCore/,
-  );
-  assert.throws(
-    () => first.createTrustedPublicSnapshotReader.call({}),
-    /MatchCore|已销毁/,
-  );
-  assert.throws(
-    () => Object.assign(reader, { read: () => first.getSnapshot() }),
-    TypeError,
-  );
-  const snapshot = reader.read();
-  assert.strictEqual(snapshot, first.getSnapshot());
+test('ambiguous MatchCore snapshot and trusted public reader APIs are removed', () => {
+  const core = createFastCore({ preparingTicks: 0 });
+  const publicCore = record(core, 'MatchCore');
+  assert.equal(publicCore.getSnapshot, undefined);
+  assert.equal(publicCore.createTrustedPublicSnapshotReader, undefined);
+  assert.equal(publicCore.getLegacyFullSnapshotForAudit instanceof Function, true);
+  const snapshot = core.getLegacyFullSnapshotForAudit();
+  assert.ok(Object.isFrozen(snapshot));
   assert.equal(Reflect.set(snapshot, 'tick', 9), false);
-  assert.equal(Reflect.set(snapshot.participants, 0, snapshot.participants[0]), false);
-  assert.equal(Reflect.set(snapshot.map.surfaces[0]!, 'enabled', false), false);
-  first.destroy();
-  assert.throws(() => reader.read(), /已销毁/);
-  second.destroy();
+  core.destroy();
 });
 
 test('MatchCore public snapshot satisfies the shared audit schema without entering the tick path', () => {
   const core = createFastCore();
-  const audited = createArenaMatchSnapshotAudit(core.getSnapshot());
+  const audited = createArenaMatchSnapshotAudit(core.getLegacyFullSnapshotForAudit());
   assert.equal(audited.participants.length, 2);
   assert.equal(audited.map.surfaces.length, 1);
   assert.ok(Object.isFrozen(audited));
@@ -433,7 +409,7 @@ test('MatchCore tick failure preserves cleanup causes and retries unfinished res
       return true;
     },
   );
-  assert.throws(() => core.getSnapshot(), /已销毁/);
+  assert.throws(() => core.getLegacyFullSnapshotForAudit(), /已销毁/);
   core.destroy();
   core.destroy();
   assert.equal(destroyAttempts, 2);
@@ -445,7 +421,7 @@ test('invalid input fails before mutation and leaves MatchCore usable', () => {
   const duplicate = createNeutralInputFrame(core.tick, 'player-1');
   assert.throws(() => core.step([duplicate, duplicate]), /重复输入/);
   assert.equal(core.tick, 0);
-  assert.equal(core.getSnapshot().phase, ARENA_MATCH_PHASE.RUNNING);
+  assert.equal(core.getLegacyFullSnapshotForAudit().phase, ARENA_MATCH_PHASE.RUNNING);
   step(core);
   assert.equal(core.tick, 1);
   core.destroy();
@@ -482,7 +458,7 @@ test('base push has windup, hits once, applies hitstun and produces authoritativ
   const elimination = events.find((event) => event.type === ARENA_MATCH_EVENT.PLAYER_ELIMINATED);
   assert.equal(required(elimination, 'elimination event').participantId, 'player-2');
   assert.equal(required(elimination, 'elimination event').creditedAttackerId, 'player-1');
-  const snapshot = core.getSnapshot();
+  const snapshot = core.getLegacyFullSnapshotForAudit();
   assert.equal(participant(snapshot, 0).eliminations, 1);
   assert.equal(participant(snapshot, 1).lives, 2);
   assert.equal(participant(snapshot, 1).status, ARENA_PARTICIPANT_STATUS.RESPAWNING);
@@ -501,7 +477,7 @@ test('same-tick symmetric attacks trade without participant-order advantage', ()
     hits.map((event) => [event.attackerId, event.targetId]),
     [['player-1', 'player-2'], ['player-2', 'player-1']],
   );
-  const snapshot = core.getSnapshot();
+  const snapshot = core.getLegacyFullSnapshotForAudit();
   assert.equal(participant(snapshot, 0).hitstunTicks, core.config.basePush.hitstunTicks);
   assert.equal(participant(snapshot, 1).hitstunTicks, core.config.basePush.hitstunTicks);
   assert.ok(participant(snapshot, 0).velocity.x < 0);
@@ -514,7 +490,7 @@ test('three eliminations respawn twice with invulnerability and then end the mat
   for (let life = 2; life >= 0; life -= 1) {
     const eliminationEvents = attackAndWaitForElimination(core);
     assert.ok(eliminationEvents.some((event) => event.type === ARENA_MATCH_EVENT.PLAYER_ELIMINATED));
-    const target = participant(core.getSnapshot(), 1);
+    const target = participant(core.getLegacyFullSnapshotForAudit(), 1);
     assert.equal(target.lives, life);
     if (life > 0) {
       const respawnEvents = runUntil(
@@ -523,7 +499,7 @@ test('three eliminations respawn twice with invulnerability and then end the mat
         10,
       );
       assert.ok(respawnEvents.some((event) => event.type === ARENA_MATCH_EVENT.PLAYER_RESPAWNED));
-      assert.equal(participant(core.getSnapshot(), 1).invulnerableTicks, 3);
+      assert.equal(participant(core.getLegacyFullSnapshotForAudit(), 1).invulnerableTicks, 3);
       for (let wait = 0; wait < 4; wait += 1) step(core);
     }
   }
@@ -563,7 +539,7 @@ test('a surviving winner is returned to a safe active state after a simultaneous
     );
     for (let wait = 0; wait < 4; wait += 1) step(core);
   }
-  assert.equal(participant(core.getSnapshot(), 1).lives, 1);
+  assert.equal(participant(core.getLegacyFullSnapshotForAudit(), 1).lives, 1);
 
   let terminalEvents: readonly ArenaAuthorityEvent[] = [];
   for (let tick = 0; tick < 240 && core.phase !== ARENA_MATCH_PHASE.ENDED; tick += 1) {
@@ -577,7 +553,7 @@ test('a surviving winner is returned to a safe active state after a simultaneous
     2,
   );
   assert.equal(required(core.result, 'match result').winnerId, 'player-1');
-  const winner = participant(core.getSnapshot(), 0);
+  const winner = participant(core.getLegacyFullSnapshotForAudit(), 0);
   assert.equal(winner.status, ARENA_PARTICIPANT_STATUS.ACTIVE);
   assert.ok(winner.position.y > core.config.arena.killY);
   core.destroy();

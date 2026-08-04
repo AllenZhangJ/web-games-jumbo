@@ -30,7 +30,7 @@ test('same bot seed and observations produce identical bounded InputFrames', () 
   const first = createController(core);
   const second = createController(core);
   for (let tick = 0; tick < 180; tick += 1) {
-    const snapshot = core.getSnapshot();
+    const snapshot = core.getLegacyFullSnapshotForAudit();
     const firstFrame = first.createInput(snapshot);
     const secondFrame = second.createInput(snapshot);
     assert.deepEqual(firstFrame, secondFrame);
@@ -57,7 +57,7 @@ test('hard bot remains human-limited instead of receiving instant perfect contro
 test('bot pursues only visible reachable equipment through ordinary bounded movement input', () => {
   const core = createArenaV1MatchCore({ seed: 41, config: { preparingTicks: 0 } });
   const controller = createController(core, 'hard');
-  const frame = controller.createInput(core.getSnapshot());
+  const frame = controller.createInput(core.getLegacyFullSnapshotForAudit());
   const debug = controller.getDebugSnapshot();
   assert.equal(debug.goalId, BOT_GOAL_ID.ACQUIRE_EQUIPMENT);
   assert.equal(frame.primaryPressed, false);
@@ -70,13 +70,13 @@ test('bot pursues only visible reachable equipment through ordinary bounded move
 test('BotController enforces consecutive ticks and idempotent destruction', () => {
   const core = createArenaV1MatchCore({ seed: 5, config: { preparingTicks: 0 } });
   const controller = createController(core, 'normal');
-  controller.createInput(core.getSnapshot());
+  controller.createInput(core.getLegacyFullSnapshotForAudit());
   core.step([]);
   core.step([]);
-  assert.throws(() => controller.createInput(core.getSnapshot()), /tick 必须连续/);
+  assert.throws(() => controller.createInput(core.getLegacyFullSnapshotForAudit()), /tick 必须连续/);
   controller.destroy();
   controller.destroy();
-  assert.throws(() => controller.createInput(core.getSnapshot()), /已销毁/);
+  assert.throws(() => controller.createInput(core.getLegacyFullSnapshotForAudit()), /已销毁/);
   core.destroy();
 });
 
@@ -84,7 +84,7 @@ test('invalid snapshot identity does not consume history or RNG and the same tic
   const core = createArenaV1MatchCore({ seed: 13, config: { preparingTicks: 0 } });
   const recovering = createController(core, 'hard');
   const fresh = createController(core, 'hard');
-  const snapshot = core.getSnapshot();
+  const snapshot = core.getLegacyFullSnapshotForAudit();
   const invalid = structuredClone(snapshot) as unknown as {
     participants: Array<{ id: string }>;
   };
@@ -102,7 +102,7 @@ test('invalid snapshot identity does not consume history or RNG and the same tic
 test('debug snapshot is deeply frozen and cannot mutate controller state', () => {
   const core = createArenaV1MatchCore({ seed: 17, config: { preparingTicks: 0 } });
   const controller = createController(core, 'normal');
-  controller.createInput(core.getSnapshot());
+  controller.createInput(core.getLegacyFullSnapshotForAudit());
   const debug = controller.getDebugSnapshot();
   assert.equal(Object.isFrozen(debug), true);
   assert.equal(Object.isFrozen(debug.personality), true);
@@ -119,7 +119,7 @@ test('createInput rejects reentrancy without poisoning the retryable input bound
   const core = createArenaV1MatchCore({ seed: 19, config: { preparingTicks: 0 } });
   const controller = createController(core, 'hard');
   const fresh = createController(core, 'hard');
-  const snapshot = core.getSnapshot();
+  const snapshot = core.getLegacyFullSnapshotForAudit();
   let reentered = false;
   const proxy = new Proxy(snapshot, {
     getOwnPropertyDescriptor(target, property) {
@@ -143,11 +143,11 @@ test('an internal planning failure destroys the controller instead of continuing
   const cosine = Math.cos;
   Math.cos = () => { throw new Error('forced internal failure'); };
   try {
-    assert.throws(() => controller.createInput(core.getSnapshot()), /forced internal failure/);
+    assert.throws(() => controller.createInput(core.getLegacyFullSnapshotForAudit()), /forced internal failure/);
   } finally {
     Math.cos = cosine;
   }
-  assert.throws(() => controller.createInput(core.getSnapshot()), /已销毁/);
+  assert.throws(() => controller.createInput(core.getLegacyFullSnapshotForAudit()), /已销毁/);
   controller.destroy();
   core.destroy();
 });
@@ -172,7 +172,7 @@ test('BotController resolves its profile through the injected immutable Registry
     characterRadius: character.collision.radius,
     maximumStepHeight: character.movement.automaticStepHeight,
   });
-  const frame = controller.createInput(core.getSnapshot());
+  const frame = controller.createInput(core.getLegacyFullSnapshotForAudit());
   assert.ok(Math.hypot(frame.moveX, frame.moveZ) <= 0.5 + 1e-12);
   controller.destroy();
   assert.throws(() => new BotController({

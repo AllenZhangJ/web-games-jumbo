@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { describe, expect, it } from 'vitest';
 import { BotProfileRegistry, BOT_PROFILE_REGISTRY } from '@number-strategy-jump/arena-bot';
 import { QuickMatchService } from '../src/index.js';
@@ -76,5 +77,17 @@ describe('arena-quick-match lifecycle foundation', () => {
       coreFactory: () => null as never,
       botProfileRegistry: { require: () => BOT_PROFILE_REGISTRY.require('hard') } as never,
     })).toThrow(/已校验的只读 Registry/);
+  });
+
+  it('classifies a missing foreign Session method without observing Error.message', async () => {
+    const source = await readFile(new URL('../src/quick-match-service.ts', import.meta.url), 'utf8');
+    expect(source).not.toMatch(/error\.message/);
+    expect(source).toMatch(/class MissingDataMethodError extends TypeError/);
+    expect(source).toMatch(/if \(isMissingDataMethodError\(error\)\)/);
+    expect(() => new QuickMatchService({
+      seedSource: {} as never,
+    }, {
+      coreFactory: () => null as never,
+    })).toThrow(TypeError);
   });
 });

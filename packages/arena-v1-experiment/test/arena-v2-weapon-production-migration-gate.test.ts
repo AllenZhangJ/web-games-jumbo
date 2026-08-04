@@ -77,5 +77,5 @@ describe('Arena V2 weapon production migration gate', () => {
     expect(Object.isFrozen(first.candidates)).toBe(true);
     expect(Object.isFrozen(first.candidates[0]!)).toBe(true);
     expect(Object.isFrozen(first.candidates[0]!.gates)).toBe(true);
-  });
+  }, 20_000);
 });

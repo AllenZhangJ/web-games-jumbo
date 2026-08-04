@@ -33,8 +33,8 @@ describe('Arena V1 strict application composition', () => {
   it('keeps same-seed quick matches deterministic through the public composition root', () => {
     const first = new ArenaV1QuickMatchService().create({ matchSeed: 20260722 });
     const second = new ArenaV1QuickMatchService().create({ matchSeed: 20260722 });
-    expect(createDeterministicDataHash(first.session.getSnapshot(), 'first snapshot'))
-      .toBe(createDeterministicDataHash(second.session.getSnapshot(), 'second snapshot'));
+    expect(createDeterministicDataHash(first.session.getLegacyFullSnapshotForAudit(), 'first snapshot'))
+      .toBe(createDeterministicDataHash(second.session.getLegacyFullSnapshotForAudit(), 'second snapshot'));
     expect(first.opponent).toEqual(second.opponent);
     first.session.destroy();
     second.session.destroy();

@@ -6,6 +6,7 @@ export type {
   ProductRewardSnapshot,
   ProductSessionControllerOptions,
   ProductSessionRenewLeaseOutcome,
+  ProductSessionReadFrameStartOutcome,
+  ProductSessionReadFrameStepOutcome,
   ProductSessionSnapshot,
-  ProductSessionStepOutcome,
 } from './product-session-controller.js';

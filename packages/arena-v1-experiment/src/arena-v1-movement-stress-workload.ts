@@ -148,7 +148,7 @@ class ArenaV1MovementStressCase {
   #snapshot() {
     const core = this.#requireCore();
     return assertArenaMovementSnapshotInvariants(
-      core.getSnapshot(),
+      core.getLegacyFullSnapshotForAudit(),
       core.config,
       (participantId) => core.getCharacterDefinition(participantId),
     );
@@ -194,7 +194,7 @@ class ArenaV1MovementStressCase {
     return Object.freeze({
       inputFrames: frames,
       events,
-      snapshot: createArenaMovementExperimentSnapshot(core.getSnapshot()),
+      snapshot: createArenaMovementExperimentSnapshot(core.getLegacyFullSnapshotForAudit()),
     });
   }
 

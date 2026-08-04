@@ -27,10 +27,17 @@ export type {
   ActionResolutionResult,
 } from './action-resolver.js';
 export type { ActionResolutionKind } from '@number-strategy-jump/arena-contracts';
-export { ActionAffordanceProjector } from './action-affordance.js';
+export {
+  ACTION_AFFORDANCE_PROFILE,
+  ActionAffordanceProjector,
+} from './action-affordance.js';
 export type {
+  ActionAffordanceProfile,
+  ActionAffordanceProfileResult,
   ActionAffordance,
   ActionAffordanceOutcome,
+  BotMobilityAffordance,
+  LocalActionAffordance,
 } from './action-affordance.js';
 export { ActionExecutionSystem } from './action-execution-system.js';
 export type {

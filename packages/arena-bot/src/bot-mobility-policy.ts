@@ -2,7 +2,7 @@ import { ARENA_PARTICIPANT_STATUS } from '@number-strategy-jump/arena-match';
 import { MOVEMENT_MODE } from '@number-strategy-jump/arena-movement';
 import { BOT_GOAL_ID } from './bot-goals.js';
 import type { BotGoalPlan } from './bot-goals.js';
-import type { BotObservation } from './bot-observation.js';
+import type { BotObservationV5 } from './bot-observation.js';
 import type { UtilityDecision } from './utility-arbitrator.js';
 
 export const BOT_MOBILITY_INTENT = Object.freeze({
@@ -15,15 +15,17 @@ export const BOT_MOBILITY_INTENT = Object.freeze({
 export type BotMobilityIntent = typeof BOT_MOBILITY_INTENT[keyof typeof BOT_MOBILITY_INTENT];
 
 export interface BotMobilitySelection {
-  readonly observation: BotObservation;
+  readonly observation: BotObservationV5;
   readonly decision: UtilityDecision<BotGoalPlan>;
 }
 
 function channelIsSelected(
-  observation: BotObservation,
+  observation: BotObservationV5,
   channel: 'jump' | 'slam',
 ): boolean {
-  return observation.self.actionAffordance.channels[channel].kind === 'selected';
+  return channel === 'jump'
+    ? observation.botMobility.channels.jump.kind === 'selected'
+    : observation.botMobility.channels.slam.kind === 'selected';
 }
 
 function horizontalDistance(

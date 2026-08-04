@@ -67,7 +67,7 @@ function eventVectorX(event: ArenaAuthorityEvent | undefined, key: string): numb
 }
 
 function participant(core: EquipmentCore, index = 0): ArenaParticipantSnapshot {
-  return required(core.getSnapshot().participants[index]);
+  return required(core.getLegacyFullSnapshotForAudit().participants[index]);
 }
 
 function affordance(core: EquipmentCore): Readonly<Record<string, unknown>> {
@@ -112,7 +112,7 @@ test('MatchCore automatically picks up equipment and resolves its action on the 
     ARENA_MATCH_EVENT.ACTION_STARTED,
   ]);
   assert.equal(eventValue(first.at(-1), 'action'), STAGE4_ACTION_ID.HAMMER_SMASH);
-  const initialSnapshot = core.getSnapshot();
+  const initialSnapshot = core.getLegacyFullSnapshotForAudit();
   const initialParticipant = required(initialSnapshot.participants[0]);
   assert.equal(required(initialParticipant.equipment).definitionId, STAGE4_EQUIPMENT_ID.HAMMER);
   assert.equal(required(initialParticipant.equipment).cooldownRemainingTicks, 72);
@@ -216,11 +216,11 @@ test('equipment snapshot mutations cannot write back into authority or state has
   const core = createEquipmentCore();
   step(core);
   const beforeHash = core.getStateHash();
-  const exposed = core.getSnapshot();
+  const exposed = core.getLegacyFullSnapshotForAudit();
   Reflect.set(required(exposed.equipment[0]), 'position', { x: 999, y: 999, z: 999 });
   Reflect.set(required(required(exposed.participants[0]).equipment), 'cooldownRemainingTicks', 999);
   assert.equal(core.getStateHash(), beforeHash);
-  const authority = core.getSnapshot();
+  const authority = core.getLegacyFullSnapshotForAudit();
   assert.notEqual(required(authority.equipment[0]).position?.x, 999);
   assert.notEqual(required(required(authority.participants[0]).equipment).cooldownRemainingTicks, 999);
   core.destroy();
@@ -249,7 +249,7 @@ test('owner elimination drops equipment at the last valid grounded position', ()
     events.some((event) => event.type === ARENA_MATCH_EVENT.EQUIPMENT_DROP_FALLBACK),
     false,
   );
-  const snapshot = core.getSnapshot();
+  const snapshot = core.getLegacyFullSnapshotForAudit();
   assert.equal(required(snapshot.participants[0]).equipment, null);
   const droppedEquipment = required(snapshot.equipment[0]);
   assert.equal(droppedEquipment.locationState, EQUIPMENT_LOCATION_STATE.DROPPED);

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CharacterRegistry } from '@number-strategy-jump/arena-definitions';
 import {
+  ARENA_EQUIPMENT_SUPPLY_DISPOSITION_SCHEMA_VERSION,
   createArenaConfigHash,
   createCharacterRuntimeReference,
   createMatchStateHash,
@@ -189,6 +190,10 @@ describe('arena-match authority foundation', () => {
         supplyDefinitionId: lifecycle.supplyDefinitionId,
         nextTick: 1_201,
         activeSupplies: [lifecycle],
+      },
+      equipmentSupplyDisposition: {
+        schemaVersion: ARENA_EQUIPMENT_SUPPLY_DISPOSITION_SCHEMA_VERSION,
+        expiredHeldSupplyEquipmentInstanceIds: [],
       },
     };
     expect(createMatchStateHash(supplied)).not.toBe(createMatchStateHash(ordinary));

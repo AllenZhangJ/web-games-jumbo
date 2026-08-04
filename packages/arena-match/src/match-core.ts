@@ -19,11 +19,13 @@ import {
 import {
   createArenaConfigHash,
   createMatchStateHash,
+  ARENA_EQUIPMENT_SUPPLY_DISPOSITION_SCHEMA_VERSION,
   type ArenaInternalEquipmentSupplyTimelineSnapshot,
   type ArenaInternalMatchSnapshot,
 } from './state-hash.js';
 import {
   ARENA_MATCH_EVENT as EVENT,
+  EQUIPMENT_DESPAWN_REASON,
   combineCleanupFailure,
   createDeterministicDataHash,
   createEquipmentExpiredEventPayload,
@@ -32,13 +34,16 @@ import {
   createEquipmentSpawnedEventPayload,
   createRng,
   deriveSeed,
+  isNormalizedInputFrame,
   normalizeInputFrames,
   normalizeThrownError,
   type ArenaInputFrame,
+  type ArenaMatchReadProfile,
   type ArenaMatchSnapshot,
   type ArenaPublicSupplyProjection,
   type DeepReadonly,
   type DeterministicRng,
+  type WorldSnapshotV2,
 } from '@number-strategy-jump/arena-contracts';
 import {
   assertPhysicsWorld,
@@ -70,6 +75,31 @@ import {
   MovementSystem,
   type MovementMutationPort,
 } from '@number-strategy-jump/arena-movement';
+import {
+  createMatchReadBindingForOwner,
+  createMatchReadOwnerPort,
+  createMatchReadReaderForOwner,
+  invalidateMatchReadOwner,
+  type MatchReadBinding,
+  type MatchReadOwnerPort,
+  type MatchReadReader,
+} from './match-read-port.js';
+import {
+  composeBotMobilitySidecarV2,
+  composeFullAuditSidecarV2,
+  composeLocalActionSidecarV2,
+  composeMatchReadFrameV2,
+  composeWorldSnapshotV2,
+  type MatchReadFrameReader,
+  type MatchReadModelBuildCandidate,
+  type MatchReadModelIdentity,
+  type MatchReadSidecarReader,
+  type MatchReadWorldSource,
+} from './match-read-frame.js';
+import type {
+  BotMobilitySidecarV2,
+  FullAuditSidecarV2,
+} from '@number-strategy-jump/arena-contracts';
 
 // Equipment positions share the character-body coordinate convention so a
 // dropped item and a configured spawn can use the same validation path. The
@@ -172,40 +202,216 @@ export interface MatchInternalCheckpointIdentity {
   readonly stateHash: string;
 }
 
-/** Opaque reader bound to one concrete MatchCore instance. */
-export interface MatchCoreTrustedPublicSnapshotReader {
-  read(): DeepReadonly<ArenaMatchSnapshot>;
+/**
+ * Opaque, single-consumer input batch for the LocalMatchSession fast path.
+ * The marker is intentionally empty: ownership, provenance and frame data
+ * live in module-private WeakMaps and cannot be supplied by a structural cast.
+ */
+export interface MatchCoreTrustedInputFrameBatch {
+  readonly __arenaTrustedInputFrameBatch?: never;
 }
 
-const TRUSTED_PUBLIC_SNAPSHOT_READERS = new WeakSet<object>();
-const TRUSTED_PUBLIC_SNAPSHOT_READER_OWNERS = new WeakMap<object, MatchCore>();
-const TRUSTED_PUBLIC_SNAPSHOT_READER_BINDINGS = new WeakMap<object, object | undefined>();
-const TRUSTED_PUBLIC_SNAPSHOT_BINDING_OWNERS = new WeakMap<object, MatchCore>();
+interface TrustedInputFrameBatchRecord {
+  readonly owner: MatchCore;
+  readonly tick: number;
+  readonly eventSequence: number;
+  readonly frames: readonly ArenaInputFrame[];
+  consumed: boolean;
+}
 
-export function assertMatchCoreTrustedPublicSnapshotReader(
+const TRUSTED_INPUT_FRAME_BATCHES = new WeakMap<object, TrustedInputFrameBatchRecord>();
+const NORMALIZED_INPUT_FRAME_KEYS = Object.freeze([
+  'tick',
+  'participantId',
+  'moveX',
+  'moveZ',
+  'primaryPressed',
+  'primaryHeld',
+  'jumpPressed',
+  'jumpHeld',
+  'slamPressed',
+]);
+
+function readFrozenDataField(value: object, key: string, name: string): unknown {
+  const descriptor = Object.getOwnPropertyDescriptor(value, key);
+  if (
+    descriptor === undefined
+    || !descriptor.enumerable
+    || !('value' in descriptor)
+    || descriptor.writable
+    || descriptor.configurable
+  ) throw new TypeError(`${name}.${key} 必须是冻结数据字段。`);
+  return descriptor.value;
+}
+
+function assertExactFrozenRecord(
   value: unknown,
-  expectedOwner?: MatchCore,
-  expectedBinding?: object,
-): MatchCoreTrustedPublicSnapshotReader {
+  keys: readonly string[],
+  name: string,
+): asserts value is Record<string, unknown> {
   if (
-    (typeof value !== 'object' || value === null)
-    || !TRUSTED_PUBLIC_SNAPSHOT_READERS.has(value)
-  ) {
-    throw new TypeError('MatchCore trusted public snapshot reader 无效。');
+    value === null
+    || typeof value !== 'object'
+    || Array.isArray(value)
+    || Object.getPrototypeOf(value) !== Object.prototype
+    || !Object.isFrozen(value)
+  ) throw new TypeError(`${name} 必须是冻结 plain record。`);
+  const ownKeys = Reflect.ownKeys(value);
+  if (
+    ownKeys.length !== keys.length
+    || ownKeys.some((key) => typeof key !== 'string' || !keys.includes(key))
+    || keys.some((key) => !ownKeys.includes(key))
+  ) throw new TypeError(`${name} 字段集合不符合 trusted InputFrame 合同。`);
+  for (const key of keys) readFrozenDataField(value, key, name);
+}
+
+function assertTrustedNormalizedFrame(
+  value: unknown,
+  expectedTick: number,
+  expectedParticipantId: string,
+  name: string,
+): asserts value is ArenaInputFrame {
+  if (!isNormalizedInputFrame(value)) {
+    throw new TypeError(`${name} 必须来自 arena-contracts strict normalizer。`);
+  }
+  assertExactFrozenRecord(value, NORMALIZED_INPUT_FRAME_KEYS, name);
+  const tick = readFrozenDataField(value, 'tick', name);
+  const participantId = readFrozenDataField(value, 'participantId', name);
+  if (tick !== expectedTick) {
+    throw new RangeError(`${name}.tick 与当前 MatchCore tick 不一致。`);
+  }
+  if (participantId !== expectedParticipantId) {
+    throw new RangeError(`${name}.participantId 顺序或身份不一致。`);
   }
   if (
-    expectedOwner !== undefined
-    && TRUSTED_PUBLIC_SNAPSHOT_READER_OWNERS.get(value) !== expectedOwner
-  ) {
-    throw new RangeError('trusted public snapshot reader 与当前 MatchCore 不一致。');
+    typeof tick !== 'number'
+    || !Number.isSafeInteger(tick)
+    || tick < 0
+    || typeof participantId !== 'string'
+    || participantId.length === 0
+  ) throw new TypeError(`${name} 身份字段无效。`);
+  for (const key of ['moveX', 'moveZ']) {
+    const movement = readFrozenDataField(value, key, name);
+    if (typeof movement !== 'number' || !Number.isFinite(movement)) {
+      throw new TypeError(`${name}.${key} 必须是有限数。`);
+    }
   }
+  const moveX = readFrozenDataField(value, 'moveX', name) as number;
+  const moveZ = readFrozenDataField(value, 'moveZ', name) as number;
   if (
-    expectedBinding !== undefined
-    && TRUSTED_PUBLIC_SNAPSHOT_READER_BINDINGS.get(value) !== expectedBinding
-  ) {
-    throw new RangeError('trusted public snapshot reader 与当前组合合同不一致。');
+    Math.abs(moveX) > 1
+    || Math.abs(moveZ) > 1
+    || Math.hypot(moveX, moveZ) > 1
+  ) throw new RangeError(`${name} movement 未经过规范化。`);
+  for (const key of [
+    'primaryPressed',
+    'primaryHeld',
+    'jumpPressed',
+    'jumpHeld',
+    'slamPressed',
+  ]) {
+    if (typeof readFrozenDataField(value, key, name) !== 'boolean') {
+      throw new TypeError(`${name}.${key} 必须是 boolean。`);
+    }
   }
-  return value as MatchCoreTrustedPublicSnapshotReader;
+}
+
+function assertTrustedInputFrameArray(
+  value: unknown,
+  participantIds: readonly string[],
+  tick: number,
+): readonly ArenaInputFrame[] {
+  if (
+    !Array.isArray(value)
+    || Object.getPrototypeOf(value) !== Array.prototype
+    || !Object.isFrozen(value)
+  ) throw new TypeError('trusted InputFrame batch 必须是冻结数组。');
+  const lengthDescriptor = Object.getOwnPropertyDescriptor(value, 'length');
+  if (
+    lengthDescriptor === undefined
+    || !('value' in lengthDescriptor)
+    || lengthDescriptor.value !== participantIds.length
+    || lengthDescriptor.writable
+    || lengthDescriptor.enumerable
+    || lengthDescriptor.configurable
+  ) throw new TypeError('trusted InputFrame batch length 不一致。');
+  const expectedKeys = new Set([
+    'length',
+    ...participantIds.map((_, index) => String(index)),
+  ]);
+  const ownKeys = Reflect.ownKeys(value);
+  if (
+    ownKeys.length !== expectedKeys.size
+    || ownKeys.some((key) => typeof key !== 'string' || !expectedKeys.has(key))
+    || [...expectedKeys].some((key) => !ownKeys.includes(key))
+  ) throw new TypeError('trusted InputFrame batch 不能包含稀疏、额外或 Symbol 字段。');
+  const frames = participantIds.map((participantId, index) => {
+    const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+    if (
+      descriptor === undefined
+      || !descriptor.enumerable
+      || !('value' in descriptor)
+      || descriptor.writable
+      || descriptor.configurable
+    ) throw new TypeError(`trusted InputFrame batch[${index}] 不是冻结数据字段。`);
+    const frame = descriptor.value;
+    assertTrustedNormalizedFrame(frame, tick, participantId, `trusted InputFrame batch[${index}]`);
+    return frame;
+  });
+  return Object.freeze(frames);
+}
+
+function createTrustedInputFrameBatch(
+  owner: MatchCore,
+  value: unknown,
+  participantIds: readonly string[],
+  tick: number,
+  eventSequence: number,
+): MatchCoreTrustedInputFrameBatch {
+  const frames = assertTrustedInputFrameArray(value, participantIds, tick);
+  const token = Object.freeze(Object.create(null)) as MatchCoreTrustedInputFrameBatch;
+  TRUSTED_INPUT_FRAME_BATCHES.set(token, {
+    owner,
+    tick,
+    eventSequence,
+    frames,
+    consumed: false,
+  });
+  return token;
+}
+
+function consumeTrustedInputFrameBatch(
+  owner: MatchCore,
+  value: unknown,
+  tick: number,
+  eventSequence: number,
+): readonly ArenaInputFrame[] {
+  if (value === null || (typeof value !== 'object' && typeof value !== 'function')) {
+    throw new TypeError('trusted InputFrame batch 无效。');
+  }
+  const record = TRUSTED_INPUT_FRAME_BATCHES.get(value);
+  if (record === undefined) throw new TypeError('trusted InputFrame batch provenance 无效。');
+  if (record.owner !== owner) throw new RangeError('trusted InputFrame batch 与当前 MatchCore 不一致。');
+  if (record.consumed) throw new Error('trusted InputFrame batch 已被消费。');
+  if (record.tick !== tick || record.eventSequence !== eventSequence) {
+    throw new RangeError('trusted InputFrame batch 已过期。');
+  }
+  record.consumed = true;
+  return record.frames;
+}
+
+export function readConsumedTrustedInputFrameBatch(
+  owner: MatchCore,
+  value: unknown,
+): readonly ArenaInputFrame[] {
+  if (value === null || (typeof value !== 'object' && typeof value !== 'function')) {
+    throw new TypeError('trusted InputFrame batch 无效。');
+  }
+  const record = TRUSTED_INPUT_FRAME_BATCHES.get(value);
+  if (record === undefined || record.owner !== owner || !record.consumed) {
+    throw new TypeError('trusted InputFrame batch 未完成有效消费。');
+  }
+  return record.frames;
 }
 
 interface MovementPreparation {
@@ -369,6 +575,48 @@ export class MatchCore {
   #eventSequence: number;
   #stepping: boolean;
   #publicSnapshotCache: PublicSnapshotCacheEntry | null;
+  #matchReadOwnerPort: MatchReadOwnerPort | null = null;
+  #matchReadBindingCreating = false;
+  #callerInputValidationActive = false;
+  #matchReadBuildActive = false;
+  #matchReadWorldMemo: {
+    readonly identity: MatchReadModelIdentity;
+    readonly snapshot: DeepReadonly<WorldSnapshotV2>;
+  } | null = null;
+
+  #withMatchReadBuild<T>(operation: () => T): T {
+    if (this.#matchReadBuildActive) {
+      throw new Error('MatchRead model 构造不可重入。');
+    }
+    if (this.#stepping || this.#callerInputValidationActive || this.#matchReadBindingCreating) {
+      throw new Error('MatchRead model 构造期间 authority 不可重入。');
+    }
+    this.#matchReadBuildActive = true;
+    try {
+      return operation();
+    } finally {
+      this.#matchReadBuildActive = false;
+    }
+  }
+
+  #assertNoMatchReadBuild(operation: string): void {
+    if (this.#matchReadBuildActive) {
+      throw new Error(`${operation} 不能在 MatchRead model 构造期间调用。`);
+    }
+  }
+
+  #withCallerInputValidation<T>(operation: () => T): T {
+    if (this.#callerInputValidationActive) {
+      throw new Error('MatchCore caller input validation 不可重入。');
+    }
+    this.#assertNoMatchReadBuild('caller input validation');
+    this.#callerInputValidationActive = true;
+    try {
+      return operation();
+    } finally {
+      this.#callerInputValidationActive = false;
+    }
+  }
 
   #requireResource<T>(resource: T | null, name: string): T {
     if (resource === null) throw new Error(`MatchCore ${name} 资源不可用。`);
@@ -405,6 +653,9 @@ export class MatchCore {
 
   #cleanupConstructionFailure(error: unknown): Error {
     const cleanupErrors: Error[] = [];
+    this.#matchReadWorldMemo = null;
+    invalidateMatchReadOwner(this.#matchReadOwnerPort);
+    this.#matchReadOwnerPort = null;
     try {
       if (typeof this.#equipmentSupplyTimeline?.destroy === 'function') {
         this.#equipmentSupplyTimeline.destroy();
@@ -501,6 +752,7 @@ export class MatchCore {
     this.#terminalTimelineSnapshot = null;
     this.#stepping = false;
     this.#publicSnapshotCache = null;
+    this.#matchReadOwnerPort = null;
     this.#rngStreams = Object.fromEntries(
       ['spawn', 'map', 'equipment', 'bot', 'presentation'].map((name) => [
         name,
@@ -669,6 +921,18 @@ export class MatchCore {
           position: spawn.position,
         });
       }
+      this.#matchReadOwnerPort = createMatchReadOwnerPort({
+        owner: this,
+        participantIds: this.config.participantIds,
+        mapDefinitionId: this.config.mapDefinitionId,
+        contentSelectionHash: this.config.contentSelection?.contentHash ?? null,
+        configHash: this.#configHash,
+        authorityContentHash: this.ruleContentHash,
+        readIdentity: (participantId, profile) => this.#readMatchReadIdentity(
+          participantId,
+          profile,
+        ),
+      });
     } catch (error) {
       throw this.#cleanupConstructionFailure(error);
     }
@@ -712,6 +976,10 @@ export class MatchCore {
 
   getCharacterDefinition(participantId: unknown): CharacterDefinition {
     this.#assertUsable();
+    this.#assertNoMatchReadBuild('character definition');
+    if (this.#callerInputValidationActive) {
+      throw new Error('caller input validation 期间不能读取 character definition。');
+    }
     const runtime = typeof participantId === 'string'
       ? this.#characterRuntimes.get(participantId)
       : undefined;
@@ -721,6 +989,22 @@ export class MatchCore {
 
   #assertUsable(): void {
     if (this.#destroyed) throw new Error('MatchCore 已销毁。');
+  }
+
+  #readMatchReadIdentity(
+    participantId: string,
+    _profile: ArenaMatchReadProfile,
+  ) {
+    this.#assertUsable();
+    this.#assertNoMatchReadBuild('MatchRead identity');
+    if (this.#stepping) throw new Error('MatchCore step() 期间不能读取 MatchRead reader。');
+    if (this.#callerInputValidationActive) {
+      throw new Error('caller input validation 期间不能读取 MatchRead reader。');
+    }
+    if (!this.config.participantIds.includes(participantId)) {
+      throw new RangeError(`未知 MatchRead participant ${participantId}。`);
+    }
+    return this.#snapshotMatchReadAuthorityIdentity();
   }
 
   #emit(type: string, payload: UnknownRecord = {}): ArenaAuthorityEvent {
@@ -804,44 +1088,102 @@ export class MatchCore {
     )));
   }
 
+  #runValidatedStep(frames: readonly ArenaInputFrame[]): readonly ArenaAuthorityEvent[] {
+    this.#publicSnapshotCache = null;
+    this.#events = [];
+    try {
+      return this.#stepNormalized(frames);
+    } catch (error) {
+      const failure = normalizeThrownError(error, 'MatchCore tick 失败');
+      // Internal fail-closed cleanup is allowed after the authoritative
+      // mutation phase unwinds; external destroy() remains blocked while a
+      // caller-owned input is being validated.
+      this.#stepping = false;
+      try {
+        this.destroy();
+      } catch (cleanupError) {
+        const causes = cleanupCauses(cleanupError);
+        const cleanupErrors = causes
+          ? causes.map((cause) => normalizeThrownError(
+            cause,
+            'MatchCore tick 清理失败',
+          ))
+          : [normalizeThrownError(cleanupError, 'MatchCore tick 清理失败')];
+        throw combineCleanupFailure(
+          failure,
+          cleanupErrors,
+          'MatchCore tick 失败且清理未完整完成。',
+        );
+      }
+      throw failure;
+    }
+  }
+
   step(inputFrames: readonly unknown[] = []): readonly ArenaAuthorityEvent[] {
     this.#assertUsable();
+    this.#assertNoMatchReadBuild('MatchCore.step()');
     if (this.phase === ARENA_MATCH_PHASE.ENDED) throw new Error('比赛已经结束，不能继续 step。');
     if (this.#stepping) throw new Error('MatchCore.step() 不可重入。');
+    if (this.#matchReadBindingCreating) {
+      throw new Error('MatchRead binding 创建期间不能 step。');
+    }
+    if (this.#callerInputValidationActive) {
+      throw new Error('caller input validation 期间不能 step。');
+    }
     this.#stepping = true;
     try {
       const frames = normalizeInputFrames(inputFrames, {
         tick: this.tick,
         participantIds: this.config.participantIds,
       });
-      this.#publicSnapshotCache = null;
-      this.#events = [];
-      try {
-        return this.#stepNormalized(frames);
-      } catch (error) {
-        const failure = normalizeThrownError(error, 'MatchCore tick 失败');
-        // Internal fail-closed cleanup is allowed after the authoritative
-        // mutation phase unwinds; external destroy() remains blocked while a
-        // caller-owned input is being validated.
-        this.#stepping = false;
-        try {
-          this.destroy();
-        } catch (cleanupError) {
-          const causes = cleanupCauses(cleanupError);
-          const cleanupErrors = causes
-            ? causes.map((cause) => normalizeThrownError(
-              cause,
-              'MatchCore tick 清理失败',
-            ))
-            : [normalizeThrownError(cleanupError, 'MatchCore tick 清理失败')];
-          throw combineCleanupFailure(
-            failure,
-            cleanupErrors,
-            'MatchCore tick 失败且清理未完整完成。',
-          );
-        }
-        throw failure;
-      }
+      return this.#runValidatedStep(frames);
+    } finally {
+      this.#stepping = false;
+    }
+  }
+
+  /** @internal Used only by LocalMatchSession through HeadlessMatchRunner. */
+  createTrustedInputFrameBatch(
+    inputFrames: readonly unknown[],
+  ): MatchCoreTrustedInputFrameBatch {
+    this.#assertUsable();
+    this.#assertNoMatchReadBuild('trusted InputFrame batch');
+    if (this.#stepping) throw new Error('MatchCore step() 期间不能创建 trusted InputFrame batch。');
+    if (this.#matchReadBindingCreating) {
+      throw new Error('MatchRead binding 创建期间不能创建 trusted InputFrame batch。');
+    }
+    return this.#withCallerInputValidation(() => createTrustedInputFrameBatch(
+      this,
+      inputFrames,
+      this.config.participantIds,
+      this.tick,
+      this.#eventSequence,
+    ));
+  }
+
+  /** @internal Used only by HeadlessMatchRunner through LocalMatchSession. */
+  stepTrustedInputFrameBatch(
+    batch: unknown,
+  ): readonly ArenaAuthorityEvent[] {
+    this.#assertUsable();
+    this.#assertNoMatchReadBuild('MatchCore.stepTrustedInputFrameBatch()');
+    if (this.phase === ARENA_MATCH_PHASE.ENDED) throw new Error('比赛已经结束，不能继续 step。');
+    if (this.#stepping) throw new Error('MatchCore.stepTrustedInputFrameBatch() 不可重入。');
+    if (this.#matchReadBindingCreating) {
+      throw new Error('MatchRead binding 创建期间不能 step。');
+    }
+    if (this.#callerInputValidationActive) {
+      throw new Error('caller input validation 期间不能 step。');
+    }
+    this.#stepping = true;
+    try {
+      const frames = consumeTrustedInputFrameBatch(
+        this,
+        batch,
+        this.tick,
+        this.#eventSequence,
+      );
+      return this.#runValidatedStep(frames);
     } finally {
       this.#stepping = false;
     }
@@ -1181,7 +1523,9 @@ export class MatchCore {
             participantId: outcome.participantId,
             equipmentInstanceId: dropped.equipment.instanceId,
             equipmentDefinitionId: dropped.equipment.definitionId,
-            reason: 'no-valid-drop-position',
+            reason: dropped.diagnosticCode === EQUIPMENT_DESPAWN_REASON.EXPIRED_HELD_LIFECYCLE
+              ? EQUIPMENT_DESPAWN_REASON.EXPIRED_HELD_LIFECYCLE
+              : 'no-valid-drop-position',
           });
         } else {
           if (!dropped.equipment.position) {
@@ -1324,9 +1668,11 @@ export class MatchCore {
 
   #createSnapshot(includeInternal: false): ArenaMatchSnapshot;
   #createSnapshot(includeInternal: true): ArenaInternalMatchSnapshot;
+  #createSnapshot(includeInternal: false, includeActionAffordance: false): MatchReadWorldSource;
   #createSnapshot(
     includeInternal: boolean,
-  ): ArenaMatchSnapshot | ArenaInternalMatchSnapshot {
+    includeActionAffordance = !includeInternal,
+  ): ArenaMatchSnapshot | ArenaInternalMatchSnapshot | MatchReadWorldSource {
     this.#assertUsable();
     const timeline = this.#matchTimeline.getSnapshot();
     const equipmentSupplySnapshot = this.#equipmentSupplyTimeline?.getSnapshot() ?? null;
@@ -1359,7 +1705,7 @@ export class MatchCore {
     }
     // ActionAffordance is a public next-input projection, not authority state.
     // Internal hash snapshots omit it entirely instead of recomputing derived data.
-    const ruleActors: readonly RuleActor[] = includeInternal ? [] : this.#createRuleActors();
+    const ruleActors: readonly RuleActor[] = includeActionAffordance ? this.#createRuleActors() : [];
     const ruleActorById = new Map(ruleActors.map((actor) => [actor.id, actor]));
     const snapshot: ArenaMatchSnapshot = {
       schemaVersion: this.config.schemaVersion,
@@ -1408,7 +1754,7 @@ export class MatchCore {
               grounded: physics.grounded,
             };
           })(),
-          ...(includeInternal ? {} : {
+          ...(includeActionAffordance ? {
             actionAffordance: (() => {
               const actor = requireMapValue(
                 ruleActorById,
@@ -1426,7 +1772,7 @@ export class MatchCore {
                 additionalCandidates: this.#ruleEngine.getMovementActionCandidates(capabilities),
               }));
             })(),
-          }),
+          } : {}),
           equipment: (() => {
             const equipment = this.#ruleEngine.getHeldEquipment(id);
             return equipment ? {
@@ -1471,18 +1817,31 @@ export class MatchCore {
           equipmentSupplyTimeline: cloneSnapshotData(
             this.#equipmentSupplyTimeline.getSnapshot(),
           ),
+          equipmentSupplyDisposition: Object.freeze({
+            schemaVersion: ARENA_EQUIPMENT_SUPPLY_DISPOSITION_SCHEMA_VERSION,
+            expiredHeldSupplyEquipmentInstanceIds: Object.freeze(
+              [...this.#ruleEngine.listExpiredHeldSupplyEquipmentInstanceIds()],
+            ),
+          }),
         }),
         rngStates: Object.freeze(Object.fromEntries(
           Object.entries(this.#rngStreams).map(([name, rng]) => [name, rng.snapshot()]),
         )),
       });
     }
+    if (!includeActionAffordance) {
+      return snapshot as unknown as MatchReadWorldSource;
+    }
     return snapshot;
   }
 
-  getSnapshot(): DeepReadonly<ArenaMatchSnapshot> {
+  getLegacyFullSnapshotForAudit(): DeepReadonly<ArenaMatchSnapshot> {
     this.#assertUsable();
+    this.#assertNoMatchReadBuild('public snapshot');
     if (this.#stepping) throw new Error('MatchCore step() 期间不能读取 public snapshot。');
+    if (this.#callerInputValidationActive) {
+      throw new Error('caller input validation 期间不能读取 public snapshot。');
+    }
     const cached = this.#publicSnapshotCache;
     if (
       cached !== null
@@ -1500,39 +1859,285 @@ export class MatchCore {
     return snapshot;
   }
 
-  createTrustedPublicSnapshotReader(binding?: object): MatchCoreTrustedPublicSnapshotReader {
+  createMatchReadBinding(descriptor: unknown): MatchReadBinding {
     this.#assertUsable();
-    if (binding !== undefined && (typeof binding !== 'object' || binding === null)) {
-      throw new TypeError('MatchCore trusted snapshot binding 必须是 opaque object。');
+    this.#assertNoMatchReadBuild('MatchRead binding');
+    if (this.#stepping) throw new Error('step() 期间不能创建 MatchRead binding。');
+    if (this.#callerInputValidationActive) {
+      throw new Error('caller input validation 期间不能创建 MatchRead binding。');
     }
-    if (binding !== undefined) {
-      const bindingOwner = TRUSTED_PUBLIC_SNAPSHOT_BINDING_OWNERS.get(binding);
-      if (bindingOwner !== undefined && bindingOwner !== this) {
-        throw new RangeError('MatchCore trusted snapshot binding 已绑定其他 MatchCore。');
-      }
-      const authorityContentHash = Object.getOwnPropertyDescriptor(
-        binding,
-        'authorityContentHash',
-      );
-      if (
-        authorityContentHash !== undefined
-        && (!('value' in authorityContentHash)
-          || authorityContentHash.value !== this.#ruleContentHash)
-      ) {
-        throw new RangeError('MatchCore trusted snapshot binding 与权威 content hash 不一致。');
-      }
-      TRUSTED_PUBLIC_SNAPSHOT_BINDING_OWNERS.set(binding, this);
+    if (this.#matchReadBindingCreating) {
+      throw new Error('MatchRead binding 创建不可重入。');
     }
-    const reader = Object.freeze({
-      read: (): DeepReadonly<ArenaMatchSnapshot> => this.getSnapshot(),
+    if (this.tick !== 0 || this.#eventSequence !== 0) {
+      throw new Error('MatchRead binding 只能在初始 authority identity 创建。');
+    }
+    if (this.#matchReadOwnerPort === null) {
+      throw new Error('MatchCore MatchRead owner port 尚未初始化。');
+    }
+    this.#matchReadBindingCreating = true;
+    try {
+      return this.#withCallerInputValidation(() => (
+        createMatchReadBindingForOwner(this.#matchReadOwnerPort as MatchReadOwnerPort, descriptor)
+      ));
+    } finally {
+      this.#matchReadBindingCreating = false;
+    }
+  }
+
+  createMatchReadReader(
+    binding: MatchReadBinding,
+    participantId: string,
+    profile: ArenaMatchReadProfile,
+  ): MatchReadReader {
+    this.#assertUsable();
+    this.#assertNoMatchReadBuild('MatchRead reader');
+    if (this.#stepping) throw new Error('step() 期间不能创建 MatchRead reader。');
+    if (this.#callerInputValidationActive) {
+      throw new Error('caller input validation 期间不能创建 MatchRead reader。');
+    }
+    if (this.#matchReadBindingCreating) {
+      throw new Error('MatchRead binding 创建期间不能创建 reader。');
+    }
+    if (this.tick !== 0 || this.#eventSequence !== 0) {
+      throw new Error('MatchRead reader 只能在初始 authority identity 创建。');
+    }
+    if (this.#matchReadOwnerPort === null) {
+      throw new Error('MatchCore MatchRead owner port 尚未初始化。');
+    }
+    return this.#withCallerInputValidation(() => createMatchReadReaderForOwner(
+      this.#matchReadOwnerPort as MatchReadOwnerPort,
+      binding,
+      participantId,
+      profile,
+    ));
+  }
+
+  #createReadActionAffordanceOptions(
+    participantId: string,
+    tick: number,
+  ): Readonly<{
+    readonly tick: number;
+    readonly participantId: string;
+    readonly actors: readonly RuleActor[];
+    readonly additionalCandidates: readonly ActionCandidate[];
+  }> {
+    if (tick !== this.tick) throw new RangeError('MatchRead action profile tick 已过期。');
+    const actors = this.#createRuleActors();
+    const actor = requireMapValue(
+      new Map(actors.map((candidate) => [candidate.id, candidate])),
+      participantId,
+      `participant ${participantId} 缺少 rule actor。`,
+    );
+    const physics = this.#physicsWorld.getCharacterState(participantId);
+    const capabilities = this.#movementSystem.projectCapabilities(participantId, {
+      grounded: physics.grounded,
+      canMove: actor.canAct,
     });
-    TRUSTED_PUBLIC_SNAPSHOT_READERS.add(reader);
-    TRUSTED_PUBLIC_SNAPSHOT_READER_OWNERS.set(reader, this);
-    TRUSTED_PUBLIC_SNAPSHOT_READER_BINDINGS.set(reader, binding);
-    return reader;
+    return Object.freeze({
+      tick,
+      participantId,
+      actors,
+      additionalCandidates: this.#ruleEngine.getMovementActionCandidates(capabilities),
+    });
+  }
+
+  #getReadWorldCandidate(
+    identity: MatchReadModelIdentity,
+  ): Readonly<{
+    readonly snapshot: DeepReadonly<WorldSnapshotV2>;
+    readonly publish: boolean;
+  }> {
+    const memo = this.#matchReadWorldMemo;
+    if (
+      memo !== null
+      && memo.identity.compositionHash === identity.compositionHash
+      && memo.identity.generation === identity.generation
+      && memo.identity.tick === identity.tick
+      && memo.identity.eventSequence === identity.eventSequence
+      && memo.identity.phase === identity.phase
+    ) return Object.freeze({ snapshot: memo.snapshot, publish: false });
+    const snapshot = composeWorldSnapshotV2(
+      this.#createSnapshot(false, false),
+      identity,
+      { requireActiveSupplyProjection: this.#equipmentSupplyTimeline !== null },
+    );
+    return Object.freeze({ snapshot, publish: true });
+  }
+
+  #createMatchReadModelReader<T>(
+    binding: MatchReadBinding,
+    participantId: string,
+    profile: ArenaMatchReadProfile,
+    buildCandidate: (
+      identity: MatchReadModelIdentity,
+    ) => MatchReadModelBuildCandidate<T>,
+  ): { readonly read: () => DeepReadonly<T> } {
+    const identityReader = this.createMatchReadReader(binding, participantId, profile);
+    let currentIdentity: MatchReadModelIdentity | null = null;
+    let currentResult: DeepReadonly<T> | null = null;
+    let reading = false;
+    return Object.freeze({
+      read: (...args: never[]): DeepReadonly<T> => {
+        if (args.length !== 0) throw new TypeError('MatchRead model reader.read() 不接受参数。');
+        if (reading) throw new Error('MatchRead model reader.read() 不可重入。');
+        reading = true;
+        try {
+          const identity = identityReader.read();
+          if (currentIdentity === identity && currentResult !== null) return currentResult;
+          const candidate = this.#withMatchReadBuild(() => {
+            const built = buildCandidate(identity);
+            const finalIdentity = this.#readMatchReadIdentityDuringBuild(participantId);
+            if (
+              finalIdentity.generation !== identity.generation
+              || finalIdentity.tick !== identity.tick
+              || finalIdentity.eventSequence !== identity.eventSequence
+              || finalIdentity.phase !== identity.phase
+            ) throw new Error('MatchRead model authority identity 在构造期间发生变化。');
+            if (built.publishWorld && built.worldSnapshot === undefined) {
+              throw new Error('MatchRead world memo candidate 缺少 snapshot。');
+            }
+            if (built.publishWorld && built.worldSnapshot !== undefined) {
+              this.#matchReadWorldMemo = Object.freeze({
+                identity,
+                snapshot: built.worldSnapshot,
+              });
+            } else if (
+              built.worldSnapshot !== undefined
+              && (
+                this.#matchReadWorldMemo === null
+                || this.#matchReadWorldMemo.snapshot !== built.worldSnapshot
+                || this.#matchReadWorldMemo.identity.compositionHash !== identity.compositionHash
+                || this.#matchReadWorldMemo.identity.generation !== identity.generation
+                || this.#matchReadWorldMemo.identity.tick !== identity.tick
+                || this.#matchReadWorldMemo.identity.eventSequence !== identity.eventSequence
+                || this.#matchReadWorldMemo.identity.phase !== identity.phase
+              )
+            ) {
+              throw new Error('MatchRead world memo 未在共享 current identity 下发布。');
+            }
+            return built;
+          });
+          // The complete world/profile/frame candidate is built before either
+          // the identity or result memo is published. A failure therefore
+          // leaves the previous stable read available.
+          currentIdentity = identity;
+          currentResult = candidate.result;
+          return candidate.result;
+        } finally {
+          reading = false;
+        }
+      },
+    });
+  }
+
+  #snapshotMatchReadAuthorityIdentity(): {
+    readonly generation: number;
+    readonly tick: number;
+    readonly eventSequence: number;
+    readonly phase: ArenaMatchPhase;
+  } {
+    return Object.freeze({
+      generation: 1,
+      tick: this.tick,
+      eventSequence: this.#eventSequence,
+      phase: this.phase,
+    });
+  }
+
+  #readMatchReadIdentityDuringBuild(
+    participantId: string,
+  ): {
+    readonly generation: number;
+    readonly tick: number;
+    readonly eventSequence: number;
+    readonly phase: ArenaMatchPhase;
+  } {
+    this.#assertUsable();
+    if (!this.config.participantIds.includes(participantId)) {
+      throw new RangeError(`未知 MatchRead participant ${participantId}。`);
+    }
+    return this.#snapshotMatchReadAuthorityIdentity();
+  }
+
+  createMatchReadFrameReader(
+    binding: MatchReadBinding,
+    participantId: string,
+  ): MatchReadFrameReader {
+    return this.#createMatchReadModelReader(
+      binding,
+      participantId,
+      'local-context-primary',
+      (identity) => {
+        const world = this.#getReadWorldCandidate(identity);
+        const affordance = this.#ruleEngine.getActionAffordanceProfile(
+          this.#createReadActionAffordanceOptions(participantId, identity.tick),
+          'local-context-primary',
+        );
+        const local = composeLocalActionSidecarV2(affordance, identity, participantId);
+        return {
+          result: composeMatchReadFrameV2(world.snapshot, local, identity),
+          worldSnapshot: world.snapshot,
+          publishWorld: world.publish,
+        };
+      },
+    );
+  }
+
+  createMatchReadSidecarReader(
+    binding: MatchReadBinding,
+    participantId: string,
+    profile: 'bot-mobility',
+  ): MatchReadSidecarReader<BotMobilitySidecarV2>;
+  createMatchReadSidecarReader(
+    binding: MatchReadBinding,
+    participantId: string,
+    profile: 'full-audit',
+  ): MatchReadSidecarReader<FullAuditSidecarV2>;
+  createMatchReadSidecarReader(
+    binding: MatchReadBinding,
+    participantId: string,
+    profile: 'bot-mobility' | 'full-audit',
+  ): MatchReadSidecarReader<BotMobilitySidecarV2 | FullAuditSidecarV2> {
+    if (profile === 'bot-mobility') {
+      return this.#createMatchReadModelReader(
+        binding,
+        participantId,
+        profile,
+        (identity) => {
+          const affordance = this.#ruleEngine.getActionAffordanceProfile(
+            this.#createReadActionAffordanceOptions(participantId, identity.tick),
+            profile,
+          );
+          return {
+            result: composeBotMobilitySidecarV2(affordance, identity, participantId),
+            publishWorld: false,
+          };
+        },
+      );
+    }
+    return this.#createMatchReadModelReader(
+      binding,
+      participantId,
+      profile,
+      (identity) => {
+        const affordance = this.#ruleEngine.getActionAffordanceProfile(
+          this.#createReadActionAffordanceOptions(participantId, identity.tick),
+          profile,
+        );
+        return {
+          result: composeFullAuditSidecarV2(affordance, identity, participantId),
+          publishWorld: false,
+        };
+      },
+    );
   }
 
   getInternalCheckpointIdentity(): MatchInternalCheckpointIdentity {
+    this.#assertNoMatchReadBuild('checkpoint');
+    if (this.#callerInputValidationActive) {
+      throw new Error('caller input validation 期间不能创建 checkpoint。');
+    }
     if (this.#stepping) throw new Error('MatchCore 不允许在半 tick 创建 checkpoint。');
     const snapshot = this.#createSnapshot(true);
     return Object.freeze({
@@ -1544,10 +2149,18 @@ export class MatchCore {
   }
 
   getStateHash(): string {
+    this.#assertNoMatchReadBuild('state hash');
+    if (this.#callerInputValidationActive) {
+      throw new Error('caller input validation 期间不能读取 state hash。');
+    }
     return createMatchStateHash(this.#createSnapshot(true));
   }
 
   getReplayMetadata(): MatchReplayMetadata {
+    this.#assertNoMatchReadBuild('Replay metadata');
+    if (this.#callerInputValidationActive) {
+      throw new Error('caller input validation 期间不能读取 Replay metadata。');
+    }
     return {
       schemaVersion: this.config.schemaVersion,
       physicsBackendVersion: this.config.physicsBackendVersion,
@@ -1596,6 +2209,13 @@ export class MatchCore {
   }
 
   destroy(): void {
+    this.#assertNoMatchReadBuild('MatchCore.destroy()');
+    if (this.#matchReadBindingCreating) {
+      throw new Error('MatchRead binding 创建期间不能销毁 MatchCore。');
+    }
+    if (this.#callerInputValidationActive) {
+      throw new Error('caller input validation 期间不能销毁 MatchCore。');
+    }
     if (
       this.#destroyed
       && !this.#timeline
@@ -1608,7 +2228,10 @@ export class MatchCore {
     ) return;
     if (this.#stepping) throw new Error('step() 期间不能销毁 MatchCore。');
     this.#destroyed = true;
+    invalidateMatchReadOwner(this.#matchReadOwnerPort);
+    this.#matchReadOwnerPort = null;
     this.#publicSnapshotCache = null;
+    this.#matchReadWorldMemo = null;
     this.#events.length = 0;
     this.#characterRuntimes.clear();
     const errors: Error[] = [];

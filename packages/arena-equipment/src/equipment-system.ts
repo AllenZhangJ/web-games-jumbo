@@ -1,5 +1,6 @@
 import {
   ARENA_MATCH_EVENT,
+  EQUIPMENT_DESPAWN_REASON,
   EQUIPMENT_EXPIRY_REASON,
   EQUIPMENT_RECYCLE_REASON,
   EQUIPMENT_SUPPLY_EVENT_PAYLOAD_SCHEMA_VERSION,
@@ -154,6 +155,10 @@ export class EquipmentSystem {
   readonly #participantIds: readonly string[];
   readonly #runtimes: Map<string, EquipmentRuntimeState>;
   readonly #heldByParticipant: Map<string, string>;
+  // Derived from the authoritative expiry transition. It is not a second
+  // lifecycle: the runtime remains held until a later owner disposition, at
+  // which point this marker requires atomic despawn instead of world drop.
+  readonly #expiredHeldSupplyEquipmentIds: Set<string>;
   readonly #pickupResolver: EquipmentPickupResolver;
   readonly #spawner: EquipmentSpawner;
   #destroyed: boolean;
@@ -193,6 +198,7 @@ export class EquipmentSystem {
     this.#participantIds = Object.freeze([...(participantIds as string[])].sort(compareStrings));
     this.#runtimes = new Map<string, EquipmentRuntimeState>();
     this.#heldByParticipant = new Map<string, string>();
+    this.#expiredHeldSupplyEquipmentIds = new Set<string>();
     this.#pickupResolver = new EquipmentPickupResolver({ equipmentRegistry: this.#equipmentRegistry });
     this.#spawner = new EquipmentSpawner({ equipmentRegistry: this.#equipmentRegistry });
     this.#destroyed = false;
@@ -361,6 +367,9 @@ export class EquipmentSystem {
         const world = runtime.locationState === EQUIPMENT_LOCATION_STATE.SPAWNED
           || runtime.locationState === EQUIPMENT_LOCATION_STATE.DROPPED;
         const held = runtime.locationState === EQUIPMENT_LOCATION_STATE.HELD;
+        if (held && this.#expiredHeldSupplyEquipmentIds.has(runtime.instanceId)) {
+          throw new RangeError(`supply ${lifecycle.supplyId} 重复过期。`);
+        }
         if (!world && !held && runtime.locationState !== EQUIPMENT_LOCATION_STATE.DESPAWNED) {
           throw new Error(`supply ${lifecycle.supplyId} 状态不可判定。`);
         }
@@ -420,10 +429,12 @@ export class EquipmentSystem {
           if (remove && !this.#runtimes.delete(runtime.instanceId)) {
             throw new Error(`待过期 equipment ${runtime.instanceId} 已不在权威集合。`);
           }
+          if (!remove) this.#expiredHeldSupplyEquipmentIds.add(runtime.instanceId);
         }
       } catch (error) {
         this.#destroyed = true;
         this.#heldByParticipant.clear();
+        this.#expiredHeldSupplyEquipmentIds.clear();
         this.#runtimes.clear();
         throw error;
       }
@@ -672,6 +683,7 @@ export class EquipmentSystem {
             if (!this.#runtimes.delete(previous.instanceId)) {
               throw new Error(`待回收 equipment ${previous.instanceId} 已不在权威集合。`);
             }
+            this.#expiredHeldSupplyEquipmentIds.delete(previous.instanceId);
           }
           target.locationState = EQUIPMENT_LOCATION_STATE.HELD;
           target.ownerId = decision.participantId;
@@ -682,6 +694,7 @@ export class EquipmentSystem {
       } catch (error) {
         this.#destroyed = true;
         this.#heldByParticipant.clear();
+        this.#expiredHeldSupplyEquipmentIds.clear();
         this.#runtimes.clear();
         throw error;
       }
@@ -812,6 +825,37 @@ export class EquipmentSystem {
       const instanceId = this.#heldByParticipant.get(id);
       if (!instanceId) return null;
       const runtime = this.#requireRuntime(instanceId);
+      if (this.#expiredHeldSupplyEquipmentIds.has(instanceId)) {
+        if (
+          runtime.locationState !== EQUIPMENT_LOCATION_STATE.HELD
+          || runtime.ownerId !== id
+        ) throw new Error(`过期 held equipment ${instanceId} 所有权状态不一致。`);
+        try {
+          runtime.locationState = EQUIPMENT_LOCATION_STATE.DESPAWNED;
+          runtime.ownerId = null;
+          runtime.position = null;
+          runtime.revision += 1;
+          const equipment = createEquipmentRuntimeSnapshot(runtime);
+          if (!this.#runtimes.delete(instanceId)) {
+            throw new Error(`过期 held equipment ${instanceId} 不在权威集合。`);
+          }
+          this.#heldByParticipant.delete(id);
+          this.#expiredHeldSupplyEquipmentIds.delete(instanceId);
+          return Object.freeze({
+            participantId: id,
+            equipment,
+            fallbackUsed: false,
+            despawned: true,
+            diagnosticCode: EQUIPMENT_DESPAWN_REASON.EXPIRED_HELD_LIFECYCLE,
+          });
+        } catch (error) {
+          this.#destroyed = true;
+          this.#heldByParticipant.clear();
+          this.#expiredHeldSupplyEquipmentIds.clear();
+          this.#runtimes.clear();
+          throw error;
+        }
+      }
       const drop = resolveEquipmentDrop({
         lastSafePosition: runtime.lastSafePosition,
         originPosition: runtime.originPosition,
@@ -889,11 +933,17 @@ export class EquipmentSystem {
     return serializeEquipmentRuntimeStates([...this.#runtimes.values()]);
   }
 
+  listExpiredHeldSupplyEquipmentInstanceIds(): readonly string[] {
+    this.#assertUsable();
+    return Object.freeze([...this.#expiredHeldSupplyEquipmentIds].sort(compareStrings));
+  }
+
   destroy(): void {
     if (this.#destroyed) return;
     if (this.#mutating) throw new Error('EquipmentSystem 权威变更期间不能销毁。');
     this.#destroyed = true;
     this.#heldByParticipant.clear();
+    this.#expiredHeldSupplyEquipmentIds.clear();
     this.#runtimes.clear();
   }
 }

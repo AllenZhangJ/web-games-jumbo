@@ -161,7 +161,7 @@ class ArenaV1MapTimelineCase {
 
   #snapshot() {
     const core = this.#requireCore();
-    return assertArenaMapTimelineSnapshotInvariants(core.getSnapshot(), core.config);
+    return assertArenaMapTimelineSnapshotInvariants(core.getLegacyFullSnapshotForAudit(), core.config);
   }
 
   getMetadata() {

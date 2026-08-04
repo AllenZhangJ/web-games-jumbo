@@ -1,6 +1,7 @@
 const rawControlSnapshots = new WeakSet<object>();
 const gestureSnapshots = new WeakSet<object>();
 const mapperAffordances = new WeakSet<object>();
+const localActionSidecarsV2 = new WeakSet<object>();
 const mappedSemanticInputs = new WeakSet<object>();
 
 function isObject(value: unknown): value is object {
@@ -32,6 +33,15 @@ export function trustMapperAffordance<T extends object>(value: T): T {
 
 export function isTrustedMapperAffordance(value: unknown): value is object {
   return isObject(value) && mapperAffordances.has(value);
+}
+
+export function trustLocalActionSidecarV2<T extends object>(value: T): T {
+  localActionSidecarsV2.add(value);
+  return value;
+}
+
+export function isTrustedLocalActionSidecarV2(value: unknown): value is object {
+  return isObject(value) && localActionSidecarsV2.has(value);
 }
 
 export function trustMappedSemanticInput<T extends object>(value: T): T {

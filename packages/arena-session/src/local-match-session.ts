@@ -4,20 +4,31 @@ import {
   cloneFrozenData,
   combineCleanupFailure,
   createNeutralInputFrame,
+  isNormalizedInputFrame,
   normalizeInputFrame,
   normalizeThrownError,
   type ArenaInputFrame,
   type ArenaMatchSnapshot,
   type DeepReadonly,
+  type MatchReadFrameV2,
 } from '@number-strategy-jump/arena-contracts';
 import {
   ARENA_MATCH_PHASE,
   HeadlessMatchRunner,
   MatchCore,
-  assertMatchCoreTrustedPublicSnapshotReader,
   type ArenaAuthorityEvent,
   type ArenaReplay,
 } from '@number-strategy-jump/arena-match';
+import {
+  armBotMatchReadTransaction,
+  invalidateBotMatchReadBundle,
+  readFullAuditForSession,
+  readPresentationFrameForSession,
+  resolveBotMatchReadBundle,
+  type BotMatchReadBundleV2,
+  type BotMatchReadFullAuditResultV2,
+  type BotMatchReadTransaction,
+} from './bot-match-read-bundle.js';
 
 export const LOCAL_MATCH_SESSION_STATE = Object.freeze({
   CREATED: 'created',
@@ -45,8 +56,8 @@ export interface LocalMatchPublicInfo {
 
 export interface BotInputController {
   createInput(snapshot: ArenaMatchSnapshot): ArenaInputFrame;
-  attachTrustedSnapshotReader?(reader: unknown, binding: unknown): boolean;
-  createInputFromTrustedSnapshot?(): ArenaInputFrame;
+  attachTrustedCommandSourceReader?(reader: unknown, handle: unknown): boolean;
+  createInputFromTrustedCommandSource?(): ArenaInputFrame;
   destroy(): void;
 }
 
@@ -55,15 +66,23 @@ export interface LocalMatchSessionOptions {
   readonly botController: BotInputController;
   readonly playerParticipantId?: string;
   readonly botParticipantId?: string;
-  readonly trustedBotBinding?: object;
+  readonly botMatchReadBundle?: BotMatchReadBundleV2;
   readonly publicMatchInfo: LocalMatchPublicInfo;
 }
 
-export interface LocalMatchStepResult {
+export interface LocalMatchLegacyAuditStepResult {
   readonly events: readonly ArenaAuthorityEvent[];
   readonly snapshot: DeepReadonly<ArenaMatchSnapshot>;
   readonly input: ArenaInputFrame | null;
 }
+
+export interface LocalMatchPresentationStepResultV2 {
+  readonly events: readonly ArenaAuthorityEvent[];
+  readonly readFrame: DeepReadonly<MatchReadFrameV2>;
+  readonly input: ArenaInputFrame | null;
+}
+
+export type LocalMatchFullAuditReadResultV2 = BotMatchReadFullAuditResultV2;
 
 export type LocalMatchInputProvider = (
   snapshot: DeepReadonly<ArenaMatchSnapshot>,
@@ -79,8 +98,8 @@ interface OwnedResource {
 
 interface BotControllerPort extends OwnedResource {
   createInput(snapshot: ArenaMatchSnapshot): ArenaInputFrame;
-  attachTrustedSnapshotReader?(reader: unknown, binding: unknown): boolean;
-  createInputFromTrustedSnapshot?(): ArenaInputFrame;
+  attachTrustedCommandSourceReader?(reader: unknown, handle: unknown): boolean;
+  createInputFromTrustedCommandSource?(): ArenaInputFrame;
 }
 
 interface NormalizedSessionOptions {
@@ -88,7 +107,7 @@ interface NormalizedSessionOptions {
   readonly botController: BotControllerPort;
   readonly playerParticipantId: string;
   readonly botParticipantId: string;
-  readonly trustedBotBinding: object | null;
+  readonly botMatchReadBundle: BotMatchReadBundleV2 | null;
   readonly publicMatchInfo: LocalMatchPublicInfo;
 }
 
@@ -97,7 +116,7 @@ const SESSION_OPTION_KEYS = new Set([
   'botController',
   'playerParticipantId',
   'botParticipantId',
-  'trustedBotBinding',
+  'botMatchReadBundle',
   'publicMatchInfo',
 ]);
 const PUBLIC_INFO_KEYS = new Set(['matchSeed', 'opponent']);
@@ -189,24 +208,26 @@ function optionalMethodFromPrototypeChain(
 function normalizeController(controller: unknown): BotControllerPort {
   const createInput = methodFromPrototypeChain(controller, 'createInput');
   const destroy = methodFromPrototypeChain(controller, 'destroy');
-  const attachTrustedSnapshotReader = optionalMethodFromPrototypeChain(
+  const attachTrustedCommandSourceReader = optionalMethodFromPrototypeChain(
     controller,
-    'attachTrustedSnapshotReader',
+    'attachTrustedCommandSourceReader',
   );
-  const createInputFromTrustedSnapshot = optionalMethodFromPrototypeChain(
+  const createInputFromTrustedCommandSource = optionalMethodFromPrototypeChain(
     controller,
-    'createInputFromTrustedSnapshot',
+    'createInputFromTrustedCommandSource',
   );
   return Object.freeze({
     createInput: (snapshot: ArenaMatchSnapshot): ArenaInputFrame => (
       createInput.call(controller, snapshot) as ArenaInputFrame
     ),
-    ...(attachTrustedSnapshotReader === null || createInputFromTrustedSnapshot === null ? {} : {
-      attachTrustedSnapshotReader: (reader: unknown, binding: unknown): boolean => (
-        attachTrustedSnapshotReader.call(controller, reader, binding) === true
+    ...(attachTrustedCommandSourceReader === null ? {} : {
+      attachTrustedCommandSourceReader: (reader: unknown, handle: unknown): boolean => (
+        attachTrustedCommandSourceReader.call(controller, reader, handle) === true
       ),
-      createInputFromTrustedSnapshot: (): ArenaInputFrame => (
-        createInputFromTrustedSnapshot.call(controller) as ArenaInputFrame
+    }),
+    ...(createInputFromTrustedCommandSource === null ? {} : {
+      createInputFromTrustedCommandSource: (): ArenaInputFrame => (
+        createInputFromTrustedCommandSource.call(controller) as ArenaInputFrame
       ),
     }),
     destroy: (): void => { destroy.call(controller); },
@@ -272,23 +293,23 @@ function normalizeOptions(options: unknown): NormalizedSessionOptions {
   const publicMatchInfo = copyPublicInfo(
     readDataProperty(record, 'publicMatchInfo', 'LocalMatchSession options'),
   );
-  const trustedBotBinding = readOptionalDataProperty(
+  const botMatchReadBundle = readOptionalDataProperty(
     record,
-    'trustedBotBinding',
+    'botMatchReadBundle',
     'LocalMatchSession options',
   );
   if (
-    trustedBotBinding !== undefined
-    && (typeof trustedBotBinding !== 'object' || trustedBotBinding === null)
+    botMatchReadBundle !== undefined
+    && (typeof botMatchReadBundle !== 'object' || botMatchReadBundle === null)
   ) {
-    throw new TypeError('LocalMatchSession trustedBotBinding 必须是 opaque object。');
+    throw new TypeError('LocalMatchSession botMatchReadBundle 必须是 opaque object。');
   }
   return Object.freeze({
     core,
     botController,
     playerParticipantId,
     botParticipantId,
-    trustedBotBinding: trustedBotBinding ?? null,
+    botMatchReadBundle: botMatchReadBundle as BotMatchReadBundleV2 | undefined ?? null,
     publicMatchInfo,
   });
 }
@@ -328,7 +349,11 @@ export class LocalMatchSession {
   #runningUntilEnded: boolean;
   #cleaning: boolean;
   #pauseRequested: boolean;
-  #useTrustedBotInput: boolean;
+  #botMatchReadBundle: BotMatchReadBundleV2 | null;
+  #useTrustedCommandSourceInput: boolean;
+  #coreDestroyed: boolean;
+  #readingPresentationFrame: boolean;
+  #activeStepMethod: 'stepWithLegacySnapshotForAudit()' | 'stepWithPresentationReadFrame()' | null;
 
   constructor(options: LocalMatchSessionOptions);
   constructor(options: unknown) {
@@ -345,30 +370,31 @@ export class LocalMatchSession {
     this.#runningUntilEnded = false;
     this.#cleaning = false;
     this.#pauseRequested = false;
-    this.#useTrustedBotInput = false;
+    this.#botMatchReadBundle = normalized.botMatchReadBundle;
+    this.#useTrustedCommandSourceInput = false;
+    this.#coreDestroyed = false;
+    this.#readingPresentationFrame = false;
+    this.#activeStepMethod = null;
     try {
-      if (normalized.trustedBotBinding !== null) {
+      if (normalized.botMatchReadBundle !== null) {
         if (
-          normalized.botController.attachTrustedSnapshotReader === undefined
-          || normalized.botController.createInputFromTrustedSnapshot === undefined
+          normalized.botController.attachTrustedCommandSourceReader === undefined
+          || normalized.botController.createInputFromTrustedCommandSource === undefined
         ) {
-          throw new TypeError('LocalMatchSession trusted Bot 缺少 opaque reader handshake。');
+          throw new TypeError('LocalMatchSession V5 Bot 缺少成对 command source reader handshake。');
         }
-        const reader = normalized.core.createTrustedPublicSnapshotReader(
-          normalized.trustedBotBinding,
-        );
-        assertMatchCoreTrustedPublicSnapshotReader(
-          reader,
+        const resolved = resolveBotMatchReadBundle(
+          normalized.botMatchReadBundle,
           normalized.core,
-          normalized.trustedBotBinding,
+          normalized.playerParticipantId,
+          normalized.botParticipantId,
         );
-        this.#useTrustedBotInput = normalized.botController.attachTrustedSnapshotReader(
-          reader,
-          normalized.trustedBotBinding,
+        const accepted = normalized.botController.attachTrustedCommandSourceReader(
+          resolved.reader,
+          resolved.handle,
         );
-        if (!this.#useTrustedBotInput) {
-          throw new Error('LocalMatchSession trusted Bot handshake 未被接受。');
-        }
+        if (!accepted) throw new Error('LocalMatchSession V5 Bot handshake 未被接受。');
+        this.#useTrustedCommandSourceInput = true;
       }
     } catch (error) {
       const cleanupErrors: Error[] = [];
@@ -399,7 +425,7 @@ export class LocalMatchSession {
 
   #assertOutsideRunLoop(action: string): void {
     if (this.#runningUntilEnded) {
-      throw new Error(`LocalMatchSession.runUntilEnded() 运行期间不能${action}。`);
+      throw new Error(`LocalMatchSession.runLegacyUntilEndedForAudit() 运行期间不能${action}。`);
     }
   }
 
@@ -432,7 +458,11 @@ export class LocalMatchSession {
     this.#assertUsable();
     this.#assertOutsideRunLoop('切换暂停状态');
     if (typeof paused !== 'boolean') throw new TypeError('paused 必须是布尔值。');
-    if (this.#stepping) throw new Error('step() 期间不能切换 LocalMatchSession 暂停状态。');
+    if (this.#stepping) {
+      throw new Error(
+        `LocalMatchSession ${this.#activeStepMethod ?? 'stepWithLegacySnapshotForAudit()'} 期间不能切换暂停状态。`,
+      );
+    }
     if (this.#state === LOCAL_MATCH_SESSION_STATE.ENDED) return;
     this.#pauseRequested = paused;
     if (this.#state === LOCAL_MATCH_SESSION_STATE.CREATED) return;
@@ -460,18 +490,79 @@ export class LocalMatchSession {
     return normalized;
   }
 
-  #stepInternal(playerFrame: unknown, runLoopOwned: boolean): LocalMatchStepResult {
+  #requirePresentationBundle(): BotMatchReadBundleV2 {
     this.#assertUsable();
-    if (!runLoopOwned) this.#assertOutsideRunLoop('调用 step()');
+    if (!this.#useTrustedCommandSourceInput || this.#botMatchReadBundle === null) {
+      throw new Error('LocalMatchSession V2 presentation frame 需要 botMatchReadBundle。');
+    }
+    return this.#botMatchReadBundle;
+  }
+
+  #readPresentationFrame(): DeepReadonly<MatchReadFrameV2> {
+    const core = this.#requireCore();
+    const bundle = this.#requirePresentationBundle();
+    if (this.#readingPresentationFrame) {
+      throw new Error('LocalMatchSession presentation frame 读取不可重入。');
+    }
+    this.#readingPresentationFrame = true;
+    try {
+      return readPresentationFrameForSession(
+        bundle,
+        core,
+        this.#playerParticipantId,
+        this.#botParticipantId,
+      ) as DeepReadonly<MatchReadFrameV2>;
+    } finally {
+      this.#readingPresentationFrame = false;
+    }
+  }
+
+  #createV5BotFrame(botController: BotInputController): ArenaInputFrame {
+    const createInputFromTrustedCommandSource =
+      botController.createInputFromTrustedCommandSource;
+    if (createInputFromTrustedCommandSource === undefined) {
+      throw new Error('LocalMatchSession V5 command-source reader 不可用。');
+    }
+    return createInputFromTrustedCommandSource();
+  }
+
+  #createLegacyBotFrame(
+    core: MatchCore,
+    botController: BotInputController,
+  ): ArenaInputFrame {
+    return botController.createInput(core.getLegacyFullSnapshotForAudit());
+  }
+
+  #stepInternal(playerFrame: unknown, runLoopOwned: boolean, projection: 'legacy'): LocalMatchLegacyAuditStepResult;
+  #stepInternal(playerFrame: unknown, runLoopOwned: boolean, projection: 'presentation'): LocalMatchPresentationStepResultV2;
+  #stepInternal(
+    playerFrame: unknown,
+    runLoopOwned: boolean,
+    projection: 'legacy' | 'presentation',
+  ): LocalMatchLegacyAuditStepResult | LocalMatchPresentationStepResultV2 {
+    const stepMethod = projection === 'presentation'
+      ? 'stepWithPresentationReadFrame()'
+      : 'stepWithLegacySnapshotForAudit()';
+    this.#assertUsable();
+    if (!runLoopOwned) this.#assertOutsideRunLoop(`调用 ${stepMethod}`);
     const core = this.#requireCore();
     if (this.#state === LOCAL_MATCH_SESSION_STATE.PAUSED) {
-      return Object.freeze({ events: EMPTY_EVENTS, snapshot: core.getSnapshot(), input: null });
+      if (projection === 'presentation') {
+        return Object.freeze({ events: EMPTY_EVENTS, readFrame: this.#readPresentationFrame(), input: null });
+      }
+      return Object.freeze({
+        events: EMPTY_EVENTS,
+        snapshot: core.getLegacyFullSnapshotForAudit(),
+        input: null,
+      });
     }
     if (this.#state !== LOCAL_MATCH_SESSION_STATE.RUNNING) {
       throw new Error(`LocalMatchSession 无法在 ${this.#state} 状态 step。`);
     }
-    if (this.#stepping) throw new Error('LocalMatchSession.step() 不可重入。');
+    if (this.#stepping) throw new Error(`LocalMatchSession.${stepMethod} 不可重入。`);
     this.#stepping = true;
+    this.#activeStepMethod = stepMethod;
+    let retryableSourceFailure = false;
     try {
       const normalizedPlayer = this.#normalizePlayerFrame(playerFrame);
       try {
@@ -480,20 +571,71 @@ export class LocalMatchSession {
         if (runner === null || botController === null) {
           throw new Error('LocalMatchSession 内部资源不可用。');
         }
-        const botFrame = this.#useTrustedBotInput
-          && botController.createInputFromTrustedSnapshot !== undefined
-          ? botController.createInputFromTrustedSnapshot()
-          : botController.createInput(core.getSnapshot());
-        if (botFrame.participantId !== this.#botParticipantId) {
+        let trustedTransaction: BotMatchReadTransaction | null = null;
+        let trustedSourceCommitted = false;
+        if (this.#useTrustedCommandSourceInput) {
+          const bundle = this.#botMatchReadBundle;
+          if (bundle === null) throw new Error('LocalMatchSession V5 bundle 不可用。');
+          trustedTransaction = armBotMatchReadTransaction(
+            bundle,
+            core,
+            this.#playerParticipantId,
+            this.#botParticipantId,
+          );
+        }
+        try {
+          const botFrame = this.#useTrustedCommandSourceInput
+            ? this.#createV5BotFrame(botController)
+            : this.#createLegacyBotFrame(core, botController);
+        const normalizedBot = this.#useTrustedCommandSourceInput
+          ? normalizeInputFrame(botFrame, {
+            expectedTick: core.tick,
+            participantIds: core.config.participantIds,
+          })
+          : isNormalizedInputFrame(botFrame)
+          ? botFrame
+          : normalizeInputFrame(botFrame, {
+            expectedTick: core.tick,
+            participantIds: core.config.participantIds,
+          });
+        if (normalizedBot.participantId !== this.#botParticipantId) {
           throw new RangeError('BotController 返回了错误的参与者输入。');
         }
-        const events = runner.step([normalizedPlayer, botFrame]);
-        const snapshot = core.getSnapshot();
+        if (trustedTransaction !== null) {
+          trustedTransaction.completeSuccess();
+          trustedSourceCommitted = true;
+        }
+        const orderedFrames = Object.freeze(core.config.participantIds.map((participantId) => {
+          if (participantId === normalizedPlayer.participantId) return normalizedPlayer;
+          if (participantId === normalizedBot.participantId) return normalizedBot;
+          throw new RangeError(`participant ${participantId} 缺少当前 tick 输入。`);
+        }));
+        const batch = core.createTrustedInputFrameBatch(orderedFrames);
+        const events = runner.stepTrustedInputFrameBatch(batch);
+        if (projection === 'presentation') {
+          const readFrame = this.#readPresentationFrame();
+          if (readFrame.worldSnapshot.phase === ARENA_MATCH_PHASE.ENDED) {
+            this.#state = LOCAL_MATCH_SESSION_STATE.ENDED;
+          }
+          return Object.freeze({ events, readFrame, input: normalizedPlayer });
+        }
+        const snapshot = core.getLegacyFullSnapshotForAudit();
         if (snapshot.phase === ARENA_MATCH_PHASE.ENDED) {
           this.#state = LOCAL_MATCH_SESSION_STATE.ENDED;
         }
         return Object.freeze({ events, snapshot, input: normalizedPlayer });
+        } catch (error) {
+          if (trustedTransaction !== null && !trustedSourceCommitted) {
+            const classification = trustedTransaction.classifyFailure();
+            if (classification.retryable) {
+              retryableSourceFailure = true;
+              throw error;
+            }
+          }
+          throw error;
+        }
       } catch (error) {
+        if (retryableSourceFailure) throw error;
         const failure = normalizeThrownError(error, 'LocalMatchSession step 失败');
         const cleanupErrors = this.#cleanup();
         throw combineCleanupFailure(
@@ -504,23 +646,73 @@ export class LocalMatchSession {
       }
     } finally {
       this.#stepping = false;
+      this.#activeStepMethod = null;
     }
   }
 
-  step(playerFrame: unknown = null): LocalMatchStepResult {
-    return this.#stepInternal(playerFrame, false);
+  stepWithLegacySnapshotForAudit(playerFrame: unknown = null): LocalMatchLegacyAuditStepResult {
+    return this.#stepInternal(playerFrame, false, 'legacy');
   }
 
-  runUntilEnded(
+  getPresentationReadFrame(): DeepReadonly<MatchReadFrameV2> {
+    this.#assertUsable();
+    this.#assertOutsideRunLoop('读取 presentation frame');
+    if (this.#stepping) {
+      throw new Error(
+        `LocalMatchSession ${this.#activeStepMethod ?? 'stepWithPresentationReadFrame()'} 期间不能读取 presentation frame。`,
+      );
+    }
+    return this.#readPresentationFrame();
+  }
+
+  /**
+   * Reads the full-audit sidecars owned by the existing bundle. The Session
+   * deliberately exposes no schedule or evidence schema; the runner owns
+   * when this capability is requested.
+   */
+  readFullAuditForEvidence(): LocalMatchFullAuditReadResultV2 {
+    this.#assertUsable();
+    this.#assertOutsideRunLoop('读取 full-audit');
+    if (this.#stepping) {
+      throw new Error(
+        `LocalMatchSession ${this.#activeStepMethod ?? 'stepWithPresentationReadFrame()'} 期间不能读取 full-audit。`,
+      );
+    }
+    const core = this.#requireCore();
+    const bundle = this.#requirePresentationBundle();
+    if (this.#readingPresentationFrame) {
+      throw new Error('LocalMatchSession full-audit 读取不可重入。');
+    }
+    this.#readingPresentationFrame = true;
+    try {
+      return readFullAuditForSession(
+        bundle,
+        core,
+        this.#playerParticipantId,
+        this.#botParticipantId,
+      );
+    } finally {
+      this.#readingPresentationFrame = false;
+    }
+  }
+
+  stepWithPresentationReadFrame(input?: ArenaInputFrame | null): LocalMatchPresentationStepResultV2;
+  stepWithPresentationReadFrame(input: unknown = null): LocalMatchPresentationStepResultV2 {
+    if (arguments.length > 1) throw new TypeError('stepWithPresentationReadFrame() 只接受一个 input 参数。');
+    this.#requirePresentationBundle();
+    return this.#stepInternal(input, false, 'presentation');
+  }
+
+  runLegacyUntilEndedForAudit(
     inputProvider?: LocalMatchInputProvider,
     options?: RunLocalMatchOptions,
   ): ArenaReplay;
-  runUntilEnded(
+  runLegacyUntilEndedForAudit(
     inputProvider: unknown = DEFAULT_INPUT_PROVIDER,
     options: unknown = undefined,
   ): ArenaReplay {
     this.#assertUsable();
-    this.#assertOutsideRunLoop('再次调用 runUntilEnded()');
+    this.#assertOutsideRunLoop('再次调用 runLegacyUntilEndedForAudit()');
     if (typeof inputProvider !== 'function') throw new TypeError('inputProvider 必须是函数。');
     this.#runningUntilEnded = true;
     try {
@@ -533,10 +725,12 @@ export class LocalMatchSession {
       if (this.#hasEnded()) return this.#exportReplayInternal();
       while (!this.#hasEnded() && core.tick < limit) {
         if (this.#state === LOCAL_MATCH_SESSION_STATE.PAUSED) {
-          throw new Error('暂停中的 LocalMatchSession 不能 runUntilEnded。');
+          throw new Error('暂停中的 LocalMatchSession 不能 runLegacyUntilEndedForAudit。');
         }
-        const frame = (inputProvider as LocalMatchInputProvider)(core.getSnapshot());
-        this.#stepInternal(frame ?? null, true);
+        const frame = (inputProvider as LocalMatchInputProvider)(
+          core.getLegacyFullSnapshotForAudit(),
+        );
+        this.#stepInternal(frame ?? null, true, 'legacy');
       }
       if (!this.#hasEnded()) {
         throw new Error(`本地比赛在 ${limit} tick 内未结束。`);
@@ -547,9 +741,10 @@ export class LocalMatchSession {
     }
   }
 
-  getSnapshot(): DeepReadonly<ArenaMatchSnapshot> {
-    return this.#requireCore().getSnapshot();
+  getLegacyFullSnapshotForAudit(): DeepReadonly<ArenaMatchSnapshot> {
+    return this.#requireCore().getLegacyFullSnapshotForAudit();
   }
+
 
   getPublicMatchInfo(): LocalMatchPublicInfo {
     this.#assertUsable();
@@ -577,9 +772,29 @@ export class LocalMatchSession {
     this.#pauseRequested = true;
     const errors: Error[] = [];
     try {
+      let bundleInvalidated = this.#botMatchReadBundle === null;
+      if (this.#botMatchReadBundle !== null && this.#core !== null) {
+        try {
+          invalidateBotMatchReadBundle(
+            this.#botMatchReadBundle,
+            this.#core,
+            this.#playerParticipantId,
+            this.#botParticipantId,
+          );
+          bundleInvalidated = true;
+        } catch (error) {
+          errors.push(normalizeThrownError(error, 'LocalMatchSession Bot match read bundle 失效失败'));
+        }
+        if (bundleInvalidated) {
+          this.#botMatchReadBundle = null;
+        }
+      }
       if (destroyOwned(this.#runner, errors)) this.#runner = null;
       if (destroyOwned(this.#botController, errors)) this.#botController = null;
-      if (destroyOwned(this.#core, errors)) this.#core = null;
+      if (!this.#coreDestroyed && destroyOwned(this.#core, errors)) {
+        this.#coreDestroyed = true;
+      }
+      if (bundleInvalidated && this.#coreDestroyed) this.#core = null;
       return errors;
     } finally {
       this.#cleaning = false;
@@ -593,9 +808,14 @@ export class LocalMatchSession {
       && this.#runner === null
       && this.#botController === null
       && this.#core === null
+      && this.#botMatchReadBundle === null
     ) return;
     this.#assertOutsideRunLoop('销毁 Session');
-    if (this.#stepping) throw new Error('step() 期间不能销毁 LocalMatchSession。');
+    if (this.#stepping) {
+      throw new Error(
+        `LocalMatchSession ${this.#activeStepMethod ?? 'stepWithLegacySnapshotForAudit()'} 期间不能销毁 LocalMatchSession。`,
+      );
+    }
     const errors = this.#cleanup();
     if (errors.length > 0) {
       const cleanupError = new Error('LocalMatchSession 清理未完整完成。') as Error & {

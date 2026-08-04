@@ -28,7 +28,7 @@ try {
   }
   if (activeCore.phase !== 'ended') throw new Error(`POC 未能在 ${maximumTicks} tick 内结束。`);
 
-  const snapshot = activeCore.getSnapshot();
+  const snapshot = activeCore.getLegacyFullSnapshotForAudit();
   pocGlobal.__arenaMatchPoc = {
     ok: snapshot.participants.every((participant) => [
       participant.position.x,

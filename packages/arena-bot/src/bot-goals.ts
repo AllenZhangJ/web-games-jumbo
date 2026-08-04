@@ -21,7 +21,7 @@ import type { BotProfileDefinition } from './bot-profile-definition.js';
 import type { BotPersonality } from './bot-personality.js';
 import type {
   BotArenaSurface,
-  BotObservation,
+  BotPolicyObservation,
   BotVector3,
   BotVisibleEquipment,
 } from './bot-observation.js';
@@ -47,7 +47,7 @@ export interface BotGoalPlan {
 }
 
 export interface BotGoalContext {
-  readonly observation: BotObservation;
+  readonly observation: BotPolicyObservation;
   readonly profile: BotProfileDefinition;
   readonly personality: BotPersonality;
 }
@@ -116,7 +116,7 @@ function attackGeometry(context: BotGoalContext): Readonly<{
   };
 }
 
-function canAct(observation: BotObservation): boolean {
+function canAct(observation: BotPolicyObservation): boolean {
   return observation.self.status === ARENA_PARTICIPANT_STATUS.ACTIVE
     && observation.self.hitstunTicks === 0
     && observation.self.action.phase === ARENA_ACTION_PHASE.IDLE
@@ -124,7 +124,7 @@ function canAct(observation: BotObservation): boolean {
     && observation.opponent.invulnerableTicks === 0;
 }
 
-function nearestReachableEquipment(observation: BotObservation): ReachableEquipment | null {
+function nearestReachableEquipment(observation: BotPolicyObservation): ReachableEquipment | null {
   if (observation.self.equipment || observation.self.status !== ARENA_PARTICIPANT_STATUS.ACTIVE) {
     return null;
   }

@@ -1,7 +1,6 @@
 import {
   assertPlainRecord,
   combineCleanupFailure,
-  normalizeThrownError,
   type PlainRecord,
 } from '@number-strategy-jump/arena-contracts';
 import {
@@ -151,13 +150,13 @@ function stateView(snapshotValue: unknown): Readonly<{
   );
   const visible = ownData(state, 'state', 'ProductPresentationFlow Product snapshot.state');
   if (typeof visible !== 'string' || !PRODUCT_STATES.has(visible)) {
-    throw new RangeError(`ProductPresentationFlow Product state 无效：${String(visible)}。`);
+    throw new RangeError('ProductPresentationFlow Product state 无效。');
   }
   const activeValue = visible === PRODUCT_SESSION_STATE.SUSPENDED
     ? ownData(state, 'activeState', 'ProductPresentationFlow Product snapshot.state')
     : visible;
   if (typeof activeValue !== 'string' || !PRODUCT_STATES.has(activeValue)) {
-    throw new RangeError(`ProductPresentationFlow Product activeState 无效：${String(activeValue)}。`);
+    throw new RangeError('ProductPresentationFlow Product activeState 无效。');
   }
   const recoveryValue = optionalOwnData(
     state,
@@ -192,9 +191,9 @@ function normalizeController(value: unknown): ControllerAdapter {
   const continueReward = method('continueReward');
   const dismissUnlocks = method('dismissUnlocks');
   const retry = method('retry');
-  const beginMatch = method('beginMatch');
-  const stepMatch = method('stepMatch');
-  const getActiveMatchSnapshot = method('getActiveMatchSnapshot');
+  const beginMatchWithReadFrame = method('beginMatchWithReadFrame');
+  const stepMatchWithReadFrame = method('stepMatchWithReadFrame');
+  const getActiveMatchReadFrame = method('getActiveMatchReadFrame');
   const getSnapshot = method('getSnapshot');
   const commitReward = method('commitReward');
   const hide = method('hide');
@@ -210,14 +209,17 @@ function normalizeController(value: unknown): ControllerAdapter {
     continueReward: () => continueReward(),
     dismissUnlocks: () => dismissUnlocks(),
     retry: () => retry(),
-    beginMatch: () => syncResult(beginMatch(), 'ProductSessionController.beginMatch()'),
-    stepMatch: (input: unknown) => syncResult(
-      stepMatch(input),
-      'ProductSessionController.stepMatch()',
+    beginMatchWithReadFrame: () => syncResult(
+      beginMatchWithReadFrame(),
+      'ProductSessionController.beginMatchWithReadFrame()',
     ),
-    getActiveMatchSnapshot: () => syncResult(
-      getActiveMatchSnapshot(),
-      'ProductSessionController.getActiveMatchSnapshot()',
+    stepMatchWithReadFrame: (input: unknown) => syncResult(
+      stepMatchWithReadFrame(input),
+      'ProductSessionController.stepMatchWithReadFrame()',
+    ),
+    getActiveMatchReadFrame: () => syncResult(
+      getActiveMatchReadFrame(),
+      'ProductSessionController.getActiveMatchReadFrame()',
     ),
     getSnapshot: () => syncResult(getSnapshot(), 'ProductSessionController.getSnapshot()'),
     commitReward: () => syncResult(commitReward(), 'ProductSessionController.commitReward()'),
@@ -233,7 +235,10 @@ function normalizeController(value: unknown): ControllerAdapter {
 function normalizeInputSource(value: unknown): ProductMatchPresentationInputPort {
   const sample = snapshotMethod(value, 'ProductPresentationFlow inputSource', 'sample')!;
   return Object.freeze({
-    sample: (tick: number, options: Readonly<{ actionAffordance: unknown }>) => syncResult(
+    sample: (tick: number, options: Readonly<{
+      eventSequence: number;
+      localActionSidecar: unknown;
+    }>) => syncResult(
       sample(tick, options),
       'ProductPresentationFlow inputSource.sample()',
     ),
@@ -254,7 +259,7 @@ function normalizeDispatcher(value: unknown): DispatcherAdapter {
     destroy = snapshotMethod(value, 'ProductPresentationFlow intentDispatcher', 'destroy')!;
   } catch (error) {
     throw new TypeError('ProductPresentationFlow intentDispatcher 不符合合同。', {
-      cause: normalizeThrownError(error, 'ProductPresentationFlow intentDispatcher 合同无效'),
+      cause: safelyWrapThrownError(error, 'ProductPresentationFlow intentDispatcher 合同无效'),
     });
   }
   return Object.freeze({
@@ -292,7 +297,7 @@ function normalizeMatchRuntime(value: unknown): MatchRuntimeAdapter {
     destroy = snapshotMethod(value, 'ProductPresentationFlow matchRuntime', 'destroy')!;
   } catch (error) {
     throw new TypeError('ProductPresentationFlow matchRuntime 不符合合同。', {
-      cause: normalizeThrownError(error, 'ProductPresentationFlow matchRuntime 合同无效'),
+      cause: safelyWrapThrownError(error, 'ProductPresentationFlow matchRuntime 合同无效'),
     });
   }
   return Object.freeze({
@@ -335,20 +340,49 @@ function normalizePresentationContent(value: unknown): ProductPresentationConten
   });
 }
 
+function attachOpaqueCause(failure: Error, error: unknown): Error {
+  try {
+    Object.defineProperty(failure, 'cause', {
+      value: error,
+      enumerable: false,
+      configurable: true,
+      writable: false,
+    });
+  } catch {
+    // Caller-thrown values are opaque; error reporting must not execute them.
+  }
+  return failure;
+}
+
+function safelyWrapThrownError(error: unknown, message: string): Error {
+  return attachOpaqueCause(new Error(message), error);
+}
+
+function staticThrownMessage(error: unknown, fallback: string): string {
+  if ((typeof error !== 'object' || error === null) && typeof error !== 'function') {
+    return fallback;
+  }
+  try {
+    const descriptor = Object.getOwnPropertyDescriptor(error, 'message');
+    return descriptor
+      && Object.hasOwn(descriptor, 'value')
+      && typeof descriptor.value === 'string'
+      ? descriptor.value
+      : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 function cleanupCandidate(value: unknown, name: string): Error[] {
   const errors: Error[] = [];
   try {
     const destroy = snapshotMethod(value, name, 'destroy', false);
     if (destroy) syncResult(destroy(), `${name}.destroy()`);
   } catch (error) {
-    errors.push(normalizeThrownError(error, `${name} 清理失败`));
+    errors.push(safelyWrapThrownError(error, `${name} 清理失败`));
   }
   return errors;
-}
-
-function flowFailure(error: unknown, message: string): Error {
-  const cause = normalizeThrownError(error, message);
-  return new Error(`${message}：${cause.message}`, { cause });
 }
 
 export class ProductPresentationFlow {
@@ -412,7 +446,7 @@ export class ProductPresentationFlow {
       this.#dispatcher = normalizeDispatcher(candidate);
     } catch (error) {
       throw combineCleanupFailure(
-        normalizeThrownError(error, 'ProductPresentationFlow 构造失败'),
+        safelyWrapThrownError(error, 'ProductPresentationFlow intentDispatcher 不符合合同'),
         cleanupCandidate(candidate, '无效 ProductPresentationFlow intentDispatcher'),
         'ProductPresentationFlow 构造失败且清理未完整完成。',
       );
@@ -469,9 +503,10 @@ export class ProductPresentationFlow {
   }
 
   #fail(error: unknown, message: string): Error {
-    this.#lastError = flowFailure(error, message);
+    const failure = new Error(message);
+    this.#lastError = failure;
     this.#state = PRODUCT_PRESENTATION_FLOW_STATE.FAILED;
-    return this.#lastError;
+    return attachOpaqueCause(failure, error);
   }
 
   #requireController(): ControllerAdapter {
@@ -519,7 +554,7 @@ export class ProductPresentationFlow {
       this.#lastMatchResult = null;
     } catch (error) {
       throw combineCleanupFailure(
-        normalizeThrownError(error, 'Product match 表现创建失败'),
+        safelyWrapThrownError(error, 'ProductPresentationFlow matchRuntime 不符合合同'),
         cleanupCandidate(candidate, 'Match 表现候选'),
         'Product match 表现创建失败且清理未完整完成。',
       );
@@ -615,8 +650,8 @@ export class ProductPresentationFlow {
       currentState = stateView(productSnapshot);
     } catch (inspectionError) {
       const combined = combineCleanupFailure(
-        normalizeThrownError(error, 'ProductPresentationFlow 同步失败'),
-        [normalizeThrownError(inspectionError, 'Product 状态复验失败')],
+        safelyWrapThrownError(error, 'ProductPresentationFlow 同步失败'),
+        [safelyWrapThrownError(inspectionError, 'Product 状态复验失败')],
         'ProductPresentationFlow 同步失败且状态无法复验。',
       );
       throw this.#fail(combined, 'ProductPresentationFlow 同步失败');
@@ -624,7 +659,15 @@ export class ProductPresentationFlow {
     if (
       currentState.active !== PRODUCT_SESSION_STATE.RECOVERABLE_ERROR
       && currentState.active !== PRODUCT_SESSION_STATE.FATAL_ERROR
-    ) throw this.#fail(error, 'ProductPresentationFlow 同步失败');
+    ) {
+      const detail = staticThrownMessage(error, '');
+      throw this.#fail(
+        error,
+        detail === 'ProductPresentationFlow matchRuntime 不符合合同'
+          ? detail
+          : 'ProductPresentationFlow 同步失败',
+      );
+    }
     try {
       if (
         currentState.active === PRODUCT_SESSION_STATE.FATAL_ERROR
@@ -633,8 +676,8 @@ export class ProductPresentationFlow {
       return this.#buildSnapshotView(productSnapshot);
     } catch (cleanupError) {
       const combined = combineCleanupFailure(
-        normalizeThrownError(error, 'ProductPresentationFlow 同步失败'),
-        [normalizeThrownError(cleanupError, 'Match 表现清理失败')],
+        safelyWrapThrownError(error, 'ProductPresentationFlow 同步失败'),
+        [safelyWrapThrownError(cleanupError, 'Match 表现清理失败')],
         'ProductPresentationFlow 同步失败且清理未完整完成。',
       );
       throw this.#fail(combined, 'ProductPresentationFlow 同步失败');
@@ -848,7 +891,7 @@ export class ProductPresentationFlow {
       this.#lastMatchFrame = null;
       this.#lastMatchResult = null;
       try { this.#disposeMatchRuntime(); } catch (error) {
-        errors.push(normalizeThrownError(error, 'ProductPresentationFlow Match 清理失败'));
+        errors.push(safelyWrapThrownError(error, 'ProductPresentationFlow Match 清理失败'));
       }
       const dispatcher = this.#dispatcher;
       if (dispatcher !== null) {
@@ -857,7 +900,7 @@ export class ProductPresentationFlow {
           this.#dispatcher = null;
           this.#assertNoSwallowedReentry();
         } catch (error) {
-          errors.push(normalizeThrownError(error, 'ProductPresentationFlow Dispatcher 清理失败'));
+          errors.push(safelyWrapThrownError(error, 'ProductPresentationFlow Dispatcher 清理失败'));
         }
       }
       this.#cleanupIncomplete = errors.length > 0;

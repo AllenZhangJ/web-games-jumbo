@@ -1,5 +1,10 @@
 import '../product-styles.css';
-import { createArenaProductGame, createArenaProductRendererFactory } from '@number-strategy-jump/arena-v1-application-launch';
+import { createArenaProductGame } from '@number-strategy-jump/arena-v1-application-launch/product-game-composition';
+import { createArenaProductRendererFactory } from '@number-strategy-jump/arena-v1-application-launch/product-renderer-composition';
+import {
+  createArenaPresentationMemoryProviderForLaunch,
+  resolveArenaPresentationQualityForLaunch,
+} from '@number-strategy-jump/arena-v1-application-launch/presentation-launch';
 import {
   bindWebGameTeardown,
   clearWebStartupError,
@@ -9,7 +14,6 @@ import {
 } from '@number-strategy-jump/arena-platform-runtime';
 import { createWebPlatform } from '@number-strategy-jump/arena-platform-runtime/web';
 import { WebProductUiSurface } from './web-product-ui-surface.js';
-import { createArenaPresentationMemoryProviderForLaunch, resolveArenaPresentationQualityForLaunch } from '@number-strategy-jump/arena-v1-application-launch';
 
 function productUiRoot(): HTMLElement {
   const root = globalThis.document?.querySelector<HTMLElement>('#arena-product-ui');

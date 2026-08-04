@@ -2,10 +2,11 @@
 
 ## 状态与边界
 
-- 状态：`upstream-contract-ready-candidate`，待主协调签核A1.1整体；实际父节点为`f80307b375eb9f8f5380372e5b002d1eb86a4df7`。
+- 当前状态：`stale-upstream-evidence / hardGatePassed=false`。历史机器包曾是绑定`f80307b375eb9f8f5380372e5b002d1eb86a4df7`的
+  `upstream-contract-ready-candidate`，但2026-08-02独立复验已因三个上游源码artifact漂移而失败；不得继续提请A1.1整体签核。
 - 机器台账：[arena-a1.1-preproduction-readiness-v1.json](../quality/art/supply/arena-a1.1-preproduction-readiness-v1.json)。
 - 本门只审计A1.0第9节可前置的来源/权利与捕获/测量方案，不制作或接入Blockout、模型、图标、VFX、音频、捕获夹具或运行时adapter。
-- A0.3仍为真人`0/10`。公共只读active supply lifecycle projection合同已由开发小门签核并绑定`f80307b`，仅关闭这一项上游缺口；A1.1协调、来源、捕获方案和所有执行/样件硬门仍为false，代表样件不得启动，A1/Blockout/Presentation/设备/真人/Final全部fail closed。
+- A0.3仍为真人`0/10`。公共只读active supply lifecycle projection合同曾由开发小门签核并绑定`f80307b`；当前六个必需字段仍可定位，但机器包不再与工作区同源，故该上游缺口重新打开为证据身份红门。A1.1协调、来源、捕获方案和所有执行/样件硬门仍为false，代表样件不得启动，A1/Blockout/Presentation/设备/真人/Final全部fail closed。
 
 ## 技能约束与缺失引用
 
@@ -51,6 +52,25 @@
 
 本门不运行A1 adapter测试、不做浏览器/Simulator捕获，也不运行全量构建。回滚只删除A1.1文档、台账、检查器与索引引用；不得删除正式资产、许可、A0.3/A1.0证据或并行P1文件。
 
-## 候选自评
+## 2026-08-02 独立复验红门与重建条件
 
-合同/治理完整度仍为`92/100`：仓库资产事实19/20、权利与撤回18/20、VFX/音频候选诚实性17/20、测量可重复性19/20、失败关闭治理19/20。`f80307b`只关闭只读生命周期合同缺口，没有新增或批准资产、夹具、浏览器/GPU、设备、真人、运行时adapter或样件实测，因此不提高分数；A1.1自身`hardGatePassed=false`。成熟度继续单列为资产10/100、设备0/100、真人0/100、运行时0/100。
+主协调运行`node --import tsx scripts/art/check-arena-supply-preproduction-readiness.ts`，检查器在
+`activeLifecycleProjectionContract.sourceArtifacts[3].byteLength`处按预期失败关闭。继续只读复核证明后续两个artifact也已漂移：
+
+| artifact | `f80307b`记录 | 当前工作区 | 判定 |
+|---|---|---|---|
+| `packages/arena-match/src/match-core.ts` | `58,363 B` / `208a736b…7347` | `85,977 B` / `6d024b18…af04` | identity stale |
+| `packages/arena-bot/src/bot-observation.ts` | `36,050 B` / `ceaaaf02…dac3` | `57,297 B` / `c20a3302…ed5f` | identity stale |
+| `packages/arena-bot/src/bot-controller.ts` | `16,293 B` / `75ce2cd9…fb99d` | `25,015 B` / `12554cb9…2447` | identity stale |
+
+`arena-public-supply-projection.ts`、`match-snapshot.ts`和`equipment-supply-timeline-system.ts`仍与机器包一致；
+`snapshotTick`、`snapshotEventSequence`、`remainingTicks`、`pendingExpiryEquipmentInstanceIds`、`resyncReadiness`和
+`pendingAuthorityTick`六个必需字段也仍可在当前源码定位。这只证明没有发现字段消失，不证明当前全调用链语义、同源或A1.1硬门通过。
+
+最小返工固定为：等待开发最终source identity形成clean commit；由美术线程重新读取本流程规定的技能和参考，重新生成A1.1机器包，逐项复核六个artifact、
+调用链、来源、捕获、失败回退和下游false；运行正向检查与fail-closed探针；提交来源/竞态/兜底/边界/生命周期/主流程自检；最后由主协调独立复验。
+禁止在dirty工作区直接替换size/hash、沿用历史92分或把字段静态存在当成合同签核。
+
+## 历史候选自评
+
+历史合同/治理完整度为`92/100`：仓库资产事实19/20、权利与撤回18/20、VFX/音频候选诚实性17/20、测量可重复性19/20、失败关闭治理19/20。`f80307b`当时只关闭只读生命周期合同缺口，没有新增或批准资产、夹具、浏览器/GPU、设备、真人、运行时adapter或样件实测；A1.1自身`hardGatePassed=false`。该分数现仅作历史，不得作为当前评分或授权。成熟度仍为资产10/100、设备0/100、真人0/100、运行时0/100。

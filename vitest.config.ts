@@ -1,11 +1,19 @@
 import { defineConfig } from 'vitest/config';
+import { fileURLToPath } from 'node:url';
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      'node:test': fileURLToPath(new URL('./tests/vitest-node-test-shim.ts', import.meta.url)),
+    },
+  },
   test: {
     environment: 'node',
     include: [
       'packages/**/test/**/*.test.ts',
       'tests/governance/**/*.test.ts',
+      'tests/arena/presentation/arena-supply-presentation-adapter.test.ts',
+      'tests/arena/presentation/arena-p1-supply-acceptance-runtime.test.ts',
     ],
     coverage: {
       provider: 'v8',

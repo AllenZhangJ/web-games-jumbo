@@ -5,9 +5,7 @@ import {
   createDeterministicDataHash,
   normalizeInputFrame,
   type ArenaInputFrame,
-  type ArenaMatchSnapshot,
   type ArenaPublicSupplyProjectionLifecycleContract,
-  type DeepReadonly,
   type DeterministicRng,
 } from '@number-strategy-jump/arena-contracts';
 import { ARENA_PARTICIPANT_STATUS } from '@number-strategy-jump/arena-match';
@@ -36,12 +34,14 @@ import {
 } from './bot-mobility-scheduler.js';
 import {
   cloneBotSourceSnapshot,
+  cloneBotCommandSourceV5,
   createBotArenaView,
-  createBotObservation,
-  createTrustedBotSourceSnapshot,
+  createBotCommandSourceV5FromLegacy,
+  createBotObservationV5,
   type BotArenaView,
-  type BotObservation,
-  type BotSourceSnapshot,
+  type BotCommandSourceV5,
+  type BotCommandSourceReaderV5,
+  type BotObservationV5,
 } from './bot-observation.js';
 import { createBotPersonality, type BotPersonality } from './bot-personality.js';
 import { selectHighestUtility, type UtilityDecision } from './utility-arbitrator.js';
@@ -54,7 +54,7 @@ const CONTROLLER_OPTION_KEYS = new Set([
   'profileRegistry',
   'requireActiveSupplyProjection',
   'supplyProjectionContract',
-  'trustedBinding',
+  'trustedCommandSourceHandle',
   'arena',
   'characterRadius',
   'maximumStepHeight',
@@ -70,8 +70,8 @@ export interface BotControllerOptions {
   /** Survival composition sets this; ordinary 1v1 keeps the optional view. */
   readonly requireActiveSupplyProjection?: boolean;
   readonly supplyProjectionContract?: ArenaPublicSupplyProjectionLifecycleContract;
-  /** Internal opaque composition token; Session binds it to its authority reader. */
-  readonly trustedBinding?: object;
+  /** Expected opaque PA3b bundle identity; PA3a does not create provenance. */
+  readonly trustedCommandSourceHandle?: object;
   readonly arena: unknown;
   readonly characterRadius: number;
   readonly maximumStepHeight?: number;
@@ -100,11 +100,30 @@ interface NormalizedBotControllerOptions {
   readonly arena: BotArenaView;
   readonly requireActiveSupplyProjection: boolean;
   readonly supplyProjectionContract?: ArenaPublicSupplyProjectionLifecycleContract;
-  readonly trustedBinding: object | null;
+  readonly trustedCommandSourceHandle: object | null;
 }
 
-interface TrustedSnapshotReader {
-  read(): DeepReadonly<ArenaMatchSnapshot>;
+interface TrustedReaderAttachState {
+  reentered: boolean;
+}
+
+function equalNormalizedSource(left: unknown, right: unknown): boolean {
+  if (Object.is(left, right)) return true;
+  if (typeof left !== 'object' || left === null || typeof right !== 'object' || right === null) {
+    return false;
+  }
+  if (Array.isArray(left) !== Array.isArray(right)) return false;
+  const leftKeys = Object.keys(left);
+  const rightKeys = Object.keys(right);
+  if (leftKeys.length !== rightKeys.length) return false;
+  for (const key of leftKeys) {
+    if (!Object.prototype.hasOwnProperty.call(right, key)) return false;
+    if (!equalNormalizedSource(
+      (left as Record<string, unknown>)[key],
+      (right as Record<string, unknown>)[key],
+    )) return false;
+  }
+  return true;
 }
 
 function uint32(value: unknown, name: string): number {
@@ -129,33 +148,6 @@ function readOptionalDataProperty(record: object, key: string, name: string): un
     throw new TypeError(`${name}.${key} 必须是可枚举数据字段。`);
   }
   return descriptor.value;
-}
-
-function assertTrustedBinding(
-  value: object,
-  supplyProjectionContract: ArenaPublicSupplyProjectionLifecycleContract | undefined,
-): object {
-  if (supplyProjectionContract === undefined) {
-    throw new TypeError('trusted Bot 必须同时注入 supplyProjectionContract。');
-  }
-  const contractHash = Object.getOwnPropertyDescriptor(value, 'contractHash');
-  const authorityContentHash = Object.getOwnPropertyDescriptor(value, 'authorityContentHash');
-  if (
-    !contractHash || !('value' in contractHash) || typeof contractHash.value !== 'string'
-    || !authorityContentHash || !('value' in authorityContentHash)
-    || typeof authorityContentHash.value !== 'string'
-    || !/^[0-9a-f]{8}$/.test(authorityContentHash.value)
-  ) {
-    throw new TypeError('trusted Bot binding 缺少严格 content hash。');
-  }
-  const expectedContractHash = createDeterministicDataHash(
-    supplyProjectionContract,
-    'formal survival Bot trusted contract',
-  );
-  if (contractHash.value !== expectedContractHash) {
-    throw new RangeError('trusted Bot binding 与 supplyProjectionContract 不一致。');
-  }
-  return value;
 }
 
 function normalizeOptions(options: unknown): NormalizedBotControllerOptions {
@@ -204,17 +196,17 @@ function normalizeOptions(options: unknown): NormalizedBotControllerOptions {
   if (requireActiveSupplyProjection && supplyProjectionContract === undefined) {
     throw new TypeError('survival BotController 必须注入 supplyProjectionContract。');
   }
-  const trustedBinding = readOptionalDataProperty(record, 'trustedBinding', 'BotController options');
+  const trustedCommandSourceHandle = readOptionalDataProperty(
+    record,
+    'trustedCommandSourceHandle',
+    'BotController options',
+  );
   if (
-    trustedBinding !== undefined
-    && (typeof trustedBinding !== 'object' || trustedBinding === null)
+    trustedCommandSourceHandle !== undefined
+    && (typeof trustedCommandSourceHandle !== 'object' || trustedCommandSourceHandle === null)
   ) {
-    throw new TypeError('BotController trustedBinding 必须是 opaque object。');
+    throw new TypeError('BotController trustedCommandSourceHandle 必须是 opaque object。');
   }
-  const normalizedTrustedBinding = trustedBinding === undefined
-    ? null
-    : assertTrustedBinding(trustedBinding, supplyProjectionContract as
-      ArenaPublicSupplyProjectionLifecycleContract | undefined);
   const arena = createBotArenaView(
     readDataProperty(record, 'arena', 'BotController options'),
     readDataProperty(record, 'characterRadius', 'BotController options'),
@@ -228,7 +220,9 @@ function normalizeOptions(options: unknown): NormalizedBotControllerOptions {
     personalitySeed,
     arena,
     requireActiveSupplyProjection: requireActiveSupplyProjection ?? false,
-    trustedBinding: normalizedTrustedBinding,
+    trustedCommandSourceHandle: trustedCommandSourceHandle === undefined
+      ? null
+      : trustedCommandSourceHandle as object,
     ...(supplyProjectionContract === undefined ? {} : {
       supplyProjectionContract: supplyProjectionContract as ArenaPublicSupplyProjectionLifecycleContract,
     }),
@@ -242,7 +236,7 @@ export class BotController {
   #personality: BotPersonality;
   #rng: DeterministicRng;
   #arena: BotArenaView;
-  #sourceSnapshots: BotSourceSnapshot[];
+  #sourceSnapshots: BotCommandSourceV5[];
   #currentPlan: UtilityDecision<BotGoalPlan> | null;
   #directionOffsetRadians: number;
   #nextPlanTick: number;
@@ -252,11 +246,15 @@ export class BotController {
   #lastMobilityIntent: BotMobilityIntent;
   #lastCommandTick: number;
   #lastCommandEventSequence: number;
+  #lastCommandSource: BotCommandSourceV5 | null;
+  #lastCommandSourceHash: string | null;
+  #lastInputFrame: ArenaInputFrame | null;
   #requireActiveSupplyProjection: boolean;
   #supplyProjectionContract: ArenaPublicSupplyProjectionLifecycleContract | undefined;
-  #trustedBinding: object | null;
-  #trustedSnapshotReader: TrustedSnapshotReader | null;
-  #trustedSnapshotReaderSource: object | null;
+  #trustedCommandSourceReader: BotCommandSourceReaderV5 | null;
+  #trustedCommandSourceReaderSource: object | null;
+  #trustedCommandSourceHandle: object | null;
+  #trustedReaderAttachState: TrustedReaderAttachState | null;
   #creatingInput: boolean;
   #destroyed: boolean;
 
@@ -285,11 +283,15 @@ export class BotController {
     this.#lastMobilityIntent = BOT_MOBILITY_INTENT.NONE;
     this.#lastCommandTick = -1;
     this.#lastCommandEventSequence = -1;
+    this.#lastCommandSource = null;
+    this.#lastCommandSourceHash = null;
+    this.#lastInputFrame = null;
     this.#requireActiveSupplyProjection = normalized.requireActiveSupplyProjection;
     this.#supplyProjectionContract = normalized.supplyProjectionContract;
-    this.#trustedBinding = normalized.trustedBinding;
-    this.#trustedSnapshotReader = null;
-    this.#trustedSnapshotReaderSource = null;
+    this.#trustedCommandSourceReader = null;
+    this.#trustedCommandSourceReaderSource = null;
+    this.#trustedCommandSourceHandle = normalized.trustedCommandSourceHandle;
+    this.#trustedReaderAttachState = null;
     this.#creatingInput = false;
     this.#destroyed = false;
   }
@@ -298,42 +300,75 @@ export class BotController {
     if (this.#destroyed) throw new Error('BotController 已销毁。');
   }
 
-  #prepareObservation(snapshot: unknown, trusted = false): Readonly<{
-    source: BotSourceSnapshot;
-    observation: BotObservation;
+  #rejectDuringTrustedReaderAttach(message: string): never {
+    const state = this.#trustedReaderAttachState;
+    if (state !== null) state.reentered = true;
+    throw new Error(message);
+  }
+
+  #beginTrustedReaderAttach(): TrustedReaderAttachState {
+    this.#assertUsable();
+    if (this.#creatingInput) {
+      return this.#rejectDuringTrustedReaderAttach(
+        'BotController reader attach 不允许在 createInput 期间执行。',
+      );
+    }
+    if (this.#trustedReaderAttachState !== null) {
+      return this.#rejectDuringTrustedReaderAttach(
+        'BotController reader attach 不允许重入。',
+      );
+    }
+    const state: TrustedReaderAttachState = { reentered: false };
+    this.#trustedReaderAttachState = state;
+    return state;
+  }
+
+  #assertTrustedReaderAttachCanPublish(state: TrustedReaderAttachState): void {
+    if (state.reentered) {
+      throw new Error('BotController reader attach 验证期间禁止重入。');
+    }
+    this.#assertUsable();
+  }
+
+  #prepareV5Source(source: BotCommandSourceV5): Readonly<{
+    source: BotCommandSourceV5;
+    observation: BotObservationV5 | null;
+    repeat: boolean;
+    frame: ArenaInputFrame | null;
   }> {
-    const source = trusted
-      ? createTrustedBotSourceSnapshot(
-        snapshot as DeepReadonly<ArenaMatchSnapshot>,
-        this.#supplyProjectionContract === undefined
-          ? { requireActiveSupplyProjection: this.#requireActiveSupplyProjection }
-          : {
-            lifecycleContract: this.#supplyProjectionContract,
-            requireActiveSupplyProjection: this.#requireActiveSupplyProjection,
-          },
-      )
-      : this.#supplyProjectionContract === undefined
-      ? cloneBotSourceSnapshot(snapshot)
-      : cloneBotSourceSnapshot(snapshot, {
-        lifecycleContract: this.#supplyProjectionContract,
-      });
-    if (this.#requireActiveSupplyProjection && source.activeSupplyProjection === null) {
-      throw new RangeError(
-        'survival Bot 缺少完整 activeSupplyProjection，已 fail closed。',
-      );
-    }
-    if (this.#lastCommandTick >= 0 && source.tick !== this.#lastCommandTick + 1) {
-      throw new RangeError(
-        `BotController tick 必须连续：上次 ${this.#lastCommandTick}，本次 ${source.tick}。`,
-      );
-    }
-    if (
-      this.#lastCommandEventSequence >= 0
-      && source.eventSequence < this.#lastCommandEventSequence
-    ) {
-      throw new RangeError(
-        `BotController eventSequence 不能回退：上次 ${this.#lastCommandEventSequence}，本次 ${source.eventSequence}。`,
-      );
+    const sourceHash = createDeterministicDataHash(source, 'BotCommandSourceV5 identity');
+    if (this.#lastCommandSourceHash !== null) {
+      if (source.commandTick === this.#lastCommandTick) {
+        if (
+          source.commandEventSequence === this.#lastCommandEventSequence
+          && source.phase === this.#sourceSnapshots[this.#sourceSnapshots.length - 1]?.phase
+          && sourceHash === this.#lastCommandSourceHash
+          && this.#lastCommandSource !== null
+          && equalNormalizedSource(source, this.#lastCommandSource)
+        ) {
+          if (this.#lastInputFrame === null) {
+            throw new Error('BotController 重复 command source 缺少已提交 InputFrame。');
+          }
+          return {
+            source: this.#sourceSnapshots[this.#sourceSnapshots.length - 1]!,
+            observation: null,
+            repeat: true,
+            frame: this.#lastInputFrame,
+          };
+        }
+        throw new RangeError('BotController 同 tick source identity 或内容不一致。');
+      }
+      if (source.commandTick < this.#lastCommandTick) {
+        throw new RangeError('BotController command source tick 不能回退。');
+      }
+      if (source.commandTick !== this.#lastCommandTick + 1) {
+        throw new RangeError(
+          `BotController tick 必须连续：上次 ${this.#lastCommandTick}，本次 ${source.commandTick}。`,
+        );
+      }
+      if (source.commandEventSequence < this.#lastCommandEventSequence) {
+        throw new RangeError('BotController eventSequence 不能回退。');
+      }
     }
     const maximum = this.#difficulty.observationDelayTicks + 2;
     const shiftOffset = this.#sourceSnapshots.length >= maximum ? 1 : 0;
@@ -343,25 +378,59 @@ export class BotController {
       prospectiveLength - 1 - this.#difficulty.observationDelayTicks,
     );
     const existingIndex = delayedIndex + shiftOffset;
-    const delayedSnapshot = existingIndex < this.#sourceSnapshots.length
-      ? this.#sourceSnapshots[existingIndex] as BotSourceSnapshot
+    const delayedSource = existingIndex < this.#sourceSnapshots.length
+      ? this.#sourceSnapshots[existingIndex] as BotCommandSourceV5
       : source;
-    const observation = createBotObservation({
-      commandSnapshot: source,
-      delayedSnapshot,
-      selfId: this.#participantId,
-      arena: this.#arena,
-    });
-    return { source, observation };
+    return {
+      source,
+      observation: createBotObservationV5({
+        commandSource: source,
+        delayedSource,
+        selfId: this.#participantId,
+        arena: this.#arena,
+      }),
+      repeat: false,
+      frame: null,
+    };
   }
 
-  #commitSourceSnapshot(source: BotSourceSnapshot): void {
+  #prepareObservation(snapshot: unknown): Readonly<{
+    source: BotCommandSourceV5;
+    observation: BotObservationV5 | null;
+    repeat: boolean;
+    frame: ArenaInputFrame | null;
+  }> {
+    const legacySource = this.#supplyProjectionContract === undefined
+      ? cloneBotSourceSnapshot(snapshot)
+      : cloneBotSourceSnapshot(snapshot, {
+        lifecycleContract: this.#supplyProjectionContract,
+      });
+    if (this.#requireActiveSupplyProjection && legacySource.activeSupplyProjection === null) {
+      throw new RangeError(
+        'survival Bot 缺少完整 activeSupplyProjection，已 fail closed。',
+      );
+    }
+    const source = createBotCommandSourceV5FromLegacy(legacySource, this.#participantId);
+    return this.#prepareV5Source(source);
+  }
+
+  #prepareCommandSource(value: unknown): Readonly<{
+    source: BotCommandSourceV5;
+    observation: BotObservationV5 | null;
+    repeat: boolean;
+    frame: ArenaInputFrame | null;
+  }> {
+    const source = cloneBotCommandSourceV5(value, { participantId: this.#participantId });
+    return this.#prepareV5Source(source);
+  }
+
+  #commitSourceSnapshot(source: BotCommandSourceV5): void {
     this.#sourceSnapshots.push(source);
     const maximum = this.#difficulty.observationDelayTicks + 2;
     if (this.#sourceSnapshots.length > maximum) this.#sourceSnapshots.shift();
   }
 
-  #replan(observation: BotObservation): void {
+  #replan(observation: BotObservationV5): void {
     const decision = selectHighestUtility(getArenaBotEvaluators(), {
       observation,
       profile: this.#difficulty,
@@ -406,7 +475,7 @@ export class BotController {
     }
   }
 
-  #createFrame(observation: BotObservation): ArenaInputFrame {
+  #createFrame(observation: BotObservationV5): ArenaInputFrame {
     if (!this.#currentPlan || observation.commandTick >= this.#nextPlanTick) {
       this.#replan(observation);
     }
@@ -454,20 +523,40 @@ export class BotController {
 
   #createInputInternal(
     snapshotFactory: () => unknown,
-    trusted: boolean,
+    commandSource = false,
   ): ArenaInputFrame {
     this.#assertUsable();
+    if (this.#trustedReaderAttachState !== null) {
+      return this.#rejectDuringTrustedReaderAttach(
+        'BotController createInput 不允许在 reader attach 验证期间执行。',
+      );
+    }
     if (this.#creatingInput) throw new Error('BotController createInput 不允许重入。');
     this.#creatingInput = true;
     let internalPhase = false;
     try {
-      const prepared = this.#prepareObservation(snapshotFactory(), trusted);
+      const prepared = commandSource
+        ? this.#prepareCommandSource(snapshotFactory())
+        : this.#prepareObservation(snapshotFactory());
       this.#assertUsable();
+      if (prepared.repeat) {
+        if (prepared.frame === null) throw new Error('BotController 重复 source 缺少缓存 frame。');
+        return prepared.frame;
+      }
+      if (prepared.observation === null) {
+        throw new Error('BotController 新 source 缺少 observation。');
+      }
       internalPhase = true;
       const frame = this.#createFrame(prepared.observation);
       this.#commitSourceSnapshot(prepared.source);
       this.#lastCommandTick = prepared.observation.commandTick;
-      this.#lastCommandEventSequence = prepared.source.eventSequence;
+      this.#lastCommandEventSequence = prepared.source.commandEventSequence;
+      this.#lastCommandSource = prepared.source;
+      this.#lastCommandSourceHash = createDeterministicDataHash(
+        prepared.source,
+        'BotCommandSourceV5 identity',
+      );
+      this.#lastInputFrame = frame;
       return frame;
     } catch (error) {
       if (internalPhase && !this.#destroyed) this.#destroyOwnedState();
@@ -478,43 +567,66 @@ export class BotController {
   }
 
   createInput(snapshot: unknown): ArenaInputFrame {
-    return this.#createInputInternal(() => snapshot, false);
+    return this.#createInputInternal(() => snapshot);
   }
 
-  attachTrustedSnapshotReader(reader: unknown, binding: unknown): boolean {
+  /**
+   * PA3a's package-neutral handshake. The opaque handle is created and owned
+   * by the future Session bundle; BotController only compares identity and
+   * validates the reader's data-method boundary.
+   */
+  attachTrustedCommandSourceReader(reader: unknown, handle: unknown): boolean {
     this.#assertUsable();
-    if (this.#trustedBinding === null) {
-      return false;
+    if (this.#creatingInput) {
+      throw new Error('BotController reader attach 不允许在 createInput 期间执行。');
     }
-    if (binding !== this.#trustedBinding) {
-      throw new RangeError('BotController trusted snapshot reader 与组合合同不一致。');
+    if (this.#trustedCommandSourceHandle === null) return false;
+    if (handle !== this.#trustedCommandSourceHandle) {
+      throw new RangeError('BotController V5 command source handle 与组合合同不一致。');
     }
     if (typeof reader !== 'object' || reader === null) {
-      throw new TypeError('BotController trusted snapshot reader 必须是 opaque object。');
+      throw new TypeError('BotController V5 command source reader 必须是 opaque object。');
     }
-    const descriptor = Object.getOwnPropertyDescriptor(reader, 'read');
-    if (!descriptor || !descriptor.enumerable || !('value' in descriptor)
-      || typeof descriptor.value !== 'function') {
-      throw new TypeError('BotController trusted snapshot reader.read 必须是数据方法。');
+    if (this.#trustedCommandSourceReaderSource !== null) {
+      if (this.#trustedCommandSourceReaderSource !== reader) {
+        throw new Error('BotController V5 command source reader 不可替换。');
+      }
+      return true;
     }
-    if (
-      this.#trustedSnapshotReaderSource !== null
-      && this.#trustedSnapshotReaderSource !== reader
-    ) {
-      throw new Error('BotController trusted snapshot reader 不可替换。');
+    const state = this.#beginTrustedReaderAttach();
+    try {
+      const descriptor = Object.getOwnPropertyDescriptor(reader, 'read');
+      if (
+        !descriptor
+        || !descriptor.enumerable
+        || !('value' in descriptor)
+        || typeof descriptor.value !== 'function'
+      ) {
+        throw new TypeError('BotController V5 command source reader.read 必须是数据方法。');
+      }
+      const capturedRead = Reflect.apply(
+        Function.prototype.bind,
+        descriptor.value,
+        [reader],
+      ) as () => unknown;
+      this.#assertTrustedReaderAttachCanPublish(state);
+      this.#trustedCommandSourceReaderSource = reader;
+      this.#trustedCommandSourceReader = Object.freeze({
+        read: capturedRead,
+      });
+      return true;
+    } finally {
+      if (this.#trustedReaderAttachState === state) {
+        this.#trustedReaderAttachState = null;
+      }
     }
-    this.#trustedSnapshotReaderSource = reader;
-    this.#trustedSnapshotReader = Object.freeze({
-      read: descriptor.value.bind(reader) as () => DeepReadonly<ArenaMatchSnapshot>,
-    });
-    return true;
   }
 
-  createInputFromTrustedSnapshot(): ArenaInputFrame {
+  createInputFromTrustedCommandSource(): ArenaInputFrame {
     this.#assertUsable();
-    const reader = this.#trustedSnapshotReader;
+    const reader = this.#trustedCommandSourceReader;
     if (reader === null) {
-      throw new Error('BotController trusted snapshot reader 尚未由 LocalMatchSession 绑定。');
+      throw new Error('BotController V5 command source reader 尚未由 bundle 绑定。');
     }
     return this.#createInputInternal(() => reader.read(), true);
   }
@@ -530,7 +642,7 @@ export class BotController {
       difficultyId: this.#difficultyId,
       personality: this.#personality,
       lastCommandTick: this.#lastCommandTick,
-      observedTick: this.#sourceSnapshots[delayedIndex]?.tick ?? null,
+      observedTick: this.#sourceSnapshots[delayedIndex]?.commandTick ?? null,
       nextPlanTick: this.#nextPlanTick,
       pauseUntilTick: this.#pauseUntilTick,
       goalId: this.#currentPlan ? this.#currentPlan.goalId as BotGoalId : null,
@@ -545,6 +657,12 @@ export class BotController {
     this.#sourceSnapshots.length = 0;
     this.#currentPlan = null;
     this.#mobilityScheduler.destroy();
+    this.#lastCommandSource = null;
+    this.#lastCommandSourceHash = null;
+    this.#lastInputFrame = null;
+    this.#trustedCommandSourceReader = null;
+    this.#trustedCommandSourceReaderSource = null;
+    this.#trustedCommandSourceHandle = null;
   }
 
   destroy(): void {

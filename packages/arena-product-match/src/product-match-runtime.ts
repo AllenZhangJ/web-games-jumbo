@@ -2,11 +2,18 @@ import {
   assertKnownKeys,
   cloneFrozenData,
   createMatchContentPublicView,
+  isNormalizedInputFrame,
 } from '@number-strategy-jump/arena-contracts';
 import type { MatchContentSelection } from '@number-strategy-jump/arena-contracts';
+import type {
+  ArenaInputFrame,
+  DeepReadonly,
+  MatchReadFrameV2,
+} from '@number-strategy-jump/arena-contracts';
 import {
   assertProductMatchSeed,
   createProductMatchResult,
+  createProductPublicMatchInfo,
   createProductPublicOpponent,
 } from '@number-strategy-jump/arena-product-contracts';
 import type {
@@ -19,6 +26,10 @@ import {
   readOptionalDataField,
   readRequiredDataField,
   requireRecord,
+  assertProductMatchReadFrameV2,
+  assertProductMatchReadFrameStartOutcome,
+  assertProductMatchReadFrameStepOutcome,
+  assertProductMatchResult,
   snapshotGetter,
   snapshotMethod,
 } from './ports.js';
@@ -47,19 +58,24 @@ export interface ProductMatchRuntimeOptions {
   readonly completionSink?: ProductMatchCompletionSink | null;
 }
 
-export interface ProductMatchStepOutcome {
+export interface ProductMatchReadFrameStartOutcome {
+  readonly readFrame: DeepReadonly<MatchReadFrameV2>;
+}
+
+export interface ProductMatchReadFrameStepOutcome {
   readonly events: readonly unknown[];
-  readonly snapshot: Readonly<Record<string, unknown>>;
+  readonly readFrame: DeepReadonly<MatchReadFrameV2>;
+  readonly input: ArenaInputFrame | null;
   readonly result: ProductMatchResult | null;
 }
 
 export interface ProductMatchRuntimePort {
-  start(): void;
   setPaused(paused: boolean): void;
-  step(playerFrame?: unknown): ProductMatchStepOutcome;
-  getSnapshot(): Readonly<Record<string, unknown>>;
   getPublicInfo(): ProductPublicMatchInfo;
   getResult(): ProductMatchResult | null;
+  startWithReadFrame(): ProductMatchReadFrameStartOutcome;
+  getReadFrame(): DeepReadonly<MatchReadFrameV2>;
+  stepWithReadFrame(playerFrame?: unknown): ProductMatchReadFrameStepOutcome;
   destroy(): void;
 }
 
@@ -67,8 +83,8 @@ interface LocalMatchSessionPort {
   readonly getState: () => unknown;
   readonly start: () => unknown;
   readonly setPaused: (paused: boolean) => unknown;
-  readonly step: (frame: unknown) => unknown;
-  readonly getSnapshot: () => unknown;
+  readonly getPresentationReadFrame: () => unknown;
+  readonly stepWithPresentationReadFrame: (frame?: unknown) => unknown;
   readonly exportReplay: () => unknown;
   readonly destroy: () => unknown;
 }
@@ -82,7 +98,6 @@ interface NormalizedLocalMatch {
 
 const LOCAL_MATCH_KEYS = new Set(['session', 'matchSeed', 'opponent', 'content']);
 const RUNTIME_OPTION_KEYS = new Set(['completionSink']);
-const STEP_OUTCOME_KEYS = new Set(['events', 'snapshot', 'input']);
 const LOCAL_MATCH_SESSION_STATES = new Set([
   'created',
   'running',
@@ -92,12 +107,22 @@ const LOCAL_MATCH_SESSION_STATES = new Set([
 ]);
 
 function normalizeSession(value: unknown): Readonly<LocalMatchSessionPort> {
+  const getPresentationReadFrame = snapshotMethod<LocalMatchSessionPort['getPresentationReadFrame']>(
+    value,
+    'getPresentationReadFrame',
+    'LocalMatchSession',
+  );
+  const stepWithPresentationReadFrame = snapshotMethod<LocalMatchSessionPort['stepWithPresentationReadFrame']>(
+    value,
+    'stepWithPresentationReadFrame',
+    'LocalMatchSession',
+  );
   return Object.freeze({
     getState: snapshotGetter(value, 'state', 'LocalMatchSession'),
     start: snapshotMethod<LocalMatchSessionPort['start']>(value, 'start', 'LocalMatchSession'),
     setPaused: snapshotMethod<LocalMatchSessionPort['setPaused']>(value, 'setPaused', 'LocalMatchSession'),
-    step: snapshotMethod<LocalMatchSessionPort['step']>(value, 'step', 'LocalMatchSession'),
-    getSnapshot: snapshotMethod<LocalMatchSessionPort['getSnapshot']>(value, 'getSnapshot', 'LocalMatchSession'),
+    getPresentationReadFrame,
+    stepWithPresentationReadFrame,
     exportReplay: snapshotMethod<LocalMatchSessionPort['exportReplay']>(value, 'exportReplay', 'LocalMatchSession'),
     destroy: snapshotMethod<LocalMatchSessionPort['destroy']>(value, 'destroy', 'LocalMatchSession'),
   });
@@ -129,27 +154,6 @@ function normalizeOptions(value: unknown): ProductMatchCompletionSink | null {
     throw new TypeError('ProductMatchRuntime completionSink 必须是函数或 null。');
   }
   return sink as ProductMatchCompletionSink | null;
-}
-
-function normalizeStepOutcome(value: unknown): Readonly<{
-  events: readonly unknown[];
-  snapshot: Readonly<Record<string, unknown>>;
-}> {
-  assertKnownKeys(value, STEP_OUTCOME_KEYS, 'ProductMatchRuntime step outcome');
-  const record = requireRecord(value, 'ProductMatchRuntime step outcome');
-  const events = cloneFrozenData(
-    readRequiredDataField(record, 'events', 'ProductMatchRuntime step outcome'),
-    'ProductMatchRuntime events',
-  );
-  if (!Array.isArray(events)) throw new TypeError('ProductMatchRuntime events 必须是数组。');
-  const snapshot = cloneFrozenData(
-    readRequiredDataField(record, 'snapshot', 'ProductMatchRuntime step outcome'),
-    'ProductMatchRuntime snapshot',
-  );
-  return Object.freeze({
-    events: events as readonly unknown[],
-    snapshot: requireRecord(snapshot, 'ProductMatchRuntime snapshot'),
-  });
 }
 
 export class ProductMatchRuntime implements ProductMatchRuntimePort {
@@ -211,30 +215,50 @@ export class ProductMatchRuntime implements ProductMatchRuntimePort {
     return this.#content;
   }
 
-  start(): void {
-    this.#begin();
-    try {
-      this.#assertUsable();
-      if (
-        this.#state === PRODUCT_MATCH_RUNTIME_STATE.RUNNING
-        || this.#state === PRODUCT_MATCH_RUNTIME_STATE.PAUSED
-      ) return;
-      if (this.#state !== PRODUCT_MATCH_RUNTIME_STATE.CREATED) {
-        throw new Error(`ProductMatchRuntime 无法从 ${this.#state} start。`);
-      }
-      try {
-        const startResult = this.#requireSession().start();
-        containRejectedAsyncReturn(startResult, 'LocalMatchSession.start');
-        this.#state = this.#pauseRequested
-          ? PRODUCT_MATCH_RUNTIME_STATE.PAUSED
-          : PRODUCT_MATCH_RUNTIME_STATE.RUNNING;
-      } catch (error) {
-        this.#state = PRODUCT_MATCH_RUNTIME_STATE.FAILED;
-        throw error;
-      }
-    } finally {
-      this.#end();
+  #requireReadFrameSession(): {
+    readonly getPresentationReadFrame: () => unknown;
+    readonly stepWithPresentationReadFrame: (frame?: unknown) => unknown;
+  } {
+    const session = this.#requireSession();
+    if (!session.getPresentationReadFrame || !session.stepWithPresentationReadFrame) {
+      throw new Error('ProductMatchRuntime 缺少 PA4a MatchReadFrameV2 Session 合同。');
     }
+    return {
+      getPresentationReadFrame: session.getPresentationReadFrame,
+      stepWithPresentationReadFrame: session.stepWithPresentationReadFrame,
+    };
+  }
+
+  #readV2Frame(): DeepReadonly<MatchReadFrameV2> {
+    const frame = this.#requireReadFrameSession().getPresentationReadFrame();
+    containRejectedAsyncReturn(frame, 'LocalMatchSession.getPresentationReadFrame');
+    return assertProductMatchReadFrameV2(frame, this.#matchSeed);
+  }
+
+  #completeEndedSession(session: Readonly<LocalMatchSessionPort>): void {
+    const sessionState = session.getState();
+    containRejectedAsyncReturn(sessionState, 'LocalMatchSession.state');
+    if (typeof sessionState !== 'string' || !LOCAL_MATCH_SESSION_STATES.has(sessionState)) {
+      throw new TypeError('LocalMatchSession.state 无效。');
+    }
+    if (sessionState !== 'ended') return;
+    const rawReplay = session.exportReplay();
+    containRejectedAsyncReturn(rawReplay, 'LocalMatchSession.exportReplay');
+    const replay = requireRecord(
+      cloneFrozenData(rawReplay, 'ProductMatchRuntime completion replay'),
+      'ProductMatchRuntime completion replay',
+    );
+    const result = createProductMatchResult({
+      matchSeed: this.#matchSeed,
+      opponent: this.#requireOpponent(),
+      content: this.#requireContent(),
+      replay,
+    });
+    const completion = Object.freeze({ result, replay });
+    const sinkResult = this.#completionSink?.(completion);
+    containRejectedAsyncReturn(sinkResult, 'ProductMatchRuntime completionSink');
+    this.#result = result;
+    this.#state = PRODUCT_MATCH_RUNTIME_STATE.ENDED;
   }
 
   setPaused(paused: boolean): void {
@@ -261,38 +285,24 @@ export class ProductMatchRuntime implements ProductMatchRuntimePort {
     }
   }
 
-  step(playerFrame: unknown = null): ProductMatchStepOutcome {
+  startWithReadFrame(): ProductMatchReadFrameStartOutcome {
     this.#begin();
     try {
       this.#assertUsable();
-      if (this.#state !== PRODUCT_MATCH_RUNTIME_STATE.RUNNING) {
-        throw new Error(`ProductMatchRuntime 无法在 ${this.#state} 状态 step。`);
+      if (this.#state !== PRODUCT_MATCH_RUNTIME_STATE.CREATED
+        && this.#state !== PRODUCT_MATCH_RUNTIME_STATE.RUNNING
+        && this.#state !== PRODUCT_MATCH_RUNTIME_STATE.PAUSED) {
+        throw new Error(`ProductMatchRuntime 无法从 ${this.#state} start V2 read frame。`);
       }
       try {
-        const session = this.#requireSession();
-        const outcome = normalizeStepOutcome(session.step(playerFrame));
-        const sessionState = session.getState();
-        if (typeof sessionState !== 'string' || !LOCAL_MATCH_SESSION_STATES.has(sessionState)) {
-          throw new TypeError('LocalMatchSession.state 无效。');
+        if (this.#state === PRODUCT_MATCH_RUNTIME_STATE.CREATED) {
+          const startResult = this.#requireSession().start();
+          containRejectedAsyncReturn(startResult, 'LocalMatchSession.start');
+          this.#state = this.#pauseRequested
+            ? PRODUCT_MATCH_RUNTIME_STATE.PAUSED
+            : PRODUCT_MATCH_RUNTIME_STATE.RUNNING;
         }
-        if (sessionState === 'ended') {
-          const replay = requireRecord(
-            cloneFrozenData(session.exportReplay(), 'ProductMatchRuntime completion replay'),
-            'ProductMatchRuntime completion replay',
-          );
-          const result = createProductMatchResult({
-            matchSeed: this.#matchSeed,
-            opponent: this.#requireOpponent(),
-            content: this.#requireContent(),
-            replay,
-          });
-          const completion = Object.freeze({ result, replay });
-          const sinkResult = this.#completionSink?.(completion);
-          containRejectedAsyncReturn(sinkResult, 'ProductMatchRuntime completionSink');
-          this.#result = result;
-          this.#state = PRODUCT_MATCH_RUNTIME_STATE.ENDED;
-        }
-        return Object.freeze({ ...outcome, result: this.#result });
+        return Object.freeze({ readFrame: this.#readV2Frame() });
       } catch (error) {
         this.#state = PRODUCT_MATCH_RUNTIME_STATE.FAILED;
         throw error;
@@ -302,14 +312,81 @@ export class ProductMatchRuntime implements ProductMatchRuntimePort {
     }
   }
 
-  getSnapshot(): Readonly<Record<string, unknown>> {
+  getReadFrame(): DeepReadonly<MatchReadFrameV2> {
     this.#begin();
     try {
       this.#assertUsable();
-      return requireRecord(
-        cloneFrozenData(this.#requireSession().getSnapshot(), 'ProductMatchRuntime snapshot'),
-        'ProductMatchRuntime snapshot',
-      );
+      return this.#readV2Frame();
+    } finally {
+      this.#end();
+    }
+  }
+
+  stepWithReadFrame(playerFrame: unknown = null): ProductMatchReadFrameStepOutcome {
+    this.#begin();
+    try {
+      this.#assertUsable();
+      if (this.#state !== PRODUCT_MATCH_RUNTIME_STATE.RUNNING) {
+        throw new Error(`ProductMatchRuntime V2 step 只允许 running，当前为 ${this.#state}。`);
+      }
+      try {
+        const session = this.#requireSession();
+        const readFrameSession = this.#requireReadFrameSession();
+        const rawOutcome = readFrameSession.stepWithPresentationReadFrame(playerFrame);
+        containRejectedAsyncReturn(rawOutcome, 'LocalMatchSession.stepWithPresentationReadFrame');
+        const outcome = requireRecord(rawOutcome, 'ProductMatchRuntime V2 step outcome');
+        assertKnownKeys(outcome, new Set(['events', 'readFrame', 'input']), 'ProductMatchRuntime V2 step outcome');
+        const events = cloneFrozenData(
+          readRequiredDataField(outcome, 'events', 'ProductMatchRuntime V2 step outcome'),
+          'ProductMatchRuntime V2 events',
+        );
+        if (!Array.isArray(events)) {
+          throw new TypeError('ProductMatchRuntime V2 events 必须是数组。');
+        }
+        const readFrame = assertProductMatchReadFrameV2(
+          readRequiredDataField(outcome, 'readFrame', 'ProductMatchRuntime V2 step outcome'),
+          this.#matchSeed,
+        );
+        const input = readRequiredDataField(outcome, 'input', 'ProductMatchRuntime V2 step outcome');
+        const world = requireRecord(
+          readRequiredDataField(readFrame, 'worldSnapshot', 'ProductMatchRuntime V2 read frame'),
+          'ProductMatchRuntime V2 read frame world',
+        );
+        const local = requireRecord(
+          readRequiredDataField(readFrame, 'localActionSidecar', 'ProductMatchRuntime V2 read frame'),
+          'ProductMatchRuntime V2 read frame local sidecar',
+        );
+        if (input === null) {
+          throw new TypeError('ProductMatchRuntime running V2 step 必须返回非 null normalized InputFrame。');
+        }
+        if (!isNormalizedInputFrame(input)) {
+          throw new TypeError('ProductMatchRuntime V2 input 缺少 normalized InputFrame provenance。');
+        }
+        const inputParticipantId = readRequiredDataField(input, 'participantId', 'ProductMatchRuntime V2 input');
+        const inputTick = readRequiredDataField(input, 'tick', 'ProductMatchRuntime V2 input');
+        const localParticipantId = readRequiredDataField(
+          local,
+          'participantId',
+          'ProductMatchRuntime V2 local sidecar',
+        );
+        const postTick = readRequiredDataField(world, 'tick', 'ProductMatchRuntime V2 read frame world');
+        if (
+          inputParticipantId !== localParticipantId
+          || inputTick !== (postTick as number) - 1
+        ) {
+          throw new Error('ProductMatchRuntime V2 input 与 post read frame identity 不一致。');
+        }
+        this.#completeEndedSession(session);
+        return Object.freeze({
+          events: events as readonly unknown[],
+          readFrame,
+          input: input as ArenaInputFrame | null,
+          result: this.#result,
+        });
+      } catch (error) {
+        this.#state = PRODUCT_MATCH_RUNTIME_STATE.FAILED;
+        throw error;
+      }
     } finally {
       this.#end();
     }
@@ -359,24 +436,9 @@ export class ProductMatchRuntime implements ProductMatchRuntimePort {
 }
 
 export function createProductMatchRuntimePort(value: unknown): Readonly<ProductMatchRuntimePort> {
-  const start = snapshotMethod<ProductMatchRuntimePort['start']>(
-    value,
-    'start',
-    'ProductMatchRuntime',
-  );
   const setPaused = snapshotMethod<ProductMatchRuntimePort['setPaused']>(
     value,
     'setPaused',
-    'ProductMatchRuntime',
-  );
-  const step = snapshotMethod<ProductMatchRuntimePort['step']>(
-    value,
-    'step',
-    'ProductMatchRuntime',
-  );
-  const getSnapshot = snapshotMethod<ProductMatchRuntimePort['getSnapshot']>(
-    value,
-    'getSnapshot',
     'ProductMatchRuntime',
   );
   const getPublicInfo = snapshotMethod<ProductMatchRuntimePort['getPublicInfo']>(
@@ -389,37 +451,63 @@ export function createProductMatchRuntimePort(value: unknown): Readonly<ProductM
     'getResult',
     'ProductMatchRuntime',
   );
+  const startWithReadFrame = snapshotMethod<ProductMatchRuntimePort['startWithReadFrame']>(
+    value,
+    'startWithReadFrame',
+    'ProductMatchRuntime',
+  );
+  const getReadFrame = snapshotMethod<ProductMatchRuntimePort['getReadFrame']>(
+    value,
+    'getReadFrame',
+    'ProductMatchRuntime',
+  );
+  const stepWithReadFrame = snapshotMethod<ProductMatchRuntimePort['stepWithReadFrame']>(
+    value,
+    'stepWithReadFrame',
+    'ProductMatchRuntime',
+  );
   const destroy = snapshotMethod<ProductMatchRuntimePort['destroy']>(
     value,
     'destroy',
     'ProductMatchRuntime',
   );
+  const publicInfo = getPublicInfo();
+  containRejectedAsyncReturn(publicInfo, 'ProductMatchRuntime.getPublicInfo');
+  const fixedPublicInfo = createProductPublicMatchInfo(publicInfo);
+  const expectedMatchSeed = assertProductMatchSeed(
+    readRequiredDataField(
+      requireRecord(fixedPublicInfo, 'ProductMatchRuntime public info'),
+      'matchSeed',
+      'ProductMatchRuntime public info',
+    ),
+  );
   return Object.freeze({
-    start: (): void => {
-      containRejectedAsyncReturn(start(), 'ProductMatchRuntime.start');
-    },
     setPaused: (paused: boolean): void => {
       containRejectedAsyncReturn(setPaused(paused), 'ProductMatchRuntime.setPaused');
     },
-    step: (playerFrame: unknown = null): ProductMatchStepOutcome => {
-      const outcome = step(playerFrame);
-      containRejectedAsyncReturn(outcome, 'ProductMatchRuntime.step');
-      return outcome;
-    },
-    getSnapshot: (): Readonly<Record<string, unknown>> => {
-      const snapshot = getSnapshot();
-      containRejectedAsyncReturn(snapshot, 'ProductMatchRuntime.getSnapshot');
-      return snapshot;
-    },
     getPublicInfo: (): ProductPublicMatchInfo => {
-      const publicInfo = getPublicInfo();
-      containRejectedAsyncReturn(publicInfo, 'ProductMatchRuntime.getPublicInfo');
-      return publicInfo;
+      return fixedPublicInfo;
     },
     getResult: (): ProductMatchResult | null => {
       const result = getResult();
       containRejectedAsyncReturn(result, 'ProductMatchRuntime.getResult');
+      if (result !== null) assertProductMatchResult(result, expectedMatchSeed, 'ProductMatchRuntime result');
       return result;
+    },
+    startWithReadFrame: (): ProductMatchReadFrameStartOutcome => {
+      const outcome = startWithReadFrame();
+      containRejectedAsyncReturn(outcome, 'ProductMatchRuntime.startWithReadFrame');
+      return assertProductMatchReadFrameStartOutcome(outcome, expectedMatchSeed);
+    },
+    getReadFrame: (): DeepReadonly<MatchReadFrameV2> => {
+      const frame = getReadFrame();
+      containRejectedAsyncReturn(frame, 'ProductMatchRuntime.getReadFrame');
+      return assertProductMatchReadFrameV2(frame, expectedMatchSeed);
+    },
+    stepWithReadFrame: (playerFrame: unknown = null): ProductMatchReadFrameStepOutcome => {
+      const outcome = stepWithReadFrame(playerFrame);
+      containRejectedAsyncReturn(outcome, 'ProductMatchRuntime.stepWithReadFrame');
+      return assertProductMatchReadFrameStepOutcome(outcome, expectedMatchSeed) as ProductMatchReadFrameStepOutcome;
     },
     destroy: (): void => {
       containRejectedAsyncReturn(destroy(), 'ProductMatchRuntime.destroy');

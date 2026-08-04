@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { createMatchContentPublicView } from '@number-strategy-jump/arena-contracts';
+import { runInNewContext } from 'node:vm';
+import {
+  createMatchContentPublicView,
+} from '@number-strategy-jump/arena-contracts';
 import {
   PRODUCT_INPUT_ROUTER_MODE,
   PRODUCT_UI_INTENT_ID,
@@ -867,6 +870,29 @@ function publicMatchContent() {
   });
 }
 
+async function presentationUnhandledDuring(run: () => unknown | Promise<unknown>): Promise<unknown[]> {
+  const unhandled: unknown[] = [];
+  const listener = (reason: unknown) => { unhandled.push(reason); };
+  process.on('unhandledRejection', listener);
+  try {
+    await run();
+    await new Promise<void>((resolve) => setImmediate(resolve));
+  } finally {
+    process.off('unhandledRejection', listener);
+  }
+  return unhandled;
+}
+
+function presentationShadowedRejection(message: string): { value: unknown; getCalls: () => number } {
+  const rejected = Promise.reject(new Error(message));
+  let getCalls = 0;
+  Object.defineProperty(rejected, 'then', {
+    configurable: true,
+    get() { getCalls += 1; throw new Error('presentation then getter must not execute'); },
+  });
+  return { value: rejected, getCalls: () => getCalls };
+}
+
 describe('Product match presentation runtime boundaries', () => {
   it('rejects option and controller method accessors without execution', () => {
     let getterCalls = 0;
@@ -876,7 +902,7 @@ describe('Product match presentation runtime boundaries', () => {
     });
     expect(() => new ProductMatchPresentationRuntime(options as never)).toThrow(/数据字段/);
     expect(getterCalls).toBe(0);
-    const controllerValue = Object.defineProperty({}, 'beginMatch', {
+    const controllerValue = Object.defineProperty({}, 'beginMatchWithReadFrame', {
       enumerable: true,
       get() { getterCalls += 1; return () => {}; },
     });
@@ -891,37 +917,37 @@ describe('Product match presentation runtime boundaries', () => {
   it('fails closed when a borrowed controller swallows runtime reentry', () => {
     const content = publicMatchContent();
     const runtimeBox: { current: ProductMatchPresentationRuntime | null } = { current: null };
-    const authoritySnapshot = {
-      tick: 0,
-      participants: [
-        { id: 'player-1', actionAffordance: {} },
-        { id: 'player-2', actionAffordance: {} },
-      ],
-    };
+    const authorityFrame = Object.freeze({
+      schemaVersion: 2,
+      worldSnapshot: Object.freeze({ tick: 0, eventSequence: 0 }),
+      localActionSidecar: Object.freeze({
+        schemaVersion: 2,
+        tick: 0,
+        eventSequence: 0,
+        participantId: 'player-1',
+        profile: 'local-context-primary',
+        primaryActionDefinitionId: null,
+        channels: Object.freeze({
+          primary: Object.freeze({ kind: 'none', actionDefinitionId: null, lane: null, source: null, reason: 'none' }),
+          primaryHold: Object.freeze({ kind: 'none', actionDefinitionId: null, lane: null, source: null, reason: 'none' }),
+        }),
+      }),
+    });
     const controllerValue = {
-      beginMatch() {
+      beginMatchWithReadFrame() {
+        try { runtimeBox.current?.start(); } catch { /* hostile port swallows reentry */ }
         return {
-          state: { state: PRODUCT_SESSION_STATE.IN_MATCH },
-          match: {
-            publicMatchInfo: {
-              matchSeed: 1,
-              opponent: {
-                id: 'opponent',
-                displayName: '对手',
-                portraitKey: 'portrait',
-                appearanceKey: 'appearance',
-              },
-              content,
-            },
+          readFrame: authorityFrame,
+          productSnapshot: {
+            state: { state: PRODUCT_SESSION_STATE.IN_MATCH },
+            match: { publicMatchInfo: { matchSeed: 1, opponent: {
+              id: 'opponent', displayName: '对手', portraitKey: 'portrait', appearanceKey: 'appearance',
+            }, content } },
           },
         };
       },
-      getActiveMatchSnapshot() {
-        try { runtimeBox.current?.start(); } catch { /* hostile port swallows reentry */ }
-        return authoritySnapshot;
-      },
-      getSnapshot() { return {}; },
-      stepMatch() { return {}; },
+      getActiveMatchReadFrame() { return authorityFrame; },
+      stepMatchWithReadFrame() { return { matchStep: null, productSnapshot: {} }; },
     };
     const runtime = new ProductMatchPresentationRuntime({
       controller: controllerValue,
@@ -929,10 +955,85 @@ describe('Product match presentation runtime boundaries', () => {
       frameProjector: () => Object.freeze({ source: Object.freeze({ tick: 0 }) }),
     });
     runtimeBox.current = runtime;
-    expect(() => runtime.start()).toThrow(/吞掉的重入异常/);
+    expect(() => runtime.start()).toThrow(/Product match 表现启动失败/);
     expect(runtime.state).toBe(PRODUCT_MATCH_PRESENTATION_RUNTIME_STATE.FAILED);
     runtime.destroy();
     expect(runtime.state).toBe(PRODUCT_MATCH_PRESENTATION_RUNTIME_STATE.DESTROYED);
+  });
+
+  it('brand-probes presentation runtime and flow ports without invoking thenables', async () => {
+    const hostileCalls = { calls: 0 };
+    let shadowGetterCalls: (() => number) | undefined;
+    const hostile = Object.freeze({
+      then() {
+        hostileCalls.calls += 1;
+        return Promise.reject(new Error('presentation returned rejection'));
+      },
+    });
+    const values = [
+      () => hostile,
+      () => {
+        const shadow = presentationShadowedRejection('presentation shadow rejection');
+        shadowGetterCalls = shadow.getCalls;
+        return shadow.value;
+      },
+      () => {
+        const foreign = runInNewContext('Promise.reject(new Error("presentation foreign rejection"))');
+        Object.defineProperty(foreign as object, 'then', { configurable: true, value: null });
+        return foreign;
+      },
+    ];
+
+    for (const makeValue of values) {
+      const value = makeValue();
+      const runtime = new ProductMatchPresentationRuntime({
+        controller: {
+          beginMatchWithReadFrame() { return value; },
+          stepMatchWithReadFrame() { return {}; },
+          getActiveMatchReadFrame() { return null; },
+        },
+        inputSource: { sample() { return {}; } },
+        frameProjector: () => ({}),
+      });
+      const unhandled = await presentationUnhandledDuring(() => {
+        expect(() => runtime.start()).toThrow(/表现启动失败|同步完成|访问器/);
+      });
+      expect(unhandled).toHaveLength(0);
+      expect(runtime.state).toBe(PRODUCT_MATCH_PRESENTATION_RUNTIME_STATE.FAILED);
+      runtime.destroy();
+    }
+
+    const ordinaryRuntime = new ProductMatchPresentationRuntime({
+      controller: {
+        beginMatchWithReadFrame() { return { then: null }; },
+        stepMatchWithReadFrame() { return {}; },
+        getActiveMatchReadFrame() { return null; },
+      },
+      inputSource: { sample() { return {}; } },
+      frameProjector: () => ({}),
+    });
+    let ordinaryError: unknown;
+    try {
+      ordinaryRuntime.start();
+    } catch (error) {
+      ordinaryError = error;
+    }
+    expect(ordinaryError).toBeInstanceOf(Error);
+    expect((ordinaryError as Error).message).not.toMatch(/必须同步完成/);
+    ordinaryRuntime.destroy();
+
+    const flowValue = presentationShadowedRejection('flow shadow rejection');
+    const controller = flowController(() => flowValue.value);
+    const flow = new ProductPresentationFlow(flowOptions(controller));
+    const unhandled = await presentationUnhandledDuring(() => {
+      expect(() => flow.synchronize()).toThrow(/同步失败|同步完成/);
+    });
+    expect(unhandled).toHaveLength(0);
+    expect(flow.state).toBe(PRODUCT_PRESENTATION_FLOW_STATE.FAILED);
+    flow.destroy();
+    expect(flowValue.getCalls()).toBe(0);
+    expect(shadowGetterCalls?.()).toBe(0);
+    expect(hostileCalls.calls).toBe(0);
   });
 });
 
@@ -969,9 +1070,9 @@ function flowController(getSnapshot: () => unknown) {
     continueReward() {},
     dismissUnlocks() {},
     retry() {},
-    beginMatch() {},
-    stepMatch() {},
-    getActiveMatchSnapshot() { return null; },
+    beginMatchWithReadFrame() { return { readFrame: null, productSnapshot: getSnapshot() }; },
+    stepMatchWithReadFrame() { return { matchStep: null, productSnapshot: getSnapshot() }; },
+    getActiveMatchReadFrame() { return null; },
     getSnapshot,
     commitReward() {},
     hide() {},

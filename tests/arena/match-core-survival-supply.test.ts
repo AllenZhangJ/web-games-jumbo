@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import {
   ARENA_MATCH_EVENT,
   ARENA_REPLAY_SCHEMA_VERSION,
+  ARENA_EQUIPMENT_SUPPLY_DISPOSITION_SCHEMA_VERSION,
   HeadlessMatchRunner,
+  createMatchStateHash,
   createReplayMatch,
   restoreMatchCoreFromCheckpoint,
   type ArenaAuthorityEvent,
@@ -122,19 +124,19 @@ test('explicit survival composition owns spawn-expire-pickup-action order in pro
   assert.equal(Reflect.get(spawnPayload, 'tick'), 1_200);
   const actionIndex = eventTypes(wave).indexOf(ARENA_MATCH_EVENT.ACTION_STARTED);
   assert.ok(actionIndex > eventTypes(wave).lastIndexOf(ARENA_MATCH_EVENT.EQUIPMENT_PICKED_UP));
-  assert.equal(core.getSnapshot().participants[0]?.equipment?.definitionId, STAGE4_EQUIPMENT_ID.HAMMER);
+  assert.equal(core.getLegacyFullSnapshotForAudit().participants[0]?.equipment?.definitionId, STAGE4_EQUIPMENT_ID.HAMMER);
 
   const expiry = stepTo(core, 1_800);
   assert.deepEqual(eventTypes(expiry), [ARENA_MATCH_EVENT.EQUIPMENT_EXPIRED]);
   assert.equal(Reflect.get(Reflect.get(expiry[0] ?? {}, 'payload'), 'tick'), 1_800);
-  assert.equal(core.getSnapshot().participants.filter(({ equipment }) => equipment !== null).length, 2);
+  assert.equal(core.getLegacyFullSnapshotForAudit().participants.filter(({ equipment }) => equipment !== null).length, 2);
 
   const replacement = stepTo(core, 2_400);
   const types = eventTypes(replacement);
   assert.deepEqual(types.slice(0, 3), Array(3).fill(ARENA_MATCH_EVENT.EQUIPMENT_SPAWNED));
   assert.equal(types.filter((type) => type === ARENA_MATCH_EVENT.EQUIPMENT_RECYCLED).length, 2);
   assert.equal(types.filter((type) => type === ARENA_MATCH_EVENT.EQUIPMENT_REPLACED).length, 2);
-  for (const participant of core.getSnapshot().participants) assert.ok(participant.equipment);
+  for (const participant of core.getLegacyFullSnapshotForAudit().participants) assert.ok(participant.equipment);
   core.destroy();
 });
 
@@ -196,7 +198,7 @@ test('two-player contest is invariant to input order and supply state changes on
 test('Replay V5 reconstructs survival supply from initial composition and inputs', () => {
   const core = createSurvivalCore(903, 1_850);
   const runner = new HeadlessMatchRunner(core, { checkpointInterval: 60 });
-  const replay = runner.runUntilEnded((snapshot) => snapshot.participants.map(({ id }) => (
+  const replay = runner.runLegacyUntilEndedForAudit((snapshot) => snapshot.participants.map(({ id }) => (
     createNeutralInputFrame(snapshot.tick, id)
   )));
   assert.equal(replay.replaySchemaVersion, ARENA_REPLAY_SCHEMA_VERSION);
@@ -272,7 +274,7 @@ test('internal checkpoint restores every survival authority boundary before publ
     const continuousEvents = runner.step(frames);
     const resumedEvents = resumed.step(frames);
     assert.deepEqual(resumedEvents, continuousEvents);
-    assert.deepEqual(resumed.getSnapshot(), source.getSnapshot());
+    assert.deepEqual(resumed.getLegacyFullSnapshotForAudit(), source.getLegacyFullSnapshotForAudit());
     assert.equal(resumed.getStateHash(), source.getStateHash());
   }
   const terminal = runner.exportInternalCheckpoint();
@@ -310,11 +312,11 @@ test('public projection survives +599 checkpoint restore and rejects +600 pre-st
     coreFactory: survivalCoreFactory,
   });
   assert.deepEqual(
-    restored.getSnapshot().activeSupplyProjection,
-    source.getSnapshot().activeSupplyProjection,
+    restored.getLegacyFullSnapshotForAudit().activeSupplyProjection,
+    source.getLegacyFullSnapshotForAudit().activeSupplyProjection,
   );
   assert.deepEqual(
-    restored.getSnapshot().activeSupplyProjection?.supplies.map(({ remainingTicks }) => remainingTicks),
+    restored.getLegacyFullSnapshotForAudit().activeSupplyProjection?.supplies.map(({ remainingTicks }) => remainingTicks),
     [1, 1, 1],
   );
   const expectedPendingExpiryIds = SUPPLY.spawnSpecs
@@ -322,7 +324,7 @@ test('public projection survives +599 checkpoint restore and rejects +600 pre-st
       `${SUPPLY.supplyDefinitionId}:wave-0:slot-${slotId}:equipment`
     ))
     .sort();
-  const preExpiry599 = source.getSnapshot();
+  const preExpiry599 = source.getLegacyFullSnapshotForAudit();
   assert.equal(preExpiry599.tick, 1_799);
   assert.equal(preExpiry599.equipment.length, 3);
   assert.deepEqual(preExpiry599.activeSupplyProjection?.pendingExpiryEquipmentInstanceIds, []);
@@ -330,7 +332,7 @@ test('public projection survives +599 checkpoint restore and rejects +600 pre-st
   const beforeExpiry = runner.step(neutralFrames(source));
   const restoredBeforeExpiry = restored.step(neutralFrames(restored));
   assert.deepEqual(restoredBeforeExpiry, beforeExpiry);
-  const preStep = source.getSnapshot();
+  const preStep = source.getLegacyFullSnapshotForAudit();
   assert.equal(preStep.tick, 1_800);
   assert.equal(preStep.activeSupplyProjection?.resyncReadiness, 'not-ready-pre-expiry');
   assert.equal(preStep.activeSupplyProjection?.pendingAuthorityTick, 1_800);
@@ -350,31 +352,143 @@ test('public projection survives +599 checkpoint restore and rejects +600 pre-st
   assert.deepEqual(restoredExpiry, expiry);
   assert.equal(expiry.filter(({ type }) => type === ARENA_MATCH_EVENT.EQUIPMENT_EXPIRED).length, 3);
   assert.deepEqual(
-    restored.getSnapshot().activeSupplyProjection,
-    source.getSnapshot().activeSupplyProjection,
+    restored.getLegacyFullSnapshotForAudit().activeSupplyProjection,
+    source.getLegacyFullSnapshotForAudit().activeSupplyProjection,
   );
-  assert.equal(restored.getSnapshot().activeSupplyProjection?.resyncReadiness, 'ready');
-  assert.equal(source.getSnapshot().activeSupplyProjection?.pendingAuthorityTick, null);
-  assert.deepEqual(source.getSnapshot().activeSupplyProjection?.pendingExpiryEquipmentInstanceIds, []);
-  assert.equal(source.getSnapshot().equipment.length, 0);
-  assert.equal(restored.getSnapshot().equipment.length, 0);
-  assert.deepEqual(restored.getSnapshot().activeSupplyProjection?.pendingExpiryEquipmentInstanceIds, []);
-  assert.deepEqual(restored.getSnapshot().activeSupplyProjection?.supplies, []);
+  assert.equal(restored.getLegacyFullSnapshotForAudit().activeSupplyProjection?.resyncReadiness, 'ready');
+  assert.equal(source.getLegacyFullSnapshotForAudit().activeSupplyProjection?.pendingAuthorityTick, null);
+  assert.deepEqual(source.getLegacyFullSnapshotForAudit().activeSupplyProjection?.pendingExpiryEquipmentInstanceIds, []);
+  assert.equal(source.getLegacyFullSnapshotForAudit().equipment.length, 0);
+  assert.equal(restored.getLegacyFullSnapshotForAudit().equipment.length, 0);
+  assert.deepEqual(restored.getLegacyFullSnapshotForAudit().activeSupplyProjection?.pendingExpiryEquipmentInstanceIds, []);
+  assert.deepEqual(restored.getLegacyFullSnapshotForAudit().activeSupplyProjection?.supplies, []);
 
   const afterExpiry = runner.step(neutralFrames(source));
   const restoredAfterExpiry = restored.step(neutralFrames(restored));
   assert.deepEqual(restoredAfterExpiry, afterExpiry);
   assert.equal(afterExpiry.filter(({ type }) => type === ARENA_MATCH_EVENT.EQUIPMENT_EXPIRED).length, 0);
   assert.equal(afterExpiry.length, 0);
-  assert.equal(source.getSnapshot().tick, 1_802);
-  assert.equal(source.getSnapshot().equipment.length, 0);
-  assert.equal(source.getSnapshot().activeSupplyProjection?.resyncReadiness, 'ready');
-  assert.equal(source.getSnapshot().activeSupplyProjection?.pendingAuthorityTick, null);
-  assert.deepEqual(source.getSnapshot().activeSupplyProjection?.pendingExpiryEquipmentInstanceIds, []);
-  assert.deepEqual(source.getSnapshot().activeSupplyProjection?.supplies, []);
+  assert.equal(source.getLegacyFullSnapshotForAudit().tick, 1_802);
+  assert.equal(source.getLegacyFullSnapshotForAudit().equipment.length, 0);
+  assert.equal(source.getLegacyFullSnapshotForAudit().activeSupplyProjection?.resyncReadiness, 'ready');
+  assert.equal(source.getLegacyFullSnapshotForAudit().activeSupplyProjection?.pendingAuthorityTick, null);
+  assert.deepEqual(source.getLegacyFullSnapshotForAudit().activeSupplyProjection?.pendingExpiryEquipmentInstanceIds, []);
+  assert.deepEqual(source.getLegacyFullSnapshotForAudit().activeSupplyProjection?.supplies, []);
   restored.destroy();
   runner.destroy();
   source.destroy();
+});
+
+test('future-affecting expired-held disposition is versioned and participates in state hash', () => {
+  const core = createSurvivalCore(9_901, 2_500);
+  const publicSnapshot = core.getLegacyFullSnapshotForAudit();
+  const timeline = Object.freeze({
+    schemaVersion: 1,
+    supplyDefinitionId: ARENA_V2_SURVIVAL_SUPPLY_DEFINITION.id,
+    nextTick: 1_200,
+    activeSupplies: Object.freeze([]),
+  });
+  const dispositionId = `${ARENA_V2_SURVIVAL_SUPPLY_DEFINITION.id}:wave-0:slot-left:equipment`;
+  const secondDispositionId = `${ARENA_V2_SURVIVAL_SUPPLY_DEFINITION.id}:wave-0:slot-right:equipment`;
+  const heldRuntime = Object.freeze({
+    schemaVersion: 1,
+    instanceId: dispositionId,
+    definitionId: STAGE4_EQUIPMENT_ID.HAMMER,
+    spawnId: 'survival-left',
+    locationState: 'held',
+    ownerId: 'player-1',
+    position: null,
+    originPosition: { x: -1, y: 1, z: 0 },
+    lastSafePosition: { x: -1, y: 1, z: 0 },
+    cooldownRemainingTicks: 0,
+    revision: 1,
+  });
+  const secondHeldRuntime = Object.freeze({
+    ...heldRuntime,
+    instanceId: secondDispositionId,
+    definitionId: STAGE4_EQUIPMENT_ID.CHAIN,
+    spawnId: 'survival-right',
+    ownerId: 'player-2',
+    originPosition: { x: 1, y: 1, z: 0 },
+    lastSafePosition: { x: 1, y: 1, z: 0 },
+  });
+  const base = {
+    ...publicSnapshot,
+    participants: Object.freeze(publicSnapshot.participants.map((participant, index) => (
+      index === 0
+        ? Object.freeze({
+          ...participant,
+          equipment: Object.freeze({
+            instanceId: dispositionId,
+            definitionId: STAGE4_EQUIPMENT_ID.HAMMER,
+            cooldownRemainingTicks: 0,
+          }),
+        })
+        : index === 1
+          ? Object.freeze({
+            ...participant,
+            equipment: Object.freeze({
+              instanceId: secondDispositionId,
+              definitionId: STAGE4_EQUIPMENT_ID.CHAIN,
+              cooldownRemainingTicks: 0,
+            }),
+          })
+          : participant
+    ))),
+    equipment: Object.freeze([heldRuntime, secondHeldRuntime]),
+    rngStates: Object.freeze({}),
+    equipmentSupplyTimeline: timeline,
+  };
+  const emptyDisposition = {
+    schemaVersion: ARENA_EQUIPMENT_SUPPLY_DISPOSITION_SCHEMA_VERSION,
+    expiredHeldSupplyEquipmentInstanceIds: Object.freeze([]),
+  } as const;
+  const expiredDisposition = {
+    schemaVersion: ARENA_EQUIPMENT_SUPPLY_DISPOSITION_SCHEMA_VERSION,
+    expiredHeldSupplyEquipmentInstanceIds: Object.freeze([
+      dispositionId,
+    ]),
+  } as const;
+  const emptyHash = createMatchStateHash({
+    ...base,
+    equipmentSupplyDisposition: emptyDisposition,
+  });
+  const expiredHash = createMatchStateHash({
+    ...base,
+    equipmentSupplyDisposition: expiredDisposition,
+  });
+  assert.notEqual(emptyHash, expiredHash);
+  assert.throws(() => createMatchStateHash({
+    ...base,
+    equipmentSupplyDisposition: {
+      schemaVersion: 2,
+      expiredHeldSupplyEquipmentInstanceIds: [],
+    },
+  } as unknown as Parameters<typeof createMatchStateHash>[0]), /disposition/);
+  assert.throws(() => createMatchStateHash({
+    ...base,
+    equipmentSupplyDisposition: {
+      schemaVersion: ARENA_EQUIPMENT_SUPPLY_DISPOSITION_SCHEMA_VERSION,
+      expiredHeldSupplyEquipmentInstanceIds: [secondDispositionId, dispositionId],
+    },
+  }), /排序|唯一/);
+  assert.throws(() => createMatchStateHash({
+    ...base,
+    equipmentSupplyDisposition: {
+      schemaVersion: ARENA_EQUIPMENT_SUPPLY_DISPOSITION_SCHEMA_VERSION,
+      expiredHeldSupplyEquipmentInstanceIds: [
+        `${ARENA_V2_SURVIVAL_SUPPLY_DEFINITION.id}:wave-0:slot-ghost:equipment`,
+      ],
+    },
+  }), /held runtime/);
+  assert.throws(() => createMatchStateHash({
+    ...base,
+    equipmentSupplyDisposition: {
+      schemaVersion: ARENA_EQUIPMENT_SUPPLY_DISPOSITION_SCHEMA_VERSION,
+      expiredHeldSupplyEquipmentInstanceIds: [dispositionId, secondDispositionId, 'overflow'],
+    },
+  } as unknown as Parameters<typeof createMatchStateHash>[0]), /participant 数量/);
+  core.destroy();
 });
 
 test('internal checkpoint rejects schema, identity, cursor, input, event and map tampering atomically', () => {
@@ -456,7 +570,7 @@ test('internal checkpoint rejects schema, identity, cursor, input, event and map
     },
   }), /rule content hash/);
   assert.ok(rejectedCandidate);
-  assert.throws(() => rejectedCandidate?.getSnapshot(), /已销毁/);
+  assert.throws(() => rejectedCandidate?.getLegacyFullSnapshotForAudit(), /已销毁/);
   runner.destroy();
   source.destroy();
 });

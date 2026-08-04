@@ -6,8 +6,9 @@ import {
 } from '@number-strategy-jump/arena-contracts';
 import {
   PRODUCT_MATCH_COORDINATOR_STATE,
+  type ProductMatchCoordinatorReadFrameStartOutcome,
+  type ProductMatchCoordinatorReadFrameStepOutcome,
   type ProductMatchCoordinatorSnapshot,
-  type ProductMatchStepOutcome,
 } from '@number-strategy-jump/arena-product-match';
 import type { PlayerProfile } from '@number-strategy-jump/arena-profile-contracts';
 import { PlayerProfilePersistenceError } from '@number-strategy-jump/arena-profile-service';
@@ -25,8 +26,10 @@ import {
   type ProductSessionStateSnapshot,
 } from '@number-strategy-jump/arena-product-state';
 import {
+  containDiagnosticReturn,
   normalizeProductSessionOptions,
   rejectAsyncSyncReturn,
+  resolveSyncOrNativePromise,
   type ProductDiagnosticSink,
   type ProductMatchCoordinatorPort,
   type ProductProfileServicePort,
@@ -51,8 +54,13 @@ export interface ProductSessionSnapshot {
   readonly lastError: ProductSessionPublicError | null;
 }
 
-export interface ProductSessionStepOutcome {
-  readonly matchStep: ProductMatchStepOutcome | null;
+export interface ProductSessionReadFrameStartOutcome {
+  readonly readFrame: ProductMatchCoordinatorReadFrameStartOutcome['readFrame'] | null;
+  readonly productSnapshot: ProductSessionSnapshot;
+}
+
+export interface ProductSessionReadFrameStepOutcome {
+  readonly matchStep: ProductMatchCoordinatorReadFrameStepOutcome | null;
   readonly productSnapshot: ProductSessionSnapshot;
 }
 
@@ -210,11 +218,7 @@ export class ProductSessionController {
     if (!this.#diagnosticSink) return;
     try {
       const result = this.#diagnosticSink(Object.freeze({ type, error }));
-      if ((typeof result === 'object' && result !== null) || typeof result === 'function') {
-        Promise.resolve(result).catch(() => {
-          // 诊断只观察，不拥有产品生命周期。
-        });
-      }
+      containDiagnosticReturn(result, 'ProductSession diagnosticSink');
     } catch {
       // 诊断只观察，不拥有产品生命周期。
     }
@@ -362,8 +366,12 @@ export class ProductSessionController {
     } catch (error) {
       opened = Promise.reject(error);
     }
-    const operation: Promise<ProductSessionSnapshot> = Promise.resolve(opened)
-      .then((profile) => this.#runTransition(() => {
+    const operation: Promise<ProductSessionSnapshot> = Promise.resolve()
+      .then(() => resolveSyncOrNativePromise(
+        opened,
+        'ProductSession ProfileService.open()',
+      ))
+      .then(({ value: profile }) => this.#runTransition(() => {
         if (this.#readState().state === PRODUCT_SESSION_STATE.DESTROYED) {
           this.#profileCleanupPending = true;
           try {
@@ -465,9 +473,12 @@ export class ProductSessionController {
     this.#dispatch(options.requestEvent);
 
     const operation: Promise<ProductSessionSnapshot> = Promise.resolve()
-      .then(() => this.#runTransition(() => this.#matchCoordinator.prepare()))
-      .then((value) => Promise.resolve(value))
-      .then(() => this.#runTransition(() => {
+      .then(() => this.#runTransition(() => resolveSyncOrNativePromise(
+        this.#matchCoordinator.prepare(),
+        'ProductSession MatchCoordinator.prepare()',
+      )))
+      .then(({ value: prepared }) => this.#runTransition(() => {
+        void prepared;
         if (this.#readState().state === PRODUCT_SESSION_STATE.DESTROYED) {
           return this.#createSnapshot();
         }
@@ -537,35 +548,48 @@ export class ProductSessionController {
     });
   }
 
-  beginMatch(): ProductSessionSnapshot {
+  beginMatchWithReadFrame(): ProductSessionReadFrameStartOutcome {
     return this.#runTransition(() => {
       this.#assertForeground(PRODUCT_SESSION_STATE.PREPARING);
       try {
-        this.#callSync(
-          'ProductSession MatchCoordinator.start()',
-          () => this.#matchCoordinator.start(),
+        const outcome = this.#callSync(
+          'ProductSession MatchCoordinator.startWithReadFrame()',
+          () => this.#matchCoordinator.startWithReadFrame(),
         );
         this.#dispatch(PRODUCT_SESSION_EVENT.MATCH_STARTED);
         this.#lastError = null;
-        return this.#createSnapshot();
+        return Object.freeze({
+          readFrame: outcome.readFrame,
+          productSnapshot: this.#createSnapshot(),
+        });
       } catch (error) {
-        return this.#resetFailedMatchOrFatal(
-          error,
-          PRODUCT_SESSION_ERROR_CODE.MATCH_RUNTIME_FAILED,
-        );
+        return Object.freeze({
+          readFrame: null,
+          productSnapshot: this.#resetFailedMatchOrFatal(
+            error,
+            PRODUCT_SESSION_ERROR_CODE.MATCH_RUNTIME_FAILED,
+          ),
+        });
       }
     });
   }
 
-  stepMatch(playerFrame: unknown = null): ProductSessionStepOutcome {
+  stepMatchWithReadFrame(playerFrame: unknown = null): ProductSessionReadFrameStepOutcome {
     return this.#runTransition(() => {
       this.#assertForeground(PRODUCT_SESSION_STATE.IN_MATCH);
       try {
         const matchStep = this.#callSync(
-          'ProductSession MatchCoordinator.step()',
-          () => this.#matchCoordinator.step(playerFrame),
+          'ProductSession MatchCoordinator.stepWithReadFrame()',
+          () => this.#matchCoordinator.stepWithReadFrame(playerFrame),
         );
-        if (matchStep.result !== null) this.#dispatch(PRODUCT_SESSION_EVENT.MATCH_FINISHED);
+        const coordinatorResult = this.#callSync(
+          'ProductSession MatchCoordinator.getResult()',
+          () => this.#matchCoordinator.getResult(),
+        );
+        if (matchStep.result !== coordinatorResult) {
+          throw new Error('ProductSession V2 step result 与 MatchCoordinator result 不一致。');
+        }
+        if (coordinatorResult !== null) this.#dispatch(PRODUCT_SESSION_EVENT.MATCH_FINISHED);
         return Object.freeze({ matchStep, productSnapshot: this.#createSnapshot() });
       } catch (error) {
         return Object.freeze({
@@ -579,12 +603,12 @@ export class ProductSessionController {
     });
   }
 
-  getActiveMatchSnapshot(): Readonly<Record<string, unknown>> | null {
+  getActiveMatchReadFrame(): ProductSessionReadFrameStartOutcome['readFrame'] | null {
     return this.#runTransition(() => {
       if (this.#readState().state === PRODUCT_SESSION_STATE.DESTROYED) return null;
       return this.#callSync(
-        'ProductSession MatchCoordinator.getMatchSnapshot()',
-        () => this.#matchCoordinator.getMatchSnapshot(),
+        'ProductSession MatchCoordinator.getMatchReadFrame()',
+        () => this.#matchCoordinator.getMatchReadFrame(),
       );
     });
   }

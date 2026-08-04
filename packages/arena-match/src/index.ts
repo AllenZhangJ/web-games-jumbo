@@ -44,14 +44,16 @@ export {
   createMatchStateHash,
 } from './state-hash.js';
 export type {
+  ArenaInternalEquipmentSupplyDispositionSnapshot,
   ArenaInternalEquipmentSupplyLifecycle,
   ArenaInternalEquipmentSupplyTimelineSnapshot,
   ArenaInternalMatchSnapshot,
 } from './state-hash.js';
+export { ARENA_EQUIPMENT_SUPPLY_DISPOSITION_SCHEMA_VERSION } from './state-hash.js';
 export {
   ARENA_MATCH_EVENT,
-  assertMatchCoreTrustedPublicSnapshotReader,
   MatchCore,
+  readConsumedTrustedInputFrameBatch,
 } from './match-core.js';
 export type {
   ArenaAuthorityEvent,
@@ -62,10 +64,19 @@ export type {
   MatchCoreEquipmentSupplyTimelineStepResult,
   MatchCoreMapFactoryContext,
   MatchCoreOptions,
-  MatchCoreTrustedPublicSnapshotReader,
+  MatchCoreTrustedInputFrameBatch,
   MatchReplayMetadata,
   MatchInternalCheckpointIdentity,
 } from './match-core.js';
+export type {
+  MatchReadBinding,
+  MatchReadIdentityMemo,
+  MatchReadReader,
+} from './match-read-port.js';
+export type {
+  MatchReadFrameReader,
+  MatchReadSidecarReader,
+} from './match-read-frame.js';
 export {
   ARENA_INTERNAL_MATCH_CHECKPOINT_SCHEMA_VERSION,
   createArenaInternalMatchCheckpoint,

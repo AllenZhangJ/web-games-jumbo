@@ -2,8 +2,8 @@ import type { ArenaMapOccurrenceSnapshot } from '@number-strategy-jump/arena-con
 import { MAP_EVENT_KIND, MAP_OCCURRENCE_PHASE } from '@number-strategy-jump/arena-map';
 import type {
   BotArenaSurface,
-  BotObservation,
-  BotParticipantObservation,
+  BotPolicyObservation,
+  BotPolicyParticipant,
   BotVector3,
 } from './bot-observation.js';
 
@@ -44,16 +44,16 @@ function surfaceContains(
     && Math.abs(position.z - surface.center.z) <= surface.halfExtents.z - radius;
 }
 
-function isSurfaceEnabled(observation: BotObservation, surfaceId: string): boolean {
+function isSurfaceEnabled(observation: BotPolicyObservation, surfaceId: string): boolean {
   return observation.map.surfaces.find(({ id }) => id === surfaceId)?.enabled === true;
 }
 
-function availableSurfaces(observation: BotObservation): readonly BotArenaSurface[] {
+function availableSurfaces(observation: BotPolicyObservation): readonly BotArenaSurface[] {
   return observation.arena.surfaces.filter(({ id }) => isSurfaceEnabled(observation, id));
 }
 
 export function nearestSurface(
-  observation: BotObservation,
+  observation: BotPolicyObservation,
   position: BotVector3,
   excludedIds: ReadonlySet<string> = new Set<string>(),
 ): BotArenaSurface | null {
@@ -69,8 +69,8 @@ export function nearestSurface(
 }
 
 export function supportSurface(
-  observation: BotObservation,
-  participant: BotParticipantObservation,
+  observation: BotPolicyObservation,
+  participant: BotPolicyParticipant,
 ): BotArenaSurface | null {
   return observation.arena.surfaces.find(
     (surface) => surface.id === participant.supportSurfaceId
@@ -102,7 +102,7 @@ function surfacesAreWalkConnected(
 }
 
 export function surfaceForPosition(
-  observation: BotObservation,
+  observation: BotPolicyObservation,
   position: BotVector3,
 ): BotArenaSurface | null {
   return availableSurfaces(observation).find((surface) => (
@@ -111,7 +111,7 @@ export function surfaceForPosition(
 }
 
 export function findSurfacePath(
-  observation: BotObservation,
+  observation: BotPolicyObservation,
   fromSurface: BotArenaSurface | null,
   targetSurface: BotArenaSurface | null,
   excludedIds: ReadonlySet<string> = new Set<string>(),
@@ -179,8 +179,8 @@ function containingMergedInterval(
 }
 
 export function clearanceFromMapEdge(
-  observation: BotObservation,
-  participant: BotParticipantObservation,
+  observation: BotPolicyObservation,
+  participant: BotPolicyParticipant,
 ): number {
   const surfaces = availableSurfaces(observation);
   const xInterval = containingMergedInterval(surfaces
@@ -209,8 +209,8 @@ export function clearanceFromMapEdge(
 }
 
 export function maximumRecoverableClearance(
-  observation: BotObservation,
-  participant: BotParticipantObservation,
+  observation: BotPolicyObservation,
+  participant: BotPolicyParticipant,
 ): number {
   const surface = supportSurface(observation, participant);
   if (!surface) return 0;
@@ -252,7 +252,7 @@ function regionValue(value: unknown): BotRegion | null {
   };
 }
 
-export function collapseThreatenedSurfaceIds(observation: BotObservation): ReadonlySet<string> {
+export function collapseThreatenedSurfaceIds(observation: BotPolicyObservation): ReadonlySet<string> {
   const result = new Set<string>();
   for (const occurrence of observation.map.occurrences) {
     const payload = recordValue(occurrence.publicPayload);
@@ -281,7 +281,7 @@ function occurrenceRegion(occurrence: ArenaMapOccurrenceSnapshot): BotRegion | n
 }
 
 export function activeWindThreat(
-  observation: BotObservation,
+  observation: BotPolicyObservation,
 ): ArenaMapOccurrenceSnapshot | null {
   return observation.map.occurrences.find((occurrence) => (
     occurrence.kind === MAP_EVENT_KIND.WIND_ZONE
@@ -290,7 +290,7 @@ export function activeWindThreat(
   )) ?? null;
 }
 
-export function safestHazardTarget(observation: BotObservation): BotHazardTarget | null {
+export function safestHazardTarget(observation: BotPolicyObservation): BotHazardTarget | null {
   const collapseIds = collapseThreatenedSurfaceIds(observation);
   const wind = activeWindThreat(observation);
   const windRegion = wind ? occurrenceRegion(wind) : null;

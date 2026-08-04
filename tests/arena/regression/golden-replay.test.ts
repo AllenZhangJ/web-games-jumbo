@@ -121,7 +121,7 @@ test('committed survival Replay rejects input, event payload, checkpoint and fin
     coreFactory: createArenaV2SurvivalGoldenReplayCore,
   });
   assert.equal(report.manifestId, 'arena.v2.survival.golden-replays.v1');
-  assert.equal(report.manifestHash, 'dd30e771');
+  assert.equal(report.manifestHash, '9f6b2d8c');
   assert.equal(report.verifiedEntryCount, 1);
   const entry = required(
     corpus.manifest.entries.find(({ id }) => id === 'regression.survival-supply-lifecycle'),

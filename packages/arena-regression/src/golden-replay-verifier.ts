@@ -1,5 +1,7 @@
 import {
   assertKnownKeys,
+  assertIntegerAtLeast,
+  assertNonEmptyString,
   assertPlainRecord,
   cloneFrozenData,
   createDeterministicDataHash,
@@ -8,6 +10,7 @@ import {
   ARENA_REPLAY_ERROR_CODE,
   ARENA_REPLAY_SCHEMA_VERSION,
   createReplayMatch,
+  validateArenaReplay,
   type ReplayCoreFactory,
 } from '@number-strategy-jump/arena-match';
 import {
@@ -44,9 +47,57 @@ interface ReplayData extends Record<string, unknown> {
   readonly events: readonly { readonly type: string }[];
 }
 
+const REPLAY_KEYS: ReadonlySet<string> = new Set([
+  'replaySchemaVersion', 'schemaVersion', 'physicsBackendVersion', 'configHash',
+  'ruleContentHash', 'matchSeed', 'config', 'inputFrames', 'checkpoints', 'events',
+  'finalHash', 'result',
+]);
+const SCENARIO_SOURCE_KEYS: ReadonlySet<string> = new Set(['id', 'version', 'category', 'file']);
+const VERIFIER_OPTIONS_KEYS: ReadonlySet<string> = new Set([
+  'manifest', 'fixtures', 'scenarioRegistry', 'coreFactory',
+]);
+const FIXTURE_KEYS: ReadonlySet<string> = new Set(['file', 'replay']);
+const ID_PATTERN = /^[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
+const FILE_PATTERN = /^(?:equipment|map|movement|lifecycle|regression)-[a-z0-9]+(?:-[a-z0-9]+)*\.json$/;
+const CATEGORY_VALUES: ReadonlySet<unknown> = new Set(['equipment', 'map', 'movement', 'lifecycle', 'regression']);
+
+function captureExactDataFields(
+  value: unknown,
+  expectedKeys: ReadonlySet<string>,
+  name: string,
+): Readonly<Record<string, unknown>> {
+  const record = assertPlainRecord(value, name);
+  const captured: Record<string, unknown> = {};
+  const seen = new Set<string>();
+  for (const key of Reflect.ownKeys(record)) {
+    if (typeof key !== 'string') throw new TypeError(`${name} 不能包含 Symbol 字段。`);
+    if (!expectedKeys.has(key)) throw new RangeError(`${name} 不支持字段 ${key}。`);
+    const descriptor = Object.getOwnPropertyDescriptor(record, key);
+    if (
+      !descriptor
+      || !descriptor.enumerable
+      || !Object.prototype.hasOwnProperty.call(descriptor, 'value')
+    ) throw new TypeError(`${name}.${key} 必须是可枚举数据字段。`);
+    captured[key] = descriptor.value;
+    seen.add(key);
+  }
+  for (const key of expectedKeys) {
+    if (!seen.has(key)) throw new TypeError(`${name} 缺少字段 ${key}。`);
+  }
+  return Object.freeze(captured);
+}
+
 function cloneReplay(value: unknown, name: string): ReplayData {
   const replay = assertPlainRecord(cloneFrozenData(value, name), name);
+  assertKnownKeys(replay, REPLAY_KEYS, name);
+  if (replay.replaySchemaVersion === ARENA_REPLAY_SCHEMA_VERSION) {
+    return validateArenaReplay(replay) as unknown as ReplayData;
+  }
   const result = assertPlainRecord(replay.result, `${name}.result`);
+  const replaySchemaVersion = replay.replaySchemaVersion;
+  if (!Number.isSafeInteger(replaySchemaVersion) || (replaySchemaVersion as number) < 1) {
+    throw new RangeError(`${name}.replaySchemaVersion 必须是安全整数。`);
+  }
   if (!Number.isSafeInteger(result.endedAtTick)) throw new TypeError(`${name} 缺少完整 result。`);
   if (!Array.isArray(replay.inputFrames) || !Array.isArray(replay.checkpoints) || !Array.isArray(replay.events)) {
     throw new TypeError(`${name} 缺少回放数组。`);
@@ -71,13 +122,29 @@ export function createArenaGoldenReplayManifestEntry(
   scenario: Pick<ArenaGoldenReplayScenarioEntry, 'id' | 'version' | 'category' | 'file'>,
   replayValue: unknown,
 ): Readonly<ArenaGoldenReplayManifestEntry> {
-  const replay = cloneReplay(replayValue, `黄金回放场景 ${scenario.id}`);
+  const scenarioSnapshot = assertPlainRecord(
+    cloneFrozenData(
+      captureExactDataFields(scenario, SCENARIO_SOURCE_KEYS, '黄金回放 scenario'),
+      '黄金回放 scenario',
+    ),
+    '黄金回放 scenario',
+  );
+  const id = assertNonEmptyString(scenarioSnapshot.id, '黄金回放 scenario.id');
+  if (!ID_PATTERN.test(id)) throw new RangeError('黄金回放 scenario.id 格式无效。');
+  const category = scenarioSnapshot.category;
+  if (!CATEGORY_VALUES.has(category)) throw new RangeError('黄金回放 scenario.category 不受支持。');
+  const file = assertNonEmptyString(scenarioSnapshot.file, '黄金回放 scenario.file');
+  if (!FILE_PATTERN.test(file) || !file.startsWith(`${String(category)}-`)) {
+    throw new RangeError('黄金回放 scenario.file 必须是安全且与 category 一致的 JSON 文件名。');
+  }
+  const version = assertIntegerAtLeast(scenarioSnapshot.version, 1, '黄金回放 scenario.version');
+  const replay = cloneReplay(replayValue, `黄金回放场景 ${id}`);
   return Object.freeze({
-    id: scenario.id,
-    category: scenario.category,
-    file: scenario.file,
-    scenario: Object.freeze({ id: scenario.id, version: scenario.version }),
-    replayHash: createDeterministicDataHash(replay, `黄金回放 ${scenario.id}`),
+    id,
+    category: category as ArenaGoldenReplayManifestEntry['category'],
+    file,
+    scenario: Object.freeze({ id, version }),
+    replayHash: createDeterministicDataHash(replay, `黄金回放 ${id}`),
     matchSeed: replay.matchSeed,
     matchSchemaVersion: replay.schemaVersion,
     physicsBackendVersion: replay.physicsBackendVersion,
@@ -110,12 +177,12 @@ function cloneFixtureMap(fixturesValue: unknown): Map<string, ReplayData> {
   const fixtures = new Map<string, ReplayData>();
   fixturesValue.forEach((value, index) => {
     const name = `黄金回放 fixtures[${index}]`;
-    const fixture = assertPlainRecord(value, name);
-    if (typeof fixture.file !== 'string' || fixture.file.length === 0) {
-      throw new TypeError(`${name}.file 必须是非空字符串。`);
-    }
-    if (fixtures.has(fixture.file)) throw new RangeError(`黄金回放 fixture 重复 ${fixture.file}。`);
-    fixtures.set(fixture.file, cloneReplay(fixture.replay, `黄金回放 ${fixture.file}`));
+    const fixture = assertPlainRecord(cloneFrozenData(value, name), name);
+    assertKnownKeys(fixture, FIXTURE_KEYS, name);
+    const file = assertNonEmptyString(fixture.file, `${name}.file`);
+    if (!FILE_PATTERN.test(file)) throw new RangeError(`${name}.file 不是安全黄金回放文件名。`);
+    if (fixtures.has(file)) throw new RangeError(`黄金回放 fixture 重复 ${file}。`);
+    fixtures.set(file, cloneReplay(fixture.replay, `黄金回放 ${file}`));
   });
   return fixtures;
 }
@@ -161,23 +228,22 @@ function assertUnsupportedBeforeCore(
 }
 
 export function verifyArenaGoldenReplayCorpus(options: unknown) {
-  assertKnownKeys(
-    options,
-    new Set(['manifest', 'fixtures', 'scenarioRegistry', 'coreFactory']),
-    '黄金回放验证 options',
-  );
-  const manifest = createArenaGoldenReplayManifest(options.manifest);
-  if (!(options.scenarioRegistry instanceof ArenaGoldenReplayScenarioRegistry)) {
+  const optionsSnapshot = captureExactDataFields(options, VERIFIER_OPTIONS_KEYS, '黄金回放验证 options');
+  const manifest = createArenaGoldenReplayManifest(optionsSnapshot.manifest);
+  const scenarioRegistry = optionsSnapshot.scenarioRegistry;
+  if (!(scenarioRegistry instanceof ArenaGoldenReplayScenarioRegistry)) {
     throw new TypeError('黄金回放验证需要 ArenaGoldenReplayScenarioRegistry。');
   }
-  if (typeof options.coreFactory !== 'function') throw new TypeError('黄金回放验证需要 coreFactory。');
-  const coreFactory = options.coreFactory as ReplayCoreFactory;
-  const fixtures = cloneFixtureMap(options.fixtures);
+  const coreFactoryValue = optionsSnapshot.coreFactory;
+  if (typeof coreFactoryValue !== 'function') throw new TypeError('黄金回放验证需要 coreFactory。');
+  const coreFactory = coreFactoryValue as ReplayCoreFactory;
+  const fixturesSource = optionsSnapshot.fixtures;
+  const fixtures = cloneFixtureMap(fixturesSource);
   if (fixtures.size !== manifest.entries.length) {
     throw new RangeError('黄金回放 fixture 数量与 Manifest 不一致。');
   }
   const current = manifest.replaySchemaVersion === ARENA_REPLAY_SCHEMA_VERSION;
-  if (current) assertCurrentScenarioCoverage(manifest, options.scenarioRegistry);
+  if (current) assertCurrentScenarioCoverage(manifest, scenarioRegistry);
   const verified: Readonly<{ id: string; replayHash: string; finalHash: string }>[] = [];
   for (const entry of manifest.entries) {
     const replay = fixtures.get(entry.file);
@@ -188,7 +254,7 @@ export function verifyArenaGoldenReplayCorpus(options: unknown) {
       throw new RangeError(`黄金回放 ${entry.id} schema 与 Manifest 不一致。`);
     }
     if (current) {
-      const scenario = options.scenarioRegistry.require(entry.scenario);
+      const scenario = scenarioRegistry.require(entry.scenario);
       if (scenario.category !== entry.category || scenario.file !== entry.file) {
         throw new Error(`黄金回放场景 ${entry.id} 的 category/file 漂移。`);
       }
@@ -207,7 +273,7 @@ export function verifyArenaGoldenReplayCorpus(options: unknown) {
   if (current) {
     const firstEntry = manifest.entries[0];
     if (!firstEntry) throw new Error('黄金回放 Manifest 不能为空。');
-    const firstReplay = cloneFixtureMap(options.fixtures).get(firstEntry.file);
+    const firstReplay = cloneFixtureMap(fixturesSource).get(firstEntry.file);
     for (const version of manifest.rejectedReplaySchemaVersions) {
       assertUnsupportedBeforeCore(firstReplay, version, coreFactory);
     }

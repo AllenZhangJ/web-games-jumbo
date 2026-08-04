@@ -9,6 +9,22 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./presentation-launch": {
+      "types": "./dist/presentation-launch.d.ts",
+      "import": "./dist/presentation-launch.js"
+    },
+    "./product-game-composition": {
+      "types": "./dist/product-game-composition.d.ts",
+      "import": "./dist/product-game-composition.js"
+    },
+    "./product-renderer-composition": {
+      "types": "./dist/product-renderer-composition.d.ts",
+      "import": "./dist/product-renderer-composition.js"
+    },
+    "./canvas-product-game-composition": {
+      "types": "./dist/canvas-product-game-composition.d.ts",
+      "import": "./dist/canvas-product-game-composition.js"
     }
   },
   "files": ["dist"],

@@ -4,13 +4,20 @@ export {
   createProductMatchRuntimePort,
   validateProductMatchRuntime,
 } from './product-match-runtime.js';
+export {
+  assertProductMatchReadFrameV2,
+  assertProductMatchReadFrameStartOutcome,
+  assertProductMatchReadFrameStepOutcome,
+  assertProductMatchResult,
+} from './ports.js';
 export type {
   ProductMatchCompletion,
   ProductMatchCompletionSink,
   ProductMatchRuntimeOptions,
   ProductMatchRuntimePort,
   ProductMatchRuntimeState,
-  ProductMatchStepOutcome,
+  ProductMatchReadFrameStartOutcome,
+  ProductMatchReadFrameStepOutcome,
 } from './product-match-runtime.js';
 export {
   QuickMatchProductFactory,
@@ -29,4 +36,6 @@ export type {
   ProductMatchCoordinatorOptions,
   ProductMatchCoordinatorSnapshot,
   ProductMatchCoordinatorState,
+  ProductMatchCoordinatorReadFrameStartOutcome,
+  ProductMatchCoordinatorReadFrameStepOutcome,
 } from './product-match-coordinator.js';

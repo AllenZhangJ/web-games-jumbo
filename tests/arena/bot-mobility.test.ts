@@ -13,9 +13,10 @@ import {
   BOT_MOBILITY_INTENT,
   BotMobilityScheduler,
   createBotArenaView,
-  createBotObservation,
+  createBotObservationV5,
   selectBotMobilityIntent,
 } from '@number-strategy-jump/arena-bot';
+import { createBotCommandSourceV5FromLegacy } from '../../packages/arena-bot/src/bot-observation.js';
 
 type Mutable<T> = {
   -readonly [Key in keyof T]: T[Key] extends readonly (infer Item)[]
@@ -29,14 +30,13 @@ function observationFromRaw(
   core: MatchCore,
   mutate: (raw: Mutable<BotSourceSnapshot>) => void = () => {},
 ) {
-  const raw = structuredClone(
-    cloneBotSourceSnapshot(core.getSnapshot()),
-  ) as Mutable<BotSourceSnapshot>;
+  const raw = structuredClone(core.getLegacyFullSnapshotForAudit()) as unknown as Mutable<BotSourceSnapshot>;
   mutate(raw);
   const source = cloneBotSourceSnapshot(raw);
-  return createBotObservation({
-    commandSnapshot: source,
-    delayedSnapshot: source,
+  const v5Source = createBotCommandSourceV5FromLegacy(source, 'player-2');
+  return createBotObservationV5({
+    commandSource: v5Source,
+    delayedSource: v5Source,
     selfId: 'player-2',
     arena: createBotArenaView(
       core.config.arena,

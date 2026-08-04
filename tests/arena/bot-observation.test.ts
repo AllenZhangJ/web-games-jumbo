@@ -25,7 +25,7 @@ function record(value: unknown, name: string): Record<string, unknown> {
 
 test('BotObservation exposes only public delayed opponent state and is deeply frozen', () => {
   const core = createArenaV1MatchCore({ seed: 9, config: { preparingTicks: 0 } });
-  const source = cloneBotSourceSnapshot(core.getSnapshot());
+  const source = cloneBotSourceSnapshot(core.getLegacyFullSnapshotForAudit());
   const observation = createBotObservation({
     commandSnapshot: source,
     delayedSnapshot: source,
@@ -69,9 +69,9 @@ test('BotObservation exposes only public delayed opponent state and is deeply fr
 test('BotObservation rejects lifecycle fields leaked into raw public equipment', () => {
   const core = createArenaV1MatchCore({ seed: 11, config: { preparingTicks: 0 } });
   // A normal 1v1 snapshot remains valid and is the control for both rejection cases.
-  assert.equal(cloneBotSourceSnapshot(core.getSnapshot()).equipment.length, 3);
+  assert.equal(cloneBotSourceSnapshot(core.getLegacyFullSnapshotForAudit()).equipment.length, 3);
   for (const extraField of ['originPosition', 'remainingTicks']) {
-    const tampered = structuredClone(core.getSnapshot()) as unknown as {
+    const tampered = structuredClone(core.getLegacyFullSnapshotForAudit()) as unknown as {
       equipment: Array<Record<string, unknown>>;
     };
     const firstEquipment = tampered.equipment[0];
@@ -90,12 +90,12 @@ test('BotObservation rejects lifecycle fields leaked into raw public equipment',
 
 test('BotObservation keeps self movement current while delaying opponent movement and affordance', () => {
   const core = createArenaV1MatchCore({ seed: 10, config: { preparingTicks: 0 } });
-  const beforeJump = cloneBotSourceSnapshot(core.getSnapshot());
+  const beforeJump = cloneBotSourceSnapshot(core.getLegacyFullSnapshotForAudit());
   core.step([
     { ...createNeutralInputFrame(0, 'player-1'), jumpPressed: true },
     { ...createNeutralInputFrame(0, 'player-2'), jumpPressed: true },
   ]);
-  const afterJump = cloneBotSourceSnapshot(core.getSnapshot());
+  const afterJump = cloneBotSourceSnapshot(core.getLegacyFullSnapshotForAudit());
   const observation = createBotObservation({
     commandSnapshot: afterJump,
     delayedSnapshot: beforeJump,
@@ -132,9 +132,9 @@ test('BotObservation delays world equipment and opponent ownership but keeps sel
       },
     },
   });
-  const beforePickup = cloneBotSourceSnapshot(core.getSnapshot());
+  const beforePickup = cloneBotSourceSnapshot(core.getLegacyFullSnapshotForAudit());
   core.step([]);
-  const afterPickup = cloneBotSourceSnapshot(core.getSnapshot());
+  const afterPickup = cloneBotSourceSnapshot(core.getLegacyFullSnapshotForAudit());
   const common = {
     selfId: 'player-2',
     arena: createBotArenaView(core.config.arena, core.getCharacterDefinition('player-2').collision.radius),
@@ -163,9 +163,9 @@ test('BotObservation delays world equipment and opponent ownership but keeps sel
 
 test('BotObservation rejects future information', () => {
   const core = createArenaV1MatchCore({ seed: 4, config: { preparingTicks: 0 } });
-  const earlier = cloneBotSourceSnapshot(core.getSnapshot());
+  const earlier = cloneBotSourceSnapshot(core.getLegacyFullSnapshotForAudit());
   core.step([]);
-  const later = cloneBotSourceSnapshot(core.getSnapshot());
+  const later = cloneBotSourceSnapshot(core.getLegacyFullSnapshotForAudit());
   const common = {
     selfId: 'player-2',
     arena: createBotArenaView(core.config.arena, core.getCharacterDefinition('player-2').collision.radius),
@@ -187,7 +187,7 @@ test('BotObservation rejects future information', () => {
 
 test('BotObservation rejects action affordance from a different tick', () => {
   const core = createArenaV1MatchCore({ seed: 5, config: { preparingTicks: 0 } });
-  const snapshot = cloneBotSourceSnapshot(core.getSnapshot());
+  const snapshot = cloneBotSourceSnapshot(core.getLegacyFullSnapshotForAudit());
   const mismatched = structuredClone(snapshot) as Mutable<typeof snapshot>;
   const participant = mismatched.participants[0];
   if (!participant) throw new Error('测试快照缺少 player-1。');
@@ -198,7 +198,7 @@ test('BotObservation rejects action affordance from a different tick', () => {
 
 test('BotObservation rejects mismatched identities and safely copies objective data', () => {
   const core = createArenaV1MatchCore({ seed: 14, config: { preparingTicks: 0 } });
-  const source = cloneBotSourceSnapshot(core.getSnapshot());
+  const source = cloneBotSourceSnapshot(core.getLegacyFullSnapshotForAudit());
   const common = {
     commandSnapshot: source,
     selfId: 'player-2',

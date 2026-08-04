@@ -66,11 +66,11 @@ test('diagnostic failure cannot cancel a valid quick match', () => {
     diagnosticSink: () => { throw new Error('logger unavailable'); },
   }).create({ matchSeed: 15 });
   match.session.start();
-  const submitted = neutral(match.session.getSnapshot());
-  const accepted = match.session.step(submitted);
+  const submitted = neutral(match.session.getLegacyFullSnapshotForAudit());
+  const accepted = match.session.stepWithLegacySnapshotForAudit(submitted);
   assert.deepEqual(accepted.input, submitted);
   assert.ok(Object.isFrozen(accepted.input));
-  assert.equal(match.session.getSnapshot().tick, 1);
+  assert.equal(match.session.getLegacyFullSnapshotForAudit().tick, 1);
   match.session.destroy();
 });
 
@@ -85,12 +85,12 @@ test('production quick match rejects difficulty overrides', () => {
 test('invalid player input fails before bot or core mutation and session remains usable', () => {
   const { session } = new QuickMatchService().create({ matchSeed: 12 });
   session.start();
-  assert.throws(() => session.step({
+  assert.throws(() => session.stepWithLegacySnapshotForAudit({
     ...createNeutralInputFrame(0, 'player-2'),
   }), /不能控制隐藏对手/);
-  assert.equal(session.getSnapshot().tick, 0);
-  session.step(neutral(session.getSnapshot()));
-  assert.equal(session.getSnapshot().tick, 1);
+  assert.equal(session.getLegacyFullSnapshotForAudit().tick, 0);
+  session.stepWithLegacySnapshotForAudit(neutral(session.getLegacyFullSnapshotForAudit()));
+  assert.equal(session.getLegacyFullSnapshotForAudit().tick, 1);
   session.destroy();
 });
 
@@ -106,17 +106,17 @@ test('LocalMatchSession pause, complete replay and destruction have explicit lif
   session.start();
   assert.equal(session.state, LOCAL_MATCH_SESSION_STATE.PAUSED);
   assert.throws(() => session.setPaused('yes'), /布尔值/);
-  const paused = session.step();
+  const paused = session.stepWithLegacySnapshotForAudit();
   assert.equal(paused.snapshot.tick, 0);
   assert.equal(paused.input, null);
   session.setPaused(false);
-  const replay = session.runUntilEnded(neutral);
+  const replay = session.runLegacyUntilEndedForAudit(neutral);
   assert.equal(session.state, LOCAL_MATCH_SESSION_STATE.ENDED);
-  assert.deepEqual(session.runUntilEnded(neutral), replay);
+  assert.deepEqual(session.runLegacyUntilEndedForAudit(neutral), replay);
   assert.deepEqual(replayMatch(replay).result, replay.result);
   session.destroy();
   session.destroy();
-  assert.throws(() => session.getSnapshot(), /已销毁/);
+  assert.throws(() => session.getLegacyFullSnapshotForAudit(), /已销毁/);
 });
 
 test('pre-start App hide/show is idempotent and does not start the match early', () => {
@@ -125,7 +125,7 @@ test('pre-start App hide/show is idempotent and does not start the match early',
   session.setPaused(true);
   session.setPaused(false);
   assert.equal(session.state, LOCAL_MATCH_SESSION_STATE.CREATED);
-  assert.equal(session.getSnapshot().tick, 0);
+  assert.equal(session.getLegacyFullSnapshotForAudit().tick, 0);
   session.start();
   assert.equal(session.state, LOCAL_MATCH_SESSION_STATE.RUNNING);
   session.destroy();
@@ -140,20 +140,20 @@ test('rapid App pause/resume never advances a paused tick or desynchronizes the 
     if (seed % 2 === 0) session.setPaused(true);
     session.start();
     if (session.state === LOCAL_MATCH_SESSION_STATE.PAUSED) {
-      const pausedTick = session.getSnapshot().tick;
-      assert.equal(session.step().snapshot.tick, pausedTick);
+      const pausedTick = session.getLegacyFullSnapshotForAudit().tick;
+      assert.equal(session.stepWithLegacySnapshotForAudit().snapshot.tick, pausedTick);
       session.setPaused(false);
     }
     for (let index = 0; index < 120; index += 1) {
       if (index % 17 === 0) {
         session.setPaused(true);
-        const pausedTick = session.getSnapshot().tick;
-        assert.equal(session.step().snapshot.tick, pausedTick);
+        const pausedTick = session.getLegacyFullSnapshotForAudit().tick;
+        assert.equal(session.stepWithLegacySnapshotForAudit().snapshot.tick, pausedTick);
         session.setPaused(false);
       }
-      session.step(neutral(session.getSnapshot()));
+      session.stepWithLegacySnapshotForAudit(neutral(session.getLegacyFullSnapshotForAudit()));
     }
-    assert.equal(session.getSnapshot().tick, 120);
+    assert.equal(session.getLegacyFullSnapshotForAudit().tick, 120);
     session.destroy();
     session.destroy();
   }
@@ -177,11 +177,11 @@ test('caller-owned InputFrame accessors are rejected without execution and sessi
     primaryPressed: false,
     primaryHeld: false,
   };
-  assert.throws(() => session.step(frame), /数据字段/);
+  assert.throws(() => session.stepWithLegacySnapshotForAudit(frame), /数据字段/);
   assert.equal(getterCalls, 0);
-  assert.equal(session.getSnapshot().tick, 0);
-  session.step();
-  assert.equal(session.getSnapshot().tick, 1);
+  assert.equal(session.getLegacyFullSnapshotForAudit().tick, 0);
+  session.stepWithLegacySnapshotForAudit();
+  assert.equal(session.getLegacyFullSnapshotForAudit().tick, 1);
   session.destroy();
 });
 
@@ -198,21 +198,16 @@ test('failed LocalMatchSession construction does not take ownership of the core'
     publicMatchInfo: { matchSeed: 16, opponent: null },
   } as unknown as LocalMatchSessionOptions;
   assert.throws(() => new LocalMatchSession(invalidOptions), /opponent 不存在/);
-  assert.equal(core.getSnapshot().tick, 0);
+  assert.equal(core.getLegacyFullSnapshotForAudit().tick, 0);
   core.destroy();
 });
 
-test('trusted Bot handshake failure leaves caller-owned Core and Bot for outer cleanup', () => {
+test('removed trusted Bot binding option is rejected without taking ownership', () => {
   const core = createArenaV1MatchCore({ seed: 17, config: { preparingTicks: 0 } });
-  const bindingB = Object.freeze({ contractHash: 'binding-b' });
   let destroyCount = 0;
   let controllerDestroyed = false;
   const botController: BotInputController = {
     createInput: (snapshot) => createNeutralInputFrame(snapshot.tick, 'player-2'),
-    attachTrustedSnapshotReader: () => {
-      throw new RangeError('组合合同不一致');
-    },
-    createInputFromTrustedSnapshot: () => createNeutralInputFrame(core.tick, 'player-2'),
     destroy: () => {
       destroyCount += 1;
       controllerDestroyed = true;
@@ -221,7 +216,7 @@ test('trusted Bot handshake failure leaves caller-owned Core and Bot for outer c
   assert.throws(() => new LocalMatchSession({
     core,
     botController,
-    trustedBotBinding: bindingB,
+    trustedBotBinding: Object.freeze({ legacy: true }),
     publicMatchInfo: {
       matchSeed: 17,
       opponent: {
@@ -231,15 +226,15 @@ test('trusted Bot handshake failure leaves caller-owned Core and Bot for outer c
         appearanceKey: 'appearance-test',
       },
     },
-  }), /组合合同/);
+  } as unknown as LocalMatchSessionOptions), /未知.*trustedBotBinding|options/);
   assert.equal(destroyCount, 0);
   assert.equal(controllerDestroyed, false);
-  assert.equal(core.getSnapshot().tick, 0);
+  assert.equal(core.getLegacyFullSnapshotForAudit().tick, 0);
   botController.destroy();
   core.destroy();
   assert.equal(destroyCount, 1);
   assert.equal(controllerDestroyed, true);
-  assert.throws(() => core.getSnapshot(), /已销毁/);
+  assert.throws(() => core.getLegacyFullSnapshotForAudit(), /已销毁/);
 });
 
 test('same quick-match seed and player inputs reproduce final replay hash', () => {
@@ -249,7 +244,7 @@ test('same quick-match seed and player inputs reproduce final replay hash', () =
       config: { preparingTicks: 0 },
     });
     session.start();
-    const replay = session.runUntilEnded(neutral);
+    const replay = session.runLegacyUntilEndedForAudit(neutral);
     session.destroy();
     return replay;
   };
@@ -282,7 +277,7 @@ test('QuickMatchService cleans partial ownership when a later factory fails', ()
   assert.equal(controllerDestroyed, true);
   const ownedCore = coreHolder.current;
   assert.ok(ownedCore);
-  assert.throws(() => ownedCore.getSnapshot(), /已销毁/);
+  assert.throws(() => ownedCore.getLegacyFullSnapshotForAudit(), /已销毁/);
 });
 
 test('QuickMatchService rejects an incomplete session contract before returning it', () => {
@@ -338,6 +333,8 @@ test('QuickMatchService retains failed cleanup for an exact retry before the nex
       const controllerIndex = controllerCount;
       return {
         createInput: (snapshot: ArenaMatchSnapshot) => controller.createInput(snapshot),
+        attachTrustedCommandSourceReader: controller.attachTrustedCommandSourceReader.bind(controller),
+        createInputFromTrustedCommandSource: controller.createInputFromTrustedCommandSource.bind(controller),
         destroy() {
           if (controllerIndex === 1) {
             firstControllerCleanupAttempts += 1;
@@ -390,10 +387,10 @@ test('bot or authoritative step failures destroy the entire local session', () =
     },
   });
   session.start();
-  assert.throws(() => session.step(neutral(session.getSnapshot())), /bot failed/);
+  assert.throws(() => session.stepWithLegacySnapshotForAudit(neutral(session.getLegacyFullSnapshotForAudit())), /bot failed/);
   assert.equal(session.state, LOCAL_MATCH_SESSION_STATE.DESTROYED);
   assert.equal(controllerDestroyed, true);
-  assert.throws(() => core.getSnapshot(), /已销毁/);
+  assert.throws(() => core.getLegacyFullSnapshotForAudit(), /已销毁/);
 });
 
 test('frozen internal errors and cleanup failures preserve both causes', () => {
@@ -421,7 +418,7 @@ test('frozen internal errors and cleanup failures preserve both causes', () => {
   });
   session.start();
   assert.throws(
-    () => session.step(neutral(session.getSnapshot())),
+    () => session.stepWithLegacySnapshotForAudit(neutral(session.getLegacyFullSnapshotForAudit())),
     (error) => {
       const failure = requireCleanupFailure(error);
       assert.equal(failure.originalError, original);
@@ -431,7 +428,7 @@ test('frozen internal errors and cleanup failures preserve both causes', () => {
     },
   );
   assert.equal(session.state, LOCAL_MATCH_SESSION_STATE.DESTROYED);
-  assert.throws(() => core.getSnapshot(), /已销毁/);
+  assert.throws(() => core.getLegacyFullSnapshotForAudit(), /已销毁/);
   session.destroy();
   session.destroy();
   assert.equal(controllerCleanupAttempts, 2);
@@ -482,7 +479,7 @@ test('LocalMatchSession rejects controller method accessors without taking Core 
     },
   }), /数据方法/);
   assert.equal(getterCalls, 0);
-  assert.equal(core.getSnapshot().tick, 0);
+  assert.equal(core.getLegacyFullSnapshotForAudit().tick, 0);
   core.destroy();
 });
 
@@ -496,10 +493,10 @@ test('runUntilEnded validates data-only options before starting the session', ()
       return 1;
     },
   });
-  assert.throws(() => session.runUntilEnded(neutral, options), /数据字段/);
+  assert.throws(() => session.runLegacyUntilEndedForAudit(neutral, options), /数据字段/);
   assert.equal(getterCalls, 0);
   assert.equal(session.state, LOCAL_MATCH_SESSION_STATE.CREATED);
-  assert.equal(session.getSnapshot().tick, 0);
+  assert.equal(session.getLegacyFullSnapshotForAudit().tick, 0);
   session.destroy();
 });
 
@@ -510,14 +507,14 @@ test('runUntilEnded blocks proxy reentry while validating options', () => {
     getOwnPropertyDescriptor(target, property) {
       if (!reentered) {
         reentered = true;
-        session.step();
+        session.stepWithLegacySnapshotForAudit();
       }
       return Reflect.getOwnPropertyDescriptor(target, property);
     },
   });
-  assert.throws(() => session.runUntilEnded(neutral, options), /运行期间不能调用 step/);
+  assert.throws(() => session.runLegacyUntilEndedForAudit(neutral, options), /运行期间不能调用 stepWithLegacySnapshotForAudit/);
   assert.equal(session.state, LOCAL_MATCH_SESSION_STATE.CREATED);
-  assert.equal(session.getSnapshot().tick, 0);
+  assert.equal(session.getLegacyFullSnapshotForAudit().tick, 0);
   session.destroy();
 });
 
@@ -526,14 +523,14 @@ test('runUntilEnded blocks provider reentry and leaves a boundary failure retrya
     matchSeed: 31,
     config: { preparingTicks: 0 },
   });
-  assert.throws(() => session.runUntilEnded(() => {
-    session.step();
+  assert.throws(() => session.runLegacyUntilEndedForAudit(() => {
+    session.stepWithLegacySnapshotForAudit();
     return null;
   }, { maxTicks: 2 }), /运行期间不能调用 step/);
   assert.equal(session.state, LOCAL_MATCH_SESSION_STATE.RUNNING);
-  assert.equal(session.getSnapshot().tick, 0);
-  session.step(neutral(session.getSnapshot()));
-  assert.equal(session.getSnapshot().tick, 1);
+  assert.equal(session.getLegacyFullSnapshotForAudit().tick, 0);
+  session.stepWithLegacySnapshotForAudit(neutral(session.getLegacyFullSnapshotForAudit()));
+  assert.equal(session.getLegacyFullSnapshotForAudit().tick, 1);
   session.destroy();
 });
 
@@ -563,6 +560,6 @@ test('cleanup publishes terminal state before destroying owned callbacks and rej
   session.destroy();
   assert.equal(reentryRejected, true);
   assert.equal(session.state, LOCAL_MATCH_SESSION_STATE.DESTROYED);
-  assert.throws(() => core.getSnapshot(), /已销毁/);
+  assert.throws(() => core.getLegacyFullSnapshotForAudit(), /已销毁/);
   session.destroy();
 });

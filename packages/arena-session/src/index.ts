@@ -8,7 +8,14 @@ export type {
   LocalMatchPublicInfo,
   LocalMatchSessionOptions,
   LocalMatchSessionState,
-  LocalMatchStepResult,
+  LocalMatchLegacyAuditStepResult,
+  LocalMatchPresentationStepResultV2,
+  LocalMatchFullAuditReadResultV2,
   PublicOpponentInfo,
   RunLocalMatchOptions,
 } from './local-match-session.js';
+export { createMatchReadBotBundleV2 } from './bot-match-read-bundle.js';
+export type {
+  BotMatchReadBundleV2,
+  CreateBotMatchReadBundleV2Options,
+} from './bot-match-read-bundle.js';

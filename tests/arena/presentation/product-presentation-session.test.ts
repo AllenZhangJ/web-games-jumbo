@@ -13,6 +13,7 @@ import {
   type ProjectArenaPresentationFrameOptions,
 } from '@number-strategy-jump/arena-v1-presentation-content';
 import {
+  ARENA_INPUT_MAPPER_ID,
   ARENA_V1_PRESENTATION_QUALITY_ID,
   ARENA_V1_PRESENTATION_QUALITY_REGISTRY,
 } from '@number-strategy-jump/arena-presentation-runtime';
@@ -541,6 +542,115 @@ test('ProductPresentationSession pauses authority across hide/show and WebGL con
   assert.equal(renderer.resizeCount, resizeBefore + 1);
   assert.equal(harness.frames.size, 1);
   session.destroy();
+});
+
+test('ProductPresentationSession enforces the V2 mapper contract and rolls back mapper failures', async () => {
+  const cases: readonly {
+    readonly name: string;
+    readonly mapperFactory: () => unknown;
+    readonly message: RegExp;
+  }[] = [
+    {
+      name: 'wrong mapper id',
+      mapperFactory: () => ({
+        id: ARENA_INPUT_MAPPER_ID.EXPLICIT_COMBAT_JUMP,
+        map: () => ({}),
+      }),
+      message: /mapperFactory 返回值不符合合同/,
+    },
+    {
+      name: 'thenable mapper',
+      mapperFactory: () => Promise.resolve({
+        id: ARENA_INPUT_MAPPER_ID.CONTEXT_PRIMARY,
+        map: () => ({}),
+      }),
+      message: /mapperFactory|同步返回|thenable/,
+    },
+    {
+      name: 'accessor mapper id',
+      mapperFactory: () => Object.defineProperty({ map: () => ({}) }, 'id', {
+        enumerable: true,
+        get: () => ARENA_INPUT_MAPPER_ID.CONTEXT_PRIMARY,
+      }),
+      message: /自有数据字段|mapperFactory/,
+    },
+    {
+      name: 'hostile mapper error',
+      mapperFactory: () => {
+        const hostile = Object.create(null) as Record<PropertyKey, unknown>;
+        Object.defineProperty(hostile, Symbol.toPrimitive, {
+          enumerable: false,
+          value: () => { throw new Error('hostile mapper coercion'); },
+        });
+        throw hostile;
+      },
+      message: /mapperFactory 失败|ProductPresentationSession 失败/,
+    },
+  ];
+
+  for (const testCase of cases) {
+    const harness = platformHarness();
+    const renderer = rendererHarness();
+    const session = createProductPresentationSession(
+      harness.platform,
+      sessionOptions(renderer, { mapperFactory: testCase.mapperFactory }),
+    );
+    await assert.rejects(session.start(), testCase.message, testCase.name);
+    assert.equal(renderer.disposed, true, `${testCase.name}: renderer rollback`);
+    assert.equal(harness.activeLifecycleCount(), 0, `${testCase.name}: lifecycle rollback`);
+    assert.equal(session.state, PRODUCT_PRESENTATION_SESSION_STATE.FAILED, testCase.name);
+    session.destroy();
+  }
+});
+
+test('ProductPresentationSession keeps mapperFactory thrown Proxy values opaque during rollback', async () => {
+  const harness = platformHarness();
+  const renderer = rendererHarness();
+  let controllerDestroyCalls = 0;
+  let trapCalls = 0;
+  const hostile = new Proxy(Object.create(null), {
+    getPrototypeOf() {
+      trapCalls += 1;
+      throw new Error('mapper error prototype trap');
+    },
+    get() {
+      trapCalls += 1;
+      throw new Error('mapper error get trap');
+    },
+    getOwnPropertyDescriptor() {
+      trapCalls += 1;
+      throw new Error('mapper error descriptor trap');
+    },
+  });
+  Object.defineProperty(hostile, Symbol.toPrimitive, {
+    configurable: true,
+    enumerable: false,
+    get() {
+      trapCalls += 1;
+      throw new Error('mapper error coercion trap');
+    },
+  });
+  const session = createProductPresentationSession(
+    harness.platform,
+    sessionOptions(renderer, {
+      controllerFactory: () => ({
+        getSnapshot: () => null,
+        destroy: () => { controllerDestroyCalls += 1; },
+      }),
+      mapperFactory: () => { throw hostile; },
+    }),
+  );
+
+  await assert.rejects(session.start(), /mapperFactory 失败|ProductPresentationSession 失败/);
+  assert.equal(trapCalls, 0);
+  assert.equal(renderer.disposed, true);
+  assert.equal(controllerDestroyCalls, 1);
+  assert.equal(harness.activeLifecycleCount(), 0);
+  assert.equal(harness.activeCanvasCount(), 0);
+  assert.equal(session.state, PRODUCT_PRESENTATION_SESSION_STATE.FAILED);
+  session.destroy();
+  session.destroy();
+  assert.equal(controllerDestroyCalls, 1);
 });
 
 test('ProductPresentationSession checks lease before foreground resume and blocks an expired match', async () => {

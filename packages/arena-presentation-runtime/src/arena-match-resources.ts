@@ -13,8 +13,8 @@ import { cloneKnownRecord } from './input-validation.js';
 interface MatchSessionPort {
   readonly start: UnknownMethod;
   readonly setPaused: UnknownMethod;
-  readonly step: UnknownMethod;
-  readonly getSnapshot: UnknownMethod;
+  readonly stepWithLegacySnapshotForAudit: UnknownMethod;
+  readonly getLegacyFullSnapshotForAudit: UnknownMethod;
   readonly getPublicMatchInfo: UnknownMethod;
   readonly destroy: UnknownMethod;
 }
@@ -43,7 +43,7 @@ export interface ArenaMatchCandidate {
   sampler: SamplerPort | null;
   eventWindow: EventWindowPort | null;
   readonly publicMatchInfo: Record<string, unknown>;
-  readonly snapshot: Record<string, unknown>;
+  readonly legacySnapshotForAudit: Record<string, unknown>;
 }
 
 const COMPOSITION_KEYS = new Set([
@@ -105,8 +105,8 @@ function validateSession(value: unknown): MatchSessionPort {
   return Object.freeze({
     start: snapshotMethod(value, '快速匹配 session', 'start')!,
     setPaused: snapshotMethod(value, '快速匹配 session', 'setPaused')!,
-    step: snapshotMethod(value, '快速匹配 session', 'step')!,
-    getSnapshot: snapshotMethod(value, '快速匹配 session', 'getSnapshot')!,
+    stepWithLegacySnapshotForAudit: snapshotMethod(value, '快速匹配 session', 'stepWithLegacySnapshotForAudit')!,
+    getLegacyFullSnapshotForAudit: snapshotMethod(value, '快速匹配 session', 'getLegacyFullSnapshotForAudit')!,
     getPublicMatchInfo: snapshotMethod(value, '快速匹配 session', 'getPublicMatchInfo')!,
     destroy: snapshotMethod(value, '快速匹配 session', 'destroy')!,
   });
@@ -153,7 +153,7 @@ export function destroyArenaMatchCandidate(candidateValue: unknown): void {
   if (candidateValue === null || candidateValue === undefined) return;
   const candidate = cloneKnownRecord(
     candidateValue,
-    new Set(['matchSeed', 'session', 'sampler', 'eventWindow', 'publicMatchInfo', 'snapshot']),
+    new Set(['matchSeed', 'session', 'sampler', 'eventWindow', 'publicMatchInfo', 'legacySnapshotForAudit']),
     'Arena match candidate',
   );
   const errors: Error[] = [];
@@ -210,11 +210,11 @@ export function createArenaMatchResources(
       callSync(session.getPublicMatchInfo, 'Arena match session.getPublicMatchInfo'),
       'Arena publicMatchInfo',
     );
-    const snapshot = recordValue(
-      callSync(session.getSnapshot, 'Arena match session.getSnapshot'),
-      'Arena match snapshot',
+    const legacySnapshotForAudit = recordValue(
+      callSync(session.getLegacyFullSnapshotForAudit, 'Arena match session.getLegacyFullSnapshotForAudit'),
+      'Arena match legacy audit snapshot',
     );
-    const snapshotSeed = uint32(snapshot.matchSeed, 'Arena match snapshot.matchSeed');
+    const snapshotSeed = uint32(legacySnapshotForAudit.matchSeed, 'Arena match legacy audit snapshot.matchSeed');
     const publicSeed = uint32(publicMatchInfo.matchSeed, 'Arena publicMatchInfo.matchSeed');
     const bundleSeed = uint32(match.matchSeed, 'Arena quick match.matchSeed');
     if (publicSeed !== snapshotSeed || bundleSeed !== snapshotSeed) {
@@ -251,7 +251,7 @@ export function createArenaMatchResources(
       sampler,
       eventWindow,
       publicMatchInfo,
-      snapshot,
+      legacySnapshotForAudit,
     };
   } catch (error) {
     const cleanupErrors: Error[] = [];

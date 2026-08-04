@@ -10,6 +10,7 @@ import {
   resolveAnimationBinding,
   type CharacterPresentationDefinition,
 } from '@number-strategy-jump/arena-presentation-contracts';
+import { snapshotLegacyMethod as snapshotMethod } from './capability-utils.js';
 import { SixSectorDirectionResolver } from './six-sector-direction-resolver.js';
 
 const OPTION_KEYS = new Set([
@@ -29,8 +30,6 @@ export const CHARACTER_VIEW_RUNTIME_STATE = Object.freeze({
 
 type CharacterViewRuntimeState =
   typeof CHARACTER_VIEW_RUNTIME_STATE[keyof typeof CHARACTER_VIEW_RUNTIME_STATE];
-type UnknownMethod = (...args: unknown[]) => unknown;
-
 interface PositionPort { readonly x: number; readonly y: number; readonly z: number }
 interface RootPort { readonly position: PositionPort }
 interface CharacterViewPort {
@@ -49,25 +48,6 @@ function ownData(value: unknown, name: string, field: string): unknown {
     throw new TypeError(`${name}.${field} 必须是数据字段。`);
   }
   return descriptor.value;
-}
-
-function snapshotMethod(value: unknown, name: string, methodName: string): UnknownMethod {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new TypeError(`${name} 必须是对象。`);
-  }
-  let owner: object | null = value;
-  while (owner) {
-    const descriptor = Object.getOwnPropertyDescriptor(owner, methodName);
-    if (descriptor) {
-      if (!Object.hasOwn(descriptor, 'value') || typeof descriptor.value !== 'function') {
-        throw new TypeError(`${name}.${methodName} 必须是数据方法。`);
-      }
-      const method = descriptor.value as UnknownMethod;
-      return (...args: unknown[]) => method.call(value, ...args);
-    }
-    owner = Object.getPrototypeOf(owner) as object | null;
-  }
-  throw new TypeError(`${name} 缺少 ${methodName}()。`);
 }
 
 function rejectThenable(value: unknown, name: string): void {

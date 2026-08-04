@@ -78,13 +78,56 @@ describe('startup fallback boundaries', () => {
 
   it('keeps one accessible Web fallback and clears its canvas state', () => {
     const fixture = webDocumentFixture();
-    expect(showWebStartupError(new Error('first'), fixture.environment)).toBe(true);
+    expect(showWebStartupError(new Error('Eabc_12 internal detail'), fixture.environment)).toBe(true);
     expect(showWebStartupError(new Error('second'), fixture.environment)).toBe(true);
     expect(fixture.elements.size).toBe(1);
     expect(fixture.canvas.attributes.get('aria-hidden')).toBe('true');
+    const panel = [...fixture.elements.values()][0]!;
+    const message = (panel.children as ReadonlyArray<Record<string, unknown>>).at(-1)!;
+    expect(message.textContent).toBe('请确认浏览器已启用 WebGL2，或更换设备后重试。');
     clearWebStartupError(fixture.environment);
     expect(fixture.elements.size).toBe(0);
     expect(fixture.canvas.attributes.has('aria-hidden')).toBe(false);
+  });
+
+  it('shows only an own data diagnostic code and never executes hostile message access', () => {
+    const coded = webDocumentFixture();
+    expect(showWebStartupError(new Error('Eabc_12 technical detail'), coded.environment)).toBe(true);
+    const codedPanel = [...coded.elements.values()][0]!;
+    const codedMessage = (codedPanel.children as ReadonlyArray<Record<string, unknown>>)[1]!;
+    expect(codedMessage.textContent).toBe(
+      '请确认浏览器已启用 WebGL2，或更换设备后重试。（诊断码：Eabc_12）',
+    );
+
+    let getterCalls = 0;
+    const accessor = Object.defineProperty({}, 'message', {
+      enumerable: true,
+      get() {
+        getterCalls += 1;
+        return 'Egetter';
+      },
+    });
+    const hostile = webDocumentFixture();
+    expect(showWebStartupError(accessor, hostile.environment)).toBe(true);
+    expect(getterCalls).toBe(0);
+    const hostilePanel = [...hostile.elements.values()][0]!;
+    const hostileMessage = (hostilePanel.children as ReadonlyArray<Record<string, unknown>>)[1]!;
+    expect(hostileMessage.textContent).toBe('请确认浏览器已启用 WebGL2，或更换设备后重试。');
+
+    let propertyReads = 0;
+    const proxy = new Proxy({}, {
+      get() {
+        propertyReads += 1;
+        throw new Error('不应读取 hostile throwable 字段');
+      },
+      getPrototypeOf() {
+        propertyReads += 1;
+        throw new Error('不应执行 instanceof');
+      },
+    });
+    const proxied = webDocumentFixture();
+    expect(showWebStartupError(proxy, proxied.environment)).toBe(true);
+    expect(propertyReads).toBe(0);
   });
 });
 

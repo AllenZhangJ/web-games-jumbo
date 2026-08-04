@@ -56,18 +56,19 @@ function cloneRuntime(value: unknown): Readonly<ArenaRegressionEvidenceRuntime> 
   });
 }
 function normalizeCore(value: unknown) {
-  assertKnownKeys(value, REPORT_INPUT_KEYS, 'ArenaRegressionEvidence input');
-  const sourceCommit = assertEvidenceGitCommit(value.sourceCommit, 'ArenaRegressionEvidence.sourceCommit');
-  if (value.sourceDirty !== false) throw new Error('ArenaRegressionEvidence 只能来自 clean source。');
+  const source = cloneFrozenData(value, 'ArenaRegressionEvidence input');
+  assertKnownKeys(source, REPORT_INPUT_KEYS, 'ArenaRegressionEvidence input');
+  const sourceCommit = assertEvidenceGitCommit(source.sourceCommit, 'ArenaRegressionEvidence.sourceCommit');
+  if (source.sourceDirty !== false) throw new Error('ArenaRegressionEvidence 只能来自 clean source。');
   return cloneFrozenData({
     schemaVersion: ARENA_REGRESSION_EVIDENCE_SCHEMA_VERSION as 1,
     definitionId: ARENA_STAGE9_REGRESSION_EVIDENCE_V1_ID,
     definitionHash: createArenaStage9RegressionEvidenceV1DefinitionHash(),
     sourceCommit,
     sourceDirty: false as const,
-    generatedAt: assertEvidenceUtcInstant(value.generatedAt, 'ArenaRegressionEvidence.generatedAt'),
-    runtime: cloneRuntime(value.runtime),
-    components: cloneArenaRegressionEvidenceComponents(value.components),
+    generatedAt: assertEvidenceUtcInstant(source.generatedAt, 'ArenaRegressionEvidence.generatedAt'),
+    runtime: cloneRuntime(source.runtime),
+    components: cloneArenaRegressionEvidenceComponents(source.components),
     status: 'passed' as const,
   }, 'ArenaRegressionEvidence core');
 }

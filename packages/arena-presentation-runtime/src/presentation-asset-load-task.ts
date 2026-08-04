@@ -1,5 +1,4 @@
 import {
-  assertKnownKeys,
   assertNonEmptyString,
 } from '@number-strategy-jump/arena-contracts';
 import {
@@ -10,6 +9,7 @@ import {
 
 const OPTION_KEYS = new Set(['assetRegistry', 'assetId', 'loader']);
 const LEASE_KEYS = new Set(['assetId', 'value', 'release']);
+const NATIVE_PROMISE_THEN = Promise.prototype.then;
 
 export const PRESENTATION_ASSET_LOAD_STATE = Object.freeze({
   CREATED: 'created',
@@ -28,6 +28,99 @@ interface NormalizedLease {
   readonly assetId: string;
   readonly value: unknown;
   readonly release: ReleaseMethod;
+}
+
+type SyncReturnInspection =
+  | Readonly<{ kind: 'native-promise'; value: object }>
+  | Readonly<{ kind: 'sync'; value: unknown }>;
+
+function captureExactDataFields(
+  value: unknown,
+  allowedKeys: ReadonlySet<string>,
+  name: string,
+): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new TypeError(`${name} 必须是普通对象。`);
+  }
+  const prototype = Object.getPrototypeOf(value) as object | null;
+  if (prototype !== Object.prototype && prototype !== null) {
+    throw new TypeError(`${name} 必须是普通对象。`);
+  }
+  const result: Record<string, unknown> = {};
+  for (const key of Reflect.ownKeys(value)) {
+    if (typeof key !== 'string') throw new RangeError(`${name} 不支持 Symbol 字段。`);
+    if (!allowedKeys.has(key)) throw new RangeError(`${name} 不支持字段 ${key}。`);
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (!descriptor || !descriptor.enumerable || !Object.hasOwn(descriptor, 'value')) {
+      throw new TypeError(`${name}.${key} 必须是可枚举数据字段。`);
+    }
+    result[key] = descriptor.value;
+  }
+  return result;
+}
+
+function observeNativePromise(value: unknown): boolean {
+  if ((typeof value !== 'object' || value === null) && typeof value !== 'function') return false;
+  try {
+    Reflect.apply(NATIVE_PROMISE_THEN, value, [() => undefined, () => undefined]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function inspectSyncOrNativePromise(value: unknown, label: string): SyncReturnInspection {
+  if ((typeof value !== 'object' || value === null) && typeof value !== 'function') {
+    return { kind: 'sync', value };
+  }
+  if (observeNativePromise(value)) return { kind: 'native-promise', value: value as object };
+  const visited = new Set<object>();
+  let current: object | null = value as object;
+  let depth = 0;
+  while (current !== null && depth < 32 && !visited.has(current)) {
+    visited.add(current);
+    depth += 1;
+    const descriptor = Object.getOwnPropertyDescriptor(current, 'then');
+    if (descriptor) {
+      if (!Object.hasOwn(descriptor, 'value')) {
+        throw new TypeError(`${label} 返回了访问器 thenable。`);
+      }
+      if (typeof descriptor.value === 'function') {
+        throw new TypeError(`${label} 返回了普通 thenable。`);
+      }
+      return { kind: 'sync', value };
+    }
+    current = Object.getPrototypeOf(current) as object | null;
+  }
+  if (current !== null) throw new TypeError(`${label} 返回值原型链无效。`);
+  return { kind: 'sync', value };
+}
+
+function resolveSyncOrNativePromise<T>(
+  value: unknown,
+  label: string,
+): Promise<Readonly<{ value: T }>> {
+  const inspected = inspectSyncOrNativePromise(value, label);
+  if (inspected.kind === 'sync') {
+    return Promise.resolve(Object.freeze({ value: inspected.value as T }));
+  }
+  return new Promise<Readonly<{ value: T }>>((resolve, reject) => {
+    try {
+      Reflect.apply(NATIVE_PROMISE_THEN, inspected.value, [
+        (resolved: unknown) => resolve(Object.freeze({ value: resolved as T })),
+        (rejected: unknown) => reject(rejected),
+      ]);
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+function observedRejectedOperation(error: unknown): Promise<never> {
+  observeNativePromise(error);
+  const operation = Promise.reject(error);
+  observeNativePromise(operation);
+  return operation;
 }
 
 function ownMethod(value: unknown, name: string): { owner: object; method: (...args: unknown[]) => unknown } {
@@ -54,25 +147,26 @@ function normalizeLoader(value: unknown): LoadMethod {
 }
 
 function inspectLease(value: unknown, expectedAssetId: string): NormalizedLease {
-  assertKnownKeys(value, LEASE_KEYS, 'Presentation asset lease');
+  const fields = captureExactDataFields(value, LEASE_KEYS, 'Presentation asset lease');
   for (const key of LEASE_KEYS) {
-    if (!Object.hasOwn(value, key)) {
+    if (!Object.hasOwn(fields, key)) {
       throw new TypeError(`Presentation asset lease.${key} 必须是可枚举数据字段。`);
     }
   }
-  if (value.assetId !== expectedAssetId) {
+  if (fields.assetId !== expectedAssetId) {
     throw new RangeError('Presentation asset lease.assetId 与请求不一致。');
   }
-  if (value.value === undefined || value.value === null) {
+  if (fields.value === undefined || fields.value === null) {
     throw new TypeError('Presentation asset lease.value 不能为空。');
   }
-  if (typeof value.release !== 'function') {
+  rejectAsyncResult(fields.value, 'Presentation asset lease.value');
+  if (typeof fields.release !== 'function') {
     throw new TypeError('Presentation asset lease.release 必须是函数。');
   }
-  const rawRelease = value.release as ReleaseMethod;
+  const rawRelease = fields.release as ReleaseMethod;
   return Object.freeze({
-    assetId: value.assetId,
-    value: value.value,
+    assetId: fields.assetId as string,
+    value: fields.value,
     release: () => rawRelease.call(value),
   });
 }
@@ -87,20 +181,14 @@ function dataReleaseFunction(value: unknown): ReleaseMethod | null {
   return () => method.call(value);
 }
 
-function rejectAsyncResult(value: unknown): void {
-  if (!value || (typeof value !== 'object' && typeof value !== 'function')) return;
-  let then: unknown;
-  try { then = Reflect.get(value, 'then'); } catch {
-    throw new TypeError('Presentation asset lease.release 返回了不可检查的 thenable。');
-  }
-  if (typeof then !== 'function') return;
-  try { Promise.resolve(value).catch(() => {}); } catch { /* malformed thenable is already invalid */ }
-  throw new TypeError('Presentation asset lease.release 必须同步完成。');
+function rejectAsyncResult(value: unknown, label: string): void {
+  const inspected = inspectSyncOrNativePromise(value, label);
+  if (inspected.kind === 'native-promise') throw new TypeError(`${label} 必须同步完成。`);
 }
 
 function releaseLease(lease: NormalizedLease | null): void {
   if (!lease) return;
-  rejectAsyncResult(lease.release());
+  rejectAsyncResult(lease.release(), 'Presentation asset lease.release()');
 }
 
 export class PresentationAssetLoadTask {
@@ -109,10 +197,15 @@ export class PresentationAssetLoadTask {
   #state: PresentationAssetLoadState = PRESENTATION_ASSET_LOAD_STATE.CREATED;
   #promise: Promise<unknown> | null = null;
   #lease: NormalizedLease | null = null;
+  #releasingLease: NormalizedLease | null = null;
   #lastError: unknown = null;
 
-  constructor(options: unknown) {
-    assertKnownKeys(options, OPTION_KEYS, 'PresentationAssetLoadTask options');
+  constructor(optionsValue: unknown) {
+    const options = captureExactDataFields(
+      optionsValue,
+      OPTION_KEYS,
+      'PresentationAssetLoadTask options',
+    );
     const registry: PresentationAssetRegistryPort = assertPresentationAssetRegistry(options.assetRegistry);
     const assetId = assertNonEmptyString(options.assetId, 'PresentationAssetLoadTask.assetId');
     const loadAsset = normalizeLoader(options.loader);
@@ -124,22 +217,34 @@ export class PresentationAssetLoadTask {
 
   #releaseRetainedLease(): void {
     if (this.#lease === null) return;
+    if (this.#releasingLease !== null) return;
     const lease = this.#lease;
-    releaseLease(lease);
-    this.#lease = null;
+    this.#releasingLease = lease;
+    try {
+      releaseLease(lease);
+      if (this.#lease === lease) this.#lease = null;
+    } finally {
+      this.#releasingLease = null;
+    }
   }
 
   load(): Promise<unknown> {
     if (this.#state === PRESENTATION_ASSET_LOAD_STATE.DESTROYED) {
-      return Promise.reject(new Error('PresentationAssetLoadTask 已销毁。'));
+      return observedRejectedOperation(new Error('PresentationAssetLoadTask 已销毁。'));
     }
     if (this.#state === PRESENTATION_ASSET_LOAD_STATE.FAILED) {
       const error = new Error('PresentationAssetLoadTask 已失败。');
       error.cause = this.#lastError;
-      return Promise.reject(error);
+      return observedRejectedOperation(error);
     }
     if (this.#state === PRESENTATION_ASSET_LOAD_STATE.READY) {
-      return Promise.resolve(this.#lease?.value);
+      const operation = this.#promise;
+      if (operation === null) {
+        return observedRejectedOperation(
+          new Error('PresentationAssetLoadTask ready 状态缺少 load operation。'),
+        );
+      }
+      return operation;
     }
     if (this.#promise) return this.#promise;
     this.#state = PRESENTATION_ASSET_LOAD_STATE.LOADING;
@@ -148,9 +253,16 @@ export class PresentationAssetLoadTask {
         if (this.#state === PRESENTATION_ASSET_LOAD_STATE.DESTROYED) {
           throw new Error('PresentationAssetLoadTask 启动已取消。');
         }
-        return this.#loadAsset(this.#definition);
+        const loadResult = this.#loadAsset(this.#definition);
+        if (this.#promise !== null && loadResult === this.#promise) {
+          throw new Error('Presentation asset loader.load() 不得自返回当前 load operation。');
+        }
+        return resolveSyncOrNativePromise(
+          loadResult,
+          'Presentation asset loader.load()',
+        );
       })
-      .then((rawLease) => {
+      .then(({ value: rawLease }) => {
         let lease: NormalizedLease;
         try {
           lease = inspectLease(rawLease, this.#definition.id);
@@ -182,12 +294,14 @@ export class PresentationAssetLoadTask {
         return lease.value;
       })
       .catch((error: unknown) => {
+        observeNativePromise(error);
         if (this.#state !== PRESENTATION_ASSET_LOAD_STATE.DESTROYED) {
           this.#lastError = error;
           this.#state = PRESENTATION_ASSET_LOAD_STATE.FAILED;
         }
         throw error;
       });
+    observeNativePromise(this.#promise);
     return this.#promise;
   }
 

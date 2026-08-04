@@ -539,9 +539,12 @@ test('observed match service receives the normalized InputFrame consumed by a re
   });
   match.session.start();
   for (let index = 0; index < 12; index += 1) {
-    const current = record(match.session.getSnapshot(), '真实本地对局快照');
+    const current = record(
+      match.session.getLegacyFullSnapshotForAudit(),
+      '真实本地对局快照',
+    );
     if (typeof current.tick !== 'number') throw new TypeError('真实本地对局 tick 必须是数字。');
-    match.session.step(input(current.tick, {
+    match.session.stepWithLegacySnapshotForAudit(input(current.tick, {
       moveX: 1,
       jumpPressed: index === 0,
       jumpHeld: index === 0,
@@ -572,7 +575,7 @@ class FakeSession {
 
   setPaused(paused: boolean) { this.paused = paused; this.state = paused ? 'paused' : 'running'; }
 
-  step(value: unknown) {
+  stepWithLegacySnapshotForAudit(value: unknown) {
     if (this.paused) return { events: [], snapshot: this.current, input: null };
     const next = snapshot({
       tick: this.current.tick + 1,
@@ -583,7 +586,7 @@ class FakeSession {
     return { events: [], snapshot: next, input: value };
   }
 
-  getSnapshot() { return this.current; }
+  getLegacyFullSnapshotForAudit() { return this.current; }
 
   getPublicMatchInfo() { return { matchSeed: MATCH_SEED, opponent: {} }; }
 
@@ -591,6 +594,83 @@ class FakeSession {
 
   destroy() { this.destroyCount += 1; this.state = 'destroyed'; }
 }
+
+test('observed session rejects async delegate and collector returns without unhandled rejection', async () => {
+  const unhandled: unknown[] = [];
+  const onUnhandled = (reason: unknown): void => { unhandled.push(reason); };
+  process.on('unhandledRejection', onUnhandled);
+  try {
+    const startDelegate = new FakeSession();
+    startDelegate.start = () => Promise.reject(new Error('late pilot start'));
+    const startSession = new InputPilotObservedSession({
+      session: startDelegate,
+      collector: { observeStep: () => {} },
+    });
+    assert.throws(() => startSession.start(), /InputPilotObservedSession start 失败/);
+    assert.equal(startDelegate.destroyCount, 1);
+
+    const stepDelegate = new FakeSession();
+    stepDelegate.start();
+    stepDelegate.stepWithLegacySnapshotForAudit = (() => Promise.reject(new Error('late pilot step'))) as unknown as FakeSession['stepWithLegacySnapshotForAudit'];
+    const stepSession = new InputPilotObservedSession({
+      session: stepDelegate,
+      collector: { observeStep: () => {} },
+    });
+    stepSession.start();
+    assert.throws(() => stepSession.stepWithLegacySnapshotForAudit(input(0)), /InputPilotObservedSession step 失败/);
+    assert.equal(stepDelegate.destroyCount, 1);
+
+    const collectorDelegate = new FakeSession();
+    const collectorSession = new InputPilotObservedSession({
+      session: collectorDelegate,
+      collector: { observeStep: () => Promise.reject(new Error('late collector observation')) },
+    });
+    collectorSession.start();
+    assert.throws(() => collectorSession.stepWithLegacySnapshotForAudit(input(0)), /InputPilotObservedSession step 失败/);
+    assert.equal(collectorDelegate.destroyCount, 1);
+
+    const thenableDelegate = new FakeSession();
+    let thenCalls = 0;
+    thenableDelegate.stepWithLegacySnapshotForAudit = (() => ({
+      then() {
+        thenCalls += 1;
+        return Promise.reject(new Error('returned thenable step'));
+      },
+    })) as unknown as FakeSession['stepWithLegacySnapshotForAudit'];
+    const thenableSession = new InputPilotObservedSession({
+      session: thenableDelegate,
+      collector: { observeStep: () => {} },
+    });
+    thenableSession.start();
+    assert.throws(() => thenableSession.stepWithLegacySnapshotForAudit(input(0)), /InputPilotObservedSession step 失败/);
+    assert.equal(thenableDelegate.destroyCount, 1);
+
+    const cleanupDelegate = new FakeSession();
+    let rejectCleanup = true;
+    cleanupDelegate.destroy = () => {
+      cleanupDelegate.destroyCount += 1;
+      if (rejectCleanup) return Promise.reject(new Error('late pilot destroy'));
+      cleanupDelegate.state = 'destroyed';
+      return undefined;
+    };
+    const cleanupSession = new InputPilotObservedSession({
+      session: cleanupDelegate,
+      collector: { observeStep: () => {} },
+    });
+    assert.throws(() => cleanupSession.destroy(), /必须同步完成/);
+    assert.equal(cleanupDelegate.destroyCount, 1);
+    rejectCleanup = false;
+    cleanupSession.destroy();
+    cleanupSession.destroy();
+    assert.equal(cleanupDelegate.destroyCount, 2);
+
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    assert.equal(thenCalls, 0);
+    assert.deepEqual(unhandled, []);
+  } finally {
+    process.off('unhandledRejection', onUnhandled);
+  }
+});
 
 test('observed session records only committed inputs and preserves paused no-op steps', () => {
   const delegate = new FakeSession();
@@ -603,7 +683,7 @@ test('observed session records only committed inputs and preserves paused no-op 
   });
   session.start();
   const firstInput = input(0, { moveX: 1 });
-  const result = session.step(firstInput);
+  const result = session.stepWithLegacySnapshotForAudit(firstInput);
   assert.equal(observations.length, 1);
   const observation = required(observations[0], '首个观察步骤');
   const beforeSnapshot = record(observation.beforeSnapshot, '观察前快照');
@@ -621,7 +701,7 @@ test('observed session records only committed inputs and preserves paused no-op 
   assert.ok(Object.isFrozen(record(observedParticipant.position, '观察前参与者位置')));
   assert.ok(Object.isFrozen(observedResult));
   assert.ok(Object.isFrozen(observedResult.events));
-  assert.ok(Object.isFrozen(session.getSnapshot()));
+  assert.ok(Object.isFrozen(session.getLegacyFullSnapshotForAudit()));
   const publicMatchInfo = record(session.getPublicMatchInfo(), '公开对局信息');
   assert.ok(Object.isFrozen(publicMatchInfo));
   assert.ok(Object.isFrozen(publicMatchInfo.opponent));
@@ -630,7 +710,7 @@ test('observed session records only committed inputs and preserves paused no-op 
   }, /read only|Cannot assign/i);
 
   session.setPaused(true);
-  const paused = record(session.step(input(1)), '暂停步骤结果');
+  const paused = record(session.stepWithLegacySnapshotForAudit(input(1)), '暂停步骤结果');
   assert.equal(paused.input, null);
   assert.ok(Object.isFrozen(paused));
   assert.equal(observations.length, 1);
@@ -647,9 +727,9 @@ test('observed session and one-shot match service fail closed on observer or rem
     collector: { observeStep: () => { throw new Error('collector failed'); } },
   });
   session.start();
-  assert.throws(() => session.step(input(0)), /collector failed/);
+  assert.throws(() => session.stepWithLegacySnapshotForAudit(input(0)), /InputPilotObservedSession step 失败/);
   assert.equal(delegate.destroyCount, 1);
-  assert.throws(() => session.getSnapshot(), /已销毁/);
+  assert.throws(() => session.getLegacyFullSnapshotForAudit(), /已销毁/);
 
   const serviceDelegate = new FakeSession();
   const matchService = new InputPilotObservedMatchService({
@@ -686,12 +766,15 @@ test('observed session preserves frozen primary failures and reports cleanup fai
   });
   session.start();
 
-  const failure = captureThrown(() => session.step(input(0)));
+  const failure = captureThrown(() => session.stepWithLegacySnapshotForAudit(input(0)));
   assert.match(failure.message, /清理未完整完成/);
-  assert.equal(failure.originalError, collectorFailure);
-  assert.deepEqual(failure.cleanupErrors, [cleanupFailure]);
+  assert.equal((failure.originalError as { readonly cause?: unknown } | undefined)?.cause, collectorFailure);
+  assert.equal(
+    (failure.cleanupErrors?.[0] as { readonly cause?: unknown } | undefined)?.cause,
+    cleanupFailure,
+  );
   assert.equal(delegate.destroyCount, 1);
-  assert.throws(() => session.getSnapshot(), /已销毁/);
+  assert.throws(() => session.getLegacyFullSnapshotForAudit(), /已销毁/);
   cleanupShouldFail = false;
   session.destroy();
   session.destroy();
@@ -706,9 +789,11 @@ test('observed session fails closed on delegate start or pause lifecycle failure
     session: startDelegate,
     collector: { observeStep: () => {} },
   });
-  assert.equal(captureThrown(() => startSession.start()), startFailure);
+  const startObservedFailure = captureThrown(() => startSession.start());
+  assert.match(startObservedFailure.message, /InputPilotObservedSession start 失败/);
+  assert.equal((startObservedFailure as { readonly cause?: unknown }).cause, startFailure);
   assert.equal(startDelegate.destroyCount, 1);
-  assert.throws(() => startSession.getSnapshot(), /已销毁/);
+  assert.throws(() => startSession.getLegacyFullSnapshotForAudit(), /已销毁/);
 
   const pauseDelegate = new FakeSession();
   const pauseFailure = Object.freeze(new Error('delegate pause failure'));
@@ -720,9 +805,11 @@ test('observed session fails closed on delegate start or pause lifecycle failure
   pauseSession.start();
   assert.throws(() => pauseSession.setPaused('yes'), /布尔值/);
   assert.equal(pauseDelegate.destroyCount, 0);
-  assert.equal(captureThrown(() => pauseSession.setPaused(true)), pauseFailure);
+  const pauseObservedFailure = captureThrown(() => pauseSession.setPaused(true));
+  assert.match(pauseObservedFailure.message, /InputPilotObservedSession setPaused 失败/);
+  assert.equal((pauseObservedFailure as { readonly cause?: unknown }).cause, pauseFailure);
   assert.equal(pauseDelegate.destroyCount, 1);
-  assert.throws(() => pauseSession.getSnapshot(), /已销毁/);
+  assert.throws(() => pauseSession.getLegacyFullSnapshotForAudit(), /已销毁/);
 });
 
 test('observed match service combines invalid-session and rollback cleanup failures', () => {

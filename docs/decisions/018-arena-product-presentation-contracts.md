@@ -1,7 +1,10 @@
 # ADR-018：Arena 产品表现使用版本化 ViewModel、意图端口与非拥有 Match 桥
 
-- 状态：已接受（S8.5.1～S8.5.3 已实施）
-- 日期：2026-07-18
+- 状态：已接受（S8.5.1～S8.5.3 已实施）；仅 Match read contract 被 ADR-111/PA5c 的 V2
+  read-frame 合同局部取代，ViewModel、Intent、单一 Match 所有者、资源借用与生命周期结论仍有效。
+  PA5c 当前 legacy Match-read 候选已移除，待主协调签核；不得据此将本 ADR 整体标为完成或废弃。
+- 初始日期：2026-07-18
+- 修订日期：2026-07-30
 
 ## 背景
 
@@ -29,19 +32,24 @@ S8.1～S8.4 已建立无 UI 产品状态机、唯一 Match 所有者、可靠本
 
 ### 3. ProductController 继续是唯一 Match 所有者
 
-`ProductSessionController.getActiveMatchSnapshot()` 只读转发当前 `ProductMatchCoordinator` 的权威快照，不暴露 Runtime、MatchCore 或写入口。
+`ProductSessionController` 仍是唯一 Match 所有者。PA4b 已将正式 Product bridge 接到
+`beginMatchWithReadFrame()/stepMatchWithReadFrame()/getActiveMatchReadFrame()`；PA5c implementation
+candidate 已移除旧的 `getActiveMatchSnapshot()/beginMatch()/stepMatch()` Match-read surface，
+仍待主协调独立签核。这里的局部取代只针对 Match read contract，不废弃本 ADR 已接受的 ViewModel、
+Intent、单一所有者、资源借用与生命周期结论。当前稳定入口不暴露 Runtime、MatchCore 或写入口。
 
 `ProductMatchPresentationRuntime` 是非拥有桥：
 
 ```text
 ProductSessionController（唯一 Match 所有者）
-        ↓ 只读快照 / beginMatch / stepMatch(InputFrame)
+        ↓ V2 frame / beginMatchWithReadFrame / stepMatchWithReadFrame(InputFrame)
 ProductMatchPresentationRuntime
         ↓ 去重事件 + ArenaPresentationFrame
 Renderer / UI / Audio（后续宿主组合）
 ```
 
-- 输入源只能按当前 tick 和 `ActionAffordance` 生成玩家 `InputFrame`。
+- 输入源只能按当前 tick 的 `LocalActionSidecarV2` 生成玩家 `InputFrame`；旧
+  `ActionAffordance` 仅在明确 Legacy/Audit differential allowlist 中出现。
 - 权威 step、结果和产品状态必须一致后才发布新表现帧。
 - `PresentationEventWindow` 是桥唯一拥有的资源；Controller 和输入源均为借用端口。
 - 比赛结束结果可作为有界只读表现缓存，供奖励提交释放 Runtime 后继续显示；缓存不是第二份权威状态。
@@ -101,7 +109,10 @@ Session 也负责 Profile lease 心跳：前台每 20 秒续租，未确认的�
 - V1 Screen Registry 覆盖所有非 suspended 产品状态，消息和内容引用可校验。
 - ViewModel 覆盖 home、角色、matching、suspended、result、reward、unlock 和公开错误，并验证机器人/难度不泄漏。
 - Intent 覆盖重复点击、不同意图并发和销毁后迟到完成。
-- 真实 Arena V1 Product Match 通过非拥有桥生成既有 Arena frame，直到权威结果。
+- 现有 PA4b 生产桥已通过非拥有桥使用
+  `beginMatchWithReadFrame()/stepMatchWithReadFrame()/getActiveMatchReadFrame()` 生成 V2 Arena
+  frame，直到权威结果；PA5c implementation candidate 已移除旧
+  `getActiveMatchSnapshot()/beginMatch()/stepMatch()` surface，待主协调签核。
 - 事件重复、权威 step 失败、构造失败和清理重试均有门禁。
 - Flow 覆盖自动奖励、保存失败精确重试、前后台暂停、候选清理和非拥有销毁。
 - Session 覆盖真实 Product 单局/重赛、启动中 hide、迟到 Renderer load、迟到帧、context loss、无效输入、Flow 失败、候选回滚和清理重试。

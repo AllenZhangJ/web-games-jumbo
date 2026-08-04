@@ -9,8 +9,9 @@ import {
 import {
   ACTION_RESOLUTION_KIND,
   assertIntegerAtLeast,
-  assertKnownKeys,
   assertNonEmptyString,
+  assertPlainRecord,
+  cloneFrozenData,
   cloneFrozenStringSet,
   type ActionResolutionKind,
 } from '@number-strategy-jump/arena-contracts';
@@ -75,6 +76,10 @@ const CONTEXT_KEYS = new Set([
   'tick', 'participantId', 'canAct', 'input', 'candidates',
   'occupiedLanes', 'activeConflictTags',
 ]);
+const PREVIEW_CONTEXT_KEYS = new Set([
+  'tick', 'participantId', 'canAct', 'candidates',
+  'occupiedLanes', 'activeConflictTags',
+]);
 const INPUT_KEYS = new Set([
   'primaryPressed', 'primaryHeld', 'jumpPressed', 'jumpHeld', 'slamPressed',
 ]);
@@ -90,14 +95,137 @@ interface PreparedCandidateBatch {
   readonly definitionByCandidateId: ReadonlyMap<string, ActionDefinition>;
 }
 
+interface PreparedResolutionContext {
+  readonly tick: number;
+  readonly participantId: string;
+  readonly canAct: boolean;
+  readonly candidates: readonly ActionCandidate[];
+  readonly definitionByCandidateId: ReadonlyMap<string, ActionDefinition>;
+  readonly occupiedLanes: readonly string[];
+  readonly activeConflictTags: readonly string[];
+  readonly occupiedLaneSet: ReadonlySet<string>;
+  readonly activeConflictTagSet: ReadonlySet<string>;
+}
+
+interface ActionResolverPreviewResult {
+  readonly resolutions: readonly ActionResolutionResult[];
+  readonly displayResolution: ActionResolutionResult | null;
+}
+
+export interface ActionResolverPreviewPort {
+  readonly resolve: (
+    contextValue: unknown,
+    intentInputsValue: unknown,
+  ) => ActionResolverPreviewResult;
+  readonly resolveWithoutDisplay: (
+    contextValue: unknown,
+    intentInputsValue: unknown,
+  ) => ActionResolverPreviewResult;
+}
+
+const ACTION_RESOLVER_PREVIEW_PORTS = new WeakMap<object, ActionResolverPreviewPort>();
+
+export function getActionResolverPreviewPort(
+  resolver: object,
+): ActionResolverPreviewPort | null {
+  return ACTION_RESOLVER_PREVIEW_PORTS.get(resolver) ?? null;
+}
+
+const DISPLAY_PRIMARY_INPUT: ActionIntentInput = Object.freeze({
+  primaryPressed: true,
+  primaryHeld: false,
+  jumpPressed: false,
+  jumpHeld: false,
+  slamPressed: false,
+});
+const NO_PREVIEW_INPUT = Symbol('no preview input');
+
+function snapshotKnownRecord(
+  value: unknown,
+  allowedKeys: ReadonlySet<string>,
+  name: string,
+): Record<string, unknown> {
+  const record = assertPlainRecord(value, name);
+  const result: Record<string, unknown> = {};
+  for (const key of Reflect.ownKeys(record)) {
+    if (typeof key !== 'string') throw new TypeError(`${name} 不能包含 Symbol 字段。`);
+    if (!allowedKeys.has(key)) throw new RangeError(`${name} 不支持字段 ${key}。`);
+    const descriptor = Object.getOwnPropertyDescriptor(record, key);
+    if (
+      !descriptor
+      || !descriptor.enumerable
+      || !Object.prototype.hasOwnProperty.call(descriptor, 'value')
+    ) throw new TypeError(`${name}.${key} 必须是可枚举数据字段。`);
+    result[key] = descriptor.value;
+  }
+  return result;
+}
+
+function snapshotDataArray(value: unknown, name: string): readonly unknown[] {
+  if (!Array.isArray(value)) throw new TypeError(`${name} 必须是数组。`);
+  const lengthDescriptor = Object.getOwnPropertyDescriptor(value, 'length');
+  if (
+    !lengthDescriptor
+    || !Object.prototype.hasOwnProperty.call(lengthDescriptor, 'value')
+    || !Number.isSafeInteger(lengthDescriptor.value)
+    || lengthDescriptor.value < 0
+  ) throw new TypeError(`${name} 必须包含安全的 length 数据字段。`);
+  const length = lengthDescriptor.value as number;
+  const keys = Reflect.ownKeys(value);
+  const keySet = new Set(keys);
+  if (keys.length !== length + 1 || !keySet.has('length')) {
+    throw new TypeError(`${name} 不能包含额外字段或隐藏索引。`);
+  }
+  const result: unknown[] = [];
+  for (let index = 0; index < length; index += 1) {
+    const key = String(index);
+    if (!keySet.has(key)) throw new TypeError(`${name} 不能包含空槽或隐藏索引。`);
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (
+      !descriptor
+      || !descriptor.enumerable
+      || !Object.prototype.hasOwnProperty.call(descriptor, 'value')
+    ) throw new TypeError(`${name}[${index}] 必须是可枚举数据字段。`);
+    result.push(descriptor.value);
+  }
+  return Object.freeze(result);
+}
+
+function isFrozenCandidateArray(values: readonly unknown[]): boolean {
+  if (!Object.isFrozen(values)) return false;
+  const lengthDescriptor = Object.getOwnPropertyDescriptor(values, 'length');
+  if (
+    !lengthDescriptor
+    || !Object.prototype.hasOwnProperty.call(lengthDescriptor, 'value')
+    || !Number.isSafeInteger(lengthDescriptor.value)
+    || lengthDescriptor.value < 0
+  ) return false;
+  const length = lengthDescriptor.value as number;
+  const keys = Reflect.ownKeys(values);
+  const keySet = new Set(keys);
+  if (keys.length !== length + 1 || !keySet.has('length')) return false;
+  for (let index = 0; index < length; index += 1) {
+    const descriptor = Object.getOwnPropertyDescriptor(values, String(index));
+    if (
+      !descriptor
+      || !descriptor.enumerable
+      || !Object.prototype.hasOwnProperty.call(descriptor, 'value')
+      || !descriptor.value
+      || typeof descriptor.value !== 'object'
+      || !Object.isFrozen(descriptor.value)
+    ) return false;
+  }
+  return true;
+}
+
 function cloneInput(input: unknown): ActionIntentInput {
-  assertKnownKeys(input, INPUT_KEYS, 'ActionResolutionContext.input');
+  const source = snapshotKnownRecord(input, INPUT_KEYS, 'ActionResolutionContext.input');
   const result: Record<string, boolean> = {};
   for (const key of INPUT_KEYS) {
-    if (typeof input[key] !== 'boolean') {
+    if (typeof source[key] !== 'boolean') {
       throw new TypeError(`ActionResolutionContext.input.${key} 必须是布尔值。`);
     }
-    result[key] = input[key];
+    result[key] = source[key] as boolean;
   }
   return Object.freeze(result) as unknown as ActionIntentInput;
 }
@@ -166,16 +294,35 @@ export class ActionResolver {
       throw new TypeError('ActionResolver 需要只读 ActionRegistry。');
     }
     this.#actionRegistry = actionRegistry;
+    if (new.target === ActionResolver) {
+      ACTION_RESOLVER_PREVIEW_PORTS.set(this, Object.freeze({
+        resolve: (contextValue: unknown, intentInputsValue: unknown) => (
+          this.#resolvePreviewBatch(contextValue, intentInputsValue, true)
+        ),
+        resolveWithoutDisplay: (contextValue: unknown, intentInputsValue: unknown) => (
+          this.#resolvePreviewBatch(contextValue, intentInputsValue, false)
+        ),
+      }));
+    }
     Object.freeze(this);
   }
 
   #prepareCandidateBatch(values: readonly unknown[]): PreparedCandidateBatch {
-    const cacheable = Object.isFrozen(values) && values.every(Object.isFrozen);
+    if (!Array.isArray(values)) {
+      throw new TypeError('ActionResolutionContext.candidates 必须是数组。');
+    }
+    const cacheable = isFrozenCandidateArray(values);
     if (cacheable) {
       const cached = this.#candidateBatchCache.get(values);
       if (cached) return cached;
     }
-    const candidates = values.map(createActionCandidate);
+    const candidateValues = snapshotDataArray(values, 'ActionResolutionContext.candidates');
+    const candidates = candidateValues.map((value, index) => (
+      createActionCandidate(
+        cloneFrozenData(value, `ActionCandidate[${index}]`),
+        index,
+      )
+    ));
     const candidateIds = new Set<string>();
     const definitionByCandidateId = new Map<string, ActionDefinition>();
     for (const candidate of candidates) {
@@ -194,32 +341,66 @@ export class ActionResolver {
     return prepared;
   }
 
-  resolve(contextValue: unknown): ActionResolutionResult {
-    assertKnownKeys(contextValue, CONTEXT_KEYS, 'ActionResolutionContext');
-    const tick = assertIntegerAtLeast(contextValue.tick, 0, 'ActionResolutionContext.tick');
-    const participantId = assertNonEmptyString(contextValue.participantId, 'ActionResolutionContext.participantId');
-    if (typeof contextValue.canAct !== 'boolean') {
+  #prepareContext(
+    source: Record<string, unknown>,
+    inputValue: unknown | typeof NO_PREVIEW_INPUT,
+  ): { readonly context: PreparedResolutionContext; readonly input: ActionIntentInput | undefined } {
+    const tick = assertIntegerAtLeast(source.tick, 0, 'ActionResolutionContext.tick');
+    const participantId = assertNonEmptyString(source.participantId, 'ActionResolutionContext.participantId');
+    if (typeof source.canAct !== 'boolean') {
       throw new TypeError('ActionResolutionContext.canAct 必须是布尔值。');
     }
-    const input = cloneInput(contextValue.input);
-    if (!Array.isArray(contextValue.candidates)) {
+    const input = inputValue === NO_PREVIEW_INPUT ? undefined : cloneInput(inputValue);
+    if (!Array.isArray(source.candidates)) {
       throw new TypeError('ActionResolutionContext.candidates 必须是数组。');
     }
+    const occupiedValues = source.occupiedLanes === undefined
+      ? Object.freeze([])
+      : snapshotDataArray(source.occupiedLanes, 'ActionResolutionContext.occupiedLanes');
     const occupiedLanes = cloneFrozenStringSet(
-      contextValue.occupiedLanes as readonly unknown[] | undefined,
+      occupiedValues,
       'ActionResolutionContext.occupiedLanes',
     );
     for (const lane of occupiedLanes) {
       if (!ACTION_LANES.has(lane)) throw new RangeError(`未知 occupied action lane ${lane}。`);
     }
+    const conflictValues = source.activeConflictTags === undefined
+      ? Object.freeze([])
+      : snapshotDataArray(source.activeConflictTags, 'ActionResolutionContext.activeConflictTags');
     const activeConflictTags = cloneFrozenStringSet(
-      contextValue.activeConflictTags as readonly unknown[] | undefined,
+      conflictValues,
       'ActionResolutionContext.activeConflictTags',
     );
-    const occupiedLaneSet = new Set(occupiedLanes);
-    const activeConflictTagSet = new Set(activeConflictTags);
-    const { candidates, definitionByCandidateId } = this.#prepareCandidateBatch(contextValue.candidates);
+    const { candidates, definitionByCandidateId } = this.#prepareCandidateBatch(source.candidates);
+    return {
+      context: Object.freeze({
+        tick,
+        participantId,
+        canAct: source.canAct as boolean,
+        candidates,
+        definitionByCandidateId,
+        occupiedLanes,
+        activeConflictTags,
+        occupiedLaneSet: new Set(occupiedLanes),
+        activeConflictTagSet: new Set(activeConflictTags),
+      }),
+      input,
+    };
+  }
 
+  #evaluatePreparedContext(
+    context: PreparedResolutionContext,
+    input: ActionIntentInput,
+    canAct = context.canAct,
+  ): ActionResolutionResult {
+    const {
+      tick,
+      participantId,
+      candidates,
+      definitionByCandidateId,
+      occupiedLaneSet,
+      activeConflictTagSet,
+    } = context;
     const activeChannels = INPUT_CHANNEL_ORDER.filter((channel) => (
       hasChannelIntent(channel, input)
       || candidates.some((candidate) => {
@@ -240,7 +421,7 @@ export class ActionResolver {
         })]),
       });
     }
-    if (!contextValue.canAct) {
+    if (!canAct) {
       return Object.freeze({
         tick,
         participantId,
@@ -318,5 +499,38 @@ export class ActionResolver {
       });
     });
     return Object.freeze({ tick, participantId, outcomes: Object.freeze(outcomes) });
+  }
+
+  #resolvePreviewBatch(
+    contextValue: unknown,
+    intentInputsValue: unknown,
+    includeUnavailableDisplay: boolean,
+  ): ActionResolverPreviewResult {
+    const source = snapshotKnownRecord(
+      contextValue,
+      PREVIEW_CONTEXT_KEYS,
+      'ActionResolver preview context',
+    );
+    const intentValues = snapshotDataArray(intentInputsValue, 'ActionResolver preview intents');
+    if (intentValues.length === 0) {
+      throw new RangeError('ActionResolver preview intents 不能为空。');
+    }
+    const inputs = intentValues.map((value) => cloneInput(value));
+    const { context } = this.#prepareContext(source, NO_PREVIEW_INPUT);
+    const resolutions = inputs.map((input) => this.#evaluatePreparedContext(context, input));
+    const displayResolution = !includeUnavailableDisplay || context.canAct
+      ? null
+      : this.#evaluatePreparedContext(context, DISPLAY_PRIMARY_INPUT, true);
+    return Object.freeze({
+      resolutions: Object.freeze(resolutions),
+      displayResolution,
+    });
+  }
+
+  resolve(contextValue: unknown): ActionResolutionResult {
+    const source = snapshotKnownRecord(contextValue, CONTEXT_KEYS, 'ActionResolutionContext');
+    const { context, input } = this.#prepareContext(source, source.input);
+    if (!input) throw new Error('ActionResolutionContext.input 缺失。');
+    return this.#evaluatePreparedContext(context, input);
   }
 }

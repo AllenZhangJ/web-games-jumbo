@@ -3,11 +3,14 @@ import {
   finiteNumber,
   integerAtLeast,
 } from './input-validation.js';
+import type { LocalActionSidecarV2 } from '@number-strategy-jump/arena-contracts';
 import {
   isTrustedGestureSnapshot,
+  isTrustedLocalActionSidecarV2,
   isTrustedMappedSemanticInput,
   isTrustedMapperAffordance,
   isTrustedRawControlSnapshot,
+  trustLocalActionSidecarV2,
   trustMapperAffordance,
   trustMappedSemanticInput,
 } from './input-snapshot-trust.js';
@@ -19,6 +22,16 @@ export const ARENA_INPUT_MAPPER_ID = Object.freeze({
 } as const);
 
 export type ArenaInputMapperId = typeof ARENA_INPUT_MAPPER_ID[keyof typeof ARENA_INPUT_MAPPER_ID];
+
+export const ARENA_INPUT_SOURCE_MODE = Object.freeze({
+  LEGACY: 'legacy',
+  LOCAL_SIDECAR_V2: 'local-sidecar-v2',
+} as const);
+
+export type ArenaInputSourceMode =
+  typeof ARENA_INPUT_SOURCE_MODE[keyof typeof ARENA_INPUT_SOURCE_MODE];
+
+export type LocalActionSidecarV2Input = LocalActionSidecarV2;
 
 export const GESTURE_DIRECTION = Object.freeze({
   UP: 'up',
@@ -101,10 +114,12 @@ interface MapperGestureSnapshot {
 
 export interface ArenaInputMapperContext {
   readonly tick?: number;
+  readonly eventSequence?: number;
   readonly participantId?: string;
   readonly raw: RawMapperSnapshot;
   readonly gestures: MapperGestureSnapshot;
   readonly actionAffordance?: MapperActionAffordance | null;
+  readonly localActionSidecar?: LocalActionSidecarV2Input | null;
 }
 
 export interface ArenaInputMapper {
@@ -123,10 +138,12 @@ const MAPPED_KEYS = new Set([
 ]);
 const INPUT_CONTEXT_KEYS = new Set([
   'tick',
+  'eventSequence',
   'participantId',
   'raw',
   'gestures',
   'actionAffordance',
+  'localActionSidecar',
 ]);
 const RAW_SNAPSHOT_KEYS = new Set([
   'revision',
@@ -180,6 +197,17 @@ const AFFORDANCE_OUTCOME_KEYS = new Set([
   'reason',
 ]);
 const AFFORDANCE_KINDS = new Set(['none', 'ignored', 'selected']);
+const SIDECAR_KEYS = new Set([
+  'schemaVersion',
+  'tick',
+  'eventSequence',
+  'participantId',
+  'profile',
+  'primaryActionDefinitionId',
+  'channels',
+]);
+const SIDECAR_CHANNEL_KEYS = new Set(['primary', 'primaryHold']);
+const SIDECAR_COPY_OPTION_KEYS = new Set(['tick', 'eventSequence', 'participantId']);
 const BOOLEAN_MAPPED_KEYS = [
   'primaryPressed',
   'primaryHeld',
@@ -197,9 +225,21 @@ function nonEmptyString(value: unknown, name: string): string {
   return value;
 }
 
+function strictNonEmptyString(value: unknown, name: string): string {
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    throw new TypeError(`${name} 必须是非空字符串。`);
+  }
+  return value;
+}
+
 function nullableString(value: unknown, name: string): string | null {
   if (value === null) return null;
   return nonEmptyString(value, name);
+}
+
+function strictNullableString(value: unknown, name: string): string | null {
+  if (value === null) return null;
+  return strictNonEmptyString(value, name);
 }
 
 function copyAffordanceOutcome(value: unknown, name: string): MapperAffordanceOutcome {
@@ -214,6 +254,162 @@ function copyAffordanceOutcome(value: unknown, name: string): MapperAffordanceOu
     source: nullableString(source.source, `${name}.source`),
     reason: nonEmptyString(source.reason, `${name}.reason`),
   });
+}
+
+function strictDataRecord(
+  value: unknown,
+  allowedKeys: ReadonlySet<string>,
+  requiredKeys: ReadonlySet<string>,
+  name: string,
+): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new TypeError(`${name} 必须是普通对象。`);
+  }
+  const prototype = Object.getPrototypeOf(value) as object | null;
+  if (prototype !== Object.prototype && prototype !== null) {
+    throw new TypeError(`${name} 必须是普通对象。`);
+  }
+  // Reflective inspection may invoke a Proxy's ownKeys/getOwnPropertyDescriptor
+  // traps; it never reads a data value or executes an accessor getter. Capture
+  // the key list once, then capture each descriptor once for this boundary.
+  const ownKeys = Reflect.ownKeys(value);
+  const descriptors = new Map<PropertyKey, PropertyDescriptor | undefined>();
+  for (const key of ownKeys) {
+    descriptors.set(key, Object.getOwnPropertyDescriptor(value, key));
+  }
+  const result: Record<string, unknown> = {};
+  for (const key of ownKeys) {
+    if (typeof key !== 'string' || !allowedKeys.has(key)) {
+      throw new RangeError(`${name} 不支持字段 ${String(key)}。`);
+    }
+    const descriptor = descriptors.get(key);
+    if (!descriptor || !Object.hasOwn(descriptor, 'value')) {
+      throw new TypeError(`${name}.${key} 不能是访问器。`);
+    }
+    if (!descriptor.enumerable) {
+      throw new TypeError(`${name}.${key} 必须是可枚举数据字段。`);
+    }
+    result[key] = descriptor.value;
+  }
+  for (const key of requiredKeys) {
+    const descriptor = descriptors.get(key);
+    if (!descriptor || !Object.hasOwn(descriptor, 'value')) {
+      throw new TypeError(`${name} 缺少字段 ${key}。`);
+    }
+  }
+  return result;
+}
+
+function copyLocalActionSidecarOutcome(value: unknown, name: string): MapperAffordanceOutcome {
+  const source = strictDataRecord(value, AFFORDANCE_OUTCOME_KEYS, AFFORDANCE_OUTCOME_KEYS, name);
+  const kind = source.kind;
+  if (!AFFORDANCE_KINDS.has(kind as string)) throw new RangeError(`${name}.kind 无效。`);
+  const actionDefinitionId = strictNullableString(
+    source.actionDefinitionId,
+    `${name}.actionDefinitionId`,
+  );
+  const lane = strictNullableString(source.lane, `${name}.lane`);
+  const sourceId = strictNullableString(source.source, `${name}.source`);
+  if (kind === 'selected' && (actionDefinitionId === null || lane === null || sourceId === null)) {
+    throw new TypeError(`${name}.selected 必须包含完整 identity。`);
+  }
+  if (kind === 'none' && (actionDefinitionId !== null || lane !== null || sourceId !== null)) {
+    throw new TypeError(`${name}.none 不得包含 identity。`);
+  }
+  if (kind === 'ignored') {
+    const allNull = actionDefinitionId === null && lane === null && sourceId === null;
+    const allPresent = actionDefinitionId !== null && lane !== null && sourceId !== null;
+    if (!allNull && !allPresent) throw new TypeError(`${name}.ignored identity 必须全有或全无。`);
+  }
+  return Object.freeze({
+    kind: kind as MapperAffordanceOutcome['kind'],
+    actionDefinitionId,
+    lane,
+    source: sourceId,
+    reason: strictNonEmptyString(source.reason, `${name}.reason`),
+  });
+}
+
+export function copyLocalActionSidecarV2(
+  value: unknown,
+  options: Readonly<{ tick: number; eventSequence: number; participantId: string }>,
+): LocalActionSidecarV2Input {
+  const copiedOptions = strictDataRecord(
+    options,
+    SIDECAR_COPY_OPTION_KEYS,
+    SIDECAR_COPY_OPTION_KEYS,
+    'LocalActionSidecarV2InputOptions',
+  );
+  const tick = integerAtLeast(copiedOptions.tick, 0, 'LocalActionSidecarV2InputOptions.tick');
+  const eventSequence = integerAtLeast(
+    copiedOptions.eventSequence,
+    0,
+    'LocalActionSidecarV2InputOptions.eventSequence',
+  );
+  const participantId = strictNonEmptyString(
+    copiedOptions.participantId,
+    'LocalActionSidecarV2InputOptions.participantId',
+  );
+  if (isTrustedLocalActionSidecarV2(value)) {
+    const trusted = value as LocalActionSidecarV2Input;
+    if (trusted.tick !== tick || trusted.eventSequence !== eventSequence) {
+      throw new RangeError('LocalActionSidecarV2 的 authority identity 与当前 sample 不一致。');
+    }
+    if (trusted.participantId !== participantId) {
+      throw new RangeError('LocalActionSidecarV2.participantId 与当前玩家不一致。');
+    }
+    return trusted;
+  }
+  const source = strictDataRecord(value, SIDECAR_KEYS, SIDECAR_KEYS, 'LocalActionSidecarV2');
+  if (source.schemaVersion !== 2) throw new RangeError('LocalActionSidecarV2.schemaVersion 必须是 2。');
+  const sourceTick = integerAtLeast(source.tick, 0, 'LocalActionSidecarV2.tick');
+  const sourceEventSequence = integerAtLeast(source.eventSequence, 0, 'LocalActionSidecarV2.eventSequence');
+  const sourceParticipantId = strictNonEmptyString(
+    source.participantId,
+    'LocalActionSidecarV2.participantId',
+  );
+  if (sourceTick !== tick || sourceEventSequence !== eventSequence) {
+    throw new RangeError('LocalActionSidecarV2 的 authority identity 与当前 sample 不一致。');
+  }
+  if (sourceParticipantId !== participantId) {
+    throw new RangeError('LocalActionSidecarV2.participantId 与当前玩家不一致。');
+  }
+  if (source.profile !== 'local-context-primary') {
+    throw new RangeError('LocalActionSidecarV2.profile 必须是 local-context-primary。');
+  }
+  const channels = strictDataRecord(
+    source.channels,
+    SIDECAR_CHANNEL_KEYS,
+    SIDECAR_CHANNEL_KEYS,
+    'LocalActionSidecarV2.channels',
+  );
+  const primary = copyLocalActionSidecarOutcome(
+    channels.primary,
+    'LocalActionSidecarV2.channels.primary',
+  );
+  const primaryHold = copyLocalActionSidecarOutcome(
+    channels.primaryHold,
+    'LocalActionSidecarV2.channels.primaryHold',
+  );
+  const primaryActionDefinitionId = strictNullableString(
+    source.primaryActionDefinitionId,
+    'LocalActionSidecarV2.primaryActionDefinitionId',
+  );
+  if (primary.kind === 'none' && primaryActionDefinitionId !== null) {
+    throw new RangeError('LocalActionSidecarV2.none primary 不得携带 primaryActionDefinitionId。');
+  }
+  if (primary.actionDefinitionId !== null && primaryActionDefinitionId !== primary.actionDefinitionId) {
+    throw new RangeError('LocalActionSidecarV2.primaryActionDefinitionId 必须匹配 primary outcome。');
+  }
+  return trustLocalActionSidecarV2(Object.freeze({
+    schemaVersion: 2 as const,
+    tick: sourceTick,
+    eventSequence: sourceEventSequence,
+    participantId: sourceParticipantId,
+    profile: 'local-context-primary' as const,
+    primaryActionDefinitionId,
+    channels: Object.freeze({ primary, primaryHold }),
+  }));
 }
 
 function booleanValue(value: unknown, name: string): boolean {
@@ -390,6 +586,14 @@ function copyMapperContext(value: unknown): ArenaInputMapperContext {
   const participantId = source.participantId === undefined
     ? undefined
     : nonEmptyString(source.participantId, 'InputMapper context.participantId');
+  const eventSequence = source.eventSequence === undefined
+    ? undefined
+    : integerAtLeast(source.eventSequence, 0, 'InputMapper context.eventSequence');
+  const hasLegacyAffordance = Object.hasOwn(source, 'actionAffordance');
+  const hasLocalSidecar = Object.hasOwn(source, 'localActionSidecar');
+  if (hasLegacyAffordance && hasLocalSidecar) {
+    throw new TypeError('InputMapper context 不得同时携带 legacy affordance 与 V2 local sidecar。');
+  }
   let actionAffordance: MapperActionAffordance | null | undefined;
   if (source.actionAffordance !== undefined) {
     if (source.actionAffordance === null) {
@@ -406,12 +610,30 @@ function copyMapperContext(value: unknown): ArenaInputMapperContext {
       });
     }
   }
+  let localActionSidecar: LocalActionSidecarV2Input | null | undefined;
+  if (hasLocalSidecar) {
+    if (source.localActionSidecar === null || source.localActionSidecar === undefined) {
+      throw new TypeError('InputMapper context.localActionSidecar 在 V2 路径必须存在。');
+    }
+    if (tick === undefined || eventSequence === undefined || participantId === undefined) {
+      throw new TypeError(
+        'InputMapper context.localActionSidecar 存在时必须同时提供 tick、eventSequence 和 participantId。',
+      );
+    }
+    localActionSidecar = copyLocalActionSidecarV2(source.localActionSidecar, {
+      tick,
+      eventSequence,
+      participantId,
+    });
+  }
   return Object.freeze({
     ...(tick === undefined ? {} : { tick }),
+    ...(eventSequence === undefined ? {} : { eventSequence }),
     ...(participantId === undefined ? {} : { participantId }),
     raw: copyRawMapperSnapshot(source.raw),
     gestures: copyMapperGestureSnapshot(source.gestures),
     ...(actionAffordance === undefined ? {} : { actionAffordance }),
+    ...(localActionSidecar === undefined ? {} : { localActionSidecar }),
   });
 }
 
@@ -441,10 +663,15 @@ export function createContextInputMapperB(): ArenaInputMapper {
     raw,
     gestures,
     actionAffordance,
+    localActionSidecar,
   }) => {
     const downGesture = gestures.primary.direction === GESTURE_DIRECTION.DOWN;
-    const pressAffordance = actionAffordance?.channels.primary ?? null;
-    const holdAffordance = actionAffordance?.channels.primaryHold ?? null;
+    const pressAffordance = localActionSidecar?.channels.primary
+      ?? actionAffordance?.channels.primary
+      ?? null;
+    const holdAffordance = localActionSidecar?.channels.primaryHold
+      ?? actionAffordance?.channels.primaryHold
+      ?? null;
     const crouchHold = !downGesture
       && gestures.primary.contactHeld
       && pressAffordance?.kind === 'selected'

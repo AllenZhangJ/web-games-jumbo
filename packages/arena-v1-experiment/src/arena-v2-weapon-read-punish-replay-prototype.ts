@@ -146,11 +146,11 @@ function createScenarioReplay(scenario: ArenaV2WeaponReadPunishScenario): Readon
   const actionStateSamples: ArenaV2WeaponReadPunishActionSample[] = [];
   try {
     while (core.phase !== 'ended') {
-      const snapshot = core.getSnapshot();
+      const snapshot = core.getLegacyFullSnapshotForAudit();
       actionStateSamples.push(actionStateFor(snapshot));
       runner.step(inputFor(snapshot, scenario));
     }
-    actionStateSamples.push(actionStateFor(core.getSnapshot()));
+    actionStateSamples.push(actionStateFor(core.getLegacyFullSnapshotForAudit()));
     return Object.freeze({
       replay: runner.exportReplay(),
       actionStateSamples: Object.freeze(actionStateSamples.map((sample) => Object.freeze({ ...sample }))),

@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./capability-utils": {
+      "types": "./dist/capability-utils.d.ts",
+      "import": "./dist/capability-utils.js"
     }
   },
   "files": ["dist"],

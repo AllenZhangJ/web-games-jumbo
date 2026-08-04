@@ -99,7 +99,7 @@ test('explicit ground and air jumps use one ActionResolver path and consume air 
     )),
     true,
   );
-  let snapshot = firstParticipant(core.getSnapshot());
+  let snapshot = firstParticipant(core.getLegacyFullSnapshotForAudit());
   assert.ok(snapshot.velocity.y > 0);
   assert.equal(snapshot.grounded, false);
   assert.equal(snapshot.movement.grounded, false);
@@ -111,7 +111,7 @@ test('explicit ground and air jumps use one ActionResolver path and consume air 
     airEvents.some(({ action }) => action === STAGE6_MOVEMENT_ACTION_ID.EXPLICIT_AIR_JUMP),
     true,
   );
-  snapshot = firstParticipant(core.getSnapshot());
+  snapshot = firstParticipant(core.getLegacyFullSnapshotForAudit());
   assert.equal(snapshot.movement.airJumpsUsed, 1);
 
   const exhausted = step(core, { 'player-1': { jumpPressed: true } });
@@ -119,7 +119,7 @@ test('explicit ground and air jumps use one ActionResolver path and consume air 
     exhausted.some(({ action }) => action === STAGE6_MOVEMENT_ACTION_ID.EXPLICIT_AIR_JUMP),
     false,
   );
-  assert.equal(firstParticipant(core.getSnapshot()).movement.airJumpsUsed, 1);
+  assert.equal(firstParticipant(core.getLegacyFullSnapshotForAudit()).movement.airJumpsUsed, 1);
   core.destroy();
 });
 
@@ -127,12 +127,12 @@ test('an exhausted airborne press is buffered and automatically jumps on the fir
   const core = createCore();
   step(core, { 'player-1': { jumpPressed: true } });
   step(core, { 'player-1': { jumpPressed: true } });
-  assert.equal(firstParticipant(core.getSnapshot()).movement.airJumpsUsed, 1);
+  assert.equal(firstParticipant(core.getLegacyFullSnapshotForAudit()).movement.airJumpsUsed, 1);
 
-  let player = firstParticipant(core.getSnapshot());
+  let player = firstParticipant(core.getLegacyFullSnapshotForAudit());
   for (let tick = 0; tick < 180 && (player.velocity.y >= 0 || player.position.y > 1.5); tick += 1) {
     step(core);
-    player = firstParticipant(core.getSnapshot());
+    player = firstParticipant(core.getLegacyFullSnapshotForAudit());
   }
   assert.ok(player.velocity.y < 0);
   assert.ok(player.position.y <= 1.5);
@@ -142,11 +142,11 @@ test('an exhausted airborne press is buffered and automatically jumps on the fir
     bufferedPress.some(({ action }) => action === STAGE6_MOVEMENT_ACTION_ID.EXPLICIT_AIR_JUMP),
     false,
   );
-  player = firstParticipant(core.getSnapshot());
+  player = firstParticipant(core.getLegacyFullSnapshotForAudit());
   assert.ok(player.movement.jumpBufferTicksRemaining > 0);
   for (let tick = 0; tick < 5 && !player.grounded; tick += 1) {
     step(core);
-    player = firstParticipant(core.getSnapshot());
+    player = firstParticipant(core.getLegacyFullSnapshotForAudit());
   }
   assert.equal(player.grounded, true);
   assert.ok(player.movement.jumpBufferTicksRemaining > 0);
@@ -158,7 +158,7 @@ test('an exhausted airborne press is buffered and automatically jumps on the fir
     )),
     true,
   );
-  player = firstParticipant(core.getSnapshot());
+  player = firstParticipant(core.getLegacyFullSnapshotForAudit());
   assert.equal(player.movement.jumpBufferTicksRemaining, 0);
   assert.equal(player.grounded, false);
   assert.ok(player.velocity.y > 0);
@@ -178,9 +178,9 @@ test('a normal pressed-and-held jump does not accidentally begin crouch charge',
     events.some(({ action }) => action === STAGE6_MOVEMENT_ACTION_ID.EXPLICIT_CROUCH_BEGIN),
     false,
   );
-  assert.equal(firstParticipant(core.getSnapshot()).movement.mode, MOVEMENT_MODE.STANDARD);
-  assert.ok(firstParticipant(core.getSnapshot()).velocity.y > 0);
-  const currentAffordance = affordance(firstParticipant(core.getSnapshot()));
+  assert.equal(firstParticipant(core.getLegacyFullSnapshotForAudit()).movement.mode, MOVEMENT_MODE.STANDARD);
+  assert.ok(firstParticipant(core.getLegacyFullSnapshotForAudit()).velocity.y > 0);
+  const currentAffordance = affordance(firstParticipant(core.getLegacyFullSnapshotForAudit()));
   assert.equal(
     currentAffordance.primaryActionDefinitionId,
     STAGE6_MOVEMENT_ACTION_ID.CONTEXT_AIR_JUMP,
@@ -201,8 +201,8 @@ test('walk and run inputs converge to CharacterDefinition target speeds', () => 
     });
   }
   const walkSpeed = Math.hypot(
-    firstParticipant(walk.getSnapshot()).velocity.x,
-    firstParticipant(walk.getSnapshot()).velocity.z,
+    firstParticipant(walk.getLegacyFullSnapshotForAudit()).velocity.x,
+    firstParticipant(walk.getLegacyFullSnapshotForAudit()).velocity.z,
   );
   assert.ok(Math.abs(walkSpeed - definition.movement.walkSpeed) < 1e-9);
   walk.destroy();
@@ -212,8 +212,8 @@ test('walk and run inputs converge to CharacterDefinition target speeds', () => 
     step(run, { 'player-1': { moveX: 1, moveZ: 0 } });
   }
   const runSpeed = Math.hypot(
-    firstParticipant(run.getSnapshot()).velocity.x,
-    firstParticipant(run.getSnapshot()).velocity.z,
+    firstParticipant(run.getLegacyFullSnapshotForAudit()).velocity.x,
+    firstParticipant(run.getLegacyFullSnapshotForAudit()).velocity.z,
   );
   assert.ok(Math.abs(runSpeed - definition.movement.runSpeed) < 1e-9);
   run.destroy();
@@ -228,8 +228,8 @@ test('primary falls back to context jump only when base targeting has no legal t
     fallback.some(({ action }) => action === STAGE6_MOVEMENT_ACTION_ID.CONTEXT_GROUND_JUMP),
     true,
   );
-  assert.ok(firstParticipant(far.getSnapshot()).velocity.y > 0);
-  assert.equal(firstParticipant(far.getSnapshot()).action.definitionId, null);
+  assert.ok(firstParticipant(far.getLegacyFullSnapshotForAudit()).velocity.y > 0);
+  assert.equal(firstParticipant(far.getLegacyFullSnapshotForAudit()).action.definitionId, null);
   far.destroy();
 
   const close = createCore({
@@ -247,7 +247,7 @@ test('primary falls back to context jump only when base targeting has no legal t
     attack.some(({ action }) => action === STAGE6_MOVEMENT_ACTION_ID.CONTEXT_GROUND_JUMP),
     false,
   );
-  assert.equal(firstParticipant(close.getSnapshot()).velocity.y, 0);
+  assert.equal(firstParticipant(close.getLegacyFullSnapshotForAudit()).velocity.y, 0);
   close.destroy();
 });
 
@@ -265,7 +265,7 @@ test('explicit production controls can whiff a base attack without a nearby targ
   );
   assert.equal(events.some(({ type }) => type === ARENA_MATCH_EVENT.HIT_RESOLVED), false);
   assert.equal(
-    affordance(firstParticipant(core.getSnapshot())).primaryActionDefinitionId,
+    affordance(firstParticipant(core.getLegacyFullSnapshotForAudit())).primaryActionDefinitionId,
     STAGE4_ACTION_ID.BASE_PUSH,
   );
   core.destroy();
@@ -284,7 +284,7 @@ test('explicit airborne primary starts a weapon-specific downward attack and des
   });
   step(core);
   assert.equal(
-    required(firstParticipant(core.getSnapshot()).equipment, 'player equipment').definitionId,
+    required(firstParticipant(core.getLegacyFullSnapshotForAudit()).equipment, 'player equipment').definitionId,
     STAGE4_EQUIPMENT_ID.HAMMER,
   );
   step(core, { 'player-1': { jumpPressed: true } });
@@ -297,7 +297,7 @@ test('explicit airborne primary starts a weapon-specific downward attack and des
     )),
     true,
   );
-  const player = firstParticipant(core.getSnapshot());
+  const player = firstParticipant(core.getLegacyFullSnapshotForAudit());
   assert.equal(player.movement.mode, MOVEMENT_MODE.DOWN_SMASH);
   assert.ok(player.velocity.y < -15);
   core.destroy();
@@ -325,7 +325,7 @@ test('same tick explicit jump and primary attack occupy independent action lanes
       .sort(),
     [STAGE4_ACTION_ID.BASE_PUSH, STAGE6_MOVEMENT_ACTION_ID.EXPLICIT_GROUND_JUMP].sort(),
   );
-  const player = firstParticipant(core.getSnapshot());
+  const player = firstParticipant(core.getLegacyFullSnapshotForAudit());
   assert.equal(player.action.definitionId, STAGE4_ACTION_ID.BASE_PUSH);
   assert.ok(player.velocity.y > 0);
   core.destroy();
@@ -334,7 +334,7 @@ test('same tick explicit jump and primary attack occupy independent action lanes
 test('crouch charge retains its originating channel and releases a bounded jump', () => {
   const core = createCore();
   step(core, { 'player-1': { jumpHeld: true } });
-  let movement = firstParticipant(core.getSnapshot()).movement;
+  let movement = firstParticipant(core.getLegacyFullSnapshotForAudit()).movement;
   assert.equal(movement.mode, MOVEMENT_MODE.CROUCH_CHARGING);
   assert.equal(
     movement.crouchActionId,
@@ -343,14 +343,14 @@ test('crouch charge retains its originating channel and releases a bounded jump'
   assert.equal(movement.crouchChargeTicks, 1);
 
   step(core, { 'player-1': { jumpHeld: true } });
-  movement = firstParticipant(core.getSnapshot()).movement;
+  movement = firstParticipant(core.getLegacyFullSnapshotForAudit()).movement;
   assert.equal(movement.crouchChargeTicks, 2);
   const release = step(core);
   assert.equal(
     release.some(({ action }) => action === STAGE6_MOVEMENT_ACTION_ID.EXPLICIT_CROUCH_RELEASE),
     true,
   );
-  const player = firstParticipant(core.getSnapshot());
+  const player = firstParticipant(core.getLegacyFullSnapshotForAudit());
   assert.equal(player.movement.mode, MOVEMENT_MODE.STANDARD);
   assert.equal(player.movement.crouchActionId, null);
   assert.ok(player.velocity.y > 0);
@@ -379,14 +379,14 @@ test('down smash is unavailable on ground and emits one authoritative landing tr
     allEvents.filter(({ type }) => type === ARENA_MATCH_EVENT.DOWN_SMASH_LANDED).length,
     1,
   );
-  assert.equal(firstParticipant(core.getSnapshot()).movement.mode, MOVEMENT_MODE.STANDARD);
+  assert.equal(firstParticipant(core.getLegacyFullSnapshotForAudit()).movement.mode, MOVEMENT_MODE.STANDARD);
   core.destroy();
 });
 
 test('snapshot action affordance is derived by the same resolver without becoming authority state', () => {
   const far = createCore();
   const beforeHash = far.getStateHash();
-  const farPlayer = firstParticipant(far.getSnapshot());
+  const farPlayer = firstParticipant(far.getLegacyFullSnapshotForAudit());
   const farAffordance = affordance(farPlayer);
   assert.equal(
     farAffordance.primaryActionDefinitionId,
@@ -402,16 +402,16 @@ test('snapshot action affordance is derived by the same resolver without becomin
     STAGE6_MOVEMENT_ACTION_ID.EXPLICIT_GROUND_JUMP,
   );
   assert.equal(channel(farAffordance, 'slam').kind, 'none');
-  assert.equal(Reflect.set(farAffordance, 'primaryActionDefinitionId', 'tampered'), true);
-  assert.equal(Reflect.set(farPlayer.movement, 'airJumpsUsed', 999), true);
-  assert.equal(Reflect.set(farPlayer.movement, 'mode', 'tampered'), true);
+  assert.equal(Reflect.set(farAffordance, 'primaryActionDefinitionId', 'tampered'), false);
+  assert.equal(Reflect.set(farPlayer.movement, 'airJumpsUsed', 999), false);
+  assert.equal(Reflect.set(farPlayer.movement, 'mode', 'tampered'), false);
   assert.equal(far.getStateHash(), beforeHash);
   assert.equal(
-    affordance(firstParticipant(far.getSnapshot())).primaryActionDefinitionId,
+    affordance(firstParticipant(far.getLegacyFullSnapshotForAudit())).primaryActionDefinitionId,
     STAGE6_MOVEMENT_ACTION_ID.CONTEXT_GROUND_JUMP,
   );
-  assert.equal(firstParticipant(far.getSnapshot()).movement.airJumpsUsed, 0);
-  assert.equal(firstParticipant(far.getSnapshot()).movement.mode, MOVEMENT_MODE.STANDARD);
+  assert.equal(firstParticipant(far.getLegacyFullSnapshotForAudit()).movement.airJumpsUsed, 0);
+  assert.equal(firstParticipant(far.getLegacyFullSnapshotForAudit()).movement.mode, MOVEMENT_MODE.STANDARD);
   far.destroy();
 
   const close = createCore({
@@ -421,7 +421,7 @@ test('snapshot action affordance is derived by the same resolver without becomin
     },
     basePush: { range: 2 },
   });
-  const closeAffordance = affordance(firstParticipant(close.getSnapshot()));
+  const closeAffordance = affordance(firstParticipant(close.getLegacyFullSnapshotForAudit()));
   assert.equal(closeAffordance.primaryActionDefinitionId, STAGE4_ACTION_ID.BASE_PUSH);
   assert.equal(channel(closeAffordance, 'primary').source, 'base-action-provider');
   assert.equal(channel(closeAffordance, 'primary').lane, 'combat');

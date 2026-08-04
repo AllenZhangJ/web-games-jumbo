@@ -18,6 +18,7 @@ import {
 } from './match-config.js';
 import {
   MatchCore,
+  readConsumedTrustedInputFrameBatch,
   type ArenaAuthorityEvent,
 } from './match-core.js';
 import type { MatchTimelineResult } from './match-timeline-system.js';
@@ -275,11 +276,40 @@ export class HeadlessMatchRunner {
     return events;
   }
 
-  runUntilEnded(
+  /** @internal Used only by LocalMatchSession after both input boundaries pass. */
+  stepTrustedInputFrameBatch(batch: unknown): readonly ArenaAuthorityEvent[] {
+    const core = this.#requireCore();
+    if (core.phase === ARENA_MATCH_PHASE.ENDED) {
+      throw new Error('比赛已经结束，不能继续记录。');
+    }
+    const events = core.stepTrustedInputFrameBatch(batch);
+    let frames: readonly ArenaInputFrame[];
+    try {
+      frames = readConsumedTrustedInputFrameBatch(core, batch);
+    } catch (error) {
+      // Core already committed the tick; an internal provenance failure would
+      // otherwise leave authority ahead of Replay.  Fail closed immediately.
+      try {
+        core.destroy();
+      } finally {
+        this.destroy();
+      }
+      throw error;
+    }
+    this.#inputFrames.push(...frames.map(copyInput));
+    this.#events.push(...events.map(copyEvent));
+    if (
+      core.tick % this.#checkpointInterval === 0
+      || matchEnded(core)
+    ) this.#checkpoints.push({ tick: core.tick, hash: core.getStateHash() });
+    return events;
+  }
+
+  runLegacyUntilEndedForAudit(
     inputProvider?: HeadlessInputProvider,
     options?: HeadlessRunOptions,
   ): ArenaReplay;
-  runUntilEnded(
+  runLegacyUntilEndedForAudit(
     inputProvider: unknown = EMPTY_INPUT_PROVIDER,
     options: unknown = undefined,
   ): ArenaReplay {
@@ -290,7 +320,9 @@ export class HeadlessMatchRunner {
       core.config.preparingTicks + core.config.hardLimitTicks + 1
     );
     while (!matchEnded(core) && core.tick < limit) {
-      const frames = (inputProvider as HeadlessInputProvider)(core.getSnapshot());
+      const frames = (inputProvider as HeadlessInputProvider)(
+        core.getLegacyFullSnapshotForAudit(),
+      );
       this.step(frames ?? EMPTY_INPUT_FRAMES);
     }
     if (!matchEnded(core)) {
@@ -493,7 +525,10 @@ function runReplay(
     }
     if (beforeStep !== null) {
       const verification = beforeStep(Object.freeze({
-        snapshot: cloneFrozenData(core.getSnapshot(), 'replay beforeStep snapshot'),
+        snapshot: cloneFrozenData(
+          core.getLegacyFullSnapshotForAudit(),
+          'replay beforeStep snapshot',
+        ),
         frames: Object.freeze(frames.map((frame) => Object.freeze(copyInput(frame)))),
       }));
       rejectThenable(verification);

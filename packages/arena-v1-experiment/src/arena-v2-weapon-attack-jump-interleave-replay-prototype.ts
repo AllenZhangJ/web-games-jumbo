@@ -142,8 +142,8 @@ function createReplay(
   const actionStarts: ArenaV2WeaponAttackJumpActionStart[] = [];
   try {
     while (core.phase !== 'ended') {
-      const events = runner.step(inputFor(core.getSnapshot(), scenario));
-      const snapshot = core.getSnapshot();
+      const events = runner.step(inputFor(core.getLegacyFullSnapshotForAudit(), scenario));
+      const snapshot = core.getLegacyFullSnapshotForAudit();
       const player = snapshot.participants.find(({ id }) => id === PLAYER_ONE_ID);
       if (!player) throw new Error('攻击/跳跃 Replay 缺少 player-1。');
       for (const event of events) {

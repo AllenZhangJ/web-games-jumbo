@@ -57,3 +57,11 @@ export type {
   ArenaPerformanceGateReport,
   ArenaPerformanceReport,
 } from './arena-performance-report.js';
+export {
+  ARENA_READ_STEP_MEASUREMENT_SCHEMA_VERSION,
+  assertReadStepMeasurementV2,
+  createReadStepMeasurementV2,
+} from './arena-read-step-measurement-v2.js';
+export type {
+  ReadStepMeasurementV2,
+} from './arena-read-step-measurement-v2.js';

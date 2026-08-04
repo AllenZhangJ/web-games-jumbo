@@ -5,6 +5,10 @@ import { ARENA_V1_BALANCE_DEFINITION } from '@number-strategy-jump/arena-v1-cont
 import { STAGE4_ACTION_ID } from '@number-strategy-jump/arena-v1-content';
 import {
   createNeutralInputFrame,
+  createMatchReadFrameV2Audit,
+  ACTION_RESOLUTION_KIND,
+  ARENA_MATCH_READ_PROFILE,
+  normalizeInputFrame,
   type ArenaMatchSnapshot,
 } from '@number-strategy-jump/arena-contracts';
 import { ARENA_MATCH_EVENT } from '@number-strategy-jump/arena-match';
@@ -26,7 +30,10 @@ import {
   PRODUCT_SESSION_STATE,
   ProductSessionStateMachine,
 } from '@number-strategy-jump/arena-product-state';
-import { TEST_MATCH_CONTENT_PUBLIC_VIEW } from './stage8-test-content.js';
+import {
+  createStage8ProductMatchResult,
+  TEST_MATCH_CONTENT_PUBLIC_VIEW,
+} from './stage8-test-content.js';
 
 function clone<Value>(value: Value): Value {
   return value === undefined ? value : JSON.parse(JSON.stringify(value)) as Value;
@@ -42,6 +49,112 @@ function deferred<Value>() {
   return { promise, resolve, reject };
 }
 
+const V2_POS = Object.freeze({ x: 0, y: 0, z: 0 });
+
+function stage8Participant(id: string): Record<string, unknown> {
+  return {
+    id,
+    characterDefinitionId: 'character-basic',
+    status: 'active',
+    lives: 11,
+    eliminations: 0,
+    deaths: 0,
+    hitstunTicks: 0,
+    invulnerableTicks: 0,
+    respawnTicks: 0,
+    lastHitBy: null,
+    lastHitTick: -1,
+    action: { definitionId: null, phase: 'idle', ticksRemaining: 0 },
+    actionRule: { schemaVersion: 1, mode: 'fixture' },
+    movement: {
+      schemaVersion: 1,
+      participantId: id,
+      characterDefinitionId: 'character-basic',
+      mode: 'grounded',
+      coyoteTicksRemaining: 0,
+      jumpBufferTicksRemaining: 0,
+      airJumpsUsed: 0,
+      crouchChargeTicks: 0,
+      crouchActionId: null,
+      downSmashActionId: null,
+      revision: 0,
+      grounded: true,
+    },
+    equipment: null,
+    position: V2_POS,
+    velocity: V2_POS,
+    facing: { x: 1, z: 0 },
+    grounded: true,
+    supportSurfaceId: 'surface-ground',
+  };
+}
+
+function stage8ActionOutcome(): Record<string, unknown> {
+  return {
+    kind: ACTION_RESOLUTION_KIND.NONE,
+    actionDefinitionId: null,
+    lane: null,
+    source: null,
+    reason: 'no-candidate',
+  };
+}
+
+function stage8ReadFrame(
+  tick: number,
+  phase: 'running' | 'ended',
+  result: ProductMatchResult | null,
+): Readonly<Record<string, unknown>> {
+  return createMatchReadFrameV2Audit({
+    schemaVersion: 2,
+    worldSnapshot: {
+      authoritySchemaVersion: 1,
+      physicsBackendVersion: 'physics-v1',
+      configHash: '12345678',
+      ruleContentHash: 'abcdef01',
+      matchSeed: 42,
+      tick,
+      activeTick: tick,
+      phase,
+      remainingTicks: phase === 'ended' ? 0 : 100,
+      eventSequence: tick,
+      participants: [stage8Participant('player-1'), stage8Participant('player-2')],
+      equipment: [],
+      activeSupplyProjection: null,
+      map: {
+        schemaVersion: 1,
+        definitionId: 'arena-map-training',
+        nextActiveTick: 0,
+        revision: 0,
+        surfaces: [{ id: 'surface-ground', enabled: true, revision: 0 }],
+        occurrences: [{
+          occurrenceId: 'occurrence-0',
+          eventId: 'none',
+          kind: 'none',
+          warningTick: 0,
+          startTick: 0,
+          endTick: null,
+          phase,
+          publicPayload: {},
+          revision: 0,
+        }],
+      },
+      result: result === null ? null : result.authorityResult,
+    },
+    localActionSidecar: {
+      schemaVersion: 2,
+      tick,
+      eventSequence: tick,
+      participantId: 'player-1',
+      profile: ARENA_MATCH_READ_PROFILE.LOCAL_CONTEXT_PRIMARY,
+      primaryActionDefinitionId: null,
+      channels: {
+        primary: stage8ActionOutcome(),
+        primaryHold: stage8ActionOutcome(),
+      },
+    },
+  });
+}
+
 function fakeRuntime({
   endAfterSteps = 1,
   destroyFailures = 0,
@@ -51,34 +164,54 @@ function fakeRuntime({
 } = {}) {
   let paused = false;
   let steps = 0;
-  let result: Readonly<{ authorityHash: string }> | null = null;
+  const publicInfo = Object.freeze({
+    matchSeed: 42,
+    opponent: Object.freeze({
+      id: 'opponent-42',
+      displayName: '玩家2048',
+      portraitKey: 'portrait-42',
+      appearanceKey: 'appearance-42',
+    }),
+    content: TEST_MATCH_CONTENT_PUBLIC_VIEW,
+  });
+  let result: ProductMatchResult | null = null;
   let destroys = 0;
+  let currentFrame = stage8ReadFrame(0, 'running', null);
   return {
     get paused() { return paused; },
     get destroys() { return destroys; },
-    start() {},
+    get result() { return result; },
+    startWithReadFrame() {
+      currentFrame = stage8ReadFrame(0, 'running', null);
+      return Object.freeze({ readFrame: currentFrame });
+    },
     setPaused(value: boolean) { paused = value; },
-    step() {
+    getReadFrame() { return currentFrame; },
+    stepWithReadFrame(input: unknown = null) {
       steps += 1;
-      if (steps >= endAfterSteps) result = Object.freeze({ authorityHash: '12345678' });
+      if (steps >= endAfterSteps) {
+        result = createStage8ProductMatchResult({
+          publicInfo,
+          endedAtTick: steps,
+        });
+      }
+      currentFrame = stage8ReadFrame(
+        steps,
+        result === null ? 'running' : 'ended',
+        result,
+      );
+      const normalizedInput = input === null
+        ? normalizeInputFrame(createNeutralInputFrame(steps - 1, 'player-1'))
+        : normalizeInputFrame(input);
       return Object.freeze({
         events: Object.freeze([]),
-        snapshot: Object.freeze({ tick: steps }),
+        readFrame: currentFrame,
+        input: normalizedInput,
         result,
       });
     },
-    getSnapshot() { return Object.freeze({ tick: steps }); },
     getPublicInfo() {
-      return Object.freeze({
-        matchSeed: 42,
-        opponent: Object.freeze({
-          id: 'opponent-42',
-          displayName: '玩家2048',
-          portraitKey: 'portrait-42',
-          appearanceKey: 'appearance-42',
-        }),
-        content: TEST_MATCH_CONTENT_PUBLIC_VIEW,
-      });
+      return publicInfo;
     },
     getResult() { return result; },
     destroy() {
@@ -272,10 +405,13 @@ test('ProductSessionController owns one match across rapid clicks, background pr
   assert.equal(runtime.paused, true);
 
   controller.show();
-  controller.beginMatch();
+  controller.beginMatchWithReadFrame();
   assert.equal(controller.state, PRODUCT_SESSION_STATE.IN_MATCH);
-  const ended = controller.stepMatch();
-  assert.equal(required(required(ended.matchStep).result).authorityHash, '12345678');
+  const ended = controller.stepMatchWithReadFrame();
+  assert.equal(
+    required(required(ended.matchStep).result).authorityHash,
+    required(runtime.result).authorityHash,
+  );
   assert.equal(controller.state, PRODUCT_SESSION_STATE.RESULTS);
   controller.hide();
   controller.hide();
@@ -338,8 +474,8 @@ test('reward persistence rejection keeps the authoritative result alive for an e
   await controller.boot();
   controller.openCharacterSelect();
   await controller.requestMatch();
-  controller.beginMatch();
-  controller.stepMatch();
+  controller.beginMatchWithReadFrame();
+  controller.stepMatchWithReadFrame();
   const failed = controller.commitReward();
   assert.equal(failed.state.state, PRODUCT_SESSION_STATE.RECOVERABLE_ERROR);
   assert.equal(failed.state.recoveryState, PRODUCT_SESSION_STATE.RESULTS);
@@ -366,8 +502,8 @@ test('reward and unlock states survive background lifecycle without losing prese
   await controller.boot();
   controller.openCharacterSelect();
   await controller.requestMatch();
-  controller.beginMatch();
-  controller.stepMatch();
+  controller.beginMatchWithReadFrame();
+  controller.stepMatchWithReadFrame();
   controller.commitReward();
   controller.hide();
   assert.equal(controller.getSnapshot().state.activeState, PRODUCT_SESSION_STATE.REWARD);
@@ -406,8 +542,8 @@ test('reward rematch deduplicates rapid clicks, preserves reward on failure and 
   await controller.boot();
   controller.openCharacterSelect();
   await controller.requestMatch();
-  controller.beginMatch();
-  controller.stepMatch();
+  controller.beginMatchWithReadFrame();
+  controller.stepMatchWithReadFrame();
   const rewarded = controller.commitReward();
   const originalReward = rewarded.reward;
   assert.equal(firstRuntime.destroys, 1);
@@ -433,8 +569,8 @@ test('reward rematch deduplicates rapid clicks, preserves reward on failure and 
   assert.equal(controller.getSnapshot().reward, null);
   assert.equal(secondRuntime.paused, true);
   controller.show();
-  controller.beginMatch();
-  controller.stepMatch();
+  controller.beginMatchWithReadFrame();
+  controller.stepMatchWithReadFrame();
   controller.commitReward();
   controller.continueReward();
   controller.destroy();
@@ -461,8 +597,8 @@ test('unlock rematch failure returns to unlock with the exact presentation snaps
   await controller.boot();
   controller.openCharacterSelect();
   await controller.requestMatch();
-  controller.beginMatch();
-  controller.stepMatch();
+  controller.beginMatchWithReadFrame();
+  controller.stepMatchWithReadFrame();
   controller.commitReward();
   controller.continueReward();
   const unlockSnapshot = controller.getSnapshot().reward;
@@ -494,8 +630,8 @@ test('cleanup failure after a persisted reward fails closed without a second gra
   await controller.boot();
   controller.openCharacterSelect();
   await controller.requestMatch();
-  controller.beginMatch();
-  controller.stepMatch();
+  controller.beginMatchWithReadFrame();
+  controller.stepMatchWithReadFrame();
   const failed = controller.commitReward();
   assert.equal(failed.state.state, PRODUCT_SESSION_STATE.FATAL_ERROR);
   assert.equal(required(failed.lastError).code, 'reward-processing-failed');
@@ -542,7 +678,7 @@ test('lifecycle pause failure fails closed and destroys the owned match', async 
   await controller.boot();
   controller.openCharacterSelect();
   await controller.requestMatch();
-  controller.beginMatch();
+  controller.beginMatchWithReadFrame();
   const failed = controller.hide();
   assert.equal(failed.state.state, PRODUCT_SESSION_STATE.FATAL_ERROR);
   assert.equal(runtime.destroys, 1);
@@ -576,7 +712,7 @@ test('ProductSessionController keeps transient lease renewal invisible and fails
 
   controller.openCharacterSelect();
   await controller.requestMatch();
-  controller.beginMatch();
+  controller.beginMatchWithReadFrame();
   const lost = controller.renewProfileLease();
   assert.equal(lost.renewed, false);
   assert.equal(lost.productSnapshot.state.state, PRODUCT_SESSION_STATE.FATAL_ERROR);
@@ -633,29 +769,29 @@ test('Arena V1 product composition runs a complete headless 1v1 without leaking 
   controller.openCharacterSelect();
   controller.selectCharacter('wind-up-cube');
   await controller.requestMatch();
-  controller.beginMatch();
-  const first = controller.stepMatch();
+  controller.beginMatchWithReadFrame();
+  const first = controller.stepMatchWithReadFrame();
   assert.equal(ARENA_V1_BALANCE_DEFINITION.matchConfig.livesPerParticipant, 11);
   assert.equal(Object.isFrozen(ARENA_V1_BALANCE_DEFINITION), true);
   assert.equal(Object.isFrozen(ARENA_V1_BALANCE_DEFINITION.matchConfig), true);
   const firstStep = required(first.matchStep);
-  const firstSnapshot = firstStep.snapshot as unknown as ArenaMatchSnapshot;
+  const firstSnapshot = firstStep.readFrame.worldSnapshot as unknown as ArenaMatchSnapshot;
   assert.deepEqual(
     firstSnapshot.participants.map(({ lives }) => lives),
     [11, 11],
   );
   const tick = firstSnapshot.tick;
   controller.hide();
-  assert.throws(() => controller.stepMatch(), /挂起/);
+  assert.throws(() => controller.stepMatchWithReadFrame(), /挂起/);
   controller.show();
 
   let last = first;
   for (let index = 0; index < 100 && controller.state === PRODUCT_SESSION_STATE.IN_MATCH; index += 1) {
-    last = controller.stepMatch();
+    last = controller.stepMatchWithReadFrame();
   }
   assert.equal(controller.state, PRODUCT_SESSION_STATE.RESULTS);
   const lastStep = required(last.matchStep);
-  const lastSnapshot = lastStep.snapshot as unknown as ArenaMatchSnapshot;
+  const lastSnapshot = lastStep.readFrame.worldSnapshot as unknown as ArenaMatchSnapshot;
   const lastResult = required(lastStep.result);
   assert.ok(lastSnapshot.tick > tick);
   assert.match(lastResult.authorityHash, /^[0-9a-f]{8}$/);
@@ -697,24 +833,18 @@ test('Arena V1 product always starts a whiff if an override requests legacy targ
   await controller.boot();
   controller.openCharacterSelect();
   await controller.requestMatch();
-  controller.beginMatch();
-  const before = controller.getActiveMatchSnapshot() as unknown as ArenaMatchSnapshot | null;
-  const matchSnapshot = required(before);
-  const local = required(matchSnapshot.participants.find(({ id }) => id === 'player-1'));
-  const actionAffordance = local.actionAffordance as {
-    readonly channels: Readonly<Record<string, Readonly<{
-      kind: string;
-      actionDefinitionId: string;
-    }>>>;
-  };
-  const primaryAffordance = required(actionAffordance.channels.primary);
+  controller.beginMatchWithReadFrame();
+  const before = controller.getActiveMatchReadFrame();
+  const matchFrame = required(before);
+  const matchSnapshot = matchFrame.worldSnapshot;
+  const primaryAffordance = matchFrame.localActionSidecar.channels.primary;
   assert.equal(primaryAffordance.kind, 'selected');
   assert.equal(
     primaryAffordance.actionDefinitionId,
     STAGE4_ACTION_ID.BASE_PUSH,
   );
 
-  const outcome = controller.stepMatch({
+  const outcome = controller.stepMatchWithReadFrame({
     ...createNeutralInputFrame(matchSnapshot.tick, 'player-1'),
     primaryPressed: true,
   });

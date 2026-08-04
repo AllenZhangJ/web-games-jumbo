@@ -61,6 +61,16 @@ node --import tsx scripts/art/test-arena-silhouette-human-evaluator-fail-closed.
 
 当前测试包检查器证明10表单×24题、144题全覆盖、1–2次出现、72细分层各2–4题、严格144 tuple笛卡尔积、双视口与sourceOutputId身份、restricted evaluator三项固定输入、答案键/题目/assignment/图像双向集合一致、校准来源、runner内嵌assignment hash、无答案/资产名泄露、零个人信息要求、raw JSON不被Git跟踪、原始答卷数与intake台账一致、A0.3/Blockout/Final关闭。14个包级负向探针保持通过；12个隔离恶意答卷、1次合法排他写入及1次提交后故障探针覆盖未来完成时间、时间/时长、落盘bytes/hash、不记录原文件名，以及ledger提交后raw不可回滚。15个评分器负向探针覆盖身份、kit/package/assignment/image、答案键schema/值域/tuple/sourceOutputId、raw/ledger和接收时间因果关系；另有1个正向探针以系统tmp中的10份完美工具答卷证明可产出`human-threshold-candidate`，同时`hardGatePassed=false`且Blockout继续禁止。所有临时答卷和报告测试后清除，不计真人。
 
+### 2026-08-02 主协调独立复验
+
+- 当前包检查：`ready-for-external-human-input`，10份表单×24题、144个唯一tuple、72细分层、真人`0/10`，`hardGatePassed=false`。
+- 测试包失败关闭：`14/14`通过。
+- Intake失败关闭：`12/12`恶意答卷拒绝，合法排他写入与提交后故障耐久探针各1项通过。
+- Evaluator失败关闭：`15/15`通过；完美10答卷工具候选仍保持`hardGatePassed=false`、`coordinatorSignOff=null`和Blockout禁止。
+
+该复验只签认“外部真人输入工具已就绪且不会自动开门”，不签认任何真人结果。下一动作必须是10名真实独立参与者分别完成唯一表单；禁止由代理、
+制作人员、脚本生成答卷或重复参与者补齐。
+
 ## 尚需外部真人输入
 
 - 10名真实、独立、未参与制作的参与者；

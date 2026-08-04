@@ -20,9 +20,17 @@ export interface ArenaInternalEquipmentSupplyTimelineSnapshot {
   readonly activeSupplies: readonly ArenaInternalEquipmentSupplyLifecycle[];
 }
 
+export const ARENA_EQUIPMENT_SUPPLY_DISPOSITION_SCHEMA_VERSION = 1 as const;
+
+export interface ArenaInternalEquipmentSupplyDispositionSnapshot {
+  readonly schemaVersion: typeof ARENA_EQUIPMENT_SUPPLY_DISPOSITION_SCHEMA_VERSION;
+  readonly expiredHeldSupplyEquipmentInstanceIds: readonly string[];
+}
+
 export type ArenaInternalMatchSnapshot = ArenaMatchSnapshot & Readonly<{
   rngStates: Readonly<Record<string, number>>;
   equipmentSupplyTimeline?: ArenaInternalEquipmentSupplyTimelineSnapshot;
+  equipmentSupplyDisposition?: ArenaInternalEquipmentSupplyDispositionSnapshot;
 }>;
 
 function finiteInteger(value: number, scale = 1_000_000): number {
@@ -140,6 +148,56 @@ export function createMatchStateHash(snapshot: ArenaInternalMatchSnapshot): stri
         lifecycle.expireTick,
       );
     }
+    const disposition = snapshot.equipmentSupplyDisposition;
+    if (
+      disposition === undefined
+      || disposition.schemaVersion !== ARENA_EQUIPMENT_SUPPLY_DISPOSITION_SCHEMA_VERSION
+      || !Array.isArray(disposition.expiredHeldSupplyEquipmentInstanceIds)
+    ) throw new TypeError('状态 hash 缺少有效 equipment supply disposition。');
+    const dispositionIds = disposition.expiredHeldSupplyEquipmentInstanceIds;
+    if (dispositionIds.length > snapshot.participants.length) {
+      throw new RangeError('equipment supply disposition 数量不能超过 participant 数量。');
+    }
+    const equipmentById = new Map<string, ArenaMatchSnapshot['equipment'][number]>();
+    for (const equipment of snapshot.equipment) {
+      if (equipmentById.has(equipment.instanceId)) {
+        throw new RangeError(`equipment runtime ${equipment.instanceId} 在状态 hash 中重复。`);
+      }
+      equipmentById.set(equipment.instanceId, equipment);
+    }
+    const participantById = new Map(
+      snapshot.participants.map((participant) => [participant.id, participant]),
+    );
+    for (let index = 0; index < dispositionIds.length; index += 1) {
+      const instanceId = dispositionIds[index];
+      if (typeof instanceId !== 'string' || instanceId.length === 0) {
+        throw new TypeError('equipment supply disposition instanceId 无效。');
+      }
+      if (index > 0 && dispositionIds[index - 1]! >= instanceId) {
+        throw new RangeError('equipment supply disposition instanceId 必须严格排序且唯一。');
+      }
+      const equipment = equipmentById.get(instanceId);
+      if (
+        equipment === undefined
+        || equipment.locationState !== 'held'
+        || equipment.ownerId === null
+      ) throw new RangeError(`equipment supply disposition ${instanceId} 未绑定 held runtime。`);
+      const owner = participantById.get(equipment.ownerId);
+      if (owner === undefined || owner.equipment?.instanceId !== instanceId) {
+        throw new RangeError(`equipment supply disposition ${instanceId} 与 participant slot 不一致。`);
+      }
+    }
+    // Empty disposition is equivalent to the legacy empty state, preserving
+    // ordinary/survival hashes until a future-affecting disposition exists.
+    if (dispositionIds.length > 0) {
+      fields.push(
+        'equipment-supply-disposition',
+        disposition.schemaVersion,
+        ...dispositionIds,
+      );
+    }
+  } else if (snapshot.equipmentSupplyDisposition !== undefined) {
+    throw new TypeError('普通 MatchCore 不能携带 equipment supply disposition。');
   }
   if (!snapshot.map || !Array.isArray(snapshot.map.surfaces) || !Array.isArray(snapshot.map.occurrences)) {
     throw new TypeError('状态 hash 缺少 map runtime 快照。');

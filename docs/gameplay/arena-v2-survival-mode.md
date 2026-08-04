@@ -2,8 +2,8 @@
 
 ## 文档状态
 
-- 状态：供给规则已冻结，最小循环无渲染原型待按冻结规则补齐
-- 日期：2026-07-28
+- 状态：P1供给Rule/Core/Bot/Presentation read model已实现并完成正确性签核；完整P2生存Mode未实现
+- 日期：2026-08-02
 - 模式性质：单人重复游玩模式
 
 ## 模式定位
@@ -49,7 +49,7 @@
 
 “可以保留”表示玩家可以不靠近新武器；一旦进入自动拾取范围并赢得争夺，替换立即生效，不能再弹确认框撤销。
 
-当前研究原型已经验证 20 秒供给、三实体生成和自动争夺，但底层 `EquipmentSystem` 仍会排除已经持有武器的参与者，原型也没有 600 tick 过期回收。因此“自动替换”和“10 秒消失”在对应 Rule/Core 批次完成前必须保持未实现状态，不能用文档状态冒充生产完成。具体决策见[ADR-108](../decisions/108-arena-v2-survival-auto-replace-and-expiry.md)，执行门禁见[Arena V2 生产化分阶段开发与治理计划](../architecture/arena-v2-production-development-plan.md)。
+早期研究原型只验证了 20 秒供给、三实体生成和自动争夺，当时尚未覆盖持有者替换与 600 tick 过期回收。当前 P1 已在权威 Rule/Core 中实现原子替换、旧武器回收、599/600/601 边界、过期 held disposition、Replay/hash，并接入受限 Bot 观察和只读 Presentation read model；PA5 总门、PA6-P 与 PA6 runner 正确性均已由主协调签核。该结论不等于完整生存模式完成：正式 Race/Survival Mode Definition、第一次掉落复活/第二次结束、完整参与者模型、临时等级、生产地图/敌人和清洁 CPU 环境 ABBA 性能门仍未通过，P1 不得 advance。具体决策见[ADR-108](../decisions/108-arena-v2-survival-auto-replace-and-expiry.md)与[ADR-110](../decisions/110-arena-v2-expired-held-release-disposition.md)，当前证据见[P1实施状态台账](../architecture/arena-v2-p1-implementation-ledger.md)，阶段边界见[Arena V2 生产化分阶段开发与治理计划](../architecture/arena-v2-production-development-plan.md)。
 
 首轮武器固定在第 20 秒（`1200 tick`）生成。开局空手阶段用于让玩家先观察地图和敌人路线；如果真人测试证明这 20 秒形成无决策等待，只能通过新的规则候选和 ADR 调整首轮时机，不能由表现层提前生成武器。
 

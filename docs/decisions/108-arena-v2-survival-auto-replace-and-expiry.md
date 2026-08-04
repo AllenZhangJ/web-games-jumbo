@@ -2,7 +2,7 @@
 
 ## 状态
 
-已接受，Rule/Core 实现待完成。
+已接受并完成 Rule/Core、Bot 与 Presentation read model 实现及主协调独立验收。PA5 总门已冻结，PA6-P 为 `completed / coordinator-approved / formalGate=false`（`95/100`），PA6 runner 正确性已签核；清洁 CPU 环境的正式 ABBA 复验仍未通过，因此 P1 不得 advance。
 
 ## 日期
 
