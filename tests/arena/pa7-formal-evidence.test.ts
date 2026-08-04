@@ -1634,27 +1634,34 @@ test('PA7 inactivity timeout TERM→KILL cleans the child and descendant process
   t.after(async () => rm(directory, { recursive: true, force: true }));
   const workerPath = path.join(directory, 'stall-worker.mjs');
   const descendantPidPath = path.join(directory, 'descendant.pid');
+  const descendantReadyPath = path.join(directory, 'descendant.ready');
   await writeFile(workerPath, [
     'import { spawn } from "node:child_process";',
-    'import { writeFileSync } from "node:fs";',
-    'const descendant=spawn(process.execPath,["-e","process.on(\\"SIGTERM\\",()=>{});setInterval(()=>{},1000)"],{stdio:"ignore"});',
-    'writeFileSync(process.argv[2],String(descendant.pid));',
+    'import { existsSync, renameSync, writeFileSync } from "node:fs";',
+    'const descendantCode="const {writeFileSync}=require(\\"node:fs\\");process.on(\\"SIGTERM\\",()=>{});writeFileSync(process.argv[1],\\"ready\\");setInterval(()=>{},1000)";',
+    'const descendant=spawn(process.execPath,["-e",descendantCode,process.argv[3]],{stdio:"ignore"});',
     'process.on("SIGTERM",()=>{});',
+    'const sleeper=new Int32Array(new SharedArrayBuffer(4));',
+    'while(!existsSync(process.argv[3]))Atomics.wait(sleeper,0,0,1);',
+    'writeFileSync(process.argv[2],String(descendant.pid));',
+    'const progress={runToken:process.env.ARENA_PA7_RUN_TOKEN,sequence:1,completedCases:0,currentCaseIndex:0,currentCaseId:"formal-survival-bot-000",currentPass:1,currentTick:1,lastCommittedCaseEvidenceHash:null};',
+    'writeFileSync(`${process.env.ARENA_PA7_PROGRESS_PATH}.tmp`,`${JSON.stringify(progress)}\\n`);',
+    'renameSync(`${process.env.ARENA_PA7_PROGRESS_PATH}.tmp`,process.env.ARENA_PA7_PROGRESS_PATH);',
     'setInterval(()=>{},1000);',
   ].join('\n'));
   let failure: ArenaPa7FormalWorkerFailureV1 | null = null;
   try {
     await runArenaPa7StrictJsonWorkerV1({
       command: process.execPath,
-      args: [workerPath, descendantPidPath],
+      args: [workerPath, descendantPidPath, descendantReadyPath],
       cwd: process.cwd(),
       temporaryDirectory: directory,
       runToken: TEST_RUN_TOKEN,
-      inactivityTimeoutMs: 150,
+      inactivityTimeoutMs: 2_000,
       outputCapBytes: 10_000,
       progressPollMs: 10,
-      termGraceMs: 1,
-      killWaitMs: 500,
+      termGraceMs: 10,
+      killWaitMs: 1_000,
     });
   } catch (error) {
     if (error instanceof ArenaPa7FormalWorkerFailureV1) failure = error;
@@ -1666,6 +1673,13 @@ test('PA7 inactivity timeout TERM→KILL cleans the child and descendant process
   assert.equal(failure.cleanup.childProcessesExited, 1);
   assert.equal(failure.cleanup.termSignalsSent, 1);
   assert.equal(failure.cleanup.killSignalsSent, 1);
+  assert.equal(failure.progress.sequence, 1);
+  assert.equal(failure.progress.completedCases, 0);
+  assert.equal(failure.progress.currentCaseIndex, 0);
+  assert.equal(failure.progress.currentCaseId, 'formal-survival-bot-000');
+  assert.equal(failure.progress.currentPass, 1);
+  assert.equal(failure.progress.currentTick, 1);
+  assert.equal(failure.progress.lastCommittedCaseEvidenceHash, null);
   const descendantPid = Number(await readFile(descendantPidPath, 'utf8'));
   assert.ok(Number.isSafeInteger(descendantPid) && descendantPid > 1);
   await waitForProcessExit(descendantPid);
