@@ -1396,7 +1396,8 @@ test('PA7 progress fd capture retries one ordinary supersede but bounds churn an
     cwd: process.cwd(),
     temporaryDirectory: directory,
     runToken: TEST_RUN_TOKEN,
-    inactivityTimeoutMs: 1_000,
+    // This test controls the read race itself; process startup is not a performance assertion.
+    inactivityTimeoutMs: 5_000,
     outputCapBytes: 10_000,
     progressPollMs: 5,
     termGraceMs: 1,
@@ -1427,7 +1428,6 @@ test('PA7 progress fd capture retries one ordinary supersede but bounds churn an
   let acceptedReplacement = false;
   await assert.rejects(runArenaPa7StrictJsonWorkerV1({
     ...options(),
-    inactivityTimeoutMs: 150,
     progressReadHooks: {
       afterDescriptorRead(progressPath) {
         if (replacedAfterRead) return;
@@ -1437,10 +1437,13 @@ test('PA7 progress fd capture retries one ordinary supersede but bounds churn an
       },
       afterProgressAccepted() {
         acceptedReplacement = true;
+        throw new Error('PA7 test stop after accepted replacement progress.');
       },
     },
   }), (error: unknown) => error instanceof ArenaPa7FormalWorkerFailureV1
-    && error.kind === 'timeout');
+    && error.kind === 'progress-invalid'
+    && error.progress.sequence === 1
+    && error.progress.currentTick === 1);
   assert.equal(replacedAfterRead, true);
   assert.equal(acceptedReplacement, true);
 
@@ -1448,7 +1451,6 @@ test('PA7 progress fd capture retries one ordinary supersede but bounds churn an
   let acceptedAfterCtimeRetry = false;
   await assert.rejects(runArenaPa7StrictJsonWorkerV1({
     ...options(),
-    inactivityTimeoutMs: 150,
     progressReadHooks: {
       afterPathBefore(progressPath) {
         if (changedCtimeOnce) return;
@@ -1457,10 +1459,13 @@ test('PA7 progress fd capture retries one ordinary supersede but bounds churn an
       },
       afterProgressAccepted() {
         acceptedAfterCtimeRetry = true;
+        throw new Error('PA7 test stop after accepted ctime-retry progress.');
       },
     },
   }), (error: unknown) => error instanceof ArenaPa7FormalWorkerFailureV1
-    && error.kind === 'timeout');
+    && error.kind === 'progress-invalid'
+    && error.progress.sequence === 1
+    && error.progress.currentTick === 1);
   assert.equal(changedCtimeOnce, true);
   assert.equal(acceptedAfterCtimeRetry, true);
 
