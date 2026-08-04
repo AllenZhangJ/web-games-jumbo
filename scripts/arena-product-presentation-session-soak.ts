@@ -184,24 +184,33 @@ function readMatchFrameSource(value: unknown): Readonly<{ matchSeed: number; tic
 
 async function main(): Promise<void> {
   const matches = positiveIntegerArgument('matches', 100);
+  const forceGarbageCollection = globalThis.gc;
+  assert(
+    typeof forceGarbageCollection === 'function',
+    'Product Session soak 必须使用 --expose-gc 运行。',
+  );
   const harness = platformHarness();
   const renderer = rendererHarness();
-  const diagnostics: unknown[] = [];
+  const recentDiagnostics: unknown[] = [];
+  let diagnosticCount = 0;
   const session = createProductPresentationSession(harness.platform, {
     ownerId: 'product-presentation-soak-owner',
     keyPrefix: 'stress.product-presentation-session',
     initialSeed: 90_000,
     rendererFactory: () => renderer,
-    onDiagnostic: (value: unknown) => diagnostics.push(value),
+    onDiagnostic: (value: unknown) => {
+      diagnosticCount += 1;
+      if (recentDiagnostics.length === 3) recentDiagnostics.shift();
+      recentDiagnostics.push(value);
+    },
     matchConfig: {
       preparingTicks: 0,
       suddenDeathStartTick: 30,
       hardLimitTicks: 60,
     },
   });
-  globalThis.gc?.();
-  const startHeapUsedBytes = process.memoryUsage().heapUsed;
-  const startedAt = performance.now();
+  let startHeapUsedBytes = 0;
+  let startedAt = 0;
   const matchSeeds = new Set<number>();
   const authorityHashes = new Set<string>();
   let pauseResumeCycles = 0;
@@ -210,8 +219,10 @@ async function main(): Promise<void> {
   let maximumTicks = 0;
   await session.start();
 
-  for (let index = 0; index < matches; index += 1) {
-    const intentId = index === 0
+  for (let index = 0; index <= matches; index += 1) {
+    const isWarmup = index === 0;
+    const measuredIndex = index - 1;
+    const intentId = isWarmup
       ? PRODUCT_UI_INTENT_ID.START_MATCH
       : PRODUCT_UI_INTENT_ID.REQUEST_REMATCH;
     let snapshot: ReturnType<typeof session.getLastSnapshot> = await session.dispatch({
@@ -224,10 +235,12 @@ async function main(): Promise<void> {
       `第 ${index + 1} 局没有进入 in-match。`,
     );
     const matchSeed = readMatchFrameSource(snapshot.matchFrame).matchSeed;
-    assert(!matchSeeds.has(matchSeed), `第 ${index + 1} 局复用了 match seed。`);
-    matchSeeds.add(matchSeed);
+    if (!isWarmup) {
+      assert(!matchSeeds.has(matchSeed), `第 ${measuredIndex + 1} 局复用了 match seed。`);
+      matchSeeds.add(matchSeed);
+    }
 
-    if (index % 11 === 0) {
+    if (!isWarmup && measuredIndex % 11 === 0) {
       const tick = session.getDebugSnapshot().matchTick;
       harness.emitLifecycle('hide');
       assertEqual(session.state, PRODUCT_PRESENTATION_SESSION_STATE.PAUSED, 'hide 未暂停 Session。');
@@ -237,7 +250,7 @@ async function main(): Promise<void> {
       assert(session.getDebugSnapshot().matchTick === tick, 'hide/show 推进了权威 tick。');
       pauseResumeCycles += 1;
     }
-    if (index % 17 === 0) {
+    if (!isWarmup && measuredIndex % 17 === 0) {
       let prevented = false;
       harness.emitCanvas('webglcontextlost', {
         preventDefault: () => { prevented = true; },
@@ -248,7 +261,7 @@ async function main(): Promise<void> {
       assertEqual(session.state, PRODUCT_PRESENTATION_SESSION_STATE.RUNNING, 'context 未恢复。');
       contextRestoreCycles += 1;
     }
-    if (index % 7 === 0) {
+    if (!isWarmup && measuredIndex % 7 === 0) {
       harness.emitLifecycle('resize');
       resizeCycles += 1;
     }
@@ -259,7 +272,7 @@ async function main(): Promise<void> {
         snapshot !== null && snapshot.viewModel !== null,
         `第 ${index + 1} 局 Session 丢失快照：${JSON.stringify({
           session: session.getDebugSnapshot(),
-          diagnostics: diagnostics.slice(-3),
+          diagnostics: recentDiagnostics,
         })}`,
       );
       if (snapshot.viewModel.activeState !== PRODUCT_SESSION_STATE.IN_MATCH) break;
@@ -272,21 +285,33 @@ async function main(): Promise<void> {
       `第 ${index + 1} 局没有进入 reward：${JSON.stringify({
         activeState: snapshot.viewModel.activeState,
         error: snapshot.viewModel.error,
-        diagnostics: diagnostics.slice(-3),
+        diagnostics: recentDiagnostics,
       })}`,
     );
     assert(snapshot.viewModel.reward?.committed === true, `第 ${index + 1} 局奖励未提交。`);
     const authorityHash = snapshot.viewModel.result?.authorityHash;
     assert(typeof authorityHash === 'string', `第 ${index + 1} 局缺少 authority hash。`);
-    assert(!authorityHashes.has(authorityHash), `第 ${index + 1} 局复用了 authority hash。`);
+    if (isWarmup) {
+      recentDiagnostics.length = 0;
+      diagnosticCount = 0;
+      forceGarbageCollection();
+      startHeapUsedBytes = process.memoryUsage().heapUsed;
+      startedAt = performance.now();
+      continue;
+    }
+    assert(!authorityHashes.has(authorityHash), `第 ${measuredIndex + 1} 局复用了 authority hash。`);
     authorityHashes.add(authorityHash);
     maximumTicks = Math.max(maximumTicks, readMatchFrameSource(snapshot.matchFrame).tick);
   }
 
+  assert(startHeapUsedBytes > 0 && startedAt > 0, 'Product Session soak warmup 未建立测量基线。');
   const elapsedMs = performance.now() - startedAt;
+  forceGarbageCollection();
+  const retainedHeapUsedBytes = process.memoryUsage().heapUsed;
   session.destroy();
-  globalThis.gc?.();
-  const endHeapUsedBytes = process.memoryUsage().heapUsed;
+  forceGarbageCollection();
+  const postDestroyHeapUsedBytes = process.memoryUsage().heapUsed;
+  const endHeapUsedBytes = Math.max(retainedHeapUsedBytes, postDestroyHeapUsedBytes);
   const heapGrowthBytes = endHeapUsedBytes - startHeapUsedBytes;
   const heapGrowthBudgetBytes = 8 * 1024 * 1024;
   assert(session.state === PRODUCT_PRESENTATION_SESSION_STATE.DESTROYED, 'Session 未销毁。');
@@ -295,7 +320,10 @@ async function main(): Promise<void> {
   assert(harness.activeLifecycleCount() === 0, '销毁后仍有生命周期监听。');
   assert(harness.activeCanvasCount() === 0, '销毁后仍有 Canvas 监听。');
   assert(harness.input === null, '销毁后输入仍绑定。');
-  assert(heapGrowthBytes <= heapGrowthBudgetBytes, 'Product Session heap 增长超过预算。');
+  assert(
+    heapGrowthBytes <= heapGrowthBudgetBytes,
+    `Product Session heap 增长超过预算：${heapGrowthBytes}/${heapGrowthBudgetBytes} bytes。`,
+  );
 
   console.log(JSON.stringify({
     ok: true,
@@ -309,7 +337,7 @@ async function main(): Promise<void> {
     pauseResumeCycles,
     contextRestoreCycles,
     resizeCycles,
-    diagnostics: diagnostics.length,
+    diagnostics: diagnosticCount,
     startHeapUsedBytes,
     endHeapUsedBytes,
     heapGrowthBytes,
