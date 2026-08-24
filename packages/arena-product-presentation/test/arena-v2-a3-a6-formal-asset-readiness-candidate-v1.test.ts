@@ -97,9 +97,21 @@ describe('Arena V2 A3-A6 formal asset readiness candidate V1 (not run)', () => {
       && asset.productionApproved === false
       && asset.formalReady === false
     ))).toBe(true);
-    const sourceTextureById = new Map([
-      ...MATERIAL_TEXTURES.map((record) => [record.textureAssetId, record] as const),
-      ...VFX_TEXTURES.map((record) => [record.vfxAssetId, record] as const),
+    const sourceTextureById = new Map<string, Readonly<{
+      decodedTextureFormat: 'rgba8';
+      width: number;
+      height: number;
+    }>>([
+      ...MATERIAL_TEXTURES.map((record) => [record.textureAssetId, Object.freeze({
+        decodedTextureFormat: record.decodedTextureFormat,
+        width: record.width,
+        height: record.height,
+      })] as const),
+      ...VFX_TEXTURES.map((record) => [record.vfxAssetId, Object.freeze({
+        decodedTextureFormat: record.decodedTextureFormat,
+        width: record.width,
+        height: record.height,
+      })] as const),
     ]);
     const sourceEncodedFormatById = new Map([
       ...CATALOG.visualRecords.map((record) => (

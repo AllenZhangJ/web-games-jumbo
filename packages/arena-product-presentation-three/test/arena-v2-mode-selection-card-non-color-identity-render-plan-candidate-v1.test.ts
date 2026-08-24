@@ -297,7 +297,8 @@ describe('Arena V2 P5 mode-selection non-color card identity（未运行候选�
     });
     composition.load();
     composition.render(source);
-    expect(rendered?.identity).toBe('mode-select:selection-mode:non-color-identity-v1');
+    expect((rendered as ArenaV2UiRenderPlanV1 | null)?.identity)
+      .toBe('mode-select:selection-mode:non-color-identity-v1');
     expect(contextSource).toBe(source);
     expect(resourceFactoryCalls).toBe(0);
     expect(composition.getSnapshot()).toMatchObject({

@@ -295,10 +295,10 @@ function material(
   emissive: readonly [number, number, number],
 ): Material {
   return document.createMaterial(name)
-    .setBaseColorFactor(color)
+    .setBaseColorFactor([color[0], color[1], color[2], color[3]])
     .setMetallicFactor(0.05)
     .setRoughnessFactor(0.72)
-    .setEmissiveFactor(emissive);
+    .setEmissiveFactor([emissive[0], emissive[1], emissive[2]]);
 }
 
 function cubeMesh(
@@ -338,8 +338,8 @@ function addBox(
 ): void {
   scene.addChild(document.createNode(name)
     .setMesh(mesh)
-    .setTranslation(translation)
-    .setScale(scale)
+    .setTranslation([translation[0], translation[1], translation[2]])
+    .setScale([scale[0], scale[1], scale[2]])
     .setExtras(extras));
 }
 

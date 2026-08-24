@@ -8,7 +8,6 @@ import {
   ActionRegistry,
   EquipmentRegistry,
   createWeaponCombatGrammarDefinitionV1,
-  type WeaponCombatGrammarDefinitionV1,
 } from '@number-strategy-jump/arena-definitions';
 import {
   ARENA_V2_COLLECTION_WEAPONS_CANDIDATE_V1,

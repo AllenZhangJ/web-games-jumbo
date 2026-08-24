@@ -12,6 +12,11 @@ import {
 } from '@number-strategy-jump/arena-contracts';
 import type { PresentationEvent } from './presentation-event-window.js';
 
+export {
+  ARENA_WEAPON_FEEDBACK_SEMANTIC_V1_EVENT_TYPE,
+  ARENA_WEAPON_FEEDBACK_SEMANTIC_V1_SCHEMA_VERSION,
+} from '@number-strategy-jump/arena-contracts';
+
 export const ARENA_V2_WEAPON_FEEDBACK_KIND = ARENA_WEAPON_FEEDBACK_SEMANTIC_V1_KIND;
 
 export type ArenaV2WeaponFeedbackKind = ArenaWeaponFeedbackSemanticKindV1;

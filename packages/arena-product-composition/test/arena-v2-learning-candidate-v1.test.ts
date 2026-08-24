@@ -1004,7 +1004,9 @@ describe('Arena V2 P6 composed learning candidate', () => {
         ...event,
         sequence: Number(event.sequence) + 1,
       })),
-    ].sort((left, right) => Number(left.tick) - Number(right.tick)).map((event, index) => ({
+    ].sort((left, right) => (
+      Number(Reflect.get(left, 'tick')) - Number(Reflect.get(right, 'tick'))
+    )).map((event, index) => ({
       ...event,
       sequence: index,
     }));

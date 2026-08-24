@@ -7,6 +7,10 @@ import {
   createArenaV2A7FormalEvidenceRetrievalPlanCandidateV3,
   createArenaV2A7FormalEvidenceRetrievalVerifierCandidateV1,
   evaluateArenaV2A7FormalVisualMediaFreezeEvidenceCandidateV3,
+  type ArenaV2A7FormalEvidenceReadRequestCandidateV1,
+  type ArenaV2A7FormalEvidenceRecordVerificationIndexEntryCandidateV3,
+  type ArenaV2A7FormalEvidenceSha256RequestCandidateV1,
+  type ArenaV2A7FormalEvidenceVerificationReceiptWriteRequestCandidateV1,
   validateArenaV2A7FormalVisualMediaFreezeEvidenceCandidateV3,
 } from '../src/index.js';
 import {
@@ -84,7 +88,9 @@ function v3Input(futurePass: boolean) {
           assembly,
           formalEvidenceRecordLocatorDirectory,
           formalEvidenceRetrievalPlan.retrievalPlanIdentityHash,
-        ),
+        ) as readonly Readonly<
+          ArenaV2A7FormalEvidenceRecordVerificationIndexEntryCandidateV3
+        >[],
     },
   };
 }
@@ -269,7 +275,9 @@ describe('Arena V2 A7 formal visual/media freeze evidence candidate V3 (not run)
       retrievalAdapterId: 'future-evidence-store-reader-v1',
       sha256AdapterId: 'future-sha256-hasher-v1',
       receiptWriterAdapterId: 'future-receipt-writer-v1',
-      evidenceReader: async (request) => ({
+      evidenceReader: async (
+        request: Readonly<ArenaV2A7FormalEvidenceReadRequestCandidateV1>,
+      ) => ({
         recordId: request.expectedRecord.recordId,
         evidenceLocator: request.expectedRecord.evidenceLocator,
         evidenceMediaType: request.expectedRecord.evidenceMediaType,
@@ -277,8 +285,14 @@ describe('Arena V2 A7 formal visual/media freeze evidence candidate V3 (not run)
         evidenceProducerId: request.expectedRecord.evidenceProducerId,
         bytes: new Uint8Array(request.expectedRecord.evidenceByteLength),
       }),
-      sha256Hasher: async (request) => recordById.get(request.recordId)!.evidenceSha256,
-      verificationReceiptWriter: async (request) => ({
+      sha256Hasher: async (
+        request: Readonly<ArenaV2A7FormalEvidenceSha256RequestCandidateV1>,
+      ) => recordById.get(request.recordId)!.evidenceSha256,
+      verificationReceiptWriter: async (
+        request: Readonly<
+          ArenaV2A7FormalEvidenceVerificationReceiptWriteRequestCandidateV1
+        >,
+      ) => ({
         verificationSessionIdentityHash: request.verificationSessionIdentityHash,
         retrievalPlanIdentityHash: request.retrievalPlanIdentityHash,
         recordIndexIdentityHash: request.recordIndexIdentityHash,

@@ -142,7 +142,11 @@ function ownerHarness(options: Readonly<{
     profileDefinition: DEFINITION,
     readCurrentProfile: () => currentProfile,
     onSettlementFinalized: (settlement) => {
-      finalized.push(settlement.grantId);
+      const grantId = settlement.grantId;
+      if (grantId === null) {
+        throw new Error('finalized settlement must retain its grant id');
+      }
+      finalized.push(grantId);
       if (options.throwDuringPostProcessing === true) {
         throw new Error('non-authoritative observer unavailable');
       }

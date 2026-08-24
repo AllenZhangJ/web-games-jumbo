@@ -10,7 +10,10 @@ import type {
   ArenaV2CollectionFourScreenIdV1,
   ArenaV2CollectionFourScreenReadSnapshotV1,
 } from '../src/arena-v2-collection-four-screen-read-owner-candidate-v1.js';
-import type { ArenaV2A6WeaponPreviewViewportV1 } from '../src/arena-v2-weapon-collection-preview-three-mount-owner-candidate-v1.js';
+import type {
+  ArenaV2A6WeaponPreviewRectCssPixelsV1,
+  ArenaV2A6WeaponPreviewViewportV1,
+} from '../src/arena-v2-weapon-collection-preview-three-mount-owner-candidate-v1.js';
 import {
   ARENA_V2_COLLECTION_VISIBLE_LAYOUT_OBSERVATION_OWNER_CANDIDATE_V1,
   ArenaV2CollectionVisibleLayoutObservationOwnerCandidateV1,
@@ -159,7 +162,7 @@ function viewport(id: '390x844' | '1440x900'): ArenaV2A6WeaponPreviewViewportV1 
     : Object.freeze({ viewportId: id, widthCssPixels: 1440, heightCssPixels: 900 });
 }
 
-function clip(id: '390x844' | '1440x900') {
+function clip(id: '390x844' | '1440x900'): ArenaV2A6WeaponPreviewRectCssPixelsV1 {
   return id === '390x844'
     ? Object.freeze({ x: 12, y: 96, width: 366, height: 600 })
     : Object.freeze({ x: 12, y: 96, width: 1416, height: 520 });

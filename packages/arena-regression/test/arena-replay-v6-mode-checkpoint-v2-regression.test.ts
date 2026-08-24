@@ -230,7 +230,7 @@ describe('Arena Replay V6 / Mode Checkpoint V2 deterministic regression candidat
     const waterline = run();
     (waterline.modeCheckpoints as DataRecord[])[1] = createArenaModeCheckpointV2(
       checkpointOptions(2, { eventSequence: 1 }),
-    );
+    ) as unknown as DataRecord;
     expect(() => createArenaReplayV6ModeCheckpointV2RegressionCandidate(
       candidateOptions(waterline, run()),
     )).toThrow(/eventSequence/);

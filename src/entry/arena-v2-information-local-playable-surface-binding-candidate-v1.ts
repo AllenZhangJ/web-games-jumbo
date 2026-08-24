@@ -31,6 +31,10 @@ type BindingState = typeof ARENA_V2_INFORMATION_LOCAL_SURFACE_BINDING_STATE_CAND
 ];
 type ModeKind = 'duel' | 'race' | 'survival';
 type ResultDecision = 'play-again' | 'next-goal';
+interface ContentSelection {
+  readonly selectedWeaponDefinitionId?: string | null;
+  readonly selectedMapDefinitionId?: string | null;
+}
 type ResultTargetScreenId =
   'home' | 'map-detail' | 'mode-select' | 'weapon-detail' | 'weapon-index';
 interface ResultPrimaryRouteIdentity {
@@ -828,17 +832,29 @@ function viewportEnvelope(value: unknown): SurfaceViewportEnvelopeV1 {
 
 function contentSelection(
   value: unknown,
-): ArenaThreeModeAuthoritativeLocalInformationProjectionCandidateV1Options {
+): ContentSelection {
   const source = assertPlainRecord(value, 'Arena V2 local surface content selection');
   assertKnownKeys(source, CONTENT_SELECTION_KEYS, 'Arena V2 local surface content selection');
   for (const key of Object.keys(source)) dataField(source, key, 'Arena V2 local surface content selection');
+  const selectedWeaponDefinitionId = source.selectedWeaponDefinitionId;
+  const selectedMapDefinitionId = source.selectedMapDefinitionId;
+  if (selectedWeaponDefinitionId !== undefined
+    && selectedWeaponDefinitionId !== null
+    && typeof selectedWeaponDefinitionId !== 'string') {
+    throw new TypeError('Arena V2 local surface selectedWeaponDefinitionId必须是string或null。');
+  }
+  if (selectedMapDefinitionId !== undefined
+    && selectedMapDefinitionId !== null
+    && typeof selectedMapDefinitionId !== 'string') {
+    throw new TypeError('Arena V2 local surface selectedMapDefinitionId必须是string或null。');
+  }
   return Object.freeze({
-    ...(source.selectedWeaponDefinitionId === undefined
+    ...(selectedWeaponDefinitionId === undefined
       ? {}
-      : { selectedWeaponDefinitionId: source.selectedWeaponDefinitionId }),
-    ...(source.selectedMapDefinitionId === undefined
+      : { selectedWeaponDefinitionId }),
+    ...(selectedMapDefinitionId === undefined
       ? {}
-      : { selectedMapDefinitionId: source.selectedMapDefinitionId }),
+      : { selectedMapDefinitionId }),
   });
 }
 
@@ -877,7 +893,7 @@ export class ArenaV2InformationLocalPlayableSurfaceBindingCandidateV1 {
   readonly #weaponAvailabilityChangeProvider: SyncFunction | null;
   #preferGoalAlignedResultRecommendation: boolean;
   #selectedModeKind: ModeKind;
-  #selection: ArenaThreeModeAuthoritativeLocalInformationProjectionCandidateV1Options;
+  #selection: ContentSelection;
   #resultDecision: ResultDecision;
   #unbindIntent: (() => void) | null = null;
   #state: BindingState = 'created';
@@ -1970,7 +1986,7 @@ export class ArenaV2InformationLocalPlayableSurfaceBindingCandidateV1 {
           expectedRevision: information.navigation.revision,
           itemId: navigationItem,
         });
-      const focusedRecordFieldId = navigationItem === 'records'
+      const focusedRecordFieldId: 'recent-records' | null = navigationItem === 'records'
         ? (() => {
           const source = assertPlainRecord(
             outcome,
@@ -1989,7 +2005,7 @@ export class ArenaV2InformationLocalPlayableSurfaceBindingCandidateV1 {
           if (focusFieldId !== 'recent-records' || targetScreenId !== 'home') {
             throw new Error('Arena V2 local records导航目标或焦点漂移。');
           }
-          return focusFieldId;
+          return 'recent-records' as const;
         })()
         : null;
       this.#assertTransitionCommit();
@@ -2035,7 +2051,9 @@ export class ArenaV2InformationLocalPlayableSurfaceBindingCandidateV1 {
             },
           );
         } catch (error) {
-          if (this.#state !== 'disposed' && this.#state !== 'failed') {
+          const stateAfterDriverStartFailure = this.#state as BindingState;
+          if (stateAfterDriverStartFailure !== 'disposed'
+            && stateAfterDriverStartFailure !== 'failed') {
             this.#reject(error, intentId);
           }
           throw error;

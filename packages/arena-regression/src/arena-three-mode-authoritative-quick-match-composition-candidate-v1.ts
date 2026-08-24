@@ -6099,7 +6099,7 @@ export class ArenaThreeModeAuthoritativeLocalPlayableHostCandidateV1 {
   }
 
   #drainRetentionWorkBatch(source: PendingRetentionWorkBatchV1['source']): boolean {
-    let batch = this.#pendingRetentionWorkBatch(source);
+    const batch = this.#pendingRetentionWorkBatch(source);
     if (batch === null) return true;
     let activeBatch: PendingRetentionWorkBatchV1 = batch;
     if (this.#pendingRetentionActionRetry !== null
@@ -9120,7 +9120,6 @@ export class ArenaThreeModeAuthoritativeLocalPlayableHostCandidateV1 {
             })()
             : screenId === 'result-reward'
               ? (() => {
-                const nextGoal = pages.profiles.learning.nextGoal;
                 if (nextGoalContinuationRoute === null) {
                   throw new Error('Arena结果页复练组合缺少同批次续玩路由。');
                 }

@@ -172,7 +172,12 @@ function currentSlots(
     });
 }
 
-function progressItem(slot: ReturnType<typeof currentSlots>[number]) {
+type ProgressItemSlot = Pick<
+  ArenaV2A6CollectionFormalAssetReuseBindingSnapshotV1['slots'][number],
+  'kind' | 'definitionId' | 'ordinal' | 'displayName'
+>;
+
+function progressItem(slot: ProgressItemSlot) {
   const collectionResearchCount = slot.kind === 'weapon' && slot.ordinal === 1 ? 30 : 0;
   const routeResearch = slot.kind === 'map'
     ? projectArenaV2MapRouteResearchMilestoneV1({
@@ -498,7 +503,7 @@ function basePlan(
     audioCues: Object.freeze([]),
     worldAnchors: Object.freeze([]),
     inputExclusionRect: null,
-    formalAssetIds: Object.freeze([]),
+    formalAssetIds: Object.freeze([] as const),
   });
 }
 
@@ -554,7 +559,7 @@ function composeInput(
   const epochId = options.epochId ?? 'epoch-a6.15';
   const read = readSnapshot(screenId, tick, {
     epochId,
-    missingFirstWeapon: options.missingFirstWeapon,
+    missingFirstWeapon: options.missingFirstWeapon ?? false,
   });
   const pipeline = pipelineResult(screenId, viewportId, options.revision ?? 1);
   const selection = projection(read);

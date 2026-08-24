@@ -362,7 +362,7 @@ describe('P2.5 mode Product Session V2 candidate', () => {
   it('rejects Promise subclasses without calling their inherited then method', () => {
     let speciesCalls = 0;
     class DerivedPromise<T> extends Promise<T> {
-      static get [Symbol.species](): PromiseConstructor {
+      static override get [Symbol.species](): PromiseConstructor {
         speciesCalls += 1;
         return Promise;
       }
@@ -660,7 +660,7 @@ describe('P2.5 mode Product Session V2 candidate', () => {
     try {
       Object.defineProperty(Promise, Symbol.species, {
         ...speciesDescriptor,
-        get() { return class DriftedPromise extends Promise {}; },
+        get() { return class DriftedPromise extends Promise<unknown> {}; },
       });
       speciesSession.start();
     } catch (error) {

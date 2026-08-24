@@ -81,7 +81,7 @@ function profile(prefix = 'catalog', revision = 0) {
     profileDefinitionContentVersion: 5,
     profileId: `${prefix}.profile.local`,
     revision,
-    committedGrantIds: [],
+    committedGrantIds: [] as string[],
     collections: { weaponDefinitionIds: [], mapDefinitionIds: [] },
     weaponMastery: [],
     mapSegmentMastery: [],

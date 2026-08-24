@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   projectArenaWeaponFeedbackEventV6PresentationEvent,
 } from '@number-strategy-jump/arena-presentation-runtime';
+import type {
+  WeaponFeedbackResolvedEventV6,
+} from '@number-strategy-jump/arena-contracts';
 import {
   ARENA_V2_MODE_HUD_FEEDBACK_EFFECT_CONSUMER_STATE_V1,
   ArenaV2ModeHudFeedbackEffectConsumerV1,
@@ -78,10 +81,7 @@ function evadedEvent() {
 }
 
 function hud(
-  event: ReturnType<typeof attackEvent>
-    | ReturnType<typeof movementFallEvent>
-    | ReturnType<typeof unarmedEvent>
-    | ReturnType<typeof evadedEvent>,
+  event: WeaponFeedbackResolvedEventV6,
 ) {
   return {
     schemaVersion: 1,

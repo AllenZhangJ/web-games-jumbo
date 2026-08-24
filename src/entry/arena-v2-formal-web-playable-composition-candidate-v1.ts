@@ -46,6 +46,7 @@ import {
   type ArenaV2RegistryBackedLocalPlayableOwnerOptionsCandidateV1,
   type ArenaV2RegistryBackedLocalPlayableOwnerSnapshotCandidateV1,
   type ArenaV2RegistryWeaponAvailabilityChangeCandidateV1,
+  type ArenaThreeModeAuthoritativeLocalPlayableHostCandidateV1Options,
 } from '@number-strategy-jump/arena-regression';
 import * as THREE from 'three';
 import {
@@ -1648,7 +1649,10 @@ export class ArenaV2FormalWebPlayableCompositionCandidateV1 {
           offlineRetentionObservationJournalError = error;
         }
       }
-      const localPlayableOptions = {
+      const localPlayableOptions: Omit<
+        ArenaThreeModeAuthoritativeLocalPlayableHostCandidateV1Options,
+        'registryReference'
+      > = {
         seedSource: source.seedSource,
         storage: source.storage,
         ownerId: source.ownerId,
@@ -1657,14 +1661,38 @@ export class ArenaV2FormalWebPlayableCompositionCandidateV1 {
         visual: feedback.visual,
         ...(raceParticipantCount === undefined
           ? {}
-          : { raceParticipantCount }),
+          : {
+            raceParticipantCount: raceParticipantCount as NonNullable<
+              ArenaThreeModeAuthoritativeLocalPlayableHostCandidateV1Options[
+                'raceParticipantCount'
+              ]
+            >,
+          }),
         ...(survivalEnemyCount === undefined
           ? {}
-          : { survivalEnemyCount }),
+          : {
+            survivalEnemyCount: survivalEnemyCount as NonNullable<
+              ArenaThreeModeAuthoritativeLocalPlayableHostCandidateV1Options[
+                'survivalEnemyCount'
+              ]
+            >,
+          }),
         ...(hasModeRegistryCandidate ? { modeRegistryCandidate } : {}),
         ...(source.maxEventCount === undefined ? {} : { maxEventCount: source.maxEventCount }),
-        ...(source.qualityTier === undefined ? {} : { qualityTier: source.qualityTier }),
-        ...(source.preferences === undefined ? {} : { preferences: source.preferences }),
+        ...(source.qualityTier === undefined
+          ? {}
+          : {
+            qualityTier: source.qualityTier as NonNullable<
+              ArenaThreeModeAuthoritativeLocalPlayableHostCandidateV1Options['qualityTier']
+            >,
+          }),
+        ...(source.preferences === undefined
+          ? {}
+          : {
+            preferences: source.preferences as NonNullable<
+              ArenaThreeModeAuthoritativeLocalPlayableHostCandidateV1Options['preferences']
+            >,
+          }),
         ...(source.keyPrefix === undefined ? {} : { keyPrefix: source.keyPrefix }),
         ...(source.leaseDurationMs === undefined
           ? {}
@@ -1701,9 +1729,9 @@ export class ArenaV2FormalWebPlayableCompositionCandidateV1 {
             }
             : {
               registryBootstrapOptions: source.registryBootstrapOptions as
-                ArenaV2RegistryBackedLocalPlayableOwnerOptionsCandidateV1[
+                NonNullable<ArenaV2RegistryBackedLocalPlayableOwnerOptionsCandidateV1[
                   'registryBootstrapOptions'
-                ],
+                ]>,
             }),
           localPlayableOptions,
         });
@@ -1780,7 +1808,7 @@ export class ArenaV2FormalWebPlayableCompositionCandidateV1 {
               currentLearningProfile,
             );
             const inheritedWindow = weaponResearchPacePageBaselineToken.createWindow(
-              offlineRetentionOptions.cohortSubjectId,
+              offlineRetentionOptions.cohortSubjectId as string,
             );
             if (durableBaselineRead !== null
               && inheritedWindow.windowIdentityHash
@@ -3049,7 +3077,9 @@ export class ArenaV2FormalWebPlayableCompositionCandidateV1 {
     if (this.#prepareOperation !== null
       && this.#state !== 'failed'
       && this.#state !== 'disposed') return this.#prepareOperation;
-    let rejectPrepare: ((reason?: unknown) => void) | null = null;
+    const prepareLaunch: {
+      reject: ((reason?: unknown) => void) | null;
+    } = { reject: null };
     let launchedPrepare: Promise<this> | null = null;
     try {
       return this.#runSynchronousOperation('prepare-formal-assets', () => {
@@ -3057,7 +3087,7 @@ export class ArenaV2FormalWebPlayableCompositionCandidateV1 {
         if (this.#assetsPrepared) return Promise.resolve(this);
         if (this.#prepareOperation !== null) return this.#prepareOperation;
         const prepareOwner = deferred<this>();
-        rejectPrepare = prepareOwner.reject;
+        prepareLaunch.reject = prepareOwner.reject;
         this.#prepareOperation = prepareOwner.promise;
         const childPreparation = this.#matchHost.prepareFormalAssets();
         const execution = childPreparation.then(() => (
@@ -3087,7 +3117,7 @@ export class ArenaV2FormalWebPlayableCompositionCandidateV1 {
       if (this.#state !== 'disposed') {
         try { this.#recordFailure(error); } catch (caught) { failure = caught; }
       }
-      const reject = rejectPrepare;
+      const reject = prepareLaunch.reject;
       if (reject === null || this.#prepareOperation === null) throw failure;
       if (launchedPrepare === null) reject(failure);
       return this.#prepareOperation;
@@ -3106,7 +3136,9 @@ export class ArenaV2FormalWebPlayableCompositionCandidateV1 {
     if (this.#activationOperation !== null
       && this.#state !== 'failed'
       && this.#state !== 'disposed') return this.#activationOperation;
-    let rejectActivation: ((reason?: unknown) => void) | null = null;
+    const activationLaunch: {
+      reject: ((reason?: unknown) => void) | null;
+    } = { reject: null };
     let launchedActivation: Promise<this> | null = null;
     try {
       return this.#runSynchronousOperation('activate-audio', () => {
@@ -3117,7 +3149,7 @@ export class ArenaV2FormalWebPlayableCompositionCandidateV1 {
           return Promise.reject(new Error('必须先显示Loading页并完成正式资产预加载。'));
         }
         const activationOwner = deferred<this>();
-        rejectActivation = activationOwner.reject;
+        activationLaunch.reject = activationOwner.reject;
         this.#activationOperation = activationOwner.promise;
         const childActivation = this.#matchHost.activateFormalAudio();
         const execution = childActivation.then(() => (
@@ -3148,7 +3180,7 @@ export class ArenaV2FormalWebPlayableCompositionCandidateV1 {
       if (this.#state !== 'disposed') {
         try { this.#recordFailure(error); } catch (caught) { failure = caught; }
       }
-      const reject = rejectActivation;
+      const reject = activationLaunch.reject;
       if (reject === null || this.#activationOperation === null) throw failure;
       if (launchedActivation === null) reject(failure);
       return this.#activationOperation;

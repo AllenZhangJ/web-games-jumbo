@@ -32,12 +32,6 @@ const CORE_KEYS = new Set([
 const KEYS = new Set([...CORE_KEYS, 'checkpointIdentityHash']);
 const HASH_PATTERN = /^[0-9a-f]{8}$/u;
 
-function compareText(left: string, right: string): number {
-  if (left < right) return -1;
-  if (left > right) return 1;
-  return 0;
-}
-
 function exact(value: unknown, keys: ReadonlySet<string>, name: string): PlainRecord {
   const source = assertPlainRecord(value, name);
   assertKnownKeys(source, keys, name);

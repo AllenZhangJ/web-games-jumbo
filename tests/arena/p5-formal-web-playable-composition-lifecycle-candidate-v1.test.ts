@@ -73,6 +73,7 @@ const QUICK_MATCH_BUNDLE_FACTORY_SOURCE_PATH =
   'packages/arena-product-composition/src/arena-v2-quick-match-bundle-factory-candidate-v1.ts';
 const MODE_LEARNING_SESSION_FACTORY_SOURCE_PATH =
   'packages/arena-product-composition/src/arena-v2-mode-learning-session-factory-candidate-v1.ts';
+const FORMAL_WEB_ENTRY_SOURCE_PATH = 'src/entry/web-arena-v2-formal-candidate.ts';
 
 function source(): string {
   return readFileSync(SOURCE_PATH, 'utf8');
@@ -717,36 +718,36 @@ test('P5.3zzzsc defaults the single result action to a content-stable replay', (
   assert.match(binding, /detailDirectoryRevealUsesRenderedSelectionActionIdentity: true/u);
   assert.match(binding, /detailAdjacentBrowseActionsWired: true/u);
   assert.match(binding, /detailAdjacentBrowseReusesCurrentDetailScreen: true/u);
-  assert.match(formal, /elevenPagePlayerReachabilityRoutesWired: true/u);
-  assert.match(formal, /modeAndPreparationOptionalDepthNavigationWired: true/u);
-  assert.match(formal, /preparationPagesExplicitReturnToModeWired: true/u);
-  assert.match(formal, /preparationDetailSingleSourceReturnWired: true/u);
-  assert.match(formal, /detailDirectorySecondaryNavigationWired: true/u);
-  assert.match(formal, /detailDirectoryReturnPreservesSelection: true/u);
-  assert.match(formal, /detailDirectoryReturnRevealsCurrentSelection: true/u);
-  assert.match(formal, /detailDirectoryRevealUsesPreviewAwareRenderPlanGeometry: true/u);
-  assert.match(formal, /detailAdjacentContinuousBrowseWired: true/u);
-  assert.match(formal, /detailBrowseVisibleDirectoryPositionWired: true/u);
-  assert.match(formal, /detailAdjacentTargetNamesVisible: true/u);
-  assert.match(formal, /detailSelectedIdentityVisibleInQuestion: true/u);
-  assert.match(formal, /weaponDetailCoreFightReadoutWired: true/u);
-  assert.match(formal, /mapDetailFourAnchorRouteSkeletonWired: true/u);
-  assert.match(formal, /mapDirectoryFourAnchorRouteSkeletonWired: true/u);
-  assert.match(formal, /preparationMapRouteSkeletonWired: true/u);
-  assert.match(formal, /resultNextMapRouteSkeletonWired: true/u);
-  assert.match(formal, /resultNextWeaponCoreFightWired: true/u);
-  assert.match(formal, /weaponDirectoryBasicGestureReadoutWired: true/u);
-  assert.match(formal, /weaponDirectoryCoreFightReadoutWired: true/u);
-  assert.match(formal, /preparationWeaponCoreFightWired: true/u);
-  assert.match(formal, /modeSelectionShortContentSignatureWired: true/u);
-  assert.match(formal, /homeNextLearningSignatureWired: true/u);
-  assert.match(formal, /homeRecordSummaryWired: true/u);
-  assert.match(formal, /recordsBottomNavigationFocusWired: true/u);
-  assert.match(formal, /resultNextLearningSignatureWired: true/u);
-  assert.match(formal, /nextLearningGoalLightweightReadWired: true/u);
-  assert.match(formal, /detailAdjacentBrowseExcludesInactiveWeapons: true/u);
-  assert.match(formal, /informationPrimaryStartActionsRemainDirect: true/u);
-  assert.match(formal, /survivalCollectionNavigationCannotEquipBeforeMatch: true/u);
+  assert.match(composition, /elevenPagePlayerReachabilityRoutesWired: true/u);
+  assert.match(composition, /modeAndPreparationOptionalDepthNavigationWired: true/u);
+  assert.match(composition, /preparationPagesExplicitReturnToModeWired: true/u);
+  assert.match(composition, /preparationDetailSingleSourceReturnWired: true/u);
+  assert.match(composition, /detailDirectorySecondaryNavigationWired: true/u);
+  assert.match(composition, /detailDirectoryReturnPreservesSelection: true/u);
+  assert.match(composition, /detailDirectoryReturnRevealsCurrentSelection: true/u);
+  assert.match(composition, /detailDirectoryRevealUsesPreviewAwareRenderPlanGeometry: true/u);
+  assert.match(composition, /detailAdjacentContinuousBrowseWired: true/u);
+  assert.match(composition, /detailBrowseVisibleDirectoryPositionWired: true/u);
+  assert.match(composition, /detailAdjacentTargetNamesVisible: true/u);
+  assert.match(composition, /detailSelectedIdentityVisibleInQuestion: true/u);
+  assert.match(composition, /weaponDetailCoreFightReadoutWired: true/u);
+  assert.match(composition, /mapDetailFourAnchorRouteSkeletonWired: true/u);
+  assert.match(composition, /mapDirectoryFourAnchorRouteSkeletonWired: true/u);
+  assert.match(composition, /preparationMapRouteSkeletonWired: true/u);
+  assert.match(composition, /resultNextMapRouteSkeletonWired: true/u);
+  assert.match(composition, /resultNextWeaponCoreFightWired: true/u);
+  assert.match(composition, /weaponDirectoryBasicGestureReadoutWired: true/u);
+  assert.match(composition, /weaponDirectoryCoreFightReadoutWired: true/u);
+  assert.match(composition, /preparationWeaponCoreFightWired: true/u);
+  assert.match(composition, /modeSelectionShortContentSignatureWired: true/u);
+  assert.match(composition, /homeNextLearningSignatureWired: true/u);
+  assert.match(composition, /homeRecordSummaryWired: true/u);
+  assert.match(composition, /recordsBottomNavigationFocusWired: true/u);
+  assert.match(composition, /resultNextLearningSignatureWired: true/u);
+  assert.match(composition, /nextLearningGoalLightweightReadWired: true/u);
+  assert.match(composition, /detailAdjacentBrowseExcludesInactiveWeapons: true/u);
+  assert.match(composition, /informationPrimaryStartActionsRemainDirect: true/u);
+  assert.match(composition, /survivalCollectionNavigationCannotEquipBeforeMatch: true/u);
   assert.match(composition, /modeSelectionPrimaryStartRemainsDirect: true/u);
   assert.match(composition, /#resolveDefaultGoalAlignedPreparationRoute\(/u);
   assert.match(composition, /resultRecommendationKind === 'prepare-next-goal'/u);
@@ -3374,7 +3375,7 @@ test('P6.204 routes scheduled settlement and failure shutdown through the operat
 });
 
 test('P6.205 keeps formal Web entry preparation single-flight within one generation', () => {
-  const entry = readFileSync(entryPath, 'utf8');
+  const entry = readFileSync(FORMAL_WEB_ENTRY_SOURCE_PATH, 'utf8');
   assert.match(entry, /let preparationOperation: Promise<void> \| null = null/u);
   const preparation = section(
     entry,
@@ -3411,7 +3412,7 @@ test('P6.205 keeps formal Web entry preparation single-flight within one generat
 });
 
 test('P6.206 keeps formal Web entry activation single-flight and retry-gated', () => {
-  const entry = readFileSync(entryPath, 'utf8');
+  const entry = readFileSync(FORMAL_WEB_ENTRY_SOURCE_PATH, 'utf8');
   assert.match(entry, /let activationOperation: Promise<void> \| null = null/u);
   const activation = section(
     entry,
@@ -3445,7 +3446,7 @@ test('P6.206 keeps formal Web entry activation single-flight and retry-gated', (
 });
 
 test('P6.239 rejects failed entry runners and guards their owner settlements', () => {
-  const entry = readFileSync(entryPath, 'utf8');
+  const entry = readFileSync(FORMAL_WEB_ENTRY_SOURCE_PATH, 'utf8');
   const activation = section(
     entry,
     'function handleEnter(): Promise<void> {',

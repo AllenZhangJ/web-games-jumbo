@@ -4043,6 +4043,7 @@ async function main(): Promise<void> {
     root,
     'src/entry/arena-v2-information-local-playable-surface-binding-candidate-v1.ts',
   ), 'utf8');
+  const host = threeModeLocalPlayableHost;
   const nextLearningSignatureProjection = await readFile(path.join(
     root,
     'packages/arena-product-presentation/src/arena-v2-home-next-learning-signature-information-projection-candidate-v1.ts',

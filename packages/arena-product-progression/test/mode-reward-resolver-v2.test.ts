@@ -542,7 +542,7 @@ describe('P2.5 mode reward resolver V2 candidate', () => {
     const definition = profileDefinition();
     let speciesCalls = 0;
     class DerivedPromise<T> extends Promise<T> {
-      static get [Symbol.species](): PromiseConstructor {
+      static override get [Symbol.species](): PromiseConstructor {
         speciesCalls += 1;
         return Promise;
       }

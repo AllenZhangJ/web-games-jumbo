@@ -373,7 +373,7 @@ describe('arena-product-progression', () => {
 
     let speciesCalls = 0;
     class DerivedPromise<T> extends Promise<T> {
-      static get [Symbol.species](): PromiseConstructor {
+      static override get [Symbol.species](): PromiseConstructor {
         speciesCalls += 1;
         return Promise;
       }

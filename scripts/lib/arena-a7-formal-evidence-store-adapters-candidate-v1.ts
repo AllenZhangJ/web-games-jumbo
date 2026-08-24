@@ -1126,7 +1126,7 @@ export function createArenaV2A7FormalEvidenceStoreAdaptersCandidateV1(
     });
     return Object.freeze({
       verificationSessionIdentityHash: sessionIdentity,
-      retrievalPlanIdentityHash,
+      retrievalPlanIdentityHash: retrievalPlanIdentity,
       recordIndexIdentityHash: recordIndexIdentity,
       storeSnapshotIdentityHash: expectedEvidenceStoreSnapshotIdentityHash,
       receipts: Object.freeze(receipts),

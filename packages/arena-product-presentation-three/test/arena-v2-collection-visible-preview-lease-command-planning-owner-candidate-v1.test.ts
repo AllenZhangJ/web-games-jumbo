@@ -437,7 +437,7 @@ describe('Arena V2 A6.10 visible preview lease command planning owner candidate 
     expect(() => owner.plan(input(snapshot, ids.slice(0, 1)))).toThrow(/同tick输入冲突/);
 
     const next = readSnapshot('weapon-index', 1);
-    const forged = clone(first.nextActiveLeaseLedger);
+    const forged = first.nextActiveLeaseLedger.map((lease) => ({ ...lease }));
     forged[0]!.assetId = 'forged.asset';
     expect(() => owner.plan(input(next, ids, forged))).toThrow(/伪造|asset/);
     expect(() => owner.plan(input(

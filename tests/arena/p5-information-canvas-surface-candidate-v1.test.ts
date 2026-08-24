@@ -161,7 +161,7 @@ function plan(revision = 1): ArenaV2UiRenderPlanV1 {
     audioCues: Object.freeze([]),
     worldAnchors: Object.freeze([]),
     inputExclusionRect: null,
-    formalAssetIds: Object.freeze([]),
+    formalAssetIds: Object.freeze([] as const),
   });
 }
 

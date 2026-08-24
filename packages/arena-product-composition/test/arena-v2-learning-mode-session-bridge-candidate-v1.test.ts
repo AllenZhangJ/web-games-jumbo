@@ -176,7 +176,7 @@ describe('Arena V2 learning mode session bridge candidate V1', () => {
     const bridge = new ArenaV2LearningModeSessionBridgeCandidateV1({
       session: value.session,
       learningHandoff: value.learningHandoff,
-      onSettlementIntentPrepared(intent) { prepared.push(intent); },
+      onSettlementIntentPrepared(intent: unknown) { prepared.push(intent); },
     });
     expect(bridge.start()).toMatchObject({
       supplyCadence: null,

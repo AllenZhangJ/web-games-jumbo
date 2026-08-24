@@ -435,16 +435,17 @@ describe('Arena V2 long progress readable layout candidate V1', () => {
         [1, DESKTOP_VIEWPORT, 68],
       ] as const) {
         const revision = 91 + routeIndex * 10 + viewportIndex;
+        const segmentCount = routeIndex === 0 ? 8 : 12;
         const result = render(
           'map-detail',
           revision,
-          mapDetailFields(fullRoute, accessibility, route.length),
+          mapDetailFields(fullRoute, accessibility, segmentCount),
           viewport,
         );
         const compact = render(
           'map-detail',
           revision + 20,
-          mapDetailFields('路线资料准备中', '完整路线资料准备中', route.length),
+          mapDetailFields('路线资料准备中', '完整路线资料准备中', segmentCount),
           viewport,
         );
         const targetRect = result.layout.deferredItemRects.find(({ fieldId }) => (

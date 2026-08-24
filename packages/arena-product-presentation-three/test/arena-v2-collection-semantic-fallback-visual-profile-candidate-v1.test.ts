@@ -88,7 +88,7 @@ describe('Arena V2 A6.18 collection semantic fallback visual profile candidate V
           assetId: profile.assetId,
           displayName: profile.stableGlyphLabel,
         });
-        const panels = primitives.filter(({ kind }) => kind === 'panel');
+        const panels = primitives.filter((primitive) => primitive.kind === 'panel');
         expect(panels).toHaveLength(3);
         panels.forEach((panel) => {
           expect(panel.rect.x).toBeGreaterThanOrEqual(rect.x);

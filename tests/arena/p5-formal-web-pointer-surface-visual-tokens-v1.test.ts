@@ -1258,12 +1258,16 @@ test('P5.3zb-B inset-only resize cancels ownership and reuses the normalized vie
   });
   documentObject.defaultView.emit('resize', {} as Event);
   assert.equal(surface.getSnapshot().activePointerCount, 0);
+  const moveVisualLeft = (pointerLayer.children[0] as FakeElement).style.left;
+  const moveVisualTop = (pointerLayer.children[0] as FakeElement).style.top;
+  assert.notEqual(moveVisualLeft, undefined);
+  assert.notEqual(moveVisualTop, undefined);
   assert.deepEqual(surface.getSnapshot().moveVisualOrigin, {
     kind: 'idle',
     xFraction: ARENA_V2_UI_VISUAL_TOKENS_V1.touchMoveControl.idleAnchorXFraction,
     yFraction: ARENA_V2_UI_VISUAL_TOKENS_V1.touchMoveControl.idleAnchorYFraction,
-    x: Number.parseFloat((pointerLayer.children[0] as FakeElement).style.left),
-    y: Number.parseFloat((pointerLayer.children[0] as FakeElement).style.top),
+    x: Number.parseFloat(moveVisualLeft!),
+    y: Number.parseFloat(moveVisualTop!),
   });
   surface.dispose();
 });

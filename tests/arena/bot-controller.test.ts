@@ -41,10 +41,14 @@ test('BotController requires explicit tick duration and character step capabilit
   };
   const missingTickDuration = { ...complete } as Record<string, unknown>;
   delete missingTickDuration.tickDurationSeconds;
-  assert.throws(() => new BotController(missingTickDuration), /tickDurationSeconds/);
+  assert.throws(() => new BotController(
+    missingTickDuration as unknown as ConstructorParameters<typeof BotController>[0],
+  ), /tickDurationSeconds/);
   const missingMaximumStepHeight = { ...complete } as Record<string, unknown>;
   delete missingMaximumStepHeight.maximumStepHeight;
-  assert.throws(() => new BotController(missingMaximumStepHeight), /maximumStepHeight/);
+  assert.throws(() => new BotController(
+    missingMaximumStepHeight as unknown as ConstructorParameters<typeof BotController>[0],
+  ), /maximumStepHeight/);
   assert.throws(() => new BotController({
     ...complete,
     tickDurationSeconds: 0,

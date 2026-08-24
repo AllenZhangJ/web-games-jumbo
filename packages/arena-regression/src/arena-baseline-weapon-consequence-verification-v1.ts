@@ -37,7 +37,6 @@ import {
   createMovementCommand,
   isMovementCommandKind,
   MovementSystem,
-  type MovementCommand,
 } from '@number-strategy-jump/arena-movement';
 import {
   ARENA_FIXED_DT,

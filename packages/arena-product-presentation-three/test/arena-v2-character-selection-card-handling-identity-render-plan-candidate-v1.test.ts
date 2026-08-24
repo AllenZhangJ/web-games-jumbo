@@ -236,7 +236,7 @@ describe('Arena V2 A6.19 character card handling identity（未运行候选）',
     });
     composition.load();
     composition.render(source);
-    expect(renderedPlan?.identity).toBe(
+    expect((renderedPlan as ArenaV2UiRenderPlanV1 | null)?.identity).toBe(
       'character-select:selection-character:handling-identity-v1',
     );
     expect(contextPlan).toBe(source);

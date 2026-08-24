@@ -153,7 +153,7 @@ function basePlan(screenId: 'weapon-index' | 'map-index', revision: number): Are
     audioCues: Object.freeze([]),
     worldAnchors: Object.freeze([]),
     inputExclusionRect: null,
-    formalAssetIds: Object.freeze([]),
+    formalAssetIds: Object.freeze([] as const),
   });
 }
 

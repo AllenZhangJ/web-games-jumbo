@@ -613,7 +613,7 @@ describe('Product Match lifecycle boundaries', () => {
   it('rejects Promise subclasses and constructor accessors without external execution', () => {
     let speciesCalls = 0;
     class DerivedPromise<T> extends Promise<T> {
-      static get [Symbol.species](): PromiseConstructor {
+      static override get [Symbol.species](): PromiseConstructor {
         speciesCalls += 1;
         return Promise;
       }
@@ -686,7 +686,7 @@ describe('Product Match lifecycle boundaries', () => {
     try {
       Object.defineProperty(Promise, Symbol.species, {
         ...speciesDescriptor,
-        get() { return class DriftedPromise extends Promise {}; },
+        get() { return class DriftedPromise extends Promise<unknown> {}; },
       });
       const promiseCandidate = {
         ...runtimeHarness(),

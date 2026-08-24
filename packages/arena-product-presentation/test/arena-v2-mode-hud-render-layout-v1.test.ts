@@ -1324,11 +1324,12 @@ describe('Arena V2 mode HUD render/layout V1', () => {
   it('keeps the next race segment scannable through landmark, beat and intensity', () => {
     const source = raceHud();
     if (source.mode.kind !== 'race') throw new Error('测试夹具必须是竞速模式。');
-    const local = source.mode.participants[0]!;
+    const raceMode = source.mode;
+    const local = raceMode.participants[0]!;
     const renderModel = createArenaV2ModeHudRenderModelV1({
       ...source,
       mode: {
-        ...source.mode,
+        ...raceMode,
         participants: [{
           ...local,
           progressOrdinal: 4,
@@ -1344,7 +1345,7 @@ describe('Arena V2 mode HUD render/layout V1', () => {
             landmarkCue: 'narrow-bridge',
             memoryHook: '看到窄桥就先对齐落点',
           },
-        }, ...source.mode.participants.slice(1)],
+        }, ...raceMode.participants.slice(1)],
       },
     }, { reducedMotion: false, soundEnabled: true });
     expect(renderModel.modeFacts.find(({ id }) => id === 'race-route-target')).toMatchObject({
@@ -1362,7 +1363,7 @@ describe('Arena V2 mode HUD render/layout V1', () => {
     expect(() => createArenaV2ModeHudRenderModelV1({
       ...source,
       mode: {
-        ...source.mode,
+        ...raceMode,
         participants: [{
           ...local,
           progressOrdinal: 4,
@@ -1378,7 +1379,7 @@ describe('Arena V2 mode HUD render/layout V1', () => {
             landmarkCue: 'narrow-bridge',
             memoryHook: '看到窄桥就先对齐落点',
           },
-        }, ...source.mode.participants.slice(1)],
+        }, ...raceMode.participants.slice(1)],
       },
     }, { reducedMotion: false, soundEnabled: true })).toThrow(/显示身份漂移/);
   });

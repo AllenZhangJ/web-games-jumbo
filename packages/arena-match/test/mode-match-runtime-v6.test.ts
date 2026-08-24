@@ -10,6 +10,7 @@ import {
   createMatchReadFrameV3Audit,
   createNeutralInputFrame,
   type ArenaInputFrame,
+  type ArenaModeProjectionV1,
   type MatchReadFrameV3,
   type ModeResultV3Payload,
 } from '@number-strategy-jump/arena-contracts';
@@ -211,7 +212,10 @@ function participant(value: ReturnType<typeof assignment>) {
   };
 }
 
-function initialProjection(kind: ModeKind, modeDefinitionId: string) {
+function initialProjection(
+  kind: ModeKind,
+  modeDefinitionId: string,
+): ArenaModeProjectionV1 {
   if (kind === 'duel') return {
     schemaVersion: 1, modeDefinitionId, revision: 0, preparationRemainingTicks: 1,
     state: { kind: 'duel', suddenDeath: false },
@@ -392,7 +396,10 @@ function harness(kind: ModeKind, options: HarnessOptions = {}) {
     .participantId;
   let eventSequence = 0;
   let destroyCalls = 0;
-  let currentProjection = initialProjection(kind, runtimeConfig.modeDefinitionId as string);
+  let currentProjection: ArenaModeProjectionV1 = initialProjection(
+    kind,
+    runtimeConfig.modeDefinitionId as string,
+  );
 const authority = {
     start() {
       return {
@@ -459,7 +466,7 @@ const authority = {
           eventSequence: eventSequence,
           modeProjection: resolution.modeProjection,
           modeResult: frameModeResult,
-          identityDrift: options.drift,
+          ...(options.drift !== undefined ? { identityDrift: options.drift } : {}),
         }),
         readFrameAudit: NO_SUPPLY,
         events: publishedEvents,
@@ -845,6 +852,8 @@ describe('ModeMatchRuntimeV6 production-unreachable concrete authority candidate
     let constructorDestroys = 0;
     const authority = {
       start() {}, step() {}, pause() {}, resume() {},
+      exportCheckpoint() {},
+      restore() {},
       destroy() { constructorDestroys += 1; },
     };
     expect(() => new ModeMatchRuntimeV6({

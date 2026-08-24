@@ -655,13 +655,14 @@ export class ArenaV2InformationDomSurfaceCandidateV1 {
   #clearPointerOwned(): void {
     const pointer = this.#pointer;
     if (pointer === null) return;
-    const hasPointerCapture = this.#surfaceRoot?.hasPointerCapture?.(pointer.pointerId) === true;
+    const surfaceRoot = this.#surfaceRoot;
+    const hasPointerCapture = surfaceRoot?.hasPointerCapture?.(pointer.pointerId) === true;
     this.#assertCurrentOperationCommit();
-    if (hasPointerCapture) {
+    if (hasPointerCapture && surfaceRoot !== null) {
       this.#releasingPointerCapture = true;
       try {
         rejectThenable(
-          this.#surfaceRoot.releasePointerCapture(pointer.pointerId),
+          surfaceRoot.releasePointerCapture(pointer.pointerId),
           'Arena V2 DOM Surface releasePointerCapture',
         );
         this.#assertCurrentOperationCommit();

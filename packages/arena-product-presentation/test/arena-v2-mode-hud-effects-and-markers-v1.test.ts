@@ -115,7 +115,7 @@ function plan(): ArenaV2UiRenderPlanV1 {
       }),
     ]),
     inputExclusionRect: Object.freeze({ x: 0, y: 668, width: 390, height: 176 }),
-    formalAssetIds: Object.freeze([]),
+    formalAssetIds: Object.freeze([] as const),
   });
 }
 

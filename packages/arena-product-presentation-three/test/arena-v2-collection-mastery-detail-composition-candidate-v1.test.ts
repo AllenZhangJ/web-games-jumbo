@@ -299,7 +299,7 @@ function input(
     detailProgressFacts: detailProgress(kind),
     existingSelectionAction: action(kind),
     ...overrides,
-  } as ArenaV2A6CollectionMasteryDetailInputV1;
+  } as unknown as ArenaV2A6CollectionMasteryDetailInputV1;
 }
 
 function unavailableInput(

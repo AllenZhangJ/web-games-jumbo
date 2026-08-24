@@ -241,7 +241,10 @@ export function createArenaV2A7CurrentCatalogIncompleteFixture(
   options: FuturePassFixtureOptions,
 ) {
   const assetSetSha256 = sha(1_100);
-  const v1BudgetById = new Map(
+  const v1BudgetById = new Map<
+  string,
+  typeof ARENA_STAGE7_FORMAL_ASSET_BUDGET_V1_ARTIFACTS[number]
+  >(
     ARENA_STAGE7_FORMAL_ASSET_BUDGET_V1_ARTIFACTS.map((entry) => [entry.id, entry] as const),
   );
   const v2BudgetById = new Map(
@@ -476,9 +479,13 @@ function createApprovedPolicyAssemblyFixture(options: FuturePassFixtureOptions) 
     true,
     {
       sourceCommit: options.sourceCommit,
-      packageLockSha256: options.packageLockSha256,
-      toolchainIdentitySha256: options.toolchainIdentitySha256,
       environmentBuilds: options.environmentBuilds,
+      ...(options.packageLockSha256 === undefined
+        ? {}
+        : { packageLockSha256: options.packageLockSha256 }),
+      ...(options.toolchainIdentitySha256 === undefined
+        ? {}
+        : { toolchainIdentitySha256: options.toolchainIdentitySha256 }),
     },
   );
   const decision =

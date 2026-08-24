@@ -66,6 +66,23 @@ import {
 type DataRecord = Record<string, unknown>;
 type TestModeKind = 'duel' | 'race' | 'survival';
 
+interface LocalPlayableSnapshotTestView {
+  readonly homeContinuationPreparation: unknown;
+  readonly retentionObservation: Readonly<{
+    pendingSettlementWork: unknown;
+    pendingNextGoalImpression: unknown;
+    pendingNextGoalCapture: Readonly<{ authorityTick: number }> | null;
+    pendingHomeContinuationFollow: unknown;
+    lastError: unknown;
+  }>;
+}
+
+function localPlayableSnapshot(
+  owner: ArenaThreeModeAuthoritativeLocalPlayableHostCandidateV1,
+): LocalPlayableSnapshotTestView {
+  return owner.getSnapshot() as LocalPlayableSnapshotTestView;
+}
+
 const ROUTE = ARENA_V2_KZ_BASE_ROUTE_DEFINITION_CANDIDATE_V2;
 
 function envelope(kind: TestModeKind, type: string): DataRecord {
@@ -1546,7 +1563,7 @@ describe('Arena three-mode Mode Registry preflight QuickMatch candidate V1', () 
         itemId: 'weapons',
       });
       expect(owner.getInformationSnapshot().navigation.currentScreenId).toBe('weapon-index');
-      expect(owner.getSnapshot().homeContinuationPreparation).toBeNull();
+      expect(localPlayableSnapshot(owner).homeContinuationPreparation).toBeNull();
     } finally {
       owner.destroy();
     }
@@ -1884,7 +1901,8 @@ describe('Arena three-mode Mode Registry preflight QuickMatch candidate V1', () 
     });
     try {
       finishLocalHostDuel(owner);
-      const pendingBefore = owner.getSnapshot().retentionObservation.pendingSettlementWork;
+      const pendingBefore = localPlayableSnapshot(owner)
+        .retentionObservation.pendingSettlementWork;
       const resultRevision = owner.getInformationSnapshot().navigation.revision;
       expect(() => owner.openBottomNavigation({
         expectedRevision: resultRevision,
@@ -1895,7 +1913,7 @@ describe('Arena three-mode Mode Registry preflight QuickMatch candidate V1', () 
         navigation: { revision: resultRevision },
       });
       expect(() => owner.destroy()).toThrow('settled work remains unavailable');
-      expect(owner.getSnapshot().retentionObservation.pendingSettlementWork)
+      expect(localPlayableSnapshot(owner).retentionObservation.pendingSettlementWork)
         .toEqual(pendingBefore);
       expect(contentAttempts).toHaveLength(3);
       expect(contentAttempts[1]).toBe(contentAttempts[0]);
@@ -2523,7 +2541,7 @@ describe('Arena three-mode Mode Registry preflight QuickMatch candidate V1', () 
       });
       finishLocalHostDuel(owner, true);
       const durableAfterSettlement = journal.getSnapshot();
-      const failedCapture = owner.getSnapshot().retentionObservation;
+      const failedCapture = localPlayableSnapshot(owner).retentionObservation;
       expect(failedCapture).toMatchObject({
         pendingSettlementWork: null,
         pendingNextGoalImpression: null,
@@ -2536,7 +2554,11 @@ describe('Arena three-mode Mode Registry preflight QuickMatch candidate V1', () 
         },
         lastError: expect.any(Error),
       });
-      expect(Object.isFrozen(failedCapture.pendingNextGoalCapture)).toBe(true);
+      const pendingNextGoalCapture = failedCapture.pendingNextGoalCapture;
+      if (pendingNextGoalCapture === null) {
+        throw new Error('测试前置失败：next-goal capture debt应存在。');
+      }
+      expect(Object.isFrozen(pendingNextGoalCapture)).toBe(true);
       expect(settlementBatchCalls).toBe(1);
 
       owner.updatePreferences({ soundEnabled: true, reducedMotion: false });
@@ -2549,7 +2571,7 @@ describe('Arena three-mode Mode Registry preflight QuickMatch candidate V1', () 
           pendingNextGoalCapture: null,
           pendingNextGoalImpression: {
             profileRevision: 1,
-            authorityTick: failedCapture.pendingNextGoalCapture.authorityTick,
+            authorityTick: pendingNextGoalCapture.authorityTick,
           },
           lastError: null,
         },
@@ -2609,7 +2631,7 @@ describe('Arena three-mode Mode Registry preflight QuickMatch candidate V1', () 
         }),
       });
       finishLocalHostDuel(owner, true);
-      const failedCapture = owner.getSnapshot().retentionObservation;
+      const failedCapture = localPlayableSnapshot(owner).retentionObservation;
       expect(failedCapture).toMatchObject({
         pendingSettlementWork: null,
         pendingNextGoalImpression: null,
@@ -2956,7 +2978,7 @@ describe('Arena three-mode Mode Registry preflight QuickMatch candidate V1', () 
           mapDefinitionIds: [continuation.targetMapDefinitionId],
           authorityTick: 0,
         });
-      expect(owner.getSnapshot().retentionObservation.pendingHomeContinuationFollow)
+      expect(localPlayableSnapshot(owner).retentionObservation.pendingHomeContinuationFollow)
         .toBeNull();
     } finally {
       owner.destroy();
@@ -3048,8 +3070,8 @@ describe('Arena three-mode Mode Registry preflight QuickMatch candidate V1', () 
       ArenaV2ModeLearningSessionFactoryCandidateV1.prototype,
       'createSession',
       {
-        configurable: createSessionDescriptor.configurable,
-        enumerable: createSessionDescriptor.enumerable,
+        configurable: createSessionDescriptor.configurable ?? false,
+        enumerable: createSessionDescriptor.enumerable ?? false,
         get() { return undefined; },
       },
     );
@@ -3336,8 +3358,8 @@ describe('Arena three-mode Mode Registry preflight QuickMatch candidate V1', () 
       ArenaV2ModeLearningSessionFactoryCandidateV1.prototype,
       'createSession',
       {
-        configurable: createSessionDescriptor.configurable,
-        enumerable: createSessionDescriptor.enumerable,
+        configurable: createSessionDescriptor.configurable ?? false,
+        enumerable: createSessionDescriptor.enumerable ?? false,
         get() { return undefined; },
       },
     );

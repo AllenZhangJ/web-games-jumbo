@@ -951,8 +951,7 @@ export class ArenaV2CollectionVisiblePreviewLeaseCommandExecutionOwnerCandidateV
       requestIdentity: record.requestIdentity,
       assetId: ledger.assetId,
     });
-    let value: unknown;
-    value = this.#readDestroyedProof(request);
+    const value: unknown = this.#readDestroyedProof(request);
     this.#assertCurrentOperationCommit();
     return freezeProof(value, request);
   }

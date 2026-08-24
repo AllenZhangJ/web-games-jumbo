@@ -38,7 +38,7 @@ function input() {
       artifactPath: entry.artifactPath,
       artifactSha256: entry.sha256,
       evidenceSlotId: slotId,
-      evidenceKind: KIND_BY_SLOT[slotId],
+      evidenceKind: KIND_BY_SLOT[slotId as keyof typeof KIND_BY_SLOT],
       evidenceLocator: `evidence://arena-v2/accepted-set/${slotId}`,
       evidenceSha256: (index + 1).toString(16).repeat(64),
       collectorId: `collector-${index + 1}`,

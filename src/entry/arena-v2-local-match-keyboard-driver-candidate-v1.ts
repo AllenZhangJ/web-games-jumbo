@@ -133,7 +133,7 @@ const JUMP_CODES = new Set(ARENA_V2_SIMPLE_KEYBOARD_CONTROL_CONTRACT_CANDIDATE_V
 const PRIMARY_CODES = new Set(
   ARENA_V2_SIMPLE_KEYBOARD_CONTROL_CONTRACT_CANDIDATE_V1.primaryAttackCodes,
 );
-const KNOWN_CODES = new Set([
+const KNOWN_CODES: ReadonlySet<string> = new Set<string>([
   ...LEFT_CODES,
   ...RIGHT_CODES,
   ...FORWARD_CODES,

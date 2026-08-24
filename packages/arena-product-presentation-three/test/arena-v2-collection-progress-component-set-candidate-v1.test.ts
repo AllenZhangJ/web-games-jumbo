@@ -35,7 +35,9 @@ const TARGET_SEGMENT_ID = TEST_MAP_DIRECTORY[1].segmentDefinitionIds[0]!;
 const MODE_ID = 'test.mode.generated-survival';
 const CHALLENGE_ID = 'test.challenge.generated-cross-01';
 
-function withProjectionHash(authority: Readonly<Record<string, unknown>>) {
+function withProjectionHash<Authority extends Readonly<Record<string, unknown>>>(
+  authority: Authority,
+): Authority & Readonly<{ contentHash: string }> {
   return {
     ...authority,
     contentHash: createDeterministicDataHash(
@@ -250,7 +252,7 @@ function input(
     muted: false,
     decorativeAssetState: 'ready',
     ...overrides,
-  } as ArenaV2A6CollectionProgressComponentInputV1;
+  } as unknown as ArenaV2A6CollectionProgressComponentInputV1;
 }
 
 function unavailableInput(

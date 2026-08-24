@@ -45,7 +45,7 @@ function plan(
     audioCues: Object.freeze([]),
     worldAnchors: Object.freeze([]),
     inputExclusionRect: null,
-    formalAssetIds: Object.freeze([]),
+    formalAssetIds: Object.freeze([] as const),
   });
 }
 

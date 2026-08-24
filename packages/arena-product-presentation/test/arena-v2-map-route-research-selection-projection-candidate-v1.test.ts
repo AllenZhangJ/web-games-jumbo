@@ -9,6 +9,10 @@ import {
 
 const MAPS = ARENA_V2_INFORMATION_CONTENT_READ_CATALOG_CANDIDATE_V1.maps;
 
+function participantRange(map: (typeof MAPS)[number]): string {
+  return map.minimumParticipants + '–' + map.maximumParticipants + '人';
+}
+
 function selection() {
   return {
     kind: 'map' as const,
@@ -16,7 +20,7 @@ function selection() {
     items: MAPS.map((map, index) => ({
       id: map.mapDefinitionId,
       label: `map-${index + 1}`,
-      description: `${index === 0 ? '当前目标 · ' : ''}已收藏 · 路线理解 ${index}/${map.segments.length}｜${map.participantRange}`,
+      description: `${index === 0 ? '当前目标 · ' : ''}已收藏 · 路线理解 ${index}/${map.segments.length}｜${participantRange(map)}`,
     })),
   };
 }
@@ -27,7 +31,7 @@ function facts(overrides: Readonly<Record<number, Readonly<Record<string, unknow
     evidencePerSegmentTarget: 1,
     segments: map.segments.map((segment, segmentIndex) => ({
       segmentDefinitionId: segment.segmentDefinitionId,
-      displayName: segment.displayName,
+      displayName: segment.nameMessageId,
       completionEvidenceCount: segmentIndex < index ? 1 : 0,
     })),
     ...overrides[index],
@@ -37,7 +41,7 @@ function facts(overrides: Readonly<Record<number, Readonly<Record<string, unknow
 function segmentsWithCompletedPrefix(mapIndex: number, completedCount: number) {
   return MAPS[mapIndex]!.segments.map((segment, segmentIndex) => ({
     segmentDefinitionId: segment.segmentDefinitionId,
-    displayName: segment.displayName,
+    displayName: segment.nameMessageId,
     completionEvidenceCount: segmentIndex < completedCount ? 1 : 0,
   }));
 }
@@ -95,7 +99,7 @@ describe('Arena V2 map route research selection projection candidate V1', () => 
     const source = selection();
     source.items[0]!.description = `当前目标 · 已收藏 · 路线理解 0/${
       MAPS[0]!.segments.length
-    }｜${MAPS[0]!.participantRange}`;
+    }｜${participantRange(MAPS[0]!)}`;
     const result = projectArenaV2MapRouteResearchSelectionCandidateV1({
       schemaVersion: 1,
       profileRevision: 0,
@@ -106,14 +110,14 @@ describe('Arena V2 map route research selection projection candidate V1', () => 
           evidencePerSegmentTarget: 2,
           segments: MAPS[0]!.segments.map((segment, segmentIndex) => ({
             segmentDefinitionId: segment.segmentDefinitionId,
-            displayName: segment.displayName,
+            displayName: segment.nameMessageId,
             completionEvidenceCount: segmentIndex === 0 ? 1 : 0,
           })),
         },
       }),
     });
     expect(result.items[0]!.description).toContain(
-      `下一段2.${MAPS[0]!.segments[1]!.displayName} 0/2`,
+      `下一段2.${MAPS[0]!.segments[1]!.nameMessageId} 0/2`,
     );
   });
 
@@ -134,7 +138,7 @@ describe('Arena V2 map route research selection projection candidate V1', () => 
         0: {
           segments: MAPS[0]!.segments.map((segment, segmentIndex) => ({
             segmentDefinitionId: segment.segmentDefinitionId,
-            displayName: segment.displayName,
+            displayName: segment.nameMessageId,
             completionEvidenceCount: segmentIndex === 0 ? 2 : 0,
           })),
         },
@@ -156,7 +160,7 @@ describe('Arena V2 map route research selection projection candidate V1', () => 
     source.items.forEach((item, index) => {
       item.description = `已收藏 · 路线理解 ${MAPS[index]!.segments.length}/${
         MAPS[index]!.segments.length
-      }｜${MAPS[index]!.participantRange}`;
+      }｜${participantRange(MAPS[index]!)}`;
     });
     const eligibleSource = {
       ...source,

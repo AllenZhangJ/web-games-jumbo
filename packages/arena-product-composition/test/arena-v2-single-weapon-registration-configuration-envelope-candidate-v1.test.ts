@@ -13,7 +13,12 @@ import {
 } from '../src/arena-v2-in-memory-registry-publication-port-candidate-v1.js';
 
 const fixture = vi.hoisted(() => ({
-  assessment: Object.freeze({
+  assessment: Object.freeze<Readonly<{
+    weaponId: string;
+    equipmentDefinitionId: string;
+    assessmentContentHash: string;
+    readinessContentHash: string;
+  }>>({
     weaponId: 'pending',
     equipmentDefinitionId: 'pending',
     assessmentContentHash: 'a1a1a1a1',

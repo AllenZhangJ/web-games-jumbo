@@ -1443,9 +1443,9 @@ export class ArenaV2FormalThreeVfxPortCandidateV1 {
             }));
             this.#textureLoader.load(
               record.runtimeSourceKey,
-              (texture) => { textureOwner.resolve(texture); },
+              (texture: THREE.Texture) => { textureOwner.resolve(texture); },
               undefined,
-              (error) => { textureOwner.reject(error); },
+              (error: Error) => { textureOwner.reject(error); },
             );
             this.#assertCurrentOperationCommit();
           }
@@ -1703,7 +1703,10 @@ export class ArenaV2FormalThreeVfxPortCandidateV1 {
     this.#assertReady('Arena V2 formal Three VFX presentDirectional');
     this.#runSynchronousOperation('Arena V2 formal Three VFX presentDirectional', () => {
       try {
-        const source = cloneFrozenData(value, 'Arena V2 formal Three VFX directional input');
+        const source = assertPlainRecord(
+          cloneFrozenData(value, 'Arena V2 formal Three VFX directional input'),
+          'Arena V2 formal Three VFX directional input',
+        );
         const resolution = resolveArenaV2TwentyWeaponFeedbackVfxCandidateV2(source);
         const command = visualCommand(source.command);
         const style = resolveArenaV2TwentyWeaponFormalVfxStyleCandidateV1(resolution.base);

@@ -796,8 +796,7 @@ export class ProductPresentationFlow {
         dispatchStarted = true;
         const dispatched = dispatcher.dispatch(intent);
         this.#assertCurrentOperationCommit(sequence, 'ProductPresentationFlow intent dispatch');
-        let operation: Promise<ProductPresentationFlowSnapshot | null>;
-        operation = dispatched
+        const operation: Promise<ProductPresentationFlowSnapshot | null> = dispatched
           .then(() => {
             if (this.#destroyRequested || this.#state === PRODUCT_PRESENTATION_FLOW_STATE.DESTROYED) {
               return null;

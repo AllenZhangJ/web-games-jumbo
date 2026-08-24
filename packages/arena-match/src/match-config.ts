@@ -1,11 +1,7 @@
 import {
-  ARENA_MATCH_PHASE,
-  ARENA_PARTICIPANT_STATUS,
   assertKnownKeys,
   cloneFrozenData,
   createMatchContentSelection,
-  type ArenaMatchPhase,
-  type ArenaParticipantStatus,
   type MatchContentSelection,
   type PlainRecord,
 } from '@number-strategy-jump/arena-contracts';

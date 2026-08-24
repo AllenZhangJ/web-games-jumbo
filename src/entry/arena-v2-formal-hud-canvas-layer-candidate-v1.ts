@@ -141,7 +141,7 @@ function cameraProjectionPort(value: unknown): ArenaV2ModeHudCameraProjectionPor
       }
       const method = descriptor.value as SyncFunction;
       return Object.freeze({
-        project: (position) => {
+        project: (position: Parameters<ArenaV2ModeHudCameraProjectionPortV1['project']>[0]) => {
           const result = Reflect.apply(method, value, [position]);
           rejectThenable(result, 'Arena V2 formal HUD cameraProjection.project');
           return result as ReturnType<ArenaV2ModeHudCameraProjectionPortV1['project']>;
@@ -672,7 +672,8 @@ export class ArenaV2FormalHudCanvasLayerCandidateV1 {
       this.#lastAnnouncementRevision = null;
       this.#cooldownEpochIdentity = null;
       this.#lastCooldownReady = null;
-      if (this.#state !== 'created' && this.#state !== 'failed') this.#state = 'ready';
+      const stateAfterClear = this.#state as HudCanvasLayerState;
+      if (stateAfterClear !== 'created' && stateAfterClear !== 'failed') this.#state = 'ready';
     } catch (error) {
       this.#operationFailure ??= error;
       this.#state = 'failed';

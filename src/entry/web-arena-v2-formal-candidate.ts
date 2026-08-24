@@ -236,8 +236,9 @@ const root = requiredElement<HTMLElement>('#arena-v2-formal-candidate-root');
 const gate = requiredElement<HTMLElement>('#arena-v2-candidate-gate');
 const status = requiredElement<HTMLElement>('#arena-v2-candidate-status');
 const enter = requiredElement<HTMLButtonElement>('#arena-v2-candidate-enter');
-const windowObject = root.ownerDocument.defaultView;
-if (!windowObject) throw new Error('Arena V2 formal candidate缺少Window。');
+const defaultView = root.ownerDocument.defaultView;
+if (!defaultView) throw new Error('Arena V2 formal candidate缺少Window。');
+const windowObject: Window = defaultView;
 const storage = localStoragePort(windowObject);
 const pageLease = pageLeaseIdentity(windowObject);
 

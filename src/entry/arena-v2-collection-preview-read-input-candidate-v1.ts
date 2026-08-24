@@ -126,10 +126,10 @@ function detailPackage(
   const actions = renderPlan.primitives.filter((primitive) => (
     primitive.kind === 'action' && primitive.intentId === expectedIntentId
   ));
-  if (actions.length !== 1 || actions[0]!.kind !== 'action') {
+  const action = actions[0];
+  if (actions.length !== 1 || action === undefined || action.kind !== 'action') {
     throw new Error(`Arena V2 ${screenId}必须恰好复用一个既有详情选择动作。`);
   }
-  const action = actions[0];
   const fields = contentFieldSource(host);
   return Object.freeze({
     selection,

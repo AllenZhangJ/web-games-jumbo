@@ -536,10 +536,10 @@ test('A7 explicit Store Adapters retrieve bytes and publish one committed receip
       formalEvidenceStoreSnapshotIdentityHash: storeSnapshotIdentity,
       verifierId: 'adapter-test-independent-verifier',
       verifiedAtUtc: '2026-08-15T18:00:00.000Z',
+      ...adapters,
       retrievalAdapterId: 'node-evidence-store-reader-v1',
       sha256AdapterId: 'node-sha256-hasher-v1',
       receiptWriterAdapterId: 'node-receipt-writer-v1',
-      ...adapters,
     });
 
     const verifier = createVerifier();

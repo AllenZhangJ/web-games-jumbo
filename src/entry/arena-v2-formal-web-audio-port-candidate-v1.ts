@@ -73,14 +73,18 @@ function dataField(source: object, key: string, name: string): unknown {
   return descriptor.value;
 }
 
-function windowObject(value: unknown): Window {
+type FormalWebAudioWindowCandidateV1 = Window & Readonly<{
+  AudioContext: typeof AudioContext;
+}>;
+
+function windowObject(value: unknown): FormalWebAudioWindowCandidateV1 {
   if (
     typeof value !== 'object'
     || value === null
     || typeof (value as Window).fetch !== 'function'
-    || typeof (value as Window).AudioContext !== 'function'
+    || typeof (value as Partial<FormalWebAudioWindowCandidateV1>).AudioContext !== 'function'
   ) throw new TypeError('Arena V2 formal Web audio需要支持Web Audio与fetch的Window。');
-  return value as Window;
+  return value as FormalWebAudioWindowCandidateV1;
 }
 
 function baseUrl(value: unknown): string {
@@ -245,7 +249,7 @@ export class ArenaV2FormalWebAudioConstructionCleanupFailureCandidateV1
  * synthesizing an oscillator or borrowing an unrelated sound.
  */
 export class ArenaV2FormalWebAudioPortCandidateV1 {
-  readonly #window: Window;
+  readonly #window: FormalWebAudioWindowCandidateV1;
   readonly #baseUrl: string;
   readonly #context: AudioContext;
   readonly #sfxBus: GainNode;
@@ -315,19 +319,22 @@ export class ArenaV2FormalWebAudioPortCandidateV1 {
     let masterBus: GainNode | null = null;
     let limiter: DynamicsCompressorNode | null = null;
     try {
-      sfxBus = context.createGain();
-      masterBus = context.createGain();
-      limiter = context.createDynamicsCompressor();
-      sfxBus.gain.value = dbToLinear(SFX_BUS_GAIN_DB);
-      masterBus.gain.value = dbToLinear(MASTER_HEADROOM_DB);
-      limiter.threshold.value = LIMITER_THRESHOLD_DB;
-      limiter.knee.value = LIMITER_KNEE_DB;
-      limiter.ratio.value = LIMITER_RATIO;
-      limiter.attack.value = LIMITER_ATTACK_SECONDS;
-      limiter.release.value = LIMITER_RELEASE_SECONDS;
-      sfxBus.connect(masterBus);
-      masterBus.connect(limiter);
-      limiter.connect(context.destination);
+      const createdSfxBus = context.createGain();
+      sfxBus = createdSfxBus;
+      const createdMasterBus = context.createGain();
+      masterBus = createdMasterBus;
+      const createdLimiter = context.createDynamicsCompressor();
+      limiter = createdLimiter;
+      createdSfxBus.gain.value = dbToLinear(SFX_BUS_GAIN_DB);
+      createdMasterBus.gain.value = dbToLinear(MASTER_HEADROOM_DB);
+      createdLimiter.threshold.value = LIMITER_THRESHOLD_DB;
+      createdLimiter.knee.value = LIMITER_KNEE_DB;
+      createdLimiter.ratio.value = LIMITER_RATIO;
+      createdLimiter.attack.value = LIMITER_ATTACK_SECONDS;
+      createdLimiter.release.value = LIMITER_RELEASE_SECONDS;
+      createdSfxBus.connect(createdMasterBus);
+      createdMasterBus.connect(createdLimiter);
+      createdLimiter.connect(context.destination);
     } catch (error) {
       const resources: FormalWebAudioConstructionResourcesCandidateV1 = {
         context,

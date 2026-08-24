@@ -414,15 +414,6 @@ function requireKeys(value: object, keys: ReadonlySet<string>, name: string): vo
   }
 }
 
-function exactRecord(
-  value: unknown,
-  keys: ReadonlySet<string>,
-  name: string,
-): asserts value is Record<string, unknown> {
-  assertKnownKeys(value, keys, name);
-  requireKeys(value, keys, name);
-}
-
 function dataField(record: object, key: string, name: string): unknown {
   const descriptor = Object.getOwnPropertyDescriptor(record, key);
   if (!descriptor || !descriptor.enumerable || !Object.hasOwn(descriptor, 'value')) {

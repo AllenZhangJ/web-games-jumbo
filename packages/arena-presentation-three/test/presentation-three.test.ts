@@ -1617,7 +1617,7 @@ describe('Arena Presentation Three lifecycle boundaries', () => {
       () => { detachFailureErrors += 1; },
     );
     detachFailureTexture.dispose = () => { detachFailureDisposals += 1; };
-    detachOnLoad?.();
+    (detachOnLoad as (() => void) | null)?.();
     expect({
       detachFailureLoads,
       detachFailureErrors,
@@ -1632,7 +1632,7 @@ describe('Arena Presentation Three lifecycle boundaries', () => {
     expect(detachFailureLoader.getSnapshot()).toEqual({
       state: 'destroy-incomplete', pendingRequestCount: 1, cleanupComplete: false,
     });
-    detachOnLoad?.();
+    (detachOnLoad as (() => void) | null)?.();
     expect(detachFailureLoads).toBe(0);
     detachFailureLoader.destroy();
     expect(detachOnLoadClearAttempts).toBe(3);

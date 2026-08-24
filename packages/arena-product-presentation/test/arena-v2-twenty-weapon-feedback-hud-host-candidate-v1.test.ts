@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   projectArenaWeaponFeedbackEventV6PresentationEvent,
 } from '@number-strategy-jump/arena-presentation-runtime';
+import type {
+  WeaponFeedbackResolvedEventV6,
+} from '@number-strategy-jump/arena-contracts';
 import {
   ARENA_V2_TWENTY_WEAPON_FEEDBACK_HUD_HOST_STATE_CANDIDATE_V1,
   ArenaV2TwentyWeaponFeedbackHudHostCandidateV1,
@@ -108,7 +111,7 @@ function ringOutFeedbackEvent() {
 }
 
 function activeModel(
-  event: ReturnType<typeof feedbackEvent> | ReturnType<typeof ringOutFeedbackEvent>,
+  event: WeaponFeedbackResolvedEventV6,
 ): ArenaV2ModeHudViewModelV1 {
   const source = baseline();
   return {
