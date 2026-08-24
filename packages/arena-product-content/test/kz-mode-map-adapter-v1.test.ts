@@ -44,6 +44,25 @@ describe('KzModeMapAdapterV1', () => {
       { participantId: 'racer-1', anchorId: 'kz-a-start-1' },
       { participantId: 'racer-2', anchorId: 'kz-a-start-2' },
     ]);
+    expect(adapter.createTickFacts({
+      tick: 60,
+      activeTick: 0,
+      preparationRemainingTicks: 0,
+      participants: [{
+        participantId: 'racer-1',
+        supportSurfaceId: 'kz-s01-start',
+        fell: false,
+        finishGateCrossed: false,
+      }, {
+        participantId: 'racer-2',
+        supportSurfaceId: 'kz-s01-start',
+        fell: false,
+        finishGateCrossed: false,
+      }],
+    }).safeAnchorClaims).toEqual([
+      { participantId: 'racer-1', anchorId: 'kz-a-start-1', progressOrdinal: 1 },
+      { participantId: 'racer-2', anchorId: 'kz-a-start-2', progressOrdinal: 1 },
+    ]);
     expect(adapter.fallbackSafeAnchorId).toBe(
       ARENA_V2_RACE_RESPAWN_TUNING_CANDIDATE_V1.anchorCapabilityId,
     );
@@ -58,7 +77,7 @@ describe('KzModeMapAdapterV1', () => {
       participants: ['racer-1', 'racer-2'].map((participantId) => ({
         participantId, supportSurfaceId: 'kz-s01-start', fell: false, finishGateCrossed: false,
       })),
-    })).toThrow(/准备期/);
+    })).toThrow(/准备期|时间线/);
     expect(() => adapter.createTickFacts({
       tick: 60,
       activeTick: 0,

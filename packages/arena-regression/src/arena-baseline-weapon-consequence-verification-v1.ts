@@ -248,14 +248,15 @@ function scene(
     });
   }
   const groundY = characterCenterY(0.95);
+  const targetsByVerticalStrike = context !== 'ground' && usesDownSmash;
   return Object.freeze({
     sourcePosition: Object.freeze({
-      x: 26.6,
+      x: targetsByVerticalStrike ? 27.1 : 26,
       y: groundY + aerialOffset,
-      z: context === 'ground' || !usesDownSmash ? -1.8 : -2.45,
+      z: -2.2,
     }),
-    targetPosition: Object.freeze({ x: 26.6, y: groundY, z: -2.45 }),
-    facing: Object.freeze({ x: 0, z: -1 }),
+    targetPosition: Object.freeze({ x: 27.1, y: groundY, z: -2.2 }),
+    facing: Object.freeze({ x: 1, z: 0 }),
     expectedSurfaceId: 'kz-s05-narrow',
   });
 }
@@ -1334,6 +1335,13 @@ function runScenario(
     const interruption = runInterruptionProbe(bundle);
     const targetFinalState = physics.getCharacterState(TARGET_ID);
     const sourceFinalState = physics.getCharacterState(ATTACKER_ID);
+    if (targetFallTick !== null && (
+      initialTarget.supportSurfaceId === null || targetFinalState.supportSurfaceId !== null
+    )) {
+      throw new RangeError(
+        `${scenarioId}记录了targetFall但支撑面未闭合 (${String(initialTarget.supportSurfaceId)} -> ${String(targetFinalState.supportSurfaceId)})。`,
+      );
+    }
     const feedbackSemantic = resolveArenaWeaponFeedbackSemanticV1({
       id: `${scenarioId}:feedback`,
       sequence: 0,

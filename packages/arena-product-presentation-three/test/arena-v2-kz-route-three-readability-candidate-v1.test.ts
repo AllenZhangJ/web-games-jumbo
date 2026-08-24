@@ -1,13 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import {
+  ARENA_V2_KZ_BASE_MAP_DEFINITION_CANDIDATE_V1,
+  ARENA_V2_KZ_BASE_ROUTE_DEFINITION_CANDIDATE_V2,
+} from '@number-strategy-jump/arena-product-content';
+import {
   ARENA_V2_KZ_ROUTE_GUIDANCE_SHAPE_IDS_CANDIDATE_V1,
   ARENA_V2_KZ_ROUTE_RISK_SHAPE_IDS_CANDIDATE_V1,
+  projectArenaV2KzRoutePresentationCandidateV1,
 } from '@number-strategy-jump/arena-product-presentation';
 import {
   ARENA_V2_KZ_ROUTE_THREE_READABILITY_CANDIDATE_V1 as CATALOG,
   ArenaV2KzRouteThreeReadabilityCandidateV1,
-  resolveArenaV2KzRouteThreeShapeLanguageCandidateV1,
 } from '../src/index.js';
 
 const ROUTE = Object.freeze({
@@ -51,9 +55,19 @@ function mesh(name: string, userData: Record<string, unknown>): THREE.Mesh {
   return result;
 }
 
-function mapObject(): THREE.Group {
+type RouteFixture = Readonly<{
+  readonly finishAnchorId: string;
+  readonly segments: readonly Readonly<{
+    readonly id: string;
+    readonly kind: string;
+    readonly entryAnchorId: string;
+    readonly surfaceIds: readonly string[];
+  }>[];
+}>;
+
+function mapObject(route: RouteFixture = ROUTE): THREE.Group {
   const root = new THREE.Group();
-  for (const segment of ROUTE.segments) {
+  for (const segment of route.segments) {
     for (const surfaceId of segment.surfaceIds) {
       root.add(mesh(`ArenaV2TopCap:${surfaceId}`, {
         surfaceId,
@@ -71,11 +85,112 @@ function mapObject(): THREE.Group {
   }
   for (const part of ['left', 'right', 'header']) {
     root.add(mesh(`ArenaV2FinishGate:${part}`, {
-      anchorId: ROUTE.finishAnchorId,
+      anchorId: route.finishAnchorId,
       presentationOnly: true,
     }));
   }
   return root;
+}
+
+function currentRouteProjection(
+  tick = 20,
+): Record<string, unknown> {
+  const route = ARENA_V2_KZ_BASE_ROUTE_DEFINITION_CANDIDATE_V2;
+  const supportSurfaceId = route.segments[1]!.surfaceIds[0]!;
+  const scene = {
+    schemaVersion: 1,
+    status: 'production-unreachable',
+    source: {
+      matchSeed: 7,
+      tick,
+      eventSequence: 0,
+      modeDefinitionId: 'arena-v2.mode.race.candidate.v1',
+      mapDefinitionId: route.mapDefinitionId,
+    },
+    world: {
+      phase: 'running',
+      remainingTicks: 10_000,
+      map: {
+        schemaVersion: 1,
+        definitionId: route.mapDefinitionId,
+        nextActiveTick: 0,
+        revision: 0,
+        surfaces: route.segments.flatMap(({ surfaceIds }) => surfaceIds)
+          .map((id) => ({ id, enabled: true, revision: 0 })),
+        occurrences: [],
+      },
+      participants: [{
+        id: 'player-1',
+        characterDefinitionId: 'arena-v2.character.vanguard.candidate.v1',
+        appearanceKey: 'local',
+        displayName: '玩家',
+        identityOrdinal: 1,
+        identityGlyphKey: 'solid-circle',
+        identityPatternKey: 'single-stripe',
+        modeRole: 'competitor',
+        local: true,
+        status: 'active',
+        lives: 1,
+        position: { x: 0, y: 1, z: 0 },
+        velocity: { x: 0, y: 0, z: 0 },
+        facing: { x: 1, z: 0 },
+        grounded: true,
+        supportSurfaceId,
+        hitstunTicks: 0,
+        invulnerableTicks: 0,
+        respawnTicks: 0,
+        action: { phase: 'idle' },
+        movement: { phase: 'grounded' },
+        equipment: null,
+      }],
+      equipment: [],
+      activeSupplyProjection: null,
+      modeProjection: {
+        schemaVersion: 1,
+        modeDefinitionId: 'arena-v2.mode.race.candidate.v1',
+        revision: 1,
+        preparationRemainingTicks: null,
+        state: {
+          kind: 'race',
+          finishGateId: 'arena-v2-race-finish-gate',
+          participants: [{
+            participantId: 'player-1',
+            status: 'racing',
+            safeAnchorId: null,
+            progressOrdinal: 1,
+            respawnReadyTick: null,
+            finishTick: null,
+            rank: null,
+          }],
+        },
+      },
+    },
+    localAction: { participantId: 'player-1' },
+    localParticipantId: 'player-1',
+    events: [],
+    result: null,
+  };
+  return structuredClone(projectArenaV2KzRoutePresentationCandidateV1({
+    schemaVersion: 1,
+    scene,
+  })) as unknown as Record<string, unknown>;
+}
+
+function currentRouteProjectionWithShape(
+  guidanceShape: string,
+  riskShape: string,
+  cues: readonly Record<string, unknown>[],
+  tick = 20,
+): Record<string, unknown> {
+  const value = currentRouteProjection(tick);
+  const route = value.route as Record<string, unknown>;
+  const segmentShapes = route.segmentShapeCatalog as Record<string, unknown>[];
+  segmentShapes[1] = { ...segmentShapes[1]!, guidanceShape, riskShape };
+  const current = (value.local as Record<string, unknown>).currentSegment as Record<string, unknown>;
+  current.guidanceShape = guidanceShape;
+  current.riskShape = riskShape;
+  value.cues = cues;
+  return value;
 }
 
 function currentSegment(segmentIndex: number): Record<string, unknown> {
@@ -114,7 +229,7 @@ function currentSegment(segmentIndex: number): Record<string, unknown> {
 
 function safeAnchorCue(
   sourceEventId = 'safe-event-1',
-  anchorId = ROUTE.segments[1]!.entryAnchorId,
+  anchorId: string = ROUTE.segments[1]!.entryAnchorId,
 ): Record<string, unknown> {
   return anchorCue('safe-anchor-committed', sourceEventId, 1, anchorId);
 }
@@ -123,7 +238,7 @@ function anchorCue(
   kind: 'respawn-scheduled' | 'respawned' | 'safe-anchor-committed',
   sourceEventId: string,
   sequence: number,
-  anchorId = ROUTE.segments[1]!.entryAnchorId,
+  anchorId: string = ROUTE.segments[1]!.entryAnchorId,
 ): Record<string, unknown> {
   const shape = kind === 'respawn-scheduled'
     ? 'open-reentry-arch'
@@ -372,6 +487,22 @@ describe('Arena V2 KZ route Three readability candidate V1 (not run)', () => {
   });
 
   it('makes all three anchor cues visible once across all 24 shapes without stacking', () => {
+    const route = ARENA_V2_KZ_BASE_ROUTE_DEFINITION_CANDIDATE_V2;
+    const startAnchors = route.startAnchorIds.map((anchorId) => (
+      route.anchors.find(({ id }) => id === anchorId)!
+    ));
+    expect(startAnchors).toHaveLength(4);
+    expect(startAnchors.every(({ surfaceId }) => surfaceId === 'kz-s01-start')).toBe(true);
+    expect(new Set(startAnchors.map(({ position }) => position.x))).toEqual(new Set([-2.1, 0.3]));
+    expect(new Set(startAnchors.map(({ position }) => position.z))).toEqual(new Set([-1.2, 1.2]));
+    expect(ARENA_V2_KZ_BASE_MAP_DEFINITION_CANDIDATE_V1.arena.spawns).toEqual([
+      { x: -2.1, y: 1.5, z: -1.2 },
+      { x: -2.1, y: 1.5, z: 1.2 },
+      { x: 0.3, y: 1.5, z: -1.2 },
+      { x: 0.3, y: 1.5, z: 1.2 },
+    ]);
+    const targetSegment = route.segments[1]!;
+    const targetAnchorId = targetSegment.entryAnchorId;
     const anchorKinds = [
       'respawn-scheduled',
       'respawned',
@@ -380,70 +511,92 @@ describe('Arena V2 KZ route Three readability candidate V1 (not run)', () => {
     for (const guidanceShape of ARENA_V2_KZ_ROUTE_GUIDANCE_SHAPE_IDS_CANDIDATE_V1) {
       for (const riskShape of ARENA_V2_KZ_ROUTE_RISK_SHAPE_IDS_CANDIDATE_V1) {
         const individualMaximums: number[] = [];
-        const shape = resolveArenaV2KzRouteThreeShapeLanguageCandidateV1({
+        const baselineMap = mapObject(route);
+        const initialProjection = currentRouteProjectionWithShape(
           guidanceShape,
           riskShape,
+          [],
+          19,
+        );
+        const baselineOwner = new ArenaV2KzRouteThreeReadabilityCandidateV1({
+          mapObject: baselineMap,
+          projection: initialProjection,
         });
-        const shapedMaximum = Math.max(
-          shape.transform.scaleX,
-          shape.transform.scaleY,
-          shape.transform.scaleZ,
-        ) * 1.12;
+        baselineOwner.sync(currentRouteProjectionWithShape(
+          guidanceShape,
+          riskShape,
+          [],
+        ), false);
+        const baselineEntry = baselineMap.getObjectByName(
+          `ArenaV2SegmentEntryCue:${targetSegment.id}`,
+        )!;
+        const baselineMaximum = Math.max(
+          baselineEntry.scale.x,
+          baselineEntry.scale.y,
+          baselineEntry.scale.z,
+        );
+        baselineOwner.destroy();
         for (const [index, kind] of anchorKinds.entries()) {
-          const individualMap = mapObject();
+          const individualMap = mapObject(route);
           const individualOwner = new ArenaV2KzRouteThreeReadabilityCandidateV1({
             mapObject: individualMap,
-            projection: projection(),
+            projection: initialProjection,
           });
-          individualOwner.sync(projectionWithCurrentShape(
+          individualOwner.sync(currentRouteProjectionWithShape(
             guidanceShape,
             riskShape,
-            [anchorCue(kind, `individual-${kind}`, index + 1)],
+            [anchorCue(kind, `individual-${kind}`, index + 1, targetAnchorId)],
           ), false);
           const individualEntry = individualMap.getObjectByName(
-            `ArenaV2SegmentEntryCue:${ROUTE.segments[1]!.id}`,
+            `ArenaV2SegmentEntryCue:${targetSegment.id}`,
           )!;
           const individualMaximum = Math.max(
             individualEntry.scale.x,
             individualEntry.scale.y,
             individualEntry.scale.z,
           );
-          expect(individualMaximum).toBeCloseTo(shapedMaximum + 0.28);
+          expect(individualMaximum).toBeCloseTo(baselineMaximum + 0.28);
           individualMaximums.push(individualMaximum);
+          individualOwner.destroy();
         }
 
-        const threeMap = mapObject();
-        const reducedMap = mapObject();
+        const threeMap = mapObject(route);
+        const reducedMap = mapObject(route);
         const threeOwner = new ArenaV2KzRouteThreeReadabilityCandidateV1({
           mapObject: threeMap,
-          projection: projection(),
+          projection: initialProjection,
         });
         const reducedOwner = new ArenaV2KzRouteThreeReadabilityCandidateV1({
           mapObject: reducedMap,
-          projection: projection(),
+          projection: initialProjection,
         });
-        const oneCue = [anchorCue('safe-anchor-committed', 'safe-one', 1)];
+        const oneCue = [anchorCue(
+          'safe-anchor-committed',
+          'safe-one',
+          1,
+          targetAnchorId,
+        )];
         const allAnchorCues = [
-          anchorCue('respawn-scheduled', 'scheduled-one', 1),
-          anchorCue('respawned', 'respawned-one', 2),
-          anchorCue('safe-anchor-committed', 'safe-one', 3),
+          anchorCue('respawn-scheduled', 'scheduled-one', 1, targetAnchorId),
+          anchorCue('respawned', 'respawned-one', 2, targetAnchorId),
+          anchorCue('safe-anchor-committed', 'safe-one', 3, targetAnchorId),
         ];
-        threeOwner.sync(projectionWithCurrentShape(
+        threeOwner.sync(currentRouteProjectionWithShape(
           guidanceShape,
           riskShape,
           allAnchorCues,
         ), false);
-        reducedOwner.sync(projectionWithCurrentShape(
+        reducedOwner.sync(currentRouteProjectionWithShape(
           guidanceShape,
           riskShape,
           oneCue,
         ), true);
 
         const threeEntry = threeMap.getObjectByName(
-          `ArenaV2SegmentEntryCue:${ROUTE.segments[1]!.id}`,
+          `ArenaV2SegmentEntryCue:${targetSegment.id}`,
         )!;
         const reducedEntry = reducedMap.getObjectByName(
-          `ArenaV2SegmentEntryCue:${ROUTE.segments[1]!.id}`,
+          `ArenaV2SegmentEntryCue:${targetSegment.id}`,
         )!;
         const threeMaximum = Math.max(
           threeEntry.scale.x,
@@ -457,6 +610,8 @@ describe('Arena V2 KZ route Three readability candidate V1 (not run)', () => {
         );
         expect(threeMaximum).toBeCloseTo(individualMaximums[0]!);
         expect(reducedMaximum).toBeLessThan(individualMaximums[0]!);
+        threeOwner.destroy();
+        reducedOwner.destroy();
       }
     }
   });
@@ -472,9 +627,12 @@ describe('Arena V2 KZ route Three readability candidate V1 (not run)', () => {
     expect(safe.scale.x).toBeGreaterThan(1.62);
     owner.pause();
     owner.pause();
-    expect(() => owner.sync(projection({ tick: 12 }), true)).toThrow(/暂停owner/);
+    expect(() => owner.sync(projection({ tick: 12 }), true))
+      .toThrow(/sync拒绝当前状态paused/);
     owner.resume();
     owner.resume();
+    owner.sync(projection({ tick: 12 }), true);
+    expect(owner.getSnapshot()).toMatchObject({ state: 'active', lastTick: 12 });
     owner.clear();
     expect(safe.scale.x).toBe(1);
     owner.destroy();

@@ -103,6 +103,7 @@ function sortedParticipantIds(value: unknown, name: string): readonly string[] {
 export class KzRaceModeMapAdapterV1 {
   readonly #route: KzRouteDefinitionV2;
   readonly #participantIds: readonly string[];
+  readonly #initialSafeAnchorIds: ReadonlyMap<string, string>;
   readonly #surfaceSegmentIndex: ReadonlyMap<string, number>;
   readonly #safeAnchorIds: readonly string[];
   readonly #finishSurfaceIds: ReadonlySet<string>;
@@ -121,6 +122,9 @@ export class KzRaceModeMapAdapterV1 {
       this.#participantIds.length < this.#route.minimumParticipants
       || this.#participantIds.length > this.#route.maximumParticipants
     ) throw new RangeError('KzRaceModeMapAdapterV1 participant数量超出route能力。');
+    this.#initialSafeAnchorIds = new Map(this.#participantIds.map((participantId, index) => (
+      [participantId, this.#route.startAnchorIds[index]!] as const
+    )));
     this.#surfaceSegmentIndex = new Map(this.#route.segments.flatMap((segment, index) => (
       segment.surfaceIds.map((surfaceId) => [surfaceId, index] as const)
     )));
@@ -204,9 +208,15 @@ export class KzRaceModeMapAdapterV1 {
     const safeAnchorClaims = preparing ? [] : participants.flatMap((participant) => {
       if (participant.fell || participant.supportSurfaceId === null) return [];
       const segmentIndex = this.#surfaceSegmentIndex.get(participant.supportSurfaceId)!;
+      const anchorId = segmentIndex === 0
+        ? this.#initialSafeAnchorIds.get(participant.participantId)
+        : this.#route.segments[segmentIndex]!.respawnAnchorId;
+      if (anchorId === undefined) {
+        throw new RangeError('KzRaceModeMapAdapterV1首段participant安全锚缺失。');
+      }
       return [Object.freeze({
         participantId: participant.participantId,
-        anchorId: this.#route.segments[segmentIndex]!.respawnAnchorId,
+        anchorId,
         progressOrdinal: segmentIndex + 1,
       })];
     });

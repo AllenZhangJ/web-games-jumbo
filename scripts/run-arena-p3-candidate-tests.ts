@@ -18,6 +18,7 @@ const VITEST_FILES = Object.freeze([
   'packages/arena-regression/test/arena-race-crowding-physics-verification-v1.test.ts',
   'packages/arena-regression/test/arena-race-vertical-integration-verification-v1.test.ts',
   'packages/arena-regression/test/arena-survival-mode-vertical-integration-candidate-v1.test.ts',
+  'packages/arena-regression/test/arena-survival-supply-action-replay-verification-v1.test.ts',
   'packages/arena-regression/test/arena-survival-shared-world-authority-verification-v1.test.ts',
 ]);
 const NODE_TEST_FILES = Object.freeze([
@@ -25,6 +26,7 @@ const NODE_TEST_FILES = Object.freeze([
   'packages/arena-match/test/mode-match-runtime-checkpoint-v3.test.ts',
   'packages/arena-match/test/mode-match-runtime-checkpoint-v4.test.ts',
   'tests/arena/p3-versioned-candidate-reachability.test.ts',
+  'tests/arena/p3-survival-shared-world-authority-matrix.test.ts',
 ]);
 
 async function assertFiles(repositoryRoot: string, files: readonly string[]): Promise<void> {
@@ -42,8 +44,13 @@ async function run(
   label: string,
   executable: string,
   args: readonly string[],
+  environment: Readonly<Record<string, string>> = {},
 ): Promise<void> {
-  const child = spawn(executable, args, { cwd: repositoryRoot, stdio: 'inherit' });
+  const child = spawn(executable, args, {
+    cwd: repositoryRoot,
+    stdio: 'inherit',
+    env: { ...process.env, ...environment },
+  });
   const result = await new Promise<Readonly<{ code: number | null; signal: NodeJS.Signals | null }>>(
     (resolve, reject) => {
       child.once('error', reject);
@@ -63,7 +70,10 @@ async function main(): Promise<void> {
     '--maxWorkers=1',
     '--fileParallelism=false',
     ...VITEST_FILES,
-  ]);
+  ], {
+    ARENA_P3_SURVIVAL_MATRIX_EXTERNAL: '1',
+    ARENA_P3_SURVIVAL_COMPONENT_EXTERNAL: '1',
+  });
   await run(repositoryRoot, 'P3 Node架构测试', process.execPath, [
     '--import', 'tsx', '--test', ...NODE_TEST_FILES,
   ]);

@@ -285,17 +285,32 @@ const EXPECTED_FAMILY_SHAPES = new Set(
     requireArenaV2WeaponFeedbackFamilyShapeForCoreVerbCandidateV1(coreVerb)
   )),
 );
-const GRAMMAR_WEAPON_IDS = new Set(
+const GRAMMAR_CATALOG_IDS: ReadonlySet<string> = new Set<string>(
+  GRAMMAR_SOURCE.entries.map(({ catalogId }) => catalogId),
+);
+const GRAMMAR_DEFINITION_IDS: ReadonlySet<string> = new Set<string>(
   GRAMMAR_SOURCE.entries.map(({ weaponDefinitionId }) => weaponDefinitionId),
 );
 const SHAPE_PROFILE_WEAPON_IDS = Object.keys(WEAPON_SHAPE_PROFILES);
+const SHAPE_PROFILE_WEAPON_ID_SET: ReadonlySet<string> = new Set<string>(
+  SHAPE_PROFILE_WEAPON_IDS,
+);
 
 if (EXPECTED_FAMILY_SHAPES.size !== 6
   || Object.keys(FAMILY_PALETTES).length !== EXPECTED_FAMILY_SHAPES.size
   || Object.keys(FAMILY_PALETTES).some((familyShape) => !EXPECTED_FAMILY_SHAPES.has(familyShape))
-  || GRAMMAR_WEAPON_IDS.size !== 20
+  || GRAMMAR_CATALOG_IDS.size !== 20
+  || GRAMMAR_DEFINITION_IDS.size !== 20
+  || GRAMMAR_SOURCE.entries.some(({ catalogId, weaponDefinitionId }) => (
+    catalogId.length === 0
+    || weaponDefinitionId.length === 0
+    || catalogId === weaponDefinitionId
+    || GRAMMAR_DEFINITION_IDS.has(catalogId)
+    || GRAMMAR_CATALOG_IDS.has(weaponDefinitionId)
+  ))
   || SHAPE_PROFILE_WEAPON_IDS.length !== 20
-  || SHAPE_PROFILE_WEAPON_IDS.some((weaponId) => !GRAMMAR_WEAPON_IDS.has(weaponId))
+  || SHAPE_PROFILE_WEAPON_IDS.some((weaponId) => !GRAMMAR_CATALOG_IDS.has(weaponId))
+  || GRAMMAR_SOURCE.entries.some(({ catalogId }) => !SHAPE_PROFILE_WEAPON_ID_SET.has(catalogId))
   || new Set(Object.values(WEAPON_SHAPE_PROFILES).map(({ identity }) => identity)).size !== 20) {
   throw new RangeError('Arena V2 formal VFX语法家族与20把接触轮廓目录未双向闭合。');
 }
@@ -323,14 +338,16 @@ function combatGrammarIdentity(
   if (resolution.weaponId === null || resolution.actionContext === null) {
     throw new RangeError('Arena V2 formal VFX武器语法缺少武器或情境身份。');
   }
-  const entry = GRAMMAR_SOURCE.entries.find(({ weaponDefinitionId }) => (
-    weaponDefinitionId === resolution.weaponId
+  const entry = GRAMMAR_SOURCE.entries.find(({ catalogId }) => (
+    catalogId === resolution.weaponId
   ));
   const context = entry?.contexts.find((candidate) => (
     candidate.context === resolution.actionContext
   ));
   if (entry === undefined
     || context === undefined
+    || entry.catalogId !== resolution.weaponId
+    || entry.weaponDefinitionId === resolution.weaponId
     || source.sourceContentHash !== GRAMMAR_SOURCE.contentHash
     || source.weaponId !== resolution.weaponId
     || source.context !== resolution.actionContext

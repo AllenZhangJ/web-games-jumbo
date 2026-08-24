@@ -177,6 +177,7 @@ const SCENARIO_OPTION_KEYS = new Set([
 const VERIFICATION_OPTION_KEYS = new Set(['schemaVersion', 'matchSeed', 'enemyCounts']);
 const RUN_KEYS = new Set(['authorityStartTick']);
 const PREPARE_KEYS = new Set(['playerInputFrame']);
+const PREPARE_NEUTRAL_VERIFICATION_KEYS = new Set(['playerInputFrame']);
 const MODE_RESOLUTION_KEYS = new Set([
   'tick', 'commands', 'modeProjection', 'modeState', 'modeResult',
 ]);
@@ -567,8 +568,11 @@ type WeaponFeedbackSourceEventV1 = Readonly<Record<string, unknown> & {
     | 'HitResolved' | 'KnockbackApplied' | 'PlayerEliminated';
 }>;
 
+type SurvivalPreparedInputDriverV1 = 'controller' | 'neutral-verification';
+
 interface PreparedTickV1 {
   readonly tick: number;
+  readonly inputDriver: SurvivalPreparedInputDriverV1;
   readonly playerInputHash: string;
   readonly inputFrames: readonly ArenaInputFrame[];
   readonly inputHash: string;
@@ -1333,24 +1337,35 @@ function pressureStagesFor(
   return Object.freeze(stages.map((stage) => Object.freeze({ ...stage })));
 }
 
-function pressureTargetTick(
+function pressureTargetStage(
   enemyCount: EnemyCountV1,
   pressurePolicy: SurvivalPressurePolicyDefinition = PRESSURE,
-): number {
+): Readonly<{
+  readonly stage: number;
+  readonly startActiveTick: number;
+  readonly reactivationDelayTicks: number;
+}> {
   const stage = pressureStagesFor(enemyCount, pressurePolicy).at(-1);
   if (!stage) throw new Error('P3 Survival pressure stage为空。');
-  return stage.startActiveTick;
+  return stage;
 }
 
 function verificationScenarioFallDriveStartTick(
   enemyCount: EnemyCountV1,
   pressurePolicy: SurvivalPressurePolicyDefinition = PRESSURE,
 ): number {
+  const pressureTarget = pressureTargetStage(enemyCount, pressurePolicy);
   return Math.max(
     ARENA_V2_SURVIVAL_SUPPLY_FIRST_SPAWN_TICKS_CANDIDATE_V1
       + ARENA_V2_SURVIVAL_SUPPLY_INTERVAL_TICKS_CANDIDATE_V1
       + FALL_DRIVE_LEAD_TICKS,
-    pressureTargetTick(enemyCount, pressurePolicy) + FALL_DRIVE_LEAD_TICKS,
+    // The mode activates a pressure slot through a committed command. Keep
+    // the verification-only protection/drive boundary beyond that stage's
+    // existing reactivation window, so the scenario observes the requested
+    // active-slot fact before it intentionally begins the two-fall script.
+    pressureTarget.startActiveTick
+      + pressureTarget.reactivationDelayTicks
+      + FALL_DRIVE_LEAD_TICKS,
   );
 }
 
@@ -1420,18 +1435,22 @@ export function createArenaSurvivalVerificationExecutionTimingCandidateV1(
     enemyCount,
     pressurePolicy,
   );
+  const scenarioMaximumTick = verificationScenarioMaximumTick(
+    enemyCount,
+    pressurePolicy,
+  );
   return freezeExecutionTiming({
     schemaVersion: ARENA_SURVIVAL_SHARED_WORLD_EXECUTION_TIMING_V1_SCHEMA_VERSION,
     purpose: ARENA_SURVIVAL_SHARED_WORLD_EXECUTION_PURPOSE_V1.VERIFICATION_SCENARIO,
     enemyCount,
-    initialPlayerProtectionTicks: scenarioFallDriveStartTick,
+    // The verification player is never a pressure-control target. It must
+    // remain available to begin the two deliberate killY falls only after
+    // the requested slot count is actually visible in the Mode projection.
+    initialPlayerProtectionTicks: scenarioMaximumTick,
     interactiveLocalHardLimitActiveTicks:
       unresolvedInteractiveLocalHardLimitActiveTicks(enemyCount),
     scenarioFallDriveStartTick,
-    verificationScenarioMaximumTick: verificationScenarioMaximumTick(
-      enemyCount,
-      pressurePolicy,
-    ),
+    verificationScenarioMaximumTick: scenarioMaximumTick,
     verificationPressurePolicyContentHash: createDeterministicDataHash(
       pressurePolicy,
       'Arena Survival verification pressure policy',
@@ -2630,15 +2649,54 @@ export class ArenaSurvivalSharedWorldAuthorityCandidateV1 implements ModeMatchWo
   }
 
   prepareInputFrames(value: unknown): readonly ArenaInputFrame[] {
+    const source = cloneFrozenData(value, 'P3 Survival shared prepare request');
+    exactRecord(source, PREPARE_KEYS, 'P3 Survival shared prepare request');
+    return this.#prepareInputFrames(source.playerInputFrame, false);
+  }
+
+  prepareNeutralVerificationInputFrames(value: unknown): readonly ArenaInputFrame[] {
+    const source = cloneFrozenData(value, 'P3 Survival shared neutral verification prepare request');
+    exactRecord(
+      source,
+      PREPARE_NEUTRAL_VERIFICATION_KEYS,
+      'P3 Survival shared neutral verification prepare request',
+    );
+    if (
+      this.#executionTiming.purpose
+        !== ARENA_SURVIVAL_SHARED_WORLD_EXECUTION_PURPOSE_V1.INTERACTIVE_PRODUCT_CANDIDATE
+    ) {
+      throw new RangeError('P3 Survival neutral verification只能使用interactive execution timing。');
+    }
+    return this.#prepareInputFrames(source.playerInputFrame, true);
+  }
+
+  prepareVerificationScenarioInputFrames(value: unknown): readonly ArenaInputFrame[] {
+    const source = cloneFrozenData(value, 'P3 Survival shared scenario verification prepare request');
+    exactRecord(
+      source,
+      PREPARE_NEUTRAL_VERIFICATION_KEYS,
+      'P3 Survival shared scenario verification prepare request',
+    );
+    if (
+      this.#executionTiming.purpose
+        !== ARENA_SURVIVAL_SHARED_WORLD_EXECUTION_PURPOSE_V1.VERIFICATION_SCENARIO
+    ) {
+      throw new RangeError('P3 Survival scenario verification只能使用verification execution timing。');
+    }
+    return this.#prepareInputFrames(source.playerInputFrame, true);
+  }
+
+  #prepareInputFrames(
+    playerInputFrameValue: unknown,
+    neutralizeEnemyControllers: boolean,
+  ): readonly ArenaInputFrame[] {
     this.#assertNoOperation('prepare-inputs');
     this.#assertLive();
     if (this.#paused || this.#readFrame === null) {
       throw new Error('P3 Survival shared authority当前不可prepare输入。');
     }
-    const source = cloneFrozenData(value, 'P3 Survival shared prepare request');
-    exactRecord(source, PREPARE_KEYS, 'P3 Survival shared prepare request');
     const tick = this.#readFrame.worldSnapshot.tick;
-    const playerInputFrame = normalizeInputFrame(source.playerInputFrame, {
+    const playerInputFrame = normalizeInputFrame(playerInputFrameValue, {
       expectedTick: tick,
       participantIds: [PLAYER_ID],
     });
@@ -2649,8 +2707,15 @@ export class ArenaSurvivalSharedWorldAuthorityCandidateV1 implements ModeMatchWo
       playerInputFrame,
       'P3 Survival shared player input',
     );
+    const inputDriver: SurvivalPreparedInputDriverV1 = neutralizeEnemyControllers
+      ? 'neutral-verification'
+      : 'controller';
     if (this.#prepared !== null) {
-      if (this.#prepared.tick !== tick || this.#prepared.playerInputHash !== playerInputHash) {
+      if (
+        this.#prepared.tick !== tick
+        || this.#prepared.inputDriver !== inputDriver
+        || this.#prepared.playerInputHash !== playerInputHash
+      ) {
         throw new RangeError('P3 Survival shared同tick prepare输入发生分叉。');
       }
       return this.#prepared.inputFrames;
@@ -2698,7 +2763,19 @@ export class ArenaSurvivalSharedWorldAuthorityCandidateV1 implements ModeMatchWo
       );
       const frameByParticipant = new Map<string, ArenaInputFrame>([[PLAYER_ID, playerInputFrame]]);
       for (const participantId of this.#enemyIds) {
-        frameByParticipant.set(participantId, this.#createEnemyInput(participantId, tick));
+        frameByParticipant.set(participantId, neutralizeEnemyControllers
+          ? normalizeInputFrame({
+            tick,
+            participantId,
+            moveX: 0,
+            moveZ: 0,
+            primaryPressed: false,
+            primaryHeld: false,
+            jumpPressed: false,
+            jumpHeld: false,
+            slamPressed: false,
+          }, { expectedTick: tick, participantIds: [participantId] })
+          : this.#createEnemyInput(participantId, tick));
       }
       const inputFrames = Object.freeze(this.#participantIds.map((participantId) => {
         const frame = frameByParticipant.get(participantId);
@@ -2708,6 +2785,7 @@ export class ArenaSurvivalSharedWorldAuthorityCandidateV1 implements ModeMatchWo
       this.#assertOperationCommit('prepare-inputs');
       this.#prepared = Object.freeze({
         tick,
+        inputDriver,
         playerInputHash,
         inputFrames,
         inputHash: createDeterministicDataHash(inputFrames, 'P3 Survival shared prepared inputs'),
@@ -3408,7 +3486,14 @@ export class ArenaSurvivalSharedWorldAuthorityCandidateV1 implements ModeMatchWo
           participantId,
           grounded: physics.getCharacterState(participantId).grounded,
         })),
-        inputs: request.inputFrames,
+        inputs: request.inputFrames.map((frame) => Object.freeze({
+          tick: frame.tick,
+          participantId: frame.participantId,
+          jumpPressed: frame.jumpPressed,
+          jumpHeld: frame.jumpHeld,
+          moveX: frame.moveX,
+          moveZ: frame.moveZ,
+        })),
         availability: this.#participantIds.map((participantId) => {
           const authority = this.#states.get(participantId)!;
           return Object.freeze({
@@ -3989,6 +4074,10 @@ export class ArenaSurvivalSharedWorldAuthorityCandidateV1 implements ModeMatchWo
         }),
       });
       if (nextEquipment === null) throw new Error('P3 Survival restore未捕获EquipmentSystem。');
+      // The restored Timeline outlives this local adoption scope. Capture the
+      // validated Engine object itself rather than the nullable construction
+      // slot, which is intentionally cleared after ownership transfers.
+      const restoredEngine = nextEngine;
       nextTimeline = new EquipmentSupplyTimelineSystem({
         supplyDefinitionId: this.#weaponPool.supplyDefinition.id,
         spawnSpecs: survivalSupplySpawnSpecs(this.#mapContext, this.#weaponPool),
@@ -3997,12 +4086,12 @@ export class ArenaSurvivalSharedWorldAuthorityCandidateV1 implements ModeMatchWo
         equipmentSupplyRegistry: registries.equipmentSupplyRegistry,
         equipmentSystem: Object.freeze({
           applySupplyTimelinePhase: (options: unknown) => (
-            nextEngine!.applyEquipmentSupplyTimelinePhase!(options)
+            restoredEngine.applyEquipmentSupplyTimelinePhase!(options)
           ),
           resolveSupplyPickups: (options: unknown) => (
-            nextEngine!.resolveEquipmentSupplyPickups!(options)
+            restoredEngine.resolveEquipmentSupplyPickups!(options)
           ),
-          getSnapshot: (instanceId: string) => nextEngine!.getEquipmentSnapshot(instanceId),
+          getSnapshot: (instanceId: string) => restoredEngine.getEquipmentSnapshot(instanceId),
         }),
         snapshot: checkpoint.timelineSnapshot,
       });
@@ -4342,13 +4431,16 @@ const PLAYER_FALL_TARGET = outsideTarget();
 function playerInputFor(
   frame: DeepReadonly<MatchReadFrameV3>,
   fallDriveStartTick: number,
+  expectedPressureStage: number,
 ): ArenaInputFrame {
   const tick = frame.worldSnapshot.tick;
   const player = frame.worldSnapshot.participants.find(({ id }) => id === PLAYER_ID);
   if (!player) throw new Error('P3 Survival post frame缺少player。');
   const projection = frame.worldSnapshot.modeProjection.state;
   if (projection.kind !== 'survival') throw new Error('P3 Survival收到非Survival projection。');
+  const pressureTargetReached = projection.pressureStage === expectedPressureStage;
   const canDrive = tick >= fallDriveStartTick
+    && pressureTargetReached
     && frame.worldSnapshot.result === null
     && player.status === 'active';
   const dx = PLAYER_FALL_TARGET.x - player.position.x;
@@ -4365,6 +4457,158 @@ function playerInputFor(
     jumpHeld: false,
     slamPressed: false,
   }, { expectedTick: tick, participantIds: [PLAYER_ID] });
+}
+
+export interface ArenaSurvivalSupplyActionReplayVerificationCandidateV1 {
+  readonly matchSeed: number;
+  readonly executedTicks: number;
+  readonly supplyId: string;
+  readonly equipmentInstanceId: string;
+  readonly runtimeEquipmentDefinitionId: string;
+  readonly collectionEquipmentDefinitionId: string;
+  readonly survivalLevel: number;
+  readonly actionId: string;
+  readonly actionTick: number;
+  readonly modeResultReason: 'survival-time-cap';
+  readonly replayIdentityHash: string;
+  readonly finalHash: string;
+  readonly retainedResourceCountAfterDestroy: 0;
+}
+
+export function runArenaSurvivalSupplyActionReplayVerificationCandidateV1(
+  value: unknown,
+): ArenaSurvivalSupplyActionReplayVerificationCandidateV1 {
+  const source = cloneFrozenData(value, 'P3 Survival supply action verification options');
+  exactRecord(source, new Set(['matchSeed']), 'P3 Survival supply action verification options');
+  const matchSeed = normalizeUint32(source.matchSeed, 'P3 Survival supply action verification matchSeed');
+  const enemyCount: EnemyCountV1 = 1;
+  const timing = createArenaSurvivalInteractiveExecutionTimingCandidateV1(enemyCount);
+  const config = createConfig(enemyCount, timing);
+  const fixture = createFixture(config, enemyCount, timing);
+  let authority = new ArenaSurvivalSharedWorldAuthorityCandidateV1(
+    config, matchSeed, PLAYER_ID, enemyCount, timing,
+  );
+  let runtime = new ModeMatchRuntimeV6({
+    checkpointIntervalTicks: CHECKPOINT_INTERVAL_TICKS,
+    config,
+    expectedMatchSeed: matchSeed,
+    localParticipantId: PLAYER_ID,
+    mode: Object.freeze({ kind: 'survival' as const, fixture }),
+    worldAuthority: authority,
+  });
+  let captured: ArenaSurvivalSupplyActionReplayVerificationCandidateV1 | null = null;
+  const pickedSupplyIdByEquipmentInstanceId = new Map<string, string>();
+  try {
+    runtime.start();
+    while (runtime.state === MODE_MATCH_RUNTIME_V6_STATE.RUNNING) {
+      const frame = runtime.readFrame;
+      if (frame === null) throw new Error('P3 Survival supply action缺少当前Frame。');
+      if (frame.worldSnapshot.tick > timing.interactiveLocalHardLimitActiveTicks + 1) {
+        throw new RangeError('P3 Survival supply action超过已绑定time-cap预算。');
+      }
+      const player = frame.worldSnapshot.participants.find(({ id }) => id === PLAYER_ID);
+      if (player === undefined) throw new Error('P3 Survival supply action缺少player。');
+      const supply = player.equipment === null
+        ? frame.worldSnapshot.activeSupplyProjection?.supplies
+          .slice().sort((left, right) => (
+            Math.hypot(left.position.x - player.position.x, left.position.z - player.position.z)
+            - Math.hypot(right.position.x - player.position.x, right.position.z - player.position.z)
+            || compareText(left.supplyId, right.supplyId)
+          ))[0] ?? null
+        : null;
+      const target = supply?.position ?? player.position;
+      const dx = target.x - player.position.x;
+      const dz = target.z - player.position.z;
+      const distance = Math.hypot(dx, dz);
+      const input = normalizeInputFrame({
+        tick: frame.worldSnapshot.tick,
+        participantId: PLAYER_ID,
+        moveX: supply !== null && distance > 1e-7 ? dx / distance : 0,
+        moveZ: supply !== null && distance > 1e-7 ? dz / distance : 0,
+        primaryPressed: player.equipment !== null
+          && player.action.phase === ARENA_ACTION_PHASE.IDLE
+          && captured === null,
+        primaryHeld: false,
+        jumpPressed: false,
+        jumpHeld: false,
+        slamPressed: false,
+      }, { expectedTick: frame.worldSnapshot.tick, participantIds: [PLAYER_ID] });
+      const outcome = runtime.step(
+        authority.prepareNeutralVerificationInputFrames({ playerInputFrame: input }),
+      );
+      for (const fact of outcome.supplyFacts) {
+        if (
+          fact.participantId !== PLAYER_ID
+          || (fact.kind !== ARENA_SUPPLY_AUTHORITY_FACT_KIND_V1.PICKED_UP
+            && fact.kind !== ARENA_SUPPLY_AUTHORITY_FACT_KIND_V1.REPLACED)
+        ) continue;
+        const previousSupplyId = pickedSupplyIdByEquipmentInstanceId.get(
+          fact.equipmentInstanceId,
+        );
+        if (previousSupplyId !== undefined && previousSupplyId !== fact.supplyId) {
+          throw new RangeError('P3 Survival supply action拾取供给身份发生漂移。');
+        }
+        pickedSupplyIdByEquipmentInstanceId.set(fact.equipmentInstanceId, fact.supplyId);
+      }
+      for (const event of outcome.events) {
+        if (
+          event.type !== ARENA_MATCH_EVENT_V6.ACTION_STARTED
+          || event.participantId !== PLAYER_ID
+          || event.sourceKind !== ARENA_MATCH_EVENT_V6_ACTION_SOURCE.EQUIPMENT
+          || event.equipmentInstanceId === null
+          || event.runtimeEquipmentDefinitionId === null
+          || event.collectionEquipmentDefinitionId === null
+          || event.survivalLevel === null
+        ) continue;
+        const supplyId = pickedSupplyIdByEquipmentInstanceId.get(event.equipmentInstanceId);
+        if (supplyId === undefined) {
+          throw new RangeError('P3 Survival supply action起手缺少已确认的真实拾取供给身份。');
+        }
+        captured ??= Object.freeze({
+          matchSeed,
+          executedTicks: 0,
+          supplyId,
+          equipmentInstanceId: event.equipmentInstanceId,
+          runtimeEquipmentDefinitionId: event.runtimeEquipmentDefinitionId,
+          collectionEquipmentDefinitionId: event.collectionEquipmentDefinitionId,
+          survivalLevel: event.survivalLevel,
+          actionId: event.action,
+          actionTick: event.tick,
+          modeResultReason: 'survival-time-cap' as const,
+          replayIdentityHash: '',
+          finalHash: '',
+          retainedResourceCountAfterDestroy: 0 as const,
+        });
+      }
+    }
+    const replay = runtime.exportReplayV6();
+    if (captured === null || replay.modeResult.kind !== 'survival' || replay.modeResult.reason !== 'survival-time-cap') {
+      throw new Error('P3 Survival supply action未形成真实装备起手/time-cap Replay。');
+    }
+    const capturedAction = captured;
+    const replayEvent = replay.events.find((event) => (
+      event.type === ARENA_MATCH_EVENT_V6.ACTION_STARTED
+      && event.participantId === PLAYER_ID
+      && event.sourceKind === ARENA_MATCH_EVENT_V6_ACTION_SOURCE.EQUIPMENT
+      && event.equipmentInstanceId === capturedAction.equipmentInstanceId
+      && event.runtimeEquipmentDefinitionId === capturedAction.runtimeEquipmentDefinitionId
+      && event.collectionEquipmentDefinitionId === capturedAction.collectionEquipmentDefinitionId
+      && event.survivalLevel === capturedAction.survivalLevel
+    ));
+    if (replayEvent === undefined) throw new Error('P3 Survival supply action Replay身份漂移。');
+    captured = Object.freeze({
+      ...captured,
+      executedTicks: replay.modeResult.endedAtTick + 1,
+      replayIdentityHash: replay.replayIdentityHash,
+      finalHash: replay.finalHash,
+    });
+  } finally {
+    runtime.destroy();
+  }
+  if (runtime.getRetainedResourceSnapshot().ownedResourceCount !== 0 || captured === null) {
+    throw new Error('P3 Survival supply action资源或结果未闭合。');
+  }
+  return captured;
 }
 
 function deferredGap() {
@@ -4407,20 +4651,29 @@ export function runArenaSurvivalSharedWorldAuthorityScenarioCandidateV1(
   let fullWorldCheckpointRestoredAtTick: number | null = null;
   let runtimeCheckpointV3RestoreIdentityHash: string | null = null;
   let feedbackCheckpointRestoreIdentityHash: string | null = null;
+  let pressureTargetObserved = false;
+  const expectedPressureStage = pressureTargetStage(options.enemyCount).stage;
   try {
     runtime.start();
     while (runtime.state === MODE_MATCH_RUNTIME_V6_STATE.RUNNING) {
       const frame = runtime.readFrame;
       if (frame === null) throw new Error('P3 Survival runtime缺少current frame。');
+      const projectedMode = frame.worldSnapshot.modeProjection.state;
+      if (projectedMode.kind !== 'survival') {
+        throw new RangeError('P3 Survival runtime收到非Survival模式投影。');
+      }
+      pressureTargetObserved ||= projectedMode.pressureStage === expectedPressureStage;
       if (frame.worldSnapshot.tick > authority.verificationScenarioMaximumTick) {
         throw new RangeError('P3 Survival未在显式tick预算内形成两次真实killY player fall。');
       }
-      const inputFrames = authority.prepareInputFrames({
-        playerInputFrame: playerInputFor(
-          frame,
-          authority.verificationScenarioFallDriveStartTick,
-        ),
-      });
+      const playerInputFrame = playerInputFor(
+        frame,
+        authority.verificationScenarioFallDriveStartTick,
+        expectedPressureStage,
+      );
+      const inputFrames = pressureTargetObserved
+        ? authority.prepareInputFrames({ playerInputFrame })
+        : authority.prepareVerificationScenarioInputFrames({ playerInputFrame });
       runtime.step(inputFrames);
       const postFrame = runtime.readFrame;
       if (
@@ -4522,13 +4775,23 @@ export function runArenaSurvivalSharedWorldAuthorityScenarioCandidateV1(
     if (finalFrame === null) throw new Error('P3 Survival终局缺少post frame。');
     const replay = runtime.exportReplayV6();
     const modeResult = replay.modeResult;
+    const evidence = authority.getEvidenceSnapshot();
     if (
       modeResult.kind !== 'survival'
       || modeResult.reason !== 'terminal-player-fall'
       || modeResult.fallCount !== 2
       || finalFrame.worldSnapshot.tick !== modeResult.endedAtTick + 1
-    ) throw new RangeError('P3 Survival两次player fall终局与T/T+1合同未闭合。');
-    const evidence = authority.getEvidenceSnapshot();
+    ) {
+      const terminalSummary = modeResult.kind === 'survival'
+        ? `${modeResult.reason}/${modeResult.fallCount}/stage-${modeResult.pressureStage}`
+        : modeResult.kind;
+      throw new RangeError(
+        'P3 Survival两次player fall终局与T/T+1合同未闭合'
+        + ` (${terminalSummary}`
+        + `/max-active-${evidence.maximumActiveEnemyCount}/${modeResult.endedAtTick}`
+        + ` -> ${finalFrame.worldSnapshot.tick})。`,
+      );
+    }
     if (
       fullWorldCheckpointRestoreCount !== 1
       || fullWorldCheckpointRestoredAtTick === null
@@ -4551,17 +4814,6 @@ export function runArenaSurvivalSharedWorldAuthorityScenarioCandidateV1(
       allowedCollectionEquipmentDefinitionIds,
       events: replay.events,
     });
-    if (!participantEquipmentUsage.some(({ usedCollectionEquipmentDefinitionIds }) => (
-      usedCollectionEquipmentDefinitionIds.length > 0
-    ))) {
-      throw new RangeError('P3 Survival真实Replay缺少非base ActionStarted武器使用事实。');
-    }
-    if (!replay.events.some((event) => (
-      event.type === ARENA_MATCH_EVENT_V6.ACTION_STARTED
-      && event.sourceKind === ARENA_MATCH_EVENT_V6_ACTION_SOURCE.EQUIPMENT
-    ))) {
-      throw new RangeError('P3 Survival真实Replay缺少equipment来源ActionStarted。');
-    }
     const participantEquipmentUsageIdentityHash = createDeterministicDataHash({
       participantIds,
       allowedCollectionEquipmentDefinitionIds,
@@ -4584,7 +4836,7 @@ export function runArenaSurvivalSharedWorldAuthorityScenarioCandidateV1(
       behaviorSeeds: evidence.behaviorSeeds,
       configuredEnemyCount: options.enemyCount,
       maximumActiveEnemyCount: evidence.maximumActiveEnemyCount,
-      pressureTargetReached: evidence.maximumActiveEnemyCount === options.enemyCount,
+      pressureTargetReached: pressureTargetObserved,
       executedTicks: finalFrame.worldSnapshot.tick,
       firstSpawnTick: ARENA_V2_SURVIVAL_SUPPLY_FIRST_SPAWN_TICKS_CANDIDATE_V1,
       spawnIntervalTicks: ARENA_V2_SURVIVAL_SUPPLY_INTERVAL_TICKS_CANDIDATE_V1,

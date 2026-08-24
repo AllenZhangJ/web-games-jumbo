@@ -64,8 +64,10 @@ import {
   type RaceModeCommandV1,
 } from '@number-strategy-jump/arena-match';
 import {
+  MOVEMENT_COMMAND_KIND,
   MovementSystem,
   createMovementCommand,
+  type MovementCommand,
   type MovementSystemCheckpointV1,
 } from '@number-strategy-jump/arena-movement';
 import {
@@ -145,20 +147,24 @@ export const ARENA_RACE_TIMELINE_RUNTIME_MIRROR_CANDIDATE_V1 = Object.freeze({
     ARENA_RACE_UNRESOLVED_INTERACTIVE_LOCAL_HARD_LIMIT_ACTIVE_TICKS_CANDIDATE_V1,
   suddenDeathStartActiveTick: null,
 });
-const AIR_JUMP_REPRESS_AFTER_TICKS = 12;
 const ARRIVAL_HORIZONTAL_TOLERANCE = 0.9;
 const ROUTE_MISTAKE_TICKS = 36;
 const ROUTE_MISTAKE_SURFACE_ID = 'kz-s05-narrow';
 const COMBAT_RING_OUT_SURFACE_ID = 'kz-s01-start';
+const EXPIRED_CONTROL_TRANSFER_SURFACE_ID = 'kz-s02-landing';
 const COMBAT_ATTACKER_INDEX = 0;
 const COMBAT_TARGET_INDEX = 1;
 const COMBAT_STAGE_TOLERANCE = 0.32;
 const COMBAT_SETTLE_TICKS = 8;
 const MAXIMUM_RECORDED_FALLS = 64;
-const COMBAT_STAGE_ATTACKER = Object.freeze({ x: -1.8, z: -0.45 });
-const COMBAT_STAGE_TARGET = Object.freeze({ x: -1.8, z: -2 });
-const EXPIRED_CONTROL_STAGE_ATTACKER = Object.freeze({ x: -2.2, z: -1.2 });
-const EXPIRED_CONTROL_STAGE_TARGET = Object.freeze({ x: -0.7, z: -1.2 });
+const COMBAT_STAGE_ATTACKER = Object.freeze({ x: -1.8, z: -0.7 });
+const COMBAT_STAGE_TARGET = Object.freeze({ x: -1.8, z: -2.1 });
+// The first hammer proof intentionally drives a target off the start pad.
+// The second starts on the opposite, outer side: its real heavy impulse points
+// toward the pad interior, leaving a grounded target that can later walk off
+// after the existing last-hit credit window expires.
+const EXPIRED_CONTROL_STAGE_ATTACKER = Object.freeze({ x: -1.2, z: 0 });
+const EXPIRED_CONTROL_STAGE_TARGET = Object.freeze({ x: 0, z: 0 });
 const PHYSICS_BACKEND_VERSION = 'arena.p3.race.lightweight-physics.v1';
 const MODE_DEFINITION_ID = ARENA_V2_LEARNING_MODE_DEFINITION_IDS_CANDIDATE_V1.race;
 const FIXTURE_DEFINITION_ID = 'arena-v2.mode.race.vertical-integration.test.fixture.v1';
@@ -329,6 +335,8 @@ export interface ArenaRaceVerticalIntegrationControlEvidenceV1 {
     readonly attackerId: string;
     readonly targetId: string;
     readonly hitTick: number;
+    readonly postHitSupportSurfaceId: typeof EXPIRED_CONTROL_TRANSFER_SURFACE_ID;
+    readonly postHitSupportTransferTick: number;
     readonly fallTick: number;
     readonly elapsedTicks: number;
     readonly lastHitCreditTicks: number;
@@ -352,8 +360,11 @@ export interface ArenaRaceVerticalIntegrationScenarioReportV1 {
   readonly participantCount: 2 | 3 | 4;
   readonly matchSeed: number;
   readonly participantIds: readonly string[];
-  readonly startLineX: number;
-  readonly startLaneZs: readonly number[];
+  readonly startAnchorPositions: readonly Readonly<{
+    readonly participantId: string;
+    readonly x: number;
+    readonly z: number;
+  }>[];
   readonly preparationTicks: 60;
   readonly executedTicks: number;
   readonly pauseResumeCycleCount: number;
@@ -494,6 +505,7 @@ interface RaceScenarioScriptStateV1 {
   combatJumpInputTick: number | null;
   combatPrimaryInputTick: number | null;
   expiredPrimaryInputTick: number | null;
+  expiredControlSupportTransferTick: number | null;
   routeMistakeStartedTick: number | null;
   routeMistakeFallTick: number | null;
   routeMistakeRespawnObserved: boolean;
@@ -1208,14 +1220,64 @@ function spawnPosition(
 }
 
 function directionTo(
-  state: Readonly<{ position: Readonly<{ x: number; z: number }> }>,
+  state: Readonly<{
+    position: Readonly<{ x: number; z: number }>;
+    grounded?: boolean;
+    supportSurfaceId?: string | null;
+  }>,
   target: KzRouteAnchorV2,
 ): Readonly<{ moveX: number; moveZ: number }> {
   const dx = target.position.x - state.position.x;
   const dz = target.position.z - state.position.z;
   const distance = Math.hypot(dx, dz);
-  if (distance <= 0.05) return Object.freeze({ moveX: 0, moveZ: 0 });
-  return Object.freeze({ moveX: dx / distance, moveZ: dz / distance });
+  const sameSupport = state.grounded === true && state.supportSurfaceId === target.surfaceId;
+  const arrivalThreshold = sameSupport
+    ? ARRIVAL_HORIZONTAL_TOLERANCE
+    : state.grounded === false
+      ? ARRIVAL_HORIZONTAL_TOLERANCE
+      : 0.05;
+  if (distance <= arrivalThreshold) {
+    return Object.freeze({ moveX: 0, moveZ: 0 });
+  }
+  const brakingDistance = ARRIVAL_HORIZONTAL_TOLERANCE * 2 + PROFILE.radius;
+  const magnitude = sameSupport && distance < brakingDistance
+    ? distance / brakingDistance
+    : 1;
+  return Object.freeze({
+    moveX: dx / distance * magnitude,
+    moveZ: dz / distance * magnitude,
+  });
+}
+
+function requestsGroundJumpAtRouteEdge(
+  state: Readonly<{
+    position: Readonly<{ x: number; z: number }>;
+    grounded: boolean;
+    supportSurfaceId: string | null;
+  }>,
+  target: KzRouteAnchorV2,
+): boolean {
+  if (!state.grounded || state.supportSurfaceId === target.surfaceId) return false;
+  const surface = MAP.arena.surfaces.find(({ id }) => id === state.supportSurfaceId);
+  if (surface === undefined) {
+    throw new RangeError(`P3 Race当前支撑面 ${String(state.supportSurfaceId)} 不存在。`);
+  }
+  const direction = directionTo(state, target);
+  const alongX = direction.moveX > 0
+    ? (surface.center.x + surface.halfExtents.x - state.position.x) / direction.moveX
+    : direction.moveX < 0
+      ? (surface.center.x - surface.halfExtents.x - state.position.x) / direction.moveX
+      : Number.POSITIVE_INFINITY;
+  const alongZ = direction.moveZ > 0
+    ? (surface.center.z + surface.halfExtents.z - state.position.z) / direction.moveZ
+    : direction.moveZ < 0
+      ? (surface.center.z - surface.halfExtents.z - state.position.z) / direction.moveZ
+      : Number.POSITIVE_INFINITY;
+  const distanceToExit = Math.min(
+    alongX > 0 ? alongX : Number.POSITIVE_INFINITY,
+    alongZ > 0 ? alongZ : Number.POSITIVE_INFINITY,
+  );
+  return distanceToExit <= PROFILE.radius;
 }
 
 function arrived(
@@ -1232,6 +1294,29 @@ function arrived(
       state.position.x - target.position.x,
       state.position.z - target.position.z,
     ) <= ARRIVAL_HORIZONTAL_TOLERANCE;
+}
+
+function createJumpCommand(
+  movement: MovementSystem,
+  frame: ArenaInputFrame,
+): MovementCommand | null {
+  if (!frame.jumpPressed) return null;
+  const capabilities = movement.getCapabilities(frame.participantId);
+  if (capabilities.canGroundJump) {
+    return Object.freeze({
+      kind: MOVEMENT_COMMAND_KIND.REQUEST_GROUND_JUMP,
+      participantId: frame.participantId,
+      actionDefinitionId: 'arena.p3.race.shared.ground-jump.candidate.v1',
+    });
+  }
+  if (capabilities.canAirJump) {
+    return Object.freeze({
+      kind: MOVEMENT_COMMAND_KIND.REQUEST_AIR_JUMP,
+      participantId: frame.participantId,
+      actionDefinitionId: 'arena.p3.race.shared.air-jump.candidate.v1',
+    });
+  }
+  return null;
 }
 
 function createConfig(
@@ -2187,7 +2272,14 @@ class RaceVerticalWorldAuthorityV1 implements ModeMatchWorldAuthorityV6 {
           participantId: id,
           grounded: physics.getCharacterState(id).grounded,
         })),
-        inputs: request.inputFrames,
+        inputs: request.inputFrames.map((frame) => Object.freeze({
+          tick: frame.tick,
+          participantId: frame.participantId,
+          jumpPressed: frame.jumpPressed,
+          jumpHeld: frame.jumpHeld,
+          moveX: frame.moveX,
+          moveZ: frame.moveZ,
+        })),
         availability: this.#participantIds.map((id) => ({
           participantId: id,
           canMove: canCompete
@@ -2230,8 +2322,17 @@ class RaceVerticalWorldAuthorityV1 implements ModeMatchWorldAuthorityV6 {
           source: start.source,
         }));
       }
+      const jumpCommands = request.inputFrames.flatMap((frame) => {
+        const authority = this.#participantState.get(frame.participantId)!;
+        if (authority.respawning || authority.finished) return [];
+        const command = createJumpCommand(movement, frame);
+        return command === null ? [] : [command];
+      });
       movement.execute(
-        started.movementCommands.map(createMovementCommand),
+        [
+          ...started.movementCommands.map(createMovementCommand),
+          ...jumpCommands,
+        ],
         { applyBatch: (mutations) => physics.applyCharacterMutationBatch(mutations) },
       );
       const mutationPorts = this.#mutationPorts(
@@ -2322,8 +2423,30 @@ class RaceVerticalWorldAuthorityV1 implements ModeMatchWorldAuthorityV6 {
           finishGateCrossed: finishGateCrossed.has(id),
         })),
       });
+      const priorRaceProjection = this.#readFrame.worldSnapshot.modeProjection.state;
+      if (priorRaceProjection.kind !== 'race') {
+        throw new Error('P3 Race authority当前Mode projection不是race。');
+      }
+      const priorProgressByParticipant = new Map(
+        priorRaceProjection.participants.map(({ participantId, progressOrdinal, safeAnchorId }) => (
+          [participantId, Object.freeze({ progressOrdinal, safeAnchorId })] as const
+        )),
+      );
+      const safeAnchorClaims = Object.freeze(facts.safeAnchorClaims.filter((claim) => {
+        const prior = priorProgressByParticipant.get(claim.participantId);
+        if (prior === undefined) {
+          throw new RangeError('P3 Race safe-anchor claim participant不在当前Mode projection。');
+        }
+        if (claim.progressOrdinal > prior.progressOrdinal) return true;
+        return claim.progressOrdinal === prior.progressOrdinal
+          && claim.anchorId === prior.safeAnchorId;
+      }));
+      const monotonicFacts = Object.freeze({
+        ...facts,
+        safeAnchorClaims,
+      });
       const resolution = cloneFrozenData(
-        request.resolveMode(facts),
+        request.resolveMode(monotonicFacts),
         'P3 Race mode resolution',
       );
       exactRecord(resolution, MODE_RESOLUTION_KEYS, 'P3 Race mode resolution');
@@ -3071,6 +3194,7 @@ function scriptState(
     combatJumpInputTick: null,
     combatPrimaryInputTick: null,
     expiredPrimaryInputTick: null,
+    expiredControlSupportTransferTick: null,
     routeMistakeStartedTick: null,
     routeMistakeFallTick: null,
     routeMistakeRespawnObserved: false,
@@ -3086,8 +3210,19 @@ function advanceScriptTarget(
     const safeIndex = script.path.findIndex(({ id }) => id === safeAnchorId);
     if (safeIndex >= 0 && safeIndex + 1 > script.targetIndex) script.targetIndex = safeIndex + 1;
   }
+  while (participant.grounded) {
+    const target = script.path[script.targetIndex];
+    if (target === undefined || target.surfaceId !== participant.supportSurfaceId) break;
+    script.targetIndex += 1;
+  }
   const target = script.path[script.targetIndex];
-  if (target !== undefined && arrived(participant, target)) script.targetIndex += 1;
+  const previous = script.path[script.targetIndex - 1];
+  if (target !== undefined && previous !== undefined && (
+    (participant.grounded
+      && participant.supportSurfaceId === target.surfaceId
+      && previous.surfaceId !== target.surfaceId)
+    || arrived(participant, target)
+  )) script.targetIndex += 1;
 }
 
 function transitionScriptPhase(
@@ -3108,7 +3243,13 @@ function pointDirection(
   const dx = target.x - participant.position.x;
   const dz = target.z - participant.position.z;
   const distance = Math.hypot(dx, dz);
-  if (distance <= COMBAT_STAGE_TOLERANCE) return Object.freeze({ moveX: 0, moveZ: 0 });
+  if (distance <= (
+    participant.grounded
+      ? COMBAT_STAGE_TOLERANCE
+      : COMBAT_STAGE_TOLERANCE + PROFILE.radius
+  )) {
+    return Object.freeze({ moveX: 0, moveZ: 0 });
+  }
   return Object.freeze({ moveX: dx / distance, moveZ: dz / distance });
 }
 
@@ -3199,14 +3340,17 @@ function advanceScenarioScriptPhase(
     && script.expiredPrimaryInputTick !== null
     && target.lastHitBy === script.attackerId
     && target.lastHitTick >= script.expiredPrimaryInputTick
+    && target.grounded
+    && target.supportSurfaceId === EXPIRED_CONTROL_TRANSFER_SURFACE_ID
   ) {
+    script.expiredControlSupportTransferTick = tick;
     transitionScriptPhase(script, 'expired-control-hold', tick);
   } else if (
     script.phase === 'expired-control-hold'
     && target.lastHitBy === script.attackerId
     && tick - target.lastHitTick > ARENA_MATCH_DEFAULTS.lastHitCreditTicks
     && target.grounded
-    && target.supportSurfaceId === COMBAT_RING_OUT_SURFACE_ID
+    && target.supportSurfaceId === EXPIRED_CONTROL_TRANSFER_SURFACE_ID
   ) {
     transitionScriptPhase(script, 'expired-control-drive-off', tick);
   } else if (
@@ -3264,26 +3408,58 @@ function createRouteInput(
   const waitingForRespawn = projected.status === 'respawning';
   const waitingAtFinish = target?.id === ROUTE.finishAnchorId
     && !script.routeMistakeRespawnObserved;
-  const canDrive = !waitingForRespawn && !waitingAtFinish && target !== undefined;
+  const earlierParticipantStillRouting = script.participants
+    .slice(0, index)
+    .some(({ targetIndex, path }) => {
+      const target = path[targetIndex];
+      return targetIndex < path.length && target?.id !== ROUTE.finishAnchorId;
+    });
   if (
     index === script.participants.length - 1
     && !participantScript.routeMistakeTriggered
-    && participant.supportSurfaceId === ROUTE_MISTAKE_SURFACE_ID
+    && participant.supportSurfaceId === COMBAT_RING_OUT_SURFACE_ID
   ) {
+    // Keep this no-hit fall input-driven while earlier racers traverse the
+    // narrow route; the crowding scenario separately owns simultaneous-route
+    // collision pressure.
     participantScript.routeMistakeTriggered = true;
     participantScript.routeMistakeTicksRemaining = ROUTE_MISTAKE_TICKS;
     script.routeMistakeStartedTick = tick;
   }
   const forcingMistake = participantScript.routeMistakeTicksRemaining > 0;
-  if (forcingMistake) participantScript.routeMistakeTicksRemaining -= 1;
+  if (forcingMistake) {
+    participantScript.routeMistakeTicksRemaining -= 1;
+    return createInput(tick, participantScript.participantId, { moveX: 0, moveZ: 1 });
+  }
+  if (
+    index === 0
+    && script.participants.at(-1)?.routeMistakeTriggered === true
+    && !script.routeMistakeRespawnObserved
+  ) {
+    // The full-world proof waits for the no-hit racer to complete its real
+    // 180-tick recovery before allowing a terminal finish claim.
+    return createInput(tick, participantScript.participantId);
+  }
+  if (earlierParticipantStillRouting) {
+    // The concurrent crowding scenario owns collision pressure. This full
+    // authority scenario serializes route completion, so later racers wait in
+    // deterministic, still-valid start-pad bays instead of body-blocking the
+    // active racer at the first jump edge.
+    const waitingZ = index % 2 === 0 ? -2.1 : 2.1;
+    const deltaZ = waitingZ - participant.position.z;
+    return createInput(tick, participantScript.participantId, {
+      moveX: 0,
+      moveZ: Math.abs(deltaZ) <= 0.05 ? 0 : deltaZ > 0 ? 1 : -1,
+    });
+  }
+  const canDrive = !waitingForRespawn
+    && !waitingAtFinish
+    && target !== undefined;
   const movement = canDrive
-    ? forcingMistake ? { moveX: 0, moveZ: 1 } : directionTo(participant, target!)
+    ? directionTo(participant, target!)
     : { moveX: 0, moveZ: 0 };
   const jumpPressed = canDrive
-    && !forcingMistake
-    && ((participant.grounded && participant.supportSurfaceId !== target!.surfaceId)
-      || (!participant.grounded
-        && participantScript.airborneTicks === AIR_JUMP_REPRESS_AFTER_TICKS));
+    && requestsGroundJumpAtRouteEdge(participant, target!);
   return createInput(tick, participantScript.participantId, movement, { jumpPressed });
 }
 
@@ -3519,10 +3695,7 @@ function raceAuthoritativeBotInput(
       : directionTo(participant, nextTarget);
   const jumpPressed = !canAttack
     && !chargingCommitment
-    && ((participant.grounded && participant.supportSurfaceId !== nextTarget.surfaceId)
-      || (!participant.grounded
-        && participant.movement.airJumpsUsed === 0
-        && (tick + state.participantId.length) % AIR_JUMP_REPRESS_AFTER_TICKS === 0));
+    && requestsGroundJumpAtRouteEdge(participant, nextTarget);
   return createInput(tick, state.participantId, movement, {
     jumpPressed,
     primaryPressed: primaryInput.primaryPressed,
@@ -3969,6 +4142,7 @@ function observeScriptEvents(
       event.type === ARENA_MATCH_EVENT_V6.PARTICIPANT_FELL
       && event.participantId === script.routeMistakeParticipantId
       && script.routeMistakeStartedTick !== null
+      && script.routeMistakeFallTick === null
       && event.tick >= script.routeMistakeStartedTick
       && event.fallCause === 'movement'
       && event.creditedAttackerId === null
@@ -4044,14 +4218,23 @@ export function runArenaRaceVerticalIntegrationScenarioCandidateV1(
   try {
     const started = runtime.start();
     const initialWorld = started.readFrame.worldSnapshot;
-    const initialXs = initialWorld.participants.map(({ position }) => position.x);
-    const initialZs = initialWorld.participants.map(({ position }) => position.z);
+    const initialAnchors = adapter.createInitialSafeAnchors();
+    const initialAnchorByParticipant = new Map(initialAnchors.map(({ participantId, anchorId }) => (
+      [participantId, requireAnchor(anchorId)] as const
+    )));
     if (
       initialWorld.phase !== 'preparing'
       || initialWorld.modeProjection.preparationRemainingTicks !== RACE_MODE_PREPARING_TICKS_V1
-      || initialXs.length !== options.participantCount
-      || !initialXs.every((x) => x === initialXs[0])
-      || new Set(initialZs).size !== options.participantCount
+      || initialWorld.participants.length !== options.participantCount
+      || initialWorld.participants.some(({ id, position }) => {
+        const anchor = initialAnchorByParticipant.get(id);
+        return anchor === undefined
+          || position.x !== anchor.position.x
+          || position.z !== anchor.position.z;
+      })
+      || new Set(initialWorld.participants.map(({ position }) => (
+        `${position.x}\u0000${position.z}`
+      ))).size !== options.participantCount
     ) {
       throw new RangeError('P3 Race 2/3/4人起跑线/独立赛道/60 tick准备身份未闭合。');
     }
@@ -4059,7 +4242,9 @@ export function runArenaRaceVerticalIntegrationScenarioCandidateV1(
       const frame = runtime.readFrame;
       if (frame === null) throw new Error('P3 Race runtime缺少当前frame。');
       if (executedTicks >= executionTiming.verificationScenarioMaximumTicks!) {
-        throw new RangeError('P3 Race纵向候选超过显式test hard limit。');
+        throw new RangeError(
+          `P3 Race纵向候选超过显式test hard limit（phase=${scripts.phase}；targets=${scripts.participants.map(({ targetIndex, path }) => `${targetIndex}:${path[targetIndex]?.id ?? 'done'}`).join(',')}；positions=${frame.worldSnapshot.participants.map(({ id, position, grounded, supportSurfaceId, lastHitBy, lastHitTick }) => `${id}:${position.x.toFixed(2)},${position.z.toFixed(2)},${grounded ? 'g' : 'a'},${supportSurfaceId ?? 'none'},${lastHitBy ?? 'none'}@${lastHitTick}`).join('|')}）。`,
+        );
       }
       if (frame.worldSnapshot.tick === 90 && pauseResumeCycleCount === 0) {
         runtime.pause();
@@ -4229,6 +4414,8 @@ export function runArenaRaceVerticalIntegrationScenarioCandidateV1(
       || combatHitTick < combatActionStartedTick
       || expiredControlHitTick === undefined
       || expiredControlHitTick < scripts.expiredPrimaryInputTick
+      || scripts.expiredControlSupportTransferTick === null
+      || scripts.expiredControlSupportTransferTick < expiredControlHitTick
       || combat.firstImpulse === null
       || combat.supportSurfaceAtFirstHit !== COMBAT_RING_OUT_SURFACE_ID
       || combat.lastSupportedTick === null
@@ -4260,7 +4447,7 @@ export function runArenaRaceVerticalIntegrationScenarioCandidateV1(
       || combatResultRanking === undefined
       || evidence.pendingRespawnCount !== 0
     ) throw new Error(
-      'P3 Race纵向候选缺少真实重锤归因掉落/过期控制/无命中路线/180 tick重生证据。',
+      `P3 Race纵向候选缺少真实重锤归因掉落/过期控制/无命中路线/180 tick重生证据（actions=${evidence.actionStartedCount};hits=${evidence.combatHitCount};creditedFalls=${evidence.combatCreditedFallCount};physicalFalls=${evidence.physicalFallCount};expiredHit=${expiredControlHitTick ?? 'none'};transfer=${scripts.expiredControlSupportTransferTick ?? 'none'};expiredFall=${expiredControlFall?.fallCause ?? 'none'};routeTick=${scripts.routeMistakeFallTick ?? 'none'};route=${routeMistakeFall?.fallCause ?? 'none'};routeRespawns=${routeMistakeRespawns.length};respawns=${evidence.respawns.map(({ participantId, fallTick, respawnTick }) => `${participantId}:${fallTick}->${respawnTick}`).join('|')};anchors=${evidence.safeAnchorCommitCount}）。`,
     );
     for (const respawn of evidence.respawns) {
       if (
@@ -4278,14 +4465,17 @@ export function runArenaRaceVerticalIntegrationScenarioCandidateV1(
       || terminalEvent.tick !== result.endedAtTick
       || finalTick !== result.endedAtTick + 1
     ) throw new RangeError('P3 Race authority终局tick与post-frame tick未按T/T+1闭合。');
-    const initialAnchors = adapter.createInitialSafeAnchors().map(({ anchorId }) => requireAnchor(anchorId));
+    const initialAnchorsForReport = adapter.createInitialSafeAnchors().map(({ participantId, anchorId }) => (
+      Object.freeze({ participantId, position: requireAnchor(anchorId).position })
+    ));
     scenarioCore = Object.freeze({
       id: `arena-race-vertical-integration.${options.participantCount}.v1`,
       participantCount: options.participantCount,
       matchSeed: options.matchSeed,
       participantIds: Object.freeze([...participantIds]),
-      startLineX: initialAnchors[0]!.position.x,
-      startLaneZs: Object.freeze(initialAnchors.map(({ position }) => position.z)),
+      startAnchorPositions: Object.freeze(initialAnchorsForReport.map(({ participantId, position }) => (
+        Object.freeze({ participantId, x: position.x, z: position.z })
+      ))),
       preparationTicks: RACE_MODE_PREPARING_TICKS_V1,
       executedTicks,
       pauseResumeCycleCount,
@@ -4328,6 +4518,8 @@ export function runArenaRaceVerticalIntegrationScenarioCandidateV1(
           attackerId: combat.attackerId,
           targetId: combat.targetId,
           hitTick: expiredControlHitTick,
+          postHitSupportSurfaceId: EXPIRED_CONTROL_TRANSFER_SURFACE_ID,
+          postHitSupportTransferTick: scripts.expiredControlSupportTransferTick,
           fallTick: expiredControlFall.tick,
           elapsedTicks: expiredControlFall.tick - expiredControlHitTick,
           lastHitCreditTicks: ARENA_MATCH_DEFAULTS.lastHitCreditTicks,

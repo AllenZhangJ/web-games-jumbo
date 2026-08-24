@@ -118,7 +118,8 @@ const P3_REACHABILITY = new RegExp([
   '|runArenaRaceCrowdingPhysicsVerificationCandidateV1',
   '|runArenaRaceVerticalIntegrationVerificationCandidateV1',
   '|runArenaSurvivalModeVerticalIntegrationCandidateV1',
-  '|runArenaSurvivalSharedWorldAuthorityVerificationCandidateV1)\\b',
+  '|runArenaSurvivalSharedWorldAuthorityVerificationCandidateV1',
+  '|runArenaSurvivalSupplyActionReplayVerificationCandidateV1)\\b',
   '|/(?:kz-route-definition-v2|kz-route-registry-v2|kz-route-map-validator-v1',
   '|arena-v2-kz-(?:base|switchback)-map-candidate-v1',
   '|arena-v2-race-respawn-capability-id-v1',
@@ -227,6 +228,12 @@ async function main(): Promise<void> {
     'preserved-unapproved-local-runtime-candidate-not-verification-budget',
     'verificationExecutionTimingSeparatedFromInteractiveRuntime: true',
     'ARENA_V2_SURVIVAL_TIMELINE_PRODUCT_PROPOSAL_CANDIDATE_V2',
+    'prepareNeutralVerificationInputFrames',
+    'P3 Survival neutral verification只能使用interactive execution timing',
+    'P3 Survival supply action起手缺少已确认的真实拾取供给身份',
+    'prepareVerificationScenarioInputFrames',
+    'P3 Survival scenario verification只能使用verification execution timing',
+    'pressureTargetReached: pressureTargetObserved',
   ]) {
     if (!survivalSharedWorldAuthority.includes(marker)) {
       throw new Error(`P3 Survival终局Authority闭包缺少 ${marker}。`);

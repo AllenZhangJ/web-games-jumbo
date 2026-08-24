@@ -33,7 +33,8 @@ const P3_VERSIONED_SURFACE = new RegExp([
   '|runArenaRaceCrowdingPhysicsVerificationCandidateV1',
   '|runArenaRaceVerticalIntegrationVerificationCandidateV1',
   '|runArenaSurvivalModeVerticalIntegrationCandidateV1',
-  '|runArenaSurvivalSharedWorldAuthorityVerificationCandidateV1)\\b',
+  '|runArenaSurvivalSharedWorldAuthorityVerificationCandidateV1',
+  '|runArenaSurvivalSupplyActionReplayVerificationCandidateV1)\\b',
   '|/(?:kz-route-definition-v2|kz-route-registry-v2|kz-route-map-validator-v1',
   '|arena-v2-kz-(?:base|switchback)-map-candidate-v1',
   '|arena-v2-race-respawn-capability-id-v1',
@@ -203,6 +204,43 @@ test('P3.4g separates Survival verification timing from interactive authority id
   );
 });
 
+test('P3.4b-S uses the existing interactive time-cap identity for neutral supply-action Replay verification', () => {
+  const source = readFileSync(
+    'packages/arena-regression/src/arena-survival-shared-world-authority-verification-v1.ts',
+    'utf8',
+  );
+  const sectionStart = source.indexOf(
+    'export function runArenaSurvivalSupplyActionReplayVerificationCandidateV1(',
+  );
+  const sectionEnd = source.indexOf('\nfunction deferredGap()', sectionStart);
+  assert.ok(sectionStart >= 0 && sectionEnd > sectionStart);
+  const section = source.slice(sectionStart, sectionEnd);
+  assert.match(section, /createArenaSurvivalInteractiveExecutionTimingCandidateV1\(enemyCount\)/u);
+  assert.match(section, /prepareNeutralVerificationInputFrames\(\{ playerInputFrame: input \}\)/u);
+  assert.match(section, /pickedSupplyIdByEquipmentInstanceId/u);
+  assert.match(section, /P3 Survival supply action起手缺少已确认的真实拾取供给身份/u);
+  assert.doesNotMatch(section, /createArenaSurvivalVerificationExecutionTimingCandidateV1/u);
+});
+
+test('P3.4b keeps the full Survival matrix on the Node long-run host while Vitest retains only quick contracts', () => {
+  const runner = readFileSync('scripts/run-arena-p3-candidate-tests.ts', 'utf8');
+  const vitest = readFileSync(
+    'packages/arena-regression/test/arena-survival-shared-world-authority-verification-v1.test.ts',
+    'utf8',
+  );
+  const authority = readFileSync(
+    'packages/arena-regression/src/arena-survival-shared-world-authority-verification-v1.ts',
+    'utf8',
+  );
+  assert.match(runner, /p3-survival-shared-world-authority-matrix\.test\.ts/u);
+  assert.match(runner, /ARENA_P3_SURVIVAL_MATRIX_EXTERNAL: '1'/u);
+  assert.match(vitest, /const MATRIX_EXTERNAL = process\.env\.ARENA_P3_SURVIVAL_MATRIX_EXTERNAL === '1'/u);
+  assert.match(vitest, /const matrixIt = MATRIX_EXTERNAL \? it\.skip : it/u);
+  assert.match(authority, /prepareVerificationScenarioInputFrames/u);
+  assert.match(authority, /pressureTargetObserved \|\|=/u);
+  assert.match(authority, /pressureTargetReached: pressureTargetObserved/u);
+});
+
 test('P3.4h separates Race product timing from the verification scenario watchdog', () => {
   const source = readFileSync(
     'packages/arena-regression/src/arena-race-vertical-integration-verification-v1.ts',
@@ -237,7 +275,11 @@ test('P3.4h separates Race product timing from the verification scenario watchdo
     source.indexOf('function createFixture('),
     source.indexOf('function actionSnapshot('),
   );
-  assert.match(fixtureSection, /vertical-integration\.test\.fixture/u);
+  assert.match(
+    source,
+    /const FIXTURE_DEFINITION_ID = 'arena-v2\.mode\.race\.vertical-integration\.test\.fixture\.v1'/u,
+  );
+  assert.match(fixtureSection, /fixtureDefinitionId: runtimePolicyBinding === null/u);
   assert.match(
     fixtureSection,
     /timing-\$\{executionTiming\.contentHash\}[\s\S]*registry-\$\{runtimePolicyBinding\.contentHash\}/u,

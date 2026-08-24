@@ -80,10 +80,10 @@ const anchor = (id: string, surfaceId: string, x: number, y: number, z: number) 
 });
 
 const ANCHORS = Object.freeze([
-  anchor('kz-a-start-1', 'kz-s01-start', -1.8, 0.5, -1.5),
-  anchor('kz-a-start-2', 'kz-s01-start', -1.8, 0.5, -0.5),
-  anchor('kz-a-start-3', 'kz-s01-start', -1.8, 0.5, 0.5),
-  anchor('kz-a-start-4', 'kz-s01-start', -1.8, 0.5, 1.5),
+  anchor('kz-a-start-1', 'kz-s01-start', -2.1, 0.5, -1.2),
+  anchor('kz-a-start-2', 'kz-s01-start', -2.1, 0.5, 1.2),
+  anchor('kz-a-start-3', 'kz-s01-start', 0.3, 0.5, -1.2),
+  anchor('kz-a-start-4', 'kz-s01-start', 0.3, 0.5, 1.2),
   anchor('kz-a-route-start', 'kz-s01-start', -2.4, 0.5, 0),
   anchor(
     ARENA_V2_RACE_RESPAWN_FALLBACK_SAFE_ANCHOR_CAPABILITY_ID_V1,
@@ -163,10 +163,10 @@ export const ARENA_V2_KZ_BASE_MAP_DEFINITION_CANDIDATE_V1 = createMapDefinition(
     killY: -6,
     surfaces: SURFACES,
     spawns: [
-      { x: -1.8, y: 1.5, z: -1.5 },
-      { x: -1.8, y: 1.5, z: -0.5 },
-      { x: -1.8, y: 1.5, z: 0.5 },
-      { x: -1.8, y: 1.5, z: 1.5 },
+      { x: -2.1, y: 1.5, z: -1.2 },
+      { x: -2.1, y: 1.5, z: 1.2 },
+      { x: 0.3, y: 1.5, z: -1.2 },
+      { x: 0.3, y: 1.5, z: 1.2 },
     ],
   },
   equipmentSpawnPoints: [

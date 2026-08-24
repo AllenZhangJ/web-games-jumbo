@@ -30,7 +30,6 @@ export const ARENA_KZ_ROUTE_PHYSICS_VERIFICATION_V1_CANDIDATE_STATUS =
 const PARTICIPANT_ID = 'arena-kz-route-physics-verification-player';
 const GROUND_JUMP_ACTION_ID = 'arena-kz-route-physics-verification.ground-jump.v1';
 const AIR_JUMP_ACTION_ID = 'arena-kz-route-physics-verification.air-jump.v1';
-const AIR_JUMP_REPRESS_AFTER_TICKS = 12;
 const ARRIVAL_HORIZONTAL_TOLERANCE = 0.9;
 const MINIMUM_SEGMENT_TICK_BUDGET = 240;
 const FULL_ROUTE_TICK_BUDGET = 3_600;
@@ -218,12 +217,45 @@ function horizontalDirection(
   const deltaX = target.position.x - state.position.x;
   const deltaZ = target.position.z - state.position.z;
   const distance = Math.hypot(deltaX, deltaZ);
-  if (distance <= 0.05) return Object.freeze({ moveX: 0, moveZ: 0, distance });
+  // Ground movement must reach the edge of a different support surface. Once
+  // airborne, stop only inside the existing authority-anchor tolerance so
+  // shared physics can bleed carry momentum without abandoning a diagonal
+  // legal landing before its support area.
+  if (distance <= (state.grounded ? 0.05 : ARRIVAL_HORIZONTAL_TOLERANCE)) {
+    return Object.freeze({ moveX: 0, moveZ: 0, distance });
+  }
   return Object.freeze({
     moveX: deltaX / distance,
     moveZ: deltaZ / distance,
     distance,
   });
+}
+
+function requestsGroundJumpAtRouteEdge(
+  state: PhysicsCharacterState,
+  target: KzRouteAnchorV2,
+): boolean {
+  if (!state.grounded || state.supportSurfaceId === target.surfaceId) return false;
+  const surface = MAP.arena.surfaces.find(({ id }) => id === state.supportSurfaceId);
+  if (surface === undefined) {
+    throw new RangeError(`KZ路线验证当前支撑面 ${String(state.supportSurfaceId)} 不存在。`);
+  }
+  const direction = horizontalDirection(state, target);
+  const alongX = direction.moveX > 0
+    ? (surface.center.x + surface.halfExtents.x - state.position.x) / direction.moveX
+    : direction.moveX < 0
+      ? (surface.center.x - surface.halfExtents.x - state.position.x) / direction.moveX
+      : Number.POSITIVE_INFINITY;
+  const alongZ = direction.moveZ > 0
+    ? (surface.center.z + surface.halfExtents.z - state.position.z) / direction.moveZ
+    : direction.moveZ < 0
+      ? (surface.center.z - surface.halfExtents.z - state.position.z) / direction.moveZ
+      : Number.POSITIVE_INFINITY;
+  const distanceToExit = Math.min(
+    alongX > 0 ? alongX : Number.POSITIVE_INFINITY,
+    alongZ > 0 ? alongZ : Number.POSITIVE_INFINITY,
+  );
+  return distanceToExit <= PROFILE.radius;
 }
 
 function arrival(
@@ -242,13 +274,18 @@ function arrival(
 function hasArrived(
   state: PhysicsCharacterState,
   target: KzRouteAnchorV2,
+  previous: KzRouteAnchorV2,
 ): boolean {
-  return state.grounded
-    && state.supportSurfaceId === target.surfaceId
-    && Math.hypot(
-      target.position.x - state.position.x,
-      target.position.z - state.position.z,
-    ) <= ARRIVAL_HORIZONTAL_TOLERANCE;
+  if (!state.grounded || state.supportSurfaceId !== target.surfaceId) return false;
+  // Crossing onto a new declared support surface is the authority fact that
+  // Race actually consumes for route progress. Same-surface anchors remain a
+  // positional navigation check, so the verifier cannot skip a platform
+  // landmark merely because it started on that surface.
+  if (previous.surfaceId !== target.surfaceId) return true;
+  return Math.hypot(
+    target.position.x - state.position.x,
+    target.position.z - state.position.z,
+  ) <= ARRIVAL_HORIZONTAL_TOLERANCE;
 }
 
 function runScenario(
@@ -289,10 +326,12 @@ function runScenario(
       const before = physics.getCharacterState(PARTICIPANT_ID);
       const target = path[targetIndex]!;
       const direction = horizontalDirection(before, target);
-      const requestsGroundJump = before.grounded
-        && before.supportSurfaceId !== target.surfaceId;
-      const requestsAirJump = !before.grounded
-        && airborneTicks === AIR_JUMP_REPRESS_AFTER_TICKS;
+      const requestsGroundJump = requestsGroundJumpAtRouteEdge(before, target);
+      // The route's validated mobility envelope is closed by its ground-jump
+      // gaps. Injecting a second impulse at a wall-clock-like airborne tick
+      // was a verification-driver invention that can overshoot narrow legal
+      // landings; it is not a route fact or a required player action.
+      const requestsAirJump = false;
       const jumpPressed = requestsGroundJump || requestsAirJump;
       movement.prepareTick({
         tick,
@@ -344,7 +383,7 @@ function runScenario(
         failedReason = 'fell-below-kill-y';
         break;
       }
-      if (hasArrived(after, target)) {
+      if (hasArrived(after, target, path[targetIndex - 1]!)) {
         arrivals.push(arrival(target, after, tick + 1));
         targetIndex += 1;
         if (targetIndex >= path.length) break;

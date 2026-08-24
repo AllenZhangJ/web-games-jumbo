@@ -114,7 +114,11 @@ describe('Survival enemy supply-aware controller V2 candidate', () => {
       visibleSupplies: [sameSegmentSupply()],
     });
     expect(frame.primaryHeld).toBe(true);
-    expect(frame.moveX).toBeLessThan(0);
+    // The committed action keeps the original pursuit target, but an enemy
+    // already inside preferred distance must not walk through that target
+    // merely to prove it ignored a visible supply.
+    expect(Math.abs(frame.moveX)).toBe(0);
+    expect(Math.abs(frame.moveZ)).toBe(0);
     expect(bot.getDebugSnapshot().delegate.selectedAnchorId).toBe('anchor-player');
   });
 

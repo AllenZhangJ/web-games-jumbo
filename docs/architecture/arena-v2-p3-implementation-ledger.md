@@ -2,11 +2,67 @@
 
 ## 1. 当前状态
 
-- 日期：2026-08-16。
-- 当前状态：`P3.0-route-contract-static-candidate-landed / P3.1-map-content-static-candidate-landed / P3.1a-switchback-second-map-code-written-not-run / P3.2-mode-binding-static-candidate-landed / P3.3-single-enemy-bot-v2-static-candidate-landed / P3.4-no-render-static-candidate-landed / P3.4a-race-combat-ring-out-and-full-world-checkpoint-code-written-not-run / P3.4a-race-respawn-single-source-candidate-code-written-not-run / P3.4b-survival-full-world-checkpoint-core-down-smash-and-product-result-usage-ownership-code-written-not-run / P3.4b-survival-first-respawn-single-source-candidate-code-written-not-run / P3.4c-world-checkpoint-primitives-landed-not-run / P3.4c-mode-driver-checkpoint-v3-code-written-not-run / P3.4d-three-mode-authoritative-quick-match-host-code-written-not-run / P3.4e-three-mode-authority-partial-destroy-retry-ownership-code-written-not-run / P3.4f-three-mode-restore-failure-resource-ownership-code-written-not-run / P3.4g-survival-interactive-verification-timing-separation-code-written-not-run / P3.4h-race-interactive-verification-timing-separation-code-written-not-run / P3.4i-three-mode-timeline-product-proposal-code-written-not-run / P3.5a-readonly-route-cue-projection-and-three-consumer-code-written-not-run / P3.5c-map-route-variety-audit-code-written-not-run / P3.5-authored-map-glb-wired-not-approved / P2.5f-terminal-tick-static-contract-patched-not-run / P3-survival-vertical-component-candidate-landed / production-unreachable / hardGate=false`。
+- 日期：2026-08-25。
+- 当前状态：`P3.0-route-contract-static-candidate-landed / P3.1-map-content-static-candidate-landed / P3.1a-switchback-second-map-code-written-not-run / P3.2-mode-binding-static-candidate-landed / P3.3-single-enemy-bot-v2-static-candidate-landed / P3.4-no-render-static-candidate-landed / P3.4a-race-combat-ring-out-and-full-world-checkpoint-code-written-not-run / P3.4a-race-respawn-single-source-candidate-code-written-not-run / P3.4b-survival-full-world-checkpoint-core-down-smash-and-product-result-usage-ownership-code-written-not-run / P3.4b-survival-first-respawn-single-source-candidate-code-written-not-run / P3.4c-world-checkpoint-primitives-landed-not-run / P3.4c-mode-driver-checkpoint-v3-code-written-not-run / P3.4d-three-mode-authoritative-quick-match-host-code-written-not-run / P3.4e-three-mode-authority-partial-destroy-retry-ownership-code-written-not-run / P3.4f-three-mode-restore-failure-resource-ownership-code-written-not-run / P3.4g-survival-interactive-verification-timing-separation-code-written-not-run / P3.4h-race-interactive-verification-timing-separation-code-written-not-run / P3.4i-three-mode-timeline-product-proposal-code-written-not-run / P3.5a-readonly-route-cue-projection-and-three-consumer-code-written-not-run / P3.5c-map-route-variety-audit-code-written-not-run / P3.5-authored-map-glb-wired-not-approved / P2.5f-terminal-tick-static-contract-patched-not-run / P3-survival-vertical-component-candidate-landed / SF-DG.2-P3-candidate-automation-passed / production-unreachable / hardGate=false`。
 - 授权依据：[ADR-119](../decisions/119-arena-v2-continuous-development-with-deferred-gates.md)。开发持续推进，测试、类型检查、构建、压测、性能、设备与真人证据集中顺延。
 - 边界：当前候选不进入默认`MapRegistry`、默认Content Pool、生产Composition、三端入口或发布清单；研究/experiment代码没有被生产候选导入。
-- 结论边界：当前只证明合同、候选内容和真实Movement/Physics场景代码已落盘；这些场景尚未执行，不能证明路线真实可达、2–4人公平、生存无安全解、性能达标或P3阶段完成。
+- 结论边界：SF-DG.2 已执行 P3 boundary（通过）、52 包构建（通过）、KZ 单路线 Physics（3/3）、KZ adapter（4/4）、Survival Enemy Physics（3/3）及 Bot V2（10/10）定向规格；Race vertical 的 2/3/4 人真实重锤、支撑转移、重生、Replay 和恢复规格已通过。2026-08-25完整P3候选自动化已通过（Vitest 17/17、126通过/12外部化跳过；Node 17/17，含shared-world五矩阵双跑和组件矩阵/Owner）；这不替代性能、设备、真人、正式地图/敌人资产批准或默认入口门，P3阶段仍不可宣布完成。
+
+### SF-DG.2 P3 Race/KZ 候选真实性首轮（2026-08-24，部分验证，未验收）
+
+首轮 `check:p3:candidate-boundaries` 通过（`authorityFileCount=30 / productionRootCount=7`）。候选 runner 的
+16 个文件中出现 10 个失败文件、15 项失败、20 项跳过；其中三个已在本批闭合：完整 `ArenaInputFrame` 不再直接
+越界传给 `MovementSystem`，而是投影为唯一 Movement 子合同；KZ 驾驶器只在支撑面边缘起跳、空中进入既有锚点
+容差后制动，且不凭固定 airborne tick 伪造二段冲量；首段 `kz-s01-start` 的 safe-anchor claim 保留各 participant
+的初始 anchor，不再把 2–4 人压缩为同一 fallback 复活点。起跑位随之从单列改为同一首段 surface 内、间距 2.4
+的 2×2 网格，Map Definition 与 spawn 同步，未改路线、地图尺寸、武器、重生时长、保护、输入或默认入口。
+
+还修复了 Survival restore 中 Timeline 回调捕获已置空的局部 `nextEngine`，改为捕获已验证 Engine 对象；否则所有权
+转移后首次供给 phase 会解引用 null。局部实测显示 Survival Enemy Physics 单次 6.592 秒、确定性双跑 13.604 秒，
+故仅该两条具名规格设为 10 秒和 20 秒 timeout，不改变全局 timeout。
+
+第二重锤不改数值、窗口、地图或 Replay：攻击者在 `kz-s01-start` 外侧以 +x 击向内侧目标，真实 Physics 在命中后
+tick 677 把目标落到 `kz-s02-landing`；tick 1020（与命中相隔374，超过300 tick归因窗）才由目标主动离场，V6
+发布无归因 movement fall，并在 tick 1200 精确重生。Race Authority 同时补齐真实 `jumpPressed → MovementCommand`
+桥接，避免空 movement candidate provider 让路线角色直接跑出首段边缘；旧 segment 回退 claim 则在 Authority→Mode
+交接前按当前 Mode progress 过滤，保持 Mode 单一写入者。状态：`production-unreachable / hardGate=false /
+code-written-not-run / validationStatus=not-run`；本段运行证据只代表所列定向命令，不能替代完整 P3 gate。
+
+P3.4b-S 另把“真实供给是否能形成玩家装备起手”从两次掉落/five-matrix 场景拆成独立候选。它固定复用同一
+shared-world Authority、首波真实20秒供给、`picked-up`事实和装备`ActionStarted`，并只使用已存在的
+`interactive-product-candidate` execution timing/content hash与4930 active-tick time-cap；验证专用中性敌方
+InputFrame只存在于该隔离场景，既不进入QuickMatch也不改变Bot/压力/供给或产品时间线。供给事实先按
+`equipmentInstanceId → supplyId`闭合，找不到同次真实拾取即在Replay导出前失败关闭。双同seed运行、time-cap
+终局、Replay/final hash和destroy资源归零的规格已登记并于2026-08-24定向执行1/1（23.58秒）；同次
+P3 reachability 8/8、P3 boundary、`typecheck:app`与`git diff --check`均通过。该证据只能证明此单场景，
+完整shared-world、多敌人数、crowding、性能、设备与真人门仍未完成。状态保持`production-unreachable / hardGate=false /
+code-written-not-run / validationStatus=not-run`。
+
+SF-DG.2b-C 把4人 crowding 未完赛定位为验证驾驶游标错误，而非地图尺寸、起跑格、碰撞开关或完赛伪造：掉落后
+Physics 已把参与者真实重置到同次 safe-anchor，但驾驶器仍指向掉落前跨段锚点，导致跳过中间声明锚。现在仅将该
+参与者的目标游标重置为已确认 safe-anchor 的下一条路径锚；另在一个既有 `respawnDelayTicks` 窗内，只有空中位于
+更高重叠恢复面之上且未前进的快线目标才继续原方向，避免容差制动把角色反复落回恢复面。全程仍保留2/3/4人同时
+Physics、碰撞、真实掉落/重入与Mode Map Adapter事实，未逐人推进、未关闭碰撞、未扩大地图或直接标记完赛。每tick
+报告支撑面、progress、位置、输入、最近邻距离与同向分离法线；终局继续以共享Physics收敛至最小分离距离。定向
+crowding 3/3（2/3/4全员完赛、同seed输入序列/hash一致、资源销毁归零）和Race纵向12/12（Replay V6、hash、
+资源归零）通过。2026-08-24首轮全P3 candidate曾为17文件中13通过、4失败；2026-08-25已由SF-DG.2c逐项
+收口并复跑通过。2×2起跑格仅继续作为既有Map/Route事实被读取，未修改
+Three、资产槽位或稳定表现事件。状态保持`production-unreachable / hardGate=false / code-written-not-run /
+validationStatus=not-run`。
+
+SF-DG.2c 收口了余下非美术P3红项：Movement idle checkpoint夹具现在按恢复后真实 capability 选择地面跳、空中跳或
+空命令，未改变Movement拒绝非法二段跳的合同；五矩阵不再要求非base装备起手或从终局重算“所有敌人同时active”，
+独立`p3-survival-supply-action-replay`继续唯一验证真实供给→拾取→装备起手，而五矩阵改为在权威Frame实际观察到
+目标Pressure stage后才切换到真实Controller与两次player fall，预热阶段仅发送验证用途的中性敌方InputFrame，防止
+碰撞把受保护玩家提前推出支撑面。该purpose/输入切换随既有execution timing、InputFrame、config/checkpoint与Replay
+闭合，交互式Runtime仍初始保护0。完整五矩阵从Vitest worker迁到P3 runner的Node子进程，Vitest在
+`ARENA_P3_SURVIVAL_MATRIX_EXTERNAL=1`时只保留快速合同和失败关闭；Node同一聚合函数双跑实际用时432.29秒并验证
+1/4/8/12/16、压力stage、两次fall、checkpoint、Replay/final hash、深相等确定性和资源归零。组件矩阵同样在
+`ARENA_P3_SURVIVAL_COMPONENT_EXTERNAL=1`下从Vitest迁入同一Node长跑，双跑与成功Owner重试/销毁用时67.28秒；
+Vitest快速域与Node长跑总计17/17、126通过/12外部化跳过及Node17/17。P4 baseline consequence
+另把窄台角色站位改为同一既有surface内的合法非重叠横向射程；`hit-ring-out`现在只在攻击者归因、起始支撑非空且
+终局失去支撑时形成，未伪造普通hit或更改武器数值。状态保持`production-unreachable / hardGate=false /
+code-written-not-run / validationStatus=not-run`。
 - 生命周期增量：`P3.4e-three-mode-authority-partial-destroy-retry-ownership-code-written-not-run`。Race原有“成功资源才清引用”语义保留，并在任一清理失败后显式失败关闭；Duel与Survival同步采用同一合同。Duel分别保留失败的Feedback/Core；Survival按participant逐个释放Controller，并分别保留失败的Feedback、Timeline、Rule、Movement、Physics。只有全部资源完成后才清运行证据并提交destroyed；失败后禁止继续step，但允许再次destroy精确收口。未运行任何验证，不改地图、武器、Bot、输入、数值、Result、Replay或默认入口。
 - 恢复切换增量：`P3.4f-three-mode-restore-failure-resource-ownership-code-written-not-run`。Duel、Race、Survival在checkpoint恢复时逐项提交旧资源释放；任一旧资源失败时保留其原字段，候选新资源若清理失败则转入待清理账本。新资源接管后的公开帧重建、跳跃能力投影或证据恢复若失败，Authority立即失败关闭；成功释放项不再重复销毁，失败项由后续`destroy()`精确重试。Survival的Controller按participant迁移所有权，Equipment只在RuleEngine尚未接管时独立回收，避免重复销毁。未运行测试、类型、构建、压测、性能或设备验证，且不改地图、武器、Bot决策、输入、数值、Result、Replay和默认入口。
 
@@ -14,18 +70,18 @@
 
 | 批次 | 当前状态 | 开发输出 | 晋级前仍需补齐 |
 |---|---|---|---|
-| P3.0 路线Definition/Registry | 静态候选已落盘 | exact-key、冻结、版本2路线；方向+跳跃；六类段落；分叉、回应、重入、供给、生存有向图；显式Registry hash | 单测、严格类型、恶意输入与schema迁移验证 |
-| P3.1 首张KZ地图候选 | 静态候选已落盘 | 原创34个surface、12段、4出生位、8条快/稳分叉、12供给点、180 tick重入；Race/Survival共用同一MapDefinition | 真实Movement/Physics全路径、2/3/4人拥挤、攻击与重入 |
+| P3.0 路线Definition/Registry | 候选自动化通过 | exact-key、冻结、版本2路线；方向+跳跃；六类段落；分叉、回应、重入、供给、生存有向图；显式Registry hash | 正式准入审计、设备/真人与默认Registry门 |
+| P3.1 首张KZ地图候选 | 候选自动化通过 | 原创34个surface、12段、4个同一首段 surface 内间距2.4的2×2出生位、8条快/稳分叉、12供给点、180 tick重入；Race/Survival共用同一MapDefinition | 正式地图资产批准、设备/真人路线可读性与公平性 |
 | P3.1a 第二张折返KZ地图候选 | 代码已落盘，未执行 | 原创12个surface、8段、4出生位、8供给点、180 tick重入；用折返、连续转向、上/下楼梯、窄路、走钢丝和双长跳建立不同路线记忆；同一选择冻结到1v1/Race/Survival | 真实Movement/Physics全路径、多人拥挤、生存无安全解、地图差异真人辨识 |
-| P3.2 Mode地图绑定 | 静态候选已落盘 | Race support/fall/finish→Mode facts只读适配；Survival authority legal transition→Bot route target只读适配；不复制几何 | 接真实world authority，与P2 runtime/replay连续与恢复一致性 |
-| P3.3 单一敌人族Bot V2 | 静态候选已落盘，未执行 | exact-key受限Observation、当前held equipment、最多3个当前可见供给、合法跨段route target、空手供给选择和持武返回V1追击；只输出InputFrame | 未接默认Bot Registry；接单一shared tick world authority、V2观察生产投影与运行验证 |
-| P3.4 无渲染场景 | 静态候选已落盘，未执行 | 12段主线、8分支、两条全路线和16个重入点；竞速2/3/4人；生存1/4/8/12/16敌人；真实Movement/Physics、地图适配和Bot checkpoint恢复 | 执行首轮；接ActionResolver/命中、Race/Survival Mode lifecycle、golden、100+ seed、长局、资源归零、失败注入 |
-| P3.4a Race纵向集成 | 完整世界恢复与重生单一来源代码已落盘，未执行 | 2/3/4人独立起跑格、60 tick准备、两张可选KZ候选路线、二十武器中所选Definition/Rule；标准InputFrame驱动真实命中→冲量→失去支撑→killY→credited-hit→180 tick重生与30 tick保护；最近安全锚失效时使用两图公共Race语义fallback；终点、排名、Bot路径、Result、Replay V6、checkpoint均跟随开局冻结的地图/武器 | 首次执行；29/30/31、179/180/181、多seed、拥挤、失败注入与长局资源门统一顺延；保护平衡与hard-limit未批准 |
-| P3 Survival纵向组件编排 | 静态候选已落盘，未执行 | 1/4/8/12/16敌人、Survival lifecycle、供给/武器/Bot候选证据在同一报告中组件级编排；明确不导入arena-v1-experiment | 尚非单一shared tick world authority；V2供给观察、hit/fall、Mode lifecycle未在同一场景原子闭合 |
-| P3.4b Survival单一权威纵向集成 | 完整世界恢复、Core down-smash迁移与Product Result武器事实所有权代码已落盘，未执行 | 同一authority两阶段tick闭合P4供给→Observation V2→Controller V2 InputFrame→Rule/Movement/Physics→killY facts→Survival Mode/Runtime V6；覆盖1/4/8/12/16、首落复活/第二落终局、敌人再激活、T事件/T+1帧；两张路线共用同一规则；baseline/tiered/shared-world不再传递依赖arena-v1-composition/content；终局Replay V6经contracts唯一producer生成canonical participantEquipmentUsage并明确归ProductMatchResultV3/Learning重算验证所有，ModeResult保持胜负/排名/生存事实 | 首次执行；多seed/长局/性能/设备 |
-| P3.4c 完整世界checkpoint底层能力 | 静态候选已落盘，未执行 | Movement完整participant/Definition/tick状态；Equipment运行时/持有/冷却/过期持有状态；轻量Physics地图/求解/角色完整状态；ActionExecution完整participant×lane与commitmentStartedTick；ArenaRule聚合Action+Equipment；Timeline和Bot沿用版本化快照；Runtime V3在完整V2外绑定标准化Mode Driver内容并在authority capture前拒绝漂移；Race与Survival authority均已聚合 | 统一执行连续/恢复后缀、Mode内容漂移、恶意checkpoint与失败注入（按开发优先窗口顺延） |
+| P3.2 Mode地图绑定 | 候选自动化通过 | Race support/fall/finish→Mode facts只读适配；Survival authority legal transition→Bot route target只读适配；不复制几何 | 默认Composition/入口和正式设备证据 |
+| P3.3 单一敌人族Bot V2 | 候选自动化通过 | exact-key受限Observation、当前held equipment、最多3个当前可见供给、合法跨段route target、空手供给选择和持武返回V1追击；只输出InputFrame | 默认Bot Registry、性能/设备与真人反制门 |
+| P3.4 无渲染场景 | 候选自动化通过 | 12段主线、8分支、两条全路线和16个重入点；竞速2/3/4人；生存1/4/8/12/16敌人；真实Movement/Physics、地图适配、Bot与checkpoint恢复 | 100+ seed、正式性能/设备、真人与发布门 |
+| P3.4a Race纵向集成 | 候选自动化通过 | 2/3/4人2×2起跑格、60 tick准备、真实MovementCommand、重锤支撑转移/掉落、180 tick重生、Result、Replay V6、checkpoint与资源归零 | 边界平衡、性能、设备、真人与正式入口门 |
+| P3 Survival纵向组件编排 | 候选自动化通过 | 1/4/8/12/16敌人、Survival lifecycle、供给/武器/Bot候选双矩阵与Owner生命周期由Node长跑执行；明确不导入arena-v1-experiment | 性能、设备、真人与默认入口门 |
+| P3.4b Survival单一权威纵向集成 | 候选自动化通过 | 同一authority闭合P4供给→Observation V2→Controller/InputFrame→Rule/Movement/Physics→killY→Mode/Runtime V6；覆盖五矩阵、首落复活/第二落终局、压力阶段、独立装备起手time-cap Replay与资源归零 | 多seed扩展、性能、设备、真人与发布门 |
+| P3.4c 完整世界checkpoint底层能力 | 候选自动化通过 | Movement/Equipment/Physics/Action/Rule/Timeline/Bot完整版本化快照；Runtime V3绑定Mode Driver并完成连续/恢复、hash与资源归零 | 更大规模故障注入、性能/设备与发布门 |
 | P3.4d 三模式权威QuickMatch/信息宿主 | 代码已落盘，未执行 | Duel 1+1、Race默认1+3且可配2/3/4、Survival默认1+16且可配1/4/8/12/16；QuickMatch V3只接受本地玩家InputFrame，Bot输入与随机/checkpoint留在各模式runtime owner；角色、武器、两图选择均在开局冻结，authoritative Session的真实Replay V6终局身份、finalHash、Mode Reward与Learning Grant已串到11页信息Host | 首次类型/运行验证；默认Composition/入口、正式Surface/资产与设备证据仍断开 |
-| P3.5a 只读路线/Cue投影与Three消费 | 代码已落盘，未执行 | 两张冻结KZ路线按当前权威`supportSurfaceId`精确映射段落；腾空不猜最近段；Race/Survival的掉落、重入、安全锚、终点和fall count只消费Mode Projection与稳定V6事件；Three owner只缩放GLB已有TopCap/入口/终点节点，已接正式Stage生命周期 | 定向测试/类型/构建、GLB运行绑定、浏览器/真机/真人 |
+| P3.5a 只读路线/Cue投影与Three消费 | 候选自动化通过 | 两张冻结KZ路线按当前权威`supportSurfaceId`精确映射段落；Three owner只变换已有节点；KZ Three当前Route/2×2起跑身份、Cue不叠爆和生命周期规格7/7通过 | 正式GLB批准、浏览器/真机/真人与性能门 |
 | P3.5b 原创地图与同族敌人正式资产 | 地图GLB已接入但未批准；敌人仅verified intake | 两张项目自制GLB已有固定来源、字节、SHA与正式Catalog/预加载/Three Stage接线；运行时不创建程序化地图兜底；同族Skeleton身份已登记 | A0.3/A1.1、地图Concept/Blockout/批准、敌人视觉族批准、浏览器/真机/真人 |
 | P3.5c 地图路线多样性只读审计 | 代码已落盘，未执行 | 同时读取两张冻结Route、20段体验节奏与反制目录，投影回应集合、分叉、朝向、升降、学习签名与重复段；输出具名复核项但不改几何、不自动调参、不宣称平衡 | 首次执行、竞速/生存动态路线占比、多人干扰、真人记忆与单一最优解证据 |
 
@@ -62,7 +118,7 @@
 | Survival复用 | 同一map/route ID | 不复制第二套几何；无终点判定由Mode负责 |
 | 正式状态 | `production-unreachable` | `hardGate=false`，默认Registry为空 |
 
-起跑公平性静态修正：四个Race出生锚已从沿前进轴错位改为同一`x=-1.8`起跑线、四条`z`车道，避免静态产生最多3.6世界单位的先发优势。该结论尚未经过多人运行和真人验证。
+起跑公平性/碰撞修正：单列四条 `z` 车道的间距为 1，小于角色最小稳定碰撞间距 2，会让 2–4 人在 shared Physics 中相互阻塞。当前四个出生锚与 Map spawn 统一为同一 `kz-s01-start` 内的 2×2 网格，最小水平间距 2.4；Race crowding 2/3/4 人定向 Physics 已通过，但多人设备/真人公平仍未验证。
 
 第二轮段落按`level-design`流程补齐：第7段先释放前一轮峰值压力，第8–12段依次重新引入楼梯节奏、路线选择、长跳、窄路与终局走钢丝；只复用方向与跳跃，不新增冲刺、攀爬或模式按键。该节奏是静态设计意图，尚未形成可达性或真人流动证据。
 
@@ -92,7 +148,7 @@
 3. 生存场景覆盖1/4/8/12/16名同族敌人；每名敌人只从受限Observation生成普通InputFrame，进入共享Movement/Physics，并在240 tick执行Controller checkpoint恢复；当前明确`exercisesCombatResolution=false / exercisesSurvivalModeLifecycle=false`。
 4. 生存路线适配补齐“玩家与敌人已在同段”语义：仍只发布权威允许的换线目标，但目标意图标记为pursuit，使Controller在同段时追逐当前玩家位置，不读取未来路径。
 5. 所有报告都具有确定性result hash，测试与聚合入口已写入但按ADR-119未执行。
-6. `arena:p3:candidate:test`延后清单静态登记16个Vitest文件与2个Node文件；reachability与Runtime V2供给事实水位checkpoint合同各一份。`action-primitives.test.ts`同时登记P3/P4是有意共享边界：P3验证路线/模式动作接线，P4验证武器动作后果；没有重复登记在同一阶段清单内。
+6. `arena:p3:candidate:test`清单精确登记17个Vitest文件与5个Node文件；其中`arena-survival-supply-action-replay-verification-v1.test.ts`独立于两次玩家坠落/five-matrix场景，只验证真实首波供给→拾取→持有→装备起手→既有time-cap Replay。完整shared-world与组件矩阵因同步长跑的Vitest worker通讯上限改由Node文件执行，矩阵没有缩减。reachability与Runtime V2供给事实水位checkpoint合同各一份。`action-primitives.test.ts`同时登记P3/P4是有意共享边界：P3验证路线/模式动作接线，P4验证武器动作后果；没有重复登记在同一阶段清单内。
 
 Survival并行候选已落盘，本次Race小门不修改其字节：
 

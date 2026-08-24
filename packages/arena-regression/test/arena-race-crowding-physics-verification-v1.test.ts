@@ -25,6 +25,8 @@ describe('Arena Race crowding physics verification candidate V1', () => {
       expect(scenario.participants).toHaveLength(scenario.participantCount);
       expect(scenario.allFinished).toBe(true);
       expect(scenario.finishClaimCount).toBe(scenario.participantCount);
+      expect(scenario.inputFrameSequenceHash).toMatch(/^[0-9a-f]{8}$/u);
+      expect(scenario.retainedResourceCountAfterDestroy).toBe(0);
       expect(scenario.fallFactCount).toBe(
         scenario.participants.reduce((total, participant) => total + participant.fallCount, 0),
       );
@@ -33,6 +35,15 @@ describe('Arena Race crowding physics verification candidate V1', () => {
       ))).toBe(true);
       expect(new Set(scenario.participants.map(({ rank }) => rank)).size)
         .toBe(scenario.participantCount);
+      expect(scenario.participants.every(({ finalSupportSurfaceId }) => (
+        finalSupportSurfaceId === 'kz-s12-finish'
+      ))).toBe(true);
+      expect(scenario.participants.every(({ lastCrowdingObservation }) => (
+        lastCrowdingObservation.nearestNeighbor.distance === null
+        || lastCrowdingObservation.nearestNeighbor.distance
+          >= ARENA_RACE_CROWDING_PHYSICS_VERIFICATION_PLAN_CANDIDATE_V1
+            .minimumSettledCharacterSeparation
+      ))).toBe(true);
     }
   });
 
@@ -41,5 +52,7 @@ describe('Arena Race crowding physics verification candidate V1', () => {
     const second = runArenaRaceCrowdingPhysicsVerificationCandidateV1();
     expect(second).toEqual(first);
     expect(second.resultHash).toBe(first.resultHash);
+    expect(second.scenarios.map(({ inputFrameSequenceHash }) => inputFrameSequenceHash))
+      .toEqual(first.scenarios.map(({ inputFrameSequenceHash }) => inputFrameSequenceHash));
   });
 });

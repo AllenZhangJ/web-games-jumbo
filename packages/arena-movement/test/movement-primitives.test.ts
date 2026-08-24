@@ -341,11 +341,21 @@ describe('arena-movement primitives', () => {
         }],
         availability: [{ participantId: 'player-1', canMove: true }],
       });
-      system.execute([{
-        kind: MOVEMENT_COMMAND_KIND.REQUEST_AIR_JUMP,
-        participantId: 'player-1',
-        actionDefinitionId: 'action.air-jump',
-      }], { applyBatch() {} });
+      const capabilities = system.getCapabilities('player-1');
+      const command = capabilities.canGroundJump
+        ? {
+          kind: MOVEMENT_COMMAND_KIND.REQUEST_GROUND_JUMP,
+          participantId: 'player-1',
+          actionDefinitionId: 'action.ground-jump',
+        }
+        : capabilities.canAirJump
+          ? {
+            kind: MOVEMENT_COMMAND_KIND.REQUEST_AIR_JUMP,
+            participantId: 'player-1',
+            actionDefinitionId: 'action.air-jump',
+          }
+          : null;
+      system.execute(command === null ? [] : [command], { applyBatch() {} });
       system.completeTick({
         tick: 1,
         contacts: [{ participantId: 'player-1', grounded: false }],

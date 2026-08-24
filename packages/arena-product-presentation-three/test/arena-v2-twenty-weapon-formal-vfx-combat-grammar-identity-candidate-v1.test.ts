@@ -50,12 +50,12 @@ describe('Arena V2 formal VFX combat grammar identity candidate V1 (not run)', (
     const identities = ARENA_V2_WEAPON_COLLECTION_COMBAT_GRAMMAR_VISUAL_SOURCE_CANDIDATE_V1
       .entries.flatMap((entry) => entry.contexts.map((context) => {
         const style = resolveArenaV2TwentyWeaponFormalVfxStyleCandidateV1(
-          resolution(entry.weaponDefinitionId, context.context),
+          resolution(entry.catalogId, context.context),
         );
         expect(style?.combatGrammarIdentity).toEqual({
           sourceContentHash:
             ARENA_V2_WEAPON_COLLECTION_COMBAT_GRAMMAR_VISUAL_SOURCE_CANDIDATE_V1.contentHash,
-          weaponId: entry.weaponDefinitionId,
+          weaponId: entry.catalogId,
           context: context.context,
           actionDefinitionId: context.actionDefinitionId,
           coreVerb: entry.coreVerb,
@@ -68,7 +68,7 @@ describe('Arena V2 formal VFX combat grammar identity candidate V1 (not run)', (
           validationStatus: 'not-run',
           hardGate: false,
         });
-        return `${entry.weaponDefinitionId}:${context.context}`;
+        return `${entry.catalogId}:${context.context}`;
       }));
     expect(identities).toHaveLength(40);
     expect(new Set(identities).size).toBe(40);
@@ -84,6 +84,24 @@ describe('Arena V2 formal VFX combat grammar identity candidate V1 (not run)', (
       hardGate: false,
       validationStatus: 'not-run',
     });
+  });
+
+  it('keeps 20 catalog cue IDs unique and disjoint from formal Definition IDs', () => {
+    const entries = ARENA_V2_WEAPON_COLLECTION_COMBAT_GRAMMAR_VISUAL_SOURCE_CANDIDATE_V1.entries;
+    const catalogIds = entries.map(({ catalogId }) => catalogId);
+    const definitionIds = entries.map(({ weaponDefinitionId }) => weaponDefinitionId);
+    expect(new Set(catalogIds).size).toBe(20);
+    expect(new Set(definitionIds).size).toBe(20);
+    expect(catalogIds.some((catalogId) => definitionIds.includes(catalogId))).toBe(false);
+    expect(entries.every(({ catalogId, weaponDefinitionId }) => catalogId !== weaponDefinitionId))
+      .toBe(true);
+  });
+
+  it('rejects unknown and formal Definition IDs in the short Cue ID domain', () => {
+    expect(() => resolution('unknown-weapon')).toThrow();
+    const entry = ARENA_V2_WEAPON_COLLECTION_COMBAT_GRAMMAR_VISUAL_SOURCE_CANDIDATE_V1.entries[0]!;
+    expect(() => resolution(entry.weaponDefinitionId)).toThrow();
+    expect(() => resolution(`${entry.catalogId}.${entry.catalogId}`)).toThrow();
   });
 
   it.each([

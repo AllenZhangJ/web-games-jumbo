@@ -60,13 +60,13 @@ describe('Arena V2 twenty-weapon formal VFX result hierarchy candidate V1 (not r
     for (const entry of
       ARENA_V2_WEAPON_COLLECTION_COMBAT_GRAMMAR_VISUAL_SOURCE_CANDIDATE_V1.entries) {
       for (const context of entry.contexts) {
-        const hit = style(entry.weaponDefinitionId, context.context, 'hit-confirm');
+        const hit = style(entry.catalogId, context.context, 'hit-confirm');
         const transfer = style(
-          entry.weaponDefinitionId,
+          entry.catalogId,
           context.context,
           'hit-surface-transfer',
         );
-        const ringOut = style(entry.weaponDefinitionId, context.context, 'hit-ring-out');
+        const ringOut = style(entry.catalogId, context.context, 'hit-ring-out');
         expect([hit.resultHierarchy.rank, transfer.resultHierarchy.rank, ringOut.resultHierarchy.rank])
           .toEqual([1, 2, 3]);
         expect(signalArea(hit)).toBeLessThan(signalArea(transfer));
@@ -75,7 +75,7 @@ describe('Arena V2 twenty-weapon formal VFX result hierarchy candidate V1 (not r
         expect(transfer.particles.size).toBeLessThan(ringOut.particles.size);
         expect(hit.direction.lengthScale).toBeLessThan(transfer.direction.lengthScale);
         expect(transfer.direction.lengthScale).toBeLessThan(ringOut.direction.lengthScale);
-        identities.push(`${entry.weaponDefinitionId}:${context.context}`);
+        identities.push(`${entry.catalogId}:${context.context}`);
       }
     }
     expect(identities).toHaveLength(40);

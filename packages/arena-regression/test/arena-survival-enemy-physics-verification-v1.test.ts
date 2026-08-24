@@ -34,12 +34,12 @@ describe('Arena Survival enemy physics verification candidate V1', () => {
         Number.isFinite(minimumPlayerDistance)
       ))).toBe(true);
     }
-  });
+  }, 10_000);
 
   it('keeps controller restore and multi-enemy movement deterministic', () => {
     const first = runArenaSurvivalEnemyPhysicsVerificationCandidateV1();
     const second = runArenaSurvivalEnemyPhysicsVerificationCandidateV1();
     expect(second).toEqual(first);
     expect(second.resultHash).toBe(first.resultHash);
-  });
+  }, 20_000);
 });

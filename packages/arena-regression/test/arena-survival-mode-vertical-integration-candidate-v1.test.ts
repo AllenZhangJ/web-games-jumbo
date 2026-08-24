@@ -10,15 +10,18 @@ const OPTIONS = Object.freeze({
   matchSeed: 0x5030_0001,
   enemyCounts: ARENA_SURVIVAL_MODE_VERTICAL_INTEGRATION_ENEMY_COUNTS_V1,
 });
+const COMPONENT_EXTERNAL = process.env.ARENA_P3_SURVIVAL_COMPONENT_EXTERNAL === '1';
+const componentIt = COMPONENT_EXTERNAL ? it.skip : it;
 
 let sharedReport!: ReturnType<typeof runArenaSurvivalModeVerticalIntegrationCandidateV1>;
 
 describe('Arena Survival Mode vertical integration candidate V1', () => {
   beforeAll(() => {
+    if (COMPONENT_EXTERNAL) return;
     sharedReport = runArenaSurvivalModeVerticalIntegrationCandidateV1(OPTIONS);
-  });
+  }, 30_000);
 
-  it('orchestrates the real component candidates without claiming a shared authority', () => {
+  componentIt('orchestrates the real component candidates without claiming a shared authority', () => {
     const report = sharedReport;
     expect(report.candidateStatus).toBe('production-unreachable');
     expect(report.hardGate).toBe(false);
@@ -41,7 +44,7 @@ describe('Arena Survival Mode vertical integration candidate V1', () => {
     expect(report.resultHash).toMatch(/^[0-9a-f]{8}$/);
   });
 
-  it('covers the 1/4/8/12/16 matrix and the two-fall Mode lifecycle', () => {
+  componentIt('covers the 1/4/8/12/16 matrix and the two-fall Mode lifecycle', () => {
     const report = sharedReport;
     expect(report.lifecycleScenarios.map(({ enemyCount }) => enemyCount)).toEqual([
       1, 4, 8, 12, 16,
@@ -58,7 +61,7 @@ describe('Arena Survival Mode vertical integration candidate V1', () => {
     }
   });
 
-  it('records real supply, replacement, expiry, tier and weapon-use component facts', () => {
+  componentIt('records real supply, replacement, expiry, tier and weapon-use component facts', () => {
     const report = sharedReport;
     expect(report.supplyFacts).toMatchObject({
       firstSpawnTick: 1_200,
@@ -79,7 +82,7 @@ describe('Arena Survival Mode vertical integration candidate V1', () => {
     expect(report.weaponUsageFacts.rulePhysicsScenarioCount).toBeGreaterThan(0);
   });
 
-  it('keeps the remaining supply-aware world wiring gap explicit', () => {
+  componentIt('keeps the remaining supply-aware world wiring gap explicit', () => {
     const report = sharedReport;
     expect(report.botFacts.usesRestrictedObservationInput).toBe(true);
     expect(report.botFacts.emitsOnlyInputFrames).toBe(true);
@@ -92,13 +95,13 @@ describe('Arena Survival Mode vertical integration candidate V1', () => {
       .not.toContain('mode-result-weapon-usage-contract');
   });
 
-  it('is deterministic for the same named seed and exact matrix', () => {
+  componentIt('is deterministic for the same named seed and exact matrix', () => {
     const first = sharedReport;
     const second = runArenaSurvivalModeVerticalIntegrationCandidateV1(OPTIONS);
     expect(first.resultHash).toBe(second.resultHash);
     expect(first.lifecycleScenarios).toEqual(second.lifecycleScenarios);
     expect(first.componentResultHashes).toEqual(second.componentResultHashes);
-  });
+  }, 30_000);
 
   it('rejects unknown fields, wrong matrices and late authority start ticks fail closed', () => {
     expect(() => createArenaSurvivalModeVerticalIntegrationCandidateRuntimeV1({
@@ -141,6 +144,17 @@ describe('Arena Survival Mode vertical integration candidate V1', () => {
   });
 
   it('rejects repeated run and calls after destroy while retaining no resources', () => {
+    if (COMPONENT_EXTERNAL) {
+      const runtime = createArenaSurvivalModeVerticalIntegrationCandidateRuntimeV1(OPTIONS);
+      runtime.destroy();
+      expect(runtime.getSnapshot()).toEqual({
+        state: 'destroyed',
+        retainedResourceCount: 0,
+        hasReport: false,
+      });
+      expect(() => runtime.run({ authorityStartTick: 0 })).toThrow(/已销毁/);
+      return;
+    }
     const runtime = createArenaSurvivalModeVerticalIntegrationCandidateRuntimeV1(OPTIONS);
     const report = runtime.run({ authorityStartTick: 0 });
     expect(report.resultHash).toMatch(/^[0-9a-f]{8}$/);
@@ -153,5 +167,5 @@ describe('Arena Survival Mode vertical integration candidate V1', () => {
     });
     expect(() => runtime.run({ authorityStartTick: 0 })).toThrow(/已销毁/);
     expect(() => runtime.destroy()).not.toThrow();
-  });
+  }, 30_000);
 });

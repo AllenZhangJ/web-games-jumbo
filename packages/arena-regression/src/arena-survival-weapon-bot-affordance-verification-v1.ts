@@ -114,6 +114,7 @@ function observation(
       grounded: true,
       hitstunTicks: 0,
       actionReady,
+      actionInProgress: false,
       currentSegmentId: 'kz-segment-01-platform',
     },
     player: {

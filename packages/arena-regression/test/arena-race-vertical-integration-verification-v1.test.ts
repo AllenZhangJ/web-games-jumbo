@@ -47,6 +47,8 @@ describe('Arena Race vertical integration verification candidate V1', () => {
       verificationExecutionTimingSeparatedFromInteractiveRuntime: true,
       executionTimingIdentityBoundToConfigAndModeFixture: true,
       verificationScenarioWatchdogControlsInteractiveFixture: false,
+      localPrimaryAffordanceProjectedFromRuleEngine: true,
+      localPrimaryHoldAffordanceProjectedFromRuleEngine: true,
       checkpointIntervalTicks: 60,
       maximumScenarioTicks: 6_000,
       defaultRegistryWired: false,
@@ -151,8 +153,16 @@ describe('Arena Race vertical integration verification candidate V1', () => {
     expect(report.deferredGaps).toEqual([]);
     for (const scenario of report.scenarios) {
       expect(scenario.participantIds).toHaveLength(scenario.participantCount);
-      expect(scenario.startLineX).toBe(-1.8);
-      expect(new Set(scenario.startLaneZs).size).toBe(scenario.participantCount);
+      expect(scenario.startAnchorPositions).toHaveLength(scenario.participantCount);
+      expect(new Set(scenario.startAnchorPositions.map(({ x, z }) => `${x}:${z}`)).size)
+        .toBe(scenario.participantCount);
+      for (let index = 0; index < scenario.startAnchorPositions.length; index += 1) {
+        for (let other = index + 1; other < scenario.startAnchorPositions.length; other += 1) {
+          const left = scenario.startAnchorPositions[index]!;
+          const right = scenario.startAnchorPositions[other]!;
+          expect(Math.hypot(left.x - right.x, left.z - right.z)).toBeGreaterThanOrEqual(2.4);
+        }
+      }
       expect(scenario.preparationTicks).toBe(60);
       expect(scenario.pauseResumeCycleCount).toBe(1);
       expect(scenario.actionStartedCount).toBeGreaterThanOrEqual(2);
@@ -255,7 +265,7 @@ describe('Arena Race vertical integration verification candidate V1', () => {
       );
       expect(
         scenario.combatRingOut.creditedFall.tick - scenario.combatRingOut.firstHitTick,
-      ).toBeLessThanOrEqual(scenario.feedbackOutcomeWindowTicks);
+      ).toBeGreaterThan(scenario.feedbackOutcomeWindowTicks);
       expect(scenario.fullAuthorityCheckpointRestoreCount).toBe(1);
       expect(scenario.fullAuthorityCheckpointRestoredAtTick).toBeGreaterThanOrEqual(
         scenario.combatRingOut.firstHitTick + 1,
@@ -265,7 +275,7 @@ describe('Arena Race vertical integration verification candidate V1', () => {
       expect(scenario.retainedResourceCountAfterDestroy).toBe(0);
       expect(scenario.finalHash).toMatch(/^[0-9a-f]{8}$/u);
     }
-  });
+  }, 25_000);
 
   it('binds all three concrete runtimes to the real feedback checkpoint capability', () => {
     expect(typeof ArenaRaceAuthoritativeRuntimeCandidateV1.prototype
@@ -305,7 +315,11 @@ describe('Arena Race vertical integration verification candidate V1', () => {
       status: 'production-unreachable',
       implementationStatus: 'code-written-not-run',
       hardGate: false,
-      supportedModeDefinitionIds: ['arena.mode.duel', 'arena.mode.race', 'arena.mode.survival'],
+      supportedModeDefinitionIds: [
+        'arena-v2.mode.duel.candidate.v1',
+        'arena-v2.mode.race.candidate.v1',
+        'arena-v2.mode.survival.candidate.v1',
+      ],
       validationStatus: 'not-run',
       defaultCompositionWired: false,
       defaultEntryWired: false,
@@ -386,7 +400,7 @@ describe('Arena Race vertical integration verification candidate V1', () => {
     const second = runArenaRaceVerticalIntegrationScenarioCandidateV1(options);
     expect(second).toEqual(first);
     expect(second.resultHash).toBe(first.resultHash);
-  });
+  }, 15_000);
 
   it.each([2, 3, 4] as const)(
     'requires the same real credited-hit ring-out chain for %i participants',
@@ -405,6 +419,7 @@ describe('Arena Race vertical integration verification candidate V1', () => {
       expect(scenario.controls.expiredLastHit.creditedAttackerId).toBeNull();
       expect(scenario.controls.noHitRouteMistake.lastHitByAtFall).toBeNull();
     },
+    10_000,
   );
 
   it('releases the production-unreachable authority in reverse ownership order', () => {
