@@ -1,12 +1,10 @@
-export const ARENA_ACTION_PHASE = Object.freeze({
-  IDLE: 'idle',
-  WINDUP: 'windup',
-  ACTIVE: 'active',
-  RECOVERY: 'recovery',
-} as const);
+import {
+  ARENA_ACTION_PHASE,
+  type ArenaActionPhase,
+} from '@number-strategy-jump/arena-contracts';
 
-export type ArenaActionPhase =
-  typeof ARENA_ACTION_PHASE[keyof typeof ARENA_ACTION_PHASE];
+export { ARENA_ACTION_PHASE } from '@number-strategy-jump/arena-contracts';
+export type { ArenaActionPhase } from '@number-strategy-jump/arena-contracts';
 
 export type ActionCommitmentStatus = 'charging' | 'committed';
 

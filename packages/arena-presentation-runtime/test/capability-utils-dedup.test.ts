@@ -138,7 +138,9 @@ describe('Arena presentation shared capability helpers', () => {
     expect(() => rejectThenable(hostile, 'Shared result')).toThrow(
       'Shared result 必须同步完成。',
     );
-    expect(() => rejectThenable({ then: null }, 'Shared result')).not.toThrow();
+    expect(() => rejectThenable({ then: null }, 'Shared result')).toThrow(
+      'Shared result返回then字段，必须同步完成。',
+    );
     expect(getterCalls).toBe(0);
     expect(thenCalls).toBe(0);
   });
@@ -204,6 +206,6 @@ describe('Arena presentation shared capability helpers', () => {
     }
     expect(source(
       'packages/arena-presentation-runtime/src/character-view-runtime.ts',
-    )).not.toMatch(/^function snapshotMethod\s*\(/mu);
+    )).not.toMatch(/^function (snapshotMethod|rejectThenable)\s*\(/mu);
   });
 });

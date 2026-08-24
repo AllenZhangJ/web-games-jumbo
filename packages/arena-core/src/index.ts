@@ -39,8 +39,13 @@ export type {
   BotMobilityAffordance,
   LocalActionAffordance,
 } from './action-affordance.js';
-export { ActionExecutionSystem } from './action-execution-system.js';
+export {
+  ACTION_EXECUTION_SYSTEM_CHECKPOINT_V1_SCHEMA_VERSION,
+  ActionExecutionSystem,
+} from './action-execution-system.js';
 export type {
+  ActionExecutionStateCheckpointV1,
+  ActionExecutionSystemCheckpointV1,
   ActionConstraints,
   ActionCommitmentActor,
   ActionCommitmentStateSnapshot,
@@ -51,6 +56,14 @@ export type {
   ActionStateSnapshot,
   ActionTransition,
 } from './action-execution-system.js';
+export {
+  ARENA_RULE_ENGINE_CHECKPOINT_V1_SCHEMA_VERSION,
+  createArenaRuleEngineCheckpointV1,
+  validateArenaRuleEngineCheckpointV1,
+} from './arena-rule-engine-checkpoint-v1.js';
+export type {
+  ArenaRuleEngineCheckpointV1,
+} from './arena-rule-engine-checkpoint-v1.js';
 export { TargetingRegistry } from './targeting-registry.js';
 export type {
   TargetingActionRegistryContract,
@@ -68,6 +81,13 @@ export type {
   RuleCommand,
 } from './action-effect-registry.js';
 export {
+  ARENA_BEGIN_DOWN_SMASH_ACTION_EFFECT_KIND_V1,
+  createArenaBeginDownSmashActionEffectHandlerV1,
+} from './begin-down-smash-action-effect-handler-v1.js';
+export type {
+  ArenaBeginDownSmashRuleCommandV1,
+} from './begin-down-smash-action-effect-handler-v1.js';
+export {
   ACTION_RULE_COMMAND,
   createDefaultActionEffectRegistry,
 } from './default-effect-handlers.js';
@@ -78,6 +98,7 @@ export type {
 } from './rule-command-registry.js';
 export { createDefaultRuleCommandRegistry } from './default-rule-command-handlers.js';
 export {
+  ARENA_RULE_ENGINE_COMMIT_GUARD_V1,
   ARENA_RULE_EVENT,
   ArenaRuleEngine,
   assertArenaRuleEngine,
@@ -93,6 +114,7 @@ export type {
   MovementCandidateProviderContract,
   MovementCapabilities,
   MovementCommandAdapter,
+  RuleTargetEligibilityContract,
   PublicActionRule,
   RuleEquipmentDropResult,
   RuleEquipmentPickupDecision,
@@ -103,3 +125,5 @@ export type {
   RuleActor,
   RuleHit,
 } from './arena-rule-engine.js';
+export * from './weapon-feedback-resolver-v1.js';
+export * from './weapon-feedback-result-direction-resolver-v2.js';

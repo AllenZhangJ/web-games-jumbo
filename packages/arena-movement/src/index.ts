@@ -62,7 +62,13 @@ export type {
   MovementExecution,
 } from './movement-execution-plan.js';
 export type { MovementLandingTransition } from './movement-state-transition.js';
-export { MovementSystem } from './movement-system.js';
+export {
+  MOVEMENT_SYSTEM_CHECKPOINT_V1_SCHEMA_VERSION,
+  MOVEMENT_SYSTEM_OPERATION_GUARD_V1,
+  MovementSystem,
+  createMovementSystemCheckpointV1,
+  validateMovementSystemCheckpointV1,
+} from './movement-system.js';
 export type {
   MovementCapabilityProjection,
   MovementCompleteOptions,
@@ -70,4 +76,5 @@ export type {
   MovementParticipantCharacter,
   MovementPrepareOptions,
   MovementSystemOptions,
+  MovementSystemCheckpointV1,
 } from './movement-system.js';

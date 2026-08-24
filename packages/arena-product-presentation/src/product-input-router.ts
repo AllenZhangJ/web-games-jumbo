@@ -216,7 +216,8 @@ export class ProductInputRouter {
   #samplerSuspended = false;
   #uiPointer: Readonly<{ pointerId: number; intentKey: string }> | null = null;
   #operation: string | null = null;
-  #reentryAttempted = false;
+  #reentrySequence = 0;
+  #reentryError: Error | null = null;
   #destroyed = false;
 
   constructor(optionsValue: ProductInputRouterOptions) {
@@ -255,39 +256,37 @@ export class ProductInputRouter {
   }
 
   #enter(operation: string): SamplerAdapter {
-    const sampler = this.#assertUsable();
     if (this.#operation !== null) {
-      this.#reentryAttempted = true;
-      throw new Error(`ProductInputRouter.${operation}() 不可在 ${this.#operation}() 中重入。`);
+      this.#reentrySequence += 1;
+      this.#reentryError ??= new Error(
+        `ProductInputRouter.${operation}() 不可在 ${this.#operation}() 中重入。`,
+      );
+      throw this.#reentryError;
     }
+    const sampler = this.#assertUsable();
     this.#operation = operation;
+    this.#reentryError = null;
     return sampler;
   }
 
   #leave(): void {
     const operation = this.#operation;
+    const reentryError = this.#reentryError;
     this.#operation = null;
-    if (!this.#reentryAttempted) return;
-    this.#reentryAttempted = false;
+    this.#reentryError = null;
+    if (reentryError === null) return;
     this.#destroyed = true;
     this.#lifecycleSuspended = true;
     this.#uiPointer = null;
-    const failure = new Error(`ProductInputRouter.${operation ?? 'operation'}() 检测到宿主重入并已失败关闭。`);
-    let cleanupFailures: readonly unknown[] = [];
-    this.#operation = 'terminalCleanup';
-    try {
-      cleanupFailures = this.#cleanupPendingSamplers();
-    } finally {
-      this.#operation = null;
-      this.#reentryAttempted = false;
-    }
-    if (cleanupFailures.length > 0) {
-      throw new AggregateError(
-        [failure, ...cleanupFailures],
-        'ProductInputRouter 重入且清理失败。',
-      );
-    }
-    throw failure;
+    throw new Error(
+      `ProductInputRouter.${operation ?? 'operation'}() 检测到宿主重入并已失败关闭。`,
+      { cause: reentryError },
+    );
+  }
+
+  #assertCurrentOperationCommit(operation: string): void {
+    if (this.#operation === null) throw new Error(`${operation}缺少当前操作所有权。`);
+    if (this.#reentryError !== null) throw this.#reentryError;
   }
 
   #retainCleanupSampler(sampler: SamplerAdapter): void {
@@ -304,6 +303,7 @@ export class ProductInputRouter {
   #cleanupSampler(sampler: SamplerAdapter): readonly unknown[] {
     try {
       sampler.destroy();
+      this.#assertCurrentOperationCommit('ProductInputRouter sampler destroy');
       if (this.#sampler?.source === sampler.source) this.#sampler = null;
       this.#removeCleanupSampler(sampler);
       return [];
@@ -319,7 +319,10 @@ export class ProductInputRouter {
       if (!candidates.some((owned) => owned.source === candidate.source)) candidates.push(candidate);
     }
     const failures: unknown[] = [];
-    for (const candidate of candidates) failures.push(...this.#cleanupSampler(candidate));
+    for (const candidate of candidates) {
+      failures.push(...this.#cleanupSampler(candidate));
+      if (this.#reentryError !== null) break;
+    }
     return failures;
   }
 
@@ -331,6 +334,7 @@ export class ProductInputRouter {
     if (value === this.#samplerSuspended) return false;
     if (value) sampler.suspend();
     else sampler.resume();
+    this.#assertCurrentOperationCommit('ProductInputRouter sampler suspend state');
     this.#samplerSuspended = value;
     return true;
   }
@@ -344,7 +348,11 @@ export class ProductInputRouter {
       throw error;
     }
     rejectThenable(value, 'ProductInputRouter.hitTestUi()');
-    return value === null || value === undefined ? null : createProductUiIntent(value);
+    this.#assertCurrentOperationCommit('ProductInputRouter hitTestUi');
+    if (value === null || value === undefined) return null;
+    const intent = createProductUiIntent(value);
+    this.#assertCurrentOperationCommit('ProductInputRouter UI intent normalization');
+    return intent;
   }
 
   #reportIntentRejection(error: unknown, intent: ProductUiIntent): void {
@@ -356,6 +364,9 @@ export class ProductInputRouter {
       observeNativePromise(observerError);
       // Observational reporting never owns input lifecycle.
     }
+    if (this.#operation !== null) {
+      this.#assertCurrentOperationCommit('ProductInputRouter onIntentRejected');
+    }
   }
 
   #dispatchIntent(intent: ProductUiIntent): void {
@@ -363,9 +374,11 @@ export class ProductInputRouter {
     try {
       outcome = this.#onIntent(intent);
     } catch (error) {
+      this.#assertCurrentOperationCommit('ProductInputRouter onIntent');
       this.#reportIntentRejection(error, intent);
       return;
     }
+    this.#assertCurrentOperationCommit('ProductInputRouter onIntent');
     if (observeNativePromise(
       outcome,
       (error) => this.#reportIntentRejection(error, intent),
@@ -378,12 +391,12 @@ export class ProductInputRouter {
   }
 
   setMode(modeValue: unknown): boolean {
-    if (typeof modeValue !== 'string' || !MODES.has(modeValue)) {
-      throw new RangeError('未知 ProductInputRouter mode。');
-    }
-    const mode = modeValue as ProductInputRouterMode;
     const sampler = this.#enter('setMode');
     try {
+      if (typeof modeValue !== 'string' || !MODES.has(modeValue)) {
+        throw new RangeError('未知 ProductInputRouter mode。');
+      }
+      const mode = modeValue as ProductInputRouterMode;
       if (this.#mode === mode) return false;
       this.#setSamplerSuspended(sampler, this.#shouldSuspendSampler(mode));
       this.#mode = mode;
@@ -401,16 +414,21 @@ export class ProductInputRouter {
         return false;
       }
       const point = clonePoint(pointValue, `ProductInputRouter.${operation}`);
+      this.#assertCurrentOperationCommit(`ProductInputRouter ${operation} point normalization`);
       if (this.#mode === PRODUCT_INPUT_ROUTER_MODE.GAMEPLAY) {
-        return sampler[operation](point);
+        const handled = sampler[operation](point);
+        this.#assertCurrentOperationCommit(`ProductInputRouter sampler ${operation}`);
+        return handled;
       }
       if (operation === 'pointerStart') {
         if (this.#uiPointer !== null) return false;
         const intent = this.#hit(point);
         if (intent === null) return false;
+        const intentKey = createProductUiIntentKey(intent);
+        this.#assertCurrentOperationCommit('ProductInputRouter UI pointer identity');
         this.#uiPointer = Object.freeze({
           pointerId: point.pointerId,
-          intentKey: createProductUiIntentKey(intent),
+          intentKey,
         });
         return true;
       }
@@ -424,7 +442,10 @@ export class ProductInputRouter {
       if (point.pointerId !== pointer?.pointerId) return false;
       this.#uiPointer = null;
       const intent = this.#hit(point);
-      if (intent === null || createProductUiIntentKey(intent) !== pointer.intentKey) return false;
+      if (intent === null) return false;
+      const intentKey = createProductUiIntentKey(intent);
+      this.#assertCurrentOperationCommit('ProductInputRouter released UI pointer identity');
+      if (intentKey !== pointer.intentKey) return false;
       this.#dispatchIntent(intent);
       return true;
     } finally {
@@ -441,7 +462,9 @@ export class ProductInputRouter {
     const sampler = this.#enter('resize');
     try {
       const viewport = cloneViewport(viewportValue, 'ProductInputRouter.viewport');
+      this.#assertCurrentOperationCommit('ProductInputRouter viewport normalization');
       const changed = sampler.resize(viewport);
+      this.#assertCurrentOperationCommit('ProductInputRouter sampler resize');
       this.#viewport = viewport;
       this.#uiPointer = null;
       return changed;
@@ -487,7 +510,9 @@ export class ProductInputRouter {
         || this.#mode !== PRODUCT_INPUT_ROUTER_MODE.GAMEPLAY
         || this.#samplerSuspended
       ) throw new Error('ProductInputRouter 仅能在活跃 gameplay 模式采样。');
-      return sampler.sample(tick, options);
+      const input = sampler.sample(tick, options);
+      this.#assertCurrentOperationCommit('ProductInputRouter sampler sample');
+      return input;
     } finally {
       this.#leave();
     }
@@ -497,13 +522,17 @@ export class ProductInputRouter {
     const previous = this.#enter('replaceSampler');
     try {
       const replacement = normalizeOwnedSampler(samplerValue);
+      this.#assertCurrentOperationCommit('ProductInputRouter replacement normalization');
       if (replacement.source === previous.source) return false;
       const shouldSuspend = this.#shouldSuspendSampler();
       try {
         replacement.resize(this.#viewport);
+        this.#assertCurrentOperationCommit('ProductInputRouter replacement resize');
         if (shouldSuspend) replacement.suspend();
+        this.#assertCurrentOperationCommit('ProductInputRouter replacement suspend');
       } catch (error) {
         this.#retainCleanupSampler(replacement);
+        if (this.#reentryError !== null) throw error;
         const cleanupFailures = this.#cleanupSampler(replacement);
         if (cleanupFailures.length > 0) {
           this.#destroyed = true;
@@ -518,11 +547,13 @@ export class ProductInputRouter {
       }
       try {
         previous.destroy();
+        this.#assertCurrentOperationCommit('ProductInputRouter previous sampler destroy');
       } catch (error) {
         this.#destroyed = true;
         this.#lifecycleSuspended = true;
         this.#uiPointer = null;
         this.#retainCleanupSampler(replacement);
+        if (this.#reentryError !== null) throw error;
         const cleanupFailures = this.#cleanupSampler(replacement);
         if (cleanupFailures.length > 0) {
           throw new AggregateError(
@@ -532,6 +563,7 @@ export class ProductInputRouter {
         }
         throw error;
       }
+      this.#removeCleanupSampler(replacement);
       this.#sampler = replacement;
       this.#samplerSuspended = shouldSuspend;
       this.#uiPointer = null;
@@ -553,10 +585,11 @@ export class ProductInputRouter {
         sampling: this.#operation === 'sample',
         sampler: sampler.getDebugSnapshot === undefined
           ? null
-          : cloneFrozenData(
-            sampler.getDebugSnapshot(),
-            'ProductInputRouter sampler debug snapshot',
-          ),
+          : (() => {
+            const snapshot = sampler.getDebugSnapshot!();
+            this.#assertCurrentOperationCommit('ProductInputRouter sampler debug snapshot');
+            return cloneFrozenData(snapshot, 'ProductInputRouter sampler debug snapshot');
+          })(),
       });
     } finally {
       this.#leave();
@@ -564,12 +597,16 @@ export class ProductInputRouter {
   }
 
   destroy(): void {
-    if (this.#destroyed && this.#sampler === null && this.#cleanupSamplers.length === 0) return;
     if (this.#operation !== null) {
-      this.#reentryAttempted = true;
-      throw new Error(`ProductInputRouter.destroy() 不可在 ${this.#operation}() 中重入。`);
+      this.#reentrySequence += 1;
+      this.#reentryError ??= new Error(
+        `ProductInputRouter.destroy() 不可在 ${this.#operation}() 中重入。`,
+      );
+      throw this.#reentryError;
     }
+    if (this.#destroyed && this.#sampler === null && this.#cleanupSamplers.length === 0) return;
     this.#operation = 'destroy';
+    this.#reentryError = null;
     this.#destroyed = true;
     this.#lifecycleSuspended = true;
     this.#uiPointer = null;
@@ -579,13 +616,11 @@ export class ProductInputRouter {
     } finally {
       this.#operation = null;
     }
-    const reentryFailure = this.#reentryAttempted
-      ? new Error('ProductInputRouter.destroy() 检测到宿主重入并已失败关闭。')
-      : null;
-    this.#reentryAttempted = false;
+    const reentryFailure = this.#reentryError;
+    this.#reentryError = null;
     const failures = reentryFailure === null
       ? cleanupFailures
-      : [reentryFailure, ...cleanupFailures];
+      : [reentryFailure, ...cleanupFailures.filter((failure) => failure !== reentryFailure)];
     if (failures.length === 1) throw failures[0];
     if (failures.length > 1) {
       throw new AggregateError(
@@ -595,3 +630,13 @@ export class ProductInputRouter {
     }
   }
 }
+
+export const PRODUCT_INPUT_ROUTER_OPERATION_POLICY = Object.freeze({
+  operationGuardPrecedesLifecycleAndInputValidation: true as const,
+  stickyReentryUsesMonotonicSequenceAndFirstError: true as const,
+  samplerCallbacksCheckedBeforeInputStateCommit: true as const,
+  uiHitAndIntentCallbacksCheckedBeforeRouterCommit: true as const,
+  cleanupReentryRetainsCurrentAndLaterSamplerOwners: true as const,
+  gameplaySampleDoesNotChangeActionVocabulary: true as const,
+  validationStatus: 'not-run' as const,
+});

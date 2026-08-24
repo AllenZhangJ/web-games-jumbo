@@ -3,7 +3,10 @@ import {
   type CharacterPresentationDefinition,
   type CharacterPresentationRegistryPort,
 } from '@number-strategy-jump/arena-presentation-contracts';
-import { CharacterViewRuntime } from '@number-strategy-jump/arena-presentation-runtime';
+import {
+  CharacterViewRuntime,
+  CharacterViewRuntimeConstructionCleanupError,
+} from '@number-strategy-jump/arena-presentation-runtime';
 import { readDataArray } from './strict-data-array.js';
 
 type UnknownMethod = (...args: unknown[]) => unknown;
@@ -18,6 +21,25 @@ interface CharacterRecord {
   rootDetached: boolean;
   runtimeDisposed: boolean;
 }
+
+interface CharacterViewRegistrySyncOptions {
+  readonly snap?: boolean;
+  readonly cameraModel?: unknown;
+  readonly animationHoldParticipantIds: readonly string[];
+  readonly animationHoldConfigured: boolean;
+}
+
+export const CHARACTER_VIEW_REGISTRY_TERMINAL_LIFECYCLE_V1 = Object.freeze({
+  id: 'character-view-registry-terminal-lifecycle-v1',
+  cleanupCallbacksCannotReenterPublicApi: true,
+  cleanupCallbacksMustCompleteSynchronously: true,
+  recordFailureStopsLaterCleanup: true,
+});
+export const CHARACTER_VIEW_REGISTRY_RUNTIME_CONSTRUCTION_LIFECYCLE_V1 = Object.freeze({
+  id: 'character-view-registry-runtime-construction-lifecycle-v1',
+  runtimeDebtRetainedBeforeRegistryPublication: true,
+  cleanupRetriesRuntimeDebtBeforeCompletion: true,
+});
 
 function snapshotMethod(value: unknown, name: string, methodName: string): UnknownMethod {
   if (!value || typeof value !== 'object') throw new TypeError(`${name} 必须是对象。`);
@@ -50,17 +72,22 @@ function nonEmpty(value: unknown, name: string): string {
   return value;
 }
 
-function syncOptions(value: unknown): Readonly<Record<string, unknown>> {
-  if (value === undefined) return Object.freeze({});
+function syncOptions(value: unknown): CharacterViewRegistrySyncOptions {
+  if (value === undefined) {
+    return Object.freeze({
+      animationHoldParticipantIds: Object.freeze([]),
+      animationHoldConfigured: false,
+    });
+  }
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new TypeError('CharacterViewRegistry sync options 必须是对象。');
   }
-  const allowed = new Set<PropertyKey>(['snap', 'cameraModel']);
+  const allowed = new Set<PropertyKey>(['snap', 'cameraModel', 'animationHoldParticipantIds']);
   if (Reflect.ownKeys(value).some((key) => !allowed.has(key))) {
     throw new TypeError('CharacterViewRegistry sync options 包含未知字段。');
   }
   const result: Record<string, unknown> = {};
-  for (const key of ['snap', 'cameraModel']) {
+  for (const key of ['snap', 'cameraModel', 'animationHoldParticipantIds']) {
     const descriptor = Object.getOwnPropertyDescriptor(value, key);
     if (!descriptor) continue;
     if (!Object.hasOwn(descriptor, 'value')) throw new TypeError(`CharacterViewRegistry ${key} 必须是数据字段。`);
@@ -69,7 +96,25 @@ function syncOptions(value: unknown): Readonly<Record<string, unknown>> {
   if (result.snap !== undefined && typeof result.snap !== 'boolean') {
     throw new TypeError('CharacterViewRegistry snap 必须是布尔值。');
   }
-  return Object.freeze(result);
+  const holdValues = result.animationHoldParticipantIds === undefined
+    ? Object.freeze([])
+    : readDataArray(
+      result.animationHoldParticipantIds,
+      'CharacterViewRegistry animationHoldParticipantIds',
+    );
+  const holdIds = holdValues.map((item, index) => nonEmpty(
+    item,
+    `CharacterViewRegistry animationHoldParticipantIds[${index}]`,
+  ));
+  if (new Set(holdIds).size !== holdIds.length) {
+    throw new RangeError('CharacterViewRegistry animationHoldParticipantIds 不能重复。');
+  }
+  return Object.freeze({
+    ...(result.snap === undefined ? {} : { snap: result.snap }),
+    ...(result.cameraModel === undefined ? {} : { cameraModel: result.cameraModel }),
+    animationHoldParticipantIds: Object.freeze(holdIds),
+    animationHoldConfigured: Object.hasOwn(result, 'animationHoldParticipantIds'),
+  });
 }
 
 function participants(
@@ -105,6 +150,15 @@ function aggregate(message: string, cause: unknown, cleanupCauses: readonly unkn
   return failure;
 }
 
+function rejectThenable(value: unknown, name: string): void {
+  if (!value || (typeof value !== 'object' && typeof value !== 'function')) return;
+  let then: unknown;
+  try { then = Reflect.get(value, 'then'); } catch { throw new TypeError(`${name} 返回值不可检查。`); }
+  if (typeof then !== 'function') return;
+  try { Promise.resolve(value).catch(() => {}); } catch { /* malformed thenable */ }
+  throw new TypeError(`${name} 必须同步完成。`);
+}
+
 export class CharacterViewRegistry {
   readonly #add: UnknownMethod;
   readonly #remove: UnknownMethod;
@@ -112,10 +166,12 @@ export class CharacterViewRegistry {
   readonly #viewFactory: unknown;
   readonly #actionPresentations: unknown;
   readonly #runtimes = new Map<string, CharacterRecord>();
+  #constructionDebt: CharacterViewRuntimeConstructionCleanupError | null = null;
   #disposed = false;
   #failedError: unknown = null;
   #operating = false;
   #cleaning = false;
+  #reentryDetected = false;
 
   constructor(root: unknown, options: unknown) {
     this.#add = snapshotMethod(root, 'CharacterViewRegistry root', 'add');
@@ -137,30 +193,53 @@ export class CharacterViewRegistry {
   }
 
   #assertUsable(): void {
+    if (this.#operating || this.#cleaning) {
+      this.#reentryDetected = true;
+      throw new Error('CharacterViewRegistry 不允许重入。');
+    }
     if (this.#disposed) throw new Error('CharacterViewRegistry 已销毁。');
     if (this.#failedError) { const error = new Error('CharacterViewRegistry 已失败。'); error.cause = this.#failedError; throw error; }
-    if (this.#operating) throw new Error('CharacterViewRegistry 不允许回调重入。');
   }
 
   #cleanupRecord(record: CharacterRecord): unknown[] {
     const errors: unknown[] = [];
     if (!record.rootDetached) {
-      try { this.#remove(record.root); record.rootDetached = true; } catch (error) { errors.push(error); }
+      try {
+        rejectThenable(this.#remove(record.root), 'CharacterViewRegistry root.remove()');
+        if (this.#reentryDetected) throw new Error('CharacterViewRegistry remove回调发生公开API重入。');
+        record.rootDetached = true;
+      } catch (error) { errors.push(error); }
     }
-    if (!record.runtimeDisposed) {
-      try { record.runtime.dispose(); record.runtimeDisposed = true; } catch (error) { errors.push(error); }
+    if (!this.#reentryDetected && record.rootDetached && !record.runtimeDisposed) {
+      try {
+        rejectThenable(record.runtime.dispose(), 'CharacterViewRegistry runtime.dispose()');
+        if (this.#reentryDetected) throw new Error('CharacterViewRegistry dispose回调发生公开API重入。');
+        record.runtimeDisposed = true;
+      } catch (error) { errors.push(error); }
     }
     return errors;
   }
 
   #cleanupAll(): unknown[] {
-    if (this.#cleaning) return [new Error('CharacterViewRegistry 清理不可重入。')];
+    if (this.#cleaning) {
+      this.#reentryDetected = true;
+      return [new Error('CharacterViewRegistry 清理不可重入。')];
+    }
     this.#cleaning = true;
+    this.#reentryDetected = false;
     const errors: unknown[] = [];
     try {
+      if (this.#constructionDebt !== null) {
+        try { this.#constructionDebt.retryCleanup(); }
+        catch (error) { errors.push(error); }
+        if (this.#constructionDebt.cleanupComplete) this.#constructionDebt = null;
+      }
       for (const [id, record] of this.#runtimes) {
+        if (this.#reentryDetected) break;
+        const errorCount = errors.length;
         errors.push(...this.#cleanupRecord(record));
         if (record.rootDetached && record.runtimeDisposed) this.#runtimes.delete(id);
+        if (errors.length > errorCount) break;
       }
     } finally { this.#cleaning = false; }
     return errors;
@@ -180,7 +259,9 @@ export class CharacterViewRegistry {
     const options = syncOptions(optionsValue);
     const entries = participants(frame, this.#presentationRegistry);
     const byId = new Map(entries.map((entry) => [entry.id, entry]));
+    const animationHoldParticipantIds = new Set(options.animationHoldParticipantIds);
     this.#operating = true;
+    this.#reentryDetected = false;
     try {
       for (const [id, record] of this.#runtimes) {
         const entry = byId.get(id);
@@ -201,10 +282,32 @@ export class CharacterViewRegistry {
           });
           record = { runtime, root: runtime.root, rootDetached: false, runtimeDisposed: false };
           this.#runtimes.set(entry.id, record);
-          this.#add(record.root);
+          rejectThenable(this.#add(record.root), 'CharacterViewRegistry root.add()');
         }
-        record.runtime.sync(frame, entry.value, options);
+        record.runtime.sync(frame, entry.value, Object.freeze({
+          snap: options.snap ?? false,
+          ...(options.cameraModel === undefined ? {} : { cameraModel: options.cameraModel }),
+          ...(options.animationHoldConfigured
+            ? { freezeAnimation: animationHoldParticipantIds.has(entry.id) }
+            : {}),
+        }));
       }
+    } catch (error) {
+      if (error instanceof CharacterViewRuntimeConstructionCleanupError) {
+        this.#constructionDebt = error;
+      }
+      this.#operating = false;
+      this.#fail(error);
+    }
+    this.#operating = false;
+  }
+
+  clearAnimationHolds(): void {
+    this.#assertUsable();
+    this.#operating = true;
+    this.#reentryDetected = false;
+    try {
+      for (const { runtime } of this.#runtimes.values()) runtime.setAnimationHold(false);
     } catch (error) {
       this.#operating = false;
       this.#fail(error);
@@ -215,6 +318,7 @@ export class CharacterViewRegistry {
   update(deltaSeconds: unknown): void {
     this.#assertUsable();
     this.#operating = true;
+    this.#reentryDetected = false;
     try { for (const { runtime } of this.#runtimes.values()) runtime.update(deltaSeconds); }
     catch (error) { this.#operating = false; this.#fail(error); }
     this.#operating = false;
@@ -235,6 +339,10 @@ export class CharacterViewRegistry {
   }
 
   dispose(): void {
+    if (this.#operating || this.#cleaning) {
+      this.#reentryDetected = true;
+      throw new Error('CharacterViewRegistry 清理不可重入。');
+    }
     if (!this.#disposed) this.#disposed = true;
     const errors = this.#cleanupAll();
     if (errors.length > 0) throw aggregate('CharacterViewRegistry 清理未完整完成。', this.#failedError, errors);

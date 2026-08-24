@@ -21,6 +21,7 @@ import {
   projectCharacterMovementIntent,
   resetMovementRuntimeState,
   serializeMovementRuntimeStates,
+  validateMovementSystemCheckpointV1,
 } from '../src/index.js';
 
 const definition = createCharacterDefinition({
@@ -261,6 +262,131 @@ describe('arena-movement primitives', () => {
     })).toThrow('physics commit failed');
 
     expect(() => system.getSnapshot('player-1')).toThrow('已失败');
+    system.destroy();
+  });
+
+  it('fails closed before local movement commit when the physical port swallows reentry', () => {
+    const system = new MovementSystem({
+      participantCharacters: [{ participantId: 'player-1', characterDefinition: definition }],
+    });
+    system.prepareTick({
+      tick: 0,
+      contacts: [{ participantId: 'player-1', grounded: true }],
+      inputs: [{
+        tick: 0,
+        participantId: 'player-1',
+        jumpPressed: true,
+        jumpHeld: true,
+        moveX: 0,
+        moveZ: 0,
+      }],
+      availability: [{ participantId: 'player-1', canMove: true }],
+    });
+    let nestedError: unknown = null;
+    expect(() => system.execute([{
+      kind: MOVEMENT_COMMAND_KIND.REQUEST_GROUND_JUMP,
+      participantId: 'player-1',
+      actionDefinitionId: 'action.ground-jump',
+    }], {
+      applyBatch() {
+        try {
+          system.getSnapshot('player-1');
+        } catch (error) {
+          nestedError = error;
+        }
+      },
+    })).toThrow(/execute.*重入snapshot-read/u);
+    expect(String(nestedError)).toMatch(/execute.*重入snapshot-read/u);
+    expect(() => system.getSnapshot('player-1')).toThrow('已失败');
+    system.destroy();
+  });
+
+  it('restores an idle tick boundary with the exact next movement state', () => {
+    const continuous = new MovementSystem({
+      participantCharacters: [{ participantId: 'player-1', characterDefinition: definition }],
+      airJumpHorizontalImpulse: 2,
+    });
+    continuous.prepareTick({
+      tick: 0,
+      contacts: [{ participantId: 'player-1', grounded: true }],
+      inputs: [{
+        tick: 0,
+        participantId: 'player-1',
+        jumpPressed: false,
+        jumpHeld: false,
+        moveX: 1,
+        moveZ: 0,
+      }],
+      availability: [{ participantId: 'player-1', canMove: true }],
+    });
+    continuous.execute([], { applyBatch() {} });
+    continuous.completeTick({
+      tick: 0,
+      contacts: [{ participantId: 'player-1', grounded: true }],
+    });
+    const checkpoint = continuous.exportCheckpointV1();
+    const restored = MovementSystem.restoreFromCheckpointV1(checkpoint);
+
+    for (const system of [continuous, restored]) {
+      system.prepareTick({
+        tick: 1,
+        contacts: [{ participantId: 'player-1', grounded: false }],
+        inputs: [{
+          tick: 1,
+          participantId: 'player-1',
+          jumpPressed: true,
+          jumpHeld: true,
+          moveX: 0,
+          moveZ: 1,
+        }],
+        availability: [{ participantId: 'player-1', canMove: true }],
+      });
+      system.execute([{
+        kind: MOVEMENT_COMMAND_KIND.REQUEST_AIR_JUMP,
+        participantId: 'player-1',
+        actionDefinitionId: 'action.air-jump',
+      }], { applyBatch() {} });
+      system.completeTick({
+        tick: 1,
+        contacts: [{ participantId: 'player-1', grounded: false }],
+      });
+    }
+    expect(restored.listSnapshots()).toEqual(continuous.listSnapshots());
+    expect(restored.exportCheckpointV1()).toEqual(continuous.exportCheckpointV1());
+    continuous.destroy();
+    restored.destroy();
+  });
+
+  it('rejects in-flight export and tampered or future movement checkpoints', () => {
+    const system = new MovementSystem({
+      participantCharacters: [{ participantId: 'player-1', characterDefinition: definition }],
+    });
+    system.prepareTick({
+      tick: 0,
+      contacts: [{ participantId: 'player-1', grounded: true }],
+      inputs: [{
+        tick: 0,
+        participantId: 'player-1',
+        jumpPressed: false,
+        jumpHeld: false,
+        moveX: 0,
+        moveZ: 0,
+      }],
+      availability: [{ participantId: 'player-1', canMove: true }],
+    });
+    expect(() => system.exportCheckpointV1()).toThrow(/进行中/u);
+    system.execute([], { applyBatch() {} });
+    system.completeTick({
+      tick: 0,
+      contacts: [{ participantId: 'player-1', grounded: true }],
+    });
+    const checkpoint = system.exportCheckpointV1();
+    const tampered = JSON.parse(JSON.stringify(checkpoint)) as Record<string, unknown>;
+    tampered.lastCompletedTick = 7;
+    expect(() => validateMovementSystemCheckpointV1(tampered)).toThrow(/hash漂移/u);
+    const future = JSON.parse(JSON.stringify(checkpoint)) as Record<string, unknown>;
+    future.futureState = true;
+    expect(() => validateMovementSystemCheckpointV1(future)).toThrow(/futureState/u);
     system.destroy();
   });
 });

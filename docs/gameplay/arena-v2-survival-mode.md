@@ -2,8 +2,8 @@
 
 ## 文档状态
 
-- 状态：P1供给Rule/Core/Bot/Presentation read model已实现并完成正确性签核；完整P2生存Mode未实现
-- 日期：2026-08-02
+- 状态：P1供给已签核；P2/P3完整生存Mode、双地图与首次复活单一候选源码已落盘但未运行，默认入口关闭
+- 日期：2026-08-12
 - 模式性质：单人重复游玩模式
 
 ## 模式定位
@@ -66,11 +66,11 @@
 
 - 敌人可以击飞玩家。
 - 玩家可以利用武器或地形击飞敌人。
-- 玩家第一次掉落后在合法位置复活。
+- 玩家第一次掉落后在合法位置复活。当前生产不可达候选等待60 tick，并在复活后提供30 tick保护；两张地图使用同一语义safe anchor ID映射各自起始安全段。
 - 玩家第二次掉落后本局结束。
 - 复活不能自动把玩家拉回安全平台；落点、无敌时间和预警必须可读。
 
-具体复活点、无敌时长、敌人上限和每轮时间需要通过模拟与实测确定。当前固定 seed 的轮次原型结果见[生存 1vE 最小循环原型结果](../research/arena-v2-survival-loop-prototype-results-v1.md)，实体/掉落结果见同一文档的[单敌人实体与掉落闭环验证](../research/arena-v2-survival-loop-prototype-results-v1.md#5-单敌人实体与掉落闭环验证)；这些数字是验证样本，不是最终平衡。
+具体复活平衡、敌人上限和每轮时间仍需要模拟与实测确定。ADR-120仅把shared-world已有的60 tick等待、30 tick保护和双地图合法锚收敛为唯一源码候选，状态仍是`balance-approval-not-run`，不是最终平衡。当前固定 seed 的轮次原型结果见[生存 1vE 最小循环原型结果](../research/arena-v2-survival-loop-prototype-results-v1.md)，实体/掉落结果见同一文档的[单敌人实体与掉落闭环验证](../research/arena-v2-survival-loop-prototype-results-v1.md#5-单敌人实体与掉落闭环验证)。
 
 ## 地图策略
 

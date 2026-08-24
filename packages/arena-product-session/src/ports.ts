@@ -21,6 +21,7 @@ import type {
   ProductSessionStateSnapshot,
 } from '@number-strategy-jump/arena-product-state';
 import { assertProductMatchSeed } from '@number-strategy-jump/arena-product-contracts';
+import { assertSynchronousModePortResult } from './synchronous-mode-port-boundary.js';
 
 type AnyMethod = (...arguments_: never[]) => unknown;
 
@@ -408,8 +409,7 @@ export function normalizeProductSessionOptions(value: unknown): NormalizedProduc
 }
 
 export function rejectAsyncSyncReturn(value: unknown, label: string): void {
-  const inspected = inspectSyncOrNativePromise(value, label);
-  if (inspected.kind === 'native-promise') throw new TypeError(`${label} 必须同步完成。`);
+  assertSynchronousModePortResult(value, label);
 }
 
 type SyncReturnInspection =

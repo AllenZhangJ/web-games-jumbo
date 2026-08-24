@@ -3,6 +3,13 @@ import {
   type ActionResolutionKind,
 } from './action-resolution.js';
 import {
+  ARENA_MATCH_PHASE,
+  assertArenaActionPhase,
+  assertArenaMatchPhase,
+  assertArenaParticipantStatus,
+  type ArenaMatchPhase,
+} from './arena-authority-state.js';
+import {
   createArenaPublicSupplyProjectionAudit,
   type ArenaPublicSupplyProjection,
 } from './arena-public-supply-projection.js';
@@ -107,7 +114,6 @@ export interface MatchReadFrameV2 {
 }
 
 const HASH_PATTERN = /^[0-9a-f]{8}$/;
-const WORLD_PHASES = new Set(['preparing', 'running', 'sudden-death', 'ended']);
 const EQUIPMENT_LOCATION_STATES = new Set(['spawned', 'held', 'dropped', 'despawned']);
 const WORLD_KEYS = new Set([
   'authoritySchemaVersion', 'physicsBackendVersion', 'configHash', 'ruleContentHash', 'matchSeed',
@@ -247,7 +253,7 @@ function auditAction(value: unknown, name: string): void {
     throw new TypeError(`${name} 缺少 definitionId。`);
   }
   nullableIdentifier(source.definitionId, `${name}.definitionId`);
-  assertNonEmptyString(source.phase, `${name}.phase`);
+  assertArenaActionPhase(source.phase, `${name}.phase`);
   safeTick(source.ticksRemaining, `${name}.ticksRemaining`);
   if (source.commitment !== undefined) auditActionCommitment(source.commitment, `${name}.commitment`);
 }
@@ -285,7 +291,7 @@ function auditParticipant(value: unknown, index: number, ids: Set<string>): stri
     source.characterDefinitionId,
     `${name}.characterDefinitionId`,
   );
-  assertNonEmptyString(source.status, `${name}.status`);
+  assertArenaParticipantStatus(source.status, `${name}.status`);
   for (const key of [
     'lives', 'eliminations', 'deaths', 'hitstunTicks', 'invulnerableTicks', 'respawnTicks',
   ]) safeTick(source[key], `${name}.${key}`);
@@ -394,14 +400,14 @@ function auditMap(value: unknown, name: string): void {
 function auditResult(
   value: unknown,
   participantIds: ReadonlySet<string>,
-  phase: string,
+  phase: ArenaMatchPhase,
   worldTick: number,
   name: string,
 ): void {
-  if (phase === 'ended' && value === null) {
+  if (phase === ARENA_MATCH_PHASE.ENDED && value === null) {
     throw new TypeError(`${name} ended phase 必须携带 result。`);
   }
-  if (phase !== 'ended' && value !== null) {
+  if (phase !== ARENA_MATCH_PHASE.ENDED && value !== null) {
     throw new RangeError(`${name} 只有 ended phase 可以携带 result。`);
   }
   if (value === null) return;
@@ -572,10 +578,7 @@ export function createWorldSnapshotV2Audit(value: unknown): DeepReadonly<WorldSn
   const tick = safeTick(source.tick, 'WorldSnapshotV2.tick');
   const activeTick = safeTick(source.activeTick, 'WorldSnapshotV2.activeTick');
   if (activeTick > tick) throw new RangeError('WorldSnapshotV2.activeTick 不能超过 tick。');
-  const phase = assertNonEmptyString(source.phase, 'WorldSnapshotV2.phase');
-  if (!WORLD_PHASES.has(phase)) {
-    throw new RangeError('WorldSnapshotV2.phase 不在 preparing/running/sudden-death/ended 集合中。');
-  }
+  const phase = assertArenaMatchPhase(source.phase, 'WorldSnapshotV2.phase');
   safeTick(source.remainingTicks, 'WorldSnapshotV2.remainingTicks');
   const eventSequence = safeTick(source.eventSequence, 'WorldSnapshotV2.eventSequence');
   if (!Array.isArray(source.participants) || source.participants.length === 0) {

@@ -9,7 +9,9 @@ import {
   assertPhysicsWorld,
   createCharacterPhysicsProfile,
   createLightweightPhysicsWorld,
+  createLightweightPhysicsWorldFromCheckpointV1,
   createMovementPhysicsPort,
+  validateLightweightPhysicsCheckpointV1,
   validateArenaDefinition,
   validateCharacterDefinition,
   type PhysicsWorld,
@@ -170,6 +172,34 @@ describe('arena-physics contracts', () => {
     expect(batches).toHaveLength(1);
   });
 
+  it('validates world methods by bounded descriptors without invoking accessors', () => {
+    let getterCalls = 0;
+    const accessorWorld = Object.defineProperty({}, 'addCharacter', {
+      enumerable: true,
+      get() {
+        getterCalls += 1;
+        throw new Error('world getter must not execute');
+      },
+    });
+    expect(() => assertPhysicsWorld(accessorWorld)).toThrow('数据方法');
+    expect(getterCalls).toBe(0);
+
+    const cyclicTarget = Object.create(null) as object;
+    let cyclicWorld: object;
+    cyclicWorld = new Proxy(cyclicTarget, {
+      getPrototypeOf() {
+        return cyclicWorld;
+      },
+    });
+    expect(() => assertPhysicsWorld(cyclicWorld)).toThrow('prototype 链不能循环');
+
+    let tooDeepWorld = Object.create(null) as object;
+    for (let depth = 0; depth < 33; depth += 1) {
+      tooDeepWorld = Object.create(tooDeepWorld) as object;
+    }
+    expect(() => assertPhysicsWorld(tooDeepWorld)).toThrow('prototype 链超过 32 层');
+  });
+
   it('produces identical state for identical fixed-tick input', () => {
     const run = () => {
       const world = createLightweightPhysicsWorld({ arena: TEST_ARENA });
@@ -229,5 +259,56 @@ describe('arena-physics contracts', () => {
     expect(() => world.step(ARENA_FIXED_DT)).toThrow('已销毁');
     expect(() => world.getCharacterState('player-1')).toThrow('已销毁');
     expect(() => addTestCharacter(world, 'player-2', 1)).toThrow('已销毁');
+  });
+
+  it('restores bodies, velocity, facing, intent and arena surface state', () => {
+    const continuous = createLightweightPhysicsWorld({ arena: TEST_ARENA });
+    addTestCharacter(continuous, 'player-1', -1);
+    addTestCharacter(continuous, 'player-2', 1);
+    continuous.setMovementIntent('player-1', 1, 0);
+    continuous.setMovementIntent('player-2', -1, 0);
+    continuous.applyImpulse('player-1', { x: 2, y: 3, z: 0 });
+    continuous.step(ARENA_FIXED_DT);
+    const checkpoint = continuous.exportCheckpointV1();
+    const restored = createLightweightPhysicsWorldFromCheckpointV1(checkpoint);
+
+    expect(restored.exportCheckpointV1()).toEqual(checkpoint);
+    for (const world of [continuous, restored]) {
+      world.setMovementIntent('player-1', 0, 1);
+      world.setMovementIntent('player-2', 0, -1);
+      world.step(ARENA_FIXED_DT);
+    }
+    expect(restored.getCharacterState('player-1')).toEqual(
+      continuous.getCharacterState('player-1'),
+    );
+    expect(restored.getCharacterState('player-2')).toEqual(
+      continuous.getCharacterState('player-2'),
+    );
+    continuous.destroy();
+    restored.destroy();
+  });
+
+  it('fails closed on tampered, reordered and future physics checkpoints', () => {
+    const world = createLightweightPhysicsWorld({ arena: TEST_ARENA });
+    addTestCharacter(world, 'player-1', 0);
+    const checkpoint = world.exportCheckpointV1();
+    const tampered = JSON.parse(JSON.stringify(checkpoint)) as {
+      characters: Array<{ state: { position: { x: number } } }>;
+    };
+    tampered.characters[0]!.state.position.x = 3;
+    expect(() => validateLightweightPhysicsCheckpointV1(tampered)).toThrow(/hash漂移/u);
+    const future = JSON.parse(JSON.stringify(checkpoint)) as Record<string, unknown>;
+    future.future = true;
+    expect(() => validateLightweightPhysicsCheckpointV1(future)).toThrow(/future/u);
+    const reorderedSurface = JSON.parse(JSON.stringify(checkpoint)) as {
+      arena: { surfaces: Array<{ id: string }> };
+    };
+    reorderedSurface.arena.surfaces.push({
+      ...reorderedSurface.arena.surfaces[0]!,
+      id: 'aaa-before-main',
+    });
+    expect(() => validateLightweightPhysicsCheckpointV1(reorderedSurface))
+      .toThrow(/稳定升序/u);
+    world.destroy();
   });
 });

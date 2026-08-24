@@ -197,7 +197,11 @@ test('survival public snapshots publish a bound active-supply projection without
       commandSnapshot: structuredClone(command),
       delayedSnapshot: structuredClone(delayed),
       selfId: 'player-2',
-      arena: createBotArenaView(core.config.arena, core.getCharacterDefinition('player-2').collision.radius),
+      arena: createBotArenaView(
+        core.config.arena,
+        core.getCharacterDefinition('player-2').collision.radius,
+        core.getCharacterDefinition('player-2').movement.automaticStepHeight,
+      ),
     });
     assert.equal(observation.commandTick, 1_202);
     assert.equal(observation.observedTick, 1_201);
@@ -241,6 +245,7 @@ test('normalized BotSourceSnapshot rejects lifecycle fields without projection a
       arena: createBotArenaView(
         core.config.arena,
         core.getCharacterDefinition('player-2').collision.radius,
+        core.getCharacterDefinition('player-2').movement.automaticStepHeight,
       ),
     }), /remainingTicks 缺少 projection/);
 
@@ -261,6 +266,7 @@ test('normalized BotSourceSnapshot rejects lifecycle fields without projection a
       arena: createBotArenaView(
         core.config.arena,
         core.getCharacterDefinition('player-2').collision.radius,
+        core.getCharacterDefinition('player-2').movement.automaticStepHeight,
       ),
     }), /pending expiry identity 不能出现在 BotVisibleEquipment/);
   } finally {
@@ -277,7 +283,11 @@ test('Bot ignores a world supply omitted at its current-tick expiry boundary', (
       commandSnapshot: source,
       delayedSnapshot: source,
       selfId: 'player-2',
-      arena: createBotArenaView(core.config.arena, core.getCharacterDefinition('player-2').collision.radius),
+      arena: createBotArenaView(
+        core.config.arena,
+        core.getCharacterDefinition('player-2').collision.radius,
+        core.getCharacterDefinition('player-2').movement.automaticStepHeight,
+      ),
     });
     assert.deepEqual(source.activeSupplyProjection?.supplies, []);
     assert.deepEqual(observation.equipment, []);
@@ -290,6 +300,7 @@ test('Bot ignores a world supply omitted at its current-tick expiry boundary', (
         patience: 1,
         riskTolerance: 0.5,
       },
+      tickDurationSeconds: core.config.fixedDeltaSeconds,
     });
     assert.notEqual(decision.goalId, 'acquire-equipment');
   } finally {
@@ -392,6 +403,8 @@ test('formal survival Bot fails closed when the public supply projection is miss
     supplyProjectionContract: SUPPLY_PROJECTION_CONTRACT,
     arena: core.config.arena,
     characterRadius: core.getCharacterDefinition('player-2').collision.radius,
+    tickDurationSeconds: core.config.fixedDeltaSeconds,
+    maximumStepHeight: core.getCharacterDefinition('player-2').movement.automaticStepHeight,
   });
   try {
     const snapshot = core.getLegacyFullSnapshotForAudit();
@@ -417,6 +430,8 @@ test('formal survival Bot rejects namespace replacement before history/RNG commi
     supplyProjectionContract: SUPPLY_PROJECTION_CONTRACT,
     arena: core.config.arena,
     characterRadius: core.getCharacterDefinition('player-2').collision.radius,
+    tickDurationSeconds: core.config.fixedDeltaSeconds,
+    maximumStepHeight: core.getCharacterDefinition('player-2').movement.automaticStepHeight,
   });
   try {
     stepTo(core, 1_200);
@@ -482,6 +497,8 @@ test('formal survival Bot preserves same-tick result under participant input ord
       supplyProjectionContract: SUPPLY_PROJECTION_CONTRACT,
       arena: core.config.arena,
       characterRadius: core.getCharacterDefinition('player-2').collision.radius,
+      tickDurationSeconds: core.config.fixedDeltaSeconds,
+      maximumStepHeight: core.getCharacterDefinition('player-2').movement.automaticStepHeight,
     });
     const events: ArenaAuthorityEvent[] = [];
     const snapshotHashes: string[] = [];
@@ -530,6 +547,8 @@ test('formal survival Bot rejects future projection before history/RNG commit an
     supplyProjectionContract: SUPPLY_PROJECTION_CONTRACT,
     arena: core.config.arena,
     characterRadius: core.getCharacterDefinition('player-2').collision.radius,
+    tickDurationSeconds: core.config.fixedDeltaSeconds,
+    maximumStepHeight: core.getCharacterDefinition('player-2').movement.automaticStepHeight,
   });
   try {
     stepTo(core, 1_200);

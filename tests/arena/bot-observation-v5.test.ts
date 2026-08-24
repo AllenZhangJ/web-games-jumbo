@@ -43,6 +43,7 @@ function arenaFor(core: ReturnType<typeof makeCore>) {
   return createBotArenaView(
     core.config.arena,
     core.getCharacterDefinition('player-2').collision.radius,
+    core.getCharacterDefinition('player-2').movement.automaticStepHeight,
   );
 }
 
@@ -258,6 +259,8 @@ test('V5 repeated stable identity is idempotent while changed same-tick identity
     trustedCommandSourceHandle: handle,
     arena: core.config.arena,
     characterRadius: core.getCharacterDefinition('player-2').collision.radius,
+    tickDurationSeconds: core.config.fixedDeltaSeconds,
+    maximumStepHeight: core.getCharacterDefinition('player-2').movement.automaticStepHeight,
   });
   controller.attachTrustedCommandSourceReader(reader, handle);
 
@@ -323,6 +326,8 @@ test('V5 repeated stable identity is idempotent while changed same-tick identity
     trustedCommandSourceHandle: endedHandle,
     arena: core.config.arena,
     characterRadius: core.getCharacterDefinition('player-2').collision.radius,
+    tickDurationSeconds: core.config.fixedDeltaSeconds,
+    maximumStepHeight: core.getCharacterDefinition('player-2').movement.automaticStepHeight,
   });
   endedController.attachTrustedCommandSourceReader(
     { read: () => endedCurrent },
@@ -355,6 +360,8 @@ test('trusted command-source attach uses one expected handle and captures the re
     trustedCommandSourceHandle: expectedHandle,
     arena: core.config.arena,
     characterRadius: core.getCharacterDefinition('player-2').collision.radius,
+    tickDurationSeconds: core.config.fixedDeltaSeconds,
+    maximumStepHeight: core.getCharacterDefinition('player-2').movement.automaticStepHeight,
   });
   assert.throws(
     () => controller.attachTrustedCommandSourceReader(reader, otherHandle),
@@ -376,6 +383,8 @@ test('trusted command-source attach uses one expected handle and captures the re
     personalitySeed: 8,
     arena: strictCore.config.arena,
     characterRadius: strictCore.getCharacterDefinition('player-2').collision.radius,
+    tickDurationSeconds: strictCore.config.fixedDeltaSeconds,
+    maximumStepHeight: strictCore.getCharacterDefinition('player-2').movement.automaticStepHeight,
   }).createInput(strictCore.getLegacyFullSnapshotForAudit());
   assert.equal(typeof originalRead, 'function');
   assert.deepEqual(trustedFrame, strictFrame);
@@ -403,6 +412,8 @@ test('trusted command-source attach uses one expected handle and captures the re
     trustedCommandSourceHandle: expectedHandle,
     arena: core.config.arena,
     characterRadius: core.getCharacterDefinition('player-2').collision.radius,
+    tickDurationSeconds: core.config.fixedDeltaSeconds,
+    maximumStepHeight: core.getCharacterDefinition('player-2').movement.automaticStepHeight,
   });
   let freshGetterReads = 0;
   const freshAccessorReader: Record<string, unknown> = {};
@@ -448,6 +459,8 @@ test('trusted command-source attach does not publish after descriptor reentry or
     trustedCommandSourceHandle: handle,
     arena: core.config.arena,
     characterRadius: core.getCharacterDefinition('player-2').collision.radius,
+    tickDurationSeconds: core.config.fixedDeltaSeconds,
+    maximumStepHeight: core.getCharacterDefinition('player-2').movement.automaticStepHeight,
   });
 
   const reentrantHandle = {};
@@ -524,6 +537,8 @@ test('legacy and trusted V5 command source paths produce identical frames and re
     personalitySeed: 12,
     arena: legacyCore.config.arena,
     characterRadius: legacyCore.getCharacterDefinition('player-2').collision.radius,
+    tickDurationSeconds: legacyCore.config.fixedDeltaSeconds,
+    maximumStepHeight: legacyCore.getCharacterDefinition('player-2').movement.automaticStepHeight,
   } as const;
   const legacy = new BotController(common);
   const trusted = new BotController({ ...common, trustedCommandSourceHandle: handle });

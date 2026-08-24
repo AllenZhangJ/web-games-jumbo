@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no"
+    />
+    <meta name="theme-color" content="#192833" />
+    <title>Arena V2 正式候选开发页</title>
+  </head>
+  <body>
+    <main
+      id="arena-v2-formal-candidate-root"
+      class="arena-v2-candidate-shell"
+      aria-label="Arena V2 正式候选开发页"
+    ></main>
+
+    <section
+      id="arena-v2-candidate-gate"
+      class="arena-v2-candidate-gate"
+      aria-labelledby="arena-v2-candidate-title"
+      aria-describedby="arena-v2-candidate-status"
+    >
+      <p class="arena-v2-candidate-kicker">ISOLATED DEVELOPMENT CANDIDATE</p>
+      <h1 id="arena-v2-candidate-title">ARENA V2</h1>
+      <p id="arena-v2-candidate-status" role="status" aria-live="polite">正在准备角色、武器与地图</p>
+      <button id="arena-v2-candidate-enter" type="button" disabled>准备资源中</button>
+      <small>点击后启用音频并进入11页游戏流程</small>
+    </section>
+
+    <script type="module" src="/src/entry/web-arena-v2-formal-candidate.ts"></script>
+  </body>
+</html>

@@ -21,8 +21,33 @@ interface StartupCoordinator {
   current: OwnedGame | null;
   starting: OwnedGame | null;
   pendingCleanup: OwnedGame[];
+  operation: StartupCoordinatorOperation | null;
+  operationSequence: number;
+  reentrySequence: number;
+  reentryError: Error | null;
+  observationDepth: number;
+  /** Kept only for same-page migration from the pre-operation coordinator. */
   transitioning: boolean;
 }
+
+type StartupCoordinatorOperation =
+  | 'begin-generation'
+  | 'platform-launch'
+  | 'candidate-adoption'
+  | 'start-launch'
+  | 'start-settlement'
+  | 'failure-publication'
+  | 'retire-record';
+
+const STARTUP_COORDINATOR_OPERATIONS = new Set<StartupCoordinatorOperation>([
+  'begin-generation',
+  'platform-launch',
+  'candidate-adoption',
+  'start-launch',
+  'start-settlement',
+  'failure-publication',
+  'retire-record',
+]);
 
 interface ParsedLaunchOptions {
   readonly root: object;
@@ -98,6 +123,11 @@ function createCoordinator(): StartupCoordinator {
     current: { enumerable: true, value: null, writable: true },
     starting: { enumerable: true, value: null, writable: true },
     pendingCleanup: { enumerable: true, value: [], writable: true },
+    operation: { enumerable: true, value: null, writable: true },
+    operationSequence: { enumerable: true, value: 0, writable: true },
+    reentrySequence: { enumerable: true, value: 0, writable: true },
+    reentryError: { enumerable: true, value: null, writable: true },
+    observationDepth: { enumerable: true, value: 0, writable: true },
     transitioning: { enumerable: true, value: false, writable: true },
   });
   return state;
@@ -142,6 +172,11 @@ function validateCoordinator(value: unknown): StartupCoordinator {
   const starting = requiredOwnDataValue(value, 'starting');
   const pendingCleanup = requiredOwnDataValue(value, 'pendingCleanup');
   const transitioning = requiredOwnDataValue(value, 'transitioning');
+  let operation = requiredOwnDataValue(value, 'operation');
+  let operationSequence = requiredOwnDataValue(value, 'operationSequence');
+  let reentrySequence = requiredOwnDataValue(value, 'reentrySequence');
+  let reentryError = requiredOwnDataValue(value, 'reentryError');
+  let observationDepth = requiredOwnDataValue(value, 'observationDepth');
   if (brand !== COORDINATOR_BRAND
     || !Number.isSafeInteger(generation)
     || (generation as number) < 0
@@ -154,8 +189,46 @@ function validateCoordinator(value: unknown): StartupCoordinator {
     || (current !== null && current === starting)
     || (current !== null && pendingCleanup.includes(current))
     || (starting !== null && pendingCleanup.includes(starting))
-    || typeof transitioning !== 'boolean') {
+    || transitioning !== false) {
     throw new TypeError('launchGame 宿主协调状态已损坏。');
+  }
+  const legacyOperationState = operation === undefined
+    && operationSequence === undefined
+    && reentrySequence === undefined
+    && reentryError === undefined
+    && observationDepth === undefined;
+  if (legacyOperationState) {
+    try {
+      Object.defineProperties(value, {
+        operation: { enumerable: true, value: null, writable: true },
+        operationSequence: { enumerable: true, value: 0, writable: true },
+        reentrySequence: { enumerable: true, value: 0, writable: true },
+        reentryError: { enumerable: true, value: null, writable: true },
+        observationDepth: { enumerable: true, value: 0, writable: true },
+      });
+    } catch (error) {
+      throw new TypeError('launchGame 无法升级旧宿主协调状态。', { cause: error });
+    }
+    operation = null;
+    operationSequence = 0;
+    reentrySequence = 0;
+    reentryError = null;
+    observationDepth = 0;
+  }
+  if (
+    (operation !== null && (
+      typeof operation !== 'string'
+      || !STARTUP_COORDINATOR_OPERATIONS.has(operation as StartupCoordinatorOperation)
+    ))
+    || !Number.isSafeInteger(operationSequence)
+    || (operationSequence as number) < 0
+    || !Number.isSafeInteger(reentrySequence)
+    || (reentrySequence as number) < 0
+    || (reentryError !== null && !isObject(reentryError))
+    || !Number.isSafeInteger(observationDepth)
+    || (observationDepth as number) < 0
+  ) {
+    throw new TypeError('launchGame 宿主协调operation状态已损坏。');
   }
   return value as unknown as StartupCoordinator;
 }
@@ -307,17 +380,152 @@ function createOwnedGame(candidate: unknown): OwnedGame {
   return record;
 }
 
-function destroyOwned(record: OwnedGame): void {
+function guardCoordinatorObservation(
+  state: StartupCoordinator,
+  operation: StartupCoordinatorOperation,
+): void {
+  if (state.observationDepth > 0) {
+    throw new Error(`launchGame observer期间不能执行${operation}。`);
+  }
+}
+
+function guardCoordinatorReentry(
+  state: StartupCoordinator,
+  operation: StartupCoordinatorOperation,
+): void {
+  if (state.operation === null) return;
+  state.reentrySequence += 1;
+  state.reentryError ??= new Error(
+    `launchGame ${state.operation}期间拒绝${operation}重入。`,
+  );
+  throw state.reentryError;
+}
+
+function assertCoordinatorOwner(
+  state: StartupCoordinator,
+  sequence: number,
+  operation: StartupCoordinatorOperation,
+  label: string,
+): void {
+  if (state.operation !== operation || state.operationSequence !== sequence) {
+    throw new Error(`${label}缺少当前launchGame operation所有权。`);
+  }
+}
+
+function assertCoordinatorCommit(
+  state: StartupCoordinator,
+  sequence: number,
+  operation: StartupCoordinatorOperation,
+  label: string,
+): void {
+  assertCoordinatorOwner(state, sequence, operation, label);
+  if (state.reentryError !== null) throw state.reentryError;
+}
+
+function runCoordinatorOperation<T>(
+  state: StartupCoordinator,
+  operation: StartupCoordinatorOperation,
+  run: (sequence: number) => T,
+): T {
+  guardCoordinatorObservation(state, operation);
+  guardCoordinatorReentry(state, operation);
+  state.operation = operation;
+  state.operationSequence += 1;
+  const sequence = state.operationSequence;
+  state.reentryError = null;
+  let result!: T;
+  let failure: unknown = null;
+  let failed = false;
+  try {
+    result = run(sequence);
+    assertCoordinatorCommit(state, sequence, operation, `launchGame ${operation}`);
+  } catch (error) {
+    failed = true;
+    failure = error;
+  } finally {
+    const reentryError = state.reentryError;
+    state.operation = null;
+    state.reentryError = null;
+    if (reentryError !== null && failure !== reentryError) {
+      throw new AggregateError(
+        failed ? [failure, reentryError] : [reentryError],
+        `launchGame ${operation}失败关闭且发生同步重入。`,
+      );
+    }
+  }
+  if (failed) throw failure;
+  return result;
+}
+
+function callCoordinatorChecked<T>(
+  state: StartupCoordinator,
+  sequence: number,
+  operation: StartupCoordinatorOperation,
+  callback: () => T,
+  label: string,
+  allowThenable = false,
+): T {
+  try {
+    const result = callback();
+    if (!allowThenable && isThenable(result)) {
+      throw new TypeError(`${label} 不得返回异步 thenable。`);
+    }
+    assertCoordinatorCommit(state, sequence, operation, label);
+    return result;
+  } catch (error) {
+    try {
+      assertCoordinatorCommit(state, sequence, operation, label);
+    } catch (reentryError) {
+      if (error !== reentryError) {
+        throw new AggregateError(
+          [error, reentryError],
+          `${label}失败且发生launchGame重入。`,
+        );
+      }
+      throw reentryError;
+    }
+    throw error;
+  }
+}
+
+function containCoordinatorObservation<T>(state: StartupCoordinator, observe: () => T): T {
+  const reentryError = state.reentryError;
+  state.observationDepth += 1;
+  try {
+    return observe();
+  } finally {
+    state.observationDepth -= 1;
+    state.reentryError = reentryError;
+  }
+}
+
+function destroyOwnedChecked(
+  state: StartupCoordinator,
+  sequence: number,
+  operation: StartupCoordinatorOperation,
+  record: OwnedGame,
+): void {
   if (record.destroyed) return;
-  const result = record.destroy();
-  if (isThenable(result)) throw new TypeError('游戏 destroy 不得返回异步 thenable。');
+  callCoordinatorChecked(
+    state,
+    sequence,
+    operation,
+    () => record.destroy(),
+    'launchGame game.destroy()',
+  );
   record.destroyed = true;
 }
 
-function callNonCritical(callback: UnknownCallback | null, value: unknown): void {
+function callNonCritical(
+  state: StartupCoordinator | null,
+  callback: UnknownCallback | null,
+  value: unknown,
+): void {
   if (!callback) return;
   try {
-    const result = callback(value);
+    const result = state === null
+      ? callback(value)
+      : containCoordinatorObservation(state, () => callback(value));
     if (isThenable(result)) return;
   } catch {
     // Host diagnostics and UI callbacks cannot own the game lifecycle.
@@ -328,14 +536,31 @@ function addUnique(records: OwnedGame[], record: OwnedGame | null): void {
   if (record && !records.includes(record)) records.push(record);
 }
 
-function cleanupRecords(state: StartupCoordinator, records: readonly OwnedGame[]): Error[] {
+function cleanupRecords(
+  state: StartupCoordinator,
+  sequence: number,
+  operation: StartupCoordinatorOperation,
+  records: readonly OwnedGame[],
+): Error[] {
   const errors: Error[] = [];
-  for (const record of records) {
+  let index = 0;
+  for (; index < records.length; index += 1) {
+    const record = records[index]!;
     try {
-      destroyOwned(record);
+      destroyOwnedChecked(state, sequence, operation, record);
     } catch (error) {
       if (!state.pendingCleanup.includes(record)) state.pendingCleanup.push(record);
       errors.push(error instanceof Error ? error : new Error(String(error)));
+      if (state.reentryError !== null) {
+        index += 1;
+        break;
+      }
+    }
+  }
+  for (; index < records.length; index += 1) {
+    const record = records[index]!;
+    if (!record.destroyed && !state.pendingCleanup.includes(record)) {
+      state.pendingCleanup.push(record);
     }
   }
   state.pendingCleanup = state.pendingCleanup.filter((record) => !record.destroyed);
@@ -343,58 +568,80 @@ function cleanupRecords(state: StartupCoordinator, records: readonly OwnedGame[]
 }
 
 function beginGeneration(root: object, state: StartupCoordinator): { generation: number; error: Error | null } {
-  if (state.transitioning) {
-    return { generation: state.generation, error: new Error('launchGame 不允许生命周期重入。') };
-  }
-  state.transitioning = true;
-  try {
+  return runCoordinatorOperation(state, 'begin-generation', (sequence) => {
     state.generation = state.generation >= Number.MAX_SAFE_INTEGER ? 1 : state.generation + 1;
     const records: OwnedGame[] = [...state.pendingCleanup];
     addUnique(records, state.current);
     addUnique(records, state.starting);
     const exposed = ownDataValue(root, EXPOSED_GAME);
+    assertCoordinatorCommit(
+      state,
+      sequence,
+      'begin-generation',
+      'launchGame exposed game read',
+    );
     if (isObject(exposed)
       && !records.some((record) => record.game === exposed)) {
       try { records.push(createOwnedGame(exposed)); } catch { /* optional legacy debug exposure */ }
     }
+    assertCoordinatorCommit(
+      state,
+      sequence,
+      'begin-generation',
+      'launchGame legacy exposed game capture',
+    );
     state.current = null;
     state.starting = null;
-    state.pendingCleanup = [];
+    state.pendingCleanup = records.filter((record) => !record.destroyed);
     exposeGame(root, null);
-    const errors = cleanupRecords(state, records);
+    assertCoordinatorCommit(
+      state,
+      sequence,
+      'begin-generation',
+      'launchGame exposed game clear',
+    );
+    const errors = cleanupRecords(state, sequence, 'begin-generation', records);
     return {
       generation: state.generation,
       error: errors.length === 0
         ? null
         : new AggregateError(errors, '旧游戏资源清理未完成，拒绝启动替换实例。'),
     };
-  } finally {
-    state.transitioning = false;
-  }
+  });
 }
 
 function retireRecord(state: StartupCoordinator, record: OwnedGame): Error | null {
-  if (state.transitioning) return new Error('launchGame 不允许销毁生命周期重入。');
-  state.transitioning = true;
   try {
-    if (state.current === record) state.current = null;
-    if (state.starting === record) state.starting = null;
-    try {
-      destroyOwned(record);
-      state.pendingCleanup = state.pendingCleanup.filter((candidate) => candidate !== record);
-      return null;
-    } catch (error) {
-      if (!state.pendingCleanup.includes(record)) state.pendingCleanup.push(record);
-      return error instanceof Error ? error : new Error(String(error));
+    return runCoordinatorOperation(state, 'retire-record', (sequence) => {
+      if (state.current === record) state.current = null;
+      if (state.starting === record) state.starting = null;
+      if (!record.destroyed && !state.pendingCleanup.includes(record)) {
+        state.pendingCleanup.push(record);
+      }
+      try {
+        destroyOwnedChecked(state, sequence, 'retire-record', record);
+        state.pendingCleanup = state.pendingCleanup.filter((candidate) => candidate !== record);
+        return null;
+      } catch (error) {
+        if (!state.pendingCleanup.includes(record)) state.pendingCleanup.push(record);
+        throw error;
+      }
+    });
+  } catch (error) {
+    if (!state.pendingCleanup.includes(record) && !record.destroyed) {
+      state.pendingCleanup.push(record);
     }
-  } finally {
-    state.transitioning = false;
+    return error instanceof Error ? error : new Error(String(error));
   }
 }
 
-function handledFailure(options: ParsedLaunchOptions | null, error: unknown): Promise<null> {
+function handledFailure(
+  options: ParsedLaunchOptions | null,
+  error: unknown,
+  state: StartupCoordinator | null = null,
+): Promise<null> {
   return Promise.resolve().then(() => {
-    callNonCritical(options?.onError ?? null, error);
+    callNonCritical(state, options?.onError ?? null, error);
     return null;
   });
 }
@@ -412,7 +659,8 @@ export function launchGame(
   if (typeof createPlatformValue !== 'function') {
     return handledFailure(options, new TypeError('launchGame 需要 createPlatform 函数。'));
   }
-  if (!options.createGame) {
+  const createGame = options.createGame;
+  if (!createGame) {
     return handledFailure(options, new TypeError('launchGame 需要 createGame 函数。'));
   }
 
@@ -420,36 +668,126 @@ export function launchGame(
   let prepared: { generation: number; error: Error | null };
   try {
     state = coordinator(options.root);
-    prepared = beginGeneration(options.root, state);
   } catch (error) {
     return handledFailure(options, error);
   }
-  if (prepared.error) return handledFailure(options, prepared.error);
+  try {
+    prepared = beginGeneration(options.root, state);
+  } catch (error) {
+    return handledFailure(options, error, state);
+  }
+  if (prepared.error) return handledFailure(options, prepared.error, state);
   const generation = prepared.generation;
 
   const run = async (): Promise<object | null> => {
-    if (generation !== state.generation) return null;
     let record: OwnedGame | null = null;
     try {
-      const platform = await (createPlatformValue as UnknownCallback)();
-      if (generation !== state.generation) return null;
-      const candidate = options.createGame?.(platform, options.gameOptions);
-      record = createOwnedGame(candidate);
-      if (generation !== state.generation) {
+      const platformPromise = runCoordinatorOperation(
+        state,
+        'platform-launch',
+        (sequence) => {
+          if (generation !== state.generation) return null;
+          const platformResult = callCoordinatorChecked(
+            state,
+            sequence,
+            'platform-launch',
+            () => (createPlatformValue as UnknownCallback)(),
+            'launchGame createPlatform()',
+            true,
+          );
+          const promise = Promise.resolve(platformResult);
+          assertCoordinatorCommit(
+            state,
+            sequence,
+            'platform-launch',
+            'launchGame platform Promise publication',
+          );
+          return promise;
+        },
+      );
+      if (platformPromise === null) return null;
+      const platform = await platformPromise;
+      const adopted = runCoordinatorOperation(
+        state,
+        'candidate-adoption',
+        (sequence) => {
+          if (generation !== state.generation) return false;
+          const candidate = callCoordinatorChecked(
+            state,
+            sequence,
+            'candidate-adoption',
+            () => createGame(platform, options.gameOptions),
+            'launchGame createGame()',
+          );
+          record = createOwnedGame(candidate);
+          assertCoordinatorCommit(
+            state,
+            sequence,
+            'candidate-adoption',
+            'launchGame game capability capture',
+          );
+          state.starting = record;
+          return true;
+        },
+      );
+      if (!adopted || record === null) return null;
+      const startPromise = runCoordinatorOperation(
+        state,
+        'start-launch',
+        (sequence) => {
+          if (generation !== state.generation || state.starting !== record) return null;
+          const startResult = callCoordinatorChecked(
+            state,
+            sequence,
+            'start-launch',
+            () => record!.start(),
+            'launchGame game.start()',
+            true,
+          );
+          const promise = Promise.resolve(startResult);
+          assertCoordinatorCommit(
+            state,
+            sequence,
+            'start-launch',
+            'launchGame start Promise publication',
+          );
+          return promise;
+        },
+      );
+      if (startPromise === null) {
         retireRecord(state, record);
         return null;
       }
-      state.starting = record;
-      await record.start();
-      if (generation !== state.generation) {
+      await startPromise;
+      const published = runCoordinatorOperation(
+        state,
+        'start-settlement',
+        (sequence) => {
+          if (generation !== state.generation || state.starting !== record) return null;
+          state.starting = null;
+          state.current = record;
+          exposeGame(options.root, record!.game);
+          assertCoordinatorCommit(
+            state,
+            sequence,
+            'start-settlement',
+            'launchGame current game exposure',
+          );
+          callNonCritical(state, options.onSuccess, record!.game);
+          assertCoordinatorCommit(
+            state,
+            sequence,
+            'start-settlement',
+            'launchGame success observation',
+          );
+          return state.current === record ? record!.game : null;
+        },
+      );
+      if (published === null) {
         retireRecord(state, record);
         return null;
       }
-      state.starting = null;
-      state.current = record;
-      exposeGame(options.root, record.game);
-      callNonCritical(options.onSuccess, record.game);
-      return generation === state.generation && state.current === record ? record.game : null;
+      return published;
     } catch (error) {
       let failure: unknown = error;
       if (record) {
@@ -457,8 +795,28 @@ export function launchGame(
         if (cleanupError) failure = new AggregateError([error, cleanupError], '游戏启动失败且清理未完成。');
       }
       if (generation === state.generation) {
-        exposeGame(options.root, null);
-        callNonCritical(options.onError, failure);
+        try {
+          runCoordinatorOperation(state, 'failure-publication', (sequence) => {
+            if (generation !== state.generation) return;
+            exposeGame(options.root, null);
+            assertCoordinatorCommit(
+              state,
+              sequence,
+              'failure-publication',
+              'launchGame failed game exposure clear',
+            );
+            callNonCritical(state, options.onError, failure);
+          });
+        } catch (publicationError) {
+          callNonCritical(
+            state,
+            options.onError,
+            new AggregateError(
+              [failure, publicationError],
+              '游戏启动失败且失败状态发布未完整完成。',
+            ),
+          );
+        }
       }
       return null;
     }
@@ -472,3 +830,17 @@ export function stopLaunchedGame(rootValue: unknown = globalThis): void {
   const prepared = beginGeneration(rootValue, state);
   if (prepared.error) throw prepared.error;
 }
+
+export const LAUNCH_GAME_COORDINATOR_OPERATION_POLICY = Object.freeze({
+  lifecycleUsesHostScopedMonotonicOperationOwner: true as const,
+  legacyTransitioningFieldIsMigrationOnly: true as const,
+  platformCandidateStartAndSettlementUseSeparateSynchronousSegments: true as const,
+  platformAndStartPromisesPublishBeforeAwait: true as const,
+  gameCapabilitiesPublishToStartingBeforeStartInvocation: true as const,
+  destroyCallbacksCheckedBeforeDestroyedAndCleanupOwnerRelease: true as const,
+  stickyReentryStopsCrossOwnerCleanupAndRetainsPendingDebt: true as const,
+  staleAsyncSettlementsCannotPublishCurrentGame: true as const,
+  successAndFailureObserversCannotOwnCoordinatorLifecycle: true as const,
+  replacementStopAndDebugExposureBehaviorRemainUnchanged: true as const,
+  validationStatus: 'not-run' as const,
+});

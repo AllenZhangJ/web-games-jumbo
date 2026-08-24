@@ -119,6 +119,9 @@ const SOURCE_KEYS = new Set([
 ]);
 const ACTION_KEYS = new Set(['definitionId', 'phase', 'ticksRemaining', 'commitment']);
 const ACTION_REQUIRED_KEYS = new Set(['definitionId', 'phase', 'ticksRemaining']);
+const ACTION_COMMITMENT_KEYS = new Set([
+  'status', 'chargeTicks', 'chargeLevel', 'facingAtStart', 'facingAtResult',
+]);
 const ACTION_RULE_KEYS = new Set([
   'definitionId',
   'targetingKind',
@@ -128,6 +131,7 @@ const ACTION_RULE_KEYS = new Set([
   'windupTicks',
   'activeTicks',
   'recoveryTicks',
+  'minimumCommitmentTicks',
 ]);
 const HELD_EQUIPMENT_KEYS = new Set([
   'instanceId',
@@ -439,6 +443,13 @@ function projectParticipant(source: WorldParticipantSnapshotV2): Record<string, 
   // The output object is deliberately assembled field by field; no generic
   // participant key can be silently carried into the V5 source.
   void actionRule;
+  const commitment = action.commitment === undefined
+    ? null
+    : requireExactKeys(
+        action.commitment,
+        ACTION_COMMITMENT_KEYS,
+        'BotCommandSourceV5 participant.action.commitment',
+      );
   const result = {
     id: participant.id,
     characterDefinitionId: participant.characterDefinitionId,
@@ -453,6 +464,10 @@ function projectParticipant(source: WorldParticipantSnapshotV2): Record<string, 
       definitionId: action.definitionId,
       phase: action.phase,
       ticksRemaining: action.ticksRemaining,
+      primaryCommitment: commitment === null ? null : Object.freeze({
+        status: commitment.status,
+        chargeTicks: commitment.chargeTicks,
+      }),
     }),
     actionRule: participant.actionRule,
     movement: Object.freeze({

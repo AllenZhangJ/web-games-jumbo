@@ -71,6 +71,18 @@ function assertRecoveryState(value: unknown): ProductSessionState {
   return value as ProductSessionState;
 }
 
+type ProductSessionStateMachineOperation =
+  | 'dispatch'
+  | 'suspend'
+  | 'resume'
+  | 'fail-recoverable'
+  | 'retry'
+  | 'fail-fatal'
+  | 'destroy'
+  | 'state-read'
+  | 'active-state-read'
+  | 'snapshot-read';
+
 export class ProductSessionStateMachine {
   readonly #registry: ProductSessionTransitionRegistry;
   #state: ProductSessionState;
@@ -78,7 +90,10 @@ export class ProductSessionStateMachine {
   #recoveryState: ProductSessionState | null;
   #revision: number;
   #lastTransition: ProductSessionTransitionSnapshot | null;
-  #transitioning: boolean;
+  #operation: ProductSessionStateMachineOperation | null = null;
+  #operationSequence = 0;
+  #reentrySequence = 0;
+  #reentryError: Error | null = null;
 
   constructor(options?: ProductSessionStateMachineOptions);
   constructor(options?: unknown) {
@@ -96,15 +111,18 @@ export class ProductSessionStateMachine {
     this.#recoveryState = null;
     this.#revision = 0;
     this.#lastTransition = null;
-    this.#transitioning = false;
     Object.freeze(this);
   }
 
   get state(): ProductSessionState {
-    return this.#state;
+    return this.#run('state-read', () => this.#state);
   }
 
   get activeState(): ProductSessionState | null {
+    return this.#run('active-state-read', () => this.#activeStateValue());
+  }
+
+  #activeStateValue(): ProductSessionState | null {
     if (this.#state === PRODUCT_SESSION_STATE.DESTROYED) return null;
     return this.#state === PRODUCT_SESSION_STATE.SUSPENDED
       ? this.#resumeState
@@ -115,8 +133,62 @@ export class ProductSessionStateMachine {
     if (this.#state === PRODUCT_SESSION_STATE.DESTROYED) {
       throw new Error('ProductSessionStateMachine 已销毁。');
     }
-    if (this.#transitioning) {
-      throw new Error('ProductSessionStateMachine 转换不可重入。');
+  }
+
+  #beginOperation(operation: ProductSessionStateMachineOperation): number {
+    if (this.#operation !== null) {
+      this.#reentrySequence += 1;
+      this.#reentryError ??= new Error(
+        `ProductSessionStateMachine.${operation}() 不可重入；当前正在 ${this.#operation}()。`,
+      );
+      throw this.#reentryError;
+    }
+    this.#operation = operation;
+    this.#operationSequence += 1;
+    this.#reentryError = null;
+    return this.#operationSequence;
+  }
+
+  #assertCurrentOperationCommit(sequence: number, label: string): void {
+    if (this.#operation === null || this.#operationSequence !== sequence) {
+      throw new Error(`${label}缺少当前ProductSessionStateMachine操作所有权。`);
+    }
+    if (this.#reentryError !== null) throw this.#reentryError;
+  }
+
+  #finishOperation(sequence: number): void {
+    const operation = this.#operation;
+    const ownershipError = operation === null || this.#operationSequence !== sequence
+      ? new Error('ProductSessionStateMachine操作所有权在结束前已失效。')
+      : null;
+    const reentryError = this.#reentryError;
+    if (reentryError !== null && this.#state !== PRODUCT_SESSION_STATE.DESTROYED) {
+      this.#state = PRODUCT_SESSION_STATE.FATAL_ERROR;
+      this.#resumeState = null;
+      this.#recoveryState = null;
+    }
+    this.#operation = null;
+    this.#reentryError = null;
+    if (ownershipError !== null) throw ownershipError;
+    if (reentryError !== null) {
+      throw new Error(
+        `ProductSessionStateMachine.${operation ?? 'operation'}() 检测到重入并已失败关闭。`,
+        { cause: reentryError },
+      );
+    }
+  }
+
+  #run<T>(
+    operation: ProductSessionStateMachineOperation,
+    callback: (sequence: number) => T,
+  ): T {
+    const sequence = this.#beginOperation(operation);
+    try {
+      const result = callback(sequence);
+      this.#assertCurrentOperationCommit(sequence, `ProductSessionStateMachine ${operation}`);
+      return result;
+    } finally {
+      this.#finishOperation(sequence);
     }
   }
 
@@ -138,25 +210,20 @@ export class ProductSessionStateMachine {
       activeFromState: values.activeFrom,
       activeToState: values.activeTo,
     });
-    return this.getSnapshot();
-  }
-
-  #run(callback: () => ProductSessionStateSnapshot): ProductSessionStateSnapshot {
-    this.#assertMutable();
-    this.#transitioning = true;
-    try {
-      return callback();
-    } finally {
-      this.#transitioning = false;
-    }
+    return this.#snapshotValue();
   }
 
   dispatch(eventIdValue: unknown): ProductSessionStateSnapshot {
-    const eventId = assertNonEmptyString(eventIdValue, 'ProductSession eventId') as ProductSessionEvent;
-    return this.#run(() => {
+    return this.#run('dispatch', (sequence) => {
+      this.#assertMutable();
+      const eventId = assertNonEmptyString(
+        eventIdValue,
+        'ProductSession eventId',
+      ) as ProductSessionEvent;
       const visibleFrom = this.#state;
-      const activeFrom = this.activeState;
+      const activeFrom = this.#activeStateValue();
       const definition = this.#registry.resolve(eventId, activeFrom);
+      this.#assertCurrentOperationCommit(sequence, 'ProductSession transition resolve');
       if (!definition) {
         throw new Error(`ProductSession 无法在 ${String(activeFrom)} 处理 ${eventId}。`);
       }
@@ -172,12 +239,13 @@ export class ProductSessionStateMachine {
   }
 
   suspend(): ProductSessionStateSnapshot {
-    if (
-      this.#state === PRODUCT_SESSION_STATE.DESTROYED
-      || this.#state === PRODUCT_SESSION_STATE.SUSPENDED
-      || this.#state === PRODUCT_SESSION_STATE.FATAL_ERROR
-    ) return this.getSnapshot();
-    return this.#run(() => {
+    return this.#run('suspend', () => {
+      if (
+        this.#state === PRODUCT_SESSION_STATE.DESTROYED
+        || this.#state === PRODUCT_SESSION_STATE.SUSPENDED
+        || this.#state === PRODUCT_SESSION_STATE.FATAL_ERROR
+      ) return this.#snapshotValue();
+      this.#assertMutable();
       const visibleFrom = this.#state;
       this.#resumeState = this.#state;
       this.#state = PRODUCT_SESSION_STATE.SUSPENDED;
@@ -191,9 +259,10 @@ export class ProductSessionStateMachine {
   }
 
   resume(): ProductSessionStateSnapshot {
-    if (this.#state === PRODUCT_SESSION_STATE.DESTROYED) return this.getSnapshot();
-    if (this.#state !== PRODUCT_SESSION_STATE.SUSPENDED) return this.getSnapshot();
-    return this.#run(() => {
+    return this.#run('resume', () => {
+      if (this.#state === PRODUCT_SESSION_STATE.DESTROYED) return this.#snapshotValue();
+      if (this.#state !== PRODUCT_SESSION_STATE.SUSPENDED) return this.#snapshotValue();
+      this.#assertMutable();
       const activeTo = this.#resumeState;
       if (activeTo === null) throw new Error('ProductSession 缺少 resumeState。');
       this.#state = activeTo;
@@ -208,13 +277,14 @@ export class ProductSessionStateMachine {
   }
 
   failRecoverable(recoveryStateValue: unknown): ProductSessionStateSnapshot {
-    const recoveryState = assertRecoveryState(recoveryStateValue);
-    return this.#run(() => {
-      if (this.activeState === PRODUCT_SESSION_STATE.FATAL_ERROR) {
+    return this.#run('fail-recoverable', () => {
+      this.#assertMutable();
+      const recoveryState = assertRecoveryState(recoveryStateValue);
+      if (this.#activeStateValue() === PRODUCT_SESSION_STATE.FATAL_ERROR) {
         throw new Error('fatal-error 不能降级为 recoverable-error。');
       }
       const visibleFrom = this.#state;
-      const activeFrom = this.activeState;
+      const activeFrom = this.#activeStateValue();
       this.#recoveryState = recoveryState;
       if (visibleFrom === PRODUCT_SESSION_STATE.SUSPENDED) {
         this.#resumeState = PRODUCT_SESSION_STATE.RECOVERABLE_ERROR;
@@ -231,8 +301,9 @@ export class ProductSessionStateMachine {
   }
 
   retry(): ProductSessionStateSnapshot {
-    return this.#run(() => {
-      if (this.activeState !== PRODUCT_SESSION_STATE.RECOVERABLE_ERROR) {
+    return this.#run('retry', () => {
+      this.#assertMutable();
+      if (this.#activeStateValue() !== PRODUCT_SESSION_STATE.RECOVERABLE_ERROR) {
         throw new Error('只有 recoverable-error 可以重试。');
       }
       const visibleFrom = this.#state;
@@ -251,13 +322,14 @@ export class ProductSessionStateMachine {
   }
 
   failFatal(): ProductSessionStateSnapshot {
-    if (
-      this.#state === PRODUCT_SESSION_STATE.DESTROYED
-      || this.#state === PRODUCT_SESSION_STATE.FATAL_ERROR
-    ) return this.getSnapshot();
-    return this.#run(() => {
+    return this.#run('fail-fatal', () => {
+      if (
+        this.#state === PRODUCT_SESSION_STATE.DESTROYED
+        || this.#state === PRODUCT_SESSION_STATE.FATAL_ERROR
+      ) return this.#snapshotValue();
+      this.#assertMutable();
       const visibleFrom = this.#state;
-      const activeFrom = this.activeState;
+      const activeFrom = this.#activeStateValue();
       this.#state = PRODUCT_SESSION_STATE.FATAL_ERROR;
       this.#resumeState = null;
       this.#recoveryState = null;
@@ -271,10 +343,10 @@ export class ProductSessionStateMachine {
   }
 
   destroy(): ProductSessionStateSnapshot {
-    if (this.#state === PRODUCT_SESSION_STATE.DESTROYED) return this.getSnapshot();
-    return this.#run(() => {
+    return this.#run('destroy', () => {
+      if (this.#state === PRODUCT_SESSION_STATE.DESTROYED) return this.#snapshotValue();
       const visibleFrom = this.#state;
-      const activeFrom = this.activeState;
+      const activeFrom = this.#activeStateValue();
       this.#state = PRODUCT_SESSION_STATE.DESTROYED;
       this.#resumeState = null;
       this.#recoveryState = null;
@@ -288,14 +360,29 @@ export class ProductSessionStateMachine {
   }
 
   getSnapshot(): ProductSessionStateSnapshot {
+    return this.#run('snapshot-read', () => this.#snapshotValue());
+  }
+
+  #snapshotValue(): ProductSessionStateSnapshot {
     return Object.freeze({
       schemaVersion: PRODUCT_SESSION_STATE_SNAPSHOT_SCHEMA_VERSION,
       revision: this.#revision,
       state: this.#state,
-      activeState: this.activeState,
+      activeState: this.#activeStateValue(),
       resumeState: this.#resumeState,
       recoveryState: this.#recoveryState,
       lastTransition: copyTransition(this.#lastTransition),
     });
   }
 }
+
+export const PRODUCT_SESSION_STATE_MACHINE_OPERATION_POLICY = Object.freeze({
+  operationGuardPrecedesLifecycleEventAndReadValidation: true as const,
+  stickyReentryUsesMonotonicSequenceAndFirstError: true as const,
+  registryResolveCheckedBeforeStateMutation: true as const,
+  publicStateActiveStateAndSnapshotReadsRejectIntermediateTransitions: true as const,
+  revisionAndLastTransitionPublishWithStateMutation: true as const,
+  reentryFailsClosedToFatalErrorWithoutSyntheticTransition: true as const,
+  transitionVocabularyAndRecoveryStatesRemainUnchanged: true as const,
+  validationStatus: 'not-run' as const,
+});

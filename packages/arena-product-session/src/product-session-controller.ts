@@ -85,6 +85,34 @@ interface PrepareMatchOptions {
   readonly clearRewardOnSuccess: boolean;
 }
 
+type ProductSessionControllerOperation =
+  | 'state-read'
+  | 'boot-request'
+  | 'boot-profile-settlement'
+  | 'boot-profile-failure'
+  | 'boot-finalize'
+  | 'open-character-select'
+  | 'close-character-select'
+  | 'select-character'
+  | 'match-request'
+  | 'rematch-request'
+  | 'match-prepare-start'
+  | 'match-prepare-settlement'
+  | 'match-prepare-failure'
+  | 'match-prepare-finalize'
+  | 'begin-match'
+  | 'step-match'
+  | 'match-frame-read'
+  | 'renew-profile-lease'
+  | 'commit-reward'
+  | 'continue-reward'
+  | 'dismiss-unlocks'
+  | 'retry'
+  | 'hide'
+  | 'show'
+  | 'destroy'
+  | 'snapshot-read';
+
 const REWARD_OUTCOME_KEYS = new Set(['grant', 'committed', 'duplicate', 'profile']);
 const REWARD_UNLOCK_KEYS = ['characterIds', 'appearanceIds', 'equipmentIds', 'mapIds'] as const;
 
@@ -146,6 +174,28 @@ function cleanupFailure(errors: readonly Error[]): Error {
   return failure;
 }
 
+const PRODUCT_SESSION_CONTROLLER_REENTRY_FAILURE = Symbol(
+  'ProductSessionControllerReentryFailure',
+);
+
+function markReentryFailure(error: Error): Error {
+  Object.defineProperty(error, PRODUCT_SESSION_CONTROLLER_REENTRY_FAILURE, {
+    configurable: false,
+    enumerable: false,
+    writable: false,
+    value: true,
+  });
+  return error;
+}
+
+function isReentryFailure(value: unknown): boolean {
+  return value instanceof Error
+    && Object.getOwnPropertyDescriptor(
+      value,
+      PRODUCT_SESSION_CONTROLLER_REENTRY_FAILURE,
+    )?.value === true;
+}
+
 export class ProductSessionController {
   readonly #stateMachine: Readonly<ProductSessionStateMachinePort>;
   readonly #profileService: Readonly<ProductProfileServicePort>;
@@ -157,7 +207,10 @@ export class ProductSessionController {
   #profileSnapshot: PlayerProfile | null = null;
   #rewardSnapshot: ProductRewardSnapshot | null = null;
   #lastError: ProductSessionPublicError | null = null;
-  #transitioning = false;
+  #operation: ProductSessionControllerOperation | null = null;
+  #operationSequence = 0;
+  #reentrySequence = 0;
+  #reentryError: Error | null = null;
   #stateMachineCleanupPending = true;
   #profileCleanupPending = true;
   #matchCleanupPending = true;
@@ -174,22 +227,109 @@ export class ProductSessionController {
   }
 
   get state(): ProductSessionState {
-    return this.#runTransition(() => this.#readState().state);
+    return this.#runOperation('state-read', () => this.#readState().state);
   }
 
-  #runTransition<T>(operation: () => T): T {
-    if (this.#transitioning) throw new Error('ProductSessionController 操作不可重入。');
-    this.#transitioning = true;
+  #beginOperation(operation: ProductSessionControllerOperation): number {
+    if (this.#operation !== null) {
+      this.#reentrySequence += 1;
+      this.#reentryError ??= new Error(
+        `ProductSessionController.${operation}() 不可重入；当前正在 ${this.#operation}()。`,
+      );
+      throw this.#reentryError;
+    }
+    this.#operation = operation;
+    this.#operationSequence += 1;
+    this.#reentryError = null;
+    return this.#operationSequence;
+  }
+
+  #assertCurrentOperationCommit(sequence: number, label: string): void {
+    if (this.#operation === null || this.#operationSequence !== sequence) {
+      throw new Error(`${label}缺少当前ProductSessionController操作所有权。`);
+    }
+    if (this.#reentryError !== null) throw this.#reentryError;
+  }
+
+  #publishReentryFailClosed(reentryError: Error, operation: string): Error {
+    const errors: Error[] = [reentryError];
     try {
-      return operation();
+      const failed = this.#stateMachine.failFatal();
+      rejectAsyncSyncReturn(
+        failed,
+        'ProductSession reentry StateMachine.failFatal()',
+      );
+    } catch (error) {
+      errors.push(normalizeThrownError(
+        error,
+        'ProductSession reentry fatal状态发布失败',
+      ));
+    }
+    this.#lastError = createProductSessionPublicError(
+      errors.length === 1
+        ? PRODUCT_SESSION_ERROR_CODE.LIFECYCLE_FAILED
+        : PRODUCT_SESSION_ERROR_CODE.CLEANUP_FAILED,
+    );
+    const failure = errors.length === 1
+      ? new Error(`ProductSessionController ${operation}检测到同步重入并已失败关闭。`, {
+          cause: reentryError,
+        })
+      : cleanupFailure(errors);
+    return markReentryFailure(failure);
+  }
+
+  #runOperation<T>(
+    operation: ProductSessionControllerOperation,
+    callback: (sequence: number) => T,
+  ): T {
+    const sequence = this.#beginOperation(operation);
+    let result!: T;
+    let failure: unknown = null;
+    let failed = false;
+    try {
+      result = callback(sequence);
+      this.#assertCurrentOperationCommit(sequence, `ProductSessionController ${operation}`);
+    } catch (error) {
+      failed = true;
+      failure = error;
     } finally {
-      this.#transitioning = false;
+      const reentryError = this.#reentryError;
+      if (reentryError !== null) {
+        const failClosed = this.#publishReentryFailClosed(reentryError, operation);
+        this.#operation = null;
+        this.#reentryError = null;
+        if (failed && failure !== reentryError) {
+          throw markReentryFailure(new AggregateError(
+            [failure, failClosed],
+            `ProductSessionController ${operation}失败且发生同步重入。`,
+          ));
+        }
+        throw failClosed;
+      }
+      this.#operation = null;
+      this.#reentryError = null;
+    }
+    if (failed) throw failure;
+    return result;
+  }
+
+  #callChecked<T>(label: string, operation: () => T): T {
+    const sequence = this.#operationSequence;
+    this.#assertCurrentOperationCommit(sequence, label);
+    try {
+      const value = operation();
+      this.#assertCurrentOperationCommit(sequence, label);
+      return value;
+    } catch (error) {
+      this.#assertCurrentOperationCommit(sequence, label);
+      throw error;
     }
   }
 
   #callSync<T>(label: string, operation: () => T): T {
-    const value = operation();
+    const value = this.#callChecked(label, operation);
     rejectAsyncSyncReturn(value, label);
+    this.#assertCurrentOperationCommit(this.#operationSequence, label);
     return value;
   }
 
@@ -216,11 +356,14 @@ export class ProductSessionController {
 
   #report(type: string, error: Error | null = null): void {
     if (!this.#diagnosticSink) return;
+    const reentryError = this.#reentryError;
     try {
       const result = this.#diagnosticSink(Object.freeze({ type, error }));
       containDiagnosticReturn(result, 'ProductSession diagnosticSink');
     } catch {
       // 诊断只观察，不拥有产品生命周期。
+    } finally {
+      if (reentryError === null) this.#reentryError = null;
     }
   }
 
@@ -336,7 +479,7 @@ export class ProductSessionController {
   }
 
   boot(): Promise<ProductSessionSnapshot> {
-    return this.#runTransition(() => this.#boot());
+    return this.#runOperation('boot-request', () => this.#boot());
   }
 
   #boot(): Promise<ProductSessionSnapshot> {
@@ -362,8 +505,12 @@ export class ProductSessionController {
 
     let opened: unknown;
     try {
-      opened = this.#profileService.open();
+      opened = this.#callChecked(
+        'ProductSession ProfileService.open()',
+        () => this.#profileService.open(),
+      );
     } catch (error) {
+      if (this.#reentryError !== null) throw error;
       opened = Promise.reject(error);
     }
     const operation: Promise<ProductSessionSnapshot> = Promise.resolve()
@@ -371,7 +518,7 @@ export class ProductSessionController {
         opened,
         'ProductSession ProfileService.open()',
       ))
-      .then(({ value: profile }) => this.#runTransition(() => {
+      .then(({ value: profile }) => this.#runOperation('boot-profile-settlement', (sequence) => {
         if (this.#readState().state === PRODUCT_SESSION_STATE.DESTROYED) {
           this.#profileCleanupPending = true;
           try {
@@ -389,12 +536,15 @@ export class ProductSessionController {
           }
           return this.#createSnapshot();
         }
-        this.#profileSnapshot = normalizeProfile(profile, 'ProductSession loaded profile');
-        this.#lastError = null;
+        const normalizedProfile = normalizeProfile(profile, 'ProductSession loaded profile');
+        this.#assertCurrentOperationCommit(sequence, 'ProductSession loaded profile publication');
         this.#dispatch(PRODUCT_SESSION_EVENT.PROFILE_LOADED);
+        this.#profileSnapshot = normalizedProfile;
+        this.#lastError = null;
         return this.#createSnapshot();
       }))
-      .catch((error: unknown) => this.#runTransition(() => {
+      .catch((error: unknown) => this.#runOperation('boot-profile-failure', () => {
+        if (isReentryFailure(error)) return this.#createSnapshot();
         if (this.#readState().state === PRODUCT_SESSION_STATE.DESTROYED) {
           return this.#createSnapshot();
         }
@@ -405,7 +555,7 @@ export class ProductSessionController {
         );
       }))
       .finally(() => {
-        this.#runTransition(() => {
+        this.#runOperation('boot-finalize', () => {
           if (this.#bootPromise === operation) this.#bootPromise = null;
         });
       });
@@ -414,7 +564,7 @@ export class ProductSessionController {
   }
 
   openCharacterSelect(): ProductSessionSnapshot {
-    return this.#runTransition(() => {
+    return this.#runOperation('open-character-select', () => {
       const state = this.#readState();
       if (
         state.state !== PRODUCT_SESSION_STATE.SUSPENDED
@@ -427,7 +577,7 @@ export class ProductSessionController {
   }
 
   closeCharacterSelect(): ProductSessionSnapshot {
-    return this.#runTransition(() => {
+    return this.#runOperation('close-character-select', () => {
       const state = this.#readState();
       if (
         state.state !== PRODUCT_SESSION_STATE.SUSPENDED
@@ -440,14 +590,16 @@ export class ProductSessionController {
   }
 
   selectCharacter(characterId: unknown): ProductSessionSnapshot {
-    return this.#runTransition(() => {
+    return this.#runOperation('select-character', (sequence) => {
       this.#assertForeground(PRODUCT_SESSION_STATE.CHARACTER_SELECT);
       try {
         const profile = this.#callSync(
           'ProductSession ProfileService.selectCharacter()',
           () => this.#profileService.selectCharacter(characterId),
         );
-        this.#profileSnapshot = normalizeProfile(profile, 'ProductSession selected profile');
+        const normalizedProfile = normalizeProfile(profile, 'ProductSession selected profile');
+        this.#assertCurrentOperationCommit(sequence, 'ProductSession selected profile publication');
+        this.#profileSnapshot = normalizedProfile;
         this.#lastError = null;
         return this.#createSnapshot();
       } catch (error) {
@@ -473,11 +625,14 @@ export class ProductSessionController {
     this.#dispatch(options.requestEvent);
 
     const operation: Promise<ProductSessionSnapshot> = Promise.resolve()
-      .then(() => this.#runTransition(() => resolveSyncOrNativePromise(
-        this.#matchCoordinator.prepare(),
+      .then(() => this.#runOperation('match-prepare-start', () => resolveSyncOrNativePromise(
+        this.#callChecked(
+          'ProductSession MatchCoordinator.prepare()',
+          () => this.#matchCoordinator.prepare(),
+        ),
         'ProductSession MatchCoordinator.prepare()',
       )))
-      .then(({ value: prepared }) => this.#runTransition(() => {
+      .then(({ value: prepared }) => this.#runOperation('match-prepare-settlement', () => {
         void prepared;
         if (this.#readState().state === PRODUCT_SESSION_STATE.DESTROYED) {
           return this.#createSnapshot();
@@ -497,7 +652,8 @@ export class ProductSessionController {
         this.#lastError = null;
         return this.#createSnapshot();
       }))
-      .catch((error: unknown) => this.#runTransition(() => {
+      .catch((error: unknown) => this.#runOperation('match-prepare-failure', () => {
+        if (isReentryFailure(error)) return this.#createSnapshot();
         if (this.#readState().state === PRODUCT_SESSION_STATE.DESTROYED) {
           return this.#createSnapshot();
         }
@@ -508,7 +664,7 @@ export class ProductSessionController {
         );
       }))
       .finally(() => {
-        this.#runTransition(() => {
+        this.#runOperation('match-prepare-finalize', () => {
           if (this.#matchRequestPromise === operation) this.#matchRequestPromise = null;
         });
       });
@@ -517,7 +673,7 @@ export class ProductSessionController {
   }
 
   requestMatch(): Promise<ProductSessionSnapshot> {
-    return this.#runTransition(() => this.#prepareMatch({
+    return this.#runOperation('match-request', () => this.#prepareMatch({
       sourceState: PRODUCT_SESSION_STATE.CHARACTER_SELECT,
       requestEvent: PRODUCT_SESSION_EVENT.MATCH_REQUESTED,
       recoveryState: PRODUCT_SESSION_STATE.CHARACTER_SELECT,
@@ -526,7 +682,7 @@ export class ProductSessionController {
   }
 
   requestRematch(): Promise<ProductSessionSnapshot> {
-    return this.#runTransition(() => {
+    return this.#runOperation('rematch-request', () => {
       const current = this.#readState();
       if (current.activeState === PRODUCT_SESSION_STATE.MATCHING && this.#matchRequestPromise) {
         return this.#matchRequestPromise;
@@ -549,7 +705,7 @@ export class ProductSessionController {
   }
 
   beginMatchWithReadFrame(): ProductSessionReadFrameStartOutcome {
-    return this.#runTransition(() => {
+    return this.#runOperation('begin-match', () => {
       this.#assertForeground(PRODUCT_SESSION_STATE.PREPARING);
       try {
         const outcome = this.#callSync(
@@ -575,7 +731,7 @@ export class ProductSessionController {
   }
 
   stepMatchWithReadFrame(playerFrame: unknown = null): ProductSessionReadFrameStepOutcome {
-    return this.#runTransition(() => {
+    return this.#runOperation('step-match', () => {
       this.#assertForeground(PRODUCT_SESSION_STATE.IN_MATCH);
       try {
         const matchStep = this.#callSync(
@@ -604,7 +760,7 @@ export class ProductSessionController {
   }
 
   getActiveMatchReadFrame(): ProductSessionReadFrameStartOutcome['readFrame'] | null {
-    return this.#runTransition(() => {
+    return this.#runOperation('match-frame-read', () => {
       if (this.#readState().state === PRODUCT_SESSION_STATE.DESTROYED) return null;
       return this.#callSync(
         'ProductSession MatchCoordinator.getMatchReadFrame()',
@@ -614,7 +770,7 @@ export class ProductSessionController {
   }
 
   renewProfileLease(): ProductSessionRenewLeaseOutcome {
-    return this.#runTransition(() => {
+    return this.#runOperation('renew-profile-lease', () => {
       const state = this.#readState();
       if (
         state.state === PRODUCT_SESSION_STATE.DESTROYED
@@ -641,7 +797,7 @@ export class ProductSessionController {
   }
 
   commitReward(): ProductSessionSnapshot {
-    return this.#runTransition(() => {
+    return this.#runOperation('commit-reward', (sequence) => {
       this.#assertForeground(PRODUCT_SESSION_STATE.RESULTS);
       try {
         const result = this.#callSync(
@@ -654,13 +810,14 @@ export class ProductSessionController {
           () => this.#rewardCommitter.commit(result),
         );
         const outcome = normalizeRewardOutcome(rawOutcome);
-        this.#profileSnapshot = outcome.profile;
-        this.#rewardSnapshot = outcome.reward;
         this.#callSync(
           'ProductSession MatchCoordinator.release()',
           () => this.#matchCoordinator.release(),
         );
         this.#dispatch(PRODUCT_SESSION_EVENT.REWARD_COMMITTED);
+        this.#assertCurrentOperationCommit(sequence, 'ProductSession reward publication');
+        this.#profileSnapshot = outcome.profile;
+        this.#rewardSnapshot = outcome.reward;
         this.#lastError = null;
         return this.#createSnapshot();
       } catch (error) {
@@ -680,7 +837,7 @@ export class ProductSessionController {
   }
 
   continueReward(): ProductSessionSnapshot {
-    return this.#runTransition(() => {
+    return this.#runOperation('continue-reward', () => {
       this.#assertForeground(PRODUCT_SESSION_STATE.REWARD);
       const hasUnlocks = this.#rewardSnapshot !== null
         && REWARD_UNLOCK_KEYS.some((key) => this.#rewardSnapshot!.grant.unlocks[key].length > 0);
@@ -695,7 +852,7 @@ export class ProductSessionController {
   }
 
   dismissUnlocks(): ProductSessionSnapshot {
-    return this.#runTransition(() => {
+    return this.#runOperation('dismiss-unlocks', () => {
       this.#assertForeground(PRODUCT_SESSION_STATE.UNLOCK);
       this.#dispatch(PRODUCT_SESSION_EVENT.UNLOCK_DISMISSED);
       this.#rewardSnapshot = null;
@@ -704,7 +861,7 @@ export class ProductSessionController {
   }
 
   retry(): Promise<ProductSessionSnapshot> {
-    return this.#runTransition(() => {
+    return this.#runOperation('retry', () => {
       const state = this.#assertForeground(PRODUCT_SESSION_STATE.RECOVERABLE_ERROR);
       const recoveryState = state.recoveryState;
       this.#callSync('ProductSession StateMachine.retry()', () => this.#stateMachine.retry());
@@ -715,7 +872,7 @@ export class ProductSessionController {
   }
 
   hide(): ProductSessionSnapshot {
-    return this.#runTransition(() => {
+    return this.#runOperation('hide', () => {
       const state = this.#readState();
       if (
         state.state === PRODUCT_SESSION_STATE.DESTROYED
@@ -735,7 +892,7 @@ export class ProductSessionController {
   }
 
   show(): ProductSessionSnapshot {
-    return this.#runTransition(() => {
+    return this.#runOperation('show', () => {
       const state = this.#readState();
       if (
         state.state === PRODUCT_SESSION_STATE.DESTROYED
@@ -755,7 +912,7 @@ export class ProductSessionController {
   }
 
   destroy(): ProductSessionSnapshot {
-    return this.#runTransition(() => {
+    return this.#runOperation('destroy', () => {
       const errors: Error[] = [];
       if (this.#stateMachineCleanupPending) {
         try {
@@ -787,6 +944,15 @@ export class ProductSessionController {
           errors.push(normalizeThrownError(error, 'Product match 销毁失败'));
         }
       }
+      if (this.#reentryError !== null) {
+        const failure = cleanupFailure(
+          errors.length > 0 ? errors : [this.#reentryError],
+        );
+        this.#lastError = createProductSessionPublicError(
+          PRODUCT_SESSION_ERROR_CODE.CLEANUP_FAILED,
+        );
+        throw failure;
+      }
       if (this.#profileCleanupPending) {
         try {
           this.#callSync(
@@ -814,6 +980,21 @@ export class ProductSessionController {
   }
 
   getSnapshot(): ProductSessionSnapshot {
-    return this.#runTransition(() => this.#createSnapshot());
+    return this.#runOperation('snapshot-read', () => this.#createSnapshot());
   }
 }
+
+export const PRODUCT_SESSION_CONTROLLER_OPERATION_POLICY = Object.freeze({
+  operationGuardPrecedesLifecycleIntentAndReadValidation: true as const,
+  stickyAuthoritativeReentryUsesMonotonicSequenceAndFirstError: true as const,
+  diagnosticObservationReentryIsContainedWithoutProductMutation: true as const,
+  profileMatchRewardAndStateCallbacksCheckedBeforeControllerPublication: true as const,
+  bootAndMatchPreparationPublishSinglePromiseOwnersBeforeSettlement: true as const,
+  asynchronousSettlementUsesIndependentOperations: true as const,
+  publicStateFrameAndSnapshotReadsRejectIntermediateOperations: true as const,
+  reentryPublishesFatalStateBeforeStoppingCrossOwnerProgress: true as const,
+  cleanupReentryRetainsCurrentAndLaterControllerOwners: true as const,
+  destroyFailuresRetainExactRetryOwnership: true as const,
+  productStatesIntentsMatchAuthorityAndRewardSemanticsRemainUnchanged: true as const,
+  validationStatus: 'not-run' as const,
+});

@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ARENA_WEAPON_FEEDBACK_SEMANTIC_V1_EVENT_TYPE,
+  ARENA_WEAPON_FEEDBACK_SEMANTIC_V1_SCHEMA_VERSION,
   ARENA_V2_WEAPON_FEEDBACK_KIND,
   PresentationEventWindow,
+  projectArenaWeaponFeedbackEventV6PresentationEvent,
+  projectArenaWeaponFeedbackSemanticV1PresentationEvent,
   projectArenaV2WeaponFeedbackPresentationEvent,
 } from '../src/index.js';
 
@@ -100,5 +104,59 @@ describe('Arena V2 weapon feedback presentation contract', () => {
       sequence: 0,
       feedback: { kind: 'hit', title: '命中', explanation: '不应被自动归类。' },
     })).toThrow(/受支持的武器反馈语义/);
+  });
+
+  it('consumes the exact authority semantic and owns only copy and cue selection', () => {
+    const event = projectArenaWeaponFeedbackSemanticV1PresentationEvent({
+      schemaVersion: ARENA_WEAPON_FEEDBACK_SEMANTIC_V1_SCHEMA_VERSION,
+      id: 'authority-feedback-1',
+      type: ARENA_WEAPON_FEEDBACK_SEMANTIC_V1_EVENT_TYPE,
+      sequence: 6,
+      tick: 40,
+      kind: 'hit-ring-out',
+      attackerId: 'player-1',
+      targetId: 'player-2',
+      actionDefinitionId: 'weapon.hammer.attack',
+      actionStartedTick: 20,
+      firstHitTick: 28,
+      targetFallTick: 36,
+      initialSupportSurfaceId: 'surface-a',
+      finalSupportSurfaceId: null,
+      fallCause: 'credited-hit',
+      creditedAttackerId: 'player-1',
+    });
+    expect(event).toMatchObject({
+      sourceEventId: 'authority-feedback-1',
+      feedbackKind: 'hit-ring-out',
+      visualCue: 'ring-out',
+      audioCue: 'weapon-ring-out',
+      title: '击落·失去支撑面',
+    });
+  });
+
+  it('adapts the public V6 authority event into the existing bounded cue event', () => {
+    const event = projectArenaWeaponFeedbackEventV6PresentationEvent({
+      id: 'v6-feedback-1',
+      type: 'WeaponFeedbackResolved',
+      sequence: 2,
+      tick: 30,
+      kind: 'attack-evaded',
+      attackerId: 'player-1',
+      targetId: null,
+      actionDefinitionId: 'weapon.chain.attack',
+      actionStartedTick: 10,
+      firstHitTick: null,
+      targetFallTick: null,
+      initialSupportSurfaceId: null,
+      finalSupportSurfaceId: null,
+      fallCause: null,
+      creditedAttackerId: null,
+    });
+    expect(event).toMatchObject({
+      sourceEventId: 'v6-feedback-1',
+      feedbackKind: 'attack-evaded',
+      visualCue: 'evaded-warning',
+      emphasis: 'warning',
+    });
   });
 });

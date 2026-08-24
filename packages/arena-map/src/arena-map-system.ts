@@ -11,7 +11,10 @@ import type {
   ArenaMapSnapshot,
   DeepReadonly,
 } from '@number-strategy-jump/arena-contracts';
-import { MapDefinition } from '@number-strategy-jump/arena-definitions';
+import {
+  MapDefinition,
+  type Vector3Definition,
+} from '@number-strategy-jump/arena-definitions';
 import {
   MapCommandRegistry,
   type MapCommandPhase,
@@ -62,6 +65,29 @@ export interface ArenaMapSystemContract {
   destroy(): void;
 }
 
+type ArenaMapSystemOperation =
+  | 'advance'
+  | 'commit'
+  | 'snapshot-read'
+  | 'state-snapshot-read'
+  | 'content-hash-read'
+  | 'surface-enabled-read'
+  | 'position-on-surface-read'
+  | 'destroy';
+
+export const ARENA_MAP_SYSTEM_OPERATION_GUARD_V1 = Object.freeze({
+  operationGuardPrecedesLifecycleAndInputValidation: true,
+  strategyCallbacksCheckedBeforeRuntimeCommit: true,
+  mutationPortsCheckedAfterEveryCallback: true,
+  swallowedCallbackReentryStopsLaterAuthorityMutation: true,
+  publicReadsRejectAdvanceAndCommitIntermediateState: true,
+  pendingBatchPublicationChecksStickyReentryFact: true,
+  pendingBatchClearChecksStickyReentryFact: true,
+  postCommitReentryFailsClosed: true,
+  destroyFastPathChecksOperationBeforeIdempotence: true,
+  validationStatus: 'not-run',
+} as const);
+
 const SYSTEM_OPTIONS_KEYS = new Set([
   'mapDefinition',
   'strategyRegistry',
@@ -85,6 +111,7 @@ const REQUIRED_MAP_SYSTEM_METHODS = Object.freeze([
   'isPositionOnEnabledSurface',
   'destroy',
 ] as const);
+const MAX_CONTRACT_PROTOTYPE_DEPTH = 32;
 
 function compareText(left: string, right: string): number {
   if (left < right) return -1;
@@ -93,8 +120,17 @@ function compareText(left: string, right: string): number {
 }
 
 function findDataMethod(value: object, name: string): ((...args: unknown[]) => unknown) | null {
+  const visited = new Set<object>();
   let target: object | null = value;
-  while (target) {
+  for (
+    let depth = 0;
+    target !== null && depth < MAX_CONTRACT_PROTOTYPE_DEPTH;
+    depth += 1
+  ) {
+    if (visited.has(target)) {
+      throw new TypeError('mapSystemFactory 返回值 prototype 链不能循环。');
+    }
+    visited.add(target);
     const descriptor = Object.getOwnPropertyDescriptor(target, name);
     if (descriptor) {
       if (!Object.prototype.hasOwnProperty.call(descriptor, 'value')) {
@@ -105,6 +141,11 @@ function findDataMethod(value: object, name: string): ((...args: unknown[]) => u
         : null;
     }
     target = Object.getPrototypeOf(target) as object | null;
+  }
+  if (target !== null) {
+    throw new RangeError(
+      `mapSystemFactory 返回值 prototype 链超过 ${MAX_CONTRACT_PROTOTYPE_DEPTH} 层。`,
+    );
   }
   return null;
 }
@@ -189,20 +230,6 @@ function enrichEvents(
   }));
 }
 
-function cloneMutationPorts(value: unknown): Readonly<MapMutationPorts> {
-  assertKnownKeys(value, COMMIT_PORT_KEYS, 'Map mutation ports');
-  for (const name of COMMIT_PORT_KEYS) {
-    if (typeof value[name] !== 'function') {
-      throw new TypeError(`Map mutation port 缺少 ${name}()。`);
-    }
-  }
-  return Object.freeze({
-    applyImpulse: value.applyImpulse as MapMutationPorts['applyImpulse'],
-    setSurfaceEnabled: value.setSurfaceEnabled as MapMutationPorts['setSurfaceEnabled'],
-    spawnEquipment: value.spawnEquipment as MapMutationPorts['spawnEquipment'],
-  });
-}
-
 function readHorizontalPosition(value: unknown): Readonly<{ x: number; z: number }> | null {
   try {
     const record = assertPlainRecord(value, 'map position');
@@ -231,9 +258,11 @@ export class ArenaMapSystem implements ArenaMapSystemContract {
   readonly #matchSeed: number;
   readonly #contentHash: string;
   #destroyed = false;
-  #advancing = false;
-  #committing = false;
   #failed = false;
+  #operation: ArenaMapSystemOperation | null = null;
+  #operationSequence = 0;
+  #reentrySequence = 0;
+  #reentryError: Error | null = null;
   #pendingBatch: ArenaMapAdvanceBatch | null = null;
 
   constructor(options: unknown) {
@@ -285,18 +314,145 @@ export class ArenaMapSystem implements ArenaMapSystemContract {
     if (this.#failed) throw new Error('ArenaMapSystem 已失败，不能继续推进。');
   }
 
-  #assertReadable(): void {
-    this.#assertAvailable();
-    if (this.#advancing) {
-      throw new Error('ArenaMapSystem advance 期间不能读取。');
+  #recordReentry(requestedOperation: ArenaMapSystemOperation): Error {
+    this.#reentrySequence += 1;
+    if (this.#reentryError === null) {
+      this.#reentryError = new Error(
+        `ArenaMapSystem ${String(this.#operation)} 期间不可重入 ${requestedOperation}。`,
+      );
+    }
+    return this.#reentryError;
+  }
+
+  #assertOperationReady(
+    operation: ArenaMapSystemOperation,
+    operationSequence: number,
+    stage: string,
+    postCommit = false,
+  ): void {
+    if (
+      this.#operation !== operation
+      || this.#operationSequence !== operationSequence
+    ) {
+      this.#failed = true;
+      throw new Error(`ArenaMapSystem ${stage}缺少${operation}操作所有权。`);
+    }
+    if (this.#reentryError === null) return;
+    if (postCommit) this.#failed = true;
+    throw this.#reentryError;
+  }
+
+  #runOperation<T>(
+    operation: ArenaMapSystemOperation,
+    callback: (operationSequence: number) => T,
+    options: Readonly<{ allowDestroyed?: boolean; allowFailed?: boolean }> = {},
+  ): T {
+    if (this.#operation !== null) throw this.#recordReentry(operation);
+    this.#operation = operation;
+    this.#operationSequence += 1;
+    const operationSequence = this.#operationSequence;
+    this.#reentryError = null;
+    try {
+      if (!options.allowDestroyed && !options.allowFailed) this.#assertAvailable();
+      else {
+        if (!options.allowDestroyed && this.#destroyed) {
+          throw new Error('ArenaMapSystem 已销毁。');
+        }
+        if (!options.allowFailed && this.#failed) {
+          throw new Error('ArenaMapSystem 已失败，不能继续推进。');
+        }
+      }
+      const result = callback(operationSequence);
+      this.#assertOperationReady(operation, operationSequence, operation, true);
+      return result;
+    } catch (error) {
+      if (this.#reentryError !== null) {
+        this.#failed = true;
+        throw this.#reentryError;
+      }
+      throw error;
+    } finally {
+      this.#operation = null;
+      this.#reentryError = null;
     }
   }
 
-  #assertUsable(): void {
-    this.#assertAvailable();
-    if (this.#advancing || this.#committing) {
-      throw new Error('ArenaMapSystem 权威变更不可重入。');
+  #useExternalValueChecked<T>(
+    operation: 'advance' | 'commit',
+    operationSequence: number,
+    stage: string,
+    callback: () => T,
+    postCommit = false,
+  ): T {
+    this.#assertOperationReady(operation, operationSequence, `${stage}调用前`, postCommit);
+    try {
+      const result = callback();
+      this.#assertOperationReady(operation, operationSequence, `${stage}返回后`, postCommit);
+      return result;
+    } catch (error) {
+      this.#assertOperationReady(operation, operationSequence, `${stage}异常后`, postCommit);
+      throw error;
     }
+  }
+
+  #captureGuardedMutationPorts(
+    value: unknown,
+    operationSequence: number,
+  ): Readonly<MapMutationPorts> {
+    assertKnownKeys(value, COMMIT_PORT_KEYS, 'Map mutation ports');
+    this.#assertOperationReady('commit', operationSequence, '地图端口字段校验');
+    const record = value as Readonly<Record<string, unknown>>;
+    const applyImpulse = record.applyImpulse;
+    this.#assertOperationReady('commit', operationSequence, 'applyImpulse端口读取');
+    const setSurfaceEnabled = record.setSurfaceEnabled;
+    this.#assertOperationReady('commit', operationSequence, 'setSurfaceEnabled端口读取');
+    const spawnEquipment = record.spawnEquipment;
+    this.#assertOperationReady('commit', operationSequence, 'spawnEquipment端口读取');
+    for (const [name, method] of [
+      ['applyImpulse', applyImpulse],
+      ['setSurfaceEnabled', setSurfaceEnabled],
+      ['spawnEquipment', spawnEquipment],
+    ] as const) {
+      if (typeof method !== 'function') {
+        throw new TypeError(`Map mutation port 缺少 ${name}()。`);
+      }
+    }
+    return Object.freeze({
+      applyImpulse: (participantId: string, impulse: Vector3Definition) => {
+        this.#useExternalValueChecked(
+          'commit',
+          operationSequence,
+          'applyImpulse端口',
+          () => Reflect.apply(applyImpulse as MapMutationPorts['applyImpulse'], value, [
+            participantId,
+            impulse,
+          ]),
+          true,
+        );
+      },
+      setSurfaceEnabled: (surfaceId: string, enabled: boolean) => {
+        this.#useExternalValueChecked(
+          'commit',
+          operationSequence,
+          'setSurfaceEnabled端口',
+          () => Reflect.apply(
+            setSurfaceEnabled as MapMutationPorts['setSurfaceEnabled'],
+            value,
+            [surfaceId, enabled],
+          ),
+          true,
+        );
+      },
+      spawnEquipment: (spawn: Parameters<MapMutationPorts['spawnEquipment']>[0]) => {
+        this.#useExternalValueChecked(
+          'commit',
+          operationSequence,
+          'spawnEquipment端口',
+          () => Reflect.apply(spawnEquipment as MapMutationPorts['spawnEquipment'], value, [spawn]),
+          true,
+        );
+      },
+    });
   }
 
   #handlerContext(
@@ -321,8 +477,17 @@ export class ArenaMapSystem implements ArenaMapSystemContract {
     });
   }
 
-  #validateAndApplyInternalCommands(commands: readonly MapRuleCommand[]): void {
-    this.#commandRegistry.assertSupported(commands);
+  #validateAndApplyInternalCommands(
+    commands: readonly MapRuleCommand[],
+    operationSequence: number,
+  ): void {
+    this.#useExternalValueChecked(
+      'advance',
+      operationSequence,
+      '地图内部命令校验',
+      () => this.#commandRegistry.assertSupported(commands),
+      true,
+    );
     const surfaceCommands: Array<Readonly<{
       surfaceId: string;
       enabled: boolean;
@@ -336,6 +501,7 @@ export class ArenaMapSystem implements ArenaMapSystemContract {
       this.#runtime.isSurfaceEnabled(surfaceId);
       surfaceCommands.push(Object.freeze({ surfaceId, enabled: command.enabled }));
     }
+    this.#assertOperationReady('advance', operationSequence, '地图内部surface提交', true);
     for (const command of surfaceCommands) {
       this.#runtime.setSurfaceEnabled(command.surfaceId, command.enabled);
     }
@@ -346,187 +512,237 @@ export class ArenaMapSystem implements ArenaMapSystemContract {
     occurrence: MapOccurrence,
     phase: MapCommandPhase,
     sequenceOffset: number,
+    operationSequence: number,
   ): Readonly<{
     commands: readonly MapRuleCommand[];
     events: readonly ArenaMapDomainEvent[];
   }> {
     const commands = enrichCommands(result.commands, occurrence, phase, sequenceOffset);
     const events = enrichEvents(result.events, occurrence);
-    this.#validateAndApplyInternalCommands(commands);
+    this.#assertOperationReady('advance', operationSequence, '地图事件结果规范化', true);
+    this.#validateAndApplyInternalCommands(commands, operationSequence);
     return Object.freeze({ commands, events });
   }
 
   advance(value: unknown): ArenaMapAdvanceBatch {
-    this.#assertUsable();
-    if (this.#pendingBatch) {
-      throw new Error('ArenaMapSystem 上一个 advance 批次尚未 commit。');
-    }
-    this.#advancing = true;
-    let validated = false;
-    const commands: MapRuleCommand[] = [];
-    const events: ArenaMapDomainEvent[] = [];
-    try {
-      assertKnownKeys(value, ADVANCE_KEYS, 'ArenaMapSystem advance options');
-      const activeTick = assertIntegerAtLeast(value.activeTick, 0, 'ArenaMapSystem activeTick');
-      const actors = cloneActors(value.actors);
-      this.#runtime.assertNextTick(activeTick);
-      validated = true;
-      for (const transition of this.#timeline.transitionsAt(activeTick)) {
-        const occurrence = this.#timeline.requireOccurrence(transition.occurrenceId);
-        if (transition.transition === MAP_TIMELINE_TRANSITION.WARNING) {
-          const seed = deriveSeed(
-            this.#matchSeed,
-            `map:${this.#definition.id}:${occurrence.occurrenceId}`,
-          );
-          const plan = this.#strategyRegistry.plan(occurrence, {
-            mapDefinition: this.#definition,
-            mapSnapshot: this.#runtime.getSnapshot(),
-            actors,
-            seed,
-          });
-          const publicState = this.#runtime.warn(occurrence.occurrenceId, plan);
-          events.push(Object.freeze({
-            type: ARENA_MAP_EVENT.EVENT_WARNED,
-            occurrenceId: occurrence.occurrenceId,
-            mapEventId: occurrence.eventId,
-            mapEventKind: occurrence.kind,
-            startsAtActiveTick: occurrence.startTick,
-            endsAtActiveTick: occurrence.endTick,
-            publicPayload: publicState.publicPayload,
-          }));
-          continue;
-        }
-        if (transition.transition === MAP_TIMELINE_TRANSITION.END) {
-          const prepared = this.#prepareResult(
-            this.#strategyRegistry.end(
+    return this.#runOperation('advance', (operationSequence) => {
+      if (this.#pendingBatch) {
+        throw new Error('ArenaMapSystem 上一个 advance 批次尚未 commit。');
+      }
+      let validated = false;
+      const commands: MapRuleCommand[] = [];
+      const events: ArenaMapDomainEvent[] = [];
+      try {
+        assertKnownKeys(value, ADVANCE_KEYS, 'ArenaMapSystem advance options');
+        const activeTick = assertIntegerAtLeast(value.activeTick, 0, 'ArenaMapSystem activeTick');
+        const actors = cloneActors(value.actors);
+        this.#assertOperationReady('advance', operationSequence, '推进输入校验');
+        this.#runtime.assertNextTick(activeTick);
+        validated = true;
+        for (const transition of this.#timeline.transitionsAt(activeTick)) {
+          const occurrence = this.#timeline.requireOccurrence(transition.occurrenceId);
+          if (transition.transition === MAP_TIMELINE_TRANSITION.WARNING) {
+            const seed = deriveSeed(
+              this.#matchSeed,
+              `map:${this.#definition.id}:${occurrence.occurrenceId}`,
+            );
+            const plan = this.#useExternalValueChecked(
+              'advance',
+              operationSequence,
+              `地图策略${occurrence.kind}.plan`,
+              () => this.#strategyRegistry.plan(occurrence, {
+                mapDefinition: this.#definition,
+                mapSnapshot: this.#runtime.getSnapshot(),
+                actors,
+                seed,
+              }),
+              true,
+            );
+            this.#assertOperationReady('advance', operationSequence, '地图warning提交', true);
+            const publicState = this.#runtime.warn(occurrence.occurrenceId, plan);
+            events.push(Object.freeze({
+              type: ARENA_MAP_EVENT.EVENT_WARNED,
+              occurrenceId: occurrence.occurrenceId,
+              mapEventId: occurrence.eventId,
+              mapEventKind: occurrence.kind,
+              startsAtActiveTick: occurrence.startTick,
+              endsAtActiveTick: occurrence.endTick,
+              publicPayload: publicState.publicPayload,
+            }));
+            continue;
+          }
+          if (transition.transition === MAP_TIMELINE_TRANSITION.END) {
+            const result = this.#useExternalValueChecked(
+              'advance',
+              operationSequence,
+              `地图策略${occurrence.kind}.end`,
+              () => this.#strategyRegistry.end(
+                occurrence,
+                this.#handlerContext(occurrence, actors),
+              ),
+              true,
+            );
+            const prepared = this.#prepareResult(
+              result,
+              occurrence,
+              'end',
+              commands.length,
+              operationSequence,
+            );
+            commands.push(...prepared.commands);
+            events.push(...prepared.events);
+            this.#assertOperationReady('advance', operationSequence, '地图event结束提交', true);
+            this.#runtime.end(occurrence.occurrenceId);
+            events.push(Object.freeze({
+              type: ARENA_MAP_EVENT.EVENT_ENDED,
+              occurrenceId: occurrence.occurrenceId,
+              mapEventId: occurrence.eventId,
+              mapEventKind: occurrence.kind,
+            }));
+            continue;
+          }
+          const result = this.#useExternalValueChecked(
+            'advance',
+            operationSequence,
+            `地图策略${occurrence.kind}.start`,
+            () => this.#strategyRegistry.start(
               occurrence,
               this.#handlerContext(occurrence, actors),
             ),
+            true,
+          );
+          const prepared = this.#prepareResult(
+            result,
             occurrence,
-            'end',
+            'start',
             commands.length,
+            operationSequence,
           );
           commands.push(...prepared.commands);
           events.push(...prepared.events);
-          this.#runtime.end(occurrence.occurrenceId);
+          this.#assertOperationReady('advance', operationSequence, '地图event开始提交', true);
+          const publicState = this.#runtime.start(occurrence.occurrenceId);
           events.push(Object.freeze({
-            type: ARENA_MAP_EVENT.EVENT_ENDED,
+            type: ARENA_MAP_EVENT.EVENT_STARTED,
             occurrenceId: occurrence.occurrenceId,
             mapEventId: occurrence.eventId,
             mapEventKind: occurrence.kind,
+            publicPayload: publicState.publicPayload,
           }));
-          continue;
         }
-        const prepared = this.#prepareResult(
-          this.#strategyRegistry.start(
+        for (const occurrenceId of this.#runtime.listActiveOccurrenceIds()) {
+          const occurrence = this.#timeline.requireOccurrence(occurrenceId);
+          const result = this.#useExternalValueChecked(
+            'advance',
+            operationSequence,
+            `地图策略${occurrence.kind}.tick`,
+            () => this.#strategyRegistry.tick(
+              occurrence,
+              this.#handlerContext(occurrence, actors),
+            ),
+            true,
+          );
+          const prepared = this.#prepareResult(
+            result,
             occurrence,
-            this.#handlerContext(occurrence, actors),
-          ),
-          occurrence,
-          'start',
-          commands.length,
-        );
-        commands.push(...prepared.commands);
-        events.push(...prepared.events);
-        const publicState = this.#runtime.start(occurrence.occurrenceId);
-        events.push(Object.freeze({
-          type: ARENA_MAP_EVENT.EVENT_STARTED,
-          occurrenceId: occurrence.occurrenceId,
-          mapEventId: occurrence.eventId,
-          mapEventKind: occurrence.kind,
-          publicPayload: publicState.publicPayload,
-        }));
+            'tick',
+            commands.length,
+            operationSequence,
+          );
+          commands.push(...prepared.commands);
+          events.push(...prepared.events);
+        }
+        this.#assertOperationReady('advance', operationSequence, '地图tick提交', true);
+        this.#runtime.completeTick(activeTick);
+        const batch = Object.freeze({
+          activeTick,
+          commands: Object.freeze(commands),
+          events: Object.freeze(events),
+        });
+        this.#assertOperationReady('advance', operationSequence, '待提交批次发布', true);
+        this.#pendingBatch = batch;
+        return batch;
+      } catch (error) {
+        if (validated) this.#failed = true;
+        throw error;
       }
-      for (const occurrenceId of this.#runtime.listActiveOccurrenceIds()) {
-        const occurrence = this.#timeline.requireOccurrence(occurrenceId);
-        const prepared = this.#prepareResult(
-          this.#strategyRegistry.tick(
-            occurrence,
-            this.#handlerContext(occurrence, actors),
-          ),
-          occurrence,
-          'tick',
-          commands.length,
-        );
-        commands.push(...prepared.commands);
-        events.push(...prepared.events);
-      }
-      this.#runtime.completeTick(activeTick);
-      const batch = Object.freeze({
-        activeTick,
-        commands: Object.freeze(commands),
-        events: Object.freeze(events),
-      });
-      this.#pendingBatch = batch;
-      return batch;
-    } catch (error) {
-      if (validated) this.#failed = true;
-      throw error;
-    } finally {
-      this.#advancing = false;
-    }
+    });
   }
 
   commit(batch: unknown, value: unknown): void {
-    this.#assertUsable();
-    if (!this.#pendingBatch) throw new Error('ArenaMapSystem 没有待提交的 advance 批次。');
-    if (batch !== this.#pendingBatch) {
-      throw new Error('ArenaMapSystem 只能提交最近一次 advance 返回的原始批次。');
-    }
-    this.#committing = true;
-    let authoritativeFailure = false;
-    try {
-      const ports = cloneMutationPorts(value);
-      authoritativeFailure = true;
-      this.#commandRegistry.assertSupported(this.#pendingBatch.commands);
-      this.#commandRegistry.execute(this.#pendingBatch.commands, { ports });
-      this.#pendingBatch = null;
-    } catch (error) {
-      if (authoritativeFailure) this.#failed = true;
-      throw error;
-    } finally {
-      this.#committing = false;
-    }
+    this.#runOperation('commit', (operationSequence) => {
+      const pendingBatch = this.#pendingBatch;
+      if (!pendingBatch) throw new Error('ArenaMapSystem 没有待提交的 advance 批次。');
+      if (batch !== pendingBatch) {
+        throw new Error('ArenaMapSystem 只能提交最近一次 advance 返回的原始批次。');
+      }
+      let authoritativeFailure = false;
+      try {
+        const ports = this.#captureGuardedMutationPorts(value, operationSequence);
+        this.#assertOperationReady('commit', operationSequence, '地图提交输入校验');
+        authoritativeFailure = true;
+        this.#useExternalValueChecked(
+          'commit',
+          operationSequence,
+          '地图命令批次校验',
+          () => this.#commandRegistry.assertSupported(pendingBatch.commands),
+          true,
+        );
+        this.#useExternalValueChecked(
+          'commit',
+          operationSequence,
+          '地图命令批次执行',
+          () => this.#commandRegistry.execute(pendingBatch.commands, { ports }),
+          true,
+        );
+        this.#assertOperationReady('commit', operationSequence, '待提交批次清除', true);
+        this.#pendingBatch = null;
+      } catch (error) {
+        if (authoritativeFailure) this.#failed = true;
+        throw error;
+      }
+    });
   }
 
   getSnapshot(): ArenaMapSnapshot {
-    this.#assertReadable();
-    return this.#runtime.getSnapshot();
+    return this.#runOperation('snapshot-read', () => this.#runtime.getSnapshot());
   }
 
   getStateSnapshot(): MapRuntimeInternalSnapshot {
-    this.#assertReadable();
-    return this.#runtime.getSnapshot({ includeInternal: true });
-  }
-
-  getContentHash(): string {
-    this.#assertReadable();
-    return this.#contentHash;
-  }
-
-  isSurfaceEnabled(surfaceId: unknown): boolean {
-    this.#assertReadable();
-    return this.#runtime.isSurfaceEnabled(surfaceId);
-  }
-
-  isPositionOnEnabledSurface(position: unknown): boolean {
-    this.#assertReadable();
-    const horizontal = readHorizontalPosition(position);
-    if (!horizontal) return false;
-    return this.#definition.arena.surfaces.some((surface) => (
-      this.#runtime.isSurfaceEnabled(surface.id)
-      && Math.abs(horizontal.x - surface.center.x) <= surface.halfExtents.x
-      && Math.abs(horizontal.z - surface.center.z) <= surface.halfExtents.z
+    return this.#runOperation('state-snapshot-read', () => (
+      this.#runtime.getSnapshot({ includeInternal: true })
     ));
   }
 
+  getContentHash(): string {
+    return this.#runOperation('content-hash-read', () => this.#contentHash);
+  }
+
+  isSurfaceEnabled(surfaceId: unknown): boolean {
+    return this.#runOperation('surface-enabled-read', () => (
+      this.#runtime.isSurfaceEnabled(surfaceId)
+    ));
+  }
+
+  isPositionOnEnabledSurface(position: unknown): boolean {
+    return this.#runOperation('position-on-surface-read', () => {
+      const horizontal = readHorizontalPosition(position);
+      if (!horizontal) return false;
+      return this.#definition.arena.surfaces.some((surface) => (
+        this.#runtime.isSurfaceEnabled(surface.id)
+        && Math.abs(horizontal.x - surface.center.x) <= surface.halfExtents.x
+        && Math.abs(horizontal.z - surface.center.z) <= surface.halfExtents.z
+      ));
+    });
+  }
+
   destroy(): void {
-    if (this.#destroyed) return;
-    if (this.#advancing || this.#committing) {
-      throw new Error('ArenaMapSystem 权威变更期间不能销毁。');
-    }
-    this.#runtime.destroy();
-    this.#pendingBatch = null;
-    this.#destroyed = true;
+    this.#runOperation('destroy', (operationSequence) => {
+      if (this.#destroyed) return;
+      this.#runtime.destroy();
+      this.#assertOperationReady('destroy', operationSequence, '地图Runtime销毁返回后', true);
+      this.#pendingBatch = null;
+      this.#destroyed = true;
+    }, { allowDestroyed: true, allowFailed: true });
   }
 }

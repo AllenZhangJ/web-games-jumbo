@@ -1,0 +1,136 @@
+:root {
+  color-scheme: dark;
+  font-family: "PingFang SC", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif;
+  background: #101a21;
+  color: #fff9ee;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 70% 8%, rgb(22 166 161 / 18%), transparent 34rem),
+    #101a21;
+}
+
+body {
+  display: grid;
+  place-items: center;
+  touch-action: none;
+  overscroll-behavior: none;
+  user-select: none;
+}
+
+button {
+  font: inherit;
+}
+
+.arena-v2-candidate-shell {
+  position: relative;
+  width: min(100vw, 76rem);
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  isolation: isolate;
+  background: #192833;
+  box-shadow: 0 0 5rem rgb(0 0 0 / 45%);
+}
+
+.arena-v2-candidate-gate {
+  position: fixed;
+  z-index: 20;
+  left: 50%;
+  bottom: max(1.25rem, env(safe-area-inset-bottom));
+  width: min(calc(100vw - 2rem), 30rem);
+  padding: 1.15rem 1.2rem 1rem;
+  border: 1px solid rgb(255 249 238 / 18%);
+  border-radius: 1.15rem;
+  background: rgb(16 26 33 / 92%);
+  box-shadow: 0 1.2rem 3rem rgb(0 0 0 / 38%);
+  text-align: center;
+  transform: translateX(-50%);
+  backdrop-filter: blur(1rem);
+}
+
+.arena-v2-candidate-gate[hidden] {
+  display: none;
+}
+
+.arena-v2-candidate-kicker {
+  margin: 0;
+  color: #65d2cc;
+  font: 800 0.68rem/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.16em;
+}
+
+.arena-v2-candidate-gate h1 {
+  margin: 0.35rem 0 0.45rem;
+  font-size: clamp(1.8rem, 8vw, 2.8rem);
+  line-height: 1;
+  letter-spacing: 0.09em;
+}
+
+.arena-v2-candidate-gate p:not(.arena-v2-candidate-kicker) {
+  min-height: 1.4em;
+  margin: 0 0 0.85rem;
+  color: #d8dedb;
+  font-size: 0.9rem;
+}
+
+.arena-v2-candidate-gate button {
+  width: 100%;
+  min-height: 3.2rem;
+  border: 0;
+  border-radius: 0.9rem;
+  background: #e85d4a;
+  color: #fff9ee;
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+
+.arena-v2-candidate-gate button:disabled {
+  background: #45535a;
+  color: #9da7a8;
+  cursor: wait;
+}
+
+.arena-v2-candidate-gate small {
+  display: block;
+  margin-top: 0.7rem;
+  color: #9da7a8;
+  font-size: 0.72rem;
+}
+
+.arena-v2-candidate-gate[data-tone="error"] {
+  border-color: rgb(232 93 74 / 62%);
+}
+
+.arena-v2-candidate-gate[data-tone="error"] .arena-v2-candidate-kicker {
+  color: #ff8b7b;
+}
+
+@media (max-width: 640px) {
+  .arena-v2-candidate-shell {
+    width: 100vw;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

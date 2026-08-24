@@ -316,6 +316,31 @@ describe('Input Pilot strict enrollment and checkpoint', () => {
     ledger.destroy();
   });
 
+  it('rejects declared data then fields atomically and permits an exact retry', () => {
+    const definition = createArenaInputPilotV1Definition();
+    let ambiguous = true;
+    let persistCalls = 0;
+    const ledger = new InputPilotEnrollmentLedger({
+      definition,
+      persist() {
+        persistCalls += 1;
+        return ambiguous ? { then: null } : true;
+      },
+    });
+
+    expect(() => ledger.enroll({ participantId: 'participant', enrollmentIndex: 0 }))
+      .toThrow(/then字段.*同步完成/);
+    expect(ledger.getSnapshot().revision).toBe(0);
+    expect(persistCalls).toBe(1);
+
+    ambiguous = false;
+    expect(ledger.enroll({ participantId: 'participant', enrollmentIndex: 0 }).enrollmentIndex)
+      .toBe(0);
+    expect(ledger.getSnapshot().revision).toBe(1);
+    expect(persistCalls).toBe(2);
+    ledger.destroy();
+  });
+
   it('rejects checkpoint accessors before reading nested evidence', () => {
     const definition = createArenaInputPilotV1Definition();
     let reads = 0;
@@ -480,6 +505,45 @@ describe('Input Pilot strict workspace coordination', () => {
     expect(reads).toBe(0);
     invalidResult = false;
     expect(coordinator.enroll(enrollment).assignment.participantId).toBe('participant');
+    coordinator.destroy();
+  });
+
+  it('rejects a CAS result with a declared then field before workspace commit', () => {
+    const definition = createArenaInputPilotV1Definition();
+    let workspace = createInputPilotWorkspace(definition);
+    let ambiguous = true;
+    let compareAndSetCalls = 0;
+    const repository = {
+      open: () => workspace,
+      getSnapshot: () => workspace,
+      compareAndSet(next: unknown) {
+        compareAndSetCalls += 1;
+        if (ambiguous) return { then: null };
+        workspace = createInputPilotWorkspace(definition, next);
+        return { committed: true, reason: null, headUpdated: true };
+      },
+      renewLease: () => true,
+      destroy() {},
+    };
+    const coordinator = new InputPilotWorkspaceCoordinator({ definition, repository });
+    coordinator.open();
+    const enrollment = {
+      participantId: 'participant',
+      device: definition.environment,
+      eligibility: {
+        priorArenaExperience: false,
+        priorOtherVariantExposure: false,
+      },
+    };
+
+    expect(() => coordinator.enroll(enrollment)).toThrow(/then字段.*同步完成/);
+    expect(workspace.revision).toBe(0);
+    expect(compareAndSetCalls).toBe(1);
+
+    ambiguous = false;
+    expect(coordinator.enroll(enrollment).assignment.participantId).toBe('participant');
+    expect(workspace.revision).toBe(1);
+    expect(compareAndSetCalls).toBe(2);
     coordinator.destroy();
   });
 
@@ -742,6 +806,263 @@ describe('Input Pilot strict observed adapters', () => {
     expect(destroyCount).toBe(1);
   });
 
+  it('bounds delegate method prototype scans and distinguishes cycles from excessive depth', () => {
+    let cyclicSession!: object;
+    cyclicSession = new Proxy(Object.create(null) as object, {
+      getPrototypeOf() {
+        return cyclicSession;
+      },
+    });
+    expect(() => new InputPilotObservedSession({
+      session: cyclicSession,
+      collector: { observeStep() {} },
+    })).toThrow(/start prototype 链不能循环/);
+
+    const delegateMethods = {
+      state: 'created',
+      start() {},
+      setPaused() {},
+      stepWithLegacySnapshotForAudit() { return null; },
+      getLegacyFullSnapshotForAudit() { return null; },
+      getPublicMatchInfo() { return null; },
+      exportReplay() { return null; },
+      destroy() {},
+    };
+    let deepSession: object = delegateMethods;
+    for (let depth = 0; depth < 32; depth += 1) {
+      deepSession = Object.create(deepSession) as object;
+    }
+    expect(() => new InputPilotObservedSession({
+      session: deepSession,
+      collector: { observeStep() {} },
+    })).toThrow(/start prototype 链超过 32 层/);
+  });
+
+  it('rejects hostile synchronous return descriptors without executing getters or then methods', () => {
+    let thenCalls = 0;
+    let thenGetterCalls = 0;
+    let constructorGetterCalls = 0;
+    const hostileThen = {
+      then() {
+        thenCalls += 1;
+      },
+    };
+    const hostileThenGetter = {};
+    Object.defineProperty(hostileThenGetter, 'then', {
+      configurable: true,
+      get() {
+        thenGetterCalls += 1;
+        return () => undefined;
+      },
+    });
+    const hostileConstructorGetter = {};
+    Object.defineProperty(hostileConstructorGetter, 'constructor', {
+      configurable: true,
+      get() {
+        constructorGetterCalls += 1;
+        return Promise;
+      },
+    });
+
+    for (const value of [hostileThen, hostileThenGetter, hostileConstructorGetter]) {
+      const session = new InputPilotObservedSession({
+        session: {
+          state: value,
+          start() {}, setPaused() {}, stepWithLegacySnapshotForAudit() { return null; },
+          getLegacyFullSnapshotForAudit() { return null; }, getPublicMatchInfo() { return null; },
+          exportReplay() { return null; }, destroy() {},
+        },
+        collector: { observeStep() {} },
+      });
+      expect(() => session.state).toThrow(/同步完成|访问器/);
+      session.destroy();
+    }
+
+    expect(thenCalls).toBe(0);
+    expect(thenGetterCalls).toBe(0);
+    expect(constructorGetterCalls).toBe(0);
+  });
+
+  it('rejects data then fields even when a Promise or plain object shadows constructor and then', () => {
+    const disguisedPromise = Promise.resolve(null);
+    Object.defineProperties(disguisedPromise, {
+      constructor: { configurable: true, enumerable: true, value: null },
+      then: { configurable: true, enumerable: true, value: null },
+    });
+    const plainThenData = Object.create(null) as Record<string, unknown>;
+    Object.defineProperty(plainThenData, 'then', {
+      configurable: true,
+      enumerable: true,
+      value: null,
+    });
+
+    for (const value of [disguisedPromise, plainThenData]) {
+      let collectorCalls = 0;
+      let destroyCalls = 0;
+      let resultReads = 0;
+      const session = new InputPilotObservedSession({
+        session: {
+          state: 'running',
+          start() {},
+          setPaused() {},
+          stepWithLegacySnapshotForAudit() { return value; },
+          getLegacyFullSnapshotForAudit() {
+            return Object.freeze({ tick: 0, phase: ARENA_MATCH_PHASE.RUNNING });
+          },
+          getPublicMatchInfo() {
+            resultReads += 1;
+            return null;
+          },
+          exportReplay() {
+            resultReads += 1;
+            return null;
+          },
+          destroy() { destroyCalls += 1; },
+        },
+        collector: {
+          observeStep() { collectorCalls += 1; },
+        },
+      });
+
+      expect(() => session.stepWithLegacySnapshotForAudit(null)).toThrow(/step 失败/);
+      expect(collectorCalls).toBe(0);
+      expect(resultReads).toBe(0);
+      expect(destroyCalls).toBe(1);
+      expect(session.state).toBe('destroyed');
+    }
+  });
+
+  it('rejects Promise subclasses and bounds synchronous return prototype scans', () => {
+    class UnsafePromiseSubclass extends Promise<unknown> {}
+    const subclassPromise = new UnsafePromiseSubclass((resolve) => resolve(null));
+    const subclassSession = new InputPilotObservedSession({
+      session: {
+        state: subclassPromise,
+        start() {}, setPaused() {}, stepWithLegacySnapshotForAudit() { return null; },
+        getLegacyFullSnapshotForAudit() { return null; }, getPublicMatchInfo() { return null; },
+        exportReplay() { return null; }, destroy() {},
+      },
+      collector: { observeStep() {} },
+    });
+    expect(() => subclassSession.state).toThrow(/必须同步完成/);
+    subclassSession.destroy();
+
+    let constructorGetterCalls = 0;
+    const promiseWithHostileConstructor = Promise.resolve(null);
+    Object.defineProperty(promiseWithHostileConstructor, 'constructor', {
+      configurable: true,
+      get() {
+        constructorGetterCalls += 1;
+        return Promise;
+      },
+    });
+    const hostileConstructorSession = new InputPilotObservedSession({
+      session: {
+        state: promiseWithHostileConstructor,
+        start() {}, setPaused() {}, stepWithLegacySnapshotForAudit() { return null; },
+        getLegacyFullSnapshotForAudit() { return null; }, getPublicMatchInfo() { return null; },
+        exportReplay() { return null; }, destroy() {},
+      },
+      collector: { observeStep() {} },
+    });
+    expect(() => hostileConstructorSession.state).toThrow(/访问器 constructor/);
+    expect(constructorGetterCalls).toBe(0);
+    hostileConstructorSession.destroy();
+
+    let cyclicReturn!: object;
+    cyclicReturn = new Proxy(Object.create(null) as object, {
+      getPrototypeOf() {
+        return cyclicReturn;
+      },
+    });
+    const cyclicSession = new InputPilotObservedSession({
+      session: {
+        state: cyclicReturn,
+        start() {}, setPaused() {}, stepWithLegacySnapshotForAudit() { return null; },
+        getLegacyFullSnapshotForAudit() { return null; }, getPublicMatchInfo() { return null; },
+        exportReplay() { return null; }, destroy() {},
+      },
+      collector: { observeStep() {} },
+    });
+    expect(() => cyclicSession.state).toThrow(/返回值 prototype 链不能循环/);
+    cyclicSession.destroy();
+
+    let deepReturn: object = Object.create(null) as object;
+    for (let depth = 0; depth < 32; depth += 1) {
+      deepReturn = Object.create(deepReturn) as object;
+    }
+    const deepSession = new InputPilotObservedSession({
+      session: {
+        state: deepReturn,
+        start() {}, setPaused() {}, stepWithLegacySnapshotForAudit() { return null; },
+        getLegacyFullSnapshotForAudit() { return null; }, getPublicMatchInfo() { return null; },
+        exportReplay() { return null; }, destroy() {},
+      },
+      collector: { observeStep() {} },
+    });
+    expect(() => deepSession.state).toThrow(/返回值 prototype 链超过 32 层/);
+    deepSession.destroy();
+  });
+
+  it('rejects native Promise descriptor drift without invoking drifted code', () => {
+    const thenDescriptor = Object.getOwnPropertyDescriptor(Promise.prototype, 'then');
+    const speciesDescriptor = Object.getOwnPropertyDescriptor(Promise, Symbol.species);
+    if (thenDescriptor === undefined || speciesDescriptor === undefined) {
+      throw new Error('native Promise descriptors must exist for the test fixture');
+    }
+
+    const thenPromise = Promise.resolve(null);
+    const thenSession = new InputPilotObservedSession({
+      session: {
+        state: thenPromise,
+        start() {}, setPaused() {}, stepWithLegacySnapshotForAudit() { return null; },
+        getLegacyFullSnapshotForAudit() { return null; }, getPublicMatchInfo() { return null; },
+        exportReplay() { return null; }, destroy() {},
+      },
+      collector: { observeStep() {} },
+    });
+    let thenCalls = 0;
+    try {
+      Object.defineProperty(Promise.prototype, 'then', {
+        ...thenDescriptor,
+        value() {
+          thenCalls += 1;
+        },
+      });
+      expect(() => thenSession.state).toThrow(/Promise\.prototype\.then 描述符漂移/);
+    } finally {
+      Object.defineProperty(Promise.prototype, 'then', thenDescriptor);
+    }
+    expect(thenCalls).toBe(0);
+    thenSession.destroy();
+
+    const speciesPromise = Promise.resolve(null);
+    const speciesSession = new InputPilotObservedSession({
+      session: {
+        state: speciesPromise,
+        start() {}, setPaused() {}, stepWithLegacySnapshotForAudit() { return null; },
+        getLegacyFullSnapshotForAudit() { return null; }, getPublicMatchInfo() { return null; },
+        exportReplay() { return null; }, destroy() {},
+      },
+      collector: { observeStep() {} },
+    });
+    let speciesCalls = 0;
+    try {
+      Object.defineProperty(Promise, Symbol.species, {
+        ...speciesDescriptor,
+        get() {
+          speciesCalls += 1;
+          return Promise;
+        },
+      });
+      expect(() => speciesSession.state).toThrow(/Promise\[Symbol\.species\] 描述符漂移/);
+    } finally {
+      Object.defineProperty(Promise, Symbol.species, speciesDescriptor);
+    }
+    expect(speciesCalls).toBe(0);
+    speciesSession.destroy();
+  });
+
   it('rejects audit inputProvider and state async returns before delegate use', async () => {
     const unhandled: unknown[] = [];
     const listener = (reason: unknown) => { unhandled.push(reason); };
@@ -755,7 +1076,7 @@ describe('Input Pilot strict observed adapters', () => {
           Object.defineProperty(rejected, 'then', { configurable: true, value: null });
           return rejected;
         })(),
-        runInNewContext('Promise.reject(new Error("pilot foreign rejection"))'),
+        runInNewContext('Promise.resolve("pilot foreign value")'),
         {
           then() {
             hostileCalls += 1;

@@ -315,7 +315,15 @@ test('CharacterViewRuntime owns one resolver/view and fails closed on view error
     viewFactory: { create: () => view },
   });
   const actor = participant();
-  runtime.sync(frame(0, actor), actor, { snap: true, cameraModel: CAMERA_MODEL });
+  assert.throws(() => runtime.sync(frame(0, actor), actor, {
+    snap: true,
+    cameraModel: CAMERA_MODEL,
+  }), /freezeAnimation/);
+  runtime.sync(frame(0, actor), actor, {
+    snap: true,
+    cameraModel: CAMERA_MODEL,
+    freezeAnimation: true,
+  });
   runtime.update(1 / 60);
   const firstCall = required(calls[0], '首个 View 调用');
   const firstOptions = record(firstCall.options, '首个 View 调用选项');
@@ -323,6 +331,14 @@ test('CharacterViewRuntime owns one resolver/view and fails closed on view error
   const baseBinding = record(animation.baseBinding, '基础动画绑定');
   assert.equal(baseBinding.sourceKey, 'idle');
   assert.equal(firstOptions.snap, true);
+  assert.equal(firstOptions.freezeAnimation, true);
+  assert.equal(runtime.getDebugSnapshot().freezeAnimation, true);
+  runtime.sync(frame(1, actor), actor, {
+    snap: false,
+    cameraModel: CAMERA_MODEL,
+    freezeAnimation: false,
+  });
+  assert.equal(runtime.getDebugSnapshot().freezeAnimation, false);
   assert.equal(record(runtime.getDebugSnapshot().view, 'View 调试快照').kind, 'fake');
   runtime.dispose();
   runtime.dispose();
@@ -357,7 +373,11 @@ test('CharacterViewRuntime owns one resolver/view and fails closed on view error
     },
   });
   assert.throws(
-    () => failed.sync(frame(0, actor), actor, { cameraModel: CAMERA_MODEL }),
+    () => failed.sync(frame(0, actor), actor, {
+      snap: false,
+      cameraModel: CAMERA_MODEL,
+      freezeAnimation: false,
+    }),
     /view sync failed/,
   );
   assert.equal(failedDisposed, 1);
@@ -391,7 +411,11 @@ test('CharacterViewRuntime snapshots view methods, rejects accessors and retries
     viewFactory: { create: () => mutableView },
   });
   mutableView.sync = () => { throw new Error('replacement sync must not run'); };
-  runtime.sync(frame(0, actor), actor, { cameraModel: CAMERA_MODEL });
+  runtime.sync(frame(0, actor), actor, {
+    snap: false,
+    cameraModel: CAMERA_MODEL,
+    freezeAnimation: false,
+  });
   assert.deepEqual(calls, ['original-sync']);
   assert.throws(() => runtime.dispose(), /清理未完整完成/);
   runtime.dispose();
@@ -446,6 +470,7 @@ test('CharacterViewRegistry detaches removed roots and closes every runtime afte
     },
   };
   const disposeCalls = new Map<string, number>();
+  const freezeByParticipantId = new Map<string, boolean>();
   let throwOnSync = false;
   const registry = new CharacterViewRegistry(root, {
     presentationRegistry: ARENA_V1_GREYBOX_CONTENT.characterPresentationRegistry,
@@ -457,8 +482,13 @@ test('CharacterViewRegistry detaches removed roots and closes every runtime afte
           proceduralKeys: ARENA_ANIMATION_SEMANTIC_IDS,
           clipKeys: [],
         }),
-        sync: () => {
+        sync: (_participant: unknown, options: unknown) => {
+          const parsed = record(options, `participant ${participantId} sync options`);
+          freezeByParticipantId.set(participantId, parsed.freezeAnimation as boolean);
           if (throwOnSync) throw new Error('registry sync failed');
+        },
+        setAnimationHold: (value: boolean) => {
+          freezeByParticipantId.set(participantId, value);
         },
         update: () => {},
         getDebugSnapshot: () => Object.freeze({ participantId }),
@@ -471,19 +501,56 @@ test('CharacterViewRegistry detaches removed roots and closes every runtime afte
   });
   const playerOne = participant();
   const playerTwo = participant({ id: 'player-2' });
+  assert.throws(() => registry.sync(frame(0, playerOne), {
+    cameraModel: CAMERA_MODEL,
+    animationHoldParticipantIds: ['player-1', 'player-1'],
+  }), /不能重复/);
+  assert.throws(() => registry.sync(frame(0, playerOne), {
+    cameraModel: CAMERA_MODEL,
+    animationHoldParticipantIds: [''],
+  }), /非空字符串/);
+  assert.throws(() => registry.sync(frame(0, playerOne), {
+    cameraModel: CAMERA_MODEL,
+    animationHoldParticipantIds: [],
+    futureAnimationPolicy: 'hold',
+  }), /未知字段/);
+  let holdReads = 0;
+  assert.throws(() => registry.sync(frame(0, playerOne), {
+    cameraModel: CAMERA_MODEL,
+    get animationHoldParticipantIds() {
+      holdReads += 1;
+      return [];
+    },
+  }), /数据字段/);
+  assert.equal(holdReads, 0);
   registry.sync({
     ...frame(0, playerOne),
     world: { participants: [playerOne, playerTwo] },
-  }, { cameraModel: CAMERA_MODEL });
+  }, {
+    cameraModel: CAMERA_MODEL,
+    animationHoldParticipantIds: ['player-1', 'already-left'],
+  });
   assert.equal(roots.length, 2);
+  assert.equal(freezeByParticipantId.get('player-1'), true);
+  assert.equal(freezeByParticipantId.get('player-2'), false);
+  registry.clearAnimationHolds();
+  assert.equal(freezeByParticipantId.get('player-1'), false);
+  assert.equal(freezeByParticipantId.get('player-2'), false);
 
-  registry.sync(frame(1, playerOne), { cameraModel: CAMERA_MODEL });
+  registry.sync(frame(1, playerOne), {
+    cameraModel: CAMERA_MODEL,
+    animationHoldParticipantIds: ['player-2'],
+  });
   assert.equal(roots.length, 1);
   assert.equal(disposeCalls.get('player-2'), 1);
+  assert.equal(freezeByParticipantId.get('player-1'), false);
+
+  registry.sync(frame(2, playerOne), { cameraModel: CAMERA_MODEL });
+  assert.equal(freezeByParticipantId.get('player-1'), undefined);
 
   throwOnSync = true;
   assert.throws(
-    () => registry.sync(frame(2, playerOne), { cameraModel: CAMERA_MODEL }),
+    () => registry.sync(frame(3, playerOne), { cameraModel: CAMERA_MODEL }),
     /registry sync failed/,
   );
   assert.equal(roots.length, 0);
@@ -603,10 +670,12 @@ test('PresentationAssetLoadTask deduplicates load and releases ready or late ass
   const pending = lateTask.load();
   await Promise.resolve();
   lateTask.destroy();
+  assert.equal(lateTask.isCleanupComplete(), false);
   late.resolve({ assetId, value: {}, release: () => { lateReleases += 1; } });
   await assert.rejects(pending, /加载完成时已销毁/);
   assert.equal(lateReleases, 1);
   assert.equal(lateTask.state, PRESENTATION_ASSET_LOAD_STATE.DESTROYED);
+  assert.equal(lateTask.isCleanupComplete(), true);
 });
 
 test('PresentationAssetLoadTask rejects invalid leases without invoking accessors', async () => {
@@ -666,8 +735,10 @@ test('PresentationAssetLoadTask retains a failed cleanup lease so destroy can re
   assert.throws(() => task.destroy(), /transient release failure/);
   assert.equal(task.state, PRESENTATION_ASSET_LOAD_STATE.DESTROYED);
   assert.equal(task.getDebugSnapshot().hasLease, true);
+  assert.equal(task.isCleanupComplete(), false);
   task.destroy();
   task.destroy();
   assert.equal(attempts, 2);
   assert.equal(task.getDebugSnapshot().hasLease, false);
+  assert.equal(task.isCleanupComplete(), true);
 });

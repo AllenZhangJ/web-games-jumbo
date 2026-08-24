@@ -1,6 +1,7 @@
 import {
   assertKnownKeys,
   assertNonEmptyString,
+  assertSynchronousReturn,
 } from '@number-strategy-jump/arena-contracts';
 import {
   InputPilotEnrollmentLedger,
@@ -57,27 +58,9 @@ function dataMethod(value: unknown, key: string): UnknownMethod {
   throw new TypeError(`InputPilotWorkspaceCoordinator.repository 缺少 ${key}()。`);
 }
 
-function rejectThenable(value: unknown, name: string): void {
-  if (!value || (typeof value !== 'object' && typeof value !== 'function')) return;
-  let current: object | null = value as object;
-  const visited = new Set<object>();
-  while (current) {
-    if (visited.has(current) || visited.size >= 32) throw new TypeError(`${name} 原型链无效。`);
-    visited.add(current);
-    const descriptor = Object.getOwnPropertyDescriptor(current, 'then');
-    if (descriptor) {
-      if (!Object.hasOwn(descriptor, 'value')) throw new TypeError(`${name} 返回了访问器 thenable。`);
-      if (typeof descriptor.value !== 'function') return;
-      try { Promise.prototype.then.call(value, undefined, () => {}); } catch { /* foreign thenable */ }
-      throw new TypeError(`${name} 必须同步完成。`);
-    }
-    current = Object.getPrototypeOf(current) as object | null;
-  }
-}
-
 function callSync(method: UnknownMethod, name: string, ...args: unknown[]): unknown {
   const result = method(...args);
-  rejectThenable(result, name);
+  assertSynchronousReturn(result, name);
   return result;
 }
 

@@ -14,6 +14,7 @@ import {
   clonePoint,
   cloneViewport,
   nextRevision,
+  resolvedPresentationSafeAreaInsets,
   type PresentationInputViewport,
 } from './input-validation.js';
 import { trustRawControlSnapshot } from './input-snapshot-trust.js';
@@ -127,7 +128,16 @@ export class RawControlState {
   resize(viewport: unknown): boolean {
     this.#assertUsable();
     const next = cloneViewport(viewport, 'RawControlState.viewport');
-    if (next.width === this.#viewport.width && next.height === this.#viewport.height) {
+    const currentInsets = resolvedPresentationSafeAreaInsets(this.#viewport);
+    const nextInsets = resolvedPresentationSafeAreaInsets(next);
+    if (
+      next.width === this.#viewport.width
+      && next.height === this.#viewport.height
+      && nextInsets.top === currentInsets.top
+      && nextInsets.right === currentInsets.right
+      && nextInsets.bottom === currentInsets.bottom
+      && nextInsets.left === currentInsets.left
+    ) {
       return false;
     }
     const nextJoystickRadius = joystickRadius(next, this.#layout);

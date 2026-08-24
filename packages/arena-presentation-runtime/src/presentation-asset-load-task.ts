@@ -198,6 +198,7 @@ export class PresentationAssetLoadTask {
   #promise: Promise<unknown> | null = null;
   #lease: NormalizedLease | null = null;
   #releasingLease: NormalizedLease | null = null;
+  #loadSettled = true;
   #lastError: unknown = null;
 
   constructor(optionsValue: unknown) {
@@ -248,6 +249,7 @@ export class PresentationAssetLoadTask {
     }
     if (this.#promise) return this.#promise;
     this.#state = PRESENTATION_ASSET_LOAD_STATE.LOADING;
+    this.#loadSettled = false;
     this.#promise = Promise.resolve()
       .then(() => {
         if (this.#state === PRESENTATION_ASSET_LOAD_STATE.DESTROYED) {
@@ -300,6 +302,9 @@ export class PresentationAssetLoadTask {
           this.#state = PRESENTATION_ASSET_LOAD_STATE.FAILED;
         }
         throw error;
+      })
+      .finally(() => {
+        this.#loadSettled = true;
       });
     observeNativePromise(this.#promise);
     return this.#promise;
@@ -312,6 +317,13 @@ export class PresentationAssetLoadTask {
       hasLease: this.#lease !== null,
       hasError: this.#lastError !== null,
     });
+  }
+
+  isCleanupComplete(): boolean {
+    return this.#state === PRESENTATION_ASSET_LOAD_STATE.DESTROYED
+      && this.#loadSettled
+      && this.#lease === null
+      && this.#releasingLease === null;
   }
 
   destroy(): void {

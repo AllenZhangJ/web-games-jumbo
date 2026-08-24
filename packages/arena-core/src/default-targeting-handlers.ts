@@ -119,6 +119,7 @@ function resolveRearCone({
   return candidates.filter((candidate) => {
     if (candidate.id === source.id) return false;
     const targetFacing = requireFacing(candidate.facing, `candidate ${candidate.id}`);
+    const targetFacingLength = Math.hypot(targetFacing.x, targetFacing.z);
     const dx = source.position.x - candidate.position.x;
     const dz = source.position.z - candidate.position.z;
     const distance = Math.hypot(dx, dz);
@@ -129,7 +130,10 @@ function resolveRearCone({
     ) return false;
     const directionX = dx / distance;
     const directionZ = dz / distance;
-    return directionX * targetFacing.x + directionZ * targetFacing.z <= -validated.minimumFacingDot;
+    return (
+      directionX * targetFacing.x / targetFacingLength
+      + directionZ * targetFacing.z / targetFacingLength
+    ) <= -validated.minimumFacingDot;
   }).map(({ id }) => id);
 }
 

@@ -88,6 +88,12 @@ export type {
   Vector3Definition,
 } from './map-definition.js';
 export { MapRegistry } from './map-registry.js';
+// P3 versioned KZ route boundary. No route is registered into the production
+// MapRegistry by this export; callers must provide an explicit candidate source.
+export * from './kz-route-definition-v2.js';
+export * from './kz-route-registry-v2.js';
+// P4 weapon grammar is data-only and does not register a production weapon.
+export * from './weapon-combat-grammar-definition-v1.js';
 export {
   ARENA_V1_CHARACTER_ID,
   ARENA_V1_DEFAULT_CHARACTER_ID,
@@ -99,3 +105,9 @@ export {
   STAGE5_MAP_ID,
 } from './arena-v1-content-ids.js';
 export type { Stage4EquipmentId } from './arena-v1-content-ids.js';
+
+// P2 versioned Definition/Registry boundaries. No production Mode instance is
+// registered here; callers must provide an explicit validated registry source.
+export * from './mode-definition.js';
+export * from './mode-policy-definition.js';
+export * from './mode-registry.js';

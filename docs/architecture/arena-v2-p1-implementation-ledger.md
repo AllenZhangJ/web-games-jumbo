@@ -3539,6 +3539,13 @@ rejected Promise 被收容，重入、迟到回调、构造半失败、清理失
 红因 Vitest 未由其 runner 启动，保留为无效调用证据，不与正确命令结果拼接。PA6-P 完成只关闭 Presentation async boundary 子门，
 不计入 PA6 CPU 数值，也不解锁 PA7。
 
+#### PA6-P 后续源码增量 P5.3zzi（2026-08-12，代码已写、未运行）
+
+为修复正式 Three 预加载器在加载中销毁时可能丢失迟到Lease清理Owner的问题，`presentation-asset-load-task.ts`新增只读
+`isCleanupComplete()`完成水位，区分“已请求destroy”与“异步加载已落定且Lease已释放”。2026-08-02的PA6-P签核与绿证据
+仍是修改前基线的历史事实，但不覆盖这次源码增量；当前源码对该文件的有效状态必须记为`P5.3zzi-code-written-not-run / formalGate=false`。
+本批没有运行Node、Vitest、architecture、类型、构建或性能验证，后续统一验证前不得引用旧PA6-P结果宣称新逻辑已通过。
+
 #### PA6 runner 正确性候选与正式性能状态（2026-08-02）
 
 PA6 runner 当前为 `implementation-candidate / coordinator-correctness-approved / performance-deferred-by-ADR-115 / formalGate=false`。候选固定 `B-only/C+B/B+D/C+B+D` 四变体、

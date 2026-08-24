@@ -1,4 +1,7 @@
-import { normalizeThrownError } from '@number-strategy-jump/arena-contracts';
+import {
+  assertSynchronousReturn as rejectThenable,
+  normalizeThrownError,
+} from '@number-strategy-jump/arena-contracts';
 import {
   createProductCanvasLayout,
   createProductUiSceneModel,
@@ -25,6 +28,18 @@ type ProductCanvasUiSurfaceState = typeof PRODUCT_CANVAS_UI_SURFACE_STATE[
   keyof typeof PRODUCT_CANVAS_UI_SURFACE_STATE
 ];
 type UnknownMethod = (...args: unknown[]) => unknown;
+type ProductCanvasUiSurfaceOperation =
+  | 'state-read'
+  | 'load'
+  | 'render'
+  | 'resize'
+  | 'input-viewport-read'
+  | 'ui-hit-test'
+  | 'intent-bind'
+  | 'composite-read'
+  | 'present'
+  | 'debug-read'
+  | 'dispose';
 
 interface CanvasLike {
   width: number;
@@ -104,25 +119,6 @@ function snapshotMethod(value: unknown, name: string, methodName: string): Unkno
     owner = Object.getPrototypeOf(owner) as object | null;
   }
   throw new TypeError(`${name} 缺少 ${methodName}()。`);
-}
-
-function rejectThenable(value: unknown, name: string): void {
-  if (!value || (typeof value !== 'object' && typeof value !== 'function')) return;
-  let owner: object | null = value as object;
-  while (owner) {
-    const descriptor = Object.getOwnPropertyDescriptor(owner, 'then');
-    if (descriptor) {
-      if (!Object.hasOwn(descriptor, 'value')) {
-        throw new TypeError(`${name} 返回了访问器 then。`);
-      }
-      if (typeof descriptor.value === 'function') {
-        if (value instanceof Promise) void value.catch(() => {});
-        throw new TypeError(`${name} 必须同步完成。`);
-      }
-      return;
-    }
-    owner = Object.getPrototypeOf(owner) as object | null;
-  }
 }
 
 function finite(value: unknown, name: string): number {
@@ -345,9 +341,10 @@ export class ProductCanvasUiSurface {
   #bindingCleanup: (() => void) | null = null;
   #rendererTarget: object | null = null;
   #rendererRender: UnknownMethod | null = null;
-  #operating = false;
-  #operationName = '';
-  #reentryDetected = false;
+  #operation: ProductCanvasUiSurfaceOperation | null = null;
+  #operationSequence = 0;
+  #reentrySequence = 0;
+  #reentryError: Error | null = null;
 
   constructor(optionsValue: unknown) {
     assertKnownKeys(optionsValue, OPTION_KEYS, 'ProductCanvasUiSurface options');
@@ -401,56 +398,178 @@ export class ProductCanvasUiSurface {
   }
 
   get state(): ProductCanvasUiSurfaceState {
-    return this.#state;
+    return this.#runOperation('state-read', () => this.#state);
   }
 
-  #rejectReentry(operation: string): void {
-    if (!this.#operating) return;
-    this.#reentryDetected = true;
-    throw new Error(
-      `ProductCanvasUiSurface ${operation} 不得重入 ${this.#operationName}。`,
+  #guardReentry(operation: ProductCanvasUiSurfaceOperation): void {
+    if (this.#operation === null) return;
+    this.#reentrySequence += 1;
+    this.#reentryError ??= new Error(
+      `ProductCanvasUiSurface ${this.#operation}期间拒绝${operation}重入。`,
     );
+    throw this.#reentryError;
   }
 
-  #assertReady(operation: string): void {
-    this.#rejectReentry(operation);
+  #assertReady(): void {
     if (this.#state !== PRODUCT_CANVAS_UI_SURFACE_STATE.READY) {
       throw new Error(`ProductCanvasUiSurface 当前状态不可用：${this.#state}。`);
     }
   }
 
-  #begin(operation: string): void {
-    this.#rejectReentry(operation);
-    this.#operating = true;
-    this.#operationName = operation;
-    this.#reentryDetected = false;
+  #assertCurrentOperationCommit(
+    sequence: number,
+    operation: ProductCanvasUiSurfaceOperation,
+    label: string,
+  ): void {
+    this.#assertOperationOwner(sequence, operation, label);
+    if (this.#reentryError !== null) throw this.#reentryError;
   }
 
-  #end(): void {
-    this.#operating = false;
-    this.#operationName = '';
-  }
-
-  #assertNoSwallowedReentry(): void {
-    if (this.#reentryDetected) {
-      throw new Error('ProductCanvasUiSurface 宿主回调吞掉了重入异常。');
+  #assertOperationOwner(
+    sequence: number,
+    operation: ProductCanvasUiSurfaceOperation,
+    label: string,
+  ): void {
+    if (this.#operation !== operation || this.#operationSequence !== sequence) {
+      throw new Error(`${label}缺少当前ProductCanvasUiSurface operation所有权。`);
     }
   }
 
-  #disposeResources(): readonly unknown[] {
-    const errors: unknown[] = [];
-    this.#bindingCleanup?.();
-    if (this.#resourceLease) {
+  #runOperation<T>(
+    operation: ProductCanvasUiSurfaceOperation,
+    run: (sequence: number) => T,
+  ): T {
+    this.#guardReentry(operation);
+    this.#operation = operation;
+    this.#operationSequence += 1;
+    const sequence = this.#operationSequence;
+    this.#reentryError = null;
+    let result!: T;
+    let failure: unknown = null;
+    let failed = false;
+    try {
+      result = run(sequence);
+      this.#assertCurrentOperationCommit(
+        sequence,
+        operation,
+        `ProductCanvasUiSurface ${operation}`,
+      );
+    } catch (error) {
+      failed = true;
+      failure = error;
+    } finally {
+      const reentryError = this.#reentryError;
+      this.#operation = null;
+      this.#reentryError = null;
+      if (reentryError !== null && failure !== reentryError) {
+        throw new AggregateError(
+          failed ? [failure, reentryError] : [reentryError],
+          `ProductCanvasUiSurface ${operation}失败关闭且发生同步重入。`,
+        );
+      }
+    }
+    if (failed) throw failure;
+    return result;
+  }
+
+  #callChecked<T>(
+    sequence: number,
+    operation: ProductCanvasUiSurfaceOperation,
+    callback: () => T,
+    label: string,
+  ): T {
+    try {
+      const result = callback();
+      rejectThenable(result, label);
+      this.#assertCurrentOperationCommit(sequence, operation, label);
+      return result;
+    } catch (error) {
       try {
-        this.#resourceLease.dispose();
+        this.#assertCurrentOperationCommit(sequence, operation, label);
+      } catch (reentryError) {
+        if (error !== reentryError) {
+          throw new AggregateError(
+            [error, reentryError],
+            `${label}失败且发生ProductCanvasUiSurface重入。`,
+          );
+        }
+        throw reentryError;
+      }
+      throw error;
+    }
+  }
+
+  #callCleanupChecked<T>(
+    sequence: number,
+    operation: ProductCanvasUiSurfaceOperation,
+    callback: () => T,
+    label: string,
+  ): T {
+    const reentrySequence = this.#reentrySequence;
+    try {
+      const result = callback();
+      rejectThenable(result, label);
+      this.#assertOperationOwner(sequence, operation, label);
+      if (this.#reentrySequence !== reentrySequence) throw this.#reentryError;
+      return result;
+    } catch (error) {
+      this.#assertOperationOwner(sequence, operation, label);
+      if (this.#reentrySequence !== reentrySequence && error !== this.#reentryError) {
+        throw new AggregateError(
+          [error, this.#reentryError],
+          `${label}失败且清理期间发生ProductCanvasUiSurface重入。`,
+        );
+      }
+      throw error;
+    }
+  }
+
+  #disposeResources(
+    sequence: number,
+    operation: ProductCanvasUiSurfaceOperation,
+  ): readonly unknown[] {
+    const errors: unknown[] = [];
+    let cleanupReentered = false;
+    const bindingCleanup = this.#bindingCleanup;
+    if (bindingCleanup !== null) {
+      const reentrySequence = this.#reentrySequence;
+      try {
+        this.#callCleanupChecked(
+          sequence,
+          operation,
+          bindingCleanup,
+          'ProductCanvasUiSurface binding cleanup()',
+        );
+        if (this.#bindingCleanup === bindingCleanup) this.#bindingCleanup = null;
+      } catch (error) {
+        errors.push(error);
+      }
+      cleanupReentered = this.#reentrySequence !== reentrySequence;
+    }
+    if (!cleanupReentered && this.#resourceLease) {
+      const resourceLease = this.#resourceLease;
+      const reentrySequence = this.#reentrySequence;
+      try {
+        this.#callCleanupChecked(
+          sequence,
+          operation,
+          () => resourceLease.dispose(),
+          'ProductCanvasUiSurface resourceLease.dispose()',
+        );
         this.#resourceLease = null;
       } catch (error) {
         errors.push(error);
       }
+      cleanupReentered = this.#reentrySequence !== reentrySequence;
     }
-    if (!this.#sceneCleared) {
+    if (!cleanupReentered && !this.#sceneCleared) {
       try {
-        this.scene.clear();
+        this.#callCleanupChecked(
+          sequence,
+          operation,
+          () => this.scene.clear(),
+          'ProductCanvasUiSurface scene.clear()',
+        );
         this.#sceneCleared = true;
       } catch (error) {
         errors.push(error);
@@ -471,8 +590,12 @@ export class ProductCanvasUiSurface {
     return Object.freeze(errors);
   }
 
-  #failClosed(cause: unknown): Error {
-    const cleanupErrors = this.#disposeResources();
+  #failClosed(
+    cause: unknown,
+    sequence: number,
+    operation: ProductCanvasUiSurfaceOperation,
+  ): Error {
+    const cleanupErrors = this.#disposeResources(sequence, operation);
     return cleanupFailure(cause, cleanupErrors);
   }
 
@@ -482,6 +605,8 @@ export class ProductCanvasUiSurface {
     textureScale: number,
     viewportRevision: number,
     force: boolean,
+    sequence: number,
+    operation: ProductCanvasUiSurfaceOperation,
   ): Readonly<{ layout: ProductCanvasLayout; visible: boolean }> {
     if (
       !force
@@ -494,110 +619,118 @@ export class ProductCanvasUiSurface {
     const layout = createProductCanvasLayout(model, viewport);
     const visible = !model.gameplay;
     this.#context.setTransform(textureScale, 0, 0, textureScale, 0, 0);
+    this.#assertCurrentOperationCommit(sequence, operation, 'ProductCanvasUiSurface paint transform');
     this.#context.clearRect(0, 0, viewport.width, viewport.height);
-    if (visible) paintProductCanvasScene(this.#context, model, layout, viewport);
-    this.#assertNoSwallowedReentry();
+    this.#assertCurrentOperationCommit(sequence, operation, 'ProductCanvasUiSurface paint clear');
+    if (visible) {
+      paintProductCanvasScene(this.#context, model, layout, viewport);
+      this.#assertCurrentOperationCommit(sequence, operation, 'ProductCanvasUiSurface paint scene');
+    }
     this.#texture.needsUpdate = true;
     this.#drawnModel = model;
     this.#drawnViewportRevision = viewportRevision;
     return Object.freeze({ layout, visible });
   }
 
-  async load(): Promise<this> {
-    this.#rejectReentry('load');
-    if (this.#state === PRODUCT_CANVAS_UI_SURFACE_STATE.DISPOSED) {
-      throw new Error('ProductCanvasUiSurface 已销毁。');
-    }
-    if (this.#state === PRODUCT_CANVAS_UI_SURFACE_STATE.DISPOSE_INCOMPLETE) {
-      throw new Error('ProductCanvasUiSurface 清理未完整完成。');
-    }
-    this.#state = PRODUCT_CANVAS_UI_SURFACE_STATE.READY;
-    return this;
+  load(): Promise<this> {
+    return this.#runOperation('load', () => {
+      if (this.#state === PRODUCT_CANVAS_UI_SURFACE_STATE.DISPOSED) {
+        throw new Error('ProductCanvasUiSurface 已销毁。');
+      }
+      if (this.#state === PRODUCT_CANVAS_UI_SURFACE_STATE.DISPOSE_INCOMPLETE) {
+        throw new Error('ProductCanvasUiSurface 清理未完整完成。');
+      }
+      this.#state = PRODUCT_CANVAS_UI_SURFACE_STATE.READY;
+      return Promise.resolve(this);
+    });
   }
 
   render(viewModel: unknown): boolean {
-    this.#assertReady('render');
-    const model = createProductUiSceneModel(viewModel);
-    this.#begin('render');
-    try {
-      const painted = this.#paint(
-        model,
-        this.#viewport,
-        this.#textureScale,
-        this.#viewportRevision,
-        false,
-      );
-      this.#assertNoSwallowedReentry();
-      this.#viewModel = viewModel;
-      this.#model = model;
-      this.#layout = painted.layout;
-      this.#visible = painted.visible;
-      return true;
-    } catch (error) {
-      throw this.#failClosed(error);
-    } finally {
-      this.#end();
-    }
+    return this.#runOperation('render', (sequence) => {
+      this.#assertReady();
+      const model = createProductUiSceneModel(viewModel);
+      try {
+        const painted = this.#paint(
+          model,
+          this.#viewport,
+          this.#textureScale,
+          this.#viewportRevision,
+          false,
+          sequence,
+          'render',
+        );
+        this.#assertCurrentOperationCommit(sequence, 'render', 'ProductCanvasUiSurface render publication');
+        this.#viewModel = viewModel;
+        this.#model = model;
+        this.#layout = painted.layout;
+        this.#visible = painted.visible;
+        return true;
+      } catch (error) {
+        throw this.#failClosed(error, sequence, 'render');
+      }
+    });
   }
 
   resize(viewportValue: unknown, inputViewportValue?: unknown): boolean {
-    this.#rejectReentry('resize');
-    if (this.#state === PRODUCT_CANVAS_UI_SURFACE_STATE.DISPOSED) return false;
-    if (this.#state === PRODUCT_CANVAS_UI_SURFACE_STATE.DISPOSE_INCOMPLETE) {
-      throw new Error('ProductCanvasUiSurface 清理未完整完成。');
-    }
-    const viewport = normalizeViewport(viewportValue);
-    const inputViewport = normalizeInputViewport(inputViewportValue, viewport);
-    const textureScale = Math.max(
-      0.5,
-      Math.min(viewport.pixelRatio, 2048 / Math.max(viewport.width, viewport.height)),
-    );
-    const canvasWidth = Math.max(1, Math.round(viewport.width * textureScale));
-    const canvasHeight = Math.max(1, Math.round(viewport.height * textureScale));
-    const viewportRevision = this.#viewportRevision + 1;
-    this.#begin('resize');
-    try {
-      setCanvasSize(this.#canvas, canvasWidth, canvasHeight);
-      let painted: Readonly<{ layout: ProductCanvasLayout; visible: boolean }> | null = null;
-      if (this.#model) {
-        painted = this.#paint(
-          this.#model,
-          viewport,
-          textureScale,
-          viewportRevision,
-          true,
-        );
-      } else {
-        this.#texture.needsUpdate = true;
+    return this.#runOperation('resize', (sequence) => {
+      if (this.#state === PRODUCT_CANVAS_UI_SURFACE_STATE.DISPOSED) return false;
+      if (this.#state === PRODUCT_CANVAS_UI_SURFACE_STATE.DISPOSE_INCOMPLETE) {
+        throw new Error('ProductCanvasUiSurface 清理未完整完成。');
       }
-      this.#assertNoSwallowedReentry();
-      this.#viewport = viewport;
-      this.#inputViewport = inputViewport;
-      this.#textureScale = textureScale;
-      this.#textureWidth = canvasWidth;
-      this.#textureHeight = canvasHeight;
-      this.#viewportRevision = viewportRevision;
-      if (painted) {
-        this.#layout = painted.layout;
-        this.#visible = painted.visible;
+      const viewport = normalizeViewport(viewportValue);
+      const inputViewport = normalizeInputViewport(inputViewportValue, viewport);
+      const textureScale = Math.max(
+        0.5,
+        Math.min(viewport.pixelRatio, 2048 / Math.max(viewport.width, viewport.height)),
+      );
+      const canvasWidth = Math.max(1, Math.round(viewport.width * textureScale));
+      const canvasHeight = Math.max(1, Math.round(viewport.height * textureScale));
+      const viewportRevision = this.#viewportRevision + 1;
+      try {
+        setCanvasSize(this.#canvas, canvasWidth, canvasHeight);
+        this.#assertCurrentOperationCommit(sequence, 'resize', 'ProductCanvasUiSurface canvas resize');
+        let painted: Readonly<{ layout: ProductCanvasLayout; visible: boolean }> | null = null;
+        if (this.#model) {
+          painted = this.#paint(
+            this.#model,
+            viewport,
+            textureScale,
+            viewportRevision,
+            true,
+            sequence,
+            'resize',
+          );
+        } else {
+          this.#texture.needsUpdate = true;
+        }
+        this.#assertCurrentOperationCommit(sequence, 'resize', 'ProductCanvasUiSurface resize publication');
+        this.#viewport = viewport;
+        this.#inputViewport = inputViewport;
+        this.#textureScale = textureScale;
+        this.#textureWidth = canvasWidth;
+        this.#textureHeight = canvasHeight;
+        this.#viewportRevision = viewportRevision;
+        if (painted) {
+          this.#layout = painted.layout;
+          this.#visible = painted.visible;
+        }
+        return true;
+      } catch (error) {
+        throw this.#failClosed(error, sequence, 'resize');
       }
-      return true;
-    } catch (error) {
-      throw this.#failClosed(error);
-    } finally {
-      this.#end();
-    }
+    });
   }
 
   getInputViewport(fallbackValue?: unknown): InputViewport {
-    this.#rejectReentry('getInputViewport');
-    if (this.#state === PRODUCT_CANVAS_UI_SURFACE_STATE.DISPOSED) {
-      throw new Error('ProductCanvasUiSurface 已销毁。');
-    }
-    if (this.#inputViewport.width > 1 || this.#inputViewport.height > 1) {
-      return this.#inputViewport;
-    }
-    return normalizeInputViewport(fallbackValue, this.#inputViewport);
+    return this.#runOperation('input-viewport-read', () => {
+      if (this.#state === PRODUCT_CANVAS_UI_SURFACE_STATE.DISPOSED) {
+        throw new Error('ProductCanvasUiSurface 已销毁。');
+      }
+      if (this.#inputViewport.width > 1 || this.#inputViewport.height > 1) {
+        return this.#inputViewport;
+      }
+      return normalizeInputViewport(fallbackValue, this.#inputViewport);
+    });
   }
 
   hitTestUi(
@@ -605,113 +738,135 @@ export class ProductCanvasUiSurface {
     inputViewportValue: unknown,
     viewModel: unknown = this.#viewModel,
   ): Readonly<Record<string, unknown>> | null {
-    this.#assertReady('hitTestUi');
-    const normalizedPoint = point(pointValue);
-    if (!normalizedPoint || !viewModel) return null;
-    const inputViewport = normalizeInputViewport(inputViewportValue, this.#inputViewport);
-    const model = createProductUiSceneModel(viewModel);
-    if (model.gameplay || !model.inputEnabled) return null;
-    const layout = model === this.#model && this.#layout
-      ? this.#layout
-      : createProductCanvasLayout(model, this.#viewport);
-    const mapped = Object.freeze({
-      x: normalizedPoint.x / inputViewport.width * this.#viewport.width,
-      y: normalizedPoint.y / inputViewport.height * this.#viewport.height,
+    return this.#runOperation('ui-hit-test', () => {
+      this.#assertReady();
+      const normalizedPoint = point(pointValue);
+      if (!normalizedPoint || !viewModel) return null;
+      const inputViewport = normalizeInputViewport(inputViewportValue, this.#inputViewport);
+      const model = createProductUiSceneModel(viewModel);
+      if (model.gameplay || !model.inputEnabled) return null;
+      const layout = model === this.#model && this.#layout
+        ? this.#layout
+        : createProductCanvasLayout(model, this.#viewport);
+      const mapped = Object.freeze({
+        x: normalizedPoint.x / inputViewport.width * this.#viewport.width,
+        y: normalizedPoint.y / inputViewport.height * this.#viewport.height,
+      });
+      for (const hit of layout.hits) {
+        if (pointInProductCanvasRect(mapped, hit.rect)) return hit.intent;
+      }
+      return null;
     });
-    for (const hit of layout.hits) {
-      if (pointInProductCanvasRect(mapped, hit.rect)) return hit.intent;
-    }
-    return null;
   }
 
   bindIntent(optionsValue: unknown = {}): () => void {
-    this.#assertReady('bindIntent');
-    assertKnownKeys(optionsValue, BINDING_KEYS, 'ProductCanvasUiSurface intent options');
-    functionValue(
-      ownData(optionsValue, 'onIntent', 'ProductCanvasUiSurface intent options'),
-      'ProductCanvasUiSurface.onIntent',
-    );
-    const rejectedValue = ownData(
-      optionsValue,
-      'onRejected',
-      'ProductCanvasUiSurface intent options',
-      false,
-    );
-    if (rejectedValue !== undefined) {
-      functionValue(rejectedValue, 'ProductCanvasUiSurface.onRejected');
-    }
-    if (this.#bindingCleanup) throw new Error('ProductCanvasUiSurface intent 已绑定。');
-    let active = true;
-    const cleanup = (): void => {
-      if (!active) return;
-      active = false;
-      if (this.#bindingCleanup === cleanup) this.#bindingCleanup = null;
-    };
-    this.#bindingCleanup = cleanup;
-    return cleanup;
-  }
-
-  requiresCompositeFrame(): boolean {
-    this.#assertReady('requiresCompositeFrame');
-    return this.#visible;
-  }
-
-  present(rendererValue: unknown): boolean {
-    this.#assertReady('present');
-    if (!this.#visible) return true;
-    assertRecord(rendererValue, 'ProductCanvasUiSurface renderer');
-    if (rendererValue !== this.#rendererTarget) {
-      this.#rendererRender = snapshotMethod(
-        rendererValue,
-        'ProductCanvasUiSurface renderer',
-        'render',
+    return this.#runOperation('intent-bind', () => {
+      this.#assertReady();
+      assertKnownKeys(optionsValue, BINDING_KEYS, 'ProductCanvasUiSurface intent options');
+      functionValue(
+        ownData(optionsValue, 'onIntent', 'ProductCanvasUiSurface intent options'),
+        'ProductCanvasUiSurface.onIntent',
       );
-      this.#rendererTarget = rendererValue;
-    }
-    this.#begin('present');
-    try {
-      const result = this.#rendererRender?.(this.scene, this.camera);
-      rejectThenable(result, 'ProductCanvasUiSurface renderer.render()');
-      this.#assertNoSwallowedReentry();
-      return true;
-    } catch (error) {
-      if (this.#reentryDetected) throw this.#failClosed(error);
-      throw error;
-    } finally {
-      this.#end();
-    }
-  }
-
-  getDebugSnapshot(): Readonly<Record<string, unknown>> {
-    this.#rejectReentry('getDebugSnapshot');
-    return Object.freeze({
-      state: this.#state,
-      scene: this.#model?.scene ?? null,
-      visible: this.#visible,
-      textureWidth: this.#textureWidth,
-      textureHeight: this.#textureHeight,
-      hitCount: this.#layout?.hits.length ?? 0,
-      bound: this.#bindingCleanup !== null,
-      viewport: this.#viewport,
-      inputViewport: this.#inputViewport,
-      viewportRevision: this.#viewportRevision,
+      const rejectedValue = ownData(
+        optionsValue,
+        'onRejected',
+        'ProductCanvasUiSurface intent options',
+        false,
+      );
+      if (rejectedValue !== undefined) {
+        functionValue(rejectedValue, 'ProductCanvasUiSurface.onRejected');
+      }
+      if (this.#bindingCleanup) throw new Error('ProductCanvasUiSurface intent 已绑定。');
+      let active = true;
+      const cleanup = (): void => {
+        if (!active) return;
+        active = false;
+        if (this.#bindingCleanup === cleanup) this.#bindingCleanup = null;
+      };
+      this.#bindingCleanup = cleanup;
+      return cleanup;
     });
   }
 
+  requiresCompositeFrame(): boolean {
+    return this.#runOperation('composite-read', () => {
+      this.#assertReady();
+      return this.#visible;
+    });
+  }
+
+  present(rendererValue: unknown): boolean {
+    return this.#runOperation('present', (sequence) => {
+      this.#assertReady();
+      if (!this.#visible) return true;
+      assertRecord(rendererValue, 'ProductCanvasUiSurface renderer');
+      if (rendererValue !== this.#rendererTarget) {
+        const rendererRender = snapshotMethod(
+          rendererValue,
+          'ProductCanvasUiSurface renderer',
+          'render',
+        );
+        this.#rendererRender = rendererRender;
+        this.#rendererTarget = rendererValue;
+      }
+      try {
+        const rendererRender = this.#rendererRender;
+        if (rendererRender === null) {
+          throw new Error('ProductCanvasUiSurface renderer.render() 不可用。');
+        }
+        this.#callChecked(
+          sequence,
+          'present',
+          () => rendererRender(this.scene, this.camera),
+          'ProductCanvasUiSurface renderer.render()',
+        );
+        return true;
+      } catch (error) {
+        if (this.#reentryError !== null) {
+          throw this.#failClosed(error, sequence, 'present');
+        }
+        throw error;
+      }
+    });
+  }
+
+  getDebugSnapshot(): Readonly<Record<string, unknown>> {
+    return this.#runOperation('debug-read', () => Object.freeze({
+        state: this.#state,
+        scene: this.#model?.scene ?? null,
+        visible: this.#visible,
+        textureWidth: this.#textureWidth,
+        textureHeight: this.#textureHeight,
+        hitCount: this.#layout?.hits.length ?? 0,
+        bound: this.#bindingCleanup !== null,
+        viewport: this.#viewport,
+        inputViewport: this.#inputViewport,
+        viewportRevision: this.#viewportRevision,
+      }));
+  }
+
   dispose(): void {
-    this.#rejectReentry('dispose');
-    if (this.#state === PRODUCT_CANVAS_UI_SURFACE_STATE.DISPOSED) return;
-    this.#begin('dispose');
-    try {
-      const errors = this.#disposeResources();
-      this.#assertNoSwallowedReentry();
+    this.#runOperation('dispose', (sequence) => {
+      if (this.#state === PRODUCT_CANVAS_UI_SURFACE_STATE.DISPOSED) return;
+      const errors = this.#disposeResources(sequence, 'dispose');
       if (errors.length > 0) {
         const failure = new Error('ProductCanvasUiSurface 清理未完整完成。');
         Object.defineProperty(failure, 'causes', { value: errors });
         throw failure;
       }
-    } finally {
-      this.#end();
-    }
+    });
   }
 }
+
+export const PRODUCT_CANVAS_UI_SURFACE_OPERATION_POLICY = Object.freeze({
+  allPublicLifecycleAndReadsUseSingleOperationOwner: true as const,
+  stickyReentryUsesMonotonicSequenceAndFirstError: true as const,
+  canvasCallbacksCheckedBeforeTextureModelAndViewportPublication: true as const,
+  rendererCallbackCheckedBeforePresentCompletion: true as const,
+  publicStateViewportCompositeAndDebugReadsRejectIntermediateOperations: true as const,
+  failClosedCleanupRetainsBindingLeaseAndSceneOwnersForRetry: true as const,
+  cleanupReentryRetainsCurrentAndLaterSurfaceOwners: true as const,
+  ordinaryCleanupFailureRetainsExactRetryOwner: true as const,
+  layoutPaintHitIntentAndCompositeSemanticsRemainUnchanged: true as const,
+  validationStatus: 'not-run' as const,
+});

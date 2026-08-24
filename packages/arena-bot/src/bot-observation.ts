@@ -2,6 +2,9 @@ import {
   assertKnownKeys,
   assertNonEmptyString,
   assertPlainRecord,
+  assertArenaActionPhase,
+  assertArenaMatchPhase,
+  assertArenaParticipantStatus,
   ARENA_PUBLIC_SUPPLY_PROJECTION_MAX_ITEMS,
   ARENA_PUBLIC_SUPPLY_PROJECTION_READINESS,
   ARENA_PUBLIC_SUPPLY_PROJECTION_SCHEMA_VERSION,
@@ -12,16 +15,13 @@ import {
   type ArenaPublicSupplyProjectionLifecycleContract,
   type ArenaMapOccurrenceSnapshot,
   type ArenaMapSnapshot,
+  type ArenaActionPhase,
+  type ArenaMatchPhase,
+  type ArenaParticipantStatus,
   type DeepReadonly,
 } from '@number-strategy-jump/arena-contracts';
 import { EQUIPMENT_LOCATION_STATE } from '@number-strategy-jump/arena-equipment';
 import { serializeMapRuntimeSnapshot } from '@number-strategy-jump/arena-map';
-import {
-  ARENA_ACTION_PHASE,
-  ARENA_MATCH_PHASE,
-  ARENA_PARTICIPANT_STATUS,
-  ARENA_PHYSICS,
-} from '@number-strategy-jump/arena-match';
 import {
   MOVEMENT_MODE,
   MOVEMENT_RUNTIME_SCHEMA_VERSION,
@@ -37,11 +37,6 @@ const OBSERVATION_OPTION_KEYS = new Set([
 const ARENA_KEYS = new Set([
   'killY', 'characterRadius', 'maximumStepHeight', 'surfaces',
 ]);
-const MATCH_PHASES: ReadonlySet<string> = new Set(Object.values(ARENA_MATCH_PHASE));
-const PARTICIPANT_STATUSES: ReadonlySet<string> = new Set(
-  Object.values(ARENA_PARTICIPANT_STATUS),
-);
-const ACTION_PHASES: ReadonlySet<string> = new Set(Object.values(ARENA_ACTION_PHASE));
 const MOVEMENT_MODES: ReadonlySet<string> = new Set(Object.values(MOVEMENT_MODE));
 const AFFORDANCE_KINDS: ReadonlySet<string> = new Set(['none', 'ignored', 'selected']);
 const ACTION_LANES: ReadonlySet<string> = new Set(['combat', 'locomotion', 'interaction']);
@@ -61,10 +56,17 @@ const BOT_MOBILITY_SIDECAR_V5_KEYS = new Set([
   'schemaVersion', 'tick', 'eventSequence', 'participantId', 'profile', 'channels',
 ]);
 const BOT_MOBILITY_SIDECAR_V5_CHANNEL_KEYS = new Set(['jump', 'slam']);
-const V5_ACTION_KEYS = new Set(['definitionId', 'phase', 'ticksRemaining']);
+const V5_ACTION_KEYS = new Set([
+  'definitionId', 'phase', 'ticksRemaining', 'primaryCommitment',
+]);
+const V5_PRIMARY_COMMITMENT_KEYS = new Set(['status', 'chargeTicks']);
+const AUTHORITY_PRIMARY_COMMITMENT_KEYS = new Set([
+  'status', 'chargeTicks', 'chargeLevel', 'facingAtStart', 'facingAtResult',
+]);
 const V5_ACTION_RULE_KEYS = new Set([
   'definitionId', 'targetingKind', 'range', 'minimumFacingDot',
   'maximumVerticalDifference', 'windupTicks', 'activeTicks', 'recoveryTicks',
+  'minimumCommitmentTicks',
 ]);
 const V5_MOVEMENT_KEYS = new Set([
   'schemaVersion', 'mode', 'airJumpsUsed', 'crouchChargeTicks', 'grounded',
@@ -122,6 +124,7 @@ export interface BotActionRule {
   readonly windupTicks: number;
   readonly activeTicks: number;
   readonly recoveryTicks: number;
+  readonly minimumCommitmentTicks: number;
 }
 
 export interface BotMovementSnapshot {
@@ -150,7 +153,7 @@ export interface BotActionAffordance {
 export interface BotParticipantObservation {
   readonly id: string;
   readonly characterDefinitionId: string;
-  readonly status: string;
+  readonly status: ArenaParticipantStatus;
   readonly lives: number;
   readonly eliminations: number;
   readonly deaths: number;
@@ -159,8 +162,12 @@ export interface BotParticipantObservation {
   readonly respawnTicks: number;
   readonly action: Readonly<{
     definitionId: string | null;
-    phase: string;
+    phase: ArenaActionPhase;
     ticksRemaining: number;
+    primaryCommitment: Readonly<{
+      readonly status: 'charging' | 'committed';
+      readonly chargeTicks: number;
+    }> | null;
   }>;
   readonly actionRule: BotActionRule;
   readonly movement: BotMovementSnapshot;
@@ -192,7 +199,7 @@ export interface BotCommandSourceV5 {
   readonly schemaVersion: 5;
   readonly commandTick: number;
   readonly commandEventSequence: number;
-  readonly phase: string;
+  readonly phase: ArenaMatchPhase;
   readonly remainingTicks: number;
   readonly self: BotPolicyParticipant;
   readonly opponent: BotPolicyParticipant;
@@ -210,7 +217,7 @@ export interface BotSourceSnapshot {
   readonly tick: number;
   readonly activeTick: number;
   readonly eventSequence: number;
-  readonly phase: string;
+  readonly phase: ArenaMatchPhase;
   readonly remainingTicks: number;
   readonly participants: readonly BotParticipantObservation[];
   readonly equipment: readonly BotVisibleEquipment[];
@@ -235,7 +242,7 @@ export interface BotObservation {
   readonly schemaVersion: 4;
   readonly commandTick: number;
   readonly observedTick: number;
-  readonly phase: string;
+  readonly phase: ArenaMatchPhase;
   readonly remainingTicks: number;
   readonly self: BotParticipantObservation;
   readonly opponent: BotParticipantObservation;
@@ -250,7 +257,7 @@ export interface BotObservation {
 export interface BotPolicyObservation {
   readonly commandTick: number;
   readonly observedTick: number;
-  readonly phase: string;
+  readonly phase: ArenaMatchPhase;
   readonly remainingTicks: number;
   readonly self: BotPolicyParticipant;
   readonly opponent: BotPolicyParticipant;
@@ -649,7 +656,42 @@ function copyActionRule(value: unknown, name: string): BotActionRule {
     windupTicks: nonNegativeInteger(record.windupTicks, `${name}.windupTicks`),
     activeTicks,
     recoveryTicks: nonNegativeInteger(record.recoveryTicks, `${name}.recoveryTicks`),
+    minimumCommitmentTicks: nonNegativeInteger(
+      record.minimumCommitmentTicks,
+      `${name}.minimumCommitmentTicks`,
+    ),
   };
+}
+
+function copyPrimaryCommitment(
+  value: unknown,
+  name: string,
+): BotPolicyParticipant['action']['primaryCommitment'] {
+  if (value === null || value === undefined) return null;
+  const record = assertPlainRecord(value, name);
+  assertKnownKeys(record, V5_PRIMARY_COMMITMENT_KEYS, name);
+  assertRequiredDataKeys(record, V5_PRIMARY_COMMITMENT_KEYS, name);
+  if (record.status !== 'charging' && record.status !== 'committed') {
+    throw new RangeError(`${name}.status不受支持。`);
+  }
+  return Object.freeze({
+    status: record.status,
+    chargeTicks: nonNegativeInteger(record.chargeTicks, `${name}.chargeTicks`),
+  });
+}
+
+function projectAuthorityPrimaryCommitment(
+  value: unknown,
+  name: string,
+): BotPolicyParticipant['action']['primaryCommitment'] {
+  if (value === null || value === undefined) return null;
+  const record = assertPlainRecord(value, name);
+  assertKnownKeys(record, AUTHORITY_PRIMARY_COMMITMENT_KEYS, name);
+  assertRequiredDataKeys(record, AUTHORITY_PRIMARY_COMMITMENT_KEYS, name);
+  return copyPrimaryCommitment({
+    status: record.status,
+    chargeTicks: record.chargeTicks,
+  }, `${name}.botProjection`);
 }
 
 function copyMovement(value: unknown, name: string): BotMovementSnapshot {
@@ -730,13 +772,9 @@ function copyActionAffordance(
 function copyParticipant(value: unknown, name: string): BotParticipantObservation {
   const participant = assertPlainRecord(value, name);
   const id = assertNonEmptyString(participant.id, `${name}.id`);
-  if (typeof participant.status !== 'string' || !PARTICIPANT_STATUSES.has(participant.status)) {
-    throw new RangeError(`${name}.status 无效。`);
-  }
+  const status = assertArenaParticipantStatus(participant.status, `${name}.status`);
   const action = assertPlainRecord(participant.action, `${name}.action`);
-  if (typeof action.phase !== 'string' || !ACTION_PHASES.has(action.phase)) {
-    throw new RangeError(`${name}.action.phase 无效。`);
-  }
+  const actionPhase = assertArenaActionPhase(action.phase, `${name}.action.phase`);
   if (typeof participant.grounded !== 'boolean') {
     throw new TypeError(`${name}.grounded 必须是布尔值。`);
   }
@@ -747,7 +785,7 @@ function copyParticipant(value: unknown, name: string): BotParticipantObservatio
       participant.characterDefinitionId,
       `${name}.characterDefinitionId`,
     ),
-    status: participant.status,
+    status,
     lives: nonNegativeInteger(participant.lives, `${name}.lives`),
     eliminations: nonNegativeInteger(participant.eliminations, `${name}.eliminations`),
     deaths: nonNegativeInteger(participant.deaths, `${name}.deaths`),
@@ -759,10 +797,14 @@ function copyParticipant(value: unknown, name: string): BotParticipantObservatio
     respawnTicks: nonNegativeInteger(participant.respawnTicks, `${name}.respawnTicks`),
     action: {
       definitionId: nullableString(action.definitionId, `${name}.action.definitionId`),
-      phase: action.phase,
+      phase: actionPhase,
       ticksRemaining: nonNegativeInteger(
         action.ticksRemaining,
         `${name}.action.ticksRemaining`,
+      ),
+      primaryCommitment: projectAuthorityPrimaryCommitment(
+        action.commitment,
+        `${name}.action.commitment`,
       ),
     },
     actionRule: copyActionRule(participant.actionRule, `${name}.actionRule`),
@@ -816,9 +858,7 @@ function normalizeSourceSnapshot(
   const activeTick = nonNegativeInteger(source.activeTick, `${name}.activeTick`);
   const eventSequence = nonNegativeInteger(source.eventSequence, `${name}.eventSequence`);
   const remainingTicks = nonNegativeInteger(source.remainingTicks, `${name}.remainingTicks`);
-  if (typeof source.phase !== 'string' || !MATCH_PHASES.has(source.phase)) {
-    throw new RangeError(`${name}.phase 无效。`);
-  }
+  const phase = assertArenaMatchPhase(source.phase, `${name}.phase`);
   if (!Array.isArray(source.participants) || source.participants.length !== 2) {
     throw new RangeError(`${name} 必须包含两名参赛者。`);
   }
@@ -890,7 +930,7 @@ function normalizeSourceSnapshot(
     tick,
     activeTick,
     eventSequence,
-    phase: source.phase,
+    phase,
     remainingTicks,
     participants,
     equipment: normalizedEquipment,
@@ -977,7 +1017,7 @@ function normalizeArenaView(value: unknown, name: string): BotArenaView {
 export function createBotArenaView(
   arena: unknown,
   characterRadius: unknown,
-  maximumStepHeight: unknown = ARENA_PHYSICS.maxStepHeight,
+  maximumStepHeight: unknown,
 ): BotArenaView {
   const source = cloneFrozenData(arena, 'Bot arena');
   const record = assertPlainRecord(source, 'Bot arena');
@@ -1107,9 +1147,7 @@ function copyCommandParticipantV5(
       participant.characterDefinitionId,
       `${name}.characterDefinitionId`,
     ),
-    status: typeof participant.status === 'string' && PARTICIPANT_STATUSES.has(participant.status)
-      ? participant.status
-      : (() => { throw new RangeError(`${name}.status 无效。`); })(),
+    status: assertArenaParticipantStatus(participant.status, `${name}.status`),
     lives: nonNegativeInteger(participant.lives, `${name}.lives`),
     eliminations: nonNegativeInteger(participant.eliminations, `${name}.eliminations`),
     deaths: nonNegativeInteger(participant.deaths, `${name}.deaths`),
@@ -1121,12 +1159,14 @@ function copyCommandParticipantV5(
     respawnTicks: nonNegativeInteger(participant.respawnTicks, `${name}.respawnTicks`),
     action: {
       definitionId: nullableString(action.definitionId, `${name}.action.definitionId`),
-      phase: typeof action.phase === 'string' && ACTION_PHASES.has(action.phase)
-        ? action.phase
-        : (() => { throw new RangeError(`${name}.action.phase 无效。`); })(),
+      phase: assertArenaActionPhase(action.phase, `${name}.action.phase`),
       ticksRemaining: nonNegativeInteger(
         action.ticksRemaining,
         `${name}.action.ticksRemaining`,
+      ),
+      primaryCommitment: copyPrimaryCommitment(
+        action.primaryCommitment,
+        `${name}.action.primaryCommitment`,
       ),
     },
     actionRule: copyActionRule(participant.actionRule, `${name}.actionRule`),
@@ -1265,9 +1305,7 @@ function normalizeBotCommandSourceV5(
     source.commandEventSequence,
     `${name}.commandEventSequence`,
   );
-  const phase = typeof source.phase === 'string' && MATCH_PHASES.has(source.phase)
-    ? source.phase
-    : (() => { throw new RangeError(`${name}.phase 无效。`); })();
+  const phase = assertArenaMatchPhase(source.phase, `${name}.phase`);
   const remainingTicks = nonNegativeInteger(source.remainingTicks, `${name}.remainingTicks`);
   const self = copyCommandParticipantV5(source.self, `${name}.self`);
   const opponent = copyCommandParticipantV5(source.opponent, `${name}.opponent`);

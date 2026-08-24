@@ -20,12 +20,18 @@ import { CharacterViewRegistry } from './character-view-registry.js';
 import { createThreeObjectDisposalLease, type ThreeObjectDisposalLease } from './dispose-three-resources.js';
 import { EquipmentViewRegistry } from './equipment-view-registry.js';
 import { GltfCharacterViewFactory } from './gltf-character-view-factory.js';
-import { GreyboxEventEffects } from './greybox-event-effects.js';
+import {
+  GreyboxEventEffects,
+  GreyboxEventEffectsConstructionCleanupError,
+} from './greybox-event-effects.js';
 import { ARENA_GREYBOX_COLOR, ARENA_GREYBOX_DESIGN } from './greybox-style.js';
 import { ProgrammaticCharacterViewFactory } from './programmatic-character-view-factory.js';
 import { ProgrammaticCharacterView } from './programmatic-character-view.js';
 import { readDataArray } from './strict-data-array.js';
-import { SurfaceViewRegistry } from './surface-view-registry.js';
+import {
+  SurfaceViewRegistry,
+  SurfaceViewRegistryConstructionCleanupError,
+} from './surface-view-registry.js';
 
 const OPTION_KEYS = new Set<PropertyKey>([
   'content', 'characterViewFactory', 'maximumEffects', 'presentationAssetLoader',
@@ -71,6 +77,23 @@ export const ARENA_WORLD_STAGE_DEFAULTS = Object.freeze({
   }),
 } as const);
 
+export const ARENA_WORLD_STAGE_CONSTRUCTION_LIFECYCLE_V1 = Object.freeze({
+  id: 'arena-world-stage-construction-lifecycle-v1',
+  partialScaffoldRetainsCleanupOwner: true,
+  successfulRegistryCandidatesRetainCleanupOwner: true,
+  ownedCharacterFactoryWaitsForCharacterRegistryCleanup: true,
+  nestedRegistryConstructionDebtPrecedesSceneClear: true,
+  sceneClearWaitsForAllChildOwners: true,
+  incompleteConstructionCleanupIsRetryable: true,
+});
+
+export const ARENA_WORLD_STAGE_TERMINAL_LIFECYCLE_V1 = Object.freeze({
+  id: 'arena-world-stage-terminal-lifecycle-v1',
+  cleanupCallbacksCannotReenterPublicApi: true,
+  cleanupCallbacksMustCompleteSynchronously: true,
+  cleanupReentryStopsDependentReleases: true,
+});
+
 type UnknownMethod = (...args: unknown[]) => unknown;
 type ImpactAction = keyof typeof ARENA_WORLD_STAGE_DEFAULTS.impact;
 
@@ -110,6 +133,32 @@ interface CleanupState {
   scene: boolean;
 }
 
+interface ArenaWorldStageConstructionResources {
+  nestedDebt:
+    | SurfaceViewRegistryConstructionCleanupError
+    | GreyboxEventEffectsConstructionCleanupError
+    | null;
+  effects: GreyboxEventEffects | null;
+  effectsComplete: boolean;
+  equipment: EquipmentViewRegistry | null;
+  equipmentComplete: boolean;
+  characters: CharacterViewRegistry | null;
+  charactersComplete: boolean;
+  surfaces: SurfaceViewRegistry | null;
+  surfacesComplete: boolean;
+  factory: unknown;
+  factoryDispose: UnknownMethod | null;
+  factoryComplete: boolean;
+  abyss: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshStandardMaterial> | null;
+  abyssGeometry: THREE.PlaneGeometry | null;
+  abyssMaterial: THREE.MeshStandardMaterial | null;
+  abyssDisposal: ThreeObjectDisposalLease | null;
+  abyssComplete: boolean;
+  scene: THREE.Scene | null;
+  sceneClear: UnknownMethod | null;
+  sceneComplete: boolean;
+}
+
 function finiteNumber(value: unknown, name: string): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) throw new TypeError(`${name} 必须是有限数。`);
   return value;
@@ -137,25 +186,144 @@ function aggregate(message: string, cause: unknown, cleanupCauses: readonly unkn
   return failure;
 }
 
-function retryConstructionRelease(name: string, release: () => unknown): unknown | null {
-  try { release(); return null; }
-  catch (firstError) {
-    try { release(); return null; }
-    catch (secondError) {
-      return aggregate(`${name} 构造回滚重试失败。`, firstError, [secondError]);
+function rejectThenable(value: unknown, name: string): void {
+  if (!value || (typeof value !== 'object' && typeof value !== 'function')) return;
+  let then: unknown;
+  try { then = Reflect.get(value, 'then'); } catch { throw new TypeError(`${name} 返回值不可检查。`); }
+  if (typeof then !== 'function') return;
+  try { Promise.resolve(value).catch(() => {}); } catch { /* malformed thenable */ }
+  throw new TypeError(`${name} 必须同步完成。`);
+}
+
+function constructionCleanupComplete(resources: ArenaWorldStageConstructionResources): boolean {
+  return resources.nestedDebt === null
+    && resources.effectsComplete
+    && resources.equipmentComplete
+    && resources.charactersComplete
+    && resources.surfacesComplete
+    && resources.factoryComplete
+    && resources.abyssComplete
+    && resources.sceneComplete;
+}
+
+function cleanupConstructionResources(resources: ArenaWorldStageConstructionResources): void {
+  const errors: unknown[] = [];
+  const release = (
+    complete: boolean,
+    candidate: { dispose(): unknown } | null,
+    markComplete: () => void,
+  ): void => {
+    if (complete) return;
+    if (candidate === null) { markComplete(); return; }
+    try {
+      rejectThenable(candidate.dispose(), 'ArenaWorldStage construction cleanup');
+      markComplete();
+    } catch (error) { errors.push(error); }
+  };
+
+  if (resources.nestedDebt !== null) {
+    try { resources.nestedDebt.retryCleanup(); } catch (error) { errors.push(error); }
+    if (resources.nestedDebt.cleanupComplete) resources.nestedDebt = null;
+  }
+
+  release(resources.effectsComplete, resources.effects, () => { resources.effectsComplete = true; });
+  release(resources.equipmentComplete, resources.equipment, () => { resources.equipmentComplete = true; });
+  release(resources.charactersComplete, resources.characters, () => { resources.charactersComplete = true; });
+  release(resources.surfacesComplete, resources.surfaces, () => { resources.surfacesComplete = true; });
+
+  if (resources.charactersComplete && !resources.factoryComplete) {
+    try {
+      if (resources.factoryDispose === null && resources.factory !== null) {
+        resources.factoryDispose = snapshotMethod(
+          resources.factory,
+          'ArenaWorldStage characterViewFactory',
+          'dispose',
+          false,
+        );
+      }
+      rejectThenable(
+        resources.factoryDispose?.(),
+        'ArenaWorldStage characterViewFactory.dispose()',
+      );
+      resources.factoryComplete = true;
+    } catch (error) { errors.push(error); }
+  }
+
+  if (!resources.abyssComplete) {
+    if (resources.abyss !== null) {
+      try {
+        const disposal = resources.abyssDisposal ?? createThreeObjectDisposalLease(
+          resources.abyss,
+          { removeFromParent: false },
+        );
+        resources.abyssDisposal = disposal;
+        disposal.dispose();
+        resources.abyssComplete = disposal.complete;
+      } catch (error) { errors.push(error); }
+    } else {
+      for (const key of ['abyssMaterial', 'abyssGeometry'] as const) {
+        const candidate = resources[key];
+        if (candidate === null) continue;
+        try {
+          rejectThenable(candidate.dispose(), `ArenaWorldStage ${key}.dispose()`);
+          resources[key] = null;
+        } catch (error) { errors.push(error); }
+      }
+      resources.abyssComplete = resources.abyssMaterial === null && resources.abyssGeometry === null;
     }
+  }
+
+  if (
+    resources.nestedDebt === null
+    && resources.effectsComplete
+    && resources.equipmentComplete
+    && resources.charactersComplete
+    && resources.surfacesComplete
+    && resources.factoryComplete
+    && resources.abyssComplete
+    && !resources.sceneComplete
+  ) {
+    try {
+      if (resources.sceneClear === null && resources.scene !== null) {
+        resources.sceneClear = snapshotMethod(resources.scene, 'ArenaWorldStage scene', 'clear')!;
+      }
+      rejectThenable(resources.sceneClear?.(), 'ArenaWorldStage scene.clear()');
+      resources.sceneComplete = true;
+    } catch (error) { errors.push(error); }
+  }
+
+  if (errors.length > 0) {
+    throw new AggregateError(errors, 'ArenaWorldStage 构造资源清理未完整完成。');
+  }
+  if (!constructionCleanupComplete(resources)) {
+    throw new Error('ArenaWorldStage 构造资源清理依赖尚未收敛。');
   }
 }
 
-function cleanupConstructionRoot(root: THREE.Object3D, name: string): readonly unknown[] {
-  const errors: unknown[] = [];
-  const lease = createThreeObjectDisposalLease(root, { removeFromParent: false });
-  const disposalError = retryConstructionRelease(`${name} 资源`, () => lease.dispose());
-  if (disposalError) errors.push(disposalError);
-  const clear = snapshotMethod(root, name, 'clear')!;
-  const clearError = retryConstructionRelease(`${name} 子节点`, () => clear());
-  if (clearError) errors.push(clearError);
-  return errors;
+export class ArenaWorldStageConstructionCleanupError extends AggregateError {
+  readonly originalError: unknown;
+  readonly cleanupError: unknown;
+  readonly #resources: ArenaWorldStageConstructionResources;
+
+  constructor(
+    originalError: unknown,
+    cleanupError: unknown,
+    resources: ArenaWorldStageConstructionResources,
+  ) {
+    super([originalError, cleanupError], 'ArenaWorldStage 构造失败且清理未完整完成。');
+    this.name = 'ArenaWorldStageConstructionCleanupError';
+    this.originalError = originalError;
+    this.cleanupError = cleanupError;
+    this.#resources = resources;
+  }
+
+  get cleanupComplete(): boolean {
+    return constructionCleanupComplete(this.#resources);
+  }
+
+  retryCleanup(): void {
+    cleanupConstructionResources(this.#resources);
+  }
 }
 
 function normalizeContent(value: unknown): WorldStageContent {
@@ -335,95 +503,111 @@ export class ArenaWorldStage {
       'ArenaWorldStage options',
       false,
     ) ?? null;
+    this.#worldBounds = createArenaWorldBounds(this.#content.map.surfaces);
+    this.#followCamera = (this.#worldBounds.maxX - this.#worldBounds.minX) > ARENA_WORLD_STAGE_DEFAULTS.largeMapSpanThreshold
+      || (this.#worldBounds.maxZ - this.#worldBounds.minZ) > ARENA_WORLD_STAGE_DEFAULTS.largeMapSpanThreshold;
+    this.#ownsCharacterViewFactory = injectedFactory === null;
+    const construction: ArenaWorldStageConstructionResources = {
+      nestedDebt: null,
+      effects: null,
+      effectsComplete: true,
+      equipment: null,
+      equipmentComplete: true,
+      characters: null,
+      charactersComplete: true,
+      surfaces: null,
+      surfacesComplete: true,
+      factory: null,
+      factoryDispose: null,
+      factoryComplete: !this.#ownsCharacterViewFactory,
+      abyss: null,
+      abyssGeometry: null,
+      abyssMaterial: null,
+      abyssDisposal: null,
+      abyssComplete: false,
+      scene: null,
+      sceneClear: null,
+      sceneComplete: false,
+    };
 
-    this.scene = new THREE.Scene();
-    this.scene.name = 'ArenaGreyboxScene';
-    this.scene.background = new THREE.Color(ARENA_GREYBOX_COLOR.background);
-    this.scene.fog = new THREE.Fog(
-      ARENA_GREYBOX_COLOR.background,
-      ARENA_WORLD_STAGE_DEFAULTS.fogNear,
-      ARENA_WORLD_STAGE_DEFAULTS.fogFar,
-    );
-    this.camera = new THREE.OrthographicCamera(
-      -ARENA_WORLD_STAGE_DEFAULTS.initialFrustumHalfSpan,
-      ARENA_WORLD_STAGE_DEFAULTS.initialFrustumHalfSpan,
-      ARENA_WORLD_STAGE_DEFAULTS.initialFrustumHalfSpan,
-      -ARENA_WORLD_STAGE_DEFAULTS.initialFrustumHalfSpan,
-      ARENA_CAMERA_DEFAULTS.near,
-      ARENA_CAMERA_DEFAULTS.far,
-    );
-    this.worldRoot = new THREE.Group();
-    this.worldRoot.name = 'ArenaWorldRoot';
-    this.surfaceRoot = new THREE.Group();
-    this.surfaceRoot.name = 'ArenaSurfaceRoot';
-    this.characterRoot = new THREE.Group();
-    this.characterRoot.name = 'ArenaCharacterRoot';
-    this.equipmentRoot = new THREE.Group();
-    this.equipmentRoot.name = 'ArenaEquipmentRoot';
-    this.effectRoot = new THREE.Group();
-    this.effectRoot.name = 'ArenaEffectRoot';
-    this.worldRoot.add(this.surfaceRoot, this.characterRoot, this.equipmentRoot, this.effectRoot);
+    try {
+      this.scene = new THREE.Scene();
+      construction.scene = this.scene;
+      construction.sceneClear = snapshotMethod(this.scene, 'ArenaWorldStage scene', 'clear')!;
+      this.scene.name = 'ArenaGreyboxScene';
+      this.scene.background = new THREE.Color(ARENA_GREYBOX_COLOR.background);
+      this.scene.fog = new THREE.Fog(
+        ARENA_GREYBOX_COLOR.background,
+        ARENA_WORLD_STAGE_DEFAULTS.fogNear,
+        ARENA_WORLD_STAGE_DEFAULTS.fogFar,
+      );
+      this.camera = new THREE.OrthographicCamera(
+        -ARENA_WORLD_STAGE_DEFAULTS.initialFrustumHalfSpan,
+        ARENA_WORLD_STAGE_DEFAULTS.initialFrustumHalfSpan,
+        ARENA_WORLD_STAGE_DEFAULTS.initialFrustumHalfSpan,
+        -ARENA_WORLD_STAGE_DEFAULTS.initialFrustumHalfSpan,
+        ARENA_CAMERA_DEFAULTS.near,
+        ARENA_CAMERA_DEFAULTS.far,
+      );
+      this.worldRoot = new THREE.Group();
+      this.worldRoot.name = 'ArenaWorldRoot';
+      this.surfaceRoot = new THREE.Group();
+      this.surfaceRoot.name = 'ArenaSurfaceRoot';
+      this.characterRoot = new THREE.Group();
+      this.characterRoot.name = 'ArenaCharacterRoot';
+      this.equipmentRoot = new THREE.Group();
+      this.equipmentRoot.name = 'ArenaEquipmentRoot';
+      this.effectRoot = new THREE.Group();
+      this.effectRoot.name = 'ArenaEffectRoot';
+      this.worldRoot.add(this.surfaceRoot, this.characterRoot, this.equipmentRoot, this.effectRoot);
 
-    const hemisphere = new THREE.HemisphereLight(
-      ARENA_WORLD_STAGE_DEFAULTS.hemisphereSkyColor,
-      ARENA_WORLD_STAGE_DEFAULTS.hemisphereGroundColor,
-      ARENA_WORLD_STAGE_DEFAULTS.hemisphereIntensity,
-    );
-    hemisphere.name = 'ArenaHemisphereLight';
-    const key = new THREE.DirectionalLight(
-      ARENA_WORLD_STAGE_DEFAULTS.keyLightColor,
-      ARENA_WORLD_STAGE_DEFAULTS.keyLightIntensity,
-    );
-    key.name = 'ArenaKeyLight';
-    key.position.set(
-      ARENA_WORLD_STAGE_DEFAULTS.keyLightPosition.x,
-      ARENA_WORLD_STAGE_DEFAULTS.keyLightPosition.y,
-      ARENA_WORLD_STAGE_DEFAULTS.keyLightPosition.z,
-    );
-    key.castShadow = true;
-    key.shadow.mapSize.set(ARENA_GREYBOX_DESIGN.shadowMapSize, ARENA_GREYBOX_DESIGN.shadowMapSize);
-    Object.assign(key.shadow.camera, ARENA_WORLD_STAGE_DEFAULTS.shadowFrustum);
+      const hemisphere = new THREE.HemisphereLight(
+        ARENA_WORLD_STAGE_DEFAULTS.hemisphereSkyColor,
+        ARENA_WORLD_STAGE_DEFAULTS.hemisphereGroundColor,
+        ARENA_WORLD_STAGE_DEFAULTS.hemisphereIntensity,
+      );
+      hemisphere.name = 'ArenaHemisphereLight';
+      const key = new THREE.DirectionalLight(
+        ARENA_WORLD_STAGE_DEFAULTS.keyLightColor,
+        ARENA_WORLD_STAGE_DEFAULTS.keyLightIntensity,
+      );
+      key.name = 'ArenaKeyLight';
+      key.position.set(
+        ARENA_WORLD_STAGE_DEFAULTS.keyLightPosition.x,
+        ARENA_WORLD_STAGE_DEFAULTS.keyLightPosition.y,
+        ARENA_WORLD_STAGE_DEFAULTS.keyLightPosition.z,
+      );
+      key.castShadow = true;
+      key.shadow.mapSize.set(ARENA_GREYBOX_DESIGN.shadowMapSize, ARENA_GREYBOX_DESIGN.shadowMapSize);
+      Object.assign(key.shadow.camera, ARENA_WORLD_STAGE_DEFAULTS.shadowFrustum);
 
-    this.abyss = new THREE.Mesh(
-      new THREE.PlaneGeometry(ARENA_WORLD_STAGE_DEFAULTS.abyssSize, ARENA_WORLD_STAGE_DEFAULTS.abyssSize),
-      new THREE.MeshStandardMaterial({
+      construction.abyssGeometry = new THREE.PlaneGeometry(
+        ARENA_WORLD_STAGE_DEFAULTS.abyssSize,
+        ARENA_WORLD_STAGE_DEFAULTS.abyssSize,
+      );
+      construction.abyssMaterial = new THREE.MeshStandardMaterial({
         color: ARENA_GREYBOX_COLOR.abyss,
         roughness: 1,
         metalness: 0,
         transparent: true,
         opacity: ARENA_WORLD_STAGE_DEFAULTS.abyssOpacity,
-      }),
-    );
-    this.abyss.name = 'ArenaAbyssReceiver';
-    this.abyss.rotation.x = ARENA_WORLD_STAGE_DEFAULTS.abyssRotationX;
-    this.abyss.position.y = this.#content.map.killY - ARENA_WORLD_STAGE_DEFAULTS.abyssYOffset;
-    this.abyss.receiveShadow = true;
-    this.scene.add(this.worldRoot, hemisphere, key, this.abyss);
-    this.#abyssDisposal = createThreeObjectDisposalLease(this.abyss, { removeFromParent: false });
-    this.#sceneClear = snapshotMethod(this.scene, 'ArenaWorldStage scene', 'clear')!;
-    this.#worldBounds = createArenaWorldBounds(this.#content.map.surfaces);
-    this.#followCamera = (this.#worldBounds.maxX - this.#worldBounds.minX) > ARENA_WORLD_STAGE_DEFAULTS.largeMapSpanThreshold
-      || (this.#worldBounds.maxZ - this.#worldBounds.minZ) > ARENA_WORLD_STAGE_DEFAULTS.largeMapSpanThreshold;
-    this.#ownsCharacterViewFactory = injectedFactory === null;
-    this.#cleanup = {
-      effects: false,
-      equipment: false,
-      characters: false,
-      surfaces: false,
-      factory: !this.#ownsCharacterViewFactory,
-      abyss: false,
-      scene: false,
-    };
+      });
+      this.abyss = new THREE.Mesh(construction.abyssGeometry, construction.abyssMaterial);
+      construction.abyss = this.abyss;
+      this.abyss.name = 'ArenaAbyssReceiver';
+      this.abyss.rotation.x = ARENA_WORLD_STAGE_DEFAULTS.abyssRotationX;
+      this.abyss.position.y = this.#content.map.killY - ARENA_WORLD_STAGE_DEFAULTS.abyssYOffset;
+      this.abyss.receiveShadow = true;
+      construction.abyssDisposal = createThreeObjectDisposalLease(
+        this.abyss,
+        { removeFromParent: false },
+      );
+      this.scene.add(this.worldRoot, hemisphere, key, this.abyss);
 
-    let factoryCandidate: unknown = null;
-    let factoryLoadCandidate: UnknownMethod | null = null;
-    let factoryDisposeCandidate: UnknownMethod | null = null;
-    let factoryDebugCandidate: UnknownMethod | null = null;
-    try {
       const usesGltfCharacters = this.#content.assetRegistry.list().some((asset) => (
         asset.providerId === ARENA_PRESENTATION_ASSET_PROVIDER_ID.GLTF_CHARACTER_V1
       ));
-      factoryCandidate = injectedFactory ?? (
+      const factoryCandidate = injectedFactory ?? (
         usesGltfCharacters
           ? new GltfCharacterViewFactory({
             assetRegistry: this.#content.assetRegistry,
@@ -436,110 +620,94 @@ export class ArenaWorldStage {
             createView: (viewOptions: unknown) => new ProgrammaticCharacterView(viewOptions),
           })
       );
-      factoryLoadCandidate = snapshotMethod(
+      construction.factory = factoryCandidate;
+      const factoryLoadCandidate = snapshotMethod(
         factoryCandidate,
         'ArenaWorldStage characterViewFactory',
         'load',
         false,
       );
-      factoryDisposeCandidate = this.#ownsCharacterViewFactory
+      const factoryDisposeCandidate = this.#ownsCharacterViewFactory
         ? snapshotMethod(factoryCandidate, 'ArenaWorldStage characterViewFactory', 'dispose', false)
         : null;
-      factoryDebugCandidate = snapshotMethod(
+      construction.factoryDispose = factoryDisposeCandidate;
+      if (factoryDisposeCandidate === null) construction.factoryComplete = true;
+      const factoryDebugCandidate = snapshotMethod(
         factoryCandidate,
         'ArenaWorldStage characterViewFactory',
         'getDebugSnapshot',
         false,
       );
-    } catch (error) {
-      const cleanupErrors: unknown[] = [];
-      if (this.#ownsCharacterViewFactory && factoryCandidate) {
-        try {
-          const dispose = snapshotMethod(
-            factoryCandidate,
-            'ArenaWorldStage characterViewFactory',
-            'dispose',
-            false,
-          );
-          if (dispose) {
-            const cleanupError = retryConstructionRelease(
-              'ArenaWorldStage characterViewFactory',
-              () => dispose(),
-            );
-            if (cleanupError) cleanupErrors.push(cleanupError);
-          }
-        } catch (cleanupError) { cleanupErrors.push(cleanupError); }
-      }
-      const abyssError = retryConstructionRelease('ArenaWorldStage abyss', () => this.#abyssDisposal.dispose());
-      if (abyssError) cleanupErrors.push(abyssError); else this.#cleanup.abyss = true;
-      const sceneError = retryConstructionRelease('ArenaWorldStage scene', () => this.#sceneClear());
-      if (sceneError) cleanupErrors.push(sceneError); else this.#cleanup.scene = true;
-      if (cleanupErrors.length > 0) throw aggregate('ArenaWorldStage 构造失败且清理未完整完成。', error, cleanupErrors);
-      throw error;
-    }
-    this.#characterViewFactory = factoryCandidate;
-    this.#factoryLoad = factoryLoadCandidate;
-    this.#factoryDispose = factoryDisposeCandidate;
-    this.#factoryDebug = factoryDebugCandidate;
-    if (this.#factoryDispose === null) this.#cleanup.factory = true;
+      this.#characterViewFactory = factoryCandidate;
+      this.#factoryLoad = factoryLoadCandidate;
+      this.#factoryDispose = factoryDisposeCandidate;
+      this.#factoryDebug = factoryDebugCandidate;
 
-    let surfaces: SurfaceViewRegistry | null = null;
-    let characters: CharacterViewRegistry | null = null;
-    let equipment: EquipmentViewRegistry | null = null;
-    let effects: GreyboxEventEffects | null = null;
-    try {
-      surfaces = new SurfaceViewRegistry(this.surfaceRoot, this.#content.map.surfaces);
-      characters = new CharacterViewRegistry(this.characterRoot, {
+      construction.surfaces = new SurfaceViewRegistry(this.surfaceRoot, this.#content.map.surfaces);
+      construction.surfacesComplete = false;
+      construction.characters = new CharacterViewRegistry(this.characterRoot, {
         presentationRegistry: this.#content.characterPresentationRegistry,
         viewFactory: this.#characterViewFactory,
         actionPresentations: this.#content.actions,
       });
-      equipment = new EquipmentViewRegistry(this.equipmentRoot);
-      effects = new GreyboxEventEffects(this.effectRoot, { maximumEffects });
+      construction.charactersComplete = false;
+      construction.equipment = new EquipmentViewRegistry(this.equipmentRoot);
+      construction.equipmentComplete = false;
+      construction.effects = new GreyboxEventEffects(this.effectRoot, { maximumEffects });
+      construction.effectsComplete = false;
+
+      const abyssDisposal = construction.abyssDisposal;
+      const sceneClear = construction.sceneClear;
+      const surfaces = construction.surfaces;
+      const characters = construction.characters;
+      const equipment = construction.equipment;
+      const effects = construction.effects;
+      if (
+        abyssDisposal === null
+        || sceneClear === null
+        || surfaces === null
+        || characters === null
+        || equipment === null
+        || effects === null
+      ) throw new Error('ArenaWorldStage 构造资源未完整发布。');
+      this.#abyssDisposal = abyssDisposal;
+      this.#sceneClear = sceneClear;
+      this.#surfaces = surfaces;
+      this.#characters = characters;
+      this.#equipment = equipment;
+      this.#effects = effects;
+      this.#cleanup = {
+        effects: false,
+        equipment: false,
+        characters: false,
+        surfaces: false,
+        factory: construction.factoryComplete,
+        abyss: false,
+        scene: false,
+      };
+      if (this.#factoryLoad === null) this.#loaded = true;
     } catch (error) {
-      const cleanupErrors: unknown[] = [];
-      for (const candidate of [effects, equipment, characters, surfaces]) {
-        if (!candidate) continue;
-        const cleanupError = retryConstructionRelease(
-          'ArenaWorldStage registry',
-          () => candidate.dispose(),
-        );
-        if (cleanupError) cleanupErrors.push(cleanupError);
+      if (
+        error instanceof SurfaceViewRegistryConstructionCleanupError
+        || error instanceof GreyboxEventEffectsConstructionCleanupError
+      ) {
+        construction.nestedDebt = error;
       }
-      if (this.#factoryDispose && !this.#cleanup.factory) {
-        const cleanupError = retryConstructionRelease(
-          'ArenaWorldStage characterViewFactory',
-          () => this.#factoryDispose?.(),
-        );
-        if (cleanupError) cleanupErrors.push(cleanupError); else this.#cleanup.factory = true;
+      try { cleanupConstructionResources(construction); }
+      catch (cleanupError) {
+        throw new ArenaWorldStageConstructionCleanupError(error, cleanupError, construction);
       }
-      for (const [root, name] of [
-        [this.effectRoot, 'ArenaWorldStage effectRoot'],
-        [this.equipmentRoot, 'ArenaWorldStage equipmentRoot'],
-        [this.characterRoot, 'ArenaWorldStage characterRoot'],
-        [this.surfaceRoot, 'ArenaWorldStage surfaceRoot'],
-      ] as const) cleanupErrors.push(...cleanupConstructionRoot(root, name));
-      const abyssError = retryConstructionRelease('ArenaWorldStage abyss', () => this.#abyssDisposal.dispose());
-      if (abyssError) cleanupErrors.push(abyssError); else this.#cleanup.abyss = true;
-      const sceneError = retryConstructionRelease('ArenaWorldStage scene', () => this.#sceneClear());
-      if (sceneError) cleanupErrors.push(sceneError); else this.#cleanup.scene = true;
-      if (cleanupErrors.length > 0) throw aggregate('ArenaWorldStage 构造失败且清理未完整完成。', error, cleanupErrors);
       throw error;
     }
-    this.#surfaces = surfaces;
-    this.#characters = characters;
-    this.#equipment = equipment;
-    this.#effects = effects;
-    if (this.#factoryLoad === null) this.#loaded = true;
   }
 
   #assertUsable(): void {
-    if (this.#disposed || this.#destroyRequested) throw new Error('ArenaWorldStage 已销毁。');
-    if (this.#failedError) { const error = new Error('ArenaWorldStage 已失败。'); error.cause = this.#failedError; throw error; }
     if (this.#operating || this.#cleaning) {
       this.#reentryDetected = true;
       throw new Error('ArenaWorldStage 不允许重入。');
     }
+    if (this.#disposed || this.#destroyRequested) throw new Error('ArenaWorldStage 已销毁。');
+    if (this.#failedError) { const error = new Error('ArenaWorldStage 已失败。'); error.cause = this.#failedError; throw error; }
   }
 
   #beginOperation(): void {
@@ -555,6 +723,7 @@ export class ArenaWorldStage {
   #cleanupAll(): unknown[] {
     if (this.#cleaning) return [new Error('ArenaWorldStage 清理不可重入。')];
     this.#cleaning = true;
+    this.#reentryDetected = false;
     const errors: unknown[] = [];
     const steps: readonly [keyof CleanupState, () => unknown][] = [
       ['effects', () => this.#effects.dispose()],
@@ -567,12 +736,13 @@ export class ArenaWorldStage {
     ];
     try {
       for (const [key, release] of steps) {
+        if (this.#reentryDetected) break;
         if (this.#cleanup[key]) continue;
         try {
           const result = release();
-          if (result instanceof Promise) {
-            result.catch(() => {});
-            throw new TypeError(`ArenaWorldStage ${key} 清理必须同步完成。`);
+          rejectThenable(result, `ArenaWorldStage ${key} cleanup`);
+          if (this.#reentryDetected) {
+            throw new Error(`ArenaWorldStage ${key} 清理回调发生公开API重入。`);
           }
           if (key !== 'factory' || this.#loadPromise === null) this.#cleanup[key] = true;
         } catch (error) { errors.push(error); }

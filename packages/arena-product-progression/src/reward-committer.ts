@@ -15,6 +15,11 @@ import {
 } from '@number-strategy-jump/arena-progression';
 import { readExactOptions } from './options.js';
 import { resolveMatchReward } from './reward-resolver.js';
+import {
+  assertSynchronousRewardPortResult,
+  captureSynchronousRewardDataMethod,
+  type SynchronousRewardPortMethod,
+} from './synchronous-reward-port-boundary.js';
 
 export interface ProfileProgressionCommitPort {
   getSnapshot(): unknown;
@@ -35,25 +40,9 @@ export interface RewardCommitOutcome {
   readonly profile: PlayerProfile;
 }
 
-type PortMethod = (...arguments_: readonly unknown[]) => unknown;
+type PortMethod = SynchronousRewardPortMethod;
 const OPTION_KEYS = new Set(['registry', 'rewardDefinitionId', 'profileDefinition', 'profileService']);
 const COMMIT_KEYS = new Set(['committed', 'duplicate', 'profile']);
-
-function snapshotMethod(target: object, methodName: string): PortMethod {
-  let cursor: object | null = target;
-  while (cursor !== null && cursor !== Object.prototype) {
-    const descriptor = Object.getOwnPropertyDescriptor(cursor, methodName);
-    if (descriptor) {
-      if (!('value' in descriptor) || typeof descriptor.value !== 'function') {
-        throw new TypeError(`RewardCommitter ProfileService.${methodName} 必须是数据方法。`);
-      }
-      const method = descriptor.value as PortMethod;
-      return (...arguments_: readonly unknown[]) => Reflect.apply(method, target, arguments_);
-    }
-    cursor = Object.getPrototypeOf(cursor);
-  }
-  throw new TypeError(`RewardCommitter ProfileService 缺少 ${methodName}()。`);
-}
 
 function createProfilePort(value: unknown): Readonly<{
   getSnapshot: PortMethod;
@@ -63,8 +52,16 @@ function createProfilePort(value: unknown): Readonly<{
     throw new TypeError('RewardCommitter 需要 ProfileService。');
   }
   return Object.freeze({
-    getSnapshot: snapshotMethod(value, 'getSnapshot'),
-    commitProgressionGrant: snapshotMethod(value, 'commitProgressionGrant'),
+    getSnapshot: captureSynchronousRewardDataMethod(
+      value,
+      'getSnapshot',
+      'RewardCommitter ProfileService',
+    ),
+    commitProgressionGrant: captureSynchronousRewardDataMethod(
+      value,
+      'commitProgressionGrant',
+      'RewardCommitter ProfileService',
+    ),
   });
 }
 
@@ -160,7 +157,13 @@ export class RewardCommitter {
     if (this.#committing) throw new Error('RewardCommitter.commit() 不可重入。');
     this.#committing = true;
     try {
-      const profile = createPlayerProfile(this.#profileDefinition, this.#profilePort.getSnapshot());
+      const profile = createPlayerProfile(
+        this.#profileDefinition,
+        assertSynchronousRewardPortResult(
+          this.#profilePort.getSnapshot(),
+          'RewardCommitter ProfileService.getSnapshot',
+        ),
+      );
       const grant = resolveMatchReward({
         registry: this.#registry,
         rewardDefinitionId: this.#rewardDefinitionId,
@@ -174,11 +177,14 @@ export class RewardCommitter {
       ) return this.#lastOutcome;
       let rawOutcome: unknown;
       try {
-        rawOutcome = this.#profilePort.commitProgressionGrant({
-          grantId: grant.grantId,
-          experienceDelta: grant.experienceDelta,
-          unlocks: grant.unlocks,
-        });
+        rawOutcome = assertSynchronousRewardPortResult(
+          this.#profilePort.commitProgressionGrant({
+            grantId: grant.grantId,
+            experienceDelta: grant.experienceDelta,
+            unlocks: grant.unlocks,
+          }),
+          'RewardCommitter ProfileService.commitProgressionGrant',
+        );
       } catch (error) {
         if (!isExplicitlyRecoverable(error)) this.#failed = true;
         throw error;

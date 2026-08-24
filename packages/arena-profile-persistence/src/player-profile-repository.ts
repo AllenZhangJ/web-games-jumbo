@@ -32,6 +32,14 @@ import { SynchronousStorageLease } from '@number-strategy-jump/arena-storage';
 
 type Slot = 'a' | 'b';
 type RepositoryState = 'created' | 'open' | 'failed' | 'destroyed';
+type PlayerProfileRepositoryOperation =
+  | 'open'
+  | 'snapshot-read'
+  | 'diagnostics-read'
+  | 'storage-keys-read'
+  | 'renew-lease'
+  | 'compare-and-set'
+  | 'destroy';
 
 export interface PlayerProfileRepositoryOptions {
   readonly definition: unknown;
@@ -255,7 +263,9 @@ export class PlayerProfileRepository {
     recoveredDefault: false,
   });
   #state: RepositoryState = 'created';
-  #transitioning = false;
+  #operation: PlayerProfileRepositoryOperation | null = null;
+  #reentrySequence = 0;
+  #reentryError: Error | null = null;
 
   constructor(options: PlayerProfileRepositoryOptions) {
     const normalized = normalizeOptions(options);
@@ -300,10 +310,43 @@ export class PlayerProfileRepository {
     Object.freeze(this);
   }
 
-  #assertNotTransitioning(): void {
-    if (this.#transitioning) {
-      throw new Error('PlayerProfileRepository 操作不可重入（写入期间不能销毁）。');
+  #rejectReentry(operation: PlayerProfileRepositoryOperation): never {
+    this.#reentrySequence += 1;
+    const error = new Error(
+      `PlayerProfileRepository 操作${this.#operation ?? 'unknown'}期间拒绝${operation}重入。`,
+    );
+    this.#reentryError ??= error;
+    throw error;
+  }
+
+  #runOperation<T>(operation: PlayerProfileRepositoryOperation, callback: () => T): T {
+    if (this.#operation !== null) this.#rejectReentry(operation);
+    this.#operation = operation;
+    this.#reentryError = null;
+    try {
+      return callback();
+    } finally {
+      this.#operation = null;
     }
+  }
+
+  #assertNoReentrySince(
+    sequence: number,
+    operation: string,
+    preserveState = false,
+  ): void {
+    if (this.#reentrySequence === sequence) return;
+    if (!preserveState) {
+      this.#failIndeterminate(
+        `PlayerProfileRepository ${operation}期间发生重入。`,
+        this.#reentryError ?? undefined,
+      );
+    }
+    const failure = new PlayerProfileIndeterminateWriteError(
+      `PlayerProfileRepository ${operation}期间发生重入。`,
+    );
+    if (this.#reentryError !== null) failure.cause = this.#reentryError;
+    throw failure;
   }
 
   #assertOpen(): void {
@@ -352,7 +395,9 @@ export class PlayerProfileRepository {
   }
 
   #readSlot(key: string, slot: Slot): SlotRead {
+    const readReentrySequence = this.#reentrySequence;
     const result = this.#requireStorage().read(key);
+    this.#assertNoReentrySince(readReentrySequence, `${slot}槽读取`);
     if (!result.ok) throw new Error(`PlayerProfile ${slot} 槽读取失败。`);
     if (!result.found) return Object.freeze({ kind: 'missing', slot });
     try {
@@ -377,12 +422,15 @@ export class PlayerProfileRepository {
   }
 
   #readHead(): HeadRead {
+    const readReentrySequence = this.#reentrySequence;
     let result;
     try {
       result = this.#requireStorage().read(this.#requireKeys().head);
     } catch {
+      this.#assertNoReentrySince(readReentrySequence, 'head读取');
       return Object.freeze({ readable: false, value: null, valid: false });
     }
+    this.#assertNoReentrySince(readReentrySequence, 'head读取');
     if (!result.ok) return Object.freeze({ readable: false, value: null, valid: false });
     if (!result.found) return Object.freeze({ readable: true, value: null, valid: true });
     const valid = result.value === SLOT.A || result.value === SLOT.B;
@@ -451,24 +499,55 @@ export class PlayerProfileRepository {
   }
 
   open(): PlayerProfile {
-    this.#assertNotTransitioning();
-    if (this.#state === 'destroyed') throw new Error('PlayerProfileRepository 已销毁。');
-    if (this.#state === 'failed') throw new PlayerProfileIndeterminateWriteError();
-    if (this.#state === 'open') return this.#requireProfile();
-    this.#transitioning = true;
-    try {
-      if (!this.#requireLease().acquire()) throw new PlayerProfileRepositoryBusyError();
+    return this.#runOperation('open', () => {
+      if (this.#state === 'destroyed') throw new Error('PlayerProfileRepository 已销毁。');
+      if (this.#state === 'failed') throw new PlayerProfileIndeterminateWriteError();
+      if (this.#state === 'open') return this.#requireProfile();
+      const acquireReentrySequence = this.#reentrySequence;
+      let acquired: boolean;
       try {
+        acquired = this.#requireLease().acquire();
+      } catch (error) {
+        this.#assertNoReentrySince(acquireReentrySequence, '租约获取');
+        let leaseFailedClosed = true;
+        try {
+          leaseFailedClosed = this.#requireLease().isFailedClosed();
+        } catch {
+          // An unreadable lease lifecycle cannot be reused safely.
+        }
+        if (leaseFailedClosed) {
+          return this.#failIndeterminate(
+            'PlayerProfileRepository 租约获取事务已失败关闭。',
+            error,
+          );
+        }
+        throw error;
+      }
+      if (!acquired) {
+        this.#assertNoReentrySince(acquireReentrySequence, '租约获取');
+        throw new PlayerProfileRepositoryBusyError();
+      }
+      try {
+        this.#assertNoReentrySince(acquireReentrySequence, '租约获取');
+        const loadReentrySequence = this.#reentrySequence;
         const stored = this.#loadStored() ?? this.#defaultStored();
+        this.#assertNoReentrySince(loadReentrySequence, '打开读档');
         this.#profile = stored.profile;
         this.#envelope = stored.envelope;
         this.#state = 'open';
         return stored.profile;
       } catch (error) {
+        if (error instanceof PlayerProfileFutureSchemaError
+          || error instanceof PlayerProfileSaveConflictError) {
+          this.#state = 'failed';
+        }
         const failure = normalizeThrownError(error, 'PlayerProfileRepository 打开失败');
         const cleanupErrors: Error[] = [];
         try {
-          if (!this.#requireLease().release()) {
+          const releaseReentrySequence = this.#reentrySequence;
+          const released = this.#requireLease().release();
+          this.#assertNoReentrySince(releaseReentrySequence, '打开失败租约释放');
+          if (!released) {
             cleanupErrors.push(new Error('PlayerProfile lease 未确认释放。'));
           }
         } catch (cleanupError) {
@@ -477,49 +556,62 @@ export class PlayerProfileRepository {
             'PlayerProfile lease 释放失败',
           ));
         }
-        throw combineCleanupFailure(
+        const combinedFailure = combineCleanupFailure(
           failure,
           cleanupErrors,
           'PlayerProfileRepository 打开失败且租约清理未完成。',
         );
+        if (cleanupErrors.length > 0) {
+          return this.#failIndeterminate(
+            'PlayerProfileRepository 打开失败且租约清理债务未确认。',
+            combinedFailure,
+          );
+        }
+        throw combinedFailure;
       }
-    } finally {
-      this.#transitioning = false;
-    }
+    });
   }
 
   getSnapshot(): PlayerProfile {
-    this.#assertNotTransitioning();
-    this.#assertOpen();
-    return this.#requireProfile();
+    return this.#runOperation('snapshot-read', () => {
+      this.#assertOpen();
+      return this.#requireProfile();
+    });
   }
 
   getDiagnostics(): Readonly<PlayerProfileRepositoryDiagnostics> {
-    this.#assertNotTransitioning();
-    if (this.#state === 'destroyed') throw new Error('PlayerProfileRepository 已销毁。');
-    return this.#diagnostics;
+    return this.#runOperation('diagnostics-read', () => {
+      if (this.#state === 'destroyed') throw new Error('PlayerProfileRepository 已销毁。');
+      return this.#diagnostics;
+    });
   }
 
   getStorageKeys(): Readonly<PlayerProfileStorageKeys> {
-    this.#assertNotTransitioning();
-    if (this.#state === 'destroyed') throw new Error('PlayerProfileRepository 已销毁。');
-    return this.#requireKeys();
+    return this.#runOperation('storage-keys-read', () => {
+      if (this.#state === 'destroyed') throw new Error('PlayerProfileRepository 已销毁。');
+      return this.#requireKeys();
+    });
   }
 
   renewLease(): boolean {
-    this.#assertNotTransitioning();
-    this.#assertOpen();
-    this.#transitioning = true;
-    try {
+    return this.#runOperation('renew-lease', () => {
+      this.#assertOpen();
       let renewalError: unknown = null;
+      const renewReentrySequence = this.#reentrySequence;
       try {
-        if (this.#requireLease().renew()) return true;
+        const renewed = this.#requireLease().renew();
+        this.#assertNoReentrySince(renewReentrySequence, '租约续租');
+        if (renewed) return true;
       } catch (error) {
+        this.#assertNoReentrySince(renewReentrySequence, '租约续租');
         renewalError = error;
       }
+      const heldReentrySequence = this.#reentrySequence;
       try {
         this.#requireLease().assertHeld();
+        this.#assertNoReentrySince(heldReentrySequence, '租约持有复核');
       } catch (verificationError) {
+        this.#assertNoReentrySince(heldReentrySequence, '租约持有复核');
         const cause = renewalError ?? verificationError;
         const failure = new PlayerProfileIndeterminateWriteError(
           'PlayerProfile 租约已过期或被其他页面取代，或当前状态无法确认，仓储已关闭写入。',
@@ -531,16 +623,12 @@ export class PlayerProfileRepository {
       }
       if (renewalError !== null) throw renewalError;
       return false;
-    } finally {
-      this.#transitioning = false;
-    }
+    });
   }
 
   compareAndSet(nextValue: unknown, expectedRevisionValue: unknown): PlayerProfileCommitResult {
-    this.#assertNotTransitioning();
-    this.#assertOpen();
-    this.#transitioning = true;
-    try {
+    return this.#runOperation('compare-and-set', () => {
+      this.#assertOpen();
       const profile = this.#requireProfile();
       const expectedRevision = assertIntegerAtLeast(
         expectedRevisionValue,
@@ -554,17 +642,22 @@ export class PlayerProfileRepository {
       if (next.revision !== expectedRevision + 1) {
         throw new RangeError('PlayerProfile 下一 revision 必须恰好递增 1。');
       }
+      const heldReentrySequence = this.#reentrySequence;
       try {
         this.#requireLease().assertHeld();
+        this.#assertNoReentrySince(heldReentrySequence, 'CAS租约复核');
       } catch (error) {
+        this.#assertNoReentrySince(heldReentrySequence, 'CAS租约复核');
         return this.#failIndeterminate(
           'PlayerProfile 租约已过期或被其他页面取代，或当前状态无法确认，仓储已关闭写入。',
           error,
         );
       }
       let currentStored: StoredProfile;
+      const loadReentrySequence = this.#reentrySequence;
       try {
         currentStored = this.#loadStored() ?? this.#defaultStored();
+        this.#assertNoReentrySince(loadReentrySequence, 'CAS基线读档');
       } catch (error) {
         if (
           error instanceof PlayerProfileFutureSchemaError
@@ -586,6 +679,7 @@ export class PlayerProfileRepository {
       const targetKey = targetSlot === SLOT.A ? keys.slotA : keys.slotB;
       const envelope = createPlayerProfileSaveEnvelope(this.#requireDefinition(), next);
       let writeReported: boolean | null = null;
+      const writeReentrySequence = this.#reentrySequence;
       try {
         writeReported = this.#requireStorage().write(targetKey, envelope);
       } catch {
@@ -593,14 +687,20 @@ export class PlayerProfileRepository {
       }
 
       let confirmed: SlotRead;
+      const readbackReentrySequence = this.#reentrySequence;
       try {
         confirmed = this.#readSlot(targetKey, targetSlot);
+        this.#assertNoReentrySince(readbackReentrySequence, '新槽读回');
       } catch (error) {
+        this.#assertNoReentrySince(readbackReentrySequence, '新槽读回');
         if (error instanceof PlayerProfileFutureSchemaError) {
           this.#state = 'failed';
           throw error;
         }
-        if (this.#rollbackUnconfirmedSlot(targetKey)) {
+        const rollbackReentrySequence = this.#reentrySequence;
+        const rolledBack = this.#rollbackUnconfirmedSlot(targetKey);
+        this.#assertNoReentrySince(rollbackReentrySequence, '新槽回滚');
+        if (rolledBack) {
           return commitFailure(
             writeReported === true ? 'slot-readback-failed' : 'slot-write-failed',
           );
@@ -615,6 +715,7 @@ export class PlayerProfileRepository {
         || confirmed.envelope.payloadHash !== envelope.payloadHash
         || confirmed.profile.revision !== next.revision
       ) {
+        this.#assertNoReentrySince(writeReentrySequence, '新槽写入');
         if (
           confirmed.kind === 'valid'
           && (writeReported === true || confirmed.profile.revision > currentStored.profile.revision)
@@ -625,8 +726,14 @@ export class PlayerProfileRepository {
           writeReported === true ? 'slot-readback-failed' : 'slot-write-failed',
         );
       }
+      if (this.#reentrySequence !== writeReentrySequence) {
+        this.#profile = confirmed.profile;
+        this.#envelope = confirmed.envelope;
+        this.#assertNoReentrySince(writeReentrySequence, '新槽写入');
+      }
 
       let headUpdated = false;
+      const headWriteReentrySequence = this.#reentrySequence;
       try {
         headUpdated = this.#requireStorage().write(keys.head, targetSlot);
       } catch {
@@ -634,18 +741,22 @@ export class PlayerProfileRepository {
       }
       this.#profile = confirmed.profile;
       this.#envelope = confirmed.envelope;
+      this.#assertNoReentrySince(headWriteReentrySequence, 'head写入');
       return Object.freeze({ committed: true, reason: null, headUpdated });
-    } finally {
-      this.#transitioning = false;
-    }
+    });
   }
 
   destroy(): void {
-    if (this.#state === 'destroyed') return;
-    this.#assertNotTransitioning();
-    this.#transitioning = true;
-    try {
-      this.#requireLease().destroy();
+    this.#runOperation('destroy', () => {
+      if (this.#state === 'destroyed') return;
+      this.#state = 'failed';
+      const destroyReentrySequence = this.#reentrySequence;
+      try {
+        this.#requireLease().destroy();
+      } catch (error) {
+        this.#assertNoReentrySince(destroyReentrySequence, '销毁');
+        throw error;
+      }
       this.#definition = null;
       this.#migrationRegistry = null;
       this.#storage = null;
@@ -654,8 +765,16 @@ export class PlayerProfileRepository {
       this.#profile = null;
       this.#envelope = null;
       this.#state = 'destroyed';
-    } finally {
-      this.#transitioning = false;
-    }
+      this.#assertNoReentrySince(destroyReentrySequence, '销毁发布', true);
+    });
   }
 }
+
+export const PLAYER_PROFILE_REPOSITORY_OPERATION_POLICY = Object.freeze({
+  operationGuardPrecedesStateAndInputValidation: true as const,
+  storageAndLeasePortsCheckedBeforeCrossOwnerProgress: true as const,
+  durableSlotAndHeadWatermarksPrecedeReentryRejection: true as const,
+  publicReadsRejectOperationIntermediateState: true as const,
+  destroyWatermarkPrecedesReentryRejection: true as const,
+  validationStatus: 'not-run' as const,
+});

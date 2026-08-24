@@ -38,7 +38,41 @@ const PRODUCT_RESULT_KEYS = new Set([
 
 class MissingPortPropertyError extends TypeError {}
 
-const NATIVE_PROMISE_THEN = Promise.prototype.then;
+const MAX_PORT_PROTOTYPE_DEPTH = 32;
+const NATIVE_PROMISE_PROTOTYPE = Promise.prototype;
+const NATIVE_PROMISE_CONSTRUCTOR = Promise;
+const CAPTURED_PROMISE_THEN_DESCRIPTOR = Object.getOwnPropertyDescriptor(
+  NATIVE_PROMISE_PROTOTYPE,
+  'then',
+);
+if (CAPTURED_PROMISE_THEN_DESCRIPTOR === undefined
+  || !Object.hasOwn(CAPTURED_PROMISE_THEN_DESCRIPTOR, 'value')
+  || typeof CAPTURED_PROMISE_THEN_DESCRIPTOR.value !== 'function') {
+  throw new TypeError('ProductMatch无法捕获原生Promise.prototype.then数据方法。');
+}
+const NATIVE_PROMISE_THEN = CAPTURED_PROMISE_THEN_DESCRIPTOR.value as (
+  ...arguments_: unknown[]
+) => unknown;
+const NATIVE_PROMISE_THEN_FLAGS = Object.freeze({
+  configurable: CAPTURED_PROMISE_THEN_DESCRIPTOR.configurable,
+  enumerable: CAPTURED_PROMISE_THEN_DESCRIPTOR.enumerable,
+  writable: CAPTURED_PROMISE_THEN_DESCRIPTOR.writable,
+});
+const CAPTURED_PROMISE_SPECIES_DESCRIPTOR = Object.getOwnPropertyDescriptor(
+  NATIVE_PROMISE_CONSTRUCTOR,
+  Symbol.species,
+);
+if (CAPTURED_PROMISE_SPECIES_DESCRIPTOR === undefined
+  || typeof CAPTURED_PROMISE_SPECIES_DESCRIPTOR.get !== 'function'
+  || CAPTURED_PROMISE_SPECIES_DESCRIPTOR.set !== undefined) {
+  throw new TypeError('ProductMatch无法捕获原生Promise[Symbol.species]访问器。');
+}
+const NATIVE_PROMISE_SPECIES_GETTER = CAPTURED_PROMISE_SPECIES_DESCRIPTOR.get;
+const NATIVE_PROMISE_SPECIES_FLAGS = Object.freeze({
+  configurable: CAPTURED_PROMISE_SPECIES_DESCRIPTOR.configurable,
+  enumerable: CAPTURED_PROMISE_SPECIES_DESCRIPTOR.enumerable,
+});
+const NOOP = (): void => {};
 
 export function readRequiredDataField(
   record: object,
@@ -321,14 +355,19 @@ function findDescriptor(
   }
   const visited = new Set<object>();
   let current: object | null = value as object;
-  while (current !== null) {
-    if (visited.has(current) || visited.size >= 32) {
-      throw new TypeError(`${ownerName} 原型链无效。`);
-    }
+  for (
+    let depth = 0;
+    current !== null && depth < MAX_PORT_PROTOTYPE_DEPTH;
+    depth += 1
+  ) {
+    if (visited.has(current)) throw new TypeError(`${ownerName} 原型链不能循环。`);
     visited.add(current);
     const descriptor = Object.getOwnPropertyDescriptor(current, key);
     if (descriptor) return Object.freeze({ owner: current, descriptor });
     current = Object.getPrototypeOf(current) as object | null;
+  }
+  if (current !== null) {
+    throw new RangeError(`${ownerName} 原型链超过${MAX_PORT_PROTOTYPE_DEPTH}层。`);
   }
   throw new MissingPortPropertyError(`${ownerName}.${key} 不存在。`);
 }
@@ -371,32 +410,85 @@ export function snapshotGetter<T>(
   return (): T => getter.call(value) as T;
 }
 
-export function containRejectedAsyncReturn(value: unknown, label: string): void {
-  if ((typeof value !== 'object' || value === null) && typeof value !== 'function') return;
-  let hasPromiseBrand = false;
-  try {
-    Reflect.apply(NATIVE_PROMISE_THEN, value, [() => {}, () => {}]);
-    hasPromiseBrand = true;
-  } catch {
-    // Ordinary thenables have no Promise internal slot; never invoke their then.
-  }
-  if (hasPromiseBrand) throw new TypeError(`${label} 必须同步完成。`);
+interface SyncReturnDescriptors {
+  readonly thenDescriptor: PropertyDescriptor | null;
+  readonly constructorDescriptor: PropertyDescriptor | null;
+}
 
-  let current: object | null = value as object;
+function inspectSyncReturnDescriptors(value: object, label: string): SyncReturnDescriptors {
+  let current: object | null = value;
   const visited = new Set<object>();
-  let depth = 0;
-  while (current !== null && depth < 32 && !visited.has(current)) {
+  let thenDescriptor: PropertyDescriptor | null = null;
+  let constructorDescriptor: PropertyDescriptor | null = null;
+  for (
+    let depth = 0;
+    current !== null && depth < MAX_PORT_PROTOTYPE_DEPTH;
+    depth += 1
+  ) {
+    if (visited.has(current)) throw new TypeError(`${label} 返回值原型链不能循环。`);
     visited.add(current);
-    depth += 1;
-    const descriptor = Object.getOwnPropertyDescriptor(current, 'then');
-    if (descriptor) {
-      if (!('value' in descriptor)) throw new TypeError(`${label} 返回了访问器 thenable。`);
-      if (typeof descriptor.value !== 'function') return;
-      throw new TypeError(`${label} 必须同步完成。`);
-    }
+    thenDescriptor ??= Object.getOwnPropertyDescriptor(current, 'then') ?? null;
+    constructorDescriptor ??=
+      Object.getOwnPropertyDescriptor(current, 'constructor') ?? null;
     current = Object.getPrototypeOf(current) as object | null;
   }
-  if (current !== null) throw new TypeError(`${label} 返回值原型链无效。`);
+  if (current !== null) {
+    throw new RangeError(`${label} 返回值原型链超过${MAX_PORT_PROTOTYPE_DEPTH}层。`);
+  }
+  return Object.freeze({ thenDescriptor, constructorDescriptor });
+}
+
+function assertNativePromiseThenIntegrity(): void {
+  const descriptor = Object.getOwnPropertyDescriptor(NATIVE_PROMISE_PROTOTYPE, 'then');
+  if (descriptor === undefined
+    || !Object.hasOwn(descriptor, 'value')
+    || descriptor.value !== NATIVE_PROMISE_THEN
+    || descriptor.configurable !== NATIVE_PROMISE_THEN_FLAGS.configurable
+    || descriptor.enumerable !== NATIVE_PROMISE_THEN_FLAGS.enumerable
+    || descriptor.writable !== NATIVE_PROMISE_THEN_FLAGS.writable) {
+    throw new TypeError('ProductMatch原生Promise.prototype.then描述符漂移。');
+  }
+}
+
+function assertNativePromiseSpeciesIntegrity(): void {
+  const descriptor = Object.getOwnPropertyDescriptor(
+    NATIVE_PROMISE_CONSTRUCTOR,
+    Symbol.species,
+  );
+  if (descriptor === undefined
+    || descriptor.get !== NATIVE_PROMISE_SPECIES_GETTER
+    || descriptor.set !== undefined
+    || descriptor.configurable !== NATIVE_PROMISE_SPECIES_FLAGS.configurable
+    || descriptor.enumerable !== NATIVE_PROMISE_SPECIES_FLAGS.enumerable) {
+    throw new TypeError('ProductMatch原生Promise[Symbol.species]描述符漂移。');
+  }
+}
+
+export function containRejectedAsyncReturn(value: unknown, label: string): void {
+  assertNativePromiseThenIntegrity();
+  if ((typeof value !== 'object' || value === null) && typeof value !== 'function') return;
+  const descriptors = inspectSyncReturnDescriptors(value as object, label);
+  const constructorDescriptor = descriptors.constructorDescriptor;
+  if (constructorDescriptor !== null && !Object.hasOwn(constructorDescriptor, 'value')) {
+    throw new TypeError(`${label} 返回了访问器 constructor。`);
+  }
+  if (constructorDescriptor?.value === NATIVE_PROMISE_CONSTRUCTOR) {
+    assertNativePromiseSpeciesIntegrity();
+    let nativePromise = false;
+    try {
+      Reflect.apply(NATIVE_PROMISE_THEN, value, [NOOP, NOOP]);
+      nativePromise = true;
+    } catch {
+      // A spoofed constructor stays on the ordinary descriptor-only path.
+    }
+    if (nativePromise) throw new TypeError(`${label} 必须同步完成。`);
+  }
+  const thenDescriptor = descriptors.thenDescriptor;
+  if (thenDescriptor === null) return;
+  if (!Object.hasOwn(thenDescriptor, 'value')) {
+    throw new TypeError(`${label} 返回了访问器 thenable。`);
+  }
+  throw new TypeError(`${label} 返回了 then 字段，必须同步完成。`);
 }
 
 export function resolveSyncOrNativePromise<T>(value: unknown, label: string): Promise<Readonly<{ value: T }>> {

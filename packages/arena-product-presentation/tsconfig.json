@@ -14,7 +14,9 @@
     { "path": "../arena-definitions" },
     { "path": "../arena-presentation-contracts" },
     { "path": "../arena-presentation-runtime" },
+    { "path": "../arena-product-content" },
     { "path": "../arena-product-contracts" },
+    { "path": "../arena-product-progression" },
     { "path": "../arena-product-state" },
     { "path": "../arena-progression" }
   ]

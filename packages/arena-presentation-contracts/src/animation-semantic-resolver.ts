@@ -190,11 +190,70 @@ export class AnimationSemanticResolver {
     const resultValue = hudValue === undefined ? undefined : ownData(hudValue, 'result', 'presentation frame.hud', false);
     const participantId = assertNonEmptyString(ownData(participant, 'id', 'participant'), 'participant.id');
     if (phase === ENDED_PHASE && resultValue) {
-      const isDraw = booleanValue(ownData(resultValue, 'isDraw', 'presentation frame.hud.result'), 'presentation frame.hud.result.isDraw');
-      const winnerId = ownData(resultValue, 'winnerId', 'presentation frame.hud.result');
-      return { semantic: isDraw ? ARENA_ANIMATION_SEMANTIC.DRAW
-        : winnerId === participantId ? ARENA_ANIMATION_SEMANTIC.WIN : ARENA_ANIMATION_SEMANTIC.LOSE,
-      airborneSemantic };
+      const result = assertPlainRecord(resultValue, 'presentation frame.hud.result');
+      const kind = ownData(result, 'kind', 'presentation frame.hud.result', false);
+      if (kind === 'duel' || kind === 'race') {
+        const winnerIdsValue = ownData(
+          result,
+          'winnerParticipantIds',
+          'presentation frame.hud.result',
+        );
+        if (!Array.isArray(winnerIdsValue)) {
+          throw new TypeError('presentation frame.hud.result.winnerParticipantIds必须是数组。');
+        }
+        const winnerIds = winnerIdsValue.map((value, index) => assertNonEmptyString(
+          value,
+          `presentation frame.hud.result.winnerParticipantIds[${index}]`,
+        ));
+        if (new Set(winnerIds).size !== winnerIds.length) {
+          throw new RangeError('presentation frame.hud.result.winnerParticipantIds不能重复。');
+        }
+        const isDraw = kind === 'duel'
+          ? booleanValue(
+            ownData(result, 'isDraw', 'presentation frame.hud.result'),
+            'presentation frame.hud.result.isDraw',
+          )
+          : winnerIds.length === 0;
+        return {
+          semantic: isDraw
+            ? ARENA_ANIMATION_SEMANTIC.DRAW
+            : winnerIds.includes(participantId)
+              ? ARENA_ANIMATION_SEMANTIC.WIN
+              : ARENA_ANIMATION_SEMANTIC.LOSE,
+          airborneSemantic,
+        };
+      }
+      if (kind === 'survival') {
+        const playerParticipantId = assertNonEmptyString(
+          ownData(result, 'playerParticipantId', 'presentation frame.hud.result'),
+          'presentation frame.hud.result.playerParticipantId',
+        );
+        const reason = ownData(result, 'reason', 'presentation frame.hud.result');
+        if (reason !== 'terminal-player-fall' && reason !== 'survival-time-cap') {
+          throw new RangeError('presentation frame.hud.result.reason不是生存终局原因。');
+        }
+        const playerWon = reason === 'survival-time-cap';
+        const participantWon = participantId === playerParticipantId ? playerWon : !playerWon;
+        return {
+          semantic: participantWon
+            ? ARENA_ANIMATION_SEMANTIC.WIN
+            : ARENA_ANIMATION_SEMANTIC.LOSE,
+          airborneSemantic,
+        };
+      }
+      const isDraw = booleanValue(
+        ownData(result, 'isDraw', 'presentation frame.hud.result'),
+        'presentation frame.hud.result.isDraw',
+      );
+      const winnerId = ownData(result, 'winnerId', 'presentation frame.hud.result');
+      return {
+        semantic: isDraw
+          ? ARENA_ANIMATION_SEMANTIC.DRAW
+          : winnerId === participantId
+            ? ARENA_ANIMATION_SEMANTIC.WIN
+            : ARENA_ANIMATION_SEMANTIC.LOSE,
+        airborneSemantic,
+      };
     }
     const status = ownData(participant, 'status', 'participant');
     if (status !== ACTIVE_STATUS) {

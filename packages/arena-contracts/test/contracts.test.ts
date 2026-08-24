@@ -1,12 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import {
   ACTION_RESOLUTION_KIND,
+  ARENA_SYNCHRONOUS_RETURN_BOUNDARY,
+  ARENA_ACTION_PHASE,
+  ARENA_MATCH_PHASE,
   ARENA_MATCH_READ_PROFILE,
   ARENA_MATCH_EVENT,
+  ARENA_PARTICIPANT_STATUS,
   EQUIPMENT_EXPIRY_REASON,
   EQUIPMENT_RECYCLE_REASON,
   EQUIPMENT_SUPPLY_EVENT_PAYLOAD_SCHEMA_VERSION,
   assertKnownKeys,
+  assertSynchronousReturn,
   cloneFrozenData,
   cloneFrozenStringSet,
   createBotMobilitySidecarV2Audit,
@@ -1002,6 +1007,86 @@ describe('Arena deterministic contracts', () => {
     }, { includeInternal: true })).toThrow(/uint32/);
   });
 
+  it('fails closed on unknown authority enums in MatchSnapshot and direct V2 world/frame audits', () => {
+    const publicSnapshot = createArenaMatchSnapshotAudit(snapshotFixture());
+    expect(publicSnapshot.phase).toBe(ARENA_MATCH_PHASE.RUNNING);
+    expect(publicSnapshot.participants[0]?.status).toBe(ARENA_PARTICIPANT_STATUS.ACTIVE);
+    expect(publicSnapshot.participants[0]?.action.phase).toBe(ARENA_ACTION_PHASE.IDLE);
+
+    const internalSnapshot = createArenaMatchSnapshotAudit(snapshotFixture(true), {
+      includeInternal: true,
+    });
+    expect(internalSnapshot.phase).toBe(ARENA_MATCH_PHASE.RUNNING);
+    expect(internalSnapshot.participants[0]?.status).toBe(ARENA_PARTICIPANT_STATUS.ACTIVE);
+    expect(internalSnapshot.participants[0]?.action.phase).toBe(ARENA_ACTION_PHASE.IDLE);
+
+    const matchSnapshot = snapshotFixture();
+    const matchParticipant = matchSnapshot.participants[0]!;
+    expect(() => createArenaMatchSnapshotAudit({
+      ...matchSnapshot,
+      phase: 'future-match-phase',
+    })).toThrow(/ArenaMatchSnapshot\.phase/);
+    expect(() => createArenaMatchSnapshotAudit({
+      ...matchSnapshot,
+      participants: [{ ...matchParticipant, status: 'future-participant-status' }],
+    })).toThrow(/participants\[0\]\.status/);
+    expect(() => createArenaMatchSnapshotAudit({
+      ...matchSnapshot,
+      participants: [{
+        ...matchParticipant,
+        action: { ...matchParticipant.action, phase: 'future-action-phase' },
+      }],
+    })).toThrow(/participants\[0\]\.action\.phase/);
+
+    const internalMatchSnapshot = snapshotFixture(true);
+    const internalParticipant = internalMatchSnapshot.participants[0]!;
+    expect(() => createArenaMatchSnapshotAudit({
+      ...internalMatchSnapshot,
+      phase: 'future-match-phase',
+    }, { includeInternal: true })).toThrow(/ArenaMatchSnapshot\.phase/);
+    expect(() => createArenaMatchSnapshotAudit({
+      ...internalMatchSnapshot,
+      participants: [{ ...internalParticipant, status: 'future-participant-status' }],
+    }, { includeInternal: true })).toThrow(/participants\[0\]\.status/);
+    expect(() => createArenaMatchSnapshotAudit({
+      ...internalMatchSnapshot,
+      participants: [{
+        ...internalParticipant,
+        action: { ...internalParticipant.action, phase: 'future-action-phase' },
+      }],
+    }, { includeInternal: true })).toThrow(/participants\[0\]\.action\.phase/);
+
+    const world = worldSnapshotV2Fixture();
+    const worldParticipant = world.participants[0]!;
+    const localActionSidecar = localSidecarFixture();
+    const auditedWorld = createWorldSnapshotV2Audit(world);
+    expect(auditedWorld.phase).toBe(ARENA_MATCH_PHASE.RUNNING);
+    expect(auditedWorld.participants[0]?.status).toBe(ARENA_PARTICIPANT_STATUS.ACTIVE);
+    expect(auditedWorld.participants[0]?.action.phase).toBe(ARENA_ACTION_PHASE.ACTIVE);
+    const unknownWorlds: ReadonlyArray<readonly [unknown, RegExp]> = [
+      [{ ...world, phase: 'future-match-phase' }, /WorldSnapshotV2\.phase/],
+      [{
+        ...world,
+        participants: [{ ...worldParticipant, status: 'future-participant-status' }],
+      }, /participants\[0\]\.status/],
+      [{
+        ...world,
+        participants: [{
+          ...worldParticipant,
+          action: { ...worldParticipant.action, phase: 'future-action-phase' },
+        }],
+      }, /participants\[0\]\.action\.phase/],
+    ];
+    for (const [unknownWorld, expectedError] of unknownWorlds) {
+      expect(() => createWorldSnapshotV2Audit(unknownWorld)).toThrow(expectedError);
+      expect(() => createMatchReadFrameV2Audit({
+        schemaVersion: 2,
+        worldSnapshot: unknownWorld,
+        localActionSidecar,
+      })).toThrow(expectedError);
+    }
+  });
+
   it('normalizes complete InputFrame batches and fills missing participants deterministically', () => {
     const frame: ArenaInputFrame = createNeutralInputFrame(3, 'p1');
     expect(normalizeInputFrames([{ ...frame, moveX: 1, moveZ: 1 }], {
@@ -1240,6 +1325,16 @@ describe('Arena deterministic contracts', () => {
       ...host,
       storageWrite: async () => true,
     }).write('profile', null)).toThrow(/同步完成/);
+
+    let ordinaryThenCalls = 0;
+    const ordinaryThenablePort = createSynchronousStoragePort({
+      ...host,
+      storageRead: () => ({
+        then() { ordinaryThenCalls += 1; },
+      }),
+    });
+    expect(() => ordinaryThenablePort.read('profile')).toThrow(/同步完成/);
+    expect(ordinaryThenCalls).toBe(0);
   });
 
   it('snapshots storage methods and rejects method or option accessors without executing them', () => {
@@ -1276,6 +1371,57 @@ describe('Arena deterministic contracts', () => {
     });
     expect(() => createSynchronousStoragePort(host, options)).toThrow(/数据字段/);
     expect(getterCalls).toBe(0);
+  });
+
+  it('requires exact own storage read fields and bounds method prototype lookup', () => {
+    const write = () => true;
+    const remove = () => true;
+    expect(() => createSynchronousStoragePort({
+      storageRead: () => ({ ok: true, found: false }),
+      storageWrite: write,
+      storageDelete: remove,
+    }).read('missing-value')).toThrow(/value.*自有可枚举数据字段/);
+
+    const inherited = Object.create({ found: false, value: undefined }) as Record<string, unknown>;
+    inherited.ok = true;
+    expect(() => createSynchronousStoragePort({
+      storageRead: () => inherited,
+      storageWrite: write,
+      storageDelete: remove,
+    }).read('inherited')).toThrow(/普通对象|found.*自有可枚举数据字段/);
+
+    let getterCalls = 0;
+    const accessor = Object.defineProperties({}, {
+      ok: { enumerable: true, value: true },
+      found: { enumerable: true, value: false },
+      value: {
+        enumerable: true,
+        get() {
+          getterCalls += 1;
+          return undefined;
+        },
+      },
+    });
+    expect(() => createSynchronousStoragePort({
+      storageRead: () => accessor,
+      storageWrite: write,
+      storageDelete: remove,
+    }).read('accessor')).toThrow(/数据字段/);
+    expect(getterCalls).toBe(0);
+
+    let cyclic: object;
+    cyclic = new Proxy(Object.create(null), {
+      getPrototypeOf() { return cyclic; },
+    });
+    expect(() => createSynchronousStoragePort(cyclic)).toThrow(/循环/);
+
+    let deep: object = {
+      storageRead: () => ({ ok: true, found: false, value: undefined }),
+      storageWrite: write,
+      storageDelete: remove,
+    };
+    for (let index = 0; index < 33; index += 1) deep = Object.create(deep);
+    expect(() => createSynchronousStoragePort(deep)).toThrow(/超过32层/);
   });
 
   it('deeply freezes canonical data without trusting accessors or insertion order', () => {
@@ -1336,5 +1482,48 @@ describe('Arena deterministic contracts', () => {
     expect(combined.cleanupErrors).toEqual([cleanup]);
     expect(combined.cleanupErrors).not.toBe(cleanupErrors);
     expect(Object.isFrozen(combined.cleanupErrors)).toBe(true);
+  });
+
+  it('rejects asynchronous and hostile synchronous returns without invoking ordinary thenables', () => {
+    let getterCalls = 0;
+    let thenCalls = 0;
+    const accessorThen = Object.defineProperty({}, 'then', {
+      get() {
+        getterCalls += 1;
+        return () => undefined;
+      },
+    });
+    expect(() => assertSynchronousReturn(accessorThen, 'accessor then'))
+      .toThrow(/访问器thenable/);
+    expect(getterCalls).toBe(0);
+
+    const ordinaryThenable = {
+      then() { thenCalls += 1; },
+    };
+    expect(() => assertSynchronousReturn(ordinaryThenable, 'ordinary thenable'))
+      .toThrow(/必须同步完成/);
+    expect(thenCalls).toBe(0);
+
+    expect(() => assertSynchronousReturn({ then: null }, 'data then'))
+      .toThrow(/then字段.*必须同步完成/);
+
+    const disguisedPromise = Promise.resolve('late');
+    Object.defineProperties(disguisedPromise, {
+      constructor: { configurable: true, value: null },
+      then: { configurable: true, value: null },
+    });
+    expect(() => assertSynchronousReturn(disguisedPromise, 'disguised promise'))
+      .toThrow(/then字段.*必须同步完成/);
+
+    const cyclicTarget = {};
+    let cyclic: object;
+    cyclic = new Proxy(cyclicTarget, {
+      getPrototypeOf: () => cyclic,
+    });
+    expect(() => assertSynchronousReturn(cyclic, 'cyclic return')).toThrow(/原型链循环/);
+    expect(() => assertSynchronousReturn(Promise.resolve('late'), 'native promise'))
+      .toThrow(/必须同步完成/);
+    expect(() => assertSynchronousReturn({ ok: true }, 'plain value')).not.toThrow();
+    expect(ARENA_SYNCHRONOUS_RETURN_BOUNDARY.maximumPrototypeDepth).toBe(32);
   });
 });

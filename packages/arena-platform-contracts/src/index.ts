@@ -181,21 +181,38 @@ export function createFrameScheduler(
       usesHost: false,
     };
     pending.set(token, entry);
+    let callbackFailed = false;
+    let callbackFailure: unknown = null;
 
     const invoke = (): void => {
       const current = pending.get(token);
       if (!current?.active) return;
       pending.delete(token);
       current.active = false;
-      callback(safeNow(now));
+      try {
+        callback(safeNow(now));
+      } catch (error) {
+        callbackFailed = true;
+        callbackFailure = error;
+        throw error;
+      }
     };
 
     if (typeof request === 'function') {
       try {
         entry.usesHost = true;
         entry.hostId = request(invoke);
+        if (callbackFailed) throw callbackFailure;
         return token;
-      } catch {
+      } catch (error) {
+        if (callbackFailed) {
+          if (error === callbackFailure) throw error;
+          throw new AggregateError(
+            [callbackFailure, error],
+            '宿主同步帧回调失败，且 requestFrame 同时抛出不同错误。',
+          );
+        }
+        if (!entry.active || !pending.has(token)) return token;
         entry.usesHost = false;
       }
     }
@@ -223,6 +240,18 @@ export function createFrameScheduler(
 
   return { requestFrame, cancelFrame };
 }
+
+export const FRAME_SCHEDULER_SYNCHRONOUS_DELIVERY_POLICY = Object.freeze({
+  status: 'production-unreachable',
+  hardGate: false,
+  codeStatus: 'code-written-not-run',
+  publicTokenPublishesBeforeHostRequest: true,
+  synchronousDeliveryStillAllowsCallbackRequestedNextFrame: true,
+  deliveredFrameNeverCreatesOrphanFallbackTimer: true,
+  synchronousCallbackFailureCannotBeSwallowedByHostRequest: true,
+  undefinedHostFrameIdStillMeansScheduled: true,
+  validationStatus: 'not-run',
+});
 
 function reportsWebGL2(contextValue: unknown): boolean {
   if (!contextValue || (typeof contextValue !== 'object' && typeof contextValue !== 'function')) {

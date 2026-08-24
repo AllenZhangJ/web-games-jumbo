@@ -158,45 +158,64 @@ describe('PlayerProfileService', () => {
     expect(calls).toBe(0);
   });
 
-  it('snapshots repository methods and blocks every callback reentry', () => {
+  it('keeps repository callback reentry sticky through outer operation completion', () => {
+    const profileDefinition = definition();
+    const openRepository = repositoryHarness(profileDefinition);
+    const openService = new PlayerProfileService({
+      definition: profileDefinition,
+      repository: openRepository.port,
+    });
+    openRepository.setHook('open', () => {
+      expect(() => openService.state).toThrow(/重入/u);
+    });
+    expect(() => openService.open()).toThrow(/Repository回调重入/u);
+    expect(openService.state).toBe(PLAYER_PROFILE_SERVICE_STATE.FAILED);
+
+    const compareRepository = repositoryHarness(profileDefinition);
+    const compareService = new PlayerProfileService({
+      definition: profileDefinition,
+      repository: compareRepository.port,
+    });
+    compareService.open();
+    compareRepository.setHook('compare', () => {
+      expect(() => compareService.getSnapshot()).toThrow(/重入/u);
+    });
+    expect(() => compareService.selectCharacter('hero-b')).toThrow(/Repository回调重入/u);
+    expect(compareRepository.getProfile()).toMatchObject({
+      revision: 1,
+      selection: { characterId: 'hero-b' },
+    });
+    expect(compareService.getLastKnownSnapshot()).toMatchObject({ revision: 1 });
+    expect(compareService.state).toBe(PLAYER_PROFILE_SERVICE_STATE.FAILED);
+
+    const destroyRepository = repositoryHarness(profileDefinition);
+    const destroyService = new PlayerProfileService({
+      definition: profileDefinition,
+      repository: destroyRepository.port,
+    });
+    destroyService.open();
+    destroyRepository.setHook('destroy', () => {
+      expect(() => destroyService.state).toThrow(/重入/u);
+    });
+    expect(() => destroyService.destroy()).toThrow(/Repository回调重入/u);
+    expect(destroyService.state).toBe(PLAYER_PROFILE_SERVICE_STATE.DESTROYED);
+  });
+
+  it('captures repository methods before callers can replace them', () => {
     const profileDefinition = definition();
     const repository = repositoryHarness(profileDefinition);
     const service = new PlayerProfileService({
       definition: profileDefinition,
       repository: repository.port,
     });
-    let reentries = 0;
-    repository.setHook('open', () => {
-      expect(() => service.open()).toThrow(/不可重入/);
-      reentries += 1;
-    });
     service.open();
-    repository.setHook('renew', () => {
-      expect(() => service.getSnapshot()).toThrow(/不可重入/);
-      expect(() => service.destroy()).toThrow(/不能销毁/);
-      reentries += 2;
-    });
-    repository.setHook('compare', () => {
-      expect(() => service.selectCharacter('hero')).toThrow(/不可重入/);
-      reentries += 1;
-    });
-    repository.setHook('snapshot', () => {
-      expect(() => service.renewLease()).toThrow(/不可重入/);
-      reentries += 1;
-    });
     repository.port.compareAndSet = () => {
       throw new Error('replacement must not run');
     };
     expect(service.selectCharacter('hero-b').revision).toBe(1);
-    repository.setHook('destroy', () => {
-      expect(() => service.destroy()).toThrow(/不能销毁/);
-      reentries += 1;
-    });
-    service.destroy();
-    expect(reentries).toBe(6);
   });
 
-  it('contains transient failures and fails closed after ambiguous or malformed commits', () => {
+  it('contains transient failures, accepts verified write-after-throw and fails closed on malformed commits', () => {
     const profileDefinition = definition();
     const transientRepository = repositoryHarness(profileDefinition);
     const transient = new PlayerProfileService({
@@ -220,10 +239,11 @@ describe('PlayerProfileService', () => {
       ambiguousRepository.publish(next);
       throw new Error('throw after mutation');
     });
-    const ambiguousError = captureFailure(() => ambiguous.selectCharacter('hero-b'));
-    expect(ambiguousError).toBeInstanceOf(PlayerProfilePersistenceError);
-    expect((ambiguousError as PlayerProfilePersistenceError).recoverable).toBe(false);
-    expect(ambiguous.state).toBe(PLAYER_PROFILE_SERVICE_STATE.FAILED);
+    expect(ambiguous.selectCharacter('hero-b')).toMatchObject({
+      revision: 1,
+      selection: { characterId: 'hero-b' },
+    });
+    expect(ambiguous.state).toBe(PLAYER_PROFILE_SERVICE_STATE.OPEN);
 
     const malformedRepository = repositoryHarness(profileDefinition);
     const malformed = new PlayerProfileService({
@@ -244,6 +264,41 @@ describe('PlayerProfileService', () => {
     expect(malformed.state).toBe(PLAYER_PROFILE_SERVICE_STATE.FAILED);
   });
 
+  it('recognizes the same reward grant after a write throws and the repository advanced', () => {
+    const profileDefinition = definition();
+    const repository = repositoryHarness(profileDefinition);
+    const service = new PlayerProfileService({
+      definition: profileDefinition,
+      repository: repository.port,
+    });
+    service.open();
+    repository.setCompare((next) => {
+      repository.publish(next);
+      throw new Error('throw after reward mutation');
+    });
+    expect(service.commitProgressionGrant({
+      grantId: 'grant-1',
+      experienceDelta: 25,
+      unlocks: {
+        characterIds: [], appearanceIds: ['appearance-a'], equipmentIds: [], mapIds: [],
+      },
+    })).toMatchObject({
+      committed: true,
+      duplicate: false,
+      profile: {
+        revision: 1,
+        progression: { experience: 25, committedGrantIds: ['grant-1'] },
+      },
+    });
+    expect(service.commitProgressionGrant({
+      grantId: 'grant-1',
+      experienceDelta: 25,
+      unlocks: {
+        characterIds: [], appearanceIds: ['appearance-a'], equipmentIds: [], mapIds: [],
+      },
+    })).toMatchObject({ committed: false, duplicate: true });
+  });
+
   it('fails closed on confirmed lease loss and keeps failed cleanup retryable', () => {
     const profileDefinition = definition();
     const lostRepository = repositoryHarness(profileDefinition);
@@ -258,6 +313,7 @@ describe('PlayerProfileService', () => {
     const lostError = captureFailure(() => lost.renewLease());
     expect(lostError).toBeInstanceOf(PlayerProfilePersistenceError);
     expect((lostError as PlayerProfilePersistenceError).recoverable).toBe(false);
+    expect((lostError as PlayerProfilePersistenceError).restartRequired).toBe(true);
     expect(lost.state).toBe(PLAYER_PROFILE_SERVICE_STATE.FAILED);
 
     const retryRepository = repositoryHarness(profileDefinition);

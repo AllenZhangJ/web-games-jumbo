@@ -116,6 +116,7 @@ describe('SynchronousStorageLease', () => {
         () => current.renew(),
         () => current.release(),
         () => current.getStatus(),
+        () => current.isFailedClosed(),
         () => current.destroy(),
       ];
       for (const operation of operations) {
@@ -138,15 +139,82 @@ describe('SynchronousStorageLease', () => {
     leaseHolder.current = lease;
     harness.setOnRead(attemptAll);
     harness.setOnWrite(attemptAll);
-    expect(lease.acquire()).toBe(true);
-    const errorsAfterAcquire = errors.length;
-    harness.setOnWrite(null);
-    expect(lease.assertHeld()).toBe(true);
-    expect(errors.length - errorsAfterAcquire).toBe(12);
-    harness.setOnRead(null);
-    expect(errors.length).toBeGreaterThanOrEqual(30);
+    expect(() => lease.acquire()).toThrow(/重入/);
+    expect(errors.length).toBeGreaterThanOrEqual(7);
     for (const error of errors) expect(error.message).toMatch(/不可重入|操作期间不能销毁/);
+    expect(() => lease.getStatus()).toThrow(/失败关闭/);
+    expect(lease.isFailedClosed()).toBe(true);
+    harness.setOnRead(null);
+    harness.setOnWrite(null);
     lease.destroy();
+  });
+
+  it('stops before a write when stored-value validation swallows public reentry', () => {
+    let lease: SynchronousStorageLease | null = null;
+    let writes = 0;
+    const stored = new Proxy({
+      schemaVersion: SYNCHRONOUS_STORAGE_LEASE_SCHEMA_VERSION,
+      ownerId: 'previous-owner',
+      holderId: 'previous-holder',
+      revision: 1,
+      acquiredAtMs: 1_000,
+      expiresAtMs: 2_000,
+    }, {
+      ownKeys(target) {
+        if (lease !== null) {
+          try { lease.getStatus(); } catch { /* hostile value swallows reentry */ }
+        }
+        return Reflect.ownKeys(target);
+      },
+    });
+    const activeLease = new SynchronousStorageLease({
+      storage: {
+        storageRead: () => ({ ok: true, found: true, value: stored }),
+        storageWrite: () => {
+          writes += 1;
+          return true;
+        },
+        storageDelete: () => true,
+      },
+      key: 'lease',
+      ownerId: 'owner',
+      wallNow: () => 3_000,
+    });
+    lease = activeLease;
+
+    expect(() => activeLease.acquire()).toThrow(/重入/);
+    expect(writes).toBe(0);
+    expect(activeLease.isFailedClosed()).toBe(true);
+    activeLease.destroy();
+  });
+
+  it('retains old and new renewal identities for exact cleanup after swallowed reentry', () => {
+    const harness = storageHarness();
+    let now = 1_000;
+    const lease = new SynchronousStorageLease({
+      storage: harness.port,
+      key: 'lease',
+      ownerId: 'owner',
+      wallNow: () => now,
+    });
+    expect(lease.acquire()).toBe(true);
+    const first = clone(harness.values.get('lease')) as { revision: number };
+    harness.setOnWrite(() => {
+      try { lease.destroy(); } catch { /* Storage swallows the reentry rejection. */ }
+    });
+    now = 2_000;
+
+    expect(() => lease.renew()).toThrow(/重入/);
+    expect(() => lease.getStatus()).toThrow(/失败关闭/);
+    expect(lease.isFailedClosed()).toBe(true);
+    expect((harness.values.get('lease') as { revision: number }).revision).toBe(
+      first.revision + 1,
+    );
+
+    harness.setOnWrite(null);
+    lease.destroy();
+    expect(harness.values.has('lease')).toBe(false);
+    expect(() => lease.getStatus()).toThrow(/已销毁/);
   });
 
   it('keeps ownership after an unconfirmed release and completes destroy only after retry', () => {
@@ -199,6 +267,17 @@ describe('SynchronousStorageLease', () => {
     });
     expect(lease.acquire()).toBe(true);
     expect(getterCalls).toBe(0);
+    lease.destroy();
+  });
+
+  it('rejects an asynchronous wall clock through the shared synchronous boundary', () => {
+    const lease = new SynchronousStorageLease({
+      storage: storageHarness().port,
+      key: 'lease',
+      ownerId: 'owner',
+      wallNow: (() => Promise.resolve(1_000)) as never,
+    });
+    expect(() => lease.acquire()).toThrow(/同步完成/);
     lease.destroy();
   });
 });

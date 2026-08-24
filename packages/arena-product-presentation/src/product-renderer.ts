@@ -40,6 +40,24 @@ interface ProductGameplayRendererPort {
   readonly getPerformanceSnapshot: (() => unknown) | null;
 }
 
+type ProductRendererOperation =
+  | 'state-read'
+  | 'load-request'
+  | 'load-gameplay-launch'
+  | 'load-ui-launch'
+  | 'load-publication'
+  | 'load-failure'
+  | 'render'
+  | 'resize'
+  | 'input-viewport-read'
+  | 'ui-hit-test'
+  | 'intent-bind'
+  | 'context-lost'
+  | 'context-restored'
+  | 'debug-read'
+  | 'performance-read'
+  | 'dispose';
+
 const CONSTRUCTOR_OPTION_KEYS = new Set([
   'canvas',
   'platform',
@@ -73,6 +91,14 @@ function optionalMethod(value: unknown, name: string, methodName: string): Unkno
 function synchronousResult<T>(value: T, name: string): T {
   rejectThenable(value, name);
   return value;
+}
+
+function nativePromise<T>(value: unknown, name: string): Promise<T> {
+  if (!(value instanceof Promise)) {
+    rejectThenable(value, name);
+    throw new TypeError(`${name} 必须返回 Promise。`);
+  }
+  return value as Promise<T>;
 }
 
 function validateSurface(value: unknown): ProductUiSurfacePort {
@@ -153,7 +179,10 @@ export class ProductRenderer {
   #loadPromise: Promise<this> | null;
   #loadGeneration: number;
   #loaded: boolean;
-  #rendering: boolean;
+  #operation: ProductRendererOperation | null;
+  #operationSequence: number;
+  #reentrySequence: number;
+  #reentryError: Error | null;
   #lastError: Error | null;
 
   constructor(optionsValue: unknown) {
@@ -183,7 +212,10 @@ export class ProductRenderer {
     this.#loadPromise = null;
     this.#loadGeneration = 0;
     this.#loaded = false;
-    this.#rendering = false;
+    this.#operation = null;
+    this.#operationSequence = 0;
+    this.#reentrySequence = 0;
+    this.#reentryError = null;
     this.#lastError = null;
     let gameplayCandidate: unknown = null;
     let surfaceCandidate: unknown = null;
@@ -224,7 +256,83 @@ export class ProductRenderer {
   }
 
   get state() {
-    return this.#state;
+    return this.#runOperation('state-read', () => this.#state);
+  }
+
+  #guardReentry(operation: ProductRendererOperation): void {
+    if (this.#operation === null) return;
+    this.#reentrySequence += 1;
+    this.#reentryError ??= new Error(
+      `ProductRenderer ${this.#operation}期间拒绝${operation}重入。`,
+    );
+    throw this.#reentryError;
+  }
+
+  #assertCurrentOperationCommit(
+    sequence: number,
+    operation: ProductRendererOperation,
+    label: string,
+  ): void {
+    if (this.#operation !== operation || this.#operationSequence !== sequence) {
+      throw new Error(`${label}缺少当前ProductRenderer operation所有权。`);
+    }
+    if (this.#reentryError !== null) throw this.#reentryError;
+  }
+
+  #runOperation<T>(operation: ProductRendererOperation, run: (sequence: number) => T): T {
+    this.#guardReentry(operation);
+    this.#operation = operation;
+    this.#operationSequence += 1;
+    const sequence = this.#operationSequence;
+    this.#reentryError = null;
+    let result!: T;
+    let failure: unknown = null;
+    let failed = false;
+    try {
+      result = run(sequence);
+      this.#assertCurrentOperationCommit(sequence, operation, `ProductRenderer ${operation}`);
+    } catch (error) {
+      failed = true;
+      failure = error;
+    } finally {
+      const reentryError = this.#reentryError;
+      this.#operation = null;
+      this.#reentryError = null;
+      if (reentryError !== null && failure !== reentryError) {
+        throw new AggregateError(
+          failed ? [failure, reentryError] : [reentryError],
+          `ProductRenderer ${operation}失败且发生同步重入。`,
+        );
+      }
+    }
+    if (failed) throw failure;
+    return result;
+  }
+
+  #callChecked<T>(
+    sequence: number,
+    operation: ProductRendererOperation,
+    callback: () => T,
+    label: string,
+  ): T {
+    try {
+      const result = synchronousResult(callback(), label);
+      this.#assertCurrentOperationCommit(sequence, operation, label);
+      return result;
+    } catch (error) {
+      try {
+        this.#assertCurrentOperationCommit(sequence, operation, label);
+      } catch (reentryError) {
+        if (error !== reentryError) {
+          throw new AggregateError(
+            [error, reentryError],
+            `${label}失败且发生ProductRenderer重入。`,
+          );
+        }
+        throw reentryError;
+      }
+      throw error;
+    }
   }
 
   #assertUsable() {
@@ -256,260 +364,395 @@ export class ProductRenderer {
     uiSurface: ProductUiSurfacePort,
   ): Promise<this> {
     try {
-      await gameplayRenderer.load();
-      if (generation !== this.#loadGeneration) throw new Error('ProductRenderer 加载已取消。');
-      await uiSurface.load();
-      if (generation !== this.#loadGeneration) throw new Error('ProductRenderer 加载已取消。');
-      this.#loaded = true;
-      if (this.#contextLost) {
-        booleanResult(
-          gameplayRenderer.handleContextLost(),
-          'ProductRenderer.gameplayRenderer.handleContextLost()',
-        );
-        this.#state = PRODUCT_RENDERER_STATE.CONTEXT_LOST;
-      } else {
-        this.#state = PRODUCT_RENDERER_STATE.READY;
+      let gameplayLoadOwner: Promise<unknown> | null = null;
+      try {
+        gameplayLoadOwner = this.#runOperation('load-gameplay-launch', () => {
+          const owner = nativePromise(
+            gameplayRenderer.load(),
+            'ProductRenderer.gameplayRenderer.load()',
+          );
+          gameplayLoadOwner = owner;
+          return owner;
+        });
+      } catch (error) {
+        if (gameplayLoadOwner !== null) void gameplayLoadOwner.catch(() => undefined);
+        throw error;
       }
-      return this;
+      await gameplayLoadOwner;
+      if (generation !== this.#loadGeneration) throw new Error('ProductRenderer 加载已取消。');
+      let uiLoadOwner: Promise<unknown> | null = null;
+      try {
+        uiLoadOwner = this.#runOperation('load-ui-launch', () => {
+          const owner = nativePromise(
+            uiSurface.load(),
+            'ProductRenderer.uiSurface.load()',
+          );
+          uiLoadOwner = owner;
+          return owner;
+        });
+      } catch (error) {
+        if (uiLoadOwner !== null) void uiLoadOwner.catch(() => undefined);
+        throw error;
+      }
+      await uiLoadOwner;
+      if (generation !== this.#loadGeneration) throw new Error('ProductRenderer 加载已取消。');
+      return this.#runOperation('load-publication', (sequence) => {
+        if (generation !== this.#loadGeneration) {
+          throw new Error('ProductRenderer 加载已取消。');
+        }
+        const contextLost = this.#contextLost;
+        if (contextLost) {
+          booleanResult(
+            this.#callChecked(
+              sequence,
+              'load-publication',
+              () => gameplayRenderer.handleContextLost(),
+              'ProductRenderer.gameplayRenderer.handleContextLost() after load',
+            ),
+            'ProductRenderer.gameplayRenderer.handleContextLost() after load',
+          );
+        }
+        this.#loaded = true;
+        this.#state = contextLost
+          ? PRODUCT_RENDERER_STATE.CONTEXT_LOST
+          : PRODUCT_RENDERER_STATE.READY;
+        return this;
+      });
     } catch (error) {
       if (generation !== this.#loadGeneration) throw error;
-      this.#lastError = normalizeThrownError(error, 'ProductRenderer 加载失败');
-      this.#state = PRODUCT_RENDERER_STATE.FAILED;
-      const failure = new Error('ProductRenderer 加载失败。');
-      failure.cause = this.#lastError;
-      throw failure;
+      return this.#runOperation('load-failure', () => {
+        this.#lastError = normalizeThrownError(error, 'ProductRenderer 加载失败');
+        this.#state = PRODUCT_RENDERER_STATE.FAILED;
+        const failure = new Error('ProductRenderer 加载失败。');
+        failure.cause = this.#lastError;
+        throw failure;
+      });
     }
   }
 
   load() {
-    this.#assertUsable();
-    if (
-      this.#loaded
-      && (
-        this.#state === PRODUCT_RENDERER_STATE.READY
-        || this.#state === PRODUCT_RENDERER_STATE.CONTEXT_LOST
-      )
-    ) return Promise.resolve(this);
     if (this.#loadPromise !== null) return this.#loadPromise;
-    const generation = this.#loadGeneration;
-    const [gameplayRenderer, uiSurface] = this.#resources();
-    const operation = this.#performLoad(
-      generation,
-      gameplayRenderer,
-      uiSurface,
-    ).finally(() => {
-      if (this.#loadPromise === operation) this.#loadPromise = null;
+    return this.#runOperation('load-request', () => {
+      this.#assertUsable();
+      if (
+        this.#loaded
+        && (
+          this.#state === PRODUCT_RENDERER_STATE.READY
+          || this.#state === PRODUCT_RENDERER_STATE.CONTEXT_LOST
+        )
+      ) return Promise.resolve(this);
+      const generation = this.#loadGeneration;
+      const [gameplayRenderer, uiSurface] = this.#resources();
+      const operation: Promise<this> = Promise.resolve()
+        .then(() => this.#performLoad(generation, gameplayRenderer, uiSurface))
+        .finally(() => {
+          if (this.#loadPromise === operation) this.#loadPromise = null;
+        });
+      this.#loadPromise = operation;
+      return operation;
     });
-    this.#loadPromise = operation;
-    return operation;
   }
 
   render(frameValue: unknown, optionsValue: unknown = {}) {
-    this.#assertUsable();
-    if (this.#state === PRODUCT_RENDERER_STATE.CONTEXT_LOST) return false;
-    if (this.#state !== PRODUCT_RENDERER_STATE.READY) {
-      throw new Error(`ProductRenderer 无法在 ${this.#state} 状态 render。`);
-    }
-    if (this.#rendering) throw new Error('ProductRenderer.render() 不可重入。');
-    const frame = validateFrame(frameValue);
-    if (!optionsValue || typeof optionsValue !== 'object' || Array.isArray(optionsValue)) {
-      throw new TypeError('ProductRenderer render options 必须是普通对象。');
-    }
-    const optionsPrototype = Object.getPrototypeOf(optionsValue) as object | null;
-    if (optionsPrototype !== Object.prototype && optionsPrototype !== null) {
-      throw new TypeError('ProductRenderer render options 必须是普通对象。');
-    }
-    const options = cloneFrozenData(
-      optionsValue as Record<string, unknown>,
-      'ProductRenderer render options',
-    );
-    const [gameplayRenderer, uiSurface] = this.#resources();
-    this.#rendering = true;
-    try {
-      const surfaceRendered = uiSurface.render(frame.viewModel, options);
-      rejectThenable(surfaceRendered, 'ProductRenderer.uiSurface.render()');
-      if (surfaceRendered === false) return false;
-      const requiresCompositeFrame = booleanResult(
-        uiSurface.requiresCompositeFrame(),
-        'ProductRenderer.uiSurface.requiresCompositeFrame()',
-      );
-      if (
-        (frame.matchFrame === null || frame.matchFrame === undefined)
-        && !requiresCompositeFrame
-      ) return true;
-      const profile = ownData(frame.viewModel, 'profile', 'ProductRenderer viewModel', false);
-      const soundEnabled = profile && typeof profile === 'object' && !Array.isArray(profile)
-        ? ownData(profile, 'soundEnabled', 'ProductRenderer profile', false) ?? true
-        : true;
-      const reducedMotion = profile && typeof profile === 'object' && !Array.isArray(profile)
-        ? ownData(profile, 'reducedMotion', 'ProductRenderer profile', false) ?? false
-        : false;
-      if (typeof soundEnabled !== 'boolean' || typeof reducedMotion !== 'boolean') {
-        throw new TypeError('ProductRenderer profile 声音与减少动效字段必须是布尔值。');
+    return this.#runOperation('render', (sequence) => {
+      this.#assertUsable();
+      if (this.#state === PRODUCT_RENDERER_STATE.CONTEXT_LOST) return false;
+      if (this.#state !== PRODUCT_RENDERER_STATE.READY) {
+        throw new Error(`ProductRenderer 无法在 ${this.#state} 状态 render。`);
       }
-      const gameplayOptions = {
-        ...options,
-        soundEnabled,
-        reducedMotion,
-      };
-      const rendered = gameplayRenderer.renderComposite(
-        frame.matchFrame ?? null,
-        uiSurface,
-        gameplayOptions,
+      const frame = validateFrame(frameValue);
+      if (!optionsValue || typeof optionsValue !== 'object' || Array.isArray(optionsValue)) {
+        throw new TypeError('ProductRenderer render options 必须是普通对象。');
+      }
+      const optionsPrototype = Object.getPrototypeOf(optionsValue) as object | null;
+      if (optionsPrototype !== Object.prototype && optionsPrototype !== null) {
+        throw new TypeError('ProductRenderer render options 必须是普通对象。');
+      }
+      const options = cloneFrozenData(
+        optionsValue as Record<string, unknown>,
+        'ProductRenderer render options',
       );
-      rejectThenable(rendered, 'ProductRenderer.gameplayRenderer.renderComposite()');
-      return rendered !== false;
-    } catch (error) {
-      this.#lastError = normalizeThrownError(error, 'ProductRenderer 渲染失败');
-      throw error;
-    } finally {
-      this.#rendering = false;
-    }
+      const [gameplayRenderer, uiSurface] = this.#resources();
+      try {
+        const surfaceRendered = this.#callChecked(
+          sequence,
+          'render',
+          () => uiSurface.render(frame.viewModel, options),
+          'ProductRenderer.uiSurface.render()',
+        );
+        if (surfaceRendered === false) return false;
+        const requiresCompositeFrame = booleanResult(
+          this.#callChecked(
+            sequence,
+            'render',
+            () => uiSurface.requiresCompositeFrame(),
+            'ProductRenderer.uiSurface.requiresCompositeFrame()',
+          ),
+          'ProductRenderer.uiSurface.requiresCompositeFrame()',
+        );
+        if (
+          (frame.matchFrame === null || frame.matchFrame === undefined)
+          && !requiresCompositeFrame
+        ) return true;
+        const profile = ownData(frame.viewModel, 'profile', 'ProductRenderer viewModel', false);
+        const soundEnabled = profile && typeof profile === 'object' && !Array.isArray(profile)
+          ? ownData(profile, 'soundEnabled', 'ProductRenderer profile', false) ?? true
+          : true;
+        const reducedMotion = profile && typeof profile === 'object' && !Array.isArray(profile)
+          ? ownData(profile, 'reducedMotion', 'ProductRenderer profile', false) ?? false
+          : false;
+        if (typeof soundEnabled !== 'boolean' || typeof reducedMotion !== 'boolean') {
+          throw new TypeError('ProductRenderer profile 声音与减少动效字段必须是布尔值。');
+        }
+        const gameplayOptions = {
+          ...options,
+          soundEnabled,
+          reducedMotion,
+        };
+        const rendered = this.#callChecked(
+          sequence,
+          'render',
+          () => gameplayRenderer.renderComposite(
+            frame.matchFrame ?? null,
+            uiSurface,
+            gameplayOptions,
+          ),
+          'ProductRenderer.gameplayRenderer.renderComposite()',
+        );
+        return rendered !== false;
+      } catch (error) {
+        this.#lastError = normalizeThrownError(error, 'ProductRenderer 渲染失败');
+        throw error;
+      }
+    });
   }
 
   resize(viewport: unknown) {
-    this.#assertUsable();
-    const [gameplayRenderer, uiSurface] = this.#resources();
-    const gameplayResized = gameplayRenderer.resize(viewport);
-    rejectThenable(gameplayResized, 'ProductRenderer.gameplayRenderer.resize()');
-    if (gameplayResized === false) return false;
-    const inputViewport = synchronousResult(
-      gameplayRenderer.getInputViewport(),
-      'ProductRenderer.gameplayRenderer.getInputViewport()',
-    );
-    const resized = uiSurface.resize(viewport, inputViewport);
-    rejectThenable(resized, 'ProductRenderer.uiSurface.resize()');
-    return resized !== false;
+    return this.#runOperation('resize', (sequence) => {
+      this.#assertUsable();
+      const [gameplayRenderer, uiSurface] = this.#resources();
+      const gameplayResized = this.#callChecked(
+        sequence,
+        'resize',
+        () => gameplayRenderer.resize(viewport),
+        'ProductRenderer.gameplayRenderer.resize()',
+      );
+      if (gameplayResized === false) return false;
+      const inputViewport = this.#callChecked(
+        sequence,
+        'resize',
+        () => gameplayRenderer.getInputViewport(),
+        'ProductRenderer.gameplayRenderer.getInputViewport()',
+      );
+      const resized = this.#callChecked(
+        sequence,
+        'resize',
+        () => uiSurface.resize(viewport, inputViewport),
+        'ProductRenderer.uiSurface.resize()',
+      );
+      return resized !== false;
+    });
   }
 
   getInputViewport() {
-    this.#assertUsable();
-    const [gameplayRenderer, uiSurface] = this.#resources();
-    const gameplayViewport = synchronousResult(
-      gameplayRenderer.getInputViewport(),
-      'ProductRenderer.gameplayRenderer.getInputViewport()',
-    );
-    return synchronousResult(
-      uiSurface.getInputViewport(gameplayViewport),
-      'ProductRenderer.uiSurface.getInputViewport()',
-    );
+    return this.#runOperation('input-viewport-read', (sequence) => {
+      this.#assertUsable();
+      const [gameplayRenderer, uiSurface] = this.#resources();
+      const gameplayViewport = this.#callChecked(
+        sequence,
+        'input-viewport-read',
+        () => gameplayRenderer.getInputViewport(),
+        'ProductRenderer.gameplayRenderer.getInputViewport()',
+      );
+      return this.#callChecked(
+        sequence,
+        'input-viewport-read',
+        () => uiSurface.getInputViewport(gameplayViewport),
+        'ProductRenderer.uiSurface.getInputViewport()',
+      );
+    });
   }
 
   hitTestUi(point: unknown, viewport: unknown, viewModel: unknown) {
-    this.#assertUsable();
-    const [, uiSurface] = this.#resources();
-    return synchronousResult(
-      uiSurface.hitTestUi(point, viewport, viewModel),
-      'ProductRenderer.uiSurface.hitTestUi()',
-    );
+    return this.#runOperation('ui-hit-test', (sequence) => {
+      this.#assertUsable();
+      const [, uiSurface] = this.#resources();
+      return this.#callChecked(
+        sequence,
+        'ui-hit-test',
+        () => uiSurface.hitTestUi(point, viewport, viewModel),
+        'ProductRenderer.uiSurface.hitTestUi()',
+      );
+    });
   }
 
   bindUiIntent(handlers: unknown) {
-    this.#assertUsable();
-    const [, uiSurface] = this.#resources();
-    const cleanup = synchronousResult(
-      uiSurface.bindIntent(handlers),
-      'ProductRenderer.uiSurface.bindIntent()',
-    );
-    if (typeof cleanup !== 'function') {
-      throw new TypeError('ProductRenderer.uiSurface.bindIntent() 必须返回 cleanup 函数。');
-    }
-    return cleanup;
+    return this.#runOperation('intent-bind', (sequence) => {
+      this.#assertUsable();
+      const [, uiSurface] = this.#resources();
+      const cleanup = this.#callChecked(
+        sequence,
+        'intent-bind',
+        () => uiSurface.bindIntent(handlers),
+        'ProductRenderer.uiSurface.bindIntent()',
+      );
+      if (typeof cleanup !== 'function') {
+        throw new TypeError('ProductRenderer.uiSurface.bindIntent() 必须返回 cleanup 函数。');
+      }
+      return cleanup;
+    });
   }
 
   handleContextLost(event?: unknown) {
-    if (
-      this.#state === PRODUCT_RENDERER_STATE.DISPOSED
-      || this.#state === PRODUCT_RENDERER_STATE.FAILED
-      || this.#state === PRODUCT_RENDERER_STATE.DISPOSE_INCOMPLETE
-    ) return false;
-    const gameplayRenderer = this.#gameplayRenderer;
-    const handled = booleanResult(
-      gameplayRenderer?.handleContextLost(event) ?? false,
-      'ProductRenderer.gameplayRenderer.handleContextLost()',
-    );
-    this.#contextLost = true;
-    this.#state = PRODUCT_RENDERER_STATE.CONTEXT_LOST;
-    return handled;
+    return this.#runOperation('context-lost', (sequence) => {
+      if (
+        this.#state === PRODUCT_RENDERER_STATE.DISPOSED
+        || this.#state === PRODUCT_RENDERER_STATE.FAILED
+        || this.#state === PRODUCT_RENDERER_STATE.DISPOSE_INCOMPLETE
+      ) return false;
+      const gameplayRenderer = this.#gameplayRenderer;
+      const handled = booleanResult(
+        gameplayRenderer === null
+          ? false
+          : this.#callChecked(
+            sequence,
+            'context-lost',
+            () => gameplayRenderer.handleContextLost(event),
+            'ProductRenderer.gameplayRenderer.handleContextLost()',
+          ),
+        'ProductRenderer.gameplayRenderer.handleContextLost()',
+      );
+      this.#contextLost = true;
+      this.#state = PRODUCT_RENDERER_STATE.CONTEXT_LOST;
+      return handled;
+    });
   }
 
   handleContextRestored() {
-    if (!this.#contextLost || this.#state !== PRODUCT_RENDERER_STATE.CONTEXT_LOST) return false;
-    const gameplayRenderer = this.#gameplayRenderer;
-    if (gameplayRenderer === null) return false;
-    const restored = booleanResult(
-      gameplayRenderer.handleContextRestored(),
-      'ProductRenderer.gameplayRenderer.handleContextRestored()',
-    );
-    if (restored) {
-      this.#contextLost = false;
-      this.#state = PRODUCT_RENDERER_STATE.READY;
-    }
-    return restored;
+    return this.#runOperation('context-restored', (sequence) => {
+      if (!this.#contextLost || this.#state !== PRODUCT_RENDERER_STATE.CONTEXT_LOST) return false;
+      const gameplayRenderer = this.#gameplayRenderer;
+      if (gameplayRenderer === null) return false;
+      const restored = booleanResult(
+        this.#callChecked(
+          sequence,
+          'context-restored',
+          () => gameplayRenderer.handleContextRestored(),
+          'ProductRenderer.gameplayRenderer.handleContextRestored()',
+        ),
+        'ProductRenderer.gameplayRenderer.handleContextRestored()',
+      );
+      if (restored) {
+        this.#contextLost = false;
+        this.#state = PRODUCT_RENDERER_STATE.READY;
+      }
+      return restored;
+    });
   }
 
   getDebugSnapshot() {
-    return Object.freeze({
-      state: this.#state,
-      contextLost: this.#contextLost,
-      loaded: this.#loaded,
-      rendering: this.#rendering,
-      lastError: this.#lastError,
-      gameplay: synchronousResult(
-        this.#gameplayRenderer?.getDebugSnapshot?.() ?? null,
-        'ProductRenderer.gameplayRenderer.getDebugSnapshot()',
-      ),
-      ui: synchronousResult(
-        this.#uiSurface?.getDebugSnapshot?.() ?? null,
-        'ProductRenderer.uiSurface.getDebugSnapshot()',
-      ),
+    return this.#runOperation('debug-read', (sequence) => {
+      const gameplayDebug = this.#gameplayRenderer?.getDebugSnapshot ?? null;
+      const uiDebug = this.#uiSurface?.getDebugSnapshot ?? null;
+      return Object.freeze({
+        state: this.#state,
+        contextLost: this.#contextLost,
+        loaded: this.#loaded,
+        rendering: this.#operation === 'render',
+        lastError: this.#lastError,
+        gameplay: gameplayDebug === null
+          ? null
+          : this.#callChecked(
+            sequence,
+            'debug-read',
+            gameplayDebug,
+            'ProductRenderer.gameplayRenderer.getDebugSnapshot()',
+          ),
+        ui: uiDebug === null
+          ? null
+          : this.#callChecked(
+            sequence,
+            'debug-read',
+            uiDebug,
+            'ProductRenderer.uiSurface.getDebugSnapshot()',
+          ),
+      });
     });
   }
 
   getPerformanceSnapshot() {
-    this.#assertUsable();
-    return synchronousResult(
-      this.#gameplayRenderer?.getPerformanceSnapshot?.() ?? null,
-      'ProductRenderer.gameplayRenderer.getPerformanceSnapshot()',
-    );
+    return this.#runOperation('performance-read', (sequence) => {
+      this.#assertUsable();
+      const read = this.#gameplayRenderer?.getPerformanceSnapshot ?? null;
+      return read === null
+        ? null
+        : this.#callChecked(
+          sequence,
+          'performance-read',
+          read,
+          'ProductRenderer.gameplayRenderer.getPerformanceSnapshot()',
+        );
+    });
   }
 
   dispose() {
-    if (this.#state === PRODUCT_RENDERER_STATE.DISPOSED) return;
-    if (this.#rendering) throw new Error('render() 期间不能销毁 ProductRenderer。');
-    this.#loadGeneration += 1;
-    const errors = [];
-    if (this.#uiSurface !== null) {
-      try {
-        rejectThenable(
-          this.#uiSurface.dispose(),
-          'ProductRenderer.uiSurface.dispose()',
-        );
-        this.#uiSurface = null;
-      } catch (error) {
-        errors.push(error);
+    return this.#runOperation('dispose', (sequence) => {
+      if (this.#state === PRODUCT_RENDERER_STATE.DISPOSED) return;
+      this.#loadGeneration += 1;
+      const errors: unknown[] = [];
+      const uiSurface = this.#uiSurface;
+      if (uiSurface !== null) {
+        try {
+          this.#callChecked(
+            sequence,
+            'dispose',
+            uiSurface.dispose,
+            'ProductRenderer.uiSurface.dispose()',
+          );
+          this.#uiSurface = null;
+        } catch (error) {
+          errors.push(error);
+        }
       }
-    }
-    if (this.#gameplayRenderer !== null) {
-      try {
-        rejectThenable(
-          this.#gameplayRenderer.dispose(),
-          'ProductRenderer.gameplayRenderer.dispose()',
-        );
-        this.#gameplayRenderer = null;
-      } catch (error) {
-        errors.push(error);
+      if (this.#reentryError === null) {
+        const gameplayRenderer = this.#gameplayRenderer;
+        if (gameplayRenderer !== null) {
+          try {
+            this.#callChecked(
+              sequence,
+              'dispose',
+              gameplayRenderer.dispose,
+              'ProductRenderer.gameplayRenderer.dispose()',
+            );
+            this.#gameplayRenderer = null;
+          } catch (error) {
+            errors.push(error);
+          }
+        }
       }
-    }
-    const failure = cleanupFailure(errors);
-    if (failure) {
-      this.#lastError = failure;
-      this.#state = PRODUCT_RENDERER_STATE.DISPOSE_INCOMPLETE;
-      throw failure;
-    }
-    this.#lastError = null;
-    this.#contextLost = false;
-    this.#loaded = false;
-    this.#state = PRODUCT_RENDERER_STATE.DISPOSED;
+      const failure = cleanupFailure(errors);
+      if (failure) {
+        this.#lastError = failure;
+        this.#state = PRODUCT_RENDERER_STATE.DISPOSE_INCOMPLETE;
+        throw failure;
+      }
+      this.#lastError = null;
+      this.#contextLost = false;
+      this.#loaded = false;
+      this.#state = PRODUCT_RENDERER_STATE.DISPOSED;
+    });
   }
 }
+
+export const PRODUCT_RENDERER_OPERATION_POLICY = Object.freeze({
+  loadPromisePublishesBeforeChildLoadInvocation: true as const,
+  asynchronousLoadUsesGameplayUiAndPublicationSegments: true as const,
+  contextLossAndDisposeRemainAvailableBetweenAsyncLoadSegments: true as const,
+  stickyReentryUsesMonotonicSequenceAndFirstError: true as const,
+  childCallbacksCheckedBeforeCrossChildAndStatePublication: true as const,
+  publicStateDebugAndPerformanceReadsRejectIntermediateOperations: true as const,
+  cleanupReentryRetainsCurrentAndLaterRendererOwners: true as const,
+  ordinaryCleanupFailureRetainsExactRetryOwner: true as const,
+  frameCompositionContextAndCleanupOrderRemainUnchanged: true as const,
+  validationStatus: 'not-run' as const,
+});

@@ -6,8 +6,16 @@ import {
   type PresentationAssetDefinition,
   type PresentationAssetRegistryPort,
 } from '@number-strategy-jump/arena-presentation-contracts';
-import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
+import {
+  assertSynchronousReturn as rejectThenable,
+  cloneFrozenData,
+} from '@number-strategy-jump/arena-contracts';
 import { ARENA_PRESENTATION_ASSET_PROVIDER_ID } from '@number-strategy-jump/arena-presentation-runtime';
+import {
+  ProgrammaticCharacterBuildConstructionCleanupError,
+  ProgrammaticCharacterViewConstructionCleanupError,
+  type ProgrammaticCharacterConstructionCleanupDebt,
+} from './programmatic-character-view.js';
 
 interface ProgrammaticCharacterViewOptions {
   readonly participantId: string;
@@ -66,7 +74,13 @@ export class ProgrammaticCharacterViewFactory {
   readonly #assetRegistry: PresentationAssetRegistryPort;
   readonly #actionPresentations: Readonly<Record<string, object>>;
   readonly #createView: CreateView;
+  readonly #constructionCleanupDebts = new Set<ProgrammaticCharacterConstructionCleanupDebt>();
   #creating = false;
+  #cleaning = false;
+  #cleanupReentryDetected = false;
+  #destroyRequested = false;
+  #failedError: unknown = null;
+  #disposed = false;
 
   constructor(options: unknown) {
     assertKnownKeys(options, OPTION_KEYS, 'ProgrammaticCharacterViewFactory options');
@@ -84,8 +98,24 @@ export class ProgrammaticCharacterViewFactory {
     Object.freeze(this);
   }
 
-  create(options: unknown): unknown {
+  #assertUsable(): void {
+    if (this.#cleaning) {
+      this.#cleanupReentryDetected = true;
+      throw new Error('ProgrammaticCharacterViewFactory 清理回调不可反调公开API。');
+    }
+    if (this.#disposed || this.#destroyRequested) {
+      throw new Error('ProgrammaticCharacterViewFactory 已销毁。');
+    }
+    if (this.#failedError) {
+      const error = new Error('ProgrammaticCharacterViewFactory 已失败。');
+      error.cause = this.#failedError;
+      throw error;
+    }
     if (this.#creating) throw new Error('ProgrammaticCharacterViewFactory 不允许 create 回调重入。');
+  }
+
+  create(options: unknown): unknown {
+    this.#assertUsable();
     assertKnownKeys(options, CREATE_KEYS, 'ProgrammaticCharacterViewFactory create options');
     const participantId = nonEmptyString(
       ownData(options, 'participantId', 'ProgrammaticCharacterViewFactory create options'),
@@ -109,8 +139,76 @@ export class ProgrammaticCharacterViewFactory {
         assetDefinition: asset,
         actionPresentations: this.#actionPresentations,
       }));
+    } catch (error) {
+      if (
+        error instanceof ProgrammaticCharacterViewConstructionCleanupError
+        || error instanceof ProgrammaticCharacterBuildConstructionCleanupError
+      ) {
+        this.#constructionCleanupDebts.add(error);
+        this.#failedError = error;
+      }
+      throw error;
     } finally {
       this.#creating = false;
     }
   }
+
+  getDebugSnapshot(): Readonly<Record<string, unknown>> {
+    this.#assertUsable();
+    return Object.freeze({
+      constructionCleanupDebtCount: this.#constructionCleanupDebts.size,
+    });
+  }
+
+  dispose(): void {
+    if (this.#cleaning) {
+      this.#cleanupReentryDetected = true;
+      throw new Error('ProgrammaticCharacterViewFactory 清理不可重入。');
+    }
+    if (this.#disposed) return;
+    if (this.#creating) throw new Error('ProgrammaticCharacterViewFactory create 期间不能销毁。');
+    this.#destroyRequested = true;
+    this.#cleaning = true;
+    this.#cleanupReentryDetected = false;
+    const errors: unknown[] = [];
+    try {
+      for (const debt of [...this.#constructionCleanupDebts]) {
+        try {
+          rejectThenable(
+            debt.retryCleanup(),
+            'ProgrammaticCharacterViewFactory construction debt.retryCleanup()',
+          );
+          if (this.#cleanupReentryDetected) {
+            throw new Error('ProgrammaticCharacterViewFactory 构造债务清理发生Factory反调。');
+          }
+          const cleanupComplete = debt.cleanupComplete;
+          if (this.#cleanupReentryDetected) {
+            throw new Error('ProgrammaticCharacterViewFactory 构造债务完成确认发生Factory反调。');
+          }
+          if (!cleanupComplete) throw new Error('程序化角色View构造清理依赖尚未收敛。');
+          this.#constructionCleanupDebts.delete(debt);
+        } catch (error) {
+          errors.push(error);
+          break;
+        }
+      }
+      this.#disposed = this.#constructionCleanupDebts.size === 0;
+    } finally {
+      this.#cleaning = false;
+    }
+    if (errors.length > 0) {
+      throw new AggregateError(errors, 'ProgrammaticCharacterViewFactory 清理未完整完成。');
+    }
+  }
 }
+
+export const PROGRAMMATIC_CHARACTER_VIEW_FACTORY_LIFECYCLE_V1 = Object.freeze({
+  failedConstructionCleanupRetainsFactoryOwnership: true as const,
+  incompleteConstructionCleanupClosesFactoryToCreate: true as const,
+  factoryDisposeRetriesOnlyIncompleteConstructionDebt: true as const,
+  failedBuilderCleanupRetainsFactoryOwnership: true as const,
+  currentDebtFailureRetainsCurrentAndLaterDebts: true as const,
+  cleanupCallbacksMustCompleteSynchronously: true as const,
+  swallowedFactoryReentryRejectsDebtCommit: true as const,
+  validationStatus: 'not-run' as const,
+});

@@ -86,6 +86,35 @@ function snapshotOptionalDestroy(value: unknown): (() => unknown) | null {
   }
 }
 
+type ProductMatchCoordinatorOperation =
+  | 'state-read'
+  | 'prepare-request'
+  | 'prepare-factory-create'
+  | 'prepare-adopt'
+  | 'prepare-reject'
+  | 'prepare-finalize'
+  | 'pause-transition'
+  | 'start-read-frame'
+  | 'step-read-frame'
+  | 'match-read-frame-read'
+  | 'result-read'
+  | 'release'
+  | 'reset-failure'
+  | 'destroy'
+  | 'snapshot-read';
+
+export const PRODUCT_MATCH_COORDINATOR_OPERATION_GUARD_V1 = Object.freeze({
+  operationGuardPrecedesStateAndInputValidation: true,
+  asyncPrepareOwnsOnlySynchronousCommitSlices: true,
+  factoryAndRuntimeCallbacksCheckedBeforeAuthorityCommit: true,
+  snapshotCallbacksCheckedBeforePublication: true,
+  swallowedCallbackReentryStopsLaterAuthorityMutation: true,
+  cleanupOwnershipRetainedWhenReentryInterruptsRelease: true,
+  postCallbackReentryFailsClosed: true,
+  destroyChecksOperationBeforeCleanupMutation: true,
+  validationStatus: 'not-run',
+} as const);
+
 export class ProductMatchCoordinator {
   #factory: Readonly<ProductMatchFactoryPort> | null;
   #runtime: Readonly<ProductMatchRuntimePort> | null = null;
@@ -98,7 +127,9 @@ export class ProductMatchCoordinator {
   #result: ProductMatchResult | null = null;
   #lastError: Error | null = null;
   #cleanupIncomplete = false;
-  #transitioning = false;
+  #operation: ProductMatchCoordinatorOperation | null = null;
+  #reentrySequence = 0;
+  #reentryError: Error | null = null;
 
   constructor(options: ProductMatchCoordinatorOptions) {
     this.#factory = normalizeOptions(options);
@@ -106,29 +137,81 @@ export class ProductMatchCoordinator {
   }
 
   get state(): ProductMatchCoordinatorState {
-    return this.#state;
+    return this.#runOperation('state-read', () => this.#state);
   }
 
-  #begin(): void {
-    if (this.#transitioning) throw new Error('ProductMatchCoordinator 操作不可重入。');
-    this.#transitioning = true;
+  #recordReentry(requestedOperation: ProductMatchCoordinatorOperation): Error {
+    this.#reentrySequence += 1;
+    if (this.#reentryError === null) {
+      this.#reentryError = new Error(
+        `ProductMatchCoordinator ${String(this.#operation)}期间不可重入${requestedOperation}。`,
+      );
+    }
+    return this.#reentryError;
   }
 
-  #end(): void {
-    this.#transitioning = false;
+  #assertReentryFree(
+    sequence: number,
+    operation: ProductMatchCoordinatorOperation,
+    failClosed: boolean,
+  ): void {
+    if (this.#reentrySequence === sequence) return;
+    if (failClosed && this.#state !== PRODUCT_MATCH_COORDINATOR_STATE.DESTROYED) {
+      this.#state = PRODUCT_MATCH_COORDINATOR_STATE.FAILED;
+    }
+    throw this.#reentryError
+      ?? new Error(`ProductMatchCoordinator ${operation}期间发生重入。`);
   }
 
-  #runTransition<T>(operation: () => T): T {
-    this.#begin();
+  #runOperation<T>(
+    operation: ProductMatchCoordinatorOperation,
+    callback: () => T,
+    options: Readonly<{ failClosedOnReentry?: boolean }> = {},
+  ): T {
+    if (this.#operation !== null) throw this.#recordReentry(operation);
+    this.#operation = operation;
+    const sequence = this.#reentrySequence;
     try {
-      return operation();
+      try {
+        const result = callback();
+        this.#assertReentryFree(
+          sequence,
+          operation,
+          options.failClosedOnReentry === true,
+        );
+        return result;
+      } catch (error) {
+        if (
+          options.failClosedOnReentry === true
+          && this.#reentrySequence !== sequence
+          && this.#state !== PRODUCT_MATCH_COORDINATOR_STATE.DESTROYED
+        ) this.#state = PRODUCT_MATCH_COORDINATOR_STATE.FAILED;
+        throw error;
+      }
     } finally {
-      this.#end();
+      this.#operation = null;
+      this.#reentryError = null;
     }
   }
 
-  #snapshot(): ProductMatchCoordinatorSnapshot {
+  #assertAuthorityCommitReady(
+    operation: ProductMatchCoordinatorOperation,
+    failClosedOnReentry = false,
+  ): void {
+    if (this.#reentryError !== null) {
+      if (failClosedOnReentry && this.#state !== PRODUCT_MATCH_COORDINATOR_STATE.DESTROYED) {
+        this.#state = PRODUCT_MATCH_COORDINATOR_STATE.FAILED;
+      }
+      throw this.#reentryError;
+    }
+    if (this.#operation !== operation) {
+      throw new Error(`ProductMatchCoordinator ${operation}缺少权威操作所有权。`);
+    }
+  }
+
+  #snapshot(operation: ProductMatchCoordinatorOperation): ProductMatchCoordinatorSnapshot {
     const factoryHasPendingCleanup = this.#factory?.hasPendingCleanup?.() ?? false;
+    this.#assertAuthorityCommitReady(operation, true);
     return Object.freeze({
       schemaVersion: PRODUCT_MATCH_COORDINATOR_SNAPSHOT_SCHEMA_VERSION,
       state: this.#state,
@@ -165,11 +248,13 @@ export class ProductMatchCoordinator {
   #destroyCandidateCleanup(
     destroy: (() => unknown) | null,
     message: string,
+    operation: ProductMatchCoordinatorOperation,
   ): Error | null {
     if (!destroy) return null;
     try {
       const result = destroy();
       containRejectedAsyncReturn(result, message);
+      this.#assertAuthorityCommitReady(operation, true);
       return null;
     } catch (error) {
       this.#cleanupRetry = destroy;
@@ -180,7 +265,7 @@ export class ProductMatchCoordinator {
   }
 
   prepare(): Promise<ProductMatchCoordinatorSnapshot> {
-    return this.#runTransition(() => {
+    return this.#runOperation('prepare-request', () => {
       this.#assertUsable();
       if (this.#state === PRODUCT_MATCH_COORDINATOR_STATE.PREPARING) {
         if (!this.#preparePromise) throw new Error('ProductMatchCoordinator prepare 状态损坏。');
@@ -197,50 +282,66 @@ export class ProductMatchCoordinator {
       let candidate: unknown = null;
       let candidateCleanup: (() => unknown) | null = null;
       const operation: Promise<ProductMatchCoordinatorSnapshot> = Promise.resolve()
-        .then(() => this.#runTransition(() => resolveSyncOrNativePromise(
-          this.#requireFactory().create(),
-          'ProductMatchFactory.create()',
-        )))
-        .then(({ value: runtimeValue }) => this.#runTransition(() => {
+        .then(() => this.#runOperation('prepare-factory-create', () => {
+          const created = this.#requireFactory().create();
+          this.#assertAuthorityCommitReady('prepare-factory-create', true);
+          return resolveSyncOrNativePromise(created, 'ProductMatchFactory.create()');
+        }, { failClosedOnReentry: true }))
+        .then(({ value: runtimeValue }) => this.#runOperation('prepare-adopt', () => {
           candidate = runtimeValue;
           // Take ownership of the raw candidate's cleanup method before any
           // Runtime port validation or publicInfo call can execute user code.
           candidateCleanup = snapshotOptionalDestroy(candidate);
           const runtime = createProductMatchRuntimePort(runtimeValue);
+          this.#assertAuthorityCommitReady('prepare-adopt', true);
           if (
             this.#generation !== generation
             || this.#state === PRODUCT_MATCH_COORDINATOR_STATE.DESTROYED
           ) {
-            this.#destroyCandidateCleanup(candidateCleanup, '已取消 ProductMatchRuntime 清理失败');
+            this.#destroyCandidateCleanup(
+              candidateCleanup,
+              '已取消 ProductMatchRuntime 清理失败',
+              'prepare-adopt',
+            );
             candidateCleanup = null;
             candidate = null;
-            return this.#snapshot();
+            return this.#snapshot('prepare-adopt');
           }
-          if (this.#pauseRequested) runtime.setPaused(true);
+          if (this.#pauseRequested) {
+            runtime.setPaused(true);
+            this.#assertAuthorityCommitReady('prepare-adopt', true);
+          }
           const publicInfo = createProductPublicMatchInfo(runtime.getPublicInfo());
+          this.#assertAuthorityCommitReady('prepare-adopt', true);
           this.#runtime = runtime;
           candidateCleanup = null;
           candidate = null;
           this.#publicInfo = publicInfo;
           this.#state = PRODUCT_MATCH_COORDINATOR_STATE.READY;
           this.#cleanupIncomplete = false;
-          return this.#snapshot();
-        }))
-        .catch((error: unknown) => this.#runTransition(() => {
+          return this.#snapshot('prepare-adopt');
+        }, { failClosedOnReentry: true }))
+        .catch((error: unknown) => this.#runOperation('prepare-reject', () => {
           if (
             this.#generation !== generation
             || this.#state === PRODUCT_MATCH_COORDINATOR_STATE.DESTROYED
           ) {
-            this.#destroyCandidateCleanup(candidateCleanup, '已取消 ProductMatchRuntime 清理失败');
+            this.#destroyCandidateCleanup(
+              candidateCleanup,
+              '已取消 ProductMatchRuntime 清理失败',
+              'prepare-reject',
+            );
             candidateCleanup = null;
             candidate = null;
-            return this.#snapshot();
+            return this.#snapshot('prepare-reject');
           }
           const failure = normalizeThrownError(error, 'ProductMatchCoordinator 准备失败');
           const cleanupFailure = this.#destroyCandidateCleanup(
             candidateCleanup,
             '准备失败后的 ProductMatchRuntime 清理失败',
+            'prepare-reject',
           );
+          this.#assertAuthorityCommitReady('prepare-reject', true);
           candidateCleanup = null;
           candidate = null;
           this.#state = PRODUCT_MATCH_COORDINATOR_STATE.FAILED;
@@ -250,28 +351,36 @@ export class ProductMatchCoordinator {
             'ProductMatchCoordinator 准备失败且清理未完整完成。',
           );
           throw this.#lastError;
-        }))
+        }, { failClosedOnReentry: true }))
         .finally(() => {
-          if (this.#preparePromise === operation) this.#preparePromise = null;
+          this.#runOperation('prepare-finalize', () => {
+            if (this.#preparePromise === operation) this.#preparePromise = null;
+          });
         });
       this.#preparePromise = operation;
       return operation;
-    });
+    }, { failClosedOnReentry: true });
   }
 
   setPaused(paused: boolean): ProductMatchCoordinatorSnapshot {
-    return this.#runTransition(() => {
-      if (this.#state === PRODUCT_MATCH_COORDINATOR_STATE.DESTROYED) return this.#snapshot();
+    return this.#runOperation('pause-transition', () => {
+      if (this.#state === PRODUCT_MATCH_COORDINATOR_STATE.DESTROYED) {
+        return this.#snapshot('pause-transition');
+      }
       this.#assertUsable();
       if (typeof paused !== 'boolean') throw new TypeError('paused 必须是布尔值。');
-      this.#pauseRequested = paused;
       if (
         this.#state === PRODUCT_MATCH_COORDINATOR_STATE.IDLE
         || this.#state === PRODUCT_MATCH_COORDINATOR_STATE.PREPARING
         || this.#state === PRODUCT_MATCH_COORDINATOR_STATE.RESULT
-      ) return this.#snapshot();
+      ) {
+        this.#pauseRequested = paused;
+        return this.#snapshot('pause-transition');
+      }
       try {
         this.#requireRuntime().setPaused(paused);
+        this.#assertAuthorityCommitReady('pause-transition', true);
+        this.#pauseRequested = paused;
         if (
           this.#state === PRODUCT_MATCH_COORDINATOR_STATE.RUNNING
           || this.#state === PRODUCT_MATCH_COORDINATOR_STATE.PAUSED
@@ -280,32 +389,41 @@ export class ProductMatchCoordinator {
             ? PRODUCT_MATCH_COORDINATOR_STATE.PAUSED
             : PRODUCT_MATCH_COORDINATOR_STATE.RUNNING;
         }
-        return this.#snapshot();
+        return this.#snapshot('pause-transition');
       } catch (error) {
         this.#state = PRODUCT_MATCH_COORDINATOR_STATE.FAILED;
         this.#lastError = normalizeThrownError(error, 'ProductMatchCoordinator 暂停切换失败');
         throw this.#lastError;
       }
-    });
+    }, { failClosedOnReentry: true });
   }
 
   startWithReadFrame(): ProductMatchCoordinatorReadFrameStartOutcome {
-    return this.#runTransition(() => {
+    return this.#runOperation('start-read-frame', () => {
       this.#assertUsable();
       const runtime = this.#requireRuntime();
       try {
         if (this.#state === PRODUCT_MATCH_COORDINATOR_STATE.READY) {
           const outcome = runtime.startWithReadFrame();
+          this.#assertAuthorityCommitReady('start-read-frame', true);
           this.#state = this.#pauseRequested
             ? PRODUCT_MATCH_COORDINATOR_STATE.PAUSED
             : PRODUCT_MATCH_COORDINATOR_STATE.RUNNING;
-          return Object.freeze({ readFrame: outcome.readFrame, snapshot: this.#snapshot() });
+          return Object.freeze({
+            readFrame: outcome.readFrame,
+            snapshot: this.#snapshot('start-read-frame'),
+          });
         }
         if (
           this.#state === PRODUCT_MATCH_COORDINATOR_STATE.RUNNING
           || this.#state === PRODUCT_MATCH_COORDINATOR_STATE.PAUSED
         ) {
-          return Object.freeze({ readFrame: runtime.getReadFrame(), snapshot: this.#snapshot() });
+          const readFrame = runtime.getReadFrame();
+          this.#assertAuthorityCommitReady('start-read-frame', true);
+          return Object.freeze({
+            readFrame,
+            snapshot: this.#snapshot('start-read-frame'),
+          });
         }
         throw new Error(`ProductMatchCoordinator 无法从 ${this.#state} start V2 read frame。`);
       } catch (error) {
@@ -313,25 +431,29 @@ export class ProductMatchCoordinator {
         this.#lastError = normalizeThrownError(error, 'ProductMatchCoordinator 启动 V2 read frame 失败');
         throw this.#lastError;
       }
-    });
+    }, { failClosedOnReentry: true });
   }
 
   stepWithReadFrame(playerFrame: unknown = null): ProductMatchCoordinatorReadFrameStepOutcome {
-    return this.#runTransition(() => {
+    return this.#runOperation('step-read-frame', () => {
       this.#assertUsable();
       const runtime = this.#requireRuntime();
       if (this.#state === PRODUCT_MATCH_COORDINATOR_STATE.PAUSED) {
+        const readFrame = runtime.getReadFrame();
+        this.#assertAuthorityCommitReady('step-read-frame', true);
         return Object.freeze({
           events: EMPTY_EVENTS,
-          readFrame: runtime.getReadFrame(),
+          readFrame,
           input: null,
           result: null,
         });
       }
       if (this.#state === PRODUCT_MATCH_COORDINATOR_STATE.RESULT) {
+        const readFrame = runtime.getReadFrame();
+        this.#assertAuthorityCommitReady('step-read-frame', true);
         return Object.freeze({
           events: EMPTY_EVENTS,
-          readFrame: runtime.getReadFrame(),
+          readFrame,
           input: null,
           result: this.#result,
         });
@@ -341,7 +463,9 @@ export class ProductMatchCoordinator {
       }
       try {
         const outcome = runtime.stepWithReadFrame(playerFrame);
+        this.#assertAuthorityCommitReady('step-read-frame', true);
         const runtimeResult = runtime.getResult();
+        this.#assertAuthorityCommitReady('step-read-frame', true);
         if (outcome.result !== runtimeResult) {
           throw new Error('ProductMatchCoordinator V2 result 与 Runtime result 不一致。');
         }
@@ -355,30 +479,34 @@ export class ProductMatchCoordinator {
         this.#lastError = normalizeThrownError(error, 'ProductMatchCoordinator V2 step 失败');
         throw this.#lastError;
       }
-    });
+    }, { failClosedOnReentry: true });
   }
 
   getMatchReadFrame(): ProductMatchReadFrameStartOutcome['readFrame'] | null {
-    return this.#runTransition(() => {
+    return this.#runOperation('match-read-frame-read', () => {
       this.#assertUsable();
       if (this.#runtime === null) return null;
-      return this.#runtime.getReadFrame();
-    });
+      const readFrame = this.#runtime.getReadFrame();
+      this.#assertAuthorityCommitReady('match-read-frame-read', true);
+      return readFrame;
+    }, { failClosedOnReentry: true });
   }
 
   getResult(): ProductMatchResult | null {
-    return this.#runTransition(() => (
+    return this.#runOperation('result-read', () => (
       this.#state === PRODUCT_MATCH_COORDINATOR_STATE.DESTROYED ? null : this.#result
     ));
   }
 
-  #releaseRuntime(): void {
+  #releaseRuntime(operation: ProductMatchCoordinatorOperation): void {
     if (this.#runtime) {
       this.#runtime.destroy();
+      this.#assertAuthorityCommitReady(operation, true);
       this.#runtime = null;
     } else if (this.#cleanupRetry) {
       const cleanupRetry = this.#cleanupRetry;
       containRejectedAsyncReturn(cleanupRetry(), 'ProductMatchRuntime 重试清理');
+      this.#assertAuthorityCommitReady(operation, true);
       this.#cleanupRetry = null;
     } else {
       return;
@@ -388,7 +516,7 @@ export class ProductMatchCoordinator {
     this.#cleanupIncomplete = false;
   }
 
-  #release(): ProductMatchCoordinatorSnapshot {
+  #release(operation: 'release' | 'reset-failure'): ProductMatchCoordinatorSnapshot {
     if (this.#state === PRODUCT_MATCH_COORDINATOR_STATE.DESTROYED) {
       throw new Error('ProductMatchCoordinator 已销毁。');
     }
@@ -396,13 +524,15 @@ export class ProductMatchCoordinator {
       throw new Error('准备中的 ProductMatchCoordinator 不能同步释放。');
     }
     try {
-      this.#releaseRuntime();
-      this.#factory?.retryPendingCleanup?.();
+      this.#releaseRuntime(operation);
+      const retryResult = this.#factory?.retryPendingCleanup?.();
+      containRejectedAsyncReturn(retryResult, 'ProductMatchFactory.retryPendingCleanup');
+      this.#assertAuthorityCommitReady(operation, true);
       this.#cleanupIncomplete = false;
       this.#state = PRODUCT_MATCH_COORDINATOR_STATE.IDLE;
       this.#pauseRequested = false;
       this.#lastError = null;
-      return this.#snapshot();
+      return this.#snapshot(operation);
     } catch (error) {
       this.#state = PRODUCT_MATCH_COORDINATOR_STATE.FAILED;
       this.#cleanupIncomplete = true;
@@ -412,26 +542,33 @@ export class ProductMatchCoordinator {
   }
 
   release(): ProductMatchCoordinatorSnapshot {
-    return this.#runTransition(() => this.#release());
-  }
-
-  resetFailure(): ProductMatchCoordinatorSnapshot {
-    return this.#runTransition(() => {
-      if (this.#state !== PRODUCT_MATCH_COORDINATOR_STATE.FAILED) {
-        throw new Error('只有失败的 ProductMatchCoordinator 可以 resetFailure。');
-      }
-      return this.#release();
+    return this.#runOperation('release', () => this.#release('release'), {
+      failClosedOnReentry: true,
     });
   }
 
+  resetFailure(): ProductMatchCoordinatorSnapshot {
+    return this.#runOperation('reset-failure', () => {
+      if (this.#state !== PRODUCT_MATCH_COORDINATOR_STATE.FAILED) {
+        throw new Error('只有失败的 ProductMatchCoordinator 可以 resetFailure。');
+      }
+      return this.#release('reset-failure');
+    }, { failClosedOnReentry: true });
+  }
+
   destroy(): void {
-    this.#runTransition(() => {
+    this.#runOperation('destroy', () => {
       this.#generation += 1;
       this.#pauseRequested = true;
       this.#state = PRODUCT_MATCH_COORDINATOR_STATE.DESTROYED;
       try {
-        this.#factory?.retryPendingCleanup?.();
-        this.#releaseRuntime();
+        const retryResult = this.#factory?.retryPendingCleanup?.();
+        containRejectedAsyncReturn(retryResult, 'ProductMatchFactory.retryPendingCleanup');
+        this.#assertAuthorityCommitReady('destroy', true);
+        this.#releaseRuntime('destroy');
+        const destroyResult = this.#factory?.destroy?.();
+        containRejectedAsyncReturn(destroyResult, 'ProductMatchFactory.destroy');
+        this.#assertAuthorityCommitReady('destroy', true);
         this.#factory = null;
         this.#cleanupIncomplete = false;
         this.#lastError = null;
@@ -440,10 +577,12 @@ export class ProductMatchCoordinator {
         this.#lastError = normalizeThrownError(error, 'ProductMatchCoordinator 销毁失败');
         throw this.#lastError;
       }
-    });
+    }, { failClosedOnReentry: true });
   }
 
   getSnapshot(): ProductMatchCoordinatorSnapshot {
-    return this.#runTransition(() => this.#snapshot());
+    return this.#runOperation('snapshot-read', () => this.#snapshot('snapshot-read'), {
+      failClosedOnReentry: true,
+    });
   }
 }

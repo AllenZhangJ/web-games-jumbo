@@ -2,8 +2,7 @@ import {
   ARENA_ACTION_PHASE,
   ARENA_MATCH_PHASE,
   ARENA_PARTICIPANT_STATUS,
-  ARENA_TICK_RATE,
-} from '@number-strategy-jump/arena-match';
+} from '@number-strategy-jump/arena-contracts';
 import {
   activeWindThreat,
   clearanceFromMapEdge,
@@ -26,6 +25,7 @@ import type {
   BotVisibleEquipment,
 } from './bot-observation.js';
 import type { UtilityEvaluator } from './utility-arbitrator.js';
+import { isBotPrimaryActionReadyV1 } from './bot-primary-input-pacing-v1.js';
 
 export const BOT_GOAL_ID = Object.freeze({
   INACTIVE: 'inactive',
@@ -50,6 +50,7 @@ export interface BotGoalContext {
   readonly observation: BotPolicyObservation;
   readonly profile: BotProfileDefinition;
   readonly personality: BotPersonality;
+  readonly tickDurationSeconds: number;
 }
 
 interface ReachableEquipment {
@@ -66,7 +67,10 @@ function evaluator(
 
 function predictedOpponent(context: BotGoalContext): BotVector3 {
   const { opponent } = context.observation;
-  const seconds = context.profile.targetPredictionTicks / ARENA_TICK_RATE;
+  if (!Number.isFinite(context.tickDurationSeconds) || context.tickDurationSeconds <= 0) {
+    throw new RangeError('BotGoalContext.tickDurationSeconds 必须是有限正数。');
+  }
+  const seconds = context.profile.targetPredictionTicks * context.tickDurationSeconds;
   return {
     x: opponent.position.x + opponent.velocity.x * seconds,
     y: opponent.position.y + opponent.velocity.y * seconds,
@@ -119,7 +123,11 @@ function attackGeometry(context: BotGoalContext): Readonly<{
 function canAct(observation: BotPolicyObservation): boolean {
   return observation.self.status === ARENA_PARTICIPANT_STATUS.ACTIVE
     && observation.self.hitstunTicks === 0
-    && observation.self.action.phase === ARENA_ACTION_PHASE.IDLE
+    && isBotPrimaryActionReadyV1({
+      schemaVersion: 1,
+      actionIdle: observation.self.action.phase === ARENA_ACTION_PHASE.IDLE,
+      cooldownRemainingTicks: observation.self.equipment?.cooldownRemainingTicks ?? null,
+    })
     && observation.opponent.status === ARENA_PARTICIPANT_STATUS.ACTIVE
     && observation.opponent.invulnerableTicks === 0;
 }

@@ -25,7 +25,9 @@ describe('Arena V2 UI information prototype', () => {
     expect(first.pages.find(({ id }) => id === 'map-detail')?.requiredInformation)
       .toContain('武器适配空间');
     expect(first.pages.find(({ id }) => id === 'survival-prep')?.requiredInformation)
-      .toContain('每 20 秒三选一');
+      .toContain('每 20 秒掉落 3 把');
+    expect(first.pages.find(({ id }) => id === 'survival-prep')?.requiredInformation)
+      .toContain('靠近自动拾取或替换');
     expect(first.pages.find(({ id }) => id === 'loading')?.maximumActionsBeforeNextStep).toBe(0);
     expect(first.pages.find(({ id }) => id === 'match-prep')?.supportedModes).toEqual(['versus', 'race']);
     expect(first.pages.some(({ id }) => (id as string) === 'race-prep')).toBe(false);

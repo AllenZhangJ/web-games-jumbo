@@ -19,6 +19,7 @@ export const ARENA_INPUT_MAPPER_ID = Object.freeze({
   GESTURE_MOBILITY: 'gesture-mobility-a',
   CONTEXT_PRIMARY: 'context-primary-b',
   EXPLICIT_COMBAT_JUMP: 'explicit-combat-jump-v1',
+  SIMPLE_THREE_CONCEPT: 'simple-three-concept-v1',
 } as const);
 
 export type ArenaInputMapperId = typeof ARENA_INPUT_MAPPER_ID[keyof typeof ARENA_INPUT_MAPPER_ID];
@@ -705,6 +706,23 @@ export function createExplicitCombatJumpMapper(): ArenaInputMapper {
   }));
 }
 
+/**
+ * Arena V2 production-control candidate. Every character, weapon and map uses
+ * the same three concepts: direction, jump and primary attack. In particular,
+ * dragging either action button never creates a hidden fourth action.
+ */
+export function createSimpleThreeConceptMapper(): ArenaInputMapper {
+  return createInputMapper(ARENA_INPUT_MAPPER_ID.SIMPLE_THREE_CONCEPT, ({ raw }) => ({
+    moveX: raw.move.vector.x,
+    moveZ: raw.move.vector.z,
+    primaryPressed: raw.primary.edges.started && !raw.primary.edges.cancelled,
+    primaryHeld: raw.primary.active,
+    jumpPressed: raw.jump.edges.started && !raw.jump.edges.cancelled,
+    jumpHeld: raw.jump.active,
+    slamPressed: false,
+  }));
+}
+
 export function createGestureInputMapperA(): ArenaInputMapper {
   return createInputMapper(ARENA_INPUT_MAPPER_ID.GESTURE_MOBILITY, ({ raw, gestures }) => ({
     moveX: raw.move.vector.x,
@@ -728,6 +746,9 @@ export function createArenaInputMapper(mapperId: unknown): ArenaInputMapper {
   }
   if (mapperId === ARENA_INPUT_MAPPER_ID.EXPLICIT_COMBAT_JUMP) {
     return createExplicitCombatJumpMapper();
+  }
+  if (mapperId === ARENA_INPUT_MAPPER_ID.SIMPLE_THREE_CONCEPT) {
+    return createSimpleThreeConceptMapper();
   }
   throw new RangeError(`未知 Arena InputMapper ${String(mapperId)}。`);
 }

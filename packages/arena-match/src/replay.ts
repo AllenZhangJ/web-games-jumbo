@@ -63,6 +63,41 @@ const RUNNER_OPTION_KEYS: ReadonlySet<string> = new Set(['checkpointInterval']);
 const RUN_OPTION_KEYS: ReadonlySet<string> = new Set(['maxTicks']);
 const REPLAY_MATCH_OPTION_KEYS: ReadonlySet<string> = new Set(['coreFactory', 'beforeStep']);
 const HASH_PATTERN = /^[0-9a-f]{8}$/;
+const MAX_SYNC_DESCRIPTOR_PROTOTYPE_DEPTH = 32;
+const NATIVE_PROMISE_PROTOTYPE = Promise.prototype;
+const NATIVE_PROMISE_CONSTRUCTOR = Promise;
+const CAPTURED_PROMISE_THEN_DESCRIPTOR = Object.getOwnPropertyDescriptor(
+  NATIVE_PROMISE_PROTOTYPE,
+  'then',
+);
+if (CAPTURED_PROMISE_THEN_DESCRIPTOR === undefined
+  || !Object.prototype.hasOwnProperty.call(CAPTURED_PROMISE_THEN_DESCRIPTOR, 'value')
+  || typeof CAPTURED_PROMISE_THEN_DESCRIPTOR.value !== 'function') {
+  throw new TypeError('Replay 无法捕获原生 Promise.prototype.then 数据方法。');
+}
+const NATIVE_PROMISE_THEN = CAPTURED_PROMISE_THEN_DESCRIPTOR.value as (
+  ...arguments_: unknown[]
+) => unknown;
+const NATIVE_PROMISE_THEN_FLAGS = Object.freeze({
+  configurable: CAPTURED_PROMISE_THEN_DESCRIPTOR.configurable,
+  enumerable: CAPTURED_PROMISE_THEN_DESCRIPTOR.enumerable,
+  writable: CAPTURED_PROMISE_THEN_DESCRIPTOR.writable,
+});
+const CAPTURED_PROMISE_SPECIES_DESCRIPTOR = Object.getOwnPropertyDescriptor(
+  NATIVE_PROMISE_CONSTRUCTOR,
+  Symbol.species,
+);
+if (CAPTURED_PROMISE_SPECIES_DESCRIPTOR === undefined
+  || typeof CAPTURED_PROMISE_SPECIES_DESCRIPTOR.get !== 'function'
+  || CAPTURED_PROMISE_SPECIES_DESCRIPTOR.set !== undefined) {
+  throw new TypeError('Replay 无法捕获原生 Promise[Symbol.species] 访问器。');
+}
+const NATIVE_PROMISE_SPECIES_GETTER = CAPTURED_PROMISE_SPECIES_DESCRIPTOR.get;
+const NATIVE_PROMISE_SPECIES_FLAGS = Object.freeze({
+  configurable: CAPTURED_PROMISE_SPECIES_DESCRIPTOR.configurable,
+  enumerable: CAPTURED_PROMISE_SPECIES_DESCRIPTOR.enumerable,
+});
+const NOOP = (): void => {};
 
 export interface ArenaReplayCheckpoint {
   readonly tick: number;
@@ -425,31 +460,92 @@ export function validateArenaReplay(replay: unknown): ArenaReplay {
   return source as unknown as ArenaReplay;
 }
 
-function findPropertyDescriptor(value: unknown, name: string): PropertyDescriptor | null {
+function findPropertyDescriptor(
+  value: unknown,
+  name: string,
+  contractName: string,
+): PropertyDescriptor | null {
   if (!value || (typeof value !== 'object' && typeof value !== 'function')) return null;
+  const visited = new Set<object>();
   let target: object | null = value;
-  while (target !== null) {
+  for (let depth = 0; target !== null && depth < MAX_SYNC_DESCRIPTOR_PROTOTYPE_DEPTH; depth += 1) {
+    if (visited.has(target)) {
+      throw new TypeError(`${contractName} prototype 链不能循环。`);
+    }
+    visited.add(target);
     const descriptor = Object.getOwnPropertyDescriptor(target, name);
     if (descriptor !== undefined) return descriptor;
     target = Object.getPrototypeOf(target) as object | null;
   }
+  if (target !== null) {
+    throw new RangeError(
+      `${contractName} prototype 链超过 ${MAX_SYNC_DESCRIPTOR_PROTOTYPE_DEPTH} 层。`,
+    );
+  }
   return null;
 }
 
-function findDataMethod(value: unknown, name: string): ((...args: unknown[]) => unknown) | null {
-  const descriptor = findPropertyDescriptor(value, name);
-  return descriptor !== null
-    && Object.prototype.hasOwnProperty.call(descriptor, 'value')
-    && typeof descriptor.value === 'function'
+function findDataMethod(
+  value: unknown,
+  name: string,
+  contractName: string,
+): ((...args: unknown[]) => unknown) | null {
+  const descriptor = findPropertyDescriptor(value, name, contractName);
+  if (descriptor === null) return null;
+  if (!Object.prototype.hasOwnProperty.call(descriptor, 'value')) {
+    throw new TypeError(`${contractName}.${name}必须是数据方法。`);
+  }
+  return typeof descriptor.value === 'function'
     ? descriptor.value as (...args: unknown[]) => unknown
     : null;
 }
 
+function hasMatchCorePrototype(value: unknown, contractName: string): boolean {
+  if (!value || (typeof value !== 'object' && typeof value !== 'function')) return false;
+  const visited = new Set<object>();
+  let target: object | null = value;
+  for (
+    let depth = 0;
+    target !== null && depth < MAX_SYNC_DESCRIPTOR_PROTOTYPE_DEPTH;
+    depth += 1
+  ) {
+    if (target === MatchCore.prototype) return true;
+    if (visited.has(target)) throw new TypeError(`${contractName} prototype 链不能循环。`);
+    visited.add(target);
+    target = Object.getPrototypeOf(target) as object | null;
+  }
+  if (target !== null) {
+    throw new RangeError(
+      `${contractName} prototype 链超过 ${MAX_SYNC_DESCRIPTOR_PROTOTYPE_DEPTH} 层。`,
+    );
+  }
+  return false;
+}
+
 function adoptReplayCore(candidate: unknown): MatchCore {
-  if (candidate instanceof MatchCore) return candidate;
   const cleanupErrors: Error[] = [];
   try {
-    findDataMethod(candidate, 'destroy')?.call(candidate);
+    if (hasMatchCorePrototype(candidate, 'Replay Core factory 候选')) {
+      return candidate as MatchCore;
+    }
+  } catch (error) {
+    cleanupErrors.push(normalizeThrownError(error, 'Replay Core factory 候选原型检查失败'));
+    throw combineCleanupFailure(
+      new TypeError('coreFactory 必须返回 MatchCore。'),
+      cleanupErrors,
+      'Replay Core factory 合同无效且清理未完整完成。',
+    );
+  }
+  try {
+    const destroy = findDataMethod(
+      candidate,
+      'destroy',
+      'Replay Core factory 候选清理',
+    );
+    if (destroy !== null) {
+      const cleanupResult = Reflect.apply(destroy, candidate, []);
+      rejectThenable(cleanupResult, 'Replay Core factory 候选 destroy');
+    }
   } catch (error) {
     cleanupErrors.push(normalizeThrownError(error, 'Replay Core factory 候选清理失败'));
   }
@@ -460,20 +556,98 @@ function adoptReplayCore(candidate: unknown): MatchCore {
   );
 }
 
-function rejectThenable(verification: unknown): void {
-  const descriptor = findPropertyDescriptor(verification, 'then');
-  if (descriptor === null) return;
-  if (!Object.prototype.hasOwnProperty.call(descriptor, 'value')) {
-    throw new TypeError('replay beforeStep 必须同步完成。');
+function assertNativePromiseThenIntegrity(): void {
+  const descriptor = Object.getOwnPropertyDescriptor(NATIVE_PROMISE_PROTOTYPE, 'then');
+  if (descriptor === undefined
+    || !Object.prototype.hasOwnProperty.call(descriptor, 'value')
+    || descriptor.value !== NATIVE_PROMISE_THEN
+    || descriptor.configurable !== NATIVE_PROMISE_THEN_FLAGS.configurable
+    || descriptor.enumerable !== NATIVE_PROMISE_THEN_FLAGS.enumerable
+    || descriptor.writable !== NATIVE_PROMISE_THEN_FLAGS.writable) {
+    throw new TypeError('Replay 原生 Promise.prototype.then 描述符漂移。');
   }
-  if (typeof descriptor.value !== 'function') return;
-  try {
-    descriptor.value.call(verification, undefined, () => undefined);
-  } catch {
-    // The synchronous contract rejects the thenable independently. Any
-    // synchronous failure while attaching containment must not replace it.
+}
+
+function assertNativePromiseSpeciesIntegrity(): void {
+  const descriptor = Object.getOwnPropertyDescriptor(
+    NATIVE_PROMISE_CONSTRUCTOR,
+    Symbol.species,
+  );
+  if (descriptor === undefined
+    || descriptor.get !== NATIVE_PROMISE_SPECIES_GETTER
+    || descriptor.set !== undefined
+    || descriptor.configurable !== NATIVE_PROMISE_SPECIES_FLAGS.configurable
+    || descriptor.enumerable !== NATIVE_PROMISE_SPECIES_FLAGS.enumerable) {
+    throw new TypeError('Replay 原生 Promise[Symbol.species] 描述符漂移。');
   }
-  throw new TypeError('replay beforeStep 必须同步完成。');
+}
+
+interface SynchronousValueDescriptors {
+  readonly thenDescriptor: PropertyDescriptor | null;
+  readonly constructorDescriptor: PropertyDescriptor | null;
+}
+
+function inspectSynchronousValueDescriptors(
+  value: object,
+  contractName: string,
+): SynchronousValueDescriptors {
+  const visited = new Set<object>();
+  let target: object | null = value;
+  let thenDescriptor: PropertyDescriptor | null = null;
+  let constructorDescriptor: PropertyDescriptor | null = null;
+  for (
+    let depth = 0;
+    target !== null && depth < MAX_SYNC_DESCRIPTOR_PROTOTYPE_DEPTH;
+    depth += 1
+  ) {
+    if (visited.has(target)) {
+      throw new TypeError(`${contractName} prototype 链不能循环。`);
+    }
+    visited.add(target);
+    thenDescriptor ??= Object.getOwnPropertyDescriptor(target, 'then') ?? null;
+    constructorDescriptor ??=
+      Object.getOwnPropertyDescriptor(target, 'constructor') ?? null;
+    target = Object.getPrototypeOf(target) as object | null;
+  }
+  if (target !== null) {
+    throw new RangeError(
+      `${contractName} prototype 链超过 ${MAX_SYNC_DESCRIPTOR_PROTOTYPE_DEPTH} 层。`,
+    );
+  }
+  return Object.freeze({ thenDescriptor, constructorDescriptor });
+}
+
+function rejectThenable(verification: unknown, contractName = 'replay beforeStep'): void {
+  assertNativePromiseThenIntegrity();
+  if ((typeof verification !== 'object' || verification === null)
+    && typeof verification !== 'function') return;
+  const descriptors = inspectSynchronousValueDescriptors(
+    verification as object,
+    `${contractName}返回值`,
+  );
+  const constructorDescriptor = descriptors.constructorDescriptor;
+  if (constructorDescriptor !== null
+    && !Object.prototype.hasOwnProperty.call(constructorDescriptor, 'value')) {
+    throw new TypeError(`${contractName}返回访问器 constructor。`);
+  }
+  if (constructorDescriptor?.value === NATIVE_PROMISE_CONSTRUCTOR) {
+    assertNativePromiseSpeciesIntegrity();
+    let nativePromise = false;
+    try {
+      Reflect.apply(NATIVE_PROMISE_THEN, verification, [NOOP, NOOP]);
+      nativePromise = true;
+    } catch {
+      // A safe constructor identity can be spoofed by a plain object. Brand
+      // failure falls through to descriptor-only ordinary thenable handling.
+    }
+    if (nativePromise) throw new TypeError(`${contractName}必须同步完成。`);
+  }
+  const thenDescriptor = descriptors.thenDescriptor;
+  if (thenDescriptor === null) return;
+  if (!Object.prototype.hasOwnProperty.call(thenDescriptor, 'value')) {
+    throw new TypeError(`${contractName}返回访问器 thenable。`);
+  }
+  throw new TypeError(`${contractName}返回then字段，必须同步完成。`);
 }
 
 function runReplay(

@@ -156,6 +156,27 @@ function normalizeOptions(value: unknown): ProductMatchCompletionSink | null {
   return sink as ProductMatchCompletionSink | null;
 }
 
+type ProductMatchRuntimeOperation =
+  | 'state-read'
+  | 'pause-transition'
+  | 'start-read-frame'
+  | 'read-frame-read'
+  | 'step-read-frame'
+  | 'public-info-read'
+  | 'result-read'
+  | 'destroy';
+
+export const PRODUCT_MATCH_RUNTIME_OPERATION_GUARD_V1 = Object.freeze({
+  operationGuardPrecedesLifecycleAndInputValidation: true,
+  publicReadsRejectCallbackIntermediateState: true,
+  sessionCallbacksCheckedBeforeAuthorityCommit: true,
+  completionSinkCheckedBeforeResultPublication: true,
+  swallowedCallbackReentryStopsLaterAuthorityMutation: true,
+  postCallbackReentryFailsClosed: true,
+  destroyFastPathChecksOperationBeforeIdempotence: true,
+  validationStatus: 'not-run',
+} as const);
+
 export class ProductMatchRuntime implements ProductMatchRuntimePort {
   #session: Readonly<LocalMatchSessionPort> | null;
   readonly #matchSeed: number;
@@ -163,7 +184,9 @@ export class ProductMatchRuntime implements ProductMatchRuntimePort {
   #content: MatchContentSelection | null;
   #state: ProductMatchRuntimeState = PRODUCT_MATCH_RUNTIME_STATE.CREATED;
   #pauseRequested = false;
-  #transitioning = false;
+  #operation: ProductMatchRuntimeOperation | null = null;
+  #reentrySequence = 0;
+  #reentryError: Error | null = null;
   #result: ProductMatchResult | null = null;
   #completionSink: ProductMatchCompletionSink | null;
 
@@ -179,16 +202,88 @@ export class ProductMatchRuntime implements ProductMatchRuntimePort {
   }
 
   get state(): ProductMatchRuntimeState {
-    return this.#state;
+    return this.#runOperation('state-read', () => this.#state, {
+      allowDestroyed: true,
+      allowFailed: true,
+    });
   }
 
-  #begin(): void {
-    if (this.#transitioning) throw new Error('ProductMatchRuntime 操作不可重入。');
-    this.#transitioning = true;
+  #recordReentry(requestedOperation: ProductMatchRuntimeOperation): Error {
+    this.#reentrySequence += 1;
+    if (this.#reentryError === null) {
+      this.#reentryError = new Error(
+        `ProductMatchRuntime ${String(this.#operation)}期间不可重入${requestedOperation}。`,
+      );
+    }
+    return this.#reentryError;
   }
 
-  #end(): void {
-    this.#transitioning = false;
+  #assertReentryFree(
+    sequence: number,
+    operation: ProductMatchRuntimeOperation,
+    failClosed: boolean,
+  ): void {
+    if (this.#reentrySequence === sequence) return;
+    if (failClosed && this.#state !== PRODUCT_MATCH_RUNTIME_STATE.DESTROYED) {
+      this.#state = PRODUCT_MATCH_RUNTIME_STATE.FAILED;
+    }
+    throw this.#reentryError ?? new Error(`ProductMatchRuntime ${operation}期间发生重入。`);
+  }
+
+  #runOperation<T>(
+    operation: ProductMatchRuntimeOperation,
+    callback: () => T,
+    options: Readonly<{
+      allowDestroyed?: boolean;
+      allowFailed?: boolean;
+      failClosedOnReentry?: boolean;
+    }> = {},
+  ): T {
+    if (this.#operation !== null) throw this.#recordReentry(operation);
+    this.#operation = operation;
+    const sequence = this.#reentrySequence;
+    try {
+      if (!options.allowDestroyed && this.#state === PRODUCT_MATCH_RUNTIME_STATE.DESTROYED) {
+        throw new Error('ProductMatchRuntime 已销毁。');
+      }
+      if (!options.allowFailed && this.#state === PRODUCT_MATCH_RUNTIME_STATE.FAILED) {
+        throw new Error('ProductMatchRuntime 已失败关闭。');
+      }
+      try {
+        const result = callback();
+        this.#assertReentryFree(
+          sequence,
+          operation,
+          options.failClosedOnReentry === true,
+        );
+        return result;
+      } catch (error) {
+        if (
+          options.failClosedOnReentry === true
+          && this.#reentrySequence !== sequence
+          && this.#state !== PRODUCT_MATCH_RUNTIME_STATE.DESTROYED
+        ) this.#state = PRODUCT_MATCH_RUNTIME_STATE.FAILED;
+        throw error;
+      }
+    } finally {
+      this.#operation = null;
+      this.#reentryError = null;
+    }
+  }
+
+  #assertAuthorityCommitReady(
+    operation: ProductMatchRuntimeOperation,
+    failClosedOnReentry = false,
+  ): void {
+    if (this.#reentryError !== null) {
+      if (failClosedOnReentry && this.#state !== PRODUCT_MATCH_RUNTIME_STATE.DESTROYED) {
+        this.#state = PRODUCT_MATCH_RUNTIME_STATE.FAILED;
+      }
+      throw this.#reentryError;
+    }
+    if (this.#operation !== operation) {
+      throw new Error(`ProductMatchRuntime ${operation}缺少权威操作所有权。`);
+    }
   }
 
   #assertUsable(): void {
@@ -229,21 +324,27 @@ export class ProductMatchRuntime implements ProductMatchRuntimePort {
     };
   }
 
-  #readV2Frame(): DeepReadonly<MatchReadFrameV2> {
+  #readV2Frame(operation: ProductMatchRuntimeOperation): DeepReadonly<MatchReadFrameV2> {
     const frame = this.#requireReadFrameSession().getPresentationReadFrame();
     containRejectedAsyncReturn(frame, 'LocalMatchSession.getPresentationReadFrame');
+    this.#assertAuthorityCommitReady(operation, true);
     return assertProductMatchReadFrameV2(frame, this.#matchSeed);
   }
 
-  #completeEndedSession(session: Readonly<LocalMatchSessionPort>): void {
+  #completeEndedSession(
+    session: Readonly<LocalMatchSessionPort>,
+    operation: ProductMatchRuntimeOperation,
+  ): void {
     const sessionState = session.getState();
     containRejectedAsyncReturn(sessionState, 'LocalMatchSession.state');
+    this.#assertAuthorityCommitReady(operation, true);
     if (typeof sessionState !== 'string' || !LOCAL_MATCH_SESSION_STATES.has(sessionState)) {
       throw new TypeError('LocalMatchSession.state 无效。');
     }
     if (sessionState !== 'ended') return;
     const rawReplay = session.exportReplay();
     containRejectedAsyncReturn(rawReplay, 'LocalMatchSession.exportReplay');
+    this.#assertAuthorityCommitReady(operation, true);
     const replay = requireRecord(
       cloneFrozenData(rawReplay, 'ProductMatchRuntime completion replay'),
       'ProductMatchRuntime completion replay',
@@ -257,19 +358,20 @@ export class ProductMatchRuntime implements ProductMatchRuntimePort {
     const completion = Object.freeze({ result, replay });
     const sinkResult = this.#completionSink?.(completion);
     containRejectedAsyncReturn(sinkResult, 'ProductMatchRuntime completionSink');
+    this.#assertAuthorityCommitReady(operation, true);
     this.#result = result;
     this.#state = PRODUCT_MATCH_RUNTIME_STATE.ENDED;
   }
 
   setPaused(paused: boolean): void {
-    this.#begin();
-    try {
+    this.#runOperation('pause-transition', () => {
       this.#assertUsable();
       if (typeof paused !== 'boolean') throw new TypeError('paused 必须是布尔值。');
       if (this.#state === PRODUCT_MATCH_RUNTIME_STATE.ENDED) return;
       try {
         const pauseResult = this.#requireSession().setPaused(paused);
         containRejectedAsyncReturn(pauseResult, 'LocalMatchSession.setPaused');
+        this.#assertAuthorityCommitReady('pause-transition', true);
         this.#pauseRequested = paused;
         if (this.#state !== PRODUCT_MATCH_RUNTIME_STATE.CREATED) {
           this.#state = paused
@@ -280,14 +382,11 @@ export class ProductMatchRuntime implements ProductMatchRuntimePort {
         this.#state = PRODUCT_MATCH_RUNTIME_STATE.FAILED;
         throw error;
       }
-    } finally {
-      this.#end();
-    }
+    }, { failClosedOnReentry: true });
   }
 
   startWithReadFrame(): ProductMatchReadFrameStartOutcome {
-    this.#begin();
-    try {
+    return this.#runOperation('start-read-frame', () => {
       this.#assertUsable();
       if (this.#state !== PRODUCT_MATCH_RUNTIME_STATE.CREATED
         && this.#state !== PRODUCT_MATCH_RUNTIME_STATE.RUNNING
@@ -298,33 +397,28 @@ export class ProductMatchRuntime implements ProductMatchRuntimePort {
         if (this.#state === PRODUCT_MATCH_RUNTIME_STATE.CREATED) {
           const startResult = this.#requireSession().start();
           containRejectedAsyncReturn(startResult, 'LocalMatchSession.start');
+          this.#assertAuthorityCommitReady('start-read-frame', true);
           this.#state = this.#pauseRequested
             ? PRODUCT_MATCH_RUNTIME_STATE.PAUSED
             : PRODUCT_MATCH_RUNTIME_STATE.RUNNING;
         }
-        return Object.freeze({ readFrame: this.#readV2Frame() });
+        return Object.freeze({ readFrame: this.#readV2Frame('start-read-frame') });
       } catch (error) {
         this.#state = PRODUCT_MATCH_RUNTIME_STATE.FAILED;
         throw error;
       }
-    } finally {
-      this.#end();
-    }
+    }, { failClosedOnReentry: true });
   }
 
   getReadFrame(): DeepReadonly<MatchReadFrameV2> {
-    this.#begin();
-    try {
+    return this.#runOperation('read-frame-read', () => {
       this.#assertUsable();
-      return this.#readV2Frame();
-    } finally {
-      this.#end();
-    }
+      return this.#readV2Frame('read-frame-read');
+    }, { failClosedOnReentry: true });
   }
 
   stepWithReadFrame(playerFrame: unknown = null): ProductMatchReadFrameStepOutcome {
-    this.#begin();
-    try {
+    return this.#runOperation('step-read-frame', () => {
       this.#assertUsable();
       if (this.#state !== PRODUCT_MATCH_RUNTIME_STATE.RUNNING) {
         throw new Error(`ProductMatchRuntime V2 step 只允许 running，当前为 ${this.#state}。`);
@@ -334,6 +428,7 @@ export class ProductMatchRuntime implements ProductMatchRuntimePort {
         const readFrameSession = this.#requireReadFrameSession();
         const rawOutcome = readFrameSession.stepWithPresentationReadFrame(playerFrame);
         containRejectedAsyncReturn(rawOutcome, 'LocalMatchSession.stepWithPresentationReadFrame');
+        this.#assertAuthorityCommitReady('step-read-frame', true);
         const outcome = requireRecord(rawOutcome, 'ProductMatchRuntime V2 step outcome');
         assertKnownKeys(outcome, new Set(['events', 'readFrame', 'input']), 'ProductMatchRuntime V2 step outcome');
         const events = cloneFrozenData(
@@ -376,7 +471,8 @@ export class ProductMatchRuntime implements ProductMatchRuntimePort {
         ) {
           throw new Error('ProductMatchRuntime V2 input 与 post read frame identity 不一致。');
         }
-        this.#completeEndedSession(session);
+        this.#completeEndedSession(session, 'step-read-frame');
+        this.#assertAuthorityCommitReady('step-read-frame', true);
         return Object.freeze({
           events: events as readonly unknown[],
           readFrame,
@@ -387,41 +483,33 @@ export class ProductMatchRuntime implements ProductMatchRuntimePort {
         this.#state = PRODUCT_MATCH_RUNTIME_STATE.FAILED;
         throw error;
       }
-    } finally {
-      this.#end();
-    }
+    }, { failClosedOnReentry: true });
   }
 
   getPublicInfo(): ProductPublicMatchInfo {
-    this.#begin();
-    try {
+    return this.#runOperation('public-info-read', () => {
       this.#assertUsable();
       return Object.freeze({
         matchSeed: this.#matchSeed,
         opponent: this.#requireOpponent(),
         content: this.#requireContent(),
       });
-    } finally {
-      this.#end();
-    }
+    });
   }
 
   getResult(): ProductMatchResult | null {
-    this.#begin();
-    try {
+    return this.#runOperation('result-read', () => {
       this.#assertUsable();
       return this.#result;
-    } finally {
-      this.#end();
-    }
+    });
   }
 
   destroy(): void {
-    this.#begin();
-    try {
+    this.#runOperation('destroy', () => {
       if (this.#state === PRODUCT_MATCH_RUNTIME_STATE.DESTROYED && this.#session === null) return;
       const destroyResult = this.#requireSession().destroy();
       containRejectedAsyncReturn(destroyResult, 'LocalMatchSession.destroy');
+      this.#assertAuthorityCommitReady('destroy', true);
       this.#session = null;
       this.#opponent = null;
       this.#content = null;
@@ -429,9 +517,7 @@ export class ProductMatchRuntime implements ProductMatchRuntimePort {
       this.#completionSink = null;
       this.#pauseRequested = true;
       this.#state = PRODUCT_MATCH_RUNTIME_STATE.DESTROYED;
-    } finally {
-      this.#end();
-    }
+    }, { allowDestroyed: true, allowFailed: true, failClosedOnReentry: true });
   }
 }
 

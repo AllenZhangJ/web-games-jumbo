@@ -60,6 +60,12 @@ function createResolver(): MatchContentPoolResolver {
   });
 }
 
+function prototypeChain(depth: number): object {
+  let value: object = Object.create(null);
+  for (let index = 0; index < depth; index += 1) value = Object.create(value);
+  return value;
+}
+
 describe('Arena Product Content strict boundaries', () => {
   it('preserves deterministic pool identity for the same profile and seed', () => {
     const resolver = createResolver();
@@ -117,6 +123,106 @@ describe('Arena Product Content strict boundaries', () => {
     });
     expect(() => asyncProvider.resolve({ matchSeed: 1 })).toThrow(/必须同步完成/);
     await Promise.resolve();
+  });
+
+  it('rejects hostile then/constructor accessors and Promise subclasses without execution', () => {
+    const resolver = createResolver();
+    for (const key of ['then', 'constructor'] as const) {
+      let accessorCalls = 0;
+      const returned = Object.create(null);
+      Object.defineProperty(returned, key, {
+        get() {
+          accessorCalls += 1;
+          throw new Error('must-not-run');
+        },
+      });
+      const provider = new ProfileContentPoolProvider({
+        profileService: { getSnapshot() { return returned; } },
+        resolver,
+      });
+      expect(() => provider.resolve({ matchSeed: 1 })).toThrow(/访问器/);
+      expect(accessorCalls).toBe(0);
+    }
+
+    let speciesCalls = 0;
+    class DerivedPromise<T> extends Promise<T> {
+      static get [Symbol.species](): PromiseConstructor {
+        speciesCalls += 1;
+        return Promise;
+      }
+    }
+    const subclassProvider = new ProfileContentPoolProvider({
+      profileService: {
+        getSnapshot() {
+          return new DerivedPromise((resolve) => resolve(createPlayerProfile(profileDefinition)));
+        },
+      },
+      resolver,
+    });
+    expect(() => subclassProvider.resolve({ matchSeed: 1 })).toThrow(/同步完成/);
+    expect(speciesCalls).toBe(0);
+
+    const dataThenProvider = new ProfileContentPoolProvider({
+      profileService: { getSnapshot: () => ({ then: null }) },
+      resolver,
+    });
+    expect(() => dataThenProvider.resolve({ matchSeed: 1 }))
+      .toThrow(/then 字段.*同步完成/);
+  });
+
+  it('distinguishes cyclic and over-deep synchronous return prototype chains', () => {
+    const resolver = createResolver();
+    let cyclic: object;
+    cyclic = new Proxy(Object.create(null), {
+      getPrototypeOf() { return cyclic; },
+    });
+    const cycleProvider = new ProfileContentPoolProvider({
+      profileService: { getSnapshot() { return cyclic; } },
+      resolver,
+    });
+    expect(() => cycleProvider.resolve({ matchSeed: 1 })).toThrow(/循环/);
+
+    const deepProvider = new ProfileContentPoolProvider({
+      profileService: { getSnapshot() { return prototypeChain(33); } },
+      resolver,
+    });
+    expect(() => deepProvider.resolve({ matchSeed: 1 })).toThrow(/超过32层/);
+  });
+
+  it('fails closed when native Promise descriptors drift', () => {
+    const thenDescriptor = Object.getOwnPropertyDescriptor(Promise.prototype, 'then');
+    const speciesDescriptor = Object.getOwnPropertyDescriptor(Promise, Symbol.species);
+    if (thenDescriptor === undefined || speciesDescriptor === undefined) {
+      throw new Error('native Promise descriptors unavailable');
+    }
+    const resolver = createResolver();
+    const normalProvider = new ProfileContentPoolProvider({
+      profileService: { getSnapshot: () => createPlayerProfile(profileDefinition) },
+      resolver,
+    });
+    try {
+      Object.defineProperty(Promise.prototype, 'then', {
+        ...thenDescriptor,
+        value: function driftedThen() { return undefined; },
+      });
+      expect(() => normalProvider.resolve({ matchSeed: 1 })).toThrow(/描述符漂移/);
+    } finally {
+      Object.defineProperty(Promise.prototype, 'then', thenDescriptor);
+    }
+
+    const promiseProvider = new ProfileContentPoolProvider({
+      profileService: { getSnapshot: () => Promise.resolve(createPlayerProfile(profileDefinition)) },
+      resolver,
+    });
+    try {
+      Object.defineProperty(Promise, Symbol.species, {
+        ...speciesDescriptor,
+        get() { return class DriftedPromise extends Promise {}; },
+      });
+      expect(() => promiseProvider.resolve({ matchSeed: 1 })).toThrow(/species.*漂移/);
+    } finally {
+      Object.defineProperty(Promise, Symbol.species, speciesDescriptor);
+    }
   });
 
   it('rejects invalid input before external work and fails closed on mismatched output', () => {

@@ -125,7 +125,7 @@
       "deterministicRenderCoverage": {
         "earned": 20,
         "possible": 20,
-        "evidence": "144个组合均生成，但只有144/144在固定target相机内有像素；12m共48项离屏。"
+        "evidence": "144个组合均生成且144/144在固定target相机内有像素；离屏0，12m样本全部保留。"
       },
       "silhouetteReadability": {
         "earned": 20,

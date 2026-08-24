@@ -11,8 +11,11 @@ import {
   snapshotLegacyMethod as snapshotMethod,
 } from '@number-strategy-jump/arena-presentation-runtime/capability-utils';
 import * as THREE from 'three';
-import { ArenaHudLayer } from './arena-hud-layer.js';
-import { ArenaWorldStage } from './arena-world-stage.js';
+import { ArenaHudLayer, ArenaHudLayerConstructionCleanupError } from './arena-hud-layer.js';
+import {
+  ArenaWorldStage,
+  ArenaWorldStageConstructionCleanupError,
+} from './arena-world-stage.js';
 import { GltfPresentationAssetLoader } from './gltf-presentation-asset-loader.js';
 import { ARENA_GREYBOX_COLOR } from './greybox-style.js';
 
@@ -43,6 +46,19 @@ export const ARENA_GREYBOX_RENDERER_STATE = Object.freeze({
   DISPOSED: 'disposed',
 } as const);
 
+export const ARENA_GREYBOX_RENDERER_CONSTRUCTION_LIFECYCLE_V1 = Object.freeze({
+  id: 'arena-greybox-renderer-construction-lifecycle-v1',
+  stageConstructionDebtRetainsRendererOwnership: true,
+  assetLoaderCleanupWaitsForStageCleanup: true,
+  rendererAndContextCleanupRemainIndependentlyRetryable: true,
+  hudConstructionDebtRetainsRendererOwnership: true,
+  rawRendererCandidateRetainsCleanupOwnerBeforeCapabilitySnapshot: true,
+  rawContextCandidateRetainsCleanupOwnerBeforeRendererFactoryReturns: true,
+  cleanupCallbacksCannotReenterPublicApi: true,
+  cleanupCallbacksMustCompleteSynchronously: true,
+  incompleteConstructionCleanupIsRetryable: true,
+});
+
 interface RendererPlatform {
   readonly getWebGLContext: UnknownMethod;
   readonly getViewport: UnknownMethod;
@@ -63,6 +79,25 @@ interface WebGlRendererPort {
   readonly dispose: UnknownMethod;
   readonly forceContextLoss: UnknownMethod | null;
   readonly setClearColor: UnknownMethod | null;
+}
+
+interface WebGlRendererConstructionCandidate {
+  readonly value: unknown;
+  dispose: UnknownMethod | null;
+  forceContextLoss: UnknownMethod | null;
+  disposePortCaptured: boolean;
+  contextPortCaptured: boolean;
+  disposed: boolean;
+  contextLost: boolean;
+}
+
+interface WebGlContextConstructionCandidate {
+  readonly value: unknown;
+  getExtension: UnknownMethod | null;
+  loseContext: UnknownMethod | null;
+  getExtensionCaptured: boolean;
+  loseContextCaptured: boolean;
+  released: boolean;
 }
 
 interface Viewport {
@@ -98,6 +133,7 @@ interface CleanupState {
   audio: boolean;
   hud: boolean;
   stage: boolean;
+  assetLoader: boolean;
   renderer: boolean;
   context: boolean;
 }
@@ -125,6 +161,15 @@ function aggregate(message: string, cause: unknown, cleanupCauses: readonly unkn
   return failure;
 }
 
+function rejectThenable(value: unknown, name: string): void {
+  if (!value || (typeof value !== 'object' && typeof value !== 'function')) return;
+  let then: unknown;
+  try { then = Reflect.get(value, 'then'); } catch { throw new TypeError(`${name} 返回值不可检查。`); }
+  if (typeof then !== 'function') return;
+  try { Promise.resolve(value).catch(() => {}); } catch { /* malformed thenable */ }
+  throw new TypeError(`${name} 必须同步完成。`);
+}
+
 function snapshotPlatform(value: unknown): RendererPlatform {
   assertRecord(value, 'ArenaGreyboxRenderer.platform');
   return Object.freeze({
@@ -138,8 +183,21 @@ function snapshotPlatform(value: unknown): RendererPlatform {
   });
 }
 
-function snapshotRenderer(value: unknown): WebGlRendererPort {
+function snapshotRenderer(
+  value: unknown,
+  constructionCandidate: WebGlRendererConstructionCandidate | null = null,
+): WebGlRendererPort {
   assertRecord(value, 'ArenaGreyboxRenderer WebGLRenderer');
+  const dispose = snapshotMethod(value, 'WebGLRenderer', 'dispose')!;
+  if (constructionCandidate !== null) {
+    constructionCandidate.dispose = dispose;
+    constructionCandidate.disposePortCaptured = true;
+  }
+  const forceContextLoss = snapshotMethod(value, 'WebGLRenderer', 'forceContextLoss', false);
+  if (constructionCandidate !== null) {
+    constructionCandidate.forceContextLoss = forceContextLoss;
+    constructionCandidate.contextPortCaptured = true;
+  }
   return Object.freeze({
     value,
     setPixelRatio: snapshotMethod(value, 'WebGLRenderer', 'setPixelRatio')!,
@@ -147,8 +205,8 @@ function snapshotRenderer(value: unknown): WebGlRendererPort {
     render: snapshotMethod(value, 'WebGLRenderer', 'render')!,
     clear: snapshotMethod(value, 'WebGLRenderer', 'clear')!,
     clearDepth: snapshotMethod(value, 'WebGLRenderer', 'clearDepth')!,
-    dispose: snapshotMethod(value, 'WebGLRenderer', 'dispose')!,
-    forceContextLoss: snapshotMethod(value, 'WebGLRenderer', 'forceContextLoss', false),
+    dispose,
+    forceContextLoss,
     setClearColor: snapshotMethod(value, 'WebGLRenderer', 'setClearColor', false),
   });
 }
@@ -244,11 +302,144 @@ function feedbackEventsAfter(events: readonly FeedbackEvent[], sequence: number)
 function tryRelease(release: UnknownMethod | null, errors: unknown[]): boolean {
   if (release === null) return true;
   try {
-    release();
+    rejectThenable(release(), 'ArenaGreyboxRenderer cleanup callback');
     return true;
   } catch (error) {
     errors.push(error);
     return false;
+  }
+}
+
+function releaseRendererConstructionCandidate(
+  candidate: WebGlRendererConstructionCandidate,
+  releaseContext: boolean,
+): readonly unknown[] {
+  const errors: unknown[] = [];
+  if (!candidate.disposePortCaptured) {
+    try {
+      assertRecord(candidate.value, 'ArenaGreyboxRenderer WebGLRenderer');
+      candidate.dispose = snapshotMethod(candidate.value, 'WebGLRenderer', 'dispose')!;
+      candidate.disposePortCaptured = true;
+    } catch (error) { errors.push(error); }
+  }
+  if (candidate.disposePortCaptured && !candidate.disposed) {
+    try {
+      rejectThenable(candidate.dispose?.(), 'ArenaGreyboxRenderer WebGLRenderer.dispose()');
+      candidate.disposed = true;
+    } catch (error) { errors.push(error); }
+  }
+  if (releaseContext && !candidate.contextPortCaptured) {
+    try {
+      assertRecord(candidate.value, 'ArenaGreyboxRenderer WebGLRenderer');
+      candidate.forceContextLoss = snapshotMethod(
+        candidate.value,
+        'WebGLRenderer',
+        'forceContextLoss',
+        false,
+      );
+      candidate.contextPortCaptured = true;
+      if (candidate.forceContextLoss === null) candidate.contextLost = true;
+    } catch (error) { errors.push(error); }
+  }
+  if (releaseContext && candidate.contextPortCaptured && !candidate.contextLost) {
+    try {
+      rejectThenable(
+        candidate.forceContextLoss?.(),
+        'ArenaGreyboxRenderer WebGLRenderer.forceContextLoss()',
+      );
+      candidate.contextLost = true;
+    } catch (error) { errors.push(error); }
+  }
+  return Object.freeze(errors);
+}
+
+function releaseWebGlContextConstructionCandidate(
+  candidate: WebGlContextConstructionCandidate,
+): readonly unknown[] {
+  if (candidate.released) return Object.freeze([]);
+  const errors: unknown[] = [];
+  if (!candidate.getExtensionCaptured) {
+    if (!candidate.value || typeof candidate.value !== 'object' || Array.isArray(candidate.value)) {
+      candidate.getExtensionCaptured = true;
+      candidate.loseContextCaptured = true;
+      candidate.released = true;
+    } else {
+      try {
+        candidate.getExtension = snapshotMethod(
+          candidate.value,
+          'ArenaGreyboxRenderer WebGL context',
+          'getExtension',
+          false,
+        );
+        candidate.getExtensionCaptured = true;
+        if (candidate.getExtension === null) {
+          candidate.loseContextCaptured = true;
+          candidate.released = true;
+        }
+      } catch (error) { errors.push(error); }
+    }
+  }
+  if (candidate.getExtensionCaptured && !candidate.loseContextCaptured && candidate.getExtension !== null) {
+    try {
+      const extension = candidate.getExtension('WEBGL_lose_context');
+      rejectThenable(extension, 'ArenaGreyboxRenderer WebGL context.getExtension()');
+      if (extension === null || extension === undefined) {
+        candidate.loseContextCaptured = true;
+        candidate.released = true;
+      } else {
+        candidate.loseContext = snapshotMethod(
+          extension,
+          'ArenaGreyboxRenderer WEBGL_lose_context',
+          'loseContext',
+        );
+        candidate.loseContextCaptured = true;
+      }
+    } catch (error) { errors.push(error); }
+  }
+  if (candidate.loseContextCaptured && !candidate.released && candidate.loseContext !== null) {
+    try {
+      rejectThenable(candidate.loseContext(), 'ArenaGreyboxRenderer WEBGL_lose_context.loseContext()');
+      candidate.released = true;
+    } catch (error) { errors.push(error); }
+  }
+  return Object.freeze(errors);
+}
+
+export class ArenaGreyboxRendererConstructionCleanupError extends AggregateError {
+  readonly originalError: unknown;
+  readonly cleanupErrors: readonly unknown[];
+  readonly #retry: () => readonly unknown[];
+  readonly #complete: () => boolean;
+
+  constructor(
+    originalError: unknown,
+    cleanupErrors: readonly unknown[],
+    retry: () => readonly unknown[],
+    complete: () => boolean,
+  ) {
+    super(
+      [originalError, ...cleanupErrors],
+      '竞技场灰盒 Renderer 构造失败且清理未完整完成。',
+    );
+    this.name = 'ArenaGreyboxRendererConstructionCleanupError';
+    this.originalError = originalError;
+    this.cleanupErrors = Object.freeze([...cleanupErrors]);
+    this.#retry = retry;
+    this.#complete = complete;
+  }
+
+  get cleanupComplete(): boolean {
+    return this.#complete();
+  }
+
+  retryCleanup(): void {
+    const errors = this.#retry();
+    if (errors.length > 0) {
+      throw new AggregateError(errors, '竞技场灰盒 Renderer 构造清理重试未完整完成。');
+    }
+    if (!this.#complete()) {
+      throw new Error('竞技场灰盒 Renderer 构造清理依赖尚未收敛。');
+    }
   }
 }
 
@@ -257,14 +448,21 @@ export class ArenaGreyboxRenderer {
   readonly canvas: Record<PropertyKey, unknown>;
   #platform: RendererPlatform;
   #renderer: WebGlRendererPort | null = null;
+  #rendererConstructionCandidate: WebGlRendererConstructionCandidate | null = null;
+  #contextConstructionCandidate: WebGlContextConstructionCandidate | null = null;
   #stage: ArenaWorldStage | null = null;
+  #stageConstructionDebt: ArenaWorldStageConstructionCleanupError | null = null;
+  #presentationAssetLoader: GltfPresentationAssetLoader | null = null;
   #hud: ArenaHudLayer | null = null;
+  #hudConstructionDebt: ArenaHudLayerConstructionCleanupError | null = null;
   #impactAudio: ArenaImpactAudio | null = null;
   #state: string = ARENA_GREYBOX_RENDERER_STATE.CREATED;
   #viewport: Viewport | null = null;
   #rendering = false;
   #callbackActive = false;
   #reentryAttempted = false;
+  #cleaningResources = false;
+  #cleanupReentryAttempted = false;
   #lastError: unknown = null;
   #qualityDefinition: ReturnType<typeof createPresentationQualityDefinition>;
   #lastFeedbackMatchSeed: number | null = null;
@@ -274,7 +472,14 @@ export class ArenaGreyboxRenderer {
   #loadGeneration = 0;
   #resourcesLoaded = false;
   #destroyRequested = false;
-  #cleanup: CleanupState = { audio: false, hud: false, stage: false, renderer: false, context: false };
+  #cleanup: CleanupState = {
+    audio: false,
+    hud: false,
+    stage: false,
+    assetLoader: false,
+    renderer: false,
+    context: false,
+  };
 
   constructor(optionsValue: unknown) {
     assertKnownKeys(optionsValue, OPTION_KEYS, 'ArenaGreyboxRenderer options');
@@ -303,22 +508,45 @@ export class ArenaGreyboxRenderer {
         preserveDrawingBuffer: false,
       });
       const context = this.#callExternal(this.#platform.getWebGLContext, canvas, contextAttributes);
+      this.#contextConstructionCandidate = {
+        value: context,
+        getExtension: null,
+        loseContext: null,
+        getExtensionCaptured: false,
+        loseContextCaptured: false,
+        released: false,
+      };
       const rendererValue = this.#callExternal(rendererFactory as UnknownMethod, {
         canvas, context, ...contextAttributes,
       });
-      this.#renderer = snapshotRenderer(rendererValue);
+      const rendererCandidateIsRecord = typeof rendererValue === 'object'
+        && rendererValue !== null
+        && !Array.isArray(rendererValue);
+      this.#rendererConstructionCandidate = {
+        value: rendererValue,
+        dispose: null,
+        forceContextLoss: null,
+        disposePortCaptured: !rendererCandidateIsRecord,
+        contextPortCaptured: !rendererCandidateIsRecord,
+        disposed: !rendererCandidateIsRecord,
+        contextLost: !rendererCandidateIsRecord,
+      };
+      this.#renderer = snapshotRenderer(rendererValue, this.#rendererConstructionCandidate);
+      this.#rendererConstructionCandidate = null;
+      this.#contextConstructionCandidate = null;
       this.#configureRenderer(this.#renderer.value);
       if (this.#renderer.setClearColor) this.#callExternal(this.#renderer.setClearColor, ARENA_GREYBOX_COLOR.background, 1);
 
+      this.#presentationAssetLoader = this.#platform.readAssetBytes
+        ? new GltfPresentationAssetLoader({
+          readAssetBytes: this.#platform.readAssetBytes,
+          createImage: this.#platform.createImage,
+        })
+        : null;
       this.#stage = new ArenaWorldStage({
         content,
         maximumEffects: this.#qualityDefinition.maximumEffects,
-        presentationAssetLoader: this.#platform.readAssetBytes
-          ? new GltfPresentationAssetLoader({
-            readAssetBytes: this.#platform.readAssetBytes,
-            createImage: this.#platform.createImage,
-          })
-          : null,
+        presentationAssetLoader: this.#presentationAssetLoader,
       });
       this.#hud = new ArenaHudLayer({
         createOffscreenCanvas: this.#platform.createOffscreenCanvas,
@@ -327,12 +555,25 @@ export class ArenaGreyboxRenderer {
         createAudio: this.#platform.createAudio ?? (() => null),
       });
     } catch (error) {
+      if (error instanceof ArenaWorldStageConstructionCleanupError) {
+        this.#stageConstructionDebt = error;
+      }
+      if (error instanceof ArenaHudLayerConstructionCleanupError) {
+        this.#hudConstructionDebt = error;
+      }
       this.#lastError = error;
       this.#state = ARENA_GREYBOX_RENDERER_STATE.FAILED;
       this.#destroyRequested = true;
       const cleanupErrors = this.#releaseOwnedResources();
-      const secondCleanupErrors = cleanupErrors.length > 0 ? this.#releaseOwnedResources() : [];
-      throw aggregate('竞技场灰盒 Renderer 初始化失败。', error, [...cleanupErrors, ...secondCleanupErrors]);
+      if (!this.#constructionCleanupComplete()) {
+        throw new ArenaGreyboxRendererConstructionCleanupError(
+          error,
+          cleanupErrors,
+          () => this.#releaseOwnedResources(),
+          () => this.#constructionCleanupComplete(),
+        );
+      }
+      throw aggregate('竞技场灰盒 Renderer 初始化失败。', error, cleanupErrors);
     }
     Object.freeze(this);
   }
@@ -340,6 +581,10 @@ export class ArenaGreyboxRenderer {
   get state(): string { return this.#state; }
 
   #guardReentry(name: string): void {
+    if (this.#cleaningResources) {
+      this.#cleanupReentryAttempted = true;
+      throw new Error(`ArenaGreyboxRenderer 清理回调期间不能调用 ${name}。`);
+    }
     if (this.#callbackActive) {
       this.#reentryAttempted = true;
       throw new Error(`ArenaGreyboxRenderer 外部回调期间不能调用 ${name}。`);
@@ -663,24 +908,107 @@ export class ArenaGreyboxRenderer {
   }
 
   #releaseOwnedResources(): unknown[] {
+    if (this.#cleaningResources) {
+      this.#cleanupReentryAttempted = true;
+      return [new Error('ArenaGreyboxRenderer 清理不可重入。')];
+    }
+    this.#cleaningResources = true;
+    this.#cleanupReentryAttempted = false;
     const errors: unknown[] = [];
+    try {
     if (!this.#cleanup.audio && tryRelease(
       this.#impactAudio ? () => this.#impactAudio!.dispose() : null,
       errors,
     )) this.#cleanup.audio = true;
     if (!this.#cleanup.hud && tryRelease(
-      this.#hud ? () => this.#hud!.dispose() : null,
+      this.#hudConstructionDebt === null && this.#hud ? () => this.#hud!.dispose() : null,
       errors,
-    )) this.#cleanup.hud = true;
-    if (!this.#cleanup.stage) {
-      const released = tryRelease(this.#stage ? () => this.#stage!.dispose() : null, errors);
-      if (released && this.#loadPromise === null) this.#cleanup.stage = true;
+    )) {
+      if (this.#hudConstructionDebt !== null) {
+        try { this.#hudConstructionDebt.retryCleanup(); }
+        catch (error) { errors.push(error); }
+        if (this.#hudConstructionDebt.cleanupComplete) this.#hudConstructionDebt = null;
+      }
+      if (this.#hudConstructionDebt === null) this.#cleanup.hud = true;
     }
-    if (!this.#cleanup.renderer && tryRelease(this.#renderer?.dispose ?? null, errors)) {
+    if (!this.#cleanup.stage) {
+      if (this.#stageConstructionDebt !== null) {
+        try { this.#stageConstructionDebt.retryCleanup(); }
+        catch (error) { errors.push(error); }
+        if (this.#stageConstructionDebt.cleanupComplete) this.#stageConstructionDebt = null;
+      }
+      if (this.#stageConstructionDebt === null) {
+        const released = tryRelease(this.#stage ? () => this.#stage!.dispose() : null, errors);
+        if (released && this.#loadPromise === null) this.#cleanup.stage = true;
+      }
+    }
+    if (!this.#cleanup.assetLoader && this.#cleanup.stage) {
+      if (this.#presentationAssetLoader === null) {
+        this.#cleanup.assetLoader = true;
+      } else {
+        const released = tryRelease(
+          () => this.#presentationAssetLoader!.destroy(),
+          errors,
+        );
+        if (released && this.#presentationAssetLoader.isCleanupComplete()) {
+          this.#cleanup.assetLoader = true;
+        }
+      }
+    }
+    if (this.#rendererConstructionCandidate !== null) {
+      errors.push(...releaseRendererConstructionCandidate(
+        this.#rendererConstructionCandidate,
+        this.#contextConstructionCandidate === null,
+      ));
+      if (this.#rendererConstructionCandidate.disposed) this.#cleanup.renderer = true;
+      if (this.#rendererConstructionCandidate.contextLost) this.#cleanup.context = true;
+      if (
+        this.#rendererConstructionCandidate.disposed
+        && this.#rendererConstructionCandidate.contextLost
+      ) this.#rendererConstructionCandidate = null;
+    }
+    if (this.#contextConstructionCandidate !== null) {
+      errors.push(...releaseWebGlContextConstructionCandidate(this.#contextConstructionCandidate));
+      if (
+        !this.#contextConstructionCandidate.released
+        && this.#rendererConstructionCandidate !== null
+      ) {
+        errors.push(...releaseRendererConstructionCandidate(
+          this.#rendererConstructionCandidate,
+          true,
+        ));
+        if (this.#rendererConstructionCandidate.contextLost) {
+          this.#contextConstructionCandidate.released = true;
+        }
+      }
+      if (this.#contextConstructionCandidate.released) {
+        this.#cleanup.context = true;
+        if (this.#rendererConstructionCandidate !== null) {
+          this.#rendererConstructionCandidate.contextLost = true;
+          if (this.#rendererConstructionCandidate.disposed) this.#rendererConstructionCandidate = null;
+        }
+        this.#contextConstructionCandidate = null;
+      }
+    }
+    if (
+      !this.#cleanup.renderer
+      && this.#rendererConstructionCandidate === null
+      && tryRelease(this.#renderer?.dispose ?? null, errors)
+    ) {
       this.#cleanup.renderer = true;
     }
-    if (!this.#cleanup.context && tryRelease(this.#renderer?.forceContextLoss ?? null, errors)) {
+    if (
+      !this.#cleanup.context
+      && this.#rendererConstructionCandidate === null
+      && tryRelease(this.#renderer?.forceContextLoss ?? null, errors)
+    ) {
       this.#cleanup.context = true;
+    }
+    } finally {
+      this.#cleaningResources = false;
+    }
+    if (this.#cleanupReentryAttempted) {
+      errors.push(new Error('ArenaGreyboxRenderer 清理回调发生公开API重入。'));
     }
     const complete = Object.values(this.#cleanup).every(Boolean);
     if (complete) {
@@ -690,6 +1018,14 @@ export class ArenaGreyboxRenderer {
       this.#state = ARENA_GREYBOX_RENDERER_STATE.DISPOSE_INCOMPLETE;
     }
     return errors;
+  }
+
+  #constructionCleanupComplete(): boolean {
+    return this.#contextConstructionCandidate === null
+      && this.#rendererConstructionCandidate === null
+      && this.#stageConstructionDebt === null
+      && this.#hudConstructionDebt === null
+      && Object.values(this.#cleanup).every(Boolean);
   }
 
   #failClosed(error: unknown, message: string): Error {

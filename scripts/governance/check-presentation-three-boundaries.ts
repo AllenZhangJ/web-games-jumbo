@@ -11,8 +11,11 @@ const EXPECTED_DEPENDENCIES = Object.freeze({
 
 const EXPECTED_PRODUCT_DEPENDENCIES = Object.freeze({
   '@number-strategy-jump/arena-contracts': '0.1.0',
+  '@number-strategy-jump/arena-presentation-contracts': '0.1.0',
   '@number-strategy-jump/arena-presentation-three': '0.1.0',
+  '@number-strategy-jump/arena-presentation-runtime': '0.1.0',
   '@number-strategy-jump/arena-product-presentation': '0.1.0',
+  '@number-strategy-jump/arena-product-progression': '0.1.0',
   three: '0.185.1',
 });
 

@@ -8,5 +8,8 @@
     "rootDir": "src",
     "outDir": "dist"
   },
+  "references": [
+    { "path": "../arena-platform-contracts" }
+  ],
   "include": ["src/**/*.ts"]
 }

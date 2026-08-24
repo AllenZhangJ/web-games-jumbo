@@ -105,6 +105,18 @@ function mutableCheckpoint(
   return structuredClone(checkpoint) as unknown as Record<string, unknown>;
 }
 
+interface CleanupFailure extends Error {
+  readonly originalError?: unknown;
+  readonly cleanupErrors: readonly Error[];
+}
+
+function requireCleanupFailure(error: unknown): CleanupFailure {
+  assert.ok(error instanceof Error);
+  const cleanupErrors = Reflect.get(error, 'cleanupErrors');
+  assert.ok(Array.isArray(cleanupErrors));
+  return error as CleanupFailure;
+}
+
 function survivalCoreFactory({ seed, config }: { seed: number; config: unknown }): MatchCore {
   return createArenaV2SurvivalSupplyMatchCore({ seed, config, supply: SUPPLY });
 }
@@ -571,6 +583,179 @@ test('internal checkpoint rejects schema, identity, cursor, input, event and map
   }), /rule content hash/);
   assert.ok(rejectedCandidate);
   assert.throws(() => rejectedCandidate?.getLegacyFullSnapshotForAudit(), /已销毁/);
+  runner.destroy();
+  source.destroy();
+});
+
+test('checkpoint bounds invalid Core cleanup and preserves the factory contract as primary failure', () => {
+  const source = createSurvivalCore(909, 1_850);
+  const runner = new HeadlessMatchRunner(source, { checkpointInterval: 60 });
+  const checkpoint = runner.exportInternalCheckpoint();
+
+  const rejectCandidate = (candidate: unknown): CleanupFailure => {
+    let thrown: unknown;
+    try {
+      restoreMatchCoreFromCheckpoint(checkpoint, { coreFactory: () => candidate });
+    } catch (error) {
+      thrown = error;
+    }
+    const failure = requireCleanupFailure(thrown);
+    assert.ok(failure.originalError instanceof Error);
+    assert.match(failure.originalError.message, /coreFactory 必须返回 MatchCore/);
+    assert.equal(failure.cleanupErrors.length, 1);
+    return failure;
+  };
+
+  const cyclicTarget = Object.create(null) as object;
+  let cyclicCandidate: object;
+  cyclicCandidate = new Proxy(cyclicTarget, {
+    getPrototypeOf() {
+      return cyclicCandidate;
+    },
+  });
+  assert.match(
+    rejectCandidate(cyclicCandidate).cleanupErrors[0]?.message ?? '',
+    /prototype 链不能循环/,
+  );
+
+  let tooDeepCandidate = Object.create(null) as object;
+  for (let depth = 0; depth < 33; depth += 1) {
+    tooDeepCandidate = Object.create(tooDeepCandidate) as object;
+  }
+  assert.match(
+    rejectCandidate(tooDeepCandidate).cleanupErrors[0]?.message ?? '',
+    /prototype 链超过 32 层/,
+  );
+
+  let destroyGetterCalls = 0;
+  const accessorCandidate = Object.defineProperty({}, 'destroy', {
+    enumerable: true,
+    get() {
+      destroyGetterCalls += 1;
+      throw new Error('destroy getter must not execute');
+    },
+  });
+  assert.match(
+    rejectCandidate(accessorCandidate).cleanupErrors[0]?.message ?? '',
+    /destroy必须是数据方法/,
+  );
+  assert.equal(destroyGetterCalls, 0);
+
+  let destroyCalls = 0;
+  let hostileThenCalls = 0;
+  assert.match(
+    rejectCandidate({
+      destroy() {
+        destroyCalls += 1;
+        return {
+          then() {
+            hostileThenCalls += 1;
+            throw new Error('hostile cleanup then must not execute');
+          },
+        };
+      },
+    }).cleanupErrors[0]?.message ?? '',
+    /destroy必须同步完成/,
+  );
+  assert.equal(destroyCalls, 1);
+  assert.equal(hostileThenCalls, 0);
+
+  let dataThenDestroyCalls = 0;
+  assert.match(
+    rejectCandidate({
+      destroy() {
+        dataThenDestroyCalls += 1;
+        return Object.freeze({ then: null });
+      },
+    }).cleanupErrors[0]?.message ?? '',
+    /destroy.*then字段.*同步完成/,
+  );
+  assert.equal(dataThenDestroyCalls, 1);
+
+  let customConstructorThenCalls = 0;
+  assert.match(
+    rejectCandidate({
+      destroy: () => ({
+        constructor: function UnsafePromiseSubclass() {},
+        then() {
+          customConstructorThenCalls += 1;
+        },
+      }),
+    }).cleanupErrors[0]?.message ?? '',
+    /destroy必须同步完成/,
+  );
+  assert.equal(customConstructorThenCalls, 0);
+
+  assert.match(
+    rejectCandidate({ destroy: () => Promise.resolve() }).cleanupErrors[0]?.message ?? '',
+    /destroy必须同步完成/,
+  );
+
+  let thenGetterCalls = 0;
+  const accessorThenResult = Object.defineProperty({}, 'then', {
+    enumerable: true,
+    get() {
+      thenGetterCalls += 1;
+      throw new Error('cleanup then getter must not execute');
+    },
+  });
+  assert.match(
+    rejectCandidate({ destroy: () => accessorThenResult }).cleanupErrors[0]?.message ?? '',
+    /访问器 thenable/,
+  );
+  assert.equal(thenGetterCalls, 0);
+
+  let constructorGetterCalls = 0;
+  const promiseWithHostileConstructor = Promise.resolve();
+  Object.defineProperty(promiseWithHostileConstructor, 'constructor', {
+    enumerable: true,
+    get() {
+      constructorGetterCalls += 1;
+      throw new Error('Promise constructor getter must not execute');
+    },
+  });
+  assert.match(
+    rejectCandidate({ destroy: () => promiseWithHostileConstructor })
+      .cleanupErrors[0]?.message ?? '',
+    /访问器 constructor/,
+  );
+  assert.equal(constructorGetterCalls, 0);
+
+  const speciesDescriptor = Object.getOwnPropertyDescriptor(Promise, Symbol.species);
+  assert.ok(speciesDescriptor);
+  let speciesGetterCalls = 0;
+  const resolvedPromise = Promise.resolve();
+  Object.defineProperty(Promise, Symbol.species, {
+    ...speciesDescriptor,
+    get() {
+      speciesGetterCalls += 1;
+      return Promise;
+    },
+  });
+  try {
+    assert.match(
+      rejectCandidate({ destroy: () => resolvedPromise }).cleanupErrors[0]?.message ?? '',
+      /Promise\[Symbol\.species\] 描述符漂移/,
+    );
+    assert.equal(speciesGetterCalls, 0);
+  } finally {
+    Object.defineProperty(Promise, Symbol.species, speciesDescriptor);
+  }
+
+  let getPrototypeOfCalls = 0;
+  const throwingPrototypeCandidate = new Proxy(Object.create(null) as object, {
+    getPrototypeOf() {
+      getPrototypeOfCalls += 1;
+      throw new Error('hostile getPrototypeOf failure');
+    },
+  });
+  const trapFailure = rejectCandidate(throwingPrototypeCandidate);
+  assert.equal(getPrototypeOfCalls, 1);
+  assert.match(
+    trapFailure.cleanupErrors[0]?.message ?? '',
+    /hostile getPrototypeOf failure/,
+  );
+
   runner.destroy();
   source.destroy();
 });

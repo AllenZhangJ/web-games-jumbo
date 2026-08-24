@@ -1,6 +1,7 @@
 import {
   assertKnownKeys,
   assertPlainRecord,
+  ARENA_PARTICIPANT_STATUS,
   createRng,
   createDeterministicDataHash,
   normalizeInputFrame,
@@ -8,7 +9,6 @@ import {
   type ArenaPublicSupplyProjectionLifecycleContract,
   type DeterministicRng,
 } from '@number-strategy-jump/arena-contracts';
-import { ARENA_PARTICIPANT_STATUS } from '@number-strategy-jump/arena-match';
 import {
   BOT_PROFILE_REGISTRY,
 } from './bot-difficulty.js';
@@ -44,6 +44,11 @@ import {
   type BotObservationV5,
 } from './bot-observation.js';
 import { createBotPersonality, type BotPersonality } from './bot-personality.js';
+import {
+  createBotPrimaryInputPacingV1,
+  isBotParticipantControlAvailableV1,
+  isBotPrimaryActionReadyV1,
+} from './bot-primary-input-pacing-v1.js';
 import { selectHighestUtility, type UtilityDecision } from './utility-arbitrator.js';
 
 const CONTROLLER_OPTION_KEYS = new Set([
@@ -57,6 +62,7 @@ const CONTROLLER_OPTION_KEYS = new Set([
   'trustedCommandSourceHandle',
   'arena',
   'characterRadius',
+  'tickDurationSeconds',
   'maximumStepHeight',
 ]);
 
@@ -74,7 +80,8 @@ export interface BotControllerOptions {
   readonly trustedCommandSourceHandle?: object;
   readonly arena: unknown;
   readonly characterRadius: number;
-  readonly maximumStepHeight?: number;
+  readonly tickDurationSeconds: number;
+  readonly maximumStepHeight: number;
 }
 
 export interface BotControllerDebugSnapshot {
@@ -98,6 +105,7 @@ interface NormalizedBotControllerOptions {
   readonly behaviorSeed: number;
   readonly personalitySeed: number;
   readonly arena: BotArenaView;
+  readonly tickDurationSeconds: number;
   readonly requireActiveSupplyProjection: boolean;
   readonly supplyProjectionContract?: ArenaPublicSupplyProjectionLifecycleContract;
   readonly trustedCommandSourceHandle: object | null;
@@ -129,6 +137,13 @@ function equalNormalizedSource(left: unknown, right: unknown): boolean {
 function uint32(value: unknown, name: string): number {
   if (!Number.isSafeInteger(value) || (value as number) < 0 || (value as number) > 0xffffffff) {
     throw new RangeError(`${name} 必须是 uint32。`);
+  }
+  return value as number;
+}
+
+function positiveFinite(value: unknown, name: string): number {
+  if (!Number.isFinite(value) || (value as number) <= 0) {
+    throw new RangeError(`${name} 必须是有限正数。`);
   }
   return value as number;
 }
@@ -210,7 +225,11 @@ function normalizeOptions(options: unknown): NormalizedBotControllerOptions {
   const arena = createBotArenaView(
     readDataProperty(record, 'arena', 'BotController options'),
     readDataProperty(record, 'characterRadius', 'BotController options'),
-    readOptionalDataProperty(record, 'maximumStepHeight', 'BotController options'),
+    readDataProperty(record, 'maximumStepHeight', 'BotController options'),
+  );
+  const tickDurationSeconds = positiveFinite(
+    readDataProperty(record, 'tickDurationSeconds', 'BotController options'),
+    'BotController options.tickDurationSeconds',
   );
   return Object.freeze({
     participantId,
@@ -219,6 +238,7 @@ function normalizeOptions(options: unknown): NormalizedBotControllerOptions {
     behaviorSeed,
     personalitySeed,
     arena,
+    tickDurationSeconds,
     requireActiveSupplyProjection: requireActiveSupplyProjection ?? false,
     trustedCommandSourceHandle: trustedCommandSourceHandle === undefined
       ? null
@@ -236,6 +256,7 @@ export class BotController {
   #personality: BotPersonality;
   #rng: DeterministicRng;
   #arena: BotArenaView;
+  #tickDurationSeconds: number;
   #sourceSnapshots: BotCommandSourceV5[];
   #currentPlan: UtilityDecision<BotGoalPlan> | null;
   #directionOffsetRadians: number;
@@ -273,6 +294,7 @@ export class BotController {
     this.#personality = personality;
     this.#rng = rng;
     this.#arena = normalized.arena;
+    this.#tickDurationSeconds = normalized.tickDurationSeconds;
     this.#sourceSnapshots = [];
     this.#currentPlan = null;
     this.#directionOffsetRadians = 0;
@@ -435,6 +457,7 @@ export class BotController {
       observation,
       profile: this.#difficulty,
       personality: this.#personality,
+      tickDurationSeconds: this.#tickDurationSeconds,
     });
     this.#currentPlan = decision;
     this.#directionOffsetRadians = (
@@ -476,42 +499,99 @@ export class BotController {
   }
 
   #createFrame(observation: BotObservationV5): ArenaInputFrame {
-    if (!this.#currentPlan || observation.commandTick >= this.#nextPlanTick) {
+    const canControl = isBotParticipantControlAvailableV1({
+      schemaVersion: 1,
+      participantActive: observation.self.status === ARENA_PARTICIPANT_STATUS.ACTIVE,
+      hitstunTicks: observation.self.hitstunTicks,
+    });
+    if (!canControl) {
+      this.#mobilityScheduler.sample(observation.commandTick, false);
+      this.#currentPlan = null;
+      this.#nextPlanTick = observation.commandTick + 1;
+      this.#actionTick = -1;
+      return normalizeInputFrame({
+        tick: observation.commandTick,
+        participantId: this.#participantId,
+        moveX: 0,
+        moveZ: 0,
+        primaryPressed: false,
+        primaryHeld: false,
+        jumpPressed: false,
+        jumpHeld: false,
+        slamPressed: false,
+      }, {
+        expectedTick: observation.commandTick,
+        participantIds: [this.#participantId],
+      });
+    }
+    const chargingCommitment = observation.self.action.primaryCommitment?.status === 'charging';
+    if (chargingCommitment) {
+      this.#nextPlanTick = observation.commandTick + 1;
+      this.#actionTick = -1;
+    }
+    if (
+      !chargingCommitment
+      && (!this.#currentPlan || observation.commandTick >= this.#nextPlanTick)
+    ) {
       this.#replan(observation);
     }
     const currentPlan = this.#currentPlan;
-    if (!currentPlan) throw new Error('BotController 规划未产生决策。');
+    if (!currentPlan && !chargingCommitment) throw new Error('BotController 规划未产生决策。');
     let moveX = 0;
     let moveZ = 0;
+    const canTrackChargingOpponent = chargingCommitment
+      && observation.opponent.status === ARENA_PARTICIPANT_STATUS.ACTIVE
+      && observation.opponent.invulnerableTicks === 0;
+    const movementTarget = chargingCommitment
+      ? canTrackChargingOpponent
+        ? observation.opponent.position
+        : observation.self.position
+      : currentPlan!.plan.target;
+    const speedScale = chargingCommitment
+      ? canTrackChargingOpponent ? 0.65 : 0
+      : currentPlan!.plan.speedScale;
     if (
       observation.commandTick >= this.#pauseUntilTick
-      && currentPlan.plan.speedScale > 0
+      && speedScale > 0
     ) {
-      const dx = currentPlan.plan.target.x - observation.self.position.x;
-      const dz = currentPlan.plan.target.z - observation.self.position.z;
+      const dx = movementTarget.x - observation.self.position.x;
+      const dz = movementTarget.z - observation.self.position.z;
       const distance = Math.hypot(dx, dz);
       if (distance > 1e-6) {
-        const cosine = Math.cos(this.#directionOffsetRadians);
-        const sine = Math.sin(this.#directionOffsetRadians);
+        const cosine = chargingCommitment ? 1 : Math.cos(this.#directionOffsetRadians);
+        const sine = chargingCommitment ? 0 : Math.sin(this.#directionOffsetRadians);
         const directionX = dx / distance;
         const directionZ = dz / distance;
         const magnitude = this.#difficulty.maximumInputMagnitude
-          * currentPlan.plan.speedScale;
+          * speedScale;
         moveX = (directionX * cosine - directionZ * sine) * magnitude;
         moveZ = (directionX * sine + directionZ * cosine) * magnitude;
       }
     }
-    const primaryPressed = observation.commandTick === this.#actionTick;
-    const canMove = observation.self.status === ARENA_PARTICIPANT_STATUS.ACTIVE
-      && observation.self.hitstunTicks === 0;
-    const mobility = this.#mobilityScheduler.sample(observation.commandTick, canMove);
+    const actionReady = isBotPrimaryActionReadyV1({
+      schemaVersion: 1,
+      actionIdle: observation.self.action.phase === 'idle',
+      cooldownRemainingTicks: observation.self.equipment?.cooldownRemainingTicks ?? null,
+    });
+    const primaryInput = createBotPrimaryInputPacingV1({
+      schemaVersion: 1,
+      actionReady,
+      actionInProgress: observation.self.action.phase !== 'idle',
+      commitment: observation.self.action.primaryCommitment,
+      minimumCommitmentTicks: observation.self.actionRule.minimumCommitmentTicks,
+      wantsToStart: observation.commandTick === this.#actionTick,
+    });
+    const mobility = this.#mobilityScheduler.sample(
+      observation.commandTick,
+      !chargingCommitment,
+    );
     return normalizeInputFrame({
       tick: observation.commandTick,
       participantId: this.#participantId,
       moveX,
       moveZ,
-      primaryPressed,
-      primaryHeld: primaryPressed,
+      primaryPressed: primaryInput.primaryPressed,
+      primaryHeld: primaryInput.primaryHeld,
       jumpPressed: mobility.jumpPressed,
       jumpHeld: mobility.jumpHeld,
       slamPressed: mobility.slamPressed,

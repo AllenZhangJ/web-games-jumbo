@@ -99,6 +99,37 @@ const REQUIRED_WORLD_METHODS = Object.freeze([
   'resetCharacter',
   'destroy',
 ]);
+const MAX_CONTRACT_PROTOTYPE_DEPTH = 32;
+
+function findWorldDataMethod(
+  world: object,
+  methodName: string,
+): ((...arguments_: unknown[]) => unknown) | null {
+  const visited = new Set<object>();
+  let target: object | null = world;
+  for (
+    let depth = 0;
+    target !== null && depth < MAX_CONTRACT_PROTOTYPE_DEPTH;
+    depth += 1
+  ) {
+    if (visited.has(target)) throw new TypeError('physics world prototype 链不能循环。');
+    visited.add(target);
+    const descriptor = Object.getOwnPropertyDescriptor(target, methodName);
+    if (descriptor !== undefined) {
+      if (!Object.prototype.hasOwnProperty.call(descriptor, 'value')) {
+        throw new TypeError(`physics world.${methodName} 必须是数据方法。`);
+      }
+      return typeof descriptor.value === 'function'
+        ? descriptor.value as (...arguments_: unknown[]) => unknown
+        : null;
+    }
+    target = Object.getPrototypeOf(target) as object | null;
+  }
+  if (target !== null) {
+    throw new RangeError(`physics world prototype 链超过 ${MAX_CONTRACT_PROTOTYPE_DEPTH} 层。`);
+  }
+  return null;
+}
 
 export function assertFiniteNumber(value: unknown, name: string): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
@@ -196,7 +227,7 @@ export function validateCharacterDefinition(definition: unknown): PhysicsCharact
 export function assertPhysicsWorld(world: unknown): PhysicsWorld {
   if (!world || typeof world !== 'object') throw new TypeError('physics world 必须是对象。');
   for (const name of REQUIRED_WORLD_METHODS) {
-    if (typeof Reflect.get(world, name) !== 'function') {
+    if (findWorldDataMethod(world, name) === null) {
       throw new TypeError(`physics world 缺少 ${name}()。`);
     }
   }

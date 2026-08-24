@@ -10,6 +10,8 @@
   },
   "references": [
     { "path": "../arena-contracts" },
+    { "path": "../arena-definitions" },
+    { "path": "../arena-map" },
     { "path": "../arena-profile-contracts" }
   ],
   "include": ["src/**/*.ts"]

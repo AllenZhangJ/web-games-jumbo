@@ -65,4 +65,5 @@ describe('Product Session composition boundary', () => {
     })).toThrow(/baseMatchConfig.*数据字段/);
     expect(reads).toBe(0);
   });
+
 });

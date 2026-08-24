@@ -2,7 +2,7 @@
 
 ## 状态
 
-提议：`P2.0 design-candidate / implementation-not-authorized / hardGate=false`。本 ADR 尚未取得开发A、美术线程的精确回执与六维自检，也未通过主协调评分；不得据此修改生产代码、schema、golden、资产，或执行commit/push。
+提议：`P2.0 implementation-candidate / verification-deferred-by-ADR-118 / production-unreachable / hardGate=false`。自2026-08-10起，[ADR-118](118-arena-v2-development-first-deferred-validation-window.md)仅授权P2.0a/P2.0b按精确新增文件形成生产不可达候选；本ADR仍未完成自动化、性能、设备、真人、美术与最终主协调验收，不得据此修改生产入口、注册未决生产数值、执行push或声称P2通过。
 
 ## 日期
 
@@ -71,6 +71,7 @@ Arena V2 已冻结三种首发模式：常规1v1、2–4人竞速和单人生存
 
 - 2–4个无队伍competitor，全部使用普通InputFrame、Rule、Targeting与Physics；不增加终点、重生或拾取按键。
 - participant掉落不消耗终局生命，等待固定180 tick后在该participant最近的合法权威安全锚点重生，可重复发生直到比赛结束。
+- 后续[ADR-121](121-arena-v2-race-respawn-single-source-candidate.md)已把真实Runtime既有30 tick重生保护与两图公共Race fallback锚收敛为生产不可达单一候选；2–4人独立起跑格与规则fallback保持分离，保护平衡批准仍为`not-run`。
 - 安全锚点只能由MapSystem依据已通过的支撑面与路线进度提交；Renderer位置历史、当前最近空间点或墙钟不得作为兜底。最近锚点失效时回退到Definition指定的起始安全锚点；起始锚点也无效则构造或tick失败关闭。
 - 第一个有效终点claim结束生产比赛。相同tick内多个有效claim共享第一名；participant ID只用于事件和序列化稳定排序，不制造虚假先后。其余参与者按终局tick的权威路线进度形成排名，同进度共享名次。
 - 固定同tick裁决为“有效终点claim优先于同participant掉落”；被击飞穿过合法终点仍算完成。硬时限无人到达终点时以`no-finisher`结束，不把最高进度伪造成winner，进度排名只作结果事实。
@@ -80,7 +81,7 @@ Arena V2 已冻结三种首发模式：常规1v1、2–4人竞速和单人生存
 - 恰好1个human player角色，加Definition约束下的有界enemy slots；玩家与敌人属于敌对关系，敌人之间默认不可互相命中。
 - 敌人slot使用稳定ID和单调generation，只有预注册slot可以激活、失活和再次激活；禁止每轮创建无界participant ID。P2.0先冻结schema测试天花板16和实现期生产候选上限4，二者都不是安全结论；已证明引擎安全上限保持null，直到P2.6在正式Core上完成4/8/12/16无渲染、Replay、资源和清洁CPU矩阵。P2.4不得注册超过4的生产候选，P2总门不得在安全上限仍为null时通过。
 - pressure policy只含连续stage、开始active tick、目标active enemy slot数、slot重激活延迟，以及每个预注册slot固定绑定的地图入口锚；重激活只增加generation，不随机更换入口。研究原型的0/15/30/45秒不得直接成为生产值。数值未签核时生产Definition不存在，不允许MatchCore补默认刷新节奏。
-- 玩家开局空手并复用ADR-108/110的P1三实体供给。玩家第一次掉落增加权威fall count并在Definition指定的合法生存锚点重生；第二次掉落立即终局。该计数不放在武器、Bot、Renderer或Profile中。
+- 玩家开局空手并复用ADR-108/110的P1三实体供给。玩家第一次掉落增加权威fall count并在Definition指定的合法生存锚点重生；第二次掉落立即终局。后续[ADR-120](120-arena-v2-survival-first-respawn-single-source-candidate.md)已把shared-world既有60 tick等待、30 tick保护与双地图同语义safe anchor收敛为生产不可达单一候选，平衡批准仍为`not-run`。该计数不放在武器、Bot、Renderer或Profile中。
 - 每个供给wave把slot content的collection武器ID经tier policy解析为等级专属runtime Equipment Definition ID；该runtime Definition继续引用等级专属Action Definition。wave、临时level、collection/runtime identity及内容hash进入Replay V6；Profile只允许记录collection熟练/收藏，不携带runtime tier或临时战斗数值。缺映射时spawn前失败关闭，不退回基础武器。
 - 敌人掉落只使对应slot失活；未来刷新只能由权威整数tick计划重新激活可用slot并增加generation，不能复用未清理runtime或直接写玩家状态。
 - 临时武器等级只存在于本局Definition/runtime/Replay；不得写入永久收藏或战斗数值成长。
@@ -187,7 +188,7 @@ grant ID只由稳定权威Result身份派生，不得包含Profile revision。Re
 4. 明确V5/V6、checkpoint v1/v2、Product Result v2/v3和future schema的validator、写入切换与回滚路径。
 5. 固定同tick多终点、终点+掉落、多掉落、第一/第二次生存掉落、slot重复激活和结束后输入的裁决与测试矩阵。
 6. 更新架构依赖测试，证明权威层不依赖experiment、Three.js、DOM、平台API、墙钟、`Math.random()`或通用事件总线。
-7. P1必须在清洁source/build/content identity上完成PA6、PA7及计划要求的Coverage、Platform/三端/真机和治理证据，并由独立审计明确`advance`后，主协调才可授权P2生产实现；PA6单门或ADR设计签核均不能绕过该阶段前置。P1未advance期间只允许本ADR/P2台账的设计反证、精确文件与测试计划，以及不改变公共合同的夹具准备。
+7. P1仍必须在清洁source/build/content identity上完成PA6、PA7及计划要求的Coverage、Platform/三端/真机和治理证据，并由独立审计明确`advance`后，才可开放P2生产入口、生产Registry与正式advance。ADR-118仅允许在此前形成P2.0a/P2.0b生产不可达候选，不改变任何正式门禁；PA6单门、ADR设计签核或候选代码均不能冒充阶段通过。
 8. 文档检查、链接、术语、命令片段和`git diff --check`通过；最终clean commit/push仍由主协调单独授权。
 9. 多controller第1/N/末项构造与采样失败、部分handshake、destroy重试、奖励写入成功但响应丢失、duplicate、Match释放失败和跨Mode rematch均有失败关闭测试；同一Result跨Profile revision必须得到同一grant ID。
 10. 九类Policy Definition全部执行exact-key、kind与交叉引用闭包验证；Survival每wave的collection→runtime tier解析进入config/content/checkpoint/Replay hash，缺variant、跨tier回退、运行时改基础Definition或临时等级进入Profile均有负向测试。
@@ -206,3 +207,5 @@ grant ID只由稳定权威Result身份派生，不得包含Profile revision。Re
 - [ADR-047](047-arena-v2-survival-entity-boundary.md)与[ADR-048](048-arena-v2-survival-multi-enemy-pressure-boundary.md)：保留敌我共享Rule/Physics和受限输入研究边界。
 - [ADR-108](108-arena-v2-survival-auto-replace-and-expiry.md)与[ADR-110](110-arena-v2-expired-held-release-disposition.md)：P2 Survival必须复用已经实现的供给生命周期。
 - [ADR-111](111-arena-v2-action-read-model-performance-boundary.md)：P2不得回退PA5/PA6只读边界或以新Mode重引入全量热路径。
+- [ADR-120](120-arena-v2-survival-first-respawn-single-source-candidate.md)：固定Survival首次复活单一源码候选与双地图语义锚，不把候选冒充最终平衡批准。
+- [ADR-121](121-arena-v2-race-respawn-single-source-candidate.md)：固定Race 180/30重生候选、双地图公共fallback锚及起跑格职责分离。

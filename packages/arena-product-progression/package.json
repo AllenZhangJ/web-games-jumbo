@@ -14,8 +14,10 @@
   "files": ["dist"],
   "dependencies": {
     "@number-strategy-jump/arena-contracts": "0.1.0",
+    "@number-strategy-jump/arena-definitions": "0.1.0",
     "@number-strategy-jump/arena-product-contracts": "0.1.0",
     "@number-strategy-jump/arena-profile-contracts": "0.1.0",
-    "@number-strategy-jump/arena-progression": "0.1.0"
+    "@number-strategy-jump/arena-progression": "0.1.0",
+    "@number-strategy-jump/arena-storage": "0.1.0"
   }
 }

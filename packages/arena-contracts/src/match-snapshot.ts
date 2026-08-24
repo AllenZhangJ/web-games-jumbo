@@ -9,6 +9,14 @@ import {
   createArenaPublicSupplyProjectionAudit,
   type ArenaPublicSupplyProjection,
 } from './arena-public-supply-projection.js';
+import {
+  assertArenaActionPhase,
+  assertArenaMatchPhase,
+  assertArenaParticipantStatus,
+  type ArenaActionPhase,
+  type ArenaMatchPhase,
+  type ArenaParticipantStatus,
+} from './arena-authority-state.js';
 
 export interface ArenaVector3Snapshot {
   readonly x: number;
@@ -23,7 +31,7 @@ export interface ArenaVector2Snapshot {
 
 export interface ArenaActionSnapshot {
   readonly definitionId: string | null;
-  readonly phase: string;
+  readonly phase: ArenaActionPhase;
   readonly ticksRemaining: number;
   readonly commitment?: ArenaActionCommitmentSnapshot;
 }
@@ -60,7 +68,7 @@ export interface ArenaHeldEquipmentSnapshot {
 export interface ArenaParticipantSnapshot {
   readonly id: string;
   readonly characterDefinitionId: string;
-  readonly status: string;
+  readonly status: ArenaParticipantStatus;
   readonly lives: number;
   readonly eliminations: number;
   readonly deaths: number;
@@ -137,7 +145,7 @@ export interface ArenaMatchSnapshot {
   readonly matchSeed: number;
   readonly tick: number;
   readonly activeTick: number;
-  readonly phase: string;
+  readonly phase: ArenaMatchPhase;
   readonly remainingTicks: number;
   readonly eventSequence: number;
   readonly participants: readonly ArenaParticipantSnapshot[];
@@ -229,7 +237,7 @@ function auditParticipant(value: unknown, index: number, includeInternal: boolea
   assertKnownKeys(value, includeInternal ? INTERNAL_PARTICIPANT_KEYS : PUBLIC_PARTICIPANT_KEYS, name);
   const id = uniqueIdentifier(value, 'id', ids, name);
   assertNonEmptyString(value.characterDefinitionId, `${name}.characterDefinitionId`);
-  assertNonEmptyString(value.status, `${name}.status`);
+  assertArenaParticipantStatus(value.status, `${name}.status`);
   for (const key of [
     'lives', 'eliminations', 'deaths', 'hitstunTicks', 'invulnerableTicks',
     'respawnTicks', 'lastHitTick',
@@ -241,7 +249,7 @@ function auditParticipant(value: unknown, index: number, includeInternal: boolea
 
   assertKnownKeys(value.action, ACTION_KEYS, `${name}.action`);
   nullableIdentifier(value.action.definitionId, `${name}.action.definitionId`);
-  assertNonEmptyString(value.action.phase, `${name}.action.phase`);
+  assertArenaActionPhase(value.action.phase, `${name}.action.phase`);
   assertIntegerAtLeast(value.action.ticksRemaining, 0, `${name}.action.ticksRemaining`);
   if (value.action.commitment !== undefined) {
     assertKnownKeys(value.action.commitment, ACTION_COMMITMENT_KEYS, `${name}.action.commitment`);
@@ -388,7 +396,7 @@ export function createArenaMatchSnapshotAudit(
   if (activeTick > tick) {
     throw new RangeError('ArenaMatchSnapshot.activeTick 不能超过 tick。');
   }
-  assertNonEmptyString(source.phase, 'ArenaMatchSnapshot.phase');
+  assertArenaMatchPhase(source.phase, 'ArenaMatchSnapshot.phase');
   assertIntegerAtLeast(source.remainingTicks, 0, 'ArenaMatchSnapshot.remainingTicks');
   const eventSequence = assertIntegerAtLeast(
     source.eventSequence,

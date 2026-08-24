@@ -263,7 +263,7 @@ describe('arena-bot deterministic foundation', () => {
         return [];
       },
     });
-    expect(() => createBotArenaView(arena, 0.4)).toThrow(/数据字段|访问器/);
+    expect(() => createBotArenaView(arena, 0.4, 0.35)).toThrow(/数据字段|访问器/);
     expect(getterCalls).toBe(0);
 
     const snapshot = Object.defineProperty({}, 'tick', {

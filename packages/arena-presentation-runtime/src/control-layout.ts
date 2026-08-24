@@ -1,3 +1,10 @@
+import {
+  cloneViewport as clonePresentationViewport,
+  resolvedPresentationSafeAreaInsets,
+  type PresentationInputViewport,
+  type PresentationSafeAreaInsets,
+} from './input-validation.js';
+
 const LAYOUT_KEYS = new Set<PropertyKey>([
   'moveZoneFraction',
   'joystickRadiusFraction',
@@ -11,7 +18,6 @@ const LAYOUT_KEYS = new Set<PropertyKey>([
   'jumpCenterXFraction',
   'jumpCenterYFraction',
 ]);
-const VIEWPORT_KEYS = new Set<PropertyKey>(['width', 'height']);
 const POINT_KEYS = new Set<PropertyKey>(['x', 'y', 'pointerId']);
 
 export const ARENA_CONTROL_ID = Object.freeze({
@@ -40,9 +46,20 @@ export interface ArenaControlPoint {
   readonly pointerId: number;
 }
 
-export interface ArenaControlViewport {
+export type ArenaControlViewport = PresentationInputViewport;
+
+export interface ArenaControlSafeRect {
+  readonly left: number;
+  readonly top: number;
+  readonly right: number;
+  readonly bottom: number;
   readonly width: number;
   readonly height: number;
+}
+
+export interface ArenaControlActionCenter {
+  readonly x: number;
+  readonly y: number;
 }
 
 export interface ArenaControlDelta {
@@ -120,11 +137,7 @@ function clonePoint(value: unknown, name: string): ArenaControlPoint {
 }
 
 function cloneViewport(value: unknown, name: string): ArenaControlViewport {
-  const source = cloneKnownRecord(value, VIEWPORT_KEYS, name);
-  return Object.freeze({
-    width: positiveNumber(source.width, `${name}.width`),
-    height: positiveNumber(source.height, `${name}.height`),
-  });
+  return clonePresentationViewport(value, name);
 }
 
 export function createArenaControlLayout(overrides: unknown = {}): Readonly<ArenaControlLayout> {
@@ -170,16 +183,71 @@ function resolvedActionButtonRadius(
   );
 }
 
+function resolvedSafeRect(
+  viewport: ArenaControlViewport,
+  insets: Readonly<PresentationSafeAreaInsets> = resolvedPresentationSafeAreaInsets(viewport),
+): Readonly<ArenaControlSafeRect> {
+  const right = viewport.width - insets.right;
+  const bottom = viewport.height - insets.bottom;
+  return Object.freeze({
+    left: insets.left,
+    top: insets.top,
+    right,
+    bottom,
+    width: right - insets.left,
+    height: bottom - insets.top,
+  });
+}
+
+function resolvedActionButtonCenter(
+  viewport: ArenaControlViewport,
+  definition: ArenaControlLayout,
+  prefix: 'jump' | 'primary',
+  radius: number,
+): Readonly<ArenaControlActionCenter> {
+  const safeRect = resolvedSafeRect(viewport);
+  if (safeRect.width < radius * 2 || safeRect.height < radius * 2) {
+    throw new RangeError('control viewport safe area 无法容纳完整动作按钮。');
+  }
+  const targetX = safeRect.left + safeRect.width * definition[`${prefix}CenterXFraction`];
+  const targetY = safeRect.top + safeRect.height * definition[`${prefix}CenterYFraction`];
+  return Object.freeze({
+    x: Math.min(safeRect.right - radius, Math.max(safeRect.left + radius, targetX)),
+    y: Math.min(safeRect.bottom - radius, Math.max(safeRect.top + radius, targetY)),
+  });
+}
+
 function isInsideButton(
   point: ArenaControlPoint,
   viewport: ArenaControlViewport,
   definition: ArenaControlLayout,
   prefix: 'jump' | 'primary',
 ): boolean {
-  const centerX = viewport.width * definition[`${prefix}CenterXFraction`];
-  const centerY = viewport.height * definition[`${prefix}CenterYFraction`];
-  return Math.hypot(point.x - centerX, point.y - centerY)
-    <= resolvedActionButtonRadius(viewport, definition);
+  const radius = resolvedActionButtonRadius(viewport, definition);
+  const center = resolvedActionButtonCenter(viewport, definition, prefix, radius);
+  return Math.hypot(point.x - center.x, point.y - center.y) <= radius;
+}
+
+export function controlSafeAreaRect(viewportValue: unknown): Readonly<ArenaControlSafeRect> {
+  return resolvedSafeRect(cloneViewport(viewportValue, 'control safe-area viewport'));
+}
+
+export function actionButtonCenter(
+  viewportValue: unknown,
+  controlId: 'jump' | 'primary',
+  layoutValue: unknown = DEFAULT_ARENA_CONTROL_LAYOUT,
+): Readonly<ArenaControlActionCenter> {
+  if (controlId !== 'jump' && controlId !== 'primary') {
+    throw new RangeError('action button controlId必须是jump或primary。');
+  }
+  const viewport = cloneViewport(viewportValue, 'action button viewport');
+  const definition = createArenaControlLayout(layoutValue);
+  return resolvedActionButtonCenter(
+    viewport,
+    definition,
+    controlId,
+    resolvedActionButtonRadius(viewport, definition),
+  );
 }
 
 export function actionButtonRadius(

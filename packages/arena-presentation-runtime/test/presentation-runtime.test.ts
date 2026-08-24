@@ -5,6 +5,7 @@ import {
   ArenaImpactAudio,
   ARENA_V1_PRESENTATION_QUALITY_REGISTRY,
   ARENA_V1_PRESENTATION_QUALITY_ID,
+  actionButtonCenter,
   controlAtPoint,
   copyMapperActionAffordance,
   createExplicitCombatJumpMapper,
@@ -256,6 +257,50 @@ describe('Arena Presentation runtime boundaries', () => {
       { width: 400, height: 800 },
       layout,
     )).toBe(ARENA_CONTROL_ID.PRIMARY);
+    const safeViewport = {
+      width: 390,
+      height: 844,
+      safeAreaInsets: { top: 47, right: 34, bottom: 59, left: 34 },
+    };
+    const primaryCenter = actionButtonCenter(safeViewport, 'primary', layout);
+    const jumpCenter = actionButtonCenter(safeViewport, 'jump', layout);
+    expect(controlAtPoint(
+      { pointerId: 2, x: primaryCenter.x, y: primaryCenter.y },
+      safeViewport,
+      layout,
+    )).toBe(ARENA_CONTROL_ID.PRIMARY);
+    expect(controlAtPoint(
+      { pointerId: 3, x: jumpCenter.x, y: jumpCenter.y },
+      safeViewport,
+      layout,
+    )).toBe(ARENA_CONTROL_ID.JUMP);
+    expect(primaryCenter.x + 46).toBeLessThanOrEqual(390 - 34);
+    expect(jumpCenter.y + 46).toBeLessThanOrEqual(844 - 59);
+    expect(() => actionButtonCenter({
+      width: 100,
+      height: 100,
+      safeAreaInsets: { top: 5, right: 5, bottom: 5, left: 5 },
+    }, 'primary', layout)).toThrow(/无法容纳完整动作按钮/);
+    expect(() => actionButtonCenter(
+      { width: 390, height: 844 },
+      'future' as never,
+      layout,
+    )).toThrow(/controlId必须是jump或primary/);
+    const insetAccessor = Object.defineProperty({}, 'top', {
+      enumerable: true,
+      get() { reads += 1; return 0; },
+    });
+    expect(() => actionButtonCenter({
+      width: 390,
+      height: 844,
+      safeAreaInsets: insetAccessor,
+    }, 'primary', layout)).toThrow(/safeAreaInsets\.top.*访问器/);
+    expect(() => actionButtonCenter({
+      width: 390,
+      height: 844,
+      safeAreaInsets: { top: 0, right: 0, bottom: 0, left: 0, future: 0 },
+    }, 'primary', layout)).toThrow(/不支持字段 future/);
+    expect(reads).toBe(0);
     expect(() => normalizedControlDelta(
       { pointerId: 1, x: 0, y: 0 },
       { pointerId: 2, x: 1, y: 1 },
@@ -498,8 +543,28 @@ describe('Arena Presentation runtime boundaries', () => {
 
     const state = new RawControlState({ viewport: { width: 400, height: 800 } });
     expect(state.resize({ width: 400, height: 800 })).toBe(false);
+    expect(state.resize({
+      width: 400,
+      height: 800,
+      safeAreaInsets: { top: 0, right: 0, bottom: 0, left: 0 },
+    })).toBe(false);
     expect(state.pointerStart({ pointerId: 1, x: 80, y: 600 })).toBe(true);
     expect(state.getDebugSnapshot().move.active).toBe(true);
+    const revisionBeforeInset = state.getDebugSnapshot().revision;
+    expect(state.resize({
+      width: 400,
+      height: 800,
+      safeAreaInsets: { top: 47, right: 0, bottom: 34, left: 0 },
+    })).toBe(true);
+    expect(state.getDebugSnapshot()).toMatchObject({
+      revision: revisionBeforeInset + 1,
+      move: { active: false },
+    });
+    expect(state.resize({
+      width: 400,
+      height: 800,
+      safeAreaInsets: { top: 47, right: 0, bottom: 34, left: 0 },
+    })).toBe(false);
     state.destroy();
   });
 

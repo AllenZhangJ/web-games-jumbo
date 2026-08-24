@@ -12,6 +12,7 @@ export const PRESENTATION_ASSET_DEFINITION_SCHEMA_VERSION = 1 as const;
 export const PRESENTATION_ASSET_KIND = Object.freeze({
   ATTACHMENT: 'attachment',
   CHARACTER_MODEL: 'character-model',
+  MAP_MODEL: 'map-model',
 } as const);
 
 export type PresentationAssetKind =

@@ -444,6 +444,90 @@ function drawOffscreenOpponent(context: HudContext, frame: HudFrame, safe: SafeR
   context.fillText(`对手 ${Math.round(distance)}m`, x, y + (ny > 0.45 ? 18 : -17) * scale);
 }
 
+interface HudConstructionUnit {
+  readonly dispose: () => unknown;
+  disposed: boolean;
+}
+interface ArenaHudLayerConstructionResources {
+  quadDisposal: ThreeObjectDisposalLease | null;
+  readonly units: HudConstructionUnit[];
+  scene: THREE.Scene | null;
+  sceneClear: UnknownMethod | null;
+  sceneCleared: boolean;
+}
+
+function hudConstructionResourcesComplete(resources: ArenaHudLayerConstructionResources): boolean {
+  const quadComplete = resources.quadDisposal?.complete
+    ?? resources.units.every(({ disposed }) => disposed);
+  return quadComplete && resources.sceneCleared;
+}
+
+function cleanupHudConstructionResources(resources: ArenaHudLayerConstructionResources): void {
+  const errors: unknown[] = [];
+  if (resources.quadDisposal !== null) {
+    if (!resources.quadDisposal.complete) {
+      try { resources.quadDisposal.dispose(); } catch (error) { errors.push(error); }
+    }
+  } else {
+    for (const unit of resources.units) {
+      if (unit.disposed) continue;
+      try { unit.dispose(); unit.disposed = true; } catch (error) { errors.push(error); }
+    }
+  }
+  const quadComplete = resources.quadDisposal?.complete
+    ?? resources.units.every(({ disposed }) => disposed);
+  if (quadComplete && !resources.sceneCleared) {
+    try {
+      if (resources.sceneClear === null && resources.scene !== null) {
+        resources.sceneClear = snapshotMethod(resources.scene, 'ArenaHudLayer scene', 'clear');
+      }
+      if (resources.sceneClear !== null) {
+        rejectThenable(resources.sceneClear(), 'ArenaHudLayer scene.clear()');
+      }
+      resources.sceneCleared = true;
+    } catch (error) { errors.push(error); }
+  }
+  if (errors.length > 0) throw new AggregateError(errors, 'ArenaHudLayer 构造资源清理未完整完成。');
+  if (!hudConstructionResourcesComplete(resources)) {
+    throw new Error('ArenaHudLayer 构造资源清理依赖尚未收敛。');
+  }
+}
+
+export class ArenaHudLayerConstructionCleanupError extends AggregateError {
+  readonly originalError: unknown;
+  readonly cleanupError: unknown;
+  readonly #resources: ArenaHudLayerConstructionResources;
+
+  constructor(
+    originalError: unknown,
+    cleanupError: unknown,
+    resources: ArenaHudLayerConstructionResources,
+  ) {
+    super([originalError, cleanupError], 'ArenaHudLayer 构造失败且清理未完整完成。');
+    this.name = 'ArenaHudLayerConstructionCleanupError';
+    this.originalError = originalError;
+    this.cleanupError = cleanupError;
+    this.#resources = resources;
+  }
+
+  get cleanupComplete(): boolean { return hudConstructionResourcesComplete(this.#resources); }
+  retryCleanup(): void { cleanupHudConstructionResources(this.#resources); }
+}
+
+export const ARENA_HUD_LAYER_CONSTRUCTION_LIFECYCLE_V1 = Object.freeze({
+  id: 'arena-hud-layer-construction-lifecycle-v1',
+  textureGeometryAndMaterialRetainCleanupOwner: true,
+  sceneClearWaitsForQuadResources: true,
+  rendererCanRetryConstructionDebt: true,
+});
+
+export const ARENA_HUD_LAYER_TERMINAL_LIFECYCLE_V1 = Object.freeze({
+  id: 'arena-hud-layer-terminal-lifecycle-v1',
+  cleanupCallbacksCannotReenterPublicApi: true,
+  cleanupReentryStopsSceneClear: true,
+  cleanupCallbacksMustCompleteSynchronously: true,
+});
+
 export class ArenaHudLayer {
   readonly scene: THREE.Scene;
   readonly camera: THREE.OrthographicCamera;
@@ -482,38 +566,53 @@ export class ArenaHudLayer {
     let quad!: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
     let lease: ThreeObjectDisposalLease | null = null;
     let sceneClear: UnknownMethod | null = null;
+    const construction: ArenaHudLayerConstructionResources = {
+      quadDisposal: null,
+      units: [],
+      scene: null,
+      sceneClear: null,
+      sceneCleared: false,
+    };
+    const track = <T extends { dispose(): unknown }>(resource: T): T => {
+      construction.units.push({ dispose: () => resource.dispose(), disposed: false });
+      return resource;
+    };
     try {
-      texture = new THREE.CanvasTexture(this.#canvas as unknown as TexImageSource);
+      texture = track(new THREE.CanvasTexture(this.#canvas as unknown as TexImageSource));
       texture.name = 'ArenaHudTexture';
       texture.colorSpace = THREE.SRGBColorSpace;
       texture.minFilter = THREE.LinearFilter;
       texture.magFilter = THREE.LinearFilter;
       texture.generateMipmaps = false;
       scene = new THREE.Scene();
+      construction.scene = scene;
+      sceneClear = snapshotMethod(scene, 'ArenaHudLayer scene', 'clear');
+      construction.sceneClear = sceneClear;
       scene.name = 'ArenaHudScene';
       camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 2);
       camera.position.z = 1;
+      const geometry = track(new THREE.PlaneGeometry(2, 2));
+      const material = track(new THREE.MeshBasicMaterial({
+        map: texture,
+        transparent: true,
+        depthTest: false,
+        depthWrite: false,
+        toneMapped: false,
+      }));
       quad = new THREE.Mesh(
-        new THREE.PlaneGeometry(2, 2),
-        new THREE.MeshBasicMaterial({
-          map: texture,
-          transparent: true,
-          depthTest: false,
-          depthWrite: false,
-          toneMapped: false,
-        }),
+        geometry,
+        material,
       );
       quad.name = 'ArenaHudQuad';
       quad.renderOrder = 1000;
       scene.add(quad);
       lease = createThreeObjectDisposalLease(quad, { removeFromParent: false });
-      sceneClear = snapshotMethod(scene, 'ArenaHudLayer scene', 'clear');
+      construction.quadDisposal = lease;
+      if (lease === null || sceneClear === null) throw new Error('ArenaHudLayer 构造资源未完整发布。');
     } catch (error) {
-      const cleanupCauses: unknown[] = [];
-      try { lease?.dispose(); } catch (cleanupError) { cleanupCauses.push(cleanupError); }
-      try { scene?.clear(); } catch (cleanupError) { cleanupCauses.push(cleanupError); }
-      if (cleanupCauses.length > 0) {
-        throw aggregate('ArenaHudLayer 构造失败且清理未完整完成。', error, cleanupCauses);
+      try { cleanupHudConstructionResources(construction); }
+      catch (cleanupError) {
+        throw new ArenaHudLayerConstructionCleanupError(error, cleanupError, construction);
       }
       throw error;
     }
@@ -526,15 +625,15 @@ export class ArenaHudLayer {
   }
 
   #assertUsable(): void {
+    if (this.#operating || this.#cleaning) {
+      this.#reentryDetected = true;
+      throw new Error('ArenaHudLayer 不允许重入。');
+    }
     if (this.#disposed || this.#destroyRequested) throw new Error('ArenaHudLayer 已销毁。');
     if (this.#failedError) {
       const error = new Error('ArenaHudLayer 已失败。');
       error.cause = this.#failedError;
       throw error;
-    }
-    if (this.#operating || this.#cleaning) {
-      this.#reentryDetected = true;
-      throw new Error('ArenaHudLayer 不允许重入。');
     }
   }
 
@@ -552,15 +651,25 @@ export class ArenaHudLayer {
   #cleanupAll(): unknown[] {
     if (this.#cleaning) return [new Error('ArenaHudLayer 清理不可重入。')];
     this.#cleaning = true;
+    this.#reentryDetected = false;
     const errors: unknown[] = [];
     try {
       if (!this.#quadDisposed) {
-        try { this.#quadDisposal.dispose(); this.#quadDisposed = true; }
+        try {
+          rejectThenable(this.#quadDisposal.dispose(), 'ArenaHudLayer quad.dispose()');
+          if (this.#reentryDetected) {
+            throw new Error('ArenaHudLayer Quad清理回调发生公开API重入。');
+          }
+          this.#quadDisposed = true;
+        }
         catch (error) { errors.push(error); }
       }
-      if (!this.#sceneCleared) {
+      if (!this.#reentryDetected && !this.#sceneCleared) {
         try {
           rejectThenable(this.#sceneClear(), 'ArenaHudLayer scene.clear()');
+          if (this.#reentryDetected) {
+            throw new Error('ArenaHudLayer Scene清理回调发生公开API重入。');
+          }
           this.#sceneCleared = true;
         } catch (error) { errors.push(error); }
       }

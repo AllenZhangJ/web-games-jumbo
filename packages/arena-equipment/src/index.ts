@@ -32,7 +32,10 @@ export {
   serializeEquipmentRuntimeStates,
 } from './equipment-serializer.js';
 export { EquipmentSpawner } from './equipment-spawner.js';
-export { EquipmentSystem } from './equipment-system.js';
+export {
+  EQUIPMENT_SYSTEM_OPERATION_GUARD_V1,
+  EquipmentSystem,
+} from './equipment-system.js';
 export type {
   EquipmentDropResult,
   EquipmentSupplyPickupDecision,
@@ -43,6 +46,12 @@ export type {
   EquipmentSupplyTimelinePhaseResult,
   EquipmentSupplyTimelineSpawn,
 } from './equipment-system.js';
+export {
+  EQUIPMENT_SYSTEM_CHECKPOINT_V1_SCHEMA_VERSION,
+  createEquipmentSystemCheckpointV1,
+  validateEquipmentSystemCheckpointV1,
+} from './equipment-system-checkpoint-v1.js';
+export type { EquipmentSystemCheckpointV1 } from './equipment-system-checkpoint-v1.js';
 export {
   EQUIPMENT_SUPPLY_LIFECYCLE_SCHEMA_VERSION,
   createEquipmentSupplyEventIdentity,
@@ -59,7 +68,10 @@ export {
 export type {
   EquipmentSupplyAuthorityContract,
   EquipmentSupplyPublicProjectionResult,
+  EquipmentSupplyPublicProjectionV3Result,
   EquipmentSupplySpawnSpec,
+  EquipmentSupplyWorldEquipmentSnapshotV3,
+  EquipmentSupplyWaveEquipmentOverride,
   EquipmentSupplyTimelineSnapshot,
   EquipmentSupplyTimelineStepResult,
 } from './equipment-supply-timeline-system.js';

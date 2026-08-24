@@ -469,6 +469,21 @@ describe('arena-map primitives', () => {
     });
     expect(() => assertArenaMapSystem(invalidSystem)).toThrow('数据方法');
     expect(methodGetterCalls).toBe(0);
+
+    const cyclicTarget = Object.create(null) as object;
+    let cyclicSystem: object;
+    cyclicSystem = new Proxy(cyclicTarget, {
+      getPrototypeOf() {
+        return cyclicSystem;
+      },
+    });
+    expect(() => assertArenaMapSystem(cyclicSystem)).toThrow('prototype 链不能循环');
+
+    let tooDeepSystem = Object.create(null) as object;
+    for (let depth = 0; depth < 33; depth += 1) {
+      tooDeepSystem = Object.create(tooDeepSystem) as object;
+    }
+    expect(() => assertArenaMapSystem(tooDeepSystem)).toThrow('prototype 链超过 32 层');
   });
 });
 

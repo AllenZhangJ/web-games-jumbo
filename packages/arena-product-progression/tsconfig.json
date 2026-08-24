@@ -10,9 +10,11 @@
   },
   "references": [
     { "path": "../arena-contracts" },
+    { "path": "../arena-definitions" },
     { "path": "../arena-product-contracts" },
     { "path": "../arena-profile-contracts" },
-    { "path": "../arena-progression" }
+    { "path": "../arena-progression" },
+    { "path": "../arena-storage" }
   ],
   "include": ["src/**/*.ts"]
 }

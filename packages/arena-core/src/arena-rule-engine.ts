@@ -1,5 +1,6 @@
 import {
   ACTION_EFFECT_TRIGGER,
+  ACTION_LANE,
   type ActionDefinition,
   type EquipmentDefinition,
 } from '@number-strategy-jump/arena-definitions';
@@ -11,6 +12,12 @@ import {
 import { ARENA_ACTION_PHASE } from './action-state.js';
 import { ActionExecutionSystem } from './action-execution-system.js';
 import type { ActionStateSnapshot } from './action-execution-system.js';
+import {
+  ARENA_RULE_ENGINE_CHECKPOINT_V1_SCHEMA_VERSION,
+  createArenaRuleEngineCheckpointV1,
+  validateArenaRuleEngineCheckpointV1,
+  type ArenaRuleEngineCheckpointV1,
+} from './arena-rule-engine-checkpoint-v1.js';
 import {
   ActionAffordanceProjector,
   assertActionAffordanceProfile,
@@ -110,6 +117,7 @@ export interface EquipmentSystemContract {
   getSnapshot(instanceId: string): RuleEquipmentSnapshot;
   listSnapshots(): readonly RuleEquipmentSnapshot[];
   listExpiredHeldSupplyEquipmentInstanceIds(): readonly string[];
+  exportCheckpointV1?(): DeepReadonly<unknown>;
   applySupplyTimelinePhase?(options: unknown): unknown;
   resolveSupplyPickups?(options: unknown): unknown;
   destroy(): void;
@@ -129,6 +137,11 @@ export interface MovementCommandAdapter {
   createCommand(command: RuleCommand): unknown;
 }
 
+export interface RuleTargetEligibilityContract {
+  readonly contentHash: string;
+  allowsTarget(sourceParticipantId: string, targetParticipantId: string): boolean;
+}
+
 export interface ArenaRuleEngineOptions {
   readonly participantIds: readonly string[];
   readonly baseActionDefinitionId: string;
@@ -139,13 +152,16 @@ export interface ArenaRuleEngineOptions {
   readonly effectRegistry: ActionEffectRegistry;
   readonly commandRegistry: RuleCommandRegistry;
   readonly movementCandidateProvider: MovementCandidateProviderContract;
+  readonly targetEligibility?: RuleTargetEligibilityContract;
   readonly createEquipmentSystem: (options: {
     readonly participantIds: readonly string[];
     readonly actionRegistry: ActionRegistryContract & { list(): readonly ActionDefinition[] };
     readonly equipmentRegistry: EquipmentRegistryContract;
+    readonly checkpoint?: DeepReadonly<unknown>;
   }) => EquipmentSystemContract;
   readonly movementCommandAdapter: MovementCommandAdapter;
   readonly allowBaseAttackWhiff?: boolean;
+  readonly checkpoint?: unknown;
 }
 
 export interface ArenaRuleEngineContract {
@@ -190,6 +206,7 @@ export interface ArenaRuleEngineContract {
     profile: ActionAffordanceProfile,
   ): ActionAffordanceProfileResult;
   getParticipantActionRule(participantId: string): PublicActionRule;
+  exportCheckpointV1?(): ArenaRuleEngineCheckpointV1;
   destroy(): void;
 }
 
@@ -232,6 +249,19 @@ export interface ArenaRuleTimerAdvance {
   readonly equipmentCooldowns: readonly unknown[];
 }
 
+type ArenaRuleEngineOperation = 'commit' | 'destroy';
+
+export const ARENA_RULE_ENGINE_COMMIT_GUARD_V1 = Object.freeze({
+  operationGuardPrecedesLifecycleAndInputValidation: true,
+  publicCallsRejectCommitIntermediateState: true,
+  mutationPortsCheckedAfterEveryCallback: true,
+  swallowedPortReentryStopsLaterMutationPorts: true,
+  authorityCommitChecksStickyReentryFact: true,
+  postCommitReentryFailsClosed: true,
+  destroyFastPathChecksOperationBeforeIdempotence: true,
+  validationStatus: 'not-run',
+} as const);
+
 export interface PublicActionRule {
   readonly definitionId: string;
   readonly targetingKind: string;
@@ -241,6 +271,8 @@ export interface PublicActionRule {
   readonly windupTicks: number;
   readonly activeTicks: number;
   readonly recoveryTicks: number;
+  /** Zero means a press action; positive values are the authority minimum before release. */
+  readonly minimumCommitmentTicks: number;
 }
 
 export interface RuleImpulse {
@@ -375,6 +407,7 @@ const REQUIRED_ENGINE_METHODS = Object.freeze([
   'getParticipantActionRule',
   'destroy',
 ]);
+const MAX_CONTRACT_PROTOTYPE_DEPTH = 32;
 const REQUIRED_EQUIPMENT_SYSTEM_METHODS = Object.freeze([
   'getActionCandidate', 'getAerialActionCandidate', 'assertActionCanStart',
   'markActionStarted', 'advanceCooldowns', 'spawn', 'resolvePickups',
@@ -382,6 +415,39 @@ const REQUIRED_EQUIPMENT_SYSTEM_METHODS = Object.freeze([
   'getHeldEquipment', 'getSnapshot', 'listSnapshots', 'destroy',
   'listExpiredHeldSupplyEquipmentInstanceIds',
 ]);
+
+function findContractDataMethod(
+  value: object,
+  methodName: string,
+  ownerName: string,
+): ((...arguments_: unknown[]) => unknown) | null {
+  const visited = new Set<object>();
+  let target: object | null = value;
+  for (
+    let depth = 0;
+    target !== null && depth < MAX_CONTRACT_PROTOTYPE_DEPTH;
+    depth += 1
+  ) {
+    if (visited.has(target)) throw new TypeError(`${ownerName} prototype 链不能循环。`);
+    visited.add(target);
+    const descriptor = Object.getOwnPropertyDescriptor(target, methodName);
+    if (descriptor !== undefined) {
+      if (!Object.prototype.hasOwnProperty.call(descriptor, 'value')) {
+        throw new TypeError(`${ownerName}.${methodName} 必须是数据方法。`);
+      }
+      return typeof descriptor.value === 'function'
+        ? descriptor.value as (...arguments_: unknown[]) => unknown
+        : null;
+    }
+    target = Object.getPrototypeOf(target) as object | null;
+  }
+  if (target !== null) {
+    throw new RangeError(
+      `${ownerName} prototype 链超过 ${MAX_CONTRACT_PROTOTYPE_DEPTH} 层。`,
+    );
+  }
+  return null;
+}
 
 function assertEquipmentSystem(value: unknown): EquipmentSystemContract {
   if (!value || typeof value !== 'object') {
@@ -406,13 +472,12 @@ function assertEquipmentSystem(value: unknown): EquipmentSystemContract {
 
 export function assertArenaRuleEngine(engine: unknown): ArenaRuleEngineContract {
   if (!engine || typeof engine !== 'object') throw new TypeError('ruleEngineFactory 必须返回对象。');
-  const contract = engine as UnknownRecord;
   for (const method of REQUIRED_ENGINE_METHODS) {
-    if (typeof contract[method] !== 'function') {
+    if (findContractDataMethod(engine, method, 'ruleEngineFactory 返回值') === null) {
       throw new TypeError(`ruleEngineFactory 返回值缺少 ${method}()。`);
     }
   }
-  return contract as unknown as ArenaRuleEngineContract;
+  return engine as ArenaRuleEngineContract;
 }
 
 function compareStrings(left: string, right: string): number {
@@ -599,6 +664,7 @@ function createPublicActionRule(definition: ActionDefinition): PublicActionRule 
     windupTicks: definition.timing.windupTicks,
     activeTicks: definition.timing.activeTicks,
     recoveryTicks: definition.timing.recoveryTicks,
+    minimumCommitmentTicks: definition.commitment?.commitTicks ?? 0,
   });
 }
 
@@ -667,6 +733,10 @@ export class ArenaRuleEngine {
   readonly #actionExecution: ActionExecutionSystem;
   readonly #movementCandidateProvider: MovementCandidateProviderContract;
   readonly #movementCommandAdapter: MovementCommandAdapter;
+  readonly #targetEligibility: Readonly<{
+    readonly contentHash: string;
+    readonly allowedPairs: readonly string[];
+  }> | null;
   readonly #actionAffordanceProjector: ActionAffordanceProjector;
   readonly #targetingRegistry: TargetingRegistry;
   readonly #effectRegistry: ActionEffectRegistry;
@@ -676,8 +746,33 @@ export class ArenaRuleEngine {
   readonly #allowBaseAttackWhiff: boolean;
   readonly #contentHash: string;
   #destroyed: boolean;
-  #committing: boolean;
   #failed: boolean;
+  #operation: ArenaRuleEngineOperation | null;
+  #operationSequence: number;
+  #reentrySequence: number;
+  #reentryError: Error | null;
+
+  static restoreFromCheckpointV1(
+    checkpointValue: unknown,
+    options: Omit<
+      ArenaRuleEngineOptions,
+      | 'participantIds'
+      | 'baseActionDefinitionId'
+      | 'baseAirActionDefinitionId'
+      | 'allowBaseAttackWhiff'
+      | 'checkpoint'
+    >,
+  ): ArenaRuleEngine {
+    const checkpoint = validateArenaRuleEngineCheckpointV1(checkpointValue);
+    return new ArenaRuleEngine({
+      ...options,
+      participantIds: checkpoint.participantIds,
+      baseActionDefinitionId: checkpoint.baseActionDefinitionId,
+      baseAirActionDefinitionId: checkpoint.baseAirActionDefinitionId,
+      allowBaseAttackWhiff: checkpoint.allowBaseAttackWhiff,
+      checkpoint,
+    });
+  }
 
   constructor({
     participantIds,
@@ -689,9 +784,11 @@ export class ArenaRuleEngine {
     effectRegistry,
     commandRegistry,
     movementCandidateProvider,
+    targetEligibility,
     createEquipmentSystem,
     movementCommandAdapter,
     allowBaseAttackWhiff = false,
+    checkpoint: checkpointValue,
   }: ArenaRuleEngineOptions) {
     if (
       !Array.isArray(participantIds)
@@ -699,6 +796,16 @@ export class ArenaRuleEngine {
       || new Set(participantIds).size !== participantIds.length
     ) throw new RangeError('ArenaRuleEngine participantIds 无效。');
     this.#participantIds = Object.freeze([...participantIds].sort(compareStrings));
+    const checkpoint = checkpointValue === undefined
+      ? null
+      : validateArenaRuleEngineCheckpointV1(checkpointValue);
+    if (
+      checkpoint !== null
+      && (
+        checkpoint.participantIds.length !== this.#participantIds.length
+        || checkpoint.participantIds.some((id, index) => id !== this.#participantIds[index])
+      )
+    ) throw new RangeError('ArenaRuleEngine checkpoint participantIds不一致。');
     this.#baseActionDefinitionId = assertNonEmptyString(
       baseActionDefinitionId,
       'baseActionDefinitionId',
@@ -710,17 +817,76 @@ export class ArenaRuleEngine {
       'baseAirActionDefinitionId',
     );
     this.#actionRegistry.require(this.#baseAirActionDefinitionId);
+    if (
+      checkpoint !== null
+      && (
+        checkpoint.baseActionDefinitionId !== this.#baseActionDefinitionId
+        || checkpoint.baseAirActionDefinitionId !== this.#baseAirActionDefinitionId
+      )
+    ) throw new RangeError('ArenaRuleEngine checkpoint基础动作身份不一致。');
     targetingRegistry.validateActionRegistry(actionRegistry);
     effectRegistry.validateActionRegistry(actionRegistry);
     if (!commandRegistry || typeof commandRegistry.execute !== 'function') {
       throw new TypeError('ArenaRuleEngine 需要 RuleCommandRegistry。');
     }
     this.#actionResolver = new ActionResolver({ actionRegistry });
-    this.#actionExecution = new ActionExecutionSystem({ participantIds, actionRegistry });
     if (!movementCandidateProvider || typeof movementCandidateProvider.getCandidates !== 'function') {
       throw new TypeError('ArenaRuleEngine 需要 movementCandidateProvider.getCandidates()。');
     }
     this.#movementCandidateProvider = movementCandidateProvider;
+    if (targetEligibility === undefined) {
+      this.#targetEligibility = null;
+    } else {
+      const targetEligibilityRecord = assertPlainRecord(
+        targetEligibility,
+        'ArenaRuleEngine targetEligibility',
+      );
+      assertKnownKeys(
+        targetEligibilityRecord,
+        new Set(['contentHash', 'allowsTarget']),
+        'ArenaRuleEngine targetEligibility',
+      );
+      const contentHashDescriptor = Object.getOwnPropertyDescriptor(
+        targetEligibilityRecord,
+        'contentHash',
+      );
+      const allowsTargetDescriptor = Object.getOwnPropertyDescriptor(
+        targetEligibilityRecord,
+        'allowsTarget',
+      );
+      if (
+        !contentHashDescriptor
+        || !contentHashDescriptor.enumerable
+        || !Object.hasOwn(contentHashDescriptor, 'value')
+        || typeof contentHashDescriptor.value !== 'string'
+        || !/^[0-9a-f]{8}$/u.test(contentHashDescriptor.value)
+        || !allowsTargetDescriptor
+        || !allowsTargetDescriptor.enumerable
+        || !Object.hasOwn(allowsTargetDescriptor, 'value')
+        || typeof allowsTargetDescriptor.value !== 'function'
+      ) throw new TypeError('ArenaRuleEngine targetEligibility无效。');
+      const allowsTarget = allowsTargetDescriptor.value as RuleTargetEligibilityContract[
+        'allowsTarget'
+      ];
+      const allowedPairs: string[] = [];
+      for (const sourceParticipantId of this.#participantIds) {
+        for (const targetParticipantId of this.#participantIds) {
+          if (sourceParticipantId === targetParticipantId) continue;
+          const result = allowsTarget(
+            sourceParticipantId,
+            targetParticipantId,
+          );
+          if (typeof result !== 'boolean') {
+            throw new TypeError('ArenaRuleEngine targetEligibility必须返回布尔值。');
+          }
+          if (result) allowedPairs.push(`${sourceParticipantId}\0${targetParticipantId}`);
+        }
+      }
+      this.#targetEligibility = Object.freeze({
+        contentHash: contentHashDescriptor.value,
+        allowedPairs: Object.freeze(allowedPairs.sort(compareStrings)),
+      });
+    }
     if (
       !movementCommandAdapter
       || typeof movementCommandAdapter.isCommandKind !== 'function'
@@ -734,6 +900,9 @@ export class ArenaRuleEngine {
       throw new TypeError('ArenaRuleEngine.allowBaseAttackWhiff 必须是布尔值。');
     }
     this.#allowBaseAttackWhiff = allowBaseAttackWhiff;
+    if (checkpoint !== null && checkpoint.allowBaseAttackWhiff !== this.#allowBaseAttackWhiff) {
+      throw new RangeError('ArenaRuleEngine checkpoint allowBaseAttackWhiff不一致。');
+    }
     this.#actionAffordanceProjector = new ActionAffordanceProjector({
       resolver: this.#actionResolver,
     });
@@ -745,18 +914,35 @@ export class ArenaRuleEngine {
       actions: actionRegistry.list(),
       equipment: equipmentRegistry.list(),
       ...(allowBaseAttackWhiff ? { allowBaseAttackWhiff: true } : {}),
+      ...(this.#targetEligibility === null ? {} : {
+        targetEligibilityContentHash: this.#targetEligibility.contentHash,
+        allowedTargetPairs: [...this.#targetEligibility.allowedPairs],
+      }),
     }, 'Arena rule content');
+    if (checkpoint !== null && checkpoint.contentHash !== this.#contentHash) {
+      throw new RangeError('ArenaRuleEngine checkpoint规则内容身份不一致。');
+    }
+    this.#actionExecution = checkpoint === null
+      ? new ActionExecutionSystem({ participantIds: this.#participantIds, actionRegistry })
+      : ActionExecutionSystem.restoreFromCheckpointV1(
+        checkpoint.actionExecutionCheckpoint,
+        actionRegistry,
+      );
     if (typeof createEquipmentSystem !== 'function') {
       throw new TypeError('ArenaRuleEngine 需要 createEquipmentSystem()。');
     }
     this.#equipmentSystem = assertEquipmentSystem(createEquipmentSystem({
-      participantIds,
+      participantIds: this.#participantIds,
       actionRegistry,
       equipmentRegistry,
+      ...(checkpoint === null ? {} : { checkpoint: checkpoint.equipmentCheckpoint }),
     }));
     this.#destroyed = false;
-    this.#committing = false;
     this.#failed = false;
+    this.#operation = null;
+    this.#operationSequence = 0;
+    this.#reentrySequence = 0;
+    this.#reentryError = null;
     Object.freeze(this);
   }
 
@@ -766,9 +952,93 @@ export class ArenaRuleEngine {
   }
 
   #assertUsable(): void {
+    if (this.#operation !== null) throw this.#recordReentry('public-call');
     if (this.#destroyed) throw new Error('ArenaRuleEngine 已销毁。');
     if (this.#failed) throw new Error('ArenaRuleEngine 已失败，不能继续推进。');
-    if (this.#committing) throw new Error('ArenaRuleEngine commit 期间不可重入。');
+  }
+
+  #recordReentry(requestedOperation: ArenaRuleEngineOperation | 'public-call'): Error {
+    this.#reentrySequence += 1;
+    if (this.#reentryError === null) {
+      this.#reentryError = new Error(
+        `ArenaRuleEngine ${String(this.#operation)} 期间不可重入 ${requestedOperation}。`,
+      );
+    }
+    return this.#reentryError;
+  }
+
+  #assertOperationReady(
+    operation: ArenaRuleEngineOperation,
+    operationSequence: number,
+    stage: string,
+    postCommit = false,
+  ): void {
+    if (
+      this.#operation !== operation
+      || this.#operationSequence !== operationSequence
+    ) {
+      this.#failed = true;
+      throw new Error(`ArenaRuleEngine ${stage}缺少${operation}操作所有权。`);
+    }
+    if (this.#reentryError === null) return;
+    if (postCommit) this.#failed = true;
+    throw this.#reentryError;
+  }
+
+  #runOperation<T>(
+    operation: ArenaRuleEngineOperation,
+    callback: (operationSequence: number) => T,
+    options: Readonly<{ allowDestroyed?: boolean; allowFailed?: boolean }> = {},
+  ): T {
+    if (this.#operation !== null) throw this.#recordReentry(operation);
+    this.#operation = operation;
+    this.#operationSequence += 1;
+    const operationSequence = this.#operationSequence;
+    this.#reentryError = null;
+    try {
+      if (!options.allowDestroyed && this.#destroyed) {
+        throw new Error('ArenaRuleEngine 已销毁。');
+      }
+      if (!options.allowFailed && this.#failed) {
+        throw new Error('ArenaRuleEngine 已失败，不能继续推进。');
+      }
+      const result = callback(operationSequence);
+      this.#assertOperationReady(operation, operationSequence, operation, true);
+      return result;
+    } catch (error) {
+      if (this.#reentryError !== null) {
+        this.#failed = true;
+        throw this.#reentryError;
+      }
+      throw error;
+    } finally {
+      this.#operation = null;
+      this.#reentryError = null;
+    }
+  }
+
+  #assertAuthorityCommitReady(
+    operationSequence: number,
+    stage: string,
+    postCommit = false,
+  ): void {
+    this.#assertOperationReady('commit', operationSequence, stage, postCommit);
+  }
+
+  #useMutationPortChecked<T>(
+    operationSequence: number,
+    stage: string,
+    callback: () => T,
+  ): T {
+    this.#assertAuthorityCommitReady(operationSequence, `${stage}调用前`);
+    try {
+      const result = callback();
+      this.#assertAuthorityCommitReady(operationSequence, `${stage}返回后`, true);
+      return result;
+    } catch (error) {
+      this.#assertAuthorityCommitReady(operationSequence, `${stage}异常后`, true);
+      throw error;
+    }
   }
 
   #cloneActors(actors: unknown): readonly RuleActor[] {
@@ -793,7 +1063,7 @@ export class ArenaRuleEngine {
     const baseTargets = this.#targetingRegistry.resolve({
       definition: baseDefinition,
       source: actor,
-      candidates: actors.filter(({ id, targetable }) => id !== participantId && targetable),
+      candidates: this.#eligibleTargets(participantId, actors),
     });
     // The production explicit-control mode treats a whiff as a real attack;
     // range/facing still resolve only on active ticks. The legacy contextual
@@ -807,6 +1077,18 @@ export class ArenaRuleEngine {
     if (equipmentCandidate) candidates.push(equipmentCandidate);
     candidates.push(...additionalCandidates);
     return Object.freeze(candidates);
+  }
+
+  #eligibleTargets(
+    sourceParticipantId: string,
+    actors: readonly RuleActor[],
+  ): readonly RuleActor[] {
+    return Object.freeze(actors.filter(({ id, targetable }) => (
+      id !== sourceParticipantId
+      && targetable
+      && (this.#targetEligibility === null
+        || this.#targetEligibility.allowedPairs.includes(`${sourceParticipantId}\0${id}`))
+    )));
   }
 
   advanceTimers(): ArenaRuleTimerAdvance {
@@ -916,6 +1198,7 @@ export class ArenaRuleEngine {
         : ARENA_RULE_EVENT.ACTION_COMMITMENT_COMMITTED,
       participantId: transition.participantId,
       action: transition.actionDefinitionId,
+      lane: transition.lane,
       chargeTicks: transition.chargeTicks,
       chargeLevel: transition.chargeLevel,
       facingAtStart: transition.facingAtStart,
@@ -932,6 +1215,8 @@ export class ArenaRuleEngine {
         type: ARENA_RULE_EVENT.ACTION_STARTED,
         participantId: start.participantId,
         action: definition.id,
+        lane: start.lane,
+        source: start.source,
       }));
       for (const effect of definition.effects) {
         if (effect.trigger !== ACTION_EFFECT_TRIGGER.ACTION_STARTED) continue;
@@ -1025,7 +1310,7 @@ export class ArenaRuleEngine {
         action.participantId,
         `active source ${action.participantId} 缺少 RuleActor。`,
       ));
-      const candidates = actors.filter(({ id, targetable }) => id !== source.id && targetable);
+      const candidates = this.#eligibleTargets(source.id, actors);
       const targets = this.#targetingRegistry.resolve({ definition, source, candidates })
         .filter((targetId) => !action.hitTargetIds.includes(targetId));
       for (const targetId of targets) {
@@ -1094,36 +1379,85 @@ export class ArenaRuleEngine {
   }
 
   commit(batch: unknown, ports: unknown): void {
-    this.#assertUsable();
-    const batchRecord = batch && typeof batch === 'object'
-      ? batch as UnknownRecord
-      : null;
-    if (!batchRecord || !Array.isArray(batchRecord.hits) || !Array.isArray(batchRecord.commands)) {
-      throw new TypeError('ArenaRuleEngine commit batch 无效。');
-    }
-    assertKnownKeys(ports, COMMIT_KEYS, 'Rule mutation ports');
-    for (const name of COMMIT_KEYS) {
-      if (typeof ports[name] !== 'function') throw new TypeError(`Rule mutation port 缺少 ${name}()。`);
-    }
-    const validatedBatch = batch as RuleCommitBatch;
-    const validatedPorts = ports as unknown as RuleMutationPorts;
-    this.#commandRegistry.assertSupported(validatedBatch.commands);
-    this.#committing = true;
-    try {
-      this.#actionExecution.recordHits(validatedBatch.hits);
-      for (const hit of validatedBatch.hits) {
-        validatedPorts.recordHit(hit.attackerId, hit.targetId, hit.actionDefinitionId);
+    this.#runOperation('commit', (operationSequence) => {
+      const batchRecord = batch && typeof batch === 'object'
+        ? batch as UnknownRecord
+        : null;
+      if (!batchRecord) {
+        throw new TypeError('ArenaRuleEngine commit batch 无效。');
       }
-      this.#commandRegistry.execute(validatedBatch.commands, {
-        ports: validatedPorts,
-        actionExecutionSystem: this.#actionExecution,
+      const hits = batchRecord.hits;
+      this.#assertAuthorityCommitReady(operationSequence, '命中批次读取');
+      const commands = batchRecord.commands;
+      this.#assertAuthorityCommitReady(operationSequence, '命令批次读取');
+      if (!Array.isArray(hits) || !Array.isArray(commands)) {
+        throw new TypeError('ArenaRuleEngine commit batch 无效。');
+      }
+      assertKnownKeys(ports, COMMIT_KEYS, 'Rule mutation ports');
+      this.#assertAuthorityCommitReady(operationSequence, '变更端口字段校验');
+      const portRecord = ports as UnknownRecord;
+      const recordHit = portRecord.recordHit;
+      this.#assertAuthorityCommitReady(operationSequence, 'recordHit端口读取');
+      const applyHitstun = portRecord.applyHitstun;
+      this.#assertAuthorityCommitReady(operationSequence, 'applyHitstun端口读取');
+      const applyImpulse = portRecord.applyImpulse;
+      this.#assertAuthorityCommitReady(operationSequence, 'applyImpulse端口读取');
+      for (const [name, method] of [
+        ['recordHit', recordHit],
+        ['applyHitstun', applyHitstun],
+        ['applyImpulse', applyImpulse],
+      ] as const) {
+        if (typeof method !== 'function') {
+          throw new TypeError(`Rule mutation port 缺少 ${name}()。`);
+        }
+      }
+      const validatedBatch: RuleCommitBatch = { hits, commands } as RuleCommitBatch;
+      this.#commandRegistry.assertSupported(validatedBatch.commands);
+      this.#assertAuthorityCommitReady(operationSequence, '提交输入验证');
+      const guardedPorts: RuleMutationPorts = Object.freeze({
+        recordHit: (attackerId: string, targetId: string, actionDefinitionId: string) => (
+          this.#useMutationPortChecked(operationSequence, 'recordHit端口', () => (
+            Reflect.apply(recordHit as RuleMutationPorts['recordHit'], ports, [
+              attackerId,
+              targetId,
+              actionDefinitionId,
+            ])
+          ))
+        ),
+        applyHitstun: (participantId: string, ticks: number) => (
+          this.#useMutationPortChecked(operationSequence, 'applyHitstun端口', () => (
+            Reflect.apply(applyHitstun as RuleMutationPorts['applyHitstun'], ports, [
+              participantId,
+              ticks,
+            ])
+          ))
+        ),
+        applyImpulse: (participantId: string, impulse: RuleImpulse) => (
+          this.#useMutationPortChecked(operationSequence, 'applyImpulse端口', () => (
+            Reflect.apply(applyImpulse as RuleMutationPorts['applyImpulse'], ports, [
+              participantId,
+              impulse,
+            ])
+          ))
+        ),
       });
-    } catch (error) {
-      this.#failed = true;
-      throw error;
-    } finally {
-      this.#committing = false;
-    }
+      try {
+        this.#assertAuthorityCommitReady(operationSequence, '命中权威提交');
+        this.#actionExecution.recordHits(validatedBatch.hits);
+        this.#assertAuthorityCommitReady(operationSequence, '命中权威提交后', true);
+        for (const hit of validatedBatch.hits) {
+          guardedPorts.recordHit(hit.attackerId, hit.targetId, hit.actionDefinitionId);
+        }
+        this.#commandRegistry.execute(validatedBatch.commands, {
+          ports: guardedPorts,
+          actionExecutionSystem: this.#actionExecution,
+        });
+        this.#assertAuthorityCommitReady(operationSequence, '规则命令提交后', true);
+      } catch (error) {
+        this.#failed = true;
+        throw error;
+      }
+    });
   }
 
   spawnEquipment(options: unknown): RuleEquipmentSnapshot {
@@ -1133,7 +1467,16 @@ export class ArenaRuleEngine {
 
   resolveEquipmentPickups(options: unknown): readonly RuleEquipmentPickupDecision[] {
     this.#assertUsable();
-    return this.#equipmentSystem.resolvePickups(options);
+    const decisions = this.#equipmentSystem.resolvePickups(options);
+    try {
+      this.#interruptCombatActionsForEquipmentChange(
+        decisions.map(({ participantId }) => participantId),
+      );
+    } catch (error) {
+      this.#failed = true;
+      throw error;
+    }
+    return decisions;
   }
 
   updateEquipmentLastSafePosition(
@@ -1146,7 +1489,15 @@ export class ArenaRuleEngine {
 
   dropEquipment(participantId: string, options: unknown): RuleEquipmentDropResult | null {
     this.#assertUsable();
-    return this.#equipmentSystem.dropOwned(participantId, options);
+    const result = this.#equipmentSystem.dropOwned(participantId, options);
+    if (result === null) return null;
+    try {
+      this.#interruptCombatActionsForEquipmentChange([participantId]);
+      return result;
+    } catch (error) {
+      this.#failed = true;
+      throw error;
+    }
   }
 
   despawnInvalidWorldEquipment(options: unknown): readonly RuleEquipmentSnapshot[] {
@@ -1157,6 +1508,16 @@ export class ArenaRuleEngine {
   resetParticipant(participantId: string): void {
     this.#assertUsable();
     this.#actionExecution.reset(participantId);
+  }
+
+  #interruptCombatActionsForEquipmentChange(
+    participantIds: readonly string[],
+  ): readonly Readonly<{
+    readonly participantId: string;
+    readonly actionDefinitionId: string;
+    readonly phase: string;
+  }>[] {
+    return this.#actionExecution.interruptLane(participantIds, ACTION_LANE.COMBAT);
   }
 
   getActionSnapshot(participantId: string): ActionStateSnapshot {
@@ -1197,12 +1558,50 @@ export class ArenaRuleEngine {
     if (typeof this.#equipmentSystem.resolveSupplyPickups !== 'function') {
       throw new Error('当前 EquipmentSystem 未启用供给替换事务。');
     }
-    return this.#equipmentSystem.resolveSupplyPickups(options);
+    const result = this.#equipmentSystem.resolveSupplyPickups(options);
+    try {
+      const record = assertPlainRecord(result, 'Equipment supply pickup transaction result');
+      if (!Array.isArray(record.decisions) || !Array.isArray(record.events)) {
+        throw new TypeError('Equipment supply pickup transaction result缺少decisions/events数组。');
+      }
+      const participantIds = record.decisions.map((decision, index) => {
+        const entry = assertPlainRecord(
+          decision,
+          `Equipment supply pickup transaction result.decisions[${index}]`,
+        );
+        return assertNonEmptyString(
+          entry.participantId,
+          `Equipment supply pickup transaction result.decisions[${index}].participantId`,
+        );
+      });
+      this.#interruptCombatActionsForEquipmentChange(participantIds);
+      return result;
+    } catch (error) {
+      this.#failed = true;
+      throw error;
+    }
   }
 
   getContentHash(): string {
     this.#assertUsable();
     return this.#contentHash;
+  }
+
+  exportCheckpointV1(): ArenaRuleEngineCheckpointV1 {
+    this.#assertUsable();
+    if (typeof this.#equipmentSystem.exportCheckpointV1 !== 'function') {
+      throw new Error('当前EquipmentSystem不支持ArenaRuleEngine完整checkpoint。');
+    }
+    return createArenaRuleEngineCheckpointV1({
+      schemaVersion: ARENA_RULE_ENGINE_CHECKPOINT_V1_SCHEMA_VERSION,
+      participantIds: this.#participantIds,
+      baseActionDefinitionId: this.#baseActionDefinitionId,
+      baseAirActionDefinitionId: this.#baseAirActionDefinitionId,
+      allowBaseAttackWhiff: this.#allowBaseAttackWhiff,
+      contentHash: this.#contentHash,
+      actionExecutionCheckpoint: this.#actionExecution.exportCheckpointV1(),
+      equipmentCheckpoint: this.#equipmentSystem.exportCheckpointV1(),
+    });
   }
 
   getMovementActionCandidates(capabilities: MovementCapabilities): readonly ActionCandidate[] {
@@ -1309,9 +1708,16 @@ export class ArenaRuleEngine {
   }
 
   destroy(): void {
-    if (this.#destroyed) return;
-    if (this.#committing) throw new Error('commit 期间不能销毁 ArenaRuleEngine。');
-    this.#equipmentSystem.destroy();
-    this.#destroyed = true;
+    this.#runOperation('destroy', (operationSequence) => {
+      if (this.#destroyed) return;
+      this.#equipmentSystem.destroy();
+      this.#assertOperationReady(
+        'destroy',
+        operationSequence,
+        'EquipmentSystem销毁返回后',
+        true,
+      );
+      this.#destroyed = true;
+    }, { allowDestroyed: true, allowFailed: true });
   }
 }

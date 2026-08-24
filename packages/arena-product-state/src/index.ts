@@ -27,6 +27,7 @@ export {
 } from './product-session-transition-registry.js';
 
 export {
+  PRODUCT_SESSION_STATE_MACHINE_OPERATION_POLICY,
   PRODUCT_SESSION_STATE_SNAPSHOT_SCHEMA_VERSION,
   ProductSessionStateMachine,
 } from './product-session-state-machine.js';

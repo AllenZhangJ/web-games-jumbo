@@ -5,8 +5,14 @@ import {
   createCharacterPresentationDefinition,
 } from '@number-strategy-jump/arena-presentation-contracts';
 import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
-import { CharacterAnimationController } from './character-animation-controller.js';
-import { createProgrammaticEquipment } from './programmatic-equipment.js';
+import {
+  CharacterAnimationController,
+  CharacterAnimationControllerConstructionCleanupError,
+} from './character-animation-controller.js';
+import {
+  createProgrammaticEquipment,
+  ProgrammaticEquipmentBuildConstructionCleanupError,
+} from './programmatic-equipment.js';
 import { ThreeObjectDisposalLease } from './dispose-three-resources.js';
 import { readDataArray } from './strict-data-array.js';
 import { visualFacingYaw } from './visual-coordinate.js';
@@ -77,6 +83,22 @@ interface EquipmentCandidate {
   readonly object: THREE.Object3D;
   readonly lease: ThreeObjectDisposalLease | null;
 }
+interface EquipmentConstructionResources {
+  nestedDebt: ProgrammaticEquipmentBuildConstructionCleanupError | null;
+  object: THREE.Object3D | null;
+  lease: ThreeObjectDisposalLease | null;
+  ownsResources: boolean;
+  rootRemoved: boolean;
+}
+interface GltfCharacterViewConstructionResources {
+  root: THREE.Group | null;
+  model: THREE.Object3D | null;
+  controller: CharacterAnimationController | null;
+  controllerConstructionDebt: CharacterAnimationControllerConstructionCleanupError | null;
+  controllerDisposed: boolean;
+  modelDetached: boolean;
+  rootCleared: boolean;
+}
 
 const EQUIPMENT_IDS = new Set<unknown>(['hammer', 'shield', 'chain']);
 const ANIMATION_SEMANTICS = new Set<unknown>(ARENA_ANIMATION_SEMANTIC_IDS);
@@ -143,6 +165,108 @@ function cleanupFailure(message: string, cause: unknown, cleanupCauses: readonly
   failure.cause = cause;
   Object.defineProperty(failure, 'cleanupCauses', { value: Object.freeze([...cleanupCauses]) });
   return failure;
+}
+
+function rejectThenable(value: unknown, name: string): void {
+  if (!value || (typeof value !== 'object' && typeof value !== 'function')) return;
+  let then: unknown;
+  try { then = Reflect.get(value, 'then'); } catch { throw new TypeError(`${name} 返回值不可检查。`); }
+  if (typeof then !== 'function') return;
+  try { Promise.resolve(value).catch(() => {}); } catch { /* malformed thenable */ }
+  throw new TypeError(`${name} 必须同步完成。`);
+}
+
+function equipmentConstructionCleanupComplete(resources: EquipmentConstructionResources): boolean {
+  const objectComplete = resources.object === null
+    || (resources.ownsResources ? resources.lease?.complete === true : resources.rootRemoved);
+  return resources.nestedDebt === null && objectComplete;
+}
+
+function cleanupEquipmentConstruction(resources: EquipmentConstructionResources): void {
+  const errors: unknown[] = [];
+  if (resources.nestedDebt !== null) {
+    try { resources.nestedDebt.retryCleanup(); } catch (error) { errors.push(error); }
+    if (resources.nestedDebt.cleanupComplete) resources.nestedDebt = null;
+  }
+  if (resources.object !== null && resources.ownsResources) {
+    if (resources.lease === null) {
+      try { resources.lease = new ThreeObjectDisposalLease(resources.object); }
+      catch (error) { errors.push(error); }
+    }
+    if (resources.lease !== null && !resources.lease.complete) {
+      try { resources.lease.dispose(); } catch (error) { errors.push(error); }
+    }
+  } else if (resources.object !== null && !resources.rootRemoved) {
+    try {
+      rejectThenable(resources.object.removeFromParent(), 'GLTF equipment candidate.removeFromParent()');
+      resources.rootRemoved = true;
+    } catch (error) { errors.push(error); }
+  }
+  if (errors.length > 0) {
+    throw new AggregateError(errors, 'GLTF角色装备构造资源清理未完整完成。');
+  }
+  if (!equipmentConstructionCleanupComplete(resources)) {
+    throw new Error('GLTF角色装备构造资源清理依赖尚未收敛。');
+  }
+}
+
+function constructionCleanupComplete(resources: GltfCharacterViewConstructionResources): boolean {
+  return (resources.controllerConstructionDebt?.cleanupComplete ?? true)
+    && resources.controllerDisposed
+    && resources.modelDetached
+    && resources.rootCleared;
+}
+
+function cleanupConstructionResources(resources: GltfCharacterViewConstructionResources): void {
+  const errors: unknown[] = [];
+  if (resources.controllerConstructionDebt && !resources.controllerConstructionDebt.cleanupComplete) {
+    try { resources.controllerConstructionDebt.retryCleanup(); } catch (error) { errors.push(error); }
+  }
+  const controllerConstructionComplete = resources.controllerConstructionDebt?.cleanupComplete ?? true;
+  if (errors.length === 0 && controllerConstructionComplete && !resources.controllerDisposed) {
+    if (resources.controller === null) resources.controllerDisposed = true;
+    else {
+      try {
+        rejectThenable(resources.controller.dispose(), 'GltfCharacterView construction controller.dispose()');
+        resources.controllerDisposed = true;
+      } catch (error) { errors.push(error); }
+    }
+  }
+  if (
+    errors.length === 0
+    && controllerConstructionComplete
+    && resources.controllerDisposed
+    && !resources.modelDetached
+  ) {
+    if (resources.model === null) resources.modelDetached = true;
+    else {
+      try {
+        rejectThenable(resources.model.removeFromParent(), 'GltfCharacterView construction model.removeFromParent()');
+        resources.modelDetached = true;
+      } catch (error) { errors.push(error); }
+    }
+  }
+  if (
+    controllerConstructionComplete
+    && errors.length === 0
+    && resources.controllerDisposed
+    && resources.modelDetached
+    && !resources.rootCleared
+  ) {
+    if (resources.root === null) resources.rootCleared = true;
+    else {
+      try {
+        rejectThenable(resources.root.clear(), 'GltfCharacterView construction root.clear()');
+        resources.rootCleared = true;
+      } catch (error) { errors.push(error); }
+    }
+  }
+  if (errors.length > 0) {
+    throw new AggregateError(errors, 'GLTF角色View构造资源清理未完整完成。');
+  }
+  if (!constructionCleanupComplete(resources)) {
+    throw new Error('GLTF角色View构造资源清理依赖尚未收敛。');
+  }
 }
 
 function normalizeTemplate(value: unknown): CharacterTemplate {
@@ -434,6 +558,35 @@ function actionVisualState(
   };
 }
 
+export class GltfCharacterTemplateIntegrationError extends Error {
+  readonly originalError: unknown;
+  readonly cleanupError: unknown | null;
+  readonly #constructionResources: GltfCharacterViewConstructionResources | null;
+
+  constructor(
+    cause: unknown,
+    cleanupError: unknown | null = null,
+    constructionResources: GltfCharacterViewConstructionResources | null = null,
+  ) {
+    super('GLTF角色模板无法建立正式角色View。');
+    this.name = 'GltfCharacterTemplateIntegrationError';
+    this.cause = cause;
+    this.originalError = cause;
+    this.cleanupError = cleanupError;
+    this.#constructionResources = constructionResources;
+  }
+
+  get cleanupComplete(): boolean {
+    return this.#constructionResources === null
+      || constructionCleanupComplete(this.#constructionResources);
+  }
+
+  retryCleanup(): void {
+    if (this.#constructionResources === null) return;
+    cleanupConstructionResources(this.#constructionResources);
+  }
+}
+
 export class GltfCharacterView {
   readonly root: THREE.Group;
   readonly #participantId: string;
@@ -447,6 +600,8 @@ export class GltfCharacterView {
   #heldEquipment: THREE.Object3D | null;
   #heldEquipmentDefinitionId: string | null;
   #heldEquipmentLease: ThreeObjectDisposalLease | null;
+  #pendingEquipmentConstruction: EquipmentConstructionResources | null;
+  #pendingEquipmentCandidate: EquipmentCandidate | null;
   #snapshot: SnapshotValue | null;
   #animation: AnimationValue | null;
   #elapsed: number;
@@ -478,6 +633,7 @@ export class GltfCharacterView {
   #semanticElapsed: number;
   #operating: boolean;
   #cleaning: boolean;
+  #reentryDetected: boolean;
   #destroyRequested: boolean;
   #failedError: unknown;
   #controllerDisposed: boolean;
@@ -494,68 +650,144 @@ export class GltfCharacterView {
     const presentationDefinition = createCharacterPresentationDefinition(
       ownData(options, 'presentationDefinition', 'GltfCharacterView options'),
     );
-    const characterTemplate = normalizeTemplate(
-      ownData(options, 'characterTemplate', 'GltfCharacterView options'),
+    const characterTemplateValue = ownData(
+      options, 'characterTemplate', 'GltfCharacterView options',
     );
-    const equipmentTemplates = normalizeEquipmentTemplates(
-      ownData(options, 'equipmentTemplates', 'GltfCharacterView options'),
+    const equipmentTemplatesValue = ownData(
+      options, 'equipmentTemplates', 'GltfCharacterView options',
     );
     const actionPresentations = normalizeActionPresentations(
       ownData(options, 'actionPresentations', 'GltfCharacterView options'),
     );
+    const presentationHash = presentationDefinition.getContentHash();
+    let characterTemplate: CharacterTemplate;
+    let equipmentTemplates: ReadonlyMap<string, EquipmentTemplate>;
+    let root: THREE.Group;
+    let model: THREE.Object3D;
+    let rightHandSlot: THREE.Object3D;
+    let leftHandSlot: THREE.Object3D;
+    let controller: CharacterAnimationController;
+    let spine: THREE.Object3D | null;
+    let head: THREE.Object3D | null;
+    let targetPosition: THREE.Vector3;
+    let hips: THREE.Object3D | null;
+    let upperLegLeft: THREE.Object3D | null;
+    let upperLegRight: THREE.Object3D | null;
+    let lowerLegLeft: THREE.Object3D | null;
+    let lowerLegRight: THREE.Object3D | null;
+    let upperArmLeft: THREE.Object3D | null;
+    let upperArmRight: THREE.Object3D | null;
+    let lowerArmLeft: THREE.Object3D | null;
+    let lowerArmRight: THREE.Object3D | null;
+    let handLeft: THREE.Object3D | null;
+    let handRight: THREE.Object3D | null;
+    const constructionResources: GltfCharacterViewConstructionResources = {
+      root: null,
+      model: null,
+      controller: null,
+      controllerConstructionDebt: null,
+      controllerDisposed: true,
+      modelDetached: true,
+      rootCleared: true,
+    };
+    try {
+      characterTemplate = normalizeTemplate(characterTemplateValue);
+      equipmentTemplates = normalizeEquipmentTemplates(equipmentTemplatesValue);
+      root = new THREE.Group();
+      constructionResources.root = root;
+      constructionResources.rootCleared = false;
+      root.name = `ArenaCharacter:${participantId}:GLTF`;
+      model = cloneSkeleton(characterTemplate.scene);
+      constructionResources.model = model;
+      constructionResources.modelDetached = false;
+      model.name = `ArenaCharacterModel:${participantId}`;
+      model.scale.setScalar(0.8);
+      model.position.y = -1;
+      prepareModel(model);
+      root.add(model);
+      rightHandSlot = requireNamedObject(
+        model,
+        ['handslot.r', 'handslot_r', 'handslotr'],
+        'handslot.r',
+      );
+      leftHandSlot = requireNamedObject(
+        model,
+        ['handslot.l', 'handslot_l', 'handslotl'],
+        'handslot.l',
+      );
+      controller = new CharacterAnimationController({
+        root: model,
+        clips: characterTemplate.animations,
+        actionPresentations,
+      });
+      constructionResources.controller = controller;
+      constructionResources.controllerDisposed = false;
+      spine = model.getObjectByName('spine') ?? null;
+      head = model.getObjectByName('head') ?? null;
+      targetPosition = new THREE.Vector3();
+      hips = model.getObjectByName('hips') ?? null;
+      upperLegLeft = model.getObjectByName('upperleg.l') ?? null;
+      upperLegRight = model.getObjectByName('upperleg.r') ?? null;
+      lowerLegLeft = model.getObjectByName('lowerleg.l') ?? null;
+      lowerLegRight = model.getObjectByName('lowerleg.r') ?? null;
+      upperArmLeft = model.getObjectByName('upperarm.l') ?? null;
+      upperArmRight = model.getObjectByName('upperarm.r') ?? null;
+      lowerArmLeft = model.getObjectByName('lowerarm.l') ?? null;
+      lowerArmRight = model.getObjectByName('lowerarm.r') ?? null;
+      handLeft = model.getObjectByName('hand.l') ?? null;
+      handRight = model.getObjectByName('hand.r') ?? null;
+    } catch (error) {
+      if (error instanceof CharacterAnimationControllerConstructionCleanupError) {
+        constructionResources.controllerConstructionDebt = error;
+      }
+      try {
+        cleanupConstructionResources(constructionResources);
+      } catch (cleanupError) {
+        throw new GltfCharacterTemplateIntegrationError(
+          error,
+          cleanupError,
+          constructionResources,
+        );
+      }
+      throw new GltfCharacterTemplateIntegrationError(error);
+    }
     this.#participantId = participantId;
     this.#presentationId = presentationDefinition.id;
-    this.#presentationHash = presentationDefinition.getContentHash();
-    this.root = new THREE.Group();
-    this.root.name = `ArenaCharacter:${participantId}:GLTF`;
-    this.#model = cloneSkeleton(characterTemplate.scene);
-    this.#model.name = `ArenaCharacterModel:${participantId}`;
-    this.#model.scale.setScalar(0.8);
-    this.#model.position.y = -1;
-    prepareModel(this.#model);
-    this.root.add(this.#model);
-    this.#rightHandSlot = requireNamedObject(
-      this.#model,
-      ['handslot.r', 'handslot_r', 'handslotr'],
-      'handslot.r',
-    );
-    this.#leftHandSlot = requireNamedObject(
-      this.#model,
-      ['handslot.l', 'handslot_l', 'handslotl'],
-      'handslot.l',
-    );
+    this.#presentationHash = presentationHash;
+    this.root = root;
+    this.#model = model;
+    this.#rightHandSlot = rightHandSlot;
+    this.#leftHandSlot = leftHandSlot;
     this.#equipmentTemplates = equipmentTemplates;
     this.#heldEquipment = null;
     this.#heldEquipmentDefinitionId = null;
     this.#heldEquipmentLease = null;
-    this.#controller = new CharacterAnimationController({
-      root: this.#model,
-      clips: characterTemplate.animations,
-      actionPresentations,
-    });
+    this.#pendingEquipmentConstruction = null;
+    this.#pendingEquipmentCandidate = null;
+    this.#controller = controller;
     this.#snapshot = null;
     this.#animation = null;
     this.#elapsed = 0;
     this.#hitDirection = null;
     this.#lastHitSequence = -1;
-    this.#spine = this.#model.getObjectByName('spine') ?? null;
-    this.#head = this.#model.getObjectByName('head') ?? null;
+    this.#spine = spine;
+    this.#head = head;
     this.#lastSpineBreathZ = 0;
     this.#lastHeadBreathX = 0;
     this.#lastHorizontalSpeed = 0;
     this.#stopSettleRemaining = 0;
-    this.#targetPosition = new THREE.Vector3();
-    this.#hips = this.#model.getObjectByName('hips') ?? null;
-    this.#upperLegLeft = this.#model.getObjectByName('upperleg.l') ?? null;
-    this.#upperLegRight = this.#model.getObjectByName('upperleg.r') ?? null;
-    this.#lowerLegLeft = this.#model.getObjectByName('lowerleg.l') ?? null;
-    this.#lowerLegRight = this.#model.getObjectByName('lowerleg.r') ?? null;
-    this.#upperArmLeft = this.#model.getObjectByName('upperarm.l') ?? null;
-    this.#upperArmRight = this.#model.getObjectByName('upperarm.r') ?? null;
-    this.#lowerArmLeft = this.#model.getObjectByName('lowerarm.l') ?? null;
-    this.#lowerArmRight = this.#model.getObjectByName('lowerarm.r') ?? null;
-    this.#handLeft = this.#model.getObjectByName('hand.l') ?? null;
-    this.#handRight = this.#model.getObjectByName('hand.r') ?? null;
+    this.#targetPosition = targetPosition;
+    this.#hips = hips;
+    this.#upperLegLeft = upperLegLeft;
+    this.#upperLegRight = upperLegRight;
+    this.#lowerLegLeft = lowerLegLeft;
+    this.#lowerLegRight = lowerLegRight;
+    this.#upperArmLeft = upperArmLeft;
+    this.#upperArmRight = upperArmRight;
+    this.#lowerArmLeft = lowerArmLeft;
+    this.#lowerArmRight = lowerArmRight;
+    this.#handLeft = handLeft;
+    this.#handRight = handRight;
     this.#actionPresentations = actionPresentations;
     this.#actionVisualStage = null;
     this.#jointOffsets = [];
@@ -564,6 +796,7 @@ export class GltfCharacterView {
     this.#semanticElapsed = 0;
     this.#operating = false;
     this.#cleaning = false;
+    this.#reentryDetected = false;
     this.#destroyRequested = false;
     this.#failedError = null;
     this.#controllerDisposed = false;
@@ -573,13 +806,16 @@ export class GltfCharacterView {
   }
 
   #assertUsable(): void {
+    if (this.#operating || this.#cleaning) {
+      this.#reentryDetected = true;
+      throw new Error('GltfCharacterView 不允许回调重入。');
+    }
     if (this.#disposed || this.#destroyRequested) throw new Error('GltfCharacterView 已销毁。');
     if (this.#failedError) {
       const error = new Error('GltfCharacterView 已失败。');
       error.cause = this.#failedError;
       throw error;
     }
-    if (this.#operating) throw new Error('GltfCharacterView 不允许回调重入。');
   }
 
   getAnimationCapabilities(): Readonly<{ proceduralKeys: readonly string[]; clipKeys: readonly string[] }> {
@@ -593,26 +829,65 @@ export class GltfCharacterView {
   #releaseHeldEquipment(): void {
     if (!this.#heldEquipment) return;
     if (this.#heldEquipmentLease) this.#heldEquipmentLease.dispose();
-    else this.#heldEquipment.removeFromParent();
+    else rejectThenable(this.#heldEquipment.removeFromParent(), 'GltfCharacterView heldEquipment.removeFromParent()');
+    if (this.#reentryDetected) throw new Error('GLTF当前装备清理回调发生View反调。');
     this.#heldEquipment = null;
     this.#heldEquipmentDefinitionId = null;
     this.#heldEquipmentLease = null;
   }
 
-  #createEquipment(definitionId: string): EquipmentCandidate {
-    const template = this.#equipmentTemplates.get(definitionId) ?? null;
-    if (template) {
-      return { object: template.scene.clone(true), lease: null };
+  #releaseEquipmentCandidate(candidate: EquipmentCandidate): void {
+    if (candidate.lease) candidate.lease.dispose();
+    else rejectThenable(candidate.object.removeFromParent(), 'GltfCharacterView equipment candidate.removeFromParent()');
+    if (this.#reentryDetected) throw new Error('GLTF装备候选清理回调发生View反调。');
+    if (this.#pendingEquipmentCandidate === candidate) {
+      this.#pendingEquipmentCandidate = null;
     }
-    const object = createProgrammaticEquipment(definitionId);
-    return { object, lease: new ThreeObjectDisposalLease(object) };
   }
 
   #syncEquipment(equipment: SnapshotValue['equipment']): void {
     const definitionId = equipmentDefinitionId(equipment);
     if (definitionId === this.#heldEquipmentDefinitionId) return;
-    const candidate = definitionId === null ? null : this.#createEquipment(definitionId);
+    let candidate: EquipmentCandidate | null = null;
     try {
+      if (definitionId !== null) {
+        const construction: EquipmentConstructionResources = {
+          nestedDebt: null,
+          object: null,
+          lease: null,
+          ownsResources: false,
+          rootRemoved: false,
+        };
+        this.#pendingEquipmentConstruction = construction;
+        try {
+          const template = this.#equipmentTemplates.get(definitionId) ?? null;
+          if (template !== null) {
+            const object = template.scene.clone(true);
+            construction.object = object;
+            candidate = { object, lease: null };
+          } else {
+            construction.ownsResources = true;
+            const object = createProgrammaticEquipment(definitionId);
+            construction.object = object;
+            const lease = new ThreeObjectDisposalLease(object);
+            construction.lease = lease;
+            candidate = { object, lease };
+          }
+          this.#pendingEquipmentCandidate = candidate;
+          this.#pendingEquipmentConstruction = null;
+        } catch (error) {
+          if (error instanceof ProgrammaticEquipmentBuildConstructionCleanupError) {
+            construction.nestedDebt = error;
+          }
+          try {
+            cleanupEquipmentConstruction(construction);
+            this.#pendingEquipmentConstruction = null;
+          } catch (cleanupError) {
+            throw cleanupFailure('GLTF装备构造失败且清理未完成。', error, [cleanupError]);
+          }
+          throw error;
+        }
+      }
       this.#releaseHeldEquipment();
       if (!candidate || definitionId === null) return;
       const { object } = candidate;
@@ -627,13 +902,13 @@ export class GltfCharacterView {
       this.#heldEquipment = object;
       this.#heldEquipmentDefinitionId = definitionId;
       this.#heldEquipmentLease = candidate.lease;
+      this.#pendingEquipmentCandidate = null;
     } catch (error) {
       const cleanupErrors: unknown[] = [];
       if (candidate && candidate.object !== this.#heldEquipment) {
-        try {
-          if (candidate.lease) candidate.lease.dispose();
-          else candidate.object.removeFromParent();
-        } catch (cleanupError) { cleanupErrors.push(cleanupError); }
+        try { this.#releaseEquipmentCandidate(candidate); } catch (cleanupError) {
+          cleanupErrors.push(cleanupError);
+        }
       }
       if (cleanupErrors.length > 0) {
         throw cleanupFailure('GLTF装备替换失败且候选清理未完成。', error, cleanupErrors);
@@ -662,8 +937,10 @@ export class GltfCharacterView {
     const hit = latestIncomingHit(frame, snapshot.id, this.#lastHitSequence);
     const hitDirection = hit ? incomingDirection(frame, snapshot, hit) : null;
     this.#operating = true;
+    this.#reentryDetected = false;
     try {
       this.#controller.sync({ snapshot, animation, hitDirection: hitDirection ?? this.#hitDirection });
+      if (this.#reentryDetected) throw new Error('GLTF动画同步回调发生View反调。');
       this.#syncEquipment(snapshot.equipment);
       if (snapValue || this.#snapshot === null) this.root.position.set(positionX, positionY, positionZ);
       this.#targetPosition.set(positionX, positionY, positionZ);
@@ -691,6 +968,7 @@ export class GltfCharacterView {
     if (!this.#snapshot) return;
     const delta = Math.min(0.1, deltaSeconds);
     this.#operating = true;
+    this.#reentryDetected = false;
     try {
       this.#elapsed += delta;
     const blend = 1 - Math.exp(-20 * delta);
@@ -705,6 +983,7 @@ export class GltfCharacterView {
     this.#lastSpineBreathZ = 0;
     this.#lastHeadBreathX = 0;
     this.#controller.update(delta);
+    if (this.#reentryDetected) throw new Error('GLTF动画更新回调发生View反调。');
     if (this.#heldEquipment) {
       this.#heldEquipment.scale.setScalar(this.#heldEquipment.userData.baseScale);
     }
@@ -903,24 +1182,50 @@ export class GltfCharacterView {
   }
 
   dispose(): void {
+    if (this.#operating || this.#cleaning) {
+      this.#reentryDetected = true;
+      throw new Error('GltfCharacterView 清理不可重入。');
+    }
     if (this.#disposed) return;
-    if (this.#operating) throw new Error('GltfCharacterView 操作期间不能销毁。');
-    if (this.#cleaning) throw new Error('GltfCharacterView 清理不可重入。');
     this.#destroyRequested = true;
     this.#cleaning = true;
+    this.#reentryDetected = false;
     const errors: unknown[] = [];
     try {
-      if (this.#heldEquipment) {
+      if (this.#pendingEquipmentConstruction) {
+        try {
+          cleanupEquipmentConstruction(this.#pendingEquipmentConstruction);
+          if (this.#reentryDetected) throw new Error('GLTF装备构造清理回调发生View反调。');
+          this.#pendingEquipmentConstruction = null;
+        } catch (error) { errors.push(error); }
+      }
+      if (errors.length === 0 && !this.#reentryDetected && this.#pendingEquipmentCandidate) {
+        try { this.#releaseEquipmentCandidate(this.#pendingEquipmentCandidate); }
+        catch (error) { errors.push(error); }
+      }
+      if (errors.length === 0 && !this.#reentryDetected && this.#heldEquipment) {
         try { this.#releaseHeldEquipment(); } catch (error) { errors.push(error); }
       }
-      if (!this.#controllerDisposed) {
-        try { this.#controller.dispose(); this.#controllerDisposed = true; } catch (error) { errors.push(error); }
+      if (errors.length === 0 && !this.#reentryDetected && !this.#controllerDisposed) {
+        try {
+          rejectThenable(this.#controller.dispose(), 'GltfCharacterView controller.dispose()');
+          if (this.#reentryDetected) throw new Error('GLTF动画控制器清理回调发生View反调。');
+          this.#controllerDisposed = true;
+        } catch (error) { errors.push(error); }
       }
-      if (!this.#rootDetached) {
-        try { this.root.removeFromParent(); this.#rootDetached = true; } catch (error) { errors.push(error); }
+      if (errors.length === 0 && !this.#reentryDetected && this.#controllerDisposed && !this.#rootDetached) {
+        try {
+          rejectThenable(this.root.removeFromParent(), 'GltfCharacterView root.removeFromParent()');
+          if (this.#reentryDetected) throw new Error('GLTF角色根解绑回调发生View反调。');
+          this.#rootDetached = true;
+        } catch (error) { errors.push(error); }
       }
-      if (!this.#rootCleared) {
-        try { this.root.clear(); this.#rootCleared = true; } catch (error) { errors.push(error); }
+      if (errors.length === 0 && !this.#reentryDetected && this.#rootDetached && !this.#rootCleared) {
+        try {
+          rejectThenable(this.root.clear(), 'GltfCharacterView root.clear()');
+          if (this.#reentryDetected) throw new Error('GLTF角色根清空回调发生View反调。');
+          this.#rootCleared = true;
+        } catch (error) { errors.push(error); }
       }
     } finally {
       this.#cleaning = false;
@@ -928,6 +1233,27 @@ export class GltfCharacterView {
     if (errors.length > 0) {
       throw cleanupFailure('GltfCharacterView 清理未完整完成。', this.#failedError, errors);
     }
-    this.#disposed = true;
+    this.#disposed = this.#pendingEquipmentConstruction === null
+      && this.#pendingEquipmentCandidate === null
+      && this.#heldEquipment === null
+      && this.#controllerDisposed
+      && this.#rootDetached
+      && this.#rootCleared;
+    if (!this.#disposed) throw new Error('GltfCharacterView 清理依赖尚未收敛。');
   }
 }
+
+export const GLTF_CHARACTER_VIEW_EQUIPMENT_LIFECYCLE_V1 = Object.freeze({
+  builderDebtAndRawRootPublishedBeforeCandidate: true as const,
+  candidateOwnerPublishedBeforeHeldEquipmentRelease: true as const,
+  failedCandidateCleanupRetainedForDisposeRetry: true as const,
+  pendingConstructionAndCandidateCleanupPrecedeHeldEquipmentAndViewCleanup: true as const,
+  validationStatus: 'not-run' as const,
+});
+
+export const GLTF_CHARACTER_VIEW_TERMINAL_LIFECYCLE_V1 = Object.freeze({
+  cleanupCallbacksCannotReenterPublicApi: true as const,
+  cleanupFailureStopsLaterOwners: true as const,
+  controllerPrecedesRootDetachAndClear: true as const,
+  validationStatus: 'not-run' as const,
+});

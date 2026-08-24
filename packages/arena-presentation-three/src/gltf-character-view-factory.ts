@@ -1,4 +1,7 @@
-import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
+import {
+  assertSynchronousReturn as rejectThenable,
+  cloneFrozenData,
+} from '@number-strategy-jump/arena-contracts';
 import {
   PRESENTATION_ASSET_KIND,
   assertPresentationAssetRegistry,
@@ -11,8 +14,15 @@ import {
   PresentationAssetLoadTask,
 } from '@number-strategy-jump/arena-presentation-runtime';
 import { GltfPresentationAssetLoader } from './gltf-presentation-asset-loader.js';
-import { GltfCharacterView } from './gltf-character-view.js';
-import { ProgrammaticCharacterView } from './programmatic-character-view.js';
+import {
+  GltfCharacterTemplateIntegrationError,
+  GltfCharacterView,
+} from './gltf-character-view.js';
+import {
+  ProgrammaticCharacterBuildConstructionCleanupError,
+  ProgrammaticCharacterView,
+  ProgrammaticCharacterViewConstructionCleanupError,
+} from './programmatic-character-view.js';
 
 const LOADABLE_PROVIDERS = new Set<unknown>([
   ARENA_PRESENTATION_ASSET_PROVIDER_ID.GLTF_ATTACHMENT_V1,
@@ -27,6 +37,10 @@ const OPTION_KEYS = new Set<PropertyKey>(['assetRegistry', 'actionPresentations'
 const CREATE_OPTION_KEYS = new Set<PropertyKey>(['participantId', 'presentationDefinition']);
 
 type LoadMethod = (definition: PresentationAssetDefinition) => unknown;
+type CharacterViewConstructionCleanupDebt =
+  | GltfCharacterTemplateIntegrationError
+  | ProgrammaticCharacterViewConstructionCleanupError
+  | ProgrammaticCharacterBuildConstructionCleanupError;
 
 function ownData(value: unknown, field: PropertyKey, name: string, required = true): unknown {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -72,6 +86,14 @@ function snapshotLoad(value: unknown): LoadMethod {
   throw new TypeError('GltfCharacterViewFactory loader 缺少 load()。');
 }
 
+function snapshotDefaultLoad(): LoadMethod {
+  const descriptor = Object.getOwnPropertyDescriptor(GltfPresentationAssetLoader.prototype, 'load');
+  if (!descriptor || !Object.hasOwn(descriptor, 'value') || typeof descriptor.value !== 'function') {
+    throw new TypeError('GltfCharacterViewFactory 默认loader.load必须是数据方法。');
+  }
+  return descriptor.value as LoadMethod;
+}
+
 function fallbackSourceKey(asset: PresentationAssetDefinition): string {
   if (asset.providerId === ARENA_PRESENTATION_ASSET_PROVIDER_ID.PROGRAMMATIC_CHARACTER_V1) {
     return asset.sourceKey;
@@ -96,19 +118,24 @@ export class GltfCharacterViewFactory {
   readonly #assetRegistry: PresentationAssetRegistryPort;
   readonly #actionPresentations: Readonly<Record<string, unknown>>;
   readonly #loader: Readonly<{ load: LoadMethod }>;
+  readonly #ownedLoader: GltfPresentationAssetLoader | null;
   readonly #definitions: readonly PresentationAssetDefinition[];
   readonly #equipmentAssetByDefinitionId: ReadonlyMap<string, string>;
   readonly #tasks = new Map<string, PresentationAssetLoadTask>();
   readonly #templates = new Map<string, unknown>();
   readonly #pendingAssetIds = new Set<string>();
   readonly #loadErrors = new Map<string, unknown>();
+  readonly #templateConstructionErrors = new Map<string, unknown>();
+  readonly #constructionCleanupDebts = new Set<CharacterViewConstructionCleanupDebt>();
   readonly #cleanupErrors = new Map<string, unknown>();
   #loadPromise: Promise<this> | null = null;
   #loadSettled = false;
   #creating = false;
   #cleaning = false;
+  #cleanupReentryDetected = false;
   #destroyRequested = false;
   #failedError: unknown = null;
+  #ownedLoaderCleanupComplete = false;
   #disposed = false;
 
   constructor(options: unknown) {
@@ -123,9 +150,6 @@ export class GltfCharacterViewFactory {
     this.#actionPresentations = cloneFrozenData(
       actionPresentations, 'GltfCharacterViewFactory actionPresentations',
     ) as Readonly<Record<string, unknown>>;
-    const loader = ownData(options, 'loader', 'GltfCharacterViewFactory options', false)
-      ?? new GltfPresentationAssetLoader();
-    this.#loader = Object.freeze({ load: snapshotLoad(loader) });
     const definitions = this.#assetRegistry.list();
     this.#definitions = Object.freeze(definitions.filter(({ providerId }) => LOADABLE_PROVIDERS.has(providerId)));
     const equipmentAssets = new Map<string, string>();
@@ -138,9 +162,31 @@ export class GltfCharacterViewFactory {
       equipmentAssets.set(definitionId, asset.id);
     }
     this.#equipmentAssetByDefinitionId = equipmentAssets;
+    const injectedLoader = ownData(
+      options,
+      'loader',
+      'GltfCharacterViewFactory options',
+      false,
+    );
+    const usesDefaultLoader = injectedLoader === undefined || injectedLoader === null;
+    const defaultLoad = usesDefaultLoader ? snapshotDefaultLoad() : null;
+    const loader = usesDefaultLoader ? new GltfPresentationAssetLoader() : injectedLoader;
+    this.#ownedLoader = usesDefaultLoader
+      ? loader as GltfPresentationAssetLoader
+      : null;
+    this.#ownedLoaderCleanupComplete = this.#ownedLoader === null;
+    this.#loader = Object.freeze({
+      load: usesDefaultLoader
+        ? (definition) => (defaultLoad as LoadMethod).call(loader, definition)
+        : snapshotLoad(loader),
+    });
   }
 
   #assertUsable(): void {
+    if (this.#cleaning) {
+      this.#cleanupReentryDetected = true;
+      throw new Error('GltfCharacterViewFactory 清理回调不可反调公开API。');
+    }
     if (this.#disposed || this.#destroyRequested) throw new Error('GltfCharacterViewFactory 已销毁。');
     if (this.#failedError) {
       const error = new Error('GltfCharacterViewFactory 已失败。');
@@ -151,23 +197,103 @@ export class GltfCharacterViewFactory {
   }
 
   #destroyTask(assetId: string, task: PresentationAssetLoadTask): unknown | null {
+    const ownsCleanupGate = !this.#cleaning;
+    if (ownsCleanupGate) {
+      this.#cleaning = true;
+      this.#cleanupReentryDetected = false;
+    }
     try {
-      task.destroy();
+      rejectThenable(task.destroy(), `GltfCharacterViewFactory task ${assetId}.destroy()`);
+      if (this.#cleanupReentryDetected) {
+        throw new Error(`GltfCharacterViewFactory task ${assetId} 清理回调发生Factory反调。`);
+      }
+      const cleanupComplete = task.isCleanupComplete();
+      if (this.#cleanupReentryDetected) {
+        throw new Error(`GltfCharacterViewFactory task ${assetId} 完成确认发生Factory反调。`);
+      }
       this.#cleanupErrors.delete(assetId);
-      if (!this.#pendingAssetIds.has(assetId)) this.#tasks.delete(assetId);
+      if (cleanupComplete) this.#tasks.delete(assetId);
       return null;
     } catch (error) {
       this.#cleanupErrors.set(assetId, error);
       return error;
+    } finally {
+      if (ownsCleanupGate) this.#cleaning = false;
     }
   }
 
   #completeDestroyIfPossible(): void {
-    if (!this.#destroyRequested || this.#pendingAssetIds.size > 0 || this.#tasks.size > 0) return;
+    if (
+      !this.#destroyRequested
+      || this.#constructionCleanupDebts.size > 0
+      || this.#pendingAssetIds.size > 0
+      || this.#tasks.size > 0
+    ) return;
+    const loaderError = this.#destroyOwnedLoader();
+    if (loaderError !== null) {
+      this.#cleanupErrors.set('__owned-loader__', loaderError);
+      return;
+    }
     this.#templates.clear();
     this.#loadErrors.clear();
+    this.#templateConstructionErrors.clear();
     this.#cleanupErrors.clear();
     this.#disposed = true;
+  }
+
+  #retryConstructionCleanupDebts(): unknown[] {
+    const errors: unknown[] = [];
+    for (const debt of [...this.#constructionCleanupDebts]) {
+      try {
+        rejectThenable(debt.retryCleanup(), 'GltfCharacterViewFactory construction debt.retryCleanup()');
+        if (this.#cleanupReentryDetected) {
+          throw new Error('GltfCharacterViewFactory 构造债务清理回调发生Factory反调。');
+        }
+        const cleanupComplete = debt.cleanupComplete;
+        if (this.#cleanupReentryDetected) {
+          throw new Error('GltfCharacterViewFactory 构造债务完成确认发生Factory反调。');
+        }
+        if (!cleanupComplete) throw new Error('GLTF角色View构造清理依赖尚未收敛。');
+        this.#constructionCleanupDebts.delete(debt);
+      } catch (error) {
+        errors.push(error);
+        break;
+      }
+    }
+    return errors;
+  }
+
+  #destroyOwnedLoader(): unknown | null {
+    if (this.#ownedLoaderCleanupComplete) return null;
+    if (this.#ownedLoader === null) {
+      this.#ownedLoaderCleanupComplete = true;
+      return null;
+    }
+    const ownsCleanupGate = !this.#cleaning;
+    if (ownsCleanupGate) {
+      this.#cleaning = true;
+      this.#cleanupReentryDetected = false;
+    }
+    try {
+      rejectThenable(this.#ownedLoader.destroy(), 'GltfCharacterViewFactory owned loader.destroy()');
+      if (this.#cleanupReentryDetected) {
+        throw new Error('GltfCharacterViewFactory底层loader清理回调发生Factory反调。');
+      }
+      const cleanupComplete = this.#ownedLoader.isCleanupComplete();
+      if (this.#cleanupReentryDetected) {
+        throw new Error('GltfCharacterViewFactory底层loader完成确认发生Factory反调。');
+      }
+      if (!cleanupComplete) {
+        return new Error('GltfCharacterViewFactory底层loader清理尚未收敛。');
+      }
+      this.#ownedLoaderCleanupComplete = true;
+      this.#cleanupErrors.delete('__owned-loader__');
+      return null;
+    } catch (error) {
+      return error;
+    } finally {
+      if (ownsCleanupGate) this.#cleaning = false;
+    }
   }
 
   load(): Promise<this> {
@@ -240,13 +366,26 @@ export class GltfCharacterViewFactory {
       if (
         asset.providerId === ARENA_PRESENTATION_ASSET_PROVIDER_ID.GLTF_CHARACTER_V1
         && template
-      ) return new GltfCharacterView({
-        participantId,
-        presentationDefinition,
-        characterTemplate: template,
-        equipmentTemplates: this.#equipmentTemplates(),
-        actionPresentations: this.#actionPresentations,
-      });
+        && !this.#templateConstructionErrors.has(asset.id)
+      ) {
+        try {
+          return new GltfCharacterView({
+            participantId,
+            presentationDefinition,
+            characterTemplate: template,
+            equipmentTemplates: this.#equipmentTemplates(),
+            actionPresentations: this.#actionPresentations,
+          });
+        } catch (error) {
+          if (!(error instanceof GltfCharacterTemplateIntegrationError)) throw error;
+          if (!error.cleanupComplete) {
+            this.#constructionCleanupDebts.add(error);
+            this.#failedError = error;
+            throw error;
+          }
+          this.#templateConstructionErrors.set(asset.id, error);
+        }
+      }
       const gltfFallbackCapabilities = asset.providerId
         === ARENA_PRESENTATION_ASSET_PROVIDER_ID.GLTF_CHARACTER_V1
         ? Object.freeze({
@@ -256,13 +395,24 @@ export class GltfCharacterViewFactory {
           ].sort()),
         })
         : null;
-      return new ProgrammaticCharacterView({
-        participantId,
-        presentationDefinition,
-        assetDefinition: { id: asset.id, sourceKey: fallbackSourceKey(asset) },
-        actionPresentations: this.#actionPresentations,
-        animationCapabilities: gltfFallbackCapabilities,
-      });
+      try {
+        return new ProgrammaticCharacterView({
+          participantId,
+          presentationDefinition,
+          assetDefinition: { id: asset.id, sourceKey: fallbackSourceKey(asset) },
+          actionPresentations: this.#actionPresentations,
+          animationCapabilities: gltfFallbackCapabilities,
+        });
+      } catch (error) {
+        if (
+          error instanceof ProgrammaticCharacterViewConstructionCleanupError
+          || error instanceof ProgrammaticCharacterBuildConstructionCleanupError
+        ) {
+          this.#constructionCleanupDebts.add(error);
+          this.#failedError = error;
+        }
+        throw error;
+      }
     } finally {
       this.#creating = false;
     }
@@ -275,27 +425,84 @@ export class GltfCharacterViewFactory {
       pendingAssetIds: Object.freeze([...this.#pendingAssetIds].sort()),
       templateAssetIds: Object.freeze([...this.#templates.keys()].sort()),
       loadErrorAssetIds: Object.freeze([...this.#loadErrors.keys()].sort()),
+      templateConstructionErrorAssetIds: Object.freeze(
+        [...this.#templateConstructionErrors.keys()].sort(),
+      ),
+      constructionCleanupDebtCount: this.#constructionCleanupDebts.size,
+      ownedLoaderCleanupComplete: this.#ownedLoaderCleanupComplete,
     });
   }
 
   dispose(): void {
+    if (this.#cleaning) {
+      this.#cleanupReentryDetected = true;
+      throw new Error('GltfCharacterViewFactory 清理不可重入。');
+    }
     if (this.#disposed) return;
     if (this.#creating) throw new Error('GltfCharacterViewFactory create 期间不能销毁。');
-    if (this.#cleaning) throw new Error('GltfCharacterViewFactory 清理不可重入。');
     this.#destroyRequested = true;
     this.#cleaning = true;
+    this.#cleanupReentryDetected = false;
     const errors: unknown[] = [];
     try {
-      for (const [assetId, task] of this.#tasks) {
-        const error = this.#destroyTask(assetId, task);
-        if (error) errors.push(error);
+      errors.push(...this.#retryConstructionCleanupDebts());
+      if (errors.length === 0 && this.#constructionCleanupDebts.size === 0) {
+        for (const [assetId, task] of this.#tasks) {
+          const error = this.#destroyTask(assetId, task);
+          if (error) {
+            errors.push(error);
+            break;
+          }
+          if (this.#cleanupReentryDetected) {
+            errors.push(new Error(`GltfCharacterViewFactory task ${assetId} 清理发生Factory反调。`));
+            break;
+          }
+        }
+        if (errors.length === 0 && this.#tasks.size === 0 && this.#pendingAssetIds.size === 0) {
+          this.#templates.clear();
+          this.#loadErrors.clear();
+          this.#templateConstructionErrors.clear();
+        }
       }
-      this.#templates.clear();
-      this.#loadErrors.clear();
-      this.#completeDestroyIfPossible();
+      if (errors.length === 0) this.#completeDestroyIfPossible();
+      const loaderError = this.#cleanupErrors.get('__owned-loader__');
+      if (loaderError !== undefined) errors.push(loaderError);
     } finally {
       this.#cleaning = false;
     }
     if (errors.length > 0) throw cleanupFailure('GltfCharacterViewFactory 清理未完整完成。', errors);
   }
 }
+
+export const GLTF_CHARACTER_VIEW_FACTORY_FALLBACK_LIFECYCLE_V1 = Object.freeze({
+  loadedTemplateConstructionFailureUsesProgrammaticFallback: true as const,
+  structurallyRejectedTemplateRemainsRejectedForFactoryLifetime: true as const,
+  successfulGltfTemplateRemainsNormalRenderingPath: true as const,
+  fallbackDoesNotReleaseSharedTemplateLeaseEarly: true as const,
+  fallbackRequiresTypedTemplateIntegrationFailure: true as const,
+  malformedTemplatePayloadMayUseFallback: true as const,
+  definitionAndActionConfigurationFailuresRemainFatal: true as const,
+  failedConstructionCleanupRetainsFactoryOwnership: true as const,
+  constructionDebtCleanupPrecedesSharedTemplateRelease: true as const,
+  incompleteConstructionCleanupClosesFactoryToCreate: true as const,
+  failedProgrammaticFallbackCleanupRetainsFactoryOwnership: true as const,
+  failedProgrammaticBuilderCleanupRetainsFactoryOwnership: true as const,
+  validationStatus: 'not-run' as const,
+});
+
+export const GLTF_CHARACTER_VIEW_FACTORY_CONSTRUCTION_LIFECYCLE_V1 = Object.freeze({
+  registryAndEquipmentValidationPrecedeOwnedLoaderConstruction: true as const,
+  defaultLoadMethodCapturedBeforeOwnedLoaderConstruction: true as const,
+  ownedLoaderHasNoExternalFactoryInitializationAfterConstruction: true as const,
+  validationStatus: 'not-run' as const,
+});
+
+export const GLTF_CHARACTER_VIEW_FACTORY_TERMINAL_LIFECYCLE_V1 = Object.freeze({
+  constructionDebtsPrecedeLoadTasks: true as const,
+  loadTasksPrecedeOwnedLoader: true as const,
+  currentOwnerFailureRetainsCurrentAndLaterOwners: true as const,
+  cleanupCallbacksMustCompleteSynchronously: true as const,
+  swallowedFactoryReentryRejectsOwnerCommit: true as const,
+  taskRemovalRequiresSynchronousCleanupCompletion: true as const,
+  validationStatus: 'not-run' as const,
+});

@@ -2,6 +2,7 @@ import {
   assertIntegerAtLeast,
   assertKnownKeys,
   assertNonEmptyString,
+  assertSynchronousReturn,
   cloneFrozenData,
   createSynchronousStoragePort,
 } from '@number-strategy-jump/arena-contracts';
@@ -57,6 +58,29 @@ export interface SynchronousStorageLeaseStatus {
   readonly revision: number | null;
   readonly expiresAtMs: number | null;
 }
+
+type SynchronousStorageLeaseOperation =
+  | 'acquire'
+  | 'assert-held'
+  | 'renew'
+  | 'release'
+  | 'status-read'
+  | 'failed-closed-read'
+  | 'destroy';
+
+export const SYNCHRONOUS_STORAGE_LEASE_LIFECYCLE = Object.freeze({
+  operationGuardPrecedesLifecycleAndInputValidation: true,
+  publicReadsRejectLeaseTransactionIntermediateState: true,
+  callbackReentryIsSticky: true,
+  storedValueValidationCheckedBeforeCrossPortProgress: true,
+  publicStateWaitsForCallbackClosure: true,
+  failedLeaseRetainsCleanupIdentity: true,
+  ambiguousRenewRetainsBoundedCleanupCandidates: true,
+  destroyFastPathChecksOperationBeforeIdempotence: true,
+  wallClockUsesSharedSynchronousReturnBoundary: true,
+  failedClosedStateIsOwnerObservable: true,
+  validationStatus: 'not-run',
+} as const);
 
 interface NormalizedOptions {
   readonly storage: unknown;
@@ -185,8 +209,12 @@ export class SynchronousStorageLease {
   #takeoverSameOwner: boolean;
   #held = false;
   #lease: StoredLease | null = null;
+  #cleanupLeaseCandidates: StoredLease[] = [];
   #lastNow: number | null = null;
-  #mutating = false;
+  #operation: SynchronousStorageLeaseOperation | null = null;
+  #failed = false;
+  #reentrySequence = 0;
+  #reentryError: Error | null = null;
   #destroyed = false;
 
   constructor(options: SynchronousStorageLeaseOptions) {
@@ -218,9 +246,88 @@ export class SynchronousStorageLease {
     Object.freeze(this);
   }
 
-  #assertUsable(): void {
-    if (this.#destroyed) throw new Error(`${this.#label} 已销毁。`);
-    if (this.#mutating) throw new Error(`${this.#label} 操作不可重入。`);
+  #recordReentry(requestedOperation: SynchronousStorageLeaseOperation): Error {
+    this.#reentrySequence += 1;
+    if (this.#reentryError === null) {
+      this.#reentryError = new Error(
+        `${this.#label} ${String(this.#operation)}期间不可重入${requestedOperation}。`,
+      );
+    }
+    return this.#reentryError;
+  }
+
+  #runOperation<T>(
+    operation: SynchronousStorageLeaseOperation,
+    callback: () => T,
+    options: Readonly<{ allowDestroyed?: boolean; allowFailed?: boolean }> = {},
+  ): T {
+    if (this.#operation !== null) throw this.#recordReentry(operation);
+    this.#operation = operation;
+    const sequence = this.#reentrySequence;
+    try {
+      if (!options.allowDestroyed && this.#destroyed) {
+        throw new Error(`${this.#label} 已销毁。`);
+      }
+      if (!options.allowFailed && this.#failed) {
+        throw new Error(`${this.#label} 已失败关闭。`);
+      }
+      try {
+        const result = callback();
+        this.#assertNoReentrySince(sequence, operation);
+        return result;
+      } catch (error) {
+        if (this.#reentrySequence !== sequence) {
+          this.#failed = true;
+          throw this.#reentryError ?? error;
+        }
+        throw error;
+      }
+    } finally {
+      this.#operation = null;
+      this.#reentryError = null;
+    }
+  }
+
+  #assertNoReentrySince(sequence: number, operation: string): void {
+    if (this.#reentrySequence === sequence) return;
+    this.#failed = true;
+    throw this.#reentryError ?? new Error(`${this.#label} ${operation}期间发生重入。`);
+  }
+
+  #assertAuthorityCommitReady(operation: SynchronousStorageLeaseOperation): void {
+    if (this.#reentryError !== null) {
+      this.#failed = true;
+      throw this.#reentryError;
+    }
+    if (this.#operation !== operation) {
+      throw new Error(`${this.#label} ${operation}缺少权威操作所有权。`);
+    }
+  }
+
+  #retainCleanupCandidate(candidate: StoredLease): void {
+    if (this.#cleanupLeaseCandidates.some((current) => sameLease(current, candidate))) return;
+    this.#cleanupLeaseCandidates.push(candidate);
+    if (this.#cleanupLeaseCandidates.length > 2) {
+      throw new Error(`${this.#label} 清理候选超过旧/新两代上限。`);
+    }
+  }
+
+  #ownsLease(candidate: StoredLease): boolean {
+    return (this.#lease !== null && sameLease(this.#lease, candidate))
+      || this.#cleanupLeaseCandidates.some((current) => sameLease(current, candidate));
+  }
+
+  #clearOwnedLeaseState(): void {
+    if (this.#reentryError !== null) {
+      this.#failed = true;
+      throw this.#reentryError;
+    }
+    if (this.#operation !== 'release' && this.#operation !== 'destroy') {
+      throw new Error(`${this.#label} 清理租约缺少release/destroy操作所有权。`);
+    }
+    this.#held = false;
+    this.#lease = null;
+    this.#cleanupLeaseCandidates = [];
   }
 
   #requireStorage(): Readonly<SynchronousStoragePort> {
@@ -239,11 +346,17 @@ export class SynchronousStorageLease {
   }
 
   #now(): number {
-    const now = assertIntegerAtLeast(
-      this.#requireWallNow()(),
-      0,
-      `${this.#label} wallNow`,
-    );
+    const sequence = this.#reentrySequence;
+    let rawNow: unknown;
+    try {
+      rawNow = this.#requireWallNow()();
+    } catch (error) {
+      this.#assertNoReentrySince(sequence, 'wallNow回调');
+      throw error;
+    }
+    this.#assertNoReentrySince(sequence, 'wallNow回调');
+    assertSynchronousReturn(rawNow, `${this.#label} wallNow`);
+    const now = assertIntegerAtLeast(rawNow, 0, `${this.#label} wallNow`);
     if (this.#lastNow !== null && now < this.#lastNow) {
       throw new RangeError(`${this.#label} wallNow 不能在实例生命周期内倒退。`);
     }
@@ -252,11 +365,20 @@ export class SynchronousStorageLease {
   }
 
   #read(): StoredLease | null {
-    const result = this.#requireStorage().read(this.#requireKey());
+    const sequence = this.#reentrySequence;
+    let result: ReturnType<SynchronousStoragePort['read']>;
+    try {
+      result = this.#requireStorage().read(this.#requireKey());
+    } catch (error) {
+      this.#assertNoReentrySince(sequence, 'Storage读取');
+      throw error;
+    }
+    this.#assertNoReentrySince(sequence, 'Storage读取');
     if (!result.ok) throw new Error(`${this.#label} 读取失败。`);
     if (!result.found) return null;
+    let validated: StoredLease;
     try {
-      return validateLease(result.value, this.#label);
+      validated = validateLease(result.value, this.#label);
     } catch (error) {
       let schemaVersion: unknown;
       try {
@@ -267,6 +389,7 @@ export class SynchronousStorageLease {
       } catch {
         schemaVersion = undefined;
       }
+      this.#assertNoReentrySince(sequence, 'Storage读取值校验');
       if (
         Number.isSafeInteger(schemaVersion)
         && (schemaVersion as number) > SYNCHRONOUS_STORAGE_LEASE_SCHEMA_VERSION
@@ -277,11 +400,14 @@ export class SynchronousStorageLease {
       }
       return null;
     }
+    this.#assertNoReentrySince(sequence, 'Storage读取值校验');
+    return validated;
   }
 
   #writeAndConfirm(next: StoredLease): boolean {
     let writeThrew = false;
     let writeError: unknown = null;
+    const writeSequence = this.#reentrySequence;
     try {
       this.#requireStorage().write(this.#requireKey(), next);
     } catch (error) {
@@ -289,6 +415,7 @@ export class SynchronousStorageLease {
       writeError = error;
     }
     const confirmed = this.#read();
+    this.#assertNoReentrySince(writeSequence, 'Storage写入');
     if (confirmed !== null && sameLease(confirmed, next)) return true;
     if (writeThrew) throw normalizeLeaseError(writeError, `${this.#label} 写入失败`);
     return false;
@@ -298,6 +425,7 @@ export class SynchronousStorageLease {
     try {
       const current = this.#read();
       if (!current || !sameLease(current, candidate)) return true;
+      const deleteSequence = this.#reentrySequence;
       try {
         this.#requireStorage().delete(this.#requireKey());
       } catch {
@@ -305,6 +433,7 @@ export class SynchronousStorageLease {
         // decides whether cleanup succeeded.
       }
       const remaining = this.#read();
+      this.#assertNoReentrySince(deleteSequence, '候选租约清理');
       return !remaining || !sameLease(remaining, candidate);
     } catch {
       return false;
@@ -329,20 +458,19 @@ export class SynchronousStorageLease {
   }
 
   #releaseInsideMutation(): boolean {
-    if (!this.#held || !this.#lease) return true;
+    if (this.#lease === null && this.#cleanupLeaseCandidates.length === 0) return true;
     const current = this.#read();
     if (!current) {
-      this.#held = false;
-      this.#lease = null;
+      this.#clearOwnedLeaseState();
       return true;
     }
-    if (!sameLease(current, this.#lease)) {
-      this.#held = false;
-      this.#lease = null;
+    if (!this.#ownsLease(current)) {
+      this.#clearOwnedLeaseState();
       return true;
     }
     let deleteThrew = false;
     let deleteError: unknown = null;
+    const deleteSequence = this.#reentrySequence;
     try {
       this.#requireStorage().delete(this.#requireKey());
     } catch (error) {
@@ -350,14 +478,13 @@ export class SynchronousStorageLease {
       deleteError = error;
     }
     const remaining = this.#read();
+    this.#assertNoReentrySince(deleteSequence, '租约释放');
     if (!remaining) {
-      this.#held = false;
-      this.#lease = null;
+      this.#clearOwnedLeaseState();
       return true;
     }
-    if (!sameLease(remaining, this.#lease)) {
-      this.#held = false;
-      this.#lease = null;
+    if (!sameLease(remaining, current)) {
+      this.#clearOwnedLeaseState();
       return false;
     }
     if (deleteThrew) throw normalizeLeaseError(deleteError, `${this.#label} 释放失败`);
@@ -365,9 +492,8 @@ export class SynchronousStorageLease {
   }
 
   acquire(): boolean {
-    this.#assertUsable();
-    this.#mutating = true;
-    try {
+    return this.#runOperation('acquire', () => {
+      const operationSequence = this.#reentrySequence;
       if (this.#held) return this.#assertHeldInsideMutation();
       const now = this.#now();
       const current = this.#read();
@@ -392,33 +518,34 @@ export class SynchronousStorageLease {
           cleanupError?: Error;
         };
         if (!this.#cleanupAcquireCandidate(next)) {
+          this.#retainCleanupCandidate(next);
+          this.#failed = true;
           failure.cleanupError = new Error(`${this.#label} 获取失败且候选租约未确认清理。`);
         }
         throw failure;
       }
       if (!confirmed) return false;
+      this.#assertNoReentrySince(operationSequence, '获取');
+      this.#assertAuthorityCommitReady('acquire');
       this.#held = true;
       this.#lease = next;
+      this.#cleanupLeaseCandidates = [];
       return true;
-    } finally {
-      this.#mutating = false;
-    }
+    });
   }
 
   assertHeld(): true {
-    this.#assertUsable();
-    this.#mutating = true;
-    try {
-      return this.#assertHeldInsideMutation();
-    } finally {
-      this.#mutating = false;
-    }
+    return this.#runOperation('assert-held', () => {
+      const operationSequence = this.#reentrySequence;
+      const held = this.#assertHeldInsideMutation();
+      this.#assertNoReentrySince(operationSequence, '持有复核');
+      return held;
+    });
   }
 
   renew(): boolean {
-    this.#assertUsable();
-    this.#mutating = true;
-    try {
+    return this.#runOperation('renew', () => {
+      const operationSequence = this.#reentrySequence;
       if (!this.#held || !this.#lease) return false;
       const now = this.#now();
       const current = this.#read();
@@ -435,7 +562,29 @@ export class SynchronousStorageLease {
         acquiredAtMs: now,
         expiresAtMs: now + this.#durationMs,
       }, this.#label);
-      if (!this.#writeAndConfirm(next)) {
+      let confirmed = false;
+      try {
+        confirmed = this.#writeAndConfirm(next);
+      } catch (error) {
+        this.#retainCleanupCandidate(current);
+        this.#retainCleanupCandidate(next);
+        try {
+          const persisted = this.#read();
+          if (persisted !== null && sameLease(persisted, next)) {
+            this.#held = true;
+            this.#lease = next;
+          } else if (persisted !== null && sameLease(persisted, current)) {
+            this.#held = true;
+            this.#lease = current;
+          }
+        } catch {
+          // Destroy will match the current storage value against the bounded
+          // old/new cleanup candidates before deleting anything.
+        }
+        this.#failed = true;
+        throw error;
+      }
+      if (!confirmed) {
         const stillCurrent = this.#read();
         if (!stillCurrent || !sameLease(stillCurrent, current)) {
           this.#held = false;
@@ -443,49 +592,55 @@ export class SynchronousStorageLease {
         }
         return false;
       }
+      this.#assertNoReentrySince(operationSequence, '续租');
+      this.#assertAuthorityCommitReady('renew');
       this.#lease = next;
+      this.#cleanupLeaseCandidates = [];
       return true;
-    } finally {
-      this.#mutating = false;
-    }
+    });
   }
 
   release(): boolean {
-    this.#assertUsable();
-    this.#mutating = true;
-    try {
-      return this.#releaseInsideMutation();
-    } finally {
-      this.#mutating = false;
-    }
+    return this.#runOperation('release', () => {
+      const operationSequence = this.#reentrySequence;
+      const released = this.#releaseInsideMutation();
+      this.#assertNoReentrySince(operationSequence, '释放');
+      return released;
+    });
   }
 
   getStatus(): Readonly<SynchronousStorageLeaseStatus> {
-    this.#assertUsable();
-    return Object.freeze({
+    return this.#runOperation('status-read', () => Object.freeze({
       held: this.#held,
       revision: this.#lease?.revision ?? null,
       expiresAtMs: this.#lease?.expiresAtMs ?? null,
+    }));
+  }
+
+  isFailedClosed(): boolean {
+    return this.#runOperation('failed-closed-read', () => this.#failed, {
+      allowFailed: true,
     });
   }
 
   destroy(): void {
-    if (this.#destroyed) return;
-    if (this.#mutating) throw new Error(`操作期间不能销毁 ${this.#label}。`);
-    this.#mutating = true;
-    try {
+    this.#runOperation('destroy', () => {
+      if (this.#destroyed) return;
+      const operationSequence = this.#reentrySequence;
       if (!this.#releaseInsideMutation()) throw new Error(`${this.#label} 未能确认释放。`);
+      this.#assertNoReentrySince(operationSequence, '销毁');
+      this.#assertAuthorityCommitReady('destroy');
       this.#held = false;
       this.#lease = null;
+      this.#cleanupLeaseCandidates = [];
       this.#storage = null;
       this.#wallNow = null;
       this.#ownerId = null;
       this.#holderId = null;
       this.#takeoverSameOwner = false;
       this.#key = null;
+      this.#failed = false;
       this.#destroyed = true;
-    } finally {
-      this.#mutating = false;
-    }
+    }, { allowDestroyed: true, allowFailed: true });
   }
 }

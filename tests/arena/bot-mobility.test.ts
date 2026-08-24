@@ -41,6 +41,7 @@ function observationFromRaw(
     arena: createBotArenaView(
       core.config.arena,
       core.getCharacterDefinition('player-2').collision.radius,
+      core.getCharacterDefinition('player-2').movement.automaticStepHeight,
     ),
   });
 }

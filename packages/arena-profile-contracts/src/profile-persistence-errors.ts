@@ -31,3 +31,41 @@ export class PlayerProfileIndeterminateWriteError extends PlayerProfilePersisten
     super(message, 'PLAYER_PROFILE_INDETERMINATE_WRITE');
   }
 }
+
+class ArenaV2LearningProfilePersistenceError extends Error {
+  readonly code: string;
+
+  constructor(message: string, code: string) {
+    super(message);
+    this.name = new.target.name;
+    this.code = code;
+  }
+}
+
+export class ArenaV2LearningProfileFutureSchemaError
+  extends ArenaV2LearningProfilePersistenceError {
+  constructor(message = 'Arena V2学习档案来自未来版本，当前候选拒绝覆盖。') {
+    super(message, 'ARENA_V2_LEARNING_PROFILE_FUTURE_SCHEMA');
+  }
+}
+
+export class ArenaV2LearningProfileRepositoryBusyError
+  extends ArenaV2LearningProfilePersistenceError {
+  constructor(message = 'Arena V2学习档案正被另一个持有者占用。') {
+    super(message, 'ARENA_V2_LEARNING_PROFILE_REPOSITORY_BUSY');
+  }
+}
+
+export class ArenaV2LearningProfileSaveConflictError
+  extends ArenaV2LearningProfilePersistenceError {
+  constructor(message = 'Arena V2学习档案双槽出现同generation不同payload。') {
+    super(message, 'ARENA_V2_LEARNING_PROFILE_SAVE_CONFLICT');
+  }
+}
+
+export class ArenaV2LearningProfileIndeterminateWriteError
+  extends ArenaV2LearningProfilePersistenceError {
+  constructor(message = 'Arena V2学习档案写入结果无法确认，仓储已失败关闭。') {
+    super(message, 'ARENA_V2_LEARNING_PROFILE_INDETERMINATE_WRITE');
+  }
+}

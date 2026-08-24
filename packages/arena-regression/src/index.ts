@@ -57,3 +57,47 @@ export type {
   ArenaGoldenReplayManifest,
   ArenaGoldenReplayManifestEntry,
 } from './golden-replay-manifest.js';
+export {
+  ARENA_REPLAY_V6_MODE_CHECKPOINT_V2_REGRESSION_SCHEMA_VERSION,
+  createArenaReplayV6ModeCheckpointV2RegressionCandidate,
+  validateArenaReplayV6ModeCheckpointV2RegressionCandidate,
+} from './arena-replay-v6-mode-checkpoint-v2-regression.js';
+export type {
+  ArenaReplayV6ModeCheckpointV2RegressionCandidate,
+  ArenaReplayV6ModeCheckpointV2RegressionCandidateCreateOptions,
+  ArenaReplayV6ModeCheckpointV2RegressionRun,
+} from './arena-replay-v6-mode-checkpoint-v2-regression.js';
+export * from './arena-mode-golden-manifest-v2.js';
+export * from './arena-mode-verification-plan-v1.js';
+export * from './arena-mode-verification-runner-v1.js';
+export * from './arena-mode-verification-fixture-v1.js';
+export * from './arena-mode-verification-runtime-factory-v1.js';
+export * from './arena-kz-route-physics-verification-v1.js';
+export * from './arena-survival-enemy-physics-verification-v1.js';
+export * from './arena-race-crowding-physics-verification-v1.js';
+export * from './arena-baseline-weapon-consequence-verification-v1.js';
+export * from './arena-baseline-weapon-matchcore-replay-verification-v1.js';
+export * from './arena-expanded-weapon-verification-v1.js';
+export * from './arena-line-suppressor-verification-v1.js';
+export * from './arena-read-counter-verification-v1.js';
+export * from './arena-flank-blade-verification-v1.js';
+export * from './arena-survival-baseline-weapon-supply-verification-v1.js';
+export * from './arena-survival-weapon-tier-consequence-verification-v1.js';
+export * from './arena-survival-weapon-bot-affordance-verification-v1.js';
+export * from './arena-survival-tiered-supply-matchcore-verification-v1.js';
+export * from './arena-survival-pressure-bot-long-run-verification-v1.js';
+export * from './arena-three-mode-weapon-feedback-checkpoint-capability-v1.js';
+export * from './arena-three-mode-weapon-feedback-direction-capability-v2.js';
+export * from './arena-v2-result-play-again-content-continuity-candidate-v1.js';
+export * from './arena-three-mode-weapon-feedback-restore-suffix-candidate-v1.js';
+export * from './arena-three-mode-weapon-feedback-failure-injection-candidate-v1.js';
+export * from './arena-three-mode-weapon-feedback-scheduled-failure-replay-report-candidate-v1.js';
+export * from './arena-three-mode-weapon-feedback-real-failure-replay-candidate-v1.js';
+export * from './arena-three-mode-content-selection-checkpoint-capability-v1.js';
+export * from './arena-three-mode-runtime-policy-binding-candidate-v1.js';
+export * from './arena-duel-authoritative-runtime-candidate-v1.js';
+export * from './arena-race-vertical-integration-verification-v1.js';
+export * from './arena-survival-shared-world-authority-verification-v1.js';
+export * from './arena-three-mode-timeline-runtime-wiring-eligibility-candidate-v1.js';
+export * from './arena-three-mode-authoritative-quick-match-composition-candidate-v1.js';
+export * from './arena-v2-registry-backed-local-playable-owner-candidate-v1.js';

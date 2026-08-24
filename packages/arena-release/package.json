@@ -19,6 +19,7 @@
     "@number-strategy-jump/arena-match": "0.1.0",
     "@number-strategy-jump/arena-performance-evidence": "0.1.0",
     "@number-strategy-jump/arena-presentation-contracts": "0.1.0",
+    "@number-strategy-jump/arena-product-presentation": "0.1.0",
     "@number-strategy-jump/arena-regression": "0.1.0",
     "@number-strategy-jump/arena-release-contracts": "0.1.0",
     "@number-strategy-jump/arena-stage9-evidence-content": "0.1.0"

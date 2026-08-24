@@ -29,3 +29,5 @@ export type {
   RewardGrant,
   RewardGrantUnlocks,
 } from './reward-grant.js';
+export * from './mode-match-reward-definition-v2.js';
+export * from './mode-progression-registry-v2.js';

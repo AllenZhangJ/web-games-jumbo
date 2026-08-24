@@ -128,8 +128,8 @@ const PAGE_CONTRACTS: readonly ArenaV2UiPageContract[] = Object.freeze([
     layer: 'selection',
     supportedModes: modes('survival'),
     question: '我能坚持多久？',
-    requiredInformation: Object.freeze(['开局无武器', '每 20 秒三选一', '第一次复活', '第二次结束']),
-    firstViewInformation: Object.freeze(['开局无武器', '每 20 秒三选一', '第一次复活']),
+    requiredInformation: Object.freeze(['开局无武器', '每 20 秒掉落 3 把', '靠近自动拾取或替换', '第一次复活', '第二次结束']),
+    firstViewInformation: Object.freeze(['开局无武器', '每 20 秒掉落 3 把', '靠近自动拾取或替换']),
     deferredInformation: Object.freeze(['第二次结束']),
     primaryAction: '开始生存',
     secondaryAction: '查看地图详情',
@@ -272,7 +272,8 @@ export function runArenaV2UiInformationPrototype(): ArenaV2UiInformationPrototyp
   });
   const passed = weaponDetail.requiredInformation.includes('命中结果')
     && weaponDetail.requiredInformation.includes('适用地图空间')
-    && survivalPrep.requiredInformation.includes('每 20 秒三选一')
+    && survivalPrep.requiredInformation.includes('每 20 秒掉落 3 把')
+    && survivalPrep.requiredInformation.includes('靠近自动拾取或替换')
     && resultReward.requiredInformation.includes('下一目标')
     && resultReward.maximumActionsBeforeNextStep === 2
     && pagesHaveReadableFirstView(PAGE_CONTRACTS)

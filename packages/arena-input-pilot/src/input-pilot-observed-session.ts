@@ -7,7 +7,41 @@ import { ARENA_MATCH_PHASE } from '@number-strategy-jump/arena-match';
 type DataRecord = Readonly<Record<string, unknown>>;
 type BoundMethod = (...args: readonly unknown[]) => unknown;
 
-const NATIVE_PROMISE_THEN = Promise.prototype.then;
+const MAX_SYNC_DESCRIPTOR_PROTOTYPE_DEPTH = 32;
+const NATIVE_PROMISE_PROTOTYPE = Promise.prototype;
+const NATIVE_PROMISE_CONSTRUCTOR = Promise;
+const CAPTURED_PROMISE_THEN_DESCRIPTOR = Object.getOwnPropertyDescriptor(
+  NATIVE_PROMISE_PROTOTYPE,
+  'then',
+);
+if (CAPTURED_PROMISE_THEN_DESCRIPTOR === undefined
+  || !Object.prototype.hasOwnProperty.call(CAPTURED_PROMISE_THEN_DESCRIPTOR, 'value')
+  || typeof CAPTURED_PROMISE_THEN_DESCRIPTOR.value !== 'function') {
+  throw new TypeError('InputPilotObservedSession 无法捕获原生 Promise.prototype.then 数据方法。');
+}
+const NATIVE_PROMISE_THEN = CAPTURED_PROMISE_THEN_DESCRIPTOR.value as (
+  ...arguments_: unknown[]
+) => unknown;
+const NATIVE_PROMISE_THEN_FLAGS = Object.freeze({
+  configurable: CAPTURED_PROMISE_THEN_DESCRIPTOR.configurable,
+  enumerable: CAPTURED_PROMISE_THEN_DESCRIPTOR.enumerable,
+  writable: CAPTURED_PROMISE_THEN_DESCRIPTOR.writable,
+});
+const CAPTURED_PROMISE_SPECIES_DESCRIPTOR = Object.getOwnPropertyDescriptor(
+  NATIVE_PROMISE_CONSTRUCTOR,
+  Symbol.species,
+);
+if (CAPTURED_PROMISE_SPECIES_DESCRIPTOR === undefined
+  || typeof CAPTURED_PROMISE_SPECIES_DESCRIPTOR.get !== 'function'
+  || CAPTURED_PROMISE_SPECIES_DESCRIPTOR.set !== undefined) {
+  throw new TypeError('InputPilotObservedSession 无法捕获原生 Promise[Symbol.species] 访问器。');
+}
+const NATIVE_PROMISE_SPECIES_GETTER = CAPTURED_PROMISE_SPECIES_DESCRIPTOR.get;
+const NATIVE_PROMISE_SPECIES_FLAGS = Object.freeze({
+  configurable: CAPTURED_PROMISE_SPECIES_DESCRIPTOR.configurable,
+  enumerable: CAPTURED_PROMISE_SPECIES_DESCRIPTOR.enumerable,
+});
+const NOOP = (): void => {};
 
 interface DelegateSessionPort {
   readonly owner: object;
@@ -40,8 +74,17 @@ function ownDataValue(record: DataRecord, key: string, name: string): unknown {
 }
 
 function findDataMethod(owner: object, method: string, name: string): BoundMethod {
+  const visited = new Set<object>();
   let current: object | null = owner;
-  while (current !== null) {
+  for (
+    let depth = 0;
+    current !== null && depth < MAX_SYNC_DESCRIPTOR_PROTOTYPE_DEPTH;
+    depth += 1
+  ) {
+    if (visited.has(current)) {
+      throw new TypeError(`${name}.${method} prototype 链不能循环。`);
+    }
+    visited.add(current);
     const descriptor = Object.getOwnPropertyDescriptor(current, method);
     if (descriptor) {
       if (!Object.prototype.hasOwnProperty.call(descriptor, 'value')) {
@@ -54,34 +97,102 @@ function findDataMethod(owner: object, method: string, name: string): BoundMetho
     }
     current = Object.getPrototypeOf(current) as object | null;
   }
+  if (current !== null) {
+    throw new RangeError(
+      `${name}.${method} prototype 链超过 ${MAX_SYNC_DESCRIPTOR_PROTOTYPE_DEPTH} 层。`,
+    );
+  }
   throw new TypeError(`${name} 缺少 ${method}()。`);
 }
 
-function rejectAsyncSyncReturn(value: unknown, label: string): void {
-  if ((typeof value !== 'object' || value === null) && typeof value !== 'function') return;
-  let nativePromise = false;
-  try {
-    Reflect.apply(NATIVE_PROMISE_THEN, value, [() => {}, () => {}]);
-    nativePromise = true;
-  } catch {
-    // 普通对象和 hostile thenable 没有 Promise internal slot。
+function assertNativePromiseThenIntegrity(): void {
+  const descriptor = Object.getOwnPropertyDescriptor(NATIVE_PROMISE_PROTOTYPE, 'then');
+  if (descriptor === undefined
+    || !Object.prototype.hasOwnProperty.call(descriptor, 'value')
+    || descriptor.value !== NATIVE_PROMISE_THEN
+    || descriptor.configurable !== NATIVE_PROMISE_THEN_FLAGS.configurable
+    || descriptor.enumerable !== NATIVE_PROMISE_THEN_FLAGS.enumerable
+    || descriptor.writable !== NATIVE_PROMISE_THEN_FLAGS.writable) {
+    throw new TypeError('InputPilotObservedSession 原生 Promise.prototype.then 描述符漂移。');
   }
-  if (nativePromise) throw new TypeError(`${label} 必须同步完成。`);
+}
+
+function assertNativePromiseSpeciesIntegrity(): void {
+  const descriptor = Object.getOwnPropertyDescriptor(
+    NATIVE_PROMISE_CONSTRUCTOR,
+    Symbol.species,
+  );
+  if (descriptor === undefined
+    || descriptor.get !== NATIVE_PROMISE_SPECIES_GETTER
+    || descriptor.set !== undefined
+    || descriptor.configurable !== NATIVE_PROMISE_SPECIES_FLAGS.configurable
+    || descriptor.enumerable !== NATIVE_PROMISE_SPECIES_FLAGS.enumerable) {
+    throw new TypeError('InputPilotObservedSession 原生 Promise[Symbol.species] 描述符漂移。');
+  }
+}
+
+interface SynchronousValueDescriptors {
+  readonly thenDescriptor: PropertyDescriptor | null;
+  readonly constructorDescriptor: PropertyDescriptor | null;
+}
+
+function inspectSynchronousValueDescriptors(
+  value: object,
+  label: string,
+): SynchronousValueDescriptors {
   const visited = new Set<object>();
-  let current: object | null = value as object;
-  let depth = 0;
-  while (current !== null && depth < 32 && !visited.has(current)) {
-    visited.add(current);
-    depth += 1;
-    const descriptor = Object.getOwnPropertyDescriptor(current, 'then');
-    if (descriptor) {
-      if (!('value' in descriptor)) throw new TypeError(`${label} 返回了访问器 thenable。`);
-      if (typeof descriptor.value !== 'function') return;
-      throw new TypeError(`${label} 必须同步完成。`);
+  let current: object | null = value;
+  let thenDescriptor: PropertyDescriptor | null = null;
+  let constructorDescriptor: PropertyDescriptor | null = null;
+  for (
+    let depth = 0;
+    current !== null && depth < MAX_SYNC_DESCRIPTOR_PROTOTYPE_DEPTH;
+    depth += 1
+  ) {
+    if (visited.has(current)) {
+      throw new TypeError(`${label} 返回值 prototype 链不能循环。`);
     }
+    visited.add(current);
+    thenDescriptor ??= Object.getOwnPropertyDescriptor(current, 'then') ?? null;
+    constructorDescriptor ??=
+      Object.getOwnPropertyDescriptor(current, 'constructor') ?? null;
     current = Object.getPrototypeOf(current) as object | null;
   }
-  if (current !== null) throw new TypeError(`${label} 返回值原型链无效。`);
+  if (current !== null) {
+    throw new RangeError(
+      `${label} 返回值 prototype 链超过 ${MAX_SYNC_DESCRIPTOR_PROTOTYPE_DEPTH} 层。`,
+    );
+  }
+  return Object.freeze({ thenDescriptor, constructorDescriptor });
+}
+
+function rejectAsyncSyncReturn(value: unknown, label: string): void {
+  assertNativePromiseThenIntegrity();
+  if ((typeof value !== 'object' || value === null) && typeof value !== 'function') return;
+  const descriptors = inspectSynchronousValueDescriptors(value as object, label);
+  const constructorDescriptor = descriptors.constructorDescriptor;
+  if (constructorDescriptor !== null
+    && !Object.prototype.hasOwnProperty.call(constructorDescriptor, 'value')) {
+    throw new TypeError(`${label} 返回了访问器 constructor。`);
+  }
+  if (constructorDescriptor?.value === NATIVE_PROMISE_CONSTRUCTOR) {
+    assertNativePromiseSpeciesIntegrity();
+    let nativePromise = false;
+    try {
+      Reflect.apply(NATIVE_PROMISE_THEN, value, [NOOP, NOOP]);
+      nativePromise = true;
+    } catch {
+      // Plain data may spoof constructor: Promise. A failed native brand probe
+      // falls through to descriptor-only ordinary thenable rejection.
+    }
+    if (nativePromise) throw new TypeError(`${label} 必须同步完成。`);
+  }
+  const thenDescriptor = descriptors.thenDescriptor;
+  if (thenDescriptor === null) return;
+  if (!Object.prototype.hasOwnProperty.call(thenDescriptor, 'value')) {
+    throw new TypeError(`${label} 返回了访问器 thenable。`);
+  }
+  throw new TypeError(`${label} 返回了 then 字段，必须同步完成。`);
 }
 
 function safelyWrapThrownError(value: unknown, message: string): Error {

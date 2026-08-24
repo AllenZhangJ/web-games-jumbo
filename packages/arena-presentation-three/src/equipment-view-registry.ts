@@ -1,9 +1,23 @@
 import type * as THREE from 'three';
 import { createThreeObjectDisposalLease, type ThreeObjectDisposalLease } from './dispose-three-resources.js';
-import { createProgrammaticEquipment } from './programmatic-equipment.js';
+import {
+  createProgrammaticEquipment,
+  ProgrammaticEquipmentBuildConstructionCleanupError,
+} from './programmatic-equipment.js';
 import { readDataArray } from './strict-data-array.js';
 
 type UnknownMethod = (...args: unknown[]) => unknown;
+export const EQUIPMENT_VIEW_REGISTRY_TERMINAL_LIFECYCLE_V1 = Object.freeze({
+  id: 'equipment-view-registry-terminal-lifecycle-v1',
+  cleanupCallbacksCannotReenterPublicApi: true,
+  cleanupCallbacksMustCompleteSynchronously: true,
+  recordFailureStopsLaterCleanup: true,
+});
+export const EQUIPMENT_VIEW_REGISTRY_RUNTIME_CONSTRUCTION_LIFECYCLE_V1 = Object.freeze({
+  id: 'equipment-view-registry-runtime-construction-lifecycle-v1',
+  worldViewOwnsBuilderDebtAndRawRoot: true,
+  registryRetriesUnpublishedWorldViewDebt: true,
+});
 
 interface PositionValue { readonly x: number; readonly y: number; readonly z: number }
 interface EquipmentSnapshot {
@@ -17,6 +31,12 @@ interface EquipmentRecord {
   readonly view: WorldEquipmentView;
   rootDetached: boolean;
   viewDisposed: boolean;
+}
+
+interface WorldEquipmentViewConstructionResources {
+  nestedDebt: ProgrammaticEquipmentBuildConstructionCleanupError | null;
+  root: THREE.Group | null;
+  disposal: ThreeObjectDisposalLease | null;
 }
 
 function snapshotMethod(value: unknown, name: string, methodName: string): UnknownMethod {
@@ -98,6 +118,66 @@ function snapOption(value: unknown): boolean {
   return descriptor.value;
 }
 
+function worldEquipmentViewConstructionCleanupComplete(
+  resources: WorldEquipmentViewConstructionResources,
+): boolean {
+  return resources.nestedDebt === null
+    && (resources.root === null || resources.disposal?.complete === true);
+}
+
+function cleanupWorldEquipmentViewConstruction(
+  resources: WorldEquipmentViewConstructionResources,
+): void {
+  const errors: unknown[] = [];
+  if (resources.nestedDebt !== null) {
+    try { resources.nestedDebt.retryCleanup(); } catch (error) { errors.push(error); }
+    if (resources.nestedDebt.cleanupComplete) resources.nestedDebt = null;
+  }
+  if (resources.root !== null) {
+    if (resources.disposal === null) {
+      try {
+        resources.disposal = createThreeObjectDisposalLease(
+          resources.root,
+          { removeFromParent: false },
+        );
+      } catch (error) { errors.push(error); }
+    }
+    if (resources.disposal !== null && !resources.disposal.complete) {
+      try { resources.disposal.dispose(); } catch (error) { errors.push(error); }
+    }
+  }
+  if (errors.length > 0) {
+    throw new AggregateError(errors, 'WorldEquipmentView 构造资源清理未完整完成。');
+  }
+  if (!worldEquipmentViewConstructionCleanupComplete(resources)) {
+    throw new Error('WorldEquipmentView 构造资源清理依赖尚未收敛。');
+  }
+}
+
+export class WorldEquipmentViewConstructionCleanupError extends AggregateError {
+  readonly originalError: unknown;
+  readonly cleanupError: unknown;
+  readonly #resources: WorldEquipmentViewConstructionResources;
+
+  constructor(
+    originalError: unknown,
+    cleanupError: unknown,
+    resources: WorldEquipmentViewConstructionResources,
+  ) {
+    super([originalError, cleanupError], 'WorldEquipmentView 构造失败且清理未完整完成。');
+    this.name = 'WorldEquipmentViewConstructionCleanupError';
+    this.originalError = originalError;
+    this.cleanupError = cleanupError;
+    this.#resources = resources;
+  }
+
+  get cleanupComplete(): boolean {
+    return worldEquipmentViewConstructionCleanupComplete(this.#resources);
+  }
+
+  retryCleanup(): void { cleanupWorldEquipmentViewConstruction(this.#resources); }
+}
+
 class WorldEquipmentView {
   readonly root: THREE.Group;
   readonly #instanceId: string;
@@ -111,11 +191,31 @@ class WorldEquipmentView {
   constructor(item: EquipmentSnapshot) {
     this.#instanceId = item.instanceId;
     this.#definitionId = item.definitionId;
-    this.root = createProgrammaticEquipment(item.definitionId);
-    this.root.name = `ArenaEquipment:${item.instanceId}`;
-    this.root.scale.setScalar(0.85);
-    this.#disposal = createThreeObjectDisposalLease(this.root, { removeFromParent: false });
-    this.sync(item, true);
+    const construction: WorldEquipmentViewConstructionResources = {
+      nestedDebt: null,
+      root: null,
+      disposal: null,
+    };
+    try {
+      const root = createProgrammaticEquipment(item.definitionId);
+      construction.root = root;
+      root.name = `ArenaEquipment:${item.instanceId}`;
+      root.scale.setScalar(0.85);
+      const disposal = createThreeObjectDisposalLease(root, { removeFromParent: false });
+      construction.disposal = disposal;
+      this.root = root;
+      this.#disposal = disposal;
+      this.sync(item, true);
+    } catch (error) {
+      if (error instanceof ProgrammaticEquipmentBuildConstructionCleanupError) {
+        construction.nestedDebt = error;
+      }
+      try { cleanupWorldEquipmentViewConstruction(construction); }
+      catch (cleanupError) {
+        throw new WorldEquipmentViewConstructionCleanupError(error, cleanupError, construction);
+      }
+      throw error;
+    }
   }
 
   get definitionId(): string { return this.#definitionId; }
@@ -149,14 +249,25 @@ function cleanupFailure(message: string, cause: unknown, errors: readonly unknow
   return failure;
 }
 
+function rejectThenable(value: unknown, name: string): void {
+  if (!value || (typeof value !== 'object' && typeof value !== 'function')) return;
+  let then: unknown;
+  try { then = Reflect.get(value, 'then'); } catch { throw new TypeError(`${name} 返回值不可检查。`); }
+  if (typeof then !== 'function') return;
+  try { Promise.resolve(value).catch(() => {}); } catch { /* malformed thenable */ }
+  throw new TypeError(`${name} 必须同步完成。`);
+}
+
 export class EquipmentViewRegistry {
   readonly #add: UnknownMethod;
   readonly #remove: UnknownMethod;
   readonly #views = new Map<string, EquipmentRecord>();
+  #constructionDebt: WorldEquipmentViewConstructionCleanupError | null = null;
   #disposed = false;
   #failedError: unknown = null;
   #operating = false;
   #cleaning = false;
+  #reentryDetected = false;
 
   constructor(root: unknown) {
     this.#add = snapshotMethod(root, 'EquipmentViewRegistry root', 'add');
@@ -164,34 +275,57 @@ export class EquipmentViewRegistry {
   }
 
   #assertUsable(): void {
+    if (this.#operating || this.#cleaning) {
+      this.#reentryDetected = true;
+      throw new Error('EquipmentViewRegistry 不允许重入。');
+    }
     if (this.#disposed) throw new Error('EquipmentViewRegistry 已销毁。');
     if (this.#failedError) {
       const error = new Error('EquipmentViewRegistry 已失败。');
       error.cause = this.#failedError;
       throw error;
     }
-    if (this.#operating) throw new Error('EquipmentViewRegistry 不允许回调重入。');
   }
 
   #cleanupRecord(record: EquipmentRecord): unknown[] {
     const errors: unknown[] = [];
     if (!record.rootDetached) {
-      try { this.#remove(record.view.root); record.rootDetached = true; } catch (error) { errors.push(error); }
+      try {
+        rejectThenable(this.#remove(record.view.root), 'EquipmentViewRegistry root.remove()');
+        if (this.#reentryDetected) throw new Error('EquipmentViewRegistry remove回调发生公开API重入。');
+        record.rootDetached = true;
+      } catch (error) { errors.push(error); }
     }
-    if (!record.viewDisposed) {
-      try { record.view.dispose(); record.viewDisposed = true; } catch (error) { errors.push(error); }
+    if (!this.#reentryDetected && record.rootDetached && !record.viewDisposed) {
+      try {
+        rejectThenable(record.view.dispose(), 'EquipmentViewRegistry view.dispose()');
+        if (this.#reentryDetected) throw new Error('EquipmentViewRegistry dispose回调发生公开API重入。');
+        record.viewDisposed = true;
+      } catch (error) { errors.push(error); }
     }
     return errors;
   }
 
   #cleanupAll(): unknown[] {
-    if (this.#cleaning) return [new Error('EquipmentViewRegistry 清理不可重入。')];
+    if (this.#cleaning) {
+      this.#reentryDetected = true;
+      return [new Error('EquipmentViewRegistry 清理不可重入。')];
+    }
     this.#cleaning = true;
+    this.#reentryDetected = false;
     const errors: unknown[] = [];
     try {
+      if (this.#constructionDebt !== null) {
+        try { this.#constructionDebt.retryCleanup(); }
+        catch (error) { errors.push(error); }
+        if (this.#constructionDebt.cleanupComplete) this.#constructionDebt = null;
+      }
       for (const [id, record] of this.#views) {
+        if (this.#reentryDetected) break;
+        const errorCount = errors.length;
         errors.push(...this.#cleanupRecord(record));
         if (record.rootDetached && record.viewDisposed) this.#views.delete(id);
+        if (errors.length > errorCount) break;
       }
     } finally { this.#cleaning = false; }
     return errors;
@@ -212,6 +346,7 @@ export class EquipmentViewRegistry {
       && (item.locationState === 'spawned' || item.locationState === 'dropped'))
       .map((item) => [item.instanceId, item]));
     this.#operating = true;
+    this.#reentryDetected = false;
     try {
       for (const [id, record] of this.#views) {
         const item = active.get(id);
@@ -226,11 +361,14 @@ export class EquipmentViewRegistry {
           const view = new WorldEquipmentView(item);
           record = { view, rootDetached: false, viewDisposed: false };
           this.#views.set(id, record);
-          this.#add(view.root);
+          rejectThenable(this.#add(view.root), 'EquipmentViewRegistry root.add()');
         }
         record.view.sync(item, snap);
       }
     } catch (error) {
+      if (error instanceof WorldEquipmentViewConstructionCleanupError) {
+        this.#constructionDebt = error;
+      }
       this.#operating = false;
       this.#fail(error);
     }
@@ -240,6 +378,7 @@ export class EquipmentViewRegistry {
   update(deltaSeconds: unknown): void {
     this.#assertUsable();
     this.#operating = true;
+    this.#reentryDetected = false;
     try { for (const { view } of this.#views.values()) view.update(deltaSeconds); }
     catch (error) { this.#operating = false; this.#fail(error); }
     this.#operating = false;
@@ -251,6 +390,10 @@ export class EquipmentViewRegistry {
   }
 
   dispose(): void {
+    if (this.#operating || this.#cleaning) {
+      this.#reentryDetected = true;
+      throw new Error('EquipmentViewRegistry 清理不可重入。');
+    }
     if (!this.#disposed) this.#disposed = true;
     const errors = this.#cleanupAll();
     if (errors.length > 0) throw cleanupFailure('EquipmentViewRegistry 清理未完整完成。', this.#failedError, errors);

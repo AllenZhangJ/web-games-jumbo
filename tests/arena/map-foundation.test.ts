@@ -255,6 +255,74 @@ test('ArenaMapSystem rejects gaps and fails closed after a mutation port failure
   system.destroy();
 });
 
+test('ArenaMapSystem keeps swallowed commit reentrancy sticky and stops later map ports', () => {
+  const system = createSystem();
+  const zero = system.advance({ activeTick: 0, actors: actors() });
+  system.commit(zero, EMPTY_PORTS);
+  const one = system.advance({ activeTick: 1, actors: actors() });
+  system.commit(one, EMPTY_PORTS);
+  const two = system.advance({ activeTick: 2, actors: actors() });
+  const reentryErrors: Error[] = [];
+  let impulseCalls = 0;
+  assert.throws(() => system.commit(two, {
+    applyImpulse() {
+      impulseCalls += 1;
+      try {
+        system.getSnapshot();
+      } catch (error) {
+        reentryErrors.push(error instanceof Error ? error : new Error(String(error)));
+      }
+    },
+    setSurfaceEnabled() {},
+    spawnEquipment() {},
+  }), /commit 期间不可重入 snapshot-read/);
+  assert.equal(impulseCalls, 1);
+  assert.match(required(reentryErrors[0], '地图提交重入错误').message, /commit 期间不可重入/);
+  assert.throws(() => system.getSnapshot(), /已失败/);
+  system.destroy();
+});
+
+test('ArenaMapSystem rejects swallowed strategy reentrancy before publishing map runtime state', () => {
+  const definition = createMapDefinition({
+    schemaVersion: MAP_DEFINITION_SCHEMA_VERSION,
+    id: 'map-strategy-reentry-test',
+    arena: TEST_ARENA,
+    equipmentSpawnPoints: [],
+    events: [event('probe', 'reentry-probe', oneShot(0, 0), {})],
+  });
+  const reentryErrors: Error[] = [];
+  let system: ArenaMapSystem;
+  const strategyRegistry = new MapEventStrategyRegistry([{
+    kind: 'reentry-probe',
+    validate() {},
+    plan() {
+      try {
+        system.getSnapshot();
+      } catch (error) {
+        reentryErrors.push(error instanceof Error ? error : new Error(String(error)));
+      }
+      return { privatePlan: {}, publicPayload: {} };
+    },
+    start() { return { commands: [], events: [] }; },
+    tick() { return { commands: [], events: [] }; },
+    end() { return { commands: [], events: [] }; },
+  }]);
+  system = new ArenaMapSystem({
+    mapDefinition: definition,
+    strategyRegistry,
+    commandRegistry: createDefaultMapCommandRegistry(),
+    matchSeed: 11,
+    rulesetVersion: 'map-strategy-reentry-test-v1',
+  });
+  assert.throws(
+    () => system.advance({ activeTick: 0, actors: actors() }),
+    /advance 期间不可重入 snapshot-read/,
+  );
+  assert.match(required(reentryErrors[0], '地图策略重入错误').message, /advance 期间不可重入/);
+  assert.throws(() => system.getSnapshot(), /已失败/);
+  system.destroy();
+});
+
 test('ArenaMapSystem requires exactly-once in-order commit of its original batch', () => {
   const system = createSystem();
   const zero = system.advance({ activeTick: 0, actors: actors() });

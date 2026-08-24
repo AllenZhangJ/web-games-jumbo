@@ -581,6 +581,7 @@ function createArenaV2SurvivalSupplyBotSessionInternal(
       trustedCommandSourceHandle: botMatchReadBundle,
       arena: core.config.arena,
       characterRadius: botCharacter.collision.radius,
+      tickDurationSeconds: core.config.fixedDeltaSeconds,
       maximumStepHeight: botCharacter.movement.automaticStepHeight,
     });
     controllerCleanup = captureCleanupHandle(controllerCandidate, 'survival BotController');

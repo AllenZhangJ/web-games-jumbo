@@ -1,7 +1,11 @@
 import {
+  ARENA_MATCH_PHASE,
+  ARENA_PARTICIPANT_STATUS,
   assertKnownKeys,
   cloneFrozenData,
   createMatchContentSelection,
+  type ArenaMatchPhase,
+  type ArenaParticipantStatus,
   type MatchContentSelection,
   type PlainRecord,
 } from '@number-strategy-jump/arena-contracts';
@@ -47,23 +51,14 @@ export const PHYSICS_POC_CHARACTER = Object.freeze({
   airAcceleration: ARENA_PHYSICS.airAcceleration,
 });
 
-export const ARENA_MATCH_PHASE = Object.freeze({
-  PREPARING: 'preparing',
-  RUNNING: 'running',
-  SUDDEN_DEATH: 'sudden-death',
-  ENDED: 'ended',
-} as const);
-
-export type ArenaMatchPhase = typeof ARENA_MATCH_PHASE[keyof typeof ARENA_MATCH_PHASE];
-
-export const ARENA_PARTICIPANT_STATUS = Object.freeze({
-  ACTIVE: 'active',
-  RESPAWNING: 'respawning',
-  ELIMINATED: 'eliminated',
-} as const);
-
-export type ArenaParticipantStatus =
-  typeof ARENA_PARTICIPANT_STATUS[keyof typeof ARENA_PARTICIPANT_STATUS];
+export {
+  ARENA_MATCH_PHASE,
+  ARENA_PARTICIPANT_STATUS,
+} from '@number-strategy-jump/arena-contracts';
+export type {
+  ArenaMatchPhase,
+  ArenaParticipantStatus,
+} from '@number-strategy-jump/arena-contracts';
 
 export interface ArenaBasePushConfig {
   readonly range: number;

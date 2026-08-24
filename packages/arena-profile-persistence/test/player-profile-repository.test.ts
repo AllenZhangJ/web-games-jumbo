@@ -41,14 +41,17 @@ function clone<T>(value: T): T {
 
 function storageHarness() {
   const values = new Map<string, unknown>();
+  const readKeys: string[] = [];
   const failNextRead = new Set<string>();
   const failReadAfterWrite = new Set<string>();
   const blockedDeletes = new Set<string>();
   const falseDeleteAfterMutation = new Set<string>();
   let readHook: ((key: string) => void) | null = null;
   let writeHook: ((key: string) => void) | null = null;
+  let deleteHook: ((key: string) => void) | null = null;
   const port = {
     storageRead(key: string) {
+      readKeys.push(key);
       readHook?.(key);
       if (failNextRead.delete(key)) {
         return { ok: false, found: false, value: undefined };
@@ -64,6 +67,7 @@ function storageHarness() {
       return true;
     },
     storageDelete(key: string) {
+      deleteHook?.(key);
       if (blockedDeletes.has(key)) return false;
       values.delete(key);
       return !falseDeleteAfterMutation.has(key);
@@ -71,12 +75,14 @@ function storageHarness() {
   };
   return {
     values,
+    readKeys,
     failReadAfterWrite,
     blockedDeletes,
     falseDeleteAfterMutation,
     port,
     setReadHook(value: ((key: string) => void) | null) { readHook = value; },
     setWriteHook(value: ((key: string) => void) | null) { writeHook = value; },
+    setDeleteHook(value: ((key: string) => void) | null) { deleteHook = value; },
   };
 }
 
@@ -131,7 +137,7 @@ describe('PlayerProfileRepository', () => {
     repo.destroy();
   });
 
-  it('rejects every public operation reentered during open storage callbacks', () => {
+  it('keeps open Storage callback reentry sticky and stops before the next slot', () => {
     const harness = storageHarness();
     const repo = repository(harness.port);
     const next = withExperience(createPlayerProfile(DEFINITION), 1);
@@ -154,15 +160,19 @@ describe('PlayerProfileRepository', () => {
         }
       }
     };
-    harness.setReadHook(attemptAll);
-    expect(repo.open().revision).toBe(0);
+    harness.setReadHook((key) => {
+      if (key.endsWith('.slot-a')) attemptAll();
+    });
+    expect(() => repo.open()).toThrow(PlayerProfileIndeterminateWriteError);
     harness.setReadHook(null);
-    expect(errors.length).toBeGreaterThanOrEqual(21);
-    for (const error of errors) expect(error.message).toMatch(/不可重入/);
+    expect(errors).toHaveLength(7);
+    for (const error of errors) expect(error.message).toMatch(/重入/u);
+    expect(harness.readKeys).not.toContain('test.profile.slot-b');
+    expect(harness.readKeys).not.toContain('test.profile.head');
     repo.destroy();
   });
 
-  it('keeps one verified CAS when storage callbacks attempt reads, writes and destroy', () => {
+  it('keeps the verified durable CAS watermark before rejecting Storage callback reentry', () => {
     const harness = storageHarness();
     const repo = repository(harness.port);
     const initial = repo.open();
@@ -186,16 +196,16 @@ describe('PlayerProfileRepository', () => {
         }
       }
     });
-    expect(repo.compareAndSet(next, 0)).toEqual({
-      committed: true,
-      reason: null,
-      headUpdated: true,
-    });
+    expect(() => repo.compareAndSet(next, 0)).toThrow(PlayerProfileIndeterminateWriteError);
     harness.setWriteHook(null);
     expect(errors).toHaveLength(6);
-    for (const error of errors) expect(error.message).toMatch(/不可重入/);
-    expect(repo.getSnapshot().revision).toBe(1);
+    for (const error of errors) expect(error.message).toMatch(/重入/u);
+    expect(() => repo.getSnapshot()).toThrow(PlayerProfileIndeterminateWriteError);
     repo.destroy();
+
+    const recovered = repository(harness.port, 'owner-recovered');
+    expect(recovered.open().revision).toBe(1);
+    recovered.destroy();
   });
 
   it('fails closed immediately when CAS confirms that another runtime owns the lease', () => {
@@ -261,12 +271,42 @@ describe('PlayerProfileRepository', () => {
     const keys = repo.getStorageKeys();
     harness.blockedDeletes.add(keys.lease);
     expect(() => repo.destroy()).toThrow(/未能确认释放/);
-    expect(repo.getSnapshot().revision).toBe(0);
+    expect(() => repo.getSnapshot()).toThrow(PlayerProfileIndeterminateWriteError);
     expect(harness.values.has(keys.lease)).toBe(true);
     harness.blockedDeletes.delete(keys.lease);
     repo.destroy();
     repo.destroy();
     expect(harness.values.has(keys.lease)).toBe(false);
     expect(() => repo.getStorageKeys()).toThrow(/已销毁/);
+  });
+
+  it('publishes head/profile and destroyed watermarks before swallowed reentry rejection', () => {
+    const headHarness = storageHarness();
+    const headRepository = repository(headHarness.port, 'owner-head');
+    const initial = headRepository.open();
+    const next = withExperience(initial, 1);
+    headHarness.setWriteHook((key) => {
+      if (!key.endsWith('.head')) return;
+      try { headRepository.getSnapshot(); } catch { /* Storage swallows the rejection. */ }
+    });
+    expect(() => headRepository.compareAndSet(next, 0)).toThrow(
+      PlayerProfileIndeterminateWriteError,
+    );
+    expect(headHarness.values.get('test.profile.head')).toBe('a');
+    headHarness.setWriteHook(null);
+    headRepository.destroy();
+    const recovered = repository(headHarness.port, 'owner-head-recovered');
+    expect(recovered.open().revision).toBe(1);
+    recovered.destroy();
+
+    const destroyHarness = storageHarness();
+    const destroyRepository = repository(destroyHarness.port, 'owner-destroy');
+    destroyRepository.open();
+    destroyHarness.setDeleteHook((key) => {
+      if (!key.endsWith('.lease')) return;
+      try { destroyRepository.getStorageKeys(); } catch { /* Storage swallows the rejection. */ }
+    });
+    expect(() => destroyRepository.destroy()).toThrow(PlayerProfileIndeterminateWriteError);
+    expect(() => destroyRepository.getDiagnostics()).toThrow(/已销毁/u);
   });
 });

@@ -304,4 +304,92 @@ describe('arena-product-progression', () => {
     expect(() => closedCommitter.commit(productResult())).toThrow(/失败关闭/);
     expect(ambiguousAttempts).toBe(1);
   });
+
+  it('treats an asynchronous write outcome as ambiguous and never submits twice', () => {
+    const definition = createPlayerProfileDefinition(profileDefinitionData());
+    let attempts = 0;
+    const committer = new RewardCommitter({
+      registry: registry(),
+      rewardDefinitionId: 'match-reward',
+      profileDefinition: definition,
+      profileService: {
+        getSnapshot() { return createPlayerProfile(definition); },
+        commitProgressionGrant() {
+          attempts += 1;
+          return Promise.reject(new Error('late write outcome'));
+        },
+      },
+    });
+
+    expect(() => committer.commit(productResult())).toThrow(/同步完成/);
+    expect(() => committer.commit(productResult())).toThrow(/失败关闭/);
+    expect(attempts).toBe(1);
+  });
+
+  it('treats any declared then field as an ambiguous synchronous write outcome', () => {
+    const definition = createPlayerProfileDefinition(profileDefinitionData());
+    let attempts = 0;
+    const committer = new RewardCommitter({
+      registry: registry(),
+      rewardDefinitionId: 'match-reward',
+      profileDefinition: definition,
+      profileService: {
+        getSnapshot() { return createPlayerProfile(definition); },
+        commitProgressionGrant() {
+          attempts += 1;
+          return { then: null };
+        },
+      },
+    });
+
+    expect(() => committer.commit(productResult())).toThrow(/then字段.*同步完成/);
+    expect(() => committer.commit(productResult())).toThrow(/失败关闭/);
+    expect(attempts).toBe(1);
+  });
+
+  it('rejects hostile return accessors and Promise subclasses without executing them', () => {
+    const definition = createPlayerProfileDefinition(profileDefinitionData());
+    for (const key of ['then', 'constructor'] as const) {
+      let accessorCalls = 0;
+      const returned = Object.create(null);
+      Object.defineProperty(returned, key, {
+        get() {
+          accessorCalls += 1;
+          throw new Error('must-not-run');
+        },
+      });
+      const committer = new RewardCommitter({
+        registry: registry(),
+        rewardDefinitionId: 'match-reward',
+        profileDefinition: definition,
+        profileService: {
+          getSnapshot() { return returned; },
+          commitProgressionGrant() { throw new Error('must-not-reach'); },
+        },
+      });
+      expect(() => committer.commit(productResult())).toThrow(/访问器/);
+      expect(accessorCalls).toBe(0);
+    }
+
+    let speciesCalls = 0;
+    class DerivedPromise<T> extends Promise<T> {
+      static get [Symbol.species](): PromiseConstructor {
+        speciesCalls += 1;
+        return Promise;
+      }
+    }
+    const subclass = new RewardCommitter({
+      registry: registry(),
+      rewardDefinitionId: 'match-reward',
+      profileDefinition: definition,
+      profileService: {
+        getSnapshot() {
+          return new DerivedPromise((resolve) => resolve(createPlayerProfile(definition)));
+        },
+        commitProgressionGrant() { throw new Error('must-not-reach'); },
+      },
+    });
+    expect(() => subclass.commit(productResult())).toThrow(/同步完成/);
+    expect(speciesCalls).toBe(0);
+  });
 });

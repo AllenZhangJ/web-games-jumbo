@@ -73,6 +73,7 @@ import {
 import {
   createMovementCommand,
   MovementSystem,
+  type MovementCapabilities,
   type MovementMutationPort,
 } from '@number-strategy-jump/arena-movement';
 import {
@@ -106,6 +107,41 @@ import type {
 // tolerance covers the physics world's small ground-probe/snap offset without
 // accepting unreachable items floating above or buried below a surface.
 const EQUIPMENT_SURFACE_HEIGHT_TOLERANCE = 0.1;
+const MAX_FACTORY_RESOURCE_PROTOTYPE_DEPTH = 32;
+const NATIVE_PROMISE_PROTOTYPE = Promise.prototype;
+const NATIVE_PROMISE_CONSTRUCTOR = Promise;
+const CAPTURED_PROMISE_THEN_DESCRIPTOR = Object.getOwnPropertyDescriptor(
+  NATIVE_PROMISE_PROTOTYPE,
+  'then',
+);
+if (CAPTURED_PROMISE_THEN_DESCRIPTOR === undefined
+  || !Object.prototype.hasOwnProperty.call(CAPTURED_PROMISE_THEN_DESCRIPTOR, 'value')
+  || typeof CAPTURED_PROMISE_THEN_DESCRIPTOR.value !== 'function') {
+  throw new TypeError('MatchCore 无法捕获原生 Promise.prototype.then 数据方法。');
+}
+const NATIVE_PROMISE_THEN = CAPTURED_PROMISE_THEN_DESCRIPTOR.value as (
+  ...arguments_: unknown[]
+) => unknown;
+const NATIVE_PROMISE_THEN_FLAGS = Object.freeze({
+  configurable: CAPTURED_PROMISE_THEN_DESCRIPTOR.configurable,
+  enumerable: CAPTURED_PROMISE_THEN_DESCRIPTOR.enumerable,
+  writable: CAPTURED_PROMISE_THEN_DESCRIPTOR.writable,
+});
+const CAPTURED_PROMISE_SPECIES_DESCRIPTOR = Object.getOwnPropertyDescriptor(
+  NATIVE_PROMISE_CONSTRUCTOR,
+  Symbol.species,
+);
+if (CAPTURED_PROMISE_SPECIES_DESCRIPTOR === undefined
+  || typeof CAPTURED_PROMISE_SPECIES_DESCRIPTOR.get !== 'function'
+  || CAPTURED_PROMISE_SPECIES_DESCRIPTOR.set !== undefined) {
+  throw new TypeError('MatchCore 无法捕获原生 Promise[Symbol.species] 访问器。');
+}
+const NATIVE_PROMISE_SPECIES_GETTER = CAPTURED_PROMISE_SPECIES_DESCRIPTOR.get;
+const NATIVE_PROMISE_SPECIES_FLAGS = Object.freeze({
+  configurable: CAPTURED_PROMISE_SPECIES_DESCRIPTOR.configurable,
+  enumerable: CAPTURED_PROMISE_SPECIES_DESCRIPTOR.enumerable,
+});
+const NOOP = (): void => {};
 
 type UnknownRecord = Readonly<Record<string, unknown>>;
 
@@ -491,18 +527,130 @@ function requireMapValue<K, V>(map: ReadonlyMap<K, V>, key: K, message: string):
   return value;
 }
 
-function findDataMethod(value: unknown, name: string): ((...args: unknown[]) => unknown) | null {
-  if (!value || (typeof value !== 'object' && typeof value !== 'function')) return null;
+function assertNativePromiseThenIntegrity(): void {
+  const descriptor = Object.getOwnPropertyDescriptor(NATIVE_PROMISE_PROTOTYPE, 'then');
+  if (descriptor === undefined
+    || !Object.prototype.hasOwnProperty.call(descriptor, 'value')
+    || descriptor.value !== NATIVE_PROMISE_THEN
+    || descriptor.configurable !== NATIVE_PROMISE_THEN_FLAGS.configurable
+    || descriptor.enumerable !== NATIVE_PROMISE_THEN_FLAGS.enumerable
+    || descriptor.writable !== NATIVE_PROMISE_THEN_FLAGS.writable) {
+    throw new TypeError('MatchCore 原生 Promise.prototype.then 描述符漂移。');
+  }
+}
+
+function assertNativePromiseSpeciesIntegrity(): void {
+  const descriptor = Object.getOwnPropertyDescriptor(
+    NATIVE_PROMISE_CONSTRUCTOR,
+    Symbol.species,
+  );
+  if (descriptor === undefined
+    || descriptor.get !== NATIVE_PROMISE_SPECIES_GETTER
+    || descriptor.set !== undefined
+    || descriptor.configurable !== NATIVE_PROMISE_SPECIES_FLAGS.configurable
+    || descriptor.enumerable !== NATIVE_PROMISE_SPECIES_FLAGS.enumerable) {
+    throw new TypeError('MatchCore 原生 Promise[Symbol.species] 描述符漂移。');
+  }
+}
+
+interface FactoryResourceReturnDescriptors {
+  readonly thenDescriptor: PropertyDescriptor | null;
+  readonly constructorDescriptor: PropertyDescriptor | null;
+}
+
+function inspectFactoryResourceReturnDescriptors(
+  value: object,
+  contractName: string,
+): FactoryResourceReturnDescriptors {
+  const visited = new Set<object>();
   let target: object | null = value;
-  while (target) {
+  let thenDescriptor: PropertyDescriptor | null = null;
+  let constructorDescriptor: PropertyDescriptor | null = null;
+  for (
+    let depth = 0;
+    target !== null && depth < MAX_FACTORY_RESOURCE_PROTOTYPE_DEPTH;
+    depth += 1
+  ) {
+    if (visited.has(target)) throw new TypeError(`${contractName} prototype 链不能循环。`);
+    visited.add(target);
+    thenDescriptor ??= Object.getOwnPropertyDescriptor(target, 'then') ?? null;
+    constructorDescriptor ??=
+      Object.getOwnPropertyDescriptor(target, 'constructor') ?? null;
+    target = Object.getPrototypeOf(target) as object | null;
+  }
+  if (target !== null) {
+    throw new RangeError(
+      `${contractName} prototype 链超过 ${MAX_FACTORY_RESOURCE_PROTOTYPE_DEPTH} 层。`,
+    );
+  }
+  return Object.freeze({ thenDescriptor, constructorDescriptor });
+}
+
+function rejectAsynchronousFactoryCleanupResult(
+  value: unknown,
+  contractName: string,
+): void {
+  assertNativePromiseThenIntegrity();
+  if ((typeof value !== 'object' || value === null) && typeof value !== 'function') return;
+  const descriptors = inspectFactoryResourceReturnDescriptors(
+    value as object,
+    `${contractName}返回值`,
+  );
+  const constructorDescriptor = descriptors.constructorDescriptor;
+  if (constructorDescriptor !== null
+    && !Object.prototype.hasOwnProperty.call(constructorDescriptor, 'value')) {
+    throw new TypeError(`${contractName}返回访问器 constructor。`);
+  }
+  if (constructorDescriptor?.value === NATIVE_PROMISE_CONSTRUCTOR) {
+    assertNativePromiseSpeciesIntegrity();
+    let nativePromise = false;
+    try {
+      Reflect.apply(NATIVE_PROMISE_THEN, value, [NOOP, NOOP]);
+      nativePromise = true;
+    } catch {
+      // Plain objects may spoof constructor: Promise. Native brand failure is
+      // contained; ordinary thenables remain descriptor-only below.
+    }
+    if (nativePromise) throw new TypeError(`${contractName}必须同步完成。`);
+  }
+  const thenDescriptor = descriptors.thenDescriptor;
+  if (thenDescriptor === null) return;
+  if (!Object.prototype.hasOwnProperty.call(thenDescriptor, 'value')) {
+    throw new TypeError(`${contractName}返回访问器 thenable。`);
+  }
+  throw new TypeError(`${contractName}返回then字段，必须同步完成。`);
+}
+
+function findDataMethod(
+  value: unknown,
+  name: string,
+  ownerName = 'MatchCore factory resource',
+): ((...args: unknown[]) => unknown) | null {
+  if (!value || (typeof value !== 'object' && typeof value !== 'function')) return null;
+  const visited = new Set<object>();
+  let target: object | null = value;
+  for (
+    let depth = 0;
+    target !== null && depth < MAX_FACTORY_RESOURCE_PROTOTYPE_DEPTH;
+    depth += 1
+  ) {
+    if (visited.has(target)) throw new TypeError(`${ownerName} prototype 链不能循环。`);
+    visited.add(target);
     const descriptor = Object.getOwnPropertyDescriptor(target, name);
     if (descriptor) {
-      return Object.prototype.hasOwnProperty.call(descriptor, 'value')
-        && typeof descriptor.value === 'function'
+      if (!Object.prototype.hasOwnProperty.call(descriptor, 'value')) {
+        throw new TypeError(`${ownerName}.${name} 必须是数据方法。`);
+      }
+      return typeof descriptor.value === 'function'
         ? descriptor.value as (...args: unknown[]) => unknown
         : null;
     }
     target = Object.getPrototypeOf(target) as object | null;
+  }
+  if (target !== null) {
+    throw new RangeError(
+      `${ownerName} prototype 链超过 ${MAX_FACTORY_RESOURCE_PROTOTYPE_DEPTH} 层。`,
+    );
   }
   return null;
 }
@@ -517,7 +665,11 @@ function adoptFactoryResource<T>(
   } catch (error) {
     const cleanupErrors: Error[] = [];
     try {
-      findDataMethod(candidate, 'destroy')?.call(candidate);
+      const destroy = findDataMethod(candidate, 'destroy', `${name} 候选资源清理`);
+      if (destroy !== null) {
+        const cleanupResult = Reflect.apply(destroy, candidate, []);
+        rejectAsynchronousFactoryCleanupResult(cleanupResult, `${name} 候选资源 destroy`);
+      }
     } catch (cleanupError) {
       cleanupErrors.push(normalizeThrownError(cleanupError, `${name} 候选资源清理失败`));
     }
@@ -542,7 +694,7 @@ function assertEquipmentSupplyTimeline(
     'getContentHash',
     'destroy',
   ] as const) {
-    if (findDataMethod(value, methodName) === null) {
+    if (findDataMethod(value, methodName, 'equipmentSupplyTimelineFactory 返回值') === null) {
       throw new TypeError(`equipment supply timeline 缺少 ${methodName}()。`);
     }
   }
@@ -985,6 +1137,25 @@ export class MatchCore {
       : undefined;
     if (!runtime) throw new RangeError(`未知 character participant ${String(participantId)}。`);
     return this.#characterRegistry.require(runtime.definitionId);
+  }
+
+  getMovementCapabilities(participantId: unknown): MovementCapabilities {
+    this.#assertUsable();
+    this.#assertNoMatchReadBuild('movement capabilities');
+    if (this.#stepping) throw new Error('MatchCore step()期间不能读取movement capabilities。');
+    if (this.#callerInputValidationActive) {
+      throw new Error('caller input validation期间不能读取movement capabilities。');
+    }
+    if (typeof participantId !== 'string' || !this.config.participantIds.includes(participantId)) {
+      throw new RangeError(`未知 movement participant ${String(participantId)}。`);
+    }
+    const physics = this.#physicsWorld.getCharacterState(participantId);
+    const phaseAllowsMovement = this.phase === ARENA_MATCH_PHASE.RUNNING
+      || this.phase === ARENA_MATCH_PHASE.SUDDEN_DEATH;
+    return this.#movementSystem.projectCapabilities(participantId, {
+      grounded: physics.grounded,
+      canMove: phaseAllowsMovement && this.#participants.canAct(participantId),
+    });
   }
 
   #assertUsable(): void {

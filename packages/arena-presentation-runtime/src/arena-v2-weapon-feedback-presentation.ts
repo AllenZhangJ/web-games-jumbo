@@ -1,22 +1,20 @@
 import {
+  ARENA_MATCH_EVENT_V6,
+  ARENA_WEAPON_FEEDBACK_SEMANTIC_V1_KIND,
+  ARENA_WEAPON_FEEDBACK_SEMANTIC_V1_SCHEMA_VERSION,
   assertIntegerAtLeast,
   assertKnownKeys,
   assertNonEmptyString,
   cloneFrozenData,
+  createArenaMatchEventV6,
+  createArenaWeaponFeedbackSemanticEventV1,
+  type ArenaWeaponFeedbackSemanticKindV1,
 } from '@number-strategy-jump/arena-contracts';
 import type { PresentationEvent } from './presentation-event-window.js';
 
-export const ARENA_V2_WEAPON_FEEDBACK_KIND = Object.freeze({
-  HIT_CONFIRM: 'hit-confirm',
-  HIT_SURFACE_TRANSFER: 'hit-surface-transfer',
-  HIT_RING_OUT: 'hit-ring-out',
-  ATTACK_EVADED: 'attack-evaded',
-  MOVEMENT_FALL: 'movement-fall',
-} as const);
+export const ARENA_V2_WEAPON_FEEDBACK_KIND = ARENA_WEAPON_FEEDBACK_SEMANTIC_V1_KIND;
 
-export type ArenaV2WeaponFeedbackKind = typeof ARENA_V2_WEAPON_FEEDBACK_KIND[
-  keyof typeof ARENA_V2_WEAPON_FEEDBACK_KIND
-];
+export type ArenaV2WeaponFeedbackKind = ArenaWeaponFeedbackSemanticKindV1;
 
 export type ArenaV2WeaponFeedbackVisualCue =
   | 'impact-confirm'
@@ -66,6 +64,11 @@ interface CueDefinition {
   readonly emphasis: ArenaV2WeaponFeedbackPresentationEvent['emphasis'];
 }
 
+interface FeedbackCopy {
+  readonly title: string;
+  readonly explanation: string;
+}
+
 const INPUT_KEYS = new Set([
   'id', 'tick', 'sequence', 'action', 'targetId', 'attackerId', 'feedback',
 ]);
@@ -95,6 +98,28 @@ const CUE_BY_KIND: Readonly<Record<ArenaV2WeaponFeedbackKind, CueDefinition>> = 
     visualCue: 'movement-fall-warning',
     audioCue: 'movement-fall',
     emphasis: 'warning',
+  }),
+});
+const COPY_BY_KIND: Readonly<Record<ArenaV2WeaponFeedbackKind, FeedbackCopy>> = Object.freeze({
+  'hit-confirm': Object.freeze({
+    title: '命中·位置被改变',
+    explanation: '武器命中成立，目标仍在原支撑面，但位置和路线压力已经改变。',
+  }),
+  'hit-surface-transfer': Object.freeze({
+    title: '命中·落点改变',
+    explanation: '武器命中改变了目标的最终支撑面，路线位置发生了转移。',
+  }),
+  'hit-ring-out': Object.freeze({
+    title: '击落·失去支撑面',
+    explanation: '本次掉落已由权威规则归因给命中者。',
+  }),
+  'attack-evaded': Object.freeze({
+    title: '未命中·攻击被避开',
+    explanation: '动作结算时没有命中或掉落事实，本次攻击窗口已经结束。',
+  }),
+  'movement-fall': Object.freeze({
+    title: '路线失误·非武器击落',
+    explanation: '本次掉落由权威规则归因为移动失足，不计作武器击落。',
   }),
 });
 
@@ -170,5 +195,44 @@ export function projectArenaV2WeaponFeedbackPresentationEvent(
     visualCue: cue.visualCue,
     audioCue: cue.audioCue,
     emphasis: cue.emphasis,
+  });
+}
+
+/**
+ * Production-candidate adapter from the exact authority semantic contract.
+ * Copy and cue selection stay here; cause, attribution and chronology have
+ * already been validated by Rule/Core before this function is called.
+ */
+export function projectArenaWeaponFeedbackSemanticV1PresentationEvent(
+  value: unknown,
+): ArenaV2WeaponFeedbackPresentationEvent {
+  const source = createArenaWeaponFeedbackSemanticEventV1(value);
+  const copy = COPY_BY_KIND[source.kind];
+  return projectArenaV2WeaponFeedbackPresentationEvent({
+    id: source.id,
+    tick: source.tick,
+    sequence: source.sequence,
+    action: source.actionDefinitionId,
+    targetId: source.targetId,
+    attackerId: source.attackerId,
+    feedback: Object.freeze({
+      kind: source.kind,
+      title: copy.title,
+      explanation: copy.explanation,
+    }),
+  });
+}
+
+/** Converts the public V6 authority envelope without accepting any second source. */
+export function projectArenaWeaponFeedbackEventV6PresentationEvent(
+  value: unknown,
+): ArenaV2WeaponFeedbackPresentationEvent {
+  const source = createArenaMatchEventV6(value);
+  if (source.type !== ARENA_MATCH_EVENT_V6.WEAPON_FEEDBACK_RESOLVED) {
+    throw new RangeError('Weapon feedback Presentation只接受WeaponFeedbackResolved V6事件。');
+  }
+  return projectArenaWeaponFeedbackSemanticV1PresentationEvent({
+    schemaVersion: ARENA_WEAPON_FEEDBACK_SEMANTIC_V1_SCHEMA_VERSION,
+    ...source,
   });
 }

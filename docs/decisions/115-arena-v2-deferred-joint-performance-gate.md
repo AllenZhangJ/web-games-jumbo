@@ -2,7 +2,7 @@
 
 ## 状态
 
-已接受：一次性 P1 内部阶段顺序调整。PA6 正确性批准保持有效，但 `formalGate=false`；本决策只延期性能命令执行，不把失败、未测或污染轮改写为通过。
+已接受：一次性 P1 内部阶段顺序调整。PA6 正确性批准保持有效，但 `formalGate=false`；本决策只延期性能命令执行，不把失败、未测或污染轮改写为通过。2026-08-10 起，[ADR-118](118-arena-v2-development-first-deferred-validation-window.md)部分取代本决策“不开放 P2”的顺序限制，但不取代 PA6/PA7 正式门。
 
 ## 日期
 

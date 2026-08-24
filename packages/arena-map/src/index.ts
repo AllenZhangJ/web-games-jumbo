@@ -5,6 +5,7 @@ export {
 } from './map-event-types.js';
 export {
   ARENA_MAP_EVENT,
+  ARENA_MAP_SYSTEM_OPERATION_GUARD_V1,
   ArenaMapSystem,
   assertArenaMapSystem,
 } from './arena-map-system.js';
@@ -70,3 +71,4 @@ export type {
 } from './map-character-safety-validator.js';
 export { validateWalkableMapTopology } from './map-topology-validator.js';
 export type { MapTopologyValidationResult } from './map-topology-validator.js';
+export * from './kz-route-map-validator-v1.js';

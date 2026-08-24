@@ -1,4 +1,5 @@
 export {
+  PRODUCT_MATCH_RUNTIME_OPERATION_GUARD_V1,
   PRODUCT_MATCH_RUNTIME_STATE,
   ProductMatchRuntime,
   createProductMatchRuntimePort,
@@ -20,6 +21,7 @@ export type {
   ProductMatchReadFrameStepOutcome,
 } from './product-match-runtime.js';
 export {
+  QUICK_MATCH_PRODUCT_FACTORY_OPERATION_GUARD_V1,
   QuickMatchProductFactory,
   createProductMatchFactoryPort,
 } from './quick-match-product-factory.js';
@@ -28,6 +30,7 @@ export type {
   QuickMatchProductFactoryOptions,
 } from './quick-match-product-factory.js';
 export {
+  PRODUCT_MATCH_COORDINATOR_OPERATION_GUARD_V1,
   PRODUCT_MATCH_COORDINATOR_SNAPSHOT_SCHEMA_VERSION,
   PRODUCT_MATCH_COORDINATOR_STATE,
   ProductMatchCoordinator,
@@ -39,3 +42,15 @@ export type {
   ProductMatchCoordinatorReadFrameStartOutcome,
   ProductMatchCoordinatorReadFrameStepOutcome,
 } from './product-match-coordinator.js';
+export {
+  MODE_PRODUCT_RESULT_ASSEMBLER_V3_STATE,
+  ModeProductResultAssemblerV3,
+} from './mode-product-result-assembler-v3.js';
+export type {
+  ModeProductResultAssemblerV3Options,
+  ModeProductResultAssemblerV3State,
+} from './mode-product-result-assembler-v3.js';
+export * from './product-result-replay-settlement-evidence-v1.js';
+export * from './product-result-runtime-settlement-evidence-v2.js';
+export * from './product-result-runtime-settlement-evidence-v3.js';
+export * from './arena-v2-product-authority-registry-candidate-v1.js';

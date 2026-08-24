@@ -9,7 +9,7 @@
 - 技能锁定清单：[`skills-lock.json`](../../skills-lock.json)
 - 关联治理：[`AGENTS.md`](../../AGENTS.md)、[V2 生产化分阶段开发与治理计划](arena-v2-production-development-plan.md)、[ADR-109](../decisions/109-arena-art-and-audio-skill-routing.md)
 - 视觉生产基线：[Arena Art Bible](arena-art-bible.md)
-- 注释参考登记：[六类70/20/10登记](arena-art-reference-register.md)；A0.2三个子门已签核，[独立视觉方向总门](arena-art-reference-total-gate-a0.2.md)以96/100通过，A0.2与Reference Board视觉方向为`ready`；[A0.3技术/代理候选](arena-art-silhouette-a0.3.md)85/100但真人0/10，A0.3、正式模型/VFX样件、Blockout及后续成熟度仍`incomplete`/fail closed
+- 注释参考登记：[六类70/20/10登记](arena-art-reference-register.md)；A0.2三个子门已签核，[独立视觉方向总门](arena-art-reference-total-gate-a0.2.md)以96/100通过，A0.2与Reference Board视觉方向为`ready`；[A0.3技术/代理候选](arena-art-silhouette-a0.3.md)85/100、真人0/10，且当前source identity处于`code-written-not-run / pending-regeneration`，A0.3、正式模型/VFX样件、Blockout及后续成熟度仍`incomplete`/fail closed
 - 阶段协作基线：[美术 A0–A7 与开发 P0–P7 对齐矩阵](arena-art-development-alignment-matrix.md)
 - 当前供给表现合同：[A1.0供给表现预生产合同](arena-art-supply-presentation-contract-a1.0.md)保留2026-07-28的v1历史身份；追加的A1.0-v2已于2026-08-03绑定28个当前来源和25项fixture，以94/100完成主协调外部联合签核，正向与85/85隔离拒绝通过。它只证明当前PP0/PP1合同、Cue/回退和来源身份，不是正式资产门。[A1.1来源与测量就绪包](arena-art-supply-readiness-a1.1.md)仍因上游漂移待最终source重建。A0.3真人、A1.1、代表样件、Blockout、正式VFX/音频、浏览器/设备/真人与Final仍关闭
 
@@ -175,6 +175,139 @@ DOM、Canvas、Web、微信、抖音平台包装
 
 当前生产资产合同是 `arena.stage7.formal-asset-budget.v1`。本流程不复制技能的泛化预算，所有正式资产必须通过项目的可重算政策。
 
+2026-08-12 新增的 `arena.stage7.formal-asset-budget.v2-candidate` 只把当前正式 Presentation Catalog 的
+130 个既有字节身份（2角色模型、20附件、2地图、8纹理、98音频）按 `assetId + path + byteLength +
+SHA-256` 规范排序并重算总编码、音频和解码纹理字节。每项候选上限严格等于当前字节，不包含产品性能
+余量；节点、关节、动作、primitive、material、纹理和设备上限仍为 `unresolved-not-approved`。因此 V2
+保持 `production-unreachable / proposed-not-approved / hardGate=false`，默认 Bundle、Preloader、Entry
+均不消费；V1 的 10 项正式覆盖与目录外 `uncovered` 真值继续有效。
+
+该候选遵守 `media-asset-management` 的 `source → process → deliver → manage` 边界：来源 revision、许可、
+权利与批准仍归正式 Catalog/证据账本；V2 只负责过程中的规范化预算身份和交付字节冻结；管理阶段批准、
+资产修改、加载与发布均不归 V2。`game-art-director` 泛化强制参考
+`docs/collaboration-protocol.md`、`docs/game-design-theory.md` 仍缺失并保持治理红门，不创建占位。
+该缺口只在Art流程/台账文档登记，不得成为V2预算Definition、Readiness导出字段或content hash输入。
+
+2026-08-15新增的A7结构预算证据候选V1只承接未来真实测量：130项资产结构/内存观察与P7六环境观察必须绑定当前Catalog、预算、clean source、lock、toolchain、build和证据SHA，再由不同Reviewer独立复核。Accepted仍不定义或批准任何上限；只有后续独立Structural Limit Proposal与预算批准才能改变`unresolved-not-approved`。当前未运行测量、测试、设备或性能任务，默认Bundle、Preloader、Entry继续关闭。
+
+同日新增的[A7结构预算上限提案候选V1](arena-v2-a7-formal-budget-structural-limit-proposal-candidate-v1.md)把Accepted结构观察按Source→Process→Deliver→Manage边界转换为130项资产与六环境的不可变maximum提案。它强制角色分离、不低于观察值、非适用指标归零，并显式统计严格/零余量；但不猜统一余量百分比，也不批准余量充分性、资产或预算。独立预算批准、Policy变更和全部运行证据仍顺延，当前`hardGate/hardGateUsable=false`且默认消费继续关闭。
+
+[A7预算独立批准决策候选V1](arena-v2-a7-formal-budget-independent-approval-decision-candidate-v1.md)随后把Manage职责从提案人再次拆开：Approver不得兼任Collector、Reviewer或Proposer，必须复核资产/环境余量、适用性/观察下限、Context恢复/清理，并精确处置全部零余量目标。Approved只允许进入新不可变Policy装配，当前V2仍不变、不批准、不接默认消费，所有运行证据继续顺延。
+
+[A7已批准预算Policy装配候选V1](arena-v2-a7-formal-budget-approved-policy-assembly-candidate-v1.md)再由第五个独立Assembler把Approved Decision固化为新的V3不可变候选：130项资产、六环境、全部结构maximum、来源和批准identity进入同一Policy内容hash。内层只具备未来A7 V3复核资格，当前V2、默认Bundle/Preloader/Entry和外层hard gate均不改变，运行证据继续顺延。
+
+[A7正式视觉/媒体冻结证据V3](arena-v2-a7-formal-visual-media-freeze-evidence-candidate-v3.md)最终把新Policy候选与V1视觉/媒体封套闭合：当前130项目录、source、六环境build、来源权利、逐资产批准、三端交付、截图/录像和人审缺一不可。Freeze Manifest/Assembly只接受V3；当前无真实PASS，future fixture只证明数据流而不开放默认消费或发布。
+
+P7.17进一步要求结构报告、独立评估、上限提案、批准记录和Policy装配五层Locator/SHA跨域互斥，防止同一美术/音频预算证据在多个治理角色中重复充数；不改变任何资产字节、预算值或当前批准状态。
+
+P7.18把上述五层记录使用的采集、评估、提案、批准和装配时间统一到Evidence层规范UTC instant合同，不允许仅外形正确但日历无效的时间进入媒体资产治理身份；不改变Source/Process/Deliver/Manage职责、资产字节、预算数值或当前批准状态。
+
+P7.19继续要求六环境原始证据与总报告、评估、提案、批准和Policy装配记录全部跨域互斥，并让环境证据身份沿Process→Deliver→Manage持续保留；防止同一截图、测量或报告被重新命名后承担多个独立治理角色，不改变资产字节、预算maximum或批准状态。
+
+P7.20给媒体预算治理的角色/业务标识、证据Locator和说明文本增加统一上限，并拒绝身份/Locator的首尾空白与控制字符；防止同一角色用空白变体跨职责自证，也防止无界外部文本污染Source→Process→Deliver→Manage身份链。资产字节、预算值和批准状态不变。
+
+P7.21要求A7 V3在汇总130项当前/maximum编码字节时保持安全整数精度，任何聚合溢出都在形成预算摘要或冻结身份前失败关闭；不得通过不精确大数伪造媒体资产总预算余量，且不以降低画质或删除资产作为修复手段。
+
+P7.22将P7.20的角色/业务标识、证据Locator和文本上限收敛为单一内部Evidence值合同，Source、Process、Deliver和Manage各层必须消费同一Owner，禁止某一层私自放宽或复制另一套媒体证据命名规则。
+
+P7.23要求媒体预算治理角色/业务标识使用小写ASCII规范闭集，证据Locator不得含任何空白；禁止Unicode近似角色或空格地址在Source→Process→Deliver→Manage链中生成视觉相似但字节不同的独立身份。
+
+P7.24要求当前3张1024²材质纹理和5张128² VFX纹理以真实方形RGBA8宽高闭合解码与GPU下限；预算提案中的最大宽高、解码字节和GPU字节必须可同时成立。不得用等面积假尺寸、数字溢出或降低分辨率换取预算通过。
+
+P7.25进一步明确正式Presentation Catalog是纹理尺寸Source Owner，预算V2只保存进入Policy identity的不可变投影，Readiness/批准账本逐项核对两者；Process/Deliver/Release不能根据解码字节猜测形状。新增或替换纹理时先更新正式Catalog的宽高，再同步预算投影中的宽、高、RGBA8解码字节和内容版本；非纹理资产宽高保持0。
+
+P7.26要求同一个Source记录同时声明解码格式；当前8张纹理统一为`rgba8`，预算投影的非纹理项必须为`not-applicable`。尺寸、格式和解码字节共同进入Policy identity，后续若改变纹理格式，必须显式更新Source、预算内容版本和独立证据，不能只改4 B/px常量。
+
+P7.27要求每个正式交付记录显式声明编码容器，并与路径后缀及媒体kind闭合：模型`glb`、音频`ogg`、纹理`png`。Budget只冻结该Source投影，Evidence/Release只核对，不得从OGG容器额外推断编码器、采样率、声道或解码内存；这些音频属性仍需独立manifest或实测证据。
+
+P7.28要求Manage阶段的新不可变Approved Policy继续保存该容器身份，Proposal和Approval只能携带、不能修改；A7 V3必须逐项回查Source/Budget基座。批准结构上限不能顺带改变文件格式，若未来确需转码，必须先形成新的Source资产身份、字节/SHA、预算内容版本和独立批准链。
+
+P7.29同样要求新Policy保留纹理当前解码格式、宽高和解码字节，而不只保存未来maximum。Manage阶段可以批准上限，不能重写Source事实；改变纹理格式或尺寸必须先更新Catalog和Budget基座，再走新的证据与批准链，不能在Assembler中静默替换。
+
+P7.30要求音频解码内存保持Source与Process分离：OGG只是Source容器身份，当前解码字节必须来自结构测量Evidence，并随Proposal、Approval和Policy保留。A7 V3只复核观察为正安全整数、上限不低于观察和非音频为0，不允许按后缀、采样率或声道公式猜值。
+
+P7.31要求Manage批准不能丢弃Process观察：新Policy必须同时保存maximum和对应Accepted Observation，设备Context恢复、资源清理回基线的失败观察会直接阻止批准。不能只写“以后必须通过”来覆盖本轮失败，也不能只保留上限而失去其证据下限。
+
+P7.32进一步要求Manage层保存的环境观察能够回溯到唯一Process证据：环境ID、Evidence Locator和Evidence SHA必须在Observation、Proposal、Approved Policy与A7 V3之间逐项相同。任一层只保留数值或只保留SHA都不足以闭合来源，不能让一份观察值借用另一份环境证据记录的身份。
+
+P7.33要求Deliver与Manage层继续显式携带Process采集批次来源：Submission Identity、Observation Batch ID和Captured At UTC不能在形成上限提案后只隐含于评估hash。它们不替代报告、环境记录或独立审批身份，只为审计者提供直接、不可变的采集批次定位。
+
+P7.34要求Manage Policy直接保留四角色分离与完整治理时间线：Collector、Reviewer、Proposer、Approver必须互异，Captured、Reviewed、Proposed、Decided必须单调。第五角色Assembler与Assembled时间只属于交付装配封套，不能混入由预算事实和独立批准形成的Policy治理来源。
+
+P7.35要求最终Evidence层重新读取Manage批准摘要，而不是把“能装配Policy”当作全部批准事实：四类复核、实测生命周期、零余量接受状态与处置数量必须再次闭合。处置数量只由Proposal零余量摘要决定，不能在Policy装配时补写或减少。
+
+P7.36要求Deliver封套的第五角色继续独立于Manage Policy：A7 V3复核Assembler与前四角色分离、装配发生在批准之后、装配记录不复用任一上游证据身份。Assembler与Assembled At只证明交付装配，不成为预算事实或独立批准事实。
+
+P7.37要求最终冻结清单直接记录所采用的Manage Policy和Deliver Assembly：Policy ID、Revision、Content Hash及Assembly Identity必须与A7内层数据一致。完整A7 Evidence仍是权威证据，直接字段只用于发布冻结审计和版本定位，不能脱离A7单独开放资产。
+
+P7.38要求功能正确性证据与媒体预算测量使用同一依赖和工具链。即使source commit、content与六环境build ID一致，只要package lock或toolchain identity不同，也不能把两批结果拼成同一Release Freeze；Assembly Session与Manifest都必须失败关闭。
+
+P7.39要求功能、自动化与A7媒体/结构证据保持记录域隔离：同一个Evidence SHA不能同时证明功能评价、自动化通过和视觉/媒体批准。A7索引覆盖Source权利、逐资产批准、环境/交付/捕获、人审以及结构预算治理记录，最终Manifest在资格生成前统一检查跨域复用。
+
+P7.40要求A7索引内部也不能重复使用Evidence SHA。一个文件只能证明一个明确证据槽，不能同时作为许可、生产批准、环境通过、人工评审或结构批准记录；资产和捕获内容本身的SHA继续作为交付内容身份，不混入治理Evidence槽唯一性。
+
+P7.41明确该索引由A7 V3拥有：A7在形成ready结论前完成索引与内部唯一性检查，Release只消费冻结投影进行跨功能域比较。媒体字段遍历不能复制到Freeze Manifest形成第二个Owner，后续新增A7证据槽必须先更新A7索引Owner。
+
+P7.42要求Manage证据索引直接解释“哪一条记录证明了什么”：每个非空Evidence SHA必须和稳定recordId、证据kind一起冻结。Source/Process/Deliver/Manage各类证据可以独立定位，recordId与SHA都不能重复；Release只用这个结构化投影定位跨域碰撞，不维护另一个媒体目录。
+
+P7.43进一步要求证据可以被实际取回：每个非空记录都要有独立Locator，目录与A7结构化索引一一对应，不能用一个位置承载多个治理槽，也不能给缺失证据预占假路径。结构测量与批准链已有Locator必须原样贯穿；Locator只定位证据记录，不替代Source文件、许可原文或交付内容自身的路径与SHA。
+
+P7.44要求Manage层在取回前知道证据记录的类型和大小：每个Locator都绑定规范媒体类型和正安全整数字节长度。它们只描述治理证据文件，Source素材、Process产物、Deliver捕获或包体仍使用各自既有格式/大小/SHA字段，禁止把两类身份混为一谈。
+
+P7.45要求Manage层的总证据字节也从同一索引安全累加，不能让数百个合法单项在聚合时整数溢出。这个总量只用于证据取回、归档和审计容量规划，不得拿来替代正式资产预算或性能测量。
+
+P7.46要求Manage层同时保留证据记录时间。结构测量、评估、提案、批准和装配记录必须使用各自上游治理事件时间，不能在最终目录中重新标注；Legacy视觉/媒体证据仍需生产者把原始记录时间提交给A7，并随Locator、类型、大小和SHA共同冻结。
+
+P7.47要求Manage层明确每条记录的Producer。结构采集、独立评估、上限提案、独立批准和装配必须分别保留既有角色身份，最终目录无权换人；Legacy来源、许可、逐资产批准、环境、交付、捕获和人审记录也要由未来生产者提供规范责任人。
+
+P7.48把Manage证据地址统一到`evidence://arena-v2/...`命名空间。外部可变URL、父级跳转、空段、查询或片段不能进入A7身份；Source素材和Deliver内容仍保留各自路径，只有治理证据记录进入该集中证据库。
+
+P7.49由Manage单一Owner对完整结构化证据索引生成独立身份。Release只保留并消费这个身份，不重新遍历Source/Process/Deliver/Manage字段；新增证据槽必须先更新A7索引Owner，避免目录和冻结清单分叉。
+
+2026-08-12 的 `arena-v2.a3-a6.production-approval-evidence-ledger.candidate.v1` 又把同一130项逐项绑定
+Catalog content hash、V2 policy identity、来源revision/license/rights/proof和七类生产批准证据槽。当前
+29项仅有第三方intake来源批准记录，130项生产批准均为`missing-not-approved`；910个生产证据槽全部
+`missing`，没有伪造reviewer、设备、真人或性能结果。该账本只管理证据缺口，
+`grantsApproval=false / assetUsePermitted=false / formalReady=false / hardGate=false`，不被A7、P7、
+默认Bundle/Preloader/Entry消费。A6.4—A6.18已按该账本纠偏：当前22个收藏预览槽全部零token、零loader、
+零lease、零mount；A6.18只读组合既有20武器轮廓/动作语义与2图20段路线节奏/地标，为每项形成唯一的
+文字＋主/辅形状＋线型/glyph fallback，并通过A6.15标准RenderPlan由DOM/Canvas同源消费。来源intake批准
+不再被当作生产批准，2D回退也不成为正式资产或程序化3D正常路径。
+两个缺失的泛化技能文档仍只登记在流程文档，不进入机器账本或hash。
+
+2026-08-14新增的[A3–A6正式资产生产准备队列候选V1](arena-v2-a3-a6-formal-asset-production-work-queue-candidate-v1.md)
+把当前130项按A3地图/敌人、A4角色/武器/材质/武器音频、A5核心VFX/模式供给音频拆成九个稳定批次。
+当前只允许来源、Brief、预算和评审准备；A0.3、A1.1与130项生产批准未闭合前，Blockout、Integration、
+Final和资产使用批次均为0。该队列不改资产字节、不授予批准、不加载媒体，也不进入默认Bundle或入口。
+
+同日新增的[A3地图生产评审准备候选V1](arena-v2-a3-map-production-review-preparation-candidate-v1.md)已落实首批合同准备：按现有Definition精确收拢2图20段、方向+跳跃、统一移动包络、两条节奏曲线、分支/恢复、地标/引导线与竞速/生存双读法，并逐图预登记八项Blockout评审。它使用`level-design`节奏/引导规则，但所有评审仍为`not-run`；不改GLB、Surface、碰撞、路线或输入，不把注册顺序写成已验证Critical Path，生产许可继续全关。
+
+[A3生存敌人生产评审准备候选V1](arena-v2-a3-survival-enemy-production-review-preparation-candidate-v1.md)随后落实第二批：同一个Character/Presentation覆盖16个Slot与十段`1→…→16`压力数量，不允许按stage造变体、放大碰撞、增加技能轮廓或用稀有色表达压力。候选绑定当前Skeleton模型、外部纹理、六扇区方向和19动作语义，并登记四视图、缩略图、拥挤度、动作、回退及生命周期九项评审；没有生成图片、修改资产或运行检查，模型和纹理生产批准仍缺失。
+
+[A4六角色生产评审准备候选V1](arena-v2-a4-playable-character-production-review-preparation-candidate-v1.md)继续落实第三批：6个有限操作Definition和6个Presentation身份当前复用1个Rogue模型，并以六套选择姿态、七部件明暗Pattern、participant glyph/pattern和文字组成非颜色身份。该方案不要求六套独立模型，但共享中性几何也不得被宣称成六个独立黑色剪影；模型/纹理、19动作语义、六角色×武器、设备和生命周期十项评审均未运行，生产与加载门继续全关。
+
+[A4二十武器附件生产评审准备候选V1](arena-v2-a4-weapon-attachment-production-review-preparation-candidate-v1.md)继续落实第四批：20个Gameplay Weapon、20个附件GLB和20个轮廓族按收藏顺序一一闭合，逐把冻结右手挂点、地面拾取、ground/aerial动作、windup/active/recovery及0/5/12米读法。`game-3d-assets`要求的Bounding Box、朝向、尺度、落地和截图全部保留`not-run`；本批不下载/转换/加载模型，也不改变命中、位移或时序。
+
+[A4正式材质贴图生产评审准备候选V1](arena-v2-a4-formal-material-texture-production-review-preparation-candidate-v1.md)继续落实第五批：3张1024² Albedo纹理与圆盾、共享Rogue、Skeleton三个GLTF Consumer一一闭合，要求sRGB采样与PBR材质兼容，并把六角色七部件明暗Pattern、统一敌人材质、Neutral Key、两地图环境、桌面/390×844和解码生命周期纳入十项评审。RGBA8无mip估算为12,582,912 B且不是运行峰值；不修改灯光/材质/资产或加载路径，所有评审和生产批准继续为`not-run/false`。
+
+[A4武器命中音频生产评审准备候选V1](arena-v2-a4-weapon-impact-audio-production-review-preparation-candidate-v1.md)继续落实第六批：20武器命中音、1徒手基础推击和40个地面/空中Action身份闭合，4份Kenney intake与17份项目衍生候选保持来源/生产批准分离。`audio-design`约束被固化为SFX分组、dB阶梯、Master Headroom、Limiter安全网、确定性三档播放率、8 Voice与低优先级淘汰；所有盲听、响度、削波、设备和生命周期证据仍为`not-run`，本批不播放或改动音频。
+
+[A4武器阶段音频生产评审准备候选V1](arena-v2-a4-weapon-phase-audio-production-review-preparation-candidate-v1.md)继续落实第七批：20把武器各自的windup/release/recovery精确形成60份未批准候选，只消费本地ActionStarted与权威动作阶段。前摇/收招为`-6 dB / priority 1`，释放为`-3 dB / priority 2`，并继续受确定性变化和8 Voice约束；release不等于命中，恢复中段不补播，静音只推进水位。试听、设备、遮蔽、恢复和生命周期仍全部`not-run`。
+
+[A5核心反馈VFX生产评审准备候选V1](arena-v2-a5-core-feedback-vfx-production-review-preparation-candidate-v1.md)继续落实第八批：5张128²候选纹理与命中、表面转移、武器击落、闪避、移动坠落五类语义一一闭合，总计483个专用Cue。`vfx-realtime`与`particle-systems`约束被固化为Shape–Timing–Color、灰度先行、核心/方向/结果必要层、装饰先裁剪、关闭档0粒子、High最多96粒子、`2x`平均过度绘制目标、无扭曲和64个活动身份；武器接触几何不能替代正式结果纹理。本批不生成/加载/渲染资产，也不扩大运行预算，所有证据仍为`not-run`。
+
+[A5模式与供给音频生产评审准备候选V1](arena-v2-a5-mode-and-supply-audio-production-review-preparation-candidate-v1.md)继续落实第九批：13个模式Cue只消费Match/Participant/Race/Survival显式事件，4个供给Cue只消费`ArenaSupplyAuthorityFact`，不观察Marker消失或本地计时猜结果。既有语义Voice梯级保持终局/关键掉落优先、供给恒为1，Gain仍服从强调层级；确定性播放率、8 Voice、64去重身份、SFX/Master/Limiter和静音不补播均冻结为评审合同。17份批准0/17，本批不播放、不改Queue或混音运行时，试听、设备和生命周期仍全部`not-run`。
+
+[A3–A6正式资产生产评审程序候选V1](arena-v2-a3-a6-formal-asset-production-review-program-candidate-v1.md)把九个逐批准备包汇总为唯一交接面：工作队列顺序、130项资产、910个缺失证据槽、95个评审单元、受阻时源码动作和解阻后真实评审动作一一固定。它不执行命令、不加载媒体、不授予批准；每批仍需独立证据、独立批准和独立回滚。
+
+[A3–A6生产评审证据提交候选V1](arena-v2-a3-a6-production-review-evidence-submission-candidate-v1.md)继续提供只读证据引用入口：七个规范Slot各有唯一Kind，并强制Ledger/Queue/Program、Preparation和Asset path/SHA同代闭合。合同不采集、读取或持久化证据，不把采集者的`pass`变成独立评估或批准，因而不会绕过九批门禁。
+
+[A3–A6生产评审证据独立评估候选V1](arena-v2-a3-a6-production-review-evidence-independent-evaluation-candidate-v1.md)在提交后要求不同reviewer重算Submission Identity，并确认Evidence SHA、Kind结构、环境和时间顺序；接受只允许唯一规范原因，拒绝必须显式覆盖失败事实。Evaluation仍不改`missing`槽或`missing-not-approved`批准状态。
+
+[A3–A6生产评审七槽接受证据集候选V1](arena-v2-a3-a6-production-review-accepted-evidence-set-candidate-v1.md)把同一资产七类accepted Evaluation按规范顺序聚合并重算每项，拒绝缺失、重复、调序或跨代身份。完整Evidence Set只供后续独立批准决策，不自行更新V1缺失账本。
+
+[A3–A6生产批准独立决策记录候选V1](arena-v2-a3-a6-production-approval-decision-record-candidate-v1.md)在完整Evidence Set后增加第三职责人：approved要求来源/权利、预算和依赖均确认，且批准记录有独立locator/SHA。记录只供未来不可变账本版本消费，不原位修改当前账本或开放正式媒体。
+
 | 项目 | 项目上限 |
 |---|---:|
 | 正式资产总编码体积 | 2,359,296 B |
@@ -284,4 +417,7 @@ git diff --check
 - 技能源仓库变更时先审阅内容 hash、许可证和项目适配差异，再决定是否更新锁定版本。
 - 新增资产能力应优先新增 Definition、资产记录、Presentation Cue 和组合注册，不在已有渲染器中堆积特殊判断。
 - 任何改变反馈语义、动作语义、音频总线、资产预算或交付平台的变化，都必须在状态台账中写明行为映射、风险、验证证据和回滚点。
+- 编码容器格式属于Source元数据：当前正式Catalog只允许模型`glb`、音频`ogg`、纹理`png`，Budget/Evidence/Release只做不可变投影和核对。文件后缀不得被当作音频编码器、采样率、声道或解码内存的证明；这些属性必须由独立manifest或实测证据补齐。
+- 正式Evidence入库必须保持`Source → Process → Deliver → Manage`身份分离：Producer记录证据，独立Verifier从`evidence://arena-v2/...`重新取回并核对Locator、类型、字节与SHA，回执再以独立Locator/SHA保存。核验者不得兼任该批任一Evidence Producer；目录合同或future-only fixture不能替代真实取回和哈希重算。
+- Evidence Store中原始记录与`*.metadata.json` sidecar分离；Reader必须从文件系统观察实际字节，并对sidecar的Record ID、Locator、类型、时间和Producer逐项对账。Store Root必须有绑定Record Index的只读Snapshot Manifest，Snapshot创建时间不得早于所含记录。回执只能在整批成功后发布到不可覆盖的Session `committed`目录，并在返回前稳定回读真实字节、长度、SHA、sidecar和同一Snapshot；staging、fixture、跨Snapshot/Plan、回读失败或没有`committed`水位的目录不能被Freeze消费。
 - 本流程只扩展开发流程，不改变 Arena 的玩法规则、Replay/hash、默认 Registry、发布入口或历史产品边界。

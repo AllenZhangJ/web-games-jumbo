@@ -28,6 +28,17 @@ export {
   ARENA_TICK_RATE,
 } from './physics-config.js';
 export type { ArenaPhysicsConfig } from './physics-config.js';
-export { createLightweightPhysicsWorld } from './lightweight-physics.js';
+export {
+  LIGHTWEIGHT_PHYSICS_CHECKPOINT_V1_SCHEMA_VERSION,
+  createLightweightPhysicsCheckpointV1,
+  createLightweightPhysicsWorld,
+  createLightweightPhysicsWorldFromCheckpointV1,
+  validateLightweightPhysicsCheckpointV1,
+} from './lightweight-physics.js';
+export type {
+  CheckpointableLightweightPhysicsWorldV1,
+  LightweightPhysicsCheckpointV1,
+  LightweightPhysicsWorldOptions,
+} from './lightweight-physics.js';
 export { createCharacterPhysicsProfile } from './character-physics-profile.js';
 export type { CharacterPhysicsProfile } from './character-physics-profile.js';

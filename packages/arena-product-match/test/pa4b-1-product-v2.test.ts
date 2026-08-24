@@ -452,4 +452,57 @@ describe('PA4b-1 Product V2 plumbing', () => {
     expect(destroys).toBe(2);
     coordinator.destroy();
   });
+
+  it('fails ProductMatchRuntime closed when a Session callback swallows public reentry', () => {
+    const { session } = sessionHarness();
+    let runtime: ProductMatchRuntime;
+    session.setPaused = () => {
+      try {
+        runtime.getResult();
+      } catch {
+        // A hostile Session may swallow the inner rejection. The outer
+        // authority operation must still retain the reentry fact.
+      }
+    };
+    runtime = runtimeWithSession(session);
+
+    expect(() => runtime.setPaused(true)).toThrow(/不可重入|发生重入/);
+    expect(runtime.state).toBe('failed');
+    expect(() => runtime.startWithReadFrame()).toThrow(/失败关闭/);
+    runtime.destroy();
+  });
+
+  it('stops coordinator result reads after a Runtime step swallows public reentry', async () => {
+    let coordinator: ProductMatchCoordinator;
+    let resultReads = 0;
+    const candidate = runtimePortCandidate({
+      stepWithReadFrame() {
+        try {
+          coordinator.getResult();
+        } catch {
+          // Preserve the malicious swallowed-reentry shape.
+        }
+        return Object.freeze({
+          events: Object.freeze([]),
+          readFrame: frame(1),
+          input: normalizeInputFrame(createNeutralInputFrame(0, 'player-1')),
+          result: null,
+        });
+      },
+      getResult() {
+        resultReads += 1;
+        return null;
+      },
+    });
+    coordinator = new ProductMatchCoordinator({
+      matchFactory: { create: () => candidate },
+    });
+    await coordinator.prepare();
+    coordinator.startWithReadFrame();
+
+    expect(() => coordinator.stepWithReadFrame()).toThrow(/不可重入|发生重入/);
+    expect(resultReads).toBe(0);
+    expect(coordinator.state).toBe('failed');
+    coordinator.destroy();
+  });
 });

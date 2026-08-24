@@ -133,6 +133,118 @@ test('replay beforeStep sees immutable copies and rejects asynchronous verificat
   runner.destroy();
 });
 
+test('replay beforeStep rejects hostile thenables without invoking them or committing a tick', () => {
+  const source = createReplayCore();
+  const replay = new HeadlessMatchRunner(source, { checkpointInterval: 20 })
+    .runLegacyUntilEndedForAudit(scriptedFrames);
+
+  const assertRejectedBeforeStep = (
+    verification: unknown,
+    pattern: RegExp,
+  ): void => {
+    const replayCoreHolder: {
+      current: ReturnType<typeof createArenaV1MatchCore> | null;
+    } = { current: null };
+    assert.throws(() => replayMatch(replay, {
+      coreFactory(options: ReplayCoreFactoryOptions) {
+        replayCoreHolder.current = createArenaV1MatchCore(options);
+        return replayCoreHolder.current;
+      },
+      beforeStep() {
+        return verification;
+      },
+    }), pattern);
+    const replayCore = replayCoreHolder.current;
+    assert.ok(replayCore);
+    assert.equal(replayCore.tick, 0);
+  };
+
+  let hostileThenCalls = 0;
+  const hostileThenable = Object.freeze({
+    then() {
+      hostileThenCalls += 1;
+      replayMatch(replay);
+      throw new Error('hostile then must not execute');
+    },
+  });
+  assertRejectedBeforeStep(hostileThenable, /必须同步完成/);
+  assert.equal(hostileThenCalls, 0);
+
+  let thenGetterCalls = 0;
+  const accessorThenable = Object.defineProperty({}, 'then', {
+    enumerable: true,
+    get() {
+      thenGetterCalls += 1;
+      return () => undefined;
+    },
+  });
+  assertRejectedBeforeStep(accessorThenable, /访问器 thenable/);
+  assert.equal(thenGetterCalls, 0);
+
+  assertRejectedBeforeStep(
+    Promise.reject(new Error('rejected Promise must be contained')),
+    /必须同步完成/,
+  );
+
+  const cyclicTarget = Object.create(null) as object;
+  let cyclicPrototype: object;
+  cyclicPrototype = new Proxy(cyclicTarget, {
+    getPrototypeOf() {
+      return cyclicPrototype;
+    },
+  });
+  assertRejectedBeforeStep(cyclicPrototype, /prototype 链不能循环/);
+
+  let tooDeepPrototype = Object.create(null) as object;
+  for (let depth = 0; depth < 33; depth += 1) {
+    tooDeepPrototype = Object.create(tooDeepPrototype) as object;
+  }
+  assertRejectedBeforeStep(tooDeepPrototype, /prototype 链超过 32 层/);
+
+  assertRejectedBeforeStep(Object.freeze({ then: null }), /then字段.*同步完成/);
+
+  const disguisedPromise = Promise.resolve(null);
+  Object.defineProperties(disguisedPromise, {
+    constructor: { configurable: true, enumerable: true, value: null },
+    then: { configurable: true, enumerable: true, value: null },
+  });
+  assertRejectedBeforeStep(disguisedPromise, /then字段.*同步完成/);
+
+  source.destroy();
+});
+
+test('replay beforeStep rejects Promise.prototype.then descriptor drift before Core step', () => {
+  const source = createReplayCore();
+  const replay = new HeadlessMatchRunner(source, { checkpointInterval: 20 })
+    .runLegacyUntilEndedForAudit(scriptedFrames);
+  const descriptor = Object.getOwnPropertyDescriptor(Promise.prototype, 'then');
+  assert.ok(descriptor);
+  const replayCoreHolder: {
+    current: ReturnType<typeof createArenaV1MatchCore> | null;
+  } = { current: null };
+  Object.defineProperty(Promise.prototype, 'then', {
+    ...descriptor,
+    value() {
+      throw new Error('drifted Promise.prototype.then must not execute');
+    },
+  });
+  try {
+    assert.throws(() => replayMatch(replay, {
+      coreFactory(options: ReplayCoreFactoryOptions) {
+        replayCoreHolder.current = createArenaV1MatchCore(options);
+        return replayCoreHolder.current;
+      },
+      beforeStep: () => Object.freeze({}),
+    }), /Promise\.prototype\.then 描述符漂移/);
+    const replayCore = replayCoreHolder.current;
+    assert.ok(replayCore);
+    assert.equal(replayCore.tick, 0);
+  } finally {
+    Object.defineProperty(Promise.prototype, 'then', descriptor);
+  }
+  source.destroy();
+});
+
 test('runner and replay options reject accessors without executing them', () => {
   const core = createReplayCore();
   let runnerGetterCalls = 0;
@@ -358,6 +470,166 @@ test('replay destroys an invalid factory result before rejecting the factory con
     failure.cleanupErrors[0]?.message ?? '',
     /forced candidate cleanup failure/,
   );
+  source.destroy();
+});
+
+test('replay bounds invalid Core prototype cleanup without executing hostile descriptors', () => {
+  const source = createReplayCore();
+  const replay = new HeadlessMatchRunner(source, { checkpointInterval: 20 })
+    .runLegacyUntilEndedForAudit(scriptedFrames);
+
+  const rejectCandidate = (candidate: unknown): CleanupFailure => {
+    let thrown: unknown;
+    try {
+      replayMatch(replay, { coreFactory: () => candidate });
+    } catch (error) {
+      thrown = error;
+    }
+    const failure = requireCleanupFailure(thrown);
+    assert.ok(failure.originalError instanceof Error);
+    assert.match(failure.originalError.message, /coreFactory 必须返回 MatchCore/);
+    assert.equal(failure.cleanupErrors.length, 1);
+    return failure;
+  };
+
+  const cyclicTarget = Object.create(null) as object;
+  let cyclicCandidate: object;
+  cyclicCandidate = new Proxy(cyclicTarget, {
+    getPrototypeOf() {
+      return cyclicCandidate;
+    },
+  });
+  assert.match(
+    rejectCandidate(cyclicCandidate).cleanupErrors[0]?.message ?? '',
+    /prototype 链不能循环/,
+  );
+
+  let tooDeepCandidate = Object.create(null) as object;
+  for (let depth = 0; depth < 32; depth += 1) {
+    tooDeepCandidate = Object.create(tooDeepCandidate) as object;
+  }
+  assert.match(
+    rejectCandidate(tooDeepCandidate).cleanupErrors[0]?.message ?? '',
+    /prototype 链超过 32 层/,
+  );
+
+  let destroyGetterCalls = 0;
+  const accessorCandidate = Object.defineProperty({}, 'destroy', {
+    enumerable: true,
+    get() {
+      destroyGetterCalls += 1;
+      throw new Error('destroy getter must not execute');
+    },
+  });
+  assert.match(
+    rejectCandidate(accessorCandidate).cleanupErrors[0]?.message ?? '',
+    /destroy必须是数据方法/,
+  );
+  assert.equal(destroyGetterCalls, 0);
+
+  let destroyCalls = 0;
+  let hostileThenCalls = 0;
+  assert.match(
+    rejectCandidate({
+      destroy() {
+        destroyCalls += 1;
+        return {
+          then() {
+            hostileThenCalls += 1;
+            throw new Error('hostile cleanup then must not execute');
+          },
+        };
+      },
+    }).cleanupErrors[0]?.message ?? '',
+    /destroy必须同步完成/,
+  );
+  assert.equal(destroyCalls, 1);
+  assert.equal(hostileThenCalls, 0);
+
+  let customConstructorThenCalls = 0;
+  assert.match(
+    rejectCandidate({
+      destroy: () => ({
+        constructor: function UnsafePromiseSubclass() {},
+        then() {
+          customConstructorThenCalls += 1;
+        },
+      }),
+    }).cleanupErrors[0]?.message ?? '',
+    /destroy必须同步完成/,
+  );
+  assert.equal(customConstructorThenCalls, 0);
+
+  assert.match(
+    rejectCandidate({ destroy: () => Promise.resolve() }).cleanupErrors[0]?.message ?? '',
+    /destroy必须同步完成/,
+  );
+
+  let thenGetterCalls = 0;
+  const accessorThenResult = Object.defineProperty({}, 'then', {
+    enumerable: true,
+    get() {
+      thenGetterCalls += 1;
+      throw new Error('cleanup then getter must not execute');
+    },
+  });
+  assert.match(
+    rejectCandidate({ destroy: () => accessorThenResult }).cleanupErrors[0]?.message ?? '',
+    /访问器 thenable/,
+  );
+  assert.equal(thenGetterCalls, 0);
+
+  let constructorGetterCalls = 0;
+  const promiseWithHostileConstructor = Promise.resolve();
+  Object.defineProperty(promiseWithHostileConstructor, 'constructor', {
+    enumerable: true,
+    get() {
+      constructorGetterCalls += 1;
+      throw new Error('Promise constructor getter must not execute');
+    },
+  });
+  assert.match(
+    rejectCandidate({ destroy: () => promiseWithHostileConstructor })
+      .cleanupErrors[0]?.message ?? '',
+    /访问器 constructor/,
+  );
+  assert.equal(constructorGetterCalls, 0);
+
+  const speciesDescriptor = Object.getOwnPropertyDescriptor(Promise, Symbol.species);
+  assert.ok(speciesDescriptor);
+  let speciesGetterCalls = 0;
+  const resolvedPromise = Promise.resolve();
+  Object.defineProperty(Promise, Symbol.species, {
+    ...speciesDescriptor,
+    get() {
+      speciesGetterCalls += 1;
+      return Promise;
+    },
+  });
+  try {
+    assert.match(
+      rejectCandidate({ destroy: () => resolvedPromise }).cleanupErrors[0]?.message ?? '',
+      /Promise\[Symbol\.species\] 描述符漂移/,
+    );
+    assert.equal(speciesGetterCalls, 0);
+  } finally {
+    Object.defineProperty(Promise, Symbol.species, speciesDescriptor);
+  }
+
+  let getPrototypeOfCalls = 0;
+  const throwingPrototypeCandidate = new Proxy(Object.create(null) as object, {
+    getPrototypeOf() {
+      getPrototypeOfCalls += 1;
+      throw new Error('hostile getPrototypeOf failure');
+    },
+  });
+  const trapFailure = rejectCandidate(throwingPrototypeCandidate);
+  assert.equal(getPrototypeOfCalls, 1);
+  assert.match(
+    trapFailure.cleanupErrors[0]?.message ?? '',
+    /hostile getPrototypeOf failure/,
+  );
+
   source.destroy();
 });
 

@@ -338,6 +338,169 @@ test('MatchCore cleans incomplete factory resources and failed map authority dur
   assert.equal(failedDestroyed, 1);
 });
 
+test('MatchCore bounds invalid factory-resource cleanup without executing hostile descriptors', () => {
+  const rejectRuleCandidate = (candidate: unknown): Readonly<Record<string, unknown>> => {
+    let thrown: unknown;
+    try {
+      createArenaV1MatchCore({
+        config: { arena: TEST_ARENA },
+        ruleEngineFactory: () => candidate,
+      });
+    } catch (error) {
+      thrown = error;
+    }
+    const failure = record(thrown, 'factory cleanup failure');
+    const original = record(failure.originalError, 'factory validation failure');
+    assert.match(required(original.message, 'factory validation message') as string, /ruleEngineFactory/);
+    const cleanupErrors = failure.cleanupErrors;
+    assert.ok(Array.isArray(cleanupErrors));
+    assert.equal(cleanupErrors.length, 1);
+    return record(cleanupErrors[0], 'factory cleanup cause');
+  };
+
+  const cyclicTarget = Object.create(null) as object;
+  let cyclicCandidate: object;
+  cyclicCandidate = new Proxy(cyclicTarget, {
+    getPrototypeOf() {
+      return cyclicCandidate;
+    },
+  });
+  assert.match(
+    required(rejectRuleCandidate(cyclicCandidate).message, 'cycle cleanup message') as string,
+    /prototype 链不能循环/,
+  );
+
+  let tooDeepCandidate = Object.create(null) as object;
+  for (let depth = 0; depth < 33; depth += 1) {
+    tooDeepCandidate = Object.create(tooDeepCandidate) as object;
+  }
+  assert.match(
+    required(rejectRuleCandidate(tooDeepCandidate).message, 'depth cleanup message') as string,
+    /prototype 链超过 32 层/,
+  );
+
+  let destroyGetterCalls = 0;
+  const accessorCandidate = Object.defineProperty({}, 'destroy', {
+    enumerable: true,
+    get() {
+      destroyGetterCalls += 1;
+      throw new Error('destroy getter must not execute');
+    },
+  });
+  assert.match(
+    required(rejectRuleCandidate(accessorCandidate).message, 'accessor cleanup message') as string,
+    /destroy 必须是数据方法/,
+  );
+  assert.equal(destroyGetterCalls, 0);
+
+  let destroyCalls = 0;
+  let hostileThenCalls = 0;
+  assert.match(
+    required(rejectRuleCandidate({
+      destroy() {
+        destroyCalls += 1;
+        return {
+          then() {
+            hostileThenCalls += 1;
+            throw new Error('hostile cleanup then must not execute');
+          },
+        };
+      },
+    }).message, 'thenable cleanup message') as string,
+    /destroy必须同步完成/,
+  );
+  assert.equal(destroyCalls, 1);
+  assert.equal(hostileThenCalls, 0);
+
+  let dataThenDestroyCalls = 0;
+  assert.match(
+    required(rejectRuleCandidate({
+      destroy() {
+        dataThenDestroyCalls += 1;
+        return Object.freeze({ then: null });
+      },
+    }).message, 'data then cleanup message') as string,
+    /destroy.*then字段.*同步完成/,
+  );
+  assert.equal(dataThenDestroyCalls, 1);
+
+  assert.match(
+    required(rejectRuleCandidate({
+      destroy: () => Promise.resolve(),
+    }).message, 'Promise cleanup message') as string,
+    /destroy必须同步完成/,
+  );
+
+  class UnsafePromiseSubclass extends Promise<unknown> {}
+  assert.match(
+    required(rejectRuleCandidate({
+      destroy: () => UnsafePromiseSubclass.resolve(),
+    }).message, 'Promise subclass cleanup message') as string,
+    /destroy必须同步完成/,
+  );
+
+  let constructorGetterCalls = 0;
+  const promiseWithHostileConstructor = Promise.resolve();
+  Object.defineProperty(promiseWithHostileConstructor, 'constructor', {
+    enumerable: true,
+    get() {
+      constructorGetterCalls += 1;
+      throw new Error('Promise constructor getter must not execute');
+    },
+  });
+  assert.match(
+    required(rejectRuleCandidate({
+      destroy: () => promiseWithHostileConstructor,
+    }).message, 'constructor cleanup message') as string,
+    /访问器 constructor/,
+  );
+  assert.equal(constructorGetterCalls, 0);
+
+  const speciesDescriptor = Object.getOwnPropertyDescriptor(Promise, Symbol.species);
+  assert.ok(speciesDescriptor);
+  let speciesGetterCalls = 0;
+  Object.defineProperty(Promise, Symbol.species, {
+    ...speciesDescriptor,
+    get() {
+      speciesGetterCalls += 1;
+      return Promise;
+    },
+  });
+  try {
+    assert.match(
+      required(rejectRuleCandidate({
+        destroy: () => Promise.resolve(),
+      }).message, 'species cleanup message') as string,
+      /Promise\[Symbol\.species\] 描述符漂移/,
+    );
+    assert.equal(speciesGetterCalls, 0);
+  } finally {
+    Object.defineProperty(Promise, Symbol.species, speciesDescriptor);
+  }
+
+  const thenDescriptor = Object.getOwnPropertyDescriptor(Promise.prototype, 'then');
+  assert.ok(thenDescriptor);
+  let replacementThenCalls = 0;
+  Object.defineProperty(Promise.prototype, 'then', {
+    ...thenDescriptor,
+    value() {
+      replacementThenCalls += 1;
+      throw new Error('replacement then must not execute');
+    },
+  });
+  try {
+    assert.match(
+      required(rejectRuleCandidate({
+        destroy() {},
+      }).message, 'then drift cleanup message') as string,
+      /Promise\.prototype\.then 描述符漂移/,
+    );
+    assert.equal(replacementThenCalls, 0);
+  } finally {
+    Object.defineProperty(Promise.prototype, 'then', thenDescriptor);
+  }
+});
+
 test('registered map equipment is validated against the actual injected RuleEngine catalog', () => {
   let destroyCalls = 0;
   const ruleEngineFactory: NonNullable<MatchCoreOptions['ruleEngineFactory']> = (context) => {

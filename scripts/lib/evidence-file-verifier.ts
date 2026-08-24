@@ -17,6 +17,11 @@ export interface VerifiedEvidenceFile {
   readonly resolvedPath: string;
 }
 
+export interface VerifiedEvidenceFileBytes extends Omit<VerifiedEvidenceFile, 'text'> {
+  readonly bytes: Uint8Array;
+  readonly text: null;
+}
+
 interface FileState {
   readonly dev: bigint;
   readonly ino: bigint;
@@ -26,6 +31,7 @@ interface FileState {
 }
 
 interface OpenVerifiedFile extends Omit<VerifiedEvidenceFile, 'resolvedPath'> {
+  readonly bytes: Buffer | null;
   readonly fileState: FileState;
 }
 
@@ -35,6 +41,7 @@ interface OpenVerifiedFileOptions {
   readonly expectedByteLength?: number | null;
   readonly expectedSha256?: string | null;
   readonly includeText?: boolean;
+  readonly includeBytes?: boolean;
 }
 
 function sameFileState(left: FileState | BigIntStats, right: FileState | BigIntStats): boolean {
@@ -93,9 +100,10 @@ async function readOpenVerifiedFile(filePath: string, {
   expectedByteLength = null,
   expectedSha256 = null,
   includeText = false,
+  includeBytes = false,
 }: OpenVerifiedFileOptions): Promise<OpenVerifiedFile> {
-  if (includeText && maximumBytes === null) {
-    throw new TypeError(`${label} 文本读取必须设置 maximumBytes。`);
+  if ((includeText || includeBytes) && maximumBytes === null) {
+    throw new TypeError(`${label} 内容读取必须设置 maximumBytes。`);
   }
   if (maximumBytes !== null) positiveMaximum(maximumBytes, 'maximumBytes');
   const fileHandle = await open(
@@ -116,7 +124,7 @@ async function readOpenVerifiedFile(filePath: string, {
     if (maximumBytes !== null && metadata.size > BigInt(maximumBytes)) {
       throw new Error(`${label} 不能超过 ${maximumBytes} bytes。`);
     }
-    const buffer = includeText
+    const buffer = includeText || includeBytes
       ? await readOpenFile(fileHandle, metadata.size, label, maximumBytes as number)
       : null;
     const sha256 = buffer === null
@@ -141,7 +149,8 @@ async function readOpenVerifiedFile(filePath: string, {
         ctimeNs: metadata.ctimeNs,
       }),
       sha256,
-      text: buffer === null ? null : buffer.toString('utf8'),
+      bytes: buffer,
+      text: includeText && buffer !== null ? buffer.toString('utf8') : null,
     });
   } finally {
     await fileHandle.close();
@@ -161,9 +170,14 @@ export async function readVerifiedTextFile(filePath: string, {
     includeText: true,
   });
   await assertPathUnchanged(resolvedPath, verified.fileState, label);
-  const { fileState, ...result } = verified;
-  if (result.text === null) throw new Error(`${label} 文本读取未返回内容。`);
-  return Object.freeze({ ...result, text: result.text, resolvedPath });
+  if (verified.text === null) throw new Error(`${label} 文本读取未返回内容。`);
+  return Object.freeze({
+    byteLength: verified.byteLength,
+    fileIdentity: verified.fileIdentity,
+    sha256: verified.sha256,
+    text: verified.text,
+    resolvedPath,
+  });
 }
 
 export async function resolveEvidenceRoot(rootValue: string): Promise<string> {
@@ -213,6 +227,65 @@ export async function readVerifiedEvidenceArtifact({
     throw new Error(`${label} 在校验期间被替换。`);
   }
   await assertPathUnchanged(resolvedAfterRead, verified.fileState, label);
-  const { fileState, ...result } = verified;
-  return Object.freeze({ ...result, resolvedPath });
+  return Object.freeze({
+    byteLength: verified.byteLength,
+    fileIdentity: verified.fileIdentity,
+    sha256: verified.sha256,
+    text: verified.text,
+    resolvedPath,
+  });
+}
+
+export async function readVerifiedEvidenceArtifactBytes({
+  root,
+  relativePath,
+  expectedByteLength,
+  expectedSha256,
+  maximumBytes,
+  label = `artifact ${relativePath}`,
+}: Readonly<{
+  root: string;
+  relativePath: string;
+  expectedByteLength: number | null;
+  expectedSha256: string | null;
+  maximumBytes: number;
+  label?: string;
+}>): Promise<VerifiedEvidenceFileBytes> {
+  if (
+    typeof relativePath !== 'string'
+    || relativePath.length === 0
+    || path.isAbsolute(relativePath)
+  ) throw new RangeError(`${label} 必须使用相对路径。`);
+  const candidate = path.resolve(root, relativePath);
+  const resolvedPath = await realpath(candidate);
+  const relative = path.relative(root, resolvedPath);
+  if (
+    relative === ''
+    || relative === '..'
+    || relative.startsWith(`..${path.sep}`)
+    || path.isAbsolute(relative)
+  ) throw new Error(`${label} 通过符号链接逃逸证据根目录。`);
+  const verified = await readOpenVerifiedFile(resolvedPath, {
+    label,
+    maximumBytes,
+    expectedByteLength,
+    expectedSha256,
+    includeBytes: true,
+  });
+  const resolvedAfterRead = await realpath(candidate);
+  if (resolvedAfterRead !== resolvedPath) {
+    throw new Error(`${label} 在校验期间被替换。`);
+  }
+  await assertPathUnchanged(resolvedAfterRead, verified.fileState, label);
+  if (verified.bytes === null) throw new Error(`${label} 二进制读取未返回内容。`);
+  const bytes = new Uint8Array(verified.bytes.byteLength);
+  bytes.set(verified.bytes);
+  return Object.freeze({
+    byteLength: verified.byteLength,
+    fileIdentity: verified.fileIdentity,
+    sha256: verified.sha256,
+    bytes,
+    text: null,
+    resolvedPath,
+  });
 }

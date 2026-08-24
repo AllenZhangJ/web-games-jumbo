@@ -8,9 +8,21 @@ import {
   createArenaPublicSupplyProjectionAudit,
   ARENA_PUBLIC_SUPPLY_PROJECTION_READINESS,
   ARENA_PUBLIC_SUPPLY_PROJECTION_SCHEMA_VERSION,
+  ARENA_PUBLIC_SUPPLY_PROJECTION_V3_READINESS,
+  ARENA_PUBLIC_SUPPLY_PROJECTION_V3_SCHEMA_VERSION,
+  createArenaPublicSupplyProjectionV3Audit,
+  createArenaSupplyCadenceSnapshotV1,
   type ArenaPublicSupplyProjection,
+  type ArenaPublicSupplyProjectionV3,
+  type ArenaPublicWorldSupplyIdentityV3,
+  type ArenaSupplyCadenceSnapshotV1,
+  type DeepReadonly,
 } from '@number-strategy-jump/arena-contracts';
-import type { EquipmentSupplyRegistryContract } from '@number-strategy-jump/arena-definitions';
+import {
+  createSurvivalEquipmentTierPolicyDefinition,
+  type EquipmentSupplyRegistryContract,
+  type SurvivalEquipmentTierPolicyDefinition,
+} from '@number-strategy-jump/arena-definitions';
 import {
   EQUIPMENT_LOCATION_STATE,
   type EquipmentPosition,
@@ -35,15 +47,25 @@ export const EQUIPMENT_SUPPLY_TIMELINE_SNAPSHOT_SCHEMA_VERSION = 1 as const;
 const OPTIONS_KEYS = new Set([
   'supplyDefinitionId',
   'spawnSpecs',
+  'waveEquipmentOverrides',
   'equipmentRegistry',
   'equipmentSupplyRegistry',
   'equipmentSystem',
   'snapshot',
 ]);
 const SPEC_KEYS = new Set(['slotId', 'equipmentDefinitionId', 'spawnId', 'position']);
+const WAVE_OVERRIDE_KEYS = new Set(['minimumWaveIndex', 'slots']);
+const WAVE_OVERRIDE_SLOT_KEYS = new Set(['slotId', 'equipmentDefinitionId']);
 const POSITION_KEYS = new Set(['x', 'y', 'z']);
 const STEP_KEYS = new Set(['tick', 'participants', 'contestSeed']);
 const PUBLIC_PROJECTION_KEYS = new Set(['snapshotTick', 'eventSequence', 'equipment']);
+const PUBLIC_PROJECTION_V3_KEYS = new Set([
+  'modeDefinitionId',
+  'tierPolicyDefinition',
+  'snapshotTick',
+  'eventSequence',
+  'equipment',
+]);
 const SNAPSHOT_KEYS = new Set([
   'schemaVersion',
   'supplyDefinitionId',
@@ -57,6 +79,14 @@ export interface EquipmentSupplySpawnSpec {
   readonly equipmentDefinitionId: string;
   readonly spawnId: string;
   readonly position: Readonly<EquipmentPosition>;
+}
+
+export interface EquipmentSupplyWaveEquipmentOverride {
+  readonly minimumWaveIndex: number;
+  readonly slots: readonly Readonly<{
+    readonly slotId: string;
+    readonly equipmentDefinitionId: string;
+  }>[];
 }
 
 export interface EquipmentSupplyTimelineSnapshot {
@@ -80,6 +110,29 @@ export interface EquipmentSupplyTimelineStepResult {
 export interface EquipmentSupplyPublicProjectionResult {
   readonly projection: ArenaPublicSupplyProjection;
   readonly pendingExpiryEquipmentInstanceIds: readonly string[];
+}
+
+export interface EquipmentSupplyWorldEquipmentSnapshotV3 {
+  readonly schemaVersion: number;
+  readonly instanceId: string;
+  readonly runtimeEquipmentDefinitionId: string;
+  readonly collectionEquipmentDefinitionId: string;
+  readonly survivalLevel: number;
+  readonly spawnId: string;
+  readonly locationState: 'spawned' | 'dropped';
+  readonly ownerId: null;
+  readonly position: Readonly<EquipmentPosition>;
+  readonly lastSafePosition: Readonly<EquipmentPosition> | null;
+  readonly cooldownRemainingTicks: number;
+  readonly revision: number;
+}
+
+export interface EquipmentSupplyPublicProjectionV3Result {
+  readonly projection: DeepReadonly<ArenaPublicSupplyProjectionV3>;
+  readonly cadence: DeepReadonly<ArenaSupplyCadenceSnapshotV1>;
+  readonly pendingExpiryEquipmentInstanceIds: readonly string[];
+  readonly worldSupplyEquipment: readonly EquipmentSupplyWorldEquipmentSnapshotV3[];
+  readonly expectedWorldSupplyIdentities: readonly ArenaPublicWorldSupplyIdentityV3[];
 }
 
 interface PendingTick {
@@ -125,6 +178,53 @@ function samePosition(
   right: Readonly<EquipmentPosition>,
 ): boolean {
   return left.x === right.x && left.y === right.y && left.z === right.z;
+}
+
+function normalizeWaveEquipmentOverrides(
+  value: unknown,
+  spawnSpecs: readonly EquipmentSupplySpawnSpec[],
+  equipmentRegistry: EquipmentRegistryContract,
+): readonly EquipmentSupplyWaveEquipmentOverride[] {
+  if (value === undefined) return Object.freeze([]);
+  const source = cloneFrozenData(value, 'EquipmentSupplyTimelineSystem waveEquipmentOverrides');
+  if (!Array.isArray(source) || source.length === 0) {
+    throw new RangeError(
+      'EquipmentSupplyTimelineSystem waveEquipmentOverrides必须是非空数组或省略。',
+    );
+  }
+  const expectedSlotIds = spawnSpecs.map(({ slotId }) => slotId);
+  let previousWaveIndex = -1;
+  const overrides = source.map((entry, index) => {
+    const name = `EquipmentSupplyTimelineSystem waveEquipmentOverrides[${index}]`;
+    assertKnownKeys(entry, WAVE_OVERRIDE_KEYS, name);
+    const minimumWaveIndex = safeTick(entry.minimumWaveIndex, `${name}.minimumWaveIndex`);
+    if (index === 0 && minimumWaveIndex !== 0) {
+      throw new RangeError('waveEquipmentOverrides首项必须从wave 0开始。');
+    }
+    if (minimumWaveIndex <= previousWaveIndex) {
+      throw new RangeError('waveEquipmentOverrides.minimumWaveIndex必须严格递增。');
+    }
+    previousWaveIndex = minimumWaveIndex;
+    if (!Array.isArray(entry.slots) || entry.slots.length !== expectedSlotIds.length) {
+      throw new RangeError(`${name}.slots必须精确覆盖全部供给槽位。`);
+    }
+    const slots = entry.slots.map((slot, slotIndex) => {
+      const slotName = `${name}.slots[${slotIndex}]`;
+      assertKnownKeys(slot, WAVE_OVERRIDE_SLOT_KEYS, slotName);
+      const slotId = assertNonEmptyString(slot.slotId, `${slotName}.slotId`);
+      if (slotId !== expectedSlotIds[slotIndex]) {
+        throw new RangeError(`${name}.slots必须按冻结slot顺序精确覆盖。`);
+      }
+      const equipmentDefinitionId = assertNonEmptyString(
+        slot.equipmentDefinitionId,
+        `${slotName}.equipmentDefinitionId`,
+      );
+      equipmentRegistry.require(equipmentDefinitionId);
+      return Object.freeze({ slotId, equipmentDefinitionId });
+    });
+    return Object.freeze({ minimumWaveIndex, slots: Object.freeze(slots) });
+  });
+  return Object.freeze(overrides);
 }
 
 function createSupplyId(definitionId: string, waveIndex: number, slotId: string): string {
@@ -180,6 +280,7 @@ export class EquipmentSupplyTimelineSystem {
   readonly #supplyRegistry: EquipmentSupplyRegistryContract;
   readonly #equipmentSystem: EquipmentSupplyAuthorityContract;
   readonly #spawnSpecs: readonly EquipmentSupplySpawnSpec[];
+  readonly #waveEquipmentOverrides: readonly EquipmentSupplyWaveEquipmentOverride[];
   readonly #contentHash: string;
   readonly #activeSupplies = new Map<string, EquipmentSupplyLifecycle>();
   #nextTick = 0;
@@ -245,9 +346,15 @@ export class EquipmentSupplyTimelineSystem {
         ),
       });
     }).sort((left, right) => compareStrings(left.slotId, right.slotId)));
+    this.#waveEquipmentOverrides = normalizeWaveEquipmentOverrides(
+      source.waveEquipmentOverrides,
+      this.#spawnSpecs,
+      this.#equipmentRegistry,
+    );
     this.#contentHash = createDeterministicDataHash({
       definition,
       spawnSpecs: this.#spawnSpecs,
+      waveEquipmentOverrides: this.#waveEquipmentOverrides,
     }, 'Equipment supply timeline content');
 
     if (source.snapshot !== undefined) this.#restore(source.snapshot);
@@ -284,6 +391,31 @@ export class EquipmentSupplyTimelineSystem {
     }, definition);
   }
 
+  #equipmentDefinitionIdAt(waveIndex: number, slotId: string): string {
+    const spec = this.#spawnSpecs.find((candidate) => candidate.slotId === slotId);
+    if (!spec) throw new RangeError(`未知 supply slot ${slotId}。`);
+    if (this.#waveEquipmentOverrides.length === 0) return spec.equipmentDefinitionId;
+    const tier = [...this.#waveEquipmentOverrides]
+      .reverse()
+      .find(({ minimumWaveIndex }) => minimumWaveIndex <= waveIndex);
+    if (!tier) throw new Error(`wave ${waveIndex}缺少 equipment override。`);
+    const slot = tier.slots.find((candidate) => candidate.slotId === slotId);
+    if (!slot) throw new Error(`wave ${waveIndex}缺少 supply slot ${slotId} override。`);
+    return slot.equipmentDefinitionId;
+  }
+
+  resolveWaveEquipmentDefinitions(waveIndexValue: unknown): readonly Readonly<{
+    readonly slotId: string;
+    readonly equipmentDefinitionId: string;
+  }>[] {
+    this.#assertUsable();
+    const waveIndex = safeTick(waveIndexValue, 'EquipmentSupplyTimelineSystem waveIndex');
+    return Object.freeze(this.#spawnSpecs.map(({ slotId }) => Object.freeze({
+      slotId,
+      equipmentDefinitionId: this.#equipmentDefinitionIdAt(waveIndex, slotId),
+    })));
+  }
+
   #waveIndexAt(tick: number): number | null {
     const definition = this.#supplyRegistry.require(this.#definitionId);
     if (tick < definition.firstSpawnTick) return null;
@@ -309,7 +441,7 @@ export class EquipmentSupplyTimelineSystem {
         if (!spec) throw new Error(`wave ${waveIndex} 缺少 spawn spec ${index}。`);
         return {
           lifecycle,
-          definitionId: spec.equipmentDefinitionId,
+          definitionId: this.#equipmentDefinitionIdAt(waveIndex!, spec.slotId),
           spawnId: spec.spawnId,
           position: spec.position,
         };
@@ -458,8 +590,12 @@ export class EquipmentSupplyTimelineSystem {
       }
       const runtime = equipmentById.get(lifecycle.equipmentInstanceId);
       if (!runtime) throw new RangeError(`供给 ${lifecycle.supplyId} 缺少 equipment runtime。`);
+      const expectedEquipmentDefinitionId = this.#equipmentDefinitionIdAt(
+        waveIndex,
+        spec.slotId,
+      );
       if (
-        runtime.definitionId !== spec.equipmentDefinitionId
+        runtime.definitionId !== expectedEquipmentDefinitionId
         || runtime.spawnId !== spec.spawnId
         || !samePosition(runtime.originPosition, spec.position)
       ) {
@@ -527,6 +663,21 @@ export class EquipmentSupplyTimelineSystem {
     const resyncReadiness = pendingExpiryEquipmentInstanceIds.length > 0
       ? ARENA_PUBLIC_SUPPLY_PROJECTION_READINESS.NOT_READY_PRE_EXPIRY
       : ARENA_PUBLIC_SUPPLY_PROJECTION_READINESS.READY;
+    const lifecycleContract = this.#waveEquipmentOverrides.length === 0
+      ? {
+        lifecycleContract: {
+          supplyDefinitionId: definition.id,
+          firstSpawnTick: definition.firstSpawnTick,
+          spawnIntervalTicks: definition.spawnIntervalTicks,
+          spawnCount: definition.spawnCount,
+          lifetimeTicks: definition.lifetimeTicks,
+          spawnSpecs: this.#spawnSpecs,
+          equipmentDefinitionIds: this.#spawnSpecs.map(({ equipmentDefinitionId }) => (
+            equipmentDefinitionId
+          )),
+        },
+      }
+      : {};
     const projection = createArenaPublicSupplyProjectionAudit({
       schemaVersion: ARENA_PUBLIC_SUPPLY_PROJECTION_SCHEMA_VERSION,
       snapshotTick,
@@ -542,23 +693,257 @@ export class EquipmentSupplyTimelineSystem {
       eventSequence,
       equipment: equipmentForPublicAudit,
       expectedWorldSupplyEquipmentInstanceIds,
-      lifecycleContract: {
-        supplyDefinitionId: definition.id,
-        firstSpawnTick: definition.firstSpawnTick,
-        spawnIntervalTicks: definition.spawnIntervalTicks,
-        spawnCount: definition.spawnCount,
-        lifetimeTicks: definition.lifetimeTicks,
-        spawnSpecs: this.#spawnSpecs,
-        equipmentDefinitionIds: this.#spawnSpecs.map(({ equipmentDefinitionId }) => (
-          equipmentDefinitionId
-        )),
-      },
+      ...lifecycleContract,
     });
     return Object.freeze({
       projection,
       pendingExpiryEquipmentInstanceIds: Object.freeze(
         [...pendingExpiryEquipmentInstanceIds].sort(compareStrings),
       ),
+    });
+  }
+
+  /**
+   * Projects survival supply identity without parsing runtime Definition IDs.
+   * Collection identity and level are resolved only through the registered
+   * SurvivalEquipmentTierPolicyDefinition supplied by the owning Mode.
+   */
+  getPublicSupplyProjectionV3(options: unknown): EquipmentSupplyPublicProjectionV3Result {
+    this.#assertUsable();
+    const source = cloneFrozenData(
+      options,
+      'EquipmentSupplyTimelineSystem V3 public projection',
+    );
+    assertKnownKeys(
+      source,
+      PUBLIC_PROJECTION_V3_KEYS,
+      'EquipmentSupplyTimelineSystem V3 public projection',
+    );
+    const modeDefinitionId = assertNonEmptyString(
+      source.modeDefinitionId,
+      'EquipmentSupplyTimelineSystem V3 public projection.modeDefinitionId',
+    );
+    const tierPolicy: SurvivalEquipmentTierPolicyDefinition =
+      createSurvivalEquipmentTierPolicyDefinition(source.tierPolicyDefinition);
+    if (tierPolicy.supplyDefinitionId !== this.#definitionId) {
+      throw new RangeError('V3 public projection tier policy 与 supply Definition 不一致。');
+    }
+    const snapshotTick = safeTick(
+      source.snapshotTick,
+      'EquipmentSupplyTimelineSystem V3 public projection.snapshotTick',
+    );
+    const eventSequence = safeTick(
+      source.eventSequence,
+      'EquipmentSupplyTimelineSystem V3 public projection.eventSequence',
+    );
+    const timeline = this.getSnapshot();
+    if (timeline.nextTick !== snapshotTick) {
+      throw new RangeError(
+        `V3 public supply projection 期望 timeline tick ${timeline.nextTick}，收到 ${snapshotTick}。`,
+      );
+    }
+    if (!Array.isArray(source.equipment)) {
+      throw new TypeError('EquipmentSupplyTimelineSystem V3 projection.equipment 必须是数组。');
+    }
+    const equipmentById = new Map<string, EquipmentRuntimeSnapshot>();
+    for (const [index, value] of source.equipment.entries()) {
+      const runtime = value as EquipmentRuntimeSnapshot;
+      const instanceId = assertNonEmptyString(
+        runtime.instanceId,
+        `EquipmentSupplyTimelineSystem V3 projection.equipment[${index}].instanceId`,
+      );
+      if (equipmentById.has(instanceId)) {
+        throw new RangeError(`V3 projection equipment instance ${instanceId} 重复。`);
+      }
+      equipmentById.set(instanceId, runtime);
+    }
+
+    const definition = this.#supplyRegistry.require(this.#definitionId);
+    const elapsedSinceFirstSpawn = Math.max(0, snapshotTick - definition.firstSpawnTick);
+    const nextWaveIndex = snapshotTick <= definition.firstSpawnTick
+      ? 0
+      : Math.ceil(elapsedSinceFirstSpawn / definition.spawnIntervalTicks);
+    const nextSpawnTick = definition.firstSpawnTick
+      + nextWaveIndex * definition.spawnIntervalTicks;
+    if (!Number.isSafeInteger(nextSpawnTick)) {
+      throw new RangeError('V3 public supply cadence下一波tick超过安全整数。');
+    }
+    const cadence = createArenaSupplyCadenceSnapshotV1({
+      schemaVersion: 1,
+      modeDefinitionId,
+      supplyDefinitionId: definition.id,
+      snapshotTick,
+      nextWaveIndex,
+      nextSpawnTick,
+      remainingTicks: nextSpawnTick - snapshotTick,
+      spawnCount: definition.spawnCount,
+    });
+    const worldSupplyEquipment: EquipmentSupplyWorldEquipmentSnapshotV3[] = [];
+    const identities: ArenaPublicWorldSupplyIdentityV3[] = [];
+    const supplies: Array<Readonly<{
+      readonly schemaVersion: typeof ARENA_PUBLIC_SUPPLY_PROJECTION_V3_SCHEMA_VERSION;
+      readonly supplyDefinitionId: string;
+      readonly tierPolicyDefinitionId: string;
+      readonly supplyId: string;
+      readonly slotId: string;
+      readonly waveIndex: number;
+      readonly survivalLevel: number;
+      readonly collectionEquipmentDefinitionId: string;
+      readonly runtimeEquipmentDefinitionId: string;
+      readonly equipmentInstanceId: string;
+      readonly equipmentSpawnId: string;
+      readonly spawnPosition: Readonly<EquipmentPosition>;
+      readonly spawnTick: number;
+      readonly expireTick: number;
+      readonly remainingTicks: number;
+      readonly position: Readonly<EquipmentPosition>;
+    }>> = [];
+    const pendingExpiryEquipmentInstanceIds: string[] = [];
+
+    for (const lifecycle of timeline.activeSupplies) {
+      if (lifecycle.supplyDefinitionId !== definition.id) {
+        throw new RangeError(`V3供给 ${lifecycle.supplyId} Definition 身份不一致。`);
+      }
+      const waveOffset = lifecycle.spawnTick - definition.firstSpawnTick;
+      if (
+        waveOffset < 0
+        || waveOffset % definition.spawnIntervalTicks !== 0
+        || !Number.isSafeInteger(waveOffset / definition.spawnIntervalTicks)
+      ) {
+        throw new RangeError(`V3供给 ${lifecycle.supplyId} 不属于合法波次。`);
+      }
+      const waveIndex = waveOffset / definition.spawnIntervalTicks;
+      const spec = this.#spawnSpecs.find((candidate) => (
+        createSupplyId(definition.id, waveIndex, candidate.slotId) === lifecycle.supplyId
+      ));
+      if (!spec || createEquipmentInstanceId(lifecycle.supplyId) !== lifecycle.equipmentInstanceId) {
+        throw new RangeError(`V3供给 ${lifecycle.supplyId} 不属于冻结 spawn spec。`);
+      }
+      const runtime = equipmentById.get(lifecycle.equipmentInstanceId);
+      if (!runtime) throw new RangeError(`V3供给 ${lifecycle.supplyId} 缺少 equipment runtime。`);
+      const runtimeEquipmentDefinitionId = this.#equipmentDefinitionIdAt(waveIndex, spec.slotId);
+      if (
+        runtime.definitionId !== runtimeEquipmentDefinitionId
+        || runtime.spawnId !== spec.spawnId
+        || !samePosition(runtime.originPosition, spec.position)
+      ) {
+        throw new RangeError(`V3供给 ${lifecycle.supplyId} runtime/spawn 身份漂移。`);
+      }
+      if (
+        runtime.locationState !== EQUIPMENT_LOCATION_STATE.SPAWNED
+        && runtime.locationState !== EQUIPMENT_LOCATION_STATE.DROPPED
+      ) continue;
+      if (runtime.ownerId !== null || runtime.position === null) {
+        throw new RangeError(`V3供给 ${lifecycle.supplyId} world owner/position 不一致。`);
+      }
+      const remainingTicks = lifecycle.expireTick - snapshotTick;
+      if (!Number.isSafeInteger(remainingTicks) || remainingTicks < 0) {
+        throw new RangeError(`V3供给 ${lifecycle.supplyId} remainingTicks 无效。`);
+      }
+      let tier = tierPolicy.tiers[0]!;
+      for (const candidate of tierPolicy.tiers) {
+        if (candidate.minimumWaveIndex > waveIndex) break;
+        tier = candidate;
+      }
+      const variant = tier.variants.find((candidate) => (
+        candidate.runtimeEquipmentDefinitionId === runtimeEquipmentDefinitionId
+      ));
+      if (!variant) {
+        throw new RangeError(
+          `V3供给 ${lifecycle.supplyId} runtime 不属于 wave ${waveIndex} tier。`,
+        );
+      }
+      const position = Object.freeze({ ...runtime.position });
+      const spawnPosition = Object.freeze({ ...spec.position });
+      const worldEquipment = Object.freeze({
+        schemaVersion: ARENA_PUBLIC_SUPPLY_PROJECTION_V3_SCHEMA_VERSION,
+        instanceId: runtime.instanceId,
+        runtimeEquipmentDefinitionId,
+        collectionEquipmentDefinitionId: variant.collectionEquipmentDefinitionId,
+        survivalLevel: tier.survivalLevel,
+        spawnId: runtime.spawnId,
+        locationState: runtime.locationState,
+        ownerId: null,
+        position,
+        lastSafePosition: runtime.lastSafePosition === null
+          ? null
+          : Object.freeze({ ...runtime.lastSafePosition }),
+        cooldownRemainingTicks: runtime.cooldownRemainingTicks,
+        revision: runtime.revision,
+      }) satisfies EquipmentSupplyWorldEquipmentSnapshotV3;
+      const identity = Object.freeze({
+        modeDefinitionId,
+        supplyDefinitionId: definition.id,
+        tierPolicyDefinitionId: tierPolicy.id,
+        supplyId: lifecycle.supplyId,
+        slotId: spec.slotId,
+        waveIndex,
+        survivalLevel: tier.survivalLevel,
+        collectionEquipmentDefinitionId: variant.collectionEquipmentDefinitionId,
+        runtimeEquipmentDefinitionId,
+        equipmentInstanceId: runtime.instanceId,
+        equipmentSpawnId: runtime.spawnId,
+        spawnPosition,
+        spawnTick: lifecycle.spawnTick,
+        expireTick: lifecycle.expireTick,
+      }) satisfies ArenaPublicWorldSupplyIdentityV3;
+      worldSupplyEquipment.push(worldEquipment);
+      identities.push(identity);
+      if (remainingTicks === 0) {
+        pendingExpiryEquipmentInstanceIds.push(runtime.instanceId);
+        continue;
+      }
+      supplies.push(Object.freeze({
+        schemaVersion: ARENA_PUBLIC_SUPPLY_PROJECTION_V3_SCHEMA_VERSION,
+        supplyDefinitionId: definition.id,
+        tierPolicyDefinitionId: tierPolicy.id,
+        supplyId: lifecycle.supplyId,
+        slotId: spec.slotId,
+        waveIndex,
+        survivalLevel: tier.survivalLevel,
+        collectionEquipmentDefinitionId: variant.collectionEquipmentDefinitionId,
+        runtimeEquipmentDefinitionId,
+        equipmentInstanceId: runtime.instanceId,
+        equipmentSpawnId: runtime.spawnId,
+        spawnPosition,
+        spawnTick: lifecycle.spawnTick,
+        expireTick: lifecycle.expireTick,
+        remainingTicks,
+        position,
+      }));
+    }
+
+    identities.sort((left, right) => compareStrings(left.supplyId, right.supplyId));
+    supplies.sort((left, right) => compareStrings(left.supplyId, right.supplyId));
+    worldSupplyEquipment.sort((left, right) => compareStrings(left.instanceId, right.instanceId));
+    pendingExpiryEquipmentInstanceIds.sort(compareStrings);
+    const resyncReadiness = pendingExpiryEquipmentInstanceIds.length === 0
+      ? ARENA_PUBLIC_SUPPLY_PROJECTION_V3_READINESS.READY
+      : ARENA_PUBLIC_SUPPLY_PROJECTION_V3_READINESS.NOT_READY_PRE_EXPIRY;
+    const projection = createArenaPublicSupplyProjectionV3Audit({
+      schemaVersion: ARENA_PUBLIC_SUPPLY_PROJECTION_V3_SCHEMA_VERSION,
+      modeDefinitionId,
+      snapshotTick,
+      snapshotEventSequence: eventSequence,
+      resyncReadiness,
+      pendingAuthorityTick: resyncReadiness === ARENA_PUBLIC_SUPPLY_PROJECTION_V3_READINESS.READY
+        ? null
+        : snapshotTick,
+      pendingExpiryEquipmentInstanceIds,
+      supplies,
+    }, {
+      modeDefinitionId,
+      snapshotTick,
+      eventSequence,
+      worldSupplyEquipment,
+      expectedWorldSupplyIdentities: identities,
+    });
+    return Object.freeze({
+      projection,
+      cadence,
+      pendingExpiryEquipmentInstanceIds: Object.freeze([...pendingExpiryEquipmentInstanceIds]),
+      worldSupplyEquipment: Object.freeze([...worldSupplyEquipment]),
+      expectedWorldSupplyIdentities: Object.freeze([...identities]),
     });
   }
 
@@ -610,7 +995,7 @@ export class EquipmentSupplyTimelineSystem {
       }
       const runtime = this.#equipmentSystem.getSnapshot(lifecycle.equipmentInstanceId);
       if (
-        runtime.definitionId !== spec.equipmentDefinitionId
+        runtime.definitionId !== this.#equipmentDefinitionIdAt(waveIndex, spec.slotId)
         || runtime.locationState === EQUIPMENT_LOCATION_STATE.DESPAWNED
       ) throw new RangeError(`snapshot supply ${lifecycle.supplyId} 与 EquipmentSystem 冲突。`);
       this.#activeSupplies.set(lifecycle.supplyId, lifecycle);

@@ -1,6 +1,6 @@
-export type UnknownMethod = (...args: unknown[]) => unknown;
+import { assertSynchronousReturn } from '@number-strategy-jump/arena-contracts';
 
-const NATIVE_PROMISE_THEN = Promise.prototype.then;
+export type UnknownMethod = (...args: unknown[]) => unknown;
 
 export function assertCapabilityRecord(
   value: unknown,
@@ -115,33 +115,7 @@ export function snapshotLegacyMethod(
 }
 
 export function rejectThenable(value: unknown, name: string): void {
-  if (!value || (typeof value !== 'object' && typeof value !== 'function')) return;
-  let hasPromiseBrand = false;
-  try {
-    Reflect.apply(NATIVE_PROMISE_THEN, value, [() => {}, () => {}]);
-    hasPromiseBrand = true;
-  } catch {
-    // Ordinary thenables have no Promise internal slot; never invoke their then.
-  }
-  if (hasPromiseBrand) throw new TypeError(`${name} 必须同步完成。`);
-
-  let owner: object | null = value as object;
-  const visited = new Set<object>();
-  let depth = 0;
-  while (owner && depth < 32 && !visited.has(owner)) {
-    visited.add(owner);
-    depth += 1;
-    const descriptor = Object.getOwnPropertyDescriptor(owner, 'then');
-    if (descriptor) {
-      if (!Object.hasOwn(descriptor, 'value')) {
-        throw new TypeError(`${name} 返回了访问器 thenable。`);
-      }
-      if (typeof descriptor.value !== 'function') return;
-      throw new TypeError(`${name} 必须同步完成。`);
-    }
-    owner = Object.getPrototypeOf(owner) as object | null;
-  }
-  if (owner !== null) throw new TypeError(`${name} 返回值原型链无效。`);
+  assertSynchronousReturn(value, name);
 }
 
 export function snapshotFunction(value: unknown, name: string): UnknownMethod {

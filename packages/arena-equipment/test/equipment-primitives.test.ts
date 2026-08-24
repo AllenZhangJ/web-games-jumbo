@@ -32,6 +32,7 @@ import {
   isEquipmentCooldownReady,
   resolveEquipmentDrop,
   serializeEquipmentRuntimeStates,
+  validateEquipmentSystemCheckpointV1,
   type EquipmentRegistryContract,
 } from '../src/index.js';
 
@@ -401,6 +402,73 @@ describe('arena-equipment primitives', () => {
     expect(() => system.listSnapshots()).toThrow('已销毁');
   });
 
+  it('restores equipment ownership, cooldown and runtime identity atomically', () => {
+    const continuous = createSystem();
+    continuous.spawn({
+      instanceId: 'checkpoint-hammer',
+      definitionId: EQUIPMENT_DEFINITION.id,
+      spawnId: 'checkpoint-center',
+      position: { x: 0, y: 1, z: 0 },
+    });
+    continuous.resolvePickups({
+      participants: [
+        { id: 'player-1', eligible: true, position: { x: 0, y: 1, z: 0 } },
+        { id: 'player-2', eligible: false, position: { x: 5, y: 1, z: 0 } },
+      ],
+      contestSeed: 9,
+      excludedEquipmentInstanceIds: [],
+    });
+    continuous.markActionStarted('player-1', 'hammer-ground');
+    const checkpoint = continuous.exportCheckpointV1();
+    const restored = EquipmentSystem.restoreFromCheckpointV1(checkpoint, {
+      actionRegistry: ACTION_REGISTRY,
+      equipmentRegistry: EQUIPMENT_REGISTRY,
+    });
+
+    expect(restored.listSnapshots()).toEqual(continuous.listSnapshots());
+    expect(restored.getHeldEquipment('player-1')).toEqual(
+      continuous.getHeldEquipment('player-1'),
+    );
+    expect(restored.exportCheckpointV1()).toEqual(checkpoint);
+    restored.advanceCooldowns();
+    continuous.advanceCooldowns();
+    expect(restored.exportCheckpointV1()).toEqual(continuous.exportCheckpointV1());
+    restored.destroy();
+    continuous.destroy();
+  });
+
+  it('rejects tampered, reordered and future equipment checkpoints', () => {
+    const system = createSystem();
+    system.spawn({
+      instanceId: 'checkpoint-a',
+      definitionId: EQUIPMENT_DEFINITION.id,
+      spawnId: 'checkpoint-a-spawn',
+      position: { x: 0, y: 1, z: 0 },
+    });
+    system.spawn({
+      instanceId: 'checkpoint-b',
+      definitionId: EQUIPMENT_DEFINITION.id,
+      spawnId: 'checkpoint-b-spawn',
+      position: { x: 2, y: 1, z: 0 },
+    });
+    const checkpoint = system.exportCheckpointV1();
+    const tampered = JSON.parse(JSON.stringify(checkpoint)) as {
+      runtimes: Array<Record<string, unknown>>;
+      future?: boolean;
+    };
+    tampered.runtimes[0]!.cooldownRemainingTicks = 99;
+    expect(() => validateEquipmentSystemCheckpointV1(tampered)).toThrow(/hash漂移/u);
+    const reordered = JSON.parse(JSON.stringify(checkpoint)) as {
+      runtimes: Array<Record<string, unknown>>;
+    };
+    reordered.runtimes.reverse();
+    expect(() => validateEquipmentSystemCheckpointV1(reordered)).toThrow(/稳定升序/u);
+    const future = JSON.parse(JSON.stringify(checkpoint)) as Record<string, unknown>;
+    future.future = true;
+    expect(() => validateEquipmentSystemCheckpointV1(future)).toThrow(/future/u);
+    system.destroy();
+  });
+
   it('keeps ownership unchanged when a drop callback reenters authority', () => {
     const system = createSystem();
     system.spawn({
@@ -425,6 +493,71 @@ describe('arena-equipment primitives', () => {
     })).toThrow('不可重入');
     expect(system.getHeldEquipment('player-1')?.instanceId).toBe('equipment-1');
     system.destroy();
+  });
+
+  it('rejects swallowed Registry and map callback reentry before equipment authority commits', () => {
+    let registrySystem: EquipmentSystem | null = null;
+    let registryReentryError: unknown = null;
+    let registryReentryEnabled = false;
+    const reentrantEquipmentRegistry: EquipmentRegistryContract = Object.freeze({
+      require(id: string) {
+        if (registryReentryEnabled) {
+          try {
+            registrySystem?.listSnapshots();
+          } catch (error) {
+            registryReentryError = error;
+          }
+        }
+        return EQUIPMENT_REGISTRY.require(id);
+      },
+    });
+    const registryGuarded = new EquipmentSystem({
+      participantIds: ['player-1', 'player-2'],
+      actionRegistry: ACTION_REGISTRY,
+      equipmentRegistry: reentrantEquipmentRegistry,
+    });
+    registrySystem = registryGuarded;
+    registryReentryEnabled = true;
+    expect(() => registryGuarded.spawn({
+      instanceId: 'registry-reentry-equipment',
+      definitionId: EQUIPMENT_DEFINITION.id,
+      spawnId: 'center',
+      position: { x: 0, y: 1, z: 0 },
+    })).toThrow(/spawn.*重入equipment-list-read/u);
+    expect(String(registryReentryError)).toMatch(/spawn.*重入equipment-list-read/u);
+    registryReentryEnabled = false;
+    expect(registryGuarded.listSnapshots()).toEqual([]);
+    registryGuarded.destroy();
+
+    const dropGuarded = createSystem();
+    dropGuarded.spawn({
+      instanceId: 'drop-reentry-equipment',
+      definitionId: EQUIPMENT_DEFINITION.id,
+      spawnId: 'center',
+      position: { x: 0, y: 1, z: 0 },
+    });
+    dropGuarded.resolvePickups({
+      participants: [
+        { id: 'player-1', eligible: true, position: { x: 0, y: 1, z: 0 } },
+        { id: 'player-2', eligible: true, position: { x: 4, y: 1, z: 0 } },
+      ],
+      contestSeed: 1,
+    });
+    let mapReentryError: unknown = null;
+    expect(() => dropGuarded.dropOwned('player-1', {
+      isPositionValid() {
+        try {
+          dropGuarded.getHeldEquipment('player-1');
+        } catch (error) {
+          mapReentryError = error;
+        }
+        return true;
+      },
+    })).toThrow(/drop-owned.*重入held-equipment-read/u);
+    expect(String(mapReentryError)).toMatch(/drop-owned.*重入held-equipment-read/u);
+    expect(dropGuarded.getHeldEquipment('player-1')?.instanceId)
+      .toBe('drop-reentry-equipment');
+    dropGuarded.destroy();
   });
 
   it('validates every reconcile callback before committing any despawn', () => {

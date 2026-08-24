@@ -188,6 +188,44 @@ function cleanupFailure(message: string, cause: unknown, cleanupCauses: readonly
   return failure;
 }
 
+export class CharacterAnimationControllerConstructionCleanupError extends AggregateError {
+  readonly originalError: unknown;
+  readonly cleanupErrors: readonly unknown[];
+  readonly #retry: () => readonly unknown[];
+  readonly #complete: () => boolean;
+
+  constructor(
+    originalError: unknown,
+    cleanupErrors: readonly unknown[],
+    retry: () => readonly unknown[],
+    complete: () => boolean,
+  ) {
+    super(
+      [originalError, ...cleanupErrors],
+      'CharacterAnimationController 构造失败且清理未完整完成。',
+    );
+    this.name = 'CharacterAnimationControllerConstructionCleanupError';
+    this.originalError = originalError;
+    this.cleanupErrors = Object.freeze([...cleanupErrors]);
+    this.#retry = retry;
+    this.#complete = complete;
+  }
+
+  get cleanupComplete(): boolean {
+    return this.#complete();
+  }
+
+  retryCleanup(): void {
+    const errors = this.#retry();
+    if (errors.length > 0) {
+      throw new AggregateError(errors, 'CharacterAnimationController 构造清理重试未完整完成。');
+    }
+    if (!this.#complete()) {
+      throw new Error('CharacterAnimationController 构造清理依赖尚未收敛。');
+    }
+  }
+}
+
 export class CharacterAnimationController {
   readonly #mixer: THREE.AnimationMixer;
   readonly #clipByName: ReadonlyMap<string, THREE.AnimationClip>;
@@ -234,7 +272,14 @@ export class CharacterAnimationController {
       }
     } catch (error) {
       const cleanupErrors = this.#cleanup();
-      if (cleanupErrors.length > 0) throw cleanupFailure('CharacterAnimationController 构造失败且清理未完整完成。', error, cleanupErrors);
+      if (cleanupErrors.length > 0) {
+        throw new CharacterAnimationControllerConstructionCleanupError(
+          error,
+          cleanupErrors,
+          () => this.#cleanup(),
+          () => this.#mixerStopped && this.#rootUncached,
+        );
+      }
       throw error;
     }
   }
@@ -444,3 +489,10 @@ export class CharacterAnimationController {
     if (errors.length > 0) throw cleanupFailure('CharacterAnimationController 清理未完整完成。', this.#lastError, errors);
   }
 }
+
+export const CHARACTER_ANIMATION_CONTROLLER_LIFECYCLE_V1 = Object.freeze({
+  constructorCleanupFailureRetainsRetryOwner: true as const,
+  retrySkipsCompletedMixerCleanup: true as const,
+  nestedViewConstructionMayComposeControllerDebt: true as const,
+  validationStatus: 'not-run' as const,
+});

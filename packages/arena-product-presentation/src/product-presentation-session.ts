@@ -129,6 +129,12 @@ interface PerformanceProbePort {
   readonly shouldSampleResources: (() => unknown) | null;
 }
 
+type ProductPresentationStartupSegment =
+  | 'renderer-construction'
+  | 'product-assembly'
+  | 'input-start'
+  | 'interactive-publication';
+
 export interface ProductPresentationSessionComposition {
   readonly platform: unknown;
   readonly mapperId: string;
@@ -547,9 +553,19 @@ export class ProductPresentationSession {
   #state: ProductPresentationSessionState;
   #startPromise: Promise<this> | null;
   #destroyRequested: boolean;
-  #processingFrame: boolean;
-  #frameReentryAttempted: boolean;
-  #cleaningUp: boolean;
+  #startupSegment: ProductPresentationStartupSegment | null;
+  #startupSegmentSequence: number;
+  #startupReentrySequence: number;
+  #startupReentryError: Error | null;
+  #observationDepth: number;
+  #frameOperation: 'frame' | null;
+  #frameOperationSequence: number;
+  #frameReentrySequence: number;
+  #frameReentryError: Error | null;
+  #cleanupOperation: 'cleanup' | null;
+  #cleanupOperationSequence: number;
+  #cleanupReentrySequence: number;
+  #cleanupReentryError: Error | null;
   #cleanupIncomplete: boolean;
   #deferredFailureCleanup: boolean;
   #hidden: boolean;
@@ -596,9 +612,19 @@ export class ProductPresentationSession {
     this.#state = PRODUCT_PRESENTATION_SESSION_STATE.CREATED;
     this.#startPromise = null;
     this.#destroyRequested = false;
-    this.#processingFrame = false;
-    this.#frameReentryAttempted = false;
-    this.#cleaningUp = false;
+    this.#startupSegment = null;
+    this.#startupSegmentSequence = 0;
+    this.#startupReentrySequence = 0;
+    this.#startupReentryError = null;
+    this.#observationDepth = 0;
+    this.#frameOperation = null;
+    this.#frameOperationSequence = 0;
+    this.#frameReentrySequence = 0;
+    this.#frameReentryError = null;
+    this.#cleanupOperation = null;
+    this.#cleanupOperationSequence = 0;
+    this.#cleanupReentrySequence = 0;
+    this.#cleanupReentryError = null;
     this.#cleanupIncomplete = false;
     this.#deferredFailureCleanup = false;
     this.#hidden = false;
@@ -639,6 +665,10 @@ export class ProductPresentationSession {
   }
 
   get state(): ProductPresentationSessionState {
+    this.#guardObservationReentry('state');
+    this.#guardFrameReentry('state');
+    this.#guardCleanupReentry('state');
+    this.#guardStartupReentry('state');
     return this.#state;
   }
 
@@ -648,9 +678,126 @@ export class ProductPresentationSession {
   }
 
   #guardFrameReentry(operation: string): void {
-    if (!this.#processingFrame) return;
-    this.#frameReentryAttempted = true;
-    throw new Error(`ProductPresentationSession frame 期间不能执行 ${operation}。`);
+    if (this.#frameOperation === null) return;
+    this.#frameReentrySequence += 1;
+    this.#frameReentryError ??= new Error(
+      `ProductPresentationSession frame 期间不能执行 ${operation}。`,
+    );
+    throw this.#frameReentryError;
+  }
+
+  #beginFrameOperation(): number {
+    this.#guardCleanupReentry('frame');
+    this.#guardStartupReentry('frame');
+    this.#guardFrameReentry('frame');
+    this.#frameOperation = 'frame';
+    this.#frameOperationSequence += 1;
+    this.#frameReentryError = null;
+    return this.#frameOperationSequence;
+  }
+
+  #assertFrameOperationCommit(sequence: number, label: string): void {
+    if (this.#frameOperation !== 'frame' || this.#frameOperationSequence !== sequence) {
+      throw new Error(`${label}缺少当前ProductPresentationSession frame所有权。`);
+    }
+    if (this.#frameReentryError !== null) throw this.#frameReentryError;
+  }
+
+  #guardCleanupReentry(operation: string): void {
+    if (this.#cleanupOperation === null) return;
+    this.#cleanupReentrySequence += 1;
+    this.#cleanupReentryError ??= new Error(
+      `ProductPresentationSession cleanup 期间不能执行 ${operation}。`,
+    );
+    throw this.#cleanupReentryError;
+  }
+
+  #beginCleanupOperation(): number {
+    this.#guardCleanupReentry('cleanup');
+    this.#cleanupOperation = 'cleanup';
+    this.#cleanupOperationSequence += 1;
+    this.#cleanupReentryError = null;
+    return this.#cleanupOperationSequence;
+  }
+
+  #assertCleanupOperationCommit(sequence: number, label: string): void {
+    if (this.#cleanupOperation !== 'cleanup' || this.#cleanupOperationSequence !== sequence) {
+      throw new Error(`${label}缺少当前ProductPresentationSession cleanup所有权。`);
+    }
+    if (this.#cleanupReentryError !== null) throw this.#cleanupReentryError;
+  }
+
+  #callCleanup(
+    sequence: number,
+    operation: () => unknown,
+    label: string,
+  ): void {
+    try {
+      syncResult(operation(), label);
+      this.#assertCleanupOperationCommit(sequence, label);
+    } catch (error) {
+      try {
+        this.#assertCleanupOperationCommit(sequence, label);
+      } catch (reentryError) {
+        if (error !== reentryError) {
+          throw new AggregateError(
+            [error, reentryError],
+            `${label}失败且发生cleanup重入。`,
+          );
+        }
+        throw reentryError;
+      }
+      throw error;
+    }
+  }
+
+  #guardStartupReentry(operation: string): void {
+    if (this.#startupSegment === null) return;
+    this.#startupReentrySequence += 1;
+    this.#startupReentryError ??= new Error(
+      `ProductPresentationSession ${this.#startupSegment} 期间不能执行 ${operation}。`,
+    );
+    throw this.#startupReentryError;
+  }
+
+  #runStartupSegment<T>(
+    segment: ProductPresentationStartupSegment,
+    operation: () => T,
+  ): T {
+    this.#guardStartupReentry(segment);
+    if (this.#destroyRequested || this.#state === PRODUCT_PRESENTATION_SESSION_STATE.DESTROYED) {
+      throw new Error('ProductPresentationSession 启动已取消。');
+    }
+    this.#startupSegment = segment;
+    this.#startupSegmentSequence += 1;
+    const sequence = this.#startupSegmentSequence;
+    this.#startupReentryError = null;
+    let result!: T;
+    let failure: unknown = null;
+    let failed = false;
+    try {
+      result = operation();
+      if (this.#startupSegment !== segment || this.#startupSegmentSequence !== sequence) {
+        throw new Error(`ProductPresentationSession ${segment}启动段所有权已失效。`);
+      }
+      if (this.#startupReentryError !== null) throw this.#startupReentryError;
+      if (this.#destroyRequested) throw new Error('ProductPresentationSession 启动已取消。');
+    } catch (error) {
+      failed = true;
+      failure = error;
+    } finally {
+      const reentryError = this.#startupReentryError;
+      this.#startupSegment = null;
+      this.#startupReentryError = null;
+      if (reentryError !== null && failure !== reentryError) {
+        throw new AggregateError(
+          failed ? [failure, reentryError] : [reentryError],
+          `ProductPresentationSession ${segment}失败且发生同步重入。`,
+        );
+      }
+    }
+    if (failed) throw failure;
+    return result;
   }
 
   #requireRenderer(): RendererPort {
@@ -683,15 +830,40 @@ export class ProductPresentationSession {
     return this.#renderPacer;
   }
 
+  #containObservation<T>(operation: () => T): T {
+    const frameReentryError = this.#frameReentryError;
+    const cleanupReentryError = this.#cleanupReentryError;
+    const startupReentryError = this.#startupReentryError;
+    this.#observationDepth += 1;
+    try {
+      return operation();
+    } finally {
+      this.#observationDepth -= 1;
+      this.#frameReentryError = frameReentryError;
+      this.#cleanupReentryError = cleanupReentryError;
+      this.#startupReentryError = startupReentryError;
+    }
+  }
+
+  #guardObservationReentry(operation: string): void {
+    if (this.#observationDepth > 0) {
+      throw new Error(`ProductPresentationSession observer 期间不能执行 ${operation}。`);
+    }
+  }
+
   #report(type: string, detail: Readonly<Record<string, unknown>> = {}): void {
-    try { this.#composition.onDiagnostic(Object.freeze({ type, ...detail })); } catch {
+    try {
+      this.#containObservation(() => this.#composition.onDiagnostic(
+        Object.freeze({ type, ...detail }),
+      ));
+    } catch {
       // Diagnostics are observational and cannot own Product lifecycle.
     }
   }
 
   #performanceNow(): number | null {
     try {
-      const value = this.#composition.platform.now();
+      const value = this.#containObservation(() => this.#composition.platform.now());
       if (typeof value === 'number' && Number.isFinite(value) && value >= 0) return value;
     } catch {
       // Performance observation must not own Product lifecycle.
@@ -703,9 +875,12 @@ export class ProductPresentationSession {
     methodName: 'start' | 'markMilestone' | 'recordFrame' | 'stop',
     ...args: unknown[]
   ): boolean {
-    if (this.#performanceProbe === null) return false;
+    const performanceProbe = this.#performanceProbe;
+    if (performanceProbe === null) return false;
     try {
-      const result = (this.#performanceProbe[methodName] as UnknownFunction)(...args);
+      const result = this.#containObservation(() => (
+        performanceProbe[methodName] as UnknownFunction
+      )(...args));
       syncResult(result, `ProductPresentationSession performanceProbe.${methodName}()`);
       return result !== false;
     } catch (error) {
@@ -727,13 +902,31 @@ export class ProductPresentationSession {
     return (...args: unknown[]) => {
       if (this.#isTerminal() || this.#destroyRequested) return false;
       try {
+        this.#guardObservationReentry('host-callback');
+        this.#guardFrameReentry('host-callback');
+        this.#guardCleanupReentry('host-callback');
+        this.#guardStartupReentry('host-callback');
         callback(...args);
         return true;
       } catch (error) {
+        if (
+          this.#observationDepth > 0
+          || this.#frameOperation !== null
+          || this.#cleanupOperation !== null
+          || this.#startupSegment !== null
+        ) return false;
         this.#fail(error);
         return false;
       }
     };
+  }
+
+  #failFromOwnedCallback(error: unknown): void {
+    this.#guardObservationReentry('owned-error-callback');
+    this.#guardFrameReentry('owned-error-callback');
+    this.#guardCleanupReentry('owned-error-callback');
+    this.#guardStartupReentry('owned-error-callback');
+    this.#failFromHost(error);
   }
 
   #registerCleanup(cleanup: unknown, name: string): void {
@@ -754,7 +947,7 @@ export class ProductPresentationSession {
   }
 
   #failFromHost(error: unknown): void {
-    if (this.#cleaningUp || this.#destroyRequested || this.#isTerminal()) return;
+    if (this.#cleanupOperation !== null || this.#destroyRequested || this.#isTerminal()) return;
     this.#fail(error);
   }
 
@@ -936,12 +1129,17 @@ export class ProductPresentationSession {
     }), { deltaSeconds }), 'ProductPresentationSession renderer.render()');
     const renderEndedAtMs = this.#performanceNow();
     let resources: Readonly<PresentationResourceSnapshot> | null | undefined = null;
-    const sampleResourcesValue = this.#performanceProbe?.shouldSampleResources?.() ?? true;
+    const shouldSampleResources = this.#performanceProbe?.shouldSampleResources ?? null;
+    const sampleResourcesValue = shouldSampleResources === null
+      ? true
+      : this.#containObservation(() => shouldSampleResources());
     rejectThenable(sampleResourcesValue, 'ProductPresentationSession shouldSampleResources()');
     const sampleResources = sampleResourcesValue !== false;
     if (sampleResources) {
       try {
-        const resourceValue = renderer.getPerformanceSnapshot?.() ?? null;
+        const resourceValue = this.#containObservation(() => (
+          renderer.getPerformanceSnapshot?.() ?? null
+        ));
         rejectThenable(resourceValue, 'ProductPresentationSession renderer.getPerformanceSnapshot()');
         resources = resourceValue as Readonly<PresentationResourceSnapshot> | null;
       } catch (error) {
@@ -953,7 +1151,7 @@ export class ProductPresentationSession {
       }
       try {
         const memory = createPresentationMemorySnapshot(
-          this.#composition.performanceMemoryProvider(),
+          this.#containObservation(() => this.#composition.performanceMemoryProvider()),
         );
         resources = mergePresentationMemorySnapshot(resources, memory);
       } catch (error) {
@@ -1020,6 +1218,7 @@ export class ProductPresentationSession {
   }
 
   async #initialize(): Promise<void> {
+    const rendererLoad = this.#runStartupSegment('renderer-construction', () => {
     this.#renderPacer = validateRenderPacer(syncResult(this.#composition.renderPacerFactory({
       qualityDefinition: this.#composition.qualityDefinition,
     }), 'ProductPresentationSession renderPacerFactory()'));
@@ -1045,10 +1244,13 @@ export class ProductPresentationSession {
       qualityDefinition: this.#composition.qualityDefinition,
     }), 'ProductPresentationSession rendererFactory()'), 'ProductPresentationSession renderer', 'dispose', validateRenderer, (cleanup) => this.#candidateCleanups.push(cleanup));
     this.#bindLifecycle();
-    await nativePromise<void>(
+    return nativePromise<void>(
       this.#renderer.load(),
       'ProductPresentationSession renderer.load()',
     );
+    });
+    await rendererLoad;
+    const startingFlow = this.#runStartupSegment('product-assembly', () => {
     this.#markPerformanceMilestone('renderer-ready');
     if (this.#destroyRequested || this.#state === PRODUCT_PRESENTATION_SESSION_STATE.DESTROYED) {
       throw new Error('ProductPresentationSession 启动已取消。');
@@ -1079,7 +1281,7 @@ export class ProductPresentationSession {
           viewport,
           this.#lastSnapshot?.viewModel ?? null,
         ),
-        onIntent: (intent: ProductUiIntent) => this.#dispatchIntent(intent),
+        onIntent: (intent: ProductUiIntent) => this.dispatch(intent),
         onIntentRejected: (error: unknown, intent: ProductUiIntent) => this.#report('ui-intent-rejected', {
           message: errorMessage(error),
           intentId: intent.id,
@@ -1108,8 +1310,8 @@ export class ProductPresentationSession {
       controller: this.#controller.source,
       inputSource: this.#inputRouter.source,
     }), 'ProductPresentationSession flowFactory()'), 'ProductPresentationSession flow', 'destroy', validateFlow, (cleanup) => this.#candidateCleanups.push(cleanup));
-    this.#registerCleanup(this.#renderer.bindUiIntent({
-      onIntent: (intent: ProductUiIntent) => this.#dispatchIntent(intent),
+    this.#registerCleanup(this.#requireRenderer().bindUiIntent({
+      onIntent: (intent: ProductUiIntent) => this.dispatch(intent),
       onRejected: (error: unknown, intent: ProductUiIntent | null) => this.#report('ui-intent-rejected', {
         message: errorMessage(error),
         intentId: intent?.id ?? null,
@@ -1120,7 +1322,7 @@ export class ProductPresentationSession {
       sampler: this.#inputRouter.source,
       viewportProvider: () => this.#requireRenderer().getInputViewport(),
       manageLifecycle: false,
-      onError: (error: unknown) => this.#failFromHost(error),
+      onError: (error: unknown) => this.#failFromOwnedCallback(error),
     }), 'ProductPresentationSession inputAdapterFactory()'), 'ProductPresentationSession inputAdapter', 'destroy', validateInputAdapter, (cleanup) => this.#candidateCleanups.push(cleanup));
     this.#accumulator = validateAccumulator(syncResult(this.#composition.accumulatorFactory({
       fixedDeltaSeconds: this.#composition.fixedDeltaSeconds,
@@ -1130,7 +1332,7 @@ export class ProductPresentationSession {
       requestFrame: (callback: unknown) => this.#composition.platform.requestFrame(callback),
       cancelFrame: (token: unknown) => this.#composition.platform.cancelFrame(token),
       now: () => this.#composition.platform.now(),
-      onError: (error: unknown) => this.#fail(error),
+      onError: (error: unknown) => this.#failFromOwnedCallback(error),
       maxDeltaSeconds: 0.1,
     }), 'ProductPresentationSession frameLoopFactory()'), 'ProductPresentationSession frameLoop', 'destroy', validateFrameLoop, (cleanup) => this.#candidateCleanups.push(cleanup));
     if (this.#resizePending) this.#applyResize();
@@ -1139,40 +1341,50 @@ export class ProductPresentationSession {
     const initialSnapshot = requireSnapshot(this.#lastSnapshot, 'ProductPresentationSession initial snapshot');
     this.#updateInputMode(initialSnapshot);
     this.#publish(initialSnapshot, 0, { forceRender: true });
-    const startingFlow = nativePromise<unknown>(
+    return nativePromise<unknown>(
       this.#flow.start(),
       'ProductPresentationSession flow.start()',
     );
+    });
     await Promise.resolve();
-    syncResult(this.#inputAdapter.start(), 'ProductPresentationSession inputAdapter.start()');
-    if (this.#hidden || this.#contextLost || this.#externallyPaused) {
-      this.#syncPauseState();
-    }
+    this.#runStartupSegment('input-start', () => {
+      const inputAdapter = this.#inputAdapter;
+      if (inputAdapter === null) {
+        throw new Error('ProductPresentationSession inputAdapter 尚未就绪。');
+      }
+      syncResult(inputAdapter.start(), 'ProductPresentationSession inputAdapter.start()');
+      if (this.#hidden || this.#contextLost || this.#externallyPaused) {
+        this.#syncPauseState();
+      }
+    });
     const started = await startingFlow;
-    if (this.#destroyRequested) {
-      throw new Error('ProductPresentationSession 启动已取消。');
-    }
-    if (started !== null) {
-      this.#lastSnapshot = requireSnapshot(started, 'ProductPresentationSession started snapshot');
-    }
-    const heartbeatNow = this.#readWallNow();
-    this.#scheduleProfileLeaseHeartbeat(
-      heartbeatNow,
-      this.#composition.profileLeaseHeartbeatIntervalMs,
-    );
-    this.#publish(
-      this.#lastSnapshot === null
-        ? requireSnapshot(this.#flow.getSnapshot(), 'ProductPresentationSession current snapshot')
-        : requireSnapshot(this.#lastSnapshot, 'ProductPresentationSession current snapshot'),
-      0,
-      { forceRender: true },
-    );
-    this.#markPerformanceMilestone('interactive');
-    this.#syncPauseState();
+    this.#runStartupSegment('interactive-publication', () => {
+      if (started !== null) {
+        this.#lastSnapshot = requireSnapshot(started, 'ProductPresentationSession started snapshot');
+      }
+      const heartbeatNow = this.#readWallNow();
+      this.#scheduleProfileLeaseHeartbeat(
+        heartbeatNow,
+        this.#composition.profileLeaseHeartbeatIntervalMs,
+      );
+      this.#publish(
+        this.#lastSnapshot === null
+          ? requireSnapshot(this.#requireFlow().getSnapshot(), 'ProductPresentationSession current snapshot')
+          : requireSnapshot(this.#lastSnapshot, 'ProductPresentationSession current snapshot'),
+        0,
+        { forceRender: true },
+      );
+      this.#markPerformanceMilestone('interactive');
+      this.#syncPauseState();
+    });
   }
 
   start(): Promise<this> {
+    this.#guardObservationReentry('start');
     this.#guardFrameReentry('start');
+    this.#guardCleanupReentry('start');
+    if (this.#startPromise) return this.#startPromise;
+    this.#guardStartupReentry('start');
     if (this.#state === PRODUCT_PRESENTATION_SESSION_STATE.DESTROYED) {
       return Promise.reject(new Error('ProductPresentationSession 已销毁。'));
     }
@@ -1181,15 +1393,25 @@ export class ProductPresentationSession {
       error.cause = this.#lastError;
       return Promise.reject(error);
     }
-    if (this.#startPromise) return this.#startPromise;
     if (this.#state !== PRODUCT_PRESENTATION_SESSION_STATE.CREATED) {
       return Promise.resolve(this);
     }
     this.#state = PRODUCT_PRESENTATION_SESSION_STATE.STARTING;
-    const operation: Promise<this> = this.#initialize()
+    const operation: Promise<this> = Promise.resolve()
+      .then(() => this.#initialize())
       .then(() => this)
       .catch((error) => {
         if (this.#state === PRODUCT_PRESENTATION_SESSION_STATE.DESTROYED) throw error;
+        if (this.#destroyRequested) {
+          const cleanupErrors = this.#cleanupResources();
+          this.#state = PRODUCT_PRESENTATION_SESSION_STATE.DESTROYED;
+          const failure = cleanupFailure(cleanupErrors);
+          if (failure !== null) {
+            this.#lastError = failure;
+            throw failure;
+          }
+          throw error;
+        }
         throw this.#fail(error);
       })
       .finally(() => {
@@ -1216,24 +1438,27 @@ export class ProductPresentationSession {
   }
 
   #onFrame(timestamp: number, deltaSeconds: number): boolean {
-    if (!Number.isFinite(timestamp) || timestamp < 0) {
-      throw this.#fail(new RangeError('ProductPresentationSession frame timestamp 必须是非负有限数。'));
-    }
-    if (!Number.isFinite(deltaSeconds) || deltaSeconds < 0) {
-      throw this.#fail(new RangeError('ProductPresentationSession frame deltaSeconds 必须是非负有限数。'));
-    }
-    if (this.#destroyRequested) return false;
-    if (this.#processingFrame) throw new Error('ProductPresentationSession frame 不可重入。');
-    this.#processingFrame = true;
-    this.#frameReentryAttempted = false;
+    const sequence = this.#beginFrameOperation();
     try {
-      if (this.#resizePending) this.#applyResize();
+      if (!Number.isFinite(timestamp) || timestamp < 0) {
+        throw this.#fail(new RangeError('ProductPresentationSession frame timestamp 必须是非负有限数。'));
+      }
+      if (!Number.isFinite(deltaSeconds) || deltaSeconds < 0) {
+        throw this.#fail(new RangeError('ProductPresentationSession frame deltaSeconds 必须是非负有限数。'));
+      }
+      if (this.#destroyRequested) return false;
+      if (this.#resizePending) {
+        this.#applyResize();
+        this.#assertFrameOperationCommit(sequence, 'ProductPresentationSession frame resize');
+      }
       let snapshot = this.#heartbeatIfDue();
+      this.#assertFrameOperationCommit(sequence, 'ProductPresentationSession frame heartbeat');
       let coreSteps = 0;
       let droppedSeconds = 0;
       if (snapshot.viewModel.activeState === PRODUCT_SESSION_STATE.IN_MATCH) {
         const accumulator = this.#requireAccumulator();
         const batch = accumulator.push(deltaSeconds);
+        this.#assertFrameOperationCommit(sequence, 'ProductPresentationSession frame accumulator');
         coreSteps = batch.steps;
         droppedSeconds = batch.droppedSeconds;
         if (batch.droppedSeconds > 0) {
@@ -1250,10 +1475,13 @@ export class ProductPresentationSession {
           this.#requireFlow().stepMatch(),
           'ProductPresentationSession step snapshot',
         );
+        this.#assertFrameOperationCommit(sequence, 'ProductPresentationSession frame match steps');
       } else {
         syncResult(this.#requireAccumulator().reset(), 'ProductPresentationSession accumulator.reset()');
+        this.#assertFrameOperationCommit(sequence, 'ProductPresentationSession frame accumulator reset');
       }
       this.#publish(snapshot, deltaSeconds);
+      this.#assertFrameOperationCommit(sequence, 'ProductPresentationSession frame publication');
       if (
         !this.#firstMatchMilestoneRecorded
         && snapshot.viewModel.activeState === PRODUCT_SESSION_STATE.IN_MATCH
@@ -1272,9 +1500,7 @@ export class ProductPresentationSession {
         renderDurationMs: this.#lastPublishTelemetry?.renderDurationMs ?? null,
         resources: this.#lastPublishTelemetry?.resources ?? null,
       });
-      if (this.#frameReentryAttempted) {
-        throw this.#fail(new Error('ProductPresentationSession 检测到被宿主吞掉的 frame 重入异常。'));
-      }
+      this.#assertFrameOperationCommit(sequence, 'ProductPresentationSession frame completion');
       return !this.#hidden
         && !this.#contextLost
         && !this.#externallyPaused
@@ -1282,8 +1508,10 @@ export class ProductPresentationSession {
         && !this.#isTerminal()
         && !snapshot.viewModel.terminal;
     } finally {
-      this.#processingFrame = false;
-      this.#frameReentryAttempted = false;
+      const reentryError = this.#frameReentryError;
+      this.#frameOperation = null;
+      this.#frameReentryError = null;
+      if (reentryError !== null && !this.#isTerminal()) this.#fail(reentryError);
       if (this.#destroyRequested && this.#state !== PRODUCT_PRESENTATION_SESSION_STATE.DESTROYED) {
         const errors = this.#cleanupResources();
         this.#state = PRODUCT_PRESENTATION_SESSION_STATE.DESTROYED;
@@ -1319,7 +1547,7 @@ export class ProductPresentationSession {
       this.#resizePending = true;
       return;
     }
-    if (this.#processingFrame) {
+    if (this.#frameOperation !== null) {
       this.#resizePending = true;
       return;
     }
@@ -1364,12 +1592,18 @@ export class ProductPresentationSession {
   }
 
   dispatch(intent: ProductUiIntent): Promise<ActiveFlowSnapshot | null> {
+    this.#guardObservationReentry('dispatch');
     this.#guardFrameReentry('dispatch');
+    this.#guardCleanupReentry('dispatch');
+    this.#guardStartupReentry('dispatch');
     return this.#dispatchIntent(intent);
   }
 
   setPaused(paused: boolean): boolean {
+    this.#guardObservationReentry('setPaused');
     this.#guardFrameReentry('setPaused');
+    this.#guardCleanupReentry('setPaused');
+    this.#guardStartupReentry('setPaused');
     if (this.#isTerminal() || this.#destroyRequested) return false;
     if (this.#externallyPaused === paused) return false;
     this.#externallyPaused = paused;
@@ -1378,17 +1612,20 @@ export class ProductPresentationSession {
   }
 
   getLastSnapshot(): ProductPresentationFlowSnapshot | null {
+    this.#guardObservationReentry('getLastSnapshot');
     this.#guardFrameReentry('getLastSnapshot');
+    this.#guardCleanupReentry('getLastSnapshot');
+    this.#guardStartupReentry('getLastSnapshot');
     return this.#lastSnapshot;
   }
 
-  getPerformanceSnapshot(): Readonly<Record<string, unknown>> {
-    this.#guardFrameReentry('getPerformanceSnapshot');
+  #readPerformanceSnapshot(): Readonly<Record<string, unknown>> {
     let probe = this.#lastPerformanceSnapshot;
-    if (this.#performanceProbe !== null) {
+    const performanceProbe = this.#performanceProbe;
+    if (performanceProbe !== null) {
       try {
         probe = syncResult(
-          this.#performanceProbe.getSnapshot(),
+          this.#containObservation(() => performanceProbe.getSnapshot()),
           'ProductPresentationSession performanceProbe.getSnapshot()',
         );
       } catch (error) {
@@ -1401,7 +1638,9 @@ export class ProductPresentationSession {
     }
     return Object.freeze({
       qualityDefinitionId: this.#composition.qualityDefinition.id,
-      qualityDefinitionHash: this.#composition.qualityDefinition.getContentHash(),
+      qualityDefinitionHash: this.#containObservation(() => (
+        this.#composition.qualityDefinition.getContentHash()
+      )),
       observerErrorCount: this.#performanceProbeErrorCount,
       observedMatchCount: this.#performanceObservedMatchCount,
       lifecycle: Object.freeze({ ...this.#performanceLifecycleCounters }),
@@ -1409,13 +1648,40 @@ export class ProductPresentationSession {
     });
   }
 
-  #finalizePerformanceProbe(): Readonly<Record<string, unknown>> {
-    if (this.#performanceProbe === null) return this.getPerformanceSnapshot();
+  getPerformanceSnapshot(): Readonly<Record<string, unknown>> {
+    this.#guardObservationReentry('getPerformanceSnapshot');
+    this.#guardFrameReentry('getPerformanceSnapshot');
+    this.#guardCleanupReentry('getPerformanceSnapshot');
+    this.#guardStartupReentry('getPerformanceSnapshot');
+    return this.#readPerformanceSnapshot();
+  }
+
+  #finalizePerformanceProbe(
+    cleanupSequence: number | null = null,
+  ): Readonly<Record<string, unknown>> {
+    if (this.#performanceProbe === null) {
+      return cleanupSequence === null
+        ? this.#readPerformanceSnapshot()
+        : Object.freeze({});
+    }
+    const performanceProbe = this.#performanceProbe;
     const stoppedAtMs = this.#performanceNow();
+    if (cleanupSequence !== null) {
+      this.#assertCleanupOperationCommit(
+        cleanupSequence,
+        'ProductPresentationSession performance clock',
+      );
+    }
     if (stoppedAtMs !== null) this.#observePerformance('stop', stoppedAtMs);
+    if (cleanupSequence !== null) {
+      this.#assertCleanupOperationCommit(
+        cleanupSequence,
+        'ProductPresentationSession performanceProbe.stop()',
+      );
+    }
     try {
       this.#lastPerformanceSnapshot = syncResult(
-        this.#performanceProbe.getSnapshot(),
+        this.#containObservation(() => performanceProbe.getSnapshot()),
         'ProductPresentationSession performanceProbe.getSnapshot()',
       );
     } catch (error) {
@@ -1425,25 +1691,45 @@ export class ProductPresentationSession {
         message: errorMessage(error),
       });
     }
-    syncResult(this.#performanceProbe.destroy(), 'ProductPresentationSession performanceProbe.destroy()');
+    if (cleanupSequence !== null) {
+      this.#assertCleanupOperationCommit(
+        cleanupSequence,
+        'ProductPresentationSession performanceProbe.getSnapshot()',
+      );
+    }
+    syncResult(performanceProbe.destroy(), 'ProductPresentationSession performanceProbe.destroy()');
+    if (cleanupSequence !== null) {
+      this.#assertCleanupOperationCommit(
+        cleanupSequence,
+        'ProductPresentationSession performanceProbe.destroy()',
+      );
+    }
     this.#performanceProbe = null;
-    return this.getPerformanceSnapshot();
+    return cleanupSequence === null
+      ? this.#readPerformanceSnapshot()
+      : Object.freeze({});
   }
 
   finishPerformanceCapture(): Readonly<Record<string, unknown>> {
+    this.#guardObservationReentry('finishPerformanceCapture');
     this.#guardFrameReentry('finishPerformanceCapture');
+    this.#guardCleanupReentry('finishPerformanceCapture');
+    this.#guardStartupReentry('finishPerformanceCapture');
     return this.#finalizePerformanceProbe();
   }
 
   getDebugSnapshot(): Readonly<Record<string, unknown>> {
+    this.#guardObservationReentry('getDebugSnapshot');
     this.#guardFrameReentry('getDebugSnapshot');
+    this.#guardCleanupReentry('getDebugSnapshot');
+    this.#guardStartupReentry('getDebugSnapshot');
     return Object.freeze({
       state: this.#state,
       hidden: this.#hidden,
       contextLost: this.#contextLost,
       externallyPaused: this.#externallyPaused,
       resizePending: this.#resizePending,
-      processingFrame: this.#processingFrame,
+      processingFrame: this.#frameOperation !== null,
       cleanupIncomplete: this.#cleanupIncomplete,
       deferredFailureCleanup: this.#deferredFailureCleanup,
       bindingCount: this.#bindings.length,
@@ -1458,89 +1744,117 @@ export class ProductPresentationSession {
       lastErrorCauseMessage: this.#lastError?.cause === undefined
         ? null
         : errorMessage(this.#lastError.cause),
-      performanceSnapshot: this.getPerformanceSnapshot(),
+      performanceSnapshot: this.#readPerformanceSnapshot(),
       nextProfileLeaseHeartbeatAtMs: this.#nextProfileLeaseHeartbeatAtMs,
     });
   }
 
   #cleanupResources(): unknown[] {
-    if (this.#cleaningUp) return [new Error('ProductPresentationSession 清理不可重入。')];
-    this.#cleaningUp = true;
+    const sequence = this.#beginCleanupOperation();
     const errors: unknown[] = [];
+    const reentered = (): boolean => this.#cleanupReentryError !== null;
+    const cleanupFunctions = (
+      owned: readonly (() => unknown)[],
+      label: string,
+    ): Array<() => unknown> => {
+      const cleanupOrder = [...owned].reverse();
+      const retainedCleanupOrder: Array<() => unknown> = [];
+      for (let index = 0; index < cleanupOrder.length; index += 1) {
+        const cleanup = cleanupOrder[index]!;
+        try {
+          this.#callCleanup(sequence, cleanup, label);
+        } catch (error) {
+          errors.push(error);
+          retainedCleanupOrder.push(cleanup);
+        }
+        if (reentered()) {
+          retainedCleanupOrder.push(...cleanupOrder.slice(index + 1));
+          break;
+        }
+      }
+      return retainedCleanupOrder.reverse();
+    };
     try {
       if (this.#frameLoop !== null) {
-        if (typeof this.#frameLoop?.destroy !== 'function') this.#frameLoop = null;
-        else {
-          try {
-            syncResult(this.#frameLoop.destroy(), 'ProductPresentationSession frameLoop.destroy()');
-            this.#frameLoop = null;
-          } catch (error) { errors.push(error); }
-        }
+        try {
+          this.#callCleanup(
+            sequence,
+            this.#frameLoop.destroy,
+            'ProductPresentationSession frameLoop.destroy()',
+          );
+          this.#frameLoop = null;
+        } catch (error) { errors.push(error); }
       }
+      if (reentered()) return errors;
       if (this.#performanceProbe !== null) {
-        try { this.#finalizePerformanceProbe(); } catch (error) { errors.push(error); }
+        try { this.#finalizePerformanceProbe(sequence); } catch (error) { errors.push(error); }
       }
+      if (reentered()) return errors;
       if (this.#inputAdapter !== null) {
-        if (typeof this.#inputAdapter?.destroy !== 'function') this.#inputAdapter = null;
-        else {
-          try {
-            syncResult(this.#inputAdapter.destroy(), 'ProductPresentationSession inputAdapter.destroy()');
-            this.#inputAdapter = null;
-          } catch (error) { errors.push(error); }
-        }
-      }
-      const bindings = this.#bindings.splice(0);
-      const failedBindings: Array<() => unknown> = [];
-      for (const cleanup of bindings.reverse()) {
         try {
-          syncResult(cleanup(), 'ProductPresentationSession binding cleanup()');
-        } catch (error) { errors.push(error); failedBindings.push(cleanup); }
+          this.#callCleanup(
+            sequence,
+            this.#inputAdapter.destroy,
+            'ProductPresentationSession inputAdapter.destroy()',
+          );
+          this.#inputAdapter = null;
+        } catch (error) { errors.push(error); }
       }
-      this.#bindings.push(...failedBindings.reverse());
-      const candidateCleanups = this.#candidateCleanups.splice(0);
-      const failedCandidateCleanups: Array<() => unknown> = [];
-      for (const cleanup of candidateCleanups.reverse()) {
-        try {
-          syncResult(cleanup(), 'ProductPresentationSession candidate cleanup()');
-        } catch (error) { errors.push(error); failedCandidateCleanups.push(cleanup); }
-      }
-      this.#candidateCleanups.push(...failedCandidateCleanups.reverse());
+      if (reentered()) return errors;
+      this.#bindings = cleanupFunctions(
+        this.#bindings,
+        'ProductPresentationSession binding cleanup()',
+      );
+      if (reentered()) return errors;
+      this.#candidateCleanups = cleanupFunctions(
+        this.#candidateCleanups,
+        'ProductPresentationSession candidate cleanup()',
+      );
+      if (reentered()) return errors;
       if (this.#flow !== null) {
-        if (typeof this.#flow?.destroy !== 'function') this.#flow = null;
-        else {
-          try {
-            syncResult(this.#flow.destroy(), 'ProductPresentationSession flow.destroy()');
-            this.#flow = null;
-          } catch (error) { errors.push(error); }
-        }
+        try {
+          this.#callCleanup(
+            sequence,
+            this.#flow.destroy,
+            'ProductPresentationSession flow.destroy()',
+          );
+          this.#flow = null;
+        } catch (error) { errors.push(error); }
       }
+      if (reentered()) return errors;
       if (this.#inputRouter !== null) {
-        if (typeof this.#inputRouter?.destroy !== 'function') this.#inputRouter = null;
-        else {
-          try {
-            syncResult(this.#inputRouter.destroy(), 'ProductPresentationSession inputRouter.destroy()');
-            this.#inputRouter = null;
-          } catch (error) { errors.push(error); }
-        }
+        try {
+          this.#callCleanup(
+            sequence,
+            this.#inputRouter.destroy,
+            'ProductPresentationSession inputRouter.destroy()',
+          );
+          this.#inputRouter = null;
+        } catch (error) { errors.push(error); }
       }
+      if (reentered()) return errors;
       if (this.#controller !== null) {
-        if (typeof this.#controller?.destroy !== 'function') this.#controller = null;
-        else {
-          try {
-            syncResult(this.#controller.destroy(), 'ProductPresentationSession controller.destroy()');
-            this.#controller = null;
-          } catch (error) { errors.push(error); }
-        }
+        try {
+          this.#callCleanup(
+            sequence,
+            this.#controller.destroy,
+            'ProductPresentationSession controller.destroy()',
+          );
+          this.#controller = null;
+        } catch (error) { errors.push(error); }
       }
+      if (reentered()) return errors;
       if (this.#renderer !== null) {
-        if (typeof this.#renderer?.dispose !== 'function') this.#renderer = null;
-        else {
-          try {
-            syncResult(this.#renderer.dispose(), 'ProductPresentationSession renderer.dispose()');
-            this.#renderer = null;
-          } catch (error) { errors.push(error); }
-        }
+        try {
+          this.#callCleanup(
+            sequence,
+            this.#renderer.dispose,
+            'ProductPresentationSession renderer.dispose()',
+          );
+          this.#renderer = null;
+        } catch (error) { errors.push(error); }
       }
+      if (reentered()) return errors;
       if (this.#renderer === null && this.#bindings.length === 0) this.#canvas = null;
       this.#accumulator = null;
       this.#renderPacer = null;
@@ -1551,8 +1865,9 @@ export class ProductPresentationSession {
       this.#lastWallNowMs = null;
       this.#nextProfileLeaseHeartbeatAtMs = null;
     } finally {
-      this.#cleanupIncomplete = errors.length > 0;
-      this.#cleaningUp = false;
+      this.#cleanupIncomplete = errors.length > 0 || this.#cleanupReentryError !== null;
+      this.#cleanupOperation = null;
+      this.#cleanupReentryError = null;
     }
     return errors;
   }
@@ -1587,7 +1902,7 @@ export class ProductPresentationSession {
       this.#report('frame-loop-stop-error', { message: errorMessage(stopError) });
     }
     this.#report('session-failed', { message: failure.message });
-    if (this.#processingFrame) {
+    if (this.#frameOperation !== null) {
       this.#deferredFailureCleanup = true;
       return failure;
     }
@@ -1595,11 +1910,17 @@ export class ProductPresentationSession {
   }
 
   destroy(): void {
+    this.#guardObservationReentry('destroy');
+    this.#guardCleanupReentry('destroy');
+    if (this.#startupSegment !== null) {
+      this.#destroyRequested = true;
+      return;
+    }
     if (
       this.#state === PRODUCT_PRESENTATION_SESSION_STATE.DESTROYED
       && !this.#cleanupIncomplete
     ) return;
-    if (this.#processingFrame) {
+    if (this.#frameOperation !== null) {
       this.#destroyRequested = true;
       return;
     }
@@ -1614,3 +1935,41 @@ export class ProductPresentationSession {
     this.#lastError = null;
   }
 }
+
+export const PRODUCT_PRESENTATION_SESSION_FRAME_OPERATION_POLICY = Object.freeze({
+  frameGuardPrecedesTimestampDeltaAndLifecycleValidation: true as const,
+  stickyFrameReentryUsesMonotonicSequenceAndFirstError: true as const,
+  frameCallbacksCheckedBeforeLaterFramePublication: true as const,
+  publicStateSnapshotPerformanceAndDebugReadsRejectFrameIntermediateState: true as const,
+  swallowedFrameReentryFailsSessionClosed: true as const,
+  destroyDuringFrameRemainsDeferredUntilFrameClosure: true as const,
+  frameFailureCleanupRemainsDeferredUntilFrameOwnershipRelease: true as const,
+  renderingInputTickAndHeartbeatSemanticsRemainUnchanged: true as const,
+  validationStatus: 'not-run' as const,
+});
+
+export const PRODUCT_PRESENTATION_SESSION_CLEANUP_OPERATION_POLICY = Object.freeze({
+  cleanupGuardPrecedesDestroyIdempotenceAndPublicReads: true as const,
+  stickyCleanupReentryUsesMonotonicSequenceAndFirstError: true as const,
+  cleanupCallbacksCheckedBeforeOwnershipRelease: true as const,
+  cleanupReentryRetainsCurrentAndLaterSessionOwners: true as const,
+  bindingAndCandidateCleanupRetainUnprocessedReverseOrderOwners: true as const,
+  performanceProbeCleanupChecksClockStopSnapshotAndDestroyCallbacks: true as const,
+  ordinaryCleanupFailuresRemainExactRetryOwners: true as const,
+  cleanupCompletionClearsNonOwnerPresentationStateOnlyAfterAllOwnerClasses: true as const,
+  renderingInputTickHeartbeatAndDestroyRetrySemanticsRemainUnchanged: true as const,
+  validationStatus: 'not-run' as const,
+});
+
+export const PRODUCT_PRESENTATION_SESSION_STARTUP_OPERATION_POLICY = Object.freeze({
+  startPromisePublishesBeforeAnyFactoryInvocation: true as const,
+  startupUsesRendererAssemblyInputAndInteractiveSegments: true as const,
+  stickyStartupReentryUsesMonotonicSequenceAndFirstError: true as const,
+  startupCallbacksCheckedBeforeCrossSegmentPublication: true as const,
+  destroyDuringStartupSegmentDefersUntilSegmentClosure: true as const,
+  destroyBetweenAsyncSegmentsPreventsLaterOwnerPublication: true as const,
+  observationalCallbacksCannotOwnProductLifecycle: true as const,
+  startupFailureRetainsCandidateCleanupOwnership: true as const,
+  renderingInputTickHeartbeatAndProductSemanticsRemainUnchanged: true as const,
+  validationStatus: 'not-run' as const,
+});

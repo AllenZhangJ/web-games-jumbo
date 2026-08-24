@@ -30,7 +30,11 @@ test('BotObservation exposes only public delayed opponent state and is deeply fr
     commandSnapshot: source,
     delayedSnapshot: source,
     selfId: 'player-2',
-    arena: createBotArenaView(core.config.arena, core.getCharacterDefinition('player-2').collision.radius),
+    arena: createBotArenaView(
+      core.config.arena,
+      core.getCharacterDefinition('player-2').collision.radius,
+      core.getCharacterDefinition('player-2').movement.automaticStepHeight,
+    ),
   });
   assert.equal(observation.schemaVersion, 4);
   assert.equal(observation.self.id, 'player-2');
@@ -103,6 +107,7 @@ test('BotObservation keeps self movement current while delaying opponent movemen
     arena: createBotArenaView(
       core.config.arena,
       core.getCharacterDefinition('player-2').collision.radius,
+      core.getCharacterDefinition('player-2').movement.automaticStepHeight,
     ),
   });
   assert.equal(observation.commandTick, 1);
@@ -137,7 +142,11 @@ test('BotObservation delays world equipment and opponent ownership but keeps sel
   const afterPickup = cloneBotSourceSnapshot(core.getLegacyFullSnapshotForAudit());
   const common = {
     selfId: 'player-2',
-    arena: createBotArenaView(core.config.arena, core.getCharacterDefinition('player-2').collision.radius),
+    arena: createBotArenaView(
+      core.config.arena,
+      core.getCharacterDefinition('player-2').collision.radius,
+      core.getCharacterDefinition('player-2').movement.automaticStepHeight,
+    ),
   };
   const delayed = createBotObservation({
     ...common,
@@ -168,7 +177,11 @@ test('BotObservation rejects future information', () => {
   const later = cloneBotSourceSnapshot(core.getLegacyFullSnapshotForAudit());
   const common = {
     selfId: 'player-2',
-    arena: createBotArenaView(core.config.arena, core.getCharacterDefinition('player-2').collision.radius),
+    arena: createBotArenaView(
+      core.config.arena,
+      core.getCharacterDefinition('player-2').collision.radius,
+      core.getCharacterDefinition('player-2').movement.automaticStepHeight,
+    ),
   };
   assert.throws(() => createBotObservation({
     ...common,
@@ -202,7 +215,11 @@ test('BotObservation rejects mismatched identities and safely copies objective d
   const common = {
     commandSnapshot: source,
     selfId: 'player-2',
-    arena: createBotArenaView(core.config.arena, core.getCharacterDefinition('player-2').collision.radius),
+    arena: createBotArenaView(
+      core.config.arena,
+      core.getCharacterDefinition('player-2').collision.radius,
+      core.getCharacterDefinition('player-2').movement.automaticStepHeight,
+    ),
   };
   const mismatched = {
     ...source,

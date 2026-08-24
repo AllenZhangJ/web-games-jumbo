@@ -2,6 +2,7 @@ import {
   assertKnownKeys,
   assertNonEmptyString,
 } from './definition-utils.js';
+import { assertSynchronousReturn } from './synchronous-return-boundary.js';
 
 export interface SynchronousStorageReadResult {
   readonly ok: boolean;
@@ -23,11 +24,24 @@ type UnknownFunction = (...args: unknown[]) => unknown;
 
 const READ_RESULT_KEYS = new Set(['ok', 'found', 'value']);
 const PORT_OPTION_KEYS = new Set(['label']);
+const MAX_STORAGE_PORT_PROTOTYPE_DEPTH = 32;
+
+export const SYNCHRONOUS_STORAGE_PORT_BOUNDARY = Object.freeze({
+  maximumMethodPrototypeDepth: MAX_STORAGE_PORT_PROTOTYPE_DEPTH,
+  readResultRequiresExactOwnEnumerableDataFields: true,
+  sharedSynchronousReturnBoundaryWired: true,
+  validationStatus: 'not-run',
+} as const);
 
 function snapshotMethod(value: object, methodName: string, label: string): UnknownFunction {
   let current: object | null = value;
   const visited = new Set<object>();
-  while (current !== null && !visited.has(current)) {
+  for (
+    let depth = 0;
+    current !== null && depth < MAX_STORAGE_PORT_PROTOTYPE_DEPTH;
+    depth += 1
+  ) {
+    if (visited.has(current)) throw new TypeError(`${label} Port 原型链不能循环。`);
     visited.add(current);
     const descriptor = Object.getOwnPropertyDescriptor(current, methodName);
     if (descriptor) {
@@ -41,36 +55,22 @@ function snapshotMethod(value: object, methodName: string, label: string): Unkno
     }
     current = Object.getPrototypeOf(current) as object | null;
   }
+  if (current !== null) {
+    throw new RangeError(`${label} Port 原型链超过${MAX_STORAGE_PORT_PROTOTYPE_DEPTH}层。`);
+  }
   throw new TypeError(`${label}.${methodName} 必须是函数。`);
 }
 
-function findThenMethod(value: object): UnknownFunction | null {
-  let current: object | null = value;
-  const visited = new Set<object>();
-  while (current !== null && !visited.has(current)) {
-    visited.add(current);
-    const descriptor = Object.getOwnPropertyDescriptor(current, 'then');
-    if (descriptor) {
-      if (!Object.prototype.hasOwnProperty.call(descriptor, 'value')) return null;
-      return typeof descriptor.value === 'function' ? descriptor.value as UnknownFunction : null;
-    }
-    current = Object.getPrototypeOf(current) as object | null;
+function readResultField(result: object, key: string, label: string): unknown {
+  const descriptor = Object.getOwnPropertyDescriptor(result, key);
+  if (!descriptor || !descriptor.enumerable || !Object.hasOwn(descriptor, 'value')) {
+    throw new TypeError(`${label} read result.${key} 必须是自有可枚举数据字段。`);
   }
-  return null;
+  return descriptor.value;
 }
 
-function rejectAsync<T>(value: T, name: string): T {
-  if (value !== null && (typeof value === 'object' || typeof value === 'function')) {
-    const thenMethod = findThenMethod(value as object);
-    if (!thenMethod) return value;
-    try {
-      thenMethod.call(value, undefined, () => undefined);
-    } catch {
-      // The synchronous boundary rejects the value regardless. A native
-      // Promise is observed here only to contain a possible late rejection.
-    }
-    throw new TypeError(`${name} 必须同步完成。`);
-  }
+function requireSynchronousResult<T>(value: T, name: string): T {
+  assertSynchronousReturn(value, name);
   return value;
 }
 
@@ -102,22 +102,28 @@ export function createSynchronousStoragePort(
   return Object.freeze({
     read(keyValue: string): SynchronousStorageReadResult {
       const key = assertNonEmptyString(keyValue, `${label} key`);
-      const result = rejectAsync(storageRead.call(value, key), `${label}.storageRead`);
+      const result = requireSynchronousResult(
+        storageRead.call(value, key),
+        `${label}.storageRead`,
+      );
       assertKnownKeys(result, READ_RESULT_KEYS, `${label} read result`);
-      if (typeof result.ok !== 'boolean' || typeof result.found !== 'boolean') {
+      const ok = readResultField(result, 'ok', label);
+      const found = readResultField(result, 'found', label);
+      const storedValue = readResultField(result, 'value', label);
+      if (typeof ok !== 'boolean' || typeof found !== 'boolean') {
         throw new TypeError(`${label} read result.ok/found 必须是布尔值。`);
       }
-      if (!result.ok && result.found) {
+      if (!ok && found) {
         throw new RangeError(`${label} 读取失败时不能声明 found。`);
       }
-      if (!result.found && result.value !== undefined) {
+      if (!found && storedValue !== undefined) {
         throw new RangeError(`${label} 未找到值时 value 必须是 undefined。`);
       }
-      return Object.freeze({ ok: result.ok, found: result.found, value: result.value });
+      return Object.freeze({ ok, found, value: storedValue });
     },
     write(keyValue: string, data: unknown): boolean {
       const key = assertNonEmptyString(keyValue, `${label} key`);
-      const result = rejectAsync(
+      const result = requireSynchronousResult(
         storageWrite.call(value, key, data),
         `${label}.storageWrite`,
       );
@@ -128,7 +134,10 @@ export function createSynchronousStoragePort(
     },
     delete(keyValue: string): boolean {
       const key = assertNonEmptyString(keyValue, `${label} key`);
-      const result = rejectAsync(storageDelete.call(value, key), `${label}.storageDelete`);
+      const result = requireSynchronousResult(
+        storageDelete.call(value, key),
+        `${label}.storageDelete`,
+      );
       if (typeof result !== 'boolean') {
         throw new TypeError(`${label}.storageDelete 必须返回布尔值。`);
       }

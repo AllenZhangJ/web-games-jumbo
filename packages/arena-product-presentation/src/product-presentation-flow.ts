@@ -385,6 +385,18 @@ function cleanupCandidate(value: unknown, name: string): Error[] {
   return errors;
 }
 
+type ProductPresentationFlowOperation =
+  | 'synchronize'
+  | 'dispatch'
+  | 'intent-settlement'
+  | 'stepMatch'
+  | 'heartbeat'
+  | 'hide'
+  | 'show'
+  | 'state-read'
+  | 'snapshot-read'
+  | 'destroy';
+
 export class ProductPresentationFlow {
   #controller: ControllerAdapter | null;
   #inputSource: ProductMatchPresentationInputPort | null;
@@ -394,11 +406,14 @@ export class ProductPresentationFlow {
   #frameProjector: ((options: ProductMatchPresentationProjectorOptions) => unknown) | null;
   #matchPresentationContent: unknown;
   #matchRuntime: MatchRuntimeAdapter | null = null;
+  #pendingMatchRuntimeCandidate: unknown = null;
   #state: ProductPresentationFlowState = PRODUCT_PRESENTATION_FLOW_STATE.ACTIVE;
   #pendingIntent: Promise<ProductPresentationFlowSnapshot | null> | null = null;
   #pendingIntentKey: string | null = null;
-  #operation: string | null = null;
-  #reentryAttempted = false;
+  #operation: ProductPresentationFlowOperation | null = null;
+  #operationSequence = 0;
+  #reentrySequence = 0;
+  #reentryError: Error | null = null;
   #destroyRequested = false;
   #cleanupIncomplete = false;
   #lastMatchFrame: unknown = null;
@@ -455,11 +470,11 @@ export class ProductPresentationFlow {
   }
 
   get state(): ProductPresentationFlowState {
-    return this.#state;
+    return this.#run('state-read', () => this.#state);
   }
 
   getState(): ProductPresentationFlowState {
-    return this.#state;
+    return this.#run('state-read', () => this.#state);
   }
 
   #assertUsable(): void {
@@ -471,34 +486,59 @@ export class ProductPresentationFlow {
     }
   }
 
-  #enter(operation: string): void {
+  #beginOperation(operation: ProductPresentationFlowOperation): number {
     if (this.#operation !== null) {
-      this.#reentryAttempted = true;
-      throw new Error(`ProductPresentationFlow ${this.#operation} 期间不能执行 ${operation}。`);
+      this.#reentrySequence += 1;
+      this.#reentryError ??= new Error(
+        `ProductPresentationFlow.${operation}() 不可重入；当前正在 ${this.#operation}()。`,
+      );
+      throw this.#reentryError;
     }
     this.#operation = operation;
-    this.#reentryAttempted = false;
+    this.#operationSequence += 1;
+    this.#reentryError = null;
+    return this.#operationSequence;
   }
 
-  #assertNoSwallowedReentry(): void {
-    if (this.#reentryAttempted) {
-      throw new Error('ProductPresentationFlow 检测到被宿主吞掉的重入异常。');
+  #assertCurrentOperationCommit(sequence: number, label: string): void {
+    if (this.#operation === null || this.#operationSequence !== sequence) {
+      throw new Error(`${label}缺少当前ProductPresentationFlow操作所有权。`);
     }
+    if (this.#reentryError !== null) throw this.#reentryError;
   }
 
-  #leave(): void {
+  #finishOperation(sequence: number): void {
+    const operation = this.#operation;
+    const ownershipError = operation === null || this.#operationSequence !== sequence
+      ? new Error('ProductPresentationFlow操作所有权在结束前已失效。')
+      : null;
+    const reentryError = this.#reentryError;
+    let reentryFailure: Error | null = null;
+    if (reentryError !== null) {
+      reentryFailure = new Error(
+        `ProductPresentationFlow.${operation ?? 'operation'}() 检测到宿主重入并已失败关闭。`,
+        { cause: reentryError },
+      );
+      this.#lastError = reentryFailure;
+      if (this.#state !== PRODUCT_PRESENTATION_FLOW_STATE.DESTROYED) {
+        this.#state = PRODUCT_PRESENTATION_FLOW_STATE.FAILED;
+      }
+      if (operation === 'destroy') this.#cleanupIncomplete = true;
+    }
     this.#operation = null;
-    this.#reentryAttempted = false;
+    this.#reentryError = null;
+    if (ownershipError !== null) throw ownershipError;
+    if (reentryFailure !== null) throw reentryFailure;
   }
 
-  #run<T>(operation: string, callback: () => T): T {
-    this.#enter(operation);
+  #run<T>(operation: ProductPresentationFlowOperation, callback: (sequence: number) => T): T {
+    const sequence = this.#beginOperation(operation);
     try {
-      const result = callback();
-      this.#assertNoSwallowedReentry();
+      const result = callback(sequence);
+      this.#assertCurrentOperationCommit(sequence, `ProductPresentationFlow ${operation}`);
       return result;
     } finally {
-      this.#leave();
+      this.#finishOperation(sequence);
     }
   }
 
@@ -514,21 +554,33 @@ export class ProductPresentationFlow {
     return this.#controller;
   }
 
-  #controllerSnapshot(): unknown {
+  #controllerSnapshot(sequence: number): unknown {
     const snapshot = this.#requireController().getSnapshot();
-    this.#assertNoSwallowedReentry();
+    this.#assertCurrentOperationCommit(sequence, 'ProductPresentationFlow controller snapshot');
     return snapshot;
   }
 
-  #disposeMatchRuntime(): void {
+  #disposeMatchRuntime(sequence: number): void {
     const runtime = this.#matchRuntime;
     if (runtime === null) return;
     runtime.destroy();
+    this.#assertCurrentOperationCommit(sequence, 'ProductPresentationFlow match runtime destroy');
     this.#matchRuntime = null;
-    this.#assertNoSwallowedReentry();
   }
 
-  #createAndStartMatch(): void {
+  #disposePendingMatchRuntimeCandidate(sequence: number): Error[] {
+    const candidate = this.#pendingMatchRuntimeCandidate;
+    if (candidate === null) return [];
+    const errors = cleanupCandidate(candidate, 'Match 表现候选');
+    this.#assertCurrentOperationCommit(
+      sequence,
+      'ProductPresentationFlow pending match runtime cleanup',
+    );
+    if (errors.length === 0) this.#pendingMatchRuntimeCandidate = null;
+    return errors;
+  }
+
+  #createAndStartMatch(sequence: number): void {
     const factory = this.#matchRuntimeFactory;
     const projector = this.#frameProjector;
     const controller = this.#requireController();
@@ -536,35 +588,56 @@ export class ProductPresentationFlow {
     if (factory === null || projector === null || inputSource === null) {
       throw new Error('ProductPresentationFlow Match 表现能力已释放。');
     }
-    let candidate: unknown = null;
     try {
-      candidate = factory({
+      const candidate = factory({
         controller,
         inputSource,
         content: this.#matchPresentationContent,
         frameProjector: projector,
       });
-      this.#assertNoSwallowedReentry();
+      this.#pendingMatchRuntimeCandidate = candidate;
+      this.#assertCurrentOperationCommit(sequence, 'ProductPresentationFlow match runtime factory');
       const runtime = normalizeMatchRuntime(candidate);
-      const frame = runtime.start();
-      this.#assertNoSwallowedReentry();
       this.#matchRuntime = runtime;
-      candidate = null;
+      this.#pendingMatchRuntimeCandidate = null;
+      const frame = runtime.start();
+      this.#assertCurrentOperationCommit(sequence, 'ProductPresentationFlow match runtime start');
       this.#lastMatchFrame = frame;
       this.#lastMatchResult = null;
     } catch (error) {
+      const cleanupErrors: Error[] = [];
+      if (this.#reentryError === null) {
+        if (this.#matchRuntime !== null) {
+          try { this.#disposeMatchRuntime(sequence); } catch (cleanupError) {
+            cleanupErrors.push(safelyWrapThrownError(
+              cleanupError,
+              'Match 表现Runtime回滚失败',
+            ));
+          }
+        }
+        if (this.#reentryError === null && this.#pendingMatchRuntimeCandidate !== null) {
+          try {
+            cleanupErrors.push(...this.#disposePendingMatchRuntimeCandidate(sequence));
+          } catch (cleanupError) {
+            cleanupErrors.push(safelyWrapThrownError(
+              cleanupError,
+              'Match 表现候选回滚边界失败',
+            ));
+          }
+        }
+      }
       throw combineCleanupFailure(
         safelyWrapThrownError(error, 'ProductPresentationFlow matchRuntime 不符合合同'),
-        cleanupCandidate(candidate, 'Match 表现候选'),
+        cleanupErrors,
         'Product match 表现创建失败且清理未完整完成。',
       );
     }
   }
 
-  #captureResult(snapshotValue: unknown): void {
+  #captureResult(sequence: number, snapshotValue: unknown): void {
     const runtime = this.#matchRuntime;
     const runtimeValue = runtime === null ? null : runtime.getLastMatchResult();
-    this.#assertNoSwallowedReentry();
+    this.#assertCurrentOperationCommit(sequence, 'ProductPresentationFlow match result read');
     const snapshot = assertPlainRecord(snapshotValue, 'ProductPresentationFlow Product snapshot');
     const matchValue = optionalOwnData(snapshot, 'match', 'ProductPresentationFlow Product snapshot');
     const match = matchValue === null || matchValue === undefined
@@ -587,45 +660,46 @@ export class ProductPresentationFlow {
       && productResult !== null
       && runtimeResult.authorityHash !== productResult.authorityHash
     ) throw new RangeError('Product 与 Match 表现结果不一致。');
+    this.#assertCurrentOperationCommit(sequence, 'ProductPresentationFlow match result validation');
     this.#lastMatchResult = runtimeResult ?? productResult;
   }
 
-  #synchronizeInternal(): ProductPresentationFlowSnapshot {
-    let snapshot = this.#controllerSnapshot();
+  #synchronizeInternal(sequence: number): ProductPresentationFlowSnapshot {
+    let snapshot = this.#controllerSnapshot(sequence);
     const initialState = stateView(snapshot);
-    if (initialState.suspended) return this.#buildSnapshotView(snapshot);
+    if (initialState.suspended) return this.#buildSnapshotView(sequence, snapshot);
 
     if (initialState.active === PRODUCT_SESSION_STATE.PREPARING) {
       if (this.#matchRuntime !== null) {
         throw new Error('Product preparing 时已存在 MatchPresentationRuntime。');
       }
-      this.#createAndStartMatch();
-      snapshot = this.#controllerSnapshot();
+      this.#createAndStartMatch(sequence);
+      snapshot = this.#controllerSnapshot(sequence);
       if (stateView(snapshot).active !== PRODUCT_SESSION_STATE.IN_MATCH) {
         throw new Error('Product match 表现启动后未进入 in-match。');
       }
     } else if (initialState.active === PRODUCT_SESSION_STATE.RESULTS) {
-      this.#captureResult(snapshot);
+      this.#captureResult(sequence, snapshot);
       snapshot = this.#requireController().commitReward();
-      this.#assertNoSwallowedReentry();
+      this.#assertCurrentOperationCommit(sequence, 'ProductPresentationFlow reward commit');
       const afterRewardState = stateView(snapshot).active;
       if (
         afterRewardState === PRODUCT_SESSION_STATE.REWARD
         || afterRewardState === PRODUCT_SESSION_STATE.FATAL_ERROR
       ) {
-        this.#disposeMatchRuntime();
+        this.#disposeMatchRuntime(sequence);
       } else if (afterRewardState !== PRODUCT_SESSION_STATE.RECOVERABLE_ERROR) {
         throw new Error(`Product reward 提交后进入未知状态 ${afterRewardState}。`);
       }
     } else if (initialState.active === PRODUCT_SESSION_STATE.RECOVERABLE_ERROR) {
       if (initialState.recovery !== PRODUCT_SESSION_STATE.RESULTS && this.#matchRuntime !== null) {
-        this.#disposeMatchRuntime();
+        this.#disposeMatchRuntime(sequence);
       }
     } else if (
       initialState.active === PRODUCT_SESSION_STATE.FATAL_ERROR
       || initialState.active === PRODUCT_SESSION_STATE.DESTROYED
     ) {
-      this.#disposeMatchRuntime();
+      this.#disposeMatchRuntime(sequence);
     } else if (initialState.active === PRODUCT_SESSION_STATE.READY) {
       if (this.#matchRuntime !== null) {
         throw new Error('Product ready 时仍持有 MatchPresentationRuntime。');
@@ -639,14 +713,20 @@ export class ProductPresentationFlow {
       throw new Error('Product in-match 缺少 MatchPresentationRuntime。');
     }
     this.#lastError = null;
-    return this.#buildSnapshotView(snapshot);
+    return this.#buildSnapshotView(sequence, snapshot);
   }
 
-  #recoverSynchronizationFailure(error: unknown): ProductPresentationFlowSnapshot {
+  #recoverSynchronizationFailure(
+    sequence: number,
+    error: unknown,
+  ): ProductPresentationFlowSnapshot {
+    if (this.#reentryError !== null) {
+      throw this.#fail(this.#reentryError, 'ProductPresentationFlow 同步期间发生重入');
+    }
     let productSnapshot: unknown;
     let currentState: ReturnType<typeof stateView>;
     try {
-      productSnapshot = this.#controllerSnapshot();
+      productSnapshot = this.#controllerSnapshot(sequence);
       currentState = stateView(productSnapshot);
     } catch (inspectionError) {
       const combined = combineCleanupFailure(
@@ -672,8 +752,8 @@ export class ProductPresentationFlow {
       if (
         currentState.active === PRODUCT_SESSION_STATE.FATAL_ERROR
         || currentState.recovery !== PRODUCT_SESSION_STATE.RESULTS
-      ) this.#disposeMatchRuntime();
-      return this.#buildSnapshotView(productSnapshot);
+      ) this.#disposeMatchRuntime(sequence);
+      return this.#buildSnapshotView(sequence, productSnapshot);
     } catch (cleanupError) {
       const combined = combineCleanupFailure(
         safelyWrapThrownError(error, 'ProductPresentationFlow 同步失败'),
@@ -685,12 +765,12 @@ export class ProductPresentationFlow {
   }
 
   synchronize(): ProductPresentationFlowSnapshot {
-    return this.#run('synchronize', () => {
+    return this.#run('synchronize', (sequence) => {
       this.#assertUsable();
       try {
-        return this.#synchronizeInternal();
+        return this.#synchronizeInternal(sequence);
       } catch (error) {
-        return this.#recoverSynchronizationFailure(error);
+        return this.#recoverSynchronizationFailure(sequence, error);
       }
     });
   }
@@ -700,51 +780,67 @@ export class ProductPresentationFlow {
   }
 
   dispatch(intentValue: unknown): Promise<ProductPresentationFlowSnapshot | null> {
-    let intent: ProductUiIntent;
-    let key: string;
+    let dispatchStarted = false;
     try {
-      this.#assertUsable();
-      intent = createProductUiIntent(intentValue);
-      key = createProductUiIntentKey(intent);
-    } catch (error) {
-      return Promise.reject(error);
-    }
-    if (this.#pendingIntent !== null) {
-      if (this.#pendingIntentKey === key) return this.#pendingIntent;
-      return Promise.reject(new Error('已有 ProductPresentationFlow intent 正在处理。'));
-    }
-    let dispatched: Promise<unknown>;
-    try {
-      dispatched = this.#run('dispatch', () => {
+      return this.#run('dispatch', (sequence) => {
+        this.#assertUsable();
+        const intent: ProductUiIntent = createProductUiIntent(intentValue);
+        const key = createProductUiIntentKey(intent);
+        this.#assertCurrentOperationCommit(sequence, 'ProductPresentationFlow intent validation');
+        if (this.#pendingIntent !== null) {
+          if (this.#pendingIntentKey === key) return this.#pendingIntent;
+          throw new Error('已有 ProductPresentationFlow intent 正在处理。');
+        }
         const dispatcher = this.#dispatcher;
         if (dispatcher === null) throw new Error('ProductPresentationFlow dispatcher 已释放。');
-        const operation = dispatcher.dispatch(intent);
-        this.#assertNoSwallowedReentry();
+        dispatchStarted = true;
+        const dispatched = dispatcher.dispatch(intent);
+        this.#assertCurrentOperationCommit(sequence, 'ProductPresentationFlow intent dispatch');
+        let operation: Promise<ProductPresentationFlowSnapshot | null>;
+        operation = dispatched
+          .then(() => {
+            if (this.#destroyRequested || this.#state === PRODUCT_PRESENTATION_FLOW_STATE.DESTROYED) {
+              return null;
+            }
+            return this.synchronize();
+          })
+          .finally(() => {
+            try {
+              this.#run('intent-settlement', () => {
+                if (this.#pendingIntent === operation) {
+                  this.#pendingIntent = null;
+                  this.#pendingIntentKey = null;
+                }
+              });
+            } catch (error) {
+              if (this.#state !== PRODUCT_PRESENTATION_FLOW_STATE.DESTROYED) {
+                this.#lastError = safelyWrapThrownError(
+                  error,
+                  'ProductPresentationFlow intent settlement 失败',
+                );
+                this.#state = PRODUCT_PRESENTATION_FLOW_STATE.FAILED;
+              }
+            }
+          });
+        this.#assertCurrentOperationCommit(sequence, 'ProductPresentationFlow pending intent publication');
+        this.#pendingIntentKey = key;
+        this.#pendingIntent = operation;
         return operation;
       });
     } catch (error) {
-      return Promise.reject(this.#fail(error, 'ProductPresentationFlow intent 分派失败'));
+      if (dispatchStarted && this.#state !== PRODUCT_PRESENTATION_FLOW_STATE.FAILED) {
+        return Promise.reject(this.#fail(error, 'ProductPresentationFlow intent 分派失败'));
+      }
+      return Promise.reject(
+        this.#state === PRODUCT_PRESENTATION_FLOW_STATE.FAILED && this.#lastError !== null
+          ? this.#lastError
+          : error,
+      );
     }
-    const operation: Promise<ProductPresentationFlowSnapshot | null> = dispatched
-      .then(() => {
-        if (this.#destroyRequested || this.#state === PRODUCT_PRESENTATION_FLOW_STATE.DESTROYED) {
-          return null;
-        }
-        return this.synchronize();
-      })
-      .finally(() => {
-        if (this.#pendingIntent === operation) {
-          this.#pendingIntent = null;
-          this.#pendingIntentKey = null;
-        }
-      });
-    this.#pendingIntentKey = key;
-    this.#pendingIntent = operation;
-    return operation;
   }
 
   stepMatch(): ProductPresentationFlowSnapshot {
-    return this.#run('stepMatch', () => {
+    return this.#run('stepMatch', (sequence) => {
       this.#assertUsable();
       const runtime = this.#matchRuntime;
       if (runtime === null) {
@@ -752,7 +848,7 @@ export class ProductPresentationFlow {
       }
       let suspended: boolean;
       try {
-        suspended = stateView(this.#controllerSnapshot()).suspended;
+        suspended = stateView(this.#controllerSnapshot(sequence)).suspended;
       } catch (error) {
         throw this.#fail(error, 'ProductPresentationFlow Match step 前置复验失败');
       }
@@ -760,21 +856,22 @@ export class ProductPresentationFlow {
         throw new Error('ProductPresentationFlow 挂起时不能 step。');
       }
       try {
-        this.#lastMatchFrame = runtime.step();
-        this.#assertNoSwallowedReentry();
+        const frame = runtime.step();
+        this.#assertCurrentOperationCommit(sequence, 'ProductPresentationFlow match step');
+        this.#lastMatchFrame = frame;
       } catch (error) {
-        return this.#recoverSynchronizationFailure(error);
+        return this.#recoverSynchronizationFailure(sequence, error);
       }
       try {
-        return this.#synchronizeInternal();
+        return this.#synchronizeInternal(sequence);
       } catch (error) {
-        return this.#recoverSynchronizationFailure(error);
+        return this.#recoverSynchronizationFailure(sequence, error);
       }
     });
   }
 
   heartbeat(): Readonly<{ renewed: boolean; snapshot: ProductPresentationFlowSnapshot }> {
-    return this.#run('heartbeat', () => {
+    return this.#run('heartbeat', (sequence) => {
       this.#assertUsable();
       let renewed: boolean;
       try {
@@ -782,7 +879,7 @@ export class ProductPresentationFlow {
           this.#requireController().renewProfileLease(),
           'ProductPresentationFlow lease outcome',
         );
-        this.#assertNoSwallowedReentry();
+        this.#assertCurrentOperationCommit(sequence, 'ProductPresentationFlow lease renewal');
         const renewedValue = ownData(outcome, 'renewed', 'ProductPresentationFlow lease outcome');
         if (typeof renewedValue !== 'boolean') {
           throw new TypeError('ProductPresentationFlow lease outcome.renewed 必须是 boolean。');
@@ -791,54 +888,57 @@ export class ProductPresentationFlow {
       } catch (error) {
         return Object.freeze({
           renewed: false,
-          snapshot: this.#recoverSynchronizationFailure(error),
+          snapshot: this.#recoverSynchronizationFailure(sequence, error),
         });
       }
       let snapshot: ProductPresentationFlowSnapshot;
       try {
-        snapshot = this.#synchronizeInternal();
+        snapshot = this.#synchronizeInternal(sequence);
       } catch (error) {
-        snapshot = this.#recoverSynchronizationFailure(error);
+        snapshot = this.#recoverSynchronizationFailure(sequence, error);
       }
       return Object.freeze({ renewed, snapshot });
     });
   }
 
   hide(): ProductPresentationFlowSnapshot {
-    return this.#run('hide', () => {
+    return this.#run('hide', (sequence) => {
       this.#assertUsable();
       try {
         this.#requireController().hide();
-        this.#assertNoSwallowedReentry();
+        this.#assertCurrentOperationCommit(sequence, 'ProductPresentationFlow hide');
       } catch (error) {
-        return this.#recoverSynchronizationFailure(error);
+        return this.#recoverSynchronizationFailure(sequence, error);
       }
       try {
-        return this.#synchronizeInternal();
+        return this.#synchronizeInternal(sequence);
       } catch (error) {
-        return this.#recoverSynchronizationFailure(error);
+        return this.#recoverSynchronizationFailure(sequence, error);
       }
     });
   }
 
   show(): ProductPresentationFlowSnapshot {
-    return this.#run('show', () => {
+    return this.#run('show', (sequence) => {
       this.#assertUsable();
       try {
         this.#requireController().show();
-        this.#assertNoSwallowedReentry();
+        this.#assertCurrentOperationCommit(sequence, 'ProductPresentationFlow show');
       } catch (error) {
-        return this.#recoverSynchronizationFailure(error);
+        return this.#recoverSynchronizationFailure(sequence, error);
       }
       try {
-        return this.#synchronizeInternal();
+        return this.#synchronizeInternal(sequence);
       } catch (error) {
-        return this.#recoverSynchronizationFailure(error);
+        return this.#recoverSynchronizationFailure(sequence, error);
       }
     });
   }
 
-  #buildSnapshotView(productSnapshot: unknown | null): ProductPresentationFlowSnapshot {
+  #buildSnapshotView(
+    sequence: number,
+    productSnapshot: unknown | null,
+  ): ProductPresentationFlowSnapshot {
     const content = this.#presentationContent;
     const viewModel = productSnapshot === null || content === null
       ? null
@@ -846,9 +946,10 @@ export class ProductPresentationFlow {
         ...content,
         lastMatchResult: this.#lastMatchResult,
       });
+    this.#assertCurrentOperationCommit(sequence, 'ProductPresentationFlow view model');
     const runtimeState = this.#matchRuntime === null ? null : this.#matchRuntime.getState();
-    this.#assertNoSwallowedReentry();
-    return Object.freeze({
+    this.#assertCurrentOperationCommit(sequence, 'ProductPresentationFlow match runtime state');
+    const snapshot = Object.freeze({
       state: this.#state,
       pendingIntent: this.#pendingIntent !== null,
       pendingIntentKey: this.#pendingIntentKey,
@@ -861,49 +962,57 @@ export class ProductPresentationFlow {
       matchRuntimeState: runtimeState,
       failed: this.#lastError !== null,
     });
+    this.#assertCurrentOperationCommit(sequence, 'ProductPresentationFlow snapshot publication');
+    return snapshot;
   }
 
-  #snapshotView(): ProductPresentationFlowSnapshot {
-    const productSnapshot = this.#controller === null ? null : this.#controllerSnapshot();
-    return this.#buildSnapshotView(productSnapshot);
+  #snapshotView(sequence: number): ProductPresentationFlowSnapshot {
+    const productSnapshot = this.#controller === null ? null : this.#controllerSnapshot(sequence);
+    return this.#buildSnapshotView(sequence, productSnapshot);
   }
 
   getSnapshot(): ProductPresentationFlowSnapshot {
-    return this.#run('getSnapshot', () => this.#snapshotView());
+    return this.#run('snapshot-read', (sequence) => this.#snapshotView(sequence));
   }
 
   destroy(): void {
-    if (
-      this.#state === PRODUCT_PRESENTATION_FLOW_STATE.DESTROYED
-      && this.#dispatcher === null
-      && this.#matchRuntime === null
-    ) return;
-    this.#enter('destroy');
-    const errors: Error[] = [];
-    try {
+    this.#run('destroy', (sequence) => {
+      if (
+        this.#state === PRODUCT_PRESENTATION_FLOW_STATE.DESTROYED
+        && this.#dispatcher === null
+        && this.#matchRuntime === null
+        && this.#pendingMatchRuntimeCandidate === null
+      ) return;
       this.#destroyRequested = true;
-      this.#controller = null;
-      this.#inputSource = null;
-      this.#presentationContent = null;
-      this.#matchRuntimeFactory = null;
-      this.#frameProjector = null;
-      this.#matchPresentationContent = null;
-      this.#lastMatchFrame = null;
-      this.#lastMatchResult = null;
-      try { this.#disposeMatchRuntime(); } catch (error) {
+      const errors: Error[] = [];
+      try { this.#disposeMatchRuntime(sequence); } catch (error) {
         errors.push(safelyWrapThrownError(error, 'ProductPresentationFlow Match 清理失败'));
       }
-      const dispatcher = this.#dispatcher;
-      if (dispatcher !== null) {
+      if (this.#reentryError === null && this.#pendingMatchRuntimeCandidate !== null) {
+        try {
+          errors.push(...this.#disposePendingMatchRuntimeCandidate(sequence));
+        } catch (error) {
+          errors.push(safelyWrapThrownError(
+            error,
+            'ProductPresentationFlow Match候选清理失败',
+          ));
+        }
+      }
+      if (this.#reentryError === null && this.#dispatcher !== null) {
+        const dispatcher = this.#dispatcher;
         try {
           dispatcher.destroy();
+          this.#assertCurrentOperationCommit(
+            sequence,
+            'ProductPresentationFlow dispatcher destroy',
+          );
           this.#dispatcher = null;
-          this.#assertNoSwallowedReentry();
         } catch (error) {
           errors.push(safelyWrapThrownError(error, 'ProductPresentationFlow Dispatcher 清理失败'));
         }
       }
-      this.#cleanupIncomplete = errors.length > 0;
+      this.#cleanupIncomplete = errors.length > 0 || this.#reentryError !== null;
+      this.#assertCurrentOperationCommit(sequence, 'ProductPresentationFlow destroy cleanup');
       if (errors.length > 0) {
         const failure = combineCleanupFailure(
           new Error('ProductPresentationFlow 清理未完整完成。'),
@@ -914,11 +1023,31 @@ export class ProductPresentationFlow {
         this.#state = PRODUCT_PRESENTATION_FLOW_STATE.FAILED;
         throw failure;
       }
+      this.#controller = null;
+      this.#inputSource = null;
+      this.#presentationContent = null;
+      this.#matchRuntimeFactory = null;
+      this.#frameProjector = null;
+      this.#matchPresentationContent = null;
+      this.#lastMatchFrame = null;
+      this.#lastMatchResult = null;
       this.#lastError = null;
+      this.#cleanupIncomplete = false;
       this.#state = PRODUCT_PRESENTATION_FLOW_STATE.DESTROYED;
-    } finally {
-      this.#cleanupIncomplete = errors.length > 0;
-      this.#leave();
-    }
+    });
   }
 }
+
+export const PRODUCT_PRESENTATION_FLOW_OPERATION_POLICY = Object.freeze({
+  operationGuardPrecedesLifecycleIntentAndSnapshotValidation: true as const,
+  stickyReentryUsesMonotonicSequenceAndFirstError: true as const,
+  controllerDispatcherAndMatchRuntimeCallbacksCheckedBeforeFlowPublication: true as const,
+  pendingIntentPublishesAfterDispatcherPromiseCapture: true as const,
+  asynchronousIntentSettlementUsesIndependentOperation: true as const,
+  matchFrameResultAndSnapshotPublishAfterCallbackClosure: true as const,
+  failedMatchRuntimeConstructionRetainsRetryOwnership: true as const,
+  cleanupReentryRetainsCurrentAndLaterFlowOwners: true as const,
+  destroyFailuresRetainRetryOwnership: true as const,
+  flowDoesNotWriteMatchAuthorityOrAddProductScreens: true as const,
+  validationStatus: 'not-run' as const,
+});

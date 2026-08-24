@@ -1,3 +1,4 @@
+import { assertSynchronousReturn as rejectThenable } from '@number-strategy-jump/arena-contracts';
 import {
   type ProductSessionViewModel,
   type ProductUiSceneAction,
@@ -12,6 +13,7 @@ import {
 export const WEB_PRODUCT_UI_SURFACE_STATE = Object.freeze({
   CREATED: 'created',
   READY: 'ready',
+  DISPOSE_INCOMPLETE: 'dispose-incomplete',
   DISPOSED: 'disposed',
 });
 
@@ -21,6 +23,29 @@ type WebProductUiSurfaceState = typeof WEB_PRODUCT_UI_SURFACE_STATE[
 type ProductIntent = Readonly<Record<string, unknown>>;
 type IntentHandler = (intent: ProductIntent) => unknown;
 type IntentRejectedHandler = (error: unknown, intent: ProductIntent) => unknown;
+type IntentDispatchOwner = Readonly<{
+  sequence: number;
+  intent: ProductIntent;
+}>;
+type IntentBindingOwner = {
+  readonly listener: (event: Event) => void;
+  active: boolean;
+};
+type WebProductUiSurfaceOperation =
+  | 'state-read'
+  | 'load'
+  | 'render'
+  | 'resize'
+  | 'input-viewport-read'
+  | 'hit-test'
+  | 'present'
+  | 'composite-read'
+  | 'intent-bind'
+  | 'intent-unbind'
+  | 'intent-launch'
+  | 'intent-settlement'
+  | 'debug-read'
+  | 'dispose';
 type WeaponComparisonKind = 'main' | 'behavior' | 'context';
 type WeaponComparisonRow = Readonly<{
   row: ProductUiSceneWeaponComparisonRow;
@@ -135,8 +160,16 @@ export class WebProductUiSurface {
   #nodes: UiNodes | null;
   readonly #intentByElement: WeakMap<Element, ProductIntent>;
   #state: WebProductUiSurfaceState;
-  #bindingCleanup: (() => void) | null;
-  #dispatching: boolean;
+  #bindingOwner: IntentBindingOwner | null;
+  #dispatchOwner: IntentDispatchOwner | null;
+  #dispatchSequence: number;
+  #operation: WebProductUiSurfaceOperation | null;
+  #operationSequence: number;
+  #reentrySequence: number;
+  #reentryError: Error | null;
+  #observationDepth: number;
+  #disposeRootHidden: boolean;
+  #disposeCanvasRestored: boolean;
   #lastViewModel: ProductSessionViewModel | null;
   #lastModel: WebProductSceneModel | null;
   #lastRenderKey: string | null;
@@ -160,8 +193,16 @@ export class WebProductUiSurface {
     this.#nodes = null;
     this.#intentByElement = new WeakMap();
     this.#state = WEB_PRODUCT_UI_SURFACE_STATE.CREATED;
-    this.#bindingCleanup = null;
-    this.#dispatching = false;
+    this.#bindingOwner = null;
+    this.#dispatchOwner = null;
+    this.#dispatchSequence = 0;
+    this.#operation = null;
+    this.#operationSequence = 0;
+    this.#reentrySequence = 0;
+    this.#reentryError = null;
+    this.#observationDepth = 0;
+    this.#disposeRootHidden = false;
+    this.#disposeCanvasRestored = false;
     this.#lastViewModel = null;
     this.#lastModel = null;
     this.#lastRenderKey = null;
@@ -170,7 +211,117 @@ export class WebProductUiSurface {
   }
 
   get state(): WebProductUiSurfaceState {
-    return this.#state;
+    return this.#runOperation('state-read', () => this.#state);
+  }
+
+  #guardObservationReentry(operation: WebProductUiSurfaceOperation): void {
+    if (this.#observationDepth > 0) {
+      throw new Error(`WebProductUiSurface observer期间不能执行${operation}。`);
+    }
+  }
+
+  #guardReentry(operation: WebProductUiSurfaceOperation): void {
+    if (this.#operation === null) return;
+    this.#reentrySequence += 1;
+    this.#reentryError ??= new Error(
+      `WebProductUiSurface ${this.#operation}期间拒绝${operation}重入。`,
+    );
+    throw this.#reentryError;
+  }
+
+  #assertOperationOwner(
+    sequence: number,
+    operation: WebProductUiSurfaceOperation,
+    label: string,
+  ): void {
+    if (this.#operation !== operation || this.#operationSequence !== sequence) {
+      throw new Error(`${label}缺少当前WebProductUiSurface operation所有权。`);
+    }
+  }
+
+  #assertCurrentOperationCommit(
+    sequence: number,
+    operation: WebProductUiSurfaceOperation,
+    label: string,
+  ): void {
+    this.#assertOperationOwner(sequence, operation, label);
+    if (this.#reentryError !== null) throw this.#reentryError;
+  }
+
+  #runOperation<T>(
+    operation: WebProductUiSurfaceOperation,
+    run: (sequence: number) => T,
+  ): T {
+    this.#guardObservationReentry(operation);
+    this.#guardReentry(operation);
+    this.#operation = operation;
+    this.#operationSequence += 1;
+    const sequence = this.#operationSequence;
+    this.#reentryError = null;
+    let result!: T;
+    let failure: unknown = null;
+    let failed = false;
+    try {
+      result = run(sequence);
+      this.#assertCurrentOperationCommit(
+        sequence,
+        operation,
+        `WebProductUiSurface ${operation}`,
+      );
+    } catch (error) {
+      failed = true;
+      failure = error;
+    } finally {
+      const reentryError = this.#reentryError;
+      this.#operation = null;
+      this.#reentryError = null;
+      if (reentryError !== null && failure !== reentryError) {
+        throw new AggregateError(
+          failed ? [failure, reentryError] : [reentryError],
+          `WebProductUiSurface ${operation}失败关闭且发生同步重入。`,
+        );
+      }
+    }
+    if (failed) throw failure;
+    return result;
+  }
+
+  #callChecked<T>(
+    sequence: number,
+    operation: WebProductUiSurfaceOperation,
+    callback: () => T,
+    label: string,
+  ): T {
+    try {
+      const result = callback();
+      rejectThenable(result, label);
+      this.#assertCurrentOperationCommit(sequence, operation, label);
+      return result;
+    } catch (error) {
+      try {
+        this.#assertCurrentOperationCommit(sequence, operation, label);
+      } catch (reentryError) {
+        if (error !== reentryError) {
+          throw new AggregateError(
+            [error, reentryError],
+            `${label}失败且发生WebProductUiSurface重入。`,
+          );
+        }
+        throw reentryError;
+      }
+      throw error;
+    }
+  }
+
+  #containObservation<T>(observe: () => T): T {
+    const reentryError = this.#reentryError;
+    this.#observationDepth += 1;
+    try {
+      return observe();
+    } finally {
+      this.#observationDepth -= 1;
+      this.#reentryError = reentryError;
+    }
   }
 
   #assertReady(): void {
@@ -184,49 +335,64 @@ export class WebProductUiSurface {
     return this.#nodes;
   }
 
-  async load(): Promise<this> {
-    if (this.#state === WEB_PRODUCT_UI_SURFACE_STATE.DISPOSED) {
-      throw new Error('WebProductUiSurface 已销毁。');
-    }
-    if (this.#state === WEB_PRODUCT_UI_SURFACE_STATE.READY) return this;
-    const nodes: UiNodes = Object.freeze({
-      kicker: requiredElement<HTMLElement>(this.#root, '#product-kicker'),
-      title: requiredElement<HTMLElement>(this.#root, '#product-title'),
-      body: requiredElement<HTMLElement>(this.#root, '#product-body'),
-      live: requiredElement<HTMLElement>(this.#root, '#product-live'),
-      primary: requiredElement<HTMLButtonElement>(this.#root, '#product-primary-action'),
-      secondary: requiredElement<HTMLButtonElement>(this.#root, '#product-secondary-action'),
-      heroImage: requiredElement<HTMLImageElement>(this.#root, '#product-hero-image'),
-      characterList: requiredElement<HTMLElement>(this.#root, '#product-character-list'),
-      weaponList: this.#root.querySelector<HTMLElement>('#product-weapon-list'),
-      weaponComparison: this.#root.querySelector<HTMLElement>('#product-weapon-comparison'),
-      weaponComparisonDetails: this.#root.querySelector<HTMLElement>('#product-weapon-comparison-details'),
-      matchingPlayerImage: requiredElement<HTMLImageElement>(this.#root, '#product-matching-player-image'),
-      matchingPlayerName: requiredElement<HTMLElement>(this.#root, '#product-matching-player-name'),
-      matchingOpponentImage: requiredElement<HTMLImageElement>(this.#root, '#product-matching-opponent-image'),
-      matchingOpponentName: requiredElement<HTMLElement>(this.#root, '#product-matching-opponent-name'),
-      resultImage: requiredElement<HTMLImageElement>(this.#root, '#product-result-image'),
-      resultMark: requiredElement<HTMLElement>(this.#root, '#product-result-mark'),
-      rewardValue: requiredElement<HTMLElement>(this.#root, '#product-reward-value'),
-      rewardImage: requiredElement<HTMLImageElement>(this.#root, '#product-reward-image'),
-      rewardMark: requiredElement<HTMLElement>(this.#root, '#product-reward-mark'),
-      rewardSceneValue: requiredElement<HTMLElement>(this.#root, '#product-reward-scene-value'),
-      unlockImage: requiredElement<HTMLImageElement>(this.#root, '#product-unlock-image'),
-      unlockName: requiredElement<HTMLElement>(this.#root, '#product-unlock-name'),
-      errorMessage: requiredElement<HTMLElement>(this.#root, '#product-error-message'),
-      visuals: [...this.#root.querySelectorAll<HTMLElement>('[data-product-visual]')],
+  load(): Promise<this> {
+    return this.#runOperation('load', (sequence) => {
+      if (
+        this.#state === WEB_PRODUCT_UI_SURFACE_STATE.DISPOSED
+        || this.#state === WEB_PRODUCT_UI_SURFACE_STATE.DISPOSE_INCOMPLETE
+      ) {
+        throw new Error(`WebProductUiSurface 当前状态不可加载：${this.#state}。`);
+      }
+      if (this.#state === WEB_PRODUCT_UI_SURFACE_STATE.READY) return Promise.resolve(this);
+      const nodes: UiNodes = Object.freeze({
+        kicker: requiredElement<HTMLElement>(this.#root, '#product-kicker'),
+        title: requiredElement<HTMLElement>(this.#root, '#product-title'),
+        body: requiredElement<HTMLElement>(this.#root, '#product-body'),
+        live: requiredElement<HTMLElement>(this.#root, '#product-live'),
+        primary: requiredElement<HTMLButtonElement>(this.#root, '#product-primary-action'),
+        secondary: requiredElement<HTMLButtonElement>(this.#root, '#product-secondary-action'),
+        heroImage: requiredElement<HTMLImageElement>(this.#root, '#product-hero-image'),
+        characterList: requiredElement<HTMLElement>(this.#root, '#product-character-list'),
+        weaponList: this.#root.querySelector<HTMLElement>('#product-weapon-list'),
+        weaponComparison: this.#root.querySelector<HTMLElement>('#product-weapon-comparison'),
+        weaponComparisonDetails: this.#root.querySelector<HTMLElement>('#product-weapon-comparison-details'),
+        matchingPlayerImage: requiredElement<HTMLImageElement>(this.#root, '#product-matching-player-image'),
+        matchingPlayerName: requiredElement<HTMLElement>(this.#root, '#product-matching-player-name'),
+        matchingOpponentImage: requiredElement<HTMLImageElement>(this.#root, '#product-matching-opponent-image'),
+        matchingOpponentName: requiredElement<HTMLElement>(this.#root, '#product-matching-opponent-name'),
+        resultImage: requiredElement<HTMLImageElement>(this.#root, '#product-result-image'),
+        resultMark: requiredElement<HTMLElement>(this.#root, '#product-result-mark'),
+        rewardValue: requiredElement<HTMLElement>(this.#root, '#product-reward-value'),
+        rewardImage: requiredElement<HTMLImageElement>(this.#root, '#product-reward-image'),
+        rewardMark: requiredElement<HTMLElement>(this.#root, '#product-reward-mark'),
+        rewardSceneValue: requiredElement<HTMLElement>(this.#root, '#product-reward-scene-value'),
+        unlockImage: requiredElement<HTMLImageElement>(this.#root, '#product-unlock-image'),
+        unlockName: requiredElement<HTMLElement>(this.#root, '#product-unlock-name'),
+        errorMessage: requiredElement<HTMLElement>(this.#root, '#product-error-message'),
+        visuals: [...this.#root.querySelectorAll<HTMLElement>('[data-product-visual]')],
+      });
+      this.#assertCurrentOperationCommit(
+        sequence,
+        'load',
+        'WebProductUiSurface load DOM discovery',
+      );
+      nodes.primary.dataset.productIntent = 'primary';
+      nodes.secondary.dataset.productIntent = 'secondary';
+      this.#assertCurrentOperationCommit(
+        sequence,
+        'load',
+        'WebProductUiSurface load DOM initialization',
+      );
+      this.#nodes = nodes;
+      this.#state = WEB_PRODUCT_UI_SURFACE_STATE.READY;
+      return Promise.resolve(this);
     });
-    this.#nodes = nodes;
-    nodes.primary.dataset.productIntent = 'primary';
-    nodes.secondary.dataset.productIntent = 'secondary';
-    this.#state = WEB_PRODUCT_UI_SURFACE_STATE.READY;
-    return this;
   }
 
   #setIntent(element: HTMLButtonElement, action: ProductUiSceneAction | null): void {
     const available = action !== null && action !== undefined;
     element.hidden = !available;
-    element.disabled = !available || !action.enabled || this.#dispatching;
+    element.disabled = !available || !action.enabled || this.#dispatchOwner !== null;
     element.setAttribute('aria-disabled', String(element.disabled));
     if (!available) {
       this.#intentByElement.delete(element);
@@ -246,7 +412,7 @@ export class WebProductUiSurface {
     // role=radio + aria-checked already announces selection. Keep the name
     // stable while a click commits so assistive tech and automation retain it.
     button.setAttribute('aria-label', card.name);
-    button.disabled = !card.enabled || this.#dispatching;
+    button.disabled = !card.enabled || this.#dispatchOwner !== null;
     setImage(image, card.asset, '');
     image.draggable = false;
     setText(label, card.name);
@@ -605,238 +771,512 @@ export class WebProductUiSurface {
     }
   }
 
-  #syncInteractive(): void {
-    if (!this.#lastModel) return;
+  #syncInteractive(
+    model: WebProductSceneModel | null = this.#lastModel,
+    viewModel: ProductSessionViewModel | null = this.#lastViewModel,
+  ): void {
+    if (!model) return;
     const nodes = this.#readyNodes();
-    this.#root.setAttribute('aria-busy', String(this.#lastModel.busy || this.#dispatching));
-    this.#setIntent(nodes.primary, this.#lastModel.primaryAction);
-    this.#setIntent(nodes.secondary, this.#lastModel.secondaryAction);
+    this.#root.setAttribute('aria-busy', String(
+      model.busy || this.#dispatchOwner !== null,
+    ));
+    this.#setIntent(nodes.primary, model.primaryAction);
+    this.#setIntent(nodes.secondary, model.secondaryAction);
     for (const element of nodes.characterList.querySelectorAll<HTMLButtonElement>('button')) {
-      element.disabled = this.#dispatching || !this.#lastViewModel?.inputEnabled;
+      element.disabled = this.#dispatchOwner !== null || !viewModel?.inputEnabled;
     }
+  }
+
+  #reportIntentRejected(
+    onRejected: IntentRejectedHandler,
+    error: unknown,
+    intent: ProductIntent,
+  ): void {
+    try {
+      const observed = this.#containObservation(() => onRejected(error, intent));
+      if (observed instanceof Promise) void observed.catch(() => undefined);
+    } catch {
+      // Intent rejection diagnostics cannot own UI lifecycle.
+    }
+  }
+
+  #settleIntentDispatch(
+    owner: IntentDispatchOwner,
+    onRejected: IntentRejectedHandler,
+    error: unknown | null,
+  ): void {
+    this.#runOperation('intent-settlement', (sequence) => {
+      if (this.#dispatchOwner !== owner) return;
+      if (error !== null) this.#reportIntentRejected(onRejected, error, owner.intent);
+      this.#assertCurrentOperationCommit(
+        sequence,
+        'intent-settlement',
+        'WebProductUiSurface intent rejection observation',
+      );
+      if (this.#dispatchOwner !== owner) return;
+      this.#dispatchOwner = null;
+      if (this.#state === WEB_PRODUCT_UI_SURFACE_STATE.READY) {
+        try {
+          this.#syncInteractive();
+          this.#assertCurrentOperationCommit(
+            sequence,
+            'intent-settlement',
+            'WebProductUiSurface intent settlement DOM commit',
+          );
+        } catch (settlementDomError) {
+          this.#lastRenderKey = null;
+          throw settlementDomError;
+        }
+      }
+    });
+  }
+
+  #launchIntentDispatch(
+    intent: ProductIntent,
+    onIntent: IntentHandler,
+    onRejected: IntentRejectedHandler,
+  ): void {
+    this.#runOperation('intent-launch', (operationSequence) => {
+      if (
+        this.#state !== WEB_PRODUCT_UI_SURFACE_STATE.READY
+        || this.#dispatchOwner !== null
+      ) return;
+      const dispatchSequence = this.#dispatchSequence + 1;
+      if (!Number.isSafeInteger(dispatchSequence)) {
+        this.#reportIntentRejected(
+          onRejected,
+          new RangeError('WebProductUiSurface intent序号达到安全上限。'),
+          intent,
+        );
+        return;
+      }
+      const owner = Object.freeze({ sequence: dispatchSequence, intent });
+      this.#dispatchSequence = dispatchSequence;
+      this.#dispatchOwner = owner;
+      try {
+        this.#syncInteractive();
+        this.#assertCurrentOperationCommit(
+          operationSequence,
+          'intent-launch',
+          'WebProductUiSurface intent launch DOM commit',
+        );
+      } catch (launchDomError) {
+        if (this.#dispatchOwner === owner) this.#dispatchOwner = null;
+        this.#lastRenderKey = null;
+        throw launchDomError;
+      }
+      const operation = Promise.resolve()
+        .then(() => {
+          if (
+            this.#dispatchOwner !== owner
+            || this.#state !== WEB_PRODUCT_UI_SURFACE_STATE.READY
+          ) return undefined;
+          return onIntent(intent);
+        })
+        .then(
+          () => this.#settleIntentDispatch(owner, onRejected, null),
+          (error: unknown) => this.#settleIntentDispatch(owner, onRejected, error),
+        )
+        .catch((error: unknown) => {
+          this.#reportIntentRejected(onRejected, error, intent);
+        });
+      void operation;
+    });
   }
 
   render(viewModel: ProductSessionViewModel): boolean {
-    this.#assertReady();
-    const model = createWebProductSceneModel(viewModel);
-    const renderKey = [
-      model.revision,
-      model.scene,
-      viewModel.locale,
-      viewModel.activeState,
-      viewModel.visibleState,
-      viewModel.inputEnabled,
-      viewModel.suspended,
-      model.characterCards.find(({ selected }) => selected)?.id ?? '',
-      model.weaponCards.map((card) => [
-        card.id,
-        card.coreVerb,
-        card.tradeoff,
-        card.counterplay,
-        card.stats.map((stat) => `${stat.id}=${stat.value}`).join(','),
-        card.behaviorStats.map((stat) => `${stat.id}=${stat.value}`).join(','),
-        card.contexts.map((context) => `${context.id}:${context.stats.map((stat) => stat.value).join(',')}`).join(';'),
-        card.comparisonFacts.map((fact) => `${fact.id}=${fact.value}`).join(','),
-        card.contextComparisonFacts.map((fact) => `${fact.id}=${fact.value}`).join(','),
-      ].join(':')).join('|'),
-      model.primaryAction?.enabled ?? false,
-      model.primaryAction?.label ?? '',
-      model.secondaryAction?.enabled ?? false,
-      model.secondaryAction?.label ?? '',
-      model.title,
-      model.body,
-      model.announcement,
-      model.outcome ?? '',
-      model.experienceDelta ?? '',
-      model.unlockName,
-      model.errorMessage,
-    ].join(':');
-    const unchanged = this.#lastRenderKey === renderKey;
-    this.#lastViewModel = viewModel;
-    this.#lastModel = model;
-    this.#lastRenderKey = renderKey;
-    this.#root.hidden = model.gameplay;
-    this.#root.dataset.scene = model.scene;
-    this.#root.dataset.productState = viewModel.activeState;
-    this.#root.lang = viewModel.locale;
-    this.#canvas.setAttribute('aria-hidden', String(!model.gameplay));
-    this.#canvas.tabIndex = model.gameplay ? 0 : -1;
-    if (model.gameplay) return true;
-    if (unchanged) return true;
-    const nodes = this.#readyNodes();
-    setText(nodes.kicker, model.kicker);
-    setText(nodes.title, model.title);
-    setText(nodes.body, model.body);
-    nodes.body.hidden = model.body.length === 0;
-    setText(nodes.live, model.announcement);
-    for (const visual of nodes.visuals) {
-      visual.hidden = visual.dataset.productVisual !== model.scene;
-    }
-    setImage(nodes.heroImage, model.lobbyAsset, '跑酷学徒和发条方块站在竞技场平台上');
-    this.#syncCharacterCards(model);
-    this.#syncWeaponCards(model);
-    this.#syncWeaponComparison(model);
-    setImage(
-      nodes.matchingPlayerImage,
-      model.selectedCharacterAsset,
-      model.selectedCharacterName,
-    );
-    setText(nodes.matchingPlayerName, model.selectedCharacterName);
-    setImage(nodes.matchingOpponentImage, model.opponentPortraitAsset, '等待中的挑战者');
-    setText(nodes.matchingOpponentName, model.opponentName);
-    setImage(nodes.resultImage, model.selectedCharacterAsset, model.selectedCharacterName);
-    setText(
-      nodes.resultMark,
-      model.outcome === 'win' ? 'WIN' : model.outcome === 'draw' ? 'DRAW' : 'NEXT',
-    );
-    setText(
-      nodes.rewardValue,
-      model.experienceDelta === null ? '' : `EXP +${model.experienceDelta}`,
-    );
-    setImage(nodes.rewardImage, model.selectedCharacterAsset, model.selectedCharacterName);
-    setText(
-      nodes.rewardMark,
-      model.outcome === 'win' ? 'WIN' : model.outcome === 'draw' ? 'DRAW' : 'NEXT',
-    );
-    setText(
-      nodes.rewardSceneValue,
-      model.experienceDelta === null ? '奖励结算完成' : `EXP +${model.experienceDelta}`,
-    );
-    setImage(nodes.unlockImage, model.unlockAsset, model.unlockName || '新内容');
-    setText(nodes.unlockName, model.unlockName);
-    setText(nodes.errorMessage, model.errorMessage || model.body);
-    this.#syncInteractive();
-    return true;
+    return this.#runOperation('render', (sequence) => {
+      this.#assertReady();
+      const model = createWebProductSceneModel(viewModel);
+      const renderKey = [
+        model.revision,
+        model.scene,
+        viewModel.locale,
+        viewModel.activeState,
+        viewModel.visibleState,
+        viewModel.inputEnabled,
+        viewModel.suspended,
+        model.characterCards.find(({ selected }) => selected)?.id ?? '',
+        model.weaponCards.map((card) => [
+          card.id,
+          card.coreVerb,
+          card.tradeoff,
+          card.counterplay,
+          card.stats.map((stat) => `${stat.id}=${stat.value}`).join(','),
+          card.behaviorStats.map((stat) => `${stat.id}=${stat.value}`).join(','),
+          card.contexts.map((context) => `${context.id}:${context.stats.map((stat) => stat.value).join(',')}`).join(';'),
+          card.comparisonFacts.map((fact) => `${fact.id}=${fact.value}`).join(','),
+          card.contextComparisonFacts.map((fact) => `${fact.id}=${fact.value}`).join(','),
+        ].join(':')).join('|'),
+        model.primaryAction?.enabled ?? false,
+        model.primaryAction?.label ?? '',
+        model.secondaryAction?.enabled ?? false,
+        model.secondaryAction?.label ?? '',
+        model.title,
+        model.body,
+        model.announcement,
+        model.outcome ?? '',
+        model.experienceDelta ?? '',
+        model.unlockName,
+        model.errorMessage,
+      ].join(':');
+      const unchanged = this.#lastRenderKey === renderKey;
+      this.#root.hidden = model.gameplay;
+      this.#root.dataset.scene = model.scene;
+      this.#root.dataset.productState = viewModel.activeState;
+      this.#root.lang = viewModel.locale;
+      this.#canvas.setAttribute('aria-hidden', String(!model.gameplay));
+      this.#canvas.tabIndex = model.gameplay ? 0 : -1;
+      this.#assertCurrentOperationCommit(
+        sequence,
+        'render',
+        'WebProductUiSurface render base DOM commit',
+      );
+      if (model.gameplay || unchanged) {
+        this.#lastViewModel = viewModel;
+        this.#lastModel = model;
+        this.#lastRenderKey = renderKey;
+        return true;
+      }
+      const nodes = this.#readyNodes();
+      setText(nodes.kicker, model.kicker);
+      setText(nodes.title, model.title);
+      setText(nodes.body, model.body);
+      nodes.body.hidden = model.body.length === 0;
+      setText(nodes.live, model.announcement);
+      for (const visual of nodes.visuals) {
+        visual.hidden = visual.dataset.productVisual !== model.scene;
+      }
+      setImage(nodes.heroImage, model.lobbyAsset, '跑酷学徒和发条方块站在竞技场平台上');
+      this.#assertCurrentOperationCommit(
+        sequence,
+        'render',
+        'WebProductUiSurface render heading and visual DOM commit',
+      );
+      this.#syncCharacterCards(model);
+      this.#syncWeaponCards(model);
+      this.#syncWeaponComparison(model);
+      this.#assertCurrentOperationCommit(
+        sequence,
+        'render',
+        'WebProductUiSurface render cards and comparison DOM commit',
+      );
+      setImage(
+        nodes.matchingPlayerImage,
+        model.selectedCharacterAsset,
+        model.selectedCharacterName,
+      );
+      setText(nodes.matchingPlayerName, model.selectedCharacterName);
+      setImage(nodes.matchingOpponentImage, model.opponentPortraitAsset, '等待中的挑战者');
+      setText(nodes.matchingOpponentName, model.opponentName);
+      setImage(nodes.resultImage, model.selectedCharacterAsset, model.selectedCharacterName);
+      setText(
+        nodes.resultMark,
+        model.outcome === 'win' ? 'WIN' : model.outcome === 'draw' ? 'DRAW' : 'NEXT',
+      );
+      setText(
+        nodes.rewardValue,
+        model.experienceDelta === null ? '' : `EXP +${model.experienceDelta}`,
+      );
+      setImage(nodes.rewardImage, model.selectedCharacterAsset, model.selectedCharacterName);
+      setText(
+        nodes.rewardMark,
+        model.outcome === 'win' ? 'WIN' : model.outcome === 'draw' ? 'DRAW' : 'NEXT',
+      );
+      setText(
+        nodes.rewardSceneValue,
+        model.experienceDelta === null ? '奖励结算完成' : `EXP +${model.experienceDelta}`,
+      );
+      setImage(nodes.unlockImage, model.unlockAsset, model.unlockName || '新内容');
+      setText(nodes.unlockName, model.unlockName);
+      setText(nodes.errorMessage, model.errorMessage || model.body);
+      this.#assertCurrentOperationCommit(
+        sequence,
+        'render',
+        'WebProductUiSurface render result and reward DOM commit',
+      );
+      this.#syncInteractive(model, viewModel);
+      this.#assertCurrentOperationCommit(
+        sequence,
+        'render',
+        'WebProductUiSurface render interactive DOM commit',
+      );
+      this.#lastViewModel = viewModel;
+      this.#lastModel = model;
+      this.#lastRenderKey = renderKey;
+      return true;
+    });
   }
 
   resize(viewport: ViewportLike = {}, inputViewport: ViewportLike = {}): boolean {
-    if (this.#state === WEB_PRODUCT_UI_SURFACE_STATE.DISPOSED) return false;
-    const width = positiveFinite(
-      viewportDimension(inputViewport, 'width'),
-      positiveFinite(viewportDimension(viewport, 'width')),
-    );
-    const height = positiveFinite(
-      viewportDimension(inputViewport, 'height'),
-      positiveFinite(viewportDimension(viewport, 'height')),
-    );
-    this.#inputViewport = Object.freeze({ width, height });
-    this.#root.style.setProperty(
-      '--arena-viewport-width',
-      `${positiveFinite(viewportDimension(viewport, 'width'), width)}px`,
-    );
-    this.#root.style.setProperty(
-      '--arena-viewport-height',
-      `${positiveFinite(viewportDimension(viewport, 'height'), height)}px`,
-    );
-    return true;
+    return this.#runOperation('resize', (sequence) => {
+      if (
+        this.#state === WEB_PRODUCT_UI_SURFACE_STATE.DISPOSED
+        || this.#state === WEB_PRODUCT_UI_SURFACE_STATE.DISPOSE_INCOMPLETE
+      ) return false;
+      const width = positiveFinite(
+        viewportDimension(inputViewport, 'width'),
+        positiveFinite(viewportDimension(viewport, 'width')),
+      );
+      const height = positiveFinite(
+        viewportDimension(inputViewport, 'height'),
+        positiveFinite(viewportDimension(viewport, 'height')),
+      );
+      const nextInputViewport = Object.freeze({ width, height });
+      this.#callChecked(
+        sequence,
+        'resize',
+        () => this.#root.style.setProperty(
+          '--arena-viewport-width',
+          `${positiveFinite(viewportDimension(viewport, 'width'), width)}px`,
+        ),
+        'WebProductUiSurface resize width DOM commit',
+      );
+      this.#callChecked(
+        sequence,
+        'resize',
+        () => this.#root.style.setProperty(
+          '--arena-viewport-height',
+          `${positiveFinite(viewportDimension(viewport, 'height'), height)}px`,
+        ),
+        'WebProductUiSurface resize height DOM commit',
+      );
+      this.#inputViewport = nextInputViewport;
+      return true;
+    });
   }
 
   getInputViewport(fallback: ViewportLike = {}): Readonly<{ width: number; height: number }> {
-    if (this.#inputViewport) return this.#inputViewport;
-    return Object.freeze({
-      width: positiveFinite(viewportDimension(fallback, 'width')),
-      height: positiveFinite(viewportDimension(fallback, 'height')),
+    return this.#runOperation('input-viewport-read', () => {
+      if (this.#inputViewport) return this.#inputViewport;
+      return Object.freeze({
+        width: positiveFinite(viewportDimension(fallback, 'width')),
+        height: positiveFinite(viewportDimension(fallback, 'height')),
+      });
     });
   }
 
   hitTestUi(): null {
-    return null;
+    return this.#runOperation('hit-test', () => null);
   }
 
   present(): boolean {
-    this.#assertReady();
-    return true;
-  }
-
-  requiresCompositeFrame(): boolean {
-    this.#assertReady();
-    return false;
-  }
-
-  bindIntent(optionsValue: unknown = {}): () => void {
-    this.#assertReady();
-    if (!optionsValue || typeof optionsValue !== 'object' || Array.isArray(optionsValue)) {
-      throw new TypeError('WebProductUiSurface bindIntent options 必须是普通对象。');
-    }
-    const prototype = Object.getPrototypeOf(optionsValue);
-    if (prototype !== Object.prototype && prototype !== null) {
-      throw new TypeError('WebProductUiSurface bindIntent options 必须是普通对象。');
-    }
-    const descriptors = Object.getOwnPropertyDescriptors(optionsValue);
-    for (const key of Reflect.ownKeys(descriptors)) {
-      if (typeof key !== 'string' || (key !== 'onIntent' && key !== 'onRejected')) {
-        throw new RangeError(`WebProductUiSurface bindIntent 不支持 ${String(key)}。`);
-      }
-      if (!Object.hasOwn(descriptors[key]!, 'value')) {
-        throw new TypeError(`WebProductUiSurface bindIntent.${key} 不能是访问器。`);
-      }
-    }
-    const onIntent = requiredFunction<IntentHandler>(
-      descriptors.onIntent?.value,
-      'WebProductUiSurface.onIntent',
-    );
-    const onRejected = descriptors.onRejected === undefined
-      ? (() => {}) as IntentRejectedHandler
-      : requiredFunction<IntentRejectedHandler>(
-        descriptors.onRejected.value,
-        'WebProductUiSurface.onRejected',
-      );
-    if (this.#bindingCleanup !== null) {
-      throw new Error('WebProductUiSurface intent 已绑定。');
-    }
-    const listener = (event: Event) => {
-      const target = event.target;
-      const element = target && typeof (target as Element).closest === 'function'
-        ? (target as Element).closest<HTMLButtonElement>('[data-product-intent]')
-        : null;
-      if (!element || !this.#root.contains(element) || element.disabled || this.#dispatching) return;
-      const intent = this.#intentByElement.get(element);
-      if (!intent) return;
-      this.#dispatching = true;
-      this.#syncInteractive();
-      Promise.resolve()
-        .then(() => onIntent(intent))
-        .catch((error) => {
-          try { onRejected(error, intent); } catch { /* diagnostic only */ }
-        })
-        .finally(() => {
-          if (this.#state === WEB_PRODUCT_UI_SURFACE_STATE.DISPOSED) return;
-          this.#dispatching = false;
-          this.#syncInteractive();
-        });
-    };
-    this.#root.addEventListener('click', listener);
-    let active = true;
-    const cleanup = () => {
-      if (!active) return;
-      this.#root.removeEventListener('click', listener);
-      active = false;
-      if (this.#bindingCleanup === cleanup) this.#bindingCleanup = null;
-    };
-    this.#bindingCleanup = cleanup;
-    return cleanup;
-  }
-
-  getDebugSnapshot(): Readonly<Record<string, unknown>> {
-    return Object.freeze({
-      state: this.#state,
-      scene: this.#lastModel?.scene ?? null,
-      dispatching: this.#dispatching,
-      bound: this.#bindingCleanup !== null,
-      inputViewport: this.#inputViewport,
+    return this.#runOperation('present', () => {
+      this.#assertReady();
+      return true;
     });
   }
 
+  requiresCompositeFrame(): boolean {
+    return this.#runOperation('composite-read', () => {
+      this.#assertReady();
+      return false;
+    });
+  }
+
+  #releaseBindingOwner(
+    sequence: number,
+    operation: WebProductUiSurfaceOperation,
+    owner: IntentBindingOwner,
+  ): void {
+    if (!owner.active) return;
+    this.#callChecked(
+      sequence,
+      operation,
+      () => this.#root.removeEventListener('click', owner.listener),
+      'WebProductUiSurface intent listener removal',
+    );
+    owner.active = false;
+    if (this.#bindingOwner === owner) this.#bindingOwner = null;
+  }
+
+  bindIntent(optionsValue: unknown = {}): () => void {
+    return this.#runOperation('intent-bind', (sequence) => {
+      this.#assertReady();
+      if (!optionsValue || typeof optionsValue !== 'object' || Array.isArray(optionsValue)) {
+        throw new TypeError('WebProductUiSurface bindIntent options 必须是普通对象。');
+      }
+      const prototype = Object.getPrototypeOf(optionsValue);
+      if (prototype !== Object.prototype && prototype !== null) {
+        throw new TypeError('WebProductUiSurface bindIntent options 必须是普通对象。');
+      }
+      const descriptors = Object.getOwnPropertyDescriptors(optionsValue);
+      for (const key of Reflect.ownKeys(descriptors)) {
+        if (typeof key !== 'string' || (key !== 'onIntent' && key !== 'onRejected')) {
+          throw new RangeError(`WebProductUiSurface bindIntent 不支持 ${String(key)}。`);
+        }
+        if (!Object.hasOwn(descriptors[key]!, 'value')) {
+          throw new TypeError(`WebProductUiSurface bindIntent.${key} 不能是访问器。`);
+        }
+      }
+      const onIntent = requiredFunction<IntentHandler>(
+        descriptors.onIntent?.value,
+        'WebProductUiSurface.onIntent',
+      );
+      const onRejected = descriptors.onRejected === undefined
+        ? (() => {}) as IntentRejectedHandler
+        : requiredFunction<IntentRejectedHandler>(
+          descriptors.onRejected.value,
+          'WebProductUiSurface.onRejected',
+        );
+      if (this.#bindingOwner !== null) {
+        throw new Error('WebProductUiSurface intent 已绑定。');
+      }
+      const listener = (event: Event) => {
+        const target = event.target;
+        const element = target && typeof (target as Element).closest === 'function'
+          ? (target as Element).closest<HTMLButtonElement>('[data-product-intent]')
+          : null;
+        if (
+          !element
+          || !this.#root.contains(element)
+          || element.disabled
+          || this.#dispatchOwner !== null
+        ) return;
+        const intent = this.#intentByElement.get(element);
+        if (!intent) return;
+        try {
+          this.#launchIntentDispatch(intent, onIntent, onRejected);
+        } catch (error) {
+          this.#reportIntentRejected(onRejected, error, intent);
+        }
+      };
+      const owner: IntentBindingOwner = { listener, active: true };
+      try {
+        this.#callChecked(
+          sequence,
+          'intent-bind',
+          () => this.#root.addEventListener('click', listener),
+          'WebProductUiSurface intent listener registration',
+        );
+      } catch (error) {
+        try {
+          this.#callChecked(
+            sequence,
+            'intent-bind',
+            () => this.#root.removeEventListener('click', listener),
+            'WebProductUiSurface failed intent listener rollback',
+          );
+          owner.active = false;
+        } catch (rollbackError) {
+          this.#bindingOwner = owner;
+          throw new AggregateError(
+            [error, rollbackError],
+            'WebProductUiSurface intent绑定失败且监听器回滚失败。',
+          );
+        }
+        throw error;
+      }
+      this.#bindingOwner = owner;
+      return () => {
+        this.#runOperation('intent-unbind', (cleanupSequence) => {
+          this.#releaseBindingOwner(cleanupSequence, 'intent-unbind', owner);
+        });
+      };
+    });
+  }
+
+  getDebugSnapshot(): Readonly<Record<string, unknown>> {
+    return this.#runOperation('debug-read', () => Object.freeze({
+      state: this.#state,
+      scene: this.#lastModel?.scene ?? null,
+      dispatching: this.#dispatchOwner !== null,
+      dispatchSequence: this.#dispatchSequence,
+      bound: this.#bindingOwner !== null,
+      operationSequence: this.#operationSequence,
+      reentrySequence: this.#reentrySequence,
+      disposeRootHidden: this.#disposeRootHidden,
+      disposeCanvasRestored: this.#disposeCanvasRestored,
+      inputViewport: this.#inputViewport,
+    }));
+  }
+
+  #disposeFailure(errors: readonly unknown[]): Error {
+    const failure = new Error('WebProductUiSurface 清理未完整完成。');
+    Object.defineProperty(failure, 'cleanupErrors', {
+      value: Object.freeze([...errors]),
+    });
+    return failure;
+  }
+
   dispose(): void {
-    if (this.#state === WEB_PRODUCT_UI_SURFACE_STATE.DISPOSED) return;
-    this.#bindingCleanup?.();
-    this.#root.hidden = true;
-    this.#canvas.removeAttribute('aria-hidden');
-    this.#nodes = null;
-    this.#lastViewModel = null;
-    this.#lastModel = null;
-    this.#lastRenderKey = null;
-    this.#inputViewport = null;
-    this.#state = WEB_PRODUCT_UI_SURFACE_STATE.DISPOSED;
+    this.#runOperation('dispose', (sequence) => {
+      if (this.#state === WEB_PRODUCT_UI_SURFACE_STATE.DISPOSED) return;
+      const errors: unknown[] = [];
+      this.#dispatchOwner = null;
+      if (this.#dispatchSequence < Number.MAX_SAFE_INTEGER) this.#dispatchSequence += 1;
+      const bindingOwner = this.#bindingOwner;
+      if (bindingOwner !== null) {
+        try {
+          this.#releaseBindingOwner(sequence, 'dispose', bindingOwner);
+        } catch (error) {
+          errors.push(error);
+        }
+      }
+      if (this.#reentryError === null && !this.#disposeRootHidden) {
+        try {
+          this.#callChecked(
+            sequence,
+            'dispose',
+            () => { this.#root.hidden = true; },
+            'WebProductUiSurface dispose root hide',
+          );
+          this.#disposeRootHidden = true;
+        } catch (error) {
+          errors.push(error);
+        }
+      }
+      if (this.#reentryError === null && !this.#disposeCanvasRestored) {
+        try {
+          this.#callChecked(
+            sequence,
+            'dispose',
+            () => this.#canvas.removeAttribute('aria-hidden'),
+            'WebProductUiSurface dispose canvas restore',
+          );
+          this.#disposeCanvasRestored = true;
+        } catch (error) {
+          errors.push(error);
+        }
+      }
+      if (errors.length > 0 || this.#reentryError !== null) {
+        this.#state = WEB_PRODUCT_UI_SURFACE_STATE.DISPOSE_INCOMPLETE;
+        if (errors.length > 0) throw this.#disposeFailure(errors);
+        throw this.#reentryError;
+      }
+      this.#nodes = null;
+      this.#lastViewModel = null;
+      this.#lastModel = null;
+      this.#lastRenderKey = null;
+      this.#inputViewport = null;
+      this.#state = WEB_PRODUCT_UI_SURFACE_STATE.DISPOSED;
+    });
   }
 }
+
+export const WEB_PRODUCT_UI_SURFACE_INTENT_OPERATION_POLICY = Object.freeze({
+  intentOwnerPublishesBeforeSessionHandlerInvocation: true as const,
+  dispatchUsesMonotonicSequenceAndObjectIdentity: true as const,
+  duplicateClicksCannotCreateParallelIntentOwners: true as const,
+  staleSuccessAndFailureSettlementsCannotMutateCurrentUi: true as const,
+  disposeInvalidatesPendingIntentBeforeDomCleanup: true as const,
+  rejectionObserverCannotReplaceIntentOwner: true as const,
+  interactiveControlsDeriveDisabledStateFromOwnerIdentity: true as const,
+  sceneLayoutHitAndIntentSemanticsRemainUnchanged: true as const,
+  validationStatus: 'not-run' as const,
+});
+
+export const WEB_PRODUCT_UI_SURFACE_LIFECYCLE_OPERATION_POLICY = Object.freeze({
+  allPublicLifecycleAndReadsUseSingleOperationOwner: true as const,
+  stickyReentryUsesMonotonicSequenceAndFirstError: true as const,
+  domCallbacksCheckedBeforeRenderIdentityPublication: true as const,
+  renderIdentityPublishesOnlyAfterCompleteDomCommit: true as const,
+  bindingListenerPublishesOnlyAfterHostRegistration: true as const,
+  bindingCleanupRetainsFailedListenerOwnerForRetry: true as const,
+  intentLaunchAndSettlementUseSeparateSynchronousSegments: true as const,
+  intentDomFailureInvalidatesRenderIdentityForFullRetry: true as const,
+  disposeInvalidatesIntentBeforeBindingAndDomCleanup: true as const,
+  disposeFailuresRetainExactBindingRootAndCanvasOwners: true as const,
+  screenLayoutAccessibilityIntentAndGameplayVisibilityRemainUnchanged: true as const,
+  validationStatus: 'not-run' as const,
+});

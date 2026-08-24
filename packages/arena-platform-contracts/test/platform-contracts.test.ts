@@ -44,4 +44,41 @@ describe('Arena platform contracts', () => {
     (hostCallback as () => void)();
     expect(timestamps).toEqual([]);
   });
+
+  it('preserves synchronous delivery errors and legal callback rescheduling', () => {
+    const hostCallbacks: Array<() => void> = [];
+    let requestCount = 0;
+    const scheduler = createFrameScheduler({
+      request(callback) {
+        requestCount += 1;
+        hostCallbacks.push(callback);
+        if (requestCount === 1) callback();
+        return requestCount;
+      },
+      now: () => 456,
+    });
+    const timestamps: number[] = [];
+    scheduler.requestFrame((timestamp) => {
+      timestamps.push(timestamp);
+      scheduler.requestFrame((nextTimestamp) => timestamps.push(nextTimestamp));
+    });
+    expect(timestamps).toEqual([456]);
+    expect(requestCount).toBe(2);
+    hostCallbacks[1]?.();
+    expect(timestamps).toEqual([456, 456]);
+
+    const failing = createFrameScheduler({
+      request(callback) {
+        try {
+          callback();
+        } catch {
+          // Hostile host swallows the game callback failure.
+        }
+        return 1;
+      },
+    });
+    expect(() => failing.requestFrame(() => {
+      throw new Error('frame callback failed');
+    })).toThrow(/frame callback failed/);
+  });
 });

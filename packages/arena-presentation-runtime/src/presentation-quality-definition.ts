@@ -6,7 +6,9 @@ import {
   cloneFrozenData,
   createDeterministicDataHash,
 } from '@number-strategy-jump/arena-contracts';
-import { ARENA_TICK_RATE } from '@number-strategy-jump/arena-match';
+import { ARENA_GAMEPLAY_V2_TUNING } from '@number-strategy-jump/arena-definitions';
+
+const CORE_TICK_RATE = ARENA_GAMEPLAY_V2_TUNING.units.tickRateHz;
 
 export const PRESENTATION_QUALITY_DEFINITION_SCHEMA_VERSION = 1 as const;
 
@@ -55,8 +57,8 @@ export class PresentationQualityDefinition implements PresentationQualityDefinit
     const targetFramesPerSecond = assertIntegerAtLeast(
       source.targetFramesPerSecond, 1, 'PresentationQualityDefinition.targetFramesPerSecond',
     );
-    if (targetFramesPerSecond > ARENA_TICK_RATE || ARENA_TICK_RATE % targetFramesPerSecond !== 0) {
-      throw new RangeError(`表现帧率必须是 ${ARENA_TICK_RATE} Hz Core tick 的整数约数。`);
+    if (targetFramesPerSecond > CORE_TICK_RATE || CORE_TICK_RATE % targetFramesPerSecond !== 0) {
+      throw new RangeError(`表现帧率必须是 ${CORE_TICK_RATE} Hz Core tick 的整数约数。`);
     }
     const maximumPixelRatio = assertPositiveFinite(
       source.maximumPixelRatio, 'PresentationQualityDefinition.maximumPixelRatio',

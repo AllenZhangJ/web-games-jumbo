@@ -392,6 +392,15 @@ function safelyWrapThrownError(error: unknown, message: string): Error {
   return attachOpaqueCause(new Error(message), error);
 }
 
+type ProductMatchPresentationRuntimeOperation =
+  | 'start'
+  | 'step'
+  | 'state-read'
+  | 'frame-read'
+  | 'result-read'
+  | 'debug-read'
+  | 'destroy';
+
 export class ProductMatchPresentationRuntime {
   #controller: ProductControllerAdapter | null;
   #inputSource: ProductMatchPresentationInputPort | null;
@@ -401,8 +410,10 @@ export class ProductMatchPresentationRuntime {
   readonly #localParticipantId: string;
   readonly #opponentParticipantId: string;
   #state: ProductMatchPresentationRuntimeState;
-  #operation: string | null = null;
-  #reentryAttempted = false;
+  #operation: ProductMatchPresentationRuntimeOperation | null = null;
+  #operationSequence = 0;
+  #reentrySequence = 0;
+  #reentryError: Error | null = null;
   #cleanupIncomplete = false;
   #publicMatchInfo: ProductPublicMatchInfo | null = null;
   #lastFrame: unknown = null;
@@ -474,11 +485,11 @@ export class ProductMatchPresentationRuntime {
   }
 
   get state(): ProductMatchPresentationRuntimeState {
-    return this.#state;
+    return this.#runOperation('state-read', () => this.#state);
   }
 
   getState(): ProductMatchPresentationRuntimeState {
-    return this.#state;
+    return this.#runOperation('state-read', () => this.#state);
   }
 
   #assertUsable(): void {
@@ -490,26 +501,68 @@ export class ProductMatchPresentationRuntime {
     }
   }
 
-  #enter(operation: string): void {
+  #beginOperation(operation: ProductMatchPresentationRuntimeOperation): number {
     if (this.#operation !== null) {
-      this.#reentryAttempted = true;
-      throw new Error(
-        `ProductMatchPresentationRuntime ${this.#operation} 期间不能执行 ${operation}。`,
+      this.#reentrySequence += 1;
+      this.#reentryError ??= new Error(
+        `ProductMatchPresentationRuntime.${operation}() 不可重入；当前正在 ${this.#operation}()。`,
       );
+      throw this.#reentryError;
     }
     this.#operation = operation;
-    this.#reentryAttempted = false;
+    this.#operationSequence += 1;
+    this.#reentryError = null;
+    return this.#operationSequence;
   }
 
-  #assertNoSwallowedReentry(): void {
-    if (this.#reentryAttempted) {
-      throw new Error('ProductMatchPresentationRuntime 检测到被宿主吞掉的重入异常。');
+  #assertCurrentOperationCommit(sequence: number, label: string): void {
+    if (this.#operation === null || this.#operationSequence !== sequence) {
+      throw new Error(`${label}缺少当前ProductMatchPresentationRuntime操作所有权。`);
+    }
+    if (this.#reentryError !== null) throw this.#reentryError;
+  }
+
+  #finishOperation(sequence: number): void {
+    const operation = this.#operation;
+    const ownershipError = operation === null || this.#operationSequence !== sequence
+      ? new Error('ProductMatchPresentationRuntime操作所有权在结束前已失效。')
+      : null;
+    const reentryError = this.#reentryError;
+    let reentryFailure: Error | null = null;
+    if (reentryError !== null) {
+      reentryFailure = new Error(
+        `ProductMatchPresentationRuntime.${operation ?? 'operation'}() 检测到宿主重入并已失败关闭。`,
+        { cause: reentryError },
+      );
+      this.#lastError = reentryFailure;
+      if (operation === 'destroy') this.#cleanupIncomplete = true;
+      if (this.#state !== PRODUCT_MATCH_PRESENTATION_RUNTIME_STATE.DESTROYED) {
+        this.#state = PRODUCT_MATCH_PRESENTATION_RUNTIME_STATE.FAILED;
+      }
+    }
+    this.#operation = null;
+    this.#reentryError = null;
+    if (ownershipError !== null) throw ownershipError;
+    if (reentryFailure !== null) throw reentryFailure;
+  }
+
+  #runOperation<T>(
+    operation: ProductMatchPresentationRuntimeOperation,
+    callback: (sequence: number) => T,
+  ): T {
+    const sequence = this.#beginOperation(operation);
+    try {
+      return callback(sequence);
+    } finally {
+      this.#finishOperation(sequence);
     }
   }
 
-  #leave(): void {
-    this.#operation = null;
-    this.#reentryAttempted = false;
+  #callChecked<T>(sequence: number, label: string, callback: () => T): T {
+    const result = callback();
+    rejectThenable(result, label);
+    this.#assertCurrentOperationCommit(sequence, label);
+    return result;
   }
 
   #fail(error: unknown, message: string): Error {
@@ -520,6 +573,7 @@ export class ProductMatchPresentationRuntime {
   }
 
   #project(
+    sequence: number,
     readFrame: TrustedV2FrameParts,
     events: readonly unknown[],
     publicMatchInfo: ProductPublicMatchInfo,
@@ -528,21 +582,27 @@ export class ProductMatchPresentationRuntime {
     if (eventWindow === null) throw new Error('ProductMatch eventWindow 已释放。');
     const frameProjector = this.#frameProjector;
     if (frameProjector === null) throw new Error('ProductMatch frameProjector 已释放。');
-    const accepted = eventWindow.consume(events);
-    this.#assertNoSwallowedReentry();
+    const accepted = this.#callChecked(
+      sequence,
+      'ProductMatch eventWindow.consume()',
+      () => eventWindow.consume(events),
+    );
     if (!Array.isArray(accepted)) {
       throw new TypeError('ProductMatch eventWindow.consume() 必须返回数组。');
     }
-    const frame = frameProjector({
-      worldSnapshot: readFrame.world,
-      localActionSidecar: readFrame.local,
-      events: accepted,
-      publicMatchInfo,
-      localParticipantId: this.#localParticipantId,
-      opponentParticipantId: this.#opponentParticipantId,
-      content: this.#content,
-    });
-    this.#assertNoSwallowedReentry();
+    const frame = this.#callChecked(
+      sequence,
+      'ProductMatch frameProjector()',
+      () => frameProjector({
+        worldSnapshot: readFrame.world,
+        localActionSidecar: readFrame.local,
+        events: accepted,
+        publicMatchInfo,
+        localParticipantId: this.#localParticipantId,
+        opponentParticipantId: this.#opponentParticipantId,
+        content: this.#content,
+      }),
+    );
     if (!frame || typeof frame !== 'object' || Array.isArray(frame)) {
       throw new TypeError('ProductMatch frameProjector() 必须返回对象。');
     }
@@ -550,20 +610,24 @@ export class ProductMatchPresentationRuntime {
   }
 
   start(): unknown {
-    this.#assertUsable();
-    this.#enter('start');
-    try {
+    return this.#runOperation('start', (sequence) => {
+      this.#assertUsable();
+      try {
       if (
         this.#state === PRODUCT_MATCH_PRESENTATION_RUNTIME_STATE.RUNNING
         || this.#state === PRODUCT_MATCH_PRESENTATION_RUNTIME_STATE.RESULT
       ) return this.#lastFrame;
       const controller = this.#controller;
       if (controller === null) throw new Error('ProductSessionController 已释放。');
+      const outcomeValue = this.#callChecked(
+        sequence,
+        'ProductSessionController.beginMatchWithReadFrame()',
+        () => controller.beginMatchWithReadFrame(),
+      );
       const outcome = assertPlainRecord(
-        controller.beginMatchWithReadFrame(),
+        outcomeValue,
         'ProductSession V2 begin outcome',
       );
-      this.#assertNoSwallowedReentry();
       const productSnapshotValue = outcome.productSnapshot;
       if (activeProductState(productSnapshotValue) !== PRODUCT_SESSION_STATE.IN_MATCH) {
         throw new Error('Product match 启动后未进入 in-match。');
@@ -577,27 +641,28 @@ export class ProductMatchPresentationRuntime {
         this.#opponentParticipantId,
       );
       const readFrame = readV2Frame(outcome.readFrame, this.#localParticipantId);
-      const frame = this.#project(readFrame, [], publicMatchInfo);
+      this.#assertCurrentOperationCommit(sequence, 'Product match start validation');
+      const frame = this.#project(sequence, readFrame, [], publicMatchInfo);
+      this.#assertCurrentOperationCommit(sequence, 'Product match start publication');
       this.#publicMatchInfo = publicMatchInfo;
       this.#lastFrame = frame;
       this.#lastError = null;
       this.#state = PRODUCT_MATCH_PRESENTATION_RUNTIME_STATE.RUNNING;
       return frame;
-    } catch (error) {
-      throw this.#fail(error, 'Product match 表现启动失败');
-    } finally {
-      this.#leave();
-    }
+      } catch (error) {
+        throw this.#fail(error, 'Product match 表现启动失败');
+      }
+    });
   }
 
   step(): unknown {
-    this.#assertUsable();
-    this.#enter('step');
-    let sampleStarted = false;
-    let sampleReturned = false;
-    let authorityEntered = false;
-    let failureMessage = 'Product match 表现 step 失败';
-    try {
+    return this.#runOperation('step', (sequence) => {
+      this.#assertUsable();
+      let sampleStarted = false;
+      let sampleReturned = false;
+      let authorityEntered = false;
+      let failureMessage = 'Product match 表现 step 失败';
+      try {
       if (this.#state === PRODUCT_MATCH_PRESENTATION_RUNTIME_STATE.RESULT) return this.#lastFrame;
       if (this.#state !== PRODUCT_MATCH_PRESENTATION_RUNTIME_STATE.RUNNING) {
         throw new Error(`ProductMatchPresentationRuntime 无法在 ${this.#state} 状态 step。`);
@@ -608,11 +673,16 @@ export class ProductMatchPresentationRuntime {
       if (controller === null) throw new Error('ProductSessionController 已释放。');
       const inputSource = this.#inputSource;
       if (inputSource === null) throw new Error('ProductMatch inputSource 已释放。');
+      const beforeValue = this.#callChecked(
+        sequence,
+        'ProductSessionController.getActiveMatchReadFrame()',
+        () => controller.getActiveMatchReadFrame(),
+      );
       const before = readV2Frame(
-        controller.getActiveMatchReadFrame(),
+        beforeValue,
         this.#localParticipantId,
       );
-      this.#assertNoSwallowedReentry();
+      this.#assertCurrentOperationCommit(sequence, 'Product match pre-frame validation');
       const tick = before.world.tick;
       if (!Number.isSafeInteger(tick) || (tick as number) < 0) {
         throw new RangeError('ProductMatch V2 world.tick 必须是非负安全整数。');
@@ -624,8 +694,8 @@ export class ProductMatchPresentationRuntime {
       });
       sampleReturned = true;
       rejectThenable(sampledValue, 'ProductMatch inputSource.sample()');
+      this.#assertCurrentOperationCommit(sequence, 'ProductMatch inputSource.sample()');
       const input = sampledValue;
-      this.#assertNoSwallowedReentry();
       if (!isNormalizedInputFrame(input)) {
         throw new TypeError('Product match V2 inputSource 必须返回 trusted normalized InputFrame。');
       }
@@ -638,11 +708,15 @@ export class ProductMatchPresentationRuntime {
         throw new RangeError('Product match V2 input.participantId 与本地 participant 不一致。');
       }
       authorityEntered = true;
+      const outcomeValue = this.#callChecked(
+        sequence,
+        'ProductSessionController.stepMatchWithReadFrame()',
+        () => controller.stepMatchWithReadFrame(input),
+      );
       const outcome = assertPlainRecord(
-        controller.stepMatchWithReadFrame(input),
+        outcomeValue,
         'ProductSession V2 step outcome',
       );
-      this.#assertNoSwallowedReentry();
       if (outcome.matchStep === null) {
         throw new Error('Product match V2 权威 step 失败并已关闭。');
       }
@@ -676,87 +750,107 @@ export class ProductMatchPresentationRuntime {
       if (activeProductState(outcome.productSnapshot) !== expectedProductState) {
         throw new Error(`Product match step 后未进入 ${expectedProductState}。`);
       }
+      this.#assertCurrentOperationCommit(sequence, 'Product match post-step validation');
       const frame = this.#project(
+        sequence,
         postFrame,
         matchStep.events,
         publicMatchInfo,
       );
+      this.#assertCurrentOperationCommit(sequence, 'Product match step publication');
       this.#lastFrame = frame;
       if (result !== null) {
         this.#lastResult = result;
         this.#state = PRODUCT_MATCH_PRESENTATION_RUNTIME_STATE.RESULT;
       }
       return frame;
-    } catch (error) {
-      if (sampleStarted && !sampleReturned && !authorityEntered && !this.#reentryAttempted) {
-        throw runtimeFailure(error, 'Product match 输入采样失败');
+      } catch (error) {
+        if (sampleStarted && !sampleReturned && !authorityEntered && this.#reentryError === null) {
+          throw runtimeFailure(error, 'Product match 输入采样失败');
+        }
+        throw this.#fail(error, failureMessage);
       }
-      throw this.#fail(error, failureMessage);
-    } finally {
-      this.#leave();
-    }
+    });
   }
 
   getLastPresentationFrame(): unknown {
-    return this.#lastFrame;
+    return this.#runOperation('frame-read', () => this.#lastFrame);
   }
 
   getLastMatchResult(): ProductMatchResult | null {
-    return this.#lastResult;
+    return this.#runOperation('result-read', () => this.#lastResult);
   }
 
   getDebugSnapshot(): Readonly<Record<string, unknown>> {
-    let lastTick: number | null = null;
-    if (this.#lastFrame && typeof this.#lastFrame === 'object') {
-      const sourceDescriptor = Object.getOwnPropertyDescriptor(this.#lastFrame, 'source');
-      const source = sourceDescriptor && 'value' in sourceDescriptor
-        ? sourceDescriptor.value as unknown
-        : null;
-      if (source && typeof source === 'object') {
-        const tickDescriptor = Object.getOwnPropertyDescriptor(source, 'tick');
-        const value = tickDescriptor && 'value' in tickDescriptor ? tickDescriptor.value : null;
-        if (Number.isSafeInteger(value) && (value as number) >= 0) lastTick = value as number;
+    return this.#runOperation('debug-read', () => {
+      let lastTick: number | null = null;
+      if (this.#lastFrame && typeof this.#lastFrame === 'object') {
+        const sourceDescriptor = Object.getOwnPropertyDescriptor(this.#lastFrame, 'source');
+        const source = sourceDescriptor && 'value' in sourceDescriptor
+          ? sourceDescriptor.value as unknown
+          : null;
+        if (source && typeof source === 'object') {
+          const tickDescriptor = Object.getOwnPropertyDescriptor(source, 'tick');
+          const value = tickDescriptor && 'value' in tickDescriptor ? tickDescriptor.value : null;
+          if (Number.isSafeInteger(value) && (value as number) >= 0) lastTick = value as number;
+        }
       }
-    }
-    return Object.freeze({
-      state: this.#state,
-      stepping: this.#operation === 'step',
-      cleanupIncomplete: this.#cleanupIncomplete,
-      hasPublicMatchInfo: this.#publicMatchInfo !== null,
-      hasFrame: this.#lastFrame !== null,
-      hasResult: this.#lastResult !== null,
-      lastTick,
-      failed: this.#lastError !== null,
+      return Object.freeze({
+        state: this.#state,
+        stepping: this.#operation === 'step',
+        cleanupIncomplete: this.#cleanupIncomplete,
+        hasPublicMatchInfo: this.#publicMatchInfo !== null,
+        hasFrame: this.#lastFrame !== null,
+        hasResult: this.#lastResult !== null,
+        lastTick,
+        failed: this.#lastError !== null,
+      });
     });
   }
 
   destroy(): void {
-    if (
-      this.#state === PRODUCT_MATCH_PRESENTATION_RUNTIME_STATE.DESTROYED
-      && this.#eventWindow === null
-    ) return;
-    this.#enter('destroy');
-    try {
-      this.#controller = null;
-      this.#inputSource = null;
-      this.#frameProjector = null;
-      this.#content = null;
-      this.#publicMatchInfo = null;
-      this.#lastFrame = null;
-      this.#lastResult = null;
-      if (this.#eventWindow !== null) {
-        this.#eventWindow.destroy();
-        this.#eventWindow = null;
-        this.#assertNoSwallowedReentry();
+    this.#runOperation('destroy', (sequence) => {
+      if (
+        this.#state === PRODUCT_MATCH_PRESENTATION_RUNTIME_STATE.DESTROYED
+        && this.#eventWindow === null
+      ) return;
+      try {
+        if (this.#eventWindow !== null) {
+          const eventWindow = this.#eventWindow;
+          this.#callChecked(
+            sequence,
+            'ProductMatch eventWindow.destroy()',
+            () => eventWindow.destroy(),
+          );
+          this.#eventWindow = null;
+        }
+        this.#assertCurrentOperationCommit(sequence, 'Product match destroy publication');
+        this.#controller = null;
+        this.#inputSource = null;
+        this.#frameProjector = null;
+        this.#content = null;
+        this.#publicMatchInfo = null;
+        this.#lastFrame = null;
+        this.#lastResult = null;
+        this.#lastError = null;
+        this.#cleanupIncomplete = false;
+        this.#state = PRODUCT_MATCH_PRESENTATION_RUNTIME_STATE.DESTROYED;
+      } catch (error) {
+        this.#cleanupIncomplete = true;
+        throw this.#fail(error, 'Product match 表现资源清理失败');
       }
-      this.#lastError = null;
-      this.#cleanupIncomplete = false;
-      this.#state = PRODUCT_MATCH_PRESENTATION_RUNTIME_STATE.DESTROYED;
-    } catch (error) {
-      this.#cleanupIncomplete = true;
-      throw this.#fail(error, 'Product match 表现资源清理失败');
-    } finally {
-      this.#leave();
-    }
+    });
   }
 }
+
+export const PRODUCT_MATCH_PRESENTATION_RUNTIME_OPERATION_POLICY = Object.freeze({
+  operationGuardPrecedesLifecycleAndInputValidation: true as const,
+  stickyReentryUsesMonotonicSequenceAndFirstError: true as const,
+  controllerInputEventAndProjectorCallbacksCheckedBeforeFramePublication: true as const,
+  publicStateFrameResultAndDebugReadsRejectIntermediateOperations: true as const,
+  preAuthorityInputFailureRemainsSameTickRetryable: true as const,
+  terminalResultPublicationWaitsForPostFrameAndProjectionClosure: true as const,
+  eventWindowDestroyRetainsOwnershipUntilCallbackClosure: true as const,
+  presentationDoesNotWriteMatchAuthority: true as const,
+  validationStatus: 'not-run' as const,
+});

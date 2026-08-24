@@ -534,7 +534,7 @@ test('ArenaRuleEngine rejects malformed batches before mutation and has terminal
   assert.throws(() => engine.advanceTimers(), /已销毁/);
 });
 
-test('ArenaRuleEngine blocks commit reentrancy and fails closed after a mutation port error', () => {
+test('ArenaRuleEngine keeps swallowed commit reentrancy sticky and stops later mutation ports', () => {
   const engine = createEngine({
     basePush: { windupTicks: 1, activeTicks: 1 },
   });
@@ -546,6 +546,7 @@ test('ArenaRuleEngine blocks commit reentrancy and fails closed after a mutation
   engine.advanceTimers();
   const batch = engine.resolveActiveActions({ actors: actors() });
   const reentryErrors: Error[] = [];
+  let laterMutationPortCalls = 0;
   assert.throws(() => engine.commit(batch, {
     recordHit() {
       try {
@@ -554,10 +555,11 @@ test('ArenaRuleEngine blocks commit reentrancy and fails closed after a mutation
         reentryErrors.push(error instanceof Error ? error : new Error(String(error)));
       }
     },
-    applyHitstun() {},
-    applyImpulse() { throw new Error('physics port failed'); },
-  }), /physics port failed/);
+    applyHitstun() { laterMutationPortCalls += 1; },
+    applyImpulse() { laterMutationPortCalls += 1; },
+  }), /commit 期间不可重入/);
   assert.match(required(reentryErrors[0], '重入错误').message, /commit 期间不可重入/);
+  assert.equal(laterMutationPortCalls, 0);
   assert.throws(() => engine.advanceTimers(), /已失败/);
   engine.destroy();
 });

@@ -2,6 +2,15 @@ import {
   MOVEMENT_MUTATION_KIND,
   type MovementMutation,
 } from '@number-strategy-jump/arena-movement';
+import {
+  assertKnownKeys,
+  assertNonEmptyString,
+  assertPlainRecord,
+  cloneFrozenData,
+  createDeterministicDataHash,
+  type DeepReadonly,
+  type PlainRecord,
+} from '@number-strategy-jump/arena-contracts';
 
 import { ARENA_FIXED_DT, ARENA_PHYSICS } from './physics-config.js';
 import {
@@ -40,6 +49,32 @@ export interface LightweightPhysicsWorldOptions {
   readonly config?: unknown;
 }
 
+export const LIGHTWEIGHT_PHYSICS_CHECKPOINT_V1_SCHEMA_VERSION = 1 as const;
+
+export interface LightweightPhysicsCheckpointV1 {
+  readonly schemaVersion: typeof LIGHTWEIGHT_PHYSICS_CHECKPOINT_V1_SCHEMA_VERSION;
+  readonly arena: Readonly<{
+    readonly killY: number;
+    readonly surfaces: readonly Readonly<{
+      readonly id: string;
+      readonly center: Readonly<{ x: number; y: number; z: number }>;
+      readonly halfExtents: Readonly<{ x: number; y: number; z: number }>;
+      readonly enabled: boolean;
+    }>[];
+  }>;
+  readonly config: PhysicsSolverConfig;
+  readonly characters: readonly Readonly<{
+    readonly definition: PhysicsCharacterDefinition;
+    readonly state: ReturnType<typeof cloneCharacterState>;
+    readonly movementIntent: Readonly<{ x: number; z: number }>;
+  }>[];
+  readonly checkpointIdentityHash: string;
+}
+
+export interface CheckpointableLightweightPhysicsWorldV1 extends PhysicsWorld {
+  exportCheckpointV1(): LightweightPhysicsCheckpointV1;
+}
+
 interface CharacterMutationDraft {
   readonly body: PhysicsCharacterBody;
   vx: number;
@@ -58,6 +93,226 @@ interface SeparationDirection {
 interface HorizontalVelocity {
   readonly x: number;
   readonly z: number;
+}
+
+const CHECKPOINT_CORE_KEYS = new Set(['schemaVersion', 'arena', 'config', 'characters']);
+const CHECKPOINT_KEYS = new Set([...CHECKPOINT_CORE_KEYS, 'checkpointIdentityHash']);
+const CHECKPOINT_ARENA_KEYS = new Set(['killY', 'surfaces']);
+const CHECKPOINT_SURFACE_KEYS = new Set(['id', 'center', 'halfExtents', 'enabled']);
+const CHECKPOINT_CONFIG_KEYS = new Set([
+  'gravity', 'maxHorizontalSpeed', 'maxVerticalSpeed', 'groundProbeTolerance',
+  'maxStepHeight', 'groundSnapDistance', 'substeps',
+]);
+const CHECKPOINT_CHARACTER_KEYS = new Set(['definition', 'state', 'movementIntent']);
+const CHECKPOINT_STATE_KEYS = new Set([
+  'id', 'position', 'velocity', 'facing', 'grounded', 'supportSurfaceId',
+]);
+const CHECKPOINT_VECTOR3_KEYS = new Set(['x', 'y', 'z']);
+const CHECKPOINT_VECTOR2_KEYS = new Set(['x', 'z']);
+const HASH_PATTERN = /^[0-9a-f]{8}$/u;
+
+function exactRecord(value: unknown, keys: ReadonlySet<string>, name: string): PlainRecord {
+  const source = assertPlainRecord(value, name);
+  assertKnownKeys(source, keys, name);
+  for (const key of keys) {
+    const descriptor = Object.getOwnPropertyDescriptor(source, key);
+    if (!descriptor || !descriptor.enumerable || !Object.hasOwn(descriptor, 'value')) {
+      throw new TypeError(`${name}.${key}必须是可枚举数据字段。`);
+    }
+  }
+  return source;
+}
+
+function dataField(source: PlainRecord, key: string, name: string): unknown {
+  const descriptor = Object.getOwnPropertyDescriptor(source, key);
+  if (!descriptor || !descriptor.enumerable || !Object.hasOwn(descriptor, 'value')) {
+    throw new TypeError(`${name}.${key}必须是可枚举数据字段。`);
+  }
+  return descriptor.value;
+}
+
+function checkpointVector3(value: unknown, name: string) {
+  const source = exactRecord(value, CHECKPOINT_VECTOR3_KEYS, name);
+  return Object.freeze({
+    x: assertFiniteNumber(dataField(source, 'x', name), `${name}.x`),
+    y: assertFiniteNumber(dataField(source, 'y', name), `${name}.y`),
+    z: assertFiniteNumber(dataField(source, 'z', name), `${name}.z`),
+  });
+}
+
+function checkpointVector2(value: unknown, name: string) {
+  const source = exactRecord(value, CHECKPOINT_VECTOR2_KEYS, name);
+  return Object.freeze({
+    x: assertFiniteNumber(dataField(source, 'x', name), `${name}.x`),
+    z: assertFiniteNumber(dataField(source, 'z', name), `${name}.z`),
+  });
+}
+
+function normalizeCheckpointCore(
+  value: unknown,
+): Omit<LightweightPhysicsCheckpointV1, 'checkpointIdentityHash'> {
+  const source = exactRecord(value, CHECKPOINT_CORE_KEYS, 'LightweightPhysicsCheckpointV1');
+  if (dataField(source, 'schemaVersion', 'LightweightPhysicsCheckpointV1')
+    !== LIGHTWEIGHT_PHYSICS_CHECKPOINT_V1_SCHEMA_VERSION) {
+    throw new RangeError('LightweightPhysicsCheckpointV1.schemaVersion必须是1。');
+  }
+  const arenaSource = exactRecord(
+    dataField(source, 'arena', 'LightweightPhysicsCheckpointV1'),
+    CHECKPOINT_ARENA_KEYS,
+    'LightweightPhysicsCheckpointV1.arena',
+  );
+  const killY = assertFiniteNumber(
+    dataField(arenaSource, 'killY', 'LightweightPhysicsCheckpointV1.arena'),
+    'LightweightPhysicsCheckpointV1.arena.killY',
+  );
+  const rawSurfaces = dataField(
+    arenaSource,
+    'surfaces',
+    'LightweightPhysicsCheckpointV1.arena',
+  );
+  if (!Array.isArray(rawSurfaces) || rawSurfaces.length === 0) {
+    throw new RangeError('LightweightPhysicsCheckpointV1.arena.surfaces必须非空。');
+  }
+  const surfaces = Object.freeze(rawSurfaces.map((value, index) => {
+    const name = `LightweightPhysicsCheckpointV1.arena.surfaces[${index}]`;
+    const surface = exactRecord(value, CHECKPOINT_SURFACE_KEYS, name);
+    const enabled = dataField(surface, 'enabled', name);
+    if (typeof enabled !== 'boolean') throw new TypeError(`${name}.enabled必须是布尔值。`);
+    const halfExtents = checkpointVector3(dataField(surface, 'halfExtents', name), `${name}.halfExtents`);
+    for (const axis of ['x', 'y', 'z'] as const) {
+      assertPositiveNumber(halfExtents[axis], `${name}.halfExtents.${axis}`);
+    }
+    return Object.freeze({
+      id: assertNonEmptyString(dataField(surface, 'id', name), `${name}.id`),
+      center: checkpointVector3(dataField(surface, 'center', name), `${name}.center`),
+      halfExtents,
+      enabled,
+    });
+  }));
+  for (let index = 1; index < surfaces.length; index += 1) {
+    if (surfaces[index - 1]!.id >= surfaces[index]!.id) {
+      throw new RangeError('LightweightPhysicsCheckpointV1 surfaces必须按id唯一稳定升序。');
+    }
+  }
+  const configSource = exactRecord(
+    dataField(source, 'config', 'LightweightPhysicsCheckpointV1'),
+    CHECKPOINT_CONFIG_KEYS,
+    'LightweightPhysicsCheckpointV1.config',
+  );
+  const config = normalizeSolverConfig(Object.fromEntries(
+    [...CHECKPOINT_CONFIG_KEYS].map((key) => [
+      key,
+      dataField(configSource, key, 'LightweightPhysicsCheckpointV1.config'),
+    ]),
+  ));
+  const rawCharacters = dataField(source, 'characters', 'LightweightPhysicsCheckpointV1');
+  if (!Array.isArray(rawCharacters) || rawCharacters.length === 0) {
+    throw new RangeError('LightweightPhysicsCheckpointV1.characters必须非空。');
+  }
+  const surfaceIds = new Set(surfaces.map(({ id }) => id));
+  const characters = Object.freeze(rawCharacters.map((value, index) => {
+    const name = `LightweightPhysicsCheckpointV1.characters[${index}]`;
+    const character = exactRecord(value, CHECKPOINT_CHARACTER_KEYS, name);
+    const definition = validateCharacterDefinition(dataField(character, 'definition', name));
+    const stateSource = exactRecord(
+      dataField(character, 'state', name),
+      CHECKPOINT_STATE_KEYS,
+      `${name}.state`,
+    );
+    const stateId = assertNonEmptyString(
+      dataField(stateSource, 'id', `${name}.state`),
+      `${name}.state.id`,
+    );
+    if (stateId !== definition.id) throw new RangeError(`${name} definition/state id漂移。`);
+    const grounded = dataField(stateSource, 'grounded', `${name}.state`);
+    if (typeof grounded !== 'boolean') throw new TypeError(`${name}.state.grounded必须是布尔值。`);
+    const rawSupportSurfaceId = dataField(stateSource, 'supportSurfaceId', `${name}.state`);
+    const supportSurfaceId = rawSupportSurfaceId === null
+      ? null
+      : assertNonEmptyString(rawSupportSurfaceId, `${name}.state.supportSurfaceId`);
+    if (supportSurfaceId !== null && !surfaceIds.has(supportSurfaceId)) {
+      throw new RangeError(`${name}.state引用未知support surface。`);
+    }
+    if (grounded !== (supportSurfaceId !== null)) {
+      throw new RangeError(`${name}.state grounded/supportSurfaceId不闭合。`);
+    }
+    return Object.freeze({
+      definition: Object.freeze({
+        ...definition,
+        position: Object.freeze({ ...definition.position }),
+      }),
+      state: Object.freeze({
+        id: stateId,
+        position: checkpointVector3(dataField(stateSource, 'position', `${name}.state`), `${name}.state.position`),
+        velocity: checkpointVector3(dataField(stateSource, 'velocity', `${name}.state`), `${name}.state.velocity`),
+        facing: checkpointVector2(dataField(stateSource, 'facing', `${name}.state`), `${name}.state.facing`),
+        grounded,
+        supportSurfaceId,
+      }),
+      movementIntent: checkpointVector2(
+        dataField(character, 'movementIntent', name),
+        `${name}.movementIntent`,
+      ),
+    });
+  }));
+  for (let index = 1; index < characters.length; index += 1) {
+    if (characters[index - 1]!.definition.id >= characters[index]!.definition.id) {
+      throw new RangeError('LightweightPhysicsCheckpointV1 characters必须按id唯一稳定升序。');
+    }
+  }
+  return Object.freeze({
+    schemaVersion: LIGHTWEIGHT_PHYSICS_CHECKPOINT_V1_SCHEMA_VERSION,
+    arena: Object.freeze({ killY, surfaces }),
+    config: Object.freeze(config),
+    characters,
+  });
+}
+
+function withCheckpointIdentity(
+  core: Omit<LightweightPhysicsCheckpointV1, 'checkpointIdentityHash'>,
+): LightweightPhysicsCheckpointV1 {
+  return Object.freeze({
+    ...core,
+    checkpointIdentityHash: createDeterministicDataHash(
+      core,
+      'LightweightPhysicsCheckpointV1 identity',
+    ),
+  });
+}
+
+export function createLightweightPhysicsCheckpointV1(
+  value: unknown,
+): LightweightPhysicsCheckpointV1 {
+  return withCheckpointIdentity(normalizeCheckpointCore(
+    cloneFrozenData(value, 'LightweightPhysicsCheckpointV1 create options'),
+  ));
+}
+
+export function validateLightweightPhysicsCheckpointV1(
+  value: unknown,
+): DeepReadonly<LightweightPhysicsCheckpointV1> {
+  const source = exactRecord(
+    cloneFrozenData(value, 'LightweightPhysicsCheckpointV1'),
+    CHECKPOINT_KEYS,
+    'LightweightPhysicsCheckpointV1',
+  );
+  const checkpointIdentityHash = dataField(
+    source,
+    'checkpointIdentityHash',
+    'LightweightPhysicsCheckpointV1',
+  );
+  if (typeof checkpointIdentityHash !== 'string' || !HASH_PATTERN.test(checkpointIdentityHash)) {
+    throw new TypeError('LightweightPhysicsCheckpointV1 checkpointIdentityHash无效。');
+  }
+  const core = Object.fromEntries([...CHECKPOINT_CORE_KEYS].map((key) => [
+    key,
+    dataField(source, key, 'LightweightPhysicsCheckpointV1'),
+  ]));
+  const normalized = withCheckpointIdentity(normalizeCheckpointCore(core));
+  if (normalized.checkpointIdentityHash !== checkpointIdentityHash) {
+    throw new RangeError('LightweightPhysicsCheckpointV1 identity hash漂移。');
+  }
+  return normalized;
 }
 
 function normalizeSolverConfig(value: unknown): PhysicsSolverConfig {
@@ -129,7 +384,7 @@ function chooseStableSeparationDirection(
     : { x: -1, z: 0, distance: 0 };
 }
 
-class LightweightPhysicsWorld implements PhysicsWorld {
+class LightweightPhysicsWorld implements CheckpointableLightweightPhysicsWorldV1 {
   readonly #arena: PhysicsRuntimeArena;
   readonly #config: PhysicsSolverConfig;
   readonly #characters: Map<string, PhysicsCharacterBody>;
@@ -449,6 +704,42 @@ class LightweightPhysicsWorld implements PhysicsWorld {
     return cloneCharacterState(this.#requireCharacter(id));
   }
 
+  exportCheckpointV1(): LightweightPhysicsCheckpointV1 {
+    this.#assertUsable();
+    return createLightweightPhysicsCheckpointV1({
+      schemaVersion: LIGHTWEIGHT_PHYSICS_CHECKPOINT_V1_SCHEMA_VERSION,
+      arena: {
+        killY: this.#arena.killY,
+        surfaces: [...this.#arena.surfaces]
+          .sort((left, right) => left.id < right.id ? -1 : left.id > right.id ? 1 : 0)
+          .map((surface) => ({
+            id: surface.id,
+            center: surface.center,
+            halfExtents: surface.halfExtents,
+            enabled: surface.enabled,
+          })),
+      },
+      config: this.#config,
+      characters: this.#characterOrder.map((id) => {
+        const body = this.#requireCharacter(id);
+        return {
+          definition: {
+            id: body.id,
+            position: body.position,
+            radius: body.radius,
+            halfHeight: body.halfHeight,
+            mass: body.mass,
+            moveSpeed: body.moveSpeed,
+            groundAcceleration: body.groundAcceleration,
+            airAcceleration: body.airAcceleration,
+          },
+          state: cloneCharacterState(body),
+          movementIntent: { x: body.intentX, z: body.intentZ },
+        };
+      }),
+    });
+  }
+
   resetCharacter(id: string, state: PhysicsCharacterResetState): void {
     const body = this.#requireCharacter(id);
     if (!state || typeof state !== 'object') throw new TypeError('reset state 必须是对象。');
@@ -490,6 +781,56 @@ class LightweightPhysicsWorld implements PhysicsWorld {
 
 export function createLightweightPhysicsWorld(
   options?: LightweightPhysicsWorldOptions,
-): PhysicsWorld {
-  return assertPhysicsWorld(new LightweightPhysicsWorld(options));
+): CheckpointableLightweightPhysicsWorldV1 {
+  return assertPhysicsWorld(
+    new LightweightPhysicsWorld(options),
+  ) as CheckpointableLightweightPhysicsWorldV1;
+}
+
+export function createLightweightPhysicsWorldFromCheckpointV1(
+  value: unknown,
+): CheckpointableLightweightPhysicsWorldV1 {
+  const checkpoint = validateLightweightPhysicsCheckpointV1(value);
+  const world = new LightweightPhysicsWorld({
+    arena: {
+      killY: checkpoint.arena.killY,
+      surfaces: checkpoint.arena.surfaces.map(({ id, center, halfExtents }) => ({
+        id,
+        center,
+        halfExtents,
+      })),
+    },
+    config: checkpoint.config,
+  });
+  try {
+    for (const surface of checkpoint.arena.surfaces) {
+      if (!surface.enabled) world.setSurfaceEnabled(surface.id, false);
+    }
+    for (const character of checkpoint.characters) {
+      world.addCharacter(character.definition);
+      world.resetCharacter(character.definition.id, {
+        position: character.state.position,
+        velocity: character.state.velocity,
+        facing: character.state.facing,
+      });
+      world.setMovementIntent(
+        character.definition.id,
+        character.movementIntent.x,
+        character.movementIntent.z,
+      );
+      if (createDeterministicDataHash(
+        world.getCharacterState(character.definition.id),
+        'LightweightPhysicsCheckpointV1 restored state',
+      ) !== createDeterministicDataHash(
+        character.state,
+        'LightweightPhysicsCheckpointV1 restored state',
+      )) {
+        throw new RangeError('LightweightPhysicsCheckpointV1恢复后的角色状态不闭合。');
+      }
+    }
+    return assertPhysicsWorld(world) as CheckpointableLightweightPhysicsWorldV1;
+  } catch (error) {
+    world.destroy();
+    throw error;
+  }
 }

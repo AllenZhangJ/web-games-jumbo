@@ -7,6 +7,14 @@ export interface PresentationInputPoint {
 export interface PresentationInputViewport {
   readonly width: number;
   readonly height: number;
+  readonly safeAreaInsets?: Readonly<PresentationSafeAreaInsets>;
+}
+
+export interface PresentationSafeAreaInsets {
+  readonly top: number;
+  readonly right: number;
+  readonly bottom: number;
+  readonly left: number;
 }
 
 export function cloneKnownRecord(
@@ -54,7 +62,31 @@ export function integerAtLeast(value: unknown, minimum: number, name: string): n
 }
 
 const POINT_KEYS = new Set(['x', 'y', 'pointerId']);
-const VIEWPORT_KEYS = new Set(['width', 'height']);
+const VIEWPORT_KEYS = new Set(['width', 'height', 'safeAreaInsets']);
+const SAFE_AREA_INSET_KEYS = new Set(['top', 'right', 'bottom', 'left']);
+
+export const ZERO_PRESENTATION_SAFE_AREA_INSETS: Readonly<PresentationSafeAreaInsets> = Object.freeze({
+  top: 0,
+  right: 0,
+  bottom: 0,
+  left: 0,
+});
+
+function nonNegativeNumber(value: unknown, name: string): number {
+  const number = finiteNumber(value, name);
+  if (number < 0) throw new RangeError(`${name} 必须大于等于 0。`);
+  return number;
+}
+
+function cloneSafeAreaInsets(value: unknown, name: string): Readonly<PresentationSafeAreaInsets> {
+  const source = cloneKnownRecord(value, SAFE_AREA_INSET_KEYS, name);
+  return Object.freeze({
+    top: nonNegativeNumber(source.top, `${name}.top`),
+    right: nonNegativeNumber(source.right, `${name}.right`),
+    bottom: nonNegativeNumber(source.bottom, `${name}.bottom`),
+    left: nonNegativeNumber(source.left, `${name}.left`),
+  });
+}
 
 export function clonePoint(value: unknown, name = 'point'): PresentationInputPoint {
   const source = cloneKnownRecord(value, POINT_KEYS, name);
@@ -68,10 +100,23 @@ export function clonePoint(value: unknown, name = 'point'): PresentationInputPoi
 
 export function cloneViewport(value: unknown, name = 'viewport'): PresentationInputViewport {
   const source = cloneKnownRecord(value, VIEWPORT_KEYS, name);
-  return Object.freeze({
-    width: positiveNumber(source.width, `${name}.width`),
-    height: positiveNumber(source.height, `${name}.height`),
-  });
+  const width = positiveNumber(source.width, `${name}.width`);
+  const height = positiveNumber(source.height, `${name}.height`);
+  if (!Object.hasOwn(source, 'safeAreaInsets')) return Object.freeze({ width, height });
+  const safeAreaInsets = cloneSafeAreaInsets(source.safeAreaInsets, `${name}.safeAreaInsets`);
+  if (safeAreaInsets.left + safeAreaInsets.right >= width) {
+    throw new RangeError(`${name}.safeAreaInsets 左右之和必须小于 viewport.width。`);
+  }
+  if (safeAreaInsets.top + safeAreaInsets.bottom >= height) {
+    throw new RangeError(`${name}.safeAreaInsets 上下之和必须小于 viewport.height。`);
+  }
+  return Object.freeze({ width, height, safeAreaInsets });
+}
+
+export function resolvedPresentationSafeAreaInsets(
+  viewport: PresentationInputViewport,
+): Readonly<PresentationSafeAreaInsets> {
+  return viewport.safeAreaInsets ?? ZERO_PRESENTATION_SAFE_AREA_INSETS;
 }
 
 export function nextRevision(value: number): number {

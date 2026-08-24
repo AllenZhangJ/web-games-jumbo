@@ -497,6 +497,7 @@ export class QuickMatchService {
         trustedCommandSourceHandle: botMatchReadBundle,
         arena: coreConfig.arena,
         characterRadius: botCharacter.collision.radius,
+        tickDurationSeconds: coreConfig.fixedDeltaSeconds,
         maximumStepHeight: botCharacter.movement.automaticStepHeight,
       }));
       const controllerCleanup = cleanupHandle(controller, 'botControllerFactory 返回值');

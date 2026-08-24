@@ -44,7 +44,11 @@ test('bot threat evaluation uses the delayed opponent equipment action range', (
     commandSnapshot: source,
     delayedSnapshot: source,
     selfId: 'player-2',
-    arena: createBotArenaView(core.config.arena, core.getCharacterDefinition('player-2').collision.radius),
+    arena: createBotArenaView(
+      core.config.arena,
+      core.getCharacterDefinition('player-2').collision.radius,
+      core.getCharacterDefinition('player-2').movement.automaticStepHeight,
+    ),
   });
   assert.equal(observation.opponentActionRule.definitionId, 'chain-pull');
   assert.ok(observation.opponentActionRule.range > observation.actionRule.range);
@@ -52,6 +56,7 @@ test('bot threat evaluation uses the delayed opponent equipment action range', (
     observation,
     profile: BOT_PROFILE_REGISTRY.require('hard'),
     personality: testPersonality('survivor', 0, 0, 0.5),
+    tickDurationSeconds: core.config.fixedDeltaSeconds,
   });
   assert.equal(decision.goalId, BOT_GOAL_ID.EVADE_THREAT);
   assert.equal(decision.plan.actionCandidate, false);
@@ -84,7 +89,11 @@ test('bot reacts only to publicly observed collapse warnings and uses ordinary m
   const common = {
     commandSnapshot: withWarning,
     selfId: 'player-2',
-    arena: createBotArenaView(core.config.arena, core.getCharacterDefinition('player-2').collision.radius),
+    arena: createBotArenaView(
+      core.config.arena,
+      core.getCharacterDefinition('player-2').collision.radius,
+      core.getCharacterDefinition('player-2').movement.automaticStepHeight,
+    ),
   };
   const delayedObservation = createBotObservation({
     ...common,
@@ -97,6 +106,7 @@ test('bot reacts only to publicly observed collapse warnings and uses ordinary m
   const context = {
     profile: BOT_PROFILE_REGISTRY.require('hard'),
     personality: testPersonality('tactician', 0.5, 0.5, 0.5),
+    tickDurationSeconds: core.config.fixedDeltaSeconds,
   };
   const delayedDecision = selectHighestUtility(getArenaBotEvaluators(), {
     ...context,
@@ -140,12 +150,17 @@ test('hard bot can finish edge recovery on the final center platform', () => {
     commandSnapshot: source,
     delayedSnapshot: source,
     selfId: 'player-2',
-    arena: createBotArenaView(core.config.arena, core.getCharacterDefinition('player-2').collision.radius),
+    arena: createBotArenaView(
+      core.config.arena,
+      core.getCharacterDefinition('player-2').collision.radius,
+      core.getCharacterDefinition('player-2').movement.automaticStepHeight,
+    ),
   });
   const decision = selectHighestUtility(getArenaBotEvaluators(), {
     observation,
     profile: BOT_PROFILE_REGISTRY.require('hard'),
     personality: testPersonality('survivor', 0.8, 0.5, 0.2),
+    tickDurationSeconds: core.config.fixedDeltaSeconds,
   });
   assert.notEqual(decision.goalId, BOT_GOAL_ID.RECOVER_EDGE);
   core.destroy();
@@ -184,12 +199,17 @@ test('bot treats missing corners of a plus-shaped topology as real outer edges',
     commandSnapshot: source,
     delayedSnapshot: source,
     selfId: 'player-2',
-    arena: createBotArenaView(core.config.arena, core.getCharacterDefinition('player-2').collision.radius),
+    arena: createBotArenaView(
+      core.config.arena,
+      core.getCharacterDefinition('player-2').collision.radius,
+      core.getCharacterDefinition('player-2').movement.automaticStepHeight,
+    ),
   });
   const decision = selectHighestUtility(getArenaBotEvaluators(), {
     observation,
     profile: BOT_PROFILE_REGISTRY.require('hard'),
     personality: testPersonality('survivor', 0.8, 0.5, 0.2),
+    tickDurationSeconds: core.config.fixedDeltaSeconds,
   });
   assert.equal(decision.goalId, BOT_GOAL_ID.RECOVER_EDGE);
   assert.deepEqual(decision.plan.target, { x: 0, y: -0.5, z: 4 });

@@ -1019,7 +1019,7 @@ describe('Product match presentation runtime boundaries', () => {
       ordinaryError = error;
     }
     expect(ordinaryError).toBeInstanceOf(Error);
-    expect((ordinaryError as Error).message).not.toMatch(/必须同步完成/);
+    expect((ordinaryError as Error).message).toMatch(/then字段.*必须同步完成/);
     ordinaryRuntime.destroy();
 
     const flowValue = presentationShadowedRejection('flow shadow rejection');

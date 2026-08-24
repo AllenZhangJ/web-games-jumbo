@@ -39,6 +39,17 @@ export {
   createBotObservation,
   createBotObservationV5,
 } from './bot-observation.js';
+
+// P3 versioned Survival enemy observation. It exposes only current restricted
+// facts and legal route targets; no MatchCore, future-state or renderer handle.
+export * from './survival-enemy-observation-v1.js';
+export * from './survival-enemy-controller-v1.js';
+export * from './survival-enemy-weapon-affordance-v1.js';
+export * from './survival-enemy-observation-v2.js';
+export * from './survival-enemy-controller-v2.js';
+export * from './bot-primary-input-pacing-v1.js';
+// P6 collection counterplay probe remains absent from default bot controllers.
+export * from './weapon-counterplay-probe-v1.js';
 export {
   activeWindThreat,
   clearanceFromMapEdge,

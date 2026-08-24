@@ -7,3 +7,5 @@ export * from './arena-supply-presentation-contract.js';
 export * from './presentation-asset-registry.js';
 export * from './character-presentation-definition.js';
 export * from './character-presentation-registry.js';
+export * from './arena-stage7-formal-asset-budget-v1.js';
+export * from './arena-stage7-formal-asset-budget-v2-candidate.js';

@@ -876,7 +876,7 @@ test('Arena V1 product balance defaults reject malformed match config before acq
   } as unknown as Parameters<typeof createArenaV1ProductSession>[0]), /matchConfig.*普通对象/);
 });
 
-test('Arena V1 composition snapshots seed methods and contains diagnostic reentry', async () => {
+test('Arena V1 composition snapshots seed methods and fails closed on coordinator reentry', async () => {
   const seedSource = { nextSeed: () => 707 };
   let diagnosticReentryAttempts = 0;
   let controller: ProductSessionController | null = null;
@@ -903,9 +903,10 @@ test('Arena V1 composition snapshots seed methods and contains diagnostic reentr
   const activeController = required(controller);
   await activeController.boot();
   activeController.openCharacterSelect();
-  await activeController.requestMatch();
+  const failed = await activeController.requestMatch();
   assert.equal(diagnosticReentryAttempts, 1);
-  assert.equal(required(activeController.getSnapshot().match.publicMatchInfo).matchSeed, 707);
+  assert.equal(failed.state.state, PRODUCT_SESSION_STATE.FATAL_ERROR);
+  assert.equal(required(failed.match.publicMatchInfo).matchSeed, 707);
   activeController.destroy();
 });
 

@@ -283,7 +283,7 @@ describe('ProductSessionController strict lifecycle', () => {
     controller.destroy();
   });
 
-  it('rejects callback reentry while preserving the outer transition', async () => {
+  it('fails closed when an owned callback swallows controller reentry', async () => {
     let reentry: Error | null = null;
     const service = profileServiceHarness();
     service.open = () => {
@@ -295,9 +295,9 @@ describe('ProductSessionController strict lifecycle', () => {
       return profile();
     };
     const controller = createController({ profileService: service });
-    const booted = await controller.boot();
+    expect(() => controller.boot()).toThrow(/重入/);
     expect(String(reentry)).toMatch(/不可重入/);
-    expect(booted.state.state).toBe(PRODUCT_SESSION_STATE.READY);
+    expect(controller.state).toBe(PRODUCT_SESSION_STATE.FATAL_ERROR);
     controller.destroy();
   });
 

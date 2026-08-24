@@ -150,6 +150,11 @@ describe('strict mini-game platform host boundaries', () => {
 
   it('bounds hostile touch collections while dispatching ordinary changed touches independently', () => {
     const fixture = miniGameFixture();
+    let viewportReads = 0;
+    fixture.api.getWindowInfo = () => {
+      viewportReads += 1;
+      return { windowWidth: 100, windowHeight: 200, pixelRatio: 2 };
+    };
     const platform = createMiniGamePlatform(fixture.api, 'wechat');
     const points: unknown[] = [];
     const cleanup = platform.bindInput({ onStart(point: unknown) { points.push(point); } });
@@ -158,6 +163,7 @@ describe('strict mini-game platform host boundaries', () => {
       changedTouches: Array.from({ length: 33 }, (_, identifier) => ({ identifier })),
     });
     expect(points).toEqual([]);
+    expect(viewportReads).toBe(0);
     start?.({
       changedTouches: [
         { identifier: 4, clientX: 10, clientY: 20 },
@@ -168,6 +174,7 @@ describe('strict mini-game platform host boundaries', () => {
       { pointerId: 4, x: 10, y: 20 },
       { pointerId: 7, x: 90, y: 180 },
     ]);
+    expect(viewportReads).toBe(1);
     cleanup();
   });
 

@@ -232,6 +232,12 @@ function hostileThenable(counter: { calls: number }): unknown {
   });
 }
 
+function prototypeChain(depth: number): object {
+  let value: object = Object.create(null);
+  for (let index = 0; index < depth; index += 1) value = Object.create(value);
+  return value;
+}
+
 describe('Product Match lifecycle boundaries', () => {
   it('rejects option accessors and snapshots LocalMatchSession methods', () => {
     let getterCalls = 0;
@@ -269,29 +275,96 @@ describe('Product Match lifecycle boundaries', () => {
         try { operation(); } catch (error) { errors.push(error as Error); }
       }
     };
-    runtime.startWithReadFrame();
+    expect(() => runtime.startWithReadFrame()).toThrow(/不可重入|发生重入/);
     expect(errors).toHaveLength(7);
     for (const error of errors) expect(error.message).toMatch(/不可重入/);
+    expect(runtime.state).toBe('failed');
     runtime.destroy();
   });
 
   it('snapshots QuickMatchService.create and rejects recursive factory creation', () => {
-    const session = sessionHarness();
     const factoryRef: { value?: QuickMatchProductFactory } = {};
     const recursiveErrors: Error[] = [];
+    const sessions: ReturnType<typeof sessionHarness>[] = [];
     const service = {
       create() {
-        try { factoryRef.value?.create(); } catch (error) { recursiveErrors.push(error as Error); }
+        const session = sessionHarness();
+        sessions.push(session);
+        if (sessions.length === 1) {
+          try { factoryRef.value?.create(); } catch (error) { recursiveErrors.push(error as Error); }
+        }
         return localMatch(session);
       },
     };
     const factory = new QuickMatchProductFactory({ quickMatchService: service });
     factoryRef.value = factory;
     service.create = () => { throw new Error('replacement must not execute'); };
+    expect(() => factory.create()).toThrow(/不可重入|发生重入/);
+    expect(sessions[0]?.destroys).toBe(1);
     const runtime = factory.create();
     expect(recursiveErrors[0]?.message).toMatch(/不可重入/);
     runtime.destroy();
-    expect(session.destroys).toBe(1);
+    expect(sessions[1]?.destroys).toBe(1);
+  });
+
+  it('transfers QuickMatchService ownership through factory and coordinator destroy', () => {
+    let serviceDestroys = 0;
+    const service = {
+      create() { return localMatch(); },
+      destroy() { serviceDestroys += 1; },
+    };
+    const factory = new QuickMatchProductFactory({ quickMatchService: service });
+    const coordinator = new ProductMatchCoordinator({ matchFactory: factory });
+
+    coordinator.destroy();
+    coordinator.destroy();
+    expect(serviceDestroys).toBe(1);
+    expect(() => factory.create()).toThrow(/已销毁/);
+  });
+
+  it('retains exact QuickMatchService cleanup ownership after a failed coordinator destroy', () => {
+    let serviceDestroys = 0;
+    const service = {
+      create() { return localMatch(); },
+      destroy() {
+        serviceDestroys += 1;
+        if (serviceDestroys === 1) throw new Error('service cleanup failed');
+      },
+    };
+    const factory = new QuickMatchProductFactory({ quickMatchService: service });
+    const coordinator = new ProductMatchCoordinator({ matchFactory: factory });
+
+    expect(() => coordinator.destroy()).toThrow(/service cleanup failed/);
+    expect(coordinator.getSnapshot()).toMatchObject({
+      state: PRODUCT_MATCH_COORDINATOR_STATE.DESTROYED,
+      cleanupIncomplete: true,
+    });
+    coordinator.destroy();
+    coordinator.destroy();
+    expect(serviceDestroys).toBe(2);
+  });
+
+  it('retains QuickMatchService ownership when destroy reentry is swallowed', () => {
+    let serviceDestroys = 0;
+    let factory!: QuickMatchProductFactory;
+    const service = {
+      create() { return localMatch(); },
+      destroy() {
+        serviceDestroys += 1;
+        if (serviceDestroys === 1) {
+          try { factory.destroy(); } catch {
+            // The outer owner must still observe the swallowed reentry.
+          }
+        }
+      },
+    };
+    factory = new QuickMatchProductFactory({ quickMatchService: service });
+
+    expect(() => factory.destroy()).toThrow(/重入/);
+    expect(factory.hasPendingCleanup()).toBe(true);
+    factory.destroy();
+    factory.destroy();
+    expect(serviceDestroys).toBe(2);
   });
 
   it('blocks Coordinator reentry from Runtime callbacks and keeps snapshotted methods', async () => {
@@ -318,8 +391,8 @@ describe('Product Match lifecycle boundaries', () => {
         try { operation(); } catch (error) { errors.push(error as Error); }
       }
     };
-    coordinator.startWithReadFrame();
-    expect(coordinator.state).toBe(PRODUCT_MATCH_COORDINATOR_STATE.RUNNING);
+    expect(() => coordinator.startWithReadFrame()).toThrow(/不可重入|发生重入/);
+    expect(coordinator.state).toBe(PRODUCT_MATCH_COORDINATOR_STATE.FAILED);
     expect(errors).toHaveLength(10);
     for (const error of errors) expect(error.message).toMatch(/不可重入/);
     runtime.destroy = () => { throw new Error('replacement must not execute'); };
@@ -534,7 +607,96 @@ describe('Product Match lifecycle boundaries', () => {
       ordinaryError = error;
     }
     expect(ordinaryError).toBeInstanceOf(Error);
-    expect((ordinaryError as Error).message).not.toMatch(/必须同步完成/);
+    expect((ordinaryError as Error).message).toMatch(/then 字段.*必须同步完成/);
+  });
+
+  it('rejects Promise subclasses and constructor accessors without external execution', () => {
+    let speciesCalls = 0;
+    class DerivedPromise<T> extends Promise<T> {
+      static get [Symbol.species](): PromiseConstructor {
+        speciesCalls += 1;
+        return Promise;
+      }
+    }
+    const subclassCandidate = {
+      ...runtimeHarness(),
+      getReadFrame() {
+        return new DerivedPromise((resolve) => resolve(frame(0)));
+      },
+    };
+    expect(() => createProductMatchRuntimePort(subclassCandidate).getReadFrame())
+      .toThrow(/同步完成/);
+    expect(speciesCalls).toBe(0);
+
+    let constructorCalls = 0;
+    const accessorValue = Object.create(null);
+    Object.defineProperty(accessorValue, 'constructor', {
+      get() {
+        constructorCalls += 1;
+        throw new Error('must-not-run');
+      },
+    });
+    const accessorCandidate = {
+      ...runtimeHarness(),
+      getReadFrame() { return accessorValue; },
+    };
+    expect(() => createProductMatchRuntimePort(accessorCandidate).getReadFrame())
+      .toThrow(/访问器 constructor/);
+    expect(constructorCalls).toBe(0);
+  });
+
+  it('distinguishes cyclic and over-deep synchronous return prototype chains', () => {
+    let cyclic: object;
+    cyclic = new Proxy(Object.create(null), {
+      getPrototypeOf() { return cyclic; },
+    });
+    const cyclicCandidate = {
+      ...runtimeHarness(),
+      getReadFrame() { return cyclic; },
+    };
+    expect(() => createProductMatchRuntimePort(cyclicCandidate).getReadFrame())
+      .toThrow(/循环/);
+
+    const deepCandidate = {
+      ...runtimeHarness(),
+      getReadFrame() { return prototypeChain(33); },
+    };
+    expect(() => createProductMatchRuntimePort(deepCandidate).getReadFrame())
+      .toThrow(/超过32层/);
+  });
+
+  it('fails closed under native Promise then/species descriptor drift', () => {
+    const thenDescriptor = Object.getOwnPropertyDescriptor(Promise.prototype, 'then');
+    const speciesDescriptor = Object.getOwnPropertyDescriptor(Promise, Symbol.species);
+    if (thenDescriptor === undefined || speciesDescriptor === undefined) {
+      throw new Error('native Promise descriptors unavailable');
+    }
+    const candidate = runtimeHarness();
+
+    try {
+      Object.defineProperty(Promise.prototype, 'then', {
+        ...thenDescriptor,
+        value: function driftedThen() { return undefined; },
+      });
+      expect(() => createProductMatchRuntimePort(candidate)).toThrow(/描述符漂移/);
+    } finally {
+      Object.defineProperty(Promise.prototype, 'then', thenDescriptor);
+    }
+
+    try {
+      Object.defineProperty(Promise, Symbol.species, {
+        ...speciesDescriptor,
+        get() { return class DriftedPromise extends Promise {}; },
+      });
+      const promiseCandidate = {
+        ...runtimeHarness(),
+        getReadFrame() { return Promise.resolve(frame(0)); },
+      };
+      expect(() => createProductMatchRuntimePort(promiseCandidate).getReadFrame())
+        .toThrow(/species.*漂移/);
+    } finally {
+      Object.defineProperty(Promise, Symbol.species, speciesDescriptor);
+    }
   });
 
   it('retains ProductMatch candidate cleanup across rejected async destroy returns', async () => {

@@ -74,6 +74,8 @@ function createRealController(
     ...(handle === undefined ? {} : { trustedCommandSourceHandle: handle }),
     arena: core.config.arena,
     characterRadius: core.getCharacterDefinition('player-2').collision.radius,
+    tickDurationSeconds: core.config.fixedDeltaSeconds,
+    maximumStepHeight: core.getCharacterDefinition('player-2').movement.automaticStepHeight,
   });
 }
 

@@ -61,6 +61,14 @@ export function assertNonEmptyString(value: unknown, name: string): string {
   return value;
 }
 
+export function assertTrimmedNonEmptyString(value: unknown, name: string): string {
+  const result = assertNonEmptyString(value, name);
+  if (result !== result.trim()) {
+    throw new RangeError(`${name} 不允许首尾空白。`);
+  }
+  return result;
+}
+
 export function assertIntegerAtLeast(value: unknown, minimum: number, name: string): number {
   if (!Number.isSafeInteger(value) || (value as number) < minimum) {
     throw new RangeError(`${name} 必须是大于等于 ${minimum} 的安全整数。`);

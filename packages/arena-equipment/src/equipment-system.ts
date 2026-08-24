@@ -39,7 +39,16 @@ import {
   type EquipmentRuntimeState,
 } from './equipment-runtime.js';
 import { EquipmentSpawner } from './equipment-spawner.js';
-import { serializeEquipmentRuntimeStates } from './equipment-serializer.js';
+import {
+  deserializeEquipmentRuntimeState,
+  serializeEquipmentRuntimeStates,
+} from './equipment-serializer.js';
+import {
+  EQUIPMENT_SYSTEM_CHECKPOINT_V1_SCHEMA_VERSION,
+  createEquipmentSystemCheckpointV1,
+  validateEquipmentSystemCheckpointV1,
+  type EquipmentSystemCheckpointV1,
+} from './equipment-system-checkpoint-v1.js';
 
 const PICKUP_OPTIONS_KEYS = new Set([
   'participants',
@@ -129,6 +138,38 @@ export interface EquipmentSupplyTimelinePhaseResult {
   readonly events: readonly EquipmentSupplyExpiredEvent[];
 }
 
+type EquipmentSystemOperation =
+  | 'spawn'
+  | 'supply-timeline'
+  | 'pickup'
+  | 'supply-pickup'
+  | 'action-candidate-read'
+  | 'aerial-action-candidate-read'
+  | 'action-start-validation'
+  | 'action-start'
+  | 'cooldown-advance'
+  | 'last-safe-position-update'
+  | 'drop-owned'
+  | 'world-equipment-reconcile'
+  | 'held-equipment-read'
+  | 'equipment-snapshot-read'
+  | 'equipment-list-read'
+  | 'expired-held-list-read'
+  | 'checkpoint-export'
+  | 'destroy';
+
+export const EQUIPMENT_SYSTEM_OPERATION_GUARD_V1 = Object.freeze({
+  operationGuardPrecedesLifecycleAndInputValidation: true,
+  registryResolverAndMapCallbacksCheckedBeforeAuthorityCommit: true,
+  swallowedCallbackReentryRejectsBeforeAuthorityCommit: true,
+  publicReadsRejectAuthorityIntermediateState: true,
+  internalReadsAvoidPublicReentry: true,
+  authorityCommitChecksStickyReentryFact: true,
+  postCommitReentryFailsClosed: true,
+  destroyFastPathChecksOperationBeforeIdempotence: true,
+  validationStatus: 'not-run',
+} as const);
+
 function compareStrings(left: string, right: string): number {
   if (left < right) return -1;
   if (left > right) return 1;
@@ -162,7 +203,10 @@ export class EquipmentSystem {
   readonly #pickupResolver: EquipmentPickupResolver;
   readonly #spawner: EquipmentSpawner;
   #destroyed: boolean;
-  #mutating: boolean;
+  #failed = false;
+  #operation: EquipmentSystemOperation | null = null;
+  #reentrySequence = 0;
+  #reentryError: Error | null = null;
 
   constructor({
     participantIds,
@@ -202,12 +246,131 @@ export class EquipmentSystem {
     this.#pickupResolver = new EquipmentPickupResolver({ equipmentRegistry: this.#equipmentRegistry });
     this.#spawner = new EquipmentSpawner({ equipmentRegistry: this.#equipmentRegistry });
     this.#destroyed = false;
-    this.#mutating = false;
     Object.freeze(this);
+  }
+
+  static restoreFromCheckpointV1(
+    checkpointValue: unknown,
+    options: Omit<EquipmentSystemOptions, 'participantIds'>,
+  ): EquipmentSystem {
+    const checkpoint = validateEquipmentSystemCheckpointV1(checkpointValue);
+    const system = new EquipmentSystem({
+      ...options,
+      participantIds: checkpoint.participantIds,
+    });
+    try {
+      for (const snapshot of checkpoint.runtimes) {
+        const runtime = deserializeEquipmentRuntimeState(snapshot, {
+          equipmentRegistry: system.#equipmentRegistry,
+        });
+        system.#equipmentRegistry.require(runtime.definitionId);
+        system.#runtimes.set(runtime.instanceId, runtime);
+        if (runtime.locationState === EQUIPMENT_LOCATION_STATE.HELD) {
+          system.#heldByParticipant.set(runtime.ownerId!, runtime.instanceId);
+        }
+      }
+      for (const instanceId of checkpoint.expiredHeldSupplyEquipmentInstanceIds) {
+        system.#expiredHeldSupplyEquipmentIds.add(instanceId);
+      }
+      system.#assertOwnershipInvariants();
+      return system;
+    } catch (error) {
+      system.destroy();
+      throw error;
+    }
   }
 
   #assertUsable(): void {
     if (this.#destroyed) throw new Error('EquipmentSystem 已销毁。');
+    if (this.#failed) throw new Error('EquipmentSystem 已失败关闭。');
+  }
+
+  #recordReentry(requestedOperation: EquipmentSystemOperation): Error {
+    this.#reentrySequence += 1;
+    if (this.#reentryError === null) {
+      this.#reentryError = new Error(
+        `EquipmentSystem ${String(this.#operation)}期间不可重入${requestedOperation}。`,
+      );
+    }
+    return this.#reentryError;
+  }
+
+  #assertReentryFree(
+    sequence: number,
+    operation: string,
+    postCommit = false,
+  ): void {
+    if (this.#reentrySequence === sequence) return;
+    if (postCommit) this.#failed = true;
+    throw this.#reentryError ?? new Error(`EquipmentSystem ${operation}期间发生重入。`);
+  }
+
+  #runOperation<T>(
+    operation: EquipmentSystemOperation,
+    callback: () => T,
+    options: Readonly<{ allowDestroyed?: boolean; allowFailed?: boolean }> = {},
+  ): T {
+    if (this.#operation !== null) throw this.#recordReentry(operation);
+    this.#operation = operation;
+    const sequence = this.#reentrySequence;
+    try {
+      if (!options.allowDestroyed && !options.allowFailed) this.#assertUsable();
+      else {
+        if (!options.allowDestroyed && this.#destroyed) {
+          throw new Error('EquipmentSystem 已销毁。');
+        }
+        if (!options.allowFailed && this.#failed) {
+          throw new Error('EquipmentSystem 已失败关闭。');
+        }
+      }
+      const result = callback();
+      this.#assertReentryFree(sequence, operation, true);
+      return result;
+    } finally {
+      this.#operation = null;
+      this.#reentryError = null;
+    }
+  }
+
+  #useExternalValueChecked<T>(operation: string, callback: () => T): T {
+    const sequence = this.#reentrySequence;
+    try {
+      const result = callback();
+      this.#assertReentryFree(sequence, operation);
+      return result;
+    } catch (error) {
+      this.#assertReentryFree(sequence, operation);
+      throw error;
+    }
+  }
+
+  #assertAuthorityCommitReady(operation: string): void {
+    if (this.#reentryError !== null) throw this.#reentryError;
+    if (this.#operation === null) {
+      throw new Error(`EquipmentSystem ${operation}缺少权威操作所有权。`);
+    }
+  }
+
+  #requireEquipmentDefinition(definitionId: string) {
+    return this.#useExternalValueChecked('Equipment Registry读取', () => (
+      this.#equipmentRegistry.require(definitionId)
+    ));
+  }
+
+  #requireSupplyDefinition(definitionId: string) {
+    const registry = this.#equipmentSupplyRegistry;
+    if (!registry) {
+      throw new Error('EquipmentSystem 未配置 EquipmentSupplyRegistry。');
+    }
+    return this.#useExternalValueChecked('Equipment Supply Registry读取', () => (
+      registry.require(definitionId)
+    ));
+  }
+
+  #requireActionDefinition(actionDefinitionId: string) {
+    return this.#useExternalValueChecked('Action Registry读取', () => (
+      this.#actionRegistry.require(actionDefinitionId)
+    ));
   }
 
   #requireParticipant(participantId: unknown): string {
@@ -223,21 +386,14 @@ export class EquipmentSystem {
     return runtime;
   }
 
-  #runMutation<T>(operation: () => T): T {
-    this.#assertUsable();
-    if (this.#mutating) throw new Error('EquipmentSystem 权威变更不可重入。');
-    this.#mutating = true;
-    try {
-      return operation();
-    } finally {
-      this.#mutating = false;
-    }
+  #runMutation<T>(operation: EquipmentSystemOperation, callback: () => T): T {
+    return this.#runOperation(operation, callback);
   }
 
   #assertOwnershipInvariants(): void {
     const seenOwners = new Set<string>();
     for (const runtime of this.#runtimes.values()) {
-      this.#equipmentRegistry.require(runtime.definitionId);
+      this.#requireEquipmentDefinition(runtime.definitionId);
       const snapshot = createEquipmentRuntimeSnapshot(runtime);
       if (snapshot.locationState !== EQUIPMENT_LOCATION_STATE.HELD) continue;
       const ownerId = this.#requireParticipant(snapshot.ownerId);
@@ -260,18 +416,21 @@ export class EquipmentSystem {
   }
 
   spawn(options: unknown): EquipmentRuntimeSnapshot {
-    return this.#runMutation(() => {
-      const runtime = this.#spawner.createRuntime(options);
+    return this.#runMutation('spawn', () => {
+      const runtime = this.#useExternalValueChecked('Equipment Spawner解析', () => (
+        this.#spawner.createRuntime(options)
+      ));
       if (this.#runtimes.has(runtime.instanceId)) {
         throw new RangeError(`重复 equipment instance ${runtime.instanceId}。`);
       }
+      this.#assertAuthorityCommitReady('生成装备');
       this.#runtimes.set(runtime.instanceId, runtime);
       return createEquipmentRuntimeSnapshot(runtime);
     });
   }
 
   applySupplyTimelinePhase(options: unknown): EquipmentSupplyTimelinePhaseResult {
-    return this.#runMutation(() => {
+    return this.#runMutation('supply-timeline', () => {
       if (!this.#equipmentSupplyRegistry) {
         throw new Error('EquipmentSystem 未配置 EquipmentSupplyRegistry。');
       }
@@ -313,7 +472,7 @@ export class EquipmentSystem {
           lifecycleSource.supplyDefinitionId,
           `EquipmentSystem supply timeline spawn[${index}].supplyDefinitionId`,
         );
-        const supplyDefinition = this.#equipmentSupplyRegistry.require(definitionId);
+        const supplyDefinition = this.#requireSupplyDefinition(definitionId);
         const lifecycle = createEquipmentSupplyLifecycle(lifecycleSource, supplyDefinition);
         if (lifecycle.spawnTick !== tick) {
           throw new RangeError(`supply ${lifecycle.supplyId} 只能在 spawnTick 生成。`);
@@ -323,12 +482,14 @@ export class EquipmentSystem {
           || this.#runtimes.has(lifecycle.equipmentInstanceId)
         ) throw new RangeError(`重复 equipment instance ${lifecycle.equipmentInstanceId}。`);
         pendingSpawnIds.add(lifecycle.equipmentInstanceId);
-        const runtime = this.#spawner.createRuntime({
-          instanceId: lifecycle.equipmentInstanceId,
-          definitionId: source.definitionId,
-          spawnId: source.spawnId,
-          position: source.position,
-        });
+        const runtime = this.#useExternalValueChecked('Equipment Spawner补给解析', () => (
+          this.#spawner.createRuntime({
+            instanceId: lifecycle.equipmentInstanceId,
+            definitionId: source.definitionId,
+            spawnId: source.spawnId,
+            position: source.position,
+          })
+        ));
         pendingSpawns.push(Object.freeze({ lifecycle, runtime }));
       }
       pendingSpawns.sort((left, right) => compareStrings(
@@ -352,7 +513,7 @@ export class EquipmentSystem {
           lifecycleSource.supplyDefinitionId,
           `EquipmentSystem supply timeline expiration[${index}].supplyDefinitionId`,
         );
-        const supplyDefinition = this.#equipmentSupplyRegistry.require(definitionId);
+        const supplyDefinition = this.#requireSupplyDefinition(definitionId);
         const lifecycle = createEquipmentSupplyLifecycle(lifecycleSource, supplyDefinition);
         if (lifecycle.expireTick !== tick) {
           throw new RangeError(`supply ${lifecycle.supplyId} 只能在 expireTick 过期。`);
@@ -363,7 +524,7 @@ export class EquipmentSystem {
         ) throw new RangeError(`重复 supply expiration ${lifecycle.equipmentInstanceId}。`);
         expirationIds.add(lifecycle.equipmentInstanceId);
         const runtime = this.#requireRuntime(lifecycle.equipmentInstanceId);
-        this.#equipmentRegistry.require(runtime.definitionId);
+        this.#requireEquipmentDefinition(runtime.definitionId);
         const world = runtime.locationState === EQUIPMENT_LOCATION_STATE.SPAWNED
           || runtime.locationState === EQUIPMENT_LOCATION_STATE.DROPPED;
         const held = runtime.locationState === EQUIPMENT_LOCATION_STATE.HELD;
@@ -422,6 +583,7 @@ export class EquipmentSystem {
         }))),
         events: Object.freeze(pendingExpirations.flatMap(({ event }) => event ? [event] : [])),
       });
+      this.#assertAuthorityCommitReady('补给时间线');
       // Atomic authority commit: all registries, identities, states and payloads are validated above.
       try {
         for (const { runtime } of pendingSpawns) this.#runtimes.set(runtime.instanceId, runtime);
@@ -443,7 +605,7 @@ export class EquipmentSystem {
   }
 
   resolvePickups(options: unknown) {
-    return this.#runMutation(() => {
+    return this.#runMutation('pickup', () => {
       assertKnownKeys(options, PICKUP_OPTIONS_KEYS, 'EquipmentSystem pickup options');
       const { participants, contestSeed } = options;
       if (!Array.isArray(participants)) throw new TypeError('EquipmentSystem participants 必须是数组。');
@@ -478,20 +640,22 @@ export class EquipmentSystem {
           excludedIds.add(instanceId);
         }
       }
-      const decisions = this.#pickupResolver.resolve({
-        participants: this.#participantIds.map((id) => {
-          const participant = participantById.get(id);
-          if (!participant) throw new Error(`pickup participant map 缺少 ${id}。`);
-          return {
-            ...participant,
-            eligible: participant.eligible && !this.#heldByParticipant.has(id),
-          };
-        }),
-        equipment: [...this.#runtimes.values()]
-          .filter(({ instanceId }) => !excludedIds.has(instanceId))
-          .map(createEquipmentRuntimeSnapshot),
-        contestSeed,
-      });
+      const decisions = this.#useExternalValueChecked('Equipment Pickup Resolver解析', () => (
+        this.#pickupResolver.resolve({
+          participants: this.#participantIds.map((id) => {
+            const participant = participantById.get(id);
+            if (!participant) throw new Error(`pickup participant map 缺少 ${id}。`);
+            return {
+              ...participant,
+              eligible: participant.eligible && !this.#heldByParticipant.has(id),
+            };
+          }),
+          equipment: [...this.#runtimes.values()]
+            .filter(({ instanceId }) => !excludedIds.has(instanceId))
+            .map(createEquipmentRuntimeSnapshot),
+          contestSeed,
+        })
+      ));
       const pending = decisions.map((decision) => {
         const runtime = this.#requireRuntime(decision.equipmentInstanceId);
         if (this.#heldByParticipant.has(decision.participantId)) {
@@ -499,6 +663,7 @@ export class EquipmentSystem {
         }
         return { decision, runtime };
       });
+      this.#assertAuthorityCommitReady('普通拾取');
       for (const { decision, runtime } of pending) {
         runtime.locationState = EQUIPMENT_LOCATION_STATE.HELD;
         runtime.ownerId = decision.participantId;
@@ -511,7 +676,7 @@ export class EquipmentSystem {
   }
 
   resolveSupplyPickups(options: unknown): EquipmentSupplyPickupTransactionResult {
-    return this.#runMutation(() => {
+    return this.#runMutation('supply-pickup', () => {
       if (!this.#equipmentSupplyRegistry) {
         throw new Error('EquipmentSystem 未配置 EquipmentSupplyRegistry。');
       }
@@ -556,7 +721,7 @@ export class EquipmentSystem {
           source.supplyDefinitionId,
           `EquipmentSupplyPickup supply[${index}].supplyDefinitionId`,
         );
-        const definition = this.#equipmentSupplyRegistry.require(definitionId);
+        const definition = this.#requireSupplyDefinition(definitionId);
         const lifecycle = createEquipmentSupplyLifecycle(source, definition);
         if (supplyIds.has(lifecycle.supplyId)) {
           throw new RangeError(`重复 equipment supply ${lifecycle.supplyId}。`);
@@ -570,7 +735,7 @@ export class EquipmentSystem {
           throw new RangeError(`supply equipment ${lifecycle.equipmentInstanceId} 当前 tick 不可拾取。`);
         }
         const runtime = this.#requireRuntime(lifecycle.equipmentInstanceId);
-        this.#equipmentRegistry.require(runtime.definitionId);
+        this.#requireEquipmentDefinition(runtime.definitionId);
         if (
           runtime.locationState === EQUIPMENT_LOCATION_STATE.SPAWNED
           || runtime.locationState === EQUIPMENT_LOCATION_STATE.DROPPED
@@ -587,15 +752,17 @@ export class EquipmentSystem {
         ) throw new Error(`supply equipment ${runtime.instanceId} 状态不可判定。`);
       }
 
-      const decisions = this.#pickupResolver.resolveSupply({
-        participants: this.#participantIds.map((id) => {
-          const participant = participantById.get(id);
-          if (!participant) throw new Error(`supply pickup participant map 缺少 ${id}。`);
-          return participant;
-        }),
-        supplies: candidates,
-        contestSeed,
-      });
+      const decisions = this.#useExternalValueChecked('Equipment Supply Pickup Resolver解析', () => (
+        this.#pickupResolver.resolveSupply({
+          participants: this.#participantIds.map((id) => {
+            const participant = participantById.get(id);
+            if (!participant) throw new Error(`supply pickup participant map 缺少 ${id}。`);
+            return participant;
+          }),
+          supplies: candidates,
+          contestSeed,
+        })
+      ));
       const pending: Array<Readonly<{
         target: EquipmentRuntimeState;
         previous: EquipmentRuntimeState | null;
@@ -675,6 +842,7 @@ export class EquipmentSystem {
         decisions: Object.freeze(transactionDecisions),
         events: Object.freeze(transactionEvents),
       });
+      this.#assertAuthorityCommitReady('补给拾取替换');
       // Commit point: every external value, invariant and event payload is now validated.
       // The remaining block performs only private, synchronous assignments and exposes no callback.
       try {
@@ -702,54 +870,15 @@ export class EquipmentSystem {
     });
   }
 
-  getActionCandidate(participantId: unknown): ActionCandidate | null {
-    this.#assertUsable();
-    const id = this.#requireParticipant(participantId);
-    const instanceId = this.#heldByParticipant.get(id);
-    if (!instanceId) return null;
-    const runtime = this.#requireRuntime(instanceId);
-    const equipment = this.#equipmentRegistry.require(runtime.definitionId);
-    const ready = isEquipmentCooldownReady(runtime.cooldownRemainingTicks);
-    return Object.freeze({
-      id: `equipment:${runtime.instanceId}`,
-      actionDefinitionId: equipment.actionDefinitionId,
-      source: 'equipment-system',
-      priority: ACTION_PRIORITY.EQUIPMENT,
-      available: ready,
-      blocksFallback: true,
-      unavailableReason: ready ? null : 'equipment-cooldown',
-    });
-  }
-
-  getAerialActionCandidate(participantId: unknown): ActionCandidate | null {
-    this.#assertUsable();
-    const id = this.#requireParticipant(participantId);
-    const instanceId = this.#heldByParticipant.get(id);
-    if (!instanceId) return null;
-    const runtime = this.#requireRuntime(instanceId);
-    const equipment = this.#equipmentRegistry.require(runtime.definitionId);
-    const ready = isEquipmentCooldownReady(runtime.cooldownRemainingTicks);
-    return Object.freeze({
-      id: `equipment-aerial:${runtime.instanceId}`,
-      actionDefinitionId: equipment.aerialActionDefinitionId,
-      source: 'equipment-system',
-      priority: ACTION_PRIORITY.AIR_COMBAT,
-      available: ready,
-      blocksFallback: true,
-      unavailableReason: ready ? null : 'equipment-cooldown',
-    });
-  }
-
-  assertActionCanStart(
+  #assertActionCanStartInsideOperation(
     participantId: unknown,
     actionDefinitionId: unknown,
   ): EquipmentRuntimeSnapshot {
-    this.#assertUsable();
     const id = this.#requireParticipant(participantId);
     const instanceId = this.#heldByParticipant.get(id);
     if (!instanceId) throw new Error(`participant ${id} 没有可使用装备。`);
     const runtime = this.#requireRuntime(instanceId);
-    const equipment = this.#equipmentRegistry.require(runtime.definitionId);
+    const equipment = this.#requireEquipmentDefinition(runtime.definitionId);
     if (
       equipment.actionDefinitionId !== actionDefinitionId
       && equipment.aerialActionDefinitionId !== actionDefinitionId
@@ -762,23 +891,81 @@ export class EquipmentSystem {
     return createEquipmentRuntimeSnapshot(runtime);
   }
 
+  #listSnapshotsInsideOperation(): readonly EquipmentRuntimeSnapshot[] {
+    return serializeEquipmentRuntimeStates([...this.#runtimes.values()]);
+  }
+
+  #listExpiredHeldSupplyEquipmentInstanceIdsInsideOperation(): readonly string[] {
+    return Object.freeze([...this.#expiredHeldSupplyEquipmentIds].sort(compareStrings));
+  }
+
+  getActionCandidate(participantId: unknown): ActionCandidate | null {
+    return this.#runOperation('action-candidate-read', () => {
+      const id = this.#requireParticipant(participantId);
+      const instanceId = this.#heldByParticipant.get(id);
+      if (!instanceId) return null;
+      const runtime = this.#requireRuntime(instanceId);
+      const equipment = this.#requireEquipmentDefinition(runtime.definitionId);
+      const ready = isEquipmentCooldownReady(runtime.cooldownRemainingTicks);
+      return Object.freeze({
+        id: `equipment:${runtime.instanceId}`,
+        actionDefinitionId: equipment.actionDefinitionId,
+        source: 'equipment-system',
+        priority: ACTION_PRIORITY.EQUIPMENT,
+        available: ready,
+        blocksFallback: true,
+        unavailableReason: ready ? null : 'equipment-cooldown',
+      });
+    });
+  }
+
+  getAerialActionCandidate(participantId: unknown): ActionCandidate | null {
+    return this.#runOperation('aerial-action-candidate-read', () => {
+      const id = this.#requireParticipant(participantId);
+      const instanceId = this.#heldByParticipant.get(id);
+      if (!instanceId) return null;
+      const runtime = this.#requireRuntime(instanceId);
+      const equipment = this.#requireEquipmentDefinition(runtime.definitionId);
+      const ready = isEquipmentCooldownReady(runtime.cooldownRemainingTicks);
+      return Object.freeze({
+        id: `equipment-aerial:${runtime.instanceId}`,
+        actionDefinitionId: equipment.aerialActionDefinitionId,
+        source: 'equipment-system',
+        priority: ACTION_PRIORITY.AIR_COMBAT,
+        available: ready,
+        blocksFallback: true,
+        unavailableReason: ready ? null : 'equipment-cooldown',
+      });
+    });
+  }
+
+  assertActionCanStart(
+    participantId: unknown,
+    actionDefinitionId: unknown,
+  ): EquipmentRuntimeSnapshot {
+    return this.#runOperation('action-start-validation', () => (
+      this.#assertActionCanStartInsideOperation(participantId, actionDefinitionId)
+    ));
+  }
+
   markActionStarted(
     participantId: unknown,
     actionDefinitionId: unknown,
   ): EquipmentRuntimeSnapshot {
-    return this.#runMutation(() => {
+    return this.#runMutation('action-start', () => {
       const actionId = assertNonEmptyString(actionDefinitionId, 'equipment actionDefinitionId');
-      const runtime = this.assertActionCanStart(participantId, actionId);
+      const runtime = this.#assertActionCanStartInsideOperation(participantId, actionId);
       const mutableRuntime = this.#requireRuntime(runtime.instanceId);
-      mutableRuntime.cooldownRemainingTicks = this.#actionRegistry
-        .require(actionId).timing.cooldownTicks;
+      const actionDefinition = this.#requireActionDefinition(actionId);
+      this.#assertAuthorityCommitReady('装备动作冷却');
+      mutableRuntime.cooldownRemainingTicks = actionDefinition.timing.cooldownTicks;
       mutableRuntime.revision += 1;
       return createEquipmentRuntimeSnapshot(mutableRuntime);
     });
   }
 
   advanceCooldowns(): readonly EquipmentRuntimeSnapshot[] {
-    return this.#runMutation(() => {
+    return this.#runMutation('cooldown-advance', () => {
       const changed: EquipmentRuntimeSnapshot[] = [];
       for (const runtime of [...this.#runtimes.values()].sort((left, right) => (
         compareStrings(left.instanceId, right.instanceId)
@@ -797,7 +984,7 @@ export class EquipmentSystem {
     participantId: unknown,
     position: unknown,
   ): EquipmentRuntimeSnapshot | null {
-    return this.#runMutation(() => {
+    return this.#runMutation('last-safe-position-update', () => {
       const id = this.#requireParticipant(participantId);
       const instanceId = this.#heldByParticipant.get(id);
       if (!instanceId) return null;
@@ -811,6 +998,7 @@ export class EquipmentSystem {
         && runtime.lastSafePosition.y === next.y
         && runtime.lastSafePosition.z === next.z
       ) return createEquipmentRuntimeSnapshot(runtime);
+      this.#assertAuthorityCommitReady('装备最后安全位置');
       runtime.lastSafePosition = next;
       runtime.revision += 1;
       return createEquipmentRuntimeSnapshot(runtime);
@@ -818,7 +1006,7 @@ export class EquipmentSystem {
   }
 
   dropOwned(participantId: unknown, options: unknown): EquipmentDropResult | null {
-    return this.#runMutation(() => {
+    return this.#runMutation('drop-owned', () => {
       assertKnownKeys(options, DROP_OPTIONS_KEYS, 'EquipmentSystem drop options');
       const { isPositionValid } = options;
       const id = this.#requireParticipant(participantId);
@@ -831,6 +1019,7 @@ export class EquipmentSystem {
           || runtime.ownerId !== id
         ) throw new Error(`过期 held equipment ${instanceId} 所有权状态不一致。`);
         try {
+          this.#assertAuthorityCommitReady('过期持有装备回收');
           runtime.locationState = EQUIPMENT_LOCATION_STATE.DESPAWNED;
           runtime.ownerId = null;
           runtime.position = null;
@@ -856,11 +1045,14 @@ export class EquipmentSystem {
           throw error;
         }
       }
-      const drop = resolveEquipmentDrop({
-        lastSafePosition: runtime.lastSafePosition,
-        originPosition: runtime.originPosition,
-        isPositionValid,
-      });
+      const drop = this.#useExternalValueChecked('地图装备落点校验', () => (
+        resolveEquipmentDrop({
+          lastSafePosition: runtime.lastSafePosition,
+          originPosition: runtime.originPosition,
+          isPositionValid,
+        })
+      ));
+      this.#assertAuthorityCommitReady('装备掉落');
       runtime.locationState = drop.despawned
         ? EQUIPMENT_LOCATION_STATE.DESPAWNED
         : EQUIPMENT_LOCATION_STATE.DROPPED;
@@ -879,7 +1071,7 @@ export class EquipmentSystem {
   }
 
   despawnInvalidWorldEquipment(options: unknown): readonly EquipmentRuntimeSnapshot[] {
-    return this.#runMutation(() => {
+    return this.#runMutation('world-equipment-reconcile', () => {
       assertKnownKeys(options, RECONCILE_OPTIONS_KEYS, 'EquipmentSystem reconcile options');
       const { isPositionValid } = options;
       if (typeof isPositionValid !== 'function') {
@@ -897,15 +1089,19 @@ export class EquipmentSystem {
           && runtime.locationState !== EQUIPMENT_LOCATION_STATE.DROPPED
         ) continue;
         const snapshot = createEquipmentRuntimeSnapshot(runtime);
-        if (!snapshot.position) {
+        const position = snapshot.position;
+        if (!position) {
           throw new Error(`world equipment ${runtime.instanceId} 缺少 position。`);
         }
-        const valid = validatePosition(snapshot.position);
+        const valid = this.#useExternalValueChecked('地图世界装备位置校验', () => (
+          validatePosition(position)
+        ));
         if (typeof valid !== 'boolean') {
           throw new TypeError('EquipmentSystem reconcile isPositionValid 必须返回布尔值。');
         }
         if (!valid) invalid.push(runtime);
       }
+      this.#assertAuthorityCommitReady('世界装备清理');
       return Object.freeze(invalid.map((runtime) => {
         runtime.locationState = EQUIPMENT_LOCATION_STATE.DESPAWNED;
         runtime.ownerId = null;
@@ -917,33 +1113,50 @@ export class EquipmentSystem {
   }
 
   getHeldEquipment(participantId: unknown): EquipmentRuntimeSnapshot | null {
-    this.#assertUsable();
-    const id = this.#requireParticipant(participantId);
-    const instanceId = this.#heldByParticipant.get(id);
-    return instanceId ? createEquipmentRuntimeSnapshot(this.#requireRuntime(instanceId)) : null;
+    return this.#runOperation('held-equipment-read', () => {
+      const id = this.#requireParticipant(participantId);
+      const instanceId = this.#heldByParticipant.get(id);
+      return instanceId ? createEquipmentRuntimeSnapshot(this.#requireRuntime(instanceId)) : null;
+    });
   }
 
   getSnapshot(instanceId: unknown): EquipmentRuntimeSnapshot {
-    this.#assertUsable();
-    return createEquipmentRuntimeSnapshot(this.#requireRuntime(instanceId));
+    return this.#runOperation('equipment-snapshot-read', () => (
+      createEquipmentRuntimeSnapshot(this.#requireRuntime(instanceId))
+    ));
   }
 
   listSnapshots(): readonly EquipmentRuntimeSnapshot[] {
-    this.#assertUsable();
-    return serializeEquipmentRuntimeStates([...this.#runtimes.values()]);
+    return this.#runOperation('equipment-list-read', () => this.#listSnapshotsInsideOperation());
   }
 
   listExpiredHeldSupplyEquipmentInstanceIds(): readonly string[] {
-    this.#assertUsable();
-    return Object.freeze([...this.#expiredHeldSupplyEquipmentIds].sort(compareStrings));
+    return this.#runOperation('expired-held-list-read', () => (
+      this.#listExpiredHeldSupplyEquipmentInstanceIdsInsideOperation()
+    ));
+  }
+
+  exportCheckpointV1(): EquipmentSystemCheckpointV1 {
+    return this.#runOperation('checkpoint-export', () => {
+      this.#assertOwnershipInvariants();
+      return createEquipmentSystemCheckpointV1({
+        schemaVersion: EQUIPMENT_SYSTEM_CHECKPOINT_V1_SCHEMA_VERSION,
+        participantIds: this.#participantIds,
+        runtimes: this.#listSnapshotsInsideOperation(),
+        expiredHeldSupplyEquipmentInstanceIds:
+          this.#listExpiredHeldSupplyEquipmentInstanceIdsInsideOperation(),
+      });
+    });
   }
 
   destroy(): void {
-    if (this.#destroyed) return;
-    if (this.#mutating) throw new Error('EquipmentSystem 权威变更期间不能销毁。');
-    this.#destroyed = true;
-    this.#heldByParticipant.clear();
-    this.#expiredHeldSupplyEquipmentIds.clear();
-    this.#runtimes.clear();
+    this.#runOperation('destroy', () => {
+      if (this.#destroyed) return;
+      this.#destroyed = true;
+      this.#failed = false;
+      this.#heldByParticipant.clear();
+      this.#expiredHeldSupplyEquipmentIds.clear();
+      this.#runtimes.clear();
+    }, { allowDestroyed: true, allowFailed: true });
   }
 }

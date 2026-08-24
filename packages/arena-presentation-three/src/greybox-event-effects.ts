@@ -43,6 +43,19 @@ const EFFECT_KIND = Object.freeze({
   IMPACT: 'impact',
 } as const);
 
+export const GREYBOX_EVENT_EFFECTS_CONSTRUCTION_LIFECYCLE_V1 = Object.freeze({
+  id: 'greybox-event-effects-construction-lifecycle-v1',
+  partialEffectResourcesRetainCleanupOwner: true,
+  poolRetainsFailedEffectConstructionDebt: true,
+  stageCanRetryPoolConstructionDebt: true,
+});
+export const GREYBOX_EVENT_EFFECTS_TERMINAL_LIFECYCLE_V1 = Object.freeze({
+  id: 'greybox-event-effects-terminal-lifecycle-v1',
+  cleanupCallbacksCannotReenterPublicApi: true,
+  cleanupCallbacksMustCompleteSynchronously: true,
+  effectFailureStopsLaterCleanup: true,
+});
+
 type EffectKind = typeof EFFECT_KIND[keyof typeof EFFECT_KIND];
 
 const DEFAULT_IMPACT_STREAK_LENGTHS = Object.freeze([1.08, 0.82, 0.62, 0.46]);
@@ -190,6 +203,104 @@ function snapshotMethod(value: object, name: string): (...args: unknown[]) => un
   throw new TypeError(`Three root 缺少 ${name}()。`);
 }
 
+interface ConstructionCleanupDebt {
+  readonly cleanupComplete: boolean;
+  retryCleanup(): void;
+}
+interface PooledEventEffectConstructionUnit {
+  readonly dispose: () => unknown;
+  disposed: boolean;
+}
+interface PooledEventEffectConstructionResources {
+  readonly root: THREE.Group;
+  lease: ThreeObjectDisposalLease | null;
+  readonly units: PooledEventEffectConstructionUnit[];
+  rootCleared: boolean;
+}
+
+function pooledEffectConstructionComplete(resources: PooledEventEffectConstructionResources): boolean {
+  return resources.lease?.complete
+    ?? (resources.rootCleared && resources.units.every(({ disposed }) => disposed));
+}
+
+function cleanupPooledEffectConstruction(resources: PooledEventEffectConstructionResources): void {
+  const errors: unknown[] = [];
+  if (resources.lease !== null) {
+    if (!resources.lease.complete) {
+      try { resources.lease.dispose(); } catch (error) { errors.push(error); }
+    }
+  } else {
+    if (!resources.rootCleared) {
+      try {
+        rejectThenable(resources.root.clear(), 'Greybox event effect construction root.clear()');
+        resources.rootCleared = true;
+      } catch (error) { errors.push(error); }
+    }
+    if (resources.rootCleared) {
+      for (const unit of resources.units) {
+        if (unit.disposed) continue;
+        try {
+          rejectThenable(unit.dispose(), 'Greybox event effect construction resource.dispose()');
+          unit.disposed = true;
+        } catch (error) { errors.push(error); }
+      }
+    }
+  }
+  if (errors.length > 0) throw new AggregateError(errors, 'Greybox event effect 构造资源清理未完整完成。');
+  if (!pooledEffectConstructionComplete(resources)) {
+    throw new Error('Greybox event effect 构造资源清理依赖尚未收敛。');
+  }
+}
+
+class PooledEventEffectConstructionCleanupError extends AggregateError implements ConstructionCleanupDebt {
+  readonly originalError: unknown;
+  readonly cleanupError: unknown;
+  readonly #resources: PooledEventEffectConstructionResources;
+
+  constructor(
+    originalError: unknown,
+    cleanupError: unknown,
+    resources: PooledEventEffectConstructionResources,
+  ) {
+    super([originalError, cleanupError], 'Greybox event effect 构造失败且清理未完整完成。');
+    this.name = 'PooledEventEffectConstructionCleanupError';
+    this.originalError = originalError;
+    this.cleanupError = cleanupError;
+    this.#resources = resources;
+  }
+
+  get cleanupComplete(): boolean { return pooledEffectConstructionComplete(this.#resources); }
+  retryCleanup(): void { cleanupPooledEffectConstruction(this.#resources); }
+}
+
+export class GreyboxEventEffectsConstructionCleanupError extends AggregateError implements ConstructionCleanupDebt {
+  readonly originalError: unknown;
+  readonly cleanupErrors: readonly unknown[];
+  readonly #retry: () => readonly unknown[];
+  readonly #complete: () => boolean;
+
+  constructor(
+    originalError: unknown,
+    cleanupErrors: readonly unknown[],
+    retry: () => readonly unknown[],
+    complete: () => boolean,
+  ) {
+    super([originalError, ...cleanupErrors], 'GreyboxEventEffects 构造失败且清理未完整完成。');
+    this.name = 'GreyboxEventEffectsConstructionCleanupError';
+    this.originalError = originalError;
+    this.cleanupErrors = Object.freeze([...cleanupErrors]);
+    this.#retry = retry;
+    this.#complete = complete;
+  }
+
+  get cleanupComplete(): boolean { return this.#complete(); }
+  retryCleanup(): void {
+    const errors = this.#retry();
+    if (errors.length > 0) throw new AggregateError(errors, 'GreyboxEventEffects 构造清理重试未完整完成。');
+    if (!this.#complete()) throw new Error('GreyboxEventEffects 构造清理依赖尚未收敛。');
+  }
+}
+
 class PooledEventEffect {
   readonly root: THREE.Group;
   readonly #pulse: THREE.Mesh<THREE.RingGeometry, THREE.MeshBasicMaterial>;
@@ -209,75 +320,87 @@ class PooledEventEffect {
 
   constructor(parent: THREE.Object3D) {
     this.root = new THREE.Group();
-    this.root.name = 'ArenaPooledEventEffect';
-    this.root.visible = false;
-
-    const material = new THREE.MeshBasicMaterial({
-      color: ARENA_GREYBOX_COLOR.teal,
-      transparent: true,
-      opacity: 0.8,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-      toneMapped: false,
-    });
-    this.#pulse = new THREE.Mesh(new THREE.RingGeometry(0.2, 0.28, 20), material);
-    this.#pulse.rotation.x = -Math.PI / 2;
-    this.#pulse.renderOrder = 4;
-    this.root.add(this.#pulse);
-
-    this.#impact = new THREE.Group();
-    const flashMaterial = new THREE.MeshBasicMaterial({
-      color: ARENA_GREYBOX_COLOR.white,
-      transparent: true,
-      opacity: 0.95,
-      depthWrite: false,
-      toneMapped: false,
-    });
-    this.#flash = new THREE.Mesh(new THREE.IcosahedronGeometry(0.24, 1), flashMaterial);
-    this.#flash.scale.set(1.4, 0.8, 0.65);
-    this.#impact.add(this.#flash);
-
-    const streakMaterial = flashMaterial.clone();
-    const streaks: THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial>[] = [];
-    for (let index = 0; index < HAMMER_IMPACT_STREAK_LENGTHS.length; index += 1) {
-      const streak = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), streakMaterial);
-      streaks.push(streak);
-      this.#impact.add(streak);
-    }
-    this.#streaks = Object.freeze(streaks);
-
-    const ringMaterial = flashMaterial.clone();
-    ringMaterial.opacity = 0.8;
-    this.#ring = new THREE.Mesh(new THREE.RingGeometry(0.22, 0.3, 24), ringMaterial);
-    this.#ring.rotation.x = -Math.PI / 2;
-    this.#ring.position.y = -0.45;
-    this.#impact.add(this.#ring);
-
-    const accentMaterial = flashMaterial.clone();
-    this.#hookArc = new THREE.Mesh(
-      new THREE.TorusGeometry(0.52, 0.045, 7, 18, Math.PI * 1.45),
-      accentMaterial,
-    );
-    this.#hookArc.rotation.z = 0.45;
-    this.#hookArc.position.z = -0.12;
-    this.#impact.add(this.#hookArc);
-
-    this.#guardArc = new THREE.Mesh(
-      new THREE.TorusGeometry(0.54, 0.055, 7, 18, Math.PI),
-      accentMaterial,
-    );
-    this.#guardArc.rotation.z = Math.PI / 2;
-    this.#guardArc.position.z = -0.05;
-    this.#impact.add(this.#guardArc);
-    this.#impact.renderOrder = 8;
-    this.root.add(this.#impact);
-    this.#disposal = new ThreeObjectDisposalLease(this.root);
+    const construction: PooledEventEffectConstructionResources = {
+      root: this.root,
+      lease: null,
+      units: [],
+      rootCleared: false,
+    };
+    const track = <T extends { dispose(): unknown }>(resource: T): T => {
+      construction.units.push({ dispose: () => resource.dispose(), disposed: false });
+      return resource;
+    };
     try {
+      this.root.name = 'ArenaPooledEventEffect';
+      this.root.visible = false;
+
+      const material = track(new THREE.MeshBasicMaterial({
+        color: ARENA_GREYBOX_COLOR.teal,
+        transparent: true,
+        opacity: 0.8,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+        toneMapped: false,
+      }));
+      this.#pulse = new THREE.Mesh(track(new THREE.RingGeometry(0.2, 0.28, 20)), material);
+      this.#pulse.rotation.x = -Math.PI / 2;
+      this.#pulse.renderOrder = 4;
+      this.root.add(this.#pulse);
+
+      this.#impact = new THREE.Group();
+      const flashMaterial = track(new THREE.MeshBasicMaterial({
+        color: ARENA_GREYBOX_COLOR.white,
+        transparent: true,
+        opacity: 0.95,
+        depthWrite: false,
+        toneMapped: false,
+      }));
+      this.#flash = new THREE.Mesh(track(new THREE.IcosahedronGeometry(0.24, 1)), flashMaterial);
+      this.#flash.scale.set(1.4, 0.8, 0.65);
+      this.#impact.add(this.#flash);
+
+      const streakMaterial = track(flashMaterial.clone());
+      const streaks: THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial>[] = [];
+      for (let index = 0; index < HAMMER_IMPACT_STREAK_LENGTHS.length; index += 1) {
+        const streak = new THREE.Mesh(track(new THREE.BoxGeometry(1, 1, 1)), streakMaterial);
+        streaks.push(streak);
+        this.#impact.add(streak);
+      }
+      this.#streaks = Object.freeze(streaks);
+
+      const ringMaterial = track(flashMaterial.clone());
+      ringMaterial.opacity = 0.8;
+      this.#ring = new THREE.Mesh(track(new THREE.RingGeometry(0.22, 0.3, 24)), ringMaterial);
+      this.#ring.rotation.x = -Math.PI / 2;
+      this.#ring.position.y = -0.45;
+      this.#impact.add(this.#ring);
+
+      const accentMaterial = track(flashMaterial.clone());
+      this.#hookArc = new THREE.Mesh(
+        track(new THREE.TorusGeometry(0.52, 0.045, 7, 18, Math.PI * 1.45)),
+        accentMaterial,
+      );
+      this.#hookArc.rotation.z = 0.45;
+      this.#hookArc.position.z = -0.12;
+      this.#impact.add(this.#hookArc);
+
+      this.#guardArc = new THREE.Mesh(
+        track(new THREE.TorusGeometry(0.54, 0.055, 7, 18, Math.PI)),
+        accentMaterial,
+      );
+      this.#guardArc.rotation.z = Math.PI / 2;
+      this.#guardArc.position.z = -0.05;
+      this.#impact.add(this.#guardArc);
+      this.#impact.renderOrder = 8;
+      this.root.add(this.#impact);
+      const disposal = new ThreeObjectDisposalLease(this.root);
+      construction.lease = disposal;
+      this.#disposal = disposal;
       const add = snapshotMethod(parent, 'add');
       rejectThenable(add(this.root), 'Three root.add()');
     } catch (error) {
-      try { this.#disposal.dispose(); } catch (cleanupError) {
-        throw cleanupFailure('Greybox event effect 挂载失败且清理未完整完成。', error, [cleanupError]);
+      try { cleanupPooledEffectConstruction(construction); } catch (cleanupError) {
+        throw new PooledEventEffectConstructionCleanupError(error, cleanupError, construction);
       }
       throw error;
     }
@@ -407,6 +530,7 @@ export class GreyboxEventEffects {
   readonly #allEffects: PooledEventEffect[] = [];
   readonly #destroyedEffects = new Set<PooledEventEffect>();
   readonly #maximumEffects: number;
+  #constructionDebt: PooledEventEffectConstructionCleanupError | null = null;
   #disposed = false;
   #destroyRequested = false;
   #operating = false;
@@ -430,20 +554,26 @@ export class GreyboxEventEffects {
         this.#freeEffects.push(effect);
       }
     } catch (error) {
+      if (error instanceof PooledEventEffectConstructionCleanupError) this.#constructionDebt = error;
       const cleanupCauses = this.#cleanupAll();
-      if (cleanupCauses.length > 0) {
-        throw cleanupFailure('GreyboxEventEffects 构造失败且清理未完整完成。', error, cleanupCauses);
+      if (cleanupCauses.length > 0 || !this.#constructionCleanupComplete()) {
+        throw new GreyboxEventEffectsConstructionCleanupError(
+          error,
+          cleanupCauses,
+          () => this.#cleanupAll(),
+          () => this.#constructionCleanupComplete(),
+        );
       }
       throw error;
     }
   }
 
   #assertUsable(): void {
-    if (this.#disposed || this.#destroyRequested) throw new Error('GreyboxEventEffects 已销毁。');
     if (this.#operating || this.#cleaning) {
       this.#reentryDetected = true;
       throw new Error('GreyboxEventEffects 不允许重入。');
     }
+    if (this.#disposed || this.#destroyRequested) throw new Error('GreyboxEventEffects 已销毁。');
   }
 
   #beginOperation(): void {
@@ -457,22 +587,46 @@ export class GreyboxEventEffects {
   }
 
   #cleanupAll(): unknown[] {
+    if (this.#cleaning) {
+      this.#reentryDetected = true;
+      return [new Error('GreyboxEventEffects 清理不可重入。')];
+    }
+    this.#cleaning = true;
+    this.#reentryDetected = false;
     const errors: unknown[] = [];
-    for (const effect of this.#allEffects) {
-      if (this.#destroyedEffects.has(effect)) continue;
-      try {
-        effect.destroy();
-        this.#destroyedEffects.add(effect);
-      } catch (error) { errors.push(error); }
-    }
-    if (this.#destroyedEffects.size === this.#allEffects.length) {
-      this.#effects.length = 0;
-      this.#freeEffects.length = 0;
-      this.#allEffects.length = 0;
-      this.#destroyedEffects.clear();
-      this.#disposed = true;
-    }
+    try {
+      if (this.#constructionDebt !== null) {
+        try { this.#constructionDebt.retryCleanup(); } catch (error) { errors.push(error); }
+        if (this.#constructionDebt.cleanupComplete) this.#constructionDebt = null;
+      }
+      if (!this.#reentryDetected) {
+        for (const effect of this.#allEffects) {
+          if (this.#reentryDetected) break;
+          if (this.#destroyedEffects.has(effect)) continue;
+          const errorCount = errors.length;
+          try {
+            rejectThenable(effect.destroy(), 'GreyboxEventEffects effect.destroy()');
+            if (this.#reentryDetected) {
+              throw new Error('GreyboxEventEffects destroy回调发生公开API重入。');
+            }
+            this.#destroyedEffects.add(effect);
+          } catch (error) { errors.push(error); }
+          if (errors.length > errorCount) break;
+        }
+      }
+      if (this.#constructionDebt === null && this.#destroyedEffects.size === this.#allEffects.length) {
+        this.#effects.length = 0;
+        this.#freeEffects.length = 0;
+        this.#allEffects.length = 0;
+        this.#destroyedEffects.clear();
+        this.#disposed = true;
+      }
+    } finally { this.#cleaning = false; }
     return errors;
+  }
+
+  #constructionCleanupComplete(): boolean {
+    return this.#constructionDebt === null && this.#allEffects.length === 0;
   }
 
   #fail(error: unknown): never {
@@ -593,9 +747,7 @@ export class GreyboxEventEffects {
       throw new Error('GreyboxEventEffects 清理不可重入。');
     }
     this.#destroyRequested = true;
-    this.#cleaning = true;
     const errors = this.#cleanupAll();
-    this.#cleaning = false;
     if (errors.length > 0) {
       throw cleanupFailure('GreyboxEventEffects 清理未完整完成。', this.#failedError, errors);
     }

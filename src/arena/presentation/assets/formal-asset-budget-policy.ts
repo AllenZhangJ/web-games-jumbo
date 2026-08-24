@@ -5,16 +5,18 @@ import {
   assertNonEmptyString,
   cloneFrozenData,
 } from '@number-strategy-jump/arena-contracts';
+import {
+  ARENA_STAGE7_FORMAL_ASSET_BUDGET_ARTIFACT_KIND_V1,
+  ARENA_STAGE7_FORMAL_ASSET_BUDGET_V1_ID as SHARED_ARENA_STAGE7_FORMAL_ASSET_BUDGET_V1_ID,
+  ARENA_STAGE7_FORMAL_ASSET_BUDGET_V1_POLICY_DATA,
+} from '@number-strategy-jump/arena-presentation-contracts';
 
 export const FORMAL_ASSET_BUDGET_POLICY_SCHEMA_VERSION = 1;
-export const ARENA_STAGE7_FORMAL_ASSET_BUDGET_V1_ID = 'arena.stage7.formal-asset-budget.v1';
+export const ARENA_STAGE7_FORMAL_ASSET_BUDGET_V1_ID =
+  SHARED_ARENA_STAGE7_FORMAL_ASSET_BUDGET_V1_ID;
 
-export const FORMAL_ASSET_BUDGET_ARTIFACT_KIND = Object.freeze({
-  AUDIO: 'audio',
-  CHARACTER_MODEL: 'character-model',
-  MODEL_ATTACHMENT: 'model-attachment',
-  TEXTURE: 'texture',
-} as const);
+export const FORMAL_ASSET_BUDGET_ARTIFACT_KIND =
+  ARENA_STAGE7_FORMAL_ASSET_BUDGET_ARTIFACT_KIND_V1;
 
 export type FormalAssetBudgetArtifactKind =
   typeof FORMAL_ASSET_BUDGET_ARTIFACT_KIND[keyof typeof FORMAL_ASSET_BUDGET_ARTIFACT_KIND];
@@ -236,67 +238,5 @@ export function createFormalAssetBudgetPolicy(value: unknown): FormalAssetBudget
 }
 
 export function createArenaStage7FormalAssetBudgetV1Policy(): FormalAssetBudgetPolicy {
-  const characterModelMaximum = 1024 * 1024;
-  const textureMaximum = 64 * 1024;
-  const audioMaximum = 16 * 1024;
-  return createFormalAssetBudgetPolicy({
-    schemaVersion: FORMAL_ASSET_BUDGET_POLICY_SCHEMA_VERSION,
-    id: ARENA_STAGE7_FORMAL_ASSET_BUDGET_V1_ID,
-    contentVersion: 1,
-    maximumTotalEncodedBytes: 2_359_296,
-    maximumTotalAudioBytes: 64 * 1024,
-    maximumTotalDecodedTextureBytes: 16 * 1024 * 1024,
-    maximumDecodedTextureBytesPerArtifact: 4 * 1024 * 1024,
-    maximumTextureDimension: 1024,
-    maximumCharacterNodes: 64,
-    maximumCharacterJoints: 48,
-    requiredCharacterAnimationCount: 18,
-    maximumCharacterAnimationCount: 18,
-    maximumCharacterPrimitives: 16,
-    maximumCharacterMaterials: 4,
-    maximumAttachmentNodes: 8,
-    maximumAttachmentPrimitives: 4,
-    maximumAttachmentMaterials: 2,
-    artifacts: [
-      {
-        id: 'arena.asset.character.parkour-apprentice.kaykit-rogue.v1',
-        path: 'public/assets/arena/characters/kaykit-adventurers/parkour-apprentice-rogue.glb',
-        kind: FORMAL_ASSET_BUDGET_ARTIFACT_KIND.CHARACTER_MODEL,
-        maximumEncodedBytes: characterModelMaximum,
-      },
-      {
-        id: 'arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1',
-        path: 'public/assets/arena/characters/kaykit-skeletons/clockwork-warrior.glb',
-        kind: FORMAL_ASSET_BUDGET_ARTIFACT_KIND.CHARACTER_MODEL,
-        maximumEncodedBytes: characterModelMaximum,
-      },
-      {
-        id: 'arena.asset.attachment.shield.kaykit-round.v1',
-        path: 'public/assets/arena/equipment/kaykit-adventurers/shield-round.glb',
-        kind: FORMAL_ASSET_BUDGET_ARTIFACT_KIND.MODEL_ATTACHMENT,
-        maximumEncodedBytes: 64 * 1024,
-      },
-      ...([
-        ['arena.texture.character.rogue.v1', 'public/assets/arena/characters/kaykit-adventurers/rogue_texture.png'],
-        ['arena.texture.character.skeleton.v1', 'public/assets/arena/characters/kaykit-skeletons/skeleton_texture.png'],
-        ['arena.texture.attachment.shield.v1', 'public/assets/arena/equipment/kaykit-adventurers/shield_texture.png'],
-      ] as const).map(([id, artifactPath]) => ({
-        id,
-        path: artifactPath,
-        kind: FORMAL_ASSET_BUDGET_ARTIFACT_KIND.TEXTURE,
-        maximumEncodedBytes: textureMaximum,
-      })),
-      ...([
-        ['arena.audio.impact.base-push.v1', 'base-push.ogg'],
-        ['arena.audio.impact.chain-pull.v1', 'chain-pull.ogg'],
-        ['arena.audio.impact.hammer-smash.v1', 'hammer-smash.ogg'],
-        ['arena.audio.impact.shield-charge.v1', 'shield-charge.ogg'],
-      ] as const).map(([id, filename]) => ({
-        id,
-        path: `public/assets/arena/audio/kenney-impact-sounds/${filename}`,
-        kind: FORMAL_ASSET_BUDGET_ARTIFACT_KIND.AUDIO,
-        maximumEncodedBytes: audioMaximum,
-      })),
-    ],
-  });
+  return createFormalAssetBudgetPolicy(ARENA_STAGE7_FORMAL_ASSET_BUDGET_V1_POLICY_DATA);
 }

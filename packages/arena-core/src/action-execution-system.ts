@@ -9,7 +9,12 @@ import {
   assertIntegerAtLeast,
   assertKnownKeys,
   assertNonEmptyString,
+  assertPlainRecord,
+  cloneFrozenData,
+  createDeterministicDataHash,
   type ArenaInputFrame,
+  type DeepReadonly,
+  type PlainRecord,
 } from '@number-strategy-jump/arena-contracts';
 import {
   ARENA_ACTION_PHASE,
@@ -50,6 +55,7 @@ export type ActionCommitmentTransitionKind = 'cancelled' | 'committed';
 
 export interface ActionCommitmentTransition {
   readonly participantId: string;
+  readonly lane: ActionLane;
   readonly actionDefinitionId: string;
   readonly kind: ActionCommitmentTransitionKind;
   readonly chargeTicks: number;
@@ -77,6 +83,7 @@ export interface ActionStart {
   readonly lane: ActionLane;
   readonly actionDefinitionId: string;
   readonly candidateId: string;
+  readonly source: string;
   readonly phase: ArenaActionPhase;
   readonly ticksRemaining: number;
 }
@@ -87,12 +94,39 @@ export interface ActionHit {
   readonly actionDefinitionId: string;
 }
 
+export const ACTION_EXECUTION_SYSTEM_CHECKPOINT_V1_SCHEMA_VERSION = 1 as const;
+
+export interface ActionExecutionStateCheckpointV1 {
+  readonly participantId: string;
+  readonly lane: ActionLane;
+  readonly definitionId: string | null;
+  readonly definitionIdentityHash: string | null;
+  readonly phase: ArenaActionPhase;
+  readonly ticksRemaining: number;
+  readonly hitTargetIds: readonly string[];
+  readonly commitmentStartedTick: number | null;
+  readonly commitmentStatus: ActionCommitmentStatus | null;
+  readonly commitmentChargeTicks: number;
+  readonly commitmentChargeLevel: number;
+  readonly commitmentFacingAtStart: Readonly<ActionCommitmentFacing> | null;
+  readonly commitmentFacingAtResult: Readonly<ActionCommitmentFacing> | null;
+}
+
+export interface ActionExecutionSystemCheckpointV1 {
+  readonly schemaVersion: typeof ACTION_EXECUTION_SYSTEM_CHECKPOINT_V1_SCHEMA_VERSION;
+  readonly participantIds: readonly string[];
+  readonly laneIds: readonly ActionLane[];
+  readonly states: readonly ActionExecutionStateCheckpointV1[];
+  readonly checkpointIdentityHash: string;
+}
+
 interface PendingStart {
   readonly participantId: string;
   readonly tick: number;
   readonly state: ActionRuntimeState;
   readonly definition: ActionDefinition;
   readonly candidateId: string;
+  readonly source: string;
   readonly inputChannel: ActionInputChannel;
 }
 
@@ -103,6 +137,26 @@ const RESOLUTION_KEYS = new Set([
 const HIT_KEYS = new Set(['attackerId', 'targetId', 'actionDefinitionId']);
 const ACTION_LANES: ReadonlySet<unknown> = new Set(Object.values(ACTION_LANE));
 const INPUT_CHANNELS: ReadonlySet<unknown> = new Set(Object.values(ACTION_INPUT_CHANNEL));
+const CHECKPOINT_CORE_KEYS = new Set(['schemaVersion', 'participantIds', 'laneIds', 'states']);
+const CHECKPOINT_KEYS = new Set([...CHECKPOINT_CORE_KEYS, 'checkpointIdentityHash']);
+const CHECKPOINT_STATE_KEYS = new Set([
+  'participantId',
+  'lane',
+  'definitionId',
+  'definitionIdentityHash',
+  'phase',
+  'ticksRemaining',
+  'hitTargetIds',
+  'commitmentStartedTick',
+  'commitmentStatus',
+  'commitmentChargeTicks',
+  'commitmentChargeLevel',
+  'commitmentFacingAtStart',
+  'commitmentFacingAtResult',
+]);
+const CHECKPOINT_FACING_KEYS = new Set(['x', 'z']);
+const CHECKPOINT_HASH_PATTERN = /^[0-9a-f]{8}$/u;
+const ACTION_PHASES: ReadonlySet<unknown> = new Set(Object.values(ARENA_ACTION_PHASE));
 
 function compareText(left: string, right: string): number {
   if (left < right) return -1;
@@ -115,6 +169,361 @@ function compareStarts(left: PendingStart, right: PendingStart): number {
     || compareText(left.definition.lane, right.definition.lane)
     || compareText(left.definition.id, right.definition.id)
     || compareText(left.candidateId, right.candidateId);
+}
+
+function checkpointDataField(source: PlainRecord, key: string, name: string): unknown {
+  const descriptor = Object.getOwnPropertyDescriptor(source, key);
+  if (!descriptor || !descriptor.enumerable || !Object.hasOwn(descriptor, 'value')) {
+    throw new TypeError(`${name}.${key}必须是可枚举数据字段。`);
+  }
+  return descriptor.value;
+}
+
+function exactCheckpointRecord(
+  value: unknown,
+  keys: ReadonlySet<string>,
+  name: string,
+): PlainRecord {
+  const source = assertPlainRecord(value, name);
+  assertKnownKeys(source, keys, name);
+  for (const key of keys) checkpointDataField(source, key, name);
+  return source;
+}
+
+function checkpointStringArray(
+  value: unknown,
+  name: string,
+  { allowEmpty = false }: Readonly<{ allowEmpty?: boolean }> = {},
+): readonly string[] {
+  if (!Array.isArray(value) || (!allowEmpty && value.length === 0)) {
+    throw new RangeError(`${name}必须是${allowEmpty ? '' : '非空'}数组。`);
+  }
+  const result = value.map((entry, index) => assertNonEmptyString(entry, `${name}[${index}]`));
+  for (let index = 1; index < result.length; index += 1) {
+    if (result[index - 1]! >= result[index]!) {
+      throw new RangeError(`${name}必须唯一且按字典序稳定升序。`);
+    }
+  }
+  return Object.freeze(result);
+}
+
+function checkpointNullableTick(value: unknown, name: string): number | null {
+  return value === null ? null : assertIntegerAtLeast(value, 0, name);
+}
+
+function checkpointFacing(
+  value: unknown,
+  name: string,
+): Readonly<ActionCommitmentFacing> | null {
+  if (value === null) return null;
+  const source = exactCheckpointRecord(value, CHECKPOINT_FACING_KEYS, name);
+  const x = checkpointDataField(source, 'x', name);
+  const z = checkpointDataField(source, 'z', name);
+  if (typeof x !== 'number' || !Number.isFinite(x) || typeof z !== 'number' || !Number.isFinite(z)) {
+    throw new TypeError(`${name}.x/z必须是有限数。`);
+  }
+  return Object.freeze({ x, z });
+}
+
+function definitionIdentityHash(definition: ActionDefinition): string {
+  return createDeterministicDataHash(
+    definition,
+    `ActionExecution ActionDefinition ${definition.id}`,
+  );
+}
+
+function phaseDuration(definition: ActionDefinition, phase: ArenaActionPhase): number {
+  if (phase === ARENA_ACTION_PHASE.WINDUP) return definition.timing.windupTicks;
+  if (phase === ARENA_ACTION_PHASE.ACTIVE) return definition.timing.activeTicks;
+  if (phase === ARENA_ACTION_PHASE.RECOVERY) return definition.timing.recoveryTicks;
+  return 0;
+}
+
+function assertNeutralCommitmentState(
+  state: ActionExecutionStateCheckpointV1,
+  name: string,
+): void {
+  if (
+    state.commitmentStartedTick !== null
+    || state.commitmentStatus !== null
+    || state.commitmentChargeTicks !== 0
+    || state.commitmentChargeLevel !== 0
+    || state.commitmentFacingAtStart !== null
+    || state.commitmentFacingAtResult !== null
+  ) throw new RangeError(`${name}不得保留commitment运行状态。`);
+}
+
+function validateCommitmentState(
+  state: ActionExecutionStateCheckpointV1,
+  definition: ActionDefinition,
+  name: string,
+): void {
+  const commitment = definition.commitment;
+  if (commitment === undefined) {
+    assertNeutralCommitmentState(state, name);
+    return;
+  }
+  if (state.commitmentStartedTick === null) {
+    throw new RangeError(`${name}.commitmentStartedTick不得缺失。`);
+  }
+  if (state.commitmentStatus !== 'charging' && state.commitmentStatus !== 'committed') {
+    throw new RangeError(`${name}.commitmentStatus无效。`);
+  }
+  const expectedChargeLevel = commitment.levelThresholds.reduce(
+    (level, threshold) => state.commitmentChargeTicks >= threshold ? level + 1 : level,
+    0,
+  );
+  if (state.commitmentChargeLevel !== expectedChargeLevel) {
+    throw new RangeError(`${name}.commitmentChargeLevel与Definition阈值不一致。`);
+  }
+  const facingPairClosed = (state.commitmentFacingAtStart === null)
+    === (state.commitmentFacingAtResult === null);
+  if (!facingPairClosed) throw new RangeError(`${name}.commitment facing必须成对存在或成对为空。`);
+  if (state.commitmentStatus === 'committed') {
+    if (state.commitmentChargeTicks < commitment.commitTicks) {
+      throw new RangeError(`${name}.committed chargeTicks低于Definition.commitTicks。`);
+    }
+    if (state.commitmentFacingAtStart === null) {
+      throw new RangeError(`${name}.committed状态缺少facing。`);
+    }
+  }
+}
+
+function normalizeCheckpointStateV1(
+  value: unknown,
+  index: number,
+  expectedParticipantId: string,
+  expectedLane: ActionLane,
+  participantIds: ReadonlySet<string>,
+  actionRegistry: ActionRegistryContract,
+): ActionExecutionStateCheckpointV1 {
+  const name = `ActionExecutionSystemCheckpointV1.states[${index}]`;
+  const source = exactCheckpointRecord(value, CHECKPOINT_STATE_KEYS, name);
+  const participantId = assertNonEmptyString(
+    checkpointDataField(source, 'participantId', name),
+    `${name}.participantId`,
+  );
+  const laneValue = assertNonEmptyString(
+    checkpointDataField(source, 'lane', name),
+    `${name}.lane`,
+  );
+  if (participantId !== expectedParticipantId || laneValue !== expectedLane) {
+    throw new RangeError(`${name}必须按participantId/lane稳定顺序完整覆盖。`);
+  }
+  if (!ACTION_LANES.has(laneValue)) throw new RangeError(`${name}.lane未知。`);
+  const lane = laneValue as ActionLane;
+  const rawDefinitionId = checkpointDataField(source, 'definitionId', name);
+  const definitionId = rawDefinitionId === null
+    ? null
+    : assertNonEmptyString(rawDefinitionId, `${name}.definitionId`);
+  const rawDefinitionIdentityHash = checkpointDataField(source, 'definitionIdentityHash', name);
+  const definitionIdentityHashValue = rawDefinitionIdentityHash === null
+    ? null
+    : assertNonEmptyString(rawDefinitionIdentityHash, `${name}.definitionIdentityHash`);
+  if (
+    definitionIdentityHashValue !== null
+    && !CHECKPOINT_HASH_PATTERN.test(definitionIdentityHashValue)
+  ) throw new TypeError(`${name}.definitionIdentityHash无效。`);
+  const phaseValue = checkpointDataField(source, 'phase', name);
+  if (!ACTION_PHASES.has(phaseValue)) throw new RangeError(`${name}.phase未知。`);
+  const phase = phaseValue as ArenaActionPhase;
+  const ticksRemaining = assertIntegerAtLeast(
+    checkpointDataField(source, 'ticksRemaining', name),
+    0,
+    `${name}.ticksRemaining`,
+  );
+  const hitTargetIds = checkpointStringArray(
+    checkpointDataField(source, 'hitTargetIds', name),
+    `${name}.hitTargetIds`,
+    { allowEmpty: true },
+  );
+  if (hitTargetIds.some((targetId) => !participantIds.has(targetId))) {
+    throw new RangeError(`${name}.hitTargetIds引用checkpoint外participant。`);
+  }
+  const commitmentStartedTick = checkpointNullableTick(
+    checkpointDataField(source, 'commitmentStartedTick', name),
+    `${name}.commitmentStartedTick`,
+  );
+  const rawCommitmentStatus = checkpointDataField(source, 'commitmentStatus', name);
+  const commitmentStatus = rawCommitmentStatus === null
+    ? null
+    : assertNonEmptyString(rawCommitmentStatus, `${name}.commitmentStatus`);
+  if (
+    commitmentStatus !== null
+    && commitmentStatus !== 'charging'
+    && commitmentStatus !== 'committed'
+  ) throw new RangeError(`${name}.commitmentStatus未知。`);
+  const commitmentChargeTicks = assertIntegerAtLeast(
+    checkpointDataField(source, 'commitmentChargeTicks', name),
+    0,
+    `${name}.commitmentChargeTicks`,
+  );
+  const commitmentChargeLevel = assertIntegerAtLeast(
+    checkpointDataField(source, 'commitmentChargeLevel', name),
+    0,
+    `${name}.commitmentChargeLevel`,
+  );
+  const normalized = Object.freeze({
+    participantId,
+    lane,
+    definitionId,
+    definitionIdentityHash: definitionIdentityHashValue,
+    phase,
+    ticksRemaining,
+    hitTargetIds,
+    commitmentStartedTick,
+    commitmentStatus: commitmentStatus as ActionCommitmentStatus | null,
+    commitmentChargeTicks,
+    commitmentChargeLevel,
+    commitmentFacingAtStart: checkpointFacing(
+      checkpointDataField(source, 'commitmentFacingAtStart', name),
+      `${name}.commitmentFacingAtStart`,
+    ),
+    commitmentFacingAtResult: checkpointFacing(
+      checkpointDataField(source, 'commitmentFacingAtResult', name),
+      `${name}.commitmentFacingAtResult`,
+    ),
+  }) satisfies ActionExecutionStateCheckpointV1;
+  if (phase === ARENA_ACTION_PHASE.IDLE) {
+    if (
+      definitionId !== null
+      || definitionIdentityHashValue !== null
+      || ticksRemaining !== 0
+      || hitTargetIds.length !== 0
+    ) throw new RangeError(`${name}.idle状态必须完全中性。`);
+    assertNeutralCommitmentState(normalized, name);
+    return normalized;
+  }
+  if (definitionId === null || definitionIdentityHashValue === null) {
+    throw new RangeError(`${name}.非idle状态缺少Definition身份。`);
+  }
+  const definition = actionRegistry.require(definitionId);
+  if (definition.id !== definitionId || definition.lane !== lane) {
+    throw new RangeError(`${name}.Definition id/lane引用不闭合。`);
+  }
+  if (definitionIdentityHash(definition) !== definitionIdentityHashValue) {
+    throw new RangeError(`${name}.Definition identity hash漂移。`);
+  }
+  const duration = phaseDuration(definition, phase);
+  if (duration < 1 || ticksRemaining < 1 || ticksRemaining > duration) {
+    throw new RangeError(`${name}.ticksRemaining与Definition timing/phase不一致。`);
+  }
+  if (phase === ARENA_ACTION_PHASE.WINDUP && hitTargetIds.length !== 0) {
+    throw new RangeError(`${name}.windup状态不得已有hitTargets。`);
+  }
+  validateCommitmentState(normalized, definition, name);
+  return normalized;
+}
+
+function normalizeActionExecutionCheckpointCoreV1(
+  value: unknown,
+  actionRegistry: ActionRegistryContract,
+): Omit<ActionExecutionSystemCheckpointV1, 'checkpointIdentityHash'> {
+  const source = exactCheckpointRecord(
+    value,
+    CHECKPOINT_CORE_KEYS,
+    'ActionExecutionSystemCheckpointV1',
+  );
+  if (checkpointDataField(source, 'schemaVersion', 'ActionExecutionSystemCheckpointV1')
+    !== ACTION_EXECUTION_SYSTEM_CHECKPOINT_V1_SCHEMA_VERSION) {
+    throw new RangeError('ActionExecutionSystemCheckpointV1.schemaVersion必须是1。');
+  }
+  const participantIds = checkpointStringArray(
+    checkpointDataField(source, 'participantIds', 'ActionExecutionSystemCheckpointV1'),
+    'ActionExecutionSystemCheckpointV1.participantIds',
+  );
+  const rawLaneIds = checkpointDataField(
+    source,
+    'laneIds',
+    'ActionExecutionSystemCheckpointV1',
+  );
+  if (!Array.isArray(rawLaneIds)) {
+    throw new TypeError('ActionExecutionSystemCheckpointV1.laneIds必须是数组。');
+  }
+  const expectedLaneIds = Object.freeze(Object.values(ACTION_LANE).sort(compareText));
+  const laneIds = Object.freeze(rawLaneIds.map((value, index) => {
+    const lane = assertNonEmptyString(value, `ActionExecutionSystemCheckpointV1.laneIds[${index}]`);
+    if (!ACTION_LANES.has(lane)) throw new RangeError(`未知 ActionExecution lane ${lane}。`);
+    return lane as ActionLane;
+  }));
+  if (
+    laneIds.length !== expectedLaneIds.length
+    || laneIds.some((lane, index) => lane !== expectedLaneIds[index])
+  ) throw new RangeError('ActionExecutionSystemCheckpointV1.laneIds必须完整稳定覆盖。');
+  const rawStates = checkpointDataField(
+    source,
+    'states',
+    'ActionExecutionSystemCheckpointV1',
+  );
+  const expectedStateCount = participantIds.length * laneIds.length;
+  if (!Array.isArray(rawStates) || rawStates.length !== expectedStateCount) {
+    throw new RangeError('ActionExecutionSystemCheckpointV1.states必须完整覆盖participant×lane。');
+  }
+  const participantIdSet = new Set(participantIds);
+  const states = Object.freeze(rawStates.map((state, index) => {
+    const participantIndex = Math.floor(index / laneIds.length);
+    const laneIndex = index % laneIds.length;
+    return normalizeCheckpointStateV1(
+      state,
+      index,
+      participantIds[participantIndex]!,
+      laneIds[laneIndex]!,
+      participantIdSet,
+      actionRegistry,
+    );
+  }));
+  return Object.freeze({
+    schemaVersion: ACTION_EXECUTION_SYSTEM_CHECKPOINT_V1_SCHEMA_VERSION,
+    participantIds,
+    laneIds,
+    states,
+  });
+}
+
+function withActionExecutionCheckpointIdentityV1(
+  core: Omit<ActionExecutionSystemCheckpointV1, 'checkpointIdentityHash'>,
+): ActionExecutionSystemCheckpointV1 {
+  return Object.freeze({
+    ...core,
+    checkpointIdentityHash: createDeterministicDataHash(
+      core,
+      'ActionExecutionSystemCheckpointV1 identity',
+    ),
+  });
+}
+
+function validateActionExecutionSystemCheckpointV1(
+  value: unknown,
+  actionRegistry: ActionRegistryContract,
+): DeepReadonly<ActionExecutionSystemCheckpointV1> {
+  if (!actionRegistry || typeof actionRegistry.require !== 'function') {
+    throw new TypeError('ActionExecutionSystemCheckpointV1恢复需要只读ActionRegistry。');
+  }
+  const source = exactCheckpointRecord(
+    cloneFrozenData(value, 'ActionExecutionSystemCheckpointV1'),
+    CHECKPOINT_KEYS,
+    'ActionExecutionSystemCheckpointV1',
+  );
+  const checkpointIdentityHash = checkpointDataField(
+    source,
+    'checkpointIdentityHash',
+    'ActionExecutionSystemCheckpointV1',
+  );
+  if (
+    typeof checkpointIdentityHash !== 'string'
+    || !CHECKPOINT_HASH_PATTERN.test(checkpointIdentityHash)
+  ) throw new TypeError('ActionExecutionSystemCheckpointV1.checkpointIdentityHash无效。');
+  const core = Object.fromEntries([...CHECKPOINT_CORE_KEYS].map((key) => [
+    key,
+    checkpointDataField(source, key, 'ActionExecutionSystemCheckpointV1'),
+  ]));
+  const normalized = withActionExecutionCheckpointIdentityV1(
+    normalizeActionExecutionCheckpointCoreV1(core, actionRegistry),
+  );
+  if (normalized.checkpointIdentityHash !== checkpointIdentityHash) {
+    throw new RangeError('ActionExecutionSystemCheckpointV1 identity hash漂移。');
+  }
+  return normalized;
 }
 
 function freezeTransition(
@@ -210,6 +619,47 @@ export class ActionExecutionSystem {
       new Map(this.#laneIds.map((lane) => [lane, createActionRuntimeState()])),
     ]));
     Object.freeze(this);
+  }
+
+  static restoreFromCheckpointV1(
+    checkpointValue: unknown,
+    actionRegistry: ActionRegistryContract,
+  ): ActionExecutionSystem {
+    const checkpoint = validateActionExecutionSystemCheckpointV1(
+      checkpointValue,
+      actionRegistry,
+    );
+    const system = new ActionExecutionSystem({
+      participantIds: checkpoint.participantIds,
+      actionRegistry,
+    });
+    try {
+      for (const checkpointState of checkpoint.states) {
+        const state = system.#requireLaneState(
+          checkpointState.participantId,
+          checkpointState.lane,
+        );
+        state.definitionId = checkpointState.definitionId;
+        state.phase = checkpointState.phase;
+        state.ticksRemaining = checkpointState.ticksRemaining;
+        state.hitTargets.clear();
+        checkpointState.hitTargetIds.forEach((targetId) => state.hitTargets.add(targetId));
+        state.commitmentStartedTick = checkpointState.commitmentStartedTick;
+        state.commitmentStatus = checkpointState.commitmentStatus;
+        state.commitmentChargeTicks = checkpointState.commitmentChargeTicks;
+        state.commitmentChargeLevel = checkpointState.commitmentChargeLevel;
+        state.commitmentFacingAtStart = checkpointState.commitmentFacingAtStart === null
+          ? null
+          : { ...checkpointState.commitmentFacingAtStart };
+        state.commitmentFacingAtResult = checkpointState.commitmentFacingAtResult === null
+          ? null
+          : { ...checkpointState.commitmentFacingAtResult };
+      }
+      return system;
+    } catch (error) {
+      for (const participantId of checkpoint.participantIds) system.reset(participantId);
+      throw error;
+    }
   }
 
   #requireParticipant(participantId: string): ReadonlyMap<ActionLane, ActionRuntimeState> {
@@ -327,6 +777,7 @@ export class ActionExecutionSystem {
           if (expired && commitment.expireOutcome === 'cancel') {
             transitions.push(Object.freeze({
               participantId,
+              lane,
               actionDefinitionId: definition.id,
               kind: 'cancelled',
               chargeTicks,
@@ -341,6 +792,7 @@ export class ActionExecutionSystem {
             if (chargeTicks < commitment.commitTicks) {
               transitions.push(Object.freeze({
                 participantId,
+                lane,
                 actionDefinitionId: definition.id,
                 kind: 'cancelled',
                 chargeTicks,
@@ -354,6 +806,7 @@ export class ActionExecutionSystem {
             state.commitmentStatus = 'committed';
             transitions.push(Object.freeze({
               participantId,
+              lane,
               actionDefinitionId: definition.id,
               kind: 'committed',
               chargeTicks,
@@ -389,7 +842,7 @@ export class ActionExecutionSystem {
       const lane = laneValue as ActionLane;
       const inputChannel = inputChannelValue as ActionInputChannel;
       const candidateId = assertNonEmptyString(resolution.candidateId, 'ActionResolution.candidateId');
-      assertNonEmptyString(resolution.source, 'ActionResolution.source');
+      const source = assertNonEmptyString(resolution.source, 'ActionResolution.source');
       const laneKey = `${participantId}\u0000${lane}`;
       const channelKey = `${participantId}\u0000${inputChannel}`;
       if (seenParticipantLanes.has(laneKey)) {
@@ -418,6 +871,7 @@ export class ActionExecutionSystem {
         state,
         definition,
         candidateId,
+        source,
         inputChannel,
       });
     }
@@ -450,7 +904,15 @@ export class ActionExecutionSystem {
     }
 
     starts.sort(compareStarts);
-    return Object.freeze(starts.map(({ participantId, tick, state, definition, candidateId, inputChannel }) => {
+    return Object.freeze(starts.map(({
+      participantId,
+      tick,
+      state,
+      definition,
+      candidateId,
+      source,
+      inputChannel,
+    }) => {
       state.definitionId = definition.id;
       state.phase = definition.timing.windupTicks > 0
         ? ARENA_ACTION_PHASE.WINDUP
@@ -473,6 +935,7 @@ export class ActionExecutionSystem {
         lane: definition.lane,
         actionDefinitionId: definition.id,
         candidateId,
+        source,
         phase: state.phase,
         ticksRemaining: state.ticksRemaining,
       });
@@ -542,6 +1005,47 @@ export class ActionExecutionSystem {
     return Object.freeze(interrupted);
   }
 
+  interruptLane(
+    participantIdsValue: unknown,
+    laneValue: unknown,
+  ): readonly Readonly<{
+    participantId: string;
+    lane: ActionLane;
+    actionDefinitionId: string;
+    phase: ArenaActionPhase;
+  }>[] {
+    if (!Array.isArray(participantIdsValue)) {
+      throw new TypeError('interruptLane participantIds 必须是数组。');
+    }
+    if (typeof laneValue !== 'string' || !ACTION_LANES.has(laneValue)) {
+      throw new RangeError(`interruptLane lane ${String(laneValue)} 未知。`);
+    }
+    const lane = laneValue as ActionLane;
+    const participantIds = participantIdsValue.map((value, index) => (
+      assertNonEmptyString(value, `interruptLane participantIds[${index}]`)
+    ));
+    const uniqueIds = [...new Set(participantIds)].sort(compareText);
+    uniqueIds.forEach((participantId) => this.#requireParticipant(participantId));
+    const interrupted: Array<Readonly<{
+      participantId: string;
+      lane: ActionLane;
+      actionDefinitionId: string;
+      phase: ArenaActionPhase;
+    }>> = [];
+    for (const participantId of uniqueIds) {
+      const state = this.#requireLaneState(participantId, lane);
+      if (state.phase === ARENA_ACTION_PHASE.IDLE) continue;
+      interrupted.push(Object.freeze({
+        participantId,
+        lane,
+        actionDefinitionId: requireActiveDefinitionId(state),
+        phase: state.phase,
+      }));
+      resetActionRuntimeState(state);
+    }
+    return Object.freeze(interrupted);
+  }
+
   reset(participantId: string): void {
     for (const state of this.#requireParticipant(participantId).values()) resetActionRuntimeState(state);
   }
@@ -598,5 +1102,44 @@ export class ActionExecutionSystem {
         ...this.getLaneSnapshot(participantId, lane),
       }))
     )));
+  }
+
+  exportCheckpointV1(): ActionExecutionSystemCheckpointV1 {
+    const states = Object.freeze(this.#participantIds.flatMap((participantId) => (
+      this.#laneIds.map((lane) => {
+        const state = this.#requireLaneState(participantId, lane);
+        const definition = state.definitionId === null
+          ? null
+          : this.#actionRegistry.require(state.definitionId);
+        return Object.freeze({
+          participantId,
+          lane,
+          definitionId: state.definitionId,
+          definitionIdentityHash: definition === null
+            ? null
+            : definitionIdentityHash(definition),
+          phase: state.phase,
+          ticksRemaining: state.ticksRemaining,
+          hitTargetIds: Object.freeze([...state.hitTargets].sort(compareText)),
+          commitmentStartedTick: state.commitmentStartedTick,
+          commitmentStatus: state.commitmentStatus,
+          commitmentChargeTicks: state.commitmentChargeTicks,
+          commitmentChargeLevel: state.commitmentChargeLevel,
+          commitmentFacingAtStart: state.commitmentFacingAtStart === null
+            ? null
+            : Object.freeze({ ...state.commitmentFacingAtStart }),
+          commitmentFacingAtResult: state.commitmentFacingAtResult === null
+            ? null
+            : Object.freeze({ ...state.commitmentFacingAtResult }),
+        });
+      })
+    )));
+    const core = normalizeActionExecutionCheckpointCoreV1({
+      schemaVersion: ACTION_EXECUTION_SYSTEM_CHECKPOINT_V1_SCHEMA_VERSION,
+      participantIds: this.#participantIds,
+      laneIds: this.#laneIds,
+      states,
+    }, this.#actionRegistry);
+    return withActionExecutionCheckpointIdentityV1(core);
   }
 }

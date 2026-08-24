@@ -19,6 +19,10 @@ import { ProductSessionController } from '@number-strategy-jump/arena-product-se
 import { ProductSessionStateMachine } from '@number-strategy-jump/arena-product-state';
 import { PlayerProfileRepository } from '@number-strategy-jump/arena-profile-persistence';
 import { PlayerProfileService } from '@number-strategy-jump/arena-profile-service';
+import {
+  assertSynchronousCompositionResult,
+  captureSynchronousCompositionMethod,
+} from './synchronous-composition-boundary.js';
 interface MatchSeedSource {
   nextSeed(): number;
 }
@@ -136,26 +140,7 @@ function snapshotMethod<T extends AnyMethod>(
   methodName: string,
   label: string,
 ): T {
-  if ((typeof value !== 'object' || value === null) && typeof value !== 'function') {
-    throw new TypeError(`${label} 必须实现 ${methodName}()。`);
-  }
-  const visited = new Set<object>();
-  let current: object | null = value as object;
-  while (current !== null) {
-    if (visited.has(current) || visited.size >= 32) {
-      throw new TypeError(`${label} 原型链无效。`);
-    }
-    visited.add(current);
-    const descriptor = Object.getOwnPropertyDescriptor(current, methodName);
-    if (descriptor) {
-      if (!('value' in descriptor) || typeof descriptor.value !== 'function') {
-        throw new TypeError(`${label}.${methodName} 必须是数据方法。`);
-      }
-      return descriptor.value.bind(value) as T;
-    }
-    current = Object.getPrototypeOf(current) as object | null;
-  }
-  throw new TypeError(`${label} 必须实现 ${methodName}()。`);
+  return captureSynchronousCompositionMethod(value, methodName, label) as unknown as T;
 }
 
 function frozenRecord(value: unknown, label: string): Readonly<Record<string, unknown>> {
@@ -164,25 +149,7 @@ function frozenRecord(value: unknown, label: string): Readonly<Record<string, un
 }
 
 function rejectAsyncSyncReturn(value: unknown, label: string): void {
-  if ((typeof value !== 'object' || value === null) && typeof value !== 'function') return;
-  const visited = new Set<object>();
-  let current: object | null = value as object;
-  while (current !== null) {
-    if (visited.has(current) || visited.size >= 32) {
-      throw new TypeError(`${label} 返回值原型链无效。`);
-    }
-    visited.add(current);
-    const descriptor = Object.getOwnPropertyDescriptor(current, 'then');
-    if (descriptor) {
-      if ('value' in descriptor && typeof descriptor.value === 'function') {
-        Promise.resolve(value).catch(() => {
-          // The synchronous factory is rejected, but its late rejection is contained.
-        });
-      }
-      throw new TypeError(`${label} 必须同步完成。`);
-    }
-    current = Object.getPrototypeOf(current) as object | null;
-  }
+  assertSynchronousCompositionResult(value, label);
 }
 
 function normalizeOptions(value: unknown): NormalizedOptions {
@@ -305,7 +272,10 @@ function cleanupOwned(cleanups: readonly (Destroy | null)[]): Error[] {
   for (const cleanup of cleanups) {
     if (!cleanup) continue;
     try {
-      cleanup();
+      assertSynchronousCompositionResult(
+        cleanup(),
+        'ProductSession Composition destroy',
+      );
     } catch (error) {
       errors.push(normalizeThrownError(error, 'ProductSession Composition 清理失败'));
     }
@@ -336,6 +306,8 @@ export function createProductSessionComposition(
   let destroyRepository: Destroy | null = null;
   let profileService: PlayerProfileService | null = null;
   let destroyProfileService: Destroy | null = null;
+  let destroyQuickMatchService: Destroy | null = null;
+  let destroyMatchFactory: Destroy | null = null;
   let matchCoordinator: ProductMatchCoordinator | null = null;
   let destroyMatchCoordinator: Destroy | null = null;
   let controller: ProductSessionController | null = null;
@@ -371,18 +343,42 @@ export function createProductSessionComposition(
         detail,
       })),
     }));
-    rejectAsyncSyncReturn(quickMatchService, 'quickMatchServiceFactory');
+    let serviceDestroyError: unknown = null;
+    let serviceSyncError: unknown = null;
+    try {
+      destroyQuickMatchService = captureSynchronousCompositionMethod(
+        quickMatchService,
+        'destroy',
+        'QuickMatchService',
+      ) as Destroy;
+    } catch (error) {
+      serviceDestroyError = error;
+    }
+    try {
+      rejectAsyncSyncReturn(quickMatchService, 'quickMatchServiceFactory');
+    } catch (error) {
+      serviceSyncError = error;
+    }
+    if (serviceSyncError !== null) throw serviceSyncError;
+    if (serviceDestroyError !== null) throw serviceDestroyError;
     const matchFactory = new QuickMatchProductFactory({
       quickMatchService,
       matchConfig: resolvedMatchConfig,
       completionSink: normalized.matchCompletionSink,
     });
+    destroyMatchFactory = snapshotMethod<Destroy>(
+      matchFactory,
+      'destroy',
+      'QuickMatchProductFactory',
+    );
+    destroyQuickMatchService = null;
     matchCoordinator = new ProductMatchCoordinator({ matchFactory });
     destroyMatchCoordinator = snapshotMethod<Destroy>(
       matchCoordinator,
       'destroy',
       'ProductMatchCoordinator',
     );
+    destroyMatchFactory = null;
     const rewardCommitter = new RewardCommitter({
       registry: definition.progressionRegistry,
       rewardDefinitionId: definition.rewardDefinitionId,
@@ -414,6 +410,8 @@ export function createProductSessionComposition(
     const cleanupErrors = cleanupOwned([
       destroyController,
       destroyMatchCoordinator,
+      destroyMatchFactory,
+      destroyQuickMatchService,
       destroyProfileService,
       destroyRepository,
     ]);

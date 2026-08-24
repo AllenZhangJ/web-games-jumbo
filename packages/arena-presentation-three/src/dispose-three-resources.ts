@@ -13,6 +13,14 @@ interface DisposalUnit {
   disposed: boolean;
 }
 
+export const THREE_OBJECT_DISPOSAL_LEASE_TERMINAL_LIFECYCLE_V1 = Object.freeze({
+  id: 'three-object-disposal-lease-terminal-lifecycle-v1',
+  cleanupCallbacksCannotReenterLeaseApi: true,
+  cleanupCallbacksMustCompleteSynchronously: true,
+  failedUnitStopsLaterCleanup: true,
+  detachWaitsForAllResources: true,
+});
+
 function snapshotMethod(value: object, name: string, required = false): UnknownMethod | null {
   let owner: object | null = value;
   while (owner) {
@@ -56,6 +64,7 @@ export class ThreeObjectDisposalLease {
   readonly #removeFromParent: UnknownMethod | null;
   #detached: boolean;
   #operating = false;
+  #reentryDetected = false;
 
   constructor(rootValue: unknown, { removeFromParent = true }: Readonly<{ removeFromParent?: boolean }> = {}) {
     if (!rootValue || typeof rootValue !== 'object') throw new TypeError('Three root 必须是对象。');
@@ -97,24 +106,47 @@ export class ThreeObjectDisposalLease {
   }
 
   get complete(): boolean {
+    if (this.#operating) {
+      this.#reentryDetected = true;
+      throw new Error('ThreeObjectDisposalLease 清理期间不能读取完成状态。');
+    }
     return this.#detached && this.#resources.every(({ disposed }) => disposed);
   }
 
   dispose(): Readonly<ThreeDisposalReport> {
-    if (this.#operating) throw new Error('ThreeObjectDisposalLease 不允许重入。');
+    if (this.#operating) {
+      this.#reentryDetected = true;
+      throw new Error('ThreeObjectDisposalLease 不允许重入。');
+    }
     this.#operating = true;
+    this.#reentryDetected = false;
     const errors: unknown[] = [];
     try {
       for (const unit of this.#resources) {
         if (unit.disposed) continue;
         try {
           rejectThenable(unit.dispose(), 'Three resource.dispose()');
+          if (this.#reentryDetected) {
+            throw new Error('Three resource.dispose() 回调发生租约反调。');
+          }
           unit.disposed = true;
-        } catch (error) { errors.push(error); }
+        } catch (error) {
+          errors.push(error);
+          break;
+        }
       }
-      if (!this.#detached && this.#removeFromParent) {
+      if (
+        errors.length === 0
+        && !this.#reentryDetected
+        && this.#resources.every(({ disposed }) => disposed)
+        && !this.#detached
+        && this.#removeFromParent
+      ) {
         try {
           rejectThenable(this.#removeFromParent(), 'Three root.removeFromParent()');
+          if (this.#reentryDetected) {
+            throw new Error('Three root.removeFromParent() 回调发生租约反调。');
+          }
           this.#detached = true;
         } catch (error) { errors.push(error); }
       }

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ARENA_MATCH_PHASE as CONTRACT_MATCH_PHASE,
+  ARENA_PARTICIPANT_STATUS as CONTRACT_PARTICIPANT_STATUS,
   createMatchContentPublicView,
   createMatchContentSelection,
 } from '@number-strategy-jump/arena-contracts';
@@ -47,6 +49,8 @@ describe('arena-match authority configuration', () => {
       RESPAWNING: 'respawning',
       ELIMINATED: 'eliminated',
     });
+    expect(ARENA_MATCH_PHASE).toBe(CONTRACT_MATCH_PHASE);
+    expect(ARENA_PARTICIPANT_STATUS).toBe(CONTRACT_PARTICIPANT_STATUS);
     expect(config.basePush).toEqual({
       range: tuning.targeting.range,
       minimumFacingDot: tuning.targeting.minimumFacingDot,

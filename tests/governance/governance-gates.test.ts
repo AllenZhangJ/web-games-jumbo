@@ -127,6 +127,83 @@ describe('enterprise governance gates', () => {
     );
   });
 
+  it('keeps root TypeScript project references aligned with every workspace build project', async () => {
+    const repositoryRoot = path.resolve('.');
+    const plan = await createWorkspaceBuildPlan(repositoryRoot);
+    const rootConfig = JSON.parse(
+      await readFile(path.join(repositoryRoot, 'tsconfig.json'), 'utf8'),
+    ) as { references?: unknown };
+    if (!Array.isArray(rootConfig.references)) {
+      throw new TypeError('root tsconfig references 必须是数组。');
+    }
+    const normalizedReferences = rootConfig.references.map((value, index) => {
+      if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+        throw new TypeError(`root tsconfig references[${index}] 必须是对象。`);
+      }
+      expect(Object.keys(value)).toEqual(['path']);
+      const referencePath = (value as { path?: unknown }).path;
+      if (typeof referencePath !== 'string' || referencePath.length === 0) {
+        throw new TypeError(`root tsconfig references[${index}].path 必须是非空字符串。`);
+      }
+      return path.relative(
+        repositoryRoot,
+        path.resolve(repositoryRoot, referencePath),
+      ).split(path.sep).join('/');
+    });
+    expect(new Set(normalizedReferences).size).toBe(normalizedReferences.length);
+
+    const plannedProjectPaths = plan.waves.flatMap((wave) => (
+      wave.map((workspacePackage) => path.relative(
+        repositoryRoot,
+        workspacePackage.projectPath,
+      ).split(path.sep).join('/'))
+    )).sort();
+    expect([...normalizedReferences].sort()).toEqual(plannedProjectPaths);
+  });
+
+  it('keeps the Formal Web Mode Registry adapter pure and default entry unwired', async () => {
+    const source = await readFile(path.resolve(
+      'src/entry/arena-v2-formal-web-mode-registry-preflight-adapter-candidate-v1.ts',
+    ), 'utf8');
+    expect(source).toContain('adapterWired: true as const');
+    expect(source).toContain('topLevelConsumerWired: true as const');
+    expect(source).toContain('runtimePolicyConsumptionWired: false as const');
+    expect(source).toContain('return preflightArenaThreeModeModeRegistryCandidateV1({');
+    expect(source).toContain('raceParticipantCount,\n    survivalEnemyCount,');
+    expect(source).not.toContain('survivalParticipantCount');
+    expect(source).not.toMatch(/survivalEnemyCount\s*[+-]/u);
+    expect(source).not.toMatch(/\b(?:document|window|localStorage|Math\.random|Date\.now)\b/u);
+    const composition = await readFile(path.resolve(
+      'src/entry/arena-v2-formal-web-playable-composition-candidate-v1.ts',
+    ), 'utf8');
+    expect(composition).toContain(
+      'explicitModeRegistryPreflightBeforeHostRootDomStorageSeedAndPresentation: true as const',
+    );
+    expect(composition.indexOf('adaptArenaV2FormalWebModeRegistryPreflightCandidateV1({'))
+      .toBeLessThan(composition.indexOf('const mount = hostRoot(source.hostRoot);'));
+    const defaultEntry = await readFile(path.resolve(
+      'src/entry/web-arena-v2-formal-candidate.ts',
+    ), 'utf8');
+    expect(defaultEntry).not.toContain('modeRegistryCandidate');
+  });
+
+  it('keeps invalid MatchCore factory cleanup bounded and descriptor-only', async () => {
+    const sources = await Promise.all([
+      'packages/arena-match/src/replay.ts',
+      'packages/arena-match/src/match-checkpoint.ts',
+    ].map((file) => readFile(path.resolve(file), 'utf8')));
+    for (const source of sources) {
+      expect(source).toContain('MAX_SYNC_DESCRIPTOR_PROTOTYPE_DEPTH = 32');
+      expect(source).toContain('CAPTURED_PROMISE_SPECIES_DESCRIPTOR');
+      expect(source).toContain('new Set<object>()');
+      expect(source).not.toMatch(/\.then\s*\(/u);
+    }
+    expect(sources[0]).not.toContain('if (candidate instanceof MatchCore)');
+    expect(sources[1]).not.toContain('if (value instanceof MatchCore)');
+    expect(sources[0]).toContain("findDataMethod(\n      candidate,\n      'destroy'");
+    expect(sources[1]).toContain("Object.getOwnPropertyDescriptor(target, 'destroy')");
+  });
+
   it('rejects secret-bearing environment files', async () => {
     const directory = await mkdtemp(path.join(os.tmpdir(), 'arena-security-gate-'));
     try {

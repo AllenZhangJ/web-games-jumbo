@@ -113,11 +113,13 @@ function createBotVerifier(replay: ArenaReplay, difficultyId: BotDifficultyId) {
   const probeCore = createArenaV1MatchCore({ seed: replay.matchSeed, config: replay.config });
   let arena: typeof probeCore.config.arena;
   let characterRadius: number;
+  let tickDurationSeconds: number;
   let maximumStepHeight: number;
   try {
     const character = probeCore.getCharacterDefinition('player-2');
     arena = probeCore.config.arena;
     characterRadius = character.collision.radius;
+    tickDurationSeconds = probeCore.config.fixedDeltaSeconds;
     maximumStepHeight = character.movement.automaticStepHeight;
   } finally {
     probeCore.destroy();
@@ -129,6 +131,7 @@ function createBotVerifier(replay: ArenaReplay, difficultyId: BotDifficultyId) {
     personalitySeed: assignment.seeds.botPersonality,
     arena,
     characterRadius,
+    tickDurationSeconds,
     maximumStepHeight,
   });
   return Object.freeze({

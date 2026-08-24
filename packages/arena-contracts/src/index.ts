@@ -2,12 +2,26 @@ export {
   assertIntegerAtLeast,
   assertKnownKeys,
   assertNonEmptyString,
+  assertTrimmedNonEmptyString,
   assertPlainRecord,
   assertPositiveFinite,
   cloneFrozenData,
   cloneFrozenStringSet,
 } from './definition-utils.js';
 export type { DeepReadonly, PlainRecord } from './definition-utils.js';
+export {
+  ARENA_ACTION_PHASE,
+  ARENA_MATCH_PHASE,
+  ARENA_PARTICIPANT_STATUS,
+  assertArenaActionPhase,
+  assertArenaMatchPhase,
+  assertArenaParticipantStatus,
+} from './arena-authority-state.js';
+export type {
+  ArenaActionPhase,
+  ArenaMatchPhase,
+  ArenaParticipantStatus,
+} from './arena-authority-state.js';
 export {
   createDeterministicDataHash,
   createFnv1aHash,
@@ -45,7 +59,28 @@ export type {
   EquipmentReplacedEventPayload,
   EquipmentSpawnedEventPayload,
 } from './equipment-supply-event-payload.js';
-export { createSynchronousStoragePort } from './synchronous-storage-port.js';
+export {
+  ARENA_SUPPLY_AUTHORITY_FACT_KIND_V1,
+  ARENA_SUPPLY_AUTHORITY_FACT_MAX_RETAINED_COUNT_V1,
+  ARENA_SUPPLY_AUTHORITY_FACT_V1_SCHEMA_VERSION,
+  createArenaSupplyAuthorityFactV1,
+  createArenaSupplyAuthorityFactsV1,
+} from './arena-supply-authority-fact-v1.js';
+export type {
+  ArenaSupplyAuthorityFactKindV1,
+  ArenaSupplyAuthorityFactV1,
+} from './arena-supply-authority-fact-v1.js';
+export {
+  ARENA_SUPPLY_CADENCE_SNAPSHOT_V1_SCHEMA_VERSION,
+  createArenaSupplyCadenceSnapshotV1,
+} from './arena-supply-cadence-snapshot-v1.js';
+export type {
+  ArenaSupplyCadenceSnapshotV1,
+} from './arena-supply-cadence-snapshot-v1.js';
+export {
+  SYNCHRONOUS_STORAGE_PORT_BOUNDARY,
+  createSynchronousStoragePort,
+} from './synchronous-storage-port.js';
 export type {
   SynchronousStoragePort,
   SynchronousStoragePortOptions,
@@ -115,6 +150,24 @@ export type {
   MatchContentSelection,
   MatchParticipantCharacterSelection,
 } from './match-content-selection.js';
+export * from './match-content-selection-v2.js';
+export * from './match-equipment-usage-v3.js';
+export * from './survival-equipment-action-eligibility-v1.js';
+export * from './competitive-equipment-action-eligibility-v1.js';
+export * from './action-feedback-outcome-consistency-v1.js';
+export * from './survival-equipment-ownership-consistency-v1.js';
+export * from './match-participant-assignment-v2.js';
+// P2 versioned contracts are public library boundaries only. Product/Composition
+// must still opt in explicitly; exporting them does not change the V5 default path.
+export * from './match-event-v6.js';
+export * from './arena-mode-rule-constants-v1.js';
+export * from './arena-combat-rule-constants-v1.js';
+export * from './arena-public-supply-projection-v3.js';
+export * from './match-read-frame-v3.js';
+export * from './weapon-feedback-semantic-v1.js';
+export * from './weapon-feedback-result-direction-v2.js';
+export * from './weapon-feedback-direction-fact-v2.js';
+export * from './local-jump-availability-v1.js';
 export {
   combineCleanupFailure,
   normalizeThrownError,
@@ -123,3 +176,7 @@ export type {
   CombinedLifecycleError,
   NormalizedLifecycleError,
 } from './lifecycle-errors.js';
+export {
+  ARENA_SYNCHRONOUS_RETURN_BOUNDARY,
+  assertSynchronousReturn,
+} from './synchronous-return-boundary.js';

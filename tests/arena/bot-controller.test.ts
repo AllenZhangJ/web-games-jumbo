@@ -21,9 +21,36 @@ function createController(core: MatchCore, difficultyId: BotDifficultyId = 'hard
     personalitySeed: 200,
     arena: core.config.arena,
     characterRadius: character.collision.radius,
+    tickDurationSeconds: core.config.fixedDeltaSeconds,
     maximumStepHeight: character.movement.automaticStepHeight,
   });
 }
+
+test('BotController requires explicit tick duration and character step capability', () => {
+  const core = createArenaV1MatchCore({ seed: 2, config: { preparingTicks: 0 } });
+  const character = core.getCharacterDefinition('player-2');
+  const complete = {
+    participantId: 'player-2',
+    difficultyId: 'normal',
+    behaviorSeed: 100,
+    personalitySeed: 200,
+    arena: core.config.arena,
+    characterRadius: character.collision.radius,
+    tickDurationSeconds: core.config.fixedDeltaSeconds,
+    maximumStepHeight: character.movement.automaticStepHeight,
+  };
+  const missingTickDuration = { ...complete } as Record<string, unknown>;
+  delete missingTickDuration.tickDurationSeconds;
+  assert.throws(() => new BotController(missingTickDuration), /tickDurationSeconds/);
+  const missingMaximumStepHeight = { ...complete } as Record<string, unknown>;
+  delete missingMaximumStepHeight.maximumStepHeight;
+  assert.throws(() => new BotController(missingMaximumStepHeight), /maximumStepHeight/);
+  assert.throws(() => new BotController({
+    ...complete,
+    tickDurationSeconds: 0,
+  }), /tickDurationSeconds.*有限正数/);
+  core.destroy();
+});
 
 test('same bot seed and observations produce identical bounded InputFrames', () => {
   const core = createArenaV1MatchCore({ seed: 3, config: { preparingTicks: 0 } });
@@ -170,6 +197,7 @@ test('BotController resolves its profile through the injected immutable Registry
     profileRegistry: customRegistry,
     arena: core.config.arena,
     characterRadius: character.collision.radius,
+    tickDurationSeconds: core.config.fixedDeltaSeconds,
     maximumStepHeight: character.movement.automaticStepHeight,
   });
   const frame = controller.createInput(core.getLegacyFullSnapshotForAudit());
@@ -183,6 +211,7 @@ test('BotController resolves its profile through the injected immutable Registry
     profileRegistry: customRegistry,
     arena: core.config.arena,
     characterRadius: character.collision.radius,
+    tickDurationSeconds: core.config.fixedDeltaSeconds,
     maximumStepHeight: character.movement.automaticStepHeight,
   }), /未知 Bot Profile/);
   assert.throws(() => new BotController({
@@ -193,6 +222,7 @@ test('BotController resolves its profile through the injected immutable Registry
     profileRegistry: { require: () => hard } as never,
     arena: core.config.arena,
     characterRadius: character.collision.radius,
+    tickDurationSeconds: core.config.fixedDeltaSeconds,
     maximumStepHeight: character.movement.automaticStepHeight,
   }), /已校验的只读 Registry/);
   core.destroy();

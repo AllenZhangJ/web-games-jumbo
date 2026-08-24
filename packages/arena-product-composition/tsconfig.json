@@ -11,13 +11,20 @@
   },
   "include": ["src/**/*.ts"],
   "references": [
+    { "path": "../arena-bot" },
     { "path": "../arena-contracts" },
+    { "path": "../arena-definitions" },
     { "path": "../arena-product-content" },
+    { "path": "../arena-product-contracts" },
     { "path": "../arena-product-match" },
+    { "path": "../arena-product-presentation" },
     { "path": "../arena-product-progression" },
     { "path": "../arena-product-session" },
     { "path": "../arena-product-state" },
+    { "path": "../arena-profile-contracts" },
     { "path": "../arena-profile-persistence" },
-    { "path": "../arena-profile-service" }
+    { "path": "../arena-profile-service" },
+    { "path": "../arena-quick-match" },
+    { "path": "../arena-storage" }
   ]
 }

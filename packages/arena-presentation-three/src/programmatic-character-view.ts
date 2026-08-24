@@ -6,7 +6,10 @@ import {
 } from '@number-strategy-jump/arena-presentation-contracts';
 import { cloneFrozenData } from '@number-strategy-jump/arena-contracts';
 import { ARENA_GREYBOX_COLOR } from './greybox-style.js';
-import { createProgrammaticEquipment } from './programmatic-equipment.js';
+import {
+  createProgrammaticEquipment,
+  ProgrammaticEquipmentBuildConstructionCleanupError,
+} from './programmatic-equipment.js';
 import { ThreeObjectDisposalLease } from './dispose-three-resources.js';
 import { readDataArray } from './strict-data-array.js';
 import { toVisualPosition, visualFacingYaw } from './visual-coordinate.js';
@@ -25,6 +28,33 @@ interface InternalAction {
   readonly ticksRemaining: number;
 }
 interface InternalEquipment { readonly definitionId: string | null }
+interface ProgrammaticEquipmentCandidate {
+  readonly object: THREE.Group;
+  readonly lease: ThreeObjectDisposalLease;
+}
+interface ProgrammaticEquipmentConstructionResources {
+  nestedDebt: ProgrammaticEquipmentBuildConstructionCleanupError | null;
+  object: THREE.Group | null;
+  lease: ThreeObjectDisposalLease | null;
+}
+interface ProgrammaticCharacterViewConstructionResources {
+  root: THREE.Object3D;
+  lease: ThreeObjectDisposalLease | null;
+}
+interface ProgrammaticCharacterBuildDisposalUnit {
+  readonly dispose: () => unknown;
+  disposed: boolean;
+}
+interface ProgrammaticCharacterBuildResources {
+  readonly root: THREE.Group;
+  readonly units: ProgrammaticCharacterBuildDisposalUnit[];
+  rootCleared: boolean;
+}
+
+export interface ProgrammaticCharacterConstructionCleanupDebt {
+  readonly cleanupComplete: boolean;
+  retryCleanup(): void;
+}
 interface InternalSnapshot {
   readonly id: string;
   readonly appearance: { readonly presentationId: string; readonly definitionHash: string };
@@ -89,12 +119,14 @@ interface ActionPresentation {
 }
 interface MaterialOptions { readonly roughness?: number; readonly metalness?: number }
 interface LimbOptions {
+  readonly resources: ProgrammaticCharacterBuildResources;
   readonly radius: number;
   readonly length: number;
   readonly entryMaterial: THREE.Material;
   readonly boxy?: boolean;
 }
 interface ArticulatedLimbOptions {
+  readonly resources: ProgrammaticCharacterBuildResources;
   readonly parent: THREE.Group;
   readonly name: string;
   readonly position: Vector3Value;
@@ -420,14 +452,175 @@ function cleanupFailure(message: string, cause: unknown, cleanupCauses: readonly
   return failure;
 }
 
-function material(color: THREE.ColorRepresentation, options: MaterialOptions = {}): THREE.MeshStandardMaterial {
-  return new THREE.MeshStandardMaterial({
+function equipmentConstructionCleanupComplete(
+  resources: ProgrammaticEquipmentConstructionResources,
+): boolean {
+  return resources.nestedDebt === null
+    && (resources.object === null || resources.lease?.complete === true);
+}
+
+function cleanupEquipmentConstruction(
+  resources: ProgrammaticEquipmentConstructionResources,
+): void {
+  const errors: unknown[] = [];
+  if (resources.nestedDebt !== null) {
+    try { resources.nestedDebt.retryCleanup(); } catch (error) { errors.push(error); }
+    if (resources.nestedDebt.cleanupComplete) resources.nestedDebt = null;
+  }
+  if (resources.object !== null) {
+    if (resources.lease === null) {
+      try { resources.lease = new ThreeObjectDisposalLease(resources.object); }
+      catch (error) { errors.push(error); }
+    }
+    if (resources.lease !== null && !resources.lease.complete) {
+      try { resources.lease.dispose(); } catch (error) { errors.push(error); }
+    }
+  }
+  if (errors.length > 0) {
+    throw new AggregateError(errors, '程序化角色装备构造资源清理未完整完成。');
+  }
+  if (!equipmentConstructionCleanupComplete(resources)) {
+    throw new Error('程序化角色装备构造资源清理依赖尚未收敛。');
+  }
+}
+
+function constructionCleanupComplete(
+  resources: ProgrammaticCharacterViewConstructionResources,
+): boolean {
+  return resources.lease?.complete ?? false;
+}
+
+function cleanupConstructionResources(
+  resources: ProgrammaticCharacterViewConstructionResources,
+): void {
+  const errors: unknown[] = [];
+  if (resources.lease === null) {
+    try { resources.lease = new ThreeObjectDisposalLease(resources.root); } catch (error) {
+      errors.push(error);
+    }
+  }
+  if (resources.lease !== null && !resources.lease.complete) {
+    try { resources.lease.dispose(); } catch (error) { errors.push(error); }
+  }
+  if (errors.length > 0) {
+    throw new AggregateError(errors, '程序化角色View构造资源清理未完整完成。');
+  }
+  if (!constructionCleanupComplete(resources)) {
+    throw new Error('程序化角色View构造资源清理依赖尚未收敛。');
+  }
+}
+
+export class ProgrammaticCharacterViewConstructionCleanupError
+  extends AggregateError
+  implements ProgrammaticCharacterConstructionCleanupDebt {
+  readonly originalError: unknown;
+  readonly cleanupError: unknown;
+  readonly #constructionResources: ProgrammaticCharacterViewConstructionResources;
+
+  constructor(
+    originalError: unknown,
+    cleanupError: unknown,
+    constructionResources: ProgrammaticCharacterViewConstructionResources,
+  ) {
+    super(
+      [originalError, cleanupError],
+      '程序化角色View构造失败且清理未完整完成。',
+    );
+    this.name = 'ProgrammaticCharacterViewConstructionCleanupError';
+    this.originalError = originalError;
+    this.cleanupError = cleanupError;
+    this.#constructionResources = constructionResources;
+  }
+
+  get cleanupComplete(): boolean {
+    return constructionCleanupComplete(this.#constructionResources);
+  }
+
+  retryCleanup(): void {
+    cleanupConstructionResources(this.#constructionResources);
+  }
+}
+
+function buildCleanupComplete(resources: ProgrammaticCharacterBuildResources): boolean {
+  return resources.rootCleared && resources.units.every(({ disposed }) => disposed);
+}
+
+function cleanupBuildResources(resources: ProgrammaticCharacterBuildResources): void {
+  const errors: unknown[] = [];
+  if (!resources.rootCleared) {
+    try {
+      resources.root.clear();
+      resources.rootCleared = true;
+    } catch (error) { errors.push(error); }
+  }
+  if (resources.rootCleared) {
+    for (const unit of resources.units) {
+      if (unit.disposed) continue;
+      try {
+        unit.dispose();
+        unit.disposed = true;
+      } catch (error) { errors.push(error); }
+    }
+  }
+  if (errors.length > 0) {
+    throw new AggregateError(errors, '程序化角色骨架Builder资源清理未完整完成。');
+  }
+  if (!buildCleanupComplete(resources)) {
+    throw new Error('程序化角色骨架Builder资源清理依赖尚未收敛。');
+  }
+}
+
+export class ProgrammaticCharacterBuildConstructionCleanupError
+  extends AggregateError
+  implements ProgrammaticCharacterConstructionCleanupDebt {
+  readonly originalError: unknown;
+  readonly cleanupError: unknown;
+  readonly #buildResources: ProgrammaticCharacterBuildResources;
+
+  constructor(
+    originalError: unknown,
+    cleanupError: unknown,
+    buildResources: ProgrammaticCharacterBuildResources,
+  ) {
+    super(
+      [originalError, cleanupError],
+      '程序化角色骨架Builder构造失败且清理未完整完成。',
+    );
+    this.name = 'ProgrammaticCharacterBuildConstructionCleanupError';
+    this.originalError = originalError;
+    this.cleanupError = cleanupError;
+    this.#buildResources = buildResources;
+  }
+
+  get cleanupComplete(): boolean {
+    return buildCleanupComplete(this.#buildResources);
+  }
+
+  retryCleanup(): void {
+    cleanupBuildResources(this.#buildResources);
+  }
+}
+
+function trackBuildResource<T extends { dispose(): unknown }>(
+  resources: ProgrammaticCharacterBuildResources,
+  resource: T,
+): T {
+  resources.units.push({ dispose: () => resource.dispose(), disposed: false });
+  return resource;
+}
+
+function material(
+  resources: ProgrammaticCharacterBuildResources,
+  color: THREE.ColorRepresentation,
+  options: MaterialOptions = {},
+): THREE.MeshStandardMaterial {
+  return trackBuildResource(resources, new THREE.MeshStandardMaterial({
     color,
     roughness: options.roughness ?? 0.76,
     metalness: options.metalness ?? 0.03,
     transparent: true,
     opacity: 1,
-  });
+  }));
 }
 
 function mesh(geometry: THREE.BufferGeometry, entryMaterial: THREE.Material): THREE.Mesh {
@@ -437,16 +630,17 @@ function mesh(geometry: THREE.BufferGeometry, entryMaterial: THREE.Material): TH
   return value;
 }
 
-function limbSegment({ radius, length, entryMaterial, boxy = false }: LimbOptions): THREE.Mesh {
-  const geometry = boxy
+function limbSegment({ resources, radius, length, entryMaterial, boxy = false }: LimbOptions): THREE.Mesh {
+  const geometry = trackBuildResource(resources, boxy
     ? new THREE.BoxGeometry(radius * 2, length, radius * 2)
-    : new THREE.CapsuleGeometry(radius, Math.max(0.01, length - radius * 2), 3, 7);
+    : new THREE.CapsuleGeometry(radius, Math.max(0.01, length - radius * 2), 3, 7));
   const value = mesh(geometry, entryMaterial);
   value.position.y = -length / 2;
   return value;
 }
 
 function articulatedLimb({
+  resources,
   parent,
   name,
   position,
@@ -460,11 +654,12 @@ function articulatedLimb({
   const upper = new THREE.Group();
   upper.name = `${name}:upper-joint`;
   upper.position.set(position.x, position.y, position.z);
-  upper.add(limbSegment({ radius, length: upperLength, entryMaterial, boxy }));
+  upper.add(limbSegment({ resources, radius, length: upperLength, entryMaterial, boxy }));
   const lower = new THREE.Group();
   lower.name = `${name}:lower-joint`;
   lower.position.y = -upperLength;
   lower.add(limbSegment({
+    resources,
     radius: radius * 0.88,
     length: lowerLength,
     entryMaterial,
@@ -474,9 +669,9 @@ function articulatedLimb({
   end.name = `${name}:${foot ? 'foot' : 'hand'}-joint`;
   end.position.y = -lowerLength;
   const endMesh = mesh(
-    foot
+    trackBuildResource(resources, foot
       ? new THREE.BoxGeometry(radius * 2.3, radius * 1.5, radius * 3.6)
-      : new THREE.SphereGeometry(radius * 1.12, 7, 5),
+      : new THREE.SphereGeometry(radius * 1.12, 7, 5)),
     entryMaterial,
   );
   if (foot) endMesh.position.z = radius * 0.75;
@@ -488,17 +683,18 @@ function articulatedLimb({
 }
 
 function createFace({
-  parent, headY, darkMaterial, tealMaterial, boxy,
+  resources, parent, headY, darkMaterial, tealMaterial, boxy,
 }: {
+  readonly resources: ProgrammaticCharacterBuildResources;
   readonly parent: THREE.Group;
   readonly headY: number;
   readonly darkMaterial: THREE.Material;
   readonly tealMaterial: THREE.Material | null;
   readonly boxy: boolean;
 }): void {
-  const eyeGeometry = boxy
+  const eyeGeometry = trackBuildResource(resources, boxy
     ? new THREE.BoxGeometry(0.075, 0.085, 0.035)
-    : new THREE.SphereGeometry(0.03, 7, 5);
+    : new THREE.SphereGeometry(0.03, 7, 5));
   const left = mesh(eyeGeometry, tealMaterial ?? darkMaterial);
   left.position.set(-0.13, headY + 0.03, boxy ? 0.31 : 0.35);
   const right = left.clone();
@@ -506,26 +702,41 @@ function createFace({
   parent.add(left, right);
 }
 
-function buildArticulatedCharacter({ robot }: { readonly robot: boolean }): BuiltCharacter {
-  const root = new THREE.Group();
+function buildArticulatedCharacterOwned({
+  robot,
+  root,
+  resources,
+}: {
+  readonly robot: boolean;
+  readonly root: THREE.Group;
+  readonly resources: ProgrammaticCharacterBuildResources;
+}): BuiltCharacter {
   const primaryMaterial = material(
+    resources,
     robot ? ARENA_GREYBOX_COLOR.opponentPrimary : ARENA_GREYBOX_COLOR.localPrimary,
     robot ? { roughness: 0.62, metalness: 0.12 } : {},
   );
   const darkMaterial = material(
+    resources,
     robot ? ARENA_GREYBOX_COLOR.opponentDark : ARENA_GREYBOX_COLOR.localDark,
     robot ? { roughness: 0.56, metalness: 0.2 } : {},
   );
   const faceMaterial = material(
+    resources,
     robot ? ARENA_GREYBOX_COLOR.opponentPrimary : ARENA_GREYBOX_COLOR.localCream,
   );
-  const tealMaterial = material(ARENA_GREYBOX_COLOR.teal, { metalness: 0.08 });
+  const tealMaterial = material(resources, ARENA_GREYBOX_COLOR.teal, { metalness: 0.08 });
 
   const pelvis = new THREE.Group();
   pelvis.name = 'rig:pelvis';
   pelvis.position.y = -0.18;
   const pelvisMesh = mesh(
-    robot ? new THREE.BoxGeometry(0.52, 0.24, 0.42) : new THREE.CapsuleGeometry(0.23, 0.16, 3, 7),
+    trackBuildResource(
+      resources,
+      robot
+        ? new THREE.BoxGeometry(0.52, 0.24, 0.42)
+        : new THREE.CapsuleGeometry(0.23, 0.16, 3, 7),
+    ),
     darkMaterial,
   );
   pelvisMesh.position.y = 0.04;
@@ -535,7 +746,12 @@ function buildArticulatedCharacter({ robot }: { readonly robot: boolean }): Buil
   spine.name = 'rig:spine';
   spine.position.y = 0.16;
   const torso = mesh(
-    robot ? new THREE.BoxGeometry(0.66, 0.58, 0.54) : new THREE.CapsuleGeometry(0.31, 0.34, 4, 9),
+    trackBuildResource(
+      resources,
+      robot
+        ? new THREE.BoxGeometry(0.66, 0.58, 0.54)
+        : new THREE.CapsuleGeometry(0.31, 0.34, 4, 9),
+    ),
     primaryMaterial,
   );
   torso.position.y = 0.28;
@@ -545,30 +761,54 @@ function buildArticulatedCharacter({ robot }: { readonly robot: boolean }): Buil
   neck.name = 'rig:neck';
   neck.position.y = 0.64;
   const head = mesh(
-    robot ? new THREE.BoxGeometry(0.7, 0.52, 0.6) : new THREE.SphereGeometry(0.38, 11, 8),
+    trackBuildResource(
+      resources,
+      robot
+        ? new THREE.BoxGeometry(0.7, 0.52, 0.6)
+        : new THREE.SphereGeometry(0.38, 11, 8),
+    ),
     faceMaterial,
   );
   head.position.y = 0.25;
   if (!robot) head.scale.set(1, 0.95, 0.95);
   neck.add(head);
-  createFace({ parent: neck, headY: 0.25, darkMaterial, tealMaterial: robot ? tealMaterial : null, boxy: robot });
+  createFace({
+    resources,
+    parent: neck,
+    headY: 0.25,
+    darkMaterial,
+    tealMaterial: robot ? tealMaterial : null,
+    boxy: robot,
+  });
 
   if (robot) {
-    const face = mesh(new THREE.BoxGeometry(0.48, 0.24, 0.025), darkMaterial);
+    const face = mesh(
+      trackBuildResource(resources, new THREE.BoxGeometry(0.48, 0.24, 0.025)),
+      darkMaterial,
+    );
     face.position.set(0, 0.25, 0.31);
     face.renderOrder = -1;
-    const chest = mesh(new THREE.BoxGeometry(0.17, 0.17, 0.045), tealMaterial);
+    const chest = mesh(
+      trackBuildResource(resources, new THREE.BoxGeometry(0.17, 0.17, 0.045)),
+      tealMaterial,
+    );
     chest.rotation.z = Math.PI / 4;
     chest.position.set(0, 0.28, 0.29);
     neck.add(face);
     spine.add(chest);
   } else {
     const hair = mesh(
-      new THREE.SphereGeometry(0.39, 9, 6, 0, Math.PI * 2, 0, 1.5),
+      trackBuildResource(
+        resources,
+        new THREE.SphereGeometry(0.39, 9, 6, 0, Math.PI * 2, 0, 1.5),
+      ),
       darkMaterial,
     );
     hair.position.y = 0.32;
-    const scarf = mesh(new THREE.TorusGeometry(0.27, 0.052, 6, 14), tealMaterial);
+    const scarf = mesh(
+      trackBuildResource(resources, new THREE.TorusGeometry(0.27, 0.052, 6, 14)),
+      tealMaterial,
+    );
     scarf.rotation.x = Math.PI / 2;
     scarf.position.y = 0.62;
     neck.add(hair);
@@ -576,6 +816,7 @@ function buildArticulatedCharacter({ robot }: { readonly robot: boolean }): Buil
   }
 
   const armLeft = articulatedLimb({
+    resources,
     parent: spine,
     name: 'rig:arm-left',
     position: { x: -0.38, y: 0.52, z: 0 },
@@ -586,6 +827,7 @@ function buildArticulatedCharacter({ robot }: { readonly robot: boolean }): Buil
     boxy: robot,
   });
   const armRight = articulatedLimb({
+    resources,
     parent: spine,
     name: 'rig:arm-right',
     position: { x: 0.38, y: 0.52, z: 0 },
@@ -596,6 +838,7 @@ function buildArticulatedCharacter({ robot }: { readonly robot: boolean }): Buil
     boxy: robot,
   });
   const legLeft = articulatedLimb({
+    resources,
     parent: pelvis,
     name: 'rig:leg-left',
     position: { x: -0.17, y: -0.04, z: 0 },
@@ -607,6 +850,7 @@ function buildArticulatedCharacter({ robot }: { readonly robot: boolean }): Buil
     foot: true,
   });
   const legRight = articulatedLimb({
+    resources,
     parent: pelvis,
     name: 'rig:leg-right',
     position: { x: 0.17, y: -0.04, z: 0 },
@@ -639,6 +883,29 @@ function buildArticulatedCharacter({ robot }: { readonly robot: boolean }): Buil
     },
     attachment: armRight.end,
   };
+}
+
+function buildArticulatedCharacter({ robot }: { readonly robot: boolean }): BuiltCharacter {
+  const root = new THREE.Group();
+  const buildResources: ProgrammaticCharacterBuildResources = {
+    root,
+    units: [],
+    rootCleared: false,
+  };
+  try {
+    return buildArticulatedCharacterOwned({ robot, root, resources: buildResources });
+  } catch (error) {
+    try {
+      cleanupBuildResources(buildResources);
+    } catch (cleanupError) {
+      throw new ProgrammaticCharacterBuildConstructionCleanupError(
+        error,
+        cleanupError,
+        buildResources,
+      );
+    }
+    throw error;
+  }
 }
 
 function buildCharacter(geometry: string): BuiltCharacter {
@@ -732,6 +999,8 @@ export class ProgrammaticCharacterView {
   readonly #attachment: THREE.Group;
   #heldEquipment: THREE.Group | null;
   #heldEquipmentLease: ThreeObjectDisposalLease | null;
+  #pendingEquipmentConstruction: ProgrammaticEquipmentConstructionResources | null;
+  #pendingEquipmentCandidate: ProgrammaticEquipmentCandidate | null;
   readonly #rootLease: ThreeObjectDisposalLease;
   #snapshot: InternalSnapshot | null;
   #animation: InternalAnimation | null;
@@ -750,6 +1019,7 @@ export class ProgrammaticCharacterView {
   #lastTakeoffSequence: number;
   #operating: boolean;
   #cleaning: boolean;
+  #reentryDetected: boolean;
   #destroyRequested: boolean;
   #failedError: unknown;
   #disposed: boolean;
@@ -774,21 +1044,48 @@ export class ProgrammaticCharacterView {
     const animationCapabilities = normalizeCapabilities(
       ownData(options, 'animationCapabilities', 'ProgrammaticCharacterView options', false) ?? null,
     );
+    const presentationHash = presentationDefinition.getContentHash();
+    const targetPosition = new THREE.Vector3();
     const built = buildCharacter(geometry);
+    let root: THREE.Group;
+    let rootLease: ThreeObjectDisposalLease;
+    const constructionResources: ProgrammaticCharacterViewConstructionResources = {
+      root: built.root,
+      lease: null,
+    };
+    try {
+      root = new THREE.Group();
+      root.name = `ArenaCharacter:${participantId}`;
+      built.root.position.y = -0.06;
+      root.add(built.root);
+      constructionResources.root = root;
+      rootLease = new ThreeObjectDisposalLease(root);
+      constructionResources.lease = rootLease;
+    } catch (error) {
+      try {
+        cleanupConstructionResources(constructionResources);
+      } catch (cleanupError) {
+        throw new ProgrammaticCharacterViewConstructionCleanupError(
+          error,
+          cleanupError,
+          constructionResources,
+        );
+      }
+      throw error;
+    }
     this.#participantId = participantId;
     this.#presentationId = presentationDefinition.id;
-    this.#presentationHash = presentationDefinition.getContentHash();
+    this.#presentationHash = presentationHash;
     this.#geometry = geometry;
-    this.root = new THREE.Group();
-    this.root.name = `ArenaCharacter:${participantId}`;
+    this.root = root;
     this.#visualRoot = built.root;
-    this.#visualRoot.position.y = -0.06;
-    this.root.add(this.#visualRoot);
     this.#joints = built.joints;
     this.#attachment = built.attachment;
     this.#heldEquipment = null;
     this.#heldEquipmentLease = null;
-    this.#rootLease = new ThreeObjectDisposalLease(this.root);
+    this.#pendingEquipmentConstruction = null;
+    this.#pendingEquipmentCandidate = null;
+    this.#rootLease = rootLease;
     this.#snapshot = null;
     this.#animation = null;
     this.#elapsed = 0;
@@ -801,24 +1098,28 @@ export class ProgrammaticCharacterView {
     this.#animationCapabilities = animationCapabilities;
     this.#actionPresentations = actionPresentations;
     this.#actionVisualStage = null;
-    this.#targetPosition = new THREE.Vector3();
+    this.#targetPosition = targetPosition;
     this.#lastHitSequence = -1;
     this.#lastTakeoffSequence = -1;
     this.#operating = false;
     this.#cleaning = false;
+    this.#reentryDetected = false;
     this.#destroyRequested = false;
     this.#failedError = null;
     this.#disposed = false;
   }
 
   #assertUsable(): void {
+    if (this.#operating || this.#cleaning) {
+      this.#reentryDetected = true;
+      throw new Error('ProgrammaticCharacterView 不允许回调重入。');
+    }
     if (this.#disposed || this.#destroyRequested) throw new Error('ProgrammaticCharacterView 已销毁。');
     if (this.#failedError) {
       const error = new Error('ProgrammaticCharacterView 已失败。');
       error.cause = this.#failedError;
       throw error;
     }
-    if (this.#operating) throw new Error('ProgrammaticCharacterView 不允许回调重入。');
   }
 
   get geometry(): string {
@@ -831,35 +1132,71 @@ export class ProgrammaticCharacterView {
     return this.#animationCapabilities;
   }
 
+  #releaseEquipmentCandidate(candidate: ProgrammaticEquipmentCandidate): void {
+    candidate.lease.dispose();
+    if (this.#reentryDetected) {
+      throw new Error('程序化角色装备候选清理回调发生View反调。');
+    }
+    if (this.#pendingEquipmentCandidate === candidate) {
+      this.#pendingEquipmentCandidate = null;
+    }
+  }
+
   #syncEquipment(equipment: InternalEquipment): void {
     const definitionId = equipment?.definitionId ?? null;
     if (this.#heldEquipment?.userData.definitionId === definitionId) return;
-    let candidate: THREE.Group | null = null;
-    let candidateLease: ThreeObjectDisposalLease | null = null;
-    if (definitionId !== null) {
-      candidate = createProgrammaticEquipment(definitionId);
-      candidate.userData.definitionId = definitionId;
-      candidate.userData.baseScale = definitionId === 'hammer' ? 1.02 : 0.94;
-      candidate.scale.setScalar(candidate.userData.baseScale as number);
-      candidate.position.set(0, -0.03, definitionId === 'shield' ? 0.12 : 0.02);
-      candidate.rotation.set(0, 0, 0);
-      candidateLease = new ThreeObjectDisposalLease(candidate);
-    }
+    let candidate: ProgrammaticEquipmentCandidate | null = null;
     try {
+      if (definitionId !== null) {
+        const construction: ProgrammaticEquipmentConstructionResources = {
+          nestedDebt: null,
+          object: null,
+          lease: null,
+        };
+        this.#pendingEquipmentConstruction = construction;
+        try {
+          const object = createProgrammaticEquipment(definitionId);
+          construction.object = object;
+          object.userData.definitionId = definitionId;
+          object.userData.baseScale = definitionId === 'hammer' ? 1.02 : 0.94;
+          object.scale.setScalar(object.userData.baseScale as number);
+          object.position.set(0, -0.03, definitionId === 'shield' ? 0.12 : 0.02);
+          object.rotation.set(0, 0, 0);
+          const lease = new ThreeObjectDisposalLease(object);
+          construction.lease = lease;
+          candidate = { object, lease };
+          this.#pendingEquipmentCandidate = candidate;
+          this.#pendingEquipmentConstruction = null;
+        } catch (error) {
+          if (error instanceof ProgrammaticEquipmentBuildConstructionCleanupError) {
+            construction.nestedDebt = error;
+          }
+          try {
+            cleanupEquipmentConstruction(construction);
+            this.#pendingEquipmentConstruction = null;
+          } catch (cleanupError) {
+            throw cleanupFailure('程序化装备构造失败且清理未完成。', error, [cleanupError]);
+          }
+          throw error;
+        }
+      }
       if (this.#heldEquipmentLease) {
         this.#heldEquipmentLease.dispose();
         this.#heldEquipmentLease = null;
         this.#heldEquipment = null;
       }
-      if (candidate && candidateLease) {
-        this.#attachment.add(candidate);
-        this.#heldEquipment = candidate;
-        this.#heldEquipmentLease = candidateLease;
+      if (candidate) {
+        this.#attachment.add(candidate.object);
+        this.#heldEquipment = candidate.object;
+        this.#heldEquipmentLease = candidate.lease;
+        this.#pendingEquipmentCandidate = null;
       }
     } catch (error) {
       const cleanupErrors: unknown[] = [];
-      if (candidateLease && candidate !== this.#heldEquipment) {
-        try { candidateLease.dispose(); } catch (cleanupError) { cleanupErrors.push(cleanupError); }
+      if (candidate && candidate.object !== this.#heldEquipment) {
+        try { this.#releaseEquipmentCandidate(candidate); } catch (cleanupError) {
+          cleanupErrors.push(cleanupError);
+        }
       }
       if (cleanupErrors.length > 0) {
         throw cleanupFailure('程序化装备替换失败且候选清理未完成。', error, cleanupErrors);
@@ -1263,21 +1600,51 @@ export class ProgrammaticCharacterView {
   }
 
   dispose(): void {
+    if (this.#operating || this.#cleaning) {
+      this.#reentryDetected = true;
+      throw new Error('ProgrammaticCharacterView 清理不可重入。');
+    }
     if (this.#disposed) return;
-    if (this.#operating) throw new Error('ProgrammaticCharacterView 操作期间不能销毁。');
-    if (this.#cleaning) throw new Error('ProgrammaticCharacterView 清理不可重入。');
     this.#destroyRequested = true;
     this.#cleaning = true;
+    this.#reentryDetected = false;
     const errors: unknown[] = [];
     try {
-      if (this.#heldEquipmentLease) {
+      if (this.#pendingEquipmentConstruction) {
+        try {
+          cleanupEquipmentConstruction(this.#pendingEquipmentConstruction);
+          if (this.#reentryDetected) {
+            throw new Error('程序化角色装备构造清理回调发生View反调。');
+          }
+          this.#pendingEquipmentConstruction = null;
+        } catch (error) { errors.push(error); }
+      }
+      if (errors.length === 0 && !this.#reentryDetected && this.#pendingEquipmentCandidate) {
+        try {
+          this.#releaseEquipmentCandidate(this.#pendingEquipmentCandidate);
+          if (this.#reentryDetected) {
+            throw new Error('程序化角色装备候选清理回调发生View反调。');
+          }
+        } catch (error) { errors.push(error); }
+      }
+      if (errors.length === 0 && !this.#reentryDetected && this.#heldEquipmentLease) {
         try {
           this.#heldEquipmentLease.dispose();
+          if (this.#reentryDetected) {
+            throw new Error('程序化角色当前装备清理回调发生View反调。');
+          }
           this.#heldEquipmentLease = null;
           this.#heldEquipment = null;
         } catch (error) { errors.push(error); }
       }
-      try { this.#rootLease.dispose(); } catch (error) { errors.push(error); }
+      if (errors.length === 0 && !this.#reentryDetected) {
+        try {
+          this.#rootLease.dispose();
+          if (this.#reentryDetected) {
+            throw new Error('程序化角色根清理回调发生View反调。');
+          }
+        } catch (error) { errors.push(error); }
+      }
     } finally {
       this.#cleaning = false;
     }
@@ -1287,3 +1654,18 @@ export class ProgrammaticCharacterView {
     this.#disposed = true;
   }
 }
+
+export const PROGRAMMATIC_CHARACTER_VIEW_EQUIPMENT_LIFECYCLE_V1 = Object.freeze({
+  builderDebtAndRawRootPublishedBeforeConfiguration: true as const,
+  candidateOwnerPublishedBeforeHeldEquipmentRelease: true as const,
+  failedCandidateCleanupRetainedForDisposeRetry: true as const,
+  pendingConstructionAndCandidateCleanupPrecedeHeldEquipmentAndViewCleanup: true as const,
+  validationStatus: 'not-run' as const,
+});
+
+export const PROGRAMMATIC_CHARACTER_VIEW_TERMINAL_LIFECYCLE_V1 = Object.freeze({
+  cleanupCallbacksCannotReenterPublicApi: true as const,
+  cleanupReentryStopsLaterOwners: true as const,
+  childCleanupUsesRetryableWatermarks: true as const,
+  validationStatus: 'not-run' as const,
+});

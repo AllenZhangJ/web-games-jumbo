@@ -7,13 +7,24 @@ import {
   ArenaWorldStage,
   EquipmentViewRegistry,
   CharacterAnimationController,
+  CharacterAnimationControllerConstructionCleanupError,
+  CHARACTER_ANIMATION_CONTROLLER_LIFECYCLE_V1,
   GltfCharacterView,
+  GLTF_CHARACTER_VIEW_EQUIPMENT_LIFECYCLE_V1,
   GltfCharacterViewFactory,
+  GLTF_CHARACTER_VIEW_FACTORY_CONSTRUCTION_LIFECYCLE_V1,
+  GLTF_CHARACTER_VIEW_FACTORY_FALLBACK_LIFECYCLE_V1,
   GltfPresentationAssetLoader,
+  GLTF_PRESENTATION_ASSET_LOADER_LIFECYCLE_V1,
   GreyboxEventEffects,
+  PLATFORM_TEXTURE_LOADER_LIFECYCLE_V1,
   PlatformTextureLoader,
   ProgrammaticCharacterView,
+  ProgrammaticCharacterBuildConstructionCleanupError,
+  ProgrammaticCharacterViewConstructionCleanupError,
+  PROGRAMMATIC_CHARACTER_VIEW_EQUIPMENT_LIFECYCLE_V1,
   ProgrammaticCharacterViewFactory,
+  PROGRAMMATIC_CHARACTER_VIEW_FACTORY_LIFECYCLE_V1,
   ThreeObjectDisposalLease,
   createArenaWorldBounds,
   createLocalFollowArenaCamera,
@@ -725,6 +736,152 @@ describe('Arena Presentation Three lifecycle boundaries', () => {
     expect(() => factory.create({})).toThrow(/已销毁/);
   });
 
+  it('falls back after a loaded GLTF template fails structural view construction', async () => {
+    const malformedScene = new THREE.Group();
+    malformedScene.name = 'MalformedCharacterWithoutHandSlots';
+    const animations = [new THREE.AnimationClip('idle', 1, [])];
+    let releaseCalls = 0;
+    const factory = new GltfCharacterViewFactory({
+      assetRegistry: gltfAssetRegistry(),
+      actionPresentations: {},
+      loader: {
+        async load(definition: { id: string }) {
+          return {
+            assetId: definition.id,
+            value: Object.freeze({ scene: malformedScene, animations }),
+            release() { releaseCalls += 1; },
+          };
+        },
+      },
+    });
+    await factory.load();
+    const presentationDefinition = {
+      ...(programmaticPresentationDefinition() as Record<string, unknown>),
+      id: 'presentation.gltf.test',
+      modelAssetId: 'asset.gltf.test',
+    };
+    const first = factory.create({ participantId: 'player-1', presentationDefinition });
+    const second = factory.create({ participantId: 'player-2', presentationDefinition });
+    expect(first).toBeInstanceOf(ProgrammaticCharacterView);
+    expect(second).toBeInstanceOf(ProgrammaticCharacterView);
+    expect(factory.getDebugSnapshot()).toMatchObject({
+      templateAssetIds: ['asset.gltf.test'],
+      loadErrorAssetIds: [],
+      templateConstructionErrorAssetIds: ['asset.gltf.test'],
+    });
+    expect(GLTF_CHARACTER_VIEW_FACTORY_FALLBACK_LIFECYCLE_V1).toEqual({
+      loadedTemplateConstructionFailureUsesProgrammaticFallback: true,
+      structurallyRejectedTemplateRemainsRejectedForFactoryLifetime: true,
+      successfulGltfTemplateRemainsNormalRenderingPath: true,
+      fallbackDoesNotReleaseSharedTemplateLeaseEarly: true,
+      fallbackRequiresTypedTemplateIntegrationFailure: true,
+      malformedTemplatePayloadMayUseFallback: true,
+      definitionAndActionConfigurationFailuresRemainFatal: true,
+      failedConstructionCleanupRetainsFactoryOwnership: true,
+      constructionDebtCleanupPrecedesSharedTemplateRelease: true,
+      incompleteConstructionCleanupClosesFactoryToCreate: true,
+      failedProgrammaticFallbackCleanupRetainsFactoryOwnership: true,
+      failedProgrammaticBuilderCleanupRetainsFactoryOwnership: true,
+      validationStatus: 'not-run',
+    });
+    expect(GLTF_CHARACTER_VIEW_FACTORY_CONSTRUCTION_LIFECYCLE_V1).toEqual({
+      registryAndEquipmentValidationPrecedeOwnedLoaderConstruction: true,
+      defaultLoadMethodCapturedBeforeOwnedLoaderConstruction: true,
+      ownedLoaderHasNoExternalFactoryInitializationAfterConstruction: true,
+      validationStatus: 'not-run',
+    });
+    first.dispose();
+    second.dispose();
+    expect(releaseCalls).toBe(0);
+    factory.dispose();
+    expect(releaseCalls).toBe(1);
+  });
+
+  it('retains failed GLTF view construction cleanup before releasing shared templates', async () => {
+    const malformedScene = new THREE.Group();
+    malformedScene.name = 'MalformedCharacterWithRetryableCleanup';
+    const animations = [new THREE.AnimationClip('idle', 1, [])];
+    let releaseCalls = 0;
+    const factory = new GltfCharacterViewFactory({
+      assetRegistry: gltfAssetRegistry(),
+      actionPresentations: {},
+      loader: {
+        async load(definition: { id: string }) {
+          return {
+            assetId: definition.id,
+            value: Object.freeze({ scene: malformedScene, animations }),
+            release() { releaseCalls += 1; },
+          };
+        },
+      },
+    });
+    await factory.load();
+    const presentationDefinition = {
+      ...(programmaticPresentationDefinition() as Record<string, unknown>),
+      id: 'presentation.gltf.cleanup-debt',
+      modelAssetId: 'asset.gltf.test',
+    };
+    const originalRemoveFromParent = THREE.Object3D.prototype.removeFromParent;
+    let removeAttempts = 0;
+    THREE.Object3D.prototype.removeFromParent = function patchedRemoveFromParent() {
+      if (this.name === 'ArenaCharacterModel:player-debt') {
+        removeAttempts += 1;
+        if (removeAttempts <= 2) throw new Error('transient construction detach');
+      }
+      return originalRemoveFromParent.call(this);
+    };
+    try {
+      expect(() => factory.create({
+        participantId: 'player-debt', presentationDefinition,
+      })).toThrow(/模板无法建立正式角色View/u);
+      expect(() => factory.create({
+        participantId: 'player-2', presentationDefinition,
+      })).toThrow(/已失败/u);
+      expect(() => factory.dispose()).toThrow(/清理未完整完成/u);
+      expect(releaseCalls).toBe(0);
+      factory.dispose();
+      factory.dispose();
+    } finally {
+      THREE.Object3D.prototype.removeFromParent = originalRemoveFromParent;
+    }
+    expect(removeAttempts).toBe(3);
+    expect(releaseCalls).toBe(1);
+  });
+
+  it('does not hide action configuration failures behind the GLTF structural fallback', async () => {
+    const factory = new GltfCharacterViewFactory({
+      assetRegistry: gltfAssetRegistry(),
+      actionPresentations: {
+        attack: { timing: { windupTicks: 0, activeTicks: 1, recoveryTicks: 1 } },
+      },
+      loader: {
+        async load(definition: { id: string }) {
+          return {
+            assetId: definition.id,
+            value: Object.freeze({
+              scene: new THREE.Group(),
+              animations: [new THREE.AnimationClip('idle', 1, [])],
+            }),
+            release() {},
+          };
+        },
+      },
+    });
+    await factory.load();
+    const presentationDefinition = {
+      ...(programmaticPresentationDefinition() as Record<string, unknown>),
+      id: 'presentation.gltf.invalid-config',
+      modelAssetId: 'asset.gltf.test',
+    };
+    expect(() => factory.create({
+      participantId: 'player-1', presentationDefinition,
+    })).toThrow(/windupTicks/u);
+    expect(factory.getDebugSnapshot()).toMatchObject({
+      templateConstructionErrorAssetIds: [],
+    });
+    factory.dispose();
+  });
+
   it('keeps GLTF view boundaries getter-safe and deduplicates incoming hits', () => {
     let reads = 0;
     const options = {
@@ -790,6 +947,67 @@ describe('Arena Presentation Three lifecycle boundaries', () => {
     expect({ sharedGeometryDisposals, sharedMaterialDisposals }).toEqual({
       sharedGeometryDisposals: 0, sharedMaterialDisposals: 0,
     });
+  });
+
+  it('retains failed replacement equipment candidates for exact view-dispose retry', () => {
+    const originalDispose = ThreeObjectDisposalLease.prototype.dispose;
+    const gltfView = createGltfView();
+    gltfView.sync(
+      programmaticParticipant({ equipment: { definitionId: 'hammer' } }),
+      gltfSyncOptions(),
+    );
+    let gltfDisposeCalls = 0;
+    ThreeObjectDisposalLease.prototype.dispose = function patchedGltfDispose() {
+      gltfDisposeCalls += 1;
+      if (gltfDisposeCalls <= 2) throw new Error('transient GLTF replacement cleanup');
+      return originalDispose.call(this);
+    };
+    try {
+      expect(() => gltfView.sync(
+        programmaticParticipant({ equipment: { definitionId: 'shield' } }),
+        gltfSyncOptions(),
+      )).toThrow(/候选清理未完成/u);
+      gltfView.dispose();
+      gltfView.dispose();
+      expect(gltfDisposeCalls).toBe(4);
+    } finally {
+      ThreeObjectDisposalLease.prototype.dispose = originalDispose;
+    }
+
+    const programmaticView = createProgrammaticView();
+    programmaticView.sync(
+      programmaticParticipant({ equipment: { definitionId: 'hammer' } }),
+      programmaticSyncOptions(),
+    );
+    let programmaticDisposeCalls = 0;
+    ThreeObjectDisposalLease.prototype.dispose = function patchedProgrammaticDispose() {
+      programmaticDisposeCalls += 1;
+      if (programmaticDisposeCalls <= 2) {
+        throw new Error('transient programmatic replacement cleanup');
+      }
+      return originalDispose.call(this);
+    };
+    try {
+      expect(() => programmaticView.sync(
+        programmaticParticipant({ equipment: { definitionId: 'shield' } }),
+        programmaticSyncOptions(),
+      )).toThrow(/候选清理未完成/u);
+      programmaticView.dispose();
+      programmaticView.dispose();
+      expect(programmaticDisposeCalls).toBe(5);
+    } finally {
+      ThreeObjectDisposalLease.prototype.dispose = originalDispose;
+    }
+
+    expect(GLTF_CHARACTER_VIEW_EQUIPMENT_LIFECYCLE_V1).toEqual({
+      candidateOwnerPublishedBeforeHeldEquipmentRelease: true,
+      failedCandidateCleanupRetainedForDisposeRetry: true,
+      pendingCandidateCleanupPrecedesHeldEquipmentAndViewCleanup: true,
+      validationStatus: 'not-run',
+    });
+    expect(PROGRAMMATIC_CHARACTER_VIEW_EQUIPMENT_LIFECYCLE_V1).toEqual(
+      GLTF_CHARACTER_VIEW_EQUIPMENT_LIFECYCLE_V1,
+    );
   });
 
   it('keeps programmatic view validation atomic and deduplicates incoming event sequences', () => {
@@ -894,6 +1112,115 @@ describe('Arena Presentation Three lifecycle boundaries', () => {
     expect(result).toEqual({ id: 'view' });
     expect(created).toHaveLength(1);
     expect(Object.isFrozen(created[0])).toBe(true);
+    stableFactory.dispose();
+    snapshotFactory.dispose();
+    factory.dispose();
+  });
+
+  it('retains programmatic view construction cleanup for direct and factory retries', () => {
+    const originalTraverse = THREE.Object3D.prototype.traverse;
+    let directTraverseAttempts = 0;
+    THREE.Object3D.prototype.traverse = function patchedDirectTraverse(callback) {
+      if (this.name === 'ArenaCharacter:player-1') {
+        directTraverseAttempts += 1;
+        if (directTraverseAttempts <= 2) throw new Error('transient direct construction traverse');
+      }
+      return originalTraverse.call(this, callback);
+    };
+    let directError: ProgrammaticCharacterViewConstructionCleanupError | null = null;
+    try {
+      try { createProgrammaticView(); } catch (error) {
+        expect(error).toBeInstanceOf(ProgrammaticCharacterViewConstructionCleanupError);
+        directError = error as ProgrammaticCharacterViewConstructionCleanupError;
+      }
+      expect(directError?.cleanupComplete).toBe(false);
+      directError?.retryCleanup();
+      expect(directError?.cleanupComplete).toBe(true);
+    } finally {
+      THREE.Object3D.prototype.traverse = originalTraverse;
+    }
+    expect(directTraverseAttempts).toBe(3);
+
+    let factoryTraverseAttempts = 0;
+    THREE.Object3D.prototype.traverse = function patchedFactoryTraverse(callback) {
+      if (this.name === 'ArenaCharacter:debt-player') {
+        factoryTraverseAttempts += 1;
+        if (factoryTraverseAttempts <= 3) throw new Error('transient factory construction traverse');
+      }
+      return originalTraverse.call(this, callback);
+    };
+    const debtFactory = new ProgrammaticCharacterViewFactory({
+      assetRegistry: programmaticAssetRegistry(),
+      actionPresentations: {},
+      createView: (options: unknown) => new ProgrammaticCharacterView(options),
+    });
+    try {
+      expect(() => debtFactory.create({
+        participantId: 'debt-player', presentationDefinition: programmaticPresentationDefinition(),
+      })).toThrow(/构造失败且清理未完整完成/u);
+      expect(() => debtFactory.create({
+        participantId: 'blocked-player', presentationDefinition: programmaticPresentationDefinition(),
+      })).toThrow(/已失败/u);
+      expect(() => debtFactory.dispose()).toThrow(/清理未完整完成/u);
+      debtFactory.dispose();
+      debtFactory.dispose();
+      expect(() => debtFactory.create({
+        participantId: 'disposed-player', presentationDefinition: programmaticPresentationDefinition(),
+      })).toThrow(/已销毁/u);
+    } finally {
+      THREE.Object3D.prototype.traverse = originalTraverse;
+    }
+    expect(factoryTraverseAttempts).toBe(4);
+    expect(PROGRAMMATIC_CHARACTER_VIEW_FACTORY_LIFECYCLE_V1).toEqual({
+      failedConstructionCleanupRetainsFactoryOwnership: true,
+      incompleteConstructionCleanupClosesFactoryToCreate: true,
+      factoryDisposeRetriesOnlyIncompleteConstructionDebt: true,
+      failedBuilderCleanupRetainsFactoryOwnership: true,
+      currentDebtFailureRetainsCurrentAndLaterDebts: true,
+      cleanupCallbacksMustCompleteSynchronously: true,
+      swallowedFactoryReentryRejectsDebtCommit: true,
+      validationStatus: 'not-run',
+    });
+  });
+
+  it('retains partial programmatic builder resources before a root is returned', () => {
+    const originalAdd = THREE.Group.prototype.add;
+    const originalMaterialDispose = THREE.Material.prototype.dispose;
+    let materialDisposeAttempts = 0;
+    THREE.Group.prototype.add = function patchedBuilderAdd(...objects: THREE.Object3D[]) {
+      if (
+        this.name === ''
+        && objects.some(({ name }) => name === 'rig:pelvis')
+      ) throw new Error('programmatic builder root publication failed');
+      return originalAdd.apply(this, objects);
+    };
+    THREE.Material.prototype.dispose = function patchedBuilderMaterialDispose(): void {
+      materialDisposeAttempts += 1;
+      if (materialDisposeAttempts === 1 || materialDisposeAttempts === 5) {
+        throw new Error('transient builder material cleanup');
+      }
+      originalMaterialDispose.call(this);
+    };
+    const factory = new ProgrammaticCharacterViewFactory({
+      assetRegistry: programmaticAssetRegistry(),
+      actionPresentations: {},
+      createView: (options: unknown) => new ProgrammaticCharacterView(options),
+    });
+    try {
+      expect(() => factory.create({
+        participantId: 'builder-debt', presentationDefinition: programmaticPresentationDefinition(),
+      })).toThrow(ProgrammaticCharacterBuildConstructionCleanupError);
+      expect(() => factory.create({
+        participantId: 'blocked-builder', presentationDefinition: programmaticPresentationDefinition(),
+      })).toThrow(/已失败/u);
+      expect(() => factory.dispose()).toThrow(/清理未完整完成/u);
+      factory.dispose();
+      factory.dispose();
+    } finally {
+      THREE.Group.prototype.add = originalAdd;
+      THREE.Material.prototype.dispose = originalMaterialDispose;
+    }
+    expect(materialDisposeAttempts).toBe(6);
   });
 
   it('rejects loader accessors, cleans invalid GLTF and retries only incomplete asset release', async () => {
@@ -914,7 +1241,7 @@ describe('Arena Presentation Three lifecycle boundaries', () => {
     expect(reads).toBe(0);
 
     const handlerEvents: string[] = [];
-    expect(() => new GltfPresentationAssetLoader({
+    const invalidRegistrationLoader = new GltfPresentationAssetLoader({
       createImage: () => ({}),
       loader: {
         manager: {
@@ -925,8 +1252,576 @@ describe('Arena Presentation Three lifecycle boundaries', () => {
         async loadAsync() { return {}; },
         async parseAsync() { return {}; },
       },
-    })).toThrow(/必须同步完成/);
+    });
+    expect(handlerEvents).toEqual([]);
+    await expect(invalidRegistrationLoader.load({
+      id: 'invalid-registration',
+      sourceKey: './assets/invalid-registration.glb',
+      providerId: ARENA_PRESENTATION_ASSET_PROVIDER_ID.GLTF_CHARACTER_V1,
+    })).rejects.toThrow(/必须同步完成/u);
     expect(handlerEvents).toEqual(['add', 'remove']);
+    expect(invalidRegistrationLoader.isCleanupComplete()).toBe(true);
+
+    const image: {
+      onload: (() => void) | null;
+      onerror: ((error: unknown) => void) | null;
+      src: string;
+    } = { onload: null, onerror: null, src: '' };
+    const managerEvents: string[] = [];
+    const textureErrors: Error[] = [];
+    let textureLoads = 0;
+    let textureDisposals = 0;
+    const platformLoader = new PlatformTextureLoader({
+      createImage: () => image,
+      manager: {
+        itemStart() { managerEvents.push('start'); },
+        itemError() { managerEvents.push('error'); },
+        itemEnd() { managerEvents.push('end'); },
+      },
+    });
+    const pendingTexture = platformLoader.load(
+      './assets/pending.png',
+      () => { textureLoads += 1; },
+      undefined,
+      (error: Error) => { textureErrors.push(error); },
+    );
+    pendingTexture.dispose = () => { textureDisposals += 1; };
+    const lateOnLoad = image.onload;
+    platformLoader.destroy();
+    expect(platformLoader.getSnapshot()).toEqual({
+      state: 'destroyed', pendingRequestCount: 0, cleanupComplete: true,
+    });
+    expect(image.onload).toBeNull();
+    expect(image.onerror).toBeNull();
+    lateOnLoad?.();
+    expect(textureLoads).toBe(0);
+    expect(textureErrors).toHaveLength(1);
+    expect(textureDisposals).toBe(1);
+    expect(managerEvents).toEqual(['start', 'error', 'end']);
+    expect(() => platformLoader.load('./assets/late.png')).toThrow(/destroyed.*拒绝新load/u);
+
+    const retryImage = { onload: null, onerror: null, src: '' } as {
+      onload: (() => void) | null;
+      onerror: ((error: unknown) => void) | null;
+      src: string;
+    };
+    let retryDisposals = 0;
+    let retryErrors = 0;
+    const retryLoader = new PlatformTextureLoader({ createImage: () => retryImage });
+    const retryTexture = retryLoader.load(
+      './assets/retry.png',
+      () => undefined,
+      undefined,
+      () => { retryErrors += 1; },
+    );
+    retryTexture.dispose = () => {
+      retryDisposals += 1;
+      if (retryDisposals === 1) throw new Error('transient texture cleanup');
+    };
+    expect(() => retryLoader.destroy()).toThrow(/清理未完整完成/u);
+    expect(retryLoader.getSnapshot()).toEqual({
+      state: 'destroy-incomplete', pendingRequestCount: 1, cleanupComplete: false,
+    });
+    retryLoader.destroy();
+    expect(retryLoader.getSnapshot()).toEqual({
+      state: 'destroyed', pendingRequestCount: 0, cleanupComplete: true,
+    });
+    expect({ retryDisposals, retryErrors }).toEqual({ retryDisposals: 2, retryErrors: 1 });
+
+    const callbackRetryImage = { onload: null, onerror: null, src: '' } as {
+      onload: (() => void) | null;
+      onerror: ((error: unknown) => void) | null;
+      src: string;
+    };
+    let callbackRetryErrors = 0;
+    const callbackRetryFailures: Error[] = [];
+    const callbackRetryLoader = new PlatformTextureLoader({
+      createImage: () => callbackRetryImage,
+    });
+    callbackRetryLoader.load(
+      './assets/callback-retry.png',
+      () => undefined,
+      undefined,
+      (error: Error) => {
+        callbackRetryErrors += 1;
+        callbackRetryFailures.push(error);
+        if (callbackRetryErrors === 1) throw new Error('transient error callback');
+      },
+    );
+    expect(() => callbackRetryLoader.destroy()).toThrow(/清理未完整完成/u);
+    expect(callbackRetryLoader.getSnapshot()).toEqual({
+      state: 'destroy-incomplete', pendingRequestCount: 1, cleanupComplete: false,
+    });
+    callbackRetryLoader.destroy();
+    expect(callbackRetryLoader.getSnapshot()).toEqual({
+      state: 'destroyed', pendingRequestCount: 0, cleanupComplete: true,
+    });
+    expect(callbackRetryErrors).toBe(2);
+    expect(callbackRetryFailures[1]).toBe(callbackRetryFailures[0]);
+
+    const managerReentryImage = { onload: null, onerror: null, src: '' } as {
+      onload: (() => void) | null;
+      onerror: ((error: unknown) => void) | null;
+      src: string;
+    };
+    let managerReentryLoader!: PlatformTextureLoader;
+    let managerReentryLoads = 0;
+    let managerReentryErrors = 0;
+    let managerReentryDestroyErrors = 0;
+    const managerReentryEvents: string[] = [];
+    managerReentryLoader = new PlatformTextureLoader({
+      createImage: () => managerReentryImage,
+      manager: {
+        itemStart() { managerReentryEvents.push('start'); },
+        itemEnd() {
+          managerReentryEvents.push('end');
+          try { managerReentryLoader.destroy(); } catch { managerReentryDestroyErrors += 1; }
+        },
+        itemError() { managerReentryEvents.push('error'); },
+      },
+    });
+    const managerReentryTexture = managerReentryLoader.load(
+      './assets/manager-reentry.png',
+      () => { managerReentryLoads += 1; },
+      undefined,
+      () => { managerReentryErrors += 1; },
+    );
+    let managerReentryDisposals = 0;
+    managerReentryTexture.dispose = () => { managerReentryDisposals += 1; };
+    managerReentryImage.onload?.();
+    expect(managerReentryLoader.getSnapshot()).toEqual({
+      state: 'destroyed', pendingRequestCount: 0, cleanupComplete: true,
+    });
+    expect(managerReentryEvents).toEqual(['start', 'end', 'error']);
+    expect({
+      managerReentryLoads,
+      managerReentryErrors,
+      managerReentryDestroyErrors,
+      managerReentryDisposals,
+    }).toEqual({
+      managerReentryLoads: 0,
+      managerReentryErrors: 1,
+      managerReentryDestroyErrors: 0,
+      managerReentryDisposals: 1,
+    });
+    expect(PLATFORM_TEXTURE_LOADER_LIFECYCLE_V1).toMatchObject({
+      requestOwnerPublishedBeforeManagerStart: true,
+      destroyCancelsPendingImagesAndDetachesCallbacks: true,
+      incompleteCancellationCleanupRetainedForRetry: true,
+      completionAndCancellationShareOneRequestWatermark: true,
+      managerReentryCannotRecursivelyCleanSameRequest: true,
+      managerStartReentryDefersCancellationUntilCallbackReturns: true,
+      deferredCancellationDoesNotFailOwningCallback: true,
+      errorCallbackMustConfirmBeforeRequestOwnerRelease: true,
+      errorCallbackRetryReusesSameFailureObject: true,
+      failureCleanupReentryDefersToCurrentOwner: true,
+      incompleteNaturalFailureClosesLoaderToNewRequests: true,
+      imageCallbackBindingStopsAfterSynchronousSettlement: true,
+      successCallbackMustConfirmBeforeTextureOwnershipTransfer: true,
+      imageCallbackDetachFailuresRetainedPerAttempt: true,
+      bindingSignalsSettleAfterHostSetterReturns: true,
+      destroyDuringImageCreationAndBindingDefersToOwner: true,
+      destroyDuringImageFailureDefersToCurrentAttempt: true,
+      fallbackCannotAbandonPriorImageCleanupDebt: true,
+      externalCallbacksCannotReenterPublicLoad: true,
+      swallowedLoadReentryFailsOwningRequest: true,
+      asynchronousLoadsRemainAllowedOutsideExternalCallbackStack: true,
+      itemStartFailureRetainsRequestOwnerUntilRollbackCompletes: true,
+      itemStartAttemptBalancesManagerErrorAndEnd: true,
+      itemStartRollbackFailureClosesLoaderAndRetries: true,
+      itemStartPrimaryAndCleanupFailuresRemainObservable: true,
+      validationStatus: 'not-run',
+    });
+
+    const naturalFailureImage = { onload: null, onerror: null, src: '' } as {
+      onload: (() => void) | null;
+      onerror: ((error: unknown) => void) | null;
+      src: string;
+    };
+    let naturalFailureNotifications = 0;
+    const naturalFailureLoader = new PlatformTextureLoader({
+      createImage: () => naturalFailureImage,
+    });
+    naturalFailureLoader.load(
+      './assets/natural-failure.png',
+      () => undefined,
+      undefined,
+      () => {
+        naturalFailureNotifications += 1;
+        if (naturalFailureNotifications === 1) throw new Error('natural failure callback debt');
+      },
+    );
+    naturalFailureImage.onerror?.(new Error('decode failed'));
+    expect(naturalFailureLoader.getSnapshot()).toEqual({
+      state: 'destroy-incomplete', pendingRequestCount: 1, cleanupComplete: false,
+    });
+    expect(() => naturalFailureLoader.load('./assets/rejected-after-failure.png')).toThrow(/destroy-incomplete/u);
+    naturalFailureLoader.destroy();
+    expect(naturalFailureLoader.getSnapshot()).toEqual({
+      state: 'destroyed', pendingRequestCount: 0, cleanupComplete: true,
+    });
+    expect(naturalFailureNotifications).toBe(2);
+
+    const failureReentryImage = { onload: null, onerror: null, src: '' } as {
+      onload: (() => void) | null;
+      onerror: ((error: unknown) => void) | null;
+      src: string;
+    };
+    let failureReentryLoader!: PlatformTextureLoader;
+    const failureReentryEvents: string[] = [];
+    failureReentryLoader = new PlatformTextureLoader({
+      createImage: () => failureReentryImage,
+      manager: {
+        itemStart() { failureReentryEvents.push('start'); },
+        itemError() {
+          failureReentryEvents.push('error');
+          failureReentryLoader.destroy();
+        },
+        itemEnd() { failureReentryEvents.push('end'); },
+      },
+    });
+    failureReentryLoader.load(
+      './assets/failure-reentry.png',
+      () => undefined,
+      undefined,
+      () => { failureReentryEvents.push('notify'); },
+    );
+    failureReentryLoader.destroy();
+    expect(failureReentryEvents).toEqual(['start', 'error', 'end', 'notify']);
+    expect(failureReentryLoader.getSnapshot()).toEqual({
+      state: 'destroyed', pendingRequestCount: 0, cleanupComplete: true,
+    });
+
+    let bindingOnLoad: (() => void) | null = null;
+    let bindingOnError: ((error: unknown) => void) | null = null;
+    let bindingSourceWrites = 0;
+    const bindingImage = {
+      get onload() { return bindingOnLoad; },
+      set onload(value: (() => void) | null) {
+        if (typeof value === 'function') value();
+        bindingOnLoad = value;
+      },
+      get onerror() { return bindingOnError; },
+      set onerror(value: ((error: unknown) => void) | null) { bindingOnError = value; },
+      get src() { return ''; },
+      set src(_value: string) { bindingSourceWrites += 1; },
+    };
+    let bindingLoads = 0;
+    const bindingLoader = new PlatformTextureLoader({ createImage: () => bindingImage });
+    bindingLoader.load(
+      './assets/binding-reentry.png',
+      () => { bindingLoads += 1; },
+      undefined,
+      () => undefined,
+    );
+    expect({ bindingLoads, bindingSourceWrites, bindingOnLoad, bindingOnError }).toEqual({
+      bindingLoads: 1,
+      bindingSourceWrites: 0,
+      bindingOnLoad: null,
+      bindingOnError: null,
+    });
+    expect(bindingLoader.getSnapshot()).toEqual({
+      state: 'active', pendingRequestCount: 0, cleanupComplete: false,
+    });
+    bindingLoader.destroy();
+
+    let errorBindingOnLoad: (() => void) | null = null;
+    let errorBindingOnError: ((error: unknown) => void) | null = null;
+    let errorBindingSourceWrites = 0;
+    const errorBindingImage = {
+      get onload() { return errorBindingOnLoad; },
+      set onload(value: (() => void) | null) { errorBindingOnLoad = value; },
+      get onerror() { return errorBindingOnError; },
+      set onerror(value: ((error: unknown) => void) | null) {
+        if (typeof value === 'function') value(new Error('binding failure'));
+        errorBindingOnError = value;
+      },
+      get src() { return ''; },
+      set src(_value: string) { errorBindingSourceWrites += 1; },
+    };
+    let errorBindingNotifications = 0;
+    const errorBindingLoader = new PlatformTextureLoader({ createImage: () => errorBindingImage });
+    errorBindingLoader.load(
+      'assets/binding-error.png',
+      () => undefined,
+      undefined,
+      () => { errorBindingNotifications += 1; },
+    );
+    expect({
+      errorBindingNotifications,
+      errorBindingSourceWrites,
+      errorBindingOnLoad,
+      errorBindingOnError,
+    }).toEqual({
+      errorBindingNotifications: 1,
+      errorBindingSourceWrites: 0,
+      errorBindingOnLoad: null,
+      errorBindingOnError: null,
+    });
+    expect(errorBindingLoader.getSnapshot()).toEqual({
+      state: 'active', pendingRequestCount: 0, cleanupComplete: false,
+    });
+    errorBindingLoader.destroy();
+
+    const unconfirmedSuccessImage = { onload: null, onerror: null, src: '' } as {
+      onload: (() => void) | null;
+      onerror: ((error: unknown) => void) | null;
+      src: string;
+    };
+    let unconfirmedSuccessDisposals = 0;
+    let unconfirmedSuccessErrors = 0;
+    const unconfirmedSuccessLoader = new PlatformTextureLoader({
+      createImage: () => unconfirmedSuccessImage,
+    });
+    const unconfirmedSuccessTexture = unconfirmedSuccessLoader.load(
+      './assets/unconfirmed-success.png',
+      () => { throw new Error('consumer rejected texture'); },
+      undefined,
+      () => { unconfirmedSuccessErrors += 1; },
+    );
+    unconfirmedSuccessTexture.dispose = () => { unconfirmedSuccessDisposals += 1; };
+    unconfirmedSuccessImage.onload?.();
+    expect({ unconfirmedSuccessDisposals, unconfirmedSuccessErrors }).toEqual({
+      unconfirmedSuccessDisposals: 1,
+      unconfirmedSuccessErrors: 1,
+    });
+    expect(unconfirmedSuccessLoader.getSnapshot()).toEqual({
+      state: 'active', pendingRequestCount: 0, cleanupComplete: false,
+    });
+    unconfirmedSuccessLoader.destroy();
+
+    let detachOnLoad: (() => void) | null = null;
+    let detachOnError: ((error: unknown) => void) | null = null;
+    let detachOnLoadClearAttempts = 0;
+    const detachFailureImage = {
+      get onload() { return detachOnLoad; },
+      set onload(value: (() => void) | null) {
+        if (value === null) {
+          detachOnLoadClearAttempts += 1;
+          if (detachOnLoadClearAttempts <= 2) throw new Error('transient onload detach');
+        }
+        detachOnLoad = value;
+      },
+      get onerror() { return detachOnError; },
+      set onerror(value: ((error: unknown) => void) | null) { detachOnError = value; },
+      src: '',
+    };
+    let detachFailureLoads = 0;
+    let detachFailureErrors = 0;
+    let detachFailureDisposals = 0;
+    const detachFailureLoader = new PlatformTextureLoader({ createImage: () => detachFailureImage });
+    const detachFailureTexture = detachFailureLoader.load(
+      './assets/detach-failure.png',
+      () => { detachFailureLoads += 1; },
+      undefined,
+      () => { detachFailureErrors += 1; },
+    );
+    detachFailureTexture.dispose = () => { detachFailureDisposals += 1; };
+    detachOnLoad?.();
+    expect({
+      detachFailureLoads,
+      detachFailureErrors,
+      detachFailureDisposals,
+      detachOnLoadClearAttempts,
+    }).toEqual({
+      detachFailureLoads: 0,
+      detachFailureErrors: 1,
+      detachFailureDisposals: 1,
+      detachOnLoadClearAttempts: 2,
+    });
+    expect(detachFailureLoader.getSnapshot()).toEqual({
+      state: 'destroy-incomplete', pendingRequestCount: 1, cleanupComplete: false,
+    });
+    detachOnLoad?.();
+    expect(detachFailureLoads).toBe(0);
+    detachFailureLoader.destroy();
+    expect(detachOnLoadClearAttempts).toBe(3);
+    expect(detachOnLoad).toBeNull();
+    expect(detachFailureLoader.getSnapshot()).toEqual({
+      state: 'destroyed', pendingRequestCount: 0, cleanupComplete: true,
+    });
+
+    let bindingDestroyOnLoad: (() => void) | null = null;
+    let bindingDestroyOnError: ((error: unknown) => void) | null = null;
+    let bindingDestroyLoader!: PlatformTextureLoader;
+    let bindingDestroyErrors = 0;
+    let bindingDestroyNotifications = 0;
+    const bindingDestroyImage = {
+      get onload() { return bindingDestroyOnLoad; },
+      set onload(value: (() => void) | null) {
+        if (typeof value === 'function') {
+          try { bindingDestroyLoader.destroy(); } catch { bindingDestroyErrors += 1; }
+        }
+        bindingDestroyOnLoad = value;
+      },
+      get onerror() { return bindingDestroyOnError; },
+      set onerror(value: ((error: unknown) => void) | null) { bindingDestroyOnError = value; },
+      src: '',
+    };
+    bindingDestroyLoader = new PlatformTextureLoader({ createImage: () => bindingDestroyImage });
+    bindingDestroyLoader.load(
+      './assets/binding-destroy.png',
+      () => undefined,
+      undefined,
+      () => { bindingDestroyNotifications += 1; },
+    );
+    expect({
+      bindingDestroyErrors,
+      bindingDestroyNotifications,
+      bindingDestroyOnLoad,
+      bindingDestroyOnError,
+    }).toEqual({
+      bindingDestroyErrors: 0,
+      bindingDestroyNotifications: 1,
+      bindingDestroyOnLoad: null,
+      bindingDestroyOnError: null,
+    });
+    expect(bindingDestroyLoader.getSnapshot()).toEqual({
+      state: 'destroyed', pendingRequestCount: 0, cleanupComplete: true,
+    });
+
+    const loadReentryImage = { onload: null, onerror: null, src: '' } as {
+      onload: (() => void) | null;
+      onerror: ((error: unknown) => void) | null;
+      src: string;
+    };
+    let loadReentryLoader!: PlatformTextureLoader;
+    let loadReentryCreateCalls = 0;
+    let loadReentryRejected = 0;
+    let loadReentryErrors = 0;
+    let loadReentryDisposals = 0;
+    loadReentryLoader = new PlatformTextureLoader({
+      createImage: () => {
+        loadReentryCreateCalls += 1;
+        return loadReentryImage;
+      },
+    });
+    const loadReentryTexture = loadReentryLoader.load(
+      './assets/load-reentry.png',
+      () => {
+        try { loadReentryLoader.load('./assets/nested-load.png'); } catch { loadReentryRejected += 1; }
+      },
+      undefined,
+      () => { loadReentryErrors += 1; },
+    );
+    loadReentryTexture.dispose = () => { loadReentryDisposals += 1; };
+    loadReentryImage.onload?.();
+    expect({
+      loadReentryCreateCalls,
+      loadReentryRejected,
+      loadReentryErrors,
+      loadReentryDisposals,
+    }).toEqual({
+      loadReentryCreateCalls: 1,
+      loadReentryRejected: 1,
+      loadReentryErrors: 1,
+      loadReentryDisposals: 1,
+    });
+    expect(loadReentryLoader.getSnapshot()).toEqual({
+      state: 'active', pendingRequestCount: 0, cleanupComplete: false,
+    });
+    loadReentryLoader.destroy();
+
+    const cleanupReentryImage = { onload: null, onerror: null, src: '' } as {
+      onload: (() => void) | null;
+      onerror: ((error: unknown) => void) | null;
+      src: string;
+    };
+    let cleanupReentryLoader!: PlatformTextureLoader;
+    let cleanupReentryAttempts = 0;
+    let cleanupReentryRejected = 0;
+    cleanupReentryLoader = new PlatformTextureLoader({ createImage: () => cleanupReentryImage });
+    const cleanupReentryTexture = cleanupReentryLoader.load(
+      './assets/cleanup-load-reentry.png',
+      () => undefined,
+      undefined,
+      () => undefined,
+    );
+    cleanupReentryTexture.dispose = () => {
+      cleanupReentryAttempts += 1;
+      if (cleanupReentryAttempts === 1) {
+        try { cleanupReentryLoader.load('./assets/cleanup-nested-load.png'); } catch {
+          cleanupReentryRejected += 1;
+        }
+      }
+    };
+    expect(() => cleanupReentryLoader.destroy()).toThrow(/清理未完整完成/u);
+    expect(cleanupReentryLoader.getSnapshot()).toEqual({
+      state: 'destroy-incomplete', pendingRequestCount: 1, cleanupComplete: false,
+    });
+    cleanupReentryLoader.destroy();
+    expect({ cleanupReentryAttempts, cleanupReentryRejected }).toEqual({
+      cleanupReentryAttempts: 2,
+      cleanupReentryRejected: 1,
+    });
+    expect(cleanupReentryLoader.getSnapshot()).toEqual({
+      state: 'destroyed', pendingRequestCount: 0, cleanupComplete: true,
+    });
+
+    const itemStartFailureEvents: string[] = [];
+    let itemStartFailureNotifications = 0;
+    const itemStartFailureLoader = new PlatformTextureLoader({
+      createImage: () => { throw new Error('image must not be created'); },
+      manager: {
+        itemStart() {
+          itemStartFailureEvents.push('start');
+          throw new Error('itemStart primary failure');
+        },
+        itemError() { itemStartFailureEvents.push('error'); },
+        itemEnd() { itemStartFailureEvents.push('end'); },
+      },
+    });
+    expect(() => itemStartFailureLoader.load(
+      './assets/item-start-failure.png',
+      () => undefined,
+      undefined,
+      () => { itemStartFailureNotifications += 1; },
+    )).toThrow(/itemStart primary failure/u);
+    expect({ itemStartFailureEvents, itemStartFailureNotifications }).toEqual({
+      itemStartFailureEvents: ['start', 'error', 'end'],
+      itemStartFailureNotifications: 1,
+    });
+    expect(itemStartFailureLoader.getSnapshot()).toEqual({
+      state: 'active', pendingRequestCount: 0, cleanupComplete: false,
+    });
+    itemStartFailureLoader.destroy();
+
+    const itemStartRollbackEvents: string[] = [];
+    let itemStartRollbackErrorAttempts = 0;
+    let itemStartRollbackNotifications = 0;
+    const itemStartRollbackLoader = new PlatformTextureLoader({
+      createImage: () => { throw new Error('image must not be created'); },
+      manager: {
+        itemStart() {
+          itemStartRollbackEvents.push('start');
+          throw new Error('itemStart rollback primary');
+        },
+        itemError() {
+          itemStartRollbackEvents.push('error');
+          itemStartRollbackErrorAttempts += 1;
+          if (itemStartRollbackErrorAttempts === 1) throw new Error('transient itemError rollback');
+        },
+        itemEnd() { itemStartRollbackEvents.push('end'); },
+      },
+    });
+    expect(() => itemStartRollbackLoader.load(
+      './assets/item-start-rollback.png',
+      () => undefined,
+      undefined,
+      () => { itemStartRollbackNotifications += 1; },
+    )).toThrow(/回滚未完成/u);
+    expect(itemStartRollbackLoader.getSnapshot()).toEqual({
+      state: 'destroy-incomplete', pendingRequestCount: 1, cleanupComplete: false,
+    });
+    expect({ itemStartRollbackEvents, itemStartRollbackNotifications }).toEqual({
+      itemStartRollbackEvents: ['start', 'error', 'end'],
+      itemStartRollbackNotifications: 1,
+    });
+    itemStartRollbackLoader.destroy();
+    expect(itemStartRollbackEvents).toEqual(['start', 'error', 'end', 'error']);
+    expect(itemStartRollbackLoader.getSnapshot()).toEqual({
+      state: 'destroyed', pendingRequestCount: 0, cleanupComplete: true,
+    });
 
     const definition = {
       id: 'character', sourceKey: './assets/character.glb',
@@ -978,6 +1873,463 @@ describe('Arena Presentation Three lifecycle boundaries', () => {
     lease.release();
     lease.release();
     expect({ geometryDisposals, materialDisposals }).toEqual({ geometryDisposals: 1, materialDisposals: 2 });
+  });
+
+  it('rejects and disposes a parsed GLTF that settles after loader destruction', async () => {
+    let resolveParsed!: (value: unknown) => void;
+    let signalParseStarted!: () => void;
+    const parseStarted = new Promise<void>((resolve) => { signalParseStarted = resolve; });
+    const parsed = new Promise<unknown>((resolve) => { resolveParsed = resolve; });
+    const scene = new THREE.Group();
+    const geometry = new THREE.BoxGeometry();
+    let geometryDisposals = 0;
+    geometry.dispose = () => { geometryDisposals += 1; };
+    scene.add(new THREE.Mesh(geometry, new THREE.MeshBasicMaterial()));
+    const handlerEvents: string[] = [];
+    const loader = new GltfPresentationAssetLoader({
+      readAssetBytes: async () => new ArrayBuffer(1),
+      createImage: () => ({}),
+      loader: {
+        manager: {
+          addHandler() { handlerEvents.push('add'); },
+          removeHandler() { handlerEvents.push('remove'); },
+          itemStart() {}, itemEnd() {}, itemError() {},
+        },
+        async loadAsync() { throw new Error('unexpected load'); },
+        parseAsync() { signalParseStarted(); return parsed; },
+      },
+    });
+    const operation = loader.load({
+      id: 'late-character',
+      sourceKey: './assets/late-character.glb',
+      providerId: ARENA_PRESENTATION_ASSET_PROVIDER_ID.GLTF_CHARACTER_V1,
+    });
+    await parseStarted;
+    loader.destroy();
+    expect(loader.getSnapshot()).toMatchObject({
+      state: 'destroy-requested', pendingLoadCount: 1,
+      retainedCandidateDisposalCount: 0, textureHandlerRegistered: true,
+    });
+    resolveParsed({ scene, animations: [] });
+    await expect(operation).rejects.toThrow(/销毁期间拒绝发布迟到资产/u);
+    expect(geometryDisposals).toBe(1);
+    expect(handlerEvents).toEqual(['add', 'remove']);
+    expect(loader.getSnapshot()).toEqual({
+      state: 'destroyed',
+      pendingLoadCount: 0,
+      retainedCandidateDisposalCount: 0,
+      textureHandlerRegistered: false,
+      platformTextureLoaderPendingRequestCount: 0,
+      platformTextureLoaderCleanupComplete: true,
+      cleanupComplete: true,
+    });
+    expect(GLTF_PRESENTATION_ASSET_LOADER_LIFECYCLE_V1).toMatchObject({
+      pendingLoadOwnerPublishedBeforeExternalRead: true,
+      lateParsedSceneDisposedBeforeRejection: true,
+      textureHandlerRemovedAfterPendingLoadsSettle: true,
+      pendingPlatformTexturesCancelledBeforeWaitingForGltfSettlement: true,
+      pendingAssetReadsOwnAbortControllers: true,
+      destroyAbortsPendingAssetReadsBeforeWaitingForGltfSettlement: true,
+      assetReadAbortControllersReleasedOnlyByMatchingLoadOwner: true,
+      thrownNullAndUndefinedRemainFailuresDuringLoadCleanup: true,
+      invalidCandidateDisposalRetainedForDestroyRetry: true,
+      candidateCleanupDebtClosesLoaderToNewLoads: true,
+      candidateCleanupRetryPrecedesDestroyedPublication: true,
+      candidateCleanupFailuresRetainOriginalLoadFailure: true,
+      terminalCleanupReentryDefersToCurrentOwner: true,
+      removeHandlerDestroyReentryCannotRepeatRemoval: true,
+      candidateCleanupDestroyReentryCannotRepeatDisposal: true,
+      destroyReentryDoesNotPublishIncompleteState: true,
+      externalCallbacksCannotReenterPublicLoad: true,
+      swallowedLoadReentryFailsOwningLoad: true,
+      reentrantAsyncResultStillSettlesUnderOriginalOwner: true,
+      callbackStackExitRestoresConcurrentLoadAdmission: true,
+      publishedLeaseReleaseRemainsOutsideLoaderReentryGate: true,
+      candidateLeaseConstructionFailureRetainsSceneOwner: true,
+      retainedSceneOwnerRetriesLeaseConstructionBeforeDispose: true,
+      candidateSceneOwnerClosesLoaderUntilCleanupCompletes: true,
+      leaseConstructionAndCleanupFailuresRemainObservable: true,
+      textureHandlerRegistrationRunsUnderPendingLoadOwner: true,
+      registrationAttemptPublishesCleanupOwnerBeforeManagerCall: true,
+      registrationFailureRetainsHandlerRemovalDebt: true,
+      destroyBeforeFirstLoadSkipsUnregisteredHandlerRemoval: true,
+      optionAndPrototypeValidationPrecedesDefaultLoaderConstruction: true,
+      defaultLoaderMethodsCapturedWithoutPostConstructionPrototypeReads: true,
+      platformTextureOwnerCreatedAfterHandlerPortsCaptured: true,
+      validationStatus: 'not-run',
+    });
+  });
+
+  it('retains invalid GLTF candidate cleanup debt until destroy retry completes', async () => {
+    const scene = new THREE.Group();
+    const geometry = new THREE.BoxGeometry();
+    const material = new THREE.MeshBasicMaterial();
+    let geometryDisposals = 0;
+    let materialDisposals = 0;
+    geometry.dispose = () => { geometryDisposals += 1; };
+    material.dispose = () => {
+      materialDisposals += 1;
+      if (materialDisposals <= 2) throw new Error('transient invalid candidate cleanup');
+    };
+    scene.add(new THREE.Mesh(geometry, material));
+    const loader = new GltfPresentationAssetLoader({
+      readAssetBytes: async () => new ArrayBuffer(1),
+      loader: {
+        async loadAsync() { throw new Error('unexpected load'); },
+        async parseAsync() { return { scene, animations: [{}] }; },
+      },
+    });
+    const definition = {
+      id: 'invalid-candidate',
+      sourceKey: './assets/invalid-candidate.glb',
+      providerId: ARENA_PRESENTATION_ASSET_PROVIDER_ID.GLTF_CHARACTER_V1,
+    };
+    await expect(loader.load(definition)).rejects.toThrow(/终态清理未完成/u);
+    expect({ geometryDisposals, materialDisposals }).toEqual({
+      geometryDisposals: 1,
+      materialDisposals: 2,
+    });
+    expect(loader.getSnapshot()).toEqual({
+      state: 'destroy-incomplete',
+      pendingLoadCount: 0,
+      retainedCandidateDisposalCount: 1,
+      textureHandlerRegistered: false,
+      platformTextureLoaderPendingRequestCount: 0,
+      platformTextureLoaderCleanupComplete: true,
+      cleanupComplete: false,
+    });
+    await expect(loader.load(definition)).rejects.toThrow(/destroy-incomplete.*拒绝新load/u);
+    loader.destroy();
+    expect({ geometryDisposals, materialDisposals }).toEqual({
+      geometryDisposals: 1,
+      materialDisposals: 3,
+    });
+    expect(loader.getSnapshot()).toEqual({
+      state: 'destroyed',
+      pendingLoadCount: 0,
+      retainedCandidateDisposalCount: 0,
+      textureHandlerRegistered: false,
+      platformTextureLoaderPendingRequestCount: 0,
+      platformTextureLoaderCleanupComplete: true,
+      cleanupComplete: true,
+    });
+  });
+
+  it('retains a GLTF scene when candidate lease construction fails and rebuilds ownership on destroy', async () => {
+    const scene = new THREE.Group();
+    const geometry = new THREE.BoxGeometry();
+    let geometryDisposals = 0;
+    geometry.dispose = () => { geometryDisposals += 1; };
+    scene.add(new THREE.Mesh(geometry, new THREE.MeshBasicMaterial()));
+    const originalTraverse = scene.traverse;
+    let traverseAttempts = 0;
+    scene.traverse = (callback) => {
+      traverseAttempts += 1;
+      if (traverseAttempts <= 2) throw new Error('transient candidate traversal');
+      originalTraverse.call(scene, callback);
+    };
+    const loader = new GltfPresentationAssetLoader({
+      readAssetBytes: () => new ArrayBuffer(1),
+      loader: {
+        async loadAsync() { throw new Error('unexpected load'); },
+        async parseAsync() { return { scene, animations: [] }; },
+      },
+    });
+    const definition = {
+      id: 'candidate-lease-construction',
+      sourceKey: './assets/candidate-lease-construction.glb',
+      providerId: ARENA_PRESENTATION_ASSET_PROVIDER_ID.GLTF_CHARACTER_V1,
+    };
+    await expect(loader.load(definition)).rejects.toThrow(/终态清理未完成/u);
+    expect({ traverseAttempts, geometryDisposals }).toEqual({
+      traverseAttempts: 2, geometryDisposals: 0,
+    });
+    expect(loader.getSnapshot()).toMatchObject({
+      state: 'destroy-incomplete', pendingLoadCount: 0,
+      retainedCandidateDisposalCount: 1, cleanupComplete: false,
+    });
+    await expect(loader.load(definition)).rejects.toThrow(/destroy-incomplete.*拒绝新load/u);
+    loader.destroy();
+    expect({ traverseAttempts, geometryDisposals }).toEqual({
+      traverseAttempts: 3, geometryDisposals: 1,
+    });
+    expect(loader.getSnapshot()).toMatchObject({
+      state: 'destroyed', retainedCandidateDisposalCount: 0, cleanupComplete: true,
+    });
+  });
+
+  it('defers destroy reentry to the current GLTF terminal cleanup owner', async () => {
+    let removeHandlerCalls = 0;
+    let removeHandlerDestroyErrors = 0;
+    let handlerLoader!: GltfPresentationAssetLoader;
+    handlerLoader = new GltfPresentationAssetLoader({
+      createImage: () => ({}),
+      loader: {
+        manager: {
+          addHandler() {},
+          removeHandler() {
+            removeHandlerCalls += 1;
+            try { handlerLoader.destroy(); } catch { removeHandlerDestroyErrors += 1; }
+          },
+          itemStart() {}, itemEnd() {}, itemError() {},
+        },
+        async loadAsync() { return { scene: new THREE.Group(), animations: [] }; },
+        async parseAsync() { return {}; },
+      },
+    });
+    const handlerLease = await handlerLoader.load({
+      id: 'handler-destroy-reentry',
+      sourceKey: './assets/handler-destroy-reentry.glb',
+      providerId: ARENA_PRESENTATION_ASSET_PROVIDER_ID.GLTF_CHARACTER_V1,
+    });
+    handlerLease.release();
+    handlerLoader.destroy();
+    expect({ removeHandlerCalls, removeHandlerDestroyErrors }).toEqual({
+      removeHandlerCalls: 1,
+      removeHandlerDestroyErrors: 0,
+    });
+    expect(handlerLoader.getSnapshot()).toMatchObject({
+      state: 'destroyed', retainedCandidateDisposalCount: 0,
+      textureHandlerRegistered: false, cleanupComplete: true,
+    });
+
+    const scene = new THREE.Group();
+    const material = new THREE.MeshBasicMaterial();
+    let materialDisposals = 0;
+    let candidateDestroyErrors = 0;
+    let candidateLoader!: GltfPresentationAssetLoader;
+    material.dispose = () => {
+      materialDisposals += 1;
+      if (materialDisposals === 1) throw new Error('first candidate cleanup fails');
+      try { candidateLoader.destroy(); } catch { candidateDestroyErrors += 1; }
+    };
+    scene.add(new THREE.Mesh(new THREE.BoxGeometry(), material));
+    candidateLoader = new GltfPresentationAssetLoader({
+      readAssetBytes: async () => new ArrayBuffer(1),
+      loader: {
+        async loadAsync() { throw new Error('unexpected load'); },
+        async parseAsync() { return { scene, animations: [{}] }; },
+      },
+    });
+    await expect(candidateLoader.load({
+      id: 'candidate-cleanup-reentry',
+      sourceKey: './assets/candidate-cleanup-reentry.glb',
+      providerId: ARENA_PRESENTATION_ASSET_PROVIDER_ID.GLTF_CHARACTER_V1,
+    })).rejects.toThrow(/清理失败/u);
+    expect({ materialDisposals, candidateDestroyErrors }).toEqual({
+      materialDisposals: 2,
+      candidateDestroyErrors: 0,
+    });
+    expect(candidateLoader.getSnapshot()).toMatchObject({
+      state: 'destroyed', pendingLoadCount: 0,
+      retainedCandidateDisposalCount: 0, cleanupComplete: true,
+    });
+  });
+
+  it('rejects swallowed GLTF byte-reader load reentry before parsing and reopens admission after callback exit', async () => {
+    let shouldReenter = true;
+    let nestedOperation!: Promise<unknown>;
+    let parseCalls = 0;
+    let loader!: GltfPresentationAssetLoader;
+    const definition = {
+      id: 'reader-reentry',
+      sourceKey: './assets/reader-reentry.glb',
+      providerId: ARENA_PRESENTATION_ASSET_PROVIDER_ID.GLTF_CHARACTER_V1,
+    };
+    loader = new GltfPresentationAssetLoader({
+      readAssetBytes() {
+        if (shouldReenter) {
+          nestedOperation = loader.load({ ...definition, id: 'nested-reader-reentry' });
+          nestedOperation.catch(() => { /* hostile callback swallows the rejection */ });
+        }
+        return new ArrayBuffer(1);
+      },
+      loader: {
+        async loadAsync() { throw new Error('unexpected load'); },
+        async parseAsync() {
+          parseCalls += 1;
+          return { scene: new THREE.Group(), animations: [] };
+        },
+      },
+    });
+    await expect(loader.load(definition)).rejects.toThrow(/公开load同步重入/u);
+    await expect(nestedOperation).rejects.toThrow(/外部回调期间拒绝公开load同步重入/u);
+    expect(parseCalls).toBe(0);
+    expect(loader.getSnapshot()).toMatchObject({ state: 'active', pendingLoadCount: 0 });
+
+    shouldReenter = false;
+    const lease = await loader.load({ ...definition, id: 'reader-after-reentry' });
+    expect(parseCalls).toBe(1);
+    lease.release();
+    loader.destroy();
+    expect(loader.isCleanupComplete()).toBe(true);
+  });
+
+  it('settles and disposes a GLTF result whose async parse was started by a reentrant callback', async () => {
+    let resolveParsed!: (value: unknown) => void;
+    let signalParseStarted!: () => void;
+    const parsed = new Promise<unknown>((resolve) => { resolveParsed = resolve; });
+    const parseStarted = new Promise<void>((resolve) => { signalParseStarted = resolve; });
+    let nestedOperation!: Promise<unknown>;
+    let loader!: GltfPresentationAssetLoader;
+    const scene = new THREE.Group();
+    const geometry = new THREE.BoxGeometry();
+    let geometryDisposals = 0;
+    geometry.dispose = () => { geometryDisposals += 1; };
+    scene.add(new THREE.Mesh(geometry, new THREE.MeshBasicMaterial()));
+    const definition = {
+      id: 'parse-reentry',
+      sourceKey: './assets/parse-reentry.glb',
+      providerId: ARENA_PRESENTATION_ASSET_PROVIDER_ID.GLTF_CHARACTER_V1,
+    };
+    loader = new GltfPresentationAssetLoader({
+      readAssetBytes: () => new ArrayBuffer(1),
+      loader: {
+        async loadAsync() { throw new Error('unexpected load'); },
+        parseAsync() {
+          nestedOperation = loader.load({ ...definition, id: 'nested-parse-reentry' });
+          nestedOperation.catch(() => { /* hostile callback swallows the rejection */ });
+          signalParseStarted();
+          return parsed;
+        },
+      },
+    });
+    const operation = loader.load(definition);
+    await parseStarted;
+    expect(loader.getSnapshot()).toMatchObject({ state: 'active', pendingLoadCount: 1 });
+    resolveParsed({ scene, animations: [] });
+    await expect(operation).rejects.toThrow(/外部调用阶段发生load重入/u);
+    await expect(nestedOperation).rejects.toThrow(/外部回调期间拒绝公开load同步重入/u);
+    expect(geometryDisposals).toBe(1);
+    expect(loader.getSnapshot()).toMatchObject({
+      state: 'active', pendingLoadCount: 0, retainedCandidateDisposalCount: 0,
+    });
+    loader.destroy();
+  });
+
+  it('fails the owning GLTF load when candidate cleanup swallows public load reentry', async () => {
+    let nestedOperation!: Promise<unknown>;
+    let loader!: GltfPresentationAssetLoader;
+    const scene = new THREE.Group();
+    const material = new THREE.MeshBasicMaterial();
+    let materialDisposals = 0;
+    material.dispose = () => {
+      materialDisposals += 1;
+      nestedOperation = loader.load({
+        id: 'nested-cleanup-reentry',
+        sourceKey: './assets/nested-cleanup-reentry.glb',
+        providerId: ARENA_PRESENTATION_ASSET_PROVIDER_ID.GLTF_CHARACTER_V1,
+      });
+      nestedOperation.catch(() => { /* hostile cleanup swallows the rejection */ });
+    };
+    scene.add(new THREE.Mesh(new THREE.BoxGeometry(), material));
+    loader = new GltfPresentationAssetLoader({
+      readAssetBytes: () => new ArrayBuffer(1),
+      loader: {
+        async loadAsync() { throw new Error('unexpected load'); },
+        async parseAsync() { return { scene, animations: [{}] }; },
+      },
+    });
+    await expect(loader.load({
+      id: 'cleanup-reentry',
+      sourceKey: './assets/cleanup-reentry.glb',
+      providerId: ARENA_PRESENTATION_ASSET_PROVIDER_ID.GLTF_CHARACTER_V1,
+    })).rejects.toThrow(/候选scene清理期间发生load重入/u);
+    await expect(nestedOperation).rejects.toThrow(/外部回调期间拒绝公开load同步重入/u);
+    expect(materialDisposals).toBe(1);
+    expect(loader.getSnapshot()).toMatchObject({
+      state: 'active', pendingLoadCount: 0, retainedCandidateDisposalCount: 0,
+    });
+    loader.destroy();
+  });
+
+  it('retains texture-handler cleanup debt for retry and rejects load before definition read', async () => {
+    let removeCalls = 0;
+    const loader = new GltfPresentationAssetLoader({
+      createImage: () => ({}),
+      loader: {
+        manager: {
+          addHandler() {},
+          removeHandler() {
+            removeCalls += 1;
+            if (removeCalls === 1) throw new Error('transient handler cleanup');
+          },
+          itemStart() {}, itemEnd() {}, itemError() {},
+        },
+        async loadAsync() { return { scene: new THREE.Group(), animations: [] }; },
+        async parseAsync() { return {}; },
+      },
+    });
+    const lease = await loader.load({
+      id: 'registered-handler',
+      sourceKey: './assets/registered-handler.glb',
+      providerId: ARENA_PRESENTATION_ASSET_PROVIDER_ID.GLTF_CHARACTER_V1,
+    });
+    lease.release();
+    expect(() => loader.destroy()).toThrow(/transient handler cleanup/u);
+    expect(loader.getSnapshot()).toMatchObject({
+      state: 'destroy-incomplete', textureHandlerRegistered: true, cleanupComplete: false,
+    });
+    let definitionReads = 0;
+    const hostileDefinition = {};
+    Object.defineProperty(hostileDefinition, 'id', {
+      enumerable: true,
+      get() { definitionReads += 1; return 'should-not-read'; },
+    });
+    await expect(loader.load(hostileDefinition)).rejects.toThrow(/destroy-incomplete.*拒绝新load/u);
+    expect(definitionReads).toBe(0);
+    loader.destroy();
+    loader.destroy();
+    expect(removeCalls).toBe(2);
+    expect(loader.isCleanupComplete()).toBe(true);
+  });
+
+  it('does not remove an unregistered texture handler and retains failed first-load registration rollback', async () => {
+    const unusedEvents: string[] = [];
+    const unusedLoader = new GltfPresentationAssetLoader({
+      createImage: () => ({}),
+      loader: {
+        manager: {
+          addHandler() { unusedEvents.push('add'); },
+          removeHandler() { unusedEvents.push('remove'); },
+          itemStart() {}, itemEnd() {}, itemError() {},
+        },
+        async loadAsync() { return {}; },
+        async parseAsync() { return {}; },
+      },
+    });
+    unusedLoader.destroy();
+    expect(unusedEvents).toEqual([]);
+    expect(unusedLoader.isCleanupComplete()).toBe(true);
+
+    let removeCalls = 0;
+    const failedLoader = new GltfPresentationAssetLoader({
+      createImage: () => ({}),
+      loader: {
+        manager: {
+          addHandler() { throw new Error('registration failed after possible side effect'); },
+          removeHandler() {
+            removeCalls += 1;
+            if (removeCalls === 1) throw new Error('registration rollback failed');
+          },
+          itemStart() {}, itemEnd() {}, itemError() {},
+        },
+        async loadAsync() { return {}; },
+        async parseAsync() { return {}; },
+      },
+    });
+    await expect(failedLoader.load({
+      id: 'registration-rollback',
+      sourceKey: './assets/registration-rollback.glb',
+      providerId: ARENA_PRESENTATION_ASSET_PROVIDER_ID.GLTF_CHARACTER_V1,
+    })).rejects.toThrow(/终态清理未完成/u);
+    expect(failedLoader.getSnapshot()).toMatchObject({
+      state: 'destroy-incomplete', pendingLoadCount: 0,
+      textureHandlerRegistered: true, cleanupComplete: false,
+    });
+    failedLoader.destroy();
+    expect(removeCalls).toBe(2);
+    expect(failedLoader.isCleanupComplete()).toBe(true);
   });
 
   it('rejects animation accessors and retries only incomplete mixer cleanup', () => {
@@ -1050,6 +2402,45 @@ describe('Arena Presentation Three lifecycle boundaries', () => {
     } finally {
       THREE.AnimationMixer.prototype.stopAllAction = originalStop;
     }
+  });
+
+  it('retains animation controller construction cleanup for exact retry', () => {
+    const root = new THREE.Group();
+    const clip = new THREE.AnimationClip('Idle', 1, []);
+    clip.clone = () => { throw new Error('animation overlay construction failed'); };
+    const originalStop = THREE.AnimationMixer.prototype.stopAllAction;
+    let stopAttempts = 0;
+    THREE.AnimationMixer.prototype.stopAllAction = function patchedConstructionStop() {
+      stopAttempts += 1;
+      if (stopAttempts <= 2) throw new Error('transient construction mixer stop');
+      return originalStop.call(this);
+    };
+    let constructionError: CharacterAnimationControllerConstructionCleanupError | null = null;
+    try {
+      try {
+        new CharacterAnimationController({
+          root,
+          clips: [clip],
+          actionPresentations: { attack: { clipName: 'Idle' } },
+        });
+      } catch (error) {
+        expect(error).toBeInstanceOf(CharacterAnimationControllerConstructionCleanupError);
+        constructionError = error as CharacterAnimationControllerConstructionCleanupError;
+      }
+      expect(constructionError?.cleanupComplete).toBe(false);
+      expect(() => constructionError?.retryCleanup()).toThrow(/重试未完整完成/u);
+      constructionError?.retryCleanup();
+      expect(constructionError?.cleanupComplete).toBe(true);
+    } finally {
+      THREE.AnimationMixer.prototype.stopAllAction = originalStop;
+    }
+    expect(stopAttempts).toBe(3);
+    expect(CHARACTER_ANIMATION_CONTROLLER_LIFECYCLE_V1).toEqual({
+      constructorCleanupFailureRetainsRetryOwner: true,
+      retrySkipsCompletedMixerCleanup: true,
+      nestedViewConstructionMayComposeControllerDebt: true,
+      validationStatus: 'not-run',
+    });
   });
 
   it('retries only failed Three resources and never repeats successful cleanup', () => {
