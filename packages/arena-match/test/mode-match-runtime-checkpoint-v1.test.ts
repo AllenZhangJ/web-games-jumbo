@@ -38,7 +38,7 @@ test('P2.5e: composite checkpoint is exact-key and requires its frozen identity 
       schemaVersion: MODE_MATCH_RUNTIME_CHECKPOINT_V1_SCHEMA_VERSION,
       extra: true,
     })),
-    /未知字段|必填字段/u,
+    /未知字段|不支持字段|必填字段/u,
   );
   const descriptor = Object.getOwnPropertyDescriptor(
     ModeMatchRuntimeV6.prototype,

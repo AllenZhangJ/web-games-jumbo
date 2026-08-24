@@ -76,7 +76,7 @@ describe('Arena Mode Golden Manifest V2 candidate', () => {
   it('keeps unresolved Race and Survival values isolated behind explicit test fixtures', () => {
     const noFixture = options();
     (noFixture.entries as DataRecord[])[1]!.fixtureDefinitionId = null;
-    expect(() => createArenaModeGoldenManifestV2(noFixture)).toThrow(/test.*fixture|格式无效/);
+    expect(() => createArenaModeGoldenManifestV2(noFixture)).toThrow(/test.*fixture|格式无效|fixtureDefinitionId/);
 
     const candidateMode = options();
     (candidateMode.entries as DataRecord[])[2]!.modeDefinitionId = 'arena.mode.survival.v6';

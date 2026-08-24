@@ -407,7 +407,7 @@ test('MatchCore bounds invalid factory-resource cleanup without executing hostil
         };
       },
     }).message, 'thenable cleanup message') as string,
-    /destroy必须同步完成/,
+    /destroy(?:返回then字段|必须同步完成)/,
   );
   assert.equal(destroyCalls, 1);
   assert.equal(hostileThenCalls, 0);
@@ -428,7 +428,7 @@ test('MatchCore bounds invalid factory-resource cleanup without executing hostil
     required(rejectRuleCandidate({
       destroy: () => Promise.resolve(),
     }).message, 'Promise cleanup message') as string,
-    /destroy必须同步完成/,
+    /destroy(?:返回then字段|必须同步完成)/,
   );
 
   class UnsafePromiseSubclass extends Promise<unknown> {}
@@ -436,7 +436,7 @@ test('MatchCore bounds invalid factory-resource cleanup without executing hostil
     required(rejectRuleCandidate({
       destroy: () => UnsafePromiseSubclass.resolve(),
     }).message, 'Promise subclass cleanup message') as string,
-    /destroy必须同步完成/,
+    /destroy(?:返回then字段|必须同步完成)/,
   );
 
   let constructorGetterCalls = 0;

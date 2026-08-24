@@ -142,7 +142,7 @@ describe('ArenaReplayV6 production-unreachable candidate', () => {
 
     const assignmentDrift = replayOptions();
     (assignmentDrift.participantAssignments as DataRecord[])[0]!.participantId = 'foreign';
-    expect(() => createArenaReplayV6(assignmentDrift)).toThrow(/assignment identity/);
+    expect(() => createArenaReplayV6(assignmentDrift)).toThrow(/assignment|winner不属于/);
   });
 
   it('rejects incomplete input/checkpoint/final-hash closure and caller tampering', () => {

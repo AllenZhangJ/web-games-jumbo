@@ -89,6 +89,14 @@ describe('arena-match authority configuration', () => {
     })).toThrow(/必须早于/);
   });
 
+  it('accepts explicit zero disabled respawn/protection timers but rejects negatives', () => {
+    const disabled = createArenaMatchConfig({ respawnTicks: 0, invulnerableTicks: 0 });
+    expect(disabled.respawnTicks).toBe(0);
+    expect(disabled.invulnerableTicks).toBe(0);
+    expect(() => createArenaMatchConfig({ respawnTicks: -1 })).toThrow(/大于等于 0/);
+    expect(() => createArenaMatchConfig({ invulnerableTicks: -1 })).toThrow(/大于等于 0/);
+  });
+
   it('normalizes match content identity once and rejects hash or assignment drift', () => {
     const selection = createMatchContentSelection(selectionInput());
     expect(selection.characterDefinitionIds).toEqual([

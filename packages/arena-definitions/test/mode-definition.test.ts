@@ -528,7 +528,7 @@ describe('P2.0a Mode Definition and Policy contracts', () => {
     const enemy = (invalidSurvival.roles as DataRecord[])
       .find((role) => role.modeRole === MODE_ROLE.ENEMY)!;
     enemy.maximumCount = MODE_POLICY_TEST_MAXIMUM_ENEMY_SLOTS + 1;
-    expect(() => createModePolicyDefinition(invalidSurvival)).toThrow(/1 human player/);
+    expect(() => createModePolicyDefinition(invalidSurvival)).toThrow(/1 human player|role count/);
 
     const wrongSlots = participantPolicy(MODE_KIND.SURVIVAL);
     const wrongEnemy = (wrongSlots.roles as DataRecord[])
@@ -543,11 +543,11 @@ describe('P2.0a Mode Definition and Policy contracts', () => {
     expect(() => createModePolicyDefinition({
       ...timelinePolicy(MODE_KIND.DUEL),
       hardLimitTicks: Number.MAX_SAFE_INTEGER + 1,
-    })).toThrow(/安全整数/);
+    })).toThrow(/安全整数|非有限数|不能包含/);
     expect(() => createModePolicyDefinition({
       ...timelinePolicy(MODE_KIND.DUEL),
       hardLimitTicks: Number.NaN,
-    })).toThrow(/安全整数/);
+    })).toThrow(/安全整数|非有限数|不能包含/);
 
     const oversizedController = participantPolicy(MODE_KIND.DUEL);
     (oversizedController.controllerKindBounds as DataRecord[])[0]!.maximumCount = 3;

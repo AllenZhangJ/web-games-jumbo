@@ -1,6 +1,27 @@
 import { describe, expect, it } from 'vitest';
 import { ModeQuickMatchServiceV2 } from '../src/index.js';
 
+function thrownError(action: () => unknown): Error {
+  try {
+    action();
+  } catch (error) {
+    if (error instanceof Error) return error;
+    throw error;
+  }
+  throw new Error('expected action to throw');
+}
+
+function failureMessages(error: unknown): readonly string[] {
+  if (!(error instanceof Error)) return [String(error)];
+  const messages = [error.message];
+  const cause = Object.getOwnPropertyDescriptor(error, 'cause')?.value;
+  if (cause !== undefined) messages.push(...failureMessages(cause));
+  if (error instanceof AggregateError) {
+    for (const nested of error.errors) messages.push(...failureMessages(nested));
+  }
+  return messages;
+}
+
 function roster(modeDefinitionId: string) {
   return {
     schemaVersion: 2,
@@ -90,8 +111,9 @@ describe('P2.5 mode quick match V2 candidate', () => {
       runtimeFactory: { createRuntime() { return {}; } },
       controllerFactory: { createController() { return {}; } },
     });
-    expect(() => value.create({ modeDefinitionId: 'mode.duel.test.v1' }))
-      .toThrow(/同步完成/);
+    const failure = thrownError(() => value.create({ modeDefinitionId: 'mode.duel.test.v1' }));
+    expect(failure.message).toBe('ModeQuickMatchServiceV2创建失败。');
+    expect(failureMessages(failure).join('\n')).toMatch(/必须同步完成/);
   });
 
   it('rejects a data then provider result before invoking later factories', () => {
@@ -121,8 +143,9 @@ describe('P2.5 mode quick match V2 candidate', () => {
       },
     });
 
-    expect(() => value.create({ modeDefinitionId: 'mode.duel.test.v1' }))
-      .toThrow(/then字段|同步完成/);
+    const failure = thrownError(() => value.create({ modeDefinitionId: 'mode.duel.test.v1' }));
+    expect(failure.message).toBe('ModeQuickMatchServiceV2创建失败。');
+    expect(failureMessages(failure).join('\n')).toMatch(/返回then字段，必须同步完成/);
     expect(seedCalls).toBe(1);
     expect(rosterCalls).toBe(1);
     expect(contentCalls).toBe(0);
@@ -142,12 +165,8 @@ describe('P2.5 mode quick match V2 candidate', () => {
           return 7;
         },
     });
-    let failure: unknown;
-    try {
-      value.create({ modeDefinitionId: 'mode.duel.test.v1' });
-    } catch (error) {
-      failure = error;
-    }
-    expect((failure as { cause: Error }).cause.message).toMatch(/重入/);
+    const failure = thrownError(() => value.create({ modeDefinitionId: 'mode.duel.test.v1' }));
+    expect(failure).toBeInstanceOf(AggregateError);
+    expect(failureMessages(failure).join('\n')).toMatch(/拒绝create重入/);
   });
 });

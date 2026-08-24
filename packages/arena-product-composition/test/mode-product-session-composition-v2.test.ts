@@ -1,8 +1,23 @@
 import { describe, expect, it } from 'vitest';
+import { createMatchContentSelectionV2 } from '@number-strategy-jump/arena-contracts';
 import { MODE_PRODUCT_SESSION_V2_STATE } from '@number-strategy-jump/arena-product-session';
 import { createModeProductSessionCompositionV2 } from '../src/index.js';
 
 const MODE_ID = 'mode.duel.test.v1';
+
+function expectFailureCause(action: () => unknown, pattern: RegExp): void {
+  let thrown: unknown;
+  try {
+    action();
+  } catch (error) {
+    thrown = error;
+  }
+  expect(thrown).toBeInstanceOf(Error);
+  const error = thrown as Error & { readonly cause?: unknown };
+  const nested = error.cause;
+  const nestedMessage = nested instanceof Error ? nested.message : String(nested ?? '');
+  expect(`${error.message}\n${nestedMessage}`).toMatch(pattern);
+}
 
 function profileDefinition() {
   return {
@@ -32,6 +47,20 @@ function profileDefinition() {
 }
 
 function options(onDestroy: () => void, override: Readonly<Record<string, unknown>> = {}) {
+  const content = createMatchContentSelectionV2({
+    schemaVersion: 2,
+    modeDefinitionId: MODE_ID,
+    contentDefinitionId: 'content.duel.test.v1',
+    contentVersion: 1,
+    characterDefinitionIds: ['fighter-a', 'fighter-b'],
+    equipmentDefinitionIds: ['hammer.collection.test'],
+    mapDefinitionIds: ['map.duel.test.v1'],
+    selectedMapDefinitionId: 'map.duel.test.v1',
+    participantCharacters: [
+      { participantId: 'p1', definitionId: 'fighter-a' },
+      { participantId: 'p2', definitionId: 'fighter-b' },
+    ],
+  });
   return {
     modeDefinitionId: MODE_ID,
     modeKind: 'duel',
@@ -66,20 +95,7 @@ function options(onDestroy: () => void, override: Readonly<Record<string, unknow
       modeDefinitionId: MODE_ID,
       matchSeed: 7,
       localParticipantId: 'p1',
-      content: {
-        schemaVersion: 2,
-        modeDefinitionId: MODE_ID,
-        contentDefinitionId: 'content.duel.test.v1',
-        contentVersion: 1,
-        characterDefinitionIds: ['fighter-a', 'fighter-b'],
-        equipmentDefinitionIds: ['hammer.collection.test'],
-        mapDefinitionIds: ['map.duel.test.v1'],
-        selectedMapDefinitionId: 'map.duel.test.v1',
-        participantCharacters: [
-          { participantId: 'p1', definitionId: 'fighter-a' },
-          { participantId: 'p2', definitionId: 'fighter-b' },
-        ],
-      },
+      content,
       participantAssignments: [
         {
           participantId: 'p1', modeRole: 'competitor', teamId: null,
@@ -143,10 +159,10 @@ describe('P2.5 mode Product composition V2 candidate', () => {
 
   it('leaves the supplied match with its caller when downstream construction fails', () => {
     let destroyed = 0;
-    expect(() => createModeProductSessionCompositionV2(options(
+    expectFailureCause(() => createModeProductSessionCompositionV2(options(
       () => { destroyed += 1; },
       { progressionRegistry: { rewards: [], unlocks: [], future: true } },
-    ))).toThrow(/future/);
+    )), /future/);
     expect(destroyed).toBe(0);
   });
 
@@ -158,10 +174,10 @@ describe('P2.5 mode Product composition V2 candidate', () => {
         throw new Error('must-not-coerce');
       },
     });
-    expect(() => createModeProductSessionCompositionV2(options(
+    expectFailureCause(() => createModeProductSessionCompositionV2(options(
       () => { throw hostile; },
       { progressionRegistry: { rewards: [], unlocks: [], future: true } },
-    ))).toThrow(/future/);
+    )), /future/);
     expect(coercions).toBe(0);
   });
 
@@ -175,7 +191,7 @@ describe('P2.5 mode Product composition V2 candidate', () => {
   it('never executes caller-owned cleanup or its hostile then accessor on construction failure', () => {
     let thenCalls = 0;
     let destroys = 0;
-    expect(() => createModeProductSessionCompositionV2(options(
+    expectFailureCause(() => createModeProductSessionCompositionV2(options(
       () => {
         destroys += 1;
         return Object.defineProperty(Object.create(null), 'then', {
@@ -186,7 +202,7 @@ describe('P2.5 mode Product composition V2 candidate', () => {
         });
       },
       { progressionRegistry: { rewards: [], unlocks: [], future: true } },
-    ))).toThrow(/future/);
+    )), /future/);
     expect(destroys).toBe(0);
     expect(thenCalls).toBe(0);
   });

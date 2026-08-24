@@ -2,8 +2,14 @@
   "schemaVersion": 1,
   "id": "arena.art.silhouette-human-test-kit.a0.3.v1",
   "status": "ready-for-external-human-input",
-  "generatedAt": "2026-07-28",
-  "baselineCommit": "fb3b01422ece301977e00c2f46526bd71cd090b0",
+  "admissibilityStatus": "non-admissible-dirty-toolchain-source",
+  "generatedAt": "2026-08-24",
+  "baselineCommit": "de1ef89f36c2152c978c82f5976f04737e43cb4f",
+  "generator": {
+    "path": "scripts/art/generate-arena-silhouette-human-test-kit.ts",
+    "byteLength": 11463,
+    "sha256": "fa7103d35f658abbc384bef76f62bd5bb3895bda9f696279ae37b5ff74c325f2"
+  },
   "sourceQuestions": {
     "path": "docs/quality/art/silhouette/blind-test/arena-a0.3-blind-questions-v1.json",
     "byteLength": 36314,
@@ -14,8 +20,8 @@
     "participantAccessible": false,
     "blindPackage": {
       "path": "docs/quality/art/silhouette/blind-test/arena-a0.3-blind-test-package-v1.json",
-      "byteLength": 40562,
-      "sha256": "69610c9bd27c5b0ff10ab6c0a8c47fd136892fe5d2e606cbdbbdad12736e90d2"
+      "byteLength": 40821,
+      "sha256": "18e726f3fdfd4486fc8ed6fe0ddc80a07d016fa0232df8948eecb81a0f68de65"
     },
     "questions": {
       "path": "docs/quality/art/silhouette/blind-test/arena-a0.3-blind-questions-v1.json",

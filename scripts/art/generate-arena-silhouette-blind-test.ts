@@ -2,6 +2,13 @@ import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import sharp from 'sharp';
+import {
+  ARENA_V2_FORMAL_PRESENTATION_ASSET_CATALOG_CANDIDATE_V1_IDENTITY,
+} from '../../packages/arena-product-presentation/src/arena-v2-formal-presentation-asset-catalog-candidate-v1.js';
+import {
+  ARENA_V2_A3_A6_PRODUCTION_APPROVAL_EVIDENCE_LEDGER_CANDIDATE_V1_IDENTITY,
+} from '../../packages/arena-product-presentation/src/arena-v2-a3-a6-production-approval-evidence-ledger-candidate-v1.js';
+import { validateArenaSilhouetteInheritedSourceFreeze } from './arena-silhouette-source-freeze.js';
 
 const ROOT = resolve(import.meta.dirname, '../..');
 const RENDER_MANIFEST_PATH = 'docs/quality/art/silhouette/arena-a0.3-silhouette-render-manifest-v1.json';
@@ -11,6 +18,7 @@ const QUESTION_PATH = `${BLIND_DIR}/arena-a0.3-blind-questions-v1.json`;
 const ANSWER_PATH = `${BLIND_DIR}/arena-a0.3-blind-answer-key-v1.json`;
 const PROXY_PATH = `${BLIND_DIR}/arena-a0.3-internal-proxy-baseline-v1.json`;
 const PACKAGE_PATH = `${BLIND_DIR}/arena-a0.3-blind-test-package-v1.json`;
+const GENERATOR_PATH = 'scripts/art/generate-arena-silhouette-blind-test.ts';
 const SEED = 20260728;
 type JsonRecord = Record<string, unknown>;
 type RenderOutput = Readonly<{ id: string; characterId: string; equipmentState: string; direction: string; distanceMeters: number; viewport: Readonly<{ id: string }>; thumbnail: Readonly<{ path: string; sha256: string; byteLength: number; width: number; height: number }> }>;
@@ -32,8 +40,36 @@ async function feature(output: RenderOutput): Promise<Feature> {
 }
 
 const renderManifest = JSON.parse(readFileSync(resolve(ROOT, RENDER_MANIFEST_PATH), 'utf8')) as JsonRecord;
+const sourceFreeze = validateArenaSilhouetteInheritedSourceFreeze(renderManifest.sourceFreeze, GENERATOR_PATH);
 const outputs = renderManifest.outputs as RenderOutput[];
-if (renderManifest.status !== 'render-evidence-ready' || outputs.length !== 144) throw new Error('render manifest must contain 144 ready outputs');
+const formalCatalog = renderManifest.formalCatalog as JsonRecord | undefined;
+const catalogBoundary = formalCatalog?.boundary as JsonRecord | undefined;
+const catalogIdentity = formalCatalog?.identity as JsonRecord | undefined;
+const approvalLedger = formalCatalog?.approvalLedger as JsonRecord | undefined;
+const selectedAssets = formalCatalog?.selectedAssets as JsonRecord[] | undefined;
+const expectedAuthorityPaths = [
+  'packages/arena-presentation-three/src/arena-camera.ts',
+  'packages/arena-presentation-runtime/src/six-sector-direction-resolver.ts',
+  'packages/arena-product-presentation/src/arena-v2-formal-presentation-asset-catalog-candidate-v1.ts',
+  'packages/arena-product-presentation/src/arena-v2-a3-a6-production-approval-evidence-ledger-candidate-v1.ts',
+  'governance/formal-assets/arena-stage7-formal-assets-v1.json',
+];
+const expectedSelectedAssetIds = [
+  'arena.asset.character.parkour-apprentice.kaykit-rogue.v1',
+  'arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1',
+  'arena.asset.attachment.shield.kaykit-round.v1',
+];
+if (
+  renderManifest.status !== 'render-evidence-ready'
+  || renderManifest.sourceCommit !== sourceFreeze.sourceCommit
+  || JSON.stringify((renderManifest.authorities as JsonRecord[] | undefined)?.map(({ path }) => path)) !== JSON.stringify(expectedAuthorityPaths)
+  || JSON.stringify(catalogIdentity) !== JSON.stringify(ARENA_V2_FORMAL_PRESENTATION_ASSET_CATALOG_CANDIDATE_V1_IDENTITY)
+  || JSON.stringify((approvalLedger?.identity as JsonRecord | undefined)) !== JSON.stringify(ARENA_V2_A3_A6_PRODUCTION_APPROVAL_EVIDENCE_LEDGER_CANDIDATE_V1_IDENTITY)
+  || catalogBoundary?.catalogAssetCount !== 130
+  || JSON.stringify(selectedAssets?.map(({ assetId }) => assetId)) !== JSON.stringify(expectedSelectedAssetIds)
+  || selectedAssets?.some(({ productionApprovalStatus, assetUsePermitted, formalReady }) => productionApprovalStatus !== 'missing-not-approved' || assetUsePermitted !== false || formalReady !== false)
+  || outputs.length !== 144
+) throw new Error('render manifest must inherit the clean sourceCommit, bind the current Catalog and contain 144 ready outputs');
 mkdirSync(resolve(ROOT, QUESTION_IMAGE_DIR), { recursive: true });
 const randomized = shuffle(outputs, SEED);
 const mapping = randomized.map((output, index) => {
@@ -111,13 +147,16 @@ const aggregateByDistance = Object.fromEntries(['0', '5', '12'].map((distance) =
 }]));
 const proxy = {
   schemaVersion: 1, id: 'arena.art.silhouette-internal-proxy.a0.3.v1', status: 'non-human-proxy-only', method: '64x64 centered binary silhouette nearest-neighbor; 10 deterministic 80% template folds',
+  sourceCommit: sourceFreeze.sourceCommit,
+  sourceFreezeFingerprint: sourceFreeze.cleanCheckFingerprint,
   disclaimer: 'This is a tooling and gross-confusion sanity baseline. It is not a human participant, usability result, device result or A0.3 pass.',
   runs: proxyRuns, aggregate: { runCount: 10, sampleCountPerRun: 144, characterAccuracy: average('characterAccuracy'), equipmentAccuracy: average('equipmentAccuracy'), directionAccuracy: average('directionAccuracy'), confusion: aggregateConfusion, byDistance: aggregateByDistance },
 };
 writeFileSync(resolve(ROOT, PROXY_PATH), `${JSON.stringify(proxy, null, 2)}\n`);
 
 const packageManifest = {
-  schemaVersion: 1, id: 'arena.art.silhouette-blind-test-package.a0.3.v1', status: 'awaiting-human-responses', generatedAt: '2026-07-28', seed: SEED,
+  schemaVersion: 1, id: 'arena.art.silhouette-blind-test-package.a0.3.v1', status: 'awaiting-human-responses', generatedAt: renderManifest.generatedAt, sourceCommit: sourceFreeze.sourceCommit, sourceFreeze: renderManifest.sourceFreeze, seed: SEED,
+  generator: artifact(GENERATOR_PATH),
   renderManifest: { path: RENDER_MANIFEST_PATH, sha256: sha256File(RENDER_MANIFEST_PATH) }, questions: artifact(QUESTION_PATH), answerKey: artifact(ANSWER_PATH), proxyBaseline: artifact(PROXY_PATH),
   questionImages: mapping.map((item) => ({ questionId: item.questionId, ...item.image })), formCount: forms.length, questionsPerForm: 24,
   humanEvidence: { participantCount: 0, minimum: 10, independentFromProduction: true, rawResponses: [], status: 'missing-blocking' },

@@ -23,6 +23,7 @@ try {
   mkdirSync(resolve(base, 'docs/quality/art/silhouette'), { recursive: true });
   cpSync(resolve(REPO, 'docs/quality/art/silhouette/human-test-kit'), resolve(base, 'docs/quality/art/silhouette/human-test-kit'), { recursive: true });
   cpSync(resolve(REPO, 'docs/quality/art/silhouette/blind-test'), resolve(base, 'docs/quality/art/silhouette/blind-test'), { recursive: true });
+  const generatorTarget = resolve(base, kit.generator.path); mkdirSync(dirname(generatorTarget), { recursive: true }); cpSync(resolve(REPO, kit.generator.path), generatorTarget);
   for (const source of ['character-b01-rogue-front-side.png', 'character-b02-skeleton-front-three-quarter.png']) { const target = resolve(base, 'docs/quality/art/reference-sources/project-character-renders', source); mkdirSync(dirname(target), { recursive: true }); cpSync(resolve(REPO, 'docs/quality/art/reference-sources/project-character-renders', source), target); }
   probe('assignment-hash', (r) => { r.assignmentSha256 = '0'.repeat(64); });
   probe('duplicate-participant', (_r, l) => { l.entries.push({ participantCode: 'P-TEST0001', formId: 'form-02' }); });

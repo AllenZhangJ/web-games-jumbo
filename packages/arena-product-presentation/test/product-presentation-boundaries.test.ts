@@ -37,6 +37,27 @@ import {
 } from '../src/index.js';
 import { markTrustedProductSessionViewModel } from '../src/product-view-model-trust.js';
 
+function thrownError(action: () => unknown): Error {
+  try {
+    action();
+  } catch (error) {
+    if (error instanceof Error) return error;
+    throw error;
+  }
+  throw new Error('expected action to throw');
+}
+
+function failureMessages(error: unknown): readonly string[] {
+  if (!(error instanceof Error)) return [String(error)];
+  const messages = [error.message];
+  const cause = Object.getOwnPropertyDescriptor(error, 'cause')?.value;
+  if (cause !== undefined) messages.push(...failureMessages(cause));
+  if (error instanceof AggregateError) {
+    for (const nested of error.errors) messages.push(...failureMessages(nested));
+  }
+  return messages;
+}
+
 function presentationSessionComposition(overrides: Record<string, unknown> = {}) {
   const platform = {
     id: 'strict-test',
@@ -955,7 +976,9 @@ describe('Product match presentation runtime boundaries', () => {
       frameProjector: () => Object.freeze({ source: Object.freeze({ tick: 0 }) }),
     });
     runtimeBox.current = runtime;
-    expect(() => runtime.start()).toThrow(/Product match 表现启动失败/);
+    const failure = thrownError(() => runtime.start());
+    expect(failure.message).toMatch(/检测到宿主重入并已失败关闭/);
+    expect(failureMessages(failure).join('\n')).toMatch(/不可重入；当前正在 start/);
     expect(runtime.state).toBe(PRODUCT_MATCH_PRESENTATION_RUNTIME_STATE.FAILED);
     runtime.destroy();
     expect(runtime.state).toBe(PRODUCT_MATCH_PRESENTATION_RUNTIME_STATE.DESTROYED);
@@ -1019,7 +1042,8 @@ describe('Product match presentation runtime boundaries', () => {
       ordinaryError = error;
     }
     expect(ordinaryError).toBeInstanceOf(Error);
-    expect((ordinaryError as Error).message).toMatch(/then字段.*必须同步完成/);
+    expect((ordinaryError as Error).message).toBe('Product match 表现启动失败');
+    expect(failureMessages(ordinaryError).join('\n')).toMatch(/返回then字段，必须同步完成/);
     ordinaryRuntime.destroy();
 
     const flowValue = presentationShadowedRejection('flow shadow rejection');
@@ -1174,7 +1198,9 @@ describe('Product presentation flow boundaries', () => {
     });
     const flow = new ProductPresentationFlow(flowOptions(controllerValue));
     flowBox.current = flow;
-    expect(() => flow.synchronize()).toThrow(/同步失败/);
+    const failure = thrownError(() => flow.synchronize());
+    expect(failure.message).toMatch(/检测到宿主重入并已失败关闭/);
+    expect(failureMessages(failure).join('\n')).toMatch(/不可重入；当前正在 synchronize/);
     expect(flow.state).toBe(PRODUCT_PRESENTATION_FLOW_STATE.FAILED);
     flow.destroy();
     expect(flow.state).toBe(PRODUCT_PRESENTATION_FLOW_STATE.DESTROYED);

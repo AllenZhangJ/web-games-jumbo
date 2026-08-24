@@ -457,13 +457,22 @@ export class ModeLocalMatchSessionV2 {
         ?? new Error(`ModeLocalMatchSessionV2 ${operation}发生被吞掉的重入。`);
     this.#reentryError = null;
     if (reentryError !== null) {
-      this.#state = MODE_LOCAL_MATCH_SESSION_V2_STATE.FAILED;
-      throw failed && failureValue !== reentryError
+      const failure = failed && failureValue !== reentryError
         ? new AggregateError(
           [failureValue, reentryError],
           `ModeLocalMatchSessionV2 ${operation}失败且同步重入。`,
         )
         : reentryError;
+      // Normal action failures enter #fail while their operation is still
+      // owned. Reinstall that ownership for a swallowed reentry detected at
+      // the outer boundary so cleanup can call its snapshotted ports exactly
+      // once instead of retaining every owner as "operation missing".
+      this.#operation = operation;
+      try {
+        return this.#fail(failure);
+      } finally {
+        this.#operation = null;
+      }
     }
     if (failed) throw failureValue;
     return result;
@@ -586,14 +595,19 @@ export class ModeLocalMatchSessionV2 {
 
   step(localInput: unknown): ModeLocalMatchSessionV2StepOutcome {
     return this.#runOperation('step', [MODE_LOCAL_MATCH_SESSION_V2_STATE.RUNNING], () => {
+      const currentFrame = this.#readFrame;
+      if (currentFrame === null) {
+        return this.#fail(new Error('ModeLocalMatchSessionV2尚无readFrame。'));
+      }
+      const tick = currentFrame.worldSnapshot.tick;
+      // A caller-controlled local frame is recoverable: reject it before a
+      // controller or authority port is invoked, preserving this session for
+      // the exact retry at the current tick.
+      const normalizedLocal = normalizeInputFrame(localInput, {
+        expectedTick: tick,
+        participantIds: [this.#localParticipantId],
+      });
       try {
-        const currentFrame = this.#readFrame;
-        if (currentFrame === null) throw new Error('ModeLocalMatchSessionV2尚无readFrame。');
-        const tick = currentFrame.worldSnapshot.tick;
-        const normalizedLocal = normalizeInputFrame(localInput, {
-          expectedTick: tick,
-          participantIds: [this.#localParticipantId],
-        });
         const candidateInputs: ArenaInputFrame[] = [normalizedLocal];
         for (const controller of this.#controllers) {
           const candidate = this.#callChecked(

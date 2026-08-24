@@ -272,15 +272,32 @@ export class ProductInputRouter {
   #leave(): void {
     const operation = this.#operation;
     const reentryError = this.#reentryError;
-    this.#operation = null;
-    this.#reentryError = null;
-    if (reentryError === null) return;
+    if (reentryError === null) {
+      this.#operation = null;
+      return;
+    }
+    // A swallowed callback reentry is terminal before any cleanup port runs.
+    // Keep the active operation and sticky marker while draining owners, so a
+    // cleanup callback cannot resume the failed router or publish a new input
+    // state. Failed cleanup retains its owner for an explicit destroy retry.
     this.#destroyed = true;
     this.#lifecycleSuspended = true;
     this.#uiPointer = null;
+    const cleanupFailures = this.#cleanupPendingSamplers();
+    this.#operation = null;
+    this.#reentryError = null;
+    const distinctCleanupFailures = cleanupFailures.filter(
+      (failure) => failure !== reentryError,
+    );
+    const failure = distinctCleanupFailures.length === 0
+      ? reentryError
+      : new AggregateError(
+        [reentryError, ...distinctCleanupFailures],
+        `ProductInputRouter.${operation ?? 'operation'}() 重入后资源清理未完整完成。`,
+      );
     throw new Error(
       `ProductInputRouter.${operation ?? 'operation'}() 检测到宿主重入并已失败关闭。`,
-      { cause: reentryError },
+      { cause: failure },
     );
   }
 
@@ -303,9 +320,11 @@ export class ProductInputRouter {
   #cleanupSampler(sampler: SamplerAdapter): readonly unknown[] {
     try {
       sampler.destroy();
-      this.#assertCurrentOperationCommit('ProductInputRouter sampler destroy');
+      // A successful child destroy releases this owner even if the callback
+      // also swallowed the outer router reentry.
       if (this.#sampler?.source === sampler.source) this.#sampler = null;
       this.#removeCleanupSampler(sampler);
+      this.#assertCurrentOperationCommit('ProductInputRouter sampler destroy');
       return [];
     } catch (error) {
       return [error];

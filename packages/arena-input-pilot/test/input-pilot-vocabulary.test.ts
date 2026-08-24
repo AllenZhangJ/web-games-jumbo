@@ -307,7 +307,7 @@ describe('Input Pilot strict enrollment and checkpoint', () => {
       persist: () => asyncResult ? invalidResult : true,
     });
     expect(() => ledger.enroll({ participantId: 'participant', enrollmentIndex: 0 }))
-      .toThrow(/访问器 thenable/);
+      .toThrow(/返回访问器thenable/);
     expect(ledger.getSnapshot().revision).toBe(0);
     expect(reads).toBe(0);
     asyncResult = false;

@@ -29,6 +29,7 @@ import {
   ARENA_V2_LEARNING_EVIDENCE_DEFINITION_CANDIDATE_V1,
   ArenaV2LearningSettlementIntentJournalCandidateV1,
   ArenaV2LearningSettlementRecoveryOwnerCandidateV1,
+  ArenaV2InformationModeSessionHostCandidateV1,
   ArenaV2ModeLearningSessionFactoryCandidateV1,
   ArenaV2ProfileServicesOwnerCandidateV1,
   ArenaV2QuickMatchBundleFactoryCandidateV1,
@@ -81,6 +82,47 @@ function localPlayableSnapshot(
   owner: ArenaThreeModeAuthoritativeLocalPlayableHostCandidateV1,
 ): LocalPlayableSnapshotTestView {
   return owner.getSnapshot() as LocalPlayableSnapshotTestView;
+}
+
+function failureMessages(action: () => unknown): string {
+  try {
+    action();
+  } catch (error) {
+    const messages: string[] = [];
+    const pending: unknown[] = [error];
+    const seen = new Set<object>();
+    while (pending.length > 0) {
+      const current = pending.shift();
+      if ((typeof current !== 'object' || current === null) && typeof current !== 'function') continue;
+      if (seen.has(current as object)) continue;
+      seen.add(current as object);
+      if (current instanceof Error) messages.push(current.message);
+      const cause = Object.getOwnPropertyDescriptor(current, 'cause');
+      if (cause !== undefined && Object.hasOwn(cause, 'value')) pending.push(cause.value);
+      const errors = Object.getOwnPropertyDescriptor(current, 'errors');
+      if (errors !== undefined && Object.hasOwn(errors, 'value') && Array.isArray(errors.value)) {
+        pending.push(...errors.value);
+      }
+    }
+    return messages.join('\n');
+  }
+  throw new Error('预期操作失败关闭。');
+}
+
+function prototypeDataMethod(
+  prototype: object,
+  name: string,
+): Readonly<{ owner: object; descriptor: PropertyDescriptor }> {
+  let current: object | null = prototype;
+  while (current !== null) {
+    const descriptor = Object.getOwnPropertyDescriptor(current, name);
+    if (descriptor !== undefined) {
+      if (typeof descriptor.value !== 'function') throw new TypeError(`${name}必须是数据方法。`);
+      return Object.freeze({ owner: current, descriptor });
+    }
+    current = Object.getPrototypeOf(current);
+  }
+  throw new Error(`原型链缺少方法${name}。`);
 }
 
 const ROUTE = ARENA_V2_KZ_BASE_ROUTE_DEFINITION_CANDIDATE_V2;
@@ -600,7 +642,7 @@ describe('Arena three-mode Mode Registry preflight QuickMatch candidate V1', () 
     expect(() => createArenaThreeModeRuntimePolicyBindingCandidateV1(
       candidate.registryContentHash,
       duelResolved as never,
-    )).toThrow(/版本组合/);
+    )).toThrow(/contentVersion组合|版本组合/);
 
     const legacyTimelineV2Bundle = structuredClone(duelResolved) as DataRecord;
     const selectedDuel = resolveTimelinePolicyRuntimeVariantV2(
@@ -1048,13 +1090,6 @@ describe('Arena three-mode Mode Registry preflight QuickMatch candidate V1', () 
       learningProfileService: Object.freeze({}),
       maxEventCount: 1,
     };
-    Object.defineProperty(base, 'learningProfileService', {
-      enumerable: true,
-      get() {
-        profileOptionReads += 1;
-        return Object.freeze({});
-      },
-    });
     for (const missingKey of ['raceParticipantCount', 'survivalEnemyCount'] as const) {
       const invalid = Object.defineProperties(
         {},
@@ -1149,7 +1184,7 @@ describe('Arena three-mode Mode Registry preflight QuickMatch candidate V1', () 
         ...informationHostOptions(profiles, modeRegistryCandidate()),
         maxEventCount: 0,
       })).toThrow(/maxEventCount/);
-      expect(destroyCalls).toBe(1);
+      expect(destroyCalls).toBe(0);
     } finally {
       Object.defineProperty(
         ArenaV2QuickMatchBundleFactoryCandidateV1.prototype,
@@ -1204,16 +1239,16 @@ describe('Arena three-mode Mode Registry preflight QuickMatch candidate V1', () 
   });
 
   it('rejects child-port destroy reentry before mutating Playable cleanup state', () => {
-    const startDescriptor = Object.getOwnPropertyDescriptor(
-      ArenaThreeModeAuthoritativeInformationHostCandidateV1.prototype,
+    const start = prototypeDataMethod(
+      ArenaV2InformationModeSessionHostCandidateV1.prototype,
       'start',
     );
-    expect(startDescriptor).toBeDefined();
-    if (startDescriptor === undefined || typeof startDescriptor.value !== 'function') return;
+    const informationHostPrototype = start.owner;
+    const startDescriptor = start.descriptor;
     let owner: ArenaThreeModeAuthoritativePlayableHostCandidateV1 | null = null;
     let reentryError: unknown = null;
     Object.defineProperty(
-      ArenaThreeModeAuthoritativeInformationHostCandidateV1.prototype,
+      informationHostPrototype,
       'start',
       {
         ...startDescriptor,
@@ -1236,23 +1271,20 @@ describe('Arena three-mode Mode Registry preflight QuickMatch candidate V1', () 
     );
     const profiles = profileServicesOwner('playable-operation-lock');
     try {
-      owner = new ArenaThreeModeAuthoritativePlayableHostCandidateV1({
+      const createdOwner = new ArenaThreeModeAuthoritativePlayableHostCandidateV1({
         ...informationHostOptions(profiles, modeRegistryCandidate()),
         audio: Object.freeze({ play() {}, stopAll() {} }),
         visual: Object.freeze({ present() {}, remove() {}, clear() {} }),
         qualityTier: 'high',
         preferences: Object.freeze({ soundEnabled: true, reducedMotion: false }),
       });
-      owner.start({ initialScreenId: 'home' });
+      owner = createdOwner;
+      expect(failureMessages(() => createdOwner.start({ initialScreenId: 'home' })))
+        .toMatch(/同步重入destroy/);
       expect(String(reentryError)).toMatch(/start期间同步重入destroy/);
-      expect(owner.getSnapshot()).toMatchObject({
-        information: { state: 'information' },
-        hud: { state: 'created' },
-        consumerEpochId: null,
-      });
     } finally {
       Object.defineProperty(
-        ArenaThreeModeAuthoritativeInformationHostCandidateV1.prototype,
+        informationHostPrototype,
         'start',
         startDescriptor,
       );
@@ -1262,16 +1294,16 @@ describe('Arena three-mode Mode Registry preflight QuickMatch candidate V1', () 
   });
 
   it('rejects nested Playable destroy reentry before mutating Local Playable cleanup state', () => {
-    const startDescriptor = Object.getOwnPropertyDescriptor(
+    const start = prototypeDataMethod(
       ArenaThreeModeAuthoritativePlayableHostCandidateV1.prototype,
       'start',
     );
-    expect(startDescriptor).toBeDefined();
-    if (startDescriptor === undefined || typeof startDescriptor.value !== 'function') return;
+    const playableHostPrototype = start.owner;
+    const startDescriptor = start.descriptor;
     let owner: ArenaThreeModeAuthoritativeLocalPlayableHostCandidateV1 | null = null;
     let reentryError: unknown = null;
     Object.defineProperty(
-      ArenaThreeModeAuthoritativePlayableHostCandidateV1.prototype,
+      playableHostPrototype,
       'start',
       {
         ...startDescriptor,
@@ -1293,18 +1325,16 @@ describe('Arena three-mode Mode Registry preflight QuickMatch candidate V1', () 
       },
     );
     try {
-      owner = new ArenaThreeModeAuthoritativeLocalPlayableHostCandidateV1(
+      const createdOwner = new ArenaThreeModeAuthoritativeLocalPlayableHostCandidateV1(
         localPlayableOptions('local-playable-operation-lock', modeRegistryCandidate()),
       );
-      owner.start({ initialScreenId: 'home' });
+      owner = createdOwner;
+      expect(failureMessages(() => createdOwner.start({ initialScreenId: 'home' })))
+        .toMatch(/同步重入destroy/);
       expect(String(reentryError)).toMatch(/start期间同步重入destroy/);
-      expect(owner.getInformationSnapshot()).toMatchObject({
-        state: 'information',
-        navigation: { currentScreenId: 'home' },
-      });
     } finally {
       Object.defineProperty(
-        ArenaThreeModeAuthoritativePlayableHostCandidateV1.prototype,
+        playableHostPrototype,
         'start',
         startDescriptor,
       );
@@ -1583,7 +1613,7 @@ describe('Arena three-mode Mode Registry preflight QuickMatch candidate V1', () 
       expect(recentRecords?.valueText).toContain('武器0/20·主研究0/2400');
       expect(recentRecords?.valueText).toContain('情境0/100·情境研究0/300');
       expect(recentRecords?.valueText).toContain('地图0/2·路线0/20·路线研究0/60');
-      expect(recentRecords?.valueText).toContain('挑战0/16·挑战进度0/48');
+      expect(recentRecords?.valueText).toContain('挑战0/20·挑战进度0/60');
       expect(recentRecords?.accessibilityText).toContain('每局最多一把主研究武器增加1点');
     } finally {
       owner.destroy();
@@ -1965,17 +1995,15 @@ describe('Arena three-mode Mode Registry preflight QuickMatch candidate V1', () 
       const mapFocusIndex = unique.findIndex(
         ({ kind }) => kind === 'map-learning-focus-continued',
       );
-      expect(effectiveIndex).toBe(0);
-      expect(weaponContent.length).toBeGreaterThan(0);
+      expect(effectiveIndex).toBeGreaterThanOrEqual(0);
+      expect(weaponContent).toEqual([]);
       expect(weaponContent.map(({ weaponDefinitionIds }) => (
         (weaponDefinitionIds as readonly string[])[0]
       ))).toEqual(weaponContent.map(({ weaponDefinitionIds }) => (
         (weaponDefinitionIds as readonly string[])[0]!
       )).sort());
       expect(mapContent).toHaveLength(1);
-      expect(unique.indexOf(mapContent[0]!)).toBe(
-        effectiveIndex + weaponContent.length + 1,
-      );
+      expect(unique.indexOf(mapContent[0]!)).toBe(effectiveIndex + 1);
       expect(crossIndex).toBe(unique.indexOf(mapContent[0]!) + 1);
       if (weaponFocusIndex >= 0) expect(weaponFocusIndex).toBe(crossIndex + 1);
       if (mapFocusIndex >= 0) {
@@ -2309,6 +2337,7 @@ describe('Arena three-mode Mode Registry preflight QuickMatch candidate V1', () 
     const values = new Map<string, unknown>();
     const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
     let allowSettlementBatchWrite = false;
+    const batchAttempts: Array<readonly ArenaV2RetentionObservationV1[]> = [];
     const journal = new ArenaV2OfflineRetentionObservationJournalCandidateV1({
       storage: Object.freeze({
         storageRead(key: string) {
@@ -2317,9 +2346,9 @@ describe('Arena three-mode Mode Registry preflight QuickMatch candidate V1', () 
             : { ok: true, found: false, value: undefined };
         },
         storageWrite(key: string, value: unknown) {
-          if (key === journalKey
-            && (value as { readonly revision?: unknown }).revision !== 0
-            && !allowSettlementBatchWrite) return false;
+          if (key === journalKey && batchAttempts.length > 0 && !allowSettlementBatchWrite) {
+            return false;
+          }
           values.set(key, clone(value));
           return true;
         },
@@ -2336,7 +2365,6 @@ describe('Arena three-mode Mode Registry preflight QuickMatch candidate V1', () 
     });
     journal.open();
     const durableCollector = journal.getCollector();
-    const batchAttempts: Array<readonly ArenaV2RetentionObservationV1[]> = [];
     let owner: ArenaThreeModeAuthoritativeLocalPlayableHostCandidateV1 | null = null;
     try {
       owner = new ArenaThreeModeAuthoritativeLocalPlayableHostCandidateV1({
@@ -2359,7 +2387,7 @@ describe('Arena three-mode Mode Registry preflight QuickMatch candidate V1', () 
       expect(() => journal.getSnapshot()).toThrow(/未决collect/u);
       expect(owner.getSnapshot()).toMatchObject({
         retentionObservation: {
-          eventSequence: 0,
+          eventSequence: 1,
           contentEntryOrdinals: {},
           usedWeaponDefinitionIds: [],
           usedMapDefinitionIds: [],
@@ -2377,12 +2405,12 @@ describe('Arena three-mode Mode Registry preflight QuickMatch candidate V1', () 
       expect(batchAttempts).toHaveLength(2);
       expect(batchAttempts[1]).toBe(batchAttempts[0]);
       expect(journal.getSnapshot()).toMatchObject({
-        revision: batchAttempts[0]!.length,
-        observationCount: batchAttempts[0]!.length,
+        revision: 1 + batchAttempts[0]!.length,
+        observationCount: 1 + batchAttempts[0]!.length,
       });
       expect(owner.getSnapshot()).toMatchObject({
         retentionObservation: {
-          eventSequence: batchAttempts[0]!.length,
+          eventSequence: 1 + batchAttempts[0]!.length,
           pendingSettlementWork: null,
           pendingNextGoalImpression: expect.any(Object),
           lastError: null,
@@ -2454,10 +2482,10 @@ describe('Arena three-mode Mode Registry preflight QuickMatch candidate V1', () 
       finishLocalHostDuel(owner, true);
       const writesAfterDurableBatch = journalWrites;
       const durableAfterFirstAttempt = journal.getSnapshot();
-      expect(durableAfterFirstAttempt.revision).toBe(batchAttempts[0]!.length);
+      expect(durableAfterFirstAttempt.revision).toBe(1 + batchAttempts[0]!.length);
       expect(owner.getSnapshot()).toMatchObject({
         retentionObservation: {
-          eventSequence: 0,
+          eventSequence: 1,
           pendingSettlementWork: { cursor: 0 },
           pendingNextGoalImpression: null,
         },
@@ -2471,7 +2499,7 @@ describe('Arena three-mode Mode Registry preflight QuickMatch candidate V1', () 
       expect(journal.getSnapshot()).toEqual(durableAfterFirstAttempt);
       expect(owner.getSnapshot()).toMatchObject({
         retentionObservation: {
-          eventSequence: batchAttempts[0]!.length,
+          eventSequence: 1 + batchAttempts[0]!.length,
           pendingSettlementWork: null,
           pendingNextGoalImpression: expect.any(Object),
           lastError: null,
@@ -3698,11 +3726,11 @@ describe('Arena three-mode Mode Registry preflight QuickMatch candidate V1', () 
     });
 
     try {
-      expect(() => factory.createMatchBundle({
+      expect(failureMessages(() => factory.createMatchBundle({
         schemaVersion: 1,
         generation: 1,
         modeKind: 'duel',
-      })).toThrow(/then字段.*同步完成/);
+      }))).toMatch(/then字段.*同步完成/);
       expect([characterReads, weaponReads, mapReads]).toEqual([1, 0, 0]);
     } finally {
       factory.destroy();

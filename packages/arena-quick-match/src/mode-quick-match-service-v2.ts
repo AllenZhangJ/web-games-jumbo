@@ -386,13 +386,10 @@ export class ModeQuickMatchServiceV2 {
         && !cleanupErrors.includes(this.#reentryError)) cleanupErrors.push(this.#reentryError);
       const failure = safelyWrapThrownError(error, 'ModeQuickMatchServiceV2创建失败。');
       if (cleanupErrors.length > 0) {
-        const combined = new Error('ModeQuickMatchServiceV2创建失败且清理不完整。') as Error & {
-          originalError: Error;
-          cleanupErrors: readonly Error[];
-        };
-        combined.originalError = failure;
-        combined.cleanupErrors = Object.freeze(cleanupErrors);
-        throw combined;
+        throw new AggregateError(
+          [failure, ...cleanupErrors],
+          'ModeQuickMatchServiceV2创建失败且清理不完整。',
+        );
       }
       throw failure;
     } finally {

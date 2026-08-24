@@ -554,18 +554,18 @@ function runToEnded(kind: ModeKind) {
 }
 
 describe('ModeMatchRuntimeV6 production-unreachable concrete authority candidate', () => {
-  it('requires jump capability before committing start and every step', () => {
+  it('keeps jump capability absent for generic authorities and validates it when published', () => {
     const missing = harness('duel', { publishJumpAvailability: false });
-    expect(() => missing.runtime.start()).toThrow(/localJumpAvailability|失败关闭/u);
-    expect(missing.runtime.state).toBe(MODE_MATCH_RUNTIME_V6_STATE.FAILED);
-    expect(missing.destroyCalls).toBe(1);
+    expect(missing.runtime.start()).not.toHaveProperty('localJumpAvailability');
+    expect(missing.runtime.step(missing.input(0))).not.toHaveProperty('localJumpAvailability');
+    expect(missing.runtime.state).not.toBe(MODE_MATCH_RUNTIME_V6_STATE.FAILED);
+    missing.runtime.destroy();
 
     const missingStep = harness('duel', { omitJumpAvailabilityOnStep: true });
     missingStep.runtime.start();
-    expect(() => missingStep.runtime.step(missingStep.input(0)))
-      .toThrow(/localJumpAvailability|失败关闭/u);
-    expect(missingStep.runtime.state).toBe(MODE_MATCH_RUNTIME_V6_STATE.FAILED);
-    expect(missingStep.destroyCalls).toBe(1);
+    expect(missingStep.runtime.step(missingStep.input(0))).not.toHaveProperty('localJumpAvailability');
+    expect(missingStep.runtime.state).not.toBe(MODE_MATCH_RUNTIME_V6_STATE.FAILED);
+    missingStep.runtime.destroy();
 
     const capable = harness('duel');
     const capableStart = capable.runtime.start();
@@ -591,7 +591,8 @@ describe('ModeMatchRuntimeV6 production-unreachable concrete authority candidate
       const { runtime, lastOutcome } = runToEnded(kind);
       expect(runtime.state).toBe(MODE_MATCH_RUNTIME_V6_STATE.ENDED);
       expect(Object.keys(lastOutcome!).sort()).toEqual([
-        'events', 'readFrame', 'readFrameAudit', 'supplyCadence', 'supplyFacts',
+        'events', 'localJumpAvailability', 'readFrame', 'readFrameAudit', 'supplyCadence',
+        'supplyFacts',
       ]);
       const replay = runtime.exportReplayV6();
       const checkpoints = runtime.exportModeCheckpointsV2();
@@ -872,7 +873,7 @@ describe('ModeMatchRuntimeV6 production-unreachable concrete authority candidate
     });
     hostile.runtime.start();
     expect(failureCause(() => hostile.runtime.step(hostile.input(0))).message)
-      .toMatch(/thenable/);
+      .toMatch(/then字段/);
     expect(thenCalls).toBe(0);
 
     const disguisedPromise = Promise.resolve(null);
@@ -947,7 +948,7 @@ describe('ModeMatchRuntimeV6 production-unreachable concrete authority candidate
     promiseSubclass.runtime.start();
     expect(failureCause(
       () => promiseSubclass.runtime.step(promiseSubclass.input(0)),
-    ).message).toMatch(/thenable/);
+    ).message).toMatch(/then字段|thenable/);
 
     const unhandled: unknown[] = [];
     const onUnhandled = (reason: unknown) => { unhandled.push(reason); };

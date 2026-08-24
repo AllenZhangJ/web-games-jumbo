@@ -129,7 +129,7 @@ describe('P2.1b Product Result V3 and PublicInfo V2 candidates', () => {
     expect(() => createProductMatchResultV3({
       ...options,
       participantEquipmentUsage: [...options.participantEquipmentUsage].reverse(),
-    })).toThrow(/assignment/);
+    })).toThrow(/assignment|participant集合不一致/);
     expect(() => createProductMatchResultV3({
       ...options,
       participantEquipmentUsage: [

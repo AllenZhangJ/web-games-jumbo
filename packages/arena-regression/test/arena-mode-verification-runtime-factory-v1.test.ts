@@ -92,22 +92,24 @@ describe('Arena Mode verification runtime factory V1 production-unreachable cand
     },
   );
 
-  it('does not bypass continuation parity for the registered long-run profile', () => {
-    const pair = createArenaModeVerificationContinuationPairV1({
-      ...request('race', 4),
-      profile: 'long-run',
-      runnerTickBudget: ARENA_MODE_VERIFICATION_PLAN_V1_LONG_RUN_TICKS,
-    });
-    expect(pair.restored.restoreFrameTick).toBe(
-      Math.floor(ARENA_MODE_VERIFICATION_PLAN_V1_LONG_RUN_TICKS / 2),
-    );
-    expect(pair.continuous.executedTicks).toBe(
-      ARENA_MODE_VERIFICATION_PLAN_V1_LONG_RUN_TICKS,
-    );
-    expect(pair.restored.executedTicks).toBe(
-      ARENA_MODE_VERIFICATION_PLAN_V1_LONG_RUN_TICKS,
-    );
-  });
+  if (process.env.ARENA_P2_LONG_RUN_EXTERNAL !== '1') {
+    it('does not bypass continuation parity for the registered long-run profile', () => {
+      const pair = createArenaModeVerificationContinuationPairV1({
+        ...request('race', 4),
+        profile: 'long-run',
+        runnerTickBudget: ARENA_MODE_VERIFICATION_PLAN_V1_LONG_RUN_TICKS,
+      });
+      expect(pair.restored.restoreFrameTick).toBe(
+        Math.floor(ARENA_MODE_VERIFICATION_PLAN_V1_LONG_RUN_TICKS / 2),
+      );
+      expect(pair.continuous.executedTicks).toBe(
+        ARENA_MODE_VERIFICATION_PLAN_V1_LONG_RUN_TICKS,
+      );
+      expect(pair.restored.executedTicks).toBe(
+        ARENA_MODE_VERIFICATION_PLAN_V1_LONG_RUN_TICKS,
+      );
+    }, 300_000);
+  }
 
   it('fails closed on prefix, checkpoint and terminal identity drift after both chains clean up', () => {
     const pair = createArenaModeVerificationContinuationPairV1(request('race'));

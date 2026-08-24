@@ -96,13 +96,15 @@ function normalizeParticipants(value: unknown): ReadonlyMap<string, ParticipantL
         throw new RangeError(`${name} player必须使用null/0 slot身份。`);
       }
       playerCount += 1;
-    } else if (slotId === null || slotGeneration < 1) {
-      throw new RangeError(`${name} enemy必须携带slotId与正slotGeneration。`);
+    } else if (slotId === null) {
+      throw new RangeError(`${name} enemy必须携带slotId。`);
     }
     result.set(participantId, {
       modeRole: candidate.modeRole,
       slotId,
       generation: slotGeneration,
+      // A configured slot may begin at generation 0 while inactive. It can
+      // only become action-eligible after its explicit 0→1 activation event.
       active: candidate.modeRole === 'player',
       playerFallCount: 0,
       playerFallTick: null,

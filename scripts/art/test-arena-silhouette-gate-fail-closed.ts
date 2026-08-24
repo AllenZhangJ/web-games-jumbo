@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { spawnSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import sharp from 'sharp';
 
 const ROOT = resolve(import.meta.dirname, '../..');
@@ -29,6 +29,16 @@ async function probe(name: string, mutate: (render: Json, blind: Json, gate: Jso
 try {
   await probe('missing-asset', (r) => { r.inputs[0].glb.path = 'public/assets/arena/characters/missing.glb'; });
   await probe('asset-hash', (r) => { r.inputs[0].glb.sha256 = '0'.repeat(64); });
+  await probe('source-commit-identity', (r) => { r.sourceCommit = '0'.repeat(40); });
+  await probe('source-freeze-fingerprint', (r) => { r.sourceFreeze.cleanCheckFingerprint = '0'.repeat(64); });
+  await probe('source-freeze-critical-artifact', (r) => { r.sourceFreeze.criticalArtifacts[0].sha256 = '0'.repeat(64); });
+  await probe('runtime-toolchain', (r) => { r.sourceFreeze.runtimeToolchain.nodeVersion = 'v0.0.0'; });
+  await probe('source-freeze-inheritance', (_r, b) => { b.sourceFreeze.cleanCheckFingerprint = '0'.repeat(64); });
+  await probe('historical-v1-authority', (r) => { r.authorities[2].path = 'packages/arena-v1-presentation-content/src/arena-gameplay-v2-character-content.ts'; });
+  await probe('catalog-content-hash', (r) => { r.formalCatalog.identity.catalogContentHash = '0'.repeat(8); });
+  await probe('catalog-selected-asset', (r) => { r.formalCatalog.selectedAssets[0].assetId = 'arena.asset.character.unknown.v1'; });
+  await probe('production-approval-forged', (r) => { r.formalCatalog.selectedAssets[0].productionApprovalStatus = 'approved'; });
+  await probe('blind-generator-drift', (_r, b) => { b.generator.sha256 = '0'.repeat(64); });
   await probe('fallback-path', (r) => { r.fallbackUsedPath = 'programmatic-fallback'; });
   await probe('clip-identity', (r) => { r.inputs[0].clips[0].clipName = 'Walking_A'; });
   await probe('skeleton-identity', (r) => { r.inputs[1].skeletonHash = '0'.repeat(64); });
@@ -52,7 +62,14 @@ try {
     b.proxyBaseline = { path, sha256: hash(path), byteLength: statSync(resolve(ROOT, path)).size };
   });
   await probe('downstream-leak', (_r, _b, g) => { g.boundaries.blockout = 'ready'; });
-  process.stdout.write('15/15 fail-closed probes passed\n');
+  const renderHashBeforeStartProbes = hash(RENDER);
+  const wrongTarget = spawnSync(process.execPath, ['--import', 'tsx', 'scripts/art/render-arena-silhouettes.ts'], { cwd: ROOT, encoding: 'utf8', env: { ...process.env, ARENA_A0_3_EXPECTED_SOURCE_COMMIT: '0'.repeat(40) } });
+  if (wrongTarget.status === 0 || hash(RENDER) !== renderHashBeforeStartProbes) throw new Error('wrong target sourceCommit must fail before output');
+  process.stdout.write('PASS wrong-target-source-commit-before-output\n');
+  const currentHead = execFileSync('git', ['-C', ROOT, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+  const dirtyRestart = spawnSync(process.execPath, ['--import', 'tsx', 'scripts/art/render-arena-silhouettes.ts'], { cwd: ROOT, encoding: 'utf8', env: { ...process.env, ARENA_A0_3_EXPECTED_SOURCE_COMMIT: currentHead } });
+  if (dirtyRestart.status === 0 || hash(RENDER) !== renderHashBeforeStartProbes) throw new Error('dirty restart must fail before output');
+  process.stdout.write('PASS dirty-restart-before-output\n25/25 manifest probes and 2 clean-start probes passed\n');
 } finally {
   rmSync(tempRoot, { recursive: true, force: true });
 }

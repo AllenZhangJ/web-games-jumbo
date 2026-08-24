@@ -191,7 +191,7 @@ describe('ArenaModeCheckpointV2 production-unreachable candidate', () => {
 
     const assignmentDrift = raceCheckpointOptions();
     (assignmentDrift.participantAssignments as DataRecord[])[0]!.participantId = 'foreign';
-    expect(() => createArenaModeCheckpointV2(assignmentDrift)).toThrow(/assignment identity/);
+    expect(() => createArenaModeCheckpointV2(assignmentDrift)).toThrow(/assignment identity|participant 集合/);
 
     const terminal = raceCheckpointOptions();
     terminal.tick = 62;

@@ -607,7 +607,7 @@ describe('Product Match lifecycle boundaries', () => {
       ordinaryError = error;
     }
     expect(ordinaryError).toBeInstanceOf(Error);
-    expect((ordinaryError as Error).message).toMatch(/then 字段.*必须同步完成/);
+    expect((ordinaryError as Error).message).toMatch(/返回then字段，必须同步完成/);
   });
 
   it('rejects Promise subclasses and constructor accessors without external execution', () => {
@@ -641,7 +641,7 @@ describe('Product Match lifecycle boundaries', () => {
       getReadFrame() { return accessorValue; },
     };
     expect(() => createProductMatchRuntimePort(accessorCandidate).getReadFrame())
-      .toThrow(/访问器 constructor/);
+      .toThrow(/返回访问器constructor/);
     expect(constructorCalls).toBe(0);
   });
 

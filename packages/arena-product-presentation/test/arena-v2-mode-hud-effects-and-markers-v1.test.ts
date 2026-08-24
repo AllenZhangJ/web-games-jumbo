@@ -144,14 +144,26 @@ describe('Arena V2 HUD feedback effects and world markers V1', () => {
       },
     }).load();
     consumer.beginEpoch('epoch-a');
-    consumer.consumeEpoch('epoch-a', feedback(1, [ITEM], true));
+    let failure: unknown;
+    try {
+      consumer.consumeEpoch('epoch-a', feedback(1, [ITEM], true));
+    } catch (error) {
+      failure = error;
+    }
 
     expect(String(reentryError)).toMatch(/consume期间同步重入dispose/);
+    expect(failure).toBeInstanceOf(AggregateError);
+    const failures = (failure as AggregateError).errors;
+    expect(failures).toContain(reentryError);
+    expect(failures.some(
+      (candidate) => candidate instanceof Error
+        && Object.getOwnPropertyDescriptor(candidate, 'cause')?.value === reentryError,
+    )).toBe(true);
     expect(plays).toBe(1);
     expect(consumer.getSnapshot()).toMatchObject({
-      state: ARENA_V2_MODE_HUD_FEEDBACK_EFFECT_CONSUMER_STATE_V1.READY,
+      state: ARENA_V2_MODE_HUD_FEEDBACK_EFFECT_CONSUMER_STATE_V1.FAILED,
       consumerEpochId: 'epoch-a',
-      revision: 1,
+      revision: null,
     });
     consumer.dispose();
   });

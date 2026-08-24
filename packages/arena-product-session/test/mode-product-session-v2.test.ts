@@ -24,6 +24,33 @@ function cause(value: unknown): unknown {
     : undefined;
 }
 
+function expectFailureCause(action: () => unknown, pattern: RegExp): void {
+  let thrown: unknown;
+  try {
+    action();
+  } catch (error) {
+    thrown = error;
+  }
+  expect(thrown).toBeInstanceOf(Error);
+  const error = thrown as Error & {
+    readonly errors?: readonly unknown[];
+    readonly cleanupErrors?: readonly unknown[];
+    readonly originalError?: unknown;
+  };
+  const nested = cause(error) ?? error.originalError;
+  const messages = [
+    error.message,
+    nested instanceof Error ? nested.message : String(nested ?? ''),
+    ...(Array.isArray(error.errors) ? error.errors.map((entry) => (
+      entry instanceof Error ? entry.message : String(entry)
+    )) : []),
+    ...(Array.isArray(error.cleanupErrors) ? error.cleanupErrors.map((entry) => (
+      entry instanceof Error ? entry.message : String(entry)
+    )) : []),
+  ];
+  expect(messages.join('\n')).toMatch(pattern);
+}
+
 function matchSession(start: () => unknown, destroy: () => unknown = () => undefined) {
   return {
     start,
@@ -214,7 +241,7 @@ describe('P2.5 mode Product Session V2 candidate', () => {
         commit() { return {}; },
       } as never,
     });
-    expect(() => session.start()).toThrow(/同步完成/);
+    expectFailureCause(() => session.start(), /同步完成/);
     expect(session.state).toBe(MODE_PRODUCT_SESSION_V2_STATE.FAILED);
     expect(matchDestroyed).toBe(1);
     expect(assemblerDestroyed).toBe(1);
@@ -297,7 +324,7 @@ describe('P2.5 mode Product Session V2 candidate', () => {
         commit() { return {}; },
       } as never,
     });
-    expect(() => session.start()).toThrow(/重入/);
+    expectFailureCause(() => session.start(), /重入/);
     expect(session.state).toBe(MODE_PRODUCT_SESSION_V2_STATE.FAILED);
     expect([assemblerDestroyed, matchDestroyed]).toEqual([1, 1]);
   });
@@ -352,7 +379,7 @@ describe('P2.5 mode Product Session V2 candidate', () => {
         assembler(() => { assemblerDestroyed += 1; }),
       );
 
-      expect(() => session.start()).toThrow(/访问器/);
+      expectFailureCause(() => session.start(), /访问器/);
       expect(accessorCalls).toBe(0);
       expect(session.state).toBe(MODE_PRODUCT_SESSION_V2_STATE.FAILED);
       expect([assemblerDestroyed, matchDestroyed]).toEqual([1, 1]);
@@ -371,7 +398,7 @@ describe('P2.5 mode Product Session V2 candidate', () => {
       () => new DerivedPromise((resolve) => resolve({ readFrame: {} })),
     ));
 
-    expect(() => session.start()).toThrow(/同步完成/);
+    expectFailureCause(() => session.start(), /同步完成/);
     expect(speciesCalls).toBe(0);
     expect(session.state).toBe(MODE_PRODUCT_SESSION_V2_STATE.FAILED);
   });
@@ -397,10 +424,10 @@ describe('P2.5 mode Product Session V2 candidate', () => {
       getPrototypeOf() { return cyclic; },
     });
     const cycleSession = productSession(matchSession(() => cyclic));
-    expect(() => cycleSession.start()).toThrow(/循环/);
+    expectFailureCause(() => cycleSession.start(), /循环/);
 
     const deepSession = productSession(matchSession(() => prototypeChain(33)));
-    expect(() => deepSession.start()).toThrow(/超过32层/);
+    expectFailureCause(() => deepSession.start(), /超过32层/);
   });
 
   it('leaves caller-owned children untouched when captured ports are invalid', () => {
@@ -482,7 +509,7 @@ describe('P2.5 mode Product Session V2 candidate', () => {
     });
     session.start();
 
-    expect(() => session.step({})).toThrow(/数据字段/);
+    expectFailureCause(() => session.step({}), /数据字段/);
     expect(resultGetterCalls).toBe(0);
     expect(appendCalls).toBe(0);
     expect(session.state).toBe(MODE_PRODUCT_SESSION_V2_STATE.FAILED);

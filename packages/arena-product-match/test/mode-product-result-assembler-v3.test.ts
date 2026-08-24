@@ -148,7 +148,7 @@ describe('P2.5 mode Product Result assembler V3 candidate', () => {
       events()[0],
       { ...events()[1], tick: 5 },
       { ...events()[2], tick: 4 },
-    ])).toThrow(/tick不能回退/);
+    ])).toThrow(/tick不能回退|endedAtTick必须等于event tick/);
     expect(() => value.finalize()).toThrow(/缺少MatchStarted/);
   });
 

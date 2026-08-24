@@ -122,6 +122,22 @@ describe('MatchParticipantSystem', () => {
     });
   });
 
+  it('permits a zero configured respawn delay but rejects a negative delay', () => {
+    const system = createSystem(1);
+    expect(system.eliminateBatch(['player-1'], {
+      tick: 1,
+      suddenDeath: false,
+      lastHitCreditTicks: 5,
+      respawnTicks: 0,
+    })[0]).toMatchObject({ participantId: 'player-1', remainingLives: 0 });
+    expect(() => system.eliminateBatch(['player-2'], {
+      tick: 1,
+      suddenDeath: false,
+      lastHitCreditTicks: 5,
+      respawnTicks: -1,
+    })).toThrow(/大于等于 0/);
+  });
+
   it('rejects getter-owned construction input and has a terminal idempotent lifecycle', () => {
     let getterCalls = 0;
     const options = Object.defineProperty({}, 'participantIds', {

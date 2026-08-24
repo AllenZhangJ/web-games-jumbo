@@ -533,7 +533,9 @@ async function main(): Promise<void> {
     'reusablePurePreflightBoundaryWired: true',
     'purePreflightSummaryIsAuthorizationToken: false',
     'downstreamCandidateRevalidationRequired: true',
-    'topLevelConsumerWired: false',
+    // The production-unreachable Information/Local Host is a real consumer;
+    // only the default surface/entry and the reusable pure boundary remain off.
+    'topLevelConsumerWired: true',
     'modeRegistryPreflightInformationHostWired: true',
     'modeRegistryPreflightLocalPlayableHostWired: true',
     'runtimePolicyConsumptionWired: false',
@@ -562,7 +564,7 @@ async function main(): Promise<void> {
   )) {
     fail('P2.0e在完整Timeline等Policy接管前不得声明通用runtime消费已接通。');
   }
-  if (/topLevel(?:ModeRegistryPreflight)?ConsumerWired:\s*true/u.test(
+  if (/topLevelModeRegistryPreflightConsumerWired:\s*true/u.test(
     threeModeQuickMatchComposition,
   )) {
     fail('P2.0g-A纯预检能力不得冒充已接线的顶层consumer。');
@@ -578,7 +580,7 @@ async function main(): Promise<void> {
     'runtimePolicyBindings.race',
     'runtimePolicyBindings.survival',
     '.mode-registry-${modeRegistryContentHash}',
-    'assertModeRegistryBundleContentIdentity(bundle, this.#registryContentHash)',
+    'assertModeRegistryBundleContentIdentity(\n        bundle,\n        this.#registryContentHash,\n        this.#authorityRegistry,',
     "const hasModeRegistryCandidate = Object.hasOwn(source, 'modeRegistryCandidate');",
     '? new ArenaThreeModeModeRegistryPreflightQuickMatchFactoryCandidateV1({',
     'weaponRegistryReference',
@@ -749,13 +751,13 @@ async function main(): Promise<void> {
     RACE_AUTHORITATIVE_RUNTIME_CANDIDATE_FILE,
   );
   for (const marker of [
-    'targetEligibility',
+    'allowsTarget: (sourceParticipantId: string, targetParticipantId: string) => (',
     "fallDisposition !== 'schedule-respawn'",
     "relationshipBetween(attackerId, targetId) !== 'hostile'",
     'projectArenaRuntimeObjectivePolicyResolverBundleCandidateV1',
     'objectivePolicyBundle',
     'ModeResultPolicyResolverV1',
-    'assertResult(resolution.modeResult, tick)',
+    'assertResult(normalizedModeResult, tick)',
     'explicitTimelinePolicyRuntimeMirrorCapabilityWritten: true',
     'explicitTimelinePolicyRuntimeMirrorWired: false',
     'interactiveExecutionTimingPurpose:',
@@ -774,14 +776,14 @@ async function main(): Promise<void> {
     SURVIVAL_AUTHORITATIVE_RUNTIME_CANDIDATE_FILE,
   );
   for (const marker of [
-    'targetEligibility',
+    'allowsTarget: (sourceParticipantId: string, targetParticipantId: string) => (',
     "fallDisposition !== 'count-for-objective'",
     "fallDisposition !== 'deactivate-slot'",
     "relationshipBetween(attackerId, targetId) !== 'hostile'",
     'projectArenaRuntimeObjectivePolicyResolverBundleCandidateV1',
     'objectivePolicyBundle',
     'ModeResultPolicyResolverV1',
-    'assertResult(resolution.modeResult, tick)',
+    'assertResult(normalizedModeResult, tick)',
     'explicitTimelinePolicyRuntimeMirrorCapabilityWritten: true',
     'explicitTimelinePolicyRuntimeMirrorWired: false',
     'interactiveInitialPlayerProtectionTicks: 0',

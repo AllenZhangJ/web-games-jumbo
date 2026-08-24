@@ -2,11 +2,18 @@
   "schemaVersion": 1,
   "id": "arena.art.silhouette-blind-test-package.a0.3.v1",
   "status": "awaiting-human-responses",
-  "generatedAt": "2026-07-28",
+  "admissibilityStatus": "non-admissible-dirty-toolchain-source",
+  "generatedAt": "2026-08-24",
+  "baselineCommit": "de1ef89f36c2152c978c82f5976f04737e43cb4f",
   "seed": 20260728,
+  "generator": {
+    "path": "scripts/art/generate-arena-silhouette-blind-test.ts",
+    "sha256": "2d507a2a79f6c59e0f528ab0b0a59291484aaadbdd7cf88a1ec38761e1a2d088",
+    "byteLength": 15274
+  },
   "renderManifest": {
     "path": "docs/quality/art/silhouette/arena-a0.3-silhouette-render-manifest-v1.json",
-    "sha256": "1b85c5442fbb08c3ff7e8d82538d0f6fdc2cb17dad06c3a279d4b7e1350805c7"
+    "sha256": "9bc9978df5a141fd742ae6a6ad007d069125feed2396e2b9c8a0fd9957d17b9c"
   },
   "questions": {
     "path": "docs/quality/art/silhouette/blind-test/arena-a0.3-blind-questions-v1.json",
@@ -20,8 +27,8 @@
   },
   "proxyBaseline": {
     "path": "docs/quality/art/silhouette/blind-test/arena-a0.3-internal-proxy-baseline-v1.json",
-    "sha256": "d4088e62f38e33fbbdfe14c1d354dcf0ac950eb70512335300ba72b5fa97a540",
-    "byteLength": 21709
+    "sha256": "ce69954036790bc584e65ff4b38c91cd518d58dc51e5330dfe41d9ffaad9cc82",
+    "byteLength": 21773
   },
   "questionImages": [
     {

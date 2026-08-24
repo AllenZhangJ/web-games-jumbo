@@ -14,20 +14,30 @@ import type { AnimationClip, Object3D } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as cloneSkeleton } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { createLocalFollowArenaCamera } from '../../packages/arena-presentation-three/src/arena-camera.js';
+import {
+  ARENA_V2_FORMAL_PRESENTATION_ASSET_CATALOG_CANDIDATE_V1_IDENTITY,
+  ARENA_V2_FORMAL_VISUAL_ASSET_RECORDS_CANDIDATE_V1,
+} from '../../packages/arena-product-presentation/src/arena-v2-formal-presentation-asset-catalog-candidate-v1.js';
+import {
+  ARENA_V2_A3_A6_PRODUCTION_APPROVAL_EVIDENCE_LEDGER_CANDIDATE_V1,
+  ARENA_V2_A3_A6_PRODUCTION_APPROVAL_EVIDENCE_LEDGER_CANDIDATE_V1_IDENTITY,
+} from '../../packages/arena-product-presentation/src/arena-v2-a3-a6-production-approval-evidence-ledger-candidate-v1.js';
+import {
+  acquireArenaSilhouetteCleanSourceFreeze,
+  validateArenaSilhouetteInheritedSourceFreeze,
+} from './arena-silhouette-source-freeze.js';
 
 const ROOT = resolve(import.meta.dirname, '../..');
 const OUTPUT_ROOT = 'docs/quality/art/silhouette';
 const MANIFEST_PATH = `${OUTPUT_ROOT}/arena-a0.3-silhouette-render-manifest-v1.json`;
-const DATE = '2026-07-28';
-const BASELINE = '5d26a4f52a0be61226130ce883e91f981b1cfec8';
 const BACKGROUND = 128;
 const POSE_SAMPLE_MAX_SECONDS = 0.35;
 const WORLD_BOUNDS = Object.freeze({ minX: -24, maxX: 24, minZ: -24, maxZ: 24 });
 const CAMERA_SOURCE = 'packages/arena-presentation-three/src/arena-camera.ts';
 const DIRECTION_SOURCE = 'packages/arena-presentation-runtime/src/six-sector-direction-resolver.ts';
-const PRESENTATION_SOURCE = 'packages/arena-v1-presentation-content/src/arena-gameplay-v2-character-content.ts';
+const FORMAL_CATALOG_SOURCE = 'packages/arena-product-presentation/src/arena-v2-formal-presentation-asset-catalog-candidate-v1.ts';
+const PRODUCTION_APPROVAL_LEDGER_SOURCE = 'packages/arena-product-presentation/src/arena-v2-a3-a6-production-approval-evidence-ledger-candidate-v1.ts';
 const FORMAL_BUNDLE = 'governance/formal-assets/arena-stage7-formal-assets-v1.json';
-const SHIELD_PATH = 'public/assets/arena/equipment/kaykit-adventurers/shield-round.glb';
 
 type CharacterSpec = Readonly<{
   id: 'parkour-apprentice' | 'wind-up-cube';
@@ -41,19 +51,72 @@ type ViewportSpec = Readonly<{ id: string; cssWidth: number; cssHeight: number; 
 type Triangle = Readonly<{ depth: number; points: readonly [number, number, number, number, number, number] }>;
 type LoadedCharacter = Readonly<{ spec: CharacterSpec; root: Group; idleClip: AnimationClip; shieldClip: AnimationClip; idleClipHash: string; shieldClipHash: string; skeletonHash: string; clipNames: readonly string[] }>;
 
+type FormalVisualRecord = typeof ARENA_V2_FORMAL_VISUAL_ASSET_RECORDS_CANDIDATE_V1[number];
+
+function requireCatalogRecord(assetId: string, expectedRole: FormalVisualRecord['role']): FormalVisualRecord {
+  const matches = ARENA_V2_FORMAL_VISUAL_ASSET_RECORDS_CANDIDATE_V1.filter(
+    ({ runtimeDefinition }) => runtimeDefinition.id === assetId,
+  );
+  if (matches.length !== 1) throw new Error(`A0.3 current Catalog must contain exactly one ${assetId}`);
+  const record = matches[0]!;
+  if (
+    record.role !== expectedRole
+    || record.maturity !== 'verified-intake-only'
+    || record.encodedMediaFormat !== 'glb'
+    || record.provenance.licenseId !== 'CC0-1.0'
+  ) throw new Error(`A0.3 current Catalog record contract drift: ${assetId}`);
+  if (statSync(resolve(ROOT, record.artifactPath)).size !== record.byteLength || sha256File(record.artifactPath) !== record.sha256) {
+    throw new Error(`A0.3 current Catalog artifact drift: ${assetId}`);
+  }
+  const approvalMatches = ARENA_V2_A3_A6_PRODUCTION_APPROVAL_EVIDENCE_LEDGER_CANDIDATE_V1.entries.filter(
+    (entry) => entry.assetId === assetId,
+  );
+  if (approvalMatches.length !== 1) throw new Error(`A0.3 approval ledger must contain exactly one ${assetId}`);
+  const approval = approvalMatches[0]!;
+  if (
+    approval.catalogContentHash !== ARENA_V2_FORMAL_PRESENTATION_ASSET_CATALOG_CANDIDATE_V1_IDENTITY.catalogContentHash
+    || approval.artifactPath !== record.artifactPath
+    || approval.byteLength !== record.byteLength
+    || approval.sha256 !== record.sha256
+    || approval.productionApprovalStatus !== 'missing-not-approved'
+    || approval.assetUsePermitted !== false
+    || approval.formalReady !== false
+  ) throw new Error(`A0.3 production approval boundary drift: ${assetId}`);
+  return record;
+}
+
+const APPRENTICE_CATALOG_RECORD = requireCatalogRecord(
+  'arena.asset.character.parkour-apprentice.kaykit-rogue.v1',
+  'playable-character-model',
+);
+const SKELETON_CATALOG_RECORD = requireCatalogRecord(
+  'arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1',
+  'survival-enemy-model',
+);
+const SHIELD_CATALOG_RECORD = requireCatalogRecord(
+  'arena.asset.attachment.shield.kaykit-round.v1',
+  'weapon-attachment-model',
+);
+const SELECTED_CATALOG_RECORDS = Object.freeze([
+  APPRENTICE_CATALOG_RECORD,
+  SKELETON_CATALOG_RECORD,
+  SHIELD_CATALOG_RECORD,
+]);
+const SHIELD_PATH = SHIELD_CATALOG_RECORD.artifactPath;
+
 const CHARACTERS: readonly CharacterSpec[] = [
   {
     id: 'parkour-apprentice',
-    assetId: 'arena.asset.character.parkour-apprentice.kaykit-rogue.v1',
+    assetId: APPRENTICE_CATALOG_RECORD.runtimeDefinition.id,
     presentationId: 'arena.character-presentation.parkour-apprentice.kaykit-rogue.v1',
-    glb: 'public/assets/arena/characters/kaykit-adventurers/parkour-apprentice-rogue.glb',
+    glb: APPRENTICE_CATALOG_RECORD.artifactPath,
     include: (name) => name.startsWith('Rogue_'),
   },
   {
     id: 'wind-up-cube',
-    assetId: 'arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1',
+    assetId: SKELETON_CATALOG_RECORD.runtimeDefinition.id,
     presentationId: 'arena.character-presentation.wind-up-cube.kaykit-skeleton-warrior.v1',
-    glb: 'public/assets/arena/characters/kaykit-skeletons/clockwork-warrior.glb',
+    glb: SKELETON_CATALOG_RECORD.artifactPath,
     include: () => true,
   },
 ];
@@ -203,6 +266,9 @@ async function writeBinaryMask(svg: Buffer, path: string, width: number, height:
   return { blackPixelCount, coverageRatio: blackPixelCount / (width * height), inFrame: blackPixelCount > 0 };
 }
 
+const expectedSourceCommit = process.env.ARENA_A0_3_EXPECTED_SOURCE_COMMIT ?? '';
+const { sourceFreeze, release: releaseSourceFreeze } = acquireArenaSilhouetteCleanSourceFreeze(expectedSourceCommit);
+try {
 mkdirSync(resolve(ROOT, OUTPUT_ROOT), { recursive: true });
 const shieldGltf = await parse(SHIELD_PATH);
 if (shieldGltf.animations.length !== 0) throw new Error('formal shield must not carry an unexpected animation clip');
@@ -230,14 +296,49 @@ for (const character of loaded) {
   }
 }
 
+validateArenaSilhouetteInheritedSourceFreeze(sourceFreeze, 'scripts/art/render-arena-silhouettes.ts');
+
 const manifest = {
   schemaVersion: 1,
   id: 'arena.art.silhouette-render.a0.3.v1',
   status: 'render-evidence-ready',
-  generatedAt: DATE,
-  baselineCommit: BASELINE,
+  generatedAt: sourceFreeze.sourceCommitDate,
+  sourceCommit: sourceFreeze.sourceCommit,
+  sourceFreeze,
   generator: { path: 'scripts/art/render-arena-silhouettes.ts', sha256: sha256File('scripts/art/render-arena-silhouettes.ts'), renderer: 'deterministic-three-cpu-projection+sharp-binary-mask-v1' },
-  authorities: [CAMERA_SOURCE, DIRECTION_SOURCE, PRESENTATION_SOURCE, FORMAL_BUNDLE].map((path) => ({ path, sha256: sha256File(path) })),
+  authorities: [CAMERA_SOURCE, DIRECTION_SOURCE, FORMAL_CATALOG_SOURCE, PRODUCTION_APPROVAL_LEDGER_SOURCE, FORMAL_BUNDLE].map((path) => ({ path, byteLength: statSync(resolve(ROOT, path)).size, sha256: sha256File(path) })),
+  formalCatalog: {
+    source: { path: FORMAL_CATALOG_SOURCE, byteLength: statSync(resolve(ROOT, FORMAL_CATALOG_SOURCE)).size, sha256: sha256File(FORMAL_CATALOG_SOURCE) },
+    identity: ARENA_V2_FORMAL_PRESENTATION_ASSET_CATALOG_CANDIDATE_V1_IDENTITY,
+    approvalLedger: {
+      source: { path: PRODUCTION_APPROVAL_LEDGER_SOURCE, byteLength: statSync(resolve(ROOT, PRODUCTION_APPROVAL_LEDGER_SOURCE)).size, sha256: sha256File(PRODUCTION_APPROVAL_LEDGER_SOURCE) },
+      identity: ARENA_V2_A3_A6_PRODUCTION_APPROVAL_EVIDENCE_LEDGER_CANDIDATE_V1_IDENTITY,
+    },
+    selectedAssets: SELECTED_CATALOG_RECORDS.map((record) => {
+      const approval = ARENA_V2_A3_A6_PRODUCTION_APPROVAL_EVIDENCE_LEDGER_CANDIDATE_V1.entries.find(
+        (entry) => entry.assetId === record.runtimeDefinition.id,
+      )!;
+      return {
+        assetId: record.runtimeDefinition.id,
+        role: record.role,
+        maturity: record.maturity,
+        artifact: { path: record.artifactPath, byteLength: record.byteLength, sha256: record.sha256 },
+        runtimeDefinition: record.runtimeDefinition,
+        provenance: record.provenance,
+        sourceApprovalRecorded: approval.sourceApprovalRecorded,
+        productionApprovalStatus: approval.productionApprovalStatus,
+        assetUsePermitted: approval.assetUsePermitted,
+        formalReady: approval.formalReady,
+      };
+    }),
+    boundary: {
+      selectedAssetCount: 3,
+      catalogAssetCount: ARENA_V2_FORMAL_PRESENTATION_ASSET_CATALOG_CANDIDATE_V1_IDENTITY.expectedAssetCount,
+      diagnosticEvidenceOnly: true,
+      grantsProductionApproval: false,
+      programmaticNormalPathAllowed: false,
+    },
+  },
   camera: {
     factory: 'createLocalFollowArenaCamera', worldBounds: WORLD_BOUNDS, target: { x: 0, z: 0 }, placementBasis: 'ground-projected cameraBasis.screenUp (-Z)', background: '#808080', silhouette: '#000000',
     portraitVerticalSpan: 14, landscapeVerticalSpan: 12, positionHeight: 16, positionDepthOffset: 16, near: 0.1, far: 80,
@@ -260,3 +361,6 @@ const manifest = {
 };
 writeFileSync(resolve(ROOT, MANIFEST_PATH), `${JSON.stringify(manifest, null, 2)}\n`);
 process.stdout.write(`${JSON.stringify({ status: manifest.status, outputs: outputs.length, inFrame: outputs.filter((item) => item.inFrame).length, manifest: MANIFEST_PATH })}\n`);
+} finally {
+  releaseSourceFreeze();
+}

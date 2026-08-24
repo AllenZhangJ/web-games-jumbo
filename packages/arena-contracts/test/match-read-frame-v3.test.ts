@@ -253,7 +253,7 @@ describe('P2.0b MatchReadFrame V3 candidate', () => {
     expect(() => createWorldSnapshotV3Audit({
       ...world,
       result: accessorResult,
-    }, noSupply)).toThrow(/访问器/);
+    }, noSupply)).toThrow(/可枚举数据字段|访问器/);
     expect(getterCalls).toBe(0);
   });
 

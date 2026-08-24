@@ -15,6 +15,10 @@ function probe(name: string, mutate: (value: Json) => void): void {
 }
 try {
   probe('status', (x) => { x.status = 'human-verified'; });
+  probe('source-commit', (x) => { x.sourceCommit = '0'.repeat(40); });
+  probe('source-freeze', (x) => { x.sourceFreeze.cleanCheckFingerprint = '0'.repeat(64); });
+  probe('runtime-toolchain', (x) => { x.sourceFreeze.runtimeToolchain.sharpVersion = '0.0.0'; });
+  probe('generator', (x) => { x.generator.sha256 = '0'.repeat(64); });
   probe('answer-key', (x) => { x.answerKeyIncluded = true; });
   probe('personal-data', (x) => { x.personalDataRequested = true; });
   probe('forged-human-count', (x) => { x.participantCount = 10; });
@@ -30,5 +34,5 @@ try {
   probe('blockout-leak', (x) => { x.downstream.blockout = 'ready'; });
   const evaluation = spawnSync(process.execPath, ['--import', 'tsx', 'scripts/art/evaluate-arena-silhouette-human-responses.ts'], { cwd: ROOT, encoding: 'utf8' });
   if (evaluation.status === 0 || !`${evaluation.stderr}${evaluation.stdout}`.includes('0')) throw new Error('0/10 evaluator must reject');
-  process.stdout.write('PASS evaluator-0-of-10\n14/14 fail-closed probes passed\n');
+  process.stdout.write('PASS evaluator-0-of-10\n18/18 fail-closed probes passed\n');
 } finally { rmSync(temp, { recursive: true, force: true }); }

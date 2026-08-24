@@ -302,15 +302,21 @@ describe('Arena V2 authoritative Quick Match bundle factory candidate V1', () =>
       quickMatchContract: 'ModeAuthoritativeQuickMatchServiceV3',
       authorityIdentitySource: 'terminal-session-only',
       replayIdentitySource: 'terminal-session-replay-v6-only',
-      runtimeTerminalEvidenceSource: 'terminal-session-mode-driver-bound-v1-only',
+      runtimeTerminalEvidenceSource: 'terminal-session-mode-driver-bound-v1-compatibility',
       authorityRegistrySource: 'explicit-match-bundle-factory-option-only',
       authorityAdmissionSource:
         'validated-selection-and-runtime-mode-driver-before-bundle-transfer-v2',
       legacyModeQuickMatchServiceV2Accepted: false,
       sharedSynchronousReturnBoundaryWired: true,
+      operationGuardPrecedesStateAndRequestValidation: true,
+      quickMatchParticipantAndAdmissionPortsCheckedBeforeTransfer: true,
       returnedRawSessionOwnedBeforeDestroyPortCapture: true,
       invalidDestroyPortRetainsRawSessionCleanupOwnership: true,
+      sessionOwnershipRetainedUntilBundlePublicationCommits: true,
+      stickyReentryUsesSequenceAndFirstError: true,
+      successfulPendingCleanupWatermarkPrecedesReentryRejection: true,
       supportedModeKinds: ['duel', 'race', 'survival'],
+      runtimeTerminalSupplyEvidenceSource: 'terminal-session-complete-supply-facts-v2-only',
     });
   });
 

@@ -2,31 +2,208 @@
   "schemaVersion": 1,
   "id": "arena.art.silhouette-render.a0.3.v1",
   "status": "render-evidence-ready",
-  "generatedAt": "2026-07-28",
-  "baselineCommit": "5d26a4f52a0be61226130ce883e91f981b1cfec8",
+  "admissibilityStatus": "non-admissible-dirty-toolchain-source",
+  "generatedAt": "2026-08-24",
+  "baselineCommit": "de1ef89f36c2152c978c82f5976f04737e43cb4f",
   "generator": {
     "path": "scripts/art/render-arena-silhouettes.ts",
-    "sha256": "ff49abd4b1ae5d2043aabf4e7d29310a8e9c338e4d6189f06bbf10681ddb616b",
+    "sha256": "87c4aabc409bdc3a6bcc3d2d9b97e949c446d99d5c023821ba235ed156777002",
     "renderer": "deterministic-three-cpu-projection+sharp-binary-mask-v1"
   },
   "authorities": [
     {
       "path": "packages/arena-presentation-three/src/arena-camera.ts",
+      "byteLength": 10423,
       "sha256": "ce1e574f55731d9bbe669d5b6351c9fe6dc3399bfdb65b9fceb8b854954e7d91"
     },
     {
       "path": "packages/arena-presentation-runtime/src/six-sector-direction-resolver.ts",
+      "byteLength": 6709,
       "sha256": "06a1336db0b2e671e9eac1800d0e99eb641d040d4fb323d8e9c96954438df630"
     },
     {
-      "path": "packages/arena-v1-presentation-content/src/arena-gameplay-v2-character-content.ts",
-      "sha256": "e07e0109a62a5c988848c489e91f32d94dfbd5f54615a0536297938db1909f34"
+      "path": "packages/arena-product-presentation/src/arena-v2-formal-presentation-asset-catalog-candidate-v1.ts",
+      "byteLength": 69706,
+      "sha256": "b41dbedba5a3d1d95c94f967846a4d9a1d945bb56b8e13bb92bdd2c281da60ad"
+    },
+    {
+      "path": "packages/arena-product-presentation/src/arena-v2-a3-a6-production-approval-evidence-ledger-candidate-v1.ts",
+      "byteLength": 23867,
+      "sha256": "8c741c69c28a2bc37ea04f72a43372c765e0d6a0fbd1516a1387be8b2f5e18d9"
     },
     {
       "path": "governance/formal-assets/arena-stage7-formal-assets-v1.json",
+      "byteLength": 6893,
       "sha256": "68a79e95e8920e2b98df8bad3a4b44d22f3dc7f17b53acd5ed8398e426c5b0bf"
     }
   ],
+  "formalCatalog": {
+    "source": {
+      "path": "packages/arena-product-presentation/src/arena-v2-formal-presentation-asset-catalog-candidate-v1.ts",
+      "byteLength": 69706,
+      "sha256": "b41dbedba5a3d1d95c94f967846a4d9a1d945bb56b8e13bb92bdd2c281da60ad"
+    },
+    "identity": {
+      "catalogId": "arena-v2-formal-presentation-assets.candidate.v1",
+      "catalogRevision": "candidate-v1",
+      "catalogContentHash": "02e87764",
+      "expectedAssetCount": 130,
+      "status": "production-unreachable",
+      "hardGate": false,
+      "validationStatus": "not-run"
+    },
+    "approvalLedger": {
+      "source": {
+        "path": "packages/arena-product-presentation/src/arena-v2-a3-a6-production-approval-evidence-ledger-candidate-v1.ts",
+        "byteLength": 23867,
+        "sha256": "8c741c69c28a2bc37ea04f72a43372c765e0d6a0fbd1516a1387be8b2f5e18d9"
+      },
+      "identity": {
+        "ledgerId": "arena-v2.a3-a6.production-approval-evidence-ledger.candidate.v1",
+        "contentHash": "c86524c7",
+        "catalogContentHash": "02e87764",
+        "budgetPolicyIdentity": {
+          "policyId": "arena.stage7.formal-asset-budget.v2-candidate",
+          "policyContentHash": "29a84034",
+          "artifactCount": 130,
+          "status": "production-unreachable",
+          "implementationStatus": "code-written-not-run",
+          "validationStatus": "not-run",
+          "approvalStatus": "proposed-not-approved",
+          "hardGateUsable": false
+        },
+        "assetCount": 130,
+        "status": "production-unreachable",
+        "implementationStatus": "code-written-not-run",
+        "validationStatus": "not-run",
+        "grantsApproval": false,
+        "hardGate": false
+      }
+    },
+    "selectedAssets": [
+      {
+        "assetId": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1",
+        "role": "playable-character-model",
+        "maturity": "verified-intake-only",
+        "artifact": {
+          "path": "public/assets/arena/characters/kaykit-adventurers/parkour-apprentice-rogue.glb",
+          "byteLength": 922332,
+          "sha256": "3ee71059eef32d9a6259c5cfd4121f31dffda0a9667509b5f24129fb2c7a1cab"
+        },
+        "runtimeDefinition": {
+          "schemaVersion": 1,
+          "id": "arena.asset.character.parkour-apprentice.kaykit-rogue.v1",
+          "kind": "character-model",
+          "providerId": "arena.gltf-character.v1",
+          "sourceKey": "./assets/arena/characters/kaykit-adventurers/parkour-apprentice-rogue.glb",
+          "contentVersion": 1,
+          "tags": [
+            "formal-intake",
+            "humanoid",
+            "kaykit",
+            "playable-candidate",
+            "eighteen-clips"
+          ]
+        },
+        "provenance": {
+          "sourceLocator": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+          "sourceRevision": "672074b73ba276876a19e8816ecdc5241817ab47",
+          "licenseId": "CC0-1.0",
+          "rightsHolder": "KayKit Game Assets / Kay Lousberg",
+          "approvedBy": "Allen",
+          "approvedAt": "2026-07-23",
+          "proofDocument": "docs/research/arena-kaykit-adventurers-intake.md"
+        },
+        "sourceApprovalRecorded": true,
+        "productionApprovalStatus": "missing-not-approved",
+        "assetUsePermitted": false,
+        "formalReady": false
+      },
+      {
+        "assetId": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1",
+        "role": "survival-enemy-model",
+        "maturity": "verified-intake-only",
+        "artifact": {
+          "path": "public/assets/arena/characters/kaykit-skeletons/clockwork-warrior.glb",
+          "byteLength": 974548,
+          "sha256": "1a424efda14e7875180989a66186fafcc94a12ac85ebdfdc7e3f998a00584e39"
+        },
+        "runtimeDefinition": {
+          "schemaVersion": 1,
+          "id": "arena.asset.character.wind-up-cube.kaykit-skeleton-warrior.v1",
+          "kind": "character-model",
+          "providerId": "arena.gltf-character.v1",
+          "sourceKey": "./assets/arena/characters/kaykit-skeletons/clockwork-warrior.glb",
+          "contentVersion": 1,
+          "tags": [
+            "formal-intake",
+            "enemy-family",
+            "kaykit",
+            "skeleton",
+            "eighteen-clips"
+          ]
+        },
+        "provenance": {
+          "sourceLocator": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Skeletons-1.0",
+          "sourceRevision": "15b62b9bad122f72926c10fb14d622c73819fa54",
+          "licenseId": "CC0-1.0",
+          "rightsHolder": "KayKit Game Assets / Kay Lousberg",
+          "approvedBy": "Allen",
+          "approvedAt": "2026-07-23",
+          "proofDocument": "docs/research/arena-kaykit-skeletons-intake.md"
+        },
+        "sourceApprovalRecorded": true,
+        "productionApprovalStatus": "missing-not-approved",
+        "assetUsePermitted": false,
+        "formalReady": false
+      },
+      {
+        "assetId": "arena.asset.attachment.shield.kaykit-round.v1",
+        "role": "weapon-attachment-model",
+        "maturity": "verified-intake-only",
+        "artifact": {
+          "path": "public/assets/arena/equipment/kaykit-adventurers/shield-round.glb",
+          "byteLength": 13084,
+          "sha256": "a61bcd83ccac9bc8596bf09894867ca491487d7a4b0662bb64dca2d1b19e790d"
+        },
+        "runtimeDefinition": {
+          "schemaVersion": 1,
+          "id": "arena.asset.attachment.shield.kaykit-round.v1",
+          "kind": "attachment",
+          "providerId": "arena.gltf-attachment.v1",
+          "sourceKey": "./assets/arena/equipment/kaykit-adventurers/shield-round.glb",
+          "contentVersion": 1,
+          "tags": [
+            "formal-intake",
+            "equipment",
+            "kaykit",
+            "shield",
+            "offhand"
+          ]
+        },
+        "provenance": {
+          "sourceLocator": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+          "sourceRevision": "672074b73ba276876a19e8816ecdc5241817ab47",
+          "licenseId": "CC0-1.0",
+          "rightsHolder": "KayKit Game Assets / Kay Lousberg",
+          "approvedBy": "Allen",
+          "approvedAt": "2026-07-23",
+          "proofDocument": "docs/research/arena-kaykit-adventurers-intake.md"
+        },
+        "sourceApprovalRecorded": true,
+        "productionApprovalStatus": "missing-not-approved",
+        "assetUsePermitted": false,
+        "formalReady": false
+      }
+    ],
+    "boundary": {
+      "selectedAssetCount": 3,
+      "catalogAssetCount": 130,
+      "diagnosticEvidenceOnly": true,
+      "grantsProductionApproval": false,
+      "programmaticNormalPathAllowed": false
+    }
+  },
   "camera": {
     "factory": "createLocalFollowArenaCamera",
     "worldBounds": {

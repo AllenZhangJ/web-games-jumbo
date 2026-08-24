@@ -1,6 +1,10 @@
 import { createHash } from 'node:crypto';
 import { lstatSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
+import {
+  ARENA_SILHOUETTE_TOOLCHAIN_PATHS,
+  readArenaSilhouetteRuntimeToolchain,
+} from './arena-silhouette-source-freeze.js';
 
 export type Json = ReturnType<typeof JSON.parse>;
 
@@ -69,7 +73,11 @@ export type ValidatedHumanKit = Readonly<{
 
 export function validateHumanKit(root: string, manifestPath: string): ValidatedHumanKit {
   const manifest = JSON.parse(readFileSync(safePath(root, manifestPath), 'utf8')) as Json;
+  const runtimeToolchain = readArenaSilhouetteRuntimeToolchain();
   if (manifest.schemaVersion !== 1 || manifest.id !== EXPECTED.kitId || manifest.status !== 'ready-for-external-human-input') throw new Error('human kit identity/status drift');
+  if (!/^[0-9a-f]{40}$/.test(manifest.sourceCommit) || manifest.sourceFreeze?.sourceCommit !== manifest.sourceCommit || manifest.sourceFreeze?.status !== 'clean-at-render-start' || manifest.sourceFreeze?.expectedDirtyRoot !== 'docs/quality/art/silhouette/' || !/^[0-9a-f]{64}$/.test(manifest.sourceFreeze?.cleanCheckFingerprint) || JSON.stringify(manifest.sourceFreeze?.toolchainPaths) !== JSON.stringify(ARENA_SILHOUETTE_TOOLCHAIN_PATHS) || JSON.stringify(manifest.sourceFreeze?.runtimeToolchain) !== JSON.stringify(runtimeToolchain)) throw new Error('human kit sourceCommit/source-freeze/runtime identity drift');
+  if (manifest.generator?.path !== 'scripts/art/generate-arena-silhouette-human-test-kit.ts') throw new Error('human kit generator path drift');
+  verifyArtifact(root, manifest.generator, 'human kit generator');
   if (manifest.answerKeyIncluded !== false || manifest.personalDataRequested !== false || manifest.participantCount !== 0 || manifest.minimumParticipants !== 10 || manifest.hardGatePassed !== false) throw new Error('human kit privacy/human boundary drift');
   if (manifest.forms?.length !== 10 || manifest.formCount !== 10 || manifest.questionsPerForm !== 24 || manifest.aggregateCoverage?.uniqueQuestions !== 144 || manifest.aggregateCoverage?.minimumAppearances !== 1 || manifest.aggregateCoverage?.maximumAppearances !== 2) throw new Error('human kit balanced coverage drift');
   if (manifest.downstream?.a0_3 !== 'incomplete' || manifest.downstream?.blockout !== 'forbidden' || manifest.downstream?.final !== 'incomplete') throw new Error('human kit downstream leak');
@@ -86,6 +94,7 @@ export function validateHumanKit(root: string, manifestPath: string): ValidatedH
   const questions = JSON.parse(readFileSync(questionsPath, 'utf8')) as Json;
   const answerKey = JSON.parse(readFileSync(answerKeyPath, 'utf8')) as Json;
   if (blindPackage.schemaVersion !== 1 || blindPackage.id !== EXPECTED.packageId || blindPackage.status !== 'awaiting-human-responses') throw new Error('blind package identity/status drift');
+  if (blindPackage.sourceCommit !== manifest.sourceCommit || JSON.stringify(blindPackage.sourceFreeze) !== JSON.stringify(manifest.sourceFreeze)) throw new Error('blind package sourceCommit/source-freeze identity drift');
   sameArtifact(blindPackage.questions, manifest.restrictedEvaluator.questions, 'blind package questions');
   sameArtifact(blindPackage.answerKey, manifest.restrictedEvaluator.answerKey, 'blind package answer key');
   if (questions.schemaVersion !== 1 || questions.id !== EXPECTED.questionsId || questions.status !== 'awaiting-human-responses' || questions.forms?.length !== 10) throw new Error('blind questions identity/status drift');

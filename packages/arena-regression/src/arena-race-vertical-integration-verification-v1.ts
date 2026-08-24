@@ -1525,6 +1525,8 @@ class RaceVerticalWorldAuthorityV1 implements ModeMatchWorldAuthorityV6 {
             z: nextPosition.z - anchor.position.z,
           },
         });
+      }
+      for (const [index, { participantId: id }] of initial.entries()) {
         const equipmentInstanceId = `p3-race-${id}-weapon`;
         this.#engine.spawnEquipment({
           instanceId: equipmentInstanceId,

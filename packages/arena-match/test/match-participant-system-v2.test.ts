@@ -142,7 +142,7 @@ describe('MatchParticipantSystemV2', () => {
           thenCalls += 1;
         },
       } as never),
-    )).message).toMatch(/thenable/);
+    )).message).toMatch(/then\s*字段|thenable/);
     expect(thenCalls).toBe(0);
 
     let dataThenFactoryCalls = 0;
@@ -214,7 +214,7 @@ describe('MatchParticipantSystemV2', () => {
     expect(constructionCause(() => new MatchParticipantSystemV2(
       raceConfig(),
       () => UnsafePromiseSubclass.resolve() as never,
-    )).message).toMatch(/thenable/);
+    )).message).toMatch(/then\s*字段|thenable/);
   });
 
   it('rejects native Promise descriptor drift without invoking the replacement', () => {

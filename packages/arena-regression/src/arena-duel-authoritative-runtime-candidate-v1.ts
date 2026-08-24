@@ -808,10 +808,33 @@ class DuelMatchCoreWorldAuthorityCandidateV1 implements ModeMatchWorldAuthorityV
           falls.push(event);
         }
       }
+      const feedbackCheckpoint = this.#feedback!.exportFeedbackCheckpointV1();
+      const feedbackSourceEvents = oldEvents.filter((event) => {
+        if (event.type !== ARENA_MATCH_EVENT.PLAYER_ELIMINATED) return true;
+        if (event.creditedAttackerId === null) return true;
+        const target = snapshot.participants.find(({ id }) => id === event.participantId)
+          ?? previousSnapshot.participants.find(({ id }) => id === event.participantId);
+        if (target === undefined
+          || target.lastHitBy !== event.creditedAttackerId
+          || !Number.isSafeInteger(target.lastHitTick)) {
+          throw new RangeError('Arena Duel credited elimination与目标last-hit身份/时间不闭合。');
+        }
+        const elapsedTicks = request.tick - target.lastHitTick;
+        if (elapsedTicks < 0) {
+          throw new RangeError('Arena Duel credited elimination早于目标last-hit。');
+        }
+        return elapsedTicks <= ARENA_WEAPON_FEEDBACK_OUTCOME_WINDOW_TICKS_V1;
+      }).map((event, index) => Object.freeze({
+        ...event,
+        sequence: feedbackCheckpoint.sourceEventSequence + index,
+      }));
       const feedbackResult = this.#feedback!.step({
         sequenceStart: this.#eventSequence,
-        sourceEvents: oldEvents,
-        observation: feedbackObservation(snapshot),
+        sourceEvents: feedbackSourceEvents,
+        observation: Object.freeze({
+          ...feedbackObservation(snapshot),
+          eventSequence: feedbackCheckpoint.sourceEventSequence + feedbackSourceEvents.length,
+        }),
       });
       const feedbackEvents = feedbackResult.feedbackEvents;
       events.push(...feedbackEvents);

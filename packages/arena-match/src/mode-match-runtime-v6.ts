@@ -228,7 +228,11 @@ export interface ModeMatchRuntimeV6StartOutcome {
   readonly readFrame: DeepReadonly<MatchReadFrameV3>;
   readonly readFrameAudit: MatchReadFrameV3AuditOptions;
   readonly supplyCadence: DeepReadonly<ArenaSupplyCadenceSnapshotV1> | null;
-  readonly localJumpAvailability: ArenaLocalJumpAvailabilityV1;
+  /**
+   * Optional versioned read capability. Authorities without a local touch
+   * consumer omit it; `null` is never a public substitute for absence.
+   */
+  readonly localJumpAvailability?: ArenaLocalJumpAvailabilityV1;
 }
 
 export interface ModeMatchRuntimeV6StepOutcome extends ModeMatchRuntimeV6StartOutcome {
@@ -294,7 +298,7 @@ interface NormalizedStart {
   readonly readFrame: DeepReadonly<MatchReadFrameV3>;
   readonly readFrameAudit: MatchReadFrameV3AuditOptions;
   readonly supplyCadence: DeepReadonly<ArenaSupplyCadenceSnapshotV1> | null;
-  readonly localJumpAvailability: ArenaLocalJumpAvailabilityV1;
+  readonly localJumpAvailability?: ArenaLocalJumpAvailabilityV1;
   readonly stateHash: string;
 }
 
@@ -326,7 +330,7 @@ const START_KEYS = new Set([
   'readFrame', 'readFrameAudit', 'supplyCadence', 'localJumpAvailability', 'stateHash',
 ]);
 const START_REQUIRED_KEYS = new Set([
-  'readFrame', 'readFrameAudit', 'supplyCadence', 'localJumpAvailability', 'stateHash',
+  'readFrame', 'readFrameAudit', 'supplyCadence', 'stateHash',
 ]);
 const STEP_KEYS = new Set([
   'readFrame',
@@ -344,7 +348,6 @@ const STEP_REQUIRED_KEYS = new Set([
   'events',
   'supplyFacts',
   'supplyCadence',
-  'localJumpAvailability',
   'stateHash',
   'appliedModeCommandHash',
 ]);
@@ -974,21 +977,21 @@ function normalizeStart(value: unknown): NormalizedStart {
   requireKeys(source, START_REQUIRED_KEYS, 'ModeMatchRuntimeV6 authority start result');
   const readFrameAudit = source.readFrameAudit as MatchReadFrameV3AuditOptions;
   const readFrame = createMatchReadFrameV3Audit(source.readFrame, readFrameAudit);
-  const localJumpAvailability = createArenaLocalJumpAvailabilityV1(
-    source.localJumpAvailability,
-  );
-  if (
+  const localJumpAvailability = Object.hasOwn(source, 'localJumpAvailability')
+    ? createArenaLocalJumpAvailabilityV1(source.localJumpAvailability)
+    : undefined;
+  if (localJumpAvailability !== undefined && (
     localJumpAvailability.tick !== readFrame.worldSnapshot.tick
     || localJumpAvailability.eventSequence !== readFrame.worldSnapshot.eventSequence
     || localJumpAvailability.participantId !== readFrame.localActionSidecar.participantId
-  ) throw new RangeError('ModeMatchRuntimeV6 start jump availability与Frame身份漂移。');
+  )) throw new RangeError('ModeMatchRuntimeV6 start jump availability与Frame身份漂移。');
   return Object.freeze({
     readFrame,
     readFrameAudit,
     supplyCadence: source.supplyCadence === null
       ? null
       : createArenaSupplyCadenceSnapshotV1(source.supplyCadence),
-    localJumpAvailability,
+    ...(localJumpAvailability === undefined ? {} : { localJumpAvailability }),
     stateHash: hash(source.stateHash, 'ModeMatchRuntimeV6 start stateHash'),
   });
 }
@@ -1000,14 +1003,14 @@ function normalizeStep(value: unknown): NormalizedStep {
   if (!Array.isArray(source.events)) throw new TypeError('ModeMatchRuntimeV6 events必须是数组。');
   const readFrameAudit = source.readFrameAudit as MatchReadFrameV3AuditOptions;
   const readFrame = createMatchReadFrameV3Audit(source.readFrame, readFrameAudit);
-  const localJumpAvailability = createArenaLocalJumpAvailabilityV1(
-    source.localJumpAvailability,
-  );
-  if (
+  const localJumpAvailability = Object.hasOwn(source, 'localJumpAvailability')
+    ? createArenaLocalJumpAvailabilityV1(source.localJumpAvailability)
+    : undefined;
+  if (localJumpAvailability !== undefined && (
     localJumpAvailability.tick !== readFrame.worldSnapshot.tick
     || localJumpAvailability.eventSequence !== readFrame.worldSnapshot.eventSequence
     || localJumpAvailability.participantId !== readFrame.localActionSidecar.participantId
-  ) throw new RangeError('ModeMatchRuntimeV6 step jump availability与Frame身份漂移。');
+  )) throw new RangeError('ModeMatchRuntimeV6 step jump availability与Frame身份漂移。');
   return Object.freeze({
     readFrame,
     readFrameAudit,
@@ -1016,7 +1019,7 @@ function normalizeStep(value: unknown): NormalizedStep {
     supplyCadence: source.supplyCadence === null
       ? null
       : createArenaSupplyCadenceSnapshotV1(source.supplyCadence),
-    localJumpAvailability,
+    ...(localJumpAvailability === undefined ? {} : { localJumpAvailability }),
     stateHash: hash(source.stateHash, 'ModeMatchRuntimeV6 step stateHash'),
     appliedModeCommandHash: hash(
       source.appliedModeCommandHash,
@@ -1639,7 +1642,9 @@ export class ModeMatchRuntimeV6 {
         readFrame: start.readFrame,
         readFrameAudit: start.readFrameAudit,
         supplyCadence: start.supplyCadence,
-        localJumpAvailability: start.localJumpAvailability,
+        ...(start.localJumpAvailability === undefined
+          ? {}
+          : { localJumpAvailability: start.localJumpAvailability }),
       });
       } catch (error) {
         return this.#fail(error);
@@ -1863,7 +1868,9 @@ export class ModeMatchRuntimeV6 {
         events: stepped.events,
         supplyFacts: stepped.supplyFacts,
         supplyCadence: stepped.supplyCadence,
-        localJumpAvailability: stepped.localJumpAvailability,
+        ...(stepped.localJumpAvailability === undefined
+          ? {}
+          : { localJumpAvailability: stepped.localJumpAvailability }),
         readFrame: stepped.readFrame,
         readFrameAudit: stepped.readFrameAudit,
       });

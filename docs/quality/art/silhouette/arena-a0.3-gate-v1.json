@@ -2,28 +2,29 @@
   "schemaVersion": 1,
   "id": "arena.art.silhouette-gate.a0.3.v1",
   "status": "tooling-review-candidate-human-blocked",
-  "generatedAt": "2026-07-28",
-  "baselineCommit": "5d26a4f52a0be61226130ce883e91f981b1cfec8",
+  "admissibilityStatus": "non-admissible-dirty-toolchain-source",
+  "generatedAt": "2026-08-24",
+  "baselineCommit": "de1ef89f36c2152c978c82f5976f04737e43cb4f",
   "generator": {
     "path": "scripts/art/generate-arena-silhouette-gate.ts",
-    "sha256": "d6ffd8561f13452792684e5ea91fec44d32461539032fb7b9f9d0449b624d0b4",
-    "byteLength": 4679
+    "sha256": "2b45c849c970e4ced452696e3d8d98a1b7327496e3e4b44868abd1cb973cb4b6",
+    "byteLength": 5146
   },
   "inputs": {
     "render": {
       "path": "docs/quality/art/silhouette/arena-a0.3-silhouette-render-manifest-v1.json",
-      "sha256": "1b85c5442fbb08c3ff7e8d82538d0f6fdc2cb17dad06c3a279d4b7e1350805c7",
-      "byteLength": 257391
+      "sha256": "9bc9978df5a141fd742ae6a6ad007d069125feed2396e2b9c8a0fd9957d17b9c",
+      "byteLength": 264423
     },
     "blindPackage": {
       "path": "docs/quality/art/silhouette/blind-test/arena-a0.3-blind-test-package-v1.json",
-      "sha256": "69610c9bd27c5b0ff10ab6c0a8c47fd136892fe5d2e606cbdbbdad12736e90d2",
-      "byteLength": 40562
+      "sha256": "18e726f3fdfd4486fc8ed6fe0ddc80a07d016fa0232df8948eecb81a0f68de65",
+      "byteLength": 40821
     },
     "proxyBaseline": {
       "path": "docs/quality/art/silhouette/blind-test/arena-a0.3-internal-proxy-baseline-v1.json",
-      "sha256": "d4088e62f38e33fbbdfe14c1d354dcf0ac950eb70512335300ba72b5fa97a540",
-      "byteLength": 21709
+      "sha256": "ce69954036790bc584e65ff4b38c91cd518d58dc51e5330dfe41d9ffaad9cc82",
+      "byteLength": 21773
     }
   },
   "facts": {
@@ -125,7 +126,7 @@
       "deterministicRenderCoverage": {
         "earned": 20,
         "possible": 20,
-        "evidence": "144个组合均生成且144/144在固定target相机内有像素；离屏0，12m样本全部保留。"
+        "evidence": "实际生成144/144个组合；inFrame=144，offscreen=0。"
       },
       "silhouetteReadability": {
         "earned": 20,

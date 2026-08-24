@@ -279,7 +279,7 @@ export class MatchParticipantSystem {
     );
     const respawnTicks = assertIntegerAtLeast(
       source.respawnTicks,
-      1,
+      0,
       'elimination respawnTicks',
     );
     const participants = ids.map((id) => {

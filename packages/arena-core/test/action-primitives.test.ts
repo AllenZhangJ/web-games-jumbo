@@ -47,9 +47,9 @@ function checkpointActionDefinitions() {
     targeting: { kind: 'none', parameters: {} },
     effects: [{
       id: 'noop-charged',
-      kind: 'noop',
-      trigger: ACTION_EFFECT_TRIGGER.ACTION_STARTED,
-      parameters: {},
+      kind: 'apply-hitstun',
+      trigger: ACTION_EFFECT_TRIGGER.HIT_RESOLVED,
+      parameters: { ticks: 1 },
     }],
     tags: [],
   }, {
@@ -59,7 +59,7 @@ function checkpointActionDefinitions() {
     input: { channel: ACTION_INPUT_CHANNEL.JUMP, trigger: ACTION_INPUT_TRIGGER.PRESSED },
     lane: ACTION_LANE.LOCOMOTION,
     conflictTags: [],
-    timing: { windupTicks: 1, activeTicks: 2, recoveryTicks: 1, cooldownTicks: 0 },
+    timing: { windupTicks: 5, activeTicks: 5, recoveryTicks: 5, cooldownTicks: 0 },
     targeting: { kind: 'none', parameters: {} },
     effects: [{
       id: 'noop-step',
@@ -178,7 +178,12 @@ function createTargetEligibilityEngine(
       kind: 'facing-cone',
       parameters: { range: 3, minimumFacingDot: 0, maximumVerticalDifference: 1 },
     },
-    effects: [],
+    effects: [{
+      id: 'noop-relationship',
+      kind: 'apply-hitstun',
+      trigger: ACTION_EFFECT_TRIGGER.HIT_RESOLVED,
+      parameters: { ticks: 1 },
+    }],
     tags: [],
   }]);
   const equipmentRegistry = new EquipmentRegistry({ definitions: [], actionRegistry });
@@ -277,9 +282,9 @@ describe('Arena action core primitives', () => {
       targeting: { kind: 'none', parameters: {} },
       effects: [{
         id: 'noop',
-        kind: 'noop',
-        trigger: ACTION_EFFECT_TRIGGER.ACTION_STARTED,
-        parameters: {},
+        kind: 'apply-hitstun',
+        trigger: ACTION_EFFECT_TRIGGER.HIT_RESOLVED,
+        parameters: { ticks: 1 },
       }],
       tags: [],
     }]);
@@ -654,7 +659,12 @@ describe('Arena action core primitives', () => {
       conflictTags: [],
       timing: { windupTicks: 3, activeTicks: 1, recoveryTicks: 1, cooldownTicks: 0 },
       targeting: { kind: 'none', parameters: {} },
-      effects: [],
+      effects: [{
+        id: 'noop-base-attack',
+        kind: 'apply-hitstun',
+        trigger: ACTION_EFFECT_TRIGGER.HIT_RESOLVED,
+        parameters: { ticks: 1 },
+      }],
       tags: [],
     }]);
     const equipmentRegistry = new EquipmentRegistry({ definitions: [], actionRegistry });

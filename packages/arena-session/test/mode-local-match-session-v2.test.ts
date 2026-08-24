@@ -19,7 +19,7 @@ import {
 } from '../src/mode-local-match-session-v2.js';
 
 const MODE_DEFINITION_ID = 'mode.duel.test.v1';
-const PARTICIPANT_IDS = Object.freeze(['p1', 'p2', 'p3']);
+const PARTICIPANT_IDS = Object.freeze(['p1', 'p2']);
 const LOCAL_PARTICIPANT_ID = 'p1';
 const NO_SUPPLY = Object.freeze({
   worldSupplyEquipmentInstanceIds: Object.freeze([]),
@@ -281,7 +281,7 @@ function createHarness(options: HarnessOptions = {}) {
       return options.runtimeDestroy?.();
     },
   };
-  const controllers = ['p2', 'p3'].map<ModeInputControllerBindingV2>(
+  const controllers = ['p2'].map<ModeInputControllerBindingV2>(
     (participantId) => ({
       participantId,
       controller: {
@@ -345,10 +345,11 @@ describe('ModeLocalMatchSessionV2 production-unreachable candidate', () => {
       }),
     });
     value.session.start();
-    expect(() => value.session.step(createNeutralInputFrame(0, LOCAL_PARTICIPANT_ID)))
-      .toThrow(/连续延续/);
+    expect(failureMessages(() => value.session.step(
+      createNeutralInputFrame(0, LOCAL_PARTICIPANT_ID),
+    ))).toMatch(/连续延续/);
     expect(value.session.state).toBe(MODE_LOCAL_MATCH_SESSION_V2_STATE.FAILED);
-    expect(value.cleanupOrder).toEqual(['p3', 'p2', 'runtime']);
+    expect(value.cleanupOrder).toEqual(['p2', 'runtime']);
   });
 
   it('rejects an event batch that leads its frame waterline', () => {
@@ -360,8 +361,9 @@ describe('ModeLocalMatchSessionV2 production-unreachable candidate', () => {
       }),
     });
     value.session.start();
-    expect(() => value.session.step(createNeutralInputFrame(0, LOCAL_PARTICIPANT_ID)))
-      .toThrow(/领先readFrame/);
+    expect(failureMessages(() => value.session.step(
+      createNeutralInputFrame(0, LOCAL_PARTICIPANT_ID),
+    ))).toMatch(/领先readFrame/);
     expect(value.session.state).toBe(MODE_LOCAL_MATCH_SESSION_V2_STATE.FAILED);
   });
 
@@ -374,9 +376,9 @@ describe('ModeLocalMatchSessionV2 production-unreachable candidate', () => {
       }),
     });
     eventWithoutResult.session.start();
-    expect(() => eventWithoutResult.session.step(
+    expect(failureMessages(() => eventWithoutResult.session.step(
       createNeutralInputFrame(0, LOCAL_PARTICIPANT_ID),
-    )).toThrow(/不能领先readFrame终局结果/);
+    ))).toMatch(/不能领先readFrame终局结果/);
 
     const resultWithoutEvent = createHarness({
       step: () => stepOutcome({
@@ -387,16 +389,16 @@ describe('ModeLocalMatchSessionV2 production-unreachable candidate', () => {
       }),
     });
     resultWithoutEvent.session.start();
-    expect(() => resultWithoutEvent.session.step(
+    expect(failureMessages(() => resultWithoutEvent.session.step(
       createNeutralInputFrame(0, LOCAL_PARTICIPANT_ID),
-    )).toThrow(/唯一末尾MatchEnded/);
+    ))).toMatch(/唯一末尾MatchEnded/);
   });
 
   it('rejects native Promise and hostile runtime thenable results synchronously', () => {
     const asyncStart = createHarness({ start: () => Promise.resolve(startOutcome()) });
     expect(failureMessages(() => asyncStart.session.start())).toMatch(/同步完成/);
     expect(asyncStart.session.state).toBe(MODE_LOCAL_MATCH_SESSION_V2_STATE.FAILED);
-    expect(asyncStart.cleanupOrder).toEqual(['p3', 'p2', 'runtime']);
+    expect(asyncStart.cleanupOrder).toEqual(['p2', 'runtime']);
 
     let thenCalls = 0;
     const thenableStep = createHarness({
@@ -547,9 +549,9 @@ describe('ModeLocalMatchSessionV2 production-unreachable candidate', () => {
         : createNeutralInputFrame(world.tick, participantId),
     });
     asyncController.session.start();
-    expect(() => asyncController.session.step(
+    expect(failureMessages(() => asyncController.session.step(
       createNeutralInputFrame(0, LOCAL_PARTICIPANT_ID),
-    )).toThrow(/同步完成/);
+    ))).toMatch(/同步完成/);
     expect(asyncController.calls.step).toBe(0);
 
     let thenCalls = 0;
@@ -559,9 +561,9 @@ describe('ModeLocalMatchSessionV2 production-unreachable candidate', () => {
         : createNeutralInputFrame(world.tick, participantId),
     });
     hostileController.session.start();
-    expect(() => hostileController.session.step(
+    expect(failureMessages(() => hostileController.session.step(
       createNeutralInputFrame(0, LOCAL_PARTICIPANT_ID),
-    )).toThrow(/同步完成/);
+    ))).toMatch(/同步完成/);
     expect(thenCalls).toBe(0);
     expect(hostileController.calls.step).toBe(0);
   });
@@ -626,7 +628,7 @@ describe('ModeLocalMatchSessionV2 production-unreachable candidate', () => {
     expect(failure).toMatchObject({ cause: runtimeError });
     expect(value.session.state).toBe(MODE_LOCAL_MATCH_SESSION_V2_STATE.FAILED);
     expect(value.session.readFrame).toBeNull();
-    expect(value.cleanupOrder).toEqual(['p3', 'p2', 'runtime']);
+    expect(value.cleanupOrder).toEqual(['p2', 'runtime']);
     expect(() => value.session.step(createNeutralInputFrame(0, LOCAL_PARTICIPANT_ID)))
       .toThrow(/状态failed/);
     expect(value.calls.step).toBe(1);
@@ -645,7 +647,7 @@ describe('ModeLocalMatchSessionV2 production-unreachable candidate', () => {
     expect(() => value.session.step(createNeutralInputFrame(0, LOCAL_PARTICIPANT_ID)))
       .toThrow(/运行失败/);
     expect(coercions).toBe(0);
-    expect(value.cleanupOrder).toEqual(['p3', 'p2', 'runtime']);
+    expect(value.cleanupOrder).toEqual(['p2', 'runtime']);
     expect(value.session.state).toBe(MODE_LOCAL_MATCH_SESSION_V2_STATE.FAILED);
   });
 
@@ -662,9 +664,9 @@ describe('ModeLocalMatchSessionV2 production-unreachable candidate', () => {
       },
     });
     session = value.session;
-    expect(() => session.start()).toThrow(/重入/);
+    expect(failureMessages(() => session.start())).toMatch(/重入/);
     expect(session.state).toBe(MODE_LOCAL_MATCH_SESSION_V2_STATE.FAILED);
-    expect(value.cleanupOrder).toEqual(['p3', 'p2', 'runtime']);
+    expect(value.cleanupOrder).toEqual(['p2', 'runtime']);
   });
 
   it('supports pause/resume and makes destroy idempotent with reverse cleanup', () => {
@@ -680,7 +682,7 @@ describe('ModeLocalMatchSessionV2 production-unreachable candidate', () => {
     value.session.destroy();
     value.session.destroy();
     expect(value.session.state).toBe(MODE_LOCAL_MATCH_SESSION_V2_STATE.DESTROYED);
-    expect(value.cleanupOrder).toEqual(['p3', 'p2', 'runtime']);
+    expect(value.cleanupOrder).toEqual(['p2', 'runtime']);
     expect(value.calls.runtimeDestroy).toBe(1);
   });
 
@@ -702,13 +704,13 @@ describe('ModeLocalMatchSessionV2 production-unreachable candidate', () => {
         },
       }),
     );
-    expect(() => new ModeLocalMatchSessionV2({
+    expect(failureMessages(() => new ModeLocalMatchSessionV2({
       runtime,
       modeDefinitionId: MODE_DEFINITION_ID,
       participantIds: PARTICIPANT_IDS,
       localParticipantId: LOCAL_PARTICIPANT_ID,
       controllers,
-    })).toThrow(/覆盖全部非local participant/);
+    }))).toMatch(/覆盖全部非local participant/);
     expect(cleanupOrder).toEqual(['foreign', 'p2', 'runtime']);
   });
 });

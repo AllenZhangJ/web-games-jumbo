@@ -5633,6 +5633,11 @@ export class ArenaThreeModeAuthoritativeLocalPlayableHostCandidateV1 {
   }
 
   #retryPendingRetentionAction(): boolean {
+    if (this.#pendingCatalogRetentionWorkBatch !== null
+      || this.#pendingSettlementRetentionWorkBatch !== null
+      || this.#pendingNextGoalCaptureDebt !== null) {
+      throw new Error('Arena next/home留存动作不得越过未决工作批或下一目标捕获债务。');
+    }
     const capturedPending = this.#pendingRetentionActionRetry;
     if (capturedPending === null) return true;
     const collector = this.#retentionObservationCollector;
@@ -8454,13 +8459,20 @@ export class ArenaThreeModeAuthoritativeLocalPlayableHostCandidateV1 {
       ARENA_V2_INFORMATION_CONTENT_READ_CATALOG_CANDIDATE_V1,
       ARENA_V2_ZH_CN_INFORMATION_MESSAGES_CANDIDATE_V1,
     );
-    const weaponDisplayNames = collectionContent.weapons.map(({
-      weaponDefinitionId,
-      displayName,
-    }) => Object.freeze({
-      weaponDefinitionId,
-      displayName,
-    }));
+    const weaponDisplayNameByDefinitionId = new Map(
+      collectionContent.weapons.map(({ weaponDefinitionId, displayName }) => (
+        [weaponDefinitionId, displayName] as const
+      )),
+    );
+    const weaponDisplayNames = learningRead.profileDefinition.weaponDefinitionIds.map(
+      (weaponDefinitionId) => {
+        const displayName = weaponDisplayNameByDefinitionId.get(weaponDefinitionId);
+        if (displayName === undefined) {
+          throw new RangeError('Arena Learning information缺少Profile Definition武器显示名。');
+        }
+        return Object.freeze({ weaponDefinitionId, displayName });
+      },
+    );
     const mapDisplayNames = collectionContent.maps.map((map) => Object.freeze({
       mapDefinitionId: map.mapDefinitionId,
       displayName: map.displayName,
@@ -9879,13 +9891,9 @@ export class ArenaThreeModeAuthoritativeLocalPlayableHostCandidateV1 {
       if (this.#pendingRetentionActionRetry !== null) {
         throw new Error('Arena销毁前待重试留存动作仍未提交。');
       }
-      const catalogCompleted = this.#collectCatalogImpressionForCurrentScreen();
-      if (!catalogCompleted
-        || this.#pendingCatalogRetentionWorkBatch !== null
-        || this.#pendingSettlementRetentionWorkBatch !== null) {
-        throw this.#lastRetentionObservationError
-          ?? new Error('Arena销毁前当前目录留存机会未提交。');
-      }
+      // Destroy only drains work frozen by a prior business operation. It
+      // must never read an inner owner to create a fresh catalog opportunity:
+      // that owner may already be in its own cleanup/retry transaction.
       const nextGoalCompleted = this.#completeNextGoalImpression(false);
       if (!nextGoalCompleted
         || this.#pendingNextGoalImpression !== null

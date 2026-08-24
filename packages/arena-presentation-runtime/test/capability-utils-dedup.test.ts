@@ -133,10 +133,10 @@ describe('Arena presentation shared capability helpers', () => {
     };
 
     expect(() => rejectThenable(accessor, 'Shared result')).toThrow(
-      'Shared result 返回了访问器 thenable。',
+      'Shared result返回访问器thenable。',
     );
     expect(() => rejectThenable(hostile, 'Shared result')).toThrow(
-      'Shared result 必须同步完成。',
+      /Shared result(?:返回then字段|必须同步完成)/,
     );
     expect(() => rejectThenable({ then: null }, 'Shared result')).toThrow(
       'Shared result返回then字段，必须同步完成。',
@@ -162,10 +162,10 @@ describe('Arena presentation shared capability helpers', () => {
 
     expect(rejectProductThenable).toBe(rejectThenable);
     expect(() => rejectProductThenable(thenable, 'Product result')).toThrow(
-      'Product result 必须同步完成。',
+      'Product result返回then字段，必须同步完成。',
     );
     expect(() => rejectProductThenable(accessor, 'Product result')).toThrow(
-      'Product result 返回了访问器 thenable。',
+      'Product result返回访问器thenable。',
     );
     expect(thenCalls).toBe(0);
     expect(getterCalls).toBe(0);
@@ -173,7 +173,7 @@ describe('Arena presentation shared capability helpers', () => {
     let deepValue: object = {};
     for (let depth = 0; depth < 40; depth += 1) deepValue = Object.create(deepValue) as object;
     expect(() => rejectProductThenable(deepValue, 'Product deep result')).toThrow(
-      'Product deep result 返回值原型链无效。',
+      /Product deep result返回值原型链(?:无效|超过32层)。/,
     );
 
     const cyclicProxy: object = new Proxy({}, {
@@ -182,7 +182,7 @@ describe('Arena presentation shared capability helpers', () => {
       },
     });
     expect(() => rejectProductThenable(cyclicProxy, 'Product cyclic result')).toThrow(
-      'Product cyclic result 返回值原型链无效。',
+      /Product cyclic result返回值原型链(?:无效|循环)。/,
     );
   });
 

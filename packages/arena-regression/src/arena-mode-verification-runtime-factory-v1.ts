@@ -231,7 +231,7 @@ function initialProjection(config: ArenaMatchConfigV6) {
         slotId: entry.slotId!,
         participantId: entry.participantId,
         active: false,
-        generation: 0,
+        generation: entry.slotGeneration,
         anchorId: null,
       }))),
     }),
@@ -647,13 +647,22 @@ class VerificationWorldAuthorityV1 implements ModeMatchWorldAuthorityV6 {
         const enemy = this.#config.participantAssignments.find(({ modeRole }) => (
           modeRole === 'enemy'
         ))!;
+        const slotDeactivation = (resolution.commands as readonly SurvivalModeCommandV1[]).find(
+          (command) => command.kind === 'change-enemy-slot'
+            && command.participantId === enemy.participantId
+            && command.slotId === enemy.slotId
+            && command.active === false,
+        );
+        if (slotDeactivation === undefined || slotDeactivation.kind !== 'change-enemy-slot') {
+          throw new RangeError('Verification Survival enemy fall缺少同tick slot deactivation。');
+        }
         sequence = pushEvent(events, this.#request.matchSeed, request.tick, sequence, {
           type: ARENA_MATCH_EVENT_V6.PARTICIPANT_FELL,
           modeDefinitionId: this.#config.modeDefinitionId,
           participantId: enemy.participantId,
           modeRole: 'enemy',
           slotId: enemy.slotId,
-          slotGeneration: 0,
+          slotGeneration: slotDeactivation.previousGeneration,
           fallCause: 'environment',
           creditedAttackerId: null,
           supportSurfaceId: null,
@@ -697,6 +706,7 @@ class VerificationWorldAuthorityV1 implements ModeMatchWorldAuthorityV6 {
       readFrame: this.#readFrame,
       readFrameAudit: this.#readFrameAudit,
       events: Object.freeze(events),
+      supplyFacts: Object.freeze([]),
       supplyCadence: verificationSupplyCadence(this.#config, request.tick + 1),
       stateHash: this.#stateHash,
       appliedModeCommandHash: createDeterministicDataHash(

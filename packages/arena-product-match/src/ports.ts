@@ -1,6 +1,7 @@
 import {
   assertKnownKeys,
   assertPlainRecord,
+  assertSynchronousReturn,
   isNormalizedInputFrame,
 } from '@number-strategy-jump/arena-contracts';
 import {
@@ -465,30 +466,7 @@ function assertNativePromiseSpeciesIntegrity(): void {
 }
 
 export function containRejectedAsyncReturn(value: unknown, label: string): void {
-  assertNativePromiseThenIntegrity();
-  if ((typeof value !== 'object' || value === null) && typeof value !== 'function') return;
-  const descriptors = inspectSyncReturnDescriptors(value as object, label);
-  const constructorDescriptor = descriptors.constructorDescriptor;
-  if (constructorDescriptor !== null && !Object.hasOwn(constructorDescriptor, 'value')) {
-    throw new TypeError(`${label} 返回了访问器 constructor。`);
-  }
-  if (constructorDescriptor?.value === NATIVE_PROMISE_CONSTRUCTOR) {
-    assertNativePromiseSpeciesIntegrity();
-    let nativePromise = false;
-    try {
-      Reflect.apply(NATIVE_PROMISE_THEN, value, [NOOP, NOOP]);
-      nativePromise = true;
-    } catch {
-      // A spoofed constructor stays on the ordinary descriptor-only path.
-    }
-    if (nativePromise) throw new TypeError(`${label} 必须同步完成。`);
-  }
-  const thenDescriptor = descriptors.thenDescriptor;
-  if (thenDescriptor === null) return;
-  if (!Object.hasOwn(thenDescriptor, 'value')) {
-    throw new TypeError(`${label} 返回了访问器 thenable。`);
-  }
-  throw new TypeError(`${label} 返回了 then 字段，必须同步完成。`);
+  assertSynchronousReturn(value, label);
 }
 
 export function resolveSyncOrNativePromise<T>(value: unknown, label: string): Promise<Readonly<{ value: T }>> {

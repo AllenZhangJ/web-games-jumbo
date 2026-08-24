@@ -464,12 +464,12 @@ export function createArenaMatchConfig(overrides: unknown = {}): ArenaMatchConfi
     hardLimitTicks,
     respawnTicks: integerAtLeast(
       optionalValue(source, 'respawnTicks') ?? ARENA_MATCH_DEFAULTS.respawnTicks,
-      1,
+      0,
       'respawnTicks',
     ),
     invulnerableTicks: integerAtLeast(
       optionalValue(source, 'invulnerableTicks') ?? ARENA_MATCH_DEFAULTS.invulnerableTicks,
-      1,
+      0,
       'invulnerableTicks',
     ),
     lastHitCreditTicks: integerAtLeast(

@@ -36,6 +36,22 @@ const NATIVE_PROMISE_SPECIES_FLAGS = Object.freeze({
   configurable: CAPTURED_PROMISE_SPECIES_DESCRIPTOR.configurable,
   enumerable: CAPTURED_PROMISE_SPECIES_DESCRIPTOR.enumerable,
 });
+const NATIVE_FUNCTION_TO_STRING = Function.prototype.toString;
+const NATIVE_PROMISE_CONSTRUCTOR_SOURCE = Reflect.apply(
+  NATIVE_FUNCTION_TO_STRING,
+  NATIVE_PROMISE_CONSTRUCTOR,
+  [],
+);
+const NATIVE_PROMISE_THEN_SOURCE = Reflect.apply(
+  NATIVE_FUNCTION_TO_STRING,
+  NATIVE_PROMISE_THEN,
+  [],
+);
+const NATIVE_PROMISE_SPECIES_GETTER_SOURCE = Reflect.apply(
+  NATIVE_FUNCTION_TO_STRING,
+  NATIVE_PROMISE_SPECIES_GETTER,
+  [],
+);
 const NOOP = (): void => {};
 
 function assertNativePromiseIntegrity(): void {
@@ -61,11 +77,78 @@ function assertNativePromiseSpeciesIntegrity(): void {
   }
 }
 
+function isRecognizedNativePromiseConstructor(value: unknown): boolean {
+  if (value === NATIVE_PROMISE_CONSTRUCTOR) return true;
+  if (typeof value !== 'function') return false;
+  const species = Object.getOwnPropertyDescriptor(value, Symbol.species);
+  if (species === undefined
+    || typeof species.get !== 'function'
+    || species.set !== undefined
+    || species.configurable !== NATIVE_PROMISE_SPECIES_FLAGS.configurable
+    || species.enumerable !== NATIVE_PROMISE_SPECIES_FLAGS.enumerable) {
+    return false;
+  }
+  try {
+    return Reflect.apply(NATIVE_FUNCTION_TO_STRING, value, []) === NATIVE_PROMISE_CONSTRUCTOR_SOURCE
+      && Reflect.apply(NATIVE_FUNCTION_TO_STRING, species.get, [])
+        === NATIVE_PROMISE_SPECIES_GETTER_SOURCE;
+  } catch {
+    return false;
+  }
+}
+
+function findRecognizedNativePromiseThen(
+  value: object,
+  constructorValue: unknown,
+): NativePromiseThen | null {
+  if (!isRecognizedNativePromiseConstructor(constructorValue)) return null;
+  const visited = new Set<object>();
+  let cursor: object | null = value;
+  for (
+    let depth = 0;
+    cursor !== null && depth < MAX_SYNCHRONOUS_RETURN_PROTOTYPE_DEPTH;
+    depth += 1
+  ) {
+    if (visited.has(cursor)) return null;
+    visited.add(cursor);
+    const then = Object.getOwnPropertyDescriptor(cursor, 'then');
+    const constructor = Object.getOwnPropertyDescriptor(cursor, 'constructor');
+    const tag = Object.getOwnPropertyDescriptor(cursor, Symbol.toStringTag);
+    if (then !== undefined
+      && Object.hasOwn(then, 'value')
+      && typeof then.value === 'function'
+      && then.configurable === NATIVE_PROMISE_THEN_FLAGS.configurable
+      && then.enumerable === NATIVE_PROMISE_THEN_FLAGS.enumerable
+      && then.writable === NATIVE_PROMISE_THEN_FLAGS.writable
+      && constructor !== undefined
+      && Object.hasOwn(constructor, 'value')
+      && constructor.value === constructorValue
+      && tag !== undefined
+      && Object.hasOwn(tag, 'value')
+      && tag.value === 'Promise'
+      && tag.configurable === true
+      && tag.enumerable === false
+      && tag.writable === false) {
+      try {
+        if (Reflect.apply(NATIVE_FUNCTION_TO_STRING, then.value, []) === NATIVE_PROMISE_THEN_SOURCE) {
+          return then.value as NativePromiseThen;
+        }
+      } catch {
+        return null;
+      }
+    }
+    cursor = Object.getPrototypeOf(cursor) as object | null;
+  }
+  return null;
+}
+
 /**
  * Rejects asynchronous or ambiguous values at a synchronous port boundary.
  * Prototype inspection is bounded and descriptor-only. Ordinary thenables and
  * accessors are never invoked; only an intact native Promise is observed to
- * contain a possible late rejection before the boundary rejects it.
+ * contain a possible late rejection before the boundary rejects it. The
+ * intrinsic brand probe is deliberately realm-agnostic, so a foreign native
+ * Promise is contained too without ever reading its ordinary `then` field.
  */
 export function assertSynchronousReturn(value: unknown, name: string): void {
   assertNativePromiseIntegrity();
@@ -94,14 +177,24 @@ export function assertSynchronousReturn(value: unknown, name: string): void {
   if (constructorDescriptor !== null && !Object.hasOwn(constructorDescriptor, 'value')) {
     throw new TypeError(`${name}返回访问器constructor。`);
   }
-  if (constructorDescriptor?.value === NATIVE_PROMISE_CONSTRUCTOR) {
-    assertNativePromiseSpeciesIntegrity();
+  // Promise internal slots are realm-independent. A foreign native Promise
+  // must be observed before rejection, but subclasses are not probed: their
+  // `then()` may execute a custom Symbol.species hook. The constructor check
+  // remains descriptor-only and never reads an ordinary input property.
+  const nativeThen = findRecognizedNativePromiseThen(
+    value as object,
+    constructorDescriptor?.value,
+  );
+  if (nativeThen !== null) {
+    if (constructorDescriptor?.value === NATIVE_PROMISE_CONSTRUCTOR) {
+      assertNativePromiseSpeciesIntegrity();
+    }
     let nativePromise = false;
     try {
-      Reflect.apply(NATIVE_PROMISE_THEN, value, [NOOP, NOOP]);
+      Reflect.apply(nativeThen, value, [NOOP, NOOP]);
       nativePromise = true;
     } catch {
-      // Spoofed constructor identity remains on the descriptor-only path.
+      // A spoofed constructor remains on the descriptor-only path below.
     }
     if (nativePromise) throw new TypeError(`${name}必须同步完成。`);
   }

@@ -193,13 +193,13 @@ describe('Arena Mode Verification Runner V1 candidate', () => {
       }),
       destroy: () => undefined,
       getRetainedResourceCount: () => 0,
-    }))).toThrow(/long-run必须完整执行/);
+    }))).toThrow(/long-run必须完整执行|无渲染执行失败/);
 
     expect(() => runArenaModeVerificationPlanV1(plan(), (request) => ({
       run: () => ({ ...output(request), completedRematches: 0 }),
       destroy: () => undefined,
       getRetainedResourceCount: () => 0,
-    }))).toThrow(/completedRematches|rematchCount/);
+    }))).toThrow(/completedRematches|rematchCount|无渲染执行失败/);
 
     expect(() => runArenaModeVerificationPlanV1(plan(), (request) => ({
       run: () => output(request),

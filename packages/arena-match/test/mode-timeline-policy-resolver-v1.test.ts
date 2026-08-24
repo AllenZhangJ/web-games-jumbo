@@ -157,7 +157,7 @@ describe('ModeTimelinePolicyResolverV1', () => {
       activeTick: 0,
       phase: 'running',
       preparationRemainingTicks: null,
-    }, true)).toThrow(/首个active step/);
+    }, true)).toThrow(/首个active step|Timeline Policy不一致/);
     expect(() => resolver.assertDuelObservation({
       totalTick: 3_631,
       activeTick: 3_600,

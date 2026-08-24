@@ -1,12 +1,14 @@
 import { createHash } from 'node:crypto';
 import { readFileSync, statSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { validateArenaSilhouetteInheritedSourceFreeze } from './arena-silhouette-source-freeze.js';
 
 const ROOT = resolve(import.meta.dirname, '../..');
 const RENDER_PATH = 'docs/quality/art/silhouette/arena-a0.3-silhouette-render-manifest-v1.json';
 const BLIND_PATH = 'docs/quality/art/silhouette/blind-test/arena-a0.3-blind-test-package-v1.json';
 const PROXY_PATH = 'docs/quality/art/silhouette/blind-test/arena-a0.3-internal-proxy-baseline-v1.json';
 const OUTPUT_PATH = 'docs/quality/art/silhouette/arena-a0.3-gate-v1.json';
+const GENERATOR_PATH = 'scripts/art/generate-arena-silhouette-gate.ts';
 type RecordValue = Record<string, unknown>;
 const read = (path: string): RecordValue => JSON.parse(readFileSync(resolve(ROOT, path), 'utf8')) as RecordValue;
 const sha = (path: string): string => createHash('sha256').update(readFileSync(resolve(ROOT, path))).digest('hex');
@@ -15,6 +17,16 @@ const artifact = (path: string) => ({ path, sha256: sha(path), byteLength: statS
 const render = read(RENDER_PATH);
 const blind = read(BLIND_PATH);
 const proxy = read(PROXY_PATH);
+const sourceFreeze = validateArenaSilhouetteInheritedSourceFreeze(render.sourceFreeze, GENERATOR_PATH);
+if (
+  render.sourceCommit !== sourceFreeze.sourceCommit
+  || blind.sourceCommit !== sourceFreeze.sourceCommit
+  || proxy.sourceCommit !== sourceFreeze.sourceCommit
+  || JSON.stringify(blind.sourceFreeze) !== JSON.stringify(render.sourceFreeze)
+  || proxy.sourceFreezeFingerprint !== sourceFreeze.cleanCheckFingerprint
+) {
+  throw new Error('A0.3 input sourceCommit/source-freeze identity drift');
+}
 const outputs = render.outputs as Array<RecordValue>;
 const expectedOutputs = 144;
 const actualOutputs = outputs.length;
@@ -40,9 +52,10 @@ const gate = {
   schemaVersion: 1,
   id: 'arena.art.silhouette-gate.a0.3.v1',
   status: 'tooling-review-candidate-human-blocked',
-  generatedAt: '2026-07-28',
-  baselineCommit: '5d26a4f52a0be61226130ce883e91f981b1cfec8',
-  generator: artifact('scripts/art/generate-arena-silhouette-gate.ts'),
+  generatedAt: render.generatedAt,
+  sourceCommit: sourceFreeze.sourceCommit,
+  sourceFreeze: render.sourceFreeze,
+  generator: artifact(GENERATOR_PATH),
   inputs: { render: artifact(RENDER_PATH), blindPackage: artifact(BLIND_PATH), proxyBaseline: artifact(PROXY_PATH) },
   facts: { expectedOutputs, actualOutputs, inFrameOutputs: inFrame, offscreenOutputs, humanParticipants: human.participantCount, requiredHumanParticipants: human.minimum, proxy: proxyAggregate },
   score: { dimensions: score, total, possible: 100, minimumDimensionRatio, threshold: { total: 90, eachDimensionRatio: 0.8 }, passed: total >= 90 && minimumDimensionRatio >= 0.8 },

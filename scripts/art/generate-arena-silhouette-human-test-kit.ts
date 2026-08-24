@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
-import { copyFileSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { validateArenaSilhouetteInheritedSourceFreeze } from './arena-silhouette-source-freeze.js';
 
 const ROOT = resolve(import.meta.dirname, '../..');
 const QUESTIONS_PATH = 'docs/quality/art/silhouette/blind-test/arena-a0.3-blind-questions-v1.json';
@@ -8,6 +9,7 @@ const BLIND_PACKAGE_PATH = 'docs/quality/art/silhouette/blind-test/arena-a0.3-bl
 const ANSWER_KEY_PATH = 'docs/quality/art/silhouette/blind-test/arena-a0.3-blind-answer-key-v1.json';
 const OUTPUT_ROOT = 'docs/quality/art/silhouette/human-test-kit';
 const MANIFEST_PATH = `${OUTPUT_ROOT}/arena-a0.3-human-test-kit-v1.json`;
+const GENERATOR_PATH = 'scripts/art/generate-arena-silhouette-human-test-kit.ts';
 const INTAKE_LEDGER_PATH = `${OUTPUT_ROOT}/arena-a0.3-human-response-intake-ledger-v1.json`;
 const RESPONSE_POLICY_PATH = `${OUTPUT_ROOT}/responses/.gitignore`;
 const CALIBRATION = [
@@ -19,7 +21,15 @@ const sha = (bytes: Buffer | string): string => createHash('sha256').update(byte
 const shaFile = (path: string): string => sha(readFileSync(resolve(ROOT, path)));
 const artifact = (path: string) => ({ path, byteLength: statSync(resolve(ROOT, path)).size, sha256: shaFile(path) });
 const questions = JSON.parse(readFileSync(resolve(ROOT, QUESTIONS_PATH), 'utf8')) as Questions;
+const blindPackage = JSON.parse(readFileSync(resolve(ROOT, BLIND_PACKAGE_PATH), 'utf8')) as Record<string, unknown>;
+const sourceFreeze = validateArenaSilhouetteInheritedSourceFreeze(blindPackage.sourceFreeze, GENERATOR_PATH);
+if (blindPackage.sourceCommit !== sourceFreeze.sourceCommit) throw new Error('human kit refuses stale blind-package sourceCommit');
 if (questions.forms.length !== 10 || questions.aggregateCoverage.uniqueQuestions !== 144 || questions.aggregateCoverage.minimumAppearances !== 1 || questions.aggregateCoverage.maximumAppearances !== 2) throw new Error('human kit requires balanced 10-form, 144-question coverage');
+if (existsSync(resolve(ROOT, `${OUTPUT_ROOT}/responses`)) && readdirSync(resolve(ROOT, `${OUTPUT_ROOT}/responses`)).some((name) => name.endsWith('.json'))) throw new Error('human kit regeneration refuses to reuse ignored raw human responses');
+if (existsSync(resolve(ROOT, INTAKE_LEDGER_PATH))) {
+  const existingIntake = JSON.parse(readFileSync(resolve(ROOT, INTAKE_LEDGER_PATH), 'utf8')) as { participantCount?: unknown; entries?: unknown[] };
+  if (existingIntake.participantCount !== 0 || existingIntake.entries?.length !== 0) throw new Error('human kit regeneration refuses to reuse existing human responses');
+}
 
 function html(formId: string, assignmentHash: string, assignmentQuestions: string): string {
   return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Arena 剪影盲测 ${formId}</title><style>
@@ -35,6 +45,9 @@ document.querySelector('#finish').onclick=()=>{const form=document.querySelector
 mkdirSync(resolve(ROOT, OUTPUT_ROOT, 'participant'), { recursive: true });
 mkdirSync(resolve(ROOT, OUTPUT_ROOT, 'responses'), { recursive: true });
 writeFileSync(resolve(ROOT, RESPONSE_POLICY_PATH), '*\n!.gitignore\n!.gitkeep\n');
+if (!existsSync(resolve(ROOT, INTAKE_LEDGER_PATH))) {
+  writeFileSync(resolve(ROOT, INTAKE_LEDGER_PATH), `${JSON.stringify({ schemaVersion: 1, id: 'arena.art.silhouette-human-response-intake.a0.3.v1', status: 'awaiting-external-human-input', kitId: 'arena.art.silhouette-human-test-kit.a0.3.v1', participantCount: 0, minimumParticipants: 10, entries: [], hardGatePassed: false, coordinatorSignOff: null, downstream: { a0_3: 'incomplete', blockout: 'forbidden', final: 'incomplete' } }, null, 2)}\n`);
+}
 const formArtifacts = [];
 for (const form of questions.forms) {
   const formRoot = `${OUTPUT_ROOT}/participant/${form.formId}`; mkdirSync(resolve(ROOT, formRoot, 'images'), { recursive: true });
@@ -44,6 +57,6 @@ for (const form of questions.forms) {
   const htmlPath = `${formRoot}/index.html`; writeFileSync(resolve(ROOT, htmlPath), html(form.formId, assignmentHash, JSON.stringify(assignment.questions).replaceAll('<', '\\u003c')));
   formArtifacts.push({ formId: form.formId, assignment: artifact(formPath), runner: artifact(htmlPath), calibration: CALIBRATION.map((item) => ({ character: item.character, ...artifact(`${formRoot}/${item.file}`), sourcePath: item.source, sourceSha256: shaFile(item.source) })), images: assignment.questions.map((item) => ({ questionId: item.questionId, path: `${formRoot}/${item.image}`, sha256: item.sha256, byteLength: statSync(resolve(ROOT, formRoot, item.image)).size })) });
 }
-const manifest = { schemaVersion: 1, id: 'arena.art.silhouette-human-test-kit.a0.3.v1', status: 'ready-for-external-human-input', generatedAt: '2026-07-28', baselineCommit: 'fb3b01422ece301977e00c2f46526bd71cd090b0', sourceQuestions: artifact(QUESTIONS_PATH), restrictedEvaluator: { status: 'restricted-evaluator-only', participantAccessible: false, blindPackage: artifact(BLIND_PACKAGE_PATH), questions: artifact(QUESTIONS_PATH), answerKey: artifact(ANSWER_KEY_PATH) }, intakeLedgerPath: INTAKE_LEDGER_PATH, answerKeyIncluded: false, personalDataRequested: false, participantCount: 0, minimumParticipants: 10, formCount: 10, questionsPerForm: 24, aggregateCoverage: questions.aggregateCoverage, requiredAttestations: ['consent', 'independentFromProduction', 'noAnswerAccess', 'noPersonalDataSubmitted'], forms: formArtifacts, responseDropPath: `${OUTPUT_ROOT}/responses`, responseDropPolicy: artifact(RESPONSE_POLICY_PATH), hardGatePassed: false, downstream: { a0_3: 'incomplete', blockout: 'forbidden', final: 'incomplete' } };
+const manifest = { schemaVersion: 1, id: 'arena.art.silhouette-human-test-kit.a0.3.v1', status: 'ready-for-external-human-input', generatedAt: blindPackage.generatedAt, sourceCommit: sourceFreeze.sourceCommit, sourceFreeze: blindPackage.sourceFreeze, generator: artifact(GENERATOR_PATH), sourceQuestions: artifact(QUESTIONS_PATH), restrictedEvaluator: { status: 'restricted-evaluator-only', participantAccessible: false, blindPackage: artifact(BLIND_PACKAGE_PATH), questions: artifact(QUESTIONS_PATH), answerKey: artifact(ANSWER_KEY_PATH) }, intakeLedgerPath: INTAKE_LEDGER_PATH, answerKeyIncluded: false, personalDataRequested: false, participantCount: 0, minimumParticipants: 10, formCount: 10, questionsPerForm: 24, aggregateCoverage: questions.aggregateCoverage, requiredAttestations: ['consent', 'independentFromProduction', 'noAnswerAccess', 'noPersonalDataSubmitted'], forms: formArtifacts, responseDropPath: `${OUTPUT_ROOT}/responses`, responseDropPolicy: artifact(RESPONSE_POLICY_PATH), hardGatePassed: false, downstream: { a0_3: 'incomplete', blockout: 'forbidden', final: 'incomplete' } };
 writeFileSync(resolve(ROOT, MANIFEST_PATH), `${JSON.stringify(manifest, null, 2)}\n`);
 process.stdout.write(`${JSON.stringify({ status: manifest.status, forms: 10, questionsPerForm: 24, aggregateCoverage: manifest.aggregateCoverage, humanParticipants: 0 })}\n`);

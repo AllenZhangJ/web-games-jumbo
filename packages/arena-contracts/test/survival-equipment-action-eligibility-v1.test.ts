@@ -131,6 +131,29 @@ function feedback(sequence: number, tick: number, startedTick: number) {
 }
 
 describe('P4.4cl Survival equipment action eligibility', () => {
+  it('permits an inactive generation-zero slot but still rejects its equipment action', () => {
+    const inactiveInitialSlot = Object.freeze([
+      participants[0]!,
+      Object.freeze({
+        participantId: 'enemy-slot-a',
+        modeRole: 'enemy' as const,
+        slotId: 'slot-a',
+        slotGeneration: 0,
+      }),
+    ]);
+    expect(() => assertArenaV6SurvivalEquipmentActionEligibilityV1({
+      participants: inactiveInitialSlot,
+      events: [action(0, 1, 'enemy-slot-a')],
+    })).toThrow(/非active参与者/);
+    expect(() => assertArenaV6SurvivalEquipmentActionEligibilityV1({
+      participants: inactiveInitialSlot,
+      events: [
+        slotChange(0, 1, true, 0, 1),
+        action(1, 2, 'enemy-slot-a'),
+      ],
+    })).not.toThrow();
+  });
+
   it('allows an equipment action only after the enemy slot generation is active', () => {
     expect(() => assertArenaV6SurvivalEquipmentActionEligibilityV1({
       participants,

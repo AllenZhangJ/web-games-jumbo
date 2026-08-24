@@ -74,6 +74,45 @@ describe('MatchCore weapon feedback adapter V1', () => {
     }
   });
 
+  it('closes a pending hit against the last authority support when terminal state has no elimination', () => {
+    const system = adapter();
+    try {
+      expect(system.step({
+        sequenceStart: 0,
+        sourceEvents: [
+          {
+            id: 'action-terminal', sequence: 0, tick: 0, type: 'ActionStarted',
+            participantId: 'player-1', action: 'hammer.attack',
+          },
+          {
+            id: 'hit-terminal', sequence: 1, tick: 0, type: 'HitResolved',
+            attackerId: 'player-1', targetId: 'player-2', action: 'hammer.attack',
+          },
+        ],
+        observation: observation(1, 2, 'hammer.attack'),
+      })).toEqual([]);
+      expect(system.step({
+        sequenceStart: 0,
+        sourceEvents: [],
+        observation: observation(2, 2, null, null, false),
+      })).toEqual([]);
+      expect(system.step({
+        sequenceStart: 0,
+        sourceEvents: [],
+        observation: observation(3, 2, null, null, false),
+      })).toMatchObject([{
+        id: 'feedback:hit-terminal',
+        kind: 'hit-confirm',
+        initialSupportSurfaceId: 'surface-a',
+        finalSupportSurfaceId: 'surface-a',
+        targetFallTick: null,
+      }]);
+      expect(system.pendingHitCount).toBe(0);
+    } finally {
+      system.destroy();
+    }
+  });
+
   it('separates credited ring-out, movement fall and whiff', () => {
     const ringOut = adapter();
     try {
@@ -402,7 +441,7 @@ describe('MatchCore weapon feedback adapter V1', () => {
       expect(() => validateMatchCoreWeaponFeedbackAdapterCheckpointV1({
         ...before,
         future: true,
-      })).toThrow(/未知字段/);
+      })).toThrow(/未知字段|不支持字段/);
     } finally {
       system.destroy();
     }

@@ -17,8 +17,10 @@ const VITEST_FILES = Object.freeze([
   // P2.0m Input Pilot observed-session synchronous port hardening.
   'packages/arena-input-pilot/test/input-pilot-vocabulary.test.ts',
   'packages/arena-match/test/duel-mode-adapter-v6.test.ts',
+  'packages/arena-match/test/match-config.test.ts',
   'packages/arena-match/test/match-config-v6.test.ts',
   'packages/arena-match/test/match-mode-system.test.ts',
+  'packages/arena-match/test/match-participant-system.test.ts',
   'packages/arena-match/test/match-participant-system-v2.test.ts',
   'packages/arena-match/test/mode-checkpoint-v2.test.ts',
   'packages/arena-match/test/mode-match-runtime-checkpoint-v1.test.ts',
@@ -75,6 +77,7 @@ const NODE_TEST_FILES = Object.freeze([
   // P2.0g-B Replay beforeStep synchronous thenable containment boundary.
   'tests/arena/replay.test.ts',
   'tests/arena/p2-versioned-candidate-reachability.test.ts',
+  'scripts/arena-p2-long-run-verification.test.ts',
 ]);
 
 interface ChildResult {
@@ -129,6 +132,7 @@ async function runChild(
 async function main(): Promise<void> {
   const repositoryRoot = process.cwd();
   await assertRegularFiles(repositoryRoot, [...VITEST_FILES, ...NODE_TEST_FILES]);
+  process.env.ARENA_P2_LONG_RUN_EXTERNAL = '1';
 
   await runChild(
     repositoryRoot,

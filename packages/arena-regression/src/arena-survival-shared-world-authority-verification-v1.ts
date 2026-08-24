@@ -1535,7 +1535,9 @@ function createConfig(
   runtimePolicyBinding: ArenaThreeModeRuntimePolicyBindingCandidateV1 | null = null,
 ): ArenaMatchConfigV6 {
   const modePolicyContentHash = createDeterministicDataHash({
-    mapDefinition: mapContext.mapDefinition,
+    // MapDefinition is a frozen class instance. Its canonical plain-data
+    // projection is the only value accepted by the deterministic hasher.
+    mapDefinition: mapContext.mapDefinition.toJSON(),
     routeDefinition: mapContext.routeDefinition,
     ...(runtimePolicyBinding === null
       ? { pressureContentHash: ARENA_V2_SURVIVAL_PRESSURE_CANDIDATE_V1.contentHash }
@@ -4813,15 +4815,22 @@ export class ArenaSurvivalAuthoritativeRuntimeCandidateV1 {
     const playerCharacter = playableCharacter(playerAssignment.characterDefinitionId);
     const mapContext = playableSurvivalMap(selection.selectedMapDefinitionId);
     const staticContentDefinitionId = 'arena-v2.content.survival-authoritative.candidate.v1';
-    const registryBoundContent = new RegExp(
+    const weaponRegistryBoundContent = new RegExp(
       `^${staticContentDefinitionId.replaceAll('.', '\\.')}`
-        + String.raw`\.registry-r(?:0|[1-9]\d*)-[0-9a-f]{8}$`,
+        + String.raw`\.registry-r(?:0|[1-9]\d*)-[0-9a-f]{8}(?:\.mode-registry-[0-9a-f]{8})?$`,
       'u',
     ).test(selection.contentDefinitionId);
-    if (selection.contentDefinitionId !== staticContentDefinitionId && !registryBoundContent) {
+    const modeRegistryBoundContent = new RegExp(
+      `^${staticContentDefinitionId.replaceAll('.', '\\.')}`
+        + String.raw`\.mode-registry-[0-9a-f]{8}$`,
+      'u',
+    ).test(selection.contentDefinitionId);
+    if (selection.contentDefinitionId !== staticContentDefinitionId
+      && !weaponRegistryBoundContent
+      && !modeRegistryBoundContent) {
       throw new RangeError('Arena Survival authoritative runtime content Registry身份非法。');
     }
-    const weaponPool: SurvivalWeaponPoolCandidateV1 = registryBoundContent
+    const weaponPool: SurvivalWeaponPoolCandidateV1 = weaponRegistryBoundContent
       ? createArenaV2SurvivalRegisteredWeaponPoolCandidateV1(
         selection.equipmentDefinitionIds,
       )
@@ -4842,7 +4851,7 @@ export class ArenaSurvivalAuthoritativeRuntimeCandidateV1 {
         Object.freeze([playerCharacter.id, ENEMY_CHARACTER.id].sort()),
         'Arena Survival selected characters',
       )
-      || (!registryBoundContent && !sameData(
+      || (!weaponRegistryBoundContent && !sameData(
         selection.equipmentDefinitionIds,
         Object.freeze(CATALOG.collectionEquipmentDefinitions.map(({ id }) => id).sort()),
         'Arena Survival selected equipment',

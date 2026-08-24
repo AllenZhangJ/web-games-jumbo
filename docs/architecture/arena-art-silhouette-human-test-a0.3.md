@@ -2,13 +2,13 @@
 
 ## 状态与边界
 
-- 日期：2026-07-28
-- 基线：`fb3b014`
-- 测试包：`ready-for-external-human-input`
+- 日期：2026-08-24（clean-source工具链准备）
+- source commit：待协调者提交`SF-A0R.2A`并提供新的clean commit
+- 测试包：当前字节保留，但为`non-admissible-dirty-toolchain-source / pending-clean-regeneration`
 - 真人证据：0/10，`hardGatePassed=false`
 - A0.3：`incomplete`；Blockout与Final继续`forbidden`/fail closed
 
-该包只把真实参与者需要的材料、匿名原始答卷和机器复算流程准备到可执行状态，不包含真人结果，也不能用内部代理、制作人员自测或模拟答卷替代真人。
+当前human kit由被退回的dirty-toolchain生成，不得发给参与者或接收答卷。`SF-A0R.2A`只把动态sourceCommit、clean预检和继承协议准备为`code-written-not-run`；协调者提交A段并在新clean commit上完成B段重生成后，新的包才可进入`ready-for-external-human-input`。任何内部代理、制作人员自测或模拟答卷都不能替代真人。
 
 ## 最小测试包
 
@@ -59,7 +59,7 @@ node --import tsx scripts/art/test-arena-silhouette-human-response-intake-fail-c
 node --import tsx scripts/art/test-arena-silhouette-human-evaluator-fail-closed.ts
 ```
 
-当前测试包检查器证明10表单×24题、144题全覆盖、1–2次出现、72细分层各2–4题、严格144 tuple笛卡尔积、双视口与sourceOutputId身份、restricted evaluator三项固定输入、答案键/题目/assignment/图像双向集合一致、校准来源、runner内嵌assignment hash、无答案/资产名泄露、零个人信息要求、raw JSON不被Git跟踪、原始答卷数与intake台账一致、A0.3/Blockout/Final关闭。14个包级负向探针保持通过；12个隔离恶意答卷、1次合法排他写入及1次提交后故障探针覆盖未来完成时间、时间/时长、落盘bytes/hash、不记录原文件名，以及ledger提交后raw不可回滚。15个评分器负向探针覆盖身份、kit/package/assignment/image、答案键schema/值域/tuple/sourceOutputId、raw/ledger和接收时间因果关系；另有1个正向探针以系统tmp中的10份完美工具答卷证明可产出`human-threshold-candidate`，同时`hardGatePassed=false`且Blockout继续禁止。所有临时答卷和报告测试后清除，不计真人。
+SF-A0R.2A延期检查器将证明10表单×24题、144题全覆盖、1–2次出现、72细分层各2–4题、严格144 tuple笛卡尔积、双视口与sourceOutputId身份、restricted evaluator三项固定输入、答案键/题目/assignment/图像双向集合一致、校准来源、runner内嵌assignment hash、无答案/资产名泄露、零个人信息要求、raw JSON不被Git跟踪、原始答卷数与intake台账一致、A0.3/Blockout/Final关闭。sourceCommit/sourceFreeze、实际runtimeToolchain和human generator identity反证已写但本A段未运行，human kit延期计数为18项。当前16项包级、12项intake、15项evaluator及工具候选运行结果均属于被退回的dirty-toolchain失败轮，不得沿用；B段必须从新clean commit与同一记录运行环境整链复验。
 
 ### 2026-08-02 主协调独立复验
 

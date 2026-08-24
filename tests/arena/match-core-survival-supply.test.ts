@@ -655,7 +655,7 @@ test('checkpoint bounds invalid Core cleanup and preserves the factory contract 
         };
       },
     }).cleanupErrors[0]?.message ?? '',
-    /destroy必须同步完成/,
+    /destroy(?:返回then字段|必须同步完成)/,
   );
   assert.equal(destroyCalls, 1);
   assert.equal(hostileThenCalls, 0);
@@ -682,13 +682,13 @@ test('checkpoint bounds invalid Core cleanup and preserves the factory contract 
         },
       }),
     }).cleanupErrors[0]?.message ?? '',
-    /destroy必须同步完成/,
+    /destroy(?:返回then字段|必须同步完成)/,
   );
   assert.equal(customConstructorThenCalls, 0);
 
   assert.match(
     rejectCandidate({ destroy: () => Promise.resolve() }).cleanupErrors[0]?.message ?? '',
-    /destroy必须同步完成/,
+    /destroy(?:返回then字段|必须同步完成)/,
   );
 
   let thenGetterCalls = 0;

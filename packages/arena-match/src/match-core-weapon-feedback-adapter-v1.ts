@@ -881,14 +881,23 @@ export class MatchCoreWeaponFeedbackAdapterV1 {
     for (const [targetId, pending] of [...pendingHits.entries()]) {
       if (authorityTick - pending.firstHitTick < this.#outcomeWindowTicks) continue;
       const participant = nextParticipants.get(targetId);
-      if (!participant || !participant.active || participant.supportSurfaceId === null) {
+      if (!participant) {
+        throw new RangeError('命中结果窗口结束时目标仍无可归类支撑结果。');
+      }
+      // A terminal frame may retire the target after the already-recorded hit
+      // but before a new support observation. With no PlayerEliminated event,
+      // the only authority-backed non-ring-out closure is its last observed
+      // support surface; do not invent a fall or discard the pending hit.
+      const finalSupportSurfaceId = participant.supportSurfaceId
+        ?? lastSupportedSurfaceIds.get(targetId);
+      if (finalSupportSurfaceId === undefined) {
         throw new RangeError('命中结果窗口结束时目标仍无可归类支撑结果。');
       }
       output.push(this.#event(
         pending,
         outputSequence,
         authorityTick,
-        participant.supportSurfaceId,
+        finalSupportSurfaceId,
         null,
         null,
       ));

@@ -18,6 +18,7 @@ function makeFixture(name: string): string {
   const root = resolve(TEMP, name); mkdirSync(resolve(root, 'docs/quality/art/silhouette'), { recursive: true });
   cpSync(resolve(REPO, 'docs/quality/art/silhouette/human-test-kit'), resolve(root, 'docs/quality/art/silhouette/human-test-kit'), { recursive: true });
   cpSync(resolve(REPO, 'docs/quality/art/silhouette/blind-test'), resolve(root, 'docs/quality/art/silhouette/blind-test'), { recursive: true });
+  const kit = JSON.parse(readFileSync(resolve(root, KIT), 'utf8')) as Json; const generatorTarget = resolve(root, kit.generator.path); mkdirSync(dirname(generatorTarget), { recursive: true }); cpSync(resolve(REPO, kit.generator.path), generatorTarget);
   for (const source of ['character-b01-rogue-front-side.png', 'character-b02-skeleton-front-three-quarter.png']) { const target = resolve(root, 'docs/quality/art/reference-sources/project-character-renders', source); mkdirSync(dirname(target), { recursive: true }); cpSync(resolve(REPO, 'docs/quality/art/reference-sources/project-character-renders', source), target); }
   return root;
 }

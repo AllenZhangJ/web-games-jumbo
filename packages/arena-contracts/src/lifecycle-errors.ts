@@ -23,5 +23,11 @@ export function combineCleanupFailure(
   const combined = new Error(message) as CombinedLifecycleError;
   combined.originalError = originalError;
   combined.cleanupErrors = Object.freeze([...cleanupErrors]);
+  Object.defineProperty(combined, 'cause', {
+    value: originalError,
+    enumerable: false,
+    configurable: false,
+    writable: false,
+  });
   return combined;
 }

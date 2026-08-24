@@ -113,7 +113,7 @@ test('replay beforeStep sees immutable copies and rejects asynchronous verificat
   assert.equal(observedSteps, replay.inputFrames.length / 2);
   assert.throws(
     () => replayMatch(replay, { beforeStep: async () => true }),
-    /必须同步完成/,
+    /必须同步完成|访问器 thenable/,
   );
   let thenGetterCalls = 0;
   assert.throws(() => replayMatch(replay, {
@@ -128,7 +128,7 @@ test('replay beforeStep sees immutable copies and rejects asynchronous verificat
       });
       return result;
     },
-  }), /必须同步完成/);
+  }), /必须同步完成|访问器 thenable/);
   assert.equal(thenGetterCalls, 0);
   runner.destroy();
 });
@@ -167,7 +167,7 @@ test('replay beforeStep rejects hostile thenables without invoking them or commi
       throw new Error('hostile then must not execute');
     },
   });
-  assertRejectedBeforeStep(hostileThenable, /必须同步完成/);
+  assertRejectedBeforeStep(hostileThenable, /必须同步完成|访问器 thenable/);
   assert.equal(hostileThenCalls, 0);
 
   let thenGetterCalls = 0;
@@ -183,7 +183,7 @@ test('replay beforeStep rejects hostile thenables without invoking them or commi
 
   assertRejectedBeforeStep(
     Promise.reject(new Error('rejected Promise must be contained')),
-    /必须同步完成/,
+    /必须同步完成|访问器 thenable/,
   );
 
   const cyclicTarget = Object.create(null) as object;
@@ -541,7 +541,7 @@ test('replay bounds invalid Core prototype cleanup without executing hostile des
         };
       },
     }).cleanupErrors[0]?.message ?? '',
-    /destroy必须同步完成/,
+    /destroy(?:返回then字段|必须同步完成)/,
   );
   assert.equal(destroyCalls, 1);
   assert.equal(hostileThenCalls, 0);
@@ -556,13 +556,13 @@ test('replay bounds invalid Core prototype cleanup without executing hostile des
         },
       }),
     }).cleanupErrors[0]?.message ?? '',
-    /destroy必须同步完成/,
+    /destroy(?:返回then字段|必须同步完成)/,
   );
   assert.equal(customConstructorThenCalls, 0);
 
   assert.match(
     rejectCandidate({ destroy: () => Promise.resolve() }).cleanupErrors[0]?.message ?? '',
-    /destroy必须同步完成/,
+    /destroy(?:返回then字段|必须同步完成)/,
   );
 
   let thenGetterCalls = 0;

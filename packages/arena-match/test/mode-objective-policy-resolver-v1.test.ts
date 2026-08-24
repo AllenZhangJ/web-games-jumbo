@@ -201,7 +201,7 @@ describe('ModeObjectivePolicyResolverV1', () => {
     }, {
       ...raceResult('finish-claimed'),
       winnerParticipantIds: ['spectator-outside-match'],
-    })).toThrow(/本局participant/);
+    })).toThrow(/本局participant|有效rank 1 finishers/);
   });
 
   it('binds Survival terminal-player-fall and time-cap to current facts', () => {

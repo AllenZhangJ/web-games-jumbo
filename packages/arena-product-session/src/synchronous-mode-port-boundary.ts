@@ -1,103 +1,10 @@
+import { assertSynchronousReturn } from '@number-strategy-jump/arena-contracts';
+
 export type SynchronousModePortMethod = (
   ...arguments_: readonly unknown[]
 ) => unknown;
 
 const MAX_SYNCHRONOUS_PROTOTYPE_DEPTH = 32;
-const NATIVE_PROMISE_PROTOTYPE = Promise.prototype;
-const NATIVE_PROMISE_CONSTRUCTOR = Promise;
-const CAPTURED_PROMISE_THEN_DESCRIPTOR = Object.getOwnPropertyDescriptor(
-  NATIVE_PROMISE_PROTOTYPE,
-  'then',
-);
-if (CAPTURED_PROMISE_THEN_DESCRIPTOR === undefined
-  || !Object.hasOwn(CAPTURED_PROMISE_THEN_DESCRIPTOR, 'value')
-  || typeof CAPTURED_PROMISE_THEN_DESCRIPTOR.value !== 'function') {
-  throw new TypeError('ModeProductSessionV2无法捕获原生Promise.prototype.then数据方法。');
-}
-const NATIVE_PROMISE_THEN = CAPTURED_PROMISE_THEN_DESCRIPTOR.value as (
-  ...arguments_: unknown[]
-) => unknown;
-const NATIVE_PROMISE_THEN_FLAGS = Object.freeze({
-  configurable: CAPTURED_PROMISE_THEN_DESCRIPTOR.configurable,
-  enumerable: CAPTURED_PROMISE_THEN_DESCRIPTOR.enumerable,
-  writable: CAPTURED_PROMISE_THEN_DESCRIPTOR.writable,
-});
-const CAPTURED_PROMISE_SPECIES_DESCRIPTOR = Object.getOwnPropertyDescriptor(
-  NATIVE_PROMISE_CONSTRUCTOR,
-  Symbol.species,
-);
-if (CAPTURED_PROMISE_SPECIES_DESCRIPTOR === undefined
-  || typeof CAPTURED_PROMISE_SPECIES_DESCRIPTOR.get !== 'function'
-  || CAPTURED_PROMISE_SPECIES_DESCRIPTOR.set !== undefined) {
-  throw new TypeError('ModeProductSessionV2无法捕获原生Promise[Symbol.species]访问器。');
-}
-const NATIVE_PROMISE_SPECIES_GETTER = CAPTURED_PROMISE_SPECIES_DESCRIPTOR.get;
-const NATIVE_PROMISE_SPECIES_FLAGS = Object.freeze({
-  configurable: CAPTURED_PROMISE_SPECIES_DESCRIPTOR.configurable,
-  enumerable: CAPTURED_PROMISE_SPECIES_DESCRIPTOR.enumerable,
-});
-const NOOP = (): void => {};
-
-function assertNativePromiseThenIntegrity(): void {
-  const descriptor = Object.getOwnPropertyDescriptor(NATIVE_PROMISE_PROTOTYPE, 'then');
-  if (descriptor === undefined
-    || !Object.hasOwn(descriptor, 'value')
-    || descriptor.value !== NATIVE_PROMISE_THEN
-    || descriptor.configurable !== NATIVE_PROMISE_THEN_FLAGS.configurable
-    || descriptor.enumerable !== NATIVE_PROMISE_THEN_FLAGS.enumerable
-    || descriptor.writable !== NATIVE_PROMISE_THEN_FLAGS.writable) {
-    throw new TypeError('ModeProductSessionV2原生Promise.prototype.then描述符漂移。');
-  }
-}
-
-function assertNativePromiseSpeciesIntegrity(): void {
-  const descriptor = Object.getOwnPropertyDescriptor(
-    NATIVE_PROMISE_CONSTRUCTOR,
-    Symbol.species,
-  );
-  if (descriptor === undefined
-    || descriptor.get !== NATIVE_PROMISE_SPECIES_GETTER
-    || descriptor.set !== undefined
-    || descriptor.configurable !== NATIVE_PROMISE_SPECIES_FLAGS.configurable
-    || descriptor.enumerable !== NATIVE_PROMISE_SPECIES_FLAGS.enumerable) {
-    throw new TypeError('ModeProductSessionV2原生Promise[Symbol.species]描述符漂移。');
-  }
-}
-
-interface SynchronousValueDescriptors {
-  readonly thenDescriptor: PropertyDescriptor | null;
-  readonly constructorDescriptor: PropertyDescriptor | null;
-}
-
-function inspectSynchronousValueDescriptors(
-  value: object,
-  contractName: string,
-): SynchronousValueDescriptors {
-  const visited = new Set<object>();
-  let cursor: object | null = value;
-  let thenDescriptor: PropertyDescriptor | null = null;
-  let constructorDescriptor: PropertyDescriptor | null = null;
-  for (
-    let depth = 0;
-    cursor !== null && depth < MAX_SYNCHRONOUS_PROTOTYPE_DEPTH;
-    depth += 1
-  ) {
-    if (visited.has(cursor)) {
-      throw new TypeError(`${contractName}返回值原型链不能循环。`);
-    }
-    visited.add(cursor);
-    thenDescriptor ??= Object.getOwnPropertyDescriptor(cursor, 'then') ?? null;
-    constructorDescriptor ??=
-      Object.getOwnPropertyDescriptor(cursor, 'constructor') ?? null;
-    cursor = Object.getPrototypeOf(cursor) as object | null;
-  }
-  if (cursor !== null) {
-    throw new RangeError(
-      `${contractName}返回值原型链超过${MAX_SYNCHRONOUS_PROTOTYPE_DEPTH}层。`,
-    );
-  }
-  return Object.freeze({ thenDescriptor, constructorDescriptor });
-}
 
 export function captureSynchronousModeDataMethod(
   target: unknown,
@@ -175,33 +82,6 @@ export function assertSynchronousModePortResult<T>(
   value: T,
   contractName: string,
 ): T {
-  assertNativePromiseThenIntegrity();
-  if ((typeof value !== 'object' || value === null) && typeof value !== 'function') {
-    return value;
-  }
-  const descriptors = inspectSynchronousValueDescriptors(value as object, contractName);
-  const constructorDescriptor = descriptors.constructorDescriptor;
-  if (constructorDescriptor !== null && !Object.hasOwn(constructorDescriptor, 'value')) {
-    throw new TypeError(`${contractName}返回访问器constructor。`);
-  }
-
-  if (constructorDescriptor?.value === NATIVE_PROMISE_CONSTRUCTOR) {
-    assertNativePromiseSpeciesIntegrity();
-    let nativePromise = false;
-    try {
-      Reflect.apply(NATIVE_PROMISE_THEN, value, [NOOP, NOOP]);
-      nativePromise = true;
-    } catch {
-      // A plain object may spoof constructor: Promise. Its then descriptor is
-      // still checked below without executing external code.
-    }
-    if (nativePromise) throw new TypeError(`${contractName}必须同步完成。`);
-  }
-
-  const thenDescriptor = descriptors.thenDescriptor;
-  if (thenDescriptor === null) return value;
-  if (!Object.hasOwn(thenDescriptor, 'value')) {
-    throw new TypeError(`${contractName}返回访问器thenable。`);
-  }
-  throw new TypeError(`${contractName}返回then字段，必须同步完成。`);
+  assertSynchronousReturn(value, contractName);
+  return value;
 }

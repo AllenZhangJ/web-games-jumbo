@@ -137,7 +137,7 @@ function createAssignments(request: Readonly<ArenaModeVerificationRunRequestV1>)
           ? 'character.player.test'
           : 'character.enemy.shared.test',
         slotId: player ? null : slotId(index - 1),
-        slotGeneration: 0,
+        slotGeneration: player ? 0 : index,
       });
     }));
   }

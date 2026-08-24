@@ -294,7 +294,7 @@ describe('ArenaPublicSupplyProjection V3 contract', () => {
     expect(() => createArenaPublicSupplyProjectionV3Audit(source, {
       ...auditOptions,
       eventSequence: 42,
-    })).toThrow(/eventSequence/);
+    })).toThrow(/snapshotEventSequence|eventSequence/);
     const foreignModeIdentity = mutableCopy(values) as unknown as DataRecord[];
     foreignModeIdentity[0]!.modeDefinitionId = 'foreign-mode.test';
     expect(() => createArenaPublicSupplyProjectionV3Audit(
