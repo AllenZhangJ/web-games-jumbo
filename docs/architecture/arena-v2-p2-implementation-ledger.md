@@ -3,7 +3,8 @@
 ## 当前状态
 
 - 状态：`P2.5-contract-system-integration-candidate-landed / P2.5d-concrete-mode-runtime-static-candidate-landed / P2.5e-mid-match-restore-static-candidate-landed / P2.5e-mode-driver-checkpoint-v3-code-written-not-run / P2.5f-terminal-tick-static-contract-patched-not-run / P2.5g-result-replay-settlement-evidence-code-written-not-run / P2.5h-mode-driver-terminal-settlement-identity-v2-code-written-not-run / P2.5i-supply-terminal-evidence-code-written-not-run / P2.5j-explicit-per-step-supply-facts-code-written-not-run / P2.5k-explicit-local-jump-availability-code-written-not-run / P2.5l-real-primary-press-hold-affordance-code-written-not-run / P2.6-real-runtime-factory-static-candidate-landed / P2.0o-P2.0q-resolved-policy-terminal-assertions-code-written-not-run / P2.0r-explicit-timeline-runtime-mirror-capability-code-written-unwired / P2.0s-declared-then-sync-boundary-code-written-not-run / P2.0t-timeline-wiring-eligibility-code-written-unwired / P2.0u-survival-execution-timing-separation-code-written-not-run / P2.0v-race-execution-timing-separation-code-written-not-run / P2.0w-three-mode-timeline-product-proposal-code-written-not-run / verification-deferred-by-ADR-119 / production-unreachable / hardGate=false`。
-- 日期：2026-08-13。
+- 日期：2026-08-24。
+- 2026-08-24 证据状态校正：当前基线为已推送的`feature/arena-v2-design-docs@787ce27`且工作树 clean；`typecheck:app`和52包workspace build已有通过记录，P2候选测试当前记录为`351/421`，P3边界门已有通过记录。该记录不等于P2全量候选门、P4–P7候选门、严格性能/设备/真人或发布通过；未取得独立运行记录的门继续保持`not-run`。
 - 目标：严格执行[生产化分阶段开发与治理计划](arena-v2-production-development-plan.md)的 P2，把 1v1、2–4 人竞速和单人生存从研究原型迁入同一正式 Mode/MatchCore。
 - 前置红门：P1整体尚未取得独立`advance`；PA6正式CPU ABBA×3、PA7正式300/120、设备、真人和美术外部门继续延期且`formalGate=false`。
 - 权限边界：按[ADR-119](../decisions/119-arena-v2-continuous-development-with-deferred-gates.md)连续开放P2后续与P3-P6生产不可达候选开发；默认Registry、生产Composition、三端入口、正式阶段完成、commit和push仍由主协调独立签核，不因开发授权自动开放。

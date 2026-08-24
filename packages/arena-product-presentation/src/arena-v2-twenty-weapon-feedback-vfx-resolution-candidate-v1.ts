@@ -151,7 +151,11 @@ const ATTACK_FEEDBACK_KINDS = Object.freeze([
 const GRAMMAR_SOURCE =
   ARENA_V2_WEAPON_COLLECTION_COMBAT_GRAMMAR_VISUAL_SOURCE_CANDIDATE_V1;
 const GRAMMAR_BY_WEAPON_ID = new Map(
-  GRAMMAR_SOURCE.entries.map((entry) => [entry.weaponDefinitionId, entry] as const),
+  GRAMMAR_SOURCE.entries.map((entry) => [entry.catalogId, entry] as const),
+);
+const READ_PLAN_WEAPON_IDS = new Set<string>(
+  ARENA_V2_TWENTY_WEAPON_FEEDBACK_READ_PLAN_CANDIDATE_V1.weaponSignatures
+    .map(({ weaponId }) => weaponId),
 );
 const CORE_VERB_VALUES = Object.freeze(Object.values(WEAPON_CORE_VERB_V1));
 const FAMILY_SHAPE_BY_CORE_VERB = new Map(
@@ -167,6 +171,8 @@ const FAMILY_SHAPE_BY_CORE_VERB = new Map(
 
 if (GRAMMAR_SOURCE.entries.length !== 20
   || GRAMMAR_BY_WEAPON_ID.size !== 20
+  || READ_PLAN_WEAPON_IDS.size !== 20
+  || !GRAMMAR_SOURCE.entries.every(({ catalogId }) => READ_PLAN_WEAPON_IDS.has(catalogId))
   || new Set(GRAMMAR_SOURCE.entries.map(({ coreVerb }) => coreVerb)).size
     !== CORE_VERB_VALUES.length
   || FAMILY_SHAPE_BY_CORE_VERB.size !== CORE_VERB_VALUES.length
@@ -194,7 +200,7 @@ function combatGrammarIdentity(
 ): ArenaV2WeaponCombatGrammarIdentityCandidateV1 {
   const entry = GRAMMAR_BY_WEAPON_ID.get(weaponId);
   const contextEntry = entry?.contexts.find((candidate) => candidate.context === context);
-  if (entry === undefined || contextEntry === undefined) {
+  if (entry === undefined || entry.catalogId !== weaponId || contextEntry === undefined) {
     throw new RangeError(`Arena V2反馈VFX缺少${weaponId}/${context}同源战斗语法。`);
   }
   return Object.freeze({

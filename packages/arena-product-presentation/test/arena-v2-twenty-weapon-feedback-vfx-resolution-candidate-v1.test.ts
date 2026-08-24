@@ -100,12 +100,12 @@ describe('Arena V2 twenty weapon feedback VFX resolution candidate V1 (not run)'
     const identities = ARENA_V2_WEAPON_COLLECTION_COMBAT_GRAMMAR_VISUAL_SOURCE_CANDIDATE_V1
       .entries.flatMap((entry) => entry.contexts.map((context) => {
         const resolution = resolveArenaV2TwentyWeaponFeedbackVfxCandidateV1(command(
-          `arena.cue.vfx.weapon-feedback.${entry.weaponDefinitionId}.${context.context}.hit-confirm.duel.candidate.v1`,
+          `arena.cue.vfx.weapon-feedback.${entry.catalogId}.${context.context}.hit-confirm.duel.candidate.v1`,
         ));
         expect(resolution.combatGrammarIdentity).toEqual({
           sourceContentHash:
             ARENA_V2_WEAPON_COLLECTION_COMBAT_GRAMMAR_VISUAL_SOURCE_CANDIDATE_V1.contentHash,
-          weaponId: entry.weaponDefinitionId,
+          weaponId: entry.catalogId,
           context: context.context,
           actionDefinitionId: context.actionDefinitionId,
           coreVerb: entry.coreVerb,
@@ -114,7 +114,7 @@ describe('Arena V2 twenty weapon feedback VFX resolution candidate V1 (not run)'
         });
         expect(Object.isFrozen(resolution.combatGrammarIdentity)).toBe(true);
         expect(Object.isFrozen(resolution.combatGrammarIdentity?.counterInputs)).toBe(true);
-        return `${entry.weaponDefinitionId}:${context.context}`;
+        return `${entry.catalogId}:${context.context}`;
       }));
     expect(identities).toHaveLength(40);
     expect(new Set(identities).size).toBe(40);

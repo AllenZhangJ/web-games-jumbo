@@ -21,10 +21,16 @@ describe('Arena V2 A5/A6 weapon combat grammar visual source（未运行候选�
         ({ weaponDefinitionId }) => weaponDefinitionId,
       ),
     );
+    expect(source.entries.map(({ catalogId }) => catalogId)).toEqual(
+      ARENA_V2_INFORMATION_CONTENT_READ_CATALOG_CANDIDATE_V1.weapons.map(
+        ({ catalogId }) => catalogId,
+      ),
+    );
     source.entries.forEach((entry, index) => {
       const authority = ARENA_V2_INFORMATION_CONTENT_READ_CATALOG_CANDIDATE_V1.weapons[index]!;
       expect(entry).toEqual({
         weaponDefinitionId: authority.weaponDefinitionId,
+        catalogId: authority.catalogId,
         collectionOrder: authority.collectionOrder,
         coreVerb: authority.coreVerb,
         contexts: authority.actions.map((action) => ({

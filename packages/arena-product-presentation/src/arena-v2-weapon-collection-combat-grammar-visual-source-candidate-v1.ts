@@ -24,6 +24,12 @@ export interface ArenaV2WeaponCollectionCombatGrammarContextVisualSourceCandidat
 
 export interface ArenaV2WeaponCollectionCombatGrammarVisualSourceEntryCandidateV1 {
   readonly weaponDefinitionId: string;
+  /**
+   * Stable collection-directory key used by feedback read plans. Keeping it
+   * beside the formal definition ID makes the cross-projection join explicit
+   * rather than relying on a coincidental spelling convention.
+   */
+  readonly catalogId: string;
   readonly collectionOrder: number;
   readonly coreVerb: WeaponCoreVerbV1;
   readonly contexts: readonly [
@@ -94,6 +100,7 @@ const ENTRIES = Object.freeze(
     ))) as ArenaV2WeaponCollectionCombatGrammarVisualSourceEntryCandidateV1['contexts'];
     return Object.freeze({
       weaponDefinitionId: weapon.weaponDefinitionId,
+      catalogId: weapon.catalogId,
       collectionOrder: weapon.collectionOrder,
       coreVerb: weapon.coreVerb,
       contexts,
@@ -103,6 +110,8 @@ const ENTRIES = Object.freeze(
 
 if (ENTRIES.length !== 20
   || new Set(ENTRIES.map(({ weaponDefinitionId }) => weaponDefinitionId)).size !== 20
+  || new Set(ENTRIES.map(({ catalogId }) => catalogId)).size !== 20
+  || ENTRIES.some(({ catalogId }) => catalogId.length === 0)
   || new Set(ENTRIES.map(({ collectionOrder }) => collectionOrder)).size !== 20) {
   throw new RangeError('A5/A6武器战斗语法视觉来源必须精确闭合20把武器。');
 }

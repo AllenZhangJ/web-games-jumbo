@@ -79,7 +79,7 @@ A0.1通过后只允许将合同交给下一任务；A0.2与A0.3任一未通过�
 ### A1 ↔ P1：供给表现合同与代表样件
 
 - 当前小门：[A1.0供给表现预生产合同](arena-art-supply-presentation-contract-a1.0.md)已新增并冻结 A1.0-v2：绑定28个非自引用来源、PP0/PP1最终字节和25个固定fixture，主协调复跑正向检查与85/85隔离拒绝后以94/100签核为当前源码合同。机器 JSON 仍保持`joint-gate-candidate / coordinatorSignOff=false / hardGatePassed=false`，外部签核只记录在P1台账，避免修改其必绑ADR形成自引用；这不授权代表样件或设备通过。
-- 并行前置：[A1.1代表样件来源与测量就绪包](arena-art-supply-readiness-a1.1.md)绑定实际父节点`f80307b`，审计圆盾/诊断剪影/研究线框、临时VFX与音频来源候选，并固定桌面1440×900及390×844测量方案。schema v2只读生命周期合同的六个必需字段在当前源码仍可定位；但`node --import tsx scripts/art/check-arena-supply-preproduction-readiness.ts`于2026-08-02因`match-core.ts`、`bot-observation.ts`、`bot-controller.ts`的byteLength/hash漂移失败，故92/100只保留为历史候选，当前状态为`stale-upstream-evidence`。在最终源码身份冻结并重建artifact前，A1.1协调与来源/捕获硬门仍false，VFX无字节、供给专用图标缺失，Kenney OGG只允许未来离线语义试听候选。
+- 并行前置：[A1.1代表样件来源与测量就绪包](arena-art-supply-readiness-a1.1.md)绑定实际父节点`f80307b`，审计圆盾/诊断剪影/研究线框、临时VFX与音频来源候选，并固定桌面1440×900及390×844测量方案。schema v2只读生命周期合同的六个必需字段在当前源码仍可定位；但历史检查器已于2026-08-02因上游identity漂移失败，[`SF-A0R.1`只读预检](arena-v2-a0.3-a1.1-current-source-rebuild-preflight-sf-a0r.1.md)又确认`787ce27`下六项仅`arena-public-supply-projection.ts`仍与历史包一致，其余五项均已漂移。故92/100只保留为历史候选，当前状态为`stale-upstream-evidence`。在最终源码身份冻结并整包重建前，A1.1协调与来源/捕获硬门仍false，VFX无字节、供给专用图标缺失，Kenney OGG只允许未来离线语义试听候选。
 - 输入：P1.1冻结后的供给 Definition、稳定事件/字段、600 tick/同 tick顺序、Snapshot/ViewModel。
 - 输出：供给/替换/过期形色表、10秒显示样件、Cue候选、音效草样、低动效/静音/失败回退。
 - 依赖：开发先完成 P1.1；美术不定义事件、不运行墙钟删除。

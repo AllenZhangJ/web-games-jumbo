@@ -7,6 +7,7 @@
 - 评分：85/100；最低维度0%，未达到总分≥90且各维度≥80%的硬门
 - 前置：A0.2视觉方向总门已`ready`（96/100）
 - 2026-08-12静态一致性收口：门台账与生成源已把陈旧的“12m共48项离屏”修为现有事实“144/144在镜头内、离屏0、12m样本全部保留”；状态仅为`code-written-not-run / pending-regeneration`。本轮未运行生成器或检查器，未更新生成器SHA、产物hash、评分、真人计数或签核；当前source identity必须在后续获准重生成后重新绑定。
+- 2026-08-24 [`SF-A0R.1`静态预检](arena-v2-a0.3-a1.1-current-source-rebuild-preflight-sf-a0r.1.md)确认：render/blind/proxy历史输入仍逐字节一致，但gate生成器已漂移，且渲染manifest仍把历史V1 Presentation文件作为产品审计源；后续必须在主协调提供的最终clean source上重绑当前Arena V2正式Catalog并整链重生成。该预检不修改机器证据，评分仍85/100、真人仍0/10、Blockout仍禁止。
 
 本包只证明可重复工具、正式输入身份、匿名题包和失败关闭边界已建立。它不证明剪影可读性、真人盲测、设备、Blockout、LOD或Final通过。
 

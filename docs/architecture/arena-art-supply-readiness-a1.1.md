@@ -67,6 +67,15 @@
 `snapshotTick`、`snapshotEventSequence`、`remainingTicks`、`pendingExpiryEquipmentInstanceIds`、`resyncReadiness`和
 `pendingAuthorityTick`六个必需字段也仍可在当前源码定位。这只证明没有发现字段消失，不证明当前全调用链语义、同源或A1.1硬门通过。
 
+### 2026-08-24 `787ce27`当前源重建预检
+
+[`SF-A0R.1`静态预检](arena-v2-a0.3-a1.1-current-source-rebuild-preflight-sf-a0r.1.md)在开始时clean的
+`787ce27a4bc100a41e1b7330b327c8554bd03459`上重新计算六个artifact：只有
+`arena-public-supply-projection.ts`仍与历史机器包一致；`match-snapshot.ts`、
+`equipment-supply-timeline-system.ts`、`match-core.ts`、`bot-observation.ts`与`bot-controller.ts`五项均已漂移。
+六个必需字段仍可定位，但这不授权只替换size/hash。A1.1仍必须等待最终clean source后整包重建、正向与fail-closed
+矩阵复验和主协调签核；历史92/100、代表样件、捕获、浏览器、设备与真人证据均不得沿用为当前通过。
+
 最小返工固定为：等待开发最终source identity形成clean commit；由美术线程重新读取本流程规定的技能和参考，重新生成A1.1机器包，逐项复核六个artifact、
 调用链、来源、捕获、失败回退和下游false；运行正向检查与fail-closed探针；提交来源/竞态/兜底/边界/生命周期/主流程自检；最后由主协调独立复验。
 禁止在dirty工作区直接替换size/hash、沿用历史92分或把字段静态存在当成合同签核。

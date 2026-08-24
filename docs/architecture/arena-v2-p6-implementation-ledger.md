@@ -2,8 +2,9 @@
 
 ## 1. 当前状态
 
-- 日期：2026-08-16。
+- 日期：2026-08-24。
 - 当前状态：`P6.0-P6.552-source-candidates-code-written-not-run / P6.44-product-authority-registry-single-source-binding-code-written-not-run / P6.49-P6.55-settlement-intent-recovery-and-player-flow-code-written-not-run / P6.56-survival-time-cap-first-fall-replay-closure-code-written-not-run / P6.91-P6.101-next-match-continuation-code-written-not-run / P6.102-P6.108-retryable-cleanup-ownership-code-written-not-run / production-unreachable / hardGate=false`。P6各源码候选均已落盘；测试、类型检查、构建、压力、性能、设备与真人验证继续统一顺延。
+- 2026-08-24 证据状态校正：当前 clean 基线`feature/arena-v2-design-docs@787ce27`已有`typecheck:app`与52包workspace build通过记录，P2候选测试记录为`351/421`且P3边界门通过；这不代表P6的Profile/结算/CAS/恢复/留存候选、纵向容量、性能、设备或真人门通过，未取得独立运行记录的门继续为`not-run`。
 - 首页武器收藏旅程：`P6.552-home-next-goal-weapon-collection-journey-code-written-not-run`。首页原下一目标在收藏武器阶段同时显示下一主研究阶段、收藏状态或理论剩余距离，以及完整目录收藏N/总数；已收藏导入档案不显示虚假收藏距离。
 - 武器收藏结算剩余距离：`P6.551-result-weapon-collection-distance-receipt-code-written-not-run`。每次有效主研究都在原结果字段显示收藏N/总数；未收藏武器显示距收藏的理论最少有效局数，已收藏武器不显示虚假距离。
 - HUD反馈声音即时静音：`P6.550-feedback-owned-audio-immediate-mute-stop-code-written-not-run`。静音帧立即停止Consumer自己持有的命中反馈声；重新开音不补播旧事件，之后的新事件仍可正常播放并被生命周期清理。

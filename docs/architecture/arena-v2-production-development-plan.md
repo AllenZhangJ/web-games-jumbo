@@ -4,7 +4,8 @@
 
 - 状态：已接受的执行基线
 - 日期：2026-07-28
-- 当前修订：2026-08-15 按 [ADR-119](../decisions/119-arena-v2-continuous-development-with-deferred-gates.md)持续推进P2–P7与A2–A7生产不可达候选；验证统一顺延，默认生产入口、正式门状态、提交与发布仍由独立签核控制
+- 当前修订：2026-08-24 按 [ADR-119](../decisions/119-arena-v2-continuous-development-with-deferred-gates.md)持续推进P2–P7与A2–A7生产不可达候选；当前 clean 基线`feature/arena-v2-design-docs@787ce27`已记录`typecheck:app`与52包workspace build通过，P2候选测试记录为`351/421`且P3边界门通过。上述记录不替代任一阶段全量候选、严格性能、设备、真人、资产或发布门；默认生产入口、正式门状态、提交与发布仍由独立签核控制
+- 2026-08-24 P4.4cq/P5.3zqv修复记录：独立文档检查首次暴露二十武器VFX以正式Definition ID误连读取计划`catalogId`，导致`charge-shield/ground`在模块加载期失败。修复只补唯一语法源的显式目录身份并保持40项动作、483个Cue及五类纹理不变；两份直接规格、受影响包定向构建、复跑文档检查和应用类型检查已通过。该定向修复不等于阶段全量候选、资产、浏览器、设备、性能或真人门通过。
 - 目标：把 Arena V2 的研究结论按 `Rule → Core → Bot → Presentation → Platform` 迁入唯一生产游戏
 - 边界：本计划不把研究原型、自动化通过、浏览器通过、真机通过或真人通过互相替代
 - 当前源码大阶段审计：[P2–P7 / A0–A7 源码开发大阶段审计](arena-v2-source-development-big-stage-audit.md)；该审计只区分源码已实现、真实源码缺口和仅缺运行/批准证据，不改变任何阶段门状态

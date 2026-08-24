@@ -1,9 +1,10 @@
 # Arena V2 P2–P7 / A0–A7 源码开发大阶段审计
 
-> 日期：2026-08-15
+> 日期：2026-08-24
 > 状态：`source-audit-static-closed / conditionally-accepted / code-written-not-run / validation-deferred`
-> 适用边界：只判断源码、合同、候选资产和治理台账是否已经落盘；不把测试、类型检查、构建、压测、性能、浏览器、设备、真人或发布证据写成通过。
+> 适用边界：只判断源码、合同、候选资产和治理台账是否已经落盘；当前 clean 基线`feature/arena-v2-design-docs@787ce27`已有`typecheck:app`与52包workspace build通过记录，P2候选测试记录为`351/421`且P3边界门通过。它们不替代P2–P7全量候选、严格性能、浏览器、设备、真人、资产或发布证据，未取得独立运行记录的门不得写成通过。
 > 可达性：`production-unreachable / hardGate=false`；默认 Registry、默认生产 Composition、Web/微信/抖音正式入口继续关闭。
+> 2026-08-24 P4.4cq/P5.3zqv修复证据：独立文档检查首次在二十武器VFX解析模块加载期发现`weaponDefinitionId`与读取计划`catalogId`错接，首个`charge-shield/ground`Cue被错误判为缺语法。唯一只读语法源现同时闭合两种既有身份，VFX按目录ID查找并逐项保留正式动作Definition验证；直接20×2规格和Cue规格共8项、受影响包定向构建、复跑文档检查和应用类型检查均通过。未修改权威事件、只读快照语义、资产槽位或默认入口；该证据不覆盖全量阶段、正式资产、浏览器/设备、性能或真人门。
 
 ## 1. 审计目的
 

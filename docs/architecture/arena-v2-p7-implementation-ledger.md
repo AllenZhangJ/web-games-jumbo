@@ -2,13 +2,13 @@
 
 ## 1. 当前状态
 
-- 日期：2026-08-15
+- 日期：2026-08-24
 - implementation：`code-written-not-run`
 - gate：`incomplete`
 - `hardGate=false`
 - production reachability：`production-unreachable`
 - 默认 Release Bundle / Web / 微信 / 抖音入口：未接入
-- 自动化、构建、性能、设备、真人与发布动作：全部未运行
+- 2026-08-24 证据状态校正：当前 clean 基线`feature/arena-v2-design-docs@787ce27`已有`typecheck:app`与52包workspace build通过记录，P2候选测试记录为`351/421`且P3边界门通过；P7自动化/评价、严格性能、设备、真人、真实A7资产证据与发布动作仍全部`not-run`，上述通用构建记录不构成P7 gate或freeze资格。
 
 本台账只记录 P7 版本化候选代码和延后验证入口已经写入；不把纯夹具中的未来 `PASS`、`advance` 或 freeze manifest 解释为真实执行证据。
 
