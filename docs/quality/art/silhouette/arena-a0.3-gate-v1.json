@@ -2,29 +2,212 @@
   "schemaVersion": 1,
   "id": "arena.art.silhouette-gate.a0.3.v1",
   "status": "tooling-review-candidate-human-blocked",
-  "admissibilityStatus": "non-admissible-dirty-toolchain-source",
-  "generatedAt": "2026-08-24",
-  "baselineCommit": "de1ef89f36c2152c978c82f5976f04737e43cb4f",
+  "generatedAt": "2026-08-25T00:36:08+08:00",
+  "sourceCommit": "60fbc13430f8ba31eb58d8bef775c7a75b5abec7",
+  "sourceFreeze": {
+    "schemaVersion": 1,
+    "status": "clean-at-render-start",
+    "sourceCommit": "60fbc13430f8ba31eb58d8bef775c7a75b5abec7",
+    "sourceCommitDate": "2026-08-25T00:36:08+08:00",
+    "criticalArtifacts": [
+      {
+        "path": "docs/quality/art/reference-sources/project-character-renders/character-b01-rogue-front-side.png",
+        "byteLength": 116434,
+        "sha256": "ce21db1d2c098747d4760d32a46a4cab209ded203286bf769cb4fae6e3dd0739"
+      },
+      {
+        "path": "docs/quality/art/reference-sources/project-character-renders/character-b02-skeleton-front-three-quarter.png",
+        "byteLength": 132105,
+        "sha256": "3089d9fbd58642821a27b19226f7a0a918d80a861f670685b683de768aeb5e7a"
+      },
+      {
+        "path": "governance/formal-assets/arena-stage7-formal-assets-v1.json",
+        "byteLength": 6893,
+        "sha256": "68a79e95e8920e2b98df8bad3a4b44d22f3dc7f17b53acd5ed8398e426c5b0bf"
+      },
+      {
+        "path": "governance/third-party/proofs/kaykit-adventurers-source.txt",
+        "byteLength": 380,
+        "sha256": "0f60d3f9f0beab6e131bf7b1b118d8d1930dff05f9c1d31cc4141ff19dcb4923"
+      },
+      {
+        "path": "governance/third-party/proofs/kaykit-skeletons-source.txt",
+        "byteLength": 367,
+        "sha256": "cdf22c97e7e0856d1dc96109a9623cd791376a9e5b75eb99340a17a60b8c5484"
+      },
+      {
+        "path": "licenses/kaykit-adventurers-CC0-LICENSE.txt",
+        "byteLength": 891,
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629"
+      },
+      {
+        "path": "licenses/kaykit-skeletons-CC0-LICENSE.txt",
+        "byteLength": 914,
+        "sha256": "5d822abca4e08c5a91d329e5372b3dc605cba8d994f752cb0f7dfdb7a0a79954"
+      },
+      {
+        "path": "package-lock.json",
+        "byteLength": 220856,
+        "sha256": "0f25f599998cfd4792dc6a4517a22e3ba53c18ba9eb53ab0b58ced53a5399b78"
+      },
+      {
+        "path": "package.json",
+        "byteLength": 14059,
+        "sha256": "0d3670ed061aa4f3ed544d8663ee99e0f550e42128067155467d64f500d6bc07"
+      },
+      {
+        "path": "packages/arena-presentation-runtime/src/six-sector-direction-resolver.ts",
+        "byteLength": 6709,
+        "sha256": "06a1336db0b2e671e9eac1800d0e99eb641d040d4fb323d8e9c96954438df630"
+      },
+      {
+        "path": "packages/arena-presentation-three/src/arena-camera.ts",
+        "byteLength": 10423,
+        "sha256": "ce1e574f55731d9bbe669d5b6351c9fe6dc3399bfdb65b9fceb8b854954e7d91"
+      },
+      {
+        "path": "packages/arena-product-presentation/src/arena-v2-a3-a6-production-approval-evidence-ledger-candidate-v1.ts",
+        "byteLength": 23867,
+        "sha256": "8c741c69c28a2bc37ea04f72a43372c765e0d6a0fbd1516a1387be8b2f5e18d9"
+      },
+      {
+        "path": "packages/arena-product-presentation/src/arena-v2-formal-presentation-asset-catalog-candidate-v1.ts",
+        "byteLength": 69706,
+        "sha256": "b41dbedba5a3d1d95c94f967846a4d9a1d945bb56b8e13bb92bdd2c281da60ad"
+      },
+      {
+        "path": "public/assets/arena/characters/kaykit-adventurers/parkour-apprentice-rogue.glb",
+        "byteLength": 922332,
+        "sha256": "3ee71059eef32d9a6259c5cfd4121f31dffda0a9667509b5f24129fb2c7a1cab"
+      },
+      {
+        "path": "public/assets/arena/characters/kaykit-skeletons/clockwork-warrior.glb",
+        "byteLength": 974548,
+        "sha256": "1a424efda14e7875180989a66186fafcc94a12ac85ebdfdc7e3f998a00584e39"
+      },
+      {
+        "path": "public/assets/arena/equipment/kaykit-adventurers/shield-round.glb",
+        "byteLength": 13084,
+        "sha256": "a61bcd83ccac9bc8596bf09894867ca491487d7a4b0662bb64dca2d1b19e790d"
+      },
+      {
+        "path": "scripts/art/arena-silhouette-human-kit-validation.ts",
+        "byteLength": 13360,
+        "sha256": "acce01b0caa3907d06270575446895b20e5d253ee7dad0090d9087299a2105a0"
+      },
+      {
+        "path": "scripts/art/arena-silhouette-source-freeze.ts",
+        "byteLength": 11383,
+        "sha256": "7384e8caf0c3030f7882036420cf7b2fb18a0b02e2a1c57216ee140ae22b6a4c"
+      },
+      {
+        "path": "scripts/art/check-arena-silhouette-gate.ts",
+        "byteLength": 13773,
+        "sha256": "a6539ad5d6062757d9d1143218cc7679127d5fe112ab38af370dc8e04d731eb5"
+      },
+      {
+        "path": "scripts/art/check-arena-silhouette-human-test-kit.ts",
+        "byteLength": 3510,
+        "sha256": "3758e40191219d19b2b2341209a4e9ca9b5c6b36aece3714ee72c70820a29e15"
+      },
+      {
+        "path": "scripts/art/evaluate-arena-silhouette-human-responses.ts",
+        "byteLength": 11049,
+        "sha256": "4bd6ab094cd4c3265009d4e4cf4ed9650ebd590386b426deea39a7854488a155"
+      },
+      {
+        "path": "scripts/art/generate-arena-silhouette-blind-test.ts",
+        "byteLength": 15599,
+        "sha256": "ddb28bdbd7dc9e040dd1c3a6510dab440903973364b60ed922965199c0ecdb97"
+      },
+      {
+        "path": "scripts/art/generate-arena-silhouette-gate.ts",
+        "byteLength": 5592,
+        "sha256": "f0ac383890958e7836df9d1e9610c1acc16a13a7e310dfc595a3120648fe32c2"
+      },
+      {
+        "path": "scripts/art/generate-arena-silhouette-human-test-kit.ts",
+        "byteLength": 11984,
+        "sha256": "2fcf5d0d5af3200ccb2c9a676fcd071ca0db5525dcc1d2ea8fcf0aef360c5a6a"
+      },
+      {
+        "path": "scripts/art/intake-arena-silhouette-human-response.ts",
+        "byteLength": 6483,
+        "sha256": "aea85041ce34efc57a3b13fa680f82ccbe439cdc5064287efe2b16815c36cb36"
+      },
+      {
+        "path": "scripts/art/render-arena-silhouettes.ts",
+        "byteLength": 23641,
+        "sha256": "d1b9c4ad29132a8a89d5a03aeea45327468dd8387c2f00bba9306324ac598414"
+      },
+      {
+        "path": "scripts/art/test-arena-silhouette-gate-fail-closed.ts",
+        "byteLength": 6526,
+        "sha256": "fa370a45605aa0094d7cc71169a66e349d3e364d8067780d4477dae28d1162fc"
+      },
+      {
+        "path": "scripts/art/test-arena-silhouette-human-evaluator-fail-closed.ts",
+        "byteLength": 10627,
+        "sha256": "334876678aed06a9b34091cb6e0a39331be2f5e86c8cc0ff9ac64af41f200832"
+      },
+      {
+        "path": "scripts/art/test-arena-silhouette-human-response-intake-fail-closed.ts",
+        "byteLength": 7213,
+        "sha256": "d051769a2c3d8f84ad3caade0c7ace3de6a96b68dda78e3b7148ddfa72153c08"
+      },
+      {
+        "path": "scripts/art/test-arena-silhouette-human-test-kit-fail-closed.ts",
+        "byteLength": 3265,
+        "sha256": "18a59d8e46b1d6187829292be6236140d01ba9d40d87e99865779885203546cf"
+      }
+    ],
+    "toolchainPaths": [
+      "scripts/art/arena-silhouette-source-freeze.ts",
+      "scripts/art/arena-silhouette-human-kit-validation.ts",
+      "scripts/art/check-arena-silhouette-gate.ts",
+      "scripts/art/check-arena-silhouette-human-test-kit.ts",
+      "scripts/art/evaluate-arena-silhouette-human-responses.ts",
+      "scripts/art/generate-arena-silhouette-blind-test.ts",
+      "scripts/art/generate-arena-silhouette-gate.ts",
+      "scripts/art/generate-arena-silhouette-human-test-kit.ts",
+      "scripts/art/intake-arena-silhouette-human-response.ts",
+      "scripts/art/render-arena-silhouettes.ts",
+      "scripts/art/test-arena-silhouette-gate-fail-closed.ts",
+      "scripts/art/test-arena-silhouette-human-evaluator-fail-closed.ts",
+      "scripts/art/test-arena-silhouette-human-response-intake-fail-closed.ts",
+      "scripts/art/test-arena-silhouette-human-test-kit-fail-closed.ts"
+    ],
+    "runtimeToolchain": {
+      "nodeVersion": "v20.19.5",
+      "platform": "darwin",
+      "arch": "arm64",
+      "threeVersion": "0.185.1",
+      "sharpVersion": "0.35.3"
+    },
+    "expectedDirtyRoot": "docs/quality/art/silhouette/",
+    "cleanCheckFingerprint": "ce1781b4af35e0241958043e4c59d0973e9e4ce91a8d686c30e5165726ad2e41",
+    "lockProtocol": "git-dir-exclusive-lock+double-head-status+head-byte-compare-v1"
+  },
   "generator": {
     "path": "scripts/art/generate-arena-silhouette-gate.ts",
-    "sha256": "2b45c849c970e4ced452696e3d8d98a1b7327496e3e4b44868abd1cb973cb4b6",
-    "byteLength": 5146
+    "sha256": "f0ac383890958e7836df9d1e9610c1acc16a13a7e310dfc595a3120648fe32c2",
+    "byteLength": 5592
   },
   "inputs": {
     "render": {
       "path": "docs/quality/art/silhouette/arena-a0.3-silhouette-render-manifest-v1.json",
-      "sha256": "9bc9978df5a141fd742ae6a6ad007d069125feed2396e2b9c8a0fd9957d17b9c",
-      "byteLength": 264423
+      "sha256": "1c76aa9a0d7ed6258f1028e0f8e51e6b1a0422e2e759cfd9ddb0ba8c682eaa13",
+      "byteLength": 272294
     },
     "blindPackage": {
       "path": "docs/quality/art/silhouette/blind-test/arena-a0.3-blind-test-package-v1.json",
-      "sha256": "18e726f3fdfd4486fc8ed6fe0ddc80a07d016fa0232df8948eecb81a0f68de65",
-      "byteLength": 40821
+      "sha256": "ae61d82fd67ff0a22df1193092612dd9170cdddff03fba435e2bafa849cdf68e",
+      "byteLength": 48692
     },
     "proxyBaseline": {
       "path": "docs/quality/art/silhouette/blind-test/arena-a0.3-internal-proxy-baseline-v1.json",
-      "sha256": "ce69954036790bc584e65ff4b38c91cd518d58dc51e5330dfe41d9ffaad9cc82",
-      "byteLength": 21773
+      "sha256": "ce96d12d2a3b26f29a207c4b13d31414aa024629ff224d0c22cb831950931a56",
+      "byteLength": 21868
     }
   },
   "facts": {

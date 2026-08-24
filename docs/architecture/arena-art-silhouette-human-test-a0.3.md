@@ -2,13 +2,13 @@
 
 ## 状态与边界
 
-- 日期：2026-08-24（clean-source工具链准备）
-- source commit：待协调者提交`SF-A0R.2A`并提供新的clean commit
-- 测试包：当前字节保留，但为`non-admissible-dirty-toolchain-source / pending-clean-regeneration`
+- 日期：2026-08-25（`SF-A0R.2B` clean-source机器包）
+- source commit：`60fbc13430f8ba31eb58d8bef775c7a75b5abec7`
+- 测试包：`ready-for-external-human-input / machine-verified-human-empty`
 - 真人证据：0/10，`hardGatePassed=false`
 - A0.3：`incomplete`；Blockout与Final继续`forbidden`/fail closed
 
-当前human kit由被退回的dirty-toolchain生成，不得发给参与者或接收答卷。`SF-A0R.2A`只把动态sourceCommit、clean预检和继承协议准备为`code-written-not-run`；协调者提交A段并在新clean commit上完成B段重生成后，新的包才可进入`ready-for-external-human-input`。任何内部代理、制作人员自测或模拟答卷都不能替代真人。
+当前human kit由`60fbc13` clean source完整生成，绑定同一sourceFreeze、依赖锁及Node/Three/Sharp运行环境，且机器正向与失败关闭矩阵已通过，可以进入外部真人输入阶段。任何内部代理、制作人员自测或模拟答卷都不能替代真人；0/10期间A0.3、Blockout与Final继续关闭。
 
 ## 最小测试包
 
@@ -59,7 +59,16 @@ node --import tsx scripts/art/test-arena-silhouette-human-response-intake-fail-c
 node --import tsx scripts/art/test-arena-silhouette-human-evaluator-fail-closed.ts
 ```
 
-SF-A0R.2A延期检查器将证明10表单×24题、144题全覆盖、1–2次出现、72细分层各2–4题、严格144 tuple笛卡尔积、双视口与sourceOutputId身份、restricted evaluator三项固定输入、答案键/题目/assignment/图像双向集合一致、校准来源、runner内嵌assignment hash、无答案/资产名泄露、零个人信息要求、raw JSON不被Git跟踪、原始答卷数与intake台账一致、A0.3/Blockout/Final关闭。sourceCommit/sourceFreeze、实际runtimeToolchain和human generator identity反证已写但本A段未运行，human kit延期计数为18项。当前16项包级、12项intake、15项evaluator及工具候选运行结果均属于被退回的dirty-toolchain失败轮，不得沿用；B段必须从新clean commit与同一记录运行环境整链复验。
+SF-A0R.2B检查器已证明10表单×24题、144题全覆盖、1–2次出现、72细分层各2–4题、严格144 tuple笛卡尔积、双视口与sourceOutputId身份、restricted evaluator三项固定输入、答案键/题目/assignment/图像双向集合一致、校准来源、runner内嵌assignment hash、无答案/资产名泄露、零个人信息要求、raw JSON不被Git跟踪、原始答卷数与intake台账一致、A0.3/Blockout/Final关闭。当前结果为human kit `18/18`、intake `12/12`恶意输入及原子写/提交后耐久、evaluator `15/15`并证明完美10人工具候选仍不自动开门；旧dirty-toolchain结果不得沿用。
+
+### 2026-08-25 主协调 clean-source复验
+
+- 机器包绑定`60fbc13430f8ba31eb58d8bef775c7a75b5abec7`、Node `v20.19.5`、darwin/arm64、Three `0.185.1`、Sharp `0.35.3`。
+- 两次完整生成树聚合SHA均为`f2ecd9ff7f21fc07742b75d12207f104c93cd8f5854e69055392496b2d3cffa4`。
+- 包检查为10份表单×24题、144个唯一tuple、72细分层、真人`0/10`，`hardGatePassed=false`。
+- Gate `25/25+2`、human kit `18/18`、intake `12/12+2`、evaluator `15/15+1`均通过。
+
+该复验只批准包进入真实外部参与者收集，不签认任何真人结果。
 
 ### 2026-08-02 主协调独立复验
 

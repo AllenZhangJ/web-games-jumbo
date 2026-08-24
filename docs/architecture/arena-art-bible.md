@@ -2,7 +2,7 @@
 
 ## 文档状态
 
-- 状态：A0.1为`contract-ready`；A0.2独立聚合总门与Reference Board视觉方向为`ready`（96/100）；A0.3的dirty-toolchain生成结果已退回，现为`toolchain-preparation / current-output-non-admissible / pending-clean-regeneration / incomplete`，历史技术/代理候选仍85/100且真人0/10；A1.1仍需按最终clean source重建。P2.5e复合checkpoint与三模式恢复、P2.6 continuous/restored双链，以及P5本地consumer-epoch、效果清理与正式候选原子宿主源码均已落盘；默认Registry/Composition/入口仍未接，所有运行验证仍按ADR-118顺延。A2.0继续为`preproduction-contract-candidate / static-bound-to-mode-match-runtime-v6 / verification-deferred-by-ADR-118 / hardGate=false`
+- 状态：A0.1为`contract-ready`；A0.2独立聚合总门与Reference Board视觉方向为`ready`（96/100）；A0.3已在`60fbc13` clean source完成两次确定性机器重生成，现为`current-source-machine-regenerated / tooling-review-candidate-human-blocked / incomplete`，机器候选85/100且真人0/10；A1.1仍需按最终clean source重建。默认Registry/Composition/入口仍未接，A2.0继续为`preproduction-contract-candidate / hardGate=false`
 - 日期：2026-08-11
 - 审计基线：正式资产与视觉事实继续沿用`d6f906008d0af1ed0133a199a8dc9e15cb1d23d0`及其后已登记证据；A2.0绑定当前共享工作树中的P2.0–P2.5版本化候选字节，不登记未经主协调冻结的commit/hash
 - 上游真值：[V2 产品总纲](../product/arena-v2-product-brief.md)、[V2 玩法框架](../gameplay/arena-v2-gameplay-framework.md)、[V2 生产计划](arena-v2-production-development-plan.md)、[ADR-108](../decisions/108-arena-v2-survival-auto-replace-and-expiry.md)、[ADR-112](../decisions/112-arena-v2-formal-mode-definition-and-policy-boundary.md)与[ADR-118](../decisions/118-arena-v2-development-first-deferred-validation-window.md)；候选实现不等于生产冻结或运行通过
@@ -164,7 +164,7 @@
 7. 盲测至少10名未参与制作的受试者；随机顺序回答“哪个角色槽位？”“赤手/锤/链/盾？”“朝向六选一？”。角色、武器、方向三个指标分别≥90%，且任一角色×武器组合不得低于80%。
 8. 失败时退回Blockout：优先改体块、重心、头肩、背部识别点、武器端点或负空间；禁止先加颜色、文字、发光或扩大权威hitbox。改后重跑全部受影响方向/距离，不能只补失败截图。
 
-当前状态：`incomplete / toolchain-preparation / current-output-non-admissible / pending-clean-regeneration`。仓库保留的144/144、代理分层和85/100结果来自被退回的dirty-toolchain生成，只可作失败轮审计，不能证明当前source闭合。[`SF-A0R.2A`](arena-v2-a0.3-clean-source-toolchain-preparation-sf-a0r.2a.md)已写动态Git sourceCommit、首输出前clean预检和下游继承候选，但尚未由协调者提交或运行；真人仍为0/10，因此不计真人可读性通过分，也不授权Blockout。
+当前状态：`incomplete / current-source-machine-regenerated / human-blocked`。仓库当前144/144、匿名题包和85/100结果来自`60fbc13` clean source，两次完整生成聚合SHA一致，正向与失败关闭矩阵通过；旧dirty-toolchain包只作历史审计。真人仍为0/10，因此不计真人可读性通过分，也不授权Blockout。
 
 ## 6. 武器视觉与声音语言
 
@@ -592,7 +592,7 @@ A0.1 当前没有缺失的必需输入。实际图片板是A0.2输出，剪影�
 
 - 当前Arena开发链已形成生产不可达的P2.5e复合checkpoint、三模式恢复、P2.6 continuous/restored逐字段对照，以及P5.3a本地consumer-epoch/效果清理与正式候选原子宿主源码；HUD ViewModel顶层exact-key和完整V6事件批次连续性也已静态闭合。上述源码均未运行，P2.5e未获签核，生产默认Registry/Composition/入口仍不可达且验证按ADR-118顺延。美术不得创建第二套事件词表，也不得因候选代码存在就声称生产冻结。
 - A2.0仅升级为`preproduction-contract-candidate / static-bound-to-mode-match-runtime-v6 / verification-deferred-by-ADR-118 / hardGate=false`。未来live表现只消费step exact-key `events / readFrame / readFrameAudit`；终点、fall、排名、重生、供给、淘汰和结算只读其中事件、projection与ModeResult，不读取内部hash/command/checkpoint，也不从坐标、动画或音频反推规则。
-- 美术首要硬缺口是A0.3在A段clean工具提交后仍须从新commit整链重生成，随后才可招募真人；真人当前`0/10`。A1.1的92/100只保留为绑定`f80307b`的历史候选，必须按最终clean source重建。正式批准、截图、代表样件、Blockout、集成、设备、真人和Final门均为false，不制作或接入角色、武器、地图、VFX、HUD或音频资产。
+- 美术首要硬缺口是A0.3至少10名真实独立参与者与协调签核，当前`0/10`；clean-source机器包已就绪。A1.1的92/100只保留为绑定`f80307b`的历史候选，必须按最终clean source重建。正式批准、截图、代表样件、Blockout、集成、设备、真人和Final门均为false，不制作或接入角色、武器、地图、VFX、HUD或音频资产。
 - 本轮只修改A2.0合同、Art Bible与[A0–A7 对齐矩阵](arena-art-development-alignment-matrix.md)，不修改ADR、台账、索引、流程、脚本、源码或资产，也不运行验证。若runtime候选撤回、step三键或source identity漂移，段落回滚本文件8.1、8.2、状态区与本节；整文件回滚点为本轮开始前版本，不得用`reset`/`checkout`覆盖共享开发工作树。
 - P3 Map、P4 武器、P5 ViewModel、P6 Profile仍分别受自己的冻结、来源、预算、设备和真人门约束；A2静态绑定不会连带开放任何后续生产阶段。
 - P5.3zzzwe/P6.408只修复20武器专属Validated Host对既有权威方向事实的最后一跳转发；方向仍来自V2 Authority Fact，VFX、音频和HUD不得从Three坐标、镜头、文案或当前装备重新推断。该修复不批准或新增任何美术/音频资产，运行、设备、真人与Final门继续为false。

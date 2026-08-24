@@ -2,7 +2,7 @@
 
 ## 文档状态
 
-- 状态：A0.1为`contract-ready`；A0.2三个子门已签核且独立聚合总门为`ready`（96/100），Reference Board视觉方向总门`ready`；A0.3的dirty-toolchain机器结果已退回，当前为`toolchain-preparation / current-output-non-admissible / pending-clean-regeneration / incomplete`，历史技术/代理候选仍85/100且真人0/10。A1.0-v2保持主协调94/100签核事实；A1.1的92/100仍只是绑定`f80307b`的历史候选，必须按最终clean source重建。P2.5e复合checkpoint与三模式恢复、P2.6 continuous/restored双链，以及P5本地consumer-epoch、效果清理与正式候选原子宿主源码均已落盘；默认Registry/Composition/入口仍未接，运行验证按ADR-118顺延。A2.0继续为`preproduction-contract-candidate / static-bound-to-mode-match-runtime-v6 / verification-deferred-by-ADR-118 / hardGate=false`，正式资产、Blockout、截图、集成、设备与真人门均未开放
+- 状态：A0.1为`contract-ready`；A0.2三个子门已签核且独立聚合总门为`ready`（96/100），Reference Board视觉方向总门`ready`；A0.3已在`60fbc13` clean source完成两次确定性机器重生成与失败关闭复验，当前为`current-source-machine-regenerated / tooling-review-candidate-human-blocked / incomplete`，机器候选85/100且真人0/10。A1.0-v2保持主协调94/100签核事实；A1.1的92/100仍只是绑定`f80307b`的历史候选，必须按最终clean source重建。默认Registry/Composition/入口仍未接，正式资产、Blockout、截图、集成、设备与真人门均未开放
 - 日期：2026-08-11
 - 审计基线：当前共享工作树中的P2.0–P2.5版本化候选字节；未运行P2.6或任何美术验证，不登记未经主协调冻结的commit/hash
 - 关联：[Art Bible](arena-art-bible.md)、[美术与音频流程](arena-art-and-audio-development-flow.md)、[V2 生产计划](arena-v2-production-development-plan.md)、[P2实施台账](arena-v2-p2-implementation-ledger.md)、[ADR-112](../decisions/112-arena-v2-formal-mode-definition-and-policy-boundary.md)、[ADR-114](../decisions/114-arena-v2-art-evidence-versioning-and-joint-gate.md)
@@ -71,7 +71,7 @@
 - 输出：`scripts/art/render-arena-silhouettes.ts`、两角色×赤手/圆盾×六方向×0/5/12距离×两视口输出、每批manifest、随机盲测题单、≥10人原始答案与汇总报告。
 - 依赖：A0.1和A0.2均通过；程序化角色/锤/链不得代替正式资产。尚不存在的重锤/锁链不阻断A0.3工具基线，而是在对应A4 Blockout独立复用本门。
 - 评分：工具可重复20、六方向/距离/武器覆盖20、渲染完整15、盲测与统计20、manifest/hash10、生命周期/回归10、状态诚实5。
-- 硬门：总分≥90且每维度≥80%；当前两角色的角色/武器态/方向分别≥90%，任一角色×赤手或圆盾组合≥80%。[`SF-A0R.2`](arena-v2-a0.3-current-source-machine-regeneration-sf-a0r.2.md)因生成器字节不属于所声明commit而退回，其85/100、144/144与代理分层只保留为不可采信失败轮。[`SF-A0R.2A`](arena-v2-a0.3-clean-source-toolchain-preparation-sf-a0r.2a.md)尚待协调者提交并从新clean commit运行B段；真人仍0/10，因此`hardGatePassed=false`、A0.3仍`incomplete / source-and-human-blocked`。
+- 硬门：总分≥90且每维度≥80%；当前两角色的角色/装备态/方向机器代理均≥90%。旧[`SF-A0R.2`](arena-v2-a0.3-current-source-machine-regeneration-sf-a0r.2.md)仍为不可采信失败轮；新[`SF-A0R.2B`](arena-v2-a0.3-current-source-machine-regeneration-sf-a0r.2b.md)已在`60fbc13`完成两次同SHA生成、正向与隔离门。真人仍0/10，因此`hardGatePassed=false`、A0.3仍`incomplete / human-blocked`。
 - 返工：相机、方向resolver、角色/武器字节、持握点、缩略规则、盲测题目或样本资格改变。
 
 A0.1通过后只允许将合同交给下一任务；A0.2与A0.3任一未通过时，A1/A3/A4可以准备事件映射或资产清单，但不能开始生产Blockout、标记`concept-approved`或宣称Reference Board/剪影已通过。
@@ -406,5 +406,5 @@ Cue消费identity固定为`event.id`去重、`event.sequence`稳定仲裁、`eve
 
 - 主开发任务`019fa7c7-d26e-7111-9054-782634e5c54c`已形成生产不可达的P2.5e复合checkpoint/三模式恢复、P2.6 continuous/restored双链与P5本地consumer-epoch/效果清理/正式候选原子宿主；默认入口和全部运行反证仍顺延。美术不修改其代码写域，也不把候选描述为默认生产路径。
 - `ModeMatchRuntimeV6.step()`继续只提供`events / readFrame / readFrameAudit`静态消费面；checkpoint/历史前缀不属于Presentation。P5正式候选原子宿主已落盘但默认Registry/Composition/入口仍不可达，P2.5e/P2.6与宿主运行验证按[ADR-118](../decisions/118-arena-v2-development-first-deferred-validation-window.md)顺延。A2.0因此仍是`preproduction-contract-candidate / static-bound-to-mode-match-runtime-v6 / verification-deferred-by-ADR-118 / hardGate=false`。
-- A0.3当前同时受clean-source B段未执行与真人`0/10`阻断，A1.1必须按最终clean source重建；正式角色、武器、地图、VFX、HUD、音频、Blockout、截图、集成、设备、真人与Final全部关闭。现有A0.3诊断PNG、匿名题包和机器账本保留为`non-admissible-dirty-toolchain-source`，不得开放任何默认消费。
+- A0.3当前机器链已闭合，但仍受真人`0/10`与协调签核缺失阻断；A1.1必须按最终clean source重建。正式角色、武器、地图、VFX、HUD、音频、Blockout、截图、集成、设备、真人与Final全部关闭。当前A0.3诊断PNG、匿名题包和机器账本只可用于外部真人盲测，不得进入默认产品消费。
 - 本轮写域仅为A2.0合同、本矩阵与Art Bible。若runtime候选被撤回、step三键/路径/exact-key改变，按段落回滚“状态＋runtime绑定表＋Cue/失败策略＋静态自检＋协作边界”；整文件回滚点是本轮开始前版本。禁止用`reset`/`checkout`覆盖开发工作树，且不改ADR、台账、索引、流程、脚本、源码或资产。
