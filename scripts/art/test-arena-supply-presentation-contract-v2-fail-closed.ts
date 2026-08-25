@@ -110,7 +110,8 @@ if (positive.status !== 0) {
   );
 }
 const positiveResult = JSON.parse(positive.stdout) as JsonRecord;
-if (positiveResult.status !== 'joint-gate-candidate'
+if (positiveResult.status !== 'final-source-joint-gate-candidate'
+  || positiveResult.sourceCommit !== '5e84714015422378d1dadbcdd8785797fa14a7c7'
   || positiveResult.score !== 94
   || positiveResult.sources !== 28
   || positiveResult.fixtureMappings !== 25
@@ -125,8 +126,10 @@ if (positiveResult.status !== 'joint-gate-candidate'
   throw new Error('A1.0-v2 isolated positive output drift');
 }
 
-mustFail('future schema', (candidate) => { candidate.schemaVersion = 3; });
+mustFail('future schema', (candidate) => { candidate.schemaVersion = 4; });
 mustFail('missing identity field', (candidate) => { delete candidate.scope; });
+mustFail('final source commit drift', (candidate) => { candidate.sourceCommit = '0'.repeat(40); });
+mustFail('final source commit removed', (candidate) => { delete candidate.sourceCommit; });
 mustFail('extra top-level field', (candidate) => { candidate.future = true; });
 mustFail('candidate status inflated', (candidate) => { candidate.status = 'contract-ready'; });
 mustFail('candidate status regressed', (candidate) => { candidate.status = 'draft'; });
@@ -365,6 +368,11 @@ mustFail('source bytes drift under unchanged ledger', () => {}, (tempRoot) => {
   const path = resolve(tempRoot, 'packages/arena-contracts/src/match-event-types.ts');
   const bytes = readFileSync(path);
   writeFileSync(path, Buffer.concat([bytes, Buffer.from('\n') ]));
+});
+mustFail('bot source bytes drift under unchanged ledger', () => {}, (tempRoot) => {
+  const path = resolve(tempRoot, 'packages/arena-bot/src/bot-observation.ts');
+  const bytes = readFileSync(path);
+  writeFileSync(path, Buffer.concat([bytes, Buffer.from('\n')]));
 });
 mustFail('ADR-113 bytes drift under unchanged ledger', () => {}, (tempRoot) => {
   const path = resolve(

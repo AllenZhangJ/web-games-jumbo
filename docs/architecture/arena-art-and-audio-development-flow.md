@@ -11,7 +11,7 @@
 - 视觉生产基线：[Arena Art Bible](arena-art-bible.md)
 - 注释参考登记：[六类70/20/10登记](arena-art-reference-register.md)；A0.2三个子门已签核，[独立视觉方向总门](arena-art-reference-total-gate-a0.2.md)以96/100通过，A0.2与Reference Board视觉方向为`ready`；[A0.3技术/代理候选](arena-art-silhouette-a0.3.md)已在`60fbc13`完成clean-source机器重生成，仍为85/100、真人0/10和`incomplete`，正式模型/VFX样件、Blockout及后续成熟度继续fail closed
 - 阶段协作基线：[美术 A0–A7 与开发 P0–P7 对齐矩阵](arena-art-development-alignment-matrix.md)
-- 当前供给表现合同：[A1.0供给表现预生产合同](arena-art-supply-presentation-contract-a1.0.md)保留2026-07-28的v1不可变语义身份；A1.0-v2的历史外部联合签核不冒充最终source机器证据。[A1.1来源与测量就绪包](arena-art-supply-readiness-a1.1.md)已在最终clean source `16861edc`重算六artifact与调用链，正向检查及93/93隔离拒绝通过，只关闭当前source绑定和测量方案机器就绪。A0.3真人、A1.1协调/来源批准/捕获批准、代表样件、Blockout、正式VFX/音频、浏览器/设备/真人与Final仍关闭
+- 当前供给表现合同：[A1.0供给表现预生产合同](arena-art-supply-presentation-contract-a1.0.md)保留v1不可变语义身份；A1.0-v2已在最终clean source `5e84714`完整重建28源、25映射与51项规格，正向和90/90隔离矩阵通过，并由主协调以94/100完成最终source外部签核，机器包自身继续`hardGate=false`。[A1.1来源与测量就绪包](arena-art-supply-readiness-a1.1.md)已在`16861edc`重算六artifact与调用链，正向及93/93隔离拒绝通过，只关闭当前source绑定和测量方案机器就绪。A0.3真人、A1.1协调/来源批准/捕获批准、代表样件、Blockout、正式VFX/音频、浏览器/设备/真人与Final仍关闭
 
 ## 1. 目的与项目特化边界
 

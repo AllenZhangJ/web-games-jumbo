@@ -78,14 +78,14 @@ A0.1通过后只允许将合同交给下一任务；A0.2与A0.3任一未通过�
 
 ### A1 ↔ P1：供给表现合同与代表样件
 
-- 当前小门：[A1.0供给表现预生产合同](arena-art-supply-presentation-contract-a1.0.md)已冻结A1.0-v1不可变语义合同；A1.0-v2曾绑定28个非自引用来源、PP0/PP1字节和25个固定fixture并取得主协调外部94/100签核，但其完整source checker相对最终`16861edc`已发生身份漂移，不能冒充最终source机器证据。机器JSON继续保持`joint-gate-candidate / coordinatorSignOff=false / hardGatePassed=false`；A1.1只独立重验自身六artifact范围，这不授权代表样件或设备通过。
+- 当前小门：[A1.0供给表现预生产合同](arena-art-supply-presentation-contract-a1.0.md)已冻结A1.0-v1不可变语义合同；A1.0-v2现于最终clean source `5e84714`重建28个非自引用来源、PP0/PP1字节、25个固定fixture和51项联合规格，正向及90/90隔离矩阵通过，并由主协调重新签核为94/100。机器JSON保持不能自签的`final-source-joint-gate-candidate / coordinatorSignOff=false / hardGatePassed=false`；这不授权代表样件或设备通过。
 - 并行前置：[A1.1代表样件来源与测量就绪包](arena-art-supply-readiness-a1.1.md)现绑定最终clean source `16861edc`，审计圆盾/诊断剪影/研究线框、临时VFX与音频来源候选，并固定桌面1440×900及390×844测量方案。schema v3机器账本逐项固定六个生命周期artifact的path/size/hash与调用链；正向和93/93隔离矩阵通过，当前为`source-and-measurement-readiness-machine-closed / hardGatePassed=false`。A1.1协调与装备/VFX/音频来源批准、捕获批准仍false，VFX无字节、供给专用图标缺失，Kenney OGG只允许未来离线语义试听候选。
 - 输入：P1.1冻结后的供给 Definition、稳定事件/字段、600 tick/同 tick顺序、Snapshot/ViewModel。
 - 输出：供给/替换/过期形色表、10秒显示样件、Cue候选、音效草样、低动效/静音/失败回退。
 - 依赖：开发先完成 P1.1；美术不定义事件、不运行墙钟删除。
 - 开发侧必须按[ADR-113](../decisions/113-arena-v2-supply-presentation-adapter-boundary.md)完成P1供给Presentation adapter：只读消费冻结projection/event并通过A1.0的25项机器矩阵；P2正式生存尚未开放时，只能由与默认Product和发布产物隔离的acceptance harness驱动。adapter不持有Mesh/Audio/VFX/DOM资源，美术只消费其深冻结Marker/Cue/View，不直接读取MatchCore、Resolver或Session authority。
 - 评分：事件映射25、替换/过期区分20、镜头/HUD20、预算/生命周期15、无障碍10、来源10。
-- 硬门：599/600/601及同 tick拾取只投影权威结果；没有三选一弹窗；只读生命周期合同与A1.1最终source/测量方案机器前置已具备，但A1.0-v2完整source机器包、A0.3真人门、A1.1协调签核、主协调批准的代表装备/临时来源/捕获方案与实际测量夹具仍未闭合，故不得启动代表样件。P1 advance前还须取得同一clean source/content身份下的Web `390×844`与`1440×900`、微信/抖音开发者工具及iOS/Android六目标供给专属记录；通用Stage 8记录不能替代。历史候选文档、上游代码签核与预算不能替代当前批准、夹具或实测。
+- 硬门：599/600/601及同 tick拾取只投影权威结果；没有三选一弹窗；A1.0-v2最终source合同已签核、A1.1最终source机器候选已具备，但A0.3真人门、A1.1协调签核、主协调批准的代表装备/临时来源/捕获方案与实际测量夹具仍未闭合，故不得启动代表样件。P1 advance前还须取得同一clean source/content身份下的Web `390×844`与`1440×900`、微信/抖音开发者工具及iOS/Android六目标供给专属记录；通用Stage 8记录不能替代。历史候选文档、上游代码签核与预算不能替代当前批准、夹具或实测。
 - 返工：事件名/字段、权威顺序、生命周期、拾取半径/替换策略或暂停恢复投影改变。
 
 ### A2 ↔ P2：模式与参与者视觉合同

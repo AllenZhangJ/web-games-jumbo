@@ -2,7 +2,7 @@
 
 ## 状态
 
-已接受：`PP0-PP1 source-frozen / PP1 completed-coordinator-approved-96 / A1.0-v2 current-source-contract-coordinator-approved-94 / hardGate=false`。开发、美术和主协调已按零重叠写域完成 PP0/PP1、25 项 fixture、A1.0-v2 真实 sourceAudit、正向 checker 与隔离 fail-closed 联合签核；随后 PP2、PP3a、PP3b 非性能实现也已分别签核。本 ADR 只接受版本化证据与联合签核机制，不代表 A0.3、A1.1、代表样件、正式资产、设备或 PA6/PA7 通过。[ADR-115](115-arena-v2-deferred-joint-performance-gate.md)仍要求 clean source 后再执行联合性能门。本文中“只授权三个 v2 文件”或“PP2/PP3 未开放”的表述是 2026-08-02 至 2026-08-03 的签核前历史快照，当前进度以 [P1 实施台账](../architecture/arena-v2-p1-implementation-ledger.md)顶部状态和[生产计划](../architecture/arena-v2-production-development-plan.md)为准。
+已接受版本化与联合签核机制。PP0/PP1及后续非性能候选保持既有签核；2026-08-03的A1.0-v2外部94分只属于当时source。SF-A1.0V2R已在最终clean source `5e84714`重建28源、25 fixture、51项联合规格与90/90隔离矩阵，并于2026-08-25由主协调独立复验后以`current-final-source-contract / coordinator-approved / 94/100 / hardGate=false`重新签核。机器包继续保持`coordinatorSignOff=false / hardGatePassed=false`，因为机器证据不能自签外部裁决。本 ADR 不代表 A0.3、A1.1批准、代表样件、正式资产、浏览器/GPU、设备、性能或 PA6/PA7 通过。[ADR-115](115-arena-v2-deferred-joint-performance-gate.md)仍要求独立运行证据。本文中“只授权三个 v2 文件”或“PP2/PP3 未开放”的表述是历史快照，当前进度以 [P1 实施台账](../architecture/arena-v2-p1-implementation-ledger.md)顶部状态和[生产计划](../architecture/arena-v2-production-development-plan.md)为准。
 
 ## 日期
 
@@ -116,7 +116,7 @@ v2 又要求绑定 adapter 与测试，形成不可执行循环；改用候选�
 
 - 增加一个版本化机器包和两份检查脚本，但保留历史可追溯性并消除循环门。
 - PP1 需要开发、美术、主协调三方联合门，不能只凭 Node 绿或美术合同分数完成。
-- 历史 v1/A1.1 继续可作为设计与来源研究输入，但当前状态保持 stale，不能开放代表样件。
+- 历史 v1继续作为不可变设计输入；A1.0-v2最终source合同已取得外部协调签核，A1.1拥有最终source机器候选，但A0.3真人、A1.1协调/逐项批准、样件与运行门仍关闭，不能开放代表样件。
 - 每次 audited source 改变都可能要求重建 v2；这是严格 source identity 的预期成本，不得通过放宽 hash 规避。
 
 ## 验收条件

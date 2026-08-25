@@ -3,14 +3,31 @@
 ## 状态与边界
 
 - 历史状态：`contract-ready-at-dd786a9`；主协调于2026-07-28以`94/100`签核当时的A1.0合同
-- 当前源码适用状态：A1.0-v2 已于2026-08-03以`current-source-contract coordinator-approved / 94/100 / hardGatePassed=false`完成开发—美术联合签核；它开放PP2/PP3a非性能实现，但不开放代表样件、Blockout或任何正式资产/设备/真人门
+- 当前源码适用状态：SF-A1.0V2R已在最终clean source `5e84714015422378d1dadbcdd8785797fa14a7c7`完整重建A1.0-v2，并于2026-08-25通过主协调独立验收，外部状态为`current-final-source-contract / coordinator-approved / 94/100 / hardGate=false`。本轮评分不是沿用2026-08-03历史签核；机器包继续保持不能自签的`coordinatorSignOff=false / hardGatePassed=false`
 - 权威审计基线：`dd786a922625472643b2f6c96f80c7049a57d3e2`（2026-07-28）
 - 机器台账：[arena-a1.0-supply-presentation-contract-v1.json](../quality/art/supply/arena-a1.0-supply-presentation-contract-v1.json)
-- 当前机器候选：[arena-a1.0-supply-presentation-contract-v2.json](../quality/art/supply/arena-a1.0-supply-presentation-contract-v2.json)；28源、25 fixture，正向通过且85/85隔离拒绝，机器包保持候选/外部门false，由本文件与P1台账记录主协调外部签核
-- 交付范围：事件→只读表现合同、预算上限、生命周期与失败关闭测试夹具计划；没有生产资产、Blockout、运行时接入、正式VFX或正式音频。
-- 上游边界：本次签核只关闭A1.0合同小门，不开放代表样件。A0.3真人仍为`0/10`、`incomplete`，`a1RepresentativeSpecimenStarted=false`、`a1Passed=false`、`Blockout forbidden`，所有生产、设备、真人与Final门继续关闭。
+- 当前机器候选：[arena-a1.0-supply-presentation-contract-v2.json](../quality/art/supply/arena-a1.0-supply-presentation-contract-v2.json)；28源、25 fixture，PP0/PP1联合测试51/51，正向检查与90/90隔离拒绝通过。机器包继续保持协调签核、joint gate及全部外部门false
+- 交付范围：事件→只读表现合同、PP0/PP1有界adapter身份、预算上限、生命周期与失败关闭机器证据；没有生产资产、Blockout、默认产品接线、正式VFX或正式音频。
+- 上游边界：本轮只形成待独立验收的最终source候选，不开放代表样件。A0.3真人仍为`0/10`、`incomplete`，`a1RepresentativeSpecimenStarted=false`、`a1Passed=false`、`Blockout forbidden`，所有生产、浏览器/GPU、设备、真人、性能与Final门继续关闭。
 
-## 当前源码复验覆盖（2026-08-02）
+## SF-A1.0V2R最终clean source重建（2026-08-25）
+
+重建保持28项有界sourceAudit，但按当前依赖重排：移除已被`MatchReadFrameV2`覆盖的旧
+`match-read-frame.ts`和PA4a历史规格，加入`bot-observation.ts`与`bot-controller.ts`，形成
+`Definition → Timeline/Equipment → Match/Snapshot/Replay/Session → Bot → PP0/PP1`闭环。28项均重新计算
+byteLength/SHA-256，并由检查器逐role验证语义marker；replacement在`EquipmentSystem`内继续严格
+`EquipmentRecycled → EquipmentReplaced`，同tick expiry/pickup顺序、599/600/601、projection resync、Bot强制
+非空与PP0/PP1只读边界均保持。
+
+25个fixture ID和testName未改名、未合并、未删减；联合规格当前51/51。正向输出绑定上述40位commit、28源、
+25映射与`hardGatePassed=false`；隔离矩阵90/90覆盖schema/sourceCommit/supersedes、路径逃逸/symlink、
+同字节替换、source role/order/hash/size、25项缺失/重复/改名、事件shape、sequence/resync、fallback、
+reduced-motion、静音、分数、治理、回滚和任一下游门误开。
+
+本轮按原六维重新评估为94/100；相同数值不代表历史签核自动延续。机器字段仍为
+`a1_0V2CoordinatorSignOff=false / a1_0V2JointGatePassed=false / coordinatorReviewPending=true`。
+
+## 当前源码复验覆盖（2026-08-02，历史）
 
 在当前共享源码上运行`node --import tsx scripts/art/check-arena-supply-presentation-contract.ts`失败，首个错误为
 `source identity drift: packages/arena-contracts/src/equipment-supply-event-payload.ts`；失败关闭脚本因正向基线预检先红而提前停止，不能记作负向矩阵通过。
@@ -67,10 +84,10 @@ sourceAudit除当前权威/Replay/Session来源外，还必须绑定ADR-113、PP
 6. `599/600/601`已有真实测试：`+599`仍有3实体，`+600`先过期且同tick不能抢救拾取，`+601`不重复过期，见`tests/arena/equipment-supply-timeline.test.ts:112-130`。生产MatchCore、Replay、checkpoint续跑证据绑定在机器台账的测试文件hash。
 7. 公共快照有当前tick、eventSequence、参与者与装备列表，但不公开完整active供给生命周期的`equipmentInstanceId/equipmentDefinitionId/spawnTick/expireTick`；该生命周期只在内部checkpoint中，见`packages/arena-contracts/src/match-snapshot.ts:128-143`与`packages/arena-match/src/match-core.ts:1254-1364`。断流恢复必须取得完整连续事件历史，或取得绑定`eventSequence`的完整active供给生命周期投影；否则整个adapter进入resync、隐藏倒计时且不处理事件。adapter无需永久保存terminal身份，这是正式代表样件的真实输入缺口与资源边界。
 
-### 2.2 尚未实现，不能写成证据
+### 2.2 当前实现与仍不能写成证据的边界
 
-- 当前没有供给HUD/ViewModel、事件消费adapter、世界marker、VFX、音频、屏幕阅读公告、30 FPS捕获或目标设备数据。
-- 下文形色、声音、预算和恢复规则均是A1.0预生产合同，不是运行时通过。
+- PP0只读合同与PP1有界adapter已存在并由51项Node规格覆盖；PP2/PP3非性能候选也已在后续小门落盘，但默认产品入口、正式资产和设备路径仍关闭。本A1.0-v2只绑定PP0/PP1与25项fixture，不把后续候选冒充本门通过。
+- 当前仍没有获批供给图标、正式VFX/供给音频、代表样件、30 FPS捕获或目标设备数据。下文形色、声音、预算和恢复规则仍是预生产合同，不是视觉/听感/性能通过。
 - 程序化几何只能在资产加载失败时作可访问诊断兜底；使用兜底的代表样件必须失败，不能成为生产正常路径。
 
 ## 3. 事件到只读表现映射
@@ -128,18 +145,18 @@ labelSeconds = ceil(remainingTicks / 60)
 
 机器台账固定25项：三实体无弹窗；合法普通扁平Spawn旁路；混合Spawn拒绝；active Pickup只终止一个marker；Pickup未命中active安全旁路；定义冲突/多重active Pickup拒绝；缺历史/绑定active投影先resync；替换pair不等PickedUp；strict replacement未命中active拒绝；strict expiry未命中active拒绝；599/600/601；过期先于拾取；回收→替换且拾取先于action；ring内相同重复幂等；ring内冲突重复拒绝；早于ring窗口不应用/不重播；sequence缺口/乱序重同步；缺失/未来字段拒绝；暂停恢复无墙钟推进；30 FPS终态精确；Replay/catch-up不双播；Replay新epoch清ring/pending；资产失败不通过资产门；低动效/静音等效；双次destroy清零全部有界资源。
 
-A1.0只校验合同与源文件身份。失败关闭脚本只对合同JSON做篡改探针，证明字段、shape、有界active投影、ring/epoch、旁路语义、预算和下游状态不能静默漂移；它不是运行时adapter测试。
-当前正向基线因10源漂移而红，所以失败关闭脚本本轮没有形成可用当前证据。上述25项运行时夹具要等表现adapter/ViewModel获批后实现。
+A1.0只校验合同、源文件身份与PP0/PP1有界adapter。失败关闭脚本在隔离正向基线通过后执行90项篡改探针，证明字段、shape、有界active投影、ring/epoch、旁路语义、预算和下游状态不能静默漂移；它不替代浏览器或设备。
+当前25项固定fixture均映射到真实联合规格，联合文件共51项且本轮全部通过；这只证明Node语义与生命周期边界，不是供给视觉、声音或性能证据。
 
 ## 9. 代表样件启动硬门
 
 以下全部满足前不得启动A1代表样件：
 
 1. A0.3取得至少10名合格真人、≥90%阈值与主协调签核；当前0/10，不满足。
-2. 获批的无缺口事件历史，或绑定`eventSequence`且完整包含active供给生命周期的只读投影。adapter据此建立最多3项active ledger后才处理事件；当前公共快照缺完整active供给身份和`expireTick`，单独使用不满足。
+2. 获批的无缺口事件历史，或绑定`eventSequence`且完整包含active供给生命周期的只读投影。当前schema v2投影与PP1 adapter已具备机器合同，但样件宿主仍须证明同一runtime owner、pre/post原子消费和失败清理。
 3. 获批的代表装备剪影/图标、临时VFX/音频来源manifest、许可与hash。
 4. 桌面与390×844捕获夹具，以及获批的30 FPS、GPU、overdraw、内存、voice、destroy测量方案、预算阈值和捕获方法；启动时不要求实际测量结果。
-5. A1.0当前源码重绑定并由主协调签核。2026-07-28历史签核仍可作为设计输入，但当前sourceAudit为stale，必须在最终source上重建并通过正向/失败关闭脚本；该项不替代前四项，也不自动启动代表样件。
+5. A1.0-v2最终source合同已完成正向/失败关闭重建及主协调独立签核；该项不替代前四项，也不自动启动代表样件。
 
 代表样件完成后，必须再以第7节列出的实际GPU/overdraw/内存/voice/生命周期数据通过独立样件门；这项证据不能倒置为启动前输入。
 
@@ -147,13 +164,15 @@ A1.0只校验合同与源文件身份。失败关闭脚本只对合同JSON做篡
 
 | 维度 | 得分 | 依据/扣分 |
 |---|---:|---|
-| 权威审计 | 24/25 | 15份源码/测试/ADR绑定byteLength与SHA；公共恢复投影仍缺生命周期字段 |
-| 事件→Cue映射 | 19/20 | 六种事件shape、接近态、旁路/拒绝与同tick顺序完整；尚无运行时adapter |
+| 权威审计 | 24/25 | 28份最终source/测试/ADR按依赖排序绑定byteLength/SHA并逐role复核；扣1分等待主协调独立复验 |
+| 事件→Cue映射 | 19/20 | 六种事件shape、旁路/拒绝、同tick顺序和PP1 adapter完整；扣1分尚无正式视听样件 |
 | 可访问语义 | 14/15 | 色形图标、低动效、静音、窄屏合同完整；无人测 |
-| 异常/Replay | 14/15 | 重复、乱序、断流、Replay、30 FPS策略完整；尚无实现夹具 |
-| 预算/生命周期 | 13/15 | 上限和清理责任明确；无设备测量 |
+| 异常/Replay | 15/15 | 25项固定映射、51项联合规格、Replay/resync/destroy边界通过 |
+| 预算/生命周期 | 12/15 | 上限和清理责任明确；无浏览器/GPU/设备实测 |
 | 证据/夹具治理 | 10/10 | 机器台账、hash、25项计划和下游false状态可复算 |
 | **合计** | **94/100** | 各维度≥80%；仅合同成熟度 |
 
-主协调于2026-07-28以`94/100`签核历史A1.0合同；该分数只属于`dd786a9`历史source identity。当前15源中10源漂移，故当前源码状态为
-`stale-upstream-evidence / hardGatePassed=false`，`runtimeAdapterTested=false`。A1、A0.3、Blockout、正式VFX/音频、设备、真人与Final全部保持`incomplete`/false。
+2026-07-28与2026-08-03的94/100签核分别属于各自历史source identity。本轮在`5e84714`上按当前28源、25映射、
+51项规格与美术反证重新计算后仍为94/100，并已由主协调独立签核为`current-final-source-contract / coordinator-approved / hardGate=false`；
+机器字段仍为`runtimeAdapterTested=true / coordinatorSignOff=false / hardGatePassed=false`。A1、A0.3真人、Blockout、正式VFX/音频、浏览器/GPU、
+设备、真人、性能与Final全部保持`incomplete`/false。

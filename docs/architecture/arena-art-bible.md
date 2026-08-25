@@ -2,7 +2,7 @@
 
 ## 文档状态
 
-- 状态：A0.1为`contract-ready`；A0.2独立聚合总门与Reference Board视觉方向为`ready`（96/100）；A0.3已在`60fbc13` clean source完成两次确定性机器重生成，现为`current-source-machine-regenerated / tooling-review-candidate-human-blocked / incomplete`，机器候选85/100且真人0/10；A1.1已在最终clean source `16861edc`完成来源/权利与测量方案机器重建，但协调、批准、样件和运行门仍全关。默认Registry/Composition/入口仍未接，A2.0继续为`preproduction-contract-candidate / hardGate=false`
+- 状态：A0.1为`contract-ready`；A0.2独立聚合总门与Reference Board视觉方向为`ready`（96/100）；A0.3已在`60fbc13` clean source完成两次确定性机器重生成，现为`current-source-machine-regenerated / tooling-review-candidate-human-blocked / incomplete`，机器候选85/100且真人0/10；A1.0-v2已在最终clean source `5e84714`完成28源/25映射重建并获主协调94/100外部签核，A1.1已在`16861edc`完成来源/权利与测量方案机器重建；A1.1 hard gate、逐项批准、样件和运行门仍全关。默认Registry/Composition/入口仍未接，A2.0继续为`preproduction-contract-candidate / hardGate=false`
 - 日期：2026-08-11
 - 审计基线：正式资产与视觉事实继续沿用`d6f906008d0af1ed0133a199a8dc9e15cb1d23d0`及其后已登记证据；A2.0绑定当前共享工作树中的P2.0–P2.5版本化候选字节，不登记未经主协调冻结的commit/hash
 - 上游真值：[V2 产品总纲](../product/arena-v2-product-brief.md)、[V2 玩法框架](../gameplay/arena-v2-gameplay-framework.md)、[V2 生产计划](arena-v2-production-development-plan.md)、[ADR-108](../decisions/108-arena-v2-survival-auto-replace-and-expiry.md)、[ADR-112](../decisions/112-arena-v2-formal-mode-definition-and-policy-boundary.md)与[ADR-118](../decisions/118-arena-v2-development-first-deferred-validation-window.md)；候选实现不等于生产冻结或运行通过

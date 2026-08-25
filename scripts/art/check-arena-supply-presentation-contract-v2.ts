@@ -34,6 +34,7 @@ const PP1_PATH =
   'packages/arena-presentation-runtime/src/arena-supply-presentation-adapter.ts';
 const JOINT_TEST_PATH =
   'tests/arena/presentation/arena-supply-presentation-adapter.test.ts';
+const SOURCE_COMMIT = '5e84714015422378d1dadbcdd8785797fa14a7c7';
 
 const AUTHORIZED_V2_PATHS = [
   CONTRACT_PATH,
@@ -382,7 +383,7 @@ const EXPECTED_HARD_GATES = {
 
 const EXPECTED_SCORE = {
   basis:
-    'A1.0-v2 current-source contract, PP0/PP1 candidate identity, 25-fixture mapping and art counterevidence only; no PP3, asset, device, human or final maturity',
+    'A1.0-v2 final-clean-source contract, PP0/PP1 candidate identity, 25-fixture mapping and freshly reviewed art counterevidence only; no coordinator sign-off, specimen, asset, browser, device, human or final maturity',
   total: 94,
   maximum: 100,
   hardGatePassed: false,
@@ -408,33 +409,162 @@ const EXPECTED_SCORE = {
 const EXPECTED_SOURCES: readonly SourceExpectation[] = [
   { path: 'packages/arena-contracts/src/match-event-types.ts', role: 'authority-event-types', byteLength: 840, sha256: 'ba3033f6d784c5e989288e3854f18ab8c082f494480d52669eb59f1bfe3d4d85' },
   { path: 'packages/arena-contracts/src/equipment-supply-event-payload.ts', role: 'strict-supply-payload', byteLength: 9788, sha256: '2dc466abb5bae193aab091b084a835fd45e2c430daa3b0b194356618a177aa9c' },
-  { path: 'packages/arena-contracts/src/match-snapshot.ts', role: 'public-world-snapshot', byteLength: 19417, sha256: '89ca74403445cbe8333e68e0e907a914500dce51b3bcf3cbce8ebb928e51fe38' },
+  { path: 'packages/arena-contracts/src/match-snapshot.ts', role: 'public-world-snapshot', byteLength: 19672, sha256: 'c03ff02ab484b8c6c558fbc550e9360a3817f6f9931094ba577823d6b0d30691' },
   { path: 'packages/arena-contracts/src/arena-public-supply-projection.ts', role: 'active-supply-projection', byteLength: 29094, sha256: 'b1ad32bc9e3d023af0cfbcbac41c31efee69d291de856e1914e5622dfa5ec7ec' },
-  { path: 'packages/arena-contracts/src/match-read-frame-v2.ts', role: 'readonly-match-frame-v2', byteLength: 31017, sha256: '6f18c6cc18934e8b97147a63a87ff12c7b976bef4e5df29c7d1fa965844ed144' },
+  { path: 'packages/arena-contracts/src/match-read-frame-v2.ts', role: 'readonly-match-frame-v2', byteLength: 31016, sha256: '8fb2a36f7c92b74f869c3a4c136dd32b48208a434a152aab77f44fecd81c2068' },
   { path: 'packages/arena-definitions/src/equipment-supply-definition.ts', role: 'supply-definition', byteLength: 5281, sha256: 'ef3d42d29141cb128a782be31f395c34b8320de1c646aa7265ed18fe774ab1f3' },
   { path: 'packages/arena-v1-content/src/arena-v2-survival-supply.ts', role: 'formal-survival-supply-content', byteLength: 1039, sha256: '0007b0b8e11feda8721162cf4c22a7a574a4f66e2f5fc7de8213082097b12cee' },
   { path: 'packages/arena-equipment/src/equipment-supply-lifecycle.ts', role: 'lifecycle-contract', byteLength: 3847, sha256: '79dac98ed7bf04699dcaad963f93dc44ccd0e78f235e0ca04d7aac120c23da5c' },
-  { path: 'packages/arena-equipment/src/equipment-supply-timeline-system.ts', role: 'authority-timeline', byteLength: 26241, sha256: '57bf117fb918724e77bd3ec0bb2f3dc0727803747b335f6039d13aab29937d0e' },
-  { path: 'packages/arena-equipment/src/equipment-system.ts', role: 'world-equipment-system', byteLength: 40775, sha256: 'fd04f4c51873ec7a91461e6b836aa3a2aa8f854794d1e2365266ca6afc7ef580' },
-  { path: 'packages/arena-match/src/match-core.ts', role: 'match-authority', byteLength: 85977, sha256: '6d024b18ddba7bddbe6ccbcfb226581fe53a81b8f1a6789696f0cd4a1c5daf04' },
-  { path: 'packages/arena-match/src/match-read-frame.ts', role: 'post-frame-projector', byteLength: 9174, sha256: 'd7b104964d7d39d7c4844b4ffde2196a94d4aad132a82935e544fdf592d7739c' },
-  { path: 'packages/arena-match/src/replay.ts', role: 'replay', byteLength: 22555, sha256: '3921cc6cd0d713877f875c9922f0060541743a41630703372bb41c0c67fb6a87' },
+  { path: 'packages/arena-equipment/src/equipment-supply-timeline-system.ts', role: 'authority-timeline', byteLength: 42946, sha256: '7015c471b7c1fe0c9b6298eaf46eb6f0c8be0f816f3181071b5e8b8be1163bb7' },
+  { path: 'packages/arena-equipment/src/equipment-system.ts', role: 'world-equipment-system', byteLength: 48833, sha256: '27961462d15d40e1f5c546ce8fcb5288495f96902e161b29b6f3cf220198deed' },
+  { path: 'packages/arena-match/src/match-core.ts', role: 'match-authority', byteLength: 93188, sha256: '51df8d148890df2f6984d0fddb1ed42da15b86bd4c42d0f4d243c346e2ede51c' },
+  { path: 'packages/arena-match/src/replay.ts', role: 'replay', byteLength: 29240, sha256: '6a8ce24090d1380418ed2569d17f0b83fc81b454c1ec49b49b6b4f6ecd832fae' },
   { path: 'packages/arena-session/src/local-match-session.ts', role: 'session', byteLength: 30619, sha256: '5ee25b71979ea9c2c429374d94f2534b079429b1189efd8ce46e46a0a3c6776f' },
   { path: 'packages/arena-v1-composition/src/arena-v2-survival-supply-match-core.ts', role: 'formal-composition-root', byteLength: 3933, sha256: '1e41a4734333df096dc5cfc3877b94641d4177daffc0d8abb8be304b16644caa' },
+  { path: 'packages/arena-bot/src/bot-observation.ts', role: 'bot-readonly-supply-observation', byteLength: 58501, sha256: 'e8accb85da7942b9587cdedc8b111dcc728d17d0af7be53a9d08c10e2a5944e6' },
+  { path: 'packages/arena-bot/src/bot-controller.ts', role: 'bot-supply-projection-gate', byteLength: 27905, sha256: '745384dae97a38501bea70d649e680405c0b914b3a5b70b9ab73c5179ebb7c0e' },
   { path: 'tests/arena/equipment-supply-timeline.test.ts', role: 'timeline-599-600-601-tests', byteLength: 22512, sha256: 'c9f86bfe1f71d6d09d11e7939f560364da0d969a4178f2b6cbc88e01710ca680' },
-  { path: 'tests/arena/match-core-survival-supply.test.ts', role: 'matchcore-supply-tests', byteLength: 25313, sha256: '1e2b40c0fd2ae419f8891766b5dd38753bf2a5024823f01c8bf3c9e672a611b0' },
+  { path: 'tests/arena/match-core-survival-supply.test.ts', role: 'matchcore-supply-tests', byteLength: 30922, sha256: 'ffd72421822176e2515651ad581fa2a3dcbd0ef22824d3d2d70b8b0927829ed5' },
   { path: 'tests/arena/match-read-frame-v2-contract.test.ts', role: 'read-frame-projection-tests', byteLength: 24958, sha256: '1a9c7b6278d72ff79e91c0e5ad86a8eda68e9a744c261b34a9212bef870d550d' },
-  { path: 'tests/arena/replay.test.ts', role: 'replay-tests', byteLength: 17156, sha256: 'ac5e42e1a546e6f611d30cad9d05d516969197d6ed3a9b468c6df4272bf8a4f4' },
+  { path: 'tests/arena/replay.test.ts', role: 'replay-tests', byteLength: 25898, sha256: '8e411bd9c73a960a3440e9cd5b95c47e3bd7fc3f5eb3f10d09212013d6a41951' },
   { path: 'tests/arena/local-match-session.test.ts', role: 'session-tests', byteLength: 20752, sha256: '7f41b8d56eaaf92cd5e179758be2f1e68d5d2eee09b3e599d31893cd9b53f8f2' },
-  { path: 'tests/arena/pa4a-session-read-frame.test.ts', role: 'pa4a-read-frame-tests', byteLength: 31616, sha256: 'faa0141939e893304dada456b67b36f058118bd4fc6624a42e8b967ce7ea566d' },
   { path: 'docs/decisions/108-arena-v2-survival-auto-replace-and-expiry.md', role: 'adr-108-authority', byteLength: 4680, sha256: '9a400fb5ec45fa04c3ea3f3aa26217c3ba2281c7e15eedb789402c6b12a6aaa9' },
   { path: 'docs/decisions/110-arena-v2-expired-held-release-disposition.md', role: 'adr-110-expired-held', byteLength: 4534, sha256: '9d56a2a139499a42d8654143ca33c8b59bd93aa412c9b0d71d07abaa2476b47d' },
   { path: 'docs/decisions/113-arena-v2-supply-presentation-adapter-boundary.md', role: 'adr-113-adapter-boundary', byteLength: 21125, sha256: '0ccce7df97a8e505e2212cea5da155190edd13b7de26d808fbdc3c84a8943653' },
-  { path: 'docs/decisions/114-arena-v2-art-evidence-versioning-and-joint-gate.md', role: 'adr-114-joint-gate', byteLength: 10908, sha256: '580efe43771b09552bf481066d3380719dec53aad88d77b5883e1b0bcb185cd5' },
+  { path: 'docs/decisions/114-arena-v2-art-evidence-versioning-and-joint-gate.md', role: 'adr-114-joint-gate', byteLength: 11090, sha256: 'e7ac4b824d1cb6570def073d80f36c1aeccd2399d164fe3f2b4fbb1b334ed181' },
   { path: PP0_PATH, role: 'pp0-presentation-contract', byteLength: 61277, sha256: '42ce6bcda78981effe41141ae5f0aa70642b8ff3c5dba72280e3788eaeaaae46' },
   { path: PP1_PATH, role: 'pp1-presentation-adapter', byteLength: 38153, sha256: '9e8b6102b9a7c4d18f31b4c8132f573425024fa37da62ead0d4a53e1396d6014' },
   { path: JOINT_TEST_PATH, role: 'pp0-pp1-joint-tests', byteLength: 61240, sha256: 'cefaa8e80b226f0a5ba726b970a01ed4d681a436d63b5c1fe0c0449b142d7270' },
 ] as const;
+
+const EXPECTED_SOURCE_SEMANTIC_MARKERS: Readonly<Record<string, readonly string[]>> = Object.freeze({
+  'authority-event-types': Object.freeze([
+    "EQUIPMENT_SPAWNED: 'EquipmentSpawned'",
+    "EQUIPMENT_PICKED_UP: 'EquipmentPickedUp'",
+    "EQUIPMENT_RECYCLED: 'EquipmentRecycled'",
+    "EQUIPMENT_REPLACED: 'EquipmentReplaced'",
+    "EQUIPMENT_EXPIRED: 'EquipmentExpired'",
+  ]),
+  'strict-supply-payload': Object.freeze([
+    'tick 必须位于 [spawnTick, expireTick) 内',
+    'tick 必须等于 expireTick',
+    'EquipmentRecycledEventPayload.reason 必须是 replaced',
+    'EquipmentExpiredEventPayload.reason 必须是 lifetime-expired',
+  ]),
+  'public-world-snapshot': Object.freeze([
+    'readonly activeSupplyProjection?: ArenaPublicSupplyProjection',
+    'createArenaPublicSupplyProjectionAudit(source.activeSupplyProjection',
+    'snapshotTick: tick',
+  ]),
+  'active-supply-projection': Object.freeze([
+    'ARENA_PUBLIC_SUPPLY_PROJECTION_SCHEMA_VERSION = 2',
+    'remainingTicks !== expireTick - snapshotTick',
+    'not-ready-pre-expiry projection 必须包含 pending expiry identity',
+    'pre-expiry projection 不能包含可交互供给',
+  ]),
+  'readonly-match-frame-v2': Object.freeze([
+    "'activeSupplyProjection'",
+    'createArenaPublicSupplyProjectionAudit(source.activeSupplyProjection',
+    '正式 survival read frame 必须携带 activeSupplyProjection',
+  ]),
+  'supply-definition': Object.freeze([
+    'spawn → expire → pickup → action',
+    'replacementPolicy 必须是 atomic-recycle-held',
+    'expiryPolicy 必须是 world-only-at-expire-tick',
+  ]),
+  'formal-survival-supply-content': Object.freeze([
+    'firstSpawnTick: 1_200',
+    'spawnCount: 3',
+    'pickupRadius: 0.8',
+    'lifetimeTicks: 600',
+  ]),
+  'lifecycle-contract': Object.freeze([
+    'const expectedExpireTick = spawnTick + definition.lifetimeTicks',
+    'expireTick 必须等于 spawnTick',
+  ]),
+  'authority-timeline': Object.freeze([
+    'getPublicSupplyProjection(options: unknown)',
+    'const remainingTicks = lifecycle.expireTick - snapshotTick',
+    'pendingExpiryEquipmentInstanceIds.push(runtime.instanceId)',
+    'ARENA_PUBLIC_SUPPLY_PROJECTION_READINESS.NOT_READY_PRE_EXPIRY',
+  ]),
+  'world-equipment-system': Object.freeze([
+    'tick < lifecycle.spawnTick || tick >= lifecycle.expireTick',
+    'createEquipmentRecycledEventPayload({',
+    'createEquipmentReplacedEventPayload({',
+    'EXPIRED_HELD_LIFECYCLE',
+  ]),
+  'match-authority': Object.freeze([
+    'this.#equipmentSupplyTimeline?.getPublicSupplyProjection({',
+    'snapshotTick: timeline.tick',
+    'eventSequence: this.#eventSequence',
+    'activeSupplyProjection = projectionResult.projection',
+    'expiredSupplyEquipmentIds.add(instanceId)',
+  ]),
+  replay: Object.freeze([
+    'checkpointSchemaVersion: ARENA_INTERNAL_MATCH_CHECKPOINT_SCHEMA_VERSION',
+    'eventSequence: identity.eventSequence',
+    '回放最终 checkpoint tick',
+  ]),
+  session: Object.freeze([
+    'stepWithPresentationReadFrame()',
+    "projection === 'presentation'",
+    '不可重入',
+  ]),
+  'formal-composition-root': Object.freeze([
+    'createArenaV2SurvivalSupplyRegistry()',
+    '禁止并行 initialSpawns authority',
+    'equipmentSupplyRegistry: supplyRegistry',
+  ]),
+  'bot-readonly-supply-observation': Object.freeze([
+    'requireArenaPublicSupplyProjection(source.activeSupplyProjection',
+    'remainingTicks !== expireTick - snapshotTick',
+    'pendingExpiryEquipmentInstanceIds 与 readiness 不一致',
+  ]),
+  'bot-supply-projection-gate': Object.freeze([
+    'survival BotController 必须注入 supplyProjectionContract',
+    'this.#requireActiveSupplyProjection && legacySource.activeSupplyProjection === null',
+    'survival Bot 缺少完整 activeSupplyProjection，已 fail closed',
+  ]),
+  'timeline-599-600-601-tests': Object.freeze([
+    "test('599/600/601 boundary expires world supply before same-tick pickup'",
+    "test('public projection marks the +600 pre-step view non-resync-ready and binds both directions'",
+  ]),
+  'matchcore-supply-tests': Object.freeze([
+    "test('explicit survival composition owns spawn-expire-pickup-action order in production MatchCore'",
+    "test('public projection survives +599 checkpoint restore and rejects +600 pre-step resync'",
+  ]),
+  'read-frame-projection-tests': Object.freeze([
+    "test('PA2a complete supply projection is audited and survival require rejects null'",
+    "test('PA2a root, future, profile, channel and owner fields fail closed'",
+  ]),
+  'replay-tests': Object.freeze([
+    "test('headless replay reproduces checkpoints, final hash, result and events'",
+    "test('pause drops wall time instead of advancing or catching up'",
+  ]),
+  'session-tests': Object.freeze([
+    "test('LocalMatchSession pause, complete replay and destruction have explicit lifecycles'",
+    "test('same quick-match seed and player inputs reproduce final replay hash'",
+  ]),
+  'adr-108-authority': Object.freeze(['expireTick = spawnTick + 600', '第 600 tick 时不可再拾取']),
+  'adr-110-expired-held': Object.freeze(['expired-held disposition', 'Presentation']),
+  'adr-113-adapter-boundary': Object.freeze(['25项机器矩阵', '599/600/601', '只读投影']),
+  'adr-114-joint-gate': Object.freeze(['sourceAudit', '25 fixture', '联合签核']),
+  'pp0-presentation-contract': Object.freeze([
+    'ARENA_SUPPLY_PRESENTATION_MAX_EVENTS_PER_UPDATE = 64',
+    'ARENA_SUPPLY_PRESENTATION_MAX_RESYNC_EVENTS_PER_UPDATE = 256',
+    'createArenaSupplyPresentationEventCanonicalHashV1',
+  ]),
+  'pp1-presentation-adapter': Object.freeze([
+    'export class ArenaSupplyPresentationAdapter',
+    'input.events.length > ARENA_SUPPLY_PRESENTATION_MAX_EVENTS_PER_UPDATE',
+    'createArenaSupplyPresentationEventCanonicalHashV1(event)',
+  ]),
+  'pp0-pp1-joint-tests': Object.freeze([
+    "test('PP1 A1 #1 strict spawn creates exactly three sorted markers and one-shot cues'",
+    "test('PP1 A1 #25 destroy is idempotent and clears adapter-owned state only'",
+  ]),
+});
 
 const EXPECTED_ROLLBACK = {
   action: 'delete-only-the-three-uncommitted-v2-files',
@@ -521,19 +651,25 @@ function requireTextOnce(text: string, needle: string, label: string): void {
   if (textOccurrenceCount(text, needle) !== 1) fail(`${label} must appear exactly once`);
 }
 
+function containsMarker(text: string, marker: string): boolean {
+  return text.includes(marker)
+    || text.replace(/\s+/gu, '').includes(marker.replace(/\s+/gu, ''));
+}
+
 const contractFile = repositoryFile(CONTRACT_PATH, 'contract');
 const contract = record(JSON.parse(readFileSync(contractFile, 'utf8')), 'contract');
 exactKeys(contract, [
-  'schemaVersion', 'id', 'status', 'reviewedAt', 'supersedes', 'scope',
+  'schemaVersion', 'id', 'status', 'reviewedAt', 'sourceCommit', 'supersedes', 'scope',
   'contractSurface', 'eventRouting', 'sequenceAndRecovery', 'fixtureCoverage',
   'artCounterevidence', 'externalEvidenceBoundary', 'hardGates', 'score',
   'sourceAudit', 'missingMandatorySkillReferences', 'rollback',
 ], 'contract');
-if (contract.schemaVersion !== 2
+if (contract.schemaVersion !== 3
   || contract.id !== 'arena.art.supply-presentation.a1.0.v2'
-  || contract.status !== 'joint-gate-candidate'
-  || contract.reviewedAt !== '2026-08-03'
-  || contract.scope !== 'current-source-art-contract-and-node-evidence-only') {
+  || contract.status !== 'final-source-joint-gate-candidate'
+  || contract.reviewedAt !== '2026-08-25'
+  || contract.sourceCommit !== SOURCE_COMMIT
+  || contract.scope !== 'final-clean-source-art-contract-and-node-evidence-only') {
   fail('identity, status, date or scope drift');
 }
 
@@ -619,11 +755,50 @@ for (const source of sourceAudit) {
   if (bytes.length !== source.byteLength || sha256(bytes) !== source.sha256) {
     fail(`source identity drift: ${String(source.path)}`);
   }
+  const markers = EXPECTED_SOURCE_SEMANTIC_MARKERS[String(source.role)];
+  if (markers === undefined) fail(`source semantic role is unregistered: ${String(source.role)}`);
+  const text = bytes.toString('utf8');
+  for (const marker of markers) {
+    if (!containsMarker(text, marker)) {
+      fail(`source semantic marker drift: ${String(source.path)}: ${marker}`);
+    }
+  }
+}
+if (Object.keys(EXPECTED_SOURCE_SEMANTIC_MARKERS).length !== EXPECTED_SOURCES.length) {
+  fail('source semantic marker catalog must cover all 28 unique roles');
+}
+
+const equipmentSystemText = readFileSync(
+  repositoryFile('packages/arena-equipment/src/equipment-system.ts', 'equipment system source'),
+  'utf8',
+);
+const supplyPickupStart = equipmentSystemText.indexOf("return this.#runMutation('supply-pickup'");
+const recycledCommit = equipmentSystemText.indexOf(
+  'createEquipmentRecycledEventPayload({',
+  supplyPickupStart,
+);
+const replacedCommit = equipmentSystemText.indexOf(
+  'createEquipmentReplacedEventPayload({',
+  recycledCommit,
+);
+if (supplyPickupStart < 0 || recycledCommit <= supplyPickupStart || replacedCommit <= recycledCommit) {
+  fail('world equipment replacement order must remain recycled before replaced');
 }
 
 const pp0Text = readFileSync(repositoryFile(PP0_PATH, 'PP0 source'), 'utf8');
 const pp1Text = readFileSync(repositoryFile(PP1_PATH, 'PP1 source'), 'utf8');
 const jointTestText = readFileSync(repositoryFile(JOINT_TEST_PATH, 'joint test source'), 'utf8');
+for (const [label, source] of [['PP0', pp0Text], ['PP1', pp1Text]] as const) {
+  if (/Math\.random|Date\.now|performance\.now|document\.|window\.|setTimeout|setInterval|THREE\./u.test(source)) {
+    fail(`${label} must remain host-free, tick-driven and renderer-neutral`);
+  }
+  if (/three-choice-modal|supply-choice-modal|三选一弹窗|modalEnabled:\s*true|requiresConfirmation:\s*true/u.test(source)) {
+    fail(`${label} must not introduce a three-choice modal`);
+  }
+}
+if (!pp0Text.includes("'spawn-three-physical-entities-without-modal'")) {
+  fail('PP0 must retain the explicit three-physical-entities-without-modal fixture identity');
+}
 for (const fixture of EXPECTED_FIXTURES) {
   requireTextOnce(pp0Text, `'${fixture.id}'`, `PP0 fixture id ${fixture.id}`);
   requireTextOnce(
@@ -677,6 +852,7 @@ if (missingReferences.some((path) => existsSync(resolve(ROOT, path)))) {
 
 process.stdout.write(`${JSON.stringify({
   status: contract.status,
+  sourceCommit: contract.sourceCommit,
   score: record(contract.score, 'score').total,
   hardGatePassed: false,
   sources: sourceAudit.length,
