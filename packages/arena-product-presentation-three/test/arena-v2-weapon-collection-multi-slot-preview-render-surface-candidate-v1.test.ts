@@ -423,7 +423,10 @@ describe('Arena V2 A6.13 weapon collection multi-slot preview render surface can
       schemaVersion: 1,
       renderer,
     })).toThrow(/scissor disable failure/);
-    expect(renderer.calls.map(({ method }) => method)).toEqual(['setScissorTest', 'dispose']);
+    expect(renderer.calls.map(({ method }) => method))
+      .toEqual(['setScissorTest', 'setScissorTest', 'dispose']);
+    expect(renderer.calls.filter(({ method }) => method === 'setScissorTest').map(({ args }) => args))
+      .toEqual([[false], [false]]);
   });
 
   it('retries only missing cleanup steps after an incomplete destroy', () => {

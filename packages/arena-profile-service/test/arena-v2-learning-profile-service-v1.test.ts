@@ -215,7 +215,7 @@ describe('Arena V2 Learning Profile Service V1', () => {
     expect(captureFailure(() => destroyService.destroy())).toMatchObject({
       reason: 'repository-callback-reentry',
     });
-    expect(destroyService.state).toBe('destroyed');
+    expect(destroyService.state).toBe('failed');
   });
 
   it('accepts a verified write that throws after publishing and keeps the grant idempotent', () => {

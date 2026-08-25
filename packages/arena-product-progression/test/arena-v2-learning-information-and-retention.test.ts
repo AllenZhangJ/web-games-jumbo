@@ -42,7 +42,7 @@ const DEFINITION = createArenaV2LearningProfileDefinitionV1({
   limits: {
     maxIdentifierLength: 96,
     maxCommittedGrantIds: 16,
-    maxCounterValue: 1_000,
+    maxCounterValue: 10_000,
     maxCollectedWeaponIds: 4,
     maxCollectedMapIds: 4,
     maxWeaponMasteryRecords: 4,
@@ -78,8 +78,10 @@ const DEFINITION = createArenaV2LearningProfileDefinitionV1({
   challengeDefinitions: [],
 });
 
+const { contentHash: _definitionContentHash, ...DEFINITION_SOURCE } = DEFINITION;
+
 const MILESTONE_DEFINITION = createArenaV2LearningProfileDefinitionV1({
-  ...DEFINITION,
+  ...DEFINITION_SOURCE,
   id: 'learning-information.milestone.test.v1',
   masteryRequirements: {
     ...DEFINITION.masteryRequirements,
@@ -88,7 +90,7 @@ const MILESTONE_DEFINITION = createArenaV2LearningProfileDefinitionV1({
 });
 
 const REVERSE_DIRECTORY_DEFINITION = createArenaV2LearningProfileDefinitionV1({
-  ...DEFINITION,
+  ...DEFINITION_SOURCE,
   id: 'learning-information.reverse-directory.test.v1',
   weaponDefinitionIds: ['weapon.z', 'weapon.a'],
   mapDefinitions: [
@@ -96,6 +98,37 @@ const REVERSE_DIRECTORY_DEFINITION = createArenaV2LearningProfileDefinitionV1({
     { mapDefinitionId: 'map.a', segmentDefinitionIds: ['segment.a'] },
   ],
 });
+
+function completedModeRecords(
+  definition: ReturnType<typeof createArenaV2LearningProfileDefinitionV1>,
+  completedAtRevision: number,
+) {
+  return definition.modeDefinitions.map(({ modeDefinitionId, kind }) => ({
+    modeDefinitionId,
+    kind,
+    playCount: 1,
+    completionCount: 1,
+    winCount: kind === 'survival' ? 0 : 1,
+    completedAtRevision,
+    bestPerformanceTicks: 600,
+  }));
+}
+
+function completedMapSegmentRecords(
+  definition: ReturnType<typeof createArenaV2LearningProfileDefinitionV1>,
+  completedAtRevision: number,
+) {
+  return definition.mapDefinitions.flatMap(({ mapDefinitionId, segmentDefinitionIds }) => (
+    segmentDefinitionIds.map((segmentDefinitionId) => ({
+      mapDefinitionId,
+      segmentDefinitionId,
+      completionEvidenceCount: definition.masteryRequirements.mapSegmentCompletionEvidence,
+      completedAtRevision,
+      bestRaceFinishTicks: null,
+      bestSurvivalTicks: null,
+    }))
+  ));
+}
 
 function committedProfile() {
   return advanceArenaV2LearningProfileV1(
@@ -161,8 +194,8 @@ function milestoneProfile(
         { context: 'survival', evidenceCount: 0, completedAtRevision: null },
       ],
     }],
-    mapSegmentMastery: [],
-    modeRecords: [],
+    mapSegmentMastery: completedMapSegmentRecords(MILESTONE_DEFINITION, 5),
+    modeRecords: completedModeRecords(MILESTONE_DEFINITION, 5),
     challenges: [],
   });
   return advanceArenaV2LearningProfileV1(
@@ -256,8 +289,8 @@ function importedCollectedMilestoneProfile() {
         { context: 'survival', evidenceCount: 0, completedAtRevision: null },
       ],
     }],
-    mapSegmentMastery: [],
-    modeRecords: [],
+    mapSegmentMastery: completedMapSegmentRecords(MILESTONE_DEFINITION, 7),
+    modeRecords: completedModeRecords(MILESTONE_DEFINITION, 7),
     challenges: [],
   });
   return advanceArenaV2LearningProfileV1(
@@ -422,9 +455,6 @@ describe('Arena V2 P6 information and retention candidates', () => {
     Object.freeze({ weaponDefinitionId: 'weapon.a', displayName: '冲锋盾' }),
     Object.freeze({ weaponDefinitionId: 'weapon.b', displayName: '重锤' }),
   ]);
-  const milestoneWeaponDisplayNames = Object.freeze([
-    Object.freeze({ weaponDefinitionId: 'weapon.a', displayName: '冲锋盾' }),
-  ]);
   const mapDisplayNames = Object.freeze([Object.freeze({
     mapDefinitionId: 'map.a',
     displayName: '空港断层',
@@ -441,7 +471,7 @@ describe('Arena V2 P6 information and retention candidates', () => {
       ['map.a', 'map.z'],
     )).toEqual({
       weaponDefinitionIds: ['weapon.a'],
-      mapDefinitionIds: ['map.z', 'map.a'],
+      mapDefinitionIds: ['map.a', 'map.z'],
     });
     expect(() => orderArenaV2NewCollectionDefinitionIdsV1(
       REVERSE_DIRECTORY_DEFINITION,
@@ -581,18 +611,18 @@ describe('Arena V2 P6 information and retention candidates', () => {
       compactText: '生存 00:10',
     });
     expect(projection.homeRecordSummary.accessibilityText)
-      .toContain('已收藏1/2把武器，已完成2/10项武器实战情境，全部武器累计情境研究进度2/10；已收藏1/1张地图；已完整理解1/2个地图路段');
+      .toContain('已收藏1/2把武器，全部武器主研究进度1/2；每局最多一把主研究武器增加1点。已完成2/10项武器实战情境，全部武器累计情境研究进度2/10；已收藏1/1张地图；已完整理解1/2个地图路段');
     expect(projection.screens.find(({ screenId }) => screenId === 'weapon-index')
       ?.fieldValues.find(({ fieldId }) => fieldId === 'owned-progress')?.valueText)
       .toBe('收藏1/2；主研究1/2；至少还需1局；阶段不加战力');
     expect(projection.screens.find(({ screenId }) => screenId === 'result-reward')
       ?.fieldValues.find(({ fieldId }) => fieldId === 'earned-progress')?.valueText)
-      .toContain('空港断层（第1张地图）·起步平台（第1段路线）：本局完成1次安全落点或有效命中，当前1/1，已理解');
+      .toContain('空港断层·起步平台落点/命中1次·1/1已理解');
     expect(projection.screens.find(({ screenId }) => screenId === 'weapon-detail')
       ?.fieldValues.map(({ fieldId }) => fieldId)).toEqual(['weapon-record']);
     expect(projection.screens.find(({ screenId }) => screenId === 'weapon-detail')
       ?.fieldValues.find(({ fieldId }) => fieldId === 'weapon-record')?.valueText)
-      .toContain('地面0/1、空中0/1、边缘0/1、1v1反制0/1、生存1/1已理解');
+      .toContain('地面0/1、空中1/1已理解、边缘0/1、1v1反制0/1、生存1/1已理解');
     expect(projection.screens.find(({ screenId }) => screenId === 'weapon-detail')
       ?.fieldValues.find(({ fieldId }) => fieldId === 'weapon-record')?.valueText)
       .toContain('下一局优先练地面情境0/1：在地面用这把武器形成一次有效武器反馈');
@@ -623,7 +653,7 @@ describe('Arena V2 P6 information and retention candidates', () => {
     ]);
     expect(projection.screens.find(({ screenId }) => screenId === 'result-reward')
       ?.fieldValues.find(({ fieldId }) => fieldId === 'earned-progress')?.valueText)
-      .toContain('完成：冲锋盾·主研究1次·1/1·已收藏·主研究完成·全武器主研究1/2·收藏1/2；冲锋盾·生存武器应用1次·1/1已理解·全部武器情境研究2/10');
+      .toContain('完成：冲锋盾·主研究1次·1/1·已收藏·主研究完成·全武器主研究1/2·收藏1/2；冲锋盾·空中有效反馈1次·1/1已理解、冲锋盾·生存武器应用1次·1/1已理解·全部武器情境研究2/10');
     expect(projection.screens.find(({ screenId }) => screenId === 'result-reward')
       ?.fieldValues.find(({ fieldId }) => fieldId === 'earned-progress')?.valueText)
       .toContain('生存·本局+1·当前1/1·整体1/3');
@@ -659,12 +689,12 @@ describe('Arena V2 P6 information and retention candidates', () => {
       .toContain('稳定推进：切换到常规1v1');
     expect(projection.screens.find(({ screenId }) => screenId === 'result-reward')
       ?.fieldValues.find(({ fieldId }) => fieldId === 'next-goal')?.accessibilityText)
-      .toContain('要推进这个长期目标，需要切换到常规1v1');
+      .toContain('要稳定推进这个长期目标，需要切换到常规1v1');
   });
 
   it('shows the exact applied cross-challenge receipt before lower-priority summary facts', () => {
     const challengeDefinition = createArenaV2LearningProfileDefinitionV1({
-      ...DEFINITION,
+      ...DEFINITION_SOURCE,
       id: 'learning-information.challenge-receipt.test.v1',
       challengeDefinitions: [{
         challengeDefinitionId: 'challenge.weapon-map-survival',
@@ -916,9 +946,9 @@ describe('Arena V2 P6 information and retention candidates', () => {
     expect(resultGoal('mode.duel')?.valueText)
       .toContain('稳定推进：当前组合可继续');
     expect(resultGoal('mode.survival')?.valueText)
-      .toContain('稳定推进：选择1v1或竞速');
+      .toContain('稳定推进：切换到常规1v1');
     expect(resultGoal('mode.survival')?.accessibilityText)
-      .toContain('选择会稳定携带所选武器的常规1v1或竞速模式');
+      .toContain('要稳定推进这个长期目标，需要切换到常规1v1');
     expect(ARENA_V2_RESULT_NEXT_GOAL_ROUTE_FIT_V1).toMatchObject({
       implementationStatus: 'code-written-not-run',
       freeChallengeUsesStableScopeCompletionGoalIds: true,
@@ -1100,7 +1130,7 @@ describe('Arena V2 P6 information and retention candidates', () => {
     );
     expect(scopedComplete.screens.find(({ screenId }) => screenId === 'result-reward')
       ?.fieldValues.find(({ fieldId }) => fieldId === 'next-goal')?.valueText).toContain(
-      '当前开放内容已完成：当前组合可继续',
+      '当前开放学习内容：自由练习当前开放内容，等待新武器开放（1/1）；结算后确认续练组合',
     );
     expect(resolveArenaV2ResultNextGoalRouteFitV1({
       profileDefinition: DEFINITION,
@@ -1218,7 +1248,7 @@ describe('Arena V2 P6 information and retention candidates', () => {
       .toContain('完整收藏目录');
     expect(projection.screens.find(({ screenId }) => screenId === 'result-reward')
       ?.fieldValues.find(({ fieldId }) => fieldId === 'next-goal')?.valueText)
-      .toContain('自由挑战：当前组合可继续');
+      .toContain('完整收藏目录：自由挑战或刷新任意个人记录（1/1）；结算后确认续练组合');
     expect(resolveArenaV2ResultNextGoalRouteFitV1({
       profileDefinition: DEFINITION,
       profile,
@@ -1373,7 +1403,7 @@ describe('Arena V2 P6 information and retention candidates', () => {
 
   it('shows the exact applied mode completion and Definition-driven 5/15 position', () => {
     const definition = createArenaV2LearningProfileDefinitionV1({
-      ...DEFINITION,
+      ...DEFINITION_SOURCE,
       id: 'learning-information.mode-completion-receipt.test.v1',
       masteryRequirements: {
         ...DEFINITION.masteryRequirements,
@@ -1418,7 +1448,7 @@ describe('Arena V2 P6 information and retention candidates', () => {
       profileDefinition: definition,
       profile: outcome.profile,
       selectedWeaponDefinitionId: null,
-      selectedMapDefinitionId: null,
+      selectedMapDefinitionId: 'map.a',
       settlement: {
         status: 'committed' as const,
         grantId: outcome.grant.grantId,
@@ -1497,7 +1527,7 @@ describe('Arena V2 P6 information and retention candidates', () => {
           weaponContextEvidenceDeltas: [],
           mapSegmentEvidenceDeltas: [],
           mapRouteEvidenceDeltas: [],
-          modeCompletionDeltas: [],
+          modeCompletionDeltas: outcome.modeCompletionDeltas,
           challengeProgressDeltas: [],
           newlyCollectedWeaponDefinitionIds: [],
           newlyCollectedMapDefinitionIds: [],
@@ -1536,7 +1566,7 @@ describe('Arena V2 P6 information and retention candidates', () => {
           weaponContextEvidenceDeltas: [],
           mapSegmentEvidenceDeltas: [],
           mapRouteEvidenceDeltas: [],
-          modeCompletionDeltas: [],
+          modeCompletionDeltas: outcome.modeCompletionDeltas,
           challengeProgressDeltas: [],
           newlyCollectedWeaponDefinitionIds: [],
           newlyCollectedMapDefinitionIds: [],
@@ -1707,19 +1737,19 @@ describe('Arena V2 P6 information and retention candidates', () => {
         newlyCollectedMapDefinitionIds: outcome.newlyCollectedMapDefinitionIds,
       },
       eligibleWeaponDefinitionIds: undefined,
-      weaponDisplayNames: milestoneWeaponDisplayNames,
+      weaponDisplayNames,
     };
     const projection = projectArenaV2LearningInformationV1(input);
     const result = projection.screens.find(({ screenId }) => screenId === 'result-reward');
     expect(result?.fieldValues.find(({ fieldId }) => fieldId === 'earned-progress')?.valueText)
       .toContain('冲锋盾·主研究1次·120/120·已收藏·主研究完成');
     expect(result?.fieldValues.find(({ fieldId }) => fieldId === 'earned-progress')?.valueText)
-      .toContain('全武器主研究120/120');
+      .toContain('全武器主研究120/240');
     expect(result?.fieldValues.find(({ fieldId }) => fieldId === 'earned-progress')?.valueText)
-      .toContain('收藏1/1');
+      .toContain('收藏1/2');
     expect(outcome.newlyCollectedWeaponDefinitionIds).toEqual(['weapon.a']);
     expect(result?.fieldValues.find(({ fieldId }) => fieldId === 'collection-change')?.valueText)
-      .toBe('冲锋盾（第1把武器）主研究达到120/120，进入已收藏阶段；阶段只表示熟悉度，不提升战斗数值；冲锋盾（第1把武器）已加入收藏（武器1/1）');
+      .toBe('冲锋盾（第1把武器）主研究达到120/120，进入主研究完成阶段；阶段只表示熟悉度，不提升战斗数值；冲锋盾（第1把武器）已加入收藏（武器1/2）');
     expect(() => projectArenaV2LearningInformationV1({
       ...input,
       settlement: { ...input.settlement, profileRevision: outcome.profile.revision - 1 },
@@ -1770,17 +1800,14 @@ describe('Arena V2 P6 information and retention candidates', () => {
       ?.fieldValues.find(({ fieldId }) => fieldId === 'collection-change')?.valueText;
     expect(weaponRecord).toContain('已收藏；当前主研究熟悉，下一阶段熟练（60/120）');
     expect(nextResearch).toMatchObject({
-      valueText: '第1把武器·已收藏·熟悉·主研究30/120·距熟练至少30局有效主研究',
+      valueText: '第2把武器·初识·主研究0/120·距熟悉至少30局有效主研究',
     });
-    expect(nextResearch?.accessibilityText).toContain('是当前武器主研究目标');
-    expect(practiceTarget?.valueText).toContain('第1把武器：继续在一局中主要使用这把武器（30/120）');
+    expect(nextResearch?.accessibilityText).toContain('第2把武器');
+    expect(practiceTarget?.valueText).toContain('第2把武器：在一局中主要使用这把武器（0/120）');
     const homeGoal = projection.screens.find(({ screenId }) => screenId === 'home')
       ?.fieldValues.find(({ fieldId }) => fieldId === 'next-goal');
-    expect(homeGoal?.valueText).toContain('当前熟悉；距熟练30次；已收藏；收藏1/2');
-    expect(homeGoal?.valueText).not.toContain('距收藏90次');
-    expect(homeGoal?.accessibilityText).toContain(
-      '这把武器已经加入收藏，目前继续补主研究证据',
-    );
+    expect(homeGoal?.valueText).toContain('当前初识；距熟悉30次；距收藏120次；收藏1/2');
+    expect(homeGoal?.accessibilityText).toContain('第2把武器');
     expect(collectionChange).toBe('本局进度已记录，收藏阶段未变化');
   });
 
@@ -2436,7 +2463,7 @@ describe('Arena V2 P6 information and retention candidates', () => {
     expect(() => createArenaV2MapLearningFocusContinuationObservationV1({
       ...baseMapFocus,
       futureField: true,
-    })).toThrow(/未知字段/u);
+    })).toThrow(/不支持字段 futureField/u);
   });
 
   it('rejects profile revision rollback by logical retention event identity', () => {
@@ -2944,7 +2971,7 @@ describe('Arena V2 P6 information and retention candidates', () => {
       expect(() => journal.collectBatch([
         first,
         { ...observation('event.atomic-invalid.2', 2, {}), futureField: true },
-      ])).toThrow(/未知字段/u);
+      ])).toThrow(/不支持字段 futureField/u);
       expect(() => journal.collectBatch([first, accessorMiddle])).toThrow(/数据字段/u);
       expect(getterCalls).toBe(0);
       expect(() => journal.collectBatch([

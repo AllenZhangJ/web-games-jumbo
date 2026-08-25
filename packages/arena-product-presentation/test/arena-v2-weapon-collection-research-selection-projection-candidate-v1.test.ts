@@ -73,19 +73,19 @@ describe('Arena V2 weapon collection research selection projection candidate V1'
       expect(item.unavailableReason).toBe(source.items[index]!.unavailableReason);
     });
     expect(result.items[0]!.description).toContain(
-      '初识 · 收藏研究 0/120 · 距熟悉至少30局有效主研究',
+      '初识 · 主研究 0/120 · 距熟悉至少30局有效主研究',
     );
     expect(result.items[1]!.description).toContain(
-      '当前目标 · 熟悉 · 收藏研究 30/120 · 距熟练至少30局有效主研究',
+      '当前目标 · 熟悉 · 主研究 30/120 · 距熟练至少30局有效主研究',
     );
     expect(result.items[2]!.description).toContain(
-      '等待开放 · 熟练 · 收藏研究 60/120 · 距精通至少30局有效主研究',
+      '等待开放 · 熟练 · 主研究 60/120 · 距精通至少30局有效主研究',
     );
     expect(result.items[3]!.description).toContain(
-      '精通 · 收藏研究 90/120 · 距已收藏至少30局有效主研究',
+      '精通 · 主研究 90/120 · 距主研究完成至少30局有效主研究',
     );
     expect(result.items[4]!.description).toContain(
-      '新开放 · 已可用未收藏 · 初识 · 收藏研究 4/120 · 距熟悉至少26局有效主研究',
+      '新开放 · 已可用未收藏 · 初识 · 主研究 4/120 · 距熟悉至少26局有效主研究',
     );
     expect(result.items[1]!.description).toContain('情境理解 1/5｜verb-1');
     expect(result.items[2]!.available).toBe(false);
@@ -101,7 +101,9 @@ describe('Arena V2 weapon collection research selection projection candidate V1'
       selection: source,
       facts: facts({ 0: { collectionEvidenceCount: 12, collected: true } }),
     });
-    expect(result.items[0]!.description).toBe(source.items[0]!.description);
+    expect(result.items[0]!.description).toBe(
+      '已收藏 · 初识 · 主研究 12/120 · 距熟悉至少18局有效主研究 · 情境理解 0/5｜verb-0',
+    );
   });
 
   it('rejects order, target and existing-description drift', () => {

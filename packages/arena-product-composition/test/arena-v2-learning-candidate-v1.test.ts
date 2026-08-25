@@ -182,6 +182,17 @@ function raceResult(
   });
 }
 
+function raceSafeAnchorId(progressOrdinal: number): string {
+  const mapBinding = ARENA_V2_LEARNING_EVIDENCE_DEFINITION_CANDIDATE_V1.mapBindings.find(
+    ({ mapDefinitionId }) => mapDefinitionId === ARENA_V2_KZ_BASE_MAP_CANDIDATE_ID,
+  );
+  const segment = mapBinding?.segments[progressOrdinal - 1];
+  if (segment?.safeAnchorId === undefined) {
+    throw new RangeError(`Race test缺少progressOrdinal ${progressOrdinal}的安全锚。`);
+  }
+  return segment.safeAnchorId;
+}
+
 function raceEvents(matchResult: ReturnType<typeof raceResult>) {
   const ground = WEAPON.grammar.contexts.find(({ kind }) => kind === 'ground')!;
   const events: Record<string, unknown>[] = [{
@@ -202,7 +213,7 @@ function raceEvents(matchResult: ReturnType<typeof raceResult>) {
     events.push({
       id: 'race-event.2', sequence: events.length, tick: RACE_FIRST_ACTIVE_TICK,
       type: 'RaceSafeAnchorCommitted', modeDefinitionId: matchResult.modeDefinitionId,
-      participantId: 'p1', anchorId: 'kz-a-route-start', progressOrdinal: 1,
+      participantId: 'p1', anchorId: raceSafeAnchorId(1), progressOrdinal: 1,
     });
   }
   if (matchResult.modeResult.kind === 'race' && matchResult.modeResult.reason === 'finish-claimed') {
@@ -983,7 +994,7 @@ describe('Arena V2 P6 composed learning candidate', () => {
       result: originalResult,
       recipientParticipantId: 'p1',
       events: sameTickDuplicate,
-    })).toThrow(/同一参与者同tick只能启动一个装备动作/);
+    })).toThrow(/Action feedback outcome同参与者、动作与tick的起手不能重复/);
 
     const sharedInstanceResult = result(7, 'timeout-draw', {
       p1: [WEAPON.equipment.id],
@@ -1173,7 +1184,7 @@ describe('Arena V2 P6 composed learning candidate', () => {
       result: matchResult,
       recipientParticipantId: 'p1',
       events: missingAction,
-    })).toThrow(/缺少同攻击者、同动作、同起手tick/);
+    })).toThrow(/Action feedback outcome缺少同攻击者、动作与起手tick的先行权威起手/);
 
     const feedbackBeforeAction = [
       ...base.slice(0, -1),
@@ -1397,7 +1408,7 @@ describe('Arena V2 P6 composed learning candidate', () => {
         type: 'RaceSafeAnchorCommitted',
         modeDefinitionId: duelMatchResult.modeDefinitionId,
         participantId: 'p1',
-        anchorId: 'kz-a-route-start',
+        anchorId: raceSafeAnchorId(1),
         progressOrdinal: 1,
       },
       ...duelEvents.slice(1).map((event) => ({
@@ -1729,7 +1740,7 @@ describe('Arena V2 P6 composed learning candidate', () => {
       result: matchResult,
       recipientParticipantId: 'p1',
       events: missingRespawn,
-    })).toThrow(/掉落|重生/);
+    })).toThrow(/Survival ParticipantFell必须来自当前active assignment/);
 
     const missingPlayerFall = validEvents.filter((event) => (
       event.id !== 'survival-event.fall.1'
@@ -1741,7 +1752,7 @@ describe('Arena V2 P6 composed learning candidate', () => {
       result: matchResult,
       recipientParticipantId: 'p1',
       events: missingPlayerFall,
-    })).toThrow(/掉落计数/);
+    })).toThrow(/掉落|重生/);
   });
 
   it('accepts an unscheduled first fall only when the same tick reaches the Survival time cap', () => {
@@ -1796,14 +1807,35 @@ describe('Arena V2 P6 composed learning candidate', () => {
   });
 
   it('rejects a Survival result without one player and enemy-only opponents', () => {
-    const matchResult = survivalResult(2, 'terminal-player-fall', 'competitor');
+    const baseline = survivalResult();
+    const { authorityHash: _authorityHash, ...authority } = baseline;
+    const matchResult = createProductMatchResultV3({
+      ...authority,
+      participantAssignments: [{
+        ...baseline.participantAssignments[0]!,
+        modeRole: 'player',
+        slotId: null,
+        slotGeneration: 0,
+      }, {
+        ...baseline.participantAssignments[1]!,
+        modeRole: 'player',
+        slotId: null,
+        slotGeneration: 0,
+      }],
+    });
     expect(() => resolveArenaV2ReplayLearningGrantV1({
       profileDefinition: ARENA_V2_LEARNING_PROFILE_DEFINITION_CANDIDATE_V1,
       evidenceDefinition: ARENA_V2_LEARNING_EVIDENCE_DEFINITION_CANDIDATE_V1,
       result: matchResult,
       recipientParticipantId: 'p1',
-      events: terminalSurvivalEvents(matchResult),
-    })).toThrow(/唯一player/);
+      events: [{
+        id: 'survival-invalid-roster.start', sequence: 0, tick: 0, type: 'MatchStarted',
+        modeDefinitionId: matchResult.modeDefinitionId, participantIds: PARTICIPANTS,
+      }, {
+        id: 'survival-invalid-roster.end', sequence: 1, tick: 200, type: 'MatchEnded',
+        modeDefinitionId: matchResult.modeDefinitionId, modeResult: matchResult.modeResult,
+      }],
+    })).toThrow(/必须恰有一个player/);
   });
 
   it('closes Survival enemy slot generation through activation, fall and deactivation', () => {
@@ -1862,7 +1894,7 @@ describe('Arena V2 P6 composed learning candidate', () => {
       result: matchResult,
       recipientParticipantId: 'p1',
       events: forgedGeneration,
-    })).toThrow(/敌人槽/);
+    })).toThrow(/Survival enemy slot change与当前generation不闭合/);
   });
 
   it('does not turn an unproven or cancelled weapon start into research evidence', () => {

@@ -91,13 +91,23 @@ describe('Arena V2 next learning goal continuation route V1', () => {
   it('routes a generic weapon research goal to deterministic duel loadout', () => {
     const profile = createArenaV2LearningProfileV1(definition, {
       ...createArenaV2LearningProfileV1(definition),
+      revision: 1,
       collections: { weaponDefinitionIds: [], mapDefinitionIds: ['map.a'] },
+      mapSegmentMastery: [{
+        mapDefinitionId: 'map.a',
+        segmentDefinitionId: 'segment.a',
+        completionEvidenceCount: 1,
+        completedAtRevision: 1,
+        bestRaceFinishTicks: null,
+        bestSurvivalTicks: null,
+      }],
       modeRecords: definition.modeDefinitions.map((mode) => ({
         modeDefinitionId: mode.modeDefinitionId,
         kind: mode.kind,
         playCount: 1,
         completionCount: 1,
         winCount: mode.kind === 'survival' ? 0 : 1,
+        completedAtRevision: 1,
         bestPerformanceTicks: 600,
       })),
     });

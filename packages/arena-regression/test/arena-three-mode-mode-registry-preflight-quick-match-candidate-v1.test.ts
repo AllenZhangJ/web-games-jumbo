@@ -1996,14 +1996,17 @@ describe('Arena three-mode Mode Registry preflight QuickMatch candidate V1', () 
         ({ kind }) => kind === 'map-learning-focus-continued',
       );
       expect(effectiveIndex).toBeGreaterThanOrEqual(0);
-      expect(weaponContent).toEqual([]);
+      expect(weaponContent).toHaveLength(1);
       expect(weaponContent.map(({ weaponDefinitionIds }) => (
         (weaponDefinitionIds as readonly string[])[0]
       ))).toEqual(weaponContent.map(({ weaponDefinitionIds }) => (
         (weaponDefinitionIds as readonly string[])[0]!
       )).sort());
       expect(mapContent).toHaveLength(1);
-      expect(unique.indexOf(mapContent[0]!)).toBe(effectiveIndex + 1);
+      expect(unique.indexOf(weaponContent[0]!)).toBe(effectiveIndex + 1);
+      expect(unique.indexOf(mapContent[0]!)).toBe(
+        unique.indexOf(weaponContent.at(-1)!) + 1,
+      );
       expect(crossIndex).toBe(unique.indexOf(mapContent[0]!) + 1);
       if (weaponFocusIndex >= 0) expect(weaponFocusIndex).toBe(crossIndex + 1);
       if (mapFocusIndex >= 0) {

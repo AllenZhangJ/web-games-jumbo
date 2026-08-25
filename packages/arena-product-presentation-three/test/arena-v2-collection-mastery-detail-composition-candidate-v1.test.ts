@@ -107,7 +107,7 @@ function progressFacts(options: Readonly<{
   const weapons = TEST_WEAPONS.map((weaponDefinitionId, index) => ({
     weaponDefinitionId,
     collected: index === 0,
-    collectionEvidenceCount: index === 0 ? 9 : 0,
+    collectionEvidenceCount: index === 0 ? 120 : 0,
     collectionEvidenceTarget: 120,
     completedContextCount: index === 0 ? weaponCompleted : 0,
     mastered: index === 0 && weaponCompleted === 5,
@@ -118,7 +118,11 @@ function progressFacts(options: Readonly<{
     maps: TEST_MAPS.map((map, index) => {
       const completedSegmentCount = index === 0 ? mapCompleted : 0;
       const evidenceCount = index === 0
-        ? completedSegmentCount * 2 + (completedSegmentCount < map.segmentDefinitionIds.length ? 1 : 0)
+        ? completedSegmentCount * 2 + (
+          completedSegmentCount > 0 && completedSegmentCount < map.segmentDefinitionIds.length
+            ? 1
+            : 0
+        )
         : 0;
       return {
         mapDefinitionId: map.mapDefinitionId,
@@ -134,13 +138,13 @@ function progressFacts(options: Readonly<{
       };
     }),
     weaponJourney: {
-      currentMainResearch: 9,
+      currentMainResearch: 120,
       targetMainResearch: 2_400,
-      remainingMainResearch: 2_391,
+      remainingMainResearch: 2_280,
       collectedWeaponCount: 1,
       weaponCount: 20,
       averageMatchMinutesAssumption: 5,
-      estimatedRemainingMinutes: 11_955,
+      estimatedRemainingMinutes: 11_400,
       estimateKind: 'capacity-hypothesis-not-player-promise',
     },
   };
@@ -237,7 +241,7 @@ function detailProgress(kind: 'weapon' | 'map', revision = 7): ArenaV2A6DetailPr
       profileRevision: revision,
       weaponDefinitionId: WEAPON_ID,
       collected: true,
-      useCount: 9,
+      useCount: 120,
       collectionEvidenceTarget: 120,
       contexts: WEAPON_CONTEXTS.map((context, index) => ({
         context,
@@ -347,8 +351,8 @@ describe('Arena V2 A6.3 collection mastery detail composition candidate', () => 
         completed: 2,
         total: 5,
         valueText: '2/5',
-        mainResearchStage: '已收藏',
-        nextMainResearchMilestoneText: '下一里程碑 30/120，还需21次主研究',
+        mainResearchStage: '主研究完成',
+        nextMainResearchMilestoneText: '主研究里程碑已完成',
       },
     });
     expect(snapshot.p5DetailFields.map(({ fieldId }) => fieldId)).toEqual(WEAPON_FIELDS);
@@ -410,6 +414,18 @@ describe('Arena V2 A6.3 collection mastery detail composition candidate', () => 
     const snapshot = consumeOnce('map', input('map', {
       collectionProgressInput: collectionProgressInput('map', {
         progressFacts: uncollectedFacts,
+        nextGoalIdentity: {
+          schemaVersion: 1,
+          profileRevision: 7,
+          kind: 'collect-map',
+          goalId: `collect-map:${MAP_ID}`,
+          weaponDefinitionId: null,
+          mapDefinitionId: MAP_ID,
+          segmentDefinitionId: null,
+          modeDefinitionId: null,
+          challengeDefinitionId: null,
+          context: null,
+        },
       }),
       detailProgressFacts: {
         ...detailProgress('map'),

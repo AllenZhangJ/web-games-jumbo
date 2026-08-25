@@ -303,42 +303,38 @@ describe('Arena V2 A6.14 collection preview page Surface Host candidate V1', () 
     ]) expect(source).toContain(marker);
   });
 
-  it('preserves submission identity and renders a late ready mount on a higher presentation tick', async () => {
+  it('preserves submission identity while the current ledger remains fallback-only', async () => {
     const fixture = harness();
-    const assetId = fixture.firstRead.previewSlots[0]!.assetId;
-    fixture.loader.pendingAssets.add(assetId);
     const input = stepInput(fixture.firstRead, [1]);
     const first = fixture.host.submitPage(input);
     expect(fixture.host.submitPage(input)).toBe(first);
     const committed = await first;
     expect(fixture.host.submitPage(input)).toBe(first);
-    expect(fixture.loader.loads).toEqual([assetId]);
+    expect(fixture.loader.loads).toEqual([]);
+    expect(committed.executionResult.activeRecords).toEqual([]);
+    expect(committed.executionResult.fallbackSlots).toHaveLength(1);
     const empty = fixture.host.renderCurrent({
       schemaVersion: 1,
       presentationTick: 0,
       pixelRatio: 2,
     });
     expect(empty.renderedSlotCount).toBe(0);
-    fixture.loader.resolve(assetId);
-    await committed.executionResult.activeRecords[0]!.leaseResultPromise;
     await flushMicrotasks();
-    const ready = fixture.host.renderCurrent({
+    const fallback = fixture.host.renderCurrent({
       schemaVersion: 1,
       presentationTick: 1,
       pixelRatio: 2,
     });
-    expect(ready).toMatchObject({ state: 'active', renderedSlotCount: 1 });
-    expect(fixture.loader.loads).toEqual([assetId]);
-    expect(fixture.renderer.calls.filter(({ method }) => method === 'render')).toHaveLength(1);
+    expect(fallback).toMatchObject({ state: 'active', renderedSlotCount: 0 });
+    expect(fixture.loader.loads).toEqual([]);
+    expect(fixture.renderer.calls.filter(({ method }) => method === 'render')).toHaveLength(0);
     expect(fixture.host.destroy().state).toBe('destroyed');
     fixture.readOwner.destroy();
   });
 
-  it('clears old weapon pixels with an authentic empty map page frame', async () => {
+  it('keeps weapon and map fallback frames free of stale Three pixels', async () => {
     const fixture = harness();
-    const first = await fixture.host.submitPage(stepInput(fixture.firstRead, [1]));
-    await first.executionResult.activeRecords[0]!.leaseResultPromise;
-    await flushMicrotasks();
+    await fixture.host.submitPage(stepInput(fixture.firstRead, [1]));
     fixture.host.renderCurrent({ schemaVersion: 1, presentationTick: 0, pixelRatio: 2 });
     const renderCount = fixture.renderer.calls.filter(({ method }) => method === 'render').length;
 
@@ -354,16 +350,15 @@ describe('Arena V2 A6.14 collection preview page Surface Host candidate V1', () 
     expect(fixture.renderer.calls.filter(({ method }) => method === 'render')).toHaveLength(
       renderCount,
     );
-    expect(fixture.loader.releases).toHaveLength(1);
+    expect(fixture.loader.loads).toHaveLength(0);
+    expect(fixture.loader.releases).toHaveLength(0);
     expect(fixture.host.destroy().state).toBe('destroyed');
     fixture.readOwner.destroy();
   });
 
   it('rejects render preflight before any additional renderer side effect', async () => {
     const fixture = harness();
-    const first = await fixture.host.submitPage(stepInput(fixture.firstRead, [1]));
-    await first.executionResult.activeRecords[0]!.leaseResultPromise;
-    await flushMicrotasks();
+    await fixture.host.submitPage(stepInput(fixture.firstRead, [1]));
     const callCount = fixture.renderer.calls.length;
     expect(() => fixture.host.renderCurrent({
       schemaVersion: 1,
@@ -378,13 +373,12 @@ describe('Arena V2 A6.14 collection preview page Surface Host candidate V1', () 
 
   it('rejects destroy during submit microtask and permits cleanup immediately after commit', async () => {
     const fixture = harness();
-    const assetId = fixture.firstRead.previewSlots[0]!.assetId;
-    fixture.loader.pendingAssets.add(assetId);
     const submission = fixture.host.submitPage(stepInput(fixture.firstRead, [1]));
     expect(() => fixture.host.destroy()).toThrow(/submission|微任务/);
     await submission;
     expect(fixture.host.destroy()).toMatchObject({ state: 'destroyed' });
-    expect(fixture.loader.pending.has(assetId)).toBe(true);
+    expect(fixture.loader.loads).toHaveLength(0);
+    expect(fixture.loader.pending.size).toBe(0);
     fixture.readOwner.destroy();
   });
 
@@ -411,7 +405,10 @@ describe('Arena V2 A6.14 collection preview page Surface Host candidate V1', () 
         renderer,
       })).toThrow(/scissor normalization failure/);
       expect(pageDestroyCalls).toBe(1);
-      expect(renderer.calls.map(({ method }) => method)).toEqual(['setScissorTest', 'dispose']);
+      expect(renderer.calls.map(({ method }) => method))
+        .toEqual(['setScissorTest', 'setScissorTest', 'dispose']);
+      expect(renderer.calls.filter(({ method }) => method === 'setScissorTest').map(({ args }) => args))
+        .toEqual([[false], [false]]);
     } finally {
       Object.defineProperty(prototype, 'destroy', descriptor);
       readOwner.destroy();
@@ -424,27 +421,24 @@ describe('Arena V2 A6.14 collection preview page Surface Host candidate V1', () 
     const renderer = new FakeRenderer(events);
     renderer.disposeFailuresRemaining = 1;
     const fixture = harness({ loader, renderer });
-    const first = await fixture.host.submitPage(stepInput(fixture.firstRead, [1]));
-    await first.executionResult.activeRecords[0]!.leaseResultPromise;
-    await flushMicrotasks();
+    await fixture.host.submitPage(stepInput(fixture.firstRead, [1]));
     const firstDestroy = fixture.host.destroy();
     expect(firstDestroy).toMatchObject({
       state: 'destroy-incomplete',
       renderResult: { state: 'dispose-incomplete' },
-      pageResult: { state: 'destroyed' },
+      pageResult: null,
       failurePhases: ['a6.13-render-surface'],
     });
     const disposeIndex = events.indexOf('renderer:dispose');
-    const releaseIndex = events.findIndex((entry) => entry.startsWith('loader:release:'));
     expect(disposeIndex).toBeGreaterThanOrEqual(0);
-    expect(releaseIndex).toBeGreaterThan(disposeIndex);
-    expect(loader.releases).toHaveLength(1);
+    expect(loader.loads).toHaveLength(0);
+    expect(loader.releases).toHaveLength(0);
 
     const secondDestroy = fixture.host.destroy();
     expect(secondDestroy).toMatchObject({ state: 'destroyed', failurePhases: [] });
     expect(fixture.host.destroy()).toBe(secondDestroy);
     expect(renderer.calls.filter(({ method }) => method === 'dispose')).toHaveLength(2);
-    expect(loader.releases).toHaveLength(1);
+    expect(loader.releases).toHaveLength(0);
     fixture.readOwner.destroy();
   });
 });

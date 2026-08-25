@@ -2,10 +2,12 @@
 
 ## 1. 当前状态
 
-- 日期：2026-08-24。
-- 当前状态：`P6.0-P6.552-source-candidates-code-written-not-run / P6.44-product-authority-registry-single-source-binding-code-written-not-run / P6.49-P6.55-settlement-intent-recovery-and-player-flow-code-written-not-run / P6.56-survival-time-cap-first-fall-replay-closure-code-written-not-run / P6.91-P6.101-next-match-continuation-code-written-not-run / P6.102-P6.108-retryable-cleanup-ownership-code-written-not-run / production-unreachable / hardGate=false`。P6各源码候选均已落盘；测试、类型检查、构建、压力、性能、设备与真人验证继续统一顺延。
+- 日期：2026-08-25。
+- 当前状态：`P6.0-P6.552-candidate-automation-executed-passed / production-unreachable / hardGate=false / defaultRegistry=false / defaultComposition=false / defaultEntry=false`。候选对象内的`implementationStatus=code-written-not-run / validationStatus=not-run`仍表示未获生产准入；它不再表示P6官方候选命令从未执行。压力、性能、浏览器、设备、真人、正式资产、默认入口和真实纵向留存继续顺延。
 - 2026-08-24 证据状态校正：此前`feature/arena-v2-design-docs@787ce27`记录的`typecheck:app`、52包workspace build、P2候选`351/421`和P3边界门仅是历史候选证据；这不代表P6的Profile/结算/CAS/恢复/留存候选、纵向容量、性能、设备或真人门通过，未取得独立运行记录的门继续为`not-run`。
 - 2026-08-24 SF-DG.1跨阶段收口：Local Host留存批在Journal拒写后保持同一冻结batch/cursor并优先以原子`collectBatch`重试，destroy阶段不创建新catalog observation；P2自动化门依赖的三模式留存预检`52/52`通过。该结果不等于P6全量候选、CAS/容量/压力、性能、设备、真人或留存目标通过。
+- 2026-08-25 SF-DG.5a候选自动化首轮收口：P6官方门首轮已记录为失败；本批将非Three红项按Contract→Persistence→Service→Result/Learning→Presentation分类后复验，32个非Three Vitest文件`398/398`通过。修正只涉及旧Profile/Grant/Replay fixture、结算回执文案与P6治理可达性：Race段落安全锚改取冻结Definition、长期夹具移除旧contentHash并补全模式/路线前置事实、完整实际武器使用回执保留空中与生存事实、显式关闭的Formal Web候选可消费P6读模型但默认入口仍禁止。混合Node治理文件仍含A6 Three/GLTF规格，待美术停止写入后与完整P6门统一复验；浏览器、设备、性能、真人、正式资产与默认入口均未通过。
+- 2026-08-25 SF-DG.5a/SF-A6P6.2候选自动化最终证据：在开发与美术分别完成自检并停止写入后，协调侧从同一共享树独立执行P6官方门并通过52包/11波构建、Vitest `54/54`文件`583/583`项、Node `4/4`文件`273/273`项；P6边界检查通过68个authority文件、7个生产根和11个A6收藏候选文件，`typecheck:app`、364份Markdown/1145条本地链接/60条命令的文档检查及`git diff --check`均通过。当前22个收藏预览槽仍为fallback、0 loader/lease/mount；17个迁移后的Three/GLTF静态锚保留顺序、值、负向断言、迟到结算与销毁重试约束。该证据只关闭P6候选自动化门，不证明200小时真实留存、正式资产、默认入口、浏览器、压力、性能、设备或真人硬门通过。
 - 首页武器收藏旅程：`P6.552-home-next-goal-weapon-collection-journey-code-written-not-run`。首页原下一目标在收藏武器阶段同时显示下一主研究阶段、收藏状态或理论剩余距离，以及完整目录收藏N/总数；已收藏导入档案不显示虚假收藏距离。
 - 武器收藏结算剩余距离：`P6.551-result-weapon-collection-distance-receipt-code-written-not-run`。每次有效主研究都在原结果字段显示收藏N/总数；未收藏武器显示距收藏的理论最少有效局数，已收藏武器不显示虚假距离。
 - HUD反馈声音即时静音：`P6.550-feedback-owned-audio-immediate-mute-stop-code-written-not-run`。静音帧立即停止Consumer自己持有的命中反馈声；重新开音不补播旧事件，之后的新事件仍可正常播放并被生命周期清理。

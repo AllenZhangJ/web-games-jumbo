@@ -377,7 +377,7 @@ describe('Arena V2 P6 collection next-goal identity projection V1', () => {
     })).toMatchObject({ context: 'survival' });
   });
 
-  it('keeps incomplete weapon-context goals in Definition order rather than Profile id order', () => {
+  it('keeps incomplete weapon-context goals in canonical Definition order', () => {
     const definition = definitionFixture({
       weaponDefinitionIds: ['weapon.z', 'weapon.a'],
     });
@@ -390,16 +390,17 @@ describe('Arena V2 P6 collection next-goal identity projection V1', () => {
         weaponMasteryRecord(definition, 'weapon.a', 120, false),
         weaponMasteryRecord(definition, 'weapon.z', 120, false),
       ],
-      modeRecords: [modeRecord(definition, 'mode.duel', 1, 900)],
+      mapSegmentMastery: completedMapSegmentRecords(definition),
+      modeRecords: modeRecords(definition, 1, 900),
     });
     expect(resolveArenaV2NextLearningGoalV1(input(definition, profile))).toMatchObject({
       kind: 'weapon-context',
-      weaponDefinitionId: 'weapon.z',
+      weaponDefinitionId: 'weapon.a',
       context: 'ground',
     });
     expect(resolveArenaV2WeaponLearningGoalV1(input(definition, profile))).toMatchObject({
       kind: 'weapon-context',
-      weaponDefinitionId: 'weapon.z',
+      weaponDefinitionId: 'weapon.a',
       context: 'ground',
     });
   });

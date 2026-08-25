@@ -48,7 +48,10 @@ describe('Arena V2 A6.11a current production approval boundary（未运行）', 
       'destroy',
       'task-resolved',
       'task-rejected',
-    ]) expect(source).toContain(`#runSynchronousOperation('${operation}'`);
+    ]) expect(source).toMatch(new RegExp(
+      `#runSynchronousOperation\\(\\s*'${operation}'`,
+      'u',
+    ));
     expect(source).toMatch(
       /const operation = Object\.freeze\([\s\S]*?this\.#tasks\.set\([\s\S]*?taskOperation = task\.load\(\)/u,
     );

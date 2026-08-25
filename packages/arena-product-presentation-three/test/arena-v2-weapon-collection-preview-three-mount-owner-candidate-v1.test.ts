@@ -100,10 +100,11 @@ describe('ArenaV2WeaponCollectionPreviewThreeMountOwnerCandidateV1（未运行�
       expect(source).toContain(`#runSynchronousOperation('${operation}'`);
     }
     expect(source).toMatch(
-      /built = buildMount\(parsed\);[\s\S]*?cleanupOwnedMountObjects\(built\.cleanup\)[\s\S]*?this\.#mounts\.set/u,
+      /built = buildMount\(parsed\);[\s\S]*?this\.#assertCurrentOperationCommit\(\);[\s\S]*?this\.#mounts\.set/u,
     );
-    expect(source.indexOf('cleanupOwnedMountObjects(built.cleanup)'))
-      .toBeLessThan(source.indexOf('this.#mounts.set(parsed.mountId'));
+    expect(source).toMatch(
+      /cleanupOwnedMountObjects\(\s*built\.cleanup,\s*\(\) => this\.#assertCurrentOperationCommit\(\),\s*\)/u,
+    );
     for (const marker of [
       'swallowedThreeCallbackReentryFailsClosed: true',
       'failedMountReentryDoesNotPublishRecord: true',

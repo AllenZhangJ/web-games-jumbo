@@ -281,16 +281,15 @@ describe('Arena V2 A6.10 visible preview lease command planning owner candidate 
     expect(third.fallbackSlots).toHaveLength(1);
   });
 
-  it('crosses the former 128-entry history boundary without retaining lease tombstones', () => {
+  it('crosses the former 128-page boundary without inventing fallback lease tombstones', () => {
     const owner = new ArenaV2CollectionVisiblePreviewLeaseCommandPlanningOwnerCandidateV1({
       epochId: 'epoch-a',
     });
     let tick = 0;
     let weapon = readSnapshot('weapon-detail', tick);
     const weaponId = weapon.previewSlots[0]!.definitionId;
-    const assetId = weapon.previewSlots[0]!.assetId;
     let plan = owner.plan(input(weapon, [weaponId]));
-    for (let activationSequence = 2; activationSequence <= 130; activationSequence += 1) {
+    for (let pageSequence = 2; pageSequence <= 130; pageSequence += 1) {
       const map = readSnapshot('map-detail', tick += 1);
       const released = owner.plan(input(
         map,
@@ -298,13 +297,13 @@ describe('Arena V2 A6.10 visible preview lease command planning owner candidate 
         plan.nextActiveLeaseLedger,
       ));
       expect(released.nextActiveLeaseLedger).toEqual([]);
+      expect(released.fallbackSlots).toHaveLength(1);
       weapon = readSnapshot('weapon-detail', tick += 1);
       plan = owner.plan(input(weapon, [weaponId], released.nextActiveLeaseLedger));
-      expect(plan.nextActiveLeaseLedger[0]?.activationSequence).toBe(activationSequence);
+      expect(plan.nextActiveLeaseLedger).toEqual([]);
+      expect(plan.fallbackSlots).toHaveLength(1);
     }
-    expect(plan.nextActiveLeaseLedger[0]?.visibleSlotLeaseId).toBe(
-      `a6.10:weapon-detail:${assetId}:130`,
-    );
+    expect(plan.nextActiveLeaseLedger).toEqual([]);
   });
 
   it('is same-tick idempotent and retains across Profile revision-only progress', () => {
@@ -316,15 +315,15 @@ describe('Arena V2 A6.10 visible preview lease command planning owner candidate 
     const sameInput = input(firstSnapshot, ids);
     const first = owner.plan(sameInput);
     expect(owner.plan(sameInput)).toBe(first);
-    expect(first.nextActiveLeaseLedger.every(({ activationSequence }) => (
-      activationSequence === 1
-    ))).toBe(true);
+    expect(first.nextActiveLeaseLedger).toEqual([]);
+    expect(first.fallbackSlots).toHaveLength(2);
 
     const advanced = readSnapshot('weapon-index', 1, { profileRevision: 2 });
     const second = owner.plan(input(advanced, ids, first.nextActiveLeaseLedger));
-    expect(second.retainLeases).toHaveLength(2);
+    expect(second.retainLeases).toEqual([]);
     expect(second.acquireCommands).toEqual([]);
     expect(second.releaseCommands).toEqual([]);
+    expect(second.fallbackSlots).toHaveLength(2);
   });
 
   it('keeps the Profile waterline through non-ready null and rejects revision rollback', () => {
@@ -336,7 +335,8 @@ describe('Arena V2 A6.10 visible preview lease command planning owner candidate 
     const first = owner.plan(input(ready, [id]));
     const nonReady = readSnapshot('weapon-index', 1);
     const second = owner.plan(input(nonReady, [id], first.nextActiveLeaseLedger));
-    expect(second.retainLeases).toHaveLength(1);
+    expect(second.retainLeases).toEqual([]);
+    expect(second.fallbackSlots).toHaveLength(1);
 
     const rollback = readSnapshot('weapon-index', 2, { profileRevision: 1 });
     expect(() => owner.plan(input(
@@ -404,7 +404,8 @@ describe('Arena V2 A6.10 visible preview lease command planning owner candidate 
     const tokenOwner = new ArenaV2CollectionVisiblePreviewLeaseCommandPlanningOwnerCandidateV1({
       epochId: 'epoch-a',
     });
-    expect(() => tokenOwner.plan(forgedToken)).toThrow(/A6\.6.*请求合同|requestToken/);
+    expect(() => tokenOwner.plan(forgedToken))
+      .toThrow(/A6\.6.*请求合同|requestToken|回退合同/);
     expect(tokenOwner.getPlan()).toBeNull();
 
     const substituted = clone(input(snapshot, [visibleId])) as unknown as {
@@ -437,19 +438,33 @@ describe('Arena V2 A6.10 visible preview lease command planning owner candidate 
     expect(() => owner.plan(input(snapshot, ids.slice(0, 1)))).toThrow(/同tick输入冲突/);
 
     const next = readSnapshot('weapon-index', 1);
-    const forged = first.nextActiveLeaseLedger.map((lease) => ({ ...lease }));
-    forged[0]!.assetId = 'forged.asset';
+    const firstSlot = snapshot.previewSlots[0]!;
+    const forged = [{
+      schemaVersion: 1,
+      epochId: snapshot.epochId,
+      catalogContentHash: snapshot.formalAssetLeaseBinding.contentIdentity.catalogContentHash,
+      screenId: snapshot.screenId,
+      visibleSlotLeaseId: 'a6.10:weapon-index:forged.asset:1',
+      activationSequence: 1,
+      kind: 'weapon',
+      definitionId: firstSlot.definitionId,
+      assetId: 'forged.asset',
+      ordinal: firstSlot.ordinal,
+      requestToken: 'forged-request-token',
+      releaseToken: 'forged-release-token',
+      state: 'planned-active',
+    }];
     expect(() => owner.plan(input(next, ids, forged))).toThrow(/伪造|asset/);
     expect(() => owner.plan(input(
       next,
       ids,
-      [first.nextActiveLeaseLedger[0]!, first.nextActiveLeaseLedger[0]!],
+      [forged[0]!, forged[0]!],
     ))).toThrow(/重复lease/);
-    expect(() => owner.plan(input(next, ['hidden.definition'], first.nextActiveLeaseLedger)))
+    expect(() => owner.plan(input(next, ['hidden.definition'], [])))
       .toThrow(/当前页/);
-    expect(() => owner.plan(input(next, [ids[0]!, ids[0]!], first.nextActiveLeaseLedger)))
+    expect(() => owner.plan(input(next, [ids[0]!, ids[0]!], [])))
       .toThrow(/唯一子集/);
-    expect(() => owner.plan(input(next, [...ids].reverse(), first.nextActiveLeaseLedger)))
+    expect(() => owner.plan(input(next, [...ids].reverse(), [])))
       .toThrow(/ordinal/);
     expect(owner.getPlan()).toBe(first);
   });

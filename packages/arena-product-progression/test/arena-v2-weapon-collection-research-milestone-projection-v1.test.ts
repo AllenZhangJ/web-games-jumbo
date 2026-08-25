@@ -110,7 +110,7 @@ describe('Arena V2 P6.9-D weapon collection research milestones V1', () => {
       target: 120,
       collected: false,
       futureReward: 1,
-    })).toThrow(/未知字段/u);
+    })).toThrow(/不支持字段 futureReward/u);
     expect(() => deriveArenaV2HighestCrossedWeaponCollectionResearchMilestoneV1({
       previousCount: 61,
       currentCount: 60,
@@ -133,7 +133,7 @@ describe('Arena V2 P6.9-D weapon collection research milestones V1', () => {
       target: 120,
       collected: false,
       then() {},
-    })).toThrow(/未知字段/u);
+    })).toThrow(/不支持字段 then/u);
   });
 
   it('keeps governance metadata honest and produces deterministic immutable values', () => {

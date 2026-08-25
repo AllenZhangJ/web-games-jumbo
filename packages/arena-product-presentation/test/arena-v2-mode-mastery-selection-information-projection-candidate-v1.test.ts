@@ -233,7 +233,7 @@ describe('Arena V2 mode mastery selection information projection candidate V1', 
     });
     expect(result.fieldValues).toHaveLength(fieldSource().fieldValues.length);
     expect(result.fieldValues.find(({ fieldId }) => fieldId === 'record-type')).toMatchObject({
-      valueText: '本地名次、终点时间与路线段记录；生存熟练5/5·整体15/15；可刷新：1v1最快胜利00:10·竞速最快到达00:10·生存最长坚持00:10；本轮建议：常规1v1·累计5局；学习目录已完成·自由挑战或刷新个人记录',
+      valueText: '本地名次、终点时间与路线段记录；生存熟练5/5·整体15/15；可刷新：1v1最快胜利00:10·竞速最快到达00:10·生存最长坚持00:10；本轮建议：常规1v1·累计5局；学习目录已完成·自由挑战或刷新任意个人记录',
       fixedWidthNumeric: false,
     });
     expect(result.fieldValues.find(({ fieldId }) => fieldId === 'record-type')

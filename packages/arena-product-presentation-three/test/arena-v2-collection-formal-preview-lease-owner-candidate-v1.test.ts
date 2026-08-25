@@ -130,7 +130,10 @@ describe('Arena V2 A6.6 current production approval ledger boundary（未运行�
       'load-rejected',
       'load-invocation-failure',
       'load-invocation-failure-close',
-    ]) expect(source).toContain(`#runSynchronousOperation('${operation}'`);
+    ]) expect(source).toMatch(new RegExp(
+      `#runSynchronousOperation\\(\\s*'${operation}'`,
+      'u',
+    ));
     expect(source).toMatch(
       /const settlementOwner = createDeferredPromiseOwner<void>\(\);[\s\S]*?const leaseResult = this\.#installLease\([\s\S]*?this\.#load, loadRequest/u,
     );

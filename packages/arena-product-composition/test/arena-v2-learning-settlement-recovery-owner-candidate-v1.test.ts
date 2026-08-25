@@ -85,7 +85,7 @@ function grant() {
       playCountDelta: 1,
       completionCountDelta: 1,
       winCountDelta: 1,
-      bestPerformanceTicksCandidate: 300,
+      bestPerformanceTicksCandidate: 100,
     },
     challengeDeltas: [],
   };
@@ -269,10 +269,7 @@ describe('Arena V2 Learning settlement recovery owner candidate V1', () => {
 
     const driftedGrant = {
       ...value.committed.grant,
-      weaponDeltas: value.committed.grant.weaponDeltas.map((entry) => ({
-        ...entry,
-        useCountDelta: entry.useCountDelta + 1,
-      })),
+      resultAuthorityHash: 'cafebabe',
     };
     expect(() => value.owner.completeSettlement(
       value.projection('duplicate'),

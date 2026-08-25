@@ -196,7 +196,7 @@ function integer(value: unknown, name: string, minimum = 0): number {
 }
 
 function canonical(value: unknown): string {
-  const result = JSON.stringify(value);
+  const result = JSON.stringify(cloneFrozenData(value, 'A6.10 canonical data'));
   if (typeof result !== 'string') throw new TypeError('A6.10数据无法规范序列化。');
   return result;
 }

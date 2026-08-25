@@ -47,7 +47,7 @@ function content() {
       mapDefinitionId: definitionId,
       displayName: `A6.16 Map ${mapIndex + 1}`,
       participantRange: '2–4人',
-      segments: Array.from({ length: 10 }, (_, segmentIndex) => ({
+      segments: Array.from({ length: mapIndex === 0 ? 12 : 8 }, (_, segmentIndex) => ({
         segmentDefinitionId: `a6.16.map.${mapIndex}.segment.${segmentIndex}`,
         ordinal: segmentIndex + 1,
         displayName: `Segment ${mapIndex + 1}-${segmentIndex + 1}`,
@@ -67,6 +67,72 @@ function content() {
   };
 }
 
+function profileDefinition() {
+  const directory = content();
+  return {
+    schemaVersion: 1,
+    id: 'arena-v2.learning-profile.candidate.v1',
+    contentVersion: 5,
+    currentProfileSchemaVersion: 1,
+    status: 'production-unreachable',
+    hardGate: false,
+    defaultProfileServiceWired: false,
+    limits: {
+      maxIdentifierLength: 160,
+      maxCommittedGrantIds: 64,
+      maxCounterValue: 10_000,
+      maxCollectedWeaponIds: 20,
+      maxCollectedMapIds: 2,
+      maxWeaponMasteryRecords: 20,
+      maxMapSegmentMasteryRecords: 20,
+      maxModeRecords: 3,
+      maxChallengeRecords: 16,
+    },
+    masteryRequirements: {
+      weaponCollectionUseEvidence: 120,
+      weaponContextEvidence: {
+        ground: 1,
+        aerial: 1,
+        edge: 1,
+        'duel-counterplay': 1,
+        survival: 1,
+      },
+      mapSegmentCompletionEvidence: 1,
+      modeCompletionEvidence: 1,
+    },
+    defaultProfileId: 'local',
+    initiallyCollectedWeaponDefinitionIds: [],
+    initiallyCollectedMapDefinitionIds: [],
+    weaponDefinitionIds: directory.weapons.map(({ weaponDefinitionId }) => weaponDefinitionId),
+    mapDefinitions: directory.maps.map(({ mapDefinitionId, segments }) => ({
+      mapDefinitionId,
+      segmentDefinitionIds: segments.map(({ segmentDefinitionId }) => segmentDefinitionId),
+    })),
+    modeDefinitions: [
+      { modeDefinitionId: 'arena-v2.mode.duel.candidate.v1', kind: 'duel' },
+      { modeDefinitionId: 'arena-v2.mode.race.candidate.v1', kind: 'race' },
+      { modeDefinitionId: 'arena-v2.mode.survival.candidate.v1', kind: 'survival' },
+    ],
+    challengeDefinitions: [],
+  };
+}
+
+function profile(revision: number) {
+  return {
+    schemaVersion: 1,
+    profileDefinitionId: 'arena-v2.learning-profile.candidate.v1',
+    profileDefinitionContentVersion: 5,
+    profileId: 'a6.16.profile.local',
+    revision,
+    committedGrantIds: [],
+    collections: { weaponDefinitionIds: [], mapDefinitionIds: [] },
+    weaponMastery: [],
+    mapSegmentMastery: [],
+    modeRecords: [],
+    challenges: [],
+  };
+}
+
 function readInput(screenId: 'weapon-index' | 'map-index', tick: number) {
   return {
     schemaVersion: 1,
@@ -76,16 +142,16 @@ function readInput(screenId: 'weapon-index' | 'map-index', tick: number) {
       epochId: 'epoch-a6.16-integration',
       tick,
       locale: 'zh-CN',
-      sourceState: 'loading',
+      sourceState: 'ready',
       collectionContent: content(),
-      profileDefinition: null,
-      profile: null,
+      profileDefinition: profileDefinition(),
+      profile: profile(tick),
       eligibleWeaponDefinitionIds: null,
       diagnosticCode: null,
-      observedProfileSchemaVersion: null,
+      observedProfileSchemaVersion: 1,
       reducedMotion: false,
       muted: false,
-      decorativeAssetState: 'ready',
+      decorativeAssetState: 'missing',
     },
     detail: null,
     formalAssetCatalog: clone(ARENA_V2_A6_CURRENT_FORMAL_PREVIEW_CATALOG_V1),
@@ -413,12 +479,12 @@ describe('Arena V2 A6.16 collection preview vertical integration candidate V1', 
     expect(value.rendererFactoryCalls()).toBe(0);
   });
 
-  it('reverse-cleans an invalid lazy renderer without publishing a preview host', () => {
+  it('does not invoke an invalid lazy renderer factory on the current fallback-only path', () => {
     const surface = new FakeSurface();
     let disposeCalls = 0;
     const owner = new ArenaV2InformationCollectionPreviewSurfaceCompositionCandidateV1({
       schemaVersion: 1,
-      epochId: 'epoch-a6.16-invalid-renderer',
+      epochId: 'epoch-a6.16-integration',
       surface,
       rendererFactory: () => ({
         setPixelRatio() {},
@@ -440,9 +506,14 @@ describe('Arena V2 A6.16 collection preview vertical integration candidate V1', 
       underlyingLoader: new FakeLoader(),
     });
     owner.load();
-    expect(() => owner.render(source('weapon-index', 1).renderPlan))
-      .toThrow(/rendererFactory result/u);
-    expect(disposeCalls).toBe(1);
-    expect(owner.getSnapshot()).toMatchObject({ state: 'failed', hasPreviewHost: false });
+    owner.render(source('weapon-index', 1).renderPlan);
+    expect(disposeCalls).toBe(0);
+    expect(owner.getSnapshot()).toMatchObject({
+      state: 'active',
+      rendererFactoryInvoked: false,
+      hasPreviewHost: false,
+    });
+    owner.dispose();
+    expect(disposeCalls).toBe(0);
   });
 });

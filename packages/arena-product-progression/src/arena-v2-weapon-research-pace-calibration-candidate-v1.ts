@@ -255,7 +255,7 @@ function projectFromAccumulatedEvidence(
   definition: ReturnType<typeof createArenaV2LearningProfileDefinitionV1>,
   baselineProfile: ArenaV2LearningProfileV1,
   currentProfile: ArenaV2LearningProfileV1,
-  window: ArenaV2WeaponResearchPaceCalibrationWindowCandidateV1,
+  calibrationWindowValue: ArenaV2WeaponResearchPaceCalibrationWindowCandidateV1,
   evidence: Readonly<{
     settledMatchCount: number;
     measuredSettledMatchCount: number;
@@ -365,7 +365,7 @@ function projectFromAccumulatedEvidence(
     status: 'offline-weapon-research-pace-calibration-candidate' as const,
     productionReady: false as const,
     longitudinalEvidence: 'not-run' as const,
-    windowIdentityHash: window.windowIdentityHash,
+    windowIdentityHash: calibrationWindowValue.windowIdentityHash,
     baselineProfileRevision: baselineProfile.revision,
     currentProfileRevision: currentProfile.revision,
     evidenceThroughProfileRevision: evidence.evidenceThroughProfileRevision,
@@ -444,14 +444,18 @@ export function projectArenaV2WeaponResearchPaceCalibrationCandidateV1(
   if (!Array.isArray(source.observations)) {
     throw new TypeError('Arena V2武器研究节奏observations必须是数组。');
   }
-  const window = calibrationWindow(source.window, definition, baselineProfile);
+  const calibrationWindowValue = calibrationWindow(
+    source.window,
+    definition,
+    baselineProfile,
+  );
   const pace = projectArenaV2LearningPaceCalibrationCandidateV1({
     profileDefinition: definition,
     observations: source.observations,
   });
   const observations = source.observations.map(createArenaV2RetentionObservationV1);
   if (observations.some(({ cohortSubjectId: subjectId }) => (
-    subjectId !== window.cohortSubjectId
+    subjectId !== calibrationWindowValue.cohortSubjectId
   ))) {
     throw new RangeError('Arena V2武器研究节奏观察与校准窗口主体漂移。');
   }
@@ -487,7 +491,7 @@ export function projectArenaV2WeaponResearchPaceCalibrationCandidateV1(
     definition,
     baselineProfile,
     currentProfile,
-    window,
+    calibrationWindowValue,
     Object.freeze({
       settledMatchCount: pace.settledMatchCount,
       measuredSettledMatchCount: pace.measuredSettledMatchCount,
@@ -516,12 +520,16 @@ export function projectArenaV2WeaponResearchPaceCalibrationFromAccumulatedEviden
     definition,
     source.currentProfile,
   );
-  const window = calibrationWindow(source.window, definition, baselineProfile);
+  const calibrationWindowValue = calibrationWindow(
+    source.window,
+    definition,
+    baselineProfile,
+  );
   return projectFromAccumulatedEvidence(
     definition,
     baselineProfile,
     currentProfile,
-    window,
+    calibrationWindowValue,
     Object.freeze({
       settledMatchCount: assertIntegerAtLeast(
         source.settledMatchCount,

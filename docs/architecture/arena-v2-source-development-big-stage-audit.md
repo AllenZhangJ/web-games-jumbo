@@ -40,7 +40,7 @@
 | P3 地图与敌人 | 两图 Route Definition、Map Validator、Race/Survival真实Movement/Physics候选、受限Bot Observation/Controller、shared-world authority；[P3台账](arena-v2-p3-implementation-ledger.md) | 路线、重入、单一敌人族、1–16压力、两模式复用几何均已落盘 | 真实物理可达、拥挤、永久安全角、压力单调、地图/敌人资产批准、设备与真人 |
 | P4 二十武器 | 20武器目录、20×10生存变体、Action/Equipment/Rule/Physics/Replay、三模式反馈与方向、逐把Registry准入/持久恢复；[P4台账](arena-v2-p4-implementation-ledger.md) | 20把最小功能、反制、反馈、逐把原子晋级候选已落盘；默认Registry仍断开 | 定向运行、三模式差异、故障/恢复、平衡、逐把资产/真人/设备批准和单把正式注册 |
 | P5 页面与反馈 | 11页Registry/Pipeline、Information/Playable Host、HUD、Audio/VFX、DOM/Canvas、键盘/触控驱动、Formal Web候选；[P5台账](arena-v2-p5-implementation-ledger.md) | 候选自动化已执行通过：52包/11波、Vitest 43文件365项、Node 14文件196项；统一三概念输入、显式jump availability与生命周期Owner闭合 | 双视口、读屏、浏览器/设备、性能、正式UI/音频/VFX批准、真人和默认入口仍未通过 |
-| P6 收藏与容量 | Learning Profile/Reducer、双槽CAS/租约、Reward/Learning原子owner、结果恢复、下一目标、20武器/20段研究、留存观察；[P6台账](arena-v2-p6-implementation-ledger.md) | 收藏、熟练、结算、恢复和200小时静态容量候选已落盘；局外进度不写战斗数值 | 存储/重复/恢复/连续多局、迁移、全量组合、纵向真人与真实留存；不得宣称200小时已达成 |
+| P6 收藏与容量 | Learning Profile/Reducer、双槽CAS/租约、Reward/Learning原子owner、结果恢复、下一目标、20武器/20段研究、留存观察；[P6台账](arena-v2-p6-implementation-ledger.md) | 收藏、熟练、结算、恢复和200小时静态容量候选已落盘；候选自动化已通过52包/11波、Vitest 54文件583项、Node 4文件273项及P6边界/type/docs/diff；局外进度不写战斗数值 | 默认入口、压力/性能、浏览器/设备、正式资产、纵向真人与真实留存；不得宣称200小时已达成 |
 | P7 证据与冻结 | 预注册、评价、24项自动化回执、Stage Report V2、A7 V3双门Freeze Manifest、Assembly Session；[P7台账](arena-v2-p7-implementation-ledger.md) | 评分缺失语义、单一门源、六环境build-set、29+24证据槽、五角色预算链和不可发布装配候选已落盘；最终冻结必须再满足同源同构建集A7 V3 PASS | 所有自动化、构建、性能、设备、真人、缺陷、独立审计、真实结构测量、130项资产批准、A7正式媒体证据和发布动作；当前只能INCOMPLETE |
 
 ## 4. A0–A7 美术与音频矩阵

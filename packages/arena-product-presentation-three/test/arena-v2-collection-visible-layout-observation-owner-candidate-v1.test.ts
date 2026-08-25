@@ -383,10 +383,11 @@ describe('Arena V2 A6.12a visible layout observation owner candidate V1', () => 
       ...validDesktopDetail[0]!,
       previewRectCssPixels: { x: 590, y: 210, width: 240, height: 240 },
     };
-    expect(new ArenaV2CollectionVisibleLayoutObservationOwnerCandidateV1({
+    const validDetail = new ArenaV2CollectionVisibleLayoutObservationOwnerCandidateV1({
       epochId: 'epoch-a',
-    }).observe(input(detail, '1440x900', validDesktopDetail)).visibleWeaponMountLayouts)
-      .toHaveLength(1);
+    }).observe(input(detail, '1440x900', validDesktopDetail));
+    expect(validDetail.visibleWeaponMountLayouts).toHaveLength(0);
+    expect(validDetail.visibleStaticFallbackLayouts).toHaveLength(1);
 
     const fractional = clone(layouts);
     fractional[0] = {

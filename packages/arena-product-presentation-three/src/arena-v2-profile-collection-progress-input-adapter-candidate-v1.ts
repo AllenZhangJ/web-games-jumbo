@@ -100,8 +100,7 @@ interface ReadyProjectionV1 {
 
 function assertComponentProgressFacts(
   value: ReturnType<typeof projectArenaV2CollectionProgressSummaryFactsV1>,
-): asserts value is ReturnType<typeof projectArenaV2CollectionProgressSummaryFactsV1>
-  & NonNullable<ArenaV2A6CollectionProgressComponentInputV1['progressFacts']> {
+): void {
   if (value.weaponJourney.targetMainResearch !== 2_400
     || value.weaponJourney.weaponCount !== 20) {
     throw new RangeError('A6.5收藏进度汇总与A6组件容量合同漂移。');
@@ -277,12 +276,28 @@ function readyProjection(input: ParsedAdapterInputV1): ReadyProjectionV1 {
       throw new RangeError(`A6.5当前可用武器${weaponDefinitionId}不在P5收藏目录中。`);
     }
   }
-  const progressFacts = projectArenaV2CollectionProgressSummaryFactsV1({
+  const projectedProgressFacts = projectArenaV2CollectionProgressSummaryFactsV1({
     profileDefinition: input.profileDefinition,
     profile: input.profile,
     orderedDirectory,
   });
-  assertComponentProgressFacts(progressFacts);
+  assertComponentProgressFacts(projectedProgressFacts);
+  const progressFacts = Object.freeze({
+    schemaVersion: projectedProgressFacts.schemaVersion,
+    weapons: projectedProgressFacts.weapons,
+    maps: projectedProgressFacts.maps,
+    weaponJourney: Object.freeze({
+      currentMainResearch: projectedProgressFacts.weaponJourney.currentMainResearch,
+      targetMainResearch: 2_400 as const,
+      remainingMainResearch: projectedProgressFacts.weaponJourney.remainingMainResearch,
+      collectedWeaponCount: projectedProgressFacts.weaponJourney.collectedWeaponCount,
+      weaponCount: 20 as const,
+      averageMatchMinutesAssumption:
+        projectedProgressFacts.weaponJourney.averageMatchMinutesAssumption,
+      estimatedRemainingMinutes: projectedProgressFacts.weaponJourney.estimatedRemainingMinutes,
+      estimateKind: projectedProgressFacts.weaponJourney.estimateKind,
+    }),
+  }) satisfies NonNullable<ArenaV2A6CollectionProgressComponentInputV1['progressFacts']>;
   const nextGoalIdentity = projectArenaV2CollectionNextGoalIdentityV1({
     profileDefinition: input.profileDefinition,
     profile: input.profile,

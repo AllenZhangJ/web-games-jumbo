@@ -357,6 +357,8 @@ describe('Arena V2 P6 collection progress summary facts projection V1', () => {
     ))).toEqual({
       weaponDefinitionId: 'weapon.alpha',
       collected: true,
+      collectionEvidenceCount: 0,
+      collectionEvidenceTarget: 120,
       completedContextCount: 0,
       mastered: false,
     });
@@ -423,17 +425,26 @@ describe('Arena V2 P6 collection progress summary facts projection V1', () => {
     })).toThrow(/未知身份/);
   });
 
-  it('rejects contradictory Profile mastery instead of inferring collection or completion', () => {
+  it('does not infer collection from legitimate pre-collection mastery', () => {
     const definition = definitionFixture();
     const profile = profileFixture(definition);
-    expect(() => projectArenaV2CollectionProgressSummaryFactsV1({
+    const preCollectionFacts = projectArenaV2CollectionProgressSummaryFactsV1({
       profileDefinition: definition,
       profile: {
         ...profile,
         collections: { ...profile.collections, weaponDefinitionIds: [] },
       },
       orderedDirectory: orderedDirectory(),
-    })).toThrow(/武器尚未收藏/);
+    });
+    expect(preCollectionFacts.weapons.find(({ weaponDefinitionId }) => (
+      weaponDefinitionId === 'weapon.alpha'
+    ))).toMatchObject({
+      collected: false,
+      collectionEvidenceCount: 12,
+      collectionEvidenceTarget: 120,
+      completedContextCount: 3,
+      mastered: false,
+    });
     expect(() => projectArenaV2CollectionProgressSummaryFactsV1({
       profileDefinition: definition,
       profile: {

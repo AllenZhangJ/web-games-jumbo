@@ -381,7 +381,7 @@ function integer(value: unknown, name: string, minimum = 0): number {
 }
 
 function canonical(value: unknown, name: string): string {
-  const result = JSON.stringify(value);
+  const result = JSON.stringify(cloneFrozenData(value, name));
   if (typeof result !== 'string') throw new TypeError(`${name}无法规范序列化。`);
   return result;
 }

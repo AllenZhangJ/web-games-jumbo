@@ -146,7 +146,10 @@ describe('Arena V2 A6.11b command execution current approval closure（未运行
       'snapshot-read',
       'reset-epoch',
       'destroy',
-    ]) expect(source).toContain(`#runSynchronousOperation('${operation}'`);
+    ]) expect(source).toMatch(new RegExp(
+      `#runSynchronousOperation\\(\\s*'${operation}'`,
+      'u',
+    ));
     expect(source).toMatch(
       /this\.#inFlightPromise = operation;[\s\S]*?NATIVE_PROMISE_THEN, EXECUTION_MICROTASK_TRIGGER/u,
     );
