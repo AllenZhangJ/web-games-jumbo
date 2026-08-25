@@ -6,8 +6,8 @@ import {
   createDeterministicDataHash,
 } from '@number-strategy-jump/arena-contracts';
 import {
-  validateMatchCoreWeaponFeedbackAdapterCheckpointV1,
-  type MatchCoreWeaponFeedbackAdapterCheckpointV1,
+  validateMatchCoreWeaponFeedbackAdapterCheckpoint,
+  type MatchCoreWeaponFeedbackAdapterCheckpoint,
 } from './match-core-weapon-feedback-adapter-v1.js';
 
 export interface MatchCoreWeaponFeedbackPendingDirectionV2 {
@@ -62,7 +62,7 @@ function impulse(value: unknown, name: string) {
 
 function pendingDirections(
   value: unknown,
-  feedbackCheckpoint: MatchCoreWeaponFeedbackAdapterCheckpointV1,
+  feedbackCheckpoint: MatchCoreWeaponFeedbackAdapterCheckpoint,
 ): readonly MatchCoreWeaponFeedbackPendingDirectionV2[] {
   if (!Array.isArray(value)) throw new TypeError('feedback direction pendingDirections必须是数组。');
   const participants = new Set(feedbackCheckpoint.participantIds);
@@ -124,7 +124,7 @@ function core(value: unknown): Omit<MatchCoreWeaponFeedbackDirectionCheckpointV2
   for (const key of INPUT_KEYS) {
     if (!Object.hasOwn(source, key)) throw new TypeError(`feedback direction checkpoint缺少${key}。`);
   }
-  const feedbackCheckpoint = validateMatchCoreWeaponFeedbackAdapterCheckpointV1(
+  const feedbackCheckpoint = validateMatchCoreWeaponFeedbackAdapterCheckpoint(
     source.feedbackCheckpoint,
   );
   return Object.freeze({
@@ -168,7 +168,7 @@ export function validateMatchCoreWeaponFeedbackDirectionCheckpointV2(
     || !HASH_PATTERN.test(source.checkpointIdentityHash)) {
     throw new RangeError('feedback direction checkpoint版本或hash格式无效。');
   }
-  const feedbackCheckpoint = validateMatchCoreWeaponFeedbackAdapterCheckpointV1(
+  const feedbackCheckpoint = validateMatchCoreWeaponFeedbackAdapterCheckpoint(
     feedbackCheckpointValue,
   );
   const resolved = createMatchCoreWeaponFeedbackDirectionCheckpointV2({

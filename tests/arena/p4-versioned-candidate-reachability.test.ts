@@ -87,6 +87,12 @@ function typescriptFiles(root: string): string[] {
 
 const CANDIDATE_COMPOSITION_ALLOWLIST = new Set([
   'packages/arena-product-composition/src/arena-v2-learning-evidence-composition-candidate-v1.ts',
+  'packages/arena-product-composition/src/arena-v2-in-memory-registry-publication-port-candidate-v1.ts',
+  'packages/arena-product-composition/src/arena-v2-local-counterplay-bot-current-facts-candidate-v1.ts',
+  'packages/arena-product-composition/src/arena-v2-registry-publication-envelope-candidate-v1.ts',
+  'packages/arena-product-composition/src/arena-v2-single-weapon-registry-snapshot-candidate-v1.ts',
+  'packages/arena-product-presentation-three/src/arena-v2-a4-weapon-attachment-production-review-preparation-candidate-v1.ts',
+  'packages/arena-product-presentation-three/src/arena-v2-a5-core-feedback-vfx-production-review-preparation-candidate-v1.ts',
 ]);
 
 test('P4 weapon candidates remain unreachable until the P4 gate approves production wiring', () => {
@@ -215,7 +221,7 @@ test('P4.4cl rejects Survival actions outside the active player life or enemy ge
   for (const marker of [
     'Survival equipment ActionStarted不能来自非active参与者。',
     'Survival enemy slot change与当前generation不闭合。',
-    'does not judge delayed feedback',
+    'not judge delayed feedback',
   ]) assert.match(eligibility, new RegExp(marker, 'u'));
 
   const replay = readFileSync('packages/arena-match/src/replay-v6.ts', 'utf8');
@@ -323,10 +329,15 @@ test('P4 registry promotion owners retain failed cleanup ownership', () => {
   );
   assert.match(coordinator, /destroyRejectsUnsealedPersistentPublicationBeforeAnyCleanup: true/u);
   assert.match(coordinator, /destroyAttemptsIndependentOwnedChildren: true/u);
-  assert.match(
-    coordinator,
-    /reference\.destroy\(\);[\s\S]*this\.#registryReference === reference[\s\S]*host\.destroy\(\);[\s\S]*this\.#registrationHost === host/u,
+  const coordinatorDestroy = coordinator.indexOf('() => reference.destroy()');
+  const coordinatorReferenceReleased = coordinator.indexOf(
+    'this.#registryReference === reference',
   );
+  const coordinatorHostDestroy = coordinator.indexOf('() => host.destroy()');
+  const coordinatorHostReleased = coordinator.indexOf('this.#registrationHost === host');
+  assert.equal(coordinatorDestroy >= 0 && coordinatorReferenceReleased > coordinatorDestroy, true);
+  assert.equal(coordinatorHostDestroy > coordinatorReferenceReleased, true);
+  assert.equal(coordinatorHostReleased > coordinatorHostDestroy, true);
   assert.match(coordinator, /Arena V2 Registry promotion coordinator清理不完整/u);
 
   const host = readFileSync(
@@ -335,10 +346,15 @@ test('P4 registry promotion owners retain failed cleanup ownership', () => {
   );
   assert.match(host, /destroyDependencyOrderPreserved: true/u);
   assert.match(host, /failedChildCleanupRemainsRetryable: true/u);
-  assert.match(
-    host,
-    /owner\.destroy\(\);[\s\S]*this\.#owner === owner[\s\S]*if \(this\.#owner === null && this\.#port !== null\)[\s\S]*port\.destroy\(\)/u,
-  );
+  const hostDestroyStart = host.indexOf('  destroy():');
+  assert.notEqual(hostDestroyStart, -1);
+  const hostDestroySource = host.slice(hostDestroyStart);
+  const ownerDestroy = hostDestroySource.indexOf('owner.destroy()');
+  const ownerReleased = hostDestroySource.indexOf('this.#owner === owner');
+  const portGate = hostDestroySource.indexOf('if (this.#owner === null && this.#port !== null)');
+  const portDestroy = hostDestroySource.indexOf('port.destroy()');
+  assert.equal(ownerDestroy >= 0 && ownerReleased > ownerDestroy, true);
+  assert.equal(portGate > ownerReleased && portDestroy > portGate, true);
   assert.match(host, /Arena V2 persistent registration host清理不完整/u);
 });
 
@@ -364,10 +380,16 @@ test('P4 registry-backed local owner closes dependents before shared bootstrap',
     source,
     /firstProvisioningFactoryDoesNotDoubleDestroyRetainedBootstrap: true/u,
   );
-  assert.match(
-    source,
-    /coordinator\.destroy\(\);[\s\S]*this\.#promotionCoordinator === coordinator[\s\S]*localPlayable\.destroy\(\);[\s\S]*this\.#localPlayable === localPlayable/u,
-  );
+  const destroyStart = source.indexOf("this.#runOperation('destroy'");
+  assert.notEqual(destroyStart, -1);
+  const destroy = source.slice(destroyStart);
+  const coordinatorDestroy = destroy.indexOf('() => coordinator.destroy()');
+  const coordinatorReleased = destroy.indexOf('this.#promotionCoordinator === coordinator');
+  const localPlayableDestroy = destroy.indexOf('() => localPlayable.destroy()');
+  const localPlayableReleased = destroy.indexOf('this.#localPlayable === localPlayable');
+  assert.equal(coordinatorDestroy >= 0 && coordinatorReleased > coordinatorDestroy, true);
+  assert.equal(localPlayableDestroy > coordinatorReleased, true);
+  assert.equal(localPlayableReleased > localPlayableDestroy, true);
   assert.match(
     source,
     /this\.#promotionCoordinator === null[\s\S]*&& this\.#localPlayable === null[\s\S]*&& this\.#registryBootstrap !== null[\s\S]*registryBootstrap\.destroy\(\)/u,
@@ -421,6 +443,37 @@ test('P4 Registry failure summaries never stringify arbitrary thrown values', ()
     'packages/arena-product-composition/src/arena-v2-single-weapon-persistent-registration-host-candidate-v1.ts',
   ]) {
     assert.doesNotMatch(readFileSync(file, 'utf8'), /String\(error\)/u, file);
+  }
+});
+
+test('P4.4cr retains closed non-ring attribution only in checkpoint V2 and carries it through three-mode owners', () => {
+  const adapter = readFileSync(
+    'packages/arena-match/src/match-core-weapon-feedback-adapter-v1.ts',
+    'utf8',
+  );
+  assert.match(adapter, /MATCH_CORE_WEAPON_FEEDBACK_ADAPTER_CHECKPOINT_V2_SCHEMA_VERSION = 2/u);
+  assert.match(adapter, /closedHitAttributions/u);
+  assert.match(adapter, /static restoreFromCheckpointV2/u);
+  assert.match(adapter, /exportCheckpointV2\(\)/u);
+  assert.match(adapter, /event\.tick - closed\.firstHitTick <= this\.#outcomeWindowTicks/u);
+  assert.match(adapter, /closedHitAttributions\.delete\(targetId\)/u);
+
+  const bundle = readFileSync(
+    'packages/arena-match/src/match-core-weapon-feedback-bundle-owner-v2.ts',
+    'utf8',
+  );
+  assert.match(bundle, /restoreFromCheckpointV2/u);
+  assert.match(bundle, /exportFeedbackCheckpointV2\(\)/u);
+  assert.match(bundle, /consumesFeedbackAdapterCheckpointV2: true/u);
+
+  for (const file of [
+    'packages/arena-regression/src/arena-duel-authoritative-runtime-candidate-v1.ts',
+    'packages/arena-regression/src/arena-race-vertical-integration-verification-v1.ts',
+    'packages/arena-regression/src/arena-survival-shared-world-authority-verification-v1.ts',
+  ]) {
+    const source = readFileSync(file, 'utf8');
+    assert.match(source, /exportFeedbackCheckpointV2\(\)/u, file);
+    assert.match(source, /MatchCoreWeaponFeedbackAdapterCheckpointV2/u, file);
   }
 });
 

@@ -73,6 +73,7 @@ const VITEST_FILES = Object.freeze([
 ]);
 const NODE_TEST_FILES = Object.freeze([
   'tests/arena/p4-versioned-candidate-reachability.test.ts',
+  'tests/arena/p4-three-mode-weapon-feedback-real-failure-replay.test.ts',
 ]);
 
 async function assertFiles(repositoryRoot: string, files: readonly string[]): Promise<void> {
@@ -90,8 +91,13 @@ async function run(
   label: string,
   executable: string,
   args: readonly string[],
+  environment: Readonly<Record<string, string>> = {},
 ): Promise<void> {
-  const child = spawn(executable, args, { cwd: repositoryRoot, stdio: 'inherit' });
+  const child = spawn(executable, args, {
+    cwd: repositoryRoot,
+    stdio: 'inherit',
+    env: { ...process.env, ...environment },
+  });
   const result = await new Promise<Readonly<{ code: number | null; signal: NodeJS.Signals | null }>>(
     (resolve, reject) => {
       child.once('error', reject);
@@ -111,7 +117,9 @@ async function main(): Promise<void> {
     '--maxWorkers=1',
     '--fileParallelism=false',
     ...VITEST_FILES,
-  ]);
+  ], {
+    ARENA_P4_REAL_FAILURE_REPLAY_EXTERNAL: '1',
+  });
   await run(repositoryRoot, 'P4 Node架构测试', process.execPath, [
     '--import', 'tsx', '--test', ...NODE_TEST_FILES,
   ]);

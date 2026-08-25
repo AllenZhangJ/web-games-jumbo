@@ -68,7 +68,7 @@ import {
   type EquipmentSupplyTimelineSnapshot,
 } from '@number-strategy-jump/arena-equipment';
 import {
-  MATCH_CORE_WEAPON_FEEDBACK_ADAPTER_CHECKPOINT_V1_SCHEMA_VERSION,
+  MATCH_CORE_WEAPON_FEEDBACK_ADAPTER_CHECKPOINT_V2_SCHEMA_VERSION,
   MODE_MATCH_RUNTIME_V6_STATE,
   MatchCoreWeaponFeedbackBundleOwnerV2,
   ModePolicyResolver,
@@ -76,10 +76,10 @@ import {
   ModeMatchRuntimeV6,
   createArenaMatchConfigV6,
   createKzSurvivalRouteTargetProjectionV1,
-  validateMatchCoreWeaponFeedbackAdapterCheckpointV1,
+  validateMatchCoreWeaponFeedbackAdapterCheckpointV2,
   validateMatchCoreWeaponFeedbackDirectionCheckpointV2,
   type ArenaMatchConfigV6,
-  type MatchCoreWeaponFeedbackAdapterCheckpointV1,
+  type MatchCoreWeaponFeedbackAdapterCheckpointV2,
   type MatchCoreWeaponFeedbackDirectionCheckpointV2,
   type ModeMatchResolutionV6,
   type ModeMatchRuntimeV6RetainedResourceSnapshot,
@@ -555,7 +555,7 @@ export interface ArenaSurvivalSharedWorldAuthorityCheckpointV3 {
     readonly behaviorSeed: number;
     readonly checkpoint: SurvivalEnemyControllerCheckpointV2;
   }>[];
-  readonly feedbackCheckpoint: MatchCoreWeaponFeedbackAdapterCheckpointV1;
+  readonly feedbackCheckpoint: MatchCoreWeaponFeedbackAdapterCheckpointV2;
   readonly feedbackDirectionCheckpoint: MatchCoreWeaponFeedbackDirectionCheckpointV2;
   readonly checkpointIdentityHash: string;
 }
@@ -1050,7 +1050,7 @@ function normalizeAuthorityCheckpoint(
     controllerCheckpoints.length !== expected.enemyIds.length
     || controllerCheckpoints.some((entry, index) => entry.participantId !== expected.enemyIds[index])
   ) throw new RangeError('P3 Survival authority checkpoint controller roster不完整。');
-  const feedbackCheckpoint = validateMatchCoreWeaponFeedbackAdapterCheckpointV1(
+  const feedbackCheckpoint = validateMatchCoreWeaponFeedbackAdapterCheckpointV2(
     source.feedbackCheckpoint,
   );
   const feedbackDirectionCheckpoint = validateMatchCoreWeaponFeedbackDirectionCheckpointV2(
@@ -1062,7 +1062,7 @@ function normalizeAuthorityCheckpoint(
   );
   if (
     feedbackCheckpoint.schemaVersion
-      !== MATCH_CORE_WEAPON_FEEDBACK_ADAPTER_CHECKPOINT_V1_SCHEMA_VERSION
+      !== MATCH_CORE_WEAPON_FEEDBACK_ADAPTER_CHECKPOINT_V2_SCHEMA_VERSION
     || feedbackCheckpoint.tick !== readFrame.worldSnapshot.tick
     || feedbackCheckpoint.participantIds.length !== feedbackParticipantIds.length
     || feedbackCheckpoint.participantIds.some((participantId, index) => (
@@ -3433,7 +3433,7 @@ export class ArenaSurvivalSharedWorldAuthorityCandidateV1 implements ModeMatchWo
       matchSeed: this.#matchSeed,
       worldSnapshot: initial.readFrame.worldSnapshot,
       supplyCadence: initial.supplyCadence,
-      feedbackCheckpoint: this.#feedbackOwner().exportFeedbackCheckpointV1(),
+      feedbackCheckpoint: this.#feedbackOwner().exportFeedbackCheckpointV2(),
       feedbackDirectionCheckpoint: this.#feedbackOwner().exportDirectionCheckpointV2(),
       timeline: this.#resources().timeline.getSnapshot(),
       controllers: [...this.#controllers].map(([id, controller]) => ({
@@ -3509,7 +3509,7 @@ export class ArenaSurvivalSharedWorldAuthorityCandidateV1 implements ModeMatchWo
         additionalCandidates: [],
       });
       const feedback = this.#feedbackOwner();
-      const feedbackSequenceStart = feedback.exportFeedbackCheckpointV1().sourceEventSequence;
+      const feedbackSequenceStart = feedback.exportFeedbackCheckpointV2().sourceEventSequence;
       const feedbackSourceEvents: WeaponFeedbackSourceEventV1[] = [];
       for (const interrupted of this.#prepared.interruptedEquipmentActions) {
         feedbackSourceEvents.push(Object.freeze({
@@ -3963,7 +3963,7 @@ export class ArenaSurvivalSharedWorldAuthorityCandidateV1 implements ModeMatchWo
           behaviorSeed: this.#behaviorSeeds.get(participantId)!,
           checkpoint: controller.exportCheckpointV2(),
         }))),
-      feedbackCheckpoint: this.#feedbackOwner().exportFeedbackCheckpointV1(),
+      feedbackCheckpoint: this.#feedbackOwner().exportFeedbackCheckpointV2(),
       feedbackDirectionCheckpoint: this.#feedbackOwner().exportDirectionCheckpointV2(),
     }, 'P3 Survival shared authority checkpoint core');
     return cloneFrozenData({
@@ -4133,7 +4133,7 @@ export class ArenaSurvivalSharedWorldAuthorityCandidateV1 implements ModeMatchWo
           'P3 Survival restored timeline checkpoint',
         )
         || !sameData(
-          nextFeedback.exportFeedbackCheckpointV1(),
+          nextFeedback.exportFeedbackCheckpointV2(),
           checkpoint.feedbackCheckpoint,
           'P3 Survival restored feedback checkpoint',
         )

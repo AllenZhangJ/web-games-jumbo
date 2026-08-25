@@ -70,9 +70,11 @@ function attackEvent(
   });
   return Object.freeze({
     ...common,
+    targetId: null,
+    initialSupportSurfaceId: null,
     firstHitTick: null,
     targetFallTick: null,
-    finalSupportSurfaceId: 'surface-a',
+    finalSupportSurfaceId: null,
     fallCause: null,
     creditedAttackerId: null,
   });
@@ -80,7 +82,6 @@ function attackEvent(
 
 function movementFallEvent(
   sequence: number,
-  actionDefinitionId: string | null = null,
 ): Readonly<Record<string, unknown>> {
   return Object.freeze({
     id: `movement-fall-${sequence}`,
@@ -88,10 +89,10 @@ function movementFallEvent(
     sequence,
     tick: 60,
     kind: 'movement-fall',
-    attackerId: actionDefinitionId === null ? null : 'player-1',
+    attackerId: null,
     targetId: 'player-2',
-    actionDefinitionId,
-    actionStartedTick: actionDefinitionId === null ? null : 10,
+    actionDefinitionId: null,
+    actionStartedTick: null,
     firstHitTick: null,
     targetFallTick: 50,
     initialSupportSurfaceId: 'surface-a',
@@ -180,10 +181,9 @@ describe('Arena V2 twenty weapon feedback read plan candidate V1 (not run)', () 
   });
 
   it('keeps movement fall global in every mode even if an attack was active', () => {
-    const activeActionId = BINDINGS[0]!.actionDefinitionId;
     const plans = MODES.map((mode, index) => project(
       mode,
-      movementFallEvent(index, activeActionId),
+      movementFallEvent(index),
     ));
     expect(plans).toHaveLength(3);
     expect(plans.every((plan) => (
@@ -196,7 +196,7 @@ describe('Arena V2 twenty weapon feedback read plan candidate V1 (not run)', () 
       && plan.vfx.semanticShape === 'downward-broken-line'
       && plan.audio.weaponIdentity === 'movement-fall-global'
     ))).toBe(true);
-    expect(plans[0]!.sourceActionDefinitionId).toBe(activeActionId);
+    expect(plans[0]!.sourceActionDefinitionId).toBeNull();
   });
 
   it('rejects unknown weapon actions and widened inputs instead of guessing a cue', () => {
@@ -209,7 +209,7 @@ describe('Arena V2 twenty weapon feedback read plan candidate V1 (not run)', () 
       modeKind: WEAPON_MODE_KIND_V1.DUEL,
       event: movementFallEvent(2),
       inferredPosition: { x: 0, y: 0, z: 0 },
-    })).toThrow(/未知字段/);
+    })).toThrow(/不支持字段/);
     expect(() => project(
       WEAPON_MODE_KIND_V1.SURVIVAL,
       attackEvent(BINDINGS[0]!.actionDefinitionId, 'hit-confirm', 3),

@@ -141,7 +141,7 @@ describe('Arena expanded weapon counterplay verification V1 candidate', () => {
         if (evidence.declaredCounterInputs.includes('jump')) {
           expect(evidence.counterfactual.jumpPressedTickCount).toBeGreaterThan(0);
           expect(evidence.counterfactual.jumpHeldTickCount).toBeGreaterThan(0);
-          expect(evidence.counterfactual.targetMovementCommandCount).toBeGreaterThan(0);
+          expect(evidence.counterfactual.targetFirstUnsupportedTick).not.toBeNull();
         }
       }
       if (probe.counterplayExecutionStatus === 'executed-counterfactual-candidate-unverified') {

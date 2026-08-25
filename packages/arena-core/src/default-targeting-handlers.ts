@@ -17,6 +17,7 @@ const DOWNWARD_CYLINDER_KEYS = new Set([
   'range', 'radius', 'minimumVerticalDrop', 'maximumVerticalDifference',
 ]);
 const EMPTY_KEYS = new Set<string>();
+const TARGETING_CONTACT_EPSILON = 1e-6;
 
 interface Vector2 { readonly x: number; readonly z: number }
 interface ConeParameters {
@@ -159,7 +160,8 @@ function resolveCapsule({ parameters, source, candidates }: TargetingResolutionC
     const along = Math.max(0, Math.min(validated.range, dx * facingX + dz * facingZ));
     const nearestX = source.position.x + facingX * along;
     const nearestZ = source.position.z + facingZ * along;
-    return Math.hypot(candidate.position.x - nearestX, candidate.position.z - nearestZ) <= validated.radius;
+    return Math.hypot(candidate.position.x - nearestX, candidate.position.z - nearestZ)
+      <= validated.radius + TARGETING_CONTACT_EPSILON;
   }).map(({ id }) => id);
 }
 
@@ -197,7 +199,7 @@ function resolveDownwardCylinder(
     return Math.hypot(
       candidate.position.x - source.position.x,
       candidate.position.z - source.position.z,
-    ) <= validated.radius;
+    ) <= validated.radius + TARGETING_CONTACT_EPSILON;
   }).map(({ id }) => id);
 }
 

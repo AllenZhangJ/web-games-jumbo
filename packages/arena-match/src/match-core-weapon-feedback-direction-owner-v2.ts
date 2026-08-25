@@ -22,8 +22,8 @@ import {
   type MatchCoreWeaponFeedbackPendingDirectionV2,
 } from './match-core-weapon-feedback-direction-checkpoint-v2.js';
 import {
-  validateMatchCoreWeaponFeedbackAdapterCheckpointV1,
-  type MatchCoreWeaponFeedbackAdapterCheckpointV1,
+  validateMatchCoreWeaponFeedbackAdapterCheckpoint,
+  type MatchCoreWeaponFeedbackAdapterCheckpoint,
 } from './match-core-weapon-feedback-adapter-v1.js';
 
 export interface MatchCoreWeaponFeedbackDirectionOwnerV2StepResult {
@@ -181,7 +181,7 @@ function closedPending(value: PendingMutable): MatchCoreWeaponFeedbackPendingDir
  * result and maintains an independently restorable direction checkpoint.
  */
 export class MatchCoreWeaponFeedbackDirectionOwnerV2 {
-  #feedbackCheckpoint: MatchCoreWeaponFeedbackAdapterCheckpointV1;
+  #feedbackCheckpoint: MatchCoreWeaponFeedbackAdapterCheckpoint;
   #directionCheckpoint: MatchCoreWeaponFeedbackDirectionCheckpointV2;
   #pending: Map<string, PendingMutable>;
   #destroyed = false;
@@ -190,7 +190,7 @@ export class MatchCoreWeaponFeedbackDirectionOwnerV2 {
     const source = cloneFrozenData(value, 'feedback direction owner options');
     assertKnownKeys(source, OPTION_KEYS, 'feedback direction owner options');
     requireKeys(source, OPTION_KEYS, 'feedback direction owner options');
-    const feedbackCheckpoint = validateMatchCoreWeaponFeedbackAdapterCheckpointV1(
+    const feedbackCheckpoint = validateMatchCoreWeaponFeedbackAdapterCheckpoint(
       source.feedbackCheckpoint,
     );
     const directionCheckpoint = source.directionCheckpoint === null
@@ -221,7 +221,7 @@ export class MatchCoreWeaponFeedbackDirectionOwnerV2 {
     const source = cloneFrozenData(value, 'feedback direction owner step');
     assertKnownKeys(source, STEP_KEYS, 'feedback direction owner step');
     requireKeys(source, STEP_KEYS, 'feedback direction owner step');
-    const nextFeedbackCheckpoint = validateMatchCoreWeaponFeedbackAdapterCheckpointV1(
+    const nextFeedbackCheckpoint = validateMatchCoreWeaponFeedbackAdapterCheckpoint(
       source.feedbackCheckpoint,
     );
     const events = sourceEvents(

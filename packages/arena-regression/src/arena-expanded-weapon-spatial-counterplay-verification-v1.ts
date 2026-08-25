@@ -1266,13 +1266,15 @@ function createExpectedPlan(): Readonly<ArenaExpandedWeaponSpatialCounterplayPla
     allowedCounterInputs: ALLOWED_COUNTER_INPUTS,
     weapons,
   });
-  return Object.freeze({
+  return cloneFrozenData({
     ...authority,
     contentHash: createDeterministicDataHash(
       authority,
       'Arena Expanded Weapon Spatial Counterplay Plan V1',
     ),
-  });
+  }, 'Arena Expanded Weapon Spatial Counterplay Plan V1 expected plan') as Readonly<
+    ArenaExpandedWeaponSpatialCounterplayPlanV1
+  >;
 }
 
 function assertExactDataEqual(left: unknown, right: unknown, path: string): void {

@@ -961,6 +961,10 @@
 
 2026-08-16追加P4.4cp静态开发：20把武器此前已有不同学习问题、反制签名和横向比较事实，但没有可执行的“同语义下数值是否形成上位替代”筛查。新增只读审计把核心动词、目标形状、非比较参数、效果语义、承诺合同和失败风险绑定为兼容hash；只在地面/空中八个明确方向轴全部不差且至少一项严格更好时输出具名复核pair。审计不算综合分、不排名、不改Definition、不宣称平衡，动态三模式×两图和真人证据继续顺延。状态保持`production-unreachable / hardGate=false / code-written-not-run / validationStatus=not-run`。
 
+2026-08-25追加P4.4cr：反馈适配器不再把“已发布非击落结果后才到达的超窗credited elimination”当成未知事实或第二个命中。Checkpoint V2以有界、按目标稳定排序的closed attribution绑定source、攻击者、目标、动作、首次命中和非击落结果；新命中覆盖旧项，严格超20 tick且同源的迟到淘汰只前进水位。V1 checkpoint仍保持旧读写语义，Bundle和三模式候选改为V2恢复闭包。Adapter/Bundle、Race、恢复后缀与Survival Node长矩阵的定向证据已通过；未开放默认入口、资产、平衡或正式发布。
+
+2026-08-25追加SF-DG.3d：P4非美术候选门完成首轮红项收口。空间/扩展counterplay的计划值先规范为冻结exact-key字典序形态；ground defender跳跃先产生真实离地再起手，aerial不延迟，验证不再误把不存在的Rule command当唯一Movement事实。十波生存供给以完整Replay事件证实30生成、1初拾、9替换、18过期和等级1→10。反馈read-plan/HUD旧夹具改为已收紧的movement-fall/attack-evaded事实形态。三模式33项failure replay不再把Duel自然终局后的步骤当作可注入窗口：Duel固定97个稳定非终局步，Race/Survival各120，并在Node独立进程完整执行。Vitest 67文件303通过、一个重型用例外部化；Node 19/19通过。未改Three/A4/A5、默认入口、玩法数值、V6/Replay合同、资产批准或设备门。
+
 2026-08-16追加P3.5c静态开发：两张KZ候选虽已有20段Route、体验节奏和反制目录，但没有机器可读的重复学习与单一路线风险汇总。新增只读多样性审计，以冻结Definition为唯一几何事实，逐段组合回应、分叉、朝向、升降、难度和体验上下文，逐图形成多样性指纹并报告无分叉、朝向集中、单回应集中、连续同回应、未差异化重复语义、高潮前无喘息和持续高压段。`level-design`的先教后考与锯齿节奏只作为复核规则，不直接改图。该报告不写Route、不自动调参、不增加输入，也不把风险项当成玩家最优解结论；竞速/生存动态占比、多人干扰与真人地图记忆继续顺延。状态保持`production-unreachable / hardGate=false / code-written-not-run / validationStatus=not-run`。
 
 2026-08-16追加P6.535静态开发：现有16项交叉挑战只覆盖前16把武器，并因两图交替仅覆盖首图前8段和折返图8段；后4把武器与首图第9–12段没有交叉目标。当前保留原16项全部身份和目标，只追加4项Race挑战完成20武器×20段一一覆盖；Profile内容版本升至5，容量与A6静态目录消费面同步为20项/动态60点。该批复用既有挑战Reducer、Replay事实、结算和页面，不新增维度、奖励或操作，也不把挑战时长串行计入200小时。验证统一顺延，状态保持`production-unreachable / hardGate=false / code-written-not-run / validationStatus=not-run`。

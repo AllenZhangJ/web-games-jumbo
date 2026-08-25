@@ -167,6 +167,7 @@ const STEP_OUTCOME_KEYS = new Set([
   'events',
   'supplyFacts',
   'supplyCadence',
+  'localJumpAvailability',
   'inputs',
   'weaponFeedbackDirectionFactsV2',
 ]);

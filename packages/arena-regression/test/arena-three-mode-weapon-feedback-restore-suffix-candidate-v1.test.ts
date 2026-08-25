@@ -14,9 +14,9 @@ describe('Arena three-mode weapon feedback restore suffix candidate V1', () => {
       implementationStatus: 'code-written-not-run',
       hardGate: false,
       supportedModeDefinitionIds: [
-        'arena.mode.duel',
-        'arena.mode.race',
-        'arena.mode.survival',
+        'arena-v2.mode.duel.candidate.v1',
+        'arena-v2.mode.race.candidate.v1',
+        'arena-v2.mode.survival.candidate.v1',
       ],
       requiredRuntimeDataMethods: [
         'exportRuntimeCheckpointV1',
@@ -69,7 +69,7 @@ describe('Arena three-mode weapon feedback restore suffix candidate V1', () => {
   it('rejects instance-level hostile method replacement before invoking it', () => {
     let runtimeCalls = 0;
     expect(() => runArenaThreeModeWeaponFeedbackRestoreSuffixCandidateV1({
-      modeDefinitionId: 'arena.mode.duel',
+      modeDefinitionId: 'arena-v2.mode.duel.candidate.v1',
       runtime: {
         step() { runtimeCalls += 1; },
         exportRuntimeCheckpointV1() { runtimeCalls += 1; },

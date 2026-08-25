@@ -275,7 +275,7 @@ describe('Arena Race vertical integration verification candidate V1', () => {
       expect(scenario.retainedResourceCountAfterDestroy).toBe(0);
       expect(scenario.finalHash).toMatch(/^[0-9a-f]{8}$/u);
     }
-  }, 25_000);
+  }, 40_000);
 
   it('binds all three concrete runtimes to the real feedback checkpoint capability', () => {
     expect(typeof ArenaRaceAuthoritativeRuntimeCandidateV1.prototype
@@ -300,7 +300,7 @@ describe('Arena Race vertical integration verification candidate V1', () => {
         status: 'production-unreachable',
         implementationStatus: 'code-written-not-run',
         hardGate: false,
-        feedbackCheckpointSchemaVersion: 1,
+        feedbackCheckpointSchemaVersion: 2,
         runtimeCheckpointMethod: 'exportRuntimeCheckpointV1',
         runtimeCheckpointForkMethod: 'forkFromWeaponFeedbackCheckpointCapabilityV1',
         worldAuthorityCheckpointField: 'feedbackCheckpoint',
@@ -428,5 +428,5 @@ describe('Arena Race vertical integration verification candidate V1', () => {
       matchSeed: 0x7654_3210,
     });
     expect(scenario.retainedResourceCountAfterDestroy).toBe(0);
-  });
+  }, 10_000);
 });

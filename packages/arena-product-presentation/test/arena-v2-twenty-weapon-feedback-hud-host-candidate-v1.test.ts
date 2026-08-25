@@ -550,8 +550,8 @@ describe('Arena V2 twenty weapon feedback HUD host candidate V1 (not run)', () =
       retainedWeaponReadPlanSourceEventIds: [],
       innerHost: { consumerEpochId: 'epoch-b' },
     });
-    expect(port.clears).toBe(2);
-    expect(port.stops).toBe(2);
+    expect(port.clears).toBe(1);
+    expect(port.stops).toBe(1);
     host.dispose();
   });
 

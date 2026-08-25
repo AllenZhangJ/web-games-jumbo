@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  MATCH_CORE_WEAPON_FEEDBACK_ADAPTER_V2_MAX_CLOSED_HIT_ATTRIBUTIONS,
   MatchCoreWeaponFeedbackAdapterV1,
   validateMatchCoreWeaponFeedbackAdapterCheckpointV1,
+  validateMatchCoreWeaponFeedbackAdapterCheckpointV2,
 } from '../src/index.js';
 
 const PARTICIPANT_IDS = Object.freeze(['player-1', 'player-2']);
@@ -39,6 +41,41 @@ function adapter() {
     outcomeWindowTicks: 2,
     initialObservation: observation(0, 0),
   });
+}
+
+function longWindowAdapter() {
+  return new MatchCoreWeaponFeedbackAdapterV1({
+    participantIds: PARTICIPANT_IDS,
+    outcomeWindowTicks: 20,
+    initialObservation: observation(0, 0),
+  });
+}
+
+function startAndHit(system: MatchCoreWeaponFeedbackAdapterV1, action = 'hammer.attack') {
+  expect(system.step({
+    sequenceStart: 0,
+    sourceEvents: [
+      {
+        id: 'action-stale', sequence: 0, tick: 0, type: 'ActionStarted',
+        participantId: 'player-1', action,
+      },
+      {
+        id: 'hit-stale', sequence: 1, tick: 0, type: 'HitResolved',
+        attackerId: 'player-1', targetId: 'player-2', action,
+      },
+    ],
+    observation: observation(1, 2, action),
+  })).toEqual([]);
+}
+
+function advanceToClosedHit(system: MatchCoreWeaponFeedbackAdapterV1) {
+  for (let tick = 2; tick <= 21; tick += 1) {
+    system.step({
+      sequenceStart: 0,
+      sourceEvents: [],
+      observation: observation(tick, 2),
+    });
+  }
 }
 
 describe('MatchCore weapon feedback adapter V1', () => {
@@ -353,7 +390,7 @@ describe('MatchCore weapon feedback adapter V1', () => {
     }
   });
 
-  it('restores a pending hit without changing the terminal feedback event', () => {
+  it('exports and restores V1-expressible pending hit state without changing terminal feedback', () => {
     const continuous = adapter();
     let restored: MatchCoreWeaponFeedbackAdapterV1 | null = null;
     try {
@@ -380,7 +417,7 @@ describe('MatchCore weapon feedback adapter V1', () => {
       const continuousEvents = steps.flatMap((step) => continuous.step(step));
       const restoredEvents = steps.flatMap((step) => restored!.step(step));
       expect(restoredEvents).toEqual(continuousEvents);
-      expect(restored.exportCheckpointV1()).toEqual(continuous.exportCheckpointV1());
+      expect(restored.exportCheckpointV2()).toEqual(continuous.exportCheckpointV2());
     } finally {
       continuous.destroy();
       restored?.destroy();
@@ -446,5 +483,187 @@ describe('MatchCore weapon feedback adapter V1', () => {
       system.destroy();
     }
     expect(() => system.exportCheckpointV1()).toThrow(/已销毁/);
+  });
+
+  it('keeps 19/20 credited eliminations in the pending window and consumes only the stale 21 tick authority event', () => {
+    const atNineteen = longWindowAdapter();
+    const atTwenty = longWindowAdapter();
+    const stale = longWindowAdapter();
+    try {
+      startAndHit(atNineteen);
+      for (let tick = 2; tick <= 19; tick += 1) {
+        atNineteen.step({ sequenceStart: 0, sourceEvents: [], observation: observation(tick, 2) });
+      }
+      expect(atNineteen.step({
+        sequenceStart: 0,
+        sourceEvents: [{
+          id: 'fall-19', sequence: 2, tick: 19, type: 'PlayerEliminated',
+          participantId: 'player-2', remainingLives: 0, creditedAttackerId: 'player-1',
+        }],
+        observation: observation(20, 3, null, null, false),
+      })).toMatchObject([{ kind: 'hit-ring-out', targetFallTick: 19 }]);
+
+      startAndHit(atTwenty);
+      for (let tick = 2; tick <= 20; tick += 1) {
+        atTwenty.step({ sequenceStart: 0, sourceEvents: [], observation: observation(tick, 2) });
+      }
+      expect(atTwenty.step({
+        sequenceStart: 0,
+        sourceEvents: [{
+          id: 'fall-20', sequence: 2, tick: 20, type: 'PlayerEliminated',
+          participantId: 'player-2', remainingLives: 0, creditedAttackerId: 'player-1',
+        }],
+        observation: observation(21, 3, null, null, false),
+      })).toMatchObject([{ kind: 'hit-ring-out', targetFallTick: 20 }]);
+
+      startAndHit(stale);
+      advanceToClosedHit(stale);
+      expect(stale.closedHitAttributionCount).toBe(1);
+      expect(stale.step({
+        sequenceStart: 0,
+        sourceEvents: [{
+          id: 'fall-21', sequence: 2, tick: 21, type: 'PlayerEliminated',
+          participantId: 'player-2', remainingLives: 0, creditedAttackerId: 'player-1',
+        }],
+        observation: observation(22, 3, null, null, false),
+      })).toEqual([]);
+      expect(stale.closedHitAttributionCount).toBe(0);
+    } finally {
+      atNineteen.destroy();
+      atTwenty.destroy();
+      stale.destroy();
+    }
+  });
+
+  it('fails closed for stale credited attribution drift, duplication, and a new hit that supersedes the closed target', () => {
+    const system = longWindowAdapter();
+    try {
+      startAndHit(system);
+      advanceToClosedHit(system);
+      const beforeWrongAttacker = system.exportCheckpointV2();
+      expect(() => system.step({
+        sequenceStart: 0,
+        sourceEvents: [{
+          id: 'fall-wrong', sequence: 2, tick: 21, type: 'PlayerEliminated',
+          participantId: 'player-2', remainingLives: 0, creditedAttackerId: 'player-2',
+        }],
+        observation: observation(22, 3, null, null, false),
+      })).toThrow(/缺少匹配的HitResolved归因/);
+      expect(system.exportCheckpointV2()).toEqual(beforeWrongAttacker);
+
+      expect(system.step({
+        sequenceStart: 0,
+        sourceEvents: [{
+          id: 'fall-once', sequence: 2, tick: 21, type: 'PlayerEliminated',
+          participantId: 'player-2', remainingLives: 0, creditedAttackerId: 'player-1',
+        }],
+        observation: observation(22, 3, null, null, false),
+      })).toEqual([]);
+      expect(() => system.step({
+        sequenceStart: 0,
+        sourceEvents: [{
+          id: 'fall-twice', sequence: 3, tick: 22, type: 'PlayerEliminated',
+          participantId: 'player-2', remainingLives: 0, creditedAttackerId: 'player-1',
+        }],
+        observation: observation(23, 4, null, null, false),
+      })).toThrow(/缺少匹配的HitResolved归因/);
+    } finally {
+      system.destroy();
+    }
+
+    const superseded = longWindowAdapter();
+    try {
+      startAndHit(superseded, 'first.attack');
+      advanceToClosedHit(superseded);
+      expect(superseded.step({
+        sequenceStart: 0,
+        sourceEvents: [
+          {
+            id: 'action-second', sequence: 2, tick: 21, type: 'ActionStarted',
+            participantId: 'player-1', action: 'second.attack',
+          },
+          {
+            id: 'hit-second', sequence: 3, tick: 21, type: 'HitResolved',
+            attackerId: 'player-1', targetId: 'player-2', action: 'second.attack',
+          },
+        ],
+        observation: observation(22, 4, 'second.attack'),
+      })).toEqual([]);
+      expect(superseded.step({
+        sequenceStart: 0,
+        sourceEvents: [{
+          id: 'fall-old', sequence: 4, tick: 22, type: 'PlayerEliminated',
+          participantId: 'player-2', remainingLives: 0, creditedAttackerId: 'player-1',
+        }],
+        observation: observation(23, 5, null, null, false),
+      })).toMatchObject([{ id: 'feedback:hit-second', kind: 'hit-ring-out' }]);
+    } finally {
+      superseded.destroy();
+    }
+  });
+
+  it('rejects lossy V1 export after closed attribution while V2 restore remains exact', () => {
+    const continuous = longWindowAdapter();
+    let restored: MatchCoreWeaponFeedbackAdapterV1 | null = null;
+    try {
+      startAndHit(continuous);
+      advanceToClosedHit(continuous);
+      const beforeV2 = continuous.exportCheckpointV2();
+      expect(() => continuous.exportCheckpointV1()).toThrow(/不能无损表达.*必须导出V2/);
+      expect(continuous.exportCheckpointV2()).toEqual(beforeV2);
+      const v2 = beforeV2;
+      expect(v2.schemaVersion).toBe(2);
+      expect(v2.closedHitAttributions).toMatchObject([{
+        sourceEventId: 'hit-stale', attackerId: 'player-1', targetId: 'player-2',
+        firstHitTick: 0, resolutionTick: 20, resultKind: 'hit-confirm',
+      }]);
+      restored = MatchCoreWeaponFeedbackAdapterV1.restoreFromCheckpointV2(v2);
+      const staleElimination = {
+        sequenceStart: 0,
+        sourceEvents: [{
+          id: 'fall-restored', sequence: 2, tick: 21, type: 'PlayerEliminated',
+          participantId: 'player-2', remainingLives: 0, creditedAttackerId: 'player-1',
+        }],
+        observation: observation(22, 3, null, null, false),
+      };
+      expect(restored.step(staleElimination)).toEqual(continuous.step(staleElimination));
+      expect(restored.exportCheckpointV2()).toEqual(continuous.exportCheckpointV2());
+
+      expect(() => validateMatchCoreWeaponFeedbackAdapterCheckpointV2({
+        ...v2,
+        closedHitAttributions: Array.from(
+          { length: MATCH_CORE_WEAPON_FEEDBACK_ADAPTER_V2_MAX_CLOSED_HIT_ATTRIBUTIONS + 1 },
+          () => v2.closedHitAttributions[0],
+        ),
+      })).toThrow(/超过有界容量/);
+      expect(() => validateMatchCoreWeaponFeedbackAdapterCheckpointV2({
+        ...v2,
+        closedHitAttributions: [{ ...v2.closedHitAttributions[0], resultKind: 'hit-ring-out' }],
+      })).toThrow(/非击落反馈/);
+      expect(() => validateMatchCoreWeaponFeedbackAdapterCheckpointV2({
+        ...v2,
+        closedHitAttributions: [
+          v2.closedHitAttributions[0],
+          { ...v2.closedHitAttributions[0], targetId: 'player-1' },
+        ],
+      })).toThrow(/重复source event/);
+      expect(() => validateMatchCoreWeaponFeedbackAdapterCheckpointV2({
+        ...v2,
+        future: true,
+      })).toThrow(/未知字段|不支持字段/);
+    } finally {
+      continuous.destroy();
+      restored?.destroy();
+    }
+  });
+
+  it('clears closed V2 attribution on destroy and never exports a destroyed owner', () => {
+    const system = longWindowAdapter();
+    startAndHit(system);
+    advanceToClosedHit(system);
+    expect(system.closedHitAttributionCount).toBe(1);
+    system.destroy();
+    expect(system.closedHitAttributionCount).toBe(0);
+    expect(() => system.exportCheckpointV2()).toThrow(/已销毁/);
   });
 });

@@ -36,6 +36,14 @@ const MATCH_SEEDS = Object.freeze({
   survival: 0x53_55_52_56,
 });
 
+function replayWarmupTickCount(
+  modeDefinitionId: ArenaThreeModeWeaponFeedbackScheduledFailureReplayModeDefinitionIdV1,
+): number {
+  if (modeDefinitionId === MODE_IDS.duel) return 31;
+  if (modeDefinitionId === MODE_IDS.race) return 62;
+  return 1;
+}
+
 export const ARENA_THREE_MODE_WEAPON_FEEDBACK_REAL_FAILURE_REPLAY_CANDIDATE_V1 =
   Object.freeze({
     schemaVersion: 1,
@@ -86,9 +94,10 @@ function createLocalInputs(
   scenario: ArenaThreeModeWeaponFeedbackScheduledFailureReplayScenarioV1,
 ): readonly ArenaInputFrame[] {
   const participantId = localParticipantId(modeDefinitionId);
+  const firstTick = replayWarmupTickCount(modeDefinitionId);
   return Object.freeze(Array.from(
     { length: scenario.comparedTickCount },
-    (_, tick) => createNeutralInputFrame(tick, participantId),
+    (_, index) => createNeutralInputFrame(firstTick + index, participantId),
   ));
 }
 
@@ -101,7 +110,7 @@ export function runArenaThreeModeWeaponFeedbackRealFailureReplayCandidateV1():
 DeepReadonly<ArenaThreeModeWeaponFeedbackScheduledFailureReplayReportV1> {
   return runArenaThreeModeWeaponFeedbackScheduledFailureReplayReportCandidateV1({
     createRuntime(modeDefinitionId) {
-      return createArenaThreeModeAuthoritativeReplayRuntimeCandidateV1({
+      const runtime = createArenaThreeModeAuthoritativeReplayRuntimeCandidateV1({
         modeDefinitionId,
         matchSeed: matchSeed(modeDefinitionId),
         raceParticipantCount:
@@ -111,6 +120,26 @@ DeepReadonly<ArenaThreeModeWeaponFeedbackScheduledFailureReplayReportV1> {
           ARENA_THREE_MODE_WEAPON_FEEDBACK_REAL_FAILURE_REPLAY_CANDIDATE_V1
             .survivalEnemyCount,
       });
+      try {
+        const participantId = localParticipantId(modeDefinitionId);
+        for (let tick = 0; tick < replayWarmupTickCount(modeDefinitionId); tick += 1) {
+          runtime.step(createNeutralInputFrame(tick, participantId));
+        }
+        // The restore suffix starts only after the real preparation/pickup
+        // lifecycle has established the selection capability it compares.
+        runtime.exportContentSelectionCheckpointCapabilityV1();
+        return runtime;
+      } catch (error) {
+        try {
+          runtime.destroy();
+        } catch (cleanupError) {
+          throw new AggregateError(
+            [error, cleanupError],
+            'Arena three-mode replay runtime预热与清理均失败。',
+          );
+        }
+        throw error;
+      }
     },
     createLocalInputs,
   });

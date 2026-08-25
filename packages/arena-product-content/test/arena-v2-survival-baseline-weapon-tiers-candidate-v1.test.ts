@@ -14,7 +14,10 @@ import {
   createArenaV2SurvivalBaselineWeaponCandidateRegistriesV1,
   type ArenaV2SurvivalWeaponRuntimeVariantCandidateV1,
 } from '../src/index.js';
-import type { ActionDefinition } from '@number-strategy-jump/arena-definitions';
+import {
+  WEAPON_TUNING_FIELD_V1,
+  type ActionDefinition,
+} from '@number-strategy-jump/arena-definitions';
 
 function variant(
   weaponId: ArenaV2SurvivalWeaponRuntimeVariantCandidateV1['weaponId'],
@@ -134,12 +137,24 @@ describe('Arena V2 survival baseline weapon tier candidate v1', () => {
       expect(tenth.actions.map((action) => action.effects.map(({ kind }) => kind))).toEqual(
         source.actions.map((action) => action.effects.map(({ kind }) => kind)),
       );
-      expect(tenth.actions[0]!.timing.cooldownTicks).toBeLessThan(
-        source.actions[0]!.timing.cooldownTicks,
-      );
-      expect(numericParameter(tenth.actions[0]!, 'impact', 'horizontalImpulse')).toBeGreaterThan(
-        numericParameter(source.actions[0]!, 'impact', 'horizontalImpulse'),
-      );
+      const permitted = source.grammar.survivalGrowth.permittedTuningFields;
+      if (permitted.includes(WEAPON_TUNING_FIELD_V1.COOLDOWN_TICKS)) {
+        expect(tenth.actions[0]!.timing.cooldownTicks).toBeLessThan(
+          source.actions[0]!.timing.cooldownTicks,
+        );
+      } else {
+        expect(tenth.actions[0]!.timing.cooldownTicks).toBe(
+          source.actions[0]!.timing.cooldownTicks,
+        );
+      }
+      const expectedImpulse = numericParameter(source.actions[0]!, 'impact', 'horizontalImpulse');
+      if (permitted.includes(WEAPON_TUNING_FIELD_V1.HORIZONTAL_IMPULSE)) {
+        expect(numericParameter(tenth.actions[0]!, 'impact', 'horizontalImpulse'))
+          .toBeGreaterThan(expectedImpulse);
+      } else {
+        expect(numericParameter(tenth.actions[0]!, 'impact', 'horizontalImpulse'))
+          .toBe(expectedImpulse);
+      }
     }
   });
 

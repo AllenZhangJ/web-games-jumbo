@@ -7,10 +7,10 @@ import {
   type DeepReadonly,
 } from '@number-strategy-jump/arena-contracts';
 import {
-  MATCH_CORE_WEAPON_FEEDBACK_ADAPTER_CHECKPOINT_V1_SCHEMA_VERSION,
-  validateMatchCoreWeaponFeedbackAdapterCheckpointV1,
+  MATCH_CORE_WEAPON_FEEDBACK_ADAPTER_CHECKPOINT_V2_SCHEMA_VERSION,
+  validateMatchCoreWeaponFeedbackAdapterCheckpointV2,
   validateModeMatchRuntimeCheckpointV1,
-  type MatchCoreWeaponFeedbackAdapterCheckpointV1,
+  type MatchCoreWeaponFeedbackAdapterCheckpointV2,
   type ModeMatchRuntimeCheckpointV1,
 } from '@number-strategy-jump/arena-match';
 
@@ -21,7 +21,7 @@ export const ARENA_THREE_MODE_WEAPON_FEEDBACK_CHECKPOINT_CAPABILITY_V1 =
     implementationStatus: 'code-written-not-run',
     hardGate: false,
     feedbackCheckpointSchemaVersion:
-      MATCH_CORE_WEAPON_FEEDBACK_ADAPTER_CHECKPOINT_V1_SCHEMA_VERSION,
+      MATCH_CORE_WEAPON_FEEDBACK_ADAPTER_CHECKPOINT_V2_SCHEMA_VERSION,
     runtimeCheckpointMethod: 'exportRuntimeCheckpointV1',
     runtimeCheckpointForkMethod: 'forkFromWeaponFeedbackCheckpointCapabilityV1',
     worldAuthorityCheckpointField: 'feedbackCheckpoint',
@@ -35,7 +35,7 @@ export interface ArenaModeWeaponFeedbackCheckpointCapabilityV1 {
   readonly modeDefinitionId: string;
   readonly runtimeCheckpoint: DeepReadonly<ModeMatchRuntimeCheckpointV1>;
   readonly runtimeCheckpointIdentityHash: string;
-  readonly feedbackCheckpoint: DeepReadonly<MatchCoreWeaponFeedbackAdapterCheckpointV1>;
+  readonly feedbackCheckpoint: DeepReadonly<MatchCoreWeaponFeedbackAdapterCheckpointV2>;
   readonly capabilityIdentityHash: string;
 }
 
@@ -108,7 +108,7 @@ function createCapabilityCore(value: unknown) {
     ),
     'Arena feedback world authority checkpoint',
   );
-  const feedbackCheckpoint = validateMatchCoreWeaponFeedbackAdapterCheckpointV1(
+  const feedbackCheckpoint = validateMatchCoreWeaponFeedbackAdapterCheckpointV2(
     dataField(worldCheckpoint, 'feedbackCheckpoint', 'Arena feedback world authority checkpoint'),
   );
   const participantIds = runtimeCheckpoint.config.participantAssignments.map(
@@ -161,7 +161,7 @@ export function validateArenaModeWeaponFeedbackCheckpointCapabilityV1(
     dataField(source, 'runtimeCheckpointIdentityHash', 'Arena feedback checkpoint capability'),
     'Arena feedback checkpoint capability runtimeCheckpointIdentityHash',
   );
-  const claimedFeedback = validateMatchCoreWeaponFeedbackAdapterCheckpointV1(
+  const claimedFeedback = validateMatchCoreWeaponFeedbackAdapterCheckpointV2(
     dataField(source, 'feedbackCheckpoint', 'Arena feedback checkpoint capability'),
   );
   if (

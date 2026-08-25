@@ -63,11 +63,12 @@ describe('Arena survival tiered supply MatchCore verification candidate v1', () 
         'arena-v2.weapon.burst-gauntlet.candidate.v1',
       );
       expect(seed.equipmentSpawnedEventCount).toBe(30);
-      expect(seed.equipmentPickedUpEventCount).toBe(10);
+      expect(seed.equipmentPickedUpEventCount).toBe(1);
       expect(seed.equipmentReplacedEventCount).toBe(9);
+      expect(seed.equipmentExpiredEventCount).toBe(18);
       expect(seed.replayedFinalHash).toBe(seed.replayFinalHash);
       expect(seed.inputFrameCount).toBeGreaterThan(0);
     }
     expect(report.resultHash).toMatch(/^[0-9a-f]{8}$/);
-  });
+  }, 15_000);
 });

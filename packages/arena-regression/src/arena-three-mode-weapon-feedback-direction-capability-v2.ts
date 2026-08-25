@@ -7,9 +7,9 @@ import {
   type DeepReadonly,
 } from '@number-strategy-jump/arena-contracts';
 import {
-  validateMatchCoreWeaponFeedbackAdapterCheckpointV1,
+  validateMatchCoreWeaponFeedbackAdapterCheckpointV2,
   validateMatchCoreWeaponFeedbackDirectionCheckpointV2,
-  type MatchCoreWeaponFeedbackAdapterCheckpointV1,
+  type MatchCoreWeaponFeedbackAdapterCheckpointV2,
   type MatchCoreWeaponFeedbackDirectionCheckpointV2,
   type ModeMatchRuntimeCheckpointV1,
 } from '@number-strategy-jump/arena-match';
@@ -24,7 +24,7 @@ export const ARENA_THREE_MODE_WEAPON_FEEDBACK_DIRECTION_CAPABILITY_V2 = Object.f
   status: 'production-unreachable' as const,
   implementationStatus: 'code-written-not-run' as const,
   hardGate: false as const,
-  feedbackCheckpointSchemaVersion: 1 as const,
+  feedbackCheckpointSchemaVersion: 2 as const,
   directionCheckpointSchemaVersion: 2 as const,
   runtimeCheckpointMethod: 'exportRuntimeCheckpointV1' as const,
   runtimeCheckpointForkMethod:
@@ -42,7 +42,7 @@ export interface ArenaModeWeaponFeedbackDirectionCheckpointCapabilityV2 {
   readonly modeDefinitionId: string;
   readonly runtimeCheckpoint: DeepReadonly<ModeMatchRuntimeCheckpointV1>;
   readonly runtimeCheckpointIdentityHash: string;
-  readonly feedbackCheckpoint: DeepReadonly<MatchCoreWeaponFeedbackAdapterCheckpointV1>;
+  readonly feedbackCheckpoint: DeepReadonly<MatchCoreWeaponFeedbackAdapterCheckpointV2>;
   readonly directionCheckpoint: DeepReadonly<MatchCoreWeaponFeedbackDirectionCheckpointV2>;
   readonly capabilityIdentityHash: string;
 }
@@ -163,7 +163,7 @@ export function validateArenaModeWeaponFeedbackDirectionCheckpointCapabilityV2(
     field(source, 'runtimeCheckpointIdentityHash', 'Arena feedback direction capability'),
     'Arena feedback direction capability runtimeCheckpointIdentityHash',
   );
-  const claimedFeedback = validateMatchCoreWeaponFeedbackAdapterCheckpointV1(field(
+  const claimedFeedback = validateMatchCoreWeaponFeedbackAdapterCheckpointV2(field(
     source,
     'feedbackCheckpoint',
     'Arena feedback direction capability',

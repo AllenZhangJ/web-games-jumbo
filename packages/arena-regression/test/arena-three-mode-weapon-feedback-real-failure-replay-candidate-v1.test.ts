@@ -31,9 +31,9 @@ describe('Arena three-mode real failure replay candidate V1', () => {
 
   it('creates already-started real mode runtimes whose ownership returns to zero', () => {
     for (const [modeDefinitionId, matchSeed] of [
-      ['arena.mode.duel', 11],
-      ['arena.mode.race', 12],
-      ['arena.mode.survival', 13],
+      ['arena-v2.mode.duel.candidate.v1', 11],
+      ['arena-v2.mode.race.candidate.v1', 12],
+      ['arena-v2.mode.survival.candidate.v1', 13],
     ] as const) {
       const runtime = createArenaThreeModeAuthoritativeReplayRuntimeCandidateV1({
         modeDefinitionId,
@@ -56,7 +56,11 @@ describe('Arena three-mode real failure replay candidate V1', () => {
     }
   });
 
-  it('assembles all 33 fixed real-runtime failure cases', () => {
+  const runRealFailureMatrix = process.env.ARENA_P4_REAL_FAILURE_REPLAY_EXTERNAL === '1'
+    ? it.skip
+    : it;
+
+  runRealFailureMatrix('assembles all 33 fixed real-runtime failure cases', () => {
     const report = runArenaThreeModeWeaponFeedbackRealFailureReplayCandidateV1();
     expect(ARENA_THREE_MODE_WEAPON_FEEDBACK_REAL_FAILURE_REPLAY_CANDIDATE_V1)
       .toMatchObject({

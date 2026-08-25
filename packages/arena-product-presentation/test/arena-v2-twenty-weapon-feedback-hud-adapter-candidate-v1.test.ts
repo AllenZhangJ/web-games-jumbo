@@ -44,10 +44,10 @@ function movementFallEvent() {
     sequence: 4,
     tick: 21,
     kind: 'movement-fall' as const,
-    attackerId: 'player',
+    attackerId: null,
     targetId: 'enemy-1',
-    actionDefinitionId: ACTION_ID,
-    actionStartedTick: 10,
+    actionDefinitionId: null,
+    actionStartedTick: null,
     firstHitTick: null,
     targetFallTick: 18,
     initialSupportSurfaceId: 'surface-a',
@@ -212,7 +212,7 @@ describe('Arena V2 twenty weapon HUD adapter candidate V1 (not run)', () => {
     expect(specialized.weaponReadPlans[0]).toMatchObject({
       weaponSpecific: false,
       weaponId: null,
-      sourceActionDefinitionId: ACTION_ID,
+      sourceActionDefinitionId: null,
       accessibility: {
         lowQualityKeepsCausalRead: true,
         colorIndependent: true,
@@ -235,8 +235,8 @@ describe('Arena V2 twenty weapon HUD adapter candidate V1 (not run)', () => {
     expect(specialized.passthroughUnarmedSourceEventIds).toEqual([event.id]);
     expect(specialized.renderModel.feedbackItems[0]).toEqual(generic.feedbackItems[0]);
     expect(specialized.renderModel.feedbackItems[0]).toMatchObject({
-      visualCue: 'impact-confirm',
-      audioCue: 'weapon-hit',
+      visualCue: 'impact-surface-transfer',
+      audioCue: 'weapon-transfer',
     });
   });
 

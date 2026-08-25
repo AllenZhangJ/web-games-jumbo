@@ -15,6 +15,9 @@ import { ACTION_LANE } from '@number-strategy-jump/arena-definitions';
 export const MATCH_CORE_WEAPON_FEEDBACK_ADAPTER_V1_CANDIDATE_STATUS =
   'production-unreachable' as const;
 export const MATCH_CORE_WEAPON_FEEDBACK_ADAPTER_CHECKPOINT_V1_SCHEMA_VERSION = 1 as const;
+export const MATCH_CORE_WEAPON_FEEDBACK_ADAPTER_CHECKPOINT_V2_SCHEMA_VERSION = 2 as const;
+/** A target retains at most one newest settled non-ring attribution. */
+export const MATCH_CORE_WEAPON_FEEDBACK_ADAPTER_V2_MAX_CLOSED_HIT_ATTRIBUTIONS = 17 as const;
 
 export interface MatchCoreWeaponFeedbackParticipantObservationV1 {
   readonly participantId: string;
@@ -64,6 +67,29 @@ export interface MatchCoreWeaponFeedbackAdapterCheckpointV1 {
   }>[];
   readonly checkpointIdentityHash: string;
 }
+
+export interface MatchCoreWeaponFeedbackClosedHitAttributionV2 {
+  readonly sourceEventId: string;
+  readonly attackerId: string;
+  readonly targetId: string;
+  readonly actionDefinitionId: string;
+  readonly firstHitTick: number;
+  readonly resolutionTick: number;
+  readonly resultKind: 'hit-confirm' | 'hit-surface-transfer';
+}
+
+export interface MatchCoreWeaponFeedbackAdapterCheckpointV2 extends Omit<
+  MatchCoreWeaponFeedbackAdapterCheckpointV1,
+  'schemaVersion'
+> {
+  readonly schemaVersion:
+    typeof MATCH_CORE_WEAPON_FEEDBACK_ADAPTER_CHECKPOINT_V2_SCHEMA_VERSION;
+  readonly closedHitAttributions: readonly MatchCoreWeaponFeedbackClosedHitAttributionV2[];
+}
+
+export type MatchCoreWeaponFeedbackAdapterCheckpoint =
+  | MatchCoreWeaponFeedbackAdapterCheckpointV1
+  | MatchCoreWeaponFeedbackAdapterCheckpointV2;
 
 interface TrackedAction {
   readonly sourceEventId: string;
@@ -141,6 +167,14 @@ const CHECKPOINT_CORE_KEYS = new Set([
   'actions', 'pendingHits', 'lastSupportedSurfaceIds',
 ]);
 const CHECKPOINT_KEYS = new Set([...CHECKPOINT_CORE_KEYS, 'checkpointIdentityHash']);
+const CHECKPOINT_V2_CORE_KEYS = new Set([
+  ...CHECKPOINT_CORE_KEYS,
+  'closedHitAttributions',
+]);
+const CHECKPOINT_V2_KEYS = new Set([
+  ...CHECKPOINT_V2_CORE_KEYS,
+  'checkpointIdentityHash',
+]);
 const CHECKPOINT_ACTION_KEYS = new Set([
   'sourceEventId', 'attackerId', 'actionDefinitionId', 'startedTick', 'hitCount',
 ]);
@@ -149,7 +183,14 @@ const CHECKPOINT_HIT_KEYS = new Set([
   'actionStartedTick', 'firstHitTick', 'initialSupportSurfaceId',
 ]);
 const CHECKPOINT_SURFACE_KEYS = new Set(['participantId', 'supportSurfaceId']);
+const CHECKPOINT_CLOSED_HIT_KEYS = new Set([
+  'sourceEventId', 'attackerId', 'targetId', 'actionDefinitionId',
+  'firstHitTick', 'resolutionTick', 'resultKind',
+]);
 const HASH_PATTERN = /^[0-9a-f]{8}$/u;
+const CLOSED_HIT_RESULT_KINDS = new Set<MatchCoreWeaponFeedbackClosedHitAttributionV2['resultKind']>([
+  'hit-confirm', 'hit-surface-transfer',
+]);
 
 function requireKeys(
   value: Readonly<Record<string, unknown>>,
@@ -284,6 +325,11 @@ function participantById(
 
 type FeedbackCheckpointCore = Omit<
   MatchCoreWeaponFeedbackAdapterCheckpointV1,
+  'checkpointIdentityHash'
+>;
+
+type FeedbackCheckpointCoreV2 = Omit<
+  MatchCoreWeaponFeedbackAdapterCheckpointV2,
   'checkpointIdentityHash'
 >;
 
@@ -501,6 +547,138 @@ export function validateMatchCoreWeaponFeedbackAdapterCheckpointV1(
   return checkpoint;
 }
 
+function closedHitAttributions(
+  value: unknown,
+  checkpoint: FeedbackCheckpointCore,
+): readonly MatchCoreWeaponFeedbackClosedHitAttributionV2[] {
+  const idOrder = new Map(
+    checkpoint.participantIds.map((participantId, index) => [participantId, index] as const),
+  );
+  const records = checkpointRecords(
+    value,
+    CHECKPOINT_CLOSED_HIT_KEYS,
+    'feedback checkpoint.closedHitAttributions',
+  );
+  if (records.length > MATCH_CORE_WEAPON_FEEDBACK_ADAPTER_V2_MAX_CLOSED_HIT_ATTRIBUTIONS) {
+    throw new RangeError('feedback checkpoint closedHitAttributions超过有界容量。');
+  }
+  const result = records.map((entry, index) => {
+    const name = `feedback checkpoint.closedHitAttributions[${index}]`;
+    const attackerId = assertNonEmptyString(entry.attackerId, `${name}.attackerId`);
+    const targetId = assertNonEmptyString(entry.targetId, `${name}.targetId`);
+    if (!idOrder.has(attackerId) || !idOrder.has(targetId)) {
+      throw new RangeError(`${name}参与者越界。`);
+    }
+    const firstHitTick = assertIntegerAtLeast(entry.firstHitTick, 0, `${name}.firstHitTick`);
+    const resolutionTick = assertIntegerAtLeast(entry.resolutionTick, 0, `${name}.resolutionTick`);
+    if (firstHitTick > resolutionTick || resolutionTick >= checkpoint.tick) {
+      throw new RangeError(`${name}时间关系无效。`);
+    }
+    const resultKind = assertNonEmptyString(entry.resultKind, `${name}.resultKind`);
+    if (!CLOSED_HIT_RESULT_KINDS.has(resultKind as MatchCoreWeaponFeedbackClosedHitAttributionV2['resultKind'])) {
+      throw new RangeError(`${name}.resultKind必须是已结算非击落反馈。`);
+    }
+    return Object.freeze({
+      sourceEventId: assertNonEmptyString(entry.sourceEventId, `${name}.sourceEventId`),
+      attackerId,
+      targetId,
+      actionDefinitionId: assertNonEmptyString(entry.actionDefinitionId, `${name}.actionDefinitionId`),
+      firstHitTick,
+      resolutionTick,
+      resultKind: resultKind as MatchCoreWeaponFeedbackClosedHitAttributionV2['resultKind'],
+    });
+  });
+  if (new Set(result.map(({ targetId }) => targetId)).size !== result.length) {
+    throw new RangeError('feedback checkpoint closedHitAttributions不能为同一目标保留多条归因。');
+  }
+  if (new Set(result.map(({ sourceEventId }) => sourceEventId)).size !== result.length) {
+    throw new RangeError('feedback checkpoint closedHitAttributions不能重复source event。');
+  }
+  result.sort((left, right) => idOrder.get(left.targetId)! - idOrder.get(right.targetId)!);
+  return Object.freeze(result);
+}
+
+function normalizeCheckpointCoreV2(value: unknown): FeedbackCheckpointCoreV2 {
+  const source = cloneFrozenData(value, 'MatchCoreWeaponFeedbackAdapter V2 checkpoint core');
+  assertKnownKeys(source, CHECKPOINT_V2_CORE_KEYS, 'MatchCoreWeaponFeedbackAdapter V2 checkpoint core');
+  requireKeys(source, CHECKPOINT_V2_CORE_KEYS, 'MatchCoreWeaponFeedbackAdapter V2 checkpoint core');
+  if (source.schemaVersion !== MATCH_CORE_WEAPON_FEEDBACK_ADAPTER_CHECKPOINT_V2_SCHEMA_VERSION) {
+    throw new RangeError('MatchCoreWeaponFeedbackAdapter V2 checkpoint schemaVersion不受支持。');
+  }
+  const base = normalizeCheckpointCore({
+    schemaVersion: MATCH_CORE_WEAPON_FEEDBACK_ADAPTER_CHECKPOINT_V1_SCHEMA_VERSION,
+    participantIds: source.participantIds,
+    outcomeWindowTicks: source.outcomeWindowTicks,
+    tick: source.tick,
+    sourceEventSequence: source.sourceEventSequence,
+    actions: source.actions,
+    pendingHits: source.pendingHits,
+    lastSupportedSurfaceIds: source.lastSupportedSurfaceIds,
+  });
+  return Object.freeze({
+    ...base,
+    schemaVersion: MATCH_CORE_WEAPON_FEEDBACK_ADAPTER_CHECKPOINT_V2_SCHEMA_VERSION,
+    closedHitAttributions: closedHitAttributions(source.closedHitAttributions, base),
+  });
+}
+
+function withCheckpointIdentityHashV2(
+  core: FeedbackCheckpointCoreV2,
+): MatchCoreWeaponFeedbackAdapterCheckpointV2 {
+  return Object.freeze({
+    ...core,
+    checkpointIdentityHash: createDeterministicDataHash(
+      core,
+      'MatchCoreWeaponFeedbackAdapterCheckpointV2 identity',
+    ),
+  });
+}
+
+export function validateMatchCoreWeaponFeedbackAdapterCheckpointV2(
+  value: unknown,
+): MatchCoreWeaponFeedbackAdapterCheckpointV2 {
+  const source = cloneFrozenData(value, 'MatchCoreWeaponFeedbackAdapter V2 checkpoint');
+  assertKnownKeys(source, CHECKPOINT_V2_KEYS, 'MatchCoreWeaponFeedbackAdapter V2 checkpoint');
+  requireKeys(source, CHECKPOINT_V2_KEYS, 'MatchCoreWeaponFeedbackAdapter V2 checkpoint');
+  const claimedHash = assertNonEmptyString(
+    source.checkpointIdentityHash,
+    'feedback V2 checkpoint.checkpointIdentityHash',
+  );
+  if (!HASH_PATTERN.test(claimedHash)) {
+    throw new RangeError('feedback V2 checkpoint.checkpointIdentityHash格式无效。');
+  }
+  const core = Object.fromEntries(
+    [...CHECKPOINT_V2_CORE_KEYS].map((key) => [key, source[key]]),
+  );
+  const checkpoint = withCheckpointIdentityHashV2(normalizeCheckpointCoreV2(core));
+  if (checkpoint.checkpointIdentityHash !== claimedHash) {
+    throw new RangeError('feedback V2 checkpoint身份hash不一致。');
+  }
+  return checkpoint;
+}
+
+export function validateMatchCoreWeaponFeedbackAdapterCheckpoint(
+  value: unknown,
+): MatchCoreWeaponFeedbackAdapterCheckpoint {
+  const source = cloneFrozenData(value, 'MatchCoreWeaponFeedbackAdapter checkpoint');
+  if (source === null || typeof source !== 'object' || Array.isArray(source)) {
+    throw new TypeError('MatchCoreWeaponFeedbackAdapter checkpoint必须是普通对象。');
+  }
+  const record = source as Readonly<Record<string, unknown>>;
+  const schemaVersion = assertIntegerAtLeast(
+    record.schemaVersion,
+    1,
+    'feedback checkpoint.schemaVersion',
+  );
+  if (schemaVersion === MATCH_CORE_WEAPON_FEEDBACK_ADAPTER_CHECKPOINT_V1_SCHEMA_VERSION) {
+    return validateMatchCoreWeaponFeedbackAdapterCheckpointV1(record);
+  }
+  if (schemaVersion === MATCH_CORE_WEAPON_FEEDBACK_ADAPTER_CHECKPOINT_V2_SCHEMA_VERSION) {
+    return validateMatchCoreWeaponFeedbackAdapterCheckpointV2(record);
+  }
+  throw new RangeError('MatchCoreWeaponFeedbackAdapter checkpoint schemaVersion不受支持。');
+}
+
 /**
  * Candidate bridge from the existing MatchCore event/snapshot boundary to the
  * V6 causal feedback event. It is deliberately not wired into default MatchCore.
@@ -511,6 +689,7 @@ export class MatchCoreWeaponFeedbackAdapterV1 {
   readonly #outcomeWindowTicks: number;
   #actions = new Map<string, TrackedAction>();
   #pendingHits = new Map<string, PendingHit>();
+  #closedHitAttributions = new Map<string, MatchCoreWeaponFeedbackClosedHitAttributionV2>();
   #lastSupportedSurfaceIds = new Map<string, string>();
   #tick: number;
   #sourceEventSequence: number;
@@ -542,6 +721,23 @@ export class MatchCoreWeaponFeedbackAdapterV1 {
     value: unknown,
   ): MatchCoreWeaponFeedbackAdapterV1 {
     const checkpoint = validateMatchCoreWeaponFeedbackAdapterCheckpointV1(value);
+    return MatchCoreWeaponFeedbackAdapterV1.#restoreFromCheckpoint(checkpoint, []);
+  }
+
+  static restoreFromCheckpointV2(
+    value: unknown,
+  ): MatchCoreWeaponFeedbackAdapterV1 {
+    const checkpoint = validateMatchCoreWeaponFeedbackAdapterCheckpointV2(value);
+    return MatchCoreWeaponFeedbackAdapterV1.#restoreFromCheckpoint(
+      checkpoint,
+      checkpoint.closedHitAttributions,
+    );
+  }
+
+  static #restoreFromCheckpoint(
+    checkpoint: MatchCoreWeaponFeedbackAdapterCheckpoint,
+    closedHitAttributions: readonly MatchCoreWeaponFeedbackClosedHitAttributionV2[],
+  ): MatchCoreWeaponFeedbackAdapterV1 {
     const supportSurfaceIds = new Map(
       checkpoint.lastSupportedSurfaceIds.map((entry) => [
         entry.participantId,
@@ -570,6 +766,10 @@ export class MatchCoreWeaponFeedbackAdapterV1 {
       entry.targetId,
       { ...entry },
     ] as const));
+    adapter.#closedHitAttributions = new Map(closedHitAttributions.map((entry) => [
+      entry.targetId,
+      { ...entry },
+    ] as const));
     return adapter;
   }
 
@@ -577,10 +777,11 @@ export class MatchCoreWeaponFeedbackAdapterV1 {
 
   get pendingHitCount(): number { return this.#pendingHits.size; }
 
-  exportCheckpointV1(): MatchCoreWeaponFeedbackAdapterCheckpointV1 {
-    this.#assertUsable();
+  get closedHitAttributionCount(): number { return this.#closedHitAttributions.size; }
+
+  #checkpointCore(): FeedbackCheckpointCore {
     const idOrder = new Map(this.#participantIds.map((id, index) => [id, index] as const));
-    return withCheckpointIdentityHash(normalizeCheckpointCore({
+    return normalizeCheckpointCore({
       schemaVersion: MATCH_CORE_WEAPON_FEEDBACK_ADAPTER_CHECKPOINT_V1_SCHEMA_VERSION,
       participantIds: this.#participantIds,
       outcomeWindowTicks: this.#outcomeWindowTicks,
@@ -595,6 +796,35 @@ export class MatchCoreWeaponFeedbackAdapterV1 {
       lastSupportedSurfaceIds: [...this.#lastSupportedSurfaceIds.entries()]
         .sort((left, right) => idOrder.get(left[0])! - idOrder.get(right[0])!)
         .map(([participantId, supportSurfaceId]) => ({ participantId, supportSurfaceId })),
+    });
+  }
+
+  exportCheckpointV1(): MatchCoreWeaponFeedbackAdapterCheckpointV1 {
+    this.#assertUsable();
+    if (this.#closedHitAttributions.size !== 0) {
+      throw new RangeError(
+        'MatchCoreWeaponFeedbackAdapter V1 checkpoint不能无损表达已结算非击落归因；必须导出V2。',
+      );
+    }
+    return withCheckpointIdentityHash(this.#checkpointCore());
+  }
+
+  exportCheckpointV2(): MatchCoreWeaponFeedbackAdapterCheckpointV2 {
+    this.#assertUsable();
+    const core = this.#checkpointCore();
+    const idOrder = new Map(this.#participantIds.map((id, index) => [id, index] as const));
+    return withCheckpointIdentityHashV2(normalizeCheckpointCoreV2({
+      schemaVersion: MATCH_CORE_WEAPON_FEEDBACK_ADAPTER_CHECKPOINT_V2_SCHEMA_VERSION,
+      participantIds: core.participantIds,
+      outcomeWindowTicks: core.outcomeWindowTicks,
+      tick: core.tick,
+      sourceEventSequence: core.sourceEventSequence,
+      actions: core.actions,
+      pendingHits: core.pendingHits,
+      lastSupportedSurfaceIds: core.lastSupportedSurfaceIds,
+      closedHitAttributions: [...this.#closedHitAttributions.values()].sort(
+        (left, right) => idOrder.get(left.targetId)! - idOrder.get(right.targetId)!,
+      ),
     }));
   }
 
@@ -675,6 +905,7 @@ export class MatchCoreWeaponFeedbackAdapterV1 {
       ]),
     );
     const pendingHits = new Map(this.#pendingHits);
+    const closedHitAttributions = new Map(this.#closedHitAttributions);
     const lastSupportedSurfaceIds = new Map(this.#lastSupportedSurfaceIds);
     const output: DeepReadonly<WeaponFeedbackResolvedEventV6>[] = [];
     let outputSequence = assertIntegerAtLeast(source.sequenceStart, 0, 'feedback sequenceStart');
@@ -722,6 +953,23 @@ export class MatchCoreWeaponFeedbackAdapterV1 {
         creditedAttackerId: null,
       }) as DeepReadonly<WeaponFeedbackResolvedEventV6>);
       outputSequence += 1;
+    };
+    const rememberClosedNonRingAttribution = (
+      pending: PendingHit,
+      feedback: DeepReadonly<WeaponFeedbackResolvedEventV6>,
+    ): void => {
+      if (feedback.kind !== 'hit-confirm' && feedback.kind !== 'hit-surface-transfer') {
+        throw new RangeError('closed hit attribution只能记录已结算非击落反馈。');
+      }
+      closedHitAttributions.set(pending.targetId, Object.freeze({
+        sourceEventId: pending.sourceEventId,
+        attackerId: pending.attackerId,
+        targetId: pending.targetId,
+        actionDefinitionId: pending.actionDefinitionId,
+        firstHitTick: pending.firstHitTick,
+        resolutionTick: feedback.tick,
+        resultKind: feedback.kind,
+      }));
     };
 
     for (let index = 0; index < source.sourceEvents.length; index += 1) {
@@ -814,17 +1062,22 @@ export class MatchCoreWeaponFeedbackAdapterV1 {
           const supersededFinalSupportSurfaceId = participant.supportSurfaceId
             ?? lastSupportedSurfaceIds.get(targetId)
             ?? previous.initialSupportSurfaceId;
-          output.push(this.#event(
+          const feedback = this.#event(
             previous,
             outputSequence,
             event.tick,
             supersededFinalSupportSurfaceId,
             null,
             null,
-          ));
+          );
+          output.push(feedback);
+          rememberClosedNonRingAttribution(previous, feedback);
           outputSequence += 1;
         }
         action.hitCount += 1;
+        // A newer hit is the only attribution that may remain open for this
+        // target. It also invalidates any older stale-fall closure.
+        closedHitAttributions.delete(targetId);
         pendingHits.set(targetId, {
           sourceEventId: event.id,
           attackerId,
@@ -845,23 +1098,39 @@ export class MatchCoreWeaponFeedbackAdapterV1 {
         );
         if (creditedAttackerId === null) {
           pendingHits.delete(targetId);
+          closedHitAttributions.delete(targetId);
           emitMovementFall(event, targetId);
         } else {
           this.#requireParticipantId(creditedAttackerId, 'PlayerEliminated creditedAttackerId');
           const pending = pendingHits.get(targetId);
-          if (!pending || pending.attackerId !== creditedAttackerId) {
-            throw new RangeError('credited elimination缺少匹配的HitResolved归因。');
+          if (pending !== undefined) {
+            if (pending.attackerId !== creditedAttackerId) {
+              throw new RangeError('credited elimination缺少匹配的HitResolved归因。');
+            }
+            output.push(this.#event(
+              pending,
+              outputSequence,
+              event.tick,
+              null,
+              event.tick,
+              'credited-hit',
+            ));
+            outputSequence += 1;
+            pendingHits.delete(targetId);
+            closedHitAttributions.delete(targetId);
+          } else {
+            const closed = closedHitAttributions.get(targetId);
+            if (closed === undefined || closed.attackerId !== creditedAttackerId) {
+              throw new RangeError('credited elimination缺少匹配的HitResolved归因。');
+            }
+            if (event.tick - closed.firstHitTick <= this.#outcomeWindowTicks) {
+              throw new RangeError('窗口内credited elimination缺少待结算HitResolved归因。');
+            }
+            // The V6 PlayerEliminated remains in the authority/replay stream.
+            // Its source waterline is consumed here, but the prior non-ring
+            // feedback is never rewritten or emitted a second time.
+            closedHitAttributions.delete(targetId);
           }
-          output.push(this.#event(
-            pending,
-            outputSequence,
-            event.tick,
-            null,
-            event.tick,
-            'credited-hit',
-          ));
-          outputSequence += 1;
-          pendingHits.delete(targetId);
         }
       }
     }
@@ -893,14 +1162,16 @@ export class MatchCoreWeaponFeedbackAdapterV1 {
       if (finalSupportSurfaceId === undefined) {
         throw new RangeError('命中结果窗口结束时目标仍无可归类支撑结果。');
       }
-      output.push(this.#event(
+      const feedback = this.#event(
         pending,
         outputSequence,
         authorityTick,
         finalSupportSurfaceId,
         null,
         null,
-      ));
+      );
+      output.push(feedback);
+      rememberClosedNonRingAttribution(pending, feedback);
       outputSequence += 1;
       pendingHits.delete(targetId);
     }
@@ -912,6 +1183,7 @@ export class MatchCoreWeaponFeedbackAdapterV1 {
     }
     this.#actions = actions;
     this.#pendingHits = pendingHits;
+    this.#closedHitAttributions = closedHitAttributions;
     this.#lastSupportedSurfaceIds = lastSupportedSurfaceIds;
     this.#tick = next.tick;
     this.#sourceEventSequence = next.eventSequence;
@@ -923,6 +1195,7 @@ export class MatchCoreWeaponFeedbackAdapterV1 {
     this.#destroyed = true;
     this.#actions.clear();
     this.#pendingHits.clear();
+    this.#closedHitAttributions.clear();
     this.#lastSupportedSurfaceIds.clear();
   }
 }

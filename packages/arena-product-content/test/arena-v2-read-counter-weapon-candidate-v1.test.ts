@@ -14,7 +14,7 @@ describe('Arena V2 Read Counter weapon candidate V1', () => {
     const candidate = ARENA_V2_READ_COUNTER_WEAPON_CANDIDATE_V1;
     const actions = new ActionRegistry(candidate.actions);
     const equipment = new EquipmentRegistry({ definitions: [candidate.equipment], actionRegistry: actions });
-    expect(equipment.require(candidate.equipment.id)).toBe(candidate.equipment);
+    expect(equipment.require(candidate.equipment.id)).toStrictEqual(candidate.equipment);
     expect(candidate).toMatchObject({
       status: 'production-unreachable', hardGate: false, defaultRegistryWired: false,
       addsInput: false, usesPrimaryHold: true,

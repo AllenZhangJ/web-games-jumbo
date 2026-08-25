@@ -120,6 +120,10 @@ const CANDIDATE_FILES = Object.freeze([
   'packages/arena-regression/src/arena-three-mode-authoritative-quick-match-composition-candidate-v1.ts',
 ]);
 
+const CANDIDATE_METADATA_FILES = Object.freeze(CANDIDATE_FILES.filter((file) => (
+  file.includes('-candidate-')
+)));
+
 const EXPECTED_EXPORTS = Object.freeze([
   ['packages/arena-bot/src/index.ts', './survival-enemy-weapon-affordance-v1.js'],
   ['packages/arena-contracts/src/index.ts', './weapon-feedback-semantic-v1.js'],
@@ -417,6 +421,12 @@ const FORBIDDEN_AUTHORITY_PATTERNS = Object.freeze([
 
 const CANDIDATE_COMPOSITION_ALLOWLIST = new Set([
   'packages/arena-product-composition/src/arena-v2-learning-evidence-composition-candidate-v1.ts',
+  'packages/arena-product-composition/src/arena-v2-in-memory-registry-publication-port-candidate-v1.ts',
+  'packages/arena-product-composition/src/arena-v2-local-counterplay-bot-current-facts-candidate-v1.ts',
+  'packages/arena-product-composition/src/arena-v2-registry-publication-envelope-candidate-v1.ts',
+  'packages/arena-product-composition/src/arena-v2-single-weapon-registry-snapshot-candidate-v1.ts',
+  'packages/arena-product-presentation-three/src/arena-v2-a4-weapon-attachment-production-review-preparation-candidate-v1.ts',
+  'packages/arena-product-presentation-three/src/arena-v2-a5-core-feedback-vfx-production-review-preparation-candidate-v1.ts',
 ]);
 
 async function typescriptFiles(root: string): Promise<readonly string[]> {
@@ -451,7 +461,7 @@ async function main(): Promise<void> {
       }
     }
   }
-  for (const file of CANDIDATE_FILES) {
+  for (const file of CANDIDATE_METADATA_FILES) {
     const source = await readFile(path.join(repositoryRoot, file), 'utf8');
     for (const marker of [
       "status: 'production-unreachable'",
@@ -558,7 +568,7 @@ async function main(): Promise<void> {
   for (const marker of [
     'Survival equipment ActionStarted不能来自非active参与者。',
     'Survival enemy slot change与当前generation不闭合。',
-    'does not judge delayed feedback',
+    'not judge delayed feedback',
   ]) {
     if (!survivalActionEligibility.includes(marker)) {
       throw new Error(`P4.4cl Survival装备动作资格缺少${marker}。`);

@@ -8,6 +8,7 @@ import {
 import {
   MatchCoreWeaponFeedbackAdapterV1,
   type MatchCoreWeaponFeedbackAdapterCheckpointV1,
+  type MatchCoreWeaponFeedbackAdapterCheckpointV2,
   type MatchCoreWeaponFeedbackAdapterV1Options,
 } from './match-core-weapon-feedback-adapter-v1.js';
 import {
@@ -27,12 +28,12 @@ export interface MatchCoreWeaponFeedbackBundleOwnerV2StepResult {
   readonly schemaVersion: 2;
   readonly feedbackEvents: readonly DeepReadonly<WeaponFeedbackResolvedEventV6>[];
   readonly directionFacts: readonly ArenaWeaponFeedbackDirectionFactV2[];
-  readonly feedbackCheckpoint: MatchCoreWeaponFeedbackAdapterCheckpointV1;
+  readonly feedbackCheckpoint: MatchCoreWeaponFeedbackAdapterCheckpointV2;
   readonly directionCheckpoint: MatchCoreWeaponFeedbackDirectionCheckpointV2;
 }
 
 export interface MatchCoreWeaponFeedbackBundleOwnerV2RestoreInput {
-  readonly feedbackCheckpoint: MatchCoreWeaponFeedbackAdapterCheckpointV1;
+  readonly feedbackCheckpoint: MatchCoreWeaponFeedbackAdapterCheckpointV2;
   readonly directionCheckpoint: MatchCoreWeaponFeedbackDirectionCheckpointV2;
 }
 
@@ -61,7 +62,7 @@ export class MatchCoreWeaponFeedbackBundleOwnerV2 {
 
   constructor(options: MatchCoreWeaponFeedbackAdapterV1Options) {
     const feedback = new MatchCoreWeaponFeedbackAdapterV1(options);
-    const feedbackCheckpoint = feedback.exportCheckpointV1();
+    const feedbackCheckpoint = feedback.exportCheckpointV2();
     let direction: MatchCoreWeaponFeedbackDirectionOwnerV2;
     try {
       direction = new MatchCoreWeaponFeedbackDirectionOwnerV2({
@@ -82,10 +83,10 @@ export class MatchCoreWeaponFeedbackBundleOwnerV2 {
     const source = cloneFrozenData(value, 'feedback bundle restore input');
     assertKnownKeys(source, RESTORE_KEYS, 'feedback bundle restore input');
     requireKeys(source, RESTORE_KEYS, 'feedback bundle restore input');
-    const feedback = MatchCoreWeaponFeedbackAdapterV1.restoreFromCheckpointV1(
+    const feedback = MatchCoreWeaponFeedbackAdapterV1.restoreFromCheckpointV2(
       source.feedbackCheckpoint,
     );
-    const feedbackCheckpoint = feedback.exportCheckpointV1();
+    const feedbackCheckpoint = feedback.exportCheckpointV2();
     let direction: MatchCoreWeaponFeedbackDirectionOwnerV2;
     try {
       direction = new MatchCoreWeaponFeedbackDirectionOwnerV2({
@@ -154,9 +155,9 @@ export class MatchCoreWeaponFeedbackBundleOwnerV2 {
       throw new TypeError('feedback bundle step.sourceEvents必须是数组。');
     }
 
-    const previousFeedbackCheckpoint = this.#feedback.exportCheckpointV1();
+    const previousFeedbackCheckpoint = this.#feedback.exportCheckpointV2();
     const previousDirectionCheckpoint = this.#direction.exportCheckpointV2();
-    const feedbackFork = MatchCoreWeaponFeedbackAdapterV1.restoreFromCheckpointV1(
+    const feedbackFork = MatchCoreWeaponFeedbackAdapterV1.restoreFromCheckpointV2(
       previousFeedbackCheckpoint,
     );
     let directionFork: MatchCoreWeaponFeedbackDirectionOwnerV2 | null = null;
@@ -167,7 +168,7 @@ export class MatchCoreWeaponFeedbackBundleOwnerV2 {
         directionCheckpoint: previousDirectionCheckpoint,
       });
       const feedbackEvents = feedbackFork.step(source);
-      const feedbackCheckpoint = feedbackFork.exportCheckpointV1();
+      const feedbackCheckpoint = feedbackFork.exportCheckpointV2();
       const directionResult = directionFork.step({
         sourceEvents: source.sourceEvents,
         feedbackEvents,
@@ -196,6 +197,11 @@ export class MatchCoreWeaponFeedbackBundleOwnerV2 {
     return this.#feedback.exportCheckpointV1();
   }
 
+  exportFeedbackCheckpointV2(): MatchCoreWeaponFeedbackAdapterCheckpointV2 {
+    this.#assertUsable();
+    return this.#feedback.exportCheckpointV2();
+  }
+
   exportDirectionCheckpointV2(): MatchCoreWeaponFeedbackDirectionCheckpointV2 {
     this.#assertUsable();
     return this.#direction.exportCheckpointV2();
@@ -215,6 +221,7 @@ export const MATCH_CORE_WEAPON_FEEDBACK_BUNDLE_OWNER_V2 = Object.freeze({
   hardGate: false as const,
   defaultRegistryWired: false as const,
   ownsFeedbackAdapterV1: true as const,
+  consumesFeedbackAdapterCheckpointV2: true as const,
   ownsDirectionOwnerV2: true as const,
   evaluatesOnCheckpointForks: true as const,
   atomicPairCommit: true as const,

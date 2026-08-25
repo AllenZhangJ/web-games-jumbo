@@ -410,6 +410,7 @@ export interface ArenaSurvivalTenWaveSeedVerificationReportV1 {
   readonly equipmentSpawnedEventCount: number;
   readonly equipmentPickedUpEventCount: number;
   readonly equipmentReplacedEventCount: number;
+  readonly equipmentExpiredEventCount: number;
   readonly replayFinalHash: string;
   readonly replayedFinalHash: string;
   readonly eventCount: number;
@@ -494,6 +495,7 @@ function runTenWaveSeed(matchSeed: number): ArenaSurvivalTenWaveSeedVerification
     equipmentSpawnedEventCount: eventCount(replay, 'EquipmentSpawned'),
     equipmentPickedUpEventCount: eventCount(replay, 'EquipmentPickedUp'),
     equipmentReplacedEventCount: eventCount(replay, 'EquipmentReplaced'),
+    equipmentExpiredEventCount: eventCount(replay, 'EquipmentExpired'),
     replayFinalHash: replay.finalHash,
     replayedFinalHash: replayed.finalHash,
     eventCount: replay.events.length,

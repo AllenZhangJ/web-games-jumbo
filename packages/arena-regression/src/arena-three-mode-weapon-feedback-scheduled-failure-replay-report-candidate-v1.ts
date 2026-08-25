@@ -21,8 +21,7 @@ import {
 } from './arena-three-mode-weapon-feedback-restore-suffix-candidate-v1.js';
 
 const COMPARED_TICK_COUNT = 120 as const;
-const AFTER_ALL_STEPS_CAPABILITY_ORDINAL = COMPARED_TICK_COUNT + 1;
-const AFTER_DESTROY_RESTORED_RESOURCE_ORDINAL = COMPARED_TICK_COUNT + 2;
+const DUEL_STABLE_COMPARED_TICK_COUNT = 97 as const;
 
 const MODE_DEFINITION_IDS = Object.freeze([
   ARENA_DUEL_AUTHORITATIVE_RUNTIME_CANDIDATE_V1.modeDefinitionId,
@@ -35,7 +34,7 @@ export type ArenaThreeModeWeaponFeedbackScheduledFailureReplayModeDefinitionIdV1
 
 export interface ArenaThreeModeWeaponFeedbackScheduledFailureReplayScenarioV1 {
   readonly scenarioId: string;
-  readonly comparedTickCount: typeof COMPARED_TICK_COUNT;
+  readonly comparedTickCount: number;
   readonly schedule: readonly ArenaThreeModeWeaponFeedbackScheduledFailureEntryV2[];
   readonly expectedTriggeredFailureCount: number;
 }
@@ -79,7 +78,7 @@ export interface ArenaThreeModeWeaponFeedbackScheduledFailureReplayCaseReportV1 
   readonly modeDefinitionId:
   ArenaThreeModeWeaponFeedbackScheduledFailureReplayModeDefinitionIdV1;
   readonly scenarioId: string;
-  readonly comparedTickCount: typeof COMPARED_TICK_COUNT;
+  readonly comparedTickCount: number;
   readonly schedule: readonly ArenaThreeModeWeaponFeedbackScheduledFailureEntryV2[];
   readonly status: ArenaThreeModeWeaponFeedbackScheduledFailureReplayCaseStatusV1;
   readonly executionFailure: ArenaThreeModeWeaponFeedbackFailureFingerprintV1 | null;
@@ -133,54 +132,61 @@ function failure(
 
 function scenario(
   scenarioId: string,
+  comparedTickCount: number,
   schedule: readonly ArenaThreeModeWeaponFeedbackScheduledFailureEntryV2[],
 ): ArenaThreeModeWeaponFeedbackScheduledFailureReplayScenarioV1 {
   return Object.freeze({
     scenarioId,
-    comparedTickCount: COMPARED_TICK_COUNT,
+    comparedTickCount,
     schedule: Object.freeze([...schedule]),
     expectedTriggeredFailureCount: schedule.length,
   });
 }
 
-const SCENARIOS = Object.freeze([
-  scenario('fork-after-construction', [failure('fork-after-construction', 1)]),
-  scenario('continuous-step-first', [failure('continuous-step-before-delegate', 1)]),
-  scenario('continuous-step-mid', [failure('continuous-step-before-delegate', 60)]),
-  scenario('restored-step-mid', [failure('restored-step-before-delegate', 60)]),
-  scenario('restored-capability-final', [
-    failure('restored-capability-corruption', AFTER_ALL_STEPS_CAPABILITY_ORDINAL),
-  ]),
-  scenario('continuous-unknown-event-final', [
-    failure('continuous-unknown-event', COMPARED_TICK_COUNT),
-  ]),
-  scenario('continuous-resource-final', [
-    failure(
-      'continuous-retained-resource-read-before-delegate',
-      AFTER_ALL_STEPS_CAPABILITY_ORDINAL,
-    ),
-  ]),
-  scenario('restored-resource-final', [
-    failure(
-      'restored-retained-resource-read-before-delegate',
-      AFTER_ALL_STEPS_CAPABILITY_ORDINAL,
-    ),
-  ]),
-  scenario('restored-destroy', [failure('restored-destroy-after-delegate', 1)]),
-  scenario('restored-resource-after-destroy', [
-    failure(
-      'restored-retained-resource-read-before-delegate',
-      AFTER_DESTROY_RESTORED_RESOURCE_ORDINAL,
-    ),
-  ]),
-  scenario('aggregate-restored-cleanup', [
-    failure('restored-destroy-after-delegate', 1),
-    failure(
-      'restored-retained-resource-read-before-delegate',
-      AFTER_DESTROY_RESTORED_RESOURCE_ORDINAL,
-    ),
-  ]),
-]);
+function scenariosFor(
+  comparedTickCount: number,
+): readonly ArenaThreeModeWeaponFeedbackScheduledFailureReplayScenarioV1[] {
+  const afterAllStepsCapabilityOrdinal = comparedTickCount + 1;
+  const afterDestroyRestoredResourceOrdinal = comparedTickCount + 2;
+  return Object.freeze([
+    scenario('fork-after-construction', comparedTickCount, [failure('fork-after-construction', 1)]),
+    scenario('continuous-step-first', comparedTickCount, [failure('continuous-step-before-delegate', 1)]),
+    scenario('continuous-step-mid', comparedTickCount, [failure('continuous-step-before-delegate', 60)]),
+    scenario('restored-step-mid', comparedTickCount, [failure('restored-step-before-delegate', 60)]),
+    scenario('restored-capability-final', comparedTickCount, [
+      failure('restored-capability-corruption', afterAllStepsCapabilityOrdinal),
+    ]),
+    scenario('continuous-unknown-event-final', comparedTickCount, [
+      failure('continuous-unknown-event', comparedTickCount),
+    ]),
+    scenario('continuous-resource-final', comparedTickCount, [
+      failure(
+        'continuous-retained-resource-read-before-delegate',
+        afterAllStepsCapabilityOrdinal,
+      ),
+    ]),
+    scenario('restored-resource-final', comparedTickCount, [
+      failure(
+        'restored-retained-resource-read-before-delegate',
+        afterAllStepsCapabilityOrdinal,
+      ),
+    ]),
+    scenario('restored-destroy', comparedTickCount, [failure('restored-destroy-after-delegate', 1)]),
+    scenario('restored-resource-after-destroy', comparedTickCount, [
+      failure(
+        'restored-retained-resource-read-before-delegate',
+        afterDestroyRestoredResourceOrdinal,
+      ),
+    ]),
+    scenario('aggregate-restored-cleanup', comparedTickCount, [
+      failure('restored-destroy-after-delegate', 1),
+      failure(
+        'restored-retained-resource-read-before-delegate',
+        afterDestroyRestoredResourceOrdinal,
+      ),
+    ]),
+  ]);
+}
 
 const MANIFEST_CORE = Object.freeze({
   schemaVersion: 1 as const,
@@ -190,10 +196,14 @@ const MANIFEST_CORE = Object.freeze({
   comparedTickCount: COMPARED_TICK_COUNT,
   modePlans: Object.freeze(MODE_DEFINITION_IDS.map((modeDefinitionId) => Object.freeze({
     modeDefinitionId,
-    scenarios: SCENARIOS,
+    scenarios: scenariosFor(
+      modeDefinitionId === ARENA_DUEL_AUTHORITATIVE_RUNTIME_CANDIDATE_V1.modeDefinitionId
+        ? DUEL_STABLE_COMPARED_TICK_COUNT
+        : COMPARED_TICK_COUNT,
+    ),
   }))),
-  scenarioCountPerMode: SCENARIOS.length,
-  totalScenarioCount: MODE_DEFINITION_IDS.length * SCENARIOS.length,
+  scenarioCountPerMode: 11,
+  totalScenarioCount: MODE_DEFINITION_IDS.length * 11,
   validationStatus: 'not-run' as const,
   defaultRegistryWired: false as const,
   defaultCompositionWired: false as const,
@@ -239,11 +249,24 @@ function executeCase(
   modeDefinitionId: ArenaThreeModeWeaponFeedbackScheduledFailureReplayModeDefinitionIdV1,
   plannedScenario: ArenaThreeModeWeaponFeedbackScheduledFailureReplayScenarioV1,
 ): ArenaThreeModeWeaponFeedbackScheduledFailureReplayCaseReportV1 {
-  const localInputs = cloneFrozenData(
-    options.createLocalInputs(modeDefinitionId, plannedScenario),
-    `Arena scheduled failure ${plannedScenario.scenarioId} local inputs`,
-  );
   const runtime = options.createRuntime(modeDefinitionId, plannedScenario);
+  let localInputs: DeepReadonly<readonly ArenaInputFrame[]>;
+  try {
+    localInputs = cloneFrozenData(
+      options.createLocalInputs(modeDefinitionId, plannedScenario),
+      `Arena scheduled failure ${plannedScenario.scenarioId} local inputs`,
+    );
+  } catch (error) {
+    try {
+      runtime.destroy();
+    } catch (cleanupError) {
+      throw new AggregateError(
+        [error, cleanupError],
+        `Arena scheduled failure ${plannedScenario.scenarioId}输入准备与runtime清理均失败。`,
+      );
+    }
+    throw error;
+  }
   let injectedRuntime: ArenaThreeModeWeaponFeedbackScheduledFailureInjectionRuntimePortV2;
   try {
     injectedRuntime = createArenaThreeModeWeaponFeedbackScheduledFailureInjectionRuntimeV2({

@@ -225,6 +225,71 @@ function characterCenterY(surfaceTop: number): number {
   return surfaceTop + PROFILE.halfHeight + PROFILE.radius;
 }
 
+function legalHitSeparation(action: ActionDefinition): number {
+  const parameters = action.targeting.parameters;
+  const rangeValue = typeof parameters === 'object'
+    && parameters !== null
+    && !Array.isArray(parameters)
+    ? (parameters as Readonly<Record<string, unknown>>).range
+    : null;
+  if (
+    typeof parameters !== 'object'
+    || parameters === null
+    || Array.isArray(parameters)
+    || typeof rangeValue !== 'number'
+    || !Number.isFinite(rangeValue)
+  ) throw new TypeError(`P4 ${action.id}缺少有限targeting range。`);
+  const range = rangeValue;
+  const minimumSeparation = PROFILE.radius * 2 + 0.05;
+  if (range <= minimumSeparation) {
+    throw new RangeError(`P4 ${action.id}射程不足以容纳非重叠命中夹具。`);
+  }
+  return Math.min(1.25, range - 0.05);
+}
+
+function legalAerialStartOffset(
+  action: ActionDefinition,
+  requiresVerticalCollisionClearance: boolean,
+): number {
+  const parameters = action.targeting.parameters;
+  const maximumVerticalDifferenceValue = typeof parameters === 'object'
+    && parameters !== null
+    && !Array.isArray(parameters)
+    ? (parameters as Readonly<Record<string, unknown>>).maximumVerticalDifference
+    : null;
+  if (
+    typeof parameters !== 'object'
+    || parameters === null
+    || Array.isArray(parameters)
+    || typeof maximumVerticalDifferenceValue !== 'number'
+    || !Number.isFinite(maximumVerticalDifferenceValue)
+  ) throw new TypeError(`P4 ${action.id}缺少有限maximumVerticalDifference。`);
+  const maximumVerticalDifference = maximumVerticalDifferenceValue;
+  if (maximumVerticalDifference <= 0.05) {
+    throw new RangeError(`P4 ${action.id}垂直容差不足以建立空中命中夹具。`);
+  }
+  const radiusValue = (parameters as Readonly<Record<string, unknown>>).radius;
+  const horizontalCollisionDiameter = PROFILE.radius * 2;
+  const verticalCollisionHeight = (PROFILE.halfHeight + PROFILE.radius) * 2;
+  if (
+    requiresVerticalCollisionClearance
+    && typeof radiusValue === 'number'
+    && Number.isFinite(radiusValue)
+    && radiusValue < horizontalCollisionDiameter
+    && maximumVerticalDifference > verticalCollisionHeight + 0.05
+  ) {
+    // A narrow downward cylinder cannot contact a same-height non-overlapping
+    // body: shared Physics resolves the horizontal pair before Targeting. Start
+    // above the vertical collision band, still within the action's eventual
+    // maximum vertical difference when its active window opens.
+    return maximumVerticalDifference + PROFILE.halfHeight + PROFILE.radius;
+  }
+  return Math.min(
+    1 + action.timing.windupTicks * 0.3,
+    maximumVerticalDifference - 0.05,
+  );
+}
+
 function scene(
   situation: typeof SCENE_SITUATIONS[number],
   context: typeof SCENE_CONTEXTS[number],
@@ -232,30 +297,33 @@ function scene(
 ): SceneDefinition {
   const usesDownSmash = action.effects.some(({ kind }) => kind === 'begin-down-smash');
   const aerialOffset = context === 'aerial'
-    ? usesDownSmash ? 1 + action.timing.windupTicks * 0.3 : 1
+    ? legalAerialStartOffset(action, usesDownSmash)
     : 0;
+  const hitSeparation = legalHitSeparation(action);
   if (situation === 'edge') {
     const groundY = characterCenterY(0.5);
+    const targetX = 2.75;
     return Object.freeze({
       sourcePosition: Object.freeze({
-        x: context === 'ground' || !usesDownSmash ? 1.35 : 2.75,
+        x: context === 'ground' || !usesDownSmash ? targetX - hitSeparation : targetX,
         y: groundY + aerialOffset,
         z: 0,
       }),
-      targetPosition: Object.freeze({ x: 2.75, y: groundY, z: 0 }),
+      targetPosition: Object.freeze({ x: targetX, y: groundY, z: 0 }),
       facing: Object.freeze({ x: 1, z: 0 }),
       expectedSurfaceId: 'kz-s01-start',
     });
   }
   const groundY = characterCenterY(0.95);
   const targetsByVerticalStrike = context !== 'ground' && usesDownSmash;
+  const targetX = 27.1;
   return Object.freeze({
     sourcePosition: Object.freeze({
-      x: targetsByVerticalStrike ? 27.1 : 26,
+      x: targetsByVerticalStrike ? targetX : targetX - hitSeparation,
       y: groundY + aerialOffset,
       z: -2.2,
     }),
-    targetPosition: Object.freeze({ x: 27.1, y: groundY, z: -2.2 }),
+    targetPosition: Object.freeze({ x: targetX, y: groundY, z: -2.2 }),
     facing: Object.freeze({ x: 1, z: 0 }),
     expectedSurfaceId: 'kz-s05-narrow',
   });
@@ -532,6 +600,17 @@ function counterfactualTickCount(action: ActionDefinition): number {
     + CONSEQUENCE_TICKS;
 }
 
+function counterfactualAttackStartTick(context: WeaponActionContextKindV1): number {
+  // Ground counterplay must first let the defender enter the movement state
+  // from which a jump command is valid; aerial probes preserve their existing
+  // immediate airborne action timing.
+  return context === 'ground' ? 2 : 0;
+}
+
+function counterfactualDefenderJumpTick(context: WeaponActionContextKindV1): number {
+  return context === 'ground' ? 1 : 0;
+}
+
 function finiteAxis(value: unknown, name: string): number {
   if (typeof value !== 'number' || !Number.isFinite(value) || value < -1 || value > 1) {
     throw new RangeError(`${name}必须是[-1,1]内有限数。`);
@@ -571,7 +650,7 @@ function normalizeCounterfactualOptions(
   const context = contextValue;
   const mapSituation = mapSituationValue;
   const action = actionForContext(bundle, context);
-  const requiredTicks = counterfactualTickCount(action);
+  const requiredTicks = counterfactualTickCount(action) + counterfactualAttackStartTick(context);
   const defenderInputScriptValue = source.defenderInputScript;
   if (!Array.isArray(defenderInputScriptValue)
     || defenderInputScriptValue.length !== requiredTicks) {
@@ -667,11 +746,13 @@ export function createArenaWeaponDefenderCounterplayInputScriptCandidateV1(
   if (grammarContext === undefined) throw new RangeError(`P4 ${bundle.id}缺少${context} grammar。`);
   const usesDirection = grammarContext.counterInputs.includes('direction');
   const usesJump = grammarContext.counterInputs.includes('jump');
+  const attackStartTick = counterfactualAttackStartTick(context);
+  const defenderJumpTick = counterfactualDefenderJumpTick(context);
   const definition = scene(mapSituation, context, action);
   const sideStep = definition.facing.x === 0
     ? Object.freeze({ x: 1, z: 0 })
     : Object.freeze({ x: 0, z: 1 });
-  const script = Array.from({ length: counterfactualTickCount(action) }, (_, tick) => (
+  const script = Array.from({ length: counterfactualTickCount(action) + attackStartTick }, (_, tick) => (
     Object.freeze({
       tick,
       inputs: Object.freeze(PARTICIPANT_IDS.map((participantId) => {
@@ -681,8 +762,10 @@ export function createArenaWeaponDefenderCounterplayInputScriptCandidateV1(
           participantId,
           moveX: defender && usesDirection ? sideStep.x : 0,
           moveZ: defender && usesDirection ? sideStep.z : 0,
-          jumpPressed: defender && usesJump && tick === 0,
-          jumpHeld: defender && usesJump && tick < 4,
+          jumpPressed: defender && usesJump && tick === defenderJumpTick,
+          jumpHeld: defender && usesJump
+            && tick >= defenderJumpTick
+            && tick < defenderJumpTick + 4,
         });
       })),
     })
@@ -714,6 +797,7 @@ function controlScript(
 function fullInputFrames(
   tick: number,
   action: ActionDefinition,
+  attackStartTick: number,
   movementInputs: readonly ArenaWeaponCounterplayMovementInputV1[],
 ): readonly ArenaInputFrame[] {
   return Object.freeze(movementInputs.map((input) => Object.freeze({
@@ -721,8 +805,12 @@ function fullInputFrames(
     participantId: input.participantId,
     moveX: input.moveX,
     moveZ: input.moveZ,
-    primaryPressed: input.participantId === ATTACKER_ID && tick === 0,
-    primaryHeld: input.participantId === ATTACKER_ID && holdsPrimaryForAction(action, tick, 0),
+    primaryPressed: input.participantId === ATTACKER_ID && tick === attackStartTick,
+    primaryHeld: input.participantId === ATTACKER_ID && holdsPrimaryForAction(
+      action,
+      tick,
+      attackStartTick,
+    ),
     jumpPressed: input.jumpPressed,
     jumpHeld: input.jumpHeld,
     slamPressed: false,
@@ -735,6 +823,7 @@ function runCounterfactualVariant(
   variant: 'control' | 'counterfactual',
 ): ArenaWeaponDefenderCounterfactualRunV1 {
   const action = actionForContext(bundle, options.context);
+  const attackStartTick = counterfactualAttackStartTick(options.context);
   const definition = scene(options.mapSituation, options.context, action);
   const script = variant === 'control'
     ? controlScript(options.defenderInputScript)
@@ -788,7 +877,7 @@ function runCounterfactualVariant(
         inputs,
         availability: PARTICIPANT_IDS.map((participantId) => ({ participantId, canMove: true })),
       });
-      const frames = fullInputFrames(tick, action, inputs);
+      const frames = fullInputFrames(tick, action, attackStartTick, inputs);
       recordedFrames.push(...frames);
       const started = ownedEngine.resolveActions({
         tick,
@@ -801,7 +890,7 @@ function runCounterfactualVariant(
           ),
         })),
       });
-      if (tick === 0) {
+      if (tick === attackStartTick) {
         actionStarted = started.starts.some(({ participantId, actionDefinitionId }) => (
           participantId === ATTACKER_ID && actionDefinitionId === action.id
         ));
@@ -994,8 +1083,8 @@ export function runArenaWeaponDefenderCounterfactualProbeCandidateV1(
   if (declaredCounterInputs.includes('jump') && (
     counterfactual.jumpPressedTickCount === 0
     || counterfactual.jumpHeldTickCount === 0
-    || counterfactual.targetMovementCommandCount === 0
-  )) throw new RangeError(`P4 ${bundle.id}/${options.context} jump未进入Rule/Movement command。`);
+    || counterfactual.targetFirstUnsupportedTick === null
+  )) throw new RangeError(`P4 ${bundle.id}/${options.context} jump未形成权威Movement/Physics离地事实。`);
   const differences = differenceAxes(control, counterfactual);
   const authority = Object.freeze({
     probeId: `arena-p4.${bundle.id}.${options.context}.${options.mapSituation}.counterfactual.v1`,
@@ -1038,16 +1127,24 @@ function runWhiffProbe(
   try {
     const groundY = characterCenterY(0.5);
     const action = actionForContext(bundle, context);
+    const parameters = action.targeting.parameters as Readonly<Record<string, unknown>>;
+    const range = parameters.range;
+    if (typeof range !== 'number' || !Number.isFinite(range) || range <= 0) {
+      throw new RangeError(`P4 ${action.id}挥空探针缺少有限range。`);
+    }
     const source = {
       x: -2.8,
       y: groundY + (context === 'aerial' ? 1 + action.timing.windupTicks * 0.3 : 0),
       z: 0,
     };
-    const target = { x: 2.8, y: groundY, z: context === 'aerial' ? 2 : 0 };
+    const target = {
+      x: source.x + range + 1,
+      y: groundY,
+      z: context === 'aerial' ? 2 : 0,
+    };
     addCharacter(physics, ATTACKER_ID, source, { x: 1, z: 0 });
     addCharacter(physics, TARGET_ID, target, { x: -1, z: 0 });
     const initialSupportSurfaceId = physics.getCharacterState(TARGET_ID).supportSurfaceId;
-    if (initialSupportSurfaceId === null) throw new Error('P4 whiff探针缺少目标起始支撑面。');
     equipAttacker(engine, bundle, physics);
     const started = engine.resolveActions({
       tick: 0,
@@ -1240,6 +1337,8 @@ function runScenario(
     let hitCount = 0;
     let movementCommandCount = 0;
     let movementCommandExecuted = false;
+    let expectedActionStartCount = 0;
+    let firstActiveSource: PhysicsCharacterState | null = null;
     let hitTick: number | null = null;
     let initialTarget: PhysicsCharacterState | null = null;
     let targetFirstUnsupportedTick: number | null = null;
@@ -1285,6 +1384,9 @@ function runScenario(
           participantId === ATTACKER_ID && actionDefinitionId === action.id
         ));
       }
+      expectedActionStartCount += started.starts.filter(({ participantId, actionDefinitionId }) => (
+        participantId === ATTACKER_ID && actionDefinitionId === action.id
+      )).length;
       movementCommandCount += started.movementCommands.length;
       const movementExecutions = movement.execute(
         started.movementCommands.map(createMovementCommand),
@@ -1293,6 +1395,12 @@ function runScenario(
       if (movementExecutions.length > 0) movementCommandExecuted = true;
       engine.commit(started, mutationPorts(physics, record));
       const active = engine.resolveActiveActions({ actors: actors(physics) });
+      if (active.hits.length === 0 && firstActiveSource === null) {
+        const actionSnapshot = engine.getActionSnapshot(ATTACKER_ID);
+        if (actionSnapshot.definitionId === action.id && actionSnapshot.phase === 'active') {
+          firstActiveSource = physics.getCharacterState(ATTACKER_ID);
+        }
+      }
       if (active.hits.length > 0 && hitTick === null) {
         hitTick = tick;
         initialTarget = physics.getCharacterState(TARGET_ID);
@@ -1328,7 +1436,15 @@ function runScenario(
       }
     }
     if (hitTick === null || initialTarget === null) {
-      throw new Error(`${scenarioId}未在动作active窗口命中。`);
+      const source = physics.getCharacterState(ATTACKER_ID);
+      const target = physics.getCharacterState(TARGET_ID);
+      throw new Error(
+        `${scenarioId}未在动作active窗口命中`
+        + ` (source=${source.position.x.toFixed(9)},${source.position.y.toFixed(9)},${source.position.z.toFixed(9)}`
+        + ` target=${target.position.x.toFixed(9)},${target.position.y.toFixed(9)},${target.position.z.toFixed(9)}`
+        + ` active=${firstActiveSource === null ? 'none' : `${firstActiveSource.position.x.toFixed(9)},${firstActiveSource.position.y.toFixed(9)},${firstActiveSource.position.z.toFixed(9)}`}`
+        + ` targeting=${action.targeting.kind} starts=${expectedActionStartCount})。`,
+      );
     }
     const whiff = runWhiffProbe(bundle, context);
     const cooldownRejected = runCooldownProbe(bundle, context);

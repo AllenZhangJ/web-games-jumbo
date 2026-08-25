@@ -59,7 +59,7 @@ import {
   type InternalCheckpointCoreFactoryOptions,
   type ArenaMatchConfigOverrides,
   type ArenaMatchConfigV6,
-  type MatchCoreWeaponFeedbackAdapterCheckpointV1,
+  type MatchCoreWeaponFeedbackAdapterCheckpointV2,
   type MatchCoreWeaponFeedbackDirectionCheckpointV2,
   type ModeMatchResolutionV6,
   type ModeMatchRuntimeV6RetainedResourceSnapshot,
@@ -235,7 +235,7 @@ interface DuelAuthorityCheckpointV2 {
   readonly stateHash: string;
   readonly paused: boolean;
   readonly coreCheckpoint: ArenaInternalMatchCheckpoint;
-  readonly feedbackCheckpoint: MatchCoreWeaponFeedbackAdapterCheckpointV1;
+  readonly feedbackCheckpoint: MatchCoreWeaponFeedbackAdapterCheckpointV2;
   readonly feedbackDirectionCheckpoint: MatchCoreWeaponFeedbackDirectionCheckpointV2;
 }
 
@@ -707,7 +707,7 @@ class DuelMatchCoreWorldAuthorityCandidateV1 implements ModeMatchWorldAuthorityV
     this.#readFrame = this.#frame(snapshot, projection, null);
     this.#stateHash = createDeterministicDataHash({
       coreHash: this.#core!.getStateHash(),
-      feedbackCheckpoint: this.#feedback!.exportFeedbackCheckpointV1(),
+      feedbackCheckpoint: this.#feedback!.exportFeedbackCheckpointV2(),
       feedbackDirectionCheckpoint: this.#feedback!.exportDirectionCheckpointV2(),
       world: this.#readFrame.worldSnapshot,
     }, 'Arena Duel initial authority state');
@@ -808,7 +808,7 @@ class DuelMatchCoreWorldAuthorityCandidateV1 implements ModeMatchWorldAuthorityV
           falls.push(event);
         }
       }
-      const feedbackCheckpoint = this.#feedback!.exportFeedbackCheckpointV1();
+      const feedbackCheckpoint = this.#feedback!.exportFeedbackCheckpointV2();
       const feedbackSourceEvents = oldEvents.filter((event) => {
         if (event.type !== ARENA_MATCH_EVENT.PLAYER_ELIMINATED) return true;
         if (event.creditedAttackerId === null) return true;
@@ -936,7 +936,7 @@ class DuelMatchCoreWorldAuthorityCandidateV1 implements ModeMatchWorldAuthorityV
       stateHash: this.#stateHash,
       paused: this.#paused,
       coreCheckpoint: this.#coreCheckpoint(),
-      feedbackCheckpoint: this.#feedback!.exportFeedbackCheckpointV1(),
+      feedbackCheckpoint: this.#feedback!.exportFeedbackCheckpointV2(),
       feedbackDirectionCheckpoint: this.#feedback!.exportDirectionCheckpointV2(),
     }, 'Arena Duel authority checkpoint');
   }
@@ -982,7 +982,7 @@ class DuelMatchCoreWorldAuthorityCandidateV1 implements ModeMatchWorldAuthorityV
       });
       nextFeedback = MatchCoreWeaponFeedbackBundleOwnerV2.restoreFromCheckpointsV2({
         feedbackCheckpoint:
-          checkpoint.feedbackCheckpoint as MatchCoreWeaponFeedbackAdapterCheckpointV1,
+          checkpoint.feedbackCheckpoint as MatchCoreWeaponFeedbackAdapterCheckpointV2,
         directionCheckpoint:
           checkpoint.feedbackDirectionCheckpoint as MatchCoreWeaponFeedbackDirectionCheckpointV2,
       });

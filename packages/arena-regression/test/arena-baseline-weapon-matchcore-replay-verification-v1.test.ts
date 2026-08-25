@@ -46,7 +46,7 @@ describe('Arena P4 baseline weapon MatchCore replay verification candidate v1', 
         'hit-ring-out',
       ].includes(kind))).toBe(true);
       expect(run.feedbackEventHash).toBe(run.replayedFeedbackEventHash);
-      expect(run.resultReason).toBe('timeout');
+      expect(run.resultReason).toBe('timeout-draw');
       expect(run.resultHash).toMatch(/^[0-9a-f]{8}$/);
     }
     expect(report.resultHash).toMatch(/^[0-9a-f]{8}$/);

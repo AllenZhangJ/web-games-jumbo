@@ -65,6 +65,15 @@ function disposeGeometry(root: THREE.Object3D): void {
   });
 }
 
+function expectEulerEqual(actual: THREE.Euler, expected: THREE.Euler): void {
+  expect({ x: actual.x, y: actual.y, z: actual.z, order: actual.order }).toEqual({
+    x: expected.x,
+    y: expected.y,
+    z: expected.z,
+    order: expected.order,
+  });
+}
+
 describe('Arena V2 A4/A5 first-screen readability candidate', () => {
   it('closes six shared-rig identities and twenty bounded weapon profiles', () => {
     expect(ARENA_V2_CHARACTER_FIRST_SCREEN_IDENTITIES_CANDIDATE_V1).toHaveLength(6);
@@ -313,7 +322,7 @@ describe('Arena V2 A4/A5 first-screen readability candidate', () => {
       },
     }))).toThrow(/枚举/);
     expect(root.position).toEqual(beforePosition);
-    expect(root.rotation).toEqual(beforeRotation);
+    expectEulerEqual(root.rotation, beforeRotation);
     expect(root.scale).toEqual(beforeScale);
     expect(mesh.material).not.toBe(beforeMaterial);
     expect((mesh.material as THREE.MeshStandardMaterial).color.getHex()).toBe(0xffffff);
@@ -359,7 +368,7 @@ describe('Arena V2 A4/A5 first-screen readability candidate', () => {
     expect(view.getSnapshot()?.visualDependsOnAudioPlayback).toBe(false);
     view.destroy();
     expect(root.position).toEqual(originalPosition);
-    expect(root.rotation).toEqual(originalRotation);
+    expectEulerEqual(root.rotation, originalRotation);
     expect(root.scale).toEqual(originalScale);
     disposeGeometry(root);
   });
@@ -454,7 +463,7 @@ describe('Arena V2 A4/A5 first-screen readability candidate', () => {
     ]);
     view.destroy();
     expect(root.position).toEqual(baseline.position);
-    expect(root.rotation).toEqual(baseline.rotation);
+    expectEulerEqual(root.rotation, baseline.rotation);
     expect(root.scale).toEqual(baseline.scale);
     disposeGeometry(root);
   });
@@ -511,7 +520,7 @@ describe('Arena V2 A4/A5 first-screen readability candidate', () => {
       weaponFeedbackCue: { ...weaponFeedbackCue, visualCue: 'ring-out' },
     }))).toThrow(/冲突事实/);
     expect(root.position).toEqual(beforeConflict.position);
-    expect(root.rotation).toEqual(beforeConflict.rotation);
+    expectEulerEqual(root.rotation, beforeConflict.rotation);
     expect(root.scale).toEqual(beforeConflict.scale);
     expect((root.children[0] as THREE.Mesh).material).toBe(beforeConflict.material);
     expect(view.getSnapshot()).toBe(beforeConflict.snapshot);
@@ -536,7 +545,7 @@ describe('Arena V2 A4/A5 first-screen readability candidate', () => {
     expect(() => view.consume(input({ tick: 12, actionStartedCue: null }))).toThrow(/唯一所有权/);
     expect(view.state).toBe(ARENA_V2_FIRST_SCREEN_READABILITY_VIEW_STATE_CANDIDATE_V1.FAILED);
     expect(root.position).toEqual(baseline.position);
-    expect(root.rotation).toEqual(baseline.rotation);
+    expectEulerEqual(root.rotation, baseline.rotation);
     expect(root.scale).toEqual(baseline.scale);
     view.destroy();
     disposeGeometry(root);
@@ -777,7 +786,7 @@ describe('Arena V2 A4/A5 first-screen readability candidate', () => {
     });
     expect(() => view.consume(input())).toThrow(/hostile color write/);
     expect(root.position).toEqual(baseline.position);
-    expect(root.rotation).toEqual(baseline.rotation);
+    expectEulerEqual(root.rotation, baseline.rotation);
     expect(root.scale).toEqual(baseline.scale);
     expect(root.visible).toBe(baseline.visible);
     expect(mesh.material).toBe(originalMaterial);

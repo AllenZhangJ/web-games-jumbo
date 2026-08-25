@@ -44,7 +44,7 @@ import {
 import {
   KzRaceModeMapAdapterV1,
   ARENA_MATCH_DEFAULTS,
-  MATCH_CORE_WEAPON_FEEDBACK_ADAPTER_CHECKPOINT_V1_SCHEMA_VERSION,
+  MATCH_CORE_WEAPON_FEEDBACK_ADAPTER_CHECKPOINT_V2_SCHEMA_VERSION,
   MODE_MATCH_RUNTIME_V6_STATE,
   MatchCoreWeaponFeedbackBundleOwnerV2,
   ModePolicyResolver,
@@ -53,10 +53,10 @@ import {
   RACE_MODE_PREPARING_TICKS_V1,
   RACE_MODE_RESPAWN_DELAY_TICKS_V1,
   createArenaMatchConfigV6,
-  validateMatchCoreWeaponFeedbackAdapterCheckpointV1,
+  validateMatchCoreWeaponFeedbackAdapterCheckpointV2,
   validateMatchCoreWeaponFeedbackDirectionCheckpointV2,
   type ArenaMatchConfigV6,
-  type MatchCoreWeaponFeedbackAdapterCheckpointV1,
+  type MatchCoreWeaponFeedbackAdapterCheckpointV2,
   type MatchCoreWeaponFeedbackDirectionCheckpointV2,
   type ModeMatchResolutionV6,
   type ModeMatchRuntimeV6RetainedResourceSnapshot,
@@ -541,7 +541,7 @@ interface RaceVerticalAuthorityCheckpointV2 {
   readonly physicsCheckpoint: LightweightPhysicsCheckpointV1;
   readonly movementCheckpoint: MovementSystemCheckpointV1;
   readonly ruleCheckpoint: ArenaRuleEngineCheckpointV1;
-  readonly feedbackCheckpoint: MatchCoreWeaponFeedbackAdapterCheckpointV1;
+  readonly feedbackCheckpoint: MatchCoreWeaponFeedbackAdapterCheckpointV2;
   readonly feedbackDirectionCheckpoint: MatchCoreWeaponFeedbackDirectionCheckpointV2;
   readonly checkpointIdentityHash: string;
 }
@@ -853,7 +853,7 @@ function normalizeRaceAuthorityCheckpoint(
     throw new RangeError('P3 Race checkpoint readFrameAudit漂移。');
   }
   const readFrame = createMatchReadFrameV3Audit(source.readFrame, NO_SUPPLY_AUDIT);
-  const feedbackCheckpoint = validateMatchCoreWeaponFeedbackAdapterCheckpointV1(
+  const feedbackCheckpoint = validateMatchCoreWeaponFeedbackAdapterCheckpointV2(
     source.feedbackCheckpoint,
   );
   const feedbackDirectionCheckpoint = validateMatchCoreWeaponFeedbackDirectionCheckpointV2(
@@ -862,7 +862,7 @@ function normalizeRaceAuthorityCheckpoint(
   );
   if (
     feedbackCheckpoint.schemaVersion
-      !== MATCH_CORE_WEAPON_FEEDBACK_ADAPTER_CHECKPOINT_V1_SCHEMA_VERSION
+      !== MATCH_CORE_WEAPON_FEEDBACK_ADAPTER_CHECKPOINT_V2_SCHEMA_VERSION
     || feedbackCheckpoint.tick !== readFrame.worldSnapshot.tick
     || feedbackCheckpoint.participantIds.length !== expected.participantIds.length
     || feedbackCheckpoint.participantIds.some(
@@ -2230,7 +2230,7 @@ class RaceVerticalWorldAuthorityV1 implements ModeMatchWorldAuthorityV6 {
     this.#stateHash = createDeterministicDataHash({
       config: this.#config,
       matchSeed: this.#matchSeed,
-      feedbackCheckpoint: this.#feedbackOwner().exportFeedbackCheckpointV1(),
+      feedbackCheckpoint: this.#feedbackOwner().exportFeedbackCheckpointV2(),
       feedbackDirectionCheckpoint: this.#feedbackOwner().exportDirectionCheckpointV2(),
       worldSnapshot: this.#readFrame.worldSnapshot,
     }, 'P3 Race authority initial state');
@@ -2298,7 +2298,7 @@ class RaceVerticalWorldAuthorityV1 implements ModeMatchWorldAuthorityV6 {
         })),
       });
       const feedback = this.#feedbackOwner();
-      const feedbackSequenceStart = feedback.exportFeedbackCheckpointV1().sourceEventSequence;
+      const feedbackSequenceStart = feedback.exportFeedbackCheckpointV2().sourceEventSequence;
       const feedbackSourceEvents: WeaponFeedbackSourceEventV1[] = [];
       for (const event of started.events) {
         if (event.type !== 'ActionCommitmentCancelled') continue;
@@ -2871,7 +2871,7 @@ class RaceVerticalWorldAuthorityV1 implements ModeMatchWorldAuthorityV6 {
       physicsCheckpoint: physics.exportCheckpointV1(),
       movementCheckpoint: movement.exportCheckpointV1(),
       ruleCheckpoint: engine.exportCheckpointV1(),
-      feedbackCheckpoint: this.#feedbackOwner().exportFeedbackCheckpointV1(),
+      feedbackCheckpoint: this.#feedbackOwner().exportFeedbackCheckpointV2(),
       feedbackDirectionCheckpoint: this.#feedbackOwner().exportDirectionCheckpointV2(),
     }, 'P3 Race authority checkpoint core');
     return cloneFrozenData({
@@ -2967,7 +2967,7 @@ class RaceVerticalWorldAuthorityV1 implements ModeMatchWorldAuthorityV6 {
           'P3 Race restored rule checkpoint',
         )
         || !sameData(
-          nextFeedback.exportFeedbackCheckpointV1(),
+          nextFeedback.exportFeedbackCheckpointV2(),
           checkpoint.feedbackCheckpoint,
           'P3 Race restored feedback checkpoint',
         )
