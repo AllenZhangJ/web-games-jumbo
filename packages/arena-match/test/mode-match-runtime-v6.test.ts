@@ -554,17 +554,16 @@ function runToEnded(kind: ModeKind) {
 }
 
 describe('ModeMatchRuntimeV6 production-unreachable concrete authority candidate', () => {
-  it('keeps jump capability absent for generic authorities and validates it when published', () => {
+  it('requires the authoritative jump capability on start and every step', () => {
     const missing = harness('duel', { publishJumpAvailability: false });
-    expect(missing.runtime.start()).not.toHaveProperty('localJumpAvailability');
-    expect(missing.runtime.step(missing.input(0))).not.toHaveProperty('localJumpAvailability');
-    expect(missing.runtime.state).not.toBe(MODE_MATCH_RUNTIME_V6_STATE.FAILED);
+    expect(() => missing.runtime.start()).toThrow(/失败关闭/);
+    expect(missing.runtime.state).toBe(MODE_MATCH_RUNTIME_V6_STATE.FAILED);
     missing.runtime.destroy();
 
     const missingStep = harness('duel', { omitJumpAvailabilityOnStep: true });
     missingStep.runtime.start();
-    expect(missingStep.runtime.step(missingStep.input(0))).not.toHaveProperty('localJumpAvailability');
-    expect(missingStep.runtime.state).not.toBe(MODE_MATCH_RUNTIME_V6_STATE.FAILED);
+    expect(() => missingStep.runtime.step(missingStep.input(0))).toThrow(/失败关闭/);
+    expect(missingStep.runtime.state).toBe(MODE_MATCH_RUNTIME_V6_STATE.FAILED);
     missingStep.runtime.destroy();
 
     const capable = harness('duel');

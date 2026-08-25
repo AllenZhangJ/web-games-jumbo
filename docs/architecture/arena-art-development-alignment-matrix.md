@@ -3,8 +3,8 @@
 ## 文档状态
 
 - 状态：A0.1为`contract-ready`；A0.2三个子门已签核且独立聚合总门为`ready`（96/100），Reference Board视觉方向总门`ready`；A0.3已在`60fbc13` clean source完成两次确定性机器重生成与失败关闭复验，当前为`current-source-machine-regenerated / tooling-review-candidate-human-blocked / incomplete`，机器候选85/100且真人0/10。A1.1已在最终clean source `16861edc`完成六artifact、来源/权利与测量方案机器重建，重新评估92/100且93/93隔离拒绝通过；协调、逐项批准、捕获、样件和hard gate仍关闭。默认Registry/Composition/入口仍未接，正式资产、Blockout、截图、集成、设备与真人门均未开放
-- 日期：2026-08-11
-- 审计基线：当前共享工作树中的P2.0–P2.5版本化候选字节；未运行P2.6或任何美术验证，不登记未经主协调冻结的commit/hash
+- 日期：2026-08-25
+- 审计基线：A2.0以clean baseline `92bafbdb15c268c7465d5321e209473b072024c7`绑定P2/P5公开合同；本批唯一测试字节例外是Jump capability必填旧夹具修正，显式登记为未提交待协调复核
 - 关联：[Art Bible](arena-art-bible.md)、[美术与音频流程](arena-art-and-audio-development-flow.md)、[V2 生产计划](arena-v2-production-development-plan.md)、[P2实施台账](arena-v2-p2-implementation-ledger.md)、[ADR-112](../decisions/112-arena-v2-formal-mode-definition-and-policy-boundary.md)、[ADR-114](../decisions/114-arena-v2-art-evidence-versioning-and-joint-gate.md)
 
 本矩阵约束美术、3D、VFX、HUD、音乐和音效如何跟随开发阶段，不改变开发阶段本身。上游合同未冻结时只能交合同、研究或代表样件；不允许批量 Final 抢跑。
@@ -90,32 +90,32 @@ A0.1通过后只允许将合同交给下一任务；A0.2与A0.3任一未通过�
 
 ### A2 ↔ P2：模式与参与者视觉合同
 
-- 当前状态：`preproduction-contract-candidate / static-bound-to-mode-match-runtime-v6 / verification-deferred-by-ADR-118 / hardGate=false`。P2.5e已形成统一Duel/Race/Survival runtime、复合checkpoint与恢复静态候选，P2.6工厂和continuous/restored双链源码已串起恢复对照；P5已落本地consumer-epoch、Audio/VFX切代清理及正式候选原子宿主。A2.0仍只回绑公开step消费面；生产默认Registry/Composition/入口不可达，上述候选尚未运行或签核。A0.3真人仍0/10，A1.1只完成source/measurement机器前置；截图、声音、VFX、HUD、Blockout、集成和资产生成继续关闭。
-- 本轮静态绑定使用`game-art-director`、`vfx-realtime`与`audio-design`；已读取技能正文、`vfx-realtime`三份强制参考及项目[美术与音频流程](arena-art-and-audio-development-flow.md)。前者约束形状/明度/语义一致性且禁止表现层成为第二权威；VFX按`Shape → Timing → Color`并保留核心因果层；音频只在既有总线播放有界Cue，静音与音频时长不改变规则。`game-art-director`要求的`docs/collaboration-protocol.md`和`docs/game-design-theory.md`仍不存在，继续作为红缺口，不创建占位文件。
-- 静态输入：`ModeMatchRuntimeV6.step()`的exact-key `events / readFrame / readFrameAudit`，其中只读V6事件、MatchReadFrame V3内的ModeResult/Projection/装备/SupplyProjection，以及供给Frame审计身份。Product PublicInfo/Result不在step内，Replay/Checkpoint属于runtime治理，均不得成为live Cue旁路。只有主协调签核、生产可达且经P2.6验证的schema才可成为A2正式输入。
+- 当前状态：`preproduction-contract-machine-closed / baseline=92bafbd / direct-spec-fix=uncommitted-review-candidate / hardGate=false`。A2.0机器账本固定33项当前P2/P5公开合同、表现Owner与17项直接规格；唯一baseline例外是Jump capability必填测试修正，已显式登记并等待协调复核。生产默认Registry/Composition/入口仍不可达，A0.3真人仍0/10，A1.1逐项生产批准及全部正式表现门继续关闭。
+- 本轮使用`game-art-director`、`vfx-realtime`、`audio-design`与`threejs-game-ui-designer`；已读取技能正文、VFX/Audio/UI直接参考及项目[美术与音频流程](arena-art-and-audio-development-flow.md)。形状/明度/文字先于颜色，VFX保留核心因果层，音频只在既有总线播放有界Cue，HUD不新增页面/按钮/输入或第二状态容器。`game-art-director`要求的`docs/collaboration-protocol.md`和`docs/game-design-theory.md`仍不存在，继续作为红缺口，不创建占位文件。
+- 机器输入：`ModeMatchRuntimeV6.step()`的exact-key `events / localJumpAvailability / readFrame / readFrameAudit / supplyCadence / supplyFacts`，其中Jump能力在start与每个step均必填，缺失即整包失败关闭；V6事件、Frame、供给事实/cadence与Jump能力均只读，Audit只复算身份。Product PublicInfo/Result不在step内，Replay/Checkpoint不得成为live Cue旁路。
 - 输出候选：模式状态表、2–4人身份标记、倒计时/排名/并列/无完赛者、两次掉落/重生、enemy slot/压力阶段Cue、声音优先级与voice上限、低动效/静音/加载失败替代。桌面/竖屏截图、正式声音/VFX/HUD、真人题包和集成均未制作，不得算作当前证据。
 - 依赖：P2.5e/P2.6已写的同seed/同输入continuous/restored候选仍须实际证明三模式恢复等价、无渲染结束、step原子闭合及Replay/Checkpoint恢复并取得签核；P5正式候选原子宿主已经负责HUD consumer与Audio/VFX consumer同epoch切换，但仍须运行故障反证且默认入口继续断开。A0.3真人必须通过，A1.1协调/逐项批准/捕获与样件门必须独立闭合。身份、锚点、重生、排名、fall count和终局均只由step事件/投影/ModeResult给出，Renderer/Audio/UI不得从内部stateHash/command/checkpoint、坐标、动画、音频或事件到达顺序推断。
 - 评分：模式区分20、多人身份20、终局/重生20、剪影15、音画10、三端/来源15；未产出和未执行项不打计划分。
 - 硬门：三模式同一视觉语义体系；颜色非唯一身份线索；并列第一不按事件序拆先后；`no-finisher`不播放胜利；静音/低动效不丢因果；无模式特供规则写入；总分≥90且每维≥80%。
 - 返工：Mode/policy/schema、participant role/team/slot generation、事件名/payload/同tick顺序、排名、重生、终局、mode projection或Survival上限改变。
 
-#### A2.0 当前源码静态绑定表
+#### A2.0 当前源码机器绑定表
 
 | 实际源码路径 | A2.0只读绑定字段/语义 | 当前边界 |
 |---|---|---|
-| `packages/arena-match/src/mode-match-runtime-v6.ts` | 公开`step()` exact-key `events / readFrame / readFrameAudit`；三模式候选统一闭合mode/participant/role/sequence/专属事件类型与终局 | A2 live唯一runtime入口；内部`stateHash / appliedModeCommandHash / commands / modeState / checkpoint / Replay`零消费，生产仍不可达 |
+| `packages/arena-match/src/mode-match-runtime-v6.ts` | 公开`step()` exact-key为当前六键；三模式统一闭合mode/participant/role/sequence/专属事件类型、供给/Jump能力与终局 | A2 live唯一runtime入口；内部`stateHash / appliedModeCommandHash / commands / modeState / checkpoint / Replay`零消费，生产仍不可达 |
 | `packages/arena-contracts/src/match-event-v6.ts` | envelope `id / sequence / tick / type`；`MatchStarted`、fall、respawn scheduled/respawned、Race anchor/finish、Survival slot/fall、`MatchEnded`及Duel/Race/Survival result判别联合 | 事件去重、迟到与同tick合批只消费这些身份；不得按到达顺序重判并列、淘汰或结果 |
 | `packages/arena-contracts/src/match-read-frame-v3.ts` | `worldSnapshot.tick / activeTick / phase / remainingTicks / eventSequence`；`modeDefinitionId / participants / equipment / activeSupplyProjection / modeProjection / result`；Race与Survival只读状态 | `remainingTicks`是active hard-limit，不冒充Race准备倒计时；frame仅重建持续表现，不合成缺失one-shot |
 | `packages/arena-contracts/src/arena-public-supply-projection-v3.ts` | `snapshotTick / snapshotEventSequence / resyncReadiness / pendingAuthorityTick / pendingExpiryEquipmentInstanceIds / supplies`；每项供给identity、spawn/expire/remaining ticks与position | 非ready时隐藏供给表现并等待resync；最多3个active供给是上游合同，不由HUD扩容 |
 | `packages/arena-product-contracts/src/product-public-match-info-v2.ts`、`product-match-result-v3.ts` | 产品层公开身份与结算封套 | 不在step输出内，不能驱动A2 live Cue；正式Composition接线待绑定 |
 | `packages/arena-match/src/mode-match-runtime-checkpoint-v1.ts`、`replay-v6.ts`、`mode-checkpoint-v2.ts` | 复合checkpoint、内容/配置/assignment身份、事件水位、mode state/result及输入/事件/Replay前缀 | 仅属runtime治理；Presentation不得消费checkpoint或历史前缀，也不得据其补播one-shot |
 | `packages/arena-regression/src/arena-mode-verification-runtime-factory-v1.ts` | `VerificationWorldAuthorityV1`、每局一次checkpoint→旧runtime destroy→新runtime restore→终局链，以及同seed/同输入continuous/restored逐字段对照源码 | 仅是待运行验证入口；对照尚未执行，不能证明恢复等价或开放A2 |
-| `packages/arena-product-presentation/src/arena-v2-mode-hud-consumer-epoch-v1.ts` | 本地epoch ID/generation、水位、HUD ViewModel顶层exact-key、同tick空批次、下一tick完整V6批次闭合、反馈来源与旧generation拒绝 | 静态候选已落盘并进入正式候选原子宿主；默认入口断开且未运行 |
+| `packages/arena-product-presentation/src/arena-v2-mode-hud-consumer-epoch-v1.ts` | 本地epoch ID/generation、水位、HUD ViewModel顶层exact-key、同tick空批次、下一tick完整V6批次闭合、反馈来源与旧generation拒绝 | 已进入正式候选原子宿主并通过本轮直接规格；默认入口和浏览器/设备仍关闭 |
 | `packages/arena-product-presentation/src/arena-v2-mode-hud-feedback-effect-consumer-v1.ts` | epoch切换`visual.clear / audio.stopAll`并重置视觉与声音去重 | 已与HUD consumer由正式候选宿主原子组合；正式资产、默认入口与运行证据仍缺 |
 
-委托中列出的`supply-projection-v3.ts`、`public-info-v2.ts`、`mode-result-v3.ts`并非当前仓库实际路径；本表绑定上述实际存在文件。若runtime路径、step三键、schema版本或exact-key改变，A2.0立即退回`source-drift / hardGate=false`，不得靠文档别名继续消费。
+委托中列出的`supply-projection-v3.ts`、`public-info-v2.ts`、`mode-result-v3.ts`并非当前仓库实际路径；本表绑定上述实际存在文件。若runtime路径、step六键、schema版本或exact-key改变，A2.0立即退回`source-drift / hardGate=false`，不得靠文档别名继续消费。
 
-step必须先验证顶层三键、V6数组、Frame与`readFrameAudit`，再原子提交持续状态和one-shot。任一缺/额外/future键、event/frame水位不闭合、supply audit/resync失败或末项`MatchEnded.modeResult`与同step Frame Result不一致时，整包拒绝：不播放Cue，清除时间敏感Marker/倒计时/Result候选，并仅显示中性数据不可用fallback。
+step必须先验证顶层六键、V6数组、供给事实/cadence、Jump能力、Frame与`readFrameAudit`，再原子提交持续状态和one-shot。任一缺/额外/future键、event/supply/frame水位不闭合、audit/resync失败或末项`MatchEnded.modeResult`与同step Frame Result不一致时，整包拒绝：不播放Cue，清除时间敏感Marker/倒计时/Result候选，并仅显示中性数据不可用fallback。
 
 checkpoint restore不扩大消费面：Presentation不得读取checkpoint、内部hash或`eventsPrefix`。P5已落本地epoch、`clear/stopAll`和只接收不透明已验证step投影的正式候选原子宿主；`step()`仍不新增权威epoch字段。当前候选已静态闭合HUD ViewModel顶层exact-key和完整V6事件批次的旧水位、数量、新水位、逐项sequence/ID/tick/Mode及反馈来源，同tick只允许空批次和无one-shot持续态；宿主切换信号或稳定Frame任一缺失时保持resync。只有运行故障闭环后，才能声明从Frame重建持续态并拒绝历史one-shot、重复ID和跨epoch旧回调已被证明。
 
@@ -182,17 +182,17 @@ Cue消费identity固定为`event.id`去重、`event.sequence`稳定仲裁、`eve
 
 本轮只提交静态七维自检；凡依赖运行、截图、设备、正式资产或真人的结论均保持未证明：
 
-1. **健壮性**：A2权威入口仍只接受step exact-key `events / readFrame / readFrameAudit`；P5.3a已静态拒绝HUD ViewModel顶层extra/future字段并逐项验证V6事件，正式候选宿主源码也只接收已验证step投影，但宿主和实际异常注入均未运行证明。
-2. **竞态/事件去重**：P5.3a已静态闭合完整批次水位、逐项sequence/ID/tick/Mode、反馈来源、同tick空批次、旧generation拒绝、Audio/VFX清理与去重重置。consumer双端原子宿主与continuous/restored对照源码已写；它们和Replay seek、同tick/跳空/乱序/跨epoch旧回调的运行证明仍顺延。
+1. **健壮性**：A2权威入口已固定为step六键且Jump能力在start/step均必填；33项源码身份、17项fixture和44项隔离漂移已由机器checker闭合，P5宿主仍只接收已验证step投影；浏览器/设备异常注入仍未运行。
+2. **竞态/事件去重**：P5直接规格已闭合完整批次水位、逐项sequence/ID/tick/Mode、反馈来源、同tick空批次、旧generation拒绝、Audio/VFX清理与去重重置；浏览器资源迟到、跨页面重入和设备端运行证明仍顺延。
 3. **静音与低动效兜底**：静音只关播放，低动效只移除震屏、闪烁和大位移；身份、原因、倒计时和Result保留静态形状/数字/文字。程序化glyph仅是加载失败fallback，不计正式资产或A1.1来源通过。
 4. **人数/模式边界**：静态schema支持Duel、Race 2–4名competitor与Survival player/enemy slot语义，覆盖并列、`no-finisher`、0/1/2次fall和最多3个active supply；PublicInfo不在step，正式glyph/pattern接线、拥挤和窄屏真人证据仍缺。
-5. **异步资产生命周期**：P5.3a效果消费者已写切epoch同步`clear/stopAll`和去重重置，HUD consumer拒绝旧generation；pause/resume/restore仍只允许从最新已验证Frame重建持续态且不补播。两个consumer已由正式候选宿主原子组合，但默认入口断开且未运行；P2.5e/P2.6仍无实际continuous等价、失败注入、双destroy或资源归零证据。
+5. **异步资产生命周期**：P5直接规格已覆盖切epoch`clear/stopAll`、旧generation拒绝、同步清理失败重试与原子宿主；默认入口仍断开，真实异步加载、浏览器双destroy、设备资源归零和前后台证据仍未运行。
 6. **主流程不反向判定**：终点、fall、排名、重生、供给、淘汰、结算只消费step events/Frame projection/ModeResult；`ActionStarted`不冒充命中，Frame差分不冒充供给原因，内部hash/command/checkpoint、坐标、动画和音频均不得改变事实。
-7. **治理/回滚**：A2.0保持`static-bound-to-mode-match-runtime-v6 / hardGate=false`，runtime路径、step三键或exact-key漂移即退回`source-drift`；回滚仅撤销本轮三份文档的runtime回绑段落，不回退P2源码或历史签核。
+7. **治理/回滚**：A2.0为`preproduction-contract-machine-closed / hardGate=false`，runtime路径、step六键或exact-key漂移即退回`source-drift`；机器包与A2文档状态可独立回滚，不回退P2/P5源码或历史签核。
 
 真人任务至少回答“当前模式、本地玩家、领先/并列、掉落原因、重生位置、Survival第几次掉落、为何结束”；整体正确率目标≥90%，任一核心题/视口/2–4人分组不得低于80%。自动化、代理或美术人员自答不能替代独立真人。
 
-本轮美术线程已完成上述七维静态自检，并在A2.0合同记录P5.3a consumer-epoch静态复核结论；没有运行checker、测试、构建、生成器、浏览器、模拟器或性能任务。`modeProjection.preparationRemainingTicks`与active hard-limit `worldSnapshot.remainingTicks`继续分离；P5.3a静态exact-key/批次连续性已闭合，但正式宿主、运行反证、P2.5e签核、continuous对照、P2.6运行、生产可达性、资产、截图、设备和真人验证均保持红门。
+本轮已运行A2.0正向checker、44项隔离矩阵与登记的P2/P5直接规格；`modeProjection.preparationRemainingTicks`与active hard-limit `worldSnapshot.remainingTicks`继续分离。生产可达性、正式资产、截图、浏览器、设备、性能和真人验证均保持红门。
 
 #### 2026-08-02 历史主协调A2.0合同预验收（非当前状态）
 
@@ -207,7 +207,7 @@ Cue消费identity固定为`event.id`去重、`event.sequence`稳定仲裁、`eve
 | 音频优先级与生命周期 | 10 | 9 | 11类Cue已冻结候选bus、优先级、单项/全局voice上限、重复间隔、迟到、暂停恢复和销毁；`-3 dBFS`仅是待实测目标 |
 | 上游身份、回执与治理 | 10 | 3 | 当时A2未越权生成资产；但ADR-112尚未签核、美术回执/当时要求的六维自检未取得、A0.3真人0/10、当时A1.1证据过期 |
 
-该`87/100`仅保留为2026-08-02的历史预审快照，不是当前评分，也不得与当前静态绑定相加。此后P2.5d `ModeMatchRuntimeV6`静态候选已经形成，本轮已完成runtime回绑；A1.1最终source/measurement机器前置现已闭合，但P2.5e、P2.6运行验证、生产可达性、A0.3真人及A1.1协调/批准/样件仍未完成，因此当前A2.0仍是`preproduction-contract-candidate / static-bound-to-mode-match-runtime-v6 / verification-deferred-by-ADR-118 / hardGate=false`。任何A2截图、音频、VFX、HUD、Blockout或集成继续禁止。
+该`87/100`仅保留为2026-08-02的历史预审快照，不是当前评分，也不得与当前机器闭环相加。当前A2.0是`preproduction-contract-machine-closed / hardGate=false`；生产可达性、A0.3真人、A1.1逐项生产批准、截图、音频、VFX、HUD、Blockout或集成继续关闭。
 
 ### A3 ↔ P3：KZ环境与敌人生产
 
@@ -405,6 +405,6 @@ Cue消费identity固定为`event.id`去重、`event.sequence`稳定仲裁、`eve
 ## 6. 当前协作边界
 
 - 主开发任务`019fa7c7-d26e-7111-9054-782634e5c54c`已形成生产不可达的P2.5e复合checkpoint/三模式恢复、P2.6 continuous/restored双链与P5本地consumer-epoch/效果清理/正式候选原子宿主；默认入口和全部运行反证仍顺延。美术不修改其代码写域，也不把候选描述为默认生产路径。
-- `ModeMatchRuntimeV6.step()`继续只提供`events / readFrame / readFrameAudit`静态消费面；checkpoint/历史前缀不属于Presentation。P5正式候选原子宿主已落盘但默认Registry/Composition/入口仍不可达，P2.5e/P2.6与宿主运行验证按[ADR-118](../decisions/118-arena-v2-development-first-deferred-validation-window.md)顺延。A2.0因此仍是`preproduction-contract-candidate / static-bound-to-mode-match-runtime-v6 / verification-deferred-by-ADR-118 / hardGate=false`。
+- `ModeMatchRuntimeV6.step()`当前提供六键只读消费面；checkpoint/历史前缀不属于Presentation。P5正式候选原子宿主已落盘但默认Registry/Composition/入口仍不可达。A2.0机器合同已闭合，运行视觉证据仍未开放。
 - A0.3当前机器链已闭合，但仍受真人`0/10`与协调签核缺失阻断；A1.1最终source/measurement机器前置已闭合，但协调、逐项批准、捕获、样件和hard gate仍关闭。正式角色、武器、地图、VFX、HUD、音频、Blockout、截图、集成、设备、真人与Final全部关闭。当前A0.3诊断PNG、匿名题包和机器账本只可用于外部真人盲测，不得进入默认产品消费。
-- 本轮写域仅为A2.0合同、本矩阵与Art Bible。若runtime候选被撤回、step三键/路径/exact-key改变，按段落回滚“状态＋runtime绑定表＋Cue/失败策略＋静态自检＋协作边界”；整文件回滚点是本轮开始前版本。禁止用`reset`/`checkout`覆盖开发工作树，且不改ADR、台账、索引、流程、脚本、源码或资产。
+- 本轮写域为A2.0机器账本/checker/隔离探针及A2合同、本矩阵与Art Bible。若runtime候选被撤回、step六键/路径/exact-key改变，独立回滚本批机器包与文档状态；不改P2/P5生产源码、资产或默认入口。
