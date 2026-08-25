@@ -20,6 +20,14 @@ import {
 
 export const ARENA_V2_A7_FORMAL_EVIDENCE_RETRIEVAL_VERIFIER_CANDIDATE_V1_SCHEMA_VERSION =
   1 as const;
+const DETERMINISTIC_IDENTITY_HASH_PATTERN = /^[0-9a-f]{8}$/u;
+
+function assertDeterministicIdentityHash(value: unknown, name: string): string {
+  if (typeof value !== 'string' || !DETERMINISTIC_IDENTITY_HASH_PATTERN.test(value)) {
+    throw new TypeError(`${name}必须是8位小写确定性身份hash。`);
+  }
+  return value;
+}
 
 export type ArenaV2A7FormalEvidenceRetrievalVerifierStateCandidateV1 =
   | 'created'
@@ -275,11 +283,11 @@ function createCanonicalContext(
     validateArenaV2A7FormalEvidenceRecordIndexCandidateV3(
       source.formalEvidenceRecordIndex,
     );
-  const formalEvidenceRetrievalPlanIdentityHash = assertEvidenceSha256(
+  const formalEvidenceRetrievalPlanIdentityHash = assertDeterministicIdentityHash(
     source.formalEvidenceRetrievalPlanIdentityHash,
     'A7 Evidence verifier formalEvidenceRetrievalPlanIdentityHash',
   );
-  const formalEvidenceRecordIndexIdentityHash = assertEvidenceSha256(
+  const formalEvidenceRecordIndexIdentityHash = assertDeterministicIdentityHash(
     source.formalEvidenceRecordIndexIdentityHash,
     'A7 Evidence verifier formalEvidenceRecordIndexIdentityHash',
   );

@@ -1581,6 +1581,8 @@ P7.70消除回执metadata的第二套规范化路径。Writer直接调用P7.61�
 
 P7.71继续消除回执正文的隐式字段顺序。公开规范序列化器会精确验证外层Session/Plan/Index/Snapshot、规范Verification Payload、Payload Identity及内外身份闭合，Writer只把其唯一UTF-8文本转成待写字节。该批不改变回执语义、Locator、批次原子性、A7资格或默认入口；延期字段重排等价反证、类型、治理和构建均未运行。
 
+P7.72收口候选自动化中暴露的身份域断裂：24项自动化manifest把`sourceDirty=false`写入规范stored身份；外部工具链字节SHA以`toolchainIdentitySha256`独立贯穿回执、报告、Assembly与Freeze，内部短确定性toolchain hash仍只用于请求/结果闭合。A7 V3、Verifier和Node Store同步区分8位Plan/Index/Session/Payload确定性身份与64位外部Evidence/Snapshot SHA，Snapshot Manifest以规范核心UTF-8字节派生自身SHA-256。2026-08-25候选门已执行通过：52包/11波构建、Vitest 21文件/166项、Node 2文件/24项、P7 boundary、应用类型、文档及diff检查；这不构成真实24项自动化、29项评价、A7 V3、资产、设备、真人、性能或freeze PASS，状态仍为`production-unreachable / hardGate=false / code-written-not-run / validationStatus=not-run`。
+
 2026-08-15 P5.3zzzwj/P6.415结果页留存承接增量：当默认长期目标要求调整下一局组合时，复用已有推荐路线和唯一主按钮，对比当前选择后直接显示实际变化的模式、武器与地图；点击只进入既有模式确认页，不会自动开局。生存路线不把目标武器当作loadout，仍明确空手开局并在场上拾取。无实际变化、非模式确认路线、目标身份与名称不成对均失败关闭。不新增页面、按钮、选择字段、Profile、任务、奖励、玩法、资产或默认入口；延期静态反证及P5/P6治理已写未运行，状态保持`production-unreachable / hardGate=false / code-written-not-run / validationStatus=not-run`。
 
 2026-08-15 P5.3zzzwk/P6.416显式下一目标文案闭合：玩家显式选择下一目标时，结果页不再用统一“继续长期目标”，而是按已经冻结的真实目的地显示确认目标组合、了解目标武器、了解目标地图、查看尚未开放的目标武器或返回首页自由挑战。模式确认、详情承接、目录和首页继续完全复用P6.100既有导航与准备会话；目标名称继续由同一次学习签名复核，任何页面/身份/名称漂移失败关闭。未新增页面、按钮、动作、导航栈、Profile、奖励、玩法、资产或默认入口；延期静态反证和治理源码已写未运行，状态保持`production-unreachable / hardGate=false / code-written-not-run / validationStatus=not-run`。

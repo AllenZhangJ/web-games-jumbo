@@ -165,6 +165,7 @@ export function createArenaV2P7StageReportCandidateV2(value: unknown) {
       packageLockSha256: automationEvidence.packageLockSha256,
       toolchain: automationEvidence.toolchain,
       toolchainIdentityHash: automationEvidence.toolchainIdentityHash,
+      toolchainIdentitySha256: automationEvidence.toolchainIdentitySha256,
       automationDefinitionIdentityHash: automationEvidence.definitionIdentityHash,
       automationManifestIdentityHash: automationEvidence.manifestIdentityHash,
     }),

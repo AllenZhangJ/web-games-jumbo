@@ -17,6 +17,7 @@ const PREREGISTRATION_IDENTITY_HASH = '2345bcde';
 const EVALUATION_IDENTITY_HASH = '3456cdef';
 const PACKAGE_JSON_SHA = sha(200);
 const PACKAGE_LOCK_SHA = sha(201);
+const TOOLCHAIN_IDENTITY_SHA256 = sha(202);
 const TOOLCHAIN = {
   nodeVersion: '22.17.0',
   npmVersion: '11.4.2',
@@ -47,6 +48,7 @@ function options(
     packageJsonSha256: PACKAGE_JSON_SHA,
     packageLockSha256: PACKAGE_LOCK_SHA,
     toolchain: { ...TOOLCHAIN },
+    toolchainIdentitySha256: TOOLCHAIN_IDENTITY_SHA256,
     runOrdinal: 1,
     attempt: 1,
     receipts: definition.suites.map((suite, index) => {
@@ -64,6 +66,7 @@ function options(
         packageJsonSha256: PACKAGE_JSON_SHA,
         packageLockSha256: PACKAGE_LOCK_SHA,
         toolchainIdentityHash,
+        toolchainIdentitySha256: TOOLCHAIN_IDENTITY_SHA256,
         exitCode: status === 'not-run' ? null : status === 'passed' ? 0 : 1,
         stdoutSha256: status === 'not-run' ? null : sha(10 + index),
         stderrSha256: status === 'not-run' ? null : sha(40 + index),

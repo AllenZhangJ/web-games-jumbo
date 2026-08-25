@@ -153,6 +153,14 @@ const FORMAL_EVIDENCE_RETRIEVAL_PLAN_INPUT_KEYS = new Set([
 ]);
 const FORMAL_EVIDENCE_MEDIA_TYPE_PATTERN =
   /^[a-z0-9][a-z0-9!#$&^_.+-]*\/[a-z0-9][a-z0-9!#$&^_.+-]*$/u;
+const DETERMINISTIC_IDENTITY_HASH_PATTERN = /^[0-9a-f]{8}$/u;
+
+function assertDeterministicIdentityHash(value: unknown, name: string): string {
+  if (typeof value !== 'string' || !DETERMINISTIC_IDENTITY_HASH_PATTERN.test(value)) {
+    throw new TypeError(`${name}必须是8位小写确定性身份hash。`);
+  }
+  return value;
+}
 const FORMAL_EVIDENCE_LOCATOR_PREFIX = 'evidence://arena-v2/' as const;
 const FORMAL_EVIDENCE_LOCATOR_SEGMENT_PATTERN = /^[a-z0-9][a-z0-9._-]*$/u;
 const STORED_KEYS = new Set([
@@ -619,7 +627,7 @@ export function createArenaV2A7FormalEvidenceRetrievalPlanCandidateV3(
     createArenaV2A7FormalBudgetApprovedPolicyAssemblyCandidateV1(
       source.approvedPolicyAssemblyInput,
     );
-  const approvedPolicyAssemblyIdentity = assertEvidenceSha256(
+  const approvedPolicyAssemblyIdentity = assertDeterministicIdentityHash(
     source.approvedPolicyAssemblyIdentity,
     'A7 V3 retrieval plan approvedPolicyAssemblyIdentity',
   );
@@ -720,7 +728,7 @@ function createFormalEvidenceRecordVerificationIndex(
     if (verificationByRecordId.has(recordId)) {
       throw new RangeError(`A7 V3视觉/结构Evidence独立验证recordId不得重复：${recordId}。`);
     }
-    const verifiedRetrievalPlanIdentityHash = assertEvidenceSha256(
+    const verifiedRetrievalPlanIdentityHash = assertDeterministicIdentityHash(
       sourceEntry.formalEvidenceRetrievalPlanIdentityHash,
       `A7 V3视觉/结构Evidence独立验证目录[${index}]`
         + '.formalEvidenceRetrievalPlanIdentityHash',

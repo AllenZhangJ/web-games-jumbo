@@ -86,7 +86,7 @@ test('A7 Store Snapshot serializer produces one canonical text for reordered inp
     snapshotId: 'adapter-test-serializer-snapshot',
     snapshotRevision: 'revision-001',
     createdAtUtc: '2026-08-15T17:30:00.000Z',
-    formalEvidenceRecordIndexIdentityHash: 'a'.repeat(64),
+    formalEvidenceRecordIndexIdentityHash: 'a'.repeat(8),
     formalEvidenceRecordCount: 1,
   });
   const reordered = {
@@ -126,9 +126,9 @@ test('A7 Store Adapter factory owns and enforces all three adapter identities', 
   );
   await assert.rejects(adapters.evidenceReader({
     schemaVersion: 1,
-    verificationSessionIdentityHash: 'b'.repeat(64),
-    retrievalPlanIdentityHash: 'c'.repeat(64),
-    recordIndexIdentityHash: 'd'.repeat(64),
+    verificationSessionIdentityHash: 'b'.repeat(8),
+    retrievalPlanIdentityHash: 'c'.repeat(8),
+    recordIndexIdentityHash: 'd'.repeat(8),
     storeSnapshotIdentityHash: 'a'.repeat(64),
     recordIndex: 0,
     recordCount: 1,
@@ -146,9 +146,9 @@ test('A7 Store Adapter factory owns and enforces all three adapter identities', 
   }), /Reader Adapter ID/u);
   await assert.rejects(adapters.sha256Hasher({
     schemaVersion: 1,
-    verificationSessionIdentityHash: 'b'.repeat(64),
-    retrievalPlanIdentityHash: 'c'.repeat(64),
-    recordIndexIdentityHash: 'd'.repeat(64),
+    verificationSessionIdentityHash: 'b'.repeat(8),
+    retrievalPlanIdentityHash: 'c'.repeat(8),
+    recordIndexIdentityHash: 'd'.repeat(8),
     storeSnapshotIdentityHash: 'a'.repeat(64),
     recordId: 'capture:adapter-id-test',
     evidenceLocator: 'evidence://arena-v2/a7/source/adapter-id-test.bin',
@@ -157,18 +157,18 @@ test('A7 Store Adapter factory owns and enforces all three adapter identities', 
   }), /Hasher Adapter ID/u);
   await assert.rejects(adapters.verificationReceiptWriter({
     schemaVersion: 1,
-    verificationSessionIdentityHash: 'b'.repeat(64),
-    retrievalPlanIdentityHash: 'c'.repeat(64),
-    recordIndexIdentityHash: 'd'.repeat(64),
+    verificationSessionIdentityHash: 'b'.repeat(8),
+    retrievalPlanIdentityHash: 'c'.repeat(8),
+    recordIndexIdentityHash: 'd'.repeat(8),
     storeSnapshotIdentityHash: 'a'.repeat(64),
     receiptWriterAdapterId: 'spoofed-writer-v1',
     receipts: Object.freeze([]),
   }), /Receipt Writer Adapter ID/u);
   const payload = Object.freeze({
     schemaVersion: 1 as const,
-    verificationSessionIdentityHash: 'b'.repeat(64),
-    retrievalPlanIdentityHash: 'c'.repeat(64),
-    recordIndexIdentityHash: 'd'.repeat(64),
+    verificationSessionIdentityHash: 'b'.repeat(8),
+    retrievalPlanIdentityHash: 'c'.repeat(8),
+    recordIndexIdentityHash: 'd'.repeat(8),
     storeSnapshotIdentityHash: 'a'.repeat(64),
     recordId: 'capture:adapter-id-test',
     verifiedEvidenceLocator: 'evidence://arena-v2/a7/source/adapter-id-test.bin',
@@ -183,9 +183,9 @@ test('A7 Store Adapter factory owns and enforces all three adapter identities', 
   });
   await assert.rejects(adapters.verificationReceiptWriter({
     schemaVersion: 1,
-    verificationSessionIdentityHash: 'b'.repeat(64),
-    retrievalPlanIdentityHash: 'c'.repeat(64),
-    recordIndexIdentityHash: 'd'.repeat(64),
+    verificationSessionIdentityHash: 'b'.repeat(8),
+    retrievalPlanIdentityHash: 'c'.repeat(8),
+    recordIndexIdentityHash: 'd'.repeat(8),
     storeSnapshotIdentityHash: 'a'.repeat(64),
     receiptWriterAdapterId: adapters.receiptWriterAdapterId,
     receipts: Object.freeze([Object.freeze({
@@ -195,28 +195,28 @@ test('A7 Store Adapter factory owns and enforces all three adapter identities', 
         ...payload,
         retrievalAdapterId: 'spoofed-reader-v1',
       }),
-      verificationPayloadIdentityHash: 'f'.repeat(64),
+      verificationPayloadIdentityHash: 'f'.repeat(8),
     })]),
   }), /verificationPayload Adapter ID/u);
   await assert.rejects(adapters.verificationReceiptWriter({
     schemaVersion: 1,
-    verificationSessionIdentityHash: 'b'.repeat(64),
-    retrievalPlanIdentityHash: 'c'.repeat(64),
-    recordIndexIdentityHash: 'd'.repeat(64),
+    verificationSessionIdentityHash: 'b'.repeat(8),
+    retrievalPlanIdentityHash: 'c'.repeat(8),
+    recordIndexIdentityHash: 'd'.repeat(8),
     storeSnapshotIdentityHash: 'a'.repeat(64),
     receiptWriterAdapterId: adapters.receiptWriterAdapterId,
     receipts: Object.freeze([Object.freeze({
       recordIndex: 0,
       recordCount: 1,
       verificationPayload: payload,
-      verificationPayloadIdentityHash: 'f'.repeat(64),
+      verificationPayloadIdentityHash: 'f'.repeat(8),
     })]),
   }), /verificationPayloadIdentityHash与Payload不闭合/u);
   await assert.rejects(adapters.verificationReceiptWriter({
     schemaVersion: 1,
-    verificationSessionIdentityHash: 'b'.repeat(64),
-    retrievalPlanIdentityHash: 'c'.repeat(64),
-    recordIndexIdentityHash: 'd'.repeat(64),
+    verificationSessionIdentityHash: 'b'.repeat(8),
+    retrievalPlanIdentityHash: 'c'.repeat(8),
+    recordIndexIdentityHash: 'd'.repeat(8),
     storeSnapshotIdentityHash: 'a'.repeat(64),
     receiptWriterAdapterId: adapters.receiptWriterAdapterId,
     receipts: Object.freeze([Object.freeze({
@@ -235,9 +235,9 @@ test('A7 Store Adapter factory owns and enforces all three adapter identities', 
   });
   await assert.rejects(adapters.verificationReceiptWriter({
     schemaVersion: 1,
-    verificationSessionIdentityHash: 'b'.repeat(64),
-    retrievalPlanIdentityHash: 'c'.repeat(64),
-    recordIndexIdentityHash: 'd'.repeat(64),
+    verificationSessionIdentityHash: 'b'.repeat(8),
+    retrievalPlanIdentityHash: 'c'.repeat(8),
+    recordIndexIdentityHash: 'd'.repeat(8),
     storeSnapshotIdentityHash: 'a'.repeat(64),
     receiptWriterAdapterId: adapters.receiptWriterAdapterId,
     receipts: Object.freeze([Object.freeze({
@@ -270,9 +270,9 @@ test('A7 Store Reader and Hasher reject non-canonical requests before Store work
   };
   const readRequest = {
     schemaVersion: 1 as const,
-    verificationSessionIdentityHash: 'b'.repeat(64),
-    retrievalPlanIdentityHash: 'c'.repeat(64),
-    recordIndexIdentityHash: 'd'.repeat(64),
+    verificationSessionIdentityHash: 'b'.repeat(8),
+    retrievalPlanIdentityHash: 'c'.repeat(8),
+    recordIndexIdentityHash: 'd'.repeat(8),
     storeSnapshotIdentityHash: 'a'.repeat(64),
     recordIndex: 0,
     recordCount: 1,
@@ -291,13 +291,13 @@ test('A7 Store Reader and Hasher reject non-canonical requests before Store work
   await assert.rejects(adapters.evidenceReader({
     ...readRequest,
     expectedRecord: accessorRecord,
-  } as never), /访问器/u);
+  } as never), /数据字段/u);
 
   const hashRequest = {
     schemaVersion: 1 as const,
-    verificationSessionIdentityHash: 'b'.repeat(64),
-    retrievalPlanIdentityHash: 'c'.repeat(64),
-    recordIndexIdentityHash: 'd'.repeat(64),
+    verificationSessionIdentityHash: 'b'.repeat(8),
+    retrievalPlanIdentityHash: 'c'.repeat(8),
+    recordIndexIdentityHash: 'd'.repeat(8),
     storeSnapshotIdentityHash: 'a'.repeat(64),
     recordId: expectedRecord.recordId,
     evidenceLocator: expectedRecord.evidenceLocator,
@@ -357,8 +357,8 @@ test('A7 Store Reader closes canonical sidecar identity before reading Evidence 
     });
     await assert.rejects(adapters.evidenceReader({
       schemaVersion: 1,
-      verificationSessionIdentityHash: 'b'.repeat(64),
-      retrievalPlanIdentityHash: 'c'.repeat(64),
+      verificationSessionIdentityHash: 'b'.repeat(8),
+      retrievalPlanIdentityHash: 'c'.repeat(8),
       recordIndexIdentityHash,
       storeSnapshotIdentityHash: snapshotIdentityHash,
       recordIndex: 0,
@@ -411,8 +411,8 @@ test('A7 Store Adapter pins the first resolved Evidence Root directory identity'
     });
     const request = Object.freeze({
       schemaVersion: 1 as const,
-      verificationSessionIdentityHash: 'b'.repeat(64),
-      retrievalPlanIdentityHash: 'c'.repeat(64),
+      verificationSessionIdentityHash: 'b'.repeat(8),
+      retrievalPlanIdentityHash: 'c'.repeat(8),
       recordIndexIdentityHash,
       storeSnapshotIdentityHash: snapshotIdentityHash,
       recordIndex: 0,
@@ -476,7 +476,7 @@ test('A7 Store Writer pins the first resolved receipt parent directory identity'
     const createVerifier = (verifiedAtUtc: string) => (
       createArenaV2A7FormalEvidenceRetrievalVerifierCandidateV1({
         formalEvidenceRecordIndex: records,
-        formalEvidenceRetrievalPlanIdentityHash: 'a'.repeat(64),
+        formalEvidenceRetrievalPlanIdentityHash: 'a'.repeat(8),
         formalEvidenceRecordIndexIdentityHash: recordIndexIdentityHash,
         formalEvidenceStoreSnapshotIdentityHash: snapshotIdentityHash,
         verifierId: 'receipt-parent-identity-verifier',
@@ -531,7 +531,7 @@ test('A7 explicit Store Adapters retrieve bytes and publish one committed receip
     });
     const createVerifier = () => createArenaV2A7FormalEvidenceRetrievalVerifierCandidateV1({
       formalEvidenceRecordIndex: records,
-      formalEvidenceRetrievalPlanIdentityHash: 'a'.repeat(64),
+      formalEvidenceRetrievalPlanIdentityHash: 'a'.repeat(8),
       formalEvidenceRecordIndexIdentityHash: recordIndexIdentity,
       formalEvidenceStoreSnapshotIdentityHash: storeSnapshotIdentity,
       verifierId: 'adapter-test-independent-verifier',
@@ -606,15 +606,15 @@ test('A7 Store Reader rejects a final-file symlink escaping the explicit root', 
     const filePath = path.join(root, ...relativePath.split('/'));
     await mkdir(path.dirname(filePath), { recursive: true });
     await symlink(outsideFile, filePath);
-    await writeFile(`${filePath}.metadata.json`, `${JSON.stringify({
+    await writeFile(`${filePath}.metadata.json`, serializeArenaV2A7FormalEvidenceMetadataSidecarCandidateV1({
       schemaVersion: 1,
       recordId: record.recordId,
       evidenceLocator: record.evidenceLocator,
       evidenceMediaType: record.evidenceMediaType,
       evidenceRecordedAtUtc: record.evidenceRecordedAtUtc,
       evidenceProducerId: record.evidenceProducerId,
-    })}\n`);
-    const storeSnapshotIdentity = await writeStoreSnapshot(root, 'd'.repeat(64), 1);
+    }));
+    const storeSnapshotIdentity = await writeStoreSnapshot(root, 'd'.repeat(8), 1);
     const adapters = createArenaV2A7FormalEvidenceStoreAdaptersCandidateV1({
       evidenceRoot: root,
       maximumEvidenceBytesPerRecord: 1_024,
@@ -622,9 +622,9 @@ test('A7 Store Reader rejects a final-file symlink escaping the explicit root', 
     });
     await assert.rejects(adapters.evidenceReader({
       schemaVersion: 1,
-      verificationSessionIdentityHash: 'b'.repeat(64),
-      retrievalPlanIdentityHash: 'c'.repeat(64),
-      recordIndexIdentityHash: 'd'.repeat(64),
+      verificationSessionIdentityHash: 'b'.repeat(8),
+      retrievalPlanIdentityHash: 'c'.repeat(8),
+      recordIndexIdentityHash: 'd'.repeat(8),
       storeSnapshotIdentityHash: storeSnapshotIdentity,
       recordIndex: 0,
       recordCount: 1,
@@ -667,8 +667,8 @@ test('A7 Store Reader rejects evidence recorded after the pinned Store Snapshot'
     });
     await assert.rejects(adapters.evidenceReader({
       schemaVersion: 1,
-      verificationSessionIdentityHash: 'a'.repeat(64),
-      retrievalPlanIdentityHash: 'b'.repeat(64),
+      verificationSessionIdentityHash: 'a'.repeat(8),
+      retrievalPlanIdentityHash: 'b'.repeat(8),
       recordIndexIdentityHash: recordIndexIdentity,
       storeSnapshotIdentityHash: storeSnapshotIdentity,
       recordIndex: 0,
@@ -717,8 +717,8 @@ test('A7 Store Reader rejects a semantically equal non-canonical Snapshot Manife
 
     await assert.rejects(adapters.evidenceReader({
       schemaVersion: 1,
-      verificationSessionIdentityHash: 'a'.repeat(64),
-      retrievalPlanIdentityHash: 'b'.repeat(64),
+      verificationSessionIdentityHash: 'a'.repeat(8),
+      retrievalPlanIdentityHash: 'b'.repeat(8),
       recordIndexIdentityHash: recordIndexIdentity,
       storeSnapshotIdentityHash: snapshot.snapshotIdentityHash,
       recordIndex: 0,
@@ -774,8 +774,8 @@ test('A7 Store Reader rejects a semantically equal non-canonical metadata sideca
 
     await assert.rejects(adapters.evidenceReader({
       schemaVersion: 1,
-      verificationSessionIdentityHash: 'a'.repeat(64),
-      retrievalPlanIdentityHash: 'b'.repeat(64),
+      verificationSessionIdentityHash: 'a'.repeat(8),
+      retrievalPlanIdentityHash: 'b'.repeat(8),
       recordIndexIdentityHash: recordIndexIdentity,
       storeSnapshotIdentityHash: storeSnapshotIdentity,
       recordIndex: 0,

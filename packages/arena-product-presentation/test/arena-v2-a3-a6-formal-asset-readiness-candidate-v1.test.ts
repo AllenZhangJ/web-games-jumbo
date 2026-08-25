@@ -282,7 +282,7 @@ describe('Arena V2 A3-A6 formal asset readiness candidate V1 (not run)', () => {
     expect(READINESS.a6ReuseBindings.fallbackPreviewAssetIds).toHaveLength(22);
     expect(READINESS.catalogAssets.filter(({ phaseId, mediaKind }) => (
       phaseId === 'A4' && mediaKind === 'audio'
-    ))).toHaveLength(21);
+    ))).toHaveLength(81);
     expect(READINESS.catalogAssets.filter(({ phaseId, mediaKind }) => (
       phaseId === 'A5' && mediaKind === 'audio'
     ))).toHaveLength(17);

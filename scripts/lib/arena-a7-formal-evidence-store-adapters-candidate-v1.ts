@@ -43,6 +43,14 @@ export const ARENA_V2_A7_FORMAL_EVIDENCE_STORE_ADAPTERS_CANDIDATE_V1_SCHEMA_VERS
   1 as const;
 export const ARENA_V2_A7_FORMAL_EVIDENCE_STORE_SNAPSHOT_MANIFEST_CANDIDATE_V1_SCHEMA_VERSION =
   1 as const;
+const DETERMINISTIC_IDENTITY_HASH_PATTERN = /^[0-9a-f]{8}$/u;
+
+function assertDeterministicIdentityHash(value: unknown, name: string): string {
+  if (typeof value !== 'string' || !DETERMINISTIC_IDENTITY_HASH_PATTERN.test(value)) {
+    throw new TypeError(`${name}必须是8位小写确定性身份hash。`);
+  }
+  return value;
+}
 export const ARENA_V2_A7_FORMAL_EVIDENCE_STORE_ADAPTER_IDS_CANDIDATE_V1 = Object.freeze({
   retrievalAdapterId: 'node-evidence-store-reader-v1' as const,
   sha256AdapterId: 'node-sha256-hasher-v1' as const,
@@ -278,15 +286,15 @@ function evidenceReadRequest(
   ) throw new RangeError('A7 Evidence Store Reader Adapter ID发生漂移。');
   return Object.freeze({
     schemaVersion: 1,
-    verificationSessionIdentityHash: assertEvidenceSha256(
+    verificationSessionIdentityHash: assertDeterministicIdentityHash(
       source.verificationSessionIdentityHash,
       `${name}.verificationSessionIdentityHash`,
     ),
-    retrievalPlanIdentityHash: assertEvidenceSha256(
+    retrievalPlanIdentityHash: assertDeterministicIdentityHash(
       source.retrievalPlanIdentityHash,
       `${name}.retrievalPlanIdentityHash`,
     ),
-    recordIndexIdentityHash: assertEvidenceSha256(
+    recordIndexIdentityHash: assertDeterministicIdentityHash(
       source.recordIndexIdentityHash,
       `${name}.recordIndexIdentityHash`,
     ),
@@ -326,15 +334,15 @@ function evidenceSha256Request(
   bytes.set(value.bytes);
   return Object.freeze({
     schemaVersion: 1,
-    verificationSessionIdentityHash: assertEvidenceSha256(
+    verificationSessionIdentityHash: assertDeterministicIdentityHash(
       value.verificationSessionIdentityHash,
       `${name}.verificationSessionIdentityHash`,
     ),
-    retrievalPlanIdentityHash: assertEvidenceSha256(
+    retrievalPlanIdentityHash: assertDeterministicIdentityHash(
       value.retrievalPlanIdentityHash,
       `${name}.retrievalPlanIdentityHash`,
     ),
-    recordIndexIdentityHash: assertEvidenceSha256(
+    recordIndexIdentityHash: assertDeterministicIdentityHash(
       value.recordIndexIdentityHash,
       `${name}.recordIndexIdentityHash`,
     ),
@@ -467,15 +475,15 @@ function verificationPayload(
   ) throw new RangeError(`${name} Adapter ID发生漂移。`);
   return Object.freeze({
     schemaVersion: 1,
-    verificationSessionIdentityHash: assertEvidenceSha256(
+    verificationSessionIdentityHash: assertDeterministicIdentityHash(
       source.verificationSessionIdentityHash,
       `${name}.verificationSessionIdentityHash`,
     ),
-    retrievalPlanIdentityHash: assertEvidenceSha256(
+    retrievalPlanIdentityHash: assertDeterministicIdentityHash(
       source.retrievalPlanIdentityHash,
       `${name}.retrievalPlanIdentityHash`,
     ),
-    recordIndexIdentityHash: assertEvidenceSha256(
+    recordIndexIdentityHash: assertDeterministicIdentityHash(
       source.recordIndexIdentityHash,
       `${name}.recordIndexIdentityHash`,
     ),
@@ -544,15 +552,15 @@ export function serializeArenaV2A7FormalEvidenceVerificationReceiptCandidateV1(
     source.schemaVersion
       !== ARENA_V2_A7_FORMAL_EVIDENCE_STORE_ADAPTERS_CANDIDATE_V1_SCHEMA_VERSION
   ) throw new RangeError(`${name}.schemaVersion必须为1。`);
-  const verificationSessionIdentityHash = assertEvidenceSha256(
+  const verificationSessionIdentityHash = assertDeterministicIdentityHash(
     source.verificationSessionIdentityHash,
     `${name}.verificationSessionIdentityHash`,
   );
-  const retrievalPlanIdentityHash = assertEvidenceSha256(
+  const retrievalPlanIdentityHash = assertDeterministicIdentityHash(
     source.retrievalPlanIdentityHash,
     `${name}.retrievalPlanIdentityHash`,
   );
-  const recordIndexIdentityHash = assertEvidenceSha256(
+  const recordIndexIdentityHash = assertDeterministicIdentityHash(
     source.recordIndexIdentityHash,
     `${name}.recordIndexIdentityHash`,
   );
@@ -564,7 +572,7 @@ export function serializeArenaV2A7FormalEvidenceVerificationReceiptCandidateV1(
     source.verificationPayload,
     `${name}.verificationPayload`,
   );
-  const verificationPayloadIdentityHash = assertEvidenceSha256(
+  const verificationPayloadIdentityHash = assertDeterministicIdentityHash(
     source.verificationPayloadIdentityHash,
     `${name}.verificationPayloadIdentityHash`,
   );
@@ -623,7 +631,7 @@ export function createArenaV2A7FormalEvidenceStoreSnapshotManifestCandidateV1(
       source.createdAtUtc,
       'A7 Evidence Store Snapshot Manifest createdAtUtc',
     ),
-    formalEvidenceRecordIndexIdentityHash: assertEvidenceSha256(
+    formalEvidenceRecordIndexIdentityHash: assertDeterministicIdentityHash(
       source.formalEvidenceRecordIndexIdentityHash,
       'A7 Evidence Store Snapshot Manifest formalEvidenceRecordIndexIdentityHash',
     ),
@@ -631,10 +639,9 @@ export function createArenaV2A7FormalEvidenceStoreSnapshotManifestCandidateV1(
   });
   return Object.freeze({
     ...core,
-    snapshotIdentityHash: createDeterministicDataHash(
-      core,
-      'Arena V2 A7 formal Evidence Store Snapshot Manifest candidate V1',
-    ),
+    snapshotIdentityHash: createHash('sha256')
+      .update(canonicalReceiptJson(core, 'Arena V2 A7 formal Evidence Store Snapshot Manifest core'))
+      .digest('hex'),
   });
 }
 
@@ -919,7 +926,7 @@ export function createArenaV2A7FormalEvidenceStoreAdaptersCandidateV1(
       if (payload.verifiedEvidenceByteLength > maximumEvidenceBytesPerRecord) {
         throw new RangeError(`${name} Payload超过显式单记录边界。`);
       }
-      const verificationPayloadIdentityHash = assertEvidenceSha256(
+      const verificationPayloadIdentityHash = assertDeterministicIdentityHash(
         entry.verificationPayloadIdentityHash,
         `${name}.verificationPayloadIdentityHash`,
       );
@@ -948,15 +955,15 @@ export function createArenaV2A7FormalEvidenceStoreAdaptersCandidateV1(
         entry.verificationPayloadIdentityHash
       ))).size !== canonicalReceipts.length
     ) throw new RangeError('A7 Evidence Store回执批次数量或身份无效。');
-    const sessionIdentity = assertEvidenceSha256(
+    const sessionIdentity = assertDeterministicIdentityHash(
       writeRequest.verificationSessionIdentityHash,
       'A7 Evidence Store verificationSessionIdentityHash',
     );
-    const retrievalPlanIdentity = assertEvidenceSha256(
+    const retrievalPlanIdentity = assertDeterministicIdentityHash(
       writeRequest.retrievalPlanIdentityHash,
       'A7 Evidence Store retrievalPlanIdentityHash',
     );
-    const recordIndexIdentity = assertEvidenceSha256(
+    const recordIndexIdentity = assertDeterministicIdentityHash(
       writeRequest.recordIndexIdentityHash,
       'A7 Evidence Store recordIndexIdentityHash',
     );

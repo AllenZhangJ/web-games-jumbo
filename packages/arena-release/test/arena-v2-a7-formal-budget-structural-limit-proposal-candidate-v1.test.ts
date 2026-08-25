@@ -210,7 +210,7 @@ describe('Arena V2 A7 formal budget structural limit proposal candidate V1 (not 
       .toEqual(ARENA_STAGE7_FORMAL_ASSET_BUDGET_V2_CANDIDATE_ARTIFACTS.map(
         ({ decodedTextureFormat }) => decodedTextureFormat,
       ));
-    expect(proposal.structuralLimitProposalIdentity).toMatch(/^[a-f0-9]{64}$/u);
+    expect(proposal.structuralLimitProposalIdentity).toMatch(/^[a-f0-9]{8}$/u);
   });
 
   it('keeps zero headroom explicit for a later independent disposition', () => {

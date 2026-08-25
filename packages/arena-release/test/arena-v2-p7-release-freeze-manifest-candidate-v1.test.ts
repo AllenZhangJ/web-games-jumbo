@@ -168,6 +168,7 @@ function reportFixture(
   const toolchainIdentityHash = createArenaV2P7AutomationToolchainIdentityHashCandidateV1(
     TOOLCHAIN,
   );
+  const toolchainIdentitySha256 = sha(222);
   const automationEvidence = createArenaV2P7AutomationExecutionEvidenceCandidateV1({
     sourceCommit: evaluation.sourceCommit,
     sourceDirty: false,
@@ -177,6 +178,7 @@ function reportFixture(
     packageJsonSha256,
     packageLockSha256,
     toolchain: TOOLCHAIN,
+    toolchainIdentitySha256,
     runOrdinal: 1,
     attempt: 1,
     receipts: definition.suites.map((suite, index) => {
@@ -194,6 +196,7 @@ function reportFixture(
         packageJsonSha256,
         packageLockSha256,
         toolchainIdentityHash,
+        toolchainIdentitySha256,
         exitCode: status === 'not-run' ? null : status === 'passed' ? 0 : 1,
         stdoutSha256: status === 'not-run' ? null : sha(120 + index),
         stderrSha256: status === 'not-run' ? null : sha(160 + index),
@@ -212,7 +215,7 @@ function manifestOptions(report: ReturnType<typeof reportFixture>) {
       sourceCommit: report.candidateIdentity.sourceCommit,
       contentIdentityHash: report.candidateIdentity.contentIdentityHash,
       packageLockSha256: report.candidateIdentity.packageLockSha256,
-      toolchainIdentitySha256: report.candidateIdentity.toolchainIdentityHash,
+      toolchainIdentitySha256: report.candidateIdentity.toolchainIdentitySha256,
       environmentBuilds: report.candidateIdentity.environmentBuilds,
     }),
   };
@@ -283,7 +286,7 @@ describe('Arena V2 P7 release-freeze manifest candidate V1', () => {
       sourceCommit: report.candidateIdentity.sourceCommit,
       contentIdentityHash: report.candidateIdentity.contentIdentityHash,
       packageLockSha256: report.candidateIdentity.packageLockSha256,
-      toolchainIdentitySha256: report.candidateIdentity.toolchainIdentityHash,
+      toolchainIdentitySha256: report.candidateIdentity.toolchainIdentitySha256,
       environmentBuilds: report.candidateIdentity.environmentBuilds,
     });
     const manifest = createArenaV2P7ReleaseFreezeManifestCandidateV1({
@@ -356,7 +359,7 @@ describe('Arena V2 P7 release-freeze manifest candidate V1', () => {
     const lockDrift = createArenaV2A7FuturePassFixtureV3({
       ...options,
       packageLockSha256: 'f'.repeat(64),
-      toolchainIdentitySha256: report.candidateIdentity.toolchainIdentityHash,
+      toolchainIdentitySha256: report.candidateIdentity.toolchainIdentitySha256,
     });
     expect(() => createArenaV2P7ReleaseFreezeManifestCandidateV1({
       report,
@@ -380,7 +383,7 @@ describe('Arena V2 P7 release-freeze manifest candidate V1', () => {
       sourceCommit: report.candidateIdentity.sourceCommit,
       contentIdentityHash: report.candidateIdentity.contentIdentityHash,
       packageLockSha256: report.candidateIdentity.packageLockSha256,
-      toolchainIdentitySha256: report.candidateIdentity.toolchainIdentityHash,
+      toolchainIdentitySha256: report.candidateIdentity.toolchainIdentitySha256,
       environmentBuilds: report.candidateIdentity.environmentBuilds,
       formalBudgetEvidenceSha256: report.evidenceIndex[0]!.evidenceSha256!,
     });
@@ -396,7 +399,7 @@ describe('Arena V2 P7 release-freeze manifest candidate V1', () => {
       sourceCommit: report.candidateIdentity.sourceCommit,
       contentIdentityHash: report.candidateIdentity.contentIdentityHash,
       packageLockSha256: report.candidateIdentity.packageLockSha256,
-      toolchainIdentitySha256: report.candidateIdentity.toolchainIdentityHash,
+      toolchainIdentitySha256: report.candidateIdentity.toolchainIdentitySha256,
       environmentBuilds: report.candidateIdentity.environmentBuilds,
       verificationReceiptSha256Override:
         report.evidenceIndex[0]!.evidenceSha256!,
@@ -413,7 +416,7 @@ describe('Arena V2 P7 release-freeze manifest candidate V1', () => {
       sourceCommit: report.candidateIdentity.sourceCommit,
       contentIdentityHash: report.candidateIdentity.contentIdentityHash,
       packageLockSha256: report.candidateIdentity.packageLockSha256,
-      toolchainIdentitySha256: report.candidateIdentity.toolchainIdentityHash,
+      toolchainIdentitySha256: report.candidateIdentity.toolchainIdentitySha256,
       environmentBuilds: report.candidateIdentity.environmentBuilds,
     };
     const baseline = createArenaV2A7FuturePassFixtureV3(fixtureOptions);

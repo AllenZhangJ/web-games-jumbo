@@ -44,6 +44,7 @@ const RECORD_INDEX_IDENTITY = createDeterministicDataHash(
   RECORDS,
   'Arena V2 A7 formal evidence record index candidate V3',
 );
+const RETRIEVAL_PLAN_IDENTITY = 'a7e10090';
 
 const BYTES_BY_RECORD_ID = Object.freeze({
   'formal-budget:test-policy': new Uint8Array([1, 2, 3]),
@@ -81,7 +82,7 @@ function options(
 ) {
   return {
     formalEvidenceRecordIndex: RECORDS,
-    formalEvidenceRetrievalPlanIdentityHash: sha(90),
+    formalEvidenceRetrievalPlanIdentityHash: RETRIEVAL_PLAN_IDENTITY,
     formalEvidenceRecordIndexIdentityHash: RECORD_INDEX_IDENTITY,
     formalEvidenceStoreSnapshotIdentityHash: sha(91),
     verifierId: 'independent-evidence-verifier',
@@ -176,13 +177,13 @@ describe('Arena V2 A7 formal Evidence retrieval verifier candidate V1', () => {
     expect(result.formalEvidenceRecordVerificationDirectory).toHaveLength(2);
     expect(result.formalEvidenceRecordVerificationDirectory.every((entry) => (
       entry.formalEvidenceStoreSnapshotIdentityHash === sha(91)
-      && entry.formalEvidenceRetrievalPlanIdentityHash === sha(90)
+      && entry.formalEvidenceRetrievalPlanIdentityHash === RETRIEVAL_PLAN_IDENTITY
     ))).toBe(true);
     expect(result.verificationReceiptIndex.every((entry) => (
-      /^[a-f0-9]{64}$/u.test(entry.verificationPayloadIdentityHash)
+      /^[a-f0-9]{8}$/u.test(entry.verificationPayloadIdentityHash)
     ))).toBe(true);
-    expect(result.verificationReceiptIndexIdentityHash).toMatch(/^[a-f0-9]{64}$/u);
-    expect(result.identityHash).toMatch(/^[a-f0-9]{64}$/u);
+    expect(result.verificationReceiptIndexIdentityHash).toMatch(/^[a-f0-9]{8}$/u);
+    expect(result.identityHash).toMatch(/^[a-f0-9]{8}$/u);
     expect(verifier.state).toBe('completed');
     expect(verifier.getResult()).toBe(result);
   });
@@ -223,7 +224,7 @@ describe('Arena V2 A7 formal Evidence retrieval verifier candidate V1', () => {
       validHasher(),
       async (request) => ({
         ...receiptBatchResult(request),
-        verificationSessionIdentityHash: 'f'.repeat(64),
+        verificationSessionIdentityHash: 'f'.repeat(8),
       }),
     ));
     await expect(identityDrift.start()).rejects.toThrow(/batch writer identity发生漂移/u);
@@ -278,7 +279,7 @@ describe('Arena V2 A7 formal Evidence retrieval verifier candidate V1', () => {
     const base = options(validReader(), validHasher(), validWriter());
     expect(() => createArenaV2A7FormalEvidenceRetrievalVerifierCandidateV1({
       ...base,
-      formalEvidenceRecordIndexIdentityHash: 'f'.repeat(64),
+      formalEvidenceRecordIndexIdentityHash: 'f'.repeat(8),
     })).toThrow(/record index identity发生漂移/u);
     expect(() => createArenaV2A7FormalEvidenceRetrievalVerifierCandidateV1({
       ...base,

@@ -39,7 +39,7 @@ const PRODUCER_OPTION_KEYS = new Set([
   'sourceCommit', 'sourceDirty', 'contentIdentityHash',
   'preregistrationIdentityHash', 'evaluationIdentityHash',
   'packageJsonSha256', 'packageLockSha256', 'toolchain',
-  'runOrdinal', 'attempt', 'commandRunner',
+  'toolchainIdentitySha256', 'runOrdinal', 'attempt', 'commandRunner',
 ]);
 
 function captureExactDataRecord(
@@ -106,6 +106,7 @@ function canonicalProducerOptions(
     packageJsonSha256: source.packageJsonSha256,
     packageLockSha256: source.packageLockSha256,
     toolchain: source.toolchain,
+    toolchainIdentitySha256: source.toolchainIdentitySha256,
     runOrdinal: source.runOrdinal,
     attempt: source.attempt,
     commandRunner: source.commandRunner,

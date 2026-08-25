@@ -156,8 +156,8 @@ describe('Arena V2 A7 formal budget approved policy assembly candidate V1 (not r
         .structuralEnvironmentEvidenceRecords,
     );
     expect(assembly.approvedPolicyCandidate.policyContentHash)
-      .toMatch(/^[a-f0-9]{64}$/u);
-    expect(assembly.approvedPolicyAssemblyIdentity).toMatch(/^[a-f0-9]{64}$/u);
+      .toMatch(/^[a-f0-9]{8}$/u);
+    expect(assembly.approvedPolicyAssemblyIdentity).toMatch(/^[a-f0-9]{8}$/u);
   });
 
   it('rejects assembler role overlap and decision identity drift', () => {

@@ -2,13 +2,14 @@
 
 ## 1. 当前状态
 
-- 日期：2026-08-24
+- 日期：2026-08-25
 - implementation：`code-written-not-run`
 - gate：`incomplete`
 - `hardGate=false`
 - production reachability：`production-unreachable`
 - 默认 Release Bundle / Web / 微信 / 抖音入口：未接入
 - 2026-08-24 证据状态校正：当前 clean 基线`feature/arena-v2-design-docs@787ce27`已有`typecheck:app`与52包workspace build通过记录，P2候选测试记录为`351/421`且P3边界门通过；P7自动化/评价、严格性能、设备、真人、真实A7资产证据与发布动作仍全部`not-run`，上述通用构建记录不构成P7 gate或freeze资格。
+- 2026-08-25 候选自动化证据：`arena:p7:candidate:test`完成52包/11波构建、21个Vitest文件/166项和2个Node文件/24项；`check:p7:candidate-boundaries`、`typecheck:app`、`check:documentation`与`git diff --check`均通过。该证据只证明production-unreachable候选代码、夹具与治理脚本的当前一致性；24项正式自动化、29项评价、真实A7 V3、设备、真人、性能及任何freeze资格仍为`not-run`。
 
 本台账只记录 P7 版本化候选代码和延后验证入口已经写入；不把纯夹具中的未来 `PASS`、`advance` 或 freeze manifest 解释为真实执行证据。
 
@@ -52,8 +53,8 @@ A7 正式视觉/媒体冻结证据仍是独立前置证据候选，不加入上�
 
 ## 4. 已写但延后运行的门
 
-- `arena:p7:candidate:test`：9个 P7、A7视觉/媒体V1/V2/V3、A7结构预算证据、结构上限提案、预算独立批准、新Policy装配、正式预算V1、预算V2候选、A3–A6逐资产批准证据账本和资产就绪共20个 Vitest 文件，加1个版本化可达性 Node 文件；测试辅助同时保留当前130项全缺批准的真实不完整夹具、旧10项V1迁移反证和future-only V3 PASS，均不代表当前项目资产已批准。结构链测试数字只是假夹具，不能自行批准预算或打开hard gate。
-- `check:p7:candidate-boundaries`：9个P7候选、A7视觉/媒体V1/V2/V3、A7结构预算证据、结构上限提案、独立批准记录与新Policy装配、共享预算V1身份、`production-unreachable / proposed-not-approved`预算V2候选、130项全缺生产批准的证据账本和A3–A6资产就绪候选元数据；结构链各层只向下一层提供不可变输入，当前V2与当前`hardGate=false`保持不变，Freeze/Assembly只消费A7 schema V3。继续检查显式index导出、默认入口/既有Release Bundle不可达和无发布能力。
+- `arena:p7:candidate:test`：2026-08-25 已执行通过：52包/11波构建、21个Vitest文件/166项、2个版本化Node文件/24项。测试辅助中的future-only V3 PASS仍不代表当前项目资产批准或P7实际执行。
+- `check:p7:candidate-boundaries`：2026-08-25 已执行通过，输出`candidateFileCount=9 / a7EvidenceCandidateCount=3 / formalAssetPrerequisiteCandidateCount=24 / deferredTestFileCount=35 / hardGate=false`；继续检查默认入口/既有Release Bundle不可达和无发布能力。
 - `P7.10-a7-final-freeze-prerequisite-code-written-not-run`：最终freeze manifest从单一报告输入收紧为报告+A7双输入；assembly启动前冻结并校验A7身份，功能报告PASS但A7未通过时结果仍完整完成且`releaseFreezeManifest=null`。随后补充项目正式目录专用只读子入口，freeze/assembly逐项绑定当前130项资产；旧10项V1 PASS夹具只能作为自选目录绕过反证，不能再生成资格。当前真实A7仍无PASS实例，130项候选资产也未被V1十项预算或任何测试夹具越权批准；本批未运行测试、类型、构建或治理命令。
 - `P7.11-a7-v2-current-catalog-budget-closure-code-written-not-run`：新增A7 V2，复用V1证据封套并以单一入口同时绑定当前Catalog identity、130项逐资产来源账本和预算V2字节身份；P7 Freeze/Assembly删除重复映射并只接受V2。预算候选批准、结构上限、真实observation、六环境和人工证据仍缺失，故V2固定`hardGate=false / formalVisualMediaReady=false`。V2单测、runner、治理与不可达检查已登记但未运行。
 - `P7.12-a7-structural-budget-evidence-submission-and-independent-evaluation-code-written-not-run`：新增130项资产结构/内存与六环境观察的exact-key提交合同，以及独立reviewer评估合同。Accepted仅证明证据身份/覆盖可供后续上限提案，绝不定义或批准预算；独立批准由P7.14承接，真实测量和全部运行验证顺延。
@@ -116,13 +117,14 @@ A7 正式视觉/媒体冻结证据仍是独立前置证据候选，不加入上�
 - `P7.69-a7-receipt-parent-directory-identity-pinning-code-written-not-run`：Factory首次Writer调用固定预配置`verification-receipts`治理父目录的真实路径与device/inode，后续批次写入前及`committed`回读返回前复核；父目录符号链接在同一Root内改指另一目录也失败关闭。首次捕获失败粘滞，不创建或接管父目录；延期双回执库改指反证已写未运行。
 - `P7.70-a7-receipt-metadata-canonical-serializer-single-source-code-written-not-run`：Writer生成回执metadata sidecar时直接调用P7.61公开规范序列化器，原始Evidence与回执metadata不再各自维护JSON字段顺序或文本表示。`committed`回读仍核对同一字节/长度/SHA；延期落盘文本与公开序列化器等价反证已写未运行。
 - `P7.71-a7-receipt-body-canonical-serializer-single-source-code-written-not-run`：新增公开回执正文规范序列化器，精确重建外层Session/Plan/Index/Snapshot、完整Verification Payload与Payload Identity并校验内外身份闭合；Writer只消费该序列化结果生成待写字节，不再独立拼接回执JSON。延期字段重排等价与内外身份漂移反证已写未运行。
+- `P7.72-candidate-identity-domain-and-automation-closure-code-written-not-run`：automation manifest补入遗失的`sourceDirty=false` canonical字段；外部`toolchainIdentitySha256`与内部短确定性toolchain identity分域并贯穿24项回执、报告、Assembly和Freeze；A7 V3/Verifier/Node Store将Plan、Index、Session和Payload的8位确定性身份与64位外部SHA分开校验，Snapshot Manifest以其规范核心UTF-8字节派生SHA-256。首轮57项候选红中的identity/schema/fixture/governance漂移已修。候选自动化、boundary、类型、文档与diff检查已执行通过；不生成真实A7证据、不授予PASS、不接默认Release或三端入口。
 - `arena:p7:candidate:gate`：先跑边界检查，再跑候选测试。
 - `project-reference-closure-code-written-not-run`：补齐活跃复合项目`arena-product-progression`对Definitions/Storage、`arena-platform-runtime`对Platform Contracts，以及P7证据工具`arena-input-pilot`对其manifest既有六个workspace依赖的TypeScript project references；只修编译图，不新增依赖、不修改锁文件，也不恢复或接入V1产品行为。V1 experiment/application/greybox其余缺引用，以及`arena-v1-experiment`缺少`arena-core` manifest声明，继续作为历史迁移债务留待对应旧链删除或独立治理，本批不维护且不接生产。
 - `root-project-reference-closure-code-written-not-run`：根`tsconfig.json`已写入52/52个`packages/*`复合项目引用，治理源码从`createWorkspaceBuildPlan()`识别的全部workspace项目目录派生期望集合，对根references规范化后检查缺失、额外与重复，不维护第二份52项手工清单。实际workspace构建波次仍只由manifest内部依赖图推导；本批未运行测试、类型或构建验证。`arena-v1-experiment`缺`arena-core` manifest/reference仍是历史删除债务，本批不背书、不修复且不恢复V1产品。
 - `authority-boundary-dependency-closure-code-written-not-run`：Action Phase、Match Phase与Participant Status下沉到`arena-contracts`单一冻结契约源，Core/Match只消费并兼容重导出同一对象；`arena-bot`移除Match依赖，角色自动踏步高度与tick时长分别由受限Arena视图和Bot构造显式注入，不再读取Physics/Match默认值；`arena-presentation-runtime`改从Definitions正式单位读取tick rate并移除Match依赖。manifest、project references与workspace lock同步更新；V1删除债、默认Registry/Composition/入口和生产资产状态均未改变。
 - `snapshot-authority-enum-closure-code-written-not-run`：`ArenaMatchSnapshot`/`WorldSnapshotV2`的Match Phase、Participant Status与Action Phase类型及unknown审计均改为复用`arena-authority-state`私有集合纯断言，V3通用phase亦复用同源校验；Map occurrence phase、Movement mode、Action commitment status与Race模式专属状态保持原合同。Bot受限观察同步收紧三类静态字段且不新增依赖；未运行测试、类型、构建或阶段门。默认Registry/Composition/入口、V1删除债与美术门均未改变。
 
-以上命令本批均未运行。当前结论只能是 `code-written-not-run / incomplete / hardGate=false`。
+2026-08-25 前述P7候选命令已按本节记录执行通过；严格性能、设备、真人、真实24项自动化、29项评价、真实A7 V3与发布仍未运行。当前结论仍只能是 `code-written-not-run / incomplete / hardGate=false`。
 
 ## 5. 七维静态自检
 

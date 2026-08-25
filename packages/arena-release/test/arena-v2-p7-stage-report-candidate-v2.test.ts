@@ -155,6 +155,7 @@ function automationFixture(
   const toolchainIdentityHash = createArenaV2P7AutomationToolchainIdentityHashCandidateV1(
     TOOLCHAIN,
   );
+  const toolchainIdentitySha256 = sha(222);
   return createArenaV2P7AutomationExecutionEvidenceCandidateV1({
     sourceCommit: evaluation.sourceCommit,
     sourceDirty: false,
@@ -164,6 +165,7 @@ function automationFixture(
     packageJsonSha256,
     packageLockSha256,
     toolchain: TOOLCHAIN,
+    toolchainIdentitySha256,
     runOrdinal: 1,
     attempt: 1,
     receipts: definition.suites.map((suite, index) => {
@@ -181,6 +183,7 @@ function automationFixture(
         packageJsonSha256,
         packageLockSha256,
         toolchainIdentityHash,
+        toolchainIdentitySha256,
         exitCode: status === 'not-run' ? null : status === 'passed' ? 0 : 1,
         stdoutSha256: status === 'not-run' ? null : sha(120 + index),
         stderrSha256: status === 'not-run' ? null : sha(160 + index),

@@ -82,7 +82,7 @@ describe('Arena V2 A7 formal budget independent approval decision candidate V1 (
       writesFilesOrPolicy: false,
       publishesRelease: false,
     });
-    expect(decision.independentApprovalDecisionIdentity).toMatch(/^[a-f0-9]{64}$/u);
+    expect(decision.independentApprovalDecisionIdentity).toMatch(/^[a-f0-9]{8}$/u);
   });
 
   it('requires exact accepted dispositions for every zero-headroom target', () => {

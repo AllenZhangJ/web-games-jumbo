@@ -134,7 +134,7 @@ describe('Arena V2 A7 formal budget structural evidence candidate V1 (not run)',
       runsMeasurementTools: false,
       writesFilesOrEvidence: false,
     });
-    expect(submission.submissionIdentity).toMatch(/^[a-f0-9]{64}$/u);
+    expect(submission.submissionIdentity).toMatch(/^[a-f0-9]{8}$/u);
   });
 
   it('accepts independently verified evidence identity but still does not define limits', () => {
@@ -152,7 +152,7 @@ describe('Arena V2 A7 formal budget structural evidence candidate V1 (not run)',
       hardGateUsable: false,
       publishesRelease: false,
     });
-    expect(evaluation.evaluationIdentity).toMatch(/^[a-f0-9]{64}$/u);
+    expect(evaluation.evaluationIdentity).toMatch(/^[a-f0-9]{8}$/u);
 
     const projection = createArenaV2A7FormalBudgetEvidenceProjectionCandidateV1({
       evaluationInput: acceptedEvaluationInput(),

@@ -54,6 +54,7 @@ export interface ArenaV2P7AutomationSuiteReceiptCandidateV1 {
   readonly packageJsonSha256: string;
   readonly packageLockSha256: string;
   readonly toolchainIdentityHash: string;
+  readonly toolchainIdentitySha256: string;
   readonly exitCode: number | null;
   readonly stdoutSha256: string | null;
   readonly stderrSha256: string | null;
@@ -70,6 +71,7 @@ export interface ArenaV2P7AutomationExecutionEvidenceOptionsCandidateV1 {
   readonly packageJsonSha256: string;
   readonly packageLockSha256: string;
   readonly toolchain: ArenaV2P7AutomationToolchainIdentityCandidateV1;
+  readonly toolchainIdentitySha256: string;
   readonly runOrdinal: number;
   readonly attempt: number;
   readonly receipts: readonly ArenaV2P7AutomationSuiteReceiptCandidateV1[];
@@ -79,7 +81,7 @@ const OPTION_KEYS = new Set([
   'sourceCommit', 'sourceDirty', 'contentIdentityHash',
   'preregistrationIdentityHash', 'evaluationIdentityHash',
   'packageJsonSha256', 'packageLockSha256', 'toolchain',
-  'runOrdinal', 'attempt', 'receipts',
+  'toolchainIdentitySha256', 'runOrdinal', 'attempt', 'receipts',
 ]);
 const TOOLCHAIN_KEYS = new Set([
   'nodeVersion', 'npmVersion', 'platform', 'architecture', 'typescriptVersion',
@@ -89,7 +91,7 @@ const RECEIPT_KEYS = new Set([
   'suiteId', 'status', 'runOrdinal', 'attempt', 'commandDefinitionHash',
   'sourceCommit', 'contentIdentityHash', 'preregistrationIdentityHash',
   'evaluationIdentityHash', 'packageJsonSha256', 'packageLockSha256',
-  'toolchainIdentityHash', 'exitCode', 'stdoutSha256', 'stderrSha256',
+  'toolchainIdentityHash', 'toolchainIdentitySha256', 'exitCode', 'stdoutSha256', 'stderrSha256',
   'aggregateOutputSha256', 'evidenceSha256',
 ]);
 const STORED_MANIFEST_KEYS = new Set([
@@ -97,6 +99,7 @@ const STORED_MANIFEST_KEYS = new Set([
   'definition', 'definitionIdentityHash', 'sourceCommit', 'sourceDirty',
   'contentIdentityHash', 'preregistrationIdentityHash', 'evaluationIdentityHash',
   'packageJsonSha256', 'packageLockSha256', 'toolchain', 'toolchainIdentityHash',
+  'toolchainIdentitySha256',
   'runOrdinal', 'attempt', 'receipts', 'automationStatus', 'hardGate',
   'manifestIdentityHash',
 ]);
@@ -233,6 +236,7 @@ interface ExpectedExecutionIdentity {
   readonly packageJsonSha256: string;
   readonly packageLockSha256: string;
   readonly toolchainIdentityHash: string;
+  readonly toolchainIdentitySha256: string;
   readonly runOrdinal: number;
   readonly attempt: number;
 }
@@ -277,6 +281,10 @@ function normalizeReceipt(
     value.toolchainIdentityHash,
     `receipt ${suite.suiteId}.toolchainIdentityHash`,
   );
+  const receiptToolchainIdentitySha256 = assertEvidenceSha256(
+    value.toolchainIdentitySha256,
+    `receipt ${suite.suiteId}.toolchainIdentitySha256`,
+  );
   if (
     sourceCommit !== expected.sourceCommit
     || receiptContentIdentityHash !== expected.contentIdentityHash
@@ -285,6 +293,7 @@ function normalizeReceipt(
     || packageJsonSha256 !== expected.packageJsonSha256
     || packageLockSha256 !== expected.packageLockSha256
     || receiptToolchainIdentityHash !== expected.toolchainIdentityHash
+    || receiptToolchainIdentitySha256 !== expected.toolchainIdentitySha256
     || runOrdinal !== expected.runOrdinal
     || attempt !== expected.attempt
   ) throw new RangeError(`P7 automation receipt ${suite.suiteId}执行身份发生混用。`);
@@ -337,6 +346,7 @@ function normalizeReceipt(
     packageJsonSha256,
     packageLockSha256,
     toolchainIdentityHash: receiptToolchainIdentityHash,
+    toolchainIdentitySha256: receiptToolchainIdentitySha256,
     exitCode,
     stdoutSha256,
     stderrSha256,
@@ -372,6 +382,10 @@ export function createArenaV2P7AutomationExecutionEvidenceCandidateV1(value: unk
   const packageLockSha256 = assertEvidenceSha256(source.packageLockSha256, 'P7 automation packageLockSha256');
   const toolchain = normalizeToolchain(source.toolchain);
   const toolchainIdentityHash = createArenaV2P7AutomationToolchainIdentityHashCandidateV1(toolchain);
+  const toolchainIdentitySha256 = assertEvidenceSha256(
+    source.toolchainIdentitySha256,
+    'P7 automation toolchainIdentitySha256',
+  );
   const runOrdinal = positiveSafeInteger(source.runOrdinal, 'P7 automation runOrdinal');
   const attempt = positiveSafeInteger(source.attempt, 'P7 automation attempt');
   const receiptValues = source.receipts;
@@ -383,12 +397,14 @@ export function createArenaV2P7AutomationExecutionEvidenceCandidateV1(value: unk
   }
   const expectedIdentity = Object.freeze({
     sourceCommit,
+    sourceDirty: false as const,
     contentIdentityHash,
     preregistrationIdentityHash,
     evaluationIdentityHash,
     packageJsonSha256,
     packageLockSha256,
     toolchainIdentityHash,
+    toolchainIdentitySha256,
     runOrdinal,
     attempt,
   });
@@ -450,6 +466,7 @@ export function validateArenaV2P7AutomationExecutionEvidenceCandidateV1(
     packageJsonSha256: source.packageJsonSha256,
     packageLockSha256: source.packageLockSha256,
     toolchain: source.toolchain,
+    toolchainIdentitySha256: source.toolchainIdentitySha256,
     runOrdinal: source.runOrdinal,
     attempt: source.attempt,
     receipts: source.receipts,

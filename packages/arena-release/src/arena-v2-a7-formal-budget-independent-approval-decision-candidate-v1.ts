@@ -395,6 +395,7 @@ export const ARENA_V2_A7_FORMAL_BUDGET_INDEPENDENT_APPROVAL_DECISION_CANDIDATE_V
     sharedEvidenceValueContractRequired: true as const,
     canonicalAsciiIdentifiersAndWhitespaceFreeLocatorsRequired: true as const,
     environmentEvidenceRecordsRemainDistinctFromGovernanceRecords: true as const,
+    evidenceRecordLocatorsAndHashesMustRemainDomainDistinct: true as const,
     approvedDecisionOnlyFeedsNewImmutablePolicyAssembly: true as const,
     decisionRecordDoesNotMutateCurrentV2Policy: true as const,
     grantsBudgetApproval: false as const,

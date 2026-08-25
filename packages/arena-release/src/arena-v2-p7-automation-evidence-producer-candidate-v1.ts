@@ -38,6 +38,7 @@ export interface ArenaV2P7AutomationCommandRequestCandidateV1 {
   readonly packageLockSha256: string;
   readonly toolchain: Readonly<ArenaV2P7AutomationToolchainIdentityCandidateV1>;
   readonly toolchainIdentityHash: string;
+  readonly toolchainIdentitySha256: string;
   readonly runOrdinal: number;
   readonly attempt: number;
 }
@@ -53,6 +54,7 @@ export interface ArenaV2P7AutomationCommandResultCandidateV1 {
   readonly packageJsonSha256: string;
   readonly packageLockSha256: string;
   readonly toolchainIdentityHash: string;
+  readonly toolchainIdentitySha256: string;
   readonly runOrdinal: number;
   readonly attempt: number;
   readonly exitCode: number;
@@ -75,6 +77,7 @@ export interface ArenaV2P7AutomationEvidenceProducerOptionsCandidateV1 {
   readonly packageJsonSha256: string;
   readonly packageLockSha256: string;
   readonly toolchain: Readonly<ArenaV2P7AutomationToolchainIdentityCandidateV1>;
+  readonly toolchainIdentitySha256: string;
   readonly runOrdinal: number;
   readonly attempt: number;
   readonly commandRunner: ArenaV2P7AutomationCommandRunnerCandidateV1;
@@ -90,6 +93,7 @@ interface CanonicalExecutionIdentity {
   readonly packageLockSha256: string;
   readonly toolchain: Readonly<ArenaV2P7AutomationToolchainIdentityCandidateV1>;
   readonly toolchainIdentityHash: string;
+  readonly toolchainIdentitySha256: string;
   readonly runOrdinal: number;
   readonly attempt: number;
 }
@@ -98,13 +102,13 @@ const OPTION_KEYS = new Set([
   'sourceCommit', 'sourceDirty', 'contentIdentityHash',
   'preregistrationIdentityHash', 'evaluationIdentityHash',
   'packageJsonSha256', 'packageLockSha256', 'toolchain',
-  'runOrdinal', 'attempt', 'commandRunner',
+  'toolchainIdentitySha256', 'runOrdinal', 'attempt', 'commandRunner',
 ]);
 const RESULT_KEYS = new Set([
   'suiteId', 'directoryIdentityHash', 'commandDefinitionHash',
   'sourceCommit', 'contentIdentityHash', 'preregistrationIdentityHash',
   'evaluationIdentityHash', 'packageJsonSha256', 'packageLockSha256',
-  'toolchainIdentityHash', 'runOrdinal', 'attempt', 'exitCode',
+  'toolchainIdentityHash', 'toolchainIdentitySha256', 'runOrdinal', 'attempt', 'exitCode',
   'stdoutSha256', 'stderrSha256', 'aggregateOutputSha256', 'evidenceSha256',
 ]);
 const NATIVE_PROMISE_THEN = Promise.prototype.then;
@@ -181,6 +185,7 @@ function createNotRunReceipt(
     packageJsonSha256: identity.packageJsonSha256,
     packageLockSha256: identity.packageLockSha256,
     toolchainIdentityHash: identity.toolchainIdentityHash,
+    toolchainIdentitySha256: identity.toolchainIdentitySha256,
     exitCode: null,
     stdoutSha256: null,
     stderrSha256: null,
@@ -206,6 +211,7 @@ function createBootstrapManifest(
     packageLockSha256: source.packageLockSha256,
     toolchain: source.toolchain,
     toolchainIdentityHash,
+    toolchainIdentitySha256: source.toolchainIdentitySha256,
     runOrdinal: source.runOrdinal,
     attempt: source.attempt,
   });
@@ -218,6 +224,7 @@ function createBootstrapManifest(
     packageJsonSha256: rawIdentity.packageJsonSha256,
     packageLockSha256: rawIdentity.packageLockSha256,
     toolchain: rawIdentity.toolchain,
+    toolchainIdentitySha256: rawIdentity.toolchainIdentitySha256,
     runOrdinal: rawIdentity.runOrdinal,
     attempt: rawIdentity.attempt,
     receipts: definition.suites.map((suite) => ({
@@ -233,6 +240,7 @@ function createBootstrapManifest(
       packageJsonSha256: rawIdentity.packageJsonSha256,
       packageLockSha256: rawIdentity.packageLockSha256,
       toolchainIdentityHash,
+      toolchainIdentitySha256: rawIdentity.toolchainIdentitySha256,
       exitCode: null,
       stdoutSha256: null,
       stderrSha256: null,
@@ -255,6 +263,7 @@ function canonicalIdentity(
     packageLockSha256: manifest.packageLockSha256,
     toolchain: manifest.toolchain,
     toolchainIdentityHash: manifest.toolchainIdentityHash,
+    toolchainIdentitySha256: manifest.toolchainIdentitySha256,
     runOrdinal: manifest.runOrdinal,
     attempt: manifest.attempt,
   });
@@ -297,6 +306,7 @@ function normalizeCommandResult(
     ['packageJsonSha256', request.packageJsonSha256],
     ['packageLockSha256', request.packageLockSha256],
     ['toolchainIdentityHash', request.toolchainIdentityHash],
+    ['toolchainIdentitySha256', request.toolchainIdentitySha256],
     ['runOrdinal', request.runOrdinal],
     ['attempt', request.attempt],
   ] as const;
@@ -332,6 +342,7 @@ function normalizeCommandResult(
     packageJsonSha256: request.packageJsonSha256,
     packageLockSha256: request.packageLockSha256,
     toolchainIdentityHash: request.toolchainIdentityHash,
+    toolchainIdentitySha256: request.toolchainIdentitySha256,
     runOrdinal: request.runOrdinal,
     attempt: request.attempt,
     exitCode,
@@ -361,6 +372,7 @@ function createExecutedReceipt(
     packageJsonSha256: result.packageJsonSha256,
     packageLockSha256: result.packageLockSha256,
     toolchainIdentityHash: result.toolchainIdentityHash,
+    toolchainIdentitySha256: result.toolchainIdentitySha256,
     exitCode: result.exitCode,
     stdoutSha256: result.stdoutSha256,
     stderrSha256: result.stderrSha256,
@@ -461,6 +473,7 @@ export class ArenaV2P7AutomationEvidenceProducerCandidateV1 {
         packageJsonSha256: identity.packageJsonSha256,
         packageLockSha256: identity.packageLockSha256,
         toolchain: identity.toolchain,
+        toolchainIdentitySha256: identity.toolchainIdentitySha256,
         runOrdinal: identity.runOrdinal,
         attempt: identity.attempt,
         receipts,

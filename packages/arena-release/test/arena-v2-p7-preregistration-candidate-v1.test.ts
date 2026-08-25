@@ -121,7 +121,7 @@ describe('Arena V2 P7 preregistration candidate V1', () => {
     expect(() => createArenaV2P7PreregistrationCandidateV1({
       ...options(),
       futureField: true,
-    })).toThrow(/未知字段|known/i);
+    })).toThrow(/不支持字段/u);
   });
 
   it('does not allow weak sample or human-readability thresholds to masquerade as flagship', () => {

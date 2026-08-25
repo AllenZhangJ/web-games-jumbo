@@ -339,6 +339,7 @@ export const ARENA_V2_A7_FORMAL_BUDGET_APPROVED_POLICY_ASSEMBLY_CANDIDATE_V1 =
     sharedEvidenceValueContractRequired: true as const,
     canonicalAsciiIdentifiersAndWhitespaceFreeLocatorsRequired: true as const,
     environmentEvidenceRecordsRemainDistinctFromGovernanceRecords: true as const,
+    evidenceRecordLocatorsAndHashesMustRemainDomainDistinct: true as const,
     approvedPolicyRetainsBaseEncodedMediaFormatIdentity: true as const,
     approvedPolicyRetainsBaseTextureDecodedMetadataIdentity: true as const,
     approvedPolicyRetainsAcceptedDecodedAudioObservation: true as const,

@@ -129,7 +129,7 @@ function assertFormalVisualMediaBuildSourceIdentity(
     approvedPolicySource.packageLockSha256
       !== report.candidateIdentity.packageLockSha256
     || approvedPolicySource.toolchainIdentitySha256
-      !== report.candidateIdentity.toolchainIdentityHash
+      !== report.candidateIdentity.toolchainIdentitySha256
   ) {
     throw new RangeError('P7 release-freeze assembly的A7与功能报告package lock或toolchain身份漂移。');
   }

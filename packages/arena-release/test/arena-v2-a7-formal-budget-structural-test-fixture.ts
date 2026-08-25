@@ -121,7 +121,7 @@ function acceptedEvaluationInput(
     environmentCoverageVerified: true,
     sourceAndBuildIdentityVerified: true,
     verificationRecordLocator: 'evidence://arena-v2/a7/structural/evaluation-001',
-    verificationRecordSha256: 'e'.repeat(64),
+    verificationRecordSha256: 'e1d2c3b4'.repeat(8),
     reviewerId: 'structural-evidence-reviewer-001',
     reviewedAtUtc: '2026-08-15T13:00:00.000Z',
     decision: 'accepted',
@@ -186,7 +186,7 @@ export function createArenaV2A7StructuralLimitProposalTestInput(
     ),
     headroomRationale: '测试专用未来上限提案，不代表当前预算批准。',
     proposalRecordLocator: 'evidence://arena-v2/a7/structural-limit/proposal-001',
-    proposalRecordSha256: 'f'.repeat(64),
+    proposalRecordSha256: 'f1e2d3c4'.repeat(8),
     notes: null,
   };
 }
@@ -228,7 +228,7 @@ export function createArenaV2A7BudgetIndependentApprovalTestInput(
         })),
       ],
     decisionRecordLocator: 'evidence://arena-v2/a7/structural-budget/decision-001',
-    decisionRecordSha256: '1'.repeat(64),
+    decisionRecordSha256: 'a1b2c3d4'.repeat(8),
     reasonIds: [
       'structural-limits-headroom-and-lifecycle-independently-approved',
     ],

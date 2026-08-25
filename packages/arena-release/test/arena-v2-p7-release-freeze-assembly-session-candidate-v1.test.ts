@@ -4,9 +4,6 @@ import type {
   ArenaV2P7AutomationCommandRunnerCandidateV1,
 } from '../src/arena-v2-p7-automation-evidence-producer-candidate-v1.js';
 import {
-  createArenaV2P7AutomationToolchainIdentityHashCandidateV1,
-} from '../src/arena-v2-p7-automation-execution-evidence-candidate-v1.js';
-import {
   evaluateArenaV2P7EvidenceCandidateV1,
   type ArenaV2P7IndependentAuditDecisionCandidateV1,
 } from '../src/arena-v2-p7-evidence-evaluation-candidate-v1.js';
@@ -147,6 +144,7 @@ function runnerResult(
     packageJsonSha256: request.packageJsonSha256,
     packageLockSha256: request.packageLockSha256,
     toolchainIdentityHash: request.toolchainIdentityHash,
+    toolchainIdentitySha256: request.toolchainIdentitySha256,
     runOrdinal: request.runOrdinal,
     attempt: request.attempt,
     exitCode,
@@ -163,8 +161,7 @@ function sessionOptions(
 ) {
   const evaluation = evaluationFixture(auditDecision);
   const packageLockSha256 = sha(221);
-  const toolchainIdentitySha256 =
-    createArenaV2P7AutomationToolchainIdentityHashCandidateV1(TOOLCHAIN);
+  const toolchainIdentitySha256 = sha(222);
   return {
     evaluation,
     formalVisualMediaEvidence: createArenaV2A7CurrentCatalogIncompleteFixtureV3({
@@ -183,6 +180,7 @@ function sessionOptions(
       packageJsonSha256: sha(220),
       packageLockSha256,
       toolchain: { ...TOOLCHAIN },
+      toolchainIdentitySha256,
       runOrdinal: 1,
       attempt: 1,
       commandRunner,
@@ -222,10 +220,7 @@ describe('Arena V2 P7 release-freeze assembly session candidate V1', () => {
       sourceCommit: base.evaluation.sourceCommit,
       contentIdentityHash: base.evaluation.contentIdentityHash,
       packageLockSha256: base.producerOptions.packageLockSha256,
-      toolchainIdentitySha256:
-        createArenaV2P7AutomationToolchainIdentityHashCandidateV1(
-          base.producerOptions.toolchain,
-        ),
+      toolchainIdentitySha256: base.producerOptions.toolchainIdentitySha256,
       environmentBuilds: base.evaluation.preregistration.environmentBuilds,
     });
     const session = createArenaV2P7ReleaseFreezeAssemblySessionCandidateV1({
@@ -253,10 +248,7 @@ describe('Arena V2 P7 release-freeze assembly session candidate V1', () => {
       sourceCommit: base.evaluation.sourceCommit,
       contentIdentityHash: base.evaluation.contentIdentityHash,
       packageLockSha256: 'f'.repeat(64),
-      toolchainIdentitySha256:
-        createArenaV2P7AutomationToolchainIdentityHashCandidateV1(
-          base.producerOptions.toolchain,
-        ),
+      toolchainIdentitySha256: base.producerOptions.toolchainIdentitySha256,
       environmentBuilds: base.evaluation.preregistration.environmentBuilds,
     });
     const session = createArenaV2P7ReleaseFreezeAssemblySessionCandidateV1({

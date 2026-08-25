@@ -111,7 +111,7 @@ function assertEligibleFormalVisualMediaEvidence(
     approvedPolicySource.packageLockSha256
       !== report.candidateIdentity.packageLockSha256
     || approvedPolicySource.toolchainIdentitySha256
-      !== report.candidateIdentity.toolchainIdentityHash
+      !== report.candidateIdentity.toolchainIdentitySha256
   ) {
     throw new RangeError('P7 release-freeze的A7结构测量与功能报告package lock或toolchain身份漂移。');
   }
@@ -311,6 +311,7 @@ export function createArenaV2P7ReleaseFreezeManifestCandidateV1(value: unknown) 
       packageLockSha256: report.candidateIdentity.packageLockSha256,
       toolchain: report.candidateIdentity.toolchain,
       toolchainIdentityHash: report.candidateIdentity.toolchainIdentityHash,
+      toolchainIdentitySha256: report.candidateIdentity.toolchainIdentitySha256,
       automationDefinitionIdentityHash:
         report.candidateIdentity.automationDefinitionIdentityHash,
       automationManifestIdentityHash: report.candidateIdentity.automationManifestIdentityHash,

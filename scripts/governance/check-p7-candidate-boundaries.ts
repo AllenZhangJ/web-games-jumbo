@@ -23,6 +23,8 @@ const A7_FORMAL_EVIDENCE_RETRIEVAL_VERIFIER_FILE =
   'arena-v2-a7-formal-evidence-retrieval-verifier-candidate-v1.ts';
 const A7_FORMAL_EVIDENCE_RETRIEVAL_VERIFIER_TEST_FILE =
   'arena-v2-a7-formal-evidence-retrieval-verifier-candidate-v1.test.ts';
+const A7_FORMAL_BUDGET_EVIDENCE_VALUE_FILE =
+  'arena-v2-a7-formal-budget-evidence-value-candidate-v1.ts';
 const A7_FORMAL_EVIDENCE_STORE_ADAPTER_FILE =
   'scripts/lib/arena-a7-formal-evidence-store-adapters-candidate-v1.ts';
 const A7_FORMAL_EVIDENCE_STORE_ADAPTER_TEST_FILE =
@@ -85,6 +87,7 @@ const CANDIDATE_FILE_SET = new Set<string>([
   ...P7_FILES,
   ...A7_FILES,
   A7_FORMAL_EVIDENCE_RETRIEVAL_VERIFIER_FILE,
+  A7_FORMAL_BUDGET_EVIDENCE_VALUE_FILE,
   A7_STRUCTURAL_BUDGET_EVIDENCE_FILE,
   A7_STRUCTURAL_BUDGET_LIMIT_PROPOSAL_FILE,
   A7_STRUCTURAL_BUDGET_INDEPENDENT_APPROVAL_FILE,

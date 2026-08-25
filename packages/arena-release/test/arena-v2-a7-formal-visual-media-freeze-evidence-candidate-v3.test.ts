@@ -50,7 +50,7 @@ function v3Input(futurePass: boolean) {
   );
   const fixtureOptions = {
     sourceCommit: assembly.approvedPolicyCandidate.sourceIdentity.sourceCommit,
-    contentIdentityHash: 'future-current-catalog-content-identity',
+    contentIdentityHash: 'f0a1c0de',
     environmentBuilds: assembly.approvedPolicyCandidate.environments.map((entry) => ({
       environmentId: entry.environmentId,
       buildIdentitySha256: entry.buildIdentitySha256,
@@ -193,12 +193,12 @@ describe('Arena V2 A7 formal visual/media freeze evidence candidate V3 (not run)
         0,
       ),
     );
-    expect(evidence.formalEvidenceRecordIndexIdentityHash).toMatch(/^[a-f0-9]{64}$/u);
+    expect(evidence.formalEvidenceRecordIndexIdentityHash).toMatch(/^[a-f0-9]{8}$/u);
     expect(evidence.formalEvidenceRecordVerificationIndex).toHaveLength(
       evidence.formalEvidenceRecordIndex.length,
     );
     expect(evidence.formalEvidenceRecordVerificationIndexIdentityHash)
-      .toMatch(/^[a-f0-9]{64}$/u);
+      .toMatch(/^[a-f0-9]{8}$/u);
     expect(evidence.coverageSummary.formalEvidenceVerificationReceiptCount)
       .toBe(evidence.formalEvidenceRecordIndex.length);
     expect(evidence.coverageSummary.totalFormalEvidenceVerificationReceiptBytes).toBe(
@@ -236,12 +236,12 @@ describe('Arena V2 A7 formal visual/media freeze evidence candidate V3 (not run)
       .toBe(evidence.formalEvidenceRecordIndexIdentityHash);
     expect(plan.formalEvidenceStoreSnapshotIdentityHash)
       .toBe(evidence.formalEvidenceStoreSnapshotIdentityHash);
-    expect(plan.retrievalPlanIdentityHash).toMatch(/^[a-f0-9]{64}$/u);
+    expect(plan.retrievalPlanIdentityHash).toMatch(/^[a-f0-9]{8}$/u);
 
     expect(() => createArenaV2A7FormalEvidenceRetrievalPlanCandidateV3({
       legacyEvidence: input.evidence.legacyEvidence,
       approvedPolicyAssemblyInput: input.evidence.approvedPolicyAssemblyInput,
-      approvedPolicyAssemblyIdentity: 'f'.repeat(64),
+      approvedPolicyAssemblyIdentity: 'f'.repeat(8),
       formalEvidenceRecordLocatorDirectory:
         input.evidence.formalEvidenceRecordLocatorDirectory,
       formalEvidenceStoreSnapshotIdentityHash:
@@ -336,7 +336,7 @@ describe('Arena V2 A7 formal visual/media freeze evidence candidate V3 (not run)
 
   it('rejects assembly identity, source and environment drift', () => {
     const identityDrift = v3Input(true);
-    identityDrift.evidence.approvedPolicyAssemblyIdentity = '0'.repeat(64);
+    identityDrift.evidence.approvedPolicyAssemblyIdentity = '0'.repeat(8);
     expect(() => evaluateArenaV2A7FormalVisualMediaFreezeEvidenceCandidateV3(
       identityDrift,
     )).toThrow(/只接受/u);
@@ -354,7 +354,7 @@ describe('Arena V2 A7 formal visual/media freeze evidence candidate V3 (not run)
     };
     expect(() => evaluateArenaV2A7FormalVisualMediaFreezeEvidenceCandidateV3(
       sourceDrift,
-    )).toThrow(/stored visual\/media evidence/u);
+    )).toThrow(/source\/content\/asset-set身份漂移/u);
   });
 
   it('rejects stored self-reported gate drift', () => {
@@ -449,7 +449,7 @@ describe('Arena V2 A7 formal visual/media freeze evidence candidate V3 (not run)
       }));
     expect(() => evaluateArenaV2A7FormalVisualMediaFreezeEvidenceCandidateV3(
       invalidMediaType,
-    )).toThrow(/规范媒体类型/u);
+    )).toThrow(/不允许包含空白/u);
 
     const invalidByteLength = v3Input(true);
     invalidByteLength.evidence.formalEvidenceRecordLocatorDirectory =
@@ -520,7 +520,7 @@ describe('Arena V2 A7 formal visual/media freeze evidence candidate V3 (not run)
       }));
     expect(() => evaluateArenaV2A7FormalVisualMediaFreezeEvidenceCandidateV3(
       aggregateOverflow,
-    )).toThrow(/Evidence字节聚合结果超出安全整数范围/u);
+    )).toThrow(/formal Evidence index字节聚合结果超出安全整数范围/u);
   });
 
   it('requires independent retrieval verification and distinct receipt identities', () => {
@@ -551,7 +551,7 @@ describe('Arena V2 A7 formal visual/media freeze evidence candidate V3 (not run)
         (entry, index) => ({
           ...entry,
           formalEvidenceRetrievalPlanIdentityHash: index === 0
-            ? 'e'.repeat(64)
+            ? 'e'.repeat(8)
             : entry.formalEvidenceRetrievalPlanIdentityHash,
         }),
       );
@@ -700,7 +700,7 @@ describe('Arena V2 A7 formal visual/media freeze evidence candidate V3 (not run)
     );
     const legacyEvidence = createArenaV2A7CurrentCatalogFuturePassLegacyFixture({
       sourceCommit: assembly.approvedPolicyCandidate.sourceIdentity.sourceCommit,
-      contentIdentityHash: 'future-current-catalog-overflow-content-identity',
+      contentIdentityHash: 'f0a1c0df',
       environmentBuilds: assembly.approvedPolicyCandidate.environments.map((entry) => ({
         environmentId: entry.environmentId,
         buildIdentitySha256: entry.buildIdentitySha256,
