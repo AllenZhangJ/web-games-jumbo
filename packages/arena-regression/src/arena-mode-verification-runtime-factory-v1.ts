@@ -4,6 +4,7 @@ import {
   assertKnownKeys,
   cloneFrozenData,
   createArenaMatchEventV6,
+  createArenaLocalJumpAvailabilityV1,
   createArenaSupplyCadenceSnapshotV1,
   createDeterministicDataHash,
   createMatchReadFrameV3Audit,
@@ -518,6 +519,31 @@ class VerificationWorldAuthorityV1 implements ModeMatchWorldAuthorityV6 {
     if (this.#destroyed) throw new Error('VerificationWorldAuthorityV1已销毁。');
   }
 
+  #localJumpAvailability(frame: DeepReadonly<MatchReadFrameV3>) {
+    const participant = frame.worldSnapshot.participants.find(({ id }) => (
+      id === this.#localParticipantId
+    ));
+    if (participant === undefined) {
+      throw new RangeError('Verification authority缺少本地参与者Jump事实。');
+    }
+    const canMove = frame.worldSnapshot.phase === 'running'
+      && participant.status === 'active'
+      && participant.hitstunTicks === 0
+      && participant.respawnTicks === 0;
+    // The no-render authority proves only its current grounded state; unknown air-jump state fails closed.
+    const canGroundJump = canMove && participant.grounded && participant.movement.grounded;
+    return createArenaLocalJumpAvailabilityV1({
+      schemaVersion: 1,
+      tick: frame.worldSnapshot.tick,
+      eventSequence: frame.worldSnapshot.eventSequence,
+      participantId: this.#localParticipantId,
+      canMove,
+      canGroundJump,
+      canAirJump: false,
+      state: canGroundJump ? 'ready' : 'blocked',
+    });
+  }
+
   #commitFrame(
     tick: number,
     eventSequence: number,
@@ -576,6 +602,7 @@ class VerificationWorldAuthorityV1 implements ModeMatchWorldAuthorityV6 {
       readFrame: this.#readFrame,
       readFrameAudit: this.#readFrameAudit,
       supplyCadence: verificationSupplyCadence(this.#config, 0),
+      localJumpAvailability: this.#localJumpAvailability(this.#readFrame),
       stateHash: this.#stateHash,
     });
   }
@@ -708,6 +735,7 @@ class VerificationWorldAuthorityV1 implements ModeMatchWorldAuthorityV6 {
       events: Object.freeze(events),
       supplyFacts: Object.freeze([]),
       supplyCadence: verificationSupplyCadence(this.#config, request.tick + 1),
+      localJumpAvailability: this.#localJumpAvailability(this.#readFrame),
       stateHash: this.#stateHash,
       appliedModeCommandHash: createDeterministicDataHash(
         resolution.commands,
@@ -778,6 +806,7 @@ class VerificationWorldAuthorityV1 implements ModeMatchWorldAuthorityV6 {
       readFrame: frame,
       readFrameAudit: audit,
       supplyCadence: verificationSupplyCadence(this.#config, frame.worldSnapshot.tick),
+      localJumpAvailability: this.#localJumpAvailability(frame),
       stateHash: source.stateHash,
     });
   }
