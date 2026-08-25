@@ -1,8 +1,8 @@
 # Arena V2 P2–P7 / A0–A7 源码开发大阶段审计
 
-> 日期：2026-08-24
-> 状态：`source-audit-static-closed / conditionally-accepted / code-written-not-run / validation-deferred`
-> 适用边界：只判断源码、合同、候选资产和治理台账是否已经落盘；当前 clean 基线`feature/arena-v2-design-docs@787ce27`已有`typecheck:app`与52包workspace build通过记录，P2候选测试记录为`351/421`且P3边界门通过。它们不替代P2–P7全量候选、严格性能、浏览器、设备、真人、资产或发布证据，未取得独立运行记录的门不得写成通过。
+> 日期：2026-08-25
+> 状态：`source-audit-static-closed / candidate-integration-automated-verified / production-unreachable / hardGate=false`
+> 适用边界：P2–P7和A1.0/A1.1/A2/A3–A6已在clean `0442619a`完成[跨阶段候选集成验收](arena-v2-cross-stage-candidate-integration-acceptance-2026-08-25.md)。该证据不替代严格性能、浏览器、设备、真人、正式资产、A7冻结或发布；未取得正式证据的门不得写成通过。
 > 可达性：`production-unreachable / hardGate=false`；默认 Registry、默认生产 Composition、Web/微信/抖音正式入口继续关闭。
 > 2026-08-24 P4.4cq/P5.3zqv修复证据：独立文档检查首次在二十武器VFX解析模块加载期发现`weaponDefinitionId`与读取计划`catalogId`错接，首个`charge-shield/ground`Cue被错误判为缺语法。唯一只读语法源现同时闭合两种既有身份，VFX按目录ID查找并逐项保留正式动作Definition验证；直接20×2规格和Cue规格共8项、受影响包定向构建、复跑文档检查和应用类型检查均通过。未修改权威事件、只读快照语义、资产槽位或默认入口；该证据不覆盖全量阶段、正式资产、浏览器/设备、性能或真人门。
 
@@ -36,12 +36,12 @@
 
 | 阶段 | 权威源码/台账锚点 | 源码状态 | 仍需顺延的门 |
 |---|---|---|---|
-| P2 正式模式核心 | Mode Policy/Registry、Race/Survival ModeSystem、ModeMatchRuntime V6、Checkpoint V2、Replay V6、Result/Reward/Session候选；[P2台账](arena-v2-p2-implementation-ledger.md) | 三模式 Rule/Core/生命周期/恢复候选已落盘；Race 180/30与Survival首次复活60/30均已形成单一生产不可达候选；未发现 Renderer/Session 重判胜负 | runtime、Replay、历史兼容、故障、长局、资源归零；Race/Survival hard limit、两项最终平衡批准仍不得擅自冻结 |
-| P3 地图与敌人 | 两图 Route Definition、Map Validator、Race/Survival真实Movement/Physics候选、受限Bot Observation/Controller、shared-world authority；[P3台账](arena-v2-p3-implementation-ledger.md) | 路线、重入、单一敌人族、1–16压力、两模式复用几何均已落盘 | 真实物理可达、拥挤、永久安全角、压力单调、地图/敌人资产批准、设备与真人 |
-| P4 二十武器 | 20武器目录、20×10生存变体、Action/Equipment/Rule/Physics/Replay、三模式反馈与方向、逐把Registry准入/持久恢复；[P4台账](arena-v2-p4-implementation-ledger.md) | 20把最小功能、反制、反馈、逐把原子晋级候选已落盘；默认Registry仍断开 | 定向运行、三模式差异、故障/恢复、平衡、逐把资产/真人/设备批准和单把正式注册 |
+| P2 正式模式核心 | Mode Policy/Registry、Race/Survival ModeSystem、ModeMatchRuntime V6、Checkpoint V2、Replay V6、Result/Reward/Session候选；[P2台账](arena-v2-p2-implementation-ledger.md) | 候选集成已通过boundary、52包/11波、Vitest 56文件531项、Node 59项；三模式、5940 tick连续/恢复与资源归零闭合 | 默认接线、严格性能、设备、真人及Race/Survival最终平衡批准 |
+| P3 地图与敌人 | 两图 Route Definition、Map Validator、Race/Survival真实Movement/Physics候选、受限Bot Observation/Controller、shared-world authority；[P3台账](arena-v2-p3-implementation-ledger.md) | 候选集成已通过boundary、52包/11波、Vitest 17文件126项及Node 17项；Race拥挤与Survival五矩阵闭合 | 地图/敌人正式资产、永久安全角真人验证、设备和性能 |
+| P4 二十武器 | 20武器目录、20×10生存变体、Action/Equipment/Rule/Physics/Replay、三模式反馈与方向、逐把Registry准入/持久恢复；[P4台账](arena-v2-p4-implementation-ledger.md) | 候选集成已通过boundary、52包/11波、Vitest 67文件303项、Node 19项和33项真实故障矩阵；默认Registry仍断开 | 平衡、逐把正式资产/真人/设备批准和单把生产注册 |
 | P5 页面与反馈 | 11页Registry/Pipeline、Information/Playable Host、HUD、Audio/VFX、DOM/Canvas、键盘/触控驱动、Formal Web候选；[P5台账](arena-v2-p5-implementation-ledger.md) | 候选自动化已执行通过：52包/11波、Vitest 43文件365项、Node 14文件196项；统一三概念输入、显式jump availability与生命周期Owner闭合 | 双视口、读屏、浏览器/设备、性能、正式UI/音频/VFX批准、真人和默认入口仍未通过 |
 | P6 收藏与容量 | Learning Profile/Reducer、双槽CAS/租约、Reward/Learning原子owner、结果恢复、下一目标、20武器/20段研究、留存观察；[P6台账](arena-v2-p6-implementation-ledger.md) | 收藏、熟练、结算、恢复和200小时静态容量候选已落盘；候选自动化已通过52包/11波、Vitest 54文件583项、Node 4文件273项及P6边界/type/docs/diff；局外进度不写战斗数值 | 默认入口、压力/性能、浏览器/设备、正式资产、纵向真人与真实留存；不得宣称200小时已达成 |
-| P7 证据与冻结 | 预注册、评价、24项自动化回执、Stage Report V2、A7 V3双门Freeze Manifest、Assembly Session；[P7台账](arena-v2-p7-implementation-ledger.md) | 评分缺失语义、单一门源、六环境build-set、29+24证据槽、五角色预算链和不可发布装配候选已落盘；最终冻结必须再满足同源同构建集A7 V3 PASS | 所有自动化、构建、性能、设备、真人、缺陷、独立审计、真实结构测量、130项资产批准、A7正式媒体证据和发布动作；当前只能INCOMPLETE |
+| P7 证据与冻结 | 预注册、评价、24项自动化回执、Stage Report V2、A7 V3双门Freeze Manifest、Assembly Session；[P7台账](arena-v2-p7-implementation-ledger.md) | 候选集成已通过boundary、52包/11波、Vitest 21文件166项和Node 24项；当前真实报告仍只能INCOMPLETE | 性能、设备、真人、缺陷审计、结构测量、130项资产批准、A7正式媒体证据及真实29+24回执和发布动作 |
 
 ## 4. A0–A7 美术与音频矩阵
 
@@ -49,9 +49,9 @@
 |---|---|---|
 | A0.1 | Art Bible、来源边界、预算和开发对齐合同已签核 | `contract-ready`，不代表资产成熟 |
 | A0.2 | 六类注释参考板与独立总门已完成 | 视觉方向`ready`，不代表Blockout/Final |
-| A0.3 | 技术/代理剪影候选85/100，真人0/10，当前source待重生成/重绑定 | `incomplete`；生产Blockout继续关闭 |
-| A1 | A1.0事件/供给表现合同已绑定；A1.1仍绑定历史source | 当前source重建缺失；不能用旧证据开放后续门 |
-| A2 | 三模式/参与者/HUD/VFX/音频只读表现合同已静态绑定Runtime V6 | `preproduction-contract-candidate / hardGate=false` |
+| A0.3 | clean-source机器链、144组合和真人执行包已就绪；真人仍0/10 | `incomplete`；生产Blockout继续关闭 |
+| A1 | A1.0最终source合同已94/100外部签核；A1.1最终source/测量方案机器包92/100 | A1.1逐项批准、代表样件、设备、真人和性能仍关闭 |
+| A2 | 六键三模式/参与者/HUD/VFX/音频只读表现机器合同及44项反证通过 | `preproduction-contract-machine-closed / hardGate=false` |
 | A3 | 单一敌人族、2张地图候选与正式Three读取合同存在 | 地图未批准；没有真人路线、设备或Final证据 |
 | A4 | 6角色、20武器附件和94项武器音频候选身份已闭合 | 候选字节不等于逐角色/逐武器批准；多数媒体仍不在正式白名单 |
 | A5 | 5张核心VFX纹理、模式/供给音频、HUD视觉Token与关闭路径已登记 | 未批准；低动效/静音合同存在但未做真实输出验收 |

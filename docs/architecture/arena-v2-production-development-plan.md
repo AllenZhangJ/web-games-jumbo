@@ -8,6 +8,7 @@
 - 2026-08-24 P4.4cq/P5.3zqv修复记录：独立文档检查首次暴露二十武器VFX以正式Definition ID误连读取计划`catalogId`，导致`charge-shield/ground`在模块加载期失败。修复只补唯一语法源的显式目录身份并保持40项动作、483个Cue及五类纹理不变；两份直接规格、受影响包定向构建、复跑文档检查和应用类型检查已通过。该定向修复不等于阶段全量候选、资产、浏览器、设备、性能或真人门通过。
 - 2026-08-25 P4.4cr修复记录：MatchCore武器反馈Checkpoint V2把有界closed non-ring attribution纳入hash/restore；严格超20 tick的同源迟到credited elimination只消费权威水位、不重发反馈。Bundle与Duel/Race/Survival候选checkpoint均改消费V2；Adapter V1仍可读/恢复旧形状，Bundle Owner V2不接受会丢失closed attribution的旧投影。定向Adapter/Bundle、Race、恢复后缀和Survival Node矩阵已通过；默认入口、V6/Replay、数值、资产与平衡批准不变。
 - 2026-08-25 SF-DG.3d修复记录：P4候选门首轮暴露的空间计划canonical-key、十波供给计数、反馈语义旧夹具、33情形真实failure replay及reachability静态锚点均已收口。ground跳跃反制现在依真实Movement/Physics离地证明；十波事实为30生成/1拾取/9替换/18过期；Duel failure suffix按最后97个可比较非终局tick冻结、Race/Survival保持120。完整P4 runner证据为Vitest 67文件303通过1外部化，Node 19/19通过且33项矩阵401.1秒；默认入口、三模式规则/数值、P5 Three资产与正式批准门不变。
+- 2026-08-25跨阶段候选集成验收：[同一clean基线验收报告](arena-v2-cross-stage-candidate-integration-acceptance-2026-08-25.md)绑定`0442619a`，P2–P7与A1.0/A1.1/A2/A3–A6机器门全部通过，并保留P2 Jump事实接力与P4单测试调度两轮首红。该报告评分95/100只表示候选工程质量；A0.3真人0/10、正式资产0/130、性能/浏览器/设备/真人、200小时真实留存、A7/P7冻结和发布仍未通过。
 - 目标：把 Arena V2 的研究结论按 `Rule → Core → Bot → Presentation → Platform` 迁入唯一生产游戏
 - 边界：本计划不把研究原型、自动化通过、浏览器通过、真机通过或真人通过互相替代
 - 当前源码大阶段审计：[P2–P7 / A0–A7 源码开发大阶段审计](arena-v2-source-development-big-stage-audit.md)；该审计只区分源码已实现、真实源码缺口和仅缺运行/批准证据，不改变任何阶段门状态
