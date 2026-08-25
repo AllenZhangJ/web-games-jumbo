@@ -6,7 +6,7 @@ type JsonRecord = Record<string, unknown>;
 
 const ROOT = resolve(process.env.ARENA_A11_CHECK_ROOT ?? resolve(import.meta.dirname, '../..'));
 const LEDGER_PATH = 'docs/quality/art/supply/arena-a1.1-preproduction-readiness-v1.json';
-const BASELINE = 'f80307b375eb9f8f5380372e5b002d1eb86a4df7';
+const BASELINE = '16861edc4efaf62ff65e515d8cc00526fd980d85';
 const FALSE_GATES = [
   'a1_1CoordinatorSignOff', 'equipmentInputApproved', 'temporaryVfxSourcesApproved', 'temporaryAudioSourcesApproved',
   'capturePlanApproved', 'a0_3Passed', 'a1RepresentativeSpecimenStarted',
@@ -15,12 +15,53 @@ const FALSE_GATES = [
 ] as const;
 const ACTIVE_LIFECYCLE_PROJECTION_ARTIFACTS = [
   { path: 'packages/arena-contracts/src/arena-public-supply-projection.ts', byteLength: 29094, sha256: 'b1ad32bc9e3d023af0cfbcbac41c31efee69d291de856e1914e5622dfa5ec7ec' },
-  { path: 'packages/arena-contracts/src/match-snapshot.ts', byteLength: 19417, sha256: '89ca74403445cbe8333e68e0e907a914500dce51b3bcf3cbce8ebb928e51fe38' },
-  { path: 'packages/arena-equipment/src/equipment-supply-timeline-system.ts', byteLength: 26241, sha256: '57bf117fb918724e77bd3ec0bb2f3dc0727803747b335f6039d13aab29937d0e' },
-  { path: 'packages/arena-match/src/match-core.ts', byteLength: 58363, sha256: '208a736b7d95c654bc99592bb0b82a14fa760c117d9afd4d30dbf744b10f7347' },
-  { path: 'packages/arena-bot/src/bot-observation.ts', byteLength: 36050, sha256: 'ceaaaf020a2a2168e52aa4356dd32feb88736fbfd894c751fc404b863bc2dac3' },
-  { path: 'packages/arena-bot/src/bot-controller.ts', byteLength: 16293, sha256: '75ce2cd9d69822ffe38ffb67f14467b63df7cde49ea0b33b34653a7f7d0fb99d' },
+  { path: 'packages/arena-contracts/src/match-snapshot.ts', byteLength: 19672, sha256: 'c03ff02ab484b8c6c558fbc550e9360a3817f6f9931094ba577823d6b0d30691' },
+  { path: 'packages/arena-equipment/src/equipment-supply-timeline-system.ts', byteLength: 42946, sha256: '7015c471b7c1fe0c9b6298eaf46eb6f0c8be0f816f3181071b5e8b8be1163bb7' },
+  { path: 'packages/arena-match/src/match-core.ts', byteLength: 93188, sha256: '51df8d148890df2f6984d0fddb1ed42da15b86bd4c42d0f4d243c346e2ede51c' },
+  { path: 'packages/arena-bot/src/bot-observation.ts', byteLength: 58501, sha256: 'e8accb85da7942b9587cdedc8b111dcc728d17d0af7be53a9d08c10e2a5944e6' },
+  { path: 'packages/arena-bot/src/bot-controller.ts', byteLength: 27905, sha256: '745384dae97a38501bea70d649e680405c0b914b3a5b70b9ab73c5179ebb7c0e' },
 ] as const;
+const ACTIVE_LIFECYCLE_SOURCE_MARKERS = Object.freeze({
+  'packages/arena-contracts/src/arena-public-supply-projection.ts': Object.freeze([
+    'ARENA_PUBLIC_SUPPLY_PROJECTION_SCHEMA_VERSION = 2',
+    'remainingTicks !== expireTick - snapshotTick',
+    'pendingAuthorityTick !== expectedPendingAuthorityTick',
+    'not-ready-pre-expiry projection 必须包含 pending expiry identity',
+    'requireArenaPublicSupplyProjection',
+  ]),
+  'packages/arena-contracts/src/match-snapshot.ts': Object.freeze([
+    'readonly activeSupplyProjection?: ArenaPublicSupplyProjection',
+    'createArenaPublicSupplyProjectionAudit(source.activeSupplyProjection',
+    'snapshotTick: tick',
+  ]),
+  'packages/arena-equipment/src/equipment-supply-timeline-system.ts': Object.freeze([
+    'getPublicSupplyProjection(options: unknown)',
+    'const remainingTicks = lifecycle.expireTick - snapshotTick',
+    'pendingExpiryEquipmentInstanceIds.push(runtime.instanceId)',
+    'ARENA_PUBLIC_SUPPLY_PROJECTION_READINESS.NOT_READY_PRE_EXPIRY',
+    'createArenaPublicSupplyProjectionAudit({',
+  ]),
+  'packages/arena-match/src/match-core.ts': Object.freeze([
+    'this.#equipmentSupplyTimeline?.getPublicSupplyProjection({',
+    'snapshotTick: timeline.tick',
+    'eventSequence: this.#eventSequence',
+    'activeSupplyProjection = projectionResult.projection',
+    'expiredSupplyEquipmentIds.add(instanceId)',
+  ]),
+  'packages/arena-bot/src/bot-observation.ts': Object.freeze([
+    'createArenaPublicSupplyProjectionAudit(source.activeSupplyProjection',
+    'requireArenaPublicSupplyProjection(source.activeSupplyProjection',
+    'projectionTick !== snapshotTick',
+    'projectionEventSequence !== eventSequence',
+    'remainingTicks !== expireTick - snapshotTick',
+    'pendingExpiryEquipmentInstanceIds 与 readiness 不一致',
+  ]),
+  'packages/arena-bot/src/bot-controller.ts': Object.freeze([
+    'survival BotController 必须注入 supplyProjectionContract',
+    'this.#requireActiveSupplyProjection && legacySource.activeSupplyProjection === null',
+    'survival Bot 缺少完整 activeSupplyProjection，已 fail closed',
+  ]),
+} as const);
 const ACTIVE_LIFECYCLE_BINDINGS = [
   'snapshotTick', 'snapshotEventSequence', 'remainingTicks', 'pendingExpiryEquipmentInstanceIds',
   'resyncReadiness', 'pendingAuthorityTick',
@@ -38,7 +79,7 @@ const CAPTURE_IDS = ['terminal-30fps', 'gpu-and-frame', 'overdraw', 'memory', 'v
 const EXPECTED_REPOSITORY_AUDITS = [
   { path: 'governance/formal-assets/arena-stage7-formal-assets-v1.json', byteLength: 6893, sha256: '68a79e95e8920e2b98df8bad3a4b44d22f3dc7f17b53acd5ed8398e426c5b0bf' },
   { path: 'governance/third-party/arena-runtime-assets-v1.json', byteLength: 4580, sha256: '73916959ae685ae7ebea359cb618b6b5edf265a4a8f4b7ebb5e4600943261d76' },
-  { path: 'docs/quality/art/silhouette/arena-a0.3-silhouette-render-manifest-v1.json', byteLength: 257391, sha256: '1b85c5442fbb08c3ff7e8d82538d0f6fdc2cb17dad06c3a279d4b7e1350805c7' },
+  { path: 'docs/quality/art/silhouette/arena-a0.3-silhouette-render-manifest-v1.json', byteLength: 272294, sha256: '1c76aa9a0d7ed6258f1028e0f8e51e6b1a0422e2e759cfd9ddb0ba8c682eaa13' },
   { path: 'docs/quality/art/reference-sources/project-ui-wireframes/ui-source-visual-manifest-v1.json', byteLength: 4088, sha256: 'ace4813c8036a8ed13d1182f91bcad6f44df12002c4ec990f7ff7a12512e9109' },
 ] as const;
 const EXPECTED_EQUIPMENT = [
@@ -119,6 +160,10 @@ function exactArray(value: unknown, expected: readonly unknown[], label: string)
   if (JSON.stringify(value) !== JSON.stringify(expected)) fail(`${label} drift`);
 }
 function sha256(bytes: Buffer): string { return createHash('sha256').update(bytes).digest('hex'); }
+function containsMarker(source: string, marker: string): boolean {
+  return source.includes(marker)
+    || source.replace(/\s+/gu, '').includes(marker.replace(/\s+/gu, ''));
+}
 function repositoryFile(pathValue: unknown, label: string): string {
   if (typeof pathValue !== 'string' || !pathValue || isAbsolute(pathValue)) fail(`${label} must be a repository-relative path`);
   const absolute = resolve(ROOT, pathValue);
@@ -159,8 +204,8 @@ exactKeys(ledger, [
   'equipmentInputAudit', 'missingEquipmentInputs', 'temporarySourceCandidates', 'measurementPlan', 'hardGates',
   'score', 'missingMandatorySkillReferences', 'rollback',
 ], 'ledger');
-if (ledger.schemaVersion !== 2 || ledger.id !== 'arena.art.supply-preproduction-readiness.a1.1.v1') fail('identity drift');
-if (ledger.status !== 'upstream-contract-ready-candidate' || ledger.baselineCommit !== BASELINE || ledger.reviewedAt !== '2026-07-29') fail('status/baseline/date drift');
+if (ledger.schemaVersion !== 3 || ledger.id !== 'arena.art.supply-preproduction-readiness.a1.1.v1') fail('identity drift');
+if (ledger.status !== 'source-and-measurement-readiness-machine-closed' || ledger.baselineCommit !== BASELINE || ledger.reviewedAt !== '2026-08-25') fail('status/baseline/date drift');
 if (ledger.scope !== 'source-rights-and-measurement-plan-only-no-specimen-or-runtime') fail('scope expanded');
 
 const upstream = object(ledger.upstream, 'upstream');
@@ -180,10 +225,17 @@ for (const gate of ['a1RepresentativeSpecimenStarted', 'a1Passed', 'a0_3Passed',
 if (upstream.a0_3QualifiedHumanParticipants !== 0 || upstream.activeLifecycleProjectionAvailable !== true) fail('upstream availability/human boundary drift');
 const activeLifecycle = object(upstream.activeLifecycleProjectionContract, 'upstream.activeLifecycleProjectionContract');
 exactKeys(activeLifecycle, ['status', 'signedCommit', 'schemaVersion', 'sourceArtifacts', 'requiredBindings', 'recoveryBoundary'], 'upstream.activeLifecycleProjectionContract');
-if (activeLifecycle.status !== 'contract-available-upstream-signed' || activeLifecycle.signedCommit !== BASELINE || activeLifecycle.schemaVersion !== 2) fail('active lifecycle contract identity drift');
+if (activeLifecycle.status !== 'contract-available-final-clean-source' || activeLifecycle.signedCommit !== BASELINE || activeLifecycle.schemaVersion !== 2) fail('active lifecycle contract identity drift');
 const activeLifecycleArtifacts = records(activeLifecycle.sourceArtifacts, 'upstream.activeLifecycleProjectionContract.sourceArtifacts');
 exactArray(activeLifecycleArtifacts, ACTIVE_LIFECYCLE_PROJECTION_ARTIFACTS, 'active lifecycle source artifacts');
 for (const [index, artifact] of activeLifecycleArtifacts.entries()) verifyArtifact(artifact, `activeLifecycleProjectionContract.sourceArtifacts[${index}]`);
+for (const artifact of ACTIVE_LIFECYCLE_PROJECTION_ARTIFACTS) {
+  const source = readFileSync(repositoryFile(artifact.path, `active lifecycle semantic source ${artifact.path}`), 'utf8');
+  const markers = ACTIVE_LIFECYCLE_SOURCE_MARKERS[artifact.path];
+  for (const marker of markers) {
+    if (!containsMarker(source, marker)) fail(`active lifecycle semantic marker drift: ${artifact.path}: ${marker}`);
+  }
+}
 exactArray(activeLifecycle.requiredBindings, ACTIVE_LIFECYCLE_BINDINGS, 'active lifecycle required bindings');
 if (activeLifecycle.recoveryBoundary !== 'not-ready-pre-expiry is a current-tick command view only; recovery must wait for the next ready projection') fail('active lifecycle recovery boundary drift');
 
@@ -271,12 +323,21 @@ if (typeof plan.evidenceBoundary !== 'string' || !String(plan.evidenceBoundary).
 exactArray(plan.missingExecutionInputs, ['capture harness implementation', 'approved browser and GPU identity', 'real iOS device', 'real Android device', 'A0.3 ten-person human approval', 'A1.1 coordinator approval'], 'measurementPlan.missingExecutionInputs');
 
 const gates = object(ledger.hardGates, 'hardGates');
-exactKeys(gates, [...FALSE_GATES, 'activeLifecycleProjectionAvailable'], 'hardGates');
+exactKeys(gates, [
+  ...FALSE_GATES,
+  'activeLifecycleProjectionAvailable',
+  'sourceAuditCurrentCleanCommitBound',
+  'measurementPlanMachineReady',
+], 'hardGates');
 for (const gate of FALSE_GATES) if (gates[gate] !== false) fail(`gate ${gate} must remain false`);
-if (gates.activeLifecycleProjectionAvailable !== true) fail('active lifecycle projection prerequisite must remain available');
+for (const gate of [
+  'activeLifecycleProjectionAvailable',
+  'sourceAuditCurrentCleanCommitBound',
+  'measurementPlanMachineReady',
+]) if (gates[gate] !== true) fail(`readiness gate ${gate} must remain true`);
 const score = object(ledger.score, 'score');
 exactKeys(score, ['basis', 'total', 'maximum', 'hardGatePassed', 'dimensions', 'maturity'], 'score');
-if (score.basis !== 'A1.1 preproduction source audit and measurement-plan contract only; no source approval, specimen, runtime, device or human maturity' || score.total !== 92 || score.maximum !== 100 || score.hardGatePassed !== false) fail('score basis/value drift');
+if (score.basis !== 'A1.1 final-clean-source source/rights audit and measurement-plan readiness only; no source approval, specimen, runtime, device or human maturity' || score.total !== 92 || score.maximum !== 100 || score.hardGatePassed !== false) fail('score basis/value drift');
 const dimensions = records(score.dimensions, 'score.dimensions');
 const expectedDimensions = [
   { id: 'repository-asset-truth', score: 19, maximum: 20 }, { id: 'rights-and-withdrawal', score: 18, maximum: 20 },
@@ -294,4 +355,4 @@ exactArray(ledger.missingMandatorySkillReferences, ['docs/collaboration-protocol
 for (const path of strings(ledger.missingMandatorySkillReferences, 'missingMandatorySkillReferences')) if (existsSync(resolve(ROOT, path))) fail(`skill reference now exists and audit must be updated: ${path}`);
 if (typeof ledger.rollback !== 'string' || !ledger.rollback.includes('preserve A1.0')) fail('rollback boundary incomplete');
 
-process.stdout.write(`${JSON.stringify({ status: ledger.status, equipmentAudits: equipment.length, temporaryCandidates: candidates.length, capturePlans: captures.length, score: score.total, hardGatePassed: false, activeLifecycleProjectionAvailable: true, a0_3Humans: 0, representativeSpecimenStarted: false })}\n`);
+process.stdout.write(`${JSON.stringify({ status: ledger.status, equipmentAudits: equipment.length, temporaryCandidates: candidates.length, capturePlans: captures.length, score: score.total, hardGatePassed: false, activeLifecycleProjectionAvailable: true, sourceAuditCurrentCleanCommitBound: true, measurementPlanMachineReady: true, a0_3Humans: 0, representativeSpecimenStarted: false })}\n`);

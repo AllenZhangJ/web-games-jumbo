@@ -9,9 +9,9 @@
 - 技能锁定清单：[`skills-lock.json`](../../skills-lock.json)
 - 关联治理：[`AGENTS.md`](../../AGENTS.md)、[V2 生产化分阶段开发与治理计划](arena-v2-production-development-plan.md)、[ADR-109](../decisions/109-arena-art-and-audio-skill-routing.md)
 - 视觉生产基线：[Arena Art Bible](arena-art-bible.md)
-- 注释参考登记：[六类70/20/10登记](arena-art-reference-register.md)；A0.2三个子门已签核，[独立视觉方向总门](arena-art-reference-total-gate-a0.2.md)以96/100通过，A0.2与Reference Board视觉方向为`ready`；[A0.3技术/代理候选](arena-art-silhouette-a0.3.md)85/100、真人0/10，且当前source identity处于`code-written-not-run / pending-regeneration`，A0.3、正式模型/VFX样件、Blockout及后续成熟度仍`incomplete`/fail closed
+- 注释参考登记：[六类70/20/10登记](arena-art-reference-register.md)；A0.2三个子门已签核，[独立视觉方向总门](arena-art-reference-total-gate-a0.2.md)以96/100通过，A0.2与Reference Board视觉方向为`ready`；[A0.3技术/代理候选](arena-art-silhouette-a0.3.md)已在`60fbc13`完成clean-source机器重生成，仍为85/100、真人0/10和`incomplete`，正式模型/VFX样件、Blockout及后续成熟度继续fail closed
 - 阶段协作基线：[美术 A0–A7 与开发 P0–P7 对齐矩阵](arena-art-development-alignment-matrix.md)
-- 当前供给表现合同：[A1.0供给表现预生产合同](arena-art-supply-presentation-contract-a1.0.md)保留2026-07-28的v1历史身份；追加的A1.0-v2已于2026-08-03绑定28个当前来源和25项fixture，以94/100完成主协调外部联合签核，正向与85/85隔离拒绝通过。它只证明当前PP0/PP1合同、Cue/回退和来源身份，不是正式资产门。[A1.1来源与测量就绪包](arena-art-supply-readiness-a1.1.md)仍因上游漂移待最终source重建。A0.3真人、A1.1、代表样件、Blockout、正式VFX/音频、浏览器/设备/真人与Final仍关闭
+- 当前供给表现合同：[A1.0供给表现预生产合同](arena-art-supply-presentation-contract-a1.0.md)保留2026-07-28的v1不可变语义身份；A1.0-v2的历史外部联合签核不冒充最终source机器证据。[A1.1来源与测量就绪包](arena-art-supply-readiness-a1.1.md)已在最终clean source `16861edc`重算六artifact与调用链，正向检查及93/93隔离拒绝通过，只关闭当前source绑定和测量方案机器就绪。A0.3真人、A1.1协调/来源批准/捕获批准、代表样件、Blockout、正式VFX/音频、浏览器/设备/真人与Final仍关闭
 
 ## 1. 目的与项目特化边界
 
@@ -277,7 +277,7 @@ Catalog content hash、V2 policy identity、来源revision/license/rights/proof�
 
 2026-08-14新增的[A3–A6正式资产生产准备队列候选V1](arena-v2-a3-a6-formal-asset-production-work-queue-candidate-v1.md)
 把当前130项按A3地图/敌人、A4角色/武器/材质/武器音频、A5核心VFX/模式供给音频拆成九个稳定批次。
-当前只允许来源、Brief、预算和评审准备；A0.3、A1.1与130项生产批准未闭合前，Blockout、Integration、
+当前只允许来源、Brief、预算和评审准备；A0.3真人、A1.1协调/逐项批准与130项生产批准未闭合前，Blockout、Integration、
 Final和资产使用批次均为0。该队列不改资产字节、不授予批准、不加载媒体，也不进入默认Bundle或入口。
 
 同日新增的[A3地图生产评审准备候选V1](arena-v2-a3-map-production-review-preparation-candidate-v1.md)已落实首批合同准备：按现有Definition精确收拢2图20段、方向+跳跃、统一移动包络、两条节奏曲线、分支/恢复、地标/引导线与竞速/生存双读法，并逐图预登记八项Blockout评审。它使用`level-design`节奏/引导规则，但所有评审仍为`not-run`；不改GLB、Surface、碰撞、路线或输入，不把注册顺序写成已验证Critical Path，生产许可继续全关。

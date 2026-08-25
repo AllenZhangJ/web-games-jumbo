@@ -66,6 +66,12 @@ try {
   });
   mustFail('A0.3 humans falsified', (v) => { object(v.upstream).a0_3QualifiedHumanParticipants = 10; });
   mustFail('active projection availability regressed', (v) => { object(v.upstream).activeLifecycleProjectionAvailable = false; });
+  mustFail('clean-source audit readiness regressed', (v) => {
+    object(v.hardGates).sourceAuditCurrentCleanCommitBound = false;
+  });
+  mustFail('measurement-plan readiness regressed', (v) => {
+    object(v.hardGates).measurementPlanMachineReady = false;
+  });
   mustFail('active projection commit drift', (v) => { object(object(v.upstream).activeLifecycleProjectionContract).signedCommit = '0'.repeat(40); });
   mustFail('active projection schema drift', (v) => { object(object(v.upstream).activeLifecycleProjectionContract).schemaVersion = 1; });
   mustFail('active projection source substitution', (v) => {
@@ -139,7 +145,9 @@ try {
   mustFail('future score field', (v) => { object(v.score).future = true; });
   mustFail('future dimension field', (v) => { objectArray(object(v.score).dimensions)[0]!.future = true; });
   for (const gate of Object.keys(object(source.hardGates))) {
-    if (gate === 'activeLifecycleProjectionAvailable') {
+    if (gate === 'activeLifecycleProjectionAvailable'
+      || gate === 'sourceAuditCurrentCleanCommitBound'
+      || gate === 'measurementPlanMachineReady') {
       mustFail(`gate regressed: ${gate}`, (v) => { object(v.hardGates)[gate] = false; });
     } else {
       mustFail(`gate opened: ${gate}`, (v) => { object(v.hardGates)[gate] = true; });

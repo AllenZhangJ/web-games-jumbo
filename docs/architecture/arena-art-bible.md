@@ -2,7 +2,7 @@
 
 ## 文档状态
 
-- 状态：A0.1为`contract-ready`；A0.2独立聚合总门与Reference Board视觉方向为`ready`（96/100）；A0.3已在`60fbc13` clean source完成两次确定性机器重生成，现为`current-source-machine-regenerated / tooling-review-candidate-human-blocked / incomplete`，机器候选85/100且真人0/10；A1.1仍需按最终clean source重建。默认Registry/Composition/入口仍未接，A2.0继续为`preproduction-contract-candidate / hardGate=false`
+- 状态：A0.1为`contract-ready`；A0.2独立聚合总门与Reference Board视觉方向为`ready`（96/100）；A0.3已在`60fbc13` clean source完成两次确定性机器重生成，现为`current-source-machine-regenerated / tooling-review-candidate-human-blocked / incomplete`，机器候选85/100且真人0/10；A1.1已在最终clean source `16861edc`完成来源/权利与测量方案机器重建，但协调、批准、样件和运行门仍全关。默认Registry/Composition/入口仍未接，A2.0继续为`preproduction-contract-candidate / hardGate=false`
 - 日期：2026-08-11
 - 审计基线：正式资产与视觉事实继续沿用`d6f906008d0af1ed0133a199a8dc9e15cb1d23d0`及其后已登记证据；A2.0绑定当前共享工作树中的P2.0–P2.5版本化候选字节，不登记未经主协调冻结的commit/hash
 - 上游真值：[V2 产品总纲](../product/arena-v2-product-brief.md)、[V2 玩法框架](../gameplay/arena-v2-gameplay-framework.md)、[V2 生产计划](arena-v2-production-development-plan.md)、[ADR-108](../decisions/108-arena-v2-survival-auto-replace-and-expiry.md)、[ADR-112](../decisions/112-arena-v2-formal-mode-definition-and-policy-boundary.md)与[ADR-118](../decisions/118-arena-v2-development-first-deferred-validation-window.md)；候选实现不等于生产冻结或运行通过
@@ -592,10 +592,10 @@ A0.1 当前没有缺失的必需输入。实际图片板是A0.2输出，剪影�
 
 - 当前Arena开发链已形成生产不可达的P2.5e复合checkpoint、三模式恢复、P2.6 continuous/restored逐字段对照，以及P5.3a本地consumer-epoch/效果清理与正式候选原子宿主源码；HUD ViewModel顶层exact-key和完整V6事件批次连续性也已静态闭合。上述源码均未运行，P2.5e未获签核，生产默认Registry/Composition/入口仍不可达且验证按ADR-118顺延。美术不得创建第二套事件词表，也不得因候选代码存在就声称生产冻结。
 - A2.0仅升级为`preproduction-contract-candidate / static-bound-to-mode-match-runtime-v6 / verification-deferred-by-ADR-118 / hardGate=false`。未来live表现只消费step exact-key `events / readFrame / readFrameAudit`；终点、fall、排名、重生、供给、淘汰和结算只读其中事件、projection与ModeResult，不读取内部hash/command/checkpoint，也不从坐标、动画或音频反推规则。
-- 美术首要硬缺口是A0.3至少10名真实独立参与者与协调签核，当前`0/10`；clean-source机器包已就绪。A1.1的92/100只保留为绑定`f80307b`的历史候选，必须按最终clean source重建。正式批准、截图、代表样件、Blockout、集成、设备、真人和Final门均为false，不制作或接入角色、武器、地图、VFX、HUD或音频资产。
+- 美术首要硬缺口是A0.3至少10名真实独立参与者与协调签核，当前`0/10`；clean-source机器包已就绪。A1.1已在`16861edc`重新得到92/100来源/测量方案机器候选，但`hardGatePassed=false`，装备/VFX/音频来源批准、捕获批准、代表样件、Blockout、集成、设备、真人和Final门均为false，不制作或接入角色、武器、地图、VFX、HUD或音频资产。
 - 本轮只修改A2.0合同、Art Bible与[A0–A7 对齐矩阵](arena-art-development-alignment-matrix.md)，不修改ADR、台账、索引、流程、脚本、源码或资产，也不运行验证。若runtime候选撤回、step三键或source identity漂移，段落回滚本文件8.1、8.2、状态区与本节；整文件回滚点为本轮开始前版本，不得用`reset`/`checkout`覆盖共享开发工作树。
 - P3 Map、P4 武器、P5 ViewModel、P6 Profile仍分别受自己的冻结、来源、预算、设备和真人门约束；A2静态绑定不会连带开放任何后续生产阶段。
 - P5.3zzzwe/P6.408只修复20武器专属Validated Host对既有权威方向事实的最后一跳转发；方向仍来自V2 Authority Fact，VFX、音频和HUD不得从Three坐标、镜头、文案或当前装备重新推断。该修复不批准或新增任何美术/音频资产，运行、设备、真人与Final门继续为false。
 - P5.3zzzwf/P6.409禁止20武器新表现代次在基线重播武器反馈；旧命中不能绕过专属读取计划生成通用音画。模式/供给通用基线与逐帧新武器事实路径不变，不批准任何新增资产。
-- P5.3zzzwh/P6.413把生存徒手命中的既有V2方向/冲量送到通用Three与SFX末端，只复用当前形状/时序、方向层、镜头/角色冲击、Cue、SFX总线和dB力度档。旧端口保留回退；不新增或批准纹理、模型、粒子层、媒体、Cue、总线、透明叠加或draw call，A0.3、A1.1及生产资产门状态不变。
+- P5.3zzzwh/P6.413把生存徒手命中的既有V2方向/冲量送到通用Three与SFX末端，只复用当前形状/时序、方向层、镜头/角色冲击、Cue、SFX总线和dB力度档。旧端口保留回退；不新增或批准纹理、模型、粒子层、媒体、Cue、总线、透明叠加或draw call，A0.3真人门、A1.1协调/批准/样件门及生产资产门状态不变。
 - P5.3zzzwi/P6.414只修复既有命中力度音频的双下限：voice priority与gain dB分别只升不降，重击击落可从-3 dB到既定-2 dB。媒体、Cue、变体、总线、8 voice、limiter和批准清单不变，实听及设备门仍未开放。
