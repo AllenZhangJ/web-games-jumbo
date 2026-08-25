@@ -23,5 +23,5 @@ describe('Arena survival pressure Bot long-run verification candidate v1', () =>
     );
     expect(report.restoredContinuationHash).toBe(report.checkpointContinuationHash);
     expect(report.resultHash).toMatch(/^[0-9a-f]{8}$/);
-  });
+  }, 10_000);
 });

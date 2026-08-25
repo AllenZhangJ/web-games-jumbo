@@ -10,6 +10,8 @@
 
 > 2026-08-25 SF-DG.3d候选自动化证据：P4 runner 已执行通过（52包/11波构建；Vitest 67文件303通过、1项由runner外部化；Node 19/19通过，真实33项failure matrix 401.1秒）。此证据仅覆盖候选自动化；默认Registry/Composition/Entry、正式资产批准、性能、浏览器/设备与真人门仍未通过，不能据此宣布P4正式硬门PASS。
 
+> 2026-08-25 SF-DG.INT.2 调度修复：P4 gate首轮仅`arena-survival-pressure-bot-long-run-verification-v1`受Vitest默认5000ms限制失败，协调实测约5199ms；独立单进程测量4691ms，10,801 tick×16敌人、十阶段、InputFrame、checkpoint/continuation与全部断言均未缩减。仅为该具名规格设置10,000ms局部上限，保留Node真实33项failure matrix和全部产品性能门的既有边界；不修改生产实现、武器/供给数值、资产或默认入口。
+
 - 日期：2026-08-24。
 - 当前状态：`P4.0-P4.4-candidate-automation-executed-passed / production-unreachable / hardGate=false / defaultRegistry=false / defaultComposition=false / defaultEntry=false`；候选对象内的`implementationStatus=code-written-not-run / validationStatus=not-run`仍表示未获生产准入，不能替代本段已记录的自动化命令证据。
 - 授权依据：[ADR-119](../decisions/119-arena-v2-continuous-development-with-deferred-gates.md)。开发连续推进；此前`feature/arena-v2-design-docs@787ce27`记录的`typecheck:app`、52包workspace build、P2候选`351/421`和P3边界门仅是历史候选证据，不构成P4定向测试、P4边界、性能、设备、真人或逐武器准入证据；这些门继续顺延并保持`not-run`。
