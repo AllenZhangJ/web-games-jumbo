@@ -277,7 +277,7 @@ test('A6.17 lazily creates the preview renderer and safely downgrades unsupporte
   assert.match(formal, /:\s*null;\s*if \(viewport === null\) return null;/u);
   assert.match(
     formal,
-    /this\.#collectionPreviewVisibilityRequested\s*&&\s*this\.#activeSurface === 'information'/u,
+    /requested\s*&&\s*surface === 'information'/u,
   );
   assert.doesNotMatch(
     formal,

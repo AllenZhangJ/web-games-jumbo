@@ -105,9 +105,9 @@ test('P5 character preview retains incomplete construction and disposal ownershi
   assert.match(surface, /this\.#renderSurface = renderSurface/u);
   assert.match(surface, /this\.#orphanRenderer = null/u);
   assert.match(surface, /if \(this\.#disposeInProgress\)/u);
-  assert.match(surface, /this\.#renderSurface\.destroy\(\);\s*this\.#renderSurface = null/u);
-  assert.match(surface, /this\.#mountOwner\.destroy\(\);\s*this\.#mountOwner = null/u);
-  assert.match(surface, /this\.#orphanRenderer\.dispose\(\);\s*this\.#orphanRenderer = null/u);
+  assert.match(surface, /\(\) => renderSurface\.destroy\(\),\s*\(\) => \{ if \(this\.#renderSurface === renderSurface\) this\.#renderSurface = null; \}/u);
+  assert.match(surface, /\(\) => mountOwner\.destroy\(\),\s*\(\) => \{ if \(this\.#mountOwner === mountOwner\) this\.#mountOwner = null; \}/u);
+  assert.match(surface, /\(\) => renderer\.dispose\(\),\s*\(\) => \{ if \(this\.#orphanRenderer === renderer\) this\.#orphanRenderer = null; \}/u);
   assert.match(
     surface,
     /this\.#scrollUnbind === null\s*&& this\.#renderSurface === null\s*&& this\.#orphanRenderer === null\s*&& this\.#mountOwner === null\s*&& !this\.#surfaceDisposed/u,
@@ -142,8 +142,8 @@ test('P5 character preview retains incomplete construction and disposal ownershi
   assert.match(render, /rendererAndSceneCallbacksCheckedBeforeFrameCommit: true/u);
   assert.match(render, /destroyReentryRetainsCurrentAndLaterOwners: true/u);
   assert.ok(
-    surface.indexOf('this.#renderSurface.destroy();')
-      < surface.lastIndexOf('this.#mountOwner.destroy();'),
+    surface.indexOf('() => renderSurface.destroy()')
+      < surface.lastIndexOf('() => mountOwner.destroy()'),
   );
   assert.doesNotMatch(
     surface,
@@ -157,7 +157,7 @@ test('P5 character preview retains incomplete construction and disposal ownershi
   );
   assert.equal(
     binding.indexOf('this.#destroyHostOwner()')
-      < binding.indexOf('this.#matchSurface.dispose()'),
+      < binding.indexOf('this.#matchSurface!.dispose()'),
     true,
   );
   assert.match(

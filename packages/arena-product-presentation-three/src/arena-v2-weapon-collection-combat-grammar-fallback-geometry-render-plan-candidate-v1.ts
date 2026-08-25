@@ -608,6 +608,13 @@ function validateSourceAndOutputCore(
   const outputLabel = exactPrimitive(outputPlan, `${prefix}:label`);
   const outputDescription = exactPrimitive(outputPlan, `${prefix}:description`);
   const outputAction = exactPrimitive(outputPlan, `${prefix}:action`);
+  const expectedSourceLabel = sourceAction.kind === 'action'
+    ? sourceAction.disabledReason === '已选择'
+      ? `已选·${sourceAction.label}`
+      : sourceAction.enabled
+        ? sourceAction.label
+        : `未开放·${sourceAction.label}`
+    : null;
   if (sourcePanel.kind !== 'panel' || outputPanel.kind !== 'panel'
     || sourceLabel.kind !== 'text' || outputLabel.kind !== 'text'
     || sourceDescription.kind !== 'text' || outputDescription.kind !== 'text'
@@ -618,7 +625,7 @@ function validateSourceAndOutputCore(
     || sourceAction.intentId !== `arena.v2.selection.weapon.${encodeURIComponent(
       grammar.weaponDefinitionId
     )}`
-    || sourceAction.label !== sourceLabel.text
+    || sourceLabel.text !== expectedSourceLabel
     || sourceAction.minimumTouchTargetCssPixels !== 48
     || !sameRect(sourcePanel.rect, sourceAction.rect)
     || !sameRect(outputPanel.rect, outputAction.rect)

@@ -104,7 +104,7 @@ describe('Arena V2 competitive repeatable challenge information projection candi
 
   it('rejects mode, identity, tick and target-field drift', () => {
     expect(() => project('duel', null, { modeDefinitionId: 'mode.future' })).toThrow(/身份漂移/);
-    expect(() => project('duel', -1)).toThrow(/tick/);
+    expect(() => project('duel', -1)).toThrow(/tick|bestPerformanceTicks/);
     expect(() => project('duel', 1.5)).toThrow(/安全整数/);
     expect(() => project('duel', null, { modeKind: 'survival' })).toThrow(/仅支持/);
     expect(() => project('duel', null, {

@@ -284,5 +284,7 @@ export const ARENA_V2_INFORMATION_HOST_ADAPTIVE_COUNTERPLAY_BOT_OWNER_CANDIDATE_
     emitsPrimaryDuringFallback: false as const,
     defaultHostFactoryWired: false as const,
     defaultBotRegistryWired: false as const,
+    defaultEntryWired: false as const,
+    defaultNavigationWired: false as const,
     validationStatus: 'not-run' as const,
   });

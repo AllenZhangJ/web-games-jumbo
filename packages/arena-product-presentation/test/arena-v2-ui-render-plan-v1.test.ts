@@ -46,7 +46,9 @@ describe('Arena V2 shared UI render plan V1', () => {
       productionReady: false,
       formalAssetIds: [],
     });
-    expect(plan.primitives.filter(({ kind }) => kind === 'action')).toHaveLength(1);
+    expect(plan.primitives.filter(({ kind, id }) => (
+      kind === 'action' && id === 'primary-action'
+    ))).toHaveLength(1);
     expect(plan.primitives.some((primitive) => (
       primitive.kind === 'text' && primitive.text === '长距离 · 窄覆盖'
     ))).toBe(true);

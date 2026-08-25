@@ -437,7 +437,7 @@ test('P6.242 fails closed when a HUD child swallows render reentry', () => {
   })), /render期间同步重入clear/);
   assert.match(String(reentryError), /render期间同步重入clear/);
   assert.equal(layer.state, ARENA_V2_FORMAL_HUD_CANVAS_LAYER_STATE_CANDIDATE_V1.FAILED);
-  assert.notEqual(layer.lastRenderPlan, null);
+  assert.equal(layer.lastRenderPlan, null);
   layer.dispose();
 });
 

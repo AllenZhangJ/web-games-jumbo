@@ -103,7 +103,8 @@ describe('Arena V2 information screen shared layout V1', () => {
       { fieldId: 'earned-progress', height: 96 },
       { fieldId: 'next-goal', height: 96 },
     ]);
-    expect(layout.contentHeight).toBeLessThanOrEqual(layout.contentViewport.height);
+    expect(layout.contentHeight).toBeGreaterThan(layout.contentViewport.height);
+    expect(layout.verticalScrollRequired).toBe(true);
     expect(layout.primaryActionRect.height).toBeGreaterThanOrEqual(48);
   });
 });

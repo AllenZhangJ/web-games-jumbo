@@ -195,12 +195,20 @@ export class PointerInputAdapter {
     const errors: Error[] = [];
     for (let index = failed.length - 1; index >= 0; index -= 1) {
       const cleanup = failed[index]!;
+      const reentrySequence = this.#reentrySequence;
       try {
-        this.#callChecked(
-          sequence,
-          'PointerInputAdapter cleanup',
-          () => cleanup(),
-        );
+        if (this.#reentryError !== null) {
+          rejectThenable(cleanup(), 'PointerInputAdapter cleanup');
+        } else {
+          this.#callChecked(
+            sequence,
+            'PointerInputAdapter cleanup',
+            () => cleanup(),
+          );
+        }
+        if (this.#reentrySequence !== reentrySequence) {
+          throw this.#reentryError ?? new Error('PointerInputAdapter cleanup期间发生同步重入。');
+        }
         failed.splice(index, 1);
       } catch (error) {
         const failure = normalizeThrownError(error, 'PointerInputAdapter 绑定清理失败');
@@ -237,7 +245,6 @@ export class PointerInputAdapter {
       const cleanups: Cleanup[] = [];
       const register = (candidate: unknown, name: string): void => {
         rejectThenable(candidate, name);
-        this.#assertCurrentOperationCommit(sequence, name);
         if (typeof candidate !== 'function') {
           throw new TypeError('PointerInputAdapter 平台绑定必须返回 cleanup 函数。');
         }
@@ -307,9 +314,7 @@ export class PointerInputAdapter {
         this.#state = 'started';
         return true;
       } catch (error) {
-        const cleanup = this.#reentryError === null
-          ? this.#cleanup(cleanups, sequence)
-          : Object.freeze({ failed: [...cleanups], errors: [] as Error[] });
+        const cleanup = this.#cleanup(cleanups, sequence);
         this.#cleanups = cleanup.failed;
         this.#state = this.#destroyRequested && cleanup.failed.length === 0
           ? 'destroyed'

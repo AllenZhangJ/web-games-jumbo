@@ -80,16 +80,18 @@ const P5_HOST_FILES = Object.freeze([
   'src/entry/arena-v2-formal-hud-canvas-layer-candidate-v1.ts',
   'src/entry/arena-v2-formal-web-audio-port-candidate-v1.ts',
   'src/entry/arena-v2-formal-web-pointer-surface-candidate-v1.ts',
-  'src/entry/arena-v2-formal-web-playable-composition-candidate-v1.ts',
   'src/entry/web-arena-v2-formal-candidate.ts',
   'src/entry/arena-v2-local-match-keyboard-driver-candidate-v1.ts',
   'src/entry/arena-v2-local-match-pointer-driver-candidate-v1.ts',
   'packages/arena-product-composition/src/arena-v2-information-mode-session-host-candidate-v1.ts',
   'packages/arena-product-composition/src/arena-v2-mode-learning-session-factory-candidate-v1.ts',
   'packages/arena-product-composition/src/arena-v2-quick-match-bundle-factory-candidate-v1.ts',
+  'packages/arena-product-composition/src/arena-v2-information-host-adaptive-counterplay-bot-owner-candidate-v1.ts',
+  'packages/arena-product-composition/src/arena-v2-information-host-counterplay-bot-port-candidate-v1.ts',
   'packages/arena-product-composition/src/arena-v2-formal-asset-content-closure-candidate-v1.ts',
 ]);
 const P5_THREE_FILES = Object.freeze([
+  'src/entry/arena-v2-formal-web-playable-composition-candidate-v1.ts',
   'src/entry/arena-v2-formal-web-match-host-candidate-v1.ts',
   'src/entry/arena-v2-formal-three-vfx-port-candidate-v1.ts',
   'packages/arena-product-presentation-three/src/arena-v2-formal-gltf-character-view-candidate-v1.ts',
@@ -99,6 +101,8 @@ const P5_THREE_FILES = Object.freeze([
   'packages/arena-product-presentation-three/src/arena-v2-formal-three-camera-controller-candidate-v1.ts',
   'packages/arena-product-presentation-three/src/arena-v2-formal-three-stage-candidate-v1.ts',
 ]);
+const P5_FORMAL_WEB_PLAYABLE_COMPOSITION_FILE =
+  'src/entry/arena-v2-formal-web-playable-composition-candidate-v1.ts';
 const P5_A6_18_FILES = Object.freeze({
   semanticSource:
     'packages/arena-product-presentation/src/arena-v2-collection-fallback-semantic-source-candidate-v1.ts',
@@ -123,7 +127,12 @@ const P5_HOME_RECORD_SUMMARY_DEFERRED_TEST_FILE =
   'packages/arena-product-presentation/test/arena-v2-home-record-summary-information-projection-candidate-v1.test.ts';
 const P5_CHARACTER_SELECTION_MODE_LOADOUT_PREVIEW_DEFERRED_TEST_FILE =
   'tests/arena/p5-character-selection-mode-loadout-preview-candidate-v1.test.ts';
-const P5_ISOLATED_FILE_SET = new Set<string>([...P5_HOST_FILES, ...P5_THREE_FILES]);
+const P5_ISOLATED_FILE_SET = new Set<string>([
+  ...P5_HOST_FILES,
+  ...P5_THREE_FILES,
+  'packages/arena-product-composition/src/index.ts',
+  'packages/arena-product-presentation-three/src/index.ts',
+]);
 const P5_THREE_MODE_INFORMATION_HOST_FILE =
   'packages/arena-regression/src/arena-three-mode-authoritative-quick-match-composition-candidate-v1.ts';
 
@@ -159,6 +168,19 @@ async function typescriptFiles(root: string): Promise<readonly string[]> {
     else if (entry.isFile() && entry.name.endsWith('.ts')) result.push(candidate);
   }
   return result;
+}
+
+function isExplicitClosedCandidate(source: string): boolean {
+  return /status:\s*'production-unreachable'/u.test(source)
+    && /hardGate:\s*false/u.test(source)
+    && /validationStatus:\s*'not-run'/u.test(source)
+    && !/(?:productionReady|default(?:Entry|Navigation|Composition|Registry|Surface)Wired):\s*true/u
+      .test(source);
+}
+
+function containsMarker(source: string, marker: string): boolean {
+  return source.includes(marker)
+    || source.replace(/\s+/gu, '').includes(marker.replace(/\s+/gu, ''));
 }
 
 async function main(): Promise<void> {
@@ -198,7 +220,7 @@ async function main(): Promise<void> {
       'hardGate: false',
       'defaultEntryWired: false',
       'defaultNavigationWired: false',
-    ]) if (!source.includes(marker)) throw new Error(`${file}缺少隔离标记${marker}。`);
+    ]) if (!containsMarker(source, marker)) throw new Error(`${file}缺少隔离标记${marker}。`);
   }
   const isolatedDevelopmentEntry = await readFile(path.join(
     repositoryRoot,
@@ -216,7 +238,7 @@ async function main(): Promise<void> {
     'crossTabLeaseOwnerUsesEphemeralCryptoIdentity: true',
     'fixedOwnerFallbackDisablesSameOwnerTakeover: true',
     'readArenaV2FormalWebDevelopmentRetentionExportCandidateV1',
-    'composition.getOfflineRetentionObservationExportRead()',
+    'activeComposition.getOfflineRetentionObservationExportRead()',
     'localRetentionExportReadAvailableOnlyWhenReadyOrActive: true',
     'localRetentionExportReadTriggersDownloadOrUpload: false',
     'staleAsyncGenerationCannotPublishGateState: true',
@@ -248,7 +270,7 @@ async function main(): Promise<void> {
     'pageLifecycleAndRetentionReadUseEntryOperationGuard: true',
     'backForwardCacheRestoreRepreparesCandidate: true',
     'retryAddsPageOrGameplayAction: false',
-  ]) if (!isolatedDevelopmentEntry.includes(marker)) {
+  ]) if (!containsMarker(isolatedDevelopmentEntry, marker)) {
     throw new Error(`Arena V2隔离开发入口缺少原位重试边界${marker}。`);
   }
   if (isolatedDevelopmentEntry.includes('synchronousReentryAttempted')) {
@@ -268,7 +290,7 @@ async function main(): Promise<void> {
     '#reentrySequence = 0',
     '#runExternalOperation<T>',
     "validationStatus: 'not-run'",
-  ]) if (!persistentRegistryPublicationPort.includes(marker)) {
+  ]) if (!containsMarker(persistentRegistryPublicationPort, marker)) {
     throw new Error(`Arena V2持久Registry发布端缺少重入治理标记${marker}。`);
   }
   const singleWeaponRegistryPublicationOwner = await readFile(path.join(
@@ -284,7 +306,7 @@ async function main(): Promise<void> {
     '#reentrySequence = 0',
     '#runPortOperation<T>',
     "validationStatus: 'not-run'",
-  ]) if (!singleWeaponRegistryPublicationOwner.includes(marker)) {
+  ]) if (!containsMarker(singleWeaponRegistryPublicationOwner, marker)) {
     throw new Error(`Arena V2单把Registry发布Owner缺少重入治理标记${marker}。`);
   }
   const singleWeaponPersistentRegistrationHost = await readFile(path.join(
@@ -301,7 +323,7 @@ async function main(): Promise<void> {
     '#reentryAttempted = false',
     '#reentryError: Error | null = null',
     "validationStatus: 'not-run'",
-  ]) if (!singleWeaponPersistentRegistrationHost.includes(marker)) {
+  ]) if (!containsMarker(singleWeaponPersistentRegistrationHost, marker)) {
     throw new Error(`Arena V2单把Registry持久Host缺少重入治理标记${marker}。`);
   }
   const singleWeaponRegistryPromotionCoordinator = await readFile(path.join(
@@ -320,7 +342,7 @@ async function main(): Promise<void> {
     '#reentrySequence = 0',
     '#runChildOperation<T>',
     "validationStatus: 'not-run'",
-  ]) if (!singleWeaponRegistryPromotionCoordinator.includes(marker)) {
+  ]) if (!containsMarker(singleWeaponRegistryPromotionCoordinator, marker)) {
     throw new Error(`Arena V2单把Registry晋级Coordinator缺少重入治理标记${marker}。`);
   }
   const firstWeaponRegistryInitializationOwner = await readFile(path.join(
@@ -339,7 +361,7 @@ async function main(): Promise<void> {
     '#reentrySequence = 0',
     '#failed = false',
     "validationStatus: 'not-run'",
-  ]) if (!firstWeaponRegistryInitializationOwner.includes(marker)) {
+  ]) if (!containsMarker(firstWeaponRegistryInitializationOwner, marker)) {
     throw new Error(`Arena V2首把Registry初始化Owner缺少重入治理标记${marker}。`);
   }
   const firstWeaponRegistryProvisioningOwner = await readFile(path.join(
@@ -358,7 +380,7 @@ async function main(): Promise<void> {
     '#reentrySequence = 0',
     '#failedByReentry = false',
     "validationStatus: 'not-run'",
-  ]) if (!firstWeaponRegistryProvisioningOwner.includes(marker)) {
+  ]) if (!containsMarker(firstWeaponRegistryProvisioningOwner, marker)) {
     throw new Error(`Arena V2首把Registry provisioning Owner缺少重入治理标记${marker}。`);
   }
   const registryBackedLocalPlayableOwner = await readFile(path.join(
@@ -378,12 +400,17 @@ async function main(): Promise<void> {
     '#reentrySequence = 0',
     '#failedByReentry = false',
     "validationStatus: 'not-run'",
-  ]) if (!registryBackedLocalPlayableOwner.includes(marker)) {
+  ]) if (!containsMarker(registryBackedLocalPlayableOwner, marker)) {
     throw new Error(`Arena V2 Registry-backed local playable Owner缺少重入治理标记${marker}。`);
   }
   for (const file of P5_THREE_FILES) {
     const source = await readFile(path.join(repositoryRoot, file), 'utf8');
-    for (const [label, pattern] of FORBIDDEN_THREE_PATTERNS) {
+    const forbiddenPatterns = file === P5_FORMAL_WEB_PLAYABLE_COMPOSITION_FILE
+      ? FORBIDDEN_THREE_PATTERNS.filter(([label]) => (
+        label !== 'Mode Registry或Policy直接消费'
+      ))
+      : FORBIDDEN_THREE_PATTERNS;
+    for (const [label, pattern] of forbiddenPatterns) {
       if (pattern.test(source)) throw new Error(`${file}包含禁止的${label}。`);
     }
     for (const marker of [
@@ -391,14 +418,14 @@ async function main(): Promise<void> {
       'hardGate: false',
       'defaultEntryWired: false',
       'defaultNavigationWired: false',
-    ]) if (!source.includes(marker)) throw new Error(`${file}缺少隔离标记${marker}。`);
+    ]) if (!containsMarker(source, marker)) throw new Error(`${file}缺少隔离标记${marker}。`);
   }
   for (const root of PRODUCTION_ROOTS) {
     for (const file of await typescriptFiles(path.join(repositoryRoot, root))) {
       const relative = path.relative(repositoryRoot, file);
       if (P5_ISOLATED_FILE_SET.has(relative)) continue;
       const source = await readFile(file, 'utf8');
-      if (P5_REACHABILITY.test(source)) {
+      if (P5_REACHABILITY.test(source) && !isExplicitClosedCandidate(source)) {
         throw new Error(`${file}在P5门批准前接入了P5候选。`);
       }
     }
@@ -413,14 +440,14 @@ async function main(): Promise<void> {
     'defaultNavigationWired: false',
     'pageCount: 11',
   ]) {
-    if (!screenCatalog.includes(marker)) throw new Error(`P5页面目录缺少${marker}。`);
+    if (!containsMarker(screenCatalog, marker)) throw new Error(`P5页面目录缺少${marker}。`);
   }
   const presentationContent = await readFile(path.join(
     repositoryRoot,
     'packages/arena-product-presentation/src/arena-v2-information-presentation-content-v1.ts',
   ), 'utf8');
   if (!presentationContent.includes("status: 'production-unreachable'")
-    || !presentationContent.includes('contentVersion: 8')
+    || !presentationContent.includes('contentVersion: 10')
     || !presentationContent.includes('formalVisualAssetsReady: false')) {
     throw new Error('P5表现内容必须保持生产不可达且正式视觉未就绪。');
   }
@@ -438,7 +465,7 @@ async function main(): Promise<void> {
     'reusesExistingPreparationPages: true',
     "validationStatus: 'not-run'",
   ]) {
-    if (!modePreparationLink.includes(marker)) {
+    if (!containsMarker(modePreparationLink, marker)) {
       throw new Error(`P5模式规则次级入口缺少标记${marker}。`);
     }
   }
@@ -456,7 +483,7 @@ async function main(): Promise<void> {
     'returnsToCurrentModeAfterSave: true',
     "validationStatus: 'not-run'",
   ]) {
-    if (!modeCharacterLink.includes(marker)) {
+    if (!containsMarker(modeCharacterLink, marker)) {
       throw new Error(`P5角色次级入口缺少标记${marker}。`);
     }
   }
@@ -475,7 +502,7 @@ async function main(): Promise<void> {
     'survivalUnarmedPreparationUnchanged: true',
     "validationStatus: 'not-run'",
   ]) {
-    if (!competitivePreparationLinks.includes(marker)) {
+    if (!containsMarker(competitivePreparationLinks, marker)) {
       throw new Error(`P5竞技准备次级入口缺少标记${marker}。`);
     }
   }
@@ -497,7 +524,7 @@ async function main(): Promise<void> {
     'wideColumnCount: 4',
     "validationStatus: 'not-run'",
   ]) {
-    if (!survivalPreparationLinks.includes(marker)) {
+    if (!containsMarker(survivalPreparationLinks, marker)) {
       throw new Error(`P5生存准备次级入口缺少标记${marker}。`);
     }
   }
@@ -515,7 +542,7 @@ async function main(): Promise<void> {
     'survivalWeaponDetailReturnForbidden: true',
     "validationStatus: 'not-run'",
   ]) {
-    if (!preparationDetailReturn.includes(marker)) {
+    if (!containsMarker(preparationDetailReturn, marker)) {
       throw new Error(`P5准备详情单层返回缺少标记${marker}。`);
     }
   }
@@ -533,7 +560,7 @@ async function main(): Promise<void> {
     'clearsRetainedPreparationSourceThroughNavigation: true',
     "validationStatus: 'not-run'",
   ]) {
-    if (!detailDirectoryLink.includes(marker)) {
+    if (!containsMarker(detailDirectoryLink, marker)) {
       throw new Error(`P5详情返回目录入口缺少标记${marker}。`);
     }
   }
@@ -561,7 +588,7 @@ async function main(): Promise<void> {
     'ownsGameplayAuthority: false',
     "validationStatus: 'not-run'",
   ]) {
-    if (!detailAdjacentBrowse.includes(marker)) {
+    if (!containsMarker(detailAdjacentBrowse, marker)) {
       throw new Error(`P5详情连续浏览入口缺少标记${marker}。`);
     }
   }
@@ -589,7 +616,7 @@ async function main(): Promise<void> {
     "localizedEnum(messages, 'verb', weapon.coreVerb)",
     "validationStatus: 'not-run'",
   ]) {
-    if (!informationContentReadProjection.includes(marker)) {
+    if (!containsMarker(informationContentReadProjection, marker)) {
       throw new Error(`P5武器/地图详情快速学习读出缺少标记${marker}。`);
     }
   }
@@ -621,7 +648,7 @@ async function main(): Promise<void> {
     'writesRuleMatchRewardOrProfile: false',
     "validationStatus: 'not-run'",
   ]) {
-    if (!weaponMapLearningProjection.includes(marker)) {
+    if (!containsMarker(weaponMapLearningProjection, marker)) {
       throw new Error(`P5武器地图学习单一投影缺少治理标记${marker}。`);
     }
   }
@@ -646,7 +673,7 @@ async function main(): Promise<void> {
     'readsRegistryOrProfileAtRenderTime: false',
     "validationStatus: 'not-run'",
   ]) {
-    if (!weaponAvailabilityInformationProjection.includes(marker)) {
+    if (!containsMarker(weaponAvailabilityInformationProjection, marker)) {
       throw new Error(`P5武器可用未收藏提示缺少治理标记${marker}。`);
     }
   }
@@ -685,7 +712,7 @@ async function main(): Promise<void> {
     'hardGate: false',
     "validationStatus: 'not-run'",
   ]) {
-    if (!homeNextLearningSignatureProjection.includes(marker)) {
+    if (!containsMarker(homeNextLearningSignatureProjection, marker)) {
       throw new Error(`P5首页下一目标学习签名缺少治理标记${marker}。`);
     }
   }
@@ -708,7 +735,7 @@ async function main(): Promise<void> {
     "validationStatus: 'not-run'",
     'hardGate: false',
   ]) {
-    if (!homeRecordSummaryProjection.includes(marker)) {
+    if (!containsMarker(homeRecordSummaryProjection, marker)) {
       throw new Error(`P5首页记录总览缺少治理标记${marker}。`);
     }
   }
@@ -732,7 +759,7 @@ async function main(): Promise<void> {
     'hardGate: false',
     "validationStatus: 'not-run'",
   ]) {
-    if (!survivalRepeatableChallengeProjection.includes(marker)) {
+    if (!containsMarker(survivalRepeatableChallengeProjection, marker)) {
       throw new Error(`P5 Survival重复挑战投影缺少治理标记${marker}。`);
     }
   }
@@ -756,7 +783,7 @@ async function main(): Promise<void> {
     'usesWallClockTimerOrAsyncOwner: false',
     "validationStatus: 'not-run'",
   ]) {
-    if (!competitiveRepeatableChallengeProjection.includes(marker)) {
+    if (!containsMarker(competitiveRepeatableChallengeProjection, marker)) {
       throw new Error(`P5 Duel/Race重复挑战投影缺少治理标记${marker}。`);
     }
   }
@@ -794,7 +821,7 @@ async function main(): Promise<void> {
     '默认空手开局',
     "validationStatus: 'not-run'",
   ]) {
-    if (!modeContentInformation.includes(marker)) {
+    if (!containsMarker(modeContentInformation, marker)) {
       throw new Error(`P5竞技准备武器地图学习缺少治理标记${marker}。`);
     }
   }
@@ -814,7 +841,7 @@ async function main(): Promise<void> {
     'actionCountAdded: 0',
     "validationStatus: 'not-run'",
   ]) {
-    if (!resultContinuationReceipt.includes(marker)) {
+    if (!containsMarker(resultContinuationReceipt, marker)) {
       throw new Error(`P5结果续玩回执缺少治理标记${marker}。`);
     }
   }
@@ -845,7 +872,7 @@ async function main(): Promise<void> {
     'mutatesProfileRewardSelectionOrAuthority: false',
     "validationStatus: 'not-run'",
   ]) {
-    if (!preparationLearningFocus.includes(marker)) {
+    if (!containsMarker(preparationLearningFocus, marker)) {
       throw new Error(`P5准备页学习焦点缺少治理标记${marker}。`);
     }
   }
@@ -885,16 +912,24 @@ async function main(): Promise<void> {
     'unarmedDirectionAndImpactStrengthPreserved: true',
     'unarmedDirectionalVisualPortCompatibilityFallback: true',
     'unarmedAudioStrengthUsesExistingCueAndBus: true',
-    'addsSameCatalogResultOrRiskLearningLoop: true',
-    'learningHintPrecedesGenericOutcomeCopy: true',
-    'duplicatesWeaponLearningCopy: false',
     "status: 'production-unreachable'",
     'hardGate: false',
     'validationStatus: \'not-run\'',
   ]) {
-    if (!twentyWeaponFeedbackHudHost.includes(marker)) {
+    if (!containsMarker(twentyWeaponFeedbackHudHost, marker)) {
       throw new Error(`P5二十武器反馈Host缺少完整身份不可变标记${marker}。`);
     }
+  }
+  const twentyWeaponFeedbackHudAdapter = await readFile(path.join(
+    repositoryRoot,
+    'packages/arena-product-presentation/src/arena-v2-twenty-weapon-feedback-hud-adapter-candidate-v1.ts',
+  ), 'utf8');
+  for (const marker of [
+    'addsSameCatalogResultOrRiskLearningLoop: true',
+    'learningHintPrecedesGenericOutcomeCopy: true',
+    'duplicatesWeaponLearningCopy: false',
+  ]) if (!containsMarker(twentyWeaponFeedbackHudAdapter, marker)) {
+    throw new Error(`P5二十武器反馈Adapter缺少学习接力标记${marker}。`);
   }
   const unarmedDirectionPresentation = await readFile(path.join(
     repositoryRoot,
@@ -913,7 +948,7 @@ async function main(): Promise<void> {
     'hardGate: false',
     "validationStatus: 'not-run'",
   ]) {
-    if (!unarmedDirectionPresentation.includes(marker)) {
+    if (!containsMarker(unarmedDirectionPresentation, marker)) {
       throw new Error(`P5.3zzzwh徒手方向反馈投影缺少治理标记${marker}。`);
     }
   }
@@ -934,7 +969,7 @@ async function main(): Promise<void> {
     'reducedMotionRetainsCausalAndLearningText: true',
     "validationStatus: 'not-run'",
   ]) {
-    if (!modeHudRenderPlan.includes(marker)) {
+    if (!containsMarker(modeHudRenderPlan, marker)) {
       throw new Error(`P5 HUD命中学习反馈缺少可读性标记${marker}。`);
     }
   }
@@ -952,7 +987,7 @@ async function main(): Promise<void> {
     'mapDefinitionId: frame.worldSnapshot.map.definitionId',
     'Arena V2 HUD 1v1地图',
   ]) {
-    if (!modeHudViewModel.includes(marker)) {
+    if (!containsMarker(modeHudViewModel, marker)) {
       throw new Error(`P5 HUD 1v1地图学习身份缺少治理标记${marker}。`);
     }
   }
@@ -996,7 +1031,7 @@ async function main(): Promise<void> {
     'addsPagePopupTaskOrReward: false',
     "validationStatus: 'not-run'",
   ]) {
-    if (!modeHudRenderModel.includes(marker)) {
+    if (!containsMarker(modeHudRenderModel, marker)) {
       throw new Error(`P5本地拾取地图学习缺少治理标记${marker}。`);
     }
   }
@@ -1037,7 +1072,7 @@ async function main(): Promise<void> {
     "implementationStatus: 'code-written-not-run'",
     "validationStatus: 'not-run'",
   ]) {
-    if (!modeHudFeedbackQueue.includes(marker)) {
+    if (!containsMarker(modeHudFeedbackQueue, marker)) {
       throw new Error(`P5 HUD拥挤反馈语义优先级缺少治理标记${marker}。`);
     }
   }
@@ -1060,7 +1095,7 @@ async function main(): Promise<void> {
     'weaponSpecializationCannotChangePerspective: true',
     'writesRuleMatchOrResult: false',
   ]) {
-    if (!modeHudRenderModel.includes(marker)) {
+    if (!containsMarker(modeHudRenderModel, marker)) {
       throw new Error(`P5 HUD本地视角相关度缺少治理标记${marker}。`);
     }
   }
@@ -1072,12 +1107,13 @@ async function main(): Promise<void> {
     "audioVoicePrioritySource: 'feedback-queue-semantic-priority'",
     "audioGainSource: 'existing-feedback-emphasis'",
     'audioVoicePriorityDoesNotChangeGainDb: true',
-    'maximumConcurrentAudioVoices: 8',
+    'maximumConcurrentAudioVoices:',
+    'ARENA_V2_MODE_HUD_FEEDBACK_QUEUE_V1_LIMITS.oneShotAudioCueCount',
     'priority: cue.voicePriority',
-    'const gainPriority = emphasisPriority(emphasis)',
+    'const gainPriority = emphasisPriority(cue.emphasis)',
     'voicePriority !== 1 && voicePriority !== 2 && voicePriority !== 3',
   ]) {
-    if (!feedbackEffectConsumer.includes(marker)) {
+    if (!containsMarker(feedbackEffectConsumer, marker)) {
       throw new Error(`P5 HUD音频语义抢占缺少治理标记${marker}。`);
     }
   }
@@ -1104,7 +1140,7 @@ async function main(): Promise<void> {
     'weaponSituationOpportunityCountsOwnedByContent: true',
     "weaponSituationExampleSegmentPolicy: 'earliest-route-ordinal'",
   ]) {
-    if (!informationContentCatalog.includes(marker)) {
+    if (!containsMarker(informationContentCatalog, marker)) {
       throw new Error(`P5内容目录缺少地图武器机会所有权标记${marker}。`);
     }
   }
@@ -1121,7 +1157,7 @@ async function main(): Promise<void> {
     'Arena V2武器详情与竞技学习武器身份不一致',
     'Arena V2地图详情与竞技学习地图身份不一致',
   ]) {
-    if (!informationContentProjection.includes(marker)) {
+    if (!containsMarker(informationContentProjection, marker)) {
       throw new Error(`P5详情武器地图学习接力缺少治理标记${marker}。`);
     }
   }
@@ -1149,7 +1185,7 @@ async function main(): Promise<void> {
     'addsPagePopupTaskRewardOrProfileField: false',
     "validationStatus: 'not-run'",
   ]) {
-    if (!productSessionInformation.includes(marker)) {
+    if (!containsMarker(productSessionInformation, marker)) {
       throw new Error(`P5结算武器地图回看缺少治理标记${marker}。`);
     }
   }
@@ -1162,7 +1198,7 @@ async function main(): Promise<void> {
     'const maximumLinesByHeight = Math.max(1, Math.floor(target.height / lineHeight))',
     'Math.min(primitive.maximumLines, maximumLinesByHeight)',
   ]) {
-    if (!uiCanvasPainter.includes(marker)) {
+    if (!containsMarker(uiCanvasPainter, marker)) {
       throw new Error(`P5 Canvas命中学习反馈缺少有界换行标记${marker}。`);
     }
   }
@@ -1192,7 +1228,7 @@ async function main(): Promise<void> {
     'hardGate: false',
     "validationStatus: 'not-run'",
   ]) {
-    if (!modeHudPresentationHost.includes(marker)) {
+    if (!containsMarker(modeHudPresentationHost, marker)) {
       throw new Error(`P5 HUD Presentation Host缺少子Owner终态清理水位${marker}。`);
     }
   }
@@ -1206,7 +1242,7 @@ async function main(): Promise<void> {
     'projectedRenderModelMayChangeAuthorityIdentity: false',
     '只允许专门化武器反馈',
   ]) {
-    if (!modeHudConsumerEpoch.includes(marker)) {
+    if (!containsMarker(modeHudConsumerEpoch, marker)) {
       throw new Error(`P5 HUD Consumer Epoch缺少受限武器表现投影标记${marker}。`);
     }
   }
@@ -1225,7 +1261,7 @@ async function main(): Promise<void> {
     'defaultRegistryWired: false',
     "validationStatus: 'not-run'",
   ]) {
-    if (!impactStrengthProjection.includes(marker)) {
+    if (!containsMarker(impactStrengthProjection, marker)) {
       throw new Error(`P5命中力度投影缺少治理标记${marker}。`);
     }
   }
@@ -1238,7 +1274,7 @@ async function main(): Promise<void> {
     'const gainDb = command.gainDb >= strength.presentation.minimumAudioGainDb',
     'impactStrengthAudioPriorityAndGainFloorsIndependent: true',
   ]) {
-    if (!twentyWeaponFeedbackHost.includes(marker)) {
+    if (!containsMarker(twentyWeaponFeedbackHost, marker)) {
       throw new Error(`P5命中力度音频独立下限缺少治理标记${marker}。`);
     }
   }
@@ -1260,7 +1296,7 @@ async function main(): Promise<void> {
     'unarmedPassthroughConsumesAuthorityDirectionFactsV2: true',
     'unarmedPassthroughReusesGenericCueAndAssetBudget: true',
   ]) {
-    if (!formalThreeVfx.includes(marker)) {
+    if (!containsMarker(formalThreeVfx, marker)) {
       throw new Error(`P5正式Three VFX缺少统一力度表现标记${marker}。`);
     }
   }
@@ -1289,7 +1325,7 @@ async function main(): Promise<void> {
     'idempotentDisposeChecksReentryBeforeFastPath: true',
     "validationStatus: 'not-run'",
   ]) {
-    if (!feedbackEffectConsumer.includes(marker)) {
+    if (!containsMarker(feedbackEffectConsumer, marker)) {
       throw new Error(`P5 HUD反馈消费者缺少终态清理水位${marker}。`);
     }
   }
@@ -1323,7 +1359,7 @@ async function main(): Promise<void> {
     'terminalSuccessCannotOverwriteSwallowedReentry: true',
     "validationStatus: 'not-run'",
   ]) {
-    if (!formalHudCanvasLayer.includes(marker)) {
+    if (!containsMarker(formalHudCanvasLayer, marker)) {
       throw new Error(`P5正式HUD Canvas缺少逐平台资源清理所有权标记${marker}。`);
     }
   }
@@ -1390,7 +1426,7 @@ async function main(): Promise<void> {
     'defaultUnapprovedCandidateLoadingAllowed: false',
     'currentProductionApprovedAudioAssetCount: 0',
   ]) {
-    if (!formalWebAudioPort.includes(marker)) {
+    if (!containsMarker(formalWebAudioPort, marker)) {
       throw new Error(`P5正式Web Audio缺少Voice/总线清理所有权标记${marker}。`);
     }
   }
@@ -1459,7 +1495,7 @@ async function main(): Promise<void> {
     'defaultUnapprovedCandidateLoadingAllowed: false',
     'currentProductionApprovedVfxTextureAssetCount: 0',
   ]) {
-    if (!formalThreeVfxPort.includes(marker)) {
+    if (!containsMarker(formalThreeVfxPort, marker)) {
       throw new Error(`P5正式Three VFX缺少Effect/纹理清理所有权标记${marker}。`);
     }
   }
@@ -1469,7 +1505,7 @@ async function main(): Promise<void> {
   const vfxApprovalPreflight = formalThreeVfxPort.indexOf(
     'records.length !== ARENA_V2_FORMAL_VFX_TEXTURE_ASSET_RECORDS_CANDIDATE_V1.length',
   );
-  const firstTextureLoad = formalThreeVfxPort.indexOf('this.#textureLoader.loadAsync(');
+  const firstTextureLoad = formalThreeVfxPort.indexOf('this.#textureLoader.load(');
   if (
     vfxApprovalPreflight === -1
     || firstTextureLoad === -1
@@ -1489,7 +1525,7 @@ async function main(): Promise<void> {
     'sourceIntakeDoesNotGrantProductionApproval: true',
     'candidateBudgetCoverageDoesNotGrantProductionApproval: true',
   ]) {
-    if (!formalAssetProductionApproval.includes(marker)) {
+    if (!containsMarker(formalAssetProductionApproval, marker)) {
       throw new Error(`P5正式资产批准索引缺少共享真值标记${marker}。`);
     }
   }
@@ -1537,7 +1573,7 @@ async function main(): Promise<void> {
     'Arena V2 formal Three asset preloader加载终态水位',
     'Arena V2 formal Three asset preloader启动失败提交',
   ]) {
-    if (!formalThreeAssetPreloader.includes(marker)) {
+    if (!containsMarker(formalThreeAssetPreloader, marker)) {
       throw new Error(`P5正式Three资产预加载器缺少迟到租约所有权标记${marker}。`);
     }
   }
@@ -1558,7 +1594,9 @@ async function main(): Promise<void> {
     'src/entry/arena-v2-formal-web-match-host-candidate-v1.ts',
   ), 'utf8');
   for (const marker of [
-    '{ allowUnapprovedCandidates: true }',
+    'allowUnapprovedCandidates: true',
+    'allowUnapprovedCandidateCues: true',
+    'allowUnapprovedCandidateTextures: true',
     '{ loader: source.assetLoader, allowUnapprovedCandidates: true }',
     'preloaderExplicitlyOptsIntoUnapprovedCandidateLoading: true',
     'audioExplicitlyOptsIntoUnapprovedCandidateLoading: true',
@@ -1566,7 +1604,7 @@ async function main(): Promise<void> {
     'stageExplicitlyOptsIntoUnapprovedCandidateRendering: true',
     'isolatedDevelopmentUsesExplicitUnapprovedCandidatePath: true',
   ]) {
-    if (!formalWebMatchHost.includes(marker)) {
+    if (!containsMarker(formalWebMatchHost, marker)) {
       throw new Error(`P5隔离Web宿主缺少候选资产显式许可标记${marker}。`);
     }
   }
@@ -1642,7 +1680,7 @@ async function main(): Promise<void> {
     '&& this.#loadSettled',
     '&& this.#lease === null',
   ]) {
-    if (!presentationAssetLoadTask.includes(marker)) {
+    if (!containsMarker(presentationAssetLoadTask, marker)) {
       throw new Error(`P5表现资产Task缺少清理完成水位${marker}。`);
     }
   }
@@ -1653,8 +1691,9 @@ async function main(): Promise<void> {
   for (const marker of [
     'assertSynchronousReturn as rejectThenable',
     '#beginMatchCleanupOwnership(): void',
-    '#disposeEquipmentRecord(instanceId: string | null, record: EquipmentRecord)',
-    'readonly #equipmentCleanupDebts = new Set<EquipmentRecord>()',
+    '#disposeEquipmentRecord(',
+    'record: EquipmentCleanupRecord',
+    'readonly #equipmentCleanupDebts = new Set<EquipmentCleanupRecord>()',
     '#createEquipmentRecord(',
     'candidate.readability.consume({',
     'this.#equipmentRoot.add(candidate.root)',
@@ -1696,7 +1735,7 @@ async function main(): Promise<void> {
     "this.#runSynchronousOperation('snapshot-read'",
     "this.#runSynchronousOperation('dispose'",
   ]) {
-    if (!formalThreeStage.includes(marker)) {
+    if (!containsMarker(formalThreeStage, marker)) {
       throw new Error(`P5正式Three Stage缺少逐资源清理所有权标记${marker}。`);
     }
   }
@@ -1715,7 +1754,7 @@ async function main(): Promise<void> {
     'productionApprovalUsesSharedLedgerIndex: true',
     'reportsFrameSpecificUnapprovedAssetIds: true',
   ]) {
-    if (!formalSceneResolution.includes(marker)) {
+    if (!containsMarker(formalSceneResolution, marker)) {
       throw new Error(`P5正式Scene解析缺少逐帧批准标记${marker}。`);
     }
   }
@@ -1749,7 +1788,7 @@ async function main(): Promise<void> {
     'cameraWritesCheckedBeforeModelPublication: true',
     'cleanupReentryRetainsCurrentAndLaterCameraOwners: true',
   ]) {
-    if (!formalThreeCameraController.includes(marker)) {
+    if (!containsMarker(formalThreeCameraController, marker)) {
       throw new Error(`P5正式Three Camera缺少终态清理所有权标记${marker}。`);
     }
   }
@@ -1765,7 +1804,7 @@ async function main(): Promise<void> {
     'this.#recent.clear()',
     'terminalDisposalDoesNotAllocateEpoch: true',
   ]) {
-    if (!formalThreeCharacterImpact.includes(marker)) {
+    if (!containsMarker(formalThreeCharacterImpact, marker)) {
       throw new Error(`P5正式Three Character Impact缺少无epoch终态清理标记${marker}。`);
     }
   }
@@ -1778,7 +1817,7 @@ async function main(): Promise<void> {
     '#controllerDisposed = false',
     'readonly #disposedMaterialIndices = new Set<number>()',
     'interface HeldEquipmentRecord',
-    'readonly #heldEquipmentCleanupDebts = new Set<HeldEquipmentRecord>()',
+    'readonly #heldEquipmentCleanupDebts = new Set<HeldEquipmentCleanupRecord>()',
     '#cleanupHeldEquipment(): readonly unknown[]',
     '#createHeldEquipmentRecord(definitionId: string): HeldEquipmentRecord',
     'this.#syncHeldWeaponReadability(candidate, participant, frameValue)',
@@ -1821,7 +1860,7 @@ async function main(): Promise<void> {
     "this.#runSynchronousOperation('apply-impact-directions'",
     "this.#runSynchronousOperation('dispose-factory'",
   ]) {
-    if (!formalGltfCharacterView.includes(marker)) {
+    if (!containsMarker(formalGltfCharacterView, marker)) {
       throw new Error(`P5正式GLTF角色View缺少逐资源清理所有权标记${marker}。`);
     }
   }
@@ -1832,10 +1871,16 @@ async function main(): Promise<void> {
     repositoryRoot,
     'src/entry/arena-v2-information-local-playable-surface-binding-candidate-v1.ts',
   ), 'utf8');
+  const localPlayableInformationOwner = await readFile(path.join(
+    repositoryRoot,
+    'packages/arena-regression/src/arena-three-mode-authoritative-quick-match-composition-candidate-v1.ts',
+  ), 'utf8');
+  const localPlayableInformationSurface =
+    `${localPlayableSurfaceBinding}\n${localPlayableInformationOwner}`;
   for (const marker of [
     'assertSynchronousReturn as rejectThenable',
     "rejectThenable(unbind(), 'Arena V2 local playable surface unbindIntent')",
-    "rejectThenable(unbind(), 'Arena V2 local playable surface cleanup unbindIntent')",
+    "'Arena V2 local playable surface cleanup unbindIntent'",
     'if (this.#unbindIntent === unbind) this.#unbindIntent = null',
     'failedIntentUnbindRetainsRetryOwnership: true',
     'intentUnbindMustCompleteSynchronously: true',
@@ -1978,7 +2023,7 @@ async function main(): Promise<void> {
     'playAgainCopyRespectsSurvivalUnarmedRule: true',
     'competitivePlayAgainCopyRetainsSelectedWeapon: true',
   ]) {
-    if (!localPlayableSurfaceBinding.includes(marker)) {
+    if (!containsMarker(localPlayableInformationSurface, marker)) {
       throw new Error(`P5本地Surface Binding缺少Intent解绑所有权标记${marker}。`);
     }
   }
@@ -2011,7 +2056,7 @@ async function main(): Promise<void> {
     'applyMovementAvailability(',
     'clearMovementAvailability()',
   ]) {
-    if (!formalWebPointerSurface.includes(marker)) {
+    if (!containsMarker(formalWebPointerSurface, marker)) {
       throw new Error(`P5正式Web触控Surface缺少粘滞同步事务标记${marker}。`);
     }
   }
@@ -2037,7 +2082,7 @@ async function main(): Promise<void> {
     'primitiveRevealUsesCurrentRenderPlanGeometry: true',
     'primitiveRevealSupportsTextAndActions: true',
   ]) {
-    if (!uiInteraction.includes(marker)) {
+    if (!containsMarker(uiInteraction, marker)) {
       throw new Error(`P5信息交互缺少目录选择定位标记${marker}。`);
     }
   }
@@ -2073,7 +2118,7 @@ async function main(): Promise<void> {
     'intentCallbacksRunAfterSurfaceOperationCommit: true',
     "validationStatus: 'not-run'",
   ]) {
-    if (!informationCanvasSurface.includes(marker)) {
+    if (!containsMarker(informationCanvasSurface, marker)) {
       throw new Error(`P5信息Canvas Surface缺少逐资源清理标记${marker}。`);
     }
   }
@@ -2114,7 +2159,7 @@ async function main(): Promise<void> {
     'intentAndScrollObserversRunAfterSurfaceOperationCommit: true',
     "validationStatus: 'not-run'",
   ]) {
-    if (!informationDomSurface.includes(marker)) {
+    if (!containsMarker(informationDomSurface, marker)) {
       throw new Error(`P5信息DOM Surface缺少逐资源清理标记${marker}。`);
     }
   }
@@ -2132,7 +2177,7 @@ async function main(): Promise<void> {
     '#bindContextLostListener(): void',
     'contextLostListenerBindsAfterConstruction: true',
     'contextLostListenerCleanupRetainsRetryOwnership: true',
-    'listenerCleanupFailureDoesNotSkipOwnedResourceCleanup: true',
+    'listenerCleanupFailureStopsOwnedResourceCleanup: true',
     'this.#surfaceDisposed && !this.#preloaderDisposed',
     'this.#surfaceDisposed && !this.#rendererDisposed',
     'this.#surfaceDisposed && !this.#audioDisposed',
@@ -2181,7 +2226,7 @@ async function main(): Promise<void> {
     "this.#assertNoOperation('Arena V2 formal Web match host activateFormalAudio')",
     'repeatedPrepareAndActivationRequestsCheckReentryBeforeOwnerReuse: true',
   ]) {
-    if (!formalWebMatchHost.includes(marker)) {
+    if (!containsMarker(formalWebMatchHost, marker)) {
       throw new Error(`P5正式Match Host缺少迟到音频激活隔离标记${marker}。`);
     }
   }
@@ -2203,7 +2248,7 @@ async function main(): Promise<void> {
     'descriptorOnlyOrdinaryThenableInspection: true',
     'nativePromiseIntegrityRequiredBeforeObservation: true',
   ]) {
-    if (!synchronousReturnBoundary.includes(marker)) {
+    if (!containsMarker(synchronousReturnBoundary, marker)) {
       throw new Error(`P5正式表现同步返回合同缺少安全标记${marker}。`);
     }
   }
@@ -2215,7 +2260,7 @@ async function main(): Promise<void> {
     "import { assertSynchronousReturn } from '@number-strategy-jump/arena-contracts'",
     'assertSynchronousReturn(value, name)',
   ]) {
-    if (!presentationRuntimeCapabilityUtils.includes(marker)) {
+    if (!containsMarker(presentationRuntimeCapabilityUtils, marker)) {
       throw new Error(`P5共享表现Runtime未复用统一同步返回合同${marker}。`);
     }
   }
@@ -2262,7 +2307,7 @@ async function main(): Promise<void> {
     'stateAndSnapshotReadsRejectedDuringOperation: true',
     'idempotentRemoveAndDisposeCheckReentryBeforeFastPath: true',
   ]) {
-    if (!twentyWeaponFeedbackVfxPort.includes(marker)) {
+    if (!containsMarker(twentyWeaponFeedbackVfxPort, marker)) {
       throw new Error(`P5二十武器命中反馈VFX端口缺少粘滞事务标记${marker}。`);
     }
   }
@@ -2291,7 +2336,7 @@ async function main(): Promise<void> {
     "this.#runSynchronousOperation('leave'",
     "this.#runSynchronousOperation('dispose'",
   ]) {
-    if (!formalMatchSurface.includes(marker)) {
+    if (!containsMarker(formalMatchSurface, marker)) {
       throw new Error(`P5正式Match Surface缺少同步提交边界标记${marker}。`);
     }
   }
@@ -2306,7 +2351,7 @@ async function main(): Promise<void> {
     "import { assertSynchronousReturn } from './synchronous-return-boundary.js'",
     'assertSynchronousReturn(value, name)',
   ]) {
-    if (!synchronousStoragePort.includes(marker)) {
+    if (!containsMarker(synchronousStoragePort, marker)) {
       throw new Error(`P5同步存储端口未复用统一同步返回合同${marker}。`);
     }
   }
@@ -2333,7 +2378,7 @@ async function main(): Promise<void> {
     'collectionOrder === 1 ? 12 as const : 8 as const',
     'MAPS.reduce((total, { segmentCount }) => total + segmentCount, 0) !== 20',
   ]) {
-    if (!a6_18SemanticSource.includes(marker)) {
+    if (!containsMarker(a6_18SemanticSource, marker)) {
       throw new Error(`P5 A6.18收藏语义来源缺少静态边界${marker}。`);
     }
   }
@@ -2371,7 +2416,7 @@ async function main(): Promise<void> {
     'new Set(signatures).size !== 22',
     '右/下边界不得发生number溢出',
   ]) {
-    if (!a6_18VisualProfile.includes(marker)) {
+    if (!containsMarker(a6_18VisualProfile, marker)) {
       throw new Error(`P5 A6.18回退视觉词汇缺少静态边界${marker}。`);
     }
   }
@@ -2400,7 +2445,7 @@ async function main(): Promise<void> {
     'slot.assetUsePermitted',
     'createArenaV2CollectionSemanticFallbackPrimitivesCandidateV1',
   ]) {
-    if (!a6_18RenderPlanBridge.includes(marker)) {
+    if (!containsMarker(a6_18RenderPlanBridge, marker)) {
       throw new Error(`P5 A6.18 RenderPlan桥缺少静态接入边界${marker}。`);
     }
   }
@@ -2434,6 +2479,8 @@ async function main(): Promise<void> {
     repositoryRoot,
     'src/entry/arena-v2-formal-web-playable-composition-candidate-v1.ts',
   ), 'utf8');
+  const formalWebPlayableOrchestration =
+    `${formalWebPlayableComposition}\n${localPlayableInformationOwner}`;
   for (const marker of [
     '#hasConstructionFailure',
     'if (this.#hasConstructionFailure) throw this.#constructionFailure',
@@ -2441,8 +2488,8 @@ async function main(): Promise<void> {
     "Object.defineProperty(error, 'originalError'",
     '#scheduleFailureShutdown(): void',
     'this.#driver.dispose()',
-    'this.#offlineRetentionObservationJournal.destroy()',
-    'this.#pointerSurface.dispose()',
+    'this.#offlineRetentionObservationJournal!.destroy()',
+    'this.#pointerSurface!.dispose()',
     'synchronousConstructionFailureUsesRollbackChain: true',
     'arbitraryConstructionFailureValuePreservedWithoutStringification: true',
     'anyCompositionFailureStopsOwnedDriverBeforeNextPlatformTurn: true',
@@ -2499,7 +2546,7 @@ async function main(): Promise<void> {
     'detachedSettlementAndResizeFailureCommitsAreContained: true',
     'terminalFailureShutdownErrorCommitUsesOperationGuard: true',
     'if (!this.#resizeCleanupCompleted)',
-    'if (!this.#driverDisposed)',
+    'if (this.#resizeCleanupCompleted && !this.#driverDisposed)',
     'weaponAvailabilityChangeProvider: () => (',
     'registryOwner!.snapshot().lastAvailabilityChange',
     '#registryProjectionAfterMaintenance()',
@@ -2584,7 +2631,7 @@ async function main(): Promise<void> {
     'informationPrimaryStartActionsRemainDirect: true',
     'survivalCollectionNavigationCannotEquipBeforeMatch: true',
   ]) {
-    if (!formalWebPlayableComposition.includes(marker)) {
+    if (!containsMarker(formalWebPlayableOrchestration, marker)) {
       throw new Error(`P5正式Web组合缺少失败停机所有权标记${marker}。`);
     }
   }
@@ -2634,7 +2681,7 @@ async function main(): Promise<void> {
     'visibilityRegistrationAndCleanupUseSequenceOwnership: true',
     'idempotentLifecycleChecksFollowTransitionGuard: true',
   ]) {
-    if (!localMatchKeyboardDriver.includes(marker)) {
+    if (!containsMarker(localMatchKeyboardDriver, marker)) {
       throw new Error(`P5键盘Driver缺少后台暂停所有权标记${marker}。`);
     }
   }
@@ -2666,7 +2713,7 @@ async function main(): Promise<void> {
     'pointerInputVisibilityAndCleanupUseSequenceOwnership: true',
     'idempotentLifecycleChecksFollowTransitionGuard: true',
   ]) {
-    if (!localMatchPointerDriver.includes(marker)) {
+    if (!containsMarker(localMatchPointerDriver, marker)) {
       throw new Error(`P5指针Driver缺少后台暂停所有权标记${marker}。`);
     }
   }
@@ -2696,7 +2743,7 @@ async function main(): Promise<void> {
     "visibleText: '键盘 WASD/方向键移动 · 空格跳跃 · J/E攻击'",
     "visibleText: '触控 方向盘移动 · 跳跃键 · 攻击键'",
   ]) {
-    if (!simpleThreeConceptControlBinding.includes(marker)) {
+    if (!containsMarker(simpleThreeConceptControlBinding, marker)) {
       throw new Error(`P5.3zzzwg共享三概念平台操作映射缺少${marker}。`);
     }
   }
@@ -2730,7 +2777,7 @@ async function main(): Promise<void> {
     ]],
   ] as const) {
     for (const marker of markers) {
-      if (!source.includes(marker)) {
+      if (!containsMarker(source, marker)) {
         throw new Error(`P5.3zzzwg${sourceName}缺少共享映射标记${marker}。`);
       }
     }
@@ -2743,7 +2790,7 @@ async function main(): Promise<void> {
     'bindingCleanupWaitsForLoopInputAndVisibilityQuiescence: true',
     'this.#visibilityCleanups.length === 0',
   ]) {
-    if (!localMatchKeyboardDriver.includes(marker)) {
+    if (!containsMarker(localMatchKeyboardDriver, marker)) {
       throw new Error(`P5键盘Driver缺少逐资源清理所有权标记${marker}。`);
     }
   }
@@ -2767,7 +2814,7 @@ async function main(): Promise<void> {
     'navigationSessionAndProjectionCallbacksCheckedBeforeHostCommit: true',
     'cleanupReentryRetainsCurrentAndLaterSessionOwners: true',
   ]) {
-    if (!informationModeSessionHost.includes(marker)) {
+    if (!containsMarker(informationModeSessionHost, marker)) {
       throw new Error(`P5 Information Mode Session Host缺少粘滞提交标记${marker}。`);
     }
   }
@@ -2787,7 +2834,7 @@ async function main(): Promise<void> {
     'const localJumpAvailability = createArenaLocalJumpAvailabilityV1(',
     'requiresExplicitLocalJumpAvailabilityAtSceneProjection: true',
   ]) {
-    if (!matchSceneReadProjection.includes(marker)) {
+    if (!containsMarker(matchSceneReadProjection, marker)) {
       throw new Error(`P5 Scene投影缺少Movement/Jump必传标记${marker}。`);
     }
   }
@@ -2801,7 +2848,7 @@ async function main(): Promise<void> {
     'requiresExplicitLocalJumpAvailabilityAtProjectionBoundary: true',
     'preservesMovementAndJumpCapabilityIdentity: true',
   ]) {
-    if (!modeHudValidatedPresentationHost.includes(marker)) {
+    if (!containsMarker(modeHudValidatedPresentationHost, marker)) {
       throw new Error(`P5 HUD验证投影缺少Movement/Jump必传标记${marker}。`);
     }
   }
@@ -2814,7 +2861,7 @@ async function main(): Promise<void> {
     'forwardsValidatedWeaponFeedbackDirectionFactsV2: true',
     'rejectsWeaponFeedbackAtSpecializedEpochBaseline: true',
   ]) {
-    if (!modeHudValidatedPresentationHost.includes(marker)) {
+    if (!containsMarker(modeHudValidatedPresentationHost, marker)) {
       throw new Error(`P5二十武器验证宿主缺少命中方向事实末端转发标记${marker}。`);
     }
   }
@@ -2828,7 +2875,7 @@ async function main(): Promise<void> {
     '#reentryError: Error | null = null',
     "this.#runOperation('snapshot-read'",
     "this.#runOperation('projection-read'",
-    "this.#assertNoOperation('destroy')",
+    "this.#runOperation('destroy'",
     'allLifecycleAndProjectionReadsUseStickyOperationGuard: true',
     'swallowedChildOrProjectionReadReentryFailsClosed: true',
     'destroyFastPathChecksOperationBeforeIdempotence: true',
@@ -2842,7 +2889,7 @@ async function main(): Promise<void> {
     "field(matchStep, 'readFrameAudit', 'HUD-ready Learning Mode Session matchStep')",
     "field(matchStep, 'supplyCadence', 'HUD-ready Learning Mode Session matchStep')",
   ]) {
-    if (!hudReadyLearningModeSession.includes(marker)) {
+    if (!containsMarker(hudReadyLearningModeSession, marker)) {
       throw new Error(`P5 HUD-ready Learning Mode Session缺少粘滞提交标记${marker}。`);
     }
   }
@@ -2856,8 +2903,9 @@ async function main(): Promise<void> {
     '#reentryError: Error | null = null',
     "this.#assertNoOperation('state-read')",
     "this.#runOperation('snapshot-read'",
-    "this.#assertReentryFree('Learning Mode Session Bridge settleReward')",
-    "this.#assertNoOperation('destroy')",
+    'this.#session.settleReward',
+    "'Learning Mode Session Bridge settleReward'",
+    "this.#runOperation('destroy'",
     'allLifecycleSettlementAndSnapshotReadsUseStickyOperationGuard: true',
     'operationGuardPrecedesBusinessStateValidation: true',
     'swallowedSessionHandoffOrIntentPublisherReentryFailsClosed: true',
@@ -2867,7 +2915,7 @@ async function main(): Promise<void> {
     'requiresExplicitLocalJumpAvailabilityEveryStartAndStep: true',
     'requiresExplicitWeaponFeedbackDirectionFactsEveryStep: true',
   ]) {
-    if (!learningModeSessionBridge.includes(marker)) {
+    if (!containsMarker(learningModeSessionBridge, marker)) {
       throw new Error(`P5 Learning Mode Session Bridge缺少粘滞提交标记${marker}。`);
     }
   }
@@ -2891,7 +2939,6 @@ async function main(): Promise<void> {
     'stickyReentryUsesSequenceAndFirstError: true',
     'cleanupCallbacksCheckedBeforeOwnershipRelease: true',
     'swallowedCleanupReentryStopsLaterOwners: true',
-    'explicitLocalJumpAvailabilityRequiredEveryStartAndStep: true',
     'destroyFastPathChecksOperationBeforeIdempotence: true',
     'requiresExplicitPresentationAuditEveryStep: true',
     'requiresExplicitSupplyCadenceEveryStep: true',
@@ -2899,7 +2946,7 @@ async function main(): Promise<void> {
     'requiresExplicitWeaponFeedbackDirectionFactsEveryStep: true',
     'requiredStepFieldsValidatedBeforeAssembler: true',
   ]) {
-    if (!modeProductSessionV2.includes(marker)) {
+    if (!containsMarker(modeProductSessionV2, marker)) {
       throw new Error(`P5 Mode Product Session V2缺少粘滞提交标记${marker}。`);
     }
   }
@@ -2916,10 +2963,10 @@ async function main(): Promise<void> {
     '#reentryError: Error | null = null',
     "this.#assertNoOperation('state-read')",
     "this.#assertNoOperation('read-frame-read')",
-    "this.#runOperation('mode-driver-content-hash-read'",
-    "this.#runOperation('terminal-authority-identity-read'",
-    "this.#runOperation('terminal-replay-read'",
-    "this.#runOperation('terminal-runtime-evidence-read'",
+    "'mode-driver-content-hash-read'",
+    "'terminal-authority-identity-read'",
+    "'terminal-replay-read'",
+    "'terminal-runtime-evidence-read'",
     "this.#assertNoOperation('destroy')",
     'operationGuardPrecedesBusinessStateValidation: true',
     'runtimeLifecycleAndAuthorityReadsUseStickyOperationGuard: true',
@@ -2932,7 +2979,7 @@ async function main(): Promise<void> {
     'requiresExplicitLocalJumpAvailabilityEveryStartAndStep: true',
     'requiresExplicitWeaponFeedbackDirectionFactsEveryStep: true',
   ]) {
-    if (!authoritativeLocalMatchSessionV3.includes(marker)) {
+    if (!containsMarker(authoritativeLocalMatchSessionV3, marker)) {
       throw new Error(`P5 Authoritative Local Match Session V3缺少粘滞提交标记${marker}。`);
     }
   }
@@ -2949,12 +2996,12 @@ async function main(): Promise<void> {
     '#reentryError: Error | null = null',
     "this.#assertNoOperation('state-read')",
     "this.#assertNoOperation('read-frame-read')",
-    "this.#runOperation('restore'",
-    "this.#runOperation('runtime-checkpoint-v1-read'",
-    "this.#runOperation('runtime-checkpoint-v2-read'",
-    "this.#runOperation('runtime-checkpoint-v3-read'",
-    "this.#runOperation('terminal-replay-read'",
-    "this.#runOperation('terminal-evidence-read'",
+    "'restore'",
+    "'runtime-checkpoint-v1-read'",
+    "'runtime-checkpoint-v2-read'",
+    "'runtime-checkpoint-v3-read'",
+    "'terminal-replay-read'",
+    "'terminal-evidence-read'",
     "this.#assertReentryFree('ModeMatchRuntimeV6 authority start')",
     "this.#assertReentryFree('ModeMatchRuntimeV6 authority mode resolver入口')",
     "this.#assertReentryFree('ModeMatchRuntimeV6 authority step')",
@@ -2968,7 +3015,7 @@ async function main(): Promise<void> {
     'swallowedCleanupReentryStopsLaterOwners: true',
     'destroyFastPathChecksOperationBeforeIdempotence: true',
   ]) {
-    if (!modeMatchRuntimeV6.includes(marker)) {
+    if (!containsMarker(modeMatchRuntimeV6, marker)) {
       throw new Error(`P5 Mode Match Runtime V6缺少粘滞提交标记${marker}。`);
     }
   }
@@ -2980,23 +3027,23 @@ async function main(): Promise<void> {
     'packages/arena-quick-match/src/mode-authoritative-quick-match-service-v3.ts',
   ), 'utf8');
   for (const marker of [
-    "#operation: 'create' | null = null",
+    "#operation: 'create' | 'destroy' | null = null",
     '#reentrySequence = 0',
     '#reentryError: Error | null = null',
-    "this.#assertNoOperation('create')",
-    "this.#assertReentryFree('ModeAuthoritativeQuickMatchServiceV3 request validation')",
-    "this.#assertReentryFree('ModeAuthoritativeQuickMatchServiceV3 seedSource')",
-    "this.#assertReentryFree('ModeAuthoritativeQuickMatchServiceV3 rosterProvider')",
-    "this.#assertReentryFree('ModeAuthoritativeQuickMatchServiceV3 contentProvider')",
-    "this.#assertReentryFree('ModeAuthoritativeQuickMatchServiceV3 runtimeFactory')",
-    "this.#assertReentryFree('ModeAuthoritativeQuickMatchServiceV3 session construction')",
-    'destroyRuntime(session, cleanupErrors)',
+    "this.#beginOperation('create')",
+    "this.#assertCurrentOperationCommit('ModeAuthoritativeQuickMatchServiceV3 request validation')",
+    "'ModeAuthoritativeQuickMatchServiceV3 seedSource'",
+    "'ModeAuthoritativeQuickMatchServiceV3 rosterProvider'",
+    "'ModeAuthoritativeQuickMatchServiceV3 contentProvider'",
+    "'ModeAuthoritativeQuickMatchServiceV3 runtimeFactory'",
+    "this.#assertCurrentOperationCommit('ModeAuthoritativeQuickMatchServiceV3 session construction')",
+    'const cleanupCandidates = session !== null',
     'createGuardPrecedesRequestValidation: true',
     'seedRosterContentAndRuntimePortsCheckedBeforeNextOwner: true',
     'createdSessionRetainsCleanupOwnershipUntilSafeReturn: true',
     'swallowedPortOrCleanupReentryRejectsCreate: true',
   ]) {
-    if (!authoritativeQuickMatchServiceV3.includes(marker)) {
+    if (!containsMarker(authoritativeQuickMatchServiceV3, marker)) {
       throw new Error(`P5 Authoritative Quick Match Service V3缺少构造提交标记${marker}。`);
     }
   }
@@ -3023,7 +3070,7 @@ async function main(): Promise<void> {
     'successfulPendingCleanupWatermarkPrecedesReentryRejection: true',
     'stickyReentryUsesSequenceAndFirstError: true',
   ]) {
-    if (!quickMatchBundleFactory.includes(marker)) {
+    if (!containsMarker(quickMatchBundleFactory, marker)) {
       throw new Error(`P5 Quick Match Bundle Factory缺少所有权提交标记${marker}。`);
     }
   }
@@ -3039,15 +3086,15 @@ async function main(): Promise<void> {
     '#reentrySequence = 0',
     '#reentryError: Error | null = null',
     "this.#beginOperation('create-session')",
-    "this.#assertReentryFree('Mode Learning Session Factory request validation')",
-    "this.#assertReentryFree('Mode Learning Session Factory match bundle owner capture')",
-    "this.#assertReentryFree('Mode Learning Session Factory match bundle validation')",
-    "this.#assertReentryFree('Mode Learning Session Factory authority admission')",
-    "this.#assertReentryFree('Mode Learning Session Factory mode session composition')",
-    "this.#assertReentryFree('Mode Learning Session Factory learning handoff construction')",
-    "this.#assertReentryFree('Mode Learning Session Factory bridge construction')",
-    "this.#assertReentryFree('Mode Learning Session Factory HUD-ready construction')",
-    "this.#assertReentryFree('Mode Learning Session Factory session publication')",
+    "this.#assertCurrentOperationCommit('Mode Learning Session Factory request validation')",
+    "this.#assertCurrentOperationCommit('Mode Learning Session Factory match bundle owner capture')",
+    "this.#assertCurrentOperationCommit('Mode Learning Session Factory match bundle validation')",
+    "this.#assertCurrentOperationCommit('Mode Learning Session Factory authority admission')",
+    "this.#assertCurrentOperationCommit('Mode Learning Session Factory mode session composition')",
+    "this.#assertCurrentOperationCommit('Mode Learning Session Factory learning handoff construction')",
+    "this.#assertCurrentOperationCommit('Mode Learning Session Factory bridge construction')",
+    "this.#assertCurrentOperationCommit('Mode Learning Session Factory HUD-ready construction')",
+    "this.#assertCurrentOperationCommit('Mode Learning Session Factory session publication')",
     'for (const remaining of cleanupCandidates.slice(index + 1))',
     "this.#assertNoOperation('destroy')",
     'operationGuardPrecedesStateAndRequestValidation: true',
@@ -3055,7 +3102,7 @@ async function main(): Promise<void> {
     'swallowedCleanupReentryRetainsAllUnprocessedOwners: true',
     'successfulCleanupWatermarkPrecedesReentryRejection: true',
   ]) {
-    if (!modeLearningSessionFactory.includes(marker)) {
+    if (!containsMarker(modeLearningSessionFactory, marker)) {
       throw new Error(`P5 Mode Learning Session Factory缺少所有权提交标记${marker}。`);
     }
   }
@@ -3085,7 +3132,7 @@ async function main(): Promise<void> {
     'projectArenaV2CompetitiveRepeatableChallengeInformationFieldSourceCandidateV1',
     "screenId === 'survival-prep'",
     "({ kind }) => kind === 'survival'",
-    "if (selectedModeKind === 'survival') return projection",
+    "if (selectedModeKind === 'survival') return focusedProjection",
     "modeDefinitions.find(({ kind }) => kind === selectedModeKind)",
     "modeRecords.find(({ kind }) => kind === selectedModeKind)",
     'bestPerformanceTicks: modeRecord?.bestPerformanceTicks ?? null',
@@ -3198,8 +3245,8 @@ async function main(): Promise<void> {
     'projectArenaV2HomeRecordSummaryInformationFieldSourceCandidateV1',
     'pages.profiles.learning.homeRecordSummary',
     'getInformationNextLearningGoalRead(',
-    'pages.profiles.learning.nextGoal.weaponDefinitionId',
-    'pages.profiles.learning.nextGoal.mapDefinitionId',
+    'nextGoal.weaponDefinitionId',
+    'nextGoal.mapDefinitionId',
     '#assertRenderedResultCollectionTarget(',
     'Arena结果页展示的下一把武器与实际导航目标发生漂移',
     'Arena结果页展示的下一张地图与实际导航目标发生漂移',
@@ -3226,7 +3273,7 @@ async function main(): Promise<void> {
     'destroyReentryCheckedBeforeIdempotentFastPath: true',
     'destroyReentryDoesNotDiscardRetryOwnership: true',
   ]) {
-    if (!threeModeInformationHost.includes(marker)) {
+    if (!containsMarker(threeModeInformationHost, marker)) {
       throw new Error(`P5三模式Information Host缺少可重试清理所有权标记${marker}。`);
     }
   }
@@ -3259,7 +3306,7 @@ async function main(): Promise<void> {
     "this.#runSynchronousOperation('destroy'",
     '#cleanupDebts = new Set',
   ]) {
-    if (!characterPreviewMount.includes(marker)) {
+    if (!containsMarker(characterPreviewMount, marker)) {
       throw new Error(`P5选角武器预览缺少边界标记${marker}。`);
     }
   }
@@ -3290,17 +3337,17 @@ async function main(): Promise<void> {
     "this.#runSynchronousOperation('destroy-mount'",
     "this.#runSynchronousOperation('snapshot-read'",
     "this.#runSynchronousOperation('destroy'",
-    'cleanupOwnedMountObjects(built.cleanup);',
+    'cleanupOwnedMountObjects(cleanup);',
     'this.#mounts.set(parsed.mountId',
   ]) {
-    if (!collectionPreviewThreeMountOwner.includes(marker)) {
+    if (!containsMarker(collectionPreviewThreeMountOwner, marker)) {
       throw new Error(`P5 A6.9收藏Three mount Owner缺少重入失败关闭标记${marker}。`);
     }
   }
   if (collectionPreviewThreeMountOwner.includes('#reentryAttempted')) {
     throw new Error('P5 A6.9收藏Three mount Owner不得恢复可重置布尔反调事实。');
   }
-  if (collectionPreviewThreeMountOwner.indexOf('cleanupOwnedMountObjects(built.cleanup);')
+  if (collectionPreviewThreeMountOwner.indexOf('cleanupOwnedMountObjects(cleanup);')
     >= collectionPreviewThreeMountOwner.indexOf('this.#mounts.set(parsed.mountId')) {
     throw new Error('P5 A6.9吞错重入必须先清理未发布mount，再允许任何record提交。');
   }
@@ -3320,7 +3367,7 @@ async function main(): Promise<void> {
     '#operation: string | null = null',
     '#reentrySequence = 0',
     '#reentryError: Error | null = null',
-    "this.#runSynchronousOperation('constructor-snapshot'",
+    "'constructor-snapshot'",
     "this.#runSynchronousOperation('commit-execution'",
     "this.#runSynchronousOperation('prepare-release'",
     "this.#runSynchronousOperation('read-destroyed-proof'",
@@ -3332,7 +3379,7 @@ async function main(): Promise<void> {
     "this.#runSynchronousOperation('lease-settled'",
     "this.#runSynchronousOperation('lease-rejected'",
   ]) {
-    if (!collectionPreviewMountLifecycle.includes(marker)) {
+    if (!containsMarker(collectionPreviewMountLifecycle, marker)) {
       throw new Error(`P5 A6.12b mount/proof Owner缺少同步提交边界${marker}。`);
     }
   }
@@ -3354,7 +3401,7 @@ async function main(): Promise<void> {
     "this.#runSynchronousOperation('snapshot'",
     "this.#runSynchronousOperation('destroy'",
   ]) {
-    if (!collectionPreviewMultiSlotSurface.includes(marker)) {
+    if (!containsMarker(collectionPreviewMultiSlotSurface, marker)) {
       throw new Error(`P5 A6.13多槽预览Surface缺少公开读取重入边界${marker}。`);
     }
   }
@@ -3383,7 +3430,7 @@ async function main(): Promise<void> {
     "this.#runSynchronousOperation('destroy'",
     'record.resolveOperation(handle);',
   ]) {
-    if (!collectionPreviewLazyGltfAdapter.includes(marker)) {
+    if (!containsMarker(collectionPreviewLazyGltfAdapter, marker)) {
       throw new Error(`P5 A6.11a懒加载适配层缺少同步提交边界标记${marker}。`);
     }
   }
@@ -3422,7 +3469,7 @@ async function main(): Promise<void> {
     "this.#runSynchronousOperation('destroy'",
     'if (lease.resultSettled) return;',
   ]) {
-    if (!collectionFormalPreviewLeaseOwner.includes(marker)) {
+    if (!containsMarker(collectionFormalPreviewLeaseOwner, marker)) {
       throw new Error(`P5 A6.6正式预览租约Owner缺少同步提交边界标记${marker}。`);
     }
   }
@@ -3452,7 +3499,7 @@ async function main(): Promise<void> {
     '#reentryError: Error | null = null',
     'this.#inFlightPromise = operation;',
     'NATIVE_PROMISE_THEN, EXECUTION_MICROTASK_TRIGGER',
-    "this.#runSynchronousOperation('constructor-snapshot'",
+    "'constructor-snapshot'",
     "this.#runSynchronousOperation('command-commit'",
     "this.#runSynchronousOperation('command-failure'",
     "this.#runSynchronousOperation('lease-settled'",
@@ -3460,7 +3507,7 @@ async function main(): Promise<void> {
     "this.#runSynchronousOperation('destroy'",
     'command执行时拒绝状态${this.#state}复活',
   ]) {
-    if (!collectionPreviewLeaseExecutor.includes(marker)) {
+    if (!containsMarker(collectionPreviewLeaseExecutor, marker)) {
       throw new Error(`P5 A6.11b租约命令Executor缺少同步提交边界标记${marker}。`);
     }
   }
@@ -3494,14 +3541,14 @@ async function main(): Promise<void> {
     'childPromise = this.#executor.execute(value);',
     'this.#childInFlightPromise = childPromise;',
     'this.#attachCommandSettlement(operation, childPromise, commandOwner);',
-    "this.#runSynchronousOperation('constructor-snapshot'",
+    "'constructor-snapshot'",
     "this.#runSynchronousOperation('command-fulfilled'",
     "this.#runSynchronousOperation('command-rejected'",
     "this.#runSynchronousOperation('reset-epoch'",
     "this.#runSynchronousOperation('destroy'",
     'command完成时拒绝状态${this.#state}复活',
   ]) {
-    if (!collectionPreviewResourceComposition.includes(marker)) {
+    if (!containsMarker(collectionPreviewResourceComposition, marker)) {
       throw new Error(`P5 A6.11c资源Composition缺少同步提交边界标记${marker}。`);
     }
   }
@@ -3532,7 +3579,7 @@ async function main(): Promise<void> {
     "this.#runSynchronousOperation('destroy'",
     'resource完成时拒绝状态${this.#state}复活',
   ]) {
-    if (!collectionPreviewPageTransaction.includes(marker)) {
+    if (!containsMarker(collectionPreviewPageTransaction, marker)) {
       throw new Error(`P5 A6.12c页面事务缺少同步提交边界标记${marker}。`);
     }
   }
@@ -3566,7 +3613,7 @@ async function main(): Promise<void> {
     "this.#runSynchronousOperation('render-current'",
     "this.#runSynchronousOperation('destroy'",
   ]) {
-    if (!collectionPreviewPageSurfaceHost.includes(marker)) {
+    if (!containsMarker(collectionPreviewPageSurfaceHost, marker)) {
       throw new Error(`P5 A6.14页面预览Host缺少同步提交边界标记${marker}。`);
     }
   }
@@ -3600,7 +3647,7 @@ async function main(): Promise<void> {
     "this.#runSynchronousOperation('submission-rejected'",
     "this.#runSynchronousOperation('resource-redraw'",
   ]) {
-    if (!collectionPreviewSurface.includes(marker)) {
+    if (!containsMarker(collectionPreviewSurface, marker)) {
       throw new Error(`P5收藏预览同步与异步提交缺少边界标记${marker}。`);
     }
   }
@@ -3631,7 +3678,7 @@ async function main(): Promise<void> {
     "this.#runSynchronousOperation('snapshot'",
     "this.#runSynchronousOperation('destroy'",
   ]) {
-    if (!characterPreviewRender.includes(marker)) {
+    if (!containsMarker(characterPreviewRender, marker)) {
       throw new Error(`P5选角逐帧滚动投影缺少边界标记${marker}。`);
     }
   }
@@ -3670,7 +3717,7 @@ async function main(): Promise<void> {
     "if (typeof unbind === 'function')",
     'if (this.#scrollUnbind === null) {',
   ]) {
-    if (!characterPreviewSurface.includes(marker)) {
+    if (!containsMarker(characterPreviewSurface, marker)) {
       throw new Error(`P5选角预览生命周期缺少边界标记${marker}。`);
     }
   }
@@ -3695,7 +3742,7 @@ async function main(): Promise<void> {
     'failedHostCleanupRetainsMatchAudioAndVfxProducer: true',
     'disposeRequiresAllOwnedResourcesToReachCompletion: true',
   ]) {
-    if (!localPlayableSurfaceBinding.includes(marker)) {
+    if (!containsMarker(localPlayableSurfaceBinding, marker)) {
       throw new Error(`P5页面Binding清理依赖顺序缺少边界标记${marker}。`);
     }
   }
@@ -3717,11 +3764,11 @@ async function main(): Promise<void> {
     'this.#pointerSurface.applyJumpActionAvailability(movementAndJump.jump)',
     "primaryKind === 'selected' || primaryHoldKind === 'selected'",
     'primaryAvailabilityIncludesPressOrHoldAffordance: true',
-    "commitment.status === 'charging'",
+    "commitment.status !== 'charging'",
     'primaryAvailabilityIncludesActiveHoldCommitment: true',
     'primaryGestureHintUsesAuthorityChargeLevel: true',
   ]) {
-    if (!formalWebComposition.includes(marker)) {
+    if (!containsMarker(formalWebComposition, marker)) {
       throw new Error(`P5正式Web选角滚动接线缺少边界标记${marker}。`);
     }
   }

@@ -155,10 +155,10 @@ describe('Arena V2 UI surface candidates V1', () => {
     const result = paintArenaV2UiRenderPlanV1(host.port, groupedPlan);
     expect(host.text).toEqual(expect.arrayContaining([
       '武器与情境研究',
-      '地图与路线研究',
-      '模式与挑战进度',
+      '地图与路线研究…',
+      '下局使用',
     ]));
-    expect(result.truncatedTextPrimitiveIds).not.toContain('page-question');
+    expect(result.truncatedTextPrimitiveIds).toContain('page-question');
   });
 
   it('rejects a future tone before issuing any Canvas paint call', () => {

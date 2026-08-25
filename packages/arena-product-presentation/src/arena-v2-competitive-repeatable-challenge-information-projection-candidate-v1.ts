@@ -180,9 +180,9 @@ export const ARENA_V2_COMPETITIVE_REPEATABLE_CHALLENGE_INFORMATION_PROJECTION_CA
   Object.freeze({
     schemaVersion: 1 as const,
     status: 'production-unreachable' as const,
+    hardGate: false as const,
     implementationStatus: 'code-written-not-run' as const,
     validationStatus: 'not-run' as const,
-    hardGate: false as const,
     defaultSurfaceWired: false as const,
     targetScreenId: 'match-prep' as const,
     targetOwnerId: 'p5-mode-content' as const,

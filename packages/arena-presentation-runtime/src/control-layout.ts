@@ -199,7 +199,7 @@ function resolvedSafeRect(
   });
 }
 
-function resolvedActionButtonCenter(
+function clampedActionButtonCenter(
   viewport: ArenaControlViewport,
   definition: ArenaControlLayout,
   prefix: 'jump' | 'primary',
@@ -217,6 +217,48 @@ function resolvedActionButtonCenter(
   });
 }
 
+function resolvedActionButtonCenters(
+  viewport: ArenaControlViewport,
+  definition: ArenaControlLayout,
+  radius: number,
+): Readonly<Record<'jump' | 'primary', Readonly<ArenaControlActionCenter>>> {
+  const safeRect = resolvedSafeRect(viewport);
+  const primary = clampedActionButtonCenter(viewport, definition, 'primary', radius);
+  const jump = clampedActionButtonCenter(viewport, definition, 'jump', radius);
+  const deltaX = primary.x - jump.x;
+  const deltaY = primary.y - jump.y;
+  const distance = Math.hypot(deltaX, deltaY);
+  const requiredDistance = radius * 2;
+  if (distance >= requiredDistance) return Object.freeze({ primary, jump });
+
+  const unitX = distance === 0 ? 0 : deltaX / distance;
+  const unitY = distance === 0 ? -1 : deltaY / distance;
+  const separation = (requiredDistance - distance) / 2;
+  const clampX = (value: number): number => Math.min(
+    safeRect.right - radius,
+    Math.max(safeRect.left + radius, value),
+  );
+  const clampY = (value: number): number => Math.min(
+    safeRect.bottom - radius,
+    Math.max(safeRect.top + radius, value),
+  );
+  const separatedPrimary = Object.freeze({
+    x: clampX(primary.x + unitX * separation),
+    y: clampY(primary.y + unitY * separation),
+  });
+  const separatedJump = Object.freeze({
+    x: clampX(jump.x - unitX * separation),
+    y: clampY(jump.y - unitY * separation),
+  });
+  if (Math.hypot(
+    separatedPrimary.x - separatedJump.x,
+    separatedPrimary.y - separatedJump.y,
+  ) + 1e-9 < requiredDistance) {
+    throw new RangeError('control viewport safe area无法容纳互不重叠的动作按钮。');
+  }
+  return Object.freeze({ primary: separatedPrimary, jump: separatedJump });
+}
+
 function isInsideButton(
   point: ArenaControlPoint,
   viewport: ArenaControlViewport,
@@ -224,7 +266,7 @@ function isInsideButton(
   prefix: 'jump' | 'primary',
 ): boolean {
   const radius = resolvedActionButtonRadius(viewport, definition);
-  const center = resolvedActionButtonCenter(viewport, definition, prefix, radius);
+  const center = resolvedActionButtonCenters(viewport, definition, radius)[prefix];
   return Math.hypot(point.x - center.x, point.y - center.y) <= radius;
 }
 
@@ -242,12 +284,11 @@ export function actionButtonCenter(
   }
   const viewport = cloneViewport(viewportValue, 'action button viewport');
   const definition = createArenaControlLayout(layoutValue);
-  return resolvedActionButtonCenter(
+  return resolvedActionButtonCenters(
     viewport,
     definition,
-    controlId,
     resolvedActionButtonRadius(viewport, definition),
-  );
+  )[controlId];
 }
 
 export function actionButtonRadius(

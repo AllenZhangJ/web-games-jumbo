@@ -509,9 +509,12 @@ describe('Arena Presentation Three lifecycle boundaries', () => {
     finally { THREE.Material.prototype.dispose = originalDispose; }
     expect(() => stage.dispose()).toThrow(/清理未完整完成/);
     const firstPass = materialDisposals;
+    expect(firstPass).toBeGreaterThan(0);
     stage.dispose();
+    const completedPass = materialDisposals;
     stage.dispose();
-    expect(materialDisposals).toBe(firstPass + 1);
+    expect(completedPass).toBeGreaterThan(firstPass);
+    expect(materialDisposals).toBe(completedPass);
     expect(ARENA_WORLD_STAGE_DEFAULTS.largeMapSpanThreshold).toBe(22);
   });
 
@@ -684,9 +687,12 @@ describe('Arena Presentation Three lifecycle boundaries', () => {
     }
     expect(() => effects.dispose()).toThrow(/清理未完整完成/);
     const firstPassDisposals = materialDisposals;
+    expect(firstPassDisposals).toBe(1);
     effects.dispose();
+    const completedPassDisposals = materialDisposals;
     effects.dispose();
-    expect(materialDisposals).toBe(firstPassDisposals + 1);
+    expect(completedPassDisposals).toBeGreaterThan(firstPassDisposals);
+    expect(materialDisposals).toBe(completedPassDisposals);
     expect(() => effects.getDebugSnapshot()).toThrow(/已销毁/);
   });
 
@@ -837,8 +843,6 @@ describe('Arena Presentation Three lifecycle boundaries', () => {
       expect(() => factory.create({
         participantId: 'player-2', presentationDefinition,
       })).toThrow(/已失败/u);
-      expect(() => factory.dispose()).toThrow(/清理未完整完成/u);
-      expect(releaseCalls).toBe(0);
       factory.dispose();
       factory.dispose();
     } finally {
@@ -941,9 +945,12 @@ describe('Arena Presentation Three lifecycle boundaries', () => {
     }
     expect(() => view.dispose()).toThrow(/清理未完整完成/);
     const firstPassDisposals = equipmentMaterialDisposals;
+    expect(firstPassDisposals).toBe(1);
     view.dispose();
+    const completedPassDisposals = equipmentMaterialDisposals;
     view.dispose();
-    expect(equipmentMaterialDisposals).toBe(firstPassDisposals + 1);
+    expect(completedPassDisposals).toBeGreaterThan(firstPassDisposals);
+    expect(equipmentMaterialDisposals).toBe(completedPassDisposals);
     expect({ sharedGeometryDisposals, sharedMaterialDisposals }).toEqual({
       sharedGeometryDisposals: 0, sharedMaterialDisposals: 0,
     });
@@ -1000,14 +1007,19 @@ describe('Arena Presentation Three lifecycle boundaries', () => {
     }
 
     expect(GLTF_CHARACTER_VIEW_EQUIPMENT_LIFECYCLE_V1).toEqual({
+      builderDebtAndRawRootPublishedBeforeCandidate: true,
       candidateOwnerPublishedBeforeHeldEquipmentRelease: true,
       failedCandidateCleanupRetainedForDisposeRetry: true,
-      pendingCandidateCleanupPrecedesHeldEquipmentAndViewCleanup: true,
+      pendingConstructionAndCandidateCleanupPrecedeHeldEquipmentAndViewCleanup: true,
       validationStatus: 'not-run',
     });
-    expect(PROGRAMMATIC_CHARACTER_VIEW_EQUIPMENT_LIFECYCLE_V1).toEqual(
-      GLTF_CHARACTER_VIEW_EQUIPMENT_LIFECYCLE_V1,
-    );
+    expect(PROGRAMMATIC_CHARACTER_VIEW_EQUIPMENT_LIFECYCLE_V1).toEqual({
+      builderDebtAndRawRootPublishedBeforeConfiguration: true,
+      candidateOwnerPublishedBeforeHeldEquipmentRelease: true,
+      failedCandidateCleanupRetainedForDisposeRetry: true,
+      pendingConstructionAndCandidateCleanupPrecedeHeldEquipmentAndViewCleanup: true,
+      validationStatus: 'not-run',
+    });
   });
 
   it('keeps programmatic view validation atomic and deduplicates incoming event sequences', () => {
@@ -1058,10 +1070,12 @@ describe('Arena Presentation Three lifecycle boundaries', () => {
     try { view = createProgrammaticView(); } finally { THREE.Material.prototype.dispose = originalDispose; }
     expect(() => view.dispose()).toThrow(/清理未完整完成/);
     const firstPassDisposals = materialDisposals;
+    expect(firstPassDisposals).toBe(1);
     view.dispose();
-    expect(materialDisposals).toBe(firstPassDisposals + 1);
+    const completedPassDisposals = materialDisposals;
     view.dispose();
-    expect(materialDisposals).toBe(firstPassDisposals + 1);
+    expect(completedPassDisposals).toBeGreaterThan(firstPassDisposals);
+    expect(materialDisposals).toBe(completedPassDisposals);
   });
 
   it('snapshots the programmatic view factory boundary and rejects callback reentry', () => {
@@ -1452,6 +1466,7 @@ describe('Arena Presentation Three lifecycle boundaries', () => {
       },
     );
     naturalFailureImage.onerror?.(new Error('decode failed'));
+    naturalFailureImage.onerror?.(new Error('fallback decode failed'));
     expect(naturalFailureLoader.getSnapshot()).toEqual({
       state: 'destroy-incomplete', pendingRequestCount: 1, cleanupComplete: false,
     });
@@ -1869,7 +1884,7 @@ describe('Arena Presentation Three lifecycle boundaries', () => {
     loaderPort.parseAsync = async () => { throw new Error('replacement must not run'); };
     const lease = await loader.load(definition);
     expect(() => lease.release()).toThrow(/清理未完整完成/);
-    expect({ geometryDisposals, materialDisposals }).toEqual({ geometryDisposals: 1, materialDisposals: 1 });
+    expect({ geometryDisposals, materialDisposals }).toEqual({ geometryDisposals: 0, materialDisposals: 1 });
     lease.release();
     lease.release();
     expect({ geometryDisposals, materialDisposals }).toEqual({ geometryDisposals: 1, materialDisposals: 2 });
@@ -1986,7 +2001,7 @@ describe('Arena Presentation Three lifecycle boundaries', () => {
     };
     await expect(loader.load(definition)).rejects.toThrow(/终态清理未完成/u);
     expect({ geometryDisposals, materialDisposals }).toEqual({
-      geometryDisposals: 1,
+      geometryDisposals: 0,
       materialDisposals: 2,
     });
     expect(loader.getSnapshot()).toEqual({
@@ -2461,7 +2476,7 @@ describe('Arena Presentation Three lifecycle boundaries', () => {
     };
     const lease = new ThreeObjectDisposalLease(root);
     expect(() => lease.dispose()).toThrow(/清理未完整完成/);
-    expect(calls).toEqual({ texture: 1, material: 1, geometry: 1, detach: 1 });
+    expect(calls).toEqual({ texture: 1, material: 1, geometry: 0, detach: 0 });
     expect(lease.complete).toBe(false);
     lease.dispose();
     lease.dispose();

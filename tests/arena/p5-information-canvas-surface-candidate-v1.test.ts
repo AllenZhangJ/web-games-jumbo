@@ -278,7 +278,7 @@ test('P5.3zzs Canvas host keeps a retryable owned-resource cleanup ledger', () =
     'event-accessibility-label',
     'dispose',
   ]) {
-    assert.match(source, new RegExp(`#runSynchronousOperation\\('${operation}'`, 'u'));
+    assert.match(source, new RegExp(`#runSynchronousOperation\\(\\s*'${operation}'`, 'u'));
   }
   assert.match(source, /synchronousLifecycleOperationReentryRejected: true/u);
   assert.match(source, /publicReadsRejectedDuringOperationCommit: true/u);

@@ -19,12 +19,12 @@ function section(value: string, start: string, end: string): string {
 test('P4.4ad routes every one-shot through bounded SFX and Master buses', () => {
   const value = source();
   const constructor = section(value, 'constructor(value: unknown)', '\n\n  get state');
-  assert.match(constructor, /sfxBus = context\.createGain\(\)/u);
-  assert.match(constructor, /masterBus = context\.createGain\(\)/u);
-  assert.match(constructor, /limiter = context\.createDynamicsCompressor\(\)/u);
-  assert.match(constructor, /sfxBus\.connect\(masterBus\)/u);
-  assert.match(constructor, /masterBus\.connect\(limiter\)/u);
-  assert.match(constructor, /limiter\.connect\(context\.destination\)/u);
+  assert.match(constructor, /const createdSfxBus = context\.createGain\(\)/u);
+  assert.match(constructor, /const createdMasterBus = context\.createGain\(\)/u);
+  assert.match(constructor, /const createdLimiter = context\.createDynamicsCompressor\(\)/u);
+  assert.match(constructor, /createdSfxBus\.connect\(createdMasterBus\)/u);
+  assert.match(constructor, /createdMasterBus\.connect\(createdLimiter\)/u);
+  assert.match(constructor, /createdLimiter\.connect\(context\.destination\)/u);
 
   const play = section(value, 'play(value: unknown): void', '\n\n  stopAll(): void');
   assert.match(play, /source\.connect\(gain\)/u);
@@ -38,18 +38,22 @@ test('P4.4ad keeps fixed headroom and limiter settings out of per-cue gameplay d
   assert.match(value, /const SFX_BUS_GAIN_DB = 0;/u);
   assert.match(value, /const LIMITER_THRESHOLD_DB = -3;/u);
   assert.match(value, /const LIMITER_RATIO = 20;/u);
-  assert.match(value, /masterBus\.gain\.value = dbToLinear\(MASTER_HEADROOM_DB\)/u);
-  assert.match(value, /limiter\.threshold\.value = LIMITER_THRESHOLD_DB/u);
-  assert.match(value, /limiter\.ratio\.value = LIMITER_RATIO/u);
+  assert.match(value, /createdMasterBus\.gain\.value = dbToLinear\(MASTER_HEADROOM_DB\)/u);
+  assert.match(value, /createdLimiter\.threshold\.value = LIMITER_THRESHOLD_DB/u);
+  assert.match(value, /createdLimiter\.ratio\.value = LIMITER_RATIO/u);
 });
 
 test('P4.4ad rolls back partial bus construction and disposes each owned node once', () => {
   const value = source();
-  const constructor = section(value, 'constructor(value: unknown)', '\n\n  get state');
-  assert.match(constructor, /try \{ sfxBus\?\.disconnect\(\); \}/u);
-  assert.match(constructor, /try \{ masterBus\?\.disconnect\(\); \}/u);
-  assert.match(constructor, /try \{ limiter\?\.disconnect\(\); \}/u);
-  assert.match(constructor, /const closing = context\.close\(\)/u);
+  const constructionCleanup = section(
+    value,
+    'function cleanupFormalWebAudioConstructionResourcesCandidateV1(',
+    '\n\nexport class ArenaV2FormalWebAudioConstructionCleanupFailureCandidateV1',
+  );
+  assert.match(constructionCleanup, /resources\.limiter\.disconnect\(\)/u);
+  assert.match(constructionCleanup, /resources\.masterBus\.disconnect\(\)/u);
+  assert.match(constructionCleanup, /resources\.sfxBus\.disconnect\(\)/u);
+  assert.match(constructionCleanup, /const closing = resources\.context\.close\(\)/u);
 
   const disconnect = section(value, '#disconnectBusGraph()', '\n\n  #fail(');
   for (const node of ['sfxBus', 'masterBus', 'limiter']) {
@@ -80,8 +84,10 @@ test('P5.3zy binds late ended callbacks to the original voice identity', () => {
   const play = section(value, 'play(value: unknown): void', '\n\n  stopAll(): void');
   assert.match(
     play,
-    /source\.addEventListener\('ended', \(\) => \{\s*this\.#releaseVoice\(cue\.sourceEventId, voice\)/u,
+    /const endedListener:[\s\S]*this\.#settleEndedVoiceEventually\(cue\.sourceEventId, voice\)/u,
   );
+  assert.match(value, /#settleEndedVoiceEventually\(sourceEventId: string, voice: ActiveVoice\)/u);
+  assert.match(value, /this\.#releaseVoice\(sourceEventId, voice, true\)/u);
   assert.match(value, /lateEndedCallbackCannotReleaseReplacementVoice: true/u);
   assert.doesNotMatch(value, /#releaseVoice\(cue\.sourceEventId\);/u);
 });

@@ -2,8 +2,10 @@
 
 ## 1. 当前状态
 
-- 日期：2026-08-24。
+- 日期：2026-08-25。
 - 当前状态：`P5.0-eleven-screen-contract-static-candidate-landed / P5.0a-eleven-screen-navigation-session-static-candidate-landed / P5.0b-navigation-mode-learning-session-host-static-candidate-landed / P5.0c-generation-scoped-mode-learning-session-factory-static-candidate-landed / P5.0d-three-mode-authoritative-quick-match-information-host-code-written-not-run / P5.1-shared-information-viewmodel-layout-and-owner-composition-static-candidate-landed / P5.1a-twenty-weapon-two-map-twenty-segment-read-content-code-written-not-run / P5.1b-host-agnostic-dom-canvas-and-interaction-static-candidate-landed / P5.1c-isolated-web-dom-and-canvas-host-lifecycle-static-candidate-landed / P5.1d-eleven-screen-surface-pipeline-static-candidate-landed / P5.1e-eleven-screen-real-owner-composition-code-written-not-run / P5.1f-isolated-local-playable-surface-binding-code-written-not-run / P5.1g-six-character-selection-and-authority-routing-code-written-not-run / P5.1h-twenty-weapon-selection-and-authority-freeze-code-written-not-run / P5.1i-two-map-three-mode-authority-routing-code-written-not-run / P5.1j-three-concept-fixed-tick-keyboard-driver-code-written-not-run / P5.1k-three-concept-fixed-tick-pointer-driver-code-written-not-run / P5.2-three-mode-hud-public-identity-and-layout-static-candidate-landed / P5.2a-formal-match-surface-lifecycle-code-written-not-run / P5.2b-formal-three-asset-preloader-code-written-not-run / P5.2c-formal-gltf-character-runtime-code-written-not-run / P5.2d-formal-three-stage-camera-code-written-not-run / P5.2e-formal-hud-action-catalog-and-web-host-code-written-not-run / P5.2f-twenty-weapon-attachment-intake-code-written-not-run / P5.2g-two-authored-map-glb-and-web-playable-composition-code-written-not-run / P5.2h-isolated-formal-web-development-entry-code-written-not-run / P5.3-bounded-feedback-queue-static-candidate-landed / P5.3a-restore-consumer-epoch-static-candidate-landed / P5.3b-atomic-presentation-host-static-candidate-landed / P5.3c-validated-step-only-formal-host-static-candidate-landed / P5.3d-authority-audit-to-atomic-hud-owner-code-written-not-run / P5.3e-explicit-supply-authority-fact-cues-code-written-not-run / P5.3f-formal-webaudio-and-tick-vfx-code-written-not-run / P5.3g-seventeen-authored-weapon-audio-candidates-code-written-not-run / production-unreachable / hardGate=false`。
+- 2026-08-25 SF-DG.4/A2P5.1候选自动化证据：上一行保留实现批次明细，其中候选对象的`code-written-not-run / validationStatus=not-run`继续表示没有生产准入；它不再表示P5 runner从未执行。当前官方候选命令已通过52包/11波构建、Vitest 43/43文件与365/365项、Node 14/14文件与196/196项。默认Registry/Composition/Entry、正式资产、浏览器、设备、性能和真人门仍未通过，P5正式硬门不得写为PASS。
+- 本轮真实修复：Pointer输入绑定在吞重入后不再丢失已返回的cleanup；Information Host只重复清理未完成Owner；Pointer Surface构造进入显式operation并在390×844横向安全区内让视觉/命中按钮共享非重叠中心；Mode Runtime的`localJumpAvailability`从名义必填收紧为start/step类型、required key、规范化和返回值全链真实必填。UI Layout继续是卡片几何唯一Owner，RenderPlan只消费结果；正式玩法数值、权威tick、页面数量、输入概念和资产字节未改变。
 - 2026-08-24 证据状态校正：当前 clean 基线`feature/arena-v2-design-docs@787ce27`已有`typecheck:app`与52包workspace build通过记录，P2候选测试记录为`351/421`且P3边界门通过；这不代表P5 DOM/Canvas/Three、读屏、双视口、浏览器、设备、正式资产或默认入口的任何通过，相关门仍为`not-run`。
 - 最新本地命中可见性增量：`P5.3zzzzzze-local-resolved-weapon-impact-visual-reservation-code-written-not-run`。既有三条反馈上限不变；携带权威Action身份的本地真实命中、落点转移或击落结果优先于仍有效的本地攻击未命中占用保留槽。没有结果性接触时挥空仍可见；无Action的移动失足不能冒充武器反馈抢槽，未被显示的本地武器项继续受既有8 voice一次性声音预算保护；终局槽不可替换。
 - 最新命中反馈跨帧状态闭合：`P5.3zzzzzzf-feedback-queue-active-state-identity-and-time-closure-code-written-not-run`。上一帧每个活动反馈必须与首次接受的tick、sequence和完整指纹一致，`expiresAtTick`必须精确等于事件tick加既有语义寿命，且不能来自状态未来、不能在状态tick已过期；活动项和seen身份顺序均需保持确定性。
@@ -419,7 +421,9 @@ P5.3zf继续使用`threejs-animation`的现有Clip选择和`vfx-realtime`的方�
 | 治理证据 | 10 | 7 | 台账、双宿主精确孤立白名单、生命周期/页面Pipeline/内容待执行测试已写，尚无运行证据/截图/缺陷账本 |
 | 合计 | 100 | 71 | 不是Gate分，不得晋级生产 |
 
-## 9. 已写入但未执行的验证
+## 9. 已写入验证与当前执行边界
+
+本节所列、且进入官方P5 runner的候选自动化已由2026-08-25 SF-DG.4执行通过；未进入runner的浏览器、双视口截图、读屏、设备、性能、正式资产与真人检查仍为`not-run`。不得用Node/Vitest结果替代这些表现门。
 
 - 11页固定顺序、唯一主动作、首屏字段数量和两点击路径测试。
 - 11页导航Session的两主点击开局、可选角色/准备、四槽导航不新增页面、Match/结算往返、revision/额外字段/非法边/销毁后调用拒绝和确定性双跑测试。

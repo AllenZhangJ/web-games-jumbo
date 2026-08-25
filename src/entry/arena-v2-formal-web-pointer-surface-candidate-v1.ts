@@ -876,6 +876,7 @@ export class ArenaV2FormalWebPointerSurfaceCandidateV1 {
     this.#primaryAvailabilityIndicator = primaryAvailabilityIndicator;
     this.#jumpGuide = jumpGuide;
     this.#jumpAvailabilityIndicator = jumpAvailabilityIndicator;
+    this.#beginOperation('construction');
     try {
       moveGuide.append(moveThumb, moveLabel, moveAvailabilityIndicator);
       primaryGuide.append(primaryLabel, primaryAvailabilityIndicator);
@@ -883,20 +884,39 @@ export class ArenaV2FormalWebPointerSurfaceCandidateV1 {
       surface.append(moveGuide, primaryGuide, jumpGuide);
       this.#hostRoot.append(surface);
       this.#resizeGuides();
+      this.#assertCurrentOperationCommit();
+      this.#operation = null;
+      this.#reentryError = null;
+      this.#operationFailure = null;
     } catch (error) {
+      this.#operationFailure ??= error;
+      const constructionError = this.#reentryError === null
+        ? error
+        : this.#operationFailure === this.#reentryError
+          ? this.#reentryError
+          : new AggregateError(
+            [this.#operationFailure, this.#reentryError],
+            'Arena V2 formal Web pointer surface构造失败且检测到同步重入。',
+          );
       try {
         rejectThenable(
           surface.remove(),
           'Arena V2 formal Web pointer surface construction root.remove',
         );
       } catch (cleanupError) {
+        this.#operation = null;
+        this.#reentryError = null;
+        this.#operationFailure = null;
         throw new ArenaV2FormalWebPointerSurfaceConstructionCleanupFailureCandidateV1(
-          error,
+          constructionError,
           cleanupError,
           surface,
         );
       }
-      throw error;
+      this.#operation = null;
+      this.#reentryError = null;
+      this.#operationFailure = null;
+      throw constructionError;
     }
     Object.freeze(this);
   }
@@ -1342,7 +1362,7 @@ export class ArenaV2FormalWebPointerSurfaceCandidateV1 {
       ),
     });
     if (Math.hypot(primaryCenter.x - jumpCenter.x, primaryCenter.y - jumpCenter.y)
-      < actionDiameter) {
+      + 1e-9 < actionDiameter) {
       throw new RangeError('Arena V2 formal Web pointer primary/jump固定圆形发生重叠。');
     }
     for (const [name, center] of [
@@ -1350,7 +1370,7 @@ export class ArenaV2FormalWebPointerSurfaceCandidateV1 {
       ['jump', jumpCenter],
     ] as const) {
       if (Math.hypot(moveCenter.x - center.x, moveCenter.y - center.y)
-        < moveRadius + actionRadius) {
+        + 1e-9 < moveRadius + actionRadius) {
         throw new RangeError(`Arena V2 formal Web pointer move/${name}固定圆形发生重叠。`);
       }
     }

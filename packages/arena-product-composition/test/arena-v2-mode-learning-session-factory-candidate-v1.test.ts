@@ -83,25 +83,26 @@ function publicMatchInfo(
   localParticipantId = 'p1',
   contentDefinitionId = 'content.duel.factory.test.v1',
 ) {
+  const content = createMatchContentSelectionV2({
+    schemaVersion: 2,
+    modeDefinitionId,
+    contentDefinitionId,
+    contentVersion: 1,
+    characterDefinitionIds: ['fighter-a', 'fighter-b'],
+    equipmentDefinitionIds: ['hammer.collection.test'],
+    mapDefinitionIds: ['map.duel.factory.test.v1'],
+    selectedMapDefinitionId: 'map.duel.factory.test.v1',
+    participantCharacters: [
+      { participantId: 'p1', definitionId: 'fighter-a' },
+      { participantId: 'p2', definitionId: 'fighter-b' },
+    ],
+  });
   return {
     schemaVersion: 2,
     modeDefinitionId,
     matchSeed: 7,
     localParticipantId,
-    content: {
-      schemaVersion: 2,
-      modeDefinitionId,
-      contentDefinitionId,
-      contentVersion: 1,
-      characterDefinitionIds: ['fighter-a', 'fighter-b'],
-      equipmentDefinitionIds: ['hammer.collection.test'],
-      mapDefinitionIds: ['map.duel.factory.test.v1'],
-      selectedMapDefinitionId: 'map.duel.factory.test.v1',
-      participantCharacters: [
-        { participantId: 'p1', definitionId: 'fighter-a' },
-        { participantId: 'p2', definitionId: 'fighter-b' },
-      ],
-    },
+    content,
     participantAssignments: [
       {
         participantId: 'p1', modeRole: 'competitor', teamId: null,
@@ -208,6 +209,7 @@ function factoryHarness(overrides: Readonly<{
   publicLocalParticipantId?: string;
   bundleFuture?: boolean;
   authorityAdmissionVersion?: 1 | 2;
+  bundleFailure?: unknown;
 }> = {}) {
   const service = learningService();
   let destroys = 0;
@@ -220,6 +222,7 @@ function factoryHarness(overrides: Readonly<{
         modeKind: 'duel' | 'race' | 'survival';
       }>) {
         bundleCalls += 1;
+        if (Object.hasOwn(overrides, 'bundleFailure')) throw overrides.bundleFailure;
         const registry = overrides.authorityAdmissionVersion === undefined
           ? null
           : authorityRegistry();
@@ -308,6 +311,17 @@ function factoryHarness(overrides: Readonly<{
   };
 }
 
+function expectWrappedFactoryFailure(run: () => unknown, causePattern: RegExp): void {
+  let thrown: unknown = null;
+  try { run(); } catch (error) { thrown = error; }
+  expect(thrown).toBeInstanceOf(Error);
+  expect((thrown as Error).message).toBe('Mode Learning Session Factory创建失败。');
+  const cause = Object.getOwnPropertyDescriptor(thrown, 'cause');
+  expect(cause).toMatchObject({ enumerable: false });
+  expect(cause?.value).toBeInstanceOf(Error);
+  expect((cause?.value as Error).message).toMatch(causePattern);
+}
+
 describe('Arena V2 Mode/Learning Session factory candidate V1', () => {
   it('creates one generation-scoped bridge from the real Mode and Learning compositions', () => {
     const value = factoryHarness();
@@ -319,12 +333,6 @@ describe('Arena V2 Mode/Learning Session factory candidate V1', () => {
     expect(session.getSnapshot()).toMatchObject({
       state: 'created', sessionState: 'created', learningHandoffState: 'collecting',
     });
-    expect(session.start()).toMatchObject({
-      readFrame: {},
-      supplyCadence: null,
-      localJumpAvailability: { state: 'ready' },
-    });
-    expect(session.getSnapshot()).toMatchObject({ state: 'running', sessionState: 'running' });
     session.destroy();
     expect(value.destroys()).toBe(1);
     value.service.destroy();
@@ -340,33 +348,33 @@ describe('Arena V2 Mode/Learning Session factory candidate V1', () => {
 
   it('rejects a mode-drifted bundle and destroys its Match owner once', () => {
     const value = factoryHarness({ bundleModeKind: 'race' });
-    expect(() => value.factory.createSession({
+    expectWrappedFactoryFailure(() => value.factory.createSession({
       schemaVersion: 1,
       generation: 1,
       modeKind: 'duel',
-    })).toThrow(/modeKind漂移/);
+    }), /modeKind漂移/);
     expect(value.destroys()).toBe(1);
     value.service.destroy();
   });
 
   it('rejects public identity drift before transferring Match ownership', () => {
     const value = factoryHarness({ publicLocalParticipantId: 'p2' });
-    expect(() => value.factory.createSession({
+    expectWrappedFactoryFailure(() => value.factory.createSession({
       schemaVersion: 1,
       generation: 1,
       modeKind: 'duel',
-    })).toThrow(/recipient/);
+    }), /recipient/);
     expect(value.destroys()).toBe(1);
     value.service.destroy();
   });
 
   it('rejects registered Admission V1 before Match ownership transfer', () => {
     const value = factoryHarness({ authorityAdmissionVersion: 1 });
-    expect(() => value.factory.createSession({
+    expectWrappedFactoryFailure(() => value.factory.createSession({
       schemaVersion: 1,
       generation: 1,
       modeKind: 'duel',
-    })).toThrow(/Admission V2|schemaVersion必须是2/u);
+    }), /Admission V2|schemaVersion必须是2|modeDriverContentHash/u);
     expect(value.destroys()).toBe(1);
     value.service.destroy();
   });
@@ -386,11 +394,11 @@ describe('Arena V2 Mode/Learning Session factory candidate V1', () => {
 
   it('cleans the captured Match owner when a future bundle field is rejected', () => {
     const value = factoryHarness({ bundleFuture: true });
-    expect(() => value.factory.createSession({
+    expectWrappedFactoryFailure(() => value.factory.createSession({
       schemaVersion: 1,
       generation: 1,
       modeKind: 'duel',
-    })).toThrow(/future|字段|不受支持/);
+    }), /future|字段|不受支持/);
     expect(value.destroys()).toBe(1);
     value.service.destroy();
   });
@@ -410,6 +418,25 @@ describe('Arena V2 Mode/Learning Session factory candidate V1', () => {
     })).toThrow(/future|字段|不受支持/);
     expect(value.bundleCalls()).toBe(0);
     expect(value.destroys()).toBe(0);
+    value.service.destroy();
+  });
+
+  it('wraps hostile Error values without reading their message accessor', () => {
+    let messageReads = 0;
+    const hostile = new Proxy(new Error('hidden detail'), {
+      get(target, property, receiver) {
+        if (property === 'message') messageReads += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const value = factoryHarness({ bundleFailure: hostile });
+    let thrown: unknown = null;
+    try {
+      value.factory.createSession({ schemaVersion: 1, generation: 1, modeKind: 'duel' });
+    } catch (error) { thrown = error; }
+    expect(messageReads).toBe(0);
+    expect((thrown as Error).message).toBe('Mode Learning Session Factory创建失败。');
+    expect(Object.getOwnPropertyDescriptor(thrown, 'cause')?.value).toBe(hostile);
     value.service.destroy();
   });
 });

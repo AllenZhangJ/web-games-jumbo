@@ -72,7 +72,7 @@ function collectionContent() {
         survivalRole: 'shared',
       })),
     })),
-    sourceContentHash: 'a615-content-source',
+    sourceContentHash: 'a615c0de',
   };
   return {
     ...authority,
@@ -139,7 +139,18 @@ function bindingSnapshot(
           estimateKind: 'capacity-hypothesis-not-player-promise',
         },
       },
-      nextGoalIdentity: null,
+      nextGoalIdentity: {
+        schemaVersion: 1,
+        profileRevision: 7,
+        kind: 'collect-weapon',
+        goalId: `collect-weapon:${content.weapons[0]!.weaponDefinitionId}`,
+        weaponDefinitionId: content.weapons[0]!.weaponDefinitionId,
+        mapDefinitionId: null,
+        segmentDefinitionId: null,
+        modeDefinitionId: null,
+        challengeDefinitionId: null,
+        context: null,
+      },
       diagnosticCode: null,
       observedProfileSchemaVersion: 1,
       reducedMotion: false,
@@ -464,7 +475,17 @@ function basePlan(
     }),
     Object.freeze({
       kind: 'action', id: 'primary-action', rect: primary, clipRect: null,
-      intentId: 'open-quick-match', label: '快速开局', accessibilityText: '快速开局',
+      intentId: screenId === 'weapon-detail'
+        ? 'use-selected-weapon-next-match'
+        : screenId === 'map-detail'
+          ? 'use-selected-map-next-match'
+          : 'open-quick-match',
+      label: screenId.endsWith('-detail') ? '下局使用' : '快速开局',
+      accessibilityText: screenId === 'weapon-detail'
+        ? '下局使用当前武器'
+        : screenId === 'map-detail'
+          ? '下局使用当前地图'
+          : '快速开局',
       enabled: true, disabledReason: null, minimumTouchTargetCssPixels: 48,
       tone: 'primary', zIndex: 4,
     }),
@@ -994,7 +1015,7 @@ describe('Arena V2 A6.15 collection preview RenderPlan layout bridge candidate V
       ({ id }) => id.endsWith(':action') && id.startsWith('selection:'),
     ) as unknown as { intentId: string };
     action.intentId = 'arena.v2.selection.weapon.forged%2Fidentity';
-    expect(() => owner.compose(forgedCard)).toThrow(/真实组合结果/);
+    expect(() => owner.compose(forgedCard)).toThrow(/Host当前权威组合结果/);
 
     const selectedDrift = clone(composeInput('weapon-index', '390x844', 2, { revision: 3 }));
     (selectedDrift.selectionProjection as unknown as { selectedId: string }).selectedId =
@@ -1002,7 +1023,7 @@ describe('Arena V2 A6.15 collection preview RenderPlan layout bridge candidate V
     expect(() => owner.compose(selectedDrift)).toThrow(/selectedId/);
 
     expect(() => owner.compose(composeInput('weapon-index', '390x844', 2, { revision: 1 })))
-      .toThrow(/revision回退/);
+      .toThrow(/revision.*跨视口回退/);
     const overflow = composeInput('weapon-index', '390x844', 2, {
       revision: 3,
       scrollOffsetCssPixels: committed.maximumScrollOffsetCssPixels + 1,
@@ -1113,7 +1134,7 @@ describe('Arena V2 A6.15 collection preview RenderPlan layout bridge candidate V
     (missing.sourceRenderPlan as unknown as {
       primitives: ArenaV2UiRenderPrimitiveV1[];
     }).primitives = [...missing.sourceRenderPlan.primitives.slice(1)];
-    expect(() => owner.compose(missing)).toThrow(/真实组合结果/);
+    expect(() => owner.compose(missing)).toThrow(/Host当前权威组合结果/);
 
     const duplicate = clone(composeInput('map-index', '390x844', 1));
     (duplicate.sourceRenderPlan.primitives as unknown as ArenaV2UiRenderPrimitiveV1[])

@@ -455,6 +455,8 @@ P2.5e中局恢复runtime、P2.5f终局tick合同、Duel/Race/Survival稳定产�
 
 ## 8. P5：11 页面、HUD 与最终反馈
 
+> 2026-08-25 SF-DG.4/A2P5.1候选自动化状态：官方P5 runner已通过52包/11波构建、43个Vitest文件365/365与14个Node文件196/196。该批关闭了Pointer/Input/Information Host清理水位、Pointer Surface构造与安全区几何、Layout单一几何Owner及Runtime显式jump availability等候选缺口；状态仍为`production-unreachable / hardGate=false`。正式资产、浏览器、双视口、读屏、设备、性能、真人、默认入口与发布均未通过。
+
 ### 目标
 
 把研究页面的信息合同迁入生产导航，并让玩家在战斗中看懂武器、供给、路线和失败原因。

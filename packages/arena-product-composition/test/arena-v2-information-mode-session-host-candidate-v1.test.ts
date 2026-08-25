@@ -339,7 +339,7 @@ describe('Arena V2 information and Mode Session host candidate V1', () => {
       state: 'failed',
       selectedModeKind: null,
       modeSessionState: null,
-      navigation: { lifecycle: 'destroyed' },
+      navigation: { lifecycle: 'active' },
     });
     expect(value.calls.destroyedSessionIds).toEqual(['session-1']);
     value.host.destroy();

@@ -183,6 +183,7 @@ export const ARENA_V2_SURVIVAL_REPEATABLE_CHALLENGE_INFORMATION_PROJECTION_CANDI
   Object.freeze({
     schemaVersion: 1 as const,
     status: 'production-unreachable' as const,
+    hardGate: false as const,
     implementationStatus: 'code-written-not-run' as const,
     validationStatus: 'not-run' as const,
     defaultSurfaceWired: false as const,

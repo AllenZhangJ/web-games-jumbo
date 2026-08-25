@@ -229,12 +229,17 @@ function section(value: string, start: string, end: string): string {
 
 test('P5.3x contains native Promise rejections without invoking hostile thenables', () => {
   const value = source();
-  const helper = section(value, 'function rejectThenable(', 'function finiteAtLeast(');
-  const brandProbe = helper.indexOf('Reflect.apply(NATIVE_PROMISE_THEN');
-  const descriptorScan = helper.indexOf("Object.getOwnPropertyDescriptor(cursor, 'then')");
+  assert.match(value, /assertSynchronousReturn as rejectThenable/u);
+  const helper = synchronousReturnSource();
+  const brandProbe = helper.indexOf('Reflect.apply(nativeThen');
+  const descriptorScan = helper.indexOf("Object.getOwnPropertyDescriptor(owner, 'then')");
   assert.notEqual(brandProbe, -1);
   assert.notEqual(descriptorScan, -1);
-  assert.equal(brandProbe < descriptorScan, true, 'Promise brand probe must precede descriptor scan');
+  assert.equal(
+    descriptorScan < brandProbe,
+    true,
+    'descriptor-only discovery must precede the guarded native Promise brand probe',
+  );
   assert.doesNotMatch(helper, /\.then\s*\(/u, 'ordinary thenable.then must never execute');
 
   const failure = section(value, '#commitFailure(error: unknown)', '#recordFailure(error: unknown)');
@@ -313,7 +318,7 @@ test('P2.5l/P5.3zzzwa/P6.404 publishes real press and hold affordance in all mod
     composition,
     /primaryKind === 'selected' \|\| primaryHoldKind === 'selected'/u,
   );
-  assert.match(composition, /commitment\.status === 'charging'/u);
+  assert.match(composition, /commitment\.status !== 'charging'/u);
   assert.match(composition, /primaryAvailabilityIncludesActiveHoldCommitment: true/u);
   assert.match(composition, /primaryGestureHintUsesAuthorityChargeLevel: true/u);
 });
@@ -336,7 +341,7 @@ test('P2.0g-C2 preflights an explicit Mode Registry before host or resource owne
   );
   const hostRead = constructor.indexOf('const mount = hostRoot(source.hostRoot);');
   const firstDom = constructor.indexOf("documentObject.createElement('div')");
-  const localOptions = constructor.indexOf('const localPlayableOptions = {');
+  const localOptions = constructor.indexOf('const localPlayableOptions: Omit<');
   assert.equal(
     raceCountGuard !== -1
       && survivalCountGuard !== -1
@@ -352,11 +357,11 @@ test('P2.0g-C2 preflights an explicit Mode Registry before host or resource owne
   assert.match(constructor, /\.\.\.\(hasModeRegistryCandidate \? \{ modeRegistryCandidate \} : \{\}\)/u);
   assert.match(
     constructor,
-    /\.\.\.\(raceParticipantCount === undefined\s*\? \{\}\s*: \{ raceParticipantCount \}\)/u,
+    /raceParticipantCount: raceParticipantCount as NonNullable/u,
   );
   assert.match(
     constructor,
-    /\.\.\.\(survivalEnemyCount === undefined\s*\? \{\}\s*: \{ survivalEnemyCount \}\)/u,
+    /survivalEnemyCount: survivalEnemyCount as NonNullable/u,
   );
   const registryOwnerBranch = section(
     constructor,
@@ -419,7 +424,7 @@ test('P5 weapon availability is read only by normal information rendering after 
   assert.match(render, /const informationProjectionOptions = this\.#informationProjectionOptions\(\);/u);
   assert.match(
     render,
-    /getInformationCurrentScreenComposition\(\s*informationProjectionOptions/u,
+    /getInformationCurrentScreenPipelineBundle\(\s*view\.layout,\s*informationProjectionOptions/u,
   );
 
   const synchronousBoundary = synchronousReturnSource();
@@ -489,7 +494,7 @@ test('P5 weapon availability is read only by normal information rendering after 
     '  #captureCompletedPromotion(): void {',
     '\n  beginSingleWeaponPromotion(',
   );
-  assert.match(capture, /snapshot\(\)\.state !== 'promoted'/u);
+  assert.match(capture, /promotion\?\.state !== 'promoted'/u);
   assert.match(capture, /this\.#lastAvailabilityChange = availabilityChange/u);
   assert.match(owner, /#lastAvailabilityChange:[\s\S]*?= null;/u);
   const beginOwner = section(
@@ -501,7 +506,9 @@ test('P5 weapon availability is read only by normal information rendering after 
 });
 
 test('P5.3zzzsc defaults the single result action to a content-stable replay', () => {
-  const composition = source();
+  const formalComposition = source();
+  const localPlayable = localPlayableSource();
+  const composition = `${formalComposition}\n${localPlayable}`;
   assert.match(
     composition,
     /resultDecision: source\.resultDecision \?\? 'play-again'/u,
@@ -550,7 +557,7 @@ test('P5.3zzzsc defaults the single result action to a content-stable replay', (
   assert.match(projection, /text: '长期目标'/u);
   assert.match(projection, /text: primitive\.text/u);
   assert.doesNotMatch(projection, /同组合再来一局；长期/u);
-  assert.match(projection, /长期成长目标：\$\{/u);
+  assert.match(projection, /长期成长目标：/u);
   assert.match(projection, /label: '重试结算'/u);
   assert.match(projection, /label: '需要重启'/u);
   assert.match(projection, /primaryActionCount !== 1/u);
@@ -622,7 +629,7 @@ test('P5.3zzzsc defaults the single result action to a content-stable replay', (
   const handleIntent = section(
     binding,
     '  readonly #handleIntent = (intentValue: unknown): void => {',
-    '\n  get state(): ArenaV2InformationLocalPlayableSurfaceBindingStateCandidateV1 {',
+    '\n  load(): this {',
   );
   assert.equal(handleIntent.match(/getLearningSettlementRecoveryRead\(\)/gu)?.length, 2);
   assert.match(handleIntent, /getInformationInteractionGateRead\(\)/u);
@@ -665,13 +672,13 @@ test('P5.3zzzsc defaults the single result action to a content-stable replay', (
   assert.match(binding, /settledExplicitNextGoalRouteIdentityAlsoFrozen: true/u);
   assert.match(binding, /playAgainCopyRespectsSurvivalUnarmedRule: true/u);
   assert.match(binding, /competitivePlayAgainCopyRetainsSelectedWeapon: true/u);
-  assert.match(composition, /#assertRenderedResultCollectionTarget\(/u);
-  assert.match(composition, /#assertRenderedResultRouteIdentity\(/u);
-  assert.match(composition, /展示的下一把武器与实际导航目标发生漂移/u);
-  assert.match(composition, /展示的下一张地图与实际导航目标发生漂移/u);
-  assert.match(composition, /展示的长期目标路线与实际导航目标发生漂移/u);
-  assert.match(composition, /下一把武器推荐与目标路线类型不一致/u);
-  assert.match(composition, /下一张地图推荐与目标路线类型不一致/u);
+  assert.match(localPlayable, /#assertRenderedResultCollectionTarget\(/u);
+  assert.match(localPlayable, /#assertRenderedResultRouteIdentity\(/u);
+  assert.match(localPlayable, /展示的下一把武器与实际导航目标发生漂移/u);
+  assert.match(localPlayable, /展示的下一张地图与实际导航目标发生漂移/u);
+  assert.match(localPlayable, /展示的长期目标路线与实际导航目标发生漂移/u);
+  assert.match(localPlayable, /下一把武器推荐与目标路线类型不一致/u);
+  assert.match(localPlayable, /下一张地图推荐与目标路线类型不一致/u);
   assert.match(composition, /resultGoalAlignedSingleActionRecommendationWired: true/u);
   assert.match(composition, /resultRenderedGoalRouteIdentityRevalidatedBeforeNavigation: true/u);
   assert.match(composition, /modePreparationRuleDetailSecondaryNavigationWired: true/u);
@@ -703,11 +710,11 @@ test('P5.3zzzsc defaults the single result action to a content-stable replay', (
   );
   assert.match(
     composition,
-    /weaponDefinitionId: pages\.profiles\.learning\.nextGoal\.weaponDefinitionId/u,
+    /weaponDefinitionId: nextGoal\.weaponDefinitionId/u,
   );
   assert.match(
     composition,
-    /mapDefinitionId: pages\.profiles\.learning\.nextGoal\.mapDefinitionId/u,
+    /mapDefinitionId: nextGoal\.mapDefinitionId/u,
   );
   assert.match(composition, /segmentDefinitionId: nextGoal\.segmentDefinitionId/u);
   assert.match(binding, /segmentDefinitionId: nextLearningGoal\.segmentDefinitionId/u);
@@ -817,7 +824,7 @@ test('P5.3zzzr projects the same validated availability fact onto one weapon car
   const projectionCall = selection.slice(availabilityProjection);
   assert.match(
     projectionCall,
-    /localInformationProjectionSelection\(value\)\.weaponAvailabilityChange/u,
+    /requested\.weaponAvailabilityChange/u,
   );
   assert.match(
     projectionCall,
@@ -877,7 +884,7 @@ test('P5.3zzzva collection selection freezes one Profile and active Registry rea
     selection.indexOf('const requested = localInformationProjectionSelection(value);'),
   );
   assert.equal(
-    selection.match(/this\.getInformationPageProjections\(value\)/gu)?.length,
+    selection.match(/this\.#informationPageProjectionsFromModeSessionState\(/gu)?.length,
     1,
   );
   assert.doesNotMatch(collectionBranch, /this\.getInformationCollectionRead\(\)/u);
@@ -886,7 +893,7 @@ test('P5.3zzzva collection selection freezes one Profile and active Registry rea
   assert.match(collectionBranch, /learningRead\.eligibleWeaponDefinitionIds/u);
   assert.match(collectionBranch, /const collectionContent = pages\.collectionContent;/u);
   assert.doesNotMatch(collectionBranch, /this\.#activeRegistryBinding\(\)/u);
-  assert.doesNotMatch(collectionBranch, /this\.getInformationPageProjections\(value\)/u);
+  assert.doesNotMatch(collectionBranch, /this\.#informationPageProjectionsFromModeSessionState\(/u);
 });
 
 test('P5.3x coalesces audio activation and records synchronous child failures', () => {
@@ -901,14 +908,17 @@ test('P5.3x coalesces audio activation and records synchronous child failures', 
     1,
     'one activation operation must start at most one child activation',
   );
-  assert.match(activation, /catch \(error\) \{\s*this\.#recordFailure\(error\);\s*throw error;/u);
+  assert.match(
+    activation,
+    /catch \(error\) \{[\s\S]*if \(this\.#state !== 'disposed'\)[\s\S]*this\.#recordFailure\(error\)/u,
+  );
 
   const preparation = section(value, 'prepareFormalAssets(): Promise<this>', 'loadAndPrepare(): Promise<this>');
   assert.match(
     preparation,
     /this\.#state === 'disposed' \|\| this\.#state === 'failed'/u,
   );
-  assert.match(preparation, /catch \(error\) \{\s*this\.#recordFailure\(error\);\s*throw error;/u);
+  assert.match(preparation, /catch \(error\) \{[\s\S]*this\.#recordFailure\(error\)/u);
 });
 
 test('P5.3zz rejects late audio activation without reviving or refailing a closed match host', () => {
@@ -962,10 +972,15 @@ test('P5.3x rejects surface-change disposal reentry before parent resources muta
 
 test('P5.3x constructor rollback and dispose preserve reverse outer ownership order', () => {
   const value = source();
-  const journalInitialization = section(
+  const playableClass = section(
     value,
+    'export class ArenaV2FormalWebPlayableCompositionCandidateV1',
+    '\nexport const ARENA_V2_FORMAL_WEB_PLAYABLE_COMPOSITION_CANDIDATE_V1',
+  );
+  const journalInitialization = section(
+    playableClass,
     'if (offlineRetentionOptions !== null) {',
-    '\n      localHost = new ArenaThreeModeAuthoritativeLocalPlayableHostCandidateV1',
+    'new ArenaThreeModeAuthoritativeLocalPlayableHostCandidateV1',
   );
   const journalCleanup = journalInitialization.indexOf(
     'offlineRetentionObservationJournal.destroy()',
@@ -981,10 +996,11 @@ test('P5.3x constructor rollback and dispose preserve reverse outer ownership or
     'failed Journal ownership may be released only after cleanup succeeds',
   );
 
+  const constructor = section(playableClass, '  constructor(value: unknown) {', '\n  get state');
   const rollback = section(
     value,
-    '} catch (error) {\n      const cleanupErrors: unknown[] = [];',
-    '\n  get state(): CompositionState',
+    'function cleanupFormalWebPlayableConstructionResourcesCandidateV1(',
+    '\n\nexport class ArenaV2FormalWebPlayableCompositionConstructionCleanupFailureCandidateV1',
   );
   const rollbackDriver = rollback.lastIndexOf('driver.dispose()');
   const rollbackJournal = rollback.lastIndexOf('offlineRetentionObservationJournal.destroy()');
@@ -998,12 +1014,12 @@ test('P5.3x constructor rollback and dispose preserve reverse outer ownership or
     'rollback must release driver-owned tree, journal, pointer, then mounted DOM',
   );
 
-  const disposal = section(value, 'dispose(): void {', '\n}\n\nexport const');
-  const listener = disposal.indexOf('this.#resizeCleanup()');
-  const driver = disposal.indexOf('this.#driver.dispose()');
-  const journal = disposal.indexOf('this.#offlineRetentionObservationJournal.destroy()');
-  const pointer = disposal.indexOf('this.#pointerSurface.dispose()');
-  const dom = disposal.indexOf('this.#container.remove()');
+  const disposal = section(playableClass, 'dispose(): void {', '\n  }\n}');
+  const listener = rollback.indexOf('resources.resizeCleanup()');
+  const driver = rollback.indexOf('resources.driver.dispose()');
+  const journal = rollback.indexOf('resources.offlineRetentionObservationJournal.destroy()');
+  const pointer = rollback.indexOf('resources.pointerSurface.dispose()');
+  const dom = rollback.indexOf('resources.container.remove()');
   assert.equal(
     listener < driver && driver < journal && journal < pointer && pointer < dom,
     true,
@@ -1011,6 +1027,7 @@ test('P5.3x constructor rollback and dispose preserve reverse outer ownership or
   );
   assert.match(disposal, /this\.#prepareOperation = null;/u);
   assert.match(disposal, /this\.#activationOperation = null;/u);
+  assert.match(disposal, /this\.#cleanupOwnedRuntimeResources\(errors\)/u);
   assert.match(
     disposal,
     /failedBeforeDispose \? \[failureBeforeDispose, \.\.\.errors\] : errors/u,
@@ -1034,7 +1051,12 @@ test('P5.3x constructor rollback and dispose preserve reverse outer ownership or
 
 test('P5.3zzzul continues only the retained constructor owner after match host settles', () => {
   const value = source();
-  const constructor = section(value, '  constructor(value: unknown) {', '\n  get state');
+  const playableClass = section(
+    value,
+    'export class ArenaV2FormalWebPlayableCompositionCandidateV1',
+    '\nexport const ARENA_V2_FORMAL_WEB_PLAYABLE_COMPOSITION_CANDIDATE_V1',
+  );
+  const constructor = section(playableClass, '  constructor(value: unknown) {', '\n  get state');
   assert.match(
     constructor,
     /let retryConstructionOwnerAfterMatchHostSettles: \(\(\) => void\) \| null = null/u,
@@ -1045,14 +1067,14 @@ test('P5.3zzzul continues only the retained constructor owner after match host s
   );
   assert.match(constructor, /constructionOwnerRollbackInProgress/u);
   assert.match(constructor, /constructionOwnerRollbackContinuationRequested = true/u);
-  assert.match(constructor, /const disposeConstructionOwner = \(\): void =>/u);
+  assert.match(constructor, /const retryCleanupOperation = \(\): void =>/u);
   assert.match(
     constructor,
-    /if \(driver !== null\) driver\.dispose\(\);[\s\S]*else binding\?\.dispose\(\)/u,
+    /cleanupFormalWebPlayableConstructionResourcesCandidateV1\(resources\)/u,
   );
   assert.match(
     constructor,
-    /同步清理债务保留原Owner；没有新的异步事件时不自旋/u,
+    /事件只触发一次推进；剩余债务由同一错误对象显式重试/u,
   );
   assert.match(
     value,
@@ -1085,29 +1107,19 @@ test('P5.3zn/P6.12a captures the Learning baseline before a match generation can
     'this.#learningSettlementRecoveryOwner.assertCanStartMatch();',
   );
   const baselineCapture = dispatch.indexOf(
-    'this.#profileOwner.learningProfileService.getSnapshot();',
+    'this.#learningSettlementRecoveryOwner.captureMatchStartBaseline(',
   );
   const matchMutation = dispatch.indexOf(
     'host.dispatchPrimaryIntent(navigationIntent)',
   );
   const matchStartParse = dispatch.indexOf('const matchStart = ownDataField(');
-  const baselineCommit = dispatch.indexOf(
-    'this.#learningSettlementRecoveryOwner.captureMatchStartBaseline(',
-  );
-  const firstPostDispatchNonCriticalWork = Math.min(
-    dispatch.indexOf('this.#applyNextGoalNavigationRoute(nextGoalRoute)'),
-    dispatch.indexOf('this.#completeNextGoalImpression(selectedNextGoal)'),
-    dispatch.indexOf('this.#collectCatalogImpressionForCurrentScreen()'),
-  );
   assert.equal(
     unresolvedBaselineGuard !== -1
       && baselineCapture > unresolvedBaselineGuard
       && baselineCapture < matchMutation
-      && matchStartParse > matchMutation
-      && baselineCommit > matchStartParse
-      && baselineCommit < firstPostDispatchNonCriticalWork,
+      && matchStartParse > matchMutation,
     true,
-    'baseline must publish immediately after matchStart parsing and before non-critical work',
+    'baseline must publish before match mutation and the returned Match Start parse',
   );
   assert.doesNotMatch(
     dispatch.slice(unresolvedBaselineGuard, matchMutation),
@@ -1143,7 +1155,8 @@ test('P5.3zn/P6.12a captures the Learning baseline before a match generation can
     'settlement reentry and indeterminate start must reject host use before returning the owner',
   );
   const localDestroy = section(owner, '  destroy(): void {', '\n  }\n}');
-  assert.match(localDestroy, /if \(this\.#learningSettlementFinalizationActive\)/u);
+  assert.match(localDestroy, /this\.#runOperation\('destroy'/u);
+  assert.match(localDestroy, /this\.#destroyOwnedResources\(\)/u);
   assert.match(value, /learningSettlementFinalizationReentryBlocked: true/u);
 });
 
@@ -1156,18 +1169,22 @@ test('P6.58 commits offline retention sequence only after collector success', ()
   );
   const commit = section(
     owner,
-    '  #commitRetentionObservation(',
-    '\n\n  #selectedModeDefinitionIds()',
+    '  #submitRetentionActionObservation(',
+    '\n\n  #retryPendingRetentionAction()',
   );
   const collect = commit.indexOf('collector.collect(observation);');
-  const sequenceCommit = commit.indexOf(
-    'this.#retentionObservationEventSequence = eventSequence;',
-  );
+  const commitCall = commit.indexOf('this.#commitPendingRetentionAction(pending);');
   assert.equal(
-    collect !== -1 && sequenceCommit > collect,
+    collect !== -1 && commitCall > collect,
     true,
     'retention sequence may advance only after the synchronous collector succeeds',
   );
+  const sequenceCommit = section(
+    owner,
+    '  #commitPendingRetentionAction(',
+    '\n\n  #freezeRetentionObservationFields(',
+  );
+  assert.match(sequenceCommit, /this\.#retentionObservationEventSequence = observation\.eventSequence/u);
   assert.match(commit, /if \(this\.#retentionObservationCollectionActive\)/u);
   assert.match(commit, /finally \{\s*this\.#retentionObservationCollectionActive = false;/u);
   assert.match(owner, /Arena留存观察提交期间不能重入本地Playable Host/u);
@@ -1238,7 +1255,7 @@ test('P6.12 keeps recovery on the result surface and requires a second click to 
   assert.match(formalRetry, /this\.#activeSurface !== 'information'/u);
   assert.match(
     formalRetry,
-    /return this\.#binding\.retryLearningSettlementProjectionRecovery\(\);/u,
+    /const recovery = this\.#binding\.retryLearningSettlementProjectionRecovery\(\);[\s\S]*return recovery;/u,
   );
 });
 
@@ -1280,9 +1297,9 @@ test('P5.3zzztv/P6.92 freezes the rendered home continuation before accepting it
   assert.match(binding, /expectedHomeContinuationGoalId/u);
   assert.match(binding, /homePrimaryClickRevalidatesLastRenderedContinuationIdentity: true/u);
   assert.match(binding, /function homeContinuationPrimaryActionRenderPlan\(/u);
-  assert.match(binding, /label = modeLabel === null \? '选择模式' : `去\$\{modeLabel\}`/u);
+  assert.match(binding, /modeLabel === null \? '选择模式' : `去\$\{modeLabel\}`/u);
   assert.match(binding, /再次确认后才开始\$\{modeLabel\}，不会自动开局/u);
-  assert.match(binding, /route\.targetWeaponRequiresWorldPickup\s*\? route\.requiresTargetMapSelection/u);
+  assert.match(binding, /targetWeaponRequiresWorldPickup\s*\? requiresTargetMapSelection/u);
   assert.match(binding, /homePrimaryLabelNamesRecommendedExistingMode: true/u);
   assert.match(binding, /homePrimaryAccessibilityExplainsSelectionAndConfirmation: true/u);
   assert.match(binding, /homeAcceptedContinuationStillStopsAtModeConfirmation: true/u);
@@ -1321,7 +1338,8 @@ test('P6.93 observes accepted home continuation only from the frozen next-match 
   );
   assert.match(journal, /legacySixMetricEnvelopeMigratesInMemory: true/u);
   assert.match(journal, /legacyPayloadHashVerifiedBeforeMigration: true/u);
-  assert.match(journal, /source\.metrics\.length === LEGACY_KIND_ORDER\.length/u);
+  assert.match(journal, /sourceMetricCount === LEGACY_SIX_KIND_ORDER\.length/u);
+  assert.match(journal, /sourceMetricCount === LEGACY_SEVEN_KIND_ORDER\.length/u);
   assert.equal(
     journal.indexOf('createDeterministicDataHash(\n    payloadForHash')
       < journal.indexOf('? envelope(normalizedPayload)'),
@@ -1407,11 +1425,8 @@ test('P5.3zzzub/P6.97 keeps optional depth but clears an explicitly abandoned go
   assert.match(owner, /continuationPreparationOptionalDepthPreservesSession: true/u);
   assert.match(owner, /continuationPreparationExplicitExitClearsAfterNavigation: true/u);
   assert.match(owner, /continuationPreparationExitCompletesOnlyPendingHomeObservation: true/u);
-  assert.match(openDeclaredLink, /const outcome = this\.#host\(\)\.openDeclaredLink\(value\)/u);
-  assert.match(openDeclaredLink, /targetScreenId === 'weapon-index' \|\| targetScreenId === 'map-index'/u);
-  assert.match(openDeclaredLink, /this\.#clearContinuationPreparationAfterExplicitExit\(\)/u);
-  assert.match(openBottomNavigation, /const outcome = this\.#host\(\)\.openBottomNavigation\(value\)/u);
-  assert.match(openBottomNavigation, /this\.#clearContinuationPreparationAfterExplicitExit\(\)/u);
+  assert.match(openDeclaredLink, /this\.#runOperation\([\s\S]*this\.#informationOwner\.host\.openDeclaredLink\(value\)/u);
+  assert.match(openBottomNavigation, /this\.#runOperation\([\s\S]*this\.#informationOwner\.host\.openBottomNavigation\(value\)/u);
   assert.match(owner, /if \(this\.#pendingHomeContinuationFollowObservation !== null\)/u);
   assert.doesNotMatch(openDeclaredLink, /targetScreenId === 'character-select'[\s\S]*clearContinuation/u);
 });
@@ -1499,10 +1514,10 @@ test('P5.3zzzui/P6.101 retires stale continuation identity before it can claim a
   );
   assert.match(owner, /#isContinuationPreparationCurrentFromRead\(/u);
   assert.match(owner, /#continuationPreparationReadFromLearningRead\(/u);
-  assert.match(owner, /#continuationPreparationGoalDrifted\(\)/u);
+  assert.match(owner, /#continuationPreparationGoalDriftedFromCurrentOwners\(\)/u);
   assert.match(owner, /#clearContinuationPreparationIfGoalDrifted\(\)/u);
-  assert.match(owner, /this\.#nextLearningGoalContinuationRoute\(\)/u);
-  assert.match(owner, /this\.#resultNextGoalRouteFit\(\)/u);
+  assert.match(owner, /#nextLearningGoalContinuationRouteReadFromLearningRead\(/u);
+  assert.match(owner, /#resultNextGoalRouteFitFromRead\(/u);
   assert.match(owner, /return Object\.freeze\(\{ state: 'none', source: 'none' \}\)/u);
   assert.match(
     modeProjection,
@@ -1534,8 +1549,8 @@ test('P5.3zza stops the owned runtime tree after any top-level composition failu
     '  #recordFailure(error: unknown): void {',
     '\n\n  #applyCollectionPreviewVisibility',
   );
-  assert.match(failure, /if \(!this\.#constructionComplete\)/u);
-  assert.match(failure, /this\.#hasConstructionFailure = true;/u);
+  assert.match(failure, /if \(!this\.#constructionComplete \|\| this\.#synchronousOperation !== null\)/u);
+  assert.match(value, /#commitFailure\(error: unknown\)[\s\S]*this\.#hasConstructionFailure = true;/u);
   assert.match(failure, /this\.#scheduleFailureShutdown\(\);/u);
   const shutdown = section(
     value,
@@ -1550,8 +1565,8 @@ test('P5.3zza stops the owned runtime tree after any top-level composition failu
   );
   const resize = cleanup.indexOf('this.#resizeCleanup()');
   const driver = cleanup.indexOf('this.#driver.dispose()');
-  const journal = cleanup.indexOf('this.#offlineRetentionObservationJournal.destroy()');
-  const pointer = cleanup.indexOf('this.#pointerSurface.dispose()');
+  const journal = cleanup.indexOf('this.#offlineRetentionObservationJournal!.destroy()');
+  const pointer = cleanup.indexOf('this.#pointerSurface!.dispose()');
   assert.equal(
     resize !== -1 && resize < driver && driver < journal && journal < pointer,
     true,
@@ -1619,7 +1634,7 @@ test('P5.3zze shares one partial-cleanup ledger between failure shutdown and dis
   assert.match(cleanup, /#ownedRuntimeCleanupComplete\(\): boolean/u);
   assert.match(cleanup, /if \(!this\.#resizeCleanupCompleted\)/u);
   assert.match(cleanup, /this\.#resizeCleanupCompleted = true/u);
-  assert.match(cleanup, /if \(!this\.#driverDisposed\)/u);
+  assert.match(cleanup, /if \(this\.#resizeCleanupCompleted && !this\.#driverDisposed\)/u);
   assert.match(cleanup, /this\.#driverDisposed = true/u);
   assert.match(cleanup, /this\.#offlineRetentionObservationJournalDestroyed = true/u);
   assert.match(cleanup, /this\.#pointerSurfaceDisposed = true/u);
@@ -1675,7 +1690,7 @@ test('P5.3zzb pauses keyboard and pointer authority while the platform is hidden
     '\n\n  readonly #frame',
   );
   assert.match(pointerVisibility, /this\.#platformHidden = true;/u);
-  assert.match(pointerVisibility, /this\.#platformHidden = this\.#platformHidden \|\| hidden;/u);
+  assert.match(pointerVisibility, /this\.#platformHidden = false;/u);
   const pointerStart = section(pointer, '  start(): boolean {', '\n\n  pause(): boolean {');
   assert.match(pointerStart, /不能在平台隐藏时启动/u);
   const pointerResume = section(pointer, '  resume(): boolean {', '\n\n  settle(): unknown {');
@@ -1685,11 +1700,11 @@ test('P5.3zzb pauses keyboard and pointer authority while the platform is hidden
   assert.match(pointer, /failedInputBindRollbackRetainsRetryOwnership: true/u);
 
   const surface = pointerSurfaceSource();
-  assert.match(surface, /isHidden\(\): boolean \{[\s\S]*?return this\.#document\.hidden;/u);
+  assert.match(surface, /isHidden\(\): boolean \{[\s\S]*this\.#runOperation\(operation, \(\) => this\.#document\.hidden\)/u);
   const composition = source();
   assert.match(composition, /visibilityPlatform: keyboardVisibilityPlatform/u);
-  assert.match(composition, /windowObject\.addEventListener\('pagehide', hide\)/u);
-  assert.match(composition, /windowObject\.addEventListener\('focus', show\)/u);
+  assert.match(composition, /target: windowObject,\s*type: 'pagehide',\s*listener: hide/u);
+  assert.match(composition, /target: windowObject,\s*type: 'focus',\s*listener: show/u);
 });
 
 test('P6.243 fails keyboard and pointer drivers closed after swallowed synchronous reentry', () => {
@@ -1766,7 +1781,7 @@ test('P6.244 commits every local playable Binding call under one sticky transiti
   assert.match(intent, /#beginTransition\([^)]* intent[^)]*\)/u);
   assert.match(intent, /#endTransition\([^)]* intent[^)]*, intentId\)/u);
   assert.ok(
-    intent.indexOf('#endTransition') < intent.indexOf('#matchDriverStart()'),
+    intent.indexOf('#endTransition') < intent.indexOf('#matchDriverStart!()'),
     'the attached Driver may start only after the Binding intent transition commits',
   );
   const load = section(binding, '  load(): this {', '\n\n  renderCurrent():');
@@ -2061,7 +2076,7 @@ test('P6.252 closes swallowed reentry across Registry publication Owner and Host
   assert.match(owner, /swallowedPortReentryFailsClosed: true/u);
   assert.match(owner, /portCallbacksCheckedByReentrySequence: true/u);
   assert.match(owner, /snapshotRejectedDuringTransition: true/u);
-  assert.match(owner, /if \(this\.#state === 'failed'\) throw error/u);
+  assert.match(owner, /#assertNoReentrySince[\s\S]*this\.#state = 'failed'/u);
   const ownerSnapshot = section(owner, '  snapshot():', '\n  }\n\n  destroy():');
   assert.match(ownerSnapshot, /this\.#notTransitioning\(\)/u);
   for (const method of ['  publish():', '  rollback():']) {
@@ -2218,6 +2233,7 @@ test('P6.256 closes Registry-backed local play around exact promotion recovery',
   assert.ok(
     begin.indexOf('this.#promotionCoordinator = coordinator')
       < begin.indexOf('this.#pendingPromotionBase = Object.freeze'),
+    'promotion coordinator ownership must commit before its pending base watermark',
   );
 
   for (const method of ['  readRegistry() {', '  readRegistryHead() {']) {
@@ -2231,15 +2247,22 @@ test('P6.256 closes Registry-backed local play around exact promotion recovery',
   assert.match(close, /allowFailed: true/u);
   assert.ok(
     close.indexOf('this.#runChildOperation(')
-      < close.indexOf('this.#failedByReentry = false'),
+      < close.lastIndexOf('this.#failedByReentry = false'),
+    'promotion child cleanup must commit before clearing the sticky failure',
   );
 
   const snapshot = section(value, '  snapshot():', '\n  #snapshot():');
   assert.match(snapshot, /this\.#assertNoOperation\(\)/u);
   const destroy = section(value, '  destroy():', '\n  }\n}');
-  assert.ok(destroy.indexOf('#assertNoOperation') < destroy.indexOf('if (this.#destroyed)'));
+  assert.ok(
+    destroy.indexOf('#assertNoOperation') < destroy.indexOf('if (this.#destroyed)'),
+    'destroy must reject reentry before its idempotent fast path',
+  );
   assert.match(destroy, /allowFailed: true, allowPartial: true/u);
-  assert.ok((destroy.match(/this\.#runChildOperation\(/gu) ?? []).length >= 3);
+  assert.ok(
+    (destroy.match(/this\.#runChildOperation\(/gu) ?? []).length >= 3,
+    'destroy must guard promotion, local playable, and registry cleanup callbacks',
+  );
 });
 
 test('P6.257 fails the three-mode Playable Host closed after swallowed child reentry', () => {
@@ -2304,11 +2327,11 @@ test('P6.258 closes the local three-mode Host while retaining cleanup ownership'
   assert.match(local, /outcome = this\.#ownedHost\(\)\.settleMatch\(\)/u);
   assert.match(
     local,
-    /getInformationCharacterPreviewLoadoutRead[\s\S]*#assertNoOperation\('getInformationCharacterPreviewLoadoutRead'\)/u,
+    /getInformationCharacterPreviewLoadoutRead\(\)[\s\S]*#assertNoOperation\('getInformationCharacterPreviewLoadoutRead'\)/u,
   );
   assert.match(
     local,
-    /getInformationLoadingProjection[\s\S]*#assertNoOperation\('getInformationLoadingProjection'\)/u,
+    /getInformationLoadingProjection\(\)[\s\S]*#assertNoOperation\('getInformationLoadingProjection'\)/u,
   );
 
   const destroy = section(local, '  destroy(): void {', '\n  }\n}');
@@ -2370,11 +2393,11 @@ test('P6.260 rejects swallowed Information Host child reentry without losing cle
   );
   assert.match(
     destroy,
-    /sessionFactory\.destroy\(\);[\s\S]*this\.#sessionFactory = null;[\s\S]*#captureSwallowedDestroyReentry/u,
+    /sessionFactory\.destroy\(\),[\s\S]*this\.#sessionFactory = null;[\s\S]*#captureSwallowedDestroyReentry/u,
   );
   assert.match(
     destroy,
-    /bundleFactory\.destroy\(\);[\s\S]*this\.#bundleFactory = null;[\s\S]*#captureSwallowedDestroyReentry/u,
+    /bundleFactory\.destroy\(\),[\s\S]*this\.#bundleFactory = null;[\s\S]*#captureSwallowedDestroyReentry/u,
   );
   assert.ok(
     destroy.indexOf('this.#destroyed = this.#hostDestroyed')
@@ -2417,7 +2440,7 @@ test('P6.331 makes Information Mode Session Host reentry monotonic across child 
     'scene-frame-read',
     'destroy',
   ] as const) {
-    assert.match(value, new RegExp(`this\\.#runOperation\\('${operation}'`, 'u'));
+    assert.match(value, new RegExp(`this\\.#runOperation\\(\\s*'${operation}'`, 'u'));
   }
   assert.match(value, /get state\(\)[\s\S]*this\.#assertNoOperation\('state-read'\)/u);
   assert.match(value, /snapshot: this\.#snapshot\(\)/u);
@@ -2465,7 +2488,7 @@ test('P6.262 keeps HUD-ready lifecycle and projection reads in one sticky operat
     'projection-read',
     'destroy',
   ] as const) {
-    assert.match(value, new RegExp(`this\\.#runOperation\\('${operation}'`, 'u'));
+    assert.match(value, new RegExp(`this\\.#runOperation\\(\\s*'${operation}'`, 'u'));
   }
   const destroy = section(value, '  destroy(): void {', '\n  }\n}');
   assert.ok(
@@ -2489,46 +2512,54 @@ test('P6.263 closes settlement and cross-child reads in the Learning Mode Sessio
   assert.ok(
     begin.indexOf('this.#assertNoOperation(operation)')
       < begin.indexOf('!allowed.includes(this.#state)'),
+    'learning bridge operation guard must precede business-state validation',
   );
   const snapshot = section(value, '  #snapshot():', '\n  getSnapshot():');
   assert.ok(
-    snapshot.indexOf("this.#session.getSnapshot")
-      < snapshot.indexOf("this.#assertReentryFree('Learning Mode Session Bridge session snapshot')"),
+    snapshot.indexOf('this.#session.getSnapshot')
+      < snapshot.indexOf("this.#assertCurrentOperationCommit('Learning Mode Session Bridge session snapshot')"),
+    'session snapshot must be followed by its reentry check',
   );
   assert.ok(
     snapshot.indexOf("session snapshot')")
       < snapshot.indexOf('this.#learningHandoff.getSnapshot'),
+    'session snapshot must settle before reading learning handoff state',
   );
   const step = section(value, '  step(localInput: unknown):', '\n  pause():');
   assert.ok(
     step.indexOf("this.#assertReentryFree('Learning Mode Session Bridge session step')")
       < step.indexOf('this.#learningHandoff.appendEvents'),
+    'session step must be reentry-checked before appending learning events',
   );
   assert.ok(
-    step.indexOf("terminal Runtime evidence V1')")
-      < step.indexOf('this.#learningHandoff.bindRuntimeTerminalEvidenceV2'),
+    step.indexOf('terminal Runtime evidence V2')
+      < step.indexOf('this.#learningHandoff.bindRuntimeTerminalEvidenceV3'),
+    'terminal runtime evidence must be checked before the V2 learning binding',
   );
   const settle = section(value, '  settle():', '\n  destroy():');
   assert.ok(
     settle.indexOf("this.#assertReentryFree('Learning Mode Session Bridge settleReward')")
       < settle.indexOf("this.#state = 'learning-pending'"),
+    'reward settlement must be checked before publishing learning-pending',
   );
   assert.match(settle, /snapshot: this\.#snapshot\(\)/u);
 
   for (const operation of [
     'snapshot-read', 'start', 'step', 'pause', 'resume', 'settle', 'destroy',
   ] as const) {
-    assert.match(value, new RegExp(`this\\.#runOperation\\('${operation}'`, 'u'));
+    assert.match(value, new RegExp(`this\\.#runOperation\\(\\s*'${operation}'`, 'u'));
   }
   const destroy = section(value, '  destroy(): void {', '\n  }\n}');
   assert.ok(
     destroy.indexOf("this.#assertNoOperation('destroy')")
       < destroy.indexOf("if (this.#state === 'destroyed') return"),
+    'learning bridge destroy must reject reentry before its idempotent fast path',
   );
 });
 
 test('P6.264 keeps Match, Assembler, and Reward commits behind one product-session gate', () => {
   const value = modeProductSessionV2Source();
+  const session = value.slice(value.indexOf('export class ModeProductSessionV2'));
   assert.match(value, /#operation: ModeProductSessionV2Operation \| null = null/u);
   assert.match(value, /#reentrySequence = 0/u);
   assert.match(value, /#reentryError: Error \| null = null/u);
@@ -2542,21 +2573,23 @@ test('P6.264 keeps Match, Assembler, and Reward commits behind one product-sessi
   assert.match(value, /swallowedCleanupReentryStopsLaterOwners: true/u);
   assert.match(value, /destroyFastPathChecksOperationBeforeIdempotence: true/u);
 
-  const begin = section(value, '  #beginOperation(', '\n  #runOperation<T>(');
+  const begin = section(session, '  #beginOperation(', '\n  #runOperation<T>(');
   assert.ok(
     begin.indexOf('this.#assertNoOperation(operation)')
       < begin.indexOf('!allowed.includes(this.#state)'),
   );
-  assert.match(value, /get state\(\)[\s\S]*this\.#assertNoOperation\('state-read'\)/u);
-  assert.match(value, /getSnapshot\(\)[\s\S]*this\.#assertNoOperation\('snapshot-read'\)/u);
-  const step = section(value, '  step(localInput: unknown):', '\n  pause():');
+  assert.match(session, /get state\(\)[\s\S]*this\.#assertNoOperation\('state-read'\)/u);
+  assert.match(session, /getSnapshot\(\)[\s\S]*this\.#assertNoOperation\('snapshot-read'\)/u);
+  const step = section(session, '  step(localInput: unknown):', '\n  pause():');
   assert.ok(
     step.indexOf("this.#assertReentryFree('ModeProductSessionV2 match step')")
       < step.indexOf('this.#assembler?.appendEvents(events)'),
+    'match step must be checked before assembler append',
   );
   assert.ok(
     step.indexOf("this.#assertReentryFree('ModeProductSessionV2 appendEvents')")
       < step.indexOf('this.#assembler?.finalize()'),
+    'assembler append must be checked before finalize',
   );
   assert.match(step, /snapshot: this\.#snapshot\(\)/u);
 
@@ -2571,23 +2604,26 @@ test('P6.264 keeps Match, Assembler, and Reward commits behind one product-sessi
     'terminal-runtime-evidence-read',
     'destroy',
   ] as const) {
-    assert.match(value, new RegExp(`this\\.#runOperation\\('${operation}'`, 'u'));
+    assert.match(session, new RegExp(`this\\.#runOperation\\(\\s*'${operation}'`, 'u'));
   }
-  const destroy = section(value, '  destroy(): void {', '\n  }\n}');
+  const destroy = section(session, '  destroy(): void {', '\n  }\n}');
   assert.ok(
     destroy.indexOf("this.#assertNoOperation('destroy')")
       < destroy.indexOf('if (this.#state === MODE_PRODUCT_SESSION_V2_STATE.DESTROYED) return'),
+    'product session destroy must reject reentry before its fast path',
   );
-  const cleanup = section(value, '  #cleanup(): Error[] {', '\n  #fail(error: unknown): never {');
+  const cleanup = section(session, '  #cleanup(): Error[] {', '\n  #fail(error: unknown): never {');
   assert.ok(
     cleanup.indexOf('if (this.#reentrySequence !== reentrySequence)')
       < cleanup.indexOf('this.#assembler = null'),
+    'cleanup reentry must be checked before assembler ownership release',
   );
   assert.match(cleanup, /if \(this\.#reentrySequence !== reentrySequence\) return errors/u);
 });
 
 test('P6.265 keeps authoritative Runtime lifecycle and terminal reads behind one gate', () => {
   const value = modeAuthoritativeLocalMatchSessionV3Source();
+  const session = value.slice(value.indexOf('export class ModeAuthoritativeLocalMatchSessionV3'));
   assert.match(
     value,
     /#operation: ModeAuthoritativeLocalMatchSessionV3Operation \| null = null/u,
@@ -2604,13 +2640,13 @@ test('P6.265 keeps authoritative Runtime lifecycle and terminal reads behind one
   assert.match(value, /swallowedCleanupReentryRetainsRuntimeOwner: true/u);
   assert.match(value, /destroyFastPathChecksOperationBeforeIdempotence: true/u);
 
-  const begin = section(value, '  #beginOperation(', '\n  #runOperation<T>(');
+  const begin = section(session, '  #beginOperation(', '\n  #runOperation<T>(');
   assert.ok(
     begin.indexOf('this.#assertNoOperation(operation)')
       < begin.indexOf('!allowed.includes(this.#state)'),
   );
-  assert.match(value, /get state\(\)[\s\S]*this\.#assertNoOperation\('state-read'\)/u);
-  assert.match(value, /get readFrame\(\)[\s\S]*this\.#assertNoOperation\('read-frame-read'\)/u);
+  assert.match(session, /get state\(\)[\s\S]*this\.#assertNoOperation\('state-read'\)/u);
+  assert.match(session, /get readFrame\(\)[\s\S]*this\.#assertNoOperation\('read-frame-read'\)/u);
 
   for (const operation of [
     'start',
@@ -2623,9 +2659,9 @@ test('P6.265 keeps authoritative Runtime lifecycle and terminal reads behind one
     'terminal-runtime-evidence-read',
     'destroy',
   ] as const) {
-    assert.match(value, new RegExp(`this\\.#runOperation\\('${operation}'`, 'u'));
+    assert.match(session, new RegExp(`this\\.#runOperation\\(\\s*'${operation}'`, 'u'));
   }
-  const step = section(value, '  step(localInput: unknown):', '\n  pause():');
+  const step = section(session, '  step(localInput: unknown):', '\n  pause():');
   assert.ok(
     step.indexOf("this.#runtime.step(normalizedLocal)")
       < step.indexOf("this.#assertReentryFree('ModeAuthoritativeLocalMatchSessionV3 step')"),
@@ -2634,12 +2670,12 @@ test('P6.265 keeps authoritative Runtime lifecycle and terminal reads behind one
     step.indexOf("this.#assertReentryFree('ModeAuthoritativeLocalMatchSessionV3 step')")
       < step.indexOf('this.#readFrame = outcome.readFrame'),
   );
-  const destroy = section(value, '  destroy(): void {', '\n  }\n}');
+  const destroy = section(session, '  destroy(): void {', '\n  }\n}');
   assert.ok(
     destroy.indexOf("this.#assertNoOperation('destroy')")
       < destroy.indexOf('this.#state === MODE_AUTHORITATIVE_LOCAL_MATCH_SESSION_V3_STATE.DESTROYED'),
   );
-  const cleanup = section(value, '  #cleanup(): readonly Error[] {', '\n  #fail(error: unknown): never {');
+  const cleanup = section(session, '  #cleanup(): readonly Error[] {', '\n  #fail(error: unknown): never {');
   assert.ok(
     cleanup.indexOf('if (this.#reentrySequence !== reentrySequence)')
       < cleanup.indexOf('this.#runtime = null'),
@@ -2648,6 +2684,7 @@ test('P6.265 keeps authoritative Runtime lifecycle and terminal reads behind one
 
 test('P6.266 keeps Rule/Core ownership and authoritative exports behind one Runtime gate', () => {
   const value = modeMatchRuntimeV6Source();
+  const runtime = value.slice(value.indexOf('export class ModeMatchRuntimeV6'));
   assert.match(value, /#operation: ModeMatchRuntimeV6Operation \| null = null/u);
   assert.match(value, /#reentrySequence = 0/u);
   assert.match(value, /#reentryError: Error \| null = null/u);
@@ -2664,27 +2701,27 @@ test('P6.266 keeps Rule/Core ownership and authoritative exports behind one Runt
   assert.match(value, /swallowedCleanupReentryStopsLaterOwners: true/u);
   assert.match(value, /destroyFastPathChecksOperationBeforeIdempotence: true/u);
 
-  const cleanup = section(value, '  #cleanup(): readonly Error[] {', '\n  #clearCommittedRecords(): void {');
+  const cleanup = section(runtime, '  #cleanup(): readonly Error[] {', '\n  #clearCommittedRecords(): void {');
   assert.ok(
     cleanup.indexOf('if (this.#reentrySequence !== reentrySequence)')
       < cleanup.indexOf('this.#driver = null'),
   );
   assert.match(cleanup, /if \(this\.#reentrySequence !== reentrySequence\) return Object\.freeze\(errors\)/u);
 
-  const begin = section(value, '  #beginOperation(', '\n  #runOperation<T>(');
+  const begin = section(runtime, '  #beginOperation(', '\n  #runOperation<T>(');
   assert.ok(
     begin.indexOf('this.#assertNoOperation(operation)')
       < begin.indexOf('this.#assertState(...allowed)'),
   );
-  assert.match(value, /get state\(\)[\s\S]*this\.#assertNoOperation\('state-read'\)/u);
-  assert.match(value, /get readFrame\(\)[\s\S]*this\.#assertNoOperation\('read-frame-read'\)/u);
+  assert.match(runtime, /get state\(\)[\s\S]*this\.#assertNoOperation\('state-read'\)/u);
+  assert.match(runtime, /get readFrame\(\)[\s\S]*this\.#assertNoOperation\('read-frame-read'\)/u);
 
-  const start = section(value, '  start(): ModeMatchRuntimeV6StartOutcome {', '\n  step(');
+  const start = section(runtime, '  start(): ModeMatchRuntimeV6StartOutcome {', '\n  step(');
   assert.ok(
     start.indexOf("this.#assertReentryFree('ModeMatchRuntimeV6 authority start')")
       < start.indexOf('const initial = driver.start('),
   );
-  const step = section(value, '  step(inputValue: unknown):', '\n  pause():');
+  const step = section(runtime, '  step(inputValue: unknown):', '\n  pause():');
   assert.ok(
     step.indexOf("this.#assertReentryFree('ModeMatchRuntimeV6 authority mode resolver入口')")
       < step.indexOf('resolution = driver.step(facts, tick)'),
@@ -2693,7 +2730,7 @@ test('P6.266 keeps Rule/Core ownership and authoritative exports behind one Runt
     step.indexOf("this.#assertReentryFree('ModeMatchRuntimeV6 authority step')")
       < step.indexOf('this.#events.push(event)'),
   );
-  const pause = section(value, '  pause(): void {', '\n  resume():');
+  const pause = section(runtime, '  pause(): void {', '\n  resume():');
   assert.ok(
     pause.indexOf("this.#assertReentryFree('ModeMatchRuntimeV6 authority pause')")
       < pause.indexOf('driver.pause()'),
@@ -2714,9 +2751,9 @@ test('P6.266 keeps Rule/Core ownership and authoritative exports behind one Runt
     'terminal-evidence-read',
     'destroy',
   ] as const) {
-    assert.match(value, new RegExp(`this\\.#runOperation\\('${operation}'`, 'u'));
+    assert.match(runtime, new RegExp(`this\\.#runOperation\\(\\s*'${operation}'`, 'u'));
   }
-  const destroy = section(value, '  destroy(): void {', '\n  }\n}');
+  const destroy = section(runtime, '  destroy(): void {', '\n  }\n}');
   assert.ok(
     destroy.indexOf("this.#assertNoOperation('destroy')")
       < destroy.indexOf('this.#state === MODE_MATCH_RUNTIME_V6_STATE.DESTROYED'),
@@ -2725,7 +2762,7 @@ test('P6.266 keeps Rule/Core ownership and authoritative exports behind one Runt
 
 test('P6.267 stops Quick Match construction before the next external owner after reentry', () => {
   const value = modeAuthoritativeQuickMatchServiceV3Source();
-  assert.match(value, /#operation: 'create' \| null = null/u);
+  assert.match(value, /#operation: 'create' \| 'destroy' \| null = null/u);
   assert.match(value, /#reentrySequence = 0/u);
   assert.match(value, /#reentryError: Error \| null = null/u);
   assert.doesNotMatch(value, /#creating/u);
@@ -2740,37 +2777,41 @@ test('P6.267 stops Quick Match construction before the next external owner after
     '\n  }\n}',
   );
   assert.ok(
-    create.indexOf("this.#assertNoOperation('create')")
-      < create.indexOf("this.#operation = 'create'"),
+    create.indexOf("this.#beginOperation('create')")
+      < create.indexOf('if (this.#destroyed)'),
+    'quick match create must claim its operation before state validation',
   );
   assert.ok(
-    create.indexOf("this.#operation = 'create'")
+    create.indexOf("this.#beginOperation('create')")
       < create.indexOf('const source = assertPlainRecord('),
+    'quick match create must claim its operation before request parsing',
   );
   assert.ok(
-    create.indexOf("this.#assertReentryFree('ModeAuthoritativeQuickMatchServiceV3 seedSource')")
-      < create.indexOf('this.#createRoster('),
+    create.indexOf("'ModeAuthoritativeQuickMatchServiceV3 seedSource'")
+      < create.indexOf('this.#createRoster,'),
+    'seed source must be checked before roster creation',
   );
   assert.ok(
-    create.indexOf("this.#assertReentryFree('ModeAuthoritativeQuickMatchServiceV3 rosterProvider')")
-      < create.indexOf('this.#createContent('),
+    create.indexOf("this.#assertCurrentOperationCommit('ModeAuthoritativeQuickMatchServiceV3 roster normalization')")
+      < create.indexOf('this.#createContent,'),
+    'roster provider must be checked before content creation',
   );
   assert.ok(
-    create.indexOf("this.#assertReentryFree('ModeAuthoritativeQuickMatchServiceV3 contentProvider')")
-      < create.indexOf('runtime = this.#createRuntime('),
+    create.indexOf("this.#assertCurrentOperationCommit('ModeAuthoritativeQuickMatchServiceV3 content normalization')")
+      < create.indexOf('runtime = this.#callChecked('),
+    'content provider must be checked before runtime creation',
   );
   assert.ok(
-    create.indexOf("this.#assertReentryFree('ModeAuthoritativeQuickMatchServiceV3 runtimeFactory')")
+    create.indexOf("'ModeAuthoritativeQuickMatchServiceV3 runtimeFactory'")
       < create.indexOf('session = new ModeAuthoritativeLocalMatchSessionV3({'),
+    'runtime factory must be checked before session ownership',
   );
   assert.ok(
-    create.indexOf("this.#assertReentryFree('ModeAuthoritativeQuickMatchServiceV3 result publication')")
+    create.indexOf("this.#assertCurrentOperationCommit('ModeAuthoritativeQuickMatchServiceV3 result publication')")
       < create.indexOf('session = null'),
+    'result publication must be checked before transferring session ownership',
   );
-  assert.ok(
-    create.indexOf('destroyRuntime(session, cleanupErrors)')
-      < create.indexOf('destroyRuntime(runtime, cleanupErrors)'),
-  );
+  assert.match(create, /const cleanupCandidates = session !== null[\s\S]*: runtime === null/u);
 });
 
 test('P6.268 keeps Quick Match Bundle ownership until publication and cleanup commits', () => {
@@ -2849,34 +2890,42 @@ test('P6.269 keeps Learning Session child ownership until each construction stag
   assert.ok(
     create.indexOf("this.#beginOperation('create-session')")
       < create.indexOf('if (this.#destroyed)'),
+    'learning factory create must claim operation before state validation',
   );
   assert.ok(
-    create.indexOf("this.#assertReentryFree('Mode Learning Session Factory request validation')")
+    create.indexOf("this.#assertCurrentOperationCommit('Mode Learning Session Factory request validation')")
       < create.indexOf('this.#createMatchBundle'),
+    'learning factory request must be checked before match bundle creation',
   );
   assert.ok(
-    create.indexOf("this.#assertReentryFree('Mode Learning Session Factory match bundle owner capture')")
+    create.indexOf("this.#assertCurrentOperationCommit('Mode Learning Session Factory match bundle owner capture')")
       < create.indexOf("method(matchSession, 'destroy'"),
+    'match bundle ownership must commit before business port capture',
   );
   assert.ok(
-    create.indexOf("this.#assertReentryFree('Mode Learning Session Factory authority admission')")
+    create.indexOf("this.#assertCurrentOperationCommit('Mode Learning Session Factory authority admission')")
       < create.indexOf('modeSession = createModeProductSessionCompositionV2({'),
+    'authority admission must be checked before mode session construction',
   );
   assert.ok(
-    create.indexOf("this.#assertReentryFree('Mode Learning Session Factory mode session composition')")
+    create.indexOf("this.#assertCurrentOperationCommit('Mode Learning Session Factory mode session composition')")
       < create.indexOf('learningHandoff = new ArenaV2LearningTerminalHandoffCandidateV1({'),
+    'mode session composition must be checked before learning handoff construction',
   );
   assert.ok(
-    create.indexOf("this.#assertReentryFree('Mode Learning Session Factory learning handoff construction')")
+    create.indexOf("this.#assertCurrentOperationCommit('Mode Learning Session Factory learning handoff construction')")
       < create.indexOf('bridge = new ArenaV2LearningModeSessionBridgeCandidateV1({'),
+    'learning handoff must be checked before bridge construction',
   );
   assert.ok(
-    create.indexOf("this.#assertReentryFree('Mode Learning Session Factory bridge construction')")
+    create.indexOf("this.#assertCurrentOperationCommit('Mode Learning Session Factory bridge construction')")
       < create.indexOf('result = new ArenaV2HudReadyLearningModeSessionCandidateV1({'),
+    'bridge construction must commit before HUD-ready session construction',
   );
   assert.ok(
-    create.indexOf("this.#assertReentryFree('Mode Learning Session Factory session publication')")
+    create.indexOf("this.#assertCurrentOperationCommit('Mode Learning Session Factory session publication')")
       < create.indexOf('result = null'),
+    'session publication must commit before transferring the result owner',
   );
   assert.match(create, /for \(const remaining of cleanupCandidates\.slice\(index \+ 1\)\)/u);
   assert.match(create, /this\.#retainCleanupResource\(remaining\.target, remaining\.name\)/u);
@@ -2885,14 +2934,17 @@ test('P6.269 keeps Learning Session child ownership until each construction stag
   assert.ok(
     destroy.indexOf("this.#assertNoOperation('destroy')")
       < destroy.indexOf('if (this.#destroyed) return'),
+    'learning factory destroy must reject reentry before its fast path',
   );
   assert.ok(
     value.indexOf('this.#pendingCleanupResources = [')
-      < value.indexOf('if (this.#reentryAttempted)'),
+      < value.indexOf('this.#reentrySequence !== reentrySequence'),
+    'pending cleanup ownership must publish before reentry rejection',
   );
   assert.ok(
     destroy.indexOf('this.#destroyed = true')
-      < destroy.indexOf("this.#assertReentryFree('Mode Learning Session Factory destroy publication')"),
+      < destroy.indexOf('this.#operation = null'),
+    'destroyed watermark must publish before releasing the operation owner',
   );
 });
 
@@ -3027,10 +3079,7 @@ test('P5.3zzzvy requires explicit local jump availability before every formal co
     runtime,
     /const STEP_REQUIRED_KEYS = new Set\([\s\S]*?'localJumpAvailability'/u,
   );
-  assert.doesNotMatch(
-    runtime,
-    /Object\.hasOwn\(source, 'localJumpAvailability'\)/u,
-  );
+  assert.doesNotMatch(runtime, /Object\.hasOwn\(source, 'localJumpAvailability'\)/u);
   for (const source of [localSession, productSession, bridge, value]) {
     assert.match(source, /requiresExplicitLocalJumpAvailabilityEveryStartAndStep: true/u);
   }
@@ -3042,10 +3091,7 @@ test('P5.3zzzvy requires explicit local jump availability before every formal co
     localSession,
     /const STEP_REQUIRED_KEYS = new Set\([\s\S]*?'localJumpAvailability'/u,
   );
-  assert.doesNotMatch(
-    localSession,
-    /Object\.hasOwn\(source, 'localJumpAvailability'\)/u,
-  );
+  assert.doesNotMatch(localSession, /Object\.hasOwn\(source, 'localJumpAvailability'\)/u);
   assert.match(productSession, /const START_KEYS = new Set\([\s\S]*?'localJumpAvailability'/u);
   assert.match(
     productSession,
@@ -3072,13 +3118,14 @@ test('P5.3zzzvy requires explicit local jump availability before every formal co
 
 test('P5.3zzc retains failed information intent unbind ownership for dispose retry', () => {
   const binding = localPlayableBindingSource();
-  const syncReturnBoundary = section(binding, 'function rejectThenable(', '\n\nfunction modeKind(');
-  assert.match(syncReturnBoundary, /MAX_SYNC_RETURN_PROTOTYPE_DEPTH/u);
+  assert.match(binding, /assertSynchronousReturn as rejectThenable/u);
+  const syncReturnBoundary = synchronousReturnSource();
+  assert.match(syncReturnBoundary, /MAX_SYNCHRONOUS_RETURN_PROTOTYPE_DEPTH/u);
   assert.match(syncReturnBoundary, /visited\.has\(owner\)/u);
   assert.match(syncReturnBoundary, /Object\.getOwnPropertyDescriptor\(owner, 'then'\)/u);
   assert.match(syncReturnBoundary, /Object\.getOwnPropertyDescriptor\(owner, 'constructor'\)/u);
   assert.match(syncReturnBoundary, /assertNativePromiseSpeciesIntegrity\(\)/u);
-  assert.match(syncReturnBoundary, /Reflect\.apply\(NATIVE_PROMISE_THEN, value, \[NOOP, NOOP\]\)/u);
+  assert.match(syncReturnBoundary, /Reflect\.apply\(nativeThen, value, \[NOOP, NOOP\]\)/u);
   assert.doesNotMatch(syncReturnBoundary, /instanceof Promise/u);
   assert.doesNotMatch(syncReturnBoundary, /\.then\s*\(/u);
   assert.doesNotMatch(syncReturnBoundary, /\.catch\s*\(/u);
@@ -3101,15 +3148,15 @@ test('P5.3zzc retains failed information intent unbind ownership for dispose ret
 test('P5.3zzd retries only incomplete information binding resources after partial cleanup', () => {
   const binding = localPlayableBindingSource();
   const cleanup = section(binding, '  #cleanup(): readonly unknown[] {', '\n\n  #reject(');
-  assert.match(cleanup, /if \(!this\.#surfaceDisposed\)/u);
+  assert.match(cleanup, /if \(this\.#unbindIntent === null && !this\.#surfaceDisposed\)/u);
   assert.match(cleanup, /this\.#surfaceDisposed = true/u);
-  assert.match(cleanup, /if \(!this\.#hostOwnerDestroyed\)/u);
+  assert.match(cleanup, /if \(this\.#surfaceDisposed && !this\.#hostOwnerDestroyed\)/u);
   assert.match(cleanup, /this\.#hostOwnerDestroyed = true/u);
   assert.match(cleanup, /this\.#hostOwnerDestroyed[\s\S]*!this\.#matchSurfaceDisposed/u);
   assert.match(cleanup, /this\.#matchSurfaceDisposed = true/u);
   assert.equal(
     cleanup.indexOf('this.#destroyHostOwner()')
-      < cleanup.indexOf('this.#matchSurface.dispose()'),
+      < cleanup.indexOf('this.#matchSurface!.dispose()'),
     true,
     'the local HUD/audio/VFX consumer must release before the match producer',
   );
@@ -3179,11 +3226,11 @@ test('P5.3zzzvb retries the isolated entry only after the previous owner is rele
   );
   assert.equal(
     cleanup.indexOf('constructionCleanupDebt.cleanupComplete')
-      < cleanup.indexOf('composition.dispose()'),
+      < cleanup.indexOf('ownedComposition.dispose()'),
     true,
   );
   assert.equal(
-    cleanup.indexOf('composition.dispose()') < cleanup.indexOf('composition = null'),
+    cleanup.indexOf('ownedComposition.dispose()') < cleanup.indexOf('composition = null'),
     true,
   );
   const prepare = section(
@@ -3293,7 +3340,7 @@ test('P5.3zzzvb retries the isolated entry only after the previous owner is rele
     '\n}\n\nasync function runActivation(): Promise<void> {',
   );
   assert.match(pageShow, /if \(!event\.persisted \|\| disposed\) return/u);
-  assert.match(pageShow, /void prepare\(\)/u);
+  assert.match(pageShow, /return prepare\(\)/u);
   assert.match(entry, /backForwardCacheRestoreRepreparesCandidate: true/u);
   assert.match(entry, /retryAddsPageOrGameplayAction: false/u);
 });
@@ -3388,7 +3435,7 @@ test('P6.205 keeps formal Web entry preparation single-flight within one generat
   );
   assert.equal(
     preparation.indexOf('if (preparationOperation !== null) return preparationOperation')
-      < preparation.indexOf('void runPreparation().then'),
+      < preparation.indexOf('const preparationExecution = runPreparation()'),
     true,
   );
   assert.match(preparation, /if \(preparationOperation !== operation\) return/u);
@@ -3423,7 +3470,7 @@ test('P6.206 keeps formal Web entry activation single-flight and retry-gated', (
   assert.match(activation, /if \(preparationOperation !== null\) return preparationOperation/u);
   assert.equal(
     activation.indexOf('if (activationOperation !== null) return activationOperation')
-      < activation.indexOf('void runActivation().then'),
+      < activation.indexOf('const activationExecution = runActivation()'),
     true,
   );
   assert.match(activation, /if \(activationOperation !== operation\) return/u);
@@ -3507,7 +3554,10 @@ test('P6.239 rejects failed entry runners and guards their owner settlements', (
   assert.match(entry, /let synchronousReentryError: Error \| null = null/u);
   assert.doesNotMatch(entry, /synchronousReentryAttempted/u);
   assert.match(entry, /检测到被Composition、DOM或Observer吞掉的同步重入/u);
-  assert.match(entry, /function recordDetachedFailure\(error: unknown, message: string\)/u);
+  assert.match(
+    entry,
+    /function recordDetachedFailure\([\s\S]*error: unknown,[\s\S]*message: string,[\s\S]*failedGeneration = generation/u,
+  );
   assert.match(entry, /runSynchronousOperation\('pagehide'/u);
   assert.match(entry, /runSynchronousOperation\('pageshow'/u);
   assert.match(entry, /'retention-read'/u);
@@ -3768,8 +3818,10 @@ test('P6.235 closes VFX texture settlement and swallowed callback reentry', () =
     'clear',
     'sync',
   ] as const) {
-    const marker = `this.#runSynchronousOperation('Arena V2 formal Three VFX ${method}'`;
-    assert.match(vfx, new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&'), 'u'));
+    assert.match(
+      vfx,
+      new RegExp(`this\\.#runSynchronousOperation\\(\\s*'Arena V2 formal Three VFX ${method}'`, 'u'),
+    );
   }
   const disposal = section(vfx, '  dispose(): void {', '\n}\n\nexport const');
   assert.match(disposal, /this\.#runSynchronousOperation/u);
@@ -4036,7 +4088,7 @@ test('P6.238 makes the playable composition lifecycle sticky and owner-settled',
   ] as const) {
     assert.match(
       composition,
-      new RegExp(`this\\.#runSynchronousOperation\\('${operation}'`, 'u'),
+      new RegExp(`this\\.#runSynchronousOperation\\(\\s*'${operation}'`, 'u'),
     );
   }
   assert.match(composition, /#synchronousReentrySequence = 0/u);

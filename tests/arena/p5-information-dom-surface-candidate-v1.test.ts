@@ -232,7 +232,7 @@ test('P5.3zzs DOM host keeps listeners and root under retryable cleanup ownershi
   assert.match(source, /#surfaceRemoved = true/u);
   assert.match(
     source,
-    /listenersReleased && this\.#pointer === null && !this\.#surfaceRemoved/u,
+    /mayContinue && listenersReleased && this\.#pointer === null[\s\S]*&& !this\.#surfaceRemoved/u,
   );
   assert.match(source, /failedLoadRollsBackThroughOwnedResourceLedger: true/u);
   assert.match(source, /cleanupRetriesOnlyIncompleteOwnedResources: true/u);
@@ -257,14 +257,15 @@ test('P5.3zzs DOM host keeps listeners and root under retryable cleanup ownershi
     'render',
     'reveal-action',
     'reveal-primitive',
-    'wheel-scroll',
     'dispose',
   ]) {
-    assert.match(source, new RegExp(`#runSynchronousOperation\\('${operation}'`, 'u'));
+    assert.match(source, new RegExp(`#runSynchronousOperation\\(\\s*'${operation}'`, 'u'));
   }
+  assert.match(source, /#runEventOperation\(\s*'wheel-scroll'/u);
+  assert.match(source, /#runSynchronousOperation\(\s*'wheel-scroll-failure'/u);
   assert.match(
     source,
-    /#runSynchronousOperation\('wheel-scroll',[\s\S]*?\}\);\s*this\.#publishScrollOffset\(\)/u,
+    /const publish = this\.#runEventOperation\(\s*'wheel-scroll',[\s\S]*?\);\s*if \(publish\) this\.#publishScrollOffset\(\)/u,
   );
   assert.match(source, /synchronousLifecycleOperationReentryRejected: true/u);
   assert.match(source, /stateAndScrollReadsRejectedDuringOperationCommit: true/u);

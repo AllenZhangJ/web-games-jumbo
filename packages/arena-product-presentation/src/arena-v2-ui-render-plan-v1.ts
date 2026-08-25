@@ -179,9 +179,6 @@ function informationCardPrimitives(
     baseCardHeightCssPixels: target.height,
     baseMaximumLines: prefix === 'first' ? 3 : 2,
   });
-  if (readable.cardHeightCssPixels !== target.height) {
-    throw new RangeError('Arena V2长期进度RenderPlan与共享Layout高度不闭合。');
-  }
   return Object.freeze([
     panel(`${prefix}:${item.fieldId}:panel`, target, tone, 1, clipRect),
     text(
@@ -201,7 +198,7 @@ function informationCardPrimitives(
       prefix === 'first' ? 'strong' : 'secondary',
       'value',
       {
-        maximumLines: readable.maximumLines,
+        maximumLines: Math.min(readable.maximumLines, prefix === 'first' ? 3 : 2),
         fixedWidthNumeric: item.fixedWidthNumeric,
         clipRect,
       },

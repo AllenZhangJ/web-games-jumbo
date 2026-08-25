@@ -179,20 +179,20 @@ describe('Arena V2 mode HUD presentation host V1', () => {
       baselineModel: model,
       preferences: { reducedMotion: false, soundEnabled: true },
     });
-    host.consume({
+    expect(() => host.consume({
       consumerEpochId: 'epoch-a',
       model: modelWithFeedback(model),
       sourceEvents: [feedbackEvent(5, 40)],
       preferences: { reducedMotion: false, soundEnabled: true },
-    });
-
-    expect(String(reentryError)).toMatch(/consume期间同步重入dispose/);
+    })).toThrow(/consume失败且检测到同步重入/);
+    expect(reentryError).toBeInstanceOf(Error);
+    expect((reentryError as Error).message).toMatch(/consume期间同步重入dispose/);
     expect(port.calls.plays).toBe(1);
     expect(host.getSnapshot()).toMatchObject({
-      state: ARENA_V2_MODE_HUD_PRESENTATION_HOST_STATE_V1.ACTIVE,
+      state: ARENA_V2_MODE_HUD_PRESENTATION_HOST_STATE_V1.FAILED,
       consumerEpochId: 'epoch-a',
-      projectionConsumer: { tick: 41 },
-      effectConsumer: { tick: 41, revision: 2 },
+      projectionConsumer: { tick: null },
+      effectConsumer: { tick: null, revision: null },
     });
     host.dispose();
   });

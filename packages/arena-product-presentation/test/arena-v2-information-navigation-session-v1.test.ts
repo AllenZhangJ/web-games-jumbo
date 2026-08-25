@@ -209,7 +209,8 @@ describe('Arena V2 information navigation session candidate V1', () => {
     });
     expect(() => value.openDeclaredLink(accessorTarget)).toThrow(/数据字段/u);
     expect(targetGetterCalls).toBe(0);
-    expect(() => dispatch(value, SCREEN.HOME, INTENT.START_SELECTED_MODE)).toThrow(/intent/);
+    expect(() => dispatch(value, SCREEN.HOME, INTENT.START_SELECTED_MODE))
+      .toThrow(/intent|selectedModeKind/);
     expect(() => value.openBottomNavigation({
       expectedRevision: 9,
       itemId: BOTTOM.START,

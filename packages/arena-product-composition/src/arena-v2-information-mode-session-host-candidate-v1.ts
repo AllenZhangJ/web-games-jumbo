@@ -349,12 +349,12 @@ export class ArenaV2InformationModeSessionHostCandidateV1 {
           ? 'Information Mode Session Host pending session destroy'
           : 'Information Mode Session Host session destroy',
       );
-      this.#assertCurrentOperationCommit('Information Mode Session Host session destroy');
       this.#session = null;
       this.#pendingSessionDestroy = null;
       this.#selectedModeKind = null;
       this.#modeSessionState = null;
       this.#pendingSettlementNavigation = null;
+      this.#assertCurrentOperationCommit('Information Mode Session Host session destroy');
       return [];
     } catch (error) {
       if (this.#reentryError !== null) throw error;
@@ -935,5 +935,7 @@ export const ARENA_V2_INFORMATION_MODE_SESSION_HOST_CANDIDATE_V1 = Object.freeze
   stickyReentryUsesMonotonicSequenceAndFirstError: true as const,
   navigationSessionAndProjectionCallbacksCheckedBeforeHostCommit: true as const,
   cleanupReentryRetainsCurrentAndLaterSessionOwners: true as const,
+  successfulCurrentSessionDestroyCommitsBeforeStickyReentry: true as const,
+  stickyDestroyReentryRetainsLaterNavigationOwner: true as const,
   validationStatus: 'not-run' as const,
 });

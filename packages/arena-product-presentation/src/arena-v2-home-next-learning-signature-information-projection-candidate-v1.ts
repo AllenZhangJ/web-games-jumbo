@@ -679,6 +679,8 @@ export const ARENA_V2_FULL_CATALOG_REPLAY_COMBINATION_INFORMATION_PROJECTION_CAN
     targetFieldId: TARGET_FIELD_ID,
     sharedCombinationSource: 'p6-full-catalog-replay-combination-v1' as const,
     resultReusesExistingNextGoalField: true as const,
+    fullCatalogReplayCombinationShowsDerivedCycleOrdinal: true as const,
+    replayRotationOrdinalsRevalidatedAgainstProfileRevision: true as const,
     resultDoesNotDuplicateHomeLearningSignature: true as const,
     survivalReplayWeaponIsConditionalWorldPickup: true as const,
     fieldCountAdded: 0 as const,

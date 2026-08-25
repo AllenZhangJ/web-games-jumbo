@@ -125,7 +125,7 @@ describe('Arena V2 home record summary information projection candidate V1', () 
     })).toThrow(/主研究/);
     expect(() => project({
       summary: { ...summary(), weaponContextEvidenceProgress: 53 },
-    })).toThrow(/情境研究/);
+    })).toThrow(/情境研究|completedWeaponContextEvidence/);
     expect(() => project({
       summary: { ...summary(), mapRouteResearchTarget: 25 },
     })).toThrow(/路线研究/);

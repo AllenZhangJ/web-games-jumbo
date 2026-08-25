@@ -443,9 +443,9 @@ test('P5.3zd wires one shared owner through VFX, stage and target material prese
   assert.match(stage, /animationHoldParticipantIds/u);
   assert.match(stage, /characters\.sync\(frame, \{ snap, cameraModel, animationHoldParticipantIds \}\)/u);
   assert.match(stage, /characterFactory\.applyImpactReadability\(Object\.freeze/u);
-  assert.match(stage, /this\.#characters\?\.clearAnimationHolds\(\)/u);
+  assert.match(stage, /this\.#characters\.clearAnimationHolds\(\)/u);
   assert.match(stage, /characterFactory\.applyImpactDirections\(characterImpact\.hitDirections\)/u);
-  assert.match(stage, /this\.#characterFactory\?\.clearImpactDirections\(\)/u);
+  assert.match(stage, /this\.#characterFactory\.clearImpactDirections\(\)/u);
   assert.match(vfx, /worldDirection: direction\?\.worldDirection \?\? null/u);
   assert.match(character, /setImpactReadabilityIntensity\(value: unknown\)/u);
   assert.doesNotMatch(stage, /characters\.update\(0\)/u);

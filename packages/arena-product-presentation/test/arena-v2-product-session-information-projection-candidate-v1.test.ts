@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { createMatchContentSelectionV2 } from '@number-strategy-jump/arena-contracts';
 import { createProductMatchResultV3 } from '@number-strategy-jump/arena-product-contracts';
 import {
   projectArenaV2ProductSessionInformationCandidateV1,
@@ -18,6 +19,20 @@ function productResult(
     endedAtTick: 300,
   },
 ) {
+  const content = createMatchContentSelectionV2({
+    schemaVersion: 2,
+    modeDefinitionId: 'mode.duel.presentation.test.v1',
+    contentDefinitionId: 'content.duel.presentation.test.v1',
+    contentVersion: 1,
+    characterDefinitionIds: ['fighter-a', 'fighter-b'],
+    equipmentDefinitionIds: [FLANK_BLADE, HEAVY_HAMMER],
+    mapDefinitionIds: [selectedMapDefinitionId],
+    selectedMapDefinitionId,
+    participantCharacters: [
+      { participantId: 'p1', definitionId: 'fighter-a' },
+      { participantId: 'p2', definitionId: 'fighter-b' },
+    ],
+  });
   return createProductMatchResultV3({
     schemaVersion: 3,
     modeDefinitionId: 'mode.duel.presentation.test.v1',
@@ -30,20 +45,7 @@ function productResult(
       ruleContentHash: 'c0ffee00',
       finalHash: '1234abcd',
     },
-    content: {
-      schemaVersion: 2,
-      modeDefinitionId: 'mode.duel.presentation.test.v1',
-      contentDefinitionId: 'content.duel.presentation.test.v1',
-      contentVersion: 1,
-      characterDefinitionIds: ['fighter-a', 'fighter-b'],
-      equipmentDefinitionIds: [FLANK_BLADE, HEAVY_HAMMER],
-      mapDefinitionIds: [selectedMapDefinitionId],
-      selectedMapDefinitionId,
-      participantCharacters: [
-        { participantId: 'p1', definitionId: 'fighter-a' },
-        { participantId: 'p2', definitionId: 'fighter-b' },
-      ],
-    },
+    content,
     participantAssignments: [
       {
         participantId: 'p1',

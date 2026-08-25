@@ -224,7 +224,7 @@ describe('Arena V2 information content read projection V1', () => {
       ARENA_V2_INFORMATION_CONTENT_READ_CATALOG_CANDIDATE_V1,
       ARENA_V2_ZH_CN_INFORMATION_MESSAGES_CANDIDATE_V1,
       'unknown-map',
-    )).toThrow(/没有unknown-map/);
+    )).toThrow(/没有地图unknown-map/);
   });
 
   it('reuses the shared concrete practice summary in competitive weapon and map detail fields', () => {

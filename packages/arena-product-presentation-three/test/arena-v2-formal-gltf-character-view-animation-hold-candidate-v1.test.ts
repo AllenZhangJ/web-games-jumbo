@@ -29,7 +29,7 @@ describe('Arena V2 formal GLTF character animation hold candidate V1', () => {
     expect(consumeIndex).toBeGreaterThan(createIndex);
     expect(mountIndex).toBeGreaterThan(consumeIndex);
     expect(retireIndex).toBeGreaterThan(mountIndex);
-    expect(SOURCE).toContain('readonly #heldEquipmentCleanupDebts = new Set<HeldEquipmentRecord>()');
+    expect(SOURCE).toContain('readonly #heldEquipmentCleanupDebts = new Set<HeldEquipmentCleanupRecord>()');
     expect(SOURCE).toContain('heldEquipmentReplacementPreflightsBeforeRetiringPrevious: true');
     expect(SOURCE).toContain('failedHeldEquipmentReplacementRetainsRetryableCleanupDebt: true');
   });

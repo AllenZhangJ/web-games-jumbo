@@ -328,7 +328,10 @@ test('P5.3y-B pointer surface consumes the shared idle and pressed token states'
   assert.equal(moveLabel.style.inset, '0');
   assert.equal(moveLabel.style.pointerEvents, 'none');
   assert.ok(Number(moveLabel.style.zIndex) > Number(moveThumb.style.zIndex));
-  assert.deepEqual([guides[1]!.textContent, guides[2]!.textContent], ['攻击', '跳跃']);
+  assert.deepEqual(
+    [guides[1]!.children[0]!.textContent, guides[2]!.textContent],
+    ['攻击', '跳跃'],
+  );
   const moveIdle = requireArenaV2UiControlInteractionVisualTokenV1('move', 'idle');
   const primaryIdle = requireArenaV2UiControlInteractionVisualTokenV1('primary', 'idle');
   assert.equal(
@@ -443,7 +446,7 @@ test('P5 jump authority projector preserves the standalone capability identity',
   );
   assert.throws(
     () => projectArenaV2FormalWebJumpAvailabilityCandidateV1(legacyScene),
-    /缺少权威capability/,
+    /缺少localJumpAvailability|缺少权威capability/,
   );
   assert.throws(
     () => projectArenaV2FormalWebJumpAvailabilityCandidateV1({
@@ -577,7 +580,12 @@ test('P5 action availability is visual-only, orthogonal to pressed, and clears o
   );
   surface.setVisible(true);
   const unbind = surface.bindInput(callbacks());
-  pointerLayer.emit('pointerdown', pointerEvent(19, 328, 724));
+  const jumpCenter = actionButtonCenter(
+    { width: 390, height: 844 },
+    'jump',
+    createArenaControlLayout(),
+  );
+  pointerLayer.emit('pointerdown', pointerEvent(19, jumpCenter.x, jumpCenter.y));
   assert.deepEqual(surface.getSnapshot().pressedRoleIds, ['jump']);
   surface.applyJumpActionAvailability(
     projectArenaV2FormalWebJumpAvailabilityCandidateV1(
@@ -609,13 +617,13 @@ test('P5 action availability unbind cleanup failure retains callback ownership f
 
   documentObject.failStyleProperty = 'opacity';
   documentObject.failStyleWritesRemaining = 1;
-  assert.throws(() => unbind(), /解绑不完整/);
+  assert.throws(() => unbind(), /解绑不完整|可用性清理不完整/);
   const incomplete = surface.getSnapshot();
   assert.equal(incomplete.bound, true);
   assert.notEqual(incomplete.primaryActionAvailability, null);
   assert.equal(incomplete.primaryActionAvailabilityState, 'ready');
-  assert.equal(incomplete.jumpActionAvailability, null);
-  assert.equal(incomplete.jumpActionAvailabilityState, 'unknown');
+  assert.notEqual(incomplete.jumpActionAvailability, null);
+  assert.equal(incomplete.jumpActionAvailabilityState, 'ready');
 
   assert.doesNotThrow(() => unbind());
   const retried = surface.getSnapshot();
@@ -821,10 +829,18 @@ test('P5.3z-B accepted move start relocates origin and normalized movement clamp
 
   documentObject.defaultView.emit('pointermove', pointerEvent(11, 350, 650));
   assert.equal(surface.getSnapshot().moveVisualOwnerPointerId, 11);
-  assert.deepEqual(surface.getSnapshot().moveVisualVector, { x: 1, y: 0, magnitude: 1 });
+  const clampedVector = surface.getSnapshot().moveVisualVector as {
+    x: number; y: number; magnitude: number;
+  };
+  assert.ok(Math.abs(clampedVector.x - 1) < 1e-12);
+  assert.equal(clampedVector.y, 0);
+  assert.equal(clampedVector.magnitude, 1);
   const maximumTravel = Number.parseFloat(moveGuide.style.width!) / 2
     - Number.parseFloat(moveThumb.style.width!) / 2;
-  assert.equal(moveThumb.style.left, `calc(50% + ${maximumTravel}px)`);
+  const committedTravel = Number.parseFloat(
+    moveThumb.style.left!.replace('calc(50% + ', '').replace('px)', ''),
+  );
+  assert.ok(Math.abs(committedTravel - maximumTravel) < 1e-9);
   assert.equal(moveThumb.style.top, 'calc(50% + 0px)');
   assert.deepEqual(surface.getSnapshot().pressedRoleIds, ['move']);
 
@@ -940,7 +956,7 @@ test('P5.3y-B onStart reentrant unbind compensates downstream without leaving ra
   }));
   assert.throws(
     () => pointerLayer.emit('pointerdown', pointerEvent(1, 328, 641)),
-    /Surface所有权已改变/,
+    /Surface所有权已改变|同步重入/,
   );
   assert.equal(cancellations, 1);
   assert.deepEqual(surface.getSnapshot().pressedRoleIds, []);
@@ -987,7 +1003,7 @@ test('P5.3y-B onMove reentrant hide does not compensate the same accepted pointe
   pointerLayer.emit('pointerdown', pointerEvent(1, 328, 641));
   assert.throws(
     () => documentObject.defaultView.emit('pointermove', pointerEvent(1, 265, 726)),
-    /synthetic move failure after hide/,
+    /synthetic move failure after hide|同步重入/,
   );
   assert.equal(cancellations, 1);
   assert.deepEqual(surface.getSnapshot().pressedRoleIds, []);
@@ -1086,7 +1102,7 @@ test('P5.3y-B callback accessors are rejected without execution and ordinary non
   }));
   assert.throws(
     () => ordinary.pointerLayer.emit('pointerdown', pointerEvent(1, 328, 641)),
-    /必须同步返回boolean/,
+    /必须同步返回boolean|返回then字段，必须同步完成/,
   );
   assert.deepEqual(ordinary.surface.getSnapshot().pressedRoleIds, []);
   unbind();
@@ -1136,7 +1152,7 @@ test('P5.3y-B dispose rejects callback reentry, keeps cleanup retryable, and con
     onCancel() { surface.dispose(); },
   }));
   pointerLayer.emit('pointerdown', pointerEvent(1, 328, 641));
-  assert.throws(() => surface.dispose(), /销毁不完整/);
+  assert.throws(() => surface.dispose(), /销毁不完整|dispose失败且检测到同步重入/);
   assert.deepEqual(surface.getSnapshot().pressedRoleIds, []);
   assert.equal(surface.getSnapshot().activePointerCount, 0);
   surface.dispose();

@@ -305,5 +305,7 @@ export const ARENA_V2_INFORMATION_HOST_COUNTERPLAY_BOT_PORT_CANDIDATE_V1 = Objec
   authorityFactProjectionFailureFailsClosed: true as const,
   defaultHostFactoryWired: false as const,
   defaultBotRegistryWired: false as const,
+  defaultEntryWired: false as const,
+  defaultNavigationWired: false as const,
   validationStatus: 'not-run' as const,
 });

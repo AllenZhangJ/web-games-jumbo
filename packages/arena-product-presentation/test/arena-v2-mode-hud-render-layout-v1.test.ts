@@ -314,7 +314,7 @@ describe('Arena V2 mode HUD render/layout V1', () => {
     expect(renderModel.supplyItems[0]).toMatchObject({
       remainingTicks: 300,
       remainingTickText: '5秒',
-      worldPosition: { x: 0, y: 1, z: 0 },
+      worldPosition: { x: 0, y: 1, z: -0 },
       coreVerbText: '压制',
     });
     expect(renderModel.modeFacts.find(({ id }) => id === 'survival-next-supply'))
@@ -386,8 +386,10 @@ describe('Arena V2 mode HUD render/layout V1', () => {
 
     const learningRenderModel = Object.freeze({
       ...renderModel,
-      feedbackItems: Object.freeze(renderModel.feedbackItems.map((item) => (
-        item.category !== 'weapon' ? item : Object.freeze({
+      feedbackItems: Object.freeze(renderModel.feedbackItems.filter(
+        (item) => item.category === 'weapon',
+      ).map((item) => (
+        Object.freeze({
           ...item,
           title: `轻击 · 重锤·地面：${item.title}`,
           explanation: '本招用途：地面正面重击，制造最高的一次性水平击退。'
@@ -411,12 +413,20 @@ describe('Arena V2 mode HUD render/layout V1', () => {
       learningFeedback,
       learningLayout,
     );
-    expect(learningPlan.primitives.find(({ id }) => id.endsWith(':title'))).toMatchObject({
+    expect(learningPlan.primitives.find((primitive) => (
+      primitive.kind === 'text'
+      && primitive.id.endsWith(':title')
+      && primitive.text.startsWith('轻击')
+    ))).toMatchObject({
       text: expect.stringMatching(/^轻击/),
       role: 'feedback-primary',
       maximumLines: 2,
     });
-    expect(learningPlan.primitives.find(({ id }) => id.endsWith(':explanation'))).toMatchObject({
+    expect(learningPlan.primitives.find((primitive) => (
+      primitive.kind === 'text'
+      && primitive.id.endsWith(':explanation')
+      && primitive.text.startsWith('本招用途：')
+    ))).toMatchObject({
       text: expect.stringMatching(/^本招用途：/),
       role: 'feedback-learning',
       maximumLines: 3,
@@ -425,6 +435,7 @@ describe('Arena V2 mode HUD render/layout V1', () => {
 
     const counterplayRenderModel = Object.freeze({
       ...renderModel,
+      tick: renderModel.tick + 30,
       feedbackItems: Object.freeze(renderModel.feedbackItems.map((item, index) => (
         item.category !== 'weapon' ? Object.freeze({
           ...item,
@@ -435,6 +446,10 @@ describe('Arena V2 mode HUD render/layout V1', () => {
           emphasis: 'normal' as const,
           explanation: '下次可改变方向或跳跃离开；对方弱点：挥空后恢复较长。你的最终支撑面和路线位置已经转移。',
         })
+      )).sort((left, right) => (
+        left.tick - right.tick
+        || left.sequence - right.sequence
+        || left.sourceEventId.localeCompare(right.sourceEventId)
       ))),
     });
     const counterplayFeedback = advanceArenaV2ModeHudFeedbackQueueV1(
@@ -466,13 +481,24 @@ describe('Arena V2 mode HUD render/layout V1', () => {
 
     const warningRenderModel = Object.freeze({
       ...counterplayRenderModel,
-      feedbackItems: Object.freeze(counterplayRenderModel.feedbackItems.map((item) => (
-        item.category === 'mode' ? Object.freeze({
-          ...item,
-          emphasis: 'warning' as const,
-          explanation: '下一次掉落将结束本局。',
-        }) : item
-      ))),
+      feedbackItems: Object.freeze([Object.freeze({
+        sourceEventId: 'mode-warning-next-fall',
+        tick: counterplayRenderModel.tick,
+        sequence: 8,
+        category: 'mode' as const,
+        anchorParticipantId: 'player',
+        attackerParticipantId: null,
+        targetParticipantId: null,
+        anchorWorldPosition: null,
+        actionDefinitionId: null,
+        perspective: 'local-involved' as const,
+        title: '只剩一次机会',
+        explanation: '下一次掉落将结束本局。',
+        emphasis: 'warning' as const,
+        visualCue: 'survival-fall-counted',
+        audioCue: null,
+        motionPolicy: 'static' as const,
+      })]),
     });
     const warningFeedback = advanceArenaV2ModeHudFeedbackQueueV1(warningRenderModel, null);
     const warningLayout = createArenaV2ModeHudLayoutV1(
@@ -490,7 +516,9 @@ describe('Arena V2 mode HUD render/layout V1', () => {
       warningFeedback,
       warningLayout,
     );
-    expect(warningPlan.primitives.find(({ id }) => id.endsWith(':explanation')))
+    expect(warningPlan.primitives.find(
+      ({ id }) => id === 'hud:feedback:mode-warning-next-fall:explanation',
+    ))
       .toMatchObject({ text: '下一次掉落将结束本局。' });
   });
 
@@ -650,7 +678,7 @@ describe('Arena V2 mode HUD render/layout V1', () => {
         cueId: 'weapon-transfer',
         actionDefinitionId: 'line-suppressor-ground',
         emphasis: 'strong',
-        voicePriority: 3,
+        voicePriority: 2,
       },
     ]);
     epoch.beginEpoch({

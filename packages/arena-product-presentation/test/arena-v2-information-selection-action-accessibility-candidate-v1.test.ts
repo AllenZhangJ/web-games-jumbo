@@ -283,14 +283,14 @@ describe('Arena V2 information selection action accessibility candidate V1', () 
         kind: 'action',
         accessibilityText: `选择竞速。${
           ARENA_V2_MODE_SELECTION_COPY_CANDIDATE_V1.items[1]!.description
-        }`,
+        }`.replace(/。$/u, ''),
       });
     expect(plan.primitives.find(({ id }) => id === 'selection:mode:duel:action'))
       .toMatchObject({
         kind: 'action',
         accessibilityText: `常规1v1。${
           ARENA_V2_MODE_SELECTION_COPY_CANDIDATE_V1.items[0]!.description
-        }。已选择`,
+        }`.replace(/。$/u, '') + '。已选择',
       });
     expect(plan.primitives.find(({ id }) => id === 'selection:mode:survival:panel'))
       .toMatchObject({ kind: 'panel', rect: { height: 112 } });
@@ -569,8 +569,8 @@ describe('Arena V2 information selection action accessibility candidate V1', () 
     expect(weapon.primitives.filter(({ id }) => id === 'primary-action')).toHaveLength(1);
     expect(weapon.primitives.find(({ id }) => id === 'page-question')).toMatchObject({
       kind: 'text',
-      text: '武器乙｜详情问题',
-      accessibilityText: '当前浏览武器：武器乙。详情问题',
+      text: '详情问题',
+      accessibilityText: '详情问题',
       role: 'question',
     });
     expect(weapon.primitives.find(({ id }) => id === 'primary-action')).toMatchObject({
