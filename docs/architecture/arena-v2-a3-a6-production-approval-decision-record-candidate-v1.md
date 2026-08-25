@@ -14,6 +14,7 @@
 - approved必须同时确认来源与权利闭合、当前预算身份闭合、模型/纹理等依赖闭合，并只使用`seven-slot-current-identity-independent-approval`原因。
 - rejected只能使用规范来源/权利、预算、依赖或独立批准人拒绝原因；布尔失败事实必须由原因覆盖。
 - 决策记录locator与SHA-256必须显式提供，但当前纯数据合同不读取其字节。
+- `approvalDecisionIdentity`与`evidenceSetIdentity`是八位确定性数据身份；`approvalRecordSha256`是64位文件SHA-256。SF-A3A6P.1直接规格按该边界断言，不扩成新的加密身份合同。
 
 ## Approved仍不修改当前账本
 

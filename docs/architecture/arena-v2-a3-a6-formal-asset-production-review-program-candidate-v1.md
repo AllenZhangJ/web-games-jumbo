@@ -39,6 +39,12 @@
 - 前置条件满足后，每批仍需独立执行、独立批准、独立回滚；统一程序不能批量授予通过。
 - 默认Formal Bundle、Preloader和Entry不消费该程序；它不参与Gameplay Authority。
 
+## SF-A3A6P.1 固定自动化边界
+
+`npm run arena:a3-a6:production-preparation:test`固定运行15个直接Vitest文件，共59项规格：队列、九批Preparation、Program，以及`submission → independent evaluation → seven-slot accepted set → independent decision`。四段链路的`*Identity`沿用项目`createDeterministicDataHash`八位数据身份，证据文件与审批记录的`*Sha256`仍严格为64位，二者不得互换。
+
+runner通过只说明合同可构造且恶意输入失败关闭；`executesReviews=false`、生产批准`0/130`、证据槽`910 missing`、95项真实评审`not-run`、默认Bundle/Preloader/Entry关闭均不改变。
+
 ## 回滚点
 
 删除统一程序源码、公开导出、延期测试、治理登记和本文即可；九个逐批准备包、Catalog、资产、工作队列、批准账本和运行时均不受影响。

@@ -81,6 +81,7 @@
     "arena:p6:candidate:gate": "npm run check:p6:candidate-boundaries && npm run arena:p6:candidate:test",
     "arena:p7:candidate:test": "npm run build:packages && node --import tsx scripts/run-arena-p7-candidate-tests.ts",
     "arena:p7:candidate:gate": "npm run check:p7:candidate-boundaries && npm run arena:p7:candidate:test",
+    "arena:a3-a6:production-preparation:test": "node --import tsx scripts/run-arena-a3-a6-production-preparation-candidate-tests.ts",
     "pretest": "npm run build:packages",
     "test": "npm run test:node && npm run test:governance",
     "check:js-migration": "node --import tsx scripts/governance/check-js-migration.ts",

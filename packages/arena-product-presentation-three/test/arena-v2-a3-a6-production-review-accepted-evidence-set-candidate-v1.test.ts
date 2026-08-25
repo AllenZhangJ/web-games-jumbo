@@ -109,7 +109,7 @@ describe('Arena V2 A3-A6 production review accepted evidence set candidate V1 (n
       writesFilesOrLedger: false,
     });
     expect(set.evaluationRows).toHaveLength(7);
-    expect(set.evidenceSetIdentity).toMatch(/^[a-f0-9]{64}$/u);
+    expect(set.evidenceSetIdentity).toMatch(/^[a-f0-9]{8}$/u);
   });
 
   it('fails closed on missing duplicate or reordered slots and stale evaluation identity', () => {

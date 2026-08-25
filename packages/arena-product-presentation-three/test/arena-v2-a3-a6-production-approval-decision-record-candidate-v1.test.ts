@@ -128,7 +128,7 @@ describe('Arena V2 A3-A6 production approval decision record candidate V1 (not r
       readsEvidenceBytes: false,
       writesFilesOrLedger: false,
     });
-    expect(record.approvalDecisionIdentity).toMatch(/^[a-f0-9]{64}$/u);
+    expect(record.approvalDecisionIdentity).toMatch(/^[a-f0-9]{8}$/u);
   });
 
   it('rejects actor overlap stale evidence set and incomplete approval closure', () => {

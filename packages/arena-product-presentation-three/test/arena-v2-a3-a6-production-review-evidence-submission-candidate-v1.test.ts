@@ -57,7 +57,7 @@ describe('Arena V2 A3-A6 production review evidence submission candidate V1 (not
       readsEvidenceBytes: false,
       writesFilesOrLedger: false,
     });
-    expect(submission.evidenceIdentity).toMatch(/^[a-f0-9]{64}$/u);
+    expect(submission.evidenceIdentity).toMatch(/^[a-f0-9]{8}$/u);
   });
 
   it('fails closed on stale program identity or wrong slot evidence kind', () => {

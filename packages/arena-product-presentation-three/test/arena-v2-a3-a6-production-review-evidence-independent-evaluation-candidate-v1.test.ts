@@ -81,7 +81,7 @@ describe('Arena V2 A3-A6 production review evidence independent evaluation candi
       writesFilesOrLedger: false,
     });
     expect(evaluation.acceptedEvidenceIdentity).toBe(evaluation.evidenceIdentity);
-    expect(evaluation.evaluationIdentity).toMatch(/^[a-f0-9]{64}$/u);
+    expect(evaluation.evaluationIdentity).toMatch(/^[a-f0-9]{8}$/u);
   });
 
   it('rejects collector self-review, stale evidence identity and premature acceptance', () => {

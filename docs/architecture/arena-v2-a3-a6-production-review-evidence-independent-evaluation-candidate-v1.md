@@ -39,6 +39,8 @@
 
 接受结果只提供`acceptedEvidenceIdentity`与独立`evaluationIdentity`，供后续七槽聚合Owner读取；它不能直接更新现行V1缺失账本。
 
+`evaluationIdentity`与上游`evidenceIdentity`均为八位确定性数据身份；`verifiedEvidenceSha256`和`verificationRecordSha256`继续严格为64位文件SHA-256。两类字段语义独立，不能以长度互换。
+
 ## 回滚点
 
 删除独立评估源码、公开导出、延期测试、治理登记和本文即可；证据提交合同、统一评审程序、九批准备包、现行账本与运行时不受影响。

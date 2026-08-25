@@ -48,6 +48,8 @@ Evidence Kind严格跟随Slot，不能用设备报告顶替真人可读性，也
 
 采集者可记录`pass / fail / inconclusive`观察结果，但`pass`只是提交内容，不能成为独立评估或生产批准。证据Identity由规范化提交数据确定性生成；当前合同只传递引用，不确认locator存在，也不读取或验证证据文件内容。
 
+`evidenceIdentity`是项目`createDeterministicDataHash`产生的八位数据身份；`evidenceSha256`与`artifactSha256`才是小写64位文件SHA-256。SF-A3A6P.1已把直接规格修正为该双域合同，禁止把数据identity冒充文件hash。
+
 ## 后续边界
 
 未来如果实现独立评估，必须是单独Owner：读取已固定字节、复核SHA、验证Evidence Kind内部结构、确认reviewer与采集者职责、输出accept/reject及原因。再后续的生产批准仍需聚合七槽、来源、预算和资产身份，并生成新版本账本；不得让本提交函数直接升级V1缺失账本。

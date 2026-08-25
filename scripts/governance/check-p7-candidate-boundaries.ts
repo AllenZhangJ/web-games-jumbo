@@ -83,6 +83,10 @@ const A3_A6_PRODUCTION_REVIEW_ACCEPTED_EVIDENCE_SET_FILE =
   'packages/arena-product-presentation-three/src/arena-v2-a3-a6-production-review-accepted-evidence-set-candidate-v1.ts';
 const A3_A6_PRODUCTION_APPROVAL_DECISION_RECORD_FILE =
   'packages/arena-product-presentation-three/src/arena-v2-a3-a6-production-approval-decision-record-candidate-v1.ts';
+const A3_A6_PRODUCTION_PREPARATION_RUNNER_FILE =
+  'scripts/run-arena-a3-a6-production-preparation-candidate-tests.ts';
+const A3_A6_PRODUCTION_PREPARATION_PACKAGE_COMMAND =
+  'node --import tsx scripts/run-arena-a3-a6-production-preparation-candidate-tests.ts';
 const CANDIDATE_FILE_SET = new Set<string>([
   ...P7_FILES,
   ...A7_FILES,
@@ -1640,12 +1644,44 @@ async function main(): Promise<void> {
     path.join(root, 'packages/arena-product-presentation-three/test/arena-v2-a3-a6-production-approval-decision-record-candidate-v1.test.ts'),
     'utf8',
   );
+  const productionPreparationRunner = await source(
+    root,
+    A3_A6_PRODUCTION_PREPARATION_RUNNER_FILE,
+  );
+  for (const marker of [
+    'VITEST_FILES.length !== 15',
+    'productionBatchCount: 9',
+    'formalAssetCount: 130',
+    'missingEvidenceSlotCount: 910',
+    'reviewUnitCount: 95',
+    'productionApprovalCount: 0',
+    'executesReviews: false',
+    'hardGate: false',
+    'arena-v2-a3-a6-formal-asset-production-work-queue-candidate-v1.test.ts',
+    'arena-v2-a3-a6-formal-asset-production-review-program-candidate-v1.test.ts',
+    'arena-v2-a3-a6-production-review-evidence-submission-candidate-v1.test.ts',
+    'arena-v2-a3-a6-production-review-evidence-independent-evaluation-candidate-v1.test.ts',
+    'arena-v2-a3-a6-production-review-accepted-evidence-set-candidate-v1.test.ts',
+    'arena-v2-a3-a6-production-approval-decision-record-candidate-v1.test.ts',
+  ]) assertMarker(
+    productionPreparationRunner,
+    marker,
+    'A3-A6 formal asset production preparation fixed runner',
+  );
+  const packageJson = JSON.parse(await source(root, 'package.json')) as {
+    readonly scripts?: Readonly<Record<string, unknown>>;
+  };
+  if (
+    packageJson.scripts?.['arena:a3-a6:production-preparation:test']
+      !== A3_A6_PRODUCTION_PREPARATION_PACKAGE_COMMAND
+  ) throw new Error('A3-A6正式资产生产准备固定runner缺少精确package命令。');
   console.log(JSON.stringify({
     status: 'passed',
     candidateFileCount: P7_FILES.length,
     a7EvidenceCandidateCount: A7_FILES.length,
     formalAssetPrerequisiteCandidateCount: 24,
     deferredTestFileCount: P7_TEST_FILES.length + 26,
+    productionPreparationRunnerFileCount: 15,
     hardGate: false,
   }));
 }

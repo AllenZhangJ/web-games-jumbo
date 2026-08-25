@@ -241,6 +241,7 @@ Cue消费identity固定为`event.id`去重、`event.sequence`稳定仲裁、`eve
 > A3–A6生产评审证据独立评估候选V1现要求reviewer与collector分离，并在接受前确认Evidence SHA、内容结构、环境和采集`pass`；拒绝原因必须覆盖SHA/结构/环境/观察失败。accepted/rejected都不写账本或授予批准，只产生独立Evaluation Identity。
 > A3–A6生产评审七槽接受证据集候选V1现要求同一资产七个accepted Evaluation按规范Slot顺序闭合，且Evidence/Evaluation Identity唯一。完整集合只标记可进入独立生产批准决策，状态仍为`pending-not-decided / missing-not-approved`。
 > A3–A6生产批准独立决策记录候选V1现要求approver与全部collector/reviewer分离，并在approved前确认来源权利、预算及依赖闭合。approved Decision仅能输入未来新不可变账本组装，当前V1账本、Formal Ready和资产使用仍不改变。
+> SF-A3A6P.1固定runner已执行上述队列、九批Preparation、Program和截至独立Decision的15文件/59项直接规格；P7边界固定runner及package命令。数据`*Identity`为八位确定性hash，文件`*Sha256`为64位，互不替代；生产批准仍0/130、910槽missing、95真实评审not-run。
 > 状态仅为 `production-unreachable / code-written-not-run / formalReady=false`，不开放 Blockout、截图或设备门。
 > A6.4—A6.18收藏预览许可链已同步当前账本真值：20武器+2地图全部fallback，request/release token为null，
 > A6.6/A6.11a当前允许集合为0，隔离Web组合不创建预览Host/Renderer，不发生load/lease/mount。未来只能由新账本版本和独立gate开放。

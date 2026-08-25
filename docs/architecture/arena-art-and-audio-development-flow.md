@@ -309,6 +309,8 @@ Final和资产使用批次均为0。该队列不改资产字节、不授予批�
 
 [A3–A6生产批准独立决策记录候选V1](arena-v2-a3-a6-production-approval-decision-record-candidate-v1.md)在完整Evidence Set后增加第三职责人：approved要求来源/权利、预算和依赖均确认，且批准记录有独立locator/SHA。记录只供未来不可变账本版本消费，不原位修改当前账本或开放正式媒体。
 
+SF-A3A6P.1新增固定复验入口`npm run arena:a3-a6:production-preparation:test`，精确覆盖上述队列、九批Preparation、Program与截至独立Decision的15文件/59项直接规格；P7边界检查同时固定runner清单和package命令。自动化通过不执行95项真实评审、不写910槽、不授予130项批准，也不触碰媒体字节或默认消费。
+
 | 项目 | 项目上限 |
 |---|---:|
 | 正式资产总编码体积 | 2,359,296 B |

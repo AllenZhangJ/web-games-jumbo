@@ -499,6 +499,7 @@ P5.3zzzuk将上述规则统一到全部正式媒体：唯一批准索引逐项�
 - [A3–A6生产评审证据独立评估候选V1](arena-v2-a3-a6-production-review-evidence-independent-evaluation-candidate-v1.md)要求reviewer不同于collector，并在接受前闭合Evidence SHA、内容结构、环境和采集`pass`；拒绝原因必须覆盖失败事实。评估接受仍保持账本槽`missing`和批准`missing-not-approved`，只供后续聚合读取。
 - [A3–A6生产评审七槽接受证据集候选V1](arena-v2-a3-a6-production-review-accepted-evidence-set-candidate-v1.md)要求同一资产按规范顺序具备七个accepted Evaluation，且Asset/Batch/Preparation与Slot/Identity全闭合。完整集合仍不批准，只把该资产送入后续独立生产批准决策。
 - [A3–A6生产批准独立决策记录候选V1](arena-v2-a3-a6-production-approval-decision-record-candidate-v1.md)要求approver不兼任采集或评估，并在approved前闭合来源权利、预算和依赖。approved记录仍不改当前账本，只能成为未来新不可变账本组装输入。
+- SF-A3A6P.1以固定runner执行队列、九批Preparation、Program及截至独立Decision的15文件/59项直接规格；四段`*Identity`使用八位确定性数据身份，证据/审批文件`*Sha256`仍为64位。该结果不执行真实评审，生产批准仍0/130、910槽仍missing、95评审单元仍not-run。
 - 静音只改变播放；前台恢复不补播已过期的一次性 Cue。
 
 ## 12. 来源与版本治理
